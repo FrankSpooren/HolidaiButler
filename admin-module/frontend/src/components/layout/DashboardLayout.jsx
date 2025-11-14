@@ -30,7 +30,8 @@ import {
   Article as ArticleIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
-  ChevronLeft as ChevronLeftIcon
+  ChevronLeft as ChevronLeftIcon,
+  Assessment as AssessmentIcon
 } from '@mui/icons-material';
 import useAuthStore from '../../store/authStore';
 
@@ -75,6 +76,12 @@ export default function DashboardLayout() {
       icon: <PlaceIcon />,
       path: '/pois',
       permission: 'pois.read'
+    },
+    {
+      text: 'Analytics',
+      icon: <AssessmentIcon />,
+      path: '/analytics',
+      permission: null
     },
     {
       text: 'Platform',
