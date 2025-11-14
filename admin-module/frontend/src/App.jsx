@@ -17,6 +17,9 @@ import Login from './pages/auth/Login';
 import Dashboard from './pages/dashboard/Dashboard';
 import POIList from './pages/pois/POIList';
 import POIForm from './pages/pois/POIForm';
+import UserList from './pages/users/UserList';
+import UserForm from './pages/users/UserForm';
+import Analytics from './pages/analytics/Analytics';
 
 // Theme
 const theme = createTheme({
@@ -123,6 +126,14 @@ function App() {
             <Route path="pois" element={<POIList />} />
             <Route path="pois/create" element={<POIForm />} />
             <Route path="pois/edit/:id" element={<POIForm />} />
+
+            {/* User Routes */}
+            <Route path="users" element={<UserList />} />
+            <Route path="users/create" element={<UserForm />} />
+            <Route path="users/edit/:id" element={<UserForm />} />
+
+            {/* Analytics */}
+            <Route path="analytics" element={<Analytics />} />
 
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

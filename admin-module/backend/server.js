@@ -12,6 +12,7 @@ import adminAuthRoutes from './routes/adminAuth.js';
 import adminPOIRoutes from './routes/adminPOI.js';
 import adminUploadRoutes from './routes/adminUpload.js';
 import adminPlatformRoutes from './routes/adminPlatform.js';
+import adminUsersRoutes from './routes/adminUsers.js';
 
 // Load environment variables
 dotenv.config();
@@ -58,6 +59,7 @@ app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/pois', adminPOIRoutes);
 app.use('/api/admin/upload', adminUploadRoutes);
 app.use('/api/admin/platform', adminPlatformRoutes);
+app.use('/api/admin/users', adminUsersRoutes);
 
 // Health check endpoint
 app.get('/api/admin/health', (req, res) => {

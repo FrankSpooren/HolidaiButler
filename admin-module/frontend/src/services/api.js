@@ -230,4 +230,57 @@ export const platformAPI = {
   }
 };
 
+// Users API
+export const usersAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/users', { params });
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  },
+
+  getStats: async () => {
+    const response = await api.get('/users/stats');
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/users', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/users/${id}`, data);
+    return response.data;
+  },
+
+  updateStatus: async (id, status) => {
+    const response = await api.patch(`/users/${id}/status`, { status });
+    return response.data;
+  },
+
+  resetPassword: async (id, newPassword) => {
+    const response = await api.patch(`/users/${id}/password`, { newPassword });
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/users/${id}`);
+    return response.data;
+  },
+
+  getActivity: async (id, params = {}) => {
+    const response = await api.get(`/users/${id}/activity`, { params });
+    return response.data;
+  },
+
+  assignPOIs: async (id, poiIds) => {
+    const response = await api.post(`/users/${id}/assign-pois`, { poiIds });
+    return response.data;
+  }
+};
+
 export default api;
