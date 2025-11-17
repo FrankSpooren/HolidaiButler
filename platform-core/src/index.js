@@ -15,6 +15,7 @@ import apiGateway from './gateway/index.js';
 import healthRoutes from './routes/health.js';
 import integrationRoutes from './routes/integration.js';
 import workflowRoutes from './routes/workflows.js';
+import poiClassificationRoutes from './routes/poiClassification.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
 
@@ -69,6 +70,7 @@ app.use(requestLogger);
 app.use('/health', healthRoutes);
 app.use('/api/v1/integration', integrationRoutes);
 app.use('/api/v1/workflows', workflowRoutes);
+app.use('/api/v1/poi-classification', poiClassificationRoutes);
 app.use('/api/v1', apiGateway); // API Gateway for all modules
 
 /**

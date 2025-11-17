@@ -14,6 +14,7 @@ import './workflows/bookingSync.js';
 import './workflows/emailCampaigns.js';
 import './workflows/dataCleanup.js';
 import './workflows/analytics.js';
+import './workflows/poiClassification.js';
 
 /**
  * Initialize automation system
@@ -75,6 +76,12 @@ function setupEventListeners() {
     await workflowManager.execute('poi-sync', data);
   });
 
+  // POI tier changed event
+  eventBus.on('poi.tier.changed', async (data) => {
+    logger.workflow('poi_tier_changed', 'triggered', data);
+    logger.info(`POI tier changed: ${data.name} (${data.oldTier} → ${data.newTier})`);
+  });
+
   logger.info('Event listeners registered');
 }
 
@@ -118,6 +125,36 @@ function scheduleCronJobs() {
   cron.schedule('0 */6 * * *', async () => {
     logger.info('Running abandoned cart recovery');
     await workflowManager.execute('abandoned-cart-recovery', { scheduled: true });
+  });
+
+  // POI Classification - Tier 1 updates (every hour)
+  cron.schedule('0 * * * *', async () => {
+    logger.info('Running Tier 1 POI updates');
+    await workflowManager.execute('poi-tier1-updates', { scheduled: true });
+  });
+
+  // POI Classification - Tier 2 updates (daily at 3:00 AM)
+  cron.schedule('0 3 * * *', async () => {
+    logger.info('Running Tier 2 POI updates');
+    await workflowManager.execute('poi-tier2-updates', { scheduled: true });
+  });
+
+  // POI Classification - Tier 3 updates (weekly on Monday at 4:00 AM)
+  cron.schedule('0 4 * * 1', async () => {
+    logger.info('Running Tier 3 POI updates');
+    await workflowManager.execute('poi-tier3-updates', { scheduled: true });
+  });
+
+  // POI Classification - Tier 4 updates (monthly on 1st at 5:00 AM)
+  cron.schedule('0 5 1 * *', async () => {
+    logger.info('Running Tier 4 POI updates');
+    await workflowManager.execute('poi-tier4-updates', { scheduled: true });
+  });
+
+  // POI Quarterly Review (every 3 months on 1st at 6:00 AM)
+  cron.schedule('0 6 1 */3 *', async () => {
+    logger.info('Running quarterly POI review');
+    await workflowManager.execute('poi-quarterly-review', { scheduled: true });
   });
 
   logger.info('Cron jobs scheduled');
