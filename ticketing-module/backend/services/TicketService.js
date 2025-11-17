@@ -1,4 +1,4 @@
-const { Ticket } = require('../models');
+const { Ticket, Booking } = require('../models');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
@@ -56,7 +56,7 @@ class TicketService {
    */
   async generateQRCode(ticketId) {
     try {
-      const ticket = await Ticket.findById(ticketId);
+      const ticket = await Ticket.findByPk(ticketId);
 
       if (!ticket) {
         throw new Error('Ticket not found');
@@ -109,8 +109,8 @@ class TicketService {
 
       // Find ticket
       const ticket = await Ticket.findOne({
-        ticketNumber: ticketData.ticketNumber,
-      }).populate('poiId');
+        where: { ticketNumber: ticketData.ticketNumber },
+      });
 
       if (!ticket) {
         return {
@@ -120,35 +120,58 @@ class TicketService {
       }
 
       // Verify POI match
-      if (ticket.poiId._id.toString() !== poiId) {
+      if (ticket.poiId !== poiId) {
         return {
           valid: false,
           reason: 'Ticket not valid for this location',
         };
       }
 
-      // Validate ticket
-      try {
-        await ticket.validateTicket(validatorDeviceId, poiId);
-
-        logger.info(`Ticket validated: ${ticket.ticketNumber}`);
-
-        return {
-          valid: true,
-          ticket: {
-            ticketNumber: ticket.ticketNumber,
-            holder: ticket.holder.name,
-            poiName: ticket.details.productName,
-            validFrom: ticket.validity.validFrom,
-            validUntil: ticket.validity.validUntil,
-          },
-        };
-      } catch (validationError) {
+      // Check if already validated
+      if (ticket.isValidated) {
         return {
           valid: false,
-          reason: validationError.message,
+          reason: 'Ticket already validated',
         };
       }
+
+      // Check status
+      if (ticket.status !== 'active') {
+        return {
+          valid: false,
+          reason: `Cannot validate ticket with status: ${ticket.status}`,
+        };
+      }
+
+      // Check validity period
+      const now = new Date();
+      if (now < ticket.validFrom || now > ticket.validUntil) {
+        return {
+          valid: false,
+          reason: 'Ticket is not valid at this time',
+        };
+      }
+
+      // Validate ticket - update fields
+      ticket.isValidated = true;
+      ticket.validatedAt = now;
+      ticket.validatedBy = validatorDeviceId;
+      ticket.validationLocation = poiId;
+      ticket.status = 'used';
+      await ticket.save();
+
+      logger.info(`Ticket validated: ${ticket.ticketNumber}`);
+
+      return {
+        valid: true,
+        ticket: {
+          ticketNumber: ticket.ticketNumber,
+          holder: ticket.holderName,
+          poiName: ticket.productName,
+          validFrom: ticket.validFrom,
+          validUntil: ticket.validUntil,
+        },
+      };
     } catch (error) {
       logger.error('Error validating ticket:', error);
       return {
@@ -186,10 +209,10 @@ class TicketService {
         to: [
           {
             email: email,
-            name: tickets[0].holderName || tickets[0].holder?.name || 'Guest',
+            name: tickets[0].holderName || 'Guest',
           },
         ],
-        subject: `Your HolidaiButler Tickets - ${tickets[0].productName || tickets[0].details?.productName}`,
+        subject: `Your HolidaiButler Tickets - ${tickets[0].productName}`,
         html: this._generateTicketEmailHTML(tickets),
         attachments: [
           {
@@ -221,15 +244,16 @@ class TicketService {
    */
   async getTicketsByUser(userId, status = null) {
     try {
-      const query = { userId };
+      const where = { userId };
 
       if (status) {
-        query.status = status;
+        where.status = status;
       }
 
-      const tickets = await Ticket.find(query)
-        .populate('poiId', 'name location images')
-        .sort({ 'validity.validFrom': -1 });
+      const tickets = await Ticket.findAll({
+        where,
+        order: [['validFrom', 'DESC']],
+      });
 
       return tickets;
     } catch (error) {
@@ -247,9 +271,15 @@ class TicketService {
   async cancelTickets(ticketIds, reason) {
     try {
       for (const ticketId of ticketIds) {
-        const ticket = await Ticket.findById(ticketId);
+        const ticket = await Ticket.findByPk(ticketId);
         if (ticket) {
-          await ticket.cancelTicket(reason);
+          // Check if ticket can be cancelled
+          if (ticket.isValidated) {
+            throw new Error('Cannot cancel a validated ticket');
+          }
+
+          ticket.status = 'cancelled';
+          await ticket.save();
         }
       }
 
@@ -268,7 +298,7 @@ class TicketService {
    */
   async addToWallet(ticketId, walletType) {
     try {
-      const ticket = await Ticket.findById(ticketId).populate('poiId');
+      const ticket = await Ticket.findByPk(ticketId);
 
       if (!ticket) {
         throw new Error('Ticket not found');
@@ -280,9 +310,9 @@ class TicketService {
       const passUrl = `${process.env.API_URL}/api/v1/tickets/${ticketId}/wallet/${walletType}`;
 
       if (walletType === 'apple') {
-        ticket.wallet.appleWalletUrl = passUrl;
+        ticket.appleWalletUrl = passUrl;
       } else {
-        ticket.wallet.googlePayUrl = passUrl;
+        ticket.googlePayUrl = passUrl;
       }
 
       await ticket.save();
@@ -306,42 +336,34 @@ class TicketService {
    * @private
    */
   async _createTicket(booking, sequenceNumber) {
-    const qrCodeData = await this.generateQRCode(booking._id.toString() + '-' + sequenceNumber);
+    // Generate temporary ticket ID for QR code
+    const tempId = `${booking.id}-${sequenceNumber}`;
+    const qrCodeData = await this.generateQRCode(tempId);
 
-    const ticket = new Ticket({
-      bookingId: booking._id,
+    // Create ticket using Sequelize
+    const ticket = await Ticket.create({
+      bookingId: booking.id,
       userId: booking.userId,
       poiId: booking.poiId,
-      type: booking.experience.productType === 'tour' ? 'guided-tour' : 'single',
-      validity: {
-        validFrom: booking.details.date,
-        validUntil: new Date(booking.details.date.getTime() + 24 * 60 * 60 * 1000), // +1 day
-        timeslot: booking.details.time,
-        timezone: 'Europe/Amsterdam',
-      },
-      qrCode: {
-        data: qrCodeData.data,
-        imageUrl: qrCodeData.imageUrl,
-        format: 'QR',
-      },
-      holder: {
-        name: booking.guestInfo.name,
-        email: booking.guestInfo.email,
-        phone: booking.guestInfo.phone,
-      },
-      details: {
-        productName: booking.poiId.name || 'Experience',
-        description: booking.poiId.description || '',
-        quantity: 1,
-        language: booking.experience.language || 'en',
-      },
+      type: booking.productType === 'tour' ? 'guided-tour' : 'single',
+      validFrom: booking.bookingDate,
+      validUntil: new Date(new Date(booking.bookingDate).getTime() + 24 * 60 * 60 * 1000), // +1 day
+      timeslot: booking.bookingTime,
+      timezone: 'Europe/Amsterdam',
+      qrCodeData: qrCodeData.data,
+      qrCodeImageUrl: qrCodeData.imageUrl,
+      qrCodeFormat: 'QR',
+      holderName: booking.guestName,
+      holderEmail: booking.guestEmail,
+      holderPhone: booking.guestPhone,
+      productName: booking.productName || 'Experience',
+      productDescription: '',
+      quantity: 1,
+      language: booking.experienceLanguage || 'en',
       status: 'active',
-      metadata: {
-        source: booking.metadata.source,
-      },
+      source: booking.source || 'mobile',
     });
 
-    await ticket.save();
     return ticket;
   }
 
@@ -352,9 +374,9 @@ class TicketService {
   _createQRPayload(ticket) {
     const data = {
       ticketNumber: ticket.ticketNumber,
-      poiId: ticket.poiId.toString(),
-      validFrom: ticket.validity.validFrom.toISOString(),
-      validUntil: ticket.validity.validUntil.toISOString(),
+      poiId: ticket.poiId,
+      validFrom: ticket.validFrom ? ticket.validFrom.toISOString() : new Date().toISOString(),
+      validUntil: ticket.validUntil ? ticket.validUntil.toISOString() : new Date().toISOString(),
       timestamp: Date.now(),
     };
 
@@ -420,17 +442,31 @@ class TicketService {
       // Ticket details
       doc.fontSize(12);
       doc.text(`Ticket Number: ${ticket.ticketNumber}`);
-      doc.text(`Product: ${ticket.details.productName}`);
-      doc.text(`Holder: ${ticket.holder.name}`);
-      doc.text(`Date: ${ticket.validity.validFrom.toLocaleDateString()}`);
-      if (ticket.validity.timeslot) {
-        doc.text(`Time: ${ticket.validity.timeslot}`);
+      doc.text(`Product: ${ticket.productName}`);
+      doc.text(`Holder: ${ticket.holderName}`);
+      doc.text(`Date: ${ticket.validFrom.toLocaleDateString()}`);
+      if (ticket.timeslot) {
+        doc.text(`Time: ${ticket.timeslot}`);
       }
       doc.moveDown();
 
-      // QR Code (placeholder - in production, embed actual QR image)
-      doc.text('[QR CODE PLACEHOLDER]', { align: 'center' });
-      doc.text(`(Scan code: ${ticket.qrCode.data.substring(0, 20)}...)`, { align: 'center', fontSize: 8 });
+      // QR Code - embed actual QR image
+      if (ticket.qrCodeImageUrl && ticket.qrCodeImageUrl.startsWith('data:image')) {
+        try {
+          // Extract base64 data from data URL
+          const base64Data = ticket.qrCodeImageUrl.split(',')[1];
+          const qrBuffer = Buffer.from(base64Data, 'base64');
+          doc.image(qrBuffer, {
+            fit: [200, 200],
+            align: 'center',
+          });
+        } catch (err) {
+          // Fallback to text if QR embedding fails
+          doc.text('[QR CODE]', { align: 'center' });
+        }
+      } else {
+        doc.text('[QR CODE]', { align: 'center' });
+      }
       doc.moveDown();
 
       // Footer
@@ -464,15 +500,15 @@ class TicketService {
       <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #2196F3;">Your Tickets Are Ready!</h1>
 
-        <p>Dear ${firstTicket.holder.name},</p>
+        <p>Dear ${firstTicket.holderName},</p>
 
-        <p>Thank you for booking with HolidaiButler! Your tickets for <strong>${firstTicket.details.productName}</strong> are attached to this email.</p>
+        <p>Thank you for booking with HolidaiButler! Your tickets for <strong>${firstTicket.productName}</strong> are attached to this email.</p>
 
         <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
           <h3 style="margin-top: 0;">Booking Details</h3>
           <p><strong>Number of Tickets:</strong> ${tickets.length}</p>
-          <p><strong>Date:</strong> ${firstTicket.validity.validFrom.toLocaleDateString()}</p>
-          ${firstTicket.validity.timeslot ? `<p><strong>Time:</strong> ${firstTicket.validity.timeslot}</p>` : ''}
+          <p><strong>Date:</strong> ${firstTicket.validFrom.toLocaleDateString()}</p>
+          ${firstTicket.timeslot ? `<p><strong>Time:</strong> ${firstTicket.timeslot}</p>` : ''}
           <p><strong>Ticket Number:</strong> ${firstTicket.ticketNumber}</p>
         </div>
 
