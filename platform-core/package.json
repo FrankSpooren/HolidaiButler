@@ -38,6 +38,7 @@
     "express-validator": "^7.0.1",
     "http-proxy-middleware": "^2.0.6",
     "@mailerlite/mailerlite-nodejs": "^1.2.0",
+    "apify-client": "^2.8.0",
     "node-cron": "^3.0.3",
     "uuid": "^9.0.1",
     "joi": "^17.11.0"
