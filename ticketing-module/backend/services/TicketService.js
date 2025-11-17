@@ -1,8 +1,8 @@
-const Ticket = require('../models/Ticket');
+const { Ticket } = require('../models');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
-const nodemailer = require('nodemailer');
+const MailerLite = require('@mailerlite/mailerlite-nodejs').default;
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
@@ -10,19 +10,17 @@ const path = require('path');
 /**
  * Ticket Service
  * Handles ticket generation, QR codes, validation, and delivery
+ * Uses MailerLite for email delivery
  */
 class TicketService {
   constructor() {
-    this.emailTransporter = nodemailer.createTransporter({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+    // Initialize MailerLite client
+    this.mailerLite = new MailerLite({
+      api_key: process.env.MAILERLITE_API_KEY,
     });
 
+    this.fromEmail = process.env.MAILERLITE_FROM_EMAIL || 'tickets@holidaibutler.com';
+    this.fromName = process.env.MAILERLITE_FROM_NAME || 'HolidaiButler';
     this.QR_SECRET = process.env.QR_SECRET_KEY || 'your-secret-key-change-in-production';
     this.S3_BUCKET_URL = process.env.S3_BUCKET_URL || '/tmp/tickets';
   }
@@ -161,7 +159,7 @@ class TicketService {
   }
 
   /**
-   * Send tickets to user via email
+   * Send tickets to user via email using MailerLite
    * @param {Array} tickets - Array of ticket objects
    * @param {String} email - Recipient email
    * @returns {Promise<void>}
@@ -175,16 +173,30 @@ class TicketService {
       // Generate PDF for all tickets
       const pdfPath = await this._generateTicketsPDF(tickets);
 
-      // Send email
-      await this.emailTransporter.sendMail({
-        from: process.env.SMTP_FROM || '"HolidaiButler" <tickets@holidaibutler.com>',
-        to: email,
-        subject: `Your HolidaiButler Tickets - ${tickets[0].details.productName}`,
+      // Read PDF file as base64
+      const pdfBuffer = fs.readFileSync(pdfPath);
+      const pdfBase64 = pdfBuffer.toString('base64');
+
+      // Send email via MailerLite
+      await this.mailerLite.send({
+        from: {
+          email: this.fromEmail,
+          name: this.fromName,
+        },
+        to: [
+          {
+            email: email,
+            name: tickets[0].holderName || tickets[0].holder?.name || 'Guest',
+          },
+        ],
+        subject: `Your HolidaiButler Tickets - ${tickets[0].productName || tickets[0].details?.productName}`,
         html: this._generateTicketEmailHTML(tickets),
         attachments: [
           {
+            content: pdfBase64,
             filename: `tickets-${tickets[0].bookingId}.pdf`,
-            path: pdfPath,
+            type: 'application/pdf',
+            disposition: 'attachment',
           },
         ],
       });
@@ -194,9 +206,9 @@ class TicketService {
         fs.unlinkSync(pdfPath);
       }
 
-      logger.info(`Tickets sent to ${email}`);
+      logger.info(`Tickets sent to ${email} via MailerLite`);
     } catch (error) {
-      logger.error('Error sending tickets:', error);
+      logger.error('Error sending tickets via MailerLite:', error);
       throw error;
     }
   }

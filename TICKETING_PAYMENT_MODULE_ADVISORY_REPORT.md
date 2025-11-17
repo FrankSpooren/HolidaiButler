@@ -289,18 +289,25 @@ Dit adviesrapport biedt een grondige analyse en aanbeveling voor de ontwikkeling
      │  (Port 3004)             │  │  (Port 3005)             │
      └──────────────────────────┘  └──────────────────────────┘
                     │                       │
+                    └───────────┬───────────┘
+                                ▼
+                    ┌──────────────────────────┐
+                    │  MySQL (Hetzner)         │
+                    │  Database: pxoziy_db1    │
+                    │  - Bookings              │
+                    │  - Tickets               │
+                    │  - Availability          │
+                    │  - Transactions          │
+                    │  - Refunds               │
+                    │  - Payment Methods       │
+                    └──────────────────────────┘
+                                │
+                    ┌───────────┴───────────┐
                     ▼                       ▼
           ┌──────────────────┐    ┌──────────────────┐
-          │  MongoDB         │    │  PostgreSQL      │
-          │  - Bookings      │    │  - Transactions  │
-          │  - Tickets       │    │  - Refunds       │
-          │  - Availability  │    │  - Settlements   │
+          │  Adyen Platform  │    │  MailerLite      │
+          │  (Payments)      │    │  (Email)         │
           └──────────────────┘    └──────────────────┘
-                                          │
-                                          ▼
-                                  ┌──────────────────┐
-                                  │  Adyen Platform  │
-                                  └──────────────────┘
 ```
 
 ### 5.2 Ticketing Module Architecture
@@ -308,10 +315,12 @@ Dit adviesrapport biedt een grondige analyse en aanbeveling voor de ontwikkeling
 #### Technology Stack
 - **Runtime:** Node.js 18+ LTS
 - **Framework:** Express.js 4.18+
-- **Database:** MongoDB (bookings, tickets, availability cache)
+- **Database:** MySQL 8.0+ (bookings, tickets, availability) - Hetzner pxoziy_db1
+- **ORM:** Sequelize 6.35+
 - **Cache:** Redis (real-time inventory, session data)
 - **Queue:** Bull (background jobs voor email/notifications)
 - **Real-time:** Socket.IO (live availability updates)
+- **Email:** MailerLite (ticket delivery, notifications)
 
 #### Core Components
 
@@ -529,7 +538,8 @@ POST   /api/v1/partners/:partnerId/webhook
 #### Technology Stack
 - **Runtime:** Node.js 18+ LTS
 - **Framework:** Express.js 4.18+
-- **Database:** PostgreSQL 15+ (ACID compliance voor financial data)
+- **Database:** MySQL 8.0+ (ACID compliance voor financial data) - Hetzner pxoziy_db1
+- **ORM:** Sequelize 6.35+
 - **Cache:** Redis (idempotency keys, rate limiting)
 - **Queue:** Bull (retry logic, webhooks, settlements)
 - **Monitoring:** Prometheus + Grafana (transaction metrics)
@@ -586,12 +596,12 @@ class FraudDetectionService {
 }
 ```
 
-#### Data Models (PostgreSQL)
+#### Data Models (MySQL - Hetzner pxoziy_db1)
 
 **Transaction Table**
 ```sql
 CREATE TABLE transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id CHAR(36) PRIMARY KEY,
   transaction_reference VARCHAR(100) UNIQUE NOT NULL,
 
   -- Payment Details
@@ -600,20 +610,20 @@ CREATE TABLE transactions (
   payment_method VARCHAR(50),
 
   -- Status
-  status VARCHAR(20) NOT NULL CHECK (status IN (
+  status ENUM(
     'pending', 'authorized', 'captured', 'failed',
     'cancelled', 'refunded', 'partially_refunded'
-  )),
+  ) NOT NULL,
 
   -- Adyen References
   psp_reference VARCHAR(100) UNIQUE,
   merchant_reference VARCHAR(100),
 
   -- User & Booking Context
-  user_id UUID NOT NULL,
+  user_id CHAR(36) NOT NULL,
   booking_reference VARCHAR(100),
   resource_type VARCHAR(50), -- 'ticket', 'restaurant', 'hotel'
-  resource_id UUID,
+  resource_id CHAR(36),
 
   -- Financial Details
   authorized_amount DECIMAL(10,2),
@@ -621,8 +631,8 @@ CREATE TABLE transactions (
   refunded_amount DECIMAL(10,2) DEFAULT 0,
 
   -- Metadata
-  metadata JSONB,
-  ip_address INET,
+  metadata JSON,
+  ip_address VARCHAR(45), -- IPv6 max length
   user_agent TEXT,
 
   -- Risk Assessment
@@ -630,10 +640,10 @@ CREATE TABLE transactions (
   fraud_check_result VARCHAR(20),
 
   -- Timestamps
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  authorized_at TIMESTAMP WITH TIME ZONE,
-  captured_at TIMESTAMP WITH TIME ZONE,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  authorized_at TIMESTAMP NULL,
+  captured_at TIMESTAMP NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   -- Indexes
   INDEX idx_user_transactions (user_id, created_at DESC),
@@ -1554,14 +1564,17 @@ const TicketCard = ({ ticket }) => {
 ### Samenvatting Aanbevelingen
 
 **1. Architectuur: 2 Aparte Modules** ⭐
-- Ticketing & Reservation Module (Port 3004, MongoDB)
-- Payment Transaction Engine (Port 3005, PostgreSQL, Adyen)
+- Ticketing & Reservation Module (Port 3004, MySQL/Sequelize)
+- Payment Transaction Engine (Port 3005, MySQL/Sequelize, Adyen)
 - Event-driven communicatie + REST APIs
 
 **2. Technology Stack**
 - Backend: Node.js 18+ / Express.js
-- Databases: PostgreSQL (payments), MongoDB (tickets), Redis (caching)
+- Database: MySQL 8.0+ (Hetzner pxoziy_db1) - Centrale database voor payments & tickets
+- ORM: Sequelize 6.35+
+- Cache: Redis (real-time inventory, sessions)
 - Payment Provider: Adyen (Web Components + API)
+- Email Service: MailerLite (ticket delivery, notifications)
 - Queue: Bull (job processing)
 - Monitoring: Prometheus + Grafana
 
