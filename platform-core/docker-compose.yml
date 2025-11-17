@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # Platform Core - Central Integration Hub
+  platform-core:
+    build: .
+    container_name: holidaibutler-platform-core
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - mysql
+      - mongodb
+    networks:
+      - holidaibutler-network
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis - Event Bus & Caching
+  redis:
+    image: redis:7-alpine
+    container_name: holidaibutler-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - holidaibutler-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # MySQL - Central Database (if not using Hetzner)
+  mysql:
+    image: mysql:8.0
+    container_name: holidaibutler-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - holidaibutler-network
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # MongoDB - Admin Module Database
+  mongodb:
+    image: mongo:7
+    container_name: holidaibutler-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - holidaibutler-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  holidaibutler-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  mysql-data:
+  mongodb-data:
