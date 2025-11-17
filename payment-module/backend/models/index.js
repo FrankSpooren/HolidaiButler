@@ -1,15 +1,19 @@
 const { Sequelize, DataTypes } = require('sequelize');
 
 /**
- * Payment Engine Database Models (PostgreSQL)
+ * Payment Engine Database Models (MySQL - Hetzner pxoziy_db1)
  * ACID-compliant financial data storage
  */
 
 // Initialize Sequelize
 const sequelize = new Sequelize(
-  process.env.DATABASE_URL || 'postgresql://localhost:5432/holidaibutler_payments',
+  process.env.DATABASE_NAME || 'pxoziy_db1',
+  process.env.DATABASE_USER || 'root',
+  process.env.DATABASE_PASSWORD || '',
   {
-    dialect: 'postgres',
+    host: process.env.DATABASE_HOST || 'localhost',
+    port: process.env.DATABASE_PORT || 3306,
+    dialect: 'mysql',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
       max: 20,
@@ -20,7 +24,10 @@ const sequelize = new Sequelize(
     define: {
       timestamps: true,
       underscored: true,
+      charset: 'utf8mb4',
+      collate: 'utf8mb4_unicode_ci',
     },
+    timezone: '+01:00', // Amsterdam timezone
   }
 );
 
@@ -126,11 +133,11 @@ const Transaction = sequelize.define('Transaction', {
 
   // Metadata
   metadata: {
-    type: DataTypes.JSONB,
+    type: DataTypes.JSON,
   },
 
   ipAddress: {
-    type: DataTypes.INET,
+    type: DataTypes.STRING(45), // IPv6 max length = 45 characters
     field: 'ip_address',
   },
 
@@ -348,7 +355,7 @@ Refund.belongsTo(Transaction, {
 const syncDatabase = async (options = {}) => {
   try {
     await sequelize.authenticate();
-    console.log('✅ PostgreSQL connection established successfully');
+    console.log('✅ MySQL (Hetzner pxoziy_db1) connection established successfully');
 
     if (options.force) {
       console.log('⚠️  Forcing database sync (DROP existing tables)');
@@ -359,7 +366,7 @@ const syncDatabase = async (options = {}) => {
 
     return true;
   } catch (error) {
-    console.error('❌ Unable to connect to PostgreSQL:', error);
+    console.error('❌ Unable to connect to MySQL:', error);
     throw error;
   }
 };
