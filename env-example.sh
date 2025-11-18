@@ -74,6 +74,32 @@ STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
 
 # ==============================================
+# WEB SCRAPING & POI DATA
+# ==============================================
+# Apify (Web Scraping Platform)
+# Get from: https://console.apify.com/
+APIFY_API_TOKEN=your_apify_token_here
+APIFY_MONTHLY_BUDGET_EUR=50
+
+# ==============================================
+# IMAGE SOURCES FOR POI ENHANCEMENT
+# ==============================================
+# Flickr API (High-quality geotagged images)
+# Get from: https://www.flickr.com/services/apps/create/
+# Free tier: 3,600 requests/hour
+FLICKR_API_KEY=your_flickr_api_key_here
+FLICKR_API_SECRET=your_flickr_api_secret_here
+
+# Unsplash API (Professional photography)
+# Get from: https://unsplash.com/oauth/applications
+# Free tier: 50 requests/hour
+UNSPLASH_ACCESS_KEY=your_unsplash_access_key_here
+UNSPLASH_SECRET_KEY=your_unsplash_secret_key_here
+
+# Enable automated image discovery cron jobs
+ENABLE_IMAGE_CRON=false
+
+# ==============================================
 # EMAIL SERVICES
 # ==============================================
 # SMTP Configuration for sending emails
