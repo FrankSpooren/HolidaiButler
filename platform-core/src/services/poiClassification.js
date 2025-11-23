@@ -19,6 +19,8 @@ import POIScoreHistory from '../models/POIScoreHistory.js';
 import dataAggregationService from './dataAggregation.js';
 import touristRelevanceService from './touristRelevance.js';
 import eventBus from './eventBus.js';
+import { mysqlSequelize } from '../config/database.js';
+import { Transaction } from 'sequelize';
 
 class POIClassificationService {
   constructor() {
@@ -49,14 +51,26 @@ class POIClassificationService {
   }
 
   /**
-   * Classify a single POI
+   * Classify a single POI with transaction support
+   * ENTERPRISE: Atomic updates with rollback on failure
    */
   async classifyPOI(poiId, options = {}) {
     logger.info(`Classifying POI: ${poiId}`);
 
+    // Use provided transaction or create new one
+    const transaction = options.transaction || await mysqlSequelize.transaction({
+      isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
+    });
+
+    const isExternalTransaction = !!options.transaction;
+
     try {
-      // Get POI
-      const poi = await POI.findByPk(poiId);
+      // Get POI (with lock if in transaction)
+      const poi = await POI.findByPk(poiId, {
+        transaction,
+        lock: transaction ? Transaction.LOCK.UPDATE : false,
+      });
+
       if (!poi) {
         throw new Error(`POI ${poiId} not found`);
       }
@@ -90,15 +104,15 @@ class POIClassificationService {
       const newScore = this.calculateScore(poi);
       const newTier = this.calculateTier(newScore);
 
-      // Update POI
+      // Update POI within transaction
       poi.poi_score = newScore;
       poi.tier = newTier;
       poi.last_classified_at = new Date();
       poi.next_update_at = this.getNextUpdateDate(newTier);
 
-      await poi.save();
+      await poi.save({ transaction });
 
-      // Save to history
+      // Save to history within transaction
       await POIScoreHistory.create({
         poi_id: poi.id,
         poi_score: newScore,
@@ -108,10 +122,16 @@ class POIClassificationService {
         booking_frequency: poi.booking_frequency,
         old_tier: oldTier,
         new_tier: newTier,
-      });
+      }, { transaction });
 
-      // Publish events if tier changed
-      if (oldTier !== newTier) {
+      // Commit if we created the transaction
+      if (!isExternalTransaction) {
+        await transaction.commit();
+        logger.debug(`Classification transaction committed for POI ${poiId}`);
+      }
+
+      // Publish events AFTER commit (only if we own the transaction)
+      if (!isExternalTransaction && oldTier !== newTier) {
         await eventBus.publish('poi.tier.changed', {
           poiId: poi.id,
           name: poi.name,
@@ -142,6 +162,12 @@ class POIClassificationService {
         oldTier,
       };
     } catch (error) {
+      // Rollback if we own the transaction
+      if (!isExternalTransaction) {
+        await transaction.rollback();
+        logger.error(`Classification transaction rolled back for POI ${poiId}:`, error);
+      }
+
       logger.error(`POI classification failed for ${poiId}:`, error);
       throw error;
     }
