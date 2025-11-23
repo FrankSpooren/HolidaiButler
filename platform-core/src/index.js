@@ -19,6 +19,9 @@ import poiClassificationRoutes from './routes/poiClassification.js';
 import poiDiscoveryRoutes from './routes/poiDiscovery.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
+import prometheusMiddleware, { metricsEndpoint } from './middleware/prometheus.js';
+import correlationIdMiddleware from './middleware/correlationId.js';
+import metricsService from './services/metrics.js';
 
 dotenv.config();
 
@@ -46,6 +49,10 @@ async function initializePlatform() {
       logger.info('✅ Automation workflows started');
     }
 
+    // Metrics & Observability
+    metricsService.startPeriodicUpdates();
+    logger.info('✅ Prometheus metrics collection started');
+
     logger.info('✅ Platform Core initialized successfully');
   } catch (error) {
     logger.error('❌ Platform initialization failed:', error);
@@ -56,6 +63,9 @@ async function initializePlatform() {
 /**
  * Middleware Configuration
  */
+// ENTERPRISE: Correlation ID must be first for distributed tracing
+app.use(correlationIdMiddleware());
+
 app.use(helmet());
 app.use(cors({
   origin: process.env.CORS_ORIGIN?.split(',') || '*',
@@ -64,10 +74,14 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(requestLogger);
+app.use(prometheusMiddleware()); // ENTERPRISE: Prometheus metrics collection
 
 /**
  * Routes
  */
+// Prometheus metrics endpoint (before other routes for performance)
+app.get('/metrics', metricsEndpoint);
+
 app.use('/health', healthRoutes);
 app.use('/api/v1/integration', integrationRoutes);
 app.use('/api/v1/workflows', workflowRoutes);

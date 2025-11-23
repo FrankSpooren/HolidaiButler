@@ -8,6 +8,7 @@ import { ApifyClient } from 'apify-client';
 import logger from '../utils/logger.js';
 import APIUsageLog from '../models/APIUsageLog.js';
 import circuitBreakerManager from './circuitBreaker.js';
+import metricsService from './metrics.js';
 
 class ApifyService {
   constructor() {
@@ -159,6 +160,15 @@ class ApifyService {
         triggeredBy: options.triggeredBy || 'system',
       });
 
+      // ENTERPRISE: Record Prometheus metrics
+      metricsService.recordExternalApiRequest(
+        'apify',
+        'google_places',
+        'success',
+        duration,
+        estimatedCost
+      );
+
       logger.info('Google Places scrape completed', {
         results: items.length,
         duration,
@@ -180,6 +190,15 @@ class ApifyService {
         poiId: options.poiId,
         triggeredBy: options.triggeredBy || 'system',
       });
+
+      // ENTERPRISE: Record failed API request metrics
+      metricsService.recordExternalApiRequest(
+        'apify',
+        'google_places',
+        'failed',
+        duration,
+        0
+      );
 
       logger.error('Google Places scrape failed:', error);
       throw error;
