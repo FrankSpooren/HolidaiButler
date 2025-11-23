@@ -23,6 +23,7 @@ import DiscoveryRun from '../models/DiscoveryRun.js';
 import eventBus from './eventBus.js';
 import { mysqlSequelize } from '../config/database.js';
 import { Transaction } from 'sequelize';
+import metricsService from './metrics.js';
 
 class POIDiscoveryService {
   constructor() {
@@ -556,6 +557,13 @@ class POIDiscoveryService {
 
             results.created++;
 
+            // ENTERPRISE: Record POI creation metrics
+            metricsService.recordPoiCreation(
+              poiData._source || 'unknown',
+              poiData._category || 'activities',
+              'created'
+            );
+
             logger.debug(`Created POI: ${poi.name} (within transaction)`);
           }
 
@@ -601,6 +609,9 @@ class POIDiscoveryService {
       // Commit transaction - all changes are atomic
       await transaction.commit();
 
+      // ENTERPRISE: Record successful transaction
+      metricsService.recordDbTransaction('committed');
+
       logger.info('POI creation transaction committed successfully', {
         created: results.created,
         updated: results.updated,
@@ -628,6 +639,9 @@ class POIDiscoveryService {
     } catch (error) {
       // Rollback transaction on any error
       await transaction.rollback();
+
+      // ENTERPRISE: Record failed transaction
+      metricsService.recordDbTransaction('rolled_back');
 
       logger.error('POI creation transaction rolled back due to error:', {
         error: error.message,

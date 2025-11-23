@@ -21,6 +21,7 @@ import touristRelevanceService from './touristRelevance.js';
 import eventBus from './eventBus.js';
 import { mysqlSequelize } from '../config/database.js';
 import { Transaction } from 'sequelize';
+import metricsService from './metrics.js';
 
 class POIClassificationService {
   constructor() {
@@ -55,6 +56,7 @@ class POIClassificationService {
    * ENTERPRISE: Atomic updates with rollback on failure
    */
   async classifyPOI(poiId, options = {}) {
+    const startTime = Date.now(); // ENTERPRISE: Track classification duration
     logger.info(`Classifying POI: ${poiId}`);
 
     // Use provided transaction or create new one
@@ -154,6 +156,11 @@ class POIClassificationService {
         tier: newTier,
       });
 
+      // ENTERPRISE: Record classification metrics
+      const duration = (Date.now() - startTime) / 1000; // Convert to seconds
+      metricsService.recordPoiClassification(newTier, 'success', duration);
+      metricsService.recordPoiScore(newTier, newScore);
+
       return {
         poi,
         score: newScore,
@@ -167,6 +174,10 @@ class POIClassificationService {
         await transaction.rollback();
         logger.error(`Classification transaction rolled back for POI ${poiId}:`, error);
       }
+
+      // ENTERPRISE: Record failed classification metrics
+      const duration = (Date.now() - startTime) / 1000;
+      metricsService.recordPoiClassification('unknown', 'failed', duration);
 
       logger.error(`POI classification failed for ${poiId}:`, error);
       throw error;
