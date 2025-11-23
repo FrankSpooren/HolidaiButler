@@ -11,6 +11,8 @@
 import workflowManager from '../workflowManager.js';
 import poiClassificationService from '../../services/poiClassification.js';
 import logger from '../../utils/logger.js';
+import { mysqlSequelize } from '../../config/database.js';
+import { Transaction } from 'sequelize';
 
 /**
  * Tier 1 POI Updates (Realtime/Hourly)
@@ -303,46 +305,64 @@ workflowManager.register('poi-discovery', {
 
       const newPOIs = [];
 
-      for (const result of results) {
-        // Check if POI already exists
-        const existing = await POI.findOne({
-          where: { google_place_id: result.placeId },
-        });
+      // ENTERPRISE: Wrap POI creation in transaction for atomicity
+      const transaction = await mysqlSequelize.transaction({
+        isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
+      });
 
-        if (existing) {
-          logger.info(`POI already exists: ${result.title}`);
-          continue;
+      try {
+        for (const result of results) {
+          // Check if POI already exists
+          const existing = await POI.findOne({
+            where: { google_place_id: result.placeId },
+            transaction,
+          });
+
+          if (existing) {
+            logger.info(`POI already exists: ${result.title}`);
+            continue;
+          }
+
+          // Create new POI
+          const poi = await POI.create({
+            name: result.title,
+            slug: result.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            description: result.description || '',
+            category: category || 'activities',
+            address: result.address,
+            city: result.city || city,
+            country: result.country || 'Netherlands',
+            latitude: result.location?.lat,
+            longitude: result.location?.lng,
+            phone: result.phone,
+            website: result.website,
+            google_place_id: result.placeId,
+            review_count: result.reviewsCount || 0,
+            average_rating: result.rating || 0,
+            tier: 4, // Start at tier 4
+            active: true,
+          }, { transaction });
+
+          // Initial classification within transaction
+          await poiClassificationService.classifyPOI(poi.id, {
+            transaction, // Pass transaction down
+            updateData: false, // We already have Google data
+            updateTouristRelevance: true,
+            updateBookingFrequency: false,
+          });
+
+          newPOIs.push(poi);
+          logger.info(`New POI added: ${poi.name}`);
         }
 
-        // Create new POI
-        const poi = await POI.create({
-          name: result.title,
-          slug: result.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-          description: result.description || '',
-          category: category || 'activities',
-          address: result.address,
-          city: result.city || city,
-          country: result.country || 'Netherlands',
-          latitude: result.location?.lat,
-          longitude: result.location?.lng,
-          phone: result.phone,
-          website: result.website,
-          google_place_id: result.placeId,
-          review_count: result.reviewsCount || 0,
-          average_rating: result.rating || 0,
-          tier: 4, // Start at tier 4
-          active: true,
-        });
-
-        // Initial classification
-        await poiClassificationService.classifyPOI(poi.id, {
-          updateData: false, // We already have Google data
-          updateTouristRelevance: true,
-          updateBookingFrequency: false,
-        });
-
-        newPOIs.push(poi);
-        logger.info(`New POI added: ${poi.name}`);
+        // Commit all POI creations
+        await transaction.commit();
+        logger.info(`Transaction committed: ${newPOIs.length} POIs created`);
+      } catch (error) {
+        // Rollback on any failure
+        await transaction.rollback();
+        logger.error('Transaction rolled back in POI discovery:', error);
+        throw error;
       }
 
       logger.workflow('poi-discovery', 'completed', {
