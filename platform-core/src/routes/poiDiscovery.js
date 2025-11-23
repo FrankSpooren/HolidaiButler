@@ -9,6 +9,8 @@ import DestinationConfig from '../models/DestinationConfig.js';
 import DiscoveryRun from '../models/DiscoveryRun.js';
 import workflowManager from '../automation/workflowManager.js';
 import logger from '../utils/logger.js';
+import { validate, validateQuery, validateParams, discoverySchemas, commonSchemas } from '../middleware/validate.js';
+import Joi from 'joi';
 
 const router = express.Router();
 
@@ -16,7 +18,7 @@ const router = express.Router();
  * POST /api/v1/poi-discovery/destination
  * Start destination discovery
  */
-router.post('/destination', async (req, res) => {
+router.post('/destination', validate(discoverySchemas.destination), async (req, res) => {
   try {
     const {
       destination,
@@ -28,13 +30,6 @@ router.post('/destination', async (req, res) => {
       autoEnrich,
       configId,
     } = req.body;
-
-    if (!destination) {
-      return res.status(400).json({
-        success: false,
-        error: 'Destination is required',
-      });
-    }
 
     logger.info('Starting destination discovery via API', {
       destination,
