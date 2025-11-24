@@ -368,4 +368,121 @@ workflowManager.register('poi-discovery', {
   timeout: 600000, // 10 minutes
 });
 
+/**
+ * Advanced Destination Discovery
+ * Complete dataset creation for new destinations with multi-source aggregation
+ */
+workflowManager.register('destination-discovery', {
+  name: 'Advanced Destination Discovery',
+  description: 'Discovers and creates complete POI datasets for new destinations',
+  handler: async (data) => {
+    logger.workflow('destination-discovery', 'starting', data);
+
+    const {
+      destination,
+      categories,
+      criteria,
+      sources,
+      maxPOIsPerCategory,
+      autoClassify,
+      autoEnrich,
+      configId,
+    } = data;
+
+    if (!destination) {
+      throw new Error('Destination is required for discovery');
+    }
+
+    try {
+      const poiDiscoveryService = (await import('../../services/poiDiscovery.js')).default;
+
+      logger.info(`Starting destination discovery: ${destination}`);
+
+      // Run discovery
+      const result = await poiDiscoveryService.discoverDestination({
+        destination,
+        categories: categories || [],
+        criteria: criteria || {},
+        sources: sources || ['google_places'],
+        maxPOIsPerCategory: maxPOIsPerCategory || 50,
+        autoClassify: autoClassify !== false,
+        autoEnrich: autoEnrich !== false,
+        configId,
+        triggeredBy: 'workflow',
+      });
+
+      logger.workflow('destination-discovery', 'completed', result.run);
+
+      return {
+        success: true,
+        ...result.run,
+        poisCreated: result.pois,
+      };
+    } catch (error) {
+      logger.error('Destination discovery failed:', error);
+      throw error;
+    }
+  },
+  timeout: 1800000, // 30 minutes
+});
+
+/**
+ * POI Enrichment
+ * Enriches existing POIs with data from multiple sources
+ */
+workflowManager.register('poi-enrichment', {
+  name: 'POI Enrichment',
+  description: 'Enriches POIs with additional data from multiple sources',
+  handler: async (data) => {
+    logger.workflow('poi-enrichment', 'starting', data);
+
+    const { poiIds, sources = ['google_places', 'tripadvisor'] } = data;
+
+    if (!poiIds || poiIds.length === 0) {
+      throw new Error('POI IDs are required for enrichment');
+    }
+
+    try {
+      const results = {
+        successful: 0,
+        failed: 0,
+        errors: [],
+      };
+
+      for (const poiId of poiIds) {
+        try {
+          // Use existing classification service to update POI data
+          await poiClassificationService.classifyPOI(poiId, {
+            updateData: true,
+            updateTouristRelevance: true,
+            updateBookingFrequency: true,
+            sources,
+          });
+
+          results.successful++;
+        } catch (error) {
+          results.failed++;
+          results.errors.push({
+            poiId,
+            error: error.message,
+          });
+
+          logger.error(`POI enrichment failed for ${poiId}:`, error);
+        }
+      }
+
+      logger.workflow('poi-enrichment', 'completed', results);
+
+      return {
+        success: true,
+        ...results,
+      };
+    } catch (error) {
+      logger.error('POI enrichment workflow failed:', error);
+      throw error;
+    }
+  },
+  timeout: 900000, // 15 minutes
+});
+
 logger.info('POI classification workflows registered');
