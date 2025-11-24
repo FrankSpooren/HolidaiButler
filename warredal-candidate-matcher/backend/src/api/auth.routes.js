@@ -3,6 +3,7 @@ import { User } from '../models/index.js';
 import { generateToken, authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { validatePassword, sanitizeEmail, sanitizeInput } from '../utils/sanitizer.js';
 
 const router = express.Router();
 
@@ -14,8 +15,29 @@ const router = express.Router();
 router.post('/register', asyncHandler(async (req, res) => {
   const { email, password, firstName, lastName, role } = req.body;
 
+  // Sanitize inputs
+  const sanitizedEmail = sanitizeEmail(email);
+  const sanitizedFirstName = sanitizeInput(firstName);
+  const sanitizedLastName = sanitizeInput(lastName);
+
+  if (!sanitizedEmail) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid email address'
+    });
+  }
+
+  // Validate password strength
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.valid) {
+    return res.status(400).json({
+      success: false,
+      message: passwordValidation.message
+    });
+  }
+
   // Check if user exists
-  const existingUser = await User.findOne({ where: { email } });
+  const existingUser = await User.findOne({ where: { email: sanitizedEmail } });
   if (existingUser) {
     return res.status(409).json({
       success: false,
@@ -25,16 +47,16 @@ router.post('/register', asyncHandler(async (req, res) => {
 
   // Create user
   const user = await User.create({
-    email,
+    email: sanitizedEmail,
     password,
-    firstName,
-    lastName,
+    firstName: sanitizedFirstName,
+    lastName: sanitizedLastName,
     role: role || 'recruiter'
   });
 
   const token = generateToken(user.id);
 
-  logger.info(`✅ User registered: ${email}`);
+  logger.info(`✅ User registered: ${sanitizedEmail}`);
 
   res.status(201).json({
     success: true,

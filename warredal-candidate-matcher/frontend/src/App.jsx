@@ -12,6 +12,7 @@ import VacanciesPage from './pages/VacanciesPage';
 import VacancyDetailPage from './pages/VacancyDetailPage';
 import CandidatesPage from './pages/CandidatesPage';
 import CandidateDetailPage from './pages/CandidateDetailPage';
+import ApplicantsImportPage from './pages/ApplicantsImportPage';
 import MessagesPage from './pages/MessagesPage';
 import SettingsPage from './pages/SettingsPage';
 
@@ -66,6 +67,7 @@ function App() {
         <Route path="vacancies/:id" element={<VacancyDetailPage />} />
         <Route path="candidates" element={<CandidatesPage />} />
         <Route path="candidates/:id" element={<CandidateDetailPage />} />
+        <Route path="applicants/import" element={<ApplicantsImportPage />} />
         <Route path="messages" element={<MessagesPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

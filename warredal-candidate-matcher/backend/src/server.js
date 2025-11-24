@@ -12,6 +12,7 @@ import authRoutes from './api/auth.routes.js';
 import vacancyRoutes from './api/vacancy.routes.js';
 import candidateRoutes from './api/candidate.routes.js';
 import messagingRoutes from './api/messaging.routes.js';
+import applicantsRoutes from './api/applicants.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -62,6 +63,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       vacancies: '/api/vacancies',
       candidates: '/api/candidates',
+      applicants: '/api/applicants',
       messaging: '/api/messages'
     }
   });
@@ -83,6 +85,7 @@ app.get('/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/vacancies', vacancyRoutes);
 app.use('/api/candidates', candidateRoutes);
+app.use('/api/applicants', applicantsRoutes);
 app.use('/api/messages', messagingRoutes);
 
 // ==================== Error Handling ====================
