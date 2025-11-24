@@ -1,7 +1,7 @@
 {
   "name": "@holidaibutler/platform-core",
-  "version": "1.0.0",
-  "description": "HolidaiButler Central Integration Hub - Connects all modules and automates workflows",
+  "version": "2.0.0",
+  "description": "HolidaiButler Platform Core with Enterprise-Grade POI Image Enhancement",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
@@ -41,7 +41,13 @@
     "apify-client": "^2.8.0",
     "node-cron": "^3.0.3",
     "uuid": "^9.0.1",
-    "joi": "^17.11.0"
+    "joi": "^17.11.0",
+    "validator": "^13.11.0",
+    "sanitize-html": "^2.11.0",
+    "@sentry/node": "^7.91.0",
+    "prom-client": "^15.1.0",
+    "compression": "^1.7.4",
+    "sharp": "^0.33.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",
