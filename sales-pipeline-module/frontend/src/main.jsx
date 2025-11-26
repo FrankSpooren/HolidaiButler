@@ -8,6 +8,9 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+// Initialize i18n
+import './i18n';
+
 import App from './App';
 import theme from './theme';
 import './styles/index.css';
