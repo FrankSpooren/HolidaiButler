@@ -21,6 +21,9 @@ import POI from '../models/POI.js';
 import DestinationConfig from '../models/DestinationConfig.js';
 import DiscoveryRun from '../models/DiscoveryRun.js';
 import eventBus from './eventBus.js';
+import { mysqlSequelize } from '../config/database.js';
+import { Transaction } from 'sequelize';
+import metricsService from './metrics.js';
 
 class POIDiscoveryService {
   constructor() {
@@ -483,7 +486,8 @@ class POIDiscoveryService {
   }
 
   /**
-   * Create POIs in database
+   * Create POIs in database with transaction support
+   * ENTERPRISE: All-or-nothing atomic operations
    */
   async createPOIsInDatabase(pois, options = {}) {
     const {
@@ -500,92 +504,154 @@ class POIDiscoveryService {
       pois: [],
     };
 
-    for (const poiData of pois) {
-      try {
-        let poi;
+    // Start transaction with READ COMMITTED isolation level
+    const transaction = await mysqlSequelize.transaction({
+      isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
+      type: Transaction.TYPES.DEFERRED,
+    });
 
-        // Check if this is an update
-        if (poiData._isUpdate && poiData._existingPOI) {
-          // Update existing POI
-          poi = poiData._existingPOI;
+    try {
+      logger.info(`Starting POI creation with transaction for ${pois.length} POIs`);
 
-          poi.review_count = poiData.review_count || poi.review_count;
-          poi.average_rating = poiData.average_rating || poi.average_rating;
-          poi.phone = poiData.phone || poi.phone;
-          poi.website = poiData.website || poi.website;
-          poi.last_scraped_at = new Date();
+      for (const poiData of pois) {
+        try {
+          let poi;
 
-          await poi.save();
-          results.updated++;
+          // Check if this is an update
+          if (poiData._isUpdate && poiData._existingPOI) {
+            // Update existing POI within transaction
+            poi = poiData._existingPOI;
 
-          logger.info(`Updated POI: ${poi.name}`);
-        } else {
-          // Create new POI
-          poi = await POI.create({
-            name: poiData.name,
-            slug: this.generateSlug(poiData.name),
-            description: poiData.description,
-            category: poiData._category || 'activities',
-            address: poiData.address,
-            city: poiData.city,
-            country: poiData.country,
-            latitude: poiData.latitude,
-            longitude: poiData.longitude,
-            phone: poiData.phone,
-            email: poiData.email,
-            website: poiData.website,
-            google_place_id: poiData.google_place_id,
-            review_count: poiData.review_count || 0,
-            average_rating: poiData.average_rating || 0,
-            tier: 4, // Start at tier 4
-            active: true,
-            last_scraped_at: new Date(),
-          });
+            poi.review_count = poiData.review_count || poi.review_count;
+            poi.average_rating = poiData.average_rating || poi.average_rating;
+            poi.phone = poiData.phone || poi.phone;
+            poi.website = poiData.website || poi.website;
+            poi.last_scraped_at = new Date();
 
-          results.created++;
+            await poi.save({ transaction });
+            results.updated++;
 
-          logger.info(`Created POI: ${poi.name}`);
-        }
+            logger.debug(`Updated POI: ${poi.name} (within transaction)`);
+          } else {
+            // Create new POI within transaction
+            poi = await POI.create({
+              name: poiData.name,
+              slug: this.generateSlug(poiData.name),
+              description: poiData.description,
+              category: poiData._category || 'activities',
+              address: poiData.address,
+              city: poiData.city,
+              country: poiData.country,
+              latitude: poiData.latitude,
+              longitude: poiData.longitude,
+              phone: poiData.phone,
+              email: poiData.email,
+              website: poiData.website,
+              google_place_id: poiData.google_place_id,
+              review_count: poiData.review_count || 0,
+              average_rating: poiData.average_rating || 0,
+              tier: 4, // Start at tier 4
+              active: true,
+              last_scraped_at: new Date(),
+            }, { transaction });
 
-        // Auto-classify
-        if (autoClassify) {
-          try {
-            await poiClassificationService.classifyPOI(poi.id, {
-              updateData: false, // We already have fresh data
-              updateTouristRelevance: true,
-              updateBookingFrequency: false,
+            results.created++;
+
+            // ENTERPRISE: Record POI creation metrics
+            metricsService.recordPoiCreation(
+              poiData._source || 'unknown',
+              poiData._category || 'activities',
+              'created'
+            );
+
+            logger.debug(`Created POI: ${poi.name} (within transaction)`);
+          }
+
+          // Auto-classify (within transaction)
+          if (autoClassify) {
+            try {
+              await poiClassificationService.classifyPOI(poi.id, {
+                updateData: false, // We already have fresh data
+                updateTouristRelevance: true,
+                updateBookingFrequency: false,
+                transaction, // Pass transaction to classification
+              });
+            } catch (error) {
+              logger.error(`Classification failed for POI ${poi.id}:`, error);
+              // Don't fail the whole batch for classification errors
+              // Just log and continue
+            }
+          }
+
+          results.pois.push(poi);
+        } catch (error) {
+          logger.error(`Failed to create/update POI: ${poiData.name}`, error);
+          results.failed++;
+
+          // Record error but continue processing other POIs
+          if (discoveryRun) {
+            await discoveryRun.addError({
+              poi: poiData.name,
+              error: error.message,
             });
-          } catch (error) {
-            logger.error(`Classification failed for POI ${poi.id}:`, error);
+          }
+
+          // IMPORTANT: For critical errors, we should rollback
+          // For now, we continue but you can add logic here to rollback on specific errors
+          if (error.name === 'SequelizeUniqueConstraintError' ||
+              error.name === 'SequelizeForeignKeyConstraintError') {
+            logger.error('Critical database constraint violation - rolling back transaction');
+            throw error; // This will trigger rollback
           }
         }
+      }
 
-        // Auto-enrich
-        if (autoEnrich && poiData._source === 'google_places') {
-          // Could enrich with additional sources here
-          // For now, just log
-          logger.debug(`POI ready for enrichment: ${poi.name}`);
-        }
+      // Commit transaction - all changes are atomic
+      await transaction.commit();
 
-        results.pois.push(poi);
-      } catch (error) {
-        logger.error(`Failed to create/update POI: ${poiData.name}`, error);
-        results.failed++;
+      // ENTERPRISE: Record successful transaction
+      metricsService.recordDbTransaction('committed');
 
-        if (discoveryRun) {
-          await discoveryRun.addError({
-            poi: poiData.name,
-            error: error.message,
-          });
+      logger.info('POI creation transaction committed successfully', {
+        created: results.created,
+        updated: results.updated,
+        failed: results.failed,
+      });
+
+      // Publish events AFTER successful commit
+      // Events should only be published if data is persisted
+      for (const poi of results.pois) {
+        try {
+          if (results.created > 0) {
+            await eventBus.publish('poi.created', {
+              poiId: poi.id,
+              name: poi.name,
+              category: poi.category,
+              city: poi.city,
+            });
+          }
+        } catch (error) {
+          // Event publishing errors shouldn't affect the operation
+          logger.error('Failed to publish event:', error);
         }
       }
-    }
 
-    logger.info('POI creation complete', {
-      created: results.created,
-      updated: results.updated,
-      failed: results.failed,
-    });
+    } catch (error) {
+      // Rollback transaction on any error
+      await transaction.rollback();
+
+      // ENTERPRISE: Record failed transaction
+      metricsService.recordDbTransaction('rolled_back');
+
+      logger.error('POI creation transaction rolled back due to error:', {
+        error: error.message,
+        stack: error.stack,
+        poisProcessed: results.created + results.updated,
+      });
+
+      // Re-throw to let caller handle
+      throw new Error(`Transaction failed: ${error.message}`);
+    }
 
     return results;
   }

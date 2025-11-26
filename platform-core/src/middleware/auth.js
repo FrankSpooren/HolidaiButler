@@ -6,7 +6,13 @@
 import jwt from 'jsonwebtoken';
 import logger from '../utils/logger.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// SECURITY: No fallback - fail fast if JWT_SECRET not set
+if (!process.env.JWT_SECRET) {
+  logger.error('FATAL: JWT_SECRET environment variable is not set');
+  throw new Error('JWT_SECRET must be set in environment variables');
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * Verify JWT token

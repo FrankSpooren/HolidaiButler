@@ -7,6 +7,8 @@
 import { ApifyClient } from 'apify-client';
 import logger from '../utils/logger.js';
 import APIUsageLog from '../models/APIUsageLog.js';
+import circuitBreakerManager from './circuitBreaker.js';
+import metricsService from './metrics.js';
 
 class ApifyService {
   constructor() {
@@ -120,7 +122,27 @@ class ApifyService {
         ...options.additionalParams,
       };
 
-      const run = await this.client.actor(this.actors.googlePlaces).call(input);
+      // ENTERPRISE: Circuit breaker protection for Apify API
+      const run = await circuitBreakerManager.execute(
+        'apify-google-places',
+        async () => {
+          return await this.client.actor(this.actors.googlePlaces).call(input);
+        },
+        {
+          failureThreshold: 50, // 50% failure rate
+          timeout: 120000, // 2 minutes
+          fallback: () => {
+            logger.warn('Circuit breaker open for Google Places, returning empty results');
+            return { defaultDatasetId: null };
+          },
+        }
+      );
+
+      // Handle circuit breaker fallback
+      if (!run.defaultDatasetId) {
+        throw new Error('Apify service unavailable (circuit breaker open)');
+      }
+
       const { items } = await this.client.dataset(run.defaultDatasetId).listItems();
 
       const duration = Math.floor((Date.now() - startTime) / 1000);
@@ -137,6 +159,15 @@ class ApifyService {
         poiId: options.poiId,
         triggeredBy: options.triggeredBy || 'system',
       });
+
+      // ENTERPRISE: Record Prometheus metrics
+      metricsService.recordExternalApiRequest(
+        'apify',
+        'google_places',
+        'success',
+        duration,
+        estimatedCost
+      );
 
       logger.info('Google Places scrape completed', {
         results: items.length,
@@ -159,6 +190,15 @@ class ApifyService {
         poiId: options.poiId,
         triggeredBy: options.triggeredBy || 'system',
       });
+
+      // ENTERPRISE: Record failed API request metrics
+      metricsService.recordExternalApiRequest(
+        'apify',
+        'google_places',
+        'failed',
+        duration,
+        0
+      );
 
       logger.error('Google Places scrape failed:', error);
       throw error;
@@ -191,7 +231,27 @@ class ApifyService {
         ...options.additionalParams,
       };
 
-      const run = await this.client.actor(this.actors.tripadvisor).call(input);
+      // ENTERPRISE: Circuit breaker protection for Apify API
+      const run = await circuitBreakerManager.execute(
+        'apify-tripadvisor',
+        async () => {
+          return await this.client.actor(this.actors.tripadvisor).call(input);
+        },
+        {
+          failureThreshold: 50,
+          timeout: 120000,
+          fallback: () => {
+            logger.warn('Circuit breaker open for TripAdvisor, returning empty results');
+            return { defaultDatasetId: null };
+          },
+        }
+      );
+
+      // Handle circuit breaker fallback
+      if (!run.defaultDatasetId) {
+        throw new Error('Apify TripAdvisor service unavailable (circuit breaker open)');
+      }
+
       const { items } = await this.client.dataset(run.defaultDatasetId).listItems();
 
       const duration = Math.floor((Date.now() - startTime) / 1000);
@@ -261,7 +321,27 @@ class ApifyService {
         ...options.additionalParams,
       };
 
-      const run = await this.client.actor(this.actors.booking).call(input);
+      // ENTERPRISE: Circuit breaker protection for Apify API
+      const run = await circuitBreakerManager.execute(
+        'apify-booking',
+        async () => {
+          return await this.client.actor(this.actors.booking).call(input);
+        },
+        {
+          failureThreshold: 50,
+          timeout: 120000,
+          fallback: () => {
+            logger.warn('Circuit breaker open for Booking.com, returning empty results');
+            return { defaultDatasetId: null };
+          },
+        }
+      );
+
+      // Handle circuit breaker fallback
+      if (!run.defaultDatasetId) {
+        throw new Error('Apify Booking.com service unavailable (circuit breaker open)');
+      }
+
       const { items } = await this.client.dataset(run.defaultDatasetId).listItems();
 
       const duration = Math.floor((Date.now() - startTime) / 1000);

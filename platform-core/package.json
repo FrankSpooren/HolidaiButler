@@ -35,6 +35,7 @@
     "jsonwebtoken": "^9.0.2",
     "bcryptjs": "^2.4.3",
     "express-rate-limit": "^7.1.5",
+    "rate-limit-redis": "^4.2.0",
     "express-validator": "^7.0.1",
     "http-proxy-middleware": "^2.0.6",
     "@mailerlite/mailerlite-nodejs": "^1.2.0",
