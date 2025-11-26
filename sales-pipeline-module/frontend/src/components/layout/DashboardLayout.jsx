@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Drawer,
@@ -37,6 +38,7 @@ import {
 
 import Sidebar from './Sidebar';
 import NotificationPanel from './NotificationPanel';
+import LanguageSwitcher from '../LanguageSwitcher';
 import useAuthStore from '../../store/authStore';
 import useNotificationStore from '../../store/notificationStore';
 import useUIStore from '../../store/uiStore';
@@ -48,6 +50,7 @@ const DashboardLayout = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const { user, logout } = useAuthStore();
@@ -165,7 +168,7 @@ const DashboardLayout = () => {
           >
             <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
             <InputBase
-              placeholder="Search deals, contacts, accounts..."
+              placeholder={t('common.searchPlaceholder')}
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               onKeyDown={handleSearch}
@@ -175,6 +178,9 @@ const DashboardLayout = () => {
 
           <Box sx={{ flex: 1 }} />
 
+          {/* Language Switcher */}
+          <LanguageSwitcher />
+
           {/* Dark mode toggle */}
           <Tooltip title={darkMode ? 'Light mode' : 'Dark mode'}>
             <IconButton color="inherit" onClick={toggleDarkMode}>
@@ -183,7 +189,7 @@ const DashboardLayout = () => {
           </Tooltip>
 
           {/* Notifications */}
-          <Tooltip title="Notifications">
+          <Tooltip title={t('notifications.title')}>
             <IconButton color="inherit" onClick={handleNotificationClick}>
               <Badge badgeContent={unreadCount} color="error">
                 <NotificationsIcon />
@@ -192,14 +198,14 @@ const DashboardLayout = () => {
           </Tooltip>
 
           {/* Settings */}
-          <Tooltip title="Settings">
+          <Tooltip title={t('common.settings')}>
             <IconButton color="inherit" onClick={() => navigate('/settings')}>
               <SettingsIcon />
             </IconButton>
           </Tooltip>
 
           {/* Profile */}
-          <Tooltip title="Profile">
+          <Tooltip title={t('common.profile')}>
             <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0 }}>
               <Avatar
                 sx={{
@@ -242,20 +248,20 @@ const DashboardLayout = () => {
           <ListItemIcon>
             <PersonIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>My Profile</ListItemText>
+          <ListItemText>{t('common.profile')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => navigate('/settings')}>
           <ListItemIcon>
             <SettingsIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Settings</ListItemText>
+          <ListItemText>{t('common.settings')}</ListItemText>
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Logout</ListItemText>
+          <ListItemText>{t('common.logout')}</ListItemText>
         </MenuItem>
       </Menu>
 
