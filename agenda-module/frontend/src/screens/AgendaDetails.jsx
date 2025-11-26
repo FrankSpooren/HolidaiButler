@@ -112,13 +112,14 @@ function AgendaDetails() {
   const primaryImage = event.images?.find((img) => img.isPrimary)?.url || event.images?.[0]?.url;
 
   return (
-    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: { xs: 2, md: 4 } }}>
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: { xs: 2, md: 4 } }} component="main">
       <Container maxWidth="lg">
         {/* Back Button */}
         <Button
-          startIcon={<ArrowBack />}
+          startIcon={<ArrowBack aria-hidden="true" />}
           onClick={() => navigate('/agenda')}
           sx={{ mb: 3 }}
+          aria-label={t('common.backToEventsList')}
         >
           {t('common.backToList')}
         </Button>
@@ -128,7 +129,7 @@ function AgendaDetails() {
           <Box
             component="img"
             src={primaryImage}
-            alt={title}
+            alt={`${title} - ${t('event.mainEventImage')}`}
             sx={{
               width: '100%',
               height: { xs: 250, sm: 400, md: 500 },
@@ -142,7 +143,7 @@ function AgendaDetails() {
         <Grid container spacing={3}>
           {/* Main Content */}
           <Grid item xs={12} md={8}>
-            <Paper elevation={2} sx={{ p: { xs: 2, md: 3 } }}>
+            <Paper elevation={2} sx={{ p: { xs: 2, md: 3 } }} component="article">
               {/* Title */}
               <Typography
                 variant="h3"
@@ -210,17 +211,19 @@ function AgendaDetails() {
               {/* Date & Time */}
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-                  <EventIcon sx={{ mr: 1, color: 'primary.main', mt: 0.5 }} />
+                  <EventIcon sx={{ mr: 1, color: 'primary.main', mt: 0.5 }} aria-hidden="true" />
                   <Box>
                     <Typography variant="caption" color="text.secondary" display="block">
                       {t('event.date')}
                     </Typography>
-                    <Typography variant="body1">{dateDisplay}</Typography>
+                    <Typography variant="body1" component="time" dateTime={event.startDate}>
+                      {dateDisplay}
+                    </Typography>
                   </Box>
                 </Box>
 
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-                  <Schedule sx={{ mr: 1, color: 'primary.main', mt: 0.5 }} />
+                  <Schedule sx={{ mr: 1, color: 'primary.main', mt: 0.5 }} aria-hidden="true" />
                   <Box>
                     <Typography variant="caption" color="text.secondary" display="block">
                       {t('event.time')}
@@ -232,7 +235,7 @@ function AgendaDetails() {
                 {/* Location */}
                 {event.location?.name && (
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-                    <Place sx={{ mr: 1, color: 'primary.main', mt: 0.5 }} />
+                    <Place sx={{ mr: 1, color: 'primary.main', mt: 0.5 }} aria-hidden="true" />
                     <Box>
                       <Typography variant="caption" color="text.secondary" display="block">
                         {t('event.location')}
@@ -249,7 +252,7 @@ function AgendaDetails() {
 
                 {/* Price */}
                 <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                  {event.pricing?.isFree ? <EuroOff sx={{ mr: 1, color: 'success.main', mt: 0.5 }} /> : <Euro sx={{ mr: 1, color: 'primary.main', mt: 0.5 }} />}
+                  {event.pricing?.isFree ? <EuroOff sx={{ mr: 1, color: 'success.main', mt: 0.5 }} aria-hidden="true" /> : <Euro sx={{ mr: 1, color: 'primary.main', mt: 0.5 }} aria-hidden="true" />}
                   <Box>
                     <Typography variant="caption" color="text.secondary" display="block">
                       {t('event.price')}
@@ -272,7 +275,7 @@ function AgendaDetails() {
                   <Typography variant="body2">{event.organizer.name}</Typography>
                   {event.organizer.website && (
                     <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                      <Language fontSize="small" sx={{ mr: 0.5 }} />
+                      <Language fontSize="small" sx={{ mr: 0.5 }} aria-hidden="true" />
                       <Typography
                         variant="body2"
                         component="a"
@@ -280,6 +283,7 @@ function AgendaDetails() {
                         target="_blank"
                         rel="noopener noreferrer"
                         sx={{ color: 'primary.main', textDecoration: 'none' }}
+                        aria-label={`${t('event.website')} (${t('accessibility.opensInNewTab')})`}
                       >
                         {t('event.website')}
                       </Typography>
@@ -287,14 +291,18 @@ function AgendaDetails() {
                   )}
                   {event.organizer.phone && (
                     <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                      <Phone fontSize="small" sx={{ mr: 0.5 }} />
-                      <Typography variant="body2">{event.organizer.phone}</Typography>
+                      <Phone fontSize="small" sx={{ mr: 0.5 }} aria-hidden="true" />
+                      <Typography variant="body2" component="a" href={`tel:${event.organizer.phone}`}>
+                        {event.organizer.phone}
+                      </Typography>
                     </Box>
                   )}
                   {event.organizer.email && (
                     <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                      <Email fontSize="small" sx={{ mr: 0.5 }} />
-                      <Typography variant="body2">{event.organizer.email}</Typography>
+                      <Email fontSize="small" sx={{ mr: 0.5 }} aria-hidden="true" />
+                      <Typography variant="body2" component="a" href={`mailto:${event.organizer.email}`}>
+                        {event.organizer.email}
+                      </Typography>
                     </Box>
                   )}
                 </Box>
@@ -317,7 +325,9 @@ function AgendaDetails() {
                         fullWidth
                         href={event.registration.url}
                         target="_blank"
+                        rel="noopener noreferrer"
                         sx={{ mt: 1 }}
+                        aria-label={`${t('event.registration')} (${t('accessibility.opensInNewTab')})`}
                       >
                         {t('event.registration')}
                       </Button>

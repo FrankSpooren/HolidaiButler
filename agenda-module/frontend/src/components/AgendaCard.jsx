@@ -49,9 +49,20 @@ function AgendaCard({ event, variant = 'grid' }) {
     navigate(`/agenda/${event._id}`);
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   if (variant === 'list') {
     return (
       <Card
+        component="article"
+        role="button"
+        tabIndex={0}
+        aria-label={`${t('event.viewDetails')}: ${title}`}
         sx={{
           display: 'flex',
           mb: 2,
@@ -61,8 +72,14 @@ function AgendaCard({ event, variant = 'grid' }) {
             transform: 'translateY(-2px)',
             boxShadow: 4,
           },
+          '&:focus': {
+            outline: '2px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: 2,
+          },
         }}
         onClick={handleClick}
+        onKeyPress={handleKeyPress}
       >
         {primaryImage && (
           <CardMedia
@@ -73,7 +90,7 @@ function AgendaCard({ event, variant = 'grid' }) {
               objectFit: 'cover',
             }}
             image={primaryImage}
-            alt={title}
+            alt={`${title} - ${t('event.eventImage')}`}
           />
         )}
         <CardContent sx={{ flex: 1, p: { xs: 1.5, sm: 2 } }}>
@@ -83,14 +100,14 @@ function AgendaCard({ event, variant = 'grid' }) {
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-              <EventIcon fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} />
-              <Typography variant="body2" color="text.secondary">
+              <EventIcon fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} aria-hidden="true" />
+              <Typography variant="body2" color="text.secondary" component="time" dateTime={event.startDate}>
                 {dateDisplay}
               </Typography>
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-              <Schedule fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} />
+              <Schedule fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} aria-hidden="true" />
               <Typography variant="body2" color="text.secondary">
                 {timeDisplay}
               </Typography>
@@ -98,7 +115,7 @@ function AgendaCard({ event, variant = 'grid' }) {
 
             {event.location?.name && (
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Place fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} />
+                <Place fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} aria-hidden="true" />
                 <Typography variant="body2" color="text.secondary">
                   {event.location.name}
                 </Typography>
@@ -127,14 +144,16 @@ function AgendaCard({ event, variant = 'grid' }) {
               size="small"
               color="primary"
               variant="outlined"
+              aria-label={`${t('event.category')}: ${t(`categories.${event.primaryCategory}`)}`}
             />
             {event.pricing?.isFree && (
               <Chip
-                icon={<EuroOff />}
+                icon={<EuroOff aria-hidden="true" />}
                 label={t('event.free')}
                 size="small"
                 color="success"
                 variant="outlined"
+                aria-label={t('event.freeEvent')}
               />
             )}
           </Box>
@@ -146,6 +165,10 @@ function AgendaCard({ event, variant = 'grid' }) {
   // Grid variant (default)
   return (
     <Card
+      component="article"
+      role="button"
+      tabIndex={0}
+      aria-label={`${t('event.viewDetails')}: ${title}`}
       sx={{
         height: '100%',
         display: 'flex',
@@ -156,15 +179,21 @@ function AgendaCard({ event, variant = 'grid' }) {
           transform: 'translateY(-4px)',
           boxShadow: 6,
         },
+        '&:focus': {
+          outline: '2px solid',
+          outlineColor: 'primary.main',
+          outlineOffset: 2,
+        },
       }}
       onClick={handleClick}
+      onKeyPress={handleKeyPress}
     >
       {primaryImage ? (
         <CardMedia
           component="img"
           height="200"
           image={primaryImage}
-          alt={title}
+          alt={`${title} - ${t('event.eventImage')}`}
           sx={{
             objectFit: 'cover',
           }}
@@ -178,8 +207,10 @@ function AgendaCard({ event, variant = 'grid' }) {
             alignItems: 'center',
             justifyContent: 'center',
           }}
+          role="img"
+          aria-label={t('event.noImage')}
         >
-          <EventIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+          <EventIcon sx={{ fontSize: 60, color: 'grey.400' }} aria-hidden="true" />
         </Box>
       )}
 
@@ -203,14 +234,14 @@ function AgendaCard({ event, variant = 'grid' }) {
 
         <Box sx={{ mb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-            <EventIcon fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} />
-            <Typography variant="body2" color="text.secondary">
+            <EventIcon fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} aria-hidden="true" />
+            <Typography variant="body2" color="text.secondary" component="time" dateTime={event.startDate}>
               {dateDisplay}
             </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-            <Schedule fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} />
+            <Schedule fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} aria-hidden="true" />
             <Typography variant="body2" color="text.secondary">
               {timeDisplay}
             </Typography>
@@ -218,7 +249,7 @@ function AgendaCard({ event, variant = 'grid' }) {
 
           {event.location?.name && (
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Place fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} />
+              <Place fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} aria-hidden="true" />
               <Typography
                 variant="body2"
                 color="text.secondary"
@@ -240,14 +271,16 @@ function AgendaCard({ event, variant = 'grid' }) {
             size="small"
             color="primary"
             sx={{ fontSize: '0.75rem' }}
+            aria-label={`${t('event.category')}: ${t(`categories.${event.primaryCategory}`)}`}
           />
           {event.pricing?.isFree && (
             <Chip
-              icon={<EuroOff sx={{ fontSize: '1rem' }} />}
+              icon={<EuroOff sx={{ fontSize: '1rem' }} aria-hidden="true" />}
               label={t('event.free')}
               size="small"
               color="success"
               sx={{ fontSize: '0.75rem' }}
+              aria-label={t('event.freeEvent')}
             />
           )}
         </Box>
