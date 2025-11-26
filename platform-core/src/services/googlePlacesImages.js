@@ -34,11 +34,17 @@ class GooglePlacesImageService {
   constructor() {
     this.apifyToken = process.env.APIFY_API_TOKEN;
     this.apifyBaseUrl = 'https://api.apify.com/v2';
-    this.googlePlacesActorId = 'nwua9Gu5YrADL7ZDj'; // Google Maps Scraper
+    // Use configured actor ID or default to compass/crawler-google-places
+    this.googlePlacesActorId = process.env.APIFY_ACTOR_ID || 'compass/crawler-google-places';
 
     if (!this.apifyToken) {
       logger.warn('APIFY_API_TOKEN not configured - Google Places image fetching disabled');
     }
+
+    logger.info('Google Places Image Service initialized', {
+      actor: this.googlePlacesActorId,
+      configured: !!this.apifyToken
+    });
 
     // Circuit breaker for Apify API
     this.circuitBreaker = circuitBreakerManager.getBreaker('apify-google-places', {
