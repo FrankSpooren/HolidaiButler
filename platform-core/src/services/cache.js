@@ -1,458 +1,327 @@
 /**
- * Enterprise Caching Service
- * Redis-based caching layer for performance optimization
- *
- * Features:
- * - Multi-tier caching strategy (L1: memory, L2: Redis)
- * - Automatic cache invalidation
- * - Cache-aside pattern
- * - Read-through caching
- * - TTL management
- * - Cache warming
- * - Metrics integration
- *
- * Cache Layers:
- * - POI data: 15 minutes TTL
- * - POI lists (by tier/city): 5 minutes TTL
- * - Classification results: 1 hour TTL
- * - User sessions: 24 hours TTL
- * - API responses (idempotency): 24 hours TTL
- *
- * Patterns:
- * - Cache-aside: Application checks cache before database
- * - Write-through: Updates both cache and database
- * - Cache invalidation: On POI updates, tier changes
+ * Caching Service
+ * Enterprise-level caching layer with Redis
  */
 
-import redis from '../config/redis.js';
+import Redis from 'ioredis';
 import logger from '../utils/logger.js';
-import metricsService from './metrics.js';
-import { getCorrelationId } from '../middleware/correlationId.js';
-
-// Cache key prefixes
-const PREFIXES = {
-  POI: 'poi:',
-  POI_LIST: 'poi:list:',
-  POI_TIER: 'poi:tier:',
-  POI_CITY: 'poi:city:',
-  POI_CLASSIFICATION: 'poi:classification:',
-  POI_STATS: 'poi:stats:',
-  USER_SESSION: 'session:',
-  API_RESPONSE: 'api:response:',
-};
-
-// Default TTLs (in seconds)
-const DEFAULT_TTL = {
-  POI: 900, // 15 minutes
-  POI_LIST: 300, // 5 minutes
-  POI_CLASSIFICATION: 3600, // 1 hour
-  POI_STATS: 600, // 10 minutes
-  USER_SESSION: 86400, // 24 hours
-  API_RESPONSE: 86400, // 24 hours
-};
 
 class CacheService {
   constructor() {
-    this.redis = redis;
-    this.enabled = !!redis;
+    this.redis = null;
+    this.isConnected = false;
+    this.defaultTTL = 300; // 5 minutes
 
-    if (!this.enabled) {
-      logger.warn('Redis not configured - caching disabled');
-    }
+    // Cache key prefixes
+    this.prefixes = {
+      poi: 'poi:',
+      poiScore: 'poi_score:',
+      poiData: 'poi_data:',
+      apiUsage: 'api_usage:',
+      stats: 'stats:',
+      weather: 'weather:',
+      topAttractions: 'top_attractions:',
+    };
   }
 
   /**
-   * Build cache key with prefix
+   * Initialize Redis connection
    */
-  buildKey(prefix, ...parts) {
-    return `${prefix}${parts.join(':')}`;
+  async initialize() {
+    if (this.isConnected) {
+      return;
+    }
+
+    try {
+      this.redis = new Redis({
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD || undefined,
+        db: parseInt(process.env.REDIS_CACHE_DB || '1'), // Use separate DB for cache
+        retryStrategy: (times) => {
+          const delay = Math.min(times * 50, 2000);
+          return delay;
+        },
+        maxRetriesPerRequest: 3,
+      });
+
+      this.redis.on('connect', () => {
+        this.isConnected = true;
+        logger.info('✅ Cache service connected to Redis');
+      });
+
+      this.redis.on('error', (err) => {
+        logger.error('Cache Redis error:', err);
+        this.isConnected = false;
+      });
+
+      this.redis.on('reconnecting', () => {
+        logger.info('Cache Redis reconnecting...');
+      });
+
+      await this.redis.ping();
+    } catch (error) {
+      logger.error('Failed to initialize cache service:', error);
+      this.isConnected = false;
+    }
   }
 
   /**
    * Get value from cache
    */
-  async get(key, options = {}) {
-    if (!this.enabled) return null;
-
-    const startTime = Date.now();
+  async get(key) {
+    if (!this.isConnected) {
+      return null;
+    }
 
     try {
       const value = await this.redis.get(key);
-      const duration = (Date.now() - startTime) / 1000;
-
       if (value) {
-        metricsService.recordCacheOperation('get', 'hit', duration);
-        logger.debug('Cache hit', {
-          key,
-          correlationId: getCorrelationId(),
-        });
+        logger.debug(`Cache HIT: ${key}`);
         return JSON.parse(value);
       }
 
-      metricsService.recordCacheOperation('get', 'miss', duration);
-      logger.debug('Cache miss', {
-        key,
-        correlationId: getCorrelationId(),
-      });
+      logger.debug(`Cache MISS: ${key}`);
       return null;
     } catch (error) {
-      const duration = (Date.now() - startTime) / 1000;
-      metricsService.recordCacheOperation('get', 'error', duration);
-      logger.error('Cache get error', {
-        key,
-        error: error.message,
-        correlationId: getCorrelationId(),
-      });
-      return null; // Fail open - return null on error
+      logger.error(`Cache get error for ${key}:`, error);
+      return null;
     }
   }
 
   /**
-   * Set value in cache with TTL
+   * Set value in cache
    */
-  async set(key, value, ttl = DEFAULT_TTL.POI) {
-    if (!this.enabled) return false;
-
-    const startTime = Date.now();
+  async set(key, value, ttl = this.defaultTTL) {
+    if (!this.isConnected) {
+      return false;
+    }
 
     try {
       const serialized = JSON.stringify(value);
       await this.redis.setex(key, ttl, serialized);
-
-      const duration = (Date.now() - startTime) / 1000;
-      metricsService.recordCacheOperation('set', 'success', duration);
-
-      logger.debug('Cache set', {
-        key,
-        ttl,
-        correlationId: getCorrelationId(),
-      });
-
+      logger.debug(`Cache SET: ${key} (TTL: ${ttl}s)`);
       return true;
     } catch (error) {
-      const duration = (Date.now() - startTime) / 1000;
-      metricsService.recordCacheOperation('set', 'error', duration);
-      logger.error('Cache set error', {
-        key,
-        error: error.message,
-        correlationId: getCorrelationId(),
-      });
+      logger.error(`Cache set error for ${key}:`, error);
       return false;
     }
   }
 
   /**
-   * Delete key(s) from cache
+   * Delete key from cache
    */
-  async del(...keys) {
-    if (!this.enabled) return 0;
-
-    const startTime = Date.now();
+  async del(key) {
+    if (!this.isConnected) {
+      return false;
+    }
 
     try {
-      const result = await this.redis.del(...keys);
-
-      const duration = (Date.now() - startTime) / 1000;
-      metricsService.recordCacheOperation('del', 'success', duration);
-
-      logger.debug('Cache delete', {
-        keys,
-        count: result,
-        correlationId: getCorrelationId(),
-      });
-
-      return result;
+      await this.redis.del(key);
+      logger.debug(`Cache DEL: ${key}`);
+      return true;
     } catch (error) {
-      const duration = (Date.now() - startTime) / 1000;
-      metricsService.recordCacheOperation('del', 'error', duration);
-      logger.error('Cache delete error', {
-        keys,
-        error: error.message,
-        correlationId: getCorrelationId(),
-      });
-      return 0;
+      logger.error(`Cache delete error for ${key}:`, error);
+      return false;
     }
   }
 
   /**
-   * Delete keys by pattern
+   * Delete keys matching pattern
    */
   async delPattern(pattern) {
-    if (!this.enabled) return 0;
+    if (!this.isConnected) {
+      return 0;
+    }
 
     try {
       const keys = await this.redis.keys(pattern);
-
-      if (keys.length === 0) {
-        return 0;
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+        logger.debug(`Cache DEL pattern: ${pattern} (${keys.length} keys)`);
+        return keys.length;
       }
-
-      return await this.del(...keys);
+      return 0;
     } catch (error) {
-      logger.error('Cache pattern delete error', {
-        pattern,
-        error: error.message,
-        correlationId: getCorrelationId(),
-      });
+      logger.error(`Cache delete pattern error for ${pattern}:`, error);
       return 0;
     }
   }
 
   /**
-   * Get or set pattern (cache-aside)
-   * If cache miss, execute fetchFn and cache result
+   * Cache POI data
    */
-  async getOrSet(key, fetchFn, ttl = DEFAULT_TTL.POI) {
-    // Try to get from cache
-    const cached = await this.get(key);
-
-    if (cached !== null) {
-      return cached;
-    }
-
-    // Cache miss - fetch from source
-    try {
-      const value = await fetchFn();
-
-      if (value !== null && value !== undefined) {
-        // Cache the result
-        await this.set(key, value, ttl);
-      }
-
-      return value;
-    } catch (error) {
-      logger.error('Cache getOrSet fetch error', {
-        key,
-        error: error.message,
-        correlationId: getCorrelationId(),
-      });
-      throw error;
-    }
+  async cachePOI(poiId, data, ttl = 3600) {
+    const key = this.prefixes.poi + poiId;
+    return await this.set(key, data, ttl);
   }
 
-  // === POI-specific caching methods ===
-
   /**
-   * Get POI by ID (with caching)
+   * Get cached POI data
    */
-  async getPOI(poiId) {
-    const key = this.buildKey(PREFIXES.POI, poiId);
+  async getCachedPOI(poiId) {
+    const key = this.prefixes.poi + poiId;
     return await this.get(key);
   }
 
   /**
-   * Cache POI by ID
+   * Cache POI score
    */
-  async setPOI(poiId, poi) {
-    const key = this.buildKey(PREFIXES.POI, poiId);
-    return await this.set(key, poi, DEFAULT_TTL.POI);
+  async cachePOIScore(poiId, score, ttl = 3600) {
+    const key = this.prefixes.poiScore + poiId;
+    return await this.set(key, score, ttl);
+  }
+
+  /**
+   * Get cached POI score
+   */
+  async getCachedPOIScore(poiId) {
+    const key = this.prefixes.poiScore + poiId;
+    return await this.get(key);
+  }
+
+  /**
+   * Cache POI source data
+   */
+  async cachePOIData(poiId, source, data, ttl = 86400) {
+    // 24 hours for source data
+    const key = `${this.prefixes.poiData}${poiId}:${source}`;
+    return await this.set(key, data, ttl);
+  }
+
+  /**
+   * Get cached POI source data
+   */
+  async getCachedPOIData(poiId, source) {
+    const key = `${this.prefixes.poiData}${poiId}:${source}`;
+    return await this.get(key);
+  }
+
+  /**
+   * Cache statistics
+   */
+  async cacheStats(type, data, ttl = 600) {
+    // 10 minutes for stats
+    const key = this.prefixes.stats + type;
+    return await this.set(key, data, ttl);
+  }
+
+  /**
+   * Get cached statistics
+   */
+  async getCachedStats(type) {
+    const key = this.prefixes.stats + type;
+    return await this.get(key);
+  }
+
+  /**
+   * Cache weather recommendations
+   */
+  async cacheWeatherRecommendations(city, weather, data, ttl = 1800) {
+    // 30 minutes
+    const key = `${this.prefixes.weather}${city}:${weather}`;
+    return await this.set(key, data, ttl);
+  }
+
+  /**
+   * Get cached weather recommendations
+   */
+  async getCachedWeatherRecommendations(city, weather) {
+    const key = `${this.prefixes.weather}${city}:${weather}`;
+    return await this.get(key);
   }
 
   /**
    * Invalidate POI cache
    */
   async invalidatePOI(poiId) {
-    const key = this.buildKey(PREFIXES.POI, poiId);
-    return await this.del(key);
+    await this.del(this.prefixes.poi + poiId);
+    await this.del(this.prefixes.poiScore + poiId);
+    await this.delPattern(`${this.prefixes.poiData}${poiId}:*`);
+    logger.info(`Cache invalidated for POI: ${poiId}`);
   }
 
   /**
-   * Get POIs by tier (with caching)
+   * Invalidate city cache
    */
-  async getPOIsByTier(tier, city = null) {
-    const key = city
-      ? this.buildKey(PREFIXES.POI_TIER, tier, city)
-      : this.buildKey(PREFIXES.POI_TIER, tier);
-
-    return await this.get(key);
-  }
-
-  /**
-   * Cache POIs by tier
-   */
-  async setPOIsByTier(tier, pois, city = null) {
-    const key = city
-      ? this.buildKey(PREFIXES.POI_TIER, tier, city)
-      : this.buildKey(PREFIXES.POI_TIER, tier);
-
-    return await this.set(key, pois, DEFAULT_TTL.POI_LIST);
-  }
-
-  /**
-   * Invalidate tier cache
-   * Called when POI tier changes
-   */
-  async invalidateTierCache(tier, city = null) {
-    if (city) {
-      const key = this.buildKey(PREFIXES.POI_TIER, tier, city);
-      return await this.del(key);
-    } else {
-      // Invalidate all tier caches for this tier
-      const pattern = this.buildKey(PREFIXES.POI_TIER, tier, '*');
-      return await this.delPattern(pattern);
-    }
-  }
-
-  /**
-   * Get POI classification (with caching)
-   */
-  async getPOIClassification(poiId) {
-    const key = this.buildKey(PREFIXES.POI_CLASSIFICATION, poiId);
-    return await this.get(key);
-  }
-
-  /**
-   * Cache POI classification
-   */
-  async setPOIClassification(poiId, classification) {
-    const key = this.buildKey(PREFIXES.POI_CLASSIFICATION, poiId);
-    return await this.set(key, classification, DEFAULT_TTL.POI_CLASSIFICATION);
-  }
-
-  /**
-   * Invalidate POI classification cache
-   */
-  async invalidatePOIClassification(poiId) {
-    const key = this.buildKey(PREFIXES.POI_CLASSIFICATION, poiId);
-    return await this.del(key);
-  }
-
-  /**
-   * Get POI statistics (with caching)
-   */
-  async getPOIStats(city = null) {
-    const key = city
-      ? this.buildKey(PREFIXES.POI_STATS, city)
-      : this.buildKey(PREFIXES.POI_STATS, 'all');
-
-    return await this.get(key);
-  }
-
-  /**
-   * Cache POI statistics
-   */
-  async setPOIStats(stats, city = null) {
-    const key = city
-      ? this.buildKey(PREFIXES.POI_STATS, city)
-      : this.buildKey(PREFIXES.POI_STATS, 'all');
-
-    return await this.set(key, stats, DEFAULT_TTL.POI_STATS);
-  }
-
-  /**
-   * Invalidate all POI-related caches
-   * Called on POI update/delete
-   */
-  async invalidateAllPOICaches(poiId, oldTier = null, newTier = null, city = null) {
-    const promises = [];
-
-    // Invalidate single POI cache
-    promises.push(this.invalidatePOI(poiId));
-    promises.push(this.invalidatePOIClassification(poiId));
-
-    // Invalidate tier caches if tier changed
-    if (oldTier !== null && oldTier !== newTier) {
-      promises.push(this.invalidateTierCache(oldTier, city));
-    }
-    if (newTier !== null) {
-      promises.push(this.invalidateTierCache(newTier, city));
-    }
-
-    // Invalidate stats
-    promises.push(this.delPattern(this.buildKey(PREFIXES.POI_STATS, '*')));
-
-    // Invalidate list caches
-    promises.push(this.delPattern(this.buildKey(PREFIXES.POI_LIST, '*')));
-
-    await Promise.all(promises);
-
-    logger.info('Invalidated POI caches', {
-      poiId,
-      oldTier,
-      newTier,
-      city,
-      correlationId: getCorrelationId(),
-    });
-  }
-
-  /**
-   * Warm cache for frequently accessed data
-   * Called on startup or periodically
-   */
-  async warmCache() {
-    if (!this.enabled) return;
-
-    logger.info('Starting cache warm-up', {
-      correlationId: getCorrelationId(),
-    });
-
-    try {
-      // Warm Tier 1 POIs (most frequently accessed)
-      const POI = (await import('../models/POI.js')).default;
-
-      const tier1POIs = await POI.findAll({
-        where: { tier: 1, active: true },
-        limit: 100,
-      });
-
-      for (const poi of tier1POIs) {
-        await this.setPOI(poi.id, poi.toJSON());
-      }
-
-      logger.info('Cache warm-up completed', {
-        tier1POIsWarmed: tier1POIs.length,
-        correlationId: getCorrelationId(),
-      });
-    } catch (error) {
-      logger.error('Cache warm-up failed', {
-        error: error.message,
-        correlationId: getCorrelationId(),
-      });
-    }
+  async invalidateCity(city) {
+    await this.delPattern(`${this.prefixes.weather}${city}:*`);
+    await this.delPattern(`${this.prefixes.stats}city:${city}*`);
+    logger.info(`Cache invalidated for city: ${city}`);
   }
 
   /**
    * Get cache statistics
    */
   async getStats() {
-    if (!this.enabled) {
-      return { enabled: false };
+    if (!this.isConnected) {
+      return { connected: false };
     }
 
     try {
       const info = await this.redis.info('stats');
-      const keyspace = await this.redis.info('keyspace');
+      const dbSize = await this.redis.dbsize();
 
       return {
-        enabled: true,
-        info: info.toString(),
-        keyspace: keyspace.toString(),
+        connected: true,
+        dbSize,
+        info: this.parseRedisInfo(info),
       };
     } catch (error) {
-      logger.error('Failed to get cache stats', { error: error.message });
-      return { enabled: true, error: error.message };
+      logger.error('Failed to get cache stats:', error);
+      return { connected: false, error: error.message };
     }
   }
 
   /**
-   * Flush all cache
-   * DANGER: Use only in development/testing
+   * Parse Redis INFO output
    */
-  async flushAll() {
-    if (!this.enabled) return;
+  parseRedisInfo(info) {
+    const lines = info.split('\r\n');
+    const stats = {};
 
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Cannot flush cache in production');
+    for (const line of lines) {
+      if (line && !line.startsWith('#')) {
+        const [key, value] = line.split(':');
+        if (key && value) {
+          stats[key] = value;
+        }
+      }
     }
 
-    await this.redis.flushall();
-    logger.warn('Cache flushed (all keys deleted)');
+    return stats;
+  }
+
+  /**
+   * Flush all cache
+   */
+  async flush() {
+    if (!this.isConnected) {
+      return false;
+    }
+
+    try {
+      await this.redis.flushdb();
+      logger.warn('Cache flushed');
+      return true;
+    } catch (error) {
+      logger.error('Failed to flush cache:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Close Redis connection
+   */
+  async close() {
+    if (this.redis) {
+      await this.redis.quit();
+      this.isConnected = false;
+      logger.info('Cache service disconnected');
+    }
   }
 }
 
 // Export singleton
 const cacheService = new CacheService();
 export default cacheService;
-
-// Export class for testing
-export { CacheService };
