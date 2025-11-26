@@ -1,0 +1,38 @@
+# Environment files with secrets
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Credentials directory (NEVER commit)
+.credentials/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+logs/
+*.log
+
+# Database
+*.sql.backup
+*.db
+*.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
