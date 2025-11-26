@@ -78,7 +78,10 @@ STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
 # ==============================================
 # Apify (Web Scraping Platform)
 # Get from: https://console.apify.com/
+# Actor: compass/crawler-google-places (Google Maps Scraper)
+# IMPORTANT: Replace with your actual Apify API token from console
 APIFY_API_TOKEN=your_apify_token_here
+APIFY_ACTOR_ID=compass/crawler-google-places
 APIFY_MONTHLY_BUDGET_EUR=50
 
 # ==============================================
