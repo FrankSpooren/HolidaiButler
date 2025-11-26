@@ -123,24 +123,25 @@ app.get('/circuit-breakers', circuitBreakerManager.dashboardMiddleware());
 // API Routes
 // ===========================
 
+// Swagger API Documentation
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
+
+app.use('/api/docs', swaggerUi.serve);
+app.get('/api/docs', swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'HolidaiButler Agenda API Documentation',
+  customCss: '.swagger-ui .topbar { display: none }',
+  customfavIcon: '/favicon.ico',
+}));
+
+// API documentation JSON (for programmatic access)
+app.get('/api/docs/json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // Main API routes
 app.use('/api/agenda', eventRoutes);
-
-// API documentation (future: Swagger/OpenAPI)
-app.get('/api/docs', (req, res) => {
-  res.json({
-    service: 'HolidaiButler Agenda API',
-    version: '1.0.0',
-    documentation: '/api/docs/swagger',
-    endpoints: {
-      events: '/api/agenda/events',
-      featured: '/api/agenda/events/featured',
-      stats: '/api/agenda/stats',
-      health: '/health',
-      metrics: '/metrics',
-    },
-  });
-});
 
 // ===========================
 // Error Handling
