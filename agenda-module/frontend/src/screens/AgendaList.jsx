@@ -113,8 +113,32 @@ function AgendaList() {
   };
 
   return (
-    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: { xs: 2, md: 4 } }}>
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: { xs: 2, md: 4 } }} component="main">
       <Container maxWidth="xl">
+        {/* Skip to main content link for keyboard users */}
+        <a
+          href="#main-content"
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            zIndex: 999,
+            padding: '1em',
+            backgroundColor: theme.palette.primary.main,
+            color: 'white',
+            textDecoration: 'none',
+            borderRadius: '4px',
+          }}
+          onFocus={(e) => {
+            e.target.style.left = '1em';
+            e.target.style.top = '1em';
+          }}
+          onBlur={(e) => {
+            e.target.style.left = '-9999px';
+          }}
+        >
+          {t('accessibility.skipToMainContent')}
+        </a>
+
         {/* Header */}
         <Box sx={{ mb: 4 }}>
           <Typography
@@ -139,8 +163,14 @@ function AgendaList() {
 
         {/* Featured Events */}
         {featuredEvents.length > 0 && !filters.search && activeFiltersCount === 0 && (
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h5" gutterBottom sx={{ mb: 2, fontWeight: 500 }}>
+          <Box sx={{ mb: 4 }} component="section" aria-labelledby="featured-events-heading">
+            <Typography
+              variant="h5"
+              gutterBottom
+              sx={{ mb: 2, fontWeight: 500 }}
+              id="featured-events-heading"
+              component="h2"
+            >
               {t('agenda.featuredEvents')}
             </Typography>
             <Grid container spacing={2}>
@@ -168,21 +198,29 @@ function AgendaList() {
               component="form"
               onSubmit={handleSearchSubmit}
               sx={{ flex: 1, display: 'flex', gap: 1 }}
+              role="search"
             >
               <TextField
                 fullWidth
                 placeholder={t('common.search')}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
+                inputProps={{
+                  'aria-label': t('agenda.searchEvents'),
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Search />
+                      <Search aria-hidden="true" />
                     </InputAdornment>
                   ),
                   endAdornment: searchInput && (
                     <InputAdornment position="end">
-                      <IconButton size="small" onClick={handleSearchClear}>
+                      <IconButton
+                        size="small"
+                        onClick={handleSearchClear}
+                        aria-label={t('common.clearSearch')}
+                      >
                         <Clear />
                       </IconButton>
                     </InputAdornment>
@@ -195,9 +233,11 @@ function AgendaList() {
             {isMobile && (
               <Button
                 variant="outlined"
-                startIcon={<FilterList />}
+                startIcon={<FilterList aria-hidden="true" />}
                 onClick={toggleMobileFilter}
                 fullWidth
+                aria-label={t('filters.openFilters')}
+                aria-expanded={mobileFilterOpen}
               >
                 {t('filters.title')}
                 {activeFiltersCount > 0 && (
@@ -206,6 +246,7 @@ function AgendaList() {
                     size="small"
                     color="primary"
                     sx={{ ml: 1, minWidth: 24, height: 24 }}
+                    aria-label={`${activeFiltersCount} ${t('filters.activeFilters')}`}
                   />
                 )}
               </Button>
@@ -218,11 +259,12 @@ function AgendaList() {
                 exclusive
                 onChange={handleViewModeChange}
                 size="small"
+                aria-label={t('agenda.viewMode')}
               >
-                <ToggleButton value="grid">
+                <ToggleButton value="grid" aria-label={t('agenda.gridView')}>
                   <ViewModule />
                 </ToggleButton>
-                <ToggleButton value="list">
+                <ToggleButton value="list" aria-label={t('agenda.listView')}>
                   <ViewList />
                 </ToggleButton>
               </ToggleButtonGroup>
@@ -261,7 +303,7 @@ function AgendaList() {
           )}
 
           {/* Events List */}
-          <Grid item xs={12} md={9}>
+          <Grid item xs={12} md={9} id="main-content">
             {/* Loading State */}
             {isLoading && (
               <Box
@@ -271,6 +313,9 @@ function AgendaList() {
                   alignItems: 'center',
                   minHeight: 400,
                 }}
+                role="status"
+                aria-live="polite"
+                aria-label={t('common.loading')}
               >
                 <CircularProgress size={60} />
               </Box>
@@ -278,19 +323,19 @@ function AgendaList() {
 
             {/* Error State */}
             {error && !isLoading && (
-              <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Box sx={{ textAlign: 'center', py: 8 }} role="alert" aria-live="assertive">
                 <Typography variant="h6" color="error" gutterBottom>
                   {t('common.error')}
                 </Typography>
                 <Button variant="contained" onClick={() => refetch()} sx={{ mt: 2 }}>
-                  Retry
+                  {t('common.retry')}
                 </Button>
               </Box>
             )}
 
             {/* Empty State */}
             {!isLoading && !error && events.length === 0 && (
-              <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Box sx={{ textAlign: 'center', py: 8 }} role="status" aria-live="polite">
                 <Typography variant="h6" color="text.secondary" gutterBottom>
                   {t('agenda.noEvents')}
                 </Typography>
@@ -304,8 +349,30 @@ function AgendaList() {
 
             {/* Events Grid/List */}
             {!isLoading && !error && events.length > 0 && (
-              <>
-                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+              <Box component="section" aria-labelledby="events-list-heading">
+                {/* Screen reader announcement for results */}
+                <div
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  style={{
+                    position: 'absolute',
+                    left: '-10000px',
+                    width: '1px',
+                    height: '1px',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {t('agenda.resultsFound', { count: pagination.total || 0 })}
+                </div>
+
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{ mb: 2 }}
+                  id="events-list-heading"
+                  component="h2"
+                >
                   {t('agenda.upcomingEvents')} ({pagination.total || 0})
                 </Typography>
 
@@ -333,6 +400,8 @@ function AgendaList() {
                       justifyContent: 'center',
                       mt: 4,
                     }}
+                    component="nav"
+                    aria-label={t('common.pagination')}
                   >
                     <Pagination
                       count={pagination.pages}
@@ -345,7 +414,7 @@ function AgendaList() {
                     />
                   </Box>
                 )}
-              </>
+              </Box>
             )}
           </Grid>
         </Grid>

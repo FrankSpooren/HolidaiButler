@@ -21,6 +21,10 @@ const resources = {
         close: 'Sluiten',
         viewDetails: 'Bekijk details',
         backToList: 'Terug naar lijst',
+        clearSearch: 'Zoekopdracht wissen',
+        backToEventsList: 'Terug naar evenementen lijst',
+        retry: 'Opnieuw proberen',
+        pagination: 'Paginering',
       },
 
       // Agenda page
@@ -32,6 +36,11 @@ const resources = {
         noEvents: 'Geen evenementen gevonden',
         showMore: 'Toon meer',
         eventDetails: 'Evenement details',
+        searchEvents: 'Zoek evenementen',
+        viewMode: 'Weergave modus',
+        gridView: 'Rasterweergave',
+        listView: 'Lijstweergave',
+        resultsFound: '{{count}} evenementen gevonden',
       },
 
       // Filters
@@ -45,6 +54,11 @@ const resources = {
         price: 'Prijs',
         freeOnly: 'Alleen gratis evenementen',
         allCategories: 'Alle categorieën',
+        activeFilters: 'actieve filters',
+        toggleCategory: 'Schakel categorie in/uit',
+        clearAllFilters: 'Wis alle filters',
+        applyFilters: 'Pas filters toe',
+        openFilters: 'Open filters',
       },
 
       // Date ranges
@@ -114,6 +128,18 @@ const resources = {
         soldOut: 'Uitverkocht',
         categories: 'Categorieën',
         audience: 'Geschikt voor',
+        viewDetails: 'Bekijk details',
+        eventImage: 'Evenement afbeelding',
+        mainEventImage: 'Hoofd evenement afbeelding',
+        noImage: 'Geen afbeelding beschikbaar',
+        category: 'Categorie',
+        freeEvent: 'Gratis evenement',
+      },
+
+      // Accessibility
+      accessibility: {
+        skipToMainContent: 'Spring naar hoofdinhoud',
+        opensInNewTab: 'opent in nieuw tabblad',
       },
     },
   },
@@ -131,6 +157,10 @@ const resources = {
         close: 'Close',
         viewDetails: 'View details',
         backToList: 'Back to list',
+        clearSearch: 'Clear search',
+        backToEventsList: 'Back to events list',
+        retry: 'Retry',
+        pagination: 'Pagination',
       },
 
       agenda: {
@@ -141,6 +171,11 @@ const resources = {
         noEvents: 'No events found',
         showMore: 'Show more',
         eventDetails: 'Event details',
+        searchEvents: 'Search events',
+        viewMode: 'View mode',
+        gridView: 'Grid view',
+        listView: 'List view',
+        resultsFound: '{{count}} events found',
       },
 
       filters: {
@@ -153,6 +188,11 @@ const resources = {
         price: 'Price',
         freeOnly: 'Free events only',
         allCategories: 'All categories',
+        activeFilters: 'active filters',
+        toggleCategory: 'Toggle category',
+        clearAllFilters: 'Clear all filters',
+        applyFilters: 'Apply filters',
+        openFilters: 'Open filters',
       },
 
       dateRanges: {
@@ -217,6 +257,18 @@ const resources = {
         soldOut: 'Sold out',
         categories: 'Categories',
         audience: 'Suitable for',
+        viewDetails: 'View details',
+        eventImage: 'Event image',
+        mainEventImage: 'Main event image',
+        noImage: 'No image available',
+        category: 'Category',
+        freeEvent: 'Free event',
+      },
+
+      // Accessibility
+      accessibility: {
+        skipToMainContent: 'Skip to main content',
+        opensInNewTab: 'opens in new tab',
       },
     },
   },
@@ -234,6 +286,10 @@ const resources = {
         close: 'Cerrar',
         viewDetails: 'Ver detalles',
         backToList: 'Volver a la lista',
+        clearSearch: 'Borrar búsqueda',
+        backToEventsList: 'Volver a la lista de eventos',
+        retry: 'Reintentar',
+        pagination: 'Paginación',
       },
 
       agenda: {
@@ -244,6 +300,11 @@ const resources = {
         noEvents: 'No se encontraron eventos',
         showMore: 'Mostrar más',
         eventDetails: 'Detalles del evento',
+        searchEvents: 'Buscar eventos',
+        viewMode: 'Modo de visualización',
+        gridView: 'Vista de cuadrícula',
+        listView: 'Vista de lista',
+        resultsFound: '{{count}} eventos encontrados',
       },
 
       filters: {
@@ -256,6 +317,11 @@ const resources = {
         price: 'Precio',
         freeOnly: 'Solo eventos gratuitos',
         allCategories: 'Todas las categorías',
+        activeFilters: 'filtros activos',
+        toggleCategory: 'Alternar categoría',
+        clearAllFilters: 'Borrar todos los filtros',
+        applyFilters: 'Aplicar filtros',
+        openFilters: 'Abrir filtros',
       },
 
       dateRanges: {
@@ -320,6 +386,18 @@ const resources = {
         soldOut: 'Agotado',
         categories: 'Categorías',
         audience: 'Adecuado para',
+        viewDetails: 'Ver detalles',
+        eventImage: 'Imagen del evento',
+        mainEventImage: 'Imagen principal del evento',
+        noImage: 'Sin imagen disponible',
+        category: 'Categoría',
+        freeEvent: 'Evento gratuito',
+      },
+
+      // Accessibility
+      accessibility: {
+        skipToMainContent: 'Saltar al contenido principal',
+        opensInNewTab: 'se abre en una nueva pestaña',
       },
     },
   },

@@ -77,19 +77,26 @@ function FilterPanel({ open, onClose, isMobile = false }) {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FilterList color="primary" />
-          <Typography variant="h6">{t('filters.title')}</Typography>
+          <FilterList color="primary" aria-hidden="true" />
+          <Typography variant="h6" component="h2" id="filter-panel-title">
+            {t('filters.title')}
+          </Typography>
           {activeFiltersCount > 0 && (
             <Chip
               label={activeFiltersCount}
               size="small"
               color="primary"
               sx={{ minWidth: 24, height: 24 }}
+              aria-label={`${activeFiltersCount} ${t('filters.activeFilters')}`}
             />
           )}
         </Box>
         {isMobile && (
-          <IconButton onClick={onClose} size="small">
+          <IconButton
+            onClick={onClose}
+            size="small"
+            aria-label={t('common.close')}
+          >
             <Close />
           </IconButton>
         )}
@@ -115,29 +122,50 @@ function FilterPanel({ open, onClose, isMobile = false }) {
       <Divider sx={{ my: 2 }} />
 
       {/* Categories */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+      <Box sx={{ mb: 3 }} role="group" aria-labelledby="category-filter-label">
+        <Typography
+          variant="subtitle2"
+          gutterBottom
+          sx={{ fontWeight: 600 }}
+          id="category-filter-label"
+        >
           {t('filters.category')}
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-          {CATEGORIES.map((category) => (
-            <Chip
-              key={category}
-              label={t(`categories.${category}`)}
-              size="small"
-              color={filters.categories.includes(category) ? 'primary' : 'default'}
-              variant={filters.categories.includes(category) ? 'filled' : 'outlined'}
-              onClick={() => toggleCategory(category)}
-              sx={{
-                cursor: 'pointer',
-                '&:hover': {
-                  bgcolor: filters.categories.includes(category)
-                    ? 'primary.dark'
-                    : 'action.hover',
-                },
-              }}
-            />
-          ))}
+          {CATEGORIES.map((category) => {
+            const isSelected = filters.categories.includes(category);
+            return (
+              <Chip
+                key={category}
+                label={t(`categories.${category}`)}
+                size="small"
+                color={isSelected ? 'primary' : 'default'}
+                variant={isSelected ? 'filled' : 'outlined'}
+                onClick={() => toggleCategory(category)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleCategory(category);
+                  }
+                }}
+                tabIndex={0}
+                role="checkbox"
+                aria-checked={isSelected}
+                aria-label={`${t('filters.toggleCategory')} ${t(`categories.${category}`)}`}
+                sx={{
+                  cursor: 'pointer',
+                  '&:hover': {
+                    bgcolor: isSelected ? 'primary.dark' : 'action.hover',
+                  },
+                  '&:focus': {
+                    outline: '2px solid',
+                    outlineColor: 'primary.main',
+                    outlineOffset: 2,
+                  },
+                }}
+              />
+            );
+          })}
         </Box>
       </Box>
 
@@ -205,11 +233,17 @@ function FilterPanel({ open, onClose, isMobile = false }) {
           onClick={handleClearFilters}
           disabled={activeFiltersCount === 0}
           fullWidth
+          aria-label={t('filters.clearAllFilters')}
         >
           {t('common.clear')}
         </Button>
         {isMobile && (
-          <Button variant="contained" onClick={onClose} fullWidth>
+          <Button
+            variant="contained"
+            onClick={onClose}
+            fullWidth
+            aria-label={t('filters.applyFilters')}
+          >
             {t('common.apply')}
           </Button>
         )}
@@ -223,6 +257,7 @@ function FilterPanel({ open, onClose, isMobile = false }) {
         anchor="left"
         open={open}
         onClose={onClose}
+        aria-labelledby="filter-panel-title"
         sx={{
           '& .MuiDrawer-paper': {
             width: '100%',
