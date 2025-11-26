@@ -1,423 +1,305 @@
 /**
- * Prometheus Metrics Service
- * ENTERPRISE: Real-time monitoring and observability
- *
- * Metrics Categories:
- * - HTTP request metrics (duration, status codes, throughput)
- * - Database metrics (query duration, connection pool)
- * - Circuit breaker metrics (state, failure rate)
- * - Business metrics (POI creation rate, classification success)
- * - Cache metrics (hit rate, eviction rate)
- * - External API metrics (Apify usage, cost tracking)
- *
- * Prometheus Best Practices:
- * - Use histograms for latency (not gauges)
- * - Use counters for events (monotonically increasing)
- * - Use gauges for current values (can go up/down)
- * - Label cardinality kept low (avoid high-cardinality labels like user IDs)
+ * Metrics Service
+ * Enterprise-level metrics collection (Prometheus-compatible)
  */
 
-import { Registry, Counter, Histogram, Gauge, Summary } from 'prom-client';
 import logger from '../utils/logger.js';
 
-// Create custom registry
-const register = new Registry();
-
-// Default labels for all metrics
-register.setDefaultLabels({
-  app: 'holidai-butler',
-  environment: process.env.NODE_ENV || 'development',
-});
-
-/**
- * HTTP Request Metrics
- */
-
-// HTTP request duration histogram
-const httpRequestDuration = new Histogram({
-  name: 'http_request_duration_seconds',
-  help: 'Duration of HTTP requests in seconds',
-  labelNames: ['method', 'route', 'status_code'],
-  buckets: [0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10], // 10ms to 10s
-  registers: [register],
-});
-
-// HTTP request total counter
-const httpRequestTotal = new Counter({
-  name: 'http_requests_total',
-  help: 'Total number of HTTP requests',
-  labelNames: ['method', 'route', 'status_code'],
-  registers: [register],
-});
-
-// HTTP request size
-const httpRequestSize = new Summary({
-  name: 'http_request_size_bytes',
-  help: 'Size of HTTP requests in bytes',
-  labelNames: ['method', 'route'],
-  registers: [register],
-});
-
-// HTTP response size
-const httpResponseSize = new Summary({
-  name: 'http_response_size_bytes',
-  help: 'Size of HTTP responses in bytes',
-  labelNames: ['method', 'route'],
-  registers: [register],
-});
-
-/**
- * Database Metrics
- */
-
-// Database query duration
-const dbQueryDuration = new Histogram({
-  name: 'db_query_duration_seconds',
-  help: 'Duration of database queries in seconds',
-  labelNames: ['operation', 'table', 'status'],
-  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5], // 1ms to 5s
-  registers: [register],
-});
-
-// Database connection pool
-const dbConnectionPoolSize = new Gauge({
-  name: 'db_connection_pool_size',
-  help: 'Current size of database connection pool',
-  labelNames: ['state'], // idle, active, waiting
-  registers: [register],
-});
-
-// Database transaction total
-const dbTransactionTotal = new Counter({
-  name: 'db_transactions_total',
-  help: 'Total number of database transactions',
-  labelNames: ['status'], // committed, rolled_back
-  registers: [register],
-});
-
-/**
- * Circuit Breaker Metrics
- */
-
-// Circuit breaker state
-const circuitBreakerState = new Gauge({
-  name: 'circuit_breaker_state',
-  help: 'Circuit breaker state (0=CLOSED, 1=HALF_OPEN, 2=OPEN)',
-  labelNames: ['service'],
-  registers: [register],
-});
-
-// Circuit breaker failure rate
-const circuitBreakerFailureRate = new Gauge({
-  name: 'circuit_breaker_failure_rate_percent',
-  help: 'Circuit breaker failure rate percentage',
-  labelNames: ['service'],
-  registers: [register],
-});
-
-// Circuit breaker requests total
-const circuitBreakerRequestsTotal = new Counter({
-  name: 'circuit_breaker_requests_total',
-  help: 'Total number of requests through circuit breaker',
-  labelNames: ['service', 'status'], // success, failure, rejected
-  registers: [register],
-});
-
-/**
- * Business Metrics (POI System)
- */
-
-// POI creation rate
-const poiCreationTotal = new Counter({
-  name: 'poi_creation_total',
-  help: 'Total number of POIs created',
-  labelNames: ['source', 'category', 'status'], // created, failed, duplicate
-  registers: [register],
-});
-
-// POI classification duration
-const poiClassificationDuration = new Histogram({
-  name: 'poi_classification_duration_seconds',
-  help: 'Duration of POI classification in seconds',
-  labelNames: ['tier', 'status'],
-  buckets: [0.1, 0.5, 1, 2, 5, 10, 30], // 100ms to 30s
-  registers: [register],
-});
-
-// POI by tier gauge
-const poiByTier = new Gauge({
-  name: 'poi_total_by_tier',
-  help: 'Total number of POIs by tier',
-  labelNames: ['tier', 'city'],
-  registers: [register],
-});
-
-// POI score histogram
-const poiScoreDistribution = new Histogram({
-  name: 'poi_score_distribution',
-  help: 'Distribution of POI scores',
-  labelNames: ['tier'],
-  buckets: [0, 2, 4, 6, 8, 10], // 0-10 score range
-  registers: [register],
-});
-
-/**
- * Cache Metrics
- */
-
-// Cache hit/miss counter
-const cacheOperationsTotal = new Counter({
-  name: 'cache_operations_total',
-  help: 'Total number of cache operations',
-  labelNames: ['operation', 'status'], // get/set/del, hit/miss/error
-  registers: [register],
-});
-
-// Cache operation duration
-const cacheOperationDuration = new Histogram({
-  name: 'cache_operation_duration_seconds',
-  help: 'Duration of cache operations in seconds',
-  labelNames: ['operation'],
-  buckets: [0.001, 0.005, 0.01, 0.05, 0.1], // 1ms to 100ms
-  registers: [register],
-});
-
-// Cache size (items)
-const cacheSize = new Gauge({
-  name: 'cache_size_items',
-  help: 'Current number of items in cache',
-  labelNames: ['cache_type'], // idempotency, rate_limit, etc.
-  registers: [register],
-});
-
-/**
- * External API Metrics
- */
-
-// External API request duration
-const externalApiDuration = new Histogram({
-  name: 'external_api_duration_seconds',
-  help: 'Duration of external API requests in seconds',
-  labelNames: ['service', 'operation', 'status'],
-  buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60], // 100ms to 60s
-  registers: [register],
-});
-
-// External API cost tracker
-const externalApiCost = new Counter({
-  name: 'external_api_cost_eur',
-  help: 'Total cost of external API usage in EUR',
-  labelNames: ['service', 'operation'],
-  registers: [register],
-});
-
-// External API requests total
-const externalApiRequestsTotal = new Counter({
-  name: 'external_api_requests_total',
-  help: 'Total number of external API requests',
-  labelNames: ['service', 'operation', 'status'],
-  registers: [register],
-});
-
-/**
- * System Metrics
- */
-
-// Active requests gauge
-const activeRequests = new Gauge({
-  name: 'active_requests',
-  help: 'Number of requests currently being processed',
-  labelNames: ['method', 'route'],
-  registers: [register],
-});
-
-// Event bus events
-const eventBusEventsTotal = new Counter({
-  name: 'event_bus_events_total',
-  help: 'Total number of events published to event bus',
-  labelNames: ['event_type', 'status'],
-  registers: [register],
-});
-
-/**
- * Metrics Service Class
- */
 class MetricsService {
   constructor() {
-    this.register = register;
+    this.metrics = {
+      // HTTP metrics
+      httpRequests: {
+        total: 0,
+        byStatusCode: {},
+        byMethod: {},
+        byPath: {},
+      },
+
+      // API metrics
+      apiCalls: {
+        total: 0,
+        byService: {},
+        failures: 0,
+        totalDuration: 0,
+      },
+
+      // POI Classification metrics
+      poiClassification: {
+        total: 0,
+        byTier: { 1: 0, 2: 0, 3: 0, 4: 0 },
+        tierChanges: 0,
+        failures: 0,
+        totalDuration: 0,
+      },
+
+      // Cache metrics
+      cache: {
+        hits: 0,
+        misses: 0,
+        sets: 0,
+        deletes: 0,
+      },
+
+      // Circuit breaker metrics
+      circuitBreakers: {},
+
+      // Database metrics
+      database: {
+        queries: 0,
+        failures: 0,
+        totalDuration: 0,
+      },
+
+      // Workflow metrics
+      workflows: {},
+    };
+
+    this.startTime = Date.now();
+  }
+
+  /**
+   * Record HTTP request
+   */
+  recordHttpRequest(method, path, statusCode, duration) {
+    this.metrics.httpRequests.total++;
+
+    // By status code
+    this.metrics.httpRequests.byStatusCode[statusCode] =
+      (this.metrics.httpRequests.byStatusCode[statusCode] || 0) + 1;
+
+    // By method
+    this.metrics.httpRequests.byMethod[method] =
+      (this.metrics.httpRequests.byMethod[method] || 0) + 1;
+
+    // By path (simplified)
+    const simplifiedPath = this.simplifyPath(path);
+    this.metrics.httpRequests.byPath[simplifiedPath] =
+      (this.metrics.httpRequests.byPath[simplifiedPath] || 0) + 1;
+  }
+
+  /**
+   * Record API call
+   */
+  recordApiCall(service, success, duration) {
+    this.metrics.apiCalls.total++;
+    this.metrics.apiCalls.totalDuration += duration;
+
+    if (!this.metrics.apiCalls.byService[service]) {
+      this.metrics.apiCalls.byService[service] = {
+        total: 0,
+        successes: 0,
+        failures: 0,
+        totalDuration: 0,
+      };
+    }
+
+    this.metrics.apiCalls.byService[service].total++;
+    this.metrics.apiCalls.byService[service].totalDuration += duration;
+
+    if (success) {
+      this.metrics.apiCalls.byService[service].successes++;
+    } else {
+      this.metrics.apiCalls.byService[service].failures++;
+      this.metrics.apiCalls.failures++;
+    }
+  }
+
+  /**
+   * Record POI classification
+   */
+  recordPOIClassification(tier, success, duration, tierChanged = false) {
+    this.metrics.poiClassification.total++;
+    this.metrics.poiClassification.totalDuration += duration;
+
+    if (success) {
+      this.metrics.poiClassification.byTier[tier]++;
+      if (tierChanged) {
+        this.metrics.poiClassification.tierChanges++;
+      }
+    } else {
+      this.metrics.poiClassification.failures++;
+    }
+  }
+
+  /**
+   * Record cache operation
+   */
+  recordCache(operation, success = true) {
+    if (success) {
+      this.metrics.cache[operation]++;
+    }
+  }
+
+  /**
+   * Record database query
+   */
+  recordDatabaseQuery(success, duration) {
+    this.metrics.database.queries++;
+    this.metrics.database.totalDuration += duration;
+
+    if (!success) {
+      this.metrics.database.failures++;
+    }
+  }
+
+  /**
+   * Record workflow execution
+   */
+  recordWorkflow(name, success, duration) {
+    if (!this.metrics.workflows[name]) {
+      this.metrics.workflows[name] = {
+        total: 0,
+        successes: 0,
+        failures: 0,
+        totalDuration: 0,
+      };
+    }
+
+    this.metrics.workflows[name].total++;
+    this.metrics.workflows[name].totalDuration += duration;
+
+    if (success) {
+      this.metrics.workflows[name].successes++;
+    } else {
+      this.metrics.workflows[name].failures++;
+    }
+  }
+
+  /**
+   * Update circuit breaker metrics
+   */
+  updateCircuitBreakerMetrics(breakerStats) {
+    this.metrics.circuitBreakers = breakerStats;
+  }
+
+  /**
+   * Get all metrics
+   */
+  getMetrics() {
+    const uptime = Math.floor((Date.now() - this.startTime) / 1000);
+
+    return {
+      uptime,
+      timestamp: new Date().toISOString(),
+      ...this.metrics,
+      calculated: {
+        avgHttpResponseTime:
+          this.metrics.httpRequests.total > 0
+            ? Math.round(this.metrics.httpRequests.totalDuration / this.metrics.httpRequests.total)
+            : 0,
+        avgApiCallTime:
+          this.metrics.apiCalls.total > 0
+            ? Math.round(this.metrics.apiCalls.totalDuration / this.metrics.apiCalls.total)
+            : 0,
+        avgClassificationTime:
+          this.metrics.poiClassification.total > 0
+            ? Math.round(
+                this.metrics.poiClassification.totalDuration / this.metrics.poiClassification.total
+              )
+            : 0,
+        cacheHitRate:
+          this.metrics.cache.hits + this.metrics.cache.misses > 0
+            ? (
+                (this.metrics.cache.hits / (this.metrics.cache.hits + this.metrics.cache.misses)) *
+                100
+              ).toFixed(2) + '%'
+            : '0%',
+        apiSuccessRate:
+          this.metrics.apiCalls.total > 0
+            ? (
+                ((this.metrics.apiCalls.total - this.metrics.apiCalls.failures) /
+                  this.metrics.apiCalls.total) *
+                100
+              ).toFixed(2) + '%'
+            : '100%',
+      },
+    };
   }
 
   /**
    * Get metrics in Prometheus format
    */
-  async getMetrics() {
-    return this.register.metrics();
+  getPrometheusMetrics() {
+    const metrics = this.getMetrics();
+    let output = [];
+
+    // HTTP requests
+    output.push('# HELP http_requests_total Total HTTP requests');
+    output.push('# TYPE http_requests_total counter');
+    output.push(`http_requests_total ${metrics.httpRequests.total}`);
+
+    // HTTP requests by status
+    output.push('# HELP http_requests_by_status HTTP requests by status code');
+    output.push('# TYPE http_requests_by_status counter');
+    for (const [status, count] of Object.entries(metrics.httpRequests.byStatusCode)) {
+      output.push(`http_requests_by_status{status="${status}"} ${count}`);
+    }
+
+    // API calls
+    output.push('# HELP api_calls_total Total API calls');
+    output.push('# TYPE api_calls_total counter');
+    output.push(`api_calls_total ${metrics.apiCalls.total}`);
+
+    // API failures
+    output.push('# HELP api_failures_total Total API failures');
+    output.push('# TYPE api_failures_total counter');
+    output.push(`api_failures_total ${metrics.apiCalls.failures}`);
+
+    // POI classifications
+    output.push('# HELP poi_classifications_total Total POI classifications');
+    output.push('# TYPE poi_classifications_total counter');
+    output.push(`poi_classifications_total ${metrics.poiClassification.total}`);
+
+    // Cache hits/misses
+    output.push('# HELP cache_hits_total Total cache hits');
+    output.push('# TYPE cache_hits_total counter');
+    output.push(`cache_hits_total ${metrics.cache.hits}`);
+
+    output.push('# HELP cache_misses_total Total cache misses');
+    output.push('# TYPE cache_misses_total counter');
+    output.push(`cache_misses_total ${metrics.cache.misses}`);
+
+    // Uptime
+    output.push('# HELP uptime_seconds Uptime in seconds');
+    output.push('# TYPE uptime_seconds gauge');
+    output.push(`uptime_seconds ${metrics.uptime}`);
+
+    return output.join('\n');
   }
 
   /**
-   * Get registry (for custom metrics)
+   * Simplify path for metrics
    */
-  getRegister() {
-    return this.register;
-  }
-
-  // HTTP Metrics
-  recordHttpRequest(method, route, statusCode, duration) {
-    httpRequestDuration.labels(method, route, statusCode).observe(duration);
-    httpRequestTotal.labels(method, route, statusCode).inc();
-  }
-
-  recordHttpRequestSize(method, route, size) {
-    httpRequestSize.labels(method, route).observe(size);
-  }
-
-  recordHttpResponseSize(method, route, size) {
-    httpResponseSize.labels(method, route).observe(size);
-  }
-
-  incrementActiveRequests(method, route) {
-    activeRequests.labels(method, route).inc();
-  }
-
-  decrementActiveRequests(method, route) {
-    activeRequests.labels(method, route).dec();
-  }
-
-  // Database Metrics
-  recordDbQuery(operation, table, status, duration) {
-    dbQueryDuration.labels(operation, table, status).observe(duration);
-  }
-
-  recordDbTransaction(status) {
-    dbTransactionTotal.labels(status).inc();
-  }
-
-  setDbConnectionPoolSize(idle, active, waiting) {
-    dbConnectionPoolSize.labels('idle').set(idle);
-    dbConnectionPoolSize.labels('active').set(active);
-    dbConnectionPoolSize.labels('waiting').set(waiting);
-  }
-
-  // Circuit Breaker Metrics
-  setCircuitBreakerState(service, state) {
-    // Map state to number: CLOSED=0, HALF_OPEN=1, OPEN=2
-    const stateMap = { CLOSED: 0, HALF_OPEN: 1, OPEN: 2 };
-    circuitBreakerState.labels(service).set(stateMap[state] || 0);
-  }
-
-  setCircuitBreakerFailureRate(service, failureRate) {
-    circuitBreakerFailureRate.labels(service).set(failureRate);
-  }
-
-  recordCircuitBreakerRequest(service, status) {
-    circuitBreakerRequestsTotal.labels(service, status).inc();
-  }
-
-  // POI Business Metrics
-  recordPoiCreation(source, category, status) {
-    poiCreationTotal.labels(source, category, status).inc();
-  }
-
-  recordPoiClassification(tier, status, duration) {
-    poiClassificationDuration.labels(tier, status).observe(duration);
-  }
-
-  setPoiCountByTier(tier, city, count) {
-    poiByTier.labels(tier, city).set(count);
-  }
-
-  recordPoiScore(tier, score) {
-    poiScoreDistribution.labels(tier).observe(score);
-  }
-
-  // Cache Metrics
-  recordCacheOperation(operation, status, duration = null) {
-    cacheOperationsTotal.labels(operation, status).inc();
-    if (duration !== null) {
-      cacheOperationDuration.labels(operation).observe(duration);
-    }
-  }
-
-  setCacheSize(cacheType, size) {
-    cacheSize.labels(cacheType).set(size);
-  }
-
-  // External API Metrics
-  recordExternalApiRequest(service, operation, status, duration, cost = 0) {
-    externalApiDuration.labels(service, operation, status).observe(duration);
-    externalApiRequestsTotal.labels(service, operation, status).inc();
-    if (cost > 0) {
-      externalApiCost.labels(service, operation).inc(cost);
-    }
-  }
-
-  // Event Bus Metrics
-  recordEventBusEvent(eventType, status = 'published') {
-    eventBusEventsTotal.labels(eventType, status).inc();
+  simplifyPath(path) {
+    // Replace UUIDs with :id
+    return path.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ':id');
   }
 
   /**
-   * Update POI statistics (called periodically)
+   * Reset metrics (for testing)
    */
-  async updatePoiStatistics() {
-    try {
-      const POI = (await import('../models/POI.js')).default;
-      const { mysqlSequelize } = await import('../config/database.js');
-
-      // Count POIs by tier and city
-      const [results] = await mysqlSequelize.query(`
-        SELECT tier, city, COUNT(*) as count
-        FROM pois
-        WHERE active = TRUE
-        GROUP BY tier, city
-      `);
-
-      results.forEach((row) => {
-        this.setPoiCountByTier(row.tier, row.city || 'unknown', row.count);
-      });
-
-      logger.debug('Updated POI statistics metrics');
-    } catch (error) {
-      logger.error('Failed to update POI statistics:', error);
-    }
-  }
-
-  /**
-   * Update circuit breaker statistics (called periodically)
-   */
-  async updateCircuitBreakerStatistics() {
-    try {
-      const circuitBreakerManager = (await import('./circuitBreaker.js')).default;
-      const stats = await circuitBreakerManager.getAllStats();
-
-      stats.forEach((stat) => {
-        this.setCircuitBreakerState(stat.name, stat.state);
-        this.setCircuitBreakerFailureRate(stat.name, stat.failureRate);
-      });
-
-      logger.debug('Updated circuit breaker metrics');
-    } catch (error) {
-      logger.error('Failed to update circuit breaker stats:', error);
-    }
-  }
-
-  /**
-   * Start periodic metrics updates
-   */
-  startPeriodicUpdates(interval = 60000) {
-    // Update POI statistics every minute
-    setInterval(() => this.updatePoiStatistics(), interval);
-
-    // Update circuit breaker statistics every 30 seconds
-    setInterval(() => this.updateCircuitBreakerStatistics(), interval / 2);
-
-    logger.info('Started periodic metrics updates', { interval });
+  reset() {
+    this.metrics = {
+      httpRequests: { total: 0, byStatusCode: {}, byMethod: {}, byPath: {} },
+      apiCalls: { total: 0, byService: {}, failures: 0, totalDuration: 0 },
+      poiClassification: {
+        total: 0,
+        byTier: { 1: 0, 2: 0, 3: 0, 4: 0 },
+        tierChanges: 0,
+        failures: 0,
+        totalDuration: 0,
+      },
+      cache: { hits: 0, misses: 0, sets: 0, deletes: 0 },
+      circuitBreakers: {},
+      database: { queries: 0, failures: 0, totalDuration: 0 },
+      workflows: {},
+    };
+    this.startTime = Date.now();
+    logger.info('Metrics reset');
   }
 }
 
 // Export singleton
 const metricsService = new MetricsService();
 export default metricsService;
-
-// Export for testing
-export { MetricsService };
