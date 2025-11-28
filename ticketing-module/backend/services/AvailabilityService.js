@@ -1,4 +1,4 @@
-const Availability = require('../models/Availability');
+const { Availability } = require('../models');
 const Redis = require('ioredis');
 const logger = require('../utils/logger');
 
