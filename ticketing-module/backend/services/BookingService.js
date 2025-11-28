@@ -1,4 +1,4 @@
-const Booking = require('../models/Booking');
+const { Booking } = require('../models');
 const AvailabilityService = require('./AvailabilityService');
 const TicketService = require('./TicketService');
 const logger = require('../utils/logger');

@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
+const { sequelize } = require('./models');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -61,16 +61,17 @@ app.use('/api/', limiter);
 
 const connectDB = async () => {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/holidaibutler-ticketing';
+    // Test MySQL connection via Sequelize
+    await sequelize.authenticate();
+    logger.info('MySQL database connected successfully');
 
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-
-    logger.info('MongoDB connected successfully');
+    // Sync models in development mode (use migrations in production)
+    if (process.env.NODE_ENV !== 'production') {
+      await sequelize.sync({ alter: false });
+      logger.info('Database models synchronized');
+    }
   } catch (error) {
-    logger.error('MongoDB connection error:', error);
+    logger.error('MySQL connection error:', error);
     process.exit(1);
   }
 };
@@ -98,14 +99,26 @@ app.get('/', (req, res) => {
 });
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({
-    success: true,
-    service: 'ticketing-module',
-    status: 'healthy',
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    timestamp: new Date().toISOString(),
-  });
+app.get('/health', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.json({
+      success: true,
+      service: 'ticketing-module',
+      status: 'healthy',
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      service: 'ticketing-module',
+      status: 'unhealthy',
+      database: 'disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // ========== ERROR HANDLING ==========
@@ -156,8 +169,8 @@ process.on('SIGTERM', async () => {
   logger.info('SIGTERM signal received: closing HTTP server');
 
   try {
-    await mongoose.connection.close();
-    logger.info('MongoDB connection closed');
+    await sequelize.close();
+    logger.info('MySQL connection closed');
     process.exit(0);
   } catch (error) {
     logger.error('Error during shutdown:', error);
@@ -169,8 +182,8 @@ process.on('SIGINT', async () => {
   logger.info('SIGINT signal received: closing HTTP server');
 
   try {
-    await mongoose.connection.close();
-    logger.info('MongoDB connection closed');
+    await sequelize.close();
+    logger.info('MySQL connection closed');
     process.exit(0);
   } catch (error) {
     logger.error('Error during shutdown:', error);
