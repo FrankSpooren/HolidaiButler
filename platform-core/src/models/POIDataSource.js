@@ -87,7 +87,6 @@ const POIDataSource = mysqlSequelize.define('POIDataSource', {
       unique: true,
       fields: ['poi_id', 'source_name'],
     },
-    { fields: ['poi_id', 'source_name'] },
     { fields: ['last_scraped_at'] },
   ],
 });

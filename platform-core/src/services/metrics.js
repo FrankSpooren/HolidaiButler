@@ -277,6 +277,15 @@ class MetricsService {
   }
 
   /**
+   * Start periodic updates (for background metrics collection)
+   */
+  startPeriodicUpdates() {
+    logger.info('Metrics periodic updates started (no-op in basic mode)');
+    // In basic mode, metrics are collected on-demand
+    // This could be extended to push metrics to external systems
+  }
+
+  /**
    * Reset metrics (for testing)
    */
   reset() {
