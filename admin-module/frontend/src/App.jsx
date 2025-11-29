@@ -17,6 +17,24 @@ import Login from './pages/auth/Login';
 import Dashboard from './pages/dashboard/Dashboard';
 import POIList from './pages/pois/POIList';
 import POIForm from './pages/pois/POIForm';
+import UserList from './pages/users/UserList';
+import UserForm from './pages/users/UserForm';
+import Analytics from './pages/analytics/Analytics';
+
+// Event Pages
+import EventList from './pages/events/EventList';
+
+// Reservation Pages
+import ReservationList from './pages/reservations/ReservationList';
+
+// Ticket Pages
+import TicketList from './pages/tickets/TicketList';
+
+// Booking Pages
+import BookingList from './pages/bookings/BookingList';
+
+// Transaction Pages
+import TransactionList from './pages/transactions/TransactionList';
 
 // Reservations Module Pages
 import RestaurantList from './pages/reservations/RestaurantList';

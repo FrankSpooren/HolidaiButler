@@ -114,6 +114,42 @@ export default function DashboardLayout() {
       permission: 'reservations.floorplans'
     },
     {
+      text: 'Events',
+      icon: <EventIcon />,
+      path: '/events',
+      permission: 'events.view'
+    },
+    {
+      text: 'Reservations',
+      icon: <RestaurantIcon />,
+      path: '/reservations',
+      permission: 'reservations.view'
+    },
+    {
+      text: 'Tickets',
+      icon: <TicketIcon />,
+      path: '/tickets',
+      permission: 'tickets.view'
+    },
+    {
+      text: 'Bookings',
+      icon: <BookingIcon />,
+      path: '/bookings',
+      permission: 'bookings.view'
+    },
+    {
+      text: 'Transactions',
+      icon: <PaymentIcon />,
+      path: '/transactions',
+      permission: 'transactions.view'
+    },
+    {
+      text: 'Analytics',
+      icon: <AssessmentIcon />,
+      path: '/analytics',
+      permission: null
+    },
+    {
       text: 'Platform',
       icon: <PaletteIcon />,
       path: '/platform',
