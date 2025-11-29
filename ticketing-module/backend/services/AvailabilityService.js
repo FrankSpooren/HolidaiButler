@@ -1,11 +1,12 @@
 const { Availability } = require('../models');
 const Redis = require('ioredis');
 const logger = require('../utils/logger');
+const { Op } = require('sequelize');
 
 /**
- * Availability Service
+ * Availability Service (Sequelize/MySQL)
  * Manages real-time inventory and capacity for POI tickets
- * Uses Redis for caching and MongoDB for persistence
+ * Uses Redis for caching and MySQL for persistence
  */
 class AvailabilityService {
   constructor() {
@@ -42,21 +43,21 @@ class AvailabilityService {
         return JSON.parse(cached);
       }
 
-      // Query database
+      // Query database using Sequelize
       const dateObj = new Date(date);
       dateObj.setHours(0, 0, 0, 0);
 
-      const query = {
+      const where = {
         poiId,
         date: dateObj,
         isActive: true,
       };
 
       if (timeslot) {
-        query.timeslot = timeslot;
+        where.timeslot = timeslot;
       }
 
-      const availability = await Availability.findOne(query);
+      const availability = await Availability.findOne({ where });
 
       if (!availability) {
         return {
@@ -66,17 +67,23 @@ class AvailabilityService {
       }
 
       const result = {
-        available: availability.isBookable,
+        available: !availability.isSoldOut && availability.availableCapacity > 0,
         capacity: {
-          total: availability.capacity.total,
-          available: availability.capacity.available,
+          total: availability.totalCapacity,
+          available: availability.availableCapacity,
+          booked: availability.bookedCapacity,
+          reserved: availability.reservedCapacity,
         },
         pricing: {
-          basePrice: availability.pricing.basePrice,
-          finalPrice: availability.pricing.finalPrice,
-          currency: availability.pricing.currency,
+          basePrice: parseFloat(availability.basePrice),
+          finalPrice: parseFloat(availability.finalPrice),
+          currency: availability.currency,
         },
-        restrictions: availability.restrictions,
+        restrictions: {
+          minBooking: availability.minBooking,
+          maxBooking: availability.maxBooking,
+          cutoffHours: availability.cutoffHours,
+        },
         isSoldOut: availability.isSoldOut,
       };
 
@@ -95,8 +102,8 @@ class AvailabilityService {
    * @param {String} bookingId - Booking identifier
    * @param {String} poiId - POI identifier
    * @param {Date} date - Date
-   * @param {String} timeslot - Optional timeslot
    * @param {Number} quantity - Number of tickets
+   * @param {String} timeslot - Optional timeslot
    * @returns {Promise<Object>} Reservation details with expiry
    */
   async reserveSlot(bookingId, poiId, date, quantity, timeslot = null) {
@@ -104,24 +111,32 @@ class AvailabilityService {
       const dateObj = new Date(date);
       dateObj.setHours(0, 0, 0, 0);
 
-      const query = {
+      const where = {
         poiId,
         date: dateObj,
         isActive: true,
       };
 
       if (timeslot) {
-        query.timeslot = timeslot;
+        where.timeslot = timeslot;
       }
 
-      const availability = await Availability.findOne(query);
+      const availability = await Availability.findOne({ where });
 
       if (!availability) {
         throw new Error('Availability not found');
       }
 
+      // Check if enough capacity available
+      if (availability.availableCapacity < quantity) {
+        throw new Error('Not enough capacity available');
+      }
+
       // Reserve capacity (15 minutes lock)
-      const expiresAt = await availability.reserveCapacity(quantity, 900);
+      availability.reservedCapacity += quantity;
+      await availability.save(); // Will auto-calculate availableCapacity via hook
+
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
 
       // Store reservation in Redis
       const reservationKey = `reservation:${bookingId}`;
@@ -169,24 +184,26 @@ class AvailabilityService {
 
       const { poiId, date, timeslot, quantity } = JSON.parse(reservation);
 
-      const query = {
+      const where = {
         poiId,
         date: new Date(date),
         isActive: true,
       };
 
       if (timeslot) {
-        query.timeslot = timeslot;
+        where.timeslot = timeslot;
       }
 
-      const availability = await Availability.findOne(query);
+      const availability = await Availability.findOne({ where });
 
       if (!availability) {
         throw new Error('Availability not found');
       }
 
-      // Confirm booking
-      await availability.confirmBooking(quantity);
+      // Confirm booking: move from reserved to booked
+      availability.reservedCapacity = Math.max(0, availability.reservedCapacity - quantity);
+      availability.bookedCapacity += quantity;
+      await availability.save(); // Will auto-calculate availableCapacity via hook
 
       // Remove reservation from Redis
       await this.redis.del(reservationKey);
@@ -218,20 +235,22 @@ class AvailabilityService {
 
       const { poiId, date, timeslot, quantity } = JSON.parse(reservation);
 
-      const query = {
+      const where = {
         poiId,
         date: new Date(date),
         isActive: true,
       };
 
       if (timeslot) {
-        query.timeslot = timeslot;
+        where.timeslot = timeslot;
       }
 
-      const availability = await Availability.findOne(query);
+      const availability = await Availability.findOne({ where });
 
       if (availability) {
-        await availability.releaseReservation(quantity);
+        // Release reserved capacity
+        availability.reservedCapacity = Math.max(0, availability.reservedCapacity - quantity);
+        await availability.save(); // Will auto-calculate availableCapacity via hook
         await this._invalidateCache(poiId, new Date(date), timeslot);
       }
 
@@ -249,8 +268,8 @@ class AvailabilityService {
    * Cancel confirmed booking (return capacity)
    * @param {String} poiId - POI identifier
    * @param {Date} date - Date
-   * @param {String} timeslot - Optional timeslot
    * @param {Number} quantity - Number of tickets to release
+   * @param {String} timeslot - Optional timeslot
    * @returns {Promise<void>}
    */
   async cancelBooking(poiId, date, quantity, timeslot = null) {
@@ -258,20 +277,22 @@ class AvailabilityService {
       const dateObj = new Date(date);
       dateObj.setHours(0, 0, 0, 0);
 
-      const query = {
+      const where = {
         poiId,
         date: dateObj,
         isActive: true,
       };
 
       if (timeslot) {
-        query.timeslot = timeslot;
+        where.timeslot = timeslot;
       }
 
-      const availability = await Availability.findOne(query);
+      const availability = await Availability.findOne({ where });
 
       if (availability) {
-        await availability.cancelBooking(quantity);
+        // Return booked capacity
+        availability.bookedCapacity = Math.max(0, availability.bookedCapacity - quantity);
+        await availability.save(); // Will auto-calculate availableCapacity via hook
         await this._invalidateCache(poiId, dateObj, timeslot);
       }
 
@@ -291,20 +312,32 @@ class AvailabilityService {
    */
   async getAvailabilityRange(poiId, startDate, endDate) {
     try {
-      const availabilities = await Availability.getAvailabilityRange(poiId, startDate, endDate);
+      const availabilities = await Availability.findAll({
+        where: {
+          poiId,
+          date: {
+            [Op.gte]: startDate,
+            [Op.lte]: endDate,
+          },
+          isActive: true,
+        },
+        order: [['date', 'ASC'], ['timeslot', 'ASC']],
+      });
 
       return availabilities.map(avail => ({
         date: avail.date,
         timeslot: avail.timeslot,
-        available: avail.isBookable,
+        available: !avail.isSoldOut && avail.availableCapacity > 0,
         capacity: {
-          total: avail.capacity.total,
-          available: avail.capacity.available,
+          total: avail.totalCapacity,
+          available: avail.availableCapacity,
+          booked: avail.bookedCapacity,
+          reserved: avail.reservedCapacity,
         },
         pricing: {
-          basePrice: avail.pricing.basePrice,
-          finalPrice: avail.pricing.finalPrice,
-          currency: avail.pricing.currency,
+          basePrice: parseFloat(avail.basePrice),
+          finalPrice: parseFloat(avail.finalPrice),
+          currency: avail.currency,
         },
         isSoldOut: avail.isSoldOut,
       }));
