@@ -36,6 +36,14 @@ import BookingList from './pages/bookings/BookingList';
 // Transaction Pages
 import TransactionList from './pages/transactions/TransactionList';
 
+// Reservations Module Pages
+import RestaurantList from './pages/reservations/RestaurantList';
+import RestaurantForm from './pages/reservations/RestaurantForm';
+import ReservationList from './pages/reservations/ReservationList';
+import GuestList from './pages/reservations/GuestList';
+import WaitlistPage from './pages/reservations/WaitlistPage';
+import FloorPlanEditor from './pages/reservations/FloorPlanEditor';
+
 // Theme
 const theme = createTheme({
   palette: {
@@ -142,28 +150,14 @@ function App() {
             <Route path="pois/create" element={<POIForm />} />
             <Route path="pois/edit/:id" element={<POIForm />} />
 
-            {/* User Routes */}
-            <Route path="users" element={<UserList />} />
-            <Route path="users/create" element={<UserForm />} />
-            <Route path="users/edit/:id" element={<UserForm />} />
-
-            {/* Event Routes */}
-            <Route path="events" element={<EventList />} />
-
-            {/* Reservation Routes */}
-            <Route path="reservations" element={<ReservationList />} />
-
-            {/* Ticket Routes */}
-            <Route path="tickets" element={<TicketList />} />
-
-            {/* Booking Routes */}
-            <Route path="bookings" element={<BookingList />} />
-
-            {/* Transaction Routes */}
-            <Route path="transactions" element={<TransactionList />} />
-
-            {/* Analytics */}
-            <Route path="analytics" element={<Analytics />} />
+            {/* Reservations Module Routes */}
+            <Route path="reservations/restaurants" element={<RestaurantList />} />
+            <Route path="reservations/restaurants/create" element={<RestaurantForm />} />
+            <Route path="reservations/restaurants/edit/:id" element={<RestaurantForm />} />
+            <Route path="reservations/bookings" element={<ReservationList />} />
+            <Route path="reservations/guests" element={<GuestList />} />
+            <Route path="reservations/waitlist" element={<WaitlistPage />} />
+            <Route path="reservations/floor-plans" element={<FloorPlanEditor />} />
 
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
