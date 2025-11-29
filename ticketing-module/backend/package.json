@@ -29,6 +29,7 @@
     "@mailerlite/mailerlite-nodejs": "^1.2.0",
     "@walletpass/pass-js": "^6.9.1",
     "axios": "^1.6.2",
+    "firebase-admin": "^12.0.0",
     "bcryptjs": "^2.4.3",
     "bull": "^4.12.0",
     "compression": "^1.7.4",
