@@ -1,10 +1,19 @@
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003/api/admin';
+const RESERVATIONS_API_URL = import.meta.env.VITE_RESERVATIONS_API_URL || 'http://localhost:3006/api';
 
-// Create axios instance
+// Create axios instance for admin API
 const api = axios.create({
   baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Create axios instance for reservations API (separate microservice)
+const reservationsApi = axios.create({
+  baseURL: RESERVATIONS_API_URL,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -60,6 +69,33 @@ api.interceptors.response.use(
       }
     }
 
+    return Promise.reject(error);
+  }
+);
+
+// Request interceptor for reservations API - add token
+reservationsApi.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor for reservations API
+reservationsApi.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Redirect to login on auth failure
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminRefreshToken');
+      localStorage.removeItem('adminUser');
+      window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );
@@ -230,4 +266,358 @@ export const platformAPI = {
   }
 };
 
+// ============================================
+// RESERVATIONS MODULE APIs (Port 3006)
+// ============================================
+
+// Restaurant API
+export const restaurantAPI = {
+  getAll: async (params = {}) => {
+    const response = await reservationsApi.get('/restaurants', { params });
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await reservationsApi.get(`/restaurants/${id}`);
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await reservationsApi.post('/restaurants', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await reservationsApi.put(`/restaurants/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await reservationsApi.delete(`/restaurants/${id}`);
+    return response.data;
+  },
+
+  updateOperatingHours: async (id, data) => {
+    const response = await reservationsApi.put(`/restaurants/${id}/operating-hours`, data);
+    return response.data;
+  },
+
+  getStats: async (id) => {
+    const response = await reservationsApi.get(`/restaurants/${id}/stats`);
+    return response.data;
+  }
+};
+
+// Table Management API
+export const tableAPI = {
+  getAll: async (restaurantId, params = {}) => {
+    const response = await reservationsApi.get(`/restaurants/${restaurantId}/tables`, { params });
+    return response.data;
+  },
+
+  getById: async (restaurantId, tableId) => {
+    const response = await reservationsApi.get(`/restaurants/${restaurantId}/tables/${tableId}`);
+    return response.data;
+  },
+
+  create: async (restaurantId, data) => {
+    const response = await reservationsApi.post(`/restaurants/${restaurantId}/tables`, data);
+    return response.data;
+  },
+
+  update: async (restaurantId, tableId, data) => {
+    const response = await reservationsApi.put(`/restaurants/${restaurantId}/tables/${tableId}`, data);
+    return response.data;
+  },
+
+  delete: async (restaurantId, tableId) => {
+    const response = await reservationsApi.delete(`/restaurants/${restaurantId}/tables/${tableId}`);
+    return response.data;
+  },
+
+  updateStatus: async (restaurantId, tableId, status) => {
+    const response = await reservationsApi.patch(`/restaurants/${restaurantId}/tables/${tableId}/status`, { status });
+    return response.data;
+  },
+
+  bulkUpdate: async (restaurantId, tables) => {
+    const response = await reservationsApi.put(`/restaurants/${restaurantId}/tables/bulk`, { tables });
+    return response.data;
+  }
+};
+
+// Reservation API
+export const reservationAPI = {
+  getAll: async (params = {}) => {
+    const response = await reservationsApi.get('/reservations', { params });
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await reservationsApi.get(`/reservations/${id}`);
+    return response.data;
+  },
+
+  getByReference: async (reference) => {
+    const response = await reservationsApi.get(`/reservations/reference/${reference}`);
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await reservationsApi.post('/reservations', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await reservationsApi.put(`/reservations/${id}`, data);
+    return response.data;
+  },
+
+  updateStatus: async (id, status, reason = null) => {
+    const response = await reservationsApi.patch(`/reservations/${id}/status`, { status, reason });
+    return response.data;
+  },
+
+  confirm: async (id) => {
+    const response = await reservationsApi.post(`/reservations/${id}/confirm`);
+    return response.data;
+  },
+
+  cancel: async (id, reason) => {
+    const response = await reservationsApi.post(`/reservations/${id}/cancel`, { reason });
+    return response.data;
+  },
+
+  noShow: async (id) => {
+    const response = await reservationsApi.post(`/reservations/${id}/no-show`);
+    return response.data;
+  },
+
+  seat: async (id, tableId) => {
+    const response = await reservationsApi.post(`/reservations/${id}/seat`, { table_id: tableId });
+    return response.data;
+  },
+
+  complete: async (id) => {
+    const response = await reservationsApi.post(`/reservations/${id}/complete`);
+    return response.data;
+  },
+
+  assignTable: async (id, tableId) => {
+    const response = await reservationsApi.patch(`/reservations/${id}/table`, { table_id: tableId });
+    return response.data;
+  },
+
+  getByRestaurant: async (restaurantId, params = {}) => {
+    const response = await reservationsApi.get(`/restaurants/${restaurantId}/reservations`, { params });
+    return response.data;
+  },
+
+  getTodayStats: async (restaurantId) => {
+    const response = await reservationsApi.get(`/restaurants/${restaurantId}/reservations/today-stats`);
+    return response.data;
+  }
+};
+
+// Guest CRM API
+export const guestAPI = {
+  getAll: async (params = {}) => {
+    const response = await reservationsApi.get('/guests', { params });
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await reservationsApi.get(`/guests/${id}`);
+    return response.data;
+  },
+
+  search: async (query) => {
+    const response = await reservationsApi.get('/guests/search', { params: { q: query } });
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await reservationsApi.post('/guests', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await reservationsApi.put(`/guests/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await reservationsApi.delete(`/guests/${id}`);
+    return response.data;
+  },
+
+  getHistory: async (id) => {
+    const response = await reservationsApi.get(`/guests/${id}/history`);
+    return response.data;
+  },
+
+  addNote: async (id, note) => {
+    const response = await reservationsApi.post(`/guests/${id}/notes`, { note });
+    return response.data;
+  },
+
+  updatePreferences: async (id, preferences) => {
+    const response = await reservationsApi.put(`/guests/${id}/preferences`, preferences);
+    return response.data;
+  },
+
+  updateTags: async (id, tags) => {
+    const response = await reservationsApi.put(`/guests/${id}/tags`, { tags });
+    return response.data;
+  },
+
+  getStats: async (id) => {
+    const response = await reservationsApi.get(`/guests/${id}/stats`);
+    return response.data;
+  }
+};
+
+// Waitlist API
+export const waitlistAPI = {
+  getAll: async (restaurantId, params = {}) => {
+    const response = await reservationsApi.get(`/restaurants/${restaurantId}/waitlist`, { params });
+    return response.data;
+  },
+
+  getPosition: async (restaurantId, id) => {
+    const response = await reservationsApi.get(`/restaurants/${restaurantId}/waitlist/${id}/position`);
+    return response.data;
+  },
+
+  add: async (restaurantId, data) => {
+    const response = await reservationsApi.post(`/restaurants/${restaurantId}/waitlist`, data);
+    return response.data;
+  },
+
+  update: async (restaurantId, id, data) => {
+    const response = await reservationsApi.put(`/restaurants/${restaurantId}/waitlist/${id}`, data);
+    return response.data;
+  },
+
+  remove: async (restaurantId, id) => {
+    const response = await reservationsApi.delete(`/restaurants/${restaurantId}/waitlist/${id}`);
+    return response.data;
+  },
+
+  notify: async (restaurantId, id) => {
+    const response = await reservationsApi.post(`/restaurants/${restaurantId}/waitlist/${id}/notify`);
+    return response.data;
+  },
+
+  convertToReservation: async (restaurantId, id, reservationData) => {
+    const response = await reservationsApi.post(`/restaurants/${restaurantId}/waitlist/${id}/convert`, reservationData);
+    return response.data;
+  },
+
+  updatePriority: async (restaurantId, id, priority) => {
+    const response = await reservationsApi.patch(`/restaurants/${restaurantId}/waitlist/${id}/priority`, { priority });
+    return response.data;
+  }
+};
+
+// Availability API
+export const availabilityAPI = {
+  getSlots: async (restaurantId, date, partySize) => {
+    const response = await reservationsApi.get(`/availability/${restaurantId}/slots`, {
+      params: { date, party_size: partySize }
+    });
+    return response.data;
+  },
+
+  getCalendar: async (restaurantId, startDate, endDate) => {
+    const response = await reservationsApi.get(`/availability/${restaurantId}/calendar`, {
+      params: { start_date: startDate, end_date: endDate }
+    });
+    return response.data;
+  },
+
+  blockSlot: async (restaurantId, date, timeSlot, reason) => {
+    const response = await reservationsApi.post(`/availability/${restaurantId}/block`, {
+      date, time_slot: timeSlot, reason
+    });
+    return response.data;
+  },
+
+  unblockSlot: async (restaurantId, date, timeSlot) => {
+    const response = await reservationsApi.delete(`/availability/${restaurantId}/block`, {
+      params: { date, time_slot: timeSlot }
+    });
+    return response.data;
+  },
+
+  updateCapacity: async (restaurantId, date, timeSlot, capacity) => {
+    const response = await reservationsApi.patch(`/availability/${restaurantId}/capacity`, {
+      date, time_slot: timeSlot, total_capacity: capacity
+    });
+    return response.data;
+  }
+};
+
+// Floor Plan API
+export const floorPlanAPI = {
+  getAll: async (restaurantId) => {
+    const response = await reservationsApi.get(`/restaurants/${restaurantId}/floor-plans`);
+    return response.data;
+  },
+
+  getById: async (restaurantId, id) => {
+    const response = await reservationsApi.get(`/restaurants/${restaurantId}/floor-plans/${id}`);
+    return response.data;
+  },
+
+  getActive: async (restaurantId) => {
+    const response = await reservationsApi.get(`/restaurants/${restaurantId}/floor-plans/active`);
+    return response.data;
+  },
+
+  create: async (restaurantId, data) => {
+    const response = await reservationsApi.post(`/restaurants/${restaurantId}/floor-plans`, data);
+    return response.data;
+  },
+
+  update: async (restaurantId, id, data) => {
+    const response = await reservationsApi.put(`/restaurants/${restaurantId}/floor-plans/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (restaurantId, id) => {
+    const response = await reservationsApi.delete(`/restaurants/${restaurantId}/floor-plans/${id}`);
+    return response.data;
+  },
+
+  setActive: async (restaurantId, id) => {
+    const response = await reservationsApi.post(`/restaurants/${restaurantId}/floor-plans/${id}/activate`);
+    return response.data;
+  },
+
+  updateLayout: async (restaurantId, id, layout) => {
+    const response = await reservationsApi.put(`/restaurants/${restaurantId}/floor-plans/${id}/layout`, { layout });
+    return response.data;
+  }
+};
+
+// Reservations Monitoring API
+export const reservationsMonitoringAPI = {
+  getHealth: async () => {
+    const response = await reservationsApi.get('/monitoring/health');
+    return response.data;
+  },
+
+  getStats: async () => {
+    const response = await reservationsApi.get('/monitoring/stats');
+    return response.data;
+  },
+
+  getDashboard: async () => {
+    const response = await reservationsApi.get('/monitoring/dashboard');
+    return response.data;
+  }
+};
+
+export { reservationsApi };
 export default api;
