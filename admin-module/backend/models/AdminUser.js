@@ -71,6 +71,36 @@ const adminUserSchema = new mongoose.Schema({
     media: {
       upload: { type: Boolean, default: false },
       delete: { type: Boolean, default: false }
+    },
+    events: {
+      view: { type: Boolean, default: false },
+      create: { type: Boolean, default: false },
+      edit: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false }
+    },
+    reservations: {
+      view: { type: Boolean, default: false },
+      create: { type: Boolean, default: false },
+      edit: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false }
+    },
+    tickets: {
+      view: { type: Boolean, default: false },
+      create: { type: Boolean, default: false },
+      edit: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false }
+    },
+    bookings: {
+      view: { type: Boolean, default: false },
+      create: { type: Boolean, default: false },
+      edit: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false }
+    },
+    transactions: {
+      view: { type: Boolean, default: false },
+      create: { type: Boolean, default: false },
+      edit: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false }
     }
   },
 
@@ -181,7 +211,12 @@ adminUserSchema.pre('save', function(next) {
         pois: { create: true, read: true, update: true, delete: true, approve: true },
         platform: { branding: true, content: true, settings: true },
         users: { view: true, manage: true },
-        media: { upload: true, delete: true }
+        media: { upload: true, delete: true },
+        events: { view: true, create: true, edit: true, delete: true },
+        reservations: { view: true, create: true, edit: true, delete: true },
+        tickets: { view: true, create: true, edit: true, delete: true },
+        bookings: { view: true, create: true, edit: true, delete: true },
+        transactions: { view: true, create: true, edit: true, delete: true }
       };
       break;
 
@@ -190,7 +225,12 @@ adminUserSchema.pre('save', function(next) {
         pois: { create: true, read: true, update: true, delete: false, approve: false },
         platform: { branding: false, content: false, settings: false },
         users: { view: false, manage: false },
-        media: { upload: true, delete: false }
+        media: { upload: true, delete: false },
+        events: { view: true, create: true, edit: true, delete: false },
+        reservations: { view: true, create: true, edit: true, delete: false },
+        tickets: { view: true, create: true, edit: true, delete: false },
+        bookings: { view: true, create: true, edit: true, delete: false },
+        transactions: { view: true, create: false, edit: false, delete: false }
       };
       break;
 
@@ -199,7 +239,12 @@ adminUserSchema.pre('save', function(next) {
         pois: { create: true, read: true, update: true, delete: false, approve: false },
         platform: { branding: false, content: true, settings: false },
         users: { view: false, manage: false },
-        media: { upload: true, delete: false }
+        media: { upload: true, delete: false },
+        events: { view: true, create: true, edit: true, delete: false },
+        reservations: { view: true, create: true, edit: true, delete: false },
+        tickets: { view: true, create: true, edit: true, delete: false },
+        bookings: { view: true, create: true, edit: true, delete: false },
+        transactions: { view: true, create: false, edit: false, delete: false }
       };
       break;
 
@@ -208,7 +253,12 @@ adminUserSchema.pre('save', function(next) {
         pois: { create: false, read: true, update: false, delete: false, approve: true },
         platform: { branding: false, content: false, settings: false },
         users: { view: false, manage: false },
-        media: { upload: false, delete: false }
+        media: { upload: false, delete: false },
+        events: { view: true, create: false, edit: false, delete: false },
+        reservations: { view: true, create: false, edit: false, delete: false },
+        tickets: { view: true, create: false, edit: false, delete: false },
+        bookings: { view: true, create: false, edit: false, delete: false },
+        transactions: { view: true, create: false, edit: false, delete: false }
       };
       break;
   }

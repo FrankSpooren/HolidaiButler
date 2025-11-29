@@ -78,6 +78,12 @@ app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/pois', adminPOIRoutes);
 app.use('/api/admin/upload', adminUploadRoutes);
 app.use('/api/admin/platform', adminPlatformRoutes);
+app.use('/api/admin/users', adminUsersRoutes);
+app.use('/api/admin/events', adminEventsRoutes);
+app.use('/api/admin/reservations', adminReservationsRoutes);
+app.use('/api/admin/tickets', adminTicketsRoutes);
+app.use('/api/admin/bookings', adminBookingsRoutes);
+app.use('/api/admin/transactions', adminTransactionsRoutes);
 
 // Enterprise monitoring routes
 app.use('/api/admin/monitoring', monitoringRoutes);
