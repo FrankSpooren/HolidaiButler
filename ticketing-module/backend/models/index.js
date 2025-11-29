@@ -781,19 +781,48 @@ Availability.beforeSave(async (availability) => {
   availability.isSoldOut = availability.availableCapacity <= 0;
 });
 
-// ========== SYNC DATABASE ==========
+// ========== DATABASE CONNECTION ==========
 
-const syncDatabase = async (options = {}) => {
+/**
+ * Test database connection without syncing tables.
+ * Use migrations for schema changes: npm run migrate
+ */
+const connectDatabase = async () => {
   try {
     await sequelize.authenticate();
     console.log('✅ MySQL (Hetzner pxoziy_db1) connection established successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Unable to connect to MySQL:', error);
+    throw error;
+  }
+};
+
+/**
+ * @deprecated Use migrations instead: npm run migrate
+ * Sync database schema directly (ONLY for development/testing)
+ *
+ * WARNING: Never use in production! Use migrations instead.
+ */
+const syncDatabase = async (options = {}) => {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ CRITICAL: sequelize.sync() is disabled in production!');
+    console.error('   Use migrations instead: npm run migrate');
+    throw new Error('Database sync is disabled in production. Use migrations.');
+  }
+
+  console.warn('⚠️  WARNING: Using sync() is deprecated. Use migrations: npm run migrate');
+
+  try {
+    await sequelize.authenticate();
+    console.log('✅ MySQL connection established');
 
     if (options.force) {
-      console.log('⚠️  Forcing database sync (DROP existing tables)');
+      console.warn('⚠️  DANGER: Forcing database sync (DROP existing tables)');
     }
 
     await sequelize.sync(options);
-    console.log('✅ Database models synchronized');
+    console.log('✅ Database models synchronized (dev mode)');
 
     return true;
   } catch (error) {
@@ -807,5 +836,6 @@ module.exports = {
   Booking,
   Ticket,
   Availability,
-  syncDatabase,
+  connectDatabase,
+  syncDatabase, // @deprecated - use migrations instead
 };
