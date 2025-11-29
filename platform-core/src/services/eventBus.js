@@ -32,24 +32,41 @@ class EventBus extends EventEmitter {
         port: parseInt(process.env.REDIS_PORT || '6379'),
         password: process.env.REDIS_PASSWORD || undefined,
         db: parseInt(process.env.REDIS_DB || '0'),
+        maxRetriesPerRequest: 3,
+        connectTimeout: 5000,
         retryStrategy: (times) => {
-          const delay = Math.min(times * 50, 2000);
+          if (times > 3) {
+            // Stop retrying after 3 attempts
+            return null;
+          }
+          const delay = Math.min(times * 500, 2000);
           return delay;
         },
+        lazyConnect: true,
       };
 
       // Create separate connections for pub/sub
       this.publisher = new Redis(redisConfig);
       this.subscriber = new Redis(redisConfig);
 
-      // Handle Redis errors
+      // Handle Redis errors silently in dev mode
       this.publisher.on('error', (err) => {
-        logger.error('Redis Publisher Error:', err);
+        if (process.env.NODE_ENV !== 'development') {
+          logger.error('Redis Publisher Error:', err);
+        }
       });
 
       this.subscriber.on('error', (err) => {
-        logger.error('Redis Subscriber Error:', err);
+        if (process.env.NODE_ENV !== 'development') {
+          logger.error('Redis Subscriber Error:', err);
+        }
       });
+
+      // Try to connect with timeout
+      await Promise.race([
+        this.subscriber.connect(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
+      ]);
 
       // Subscribe to all platform events
       await this.subscriber.psubscribe('platform:*');
@@ -62,6 +79,13 @@ class EventBus extends EventEmitter {
       this.isInitialized = true;
       logger.info('✅ Event Bus initialized');
     } catch (error) {
+      // In development, gracefully degrade without Redis
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn('⚠️ Event Bus initialization failed (Redis unavailable) - running in local-only mode');
+        this.isInitialized = true; // Allow local events to work
+        this.localOnly = true;
+        return;
+      }
       logger.error('❌ Event Bus initialization failed:', error);
       throw error;
     }
@@ -76,6 +100,13 @@ class EventBus extends EventEmitter {
     }
 
     try {
+      // In local-only mode, just emit locally
+      if (this.localOnly) {
+        this.emit(eventName, data);
+        logger.debug(`[Local] Event emitted: ${eventName}`);
+        return;
+      }
+
       const channel = `platform:${eventName}`;
       const payload = JSON.stringify({
         event: eventName,
@@ -94,6 +125,12 @@ class EventBus extends EventEmitter {
       // Also emit locally
       this.emit(eventName, data);
     } catch (error) {
+      // In development, log and continue
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn(`Event publish failed (${eventName}), falling back to local emit`);
+        this.emit(eventName, data);
+        return;
+      }
       logger.error(`Failed to publish event ${eventName}:`, error);
       throw error;
     }

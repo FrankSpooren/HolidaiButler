@@ -89,6 +89,28 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve static files (uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Root health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.json({
+      success: true,
+      service: 'admin-module',
+      status: 'healthy',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      service: 'admin-module',
+      status: 'unhealthy',
+      database: 'disconnected',
+      error: error.message
+    });
+  }
+});
+
 // API Routes
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/pois', adminPOIRoutes);

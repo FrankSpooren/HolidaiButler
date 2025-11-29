@@ -619,5 +619,161 @@ export const reservationsMonitoringAPI = {
   }
 };
 
+// ============================================
+// ADDITIONAL MODULE APIs (Stubs for compatibility)
+// ============================================
+
+// Users API
+export const usersAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/users', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/users', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/users/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/users/${id}`);
+    return response.data;
+  },
+  getStats: async () => {
+    const response = await api.get('/users/stats');
+    return response.data;
+  }
+};
+
+// Bookings API
+export const bookingsAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/bookings', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/bookings/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/bookings', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/bookings/${id}`, data);
+    return response.data;
+  },
+  cancel: async (id, reason) => {
+    const response = await api.post(`/bookings/${id}/cancel`, { reason });
+    return response.data;
+  },
+  confirm: async (id) => {
+    const response = await api.post(`/bookings/${id}/confirm`);
+    return response.data;
+  },
+  getStats: async () => {
+    const response = await api.get('/bookings/stats');
+    return response.data;
+  }
+};
+
+// Events API (Ticketing module)
+const ticketingApi = axios.create({
+  baseURL: import.meta.env.VITE_TICKETING_API_URL || 'http://localhost:3004/api/v1/tickets',
+  headers: { 'Content-Type': 'application/json' }
+});
+
+export const eventsAPI = {
+  getAll: async (params = {}) => {
+    const response = await ticketingApi.get('/events', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await ticketingApi.get(`/events/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await ticketingApi.post('/events', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await ticketingApi.put(`/events/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await ticketingApi.delete(`/events/${id}`);
+    return response.data;
+  },
+  getStats: async () => {
+    const response = await ticketingApi.get('/events/stats');
+    return response.data;
+  }
+};
+
+// Tickets API
+export const ticketsAPI = {
+  getAll: async (params = {}) => {
+    const response = await ticketingApi.get('/', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await ticketingApi.get(`/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await ticketingApi.post('/', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await ticketingApi.put(`/${id}`, data);
+    return response.data;
+  },
+  cancel: async (id) => {
+    const response = await ticketingApi.post(`/${id}/cancel`);
+    return response.data;
+  },
+  validate: async (code) => {
+    const response = await ticketingApi.post('/validate', { code });
+    return response.data;
+  }
+};
+
+// POIs API (alias for poiAPI)
+export const poisAPI = poiAPI;
+
+// Transactions API (Payment module)
+const paymentApi = axios.create({
+  baseURL: import.meta.env.VITE_PAYMENT_API_URL || 'http://localhost:3005/api/v1/payments',
+  headers: { 'Content-Type': 'application/json' }
+});
+
+export const transactionsAPI = {
+  getAll: async (params = {}) => {
+    const response = await paymentApi.get('/transactions', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await paymentApi.get(`/transactions/${id}`);
+    return response.data;
+  },
+  refund: async (id, amount) => {
+    const response = await paymentApi.post(`/transactions/${id}/refund`, { amount });
+    return response.data;
+  },
+  getStats: async () => {
+    const response = await paymentApi.get('/transactions/stats');
+    return response.data;
+  }
+};
+
+// Reservations API (alias for reservationAPI)
+export const reservationsAPI = reservationAPI;
+
 export { reservationsApi };
 export default api;
