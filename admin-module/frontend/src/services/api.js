@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003/api/admin';
-const RESERVATIONS_API_URL = import.meta.env.VITE_RESERVATIONS_API_URL || 'http://localhost:3006/api';
+const RESERVATIONS_API_URL = import.meta.env.VITE_RESERVATIONS_API_URL || 'http://localhost:5003/api';
 
 // Create axios instance for admin API
 const api = axios.create({
@@ -685,7 +685,7 @@ export const bookingsAPI = {
 
 // Events API (Ticketing module)
 const ticketingApi = axios.create({
-  baseURL: import.meta.env.VITE_TICKETING_API_URL || 'http://localhost:3004/api/v1/tickets',
+  baseURL: import.meta.env.VITE_TICKETING_API_URL || 'http://localhost:5004/api/v1/tickets',
   headers: { 'Content-Type': 'application/json' }
 });
 
@@ -749,7 +749,7 @@ export const poisAPI = poiAPI;
 
 // Transactions API (Payment module)
 const paymentApi = axios.create({
-  baseURL: import.meta.env.VITE_PAYMENT_API_URL || 'http://localhost:3005/api/v1/payments',
+  baseURL: import.meta.env.VITE_PAYMENT_API_URL || 'http://localhost:5002/api/v1/payments',
   headers: { 'Content-Type': 'application/json' }
 });
 
@@ -777,7 +777,7 @@ export const reservationsAPI = reservationAPI;
 
 // Agenda API (Agenda module)
 const agendaApi = axios.create({
-  baseURL: import.meta.env.VITE_AGENDA_API_URL || 'http://localhost:5003/api',
+  baseURL: import.meta.env.VITE_AGENDA_API_URL || 'http://localhost:5005/api',
   headers: { 'Content-Type': 'application/json' }
 });
 
