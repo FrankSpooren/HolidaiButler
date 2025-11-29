@@ -13,6 +13,11 @@ import adminPOIRoutes from './routes/adminPOI.js';
 import adminUploadRoutes from './routes/adminUpload.js';
 import adminPlatformRoutes from './routes/adminPlatform.js';
 import adminUsersRoutes from './routes/adminUsers.js';
+import adminEventsRoutes from './routes/adminEvents.js';
+import adminReservationsRoutes from './routes/adminReservations.js';
+import adminTicketsRoutes from './routes/adminTickets.js';
+import adminBookingsRoutes from './routes/adminBookings.js';
+import adminTransactionsRoutes from './routes/adminTransactions.js';
 
 // Load environment variables
 dotenv.config();
@@ -60,6 +65,11 @@ app.use('/api/admin/pois', adminPOIRoutes);
 app.use('/api/admin/upload', adminUploadRoutes);
 app.use('/api/admin/platform', adminPlatformRoutes);
 app.use('/api/admin/users', adminUsersRoutes);
+app.use('/api/admin/events', adminEventsRoutes);
+app.use('/api/admin/reservations', adminReservationsRoutes);
+app.use('/api/admin/tickets', adminTicketsRoutes);
+app.use('/api/admin/bookings', adminBookingsRoutes);
+app.use('/api/admin/transactions', adminTransactionsRoutes);
 
 // Health check endpoint
 app.get('/api/admin/health', (req, res) => {

@@ -283,4 +283,349 @@ export const usersAPI = {
   }
 };
 
+// Events API
+export const eventsAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/events', { params });
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await api.get(`/events/${id}`);
+    return response.data;
+  },
+
+  getStats: async (params = {}) => {
+    const response = await api.get('/events/stats', { params });
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/events', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/events/${id}`, data);
+    return response.data;
+  },
+
+  updateStatus: async (id, status) => {
+    const response = await api.patch(`/events/${id}/status`, { status });
+    return response.data;
+  },
+
+  publish: async (id) => {
+    const response = await api.post(`/events/${id}/publish`);
+    return response.data;
+  },
+
+  duplicate: async (id) => {
+    const response = await api.post(`/events/${id}/duplicate`);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/events/${id}`);
+    return response.data;
+  },
+
+  bulkDelete: async (eventIds) => {
+    const response = await api.post('/events/bulk-delete', { eventIds });
+    return response.data;
+  },
+
+  bulkUpdateStatus: async (eventIds, status) => {
+    const response = await api.post('/events/bulk-update-status', { eventIds, status });
+    return response.data;
+  }
+};
+
+// Reservations API
+export const reservationsAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/reservations', { params });
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await api.get(`/reservations/${id}`);
+    return response.data;
+  },
+
+  getStats: async (params = {}) => {
+    const response = await api.get('/reservations/stats', { params });
+    return response.data;
+  },
+
+  getToday: async (params = {}) => {
+    const response = await api.get('/reservations/today', { params });
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/reservations', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/reservations/${id}`, data);
+    return response.data;
+  },
+
+  confirm: async (id) => {
+    const response = await api.post(`/reservations/${id}/confirm`);
+    return response.data;
+  },
+
+  seat: async (id, tableInfo) => {
+    const response = await api.post(`/reservations/${id}/seat`, { tableInfo });
+    return response.data;
+  },
+
+  complete: async (id, revenueData) => {
+    const response = await api.post(`/reservations/${id}/complete`, { revenueData });
+    return response.data;
+  },
+
+  cancel: async (id, reason, cancelledBy) => {
+    const response = await api.post(`/reservations/${id}/cancel`, { reason, cancelledBy });
+    return response.data;
+  },
+
+  noShow: async (id, notes) => {
+    const response = await api.post(`/reservations/${id}/no-show`, { notes });
+    return response.data;
+  },
+
+  addNote: async (id, note) => {
+    const response = await api.post(`/reservations/${id}/notes`, { note });
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/reservations/${id}`);
+    return response.data;
+  }
+};
+
+// Tickets API
+export const ticketsAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/tickets', { params });
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await api.get(`/tickets/${id}`);
+    return response.data;
+  },
+
+  getStats: async (params = {}) => {
+    const response = await api.get('/tickets/stats', { params });
+    return response.data;
+  },
+
+  validate: async (ticketNumber) => {
+    const response = await api.get(`/tickets/validate/${ticketNumber}`);
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/tickets', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/tickets/${id}`, data);
+    return response.data;
+  },
+
+  use: async (id, scanInfo) => {
+    const response = await api.post(`/tickets/${id}/use`, { scanInfo });
+    return response.data;
+  },
+
+  cancel: async (id, reason, cancelledBy, refund) => {
+    const response = await api.post(`/tickets/${id}/cancel`, { reason, cancelledBy, refund });
+    return response.data;
+  },
+
+  transfer: async (id, newHolder, reason) => {
+    const response = await api.post(`/tickets/${id}/transfer`, { newHolder, reason });
+    return response.data;
+  },
+
+  resend: async (id, method) => {
+    const response = await api.post(`/tickets/${id}/resend`, { method });
+    return response.data;
+  },
+
+  addNote: async (id, note) => {
+    const response = await api.post(`/tickets/${id}/notes`, { note });
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/tickets/${id}`);
+    return response.data;
+  },
+
+  bulkCancel: async (ticketIds, reason) => {
+    const response = await api.post('/tickets/bulk-cancel', { ticketIds, reason });
+    return response.data;
+  }
+};
+
+// Bookings API
+export const bookingsAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/bookings', { params });
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await api.get(`/bookings/${id}`);
+    return response.data;
+  },
+
+  getStats: async (params = {}) => {
+    const response = await api.get('/bookings/stats', { params });
+    return response.data;
+  },
+
+  getToday: async (params = {}) => {
+    const response = await api.get('/bookings/today', { params });
+    return response.data;
+  },
+
+  getByCustomer: async (customerId) => {
+    const response = await api.get(`/bookings/customer/${customerId}`);
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/bookings', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/bookings/${id}`, data);
+    return response.data;
+  },
+
+  confirm: async (id, transactionId) => {
+    const response = await api.post(`/bookings/${id}/confirm`, { transactionId });
+    return response.data;
+  },
+
+  complete: async (id) => {
+    const response = await api.post(`/bookings/${id}/complete`);
+    return response.data;
+  },
+
+  cancel: async (id, reason, cancelledBy, refundAmount) => {
+    const response = await api.post(`/bookings/${id}/cancel`, { reason, cancelledBy, refundAmount });
+    return response.data;
+  },
+
+  addNote: async (id, note) => {
+    const response = await api.post(`/bookings/${id}/notes`, { note });
+    return response.data;
+  },
+
+  resendConfirmation: async (id) => {
+    const response = await api.post(`/bookings/${id}/resend-confirmation`);
+    return response.data;
+  },
+
+  bulkUpdateStatus: async (bookingIds, status) => {
+    const response = await api.post('/bookings/bulk-update-status', { bookingIds, status });
+    return response.data;
+  }
+};
+
+// Transactions API
+export const transactionsAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/transactions', { params });
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await api.get(`/transactions/${id}`);
+    return response.data;
+  },
+
+  getStats: async (params = {}) => {
+    const response = await api.get('/transactions/stats', { params });
+    return response.data;
+  },
+
+  getToday: async (params = {}) => {
+    const response = await api.get('/transactions/today', { params });
+    return response.data;
+  },
+
+  getPendingReviews: async () => {
+    const response = await api.get('/transactions/pending-reviews');
+    return response.data;
+  },
+
+  getUnreconciled: async (params = {}) => {
+    const response = await api.get('/transactions/unreconciled', { params });
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/transactions', data);
+    return response.data;
+  },
+
+  refund: async (id, amount, reason, refundMethod) => {
+    const response = await api.post(`/transactions/${id}/refund`, { amount, reason, refundMethod });
+    return response.data;
+  },
+
+  initiateDispute: async (id, reason, evidence) => {
+    const response = await api.post(`/transactions/${id}/dispute`, { reason, evidence });
+    return response.data;
+  },
+
+  resolveDispute: async (id, resolution, won) => {
+    const response = await api.post(`/transactions/${id}/dispute/resolve`, { resolution, won });
+    return response.data;
+  },
+
+  flagForReview: async (id, reason) => {
+    const response = await api.post(`/transactions/${id}/flag-review`, { reason });
+    return response.data;
+  },
+
+  approveReview: async (id, notes) => {
+    const response = await api.post(`/transactions/${id}/approve-review`, { notes });
+    return response.data;
+  },
+
+  reconcile: async (id, batchId, settlementDate) => {
+    const response = await api.post(`/transactions/${id}/reconcile`, { batchId, settlementDate });
+    return response.data;
+  },
+
+  addNote: async (id, note, isInternal) => {
+    const response = await api.post(`/transactions/${id}/notes`, { note, isInternal });
+    return response.data;
+  },
+
+  bulkReconcile: async (transactionIds, batchId, settlementDate) => {
+    const response = await api.post('/transactions/bulk-reconcile', { transactionIds, batchId, settlementDate });
+    return response.data;
+  },
+
+  export: async (params = {}) => {
+    const response = await api.get('/transactions/export', { params });
+    return response.data;
+  }
+};
+
 export default api;
