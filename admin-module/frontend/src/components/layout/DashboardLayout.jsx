@@ -36,7 +36,13 @@ import {
   TableRestaurant as TableRestaurantIcon,
   ContactPhone as ContactPhoneIcon,
   HourglassEmpty as HourglassEmptyIcon,
-  GridOn as GridOnIcon
+  GridOn as GridOnIcon,
+  Event as EventIcon,
+  ConfirmationNumber as TicketIcon,
+  BookOnline as BookingIcon,
+  Payment as PaymentIcon,
+  Assessment as AssessmentIcon,
+  CalendarMonth as AgendaIcon
 } from '@mui/icons-material';
 import useAuthStore from '../../store/authStore';
 
@@ -80,68 +86,49 @@ export default function DashboardLayout() {
       text: 'POIs',
       icon: <PlaceIcon />,
       path: '/pois',
-      permission: 'pois.read'
-    },
-    // Reservations Module
-    {
-      text: 'Restaurants',
-      icon: <RestaurantIcon />,
-      path: '/reservations/restaurants',
-      permission: 'reservations.restaurants'
-    },
-    {
-      text: 'Reservations',
-      icon: <EventNoteIcon />,
-      path: '/reservations/bookings',
-      permission: 'reservations.view'
-    },
-    {
-      text: 'Guests',
-      icon: <ContactPhoneIcon />,
-      path: '/reservations/guests',
-      permission: 'reservations.guests'
-    },
-    {
-      text: 'Waitlist',
-      icon: <HourglassEmptyIcon />,
-      path: '/reservations/waitlist',
-      permission: 'reservations.waitlist'
-    },
-    {
-      text: 'Floor Plans',
-      icon: <GridOnIcon />,
-      path: '/reservations/floor-plans',
-      permission: 'reservations.floorplans'
+      permission: null // Allow all for development
     },
     {
       text: 'Events',
       icon: <EventIcon />,
       path: '/events',
-      permission: 'events.view'
-    },
-    {
-      text: 'Reservations',
-      icon: <RestaurantIcon />,
-      path: '/reservations',
-      permission: 'reservations.view'
+      permission: null
     },
     {
       text: 'Tickets',
       icon: <TicketIcon />,
       path: '/tickets',
-      permission: 'tickets.view'
+      permission: null
+    },
+    {
+      text: 'Reservations',
+      icon: <RestaurantIcon />,
+      path: '/reservations',
+      permission: null
+    },
+    {
+      text: 'Restaurants',
+      icon: <TableRestaurantIcon />,
+      path: '/reservations/restaurants',
+      permission: null
     },
     {
       text: 'Bookings',
       icon: <BookingIcon />,
       path: '/bookings',
-      permission: 'bookings.view'
+      permission: null
     },
     {
       text: 'Transactions',
       icon: <PaymentIcon />,
       path: '/transactions',
-      permission: 'transactions.view'
+      permission: null
+    },
+    {
+      text: 'Agenda',
+      icon: <AgendaIcon />,
+      path: '/agenda',
+      permission: null
     },
     {
       text: 'Analytics',
@@ -153,19 +140,13 @@ export default function DashboardLayout() {
       text: 'Platform',
       icon: <PaletteIcon />,
       path: '/platform',
-      permission: 'platform',
-      submenu: [
-        { text: 'Branding', path: '/platform/branding', permission: 'platform.branding' },
-        { text: 'Content', path: '/platform/content', permission: 'platform.content' },
-        { text: 'Contact', path: '/platform/contact', permission: 'platform.content' },
-        { text: 'Legal', path: '/platform/legal', permission: 'platform.settings' }
-      ]
+      permission: null
     },
     {
       text: 'Users',
       icon: <PeopleIcon />,
       path: '/users',
-      permission: 'users.view'
+      permission: null
     }
   ];
 
