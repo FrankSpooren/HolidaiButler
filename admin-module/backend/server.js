@@ -1,5 +1,4 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -7,11 +6,21 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
+// Import database and models
+import { sequelize, AdminUser, Booking, Event, PlatformConfig, Reservation, Ticket, Transaction } from './models/index.js';
+import { testConnection, syncDatabase } from './config/database.js';
+
 // Import routes
 import adminAuthRoutes from './routes/adminAuth.js';
 import adminPOIRoutes from './routes/adminPOI.js';
 import adminUploadRoutes from './routes/adminUpload.js';
 import adminPlatformRoutes from './routes/adminPlatform.js';
+import adminUsersRoutes from './routes/adminUsers.js';
+import adminEventsRoutes from './routes/adminEvents.js';
+import adminReservationsRoutes from './routes/adminReservations.js';
+import adminTicketsRoutes from './routes/adminTickets.js';
+import adminBookingsRoutes from './routes/adminBookings.js';
+import adminTransactionsRoutes from './routes/adminTransactions.js';
 import monitoringRoutes from './routes/monitoring.js';
 
 // Import enterprise services
@@ -28,25 +37,32 @@ const __dirname = path.dirname(__filename);
 // Initialize Express app
 const app = express();
 
-// MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/holidaibutler';
-
 // Initialize services
 async function initializeServices() {
   try {
-    // Connect to MongoDB
-    await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
-    console.log('✅ MongoDB connected successfully');
+    // Connect to MySQL Database
+    const dbConnected = await testConnection();
+    if (!dbConnected) {
+      console.error('❌ MySQL database connection failed');
+      process.exit(1);
+    }
 
-    // Connect to Redis cache
-    const cacheConnected = await cacheService.connect();
-    if (cacheConnected) {
-      console.log('✅ Redis cache initialized');
-    } else {
-      console.warn('⚠️  Redis cache not available (performance may be degraded)');
+    // Sync database in development mode
+    if (process.env.NODE_ENV === 'development') {
+      await syncDatabase(false); // Set to true to force recreate tables
+      console.log('✅ Database synchronized');
+    }
+
+    // Connect to Redis cache (optional)
+    try {
+      const cacheConnected = await cacheService.connect();
+      if (cacheConnected) {
+        console.log('✅ Redis cache initialized');
+      } else {
+        console.warn('⚠️  Redis cache not available (performance may be degraded)');
+      }
+    } catch (redisError) {
+      console.warn('⚠️  Redis cache not available:', redisError.message);
     }
 
     console.log('✅ All services initialized');
@@ -89,14 +105,45 @@ app.use('/api/admin/transactions', adminTransactionsRoutes);
 app.use('/api/admin/monitoring', monitoringRoutes);
 
 // Health check endpoint
-app.get('/api/admin/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Admin API is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
+app.get('/api/admin/health', async (req, res) => {
+  try {
+    // Check database connection
+    await sequelize.authenticate();
+
+    res.json({
+      success: true,
+      message: 'Admin API is running',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: 'MySQL connected',
+      version: '2.0.0'
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      message: 'Admin API degraded',
+      database: 'disconnected',
+      error: error.message
+    });
+  }
 });
+
+// Database info endpoint (development only)
+if (process.env.NODE_ENV === 'development') {
+  app.get('/api/admin/db-info', async (req, res) => {
+    try {
+      const models = Object.keys(sequelize.models);
+      res.json({
+        success: true,
+        database: 'MySQL',
+        models,
+        dialect: sequelize.getDialect()
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+}
 
 // 404 handler
 app.use((req, res) => {
@@ -111,9 +158,9 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const errors = Object.values(err.errors).map(e => e.message);
+  // Sequelize validation error
+  if (err.name === 'SequelizeValidationError') {
+    const errors = err.errors.map(e => e.message);
     return res.status(400).json({
       success: false,
       message: 'Validation error',
@@ -121,20 +168,29 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Mongoose cast error (invalid ObjectId)
-  if (err.name === 'CastError') {
+  // Sequelize unique constraint error
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    const fields = err.errors.map(e => e.path);
     return res.status(400).json({
       success: false,
-      message: 'Invalid ID format'
+      message: `${fields.join(', ')} already exists`
     });
   }
 
-  // Duplicate key error
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyPattern)[0];
+  // Sequelize database error
+  if (err.name === 'SequelizeDatabaseError') {
+    return res.status(500).json({
+      success: false,
+      message: 'Database error',
+      ...(process.env.NODE_ENV === 'development' && { detail: err.message })
+    });
+  }
+
+  // Sequelize foreign key constraint error
+  if (err.name === 'SequelizeForeignKeyConstraintError') {
     return res.status(400).json({
       success: false,
-      message: `${field} already exists`
+      message: 'Referenced record does not exist or cannot be deleted due to dependencies'
     });
   }
 
@@ -164,22 +220,40 @@ app.use((err, req, res, next) => {
 // Start server
 const PORT = process.env.ADMIN_PORT || 3003;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Admin API server running on port ${PORT}`);
   console.log(`🌐 Admin API: http://localhost:${PORT}/api/admin`);
   console.log(`📁 Uploads: http://localhost:${PORT}/uploads`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`💾 Database: MySQL/Sequelize`);
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
+  server.close(async () => {
     console.log('HTTP server closed');
-    mongoose.connection.close(false, () => {
-      console.log('MongoDB connection closed');
-      process.exit(0);
-    });
+    try {
+      await sequelize.close();
+      console.log('MySQL connection closed');
+    } catch (error) {
+      console.error('Error closing database connection:', error);
+    }
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT signal received: closing HTTP server');
+  server.close(async () => {
+    console.log('HTTP server closed');
+    try {
+      await sequelize.close();
+      console.log('MySQL connection closed');
+    } catch (error) {
+      console.error('Error closing database connection:', error);
+    }
+    process.exit(0);
   });
 });
 

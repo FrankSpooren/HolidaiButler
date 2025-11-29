@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import AdminUser from '../models/AdminUser.js';
+import { AdminUser } from '../models/index.js';
 
 // JWT Secret (should be in environment variables)
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -25,8 +25,8 @@ export const verifyAdminToken = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, JWT_ADMIN_SECRET);
 
-    // Get user from token
-    const user = await AdminUser.findById(decoded.userId).select('-password');
+    // Get user from token (using Sequelize findByPk - default scope excludes password)
+    const user = await AdminUser.findByPk(decoded.userId);
 
     if (!user) {
       return res.status(401).json({

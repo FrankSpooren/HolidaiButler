@@ -1,409 +1,458 @@
-import mongoose from 'mongoose';
+import { DataTypes, Model } from 'sequelize';
 import crypto from 'crypto';
+import sequelize from '../config/database.js';
 
-const ticketSchema = new mongoose.Schema({
-  // Ticket Information
+class Ticket extends Model {
+  // Generate ticket number
+  static generateTicketNumber() {
+    const prefix = 'TKT';
+    const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const random = crypto.randomBytes(4).toString('hex').toUpperCase();
+    return `${prefix}-${date}-${random}`;
+  }
+
+  // Generate QR code
+  static generateQRCode() {
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  // Check if ticket is valid
+  get isValid() {
+    const now = new Date();
+    return (
+      this.status === 'active' &&
+      new Date(this.validFrom) <= now &&
+      new Date(this.validUntil) >= now
+    );
+  }
+
+  // Check if expired
+  get isExpired() {
+    return new Date(this.validUntil) < new Date();
+  }
+
+  // Use ticket
+  async use(adminUserId, scanInfo = {}) {
+    if (!this.isValid) {
+      throw new Error('Ticket is not valid');
+    }
+
+    this.status = 'used';
+    this.scannedAt = new Date();
+    this.scannedById = adminUserId;
+    this.scanLocation = scanInfo.location;
+    this.scanDevice = scanInfo.device;
+    this.entryGate = scanInfo.gate;
+
+    return this.save();
+  }
+
+  // Cancel ticket
+  async cancel(reason, cancelledBy, refund = false) {
+    this.status = 'cancelled';
+    this.cancelledAt = new Date();
+    this.cancelledBy = cancelledBy;
+    this.cancellationReason = reason;
+    this.refunded = refund;
+
+    if (refund) {
+      this.refundAmount = this.priceAmount;
+      this.refundedAt = new Date();
+    }
+
+    return this.save();
+  }
+
+  // Transfer ticket
+  async transfer(newHolder, transferredBy, reason) {
+    this.status = 'transferred';
+    this.transferredAt = new Date();
+    this.transferredTo = newHolder;
+    this.transferredById = transferredBy;
+    this.transferReason = reason;
+
+    // Update holder info
+    this.holderFirstName = newHolder.firstName;
+    this.holderLastName = newHolder.lastName;
+    this.holderEmail = newHolder.email;
+
+    return this.save();
+  }
+}
+
+Ticket.init({
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
+
   ticketNumber: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING(50),
+    allowNull: false,
     unique: true,
-    index: true
+    field: 'ticket_number'
   },
 
   qrCode: {
-    type: String,
-    required: true,
-    unique: true
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    unique: true,
+    field: 'qr_code'
   },
 
-  // Event/Attraction Reference
-  event: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Event'
+  // References (stored as UUIDs)
+  eventId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'event_id'
   },
 
-  poi: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'POI'
+  poiId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'poi_id'
+  },
+
+  bookingId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    field: 'booking_id'
   },
 
   // Ticket Type
-  ticketType: {
-    name: {
-      type: String,
-      required: true
-    },
-    description: String,
-    category: {
-      type: String,
-      enum: ['general', 'vip', 'earlybird', 'student', 'senior', 'child', 'group', 'season'],
-      default: 'general'
-    }
+  ticketTypeName: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    field: 'ticket_type_name'
   },
 
-  // Booking Reference
-  booking: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Booking',
-    required: true,
-    index: true
+  ticketTypeDescription: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'ticket_type_description'
+  },
+
+  ticketCategory: {
+    type: DataTypes.ENUM('general', 'vip', 'earlybird', 'student', 'senior', 'child', 'group', 'season'),
+    defaultValue: 'general',
+    field: 'ticket_category'
   },
 
   // Holder Information
-  holder: {
-    firstName: String,
-    lastName: String,
-    email: String,
-    phone: String,
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }
+  holderFirstName: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'holder_first_name'
+  },
+
+  holderLastName: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'holder_last_name'
+  },
+
+  holderEmail: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'holder_email'
+  },
+
+  holderPhone: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'holder_phone'
+  },
+
+  holderUserId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'holder_user_id'
   },
 
   // Validity
-  validity: {
-    validFrom: {
-      type: Date,
-      required: true
-    },
-    validUntil: {
-      type: Date,
-      required: true
-    },
-    dateSpecific: {
-      type: Boolean,
-      default: true
-    },
-    scheduledDate: Date,
-    scheduledTime: String
+  validFrom: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    field: 'valid_from'
+  },
+
+  validUntil: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    field: 'valid_until'
+  },
+
+  dateSpecific: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    field: 'date_specific'
+  },
+
+  scheduledDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+    field: 'scheduled_date'
+  },
+
+  scheduledTime: {
+    type: DataTypes.STRING(10),
+    allowNull: true,
+    field: 'scheduled_time'
   },
 
   // Pricing
-  price: {
-    amount: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    currency: {
-      type: String,
-      default: 'EUR'
-    },
-    originalPrice: Number,
-    discount: {
-      amount: Number,
-      percentage: Number,
-      code: String,
-      reason: String
-    }
+  priceAmount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    field: 'price_amount'
+  },
+
+  priceCurrency: {
+    type: DataTypes.STRING(3),
+    defaultValue: 'EUR',
+    field: 'price_currency'
+  },
+
+  originalPrice: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'original_price'
+  },
+
+  discountAmount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'discount_amount'
+  },
+
+  discountCode: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'discount_code'
   },
 
   // Status
   status: {
-    type: String,
-    enum: [
-      'active',         // Valid and unused
-      'used',           // Scanned and used
-      'expired',        // Past validity date
-      'cancelled',      // Cancelled/refunded
-      'transferred',    // Transferred to another person
-      'pending',        // Awaiting payment confirmation
-      'invalid'         // Marked as invalid
-    ],
-    default: 'pending',
-    index: true
+    type: DataTypes.ENUM('active', 'used', 'expired', 'cancelled', 'transferred', 'pending', 'invalid'),
+    defaultValue: 'pending'
   },
 
   // Usage Tracking
-  usage: {
-    scannedAt: Date,
-    scannedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'AdminUser'
-    },
-    scanLocation: String,
-    scanDevice: String,
-    entryGate: String
+  scannedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'scanned_at'
+  },
+
+  scannedById: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'scanned_by_id'
+  },
+
+  scanLocation: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'scan_location'
+  },
+
+  scanDevice: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'scan_device'
+  },
+
+  entryGate: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'entry_gate'
   },
 
   // Transfer Information
-  transfer: {
-    transferredAt: Date,
-    transferredTo: {
-      firstName: String,
-      lastName: String,
-      email: String
-    },
-    transferredBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    reason: String
+  transferredAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'transferred_at'
+  },
+
+  transferredTo: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'transferred_to'
+  },
+
+  transferredById: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'transferred_by_id'
+  },
+
+  transferReason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'transfer_reason'
   },
 
   // Cancellation
-  cancellation: {
-    cancelledAt: Date,
-    cancelledBy: {
-      type: String,
-      enum: ['customer', 'admin', 'system']
-    },
-    reason: String,
-    refunded: {
-      type: Boolean,
-      default: false
-    },
-    refundAmount: Number,
-    refundedAt: Date
+  cancelledAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'cancelled_at'
   },
 
-  // Add-ons/Extras (for attractions)
-  addOns: [{
-    name: String,
-    description: String,
-    price: Number,
-    quantity: {
-      type: Number,
-      default: 1
-    }
-  }],
+  cancelledBy: {
+    type: DataTypes.ENUM('customer', 'admin', 'system'),
+    allowNull: true,
+    field: 'cancelled_by'
+  },
 
-  // Special Access/Features
+  cancellationReason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'cancellation_reason'
+  },
+
+  refunded: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+
+  refundAmount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'refund_amount'
+  },
+
+  refundedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'refunded_at'
+  },
+
+  // Add-ons
+  addOns: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    field: 'add_ons'
+  },
+
+  // Features
   features: {
-    fastPass: {
-      type: Boolean,
-      default: false
-    },
-    vipAccess: {
-      type: Boolean,
-      default: false
-    },
-    photoPackage: {
-      type: Boolean,
-      default: false
-    },
-    merchandise: {
-      type: Boolean,
-      default: false
-    },
-    customFeatures: [String]
+    type: DataTypes.JSON,
+    defaultValue: {
+      fastPass: false,
+      vipAccess: false,
+      photoPackage: false,
+      merchandise: false
+    }
   },
 
-  // Digital Delivery
-  delivery: {
-    method: {
-      type: String,
-      enum: ['email', 'sms', 'app', 'physical', 'wallet'],
-      default: 'email'
-    },
-    sentAt: Date,
-    deliveredAt: Date,
-    walletPassUrl: String,
-    downloadUrl: String
+  // Delivery
+  deliveryMethod: {
+    type: DataTypes.ENUM('email', 'sms', 'app', 'physical', 'wallet'),
+    defaultValue: 'email',
+    field: 'delivery_method'
   },
 
-  // Seat Assignment (for events with seating)
+  deliverySentAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'delivery_sent_at'
+  },
+
+  walletPassUrl: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    field: 'wallet_pass_url'
+  },
+
+  // Seating
   seating: {
-    section: String,
-    row: String,
-    seat: String,
-    accessible: {
-      type: Boolean,
-      default: false
-    }
+    type: DataTypes.JSON,
+    allowNull: true
   },
 
-  // Group Ticket Info
-  group: {
-    isGroupTicket: {
-      type: Boolean,
-      default: false
-    },
-    groupSize: Number,
-    groupName: String,
-    leadContact: String
+  // Group Info
+  isGroupTicket: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'is_group_ticket'
   },
 
-  // Notes & Tags
+  groupSize: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'group_size'
+  },
+
+  // Notes
   notes: {
-    customer: String,
-    admin: String,
-    internal: String
+    type: DataTypes.JSON,
+    defaultValue: {}
   },
 
-  tags: [String],
-
-  // Integration Data
-  externalId: String,
-  externalPlatform: String,
-
-  // Admin Information
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'AdminUser'
+  tags: {
+    type: DataTypes.JSON,
+    defaultValue: []
   },
 
-  updatedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'AdminUser'
+  // External Integration
+  externalId: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'external_id'
+  },
+
+  externalPlatform: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'external_platform'
+  },
+
+  // Admin
+  createdById: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'created_by_id'
+  },
+
+  updatedById: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'updated_by_id'
   }
-
 }, {
-  timestamps: true
-});
-
-// Indexes
-ticketSchema.index({ status: 1 });
-ticketSchema.index({ 'validity.validFrom': 1, 'validity.validUntil': 1 });
-ticketSchema.index({ 'holder.email': 1 });
-ticketSchema.index({ event: 1, status: 1 });
-ticketSchema.index({ poi: 1, status: 1 });
-ticketSchema.index({ createdAt: -1 });
-
-// Virtual for checking if ticket is valid
-ticketSchema.virtual('isValid').get(function() {
-  const now = new Date();
-  return (
-    this.status === 'active' &&
-    this.validity.validFrom <= now &&
-    this.validity.validUntil >= now
-  );
-});
-
-// Virtual for checking if expired
-ticketSchema.virtual('isExpired').get(function() {
-  return this.validity.validUntil < new Date();
-});
-
-// Virtual for holder full name
-ticketSchema.virtual('holderFullName').get(function() {
-  if (!this.holder?.firstName) return null;
-  return `${this.holder.firstName} ${this.holder.lastName}`;
-});
-
-// Methods
-ticketSchema.methods.generateTicketNumber = function() {
-  const prefix = 'TKT';
-  const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
-  const random = crypto.randomBytes(4).toString('hex').toUpperCase();
-  return `${prefix}-${date}-${random}`;
-};
-
-ticketSchema.methods.generateQRCode = function() {
-  return crypto.randomBytes(32).toString('hex');
-};
-
-ticketSchema.methods.use = function(adminUserId, scanInfo = {}) {
-  if (!this.isValid) {
-    throw new Error('Ticket is not valid');
-  }
-
-  this.status = 'used';
-  this.usage = {
-    scannedAt: new Date(),
-    scannedBy: adminUserId,
-    scanLocation: scanInfo.location,
-    scanDevice: scanInfo.device,
-    entryGate: scanInfo.gate
-  };
-
-  return this.save();
-};
-
-ticketSchema.methods.cancel = function(reason, cancelledBy, refund = false) {
-  this.status = 'cancelled';
-  this.cancellation = {
-    cancelledAt: new Date(),
-    cancelledBy,
-    reason,
-    refunded: refund
-  };
-
-  if (refund) {
-    this.cancellation.refundAmount = this.price.amount;
-    this.cancellation.refundedAt = new Date();
-  }
-
-  return this.save();
-};
-
-ticketSchema.methods.transfer = function(newHolder, transferredBy, reason) {
-  this.status = 'transferred';
-  this.transfer = {
-    transferredAt: new Date(),
-    transferredTo: {
-      firstName: newHolder.firstName,
-      lastName: newHolder.lastName,
-      email: newHolder.email
+  sequelize,
+  modelName: 'Ticket',
+  tableName: 'tickets',
+  timestamps: true,
+  underscored: true,
+  indexes: [
+    { fields: ['ticket_number'], unique: true },
+    { fields: ['qr_code'], unique: true },
+    { fields: ['status'] },
+    { fields: ['booking_id'] },
+    { fields: ['event_id'] },
+    { fields: ['holder_email'] },
+    { fields: ['valid_from', 'valid_until'] }
+  ],
+  hooks: {
+    beforeCreate: (ticket) => {
+      if (!ticket.ticketNumber) {
+        ticket.ticketNumber = Ticket.generateTicketNumber();
+      }
+      if (!ticket.qrCode) {
+        ticket.qrCode = Ticket.generateQRCode();
+      }
     },
-    transferredBy,
-    reason
-  };
-
-  // Update holder info
-  this.holder = newHolder;
-
-  return this.save();
-};
-
-ticketSchema.methods.markAsExpired = function() {
-  this.status = 'expired';
-  return this.save();
-};
-
-// Static methods
-ticketSchema.statics.getActiveTickets = function(filter = {}) {
-  return this.find({
-    ...filter,
-    status: 'active',
-    'validity.validFrom': { $lte: new Date() },
-    'validity.validUntil': { $gte: new Date() }
-  });
-};
-
-ticketSchema.statics.getUsedTickets = function(eventId, startDate, endDate) {
-  const query = {
-    status: 'used',
-    'usage.scannedAt': {
-      $gte: startDate,
-      $lte: endDate
+    beforeUpdate: (ticket) => {
+      // Auto-expire if past validity date
+      if (ticket.isExpired && ticket.status === 'active') {
+        ticket.status = 'expired';
+      }
     }
-  };
-
-  if (eventId) {
-    query.event = eventId;
   }
-
-  return this.find(query).sort({ 'usage.scannedAt': -1 });
-};
-
-ticketSchema.statics.checkAvailability = function(eventId, ticketTypeId, quantity) {
-  // This would check against event capacity
-  // Implementation depends on Event/TicketType models
-  return true;
-};
-
-// Pre-save middleware
-ticketSchema.pre('save', function(next) {
-  // Generate ticket number if not exists
-  if (this.isNew && !this.ticketNumber) {
-    this.ticketNumber = this.generateTicketNumber();
-  }
-
-  // Generate QR code if not exists
-  if (this.isNew && !this.qrCode) {
-    this.qrCode = this.generateQRCode();
-  }
-
-  // Auto-expire if past validity date
-  if (this.isExpired && this.status === 'active') {
-    this.status = 'expired';
-  }
-
-  next();
 });
-
-const Ticket = mongoose.model('Ticket', ticketSchema);
 
 export default Ticket;
