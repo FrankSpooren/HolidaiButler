@@ -775,5 +775,60 @@ export const transactionsAPI = {
 // Reservations API (alias for reservationAPI)
 export const reservationsAPI = reservationAPI;
 
-export { reservationsApi };
+// Agenda API (Agenda module)
+const agendaApi = axios.create({
+  baseURL: import.meta.env.VITE_AGENDA_API_URL || 'http://localhost:5003/api',
+  headers: { 'Content-Type': 'application/json' }
+});
+
+// Add auth interceptor for agenda API
+agendaApi.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+export const agendaAPI = {
+  getAll: async (params = {}) => {
+    const response = await agendaApi.get('/agenda', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await agendaApi.get(`/agenda/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await agendaApi.post('/agenda', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await agendaApi.put(`/agenda/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await agendaApi.delete(`/agenda/${id}`);
+    return response.data;
+  },
+  getByDateRange: async (startDate, endDate) => {
+    const response = await agendaApi.get('/agenda/range', {
+      params: { start_date: startDate, end_date: endDate }
+    });
+    return response.data;
+  },
+  getUpcoming: async (limit = 10) => {
+    const response = await agendaApi.get('/agenda/upcoming', { params: { limit } });
+    return response.data;
+  },
+  getStats: async () => {
+    const response = await agendaApi.get('/agenda/stats');
+    return response.data;
+  }
+};
+
+export { reservationsApi, agendaApi };
 export default api;
