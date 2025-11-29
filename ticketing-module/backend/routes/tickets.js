@@ -284,8 +284,8 @@ router.get('/:ticketId', authenticate, async (req, res) => {
   try {
     const { ticketId } = req.params;
 
-    const Ticket = require('../models/Ticket');
-    const ticket = await Ticket.findById(ticketId).populate('poiId', 'name location images');
+    // Using Sequelize Ticket model from models/index.js
+    const ticket = await Ticket.findByPk(ticketId);
 
     if (!ticket) {
       return res.status(404).json({
@@ -295,7 +295,7 @@ router.get('/:ticketId', authenticate, async (req, res) => {
     }
 
     // Verify user owns this ticket
-    if (ticket.userId.toString() !== req.user.id && req.user.role !== 'admin') {
+    if (ticket.userId !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -357,8 +357,8 @@ router.post('/:ticketId/resend', authenticate, async (req, res) => {
     const { ticketId } = req.params;
     const { deliveryMethod } = req.body;
 
-    const Ticket = require('../models/Ticket');
-    const ticket = await Ticket.findById(ticketId);
+    // Using Sequelize Ticket model from models/index.js
+    const ticket = await Ticket.findByPk(ticketId);
 
     if (!ticket) {
       return res.status(404).json({
@@ -368,7 +368,7 @@ router.post('/:ticketId/resend', authenticate, async (req, res) => {
     }
 
     // Verify user owns this ticket
-    if (ticket.userId.toString() !== req.user.id) {
+    if (ticket.userId !== req.user.id) {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -376,7 +376,7 @@ router.post('/:ticketId/resend', authenticate, async (req, res) => {
     }
 
     if (deliveryMethod === 'email' || !deliveryMethod) {
-      await TicketService.sendTicketsToUser([ticket], ticket.holder.email);
+      await TicketService.sendTicketsToUser([ticket], ticket.holderEmail);
     }
 
     res.json({

@@ -336,11 +336,7 @@ class TicketService {
    * @private
    */
   async _createTicket(booking, sequenceNumber) {
-    // Generate temporary ticket ID for QR code
-    const tempId = `${booking.id}-${sequenceNumber}`;
-    const qrCodeData = await this.generateQRCode(tempId);
-
-    // Create ticket using Sequelize
+    // Create ticket using Sequelize first (without QR code)
     const ticket = await Ticket.create({
       bookingId: booking.id,
       userId: booking.userId,
@@ -350,8 +346,8 @@ class TicketService {
       validUntil: new Date(new Date(booking.bookingDate).getTime() + 24 * 60 * 60 * 1000), // +1 day
       timeslot: booking.bookingTime,
       timezone: 'Europe/Amsterdam',
-      qrCodeData: qrCodeData.data,
-      qrCodeImageUrl: qrCodeData.imageUrl,
+      qrCodeData: '', // Placeholder, will be updated
+      qrCodeImageUrl: '',
       qrCodeFormat: 'QR',
       holderName: booking.guestName,
       holderEmail: booking.guestEmail,
@@ -363,6 +359,22 @@ class TicketService {
       status: 'active',
       source: booking.source || 'mobile',
     });
+
+    // Now generate QR code with actual ticket data
+    const payload = this._createQRPayload(ticket);
+
+    // Generate QR code image
+    const qrCodeDataUrl = await QRCode.toDataURL(payload, {
+      errorCorrectionLevel: 'H',
+      type: 'image/png',
+      width: 400,
+      margin: 2,
+    });
+
+    // Update ticket with QR code
+    ticket.qrCodeData = payload;
+    ticket.qrCodeImageUrl = qrCodeDataUrl;
+    await ticket.save();
 
     return ticket;
   }
