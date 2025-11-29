@@ -86,13 +86,10 @@ const connectDB = async () => {
       logger.info('Production mode: Using migrations for schema management');
       logger.info('Run migrations with: npm run migrate');
     } else {
-      if (process.env.DB_SYNC === 'true') {
-        logger.warn('DEV MODE: Syncing database (use migrations for production)');
-        await sequelize.sync({ alter: false });
-        logger.info('Database models synchronized');
-      } else {
-        logger.info('Dev mode: Skipping sync. Run migrations: npm run migrate');
-      }
+      // Always sync in development mode
+      logger.warn('DEV MODE: Syncing database (use migrations for production)');
+      await sequelize.sync({ alter: true });
+      logger.info('Database models synchronized');
     }
   } catch (error) {
     logger.error('MySQL connection error:', error);

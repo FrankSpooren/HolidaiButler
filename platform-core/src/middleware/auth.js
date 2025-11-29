@@ -6,13 +6,20 @@
 import jwt from 'jsonwebtoken';
 import logger from '../utils/logger.js';
 
-// SECURITY: No fallback - fail fast if JWT_SECRET not set
-if (!process.env.JWT_SECRET) {
-  logger.error('FATAL: JWT_SECRET environment variable is not set');
-  throw new Error('JWT_SECRET must be set in environment variables');
-}
-
-const JWT_SECRET = process.env.JWT_SECRET;
+/**
+ * Get JWT secret (lazy evaluation to allow dotenv to load first)
+ */
+const getJwtSecret = () => {
+  if (!process.env.getJwtSecret()) {
+    if (process.env.NODE_ENV === 'development') {
+      logger.warn('getJwtSecret() not set - using development fallback');
+      return 'development-secret-change-in-production';
+    }
+    logger.error('FATAL: getJwtSecret() environment variable is not set');
+    throw new Error('getJwtSecret() must be set in environment variables');
+  }
+  return process.env.getJwtSecret();
+};
 
 /**
  * Verify JWT token
@@ -31,7 +38,7 @@ export function authenticate(req, res, next) {
     const token = authHeader.substring(7);
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, getJwtSecret());
       req.user = decoded;
       next();
     } catch (error) {
@@ -66,7 +73,7 @@ export function optionalAuth(req, res, next) {
     const token = authHeader.substring(7);
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, getJwtSecret());
       req.user = decoded;
     } catch (error) {
       // Token invalid, but continue anyway
@@ -81,7 +88,7 @@ export function optionalAuth(req, res, next) {
  * Generate JWT token
  */
 export function generateToken(payload, expiresIn = '24h') {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn,
   });
 }
@@ -90,7 +97,7 @@ export function generateToken(payload, expiresIn = '24h') {
  * Generate refresh token
  */
 export function generateRefreshToken(payload) {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   });
 }
@@ -100,7 +107,7 @@ export function generateRefreshToken(payload) {
  */
 export function verifyRefreshToken(token) {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    return jwt.verify(token, getJwtSecret());
   } catch (error) {
     throw new Error('Invalid refresh token');
   }

@@ -26,7 +26,7 @@ workflowManager.register('poi-tier1-updates', {
 
     try {
       // Get Tier 1 POIs due for update
-      const pois = await poiClassificationService.getPOIsFor Update(1, 50);
+      const pois = await poiClassificationService.getPOIsForUpdate(1, 50);
 
       logger.info(`Found ${pois.length} Tier 1 POIs for update`);
 

@@ -30,14 +30,14 @@ export default defineConfig({
 
   // Development server
   server: {
-    port: 5175,
+    port: 5173,
     host: true, // Listen on all addresses
     open: false, // Don't auto-open browser
     cors: true,
     proxy: {
-      // Proxy API requests to backend
+      // Proxy API requests to Platform Core API Gateway
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       },
