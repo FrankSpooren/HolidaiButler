@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - HolidaiButler</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .container {
+      text-align: center;
+      padding: 40px;
+      max-width: 500px;
+    }
+
+    .icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+      opacity: 0.9;
+    }
+
+    .offline-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 12px 24px;
+      border-radius: 25px;
+      margin-bottom: 32px;
+    }
+
+    .offline-dot {
+      width: 10px;
+      height: 10px;
+      background: #ff5252;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: white;
+      color: #1976d2;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: white;
+    }
+
+    .tickets-available {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 32px;
+    }
+
+    .tickets-available h3 {
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    .ticket-count {
+      font-size: 48px;
+      font-weight: bold;
+    }
+
+    .ticket-label {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    footer {
+      margin-top: 40px;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+
+    <div class="offline-indicator">
+      <div class="offline-dot"></div>
+      <span>Geen internetverbinding</span>
+    </div>
+
+    <h1>Je bent offline</h1>
+    <p>
+      Maak je geen zorgen! Je kunt nog steeds je opgeslagen tickets bekijken.
+      Zodra je weer online bent, wordt alles automatisch gesynchroniseerd.
+    </p>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="viewOfflineTickets()">
+        📱 Bekijk opgeslagen tickets
+      </button>
+      <button class="btn btn-secondary" onclick="tryReconnect()">
+        🔄 Probeer opnieuw
+      </button>
+    </div>
+
+    <div id="ticketsSection" class="tickets-available hidden">
+      <h3>Offline beschikbaar</h3>
+      <div class="ticket-count" id="ticketCount">0</div>
+      <div class="ticket-label">tickets opgeslagen</div>
+    </div>
+
+    <footer>
+      HolidaiButler - Jouw vakantiepartner
+    </footer>
+  </div>
+
+  <script>
+    // Check for cached tickets
+    async function checkCachedTickets() {
+      try {
+        const cache = await caches.open('holidaibutler-ticket-data-v1');
+        const keys = await cache.keys();
+        const ticketCount = keys.filter(req => req.url.includes('/tickets/')).length;
+
+        if (ticketCount > 0) {
+          document.getElementById('ticketsSection').classList.remove('hidden');
+          document.getElementById('ticketCount').textContent = ticketCount;
+        }
+      } catch (e) {
+        console.log('Could not check cache:', e);
+      }
+    }
+
+    // View offline tickets
+    function viewOfflineTickets() {
+      // Try to navigate to tickets page which should work offline
+      window.location.href = '/#/tickets?offline=true';
+    }
+
+    // Try to reconnect
+    function tryReconnect() {
+      window.location.reload();
+    }
+
+    // Listen for online event
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+
+    // Check cache on load
+    checkCachedTickets();
+  </script>
+</body>
+</html>

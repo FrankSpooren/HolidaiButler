@@ -341,6 +341,55 @@ const Booking = sequelize.define('Booking', {
     field: 'guest_nationality',
   },
 
+  // Reminders
+  reminderScheduled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'reminder_scheduled',
+  },
+
+  reminder24hScheduledFor: {
+    type: DataTypes.DATE,
+    field: 'reminder_24h_scheduled_for',
+  },
+
+  reminder2hScheduledFor: {
+    type: DataTypes.DATE,
+    field: 'reminder_2h_scheduled_for',
+  },
+
+  reminder24hSentAt: {
+    type: DataTypes.DATE,
+    field: 'reminder_24h_sent_at',
+  },
+
+  reminder2hSentAt: {
+    type: DataTypes.DATE,
+    field: 'reminder_2h_sent_at',
+  },
+
+  // Refund tracking
+  refundStatus: {
+    type: DataTypes.ENUM('none', 'initiated', 'processing', 'sent', 'completed', 'failed'),
+    defaultValue: 'none',
+    field: 'refund_status',
+  },
+
+  refundAmount: {
+    type: DataTypes.DECIMAL(10, 2),
+    field: 'refund_amount',
+  },
+
+  refundTransactionId: {
+    type: DataTypes.STRING(100),
+    field: 'refund_transaction_id',
+  },
+
+  refundCompletedAt: {
+    type: DataTypes.DATE,
+    field: 'refund_completed_at',
+  },
+
   // AI Context
   aiMessageId: {
     type: DataTypes.UUID,
@@ -560,6 +609,32 @@ const Ticket = sequelize.define('Ticket', {
     type: DataTypes.STRING(200),
     field: 'original_holder',
   },
+
+  transferredAt: {
+    type: DataTypes.DATE,
+    field: 'transferred_at',
+  },
+
+  holderFirstName: {
+    type: DataTypes.STRING(100),
+    field: 'holder_first_name',
+  },
+
+  holderLastName: {
+    type: DataTypes.STRING(100),
+    field: 'holder_last_name',
+  },
+
+  validationCode: {
+    type: DataTypes.STRING(50),
+    field: 'validation_code',
+  },
+
+  isUsed: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'is_used',
+  },
 }, {
   tableName: 'tickets',
   indexes: [
@@ -713,6 +788,138 @@ const Availability = sequelize.define('Availability', {
   ],
 });
 
+// ========== TICKET TRANSFER MODEL ==========
+
+const TicketTransfer = sequelize.define('TicketTransfer', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+
+  ticketId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    field: 'ticket_id',
+  },
+
+  fromUserId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    field: 'from_user_id',
+  },
+
+  fromName: {
+    type: DataTypes.STRING(200),
+    allowNull: false,
+    field: 'from_name',
+  },
+
+  fromEmail: {
+    type: DataTypes.STRING(200),
+    allowNull: false,
+    field: 'from_email',
+  },
+
+  toUserId: {
+    type: DataTypes.UUID,
+    field: 'to_user_id',
+  },
+
+  toName: {
+    type: DataTypes.STRING(200),
+    allowNull: false,
+    field: 'to_name',
+  },
+
+  toEmail: {
+    type: DataTypes.STRING(200),
+    allowNull: false,
+    field: 'to_email',
+  },
+
+  transferredAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW,
+    field: 'transferred_at',
+  },
+
+  status: {
+    type: DataTypes.ENUM('pending', 'completed', 'cancelled'),
+    defaultValue: 'completed',
+  },
+
+  transferReason: {
+    type: DataTypes.TEXT,
+    field: 'transfer_reason',
+  },
+}, {
+  tableName: 'ticket_transfers',
+  indexes: [
+    { fields: ['ticket_id'] },
+    { fields: ['from_user_id'] },
+    { fields: ['to_email'] },
+    { fields: ['transferred_at'] },
+  ],
+});
+
+// ========== DEVICE TOKEN MODEL (Firebase Push Notifications) ==========
+
+const DeviceToken = sequelize.define('DeviceToken', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+
+  userId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    field: 'user_id',
+  },
+
+  token: {
+    type: DataTypes.STRING(500),
+    allowNull: false,
+    unique: true,
+  },
+
+  platform: {
+    type: DataTypes.ENUM('web', 'android', 'ios'),
+    allowNull: false,
+    defaultValue: 'web',
+  },
+
+  deviceId: {
+    type: DataTypes.STRING(200),
+    field: 'device_id',
+  },
+
+  appVersion: {
+    type: DataTypes.STRING(20),
+    field: 'app_version',
+  },
+
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    field: 'is_active',
+  },
+
+  lastUsedAt: {
+    type: DataTypes.DATE,
+    field: 'last_used_at',
+  },
+}, {
+  tableName: 'device_tokens',
+  indexes: [
+    { fields: ['user_id', 'is_active'] },
+    { fields: ['token'], unique: true },
+    { fields: ['platform'] },
+  ],
+});
+
 // ========== ASSOCIATIONS ==========
 
 Booking.hasMany(Ticket, {
@@ -723,6 +930,16 @@ Booking.hasMany(Ticket, {
 Ticket.belongsTo(Booking, {
   foreignKey: 'booking_id',
   as: 'booking',
+});
+
+Ticket.hasMany(TicketTransfer, {
+  foreignKey: 'ticket_id',
+  as: 'transfers',
+});
+
+TicketTransfer.belongsTo(Ticket, {
+  foreignKey: 'ticket_id',
+  as: 'ticket',
 });
 
 // ========== STATIC METHODS ==========
@@ -836,6 +1053,8 @@ module.exports = {
   Booking,
   Ticket,
   Availability,
+  TicketTransfer,
+  DeviceToken,
   connectDatabase,
   syncDatabase, // @deprecated - use migrations instead
 };
