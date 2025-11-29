@@ -44,13 +44,17 @@ async function initializeServices() {
     const dbConnected = await testConnection();
     if (!dbConnected) {
       console.error('❌ MySQL database connection failed');
-      process.exit(1);
-    }
-
-    // Sync database in development mode
-    if (process.env.NODE_ENV === 'development') {
-      await syncDatabase(false); // Set to true to force recreate tables
-      console.log('✅ Database synchronized');
+      if (process.env.NODE_ENV === 'production') {
+        process.exit(1);
+      } else {
+        console.warn('⚠️ Running in degraded mode without database - development only');
+      }
+    } else {
+      // Sync database in development mode
+      if (process.env.NODE_ENV === 'development') {
+        await syncDatabase(false); // Set to true to force recreate tables
+        console.log('✅ Database synchronized');
+      }
     }
 
     // Connect to Redis cache (optional)
