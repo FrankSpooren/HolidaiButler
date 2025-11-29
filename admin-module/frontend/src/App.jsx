@@ -18,6 +18,14 @@ import Dashboard from './pages/dashboard/Dashboard';
 import POIList from './pages/pois/POIList';
 import POIForm from './pages/pois/POIForm';
 
+// Reservations Module Pages
+import RestaurantList from './pages/reservations/RestaurantList';
+import RestaurantForm from './pages/reservations/RestaurantForm';
+import ReservationList from './pages/reservations/ReservationList';
+import GuestList from './pages/reservations/GuestList';
+import WaitlistPage from './pages/reservations/WaitlistPage';
+import FloorPlanEditor from './pages/reservations/FloorPlanEditor';
+
 // Theme
 const theme = createTheme({
   palette: {
@@ -123,6 +131,15 @@ function App() {
             <Route path="pois" element={<POIList />} />
             <Route path="pois/create" element={<POIForm />} />
             <Route path="pois/edit/:id" element={<POIForm />} />
+
+            {/* Reservations Module Routes */}
+            <Route path="reservations/restaurants" element={<RestaurantList />} />
+            <Route path="reservations/restaurants/create" element={<RestaurantForm />} />
+            <Route path="reservations/restaurants/edit/:id" element={<RestaurantForm />} />
+            <Route path="reservations/bookings" element={<ReservationList />} />
+            <Route path="reservations/guests" element={<GuestList />} />
+            <Route path="reservations/waitlist" element={<WaitlistPage />} />
+            <Route path="reservations/floor-plans" element={<FloorPlanEditor />} />
 
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
