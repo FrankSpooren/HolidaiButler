@@ -7,11 +7,11 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/api/ticketing': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:3004',
         changeOrigin: true,
       },
       '/api/payment': {
-        target: 'http://localhost:5002',
+        target: 'http://localhost:3005',
         changeOrigin: true,
       },
     },

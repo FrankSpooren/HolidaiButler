@@ -1,11 +1,12 @@
-const Booking = require('../models/Booking');
+const { Booking, Ticket } = require('../models');
 const AvailabilityService = require('./AvailabilityService');
 const TicketService = require('./TicketService');
 const logger = require('../utils/logger');
 const axios = require('axios');
+const { Op } = require('sequelize');
 
 /**
- * Booking Service
+ * Booking Service (Sequelize/MySQL)
  * Manages ticket bookings lifecycle: create, confirm, cancel
  * Integrates with Availability Service and Payment Engine
  */
@@ -52,65 +53,61 @@ class BookingService {
         voucherCode
       );
 
-      // Step 3: Create booking record
-      const booking = new Booking({
+      // Step 3: Create booking record using Sequelize
+      const booking = await Booking.create({
         userId,
         poiId,
         status: 'pending',
-        details: {
-          date: new Date(date),
-          time: timeslot ? timeslot.split('-')[0] : null,
-          duration: null, // TODO: Get from POI configuration
-          guests: {
-            adults: quantity,
-            children: 0,
-            infants: 0,
-          },
-        },
-        pricing,
-        experience: {
-          productType: productType || 'ticket',
-          language: language || 'en',
-        },
-        guestInfo: {
-          name: guestInfo.name,
-          email: guestInfo.email,
-          phone: guestInfo.phone || null,
-        },
-        cancellation: {
-          allowCancellation: true,
-          cancellationDeadline: new Date(new Date(date).getTime() - 24 * 60 * 60 * 1000), // 24h before
-          refundPolicy: 'full',
-        },
-        metadata: {
-          source: bookingData.source || 'mobile',
-          ipAddress: bookingData.ipAddress,
-          userAgent: bookingData.userAgent,
-        },
+        bookingDate: new Date(date),
+        bookingTime: timeslot ? timeslot.split('-')[0] : null,
+        duration: null, // TODO: Get from POI configuration
+        adultsCount: quantity,
+        childrenCount: 0,
+        infantsCount: 0,
+        basePrice: pricing.basePrice,
+        taxes: pricing.taxes,
+        fees: pricing.fees,
+        discount: pricing.discount,
+        totalPrice: pricing.totalPrice,
+        currency: pricing.currency,
+        commission: pricing.commission,
+        paymentStatus: 'pending',
+        productType: productType || 'ticket',
+        experienceLanguage: language || 'en',
+        allowCancellation: true,
+        cancellationDeadline: new Date(new Date(date).getTime() - 24 * 60 * 60 * 1000), // 24h before
+        refundPolicy: 'full',
+        guestName: guestInfo.name,
+        guestEmail: guestInfo.email,
+        guestPhone: guestInfo.phone || null,
+        source: bookingData.source || 'mobile',
+        ipAddress: bookingData.ipAddress,
+        userAgent: bookingData.userAgent,
+        voucherCode: voucherCode || null,
+        voucherDiscountAmount: pricing.voucherDiscountAmount || null,
+        voucherDiscountPercentage: pricing.voucherDiscountPercentage || null,
       });
-
-      await booking.save();
 
       // Step 4: Reserve capacity (15-minute hold)
       try {
         const reservation = await AvailabilityService.reserveSlot(
-          booking._id.toString(),
+          booking.id,
           poiId,
           date,
           quantity,
           timeslot
         );
 
-        booking.reservation.isLocked = true;
-        booking.reservation.lockedUntil = reservation.expiresAt;
-        booking.reservation.lockId = booking._id.toString();
+        booking.isLocked = true;
+        booking.lockedUntil = reservation.expiresAt;
+        booking.lockId = booking.id;
         await booking.save();
 
         // Schedule automatic release if payment not completed
-        this._scheduleReservationRelease(booking._id.toString(), this.RESERVATION_TIMEOUT);
+        this._scheduleReservationRelease(booking.id, this.RESERVATION_TIMEOUT);
       } catch (error) {
         // If reservation fails, delete the booking
-        await Booking.findByIdAndDelete(booking._id);
+        await booking.destroy();
         throw error;
       }
 
@@ -120,12 +117,12 @@ class BookingService {
       logger.info(`Booking created: ${booking.bookingReference}`);
 
       return {
-        bookingId: booking._id,
+        bookingId: booking.id,
         bookingReference: booking.bookingReference,
         status: booking.status,
-        totalPrice: booking.pricing.totalPrice,
-        currency: booking.pricing.currency,
-        expiresAt: booking.reservation.lockedUntil,
+        totalPrice: booking.totalPrice,
+        currency: booking.currency,
+        expiresAt: booking.lockedUntil,
         paymentUrl: paymentSession.redirectUrl,
         paymentId: paymentSession.paymentId,
       };
@@ -143,7 +140,7 @@ class BookingService {
    */
   async confirmBooking(bookingId, paymentTransactionId) {
     try {
-      const booking = await Booking.findById(bookingId).populate('poiId');
+      const booking = await Booking.findByPk(bookingId);
 
       if (!booking) {
         throw new Error('Booking not found');
@@ -161,7 +158,12 @@ class BookingService {
       }
 
       // Step 2: Confirm booking
-      await booking.confirmBooking(paymentTransactionId);
+      booking.status = 'confirmed';
+      booking.paymentStatus = 'paid';
+      booking.paymentMethod = paymentStatus.paymentMethod || 'card';
+      booking.transactionId = paymentTransactionId;
+      booking.paidAt = new Date();
+      await booking.save();
 
       // Step 3: Confirm reservation (convert to booked capacity)
       await AvailabilityService.confirmReservation(bookingId);
@@ -169,26 +171,25 @@ class BookingService {
       // Step 4: Generate tickets
       const tickets = await TicketService.generateTicketsForBooking(booking);
 
-      booking.tickets.ticketIds = tickets.map(t => t._id);
-      booking.tickets.deliveryMethod = 'email'; // Default
+      booking.deliveryMethod = 'email'; // Default
       await booking.save();
 
       // Step 5: Send tickets to user
-      await TicketService.sendTicketsToUser(tickets, booking.guestInfo.email);
+      await TicketService.sendTicketsToUser(tickets, booking.guestEmail);
 
-      booking.tickets.deliveredAt = new Date();
+      booking.deliveredAt = new Date();
       await booking.save();
 
       logger.info(`Booking confirmed: ${booking.bookingReference}`);
 
       return {
-        bookingId: booking._id,
+        bookingId: booking.id,
         bookingReference: booking.bookingReference,
         status: booking.status,
         tickets: tickets.map(t => ({
-          ticketId: t._id,
+          ticketId: t.id,
           ticketNumber: t.ticketNumber,
-          qrCodeUrl: t.qrCode.imageUrl,
+          qrCodeUrl: t.qrCodeImageUrl,
         })),
       };
     } catch (error) {
@@ -206,49 +207,59 @@ class BookingService {
    */
   async cancelBooking(bookingId, userId, reason) {
     try {
-      const booking = await Booking.findById(bookingId);
+      const booking = await Booking.findByPk(bookingId);
 
       if (!booking) {
         throw new Error('Booking not found');
       }
 
-      if (!booking.canBeCancelled) {
+      // Check if booking can be cancelled
+      if (!booking.allowCancellation) {
         throw new Error('Booking cannot be cancelled');
       }
 
+      if (booking.cancellationDeadline && new Date() > booking.cancellationDeadline) {
+        throw new Error('Cancellation deadline has passed');
+      }
+
       // Step 1: Cancel booking
-      await booking.cancelBooking(userId, reason);
+      booking.status = 'cancelled';
+      booking.cancelledAt = new Date();
+      booking.cancelledBy = userId;
+      booking.cancellationReason = reason;
+      await booking.save();
 
       // Step 2: Release or return capacity
-      if (booking.status === 'pending') {
+      if (booking.isLocked) {
         // Release reservation
         await AvailabilityService.releaseReservation(bookingId);
-      } else if (booking.status === 'confirmed') {
+      } else {
         // Return booked capacity
-        const totalGuests = booking.totalGuests;
+        const totalGuests = booking.adultsCount + booking.childrenCount;
         await AvailabilityService.cancelBooking(
           booking.poiId,
-          booking.details.date,
+          booking.bookingDate,
           totalGuests,
-          booking.details.time
+          booking.bookingTime
         );
       }
 
       // Step 3: Process refund if payment was made
       let refundResult = null;
-      if (booking.payment.status === 'paid' && booking.payment.transactionId) {
+      if (booking.paymentStatus === 'paid' && booking.transactionId) {
         refundResult = await this._initiateRefund(booking);
       }
 
       // Step 4: Cancel tickets
-      if (booking.tickets.ticketIds.length > 0) {
-        await TicketService.cancelTickets(booking.tickets.ticketIds, reason);
+      const tickets = await Ticket.findAll({ where: { bookingId: booking.id } });
+      if (tickets.length > 0) {
+        await TicketService.cancelTickets(tickets.map(t => t.id), reason);
       }
 
       logger.info(`Booking cancelled: ${booking.bookingReference}`);
 
       return {
-        bookingId: booking._id,
+        bookingId: booking.id,
         bookingReference: booking.bookingReference,
         status: booking.status,
         refund: refundResult,
@@ -267,23 +278,24 @@ class BookingService {
    */
   async getBookingsByUser(userId, filters = {}) {
     try {
-      const query = { userId };
+      const where = { userId };
 
       if (filters.status) {
-        query.status = filters.status;
+        where.status = filters.status;
       }
 
       if (filters.from && filters.to) {
-        query['details.date'] = {
-          $gte: new Date(filters.from),
-          $lte: new Date(filters.to),
+        where.bookingDate = {
+          [Op.gte]: new Date(filters.from),
+          [Op.lte]: new Date(filters.to),
         };
       }
 
-      const bookings = await Booking.find(query)
-        .populate('poiId', 'name location images')
-        .sort({ createdAt: -1 })
-        .limit(filters.limit || 50);
+      const bookings = await Booking.findAll({
+        where,
+        order: [['createdAt', 'DESC']],
+        limit: filters.limit || 50,
+      });
 
       return bookings;
     } catch (error) {
@@ -299,9 +311,14 @@ class BookingService {
    */
   async getBookingById(bookingId) {
     try {
-      const booking = await Booking.findById(bookingId)
-        .populate('poiId', 'name location images description')
-        .populate('tickets.ticketIds');
+      const booking = await Booking.findByPk(bookingId, {
+        include: [
+          {
+            model: Ticket,
+            as: 'tickets',
+          },
+        ],
+      });
 
       if (!booking) {
         throw new Error('Booking not found');
@@ -323,17 +340,15 @@ class BookingService {
   async _calculatePricing(basePrice, quantity, voucherCode = null) {
     let baseTotal = basePrice * quantity;
     let discount = 0;
-    let voucher = {};
+    let voucherDiscountAmount = null;
+    let voucherDiscountPercentage = null;
 
     if (voucherCode) {
       // TODO: Validate voucher code against voucher system
       // Placeholder: 10% discount
       discount = baseTotal * 0.10;
-      voucher = {
-        code: voucherCode,
-        discountPercentage: 10,
-        discountAmount: discount,
-      };
+      voucherDiscountAmount = discount;
+      voucherDiscountPercentage = 10;
     }
 
     const taxes = baseTotal * 0.09; // 9% VAT (example)
@@ -347,6 +362,8 @@ class BookingService {
       totalPrice: Math.round((baseTotal + taxes + fees - discount) * 100) / 100,
       currency: 'EUR',
       commission: Math.round(baseTotal * 0.08 * 100) / 100, // 8% platform commission
+      voucherDiscountAmount,
+      voucherDiscountPercentage,
     };
   }
 
@@ -357,15 +374,15 @@ class BookingService {
   async _createPaymentSession(booking) {
     try {
       const response = await axios.post(`${this.PAYMENT_ENGINE_URL}/api/v1/payments`, {
-        amount: Math.round(booking.pricing.totalPrice * 100), // cents
-        currency: booking.pricing.currency,
+        amount: Math.round(booking.totalPrice * 100), // cents
+        currency: booking.currency,
         resourceType: 'ticket',
-        resourceId: booking._id.toString(),
+        resourceId: booking.id,
         returnUrl: `${process.env.FRONTEND_URL}/booking/complete`,
         metadata: {
-          userId: booking.userId.toString(),
+          userId: booking.userId,
           bookingReference: booking.bookingReference,
-          poiId: booking.poiId.toString(),
+          poiId: booking.poiId,
         },
       });
 
@@ -400,10 +417,10 @@ class BookingService {
    */
   async _initiateRefund(booking) {
     try {
-      const refundAmount = booking.pricing.totalPrice;
+      const refundAmount = booking.totalPrice;
 
       const response = await axios.post(
-        `${this.PAYMENT_ENGINE_URL}/api/v1/payments/${booking.payment.transactionId}/refunds`,
+        `${this.PAYMENT_ENGINE_URL}/api/v1/payments/${booking.transactionId}/refunds`,
         {
           amount: Math.round(refundAmount * 100), // cents
           reason: `Booking cancellation: ${booking.bookingReference}`,
@@ -413,7 +430,7 @@ class BookingService {
       return {
         refundId: response.data.refundId,
         amount: refundAmount,
-        currency: booking.pricing.currency,
+        currency: booking.currency,
         status: 'pending',
       };
     } catch (error) {
@@ -432,7 +449,7 @@ class BookingService {
   _scheduleReservationRelease(bookingId, timeout) {
     setTimeout(async () => {
       try {
-        const booking = await Booking.findById(bookingId);
+        const booking = await Booking.findByPk(bookingId);
 
         // Only release if still pending
         if (booking && booking.status === 'pending') {
@@ -440,7 +457,7 @@ class BookingService {
           await AvailabilityService.releaseReservation(bookingId);
 
           booking.status = 'expired';
-          booking.reservation.isLocked = false;
+          booking.isLocked = false;
           await booking.save();
         }
       } catch (error) {

@@ -3,6 +3,7 @@ const router = express.Router();
 const AvailabilityService = require('../services/AvailabilityService');
 const BookingService = require('../services/BookingService');
 const TicketService = require('../services/TicketService');
+const WalletService = require('../services/WalletService');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const {
   validate,
@@ -11,6 +12,7 @@ const {
   validateTicketSchema,
 } = require('../middleware/validators');
 const logger = require('../utils/logger');
+const { Ticket } = require('../models');
 
 /**
  * Ticketing Module API Routes
@@ -282,8 +284,8 @@ router.get('/:ticketId', authenticate, async (req, res) => {
   try {
     const { ticketId } = req.params;
 
-    const Ticket = require('../models/Ticket');
-    const ticket = await Ticket.findById(ticketId).populate('poiId', 'name location images');
+    // Using Sequelize Ticket model from models/index.js
+    const ticket = await Ticket.findByPk(ticketId);
 
     if (!ticket) {
       return res.status(404).json({
@@ -293,7 +295,7 @@ router.get('/:ticketId', authenticate, async (req, res) => {
     }
 
     // Verify user owns this ticket
-    if (ticket.userId.toString() !== req.user.id && req.user.role !== 'admin') {
+    if (ticket.userId !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -355,8 +357,8 @@ router.post('/:ticketId/resend', authenticate, async (req, res) => {
     const { ticketId } = req.params;
     const { deliveryMethod } = req.body;
 
-    const Ticket = require('../models/Ticket');
-    const ticket = await Ticket.findById(ticketId);
+    // Using Sequelize Ticket model from models/index.js
+    const ticket = await Ticket.findByPk(ticketId);
 
     if (!ticket) {
       return res.status(404).json({
@@ -366,7 +368,7 @@ router.post('/:ticketId/resend', authenticate, async (req, res) => {
     }
 
     // Verify user owns this ticket
-    if (ticket.userId.toString() !== req.user.id) {
+    if (ticket.userId !== req.user.id) {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -374,7 +376,7 @@ router.post('/:ticketId/resend', authenticate, async (req, res) => {
     }
 
     if (deliveryMethod === 'email' || !deliveryMethod) {
-      await TicketService.sendTicketsToUser([ticket], ticket.holder.email);
+      await TicketService.sendTicketsToUser([ticket], ticket.holderEmail);
     }
 
     res.json({
@@ -500,6 +502,214 @@ router.post('/partners/:partnerId/webhook', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to process webhook',
+    });
+  }
+});
+
+// ========== WALLET PASS ENDPOINTS (PHASE 2: Week 11-12) ==========
+
+/**
+ * POST /api/v1/tickets/:ticketId/wallet
+ * Generate wallet passes for a ticket
+ * Supports both Apple Wallet and Google Pay
+ */
+router.post('/:ticketId/wallet', authenticate, async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { walletType } = req.body; // 'apple', 'google', or 'both'
+
+    // Fetch ticket
+    const ticket = await Ticket.findByPk(ticketId);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        error: 'Ticket not found',
+      });
+    }
+
+    // Verify ticket belongs to user
+    if (ticket.userId !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied',
+      });
+    }
+
+    let result = {};
+
+    if (walletType === 'apple') {
+      result.apple = await WalletService.generateApplePass(ticket);
+
+      // Update ticket with wallet URL
+      if (result.apple.success) {
+        ticket.appleWalletUrl = result.apple.passUrl;
+        await ticket.save();
+      }
+    } else if (walletType === 'google') {
+      result.google = await WalletService.generateGooglePass(ticket);
+
+      // Update ticket with wallet URL
+      if (result.google.success) {
+        ticket.googlePayUrl = result.google.passUrl;
+        await ticket.save();
+      }
+    } else {
+      // Generate both
+      result = await WalletService.generateBothPasses(ticket);
+
+      // Update ticket with wallet URLs
+      if (result.apple?.success) {
+        ticket.appleWalletUrl = result.apple.passUrl;
+      }
+      if (result.google?.success) {
+        ticket.googlePayUrl = result.google.passUrl;
+      }
+      await ticket.save();
+    }
+
+    logger.info(`Wallet pass generated for ticket ${ticket.ticketNumber}`);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    logger.error('Error generating wallet pass:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate wallet pass',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * GET /api/v1/tickets/:ticketId/wallet/apple/download
+ * Download Apple Wallet PKPass file
+ */
+router.get('/:ticketId/wallet/apple/download', async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+
+    // Fetch ticket
+    const ticket = await Ticket.findByPk(ticketId);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        error: 'Ticket not found',
+      });
+    }
+
+    // Get pass file
+    const passFilePath = await WalletService.getPassFile(ticket.ticketNumber, 'apple');
+
+    // Send file
+    res.setHeader('Content-Type', 'application/vnd.apple.pkpass');
+    res.setHeader('Content-Disposition', `attachment; filename="ticket-${ticket.ticketNumber}.pkpass"`);
+    res.sendFile(passFilePath);
+
+    logger.info(`Apple Wallet pass downloaded for ticket ${ticket.ticketNumber}`);
+  } catch (error) {
+    logger.error('Error downloading Apple Wallet pass:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to download wallet pass',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * GET /api/v1/tickets/:ticketId/wallet/google
+ * Get Google Pay URL
+ */
+router.get('/:ticketId/wallet/google', authenticate, async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+
+    // Fetch ticket
+    const ticket = await Ticket.findByPk(ticketId);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        error: 'Ticket not found',
+      });
+    }
+
+    // Verify ticket belongs to user
+    if (ticket.userId !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied',
+      });
+    }
+
+    // Generate or return existing Google Pay URL
+    if (!ticket.googlePayUrl) {
+      const result = await WalletService.generateGooglePass(ticket);
+
+      if (result.success) {
+        ticket.googlePayUrl = result.passUrl;
+        await ticket.save();
+      }
+
+      return res.json({
+        success: result.success,
+        data: {
+          googlePayUrl: result.passUrl,
+          jwt: result.jwt,
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        googlePayUrl: ticket.googlePayUrl,
+      },
+    });
+  } catch (error) {
+    logger.error('Error getting Google Pay URL:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get Google Pay URL',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * PUT /api/v1/tickets/:ticketId/wallet/update
+ * Update wallet pass (triggers push notification to wallet apps)
+ */
+router.put('/:ticketId/wallet/update', authenticate, async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { updates } = req.body;
+
+    // Verify admin access
+    if (!req.user.isAdmin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Admin access required',
+      });
+    }
+
+    await WalletService.updatePass(ticketId, updates);
+
+    res.json({
+      success: true,
+      message: 'Wallet pass updated',
+    });
+  } catch (error) {
+    logger.error('Error updating wallet pass:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update wallet pass',
+      message: error.message,
     });
   }
 });
