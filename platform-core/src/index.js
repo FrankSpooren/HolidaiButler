@@ -63,7 +63,11 @@ async function initializePlatform() {
     logger.info('✅ Platform Core initialized successfully');
   } catch (error) {
     logger.error('❌ Platform initialization failed:', error);
-    process.exit(1);
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    } else {
+      logger.warn('⚠️ Running in degraded mode without database - development only');
+    }
   }
 }
 
