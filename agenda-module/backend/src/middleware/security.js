@@ -1,5 +1,4 @@
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
 const helmet = require('helmet');
 const xss = require('xss-clean');
 const hpp = require('hpp');
@@ -61,7 +60,7 @@ const helmetConfig = helmet({
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:', 'http:'],
       scriptSrc: ["'self'"],
-      connectSrc: ["'self'", process.env.CORS_ORIGIN || '*'],
+      connectSrc: ["'self'", 'http:', 'https:'],
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -70,16 +69,10 @@ const helmetConfig = helmet({
 
 /**
  * Input Sanitization
- * Prevents NoSQL injection and XSS attacks
+ * Prevents SQL injection and XSS attacks
  */
 
-// MongoDB query sanitization
-const sanitizeMongo = mongoSanitize({
-  replaceWith: '_',
-  onSanitize: ({ req, key }) => {
-    console.warn(`[Security] Sanitized request from ${req.ip}: ${key}`);
-  },
-});
+// SQL injection is handled by Sequelize parameterized queries
 
 // XSS protection
 const sanitizeXSS = xss();
@@ -326,7 +319,6 @@ module.exports = {
   searchLimiter,
   adminLimiter,
   helmetConfig,
-  sanitizeMongo,
   sanitizeXSS,
   preventHPP,
   corsOptions,
