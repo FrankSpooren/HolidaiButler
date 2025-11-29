@@ -7,6 +7,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import logger from './utils/logger.js';
 import { initializeDatabase } from './config/database.js';
 import { initializeEventBus } from './services/eventBus.js';
@@ -23,7 +25,12 @@ import prometheusMiddleware, { metricsEndpoint } from './middleware/prometheus.j
 import correlationIdMiddleware from './middleware/correlationId.js';
 import metricsService from './services/metrics.js';
 
-dotenv.config();
+// Get directory name for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env from platform-core root
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3001;

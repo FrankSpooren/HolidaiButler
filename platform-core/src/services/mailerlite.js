@@ -8,13 +8,16 @@ import logger from '../utils/logger.js';
 
 class MailerLiteService {
   constructor() {
-    if (!process.env.MAILERLITE_API_KEY) {
-      throw new Error('MailerLite API key not configured');
-    }
+    this.enabled = !!process.env.MAILERLITE_API_KEY;
 
-    this.client = new MailerLite({
-      api_key: process.env.MAILERLITE_API_KEY,
-    });
+    if (!this.enabled) {
+      logger.warn('MailerLite API key not configured - email features disabled');
+      this.client = null;
+    } else {
+      this.client = new MailerLite({
+        api_key: process.env.MAILERLITE_API_KEY,
+      });
+    }
 
     this.fromEmail = process.env.MAILERLITE_FROM_EMAIL || 'noreply@holidaibutler.com';
     this.fromName = process.env.MAILERLITE_FROM_NAME || 'HolidaiButler';
@@ -22,9 +25,21 @@ class MailerLiteService {
   }
 
   /**
+   * Check if service is enabled
+   */
+  isEnabled() {
+    return this.enabled;
+  }
+
+  /**
    * Subscribe user to mailing list
    */
   async subscribeUser(email, data = {}) {
+    if (!this.enabled) {
+      logger.info(`[DEV] Would subscribe user: ${email}`);
+      return { id: 'dev-mock-id', email, status: 'mock' };
+    }
+
     try {
       const subscriberData = {
         email,
