@@ -12,12 +12,11 @@ import adminAuthRoutes from './routes/adminAuth.js';
 import adminPOIRoutes from './routes/adminPOI.js';
 import adminUploadRoutes from './routes/adminUpload.js';
 import adminPlatformRoutes from './routes/adminPlatform.js';
-import adminUsersRoutes from './routes/adminUsers.js';
-import adminEventsRoutes from './routes/adminEvents.js';
-import adminReservationsRoutes from './routes/adminReservations.js';
-import adminTicketsRoutes from './routes/adminTickets.js';
-import adminBookingsRoutes from './routes/adminBookings.js';
-import adminTransactionsRoutes from './routes/adminTransactions.js';
+import monitoringRoutes from './routes/monitoring.js';
+
+// Import enterprise services
+import cacheService from './services/cache.js';
+import metricsService from './services/metrics.js';
 
 // Load environment variables
 dotenv.config();
@@ -32,17 +31,32 @@ const app = express();
 // MongoDB connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/holidaibutler';
 
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => {
-  console.log('✅ MongoDB connected successfully');
-})
-.catch((error) => {
-  console.error('❌ MongoDB connection error:', error);
-  process.exit(1);
-});
+// Initialize services
+async function initializeServices() {
+  try {
+    // Connect to MongoDB
+    await mongoose.connect(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    console.log('✅ MongoDB connected successfully');
+
+    // Connect to Redis cache
+    const cacheConnected = await cacheService.connect();
+    if (cacheConnected) {
+      console.log('✅ Redis cache initialized');
+    } else {
+      console.warn('⚠️  Redis cache not available (performance may be degraded)');
+    }
+
+    console.log('✅ All services initialized');
+  } catch (error) {
+    console.error('❌ Service initialization error:', error);
+    process.exit(1);
+  }
+}
+
+initializeServices();
 
 // Middleware
 app.use(helmet({
@@ -70,6 +84,9 @@ app.use('/api/admin/reservations', adminReservationsRoutes);
 app.use('/api/admin/tickets', adminTicketsRoutes);
 app.use('/api/admin/bookings', adminBookingsRoutes);
 app.use('/api/admin/transactions', adminTransactionsRoutes);
+
+// Enterprise monitoring routes
+app.use('/api/admin/monitoring', monitoringRoutes);
 
 // Health check endpoint
 app.get('/api/admin/health', (req, res) => {

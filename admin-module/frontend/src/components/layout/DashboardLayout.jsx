@@ -31,12 +31,12 @@ import {
   Logout as LogoutIcon,
   Person as PersonIcon,
   ChevronLeft as ChevronLeftIcon,
-  Assessment as AssessmentIcon,
-  Event as EventIcon,
   Restaurant as RestaurantIcon,
-  ConfirmationNumber as TicketIcon,
-  BookOnline as BookingIcon,
-  Payment as PaymentIcon
+  EventNote as EventNoteIcon,
+  TableRestaurant as TableRestaurantIcon,
+  ContactPhone as ContactPhoneIcon,
+  HourglassEmpty as HourglassEmptyIcon,
+  GridOn as GridOnIcon
 } from '@mui/icons-material';
 import useAuthStore from '../../store/authStore';
 
@@ -81,6 +81,37 @@ export default function DashboardLayout() {
       icon: <PlaceIcon />,
       path: '/pois',
       permission: 'pois.read'
+    },
+    // Reservations Module
+    {
+      text: 'Restaurants',
+      icon: <RestaurantIcon />,
+      path: '/reservations/restaurants',
+      permission: 'reservations.restaurants'
+    },
+    {
+      text: 'Reservations',
+      icon: <EventNoteIcon />,
+      path: '/reservations/bookings',
+      permission: 'reservations.view'
+    },
+    {
+      text: 'Guests',
+      icon: <ContactPhoneIcon />,
+      path: '/reservations/guests',
+      permission: 'reservations.guests'
+    },
+    {
+      text: 'Waitlist',
+      icon: <HourglassEmptyIcon />,
+      path: '/reservations/waitlist',
+      permission: 'reservations.waitlist'
+    },
+    {
+      text: 'Floor Plans',
+      icon: <GridOnIcon />,
+      path: '/reservations/floor-plans',
+      permission: 'reservations.floorplans'
     },
     {
       text: 'Events',

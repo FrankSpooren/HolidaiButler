@@ -1,0 +1,771 @@
+openapi: 3.0.3
+info:
+  title: HolidaiButler Payment Engine API
+  description: |
+    Enterprise-grade payment processing API for the HolidaiButler platform.
+
+    ## Features
+    - Adyen integration for payment processing
+    - Multi-currency support (EUR, USD, GBP, etc.)
+    - Multiple payment methods (cards, iDEAL, PayPal, etc.)
+    - Refund processing
+    - Webhook handling
+    - PCI-DSS compliant
+
+    ## Authentication
+    All endpoints (except webhooks and health checks) require JWT authentication.
+    Include the token in the Authorization header: `Bearer <token>`
+
+    ## Rate Limiting
+    - Standard endpoints: 100 requests per 15 minutes
+    - Webhook endpoints: 1000 requests per 15 minutes
+
+    ## Error Handling
+    All errors return a consistent JSON structure with `success: false` and an `error` message.
+  version: 1.0.0
+  contact:
+    name: HolidaiButler B.V.
+    email: tech@holidaibutler.com
+    url: https://holidaibutler.com
+  license:
+    name: Proprietary
+    url: https://holidaibutler.com/terms
+
+servers:
+  - url: http://localhost:3005/api/v1
+    description: Development server
+  - url: https://api.holidaibutler.com/payment/v1
+    description: Production server
+
+tags:
+  - name: Payments
+    description: Payment creation and management
+  - name: Refunds
+    description: Refund processing
+  - name: Payment Methods
+    description: Available payment methods
+  - name: Webhooks
+    description: Adyen webhook handling
+  - name: Admin
+    description: Administrative endpoints
+  - name: Health
+    description: Health check endpoints
+
+paths:
+  /payments:
+    post:
+      tags:
+        - Payments
+      summary: Create payment session
+      description: |
+        Creates a new payment session with Adyen.
+        Returns session data for frontend integration with Adyen Drop-in.
+      operationId: createPayment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+            examples:
+              ticketPurchase:
+                summary: Ticket purchase
+                value:
+                  amount: 5000
+                  currency: EUR
+                  resourceType: ticket
+                  resourceId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                  returnUrl: https://holidaibutler.com/payment/callback
+                  metadata:
+                    bookingReference: BOOK-2024-001
+                    customerEmail: guest@example.com
+      responses:
+        '201':
+          description: Payment session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePaymentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Idempotency conflict - request is being processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdempotencyConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /payments/{paymentId}:
+    get:
+      tags:
+        - Payments
+      summary: Get payment status
+      description: Retrieves the current status and details of a payment
+      operationId: getPayment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/paymentId'
+      responses:
+        '200':
+          description: Payment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /payments/{paymentId}/capture:
+    post:
+      tags:
+        - Payments
+      summary: Capture authorized payment
+      description: |
+        Captures a previously authorized payment.
+        Supports partial capture by specifying an amount.
+        Requires admin role.
+      operationId: capturePayment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/paymentId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaptureRequest'
+      responses:
+        '200':
+          description: Payment captured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /payments/{paymentId}/cancel:
+    post:
+      tags:
+        - Payments
+      summary: Cancel authorized payment
+      description: Cancels a payment that has been authorized but not yet captured
+      operationId: cancelPayment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/paymentId'
+      responses:
+        '200':
+          description: Payment cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /payments/{paymentId}/refunds:
+    post:
+      tags:
+        - Refunds
+      summary: Initiate refund
+      description: |
+        Initiates a refund for a captured payment.
+        Supports partial refunds by specifying an amount.
+      operationId: createRefund
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/paymentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundRequest'
+      responses:
+        '201':
+          description: Refund initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+        - Refunds
+      summary: Get refunds for payment
+      description: Lists all refunds associated with a payment
+      operationId: getRefunds
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/paymentId'
+      responses:
+        '200':
+          description: List of refunds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundList'
+
+  /payment-methods/available:
+    get:
+      tags:
+        - Payment Methods
+      summary: Get available payment methods
+      description: Returns available payment methods for a country/currency combination
+      operationId: getPaymentMethods
+      parameters:
+        - name: country
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z]{2}$'
+          example: NL
+        - name: currency
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z]{3}$'
+          example: EUR
+      responses:
+        '200':
+          description: Available payment methods
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethodsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /webhooks/adyen:
+    post:
+      tags:
+        - Webhooks
+      summary: Adyen webhook endpoint
+      description: |
+        Receives webhook notifications from Adyen.
+        Verifies HMAC signature and processes payment events.
+      operationId: handleAdyenWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdyenWebhook'
+      responses:
+        '200':
+          description: Webhook accepted
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: '[accepted]'
+        '400':
+          description: Invalid webhook
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: '[invalid]'
+        '401':
+          description: HMAC verification failed
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: '[invalid]'
+
+  /admin/transactions:
+    get:
+      tags:
+        - Admin
+      summary: List transactions
+      description: Administrative endpoint to list and filter transactions
+      operationId: listTransactions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TransactionStatus'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns health status of the payment service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from authentication service
+
+  parameters:
+    paymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Payment/Transaction ID
+
+  schemas:
+    CreatePaymentRequest:
+      type: object
+      required:
+        - amount
+        - resourceType
+        - resourceId
+        - returnUrl
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          maximum: 999999999
+          description: Amount in cents (e.g., 5000 = €50.00)
+          example: 5000
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          default: EUR
+          example: EUR
+        resourceType:
+          type: string
+          enum: [ticket, restaurant, hotel, activity, experience, bundle]
+          example: ticket
+        resourceId:
+          type: string
+          format: uuid
+        returnUrl:
+          type: string
+          format: uri
+          pattern: '^https://'
+          description: HTTPS URL for redirect after payment
+        metadata:
+          type: object
+          properties:
+            bookingReference:
+              type: string
+              maxLength: 100
+            customerEmail:
+              type: string
+              format: email
+            customerName:
+              type: string
+              maxLength: 200
+            countryCode:
+              type: string
+              pattern: '^[A-Z]{2}$'
+            shopperLocale:
+              type: string
+              pattern: '^[a-z]{2}-[A-Z]{2}$'
+        idempotencyKey:
+          type: string
+          minLength: 16
+          maxLength: 64
+          pattern: '^[a-zA-Z0-9\-_]+$'
+
+    CreatePaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            paymentId:
+              type: string
+              format: uuid
+            transactionReference:
+              type: string
+              example: TXN-1704067200000-a1b2c3d4
+            sessionId:
+              type: string
+              description: Adyen session ID for Drop-in
+            sessionData:
+              type: string
+              description: Adyen session data for Drop-in
+            expiresAt:
+              type: string
+              format: date-time
+
+    PaymentDetails:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            transactionId:
+              type: string
+              format: uuid
+            transactionReference:
+              type: string
+            status:
+              $ref: '#/components/schemas/TransactionStatus'
+            amount:
+              type: string
+              example: '50.00'
+            currency:
+              type: string
+            paymentMethod:
+              type: string
+            authorizedAmount:
+              type: string
+            capturedAmount:
+              type: string
+            refundedAmount:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            authorizedAt:
+              type: string
+              format: date-time
+            capturedAt:
+              type: string
+              format: date-time
+
+    TransactionStatus:
+      type: string
+      enum:
+        - pending
+        - authorized
+        - captured
+        - failed
+        - cancelled
+        - refunded
+        - partially_refunded
+
+    CaptureRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          description: Partial capture amount in cents (optional)
+
+    CaptureResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            transactionId:
+              type: string
+              format: uuid
+            status:
+              type: string
+            capturedAmount:
+              type: string
+            currency:
+              type: string
+
+    CancelResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            transactionId:
+              type: string
+              format: uuid
+            status:
+              type: string
+
+    RefundRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          description: Partial refund amount in cents (optional)
+        reason:
+          type: string
+          enum:
+            - customer_request
+            - duplicate_payment
+            - fraudulent
+            - order_cancelled
+            - product_not_delivered
+            - product_defective
+            - other
+        reasonDetails:
+          type: string
+          maxLength: 500
+          description: Required when reason is 'other'
+        notifyCustomer:
+          type: boolean
+          default: true
+
+    RefundResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            refundId:
+              type: string
+              format: uuid
+            refundReference:
+              type: string
+            amount:
+              type: string
+            currency:
+              type: string
+            status:
+              type: string
+              enum: [pending, processing, completed, failed]
+
+    RefundList:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RefundResponse'
+
+    PaymentMethodsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              name:
+                type: string
+              brands:
+                type: array
+                items:
+                  type: string
+
+    AdyenWebhook:
+      type: object
+      required:
+        - notificationItems
+      properties:
+        notificationItems:
+          type: array
+          items:
+            type: object
+            properties:
+              NotificationRequestItem:
+                type: object
+                properties:
+                  eventCode:
+                    type: string
+                  success:
+                    type: string
+                  pspReference:
+                    type: string
+                  merchantReference:
+                    type: string
+                  amount:
+                    type: object
+                    properties:
+                      value:
+                        type: integer
+                      currency:
+                        type: string
+                  paymentMethod:
+                    type: string
+                  additionalData:
+                    type: object
+
+    TransactionList:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentDetails'
+        count:
+          type: integer
+
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        service:
+          type: string
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        adyen:
+          type: string
+          enum: [connected, disconnected]
+        database:
+          type: string
+          enum: [connected, disconnected]
+        redis:
+          type: string
+          enum: [connected, disconnected]
+        timestamp:
+          type: string
+          format: date-time
+
+    IdempotencyConflict:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Request is currently being processed
+        code:
+          type: string
+          example: IDEMPOTENCY_CONFLICT
+        idempotencyKey:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized - missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
+  Typography,
+  Button,
   Table,
   TableBody,
   TableCell,
@@ -11,448 +13,389 @@ import {
   TableRow,
   TablePagination,
   IconButton,
-  Button,
-  TextField,
-  MenuItem,
   Chip,
-  Typography,
+  TextField,
   InputAdornment,
-  Tooltip,
   Menu,
-  ListItemIcon,
-  ListItemText,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  MenuItem,
+  CircularProgress,
   Alert,
-  Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  Grid,
+  Tabs,
   Tab,
-  Tabs
+  Badge
 } from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
   MoreVert as MoreVertIcon,
-  Edit as EditIcon,
-  Check as CheckIcon,
+  CheckCircle as ConfirmIcon,
   Cancel as CancelIcon,
   EventSeat as SeatIcon,
-  CheckCircle as CompleteIcon,
-  Block as NoShowIcon
+  Done as CompleteIcon,
+  DoNotDisturb as NoShowIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { reservationsAPI } from '../../services/api';
-import useAuthStore from '../../store/authStore';
+import { toast } from 'react-toastify';
+import { reservationAPI, restaurantAPI } from '../../services/api';
 
-const statusColors = {
+const STATUS_COLORS = {
   pending: 'warning',
   confirmed: 'info',
   seated: 'primary',
   completed: 'success',
-  cancelled: 'error',
-  no_show: 'default'
+  cancelled: 'default',
+  no_show: 'error'
+};
+
+const STATUS_LABELS = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  seated: 'Seated',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  no_show: 'No Show'
 };
 
 export default function ReservationList() {
   const navigate = useNavigate();
-  const { hasPermission } = useAuthStore();
-
   const [reservations, setReservations] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
-  const [total, setTotal] = useState(0);
-  const [tabValue, setTabValue] = useState(0);
-
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
-
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [restaurantFilter, setRestaurantFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedReservation, setSelectedReservation] = useState(null);
-  const [actionDialog, setActionDialog] = useState({ open: false, type: null });
+  const [tabValue, setTabValue] = useState(0);
+  const [stats, setStats] = useState({ pending: 0, confirmed: 0, seated: 0 });
 
-  const canEdit = hasPermission('reservations.edit');
-  const canCreate = hasPermission('reservations.create');
+  useEffect(() => {
+    fetchRestaurants();
+  }, []);
 
   useEffect(() => {
     fetchReservations();
-  }, [page, rowsPerPage, search, statusFilter, dateFilter, tabValue]);
+  }, [page, rowsPerPage, searchQuery, statusFilter, restaurantFilter, dateFilter]);
+
+  const fetchRestaurants = async () => {
+    try {
+      const response = await restaurantAPI.getAll({ limit: 100 });
+      setRestaurants(response.data?.restaurants || []);
+    } catch (err) {
+      console.error('Failed to load restaurants', err);
+    }
+  };
 
   const fetchReservations = async () => {
     try {
       setLoading(true);
-      setError(null);
+      const params = {
+        page: page + 1,
+        limit: rowsPerPage,
+        search: searchQuery || undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        restaurant_id: restaurantFilter || undefined,
+        date: dateFilter || undefined
+      };
 
-      let response;
-      if (tabValue === 0) {
-        // Today's reservations
-        response = await reservationsAPI.getToday({ status: statusFilter });
-      } else {
-        // All reservations
-        const params = {
-          page: page + 1,
-          limit: rowsPerPage,
-          ...(search && { search }),
-          ...(statusFilter && { status: statusFilter }),
-          ...(dateFilter && { date: dateFilter })
-        };
-        response = await reservationsAPI.getAll(params);
-      }
+      const response = await reservationAPI.getAll(params);
+      setReservations(response.data?.reservations || []);
+      setTotalCount(response.data?.total || 0);
 
-      if (response.success) {
-        if (tabValue === 0) {
-          setReservations(response.data.reservations);
-          setTotal(response.data.reservations.length);
-        } else {
-          setReservations(response.data.reservations);
-          setTotal(response.data.pagination.total);
-        }
+      // Update stats
+      if (response.data?.stats) {
+        setStats(response.data.stats);
       }
     } catch (err) {
-      console.error('Error fetching reservations:', err);
-      setError(err.response?.data?.message || 'Failed to load reservations');
+      setError('Failed to load reservations');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAction = async (type) => {
-    try {
-      let response;
-      switch (type) {
-        case 'confirm':
-          response = await reservationsAPI.confirm(selectedReservation._id);
-          break;
-        case 'seat':
-          response = await reservationsAPI.seat(selectedReservation._id, {
-            tableNumber: selectedReservation.table?.number,
-            seatedAt: new Date()
-          });
-          break;
-        case 'complete':
-          response = await reservationsAPI.complete(selectedReservation._id, {
-            total: 0,
-            tip: 0
-          });
-          break;
-        case 'cancel':
-          response = await reservationsAPI.cancel(
-            selectedReservation._id,
-            'Cancelled by admin',
-            'admin'
-          );
-          break;
-        case 'no_show':
-          response = await reservationsAPI.noShow(selectedReservation._id, 'No show');
-          break;
-      }
+  const handleMenuOpen = (event, reservation) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedReservation(reservation);
+  };
 
-      if (response.success) {
-        fetchReservations();
-        setActionDialog({ open: false, type: null });
-        setSelectedReservation(null);
-      }
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedReservation(null);
+  };
+
+  const handleStatusChange = async (newStatus) => {
+    if (!selectedReservation) return;
+
+    try {
+      await reservationAPI.updateStatus(selectedReservation.id, newStatus);
+      toast.success(`Reservation ${newStatus}`);
+      fetchReservations();
     } catch (err) {
-      console.error(`Error ${type} reservation:`, err);
-      setError(err.response?.data?.message || `Failed to ${type} reservation`);
+      toast.error('Failed to update reservation');
     }
+    handleMenuClose();
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+    const statuses = ['all', 'pending', 'confirmed', 'seated', 'completed', 'cancelled'];
+    setStatusFilter(statuses[newValue]);
+  };
+
+  const formatTime = (time) => {
+    if (!time) return '-';
+    return time.substring(0, 5);
   };
 
   const formatDate = (date) => {
+    if (!date) return '-';
     return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
+      weekday: 'short',
       month: 'short',
       day: 'numeric'
     });
   };
 
-  const formatTime = (time) => {
-    return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" fontWeight="bold">
           Reservations
         </Typography>
-        {canCreate && (
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={fetchReservations}
+          >
+            Refresh
+          </Button>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => navigate('/reservations/new')}
+            onClick={() => navigate('/reservations/bookings/create')}
           >
             New Reservation
           </Button>
-        )}
+        </Box>
       </Box>
 
-      {/* Tabs */}
       <Paper sx={{ mb: 2 }}>
-        <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
-          <Tab label="Today" />
-          <Tab label="All Reservations" />
+        <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tab label="All" />
+          <Tab label={<Badge badgeContent={stats.pending} color="warning">Pending</Badge>} />
+          <Tab label={<Badge badgeContent={stats.confirmed} color="info">Confirmed</Badge>} />
+          <Tab label={<Badge badgeContent={stats.seated} color="primary">Seated</Badge>} />
+          <Tab label="Completed" />
+          <Tab label="Cancelled" />
         </Tabs>
       </Paper>
 
-      {/* Filters */}
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <TextField
-            placeholder="Search by name, email, phone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            sx={{ flex: 1 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              )
-            }}
-          />
-          <TextField
-            select
-            label="Status"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            sx={{ minWidth: 150 }}
-          >
-            <MenuItem value="">All Statuses</MenuItem>
-            <MenuItem value="pending">Pending</MenuItem>
-            <MenuItem value="confirmed">Confirmed</MenuItem>
-            <MenuItem value="seated">Seated</MenuItem>
-            <MenuItem value="completed">Completed</MenuItem>
-            <MenuItem value="cancelled">Cancelled</MenuItem>
-            <MenuItem value="no_show">No Show</MenuItem>
-          </TextField>
-          {tabValue === 1 && (
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={3}>
             <TextField
+              fullWidth
+              placeholder="Search by name, email, reference..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                )
+              }}
+              size="small"
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Restaurant</InputLabel>
+              <Select
+                value={restaurantFilter}
+                onChange={(e) => setRestaurantFilter(e.target.value)}
+                label="Restaurant"
+              >
+                <MenuItem value="">All Restaurants</MenuItem>
+                {restaurants.map((r) => (
+                  <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
               type="date"
               label="Date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
+              size="small"
               InputLabelProps={{ shrink: true }}
-              sx={{ minWidth: 150 }}
             />
-          )}
-        </Stack>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => {
+                setSearchQuery('');
+                setRestaurantFilter('');
+                setDateFilter(new Date().toISOString().split('T')[0]);
+                setStatusFilter('all');
+                setTabValue(0);
+              }}
+            >
+              Clear Filters
+            </Button>
+          </Grid>
+        </Grid>
       </Paper>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
 
-      {/* Table */}
       <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Reservation #</TableCell>
-              <TableCell>Guest</TableCell>
-              <TableCell>Date & Time</TableCell>
-              <TableCell>Party Size</TableCell>
-              <TableCell>Table</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : reservations.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                  <Typography color="text.secondary">
-                    No reservations found
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              reservations.map((reservation) => (
-                <TableRow key={reservation._id} hover>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight="medium">
-                      {reservation.reservationNumber}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="subtitle2">
-                        {reservation.guest?.firstName} {reservation.guest?.lastName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {reservation.guest?.email}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body2">
-                        {formatDate(reservation.date)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {reservation.time}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>{reservation.partySize}</TableCell>
-                  <TableCell>{reservation.table?.number || '-'}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={reservation.status.replace('_', ' ')}
-                      size="small"
-                      color={statusColors[reservation.status]}
-                      sx={{ textTransform: 'capitalize' }}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Actions">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          setAnchorEl(e.currentTarget);
-                          setSelectedReservation(reservation);
-                        }}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Reference</TableCell>
+                  <TableCell>Guest</TableCell>
+                  <TableCell>Restaurant</TableCell>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Time</TableCell>
+                  <TableCell>Party</TableCell>
+                  <TableCell>Table</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-
-        {tabValue === 1 && (
-          <TablePagination
-            rowsPerPageOptions={[10, 20, 50]}
-            component="div"
-            count={total}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={(e, newPage) => setPage(newPage)}
-            onRowsPerPageChange={(e) => {
-              setRowsPerPage(parseInt(e.target.value, 10));
-              setPage(0);
-            }}
-          />
+              </TableHead>
+              <TableBody>
+                {reservations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} align="center">
+                      <Typography color="text.secondary" sx={{ py: 4 }}>
+                        No reservations found for the selected criteria.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  reservations.map((reservation) => (
+                    <TableRow key={reservation.id} hover>
+                      <TableCell>
+                        <Typography fontWeight="medium" sx={{ fontFamily: 'monospace' }}>
+                          {reservation.reservation_reference}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography fontWeight="medium">
+                          {reservation.guest?.first_name} {reservation.guest?.last_name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {reservation.guest?.phone || reservation.guest?.email}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{reservation.restaurant?.name}</TableCell>
+                      <TableCell>{formatDate(reservation.reservation_date)}</TableCell>
+                      <TableCell>{formatTime(reservation.reservation_time)}</TableCell>
+                      <TableCell>{reservation.party_size} guests</TableCell>
+                      <TableCell>
+                        {reservation.table?.table_number || (
+                          <Chip label="Unassigned" size="small" variant="outlined" />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={STATUS_LABELS[reservation.status]}
+                          color={STATUS_COLORS[reservation.status]}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleMenuOpen(e, reservation)}
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={totalCount}
+              page={page}
+              onPageChange={(e, p) => setPage(p)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
+              rowsPerPageOptions={[10, 25, 50, 100]}
+            />
+          </>
         )}
       </TableContainer>
 
-      {/* Context Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
+        onClose={handleMenuClose}
       >
-        {canEdit && selectedReservation?.status === 'pending' && (
-          <MenuItem
-            onClick={() => {
-              setActionDialog({ open: true, type: 'confirm' });
-              setAnchorEl(null);
-            }}
-          >
-            <ListItemIcon>
-              <CheckIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Confirm</ListItemText>
+        {selectedReservation?.status === 'pending' && (
+          <MenuItem onClick={() => handleStatusChange('confirmed')}>
+            <ConfirmIcon fontSize="small" sx={{ mr: 1, color: 'success.main' }} />
+            Confirm
           </MenuItem>
         )}
-        {canEdit && selectedReservation?.status === 'confirmed' && (
-          <MenuItem
-            onClick={() => {
-              setActionDialog({ open: true, type: 'seat' });
-              setAnchorEl(null);
-            }}
-          >
-            <ListItemIcon>
-              <SeatIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Mark as Seated</ListItemText>
+        {(selectedReservation?.status === 'pending' || selectedReservation?.status === 'confirmed') && (
+          <MenuItem onClick={() => handleStatusChange('seated')}>
+            <SeatIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+            Seat Guest
           </MenuItem>
         )}
-        {canEdit && selectedReservation?.status === 'seated' && (
-          <MenuItem
-            onClick={() => {
-              setActionDialog({ open: true, type: 'complete' });
-              setAnchorEl(null);
-            }}
-          >
-            <ListItemIcon>
-              <CompleteIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Complete</ListItemText>
+        {selectedReservation?.status === 'seated' && (
+          <MenuItem onClick={() => handleStatusChange('completed')}>
+            <CompleteIcon fontSize="small" sx={{ mr: 1, color: 'success.main' }} />
+            Complete
           </MenuItem>
         )}
-        {canEdit && !['completed', 'cancelled', 'no_show'].includes(selectedReservation?.status) && (
-          <MenuItem
-            onClick={() => {
-              setActionDialog({ open: true, type: 'cancel' });
-              setAnchorEl(null);
-            }}
-          >
-            <ListItemIcon>
-              <CancelIcon fontSize="small" color="error" />
-            </ListItemIcon>
-            <ListItemText>Cancel</ListItemText>
-          </MenuItem>
-        )}
-        {canEdit && !['completed', 'cancelled', 'no_show'].includes(selectedReservation?.status) && (
-          <MenuItem
-            onClick={() => {
-              setActionDialog({ open: true, type: 'no_show' });
-              setAnchorEl(null);
-            }}
-          >
-            <ListItemIcon>
-              <NoShowIcon fontSize="small" color="warning" />
-            </ListItemIcon>
-            <ListItemText>Mark as No Show</ListItemText>
-          </MenuItem>
+        {selectedReservation?.status !== 'cancelled' && selectedReservation?.status !== 'completed' && (
+          <>
+            <MenuItem onClick={() => handleStatusChange('no_show')} sx={{ color: 'error.main' }}>
+              <NoShowIcon fontSize="small" sx={{ mr: 1 }} />
+              Mark No Show
+            </MenuItem>
+            <MenuItem onClick={() => handleStatusChange('cancelled')} sx={{ color: 'error.main' }}>
+              <CancelIcon fontSize="small" sx={{ mr: 1 }} />
+              Cancel
+            </MenuItem>
+          </>
         )}
       </Menu>
-
-      {/* Action Dialog */}
-      <Dialog open={actionDialog.open} onClose={() => setActionDialog({ open: false, type: null })}>
-        <DialogTitle>
-          {actionDialog.type === 'confirm' && 'Confirm Reservation'}
-          {actionDialog.type === 'seat' && 'Mark as Seated'}
-          {actionDialog.type === 'complete' && 'Complete Reservation'}
-          {actionDialog.type === 'cancel' && 'Cancel Reservation'}
-          {actionDialog.type === 'no_show' && 'Mark as No Show'}
-        </DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to {actionDialog.type} this reservation?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setActionDialog({ open: false, type: null })}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => handleAction(actionDialog.type)}
-            variant="contained"
-            color={actionDialog.type === 'cancel' ? 'error' : 'primary'}
-          >
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }
