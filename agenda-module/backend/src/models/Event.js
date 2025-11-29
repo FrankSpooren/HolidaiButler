@@ -1,641 +1,412 @@
-const mongoose = require('mongoose');
+const { DataTypes, Op } = require('sequelize');
+const { sequelize } = require('../config/database');
+const { v4: uuidv4 } = require('uuid');
 
 /**
- * Event Schema for Calpe Tourism Events
+ * Event Model for Calpe Tourism Events (MySQL/Sequelize)
+ * Migrated from MongoDB for platform consistency
  * Supports multi-source aggregation, verification, and comprehensive filtering
  */
-const eventSchema = new mongoose.Schema({
-  // Basic Information
+
+const Event = sequelize.define('Event', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: () => uuidv4(),
+    primaryKey: true,
+  },
+
+  // Multilingual title: { nl: 'Dutch', en: 'English', es: 'Spanish', de: 'German', fr: 'French' }
   title: {
-    type: Map,
-    of: String,
-    required: true,
-    // Multilingual support: { nl: 'Dutch title', en: 'English title', es: 'Spanish title', de: 'German title', fr: 'French title' }
+    type: DataTypes.JSON,
+    allowNull: false,
+    comment: 'Multilingual titles as JSON object',
   },
+
   description: {
-    type: Map,
-    of: String,
-    required: true,
+    type: DataTypes.JSON,
+    allowNull: false,
+    comment: 'Multilingual descriptions as JSON object',
   },
+
   shortDescription: {
-    type: Map,
-    of: String,
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'short_description',
   },
 
   // Date & Time
   startDate: {
-    type: Date,
-    required: true,
-    index: true,
+    type: DataTypes.DATE,
+    allowNull: false,
+    field: 'start_date',
   },
+
   endDate: {
-    type: Date,
-    required: true,
+    type: DataTypes.DATE,
+    allowNull: false,
+    field: 'end_date',
   },
+
   allDay: {
-    type: Boolean,
-    default: false,
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'all_day',
   },
+
+  // Recurring event settings as JSON
   recurring: {
-    enabled: {
-      type: Boolean,
-      default: false,
-    },
-    frequency: {
-      type: String,
-      enum: ['daily', 'weekly', 'monthly', 'yearly'],
-    },
-    endRecurrence: Date,
-    daysOfWeek: [Number], // 0-6 (Sunday-Saturday)
+    type: DataTypes.JSON,
+    defaultValue: { enabled: false },
+    comment: '{ enabled, frequency, endRecurrence, daysOfWeek }',
   },
 
-  // Time of Day (for filtering)
   timeOfDay: {
-    type: String,
-    enum: ['morning', 'afternoon', 'evening', 'night', 'all-day'],
-    required: true,
+    type: DataTypes.ENUM('morning', 'afternoon', 'evening', 'night', 'all-day'),
+    allowNull: false,
+    field: 'time_of_day',
   },
 
-  // Location
+  // Location as JSON object
   location: {
-    name: {
-      type: String,
-      required: true,
-    },
-    address: String,
-    city: {
-      type: String,
-      default: 'Calpe',
-    },
-    region: {
-      type: String,
-      default: 'Costa Blanca',
-    },
-    coordinates: {
-      lat: Number,
-      lng: Number,
-    },
-    venue: String, // Specific venue name
-    area: {
-      type: String,
-      enum: ['old-town', 'beach-area', 'port', 'penon-ifach', 'city-center', 'outskirts', 'natural-park'],
-    },
+    type: DataTypes.JSON,
+    allowNull: false,
+    comment: '{ name, address, city, region, coordinates: {lat, lng}, venue, area }',
   },
 
-  // Categorization & Themes
+  // Categories
   primaryCategory: {
-    type: String,
-    required: true,
-    enum: [
-      'culture',
-      'beach',
-      'active-sports',
-      'relaxation',
-      'food-drink',
-      'nature',
-      'entertainment',
-      'folklore',
-      'festivals',
-      'tours',
-      'workshops',
-      'markets',
-      'sports-events',
-      'exhibitions',
-      'music',
-      'family',
-    ],
-    index: true,
+    type: DataTypes.ENUM(
+      'culture', 'beach', 'active-sports', 'relaxation', 'food-drink',
+      'nature', 'entertainment', 'folklore', 'festivals', 'tours',
+      'workshops', 'markets', 'sports-events', 'exhibitions', 'music', 'family'
+    ),
+    allowNull: false,
+    field: 'primary_category',
   },
-  secondaryCategories: [{
-    type: String,
-    enum: [
-      'culture',
-      'beach',
-      'active-sports',
-      'relaxation',
-      'food-drink',
-      'nature',
-      'entertainment',
-      'folklore',
-      'festivals',
-      'tours',
-      'workshops',
-      'markets',
-      'sports-events',
-      'exhibitions',
-      'music',
-      'family',
-    ],
-  }],
 
-  // Activity Types (detailed)
+  secondaryCategories: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    field: 'secondary_categories',
+    comment: 'Array of category strings',
+  },
+
   activityType: {
-    type: String,
-    enum: [
-      'excursion',
-      'exhibition',
-      'festival',
-      'folklore',
-      'guided-tour',
-      'guided-walk',
-      'guided-bike-tour',
-      'live-music',
-      'street-theater',
-      'workshop',
-      'seminar',
-      'historic-walk',
-      'local-market',
-      'flea-market',
-      'fair',
-      'golf',
-      'padel',
-      'football',
-      'mountain-bike',
-      'cycling',
-      'beach-volleyball',
-      'surfing',
-      'sup',
-      'diving',
-      'catamaran-sailing',
-      'sailing',
-      'swimming',
-      'kitesurfing',
-      'foiling',
-      'water-sports',
-      'cultural-program',
-      'fiesta',
-      'parade',
-      'fireworks',
-      'gastronomy',
-      'wine-tasting',
-      'cooking-class',
-      'art-class',
-      'yoga',
-      'meditation',
-      'hiking',
-      'wildlife-watching',
-      'dolphin-watching',
-      'boat-trip',
-      'kayaking',
-      'climbing',
-      'running',
-      'triathlon',
-      'other',
-    ],
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'activity_type',
   },
 
-  // Target Audience
-  targetAudience: [{
-    type: String,
-    enum: [
-      'families-with-kids',
-      'couples',
-      'friends',
-      'solo-travelers',
-      'seniors',
-      'young-adults',
-      'children',
-      'teens',
-      'all-ages',
-      'groups',
-      'business',
-    ],
-  }],
+  // Target Audience as JSON array
+  targetAudience: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    field: 'target_audience',
+  },
 
   // Difficulty & Requirements
   difficultyLevel: {
-    type: String,
-    enum: ['easy', 'moderate', 'challenging', 'expert', 'all-levels'],
+    type: DataTypes.ENUM('easy', 'moderate', 'challenging', 'expert', 'all-levels'),
+    field: 'difficulty_level',
   },
+
   ageRestriction: {
-    min: Number,
-    max: Number,
+    type: DataTypes.JSON,
+    field: 'age_restriction',
+    comment: '{ min, max }',
   },
+
   accessibility: {
-    wheelchairAccessible: Boolean,
-    hearingAccessible: Boolean,
-    visuallyAccessible: Boolean,
-    familyFriendly: Boolean,
-    petsAllowed: Boolean,
+    type: DataTypes.JSON,
+    comment: '{ wheelchairAccessible, hearingAccessible, visuallyAccessible, familyFriendly, petsAllowed }',
   },
 
-  // Pricing
+  // Pricing as JSON
   pricing: {
-    isFree: {
-      type: Boolean,
-      default: false,
-    },
-    price: {
-      amount: Number,
-      currency: {
-        type: String,
-        default: 'EUR',
-      },
-    },
-    priceRange: {
-      min: Number,
-      max: Number,
-    },
-    priceDescription: {
-      type: Map,
-      of: String,
-    },
+    type: DataTypes.JSON,
+    defaultValue: { isFree: false },
+    comment: '{ isFree, price: {amount, currency}, priceRange, priceDescription }',
   },
 
-  // Registration & Booking
+  // Registration as JSON
   registration: {
-    required: {
-      type: Boolean,
-      default: false,
-    },
-    url: String,
-    phone: String,
-    email: String,
-    deadline: Date,
-    maxParticipants: Number,
-    currentParticipants: {
-      type: Number,
-      default: 0,
-    },
-    waitingList: Boolean,
+    type: DataTypes.JSON,
+    defaultValue: { required: false },
+    comment: '{ required, url, phone, email, deadline, maxParticipants, currentParticipants, waitingList }',
   },
 
-  // Media
-  images: [{
-    url: String,
-    alt: {
-      type: Map,
-      of: String,
-    },
-    isPrimary: Boolean,
-    source: String,
-  }],
-  videos: [{
-    url: String,
-    platform: {
-      type: String,
-      enum: ['youtube', 'vimeo', 'other'],
-    },
-  }],
+  // Media as JSON arrays
+  images: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    comment: 'Array of { url, alt, isPrimary, source }',
+  },
 
-  // Contact & Organization
+  videos: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    comment: 'Array of { url, platform }',
+  },
+
+  // Organizer as JSON
   organizer: {
-    name: String,
-    website: String,
-    email: String,
-    phone: String,
-    socialMedia: {
-      facebook: String,
-      instagram: String,
-      twitter: String,
-    },
+    type: DataTypes.JSON,
+    comment: '{ name, website, email, phone, socialMedia }',
   },
 
-  // External Links
-  externalLinks: [{
-    platform: {
-      type: String,
-      enum: ['official', 'tripadvisor', 'getyourguide', 'facebook', 'eventbrite', 'other'],
-    },
-    url: String,
-    rating: Number,
-    reviewCount: Number,
-  }],
+  // External links as JSON array
+  externalLinks: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    field: 'external_links',
+    comment: 'Array of { platform, url, rating, reviewCount }',
+  },
 
-  // Multi-Source Data Management
-  sources: [{
-    platform: {
-      type: String,
-      enum: [
-        'calpe-official',
-        'cultura-calpe',
-        'calpe-online24',
-        'costa-blanca-online24',
-        'calpe-magazin',
-        'tripadvisor',
-        'getyourguide',
-        'facebook',
-        'instagram',
-        'google-events',
-        'eventbrite',
-        'manual-entry',
-        'other',
-      ],
-      required: true,
-    },
-    sourceId: String, // ID from the source platform
-    url: String,
-    lastChecked: Date,
-    dataHash: String, // Hash of the data to detect changes
-    confidence: {
-      type: Number,
-      min: 0,
-      max: 100,
-      default: 50,
-    },
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
-  }],
+  // Multi-source data as JSON array
+  sources: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    comment: 'Array of { platform, sourceId, url, lastChecked, dataHash, confidence, isVerified }',
+  },
 
-  // Verification & Quality
+  // Verification as JSON
   verification: {
-    status: {
-      type: String,
-      enum: ['unverified', 'partially-verified', 'verified', 'disputed'],
-      default: 'unverified',
-    },
-    verificationCount: {
-      type: Number,
-      default: 0,
-    }, // How many sources confirm this event
-    lastVerified: Date,
-    verifiedBy: String, // Admin user ID if manually verified
-    conflictingData: [{
-      field: String,
-      values: [mongoose.Schema.Types.Mixed],
-      sources: [String],
-    }],
+    type: DataTypes.JSON,
+    defaultValue: { status: 'unverified', verificationCount: 0 },
+    comment: '{ status, verificationCount, lastVerified, verifiedBy, conflictingData }',
   },
 
-  // AI-Enhanced Data
+  // AI Enhancements as JSON
   aiEnhancements: {
-    translatedBy: {
-      type: String,
-      enum: ['human', 'ai', 'mixed'],
-    },
-    translationModel: String,
-    translatedAt: Date,
-    sentiment: {
-      score: Number,
-      positive: Boolean,
-    },
-    keywords: {
-      type: Map,
-      of: [String],
-    },
-    suggestedCategories: [{
-      category: String,
-      confidence: Number,
-    }],
+    type: DataTypes.JSON,
+    field: 'ai_enhancements',
+    comment: '{ translatedBy, translationModel, translatedAt, sentiment, keywords, suggestedCategories }',
   },
 
   // Status & Visibility
   status: {
-    type: String,
-    enum: ['draft', 'published', 'cancelled', 'postponed', 'completed', 'archived'],
-    default: 'draft',
-    index: true,
+    type: DataTypes.ENUM('draft', 'published', 'cancelled', 'postponed', 'completed', 'archived'),
+    defaultValue: 'draft',
   },
+
   visibility: {
-    type: String,
-    enum: ['public', 'unlisted', 'private'],
-    default: 'public',
+    type: DataTypes.ENUM('public', 'unlisted', 'private'),
+    defaultValue: 'public',
   },
+
   featured: {
-    type: Boolean,
-    default: false,
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
   },
+
   priority: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 100,
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
   },
 
-  // Engagement Metrics
+  // Engagement Metrics as JSON
   metrics: {
-    views: {
-      type: Number,
-      default: 0,
-    },
-    clicks: {
-      type: Number,
-      default: 0,
-    },
-    bookmarks: {
-      type: Number,
-      default: 0,
-    },
-    shares: {
-      type: Number,
-      default: 0,
-    },
-    averageRating: Number,
-    ratingCount: Number,
+    type: DataTypes.JSON,
+    defaultValue: { views: 0, clicks: 0, bookmarks: 0, shares: 0 },
+    comment: '{ views, clicks, bookmarks, shares, averageRating, ratingCount }',
   },
 
-  // Weather Dependencies (for outdoor events)
+  // Weather Dependencies
   weatherDependent: {
-    type: Boolean,
-    default: false,
-  },
-  weatherConditions: {
-    minTemp: Number,
-    maxTemp: Number,
-    noRain: Boolean,
-    noStrongWind: Boolean,
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'weather_dependent',
   },
 
-  // SEO & Metadata
+  weatherConditions: {
+    type: DataTypes.JSON,
+    field: 'weather_conditions',
+    comment: '{ minTemp, maxTemp, noRain, noStrongWind }',
+  },
+
+  // SEO as JSON
   seo: {
-    slug: {
-      type: String,
-      unique: true,
-      sparse: true,
-    },
-    metaTitle: {
-      type: Map,
-      of: String,
-    },
-    metaDescription: {
-      type: Map,
-      of: String,
-    },
-    keywords: [String],
+    type: DataTypes.JSON,
+    defaultValue: {},
+    comment: '{ slug, metaTitle, metaDescription, keywords }',
   },
 
   // Admin & System
   createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: DataTypes.UUID,
+    field: 'created_by',
   },
+
   updatedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: DataTypes.UUID,
+    field: 'updated_by',
   },
-  deletedAt: Date, // Soft delete
 
+  deletedAt: {
+    type: DataTypes.DATE,
+    field: 'deleted_at',
+  },
 }, {
-  timestamps: true, // Adds createdAt and updatedAt automatically
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true },
+  tableName: 'agenda_events',
+  timestamps: true,
+  underscored: true,
+  paranoid: false,
+  indexes: [
+    { fields: ['start_date', 'end_date'] },
+    { fields: ['primary_category', 'status'] },
+    { fields: ['status', 'visibility', 'start_date'] },
+    { fields: ['featured', 'priority'] },
+  ],
+  getterMethods: {
+    isUpcoming() {
+      return this.startDate > new Date() && this.status === 'published';
+    },
+    isActive() {
+      const now = new Date();
+      return this.startDate <= now && this.endDate >= now && this.status === 'published';
+    },
+    isPast() {
+      return this.endDate < new Date();
+    },
+    durationInDays() {
+      return Math.ceil((this.endDate - this.startDate) / (1000 * 60 * 60 * 24));
+    },
+  },
 });
 
-// Indexes for performance
-eventSchema.index({ startDate: 1, endDate: 1 });
-eventSchema.index({ 'location.city': 1, startDate: 1 });
-eventSchema.index({ primaryCategory: 1, status: 1 });
-eventSchema.index({ status: 1, visibility: 1, startDate: 1 });
-eventSchema.index({ 'location.coordinates': '2dsphere' }); // Geospatial index
-eventSchema.index({ 'seo.slug': 1 });
-eventSchema.index({ featured: 1, priority: -1 });
-
-// Compound indexes for common queries
-eventSchema.index({
-  status: 1,
-  visibility: 1,
-  startDate: 1,
-  primaryCategory: 1
-});
-
-// Virtual fields
-eventSchema.virtual('isUpcoming').get(function() {
-  return this.startDate > new Date() && this.status === 'published';
-});
-
-eventSchema.virtual('isActive').get(function() {
-  const now = new Date();
-  return this.startDate <= now && this.endDate >= now && this.status === 'published';
-});
-
-eventSchema.virtual('isPast').get(function() {
-  return this.endDate < new Date();
-});
-
-eventSchema.virtual('durationInDays').get(function() {
-  return Math.ceil((this.endDate - this.startDate) / (1000 * 60 * 60 * 24));
-});
-
-// Instance methods
-eventSchema.methods.incrementView = function() {
-  this.metrics.views += 1;
+// Instance Methods
+Event.prototype.incrementView = async function() {
+  const metrics = this.metrics || { views: 0 };
+  metrics.views = (metrics.views || 0) + 1;
+  this.metrics = metrics;
   return this.save();
 };
 
-eventSchema.methods.addSource = function(sourceData) {
-  const existingSource = this.sources.find(s =>
+Event.prototype.addSource = async function(sourceData) {
+  const sources = this.sources || [];
+  const existingIndex = sources.findIndex(s =>
     s.platform === sourceData.platform && s.sourceId === sourceData.sourceId
   );
 
-  if (existingSource) {
-    Object.assign(existingSource, sourceData);
+  if (existingIndex >= 0) {
+    sources[existingIndex] = { ...sources[existingIndex], ...sourceData };
   } else {
-    this.sources.push(sourceData);
+    sources.push(sourceData);
   }
 
+  this.sources = sources;
+
   // Update verification count
-  this.verification.verificationCount = this.sources.filter(s => s.isVerified).length;
+  const verification = this.verification || { status: 'unverified', verificationCount: 0 };
+  verification.verificationCount = sources.filter(s => s.isVerified).length;
+  this.verification = verification;
 
   return this.save();
 };
 
-eventSchema.methods.getLocalizedField = function(field, language = 'nl') {
+Event.prototype.getLocalizedField = function(field, language = 'nl') {
   const fieldValue = this[field];
-  if (fieldValue instanceof Map) {
-    return fieldValue.get(language) || fieldValue.get('nl') || fieldValue.get('en');
+  if (fieldValue && typeof fieldValue === 'object') {
+    return fieldValue[language] || fieldValue.nl || fieldValue.en;
   }
   return fieldValue;
 };
 
-// Static methods
-eventSchema.statics.findUpcoming = function(filters = {}, limit = 50) {
+// Static Methods
+Event.findUpcoming = async function(filters = {}, limit = 50) {
   const now = new Date();
-  return this.find({
-    startDate: { $gte: now },
-    status: 'published',
-    visibility: 'public',
-    ...filters,
-  })
-    .sort({ startDate: 1, priority: -1 })
-    .limit(limit);
-};
-
-eventSchema.statics.findByDateRange = function(startDate, endDate, filters = {}) {
-  return this.find({
-    $or: [
-      { startDate: { $gte: startDate, $lte: endDate } },
-      { endDate: { $gte: startDate, $lte: endDate } },
-      { startDate: { $lte: startDate }, endDate: { $gte: endDate } },
-    ],
-    status: 'published',
-    visibility: 'public',
-    ...filters,
-  }).sort({ startDate: 1 });
-};
-
-eventSchema.statics.findByCategory = function(category, filters = {}) {
-  return this.find({
-    $or: [
-      { primaryCategory: category },
-      { secondaryCategories: category },
-    ],
-    status: 'published',
-    visibility: 'public',
-    ...filters,
-  }).sort({ startDate: 1, priority: -1 });
-};
-
-eventSchema.statics.findNearLocation = function(coordinates, maxDistance = 5000, filters = {}) {
-  return this.find({
-    'location.coordinates': {
-      $near: {
-        $geometry: {
-          type: 'Point',
-          coordinates: [coordinates.lng, coordinates.lat],
-        },
-        $maxDistance: maxDistance,
-      },
+  return this.findAll({
+    where: {
+      startDate: { [Op.gte]: now },
+      status: 'published',
+      visibility: 'public',
+      ...filters,
     },
-    status: 'published',
-    visibility: 'public',
-    ...filters,
+    order: [['start_date', 'ASC'], ['priority', 'DESC']],
+    limit,
   });
 };
 
-// Pre-save middleware
-eventSchema.pre('save', function(next) {
-  // Auto-generate slug if not exists
-  if (!this.seo.slug && this.title.get('nl')) {
-    const titleNl = this.title.get('nl');
-    this.seo.slug = titleNl
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-  }
+Event.findByDateRange = async function(startDate, endDate, filters = {}) {
+  return this.findAll({
+    where: {
+      [Op.or]: [
+        { startDate: { [Op.gte]: startDate, [Op.lte]: endDate } },
+        { endDate: { [Op.gte]: startDate, [Op.lte]: endDate } },
+        { startDate: { [Op.lte]: startDate }, endDate: { [Op.gte]: endDate } },
+      ],
+      status: 'published',
+      visibility: 'public',
+      ...filters,
+    },
+    order: [['start_date', 'ASC']],
+  });
+};
 
-  // Set time of day based on start time if not set
-  if (!this.timeOfDay && this.startDate) {
-    const hour = this.startDate.getHours();
-    if (this.allDay) {
-      this.timeOfDay = 'all-day';
-    } else if (hour < 12) {
-      this.timeOfDay = 'morning';
-    } else if (hour < 17) {
-      this.timeOfDay = 'afternoon';
-    } else if (hour < 21) {
-      this.timeOfDay = 'evening';
-    } else {
-      this.timeOfDay = 'night';
+Event.findByCategory = async function(category, filters = {}) {
+  return this.findAll({
+    where: {
+      [Op.or]: [
+        { primaryCategory: category },
+        sequelize.where(
+          sequelize.fn('JSON_CONTAINS', sequelize.col('secondary_categories'), JSON.stringify(category)),
+          true
+        ),
+      ],
+      status: 'published',
+      visibility: 'public',
+      ...filters,
+    },
+    order: [['start_date', 'ASC'], ['priority', 'DESC']],
+  });
+};
+
+// Hook: Auto-set timeOfDay based on startDate
+Event.beforeCreate(async (event) => {
+  // Auto-generate slug if not exists
+  if (!event.seo || !event.seo.slug) {
+    const title = event.title;
+    const titleNl = title && title.nl;
+    if (titleNl) {
+      const slug = titleNl
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      event.seo = { ...event.seo, slug };
     }
   }
 
-  // Update verification status based on verification count
-  if (this.verification.verificationCount >= 3) {
-    this.verification.status = 'verified';
-  } else if (this.verification.verificationCount >= 1) {
-    this.verification.status = 'partially-verified';
+  // Set time of day based on start time
+  if (!event.timeOfDay && event.startDate) {
+    const hour = event.startDate.getHours();
+    if (event.allDay) {
+      event.timeOfDay = 'all-day';
+    } else if (hour < 12) {
+      event.timeOfDay = 'morning';
+    } else if (hour < 17) {
+      event.timeOfDay = 'afternoon';
+    } else if (hour < 21) {
+      event.timeOfDay = 'evening';
+    } else {
+      event.timeOfDay = 'night';
+    }
   }
 
-  next();
+  // Update verification status
+  if (event.verification && event.verification.verificationCount >= 3) {
+    event.verification.status = 'verified';
+  } else if (event.verification && event.verification.verificationCount >= 1) {
+    event.verification.status = 'partially-verified';
+  }
 });
 
-// Post-save middleware for logging
-eventSchema.post('save', function(doc) {
-  console.log(`Event saved: ${doc._id} - ${doc.title.get('nl') || doc.title.get('en')}`);
+Event.beforeUpdate(async (event) => {
+  // Update verification status on update
+  if (event.verification && event.verification.verificationCount >= 3) {
+    event.verification.status = 'verified';
+  } else if (event.verification && event.verification.verificationCount >= 1) {
+    event.verification.status = 'partially-verified';
+  }
 });
-
-const Event = mongoose.model('Event', eventSchema);
 
 module.exports = Event;

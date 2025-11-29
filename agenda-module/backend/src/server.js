@@ -4,7 +4,7 @@ const cors = require('cors');
 const compression = require('compression');
 
 // Configuration
-const connectDB = require('./config/database');
+const { connectDB, closeDB, sequelize } = require('./config/database');
 const logger = require('./config/logger');
 const cacheService = require('./config/cache');
 
@@ -16,35 +16,20 @@ const errorHandler = require('./middleware/errorHandler');
 const {
   apiLimiter,
   helmetConfig,
-  sanitizeMongo,
   sanitizeXSS,
   preventHPP,
   corsOptions,
   requestLogger,
   gdprCompliance,
 } = require('./middleware/security');
-const {
-  basicHealthCheck,
-  detailedHealthCheck,
-  readinessCheck,
-  livenessCheck,
-  getMetrics,
-} = require('./middleware/healthCheck');
 const { circuitBreakerManager } = require('./middleware/circuitBreaker');
 
 // Automation
 const dailyEventUpdate = require('./automation/dailyEventUpdate');
 
 /**
- * Enterprise-Level Agenda Module Server
+ * Enterprise-Level Agenda Module Server (MySQL/Sequelize)
  * Port: 5003
- *
- * Features:
- * - Security: Rate limiting, helmet, input sanitization, CSRF protection
- * - Performance: Redis caching, compression, connection pooling
- * - Reliability: Circuit breakers, health checks, graceful shutdown
- * - Monitoring: Winston logging, metrics endpoints, error tracking
- * - DevOps: Docker ready, K8s health checks, environment-based config
  */
 
 const app = express();
@@ -55,28 +40,17 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 // Security Middleware
 // ===========================
 
-// Helmet - secure HTTP headers
 app.use(helmetConfig);
-
-// CORS with whitelist
 app.use(cors(corsOptions));
-
-// GDPR compliance headers
 app.use(gdprCompliance);
-
-// Rate limiting
 app.use('/api/', apiLimiter);
 
-// Body parsing with size limits
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Input sanitization
-app.use(sanitizeMongo); // NoSQL injection prevention
-app.use(sanitizeXSS); // XSS prevention
-app.use(preventHPP); // HTTP Parameter Pollution prevention
+app.use(sanitizeXSS);
+app.use(preventHPP);
 
-// Response compression
 app.use(compression({
   filter: (req, res) => {
     if (req.headers['x-no-compression']) {
@@ -91,39 +65,97 @@ app.use(compression({
 // Logging & Monitoring
 // ===========================
 
-// HTTP request logging
 app.use(logger.httpLogger);
-
-// Request tracking middleware
 app.use(requestLogger);
 
 // ===========================
 // Health Check Endpoints
 // ===========================
 
-// Basic health check - for load balancers (fast response)
-app.get('/health', basicHealthCheck);
+app.get('/health', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.json({
+      success: true,
+      service: 'agenda-module',
+      status: 'healthy',
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      service: 'agenda-module',
+      status: 'unhealthy',
+      database: 'disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
 
-// Detailed health check - includes all dependencies
-app.get('/health/detailed', detailedHealthCheck);
+app.get('/health/detailed', async (req, res) => {
+  const health = {
+    success: true,
+    service: 'agenda-module',
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    checks: {},
+  };
 
-// Kubernetes readiness probe
-app.get('/health/ready', readinessCheck);
+  try {
+    await sequelize.authenticate();
+    health.checks.database = { status: 'healthy', type: 'mysql' };
+  } catch (error) {
+    health.checks.database = { status: 'unhealthy', error: error.message };
+    health.status = 'degraded';
+  }
 
-// Kubernetes liveness probe
-app.get('/health/live', livenessCheck);
+  try {
+    if (cacheService.isConnected) {
+      health.checks.cache = { status: 'healthy' };
+    } else {
+      health.checks.cache = { status: 'not_connected' };
+    }
+  } catch (error) {
+    health.checks.cache = { status: 'unhealthy', error: error.message };
+  }
 
-// System metrics endpoint
-app.get('/metrics', getMetrics);
+  res.json(health);
+});
 
-// Circuit breaker dashboard
+app.get('/health/ready', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.json({ status: 'ready' });
+  } catch (error) {
+    res.status(503).json({ status: 'not_ready', error: error.message });
+  }
+});
+
+app.get('/health/live', (req, res) => {
+  res.json({ status: 'alive' });
+});
+
+app.get('/metrics', (req, res) => {
+  const used = process.memoryUsage();
+  res.json({
+    uptime: process.uptime(),
+    memory: {
+      rss: Math.round(used.rss / 1024 / 1024) + ' MB',
+      heapTotal: Math.round(used.heapTotal / 1024 / 1024) + ' MB',
+      heapUsed: Math.round(used.heapUsed / 1024 / 1024) + ' MB',
+    },
+    cpu: process.cpuUsage(),
+  });
+});
+
 app.get('/circuit-breakers', circuitBreakerManager.dashboardMiddleware());
 
 // ===========================
 // API Routes
 // ===========================
 
-// Swagger API Documentation
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 
@@ -131,23 +163,36 @@ app.use('/api/docs', swaggerUi.serve);
 app.get('/api/docs', swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'HolidaiButler Agenda API Documentation',
   customCss: '.swagger-ui .topbar { display: none }',
-  customfavIcon: '/favicon.ico',
 }));
 
-// API documentation JSON (for programmatic access)
 app.get('/api/docs/json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
 
-// Main API routes
 app.use('/api/agenda', eventRoutes);
+
+app.get('/', (req, res) => {
+  res.json({
+    service: 'HolidaiButler Agenda Module',
+    version: '1.0.0',
+    database: 'MySQL/Sequelize',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      events: '/api/agenda/events',
+      featured: '/api/agenda/events/featured',
+      stats: '/api/agenda/stats',
+      health: '/health',
+      docs: '/api/docs',
+    },
+  });
+});
 
 // ===========================
 // Error Handling
 // ===========================
 
-// 404 handler
 app.use((req, res) => {
   logger.warn(`404 - Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
@@ -157,10 +202,7 @@ app.use((req, res) => {
   });
 });
 
-// Error logger middleware
 app.use(logger.errorLogger);
-
-// Global error handler
 app.use(errorHandler);
 
 // ===========================
@@ -172,18 +214,14 @@ let server;
 const gracefulShutdown = async (signal) => {
   logger.info(`${signal} received. Starting graceful shutdown...`);
 
-  // Stop accepting new connections
   if (server) {
     server.close(async () => {
       logger.info('HTTP server closed');
 
       try {
-        // Close database connection
-        const mongoose = require('mongoose');
-        await mongoose.connection.close();
+        await closeDB();
         logger.info('Database connection closed');
 
-        // Close Redis connection
         await cacheService.disconnect();
         logger.info('Cache connection closed');
 
@@ -195,7 +233,6 @@ const gracefulShutdown = async (signal) => {
       }
     });
 
-    // Force shutdown after 30 seconds
     setTimeout(() => {
       logger.error('Forced shutdown after timeout');
       process.exit(1);
@@ -203,17 +240,14 @@ const gracefulShutdown = async (signal) => {
   }
 };
 
-// Handle shutdown signals
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
   gracefulShutdown('uncaughtException');
 });
 
-// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
   gracefulShutdown('unhandledRejection');
@@ -227,18 +261,16 @@ const startServer = async () => {
   try {
     logger.info('Starting Agenda Module Server...');
     logger.info(`Environment: ${NODE_ENV}`);
+    logger.info('Database: MySQL/Sequelize');
 
-    // 1. Connect to MongoDB
     logger.info('Connecting to database...');
     await connectDB();
 
-    // 2. Connect to Redis (optional - degrades gracefully)
     logger.info('Connecting to cache...');
     await cacheService.connect().catch(err => {
       logger.warn('Cache not available, continuing without cache:', err.message);
     });
 
-    // 3. Warm up cache (if connected)
     if (cacheService.isConnected) {
       logger.info('Warming up cache...');
       await cacheService.warmUp().catch(err => {
@@ -246,21 +278,16 @@ const startServer = async () => {
       });
     }
 
-    // 4. Initialize daily automation
     logger.info('Initializing automation...');
     dailyEventUpdate.initialize();
 
-    // 5. Start HTTP server
     server = app.listen(PORT, () => {
       logger.info(`🚀 Agenda Module server running on port ${PORT}`);
       logger.info(`📍 Health check: http://localhost:${PORT}/health`);
       logger.info(`📅 API endpoints: http://localhost:${PORT}/api/agenda`);
-      logger.info(`📊 Metrics: http://localhost:${PORT}/metrics`);
-      logger.info(`🔧 Circuit breakers: http://localhost:${PORT}/circuit-breakers`);
       logger.info('✅ Server started successfully');
     });
 
-    // Set server timeout to 2 minutes
     server.setTimeout(120000);
 
   } catch (error) {
@@ -269,7 +296,6 @@ const startServer = async () => {
   }
 };
 
-// Start the server
 if (require.main === module) {
   startServer();
 }
