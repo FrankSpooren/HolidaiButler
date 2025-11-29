@@ -118,7 +118,7 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
           name: 'idx_covers',
-          fields: ['restaurant_id', 'date', 'available_covers'],
+          fields: ['restaurant_id', 'date', 'total_covers'],
         },
       ],
     }

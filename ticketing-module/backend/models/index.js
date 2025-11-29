@@ -642,7 +642,6 @@ const Ticket = sequelize.define('Ticket', {
     { fields: ['booking_id'] },
     { fields: ['user_id', 'status'] },
     { fields: ['poi_id', 'valid_from'] },
-    { fields: ['qr_code_data'] },
     { fields: ['status', 'valid_until'] },
   ],
 });
