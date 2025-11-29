@@ -1,464 +1,499 @@
-import mongoose from 'mongoose';
+import { DataTypes, Model } from 'sequelize';
+import sequelize from '../config/database.js';
 
-const bookingSchema = new mongoose.Schema({
-  // Booking Reference
+class Booking extends Model {
+  // Generate booking number
+  static generateBookingNumber() {
+    const prefix = 'BKG';
+    const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `${prefix}-${date}-${random}`;
+  }
+
+  // Generate confirmation code
+  static generateConfirmationCode() {
+    return Math.random().toString(36).substring(2, 10).toUpperCase();
+  }
+
+  // Virtuals
+  get customerFullName() {
+    return `${this.customerFirstName} ${this.customerLastName}`;
+  }
+
+  get totalItems() {
+    const items = this.items || [];
+    return items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  }
+
+  get isPaid() {
+    return this.paymentStatus === 'completed';
+  }
+
+  get canCancel() {
+    if (!this.cancellationAllowed) return false;
+    if (!this.cancellationDeadline) return true;
+    return new Date() < new Date(this.cancellationDeadline);
+  }
+
+  // Calculate total
+  calculateTotal() {
+    const items = this.items || [];
+    this.pricingSubtotal = items.reduce((sum, item) => {
+      return sum + ((item.price || 0) * (item.quantity || 1));
+    }, 0);
+
+    let total = this.pricingSubtotal;
+    if (this.discountAmount > 0) {
+      total -= this.discountAmount;
+    }
+
+    total += this.pricingServiceFee || 0;
+
+    if (this.pricingTaxRate > 0) {
+      this.pricingTax = total * (this.pricingTaxRate / 100);
+      total += this.pricingTax;
+    }
+
+    this.pricingTotal = Math.round(total * 100) / 100;
+    return this.pricingTotal;
+  }
+
+  // Confirm booking
+  async confirm(transactionId, adminUserId) {
+    this.status = 'confirmed';
+    this.paymentStatus = 'completed';
+    this.paymentPaidAt = new Date();
+    this.paymentTransactionId = transactionId;
+    this.confirmationSent = true;
+    this.confirmationSentAt = new Date();
+
+    if (adminUserId) this.updatedById = adminUserId;
+    return this.save();
+  }
+
+  // Cancel booking
+  async cancel(reason, cancelledBy, refundAmount, adminUserId) {
+    this.status = 'cancelled';
+    this.cancelledAt = new Date();
+    this.cancelledBy = cancelledBy;
+    this.cancellationReason = reason;
+    this.refundIssued = refundAmount > 0;
+    this.refundAmount = refundAmount;
+
+    if (refundAmount > 0) {
+      this.paymentStatus = refundAmount >= this.pricingTotal ? 'refunded' : 'partially_refunded';
+      this.paymentRefundedAt = new Date();
+    }
+
+    if (adminUserId) this.updatedById = adminUserId;
+    return this.save();
+  }
+
+  // Complete booking
+  async complete(adminUserId) {
+    this.status = 'completed';
+    if (adminUserId) this.updatedById = adminUserId;
+    return this.save();
+  }
+
+  // Add admin note
+  async addNote(note, adminUserId) {
+    const notes = this.adminNotes || [];
+    notes.push({
+      note,
+      createdById: adminUserId,
+      createdAt: new Date().toISOString()
+    });
+    this.adminNotes = notes;
+    return this.save();
+  }
+}
+
+Booking.init({
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
+
   bookingNumber: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING(50),
+    allowNull: false,
     unique: true,
-    index: true
+    field: 'booking_number'
   },
 
   confirmationCode: {
-    type: String,
-    required: true,
-    unique: true
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    unique: true,
+    field: 'confirmation_code'
   },
 
   // Type
   type: {
-    type: String,
-    enum: ['event_ticket', 'attraction_ticket', 'tour', 'reservation', 'package'],
-    required: true,
-    index: true
+    type: DataTypes.ENUM('event_ticket', 'attraction_ticket', 'tour', 'reservation', 'package'),
+    allowNull: false
   },
 
   // Customer Information
-  customer: {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    firstName: {
-      type: String,
-      required: true
-    },
-    lastName: {
-      type: String,
-      required: true
-    },
-    email: {
-      type: String,
-      required: true,
-      lowercase: true
-    },
-    phone: {
-      type: String,
-      required: true
-    },
-    country: String,
-    language: {
-      type: String,
-      default: 'en'
-    }
+  customerUserId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'customer_user_id'
   },
 
-  // Items (tickets, reservations, etc.)
-  items: [{
-    itemType: {
-      type: String,
-      enum: ['ticket', 'addon', 'package', 'upgrade'],
-      required: true
-    },
-    event: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Event'
-    },
-    poi: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'POI'
-    },
-    name: String,
-    description: String,
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1
-    },
-    price: {
-      type: Number,
-      required: true
-    },
-    currency: {
-      type: String,
-      default: 'EUR'
-    },
-    ticketType: String,
-    ticketIds: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Ticket'
-    }]
-  }],
+  customerFirstName: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    field: 'customer_first_name'
+  },
+
+  customerLastName: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    field: 'customer_last_name'
+  },
+
+  customerEmail: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    field: 'customer_email'
+  },
+
+  customerPhone: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    field: 'customer_phone'
+  },
+
+  customerCountry: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'customer_country'
+  },
+
+  customerLanguage: {
+    type: DataTypes.STRING(10),
+    defaultValue: 'en',
+    field: 'customer_language'
+  },
+
+  // Items (stored as JSON array)
+  items: {
+    type: DataTypes.JSON,
+    defaultValue: []
+  },
 
   // Pricing
-  pricing: {
-    subtotal: {
-      type: Number,
-      required: true
-    },
-    tax: {
-      type: Number,
-      default: 0
-    },
-    taxRate: {
-      type: Number,
-      default: 0
-    },
-    serviceFee: {
-      type: Number,
-      default: 0
-    },
-    discount: {
-      amount: {
-        type: Number,
-        default: 0
-      },
-      code: String,
-      description: String
-    },
-    total: {
-      type: Number,
-      required: true
-    },
-    currency: {
-      type: String,
-      default: 'EUR'
-    }
+  pricingSubtotal: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    field: 'pricing_subtotal'
   },
 
-  // Payment Status
-  payment: {
-    status: {
-      type: String,
-      enum: ['pending', 'processing', 'completed', 'failed', 'refunded', 'partially_refunded'],
-      default: 'pending',
-      index: true
-    },
-    method: {
-      type: String,
-      enum: ['credit_card', 'debit_card', 'paypal', 'bank_transfer', 'cash', 'ideal', 'other']
-    },
-    transactionId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Transaction'
-    },
-    paidAt: Date,
-    refundedAt: Date,
-    refundAmount: Number,
-    refundReason: String
+  pricingTax: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0,
+    field: 'pricing_tax'
   },
 
-  // Booking Status
+  pricingTaxRate: {
+    type: DataTypes.DECIMAL(5, 2),
+    defaultValue: 0,
+    field: 'pricing_tax_rate'
+  },
+
+  pricingServiceFee: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0,
+    field: 'pricing_service_fee'
+  },
+
+  discountAmount: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0,
+    field: 'discount_amount'
+  },
+
+  discountCode: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'discount_code'
+  },
+
+  pricingTotal: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    field: 'pricing_total'
+  },
+
+  currency: {
+    type: DataTypes.STRING(3),
+    defaultValue: 'EUR'
+  },
+
+  // Payment
+  paymentStatus: {
+    type: DataTypes.ENUM('pending', 'processing', 'completed', 'failed', 'refunded', 'partially_refunded'),
+    defaultValue: 'pending',
+    field: 'payment_status'
+  },
+
+  paymentMethod: {
+    type: DataTypes.ENUM('credit_card', 'debit_card', 'paypal', 'bank_transfer', 'cash', 'ideal', 'other'),
+    allowNull: true,
+    field: 'payment_method'
+  },
+
+  paymentTransactionId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'payment_transaction_id'
+  },
+
+  paymentPaidAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'payment_paid_at'
+  },
+
+  paymentRefundedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'payment_refunded_at'
+  },
+
+  // Status
   status: {
-    type: String,
-    enum: [
-      'pending',        // Created but not confirmed
-      'confirmed',      // Payment received and confirmed
-      'completed',      // Event/service completed
-      'cancelled',      // Cancelled by customer
-      'refunded',       // Money refunded
-      'no_show',        // Customer didn't show up
-      'expired'         // Booking expired
-    ],
-    default: 'pending',
-    index: true
+    type: DataTypes.ENUM('pending', 'confirmed', 'completed', 'cancelled', 'refunded', 'no_show', 'expired'),
+    defaultValue: 'pending'
   },
 
-  // Event/Visit Details
-  visitDetails: {
-    date: Date,
-    time: String,
-    duration: Number, // in minutes
-    participants: Number,
-    notes: String
+  // Visit Details
+  visitDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+    field: 'visit_date'
+  },
+
+  visitTime: {
+    type: DataTypes.STRING(10),
+    allowNull: true,
+    field: 'visit_time'
+  },
+
+  visitDuration: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'visit_duration'
+  },
+
+  visitParticipants: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'visit_participants'
+  },
+
+  visitNotes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'visit_notes'
   },
 
   // Special Requests
   specialRequests: {
-    accessibility: [String],
-    dietary: [String],
-    other: String
+    type: DataTypes.JSON,
+    defaultValue: {
+      accessibility: [],
+      dietary: [],
+      other: ''
+    },
+    field: 'special_requests'
   },
 
-  // Delivery/Fulfillment
-  fulfillment: {
-    method: {
-      type: String,
-      enum: ['email', 'sms', 'app', 'physical', 'pickup'],
-      default: 'email'
-    },
-    deliveredAt: Date,
-    tracking: String
+  // Delivery
+  fulfillmentMethod: {
+    type: DataTypes.ENUM('email', 'sms', 'app', 'physical', 'pickup'),
+    defaultValue: 'email',
+    field: 'fulfillment_method'
   },
 
-  // Communication
-  notifications: {
-    confirmation: {
-      sent: Boolean,
-      sentAt: Date
-    },
-    reminder: {
-      sent: Boolean,
-      sentAt: Date
-    },
-    followUp: {
-      sent: Boolean,
-      sentAt: Date
-    }
+  fulfillmentDeliveredAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'fulfillment_delivered_at'
   },
 
-  // Source & Attribution
-  source: {
-    channel: {
-      type: String,
-      enum: ['web', 'mobile_app', 'partner', 'call_center', 'walk_in', 'admin'],
-      default: 'web'
-    },
-    referrer: String,
-    campaign: String,
-    affiliate: String
+  // Notifications
+  confirmationSent: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'confirmation_sent'
   },
 
-  // Review & Feedback
-  review: {
-    submitted: {
-      type: Boolean,
-      default: false
-    },
-    rating: Number,
-    comment: String,
-    submittedAt: Date
+  confirmationSentAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'confirmation_sent_at'
+  },
+
+  reminderSent: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'reminder_sent'
+  },
+
+  reminderSentAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'reminder_sent_at'
+  },
+
+  // Source
+  sourceChannel: {
+    type: DataTypes.ENUM('web', 'mobile_app', 'partner', 'call_center', 'walk_in', 'admin'),
+    defaultValue: 'web',
+    field: 'source_channel'
+  },
+
+  sourceReferrer: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    field: 'source_referrer'
+  },
+
+  sourceCampaign: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'source_campaign'
+  },
+
+  // Review
+  reviewSubmitted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'review_submitted'
+  },
+
+  reviewRating: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'review_rating'
+  },
+
+  reviewComment: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'review_comment'
   },
 
   // Cancellation Policy
-  cancellationPolicy: {
-    allowed: {
-      type: Boolean,
-      default: true
-    },
-    deadline: Date,
-    fee: Number,
-    refundPercentage: Number
+  cancellationAllowed: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    field: 'cancellation_allowed'
+  },
+
+  cancellationDeadline: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'cancellation_deadline'
+  },
+
+  cancellationFee: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'cancellation_fee'
   },
 
   // Cancellation Details
-  cancellation: {
-    cancelledAt: Date,
-    cancelledBy: {
-      type: String,
-      enum: ['customer', 'admin', 'system', 'provider']
-    },
-    reason: String,
-    refundIssued: Boolean,
-    refundAmount: Number
+  cancelledAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'cancelled_at'
+  },
+
+  cancelledBy: {
+    type: DataTypes.ENUM('customer', 'admin', 'system', 'provider'),
+    allowNull: true,
+    field: 'cancelled_by'
+  },
+
+  cancellationReason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'cancellation_reason'
+  },
+
+  refundIssued: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'refund_issued'
+  },
+
+  refundAmount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'refund_amount'
   },
 
   // Admin Notes
-  adminNotes: [{
-    note: String,
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'AdminUser'
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
+  adminNotes: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    field: 'admin_notes'
+  },
 
   // Metadata
   metadata: {
-    ip: String,
-    userAgent: String,
-    locale: String,
-    timezone: String
+    type: DataTypes.JSON,
+    defaultValue: {}
   },
 
-  // Admin Information
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'AdminUser'
+  // Admin
+  createdById: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'created_by_id'
   },
 
-  updatedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'AdminUser'
+  updatedById: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'updated_by_id'
   }
-
 }, {
-  timestamps: true
+  sequelize,
+  modelName: 'Booking',
+  tableName: 'bookings',
+  timestamps: true,
+  underscored: true,
+  indexes: [
+    { fields: ['booking_number'], unique: true },
+    { fields: ['confirmation_code'], unique: true },
+    { fields: ['status'] },
+    { fields: ['payment_status'] },
+    { fields: ['customer_email'] },
+    { fields: ['customer_user_id'] },
+    { fields: ['visit_date'] },
+    { fields: ['type'] }
+  ],
+  hooks: {
+    beforeCreate: (booking) => {
+      if (!booking.bookingNumber) {
+        booking.bookingNumber = Booking.generateBookingNumber();
+      }
+      if (!booking.confirmationCode) {
+        booking.confirmationCode = Booking.generateConfirmationCode();
+      }
+    },
+    beforeSave: (booking) => {
+      if (booking.changed('items') || booking.changed('discountAmount') || booking.changed('pricingServiceFee')) {
+        booking.calculateTotal();
+      }
+    }
+  }
 });
-
-// Indexes
-bookingSchema.index({ 'customer.email': 1 });
-bookingSchema.index({ 'customer.userId': 1 });
-bookingSchema.index({ status: 1, 'payment.status': 1 });
-bookingSchema.index({ 'visitDetails.date': 1 });
-bookingSchema.index({ createdAt: -1 });
-
-// Virtuals
-bookingSchema.virtual('customerFullName').get(function() {
-  return `${this.customer.firstName} ${this.customer.lastName}`;
-});
-
-bookingSchema.virtual('totalItems').get(function() {
-  return this.items.reduce((sum, item) => sum + item.quantity, 0);
-});
-
-bookingSchema.virtual('isPaid').get(function() {
-  return this.payment.status === 'completed';
-});
-
-bookingSchema.virtual('canCancel').get(function() {
-  if (!this.cancellationPolicy.allowed) return false;
-  if (!this.cancellationPolicy.deadline) return true;
-  return new Date() < this.cancellationPolicy.deadline;
-});
-
-// Methods
-bookingSchema.methods.generateBookingNumber = function() {
-  const prefix = 'BKG';
-  const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `${prefix}-${date}-${random}`;
-};
-
-bookingSchema.methods.generateConfirmationCode = function() {
-  return Math.random().toString(36).substring(2, 10).toUpperCase();
-};
-
-bookingSchema.methods.calculateTotal = function() {
-  // Calculate subtotal
-  this.pricing.subtotal = this.items.reduce((sum, item) => {
-    return sum + (item.price * item.quantity);
-  }, 0);
-
-  // Apply discount
-  let total = this.pricing.subtotal;
-  if (this.pricing.discount.amount > 0) {
-    total -= this.pricing.discount.amount;
-  }
-
-  // Add service fee
-  total += this.pricing.serviceFee;
-
-  // Add tax
-  if (this.pricing.taxRate > 0) {
-    this.pricing.tax = total * (this.pricing.taxRate / 100);
-    total += this.pricing.tax;
-  }
-
-  this.pricing.total = Math.round(total * 100) / 100;
-
-  return this.pricing.total;
-};
-
-bookingSchema.methods.confirm = function(transactionId, adminUserId) {
-  this.status = 'confirmed';
-  this.payment.status = 'completed';
-  this.payment.paidAt = new Date();
-  this.payment.transactionId = transactionId;
-
-  this.notifications.confirmation.sent = true;
-  this.notifications.confirmation.sentAt = new Date();
-
-  if (adminUserId) {
-    this.updatedBy = adminUserId;
-  }
-
-  return this.save();
-};
-
-bookingSchema.methods.cancel = function(reason, cancelledBy, refundAmount, adminUserId) {
-  this.status = 'cancelled';
-  this.cancellation = {
-    cancelledAt: new Date(),
-    cancelledBy,
-    reason,
-    refundIssued: refundAmount > 0,
-    refundAmount
-  };
-
-  if (refundAmount > 0) {
-    this.payment.status = refundAmount >= this.pricing.total ? 'refunded' : 'partially_refunded';
-    this.payment.refundedAt = new Date();
-    this.payment.refundAmount = refundAmount;
-    this.payment.refundReason = reason;
-  }
-
-  if (adminUserId) {
-    this.updatedBy = adminUserId;
-  }
-
-  return this.save();
-};
-
-bookingSchema.methods.complete = function(adminUserId) {
-  this.status = 'completed';
-
-  if (adminUserId) {
-    this.updatedBy = adminUserId;
-  }
-
-  return this.save();
-};
-
-bookingSchema.methods.addNote = function(note, adminUserId) {
-  this.adminNotes.push({
-    note,
-    createdBy: adminUserId,
-    createdAt: new Date()
-  });
-
-  return this.save();
-};
-
-// Static methods
-bookingSchema.statics.getTodayBookings = function(filters = {}) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  return this.find({
-    ...filters,
-    'visitDetails.date': { $gte: today, $lt: tomorrow },
-    status: { $nin: ['cancelled', 'refunded'] }
-  }).sort({ 'visitDetails.time': 1 });
-};
-
-bookingSchema.statics.getUpcoming = function(days = 7, filters = {}) {
-  const startDate = new Date();
-  const endDate = new Date();
-  endDate.setDate(endDate.getDate() + days);
-
-  return this.find({
-    ...filters,
-    'visitDetails.date': { $gte: startDate, $lte: endDate },
-    status: { $in: ['confirmed', 'pending'] }
-  }).sort({ 'visitDetails.date': 1 });
-};
-
-// Pre-save middleware
-bookingSchema.pre('save', function(next) {
-  // Generate booking number if not exists
-  if (this.isNew && !this.bookingNumber) {
-    this.bookingNumber = this.generateBookingNumber();
-  }
-
-  // Generate confirmation code if not exists
-  if (this.isNew && !this.confirmationCode) {
-    this.confirmationCode = this.generateConfirmationCode();
-  }
-
-  // Recalculate total if items changed
-  if (this.isModified('items') || this.isModified('pricing.discount') || this.isModified('pricing.serviceFee')) {
-    this.calculateTotal();
-  }
-
-  next();
-});
-
-const Booking = mongoose.model('Booking', bookingSchema);
 
 export default Booking;
