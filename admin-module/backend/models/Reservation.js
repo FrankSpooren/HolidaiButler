@@ -1,364 +1,476 @@
-import mongoose from 'mongoose';
+import { DataTypes, Model } from 'sequelize';
+import sequelize from '../config/database.js';
 
-const reservationSchema = new mongoose.Schema({
-  // Reservation Details
-  reservationNumber: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true
+class Reservation extends Model {
+  // Generate reservation number
+  static generateReservationNumber(date) {
+    const prefix = 'RSV';
+    const dateStr = (date || new Date()).toISOString().split('T')[0].replace(/-/g, '');
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${prefix}-${dateStr}-${random}`;
+  }
+
+  // Generate confirmation code
+  static generateConfirmationCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
+
+  // Virtuals
+  get guestFullName() {
+    return `${this.guestFirstName} ${this.guestLastName}`;
+  }
+
+  get isUpcoming() {
+    const reservationDateTime = new Date(`${this.date}T${this.time}`);
+    return reservationDateTime > new Date() && ['pending', 'confirmed'].includes(this.status);
+  }
+
+  get isLate() {
+    if (!this.arrivedAt) return false;
+    return this.lateMinutes > 15;
+  }
+
+  // Confirm reservation
+  async confirm(adminUserId) {
+    this.status = 'confirmed';
+    this.confirmedAt = new Date();
+    if (adminUserId) this.updatedById = adminUserId;
+    return this.save();
+  }
+
+  // Cancel reservation
+  async cancel(reason, cancelledBy, adminUserId) {
+    this.status = 'cancelled';
+    this.cancelledAt = new Date();
+    this.cancelledBy = cancelledBy;
+    this.cancellationReason = reason;
+    this.refundIssued = this.depositStatus === 'paid';
+    if (adminUserId) this.updatedById = adminUserId;
+    return this.save();
+  }
+
+  // Mark as no-show
+  async markNoShow(adminUserId) {
+    this.status = 'no_show';
+    if (adminUserId) this.updatedById = adminUserId;
+    return this.save();
+  }
+
+  // Seat guest
+  async seat(tableInfo, adminUserId) {
+    this.status = 'seated';
+    this.arrivedAt = new Date();
+
+    const reservationDateTime = new Date(`${this.date}T${this.time}`);
+    const minutesLate = Math.floor((this.arrivedAt - reservationDateTime) / 60000);
+    this.lateMinutes = minutesLate > 0 ? minutesLate : 0;
+
+    if (tableInfo) {
+      this.tableNumber = tableInfo.tableNumber;
+      this.tableName = tableInfo.tableName;
+      this.tableSection = tableInfo.section;
+      this.tableCapacity = tableInfo.capacity;
+    }
+
+    if (adminUserId) this.updatedById = adminUserId;
+    return this.save();
+  }
+
+  // Complete reservation
+  async complete(revenueData, adminUserId) {
+    this.status = 'completed';
+    this.leftAt = new Date();
+
+    if (this.arrivedAt) {
+      const duration = Math.floor((this.leftAt - new Date(this.arrivedAt)) / 60000);
+      this.duration = duration;
+    }
+
+    if (revenueData) {
+      this.revenueFoodBeverage = revenueData.foodBeverage;
+      this.revenueTax = revenueData.tax;
+      this.revenueTip = revenueData.tip;
+      this.revenueTotal = revenueData.total;
+    }
+
+    if (adminUserId) this.updatedById = adminUserId;
+    return this.save();
+  }
+}
+
+Reservation.init({
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
   },
 
-  // Restaurant/POI Reference
-  poi: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'POI',
-    required: true,
-    index: true
+  reservationNumber: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    unique: true,
+    field: 'reservation_number'
+  },
+
+  // POI Reference
+  poiId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    field: 'poi_id'
   },
 
   // Guest Information
-  guest: {
-    firstName: {
-      type: String,
-      required: true
-    },
-    lastName: {
-      type: String,
-      required: true
-    },
-    email: {
-      type: String,
-      required: true,
-      lowercase: true
-    },
-    phone: {
-      type: String,
-      required: true
-    },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }
+  guestFirstName: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    field: 'guest_first_name'
   },
 
-  // Reservation Date & Time
+  guestLastName: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    field: 'guest_last_name'
+  },
+
+  guestEmail: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    field: 'guest_email'
+  },
+
+  guestPhone: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    field: 'guest_phone'
+  },
+
+  guestUserId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'guest_user_id'
+  },
+
+  // Date & Time
   date: {
-    type: Date,
-    required: true,
-    index: true
+    type: DataTypes.DATEONLY,
+    allowNull: false
   },
 
   time: {
-    type: String,
-    required: true
+    type: DataTypes.STRING(10),
+    allowNull: false
   },
 
-  // Party Information
+  // Party
   partySize: {
-    type: Number,
-    required: true,
-    min: 1,
-    max: 50
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: { min: 1, max: 50 },
+    field: 'party_size'
   },
 
-  // Table Assignment
-  table: {
-    tableNumber: String,
-    tableName: String,
-    section: String,
-    capacity: Number
+  // Table
+  tableNumber: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    field: 'table_number'
+  },
+
+  tableName: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'table_name'
+  },
+
+  tableSection: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'table_section'
+  },
+
+  tableCapacity: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'table_capacity'
   },
 
   // Special Requests
-  specialRequests: {
-    dietary: [String], // 'vegetarian', 'vegan', 'gluten-free', etc.
-    occasion: {
-      type: String,
-      enum: ['birthday', 'anniversary', 'business', 'date', 'celebration', 'none'],
-      default: 'none'
-    },
-    notes: String,
-    preferences: String
+  dietaryRequests: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    field: 'dietary_requests'
   },
 
-  // Status & Lifecycle
+  occasion: {
+    type: DataTypes.ENUM('birthday', 'anniversary', 'business', 'date', 'celebration', 'none'),
+    defaultValue: 'none'
+  },
+
+  requestNotes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'request_notes'
+  },
+
+  guestPreferences: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'guest_preferences'
+  },
+
+  // Status
   status: {
-    type: String,
-    enum: [
-      'pending',        // Initial booking
-      'confirmed',      // Restaurant confirmed
-      'seated',         // Guest arrived and seated
-      'completed',      // Meal finished
-      'cancelled',      // Cancelled by guest
-      'no_show',        // Guest didn't arrive
-      'rejected'        // Restaurant rejected
-    ],
-    default: 'pending',
-    index: true
+    type: DataTypes.ENUM('pending', 'confirmed', 'seated', 'completed', 'cancelled', 'no_show', 'rejected'),
+    defaultValue: 'pending'
   },
 
-  // Payment Information
-  deposit: {
-    required: {
-      type: Boolean,
-      default: false
-    },
-    amount: Number,
-    currency: {
-      type: String,
-      default: 'EUR'
-    },
-    status: {
-      type: String,
-      enum: ['pending', 'paid', 'refunded', 'failed'],
-      default: 'pending'
-    },
-    paymentId: String,
-    paidAt: Date,
-    refundedAt: Date
+  // Deposit
+  depositRequired: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'deposit_required'
+  },
+
+  depositAmount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'deposit_amount'
+  },
+
+  depositCurrency: {
+    type: DataTypes.STRING(3),
+    defaultValue: 'EUR',
+    field: 'deposit_currency'
+  },
+
+  depositStatus: {
+    type: DataTypes.ENUM('pending', 'paid', 'refunded', 'failed'),
+    defaultValue: 'pending',
+    field: 'deposit_status'
+  },
+
+  depositPaymentId: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'deposit_payment_id'
+  },
+
+  depositPaidAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'deposit_paid_at'
   },
 
   // Cancellation
-  cancellation: {
-    cancelledAt: Date,
-    cancelledBy: {
-      type: String,
-      enum: ['guest', 'restaurant', 'system', 'admin']
-    },
-    reason: String,
-    refundIssued: {
-      type: Boolean,
-      default: false
-    },
-    fee: Number
+  cancelledAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'cancelled_at'
   },
 
-  // Confirmation & Communication
-  confirmation: {
-    code: String,
-    sentAt: Date,
-    confirmedAt: Date
+  cancelledBy: {
+    type: DataTypes.ENUM('guest', 'restaurant', 'system', 'admin'),
+    allowNull: true,
+    field: 'cancelled_by'
   },
 
-  reminder: {
-    sent: {
-      type: Boolean,
-      default: false
-    },
-    sentAt: Date
+  cancellationReason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'cancellation_reason'
   },
 
-  // Channel Information
+  refundIssued: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'refund_issued'
+  },
+
+  cancellationFee: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'cancellation_fee'
+  },
+
+  // Confirmation
+  confirmationCode: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    field: 'confirmation_code'
+  },
+
+  confirmationSentAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'confirmation_sent_at'
+  },
+
+  confirmedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'confirmed_at'
+  },
+
+  // Reminder
+  reminderSent: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'reminder_sent'
+  },
+
+  reminderSentAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'reminder_sent_at'
+  },
+
+  // Source
   source: {
-    type: String,
-    enum: ['web', 'mobile', 'phone', 'walk-in', 'third-party', 'admin'],
-    default: 'web'
+    type: DataTypes.ENUM('web', 'mobile', 'phone', 'walk-in', 'third-party', 'admin'),
+    defaultValue: 'web'
   },
 
-  thirdParty: {
-    platform: {
-      type: String,
-      enum: ['thefork', 'google', 'tripadvisor', 'opentable']
-    },
-    externalId: String,
-    commission: Number
+  thirdPartyPlatform: {
+    type: DataTypes.ENUM('thefork', 'google', 'tripadvisor', 'opentable'),
+    allowNull: true,
+    field: 'third_party_platform'
+  },
+
+  thirdPartyExternalId: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'third_party_external_id'
+  },
+
+  thirdPartyCommission: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'third_party_commission'
   },
 
   // Arrival & Departure
-  arrival: {
-    arrivedAt: Date,
-    lateMinutes: Number
+  arrivedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'arrived_at'
   },
 
-  departure: {
-    leftAt: Date,
-    duration: Number // in minutes
+  lateMinutes: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'late_minutes'
+  },
+
+  leftAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'left_at'
+  },
+
+  duration: {
+    type: DataTypes.INTEGER,
+    allowNull: true
   },
 
   // Restaurant Notes
-  restaurantNotes: {
-    vip: {
-      type: Boolean,
-      default: false
-    },
-    returnGuest: {
-      type: Boolean,
-      default: false
-    },
-    previousVisits: {
-      type: Number,
-      default: 0
-    },
-    privateNotes: String,
-    preferences: [String]
+  isVip: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'is_vip'
   },
 
-  // Revenue (optional, filled after completion)
-  revenue: {
-    foodBeverage: Number,
-    tax: Number,
-    tip: Number,
-    total: Number,
-    currency: {
-      type: String,
-      default: 'EUR'
-    }
+  isReturnGuest: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'is_return_guest'
   },
 
-  // Admin Information
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'AdminUser'
+  previousVisits: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    field: 'previous_visits'
   },
 
-  updatedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'AdminUser'
+  privateNotes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'private_notes'
+  },
+
+  restaurantPreferences: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    field: 'restaurant_preferences'
+  },
+
+  // Revenue
+  revenueFoodBeverage: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'revenue_food_beverage'
+  },
+
+  revenueTax: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'revenue_tax'
+  },
+
+  revenueTip: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'revenue_tip'
+  },
+
+  revenueTotal: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'revenue_total'
+  },
+
+  revenueCurrency: {
+    type: DataTypes.STRING(3),
+    defaultValue: 'EUR',
+    field: 'revenue_currency'
+  },
+
+  // Admin
+  createdById: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'created_by_id'
+  },
+
+  updatedById: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'updated_by_id'
   }
-
 }, {
-  timestamps: true
-});
-
-// Indexes
-reservationSchema.index({ date: 1, time: 1 });
-reservationSchema.index({ 'guest.email': 1 });
-reservationSchema.index({ 'guest.phone': 1 });
-reservationSchema.index({ status: 1, date: 1 });
-reservationSchema.index({ poi: 1, date: 1 });
-reservationSchema.index({ createdAt: -1 });
-
-// Virtual for guest full name
-reservationSchema.virtual('guestFullName').get(function() {
-  return `${this.guest.firstName} ${this.guest.lastName}`;
-});
-
-// Virtual for checking if reservation is upcoming
-reservationSchema.virtual('isUpcoming').get(function() {
-  const reservationDateTime = new Date(`${this.date.toISOString().split('T')[0]}T${this.time}`);
-  return reservationDateTime > new Date() && ['pending', 'confirmed'].includes(this.status);
-});
-
-// Virtual for checking if late
-reservationSchema.virtual('isLate').get(function() {
-  if (!this.arrival?.arrivedAt) return false;
-  return this.arrival.lateMinutes > 15;
-});
-
-// Methods
-reservationSchema.methods.generateReservationNumber = function() {
-  const prefix = 'RSV';
-  const date = this.date.toISOString().split('T')[0].replace(/-/g, '');
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}-${date}-${random}`;
-};
-
-reservationSchema.methods.generateConfirmationCode = function() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-};
-
-reservationSchema.methods.confirm = function(adminUserId) {
-  this.status = 'confirmed';
-  this.confirmation.confirmedAt = new Date();
-  this.updatedBy = adminUserId;
-  return this.save();
-};
-
-reservationSchema.methods.cancel = function(reason, cancelledBy, adminUserId) {
-  this.status = 'cancelled';
-  this.cancellation = {
-    cancelledAt: new Date(),
-    cancelledBy,
-    reason,
-    refundIssued: this.deposit?.status === 'paid'
-  };
-  this.updatedBy = adminUserId;
-  return this.save();
-};
-
-reservationSchema.methods.markNoShow = function(adminUserId) {
-  this.status = 'no_show';
-  this.updatedBy = adminUserId;
-  return this.save();
-};
-
-reservationSchema.methods.seat = function(tableInfo, adminUserId) {
-  this.status = 'seated';
-  this.arrival.arrivedAt = new Date();
-
-  const reservationDateTime = new Date(`${this.date.toISOString().split('T')[0]}T${this.time}`);
-  const minutesLate = Math.floor((this.arrival.arrivedAt - reservationDateTime) / 60000);
-  this.arrival.lateMinutes = minutesLate > 0 ? minutesLate : 0;
-
-  if (tableInfo) {
-    this.table = tableInfo;
+  sequelize,
+  modelName: 'Reservation',
+  tableName: 'reservations',
+  timestamps: true,
+  underscored: true,
+  indexes: [
+    { fields: ['reservation_number'], unique: true },
+    { fields: ['status'] },
+    { fields: ['date', 'time'] },
+    { fields: ['poi_id', 'date'] },
+    { fields: ['guest_email'] },
+    { fields: ['guest_phone'] }
+  ],
+  hooks: {
+    beforeCreate: (reservation) => {
+      if (!reservation.reservationNumber) {
+        reservation.reservationNumber = Reservation.generateReservationNumber(reservation.date);
+      }
+      if (!reservation.confirmationCode) {
+        reservation.confirmationCode = Reservation.generateConfirmationCode();
+        reservation.confirmationSentAt = new Date();
+      }
+    }
   }
-
-  this.updatedBy = adminUserId;
-  return this.save();
-};
-
-reservationSchema.methods.complete = function(revenueData, adminUserId) {
-  this.status = 'completed';
-  this.departure.leftAt = new Date();
-
-  if (this.arrival?.arrivedAt) {
-    const duration = Math.floor((this.departure.leftAt - this.arrival.arrivedAt) / 60000);
-    this.departure.duration = duration;
-  }
-
-  if (revenueData) {
-    this.revenue = revenueData;
-  }
-
-  this.updatedBy = adminUserId;
-  return this.save();
-};
-
-// Static methods
-reservationSchema.statics.getUpcoming = function(poiId, days = 7) {
-  const startDate = new Date();
-  const endDate = new Date();
-  endDate.setDate(endDate.getDate() + days);
-
-  return this.find({
-    poi: poiId,
-    date: { $gte: startDate, $lte: endDate },
-    status: { $in: ['pending', 'confirmed'] }
-  }).sort({ date: 1, time: 1 });
-};
-
-reservationSchema.statics.getTodayReservations = function(poiId) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  return this.find({
-    poi: poiId,
-    date: { $gte: today, $lt: tomorrow },
-    status: { $nin: ['cancelled', 'no_show'] }
-  }).sort({ time: 1 });
-};
-
-// Pre-save middleware
-reservationSchema.pre('save', function(next) {
-  // Generate reservation number if not exists
-  if (this.isNew && !this.reservationNumber) {
-    this.reservationNumber = this.generateReservationNumber();
-  }
-
-  // Generate confirmation code if not exists
-  if (this.isNew && !this.confirmation?.code) {
-    if (!this.confirmation) this.confirmation = {};
-    this.confirmation.code = this.generateConfirmationCode();
-    this.confirmation.sentAt = new Date();
-  }
-
-  next();
 });
-
-const Reservation = mongoose.model('Reservation', reservationSchema);
 
 export default Reservation;

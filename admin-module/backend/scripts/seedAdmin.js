@@ -1,39 +1,39 @@
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import AdminUser from '../models/AdminUser.js';
-import PlatformConfig from '../models/PlatformConfig.js';
+import { AdminUser, PlatformConfig, sequelize } from '../models/index.js';
+import { testConnection, syncDatabase } from '../config/database.js';
 
 dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/holidaibutler';
-
 const seedData = async () => {
   try {
-    // Connect to MongoDB
-    await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    // Connect to MySQL Database
+    const connected = await testConnection();
+    if (!connected) {
+      console.error('❌ Failed to connect to MySQL database');
+      process.exit(1);
+    }
 
-    console.log('✅ Connected to MongoDB');
+    console.log('✅ Connected to MySQL database');
+
+    // Sync database (create tables if they don't exist)
+    await syncDatabase(false); // Set to true to recreate tables
+    console.log('✅ Database synchronized');
 
     // Create default platform admin
-    const existingAdmin = await AdminUser.findOne({ email: 'admin@holidaibutler.com' });
+    const existingAdmin = await AdminUser.findOne({
+      where: { email: 'admin@holidaibutler.com' }
+    });
 
     if (!existingAdmin) {
       const admin = await AdminUser.create({
         email: 'admin@holidaibutler.com',
         password: 'Admin123!@#', // Change this in production!
-        profile: {
-          firstName: 'Platform',
-          lastName: 'Administrator',
-          language: 'en'
-        },
+        firstName: 'Platform',
+        lastName: 'Administrator',
+        language: 'en',
         role: 'platform_admin',
         status: 'active',
-        security: {
-          emailVerified: true
-        }
+        emailVerified: true
       });
 
       console.log('✅ Created platform admin:', admin.email);
@@ -44,23 +44,21 @@ const seedData = async () => {
     }
 
     // Create sample POI owner
-    const existingPOIOwner = await AdminUser.findOne({ email: 'poi.owner@example.com' });
+    const existingPOIOwner = await AdminUser.findOne({
+      where: { email: 'poi.owner@example.com' }
+    });
 
     if (!existingPOIOwner) {
       const poiOwner = await AdminUser.create({
         email: 'poi.owner@example.com',
         password: 'POI123!@#', // Change this in production!
-        profile: {
-          firstName: 'POI',
-          lastName: 'Owner',
-          language: 'en'
-        },
+        firstName: 'POI',
+        lastName: 'Owner',
+        language: 'en',
         role: 'poi_owner',
         status: 'active',
-        security: {
-          emailVerified: true
-        },
-        ownedPOIs: [] // Will be populated when POIs are created
+        emailVerified: true,
+        ownedPOIs: []
       });
 
       console.log('✅ Created POI owner:', poiOwner.email);
@@ -71,22 +69,20 @@ const seedData = async () => {
     }
 
     // Create sample editor
-    const existingEditor = await AdminUser.findOne({ email: 'editor@holidaibutler.com' });
+    const existingEditor = await AdminUser.findOne({
+      where: { email: 'editor@holidaibutler.com' }
+    });
 
     if (!existingEditor) {
       const editor = await AdminUser.create({
         email: 'editor@holidaibutler.com',
         password: 'Editor123!@#', // Change this in production!
-        profile: {
-          firstName: 'Content',
-          lastName: 'Editor',
-          language: 'en'
-        },
+        firstName: 'Content',
+        lastName: 'Editor',
+        language: 'en',
         role: 'editor',
         status: 'active',
-        security: {
-          emailVerified: true
-        }
+        emailVerified: true
       });
 
       console.log('✅ Created editor:', editor.email);
@@ -97,22 +93,20 @@ const seedData = async () => {
     }
 
     // Create sample reviewer
-    const existingReviewer = await AdminUser.findOne({ email: 'reviewer@holidaibutler.com' });
+    const existingReviewer = await AdminUser.findOne({
+      where: { email: 'reviewer@holidaibutler.com' }
+    });
 
     if (!existingReviewer) {
       const reviewer = await AdminUser.create({
         email: 'reviewer@holidaibutler.com',
         password: 'Reviewer123!@#', // Change this in production!
-        profile: {
-          firstName: 'Content',
-          lastName: 'Reviewer',
-          language: 'en'
-        },
+        firstName: 'Content',
+        lastName: 'Reviewer',
+        language: 'en',
         role: 'reviewer',
         status: 'active',
-        security: {
-          emailVerified: true
-        }
+        emailVerified: true
       });
 
       console.log('✅ Created reviewer:', reviewer.email);
@@ -128,6 +122,10 @@ const seedData = async () => {
 
     console.log('\n🎉 Seeding completed successfully!');
     console.log('\n⚠️  IMPORTANT: Change default passwords before going to production!');
+
+    // Close database connection
+    await sequelize.close();
+    console.log('✅ Database connection closed');
 
     process.exit(0);
 

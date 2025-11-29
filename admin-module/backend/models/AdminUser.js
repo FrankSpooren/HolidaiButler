@@ -1,213 +1,108 @@
-import mongoose from 'mongoose';
+import { DataTypes, Model } from 'sequelize';
 import bcrypt from 'bcryptjs';
+import sequelize from '../config/database.js';
 
-const adminUserSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
-  },
-
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [8, 'Password must be at least 8 characters'],
-    select: false
-  },
-
-  profile: {
-    firstName: {
-      type: String,
-      required: [true, 'First name is required'],
-      trim: true
-    },
-    lastName: {
-      type: String,
-      required: [true, 'Last name is required'],
-      trim: true
-    },
-    avatar: {
-      type: String,
-      default: null
-    },
-    phoneNumber: {
-      type: String,
-      default: null
-    },
-    language: {
-      type: String,
-      enum: ['en', 'es', 'de', 'fr'],
-      default: 'en'
+class AdminUser extends Model {
+  // Instance method to compare password
+  async comparePassword(candidatePassword) {
+    try {
+      return await bcrypt.compare(candidatePassword, this.password);
+    } catch (error) {
+      throw new Error('Password comparison failed');
     }
-  },
-
-  role: {
-    type: String,
-    enum: ['platform_admin', 'poi_owner', 'editor', 'reviewer'],
-    required: [true, 'Role is required'],
-    default: 'editor'
-  },
-
-  permissions: {
-    pois: {
-      create: { type: Boolean, default: false },
-      read: { type: Boolean, default: true },
-      update: { type: Boolean, default: false },
-      delete: { type: Boolean, default: false },
-      approve: { type: Boolean, default: false }
-    },
-    platform: {
-      branding: { type: Boolean, default: false },
-      content: { type: Boolean, default: false },
-      settings: { type: Boolean, default: false }
-    },
-    users: {
-      view: { type: Boolean, default: false },
-      manage: { type: Boolean, default: false }
-    },
-    media: {
-      upload: { type: Boolean, default: false },
-      delete: { type: Boolean, default: false }
-    },
-    events: {
-      view: { type: Boolean, default: false },
-      create: { type: Boolean, default: false },
-      edit: { type: Boolean, default: false },
-      delete: { type: Boolean, default: false }
-    },
-    reservations: {
-      view: { type: Boolean, default: false },
-      create: { type: Boolean, default: false },
-      edit: { type: Boolean, default: false },
-      delete: { type: Boolean, default: false }
-    },
-    tickets: {
-      view: { type: Boolean, default: false },
-      create: { type: Boolean, default: false },
-      edit: { type: Boolean, default: false },
-      delete: { type: Boolean, default: false }
-    },
-    bookings: {
-      view: { type: Boolean, default: false },
-      create: { type: Boolean, default: false },
-      edit: { type: Boolean, default: false },
-      delete: { type: Boolean, default: false }
-    },
-    transactions: {
-      view: { type: Boolean, default: false },
-      create: { type: Boolean, default: false },
-      edit: { type: Boolean, default: false },
-      delete: { type: Boolean, default: false }
-    }
-  },
-
-  ownedPOIs: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'POI'
-  }],
-
-  status: {
-    type: String,
-    enum: ['active', 'suspended', 'pending'],
-    default: 'pending'
-  },
-
-  security: {
-    emailVerified: {
-      type: Boolean,
-      default: false
-    },
-    verificationToken: String,
-    verificationExpires: Date,
-    resetPasswordToken: String,
-    resetPasswordExpires: Date,
-    loginAttempts: {
-      type: Number,
-      default: 0
-    },
-    lockUntil: Date,
-    lastLogin: Date,
-    twoFactorEnabled: {
-      type: Boolean,
-      default: false
-    },
-    twoFactorSecret: String
-  },
-
-  activityLog: [{
-    action: String,
-    resource: String,
-    resourceId: mongoose.Schema.Types.ObjectId,
-    timestamp: {
-      type: Date,
-      default: Date.now
-    },
-    ipAddress: String,
-    userAgent: String
-  }],
-
-  preferences: {
-    emailNotifications: {
-      type: Boolean,
-      default: true
-    },
-    dashboardLayout: {
-      type: String,
-      default: 'default'
-    }
-  },
-
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'AdminUser'
-  },
-
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
-}, {
-  timestamps: true
-});
 
-// Indexes
-adminUserSchema.index({ email: 1 });
-adminUserSchema.index({ role: 1 });
-adminUserSchema.index({ status: 1 });
-
-// Virtual for account locked
-adminUserSchema.virtual('isLocked').get(function() {
-  return !!(this.security.lockUntil && this.security.lockUntil > Date.now());
-});
-
-// Pre-save middleware to hash password
-adminUserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-
-  try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
+  // Check if account is locked
+  get isLocked() {
+    return !!(this.lockUntil && new Date(this.lockUntil) > new Date());
   }
-});
 
-// Pre-save middleware to set default permissions based on role
-adminUserSchema.pre('save', function(next) {
-  if (!this.isModified('role')) return next();
+  // Increment login attempts
+  async incLoginAttempts() {
+    // If we have a previous lock that has expired, restart at 1
+    if (this.lockUntil && new Date(this.lockUntil) < new Date()) {
+      this.loginAttempts = 1;
+      this.lockUntil = null;
+      return this.save();
+    }
 
-  switch(this.role) {
-    case 'platform_admin':
-      this.permissions = {
+    // Otherwise increment
+    this.loginAttempts += 1;
+
+    // Lock account after 5 attempts for 2 hours
+    const maxAttempts = 5;
+    const lockTime = 2 * 60 * 60 * 1000; // 2 hours
+
+    if (this.loginAttempts >= maxAttempts && !this.isLocked) {
+      this.lockUntil = new Date(Date.now() + lockTime);
+    }
+
+    return this.save();
+  }
+
+  // Reset login attempts
+  async resetLoginAttempts() {
+    this.loginAttempts = 0;
+    this.lockUntil = null;
+    return this.save();
+  }
+
+  // Check if user has permission
+  hasPermission(resource, action) {
+    if (this.role === 'platform_admin') return true;
+
+    const permissions = this.permissions || {};
+    const parts = resource.split('.');
+    let perm = permissions;
+
+    for (const part of parts) {
+      perm = perm[part];
+      if (perm === undefined) return false;
+    }
+
+    if (typeof perm === 'object' && action) {
+      return perm[action] === true;
+    }
+
+    return perm === true;
+  }
+
+  // Check if user can manage specific POI
+  canManagePOI(poiId) {
+    if (this.role === 'platform_admin' || this.role === 'editor') return true;
+    if (this.role === 'poi_owner') {
+      const ownedPOIs = this.ownedPOIs || [];
+      return ownedPOIs.includes(poiId);
+    }
+    return false;
+  }
+
+  // Log activity
+  async logActivity(action, resource, resourceId, req) {
+    const activityLog = this.activityLog || [];
+    activityLog.push({
+      action,
+      resource,
+      resourceId,
+      timestamp: new Date().toISOString(),
+      ipAddress: req?.ip || req?.connection?.remoteAddress,
+      userAgent: req?.get?.('user-agent')
+    });
+
+    // Keep only last 100 activities
+    if (activityLog.length > 100) {
+      this.activityLog = activityLog.slice(-100);
+    } else {
+      this.activityLog = activityLog;
+    }
+
+    return this.save();
+  }
+
+  // Get default permissions based on role
+  static getDefaultPermissions(role) {
+    const permissionSets = {
+      platform_admin: {
         pois: { create: true, read: true, update: true, delete: true, approve: true },
         platform: { branding: true, content: true, settings: true },
         users: { view: true, manage: true },
@@ -217,11 +112,8 @@ adminUserSchema.pre('save', function(next) {
         tickets: { view: true, create: true, edit: true, delete: true },
         bookings: { view: true, create: true, edit: true, delete: true },
         transactions: { view: true, create: true, edit: true, delete: true }
-      };
-      break;
-
-    case 'poi_owner':
-      this.permissions = {
+      },
+      poi_owner: {
         pois: { create: true, read: true, update: true, delete: false, approve: false },
         platform: { branding: false, content: false, settings: false },
         users: { view: false, manage: false },
@@ -231,11 +123,8 @@ adminUserSchema.pre('save', function(next) {
         tickets: { view: true, create: true, edit: true, delete: false },
         bookings: { view: true, create: true, edit: true, delete: false },
         transactions: { view: true, create: false, edit: false, delete: false }
-      };
-      break;
-
-    case 'editor':
-      this.permissions = {
+      },
+      editor: {
         pois: { create: true, read: true, update: true, delete: false, approve: false },
         platform: { branding: false, content: true, settings: false },
         users: { view: false, manage: false },
@@ -245,11 +134,8 @@ adminUserSchema.pre('save', function(next) {
         tickets: { view: true, create: true, edit: true, delete: false },
         bookings: { view: true, create: true, edit: true, delete: false },
         transactions: { view: true, create: false, edit: false, delete: false }
-      };
-      break;
-
-    case 'reviewer':
-      this.permissions = {
+      },
+      reviewer: {
         pois: { create: false, read: true, update: false, delete: false, approve: true },
         platform: { branding: false, content: false, settings: false },
         users: { view: false, manage: false },
@@ -259,100 +145,233 @@ adminUserSchema.pre('save', function(next) {
         tickets: { view: true, create: false, edit: false, delete: false },
         bookings: { view: true, create: false, edit: false, delete: false },
         transactions: { view: true, create: false, edit: false, delete: false }
-      };
-      break;
+      }
+    };
+
+    return permissionSets[role] || permissionSets.reviewer;
   }
 
-  next();
+  // Safe JSON output (exclude sensitive fields)
+  toSafeJSON() {
+    const values = this.toJSON();
+    delete values.password;
+    delete values.verificationToken;
+    delete values.resetPasswordToken;
+    delete values.twoFactorSecret;
+    return values;
+  }
+}
+
+AdminUser.init({
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
+
+  // Basic Info
+  email: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    unique: true,
+    validate: {
+      isEmail: true
+    },
+    set(value) {
+      this.setDataValue('email', value?.toLowerCase()?.trim());
+    }
+  },
+
+  password: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    validate: {
+      len: [8, 255]
+    }
+  },
+
+  // Profile
+  firstName: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    field: 'first_name'
+  },
+
+  lastName: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    field: 'last_name'
+  },
+
+  avatar: {
+    type: DataTypes.STRING(500),
+    allowNull: true
+  },
+
+  phoneNumber: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'phone_number'
+  },
+
+  language: {
+    type: DataTypes.ENUM('en', 'es', 'de', 'fr', 'nl'),
+    defaultValue: 'en'
+  },
+
+  // Role & Permissions
+  role: {
+    type: DataTypes.ENUM('platform_admin', 'poi_owner', 'editor', 'reviewer'),
+    allowNull: false,
+    defaultValue: 'editor'
+  },
+
+  permissions: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: {}
+  },
+
+  ownedPOIs: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    field: 'owned_pois'
+  },
+
+  // Status
+  status: {
+    type: DataTypes.ENUM('active', 'suspended', 'pending'),
+    defaultValue: 'pending'
+  },
+
+  // Security
+  emailVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'email_verified'
+  },
+
+  verificationToken: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'verification_token'
+  },
+
+  verificationExpires: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'verification_expires'
+  },
+
+  resetPasswordToken: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'reset_password_token'
+  },
+
+  resetPasswordExpires: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'reset_password_expires'
+  },
+
+  loginAttempts: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    field: 'login_attempts'
+  },
+
+  lockUntil: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'lock_until'
+  },
+
+  lastLogin: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'last_login'
+  },
+
+  twoFactorEnabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'two_factor_enabled'
+  },
+
+  twoFactorSecret: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'two_factor_secret'
+  },
+
+  // Activity Log (stored as JSON array)
+  activityLog: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    field: 'activity_log'
+  },
+
+  // Preferences
+  preferences: {
+    type: DataTypes.JSON,
+    defaultValue: {
+      emailNotifications: true,
+      dashboardLayout: 'default'
+    }
+  },
+
+  // Created by reference (stored as UUID)
+  createdById: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'created_by_id'
+  }
+}, {
+  sequelize,
+  modelName: 'AdminUser',
+  tableName: 'admin_users',
+  timestamps: true,
+  underscored: true,
+  indexes: [
+    { fields: ['email'], unique: true },
+    { fields: ['role'] },
+    { fields: ['status'] }
+  ],
+  hooks: {
+    // Hash password before save
+    beforeCreate: async (user) => {
+      if (user.password) {
+        const salt = await bcrypt.genSalt(12);
+        user.password = await bcrypt.hash(user.password, salt);
+      }
+      // Set default permissions based on role
+      if (!user.permissions || Object.keys(user.permissions).length === 0) {
+        user.permissions = AdminUser.getDefaultPermissions(user.role);
+      }
+    },
+    beforeUpdate: async (user) => {
+      if (user.changed('password')) {
+        const salt = await bcrypt.genSalt(12);
+        user.password = await bcrypt.hash(user.password, salt);
+      }
+      // Update permissions if role changed
+      if (user.changed('role')) {
+        user.permissions = AdminUser.getDefaultPermissions(user.role);
+      }
+    }
+  },
+  defaultScope: {
+    attributes: { exclude: ['password', 'verificationToken', 'resetPasswordToken', 'twoFactorSecret'] }
+  },
+  scopes: {
+    withPassword: {
+      attributes: { include: ['password'] }
+    },
+    withSecurityTokens: {
+      attributes: { include: ['verificationToken', 'resetPasswordToken'] }
+    }
+  }
 });
-
-// Method to compare password
-adminUserSchema.methods.comparePassword = async function(candidatePassword) {
-  try {
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    throw new Error('Password comparison failed');
-  }
-};
-
-// Method to increment login attempts
-adminUserSchema.methods.incLoginAttempts = function() {
-  // If we have a previous lock that has expired, restart at 1
-  if (this.security.lockUntil && this.security.lockUntil < Date.now()) {
-    return this.updateOne({
-      $set: { 'security.loginAttempts': 1 },
-      $unset: { 'security.lockUntil': 1 }
-    });
-  }
-
-  // Otherwise increment
-  const updates = { $inc: { 'security.loginAttempts': 1 } };
-
-  // Lock account after 5 attempts for 2 hours
-  const maxAttempts = 5;
-  const lockTime = 2 * 60 * 60 * 1000; // 2 hours
-
-  if (this.security.loginAttempts + 1 >= maxAttempts && !this.isLocked) {
-    updates.$set = { 'security.lockUntil': Date.now() + lockTime };
-  }
-
-  return this.updateOne(updates);
-};
-
-// Method to reset login attempts
-adminUserSchema.methods.resetLoginAttempts = function() {
-  return this.updateOne({
-    $set: { 'security.loginAttempts': 0 },
-    $unset: { 'security.lockUntil': 1 }
-  });
-};
-
-// Method to log activity
-adminUserSchema.methods.logActivity = function(action, resource, resourceId, req) {
-  this.activityLog.push({
-    action,
-    resource,
-    resourceId,
-    ipAddress: req.ip || req.connection.remoteAddress,
-    userAgent: req.get('user-agent')
-  });
-
-  // Keep only last 100 activities
-  if (this.activityLog.length > 100) {
-    this.activityLog = this.activityLog.slice(-100);
-  }
-
-  return this.save();
-};
-
-// Method to check if user has permission
-adminUserSchema.methods.hasPermission = function(resource, action) {
-  if (this.role === 'platform_admin') return true;
-
-  const parts = resource.split('.');
-  let perm = this.permissions;
-
-  for (const part of parts) {
-    perm = perm[part];
-    if (perm === undefined) return false;
-  }
-
-  if (typeof perm === 'object' && action) {
-    return perm[action] === true;
-  }
-
-  return perm === true;
-};
-
-// Method to check if user can manage specific POI
-adminUserSchema.methods.canManagePOI = function(poiId) {
-  if (this.role === 'platform_admin' || this.role === 'editor') return true;
-  if (this.role === 'poi_owner') {
-    return this.ownedPOIs.some(id => id.toString() === poiId.toString());
-  }
-  return false;
-};
-
-const AdminUser = mongoose.model('AdminUser', adminUserSchema);
 
 export default AdminUser;

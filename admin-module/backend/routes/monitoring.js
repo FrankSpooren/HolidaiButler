@@ -4,10 +4,7 @@
  */
 
 import express from 'express';
-import mongoose from 'mongoose';
-import metricsService from '../services/metrics.js';
-import cacheService from '../services/cache.js';
-import circuitBreakerManager from '../utils/circuitBreaker.js';
+import { sequelize } from '../models/index.js';
 import winston from 'winston';
 
 const logger = winston.createLogger({
@@ -23,6 +20,13 @@ const logger = winston.createLogger({
 
 const router = express.Router();
 
+// Simple in-memory metrics (can be replaced with proper metrics service)
+const metrics = {
+  requests: 0,
+  errors: 0,
+  startTime: new Date()
+};
+
 /**
  * GET /api/admin/monitoring/health
  * Comprehensive health check
@@ -33,66 +37,25 @@ router.get('/health', async (req, res) => {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       service: 'admin-module',
-      version: process.env.npm_package_version || '1.0.0',
+      version: process.env.npm_package_version || '2.0.0',
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || 'development',
       checks: {}
     };
 
-    // Database check
+    // Database check (Sequelize/MySQL)
     try {
-      if (mongoose.connection.readyState === 1) {
-        health.checks.database = {
-          status: 'healthy',
-          type: 'mongodb',
-          connections: mongoose.connection.readyState
-        };
-      } else {
-        health.checks.database = {
-          status: 'unhealthy',
-          error: 'Database not connected'
-        };
-        health.status = 'degraded';
-      }
+      await sequelize.authenticate();
+      health.checks.database = {
+        status: 'healthy',
+        type: 'mysql',
+        dialect: sequelize.getDialect()
+      };
     } catch (error) {
       health.checks.database = {
         status: 'unhealthy',
         error: error.message
       };
-      health.status = 'degraded';
-    }
-
-    // Cache check
-    if (cacheService.isConnected) {
-      health.checks.cache = {
-        status: 'healthy',
-        type: 'redis'
-      };
-    } else {
-      health.checks.cache = {
-        status: 'unhealthy',
-        warning: 'Cache not connected (degraded performance)'
-      };
-      // Cache failure is not critical
-      if (health.status === 'healthy') {
-        health.status = 'degraded';
-      }
-    }
-
-    // Circuit breakers check
-    const breakerStatuses = circuitBreakerManager.getAllStatuses();
-    const openBreakers = Object.entries(breakerStatuses).filter(
-      ([_, status]) => status.state === 'OPEN'
-    );
-
-    health.checks.circuitBreakers = {
-      status: openBreakers.length === 0 ? 'healthy' : 'degraded',
-      total: Object.keys(breakerStatuses).length,
-      open: openBreakers.length,
-      openBreakers: openBreakers.map(([name]) => name)
-    };
-
-    if (openBreakers.length > 0 && health.status === 'healthy') {
       health.status = 'degraded';
     }
 
@@ -124,20 +87,15 @@ router.get('/health', async (req, res) => {
  */
 router.get('/ready', async (req, res) => {
   try {
-    if (mongoose.connection.readyState === 1) {
-      res.status(200).json({
-        ready: true,
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(503).json({
-        ready: false,
-        reason: 'Database not connected'
-      });
-    }
+    await sequelize.authenticate();
+    res.status(200).json({
+      ready: true,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
     res.status(503).json({
       ready: false,
+      reason: 'Database not connected',
       error: error.message
     });
   }
@@ -160,8 +118,21 @@ router.get('/live', (req, res) => {
  */
 router.get('/metrics', (req, res) => {
   try {
-    const metrics = metricsService.getAllMetrics();
-    res.json(metrics);
+    const uptime = process.uptime();
+    const memUsage = process.memoryUsage();
+
+    res.json({
+      timestamp: new Date().toISOString(),
+      uptime: uptime,
+      requests: metrics.requests,
+      errors: metrics.errors,
+      memory: {
+        heapUsed: memUsage.heapUsed,
+        heapTotal: memUsage.heapTotal,
+        rss: memUsage.rss
+      },
+      startTime: metrics.startTime.toISOString()
+    });
   } catch (error) {
     logger.error('Error retrieving metrics:', error);
     res.status(500).json({
@@ -177,7 +148,35 @@ router.get('/metrics', (req, res) => {
  */
 router.get('/metrics/prometheus', (req, res) => {
   try {
-    const prometheusMetrics = metricsService.getPrometheusMetrics();
+    const uptime = process.uptime();
+    const memUsage = process.memoryUsage();
+
+    const prometheusMetrics = `
+# HELP admin_uptime_seconds Total uptime in seconds
+# TYPE admin_uptime_seconds gauge
+admin_uptime_seconds ${uptime}
+
+# HELP admin_requests_total Total number of requests
+# TYPE admin_requests_total counter
+admin_requests_total ${metrics.requests}
+
+# HELP admin_errors_total Total number of errors
+# TYPE admin_errors_total counter
+admin_errors_total ${metrics.errors}
+
+# HELP admin_heap_used_bytes Heap memory used
+# TYPE admin_heap_used_bytes gauge
+admin_heap_used_bytes ${memUsage.heapUsed}
+
+# HELP admin_heap_total_bytes Total heap memory
+# TYPE admin_heap_total_bytes gauge
+admin_heap_total_bytes ${memUsage.heapTotal}
+
+# HELP admin_rss_bytes Resident Set Size
+# TYPE admin_rss_bytes gauge
+admin_rss_bytes ${memUsage.rss}
+`.trim();
+
     res.set('Content-Type', 'text/plain; version=0.0.4');
     res.send(prometheusMetrics);
   } catch (error) {
@@ -187,131 +186,14 @@ router.get('/metrics/prometheus', (req, res) => {
 });
 
 /**
- * GET /api/admin/monitoring/circuit-breakers
- * Get all circuit breaker statuses
- */
-router.get('/circuit-breakers', (req, res) => {
-  try {
-    const statuses = circuitBreakerManager.getAllStatuses();
-    res.json({
-      timestamp: new Date().toISOString(),
-      circuitBreakers: statuses
-    });
-  } catch (error) {
-    logger.error('Error retrieving circuit breaker statuses:', error);
-    res.status(500).json({
-      error: 'Failed to retrieve circuit breaker statuses',
-      message: error.message
-    });
-  }
-});
-
-/**
- * POST /api/admin/monitoring/circuit-breakers/:name/reset
- * Reset specific circuit breaker
- */
-router.post('/circuit-breakers/:name/reset', (req, res) => {
-  try {
-    const { name } = req.params;
-    circuitBreakerManager.reset(name);
-
-    logger.info(`Circuit breaker ${name} reset via API`);
-
-    res.json({
-      success: true,
-      message: `Circuit breaker ${name} reset successfully`,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    logger.error('Error resetting circuit breaker:', error);
-    res.status(500).json({
-      error: 'Failed to reset circuit breaker',
-      message: error.message
-    });
-  }
-});
-
-/**
- * POST /api/admin/monitoring/circuit-breakers/reset-all
- * Reset all circuit breakers
- */
-router.post('/circuit-breakers/reset-all', (req, res) => {
-  try {
-    circuitBreakerManager.resetAll();
-
-    logger.info('All circuit breakers reset via API');
-
-    res.json({
-      success: true,
-      message: 'All circuit breakers reset successfully',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    logger.error('Error resetting all circuit breakers:', error);
-    res.status(500).json({
-      error: 'Failed to reset circuit breakers',
-      message: error.message
-    });
-  }
-});
-
-/**
- * GET /api/admin/monitoring/cache/stats
- * Get cache statistics
- */
-router.get('/cache/stats', async (req, res) => {
-  try {
-    const stats = await cacheService.getStatistics();
-    res.json({
-      timestamp: new Date().toISOString(),
-      cache: stats
-    });
-  } catch (error) {
-    logger.error('Error retrieving cache stats:', error);
-    res.status(500).json({
-      error: 'Failed to retrieve cache statistics',
-      message: error.message
-    });
-  }
-});
-
-/**
- * POST /api/admin/monitoring/cache/flush
- * Flush entire cache (use with caution)
- */
-router.post('/cache/flush', async (req, res) => {
-  try {
-    const success = await cacheService.flushAll();
-
-    if (success) {
-      logger.warn('Cache flushed via API');
-      res.json({
-        success: true,
-        message: 'Cache flushed successfully',
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to flush cache'
-      });
-    }
-  } catch (error) {
-    logger.error('Error flushing cache:', error);
-    res.status(500).json({
-      error: 'Failed to flush cache',
-      message: error.message
-    });
-  }
-});
-
-/**
  * POST /api/admin/monitoring/metrics/reset
- * Reset all metrics (use with caution)
+ * Reset all metrics
  */
 router.post('/metrics/reset', (req, res) => {
   try {
-    metricsService.reset();
+    metrics.requests = 0;
+    metrics.errors = 0;
+    metrics.startTime = new Date();
 
     logger.warn('Metrics reset via API');
 
@@ -336,10 +218,11 @@ router.post('/metrics/reset', (req, res) => {
 router.get('/info', (req, res) => {
   res.json({
     service: 'HolidaiButler Admin Module',
-    version: process.env.npm_package_version || '1.0.0',
+    version: process.env.npm_package_version || '2.0.0',
     environment: process.env.NODE_ENV || 'development',
     nodeVersion: process.version,
     platform: process.platform,
+    database: 'MySQL (Sequelize)',
     uptime: process.uptime(),
     memory: {
       heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
@@ -347,6 +230,31 @@ router.get('/info', (req, res) => {
     },
     timestamp: new Date().toISOString()
   });
+});
+
+/**
+ * GET /api/admin/monitoring/database
+ * Get database connection info
+ */
+router.get('/database', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+
+    res.json({
+      status: 'connected',
+      dialect: sequelize.getDialect(),
+      database: sequelize.config.database,
+      host: sequelize.config.host,
+      port: sequelize.config.port,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 export default router;
