@@ -1,8 +1,9 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import AdminUser from '../models/AdminUser.js';
+import { AdminUser } from '../models/index.js';
 import { verifyAdminToken, adminRateLimit } from '../middleware/adminAuth.js';
+import { Op } from 'sequelize';
 
 const router = express.Router();
 
@@ -31,9 +32,10 @@ router.post('/login', adminRateLimit(10, 15 * 60 * 1000), async (req, res) => {
       });
     }
 
-    // Find user with password field
-    const user = await AdminUser.findOne({ email: email.toLowerCase() })
-      .select('+password');
+    // Find user with password field using scope
+    const user = await AdminUser.scope('withPassword').findOne({
+      where: { email: email.toLowerCase() }
+    });
 
     if (!user) {
       return res.status(401).json({
@@ -44,7 +46,7 @@ router.post('/login', adminRateLimit(10, 15 * 60 * 1000), async (req, res) => {
 
     // Check if account is locked
     if (user.isLocked) {
-      const lockTimeRemaining = Math.ceil((user.security.lockUntil - Date.now()) / 1000 / 60);
+      const lockTimeRemaining = Math.ceil((new Date(user.lockUntil) - Date.now()) / 1000 / 60);
       return res.status(423).json({
         success: false,
         message: `Account is locked due to too many failed login attempts. Please try again in ${lockTimeRemaining} minutes.`
@@ -73,18 +75,18 @@ router.post('/login', adminRateLimit(10, 15 * 60 * 1000), async (req, res) => {
     }
 
     // Reset login attempts on successful login
-    if (user.security.loginAttempts > 0 || user.security.lockUntil) {
+    if (user.loginAttempts > 0 || user.lockUntil) {
       await user.resetLoginAttempts();
     }
 
     // Update last login
-    user.security.lastLogin = new Date();
+    user.lastLogin = new Date();
     await user.save();
 
     // Generate tokens
     const accessToken = jwt.sign(
       {
-        userId: user._id,
+        userId: user.id,
         role: user.role,
         type: 'access'
       },
@@ -94,22 +96,21 @@ router.post('/login', adminRateLimit(10, 15 * 60 * 1000), async (req, res) => {
 
     const refreshToken = jwt.sign(
       {
-        userId: user._id,
+        userId: user.id,
         type: 'refresh'
       },
       JWT_REFRESH_SECRET,
       { expiresIn: REFRESH_TOKEN_EXPIRY }
     );
 
-    // Remove password from user object
-    const userObject = user.toObject();
-    delete userObject.password;
+    // Get safe user data (without sensitive fields)
+    const userData = user.toSafeJSON();
 
     res.json({
       success: true,
       message: 'Login successful.',
       data: {
-        user: userObject,
+        user: userData,
         accessToken,
         refreshToken,
         expiresIn: ACCESS_TOKEN_EXPIRY
@@ -152,7 +153,7 @@ router.post('/refresh', async (req, res) => {
     }
 
     // Get user
-    const user = await AdminUser.findById(decoded.userId);
+    const user = await AdminUser.findByPk(decoded.userId);
 
     if (!user || user.status !== 'active') {
       return res.status(401).json({
@@ -164,7 +165,7 @@ router.post('/refresh', async (req, res) => {
     // Generate new access token
     const accessToken = jwt.sign(
       {
-        userId: user._id,
+        userId: user.id,
         role: user.role,
         type: 'access'
       },
@@ -204,9 +205,11 @@ router.post('/refresh', async (req, res) => {
  */
 router.get('/me', verifyAdminToken, async (req, res) => {
   try {
-    const user = await AdminUser.findById(req.adminUser._id)
-      .populate('ownedPOIs', 'name location.city status')
-      .populate('createdBy', 'profile.firstName profile.lastName');
+    const user = await AdminUser.findByPk(req.adminUser.id, {
+      include: [
+        { model: AdminUser, as: 'createdBy', attributes: ['id', 'firstName', 'lastName'] }
+      ]
+    });
 
     res.json({
       success: true,
@@ -236,7 +239,7 @@ router.put('/profile', verifyAdminToken, async (req, res) => {
 
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
-        updates[`profile.${field}`] = req.body[field];
+        updates[field] = req.body[field];
       }
     }
 
@@ -247,17 +250,22 @@ router.put('/profile', verifyAdminToken, async (req, res) => {
       });
     }
 
-    const user = await AdminUser.findByIdAndUpdate(
-      req.adminUser._id,
-      { $set: updates },
-      { new: true, runValidators: true }
-    );
+    const user = await AdminUser.findByPk(req.adminUser.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+
+    await user.update(updates);
 
     res.json({
       success: true,
       message: 'Profile updated successfully.',
       data: {
-        user
+        user: user.toSafeJSON()
       }
     });
 
@@ -294,7 +302,7 @@ router.post('/change-password', verifyAdminToken, async (req, res) => {
     }
 
     // Get user with password
-    const user = await AdminUser.findById(req.adminUser._id).select('+password');
+    const user = await AdminUser.scope('withPassword').findByPk(req.adminUser.id);
 
     // Verify current password
     const isMatch = await user.comparePassword(currentPassword);
@@ -306,7 +314,7 @@ router.post('/change-password', verifyAdminToken, async (req, res) => {
       });
     }
 
-    // Update password
+    // Update password (hook will hash it)
     user.password = newPassword;
     await user.save();
 
@@ -340,7 +348,9 @@ router.post('/forgot-password', adminRateLimit(3, 60 * 60 * 1000), async (req, r
       });
     }
 
-    const user = await AdminUser.findOne({ email: email.toLowerCase() });
+    const user = await AdminUser.findOne({
+      where: { email: email.toLowerCase() }
+    });
 
     // Don't reveal if user exists
     if (!user) {
@@ -354,8 +364,8 @@ router.post('/forgot-password', adminRateLimit(3, 60 * 60 * 1000), async (req, r
     const resetToken = crypto.randomBytes(32).toString('hex');
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
-    user.security.resetPasswordToken = hashedToken;
-    user.security.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
 
     // TODO: Send email with reset link
@@ -407,10 +417,12 @@ router.post('/reset-password', async (req, res) => {
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
     // Find user with valid token
-    const user = await AdminUser.findOne({
-      'security.resetPasswordToken': hashedToken,
-      'security.resetPasswordExpires': { $gt: Date.now() }
-    }).select('+password');
+    const user = await AdminUser.scope('withPassword').findOne({
+      where: {
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { [Op.gt]: new Date() }
+      }
+    });
 
     if (!user) {
       return res.status(400).json({
@@ -421,8 +433,8 @@ router.post('/reset-password', async (req, res) => {
 
     // Update password
     user.password = newPassword;
-    user.security.resetPasswordToken = undefined;
-    user.security.resetPasswordExpires = undefined;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
     await user.save();
 
     res.json({
