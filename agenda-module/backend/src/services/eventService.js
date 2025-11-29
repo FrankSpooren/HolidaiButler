@@ -1,10 +1,11 @@
+const { Op, fn, col, literal } = require('sequelize');
 const Event = require('../models/Event');
 const multiSourceVerification = require('./multiSourceVerification');
 const translationService = require('./translationService');
 
 /**
  * Event Service
- * Handles all business logic for events
+ * Handles all business logic for events (MySQL/Sequelize)
  */
 
 class EventService {
@@ -19,8 +20,6 @@ class EventService {
       // Detect source language if not specified
       if (eventData.title && typeof eventData.title === 'string') {
         const detectedLang = await translationService.detectLanguage(eventData.title);
-
-        // Translate to all supported languages
         const translatedEvent = await translationService.translateEvent(eventData, detectedLang);
         eventData = translatedEvent;
       }
@@ -36,9 +35,7 @@ class EventService {
         eventData.sources[0].lastChecked = new Date();
       }
 
-      const event = new Event(eventData);
-      await event.save();
-
+      const event = await Event.create(eventData);
       return event;
     } catch (error) {
       console.error('Error creating event:', error);
@@ -55,24 +52,17 @@ class EventService {
    */
   async updateEvent(eventId, updateData, userId = null) {
     try {
-      const event = await Event.findById(eventId);
+      const event = await Event.findByPk(eventId);
       if (!event) {
         throw new Error('Event not found');
       }
 
-      // Update fields
-      Object.keys(updateData).forEach(key => {
-        if (updateData[key] !== undefined) {
-          event[key] = updateData[key];
-        }
-      });
-
       // Update modifier
       if (userId) {
-        event.updatedBy = userId;
+        updateData.updatedBy = userId;
       }
 
-      await event.save();
+      await event.update(updateData);
       return event;
     } catch (error) {
       console.error('Error updating event:', error);
@@ -89,163 +79,148 @@ class EventService {
   async getEvents(filters = {}, options = {}) {
     try {
       const {
-        // Date filters
+        dateRange,
         startDate,
         endDate,
-        dateRange,
-
-        // Category filters
         primaryCategory,
         categories,
         activityType,
-
-        // Location filters
         city = 'Calpe',
         area,
-        nearLocation,
-        maxDistance = 5000,
-
-        // Audience filters
         targetAudience,
-
-        // Time filters
         timeOfDay,
-
-        // Other filters
         isFree,
         featured,
         status = 'published',
         visibility = 'public',
         search,
-
-        // Pagination
         page = 1,
         limit = 50,
         sort = 'startDate',
         sortOrder = 'asc',
       } = filters;
 
-      // Build query
-      const query = {
+      // Build where clause
+      const where = {
         status,
         visibility,
-        'location.city': city,
       };
+
+      // City filter (JSON field)
+      if (city) {
+        where[Op.and] = where[Op.and] || [];
+        where[Op.and].push(
+          literal(`JSON_EXTRACT(location, '$.city') = '${city}'`)
+        );
+      }
 
       // Date filtering
       const now = new Date();
       if (dateRange === 'upcoming') {
-        query.startDate = { $gte: now };
+        where.startDate = { [Op.gte]: now };
       } else if (dateRange === 'today') {
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
         tomorrow.setHours(0, 0, 0, 0);
-        query.startDate = { $gte: now, $lt: tomorrow };
+        where.startDate = { [Op.gte]: now, [Op.lt]: tomorrow };
       } else if (dateRange === 'this-week') {
         const endOfWeek = new Date(now);
         endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
-        query.startDate = { $gte: now, $lte: endOfWeek };
+        where.startDate = { [Op.gte]: now, [Op.lte]: endOfWeek };
       } else if (dateRange === 'this-month') {
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        query.startDate = { $gte: now, $lte: endOfMonth };
+        where.startDate = { [Op.gte]: now, [Op.lte]: endOfMonth };
       } else if (startDate || endDate) {
-        query.$or = [
-          { startDate: {} },
-          { endDate: {} },
-          { startDate: { $lte: startDate }, endDate: { $gte: endDate } },
-        ];
-        if (startDate) {
-          query.$or[0].startDate.$gte = new Date(startDate);
-          query.$or[1].endDate.$gte = new Date(startDate);
-        }
-        if (endDate) {
-          query.$or[0].startDate.$lte = new Date(endDate);
-          query.$or[1].endDate.$lte = new Date(endDate);
+        where[Op.or] = [];
+        if (startDate && endDate) {
+          where[Op.or] = [
+            { startDate: { [Op.gte]: new Date(startDate), [Op.lte]: new Date(endDate) } },
+            { endDate: { [Op.gte]: new Date(startDate), [Op.lte]: new Date(endDate) } },
+            { startDate: { [Op.lte]: new Date(startDate) }, endDate: { [Op.gte]: new Date(endDate) } },
+          ];
+        } else if (startDate) {
+          where.startDate = { [Op.gte]: new Date(startDate) };
+        } else if (endDate) {
+          where.endDate = { [Op.lte]: new Date(endDate) };
         }
       }
 
       // Category filtering
       if (primaryCategory) {
-        query.$or = [
+        where[Op.or] = [
           { primaryCategory },
-          { secondaryCategories: primaryCategory },
+          literal(`JSON_CONTAINS(secondary_categories, '"${primaryCategory}"')`),
         ];
       }
 
       if (categories && categories.length > 0) {
-        query.$or = [
-          { primaryCategory: { $in: categories } },
-          { secondaryCategories: { $in: categories } },
+        where[Op.or] = [
+          { primaryCategory: { [Op.in]: categories } },
+          ...categories.map(cat => literal(`JSON_CONTAINS(secondary_categories, '"${cat}"')`)),
         ];
       }
 
       if (activityType) {
-        query.activityType = activityType;
+        where.activityType = activityType;
       }
 
-      // Location filtering
+      // Area filtering (JSON field)
       if (area) {
-        query['location.area'] = area;
+        where[Op.and] = where[Op.and] || [];
+        where[Op.and].push(
+          literal(`JSON_EXTRACT(location, '$.area') = '${area}'`)
+        );
       }
 
-      // Audience filtering
+      // Target audience filtering (JSON array)
       if (targetAudience) {
-        query.targetAudience = targetAudience;
+        where[Op.and] = where[Op.and] || [];
+        where[Op.and].push(
+          literal(`JSON_CONTAINS(target_audience, '"${targetAudience}"')`)
+        );
       }
 
       // Time filtering
       if (timeOfDay) {
-        query.timeOfDay = timeOfDay;
+        where.timeOfDay = timeOfDay;
       }
 
       // Pricing filter
       if (isFree !== undefined) {
-        query['pricing.isFree'] = isFree;
+        where[Op.and] = where[Op.and] || [];
+        where[Op.and].push(
+          literal(`JSON_EXTRACT(pricing, '$.isFree') = ${isFree}`)
+        );
       }
 
       // Featured filter
       if (featured !== undefined) {
-        query.featured = featured;
+        where.featured = featured;
       }
 
       // Text search
       if (search) {
-        query.$or = [
-          { 'title.nl': { $regex: search, $options: 'i' } },
-          { 'title.en': { $regex: search, $options: 'i' } },
-          { 'title.es': { $regex: search, $options: 'i' } },
-          { 'description.nl': { $regex: search, $options: 'i' } },
-          { 'description.en': { $regex: search, $options: 'i' } },
-          { 'location.name': { $regex: search, $options: 'i' } },
+        where[Op.or] = [
+          literal(`JSON_EXTRACT(title, '$.nl') LIKE '%${search}%'`),
+          literal(`JSON_EXTRACT(title, '$.en') LIKE '%${search}%'`),
+          literal(`JSON_EXTRACT(title, '$.es') LIKE '%${search}%'`),
+          literal(`JSON_EXTRACT(description, '$.nl') LIKE '%${search}%'`),
+          literal(`JSON_EXTRACT(description, '$.en') LIKE '%${search}%'`),
+          literal(`JSON_EXTRACT(location, '$.name') LIKE '%${search}%'`),
         ];
       }
 
       // Execute query
-      const skip = (page - 1) * limit;
-      const sortObj = {};
-      sortObj[sort] = sortOrder === 'desc' ? -1 : 1;
+      const offset = (page - 1) * limit;
+      const sortField = sort === 'startDate' ? 'start_date' : sort;
+      const order = [[sortField, sortOrder.toUpperCase()]];
 
-      let eventsQuery;
-
-      // Geospatial query for near location
-      if (nearLocation && nearLocation.lat && nearLocation.lng) {
-        eventsQuery = Event.findNearLocation(
-          { lat: nearLocation.lat, lng: nearLocation.lng },
-          maxDistance,
-          query
-        );
-      } else {
-        eventsQuery = Event.find(query);
-      }
-
-      const [events, total] = await Promise.all([
-        eventsQuery
-          .sort(sortObj)
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        Event.countDocuments(query),
-      ]);
+      const { rows: events, count: total } = await Event.findAndCountAll({
+        where,
+        order,
+        limit: parseInt(limit),
+        offset,
+      });
 
       return {
         events,
@@ -270,7 +245,7 @@ class EventService {
    */
   async getEventById(eventId, language = 'nl') {
     try {
-      const event = await Event.findById(eventId);
+      const event = await Event.findByPk(eventId);
       if (!event) {
         throw new Error('Event not found');
       }
@@ -292,7 +267,15 @@ class EventService {
    */
   async getEventBySlug(slug) {
     try {
-      const event = await Event.findOne({ 'seo.slug': slug, status: 'published' });
+      const event = await Event.findOne({
+        where: {
+          status: 'published',
+          [Op.and]: [
+            literal(`JSON_EXTRACT(seo, '$.slug') = '${slug}'`)
+          ],
+        },
+      });
+
       if (!event) {
         throw new Error('Event not found');
       }
@@ -312,14 +295,15 @@ class EventService {
    */
   async deleteEvent(eventId) {
     try {
-      const event = await Event.findById(eventId);
+      const event = await Event.findByPk(eventId);
       if (!event) {
         throw new Error('Event not found');
       }
 
-      event.deletedAt = new Date();
-      event.status = 'archived';
-      await event.save();
+      await event.update({
+        deletedAt: new Date(),
+        status: 'archived',
+      });
 
       return true;
     } catch (error) {
@@ -336,7 +320,7 @@ class EventService {
    */
   async addEventSource(eventId, sourceData) {
     try {
-      const event = await Event.findById(eventId);
+      const event = await Event.findByPk(eventId);
       if (!event) {
         throw new Error('Event not found');
       }
@@ -361,13 +345,13 @@ class EventService {
 
       // Re-verify event with new source
       const verification = multiSourceVerification.verifyEvent(event);
-      event.verification = {
+      const updatedVerification = {
         ...event.verification,
         ...verification,
         lastVerified: new Date(),
       };
 
-      await event.save();
+      await event.update({ verification: updatedVerification });
 
       return event;
     } catch (error) {
@@ -386,16 +370,18 @@ class EventService {
       const cutoffDate = new Date();
       cutoffDate.setHours(cutoffDate.getHours() - hours);
 
-      const events = await Event.find({
-        $or: [
-          { 'sources.lastChecked': { $lt: cutoffDate } },
-          { 'sources.lastChecked': null },
-        ],
-        status: { $in: ['published', 'draft'] },
-        endDate: { $gte: new Date() }, // Only future events
+      const events = await Event.findAll({
+        where: {
+          status: { [Op.in]: ['published', 'draft'] },
+          endDate: { [Op.gte]: new Date() },
+        },
       });
 
-      return events;
+      // Filter events with stale sources (JSON field filtering)
+      return events.filter(event => {
+        const sources = event.sources || [];
+        return sources.some(s => !s.lastChecked || new Date(s.lastChecked) < cutoffDate);
+      });
     } catch (error) {
       console.error('Error getting stale events:', error);
       throw error;
@@ -412,9 +398,11 @@ class EventService {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
 
-      const events = await Event.find({
-        endDate: { $lt: cutoffDate },
-        status: { $in: ['published', 'draft'] },
+      const events = await Event.findAll({
+        where: {
+          endDate: { [Op.lt]: cutoffDate },
+          status: { [Op.in]: ['published', 'draft'] },
+        },
       });
 
       return events;
@@ -434,8 +422,7 @@ class EventService {
       const events = await this.getPastEventsToArchive(daysAgo);
 
       for (const event of events) {
-        event.status = 'archived';
-        await event.save();
+        await event.update({ status: 'archived' });
       }
 
       return events.length;
@@ -454,15 +441,16 @@ class EventService {
     try {
       const now = new Date();
 
-      const events = await Event.find({
-        featured: true,
-        status: 'published',
-        visibility: 'public',
-        startDate: { $gte: now },
-      })
-        .sort({ priority: -1, startDate: 1 })
-        .limit(limit)
-        .lean();
+      const events = await Event.findAll({
+        where: {
+          featured: true,
+          status: 'published',
+          visibility: 'public',
+          startDate: { [Op.gte]: now },
+        },
+        order: [['priority', 'DESC'], ['start_date', 'ASC']],
+        limit,
+      });
 
       return events;
     } catch (error) {
@@ -478,47 +466,63 @@ class EventService {
   async getEventStatistics() {
     try {
       const now = new Date();
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(now);
+      todayEnd.setHours(23, 59, 59, 999);
+      const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
       const [
         total,
         upcoming,
         today,
         thisWeek,
-        byCategory,
         featured,
         verified,
       ] = await Promise.all([
-        Event.countDocuments({ status: 'published' }),
-        Event.countDocuments({ status: 'published', startDate: { $gte: now } }),
-        Event.countDocuments({
-          status: 'published',
-          startDate: {
-            $gte: new Date(now.setHours(0, 0, 0, 0)),
-            $lt: new Date(now.setHours(23, 59, 59, 999)),
+        Event.count({ where: { status: 'published' } }),
+        Event.count({ where: { status: 'published', startDate: { [Op.gte]: now } } }),
+        Event.count({
+          where: {
+            status: 'published',
+            startDate: { [Op.gte]: todayStart, [Op.lt]: todayEnd },
           },
         }),
-        Event.countDocuments({
-          status: 'published',
-          startDate: {
-            $gte: now,
-            $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+        Event.count({
+          where: {
+            status: 'published',
+            startDate: { [Op.gte]: now, [Op.lte]: weekEnd },
           },
         }),
-        Event.aggregate([
-          { $match: { status: 'published' } },
-          { $group: { _id: '$primaryCategory', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ]),
-        Event.countDocuments({ featured: true, status: 'published' }),
-        Event.countDocuments({ 'verification.status': 'verified', status: 'published' }),
+        Event.count({ where: { featured: true, status: 'published' } }),
+        Event.count({
+          where: {
+            status: 'published',
+            [Op.and]: [
+              literal(`JSON_EXTRACT(verification, '$.status') = 'verified'`)
+            ],
+          },
+        }),
       ]);
+
+      // Get counts by category
+      const byCategory = await Event.findAll({
+        where: { status: 'published' },
+        attributes: [
+          'primaryCategory',
+          [fn('COUNT', col('id')), 'count'],
+        ],
+        group: ['primaryCategory'],
+        order: [[literal('count'), 'DESC']],
+        raw: true,
+      });
 
       return {
         total,
         upcoming,
         today,
         thisWeek,
-        byCategory,
+        byCategory: byCategory.map(c => ({ _id: c.primaryCategory, count: c.count })),
         featured,
         verified,
       };

@@ -1,44 +1,70 @@
-const mongoose = require('mongoose');
+const { Sequelize } = require('sequelize');
 
 /**
- * Database Configuration
+ * Database Configuration - MySQL/Sequelize
+ * Migrated from MongoDB for platform consistency
  */
 
+const sequelize = new Sequelize(
+  process.env.DATABASE_NAME || 'holidaibutler',
+  process.env.DATABASE_USER || 'root',
+  process.env.DATABASE_PASSWORD || '',
+  {
+    host: process.env.DATABASE_HOST || 'localhost',
+    port: process.env.DATABASE_PORT || 3306,
+    dialect: 'mysql',
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    pool: {
+      max: 20,
+      min: 5,
+      acquire: 30000,
+      idle: 10000,
+    },
+    define: {
+      timestamps: true,
+      underscored: true,
+      charset: 'utf8mb4',
+      collate: 'utf8mb4_unicode_ci',
+    },
+    timezone: '+01:00',
+  }
+);
+
+/**
+ * Connect to database
+ */
 const connectDB = async () => {
   try {
-    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/holidaibutler-agenda';
+    await sequelize.authenticate();
+    console.log('✅ MySQL database connected successfully');
 
-    const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    };
+    if (process.env.DB_SYNC === 'true') {
+      console.log('⚠️  DEV MODE: Syncing database models');
+      await sequelize.sync({ alter: false });
+      console.log('✅ Database models synchronized');
+    }
 
-    await mongoose.connect(MONGODB_URI, options);
-
-    console.log(`MongoDB connected: ${mongoose.connection.host}`);
-
-    // Handle connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
-    });
-
-    mongoose.connection.on('disconnected', () => {
-      console.log('MongoDB disconnected');
-    });
-
-    // Graceful shutdown
-    process.on('SIGINT', async () => {
-      await mongoose.connection.close();
-      console.log('MongoDB connection closed through app termination');
-      process.exit(0);
-    });
-
+    return true;
   } catch (error) {
-    console.error('MongoDB connection failed:', error);
-    process.exit(1);
+    console.error('❌ MySQL connection failed:', error);
+    throw error;
   }
 };
 
-module.exports = connectDB;
+/**
+ * Close database connection
+ */
+const closeDB = async () => {
+  try {
+    await sequelize.close();
+    console.log('MySQL connection closed');
+  } catch (error) {
+    console.error('Error closing MySQL connection:', error);
+  }
+};
+
+module.exports = {
+  sequelize,
+  connectDB,
+  closeDB,
+};
