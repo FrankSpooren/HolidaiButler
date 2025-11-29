@@ -21,6 +21,21 @@ import UserList from './pages/users/UserList';
 import UserForm from './pages/users/UserForm';
 import Analytics from './pages/analytics/Analytics';
 
+// Event Pages
+import EventList from './pages/events/EventList';
+
+// Reservation Pages
+import ReservationList from './pages/reservations/ReservationList';
+
+// Ticket Pages
+import TicketList from './pages/tickets/TicketList';
+
+// Booking Pages
+import BookingList from './pages/bookings/BookingList';
+
+// Transaction Pages
+import TransactionList from './pages/transactions/TransactionList';
+
 // Theme
 const theme = createTheme({
   palette: {
@@ -131,6 +146,21 @@ function App() {
             <Route path="users" element={<UserList />} />
             <Route path="users/create" element={<UserForm />} />
             <Route path="users/edit/:id" element={<UserForm />} />
+
+            {/* Event Routes */}
+            <Route path="events" element={<EventList />} />
+
+            {/* Reservation Routes */}
+            <Route path="reservations" element={<ReservationList />} />
+
+            {/* Ticket Routes */}
+            <Route path="tickets" element={<TicketList />} />
+
+            {/* Booking Routes */}
+            <Route path="bookings" element={<BookingList />} />
+
+            {/* Transaction Routes */}
+            <Route path="transactions" element={<TransactionList />} />
 
             {/* Analytics */}
             <Route path="analytics" element={<Analytics />} />

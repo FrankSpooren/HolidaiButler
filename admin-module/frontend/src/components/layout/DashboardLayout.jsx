@@ -31,7 +31,12 @@ import {
   Logout as LogoutIcon,
   Person as PersonIcon,
   ChevronLeft as ChevronLeftIcon,
-  Assessment as AssessmentIcon
+  Assessment as AssessmentIcon,
+  Event as EventIcon,
+  Restaurant as RestaurantIcon,
+  ConfirmationNumber as TicketIcon,
+  BookOnline as BookingIcon,
+  Payment as PaymentIcon
 } from '@mui/icons-material';
 import useAuthStore from '../../store/authStore';
 
@@ -76,6 +81,36 @@ export default function DashboardLayout() {
       icon: <PlaceIcon />,
       path: '/pois',
       permission: 'pois.read'
+    },
+    {
+      text: 'Events',
+      icon: <EventIcon />,
+      path: '/events',
+      permission: 'events.view'
+    },
+    {
+      text: 'Reservations',
+      icon: <RestaurantIcon />,
+      path: '/reservations',
+      permission: 'reservations.view'
+    },
+    {
+      text: 'Tickets',
+      icon: <TicketIcon />,
+      path: '/tickets',
+      permission: 'tickets.view'
+    },
+    {
+      text: 'Bookings',
+      icon: <BookingIcon />,
+      path: '/bookings',
+      permission: 'bookings.view'
+    },
+    {
+      text: 'Transactions',
+      icon: <PaymentIcon />,
+      path: '/transactions',
+      permission: 'transactions.view'
     },
     {
       text: 'Analytics',
