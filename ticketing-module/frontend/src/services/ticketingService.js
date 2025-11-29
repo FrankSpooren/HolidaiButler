@@ -46,8 +46,37 @@ export const ticketingService = {
     return response.data;
   },
 
-  async cancelBooking(bookingId) {
-    const response = await api.post(`/api/ticketing/bookings/${bookingId}/cancel`);
+  async cancelBooking(bookingId, data = {}) {
+    const response = await api.post(`/api/ticketing/bookings/${bookingId}/cancel`, data);
+    return response.data;
+  },
+
+  // Ticket Transfer
+  async transferTicket(ticketId, transferData) {
+    const response = await api.post(`/api/ticketing/tickets/${ticketId}/transfer`, transferData);
+    return response.data;
+  },
+
+  async getTransferHistory(ticketId) {
+    const response = await api.get(`/api/ticketing/tickets/${ticketId}/transfers`);
+    return response.data;
+  },
+
+  // Refund Status
+  async getRefundStatus(bookingId) {
+    const response = await api.get(`/api/ticketing/bookings/${bookingId}/refund`);
+    return response.data;
+  },
+
+  // Wallet
+  async addToWallet(ticketId, walletType) {
+    const response = await api.post(`/api/ticketing/tickets/${ticketId}/wallet`, { walletType });
+    return response.data;
+  },
+
+  // Offline sync
+  async syncOfflineTickets(tickets) {
+    const response = await api.post('/api/ticketing/tickets/sync', { tickets });
     return response.data;
   },
 
