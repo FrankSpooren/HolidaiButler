@@ -30,7 +30,13 @@ import {
   Article as ArticleIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
-  ChevronLeft as ChevronLeftIcon
+  ChevronLeft as ChevronLeftIcon,
+  Restaurant as RestaurantIcon,
+  EventNote as EventNoteIcon,
+  TableRestaurant as TableRestaurantIcon,
+  ContactPhone as ContactPhoneIcon,
+  HourglassEmpty as HourglassEmptyIcon,
+  GridOn as GridOnIcon
 } from '@mui/icons-material';
 import useAuthStore from '../../store/authStore';
 
@@ -75,6 +81,37 @@ export default function DashboardLayout() {
       icon: <PlaceIcon />,
       path: '/pois',
       permission: 'pois.read'
+    },
+    // Reservations Module
+    {
+      text: 'Restaurants',
+      icon: <RestaurantIcon />,
+      path: '/reservations/restaurants',
+      permission: 'reservations.restaurants'
+    },
+    {
+      text: 'Reservations',
+      icon: <EventNoteIcon />,
+      path: '/reservations/bookings',
+      permission: 'reservations.view'
+    },
+    {
+      text: 'Guests',
+      icon: <ContactPhoneIcon />,
+      path: '/reservations/guests',
+      permission: 'reservations.guests'
+    },
+    {
+      text: 'Waitlist',
+      icon: <HourglassEmptyIcon />,
+      path: '/reservations/waitlist',
+      permission: 'reservations.waitlist'
+    },
+    {
+      text: 'Floor Plans',
+      icon: <GridOnIcon />,
+      path: '/reservations/floor-plans',
+      permission: 'reservations.floorplans'
     },
     {
       text: 'Platform',
