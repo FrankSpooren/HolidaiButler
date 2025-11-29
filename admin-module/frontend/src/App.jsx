@@ -23,23 +23,32 @@ import Analytics from './pages/analytics/Analytics';
 
 // Event Pages
 import EventList from './pages/events/EventList';
+import EventForm from './pages/events/EventForm';
+import EventDetail from './pages/events/EventDetail';
+import EventAnalytics from './pages/events/EventAnalytics';
+import EventImportExport from './pages/events/EventImportExport';
 
 // Reservation Pages
 import ReservationList from './pages/reservations/ReservationList';
+import ReservationForm from './pages/reservations/ReservationForm';
+import ReservationDetail from './pages/reservations/ReservationDetail';
 
 // Ticket Pages
 import TicketList from './pages/tickets/TicketList';
+import TicketForm from './pages/tickets/TicketForm';
+import TicketDetail from './pages/tickets/TicketDetail';
 
 // Booking Pages
 import BookingList from './pages/bookings/BookingList';
+import BookingDetail from './pages/bookings/BookingDetail';
 
 // Transaction Pages
 import TransactionList from './pages/transactions/TransactionList';
+import TransactionDetail from './pages/transactions/TransactionDetail';
 
 // Reservations Module Pages
 import RestaurantList from './pages/reservations/RestaurantList';
 import RestaurantForm from './pages/reservations/RestaurantForm';
-import ReservationList from './pages/reservations/ReservationList';
 import GuestList from './pages/reservations/GuestList';
 import WaitlistPage from './pages/reservations/WaitlistPage';
 import FloorPlanEditor from './pages/reservations/FloorPlanEditor';
@@ -150,6 +159,25 @@ function App() {
             <Route path="pois/create" element={<POIForm />} />
             <Route path="pois/edit/:id" element={<POIForm />} />
 
+            {/* User Routes */}
+            <Route path="users" element={<UserList />} />
+            <Route path="users/create" element={<UserForm />} />
+            <Route path="users/edit/:id" element={<UserForm />} />
+
+            {/* Event Routes */}
+            <Route path="events" element={<EventList />} />
+            <Route path="events/new" element={<EventForm />} />
+            <Route path="events/edit/:id" element={<EventForm />} />
+            <Route path="events/analytics" element={<EventAnalytics />} />
+            <Route path="events/import-export" element={<EventImportExport />} />
+            <Route path="events/:id" element={<EventDetail />} />
+
+            {/* Reservation Routes */}
+            <Route path="reservations" element={<ReservationList />} />
+            <Route path="reservations/new" element={<ReservationForm />} />
+            <Route path="reservations/edit/:id" element={<ReservationForm />} />
+            <Route path="reservations/:id" element={<ReservationDetail />} />
+
             {/* Reservations Module Routes */}
             <Route path="reservations/restaurants" element={<RestaurantList />} />
             <Route path="reservations/restaurants/create" element={<RestaurantForm />} />
@@ -158,6 +186,23 @@ function App() {
             <Route path="reservations/guests" element={<GuestList />} />
             <Route path="reservations/waitlist" element={<WaitlistPage />} />
             <Route path="reservations/floor-plans" element={<FloorPlanEditor />} />
+
+            {/* Ticket Routes */}
+            <Route path="tickets" element={<TicketList />} />
+            <Route path="tickets/new" element={<TicketForm />} />
+            <Route path="tickets/edit/:id" element={<TicketForm />} />
+            <Route path="tickets/:id" element={<TicketDetail />} />
+
+            {/* Booking Routes */}
+            <Route path="bookings" element={<BookingList />} />
+            <Route path="bookings/:id" element={<BookingDetail />} />
+
+            {/* Transaction Routes */}
+            <Route path="transactions" element={<TransactionList />} />
+            <Route path="transactions/:id" element={<TransactionDetail />} />
+
+            {/* Analytics */}
+            <Route path="analytics" element={<Analytics />} />
 
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
