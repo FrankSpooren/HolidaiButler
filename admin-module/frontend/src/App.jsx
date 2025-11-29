@@ -46,6 +46,9 @@ import BookingDetail from './pages/bookings/BookingDetail';
 import TransactionList from './pages/transactions/TransactionList';
 import TransactionDetail from './pages/transactions/TransactionDetail';
 
+// Agenda Pages
+import AgendaList from './pages/agenda/AgendaList';
+
 // Reservations Module Pages
 import RestaurantList from './pages/reservations/RestaurantList';
 import RestaurantForm from './pages/reservations/RestaurantForm';
@@ -200,6 +203,9 @@ function App() {
             {/* Transaction Routes */}
             <Route path="transactions" element={<TransactionList />} />
             <Route path="transactions/:id" element={<TransactionDetail />} />
+
+            {/* Agenda Routes */}
+            <Route path="agenda" element={<AgendaList />} />
 
             {/* Analytics */}
             <Route path="analytics" element={<Analytics />} />
