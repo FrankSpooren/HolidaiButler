@@ -412,14 +412,14 @@ Met de goedgekeurde hybride aanpak en gefaseerde implementatie kan HolidaiButler
 
 ## 10. Implementatie Status
 
-### Fase 1: Foundation - **IN UITVOERING**
+### Fase 1: Foundation - **✅ VOLTOOID**
 | Taak | Status | Prioriteit | Datum |
 |------|--------|------------|-------|
 | Fix JWT bug in platform-core | ✅ Voltooid | **P1 - BLOCKER** | 30-11-2025 |
 | Fix SQL injection in publicPOI.js | ✅ Voltooid | **P1 - BLOCKER** | 30-11-2025 |
 | Merge ORIGINAL auth middleware | ✅ Voltooid | Hoog | 30-11-2025 |
-| Database schema alignment | ⏳ Te starten | Hoog | - |
-| Basic integration tests | ⏳ Te starten | Medium | - |
+| Database schema alignment | ✅ Voltooid | Hoog | 30-11-2025 |
+| Basic integration tests | ✅ Voltooid | Medium | 30-11-2025 |
 
 #### Security Fixes Details (30-11-2025):
 - **JWT Bug:** `platform-core/src/middleware/auth.js` - Changed `process.env.getJwtSecret()` → `process.env.JWT_SECRET`
@@ -436,6 +436,57 @@ Het `platform-core/src/middleware/auth.js` bestand is uitgebreid van 125 naar 73
 - **Token Generation:** `generateToken()`, `generateRefreshToken()`, `generateAdminToken()`
 - **Backwards Compatible:** Alle bestaande exports behouden, `verifyToken` alias toegevoegd
 
+#### Database Schema Alignment Details (30-11-2025):
+Unified schema gecreëerd die ORIGINAL en NEW structuren combineert:
+
+**Nieuwe Migratie:** `003_unified_schema_alignment.sql`
+- **RBAC Systeem:** `roles`, `permissions`, `role_permissions` tabellen
+- **Users Tabel:** Gebaseerd op ORIGINAL backend met Sequelize model
+- **User Permissions:** Individuele permission overrides met expiration
+- **Sessions:** JWT session tracking
+- **Favorites:** User favorites sync (van localStorage naar DB)
+- **POI Q&A:** Knowledge base voor HoliBot chatbot
+- **Reviews:** User review systeem met moderatie
+- **Audit Log:** Security audit trail
+- **API Keys:** External integration keys
+- **Notification Settings:** User notification preferences
+
+**Nieuwe Sequelize Models:**
+- `User.js` - Customer accounts met password hashing
+- `Role.js` - RBAC rollen
+- `Permission.js` - RBAC permissies
+- `models/index.js` - Centraal export met associations
+
+**Standaard Rollen:**
+| Rol | Beschrijving |
+|-----|--------------|
+| super_admin | Volledige systeemtoegang |
+| admin | Platform administratie |
+| moderator | Content moderatie |
+| poi_owner | Eigenaar beheert eigen POI(s) |
+| user | Standaard geregistreerde gebruiker |
+| guest | Niet-geregistreerde bezoeker |
+
+**Documentatie:** `DATABASE_SCHEMA_OVERVIEW.md`
+
+#### Integration Tests Details (30-11-2025):
+Comprehensive test suite toegevoegd voor platform-core:
+
+**Test Bestanden:**
+- `src/middleware/__tests__/auth.test.js` - Auth middleware tests (25+ tests)
+- `src/routes/__tests__/publicPOI.test.js` - Public POI routes tests (20+ tests)
+- `src/models/__tests__/User.test.js` - User model tests (15+ tests)
+- `tests/setup.js` - Enhanced test configuration
+
+**Test Coverage:**
+| Component | Tests | Focus |
+|-----------|-------|-------|
+| Auth Middleware | 25+ | JWT verification, RBAC, token generation |
+| Public POI Routes | 20+ | API responses, security, sample data |
+| User Model | 15+ | Password hashing, validation, security |
+
+**Run Tests:** `cd platform-core && npm test`
+
 ### Fase 2-4: Zie sectie 5 voor details
 
 ---
@@ -443,4 +494,5 @@ Het `platform-core/src/middleware/auth.js` bestand is uitgebreid van 125 naar 73
 **Document opgesteld door:** Claude Code Analysis
 **Goedgekeurd door:** Frank Spooren
 **Datum goedkeuring:** 30 november 2025
-**Volgende stap:** Start Fase 1 - Security Fixes
+**Fase 1 voltooid:** 30 november 2025
+**Volgende stap:** Start Fase 2 - Frontend Integration
