@@ -7,21 +7,47 @@ import { Sequelize } from 'sequelize';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 // Get directory name for ESM - MUST be before dotenv.config()
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load .env FIRST - before any other code
+// Load .env FIRST - with robust path handling for Windows
 const envPath = path.resolve(__dirname, '../../.env');
-dotenv.config({ path: envPath });
 
-// Debug: Log the loaded values
-console.log('[Database Config] Loading from:', envPath);
-console.log('[Database Config] DB_USER:', process.env.DB_USER || '(not set, using root)');
-console.log('[Database Config] DB_HOST:', process.env.DB_HOST || '(not set, using localhost)');
-console.log('[Database Config] DB_NAME:', process.env.DB_NAME || '(not set, using holidaibutler)');
+// Check if .env file exists and load it
+if (fs.existsSync(envPath)) {
+  const result = dotenv.config({ path: envPath });
+  if (result.error) {
+    console.warn('[Database Config] Warning loading .env:', result.error.message);
+  } else {
+    console.log('[Database Config] Loaded .env from:', envPath);
+  }
+} else {
+  console.warn('[Database Config] .env file not found at:', envPath);
+  // Try alternative paths
+  const altPaths = [
+    path.join(process.cwd(), '.env'),
+    path.resolve(__dirname, '../../../.env'),
+  ];
+  for (const altPath of altPaths) {
+    if (fs.existsSync(altPath)) {
+      dotenv.config({ path: altPath });
+      console.log('[Database Config] Loaded .env from alternate path:', altPath);
+      break;
+    }
+  }
+}
+
+// Debug: Log the loaded values (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('[Database Config] Environment:', process.env.NODE_ENV || 'not set');
+  console.log('[Database Config] DB_USER:', process.env.DB_USER ? '***' : '(not set, using root)');
+  console.log('[Database Config] DB_HOST:', process.env.DB_HOST || '(not set, using localhost)');
+  console.log('[Database Config] DB_NAME:', process.env.DB_NAME || '(not set, using holidaibutler)');
+}
 
 // MySQL Connection (Hetzner - Central Database)
 // Use explicit defaults as fallbacks
@@ -82,30 +108,53 @@ export async function connectMongoDB() {
   }
 }
 
-// Initialize all database connections
+// Helper function to wait
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Initialize all database connections with retry logic
 export async function initializeDatabase() {
-  try {
-    // Test MySQL connection
-    await mysqlSequelize.authenticate();
-    console.log('✅ MySQL (Hetzner) connected successfully');
+  const maxRetries = parseInt(process.env.DB_CONNECT_RETRIES || '5', 10);
+  const retryDelay = parseInt(process.env.DB_CONNECT_RETRY_DELAY || '3000', 10);
 
-    // Sync models (in production, use migrations instead)
-    if (process.env.NODE_ENV !== 'production') {
-      await mysqlSequelize.sync({ alter: false });
-      console.log('✅ MySQL models synchronized');
+  let lastError = null;
+
+  // MySQL connection with retry
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[Database] MySQL connection attempt ${attempt}/${maxRetries}...`);
+      await mysqlSequelize.authenticate();
+      console.log('✅ MySQL connected successfully');
+
+      // Sync models (in production, use migrations instead)
+      if (process.env.NODE_ENV !== 'production') {
+        await mysqlSequelize.sync({ alter: false });
+        console.log('✅ MySQL models synchronized');
+      }
+
+      // Connect to MongoDB (optional)
+      await connectMongoDB();
+
+      return {
+        mysql: mysqlSequelize,
+        mongodb: mongoConnection,
+      };
+    } catch (error) {
+      lastError = error;
+      const isConnectionError = error.name === 'SequelizeConnectionRefusedError' ||
+                                error.name === 'SequelizeConnectionError' ||
+                                error.original?.code === 'ECONNREFUSED';
+
+      if (isConnectionError && attempt < maxRetries) {
+        console.warn(`[Database] Connection failed, retrying in ${retryDelay/1000}s... (${attempt}/${maxRetries})`);
+        await sleep(retryDelay);
+      } else {
+        console.error('❌ Database initialization failed:', error.message || error);
+        throw error;
+      }
     }
-
-    // Connect to MongoDB
-    await connectMongoDB();
-
-    return {
-      mysql: mysqlSequelize,
-      mongodb: mongoConnection,
-    };
-  } catch (error) {
-    console.error('❌ Database initialization failed:', error);
-    throw error;
   }
+
+  throw lastError;
 }
 
 // Graceful shutdown

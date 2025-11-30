@@ -3,12 +3,20 @@
  * Central Integration Hub - Main Entry Point
  */
 
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
+// IMPORTANT: Load environment variables FIRST, before any other imports
+// This ensures all modules have access to env vars when they initialize
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Now import all other modules (they will have access to env vars)
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
 import logger from './utils/logger.js';
 import { initializeDatabase } from './config/database.js';
 import { initializeEventBus } from './services/eventBus.js';
@@ -25,13 +33,6 @@ import { requestLogger } from './middleware/requestLogger.js';
 import prometheusMiddleware, { metricsEndpoint } from './middleware/prometheus.js';
 import correlationIdMiddleware from './middleware/correlationId.js';
 import metricsService from './services/metrics.js';
-
-// Get directory name for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load .env from platform-core root
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -125,13 +126,15 @@ process.on('SIGINT', async () => {
  */
 initializePlatform().then(() => {
   app.listen(PORT, () => {
+    const envDisplay = (process.env.NODE_ENV || 'development').toUpperCase().padEnd(42);
+    const portDisplay = `http://localhost:${PORT}`.padEnd(28);
     logger.info(`
     ╔═══════════════════════════════════════════════════════════╗
     ║   🏝️  HolidaiButler Platform Core                        ║
     ║   Central Integration Hub                                ║
     ╠═══════════════════════════════════════════════════════════╣
-    ║   Environment: ${process.env.NODE_ENV?.toUpperCase().padEnd(42)}║
-    ║   API Gateway: http://localhost:${PORT}${' '.repeat(22)}║
+    ║   Environment: ${envDisplay}║
+    ║   API Gateway: ${portDisplay}║
     ║   Status: RUNNING                                        ║
     ╚═══════════════════════════════════════════════════════════╝
     `);
