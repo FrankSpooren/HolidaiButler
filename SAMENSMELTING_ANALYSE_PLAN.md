@@ -412,14 +412,14 @@ Met de goedgekeurde hybride aanpak en gefaseerde implementatie kan HolidaiButler
 
 ## 10. Implementatie Status
 
-### Fase 1: Foundation - **BIJNA VOLTOOID**
+### Fase 1: Foundation - **✅ VOLTOOID**
 | Taak | Status | Prioriteit | Datum |
 |------|--------|------------|-------|
 | Fix JWT bug in platform-core | ✅ Voltooid | **P1 - BLOCKER** | 30-11-2025 |
 | Fix SQL injection in publicPOI.js | ✅ Voltooid | **P1 - BLOCKER** | 30-11-2025 |
 | Merge ORIGINAL auth middleware | ✅ Voltooid | Hoog | 30-11-2025 |
 | Database schema alignment | ✅ Voltooid | Hoog | 30-11-2025 |
-| Basic integration tests | ⏳ Te starten | Medium | - |
+| Basic integration tests | ✅ Voltooid | Medium | 30-11-2025 |
 
 #### Security Fixes Details (30-11-2025):
 - **JWT Bug:** `platform-core/src/middleware/auth.js` - Changed `process.env.getJwtSecret()` → `process.env.JWT_SECRET`
@@ -469,6 +469,24 @@ Unified schema gecreëerd die ORIGINAL en NEW structuren combineert:
 
 **Documentatie:** `DATABASE_SCHEMA_OVERVIEW.md`
 
+#### Integration Tests Details (30-11-2025):
+Comprehensive test suite toegevoegd voor platform-core:
+
+**Test Bestanden:**
+- `src/middleware/__tests__/auth.test.js` - Auth middleware tests (25+ tests)
+- `src/routes/__tests__/publicPOI.test.js` - Public POI routes tests (20+ tests)
+- `src/models/__tests__/User.test.js` - User model tests (15+ tests)
+- `tests/setup.js` - Enhanced test configuration
+
+**Test Coverage:**
+| Component | Tests | Focus |
+|-----------|-------|-------|
+| Auth Middleware | 25+ | JWT verification, RBAC, token generation |
+| Public POI Routes | 20+ | API responses, security, sample data |
+| User Model | 15+ | Password hashing, validation, security |
+
+**Run Tests:** `cd platform-core && npm test`
+
 ### Fase 2-4: Zie sectie 5 voor details
 
 ---
@@ -476,4 +494,5 @@ Unified schema gecreëerd die ORIGINAL en NEW structuren combineert:
 **Document opgesteld door:** Claude Code Analysis
 **Goedgekeurd door:** Frank Spooren
 **Datum goedkeuring:** 30 november 2025
-**Volgende stap:** Basic integration tests of start Fase 2
+**Fase 1 voltooid:** 30 november 2025
+**Volgende stap:** Start Fase 2 - Frontend Integration
