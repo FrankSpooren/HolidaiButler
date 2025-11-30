@@ -1,0 +1,219 @@
+[
+  {
+    "name": "Basic Follow-up with Display Flags",
+    "iteration": "1.1",
+    "context": "Testing display flags in basic follow-up scenario",
+    "conversation": [
+      {
+        "user": "Italian restaurants",
+        "expected": {
+          "resultCount": 5,
+          "displayCardCount": 5,
+          "displayReasons": ["search_result", "search_result", "search_result", "search_result", "search_result"],
+          "textResponseContains": ["Italian", "restaurant"]
+        }
+      },
+      {
+        "user": "Is the first one open?",
+        "expected": {
+          "resultCount": 1,
+          "displayCardCount": 1,
+          "displayReasons": ["requested"],
+          "textResponseContains": ["open", "closed"],
+          "textResponse": true
+        }
+      }
+    ]
+  },
+  {
+    "name": "Opening Hours Follow-up",
+    "iteration": "1.2",
+    "context": "Testing opening hours in follow-up questions",
+    "conversation": [
+      {
+        "user": "What restaurants are open right now?",
+        "expected": {
+          "resultCount": 5,
+          "displayCardCount": 5,
+          "textResponseContains": ["open", "restaurant"]
+        }
+      },
+      {
+        "user": "Is the first one still open?",
+        "expected": {
+          "resultCount": 1,
+          "displayCardCount": 1,
+          "textResponseContains": ["open", "closed"],
+          "textResponse": true
+        }
+      }
+    ]
+  },
+  {
+    "name": "Closed POI with Alternatives",
+    "iteration": "2.1",
+    "context": "Testing alternative POI suggestions when requested POI is closed",
+    "conversation": [
+      {
+        "user": "Restaurants with paella",
+        "expected": {
+          "resultCount": 5,
+          "displayCardCount": 5,
+          "textResponseContains": ["paella", "restaurant"]
+        }
+      },
+      {
+        "user": "Is the first one open now?",
+        "expected": {
+          "resultCount": 1,
+          "displayCardCount": 1,
+          "textResponse": true,
+          "textResponseContains": ["open", "closed"]
+        }
+      },
+      {
+        "user": "What else is open?",
+        "expected": {
+          "hasAlternatives": true,
+          "textResponseContains": ["However", "open"],
+          "textResponse": true
+        }
+      }
+    ]
+  },
+  {
+    "name": "Prevent POI Repetition",
+    "iteration": "3.1",
+    "context": "Testing that previously displayed POIs are not repeated",
+    "conversation": [
+      {
+        "user": "Restaurants",
+        "expected": {
+          "resultCount": 5,
+          "displayCardCount": 5
+        }
+      },
+      {
+        "user": "Tell me about the first one",
+        "expected": {
+          "resultCount": 1,
+          "displayCardCount": 1,
+          "displayReasons": ["requested"]
+        }
+      },
+      {
+        "user": "What about Italian restaurants?",
+        "expected": {
+          "resultCount": 5,
+          "displayCardCount": 5
+        }
+      }
+    ]
+  },
+  {
+    "name": "Multi-turn Context",
+    "iteration": "3.2",
+    "context": "Testing context maintenance across multiple turns",
+    "conversation": [
+      {
+        "user": "Restaurants",
+        "expected": {
+          "resultCount": 5,
+          "displayCardCount": 5
+        }
+      },
+      {
+        "user": "Is the first one open?",
+        "expected": {
+          "resultCount": 1,
+          "displayCardCount": 1
+        }
+      },
+      {
+        "user": "What about the second one?",
+        "expected": {
+          "resultCount": 1,
+          "displayCardCount": 1
+        }
+      }
+    ]
+  },
+  {
+    "name": "Multi-Criteria Filtering",
+    "iteration": "4.1",
+    "context": "Testing filtering by multiple criteria simultaneously",
+    "conversation": [
+      {
+        "user": "Vegetarian restaurant that is wheelchair accessible",
+        "expected": {
+          "resultCount": 5,
+          "displayCardCount": 5,
+          "textResponseContains": ["vegetarian", "wheelchair", "accessible"]
+        }
+      }
+    ]
+  },
+  {
+    "name": "Q&A-Based Discovery",
+    "iteration": "4.2",
+    "context": "Testing Q&A-based search and responses",
+    "conversation": [
+      {
+        "user": "Where can I get authentic paella?",
+        "expected": {
+          "resultCount": 5,
+          "displayCardCount": 5,
+          "textResponseContains": ["paella"]
+        }
+      },
+      {
+        "user": "Do they make it fresh?",
+        "expected": {
+          "resultCount": 1,
+          "displayCardCount": 1,
+          "textResponseContains": ["fresh", "daily", "prepare"]
+        }
+      }
+    ]
+  },
+  {
+    "name": "Progressive Filtering",
+    "iteration": "5.1",
+    "context": "Testing progressive filter application across conversation",
+    "conversation": [
+      {
+        "user": "I want to have dinner tonight",
+        "expected": {
+          "resultCount": 5,
+          "displayCardCount": 5,
+          "textResponseContains": ["dinner", "tonight"]
+        }
+      },
+      {
+        "user": "Something romantic",
+        "expected": {
+          "resultCount": 5,
+          "displayCardCount": 5,
+          "textResponseContains": ["romantic"]
+        }
+      },
+      {
+        "user": "With sea views",
+        "expected": {
+          "resultCount": 5,
+          "displayCardCount": 5,
+          "textResponseContains": ["sea", "view"]
+        }
+      },
+      {
+        "user": "Do they need reservations?",
+        "expected": {
+          "resultCount": 1,
+          "displayCardCount": 1,
+          "textResponseContains": ["reservation"]
+        }
+      }
+    ]
+  }
+]
+
