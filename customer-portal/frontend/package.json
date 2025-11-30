@@ -33,7 +33,7 @@
     "swiper": "^11.0.5",
     "react-spring": "^9.7.3",
     "@react-oauth/google": "^0.12.1",
-    "react-facebook-login": "^4.1.1"
+    "@greatsumini/react-facebook-login": "^3.3.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.45",
