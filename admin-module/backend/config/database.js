@@ -1,7 +1,22 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+// Get directory name for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env from the backend root directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Debug: Log database config (development only)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('[Database Config] Loading from:', path.resolve(__dirname, '../.env'));
+  console.log('[Database Config] DATABASE_HOST:', process.env.DATABASE_HOST || '(not set, using localhost)');
+  console.log('[Database Config] DATABASE_USER:', process.env.DATABASE_USER || '(not set, using root)');
+  console.log('[Database Config] DATABASE_PASSWORD:', process.env.DATABASE_PASSWORD ? '***set***' : '(not set!)');
+}
 
 // Database configuration
 const config = {
