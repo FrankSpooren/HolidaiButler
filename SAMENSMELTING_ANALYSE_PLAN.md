@@ -1,8 +1,23 @@
 # HolidaiButler Platform Samensmelting Analyse & Implementatieplan
 
 **Datum:** 30 november 2025
-**Versie:** 1.0
-**Status:** Ter besluitvorming
+**Versie:** 2.0
+**Status:** ✅ GOEDGEKEURD
+
+---
+
+## Goedgekeurde Beslissingen (30-11-2025)
+
+| Beslispunt | Keuze | Goedgekeurd |
+|------------|-------|-------------|
+| **1. Frontend Framework** | ORIGINAL (React 19 + TypeScript + Tailwind) | ✅ |
+| **2. Backend ORM** | Sequelize | ✅ |
+| **3. Widget API Deployment** | Standalone service (eigen port :3002) | ✅ |
+| **4. Release Prioriteit** | Volledig platform (alle modules) | ✅ |
+| **Prioriteit 1** | Security fixes (JWT bug + SQL injection) | ✅ |
+
+**Goedgekeurd door:** Frank Spooren
+**Datum goedkeuring:** 30 november 2025
 
 ---
 
@@ -126,18 +141,19 @@ Dit document presenteert een grondige analyse van twee ontwikkeltrajecten van he
 
 ---
 
-## 2. Definitieve Architectuur
+## 2. Definitieve Architectuur (GOEDGEKEURD)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    HolidaiButler Platform v2.0                       │
 │                  (Enterprise-Level Architecture)                     │
+│                        ✅ GOEDGEKEURD                                │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         FRONTEND LAYER                               │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Customer Portal (ORIGINAL base + NEW enhancements)                  │
+│  Customer Portal (ORIGINAL)                                          │
 │  ├─ React 19 + TypeScript + Vite 7                                  │
 │  ├─ Tailwind CSS (Mediterrane branding)                             │
 │  ├─ Framer Motion (NEW animaties)                                   │
@@ -151,39 +167,47 @@ Dit document presenteert een grondige analyse van twee ontwikkeltrajecten van he
 │  ├─ React 18 + MUI                                                  │
 │  └─ POI Management (ORIGINAL implementatie)                         │
 │                                                                      │
-│  HoliBot Widget (ORIGINAL)                                          │
-│  └─ 11 components, Mistral AI integration                           │
+│  HoliBot Widget (ORIGINAL - embedded in Customer Portal)            │
+│  └─ 11 components, connects to standalone API                       │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         BACKEND LAYER                                │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Platform Core (NEW + ORIGINAL auth fixes)                          │
-│  ├─ API Gateway (proxy to modules)                                  │
-│  ├─ Event Bus (Redis Pub/Sub)                                       │
-│  ├─ POI Discovery & Classification                                  │
-│  ├─ Authentication (ORIGINAL middleware)                            │
-│  └─ Prometheus Metrics                                              │
 │                                                                      │
-│  Widget API / HoliBot (ORIGINAL)                                    │
-│  ├─ Mistral AI Integration                                          │
-│  ├─ ChromaDB Vector Search                                          │
-│  ├─ Multi-turn Conversations                                        │
-│  └─ Intent Recognition                                              │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  Platform Core (:3001) - Sequelize ORM                      │    │
+│  │  ├─ API Gateway (proxy to modules)                          │    │
+│  │  ├─ Event Bus (Redis Pub/Sub)                               │    │
+│  │  ├─ POI Discovery & Classification                          │    │
+│  │  ├─ Authentication (ORIGINAL middleware - FIXED)            │    │
+│  │  └─ Prometheus Metrics                                      │    │
+│  └─────────────────────────────────────────────────────────────┘    │
 │                                                                      │
-│  Modules:                                                            │
-│  ├─ Admin Module (HYBRID)                                           │
-│  ├─ Ticketing Module (NEW)                                          │
-│  ├─ Payment Module (NEW - Adyen)                                    │
-│  ├─ Reservations Module (NEW)                                       │
-│  ├─ Agenda Module (NEW)                                             │
-│  └─ Sales Pipeline (NEW)                                            │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  HoliBot API (:3002) - STANDALONE                           │    │
+│  │  ├─ Mistral AI Integration                                  │    │
+│  │  ├─ ChromaDB Vector Search                                  │    │
+│  │  ├─ Multi-turn Conversations                                │    │
+│  │  └─ Intent Recognition                                      │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                 │
+│  │Admin (:3003) │ │Ticket (:3004)│ │Payment(:3005)│                 │
+│  │   HYBRID     │ │    NEW       │ │  NEW-Adyen   │                 │
+│  └──────────────┘ └──────────────┘ └──────────────┘                 │
+│                                                                      │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                 │
+│  │Reserv.(:3006)│ │Agenda (:3007)│ │Sales  (:3008)│                 │
+│  │    NEW       │ │    NEW       │ │    NEW       │                 │
+│  └──────────────┘ └──────────────┘ └──────────────┘                 │
+│                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         DATA LAYER                                   │
 ├─────────────────────────────────────────────────────────────────────┤
-│  MySQL (Hetzner - pxoziy_db1)                                       │
+│  MySQL (Hetzner - pxoziy_db1) - Via Sequelize ORM                   │
 │  ├─ POIs, Categories, Q&As                                          │
 │  ├─ Users, Sessions, Permissions                                    │
 │  ├─ Bookings, Tickets, Transactions                                 │
@@ -194,9 +218,26 @@ Dit document presenteert een grondige analyse van twee ontwikkeltrajecten van he
 │  ├─ Event Bus (Pub/Sub)                                             │
 │  └─ Rate Limiting                                                   │
 │                                                                      │
-│  ChromaDB                                                            │
-│  └─ POI Vector Embeddings (HoliBot)                                 │
+│  ChromaDB (voor HoliBot API)                                        │
+│  └─ POI Vector Embeddings                                           │
 └─────────────────────────────────────────────────────────────────────┘
+
+Service Ports Overview:
+┌────────────────────┬───────┐
+│ Service            │ Port  │
+├────────────────────┼───────┤
+│ Platform Core      │ 3001  │
+│ HoliBot API        │ 3002  │
+│ Admin Module       │ 3003  │
+│ Ticketing Module   │ 3004  │
+│ Payment Module     │ 3005  │
+│ Reservations       │ 3006  │
+│ Agenda Module      │ 3007  │
+│ Sales Pipeline     │ 3008  │
+│ MySQL              │ 3306  │
+│ Redis              │ 6379  │
+│ ChromaDB           │ 8000  │
+└────────────────────┴───────┘
 ```
 
 ---
@@ -303,35 +344,32 @@ Dit document presenteert een grondige analyse van twee ontwikkeltrajecten van he
 
 ---
 
-## 7. Beslispunten voor Eigenaar
+## 7. Beslispunten - GOEDGEKEURD
 
-### Beslissing 1: Frontend Framework
-**Opties:**
-- A) ORIGINAL (React 19 + TypeScript + Tailwind)
-- B) NEW (React 18 + JavaScript + MUI)
+### Beslissing 1: Frontend Framework ✅
+**Gekozen:** ORIGINAL (React 19 + TypeScript + Tailwind)
+- Nieuwere stack, betere typing
+- Mediterrane branding behouden
+- 114 componenten, 6 talen, WCAG 2.1 compliant
 
-**Aanbeveling:** Optie A - Nieuwere stack, betere typing, Mediterrane branding
+### Beslissing 2: Backend ORM ✅
+**Gekozen:** Sequelize ORM
+- Betere maintainability
+- Migrations support
+- Consistentie met NEW modules
 
-### Beslissing 2: Backend ORM
-**Opties:**
-- A) Raw MySQL queries (ORIGINAL style)
-- B) Sequelize ORM (NEW style)
+### Beslissing 3: Widget API Deployment ✅
+**Gekozen:** Standalone service (port :3002)
+- Onafhankelijke schaalbaarheid
+- Fault isolation (chatbot crash treft niet platform)
+- Onafhankelijke deployments mogelijk
 
-**Aanbeveling:** Optie B - Betere maintainability, migrations support
-
-### Beslissing 3: Widget API Deployment
-**Opties:**
-- A) Standalone service (eigen port)
-- B) Geïntegreerd in platform-core
-
-**Aanbeveling:** Optie A - Betere schaalbaarheid, onafhankelijke scaling
-
-### Beslissing 4: Prioriteit eerste release
-**Opties:**
-- A) Volledig platform (alle modules)
-- B) MVP (Customer portal + HoliBot + Admin basics)
-
-**Aanbeveling:** Optie B - Sneller naar markt, iteratief uitbreiden
+### Beslissing 4: Release Prioriteit ✅
+**Gekozen:** Volledig platform (alle modules)
+- Customer Portal + Admin + HoliBot
+- Ticketing + Payment + Reservations
+- Agenda + Sales Pipeline
+- Enterprise-complete vanaf dag 1
 
 ---
 
@@ -368,10 +406,26 @@ De samensmelting van ORIGINAL en NEW resulteert in een **enterprise-level platfo
 - **ORIGINAL:** Mediterrane branding, meertaligheid, HoliBot AI, POI templates, WCAG compliance
 - **NEW:** Enterprise modules, Adyen payments, Firebase notifications, API Gateway, monitoring
 
-Met de voorgestelde hybride aanpak en gefaseerde implementatie kan HolidaiButler uitgroeien tot een **state-of-the-art tourism platform** klaar voor Europese expansie.
+Met de goedgekeurde hybride aanpak en gefaseerde implementatie kan HolidaiButler uitgroeien tot een **state-of-the-art tourism platform** klaar voor Europese expansie.
+
+---
+
+## 10. Implementatie Status
+
+### Fase 1: Foundation - **VOLGENDE STAP**
+| Taak | Status | Prioriteit |
+|------|--------|------------|
+| Fix JWT bug in platform-core | ⏳ Te starten | **P1 - BLOCKER** |
+| Fix SQL injection in publicPOI.js | ⏳ Te starten | **P1 - BLOCKER** |
+| Merge ORIGINAL auth middleware | ⏳ Te starten | Hoog |
+| Database schema alignment | ⏳ Te starten | Hoog |
+| Basic integration tests | ⏳ Te starten | Medium |
+
+### Fase 2-4: Zie sectie 5 voor details
 
 ---
 
 **Document opgesteld door:** Claude Code Analysis
-**Ter goedkeuring:** Frank Spooren
-**Volgende stap:** Besluitvorming op de 7 beslispunten
+**Goedgekeurd door:** Frank Spooren
+**Datum goedkeuring:** 30 november 2025
+**Volgende stap:** Start Fase 1 - Security Fixes
