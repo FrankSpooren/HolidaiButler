@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: holidaibutler_mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: holidai2024
+      MYSQL_DATABASE: holidaibutler
+      MYSQL_USER: holidaibutler
+      MYSQL_PASSWORD: holidai2024
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - holidaibutler_network
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Redis Cache
+  redis:
+    image: redis:7.2-alpine
+    container_name: holidaibutler_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - holidaibutler_network
+
+  # MongoDB Database (for services that need it)
+  mongodb:
+    image: mongo:7.0
+    container_name: holidaibutler_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: holidai2024
+      MONGO_INITDB_DATABASE: holidaibutler
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - holidaibutler_network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  mongodb_data:
+    driver: local
+
+networks:
+  holidaibutler_network:
+    driver: bridge
