@@ -1,0 +1,224 @@
+/**
+ * ChatMessage Styles
+ * Phase 6: Mistral AI Integration ✅
+ *
+ * Design: WhatsApp/iMessage-inspired chat bubbles
+ * - User messages: Right-aligned, gold gradient
+ * - Assistant messages: Left-aligned, white background
+ * - Avatar for assistant
+ * - Timestamp below message
+ */
+
+.chat-message {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  animation: message-slide-in 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* User messages - Right aligned */
+.chat-message--user {
+  flex-direction: row-reverse;
+}
+
+.chat-message--user .chat-message-content {
+  align-items: flex-end;
+}
+
+/* Assistant messages - Left aligned */
+.chat-message--assistant {
+  flex-direction: row;
+}
+
+.chat-message--assistant .chat-message-content {
+  align-items: flex-start;
+}
+
+/* Avatar (Assistant only) */
+.chat-message-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #2C3E50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.chat-message-avatar-img {
+  width: 120%;
+  height: 120%;
+  object-fit: cover;
+  object-position: center 30%;
+  transform: translateX(-10%);
+}
+
+/* Content wrapper */
+.chat-message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 75%;
+}
+
+/* Message bubble */
+.chat-message-bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.chat-message--user .chat-message-bubble {
+  background: linear-gradient(135deg, #D4AF37 0%, #C49B2A 100%);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-message--assistant .chat-message-bubble {
+  background: white;
+  color: #2C3E50;
+  border: 1px solid #E5E7EB;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Message text */
+.chat-message-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* Meta (timestamp) */
+.chat-message-meta {
+  padding: 0 4px;
+}
+
+.chat-message-time {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+/* Typing indicator */
+.chat-message-typing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.chat-message-typing span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9CA3AF;
+  animation: typing-bounce 1.4s ease-in-out infinite;
+}
+
+.chat-message-typing span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.chat-message-typing span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.chat-message-typing span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Animations */
+@keyframes message-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .chat-message-content {
+    max-width: 85%;
+  }
+
+  .chat-message-avatar {
+    width: 32px;
+    height: 32px;
+    border: 2px solid #2C3E50;
+  }
+
+  .chat-message-bubble {
+    padding: 8px 12px;
+  }
+
+  .chat-message-text {
+    font-size: 14px;
+  }
+}
+
+/* POI Clickable Links - Phase 7 ✅ */
+.chat-message-poi-link {
+  display: inline;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: #7FA594;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chat-message-poi-link:hover {
+  color: #5E8B7E;
+  text-decoration-thickness: 2px;
+}
+
+.chat-message-poi-link:active {
+  transform: scale(0.98);
+}
+
+.chat-message-poi-link:focus {
+  outline: 2px solid #7FA594;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Accessibility - Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .chat-message {
+    animation: none;
+  }
+
+  .chat-message-typing span {
+    animation: none;
+  }
+
+  .chat-message-poi-link {
+    transition: none;
+  }
+
+  .chat-message-poi-link:active {
+    transform: none;
+  }
+}
