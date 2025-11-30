@@ -412,14 +412,18 @@ Met de goedgekeurde hybride aanpak en gefaseerde implementatie kan HolidaiButler
 
 ## 10. Implementatie Status
 
-### Fase 1: Foundation - **VOLGENDE STAP**
-| Taak | Status | Prioriteit |
-|------|--------|------------|
-| Fix JWT bug in platform-core | ⏳ Te starten | **P1 - BLOCKER** |
-| Fix SQL injection in publicPOI.js | ⏳ Te starten | **P1 - BLOCKER** |
-| Merge ORIGINAL auth middleware | ⏳ Te starten | Hoog |
-| Database schema alignment | ⏳ Te starten | Hoog |
-| Basic integration tests | ⏳ Te starten | Medium |
+### Fase 1: Foundation - **IN UITVOERING**
+| Taak | Status | Prioriteit | Datum |
+|------|--------|------------|-------|
+| Fix JWT bug in platform-core | ✅ Voltooid | **P1 - BLOCKER** | 30-11-2025 |
+| Fix SQL injection in publicPOI.js | ✅ Voltooid | **P1 - BLOCKER** | 30-11-2025 |
+| Merge ORIGINAL auth middleware | ⏳ Te starten | Hoog | - |
+| Database schema alignment | ⏳ Te starten | Hoog | - |
+| Basic integration tests | ⏳ Te starten | Medium | - |
+
+#### Security Fixes Details (30-11-2025):
+- **JWT Bug:** `platform-core/src/middleware/auth.js` - Changed `process.env.getJwtSecret()` → `process.env.JWT_SECRET`
+- **SQL Injection:** `platform-core/src/routes/publicPOI.js` - Replaced raw SQL literal with Sequelize `Op.or` operators
 
 ### Fase 2-4: Zie sectie 5 voor details
 
