@@ -8,6 +8,8 @@ import 'react-toastify/dist/ReactToastify.css';
 // Components
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { HoliBotWidget } from './components/HoliBot';
+import { HoliBotProvider } from './contexts/HoliBotContext';
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -144,9 +146,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <BrowserRouter>
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
+        <HoliBotProvider>
+          <BrowserRouter>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
               {/* Public routes with layout */}
               <Route element={<Layout />}>
                 <Route index element={<HomePage />} />
@@ -189,9 +192,13 @@ function App() {
 
               {/* Catch all */}
               <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
+              </Routes>
+            </Suspense>
+
+            {/* HoliBot Chat Widget */}
+            <HoliBotWidget />
+          </BrowserRouter>
+        </HoliBotProvider>
 
         {/* Toast Notifications */}
         <ToastContainer
