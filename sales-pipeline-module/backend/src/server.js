@@ -12,8 +12,16 @@ import { createServer } from 'http';
 import { Server as SocketIO } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Load environment variables
+// Get current directory for env loading
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment from root .env first
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+// Also load local .env for overrides
 dotenv.config();
 
 import { sequelize, initializeDatabase } from './models/index.js';

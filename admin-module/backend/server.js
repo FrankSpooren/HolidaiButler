@@ -6,6 +6,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
+// Get current directory early for env loading
+const __filename_early = fileURLToPath(import.meta.url);
+const __dirname_early = path.dirname(__filename_early);
+
+// Load environment from root .env first
+dotenv.config({ path: path.resolve(__dirname_early, '../../.env') });
+// Also load local .env for overrides
+dotenv.config({ path: path.resolve(__dirname_early, '.env') });
+
 // Import database and models
 import { sequelize, AdminUser, Booking, Event, PlatformConfig, Reservation, Ticket, Transaction } from './models/index.js';
 import { testConnection, syncDatabase } from './config/database.js';

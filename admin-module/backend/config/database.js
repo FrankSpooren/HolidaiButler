@@ -8,9 +8,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Try multiple possible .env locations
+// Try multiple possible .env locations (root .env first for shared config)
 const envPaths = [
-  path.resolve(__dirname, '../.env'),
+  path.resolve(__dirname, '../../../.env'),  // Root .env (centrale config)
+  path.resolve(__dirname, '../.env'),         // Module-specific .env
   path.resolve(process.cwd(), '.env'),
   path.resolve(process.cwd(), 'admin-module/backend/.env'),
 ];

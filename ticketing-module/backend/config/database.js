@@ -1,10 +1,14 @@
+// Load environment from root .env
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
+// Also load local .env for overrides
 require('dotenv').config();
 
 module.exports = {
   development: {
     username: process.env.DATABASE_USER || 'root',
     password: process.env.DATABASE_PASSWORD || '',
-    database: process.env.DATABASE_NAME || 'pxoziy_db1',
+    database: process.env.DATABASE_NAME || 'holidaibutler',
     host: process.env.DATABASE_HOST || 'localhost',
     port: parseInt(process.env.DATABASE_PORT, 10) || 3306,
     dialect: 'mysql',

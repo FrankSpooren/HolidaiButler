@@ -1,4 +1,9 @@
+// Load environment from root .env
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+// Also load local .env for overrides
 require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
