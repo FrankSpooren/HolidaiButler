@@ -52,12 +52,18 @@ class CacheService {
         password: process.env.REDIS_PASSWORD || undefined,
         db: parseInt(process.env.REDIS_DB_ADMIN || '3'), // Separate DB for admin
         retryStrategy: (times) => {
+          // In development, stop retrying after 3 attempts to avoid log spam
+          if (process.env.NODE_ENV === 'development' && times > 3) {
+            logger.info('Redis not available - running without cache (development mode)');
+            return null; // Stop retrying
+          }
           const delay = Math.min(times * 50, 2000);
           return delay;
         },
-        maxRetriesPerRequest: 3,
+        maxRetriesPerRequest: 1, // Reduce retries per request
         enableReadyCheck: true,
-        lazyConnect: false
+        lazyConnect: true, // Don't connect immediately
+        enableOfflineQueue: false // Don't queue commands when disconnected
       });
 
       this.redis.on('connect', () => {
@@ -75,11 +81,13 @@ class CacheService {
         logger.warn('Redis cache connection closed');
       });
 
-      // Test connection
+      // Test connection with lazyConnect
+      await this.redis.connect();
       await this.redis.ping();
       return true;
     } catch (error) {
-      logger.error('Failed to connect to Redis:', error);
+      logger.error('Failed to connect to Redis:', error.message);
+      this.isConnected = false;
       return false;
     }
   }
