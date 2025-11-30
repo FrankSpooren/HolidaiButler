@@ -8,17 +8,19 @@ import logger from '../utils/logger.js';
 
 /**
  * Get JWT secret (lazy evaluation to allow dotenv to load first)
+ * SECURITY FIX: Changed from process.env.getJwtSecret() to process.env.JWT_SECRET
+ * Bug fixed: 30-11-2025
  */
 const getJwtSecret = () => {
-  if (!process.env.getJwtSecret()) {
+  if (!process.env.JWT_SECRET) {
     if (process.env.NODE_ENV === 'development') {
-      logger.warn('getJwtSecret() not set - using development fallback');
+      logger.warn('JWT_SECRET not set - using development fallback (DO NOT USE IN PRODUCTION)');
       return 'development-secret-change-in-production';
     }
-    logger.error('FATAL: getJwtSecret() environment variable is not set');
-    throw new Error('getJwtSecret() must be set in environment variables');
+    logger.error('FATAL: JWT_SECRET environment variable is not set');
+    throw new Error('JWT_SECRET must be set in environment variables for production');
   }
-  return process.env.getJwtSecret();
+  return process.env.JWT_SECRET;
 };
 
 /**
