@@ -15,6 +15,17 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secre
 const ACCESS_TOKEN_EXPIRY = '24h';
 const REFRESH_TOKEN_EXPIRY = '7d';
 
+// Development fallback user (only for development mode without database)
+const DEV_FALLBACK_USER = {
+  id: 'dev-admin-001',
+  email: 'admin@holidaibutler.com',
+  password: 'Admin2024',  // Simple dev password without special chars
+  firstName: 'Development',
+  lastName: 'Admin',
+  role: 'super_admin',
+  status: 'active'
+};
+
 /**
  * @route   POST /api/admin/auth/login
  * @desc    Admin login
@@ -32,10 +43,68 @@ router.post('/login', adminRateLimit(10, 15 * 60 * 1000), async (req, res) => {
       });
     }
 
-    // Find user with password field using scope
-    const user = await AdminUser.scope('withPassword').findOne({
-      where: { email: email.toLowerCase() }
-    });
+    // Try to find user in database
+    let user = null;
+    let isDatabaseAvailable = true;
+
+    try {
+      user = await AdminUser.scope('withPassword').findOne({
+        where: { email: email.toLowerCase() }
+      });
+    } catch (dbError) {
+      isDatabaseAvailable = false;
+      console.warn('Database not available for login:', dbError.message);
+    }
+
+    // Development fallback: allow login without database
+    if (!isDatabaseAvailable && process.env.NODE_ENV === 'development') {
+      console.log('🔧 Using development fallback login (database unavailable)');
+
+      if (email.toLowerCase() === DEV_FALLBACK_USER.email && password === DEV_FALLBACK_USER.password) {
+        const accessToken = jwt.sign(
+          {
+            userId: DEV_FALLBACK_USER.id,
+            role: DEV_FALLBACK_USER.role,
+            type: 'access'
+          },
+          JWT_ADMIN_SECRET,
+          { expiresIn: ACCESS_TOKEN_EXPIRY }
+        );
+
+        const refreshToken = jwt.sign(
+          {
+            userId: DEV_FALLBACK_USER.id,
+            type: 'refresh'
+          },
+          JWT_REFRESH_SECRET,
+          { expiresIn: REFRESH_TOKEN_EXPIRY }
+        );
+
+        return res.json({
+          success: true,
+          message: 'Login successful (development mode - database unavailable).',
+          data: {
+            user: {
+              id: DEV_FALLBACK_USER.id,
+              email: DEV_FALLBACK_USER.email,
+              firstName: DEV_FALLBACK_USER.firstName,
+              lastName: DEV_FALLBACK_USER.lastName,
+              role: DEV_FALLBACK_USER.role,
+              status: DEV_FALLBACK_USER.status
+            },
+            accessToken,
+            refreshToken,
+            expiresIn: ACCESS_TOKEN_EXPIRY,
+            _devMode: true
+          }
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials. (Development mode: use admin@holidaibutler.com / Admin2024)'
+        });
+      }
+    }
 
     if (!user) {
       return res.status(401).json({

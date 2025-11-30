@@ -5,6 +5,21 @@ import { AdminUser } from '../models/index.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_ADMIN_SECRET = process.env.JWT_ADMIN_SECRET || 'your-admin-secret-key-change-in-production';
 
+// Development fallback user (matches the one in adminAuth routes)
+const DEV_FALLBACK_USER = {
+  id: 'dev-admin-001',
+  email: 'admin@holidaibutler.com',
+  firstName: 'Development',
+  lastName: 'Admin',
+  role: 'super_admin',
+  status: 'active',
+  // Mock methods for compatibility
+  hasPermission: () => true,
+  canManagePOI: () => true,
+  logActivity: async () => {},
+  isLocked: false
+};
+
 /**
  * Verify admin JWT token
  */
@@ -25,8 +40,26 @@ export const verifyAdminToken = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, JWT_ADMIN_SECRET);
 
+    // Check for development fallback user
+    if (decoded.userId === DEV_FALLBACK_USER.id && process.env.NODE_ENV === 'development') {
+      console.log('🔧 Using development fallback user (database unavailable)');
+      req.adminUser = DEV_FALLBACK_USER;
+      return next();
+    }
+
     // Get user from token (using Sequelize findByPk - default scope excludes password)
-    const user = await AdminUser.findByPk(decoded.userId);
+    let user = null;
+    try {
+      user = await AdminUser.findByPk(decoded.userId);
+    } catch (dbError) {
+      // Database not available - check if dev mode
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Database unavailable, using dev fallback user');
+        req.adminUser = DEV_FALLBACK_USER;
+        return next();
+      }
+      throw dbError;
+    }
 
     if (!user) {
       return res.status(401).json({
