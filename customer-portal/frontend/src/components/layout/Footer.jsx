@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Box, Container, Grid, Typography, IconButton, Divider, useTheme } from '@mui/material';
 import {
   Facebook as FacebookIcon,
@@ -10,31 +11,32 @@ import {
 
 const Footer = () => {
   const theme = useTheme();
+  const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
 
   const footerLinks = {
     platform: [
-      { label: 'Over ons', path: '/about' },
-      { label: 'Hoe het werkt', path: '/how-it-works' },
-      { label: 'Prijzen', path: '/pricing' },
-      { label: 'Careers', path: '/careers' },
+      { labelKey: 'footer.about', path: '/about' },
+      { labelKey: 'footer.howItWorks', path: '/how-it-works' },
+      { labelKey: 'footer.pricing', path: '/pricing' },
+      { labelKey: 'footer.careers', path: '/careers' },
     ],
     support: [
-      { label: 'Help Center', path: '/help' },
-      { label: 'Contact', path: '/contact' },
-      { label: 'FAQ', path: '/faq' },
-      { label: 'Annuleringsbeleid', path: '/cancellation-policy' },
+      { labelKey: 'footer.helpCenter', path: '/help' },
+      { labelKey: 'footer.contact', path: '/contact' },
+      { labelKey: 'footer.faq', path: '/faq' },
+      { labelKey: 'footer.cancellationPolicy', path: '/cancellation-policy' },
     ],
     legal: [
-      { label: 'Privacybeleid', path: '/privacy' },
-      { label: 'Algemene voorwaarden', path: '/terms' },
-      { label: 'Cookiebeleid', path: '/cookies' },
-      { label: 'GDPR', path: '/gdpr' },
+      { labelKey: 'footer.privacy', path: '/privacy' },
+      { labelKey: 'footer.terms', path: '/terms' },
+      { labelKey: 'footer.cookies', path: '/cookies' },
+      { labelKey: 'footer.gdpr', path: '/gdpr' },
     ],
     partners: [
-      { label: 'Word partner', path: '/become-partner' },
-      { label: 'Affiliate programma', path: '/affiliate' },
-      { label: 'API Documentatie', path: '/api-docs' },
+      { labelKey: 'footer.becomePartner', path: '/become-partner' },
+      { labelKey: 'footer.affiliate', path: '/affiliate' },
+      { labelKey: 'footer.apiDocs', path: '/api-docs' },
     ],
   };
 
@@ -63,11 +65,10 @@ const Footer = () => {
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              HolidaiButler
+              {t('footer.brand')}
             </Typography>
             <Typography variant="body2" sx={{ mb: 3, color: 'grey.400', maxWidth: 280 }}>
-              Jouw persoonlijke butler voor de perfecte Costa Blanca ervaring.
-              Boek tickets, restaurants en activiteiten op één plek.
+              {t('footer.tagline')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <IconButton
@@ -116,7 +117,7 @@ const Footer = () => {
           {/* Links */}
           <Grid item xs={6} sm={3} md={2}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'white', mb: 2 }}>
-              Platform
+              {t('footer.platform')}
             </Typography>
             <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
               {footerLinks.platform.map((link) => (
@@ -132,7 +133,7 @@ const Footer = () => {
                       '&:hover': { color: 'primary.light' },
                     }}
                   >
-                    {link.label}
+                    {t(link.labelKey)}
                   </Typography>
                 </li>
               ))}
@@ -141,7 +142,7 @@ const Footer = () => {
 
           <Grid item xs={6} sm={3} md={2}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'white', mb: 2 }}>
-              Ondersteuning
+              {t('footer.support')}
             </Typography>
             <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
               {footerLinks.support.map((link) => (
@@ -157,7 +158,7 @@ const Footer = () => {
                       '&:hover': { color: 'primary.light' },
                     }}
                   >
-                    {link.label}
+                    {t(link.labelKey)}
                   </Typography>
                 </li>
               ))}
@@ -166,7 +167,7 @@ const Footer = () => {
 
           <Grid item xs={6} sm={3} md={2}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'white', mb: 2 }}>
-              Juridisch
+              {t('footer.legal')}
             </Typography>
             <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
               {footerLinks.legal.map((link) => (
@@ -182,7 +183,7 @@ const Footer = () => {
                       '&:hover': { color: 'primary.light' },
                     }}
                   >
-                    {link.label}
+                    {t(link.labelKey)}
                   </Typography>
                 </li>
               ))}
@@ -191,7 +192,7 @@ const Footer = () => {
 
           <Grid item xs={6} sm={3} md={2}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'white', mb: 2 }}>
-              Partners
+              {t('footer.partners')}
             </Typography>
             <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
               {footerLinks.partners.map((link) => (
@@ -207,7 +208,7 @@ const Footer = () => {
                       '&:hover': { color: 'primary.light' },
                     }}
                   >
-                    {link.label}
+                    {t(link.labelKey)}
                   </Typography>
                 </li>
               ))}
@@ -227,10 +228,10 @@ const Footer = () => {
           }}
         >
           <Typography variant="body2" sx={{ color: 'grey.500' }}>
-            © {currentYear} HolidaiButler B.V. Alle rechten voorbehouden.
+            {t('footer.copyright', { year: currentYear })}
           </Typography>
           <Typography variant="body2" sx={{ color: 'grey.500' }}>
-            Made with ❤️ for Costa Blanca travelers
+            {t('footer.madeWith')}
           </Typography>
         </Box>
       </Container>
