@@ -170,7 +170,7 @@ export default function Login() {
               Default credentials for testing:
             </Typography>
             <Typography variant="caption" color="text.secondary" align="center" display="block">
-              admin@holidaibutler.com / Admin123!@#
+              admin@holidaibutler.com / Admin2024
             </Typography>
           </Box>
         </Paper>
