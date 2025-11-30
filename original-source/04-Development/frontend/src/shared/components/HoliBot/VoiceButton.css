@@ -1,0 +1,135 @@
+/**
+ * VoiceButton Styles
+ * Phase 5: Voice Input ✅
+ *
+ * Design: Microphone button with 3 states
+ * - idle: Gray, ready to record
+ * - recording: Red with pulse animation
+ * - processing: Gold with spin animation
+ */
+
+.holibot-voice-button {
+  /* Layout */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+
+  /* Appearance */
+  background: #E5E7EB;
+  color: #6B7280;
+  cursor: pointer;
+
+  /* Transition */
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Accessibility */
+  outline: none;
+}
+
+.holibot-voice-button:hover:not(:disabled) {
+  background: #D1D5DB;
+  transform: scale(1.05);
+}
+
+.holibot-voice-button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
+}
+
+.holibot-voice-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.holibot-voice-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Recording State - Red with pulse */
+.holibot-voice-button--recording {
+  background: #EF4444;
+  color: white;
+  animation: voice-pulse 1.5s ease-in-out infinite;
+}
+
+.holibot-voice-button--recording:hover {
+  background: #DC2626;
+}
+
+/* Processing State - Gold */
+.holibot-voice-button--processing {
+  background: #D4AF37;
+  color: white;
+}
+
+/* Icon Animations */
+.holibot-voice-icon {
+  display: block;
+}
+
+.holibot-voice-icon--pulse {
+  animation: icon-pulse 1.5s ease-in-out infinite;
+}
+
+.holibot-voice-icon--spin {
+  animation: icon-spin 1s linear infinite;
+}
+
+/* Keyframe Animations */
+@keyframes voice-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+@keyframes icon-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes icon-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 480px) {
+  .holibot-voice-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .holibot-voice-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Accessibility - Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .holibot-voice-button,
+  .holibot-voice-icon {
+    animation: none !important;
+    transition: none;
+  }
+
+  .holibot-voice-button--recording {
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+  }
+}
