@@ -108,6 +108,36 @@ router.use(
 );
 
 /**
+ * Reservations Module Routes
+ * Proxies to reservations-module (port 3006)
+ */
+router.use(
+  '/reservations',
+  createProxyMiddleware({
+    ...proxyOptions,
+    target: process.env.RESERVATIONS_MODULE_URL || 'http://localhost:3006',
+    pathRewrite: {
+      '^/api/v1/reservations': '/api/v1/reservations',
+    },
+  })
+);
+
+/**
+ * Agenda Module Routes
+ * Proxies to agenda-module (port 5003)
+ */
+router.use(
+  '/agenda',
+  createProxyMiddleware({
+    ...proxyOptions,
+    target: process.env.AGENDA_MODULE_URL || 'http://localhost:5003',
+    pathRewrite: {
+      '^/api/v1/agenda': '/api/agenda',
+    },
+  })
+);
+
+/**
  * Platform Frontend Routes
  * Proxies to main platform (port 3002)
  */
@@ -132,6 +162,8 @@ router.get('/health/all', async (req, res) => {
     admin: process.env.ADMIN_MODULE_URL || 'http://localhost:3003',
     ticketing: process.env.TICKETING_MODULE_URL || 'http://localhost:3004',
     payment: process.env.PAYMENT_MODULE_URL || 'http://localhost:3005',
+    reservations: process.env.RESERVATIONS_MODULE_URL || 'http://localhost:3006',
+    agenda: process.env.AGENDA_MODULE_URL || 'http://localhost:5003',
   };
 
   const results = {};
@@ -183,6 +215,18 @@ router.get('/services', (req, res) => {
         name: 'payment',
         url: process.env.PAYMENT_MODULE_URL || 'http://localhost:3005',
         endpoints: ['/api/v1/payments', '/api/v1/webhooks/adyen'],
+        status: 'active',
+      },
+      {
+        name: 'reservations',
+        url: process.env.RESERVATIONS_MODULE_URL || 'http://localhost:3006',
+        endpoints: ['/api/v1/reservations/restaurants', '/api/v1/reservations/bookings'],
+        status: 'active',
+      },
+      {
+        name: 'agenda',
+        url: process.env.AGENDA_MODULE_URL || 'http://localhost:5003',
+        endpoints: ['/api/agenda/events', '/api/agenda/events/featured'],
         status: 'active',
       },
     ],
