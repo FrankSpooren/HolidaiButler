@@ -417,13 +417,24 @@ Met de goedgekeurde hybride aanpak en gefaseerde implementatie kan HolidaiButler
 |------|--------|------------|-------|
 | Fix JWT bug in platform-core | ✅ Voltooid | **P1 - BLOCKER** | 30-11-2025 |
 | Fix SQL injection in publicPOI.js | ✅ Voltooid | **P1 - BLOCKER** | 30-11-2025 |
-| Merge ORIGINAL auth middleware | ⏳ Te starten | Hoog | - |
+| Merge ORIGINAL auth middleware | ✅ Voltooid | Hoog | 30-11-2025 |
 | Database schema alignment | ⏳ Te starten | Hoog | - |
 | Basic integration tests | ⏳ Te starten | Medium | - |
 
 #### Security Fixes Details (30-11-2025):
 - **JWT Bug:** `platform-core/src/middleware/auth.js` - Changed `process.env.getJwtSecret()` → `process.env.JWT_SECRET`
 - **SQL Injection:** `platform-core/src/routes/publicPOI.js` - Replaced raw SQL literal with Sequelize `Op.or` operators
+
+#### Auth Middleware Merge Details (30-11-2025):
+Het `platform-core/src/middleware/auth.js` bestand is uitgebreid van 125 naar 738 regels met features van ORIGINAL:
+- **RBAC System:** `requirePermission()`, `requireRole()` middleware factories
+- **Permission Checks:** `checkUserPermission()`, `checkAnyPermission()`, `checkAllPermissions()`
+- **Admin Auth:** Aparte `verifyAdminToken()` met JWT_ADMIN_SECRET
+- **Rate Limiting:** `authRateLimiter` (5 req/15min) en `apiRateLimiter` (100 req/15min)
+- **Activity Logging:** `logActivity()` middleware voor audit trails
+- **Field Validation:** `validateFields()` tegen mass assignment attacks
+- **Token Generation:** `generateToken()`, `generateRefreshToken()`, `generateAdminToken()`
+- **Backwards Compatible:** Alle bestaande exports behouden, `verifyToken` alias toegevoegd
 
 ### Fase 2-4: Zie sectie 5 voor details
 
