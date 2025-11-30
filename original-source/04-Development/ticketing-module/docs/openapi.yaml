@@ -1,0 +1,1090 @@
+openapi: 3.0.3
+info:
+  title: HolidaiButler Ticketing & Reservations API
+  description: |
+    Comprehensive API for managing ticket bookings, availability, and digital ticket generation for Points of Interest (POIs).
+
+    ## Features
+    - Real-time availability checking with Redis caching
+    - Secure booking lifecycle management
+    - QR code-based digital tickets
+    - Integration with payment systems (Adyen)
+    - Mobile wallet support (Apple Wallet, Google Pay)
+    - Partner system integration via webhooks
+
+    ## Authentication
+    Most endpoints require JWT Bearer token authentication. Obtain a token through the main authentication service.
+
+    ## Rate Limiting
+    - Public endpoints: 100 requests/minute
+    - Authenticated endpoints: 50 requests/minute
+    - Staff validation: 200 requests/minute
+
+  version: 1.0.0
+  contact:
+    name: HolidaiButler API Support
+    email: api@holidaibutler.com
+  license:
+    name: Proprietary
+servers:
+  - url: http://localhost:5000/api/v1/ticketing
+    description: Local development server
+  - url: https://api.holidaibutler.com/api/v1/ticketing
+    description: Production server
+  - url: https://staging-api.holidaibutler.com/api/v1/ticketing
+    description: Staging server
+
+tags:
+  - name: Health
+    description: Service health and status endpoints
+  - name: Availability
+    description: Check and manage ticket availability
+  - name: Bookings
+    description: Booking lifecycle management
+  - name: Tickets
+    description: Digital ticket management
+  - name: Partners
+    description: Partner system integration
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Returns service health status and uptime information
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                    description: Service uptime in seconds
+
+  /availability/check:
+    post:
+      tags:
+        - Availability
+      summary: Check availability for specific date/time
+      description: Check if tickets are available for a specific POI, date, timeslot, and quantity
+      operationId: checkAvailability
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - poiId
+                - date
+                - quantity
+              properties:
+                poiId:
+                  type: integer
+                  example: 123
+                  description: Point of Interest ID
+                date:
+                  type: string
+                  format: date
+                  example: "2025-12-25"
+                timeslot:
+                  type: string
+                  example: "10:00-12:00"
+                  description: Optional time slot
+                quantity:
+                  type: integer
+                  minimum: 1
+                  example: 2
+      responses:
+        '200':
+          description: Availability check successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /availability/{poiId}:
+    get:
+      tags:
+        - Availability
+      summary: Get availability for single date
+      description: Retrieve availability information for a specific POI and date
+      operationId: getAvailability
+      security: []
+      parameters:
+        - name: poiId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Point of Interest ID
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2025-12-25"
+        - name: timeslot
+          in: query
+          schema:
+            type: string
+          example: "10:00-12:00"
+      responses:
+        '200':
+          description: Availability data retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityData'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /availability/{poiId}/range:
+    get:
+      tags:
+        - Availability
+      summary: Get availability for date range
+      description: Retrieve availability for a date range (useful for calendar views)
+      operationId: getAvailabilityRange
+      security: []
+      parameters:
+        - name: poiId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2025-12-01"
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2025-12-31"
+      responses:
+        '200':
+          description: Availability range retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AvailabilityData'
+
+  /bookings:
+    post:
+      tags:
+        - Bookings
+      summary: Create new booking
+      description: |
+        Create a new ticket booking with automatic capacity reservation.
+        Capacity is held for 15 minutes pending payment completion.
+      operationId: createBooking
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/BookingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Insufficient availability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bookings/{bookingId}:
+    get:
+      tags:
+        - Bookings
+      summary: Get booking by ID
+      description: Retrieve detailed information about a specific booking
+      operationId: getBooking
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Booking details retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/BookingDetails'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/{bookingId}/confirm:
+    post:
+      tags:
+        - Bookings
+      summary: Confirm booking after payment
+      description: |
+        Confirm a booking after successful payment.
+        This generates digital tickets with QR codes and sends them to the user.
+      operationId: confirmBooking
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - paymentTransactionId
+              properties:
+                paymentTransactionId:
+                  type: string
+                  example: "txn_abc123xyz"
+      responses:
+        '200':
+          description: Booking confirmed and tickets generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      booking:
+                        $ref: '#/components/schemas/BookingDetails'
+                      tickets:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Ticket'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/{bookingId}/cancel:
+    post:
+      tags:
+        - Bookings
+      summary: Cancel booking
+      description: Cancel a booking and initiate refund if applicable
+      operationId: cancelBooking
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  example: "Changed plans"
+      responses:
+        '200':
+          description: Booking cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      booking:
+                        $ref: '#/components/schemas/BookingDetails'
+                      refund:
+                        $ref: '#/components/schemas/RefundInfo'
+
+  /bookings/user/{userId}:
+    get:
+      tags:
+        - Bookings
+      summary: Get user bookings
+      description: Retrieve all bookings for a specific user with optional filtering
+      operationId: getUserBookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, cancelled, completed]
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: User bookings retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BookingDetails'
+                  count:
+                    type: integer
+
+  /tickets/user/{userId}:
+    get:
+      tags:
+        - Tickets
+      summary: Get user tickets
+      description: Retrieve all tickets for a specific user
+      operationId: getUserTickets
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, used, expired, cancelled]
+      responses:
+        '200':
+          description: User tickets retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ticket'
+                  count:
+                    type: integer
+
+  /{ticketId}:
+    get:
+      tags:
+        - Tickets
+      summary: Get ticket by ID
+      description: Retrieve detailed information about a specific ticket
+      operationId: getTicket
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ticket details retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Ticket'
+
+  /{ticketId}/resend:
+    post:
+      tags:
+        - Tickets
+      summary: Resend ticket email
+      description: Resend the ticket to the user's email address
+      operationId: resendTicket
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ticket resent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      sent:
+                        type: boolean
+                      email:
+                        type: string
+
+  /{ticketId}/wallet:
+    post:
+      tags:
+        - Tickets
+      summary: Add ticket to mobile wallet
+      description: Generate Apple Wallet or Google Pay pass for the ticket
+      operationId: addToWallet
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - walletType
+              properties:
+                walletType:
+                  type: string
+                  enum: [apple, google]
+                  example: "apple"
+      responses:
+        '200':
+          description: Wallet pass generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      walletPassUrl:
+                        type: string
+                        format: uri
+
+  /validate:
+    post:
+      tags:
+        - Tickets
+      summary: Validate ticket QR code
+      description: Validate a ticket QR code at POI entrance (for staff use)
+      operationId: validateTicket
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - qrCodeData
+                - poiId
+              properties:
+                qrCodeData:
+                  type: string
+                  description: Encrypted QR code payload
+                poiId:
+                  type: integer
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      valid:
+                        type: boolean
+                      ticket:
+                        $ref: '#/components/schemas/Ticket'
+                      validationDetails:
+                        type: object
+                        properties:
+                          poiMatch:
+                            type: boolean
+                          dateValid:
+                            type: boolean
+                          alreadyUsed:
+                            type: boolean
+
+  /partners/{partnerId}/sync-inventory:
+    post:
+      tags:
+        - Partners
+      summary: Sync partner inventory
+      description: Synchronize inventory from external partner systems
+      operationId: syncPartnerInventory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - date
+                - inventory
+              properties:
+                date:
+                  type: string
+                  format: date
+                inventory:
+                  type: object
+                  properties:
+                    totalCapacity:
+                      type: integer
+                    availableCapacity:
+                      type: integer
+      responses:
+        '200':
+          description: Inventory synced successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      synced:
+                        type: boolean
+                      recordsUpdated:
+                        type: integer
+
+  /partners/{partnerId}/webhook:
+    post:
+      tags:
+        - Partners
+      summary: Partner webhook receiver
+      description: Receive webhooks from partner systems for booking updates
+      operationId: partnerWebhook
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event:
+                  type: string
+                  example: "booking.confirmed"
+                bookingId:
+                  type: string
+                timestamp:
+                  type: string
+                  format: date-time
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      received:
+                        type: boolean
+                      processedAt:
+                        type: string
+                        format: date-time
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication token obtained from main auth service
+
+  schemas:
+    AvailabilityResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            available:
+              type: boolean
+            capacity:
+              $ref: '#/components/schemas/CapacityInfo'
+            pricing:
+              $ref: '#/components/schemas/PricingInfo'
+            requestedQuantity:
+              type: integer
+            canBook:
+              type: boolean
+
+    AvailabilityData:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+            poiId:
+              type: integer
+            date:
+              type: string
+              format: date
+            timeslot:
+              type: string
+            totalCapacity:
+              type: integer
+            availableCapacity:
+              type: integer
+            bookedCapacity:
+              type: integer
+            reservedCapacity:
+              type: integer
+            basePrice:
+              type: number
+              format: double
+            finalPrice:
+              type: number
+              format: double
+            currency:
+              type: string
+              example: "EUR"
+            isSoldOut:
+              type: boolean
+
+    CapacityInfo:
+      type: object
+      properties:
+        total:
+          type: integer
+        available:
+          type: integer
+        booked:
+          type: integer
+        reserved:
+          type: integer
+
+    PricingInfo:
+      type: object
+      properties:
+        basePrice:
+          type: number
+          format: double
+        finalPrice:
+          type: number
+          format: double
+        currency:
+          type: string
+          example: "EUR"
+        discount:
+          type: number
+          format: double
+
+    CreateBookingRequest:
+      type: object
+      required:
+        - poiId
+        - date
+        - quantity
+        - ticketType
+        - guestInfo
+      properties:
+        poiId:
+          type: integer
+          example: 123
+        date:
+          type: string
+          format: date
+          example: "2025-12-25"
+        timeslot:
+          type: string
+          example: "10:00-12:00"
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+        ticketType:
+          type: string
+          enum: [single, group, family, vip]
+          example: "single"
+        guestInfo:
+          $ref: '#/components/schemas/GuestInfo'
+        guests:
+          $ref: '#/components/schemas/GuestCount'
+
+    GuestInfo:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        phone:
+          type: string
+          example: "+31612345678"
+
+    GuestCount:
+      type: object
+      properties:
+        adults:
+          type: integer
+          minimum: 0
+          example: 2
+        children:
+          type: integer
+          minimum: 0
+          example: 0
+        infants:
+          type: integer
+          minimum: 0
+          example: 0
+
+    BookingResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        bookingReference:
+          type: string
+          example: "BK-2025-001234"
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled, completed]
+        reservation:
+          type: object
+          properties:
+            expiresAt:
+              type: string
+              format: date-time
+        paymentUrl:
+          type: string
+          format: uri
+
+    BookingDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+        bookingReference:
+          type: string
+        userId:
+          type: integer
+        poiId:
+          type: integer
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled, completed]
+        paymentStatus:
+          type: string
+          enum: [pending, paid, failed, refunded]
+        bookingDate:
+          type: string
+          format: date
+        timeslot:
+          type: string
+        ticketType:
+          type: string
+        quantity:
+          type: integer
+        totalAmount:
+          type: number
+          format: double
+        currency:
+          type: string
+        guestName:
+          type: string
+        guestEmail:
+          type: string
+        guestPhone:
+          type: string
+        adultsCount:
+          type: integer
+        childrenCount:
+          type: integer
+        infantsCount:
+          type: integer
+        poi:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            location:
+              type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticketNumber:
+          type: string
+          example: "HB-2025-001234"
+        bookingId:
+          type: integer
+        userId:
+          type: integer
+        poiId:
+          type: integer
+        status:
+          type: string
+          enum: [active, used, expired, cancelled]
+        ticketType:
+          type: string
+        holderName:
+          type: string
+        holderEmail:
+          type: string
+        qrCodeData:
+          type: string
+          description: Encrypted QR code payload
+        qrCodeImageUrl:
+          type: string
+          format: uri
+        validFrom:
+          type: string
+          format: date-time
+        validUntil:
+          type: string
+          format: date-time
+        usedAt:
+          type: string
+          format: date-time
+        poi:
+          type: object
+          properties:
+            name:
+              type: string
+            location:
+              type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    RefundInfo:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+        refundId:
+          type: string
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        processedAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Human-readable error message
+        message:
+          type: string
+          description: Technical error details (optional)
+
+  responses:
+    BadRequest:
+      description: Invalid request data or validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "Validation error: missing required field 'date'"
+
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "Unauthorized: valid JWT token required"
+
+    Forbidden:
+      description: User doesn't have permission to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "Access denied: you can only access your own bookings"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "Booking not found"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "An unexpected error occurred"
+            message: "Database connection failed"
