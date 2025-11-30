@@ -1,0 +1,1 @@
+{"version":3,"file":"mistral.js","sourceRoot":"","sources":["../../src/config/mistral.ts"],"names":[],"mappings":";;;AACa,QAAA,aAAa,GAAG;IAC3B,MAAM,EAAE,OAAO,CAAC,GAAG,CAAC,eAAe;IACnC,OAAO,EAAE,OAAO,CAAC,GAAG,CAAC,gBAAgB,IAAI,2BAA2B;IACpE,KAAK,EAAE,eAAe;IACtB,OAAO,EAAE,KAAK;IACd,OAAO,EAAE,CAAC;CACX,CAAC"}
