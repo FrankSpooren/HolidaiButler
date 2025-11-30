@@ -6,11 +6,16 @@ import AdminUser from './AdminUser.js';
 import Booking from './Booking.js';
 import Event from './Event.js';
 import PlatformConfig from './PlatformConfig.js';
+import POI from './POI.js';
+import POIImportHistory from './POIImportHistory.js';
 import Reservation from './Reservation.js';
 import Ticket from './Ticket.js';
 import Transaction from './Transaction.js';
 
 // Define Associations
+
+// POI Import History associations
+POIImportHistory.belongsTo(AdminUser, { as: 'user', foreignKey: 'user_id' });
 
 // AdminUser self-reference (created by)
 AdminUser.belongsTo(AdminUser, { as: 'createdBy', foreignKey: 'createdById' });
@@ -58,6 +63,8 @@ export {
   Booking,
   Event,
   PlatformConfig,
+  POI,
+  POIImportHistory,
   Reservation,
   Ticket,
   Transaction
@@ -70,6 +77,8 @@ export default {
   Booking,
   Event,
   PlatformConfig,
+  POI,
+  POIImportHistory,
   Reservation,
   Ticket,
   Transaction
