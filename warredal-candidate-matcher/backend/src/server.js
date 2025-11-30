@@ -3,6 +3,18 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get current directory for env loading
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment from root .env first
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+// Also load local .env for overrides
+dotenv.config();
+
 import { testConnection, syncDatabase } from './config/database.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { logger } from './utils/logger.js';
@@ -13,9 +25,6 @@ import vacancyRoutes from './api/vacancy.routes.js';
 import candidateRoutes from './api/candidate.routes.js';
 import messagingRoutes from './api/messaging.routes.js';
 import applicantsRoutes from './api/applicants.routes.js';
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
