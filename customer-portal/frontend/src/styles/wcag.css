@@ -1,0 +1,89 @@
+/**
+ * WCAG Accessibility Styles
+ * Applied globally when accessibility settings are enabled
+ */
+
+/* High Contrast Mode */
+.wcag-high-contrast {
+  --bg-primary: #000000;
+  --bg-secondary: #1a1a1a;
+  --text-primary: #ffffff;
+  --text-secondary: #ffff00;
+  --link-color: #00ffff;
+  --border-color: #ffffff;
+}
+
+.wcag-high-contrast body {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+.wcag-high-contrast a {
+  color: var(--link-color) !important;
+}
+
+.wcag-high-contrast a:hover,
+.wcag-high-contrast a:focus {
+  color: var(--text-secondary) !important;
+  text-decoration: underline !important;
+}
+
+.wcag-high-contrast button,
+.wcag-high-contrast .MuiButton-root {
+  border: 2px solid var(--border-color) !important;
+}
+
+.wcag-high-contrast .MuiCard-root,
+.wcag-high-contrast .MuiPaper-root {
+  background-color: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.wcag-high-contrast .MuiTypography-root {
+  color: var(--text-primary) !important;
+}
+
+.wcag-high-contrast .MuiInputBase-root {
+  background-color: var(--bg-secondary) !important;
+  border: 2px solid var(--border-color) !important;
+}
+
+.wcag-high-contrast .MuiInputBase-input {
+  color: var(--text-primary) !important;
+}
+
+.wcag-high-contrast .MuiChip-root {
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Grayscale Mode */
+.wcag-grayscale {
+  filter: grayscale(100%);
+}
+
+.wcag-grayscale img,
+.wcag-grayscale video {
+  filter: grayscale(100%);
+}
+
+/* Focus indicators for better accessibility */
+:focus-visible {
+  outline: 3px solid #667eea;
+  outline-offset: 2px;
+}
+
+.wcag-high-contrast :focus-visible {
+  outline: 3px solid var(--text-secondary) !important;
+  outline-offset: 2px;
+}
+
+/* Ensure minimum touch target size (48x48px) */
+button,
+a,
+[role="button"],
+.MuiIconButton-root {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Skip link styles - already in SkipToContent component */
