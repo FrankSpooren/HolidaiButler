@@ -36,16 +36,20 @@ import {
   PersonAdd as SignupIcon,
   Close as CloseIcon,
   Search as SearchIcon,
+  Accessibility as AccessibilityIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../common/LanguageSwitcher';
 import useAuthStore from '../../store/authStore';
 import Footer from './Footer';
 
-const Layout = () => {
+const Layout = ({ onAccessibilityClick }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { t } = useTranslation();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [anchorElUser, setAnchorElUser] = useState(null);
@@ -161,11 +165,30 @@ const Layout = () => {
             {!isMobile && (
               <IconButton
                 onClick={() => navigate('/search')}
-                sx={{ mr: 2 }}
-                aria-label="Zoeken"
+                sx={{ mr: 1 }}
+                aria-label={t('nav.search', 'Zoeken')}
               >
                 <SearchIcon />
               </IconButton>
+            )}
+
+            {/* Accessibility Button (Desktop) */}
+            {!isMobile && onAccessibilityClick && (
+              <IconButton
+                onClick={onAccessibilityClick}
+                sx={{ mr: 1 }}
+                aria-label={t('accessibility.settings', 'Toegankelijkheid')}
+                title={t('accessibility.settings', 'Toegankelijkheid')}
+              >
+                <AccessibilityIcon />
+              </IconButton>
+            )}
+
+            {/* Language Switcher (Desktop) */}
+            {!isMobile && (
+              <Box sx={{ mr: 2 }}>
+                <LanguageSwitcher />
+              </Box>
             )}
 
             {/* User Menu / Auth Buttons */}
@@ -370,10 +393,40 @@ const Layout = () => {
             </Button>
           </Box>
         )}
+
+        <Divider />
+
+        {/* Mobile: Language & Accessibility */}
+        <Box sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">
+              {t('common.language', 'Taal')}
+            </Typography>
+            <LanguageSwitcher />
+          </Box>
+          {onAccessibilityClick && (
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<AccessibilityIcon />}
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onAccessibilityClick();
+              }}
+            >
+              {t('accessibility.settings', 'Toegankelijkheid')}
+            </Button>
+          )}
+        </Box>
       </Drawer>
 
       {/* Main Content */}
-      <Box component="main" sx={{ flexGrow: 1 }}>
+      <Box
+        component="main"
+        id="main-content"
+        tabIndex={-1}
+        sx={{ flexGrow: 1, outline: 'none' }}
+      >
         <Outlet />
       </Box>
 
