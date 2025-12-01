@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 // API base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api/v1';
+// Platform Core runs on port 3001 (central API gateway)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
 // Create axios instance
 export const apiClient = axios.create({
