@@ -208,4 +208,8 @@ const useFilterState = (initialFilters = {}) => {
   };
 };
 
+// Named export for ES module compatibility
+export { useFilterState };
+
+// Default export for backwards compatibility
 export default useFilterState;

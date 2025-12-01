@@ -91,10 +91,36 @@ initializeServices();
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 })); // Security headers
-app.use(cors({
-  origin: process.env.ADMIN_FRONTEND_URL || 'http://localhost:5174',
+// Dynamic CORS configuration for multiple environments
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+
+    // Allowed origins list
+    const allowedOrigins = [
+      'http://localhost:5174',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      process.env.ADMIN_FRONTEND_URL,
+    ].filter(Boolean);
+
+    // Check for GitHub Codespaces or other preview environments
+    const isCodespaces = origin.includes('.app.github.dev');
+    const isGitpod = origin.includes('.gitpod.io');
+    const isStackBlitz = origin.includes('.stackblitz.io');
+    const isPreviewEnv = isCodespaces || isGitpod || isStackBlitz;
+
+    if (allowedOrigins.includes(origin) || isPreviewEnv) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
-})); // CORS
+};
+app.use(cors(corsOptions)); // Dynamic CORS
 app.use(morgan('dev')); // Logging
 app.use(express.json({ limit: '10mb' })); // Body parser
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
