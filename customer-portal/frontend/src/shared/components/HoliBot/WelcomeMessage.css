@@ -1,0 +1,112 @@
+/**
+ * WelcomeMessage Styles - Sequential Animation
+ *
+ * User Requirements (2025-11-09):
+ * - 3 sequential messages with fade-in animation (1.5s intervals)
+ * - HoliBot icon (Calpe Turismo logo)
+ * - Mobile-first responsive design
+ *
+ * Design: Calm, sophisticated welcome experience
+ */
+
+.holibot-welcome-container {
+  margin-bottom: 20px;
+}
+
+/* Individual welcome message */
+.holibot-welcome-message {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* Secondary messages (without avatar) */
+.holibot-welcome-secondary {
+  padding-left: 48px; /* Align with text after avatar (36px avatar + 12px gap) */
+}
+
+/* HoliBot avatar - matches ChatMessage styling */
+.holibot-welcome-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #2C3E50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.holibot-welcome-avatar-img {
+  width: 120%;
+  height: 120%;
+  object-fit: cover;
+  object-position: center 30%;
+  transform: translateX(-10%);
+}
+
+/* Primary text (greeting) */
+.holibot-welcome-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2C3E50; /* Deep Sea Navy */
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Secondary text (questions) */
+.holibot-welcome-text-secondary {
+  font-size: 15px;
+  font-weight: 400;
+  color: #5A6C7D; /* Secondary text */
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Fade-in animation */
+.holibot-welcome-animate {
+  animation: fadeIn 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .holibot-welcome-text {
+    font-size: 16px;
+  }
+
+  .holibot-welcome-text-secondary {
+    font-size: 14px;
+  }
+
+  .holibot-welcome-avatar {
+    width: 32px;
+    height: 32px;
+    border: 2px solid #2C3E50;
+  }
+
+  .holibot-welcome-secondary {
+    padding-left: 44px; /* 32px avatar + 12px gap */
+  }
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .holibot-welcome-animate {
+    animation: none;
+  }
+}
