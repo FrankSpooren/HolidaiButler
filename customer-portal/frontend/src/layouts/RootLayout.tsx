@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router';
 import { Header } from '../shared/components/Header';
+import { Footer } from '../shared/components/Footer';
 import { HoliBotWidget } from '../shared/components/HoliBot';
 
 /**
@@ -29,10 +30,13 @@ export function RootLayout() {
       {/* Header - Enterprise Navigation Component */}
       <Header />
 
-      {/* Main Content - Child routes render here (includes page-specific footers) */}
+      {/* Main Content - Child routes render here */}
       <main className="flex-1">
         <Outlet />
       </main>
+
+      {/* Footer - Enterprise Footer Component (hidden on Homepage which has its own) */}
+      {location.pathname !== '/' && <Footer />}
 
       {/* HoliBotWidget - Native React AI Travel Assistant (hidden on Account page) */}
       {!isAccountPage && <HoliBotWidget />}
