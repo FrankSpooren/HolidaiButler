@@ -1,15 +1,23 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline, CircularProgress, Box } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+// WCAG Accessibility Styles
+import './styles/wcag.css';
+
 // Components
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { HoliBotWidget } from './components/HoliBot';
 import { HoliBotProvider } from './contexts/HoliBotContext';
+
+// Accessibility & Privacy Components (GDPR/WCAG Compliance)
+import SkipToContent from './components/accessibility/SkipToContent';
+import WCAGModal from './components/accessibility/WCAGModal';
+import CookieConsent from './components/privacy/CookieConsent';
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -30,6 +38,10 @@ const SignupPage = lazy(() => import('./pages/auth/SignupPage'));
 const CheckoutPage = lazy(() => import('./pages/checkout/CheckoutPage'));
 const ConfirmationPage = lazy(() => import('./pages/checkout/ConfirmationPage'));
 const SearchResultsPage = lazy(() => import('./pages/search/SearchResultsPage'));
+
+// Legal pages (GDPR Compliance)
+const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
+const CookiePolicy = lazy(() => import('./pages/legal/CookiePolicy'));
 
 // Create theme
 const theme = createTheme({
@@ -142,16 +154,41 @@ const LoadingFallback = () => (
 );
 
 function App() {
+  // WCAG Modal state
+  const [wcagModalOpen, setWcagModalOpen] = useState(false);
+
+  // Apply saved WCAG preferences on mount
+  useEffect(() => {
+    const savedPrefs = localStorage.getItem('wcag-preferences');
+    if (savedPrefs) {
+      try {
+        const prefs = JSON.parse(savedPrefs);
+        const root = document.documentElement;
+        root.style.fontSize = `${prefs.fontSize || 100}%`;
+        root.style.letterSpacing = `${prefs.letterSpacing || 0}px`;
+        root.style.lineHeight = `${prefs.lineHeight || 1.5}`;
+        if (prefs.contrast === 'high') root.classList.add('wcag-high-contrast');
+        if (prefs.grayscale) root.classList.add('wcag-grayscale');
+      } catch (error) {
+        console.error('Error loading WCAG preferences:', error);
+      }
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
+
+        {/* WCAG: Skip to main content link (keyboard navigation) */}
+        <SkipToContent targetId="main-content" />
+
         <HoliBotProvider>
           <BrowserRouter>
             <Suspense fallback={<LoadingFallback />}>
               <Routes>
               {/* Public routes with layout */}
-              <Route element={<Layout />}>
+              <Route element={<Layout onAccessibilityClick={() => setWcagModalOpen(true)} />}>
                 <Route index element={<HomePage />} />
                 <Route path="search" element={<SearchResultsPage />} />
 
@@ -178,6 +215,10 @@ function App() {
                 {/* Checkout flow */}
                 <Route path="checkout" element={<CheckoutPage />} />
                 <Route path="checkout/confirmation" element={<ConfirmationPage />} />
+
+                {/* Legal pages (GDPR Compliance) */}
+                <Route path="privacy" element={<PrivacyPolicy />} />
+                <Route path="cookies" element={<CookiePolicy />} />
 
                 {/* User routes (protected) */}
                 <Route path="account" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
@@ -212,6 +253,31 @@ function App() {
           draggable
           pauseOnHover
           theme="light"
+        />
+
+        {/* GDPR: Cookie Consent Banner */}
+        <CookieConsent
+          onAccept={(preferences) => {
+            console.log('Cookie preferences accepted:', preferences);
+            // Initialize analytics/marketing based on preferences
+            if (preferences.analytics) {
+              // Initialize Google Analytics, etc.
+            }
+            if (preferences.marketing) {
+              // Initialize marketing pixels, etc.
+            }
+          }}
+          onReject={(preferences) => {
+            console.log('Non-essential cookies rejected:', preferences);
+          }}
+          privacyPolicyUrl="/privacy"
+          cookiePolicyUrl="/cookies"
+        />
+
+        {/* WCAG: Accessibility Settings Modal */}
+        <WCAGModal
+          isOpen={wcagModalOpen}
+          onClose={() => setWcagModalOpen(false)}
         />
       </ThemeProvider>
     </QueryClientProvider>

@@ -22,6 +22,9 @@ import {
   IconButton,
   Rating,
   alpha,
+  ToggleButtonGroup,
+  ToggleButton,
+  Tooltip,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -31,17 +34,24 @@ import {
   Verified as VerifiedIcon,
   Favorite as FavoriteIcon,
   FavoriteBorder as FavoriteBorderIcon,
+  ViewModule as GridIcon,
+  ViewList as ListIcon,
+  Map as MapIcon,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
+import { MapView, ListView } from '../../components/poi';
 
 const POIListPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [category, setCategory] = useState(searchParams.get('category') || '');
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'rating');
   const [page, setPage] = useState(parseInt(searchParams.get('page')) || 1);
+  const [viewMode, setViewMode] = useState(searchParams.get('view') || 'grid');
 
   const categories = [
     { value: '', label: 'Alle categorieën' },
@@ -97,8 +107,16 @@ const POIListPage = () => {
     if (category) params.set('category', category);
     if (sortBy !== 'rating') params.set('sort', sortBy);
     if (page > 1) params.set('page', page);
+    if (viewMode !== 'grid') params.set('view', viewMode);
     setSearchParams(params);
-  }, [searchQuery, category, sortBy, page]);
+  }, [searchQuery, category, sortBy, page, viewMode]);
+
+  // Handle view mode change
+  const handleViewModeChange = (event, newMode) => {
+    if (newMode !== null) {
+      setViewMode(newMode);
+    }
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -175,34 +193,93 @@ const POIListPage = () => {
           </FormControl>
         </Box>
 
-        {/* Results count */}
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          {data?.total || 0} ervaringen gevonden
-        </Typography>
+        {/* Results count & View Toggle */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 3,
+            flexWrap: 'wrap',
+            gap: 2,
+          }}
+        >
+          <Typography variant="body2" color="text.secondary">
+            {data?.total || 0} {t('poi.experiencesFound', 'ervaringen gevonden')}
+          </Typography>
 
-        {/* POI Grid */}
-        <Grid container spacing={3}>
-          {isLoading
-            ? Array.from(new Array(12)).map((_, i) => (
-                <Grid item xs={12} sm={6} md={4} key={i}>
-                  <Card>
-                    <Skeleton variant="rectangular" height={200} />
-                    <CardContent>
-                      <Skeleton />
-                      <Skeleton width="60%" />
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))
-            : data?.pois?.map((poi) => (
-                <Grid item xs={12} sm={6} md={4} key={poi.id}>
-                  <POICard poi={poi} onClick={() => navigate(`/experiences/${poi.id}`)} />
-                </Grid>
-              ))}
-        </Grid>
+          {/* View Mode Toggle */}
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={handleViewModeChange}
+            aria-label={t('poi.viewMode', 'Weergave modus')}
+            size="small"
+          >
+            <ToggleButton value="grid" aria-label={t('poi.gridView', 'Grid weergave')}>
+              <Tooltip title={t('poi.gridView', 'Grid weergave')}>
+                <GridIcon />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton value="list" aria-label={t('poi.listView', 'Lijst weergave')}>
+              <Tooltip title={t('poi.listView', 'Lijst weergave')}>
+                <ListIcon />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton value="map" aria-label={t('poi.mapView', 'Kaart weergave')}>
+              <Tooltip title={t('poi.mapView', 'Kaart weergave')}>
+                <MapIcon />
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
 
-        {/* Pagination */}
-        {data?.totalPages > 1 && (
+        {/* POI Content - Grid/List/Map Views */}
+        {isLoading ? (
+          // Loading skeleton
+          <Grid container spacing={3}>
+            {Array.from(new Array(12)).map((_, i) => (
+              <Grid item xs={12} sm={6} md={4} key={i}>
+                <Card>
+                  <Skeleton variant="rectangular" height={200} />
+                  <CardContent>
+                    <Skeleton />
+                    <Skeleton width="60%" />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        ) : viewMode === 'map' ? (
+          // Map View
+          <MapView
+            pois={data?.pois?.map(poi => ({
+              ...poi,
+              // Add coordinates for Calpe area (mock for demo)
+              latitude: poi.latitude || 38.6429 + (Math.random() - 0.5) * 0.05,
+              longitude: poi.longitude || 0.0462 + (Math.random() - 0.5) * 0.05,
+            })) || []}
+            height="600px"
+          />
+        ) : viewMode === 'list' ? (
+          // List View
+          <ListView
+            pois={data?.pois || []}
+            onItemClick={(poi) => navigate(`/experiences/${poi.id}`)}
+          />
+        ) : (
+          // Grid View (default)
+          <Grid container spacing={3}>
+            {data?.pois?.map((poi) => (
+              <Grid item xs={12} sm={6} md={4} key={poi.id}>
+                <POICard poi={poi} onClick={() => navigate(`/experiences/${poi.id}`)} />
+              </Grid>
+            ))}
+          </Grid>
+        )}
+
+        {/* Pagination - hidden in map view */}
+        {viewMode !== 'map' && data?.totalPages > 1 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <Pagination
               count={data.totalPages}
