@@ -71,9 +71,11 @@ export class HttpClient<SecurityDataType = unknown> {
     format,
     ...axiosConfig
   }: ApiConfig<SecurityDataType> = {}) {
+    // Ticketing module runs on port 3004
+    const ticketingUrl = import.meta.env.VITE_TICKETING_API_URL || "http://localhost:3004/api/v1";
     this.instance = axios.create({
       ...axiosConfig,
-      baseURL: axiosConfig.baseURL || "http://localhost:5000/api/v1/ticketing",
+      baseURL: axiosConfig.baseURL || ticketingUrl,
     });
     this.secure = secure;
     this.format = format;

@@ -8,7 +8,9 @@
 
 import type { ChatRequest, ChatResponse, ChatMessage } from '../types/chat.types';
 
-const API_BASE_URL = 'http://localhost:3002/api/v1';
+// HoliBot/Chat API - Platform Core includes chat routes on :3001
+// Use VITE_WIDGET_API_URL if Widget API runs separately on :3002
+const API_BASE_URL = import.meta.env.VITE_WIDGET_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
 class ChatAPI {
   private sessionId: string | null = null;
