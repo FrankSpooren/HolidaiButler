@@ -120,8 +120,18 @@ const Layout = ({ onAccessibilityClick }) => {
                 textDecoration: 'none',
                 color: 'inherit',
                 mr: 4,
+                gap: 1.5,
               }}
             >
+              <Box
+                component="img"
+                src="/assets/images/HolidaiButler_Icon_Web.png"
+                alt="HolidaiButler"
+                sx={{
+                  height: 40,
+                  width: 'auto',
+                }}
+              />
               <Typography
                 variant="h5"
                 sx={{
@@ -129,6 +139,7 @@ const Layout = ({ onAccessibilityClick }) => {
                   background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
+                  display: { xs: 'none', sm: 'block' },
                 }}
               >
                 HolidaiButler
