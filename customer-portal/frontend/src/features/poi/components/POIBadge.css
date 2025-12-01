@@ -1,0 +1,123 @@
+/**
+ * POIBadge Styles
+ * Enterprise-grade badge component styling
+ * Responsive, accessible, brand-aligned
+ */
+
+.poi-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: white;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+/* Category Badge - Uses gradient from categoryConfig */
+.poi-badge-category {
+  /* background set via inline style */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.poi-badge-category:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Verified Badge - Green theme */
+.poi-badge-verified {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.poi-badge-verified:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+}
+
+/* Popular Badge - Gold/Star theme */
+.poi-badge-popular {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+}
+
+.poi-badge-popular:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.4);
+}
+
+/* Badge Icon */
+.poi-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Badge container for multiple badges */
+.poi-badges-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .poi-badge {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .poi-badge-icon {
+    font-size: 13px;
+  }
+
+  .poi-badges-container {
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .poi-badge {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  .poi-badge-icon {
+    font-size: 12px;
+  }
+
+  .poi-badges-container {
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+}
+
+/* Accessibility - High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .poi-badge {
+    border: 2px solid white;
+    font-weight: 700;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .poi-badge {
+    transition: none;
+  }
+
+  .poi-badge-category:hover,
+  .poi-badge-verified:hover,
+  .poi-badge-popular:hover {
+    transform: none;
+  }
+}

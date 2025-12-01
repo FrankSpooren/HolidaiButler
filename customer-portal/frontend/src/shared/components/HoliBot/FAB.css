@@ -1,0 +1,98 @@
+/**
+ * FAB (Floating Action Button) Styles
+ *
+ * Design System:
+ * - Mediterranean Teal gradient (#7FA594 → #6B9283)
+ * - Fixed bottom-right positioning
+ * - GPU-accelerated animations
+ * - Mobile-responsive
+ * - Enterprise-level accessibility
+ */
+
+.holibot-fab {
+  /* Positioning - CRITICAL: Fixed, not static! */
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999999;
+
+  /* Size */
+  width: 60px;
+  height: 60px;
+  padding: 0;
+
+  /* Appearance */
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #D4AF37 0%, #C49B2A 100%);
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.3);
+  cursor: pointer;
+
+  /* Performance optimization (Enterprise doc pattern) */
+  will-change: transform;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Floating animation (old widget pattern) */
+  animation: fab-float 3s ease-in-out infinite;
+
+  /* Flexbox for icon centering */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Accessibility */
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Hover state - pause float animation */
+.holibot-fab:hover {
+  animation-play-state: paused;
+  transform: scale(1.1);
+  box-shadow: 0 15px 30px rgba(212, 175, 55, 0.4);
+}
+
+/* Active state (click) */
+.holibot-fab:active {
+  animation-play-state: paused;
+  transform: scale(0.95);
+}
+
+/* Focus state (keyboard navigation - WCAG 2.1 AA) */
+.holibot-fab:focus-visible {
+  outline: 3px solid #D4AF37; /* Compass Gold */
+  outline-offset: 4px;
+}
+
+/* Hide FAB on mobile when widget is open */
+@media (max-width: 480px) {
+  .holibot-fab {
+    bottom: 16px;
+    right: 16px;
+    width: 56px;
+    height: 56px;
+  }
+
+  .holibot-fab-hidden {
+    display: none;
+  }
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .holibot-fab {
+    transition: none;
+    will-change: auto;
+    animation: none; /* Disable floating animation */
+  }
+}
+
+/* Floating animation - draws attention subtly */
+@keyframes fab-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
