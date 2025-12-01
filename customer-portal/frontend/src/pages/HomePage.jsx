@@ -213,7 +213,7 @@ const HomePage = () => {
 
   return (
     <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
-      {/* Hero Section */}
+      {/* Hero Section - Calpe Hero Image */}
       <Box
         ref={heroRef}
         component={motion.div}
@@ -222,13 +222,9 @@ const HomePage = () => {
         transition={{ duration: 0.8 }}
         sx={{
           position: 'relative',
-          minHeight: isMobile ? '60vh' : '70vh',
+          minHeight: isMobile ? '70vh' : '85vh',
           display: 'flex',
           alignItems: 'center',
-          background: `linear-gradient(135deg,
-            ${theme.palette.primary.main} 0%,
-            ${theme.palette.primary.dark} 50%,
-            ${theme.palette.secondary.main} 100%)`,
           overflow: 'hidden',
           '&::before': {
             content: '""',
@@ -237,10 +233,18 @@ const HomePage = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundImage: 'url(/images/costa-blanca-hero.jpg)',
+            backgroundImage: 'url(/assets/images/hero-calpe.jpg)',
             backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.2,
+            backgroundPosition: 'center 30%',
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.5) 100%)',
           },
         }}
       >
@@ -250,16 +254,39 @@ const HomePage = () => {
             animate={heroInView ? { y: 0, opacity: 1 } : {}}
             transition={{ delay: 0.2, duration: 0.8 }}
           >
+            {/* HolidaiButler Logo */}
+            <Box
+              component="img"
+              src="/assets/images/HolidaiButler_Icon_Web.png"
+              alt="HolidaiButler"
+              sx={{
+                height: isMobile ? 60 : 80,
+                width: 'auto',
+                mb: 2,
+                filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))',
+              }}
+            />
             <Typography
               variant={isMobile ? 'h3' : 'h1'}
               sx={{
                 color: 'white',
                 fontWeight: 800,
-                mb: 2,
-                textShadow: '0 2px 20px rgba(0,0,0,0.3)',
+                mb: 1,
+                textShadow: '0 2px 20px rgba(0,0,0,0.5)',
               }}
             >
-              Ontdek de Costa Blanca
+              HolidaiButler
+            </Typography>
+            <Typography
+              variant={isMobile ? 'h5' : 'h4'}
+              sx={{
+                color: 'rgba(255,255,255,0.95)',
+                fontWeight: 600,
+                mb: 2,
+                textShadow: '0 2px 10px rgba(0,0,0,0.4)',
+              }}
+            >
+              Jouw Persoonlijke Butler aan de Costa Blanca
             </Typography>
             <Typography
               variant={isMobile ? 'h6' : 'h5'}
@@ -329,24 +356,42 @@ const HomePage = () => {
               </Button>
             </Box>
 
-            {/* Trust Indicators */}
-            <Box sx={{ mt: 4, display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* HolidaiButler USPs */}
+            <Box
+              sx={{
+                mt: 4,
+                display: 'flex',
+                gap: isMobile ? 2 : 4,
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                bgcolor: 'rgba(255,255,255,0.15)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: 2,
+                p: 2,
+              }}
+            >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <VerifiedIcon sx={{ color: 'success.light', fontSize: 24 }} />
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-                  <strong>Geverifieerd</strong> platform
+                <VerifiedIcon sx={{ color: '#D4AF37', fontSize: 28 }} />
+                <Typography variant="body1" sx={{ color: 'white', fontWeight: 600 }}>
+                  Lokale Experts
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <StarIcon sx={{ color: 'warning.light', fontSize: 24 }} />
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-                  <strong>4.8/5</strong> gemiddelde beoordeling
+                <StarIcon sx={{ color: '#D4AF37', fontSize: 28 }} />
+                <Typography variant="body1" sx={{ color: 'white', fontWeight: 600 }}>
+                  Curated Ervaringen
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TrendingIcon sx={{ color: 'info.light', fontSize: 24 }} />
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-                  <strong>10.000+</strong> tevreden gasten
+                <TrendingIcon sx={{ color: '#D4AF37', fontSize: 28 }} />
+                <Typography variant="body1" sx={{ color: 'white', fontWeight: 600 }}>
+                  Direct Boeken
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FavoriteIcon sx={{ color: '#D4AF37', fontSize: 28 }} />
+                <Typography variant="body1" sx={{ color: 'white', fontWeight: 600 }}>
+                  Persoonlijke Service
                 </Typography>
               </Box>
             </Box>
