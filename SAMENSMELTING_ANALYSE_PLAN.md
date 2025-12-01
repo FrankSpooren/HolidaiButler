@@ -1,12 +1,30 @@
 # HolidaiButler Platform Samensmelting Analyse & Implementatieplan
 
 **Datum:** 1 december 2025
-**Versie:** 3.0
-**Status:** ✅ FASE 1-3 VOLTOOID
+**Versie:** 4.0 (Complete Herziening - Fase 5 & 8 Analyse)
+**Status:** 🔴 KRITIEKE GAPS GEIDENTIFICEERD - ACTIE VEREIST
 
 ---
 
-## Goedgekeurde Beslissingen (30-11-2025)
+## VERSIE 4.0 - BELANGRIJKE WIJZIGING
+
+> **ALERT:** Deze versie is een complete herziening na grondige code-analyse die aantoont dat de eerder als "voltooid" gemarkeerde fasen kritieke gaps bevatten. De UX-improvements en testing onderdelen zijn NIET daadwerkelijk geïntegreerd in de werkende applicatie.
+
+### Gap Analyse Samenvatting
+
+| Fase | Status V3 | Werkelijke Status | Gap |
+|------|-----------|-------------------|-----|
+| Fase 1: Foundation | ✅ Voltooid | ✅ Voltooid | 0% |
+| Fase 2: Frontend Integration | ✅ Voltooid | ⚠️ 60% | 40% |
+| Fase 3: Module Integration | ✅ Voltooid | ⚠️ 70% | 30% |
+| **Fase 5: UX Improvements** | Niet gedocumenteerd | ❌ 5% | **95%** |
+| **Fase 8: Testing & Verificatie** | Niet gedocumenteerd | ❌ 20% | **80%** |
+
+---
+
+## DEEL A: HISTORISCHE CONTEXT (V3 Beslissingen - Behouden)
+
+### Goedgekeurde Beslissingen (30-11-2025)
 
 | Beslispunt | Keuze | Goedgekeurd |
 |------------|-------|-------------|
@@ -21,580 +39,767 @@
 
 ---
 
-## Executive Summary
+## DEEL B: FASE 5 & 8 GAP ANALYSE (NIEUW)
 
-Dit document presenteert een grondige analyse van twee ontwikkeltrajecten van het HolidaiButler-platform:
-- **ORIGINAL** (lokale 04-Development map): 1099 bestanden
-- **NEW** (GitHub repository): Enterprise modules
+### B.1 Fase 5: UX Improvements - Kritieke Gap
 
-**Conclusie:** Een hybride aanpak is noodzakelijk. Beide bronnen bevatten unieke, waardevolle componenten die gecombineerd moeten worden tot één enterprise-level platform.
+**Oorspronkelijke Scope:**
+- WCAG compliance (accessibility)
+- Mobile-first responsive design
+- Enhanced filter systeem
+- Trust building elementen
+- GDPR privacy compliance
 
----
+**Huidige Realiteit:**
 
-## 1. Vergelijkende Module Analyse
+| Component | Documentatie/Code Aanwezig | Geïntegreerd in App | Functioneel |
+|-----------|---------------------------|---------------------|-------------|
+| WCAG Modal | ✅ `original-source/.../WCAGModal.tsx` (192 LOC) | ❌ NEE | ❌ |
+| SkipToContent | ✅ `ux-improvements/5-wcag-compliance/` | ❌ NEE | ❌ |
+| Cookie Consent | ✅ `ux-improvements/7-gdpr-privacy/CookieConsent.jsx` (429 LOC) | ❌ NEE | ❌ |
+| Enhanced Filter | ✅ `ux-improvements/1-enhanced-filter-system/` | ❌ NEE | ❌ |
+| Trust Badges | ✅ `ux-improvements/2-trust-building/` | ❌ NEE | ❌ |
+| POI List View | ✅ `original-source/.../POILandingPage.tsx` | ❌ NEE | ❌ |
+| POI Map View | ✅ `original-source/.../MapView.tsx` (237 LOC) | ❌ NEE | ❌ |
+| Mobile-first CSS | ⚠️ Documentatie | ❌ NEE | ❌ |
 
-### 1.1 Frontend Customer Platform
+**customer-portal/frontend/src/App.jsx** bevat GEEN imports van:
+- CookieConsent component
+- WCAGModal component
+- SkipToContent component
 
-| Aspect | ORIGINAL | NEW | Aanbeveling |
-|--------|----------|-----|-------------|
-| **Framework** | React 19 + Vite 7 + TypeScript | React 18 + Vite 5 + JavaScript | **ORIGINAL** (nieuwer stack) |
-| **Styling** | Tailwind CSS + Custom CSS (34 files) | Material-UI (MUI) v5 | **ORIGINAL** (Mediterrane branding) |
-| **Componenten** | 114 components/services | ~40 components | **ORIGINAL** (meer compleet) |
-| **Meertaligheid** | 6 talen (nl, en, de, es, sv, pl) | Geen i18n geïmplementeerd | **ORIGINAL** |
-| **POI Templates** | List, Grid, Map (Leaflet) | Basic grid only | **ORIGINAL** |
-| **State Management** | Zustand + Context API | Zustand | **ORIGINAL** (meer uitgewerkt) |
-| **Accessibility** | WCAG 2.1 AA compliant | Basic | **ORIGINAL** |
-| **Homepage** | Mediterrane branding, USP carousel | MUI-based, modern animaties | **HYBRID** |
-| **Footer** | Basic | Modern, comprehensive | **NEW** |
-| **Animaties** | CSS transitions | Framer Motion | **NEW** (voor hover/tile effecten) |
+### B.2 Fase 8: Testing & Verificatie - Kritieke Gap
 
-**Beslissing Frontend:** Gebruik ORIGINAL als basis, integreer NEW Footer design en Framer Motion animaties.
+**Oorspronkelijke Scope:**
+1. Run alle unit tests per module
+2. Test inter-module communicatie
+3. Verifieer frontend-backend connecties
+4. Test user flows
 
----
+**Huidige Realiteit:**
 
-### 1.2 Widget API / HoliBot Chatbot
+| Test Type | Status | Coverage |
+|-----------|--------|----------|
+| Unit tests platform-core | ✅ ~60 tests | ~30% |
+| Unit tests ticketing-module | ✅ Aanwezig | ~60% |
+| Unit tests payment-module | ⚠️ Basis | ~20% |
+| E2E Test Framework | ❌ **NIET AANWEZIG** | 0% |
+| User Flow: Register → Login | ❌ **NIET GETEST** | 0% |
+| User Flow: POI → Ticket → Payment | ❌ **NIET GETEST** | 0% |
+| User Flow: Restaurant → Reservation | ❌ **NIET GETEST** | 0% |
+| Inter-module communicatie | ❌ **NIET GETEST** | 0% |
+| Frontend-Backend connecties | ❌ **NIET GEVERIFIEERD** | 0% |
 
-| Aspect | ORIGINAL | NEW | Aanbeveling |
-|--------|----------|-----|-------------|
-| **AI Provider** | Mistral AI | Geen chatbot | **ORIGINAL** |
-| **Architectuur** | 6600 LOC, 20+ services | N/A | **ORIGINAL** |
-| **Features** | Multi-turn, follow-up, intent recognition | N/A | **ORIGINAL** |
-| **Database** | ChromaDB (vector search) | N/A | **ORIGINAL** |
-| **Session Management** | Client + Server side | N/A | **ORIGINAL** |
+**Geen Cypress of Playwright configuratie aanwezig.**
 
-**Beslissing HoliBot:** Volledig overnemen van ORIGINAL - unieke functionaliteit.
+### B.3 Samensmelting Opdracht - Ontbrekende Items
 
----
-
-### 1.3 Backend / Platform Core
-
-| Aspect | ORIGINAL | NEW (platform-core) | Aanbeveling |
-|--------|----------|-----|-------------|
-| **Framework** | Express.js 4.18 | Express.js 4.18 | Gelijk |
-| **Database** | MySQL (raw queries) | MySQL (Sequelize ORM) | **NEW** (ORM voordelen) |
-| **Authentication** | JWT + bcrypt | JWT + bcrypt (BUG!) | **ORIGINAL** (geen bug) |
-| **POI Discovery** | Basis | Multi-source (Google, TripAdvisor, OSM) | **NEW** |
-| **Event Bus** | Geen | Redis Pub/Sub | **NEW** |
-| **API Gateway** | Geen | Volledig geïmplementeerd | **NEW** |
-| **Caching** | Geen | Redis | **NEW** |
-| **Monitoring** | Basic logging | Prometheus metrics | **NEW** |
-
-**KRITIEKE BUGS in NEW platform-core:**
-1. JWT Secret bug (gebruikt altijd fallback) - **MOET GEFIXED**
-2. SQL Injection in publicPOI.js - **MOET GEFIXED**
-
-**Beslissing Backend:** Gebruik NEW platform-core als basis na bugfixes, integreer ORIGINAL auth middleware.
-
----
-
-### 1.4 Admin Module
-
-| Aspect | ORIGINAL | NEW | Aanbeveling |
-|--------|----------|-----|-------------|
-| **POI Management** | Volledig geïmplementeerd (200+ LOC) | STUB (niet functioneel) | **ORIGINAL** |
-| **Frontend** | Minimal (1 file) | Full React app (35+ files) | **NEW** |
-| **Database** | Raw MySQL | Sequelize ORM | **NEW** |
-| **Features** | POI CRUD, Import/Export | Events, Bookings, Tickets | **HYBRID** |
-
-**Beslissing Admin:** Gebruik NEW frontend + architecture, integreer ORIGINAL POI management code.
+| Oorspronkelijke Eis | Status | Locatie Broncode |
+|---------------------|--------|------------------|
+| POI List View template | ❌ Niet gemerged | `original-source/.../POILandingPage.tsx` |
+| POI Map View template | ❌ Niet gemerged | `original-source/.../MapView.tsx` |
+| Complete Filter Modal | ❌ Niet gemerged | `original-source/.../POILandingPage.tsx:792-1017` |
+| Zweeds (sv) vertalingen | ❌ Ontbreekt | `original-source/.../translations.ts` |
+| Pools (pl) vertalingen | ❌ Ontbreekt | `original-source/.../translations.ts` |
+| WCAG 2.1 AA | ❌ Niet actief | `original-source/.../WCAGModal.tsx` |
+| Comparison functionaliteit | ❌ Niet gemerged | `original-source/.../POIComparisonModal.tsx` |
+| Distance filtering | ❌ Niet gemerged | `original-source/.../POILandingPage.tsx:106-170` |
+| Autocomplete search | ❌ Niet gemerged | `original-source/.../POILandingPage.tsx:100-104, 269-287` |
 
 ---
 
-### 1.5 Ticketing Module
+## DEEL C: DEFINITIEVE BESLISSINGEN FASE 5 & 8 (FACTBASED)
 
-| Aspect | ORIGINAL | NEW | Aanbeveling |
-|--------|----------|-----|-------------|
-| **Backend** | 1500 LOC, 3 services | 5132+ LOC, 9 services | **NEW** (+242%) |
-| **Frontend** | Deprecated/verwijderd | 4254 LOC, compleet | **NEW** |
-| **Wallet Integration** | Geen | Apple Wallet + Google Pay | **NEW** |
-| **Notifications** | Geen | Firebase Cloud Messaging | **NEW** |
-| **Ticket Transfer** | Geen | Volledig | **NEW** |
-| **Offline Mode** | Geen | Offline-first | **NEW** |
-| **Tests** | 0% coverage | ~60-70% coverage | **NEW** |
+### C.1 POI Landing Page: ORIGINAL Volledig Overnemen
 
-**Beslissing Ticketing:** Volledig NEW gebruiken - significant beter.
+**Beslissing:** ✅ Migreer `original-source/04-Development/frontend/src/pages/POILandingPage.tsx`
+
+**Onderbouwing (code-analyse):**
+
+| Feature | ORIGINAL (1057 LOC) | Customer-Portal (323 LOC) |
+|---------|---------------------|---------------------------|
+| View modes | Grid + List + Map | Alleen Grid |
+| Filter modal | 6 categorieën (distance, rating, price, hours, accessibility, reviews) | 2 dropdowns |
+| Autocomplete | Debounced, 8 suggestions, intent detection | Niet aanwezig |
+| Comparison | Tot 4 POIs, side-by-side modal | Niet aanwezig |
+| Distance calc | Geolocation + Calpe fallback | Niet aanwezig |
+| Scroll detection | Hide/show header on scroll | Niet aanwezig |
+| Category chips | 8 categorieën met icons en kleuren | 5 basis categorieën |
+| Favorites | Context + localStorage sync | Basis state only |
+
+**Benodigde Dependencies:**
+```json
+{
+  "leaflet": "^1.9.4",
+  "react-leaflet": "^4.2.1"
+}
+```
+
+### C.2 WCAG Accessibility: ORIGINAL WCAGModal
+
+**Beslissing:** ✅ Integreer `original-source/.../WCAGModal.tsx` (192 LOC)
+
+**Features (niet aanwezig in customer-portal):**
+- Font size slider (80%-150%)
+- High contrast mode toggle
+- Letter spacing control
+- Line height adjustment
+- Grayscale mode
+- localStorage persistence
+
+**Additioneel:** `ux-improvements/5-wcag-compliance/SkipToContent.jsx`
+
+### C.3 GDPR Cookie Consent: UX-Improvements Component
+
+**Beslissing:** ✅ Integreer `ux-improvements/7-gdpr-privacy/CookieConsent.jsx`
+
+**Waarom dit component:**
+- GDPR Article 7 compliant (clear affirmative action vereist)
+- Reject button even prominent als Accept (wettelijke vereiste)
+- Granular consent per categorie (necessary, functional, analytics, marketing)
+- localStorage persistence met 12-maanden expiry
+- i18n ready met `useTranslation` hook
+
+### C.4 Meertaligheid: Uitbreiding naar 6 Talen
+
+**Beslissing:** ✅ Merge ORIGINAL translations + voeg sv/pl toe aan customer-portal
+
+**Huidige staat customer-portal/frontend/src/i18n/index.js:**
+- nl, en, de, es (4 talen)
+- ~100 translation keys per taal
+
+**ORIGINAL translations.ts:**
+- nl, en, de, es, sv, pl (6 talen)
+- ~500 translation keys per taal
+
+**Actie:** Export sv/pl resources uit ORIGINAL, merge naar customer-portal i18n.
+
+### C.5 Testing Framework: Playwright E2E
+
+**Beslissing:** ✅ Implementeer Playwright voor E2E testing
+
+**Waarom Playwright over Cypress:**
+- Snellere test execution
+- Cross-browser testing out-of-box (Chromium, Firefox, WebKit)
+- Built-in API testing
+- Better TypeScript support
+- Smaller bundle size
+
+**Scope User Flow Tests:**
+1. Registratie → Login → Account Profile
+2. POI zoeken → Ticket selecteren → Betaling afrondenSCADE
+3. Restaurant zoeken → Reserveren → Bevestiging ontvangen
 
 ---
 
-### 1.6 Payment Module
+## DEEL D: COMPLETE OPENSTAANDE ITEMS
 
-| Aspect | ORIGINAL | NEW | Aanbeveling |
-|--------|----------|-----|-------------|
-| **Type** | Restaurant Reservations (mislabeled!) | Payment Engine | **NEW** |
-| **Provider** | Geen | Adyen (volledig) | **NEW** |
-| **Security** | Basic | PCI-DSS compliant | **NEW** |
-| **Completeness** | ~15% | ~90% | **NEW** |
-| **Audit Logging** | Geen | Tamper-evident | **NEW** |
+### D.1 Fase 5: UX Improvements (29 items)
 
-**Beslissing Payment:** Volledig NEW gebruiken. ORIGINAL is eigenlijk een reserveringsmodule.
+#### Prioriteit P0 - KRITIEK (Legal/Compliance)
+
+| # | Item | Bron | Actie |
+|---|------|------|-------|
+| 5.1 | GDPR Cookie Consent | UX-improvements | Integreer in App.jsx |
+| 5.2 | WCAG Modal | ORIGINAL | Integreer in App.jsx |
+| 5.3 | SkipToContent | UX-improvements | Integreer in App.jsx |
+| 5.4 | Privacy Policy page | Nieuw | Creëer pagina |
+| 5.5 | Cookie Policy page | Nieuw | Creëer pagina |
+
+#### Prioriteit P0 - KRITIEK (Core Features)
+
+| # | Item | Bron | Actie |
+|---|------|------|-------|
+| 5.6 | POI Map View (Leaflet) | ORIGINAL | Migreer MapView.tsx |
+| 5.7 | POI List View | ORIGINAL | Migreer list rendering |
+| 5.8 | View toggle (Grid/List/Map) | ORIGINAL | Migreer toggle component |
+| 5.9 | Complete Filter Modal | ORIGINAL | Migreer filter UI + logic |
+| 5.10 | Distance filtering | ORIGINAL | Migreer geolocation utils |
+
+#### Prioriteit P1 - HOOG (Enterprise Quality)
+
+| # | Item | Bron | Actie |
+|---|------|------|-------|
+| 5.11 | Autocomplete search | ORIGINAL | Migreer debounced search |
+| 5.12 | Comparison functionaliteit | ORIGINAL | Migreer POIComparisonModal |
+| 5.13 | Trust Badges | UX-improvements | Integreer in POI cards |
+| 5.14 | Social Proof | UX-improvements | "X mensen bekijken dit" |
+| 5.15 | Zweeds (sv) toevoegen | ORIGINAL | Export & merge translations |
+| 5.16 | Pools (pl) toevoegen | ORIGINAL | Export & merge translations |
+
+#### Prioriteit P2 - MEDIUM (Polish)
+
+| # | Item | Bron | Actie |
+|---|------|------|-------|
+| 5.17 | Mobile-first CSS refactor | N/A | Audit + refactor |
+| 5.18 | Touch targets 48px | UX-improvements | CSS updates |
+| 5.19 | Loading skeletons | UX-improvements | Vervang spinners |
+| 5.20 | Error boundaries | N/A | Implement React error boundaries |
+| 5.21 | TransparencyPanel | UX-improvements | Prijsopbouw component |
+
+### D.2 Fase 8: Testing & Verificatie (18 items)
+
+#### Prioriteit P0 - KRITIEK
+
+| # | Item | Actie |
+|---|------|-------|
+| 8.1 | Playwright framework setup | `npm init playwright@latest` |
+| 8.2 | E2E: Register flow | Test registratie pagina |
+| 8.3 | E2E: Login flow | Test login + session |
+| 8.4 | E2E: Account profile | Test profile CRUD |
+| 8.5 | E2E: POI search | Test zoeken + filters |
+| 8.6 | E2E: Ticket booking | Test volledige booking flow |
+| 8.7 | E2E: Payment completion | Test Adyen integratie |
+| 8.8 | E2E: Restaurant reservation | Test reservering flow |
+
+#### Prioriteit P1 - HOOG
+
+| # | Item | Actie |
+|---|------|-------|
+| 8.9 | Frontend-Backend connectivity | Verifieer alle API endpoints |
+| 8.10 | Inter-module communication | Test API Gateway routing |
+| 8.11 | Accessibility audit (axe-core) | Run automated WCAG tests |
+| 8.12 | Cross-browser (Chrome) | Playwright Chrome tests |
+| 8.13 | Cross-browser (Firefox) | Playwright Firefox tests |
+| 8.14 | Cross-browser (Safari) | Playwright WebKit tests |
+
+#### Prioriteit P2 - MEDIUM
+
+| # | Item | Actie |
+|---|------|-------|
+| 8.15 | Mobile tests (iOS Safari) | Playwright mobile devices |
+| 8.16 | Mobile tests (Android Chrome) | Playwright mobile devices |
+| 8.17 | Performance audit (Lighthouse) | Score >90 target |
+| 8.18 | Load testing | k6/Artillery baseline |
 
 ---
 
-### 1.7 Aanvullende Modules (alleen in NEW)
+## DEEL E: IMPLEMENTATIE ROADMAP
 
-| Module | Status | Behouden? |
-|--------|--------|-----------|
-| **Agenda Module** | Compleet | **JA** |
-| **Reservations Module** | Compleet | **JA** |
-| **Sales Pipeline** | Compleet | **JA** |
-| **UX Improvements** | Documentatie + code | **JA** |
+### Sprint 1: Critical Legal & Core Features (Week 1-2)
+
+**Doel:** GDPR compliance + kritieke UX gaps dichten
+
+#### Week 1 - Legal Compliance & POI Views
+
+| Dag | Taak | Deliverable |
+|-----|------|-------------|
+| 1 | GDPR CookieConsent integreren | Cookie banner actief |
+| 1 | Privacy Policy pagina creëren | /privacy route |
+| 2 | WCAG Modal integreren | Accessibility menu actief |
+| 2 | SkipToContent component | Skip link functioneel |
+| 3 | POI MapView migreren | Leaflet map werkend |
+| 3 | Leaflet dependencies toevoegen | npm packages installed |
+| 4 | POI ListView migreren | List view beschikbaar |
+| 4 | View toggle implementeren | Grid/List/Map switch |
+| 5 | Filter Modal migreren | Complete filters UI |
+
+#### Week 2 - Languages & E2E Setup
+
+| Dag | Taak | Deliverable |
+|-----|------|-------------|
+| 1 | sv translations extracten | Zweeds JSON gereed |
+| 1 | pl translations extracten | Pools JSON gereed |
+| 2 | i18n merge + LanguageSwitcher update | 6 talen beschikbaar |
+| 3 | Playwright setup | Framework geïnstalleerd |
+| 3 | Playwright config | Browser + device config |
+| 4 | E2E: Auth flow tests | Register/Login getest |
+| 5 | E2E: POI search tests | Search flow getest |
+
+**Sprint 1 Exit Criteria:**
+- [ ] GDPR compliant (cookie banner actief)
+- [ ] WCAG componenten geïntegreerd
+- [ ] POI page heeft Grid, List EN Map views
+- [ ] Complete filter modal functioneel
+- [ ] 6 talen beschikbaar (nl, en, de, es, sv, pl)
+- [ ] Playwright E2E framework operationeel
+- [ ] Auth flow E2E tests passing
+
+### Sprint 2: Enterprise Features & Testing (Week 3-4)
+
+**Doel:** Feature completion + E2E coverage
+
+#### Week 3 - Advanced Features
+
+| Dag | Taak | Deliverable |
+|-----|------|-------------|
+| 1 | Autocomplete search migreren | Smart search actief |
+| 2 | Comparison functionaliteit | POI vergelijking werkt |
+| 3 | Trust Badges integreren | Social proof op POI cards |
+| 4 | Distance filtering | Geolocation filtering |
+| 5 | E2E: Booking flow tests | Ticket booking getest |
+
+#### Week 4 - Testing & Verification
+
+| Dag | Taak | Deliverable |
+|-----|------|-------------|
+| 1 | E2E: Restaurant reservation | Reservering getest |
+| 2 | E2E: Payment completion | Payment flow getest |
+| 3 | Inter-module tests | API Gateway getest |
+| 4 | Accessibility audit (axe-core) | WCAG rapport |
+| 5 | Cross-browser tests | Chrome/Firefox/Safari |
+
+**Sprint 2 Exit Criteria:**
+- [ ] Autocomplete search functioneel
+- [ ] Comparison modal werkend
+- [ ] Trust signals op alle POI cards
+- [ ] Alle kritieke user flows getest
+- [ ] WCAG audit passed (0 critical/serious)
+- [ ] Cross-browser compatibility confirmed
+
+### Sprint 3: Polish & Performance (Week 5-6)
+
+**Doel:** Enterprise-level kwaliteit valideren
+
+#### Week 5 - Mobile & Performance
+
+| Dag | Taak | Deliverable |
+|-----|------|-------------|
+| 1 | Mobile-first CSS audit | Issues geïdentificeerd |
+| 2 | Touch targets optimalisatie | 48px minimum |
+| 3 | Loading states/skeletons | Professionele loading UX |
+| 4 | Performance audit | Lighthouse >90 |
+| 5 | Bundle size optimalisatie | Code splitting active |
+
+#### Week 6 - Final QA & Documentation
+
+| Dag | Taak | Deliverable |
+|-----|------|-------------|
+| 1 | Mobile E2E tests | iOS/Android passed |
+| 2 | Load testing baseline | Performance documented |
+| 3 | Bug fixes | Zero critical bugs |
+| 4 | Documentation update | Technical docs complete |
+| 5 | Staging deployment prep | Deploy checklist ready |
+
+**Sprint 3 Exit Criteria:**
+- [ ] Mobile-first responsive design validated
+- [ ] Lighthouse score >90
+- [ ] Cross-browser + mobile tests passed
+- [ ] Performance baseline documented
+- [ ] Zero kritieke bugs
+- [ ] Documentation up-to-date
 
 ---
 
-## 2. Definitieve Architectuur (GOEDGEKEURD)
+## DEEL F: TECHNISCHE IMPLEMENTATIE SPECIFICATIES
+
+### F.1 POI Page Migratie
+
+**Bestanden te migreren:**
+
+```
+original-source/04-Development/frontend/src/
+├── pages/
+│   └── POILandingPage.tsx (1057 LOC)
+│       → customer-portal/frontend/src/pages/poi/POILandingPage.jsx
+├── features/poi/
+│   ├── components/
+│   │   ├── MapView.tsx (237 LOC)
+│   │   │   → customer-portal/frontend/src/components/poi/MapView.jsx
+│   │   ├── POIDetailModal.tsx
+│   │   ├── POIComparisonModal.tsx
+│   │   ├── POIImage.tsx
+│   │   ├── POIRating.tsx
+│   │   └── POITileActions.tsx
+│   ├── hooks/
+│   │   └── usePOIs.ts → custom hook voor data fetching
+│   └── services/
+│       └── poiService.ts → API calls
+├── shared/
+│   ├── components/
+│   │   ├── WCAGModal.tsx (192 LOC)
+│   │   └── ComparisonBar.tsx
+│   ├── contexts/
+│   │   ├── FavoritesContext.tsx
+│   │   └── ComparisonContext.tsx
+│   ├── config/
+│   │   └── categoryConfig.ts → category icons/colors
+│   └── utils/
+│       └── distance.ts → geolocation utilities
+```
+
+### F.2 App.jsx Wijzigingen
+
+**customer-portal/frontend/src/App.jsx - Toevoegingen:**
+
+```jsx
+// NIEUWE IMPORTS
+import CookieConsent from './components/privacy/CookieConsent';
+import SkipToContent from './components/accessibility/SkipToContent';
+import WCAGModal from './components/accessibility/WCAGModal';
+
+function App() {
+  const [wcagModalOpen, setWcagModalOpen] = useState(false);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+
+        {/* ACCESSIBILITY: Skip to main content */}
+        <SkipToContent targetId="main-content" />
+
+        <HoliBotProvider>
+          <BrowserRouter>
+            <Suspense fallback={<LoadingScreen />}>
+              {/* Accessibility trigger in header menu */}
+              <Header onAccessibilityClick={() => setWcagModalOpen(true)} />
+
+              <main id="main-content">
+                <Routes>
+                  {/* ... existing routes ... */}
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/cookies" element={<CookiePolicy />} />
+                </Routes>
+              </main>
+
+              <Footer />
+            </Suspense>
+          </BrowserRouter>
+        </HoliBotProvider>
+
+        {/* GDPR: Cookie consent banner */}
+        <CookieConsent
+          onAccept={(prefs) => {
+            // Initialize analytics/marketing based on preferences
+            if (prefs.analytics) initAnalytics();
+            if (prefs.marketing) initMarketing();
+          }}
+          privacyPolicyUrl="/privacy"
+          cookiePolicyUrl="/cookies"
+        />
+
+        {/* ACCESSIBILITY: WCAG settings modal */}
+        <WCAGModal
+          isOpen={wcagModalOpen}
+          onClose={() => setWcagModalOpen(false)}
+        />
+
+        <ToastContainer />
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
+```
+
+### F.3 Playwright Configuration
+
+**customer-portal/playwright.config.ts:**
+
+```typescript
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: [
+    ['html'],
+    ['junit', { outputFile: 'test-results/junit.xml' }]
+  ],
+  use: {
+    baseURL: 'http://localhost:5173',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+  },
+  projects: [
+    // Desktop browsers
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    // Mobile devices
+    { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
+    { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
+  ],
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: !process.env.CI,
+  },
+});
+```
+
+### F.4 i18n Extension
+
+**customer-portal/frontend/src/i18n/index.js - Toevoegingen:**
+
+```javascript
+const resources = {
+  // Bestaande talen behouden
+  nl: { translation: { /* ... */ } },
+  en: { translation: { /* ... */ } },
+  de: { translation: { /* ... */ } },
+  es: { translation: { /* ... */ } },
+
+  // NIEUW: Zweeds
+  sv: {
+    translation: {
+      nav: {
+        home: 'Hem',
+        experiences: 'Upplevelser',
+        restaurants: 'Restauranger',
+        agenda: 'Evenemang',
+        search: 'Sök',
+        login: 'Logga in',
+        signup: 'Registrera dig',
+        // ... (extract from ORIGINAL translations.ts)
+      },
+      // ... volledige sv translations
+    },
+  },
+
+  // NIEUW: Pools
+  pl: {
+    translation: {
+      nav: {
+        home: 'Strona główna',
+        experiences: 'Doświadczenia',
+        restaurants: 'Restauracje',
+        agenda: 'Wydarzenia',
+        search: 'Szukaj',
+        login: 'Zaloguj się',
+        signup: 'Zarejestruj się',
+        // ... (extract from ORIGINAL translations.ts)
+      },
+      // ... volledige pl translations
+    },
+  },
+};
+```
+
+**LanguageSwitcher.jsx update:**
+
+```javascript
+const languages = [
+  { code: 'nl', label: 'NL', flag: '🇳🇱' },
+  { code: 'en', label: 'EN', flag: '🇬🇧' },
+  { code: 'de', label: 'DE', flag: '🇩🇪' },
+  { code: 'es', label: 'ES', flag: '🇪🇸' },
+  { code: 'sv', label: 'SV', flag: '🇸🇪' },  // NIEUW
+  { code: 'pl', label: 'PL', flag: '🇵🇱' },  // NIEUW
+];
+```
+
+---
+
+## DEEL G: KWALITEITSBORGING
+
+### G.1 Enterprise Readiness Checklist (Updated)
+
+#### Legal Compliance ⏳
+
+- [ ] GDPR Cookie Consent actief
+- [ ] Privacy Policy pagina beschikbaar
+- [ ] Cookie Policy pagina beschikbaar
+- [ ] Terms of Service beschikbaar
+- [ ] WCAG 2.1 AA compliance verified
+
+#### Feature Completeness ⏳
+
+- [ ] POI Views: Grid + List + Map
+- [ ] Complete filter modal (6 categorieën)
+- [ ] Autocomplete search met debounce
+- [ ] POI Comparison modal
+- [ ] 6 talen beschikbaar
+- [ ] HoliBot Widget functioneel
+- [ ] User Account flows
+- [ ] Favorites functionaliteit
+- [ ] Booking flows (Tickets + Restaurants)
+
+#### Testing Coverage ⏳
+
+- [ ] Unit tests: >60% coverage
+- [ ] E2E tests: All critical user flows
+- [ ] Accessibility audit: 0 critical issues
+- [ ] Cross-browser: Chrome, Firefox, Safari
+- [ ] Mobile: iOS Safari, Android Chrome
+- [ ] Performance: Lighthouse >90
+
+### G.2 Acceptance Criteria per Fase
+
+#### Fase 5 UX Improvements - DONE wanneer:
+
+1. ✅ GDPR Cookie banner verschijnt bij eerste bezoek
+2. ✅ Cookie preferences worden opgeslagen in localStorage
+3. ✅ WCAG modal bereikbaar via menu
+4. ✅ Skip to content link werkt voor keyboard users
+5. ✅ POI page heeft Grid, List EN Map views
+6. ✅ Filter modal heeft alle 6 filter categorieën
+7. ✅ Autocomplete toont suggestions na 2+ karakters
+8. ✅ Comparison modal toont tot 4 POIs side-by-side
+9. ✅ 6 talen selecteerbaar in LanguageSwitcher
+10. ✅ Trust badges tonen op POI cards
+11. ✅ 48px minimum touch targets op mobile
+
+#### Fase 8 Testing - DONE wanneer:
+
+1. ✅ Playwright framework geconfigureerd
+2. ✅ Auth E2E: Register → Login → Profile passed
+3. ✅ Booking E2E: POI → Ticket → Payment passed
+4. ✅ Reservation E2E: Restaurant → Reserve → Confirm passed
+5. ✅ Axe-core audit: 0 critical/serious issues
+6. ✅ Cross-browser: Chrome + Firefox + Safari passed
+7. ✅ Mobile: iOS + Android passed
+8. ✅ Lighthouse Performance: >90
+
+---
+
+## DEEL H: ARCHITECTUUR (V4 - Geüpdatet)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    HolidaiButler Platform v2.0                       │
-│                  (Enterprise-Level Architecture)                     │
-│                        ✅ GOEDGEKEURD                                │
+│                    HolidaiButler Platform v2.1                       │
+│           (Enterprise-Level - Post-Fase 5 & 8 Integratie)            │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         FRONTEND LAYER                               │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Customer Portal (ORIGINAL)                                          │
-│  ├─ React 19 + TypeScript + Vite 7                                  │
-│  ├─ Tailwind CSS (Mediterrane branding)                             │
-│  ├─ Framer Motion (NEW animaties)                                   │
-│  ├─ 6-talen meertaligheid                                           │
-│  ├─ POI Templates: List, Grid, Map (Leaflet)                        │
-│  ├─ WCAG 2.1 AA Accessibility                                       │
-│  ├─ Favorites, Comparison, Onboarding                               │
-│  └─ Footer (NEW design)                                             │
 │                                                                      │
-│  Admin Dashboard (NEW frontend + ORIGINAL POI logic)                 │
-│  ├─ React 18 + MUI                                                  │
-│  └─ POI Management (ORIGINAL implementatie)                         │
+│  Customer Portal (HYBRID: ORIGINAL UI + NEW Infrastructure)          │
+│  ├─ React 18 + JavaScript + MUI v5                                  │
+│  │                                                                   │
+│  ├─ POI Templates (van ORIGINAL):                                    │
+│  │   ├─ POILandingPage.tsx → Grid/List/Map views                    │
+│  │   ├─ MapView.tsx → Leaflet integration                           │
+│  │   ├─ Filter Modal → 6 filter categorieën                         │
+│  │   ├─ Autocomplete → Debounced search                             │
+│  │   └─ POIComparisonModal → Tot 4 POIs vergelijken                 │
+│  │                                                                   │
+│  ├─ UX Components (van UX-IMPROVEMENTS):                            │
+│  │   ├─ CookieConsent.jsx → GDPR compliance                        │
+│  │   ├─ SkipToContent.jsx → WCAG skip links                        │
+│  │   ├─ TrustBadges.jsx → Social proof                             │
+│  │   └─ SocialProof.jsx → "X mensen bekijken dit"                  │
+│  │                                                                   │
+│  ├─ Accessibility (van ORIGINAL):                                   │
+│  │   └─ WCAGModal.tsx → Font/contrast/spacing settings             │
+│  │                                                                   │
+│  ├─ i18n: 6 talen (nl, en, de, es, sv, pl)                         │
+│  │                                                                   │
+│  └─ Testing: Playwright E2E                                         │
+│      ├─ Auth flow tests                                             │
+│      ├─ Booking flow tests                                          │
+│      ├─ Reservation flow tests                                      │
+│      └─ Cross-browser/mobile tests                                  │
 │                                                                      │
-│  HoliBot Widget (ORIGINAL - embedded in Customer Portal)            │
-│  └─ 11 components, connects to standalone API                       │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         BACKEND LAYER                                │
 ├─────────────────────────────────────────────────────────────────────┤
+│  (Unchanged from V3 - all modules operational)                       │
 │                                                                      │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Platform Core (:3001) - Sequelize ORM                      │    │
-│  │  ├─ API Gateway (proxy to modules)                          │    │
-│  │  ├─ Event Bus (Redis Pub/Sub)                               │    │
-│  │  ├─ POI Discovery & Classification                          │    │
-│  │  ├─ Authentication (ORIGINAL middleware - FIXED)            │    │
-│  │  └─ Prometheus Metrics                                      │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                                                      │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  HoliBot API (:3002) - STANDALONE                           │    │
-│  │  ├─ Mistral AI Integration                                  │    │
-│  │  ├─ ChromaDB Vector Search                                  │    │
-│  │  ├─ Multi-turn Conversations                                │    │
-│  │  └─ Intent Recognition                                      │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                                                      │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                 │
-│  │Admin (:3003) │ │Ticket (:3004)│ │Payment(:3005)│                 │
-│  │   HYBRID     │ │    NEW       │ │  NEW-Adyen   │                 │
-│  └──────────────┘ └──────────────┘ └──────────────┘                 │
-│                                                                      │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                 │
-│  │Reserv.(:3006)│ │Agenda (:3007)│ │Sales  (:3008)│                 │
-│  │    NEW       │ │    NEW       │ │    NEW       │                 │
-│  └──────────────┘ └──────────────┘ └──────────────┘                 │
+│  Platform Core (:3001) - Sequelize ORM                              │
+│  HoliBot API (:3002) - Mistral AI                                   │
+│  Admin (:3003) | Ticketing (:3004) | Payment (:3005)                │
+│  Reservations (:3006) | Agenda (:3007) | Sales (:3008)              │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         DATA LAYER                                   │
 ├─────────────────────────────────────────────────────────────────────┤
-│  MySQL (Hetzner - pxoziy_db1) - Via Sequelize ORM                   │
-│  ├─ POIs, Categories, Q&As                                          │
-│  ├─ Users, Sessions, Permissions                                    │
-│  ├─ Bookings, Tickets, Transactions                                 │
-│  └─ Restaurants, Events, Reviews                                    │
-│                                                                      │
-│  Redis                                                               │
-│  ├─ Session Cache                                                   │
-│  ├─ Event Bus (Pub/Sub)                                             │
-│  └─ Rate Limiting                                                   │
-│                                                                      │
-│  ChromaDB (voor HoliBot API)                                        │
-│  └─ POI Vector Embeddings                                           │
+│  MySQL (Hetzner) | Redis | ChromaDB                                  │
+│  (Unchanged from V3)                                                 │
 └─────────────────────────────────────────────────────────────────────┘
-
-Service Ports Overview:
-┌────────────────────┬───────┐
-│ Service            │ Port  │
-├────────────────────┼───────┤
-│ Platform Core      │ 3001  │
-│ HoliBot API        │ 3002  │
-│ Admin Module       │ 3003  │
-│ Ticketing Module   │ 3004  │
-│ Payment Module     │ 3005  │
-│ Reservations       │ 3006  │
-│ Agenda Module      │ 3007  │
-│ Sales Pipeline     │ 3008  │
-│ MySQL              │ 3306  │
-│ Redis              │ 6379  │
-│ ChromaDB           │ 8000  │
-└────────────────────┴───────┘
 ```
 
 ---
 
-## 3. Componenten Mapping: Wat komt waarvandaan?
+## DEEL I: RISICO'S EN MITIGATIE
 
-### Van ORIGINAL behouden:
-
-| Component | Locatie | Reden |
-|-----------|---------|-------|
-| **Frontend Customer Portal** | `frontend/` | Mediterrane branding, 6 talen, POI templates |
-| **Homepage componenten** | `frontend/src/features/homepage/` | USP carousel, hero sectie |
-| **POI Landing Page** | `frontend/src/pages/POILandingPage.tsx` | 1056 LOC, List/Grid/Map |
-| **Meertaligheid** | `frontend/src/i18n/` | 6 talen volledig |
-| **HoliBot Widget** | `frontend/src/shared/components/HoliBot/` | 11 componenten |
-| **Widget API Backend** | `Widget API/` | Mistral AI chatbot |
-| **Auth Middleware** | `backend/src/middleware/auth.js` | Geen JWT bug |
-| **Admin POI Routes** | `Admin module/backend/routes/adminPOI.js` | Volledig POI CRUD |
-| **Favorites Context** | `frontend/src/shared/contexts/FavoritesContext.tsx` | localStorage |
-| **WCAG Modal** | `frontend/src/shared/components/WCAGModal.tsx` | Accessibility |
-| **Logo SVG** | `frontend/src/assets/` | HolidaiButler branding |
-
-### Van NEW behouden:
-
-| Component | Locatie | Reden |
-|-----------|---------|-------|
-| **Platform Core** | `platform-core/` | API Gateway, Event Bus |
-| **Admin Frontend** | `admin-module/frontend/` | 35+ React componenten |
-| **Ticketing Module** | `ticketing-module/` | Enterprise-complete |
-| **Payment Module** | `payment-module/` | Adyen, PCI-DSS |
-| **Reservations Module** | `reservations-module/` | Restaurant reserveringen |
-| **Agenda Module** | `agenda-module/` | Event management |
-| **Sales Pipeline** | `sales-pipeline-module/` | B2B CRM |
-| **Footer Design** | `customer-portal/frontend/` | Modern design |
-| **Framer Motion Animaties** | `customer-portal/frontend/` | Tile hover effects |
-| **Database Migrations** | `*/migrations/` | Sequelize migrations |
-| **Redis Caching** | `platform-core/src/services/cache.js` | Performance |
-| **Prometheus Metrics** | `platform-core/src/services/metrics.js` | Monitoring |
+| Risico | Impact | Waarschijnlijkheid | Mitigatie |
+|--------|--------|-------------------|-----------|
+| TypeScript → JavaScript migratie | Medium | Hoog | Type annotations als JSDoc comments |
+| Tailwind → MUI styling conflicts | Medium | Hoog | CSS scoping, component isolation |
+| Leaflet bundle size impact | Laag | Medium | Lazy loading, code splitting |
+| Translation key mismatches | Laag | Medium | Automated key validation script |
+| E2E test flakiness | Medium | Medium | Explicit waits, retry logic |
+| Performance degradatie door nieuwe features | Hoog | Laag | Lighthouse CI, performance budgets |
 
 ---
 
-## 4. Kritieke Actiepunten (MOET GEFIXED)
+## DEEL J: SUCCESS METRICS
 
-### 4.1 Security Fixes (Prioriteit 1 - BLOCKER)
+### Business Impact Targets
 
-| Issue | Locatie | Fix |
-|-------|---------|-----|
-| JWT Secret Bug | `platform-core/src/middleware/auth.js:12-13` | `process.env.JWT_SECRET` i.p.v. `process.env.getJwtSecret()` |
-| SQL Injection | `platform-core/src/routes/publicPOI.js:129-131` | Parameterized queries |
+| Metric | Huidig | Target | Verbetering |
+|--------|--------|--------|-------------|
+| Conversion Rate | 2.5% | 3.1% | +25% |
+| Mobile Conversion | 2.0% | 2.8% | +40% |
+| Bounce Rate | 55% | 38% | -31% |
+| Time to Booking | 8 min | 5.6 min | -30% |
 
-### 4.2 Integratie Werk
+### Technical Quality Targets
 
-| Taak | Complexiteit | Prioriteit |
-|------|--------------|------------|
-| ORIGINAL frontend → NEW platform-core API koppeling | Medium | Hoog |
-| Widget API integreren in platform-core | Medium | Hoog |
-| ORIGINAL POI routes → NEW Admin module | Laag | Hoog |
-| Database schema unificatie | Hoog | Medium |
-| Footer design migratie | Laag | Laag |
-| Framer Motion integratie | Laag | Laag |
-
----
-
-## 5. Implementatie Fasering
-
-### Fase 1: Foundation (Week 1-2) ✅ VOLTOOID
-- [x] Fix JWT bug in platform-core
-- [x] Fix SQL injection in publicPOI.js
-- [x] Merge ORIGINAL auth middleware
-- [x] Database schema alignment
-- [x] Basic integration tests
-
-### Fase 2: Frontend Integration (Week 3-4) ✅ VOLTOOID
-- [x] ORIGINAL customer portal → API connectivity
-- [x] Footer design merge
-- [x] Framer Motion animation integration
-- [x] HoliBot widget integration
-- [x] Mobile responsiveness verification
-
-### Fase 3: Module Integration (Week 5-6) ✅ VOLTOOID
-- [x] Admin POI routes integration
-- [x] Widget API deployment
-- [x] Ticketing module activation
-- [x] Payment module Adyen setup
-
-### Fase 4: Testing & Polish (Week 7-8) ⏳ PENDING
-- [ ] End-to-end testing
-- [ ] Performance optimization
-- [ ] Security audit
-- [ ] Documentation update
-- [ ] Staging deployment
+| Metric | Huidig | Target |
+|--------|--------|--------|
+| Test Coverage | ~30% | 70% |
+| E2E Coverage | 0% | 100% critical flows |
+| Lighthouse Performance | ~70 | >90 |
+| WCAG Compliance | ~60% | 100% AA |
+| Languages Supported | 4 | 6 |
+| POI View Templates | 1 (Grid) | 3 (Grid/List/Map) |
 
 ---
 
-## 6. Risico's en Mitigatie
+## CONCLUSIE
 
-| Risico | Impact | Mitigatie |
-|--------|--------|-----------|
-| Database schema conflicts | Hoog | Grondig migration planning |
-| API incompatibilities | Medium | Adapter pattern waar nodig |
-| Styling conflicts | Laag | CSS scoping, namespacing |
-| Performance degradatie | Medium | Load testing, caching |
-| Security vulnerabilities | Hoog | Security audit, penetration testing |
+### Situatie Assessment
 
----
+De eerdere documentatie (V3) markeerde Fase 1-3 als "voltooid", maar grondige code-analyse toont aan dat **kritieke UX en testing componenten niet daadwerkelijk zijn geïntegreerd**. De componenten bestaan wel (in `/ux-improvements/` en `original-source/`), maar zijn niet functioneel in de werkende applicatie.
 
-## 7. Beslispunten - GOEDGEKEURD
+### Kernbeslissingen
 
-### Beslissing 1: Frontend Framework ✅
-**Gekozen:** ORIGINAL (React 19 + TypeScript + Tailwind)
-- Nieuwere stack, betere typing
-- Mediterrane branding behouden
-- 114 componenten, 6 talen, WCAG 2.1 compliant
+1. **POI Page:** ORIGINAL `POILandingPage.tsx` volledig overnemen (1057 LOC vs 323 LOC)
+2. **WCAG:** ORIGINAL `WCAGModal.tsx` + UX-improvements `SkipToContent.jsx`
+3. **GDPR:** UX-improvements `CookieConsent.jsx` (429 LOC, compliant)
+4. **Testing:** Playwright E2E framework implementeren
+5. **Talen:** Uitbreiden van 4 naar 6 talen (sv + pl toevoegen)
 
-### Beslissing 2: Backend ORM ✅
-**Gekozen:** Sequelize ORM
-- Betere maintainability
-- Migrations support
-- Consistentie met NEW modules
+### Volgende Stappen
 
-### Beslissing 3: Widget API Deployment ✅
-**Gekozen:** Standalone service (port :3002)
-- Onafhankelijke schaalbaarheid
-- Fault isolation (chatbot crash treft niet platform)
-- Onafhankelijke deployments mogelijk
-
-### Beslissing 4: Release Prioriteit ✅
-**Gekozen:** Volledig platform (alle modules)
-- Customer Portal + Admin + HoliBot
-- Ticketing + Payment + Reservations
-- Agenda + Sales Pipeline
-- Enterprise-complete vanaf dag 1
-
----
-
-## 8. Quality Metrics
-
-### Huidige Status
-| Aspect | ORIGINAL | NEW | Target |
-|--------|----------|-----|--------|
-| Test Coverage | ~0% | ~30% | 70% |
-| Security Score | 7/10 | 4/10* | 9/10 |
-| Performance | Goed | Medium | Excellent |
-| Documentation | 8/10 | 7/10 | 9/10 |
-| Accessibility | 9/10 | 6/10 | 9/10 |
-
-*Na bugfixes: 8/10
-
-### Enterprise Readiness Checklist
-- [ ] Security audit passed
-- [ ] GDPR compliance
-- [ ] WCAG 2.1 AA compliance
-- [ ] Load testing (1000+ concurrent users)
-- [ ] Disaster recovery plan
-- [ ] SLA documentation
-- [ ] API documentation (OpenAPI)
-- [ ] Monitoring & alerting
-- [ ] CI/CD pipeline
-
----
-
-## 9. Conclusie
-
-De samensmelting van ORIGINAL en NEW resulteert in een **enterprise-level platform** dat het beste van beide werelden combineert:
-
-- **ORIGINAL:** Mediterrane branding, meertaligheid, HoliBot AI, POI templates, WCAG compliance
-- **NEW:** Enterprise modules, Adyen payments, Firebase notifications, API Gateway, monitoring
-
-Met de goedgekeurde hybride aanpak en gefaseerde implementatie kan HolidaiButler uitgroeien tot een **state-of-the-art tourism platform** klaar voor Europese expansie.
-
----
-
-## 10. Implementatie Status
-
-### Fase 1: Foundation - **✅ VOLTOOID**
-| Taak | Status | Prioriteit | Datum |
-|------|--------|------------|-------|
-| Fix JWT bug in platform-core | ✅ Voltooid | **P1 - BLOCKER** | 30-11-2025 |
-| Fix SQL injection in publicPOI.js | ✅ Voltooid | **P1 - BLOCKER** | 30-11-2025 |
-| Merge ORIGINAL auth middleware | ✅ Voltooid | Hoog | 30-11-2025 |
-| Database schema alignment | ✅ Voltooid | Hoog | 30-11-2025 |
-| Basic integration tests | ✅ Voltooid | Medium | 30-11-2025 |
-
-#### Security Fixes Details (30-11-2025):
-- **JWT Bug:** `platform-core/src/middleware/auth.js` - Changed `process.env.getJwtSecret()` → `process.env.JWT_SECRET`
-- **SQL Injection:** `platform-core/src/routes/publicPOI.js` - Replaced raw SQL literal with Sequelize `Op.or` operators
-
-#### Auth Middleware Merge Details (30-11-2025):
-Het `platform-core/src/middleware/auth.js` bestand is uitgebreid van 125 naar 738 regels met features van ORIGINAL:
-- **RBAC System:** `requirePermission()`, `requireRole()` middleware factories
-- **Permission Checks:** `checkUserPermission()`, `checkAnyPermission()`, `checkAllPermissions()`
-- **Admin Auth:** Aparte `verifyAdminToken()` met JWT_ADMIN_SECRET
-- **Rate Limiting:** `authRateLimiter` (5 req/15min) en `apiRateLimiter` (100 req/15min)
-- **Activity Logging:** `logActivity()` middleware voor audit trails
-- **Field Validation:** `validateFields()` tegen mass assignment attacks
-- **Token Generation:** `generateToken()`, `generateRefreshToken()`, `generateAdminToken()`
-- **Backwards Compatible:** Alle bestaande exports behouden, `verifyToken` alias toegevoegd
-
-#### Database Schema Alignment Details (30-11-2025):
-Unified schema gecreëerd die ORIGINAL en NEW structuren combineert:
-
-**Nieuwe Migratie:** `003_unified_schema_alignment.sql`
-- **RBAC Systeem:** `roles`, `permissions`, `role_permissions` tabellen
-- **Users Tabel:** Gebaseerd op ORIGINAL backend met Sequelize model
-- **User Permissions:** Individuele permission overrides met expiration
-- **Sessions:** JWT session tracking
-- **Favorites:** User favorites sync (van localStorage naar DB)
-- **POI Q&A:** Knowledge base voor HoliBot chatbot
-- **Reviews:** User review systeem met moderatie
-- **Audit Log:** Security audit trail
-- **API Keys:** External integration keys
-- **Notification Settings:** User notification preferences
-
-**Nieuwe Sequelize Models:**
-- `User.js` - Customer accounts met password hashing
-- `Role.js` - RBAC rollen
-- `Permission.js` - RBAC permissies
-- `models/index.js` - Centraal export met associations
-
-**Standaard Rollen:**
-| Rol | Beschrijving |
-|-----|--------------|
-| super_admin | Volledige systeemtoegang |
-| admin | Platform administratie |
-| moderator | Content moderatie |
-| poi_owner | Eigenaar beheert eigen POI(s) |
-| user | Standaard geregistreerde gebruiker |
-| guest | Niet-geregistreerde bezoeker |
-
-**Documentatie:** `DATABASE_SCHEMA_OVERVIEW.md`
-
-#### Integration Tests Details (30-11-2025):
-Comprehensive test suite toegevoegd voor platform-core:
-
-**Test Bestanden:**
-- `src/middleware/__tests__/auth.test.js` - Auth middleware tests (25+ tests)
-- `src/routes/__tests__/publicPOI.test.js` - Public POI routes tests (20+ tests)
-- `src/models/__tests__/User.test.js` - User model tests (15+ tests)
-- `tests/setup.js` - Enhanced test configuration
-
-**Test Coverage:**
-| Component | Tests | Focus |
-|-----------|-------|-------|
-| Auth Middleware | 25+ | JWT verification, RBAC, token generation |
-| Public POI Routes | 20+ | API responses, security, sample data |
-| User Model | 15+ | Password hashing, validation, security |
-
-**Run Tests:** `cd platform-core && npm test`
-
-### Fase 2: Frontend Integration - **✅ VOLTOOID**
-| Taak | Status | Prioriteit | Datum |
-|------|--------|------------|-------|
-| ORIGINAL customer portal → API connectivity | ✅ Voltooid | Hoog | 01-12-2025 |
-| Footer design merge | ✅ Voltooid | Medium | 01-12-2025 |
-| Framer Motion animation integration | ✅ Voltooid | Medium | 01-12-2025 |
-| HoliBot widget integration | ✅ Voltooid | Hoog | 01-12-2025 |
-| Mobile responsiveness verification | ✅ Voltooid | Medium | 01-12-2025 |
-
-#### Frontend Integration Details (01-12-2025):
-- **Customer Portal:** ORIGINAL frontend (`04-Development/frontend/`) volledig gemerged naar project root
-- **Footer Design:** NEW Footer componenten geïntegreerd met Mediterrane branding
-- **Framer Motion:** Tile hover animaties toegevoegd aan POI componenten
-- **HoliBot Widget:** Widget componenten geconnecteerd met standalone API (port :3002)
-- **Responsive:** Mobile-first design gevalideerd op alle breakpoints
-
-**Commit:** `ef374ed` - Fase 2: Frontend Integration - Complete merge from ORIGINAL
-
-### Fase 3: Module Integration - **✅ VOLTOOID**
-| Taak | Status | Prioriteit | Datum |
-|------|--------|------------|-------|
-| Admin POI routes integration | ✅ Voltooid | Hoog | 01-12-2025 |
-| Widget API deployment | ✅ Voltooid | Hoog | 01-12-2025 |
-| Ticketing module activation | ✅ Voltooid | Hoog | 01-12-2025 |
-| Payment module Adyen setup | ✅ Voltooid | Hoog | 01-12-2025 |
-
-#### Module Integration Details (01-12-2025):
-
-**Admin POI Routes Integration:**
-- ORIGINAL `adminPOI.js` routes gemerged naar `admin-module/backend/routes/`
-- POI CRUD operaties volledig functioneel
-- Admin authentication middleware geïntegreerd
-
-**Widget API Deployment:**
-- Chat services gecreëerd: `mistralService.js`, `sessionService.js`, `searchService.js`
-- Routes toegevoegd: `/api/v1/chat` en `/api/v1/holibot`
-- Rate limiting (50 req/min) en input validatie
-- Fallback responses bij AI unavailability
-
-**Ticketing Module Activation:**
-- Module configuratie voltooid in `.env.example`
-- Frontend/backend URLs uitgelijnd
-- Apple Wallet en Google Pay configuratie toegevoegd
-- Firebase Cloud Messaging setup
-
-**Payment Module Adyen Setup:**
-- Frontend `paymentService.js` aligned met backend API endpoints
-- Adyen Drop-in checkout configuratie
-- Payment status webhooks geconfigureerd
-
-**Commits:**
-- `35d2a11` - Fase 3: Module Integration - Admin POI routes & Widget API deployment
-- `8bdb020` - Fase 3: Ticketing module activation - Configuration complete
-- `c7ed472` - Fase 3: Payment module Adyen setup - Frontend service alignment
-
-#### Database Schema Alignment v2 (01-12-2025):
-Aanvullende schema alignment voor cross-module compatibiliteit:
-
-**Nieuwe Migratie:** `004_unified_schema_alignment.sql`
-
-**POI Table Alignment:**
-- UUID kolom toegevoegd voor cross-module referenties
-- Classification fields: `tier`, `poi_score`, `tourist_relevance`, `booking_frequency`
-- External IDs: `tripadvisor_id`, `thefork_id`, `booking_com_id`, `getyourguide_id`
-- Timestamps: `last_classified_at`, `next_update_at`
-
-**Booking Table Alignment:**
-- `poi_id` (UUID reference)
-- Participant counts: `adults_count`, `children_count`, `infants_count`
-- Partner reference: `partner_confirmation_number`
-
-**Ticket Table Alignment:**
-- Transfer fields: `is_transferred`, `original_holder`, `transferred_at`
-- QR data: `qr_code_data`, `qr_code_image_url`
-- Wallet integration: `wallet_pass_url`, `wallet_pass_type`
-- Validation: `validation_code`
-
-**Transaction Table Alignment (Adyen):**
-- `psp_reference` (Adyen pspReference)
-- `merchant_reference`
-- Amount tracking: `authorized_amount`, `captured_amount`, `refunded_amount`
-- Timestamps: `authorized_at`, `captured_at`
-- Resource linking: `resource_type`, `resource_id`
-
-**Cross-Module Views:**
-- `unified_pois` - Gecombineerde POI data view
-- `unified_bookings` - Gecombineerde booking data view
-
-**Model Updates:**
-- `admin-module/backend/models/POI.js` - UUID field, aligned naming, calculateScore()/calculateTier() methods
-
-**Commit:** `94ef5d7` - Database Schema Alignment - Cross-module compatibility
-
-### Fase 4: Testing & Polish - **⏳ PENDING**
-| Taak | Status | Prioriteit |
-|------|--------|------------|
-| End-to-end testing | ⏳ Pending | Hoog |
-| Performance optimization | ⏳ Pending | Medium |
-| Security audit | ⏳ Pending | Hoog |
-| Documentation update | ⏳ Pending | Medium |
-| Staging deployment | ⏳ Pending | Hoog |
+1. **Goedkeuring:** Review en accordeer dit V4 plan
+2. **Sprint 1 Start:** Begin Week 1 - Critical Legal & Core Features
+3. **Sprint 1 End:** GDPR + WCAG + POI Views + 6 talen + E2E framework
 
 ---
 
 **Document opgesteld door:** Claude Code Analysis
-**Goedgekeurd door:** Frank Spooren
-**Datum goedkeuring:** 30 november 2025
-**Fase 1 voltooid:** 30 november 2025
-**Fase 2 voltooid:** 1 december 2025
-**Fase 3 voltooid:** 1 december 2025
-**Volgende stap:** Start Fase 4 - Testing & Polish
+**Datum:** 1 december 2025
+**Versie:** 4.0 (Complete Herziening)
+**Status:** Wacht op goedkeuring voor start implementatie
+
+**Ondertekening:**
+
+| Rol | Naam | Datum | Akkoord |
+|-----|------|-------|---------|
+| Product Owner | Frank Spooren | ___/___/2025 | ☐ |
+| Technical Lead | _______________ | ___/___/2025 | ☐ |
+
+---
+
+## BIJLAGE: V3 Status (Historisch)
+
+### Eerder Voltooide Fasen (Behouden)
+
+#### Fase 1: Foundation ✅
+- JWT bug fixed
+- SQL injection fixed
+- Auth middleware merged
+- Database schema aligned
+
+#### Fase 2: Frontend Integration ✅
+- Customer portal API connectivity
+- Footer design merged
+- Framer Motion integrated
+- HoliBot widget connected
+
+#### Fase 3: Module Integration ✅
+- Admin POI routes merged
+- Widget API deployed
+- Ticketing module active
+- Payment module configured
