@@ -13,6 +13,7 @@ import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { HoliBotWidget } from './components/HoliBot';
 import { HoliBotProvider } from './contexts/HoliBotContext';
+import { FavoritesProvider } from './contexts/FavoritesContext';
 
 // Accessibility & Privacy Components (GDPR/WCAG Compliance)
 import SkipToContent from './components/accessibility/SkipToContent';
@@ -183,6 +184,7 @@ function App() {
         {/* WCAG: Skip to main content link (keyboard navigation) */}
         <SkipToContent targetId="main-content" />
 
+        <FavoritesProvider>
         <HoliBotProvider>
           <BrowserRouter>
             <Suspense fallback={<LoadingFallback />}>
@@ -240,6 +242,7 @@ function App() {
             <HoliBotWidget />
           </BrowserRouter>
         </HoliBotProvider>
+        </FavoritesProvider>
 
         {/* Toast Notifications */}
         <ToastContainer

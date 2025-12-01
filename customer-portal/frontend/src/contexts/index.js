@@ -4,3 +4,4 @@
  */
 
 export { HoliBotProvider, useHoliBot } from './HoliBotContext';
+export { FavoritesProvider, useFavorites } from './FavoritesContext';
