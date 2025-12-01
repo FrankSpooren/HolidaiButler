@@ -1,8 +1,8 @@
 # HolidaiButler Platform Samensmelting Analyse & Implementatieplan
 
-**Datum:** 30 november 2025
-**Versie:** 2.0
-**Status:** ✅ GOEDGEKEURD
+**Datum:** 1 december 2025
+**Versie:** 3.0
+**Status:** ✅ FASE 1-3 VOLTOOID
 
 ---
 
@@ -303,27 +303,27 @@ Service Ports Overview:
 
 ## 5. Implementatie Fasering
 
-### Fase 1: Foundation (Week 1-2)
-- [ ] Fix JWT bug in platform-core
-- [ ] Fix SQL injection in publicPOI.js
-- [ ] Merge ORIGINAL auth middleware
-- [ ] Database schema alignment
-- [ ] Basic integration tests
+### Fase 1: Foundation (Week 1-2) ✅ VOLTOOID
+- [x] Fix JWT bug in platform-core
+- [x] Fix SQL injection in publicPOI.js
+- [x] Merge ORIGINAL auth middleware
+- [x] Database schema alignment
+- [x] Basic integration tests
 
-### Fase 2: Frontend Integration (Week 3-4)
-- [ ] ORIGINAL customer portal → API connectivity
-- [ ] Footer design merge
-- [ ] Framer Motion animation integration
-- [ ] HoliBot widget integration
-- [ ] Mobile responsiveness verification
+### Fase 2: Frontend Integration (Week 3-4) ✅ VOLTOOID
+- [x] ORIGINAL customer portal → API connectivity
+- [x] Footer design merge
+- [x] Framer Motion animation integration
+- [x] HoliBot widget integration
+- [x] Mobile responsiveness verification
 
-### Fase 3: Module Integration (Week 5-6)
-- [ ] Admin POI routes integration
-- [ ] Widget API deployment
-- [ ] Ticketing module activation
-- [ ] Payment module Adyen setup
+### Fase 3: Module Integration (Week 5-6) ✅ VOLTOOID
+- [x] Admin POI routes integration
+- [x] Widget API deployment
+- [x] Ticketing module activation
+- [x] Payment module Adyen setup
 
-### Fase 4: Testing & Polish (Week 7-8)
+### Fase 4: Testing & Polish (Week 7-8) ⏳ PENDING
 - [ ] End-to-end testing
 - [ ] Performance optimization
 - [ ] Security audit
@@ -487,7 +487,107 @@ Comprehensive test suite toegevoegd voor platform-core:
 
 **Run Tests:** `cd platform-core && npm test`
 
-### Fase 2-4: Zie sectie 5 voor details
+### Fase 2: Frontend Integration - **✅ VOLTOOID**
+| Taak | Status | Prioriteit | Datum |
+|------|--------|------------|-------|
+| ORIGINAL customer portal → API connectivity | ✅ Voltooid | Hoog | 01-12-2025 |
+| Footer design merge | ✅ Voltooid | Medium | 01-12-2025 |
+| Framer Motion animation integration | ✅ Voltooid | Medium | 01-12-2025 |
+| HoliBot widget integration | ✅ Voltooid | Hoog | 01-12-2025 |
+| Mobile responsiveness verification | ✅ Voltooid | Medium | 01-12-2025 |
+
+#### Frontend Integration Details (01-12-2025):
+- **Customer Portal:** ORIGINAL frontend (`04-Development/frontend/`) volledig gemerged naar project root
+- **Footer Design:** NEW Footer componenten geïntegreerd met Mediterrane branding
+- **Framer Motion:** Tile hover animaties toegevoegd aan POI componenten
+- **HoliBot Widget:** Widget componenten geconnecteerd met standalone API (port :3002)
+- **Responsive:** Mobile-first design gevalideerd op alle breakpoints
+
+**Commit:** `ef374ed` - Fase 2: Frontend Integration - Complete merge from ORIGINAL
+
+### Fase 3: Module Integration - **✅ VOLTOOID**
+| Taak | Status | Prioriteit | Datum |
+|------|--------|------------|-------|
+| Admin POI routes integration | ✅ Voltooid | Hoog | 01-12-2025 |
+| Widget API deployment | ✅ Voltooid | Hoog | 01-12-2025 |
+| Ticketing module activation | ✅ Voltooid | Hoog | 01-12-2025 |
+| Payment module Adyen setup | ✅ Voltooid | Hoog | 01-12-2025 |
+
+#### Module Integration Details (01-12-2025):
+
+**Admin POI Routes Integration:**
+- ORIGINAL `adminPOI.js` routes gemerged naar `admin-module/backend/routes/`
+- POI CRUD operaties volledig functioneel
+- Admin authentication middleware geïntegreerd
+
+**Widget API Deployment:**
+- Chat services gecreëerd: `mistralService.js`, `sessionService.js`, `searchService.js`
+- Routes toegevoegd: `/api/v1/chat` en `/api/v1/holibot`
+- Rate limiting (50 req/min) en input validatie
+- Fallback responses bij AI unavailability
+
+**Ticketing Module Activation:**
+- Module configuratie voltooid in `.env.example`
+- Frontend/backend URLs uitgelijnd
+- Apple Wallet en Google Pay configuratie toegevoegd
+- Firebase Cloud Messaging setup
+
+**Payment Module Adyen Setup:**
+- Frontend `paymentService.js` aligned met backend API endpoints
+- Adyen Drop-in checkout configuratie
+- Payment status webhooks geconfigureerd
+
+**Commits:**
+- `35d2a11` - Fase 3: Module Integration - Admin POI routes & Widget API deployment
+- `8bdb020` - Fase 3: Ticketing module activation - Configuration complete
+- `c7ed472` - Fase 3: Payment module Adyen setup - Frontend service alignment
+
+#### Database Schema Alignment v2 (01-12-2025):
+Aanvullende schema alignment voor cross-module compatibiliteit:
+
+**Nieuwe Migratie:** `004_unified_schema_alignment.sql`
+
+**POI Table Alignment:**
+- UUID kolom toegevoegd voor cross-module referenties
+- Classification fields: `tier`, `poi_score`, `tourist_relevance`, `booking_frequency`
+- External IDs: `tripadvisor_id`, `thefork_id`, `booking_com_id`, `getyourguide_id`
+- Timestamps: `last_classified_at`, `next_update_at`
+
+**Booking Table Alignment:**
+- `poi_id` (UUID reference)
+- Participant counts: `adults_count`, `children_count`, `infants_count`
+- Partner reference: `partner_confirmation_number`
+
+**Ticket Table Alignment:**
+- Transfer fields: `is_transferred`, `original_holder`, `transferred_at`
+- QR data: `qr_code_data`, `qr_code_image_url`
+- Wallet integration: `wallet_pass_url`, `wallet_pass_type`
+- Validation: `validation_code`
+
+**Transaction Table Alignment (Adyen):**
+- `psp_reference` (Adyen pspReference)
+- `merchant_reference`
+- Amount tracking: `authorized_amount`, `captured_amount`, `refunded_amount`
+- Timestamps: `authorized_at`, `captured_at`
+- Resource linking: `resource_type`, `resource_id`
+
+**Cross-Module Views:**
+- `unified_pois` - Gecombineerde POI data view
+- `unified_bookings` - Gecombineerde booking data view
+
+**Model Updates:**
+- `admin-module/backend/models/POI.js` - UUID field, aligned naming, calculateScore()/calculateTier() methods
+
+**Commit:** `94ef5d7` - Database Schema Alignment - Cross-module compatibility
+
+### Fase 4: Testing & Polish - **⏳ PENDING**
+| Taak | Status | Prioriteit |
+|------|--------|------------|
+| End-to-end testing | ⏳ Pending | Hoog |
+| Performance optimization | ⏳ Pending | Medium |
+| Security audit | ⏳ Pending | Hoog |
+| Documentation update | ⏳ Pending | Medium |
+| Staging deployment | ⏳ Pending | Hoog |
 
 ---
 
@@ -495,4 +595,6 @@ Comprehensive test suite toegevoegd voor platform-core:
 **Goedgekeurd door:** Frank Spooren
 **Datum goedkeuring:** 30 november 2025
 **Fase 1 voltooid:** 30 november 2025
-**Volgende stap:** Start Fase 2 - Frontend Integration
+**Fase 2 voltooid:** 1 december 2025
+**Fase 3 voltooid:** 1 december 2025
+**Volgende stap:** Start Fase 4 - Testing & Polish
