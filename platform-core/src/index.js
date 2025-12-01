@@ -28,6 +28,8 @@ import workflowRoutes from './routes/workflows.js';
 import poiClassificationRoutes from './routes/poiClassification.js';
 import poiDiscoveryRoutes from './routes/poiDiscovery.js';
 import publicPOIRoutes from './routes/publicPOI.js';
+import chatRoutes from './routes/chat.js';
+import holibotRoutes from './routes/holibot.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import prometheusMiddleware, { metricsEndpoint } from './middleware/prometheus.js';
@@ -101,6 +103,8 @@ app.use('/api/v1/workflows', workflowRoutes);
 app.use('/api/v1/poi-classification', poiClassificationRoutes);
 app.use('/api/v1/poi-discovery', poiDiscoveryRoutes);
 app.use('/api/v1/pois', publicPOIRoutes); // Public POI endpoints (no auth)
+app.use('/api/v1/chat', chatRoutes); // HoliBot Chat API
+app.use('/api/v1/holibot', holibotRoutes); // HoliBot Widget API
 app.use('/api/v1', apiGateway); // API Gateway for all modules
 
 /**
