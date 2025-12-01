@@ -1,27 +1,43 @@
+version: '3.8'
+
+# HolidaiButler Platform - Docker Compose Configuration
+# For staging and production deployments
+
 services:
-  # MySQL Database
+  # ==========================================================================
+  # DATABASE - MySQL
+  # ==========================================================================
   mysql:
     image: mysql:8.0
-    container_name: holidaibutler_mysql
-    restart: always
+    container_name: holidaibutler-mysql
+    restart: unless-stopped
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: holidai2024
-      MYSQL_DATABASE: holidaibutler
-      MYSQL_USER: holidaibutler
-      MYSQL_PASSWORD: holidai2024
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-holidai2024}
+      MYSQL_DATABASE: ${DATABASE_NAME:-holidaibutler}
+      MYSQL_USER: ${DATABASE_USER:-holidaibutler}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD:-holidai2024}
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./platform-core/database/migrations:/docker-entrypoint-initdb.d:ro
     networks:
       - holidaibutler_network
     command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
-  # Redis Cache
+  # ==========================================================================
+  # CACHE - Redis
+  # ==========================================================================
   redis:
     image: redis:7.2-alpine
-    container_name: holidaibutler_redis
-    restart: always
+    container_name: holidaibutler-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
@@ -29,31 +45,220 @@ services:
       - redis_data:/data
     networks:
       - holidaibutler_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
-  # MongoDB Database (for services that need it)
-  mongodb:
-    image: mongo:7.0
-    container_name: holidaibutler_mongodb
-    restart: always
+  # ==========================================================================
+  # PLATFORM CORE - Central API Gateway
+  # ==========================================================================
+  platform-core:
+    build:
+      context: ./platform-core
+      dockerfile: Dockerfile
+    container_name: holidaibutler-core
+    restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "3001:3001"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: holidai2024
-      MONGO_INITDB_DATABASE: holidaibutler
-    volumes:
-      - mongodb_data:/data/db
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3001
+      - DATABASE_HOST=mysql
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=${DATABASE_NAME:-holidaibutler}
+      - DATABASE_USER=${DATABASE_USER:-holidaibutler}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-holidai2024}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ADMIN_SECRET=${JWT_ADMIN_SECRET}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - ENABLE_CRON_JOBS=${ENABLE_CRON_JOBS:-true}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - holidaibutler_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==========================================================================
+  # ADMIN MODULE
+  # ==========================================================================
+  admin-backend:
+    build:
+      context: ./admin-module/backend
+      dockerfile: Dockerfile
+    container_name: holidaibutler-admin
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3003
+      - DATABASE_HOST=mysql
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=${DATABASE_NAME:-holidaibutler}
+      - DATABASE_USER=${DATABASE_USER:-holidaibutler}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-holidai2024}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ADMIN_SECRET=${JWT_ADMIN_SECRET}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+    depends_on:
+      - platform-core
     networks:
       - holidaibutler_network
 
+  # ==========================================================================
+  # TICKETING MODULE
+  # ==========================================================================
+  ticketing-backend:
+    build:
+      context: ./ticketing-module/backend
+      dockerfile: Dockerfile
+    container_name: holidaibutler-ticketing
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3004
+      - DATABASE_HOST=mysql
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=${DATABASE_NAME:-holidaibutler}
+      - DATABASE_USER=${DATABASE_USER:-holidaibutler}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-holidai2024}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+      - MAILERLITE_API_KEY=${MAILERLITE_API_KEY}
+    depends_on:
+      - platform-core
+    networks:
+      - holidaibutler_network
+
+  # ==========================================================================
+  # PAYMENT MODULE
+  # ==========================================================================
+  payment-backend:
+    build:
+      context: ./payment-module/backend
+      dockerfile: Dockerfile
+    container_name: holidaibutler-payment
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3005
+      - DATABASE_HOST=mysql
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=${DATABASE_NAME:-holidaibutler}
+      - DATABASE_USER=${DATABASE_USER:-holidaibutler}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-holidai2024}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+      - ADYEN_API_KEY=${ADYEN_API_KEY}
+      - ADYEN_MERCHANT_ACCOUNT=${ADYEN_MERCHANT_ACCOUNT}
+      - ADYEN_ENVIRONMENT=${ADYEN_ENVIRONMENT:-test}
+    depends_on:
+      - platform-core
+    networks:
+      - holidaibutler_network
+
+  # ==========================================================================
+  # RESERVATIONS MODULE
+  # ==========================================================================
+  reservations-backend:
+    build:
+      context: ./reservations-module/backend
+      dockerfile: Dockerfile
+    container_name: holidaibutler-reservations
+    restart: unless-stopped
+    ports:
+      - "3006:3006"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3006
+      - DATABASE_HOST=mysql
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=${DATABASE_NAME:-holidaibutler}
+      - DATABASE_USER=${DATABASE_USER:-holidaibutler}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-holidai2024}
+      - REDIS_HOST=redis
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - platform-core
+    networks:
+      - holidaibutler_network
+
+  # ==========================================================================
+  # MONITORING - Prometheus (Optional, use --profile monitoring)
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: holidaibutler-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - holidaibutler_network
+    profiles:
+      - monitoring
+
+  # ==========================================================================
+  # MONITORING - Grafana (Optional, use --profile monitoring)
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: holidaibutler-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - holidaibutler_network
+    profiles:
+      - monitoring
+
+# ==========================================================================
+# VOLUMES
+# ==========================================================================
 volumes:
   mysql_data:
     driver: local
   redis_data:
     driver: local
-  mongodb_data:
+  prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
 
+# ==========================================================================
+# NETWORKS
+# ==========================================================================
 networks:
   holidaibutler_network:
     driver: bridge
