@@ -10,7 +10,6 @@
  * - Payment Module:              3005
  * - Reservations Module:         3006
  * - Agenda Module:               3007
- * - Sales Pipeline:              3008
  */
 
 export const API_CONFIG = {
@@ -93,16 +92,6 @@ export const API_CONFIG = {
     }
   },
 
-  // Sales Pipeline Module - B2B CRM
-  salesPipeline: {
-    baseUrl: import.meta.env.VITE_SALES_API_URL || 'http://localhost:3008/api/v1',
-    endpoints: {
-      deals: '/deals',
-      leads: '/leads',
-      contacts: '/contacts',
-      pipeline: '/pipeline',
-    }
-  },
 } as const;
 
 // Feature flags

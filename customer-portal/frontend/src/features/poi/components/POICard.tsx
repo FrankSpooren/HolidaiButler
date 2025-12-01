@@ -1,13 +1,16 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import type { POI } from '../types/poi.types';
 import { MapPin, Star, Phone, Globe } from 'lucide-react';
+import { cardHoverVariants } from '@/shared/utils/animations';
 
 interface POICardProps {
   poi: POI;
   onClick?: () => void;
+  index?: number; // For staggered animations
 }
 
-export const POICard: React.FC<POICardProps> = ({ poi, onClick }) => {
+export const POICard: React.FC<POICardProps> = ({ poi, onClick, index = 0 }) => {
   // Format rating to 1 decimal place
   const formattedRating = poi.rating ? poi.rating.toFixed(1) : null;
 
@@ -26,9 +29,18 @@ export const POICard: React.FC<POICardProps> = ({ poi, onClick }) => {
   const formattedName = toTitleCase(poi.name);
 
   return (
-    <div
+    <motion.div
       onClick={onClick}
-      className="bg-white rounded-card border border-border-light p-4 shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer active:scale-98 md:hover:translate-y-[-2px]"
+      className="bg-white rounded-card border border-border-light p-4 shadow-card cursor-pointer"
+      variants={cardHoverVariants}
+      initial="initial"
+      whileHover="hover"
+      whileTap="tap"
+      animate={{
+        opacity: 1,
+        y: 0,
+        transition: { delay: index * 0.05, duration: 0.3 },
+      }}
     >
       {/* POI Image Placeholder */}
       <div className="w-full h-40 bg-bg-gray rounded-lg mb-3 flex items-center justify-center overflow-hidden">
@@ -123,7 +135,7 @@ export const POICard: React.FC<POICardProps> = ({ poi, onClick }) => {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

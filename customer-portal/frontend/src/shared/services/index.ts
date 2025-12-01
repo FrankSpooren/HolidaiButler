@@ -48,3 +48,11 @@ export type {
   EventsResponse,
   EventFilters,
 } from './agenda.api';
+
+// Admin
+export { adminApi } from './admin.api';
+export type {
+  AdminPOI,
+  AdminUser,
+  AnalyticsSummary,
+} from './admin.api';
