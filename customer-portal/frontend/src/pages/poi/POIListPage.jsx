@@ -55,6 +55,7 @@ import {
 } from '../../components/poi';
 import { useFilterState } from '../../hooks/useFilterState';
 import { filterByDistance, sortByDistance } from '../../utils/distance';
+import { useFavorites as useFavoritesHook } from '../../contexts/FavoritesContext';
 
 const POIListPage = () => {
   const navigate = useNavigate();
@@ -392,8 +393,10 @@ const POIListPage = () => {
 
 // POI Card Component with Sprint 2 enhancements
 const POICard = ({ poi, onClick, isCompareSelected, onCompareToggle, showCompare }) => {
-  const [favorite, setFavorite] = useState(false);
   const { t } = useTranslation();
+  // Import useFavorites at component level for proper hook usage
+  const { isFavorite, toggleFavorite } = useFavoritesHook();
+  const favorite = isFavorite(poi.id);
 
   // Determine which trust badges to show
   const trustBadges = [];
@@ -464,7 +467,7 @@ const POICard = ({ poi, onClick, isCompareSelected, onCompareToggle, showCompare
           <IconButton
             onClick={(e) => {
               e.stopPropagation();
-              setFavorite(!favorite);
+              toggleFavorite(poi.id);
             }}
             sx={{
               bgcolor: 'white',
