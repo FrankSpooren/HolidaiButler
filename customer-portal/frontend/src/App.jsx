@@ -44,18 +44,20 @@ const SearchResultsPage = lazy(() => import('./pages/search/SearchResultsPage'))
 const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
 const CookiePolicy = lazy(() => import('./pages/legal/CookiePolicy'));
 
-// Create theme
+// Create theme - Mediterranean HolidaiButler Branding
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#667eea',
-      light: '#8b9ff7',
-      dark: '#4c5fd7',
+      main: '#2E7D32', // Mediterranean Green
+      light: '#4CAF50',
+      dark: '#1B5E20',
+      contrastText: '#ffffff',
     },
     secondary: {
-      main: '#764ba2',
-      light: '#9d71c9',
-      dark: '#52337b',
+      main: '#D4AF37', // Mediterranean Gold
+      light: '#E4C767',
+      dark: '#B8960C',
+      contrastText: '#000000',
     },
     success: {
       main: '#4CAF50',
@@ -72,8 +74,13 @@ const theme = createTheme({
       light: '#e57373',
       dark: '#d32f2f',
     },
+    info: {
+      main: '#0288D1', // Mediterranean Blue (sea)
+      light: '#03A9F4',
+      dark: '#01579B',
+    },
     background: {
-      default: '#fafafa',
+      default: '#FAFAF5', // Warm off-white
       paper: '#ffffff',
     },
   },
