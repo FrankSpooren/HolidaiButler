@@ -1,0 +1,63 @@
+# HolidaiButler Prometheus Configuration
+# Monitoring configuration for all platform services
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'holidaibutler'
+
+# Alerting rules (optional)
+rule_files:
+  # - "alert.rules"
+
+scrape_configs:
+  # Platform Core metrics
+  - job_name: 'platform-core'
+    static_configs:
+      - targets: ['platform-core:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Admin Module metrics
+  - job_name: 'admin-module'
+    static_configs:
+      - targets: ['admin-backend:3003']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Ticketing Module metrics
+  - job_name: 'ticketing-module'
+    static_configs:
+      - targets: ['ticketing-backend:3004']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Payment Module metrics
+  - job_name: 'payment-module'
+    static_configs:
+      - targets: ['payment-backend:3005']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Reservations Module metrics
+  - job_name: 'reservations-module'
+    static_configs:
+      - targets: ['reservations-backend:3006']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Redis metrics (requires redis_exporter)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis:6379']
+
+  # MySQL metrics (requires mysqld_exporter)
+  # - job_name: 'mysql'
+  #   static_configs:
+  #     - targets: ['mysql:9104']
+
+  # Node metrics (if node_exporter is installed)
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
