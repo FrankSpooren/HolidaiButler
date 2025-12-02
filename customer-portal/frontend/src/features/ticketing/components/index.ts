@@ -9,6 +9,12 @@ export { AvailabilityChecker } from './AvailabilityChecker/AvailabilityChecker';
 export { LoadingSpinner } from './shared/LoadingSpinner';
 export { ErrorDisplay } from './shared/ErrorDisplay';
 
-// TODO: Add more components as they're built
-// - BookingFlow components
-// - TicketManagement components
+// Payment Components (Adyen Integration)
+export { AdyenCheckoutComponent, AdyenCheckout } from './Payment';
+export type { AdyenSessionData, PaymentResult } from './Payment';
+
+// Booking Flow Components
+export * from './BookingFlow';
+
+// Ticket Management Components
+export * from './TicketManagement';
