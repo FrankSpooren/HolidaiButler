@@ -39,7 +39,7 @@ const isDevelopmentMode = () => {
  */
 router.post('/login', adminRateLimit(10, 15 * 60 * 1000), async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
 
     // Validate input
     if (!email || !password) {
@@ -54,9 +54,15 @@ router.post('/login', adminRateLimit(10, 15 * 60 * 1000), async (req, res) => {
     let isDatabaseAvailable = true;
 
     try {
-      user = await AdminUser.scope('withPassword').findOne({
-        where: { email: email.toLowerCase() }
-      });
+      // Check if AdminUser model is available and has scope method
+      if (AdminUser && typeof AdminUser.scope === 'function') {
+        user = await AdminUser.scope('withPassword').findOne({
+          where: { email: email.toLowerCase() }
+        });
+      } else {
+        isDatabaseAvailable = false;
+        console.warn('AdminUser model not properly initialized');
+      }
     } catch (dbError) {
       isDatabaseAvailable = false;
       console.warn('Database not available for login:', dbError.message);
@@ -64,8 +70,8 @@ router.post('/login', adminRateLimit(10, 15 * 60 * 1000), async (req, res) => {
 
     // Development fallback: allow login without database
     // Works in development mode or when NODE_ENV is not set (cloud environments)
-    if (!isDatabaseAvailable && isDevelopmentMode()) {
-      console.log('🔧 Using development fallback login (database unavailable, NODE_ENV:', process.env.NODE_ENV || 'not set', ')');
+    if (!isDatabaseAvailable || (isDevelopmentMode() && !user)) {
+      console.log('🔧 Using development fallback login (database unavailable or user not found, NODE_ENV:', process.env.NODE_ENV || 'not set', ')');
 
       if (email.toLowerCase() === DEV_FALLBACK_USER.email && password === DEV_FALLBACK_USER.password) {
         const accessToken = jwt.sign(
@@ -109,7 +115,7 @@ router.post('/login', adminRateLimit(10, 15 * 60 * 1000), async (req, res) => {
         return res.status(401).json({
           success: false,
           message: 'Invalid credentials.',
-          hint: 'Development mode credentials: admin@holidaibutler.com / Admin2024'
+          hint: isDevelopmentMode() ? 'Development mode credentials: admin@holidaibutler.com / Admin2024' : undefined
         });
       }
     }
