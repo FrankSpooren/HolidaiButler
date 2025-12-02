@@ -12,10 +12,93 @@ export interface Translations {
     explore: string;
     holibot: string;
     agenda: string;
+    reservations: string;
+    tickets: string;
     favorites: string;
     account: string;
     about: string;
     faq: string;
+  };
+  // Agenda Page
+  agenda: {
+    title: string;
+    subtitle: string;
+    categories: {
+      all: string;
+      festival: string;
+      music: string;
+      gastronomy: string;
+      market: string;
+      wellness: string;
+      adventure: string;
+    };
+    noEvents: string;
+    moreInfo: string;
+    newsletter: {
+      title: string;
+      description: string;
+      placeholder: string;
+      button: string;
+    };
+  };
+  // Reservations Page
+  reservations: {
+    title: string;
+    subtitle: string;
+    searchPlaceholder: string;
+    persons: string;
+    person: string;
+    time: string;
+    cuisines: {
+      all: string;
+      mediterranean: string;
+      spanish: string;
+      italian: string;
+      japanese: string;
+      seafood: string;
+      vegan: string;
+    };
+    found: string;
+    reserveNow: string;
+    modal: {
+      title: string;
+      name: string;
+      email: string;
+      phone: string;
+      guests: string;
+      date: string;
+      time: string;
+      selectTime: string;
+      specialRequests: string;
+      submit: string;
+    };
+  };
+  // Tickets Page
+  tickets: {
+    title: string;
+    subtitle: string;
+    searchPlaceholder: string;
+    available: string;
+    buyTickets: string;
+    selectTickets: string;
+    orderSummary: string;
+    total: string;
+    continueToCheckout: string;
+    guestInformation: string;
+    name: string;
+    email: string;
+    phone: string;
+    event: string;
+    tickets: string;
+    processing: string;
+    proceedToPayment: string;
+    payment: string;
+    loadingPayment: string;
+    bookingConfirmed: string;
+    confirmationMessage: string;
+    bookingReference: string;
+    emailSent: string;
+    browseMoreEvents: string;
   };
   // Homepage
   homepage: {
@@ -197,6 +280,8 @@ export interface Translations {
     apply: string;
     reset: string;
     loading: string;
+    back: string;
+    optional: string;
   };
   // Auth Pages
   auth: {
@@ -352,10 +437,90 @@ export const translations: Record<Language, Translations> = {
       explore: 'Verkennen',
       holibot: 'HoliBot',
       agenda: 'Agenda',
+      reservations: 'Reserveren',
+      tickets: 'Tickets',
       favorites: 'Favorieten',
       account: 'Account',
       about: 'Over',
       faq: 'FAQ',
+    },
+    agenda: {
+      title: 'Agenda Calpe',
+      subtitle: 'Ontdek alle evenementen, festivals en activiteiten in Calpe',
+      categories: {
+        all: 'Alle',
+        festival: 'Festivals',
+        music: 'Muziek',
+        gastronomy: 'Gastronomie',
+        market: 'Markten',
+        wellness: 'Wellness',
+        adventure: 'Avontuur',
+      },
+      noEvents: 'Geen evenementen gevonden voor deze categorie.',
+      moreInfo: 'Meer info',
+      newsletter: {
+        title: 'Mis geen enkel evenement!',
+        description: 'Meld je aan voor onze nieuwsbrief en ontvang wekelijks de beste evenementen in Calpe.',
+        placeholder: 'Je e-mailadres',
+        button: 'Aanmelden',
+      },
+    },
+    reservations: {
+      title: 'Restaurant Reserveringen',
+      subtitle: 'Ontdek en reserveer bij de beste restaurants in Calpe',
+      searchPlaceholder: 'Zoek restaurant of keuken...',
+      persons: 'personen',
+      person: 'persoon',
+      time: 'Tijd',
+      cuisines: {
+        all: 'Alle',
+        mediterranean: 'Mediterraan',
+        spanish: 'Spaans',
+        italian: 'Italiaans',
+        japanese: 'Japans',
+        seafood: 'Visgerechten',
+        vegan: 'Vegan',
+      },
+      found: 'restaurants gevonden',
+      reserveNow: 'Reserveer Nu',
+      modal: {
+        title: 'Reserveer bij',
+        name: 'Naam',
+        email: 'E-mail',
+        phone: 'Telefoon',
+        guests: 'Aantal personen',
+        date: 'Datum',
+        time: 'Tijd',
+        selectTime: 'Selecteer tijd',
+        specialRequests: 'Speciale verzoeken',
+        submit: 'Bevestig Reservering',
+      },
+    },
+    tickets: {
+      title: 'Tickets & Activiteiten',
+      subtitle: 'Boek tickets voor de beste attracties en activiteiten in Calpe',
+      searchPlaceholder: 'Zoek evenementen...',
+      available: 'beschikbaar',
+      buyTickets: 'Tickets kopen',
+      selectTickets: 'Selecteer Tickets',
+      orderSummary: 'Bestelling',
+      total: 'Totaal',
+      continueToCheckout: 'Doorgaan naar afrekenen',
+      guestInformation: 'Gastgegevens',
+      name: 'Volledige naam',
+      email: 'E-mailadres',
+      phone: 'Telefoonnummer',
+      event: 'Evenement',
+      tickets: 'tickets',
+      processing: 'Verwerken...',
+      proceedToPayment: 'Doorgaan naar betaling',
+      payment: 'Betaling',
+      loadingPayment: 'Betaalmethodes laden...',
+      bookingConfirmed: 'Boeking bevestigd!',
+      confirmationMessage: 'Je tickets zijn succesvol geboekt.',
+      bookingReference: 'Boekingsreferentie',
+      emailSent: 'Een bevestigingsmail is verzonden naar',
+      browseMoreEvents: 'Meer evenementen bekijken',
     },
     homepage: {
       hero: {
@@ -540,6 +705,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Toepassen',
       reset: 'Reset',
       loading: 'Laden...',
+      back: 'Terug',
+      optional: 'optioneel',
     },
     auth: {
       login: {
@@ -686,10 +853,90 @@ export const translations: Record<Language, Translations> = {
       explore: 'Explore',
       holibot: 'HoliBot',
       agenda: 'Agenda',
+      reservations: 'Reservations',
+      tickets: 'Tickets',
       favorites: 'Favorites',
       account: 'Account',
       about: 'About',
       faq: 'FAQ',
+    },
+    agenda: {
+      title: 'Calpe Agenda',
+      subtitle: 'Discover all events, festivals and activities in Calpe',
+      categories: {
+        all: 'All',
+        festival: 'Festivals',
+        music: 'Music',
+        gastronomy: 'Gastronomy',
+        market: 'Markets',
+        wellness: 'Wellness',
+        adventure: 'Adventure',
+      },
+      noEvents: 'No events found for this category.',
+      moreInfo: 'More info',
+      newsletter: {
+        title: "Don't miss any event!",
+        description: 'Subscribe to our newsletter and receive the best events in Calpe weekly.',
+        placeholder: 'Your email address',
+        button: 'Subscribe',
+      },
+    },
+    reservations: {
+      title: 'Restaurant Reservations',
+      subtitle: 'Discover and book at the best restaurants in Calpe',
+      searchPlaceholder: 'Search restaurant or cuisine...',
+      persons: 'guests',
+      person: 'guest',
+      time: 'Time',
+      cuisines: {
+        all: 'All',
+        mediterranean: 'Mediterranean',
+        spanish: 'Spanish',
+        italian: 'Italian',
+        japanese: 'Japanese',
+        seafood: 'Seafood',
+        vegan: 'Vegan',
+      },
+      found: 'restaurants found',
+      reserveNow: 'Reserve Now',
+      modal: {
+        title: 'Reserve at',
+        name: 'Name',
+        email: 'Email',
+        phone: 'Phone',
+        guests: 'Number of guests',
+        date: 'Date',
+        time: 'Time',
+        selectTime: 'Select time',
+        specialRequests: 'Special requests',
+        submit: 'Confirm Reservation',
+      },
+    },
+    tickets: {
+      title: 'Tickets & Activities',
+      subtitle: 'Book tickets for the best attractions and activities in Calpe',
+      searchPlaceholder: 'Search events...',
+      available: 'available',
+      buyTickets: 'Buy tickets',
+      selectTickets: 'Select Tickets',
+      orderSummary: 'Order Summary',
+      total: 'Total',
+      continueToCheckout: 'Continue to Checkout',
+      guestInformation: 'Guest Information',
+      name: 'Full Name',
+      email: 'Email',
+      phone: 'Phone',
+      event: 'Event',
+      tickets: 'tickets',
+      processing: 'Processing...',
+      proceedToPayment: 'Proceed to Payment',
+      payment: 'Payment',
+      loadingPayment: 'Loading payment methods...',
+      bookingConfirmed: 'Booking Confirmed!',
+      confirmationMessage: 'Your tickets have been booked successfully.',
+      bookingReference: 'Booking Reference',
+      emailSent: 'A confirmation email has been sent to',
+      browseMoreEvents: 'Browse More Events',
     },
     homepage: {
       hero: {
@@ -874,6 +1121,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Apply',
       reset: 'Reset',
       loading: 'Loading...',
+      back: 'Back',
+      optional: 'optional',
     },
     account: {
       tabs: {
@@ -1024,10 +1273,90 @@ export const translations: Record<Language, Translations> = {
       explore: 'Erkunden',
       holibot: 'HoliBot',
       agenda: 'Terminkalender',
+      reservations: 'Reservierungen',
+      tickets: 'Tickets',
       favorites: 'Favoriten',
       account: 'Konto',
       about: 'Über',
       faq: 'FAQ',
+    },
+    agenda: {
+      title: 'Terminkalender Calpe',
+      subtitle: 'Entdecken Sie alle Veranstaltungen, Festivals und Aktivitäten in Calpe',
+      categories: {
+        all: 'Alle',
+        festival: 'Festivals',
+        music: 'Musik',
+        gastronomy: 'Gastronomie',
+        market: 'Märkte',
+        wellness: 'Wellness',
+        adventure: 'Abenteuer',
+      },
+      noEvents: 'Keine Veranstaltungen für diese Kategorie gefunden.',
+      moreInfo: 'Mehr Info',
+      newsletter: {
+        title: 'Verpassen Sie keine Veranstaltung!',
+        description: 'Melden Sie sich für unseren Newsletter an und erhalten Sie wöchentlich die besten Veranstaltungen in Calpe.',
+        placeholder: 'Ihre E-Mail-Adresse',
+        button: 'Abonnieren',
+      },
+    },
+    reservations: {
+      title: 'Restaurant-Reservierungen',
+      subtitle: 'Entdecken und reservieren Sie in den besten Restaurants in Calpe',
+      searchPlaceholder: 'Restaurant oder Küche suchen...',
+      persons: 'Personen',
+      person: 'Person',
+      time: 'Uhrzeit',
+      cuisines: {
+        all: 'Alle',
+        mediterranean: 'Mediterran',
+        spanish: 'Spanisch',
+        italian: 'Italienisch',
+        japanese: 'Japanisch',
+        seafood: 'Meeresfrüchte',
+        vegan: 'Vegan',
+      },
+      found: 'Restaurants gefunden',
+      reserveNow: 'Jetzt Reservieren',
+      modal: {
+        title: 'Reservieren bei',
+        name: 'Name',
+        email: 'E-Mail',
+        phone: 'Telefon',
+        guests: 'Anzahl der Gäste',
+        date: 'Datum',
+        time: 'Uhrzeit',
+        selectTime: 'Uhrzeit auswählen',
+        specialRequests: 'Besondere Wünsche',
+        submit: 'Reservierung Bestätigen',
+      },
+    },
+    tickets: {
+      title: 'Tickets & Aktivitäten',
+      subtitle: 'Buchen Sie Tickets für die besten Attraktionen und Aktivitäten in Calpe',
+      searchPlaceholder: 'Veranstaltungen suchen...',
+      available: 'verfügbar',
+      buyTickets: 'Tickets kaufen',
+      selectTickets: 'Tickets auswählen',
+      orderSummary: 'Bestellübersicht',
+      total: 'Gesamt',
+      continueToCheckout: 'Weiter zur Kasse',
+      guestInformation: 'Gastinformationen',
+      name: 'Vollständiger Name',
+      email: 'E-Mail',
+      phone: 'Telefon',
+      event: 'Veranstaltung',
+      tickets: 'Tickets',
+      processing: 'Verarbeitung...',
+      proceedToPayment: 'Zur Zahlung',
+      payment: 'Zahlung',
+      loadingPayment: 'Zahlungsmethoden laden...',
+      bookingConfirmed: 'Buchung bestätigt!',
+      confirmationMessage: 'Ihre Tickets wurden erfolgreich gebucht.',
+      bookingReference: 'Buchungsreferenz',
+      emailSent: 'Eine Bestätigungsmail wurde gesendet an',
+      browseMoreEvents: 'Weitere Veranstaltungen',
     },
     homepage: {
       hero: {
@@ -1212,6 +1541,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Anwenden',
       reset: 'Zurücksetzen',
       loading: 'Laden...',
+      back: 'Zurück',
+      optional: 'optional',
     },
     account: {
       tabs: {
@@ -1362,10 +1693,90 @@ export const translations: Record<Language, Translations> = {
       explore: 'Explorar',
       holibot: 'HoliBot',
       agenda: 'Agenda',
+      reservations: 'Reservas',
+      tickets: 'Entradas',
       favorites: 'Favoritos',
       account: 'Cuenta',
       about: 'Acerca de',
       faq: 'FAQ',
+    },
+    agenda: {
+      title: 'Agenda de Calpe',
+      subtitle: 'Descubre todos los eventos, festivales y actividades en Calpe',
+      categories: {
+        all: 'Todos',
+        festival: 'Festivales',
+        music: 'Música',
+        gastronomy: 'Gastronomía',
+        market: 'Mercados',
+        wellness: 'Bienestar',
+        adventure: 'Aventura',
+      },
+      noEvents: 'No se encontraron eventos para esta categoría.',
+      moreInfo: 'Más información',
+      newsletter: {
+        title: '¡No te pierdas ningún evento!',
+        description: 'Suscríbete a nuestro boletín y recibe semanalmente los mejores eventos en Calpe.',
+        placeholder: 'Tu correo electrónico',
+        button: 'Suscribirse',
+      },
+    },
+    reservations: {
+      title: 'Reservas de Restaurantes',
+      subtitle: 'Descubre y reserva en los mejores restaurantes de Calpe',
+      searchPlaceholder: 'Buscar restaurante o cocina...',
+      persons: 'personas',
+      person: 'persona',
+      time: 'Hora',
+      cuisines: {
+        all: 'Todos',
+        mediterranean: 'Mediterránea',
+        spanish: 'Española',
+        italian: 'Italiana',
+        japanese: 'Japonesa',
+        seafood: 'Mariscos',
+        vegan: 'Vegana',
+      },
+      found: 'restaurantes encontrados',
+      reserveNow: 'Reservar Ahora',
+      modal: {
+        title: 'Reservar en',
+        name: 'Nombre',
+        email: 'Correo electrónico',
+        phone: 'Teléfono',
+        guests: 'Número de personas',
+        date: 'Fecha',
+        time: 'Hora',
+        selectTime: 'Seleccionar hora',
+        specialRequests: 'Solicitudes especiales',
+        submit: 'Confirmar Reserva',
+      },
+    },
+    tickets: {
+      title: 'Entradas y Actividades',
+      subtitle: 'Reserva entradas para las mejores atracciones y actividades en Calpe',
+      searchPlaceholder: 'Buscar eventos...',
+      available: 'disponible',
+      buyTickets: 'Comprar entradas',
+      selectTickets: 'Seleccionar Entradas',
+      orderSummary: 'Resumen del Pedido',
+      total: 'Total',
+      continueToCheckout: 'Continuar al Pago',
+      guestInformation: 'Información del Invitado',
+      name: 'Nombre Completo',
+      email: 'Correo Electrónico',
+      phone: 'Teléfono',
+      event: 'Evento',
+      tickets: 'entradas',
+      processing: 'Procesando...',
+      proceedToPayment: 'Proceder al Pago',
+      payment: 'Pago',
+      loadingPayment: 'Cargando métodos de pago...',
+      bookingConfirmed: '¡Reserva Confirmada!',
+      confirmationMessage: 'Tus entradas han sido reservadas con éxito.',
+      bookingReference: 'Referencia de Reserva',
+      emailSent: 'Se ha enviado un correo de confirmación a',
+      browseMoreEvents: 'Ver Más Eventos',
     },
     homepage: {
       hero: {
@@ -1550,6 +1961,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Aplicar',
       reset: 'Restablecer',
       loading: 'Cargando...',
+      back: 'Volver',
+      optional: 'opcional',
     },
     account: {
       tabs: {
@@ -1700,10 +2113,90 @@ export const translations: Record<Language, Translations> = {
       explore: 'Utforska',
       holibot: 'HoliBot',
       agenda: 'Agenda',
+      reservations: 'Bokningar',
+      tickets: 'Biljetter',
       favorites: 'Favoriter',
       account: 'Konto',
       about: 'Om',
       faq: 'FAQ',
+    },
+    agenda: {
+      title: 'Calpe Agenda',
+      subtitle: 'Upptäck alla evenemang, festivaler och aktiviteter i Calpe',
+      categories: {
+        all: 'Alla',
+        festival: 'Festivaler',
+        music: 'Musik',
+        gastronomy: 'Gastronomi',
+        market: 'Marknader',
+        wellness: 'Välmående',
+        adventure: 'Äventyr',
+      },
+      noEvents: 'Inga evenemang hittades för denna kategori.',
+      moreInfo: 'Mer info',
+      newsletter: {
+        title: 'Missa inget evenemang!',
+        description: 'Prenumerera på vårt nyhetsbrev och få de bästa evenemangen i Calpe varje vecka.',
+        placeholder: 'Din e-postadress',
+        button: 'Prenumerera',
+      },
+    },
+    reservations: {
+      title: 'Restaurangbokningar',
+      subtitle: 'Upptäck och boka på de bästa restaurangerna i Calpe',
+      searchPlaceholder: 'Sök restaurang eller kök...',
+      persons: 'gäster',
+      person: 'gäst',
+      time: 'Tid',
+      cuisines: {
+        all: 'Alla',
+        mediterranean: 'Medelhavs',
+        spanish: 'Spansk',
+        italian: 'Italiensk',
+        japanese: 'Japansk',
+        seafood: 'Skaldjur',
+        vegan: 'Vegansk',
+      },
+      found: 'restauranger hittade',
+      reserveNow: 'Boka Nu',
+      modal: {
+        title: 'Boka på',
+        name: 'Namn',
+        email: 'E-post',
+        phone: 'Telefon',
+        guests: 'Antal gäster',
+        date: 'Datum',
+        time: 'Tid',
+        selectTime: 'Välj tid',
+        specialRequests: 'Särskilda önskemål',
+        submit: 'Bekräfta Bokning',
+      },
+    },
+    tickets: {
+      title: 'Biljetter & Aktiviteter',
+      subtitle: 'Boka biljetter till de bästa attraktionerna och aktiviteterna i Calpe',
+      searchPlaceholder: 'Sök evenemang...',
+      available: 'tillgängliga',
+      buyTickets: 'Köp biljetter',
+      selectTickets: 'Välj Biljetter',
+      orderSummary: 'Beställningsöversikt',
+      total: 'Totalt',
+      continueToCheckout: 'Fortsätt till kassan',
+      guestInformation: 'Gästinformation',
+      name: 'Fullständigt namn',
+      email: 'E-post',
+      phone: 'Telefon',
+      event: 'Evenemang',
+      tickets: 'biljetter',
+      processing: 'Bearbetar...',
+      proceedToPayment: 'Gå till betalning',
+      payment: 'Betalning',
+      loadingPayment: 'Laddar betalningsmetoder...',
+      bookingConfirmed: 'Bokning bekräftad!',
+      confirmationMessage: 'Dina biljetter har bokats framgångsrikt.',
+      bookingReference: 'Bokningsreferens',
+      emailSent: 'Ett bekräftelsemail har skickats till',
+      browseMoreEvents: 'Bläddra bland fler evenemang',
     },
     homepage: {
       hero: {
@@ -1888,6 +2381,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Tillämpa',
       reset: 'Återställ',
       loading: 'Laddar...',
+      back: 'Tillbaka',
+      optional: 'valfritt',
     },
     account: {
       tabs: {
@@ -2038,10 +2533,90 @@ export const translations: Record<Language, Translations> = {
       explore: 'Odkryj',
       holibot: 'HoliBot',
       agenda: 'Agenda',
+      reservations: 'Rezerwacje',
+      tickets: 'Bilety',
       favorites: 'Ulubione',
       account: 'Konto',
       about: 'O nas',
       faq: 'FAQ',
+    },
+    agenda: {
+      title: 'Agenda Calpe',
+      subtitle: 'Odkryj wszystkie wydarzenia, festiwale i atrakcje w Calpe',
+      categories: {
+        all: 'Wszystkie',
+        festival: 'Festiwale',
+        music: 'Muzyka',
+        gastronomy: 'Gastronomia',
+        market: 'Targi',
+        wellness: 'Wellness',
+        adventure: 'Przygoda',
+      },
+      noEvents: 'Nie znaleziono wydarzeń dla tej kategorii.',
+      moreInfo: 'Więcej informacji',
+      newsletter: {
+        title: 'Nie przegap żadnego wydarzenia!',
+        description: 'Zapisz się do naszego newslettera i otrzymuj co tydzień najlepsze wydarzenia w Calpe.',
+        placeholder: 'Twój adres e-mail',
+        button: 'Zapisz się',
+      },
+    },
+    reservations: {
+      title: 'Rezerwacje Restauracji',
+      subtitle: 'Odkryj i zarezerwuj w najlepszych restauracjach w Calpe',
+      searchPlaceholder: 'Szukaj restauracji lub kuchni...',
+      persons: 'osób',
+      person: 'osoba',
+      time: 'Godzina',
+      cuisines: {
+        all: 'Wszystkie',
+        mediterranean: 'Śródziemnomorska',
+        spanish: 'Hiszpańska',
+        italian: 'Włoska',
+        japanese: 'Japońska',
+        seafood: 'Owoce morza',
+        vegan: 'Wegańska',
+      },
+      found: 'restauracji znaleziono',
+      reserveNow: 'Zarezerwuj Teraz',
+      modal: {
+        title: 'Zarezerwuj w',
+        name: 'Imię',
+        email: 'E-mail',
+        phone: 'Telefon',
+        guests: 'Liczba osób',
+        date: 'Data',
+        time: 'Godzina',
+        selectTime: 'Wybierz godzinę',
+        specialRequests: 'Specjalne życzenia',
+        submit: 'Potwierdź Rezerwację',
+      },
+    },
+    tickets: {
+      title: 'Bilety i Atrakcje',
+      subtitle: 'Zarezerwuj bilety na najlepsze atrakcje i zajęcia w Calpe',
+      searchPlaceholder: 'Szukaj wydarzeń...',
+      available: 'dostępne',
+      buyTickets: 'Kup bilety',
+      selectTickets: 'Wybierz Bilety',
+      orderSummary: 'Podsumowanie Zamówienia',
+      total: 'Razem',
+      continueToCheckout: 'Przejdź do kasy',
+      guestInformation: 'Informacje o Gościu',
+      name: 'Imię i Nazwisko',
+      email: 'E-mail',
+      phone: 'Telefon',
+      event: 'Wydarzenie',
+      tickets: 'bilety',
+      processing: 'Przetwarzanie...',
+      proceedToPayment: 'Przejdź do płatności',
+      payment: 'Płatność',
+      loadingPayment: 'Ładowanie metod płatności...',
+      bookingConfirmed: 'Rezerwacja Potwierdzona!',
+      confirmationMessage: 'Twoje bilety zostały pomyślnie zarezerwowane.',
+      bookingReference: 'Numer Rezerwacji',
+      emailSent: 'E-mail z potwierdzeniem został wysłany do',
+      browseMoreEvents: 'Przeglądaj Więcej Wydarzeń',
     },
     homepage: {
       hero: {
@@ -2193,6 +2768,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Zastosuj',
       reset: 'Resetuj',
       loading: 'Ładowanie...',
+      back: 'Wstecz',
+      optional: 'opcjonalne',
     },
     reviews: {
       title: 'Recenzje',

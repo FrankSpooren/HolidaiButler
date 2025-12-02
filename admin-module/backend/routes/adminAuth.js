@@ -15,7 +15,7 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secre
 const ACCESS_TOKEN_EXPIRY = '24h';
 const REFRESH_TOKEN_EXPIRY = '7d';
 
-// Development fallback user (only for development mode without database)
+// Development fallback user (for development mode or cloud environments without database)
 const DEV_FALLBACK_USER = {
   id: 'dev-admin-001',
   email: 'admin@holidaibutler.com',
@@ -24,6 +24,12 @@ const DEV_FALLBACK_USER = {
   lastName: 'Admin',
   role: 'super_admin',
   status: 'active'
+};
+
+// Check if running in development or cloud environment (Codespaces, Gitpod)
+const isDevelopmentMode = () => {
+  const env = process.env.NODE_ENV;
+  return env === 'development' || env === undefined || env === '';
 };
 
 /**
@@ -57,8 +63,9 @@ router.post('/login', adminRateLimit(10, 15 * 60 * 1000), async (req, res) => {
     }
 
     // Development fallback: allow login without database
-    if (!isDatabaseAvailable && process.env.NODE_ENV === 'development') {
-      console.log('🔧 Using development fallback login (database unavailable)');
+    // Works in development mode or when NODE_ENV is not set (cloud environments)
+    if (!isDatabaseAvailable && isDevelopmentMode()) {
+      console.log('🔧 Using development fallback login (database unavailable, NODE_ENV:', process.env.NODE_ENV || 'not set', ')');
 
       if (email.toLowerCase() === DEV_FALLBACK_USER.email && password === DEV_FALLBACK_USER.password) {
         const accessToken = jwt.sign(
@@ -101,7 +108,8 @@ router.post('/login', adminRateLimit(10, 15 * 60 * 1000), async (req, res) => {
       } else {
         return res.status(401).json({
           success: false,
-          message: 'Invalid credentials. (Development mode: use admin@holidaibutler.com / Admin2024)'
+          message: 'Invalid credentials.',
+          hint: 'Development mode credentials: admin@holidaibutler.com / Admin2024'
         });
       }
     }
