@@ -77,6 +77,28 @@ export interface Translations {
   tickets: {
     title: string;
     subtitle: string;
+    searchPlaceholder: string;
+    available: string;
+    buyTickets: string;
+    selectTickets: string;
+    orderSummary: string;
+    total: string;
+    continueToCheckout: string;
+    guestInformation: string;
+    name: string;
+    email: string;
+    phone: string;
+    event: string;
+    tickets: string;
+    processing: string;
+    proceedToPayment: string;
+    payment: string;
+    loadingPayment: string;
+    bookingConfirmed: string;
+    confirmationMessage: string;
+    bookingReference: string;
+    emailSent: string;
+    browseMoreEvents: string;
   };
   // Homepage
   homepage: {
@@ -258,6 +280,8 @@ export interface Translations {
     apply: string;
     reset: string;
     loading: string;
+    back: string;
+    optional: string;
   };
   // Auth Pages
   auth: {
@@ -475,6 +499,28 @@ export const translations: Record<Language, Translations> = {
     tickets: {
       title: 'Tickets & Activiteiten',
       subtitle: 'Boek tickets voor de beste attracties en activiteiten in Calpe',
+      searchPlaceholder: 'Zoek evenementen...',
+      available: 'beschikbaar',
+      buyTickets: 'Tickets kopen',
+      selectTickets: 'Selecteer Tickets',
+      orderSummary: 'Bestelling',
+      total: 'Totaal',
+      continueToCheckout: 'Doorgaan naar afrekenen',
+      guestInformation: 'Gastgegevens',
+      name: 'Volledige naam',
+      email: 'E-mailadres',
+      phone: 'Telefoonnummer',
+      event: 'Evenement',
+      tickets: 'tickets',
+      processing: 'Verwerken...',
+      proceedToPayment: 'Doorgaan naar betaling',
+      payment: 'Betaling',
+      loadingPayment: 'Betaalmethodes laden...',
+      bookingConfirmed: 'Boeking bevestigd!',
+      confirmationMessage: 'Je tickets zijn succesvol geboekt.',
+      bookingReference: 'Boekingsreferentie',
+      emailSent: 'Een bevestigingsmail is verzonden naar',
+      browseMoreEvents: 'Meer evenementen bekijken',
     },
     homepage: {
       hero: {
@@ -659,6 +705,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Toepassen',
       reset: 'Reset',
       loading: 'Laden...',
+      back: 'Terug',
+      optional: 'optioneel',
     },
     auth: {
       login: {
@@ -867,6 +915,28 @@ export const translations: Record<Language, Translations> = {
     tickets: {
       title: 'Tickets & Activities',
       subtitle: 'Book tickets for the best attractions and activities in Calpe',
+      searchPlaceholder: 'Search events...',
+      available: 'available',
+      buyTickets: 'Buy tickets',
+      selectTickets: 'Select Tickets',
+      orderSummary: 'Order Summary',
+      total: 'Total',
+      continueToCheckout: 'Continue to Checkout',
+      guestInformation: 'Guest Information',
+      name: 'Full Name',
+      email: 'Email',
+      phone: 'Phone',
+      event: 'Event',
+      tickets: 'tickets',
+      processing: 'Processing...',
+      proceedToPayment: 'Proceed to Payment',
+      payment: 'Payment',
+      loadingPayment: 'Loading payment methods...',
+      bookingConfirmed: 'Booking Confirmed!',
+      confirmationMessage: 'Your tickets have been booked successfully.',
+      bookingReference: 'Booking Reference',
+      emailSent: 'A confirmation email has been sent to',
+      browseMoreEvents: 'Browse More Events',
     },
     homepage: {
       hero: {
@@ -1051,6 +1121,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Apply',
       reset: 'Reset',
       loading: 'Loading...',
+      back: 'Back',
+      optional: 'optional',
     },
     account: {
       tabs: {
@@ -1263,6 +1335,28 @@ export const translations: Record<Language, Translations> = {
     tickets: {
       title: 'Tickets & Aktivitäten',
       subtitle: 'Buchen Sie Tickets für die besten Attraktionen und Aktivitäten in Calpe',
+      searchPlaceholder: 'Veranstaltungen suchen...',
+      available: 'verfügbar',
+      buyTickets: 'Tickets kaufen',
+      selectTickets: 'Tickets auswählen',
+      orderSummary: 'Bestellübersicht',
+      total: 'Gesamt',
+      continueToCheckout: 'Weiter zur Kasse',
+      guestInformation: 'Gastinformationen',
+      name: 'Vollständiger Name',
+      email: 'E-Mail',
+      phone: 'Telefon',
+      event: 'Veranstaltung',
+      tickets: 'Tickets',
+      processing: 'Verarbeitung...',
+      proceedToPayment: 'Zur Zahlung',
+      payment: 'Zahlung',
+      loadingPayment: 'Zahlungsmethoden laden...',
+      bookingConfirmed: 'Buchung bestätigt!',
+      confirmationMessage: 'Ihre Tickets wurden erfolgreich gebucht.',
+      bookingReference: 'Buchungsreferenz',
+      emailSent: 'Eine Bestätigungsmail wurde gesendet an',
+      browseMoreEvents: 'Weitere Veranstaltungen',
     },
     homepage: {
       hero: {
@@ -1447,6 +1541,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Anwenden',
       reset: 'Zurücksetzen',
       loading: 'Laden...',
+      back: 'Zurück',
+      optional: 'optional',
     },
     account: {
       tabs: {
@@ -1659,6 +1755,28 @@ export const translations: Record<Language, Translations> = {
     tickets: {
       title: 'Entradas y Actividades',
       subtitle: 'Reserva entradas para las mejores atracciones y actividades en Calpe',
+      searchPlaceholder: 'Buscar eventos...',
+      available: 'disponible',
+      buyTickets: 'Comprar entradas',
+      selectTickets: 'Seleccionar Entradas',
+      orderSummary: 'Resumen del Pedido',
+      total: 'Total',
+      continueToCheckout: 'Continuar al Pago',
+      guestInformation: 'Información del Invitado',
+      name: 'Nombre Completo',
+      email: 'Correo Electrónico',
+      phone: 'Teléfono',
+      event: 'Evento',
+      tickets: 'entradas',
+      processing: 'Procesando...',
+      proceedToPayment: 'Proceder al Pago',
+      payment: 'Pago',
+      loadingPayment: 'Cargando métodos de pago...',
+      bookingConfirmed: '¡Reserva Confirmada!',
+      confirmationMessage: 'Tus entradas han sido reservadas con éxito.',
+      bookingReference: 'Referencia de Reserva',
+      emailSent: 'Se ha enviado un correo de confirmación a',
+      browseMoreEvents: 'Ver Más Eventos',
     },
     homepage: {
       hero: {
@@ -1843,6 +1961,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Aplicar',
       reset: 'Restablecer',
       loading: 'Cargando...',
+      back: 'Volver',
+      optional: 'opcional',
     },
     account: {
       tabs: {
@@ -2055,6 +2175,28 @@ export const translations: Record<Language, Translations> = {
     tickets: {
       title: 'Biljetter & Aktiviteter',
       subtitle: 'Boka biljetter till de bästa attraktionerna och aktiviteterna i Calpe',
+      searchPlaceholder: 'Sök evenemang...',
+      available: 'tillgängliga',
+      buyTickets: 'Köp biljetter',
+      selectTickets: 'Välj Biljetter',
+      orderSummary: 'Beställningsöversikt',
+      total: 'Totalt',
+      continueToCheckout: 'Fortsätt till kassan',
+      guestInformation: 'Gästinformation',
+      name: 'Fullständigt namn',
+      email: 'E-post',
+      phone: 'Telefon',
+      event: 'Evenemang',
+      tickets: 'biljetter',
+      processing: 'Bearbetar...',
+      proceedToPayment: 'Gå till betalning',
+      payment: 'Betalning',
+      loadingPayment: 'Laddar betalningsmetoder...',
+      bookingConfirmed: 'Bokning bekräftad!',
+      confirmationMessage: 'Dina biljetter har bokats framgångsrikt.',
+      bookingReference: 'Bokningsreferens',
+      emailSent: 'Ett bekräftelsemail har skickats till',
+      browseMoreEvents: 'Bläddra bland fler evenemang',
     },
     homepage: {
       hero: {
@@ -2239,6 +2381,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Tillämpa',
       reset: 'Återställ',
       loading: 'Laddar...',
+      back: 'Tillbaka',
+      optional: 'valfritt',
     },
     account: {
       tabs: {
@@ -2451,6 +2595,28 @@ export const translations: Record<Language, Translations> = {
     tickets: {
       title: 'Bilety i Atrakcje',
       subtitle: 'Zarezerwuj bilety na najlepsze atrakcje i zajęcia w Calpe',
+      searchPlaceholder: 'Szukaj wydarzeń...',
+      available: 'dostępne',
+      buyTickets: 'Kup bilety',
+      selectTickets: 'Wybierz Bilety',
+      orderSummary: 'Podsumowanie Zamówienia',
+      total: 'Razem',
+      continueToCheckout: 'Przejdź do kasy',
+      guestInformation: 'Informacje o Gościu',
+      name: 'Imię i Nazwisko',
+      email: 'E-mail',
+      phone: 'Telefon',
+      event: 'Wydarzenie',
+      tickets: 'bilety',
+      processing: 'Przetwarzanie...',
+      proceedToPayment: 'Przejdź do płatności',
+      payment: 'Płatność',
+      loadingPayment: 'Ładowanie metod płatności...',
+      bookingConfirmed: 'Rezerwacja Potwierdzona!',
+      confirmationMessage: 'Twoje bilety zostały pomyślnie zarezerwowane.',
+      bookingReference: 'Numer Rezerwacji',
+      emailSent: 'E-mail z potwierdzeniem został wysłany do',
+      browseMoreEvents: 'Przeglądaj Więcej Wydarzeń',
     },
     homepage: {
       hero: {
@@ -2602,6 +2768,8 @@ export const translations: Record<Language, Translations> = {
       apply: 'Zastosuj',
       reset: 'Resetuj',
       loading: 'Ładowanie...',
+      back: 'Wstecz',
+      optional: 'opcjonalne',
     },
     reviews: {
       title: 'Recenzje',
