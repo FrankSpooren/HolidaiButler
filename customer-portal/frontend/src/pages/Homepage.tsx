@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useLanguage } from '../i18n/LanguageContext';
+import { Footer } from '../shared/components/Footer';
 import './Homepage.css';
 
 /**
@@ -154,10 +155,10 @@ export function Homepage() {
       <section className="cta-section">
         <div className="cta-container">
           <Link to="/pois" className="cta-btn explore">
-            {t.homepage.cta.explore}
+            🗺️ {t.homepage.cta.explore}
           </Link>
-          <Link to="/login" className="cta-btn agenda">
-            {t.homepage.cta.agenda}
+          <Link to="/agenda" className="cta-btn agenda">
+            📅 {t.homepage.cta.agenda}
           </Link>
         </div>
       </section>
@@ -220,20 +221,8 @@ export function Homepage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <div className="footer-links">
-            <Link to="/about" className="footer-link">{t.footer.about}</Link>
-            <Link to="/privacy" className="footer-link">{t.footer.privacy}</Link>
-            <Link to="/terms" className="footer-link">{t.footer.terms}</Link>
-            <Link to="/contact" className="footer-link">{t.footer.contact}</Link>
-          </div>
-          <p className="footer-copy">
-            {t.footer.copyright}
-          </p>
-        </div>
-      </footer>
+      {/* Enterprise Footer Component */}
+      <Footer />
     </>
   );
 }
