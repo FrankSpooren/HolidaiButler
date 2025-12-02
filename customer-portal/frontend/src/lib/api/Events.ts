@@ -8,8 +8,9 @@
  * Gateway: platform-core (port 3001) -> /api/v1/ticketing/events
  */
 
-import { HttpClient, ContentType, RequestParams } from './http-client';
-import type { EventsResponse, EventResponse, Event, TicketType, ErrorResponse } from './data-contracts';
+import type { EventsResponse, EventResponse, TicketType, ErrorResponse } from './data-contracts';
+import type { RequestParams } from './http-client';
+import { HttpClient, ContentType } from './http-client';
 
 export class Events<SecurityDataType = unknown> extends HttpClient<SecurityDataType> {
   /**
