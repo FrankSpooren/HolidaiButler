@@ -16,8 +16,8 @@ import BookingConfirmation, {
   type ConfirmationData,
 } from '../features/ticketing/components/BookingFlow/BookingConfirmation';
 import { useCreateBooking, useConfirmBooking } from '../features/ticketing/hooks/useBooking';
-import LoadingSpinner from '../features/ticketing/components/shared/LoadingSpinner';
-import ErrorDisplay from '../features/ticketing/components/shared/ErrorDisplay';
+import { LoadingSpinner } from '../features/ticketing/components/shared/LoadingSpinner';
+import { ErrorDisplay } from '../features/ticketing/components/shared/ErrorDisplay';
 
 type BookingStep = 'guest-info' | 'summary' | 'payment' | 'confirmation';
 
@@ -245,7 +245,7 @@ export default function BookingFlow() {
           <div className="max-w-2xl mx-auto p-6">
             <ErrorDisplay
               title="Booking Failed"
-              message={
+              error={
                 createBookingMutation.error instanceof Error
                   ? createBookingMutation.error.message
                   : 'Failed to create booking'

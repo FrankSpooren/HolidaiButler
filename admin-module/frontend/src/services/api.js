@@ -1,7 +1,17 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003/api/admin';
-const RESERVATIONS_API_URL = import.meta.env.VITE_RESERVATIONS_API_URL || 'http://localhost:5003/api';
+// Detect if running in Codespaces or similar cloud environment
+const isCloudEnvironment = typeof window !== 'undefined' && (
+  window.location.hostname.includes('.app.github.dev') ||
+  window.location.hostname.includes('.gitpod.io') ||
+  window.location.hostname.includes('.stackblitz.io')
+);
+
+// Use relative URLs for Vite proxy in development, or explicit URLs for production
+// In Codespaces: relative URL '/api/admin' goes through Vite proxy -> localhost:3003
+// In production: use VITE_API_URL environment variable
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isCloudEnvironment ? '/api/admin' : 'http://localhost:3003/api/admin');
+const RESERVATIONS_API_URL = import.meta.env.VITE_RESERVATIONS_API_URL || (isCloudEnvironment ? '/api/reservations' : 'http://localhost:5003/api');
 
 // Create axios instance for admin API
 const api = axios.create({
