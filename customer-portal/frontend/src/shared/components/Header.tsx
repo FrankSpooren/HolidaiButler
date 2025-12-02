@@ -133,7 +133,7 @@ export function Header() {
       </div>
 
       <nav ref={menuRef} className={`nav-menu ${menuOpen ? 'active' : ''}`}>
-        <Link to="/" className="nav-link">🏠 {t.nav.home}</Link>
+        <Link to="/" className="nav-link" onClick={() => setMenuOpen(false)}>🏠 {t.nav.home}</Link>
         <Link to="/pois" className="nav-link" onClick={() => setMenuOpen(false)}>🗺️ {t.nav.explore}</Link>
         <a
           href="#"
@@ -148,12 +148,14 @@ export function Header() {
         >
           💬 {t.nav.holibot}
         </a>
-        <a href="#" className="nav-link">📅 {t.nav.agenda}</a>
+        <Link to="/agenda" className="nav-link" onClick={() => setMenuOpen(false)}>📅 {t.nav.agenda}</Link>
+        <Link to="/reservations" className="nav-link" onClick={() => setMenuOpen(false)}>🍽️ {t.nav.reservations || 'Reserveren'}</Link>
+        <Link to="/tickets" className="nav-link" onClick={() => setMenuOpen(false)}>🎫 {t.nav.tickets || 'Tickets'}</Link>
         <Link to="/favorites" className="nav-link" onClick={() => setMenuOpen(false)}>❤️ {t.nav.favorites}</Link>
         <div className="nav-separator"></div>
-        <Link to="/account" className="nav-link">👤 {t.nav.account}</Link>
-        <a href="#" className="nav-link">ℹ️ {t.nav.about}</a>
-        <a href="#" className="nav-link">❓ {t.nav.faq}</a>
+        <Link to="/account" className="nav-link" onClick={() => setMenuOpen(false)}>👤 {t.nav.account}</Link>
+        <Link to="/about" className="nav-link" onClick={() => setMenuOpen(false)}>ℹ️ {t.nav.about}</Link>
+        <Link to="/faq" className="nav-link" onClick={() => setMenuOpen(false)}>❓ {t.nav.faq}</Link>
       </nav>
 
       <WCAGModal isOpen={wcagModalOpen} onClose={() => setWcagModalOpen(false)} />
