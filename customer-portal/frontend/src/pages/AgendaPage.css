@@ -5,25 +5,28 @@
   background: #f9fafb;
 }
 
-/* Hero Section */
+/* Hero Section - Consistent with Homepage template (no duplicate green header) */
 .agenda-hero {
-  background: linear-gradient(135deg, #5E8B7E 0%, #7FA594 100%);
-  padding: 60px 20px;
+  background: white;
+  padding: 32px 20px;
   text-align: center;
-  color: white;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .agenda-hero h1 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  color: #2C3E50;
+  font-family: 'Inter', sans-serif;
 }
 
 .agenda-hero p {
-  font-size: 1.1rem;
-  opacity: 0.9;
+  font-size: 1rem;
+  color: #6B7280;
   max-width: 600px;
   margin: 0 auto;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Month Navigation */
@@ -303,8 +306,16 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .agenda-hero {
+    padding: 24px 16px;
+  }
+
   .agenda-hero h1 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
+  }
+
+  .agenda-hero p {
+    font-size: 0.9rem;
   }
 
   .events-grid {

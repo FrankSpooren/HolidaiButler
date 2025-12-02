@@ -155,10 +155,10 @@ export function Homepage() {
       <section className="cta-section">
         <div className="cta-container">
           <Link to="/pois" className="cta-btn explore">
-            🗺️ {t.homepage.cta.explore}
+            {t.homepage.cta.explore}
           </Link>
           <Link to="/agenda" className="cta-btn agenda">
-            📅 {t.homepage.cta.agenda}
+            {t.homepage.cta.agenda}
           </Link>
         </div>
       </section>
