@@ -203,3 +203,100 @@ export interface ErrorResponse {
   /** Technical error details (optional) */
   message?: string;
 }
+
+// Event Types for NEW Ticketing Module
+export interface Event {
+  id: number;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  location?: string;
+  venue?: string;
+  category?: EventCategory;
+  /** @format date-time */
+  startDate: string;
+  /** @format date-time */
+  endDate?: string;
+  status: 'draft' | 'active' | 'cancelled' | 'completed';
+  availableTickets?: number;
+  totalCapacity?: number;
+  ticketTypes?: TicketType[];
+  /** @format date-time */
+  createdAt?: string;
+  /** @format date-time */
+  updatedAt?: string;
+}
+
+export type EventCategory = 'festival' | 'music' | 'gastronomy' | 'market' | 'wellness' | 'adventure' | 'sports' | 'culture' | 'other';
+
+export interface TicketType {
+  id: number;
+  eventId: number;
+  name: string;
+  description?: string;
+  /** @format double */
+  price: number;
+  currency: string;
+  maxPerOrder?: number;
+  availableQuantity?: number;
+  isActive?: boolean;
+}
+
+export interface EventsResponse {
+  success: boolean;
+  data: Event[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+}
+
+export interface EventResponse {
+  success: boolean;
+  data: Event;
+}
+
+// Payment Session Types for Adyen Integration
+export interface CreatePaymentSessionRequest {
+  amount: number;
+  currency: string;
+  bookingReference: string;
+  resourceType: 'ticket' | 'restaurant' | 'activity';
+  resourceId: string;
+  customerInfo: {
+    name: string;
+    email: string;
+    phone?: string;
+  };
+  returnUrl: string;
+}
+
+export interface PaymentSessionResponse {
+  success: boolean;
+  data: {
+    id: string;
+    sessionData: string;
+    clientKey: string;
+    environment: 'test' | 'live';
+    amount: {
+      value: number;
+      currency: string;
+    };
+    expiresAt?: string;
+  };
+}
+
+export interface PaymentStatusResponse {
+  success: boolean;
+  data: {
+    transactionId: string;
+    status: 'pending' | 'authorized' | 'captured' | 'cancelled' | 'failed' | 'refunded';
+    amount: number;
+    currency: string;
+    pspReference?: string;
+    resultCode?: string;
+    refusalReason?: string;
+  };
+}

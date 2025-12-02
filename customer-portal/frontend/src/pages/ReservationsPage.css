@@ -5,23 +5,26 @@
   background: #f9fafb;
 }
 
-/* Hero Section */
+/* Hero Section - Consistent with Homepage template (no duplicate green header) */
 .reservations-hero {
-  background: linear-gradient(135deg, #5E8B7E 0%, #7FA594 100%);
-  padding: 60px 20px;
+  background: white;
+  padding: 32px 20px;
   text-align: center;
-  color: white;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .reservations-hero h1 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  color: #2C3E50;
+  font-family: 'Inter', sans-serif;
 }
 
 .reservations-hero p {
-  font-size: 1.1rem;
-  opacity: 0.9;
+  font-size: 1rem;
+  color: #6B7280;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Search & Filter Bar */
@@ -416,8 +419,16 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .reservations-hero {
+    padding: 24px 16px;
+  }
+
   .reservations-hero h1 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
+  }
+
+  .reservations-hero p {
+    font-size: 0.9rem;
   }
 
   .search-container {

@@ -10,7 +10,7 @@ import { LoginPage } from '../pages/auth/LoginPage';
 import { SignupPage } from '../pages/auth/SignupPage';
 import OnboardingFlow from '../pages/onboarding/OnboardingFlow';
 import { NotFoundPage } from '../pages/NotFoundPage';
-import { TicketingDemo } from '../pages/TicketingDemo';
+import { TicketsPage } from '../pages/TicketsPage';
 import { AgendaPage } from '../pages/AgendaPage';
 import { ReservationsPage } from '../pages/ReservationsPage';
 import BookingFlow from '../pages/BookingFlow';
@@ -57,14 +57,9 @@ export const router = createBrowserRouter([
         element: <FavoritesPage />,
       },
       {
-        // Ticketing Demo Page (Phase 6 - Frontend Integration)
-        path: '/ticketing-demo',
-        element: <TicketingDemo />,
-      },
-      {
-        // Tickets Page (alias for ticketing-demo)
+        // Tickets Page - NEW Enterprise Ticketing with Adyen Integration
         path: '/tickets',
-        element: <TicketingDemo />,
+        element: <TicketsPage />,
       },
       {
         // Agenda Page - Events & Activities Calendar
