@@ -8,7 +8,8 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import AdyenCheckout from '@adyen/adyen-web';
+import { AdyenCheckout } from '@adyen/adyen-web';
+import type { CoreConfiguration } from '@adyen/adyen-web';
 import '@adyen/adyen-web/styles/adyen.css';
 import { AlertCircle, Loader2, Lock, CheckCircle } from 'lucide-react';
 
@@ -53,7 +54,7 @@ export const AdyenCheckoutComponent: React.FC<AdyenCheckoutProps> = ({
   countryCode = 'NL',
 }) => {
   const paymentContainerRef = useRef<HTMLDivElement>(null);
-  const checkoutInstanceRef = useRef<AdyenCheckout | null>(null);
+  const checkoutInstanceRef = useRef<InstanceType<typeof AdyenCheckout> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
