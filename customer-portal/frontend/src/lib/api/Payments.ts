@@ -8,13 +8,14 @@
  * Gateway: platform-core (port 3001) -> /api/v1/payments
  */
 
-import { HttpClient, ContentType, RequestParams } from './http-client';
 import type {
   CreatePaymentSessionRequest,
   PaymentSessionResponse,
   PaymentStatusResponse,
   ErrorResponse,
 } from './data-contracts';
+import type { RequestParams } from './http-client';
+import { HttpClient, ContentType } from './http-client';
 
 export class Payments<SecurityDataType = unknown> extends HttpClient<SecurityDataType> {
   /**
