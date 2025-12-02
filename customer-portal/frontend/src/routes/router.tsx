@@ -11,6 +11,9 @@ import { SignupPage } from '../pages/auth/SignupPage';
 import OnboardingFlow from '../pages/onboarding/OnboardingFlow';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { TicketingDemo } from '../pages/TicketingDemo';
+import { AgendaPage } from '../pages/AgendaPage';
+import { ReservationsPage } from '../pages/ReservationsPage';
+import BookingFlow from '../pages/BookingFlow';
 import { ErrorBoundary } from '../shared/components/ErrorBoundary';
 import { protectedLoader } from './loaders/protectedLoader';
 
@@ -23,8 +26,8 @@ import { protectedLoader } from './loaders/protectedLoader';
  * - Error boundaries (custom ErrorBoundary component)
  * - Nested layouts
  *
- * Total Routes: 8
- * - Public: 6 (/, /pois, /pois/:id, /onboarding, /login, /signup, *)
+ * Total Routes: 12
+ * - Public: 10 (/, /pois, /pois/:id, /favorites, /agenda, /reservations, /tickets, /booking, /onboarding, /login, /signup, *)
  * - Protected: 1 (/account)
  */
 export const router = createBrowserRouter([
@@ -57,6 +60,26 @@ export const router = createBrowserRouter([
         // Ticketing Demo Page (Phase 6 - Frontend Integration)
         path: '/ticketing-demo',
         element: <TicketingDemo />,
+      },
+      {
+        // Tickets Page (alias for ticketing-demo)
+        path: '/tickets',
+        element: <TicketingDemo />,
+      },
+      {
+        // Agenda Page - Events & Activities Calendar
+        path: '/agenda',
+        element: <AgendaPage />,
+      },
+      {
+        // Reservations Page - Restaurant Bookings
+        path: '/reservations',
+        element: <ReservationsPage />,
+      },
+      {
+        // Booking Flow - Complete booking process
+        path: '/booking',
+        element: <BookingFlow />,
       },
       {
         // Account Dashboard (Protected Route)
