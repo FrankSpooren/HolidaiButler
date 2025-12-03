@@ -157,26 +157,36 @@ router.get(
   requirePermission('pois', 'read'),
   async (req, res) => {
     try {
-      // Get overview stats
-      const total = await POI.count();
-      const active = await POI.count({ where: { verified: true } });
-      const inactive = await POI.count({ where: { verified: false } });
-      const avgRating = await POI.findOne({
-        attributes: [[sequelize.fn('AVG', sequelize.col('rating')), 'avgRating']],
-        raw: true,
-      });
-      const totalViews = await POI.sum('popularity_score') || 0;
+      // Try to get stats from database
+      let total = 0, active = 0, inactive = 0, avgRating = 0, totalViews = 0;
+      let byCategory = [];
 
-      // Get category breakdown
-      const byCategory = await POI.findAll({
-        attributes: [
-          ['category', '_id'],
-          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-        ],
-        group: ['category'],
-        order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
-        raw: true,
-      });
+      try {
+        // Get overview stats
+        total = await POI.count();
+        active = await POI.count({ where: { verified: true } });
+        inactive = await POI.count({ where: { verified: false } });
+        const avgRatingResult = await POI.findOne({
+          attributes: [[sequelize.fn('AVG', sequelize.col('rating')), 'avgRating']],
+          raw: true,
+        });
+        avgRating = parseFloat(avgRatingResult?.avgRating) || 0;
+        totalViews = await POI.sum('popularity_score') || 0;
+
+        // Get category breakdown
+        byCategory = await POI.findAll({
+          attributes: [
+            ['category', '_id'],
+            [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+          ],
+          group: ['category'],
+          order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
+          raw: true,
+        });
+      } catch (dbError) {
+        // Database not available - return default stats
+        console.warn('POI stats: Database not available, returning default stats');
+      }
 
       res.json({
         success: true,
@@ -187,12 +197,13 @@ router.get(
             inactive,
             pending: inactive,
             needsReview: inactive,
-            avgRating: parseFloat(avgRating?.avgRating) || 0,
+            avgRating,
             totalViews,
             totalBookings: 0,
           },
           byCategory,
         },
+        _degradedMode: total === 0 && active === 0,
       });
     } catch (error) {
       console.error('Get POI stats error:', error);
