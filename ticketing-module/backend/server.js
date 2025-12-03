@@ -63,11 +63,14 @@ app.use('/api/', limiter);
 
 // ========== DATABASE CONNECTION ==========
 
+let isDatabaseConnected = false;
+
 const connectDB = async () => {
   try {
     // Test MySQL connection via Sequelize
     await sequelize.authenticate();
     logger.info('MySQL database connected successfully');
+    isDatabaseConnected = true;
 
     // In production, only connect - use migrations for schema changes
     if (process.env.NODE_ENV === 'production') {
@@ -84,8 +87,18 @@ const connectDB = async () => {
       }
     }
   } catch (error) {
-    logger.error('MySQL connection error:', error);
-    process.exit(1);
+    logger.error('MySQL connection error:', error.message);
+    isDatabaseConnected = false;
+
+    // In production, exit on database failure
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('Production mode requires database connection. Exiting.');
+      process.exit(1);
+    } else {
+      // In development/Codespaces, continue without database
+      logger.warn('⚠️  Running in DEGRADED MODE without database');
+      logger.warn('⚠️  Events API will work (sample data), but booking/tickets require database');
+    }
   }
 };
 
