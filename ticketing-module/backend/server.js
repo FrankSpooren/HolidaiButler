@@ -92,17 +92,28 @@ const connectDB = async () => {
 // ========== ROUTES ==========
 
 const ticketRoutes = require('./routes/tickets');
+const eventRoutes = require('./routes/events');
 
+// Main ticketing routes (availability, bookings, tickets)
 app.use('/api/v1/tickets', ticketRoutes);
+
+// Events routes (for Customer Portal ticketing page)
+app.use('/api/v1/tickets/events', eventRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
     service: 'HolidaiButler Ticketing Module',
-    version: '1.0.0',
+    version: '2.0.0',
     status: 'running',
     timestamp: new Date().toISOString(),
     endpoints: {
+      // Events endpoints (for Customer Portal)
+      events: '/api/v1/tickets/events',
+      eventDetails: '/api/v1/tickets/events/:eventId',
+      ticketTypes: '/api/v1/tickets/events/:eventId/ticket-types',
+      eventAvailability: '/api/v1/tickets/events/:eventId/availability',
+      // POI-based availability (legacy)
       availability: '/api/v1/tickets/availability/:poiId',
       bookings: '/api/v1/tickets/bookings',
       tickets: '/api/v1/tickets/:ticketId',
