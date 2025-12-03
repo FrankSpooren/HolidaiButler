@@ -1,17 +1,53 @@
 import axios from 'axios';
 
 // Detect if running in Codespaces or similar cloud environment
-const isCloudEnvironment = typeof window !== 'undefined' && (
-  window.location.hostname.includes('.app.github.dev') ||
-  window.location.hostname.includes('.gitpod.io') ||
-  window.location.hostname.includes('.stackblitz.io')
-);
+const isCodespaces = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
+const isGitpod = typeof window !== 'undefined' && window.location.hostname.includes('.gitpod.io');
+const isStackBlitz = typeof window !== 'undefined' && window.location.hostname.includes('.stackblitz.io');
+const isCloudEnvironment = isCodespaces || isGitpod || isStackBlitz;
 
-// Use relative URLs for Vite proxy in development, or explicit URLs for production
-// In Codespaces: relative URL '/api/admin' goes through Vite proxy -> localhost:3003
-// In production: use VITE_API_URL environment variable
-const API_BASE_URL = import.meta.env.VITE_API_URL || (isCloudEnvironment ? '/api/admin' : 'http://localhost:3003/api/admin');
-const RESERVATIONS_API_URL = import.meta.env.VITE_RESERVATIONS_API_URL || (isCloudEnvironment ? '/api/reservations' : 'http://localhost:5003/api');
+/**
+ * Build the correct backend URL for Codespaces
+ * Frontend: https://xxx-5174.app.github.dev -> Backend: https://xxx-3003.app.github.dev
+ */
+const getCodespacesBackendUrl = (port, basePath) => {
+  if (typeof window === 'undefined') return `http://localhost:${port}${basePath}`;
+
+  const hostname = window.location.hostname;
+  // Replace the port number in the hostname
+  // Format: name-hash-PORT.app.github.dev
+  const backendHostname = hostname.replace(/-\d+\.app\.github\.dev$/, `-${port}.app.github.dev`);
+  return `https://${backendHostname}${basePath}`;
+};
+
+// Build API URLs based on environment
+let API_BASE_URL;
+let RESERVATIONS_API_URL;
+
+if (import.meta.env.VITE_API_URL) {
+  // Explicit URL set - use it (production)
+  API_BASE_URL = import.meta.env.VITE_API_URL;
+} else if (isCodespaces) {
+  // Codespaces: construct the backend URL dynamically
+  API_BASE_URL = getCodespacesBackendUrl(3003, '/api/admin');
+  console.log('🔧 Codespaces detected, using backend URL:', API_BASE_URL);
+} else if (isCloudEnvironment) {
+  // Other cloud environments: try relative URLs with proxy
+  API_BASE_URL = '/api/admin';
+} else {
+  // Local development
+  API_BASE_URL = 'http://localhost:3003/api/admin';
+}
+
+if (import.meta.env.VITE_RESERVATIONS_API_URL) {
+  RESERVATIONS_API_URL = import.meta.env.VITE_RESERVATIONS_API_URL;
+} else if (isCodespaces) {
+  RESERVATIONS_API_URL = getCodespacesBackendUrl(5003, '/api');
+} else if (isCloudEnvironment) {
+  RESERVATIONS_API_URL = '/api/reservations';
+} else {
+  RESERVATIONS_API_URL = 'http://localhost:5003/api';
+}
 
 // Create axios instance for admin API
 const api = axios.create({
@@ -694,10 +730,26 @@ export const bookingsAPI = {
 };
 
 // Events API (Ticketing module)
+const TICKETING_API_URL = import.meta.env.VITE_TICKETING_API_URL ||
+  (isCodespaces ? getCodespacesBackendUrl(3004, '/api/v1/tickets') :
+    (isCloudEnvironment ? '/api/v1/tickets' : 'http://localhost:3004/api/v1/tickets'));
+
 const ticketingApi = axios.create({
-  baseURL: import.meta.env.VITE_TICKETING_API_URL || 'http://localhost:5004/api/v1/tickets',
+  baseURL: TICKETING_API_URL,
   headers: { 'Content-Type': 'application/json' }
 });
+
+// Add auth interceptor for ticketing API
+ticketingApi.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 export const eventsAPI = {
   getAll: async (params = {}) => {
@@ -758,10 +810,26 @@ export const ticketsAPI = {
 export const poisAPI = poiAPI;
 
 // Transactions API (Payment module)
+const PAYMENT_API_URL = import.meta.env.VITE_PAYMENT_API_URL ||
+  (isCodespaces ? getCodespacesBackendUrl(3005, '/api/v1/payments') :
+    (isCloudEnvironment ? '/api/v1/payments' : 'http://localhost:3005/api/v1/payments'));
+
 const paymentApi = axios.create({
-  baseURL: import.meta.env.VITE_PAYMENT_API_URL || 'http://localhost:5002/api/v1/payments',
+  baseURL: PAYMENT_API_URL,
   headers: { 'Content-Type': 'application/json' }
 });
+
+// Add auth interceptor for payment API
+paymentApi.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 export const transactionsAPI = {
   getAll: async (params = {}) => {
@@ -786,8 +854,12 @@ export const transactionsAPI = {
 export const reservationsAPI = reservationAPI;
 
 // Agenda API (Agenda module)
+const AGENDA_API_URL = import.meta.env.VITE_AGENDA_API_URL ||
+  (isCodespaces ? getCodespacesBackendUrl(5005, '/api') :
+    (isCloudEnvironment ? '/api/agenda' : 'http://localhost:5005/api'));
+
 const agendaApi = axios.create({
-  baseURL: import.meta.env.VITE_AGENDA_API_URL || 'http://localhost:5005/api',
+  baseURL: AGENDA_API_URL,
   headers: { 'Content-Type': 'application/json' }
 });
 
