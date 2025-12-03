@@ -169,9 +169,14 @@ export default function ReservationList() {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold">
-          Reservations
-        </Typography>
+        <Box>
+          <Typography variant="h4" fontWeight="bold">
+            Reservations
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Manage restaurant reservations and bookings
+          </Typography>
+        </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="outlined"

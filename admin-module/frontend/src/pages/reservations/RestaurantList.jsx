@@ -111,9 +111,14 @@ export default function RestaurantList() {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold">
-          Restaurants
-        </Typography>
+        <Box>
+          <Typography variant="h4" fontWeight="bold">
+            Restaurants
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Manage restaurants and their settings
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
