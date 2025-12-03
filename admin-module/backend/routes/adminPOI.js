@@ -10,6 +10,178 @@ import { POI, POIImportHistory, AdminUser, sequelize } from '../models/index.js'
 
 const router = express.Router();
 
+// Development mode check
+const isDevelopmentMode = () => {
+  const env = process.env.NODE_ENV;
+  return env === 'development' || env === undefined || env === '';
+};
+
+// Development fallback POIs (Costa Blanca attractions)
+const DEV_FALLBACK_POIS = [
+  {
+    id: 1,
+    google_placeid: 'dev_poi_001',
+    name: 'Peñón de Ifach',
+    description: 'Iconic limestone rock formation rising 332m from the sea. Natural park with hiking trails and stunning Mediterranean views.',
+    category: 'attraction',
+    subcategory: 'natural_landmark',
+    latitude: 38.6347,
+    longitude: 0.0781,
+    address: 'Parque Natural del Peñón de Ifach',
+    city: 'Calpe',
+    region: 'Costa Blanca',
+    country: 'Spain',
+    postal_code: '03710',
+    phone: '+34 965 836 920',
+    website: 'https://parquesnaturales.gva.es',
+    rating: 4.7,
+    review_count: 12450,
+    price_level: 1,
+    verified: true,
+    featured: true,
+    popularity_score: 9500,
+    amenities: JSON.stringify(['parking', 'visitor_center', 'hiking_trails', 'viewpoint']),
+    images: JSON.stringify(['https://example.com/penon1.jpg', 'https://example.com/penon2.jpg']),
+    created_at: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 2,
+    google_placeid: 'dev_poi_002',
+    name: 'Restaurant El Bodegón',
+    description: 'Traditional Spanish restaurant specializing in fresh seafood and local paella. Family-run since 1985.',
+    category: 'restaurant',
+    subcategory: 'seafood',
+    latitude: 38.6456,
+    longitude: 0.0456,
+    address: 'Calle del Mar 23',
+    city: 'Calpe',
+    region: 'Costa Blanca',
+    country: 'Spain',
+    postal_code: '03710',
+    phone: '+34 965 831 234',
+    website: 'https://elbodegon-calpe.es',
+    rating: 4.5,
+    review_count: 892,
+    price_level: 2,
+    verified: true,
+    featured: false,
+    popularity_score: 4200,
+    amenities: JSON.stringify(['outdoor_seating', 'wifi', 'reservations', 'wheelchair_accessible']),
+    images: JSON.stringify(['https://example.com/bodegon1.jpg']),
+    created_at: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 3,
+    google_placeid: 'dev_poi_003',
+    name: 'Playa del Arenal-Bol',
+    description: 'Beautiful sandy beach with Blue Flag certification. Perfect for swimming, sunbathing, and water sports.',
+    category: 'beach',
+    subcategory: 'sandy_beach',
+    latitude: 38.6398,
+    longitude: 0.0534,
+    address: 'Paseo Marítimo',
+    city: 'Calpe',
+    region: 'Costa Blanca',
+    country: 'Spain',
+    postal_code: '03710',
+    phone: null,
+    website: null,
+    rating: 4.6,
+    review_count: 5623,
+    price_level: 0,
+    verified: true,
+    featured: true,
+    popularity_score: 7800,
+    amenities: JSON.stringify(['lifeguard', 'showers', 'beach_bars', 'sunbed_rental', 'water_sports']),
+    images: JSON.stringify(['https://example.com/arenal1.jpg', 'https://example.com/arenal2.jpg']),
+    created_at: new Date(Date.now() - 300 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 4,
+    google_placeid: 'dev_poi_004',
+    name: 'Hotel Suitopia Sol y Mar',
+    description: 'Modern 4-star hotel with sea views, rooftop pool, and spa facilities. Located near the beach and town center.',
+    category: 'accommodation',
+    subcategory: 'hotel',
+    latitude: 38.6412,
+    longitude: 0.0489,
+    address: 'Avenida Juan Carlos I, 48',
+    city: 'Calpe',
+    region: 'Costa Blanca',
+    country: 'Spain',
+    postal_code: '03710',
+    phone: '+34 965 836 400',
+    website: 'https://suitopia.es',
+    rating: 4.3,
+    review_count: 1876,
+    price_level: 3,
+    verified: true,
+    featured: false,
+    popularity_score: 5100,
+    amenities: JSON.stringify(['pool', 'spa', 'restaurant', 'wifi', 'parking', 'gym', 'bar']),
+    images: JSON.stringify(['https://example.com/suitopia1.jpg']),
+    created_at: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 5,
+    google_placeid: 'dev_poi_005',
+    name: 'Casco Antiguo de Calpe',
+    description: 'Historic old town with narrow streets, whitewashed houses, and the 15th-century Church of Nuestra Señora de las Nieves.',
+    category: 'attraction',
+    subcategory: 'historic_district',
+    latitude: 38.6445,
+    longitude: 0.0512,
+    address: 'Plaza de la Villa',
+    city: 'Calpe',
+    region: 'Costa Blanca',
+    country: 'Spain',
+    postal_code: '03710',
+    phone: '+34 965 833 541',
+    website: 'https://calpe.es',
+    rating: 4.4,
+    review_count: 2341,
+    price_level: 0,
+    verified: true,
+    featured: true,
+    popularity_score: 6200,
+    amenities: JSON.stringify(['walking_tours', 'museums', 'shops', 'restaurants']),
+    images: JSON.stringify(['https://example.com/casco1.jpg', 'https://example.com/casco2.jpg']),
+    created_at: new Date(Date.now() - 250 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 6,
+    google_placeid: 'dev_poi_006',
+    name: 'Las Salinas de Calpe',
+    description: 'Ancient salt flats and lagoon, home to flamingos and diverse birdlife. Important wetland ecosystem.',
+    category: 'attraction',
+    subcategory: 'nature_reserve',
+    latitude: 38.6523,
+    longitude: 0.0623,
+    address: 'Salinas de Calpe',
+    city: 'Calpe',
+    region: 'Costa Blanca',
+    country: 'Spain',
+    postal_code: '03710',
+    phone: null,
+    website: null,
+    rating: 4.2,
+    review_count: 1567,
+    price_level: 0,
+    verified: false,
+    featured: false,
+    popularity_score: 3400,
+    amenities: JSON.stringify(['birdwatching', 'walking_path', 'information_boards']),
+    images: JSON.stringify(['https://example.com/salinas1.jpg']),
+    created_at: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
 /**
  * Safe JSON parse helper
  */
@@ -75,64 +247,118 @@ router.get(
         needsReview,
       } = req.query;
 
-      // Build WHERE conditions
-      const where = {};
+      let pois = [];
+      let total = 0;
 
-      // Status filter
-      if (status) {
-        if (status === 'active') where.verified = true;
-        else if (status === 'inactive' || status === 'pending') where.verified = false;
+      try {
+        // Build WHERE conditions
+        const where = {};
+
+        // Status filter
+        if (status) {
+          if (status === 'active') where.verified = true;
+          else if (status === 'inactive' || status === 'pending') where.verified = false;
+        }
+
+        if (category) where.category = category;
+        if (city) where.city = { [Op.like]: `%${city}%` };
+        if (country) where.country = country;
+        if (needsReview === 'true') where.verified = false;
+
+        if (search) {
+          where[Op.or] = [
+            { name: { [Op.like]: `%${search}%` } },
+            { description: { [Op.like]: `%${search}%` } },
+            { city: { [Op.like]: `%${search}%` } },
+          ];
+        }
+
+        // Parse sort parameter
+        let order = [['created_at', 'DESC']];
+        if (sort) {
+          const sortField = sort.startsWith('-') ? sort.substring(1) : sort;
+          const sortDir = sort.startsWith('-') ? 'DESC' : 'ASC';
+          const fieldMap = {
+            createdAt: 'created_at',
+            created_at: 'created_at',
+            name: 'name',
+            rating: 'rating',
+            category: 'category',
+          };
+          const mappedField = fieldMap[sortField] || 'created_at';
+          order = [[mappedField, sortDir]];
+        }
+
+        // Calculate pagination
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+
+        // Execute query
+        const { count, rows } = await POI.findAndCountAll({
+          where,
+          order,
+          limit: parseInt(limit),
+          offset,
+        });
+
+        pois = rows.map(formatPOI);
+        total = count;
+      } catch (dbError) {
+        console.warn('POIs query failed, using fallback:', dbError.message);
+        if (isDevelopmentMode()) {
+          // Apply filters to fallback data
+          let filteredPois = DEV_FALLBACK_POIS.filter(p => {
+            if (status === 'active' && !p.verified) return false;
+            if ((status === 'inactive' || status === 'pending') && p.verified) return false;
+            if (category && p.category !== category) return false;
+            if (city && !p.city.toLowerCase().includes(city.toLowerCase())) return false;
+            if (country && p.country !== country) return false;
+            if (needsReview === 'true' && p.verified) return false;
+            if (search) {
+              const searchLower = search.toLowerCase();
+              if (!p.name.toLowerCase().includes(searchLower) &&
+                  !p.description.toLowerCase().includes(searchLower) &&
+                  !p.city.toLowerCase().includes(searchLower)) {
+                return false;
+              }
+            }
+            return true;
+          });
+
+          // Format fallback POIs to match expected structure
+          pois = filteredPois.map(p => ({
+            ...p,
+            opening_hours: null,
+            amenities: safeJSONParse(p.amenities, []),
+            accessibility_features: null,
+            images: safeJSONParse(p.images, []),
+            google_place_data: null,
+            status: p.verified ? 'active' : 'pending',
+            location: {
+              city: p.city,
+              country: p.country,
+              region: p.region,
+              address: p.address,
+              postal_code: p.postal_code,
+              latitude: p.latitude,
+              longitude: p.longitude,
+            },
+            quality: {
+              needsReview: !p.verified,
+            },
+          }));
+          total = pois.length;
+        }
       }
-
-      if (category) where.category = category;
-      if (city) where.city = { [Op.like]: `%${city}%` };
-      if (country) where.country = country;
-      if (needsReview === 'true') where.verified = false;
-
-      if (search) {
-        where[Op.or] = [
-          { name: { [Op.like]: `%${search}%` } },
-          { description: { [Op.like]: `%${search}%` } },
-          { city: { [Op.like]: `%${search}%` } },
-        ];
-      }
-
-      // Parse sort parameter
-      let order = [['created_at', 'DESC']];
-      if (sort) {
-        const sortField = sort.startsWith('-') ? sort.substring(1) : sort;
-        const sortDir = sort.startsWith('-') ? 'DESC' : 'ASC';
-        const fieldMap = {
-          createdAt: 'created_at',
-          created_at: 'created_at',
-          name: 'name',
-          rating: 'rating',
-          category: 'category',
-        };
-        const mappedField = fieldMap[sortField] || 'created_at';
-        order = [[mappedField, sortDir]];
-      }
-
-      // Calculate pagination
-      const offset = (parseInt(page) - 1) * parseInt(limit);
-
-      // Execute query
-      const { count, rows } = await POI.findAndCountAll({
-        where,
-        order,
-        limit: parseInt(limit),
-        offset,
-      });
 
       res.json({
         success: true,
         data: {
-          pois: rows.map(formatPOI),
+          pois,
           pagination: {
-            total: count,
+            total,
             page: parseInt(page),
             limit: parseInt(limit),
-            pages: Math.ceil(count / parseInt(limit)),
+            pages: Math.ceil(total / parseInt(limit)),
           },
         },
       });
@@ -184,8 +410,25 @@ router.get(
           raw: true,
         });
       } catch (dbError) {
-        // Database not available - return default stats
-        console.warn('POI stats: Database not available, returning default stats');
+        // Database not available - use fallback data for stats
+        console.warn('POI stats: Database not available, using fallback stats');
+        if (isDevelopmentMode()) {
+          total = DEV_FALLBACK_POIS.length;
+          active = DEV_FALLBACK_POIS.filter(p => p.verified).length;
+          inactive = DEV_FALLBACK_POIS.filter(p => !p.verified).length;
+          avgRating = DEV_FALLBACK_POIS.reduce((sum, p) => sum + (p.rating || 0), 0) / total;
+          totalViews = DEV_FALLBACK_POIS.reduce((sum, p) => sum + (p.popularity_score || 0), 0);
+
+          // Calculate category breakdown from fallback data
+          const categoryCount = {};
+          DEV_FALLBACK_POIS.forEach(p => {
+            categoryCount[p.category] = (categoryCount[p.category] || 0) + 1;
+          });
+          byCategory = Object.entries(categoryCount).map(([cat, count]) => ({
+            _id: cat,
+            count
+          })).sort((a, b) => b.count - a.count);
+        }
       }
 
       res.json({
@@ -197,7 +440,7 @@ router.get(
             inactive,
             pending: inactive,
             needsReview: inactive,
-            avgRating,
+            avgRating: Math.round(avgRating * 10) / 10,
             totalViews,
             totalBookings: 0,
           },
