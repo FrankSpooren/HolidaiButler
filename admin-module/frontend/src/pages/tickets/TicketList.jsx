@@ -51,7 +51,8 @@ const statusColors = {
   used: 'info',
   expired: 'default',
   cancelled: 'error',
-  transferred: 'secondary'
+  transferred: 'secondary',
+  confirmed: 'success'  // Added for fallback data
 };
 
 const typeLabels = {
@@ -110,8 +111,11 @@ export default function TicketList() {
       const response = await ticketsAPI.getAll(params);
 
       if (response.success) {
-        setTickets(response.data.tickets);
-        setTotal(response.data.pagination.total);
+        // Handle both API response format and fallback data format
+        const ticketsList = response.data?.tickets || response.tickets || [];
+        const totalCount = response.data?.pagination?.total || response.total || ticketsList.length;
+        setTickets(ticketsList);
+        setTotal(totalCount);
       }
     } catch (err) {
       console.error('Error fetching tickets:', err);
@@ -161,12 +165,7 @@ export default function TicketList() {
 
   const handleCancelTicket = async (ticket) => {
     try {
-      const response = await ticketsAPI.cancel(
-        ticket._id,
-        'Cancelled by admin',
-        'admin',
-        { refund: false }
-      );
+      const response = await ticketsAPI.cancel(ticket._id || ticket.id);
 
       if (response.success) {
         setSuccess('Ticket cancelled successfully');
@@ -179,9 +178,9 @@ export default function TicketList() {
 
   const handleResendTicket = async (ticket) => {
     try {
-      const response = await ticketsAPI.resend(ticket._id, 'email');
+      const response = await ticketsAPI.resend?.(ticket._id || ticket.id, 'email');
 
-      if (response.success) {
+      if (response?.success) {
         setSuccess('Ticket resent successfully');
       }
     } catch (err) {
@@ -312,58 +311,70 @@ export default function TicketList() {
                 </TableCell>
               </TableRow>
             ) : (
-              tickets.map((ticket) => (
-                <TableRow key={ticket._id} hover>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight="medium">
-                      {ticket.ticketNumber}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="subtitle2">
-                        {ticket.holder?.firstName} {ticket.holder?.lastName}
+              tickets.map((ticket) => {
+                const ticketId = ticket._id || ticket.id;
+                const ticketNumber = ticket.ticketNumber || ticket.ticketCode;
+                const holderName = ticket.holder?.firstName
+                  ? `${ticket.holder.firstName} ${ticket.holder.lastName}`
+                  : ticket.customerName;
+                const holderEmail = ticket.holder?.email || ticket.customerEmail;
+                const ticketType = ticket.type || 'general';
+                const eventTitle = ticket.event?.title || ticket.eventTitle || ticket.poi?.name || '-';
+                const price = ticket.pricing?.finalPrice ?? ticket.totalPrice ?? 0;
+
+                return (
+                  <TableRow key={ticketId} hover>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        {ticketNumber}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {ticket.holder?.email}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={typeLabels[ticket.type] || ticket.type}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {ticket.event?.title || ticket.poi?.name || '-'}
-                  </TableCell>
-                  <TableCell>€{ticket.pricing?.finalPrice.toFixed(2)}</TableCell>
-                  <TableCell>{formatDate(ticket.purchaseDate)}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={ticket.status}
-                      size="small"
-                      color={statusColors[ticket.status]}
-                      sx={{ textTransform: 'capitalize' }}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Actions">
-                      <IconButton
+                    </TableCell>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="subtitle2">
+                          {holderName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {holderEmail}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={typeLabels[ticketType] || ticketType}
                         size="small"
-                        onClick={(e) => {
-                          setAnchorEl(e.currentTarget);
-                          setSelectedTicket(ticket);
-                        }}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {eventTitle}
+                    </TableCell>
+                    <TableCell>€{typeof price === 'number' ? price.toFixed(2) : price}</TableCell>
+                    <TableCell>{formatDate(ticket.purchaseDate)}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={ticket.status}
+                        size="small"
+                        color={statusColors[ticket.status] || 'default'}
+                        sx={{ textTransform: 'capitalize' }}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Actions">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            setAnchorEl(e.currentTarget);
+                            setSelectedTicket(ticket);
+                          }}
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -389,7 +400,7 @@ export default function TicketList() {
         onClose={() => setAnchorEl(null)}
       >
         {canEdit && (
-          <MenuItem onClick={() => navigate(`/tickets/edit/${selectedTicket?._id}`)}>
+          <MenuItem onClick={() => navigate(`/tickets/edit/${selectedTicket?._id || selectedTicket?.id}`)}>
             <ListItemIcon>
               <EditIcon fontSize="small" />
             </ListItemIcon>

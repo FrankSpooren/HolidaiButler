@@ -89,7 +89,7 @@ export default function ReservationList() {
   const fetchRestaurants = async () => {
     try {
       const response = await restaurantAPI.getAll({ limit: 100 });
-      setRestaurants(response.data?.restaurants || []);
+      setRestaurants(response.data?.restaurants || response.restaurants || []);
     } catch (err) {
       console.error('Failed to load restaurants', err);
     }
@@ -108,12 +108,13 @@ export default function ReservationList() {
       };
 
       const response = await reservationAPI.getAll(params);
-      setReservations(response.data?.reservations || []);
-      setTotalCount(response.data?.total || 0);
+      // Handle both API response format and fallback data format
+      setReservations(response.data?.reservations || response.reservations || []);
+      setTotalCount(response.data?.total || response.total || 0);
 
       // Update stats
-      if (response.data?.stats) {
-        setStats(response.data.stats);
+      if (response.data?.stats || response.stats) {
+        setStats(response.data?.stats || response.stats);
       }
     } catch (err) {
       setError('Failed to load reservations');
@@ -137,7 +138,7 @@ export default function ReservationList() {
     if (!selectedReservation) return;
 
     try {
-      await reservationAPI.updateStatus(selectedReservation.id, newStatus);
+      await reservationAPI.updateStatus(selectedReservation.id || selectedReservation._id, newStatus);
       toast.success(`Reservation ${newStatus}`);
       fetchReservations();
     } catch (err) {
@@ -306,7 +307,7 @@ export default function ReservationList() {
                   </TableRow>
                 ) : (
                   reservations.map((reservation) => (
-                    <TableRow key={reservation.id} hover>
+                    <TableRow key={reservation.id || reservation._id} hover>
                       <TableCell>
                         <Typography fontWeight="medium" sx={{ fontFamily: 'monospace' }}>
                           {reservation.reservation_reference}
