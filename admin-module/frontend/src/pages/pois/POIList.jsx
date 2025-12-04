@@ -105,8 +105,9 @@ export default function POIList() {
         city: filters.city || undefined
       });
 
-      setPois(response.data.pois);
-      setTotalCount(response.data.pagination.total);
+      // Handle both API response format and fallback data format
+      setPois(response.data?.pois || response.pois || []);
+      setTotalCount(response.data?.pagination?.total || response.total || 0);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch POIs');
       toast.error('Failed to load POIs');
@@ -138,14 +139,14 @@ export default function POIList() {
 
   // Handle edit
   const handleEdit = (poi) => {
-    navigate(`/pois/edit/${poi._id}`);
+    navigate(`/pois/edit/${poi._id || poi.id}`);
     handleMenuClose();
   };
 
   // Handle status change
   const handleStatusChange = async (poi, newStatus) => {
     try {
-      await poiAPI.updateStatus(poi._id, newStatus);
+      await poiAPI.updateStatus(poi._id || poi.id, newStatus);
       toast.success(`POI status updated to ${newStatus}`);
       fetchPOIs();
     } catch (err) {
@@ -163,7 +164,7 @@ export default function POIList() {
 
   const handleDeleteConfirm = async () => {
     try {
-      await poiAPI.delete(selectedPOI._id);
+      await poiAPI.delete(selectedPOI._id || selectedPOI.id);
       toast.success('POI deleted successfully');
       fetchPOIs();
       setDeleteDialogOpen(false);
@@ -318,7 +319,7 @@ export default function POIList() {
                 </TableRow>
               ) : (
                 pois.map((poi) => (
-                  <TableRow key={poi._id} hover>
+                  <TableRow key={poi._id || poi.id} hover>
                     <TableCell>
                       <Typography fontWeight="medium">{poi.name}</Typography>
                     </TableCell>

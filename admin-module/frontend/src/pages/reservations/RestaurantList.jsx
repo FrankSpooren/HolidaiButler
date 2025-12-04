@@ -57,8 +57,9 @@ export default function RestaurantList() {
         limit: rowsPerPage,
         search: searchQuery || undefined
       });
-      setRestaurants(response.data?.restaurants || []);
-      setTotalCount(response.data?.total || 0);
+      // Handle both API response format and fallback data format
+      setRestaurants(response.data?.restaurants || response.restaurants || []);
+      setTotalCount(response.data?.total || response.total || 0);
     } catch (err) {
       setError('Failed to load restaurants');
       console.error(err);
