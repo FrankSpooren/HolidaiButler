@@ -106,12 +106,14 @@ export default function BookingList() {
       }
 
       if (response.success) {
+        // Handle both API response format and fallback data format
+        const bookingsList = response.data?.bookings || response.bookings || [];
         if (tabValue === 0) {
-          setBookings(response.data.bookings);
-          setTotal(response.data.bookings.length);
+          setBookings(bookingsList);
+          setTotal(bookingsList.length);
         } else {
-          setBookings(response.data.bookings);
-          setTotal(response.data.pagination.total);
+          setBookings(bookingsList);
+          setTotal(response.data?.pagination?.total || response.total || bookingsList.length);
         }
       }
     } catch (err) {
@@ -124,7 +126,7 @@ export default function BookingList() {
 
   const handleConfirmBooking = async (booking) => {
     try {
-      const response = await bookingsAPI.confirm(booking._id, booking.payment?.transactionId);
+      const response = await bookingsAPI.confirm(booking._id || booking.id, booking.payment?.transactionId);
 
       if (response.success) {
         setSuccess('Booking confirmed successfully');
@@ -137,7 +139,7 @@ export default function BookingList() {
 
   const handleCompleteBooking = async (booking) => {
     try {
-      const response = await bookingsAPI.complete(booking._id);
+      const response = await bookingsAPI.complete(booking._id || booking.id);
 
       if (response.success) {
         setSuccess('Booking completed successfully');
@@ -151,7 +153,7 @@ export default function BookingList() {
   const handleCancelBooking = async (booking) => {
     try {
       const response = await bookingsAPI.cancel(
-        booking._id,
+        booking._id || booking.id,
         'Cancelled by admin',
         'admin',
         0
@@ -168,7 +170,7 @@ export default function BookingList() {
 
   const handleResendConfirmation = async (booking) => {
     try {
-      const response = await bookingsAPI.resendConfirmation(booking._id);
+      const response = await bookingsAPI.resendConfirmation(booking._id || booking.id);
 
       if (response.success) {
         setSuccess('Confirmation resent successfully');
@@ -317,7 +319,7 @@ export default function BookingList() {
               </TableRow>
             ) : (
               bookings.map((booking) => (
-                <TableRow key={booking._id} hover>
+                <TableRow key={booking._id || booking.id} hover>
                   <TableCell>
                     <Typography variant="body2" fontWeight="medium">
                       {booking.bookingNumber}
@@ -418,7 +420,7 @@ export default function BookingList() {
         onClose={() => setAnchorEl(null)}
       >
         <MenuItem onClick={() => {
-          navigate(`/bookings/${selectedBooking?._id}`);
+          navigate(`/bookings/${selectedBooking?._id || selectedBooking?.id}`);
           setAnchorEl(null);
         }}>
           <ListItemIcon>

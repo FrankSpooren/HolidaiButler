@@ -65,8 +65,9 @@ export default function AgendaList() {
         search: searchQuery,
         status: statusFilter
       });
-      setItems(response.data?.items || response.data || []);
-      setTotalCount(response.data?.total || response.data?.length || 0);
+      // Handle both API response format and fallback data format
+      setItems(response.data?.items || response.items || response.data || []);
+      setTotalCount(response.data?.total || response.total || response.data?.length || 0);
     } catch (err) {
       console.error('Failed to fetch agenda items:', err);
       setError('Failed to load agenda items. Please check if the Agenda service is running.');
@@ -207,7 +208,7 @@ export default function AgendaList() {
                 </TableRow>
               ) : (
                 items.map((item) => (
-                  <TableRow key={item.id} hover>
+                  <TableRow key={item.id || item._id} hover>
                     <TableCell>
                       <Typography variant="subtitle2" fontWeight="medium">
                         {item.title}
@@ -239,7 +240,7 @@ export default function AgendaList() {
                       <Tooltip title="View">
                         <IconButton
                           size="small"
-                          onClick={() => navigate(`/agenda/${item.id}`)}
+                          onClick={() => navigate(`/agenda/${item.id || item._id}`)}
                         >
                           <ViewIcon />
                         </IconButton>
@@ -247,7 +248,7 @@ export default function AgendaList() {
                       <Tooltip title="Edit">
                         <IconButton
                           size="small"
-                          onClick={() => navigate(`/agenda/edit/${item.id}`)}
+                          onClick={() => navigate(`/agenda/edit/${item.id || item._id}`)}
                         >
                           <EditIcon />
                         </IconButton>
@@ -256,7 +257,7 @@ export default function AgendaList() {
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() => handleDelete(item.id || item._id)}
                         >
                           <DeleteIcon />
                         </IconButton>

@@ -115,8 +115,9 @@ export default function TransactionList() {
       const response = await transactionsAPI.getAll(params);
 
       if (response.success) {
-        setTransactions(response.data.transactions);
-        setTotal(response.data.pagination.total);
+        // Handle both API response format and fallback data format
+        setTransactions(response.data?.transactions || response.transactions || []);
+        setTotal(response.data?.pagination?.total || response.total || 0);
       }
     } catch (err) {
       console.error('Error fetching transactions:', err);
@@ -130,7 +131,8 @@ export default function TransactionList() {
     try {
       const response = await transactionsAPI.getPendingReviews();
       if (response.success) {
-        setPendingReviewsCount(response.data.transactions.length);
+        const reviewTransactions = response.data?.transactions || response.transactions || [];
+        setPendingReviewsCount(reviewTransactions.length);
       }
     } catch (err) {
       console.error('Error fetching pending reviews:', err);
@@ -140,7 +142,7 @@ export default function TransactionList() {
   const handleRefund = async () => {
     try {
       const response = await transactionsAPI.refund(
-        selectedTransaction._id,
+        selectedTransaction._id || selectedTransaction.id,
         refundDialog.amount,
         refundDialog.reason,
         selectedTransaction.paymentMethod
@@ -159,7 +161,7 @@ export default function TransactionList() {
   const handleApproveReview = async (transaction) => {
     try {
       const response = await transactionsAPI.approveReview(
-        transaction._id,
+        transaction._id || transaction.id,
         'Approved after manual review'
       );
 
@@ -176,7 +178,7 @@ export default function TransactionList() {
   const handleReconcile = async (transaction) => {
     try {
       const response = await transactionsAPI.reconcile(
-        transaction._id,
+        transaction._id || transaction.id,
         `BATCH-${new Date().getTime()}`,
         new Date()
       );
@@ -342,7 +344,7 @@ export default function TransactionList() {
               </TableRow>
             ) : (
               transactions.map((transaction) => (
-                <TableRow key={transaction._id} hover>
+                <TableRow key={transaction._id || transaction.id} hover>
                   <TableCell>
                     <Typography variant="body2" fontWeight="medium">
                       {transaction.transactionNumber}
@@ -439,7 +441,7 @@ export default function TransactionList() {
         onClose={() => setAnchorEl(null)}
       >
         <MenuItem onClick={() => {
-          navigate(`/transactions/${selectedTransaction?._id}`);
+          navigate(`/transactions/${selectedTransaction?._id || selectedTransaction?.id}`);
           setAnchorEl(null);
         }}>
           <ListItemIcon>
@@ -496,7 +498,7 @@ export default function TransactionList() {
 
         {selectedTransaction?.dispute?.isDisputed && (
           <MenuItem onClick={() => {
-            navigate(`/transactions/${selectedTransaction._id}/dispute`);
+            navigate(`/transactions/${selectedTransaction._id || selectedTransaction.id}/dispute`);
             setAnchorEl(null);
           }}>
             <ListItemIcon>
