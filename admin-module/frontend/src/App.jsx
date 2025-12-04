@@ -56,6 +56,13 @@ import GuestList from './pages/reservations/GuestList';
 import WaitlistPage from './pages/reservations/WaitlistPage';
 import FloorPlanEditor from './pages/reservations/FloorPlanEditor';
 
+// Profile & Settings Pages
+import Profile from './pages/profile/Profile';
+import Settings from './pages/settings/Settings';
+
+// Platform Page
+import Platform from './pages/platform/Platform';
+
 // Theme
 const theme = createTheme({
   palette: {
@@ -209,6 +216,13 @@ function App() {
 
             {/* Analytics */}
             <Route path="analytics" element={<Analytics />} />
+
+            {/* Profile & Settings */}
+            <Route path="profile" element={<Profile />} />
+            <Route path="settings" element={<Settings />} />
+
+            {/* Platform */}
+            <Route path="platform" element={<Platform />} />
 
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
