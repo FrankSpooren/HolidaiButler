@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Paper,
@@ -30,166 +30,41 @@ import {
   Restore as RestoreIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-
-// Language options
-const LANGUAGES = [
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'nl', name: 'Nederlands', flag: '🇳🇱' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' }
-];
-
-// Translations for Settings page
-const translations = {
-  en: {
-    title: 'Settings',
-    subtitle: 'Configure your application preferences',
-    language: 'Language & Region',
-    languageDesc: 'Select your preferred language',
-    notifications: 'Notifications',
-    notificationsDesc: 'Manage notification preferences',
-    emailNotifications: 'Email Notifications',
-    emailNotificationsDesc: 'Receive updates via email',
-    pushNotifications: 'Push Notifications',
-    pushNotificationsDesc: 'Browser push notifications',
-    bookingAlerts: 'Booking Alerts',
-    bookingAlertsDesc: 'Alerts for new reservations',
-    appearance: 'Appearance',
-    appearanceDesc: 'Customize the look and feel',
-    darkMode: 'Dark Mode',
-    darkModeDesc: 'Use dark theme',
-    compactMode: 'Compact Mode',
-    compactModeDesc: 'Reduce spacing in lists',
-    save: 'Save Settings',
-    reset: 'Reset to Default',
-    saved: 'Settings saved successfully',
-    resetted: 'Settings reset to default'
-  },
-  es: {
-    title: 'Configuración',
-    subtitle: 'Configure sus preferencias de aplicación',
-    language: 'Idioma y Región',
-    languageDesc: 'Seleccione su idioma preferido',
-    notifications: 'Notificaciones',
-    notificationsDesc: 'Gestione las preferencias de notificación',
-    emailNotifications: 'Notificaciones por Email',
-    emailNotificationsDesc: 'Recibir actualizaciones por email',
-    pushNotifications: 'Notificaciones Push',
-    pushNotificationsDesc: 'Notificaciones del navegador',
-    bookingAlerts: 'Alertas de Reservas',
-    bookingAlertsDesc: 'Alertas para nuevas reservas',
-    appearance: 'Apariencia',
-    appearanceDesc: 'Personalice el aspecto visual',
-    darkMode: 'Modo Oscuro',
-    darkModeDesc: 'Usar tema oscuro',
-    compactMode: 'Modo Compacto',
-    compactModeDesc: 'Reducir espaciado en listas',
-    save: 'Guardar Configuración',
-    reset: 'Restablecer por Defecto',
-    saved: 'Configuración guardada correctamente',
-    resetted: 'Configuración restablecida'
-  },
-  nl: {
-    title: 'Instellingen',
-    subtitle: 'Configureer uw applicatievoorkeuren',
-    language: 'Taal & Regio',
-    languageDesc: 'Selecteer uw voorkeurstaal',
-    notifications: 'Meldingen',
-    notificationsDesc: 'Beheer meldingsvoorkeuren',
-    emailNotifications: 'E-mailmeldingen',
-    emailNotificationsDesc: 'Ontvang updates via e-mail',
-    pushNotifications: 'Push Meldingen',
-    pushNotificationsDesc: 'Browser pushmeldingen',
-    bookingAlerts: 'Boekingswaarschuwingen',
-    bookingAlertsDesc: 'Waarschuwingen voor nieuwe reserveringen',
-    appearance: 'Weergave',
-    appearanceDesc: 'Pas het uiterlijk aan',
-    darkMode: 'Donkere Modus',
-    darkModeDesc: 'Gebruik donker thema',
-    compactMode: 'Compacte Modus',
-    compactModeDesc: 'Verminder ruimte in lijsten',
-    save: 'Instellingen Opslaan',
-    reset: 'Standaardwaarden Herstellen',
-    saved: 'Instellingen succesvol opgeslagen',
-    resetted: 'Instellingen hersteld naar standaard'
-  },
-  de: {
-    title: 'Einstellungen',
-    subtitle: 'Konfigurieren Sie Ihre Anwendungseinstellungen',
-    language: 'Sprache & Region',
-    languageDesc: 'Wählen Sie Ihre bevorzugte Sprache',
-    notifications: 'Benachrichtigungen',
-    notificationsDesc: 'Verwalten Sie die Benachrichtigungseinstellungen',
-    emailNotifications: 'E-Mail-Benachrichtigungen',
-    emailNotificationsDesc: 'Erhalten Sie Updates per E-Mail',
-    pushNotifications: 'Push-Benachrichtigungen',
-    pushNotificationsDesc: 'Browser-Push-Benachrichtigungen',
-    bookingAlerts: 'Buchungsbenachrichtigungen',
-    bookingAlertsDesc: 'Benachrichtigungen für neue Reservierungen',
-    appearance: 'Erscheinungsbild',
-    appearanceDesc: 'Passen Sie das Aussehen an',
-    darkMode: 'Dunkler Modus',
-    darkModeDesc: 'Dunkles Design verwenden',
-    compactMode: 'Kompakter Modus',
-    compactModeDesc: 'Abstände in Listen reduzieren',
-    save: 'Einstellungen Speichern',
-    reset: 'Auf Standard Zurücksetzen',
-    saved: 'Einstellungen erfolgreich gespeichert',
-    resetted: 'Einstellungen auf Standard zurückgesetzt'
-  }
-};
-
-const defaultSettings = {
-  language: 'en',
-  emailNotifications: true,
-  pushNotifications: false,
-  bookingAlerts: true,
-  darkMode: false,
-  compactMode: false
-};
+import { useLanguage, LANGUAGES, defaultSettings } from '../../contexts/LanguageContext';
 
 export default function Settings() {
-  const [settings, setSettings] = useState(() => {
-    const saved = localStorage.getItem('adminSettings');
-    return saved ? JSON.parse(saved) : defaultSettings;
-  });
-
+  const { settings, updateSettings, t } = useLanguage();
+  const [localSettings, setLocalSettings] = useState(settings);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const t = translations[settings.language] || translations.en;
-
-  useEffect(() => {
-    const saved = localStorage.getItem('adminSettings');
-    if (saved) {
-      setSettings(JSON.parse(saved));
-    }
-  }, []);
-
   const handleChange = (field, value) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
+    setLocalSettings(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
 
   const handleSave = () => {
-    localStorage.setItem('adminSettings', JSON.stringify(settings));
+    updateSettings(localSettings);
+    // Dispatch custom event to notify App.jsx about the change
+    window.dispatchEvent(new Event('settingsChanged'));
     setHasChanges(false);
-    toast.success(t.saved);
+    toast.success(t.settings.saved);
   };
 
   const handleReset = () => {
-    setSettings(defaultSettings);
-    localStorage.setItem('adminSettings', JSON.stringify(defaultSettings));
+    setLocalSettings(defaultSettings);
+    updateSettings(defaultSettings);
+    window.dispatchEvent(new Event('settingsChanged'));
     setHasChanges(false);
-    toast.info(t.resetted);
+    toast.info(t.settings.resetted);
   };
 
   return (
     <Box>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
-        {t.title}
+        {t.settings.title}
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        {t.subtitle}
+        {t.settings.subtitle}
       </Typography>
 
       <Grid container spacing={3}>
@@ -200,18 +75,18 @@ export default function Settings() {
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <LanguageIcon sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="h6" fontWeight="bold">
-                  {t.language}
+                  {t.settings.language}
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                {t.languageDesc}
+                {t.settings.languageDesc}
               </Typography>
 
               <FormControl fullWidth>
-                <InputLabel>Language</InputLabel>
+                <InputLabel>{t.settings.language}</InputLabel>
                 <Select
-                  value={settings.language}
-                  label="Language"
+                  value={localSettings.language}
+                  label={t.settings.language}
                   onChange={(e) => handleChange('language', e.target.value)}
                 >
                   {LANGUAGES.map((lang) => (
@@ -235,11 +110,11 @@ export default function Settings() {
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <NotificationsIcon sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="h6" fontWeight="bold">
-                  {t.notifications}
+                  {t.settings.notifications}
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t.notificationsDesc}
+                {t.settings.notificationsDesc}
               </Typography>
 
               <List disablePadding>
@@ -248,12 +123,12 @@ export default function Settings() {
                     <EmailIcon />
                   </ListItemIcon>
                   <ListItemText
-                    primary={t.emailNotifications}
-                    secondary={t.emailNotificationsDesc}
+                    primary={t.settings.emailNotifications}
+                    secondary={t.settings.emailNotificationsDesc}
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.emailNotifications}
+                      checked={localSettings.emailNotifications}
                       onChange={(e) => handleChange('emailNotifications', e.target.checked)}
                       color="primary"
                     />
@@ -265,12 +140,12 @@ export default function Settings() {
                     <NotificationsIcon />
                   </ListItemIcon>
                   <ListItemText
-                    primary={t.pushNotifications}
-                    secondary={t.pushNotificationsDesc}
+                    primary={t.settings.pushNotifications}
+                    secondary={t.settings.pushNotificationsDesc}
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.pushNotifications}
+                      checked={localSettings.pushNotifications}
                       onChange={(e) => handleChange('pushNotifications', e.target.checked)}
                       color="primary"
                     />
@@ -282,12 +157,12 @@ export default function Settings() {
                     <NotificationsIcon />
                   </ListItemIcon>
                   <ListItemText
-                    primary={t.bookingAlerts}
-                    secondary={t.bookingAlertsDesc}
+                    primary={t.settings.bookingAlerts}
+                    secondary={t.settings.bookingAlertsDesc}
                   />
                   <ListItemSecondaryAction>
                     <Switch
-                      checked={settings.bookingAlerts}
+                      checked={localSettings.bookingAlerts}
                       onChange={(e) => handleChange('bookingAlerts', e.target.checked)}
                       color="primary"
                     />
@@ -305,11 +180,11 @@ export default function Settings() {
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <DarkModeIcon sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="h6" fontWeight="bold">
-                  {t.appearance}
+                  {t.settings.appearance}
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t.appearanceDesc}
+                {t.settings.appearanceDesc}
               </Typography>
 
               <Grid container spacing={2}>
@@ -318,16 +193,16 @@ export default function Settings() {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={settings.darkMode}
+                          checked={localSettings.darkMode}
                           onChange={(e) => handleChange('darkMode', e.target.checked)}
                           color="primary"
                         />
                       }
                       label={
                         <Box>
-                          <Typography variant="body1">{t.darkMode}</Typography>
+                          <Typography variant="body1">{t.settings.darkMode}</Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {t.darkModeDesc}
+                            {t.settings.darkModeDesc}
                           </Typography>
                         </Box>
                       }
@@ -341,16 +216,16 @@ export default function Settings() {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={settings.compactMode}
+                          checked={localSettings.compactMode}
                           onChange={(e) => handleChange('compactMode', e.target.checked)}
                           color="primary"
                         />
                       }
                       label={
                         <Box>
-                          <Typography variant="body1">{t.compactMode}</Typography>
+                          <Typography variant="body1">{t.settings.compactMode}</Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {t.compactModeDesc}
+                            {t.settings.compactModeDesc}
                           </Typography>
                         </Box>
                       }
@@ -372,7 +247,7 @@ export default function Settings() {
               startIcon={<RestoreIcon />}
               onClick={handleReset}
             >
-              {t.reset}
+              {t.settings.reset}
             </Button>
             <Button
               variant="contained"
@@ -380,7 +255,7 @@ export default function Settings() {
               onClick={handleSave}
               disabled={!hasChanges}
             >
-              {t.save}
+              {t.settings.save}
             </Button>
           </Box>
         </Grid>
@@ -388,7 +263,7 @@ export default function Settings() {
 
       {hasChanges && (
         <Alert severity="info" sx={{ mt: 3 }}>
-          You have unsaved changes
+          {t.labels?.warning || 'You have unsaved changes'}
         </Alert>
       )}
     </Box>
