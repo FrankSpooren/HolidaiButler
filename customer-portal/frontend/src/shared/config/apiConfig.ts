@@ -3,9 +3,7 @@
  * Centralized configuration for all backend module endpoints
  *
  * Port Mapping:
- * - Platform Core (API Gateway): 3001
- * - Widget API (HoliBot):        3002
- * - Admin Module:                3003
+ * - Admin Module (Auth + API):   3003
  * - Ticketing Module:            3004
  * - Payment Module:              3005
  * - Reservations Module:         3006
@@ -13,9 +11,9 @@
  */
 
 export const API_CONFIG = {
-  // Platform Core - Main API Gateway (handles POIs, Auth, Users)
+  // Platform Core - Uses Admin Backend for Auth (port 3003)
   platformCore: {
-    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1',
+    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3003/api/v1',
     endpoints: {
       pois: '/pois',
       auth: '/auth',
@@ -25,9 +23,9 @@ export const API_CONFIG = {
     }
   },
 
-  // Widget API - HoliBot AI Chat (Mistral integration)
+  // Widget API - HoliBot AI Chat (uses Admin Backend)
   widgetApi: {
-    baseUrl: import.meta.env.VITE_WIDGET_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1',
+    baseUrl: import.meta.env.VITE_WIDGET_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:3003/api/v1',
     endpoints: {
       chat: '/chat',
       message: '/chat/message',

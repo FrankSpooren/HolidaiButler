@@ -45,6 +45,7 @@ import {
   CalendarMonth as AgendaIcon
 } from '@mui/icons-material';
 import useAuthStore from '../../store/authStore';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const drawerWidth = 260;
 
@@ -54,6 +55,7 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, hasPermission } = useAuthStore();
+  const { t } = useLanguage();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -77,73 +79,73 @@ export default function DashboardLayout() {
 
   const menuItems = [
     {
-      text: 'Dashboard',
+      text: t.nav.dashboard,
       icon: <DashboardIcon />,
       path: '/dashboard',
       permission: null
     },
     {
-      text: 'POIs',
+      text: t.nav.pois,
       icon: <PlaceIcon />,
       path: '/pois',
       permission: null // Allow all for development
     },
     {
-      text: 'Events',
+      text: t.nav.events,
       icon: <EventIcon />,
       path: '/events',
       permission: null
     },
     {
-      text: 'Tickets',
+      text: t.nav.tickets,
       icon: <TicketIcon />,
       path: '/tickets',
       permission: null
     },
     {
-      text: 'Reservations',
+      text: t.nav.reservations,
       icon: <RestaurantIcon />,
       path: '/reservations',
       permission: null
     },
     {
-      text: 'Restaurants',
+      text: t.nav.restaurants,
       icon: <TableRestaurantIcon />,
       path: '/reservations/restaurants',
       permission: null
     },
     {
-      text: 'Bookings',
+      text: t.nav.bookings,
       icon: <BookingIcon />,
       path: '/bookings',
       permission: null
     },
     {
-      text: 'Transactions',
+      text: t.nav.transactions,
       icon: <PaymentIcon />,
       path: '/transactions',
       permission: null
     },
     {
-      text: 'Agenda',
+      text: t.nav.agenda,
       icon: <AgendaIcon />,
       path: '/agenda',
       permission: null
     },
     {
-      text: 'Analytics',
+      text: t.nav.analytics,
       icon: <AssessmentIcon />,
       path: '/analytics',
       permission: null
     },
     {
-      text: 'Platform',
+      text: t.nav.platform,
       icon: <PaletteIcon />,
       path: '/platform',
       permission: null
     },
     {
-      text: 'Users',
+      text: t.nav.users,
       icon: <PeopleIcon />,
       path: '/users',
       permission: null
@@ -302,20 +304,20 @@ export default function DashboardLayout() {
               <ListItemIcon>
                 <PersonIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText>Profile</ListItemText>
+              <ListItemText>{t.nav.profile}</ListItemText>
             </MenuItem>
             <MenuItem onClick={() => { navigate('/settings'); handleProfileMenuClose(); }}>
               <ListItemIcon>
                 <SettingsIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText>Settings</ListItemText>
+              <ListItemText>{t.nav.settings}</ListItemText>
             </MenuItem>
             <Divider />
             <MenuItem onClick={handleLogout}>
               <ListItemIcon>
                 <LogoutIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText>Logout</ListItemText>
+              <ListItemText>{t.nav.logout}</ListItemText>
             </MenuItem>
           </Menu>
         </Toolbar>
