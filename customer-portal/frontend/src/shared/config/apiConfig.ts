@@ -10,10 +10,44 @@
  * - Agenda Module:               3007
  */
 
+// Helper to detect and construct Codespaces URL
+const getCodespacesUrl = (port: number): string | null => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // Check if running in GitHub Codespaces
+    if (hostname.includes('.app.github.dev')) {
+      // Extract the codespace name (everything before the port in the hostname)
+      // Format: <codespace-name>-<port>.app.github.dev
+      const match = hostname.match(/^(.+)-\d+\.app\.github\.dev$/);
+      if (match) {
+        return `https://${match[1]}-${port}.app.github.dev`;
+      }
+    }
+  }
+  return null;
+};
+
+// Get API URL for a specific port, with Codespaces support
+const getApiUrl = (envVar: string | undefined, port: number): string => {
+  // First check environment variable
+  if (envVar) {
+    return envVar;
+  }
+
+  // Check for Codespaces environment
+  const codespacesUrl = getCodespacesUrl(port);
+  if (codespacesUrl) {
+    return `${codespacesUrl}/api/v1`;
+  }
+
+  // Default to localhost for local development
+  return `http://localhost:${port}/api/v1`;
+};
+
 export const API_CONFIG = {
   // Platform Core - Uses Admin Backend for Auth (port 3003)
   platformCore: {
-    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3003/api/v1',
+    baseUrl: getApiUrl(import.meta.env.VITE_API_URL, 3003),
     endpoints: {
       pois: '/pois',
       auth: '/auth',
@@ -25,7 +59,7 @@ export const API_CONFIG = {
 
   // Widget API - HoliBot AI Chat (uses Admin Backend)
   widgetApi: {
-    baseUrl: import.meta.env.VITE_WIDGET_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:3003/api/v1',
+    baseUrl: import.meta.env.VITE_WIDGET_API_URL || getApiUrl(import.meta.env.VITE_API_URL, 3003),
     endpoints: {
       chat: '/chat',
       message: '/chat/message',
@@ -36,7 +70,7 @@ export const API_CONFIG = {
 
   // Admin Module
   admin: {
-    baseUrl: import.meta.env.VITE_ADMIN_API_URL || 'http://localhost:3003/api/v1',
+    baseUrl: getApiUrl(import.meta.env.VITE_ADMIN_API_URL, 3003),
     endpoints: {
       pois: '/admin/pois',
       users: '/admin/users',
@@ -46,7 +80,7 @@ export const API_CONFIG = {
 
   // Ticketing Module - Ticket bookings & management
   ticketing: {
-    baseUrl: import.meta.env.VITE_TICKETING_API_URL || 'http://localhost:3004/api/v1',
+    baseUrl: getApiUrl(import.meta.env.VITE_TICKETING_API_URL, 3004),
     endpoints: {
       bookings: '/bookings',
       tickets: '/tickets',
@@ -57,7 +91,7 @@ export const API_CONFIG = {
 
   // Payment Module - Adyen integration (PCI-DSS compliant)
   payment: {
-    baseUrl: import.meta.env.VITE_PAYMENT_API_URL || 'http://localhost:3005/api/v1',
+    baseUrl: getApiUrl(import.meta.env.VITE_PAYMENT_API_URL, 3005),
     endpoints: {
       payments: '/payments',
       checkout: '/payments/checkout',
@@ -68,7 +102,7 @@ export const API_CONFIG = {
 
   // Reservations Module - Restaurant bookings
   reservations: {
-    baseUrl: import.meta.env.VITE_RESERVATIONS_API_URL || 'http://localhost:3006/api/v1',
+    baseUrl: getApiUrl(import.meta.env.VITE_RESERVATIONS_API_URL, 3006),
     endpoints: {
       reservations: '/reservations',
       restaurants: '/restaurants',
@@ -81,7 +115,7 @@ export const API_CONFIG = {
 
   // Agenda Module - Events & Calendar
   agenda: {
-    baseUrl: import.meta.env.VITE_AGENDA_API_URL || 'http://localhost:3007/api/v1',
+    baseUrl: getApiUrl(import.meta.env.VITE_AGENDA_API_URL, 3007),
     endpoints: {
       events: '/events',
       upcoming: '/events/upcoming',
