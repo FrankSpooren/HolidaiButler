@@ -1,8 +1,42 @@
 import axios from 'axios';
 
+// Helper to detect and construct Codespaces URL
+const getCodespacesUrl = (port: number): string | null => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // Check if running in GitHub Codespaces
+    if (hostname.includes('.app.github.dev')) {
+      // Extract the codespace name (everything before the port in the hostname)
+      // Format: <codespace-name>-<port>.app.github.dev
+      const match = hostname.match(/^(.+)-\d+\.app\.github\.dev$/);
+      if (match) {
+        return `https://${match[1]}-${port}.app.github.dev`;
+      }
+    }
+  }
+  return null;
+};
+
 // API base URL from environment variables
 // Uses Admin Backend on port 3003 for authentication
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003/api/v1';
+// In Codespaces, automatically construct the correct forwarded URL
+const getApiBaseUrl = (): string => {
+  // First check environment variable
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // Check for Codespaces environment
+  const codespacesUrl = getCodespacesUrl(3003);
+  if (codespacesUrl) {
+    return `${codespacesUrl}/api/v1`;
+  }
+
+  // Default to localhost for local development
+  return 'http://localhost:3003/api/v1';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Create axios instance
 export const apiClient = axios.create({

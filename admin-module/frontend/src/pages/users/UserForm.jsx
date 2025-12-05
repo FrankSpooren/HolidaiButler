@@ -107,7 +107,7 @@ export default function UserForm() {
 
   const roles = [
     { value: 'platform_admin', label: 'Platform Admin', description: 'Full access to all features' },
-    { value: 'poi_owner', label: 'POI Owner', description: 'Can manage own POIs' },
+    { value: 'poi_owner', label: 'Owner', description: 'Full access to all features of an assigned destination, excluding user management' },
     { value: 'editor', label: 'Editor', description: 'Can edit all POIs and content' },
     { value: 'reviewer', label: 'Reviewer', description: 'Can approve/reject POIs' }
   ];
@@ -310,7 +310,7 @@ export default function UserForm() {
                 <Typography variant="body2">
                   • <strong>Platform Admin:</strong> Full access to all features including user management
                   <br />
-                  • <strong>POI Owner:</strong> Can only manage POIs assigned to them
+                  • <strong>Owner:</strong> Full access to all features of an assigned destination, excluding user management
                   <br />
                   • <strong>Editor:</strong> Can edit all POIs and content but cannot delete or approve
                   <br />
