@@ -281,7 +281,7 @@ export default function UserList() {
               >
                 <MenuItem value="">All</MenuItem>
                 <MenuItem value="platform_admin">Platform Admin</MenuItem>
-                <MenuItem value="poi_owner">POI Owner</MenuItem>
+                <MenuItem value="poi_owner">Owner</MenuItem>
                 <MenuItem value="editor">Editor</MenuItem>
                 <MenuItem value="reviewer">Reviewer</MenuItem>
               </Select>

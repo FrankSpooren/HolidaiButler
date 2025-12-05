@@ -13,18 +13,32 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
+.reservations-hero .hero-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
 .reservations-hero h1 {
-  font-size: 2rem;
+  font-size: 1.875rem;
   font-weight: 700;
   margin-bottom: 8px;
-  color: #2C3E50;
+  color: #111827;
   font-family: 'Inter', sans-serif;
+}
+
+@media (min-width: 768px) {
+  .reservations-hero h1 {
+    font-size: 2.25rem;
+  }
 }
 
 .reservations-hero p {
   font-size: 1rem;
   color: #6B7280;
   font-family: 'Inter', sans-serif;
+  max-width: 42rem;
+  margin: 0 auto;
 }
 
 /* Search & Filter Bar */
