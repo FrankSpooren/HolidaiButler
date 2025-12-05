@@ -166,6 +166,86 @@ const translations = {
       currentPassword: 'Current Password',
       newPassword: 'New Password',
       confirmPassword: 'Confirm Password'
+    },
+    // Tickets
+    tickets: {
+      title: 'Ticket Management',
+      addTicket: 'Add Ticket',
+      editTicket: 'Edit Ticket',
+      event: 'Event',
+      quantity: 'Quantity',
+      buyer: 'Buyer',
+      ticketType: 'Ticket Type',
+      purchaseDate: 'Purchase Date',
+      validUntil: 'Valid Until'
+    },
+    // Bookings
+    bookings: {
+      title: 'Bookings',
+      addBooking: 'Add Booking',
+      editBooking: 'Edit Booking',
+      customer: 'Customer',
+      service: 'Service',
+      bookingDate: 'Booking Date',
+      amount: 'Amount',
+      paymentStatus: 'Payment Status',
+      paid: 'Paid',
+      unpaid: 'Unpaid',
+      refunded: 'Refunded'
+    },
+    // Transactions
+    transactions: {
+      title: 'Transactions',
+      transactionId: 'Transaction ID',
+      method: 'Payment Method',
+      gateway: 'Gateway',
+      reference: 'Reference',
+      creditCard: 'Credit Card',
+      bankTransfer: 'Bank Transfer',
+      paypal: 'PayPal',
+      ideal: 'iDEAL',
+      cash: 'Cash'
+    },
+    // Analytics
+    analytics: {
+      title: 'Analytics',
+      subtitle: 'Monitor your business performance',
+      overview: 'Overview',
+      revenue: 'Revenue',
+      visitors: 'Visitors',
+      conversions: 'Conversions',
+      bookingsChart: 'Bookings Over Time',
+      revenueChart: 'Revenue Over Time',
+      topPois: 'Top POIs',
+      period: 'Period',
+      today: 'Today',
+      thisWeek: 'This Week',
+      thisMonth: 'This Month',
+      thisYear: 'This Year',
+      custom: 'Custom Range'
+    },
+    // Platform
+    platform: {
+      title: 'Platform Settings',
+      subtitle: 'Manage platform configuration',
+      general: 'General Settings',
+      integrations: 'Integrations',
+      apiKeys: 'API Keys',
+      webhooks: 'Webhooks',
+      maintenance: 'Maintenance Mode',
+      backups: 'Backups'
+    },
+    // Table columns
+    table: {
+      id: 'ID',
+      actions: 'Actions',
+      createdAt: 'Created',
+      updatedAt: 'Updated',
+      noResults: 'No results found',
+      rowsPerPage: 'Rows per page',
+      of: 'of',
+      showing: 'Showing',
+      results: 'results'
     }
   },
   nl: {
@@ -332,6 +412,86 @@ const translations = {
       currentPassword: 'Huidig Wachtwoord',
       newPassword: 'Nieuw Wachtwoord',
       confirmPassword: 'Bevestig Wachtwoord'
+    },
+    // Tickets
+    tickets: {
+      title: 'Ticketbeheer',
+      addTicket: 'Ticket Toevoegen',
+      editTicket: 'Ticket Bewerken',
+      event: 'Evenement',
+      quantity: 'Aantal',
+      buyer: 'Koper',
+      ticketType: 'Tickettype',
+      purchaseDate: 'Aankoopdatum',
+      validUntil: 'Geldig Tot'
+    },
+    // Bookings
+    bookings: {
+      title: 'Boekingen',
+      addBooking: 'Boeking Toevoegen',
+      editBooking: 'Boeking Bewerken',
+      customer: 'Klant',
+      service: 'Dienst',
+      bookingDate: 'Boekingsdatum',
+      amount: 'Bedrag',
+      paymentStatus: 'Betaalstatus',
+      paid: 'Betaald',
+      unpaid: 'Onbetaald',
+      refunded: 'Terugbetaald'
+    },
+    // Transactions
+    transactions: {
+      title: 'Transacties',
+      transactionId: 'Transactie ID',
+      method: 'Betaalmethode',
+      gateway: 'Gateway',
+      reference: 'Referentie',
+      creditCard: 'Creditcard',
+      bankTransfer: 'Bankoverschrijving',
+      paypal: 'PayPal',
+      ideal: 'iDEAL',
+      cash: 'Contant'
+    },
+    // Analytics
+    analytics: {
+      title: 'Analyses',
+      subtitle: 'Monitor uw bedrijfsprestaties',
+      overview: 'Overzicht',
+      revenue: 'Omzet',
+      visitors: 'Bezoekers',
+      conversions: 'Conversies',
+      bookingsChart: 'Boekingen in de Tijd',
+      revenueChart: 'Omzet in de Tijd',
+      topPois: "Top POI's",
+      period: 'Periode',
+      today: 'Vandaag',
+      thisWeek: 'Deze Week',
+      thisMonth: 'Deze Maand',
+      thisYear: 'Dit Jaar',
+      custom: 'Aangepast'
+    },
+    // Platform
+    platform: {
+      title: 'Platform Instellingen',
+      subtitle: 'Beheer platformconfiguratie',
+      general: 'Algemene Instellingen',
+      integrations: 'Integraties',
+      apiKeys: 'API Sleutels',
+      webhooks: 'Webhooks',
+      maintenance: 'Onderhoudsmodus',
+      backups: 'Back-ups'
+    },
+    // Table columns
+    table: {
+      id: 'ID',
+      actions: 'Acties',
+      createdAt: 'Aangemaakt',
+      updatedAt: 'Bijgewerkt',
+      noResults: 'Geen resultaten gevonden',
+      rowsPerPage: 'Rijen per pagina',
+      of: 'van',
+      showing: 'Tonen',
+      results: 'resultaten'
     }
   },
   es: {
@@ -498,6 +658,86 @@ const translations = {
       currentPassword: 'Contraseña Actual',
       newPassword: 'Nueva Contraseña',
       confirmPassword: 'Confirmar Contraseña'
+    },
+    // Tickets
+    tickets: {
+      title: 'Gestión de Entradas',
+      addTicket: 'Añadir Entrada',
+      editTicket: 'Editar Entrada',
+      event: 'Evento',
+      quantity: 'Cantidad',
+      buyer: 'Comprador',
+      ticketType: 'Tipo de Entrada',
+      purchaseDate: 'Fecha de Compra',
+      validUntil: 'Válido Hasta'
+    },
+    // Bookings
+    bookings: {
+      title: 'Reservas',
+      addBooking: 'Añadir Reserva',
+      editBooking: 'Editar Reserva',
+      customer: 'Cliente',
+      service: 'Servicio',
+      bookingDate: 'Fecha de Reserva',
+      amount: 'Importe',
+      paymentStatus: 'Estado del Pago',
+      paid: 'Pagado',
+      unpaid: 'Sin Pagar',
+      refunded: 'Reembolsado'
+    },
+    // Transactions
+    transactions: {
+      title: 'Transacciones',
+      transactionId: 'ID de Transacción',
+      method: 'Método de Pago',
+      gateway: 'Pasarela',
+      reference: 'Referencia',
+      creditCard: 'Tarjeta de Crédito',
+      bankTransfer: 'Transferencia Bancaria',
+      paypal: 'PayPal',
+      ideal: 'iDEAL',
+      cash: 'Efectivo'
+    },
+    // Analytics
+    analytics: {
+      title: 'Analíticas',
+      subtitle: 'Monitoree el rendimiento de su negocio',
+      overview: 'Resumen',
+      revenue: 'Ingresos',
+      visitors: 'Visitantes',
+      conversions: 'Conversiones',
+      bookingsChart: 'Reservas en el Tiempo',
+      revenueChart: 'Ingresos en el Tiempo',
+      topPois: 'POIs Principales',
+      period: 'Período',
+      today: 'Hoy',
+      thisWeek: 'Esta Semana',
+      thisMonth: 'Este Mes',
+      thisYear: 'Este Año',
+      custom: 'Rango Personalizado'
+    },
+    // Platform
+    platform: {
+      title: 'Configuración de Plataforma',
+      subtitle: 'Gestione la configuración de la plataforma',
+      general: 'Configuración General',
+      integrations: 'Integraciones',
+      apiKeys: 'Claves API',
+      webhooks: 'Webhooks',
+      maintenance: 'Modo Mantenimiento',
+      backups: 'Copias de Seguridad'
+    },
+    // Table columns
+    table: {
+      id: 'ID',
+      actions: 'Acciones',
+      createdAt: 'Creado',
+      updatedAt: 'Actualizado',
+      noResults: 'No se encontraron resultados',
+      rowsPerPage: 'Filas por página',
+      of: 'de',
+      showing: 'Mostrando',
+      results: 'resultados'
     }
   },
   de: {
@@ -664,6 +904,86 @@ const translations = {
       currentPassword: 'Aktuelles Passwort',
       newPassword: 'Neues Passwort',
       confirmPassword: 'Passwort Bestätigen'
+    },
+    // Tickets
+    tickets: {
+      title: 'Ticketverwaltung',
+      addTicket: 'Ticket Hinzufügen',
+      editTicket: 'Ticket Bearbeiten',
+      event: 'Veranstaltung',
+      quantity: 'Anzahl',
+      buyer: 'Käufer',
+      ticketType: 'Tickettyp',
+      purchaseDate: 'Kaufdatum',
+      validUntil: 'Gültig Bis'
+    },
+    // Bookings
+    bookings: {
+      title: 'Buchungen',
+      addBooking: 'Buchung Hinzufügen',
+      editBooking: 'Buchung Bearbeiten',
+      customer: 'Kunde',
+      service: 'Dienstleistung',
+      bookingDate: 'Buchungsdatum',
+      amount: 'Betrag',
+      paymentStatus: 'Zahlungsstatus',
+      paid: 'Bezahlt',
+      unpaid: 'Unbezahlt',
+      refunded: 'Erstattet'
+    },
+    // Transactions
+    transactions: {
+      title: 'Transaktionen',
+      transactionId: 'Transaktions-ID',
+      method: 'Zahlungsmethode',
+      gateway: 'Gateway',
+      reference: 'Referenz',
+      creditCard: 'Kreditkarte',
+      bankTransfer: 'Banküberweisung',
+      paypal: 'PayPal',
+      ideal: 'iDEAL',
+      cash: 'Bargeld'
+    },
+    // Analytics
+    analytics: {
+      title: 'Analysen',
+      subtitle: 'Überwachen Sie Ihre Geschäftsleistung',
+      overview: 'Übersicht',
+      revenue: 'Umsatz',
+      visitors: 'Besucher',
+      conversions: 'Conversions',
+      bookingsChart: 'Buchungen im Zeitverlauf',
+      revenueChart: 'Umsatz im Zeitverlauf',
+      topPois: 'Top POIs',
+      period: 'Zeitraum',
+      today: 'Heute',
+      thisWeek: 'Diese Woche',
+      thisMonth: 'Dieser Monat',
+      thisYear: 'Dieses Jahr',
+      custom: 'Benutzerdefiniert'
+    },
+    // Platform
+    platform: {
+      title: 'Plattform-Einstellungen',
+      subtitle: 'Verwalten Sie die Plattformkonfiguration',
+      general: 'Allgemeine Einstellungen',
+      integrations: 'Integrationen',
+      apiKeys: 'API-Schlüssel',
+      webhooks: 'Webhooks',
+      maintenance: 'Wartungsmodus',
+      backups: 'Backups'
+    },
+    // Table columns
+    table: {
+      id: 'ID',
+      actions: 'Aktionen',
+      createdAt: 'Erstellt',
+      updatedAt: 'Aktualisiert',
+      noResults: 'Keine Ergebnisse gefunden',
+      rowsPerPage: 'Zeilen pro Seite',
+      of: 'von',
+      showing: 'Zeige',
+      results: 'Ergebnisse'
     }
   }
 };

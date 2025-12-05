@@ -93,3 +93,6 @@ export const paymentsApi = new Payments({
   securityWorker,
   secure: true,
 });
+
+// Re-export eventsService with fallback data
+export { eventsService } from './eventsService';

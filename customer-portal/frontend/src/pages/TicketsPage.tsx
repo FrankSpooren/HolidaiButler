@@ -35,7 +35,8 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { eventsApi, paymentsApi, bookingsApi } from '@/lib/api';
+import { paymentsApi, bookingsApi } from '@/lib/api';
+import { eventsService } from '@/lib/api/eventsService';
 import type { Event, TicketType, CreateBookingRequest } from '@/lib/api';
 import { AdyenCheckoutComponent } from '@/features/ticketing/components/Payment/AdyenCheckout';
 import type { AdyenSessionData, PaymentResult } from '@/features/ticketing/components/Payment/AdyenCheckout';
@@ -78,7 +79,7 @@ export const TicketsPage = () => {
   const [paymentSession, setPaymentSession] = useState<AdyenSessionData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch events
+  // Fetch events with fallback data
   const {
     data: eventsResponse,
     isLoading: eventsLoading,
@@ -86,7 +87,7 @@ export const TicketsPage = () => {
   } = useQuery({
     queryKey: ['events', { status: 'active' }],
     queryFn: async () => {
-      const response = await eventsApi.getEvents({ status: 'active' });
+      const response = await eventsService.getEvents({ status: 'active' });
       return response.data;
     },
   });
@@ -99,7 +100,7 @@ export const TicketsPage = () => {
     queryKey: ['ticketTypes', selectedEvent?.id],
     queryFn: async () => {
       if (!selectedEvent?.id) return null;
-      const response = await eventsApi.getTicketTypes(selectedEvent.id);
+      const response = await eventsService.getTicketTypes(selectedEvent.id);
       return response.data;
     },
     enabled: !!selectedEvent?.id,
