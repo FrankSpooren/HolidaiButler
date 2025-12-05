@@ -31,6 +31,7 @@ import adminTicketsRoutes from './routes/adminTickets.js';
 import adminBookingsRoutes from './routes/adminBookings.js';
 import adminTransactionsRoutes from './routes/adminTransactions.js';
 import monitoringRoutes from './routes/monitoring.js';
+import customerAuthRoutes from './routes/customerAuth.js';
 
 // Import enterprise services
 import cacheService from './services/cache.js';
@@ -150,7 +151,10 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// API Routes
+// API Routes - Customer Portal Auth (public facing)
+app.use('/api/v1/auth', customerAuthRoutes);
+
+// API Routes - Admin Module
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/pois', adminPOIRoutes);
 app.use('/api/admin/upload', adminUploadRoutes);
