@@ -22,7 +22,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('customer-portal/frontend/package-lock.json') }}
+          key: "${{ runner.os }}-node-${{ hashFiles('customer-portal/frontend/package-lock.json') }}"
           restore-keys: |
             ${{ runner.os }}-node-
 
@@ -73,12 +73,11 @@ jobs:
       - name: Fix permissions
         run: |
           ssh root@91.98.71.87 "chown -R www-data:www-data /var/www/test.holidaibutler.com && chmod -R 755 /var/www/test.holidaibutler.com"
-          
+
       # 10. Herstart Apache
       - name: Reload Apache
-      run: |
-        ssh root@91.98.71.87 "systemctl reload apache2
-
+        run: |
+          ssh root@91.98.71.87 "systemctl reload apache2"
 
       # 11. Health check + rollback
       - name: Health check
@@ -91,4 +90,3 @@ jobs:
             exit 1
           else
             echo "✅ Deployment successful! Status code: $STATUS"
-          fi
