@@ -5,15 +5,40 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'customer-portal/frontend/**' # Alleen triggeren bij wijzigingen in frontend
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Haal code op
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2. Cache npm dependencies voor snelheid
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # 3. Installeer Node en build project
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies and build
+        run: |
+          cd customer-portal/frontend
+          npm ci
+          npm run build
+
+      # 4. Setup SSH
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -21,18 +46,22 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
 
+      # 5. Backup huidige versie
       - name: Backup current version
         run: |
           ssh root@91.98.71.87 "rsync -av --delete /var/www/test.holidaibutler.com/ /var/www/test-backup/"
 
+      # 6. Deploy nieuwe build
       - name: Deploy built files
         run: |
           rsync -av --delete customer-portal/frontend/dist/ root@91.98.71.87:/var/www/test.holidaibutler.com/
 
+      # 7. Fix permissies
       - name: Fix permissions
         run: |
           ssh root@91.98.71.87 "chown -R www-data:www-data /var/www/test.holidaibutler.com && chmod -R 755 /var/www/test.holidaibutler.com"
 
+      # 8. Health check + rollback
       - name: Health check
         run: |
           sleep 5
