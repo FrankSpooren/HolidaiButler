@@ -38,7 +38,7 @@ jobs:
 
       - name: Deploy built files
         run: |
-          rsync -av --delete customer-portal/frontend/dist/ root@YOUR_SERVER_IP:/var/www/test.holidaibutler.com/
+          rsync -av --delete customer-portal/frontend/dist/ root@91.98.71.87:/var/www/test.holidaibutler.com/
 
       - name: Fix permissions
         run: |
