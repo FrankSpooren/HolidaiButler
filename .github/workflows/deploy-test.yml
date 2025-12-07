@@ -37,9 +37,11 @@ jobs:
       - name: Install dependencies
         run: |
           cd customer-portal/frontend
-          echo "🔍 Probeer npm ci..."
-          if ! npm ci; then
-            echo "⚠️ npm ci faalde, gebruik npm install als fallback"
+          if [ -f package-lock.json ]; then
+            echo "🔍 Lock file gevonden, probeer npm ci..."
+            npm ci || (echo "⚠️ npm ci faalde, gebruik npm install" && npm install --prefer-offline)
+          else
+            echo "⚠️ Geen lock file, gebruik npm install"
             npm install --prefer-offline
           fi
 
@@ -71,8 +73,14 @@ jobs:
       - name: Fix permissions
         run: |
           ssh root@91.98.71.87 "chown -R www-data:www-data /var/www/test.holidaibutler.com && chmod -R 755 /var/www/test.holidaibutler.com"
+          
+      # 10. Herstart Apache
+      - name: Reload Apache
+      run: |
+        ssh root@91.98.71.87 "systemctl reload apache2
 
-      # 10. Health check + rollback
+
+      # 11. Health check + rollback
       - name: Health check
         run: |
           sleep 5
@@ -83,3 +91,4 @@ jobs:
             exit 1
           else
             echo "✅ Deployment successful! Status code: $STATUS"
+          fi
