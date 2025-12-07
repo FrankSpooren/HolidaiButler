@@ -26,12 +26,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # 3. Installeer Node.js
+      # 3. Installeer Node.js (met juiste pad voor lock file)
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: 'customer-portal/frontend/package-lock.json'
 
       # 4. Installeer dependencies (met fallback)
       - name: Install dependencies
