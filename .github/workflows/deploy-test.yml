@@ -29,6 +29,10 @@ jobs:
         run: |
           rsync -av --delete customer-portal/frontend/ root@91.98.71.87:/var/www/test.holidaibutler.com/
 
+      - name: Fix permissions
+        run: |
+          ssh root@YOUR_SERVER_IP "chown -R www-data:www-data /var/www/test.holidaibutler.com && chmod -R 755 /var/www/test.holidaibutler.com"
+
       - name: Health check
         run: |
           sleep 5
