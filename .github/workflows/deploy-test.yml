@@ -31,7 +31,7 @@ jobs:
 
       - name: Fix permissions
         run: |
-          ssh root@YOUR_SERVER_IP "chown -R www-data:www-data /var/www/test.holidaibutler.com && chmod -R 755 /var/www/test.holidaibutler.com"
+          ssh root@91.98.71.87 "chown -R www-data:www-data /var/www/test.holidaibutler.com && chmod -R 755 /var/www/test.holidaibutler.com"
 
       - name: Health check
         run: |
