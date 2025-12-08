@@ -28,6 +28,8 @@ import workflowRoutes from './routes/workflows.js';
 import poiClassificationRoutes from './routes/poiClassification.js';
 import poiDiscoveryRoutes from './routes/poiDiscovery.js';
 import publicPOIRoutes from './routes/publicPOI.js';
+import authRoutes from './routes/auth.js';
+import User from './models/User.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import prometheusMiddleware, { metricsEndpoint } from './middleware/prometheus.js';
@@ -47,6 +49,14 @@ async function initializePlatform() {
     // Database connections
     await initializeDatabase();
     logger.info('✅ Database connections established');
+
+    // Sync User model (for customer portal authentication)
+    try {
+      await User.sync({ alter: process.env.NODE_ENV === 'development' });
+      logger.info('✅ User model synchronized');
+    } catch (syncError) {
+      logger.warn('⚠️ User model sync failed (may need manual setup):', syncError.message);
+    }
 
     // Event Bus
     await initializeEventBus();
@@ -96,6 +106,7 @@ app.use(prometheusMiddleware()); // ENTERPRISE: Prometheus metrics collection
 app.get('/metrics', metricsEndpoint);
 
 app.use('/health', healthRoutes);
+app.use('/api/auth', authRoutes); // Customer Portal Authentication
 app.use('/api/v1/integration', integrationRoutes);
 app.use('/api/v1/workflows', workflowRoutes);
 app.use('/api/v1/poi-classification', poiClassificationRoutes);
