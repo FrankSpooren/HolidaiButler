@@ -4,7 +4,7 @@ name: Deploy Test Frontend & Selected Modules
 on:
   push:
     branches:
-      - main
+      - '**'   # alle branches
     paths:
       - 'customer-portal/frontend/**'
       - 'admin-module/**'
