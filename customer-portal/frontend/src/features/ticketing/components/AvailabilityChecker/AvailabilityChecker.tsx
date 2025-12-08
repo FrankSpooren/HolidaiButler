@@ -34,7 +34,7 @@ export const AvailabilityChecker: React.FC<AvailabilityCheckerProps> = ({
     }
 
     checkAvailability({
-      poiId: String(poiId),
+      poiId,
       date: selectedDate,
       quantity,
     });
@@ -119,7 +119,7 @@ export const AvailabilityChecker: React.FC<AvailabilityCheckerProps> = ({
       {error && (
         <div className="mt-6">
           <ErrorDisplay
-            error={error}
+            error={error.error || error.message || 'An error occurred'}
             onRetry={handleCheck}
             title="Couldn't check availability"
           />

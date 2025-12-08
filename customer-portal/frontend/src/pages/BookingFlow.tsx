@@ -229,12 +229,12 @@ export default function BookingFlow() {
           <GuestInfoForm
             initialData={guestInfo || undefined}
             onSubmit={handleGuestInfoSubmit}
-            isLoading={createBookingMutation.isLoading}
+            isLoading={createBookingMutation.isPending}
           />
         )}
 
         {/* Loading State */}
-        {createBookingMutation.isLoading && (
+        {createBookingMutation.isPending && (
           <div className="flex justify-center items-center min-h-[400px]">
             <LoadingSpinner message="Creating your booking..." />
           </div>
@@ -303,7 +303,7 @@ export default function BookingFlow() {
         )}
 
         {/* Confirmation Loading */}
-        {confirmBookingMutation.isLoading && (
+        {confirmBookingMutation.isPending && (
           <div className="flex justify-center items-center min-h-[400px]">
             <LoadingSpinner message="Confirming your booking..." />
           </div>
