@@ -6,7 +6,7 @@
  * Endpoint: POST /api/v1/chat/message
  */
 
-import type { ChatRequest, ChatResponse, ChatMessage } from '../types/chat.types';
+import type { ChatRequest, ChatResponse } from '../types/chat.types';
 
 // HoliBot/Chat API - Platform Core includes chat routes on :3001
 // Use VITE_WIDGET_API_URL if Widget API runs separately on :3002

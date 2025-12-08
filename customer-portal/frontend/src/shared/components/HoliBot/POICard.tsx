@@ -27,7 +27,7 @@ export function POICard({ poi, onClick }: POICardProps) {
         <TrustBadge
           rating={poi.rating}
           reviewCount={poi.review_count}
-          verified={poi.popularity_score && poi.popularity_score > 80}
+          verified={poi.popularity_score !== undefined && poi.popularity_score > 80}
         />
 
         <ReviewMetadata
