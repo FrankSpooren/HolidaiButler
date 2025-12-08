@@ -1,0 +1,469 @@
+/* POI Detail Page Styles */
+
+.poi-detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px;
+    overflow-x: hidden;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #6B7280;
+    margin-bottom: 24px;
+}
+
+.breadcrumb a {
+    color: #7FA594;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb a:hover {
+    color: #5E8B7E;
+}
+
+/* Hero Section */
+.poi-hero {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+}
+
+.poi-hero-image {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 64px;
+}
+
+.poi-hero-content {
+    padding: 24px;
+}
+
+.poi-category {
+    display: inline-block;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    color: white;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.poi-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 12px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.poi-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.poi-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #6B7280;
+}
+
+.poi-meta-icon {
+    font-size: 18px;
+}
+
+/* Action Buttons */
+.poi-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.poi-action-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.poi-action-btn-primary {
+    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    color: white;
+}
+
+.poi-action-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(127, 165, 148, 0.3);
+}
+
+.poi-action-btn-secondary {
+    background: white;
+    border: 2px solid #E5E7EB;
+    color: #1F2937;
+}
+
+.poi-action-btn-secondary:hover {
+    border-color: #7FA594;
+}
+
+/* Content Sections */
+.poi-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* 2-Column Layout for Desktop */
+.poi-columns {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+
+.poi-column-left,
+.poi-column-right {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Desktop: 2-column layout */
+@media (min-width: 768px) {
+    .poi-columns {
+        grid-template-columns: 2fr 1fr;
+    }
+}
+
+.poi-section {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+/* Reviews section - always full width */
+.poi-reviews-section {
+    width: 100%;
+}
+
+.poi-section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 16px;
+}
+
+.poi-description {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #4B5563;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+/* Read More Button */
+.poi-description-container {
+    margin-bottom: 8px;
+}
+
+.poi-read-more-btn {
+    background: none;
+    border: none;
+    color: #7FA594;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 0;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.poi-read-more-btn:hover {
+    color: #5E8B7E;
+}
+
+.poi-read-more-btn:focus {
+    outline: 2px solid #7FA594;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Subsection Title */
+.poi-subsection-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 12px;
+}
+
+/* Highlights Section */
+.poi-highlights {
+    margin-top: 20px;
+}
+
+.poi-highlights-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.poi-highlight-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #4B5563;
+}
+
+.poi-highlight-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Perfect For Section */
+.poi-perfect-for {
+    margin-top: 20px;
+}
+
+.poi-perfect-for-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.poi-perfect-for-tag {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #F3F4F6;
+    color: #4B5563;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.poi-perfect-for-tag:hover {
+    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(127, 165, 148, 0.2);
+}
+
+/* Section Header with Status */
+.poi-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.poi-opening-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.poi-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Opening Hours */
+.opening-hours-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.opening-hours-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.opening-hours-day {
+    font-weight: 600;
+    color: #1F2937;
+}
+
+.opening-hours-time {
+    color: #6B7280;
+}
+
+/* Contact Info */
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #F9FAFB;
+    border-radius: 8px;
+}
+
+.contact-icon {
+    font-size: 20px;
+}
+
+.contact-text {
+    flex: 1;
+    font-size: 14px;
+    color: #1F2937;
+}
+
+/* Loading State */
+.poi-loading {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.poi-loading-spinner {
+    font-size: 48px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Error State */
+.poi-error {
+    background: #FEE2E2;
+    border: 1px solid #FCA5A5;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 24px auto;
+    max-width: 600px;
+    text-align: center;
+}
+
+.poi-error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.poi-error-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #DC2626;
+    margin-bottom: 8px;
+}
+
+.poi-error-message {
+    font-size: 14px;
+    color: #991B1B;
+    margin-bottom: 16px;
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+    .poi-detail-container {
+        padding: 24px;
+    }
+
+    .poi-hero-image {
+        height: 350px;
+    }
+
+    .poi-title {
+        font-size: 32px;
+    }
+
+    .poi-content {
+        grid-template-columns: 2fr 1fr;
+    }
+
+    .poi-actions {
+        flex-wrap: nowrap;
+    }
+
+    .poi-action-btn {
+        min-width: auto;
+    }
+}
+
+@media (max-width: 767px) {
+    .poi-detail-container {
+        padding: 12px;
+    }
+
+    .poi-hero-image {
+        height: 250px;
+    }
+
+    .poi-title {
+        font-size: 22px;
+    }
+
+    .poi-hero-content {
+        padding: 16px;
+    }
+
+    .poi-actions {
+        gap: 8px;
+    }
+
+    .poi-action-btn {
+        font-size: 14px;
+        padding: 10px 16px;
+    }
+}

@@ -63,11 +63,14 @@ app.use('/api/', limiter);
 
 // ========== DATABASE CONNECTION ==========
 
+let isDatabaseConnected = false;
+
 const connectDB = async () => {
   try {
     // Test MySQL connection via Sequelize
     await sequelize.authenticate();
     logger.info('MySQL database connected successfully');
+    isDatabaseConnected = true;
 
     // In production, only connect - use migrations for schema changes
     if (process.env.NODE_ENV === 'production') {
@@ -84,25 +87,46 @@ const connectDB = async () => {
       }
     }
   } catch (error) {
-    logger.error('MySQL connection error:', error);
-    process.exit(1);
+    logger.error('MySQL connection error:', error.message);
+    isDatabaseConnected = false;
+
+    // In production, exit on database failure
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('Production mode requires database connection. Exiting.');
+      process.exit(1);
+    } else {
+      // In development/Codespaces, continue without database
+      logger.warn('⚠️  Running in DEGRADED MODE without database');
+      logger.warn('⚠️  Events API will work (sample data), but booking/tickets require database');
+    }
   }
 };
 
 // ========== ROUTES ==========
 
 const ticketRoutes = require('./routes/tickets');
+const eventRoutes = require('./routes/events');
 
+// Main ticketing routes (availability, bookings, tickets)
 app.use('/api/v1/tickets', ticketRoutes);
+
+// Events routes (for Customer Portal ticketing page)
+app.use('/api/v1/tickets/events', eventRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
     service: 'HolidaiButler Ticketing Module',
-    version: '1.0.0',
+    version: '2.0.0',
     status: 'running',
     timestamp: new Date().toISOString(),
     endpoints: {
+      // Events endpoints (for Customer Portal)
+      events: '/api/v1/tickets/events',
+      eventDetails: '/api/v1/tickets/events/:eventId',
+      ticketTypes: '/api/v1/tickets/events/:eventId/ticket-types',
+      eventAvailability: '/api/v1/tickets/events/:eventId/availability',
+      // POI-based availability (legacy)
       availability: '/api/v1/tickets/availability/:poiId',
       bookings: '/api/v1/tickets/bookings',
       tickets: '/api/v1/tickets/:ticketId',

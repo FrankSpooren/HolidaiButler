@@ -44,19 +44,23 @@ if (fs.existsSync(envPath)) {
 // Debug: Log the loaded values (only in development)
 if (process.env.NODE_ENV !== 'production') {
   console.log('[Database Config] Environment:', process.env.NODE_ENV || 'not set');
-  console.log('[Database Config] DB_USER:', process.env.DB_USER ? '***' : '(not set, using root)');
-  console.log('[Database Config] DB_HOST:', process.env.DB_HOST || '(not set, using localhost)');
-  console.log('[Database Config] DB_NAME:', process.env.DB_NAME || '(not set, using holidaibutler)');
+  // Support both DB_ and DATABASE_ prefixes
+  const dbUser = process.env.DB_USER || process.env.DATABASE_USER;
+  const dbHost = process.env.DB_HOST || process.env.DATABASE_HOST;
+  const dbName = process.env.DB_NAME || process.env.DATABASE_NAME;
+  console.log('[Database Config] DB_USER:', dbUser ? '***' : '(not set, using root)');
+  console.log('[Database Config] DB_HOST:', dbHost || '(not set, using localhost)');
+  console.log('[Database Config] DB_NAME:', dbName || '(not set, using holidaibutler)');
 }
 
 // MySQL Connection (Hetzner - Central Database)
-// Use explicit defaults as fallbacks
+// Support both DB_ and DATABASE_ prefixes for flexibility
 const dbConfig = {
-  database: process.env.DB_NAME || 'holidaibutler',
-  username: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : '',
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '3306', 10),
+  database: process.env.DB_NAME || process.env.DATABASE_NAME || 'holidaibutler',
+  username: process.env.DB_USER || process.env.DATABASE_USER || 'root',
+  password: process.env.DB_PASSWORD || process.env.DATABASE_PASSWORD || '',
+  host: process.env.DB_HOST || process.env.DATABASE_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || process.env.DATABASE_PORT || '3306', 10),
 };
 
 console.log('[Database Config] Connecting as:', dbConfig.username, 'to', dbConfig.host + ':' + dbConfig.port);

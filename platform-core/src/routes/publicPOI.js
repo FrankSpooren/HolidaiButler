@@ -5,6 +5,7 @@
 
 import express from 'express';
 import { mysqlSequelize } from '../config/database.js';
+import { Op } from 'sequelize';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -124,11 +125,16 @@ router.get('/:id', async (req, res) => {
 
     const { id } = req.params;
 
-    // Try to find by ID or slug
+    // SECURITY FIX: Use parameterized query instead of string interpolation
+    // Bug fixed: 30-11-2025 - Prevents SQL injection attacks
     const poi = await model.findOne({
-      where: mysqlSequelize.literal(
-        `(id = '${id}' OR slug = '${id}') AND status = 'active'`
-      )
+      where: {
+        [Op.or]: [
+          { id: id },
+          { slug: id }
+        ],
+        status: 'active'
+      }
     });
 
     if (!poi) {

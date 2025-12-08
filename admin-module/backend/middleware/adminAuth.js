@@ -5,6 +5,12 @@ import { AdminUser } from '../models/index.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_ADMIN_SECRET = process.env.JWT_ADMIN_SECRET || 'your-admin-secret-key-change-in-production';
 
+// Check if running in development or cloud environment (Codespaces, Gitpod)
+const isDevelopmentMode = () => {
+  const env = process.env.NODE_ENV;
+  return env === 'development' || env === undefined || env === '';
+};
+
 // Development fallback user (matches the one in adminAuth routes)
 const DEV_FALLBACK_USER = {
   id: 'dev-admin-001',
@@ -41,8 +47,8 @@ export const verifyAdminToken = async (req, res, next) => {
     const decoded = jwt.verify(token, JWT_ADMIN_SECRET);
 
     // Check for development fallback user
-    if (decoded.userId === DEV_FALLBACK_USER.id && process.env.NODE_ENV === 'development') {
-      console.log('🔧 Using development fallback user (database unavailable)');
+    if (decoded.userId === DEV_FALLBACK_USER.id && isDevelopmentMode()) {
+      console.log('🔧 Using development fallback user (database unavailable, NODE_ENV:', process.env.NODE_ENV || 'not set', ')');
       req.adminUser = DEV_FALLBACK_USER;
       return next();
     }
@@ -52,9 +58,9 @@ export const verifyAdminToken = async (req, res, next) => {
     try {
       user = await AdminUser.findByPk(decoded.userId);
     } catch (dbError) {
-      // Database not available - check if dev mode
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Database unavailable, using dev fallback user');
+      // Database not available - check if dev mode or cloud environment
+      if (isDevelopmentMode()) {
+        console.warn('Database unavailable, using dev fallback user (NODE_ENV:', process.env.NODE_ENV || 'not set', ')');
         req.adminUser = DEV_FALLBACK_USER;
         return next();
       }

@@ -1,0 +1,934 @@
+{
+  "info": {
+    "name": "HolidaiButler Ticketing API",
+    "description": "Comprehensive test collection for HolidaiButler Ticketing & Reservations Module\n\n**Version:** 1.0.0\n**Base URL:** http://localhost:5000/api/v1/ticketing\n**Auth:** JWT Bearer Token (for authenticated endpoints)\n\n**Test Coverage:**\n- 16 API endpoints\n- Authentication flows\n- Error scenarios\n- Complete booking lifecycle",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000/api/v1/ticketing",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "poi_id",
+      "value": "123",
+      "type": "string"
+    },
+    {
+      "key": "booking_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ticket_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has success status\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('healthy');",
+                  "});",
+                  "",
+                  "pm.test(\"Response time is less than 100ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(100);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Health check endpoint - no authentication required"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Availability Management",
+      "item": [
+        {
+          "name": "Check Availability (Specific Date & Timeslot)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has availability data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('available');",
+                  "    pm.expect(jsonData.data).to.have.property('capacity');",
+                  "    pm.expect(jsonData.data).to.have.property('pricing');",
+                  "});",
+                  "",
+                  "pm.test(\"Capacity object has required fields\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.capacity).to.have.property('total');",
+                  "    pm.expect(jsonData.data.capacity).to.have.property('available');",
+                  "    pm.expect(jsonData.data.capacity).to.have.property('booked');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"poiId\": {{poi_id}},\n  \"date\": \"2025-12-25\",\n  \"timeslot\": \"10:00-12:00\",\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/availability/check",
+              "host": ["{{base_url}}"],
+              "path": ["availability", "check"]
+            },
+            "description": "Check if specific date/time is available for booking"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Availability (Single Date)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains availability data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('date');",
+                  "    pm.expect(jsonData.data).to.have.property('totalCapacity');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/availability/{{poi_id}}?date=2025-12-25&timeslot=10:00-12:00",
+              "host": ["{{base_url}}"],
+              "path": ["availability", "{{poi_id}}"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2025-12-25"
+                },
+                {
+                  "key": "timeslot",
+                  "value": "10:00-12:00"
+                }
+              ]
+            },
+            "description": "Get availability for a single date"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Availability Range (Calendar View)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is array of availability objects\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"Response time is less than 500ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/availability/{{poi_id}}/range?from=2025-12-01&to=2025-12-31",
+              "host": ["{{base_url}}"],
+              "path": ["availability", "{{poi_id}}", "range"],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2025-12-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2025-12-31"
+                }
+              ]
+            },
+            "description": "Get availability for date range (for calendar display)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Booking Lifecycle",
+      "item": [
+        {
+          "name": "Create Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Booking created with ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('id');",
+                  "    pm.expect(jsonData.data).to.have.property('bookingReference');",
+                  "    pm.expect(jsonData.data.status).to.eql('pending');",
+                  "    ",
+                  "    // Save booking ID for subsequent requests",
+                  "    pm.collectionVariables.set('booking_id', jsonData.data.id);",
+                  "});",
+                  "",
+                  "pm.test(\"Reservation with expiry created\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('reservation');",
+                  "    pm.expect(jsonData.data.reservation).to.have.property('expiresAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Payment URL provided\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('paymentUrl');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"poiId\": {{poi_id}},\n  \"date\": \"2025-12-25\",\n  \"timeslot\": \"10:00-12:00\",\n  \"quantity\": 2,\n  \"ticketType\": \"single\",\n  \"guestInfo\": {\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"phone\": \"+31612345678\"\n  },\n  \"guests\": {\n    \"adults\": 2,\n    \"children\": 0,\n    \"infants\": 0\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/bookings",
+              "host": ["{{base_url}}"],
+              "path": ["bookings"]
+            },
+            "description": "Create a new booking with automatic capacity reservation (15-minute hold)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Booking by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Booking details returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('id');",
+                  "    pm.expect(jsonData.data).to.have.property('bookingReference');",
+                  "    pm.expect(jsonData.data).to.have.property('poi');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bookings/{{booking_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "{{booking_id}}"]
+            },
+            "description": "Get booking details by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Booking (After Payment)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Booking confirmed and tickets generated\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.booking.status).to.eql('confirmed');",
+                  "    pm.expect(jsonData.data.booking.paymentStatus).to.eql('paid');",
+                  "    pm.expect(jsonData.data).to.have.property('tickets');",
+                  "    pm.expect(jsonData.data.tickets).to.be.an('array');",
+                  "    ",
+                  "    // Save first ticket ID for subsequent tests",
+                  "    if (jsonData.data.tickets.length > 0) {",
+                  "        pm.collectionVariables.set('ticket_id', jsonData.data.tickets[0].id);",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test(\"Tickets have QR codes\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    jsonData.data.tickets.forEach(function(ticket) {",
+                  "        pm.expect(ticket).to.have.property('qrCodeImageUrl');",
+                  "        pm.expect(ticket).to.have.property('ticketNumber');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentTransactionId\": \"txn_test_abc123xyz\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/bookings/{{booking_id}}/confirm",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "{{booking_id}}", "confirm"]
+            },
+            "description": "Confirm booking after successful payment - generates tickets with QR codes"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Booking cancelled successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.booking.status).to.eql('cancelled');",
+                  "});",
+                  "",
+                  "pm.test(\"Refund information provided (if applicable)\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data.refund) {",
+                  "        pm.expect(jsonData.data.refund).to.have.property('amount');",
+                  "        pm.expect(jsonData.data.refund).to.have.property('refundId');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Changed plans - testing cancellation flow\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/bookings/{{booking_id}}/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "{{booking_id}}", "cancel"]
+            },
+            "description": "Cancel a booking and trigger refund if applicable"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Bookings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Bookings array returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    pm.expect(jsonData).to.have.property('count');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bookings/user/{{user_id}}?status=confirmed&limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "user", "{{user_id}}"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "confirmed"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Get all bookings for a user with optional filters"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Ticket Management",
+      "item": [
+        {
+          "name": "Get User Tickets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Tickets array returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tickets/user/{{user_id}}?status=active",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "user", "{{user_id}}"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            },
+            "description": "Get all tickets for a user with optional status filter"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Ticket details returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('id');",
+                  "    pm.expect(jsonData.data).to.have.property('ticketNumber');",
+                  "    pm.expect(jsonData.data).to.have.property('qrCodeImageUrl');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{ticket_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["{{ticket_id}}"]
+            },
+            "description": "Get ticket details by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Resend Ticket Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Email resent successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('sent');",
+                  "    pm.expect(jsonData.data.sent).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{ticket_id}}/resend",
+              "host": ["{{base_url}}"],
+              "path": ["{{ticket_id}}", "resend"]
+            },
+            "description": "Resend ticket to user's email address"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Ticket to Wallet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Wallet pass URL returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('walletPassUrl');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletType\": \"apple\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{ticket_id}}/wallet",
+              "host": ["{{base_url}}"],
+              "path": ["{{ticket_id}}", "wallet"]
+            },
+            "description": "Add ticket to Apple Wallet or Google Pay"
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Ticket (POI Staff)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Validation result returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('valid');",
+                  "    pm.expect(jsonData.data).to.have.property('ticket');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrCodeData\": \"ENCRYPTED_QR_CODE_PAYLOAD_HERE\",\n  \"poiId\": {{poi_id}}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/validate",
+              "host": ["{{base_url}}"],
+              "path": ["validate"]
+            },
+            "description": "Validate ticket QR code at POI entrance (for staff use)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Partner Integration",
+      "item": [
+        {
+          "name": "Sync Partner Inventory",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Sync completed successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2025-12-25\",\n  \"inventory\": {\n    \"totalCapacity\": 500,\n    \"availableCapacity\": 350\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/partners/:partnerId/sync-inventory",
+              "host": ["{{base_url}}"],
+              "path": ["partners", ":partnerId", "sync-inventory"],
+              "variable": [
+                {
+                  "key": "partnerId",
+                  "value": "partner_123"
+                }
+              ]
+            },
+            "description": "Sync inventory from external partner systems"
+          },
+          "response": []
+        },
+        {
+          "name": "Partner Webhook Receiver",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Webhook processed\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"booking.confirmed\",\n  \"bookingId\": \"partner_booking_123\",\n  \"timestamp\": \"2025-11-17T12:00:00Z\",\n  \"data\": {\n    \"status\": \"confirmed\",\n    \"amount\": 50.00\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/partners/:partnerId/webhook",
+              "host": ["{{base_url}}"],
+              "path": ["partners", ":partnerId", "webhook"],
+              "variable": [
+                {
+                  "key": "partnerId",
+                  "value": "partner_123"
+                }
+              ]
+            },
+            "description": "Receive webhooks from partner systems for booking updates"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Error Scenarios",
+      "item": [
+        {
+          "name": "Invalid Booking - Missing Required Fields",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"poiId\": {{poi_id}}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/bookings",
+              "host": ["{{base_url}}"],
+              "path": ["bookings"]
+            },
+            "description": "Test validation error handling - missing required fields"
+          },
+          "response": []
+        },
+        {
+          "name": "Unauthorized Access - No Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"Unauthorized error returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bookings/user/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "user", "{{user_id}}"]
+            },
+            "description": "Test authentication requirement - request without JWT token"
+          },
+          "response": []
+        },
+        {
+          "name": "Not Found - Invalid Booking ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Not found error returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bookings/999999",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "999999"]
+            },
+            "description": "Test 404 handling - non-existent booking ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Insufficient Availability",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test(\"Availability conflict error\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error).to.include('availability');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"poiId\": {{poi_id}},\n  \"date\": \"2025-12-25\",\n  \"timeslot\": \"10:00-12:00\",\n  \"quantity\": 10000,\n  \"ticketType\": \"single\",\n  \"guestInfo\": {\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/bookings",
+              "host": ["{{base_url}}"],
+              "path": ["bookings"]
+            },
+            "description": "Test capacity limits - request exceeds available capacity"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "name": "HolidaiButler Development",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  "postStartCommand": "bash .devcontainer/start-services.sh",
+
+  "forwardPorts": [3003, 3004, 5173, 5174, 5175],
+
+  "portsAttributes": {
+    "3003": {
+      "label": "Admin Backend API",
+      "onAutoForward": "notify",
+      "visibility": "public"
+    },
+    "3004": {
+      "label": "Ticketing Backend API",
+      "onAutoForward": "notify",
+      "visibility": "public"
+    },
+    "5173": {
+      "label": "Admin Frontend",
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
+    },
+    "5174": {
+      "label": "Customer Portal",
+      "onAutoForward": "notify",
+      "visibility": "public"
+    },
+    "5175": {
+      "label": "Alternative Frontend Port",
+      "onAutoForward": "notify",
+      "visibility": "public"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+
+  "remoteEnv": {
+    "NODE_ENV": "development"
+  }
+}

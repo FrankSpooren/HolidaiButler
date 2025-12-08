@@ -46,7 +46,9 @@ const statusColors = {
   draft: 'default',
   published: 'success',
   cancelled: 'error',
-  completed: 'info'
+  completed: 'info',
+  active: 'success',  // Added for fallback data
+  pending: 'warning'  // Added for fallback data
 };
 
 const categoryLabels = {
@@ -118,8 +120,11 @@ export default function EventList() {
       const response = await eventsAPI.getAll(params);
 
       if (response.success) {
-        setEvents(response.data.events);
-        setTotal(response.data.pagination.total);
+        // Handle both API response format and fallback data format
+        const eventsList = response.data?.events || response.events || [];
+        const totalCount = response.data?.pagination?.total || response.total || eventsList.length;
+        setEvents(eventsList);
+        setTotal(totalCount);
       }
     } catch (err) {
       console.error('Error fetching events:', err);
@@ -149,13 +154,13 @@ export default function EventList() {
   };
 
   const handleEdit = (event) => {
-    navigate(`/events/edit/${event._id}`);
+    navigate(`/events/edit/${event._id || event.id}`);
     handleMenuClose();
   };
 
   const handleDuplicate = async (event) => {
     try {
-      const response = await eventsAPI.duplicate(event._id);
+      const response = await eventsAPI.duplicate(event._id || event.id);
       if (response.success) {
         fetchEvents();
       }
@@ -168,7 +173,7 @@ export default function EventList() {
 
   const handlePublish = async (event) => {
     try {
-      const response = await eventsAPI.publish(event._id);
+      const response = await eventsAPI.publish(event._id || event.id);
       if (response.success) {
         fetchEvents();
       }
@@ -188,7 +193,7 @@ export default function EventList() {
   const handleDeleteConfirm = async () => {
     try {
       setDeleteLoading(true);
-      const response = await eventsAPI.delete(selectedEvent._id);
+      const response = await eventsAPI.delete(selectedEvent._id || selectedEvent.id);
 
       if (response.success) {
         fetchEvents();
@@ -205,7 +210,7 @@ export default function EventList() {
 
   const handleSelectAll = (event) => {
     if (event.target.checked) {
-      setSelected(events.map(e => e._id));
+      setSelected(events.map(e => e._id || e.id));
     } else {
       setSelected([]);
     }
@@ -378,51 +383,59 @@ export default function EventList() {
                 </TableCell>
               </TableRow>
             ) : (
-              events.map((event) => (
-                <TableRow key={event._id} hover>
-                  {canDelete && (
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        checked={selected.indexOf(event._id) !== -1}
-                        onChange={() => handleSelectOne(event._id)}
+              events.map((event) => {
+                const eventId = event._id || event.id;
+                const eventTitle = event.title?.en || event.title || 'Untitled';
+                const eventDate = event.startDate || event.date;
+                const eventLocation = event.location?.city || event.venue || event.location || '-';
+                const eventViews = event.stats?.views || event.ticketsSold || 0;
+
+                return (
+                  <TableRow key={eventId} hover>
+                    {canDelete && (
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={selected.indexOf(eventId) !== -1}
+                          onChange={() => handleSelectOne(eventId)}
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <Typography variant="subtitle2" fontWeight="medium">
+                        {eventTitle}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={categoryLabels[event.category] || event.category}
+                        size="small"
+                        variant="outlined"
                       />
                     </TableCell>
-                  )}
-                  <TableCell>
-                    <Typography variant="subtitle2" fontWeight="medium">
-                      {event.title?.en || 'Untitled'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={categoryLabels[event.category] || event.category}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>{formatDate(event.startDate)}</TableCell>
-                  <TableCell>{event.location?.city || '-'}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={event.status}
-                      size="small"
-                      color={statusColors[event.status]}
-                      sx={{ textTransform: 'capitalize' }}
-                    />
-                  </TableCell>
-                  <TableCell>{event.stats?.views || 0}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Actions">
-                      <IconButton
+                    <TableCell>{formatDate(eventDate)}</TableCell>
+                    <TableCell>{eventLocation}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={event.status}
                         size="small"
-                        onClick={(e) => handleMenuOpen(e, event)}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))
+                        color={statusColors[event.status] || 'default'}
+                        sx={{ textTransform: 'capitalize' }}
+                      />
+                    </TableCell>
+                    <TableCell>{eventViews}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Actions">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleMenuOpen(e, event)}
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -483,7 +496,7 @@ export default function EventList() {
         <DialogTitle>Delete Event</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete "{selectedEvent?.title?.en}"? This action cannot be undone.
+            Are you sure you want to delete "{selectedEvent?.title?.en || selectedEvent?.title}"? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
