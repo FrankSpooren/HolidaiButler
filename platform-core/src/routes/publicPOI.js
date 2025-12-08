@@ -1,6 +1,8 @@
 /**
  * Public POI Routes
  * Endpoints for customer-facing POI data (no authentication required)
+ * FIXED: Use correct field names (verified, active) instead of non-existent 'status' field
+ * Merged: Supports both page-based and offset-based pagination
  */
 
 import express from 'express';
@@ -27,56 +29,62 @@ const getPOIModel = async () => {
 };
 
 /**
- * Helper to safely parse JSON fields
+ * Safe JSON parse helper
  */
-function safeParseJSON(value, defaultValue = []) {
-  if (!value) return defaultValue;
-  if (typeof value === 'object') return value;
+const safeJSONParse = (data, defaultValue = null) => {
+  if (!data) return defaultValue;
+  if (typeof data === 'object') return data;
   try {
-    return JSON.parse(value);
-  } catch (e) {
+    return JSON.parse(data);
+  } catch {
     return defaultValue;
   }
-}
+};
 
 /**
- * Transform POI data for frontend compatibility
+ * Format POI from database to public API response format
+ * Supports both basic and extended fields for frontend compatibility
  */
-function transformPOI(poi) {
+const formatPOIForPublic = (poi) => {
+  const data = poi.toJSON ? poi.toJSON() : poi;
   return {
-    id: poi.id,
-    name: poi.name,
-    description: poi.description,
-    category: poi.category,
-    subcategory: poi.subcategory,
-    level3_type: poi.poi_type || null,
-    city: poi.city,
-    address: poi.address,
-    postal_code: poi.postal_code || null,
-    latitude: poi.latitude ? parseFloat(poi.latitude) : null,
-    longitude: poi.longitude ? parseFloat(poi.longitude) : null,
-    rating: poi.rating ? parseFloat(poi.rating) : null,
-    review_count: poi.review_count || 0,
-    price_level: poi.price_level,
-    phone: poi.phone,
-    website: poi.website,
-    email: poi.email,
-    images: safeParseJSON(poi.images, []),
-    thumbnail_url: poi.thumbnail_url,
-    amenities: safeParseJSON(poi.amenities, []),
-    accessibility_features: safeParseJSON(poi.accessibility_features, []),
-    opening_hours: null,
-    verified: poi.verified || false,
-    featured: poi.featured || false,
-    popularity_score: poi.popularity_score || 0,
-    google_placeid: poi.google_placeid,
-    enriched_tile_description: null,
-    enriched_detail_description: null,
-    content_quality_score: null,
-    created_at: poi.last_updated || new Date().toISOString(),
-    updated_at: poi.last_updated || new Date().toISOString()
+    id: data.id,
+    uuid: data.uuid,
+    name: data.name,
+    slug: data.slug || data.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    description: data.description,
+    category: data.category,
+    subcategory: data.subcategory,
+    level3_type: data.poi_type || null,
+    city: data.city,
+    region: data.region,
+    country: data.country,
+    address: data.address,
+    postal_code: data.postal_code || null,
+    latitude: data.latitude ? parseFloat(data.latitude) : null,
+    longitude: data.longitude ? parseFloat(data.longitude) : null,
+    status: data.verified && data.active ? 'active' : 'pending',
+    tier: data.tier || 4,
+    rating: data.average_rating || data.rating ? parseFloat(data.average_rating || data.rating) : null,
+    reviewCount: data.review_count || 0,
+    review_count: data.review_count || 0,
+    price_level: data.price_level,
+    images: safeJSONParse(data.images, []),
+    thumbnail_url: data.thumbnail_url,
+    amenities: safeJSONParse(data.amenities, []),
+    accessibility_features: safeJSONParse(data.accessibility_features, []),
+    opening_hours: safeJSONParse(data.opening_hours, null),
+    phone: data.phone,
+    website: data.website,
+    email: data.email,
+    verified: data.verified || false,
+    featured: data.featured || false,
+    popularity_score: data.popularity_score || 0,
+    google_placeid: data.google_place_id || data.google_placeid,
+    created_at: data.created_at || data.last_updated || new Date().toISOString(),
+    updated_at: data.updated_at || data.last_updated || new Date().toISOString()
   };
-}
+};
 
 /**
  * @route   GET /api/v1/pois
@@ -98,60 +106,80 @@ router.get('/', async (req, res) => {
       q,
       category,
       city,
+      search,
       sort = 'name:asc',
+      page = 1,
       limit = 20,
-      offset = 0,
+      offset,
       min_rating,
       require_images
     } = req.query;
 
-    // Build where clause
-    const where = {};
+    // Calculate offset from page if not provided directly
+    const calculatedOffset = offset !== undefined ? parseInt(offset) : (parseInt(page) - 1) * parseInt(limit);
+
+    // Build where clause - only show verified and active POIs
+    const where = { verified: true, active: true };
     if (category) where.category = category;
-    if (city) where.city = city;
-    if (q) {
+    if (city) where.city = { [Op.like]: `%${city}%` };
+
+    // Support both 'q' and 'search' parameters
+    const searchTerm = search || q;
+    if (searchTerm) {
       where[Op.or] = [
-        { name: { [Op.like]: `%${q}%` } },
-        { description: { [Op.like]: `%${q}%` } }
+        { name: { [Op.like]: `%${searchTerm}%` } },
+        { description: { [Op.like]: `%${searchTerm}%` } },
+        { city: { [Op.like]: `%${searchTerm}%` } },
       ];
     }
+
     if (min_rating) {
-      where.rating = { [Op.gte]: parseFloat(min_rating) };
+      where.average_rating = { [Op.gte]: parseFloat(min_rating) };
     }
 
-    // Parse sort parameter (e.g., name:asc or rating:desc)
-    let orderClause = [['name', 'ASC']];
+    // Parse sort parameter
+    let order = [['name', 'ASC']];
     if (sort) {
-      const [field, direction] = sort.split(':');
-      const validFields = ['name', 'rating', 'popularity_score', 'review_count'];
-      if (validFields.includes(field)) {
-        orderClause = [[field, (direction || 'asc').toUpperCase()]];
+      const [sortField, sortDir] = sort.split(':');
+      const fieldMap = {
+        name: 'name',
+        rating: 'average_rating',
+        category: 'category',
+        tier: 'tier',
+        popularity_score: 'popularity_score',
+        review_count: 'review_count',
+        created_at: 'created_at',
+      };
+      const validFields = Object.keys(fieldMap);
+      if (validFields.includes(sortField)) {
+        const mappedField = fieldMap[sortField] || sortField;
+        order = [[mappedField, (sortDir || 'asc').toUpperCase()]];
       }
     }
 
     const { count, rows } = await model.findAndCountAll({
       where,
       limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: orderClause
+      offset: calculatedOffset,
+      order
     });
 
     // Transform data for frontend compatibility
-    const pois = rows.map(transformPOI);
+    const pois = rows.map(formatPOIForPublic);
 
-    // Return in format expected by frontend: { success, data: [...], meta: {...} }
+    // Return in format that supports both pagination styles
     res.json({
       success: true,
       data: pois,
       meta: {
         total: count,
+        page: parseInt(page),
         limit: parseInt(limit),
-        offset: parseInt(offset),
+        offset: calculatedOffset,
+        pages: Math.ceil(count / parseInt(limit)),
         count: pois.length,
-        cursor: null,
-        next_cursor: parseInt(offset) + pois.length < count ? parseInt(offset) + parseInt(limit) : null,
-        has_more: parseInt(offset) + pois.length < count,
-        pagination_type: 'offset'
+        has_more: calculatedOffset + pois.length < count,
+        next_cursor: calculatedOffset + pois.length < count ? calculatedOffset + parseInt(limit) : null
       }
     });
   } catch (error) {
@@ -248,14 +276,13 @@ router.get('/geojson', async (req, res) => {
 
     const {
       category,
-      city,
-      status = 'active'
+      city
     } = req.query;
 
-    // Build where clause
-    const where = { status };
+    // Build where clause - only show verified and active POIs
+    const where = { verified: true, active: true };
     if (category) where.category = category;
-    if (city) where.city = city;
+    if (city) where.city = { [Op.like]: `%${city}%` };
 
     const pois = await model.findAll({
       where,
@@ -268,6 +295,120 @@ router.get('/geojson', async (req, res) => {
 
     // Return sample data on error for development
     res.json(convertToGeoJSON(getSamplePOIs()));
+  }
+});
+
+/**
+ * @route   GET /api/v1/pois/search
+ * @desc    Search POIs with fuzzy matching
+ * @access  Public
+ */
+router.get('/search', async (req, res) => {
+  try {
+    const model = await getPOIModel();
+
+    if (!model) {
+      return res.json({
+        success: true,
+        message: 'Database not available - returning sample data',
+        data: getSamplePOIs(),
+        meta: { total: 5, page: 1, limit: 20, pages: 1 }
+      });
+    }
+
+    const {
+      q,
+      query,
+      page = 1,
+      limit = 20,
+      category
+    } = req.query;
+
+    const searchTerm = q || query || '';
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build where clause - only show verified and active POIs
+    const where = { verified: true, active: true };
+    if (category) where.category = category;
+
+    if (searchTerm) {
+      where[Op.or] = [
+        { name: { [Op.like]: `%${searchTerm}%` } },
+        { description: { [Op.like]: `%${searchTerm}%` } },
+        { city: { [Op.like]: `%${searchTerm}%` } },
+        { address: { [Op.like]: `%${searchTerm}%` } },
+      ];
+    }
+
+    const { count, rows } = await model.findAndCountAll({
+      where,
+      limit: parseInt(limit),
+      offset,
+      order: [['average_rating', 'DESC'], ['name', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: rows.map(formatPOIForPublic),
+      meta: {
+        total: count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(count / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    logger.error('Error searching POIs:', error);
+    res.json({
+      success: true,
+      message: 'Database error - returning sample data',
+      data: getSamplePOIs(),
+      meta: { total: 5, page: 1, limit: 20, pages: 1 }
+    });
+  }
+});
+
+/**
+ * @route   GET /api/v1/pois/autocomplete
+ * @desc    Get autocomplete suggestions for POI names
+ * @access  Public
+ */
+router.get('/autocomplete', async (req, res) => {
+  try {
+    const { q, limit = 10 } = req.query;
+
+    if (!q || q.length < 2) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const model = await getPOIModel();
+    if (!model) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const pois = await model.findAll({
+      where: {
+        verified: true,
+        active: true,
+        name: { [Op.like]: `%${q}%` }
+      },
+      attributes: ['id', 'name', 'category', 'city'],
+      limit: parseInt(limit),
+      order: [['average_rating', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: pois.map(poi => ({
+        id: poi.id,
+        name: poi.name,
+        category: poi.category,
+        city: poi.city
+      }))
+    });
+  } catch (error) {
+    logger.error('Error fetching autocomplete:', error);
+    res.json({ success: true, data: [] });
   }
 });
 
@@ -291,16 +432,16 @@ function convertToGeoJSON(pois) {
         properties: {
           id: poiData.id,
           name: poiData.name,
-          slug: poiData.slug,
+          slug: poiData.slug || poiData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
           description: poiData.description,
           category: poiData.category,
           city: poiData.city,
           address: poiData.address,
-          status: poiData.status,
-          tier: poiData.tier,
-          images: poiData.images,
-          rating: poiData.rating,
-          reviewCount: poiData.reviewCount
+          status: poiData.verified && poiData.active ? 'active' : 'pending',
+          tier: poiData.tier || 4,
+          images: safeJSONParse(poiData.images, []),
+          rating: poiData.average_rating || poiData.rating,
+          reviewCount: poiData.review_count
         }
       };
     })
@@ -325,7 +466,45 @@ router.get('/:id', async (req, res) => {
 
     const { id } = req.params;
 
-    const poi = await model.findByPk(id);
+    // Try to find by ID first, then by slug or google_place_id
+    let poi = null;
+
+    // Check if id is numeric
+    if (/^\d+$/.test(id)) {
+      poi = await model.findOne({
+        where: {
+          id: id,
+          verified: true,
+          active: true
+        }
+      });
+    }
+
+    // If not found by numeric ID, try other fields
+    if (!poi) {
+      poi = await model.findOne({
+        where: {
+          [Op.or]: [
+            { slug: id },
+            { google_place_id: id }
+          ],
+          verified: true,
+          active: true
+        }
+      });
+    }
+
+    // If not found, try slug-based search as fallback
+    if (!poi) {
+      const slugSearch = id.replace(/-/g, '%');
+      poi = await model.findOne({
+        where: {
+          name: { [Op.like]: `%${slugSearch}%` },
+          verified: true,
+          active: true
+        }
+      });
+    }
 
     if (!poi) {
       return res.status(404).json({
@@ -336,7 +515,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: transformPOI(poi)
+      data: formatPOIForPublic(poi)
     });
   } catch (error) {
     logger.error('Error fetching POI:', error);
@@ -346,5 +525,93 @@ router.get('/:id', async (req, res) => {
     });
   }
 });
+
+/**
+ * Sample POIs for development/demo
+ */
+function getSamplePOIs() {
+  return [
+    {
+      id: '1',
+      name: 'Penyal d\'Ifac',
+      slug: 'penyal-difac',
+      description: 'Iconic rock formation and nature reserve',
+      category: 'beach',
+      city: 'Calpe',
+      address: 'Parque Natural del Penyal d\'Ifac',
+      latitude: 38.6327,
+      longitude: 0.0778,
+      status: 'active',
+      tier: 1,
+      images: [{ url: '/images/penyal.jpg', isPrimary: true }],
+      rating: 4.8,
+      reviewCount: 245
+    },
+    {
+      id: '2',
+      name: 'Playa Arenal-Bol',
+      slug: 'playa-arenal-bol',
+      description: 'Main beach with golden sand',
+      category: 'beach',
+      city: 'Calpe',
+      address: 'Av. de los Ejércitos Españoles',
+      latitude: 38.6448,
+      longitude: 0.0598,
+      status: 'active',
+      tier: 2,
+      images: [{ url: '/images/arenal.jpg', isPrimary: true }],
+      rating: 4.5,
+      reviewCount: 189
+    },
+    {
+      id: '3',
+      name: 'Restaurante Baydal',
+      slug: 'restaurante-baydal',
+      description: 'Traditional Mediterranean cuisine',
+      category: 'food_drinks',
+      city: 'Calpe',
+      address: 'Calle Mayor 12',
+      latitude: 38.6445,
+      longitude: 0.0441,
+      status: 'active',
+      tier: 1,
+      images: [{ url: '/images/baydal.jpg', isPrimary: true }],
+      rating: 4.7,
+      reviewCount: 312
+    },
+    {
+      id: '4',
+      name: 'Museo de Historia',
+      slug: 'museo-historia-calpe',
+      description: 'Local history museum',
+      category: 'museum',
+      city: 'Calpe',
+      address: 'Plaza de la Villa',
+      latitude: 38.6452,
+      longitude: 0.0445,
+      status: 'active',
+      tier: 3,
+      images: [{ url: '/images/museo.jpg', isPrimary: true }],
+      rating: 4.2,
+      reviewCount: 87
+    },
+    {
+      id: '5',
+      name: 'Centro Comercial Portal',
+      slug: 'centro-comercial-portal',
+      description: 'Shopping center with local shops',
+      category: 'shopping',
+      city: 'Calpe',
+      address: 'Av. Gabriel Miró 5',
+      latitude: 38.6461,
+      longitude: 0.0512,
+      status: 'active',
+      tier: 4,
+      images: [{ url: '/images/portal.jpg', isPrimary: true }],
+      rating: 4.0,
+      reviewCount: 56
+    }
+  ];
+}
 
 export default router;
