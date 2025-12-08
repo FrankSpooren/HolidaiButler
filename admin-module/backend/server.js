@@ -32,6 +32,7 @@ import adminBookingsRoutes from './routes/adminBookings.js';
 import adminTransactionsRoutes from './routes/adminTransactions.js';
 import monitoringRoutes from './routes/monitoring.js';
 import customerAuthRoutes from './routes/customerAuth.js';
+import publicPOIRoutes from './routes/publicPOI.js';
 
 // Import enterprise services
 import cacheService from './services/cache.js';
@@ -103,16 +104,21 @@ const corsOptions = {
       'http://localhost:5174',
       'http://localhost:5173',
       'http://localhost:3000',
+      'https://test.holidaibutler.com',
+      'https://holidaibutler.com',
+      'https://www.holidaibutler.com',
       process.env.ADMIN_FRONTEND_URL,
+      process.env.CORS_ORIGIN,
     ].filter(Boolean);
 
     // Check for GitHub Codespaces or other preview environments
     const isCodespaces = origin.includes('.app.github.dev');
     const isGitpod = origin.includes('.gitpod.io');
     const isStackBlitz = origin.includes('.stackblitz.io');
+    const isHolidaiButler = origin.includes('holidaibutler.com');
     const isPreviewEnv = isCodespaces || isGitpod || isStackBlitz;
 
-    if (allowedOrigins.includes(origin) || isPreviewEnv) {
+    if (allowedOrigins.includes(origin) || isPreviewEnv || isHolidaiButler) {
       callback(null, true);
     } else {
       console.warn(`CORS blocked origin: ${origin}`);
@@ -153,6 +159,10 @@ app.get('/health', async (req, res) => {
 
 // API Routes - Customer Portal Auth (public facing)
 app.use('/api/v1/auth', customerAuthRoutes);
+
+// API Routes - Public POI endpoints (no authentication required)
+// These routes serve the customer portal frontend
+app.use('/api/v1/pois', publicPOIRoutes);
 
 // API Routes - Admin Module
 app.use('/api/admin/auth', adminAuthRoutes);
