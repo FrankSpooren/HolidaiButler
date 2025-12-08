@@ -2,6 +2,7 @@
  * POI Model (MySQL)
  * Central POI data with AI-driven tier classification
  * ALIGNED with admin-module POI model and actual database schema
+ * Matches existing pxoziy_db1.POI table structure
  */
 
 import { DataTypes } from 'sequelize';
@@ -72,6 +73,7 @@ const POI = mysqlSequelize.define('POI', {
   category: {
     type: DataTypes.STRING(100),
     allowNull: false,
+    defaultValue: 'Uncategorized',
   },
   subcategory: {
     type: DataTypes.STRING(100),
@@ -132,12 +134,7 @@ const POI = mysqlSequelize.define('POI', {
     allowNull: true,
   },
 
-  // Classification
-  tier: {
-    type: DataTypes.TINYINT,
-    defaultValue: 4,
-    comment: '1=realtime, 2=daily, 3=weekly, 4=monthly',
-  },
+  // Scoring fields for AI-driven tier classification
   poi_score: {
     type: DataTypes.DECIMAL(4, 2),
     defaultValue: 0.0,
@@ -219,6 +216,12 @@ const POI = mysqlSequelize.define('POI', {
     type: DataTypes.INTEGER,
     allowNull: true,
     defaultValue: 0,
+  },
+  tier: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 4,
+    comment: 'AI-driven tier: 1=hourly, 2=daily, 3=weekly, 4=monthly updates',
   },
 
   // Timestamps - mapped to database column names
