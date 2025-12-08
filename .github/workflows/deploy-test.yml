@@ -46,20 +46,20 @@ jobs:
             reservations-module/package-lock.json
             ticketing-module/package-lock.json
 
-      # 4. Build alle modules (faalt als map ontbreekt)
+      # 4. Build alle modules (met absolute paden)
       - name: Build all modules
         run: |
           build_module() {
             MODULE=$1
             echo "🔍 Building $MODULE..."
-            cd "$MODULE"
+            cd "$GITHUB_WORKSPACE/$MODULE"
             if [ -f package-lock.json ]; then
               npm ci || npm install --prefer-offline
             else
               npm install --prefer-offline
             fi
             npm run build
-            cd ..
+            cd "$GITHUB_WORKSPACE"
           }
 
           build_module customer-portal/frontend
@@ -87,13 +87,13 @@ jobs:
       - name: Deploy built files
         run: |
           rsync -av --delete \
-            customer-portal/frontend/dist/ \
-            admin-module/dist/ \
-            agenda-module/dist/ \
-            payment-module/dist/ \
-            platform-core/dist/ \
-            reservations-module/dist/ \
-            ticketing-module/dist/ \
+            $GITHUB_WORKSPACE/customer-portal/frontend/dist/ \
+            $GITHUB_WORKSPACE/admin-module/dist/ \
+            $GITHUB_WORKSPACE/agenda-module/dist/ \
+            $GITHUB_WORKSPACE/payment-module/dist/ \
+            $GITHUB_WORKSPACE/platform-core/dist/ \
+            $GITHUB_WORKSPACE/reservations-module/dist/ \
+            $GITHUB_WORKSPACE/ticketing-module/dist/ \
             root@91.98.71.87:/var/www/test.holidaibutler.com/
 
       # 8. Fix permissies
