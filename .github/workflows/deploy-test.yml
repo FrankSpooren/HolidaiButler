@@ -3,12 +3,11 @@ name: Deploy Test Frontend & Selected Modules
 
 on:
   push:
-    branches:
-      - '**'   # alle branches
     paths:
       - 'customer-portal/frontend/**'
       - 'admin-module/**'
       - 'platform-core/**'
+  workflow_dispatch: # handmatige trigger
 
 jobs:
   deploy:
@@ -38,7 +37,7 @@ jobs:
             admin-module/package-lock.json
             platform-core/package-lock.json
 
-      # 4. Build geselecteerde modules (met fallback en build-check)
+      # 4. Build geselecteerde modules
       - name: Build selected modules
         run: |
           build_module() {
@@ -53,7 +52,7 @@ jobs:
               npm install --prefer-offline
             fi
 
-            # Als er een frontend-submap is, ga daarheen
+            # Check of er een frontend-submap is
             if [ -d "frontend" ]; then
               cd frontend
               if [ -f package-lock.json ]; then
@@ -95,7 +94,7 @@ jobs:
         run: |
           ssh root@91.98.71.87 "rsync -av --delete /var/www/test.holidaibutler.com/ /var/www/test-backup/"
 
-      # 7. Deploy nieuwe build (met dynamische rsync-check)
+      # 7. Deploy nieuwe build
       - name: Deploy built files
         run: |
           DEPLOY_PATH="/var/www/test.holidaibutler.com"
