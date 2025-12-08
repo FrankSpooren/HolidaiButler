@@ -108,6 +108,81 @@ router.get('/', async (req, res) => {
 });
 
 /**
+ * @route   GET /api/v1/pois/geojson
+ * @desc    Get POIs in GeoJSON format for map display
+ * @access  Public
+ */
+router.get('/geojson', async (req, res) => {
+  try {
+    const model = await getPOIModel();
+
+    if (!model) {
+      // Return sample data in GeoJSON format if model not available
+      return res.json(convertToGeoJSON(getSamplePOIs()));
+    }
+
+    const {
+      category,
+      city,
+      status = 'active'
+    } = req.query;
+
+    // Build where clause
+    const where = { status };
+    if (category) where.category = category;
+    if (city) where.city = city;
+
+    const pois = await model.findAll({
+      where,
+      order: [['tier', 'ASC'], ['name', 'ASC']]
+    });
+
+    res.json(convertToGeoJSON(pois));
+  } catch (error) {
+    logger.error('Error fetching POIs as GeoJSON:', error);
+
+    // Return sample data on error for development
+    res.json(convertToGeoJSON(getSamplePOIs()));
+  }
+});
+
+/**
+ * Convert POIs array to GeoJSON FeatureCollection
+ */
+function convertToGeoJSON(pois) {
+  return {
+    type: 'FeatureCollection',
+    features: pois.map(poi => {
+      const poiData = poi.toJSON ? poi.toJSON() : poi;
+      return {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [
+            parseFloat(poiData.longitude) || 0,
+            parseFloat(poiData.latitude) || 0
+          ]
+        },
+        properties: {
+          id: poiData.id,
+          name: poiData.name,
+          slug: poiData.slug,
+          description: poiData.description,
+          category: poiData.category,
+          city: poiData.city,
+          address: poiData.address,
+          status: poiData.status,
+          tier: poiData.tier,
+          images: poiData.images,
+          rating: poiData.rating,
+          reviewCount: poiData.reviewCount
+        }
+      };
+    })
+  };
+}
+
+/**
  * @route   GET /api/v1/pois/:id
  * @desc    Get single POI by ID or slug (public)
  * @access  Public
