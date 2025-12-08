@@ -1,4 +1,5 @@
-name: Deploy Test Frontend
+
+name: Deploy Test Frontend & Modules
 
 on:
   push:
@@ -6,6 +7,12 @@ on:
       - main
     paths:
       - 'customer-portal/frontend/**'
+      - 'admin-module/**'
+      - 'agenda-module/**'
+      - 'payment-module/**'
+      - 'platform-core/**'
+      - 'reservations-module/**'
+      - 'ticketing-module/**'
 
 jobs:
   deploy:
@@ -21,37 +28,42 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.npm
-          key: "${{ runner.os }}-node-${{ hashFiles('customer-portal/frontend/package-lock.json') }}"
+          key: "${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}"
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # 3. Installeer Node.js (met juiste pad voor lock file)
+      # 3. Installeer Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: 'customer-portal/frontend/package-lock.json'
 
-      # 4. Installeer dependencies (met fallback)
-      - name: Install dependencies
+      # 4. Build alle modules
+      - name: Build all modules
         run: |
-          cd customer-portal/frontend
-          if [ -f package-lock.json ]; then
-            echo "🔍 Lock file gevonden, probeer npm ci..."
-            npm ci || (echo "⚠️ npm ci faalde, gebruik npm install" && npm install --prefer-offline)
-          else
-            echo "⚠️ Geen lock file, gebruik npm install"
-            npm install --prefer-offline
-          fi
+          build_module() {
+            MODULE=$1
+            echo "🔍 Building $MODULE..."
+            cd $MODULE
+            if [ -f package-lock.json ]; then
+              npm ci || npm install --prefer-offline
+            else
+              npm install --prefer-offline
+            fi
+            npm run build
+            cd ..
+          }
 
-      # 5. Build project
-      - name: Build project
-        run: |
-          cd customer-portal/frontend
-          npm run build
+          build_module customer-portal/frontend
+          build_module admin-module
+          build_module agenda-module
+          build_module payment-module
+          build_module platform-core
+          build_module reservations-module
+          build_module ticketing-module
 
-      # 6. Setup SSH
+      # 5. Setup SSH
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -59,27 +71,35 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
 
-      # 7. Backup huidige versie
+      # 6. Backup huidige versie
       - name: Backup current version
         run: |
           ssh root@91.98.71.87 "rsync -av --delete /var/www/test.holidaibutler.com/ /var/www/test-backup/"
 
-      # 8. Deploy nieuwe build
+      # 7. Deploy nieuwe build
       - name: Deploy built files
         run: |
-          rsync -av --delete customer-portal/frontend/dist/ root@91.98.71.87:/var/www/test.holidaibutler.com/
+          rsync -av --delete \
+            customer-portal/frontend/dist/ \
+            admin-module/dist/ \
+            agenda-module/dist/ \
+            payment-module/dist/ \
+            platform-core/dist/ \
+            reservations-module/dist/ \
+            ticketing-module/dist/ \
+            root@91.98.71.87:/var/www/test.holidaibutler.com/
 
-      # 9. Fix permissies
+      # 8. Fix permissies
       - name: Fix permissions
         run: |
           ssh root@91.98.71.87 "chown -R www-data:www-data /var/www/test.holidaibutler.com && chmod -R 755 /var/www/test.holidaibutler.com"
 
-      # 10. Herstart Apache
+      # 9. Herstart Apache
       - name: Reload Apache
         run: |
           ssh root@91.98.71.87 "systemctl reload apache2"
 
-      # 11. Health check + rollback
+      # 10. Health check + rollback
       - name: Health check
         run: |
           sleep 5
