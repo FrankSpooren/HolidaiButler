@@ -9,8 +9,31 @@
 import type { ChatRequest, ChatResponse } from '../types/chat.types';
 
 // HoliBot/Chat API - Platform Core includes chat routes on :3001
-// Use VITE_WIDGET_API_URL if Widget API runs separately on :3002
-const API_BASE_URL = import.meta.env.VITE_WIDGET_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+// Use VITE_WIDGET_API_URL if Widget API runs separately
+// In production, use relative URL for same-origin requests
+const getApiBaseUrl = (): string => {
+  if (import.meta.env.VITE_WIDGET_API_URL) {
+    return import.meta.env.VITE_WIDGET_API_URL;
+  }
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // In production (not localhost), use relative URL
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isCodespaces = hostname.includes('.app.github.dev');
+
+    if (!isLocalhost && !isCodespaces) {
+      return '/api/v1';
+    }
+  }
+
+  return 'http://localhost:3003/api/v1';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class ChatAPI {
   private sessionId: string | null = null;

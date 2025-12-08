@@ -1,5 +1,18 @@
 import axios from 'axios';
 
+// Helper to detect environment
+const isLocalhost = (): boolean => {
+  if (typeof window === 'undefined') return true;
+  const hostname = window.location.hostname;
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+};
+
+// Helper to detect GitHub Codespaces
+const isCodespaces = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname.includes('.app.github.dev');
+};
+
 // Helper to detect and construct Codespaces URL
 const getCodespacesUrl = (port: number): string | null => {
   if (typeof window !== 'undefined') {
@@ -20,6 +33,7 @@ const getCodespacesUrl = (port: number): string | null => {
 // API base URL from environment variables
 // Uses Admin Backend on port 3003 for authentication
 // In Codespaces, automatically construct the correct forwarded URL
+// In production, use relative URLs for same-origin requests
 const getApiBaseUrl = (): string => {
   // First check environment variable
   if (import.meta.env.VITE_API_URL) {
@@ -30,6 +44,11 @@ const getApiBaseUrl = (): string => {
   const codespacesUrl = getCodespacesUrl(3003);
   if (codespacesUrl) {
     return `${codespacesUrl}/api/v1`;
+  }
+
+  // In production (not localhost, not Codespaces), use relative URL
+  if (!isLocalhost() && !isCodespaces()) {
+    return '/api/v1';
   }
 
   // Default to localhost for local development

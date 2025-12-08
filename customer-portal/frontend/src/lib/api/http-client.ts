@@ -72,7 +72,22 @@ export class HttpClient<SecurityDataType = unknown> {
     ...axiosConfig
   }: ApiConfig<SecurityDataType> = {}) {
     // Ticketing module runs on port 3004
-    const ticketingUrl = import.meta.env.VITE_TICKETING_API_URL || "http://localhost:3004/api/v1";
+    // In production, use relative URL for same-origin requests
+    const getTicketingUrl = (): string => {
+      if (import.meta.env.VITE_TICKETING_API_URL) {
+        return import.meta.env.VITE_TICKETING_API_URL;
+      }
+      if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        const isCodespaces = hostname.includes('.app.github.dev');
+        if (!isLocalhost && !isCodespaces) {
+          return '/api/v1';
+        }
+      }
+      return 'http://localhost:3004/api/v1';
+    };
+    const ticketingUrl = getTicketingUrl();
     this.instance = axios.create({
       ...axiosConfig,
       baseURL: axiosConfig.baseURL || ticketingUrl,

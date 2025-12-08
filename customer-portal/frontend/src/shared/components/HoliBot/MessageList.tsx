@@ -107,8 +107,13 @@ export function MessageList() {
     setLoadingPOIs(true);
 
     try {
-      // Fetch POIs based on personality
-      const response = await fetch(`http://localhost:3002/api/v1/pois?limit=6`);
+      // Fetch POIs based on personality - use API_BASE_URL from environment
+      // In production, use relative URL; in development use localhost
+      const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+      const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+      const isCodespaces = hostname.includes('.app.github.dev');
+      const apiUrl = import.meta.env.VITE_API_URL || (!isLocalhost && !isCodespaces ? '/api/v1' : 'http://localhost:3003/api/v1');
+      const response = await fetch(`${apiUrl}/pois?limit=6`);
       const data = await response.json();
       setPois(data.data || []);
     } catch (error) {

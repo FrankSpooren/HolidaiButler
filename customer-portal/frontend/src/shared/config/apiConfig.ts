@@ -10,6 +10,19 @@
  * - Agenda Module:               3007
  */
 
+// Helper to detect environment
+const isLocalhost = (): boolean => {
+  if (typeof window === 'undefined') return true;
+  const hostname = window.location.hostname;
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+};
+
+// Helper to detect GitHub Codespaces
+const isCodespaces = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname.includes('.app.github.dev');
+};
+
 // Helper to detect and construct Codespaces URL
 const getCodespacesUrl = (port: number): string | null => {
   if (typeof window !== 'undefined') {
@@ -27,7 +40,7 @@ const getCodespacesUrl = (port: number): string | null => {
   return null;
 };
 
-// Get API URL for a specific port, with Codespaces support
+// Get API URL for a specific port, with environment-aware fallbacks
 const getApiUrl = (envVar: string | undefined, port: number): string => {
   // First check environment variable
   if (envVar) {
@@ -38,6 +51,12 @@ const getApiUrl = (envVar: string | undefined, port: number): string => {
   const codespacesUrl = getCodespacesUrl(port);
   if (codespacesUrl) {
     return `${codespacesUrl}/api/v1`;
+  }
+
+  // In production (not localhost, not Codespaces), use relative URL
+  // This makes API calls to the same origin, handled by nginx/reverse proxy
+  if (!isLocalhost() && !isCodespaces()) {
+    return '/api/v1';
   }
 
   // Default to localhost for local development

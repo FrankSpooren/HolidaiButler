@@ -4,7 +4,29 @@
 
 import type { CategoriesResponse, Category } from '../types/category.types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api/v1';
+// Helper to detect if running in production
+const getApiBaseUrl = (): string => {
+  // First check environment variable
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // In production (not localhost), use relative URL
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isCodespaces = hostname.includes('.app.github.dev');
+
+    if (!isLocalhost && !isCodespaces) {
+      return '/api/v1';
+    }
+  }
+
+  // Default to localhost for local development
+  return 'http://localhost:3003/api/v1';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export const categoriesApi = {
   async getAll(language: string = 'nl'): Promise<Category[]> {
