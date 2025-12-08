@@ -201,8 +201,10 @@ export interface Translations {
       closed: string;
       closesAt: string;
       closedToday: string;
+      available: string;
     };
     amenities: {
+      title: string;
       wheelchairAccessible: string;
       freeWifi: string;
       creditCards: string;
@@ -224,6 +226,7 @@ export interface Translations {
       clearAll: string;
       noItemsSelected: string;
       selectToCompare: string;
+      hint: string;
     };
   };
   // Categories
@@ -356,6 +359,11 @@ export interface Translations {
       interests: string;
       dietary: string;
       editButton: string;
+      asCouple: string;
+      foodDrinks: string;
+      beaches: string;
+      culture: string;
+      vegetarian: string;
     };
     ai: {
       title: string;
@@ -629,8 +637,10 @@ export const translations: Record<Language, Translations> = {
         closed: 'Gesloten',
         closesAt: 'Sluit om',
         closedToday: 'Vandaag gesloten',
+        available: 'Beschikbaar',
       },
       amenities: {
+        title: 'Voorzieningen',
         wheelchairAccessible: 'Rolstoeltoegankelijk',
         freeWifi: 'Gratis WiFi Beschikbaar',
         creditCards: 'Accepteert Creditcards',
@@ -652,6 +662,7 @@ export const translations: Record<Language, Translations> = {
         clearAll: 'Alles wissen',
         noItemsSelected: 'Geen POI\'s geselecteerd',
         selectToCompare: 'Selecteer 2-3 POI\'s om te vergelijken',
+        hint: 'Klik op het vergelijkingsicoon bij POI\'s om ze toe te voegen',
       },
     },
     categories: {
@@ -737,6 +748,10 @@ export const translations: Record<Language, Translations> = {
         passwordPlaceholder: 'Kies een wachtwoord',
         confirmPasswordLabel: 'Bevestig wachtwoord',
         confirmPasswordPlaceholder: 'Voer wachtwoord opnieuw in',
+        termsText: 'Ik ga akkoord met de',
+        termsLink: 'Servicevoorwaarden',
+        and: 'en',
+        privacyLink: 'Privacybeleid',
         signUpButton: 'Registreren',
         signingUp: 'Registreren...',
         haveAccount: 'Heb je al een account?',
@@ -775,6 +790,11 @@ export const translations: Record<Language, Translations> = {
         interests: 'Interesses',
         dietary: 'Dieet',
         editButton: 'Voorkeuren Bewerken',
+        asCouple: 'Als koppel',
+        foodDrinks: 'Eten & Drinken',
+        beaches: 'Stranden',
+        culture: 'Cultuur',
+        vegetarian: 'Vegetarisch',
       },
       ai: {
         title: 'AI-Aangedreven Personalisatie',
@@ -1045,8 +1065,10 @@ export const translations: Record<Language, Translations> = {
         closed: 'Closed',
         closesAt: 'Closes at',
         closedToday: 'Closed today',
+        available: 'Available',
       },
       amenities: {
+        title: 'Amenities',
         wheelchairAccessible: 'Wheelchair Accessible',
         freeWifi: 'Free WiFi Available',
         creditCards: 'Accepts Credit Cards',
@@ -1068,6 +1090,7 @@ export const translations: Record<Language, Translations> = {
         clearAll: 'Clear all',
         noItemsSelected: 'No POIs selected',
         selectToCompare: 'Select 2-3 POIs to compare',
+        hint: 'Click the compare icon on POIs to add them',
       },
     },
     categories: {
@@ -1150,6 +1173,11 @@ export const translations: Record<Language, Translations> = {
         interests: 'Interests',
         dietary: 'Dietary',
         editButton: 'Edit Preferences',
+        asCouple: 'As a couple',
+        foodDrinks: 'Food & Drinks',
+        beaches: 'Beaches',
+        culture: 'Culture',
+        vegetarian: 'Vegetarian',
       },
       ai: {
         title: 'AI-Powered Personalization',
@@ -1465,8 +1493,10 @@ export const translations: Record<Language, Translations> = {
         closed: 'Geschlossen',
         closesAt: 'Schließt um',
         closedToday: 'Heute geschlossen',
+        available: 'Verfügbar',
       },
       amenities: {
+        title: 'Ausstattung',
         wheelchairAccessible: 'Rollstuhlgerecht',
         freeWifi: 'Kostenloses WLAN verfügbar',
         creditCards: 'Akzeptiert Kreditkarten',
@@ -1488,6 +1518,7 @@ export const translations: Record<Language, Translations> = {
         clearAll: 'Alles löschen',
         noItemsSelected: 'Keine POIs ausgewählt',
         selectToCompare: 'Wählen Sie 2-3 POIs zum Vergleichen aus',
+        hint: 'Klicken Sie auf das Vergleichssymbol bei POIs, um sie hinzuzufügen',
       },
     },
     categories: {
@@ -1570,6 +1601,11 @@ export const translations: Record<Language, Translations> = {
         interests: 'Interessen',
         dietary: 'Ernährung',
         editButton: 'Präferenzen bearbeiten',
+        asCouple: 'Als Paar',
+        foodDrinks: 'Essen & Trinken',
+        beaches: 'Strände',
+        culture: 'Kultur',
+        vegetarian: 'Vegetarisch',
       },
       ai: {
         title: 'KI-gestützte Personalisierung',
@@ -1885,8 +1921,10 @@ export const translations: Record<Language, Translations> = {
         closed: 'Cerrado',
         closesAt: 'Cierra a las',
         closedToday: 'Cerrado hoy',
+        available: 'Disponible',
       },
       amenities: {
+        title: 'Servicios',
         wheelchairAccessible: 'Accesible en silla de ruedas',
         freeWifi: 'WiFi Gratis Disponible',
         creditCards: 'Acepta Tarjetas de Crédito',
@@ -1908,6 +1946,7 @@ export const translations: Record<Language, Translations> = {
         clearAll: 'Limpiar todo',
         noItemsSelected: 'No se han seleccionado POIs',
         selectToCompare: 'Selecciona 2-3 POIs para comparar',
+        hint: 'Haz clic en el icono de comparación en los POIs para agregarlos',
       },
     },
     categories: {
@@ -1990,6 +2029,11 @@ export const translations: Record<Language, Translations> = {
         interests: 'Intereses',
         dietary: 'Dietético',
         editButton: 'Editar Preferencias',
+        asCouple: 'En pareja',
+        foodDrinks: 'Comida y Bebidas',
+        beaches: 'Playas',
+        culture: 'Cultura',
+        vegetarian: 'Vegetariano',
       },
       ai: {
         title: 'Personalización con IA',
@@ -2305,8 +2349,10 @@ export const translations: Record<Language, Translations> = {
         closed: 'Stängt',
         closesAt: 'Stänger kl',
         closedToday: 'Stängt idag',
+        available: 'Tillgänglig',
       },
       amenities: {
+        title: 'Faciliteter',
         wheelchairAccessible: 'Rullstolsanpassat',
         freeWifi: 'Gratis WiFi Tillgängligt',
         creditCards: 'Accepterar Kreditkort',
@@ -2328,6 +2374,7 @@ export const translations: Record<Language, Translations> = {
         clearAll: 'Rensa alla',
         noItemsSelected: 'Inga POI:er valda',
         selectToCompare: 'Välj 2-3 POI:er att jämföra',
+        hint: 'Klicka på jämförelseikonen på POI:er för att lägga till dem',
       },
     },
     categories: {
@@ -2410,6 +2457,11 @@ export const translations: Record<Language, Translations> = {
         interests: 'Intressen',
         dietary: 'Kost',
         editButton: 'Redigera Preferenser',
+        asCouple: 'Som par',
+        foodDrinks: 'Mat & Dryck',
+        beaches: 'Stränder',
+        culture: 'Kultur',
+        vegetarian: 'Vegetarisk',
       },
       ai: {
         title: 'AI-driven Personalisering',
@@ -2725,8 +2777,10 @@ export const translations: Record<Language, Translations> = {
         closed: 'Zamknięte',
         closesAt: 'Zamyka się o',
         closedToday: 'Dzisiaj zamknięte',
+        available: 'Dostępny',
       },
       amenities: {
+        title: 'Udogodnienia',
         wheelchairAccessible: 'Dostępne dla wózków inwalidzkich',
         freeWifi: 'Darmowe WiFi',
         creditCards: 'Akceptuje karty kredytowe',
@@ -2748,6 +2802,7 @@ export const translations: Record<Language, Translations> = {
         clearAll: 'Wyczyść wszystko',
         noItemsSelected: 'Nie wybrano POI',
         selectToCompare: 'Wybierz 2-3 POI do porównania',
+        hint: 'Kliknij ikonę porównania przy POI, aby je dodać',
       },
     },
     categories: {
@@ -2759,8 +2814,6 @@ export const translations: Record<Language, Translations> = {
       health: 'Zdrowie i Wellness',
       shopping: 'Zakupy',
       practical: 'Praktyczne',
-      events: 'Wydarzenia',
-      all: 'Wszystkie',
     },
     common: {
       save: 'Zapisz',
@@ -2773,64 +2826,102 @@ export const translations: Record<Language, Translations> = {
     },
     reviews: {
       title: 'Recenzje',
-      writeReview: 'Napisz recenzję',
-      editReview: 'Edytuj recenzję',
-      deleteReview: 'Usuń recenzję',
-      yourRating: 'Twoja ocena',
-      yourReview: 'Twoja recenzja',
-      submitReview: 'Prześlij recenzję',
-      updateReview: 'Zaktualizuj recenzję',
-      cancel: 'Anuluj',
-      reviewDeleted: 'Recenzja usunięta',
-      reviewSubmitted: 'Recenzja przesłana',
-      reviewUpdated: 'Recenzja zaktualizowana',
-      loginToReview: 'Zaloguj się, aby napisać recenzję',
-      filters: {
-        all: 'Wszystkie recenzje',
+      travelParty: {
+        all: 'Wszystkie',
+        couples: 'Pary',
+        families: 'Rodziny',
+        solo: 'Podróżnicy solo',
+        friends: 'Przyjaciele',
+        business: 'Służbowe',
+      },
+      sort: {
+        recent: 'Najnowsze',
+        helpful: 'Najbardziej pomocne',
+        highRating: 'Najwyżej oceniane',
+        lowRating: 'Najniżej oceniane',
+      },
+      sentiment: {
         positive: 'Pozytywne',
         neutral: 'Neutralne',
         negative: 'Negatywne',
       },
-      sortBy: {
-        label: 'Sortuj według',
-        newest: 'Najnowsze',
-        oldest: 'Najstarsze',
-        highestRated: 'Najwyżej oceniane',
-        lowestRated: 'Najniżej oceniane',
-      },
-      ratingDistribution: 'Rozkład ocen',
+      filterByTraveler: 'Filtruj według podróżnika',
+      filterBySentiment: 'Filtruj według sentymentu',
+      sortBy: 'Sortuj według',
+      helpful: 'Pomocne',
+      noReviews: 'Brak recenzji',
+      writeReview: 'Napisz recenzję',
+      readMore: 'Czytaj więcej',
+      showLess: 'Pokaż mniej',
+      visited: 'Odwiedzone',
+      loadingReviews: 'Ładowanie recenzji...',
+      loadMoreReviews: 'Załaduj więcej recenzji',
+      reviewCount: '{count} recenzji',
       averageRating: 'Średnia ocena',
-      totalReviews: '{count} recenzji',
-    },
-    favorites: {
-      title: 'Moje Ulubione',
-      empty: 'Brak ulubionych',
-      emptyDescription: 'Zacznij dodawać miejsca do swoich ulubionych!',
-      removeConfirm: 'Czy na pewno chcesz usunąć z ulubionych?',
-      removed: 'Usunięto z ulubionych',
     },
     account: {
-      title: 'Moje Konto',
+      tabs: {
+        profile: 'Profil',
+        preferences: 'Preferencje',
+        ai: 'AI',
+        privacy: 'Prywatność',
+        export: 'Eksport',
+        settings: 'Ustawienia',
+      },
       profile: {
-        title: 'Profil',
-        name: 'Imię',
-        email: 'E-mail',
-        phone: 'Telefon',
-        language: 'Język',
-        saveChanges: 'Zapisz zmiany',
-        changesSaved: 'Zmiany zapisane',
+        memberSince: 'Członek od',
+        clickAvatarHint: 'Kliknij avatar, aby przesłać zdjęcie',
+        changePhoto: 'Zmień Zdjęcie',
+        quickActions: 'Szybkie Akcje',
+        savedPOIs: 'Zapisane POI',
+        favorites: 'Ulubione',
+        visits: 'Wizyty',
+        reviews: 'Recenzje',
+        comingSoon: 'Wkrótce',
       },
       preferences: {
-        title: 'Preferencje',
-        categories: 'Ulubione kategorie',
-        budget: 'Budżet',
-        notifications: 'Powiadomienia',
+        title: 'Preferencje podróżne',
+        travelingAs: 'Podróżuję jako',
+        interests: 'Zainteresowania',
+        dietary: 'Dieta',
+        editButton: 'Edytuj Preferencje',
+        asCouple: 'Jako para',
+        foodDrinks: 'Jedzenie i Napoje',
+        beaches: 'Plaże',
+        culture: 'Kultura',
+        vegetarian: 'Wegetariański',
+      },
+      ai: {
+        title: 'Personalizacja AI',
+        subtitle: 'Funkcje AI',
+        infoText: 'Używamy lokalnych danych, ale także AI, aby personalizować i optymalizować Twoje rekomendacje. Masz 100% kontroli nad tym, jak AI jest używana',
+        features: 'Funkcje AI',
+        personalizedRecs: 'Spersonalizowane Rekomendacje',
+        personalizedRecsDesc: 'Użyj AI do sugerowania POI',
+        smartFilters: 'Inteligentne Filtry',
+        smartFiltersDesc: 'Filtry wyszukiwania napędzane AI',
+        behavioralLearning: 'Uczenie Behawioralne',
+        behavioralLearningDesc: 'Ucz się z Twoich interakcji',
+        howItWorks: 'Jak działa personalizacja AI?',
       },
       privacy: {
         title: 'Prywatność i Dane',
-        downloadData: 'Pobierz Moje Dane',
-        deleteAccount: 'Usuń Konto',
-        dataExport: 'Eksport Danych',
+        subtitle: 'Ustawienia prywatności',
+        dataCollection: 'Gromadzenie Danych',
+        essentialCookies: 'Niezbędne Pliki Cookie',
+        essentialCookiesDesc: 'Wymagane do podstawowej funkcjonalności',
+        required: 'Wymagane',
+        analytics: 'Analityka',
+        analyticsDesc: 'Pomóż nam ulepszyć naszą usługę',
+        personalization: 'Personalizacja',
+        personalizationDesc: 'Dostosuj swoje doświadczenie',
+        marketing: 'Marketing',
+        marketingDesc: 'Otrzymuj spersonalizowane oferty',
+        updateButton: 'Zaktualizuj Preferencje',
+      },
+      export: {
+        title: 'Eksport Danych',
+        infoText: 'Pobierz wszystkie swoje dane osobowe',
         whatIncluded: 'Co jest zawarte?',
         includeList: {
           profile: 'Informacje profilowe',

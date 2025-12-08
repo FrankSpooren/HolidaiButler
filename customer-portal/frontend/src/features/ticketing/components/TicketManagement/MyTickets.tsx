@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Filter, Search, Calendar, Ticket, AlertCircle } from 'lucide-react';
 import { useGetUserTickets } from '../../hooks/useTickets';
-import LoadingSpinner from '../shared/LoadingSpinner';
-import ErrorDisplay from '../shared/ErrorDisplay';
+import { LoadingSpinner } from '../shared/LoadingSpinner';
+import { ErrorDisplay } from '../shared/ErrorDisplay';
 
 export type TicketStatus = 'active' | 'used' | 'expired' | 'cancelled';
 
@@ -28,7 +28,7 @@ export default function MyTickets({
     isError,
     error,
     refetch,
-  } = useGetUserTickets(userId, statusFilter !== 'all' ? statusFilter : undefined);
+  } = useGetUserTickets(userId, statusFilter !== 'all' ? { status: statusFilter } : undefined);
 
   const tickets = ticketsData?.data || [];
 
@@ -88,7 +88,7 @@ export default function MyTickets({
     return (
       <ErrorDisplay
         title="Failed to Load Tickets"
-        message={error instanceof Error ? error.message : 'An unexpected error occurred'}
+        error={error instanceof Error ? error.message : 'An unexpected error occurred'}
         onRetry={refetch}
       />
     );

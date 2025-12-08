@@ -15,7 +15,7 @@ const FALLBACK_EVENTS: Event[] = [
     startDate: '2025-08-05T20:00:00Z',
     endDate: '2025-08-05T23:59:00Z',
     location: 'Plaza de la Villa, Calpe',
-    category: 'festivals',
+    category: 'festival',
     status: 'active',
     imageUrl: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800',
     availableTickets: 500,
@@ -49,7 +49,7 @@ const FALLBACK_EVENTS: Event[] = [
     startDate: '2025-06-28T18:00:00Z',
     endDate: '2025-06-28T23:00:00Z',
     location: 'Casco Antiguo, Calpe',
-    category: 'food-drink',
+    category: 'gastronomy',
     status: 'active',
     imageUrl: 'https://images.unsplash.com/photo-1515443961218-a51367888e4b?w=800',
     availableTickets: 80,
@@ -66,7 +66,7 @@ const FALLBACK_EVENTS: Event[] = [
     startDate: '2025-07-12T09:00:00Z',
     endDate: '2025-07-12T13:00:00Z',
     location: 'Puerto de Calpe',
-    category: 'active-sports',
+    category: 'sports',
     status: 'active',
     imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800',
     availableTickets: 12,
@@ -100,7 +100,7 @@ const FALLBACK_EVENTS: Event[] = [
     startDate: '2025-07-08T06:30:00Z',
     endDate: '2025-07-08T08:00:00Z',
     location: 'Peñón de Ifach Natural Park',
-    category: 'relaxation',
+    category: 'wellness',
     status: 'active',
     imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800',
     availableTickets: 20,
@@ -116,7 +116,7 @@ const FALLBACK_EVENTS: Event[] = [
     startDate: '2025-08-15T10:00:00Z',
     endDate: '2025-08-17T22:00:00Z',
     location: 'Casco Antiguo, Calpe',
-    category: 'festivals',
+    category: 'festival',
     status: 'active',
     imageUrl: 'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=800',
     availableTickets: 0,
@@ -132,7 +132,7 @@ const FALLBACK_EVENTS: Event[] = [
     startDate: '2025-07-20T10:00:00Z',
     endDate: '2025-07-20T14:00:00Z',
     location: 'Club Náutico, Calpe',
-    category: 'active-sports',
+    category: 'sports',
     status: 'active',
     imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800',
     availableTickets: 6,
@@ -170,7 +170,8 @@ export const eventsService = {
   }): Promise<EventsResponse> => {
     try {
       const response = await eventsApi.getEvents(query as Parameters<typeof eventsApi.getEvents>[0]);
-      return response;
+      // Extract data from Axios response - the API returns { success, data, pagination }
+      return (response as { data: EventsResponse }).data;
     } catch (error) {
       console.warn('Using fallback events data:', error);
 
@@ -195,17 +196,15 @@ export const eventsService = {
       }
 
       return {
-        data: {
-          success: true,
-          data: filteredEvents,
-          pagination: {
-            page: 1,
-            limit: 20,
-            total: filteredEvents.length,
-            pages: 1,
-          },
+        success: true,
+        data: filteredEvents,
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: filteredEvents.length,
+          pages: 1,
         },
-      } as EventsResponse;
+      };
     }
   },
 
@@ -215,7 +214,8 @@ export const eventsService = {
   getEvent: async (eventId: number): Promise<EventResponse> => {
     try {
       const response = await eventsApi.getEvent(eventId);
-      return response;
+      // Extract data from Axios response - the API returns { success, data }
+      return (response as { data: EventResponse }).data;
     } catch (error) {
       console.warn('Using fallback event data:', error);
 
@@ -225,11 +225,9 @@ export const eventsService = {
       }
 
       return {
-        data: {
-          success: true,
-          data: event,
-        },
-      } as EventResponse;
+        success: true,
+        data: event,
+      };
     }
   },
 
