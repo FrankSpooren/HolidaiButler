@@ -38,7 +38,7 @@ jobs:
             admin-module/package-lock.json
             platform-core/package-lock.json
 
-      # 4. Build geselecteerde modules (met support voor frontend-submap)
+      # 4. Build geselecteerde modules (met fallback en build-check)
       - name: Build selected modules
         run: |
           build_module() {
@@ -46,19 +46,33 @@ jobs:
             echo "🔍 Building $MODULE..."
             cd "$GITHUB_WORKSPACE/$MODULE"
 
-            # Installeer root dependencies (indien aanwezig)
-            if [ -f package.json ]; then
+            # Installeer dependencies
+            if [ -f package-lock.json ]; then
               npm ci || npm install --prefer-offline
+            else
+              npm install --prefer-offline
             fi
 
-            # Als er een frontend-submap is, installeer daar ook en build
+            # Als er een frontend-submap is, ga daarheen
             if [ -d "frontend" ]; then
               cd frontend
-              npm ci || npm install --prefer-offline
-              npm run build
+              if [ -f package-lock.json ]; then
+                npm ci || npm install --prefer-offline
+              else
+                npm install --prefer-offline
+              fi
+              if npm run | grep -q build; then
+                npm run build
+              else
+                echo "⚠️ Geen build script in $MODULE/frontend, overslaan..."
+              fi
               cd ..
             else
-              npm run build
+              if npm run | grep -q build; then
+                npm run build
+              else
+                echo "⚠️ Geen build script in $MODULE, overslaan..."
+              fi
             fi
 
             cd "$GITHUB_WORKSPACE"
