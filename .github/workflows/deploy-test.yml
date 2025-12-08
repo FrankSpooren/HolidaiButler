@@ -99,7 +99,7 @@ jobs:
           rsync -av --delete \
             $GITHUB_WORKSPACE/customer-portal/frontend/dist/ \
             $GITHUB_WORKSPACE/admin-module/frontend/dist/ \
-            $GITHUB_WORKSPACE/agenda-module/dist/ \
+            $GITHUB_WORKSPACE/agenda-module/frontend/dist/ \
             $GITHUB_WORKSPACE/payment-module/dist/ \
             $GITHUB_WORKSPACE/platform-core/dist/ \
             $GITHUB_WORKSPACE/reservations-module/dist/ \
