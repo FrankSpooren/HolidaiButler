@@ -1,276 +1,241 @@
 /**
- * User Model (MySQL)
- * Customer/user accounts for the platform
- * Aligned with ORIGINAL backend User model
+ * User Model - Customer Portal Users
+ * For end-users of the HolidaiButler platform
  */
 
-import { DataTypes } from 'sequelize';
+import { DataTypes, Model } from 'sequelize';
 import bcrypt from 'bcryptjs';
-import { mysqlSequelize } from '../config/database.js';
+import { mysqlSequelize as sequelize } from '../config/database.js';
 
-const SALT_ROUNDS = 12;
+class User extends Model {
+  // Instance method to compare password
+  async comparePassword(candidatePassword) {
+    try {
+      return await bcrypt.compare(candidatePassword, this.password);
+    } catch (error) {
+      throw new Error('Password comparison failed');
+    }
+  }
 
-const User = mysqlSequelize.define('User', {
+  // Check if account is locked
+  get isLocked() {
+    return !!(this.lockUntil && new Date(this.lockUntil) > new Date());
+  }
+
+  // Increment login attempts
+  async incLoginAttempts() {
+    if (this.lockUntil && new Date(this.lockUntil) < new Date()) {
+      this.loginAttempts = 1;
+      this.lockUntil = null;
+      return this.save();
+    }
+
+    this.loginAttempts += 1;
+
+    const maxAttempts = 5;
+    const lockTime = 2 * 60 * 60 * 1000; // 2 hours
+
+    if (this.loginAttempts >= maxAttempts && !this.isLocked) {
+      this.lockUntil = new Date(Date.now() + lockTime);
+    }
+
+    return this.save();
+  }
+
+  // Reset login attempts
+  async resetLoginAttempts() {
+    this.loginAttempts = 0;
+    this.lockUntil = null;
+    return this.save();
+  }
+
+  // Safe JSON output (exclude sensitive fields)
+  toSafeJSON() {
+    const values = this.toJSON();
+    delete values.password;
+    delete values.resetPasswordToken;
+    delete values.resetPasswordExpires;
+    return values;
+  }
+}
+
+User.init({
   id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
-  uuid: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
-    unique: true,
+    primaryKey: true
   },
 
-  // Authentication
+  // Basic Info
   email: {
     type: DataTypes.STRING(255),
     allowNull: false,
     unique: true,
     validate: {
-      isEmail: true,
+      isEmail: true
     },
+    set(value) {
+      this.setDataValue('email', value?.toLowerCase()?.trim());
+    }
   },
-  password_hash: {
+
+  password: {
     type: DataTypes.STRING(255),
     allowNull: false,
+    validate: {
+      len: [8, 255]
+    }
   },
 
   // Profile
-  name: {
-    type: DataTypes.STRING(200),
+  firstName: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    field: 'first_name'
   },
-  avatar_url: {
+
+  lastName: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    field: 'last_name'
+  },
+
+  avatar: {
     type: DataTypes.STRING(500),
+    allowNull: true
   },
-  phone: {
+
+  phoneNumber: {
     type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'phone_number'
   },
 
-  // RBAC
-  role_id: {
-    type: DataTypes.INTEGER,
-    references: {
-      model: 'roles',
-      key: 'id',
-    },
+  language: {
+    type: DataTypes.ENUM('en', 'es', 'de', 'fr', 'nl'),
+    defaultValue: 'nl'
   },
 
-  // Onboarding
-  onboarding_completed: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
+  country: {
+    type: DataTypes.STRING(100),
+    allowNull: true
   },
-  onboarding_step: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0,
+
+  // Subscription
+  subscriptionType: {
+    type: DataTypes.ENUM('free', 'premium', 'enterprise'),
+    defaultValue: 'free',
+    field: 'subscription_type'
+  },
+
+  subscriptionEndsAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'subscription_ends_at'
+  },
+
+  stripeCustomerId: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'stripe_customer_id'
   },
 
   // Status
-  is_active: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true,
-  },
-  is_admin: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    comment: 'Deprecated: use roles instead',
-  },
-  email_verified: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
+  status: {
+    type: DataTypes.ENUM('active', 'suspended', 'pending', 'deleted'),
+    defaultValue: 'active'
   },
 
-  // Email Verification
-  email_verification_token: {
-    type: DataTypes.STRING(255),
-  },
-  email_verification_expires: {
-    type: DataTypes.DATE,
+  // Security
+  emailVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'email_verified'
   },
 
-  // Password Reset
-  password_reset_token: {
+  resetPasswordToken: {
     type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'reset_password_token'
   },
-  password_reset_expires: {
+
+  resetPasswordExpires: {
     type: DataTypes.DATE,
+    allowNull: true,
+    field: 'reset_password_expires'
+  },
+
+  loginAttempts: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    field: 'login_attempts'
+  },
+
+  lockUntil: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'lock_until'
+  },
+
+  lastLogin: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'last_login'
   },
 
   // Preferences
-  preferred_language: {
-    type: DataTypes.STRING(5),
-    defaultValue: 'nl',
-  },
-  notification_preferences: {
+  preferences: {
     type: DataTypes.JSON,
-    defaultValue: { email: true, push: true, sms: false },
+    defaultValue: {
+      interests: ['beaches', 'restaurants', 'cultural'],
+      budget: 'moderate',
+      groupSize: 2,
+      notifications: true
+    }
   },
 
-  // Timestamps
-  last_login: {
-    type: DataTypes.DATE,
-  },
+  // Stats
+  stats: {
+    type: DataTypes.JSON,
+    defaultValue: {
+      conversationsCount: 0,
+      bookingsCount: 0,
+      favoritesCount: 0
+    }
+  }
+
 }, {
+  sequelize,
+  modelName: 'User',
   tableName: 'users',
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
+  underscored: true,
   indexes: [
     { fields: ['email'], unique: true },
-    { fields: ['uuid'], unique: true },
-    { fields: ['role_id'] },
-    { fields: ['is_active'] },
-    { fields: ['created_at'] },
+    { fields: ['status'] },
+    { fields: ['subscription_type'] }
   ],
-});
-
-// ============================================================================
-// Instance Methods
-// ============================================================================
-
-/**
- * Verify password
- * @param {string} password - Plain text password
- * @returns {Promise<boolean>}
- */
-User.prototype.verifyPassword = async function(password) {
-  return bcrypt.compare(password, this.password_hash);
-};
-
-/**
- * Get safe user object (without password)
- * @returns {Object}
- */
-User.prototype.toSafeObject = function() {
-  const { password_hash, email_verification_token, password_reset_token, ...safe } = this.toJSON();
-  return safe;
-};
-
-// ============================================================================
-// Static Methods
-// ============================================================================
-
-/**
- * Hash password
- * @param {string} password - Plain text password
- * @returns {Promise<string>}
- */
-User.hashPassword = async function(password) {
-  return bcrypt.hash(password, SALT_ROUNDS);
-};
-
-/**
- * Create new user
- * @param {Object} userData - { email, password, name }
- * @returns {Promise<User>}
- */
-User.createUser = async function({ email, password, name }) {
-  const password_hash = await this.hashPassword(password);
-
-  const user = await this.create({
-    email,
-    password_hash,
-    name,
-  });
-
-  return user.toSafeObject();
-};
-
-/**
- * Find user by email
- * @param {string} email
- * @returns {Promise<User|null>}
- */
-User.findByEmail = async function(email) {
-  return this.findOne({
-    where: { email },
-  });
-};
-
-/**
- * Find active user by ID
- * @param {number} id
- * @returns {Promise<User|null>}
- */
-User.findActiveById = async function(id) {
-  return this.findOne({
-    where: {
-      id,
-      is_active: true,
+  hooks: {
+    beforeCreate: async (user) => {
+      if (user.password) {
+        const salt = await bcrypt.genSalt(12);
+        user.password = await bcrypt.hash(user.password, salt);
+      }
     },
-  });
-};
-
-/**
- * Find user by UUID
- * @param {string} uuid
- * @returns {Promise<User|null>}
- */
-User.findByUUID = async function(uuid) {
-  return this.findOne({
-    where: {
-      uuid,
-      is_active: true,
-    },
-  });
-};
-
-/**
- * Update last login
- * @param {number} userId
- */
-User.updateLastLogin = async function(userId) {
-  await this.update(
-    { last_login: new Date() },
-    { where: { id: userId } }
-  );
-};
-
-/**
- * Update onboarding status
- * @param {number} userId
- * @param {number} step
- * @param {boolean} completed
- */
-User.updateOnboarding = async function(userId, step, completed = false) {
-  await this.update(
-    {
-      onboarding_step: step,
-      onboarding_completed: completed,
-    },
-    { where: { id: userId } }
-  );
-};
-
-/**
- * Soft delete user (GDPR compliance)
- * @param {number} userId
- */
-User.softDelete = async function(userId) {
-  await this.update(
-    { is_active: false },
-    { where: { id: userId } }
-  );
-};
-
-// ============================================================================
-// Hooks
-// ============================================================================
-
-// Hash password before creating user if provided as plain text
-User.beforeCreate(async (user) => {
-  if (user.password && !user.password_hash) {
-    user.password_hash = await User.hashPassword(user.password);
-    delete user.password;
-  }
-});
-
-// Hash password before updating if changed
-User.beforeUpdate(async (user) => {
-  if (user.changed('password')) {
-    user.password_hash = await User.hashPassword(user.password);
-    delete user.password;
+    beforeUpdate: async (user) => {
+      if (user.changed('password')) {
+        const salt = await bcrypt.genSalt(12);
+        user.password = await bcrypt.hash(user.password, salt);
+      }
+    }
+  },
+  defaultScope: {
+    attributes: { exclude: ['password', 'resetPasswordToken', 'resetPasswordExpires'] }
+  },
+  scopes: {
+    withPassword: {
+      attributes: { include: ['password'] }
+    }
   }
 });
 
