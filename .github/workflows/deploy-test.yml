@@ -54,7 +54,7 @@ jobs:
 
       # 6. Upload build artifact (optioneel voor debugging)
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
           path: customer-portal/frontend/dist
@@ -68,46 +68,36 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
 
-      # 8. Atomic deploy met symlink
-      - name: Deploy new release
+      # 8. Backup huidige versie
+      - name: Backup current version
         run: |
-          set -e
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          RELEASE_DIR="/var/www/releases/$TIMESTAMP"
-          ssh root@91.98.71.87 "mkdir -p $RELEASE_DIR"
-          rsync -av --delete customer-portal/frontend/dist/ root@91.98.71.87:$RELEASE_DIR/
-          ssh root@91.98.71.87 "ln -sfn $RELEASE_DIR /var/www/test.holidaibutler.com"
+          ssh root@91.98.71.87 "rsync -av --delete /var/www/test.holidaibutler.com/ /var/www/test-backup/"
 
-      # 9. Fix permissies
+      # 9. Deploy nieuwe build
+      - name: Deploy built files
+        run: |
+          rsync -av --delete customer-portal/frontend/dist/ root@91.98.71.87:/var/www/test.holidaibutler.com/
+
+      # 10. Fix permissies
       - name: Fix permissions
         run: |
-          ssh root@91.98.71.87 "chown -R www-data:www-data /var/www/releases && chmod -R 755 /var/www/releases"
+          ssh root@91.98.71.87 "chown -R www-data:www-data /var/www/test.holidaibutler.com && chmod -R 755 /var/www/test.holidaibutler.com"
 
-      # 10. Herstart Apache
-      - name: Restart Apache
+      # 11. Herstart Apache
+      - name: Reload Apache
         run: |
-          ssh root@91.98.71.87 "systemctl restart apache2"
+          ssh root@91.98.71.87 "systemctl reload apache2"
 
-      # 11. Health check + rollback
+      # 12. Health check + rollback
       - name: Health check
         run: |
           set -e
-          ATTEMPTS=3
-          SUCCESS=false
-          for i in $(seq 1 $ATTEMPTS); do
-            STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://test.holidaibutler.com)
-            if [ "$STATUS" -eq 200 ]; then
-              echo "✅ Deployment successful! Status code: $STATUS"
-              SUCCESS=true
-              break
-            else
-              echo "⚠️ Attempt $i failed (Status: $STATUS). Retry in 5s..."
-              sleep 5
-            fi
-          done
-
-          if [ "$SUCCESS" = false ]; then
-            echo "❌ Health check failed after $ATTEMPTS attempts! Rolling back..."
-            ssh root@91.98.71.87 "ln -sfn /var/www/test-backup /var/www/test.holidaibutler.com"
+          sleep 5
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://test.holidaibutler.com)
+          if [ "$STATUS" -ne 200 ]; then
+            echo "❌ Health check failed! Rolling back..."
+            ssh root@91.98.71.87 "rsync -av --delete /var/www/test-backup/ /var/www/test.holidaibutler.com/"
             exit 1
+          else
+            echo "✅ Deployment successful! Status code: $STATUS"
           fi
