@@ -27,6 +27,58 @@ const getPOIModel = async () => {
 };
 
 /**
+ * Helper to safely parse JSON fields
+ */
+function safeParseJSON(value, defaultValue = []) {
+  if (!value) return defaultValue;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    return defaultValue;
+  }
+}
+
+/**
+ * Transform POI data for frontend compatibility
+ */
+function transformPOI(poi) {
+  return {
+    id: poi.id,
+    name: poi.name,
+    description: poi.description,
+    category: poi.category,
+    subcategory: poi.subcategory,
+    level3_type: poi.poi_type || null,
+    city: poi.city,
+    address: poi.address,
+    postal_code: poi.postal_code || null,
+    latitude: poi.latitude ? parseFloat(poi.latitude) : null,
+    longitude: poi.longitude ? parseFloat(poi.longitude) : null,
+    rating: poi.rating ? parseFloat(poi.rating) : null,
+    review_count: poi.review_count || 0,
+    price_level: poi.price_level,
+    phone: poi.phone,
+    website: poi.website,
+    email: poi.email,
+    images: safeParseJSON(poi.images, []),
+    thumbnail_url: poi.thumbnail_url,
+    amenities: safeParseJSON(poi.amenities, []),
+    accessibility_features: safeParseJSON(poi.accessibility_features, []),
+    opening_hours: null,
+    verified: poi.verified || false,
+    featured: poi.featured || false,
+    popularity_score: poi.popularity_score || 0,
+    google_placeid: poi.google_placeid,
+    enriched_tile_description: null,
+    enriched_detail_description: null,
+    content_quality_score: null,
+    created_at: poi.last_updated || new Date().toISOString(),
+    updated_at: poi.last_updated || new Date().toISOString()
+  };
+}
+
+/**
  * @route   GET /api/v1/pois
  * @desc    Get all published POIs (public)
  * @access  Public
@@ -36,80 +88,153 @@ router.get('/', async (req, res) => {
     const model = await getPOIModel();
 
     if (!model) {
-      // Return mock data if model not available
-      return res.json({
-        success: true,
-        message: 'Database not connected - returning sample data',
-        data: {
-          pois: getSamplePOIs(),
-          pagination: {
-            total: 5,
-            page: 1,
-            limit: 20,
-            pages: 1
-          }
-        }
+      return res.status(503).json({
+        success: false,
+        message: 'Database not connected'
       });
     }
 
     const {
-      page = 1,
-      limit = 20,
+      q,
       category,
       city,
-      search,
-      status = 'active'
+      sort = 'name:asc',
+      limit = 20,
+      offset = 0,
+      min_rating,
+      require_images
     } = req.query;
 
-    const offset = (page - 1) * limit;
-
     // Build where clause
-    const where = { status };
+    const where = {};
     if (category) where.category = category;
     if (city) where.city = city;
+    if (q) {
+      where[Op.or] = [
+        { name: { [Op.like]: `%${q}%` } },
+        { description: { [Op.like]: `%${q}%` } }
+      ];
+    }
+    if (min_rating) {
+      where.rating = { [Op.gte]: parseFloat(min_rating) };
+    }
+
+    // Parse sort parameter (e.g., name:asc or rating:desc)
+    let orderClause = [['name', 'ASC']];
+    if (sort) {
+      const [field, direction] = sort.split(':');
+      const validFields = ['name', 'rating', 'popularity_score', 'review_count'];
+      if (validFields.includes(field)) {
+        orderClause = [[field, (direction || 'asc').toUpperCase()]];
+      }
+    }
 
     const { count, rows } = await model.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['tier', 'ASC'], ['name', 'ASC']]
+      order: orderClause
     });
 
+    // Transform data for frontend compatibility
+    const pois = rows.map(transformPOI);
+
+    // Return in format expected by frontend: { success, data: [...], meta: {...} }
     res.json({
       success: true,
-      data: {
-        pois: rows,
-        pagination: {
-          total: count,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(count / limit)
-        }
+      data: pois,
+      meta: {
+        total: count,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        count: pois.length,
+        cursor: null,
+        next_cursor: parseInt(offset) + pois.length < count ? parseInt(offset) + parseInt(limit) : null,
+        has_more: parseInt(offset) + pois.length < count,
+        pagination_type: 'offset'
       }
     });
   } catch (error) {
     logger.error('Error fetching POIs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching POIs',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 
-    // Return sample data on error for development
+/**
+ * @route   GET /api/v1/pois/categories
+ * @desc    Get all unique categories
+ * @access  Public
+ */
+router.get('/categories', async (req, res) => {
+  try {
+    const model = await getPOIModel();
+
+    if (!model) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database not connected'
+      });
+    }
+
+    const categories = await model.findAll({
+      attributes: [[mysqlSequelize.fn('DISTINCT', mysqlSequelize.col('category')), 'category']],
+      order: [['category', 'ASC']]
+    });
+
     res.json({
       success: true,
-      message: 'Database error - returning sample data',
-      data: {
-        pois: getSamplePOIs(),
-        pagination: {
-          total: 5,
-          page: 1,
-          limit: 20,
-          pages: 1
-        }
-      }
+      data: categories.map(c => c.category).filter(c => c)
+    });
+  } catch (error) {
+    logger.error('Error fetching categories:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching categories'
+    });
+  }
+});
+
+/**
+ * @route   GET /api/v1/pois/cities
+ * @desc    Get all unique cities
+ * @access  Public
+ */
+router.get('/cities', async (req, res) => {
+  try {
+    const model = await getPOIModel();
+
+    if (!model) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database not connected'
+      });
+    }
+
+    const cities = await model.findAll({
+      attributes: [[mysqlSequelize.fn('DISTINCT', mysqlSequelize.col('city')), 'city']],
+      order: [['city', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: cities.map(c => c.city).filter(c => c)
+    });
+  } catch (error) {
+    logger.error('Error fetching cities:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching cities'
     });
   }
 });
 
 /**
  * @route   GET /api/v1/pois/:id
- * @desc    Get single POI by ID or slug (public)
+ * @desc    Get single POI by ID (public)
  * @access  Public
  */
 router.get('/:id', async (req, res) => {
@@ -125,17 +250,7 @@ router.get('/:id', async (req, res) => {
 
     const { id } = req.params;
 
-    // SECURITY FIX: Use parameterized query instead of string interpolation
-    // Bug fixed: 30-11-2025 - Prevents SQL injection attacks
-    const poi = await model.findOne({
-      where: {
-        [Op.or]: [
-          { id: id },
-          { slug: id }
-        ],
-        status: 'active'
-      }
-    });
+    const poi = await model.findByPk(id);
 
     if (!poi) {
       return res.status(404).json({
@@ -146,7 +261,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: poi
+      data: transformPOI(poi)
     });
   } catch (error) {
     logger.error('Error fetching POI:', error);
@@ -156,93 +271,5 @@ router.get('/:id', async (req, res) => {
     });
   }
 });
-
-/**
- * Sample POIs for development/demo
- */
-function getSamplePOIs() {
-  return [
-    {
-      id: '1',
-      name: 'Penyal d\'Ifac',
-      slug: 'penyal-difac',
-      description: 'Iconic rock formation and nature reserve',
-      category: 'beach',
-      city: 'Calpe',
-      address: 'Parque Natural del Penyal d\'Ifac',
-      latitude: 38.6327,
-      longitude: 0.0778,
-      status: 'active',
-      tier: 'premium',
-      images: [{ url: '/images/penyal.jpg', isPrimary: true }],
-      rating: 4.8,
-      reviewCount: 245
-    },
-    {
-      id: '2',
-      name: 'Playa Arenal-Bol',
-      slug: 'playa-arenal-bol',
-      description: 'Main beach with golden sand',
-      category: 'beach',
-      city: 'Calpe',
-      address: 'Av. de los Ejércitos Españoles',
-      latitude: 38.6448,
-      longitude: 0.0598,
-      status: 'active',
-      tier: 'standard',
-      images: [{ url: '/images/arenal.jpg', isPrimary: true }],
-      rating: 4.5,
-      reviewCount: 189
-    },
-    {
-      id: '3',
-      name: 'Restaurante Baydal',
-      slug: 'restaurante-baydal',
-      description: 'Traditional Mediterranean cuisine',
-      category: 'food_drinks',
-      city: 'Calpe',
-      address: 'Calle Mayor 12',
-      latitude: 38.6445,
-      longitude: 0.0441,
-      status: 'active',
-      tier: 'premium',
-      images: [{ url: '/images/baydal.jpg', isPrimary: true }],
-      rating: 4.7,
-      reviewCount: 312
-    },
-    {
-      id: '4',
-      name: 'Museo de Historia',
-      slug: 'museo-historia-calpe',
-      description: 'Local history museum',
-      category: 'museum',
-      city: 'Calpe',
-      address: 'Plaza de la Villa',
-      latitude: 38.6452,
-      longitude: 0.0445,
-      status: 'active',
-      tier: 'standard',
-      images: [{ url: '/images/museo.jpg', isPrimary: true }],
-      rating: 4.2,
-      reviewCount: 87
-    },
-    {
-      id: '5',
-      name: 'Centro Comercial Portal',
-      slug: 'centro-comercial-portal',
-      description: 'Shopping center with local shops',
-      category: 'shopping',
-      city: 'Calpe',
-      address: 'Av. Gabriel Miró 5',
-      latitude: 38.6461,
-      longitude: 0.0512,
-      status: 'active',
-      tier: 'basic',
-      images: [{ url: '/images/portal.jpg', isPrimary: true }],
-      rating: 4.0,
-      reviewCount: 56
-    }
-  ];
-}
 
 export default router;
