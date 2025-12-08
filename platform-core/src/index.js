@@ -32,6 +32,7 @@ import publicPOIRoutes from './routes/publicPOI.js';
 import authRoutes from './routes/auth.js';
 import chatRoutes from './routes/chat.js';
 import holibotRoutes from './routes/holibot.js';
+import onboardingRoutes from './routes/onboarding.js';
 import User from './models/User.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -129,6 +130,7 @@ app.use('/api/v1/poi-discovery', poiDiscoveryRoutes);
 app.use('/api/v1/pois', publicPOIRoutes); // Public POI endpoints (no auth)
 app.use('/api/v1/chat', chatRoutes); // HoliBot Chat API
 app.use('/api/v1/holibot', holibotRoutes); // HoliBot Widget API
+app.use('/api/v1/onboarding', onboardingRoutes); // User Onboarding Flow
 app.use('/api/v1', apiGateway); // API Gateway for all modules
 
 /**
