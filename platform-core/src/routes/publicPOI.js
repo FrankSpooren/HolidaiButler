@@ -14,6 +14,7 @@ const router = express.Router();
 
 // Import POI model dynamically to handle connection issues
 let POI = null;
+let hasActiveColumn = null; // Cache for column existence check
 
 const getPOIModel = async () => {
   if (!POI) {
@@ -26,6 +27,40 @@ const getPOIModel = async () => {
     }
   }
   return POI;
+};
+
+/**
+ * Check if the is_active column exists in the POI table
+ * Results are cached for performance
+ */
+const checkActiveColumn = async (model) => {
+  if (hasActiveColumn !== null) return hasActiveColumn;
+
+  try {
+    const tableDesc = await model.describe();
+    hasActiveColumn = !!(tableDesc.is_active || tableDesc.active);
+    logger.info(`POI table has active column: ${hasActiveColumn}`);
+  } catch (err) {
+    logger.warn('Could not describe POI table, assuming no active column:', err.message);
+    hasActiveColumn = false;
+  }
+  return hasActiveColumn;
+};
+
+/**
+ * Build base where clause for public POI queries
+ * Only adds active filter if column exists
+ */
+const buildPublicWhereClause = async (model) => {
+  const where = { verified: true };
+
+  // Only add active filter if column exists
+  const hasActive = await checkActiveColumn(model);
+  if (hasActive) {
+    where.active = true;
+  }
+
+  return where;
 };
 
 /**
@@ -118,8 +153,8 @@ router.get('/', async (req, res) => {
     // Calculate offset from page if not provided directly
     const calculatedOffset = offset !== undefined ? parseInt(offset) : (parseInt(page) - 1) * parseInt(limit);
 
-    // Build where clause - only show verified and active POIs
-    const where = { verified: true, active: true };
+    // Build where clause - only show verified (and active if column exists) POIs
+    const where = await buildPublicWhereClause(model);
     if (category) where.category = category;
     if (city) where.city = { [Op.like]: `%${city}%` };
 
@@ -279,8 +314,8 @@ router.get('/geojson', async (req, res) => {
       city
     } = req.query;
 
-    // Build where clause - only show verified and active POIs
-    const where = { verified: true, active: true };
+    // Build where clause - only show verified (and active if column exists) POIs
+    const where = await buildPublicWhereClause(model);
     if (category) where.category = category;
     if (city) where.city = { [Op.like]: `%${city}%` };
 
@@ -327,8 +362,8 @@ router.get('/search', async (req, res) => {
     const searchTerm = q || query || '';
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    // Build where clause - only show verified and active POIs
-    const where = { verified: true, active: true };
+    // Build where clause - only show verified (and active if column exists) POIs
+    const where = await buildPublicWhereClause(model);
     if (category) where.category = category;
 
     if (searchTerm) {
@@ -386,12 +421,11 @@ router.get('/autocomplete', async (req, res) => {
       return res.json({ success: true, data: [] });
     }
 
+    const where = await buildPublicWhereClause(model);
+    where.name = { [Op.like]: `%${q}%` };
+
     const pois = await model.findAll({
-      where: {
-        verified: true,
-        active: true,
-        name: { [Op.like]: `%${q}%` }
-      },
+      where,
       attributes: ['id', 'name', 'category', 'city'],
       limit: parseInt(limit),
       order: [['average_rating', 'DESC']]
@@ -466,6 +500,9 @@ router.get('/:id', async (req, res) => {
 
     const { id } = req.params;
 
+    // Get base where clause (verified + active if column exists)
+    const baseWhere = await buildPublicWhereClause(model);
+
     // Try to find by ID first, then by slug or google_place_id
     let poi = null;
 
@@ -473,9 +510,8 @@ router.get('/:id', async (req, res) => {
     if (/^\d+$/.test(id)) {
       poi = await model.findOne({
         where: {
-          id: id,
-          verified: true,
-          active: true
+          ...baseWhere,
+          id: id
         }
       });
     }
@@ -484,12 +520,11 @@ router.get('/:id', async (req, res) => {
     if (!poi) {
       poi = await model.findOne({
         where: {
+          ...baseWhere,
           [Op.or]: [
             { slug: id },
             { google_place_id: id }
-          ],
-          verified: true,
-          active: true
+          ]
         }
       });
     }
@@ -499,9 +534,8 @@ router.get('/:id', async (req, res) => {
       const slugSearch = id.replace(/-/g, '%');
       poi = await model.findOne({
         where: {
-          name: { [Op.like]: `%${slugSearch}%` },
-          verified: true,
-          active: true
+          ...baseWhere,
+          name: { [Op.like]: `%${slugSearch}%` }
         }
       });
     }
