@@ -95,10 +95,10 @@ jobs:
         run: |
           ssh root@91.98.71.87 "rsync -av --delete /var/www/test.holidaibutler.com/ /var/www/test-backup/"
 
-      # 7. Deploy nieuwe build (met ignore-missing-args)
+      # 7. Deploy nieuwe build (met robuuste rsync-opties)
       - name: Deploy built files
         run: |
-          rsync -av --delete --ignore-missing-args \
+          rsync -av --delete --ignore-missing-args --ignore-errors --no-perms \
             $GITHUB_WORKSPACE/customer-portal/frontend/dist/ \
             $GITHUB_WORKSPACE/admin-module/frontend/dist/ \
             $GITHUB_WORKSPACE/platform-core/dist/ \
