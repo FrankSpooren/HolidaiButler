@@ -95,14 +95,25 @@ jobs:
         run: |
           ssh root@91.98.71.87 "rsync -av --delete /var/www/test.holidaibutler.com/ /var/www/test-backup/"
 
-      # 7. Deploy nieuwe build (met robuuste rsync-opties)
+      # 7. Deploy nieuwe build (met dynamische rsync-check)
       - name: Deploy built files
         run: |
-          rsync -av --delete --ignore-missing-args --ignore-errors --no-perms \
-            $GITHUB_WORKSPACE/customer-portal/frontend/dist/ \
-            $GITHUB_WORKSPACE/admin-module/frontend/dist/ \
-            $GITHUB_WORKSPACE/platform-core/dist/ \
-            root@91.98.71.87:/var/www/test.holidaibutler.com/
+          DEPLOY_PATH="/var/www/test.holidaibutler.com"
+          TARGET="root@91.98.71.87:$DEPLOY_PATH"
+          RSYNC_CMD="rsync -av --delete --ignore-errors --no-perms"
+
+          for DIR in \
+            "$GITHUB_WORKSPACE/customer-portal/frontend/dist" \
+            "$GITHUB_WORKSPACE/admin-module/frontend/dist" \
+            "$GITHUB_WORKSPACE/platform-core/dist"
+          do
+            if [ -d "$DIR" ]; then
+              echo "✅ Kopieer $DIR naar $TARGET"
+              $RSYNC_CMD "$DIR/" "$TARGET/"
+            else
+              echo "⚠️ Map $DIR bestaat niet, overslaan..."
+            fi
+          done
 
       # 8. Fix permissies
       - name: Fix permissions
