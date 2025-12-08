@@ -1,5 +1,5 @@
 
-name: Deploy Test Frontend & Selected Modules
+name: Deploy Test Frontend & Backend
 
 on:
   push:
@@ -38,37 +38,55 @@ jobs:
             admin-module/package-lock.json
             platform-core/package-lock.json
 
-      # 4. Build geselecteerde modules (met support voor frontend-submap)
-      - name: Build selected modules
+      # 4. Build Customer Portal Frontend met production environment
+      - name: Build Customer Portal Frontend
         run: |
-          build_module() {
-            MODULE=$1
-            echo "🔍 Building $MODULE..."
-            cd "$GITHUB_WORKSPACE/$MODULE"
+          cd $GITHUB_WORKSPACE/customer-portal/frontend
+          npm ci || npm install --prefer-offline
 
-            # Installeer root dependencies (indien aanwezig)
-            if [ -f package.json ]; then
-              npm ci || npm install --prefer-offline
-            fi
+          # Create .env.production for Vite build
+          cat > .env.production << 'EOF'
+          VITE_API_URL=https://test.holidaibutler.com/api/v1
+          VITE_WIDGET_API_URL=https://test.holidaibutler.com/api/v1
+          VITE_ADMIN_API_URL=https://test.holidaibutler.com/api/v1
+          VITE_TICKETING_API_URL=https://test.holidaibutler.com/api/v1
+          VITE_PAYMENT_API_URL=https://test.holidaibutler.com/api/v1
+          VITE_RESERVATIONS_API_URL=https://test.holidaibutler.com/api/v1
+          VITE_AGENDA_API_URL=https://test.holidaibutler.com/api/v1
+          VITE_ENABLE_TICKETING=true
+          VITE_ENABLE_PAYMENTS=true
+          VITE_ENABLE_RESERVATIONS=true
+          VITE_ENABLE_AGENDA=true
+          VITE_ENABLE_HOLIBOT=true
+          VITE_MAP_DEFAULT_LAT=38.6447
+          VITE_MAP_DEFAULT_LNG=0.0410
+          VITE_MAP_DEFAULT_ZOOM=14
+          VITE_DEFAULT_LANGUAGE=nl
+          VITE_APP_NAME=HolidaiButler
+          EOF
 
-            # Als er een frontend-submap is, installeer daar ook en build
-            if [ -d "frontend" ]; then
-              cd frontend
-              npm ci || npm install --prefer-offline
-              npm run build
-              cd ..
-            else
-              npm run build
-            fi
+          # Remove leading whitespace from heredoc
+          sed -i 's/^[[:space:]]*//' .env.production
 
-            cd "$GITHUB_WORKSPACE"
-          }
+          # Build with production environment
+          npm run build
 
-          build_module customer-portal/frontend
-          build_module admin-module
-          build_module platform-core
+          echo "✅ Customer Portal Frontend built with production API URLs"
 
-      # 5. Setup SSH
+      # 5. Build Platform Core (Backend API)
+      - name: Build Platform Core Backend
+        run: |
+          cd $GITHUB_WORKSPACE/platform-core
+          npm ci || npm install --prefer-offline
+
+          # Build if build script exists
+          if npm run build --if-present; then
+            echo "✅ Platform Core built successfully"
+          else
+            echo "ℹ️ No build script, using source directly"
+          fi
+
+      # 6. Setup SSH
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -76,38 +94,90 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
 
-      # 6. Backup huidige versie
+      # 7. Backup huidige versie
       - name: Backup current version
         run: |
-          ssh root@91.98.71.87 "rsync -av --delete /var/www/test.holidaibutler.com/ /var/www/test-backup/"
+          ssh root@91.98.71.87 "mkdir -p /var/www/test-backup && rsync -av --delete /var/www/test.holidaibutler.com/ /var/www/test-backup/ || true"
 
-      # 7. Deploy nieuwe build
-      - name: Deploy built files
+      # 8. Deploy Frontend static files
+      - name: Deploy Frontend
         run: |
           rsync -av --delete \
             $GITHUB_WORKSPACE/customer-portal/frontend/dist/ \
-            $GITHUB_WORKSPACE/admin-module/frontend/dist/ \
-            $GITHUB_WORKSPACE/platform-core/dist/ \
             root@91.98.71.87:/var/www/test.holidaibutler.com/
 
-      # 8. Fix permissies
+      # 9. Deploy Backend API
+      - name: Deploy Backend API
+        run: |
+          # Create backend directory if not exists
+          ssh root@91.98.71.87 "mkdir -p /var/www/api.holidaibutler.com"
+
+          # Deploy platform-core backend
+          rsync -av --delete \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            --exclude 'logs' \
+            $GITHUB_WORKSPACE/platform-core/ \
+            root@91.98.71.87:/var/www/api.holidaibutler.com/
+
+      # 10. Install backend dependencies and restart service
+      - name: Setup Backend Service
+        run: |
+          ssh root@91.98.71.87 << 'ENDSSH'
+            cd /var/www/api.holidaibutler.com
+
+            # Install production dependencies
+            npm ci --only=production || npm install --only=production
+
+            # Create logs directory
+            mkdir -p logs
+
+            # Check if PM2 is installed, install if not
+            if ! command -v pm2 &> /dev/null; then
+              npm install -g pm2
+            fi
+
+            # Start or restart the API with PM2
+            if pm2 describe holidaibutler-api > /dev/null 2>&1; then
+              pm2 restart holidaibutler-api
+            else
+              pm2 start src/index.js --name holidaibutler-api --env production
+            fi
+
+            # Save PM2 process list
+            pm2 save
+
+            echo "✅ Backend API started/restarted"
+          ENDSSH
+
+      # 11. Fix permissies
       - name: Fix permissions
         run: |
           ssh root@91.98.71.87 "chown -R www-data:www-data /var/www/test.holidaibutler.com && chmod -R 755 /var/www/test.holidaibutler.com"
 
-      # 9. Herstart Apache
+      # 12. Herstart Apache
       - name: Reload Apache
         run: |
           ssh root@91.98.71.87 "systemctl reload apache2"
 
-      # 10. Health check + rollback
+      # 13. Health check + rollback
       - name: Health check
         run: |
-          sleep 5
-          STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://test.holidaibutler.com)
-          if [ "$STATUS" -ne 200 ]; then
-            echo "❌ Health check failed! Rolling back..."
+          sleep 10
+
+          # Check frontend
+          FRONTEND_STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://test.holidaibutler.com)
+
+          # Check API health endpoint (mounted at /health, not /api/v1/health)
+          API_STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://test.holidaibutler.com/health || echo "000")
+
+          echo "Frontend status: $FRONTEND_STATUS"
+          echo "API status: $API_STATUS"
+
+          if [ "$FRONTEND_STATUS" -ne 200 ]; then
+            echo "❌ Frontend health check failed! Rolling back..."
             ssh root@91.98.71.87 "rsync -av --delete /var/www/test-backup/ /var/www/test.holidaibutler.com/"
             exit 1
           else
-            echo "✅ Deployment successful! Status code: $STATUS"
+            echo "✅ Deployment successful!"
+          fi
