@@ -2,6 +2,7 @@
  * Public POI Routes
  * Endpoints for customer-facing POI data (no authentication required)
  * FIXED: Use correct field names (verified, active) instead of non-existent 'status' field
+ * Merged: Supports both page-based and offset-based pagination
  */
 
 import express from 'express';
@@ -42,29 +43,46 @@ const safeJSONParse = (data, defaultValue = null) => {
 
 /**
  * Format POI from database to public API response format
+ * Supports both basic and extended fields for frontend compatibility
  */
 const formatPOIForPublic = (poi) => {
   const data = poi.toJSON ? poi.toJSON() : poi;
   return {
     id: data.id,
+    uuid: data.uuid,
     name: data.name,
     slug: data.slug || data.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     description: data.description,
     category: data.category,
+    subcategory: data.subcategory,
+    level3_type: data.poi_type || null,
     city: data.city,
+    region: data.region,
+    country: data.country,
     address: data.address,
+    postal_code: data.postal_code || null,
     latitude: data.latitude ? parseFloat(data.latitude) : null,
     longitude: data.longitude ? parseFloat(data.longitude) : null,
     status: data.verified && data.active ? 'active' : 'pending',
     tier: data.tier || 4,
+    rating: data.average_rating || data.rating ? parseFloat(data.average_rating || data.rating) : null,
+    reviewCount: data.review_count || 0,
+    review_count: data.review_count || 0,
+    price_level: data.price_level,
     images: safeJSONParse(data.images, []),
-    rating: data.average_rating || data.rating,
-    reviewCount: data.review_count,
+    thumbnail_url: data.thumbnail_url,
     amenities: safeJSONParse(data.amenities, []),
+    accessibility_features: safeJSONParse(data.accessibility_features, []),
     opening_hours: safeJSONParse(data.opening_hours, null),
     phone: data.phone,
     website: data.website,
     email: data.email,
+    verified: data.verified || false,
+    featured: data.featured || false,
+    popularity_score: data.popularity_score || 0,
+    google_placeid: data.google_place_id || data.google_placeid,
+    created_at: data.created_at || data.last_updated || new Date().toISOString(),
+    updated_at: data.updated_at || data.last_updated || new Date().toISOString()
   };
 };
 
@@ -78,44 +96,45 @@ router.get('/', async (req, res) => {
     const model = await getPOIModel();
 
     if (!model) {
-      // Return mock data if model not available
-      return res.json({
-        success: true,
-        message: 'Database not connected - returning sample data',
-        data: {
-          pois: getSamplePOIs(),
-          pagination: {
-            total: 5,
-            page: 1,
-            limit: 20,
-            pages: 1
-          }
-        }
+      return res.status(503).json({
+        success: false,
+        message: 'Database not connected'
       });
     }
 
     const {
-      page = 1,
-      limit = 20,
+      q,
       category,
       city,
       search,
-      sort = 'name:asc'
+      sort = 'name:asc',
+      page = 1,
+      limit = 20,
+      offset,
+      min_rating,
+      require_images
     } = req.query;
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    // Calculate offset from page if not provided directly
+    const calculatedOffset = offset !== undefined ? parseInt(offset) : (parseInt(page) - 1) * parseInt(limit);
 
     // Build where clause - only show verified and active POIs
     const where = { verified: true, active: true };
     if (category) where.category = category;
     if (city) where.city = { [Op.like]: `%${city}%` };
 
-    if (search) {
+    // Support both 'q' and 'search' parameters
+    const searchTerm = search || q;
+    if (searchTerm) {
       where[Op.or] = [
-        { name: { [Op.like]: `%${search}%` } },
-        { description: { [Op.like]: `%${search}%` } },
-        { city: { [Op.like]: `%${search}%` } },
+        { name: { [Op.like]: `%${searchTerm}%` } },
+        { description: { [Op.like]: `%${searchTerm}%` } },
+        { city: { [Op.like]: `%${searchTerm}%` } },
       ];
+    }
+
+    if (min_rating) {
+      where.average_rating = { [Op.gte]: parseFloat(min_rating) };
     }
 
     // Parse sort parameter
@@ -127,47 +146,116 @@ router.get('/', async (req, res) => {
         rating: 'average_rating',
         category: 'category',
         tier: 'tier',
-        created_at: 'createdAt',
+        popularity_score: 'popularity_score',
+        review_count: 'review_count',
+        created_at: 'created_at',
       };
-      const mappedField = fieldMap[sortField] || 'name';
-      order = [[mappedField, (sortDir || 'asc').toUpperCase()]];
+      const validFields = Object.keys(fieldMap);
+      if (validFields.includes(sortField)) {
+        const mappedField = fieldMap[sortField] || sortField;
+        order = [[mappedField, (sortDir || 'asc').toUpperCase()]];
+      }
     }
 
     const { count, rows } = await model.findAndCountAll({
       where,
       limit: parseInt(limit),
-      offset: parseInt(offset),
+      offset: calculatedOffset,
       order
     });
 
+    // Transform data for frontend compatibility
+    const pois = rows.map(formatPOIForPublic);
+
+    // Return in format that supports both pagination styles
     res.json({
       success: true,
-      data: {
-        pois: rows.map(formatPOIForPublic),
-        pagination: {
-          total: count,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(count / parseInt(limit))
-        }
+      data: pois,
+      meta: {
+        total: count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        offset: calculatedOffset,
+        pages: Math.ceil(count / parseInt(limit)),
+        count: pois.length,
+        has_more: calculatedOffset + pois.length < count,
+        next_cursor: calculatedOffset + pois.length < count ? calculatedOffset + parseInt(limit) : null
       }
     });
   } catch (error) {
     logger.error('Error fetching POIs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching POIs',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 
-    // Return sample data on error for development
+/**
+ * @route   GET /api/v1/pois/categories
+ * @desc    Get all unique categories
+ * @access  Public
+ */
+router.get('/categories', async (req, res) => {
+  try {
+    const model = await getPOIModel();
+
+    if (!model) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database not connected'
+      });
+    }
+
+    const categories = await model.findAll({
+      attributes: [[mysqlSequelize.fn('DISTINCT', mysqlSequelize.col('category')), 'category']],
+      order: [['category', 'ASC']]
+    });
+
     res.json({
       success: true,
-      message: 'Database error - returning sample data',
-      data: {
-        pois: getSamplePOIs(),
-        pagination: {
-          total: 5,
-          page: 1,
-          limit: 20,
-          pages: 1
-        }
-      }
+      data: categories.map(c => c.category).filter(c => c)
+    });
+  } catch (error) {
+    logger.error('Error fetching categories:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching categories'
+    });
+  }
+});
+
+/**
+ * @route   GET /api/v1/pois/cities
+ * @desc    Get all unique cities
+ * @access  Public
+ */
+router.get('/cities', async (req, res) => {
+  try {
+    const model = await getPOIModel();
+
+    if (!model) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database not connected'
+      });
+    }
+
+    const cities = await model.findAll({
+      attributes: [[mysqlSequelize.fn('DISTINCT', mysqlSequelize.col('city')), 'city']],
+      order: [['city', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: cities.map(c => c.city).filter(c => c)
+    });
+  } catch (error) {
+    logger.error('Error fetching cities:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching cities'
     });
   }
 });
@@ -223,10 +311,8 @@ router.get('/search', async (req, res) => {
       return res.json({
         success: true,
         message: 'Database not available - returning sample data',
-        data: {
-          pois: getSamplePOIs(),
-          pagination: { total: 5, page: 1, limit: 20, pages: 1 }
-        }
+        data: getSamplePOIs(),
+        meta: { total: 5, page: 1, limit: 20, pages: 1 }
       });
     }
 
@@ -263,14 +349,12 @@ router.get('/search', async (req, res) => {
 
     res.json({
       success: true,
-      data: {
-        pois: rows.map(formatPOIForPublic),
-        pagination: {
-          total: count,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(count / parseInt(limit))
-        }
+      data: rows.map(formatPOIForPublic),
+      meta: {
+        total: count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(count / parseInt(limit))
       }
     });
   } catch (error) {
@@ -278,10 +362,8 @@ router.get('/search', async (req, res) => {
     res.json({
       success: true,
       message: 'Database error - returning sample data',
-      data: {
-        pois: getSamplePOIs(),
-        pagination: { total: 5, page: 1, limit: 20, pages: 1 }
-      }
+      data: getSamplePOIs(),
+      meta: { total: 5, page: 1, limit: 20, pages: 1 }
     });
   }
 });
@@ -368,7 +450,7 @@ function convertToGeoJSON(pois) {
 
 /**
  * @route   GET /api/v1/pois/:id
- * @desc    Get single POI by ID or slug (public)
+ * @desc    Get single POI by ID (public)
  * @access  Public
  */
 router.get('/:id', async (req, res) => {
@@ -384,20 +466,35 @@ router.get('/:id', async (req, res) => {
 
     const { id } = req.params;
 
-    // Try to find by ID first, then by slug
-    let poi = await model.findOne({
-      where: {
-        [Op.or]: [
-          { id: id },
-          { slug: id },
-          { google_place_id: id }
-        ],
-        verified: true,
-        active: true
-      }
-    });
+    // Try to find by ID first, then by slug or google_place_id
+    let poi = null;
 
-    // If not found by ID, try slug-based search
+    // Check if id is numeric
+    if (/^\d+$/.test(id)) {
+      poi = await model.findOne({
+        where: {
+          id: id,
+          verified: true,
+          active: true
+        }
+      });
+    }
+
+    // If not found by numeric ID, try other fields
+    if (!poi) {
+      poi = await model.findOne({
+        where: {
+          [Op.or]: [
+            { slug: id },
+            { google_place_id: id }
+          ],
+          verified: true,
+          active: true
+        }
+      });
+    }
+
+    // If not found, try slug-based search as fallback
     if (!poi) {
       const slugSearch = id.replace(/-/g, '%');
       poi = await model.findOne({
