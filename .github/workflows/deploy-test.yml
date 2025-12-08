@@ -7,7 +7,7 @@ on:
       - 'customer-portal/frontend/**'
       - 'admin-module/**'
       - 'platform-core/**'
-  workflow_dispatch: # optioneel voor handmatige start
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -29,15 +29,33 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20'
-          cache-dependency-path: |
-            customer-portal/frontend/package-lock.json
-            admin-module/package-lock.json
-            platform-core/package-lock.json
 
-      - name: Build selected modules
+      # Detect gewijzigde modules
+      - name: Detect changed modules
+        id: changes
         run: |
-          build_module() {
-            MODULE=$1
+          echo "changed_modules=" >> $GITHUB_ENV
+          CHANGED=$(git diff --name-only HEAD~1 HEAD)
+          echo "Gewijzigde bestanden:"
+          echo "$CHANGED"
+
+          MODULES=""
+          if echo "$CHANGED" | grep -q "^customer-portal/frontend/"; then
+            MODULES="$MODULES customer-portal/frontend"
+          fi
+          if echo "$CHANGED" | grep -q "^admin-module/"; then
+            MODULES="$MODULES admin-module"
+          fi
+          if echo "$CHANGED" | grep -q "^platform-core/"; then
+            MODULES="$MODULES platform-core"
+          fi
+
+          echo "changed_modules=$MODULES" >> $GITHUB_ENV
+
+      # Build alleen gewijzigde modules
+      - name: Build changed modules
+        run: |
+          for MODULE in $changed_modules; do
             echo "🔍 Building $MODULE..."
             cd "$GITHUB_WORKSPACE/$MODULE"
 
@@ -69,12 +87,9 @@ jobs:
             fi
 
             cd "$GITHUB_WORKSPACE"
-          }
+          done
 
-          build_module customer-portal/frontend
-          build_module admin-module
-          build_module platform-core
-
+      # Deploy stappen blijven hetzelfde
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -92,16 +107,13 @@ jobs:
           TARGET="root@91.98.71.87:$DEPLOY_PATH"
           RSYNC_CMD="rsync -av --delete --ignore-errors --no-perms"
 
-          for DIR in \
-            "$GITHUB_WORKSPACE/customer-portal/frontend/dist" \
-            "$GITHUB_WORKSPACE/admin-module/frontend/dist" \
-            "$GITHUB_WORKSPACE/platform-core/dist"
-          do
-            if [ -d "$DIR" ]; then
-              echo "✅ Kopieer $DIR naar $TARGET"
-              $RSYNC_CMD "$DIR/" "$TARGET/"
+          for MODULE in $changed_modules; do
+            DIST_DIR="$GITHUB_WORKSPACE/$MODULE/dist"
+            if [ -d "$DIST_DIR" ]; then
+              echo "✅ Kopieer $DIST_DIR naar $TARGET"
+              $RSYNC_CMD "$DIST_DIR/" "$TARGET/"
             else
-              echo "⚠️ Map $DIR bestaat niet, overslaan..."
+              echo "⚠️ Map $DIST_DIR bestaat niet, overslaan..."
             fi
           done
 
