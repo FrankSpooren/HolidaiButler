@@ -43,10 +43,12 @@ import {
 import { poiAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import { toast } from 'react-toastify';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function POIList() {
   const navigate = useNavigate();
   const { hasPermission } = useAuthStore();
+  const { t } = useLanguage();
 
   const [pois, setPois] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -105,8 +107,9 @@ export default function POIList() {
         city: filters.city || undefined
       });
 
-      setPois(response.data.pois);
-      setTotalCount(response.data.pagination.total);
+      // Handle both API response format and fallback data format
+      setPois(response.data?.pois || response.pois || []);
+      setTotalCount(response.data?.pagination?.total || response.total || 0);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch POIs');
       toast.error('Failed to load POIs');
@@ -138,14 +141,14 @@ export default function POIList() {
 
   // Handle edit
   const handleEdit = (poi) => {
-    navigate(`/pois/edit/${poi._id}`);
+    navigate(`/pois/edit/${poi._id || poi.id}`);
     handleMenuClose();
   };
 
   // Handle status change
   const handleStatusChange = async (poi, newStatus) => {
     try {
-      await poiAPI.updateStatus(poi._id, newStatus);
+      await poiAPI.updateStatus(poi._id || poi.id, newStatus);
       toast.success(`POI status updated to ${newStatus}`);
       fetchPOIs();
     } catch (err) {
@@ -163,7 +166,7 @@ export default function POIList() {
 
   const handleDeleteConfirm = async () => {
     try {
-      await poiAPI.delete(selectedPOI._id);
+      await poiAPI.delete(selectedPOI._id || selectedPOI.id);
       toast.success('POI deleted successfully');
       fetchPOIs();
       setDeleteDialogOpen(false);
@@ -192,7 +195,7 @@ export default function POIList() {
     <Box>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h4" fontWeight="bold">
-          POI Management
+          {t.pois.title}
         </Typography>
         {canCreate && (
           <Button
@@ -200,7 +203,7 @@ export default function POIList() {
             startIcon={<AddIcon />}
             onClick={() => navigate('/pois/create')}
           >
-            Add New POI
+            {t.pois.addPoi}
           </Button>
         )}
       </Box>
@@ -211,7 +214,7 @@ export default function POIList() {
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              placeholder="Search POIs..."
+              placeholder={`${t.actions.search}...`}
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
               InputProps={{
@@ -226,29 +229,29 @@ export default function POIList() {
 
           <Grid item xs={12} sm={4} md={2}>
             <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t.labels.status}</InputLabel>
               <Select
                 value={filters.status}
-                label="Status"
+                label={t.labels.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
               >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="">{t.labels.all}</MenuItem>
+                <MenuItem value="active">{t.labels.active}</MenuItem>
+                <MenuItem value="inactive">{t.labels.inactive}</MenuItem>
+                <MenuItem value="pending">{t.labels.pending}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
 
           <Grid item xs={12} sm={4} md={2}>
             <FormControl fullWidth>
-              <InputLabel>Category</InputLabel>
+              <InputLabel>{t.labels.category}</InputLabel>
               <Select
                 value={filters.category}
-                label="Category"
+                label={t.labels.category}
                 onChange={(e) => handleFilterChange('category', e.target.value)}
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem value="">{t.labels.all}</MenuItem>
                 <MenuItem value="restaurant">Restaurant</MenuItem>
                 <MenuItem value="attraction">Attraction</MenuItem>
                 <MenuItem value="hotel">Hotel</MenuItem>
@@ -260,7 +263,7 @@ export default function POIList() {
           <Grid item xs={12} sm={4} md={2}>
             <TextField
               fullWidth
-              label="City"
+              label={t.labels.city}
               value={filters.city}
               onChange={(e) => handleFilterChange('city', e.target.value)}
             />
@@ -274,7 +277,7 @@ export default function POIList() {
               onClick={fetchPOIs}
               sx={{ height: '56px' }}
             >
-              Refresh
+              {t.actions.refresh}
             </Button>
           </Grid>
         </Grid>
@@ -292,13 +295,13 @@ export default function POIList() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Location</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Rating</TableCell>
-                <TableCell>Views</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell>{t.labels.name}</TableCell>
+                <TableCell>{t.labels.category}</TableCell>
+                <TableCell>{t.pois.location}</TableCell>
+                <TableCell>{t.labels.status}</TableCell>
+                <TableCell>{t.pois.rating}</TableCell>
+                <TableCell>{t.pois.views}</TableCell>
+                <TableCell align="right">{t.table.actions}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -312,13 +315,13 @@ export default function POIList() {
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                     <Typography color="text.secondary">
-                      No POIs found
+                      {t.table.noResults}
                     </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
                 pois.map((poi) => (
-                  <TableRow key={poi._id} hover>
+                  <TableRow key={poi._id || poi.id} hover>
                     <TableCell>
                       <Typography fontWeight="medium">{poi.name}</Typography>
                     </TableCell>
@@ -376,44 +379,44 @@ export default function POIList() {
         {canUpdate && (
           <MenuItem onClick={() => handleEdit(selectedPOI)}>
             <EditIcon fontSize="small" sx={{ mr: 1 }} />
-            Edit
+            {t.actions.edit}
           </MenuItem>
         )}
 
         {canApprove && selectedPOI?.status !== 'active' && (
           <MenuItem onClick={() => handleStatusChange(selectedPOI, 'active')}>
             <CheckCircleIcon fontSize="small" sx={{ mr: 1 }} />
-            Approve
+            {t.actions.confirm}
           </MenuItem>
         )}
 
         {canApprove && selectedPOI?.status === 'active' && (
           <MenuItem onClick={() => handleStatusChange(selectedPOI, 'inactive')}>
             <CancelIcon fontSize="small" sx={{ mr: 1 }} />
-            Deactivate
+            {t.labels.inactive}
           </MenuItem>
         )}
 
         {canDelete && (
           <MenuItem onClick={() => handleDeleteClick(selectedPOI)} sx={{ color: 'error.main' }}>
             <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
-            Delete
+            {t.actions.delete}
           </MenuItem>
         )}
       </Menu>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete POI</DialogTitle>
+        <DialogTitle>{t.actions.delete} POI</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete "{selectedPOI?.name}"? This action cannot be undone.
+            {selectedPOI?.name}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>{t.actions.cancel}</Button>
           <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            Delete
+            {t.actions.delete}
           </Button>
         </DialogActions>
       </Dialog>

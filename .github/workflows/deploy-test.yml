@@ -1,0 +1,113 @@
+
+name: Deploy Test Frontend & Selected Modules
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'customer-portal/frontend/**'
+      - 'admin-module/**'
+      - 'platform-core/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Haal code op
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Cache npm dependencies
+      - name: Cache npm
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: "${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}"
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # 3. Installeer Node.js + caching voor geselecteerde modules
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache-dependency-path: |
+            customer-portal/frontend/package-lock.json
+            admin-module/package-lock.json
+            platform-core/package-lock.json
+
+      # 4. Build geselecteerde modules (met support voor frontend-submap)
+      - name: Build selected modules
+        run: |
+          build_module() {
+            MODULE=$1
+            echo "🔍 Building $MODULE..."
+            cd "$GITHUB_WORKSPACE/$MODULE"
+
+            # Installeer root dependencies (indien aanwezig)
+            if [ -f package.json ]; then
+              npm ci || npm install --prefer-offline
+            fi
+
+            # Als er een frontend-submap is, installeer daar ook en build
+            if [ -d "frontend" ]; then
+              cd frontend
+              npm ci || npm install --prefer-offline
+              npm run build
+              cd ..
+            else
+              npm run build
+            fi
+
+            cd "$GITHUB_WORKSPACE"
+          }
+
+          build_module customer-portal/frontend
+          build_module admin-module
+          build_module platform-core
+
+      # 5. Setup SSH
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      # 6. Backup huidige versie
+      - name: Backup current version
+        run: |
+          ssh root@91.98.71.87 "rsync -av --delete /var/www/test.holidaibutler.com/ /var/www/test-backup/"
+
+      # 7. Deploy nieuwe build
+      - name: Deploy built files
+        run: |
+          rsync -av --delete \
+            $GITHUB_WORKSPACE/customer-portal/frontend/dist/ \
+            $GITHUB_WORKSPACE/admin-module/frontend/dist/ \
+            $GITHUB_WORKSPACE/platform-core/dist/ \
+            root@91.98.71.87:/var/www/test.holidaibutler.com/
+
+      # 8. Fix permissies
+      - name: Fix permissions
+        run: |
+          ssh root@91.98.71.87 "chown -R www-data:www-data /var/www/test.holidaibutler.com && chmod -R 755 /var/www/test.holidaibutler.com"
+
+      # 9. Herstart Apache
+      - name: Reload Apache
+        run: |
+          ssh root@91.98.71.87 "systemctl reload apache2"
+
+      # 10. Health check + rollback
+      - name: Health check
+        run: |
+          sleep 5
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://test.holidaibutler.com)
+          if [ "$STATUS" -ne 200 ]; then
+            echo "❌ Health check failed! Rolling back..."
+            ssh root@91.98.71.87 "rsync -av --delete /var/www/test-backup/ /var/www/test.holidaibutler.com/"
+            exit 1
+          else
+            echo "✅ Deployment successful! Status code: $STATUS"

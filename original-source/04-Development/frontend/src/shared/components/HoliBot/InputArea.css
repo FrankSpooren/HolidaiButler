@@ -1,0 +1,108 @@
+/**
+ * InputArea Styles
+ *
+ * Design: Clean, minimal input with send button
+ * - Horizontal layout (textarea + button)
+ * - Auto-resize textarea
+ * - Mediterranean Teal send button
+ * - Accessible focus states
+ */
+
+.holibot-input-area {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 16px;
+  background: white;
+  border-top: 1px solid #E8EAED; /* Light border */
+
+  /* Border radius (bottom corners only) */
+  border-radius: 0 0 16px 16px;
+}
+
+/* Text input field */
+.holibot-input-field {
+  flex: 1;
+  min-height: 40px;
+  max-height: 120px;
+  padding: 10px 12px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #2C3E50; /* Deep Sea Navy */
+  background: #F8F9FA; /* Light gray */
+  border: 2px solid #7FA594; /* Mediterranean Teal - huisstijl (User requirement 2025-11-09) */
+  border-radius: 8px;
+  resize: none;
+  outline: none;
+
+  /* Performance */
+  transition: border-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.holibot-input-field:focus {
+  border-color: #6D8F7F; /* Darker teal on focus */
+}
+
+.holibot-input-field::placeholder {
+  color: #9CA3AF; /* Gray placeholder */
+}
+
+/* Send button */
+.holibot-send-button {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #D4AF37 0%, #C49B2A 100%);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+
+  /* Performance */
+  will-change: transform;
+  transition:
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.holibot-send-button:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.holibot-send-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.holibot-send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Focus state (keyboard navigation - WCAG 2.1 AA) */
+.holibot-send-button:focus-visible {
+  outline: 3px solid #D4AF37; /* Compass Gold */
+  outline-offset: 2px;
+}
+
+/* Mobile responsive - Reduced padding */
+@media (max-width: 480px) {
+  .holibot-input-area {
+    padding: 12px;
+    border-radius: 0; /* No border radius on mobile (full screen) */
+  }
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .holibot-input-field,
+  .holibot-send-button {
+    transition: none;
+    will-change: auto;
+  }
+}

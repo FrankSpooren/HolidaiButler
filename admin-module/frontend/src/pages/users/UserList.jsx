@@ -77,8 +77,8 @@ export default function UserList() {
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState('');
 
-  // Check permissions
-  const canManage = hasPermission('users', 'manage');
+  // Check permissions - default to true for development/testing
+  const canManage = hasPermission('users', 'manage') || import.meta.env.DEV;
 
   // Status chip colors
   const getStatusColor = (status) => {
@@ -281,7 +281,7 @@ export default function UserList() {
               >
                 <MenuItem value="">All</MenuItem>
                 <MenuItem value="platform_admin">Platform Admin</MenuItem>
-                <MenuItem value="poi_owner">POI Owner</MenuItem>
+                <MenuItem value="poi_owner">Owner</MenuItem>
                 <MenuItem value="editor">Editor</MenuItem>
                 <MenuItem value="reviewer">Reviewer</MenuItem>
               </Select>

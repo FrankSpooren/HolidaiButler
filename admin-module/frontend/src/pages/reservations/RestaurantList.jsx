@@ -57,8 +57,9 @@ export default function RestaurantList() {
         limit: rowsPerPage,
         search: searchQuery || undefined
       });
-      setRestaurants(response.data?.restaurants || []);
-      setTotalCount(response.data?.total || 0);
+      // Handle both API response format and fallback data format
+      setRestaurants(response.data?.restaurants || response.restaurants || []);
+      setTotalCount(response.data?.total || response.total || 0);
     } catch (err) {
       setError('Failed to load restaurants');
       console.error(err);
@@ -111,9 +112,14 @@ export default function RestaurantList() {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold">
-          Restaurants
-        </Typography>
+        <Box>
+          <Typography variant="h4" fontWeight="bold">
+            Restaurants
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Manage restaurants and their settings
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
