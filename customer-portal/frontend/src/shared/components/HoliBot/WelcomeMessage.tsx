@@ -20,7 +20,7 @@ interface WelcomeMessageProps {
   language?: 'nl' | 'en' | 'de' | 'es' | 'sv';
 }
 
-const welcomeMessages = {
+const welcomeMessages: Record<string, string[]> = {
   nl: [
     'Hola! Ik ben HoliBot, je persoonlijke Calpe-Assistent.',
     'Waar kan ik je bij helpen?',
@@ -30,6 +30,21 @@ const welcomeMessages = {
     'Hola! I\'m HoliBot, your personal Calpe Assistant.',
     'How can I help you?',
     'Let me give you some suggestions, or type or speak your question below:'
+  ],
+  de: [
+    'Hola! Ich bin HoliBot, Ihr persönlicher Calpe-Assistent.',
+    'Wie kann ich Ihnen helfen?',
+    'Hier sind einige Vorschläge, oder geben Sie Ihre Frage unten ein:'
+  ],
+  es: [
+    'Hola! Soy HoliBot, tu asistente personal de Calpe.',
+    '¿En qué puedo ayudarte?',
+    'Aquí tienes algunas sugerencias, o escribe tu pregunta abajo:'
+  ],
+  sv: [
+    'Hola! Jag är HoliBot, din personliga Calpe-assistent.',
+    'Hur kan jag hjälpa dig?',
+    'Här är några förslag, eller skriv din fråga nedan:'
   ]
 };
 
@@ -39,7 +54,7 @@ export function WelcomeMessage({ language = 'nl', onComplete }: WelcomeMessagePr
 
   // Sequential fade-in animation (1.5s intervals) - Run once on mount only
   useEffect(() => {
-    const timers: NodeJS.Timeout[] = [];
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
     // Show first message immediately
     setVisibleMessages(1);

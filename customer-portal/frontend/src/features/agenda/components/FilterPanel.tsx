@@ -59,7 +59,7 @@ const DATE_RANGES = [
 ];
 
 export function FilterPanel({ open, onClose, isMobile = false }: FilterPanelProps) {
-  const { t } = useLanguage();
+  useLanguage(); // For future i18n support
   const {
     filters,
     setFilter,

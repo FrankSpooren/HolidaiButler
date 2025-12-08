@@ -32,7 +32,7 @@ const personalityMap: Record<string, PersonalityType> = {
 };
 
 export function MessageList() {
-  const { language, messages, isLoading, isOpen, sendMessage, addAssistantMessage } = useHoliBot();
+  const { language, messages, isLoading, isOpen, addAssistantMessage } = useHoliBot();
   const [selectedPersonality, setSelectedPersonality] = useState<PersonalityType | null>(null);
   const [pois, setPois] = useState<POI[]>([]);
   const [loadingPOIs, setLoadingPOIs] = useState(false);
@@ -42,7 +42,8 @@ export function MessageList() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
 
-  const { data: categories } = useCategories(language);
+  // Categories hook is available for future use
+  useCategories(language);
 
   // Reset state when widget closes (prepare for next open)
   useEffect(() => {
