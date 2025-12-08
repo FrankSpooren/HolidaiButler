@@ -10,5 +10,4 @@ export * from './hooks';
 // Export components
 export * from './components';
 
-// Export API client (re-export from lib)
-export * from '@/lib/api';
+// Note: API client should be imported directly from '@/lib/api' to avoid naming conflicts

@@ -54,7 +54,8 @@ export const AdyenCheckoutComponent: React.FC<AdyenCheckoutProps> = ({
   countryCode = 'NL',
 }) => {
   const paymentContainerRef = useRef<HTMLDivElement>(null);
-  const checkoutInstanceRef = useRef<InstanceType<typeof AdyenCheckout> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const checkoutInstanceRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');

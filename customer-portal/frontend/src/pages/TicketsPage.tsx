@@ -14,7 +14,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { format, type Locale } from 'date-fns';
 import { nl, enUS, de, es } from 'date-fns/locale';
 import {
   Search,

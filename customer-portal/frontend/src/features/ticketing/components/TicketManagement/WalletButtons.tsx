@@ -21,7 +21,7 @@ export default function WalletButtons({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { mutate: addToWallet, isLoading } = useAddToWallet();
+  const { mutate: addToWallet, isPending: isLoading } = useAddToWallet();
 
   // Detect user's platform
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
