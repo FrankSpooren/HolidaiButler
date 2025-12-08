@@ -103,7 +103,7 @@ export function POIComparisonModal({ poiIds, isOpen, onClose }: POIComparisonMod
 
           {hasError && (
             <div className="comparison-error">
-              <p>{t.poi.loadingStates.error || 'Error loading POIs for comparison'}</p>
+              <p>{t.poi.loadingStates?.notFound || 'Error loading POIs for comparison'}</p>
             </div>
           )}
 
@@ -113,7 +113,7 @@ export function POIComparisonModal({ poiIds, isOpen, onClose }: POIComparisonMod
                 <thead>
                   <tr>
                     <th className="comparison-table-label"></th>
-                    {pois.map((poi) => (
+                    {pois.map((poi) => poi && (
                       <th key={poi.id} className="comparison-table-poi">
                         <div className="comparison-poi-header">
                           {/* POI Image */}
@@ -131,7 +131,7 @@ export function POIComparisonModal({ poiIds, isOpen, onClose }: POIComparisonMod
                           <h3 className="comparison-poi-name">{poi.name}</h3>
                           <div className="comparison-poi-badges">
                             <POIBadge type="category" category={poi.category} />
-                            {poi.verified === 1 && <POIBadge type="verified" />}
+                            {poi.verified && <POIBadge type="verified" />}
                           </div>
                         </div>
                       </th>
@@ -142,13 +142,13 @@ export function POIComparisonModal({ poiIds, isOpen, onClose }: POIComparisonMod
                 <tbody>
                   {/* Rating */}
                   <tr>
-                    <td className="comparison-table-label">{t.poi.rating || 'Rating'}</td>
-                    {pois.map((poi) => (
+                    <td className="comparison-table-label">{'Rating'}</td>
+                    {pois.map((poi) => poi && (
                       <td key={poi.id} className="comparison-table-value">
                         <POIRating rating={poi.rating} size="medium" showReviewCount={false} />
                         {poi.review_count && (
                           <div className="comparison-review-count">
-                            {poi.review_count} {t.reviews.reviews || 'reviews'}
+                            {poi.review_count} {t.reviews?.noReviews ? 'reviews' : 'reviews'}
                           </div>
                         )}
                       </td>
@@ -157,8 +157,8 @@ export function POIComparisonModal({ poiIds, isOpen, onClose }: POIComparisonMod
 
                   {/* Price Level */}
                   <tr>
-                    <td className="comparison-table-label">{t.poi.budgetLabels.priceLevel || 'Price'}</td>
-                    {pois.map((poi) => (
+                    <td className="comparison-table-label">{t.poi.budgetLabels?.priceLevel || 'Price'}</td>
+                    {pois.map((poi) => poi && (
                       <td key={poi.id} className="comparison-table-value">
                         <div className="comparison-price">
                           {poi.price_level ? '€'.repeat(poi.price_level) : '-'}
@@ -173,7 +173,7 @@ export function POIComparisonModal({ poiIds, isOpen, onClose }: POIComparisonMod
                   {/* Description */}
                   <tr>
                     <td className="comparison-table-label">{t.poi.about || 'Description'}</td>
-                    {pois.map((poi) => (
+                    {pois.map((poi) => poi && (
                       <td key={poi.id} className="comparison-table-value">
                         <div className="comparison-description">
                           {poi.description
@@ -188,8 +188,8 @@ export function POIComparisonModal({ poiIds, isOpen, onClose }: POIComparisonMod
 
                   {/* Address */}
                   <tr>
-                    <td className="comparison-table-label">{t.poi.address || 'Address'}</td>
-                    {pois.map((poi) => (
+                    <td className="comparison-table-label">{'Address'}</td>
+                    {pois.map((poi) => poi && (
                       <td key={poi.id} className="comparison-table-value">
                         {poi.address || '-'}
                       </td>
@@ -198,8 +198,8 @@ export function POIComparisonModal({ poiIds, isOpen, onClose }: POIComparisonMod
 
                   {/* Phone */}
                   <tr>
-                    <td className="comparison-table-label">{t.poi.phone || 'Phone'}</td>
-                    {pois.map((poi) => (
+                    <td className="comparison-table-label">{'Phone'}</td>
+                    {pois.map((poi) => poi && (
                       <td key={poi.id} className="comparison-table-value">
                         {poi.phone ? (
                           <a href={`tel:${poi.phone}`} className="comparison-link">
@@ -214,8 +214,8 @@ export function POIComparisonModal({ poiIds, isOpen, onClose }: POIComparisonMod
 
                   {/* Website */}
                   <tr>
-                    <td className="comparison-table-label">{t.poi.website || 'Website'}</td>
-                    {pois.map((poi) => (
+                    <td className="comparison-table-label">{'Website'}</td>
+                    {pois.map((poi) => poi && (
                       <td key={poi.id} className="comparison-table-value">
                         {poi.website ? (
                           <a
@@ -236,10 +236,10 @@ export function POIComparisonModal({ poiIds, isOpen, onClose }: POIComparisonMod
                   {/* Opening Hours Summary */}
                   <tr>
                     <td className="comparison-table-label">{t.poi.openingHours || 'Hours'}</td>
-                    {pois.map((poi) => (
+                    {pois.map((poi) => poi && (
                       <td key={poi.id} className="comparison-table-value">
                         {poi.opening_hours ? (
-                          <div className="comparison-hours-indicator">✓ {t.poi.openingStatus.available || 'Available'}</div>
+                          <div className="comparison-hours-indicator">✓ {t.poi.openingStatus?.available || 'Available'}</div>
                         ) : (
                           '-'
                         )}
@@ -249,8 +249,9 @@ export function POIComparisonModal({ poiIds, isOpen, onClose }: POIComparisonMod
 
                   {/* Amenities */}
                   <tr>
-                    <td className="comparison-table-label">{t.poi.amenities.title || 'Amenities'}</td>
+                    <td className="comparison-table-label">{t.poi.amenities?.title || 'Amenities'}</td>
                     {pois.map((poi) => {
+                      if (!poi) return null;
                       const amenities: string[] = [];
                       if (poi.accessibility_features && poi.accessibility_features.includes('wheelchair_accessible')) {
                         amenities.push('♿ Wheelchair');

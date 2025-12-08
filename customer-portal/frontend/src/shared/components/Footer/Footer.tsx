@@ -17,21 +17,24 @@ export function Footer() {
   const { t } = useLanguage();
   const currentYear = new Date().getFullYear();
 
+  // Cast footer to any to handle optional properties
+  const footer = t.footer as Record<string, string>;
+
   const footerLinks = {
     platform: [
-      { label: t.footer.about, path: '/about' },
-      { label: t.footer.howItWorks || 'Hoe het werkt', path: '/how-it-works' },
-      { label: t.footer.pois || 'Ontdek', path: '/pois' },
+      { label: footer.about || 'About', path: '/about' },
+      { label: footer.howItWorks || 'Hoe het werkt', path: '/how-it-works' },
+      { label: footer.pois || 'Ontdek', path: '/pois' },
     ],
     support: [
-      { label: t.footer.contact, path: '/contact' },
-      { label: t.footer.faq || 'FAQ', path: '/faq' },
-      { label: t.footer.help || 'Help', path: '/help' },
+      { label: footer.contact || 'Contact', path: '/contact' },
+      { label: footer.faq || 'FAQ', path: '/faq' },
+      { label: footer.help || 'Help', path: '/help' },
     ],
     legal: [
-      { label: t.footer.privacy, path: '/privacy' },
-      { label: t.footer.terms, path: '/terms' },
-      { label: t.footer.cookies || 'Cookies', path: '/cookies' },
+      { label: footer.privacy || 'Privacy', path: '/privacy' },
+      { label: footer.terms || 'Terms', path: '/terms' },
+      { label: footer.cookies || 'Cookies', path: '/cookies' },
     ],
   };
 
@@ -53,7 +56,7 @@ export function Footer() {
               </svg>
             </Link>
             <p className="footer-tagline">
-              {t.footer.tagline || 'Jouw Persoonlijke Butler aan de Costa Blanca'}
+              {footer.tagline || 'Jouw Persoonlijke Butler aan de Costa Blanca'}
             </p>
 
             {/* Social Links */}
@@ -97,7 +100,7 @@ export function Footer() {
           {/* Link Columns */}
           <div className="footer-links-grid">
             <div className="footer-column">
-              <h4 className="footer-column-title">{t.footer.platformTitle || 'Platform'}</h4>
+              <h4 className="footer-column-title">{footer.platformTitle || 'Platform'}</h4>
               <ul className="footer-link-list">
                 {footerLinks.platform.map((link) => (
                   <li key={link.path}>
@@ -108,7 +111,7 @@ export function Footer() {
             </div>
 
             <div className="footer-column">
-              <h4 className="footer-column-title">{t.footer.supportTitle || 'Support'}</h4>
+              <h4 className="footer-column-title">{footer.supportTitle || 'Support'}</h4>
               <ul className="footer-link-list">
                 {footerLinks.support.map((link) => (
                   <li key={link.path}>
@@ -119,7 +122,7 @@ export function Footer() {
             </div>
 
             <div className="footer-column">
-              <h4 className="footer-column-title">{t.footer.legalTitle || 'Juridisch'}</h4>
+              <h4 className="footer-column-title">{footer.legalTitle || 'Juridisch'}</h4>
               <ul className="footer-link-list">
                 {footerLinks.legal.map((link) => (
                   <li key={link.path}>
@@ -136,10 +139,10 @@ export function Footer() {
       <div className="footer-bottom">
         <div className="footer-container">
           <p className="footer-copyright">
-            © {currentYear} HolidaiButler. {t.footer.allRights || 'Alle rechten voorbehouden.'}
+            © {currentYear} HolidaiButler. {footer.allRights || 'Alle rechten voorbehouden.'}
           </p>
           <p className="footer-made-with">
-            {t.footer.madeWith || 'Gemaakt met ❤️ in Costa Blanca'}
+            {footer.madeWith || 'Gemaakt met ❤️ in Costa Blanca'}
           </p>
         </div>
       </div>
