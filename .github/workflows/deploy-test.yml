@@ -46,19 +46,29 @@ jobs:
             reservations-module/package-lock.json
             ticketing-module/package-lock.json
 
-      # 4. Build alle modules (met absolute paden)
+      # 4. Build alle modules (met support voor frontend-submap)
       - name: Build all modules
         run: |
           build_module() {
             MODULE=$1
             echo "🔍 Building $MODULE..."
             cd "$GITHUB_WORKSPACE/$MODULE"
-            if [ -f package-lock.json ]; then
+
+            # Installeer root dependencies (indien aanwezig)
+            if [ -f package.json ]; then
               npm ci || npm install --prefer-offline
-            else
-              npm install --prefer-offline
             fi
-            npm run build
+
+            # Als er een frontend-submap is, installeer daar ook en build
+            if [ -d "frontend" ]; then
+              cd frontend
+              npm ci || npm install --prefer-offline
+              npm run build
+              cd ..
+            else
+              npm run build
+            fi
+
             cd "$GITHUB_WORKSPACE"
           }
 
@@ -88,7 +98,7 @@ jobs:
         run: |
           rsync -av --delete \
             $GITHUB_WORKSPACE/customer-portal/frontend/dist/ \
-            $GITHUB_WORKSPACE/admin-module/dist/ \
+            $GITHUB_WORKSPACE/admin-module/frontend/dist/ \
             $GITHUB_WORKSPACE/agenda-module/dist/ \
             $GITHUB_WORKSPACE/payment-module/dist/ \
             $GITHUB_WORKSPACE/platform-core/dist/ \
