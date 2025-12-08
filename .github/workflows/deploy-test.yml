@@ -1,95 +1,57 @@
-
-name: Deploy Test Frontend & Selected Modules
+name: Deploy Test Frontend
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'customer-portal/frontend/**'
-      - 'admin-module/**'
-      - 'platform-core/**'
-  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Haal code op
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2. Cache npm dependencies
       - name: Cache npm
         uses: actions/cache@v3
         with:
           path: ~/.npm
-          key: "${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}"
+          key: "${{ runner.os }}-node-${{ hashFiles('customer-portal/frontend/package-lock.json') }}"
           restore-keys: |
             ${{ runner.os }}-node-
 
+      # 3. Installeer Node.js (met juiste pad voor lock file)
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'customer-portal/frontend/package-lock.json'
 
-      # Detect gewijzigde modules
-      - name: Detect changed modules
-        id: changes
+      # 4. Installeer dependencies (met fallback)
+      - name: Install dependencies
         run: |
-          echo "changed_modules=" >> $GITHUB_ENV
-          CHANGED=$(git diff --name-only HEAD~1 HEAD)
-          echo "Gewijzigde bestanden:"
-          echo "$CHANGED"
-
-          MODULES=""
-          if echo "$CHANGED" | grep -q "^customer-portal/frontend/"; then
-            MODULES="$MODULES customer-portal/frontend"
-          fi
-          if echo "$CHANGED" | grep -q "^admin-module/"; then
-            MODULES="$MODULES admin-module"
-          fi
-          if echo "$CHANGED" | grep -q "^platform-core/"; then
-            MODULES="$MODULES platform-core"
+          cd customer-portal/frontend
+          if [ -f package-lock.json ]; then
+            echo "🔍 Lock file gevonden, probeer npm ci..."
+            npm ci || (echo "⚠️ npm ci faalde, gebruik npm install" && npm install --prefer-offline)
+          else
+            echo "⚠️ Geen lock file, gebruik npm install"
+            npm install --prefer-offline
           fi
 
-          echo "changed_modules=$MODULES" >> $GITHUB_ENV
-
-      # Build alleen gewijzigde modules
-      - name: Build changed modules
+      # 5. Build project
+      - name: Build project
         run: |
-          for MODULE in $changed_modules; do
-            echo "🔍 Building $MODULE..."
-            cd "$GITHUB_WORKSPACE/$MODULE"
+          cd customer-portal/frontend
+          npm run build
 
-            if [ -f package-lock.json ]; then
-              npm ci || npm install --prefer-offline
-            else
-              npm install --prefer-offline
-            fi
-
-            if [ -d "frontend" ]; then
-              cd frontend
-              if [ -f package-lock.json ]; then
-                npm ci || npm install --prefer-offline
-              else
-                npm install --prefer-offline
-              fi
-              if npm run | grep -q build; then
-                npm run build
-              else
-                echo "⚠️ Geen build script in $MODULE/frontend, overslaan..."
-              fi
-              cd ..
-            else
-              if npm run | grep -q build; then
-                npm run build
-              else
-                echo "⚠️ Geen build script in $MODULE, overslaan..."
-              fi
-            fi
-
-            cd "$GITHUB_WORKSPACE"
-          done
-
-      # Deploy stappen blijven hetzelfde
+      # 6. Setup SSH
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -97,34 +59,27 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
 
+      # 7. Backup huidige versie
       - name: Backup current version
         run: |
           ssh root@91.98.71.87 "rsync -av --delete /var/www/test.holidaibutler.com/ /var/www/test-backup/"
 
+      # 8. Deploy nieuwe build
       - name: Deploy built files
         run: |
-          DEPLOY_PATH="/var/www/test.holidaibutler.com"
-          TARGET="root@91.98.71.87:$DEPLOY_PATH"
-          RSYNC_CMD="rsync -av --delete --ignore-errors --no-perms"
+          rsync -av --delete customer-portal/frontend/dist/ root@91.98.71.87:/var/www/test.holidaibutler.com/
 
-          for MODULE in $changed_modules; do
-            DIST_DIR="$GITHUB_WORKSPACE/$MODULE/dist"
-            if [ -d "$DIST_DIR" ]; then
-              echo "✅ Kopieer $DIST_DIR naar $TARGET"
-              $RSYNC_CMD "$DIST_DIR/" "$TARGET/"
-            else
-              echo "⚠️ Map $DIST_DIR bestaat niet, overslaan..."
-            fi
-          done
-
+      # 9. Fix permissies
       - name: Fix permissions
         run: |
           ssh root@91.98.71.87 "chown -R www-data:www-data /var/www/test.holidaibutler.com && chmod -R 755 /var/www/test.holidaibutler.com"
 
+      # 10. Herstart Apache
       - name: Reload Apache
         run: |
           ssh root@91.98.71.87 "systemctl reload apache2"
 
+      # 11. Health check + rollback
       - name: Health check
         run: |
           sleep 5
