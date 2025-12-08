@@ -1,5 +1,5 @@
 
-name: Deploy Test Frontend & Modules
+name: Deploy Test Frontend & Selected Modules
 
 on:
   push:
@@ -8,11 +8,7 @@ on:
     paths:
       - 'customer-portal/frontend/**'
       - 'admin-module/**'
-      - 'agenda-module/**'
-      - 'payment-module/**'
       - 'platform-core/**'
-      - 'reservations-module/**'
-      - 'ticketing-module/**'
 
 jobs:
   deploy:
@@ -32,7 +28,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # 3. Installeer Node.js + caching voor alle modules
+      # 3. Installeer Node.js + caching voor geselecteerde modules
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -40,14 +36,10 @@ jobs:
           cache-dependency-path: |
             customer-portal/frontend/package-lock.json
             admin-module/package-lock.json
-            agenda-module/package-lock.json
-            payment-module/package-lock.json
             platform-core/package-lock.json
-            reservations-module/package-lock.json
-            ticketing-module/package-lock.json
 
-      # 4. Build alle modules (met support voor frontend-submap)
-      - name: Build all modules
+      # 4. Build geselecteerde modules (met support voor frontend-submap)
+      - name: Build selected modules
         run: |
           build_module() {
             MODULE=$1
@@ -74,11 +66,7 @@ jobs:
 
           build_module customer-portal/frontend
           build_module admin-module
-          build_module agenda-module
-          build_module payment-module
           build_module platform-core
-          build_module reservations-module
-          build_module ticketing-module
 
       # 5. Setup SSH
       - name: Setup SSH
@@ -99,11 +87,7 @@ jobs:
           rsync -av --delete \
             $GITHUB_WORKSPACE/customer-portal/frontend/dist/ \
             $GITHUB_WORKSPACE/admin-module/frontend/dist/ \
-            $GITHUB_WORKSPACE/agenda-module/frontend/dist/ \
-            $GITHUB_WORKSPACE/payment-module/dist/ \
             $GITHUB_WORKSPACE/platform-core/dist/ \
-            $GITHUB_WORKSPACE/reservations-module/dist/ \
-            $GITHUB_WORKSPACE/ticketing-module/dist/ \
             root@91.98.71.87:/var/www/test.holidaibutler.com/
 
       # 8. Fix permissies
