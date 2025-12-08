@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import type { Locale } from 'date-fns';
 import { nl, enUS, de, es } from 'date-fns/locale';
 import { Calendar, Clock, MapPin, Euro, Star } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';

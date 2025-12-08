@@ -23,7 +23,7 @@ export function QuickReplies({ replies, onSelect, onAllVisible }: QuickRepliesPr
 
   // Show tiles one by one: first after 1.5s, then every 0.75s
   useEffect(() => {
-    const timers: NodeJS.Timeout[] = [];
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
     replies.forEach((_, index) => {
       // First tile after 1500ms, subsequent tiles every 750ms
