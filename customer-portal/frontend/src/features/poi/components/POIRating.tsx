@@ -49,7 +49,7 @@ export function POIRating({
   // Handle null, undefined, strings, and numbers
   const parseRating = (value: number | null | undefined): number => {
     // Explicitly check for null/undefined
-    if (value === null || value === undefined || value === '') return 0;
+    if (value === null || value === undefined) return 0;
 
     // Convert to number (handles both number and string types)
     const parsed = Number(value);

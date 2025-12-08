@@ -329,7 +329,7 @@ export function POIDetailPage() {
           {/* Badges */}
           <div className="poi-badges-container">
             <POIBadge type="category" category={poi.category} />
-            {poi.verified === 1 && <POIBadge type="verified" />}
+            {Boolean(poi.verified) && <POIBadge type="verified" />}
             {poi.rating > 4.5 && poi.review_count > 50 && <POIBadge type="popular" />}
           </div>
 

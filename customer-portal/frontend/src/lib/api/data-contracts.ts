@@ -231,7 +231,7 @@ export type EventCategory = 'festival' | 'music' | 'gastronomy' | 'market' | 'we
 
 export interface TicketType {
   id: number;
-  eventId: number;
+  eventId?: number;
   name: string;
   description?: string;
   /** @format double */
@@ -239,6 +239,7 @@ export interface TicketType {
   currency: string;
   maxPerOrder?: number;
   availableQuantity?: number;
+  available?: number;
   isActive?: boolean;
 }
 
