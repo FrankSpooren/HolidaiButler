@@ -1,6 +1,7 @@
 /**
  * Public POI Routes
  * Endpoints for customer-facing POI data (no authentication required)
+ * FIXED: Use correct field names (verified, active) instead of non-existent 'status' field
  */
 
 import express from 'express';
@@ -24,6 +25,47 @@ const getPOIModel = async () => {
     }
   }
   return POI;
+};
+
+/**
+ * Safe JSON parse helper
+ */
+const safeJSONParse = (data, defaultValue = null) => {
+  if (!data) return defaultValue;
+  if (typeof data === 'object') return data;
+  try {
+    return JSON.parse(data);
+  } catch {
+    return defaultValue;
+  }
+};
+
+/**
+ * Format POI from database to public API response format
+ */
+const formatPOIForPublic = (poi) => {
+  const data = poi.toJSON ? poi.toJSON() : poi;
+  return {
+    id: data.id,
+    name: data.name,
+    slug: data.slug || data.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    description: data.description,
+    category: data.category,
+    city: data.city,
+    address: data.address,
+    latitude: data.latitude ? parseFloat(data.latitude) : null,
+    longitude: data.longitude ? parseFloat(data.longitude) : null,
+    status: data.verified && data.active ? 'active' : 'pending',
+    tier: data.tier || 4,
+    images: safeJSONParse(data.images, []),
+    rating: data.average_rating || data.rating,
+    reviewCount: data.review_count,
+    amenities: safeJSONParse(data.amenities, []),
+    opening_hours: safeJSONParse(data.opening_hours, null),
+    phone: data.phone,
+    website: data.website,
+    email: data.email,
+  };
 };
 
 /**
@@ -58,32 +100,55 @@ router.get('/', async (req, res) => {
       category,
       city,
       search,
-      status = 'active'
+      sort = 'name:asc'
     } = req.query;
 
-    const offset = (page - 1) * limit;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    // Build where clause
-    const where = { status };
+    // Build where clause - only show verified and active POIs
+    const where = { verified: true, active: true };
     if (category) where.category = category;
-    if (city) where.city = city;
+    if (city) where.city = { [Op.like]: `%${city}%` };
+
+    if (search) {
+      where[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { description: { [Op.like]: `%${search}%` } },
+        { city: { [Op.like]: `%${search}%` } },
+      ];
+    }
+
+    // Parse sort parameter
+    let order = [['name', 'ASC']];
+    if (sort) {
+      const [sortField, sortDir] = sort.split(':');
+      const fieldMap = {
+        name: 'name',
+        rating: 'average_rating',
+        category: 'category',
+        tier: 'tier',
+        created_at: 'createdAt',
+      };
+      const mappedField = fieldMap[sortField] || 'name';
+      order = [[mappedField, (sortDir || 'asc').toUpperCase()]];
+    }
 
     const { count, rows } = await model.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['tier', 'ASC'], ['name', 'ASC']]
+      order
     });
 
     res.json({
       success: true,
       data: {
-        pois: rows,
+        pois: rows.map(formatPOIForPublic),
         pagination: {
           total: count,
           page: parseInt(page),
           limit: parseInt(limit),
-          pages: Math.ceil(count / limit)
+          pages: Math.ceil(count / parseInt(limit))
         }
       }
     });
@@ -123,14 +188,13 @@ router.get('/geojson', async (req, res) => {
 
     const {
       category,
-      city,
-      status = 'active'
+      city
     } = req.query;
 
-    // Build where clause
-    const where = { status };
+    // Build where clause - only show verified and active POIs
+    const where = { verified: true, active: true };
     if (category) where.category = category;
-    if (city) where.city = city;
+    if (city) where.city = { [Op.like]: `%${city}%` };
 
     const pois = await model.findAll({
       where,
@@ -143,6 +207,126 @@ router.get('/geojson', async (req, res) => {
 
     // Return sample data on error for development
     res.json(convertToGeoJSON(getSamplePOIs()));
+  }
+});
+
+/**
+ * @route   GET /api/v1/pois/search
+ * @desc    Search POIs with fuzzy matching
+ * @access  Public
+ */
+router.get('/search', async (req, res) => {
+  try {
+    const model = await getPOIModel();
+
+    if (!model) {
+      return res.json({
+        success: true,
+        message: 'Database not available - returning sample data',
+        data: {
+          pois: getSamplePOIs(),
+          pagination: { total: 5, page: 1, limit: 20, pages: 1 }
+        }
+      });
+    }
+
+    const {
+      q,
+      query,
+      page = 1,
+      limit = 20,
+      category
+    } = req.query;
+
+    const searchTerm = q || query || '';
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build where clause - only show verified and active POIs
+    const where = { verified: true, active: true };
+    if (category) where.category = category;
+
+    if (searchTerm) {
+      where[Op.or] = [
+        { name: { [Op.like]: `%${searchTerm}%` } },
+        { description: { [Op.like]: `%${searchTerm}%` } },
+        { city: { [Op.like]: `%${searchTerm}%` } },
+        { address: { [Op.like]: `%${searchTerm}%` } },
+      ];
+    }
+
+    const { count, rows } = await model.findAndCountAll({
+      where,
+      limit: parseInt(limit),
+      offset,
+      order: [['average_rating', 'DESC'], ['name', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: {
+        pois: rows.map(formatPOIForPublic),
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(count / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('Error searching POIs:', error);
+    res.json({
+      success: true,
+      message: 'Database error - returning sample data',
+      data: {
+        pois: getSamplePOIs(),
+        pagination: { total: 5, page: 1, limit: 20, pages: 1 }
+      }
+    });
+  }
+});
+
+/**
+ * @route   GET /api/v1/pois/autocomplete
+ * @desc    Get autocomplete suggestions for POI names
+ * @access  Public
+ */
+router.get('/autocomplete', async (req, res) => {
+  try {
+    const { q, limit = 10 } = req.query;
+
+    if (!q || q.length < 2) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const model = await getPOIModel();
+    if (!model) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const pois = await model.findAll({
+      where: {
+        verified: true,
+        active: true,
+        name: { [Op.like]: `%${q}%` }
+      },
+      attributes: ['id', 'name', 'category', 'city'],
+      limit: parseInt(limit),
+      order: [['average_rating', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: pois.map(poi => ({
+        id: poi.id,
+        name: poi.name,
+        category: poi.category,
+        city: poi.city
+      }))
+    });
+  } catch (error) {
+    logger.error('Error fetching autocomplete:', error);
+    res.json({ success: true, data: [] });
   }
 });
 
@@ -166,16 +350,16 @@ function convertToGeoJSON(pois) {
         properties: {
           id: poiData.id,
           name: poiData.name,
-          slug: poiData.slug,
+          slug: poiData.slug || poiData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
           description: poiData.description,
           category: poiData.category,
           city: poiData.city,
           address: poiData.address,
-          status: poiData.status,
-          tier: poiData.tier,
-          images: poiData.images,
-          rating: poiData.rating,
-          reviewCount: poiData.reviewCount
+          status: poiData.verified && poiData.active ? 'active' : 'pending',
+          tier: poiData.tier || 4,
+          images: safeJSONParse(poiData.images, []),
+          rating: poiData.average_rating || poiData.rating,
+          reviewCount: poiData.review_count
         }
       };
     })
@@ -200,17 +384,30 @@ router.get('/:id', async (req, res) => {
 
     const { id } = req.params;
 
-    // SECURITY FIX: Use parameterized query instead of string interpolation
-    // Bug fixed: 30-11-2025 - Prevents SQL injection attacks
-    const poi = await model.findOne({
+    // Try to find by ID first, then by slug
+    let poi = await model.findOne({
       where: {
         [Op.or]: [
           { id: id },
-          { slug: id }
+          { slug: id },
+          { google_place_id: id }
         ],
-        status: 'active'
+        verified: true,
+        active: true
       }
     });
+
+    // If not found by ID, try slug-based search
+    if (!poi) {
+      const slugSearch = id.replace(/-/g, '%');
+      poi = await model.findOne({
+        where: {
+          name: { [Op.like]: `%${slugSearch}%` },
+          verified: true,
+          active: true
+        }
+      });
+    }
 
     if (!poi) {
       return res.status(404).json({
@@ -221,7 +418,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: poi
+      data: formatPOIForPublic(poi)
     });
   } catch (error) {
     logger.error('Error fetching POI:', error);
@@ -248,7 +445,7 @@ function getSamplePOIs() {
       latitude: 38.6327,
       longitude: 0.0778,
       status: 'active',
-      tier: 'premium',
+      tier: 1,
       images: [{ url: '/images/penyal.jpg', isPrimary: true }],
       rating: 4.8,
       reviewCount: 245
@@ -264,7 +461,7 @@ function getSamplePOIs() {
       latitude: 38.6448,
       longitude: 0.0598,
       status: 'active',
-      tier: 'standard',
+      tier: 2,
       images: [{ url: '/images/arenal.jpg', isPrimary: true }],
       rating: 4.5,
       reviewCount: 189
@@ -280,7 +477,7 @@ function getSamplePOIs() {
       latitude: 38.6445,
       longitude: 0.0441,
       status: 'active',
-      tier: 'premium',
+      tier: 1,
       images: [{ url: '/images/baydal.jpg', isPrimary: true }],
       rating: 4.7,
       reviewCount: 312
@@ -296,7 +493,7 @@ function getSamplePOIs() {
       latitude: 38.6452,
       longitude: 0.0445,
       status: 'active',
-      tier: 'standard',
+      tier: 3,
       images: [{ url: '/images/museo.jpg', isPrimary: true }],
       rating: 4.2,
       reviewCount: 87
@@ -312,7 +509,7 @@ function getSamplePOIs() {
       latitude: 38.6461,
       longitude: 0.0512,
       status: 'active',
-      tier: 'basic',
+      tier: 4,
       images: [{ url: '/images/portal.jpg', isPrimary: true }],
       rating: 4.0,
       reviewCount: 56
