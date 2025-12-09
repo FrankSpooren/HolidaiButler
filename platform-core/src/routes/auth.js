@@ -169,6 +169,12 @@ router.post('/signup', async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Account succesvol aangemaakt',
+      data: {
+        user: userData,
+        accessToken,
+        refreshToken
+      },
+      // Keep legacy fields for backwards compatibility
       user: userData,
       token: accessToken,
       refreshToken,
@@ -326,6 +332,12 @@ router.post('/login', async (req, res) => {
     res.json({
       success: true,
       message: 'Inloggen gelukt',
+      data: {
+        user: userData,
+        accessToken,
+        refreshToken
+      },
+      // Keep legacy fields for backwards compatibility
       user: userData,
       token: accessToken,
       refreshToken,
@@ -382,9 +394,11 @@ router.get('/me', authenticate, async (req, res) => {
       });
     }
 
+    const userData = user.toSafeJSON ? user.toSafeJSON() : user;
     res.json({
       success: true,
-      user: user.toSafeJSON ? user.toSafeJSON() : user
+      data: userData,
+      user: userData  // Legacy field
     });
 
   } catch (error) {
@@ -518,7 +532,14 @@ router.post('/refresh', async (req, res) => {
     res.json({
       success: true,
       message: 'Token vernieuwd',
+      data: {
+        accessToken,
+        refreshToken  // Return same refresh token
+      },
+      // Legacy fields
       token: accessToken,
+      accessToken,
+      refreshToken,
       expiresIn: ACCESS_TOKEN_EXPIRY
     });
 
