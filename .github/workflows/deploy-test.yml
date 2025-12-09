@@ -110,22 +110,24 @@ jobs:
       # 9. Deploy Backend API
       - name: Deploy Backend API
         run: |
-          # Create backend directory if not exists
-          ssh root@91.98.71.87 "mkdir -p /var/www/api.holidaibutler.com"
+          # Create backend directory structure if not exists
+          ssh root@91.98.71.87 "mkdir -p /var/www/api.holidaibutler.com/platform-core"
 
-          # Deploy platform-core backend
+          # Deploy platform-core backend to correct subdirectory
+          # IMPORTANT: Deploy to platform-core/ subdirectory, NOT root api directory
+          # The PM2 process expects code at /var/www/api.holidaibutler.com/platform-core/src/
           rsync -av --delete \
             --exclude 'node_modules' \
             --exclude '.env' \
             --exclude 'logs' \
             $GITHUB_WORKSPACE/platform-core/ \
-            root@91.98.71.87:/var/www/api.holidaibutler.com/
+            root@91.98.71.87:/var/www/api.holidaibutler.com/platform-core/
 
       # 10. Install backend dependencies and restart service
       - name: Setup Backend Service
         run: |
           ssh root@91.98.71.87 << 'ENDSSH'
-            cd /var/www/api.holidaibutler.com
+            cd /var/www/api.holidaibutler.com/platform-core
 
             # Install production dependencies
             npm ci --only=production || npm install --only=production
@@ -139,10 +141,11 @@ jobs:
             fi
 
             # Start or restart the API with PM2
+            # Working directory is /var/www/api.holidaibutler.com/platform-core
             if pm2 describe holidaibutler-api > /dev/null 2>&1; then
               pm2 restart holidaibutler-api
             else
-              pm2 start src/index.js --name holidaibutler-api --env production
+              pm2 start src/index.js --name holidaibutler-api --cwd /var/www/api.holidaibutler.com/platform-core --env production
             fi
 
             # Save PM2 process list
