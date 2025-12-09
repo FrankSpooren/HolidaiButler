@@ -16,21 +16,154 @@ import './AgendaPage.css';
  * Design: Matches POILandingPage exactly
  */
 
-type ViewMode = 'grid' | 'list' | 'map';
-
-// Interest category configuration matching POI categories
+// Interest category configuration - Updated labels with translations
 const INTEREST_CATEGORIES = [
-  { id: 'music', label: 'Music', icon: '🎵', color: '#E67E22' },
-  { id: 'culture', label: 'Culture & History', icon: '🏛️', color: '#9C59B8' },
-  { id: 'active', label: 'Active', icon: '⚽', color: '#3498DB' },
-  { id: 'nature', label: 'Beaches & Nature', icon: '🌿', color: '#1ABC9C' },
-  { id: 'food', label: 'Food & Drinks', icon: '🍽️', color: '#27AE60' },
-  { id: 'festivals', label: 'Recreation', icon: '🎉', color: '#E67E22' },
-  { id: 'markets', label: 'Shopping', icon: '🛒', color: '#F39C12' },
-  { id: 'family', label: 'Health & Wellbeing', icon: '🧘', color: '#E91E63' },
+  { id: 'music', icon: '🎵', color: '#E67E22' },
+  { id: 'culture', icon: '🏛️', color: '#9C59B8' },
+  { id: 'active', icon: '⚽', color: '#3498DB' },
+  { id: 'nature', icon: '🌿', color: '#1ABC9C' },
+  { id: 'food', icon: '🍽️', color: '#27AE60' },
+  { id: 'festivals', icon: '🎉', color: '#E67E22' },
+  { id: 'markets', icon: '🛒', color: '#F39C12' },
+  { id: 'creative', icon: '🎨', color: '#9B59B6' },
 ];
 
-// Map event categories to interest categories
+// Category labels in all 6 languages
+const categoryLabels: Record<string, Record<string, string>> = {
+  nl: {
+    music: 'Muziek',
+    culture: 'Cultuur',
+    active: 'Actief',
+    nature: 'Natuur',
+    food: 'Eten',
+    festivals: 'Festivals',
+    markets: 'Markten',
+    creative: 'Creatief',
+  },
+  en: {
+    music: 'Music',
+    culture: 'Culture',
+    active: 'Active',
+    nature: 'Nature',
+    food: 'Food',
+    festivals: 'Festivals',
+    markets: 'Markets',
+    creative: 'Creative',
+  },
+  de: {
+    music: 'Musik',
+    culture: 'Kultur',
+    active: 'Aktiv',
+    nature: 'Natur',
+    food: 'Essen',
+    festivals: 'Festivals',
+    markets: 'Märkte',
+    creative: 'Kreativ',
+  },
+  es: {
+    music: 'Música',
+    culture: 'Cultura',
+    active: 'Activo',
+    nature: 'Naturaleza',
+    food: 'Comida',
+    festivals: 'Festivales',
+    markets: 'Mercados',
+    creative: 'Creativo',
+  },
+  sv: {
+    music: 'Musik',
+    culture: 'Kultur',
+    active: 'Aktiv',
+    nature: 'Natur',
+    food: 'Mat',
+    festivals: 'Festivaler',
+    markets: 'Marknader',
+    creative: 'Kreativ',
+  },
+  pl: {
+    music: 'Muzyka',
+    culture: 'Kultura',
+    active: 'Aktywne',
+    nature: 'Natura',
+    food: 'Jedzenie',
+    festivals: 'Festiwale',
+    markets: 'Targi',
+    creative: 'Kreatywny',
+  },
+};
+
+// Search placeholder translations
+const searchPlaceholders: Record<string, string> = {
+  nl: 'Zoek evenementen en activiteiten',
+  en: 'Search Events and Activities',
+  de: 'Veranstaltungen und Aktivitäten suchen',
+  es: 'Buscar eventos y actividades',
+  sv: 'Sök evenemang och aktiviteter',
+  pl: 'Szukaj wydarzeń i aktywności',
+};
+
+// Keywords for smart categorization based on title/description
+const categoryKeywords: Record<string, string[]> = {
+  music: ['music', 'concert', 'band', 'orchestra', 'jazz', 'rock', 'live music', 'dj', 'festival music', 'singing', 'choir', 'guitar', 'piano', 'flamenco'],
+  culture: ['museum', 'history', 'heritage', 'castle', 'church', 'cathedral', 'monument', 'archaeological', 'historic', 'cultural', 'tradition', 'folklore', 'exhibition', 'gallery', 'art exhibition'],
+  active: ['hiking', 'cycling', 'running', 'sport', 'fitness', 'yoga', 'swimming', 'tennis', 'golf', 'football', 'basketball', 'climbing', 'kayak', 'surfing', 'diving', 'walk', 'tour', 'adventure'],
+  nature: ['beach', 'nature', 'park', 'garden', 'mountain', 'forest', 'wildlife', 'bird', 'botanical', 'landscape', 'outdoor', 'natural', 'eco', 'hiking', 'trail', 'peñon', 'ifach', 'sierra'],
+  food: ['food', 'restaurant', 'tapas', 'wine', 'gastronomy', 'cooking', 'culinary', 'tasting', 'dinner', 'lunch', 'brunch', 'cafe', 'bar', 'paella', 'cuisine'],
+  festivals: ['festival', 'fiesta', 'carnival', 'parade', 'celebration', 'party', 'fireworks', 'fair', 'feria', 'hogueras', 'moors', 'christians'],
+  markets: ['market', 'mercado', 'flea', 'antique', 'craft', 'artisan', 'farmers', 'street market', 'bazaar', 'fair'],
+  creative: ['painting', 'art class', 'workshop', 'craft', 'pottery', 'sculpture', 'photography', 'drawing', 'creative', 'artistic', 'design', 'handmade', 'diy', 'oil painting', 'watercolor', 'ceramic'],
+};
+
+// Smart categorization function - scans title and description
+function detectCategory(event: AgendaEvent, language: string): string {
+  const title = typeof event.title === 'string'
+    ? event.title.toLowerCase()
+    : (event.title?.[language] || event.title?.en || event.title?.nl || '').toLowerCase();
+
+  const description = typeof event.description === 'string'
+    ? event.description.toLowerCase()
+    : (event.description?.[language] || event.description?.en || event.description?.nl || '').toLowerCase();
+
+  const combinedText = `${title} ${description}`;
+
+  // Score each category based on keyword matches
+  const scores: Record<string, number> = {};
+
+  for (const [category, keywords] of Object.entries(categoryKeywords)) {
+    scores[category] = 0;
+    for (const keyword of keywords) {
+      if (combinedText.includes(keyword)) {
+        // Title matches are worth more
+        if (title.includes(keyword)) {
+          scores[category] += 3;
+        } else {
+          scores[category] += 1;
+        }
+      }
+    }
+  }
+
+  // Find the category with highest score
+  let maxScore = 0;
+  let bestCategory = 'culture'; // default fallback
+
+  for (const [category, score] of Object.entries(scores)) {
+    if (score > maxScore) {
+      maxScore = score;
+      bestCategory = category;
+    }
+  }
+
+  // If no keywords matched, use the event's primaryCategory with mapping
+  if (maxScore === 0 && event.primaryCategory) {
+    const mapped = categoryMapping[event.primaryCategory];
+    if (mapped) return mapped;
+  }
+
+  return bestCategory;
+}
+
+// Map event categories to interest categories (fallback)
 const categoryMapping: Record<string, string> = {
   culture: 'culture',
   exhibitions: 'culture',
@@ -40,13 +173,12 @@ const categoryMapping: Record<string, string> = {
   'food-drink': 'food',
   'active-sports': 'active',
   nature: 'nature',
-  family: 'family',
   tours: 'culture',
-  workshops: 'festivals',
+  workshops: 'creative',
   entertainment: 'festivals',
-  relaxation: 'family',
   folklore: 'culture',
   beach: 'nature',
+  creative: 'creative',
 };
 
 const defaultFilters: AgendaFilters = {
@@ -58,7 +190,6 @@ const defaultFilters: AgendaFilters = {
 
 export function AgendaPage() {
   const { t, language } = useLanguage();
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [limit, setLimit] = useState<number>(12);
@@ -84,23 +215,23 @@ export function AgendaPage() {
 
   const allEvents = eventsData?.data || [];
 
-  // Filter events based on filters
+  // Filter events based on filters with smart categorization
   const filteredEvents = useMemo(() => {
     let result = [...allEvents];
 
-    // Filter by selected category chip
+    // Filter by selected category chip using smart detection
     if (selectedCategory) {
       result = result.filter(event => {
-        const mappedCategory = categoryMapping[event.primaryCategory];
-        return mappedCategory === selectedCategory;
+        const detectedCategory = detectCategory(event, language);
+        return detectedCategory === selectedCategory;
       });
     }
 
-    // Filter by interests from filter modal
+    // Filter by interests from filter modal using smart detection
     if (filters.interests.length > 0) {
       result = result.filter(event => {
-        const mappedCategory = categoryMapping[event.primaryCategory];
-        return filters.interests.includes(mappedCategory);
+        const detectedCategory = detectCategory(event, language);
+        return filters.interests.includes(detectedCategory);
       });
     }
 
@@ -261,7 +392,7 @@ export function AgendaPage() {
           <input
             type="text"
             className="agenda-search-input"
-            placeholder={t.poi?.searchPlaceholder || 'Search POIs, restaurants, beaches...'}
+            placeholder={searchPlaceholders[language] || searchPlaceholders.en}
             value={searchQuery}
             onChange={handleSearch}
           />
@@ -279,7 +410,7 @@ export function AgendaPage() {
               onClick={() => handleCategoryClick(category.id)}
             >
               <span className="agenda-category-icon">{category.icon}</span>
-              {category.label}
+              {categoryLabels[language]?.[category.id] || categoryLabels.en[category.id]}
             </div>
           ))}
         </div>
@@ -290,34 +421,6 @@ export function AgendaPage() {
         <button className="agenda-filter-btn" onClick={() => setFilterModalOpen(true)}>
           🔽 {t.poi?.filters || 'Filters'} ({getActiveFilterCount()})
         </button>
-        <div className="agenda-view-toggle">
-          <button
-            className={`agenda-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-            onClick={() => setViewMode('grid')}
-          >
-            🔲
-          </button>
-          <button
-            className={`agenda-view-btn ${viewMode === 'list' ? 'active' : ''}`}
-            onClick={() => setViewMode('list')}
-          >
-            ☰
-          </button>
-          <button
-            className={`agenda-view-btn ${viewMode === 'map' ? 'active' : ''}`}
-            onClick={() => setViewMode('map')}
-          >
-            <svg viewBox="0 0 24 24" fill="none">
-              <path
-                d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
-                fill={viewMode === 'map' ? 'white' : '#0273ae'}
-                stroke={viewMode === 'map' ? 'white' : '#0273ae'}
-                strokeWidth="2"
-              />
-              <circle cx="12" cy="10" r="3" fill={viewMode === 'map' ? '#D4AF37' : 'white'} />
-            </svg>
-          </button>
-        </div>
       </div>
 
       {/* Loading State */}
@@ -336,7 +439,7 @@ export function AgendaPage() {
       )}
 
       {/* Grid View */}
-      {viewMode === 'grid' && !isLoading && !error && (
+      {!isLoading && !error && (
         <div className="agenda-grid">
           {filteredEvents.map((event) => (
             <AgendaCard
@@ -346,36 +449,14 @@ export function AgendaPage() {
               onSave={handleToggleSave}
               isSaved={savedEvents.has(event._id)}
               distance={getDistance(event)}
+              detectedCategory={detectCategory(event, language)}
             />
           ))}
-        </div>
-      )}
-
-      {/* List View */}
-      {viewMode === 'list' && !isLoading && !error && (
-        <div className="agenda-list">
-          {filteredEvents.map((event) => (
-            <AgendaCard
-              key={event._id}
-              event={event}
-              onClick={() => handleEventClick(event._id)}
-              onSave={handleToggleSave}
-              isSaved={savedEvents.has(event._id)}
-              distance={getDistance(event)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Map View Placeholder */}
-      {viewMode === 'map' && !isLoading && !error && (
-        <div className="agenda-map-placeholder">
-          <p>Map view coming soon...</p>
         </div>
       )}
 
       {/* Load More */}
-      {!isLoading && !error && hasMore && viewMode !== 'map' && (
+      {!isLoading && !error && hasMore && (
         <button className="agenda-load-more" onClick={handleLoadMore}>
           {t.poi?.loadMore || 'Load more'} ({allEvents.length - filteredEvents.length} remaining)
         </button>

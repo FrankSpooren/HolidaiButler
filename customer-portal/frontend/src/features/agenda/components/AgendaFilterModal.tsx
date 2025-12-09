@@ -66,7 +66,7 @@ const filterTranslations: Record<string, {
         food: 'Eten & Drinken',
         festivals: 'Festivals',
         markets: 'Markten',
-        family: 'Familie',
+        creative: 'Creatief',
       },
     },
     distance: {
@@ -113,7 +113,7 @@ const filterTranslations: Record<string, {
         food: 'Food & Drinks',
         festivals: 'Festivals',
         markets: 'Markets',
-        family: 'Family',
+        creative: 'Creative',
       },
     },
     distance: {
@@ -160,7 +160,7 @@ const filterTranslations: Record<string, {
         food: 'Essen & Trinken',
         festivals: 'Festivals',
         markets: 'Märkte',
-        family: 'Familie',
+        creative: 'Kreativ',
       },
     },
     distance: {
@@ -207,7 +207,7 @@ const filterTranslations: Record<string, {
         food: 'Comida y Bebida',
         festivals: 'Festivales',
         markets: 'Mercados',
-        family: 'Familia',
+        creative: 'Creativo',
       },
     },
     distance: {
@@ -254,7 +254,7 @@ const filterTranslations: Record<string, {
         food: 'Mat & Dryck',
         festivals: 'Festivaler',
         markets: 'Marknader',
-        family: 'Familj',
+        creative: 'Kreativ',
       },
     },
     distance: {
@@ -301,7 +301,7 @@ const filterTranslations: Record<string, {
         food: 'Jedzenie i Napoje',
         festivals: 'Festiwale',
         markets: 'Targi',
-        family: 'Rodzina',
+        creative: 'Kreatywny',
       },
     },
     distance: {
