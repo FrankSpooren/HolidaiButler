@@ -122,7 +122,8 @@ app.use(prometheusMiddleware()); // ENTERPRISE: Prometheus metrics collection
 app.get('/metrics', metricsEndpoint);
 
 app.use('/health', healthRoutes);
-app.use('/api/auth', authRoutes); // Customer Portal Authentication
+app.use('/api/auth', authRoutes); // Customer Portal Authentication (legacy)
+app.use('/api/v1/auth', authRoutes); // Customer Portal Authentication (v1)
 app.use('/api/v1/integration', integrationRoutes);
 app.use('/api/v1/workflows', workflowRoutes);
 app.use('/api/v1/poi-classification', poiClassificationRoutes);
