@@ -273,6 +273,8 @@ router.get('/cities', async (req, res) => {
  * @route   GET /api/v1/pois/geojson
  * @desc    Get POIs in GeoJSON format for map display
  * @access  Public
+ * @query   per_category - Number of POIs per category (default: all)
+ * @query   city - Filter by city (default: Calpe area)
  */
 router.get('/geojson', async (req, res) => {
   try {
@@ -285,7 +287,8 @@ router.get('/geojson', async (req, res) => {
 
     const {
       category,
-      city
+      city,
+      per_category // New: limit POIs per category for cleaner map display
     } = req.query;
 
     // Build where clause - only show verified (and active if column exists) POIs
@@ -293,10 +296,58 @@ router.get('/geojson', async (req, res) => {
     if (category) where.category = category;
     if (city) where.city = { [Op.like]: `%${city}%` };
 
-    const pois = await model.findAll({
-      where,
-      order: [['rating', 'DESC'], ['name', 'ASC']]
-    });
+    let pois;
+
+    if (per_category && !category) {
+      // Fetch limited POIs per category for balanced map display
+      const limit = parseInt(per_category) || 2;
+
+      // Get all categories first
+      const categories = await model.findAll({
+        attributes: [[mysqlSequelize.fn('DISTINCT', mysqlSequelize.col('category')), 'category']],
+        where,
+        raw: true
+      });
+
+      // Fetch limited POIs for each category (prioritize Calpe, high rating)
+      const categoryPOIs = await Promise.all(
+        categories.map(async (cat) => {
+          return model.findAll({
+            where: {
+              ...where,
+              category: cat.category,
+              // Focus on Calpe area for better presentation
+              city: { [Op.in]: ['Calp', 'Calpe', 'Calp/Calpe'] }
+            },
+            order: [['rating', 'DESC'], ['review_count', 'DESC']],
+            limit
+          });
+        })
+      );
+
+      // Flatten and filter out empty results
+      pois = categoryPOIs.flat();
+
+      // If we don't have enough POIs from Calpe, fill with nearby cities
+      if (pois.length < categories.length * limit) {
+        const existingIds = pois.map(p => p.id);
+        const additionalPOIs = await model.findAll({
+          where: {
+            ...where,
+            id: { [Op.notIn]: existingIds }
+          },
+          order: [['rating', 'DESC'], ['review_count', 'DESC']],
+          limit: (categories.length * limit) - pois.length
+        });
+        pois = [...pois, ...additionalPOIs];
+      }
+    } else {
+      // Original behavior - fetch all matching POIs
+      pois = await model.findAll({
+        where,
+        order: [['rating', 'DESC'], ['name', 'ASC']]
+      });
+    }
 
     res.json(convertToGeoJSON(pois));
   } catch (error) {
