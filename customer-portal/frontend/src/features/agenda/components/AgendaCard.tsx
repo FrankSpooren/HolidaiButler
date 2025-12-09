@@ -18,6 +18,7 @@ interface AgendaCardProps {
   onSave?: (eventId: string) => void;
   isSaved?: boolean;
   distance?: string;
+  detectedCategory?: string;
 }
 
 const dateLocales: Record<string, Locale> = {
@@ -29,23 +30,90 @@ const dateLocales: Record<string, Locale> = {
   pl: pl,
 };
 
-// Category configuration matching POI categories
-const categoryConfig: Record<string, { label: string; color: string; icon: string }> = {
-  culture: { label: 'Culture & History', color: '#9C59B8', icon: '🏛️' },
-  exhibitions: { label: 'Culture & History', color: '#9C59B8', icon: '🎨' },
-  festivals: { label: 'Recreation', color: '#E67E22', icon: '🎉' },
-  music: { label: 'Recreation', color: '#E67E22', icon: '🎵' },
-  markets: { label: 'Shopping', color: '#F39C12', icon: '🛒' },
-  'food-drink': { label: 'Food & Drinks', color: '#27AE60', icon: '🍽️' },
-  'active-sports': { label: 'Active', color: '#3498DB', icon: '⚽' },
-  nature: { label: 'Beaches & Nature', color: '#1ABC9C', icon: '🌿' },
-  family: { label: 'Recreation', color: '#E67E22', icon: '👨‍👩‍👧' },
-  tours: { label: 'Culture & History', color: '#9C59B8', icon: '🚶' },
-  workshops: { label: 'Recreation', color: '#E67E22', icon: '🎓' },
-  entertainment: { label: 'Recreation', color: '#E67E22', icon: '🎭' },
-  relaxation: { label: 'Health & Wellbeing', color: '#E91E63', icon: '🧘' },
-  folklore: { label: 'Culture & History', color: '#9C59B8', icon: '💃' },
-  beach: { label: 'Beaches & Nature', color: '#1ABC9C', icon: '🏖️' },
+// Category configuration - colors and icons
+const categoryConfig: Record<string, { color: string; icon: string }> = {
+  music: { color: '#E67E22', icon: '🎵' },
+  culture: { color: '#9C59B8', icon: '🏛️' },
+  active: { color: '#3498DB', icon: '⚽' },
+  nature: { color: '#1ABC9C', icon: '🌿' },
+  food: { color: '#27AE60', icon: '🍽️' },
+  festivals: { color: '#E67E22', icon: '🎉' },
+  markets: { color: '#F39C12', icon: '🛒' },
+  creative: { color: '#9B59B6', icon: '🎨' },
+};
+
+// Category labels in all 6 languages
+const categoryLabels: Record<string, Record<string, string>> = {
+  nl: {
+    music: 'Muziek',
+    culture: 'Cultuur',
+    active: 'Actief',
+    nature: 'Natuur',
+    food: 'Eten',
+    festivals: 'Festivals',
+    markets: 'Markten',
+    creative: 'Creatief',
+  },
+  en: {
+    music: 'Music',
+    culture: 'Culture',
+    active: 'Active',
+    nature: 'Nature',
+    food: 'Food',
+    festivals: 'Festivals',
+    markets: 'Markets',
+    creative: 'Creative',
+  },
+  de: {
+    music: 'Musik',
+    culture: 'Kultur',
+    active: 'Aktiv',
+    nature: 'Natur',
+    food: 'Essen',
+    festivals: 'Festivals',
+    markets: 'Märkte',
+    creative: 'Kreativ',
+  },
+  es: {
+    music: 'Música',
+    culture: 'Cultura',
+    active: 'Activo',
+    nature: 'Naturaleza',
+    food: 'Comida',
+    festivals: 'Festivales',
+    markets: 'Mercados',
+    creative: 'Creativo',
+  },
+  sv: {
+    music: 'Musik',
+    culture: 'Kultur',
+    active: 'Aktiv',
+    nature: 'Natur',
+    food: 'Mat',
+    festivals: 'Festivaler',
+    markets: 'Marknader',
+    creative: 'Kreativ',
+  },
+  pl: {
+    music: 'Muzyka',
+    culture: 'Kultura',
+    active: 'Aktywne',
+    nature: 'Natura',
+    food: 'Jedzenie',
+    festivals: 'Festiwale',
+    markets: 'Targi',
+    creative: 'Kreatywny',
+  },
+};
+
+// UI labels translations
+const uiLabels: Record<string, Record<string, string>> = {
+  nl: { free: 'Gratis', featured: 'Uitgelicht', share: 'Delen', agenda: 'Agenda', map: 'Kaart', details: 'Details' },
+  en: { free: 'Free', featured: 'Featured', share: 'Share', agenda: 'Agenda', map: 'Map', details: 'Details' },
+  de: { free: 'Kostenlos', featured: 'Empfohlen', share: 'Teilen', agenda: 'Kalender', map: 'Karte', details: 'Details' },
+  es: { free: 'Gratis', featured: 'Destacado', share: 'Compartir', agenda: 'Agenda', map: 'Mapa', details: 'Detalles' },
+  sv: { free: 'Gratis', featured: 'Utvalda', share: 'Dela', agenda: 'Kalender', map: 'Karta', details: 'Detaljer' },
+  pl: { free: 'Bezpłatne', featured: 'Polecane', share: 'Udostępnij', agenda: 'Kalendarz', map: 'Mapa', details: 'Szczegóły' },
 };
 
 export const AgendaCard: React.FC<AgendaCardProps> = ({
@@ -53,7 +121,8 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
   onClick,
   onSave,
   isSaved = false,
-  distance
+  distance,
+  detectedCategory
 }) => {
   const { language } = useLanguage();
   const locale = dateLocales[language] || nl;
@@ -75,12 +144,14 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
   // Get primary image
   const primaryImage = event.images?.find((img) => img.isPrimary)?.url || event.images?.[0]?.url;
 
-  // Get category config
-  const category = categoryConfig[event.primaryCategory] || {
-    label: 'Event',
+  // Get category config - use detected category or fallback
+  const categoryKey = detectedCategory || event.primaryCategory || 'culture';
+  const categoryStyle = categoryConfig[categoryKey] || {
     color: '#7FA594',
     icon: '📅',
   };
+  const categoryLabel = categoryLabels[language]?.[categoryKey] || categoryLabels.en[categoryKey] || 'Event';
+  const ui = uiLabels[language] || uiLabels.en;
 
   // Truncate description to first sentence
   const truncateDescription = (text: string): string => {
@@ -110,9 +181,9 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
       {/* Category Label */}
       <div
         className="agenda-category-label"
-        style={{ background: category.color }}
+        style={{ background: categoryStyle.color }}
       >
-        {category.label}
+        {categoryLabel}
       </div>
 
       {/* Image Container */}
@@ -127,15 +198,15 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
         ) : (
           <div
             className="agenda-image-placeholder"
-            style={{ background: `linear-gradient(135deg, ${category.color}40, ${category.color}20)` }}
+            style={{ background: `linear-gradient(135deg, ${categoryStyle.color}40, ${categoryStyle.color}20)` }}
           >
-            <span className="agenda-placeholder-icon">{category.icon}</span>
+            <span className="agenda-placeholder-icon">{categoryStyle.icon}</span>
           </div>
         )}
 
         {/* Free Badge */}
         {event.pricing?.isFree && (
-          <div className="agenda-free-badge">Gratis</div>
+          <div className="agenda-free-badge">{ui.free}</div>
         )}
       </div>
 
@@ -161,7 +232,7 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
           {event.featured && (
             <div className="agenda-rating">
               <Star className="agenda-star-icon" />
-              <span>Featured</span>
+              <span>{ui.featured}</span>
             </div>
           )}
         </div>
@@ -193,21 +264,21 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
 
       {/* Action Buttons */}
       <div className="agenda-actions">
-        <button className="agenda-action-btn" title="Share">
+        <button className="agenda-action-btn" title={ui.share}>
           <span>↗️</span>
-          <span>Share</span>
+          <span>{ui.share}</span>
         </button>
-        <button className="agenda-action-btn" title="Calendar">
+        <button className="agenda-action-btn" title={ui.agenda}>
           <span>📅</span>
-          <span>Agenda</span>
+          <span>{ui.agenda}</span>
         </button>
-        <button className="agenda-action-btn" title="Map">
+        <button className="agenda-action-btn" title={ui.map}>
           <span>📍</span>
-          <span>Map</span>
+          <span>{ui.map}</span>
         </button>
-        <button className="agenda-action-btn agenda-action-primary" title="Details" onClick={onClick}>
+        <button className="agenda-action-btn agenda-action-primary" title={ui.details} onClick={onClick}>
           <span>ℹ️</span>
-          <span>Details</span>
+          <span>{ui.details}</span>
         </button>
       </div>
     </div>
