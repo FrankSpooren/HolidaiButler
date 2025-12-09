@@ -24,12 +24,14 @@ async function query(sql, params = []) {
  */
 export const getStatus = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    // req.user.id contains UUID from JWT token
+    const userUuid = req.user.id;
 
+    // Find user by UUID (which is stored in 'uuid' column)
     const users = await query(
-      `SELECT onboarding_completed, onboarding_step
-       FROM Users WHERE id = ?`,
-      [userId]
+      `SELECT id, uuid, onboarding_completed, onboarding_step
+       FROM Users WHERE uuid = ?`,
+      [userUuid]
     );
 
     if (users.length === 0) {
@@ -43,6 +45,7 @@ export const getStatus = async (req, res, next) => {
     }
 
     const user = users[0];
+    const userId = user.id; // Use the integer id for User_Preferences queries
 
     // Get saved onboarding data from preferences
     const prefs = await query(
@@ -86,8 +89,27 @@ export const getStatus = async (req, res, next) => {
  */
 export const saveStep = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    // req.user.id contains UUID from JWT token, need to get integer id
+    const userUuid = req.user.id;
     const { stepNumber } = req.params;
+
+    // Get user's integer ID from UUID
+    const users = await query(
+      'SELECT id FROM Users WHERE uuid = ?',
+      [userUuid]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found'
+        }
+      });
+    }
+
+    const userId = users[0].id;
     const stepNum = parseInt(stepNumber);
 
     // Validate step number
@@ -252,7 +274,26 @@ export const saveStep = async (req, res, next) => {
  */
 export const complete = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    // req.user.id contains UUID from JWT token
+    const userUuid = req.user.id;
+
+    // Get user's integer ID from UUID
+    const users = await query(
+      'SELECT id FROM Users WHERE uuid = ?',
+      [userUuid]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found'
+        }
+      });
+    }
+
+    const userId = users[0].id;
 
     // Mark onboarding as complete
     await mysqlSequelize.query(
