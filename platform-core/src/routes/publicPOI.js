@@ -14,7 +14,6 @@ const router = express.Router();
 
 // Import POI model dynamically to handle connection issues
 let POI = null;
-let hasActiveColumn = null; // Cache for column existence check
 
 const getPOIModel = async () => {
   if (!POI) {
@@ -30,37 +29,14 @@ const getPOIModel = async () => {
 };
 
 /**
- * Check if the is_active column exists in the POI table
- * Results are cached for performance
- */
-const checkActiveColumn = async (model) => {
-  if (hasActiveColumn !== null) return hasActiveColumn;
-
-  try {
-    const tableDesc = await model.describe();
-    hasActiveColumn = !!(tableDesc.is_active || tableDesc.active);
-    logger.info(`POI table has active column: ${hasActiveColumn}`);
-  } catch (err) {
-    logger.warn('Could not describe POI table, assuming no active column:', err.message);
-    hasActiveColumn = false;
-  }
-  return hasActiveColumn;
-};
-
-/**
  * Build base where clause for public POI queries
- * Only adds active filter if column exists
+ * Uses is_active (matching actual database column)
  */
-const buildPublicWhereClause = async (model) => {
-  const where = { verified: true };
-
-  // Only add active filter if column exists
-  const hasActive = await checkActiveColumn(model);
-  if (hasActive) {
-    where.active = true;
-  }
-
-  return where;
+const buildPublicWhereClause = async () => {
+  return {
+    verified: true,
+    is_active: true
+  };
 };
 
 /**
@@ -78,15 +54,14 @@ const safeJSONParse = (data, defaultValue = null) => {
 
 /**
  * Format POI from database to public API response format
- * Supports both basic and extended fields for frontend compatibility
+ * Uses actual database column names (is_active, rating, etc.)
  */
 const formatPOIForPublic = (poi) => {
   const data = poi.toJSON ? poi.toJSON() : poi;
   return {
     id: data.id,
-    uuid: data.uuid,
     name: data.name,
-    slug: data.slug || data.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    slug: data.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     description: data.description,
     category: data.category,
     subcategory: data.subcategory,
@@ -98,9 +73,8 @@ const formatPOIForPublic = (poi) => {
     postal_code: data.postal_code || null,
     latitude: data.latitude ? parseFloat(data.latitude) : null,
     longitude: data.longitude ? parseFloat(data.longitude) : null,
-    status: data.verified && data.active ? 'active' : 'pending',
-    tier: data.tier || 4,
-    rating: data.average_rating || data.rating ? parseFloat(data.average_rating || data.rating) : null,
+    status: data.verified && data.is_active ? 'active' : 'pending',
+    rating: data.rating ? parseFloat(data.rating) : null,
     reviewCount: data.review_count || 0,
     review_count: data.review_count || 0,
     price_level: data.price_level,
@@ -115,9 +89,9 @@ const formatPOIForPublic = (poi) => {
     verified: data.verified || false,
     featured: data.featured || false,
     popularity_score: data.popularity_score || 0,
-    google_placeid: data.google_place_id || data.google_placeid,
+    google_placeid: data.google_placeid,
     created_at: data.created_at || data.last_updated || new Date().toISOString(),
-    updated_at: data.updated_at || data.last_updated || new Date().toISOString()
+    updated_at: data.last_updated || new Date().toISOString()
   };
 };
 
@@ -169,7 +143,7 @@ router.get('/', async (req, res) => {
     }
 
     if (min_rating) {
-      where.average_rating = { [Op.gte]: parseFloat(min_rating) };
+      where.rating = { [Op.gte]: parseFloat(min_rating) };
     }
 
     // Parse sort parameter
@@ -178,9 +152,8 @@ router.get('/', async (req, res) => {
       const [sortField, sortDir] = sort.split(':');
       const fieldMap = {
         name: 'name',
-        rating: 'average_rating',
+        rating: 'rating',
         category: 'category',
-        tier: 'tier',
         popularity_score: 'popularity_score',
         review_count: 'review_count',
         created_at: 'created_at',
@@ -321,7 +294,7 @@ router.get('/geojson', async (req, res) => {
 
     const pois = await model.findAll({
       where,
-      order: [['tier', 'ASC'], ['name', 'ASC']]
+      order: [['rating', 'DESC'], ['name', 'ASC']]
     });
 
     res.json(convertToGeoJSON(pois));
@@ -379,7 +352,7 @@ router.get('/search', async (req, res) => {
       where,
       limit: parseInt(limit),
       offset,
-      order: [['average_rating', 'DESC'], ['name', 'ASC']]
+      order: [['rating', 'DESC'], ['name', 'ASC']]
     });
 
     res.json({
@@ -428,7 +401,7 @@ router.get('/autocomplete', async (req, res) => {
       where,
       attributes: ['id', 'name', 'category', 'city'],
       limit: parseInt(limit),
-      order: [['average_rating', 'DESC']]
+      order: [['rating', 'DESC']]
     });
 
     res.json({
@@ -466,15 +439,14 @@ function convertToGeoJSON(pois) {
         properties: {
           id: poiData.id,
           name: poiData.name,
-          slug: poiData.slug || poiData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          slug: poiData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
           description: poiData.description,
           category: poiData.category,
           city: poiData.city,
           address: poiData.address,
-          status: poiData.verified && poiData.active ? 'active' : 'pending',
-          tier: poiData.tier || 4,
+          status: poiData.verified && poiData.is_active ? 'active' : 'pending',
           images: safeJSONParse(poiData.images, []),
-          rating: poiData.average_rating || poiData.rating,
+          rating: poiData.rating,
           reviewCount: poiData.review_count
         }
       };
