@@ -7,6 +7,7 @@ import { ChatMessage } from './ChatMessage';
 import { POIDetailModal } from '../../../features/poi/components/POIDetailModal';
 import { useCategories } from '../../hooks/useCategories';
 import { chatApi } from '../../services/chat.api';
+import { poiService } from '../../../features/poi/services/poiService';
 import type { POI } from '../../types/poi.types';
 import type { PersonalityType } from '../../types/category.types';
 import './MessageList.css';
@@ -107,10 +108,9 @@ export function MessageList() {
     setLoadingPOIs(true);
 
     try {
-      // Fetch POIs based on personality
-      const response = await fetch(`http://localhost:3002/api/v1/pois?limit=6`);
-      const data = await response.json();
-      setPois(data.data || []);
+      // Fetch POIs based on personality using centralized API service
+      const response = await poiService.getPOIs({ limit: 6 });
+      setPois(response.data || []);
     } catch (error) {
       console.error('Failed to fetch POIs:', error);
     } finally {
