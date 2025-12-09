@@ -267,5 +267,29 @@ tail -f /var/log/apache2/test_access.log
 - [x] SSL certificaat actief (Let's Encrypt)
 - [x] POIs endpoint werkt (1591 actieve POIs)
 - [x] Health endpoint werkt
+- [x] POI List view werkt
+- [x] POI Grid view werkt
+- [x] POI Map view werkt (Leaflet)
 - [ ] MongoDB niet geconfigureerd (niet nodig voor huidige functionaliteit)
 - [ ] Mistral AI niet geconfigureerd (HoliBot gebruikt fallback responses)
+
+## Backup Locatie
+
+Werkende configuratie backup (2025-12-09 01:44 CET):
+```
+/var/backups/holidaibutler/2025-12-09-working/
+├── .env                    # Backend environment
+├── src/                    # Backend source code
+├── frontend/               # Frontend static files
+└── README.txt              # Restore instructies
+```
+
+**Restore commando's:**
+```bash
+# Backend herstellen
+cp -r /var/backups/holidaibutler/2025-12-09-working/src/* /var/www/api.holidaibutler.com/platform-core/src/
+pm2 restart holidaibutler-api
+
+# Frontend herstellen
+cp -r /var/backups/holidaibutler/2025-12-09-working/frontend/* /var/www/test.holidaibutler.com/
+```
