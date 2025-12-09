@@ -1,51 +1,60 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { nl, enUS, es } from 'date-fns/locale';
+import { nl, enUS, es, de, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
-import { Calendar, Clock, MapPin, ExternalLink } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Calendar, MapPin, Star, Heart } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import type { AgendaEvent } from '../services/agendaService';
-import { cardHoverVariants } from '@/shared/utils/animations';
+import './AgendaCard.css';
 
 /**
  * AgendaCard Component
- * Displays event in compact card format - EXACT same styling as POICard
+ * Displays event in POI Grid style - matching POILandingPage cards exactly
  */
 
 interface AgendaCardProps {
   event: AgendaEvent;
-  variant?: 'grid' | 'list';
   onClick?: () => void;
-  index?: number;
+  onSave?: (eventId: string) => void;
+  isSaved?: boolean;
+  distance?: string;
 }
 
 const dateLocales: Record<string, Locale> = {
   nl: nl,
   en: enUS,
   es: es,
+  de: de,
+  sv: sv,
+  pl: pl,
 };
 
-// Category configuration
-const categoryConfig: Record<string, { label: string }> = {
-  culture: { label: 'Cultuur' },
-  exhibitions: { label: 'Exposities' },
-  festivals: { label: 'Festivals' },
-  music: { label: 'Muziek' },
-  markets: { label: 'Markten' },
-  'food-drink': { label: 'Gastronomie' },
-  'active-sports': { label: 'Sport' },
-  nature: { label: 'Natuur' },
-  family: { label: 'Familie' },
-  tours: { label: 'Tours' },
-  workshops: { label: 'Workshops' },
-  entertainment: { label: 'Entertainment' },
-  relaxation: { label: 'Wellness' },
-  folklore: { label: 'Folklore' },
-  beach: { label: 'Strand' },
+// Category configuration matching POI categories
+const categoryConfig: Record<string, { label: string; color: string; icon: string }> = {
+  culture: { label: 'Culture & History', color: '#9C59B8', icon: '🏛️' },
+  exhibitions: { label: 'Culture & History', color: '#9C59B8', icon: '🎨' },
+  festivals: { label: 'Recreation', color: '#E67E22', icon: '🎉' },
+  music: { label: 'Recreation', color: '#E67E22', icon: '🎵' },
+  markets: { label: 'Shopping', color: '#F39C12', icon: '🛒' },
+  'food-drink': { label: 'Food & Drinks', color: '#27AE60', icon: '🍽️' },
+  'active-sports': { label: 'Active', color: '#3498DB', icon: '⚽' },
+  nature: { label: 'Beaches & Nature', color: '#1ABC9C', icon: '🌿' },
+  family: { label: 'Recreation', color: '#E67E22', icon: '👨‍👩‍👧' },
+  tours: { label: 'Culture & History', color: '#9C59B8', icon: '🚶' },
+  workshops: { label: 'Recreation', color: '#E67E22', icon: '🎓' },
+  entertainment: { label: 'Recreation', color: '#E67E22', icon: '🎭' },
+  relaxation: { label: 'Health & Wellbeing', color: '#E91E63', icon: '🧘' },
+  folklore: { label: 'Culture & History', color: '#9C59B8', icon: '💃' },
+  beach: { label: 'Beaches & Nature', color: '#1ABC9C', icon: '🏖️' },
 };
 
-export const AgendaCard: React.FC<AgendaCardProps> = ({ event, variant = 'grid', onClick, index = 0 }) => {
+export const AgendaCard: React.FC<AgendaCardProps> = ({
+  event,
+  onClick,
+  onSave,
+  isSaved = false,
+  distance
+}) => {
   const { language } = useLanguage();
   const locale = dateLocales[language] || nl;
 
@@ -62,181 +71,146 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({ event, variant = 'grid',
   // Format date
   const startDate = new Date(event.startDate);
   const dateDisplay = format(startDate, 'd MMM yyyy', { locale });
-  const timeDisplay = event.allDay ? 'Hele dag' : format(startDate, 'HH:mm', { locale });
 
   // Get primary image
   const primaryImage = event.images?.find((img) => img.isPrimary)?.url || event.images?.[0]?.url;
 
-  // Get category label
-  const categoryLabel = categoryConfig[event.primaryCategory]?.label || 'Evenement';
+  // Get category config
+  const category = categoryConfig[event.primaryCategory] || {
+    label: 'Event',
+    color: '#7FA594',
+    icon: '📅',
+  };
 
-  // List variant - compact horizontal layout (matching POICard proportions)
-  if (variant === 'list') {
-    return (
-      <motion.div
-        onClick={onClick}
-        className="bg-white rounded-card border border-border-light p-4 shadow-card cursor-pointer flex gap-4"
-        variants={cardHoverVariants}
-        initial="initial"
-        whileHover="hover"
-        whileTap="tap"
-        animate={{
-          opacity: 1,
-          y: 0,
-          transition: { delay: index * 0.05, duration: 0.3 },
-        }}
-      >
-        {/* Image */}
-        <div className="w-32 h-24 max-h-24 bg-bg-gray rounded-lg flex-shrink-0 overflow-hidden relative">
-          {primaryImage ? (
-            <img
-              src={primaryImage}
-              alt={title}
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Calendar className="w-8 h-8 text-text-tertiary" />
-            </div>
-          )}
-        </div>
+  // Truncate description to first sentence
+  const truncateDescription = (text: string): string => {
+    if (!text) return '';
+    const match = text.match(/^[^.!?]+[.!?]/);
+    if (match) return match[0].trim();
+    if (text.length > 100) return text.substring(0, 100).trim() + '...';
+    return text.trim();
+  };
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 space-y-1">
-          {/* Category Badge */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-medium text-holibot-accent bg-holibot-accent/10 px-3 py-1 rounded-chip whitespace-nowrap">
-              {categoryLabel}
-            </span>
-            {event.pricing?.isFree && (
-              <span className="text-xs font-medium text-green-700 bg-green-100 px-3 py-1 rounded-chip whitespace-nowrap">
-                Gratis
-              </span>
-            )}
-          </div>
+  // Convert to title case
+  const toTitleCase = (str: string) => {
+    return str
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
-          {/* Title */}
-          <h3 className="text-base font-semibold text-text-primary line-clamp-1">
-            {title}
-          </h3>
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSave?.(event._id);
+  };
 
-          {/* Date & Time */}
-          <div className="flex items-center gap-3 text-sm text-text-secondary">
-            <span className="flex items-center gap-1">
-              <Calendar className="w-4 h-4" />
-              {dateDisplay}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              {timeDisplay}
-            </span>
-          </div>
-
-          {/* Location */}
-          {event.location?.name && (
-            <div className="flex items-start gap-1 text-sm text-text-secondary">
-              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span className="line-clamp-1">{event.location.name}</span>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    );
-  }
-
-  // Grid variant - vertical card layout (EXACT same structure as POICard)
   return (
-    <motion.div
-      onClick={onClick}
-      className="bg-white rounded-card border border-border-light p-4 shadow-card cursor-pointer"
-      variants={cardHoverVariants}
-      initial="initial"
-      whileHover="hover"
-      whileTap="tap"
-      animate={{
-        opacity: 1,
-        y: 0,
-        transition: { delay: index * 0.05, duration: 0.3 },
-      }}
-    >
-      {/* Event Image - fixed height container */}
-      <div className="w-full h-40 max-h-40 bg-bg-gray rounded-lg mb-3 flex items-center justify-center overflow-hidden relative">
+    <div className="agenda-card" onClick={onClick}>
+      {/* Category Label */}
+      <div
+        className="agenda-category-label"
+        style={{ background: category.color }}
+      >
+        {category.label}
+      </div>
+
+      {/* Image Container */}
+      <div className="agenda-image-container">
         {primaryImage ? (
           <img
             src={primaryImage}
             alt={title}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="agenda-image"
             loading="lazy"
           />
         ) : (
-          <Calendar className="w-12 h-12 text-text-tertiary" />
+          <div
+            className="agenda-image-placeholder"
+            style={{ background: `linear-gradient(135deg, ${category.color}40, ${category.color}20)` }}
+          >
+            <span className="agenda-placeholder-icon">{category.icon}</span>
+          </div>
+        )}
+
+        {/* Free Badge */}
+        {event.pricing?.isFree && (
+          <div className="agenda-free-badge">Gratis</div>
         )}
       </div>
 
-      {/* Event Content - same structure as POICard */}
-      <div className="space-y-2">
-        {/* Category Badge */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-medium text-holibot-accent bg-holibot-accent/10 px-3 py-1 rounded-chip whitespace-nowrap">
-            {categoryLabel}
-          </span>
-          {event.pricing?.isFree && (
-            <span className="text-xs font-medium text-green-700 bg-green-100 px-3 py-1 rounded-chip whitespace-nowrap">
-              Gratis
-            </span>
+      {/* Save Button */}
+      <button
+        className={`agenda-save-btn ${isSaved ? 'saved' : ''}`}
+        onClick={handleSaveClick}
+      >
+        {isSaved ? '❤️' : '🤍'}
+      </button>
+
+      {/* Content */}
+      <div className="agenda-content">
+        <div className="agenda-title">{toTitleCase(title)}</div>
+        <div className="agenda-description">{truncateDescription(description)}</div>
+
+        {/* Date & Rating Row */}
+        <div className="agenda-meta-row">
+          <div className="agenda-date">
+            <Calendar className="agenda-icon" />
+            <span>{dateDisplay}</span>
+          </div>
+          {event.featured && (
+            <div className="agenda-rating">
+              <Star className="agenda-star-icon" />
+              <span>Featured</span>
+            </div>
           )}
         </div>
 
-        {/* Event Title */}
-        <h3 className="text-base font-semibold text-text-primary line-clamp-2 min-h-touch-lg">
-          {title}
-        </h3>
-
-        {/* Date & Time */}
-        <div className="flex items-center gap-3 text-sm">
-          <div className="flex items-center gap-1">
-            <Calendar className="w-4 h-4 text-holibot-accent" />
-            <span className="text-text-primary">{dateDisplay}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Clock className="w-4 h-4 text-holibot-accent" />
-            <span className="text-text-secondary">{timeDisplay}</span>
-          </div>
+        {/* Location & Distance Row */}
+        <div className="agenda-bottom-row">
+          {event.location?.name && (
+            <div className="agenda-location">
+              <MapPin className="agenda-icon" />
+              <span className="agenda-location-text">{event.location.name}</span>
+            </div>
+          )}
+          {distance && (
+            <div className="agenda-distance">
+              <svg className="agenda-map-icon" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                  fill="#0273ae"
+                  stroke="#0273ae"
+                  strokeWidth="2"
+                />
+                <circle cx="12" cy="10" r="3" fill="white" />
+              </svg>
+              {distance}
+            </div>
+          )}
         </div>
-
-        {/* Location */}
-        {event.location?.name && (
-          <div className="flex items-start gap-1 text-sm text-text-secondary">
-            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span className="line-clamp-1">{event.location.name}</span>
-          </div>
-        )}
-
-        {/* Description */}
-        {description && (
-          <p className="text-sm text-text-secondary line-clamp-2">
-            {description}
-          </p>
-        )}
-
-        {/* Action Button - same style as POICard */}
-        {event.url && (
-          <div className="flex items-center gap-2 pt-2">
-            <button
-              className="flex-1 min-h-touch py-2 px-3 bg-bg-hover text-text-primary rounded-button text-sm font-medium hover:bg-border-light transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(event.url!, '_blank');
-              }}
-            >
-              <ExternalLink className="w-4 h-4 inline mr-1" />
-              Meer info
-            </button>
-          </div>
-        )}
       </div>
-    </motion.div>
+
+      {/* Action Buttons */}
+      <div className="agenda-actions">
+        <button className="agenda-action-btn" title="Share">
+          <span>↗️</span>
+          <span>Share</span>
+        </button>
+        <button className="agenda-action-btn" title="Calendar">
+          <span>📅</span>
+          <span>Agenda</span>
+        </button>
+        <button className="agenda-action-btn" title="Map">
+          <span>📍</span>
+          <span>Map</span>
+        </button>
+        <button className="agenda-action-btn agenda-action-primary" title="Details" onClick={onClick}>
+          <span>ℹ️</span>
+          <span>Details</span>
+        </button>
+      </div>
+    </div>
   );
 };
 
