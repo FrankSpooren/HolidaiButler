@@ -30,12 +30,13 @@ const getPOIModel = async () => {
 
 /**
  * Build base where clause for public POI queries
- * Uses is_active (matching actual database column)
+ * Note: verified filter disabled for test environment (no POIs verified yet)
+ * Uses is_active to filter only active POIs
  */
 const buildPublicWhereClause = async () => {
   return {
-    verified: true,
     is_active: true
+    // verified: true  // Re-enable when POIs are verified in production
   };
 };
 
