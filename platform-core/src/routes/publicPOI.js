@@ -447,8 +447,9 @@ function convertToGeoJSON(pois) {
           address: poiData.address,
           status: poiData.verified && poiData.is_active ? 'active' : 'pending',
           images: safeJSONParse(poiData.images, []),
-          rating: poiData.rating,
-          reviewCount: poiData.review_count
+          rating: poiData.rating ? parseFloat(poiData.rating) : null,
+          reviewCount: poiData.review_count || 0,
+          price_level: poiData.price_level ? parseInt(poiData.price_level) : null
         }
       };
     })

@@ -203,7 +203,7 @@ export function MapView({ searchParams, height = '600px', onMarkerClick }: MapVi
                   <div className="popup-category">{category}</div>
                   {rating && (
                     <div className="popup-rating">
-                      ⭐ {rating.toFixed(1)}
+                      ⭐ {typeof rating === 'number' ? rating.toFixed(1) : parseFloat(String(rating)).toFixed(1)}
                     </div>
                   )}
                   {price_level && (
