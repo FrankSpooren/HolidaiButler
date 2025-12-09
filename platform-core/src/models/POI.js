@@ -1,57 +1,26 @@
 /**
  * POI Model (MySQL)
- * Central POI data with AI-driven tier classification
- * ALIGNED with admin-module POI model and actual database schema
- * Matches existing pxoziy_db1.POI table structure
+ * Central POI data - ALIGNED with actual pxoziy_db1.POI table structure
+ * Updated: 2025-12-09 - Removed non-existent columns
  */
 
 import { DataTypes } from 'sequelize';
 import { mysqlSequelize } from '../config/database.js';
 
 const POI = mysqlSequelize.define('POI', {
-  // Primary key - INTEGER for backwards compatibility with existing database
+  // Primary key
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
   },
 
-  // UUID for cross-module compatibility
-  uuid: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
-    unique: true,
-    allowNull: true,
-  },
-
-  // External IDs - mapped to database column names
+  // External ID - Google Places
   google_place_id: {
     type: DataTypes.STRING(255),
     unique: true,
     allowNull: true,
-    field: 'google_placeid', // Database column name for backwards compatibility
-  },
-  tripadvisor_id: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-  },
-  thefork_id: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-  },
-  booking_com_id: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-  },
-  getyourguide_id: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-  },
-
-  // Google Place data cache
-  google_place_data: {
-    type: DataTypes.TEXT('long'),
-    allowNull: true,
+    field: 'google_placeid',
   },
 
   // Basic Info
@@ -59,17 +28,12 @@ const POI = mysqlSequelize.define('POI', {
     type: DataTypes.STRING(255),
     allowNull: false,
   },
-  slug: {
-    type: DataTypes.STRING(255),
-    unique: true,
-    allowNull: true,
-  },
   description: {
     type: DataTypes.TEXT,
     allowNull: true,
   },
 
-  // Category - use STRING for flexibility (not ENUM)
+  // Category
   category: {
     type: DataTypes.STRING(100),
     allowNull: false,
@@ -87,11 +51,11 @@ const POI = mysqlSequelize.define('POI', {
   // Location
   latitude: {
     type: DataTypes.DECIMAL(10, 8),
-    allowNull: true,
+    allowNull: false,
   },
   longitude: {
     type: DataTypes.DECIMAL(11, 8),
-    allowNull: true,
+    allowNull: false,
   },
   address: {
     type: DataTypes.TEXT,
@@ -105,7 +69,6 @@ const POI = mysqlSequelize.define('POI', {
   region: {
     type: DataTypes.STRING(100),
     allowNull: true,
-    defaultValue: 'Costa Blanca',
   },
   country: {
     type: DataTypes.STRING(100),
@@ -117,12 +80,24 @@ const POI = mysqlSequelize.define('POI', {
     allowNull: true,
   },
 
-  // Ratings & Reviews - mapped to database column names
-  average_rating: {
+  // Contact
+  phone: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+  },
+  website: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  email: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+
+  // Ratings & Reviews
+  rating: {
     type: DataTypes.DECIMAL(3, 2),
     allowNull: true,
-    defaultValue: 0.0,
-    field: 'rating', // Database column for backwards compatibility
   },
   review_count: {
     type: DataTypes.INTEGER,
@@ -134,185 +109,114 @@ const POI = mysqlSequelize.define('POI', {
     allowNull: true,
   },
 
-  // Scoring fields for AI-driven tier classification
-  poi_score: {
-    type: DataTypes.DECIMAL(4, 2),
-    defaultValue: 0.0,
-    comment: 'Weighted score 0-10',
+  // Status
+  verified: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
   },
-  tourist_relevance: {
-    type: DataTypes.DECIMAL(3, 2),
-    defaultValue: 0.0,
-    comment: '0-10 scale',
+  featured: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
   },
-  booking_frequency: {
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+  },
+
+  // Scores
+  popularity_score: {
     type: DataTypes.INTEGER,
+    allowNull: true,
     defaultValue: 0,
-    comment: 'Monthly average',
   },
 
-  // Contact
-  phone: {
-    type: DataTypes.STRING(50),
-    allowNull: true,
-  },
-  website: {
-    type: DataTypes.STRING(500),
-    allowNull: true,
-  },
-  email: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-  },
-
-  // Opening Hours & Features
-  opening_hours: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-    comment: 'JSON format',
-  },
+  // Features (JSON)
   amenities: {
-    type: DataTypes.TEXT,
+    type: DataTypes.TEXT('long'),
     allowNull: true,
-    comment: 'JSON array',
   },
   accessibility_features: {
-    type: DataTypes.TEXT,
+    type: DataTypes.TEXT('long'),
     allowNull: true,
-    comment: 'JSON object',
+  },
+  opening_hours: {
+    type: DataTypes.TEXT('long'),
+    allowNull: true,
   },
 
   // Images
   images: {
     type: DataTypes.TEXT('long'),
     allowNull: true,
-    comment: 'JSON array of image objects',
   },
   thumbnail_url: {
-    type: DataTypes.STRING(500),
+    type: DataTypes.TEXT,
     allowNull: true,
   },
 
-  // Status - mapped to database column names
-  verified: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false,
-  },
-  active: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: true,
-    field: 'is_active', // Database column for backwards compatibility
-  },
-  featured: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false,
-  },
-
-  // Admin-specific fields
-  popularity_score: {
-    type: DataTypes.INTEGER,
+  // Content Quality
+  content_quality_score: {
+    type: DataTypes.DECIMAL(3, 1),
     allowNull: true,
-    defaultValue: 0,
   },
-  tier: {
-    type: DataTypes.INTEGER,
+  content_quality_data: {
+    type: DataTypes.TEXT('long'),
     allowNull: true,
-    defaultValue: 4,
-    comment: 'AI-driven tier: 1=hourly, 2=daily, 3=weekly, 4=monthly updates',
   },
-
-  // Timestamps - mapped to database column names
-  last_scraped_at: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    field: 'last_updated',
-  },
-  last_classified_at: {
+  content_quality_assessed_at: {
     type: DataTypes.DATE,
     allowNull: true,
   },
-  next_update_at: {
+
+  // Enriched Content
+  enriched_tile_description: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  enriched_detail_description: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  enriched_highlights: {
+    type: DataTypes.TEXT('long'),
+    allowNull: true,
+  },
+  enriched_target_audience: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+
+  // Timestamps
+  last_updated: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  created_at: {
     type: DataTypes.DATE,
     allowNull: true,
   },
 }, {
-  tableName: 'POI',  // Match the actual database table name (uppercase)
+  tableName: 'POI',
   modelName: 'POI',
-  timestamps: true,
-  underscored: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
+  timestamps: false, // We manage timestamps manually
   indexes: [
-    { fields: ['uuid'], unique: true },
+    { fields: ['google_placeid'], unique: true },
     { fields: ['category'] },
+    { fields: ['subcategory'] },
     { fields: ['city'] },
     { fields: ['verified'] },
+    { fields: ['is_active'] },
     { fields: ['featured'] },
     { fields: ['name'] },
-    { fields: ['tier'] },
-    { fields: ['poi_score'] },
-    { fields: ['next_update_at'] },
+    { fields: ['rating'] },
+    { fields: ['price_level'] },
+    { fields: ['popularity_score'] },
     { fields: ['latitude', 'longitude'] },
   ],
 });
-
-// Instance methods
-POI.prototype.calculateScore = function() {
-  // Normalize review_count (0-10 scale, assuming max 1000 reviews)
-  const normalizedReviews = Math.min(this.review_count / 100, 10);
-
-  // Normalize rating (0-10 scale from 0-5)
-  const normalizedRating = (this.average_rating / 5) * 10;
-
-  // Calculate weighted score
-  const score = (
-    (normalizedReviews * 0.3) +
-    (normalizedRating * 0.2) +
-    ((this.tourist_relevance || 0) * 0.3) +
-    ((this.booking_frequency || 0) * 0.2)
-  );
-
-  return Math.round(score * 100) / 100; // Round to 2 decimals
-};
-
-POI.prototype.calculateTier = function(score = null) {
-  const poiScore = score !== null ? score : this.poi_score;
-
-  if (poiScore >= 8.5) return 1;
-  if (poiScore >= 7.0) return 2;
-  if (poiScore >= 5.0) return 3;
-  return 4;
-};
-
-POI.prototype.getUpdateFrequency = function() {
-  switch (this.tier) {
-    case 1: return 'hourly'; // realtime
-    case 2: return 'daily';
-    case 3: return 'weekly';
-    case 4: return 'monthly';
-    default: return 'monthly';
-  }
-};
-
-POI.prototype.getNextUpdateDate = function() {
-  const now = new Date();
-
-  switch (this.tier) {
-    case 1: // Hourly
-      return new Date(now.getTime() + 60 * 60 * 1000);
-    case 2: // Daily
-      return new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    case 3: // Weekly
-      return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    case 4: // Monthly
-      return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    default:
-      return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  }
-};
 
 // Instance method to format POI for API response
 POI.prototype.toPublicJSON = function() {
@@ -331,12 +235,12 @@ POI.prototype.toPublicJSON = function() {
 
   return {
     id: values.id,
-    uuid: values.uuid,
     name: values.name,
-    slug: values.slug || values.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    slug: values.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     description: values.description,
     category: values.category,
     subcategory: values.subcategory,
+    poi_type: values.poi_type,
     city: values.city,
     region: values.region,
     country: values.country,
@@ -344,17 +248,24 @@ POI.prototype.toPublicJSON = function() {
     postal_code: values.postal_code,
     latitude: values.latitude ? parseFloat(values.latitude) : null,
     longitude: values.longitude ? parseFloat(values.longitude) : null,
-    status: values.verified && values.active ? 'active' : 'pending',
-    tier: values.tier || 4,
-    rating: values.average_rating,
+    status: values.verified && values.is_active ? 'active' : 'pending',
+    rating: values.rating ? parseFloat(values.rating) : null,
     reviewCount: values.review_count,
     priceLevel: values.price_level,
+    verified: values.verified,
+    featured: values.featured,
     images: parseJSON(values.images, []),
     amenities: parseJSON(values.amenities, []),
+    accessibility_features: parseJSON(values.accessibility_features, []),
     opening_hours: parseJSON(values.opening_hours, null),
     phone: values.phone,
     website: values.website,
     email: values.email,
+    thumbnail_url: values.thumbnail_url,
+    enriched_tile_description: values.enriched_tile_description,
+    enriched_detail_description: values.enriched_detail_description,
+    enriched_highlights: parseJSON(values.enriched_highlights, []),
+    enriched_target_audience: values.enriched_target_audience,
   };
 };
 
