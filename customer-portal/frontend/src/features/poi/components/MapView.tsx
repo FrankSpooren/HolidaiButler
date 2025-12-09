@@ -35,6 +35,8 @@ interface MapViewProps {
   searchParams?: POISearchParams;
   height?: string;
   onMarkerClick?: (poiId: number) => void;
+  perCategory?: number; // Limit POIs per category for cleaner display
+  disableAutoBounds?: boolean; // Keep map centered on Calpe instead of auto-fitting
 }
 
 interface POIFeature {
@@ -96,15 +98,21 @@ function MapUpdater({ bounds }: { bounds: L.LatLngBounds | null }) {
   return null;
 }
 
-export function MapView({ searchParams, height = '600px', onMarkerClick }: MapViewProps) {
+export function MapView({
+  searchParams,
+  height = '600px',
+  onMarkerClick,
+  perCategory = 2, // Default: 2 POIs per category for cleaner map
+  disableAutoBounds = true // Default: keep centered on Calpe
+}: MapViewProps) {
   const [geoData, setGeoData] = useState<GeoJSONResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
 
-  // Calpe center coordinates (optimized for presentation)
-  const DEFAULT_CENTER: [number, number] = [38.6429, 0.0462];
-  const DEFAULT_ZOOM = 14; // NEW: Increased from 13 for better initial view
+  // Calpe center coordinates (Plaza de la Constitución - city center)
+  const DEFAULT_CENTER: [number, number] = [38.6447, 0.0445];
+  const DEFAULT_ZOOM = 15; // Zoomed in for Calpe centrum view
 
   useEffect(() => {
     const fetchGeoJSON = async () => {
@@ -112,11 +120,16 @@ export function MapView({ searchParams, height = '600px', onMarkerClick }: MapVi
       setError(null);
 
       try {
-        const data = await poiService.getGeoJSON(searchParams);
+        // Add per_category parameter for balanced POI display
+        const params = {
+          ...searchParams,
+          per_category: perCategory
+        };
+        const data = await poiService.getGeoJSON(params);
         setGeoData(data);
 
-        // Calculate bounds if we have features
-        if (data.features && data.features.length > 0) {
+        // Only calculate bounds if auto-bounds is enabled
+        if (!disableAutoBounds && data.features && data.features.length > 0) {
           const coordinates = data.features.map((f: POIFeature) => [
             f.geometry.coordinates[1], // lat
             f.geometry.coordinates[0], // lng
@@ -124,6 +137,8 @@ export function MapView({ searchParams, height = '600px', onMarkerClick }: MapVi
 
           const newBounds = L.latLngBounds(coordinates);
           setBounds(newBounds);
+        } else {
+          setBounds(null); // Keep default center
         }
       } catch (err) {
         console.error('Failed to fetch GeoJSON:', err);
@@ -134,7 +149,7 @@ export function MapView({ searchParams, height = '600px', onMarkerClick }: MapVi
     };
 
     fetchGeoJSON();
-  }, [searchParams]);
+  }, [searchParams, perCategory, disableAutoBounds]);
 
   const handleMarkerClick = (poiId: number) => {
     // Open POI detail modal (if callback provided)
