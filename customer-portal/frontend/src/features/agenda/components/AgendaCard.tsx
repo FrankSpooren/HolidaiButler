@@ -87,16 +87,18 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({ event, variant = 'grid',
         }}
       >
         {/* Image */}
-        <div className="w-32 h-24 bg-bg-gray rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
+        <div className="w-32 h-24 max-h-24 bg-bg-gray rounded-lg flex-shrink-0 overflow-hidden relative">
           {primaryImage ? (
             <img
               src={primaryImage}
               alt={title}
-              className="w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover"
               loading="lazy"
             />
           ) : (
-            <Calendar className="w-8 h-8 text-text-tertiary" />
+            <div className="w-full h-full flex items-center justify-center">
+              <Calendar className="w-8 h-8 text-text-tertiary" />
+            </div>
           )}
         </div>
 
@@ -158,13 +160,13 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({ event, variant = 'grid',
         transition: { delay: index * 0.05, duration: 0.3 },
       }}
     >
-      {/* Event Image - h-40 same as POICard */}
-      <div className="w-full h-40 bg-bg-gray rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+      {/* Event Image - fixed height container */}
+      <div className="w-full h-40 max-h-40 bg-bg-gray rounded-lg mb-3 flex items-center justify-center overflow-hidden relative">
         {primaryImage ? (
           <img
             src={primaryImage}
             alt={title}
-            className="w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
           />
         ) : (
