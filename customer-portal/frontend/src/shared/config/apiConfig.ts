@@ -113,14 +113,16 @@ export const API_CONFIG = {
     }
   },
 
-  // Agenda Module - Events & Calendar
+  // Agenda Module - Events & Calendar (via Platform Core API)
+  // Production: https://test.holidaibutler.com/api/v1/agenda
   agenda: {
-    baseUrl: getApiUrl(import.meta.env.VITE_AGENDA_API_URL, 3007),
+    baseUrl: (import.meta.env.VITE_API_URL || 'https://test.holidaibutler.com/api/v1') + '/agenda',
     endpoints: {
       events: '/events',
       upcoming: '/events/upcoming',
       featured: '/events/featured',
       byDate: '/events/date',
+      stats: '/stats',
     }
   },
 

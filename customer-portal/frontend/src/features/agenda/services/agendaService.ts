@@ -2,14 +2,18 @@ import { API_CONFIG } from '@/shared/config/apiConfig';
 
 /**
  * Agenda API Service
- * Handles all API calls to the Agenda backend module
+ * Handles all API calls to the Agenda backend via Platform Core
+ *
+ * API Endpoint: /api/v1/agenda (via VITE_API_URL)
+ * Data Source: agenda + agenda_dates tables (Hetzner MySQL)
  */
 
 export interface AgendaEvent {
   _id: string;
-  id?: string;
+  id?: number;
   title: Record<string, string> | string;
   description: Record<string, string> | string;
+  longDescription?: Record<string, string>;
   startDate: string;
   endDate: string;
   allDay?: boolean;
@@ -19,7 +23,7 @@ export interface AgendaEvent {
     coordinates?: {
       lat: number;
       lng: number;
-    };
+    } | null;
   };
   primaryCategory: string;
   categories?: string[];
@@ -39,6 +43,9 @@ export interface AgendaEvent {
   featured?: boolean;
   status?: string;
   slug?: string;
+  url?: string;
+  isInCalpeArea?: boolean;
+  allDates?: Array<{ date: string; time: string }>;
 }
 
 export interface AgendaPagination {
