@@ -111,7 +111,7 @@ router.get('/categories', async (req, res) => {
       ],
       where: {
         category: { [Sequelize.Op.ne]: null },
-        status: 'active'
+        is_active: true  // Fixed: use is_active instead of status
       },
       group: ['category'],
       order: [[Sequelize.literal('count'), 'DESC']]
@@ -158,7 +158,7 @@ router.get('/pois', async (req, res) => {
     }
 
     const { Op } = await import('sequelize');
-    const where = { status: 'active' };
+    const where = { is_active: true };
 
     if (category) where.category = category;
     if (subcategory) where.subcategory = subcategory;
@@ -238,7 +238,7 @@ router.post('/recommendations', async (req, res) => {
       where: {
         category: { [Op.in]: categories },
         rating: { [Op.gte]: 4.0 },
-        status: 'active'
+        is_active: true
       },
       order: [['rating', 'DESC'], ['name', 'ASC']],
       limit
@@ -368,7 +368,7 @@ router.get('/daily-tip', async (req, res) => {
     // Get random POI from selected category
     let poi = await model.findOne({
       where: {
-        status: 'active',
+        is_active: true,
         category: selectedCategory,
         description: { [Op.ne]: null }
       },
@@ -379,7 +379,7 @@ router.get('/daily-tip', async (req, res) => {
     if (!poi) {
       poi = await model.findOne({
         where: {
-          status: 'active',
+          is_active: true,
           description: { [Op.ne]: null }
         },
         order: Sequelize.literal('RAND()')

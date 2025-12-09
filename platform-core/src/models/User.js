@@ -1,72 +1,78 @@
 /**
- * User Model - Customer Portal Users
- * For end-users of the HolidaiButler platform
+ * User Model - Aligned with actual database schema (Users table)
+ * Database: pxoziy_db1 @ jotx.your-database.de
+ * Last verified: 2025-12-09
  */
 
 import { DataTypes, Model } from 'sequelize';
 import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 import { mysqlSequelize as sequelize } from '../config/database.js';
 
 class User extends Model {
   // Instance method to compare password
   async comparePassword(candidatePassword) {
     try {
-      return await bcrypt.compare(candidatePassword, this.password);
+      return await bcrypt.compare(candidatePassword, this.passwordHash);
     } catch (error) {
       throw new Error('Password comparison failed');
     }
   }
 
-  // Check if account is locked
+  // Check if account is locked (not in current schema, but keep for future)
   get isLocked() {
-    return !!(this.lockUntil && new Date(this.lockUntil) > new Date());
+    return false; // No lock fields in current schema
   }
 
-  // Increment login attempts
+  // Increment login attempts (placeholder - not in current schema)
   async incLoginAttempts() {
-    if (this.lockUntil && new Date(this.lockUntil) < new Date()) {
-      this.loginAttempts = 1;
-      this.lockUntil = null;
-      return this.save();
-    }
-
-    this.loginAttempts += 1;
-
-    const maxAttempts = 5;
-    const lockTime = 2 * 60 * 60 * 1000; // 2 hours
-
-    if (this.loginAttempts >= maxAttempts && !this.isLocked) {
-      this.lockUntil = new Date(Date.now() + lockTime);
-    }
-
-    return this.save();
+    // No login_attempts field in current schema
+    return this;
   }
 
-  // Reset login attempts
+  // Reset login attempts (placeholder)
   async resetLoginAttempts() {
-    this.loginAttempts = 0;
-    this.lockUntil = null;
-    return this.save();
+    return this;
   }
 
   // Safe JSON output (exclude sensitive fields)
   toSafeJSON() {
     const values = this.toJSON();
-    delete values.password;
-    delete values.resetPasswordToken;
-    delete values.resetPasswordExpires;
+    delete values.passwordHash;
+    delete values.password_hash;
+    delete values.passwordResetToken;
+    delete values.password_reset_token;
+    delete values.verificationToken;
+    delete values.verification_token;
+    delete values.resetToken;
+    delete values.reset_token;
+    delete values.emailVerificationToken;
+    delete values.email_verification_token;
+
+    // Add computed fields for frontend compatibility
+    const nameParts = (values.name || '').split(' ');
+    values.firstName = nameParts[0] || '';
+    values.lastName = nameParts.slice(1).join(' ') || '';
+    values.status = values.isActive ? 'active' : 'inactive';
+
     return values;
   }
 }
 
 User.init({
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
-    primaryKey: true
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
   },
 
-  // Basic Info
+  uuid: {
+    type: DataTypes.STRING(36),
+    allowNull: false,
+    unique: true,
+    defaultValue: () => uuidv4()
+  },
+
   email: {
     type: DataTypes.STRING(255),
     allowNull: false,
@@ -79,102 +85,57 @@ User.init({
     }
   },
 
-  password: {
+  passwordHash: {
     type: DataTypes.STRING(255),
     allowNull: false,
-    validate: {
-      len: [8, 255]
-    }
+    field: 'password_hash'
   },
 
-  // Profile
-  firstName: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-    field: 'first_name'
-  },
-
-  lastName: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-    field: 'last_name'
-  },
-
-  avatar: {
-    type: DataTypes.STRING(500),
-    allowNull: true
-  },
-
-  phoneNumber: {
-    type: DataTypes.STRING(50),
-    allowNull: true,
-    field: 'phone_number'
-  },
-
-  language: {
-    type: DataTypes.ENUM('en', 'es', 'de', 'fr', 'nl'),
-    defaultValue: 'nl'
-  },
-
-  country: {
-    type: DataTypes.STRING(100),
-    allowNull: true
-  },
-
-  // Subscription
-  subscriptionType: {
-    type: DataTypes.ENUM('free', 'premium', 'enterprise'),
-    defaultValue: 'free',
-    field: 'subscription_type'
-  },
-
-  subscriptionEndsAt: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    field: 'subscription_ends_at'
-  },
-
-  stripeCustomerId: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    field: 'stripe_customer_id'
-  },
-
-  // Status
-  status: {
-    type: DataTypes.ENUM('active', 'suspended', 'pending', 'deleted'),
-    defaultValue: 'active'
-  },
-
-  // Security
   emailVerified: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
     field: 'email_verified'
   },
 
-  resetPasswordToken: {
+  emailVerificationToken: {
     type: DataTypes.STRING(255),
     allowNull: true,
-    field: 'reset_password_token'
+    field: 'email_verification_token'
   },
 
-  resetPasswordExpires: {
-    type: DataTypes.DATE,
+  name: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+
+  avatarUrl: {
+    type: DataTypes.STRING(255),
     allowNull: true,
-    field: 'reset_password_expires'
+    field: 'avatar_url'
   },
 
-  loginAttempts: {
+  onboardingCompleted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'onboarding_completed'
+  },
+
+  onboardingStep: {
     type: DataTypes.INTEGER,
     defaultValue: 0,
-    field: 'login_attempts'
+    field: 'onboarding_step'
   },
 
-  lockUntil: {
+  passwordResetToken: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'password_reset_token'
+  },
+
+  passwordResetExpires: {
     type: DataTypes.DATE,
     allowNull: true,
-    field: 'lock_until'
+    field: 'password_reset_expires'
   },
 
   lastLogin: {
@@ -183,58 +144,123 @@ User.init({
     field: 'last_login'
   },
 
-  // Preferences
-  preferences: {
-    type: DataTypes.JSON,
-    defaultValue: {
-      interests: ['beaches', 'restaurants', 'cultural'],
-      budget: 'moderate',
-      groupSize: 2,
-      notifications: true
-    }
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    field: 'is_active'
   },
 
-  // Stats
-  stats: {
-    type: DataTypes.JSON,
-    defaultValue: {
-      conversationsCount: 0,
-      bookingsCount: 0,
-      favoritesCount: 0
-    }
+  isAdmin: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'is_admin'
+  },
+
+  // New verification fields
+  verificationToken: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'verification_token'
+  },
+
+  verificationTokenExpires: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'verification_token_expires'
+  },
+
+  verificationSentCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    field: 'verification_sent_count'
+  },
+
+  verificationSentAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'verification_sent_at'
+  },
+
+  verifiedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'verified_at'
+  },
+
+  // Password reset fields
+  resetToken: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'reset_token'
+  },
+
+  resetTokenExpires: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'reset_token_expires'
+  },
+
+  resetSentCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    field: 'reset_sent_count'
+  },
+
+  resetSentAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'reset_sent_at'
+  },
+
+  passwordResetAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'password_reset_at'
+  },
+
+  roleId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'role_id'
   }
 
 }, {
   sequelize,
   modelName: 'User',
-  tableName: 'users',
+  tableName: 'Users', // Actual table name in database (capital U)
   timestamps: true,
   underscored: true,
-  indexes: [
-    { fields: ['email'], unique: true },
-    { fields: ['status'] },
-    { fields: ['subscription_type'] }
-  ],
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   hooks: {
     beforeCreate: async (user) => {
-      if (user.password) {
+      // Generate UUID if not set
+      if (!user.uuid) {
+        user.uuid = uuidv4();
+      }
+      // Hash password if provided as plain text
+      if (user.passwordHash && !user.passwordHash.startsWith('$2')) {
         const salt = await bcrypt.genSalt(12);
-        user.password = await bcrypt.hash(user.password, salt);
+        user.passwordHash = await bcrypt.hash(user.passwordHash, salt);
       }
     },
     beforeUpdate: async (user) => {
-      if (user.changed('password')) {
+      if (user.changed('passwordHash') && !user.passwordHash.startsWith('$2')) {
         const salt = await bcrypt.genSalt(12);
-        user.password = await bcrypt.hash(user.password, salt);
+        user.passwordHash = await bcrypt.hash(user.passwordHash, salt);
       }
     }
   },
   defaultScope: {
-    attributes: { exclude: ['password', 'resetPasswordToken', 'resetPasswordExpires'] }
+    attributes: {
+      exclude: ['passwordHash', 'password_hash', 'verificationToken', 'verification_token',
+                'resetToken', 'reset_token', 'emailVerificationToken', 'email_verification_token',
+                'passwordResetToken', 'password_reset_token']
+    }
   },
   scopes: {
     withPassword: {
-      attributes: { include: ['password'] }
+      attributes: { include: ['passwordHash'] }
     }
   }
 });

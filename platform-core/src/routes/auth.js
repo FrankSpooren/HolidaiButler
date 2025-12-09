@@ -67,13 +67,16 @@ function checkRateLimit(ip) {
  */
 router.post('/signup', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, language } = req.body;
+    const { email, password, firstName, lastName, name: providedName } = req.body;
+
+    // Build name from firstName/lastName or use provided name
+    const name = providedName || (firstName && lastName ? `${firstName} ${lastName}` : null);
 
     // Validate input
-    if (!email || !password || !firstName || !lastName) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Alle velden zijn verplicht (email, password, firstName, lastName)'
+        message: 'E-mail en wachtwoord zijn verplicht'
       });
     }
 
@@ -108,19 +111,20 @@ router.post('/signup', async (req, res) => {
         });
       }
 
-      // Create user
+      // Create user with schema-aligned fields
       user = await User.create({
         email: email.toLowerCase(),
-        password,
-        firstName,
-        lastName,
-        language: language || 'nl',
-        status: 'active',
-        emailVerified: false
+        passwordHash: password, // Will be hashed by beforeCreate hook
+        name: name || email.split('@')[0], // Use email prefix if no name
+        emailVerified: false,
+        isActive: true,
+        onboardingCompleted: false,
+        onboardingStep: 0
       });
     } catch (dbError) {
       isDatabaseAvailable = false;
       logger.warn('Database not available for signup:', dbError.message);
+      logger.error('DB Error details:', dbError);
     }
 
     // Development fallback
@@ -128,13 +132,11 @@ router.post('/signup', async (req, res) => {
       logger.info('Using development fallback for signup (database unavailable)');
       user = {
         id: 'new-user-' + Date.now(),
+        uuid: crypto.randomUUID(),
         email: email.toLowerCase(),
-        firstName,
-        lastName,
-        language: language || 'nl',
-        status: 'active',
-        subscriptionType: 'free',
-        preferences: DEV_FALLBACK_USER.preferences
+        name: name || email.split('@')[0],
+        isActive: true,
+        onboardingCompleted: false
       };
     }
 
@@ -145,15 +147,16 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    // Generate tokens
+    // Generate tokens using UUID for JWT (more secure than integer ID)
+    const tokenUserId = user.uuid || user.id;
     const accessToken = jwt.sign(
-      { userId: user.id, type: 'access' },
+      { userId: tokenUserId, type: 'access' },
       JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
 
     const refreshToken = jwt.sign(
-      { userId: user.id, type: 'refresh' },
+      { userId: tokenUserId, type: 'refresh' },
       JWT_REFRESH_SECRET,
       { expiresIn: REFRESH_TOKEN_EXPIRY }
     );
@@ -270,20 +273,19 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check if account is locked
+    // Check if account is locked (uses isLocked getter)
     if (user.isLocked) {
-      const lockTimeRemaining = Math.ceil((new Date(user.lockUntil) - Date.now()) / 1000 / 60);
       return res.status(423).json({
         success: false,
-        message: `Account is vergrendeld wegens te veel mislukte pogingen. Probeer het over ${lockTimeRemaining} minuten opnieuw.`
+        message: 'Account is tijdelijk vergrendeld. Probeer het later opnieuw.'
       });
     }
 
-    // Check if account is active
-    if (user.status !== 'active') {
+    // Check if account is active (uses isActive field from schema)
+    if (!user.isActive) {
       return res.status(403).json({
         success: false,
-        message: `Account is ${user.status === 'suspended' ? 'opgeschort' : 'niet actief'}. Neem contact op met support.`
+        message: 'Account is niet actief. Neem contact op met support.'
       });
     }
 
@@ -298,24 +300,20 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Reset login attempts on successful login
-    if (user.loginAttempts > 0 || user.lockUntil) {
-      await user.resetLoginAttempts();
-    }
-
     // Update last login
     user.lastLogin = new Date();
     await user.save();
 
-    // Generate tokens
+    // Generate tokens using UUID for JWT (more secure than integer ID)
+    const tokenUserId = user.uuid || user.id;
     const accessToken = jwt.sign(
-      { userId: user.id, type: 'access' },
+      { userId: tokenUserId, type: 'access' },
       JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
 
     const refreshToken = jwt.sign(
-      { userId: user.id, type: 'refresh' },
+      { userId: tokenUserId, type: 'refresh' },
       JWT_REFRESH_SECRET,
       { expiresIn: REFRESH_TOKEN_EXPIRY }
     );
@@ -353,7 +351,15 @@ router.get('/me', authenticate, async (req, res) => {
     let user = null;
 
     try {
-      user = await User.findByPk(req.user.userId);
+      // JWT now contains UUID, so we need to find by UUID
+      user = await User.findOne({
+        where: { uuid: req.user.userId }
+      });
+
+      // Fallback: try finding by integer ID if UUID not found
+      if (!user && !isNaN(parseInt(req.user.userId))) {
+        user = await User.findByPk(parseInt(req.user.userId));
+      }
     } catch (dbError) {
       // Development fallback
       if (process.env.NODE_ENV === 'development' && req.user.userId === DEV_FALLBACK_USER.id) {
@@ -397,13 +403,32 @@ router.get('/me', authenticate, async (req, res) => {
  */
 router.put('/profile', authenticate, async (req, res) => {
   try {
-    const allowedFields = ['firstName', 'lastName', 'phoneNumber', 'language', 'avatar', 'country', 'preferences'];
+    // Map frontend fields to database fields
+    const fieldMapping = {
+      'firstName': null, // Combined into 'name'
+      'lastName': null,  // Combined into 'name'
+      'name': 'name',
+      'avatarUrl': 'avatarUrl',
+      'avatar': 'avatarUrl'
+    };
+
     const updates = {};
 
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
-      }
+    // Handle name update from firstName/lastName
+    if (req.body.firstName || req.body.lastName) {
+      const firstName = req.body.firstName || '';
+      const lastName = req.body.lastName || '';
+      updates.name = `${firstName} ${lastName}`.trim();
+    }
+
+    // Handle direct name update
+    if (req.body.name) {
+      updates.name = req.body.name;
+    }
+
+    // Handle avatar
+    if (req.body.avatarUrl || req.body.avatar) {
+      updates.avatarUrl = req.body.avatarUrl || req.body.avatar;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -416,7 +441,16 @@ router.put('/profile', authenticate, async (req, res) => {
     let user = null;
 
     try {
-      user = await User.findByPk(req.user.userId);
+      // Find by UUID first
+      user = await User.findOne({
+        where: { uuid: req.user.userId }
+      });
+
+      // Fallback to ID
+      if (!user && !isNaN(parseInt(req.user.userId))) {
+        user = await User.findByPk(parseInt(req.user.userId));
+      }
+
       if (user) {
         await user.update(updates);
       }
