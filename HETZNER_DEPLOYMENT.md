@@ -1,229 +1,271 @@
 # HolidaiButler - Hetzner Server Deployment Guide
 
-Dit document beschrijft de stappen om HolidaiButler te deployen op de Hetzner server met de `pxoziy_db1` database.
+Dit document beschrijft de huidige deployment configuratie op de Hetzner server.
 
-## Probleemanalyse
+**Laatst bijgewerkt:** 2025-12-09
 
-De huidige errors op https://test.holidaibutler.com/pois:
-- `localhost:3003/api/v_quire_images=true` - Frontend probeert localhost te bereiken
-- `localhost:3003/api/v1/pois?limit=1000` - API endpoint niet bereikbaar
+## Server Informatie
 
-**Oorzaken:**
-1. Frontend was gebouwd zonder productie API URLs
-2. Backend API draait niet op de server
-3. Apache is niet geconfigureerd om API requests te proxyen
+| Item | Waarde |
+|------|--------|
+| Server IP | 91.98.71.87 |
+| SSH User | root |
+| Frontend URL | https://test.holidaibutler.com |
+| API URL | https://test.holidaibutler.com/api |
+| Health Endpoint | https://test.holidaibutler.com/health |
 
-## Oplossing Overzicht
+## Architectuur Overzicht
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    test.holidaibutler.com                        │
 ├─────────────────────────────────────────────────────────────────┤
-│  Apache (Port 443)                                               │
-│  ├── /              → Static Frontend (React)                   │
-│  └── /api/*         → Reverse Proxy → Node.js (Port 3001)      │
+│  Apache (Port 443 - SSL/TLS)                                     │
+│  ├── /              → Static Frontend (React)                    │
+│  │                    /var/www/test.holidaibutler.com            │
+│  ├── /api/*         → Reverse Proxy → Node.js (Port 3001)       │
+│  └── /health        → Reverse Proxy → Node.js (Port 3001)       │
 ├─────────────────────────────────────────────────────────────────┤
-│  Node.js Backend (PM2 managed)                                   │
-│  └── Connects to MySQL (pxoziy_db1)                             │
+│  Node.js Backend (PM2 managed - holidaibutler-api)              │
+│  └── Working dir: /var/www/api.holidaibutler.com/platform-core  │
+│      Entry point: src/index.js                                   │
+├─────────────────────────────────────────────────────────────────┤
+│  Database (External Hetzner KonsoleH)                            │
+│  └── Host: jotx.your-database.de                                │
+│      Database: pxoziy_db1                                        │
+│      Read User: pxoziy_1                                         │
+│      Write User: pxoziy_1_w                                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Stap 1: Server Vereisten
+## Directory Structuur op Server
 
-SSH naar de Hetzner server:
-```bash
-ssh root@91.98.71.87
+```
+/var/www/
+├── test.holidaibutler.com/     # Frontend static files
+│   ├── index.html
+│   ├── assets/
+│   └── ...
+│
+└── api.holidaibutler.com/      # Backend applicatie
+    ├── platform-core/          # Actieve codebase
+    │   ├── .env                # Environment variabelen
+    │   ├── src/                # Source code
+    │   │   ├── index.js        # Entry point
+    │   │   ├── controllers/
+    │   │   ├── models/
+    │   │   ├── routes/
+    │   │   └── services/
+    │   ├── node_modules/
+    │   └── logs/
+    └── ...
 ```
 
-Installeer vereiste software:
-```bash
-# Node.js 20.x
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-apt-get install -y nodejs
+## Environment Configuratie (.env)
 
-# PM2 Process Manager
-npm install -g pm2
-
-# Apache modules
-a2enmod proxy proxy_http rewrite headers ssl expires deflate
-```
-
-## Stap 2: Apache Configuratie
-
-1. Kopieer de Apache configuratie naar de server:
-```bash
-# Lokaal (vanuit project root)
-scp deployment/apache/test.holidaibutler.com.conf root@91.98.71.87:/etc/apache2/sites-available/
-```
-
-2. Op de server, activeer de configuratie:
-```bash
-ssh root@91.98.71.87
-
-# Disable default site if enabled
-a2dissite 000-default.conf
-
-# Enable our site
-a2ensite test.holidaibutler.com.conf
-
-# Test configuration
-apache2ctl configtest
-
-# Reload Apache
-systemctl reload apache2
-```
-
-## Stap 3: Backend Environment Configuratie
-
-1. Maak de backend directory:
-```bash
-ssh root@91.98.71.87
-mkdir -p /var/www/api.holidaibutler.com
-```
-
-2. Maak het `.env` bestand aan op de server:
-```bash
-nano /var/www/api.holidaibutler.com/.env
-```
-
-3. Kopieer de inhoud van `platform-core/.env.production.template` en vul de juiste waarden in:
+Locatie: `/var/www/api.holidaibutler.com/platform-core/.env`
 
 ```env
-# PRODUCTION ENVIRONMENT
-
+# HolidaiButler Platform Core - Production Environment
 NODE_ENV=production
-LOG_LEVEL=info
-PLATFORM_CORE_PORT=3001
+PORT=3001
+API_BASE_URL=https://test.holidaibutler.com/api
 
-# DATABASE - Hetzner MySQL (pxoziy_db1)
-DATABASE_HOST=localhost
-DATABASE_PORT=3306
-DATABASE_NAME=pxoziy_db1
-DATABASE_USER=pxoziy_u1
-DATABASE_PASSWORD=<VUL_HIER_HET_WACHTWOORD_IN>
+# Security (gegenereerd met openssl rand -hex 32)
+JWT_SECRET=<64-char-hex>
+API_KEY=<64-char-hex>
 
-# CORS - Allow test domain
+# Database - External Hetzner MySQL (KonsoleH)
+DB_HOST=jotx.your-database.de
+DB_PORT=3306
+DB_USER=pxoziy_1
+DB_PASSWORD=<wachtwoord>
+DB_NAME=pxoziy_db1
+
+# CORS
 CORS_ORIGIN=https://test.holidaibutler.com
 
-# JWT Secrets (genereer unieke waarden!)
-# Genereer met: openssl rand -hex 32
-JWT_SECRET=<GENEREER_64_CHAR_HEX>
-JWT_ADMIN_SECRET=<GENEREER_64_CHAR_HEX>
-JWT_REFRESH_SECRET=<GENEREER_64_CHAR_HEX>
-JWT_EXPIRES_IN=24h
+# Logging
+LOG_LEVEL=info
+LOG_DIR=/var/log/holidaibutler
 
-# Security
-ENCRYPTION_KEY=<GENEREER_64_CHAR_HEX>
+# Features
+ENABLE_METRICS=false
+ENABLE_CRON_JOBS=false
+SESSION_EXPIRY_HOURS=24
 ```
 
-**Belangrijk:** Genereer unieke secrets:
-```bash
-# Op de server, genereer random secrets
-openssl rand -hex 32  # Run dit 4x voor elk secret
+**Let op:** Database is EXTERN (niet localhost). Gebruik `jotx.your-database.de` als host.
+
+## Apache SSL Configuratie
+
+Locatie: `/etc/apache2/sites-enabled/test.holidaibutler.com-le-ssl.conf`
+
+```apache
+<IfModule mod_ssl.c>
+<VirtualHost *:443>
+    ServerName test.holidaibutler.com
+    DocumentRoot /var/www/test.holidaibutler.com
+
+    # API Proxy to Node.js backend
+    ProxyPreserveHost On
+    ProxyPass /api http://127.0.0.1:3001/api
+    ProxyPassReverse /api http://127.0.0.1:3001/api
+    ProxyPass /health http://127.0.0.1:3001/health
+    ProxyPassReverse /health http://127.0.0.1:3001/health
+
+    # CORS Headers for API
+    <Location /api>
+        Header always set Access-Control-Allow-Origin "https://test.holidaibutler.com"
+        Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+        Header always set Access-Control-Allow-Credentials "true"
+    </Location>
+
+    # SPA routing
+    <Directory /var/www/test.holidaibutler.com>
+        RewriteEngine On
+        RewriteBase /
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteCond %{REQUEST_URI} !^/api
+        RewriteCond %{REQUEST_URI} !^/health
+        RewriteRule . /index.html [L]
+    </Directory>
+
+    # SSL (Let's Encrypt)
+    SSLCertificateFile /etc/letsencrypt/live/test.holidaibutler.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/test.holidaibutler.com/privkey.pem
+</VirtualHost>
+</IfModule>
 ```
 
-## Stap 4: Backend Deployment
-
-De GitHub Actions workflow zal automatisch deployen bij push naar `main`. Voor handmatige deployment:
+## PM2 Configuratie
 
 ```bash
-# Op de server
-cd /var/www/api.holidaibutler.com
+# Status bekijken
+pm2 status
 
-# Clone of update de repo
-git pull origin main
+# Logs bekijken
+pm2 logs holidaibutler-api --lines 50
 
-# Installeer dependencies
-npm ci --only=production
+# Herstarten
+pm2 restart holidaibutler-api
 
-# Start met PM2
-pm2 start src/index.js --name holidaibutler-api --env production
+# Start configuratie
+pm2 start src/index.js --name holidaibutler-api --cwd /var/www/api.holidaibutler.com/platform-core
 
-# Auto-start bij reboot
-pm2 startup
+# Opslaan voor auto-restart
 pm2 save
 ```
 
-## Stap 5: Database Verificatie
+## Deployment Stappen
 
-Controleer de database verbinding:
-
-```bash
-# Op de server
-mysql -u pxoziy_u1 -p pxoziy_db1
-
-# Test query
-SHOW TABLES;
-SELECT COUNT(*) FROM pois;
-```
-
-## Stap 6: Test de Deployment
-
-Na deployment, test alle endpoints:
+### Code Update (handmatig)
 
 ```bash
-# Frontend
-curl -I https://test.holidaibutler.com
+ssh root@91.98.71.87
 
-# API Health
-curl https://test.holidaibutler.com/api/v1/health
+# Haal laatste code van GitHub
+cd /var/www/api.holidaibutler.com
+git clone --depth 1 https://github.com/FrankSpooren/HolidaiButler.git temp_repo
+cp -r temp_repo/platform-core/src/* platform-core/src/
+rm -rf temp_repo
 
-# POIs endpoint
-curl "https://test.holidaibutler.com/api/v1/pois?limit=10"
+# Herstart applicatie
+pm2 restart holidaibutler-api
 ```
+
+### Verifieer Deployment
+
+```bash
+# Health check
+curl https://test.holidaibutler.com/health
+
+# POIs test
+curl "https://test.holidaibutler.com/api/v1/pois?limit=2"
+
+# Categories test
+curl "https://test.holidaibutler.com/api/v1/pois/categories"
+```
+
+## Beschikbare API Endpoints
+
+| Endpoint | Method | Beschrijving |
+|----------|--------|--------------|
+| `/health` | GET | Health check |
+| `/api/v1/pois` | GET | Lijst POIs (pagination) |
+| `/api/v1/pois/:id` | GET | Enkele POI |
+| `/api/v1/pois/categories` | GET | Alle categorieën |
+| `/api/v1/pois/cities` | GET | Alle steden |
+| `/api/v1/pois/search` | GET | Zoeken in POIs |
+| `/api/v1/pois/geojson` | GET | POIs als GeoJSON |
+| `/api/v1/holibot/chat` | POST | HoliBot AI chat |
+| `/api/v1/holibot/categories` | GET | HoliBot categorieën |
+| `/api/v1/holibot/recommendations` | POST | POI aanbevelingen |
+| `/api/v1/onboarding/status` | GET | Onboarding status |
+| `/api/auth/signup` | POST | Registratie |
+| `/api/auth/login` | POST | Login |
+
+## Database Informatie
+
+**Externe MySQL Database (Hetzner KonsoleH)**
+
+- Host: `jotx.your-database.de`
+- Database: `pxoziy_db1`
+- Read User: `pxoziy_1`
+- Write User: `pxoziy_1_w`
+
+**Belangrijke Tabellen:**
+- `POI` - 1593 Points of Interest (1591 actief)
+- `Users` - Gebruikers
+- `User_Preferences` - Gebruikersvoorkeuren
+- `Chat_Sessions` - Chat geschiedenis
 
 ## Troubleshooting
 
-### Error: API Returns 502 Bad Gateway
-- Backend draait niet: `pm2 status`
-- Start backend: `pm2 start holidaibutler-api`
+### 503 Service Unavailable
 
-### Error: Database Connection Refused
-- Check MySQL status: `systemctl status mysql`
-- Verify credentials in `.env`
-- Check of user toegang heeft: `mysql -u pxoziy_u1 -p`
-
-### Error: CORS Blocked
-- Check `CORS_ORIGIN` in backend `.env`
-- Verify Apache headers in vhost config
-
-### PM2 Logs Bekijken
 ```bash
-pm2 logs holidaibutler-api
-pm2 logs holidaibutler-api --lines 100
+# Check of backend draait
+pm2 status
+
+# Bekijk error logs
+pm2 logs holidaibutler-api --lines 50
+
+# Herstart indien nodig
+pm2 restart holidaibutler-api
 ```
 
-### Apache Logs Bekijken
+### Database Connection Error
+
 ```bash
-tail -f /var/log/apache2/test.holidaibutler.com-error.log
-tail -f /var/log/apache2/test.holidaibutler.com-access.log
+# Test database verbinding
+mysql -h jotx.your-database.de -u pxoziy_1 -p pxoziy_db1 -e "SHOW TABLES;"
+
+# Check .env bestand
+cat /var/www/api.holidaibutler.com/platform-core/.env | grep DB_
 ```
 
-## Checklist voor Deployment
+### CORS Errors
 
-- [ ] Apache modules geactiveerd (proxy, rewrite, ssl, headers)
-- [ ] Apache vhost configuratie geplaatst en geactiveerd
-- [ ] Backend `.env` aangemaakt met juiste database credentials
-- [ ] PM2 geinstalleerd en backend draaiend
-- [ ] SSL certificaten aanwezig (Let's Encrypt)
-- [ ] Database toegankelijk vanaf server
-- [ ] CORS correct geconfigureerd
-- [ ] Health endpoint bereikbaar: `/api/v1/health`
-- [ ] POIs endpoint werkt: `/api/v1/pois`
+- Controleer `CORS_ORIGIN` in `.env`
+- Controleer Apache headers in vhost config
 
-## Automatische Deployment
+### Apache Logs
 
-Na deze handmatige setup zal de GitHub Actions workflow automatisch deployen bij elke push naar `main`:
+```bash
+tail -f /var/log/apache2/test_error.log
+tail -f /var/log/apache2/test_access.log
+```
 
-1. Frontend wordt gebouwd met productie API URLs
-2. Frontend static files worden gedeployed naar `/var/www/test.holidaibutler.com`
-3. Backend wordt gedeployed naar `/var/www/api.holidaibutler.com`
-4. PM2 herstart de backend service
-5. Health check verifieert de deployment
+## Status (2025-12-09)
 
-## Contact
-
-Bij problemen, check de logs:
-- PM2: `pm2 logs`
-- Apache: `/var/log/apache2/test.holidaibutler.com-*.log`
-- Applicatie: `/var/www/api.holidaibutler.com/logs/`
+- [x] Backend API draait op PM2
+- [x] MySQL database verbonden (extern: jotx.your-database.de)
+- [x] Apache reverse proxy geconfigureerd
+- [x] SSL certificaat actief (Let's Encrypt)
+- [x] POIs endpoint werkt (1591 actieve POIs)
+- [x] Health endpoint werkt
+- [ ] MongoDB niet geconfigureerd (niet nodig voor huidige functionaliteit)
+- [ ] Mistral AI niet geconfigureerd (HoliBot gebruikt fallback responses)
