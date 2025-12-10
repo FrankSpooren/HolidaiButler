@@ -155,19 +155,18 @@ export function FavoritesPage() {
     return agendaCategoryConfig[categoryKey]?.color || agendaCategoryConfig.culture.color;
   };
 
-  // Get event category label
+  // Get event category label (uses language)
   const getEventCategoryLabel = (event: AgendaEvent): string => {
     const categoryKey = event.primaryCategory || 'culture';
-    const labels: Record<string, string> = {
-      music: 'Music',
-      culture: 'Culture & History',
-      active: 'Active',
-      nature: 'Beaches & Nature',
-      food: 'Food & Drinks',
-      festivals: 'Recreation',
-      markets: 'Shopping',
-      creative: 'Health & Wellbeing',
+    const labelsByLang: Record<string, Record<string, string>> = {
+      nl: { music: 'Muziek', culture: 'Cultuur', active: 'Actief', nature: 'Natuur', food: 'Food', festivals: 'Festivals', markets: 'Markten', creative: 'Creatief' },
+      en: { music: 'Music', culture: 'Culture', active: 'Active', nature: 'Nature', food: 'Food', festivals: 'Festivals', markets: 'Markets', creative: 'Creative' },
+      de: { music: 'Musik', culture: 'Kultur', active: 'Aktiv', nature: 'Natur', food: 'Essen', festivals: 'Festivals', markets: 'Märkte', creative: 'Kreativ' },
+      es: { music: 'Música', culture: 'Cultura', active: 'Activo', nature: 'Naturaleza', food: 'Comida', festivals: 'Festivales', markets: 'Mercados', creative: 'Creativo' },
+      sv: { music: 'Musik', culture: 'Kultur', active: 'Aktiv', nature: 'Natur', food: 'Mat', festivals: 'Festivaler', markets: 'Marknader', creative: 'Kreativ' },
+      pl: { music: 'Muzyka', culture: 'Kultura', active: 'Aktywne', nature: 'Natura', food: 'Jedzenie', festivals: 'Festiwale', markets: 'Targi', creative: 'Kreatywny' },
     };
+    const labels = labelsByLang[language] || labelsByLang.en;
     return labels[categoryKey] || 'Event';
   };
 
