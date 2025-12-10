@@ -18,6 +18,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useFavorites } from '../shared/contexts/FavoritesContext';
+import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import './AccountDashboard.css';
 
@@ -32,6 +33,7 @@ interface UserPreferences {
 export default function AccountDashboard() {
   const navigate = useNavigate();
   const { favorites } = useFavorites();
+  const { agendaFavorites } = useAgendaFavorites();
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<TabType>('profile');
@@ -138,7 +140,7 @@ export default function AccountDashboard() {
     }
   };
 
-  const favoritesCount = favorites.size;
+  const favoritesCount = favorites.size + agendaFavorites.size;
 
   // Helper functions to display preference labels
   const getCompanionLabel = (id: string | null) => {

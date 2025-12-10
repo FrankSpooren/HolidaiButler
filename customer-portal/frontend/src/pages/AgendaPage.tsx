@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { AgendaCard } from '@/features/agenda/components/AgendaCard';
 import { AgendaDetailModal } from '@/features/agenda/components/AgendaDetailModal';
 import { AgendaFilterModal, type AgendaFilters } from '@/features/agenda/components/AgendaFilterModal';
@@ -16,79 +17,79 @@ import './AgendaPage.css';
  * Design: Matches POILandingPage exactly
  */
 
-// Interest category configuration - Updated labels with translations
+// Interest category configuration - Colors matching POI page exactly
 const INTEREST_CATEGORIES = [
-  { id: 'music', icon: '🎵', color: '#E67E22' },
-  { id: 'culture', icon: '🏛️', color: '#9C59B8' },
-  { id: 'active', icon: '⚽', color: '#3498DB' },
-  { id: 'nature', icon: '🌿', color: '#1ABC9C' },
-  { id: 'food', icon: '🍽️', color: '#27AE60' },
-  { id: 'festivals', icon: '🎉', color: '#E67E22' },
-  { id: 'markets', icon: '🛒', color: '#F39C12' },
-  { id: 'creative', icon: '🎨', color: '#9B59B6' },
+  { id: 'music', icon: '/assets/category-icons/recreation.png', color: 'linear-gradient(135deg, #354f48, #49605a)' },
+  { id: 'culture', icon: '/assets/category-icons/culture-history.png', color: 'linear-gradient(135deg, #253444, #3a4856)' },
+  { id: 'active', icon: '/assets/category-icons/active.png', color: 'linear-gradient(135deg, #016193, #1a709d)' },
+  { id: 'nature', icon: '/assets/category-icons/beaches-nature.png', color: 'linear-gradient(135deg, #b4942e, #bb9e42)' },
+  { id: 'food', icon: '/assets/category-icons/food-drinks.png', color: 'linear-gradient(135deg, #4f766b, #608379)' },
+  { id: 'festivals', icon: '/assets/category-icons/recreation.png', color: 'linear-gradient(135deg, #354f48, #49605a)' },
+  { id: 'markets', icon: '/assets/category-icons/shopping.png', color: 'linear-gradient(135deg, #b4892e, #bb9442)' },
+  { id: 'creative', icon: '/assets/category-icons/health-wellbeing.png', color: 'linear-gradient(135deg, #004568, #195777)' },
 ];
 
-// Category labels in all 6 languages
+// Category labels in all 6 languages - matching POI page labels
 const categoryLabels: Record<string, Record<string, string>> = {
   nl: {
-    music: 'Muziek',
-    culture: 'Cultuur',
-    active: 'Actief',
-    nature: 'Natuur',
-    food: 'Eten',
-    festivals: 'Festivals',
-    markets: 'Markten',
-    creative: 'Creatief',
+    music: 'Music',
+    culture: 'Culture & History',
+    active: 'Active',
+    nature: 'Beaches & Nature',
+    food: 'Food & Drinks',
+    festivals: 'Recreation',
+    markets: 'Shopping',
+    creative: 'Health & Wellbeing',
   },
   en: {
     music: 'Music',
-    culture: 'Culture',
+    culture: 'Culture & History',
     active: 'Active',
-    nature: 'Nature',
-    food: 'Food',
-    festivals: 'Festivals',
-    markets: 'Markets',
-    creative: 'Creative',
+    nature: 'Beaches & Nature',
+    food: 'Food & Drinks',
+    festivals: 'Recreation',
+    markets: 'Shopping',
+    creative: 'Health & Wellbeing',
   },
   de: {
-    music: 'Musik',
-    culture: 'Kultur',
-    active: 'Aktiv',
-    nature: 'Natur',
-    food: 'Essen',
-    festivals: 'Festivals',
-    markets: 'Märkte',
-    creative: 'Kreativ',
+    music: 'Music',
+    culture: 'Culture & History',
+    active: 'Active',
+    nature: 'Beaches & Nature',
+    food: 'Food & Drinks',
+    festivals: 'Recreation',
+    markets: 'Shopping',
+    creative: 'Health & Wellbeing',
   },
   es: {
-    music: 'Música',
-    culture: 'Cultura',
-    active: 'Activo',
-    nature: 'Naturaleza',
-    food: 'Comida',
-    festivals: 'Festivales',
-    markets: 'Mercados',
-    creative: 'Creativo',
+    music: 'Music',
+    culture: 'Culture & History',
+    active: 'Active',
+    nature: 'Beaches & Nature',
+    food: 'Food & Drinks',
+    festivals: 'Recreation',
+    markets: 'Shopping',
+    creative: 'Health & Wellbeing',
   },
   sv: {
-    music: 'Musik',
-    culture: 'Kultur',
-    active: 'Aktiv',
-    nature: 'Natur',
-    food: 'Mat',
-    festivals: 'Festivaler',
-    markets: 'Marknader',
-    creative: 'Kreativ',
+    music: 'Music',
+    culture: 'Culture & History',
+    active: 'Active',
+    nature: 'Beaches & Nature',
+    food: 'Food & Drinks',
+    festivals: 'Recreation',
+    markets: 'Shopping',
+    creative: 'Health & Wellbeing',
   },
   pl: {
-    music: 'Muzyka',
-    culture: 'Kultura',
-    active: 'Aktywne',
-    nature: 'Natura',
-    food: 'Jedzenie',
-    festivals: 'Festiwale',
-    markets: 'Targi',
-    creative: 'Kreatywny',
+    music: 'Music',
+    culture: 'Culture & History',
+    active: 'Active',
+    nature: 'Beaches & Nature',
+    food: 'Food & Drinks',
+    festivals: 'Recreation',
+    markets: 'Shopping',
+    creative: 'Health & Wellbeing',
   },
 };
 
@@ -190,6 +191,7 @@ const defaultFilters: AgendaFilters = {
 
 export function AgendaPage() {
   const { t, language } = useLanguage();
+  const { agendaFavorites, isAgendaFavorite, toggleAgendaFavorite } = useAgendaFavorites();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [limit, setLimit] = useState<number>(12);
@@ -197,7 +199,6 @@ export function AgendaPage() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
   const [filters, setFilters] = useState<AgendaFilters>(defaultFilters);
-  const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set());
   const [showHeader, setShowHeader] = useState<boolean>(true);
   const [lastScrollY, setLastScrollY] = useState<number>(0);
 
@@ -358,15 +359,7 @@ export function AgendaPage() {
   };
 
   const handleToggleSave = (eventId: string) => {
-    setSavedEvents(prev => {
-      const next = new Set(prev);
-      if (next.has(eventId)) {
-        next.delete(eventId);
-      } else {
-        next.add(eventId);
-      }
-      return next;
-    });
+    toggleAgendaFavorite(eventId);
   };
 
   const handleApplyFilters = (newFilters: AgendaFilters) => {
@@ -409,7 +402,7 @@ export function AgendaPage() {
               style={{ background: category.color }}
               onClick={() => handleCategoryClick(category.id)}
             >
-              <span className="agenda-category-icon">{category.icon}</span>
+              <img src={category.icon} alt="" className="agenda-category-icon" />
               {categoryLabels[language]?.[category.id] || categoryLabels.en[category.id]}
             </div>
           ))}
@@ -447,7 +440,7 @@ export function AgendaPage() {
               event={event}
               onClick={() => handleEventClick(event._id)}
               onSave={handleToggleSave}
-              isSaved={savedEvents.has(event._id)}
+              isSaved={isAgendaFavorite(event._id)}
               distance={getDistance(event)}
               detectedCategory={detectCategory(event, language)}
             />
