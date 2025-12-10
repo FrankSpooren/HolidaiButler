@@ -17,16 +17,16 @@ import './AgendaPage.css';
  * Design: Matches POILandingPage exactly
  */
 
-// Interest category configuration - Colors matching POI page exactly
+// Interest category configuration - Colors matching POI page, with emoji icons
 const INTEREST_CATEGORIES = [
-  { id: 'music', icon: '/assets/category-icons/recreation.png', color: 'linear-gradient(135deg, #354f48, #49605a)' },
-  { id: 'culture', icon: '/assets/category-icons/culture-history.png', color: 'linear-gradient(135deg, #253444, #3a4856)' },
-  { id: 'active', icon: '/assets/category-icons/active.png', color: 'linear-gradient(135deg, #016193, #1a709d)' },
-  { id: 'nature', icon: '/assets/category-icons/beaches-nature.png', color: 'linear-gradient(135deg, #b4942e, #bb9e42)' },
-  { id: 'food', icon: '/assets/category-icons/food-drinks.png', color: 'linear-gradient(135deg, #4f766b, #608379)' },
-  { id: 'festivals', icon: '/assets/category-icons/recreation.png', color: 'linear-gradient(135deg, #354f48, #49605a)' },
-  { id: 'markets', icon: '/assets/category-icons/shopping.png', color: 'linear-gradient(135deg, #b4892e, #bb9442)' },
-  { id: 'creative', icon: '/assets/category-icons/health-wellbeing.png', color: 'linear-gradient(135deg, #004568, #195777)' },
+  { id: 'music', icon: '🎵', color: 'linear-gradient(135deg, #354f48, #49605a)' },
+  { id: 'culture', icon: '🏛️', color: 'linear-gradient(135deg, #253444, #3a4856)' },
+  { id: 'active', icon: '⚽', color: 'linear-gradient(135deg, #016193, #1a709d)' },
+  { id: 'nature', icon: '🌿', color: 'linear-gradient(135deg, #b4942e, #bb9e42)' },
+  { id: 'food', icon: '🍽️', color: 'linear-gradient(135deg, #4f766b, #608379)' },
+  { id: 'festivals', icon: '🎉', color: 'linear-gradient(135deg, #354f48, #49605a)' },
+  { id: 'markets', icon: '🛒', color: 'linear-gradient(135deg, #b4892e, #bb9442)' },
+  { id: 'creative', icon: '🎨', color: 'linear-gradient(135deg, #004568, #195777)' },
 ];
 
 // Category labels in all 6 languages - original Agenda labels
@@ -402,7 +402,7 @@ export function AgendaPage() {
               style={{ background: category.color }}
               onClick={() => handleCategoryClick(category.id)}
             >
-              <img src={category.icon} alt="" className="agenda-category-icon" />
+              <span className="agenda-category-icon">{category.icon}</span>
               {categoryLabels[language]?.[category.id] || categoryLabels.en[category.id]}
             </div>
           ))}
