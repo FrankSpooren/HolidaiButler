@@ -5,6 +5,7 @@ import { router } from './routes/router';
 import { HoliBotProvider } from './shared/contexts/HoliBotContext';
 import { LanguageProvider } from './i18n/LanguageContext';
 import { FavoritesProvider } from './shared/contexts/FavoritesContext';
+import { AgendaFavoritesProvider } from './shared/contexts/AgendaFavoritesContext';
 import { ComparisonProvider } from './shared/contexts/ComparisonContext';
 
 /**
@@ -29,14 +30,16 @@ function App() {
   return (
     <LanguageProvider>
       <FavoritesProvider>
-        <ComparisonProvider>
-          <HoliBotProvider>
-            <QueryClientProvider client={queryClient}>
-              {/* React Router v7 - Data Router */}
-              <RouterProvider router={router} />
-            </QueryClientProvider>
-          </HoliBotProvider>
-        </ComparisonProvider>
+        <AgendaFavoritesProvider>
+          <ComparisonProvider>
+            <HoliBotProvider>
+              <QueryClientProvider client={queryClient}>
+                {/* React Router v7 - Data Router */}
+                <RouterProvider router={router} />
+              </QueryClientProvider>
+            </HoliBotProvider>
+          </ComparisonProvider>
+        </AgendaFavoritesProvider>
       </FavoritesProvider>
     </LanguageProvider>
   );
