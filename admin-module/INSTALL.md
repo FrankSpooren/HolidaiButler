@@ -10,7 +10,7 @@ Deze admin module is gebouwd en klaar om geïntegreerd te worden met je bestaand
 
 Zorg dat je hebt:
 - ✅ Node.js >= 18.0.0
-- ✅ MongoDB (draaiend)
+- ✅ MySQL Database (draaiend)
 - ✅ NPM of Yarn
 - ✅ Git
 
@@ -42,7 +42,7 @@ npm install
 cp .env.example .env
 
 # Open .env en pas aan:
-# - MONGODB_URI (naar jouw MongoDB)
+# - DATABASE_HOST, DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD (naar jouw MySQL)
 # - JWT secrets (genereer nieuwe keys)
 # - ADMIN_FRONTEND_URL (naar jouw frontend URL)
 
@@ -83,7 +83,7 @@ npm run dev
 
 2. Log in met platform admin:
    - Email: `admin@holidaibutler.com`
-   - Password: `Admin123!@#`
+   - Password: `Admin2025`
 
 3. Je zou nu het dashboard moeten zien!
 
@@ -107,10 +107,10 @@ Zou moeten returnen:
 }
 ```
 
-**MongoDB:**
+**MySQL:**
 ```bash
 # Check of admin users zijn aangemaakt
-mongo holidaibutler --eval "db.adminusers.count()"
+mysql -e "SELECT COUNT(*) FROM admin_users;" pxoziy_db1
 ```
 
 Zou `4` moeten returnen (4 test users).
@@ -121,7 +121,7 @@ Zou `4` moeten returnen (4 test users).
 
 1. **Wijzig alle default passwords!**
    ```bash
-   # Via MongoDB of maak nieuwe users aan
+   # Via MySQL of maak nieuwe users aan
    ```
 
 2. **Genereer sterke JWT secrets:**
@@ -141,7 +141,7 @@ Zou `4` moeten returnen (4 test users).
    ```
 
 4. **Enable HTTPS**
-5. **Setup MongoDB authentication**
+5. **Setup MySQL authentication**
 6. **Configure firewall rules**
 
 ## 🗂️ Project Integratie

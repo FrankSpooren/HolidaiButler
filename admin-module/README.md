@@ -17,7 +17,7 @@ Deze admin module biedt:
 
 ### Backend (Node.js/Express)
 - **Port**: 3003
-- **Database**: MongoDB (gedeeld met hoofdapplicatie)
+- **Database**: MySQL/Sequelize (gedeeld met hoofdapplicatie)
 - **Authentication**: JWT tokens (access + refresh)
 - **File Storage**: Lokaal bestandssysteem
 
@@ -107,19 +107,19 @@ Ga naar `http://localhost:5174/login` en log in met:
 
 **Platform Admin:**
 - Email: `admin@holidaibutler.com`
-- Password: `Admin123!@#`
+- Password: `Admin2025`
 
 **POI Owner:**
 - Email: `poi.owner@example.com`
-- Password: `POI123!@#`
+- Password: `POI2025`
 
 **Editor:**
 - Email: `editor@holidaibutler.com`
-- Password: `Editor123!@#`
+- Password: `Editor2025`
 
 **Reviewer:**
 - Email: `reviewer@holidaibutler.com`
-- Password: `Reviewer123!@#`
+- Password: `Reviewer2025`
 
 ⚠️ **BELANGRIJK**: Wijzig deze wachtwoorden in productie!
 
