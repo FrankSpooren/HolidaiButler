@@ -1,7 +1,7 @@
 /**
  * POI Model - Points of Interest
  * Admin module Sequelize model for POI management
- * ALIGNED with platform-core POI model schema
+ * ALIGNED with actual pxoziy_db1.POI table structure
  */
 
 import { DataTypes, Model } from 'sequelize';
@@ -29,7 +29,10 @@ class POI extends Model {
       amenities: parseJSON(values.amenities, []),
       accessibility_features: parseJSON(values.accessibility_features, null),
       images: parseJSON(values.images, []),
-      google_place_data: parseJSON(values.google_place_data, null),
+      enhanced_images: parseJSON(values.enhanced_images, []),
+      enriched_highlights: parseJSON(values.enriched_highlights, []),
+      enriched_sources: parseJSON(values.enriched_sources, []),
+      content_quality_data: parseJSON(values.content_quality_data, null),
       status: values.verified ? 'active' : 'pending',
       location: {
         city: values.city,
@@ -42,79 +45,26 @@ class POI extends Model {
       },
       quality: {
         needsReview: !values.verified,
+        score: values.content_quality_score ? parseFloat(values.content_quality_score) : null,
       },
     };
-  }
-
-  // Calculate POI score (aligned with platform-core)
-  calculateScore() {
-    const normalizedReviews = Math.min(this.review_count / 100, 10);
-    const normalizedRating = (this.average_rating / 5) * 10;
-    const score = (
-      (normalizedReviews * 0.3) +
-      (normalizedRating * 0.2) +
-      ((this.tourist_relevance || 0) * 0.3) +
-      ((this.booking_frequency || 0) * 0.2)
-    );
-    return Math.round(score * 100) / 100;
-  }
-
-  // Calculate tier based on score (aligned with platform-core)
-  calculateTier(score = null) {
-    const poiScore = score !== null ? score : this.poi_score;
-    if (poiScore >= 8.5) return 1;
-    if (poiScore >= 7.0) return 2;
-    if (poiScore >= 5.0) return 3;
-    return 4;
   }
 }
 
 POI.init(
   {
-    // Primary key - INTEGER for backwards compatibility
-    // Use uuid field for cross-module references
+    // Primary key
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
 
-    // UUID for cross-module compatibility with platform-core
-    uuid: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+    // Google Place ID
+    google_placeid: {
+      type: DataTypes.STRING(255),
       unique: true,
       allowNull: false,
-    },
-
-    // External IDs - ALIGNED naming with platform-core
-    google_place_id: {
-      type: DataTypes.STRING(255),
-      unique: true,
-      allowNull: true,
-      field: 'google_placeid', // Database column name for backwards compatibility
-    },
-    tripadvisor_id: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-    thefork_id: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-    booking_com_id: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-    getyourguide_id: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-
-    // Google Place data cache
-    google_place_data: {
-      type: DataTypes.TEXT('long'),
-      allowNull: true,
     },
 
     // Basic Info
@@ -122,32 +72,16 @@ POI.init(
       type: DataTypes.STRING(255),
       allowNull: false,
     },
-    slug: {
-      type: DataTypes.STRING(255),
-      unique: true,
-      allowNull: true,
-    },
     description: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
 
-    // Category - ALIGNED with platform-core ENUM values
+    // Category
     category: {
       type: DataTypes.STRING(100),
       allowNull: false,
-      validate: {
-        isIn: {
-          args: [[
-            'food_drinks', 'museum', 'beach', 'historical', 'routes',
-            'healthcare', 'shopping', 'activities', 'accommodation', 'nightlife',
-            // Extended categories for admin flexibility
-            'Culture & History', 'Beaches & Nature', 'Active', 'Recreation',
-            'Food & Drinks', 'Shopping', 'Practical'
-          ]],
-          msg: 'Invalid category value'
-        }
-      }
+      defaultValue: 'Uncategorized',
     },
     subcategory: {
       type: DataTypes.STRING(100),
@@ -158,7 +92,7 @@ POI.init(
       allowNull: true,
     },
 
-    // Location - ALIGNED with platform-core
+    // Location
     latitude: {
       type: DataTypes.DECIMAL(10, 8),
       allowNull: false,
@@ -179,7 +113,6 @@ POI.init(
     region: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      defaultValue: 'Costa Blanca',
     },
     country: {
       type: DataTypes.STRING(100),
@@ -191,13 +124,32 @@ POI.init(
       allowNull: true,
     },
 
-    // Ratings & Reviews - ALIGNED with platform-core
-    average_rating: {
+    // Contact
+    phone: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    website: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    email: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    facebook_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    instagram_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+
+    // Ratings & Reviews
+    rating: {
       type: DataTypes.DECIMAL(3, 2),
       allowNull: true,
-      defaultValue: 0.0,
-      comment: '0-5 scale, aligned with platform-core',
-      field: 'rating', // Database column for backwards compatibility
     },
     review_count: {
       type: DataTypes.INTEGER,
@@ -207,109 +159,114 @@ POI.init(
     price_level: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      comment: '1-4 scale',
     },
 
-    // Classification - ALIGNED with platform-core
-    tier: {
-      type: DataTypes.TINYINT,
-      defaultValue: 4,
-      comment: '1=realtime, 2=daily, 3=weekly, 4=monthly',
-    },
-    poi_score: {
-      type: DataTypes.DECIMAL(4, 2),
-      defaultValue: 0.0,
-      comment: 'Weighted score 0-10',
-    },
-    tourist_relevance: {
-      type: DataTypes.DECIMAL(3, 2),
-      defaultValue: 0.0,
-      comment: '0-10 scale',
-    },
-    booking_frequency: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-      comment: 'Monthly average',
-    },
-
-    // Contact
-    phone: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-    },
-    website: {
-      type: DataTypes.STRING(500),
-      allowNull: true,
-    },
-    email: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-
-    // Opening Hours & Features
-    opening_hours: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'JSON format',
-    },
-    amenities: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'JSON array',
-    },
-    accessibility_features: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'JSON object',
-    },
-
-    // Images
-    images: {
-      type: DataTypes.TEXT('long'),
-      allowNull: true,
-      comment: 'JSON array of image objects',
-    },
-    thumbnail_url: {
-      type: DataTypes.STRING(500),
-      allowNull: true,
-    },
-
-    // Status - ALIGNED with platform-core
+    // Status flags
     verified: {
       type: DataTypes.BOOLEAN,
-      allowNull: false,
+      allowNull: true,
       defaultValue: false,
-    },
-    active: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
-      field: 'is_active', // Database column for backwards compatibility
     },
     featured: {
       type: DataTypes.BOOLEAN,
-      allowNull: false,
+      allowNull: true,
       defaultValue: false,
     },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
 
-    // Admin-specific fields
+    // Scores
     popularity_score: {
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: 0,
     },
 
-    // Timestamps - ALIGNED with platform-core
-    last_scraped_at: {
-      type: DataTypes.DATE,
-      allowNull: true,
-      field: 'last_updated',
-    },
-    last_classified_at: {
-      type: DataTypes.DATE,
+    // Opening Hours & Features
+    opening_hours: {
+      type: DataTypes.TEXT('long'),
       allowNull: true,
     },
-    next_update_at: {
+    amenities: {
+      type: DataTypes.TEXT('long'),
+      allowNull: true,
+    },
+    accessibility_features: {
+      type: DataTypes.TEXT('long'),
+      allowNull: true,
+    },
+
+    // Images
+    images: {
+      type: DataTypes.TEXT('long'),
+      allowNull: true,
+    },
+    thumbnail_url: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    enhanced_images: {
+      type: DataTypes.TEXT('long'),
+      allowNull: true,
+    },
+    enhanced_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+
+    // Content Quality
+    content_quality_score: {
+      type: DataTypes.DECIMAL(3, 1),
+      allowNull: true,
+    },
+    content_quality_data: {
+      type: DataTypes.TEXT('long'),
+      allowNull: true,
+    },
+    content_quality_assessed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+
+    // Enriched content
+    enriched_tile_description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    enriched_detail_description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    enriched_highlights: {
+      type: DataTypes.TEXT('long'),
+      allowNull: true,
+    },
+    enriched_target_audience: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    enriched_best_time: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    enriched_sources: {
+      type: DataTypes.TEXT('long'),
+      allowNull: true,
+    },
+    enrichment_completed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+
+    // Timestamps
+    last_updated: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    created_at: {
       type: DataTypes.DATE,
       allowNull: true,
     },
@@ -318,21 +275,20 @@ POI.init(
     sequelize,
     tableName: 'POI',
     modelName: 'POI',
-    timestamps: true,
-    underscored: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
+    timestamps: false, // Table uses last_updated and created_at directly
     indexes: [
-      { fields: ['uuid'], unique: true },
-      { fields: ['category'] },
-      { fields: ['city'] },
-      { fields: ['verified'] },
-      { fields: ['featured'] },
+      { fields: ['google_placeid'], unique: true },
       { fields: ['name'] },
-      { fields: ['tier'] },
-      { fields: ['poi_score'] },
-      { fields: ['next_update_at'] },
-      { fields: ['latitude', 'longitude'] },
+      { fields: ['category'] },
+      { fields: ['subcategory'] },
+      { fields: ['city'] },
+      { fields: ['latitude'] },
+      { fields: ['rating'] },
+      { fields: ['price_level'] },
+      { fields: ['verified'] },
+      { fields: ['is_active'] },
+      { fields: ['popularity_score'] },
+      { fields: ['enhanced_at'] },
     ],
   }
 );
