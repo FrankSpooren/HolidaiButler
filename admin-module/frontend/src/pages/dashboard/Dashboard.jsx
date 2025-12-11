@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -6,30 +7,53 @@ import {
   Typography,
   Card,
   CardContent,
-  CircularProgress
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemText,
+  Chip
 } from '@mui/material';
 import {
   Place as PlaceIcon,
   CheckCircle as CheckCircleIcon,
   Pending as PendingIcon,
-  Visibility as VisibilityIcon
+  Event as EventIcon,
+  CalendarMonth as CalendarIcon,
+  LocationOn as LocationIcon
 } from '@mui/icons-material';
-import { poiAPI } from '../../services/api';
+import { poiAPI, agendaAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 
 export default function Dashboard() {
   const { user } = useAuthStore();
-  const [stats, setStats] = useState(null);
+  const navigate = useNavigate();
+  const [poiStats, setPoiStats] = useState(null);
+  const [agendaStats, setAgendaStats] = useState(null);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStats();
+    fetchAllStats();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchAllStats = async () => {
     try {
-      const response = await poiAPI.getStats();
-      setStats(response.data.overview);
+      // Fetch POI and Agenda stats in parallel
+      const [poiResponse, agendaResponse, upcomingResponse] = await Promise.all([
+        poiAPI.getStats().catch(err => { console.error('POI stats error:', err); return null; }),
+        agendaAPI.getStats().catch(err => { console.error('Agenda stats error:', err); return null; }),
+        agendaAPI.getUpcoming(5, true).catch(err => { console.error('Upcoming events error:', err); return null; })
+      ]);
+
+      if (poiResponse?.data?.overview) {
+        setPoiStats(poiResponse.data.overview);
+      }
+      if (agendaResponse?.data?.overview) {
+        setAgendaStats(agendaResponse.data.overview);
+      }
+      if (upcomingResponse?.data?.agendaItems) {
+        setUpcomingEvents(upcomingResponse.data.agendaItems);
+      }
     } catch (error) {
       console.error('Failed to fetch stats:', error);
     } finally {
@@ -37,32 +61,59 @@ export default function Dashboard() {
     }
   };
 
-  const statCards = [
+  const poiStatCards = [
     {
       title: 'Total POIs',
-      value: stats?.total || 0,
+      value: poiStats?.total || 0,
       icon: <PlaceIcon sx={{ fontSize: 40 }} />,
-      color: '#667eea'
+      color: '#667eea',
+      onClick: () => navigate('/pois')
     },
     {
       title: 'Active POIs',
-      value: stats?.active || 0,
+      value: poiStats?.active || 0,
       icon: <CheckCircleIcon sx={{ fontSize: 40 }} />,
-      color: '#4caf50'
+      color: '#4caf50',
+      onClick: () => navigate('/pois?status=active')
     },
     {
       title: 'Pending Review',
-      value: stats?.pending || 0,
+      value: poiStats?.pending || 0,
       icon: <PendingIcon sx={{ fontSize: 40 }} />,
-      color: '#ff9800'
-    },
-    {
-      title: 'Total Views',
-      value: stats?.totalViews || 0,
-      icon: <VisibilityIcon sx={{ fontSize: 40 }} />,
-      color: '#2196f3'
+      color: '#ff9800',
+      onClick: () => navigate('/pois?status=pending')
     }
   ];
+
+  const agendaStatCards = [
+    {
+      title: 'Total Events',
+      value: agendaStats?.total || 0,
+      icon: <EventIcon sx={{ fontSize: 40 }} />,
+      color: '#9c27b0',
+      onClick: () => navigate('/agenda')
+    },
+    {
+      title: 'In Calpe Area',
+      value: agendaStats?.inCalpeArea || 0,
+      icon: <LocationIcon sx={{ fontSize: 40 }} />,
+      color: '#00bcd4',
+      onClick: () => navigate('/agenda?inCalpeArea=true')
+    },
+    {
+      title: 'Upcoming',
+      value: agendaStats?.upcoming || 0,
+      icon: <CalendarIcon sx={{ fontSize: 40 }} />,
+      color: '#e91e63',
+      onClick: () => navigate('/agenda')
+    }
+  ];
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
 
   return (
     <Box>
@@ -71,7 +122,7 @@ export default function Dashboard() {
           Welcome back, {user?.profile?.firstName}!
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Here's an overview of your POI management dashboard
+          Overview of your HolidaiButler Admin Dashboard
         </Typography>
       </Box>
 
@@ -81,15 +132,65 @@ export default function Dashboard() {
         </Box>
       ) : (
         <>
+          {/* POI Stats Section */}
+          <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+            Points of Interest (POIs)
+          </Typography>
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            {statCards.map((card, index) => (
-              <Grid item xs={12} sm={6} md={3} key={index}>
+            {poiStatCards.map((card, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
                 <Card
                   sx={{
                     height: '100%',
                     background: `linear-gradient(135deg, ${card.color}15 0%, ${card.color}05 100%)`,
-                    border: `1px solid ${card.color}30`
+                    border: `1px solid ${card.color}30`,
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: `0 4px 20px ${card.color}30`
+                    }
                   }}
+                  onClick={card.onClick}
+                >
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Box sx={{ color: card.color }}>
+                        {card.icon}
+                      </Box>
+                    </Box>
+                    <Typography variant="h4" fontWeight="bold" gutterBottom>
+                      {card.value.toLocaleString()}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {card.title}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Agenda Stats Section */}
+          <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+            Agenda / Events
+          </Typography>
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {agendaStatCards.map((card, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    background: `linear-gradient(135deg, ${card.color}15 0%, ${card.color}05 100%)`,
+                    border: `1px solid ${card.color}30`,
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: `0 4px 20px ${card.color}30`
+                    }
+                  }}
+                  onClick={card.onClick}
                 >
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -110,6 +211,53 @@ export default function Dashboard() {
           </Grid>
 
           <Grid container spacing={3}>
+            {/* Upcoming Events */}
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Upcoming Events (Calpe Area)
+                </Typography>
+                {upcomingEvents.length > 0 ? (
+                  <List>
+                    {upcomingEvents.map((event, index) => (
+                      <ListItem key={event.id || index} divider={index < upcomingEvents.length - 1}>
+                        <ListItemText
+                          primary={event.title || event.title_en || 'Untitled Event'}
+                          secondary={
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
+                              <Chip
+                                label={formatDate(event.date)}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                              />
+                              {event.time && (
+                                <Chip
+                                  label={event.time}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              )}
+                              {event.location_name && (
+                                <Typography variant="caption" color="text.secondary">
+                                  {event.location_name}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Typography color="text.secondary" sx={{ py: 2 }}>
+                    No upcoming events in the Calpe area
+                  </Typography>
+                )}
+              </Paper>
+            </Grid>
+
+            {/* Quick Stats */}
             <Grid item xs={12} md={6}>
               <Paper sx={{ p: 3 }}>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -117,37 +265,38 @@ export default function Dashboard() {
                 </Typography>
                 <Box sx={{ mt: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography color="text.secondary">Average Rating</Typography>
+                    <Typography color="text.secondary">POI Average Rating</Typography>
                     <Typography fontWeight="bold">
-                      {stats?.avgRating?.toFixed(1) || 'N/A'}
+                      {poiStats?.avgRating?.toFixed(1) || 'N/A'}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography color="text.secondary">Total Bookings</Typography>
+                    <Typography color="text.secondary">Inactive POIs</Typography>
                     <Typography fontWeight="bold">
-                      {stats?.totalBookings?.toLocaleString() || 0}
+                      {poiStats?.inactive || 0}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography color="text.secondary">Needs Review</Typography>
-                    <Typography fontWeight="bold" color={stats?.needsReview > 0 ? 'warning.main' : 'inherit'}>
-                      {stats?.needsReview || 0}
+                    <Typography color="text.secondary">Total Event Dates</Typography>
+                    <Typography fontWeight="bold">
+                      {agendaStats?.totalDates?.toLocaleString() || 0}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography color="text.secondary">Inactive POIs</Typography>
+                    <Typography color="text.secondary">Past Events</Typography>
                     <Typography fontWeight="bold">
-                      {stats?.inactive || 0}
+                      {agendaStats?.past || 0}
                     </Typography>
                   </Box>
                 </Box>
               </Paper>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            {/* User Role */}
+            <Grid item xs={12}>
               <Paper sx={{ p: 3 }}>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Your Role
+                  Your Role & Permissions
                 </Typography>
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -160,21 +309,21 @@ export default function Dashboard() {
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     Permissions
                   </Typography>
-                  <Box sx={{ mt: 1 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                     {user?.permissions?.pois?.create && (
-                      <Typography variant="body2">• Can create POIs</Typography>
+                      <Chip label="Create POIs" size="small" color="primary" variant="outlined" />
                     )}
                     {user?.permissions?.pois?.update && (
-                      <Typography variant="body2">• Can edit POIs</Typography>
+                      <Chip label="Edit POIs" size="small" color="primary" variant="outlined" />
                     )}
                     {user?.permissions?.pois?.delete && (
-                      <Typography variant="body2">• Can delete POIs</Typography>
+                      <Chip label="Delete POIs" size="small" color="error" variant="outlined" />
                     )}
                     {user?.permissions?.pois?.approve && (
-                      <Typography variant="body2">• Can approve POIs</Typography>
+                      <Chip label="Approve POIs" size="small" color="success" variant="outlined" />
                     )}
                     {user?.permissions?.platform?.branding && (
-                      <Typography variant="body2">• Can manage platform branding</Typography>
+                      <Chip label="Manage Branding" size="small" color="secondary" variant="outlined" />
                     )}
                   </Box>
                 </Box>
