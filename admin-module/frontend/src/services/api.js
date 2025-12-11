@@ -1290,175 +1290,31 @@ export const transactionsAPI = {
 // Reservations API (alias for reservationAPI)
 export const reservationsAPI = reservationAPI;
 
-// Agenda API (Agenda module)
-const AGENDA_API_URL = import.meta.env.VITE_AGENDA_API_URL ||
-  (isCodespaces ? getCodespacesBackendUrl(5005, '/api') :
-    (isCloudEnvironment ? '/api/agenda' : 'http://localhost:5005/api'));
-
-const agendaApi = axios.create({
-  baseURL: AGENDA_API_URL,
-  headers: { 'Content-Type': 'application/json' }
-});
-
-// Add auth interceptor for agenda API
-agendaApi.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('adminToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Fallback agenda data for development
-const DEV_FALLBACK_AGENDA_ITEMS = [
-  {
-    id: 1,
-    title: 'Wine Tasting at Bodegas Enrique Mendoza',
-    type: 'event',
-    category: 'Experience',
-    date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    time: '11:00',
-    duration: 120,
-    location: 'Alfaz del Pi, Costa Blanca',
-    description: 'Premium wine tasting experience with local wines and tapas',
-    status: 'confirmed',
-    participants: 4,
-    notes: 'Transportation arranged from hotel',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 2,
-    title: 'Dinner Reservation - El Poblet',
-    type: 'reservation',
-    category: 'Dining',
-    date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    time: '20:30',
-    duration: 150,
-    location: 'Dénia, Costa Blanca',
-    description: 'Michelin star restaurant - tasting menu',
-    status: 'confirmed',
-    participants: 2,
-    notes: 'Window table requested',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 3,
-    title: 'Kayak Tour Cabo de las Huertas',
-    type: 'activity',
-    category: 'Adventure',
-    date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    time: '09:00',
-    duration: 180,
-    location: 'Alicante, Costa Blanca',
-    description: 'Guided kayak tour with snorkeling stops',
-    status: 'pending',
-    participants: 3,
-    notes: 'Equipment included',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 4,
-    title: 'Guadalest Village Tour',
-    type: 'tour',
-    category: 'Culture',
-    date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    time: '10:00',
-    duration: 240,
-    location: 'Guadalest, Costa Blanca',
-    description: 'Historic village tour with museum visits',
-    status: 'confirmed',
-    participants: 4,
-    notes: 'Includes lunch at local restaurant',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 5,
-    title: 'Spa Day - SHA Wellness Clinic',
-    type: 'wellness',
-    category: 'Wellness',
-    date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    time: '10:00',
-    duration: 360,
-    location: 'Altea, Costa Blanca',
-    description: 'Full day spa package with treatments',
-    status: 'confirmed',
-    participants: 2,
-    notes: 'Lunch included',
-    createdAt: new Date().toISOString()
-  }
-];
-
+// Agenda API - Uses admin backend for agenda data from Hetzner MySQL
 export const agendaAPI = {
   getAll: async (params = {}) => {
-    try {
-      const response = await agendaApi.get('/agenda', { params });
-      return response.data;
-    } catch (error) {
-      console.warn('Agenda API not available, using fallback data');
-      return { success: true, items: DEV_FALLBACK_AGENDA_ITEMS, total: DEV_FALLBACK_AGENDA_ITEMS.length };
-    }
+    const response = await api.get('/agenda', { params });
+    return response.data;
   },
   getById: async (id) => {
-    try {
-      const response = await agendaApi.get(`/agenda/${id}`);
-      return response.data;
-    } catch (error) {
-      const item = DEV_FALLBACK_AGENDA_ITEMS.find(i => i.id === parseInt(id));
-      return { success: true, item };
-    }
-  },
-  create: async (data) => {
-    const response = await agendaApi.post('/agenda', data);
+    const response = await api.get(`/agenda/${id}`);
     return response.data;
   },
-  update: async (id, data) => {
-    const response = await agendaApi.put(`/agenda/${id}`, data);
+  getByDateRange: async (startDate, endDate, inCalpeArea = false) => {
+    const response = await api.get('/agenda/range', {
+      params: { startDate, endDate, inCalpeArea }
+    });
     return response.data;
   },
-  delete: async (id) => {
-    const response = await agendaApi.delete(`/agenda/${id}`);
+  getUpcoming: async (limit = 10, inCalpeArea = false) => {
+    const response = await api.get('/agenda/upcoming', { params: { limit, inCalpeArea } });
     return response.data;
-  },
-  getByDateRange: async (startDate, endDate) => {
-    try {
-      const response = await agendaApi.get('/agenda/range', {
-        params: { start_date: startDate, end_date: endDate }
-      });
-      return response.data;
-    } catch (error) {
-      console.warn('Agenda API not available, using fallback data');
-      return { success: true, items: DEV_FALLBACK_AGENDA_ITEMS, total: DEV_FALLBACK_AGENDA_ITEMS.length };
-    }
-  },
-  getUpcoming: async (limit = 10) => {
-    try {
-      const response = await agendaApi.get('/agenda/upcoming', { params: { limit } });
-      return response.data;
-    } catch (error) {
-      console.warn('Agenda API not available, using fallback data');
-      return { success: true, items: DEV_FALLBACK_AGENDA_ITEMS.slice(0, limit), total: Math.min(limit, DEV_FALLBACK_AGENDA_ITEMS.length) };
-    }
   },
   getStats: async () => {
-    try {
-      const response = await agendaApi.get('/agenda/stats');
-      return response.data;
-    } catch (error) {
-      return {
-        success: true,
-        stats: {
-          totalItems: DEV_FALLBACK_AGENDA_ITEMS.length,
-          upcomingEvents: 3,
-          confirmedReservations: 4,
-          pendingItems: 1
-        }
-      };
-    }
+    const response = await api.get('/agenda/stats');
+    return response.data;
   }
 };
 
-export { reservationsApi, agendaApi };
+export { reservationsApi };
 export default api;

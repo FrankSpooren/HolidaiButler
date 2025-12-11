@@ -3,6 +3,8 @@ import sequelize from '../config/database.js';
 
 // Import all models
 import AdminUser from './AdminUser.js';
+import Agenda from './Agenda.js';
+import AgendaDates from './AgendaDates.js';
 import Booking from './Booking.js';
 import Event from './Event.js';
 import PlatformConfig from './PlatformConfig.js';
@@ -56,10 +58,15 @@ Event.belongsTo(AdminUser, { as: 'deletedBy', foreignKey: 'deletedById' });
 // PlatformConfig associations
 PlatformConfig.belongsTo(AdminUser, { as: 'lastModifiedBy', foreignKey: 'lastModifiedById' });
 
+// Agenda associations (link agenda_dates to agenda via provider_event_hash)
+// Note: This is a logical relationship, not a foreign key constraint in the DB
+
 // Export models
 export {
   sequelize,
   AdminUser,
+  Agenda,
+  AgendaDates,
   Booking,
   Event,
   PlatformConfig,
@@ -74,6 +81,8 @@ export {
 export default {
   sequelize,
   AdminUser,
+  Agenda,
+  AgendaDates,
   Booking,
   Event,
   PlatformConfig,
