@@ -27,7 +27,7 @@ const seedData = async () => {
     if (!existingAdmin) {
       const admin = await AdminUser.create({
         email: 'admin@holidaibutler.com',
-        password: 'Admin123!@#', // Change this in production!
+        password: 'Admin2025', // Change this in production!
         firstName: 'Platform',
         lastName: 'Administrator',
         language: 'en',
@@ -38,7 +38,7 @@ const seedData = async () => {
 
       console.log('✅ Created platform admin:', admin.email);
       console.log('📧 Email: admin@holidaibutler.com');
-      console.log('🔑 Password: Admin123!@# (CHANGE THIS!)');
+      console.log('🔑 Password: Admin2025 (CHANGE THIS!)');
     } else {
       console.log('ℹ️  Platform admin already exists');
     }
@@ -51,7 +51,7 @@ const seedData = async () => {
     if (!existingPOIOwner) {
       const poiOwner = await AdminUser.create({
         email: 'poi.owner@example.com',
-        password: 'POI123!@#', // Change this in production!
+        password: 'POI2025', // Change this in production!
         firstName: 'POI',
         lastName: 'Owner',
         language: 'en',
@@ -63,7 +63,7 @@ const seedData = async () => {
 
       console.log('✅ Created POI owner:', poiOwner.email);
       console.log('📧 Email: poi.owner@example.com');
-      console.log('🔑 Password: POI123!@#');
+      console.log('🔑 Password: POI2025');
     } else {
       console.log('ℹ️  POI owner already exists');
     }
@@ -76,7 +76,7 @@ const seedData = async () => {
     if (!existingEditor) {
       const editor = await AdminUser.create({
         email: 'editor@holidaibutler.com',
-        password: 'Editor123!@#', // Change this in production!
+        password: 'Editor2025', // Change this in production!
         firstName: 'Content',
         lastName: 'Editor',
         language: 'en',
@@ -87,7 +87,7 @@ const seedData = async () => {
 
       console.log('✅ Created editor:', editor.email);
       console.log('📧 Email: editor@holidaibutler.com');
-      console.log('🔑 Password: Editor123!@#');
+      console.log('🔑 Password: Editor2025');
     } else {
       console.log('ℹ️  Editor already exists');
     }
@@ -100,7 +100,7 @@ const seedData = async () => {
     if (!existingReviewer) {
       const reviewer = await AdminUser.create({
         email: 'reviewer@holidaibutler.com',
-        password: 'Reviewer123!@#', // Change this in production!
+        password: 'Reviewer2025', // Change this in production!
         firstName: 'Content',
         lastName: 'Reviewer',
         language: 'en',
@@ -111,7 +111,7 @@ const seedData = async () => {
 
       console.log('✅ Created reviewer:', reviewer.email);
       console.log('📧 Email: reviewer@holidaibutler.com');
-      console.log('🔑 Password: Reviewer123!@#');
+      console.log('🔑 Password: Reviewer2025');
     } else {
       console.log('ℹ️  Reviewer already exists');
     }
