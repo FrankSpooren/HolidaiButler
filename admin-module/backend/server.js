@@ -22,6 +22,7 @@ import { testConnection, syncDatabase } from './config/database.js';
 // Import routes
 import adminAuthRoutes from './routes/adminAuth.js';
 import adminPOIRoutes from './routes/adminPOI.js';
+import adminAgendaRoutes from './routes/adminAgenda.js';
 import adminUploadRoutes from './routes/adminUpload.js';
 import adminPlatformRoutes from './routes/adminPlatform.js';
 import adminUsersRoutes from './routes/adminUsers.js';
@@ -167,6 +168,7 @@ app.use('/api/v1/pois', publicPOIRoutes);
 // API Routes - Admin Module
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/pois', adminPOIRoutes);
+app.use('/api/admin/agenda', adminAgendaRoutes);
 app.use('/api/admin/upload', adminUploadRoutes);
 app.use('/api/admin/platform', adminPlatformRoutes);
 app.use('/api/admin/users', adminUsersRoutes);
