@@ -223,19 +223,15 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
         <div className="agenda-title">{toTitleCase(title)}</div>
         <div className="agenda-description">{truncateDescription(description)}</div>
 
-        {/* Date & Rating Row */}
-        <div className="agenda-meta-row">
-          <div className="agenda-date">
-            <Calendar className="agenda-icon" />
-            <span>{dateDisplay}</span>
-          </div>
-          {event.featured && (
+        {/* Featured Badge Row (date moved to sticky header) */}
+        {event.featured && (
+          <div className="agenda-meta-row">
             <div className="agenda-rating">
               <Star className="agenda-star-icon" />
               <span>{ui.featured}</span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Location & Distance Row */}
         <div className="agenda-bottom-row">

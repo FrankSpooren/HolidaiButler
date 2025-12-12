@@ -2,6 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { nl, enUS, de, es, sv, pl } from 'date-fns/locale';
+import type { Locale } from 'date-fns';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { AgendaCard } from '@/features/agenda/components/AgendaCard';
@@ -201,6 +204,7 @@ export function AgendaPage() {
   const [filters, setFilters] = useState<AgendaFilters>(defaultFilters);
   const [showHeader, setShowHeader] = useState<boolean>(true);
   const [lastScrollY, setLastScrollY] = useState<number>(0);
+  const [visibleDate, setVisibleDate] = useState<string>('');
 
   // Fetch events
   const { data: eventsData, isLoading, error } = useQuery({
@@ -323,7 +327,62 @@ export function AgendaPage() {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+  
+  // Group events by date for display
+  const eventsByDate = useMemo(() => {
+    const groups: { date: string; dateFormatted: string; events: typeof filteredEvents }[] = [];
+    const locale = dateLocales[language] || dateLocales.en;
+    const formatStr = dateHeaderFormats[language] || dateHeaderFormats.en;
+
+    filteredEvents.forEach(event => {
+      const eventDate = new Date(event.startDate);
+      const dateKey = eventDate.toISOString().split('T')[0];
+      const dateFormatted = format(eventDate, formatStr, { locale });
+
+      const existingGroup = groups.find(g => g.date === dateKey);
+      if (existingGroup) {
+        existingGroup.events.push(event);
+      } else {
+        groups.push({ date: dateKey, dateFormatted, events: [event] });
+      }
+    });
+
+    // Sort groups by date
+    groups.sort((a, b) => a.date.localeCompare(b.date));
+
+    // Set initial visible date
+    if (groups.length > 0 && !visibleDate) {
+      setVisibleDate(groups[0].dateFormatted);
+    }
+
+    return groups;
+  }, [filteredEvents, language, visibleDate]);
+
+  // Update visible date based on scroll position
+  useEffect(() => {
+    const handleDateScroll = () => {
+      const dateHeaders = document.querySelectorAll('.agenda-date-header');
+      const stickyOffset = 280; // Height of sticky elements above
+
+      for (let i = dateHeaders.length - 1; i >= 0; i--) {
+        const header = dateHeaders[i] as HTMLElement;
+        const rect = header.getBoundingClientRect();
+
+        if (rect.top <= stickyOffset + 10) {
+          const dateStr = header.getAttribute('data-date-formatted');
+          if (dateStr && dateStr !== visibleDate) {
+            setVisibleDate(dateStr);
+          }
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleDateScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleDateScroll);
+  }, [visibleDate]);
+
+  return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
   // Calculate distance to event
@@ -364,6 +423,15 @@ export function AgendaPage() {
 
   const handleApplyFilters = (newFilters: AgendaFilters) => {
     setFilters(newFilters);
+    setLimit(12);
+  };
+
+  // Handle quick filter button clicks
+  const handleQuickFilter = (type: 'today' | 'tomorrow' | 'weekend') => {
+    setFilters(prev => ({
+      ...prev,
+      dateType: prev.dateType === type ? 'all' : type, // Toggle off if already active
+    }));
     setLimit(12);
   };
 
@@ -409,11 +477,30 @@ export function AgendaPage() {
         </div>
       </div>
 
-      {/* Filter Row */}
+      {/* Filter Row with Quick Filters */}
       <div className={`agenda-filter-row ${showHeader ? 'header-visible' : 'header-hidden'}`}>
         <button className="agenda-filter-btn" onClick={() => setFilterModalOpen(true)}>
-          🔽 {t.poi?.filters || 'Filters'} ({getActiveFilterCount()})
         </button>
+        <div className="agenda-quick-filters">
+          <button
+            className={`agenda-quick-filter-btn ${filters.dateType === 'today' ? 'active' : ''}`}
+            onClick={() => handleQuickFilter('today')}
+          >
+            {quickFilterLabels[language]?.today || 'Today'}
+          </button>
+          <button
+            className={`agenda-quick-filter-btn ${filters.dateType === 'tomorrow' ? 'active' : ''}`}
+            onClick={() => handleQuickFilter('tomorrow')}
+          >
+            {quickFilterLabels[language]?.tomorrow || 'Tomorrow'}
+          </button>
+          <button
+            className={`agenda-quick-filter-btn ${filters.dateType === 'weekend' ? 'active' : ''}`}
+            onClick={() => handleQuickFilter('weekend')}
+          >
+            {quickFilterLabels[language]?.weekend || 'This Weekend'}
+          </button>
+        </div>
       </div>
 
       {/* Loading State */}
@@ -456,7 +543,7 @@ export function AgendaPage() {
       )}
 
       {/* No Results */}
-      {!isLoading && !error && filteredEvents.length === 0 && (
+      {!isLoading && !error && eventsByDate.length === 0 && (
         <div className="agenda-no-results">
           <p className="agenda-no-results-icon">🔍</p>
           <h3>{t.poi?.noResults || 'No results found'}</h3>
