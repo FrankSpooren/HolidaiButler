@@ -220,6 +220,8 @@ export function AgendaPage() {
         return title.toLowerCase().includes(query);
       });
     }
+    // Sort by date ascending (chronological order)
+    result.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
     return result.slice(0, limit);
   }, [allEvents, selectedCategory, filters, userLocation, searchQuery, language, limit]);
 
