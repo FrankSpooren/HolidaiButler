@@ -238,10 +238,9 @@
   text-transform: capitalize;
 }
 
-/* Card wrapper - simple width/height to fill grid cell */
+/* Card wrapper - display:contents makes card direct grid item */
 .agenda-card-wrapper {
-  width: 100%;
-  height: 100%;
+  display: contents;
 }
 
 /* Grid Layout - Single continuous grid, 4 columns on desktop */
