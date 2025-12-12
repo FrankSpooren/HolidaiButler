@@ -361,6 +361,13 @@ export function AgendaPage() {
         </div>
       </div>
 
+      {/* Sticky Date Subheader - ONE header that updates on scroll */}
+      {!isLoading && !error && filteredEvents.length > 0 && (
+        <div className="agenda-date-subheader">
+          <span className="agenda-date-subheader-text">{visibleDate}</span>
+        </div>
+      )}
+
       {/* Loading State */}
       {isLoading && (
         <div className="agenda-loading-state">
@@ -379,7 +386,7 @@ export function AgendaPage() {
       {/* Grid View - Grouped by Date */}
       {!isLoading && !error && eventsByDate.map((group) => (
         <div key={group.date} className="agenda-date-section">
-          <div className="agenda-date-header">{group.dateFormatted}</div>
+          <div className="agenda-date-header" data-date-formatted={group.dateFormatted} />
           <div className="agenda-grid">
             {group.events.map((event) => (
               <AgendaCard
