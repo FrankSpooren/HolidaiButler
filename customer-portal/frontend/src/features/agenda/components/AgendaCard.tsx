@@ -25,6 +25,8 @@ interface AgendaCardProps {
   onToggleComparison?: (eventId: string) => void;
   canAddMore?: boolean;
   showComparison?: boolean;
+  // Date key for scroll detection (applied directly to card)
+  dateKey?: string;
 }
 
 const dateLocales: Record<string, Locale> = {
@@ -132,7 +134,8 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
   isInComparison = false,
   onToggleComparison,
   canAddMore = true,
-  showComparison = true
+  showComparison = true,
+  dateKey
 }) => {
   const { language } = useLanguage();
   const locale = dateLocales[language] || nl;
@@ -263,7 +266,7 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
   };
 
   return (
-    <div className="agenda-card" onClick={onClick}>
+    <div className="agenda-card" onClick={onClick} data-date-key={dateKey}>
       {/* Category Label */}
       <div
         className="agenda-category-label"

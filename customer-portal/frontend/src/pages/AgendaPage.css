@@ -238,10 +238,6 @@
   text-transform: capitalize;
 }
 
-/* Card wrapper - display:contents makes card direct grid item */
-.agenda-card-wrapper {
-  display: contents;
-}
 
 /* Grid Layout - Single continuous grid, 4 columns on desktop */
 .agenda-grid {
