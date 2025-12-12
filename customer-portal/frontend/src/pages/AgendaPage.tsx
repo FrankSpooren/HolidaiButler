@@ -343,30 +343,31 @@ export function AgendaPage() {
         </div>
       </div>
 
-      {/* Filter Row with Quick Filters - all on same row */}
+      {/* Filter Row with Quick Filters AND Date - all move together */}
       <div className={`agenda-filter-row ${showHeader ? 'header-visible' : 'header-hidden'}`}>
-        <button className="agenda-filter-btn" onClick={() => setFilterModalOpen(true)}>
-          🔽 {t.poi?.filters || 'Filters'} ({getActiveFilterCount()})
-        </button>
-        <div className="agenda-quick-filters">
-          <button className={`agenda-quick-filter-btn ${filters.dateType === 'today' ? 'active' : ''}`} onClick={() => handleQuickFilter('today')}>
-            {quickFilterLabels[language]?.today || 'Today'}
+        <div className="agenda-filter-buttons">
+          <button className="agenda-filter-btn" onClick={() => setFilterModalOpen(true)}>
+            🔽 {t.poi?.filters || 'Filters'} ({getActiveFilterCount()})
           </button>
-          <button className={`agenda-quick-filter-btn ${filters.dateType === 'tomorrow' ? 'active' : ''}`} onClick={() => handleQuickFilter('tomorrow')}>
-            {quickFilterLabels[language]?.tomorrow || 'Tomorrow'}
-          </button>
-          <button className={`agenda-quick-filter-btn ${filters.dateType === 'weekend' ? 'active' : ''}`} onClick={() => handleQuickFilter('weekend')}>
-            {quickFilterLabels[language]?.weekend || 'This Weekend'}
-          </button>
+          <div className="agenda-quick-filters">
+            <button className={`agenda-quick-filter-btn ${filters.dateType === 'today' ? 'active' : ''}`} onClick={() => handleQuickFilter('today')}>
+              {quickFilterLabels[language]?.today || 'Today'}
+            </button>
+            <button className={`agenda-quick-filter-btn ${filters.dateType === 'tomorrow' ? 'active' : ''}`} onClick={() => handleQuickFilter('tomorrow')}>
+              {quickFilterLabels[language]?.tomorrow || 'Tomorrow'}
+            </button>
+            <button className={`agenda-quick-filter-btn ${filters.dateType === 'weekend' ? 'active' : ''}`} onClick={() => handleQuickFilter('weekend')}>
+              {quickFilterLabels[language]?.weekend || 'This Weekend'}
+            </button>
+          </div>
         </div>
+        {/* Date subheader - inside filter row so they move together */}
+        {!isLoading && !error && filteredEvents.length > 0 && (
+          <div className="agenda-date-subheader">
+            <span className="agenda-date-subheader-text">{visibleDate}</span>
+          </div>
+        )}
       </div>
-
-      {/* Sticky Date Subheader - ONE header that updates on scroll */}
-      {!isLoading && !error && filteredEvents.length > 0 && (
-        <div className="agenda-date-subheader">
-          <span className="agenda-date-subheader-text">{visibleDate}</span>
-        </div>
-      )}
 
       {/* Loading State */}
       {isLoading && (

@@ -129,25 +129,17 @@
   line-height: 1;
 }
 
-/* Filter Row - With Quick Filters on same line */
+/* Filter Row - Contains buttons AND date, all move together */
 .agenda-filter-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
+  flex-direction: column;
+  gap: 0;
   background: white;
   border-bottom: 1px solid #E5E7EB;
   position: sticky;
   top: 198px;
   z-index: 80;
   transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.agenda-filter-row::-webkit-scrollbar {
-  display: none;
 }
 
 .agenda-filter-row.header-hidden {
@@ -156,6 +148,21 @@
 
 .agenda-filter-row.header-visible {
   top: 198px;
+}
+
+/* Filter buttons row */
+.agenda-filter-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.agenda-filter-buttons::-webkit-scrollbar {
+  display: none;
 }
 
 .agenda-filter-btn {
@@ -215,15 +222,12 @@
   border-color: #c9a432;
 }
 
-/* Sticky Date Subheader - simple text, left-aligned, moves with filters */
+/* Date Subheader - inside filter row, moves together with filters */
 .agenda-date-subheader {
   background: white;
   padding: 12px 16px;
   text-align: left;
-  position: sticky;
-  top: 248px;
-  z-index: 75;
-  border-bottom: 1px solid #E5E7EB;
+  border-top: 1px solid #E5E7EB;
 }
 
 .agenda-date-subheader-text {
@@ -419,12 +423,14 @@
     font-size: 16px;
   }
 
-  /* Mobile: Filter button and quick filters on SAME row */
+  /* Mobile: Filter row contains buttons and date */
   .agenda-filter-row {
     top: 168px;
+  }
+
+  .agenda-filter-buttons {
     padding: 10px 12px;
     gap: 6px;
-    flex-wrap: nowrap;
   }
 
   .agenda-filter-btn {
@@ -441,9 +447,8 @@
     font-size: 12px;
   }
 
-  /* Sticky date subheader mobile */
+  /* Date subheader mobile */
   .agenda-date-subheader {
-    top: 212px;
     padding: 10px 16px;
   }
 
