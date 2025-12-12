@@ -269,7 +269,7 @@ export function AgendaPage() {
   // Update visible date key on scroll (for the subheader)
   useEffect(() => {
     const handleDateScroll = () => {
-      const cards = document.querySelectorAll('.agenda-card-wrapper');
+      const cards = document.querySelectorAll('.agenda-card');
       for (let i = cards.length - 1; i >= 0; i--) {
         const card = cards[i] as HTMLElement;
         if (card.getBoundingClientRect().top <= 290) {
@@ -391,8 +391,8 @@ export function AgendaPage() {
           {filteredEvents.map((event) => {
             const eventDateKey = new Date(event.startDate).toISOString().split('T')[0];
             return (
-              <div key={event._id} className="agenda-card-wrapper" data-date-key={eventDateKey}>
-                <AgendaCard
+              <AgendaCard
+                key={event._id}
                   event={event}
                   onClick={() => setSelectedEventId(event._id)}
                   onSave={toggleAgendaFavorite}
@@ -403,8 +403,8 @@ export function AgendaPage() {
                   onToggleComparison={toggleComparison}
                   canAddMore={canAddMore}
                   showComparison={true}
-                />
-              </div>
+                dateKey={eventDateKey}
+              />
             );
           })}
         </div>
