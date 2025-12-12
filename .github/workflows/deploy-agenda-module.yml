@@ -1,0 +1,85 @@
+# =============================================================================
+# Agenda Module Deployment Pipeline
+# =============================================================================
+# Triggers: Only when agenda-module/** or modules/agenda-module/** files change
+# Deploys: Agenda service backend
+# =============================================================================
+
+name: "Deploy: Agenda Module"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'agenda-module/**'
+      - 'modules/agenda-module/**'
+      - '!**/README.md'
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
+
+env:
+  NODE_VERSION: '20'
+  MODULE_NAME: 'agenda-module'
+  PM2_PROCESS_NAME: 'holidaibutler-agenda'
+  DEPLOY_PATH: '/var/www/api.holidaibutler.com/agenda-module'
+
+jobs:
+  deploy:
+    name: Deploy Agenda Module
+    runs-on: ubuntu-latest
+    environment: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine source path
+        id: source
+        run: |
+          if [ -d "modules/agenda-module/backend" ]; then
+            echo "path=modules/agenda-module/backend" >> $GITHUB_OUTPUT
+          elif [ -d "agenda-module/backend" ]; then
+            echo "path=agenda-module/backend" >> $GITHUB_OUTPUT
+          else
+            echo "path=agenda-module" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Backup and Deploy
+        run: |
+          ssh root@91.98.71.87 "mkdir -p ${{ env.DEPLOY_PATH }} /var/www/backups/agenda-module"
+          ssh root@91.98.71.87 "cp -r ${{ env.DEPLOY_PATH }} /var/www/backups/agenda-module/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            --exclude 'logs' \
+            ${{ steps.source.outputs.path }}/ \
+            root@91.98.71.87:${{ env.DEPLOY_PATH }}/
+
+      - name: Install and restart
+        run: |
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && npm ci --only=production 2>/dev/null || npm install --only=production && mkdir -p logs && (pm2 restart ${{ env.PM2_PROCESS_NAME }} 2>/dev/null || pm2 start src/server.js --name ${{ env.PM2_PROCESS_NAME }} --cwd ${{ env.DEPLOY_PATH }} 2>/dev/null || echo 'Module not yet configured in PM2') && pm2 save"
+
+      - name: Notify
+        run: echo "::notice title=Deployment Complete::Agenda Module deployed"
