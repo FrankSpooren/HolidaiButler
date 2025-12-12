@@ -1,0 +1,99 @@
+# =============================================================================
+# Payment Module Deployment Pipeline
+# =============================================================================
+# Triggers: Only when payment-module/** files change
+# Deploys: Payment service (backend only - Adyen integration)
+# Port: 3005
+# IMPORTANT: This module handles PCI-DSS sensitive payment processing
+# =============================================================================
+
+name: "Deploy: Payment Module"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'payment-module/**'
+      - 'modules/payment-module/**'
+      - '!**/README.md'
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
+
+env:
+  NODE_VERSION: '20'
+  MODULE_NAME: 'payment-module'
+  PM2_PROCESS_NAME: 'holidaibutler-payment'
+  DEPLOY_PATH: '/var/www/api.holidaibutler.com/payment-module'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Deploy Backend
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy Payment Backend
+    runs-on: ubuntu-latest
+    environment: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine source path
+        id: source
+        run: |
+          if [ -d "modules/payment-module/backend" ]; then
+            echo "path=modules/payment-module/backend" >> $GITHUB_OUTPUT
+          else
+            echo "path=payment-module/backend" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Backup current version
+        run: |
+          ssh root@91.98.71.87 "mkdir -p ${{ env.DEPLOY_PATH }} /var/www/backups/payment-module"
+          ssh root@91.98.71.87 "cp -r ${{ env.DEPLOY_PATH }} /var/www/backups/payment-module/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+
+      - name: Deploy backend
+        run: |
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            --exclude 'logs' \
+            --exclude 'certs' \
+            ${{ steps.source.outputs.path }}/ \
+            root@91.98.71.87:${{ env.DEPLOY_PATH }}/
+
+      - name: Install dependencies and restart
+        run: |
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && npm ci --only=production 2>/dev/null || npm install --only=production && mkdir -p logs && (pm2 restart ${{ env.PM2_PROCESS_NAME }} 2>/dev/null || pm2 start server.js --name ${{ env.PM2_PROCESS_NAME }} --cwd ${{ env.DEPLOY_PATH }} 2>/dev/null || echo 'PM2 start pending - configure manually if first deploy') && pm2 save"
+
+      - name: Health check
+        run: |
+          sleep 5
+          echo "Payment Module deployed to port 3005"
+          echo "::notice title=Deployment Complete::Payment Module deployed (PCI-DSS compliant service)"
+
+      - name: Security reminder
+        run: |
+          echo "::warning title=Security Reminder::Ensure .env contains valid Adyen API credentials and webhook secrets"

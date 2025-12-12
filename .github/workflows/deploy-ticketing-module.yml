@@ -1,0 +1,169 @@
+# =============================================================================
+# Ticketing Module Deployment Pipeline
+# =============================================================================
+# Triggers: Only when ticketing-module/** files change
+# Deploys: Ticketing service (frontend + backend)
+# Port: 3004
+# =============================================================================
+
+name: "Deploy: Ticketing Module"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ticketing-module/**'
+      - 'modules/ticketing-module/**'
+      - '!**/README.md'
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
+      component:
+        description: 'Component to deploy'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - frontend
+          - backend
+          - both
+
+env:
+  NODE_VERSION: '20'
+  MODULE_NAME: 'ticketing-module'
+  PM2_PROCESS_NAME: 'holidaibutler-ticketing'
+  DEPLOY_PATH: '/var/www/api.holidaibutler.com/ticketing-module'
+  FRONTEND_PATH: '/var/www/ticketing.holidaibutler.com'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Detect Changes
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'ticketing-module/frontend/**'
+              - 'modules/ticketing-module/frontend/**'
+            backend:
+              - 'ticketing-module/backend/**'
+              - 'modules/ticketing-module/backend/**'
+
+  # ---------------------------------------------------------------------------
+  # Deploy Backend
+  # ---------------------------------------------------------------------------
+  deploy-backend:
+    name: Deploy Ticketing Backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event.inputs.component != 'frontend'
+    runs-on: ubuntu-latest
+    environment: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine source path
+        id: source
+        run: |
+          if [ -d "modules/ticketing-module/backend" ]; then
+            echo "path=modules/ticketing-module/backend" >> $GITHUB_OUTPUT
+          else
+            echo "path=ticketing-module/backend" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Backup and Deploy
+        run: |
+          ssh root@91.98.71.87 "mkdir -p ${{ env.DEPLOY_PATH }} /var/www/backups/ticketing-module"
+          ssh root@91.98.71.87 "cp -r ${{ env.DEPLOY_PATH }} /var/www/backups/ticketing-module/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            --exclude 'logs' \
+            ${{ steps.source.outputs.path }}/ \
+            root@91.98.71.87:${{ env.DEPLOY_PATH }}/
+
+      - name: Install and restart
+        run: |
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && npm ci --only=production 2>/dev/null || npm install --only=production && mkdir -p logs && (pm2 restart ${{ env.PM2_PROCESS_NAME }} 2>/dev/null || pm2 start server.js --name ${{ env.PM2_PROCESS_NAME }} --cwd ${{ env.DEPLOY_PATH }} 2>/dev/null || echo 'PM2 start pending - configure manually if first deploy') && pm2 save"
+
+      - name: Notify
+        run: echo "::notice title=Deployment Complete::Ticketing Backend deployed to port 3004"
+
+  # ---------------------------------------------------------------------------
+  # Deploy Frontend
+  # ---------------------------------------------------------------------------
+  deploy-frontend:
+    name: Deploy Ticketing Frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event.inputs.component != 'backend'
+    runs-on: ubuntu-latest
+    environment: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine source path
+        id: source
+        run: |
+          if [ -d "modules/ticketing-module/frontend" ]; then
+            echo "path=modules/ticketing-module/frontend" >> $GITHUB_OUTPUT
+          else
+            echo "path=ticketing-module/frontend" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install and Build
+        working-directory: ${{ steps.source.outputs.path }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Deploy Frontend
+        run: |
+          ssh root@91.98.71.87 "mkdir -p ${{ env.FRONTEND_PATH }}"
+          rsync -avz --delete \
+            ${{ steps.source.outputs.path }}/dist/ \
+            root@91.98.71.87:${{ env.FRONTEND_PATH }}/
+          ssh root@91.98.71.87 "chown -R www-data:www-data ${{ env.FRONTEND_PATH }} && systemctl reload apache2"
+
+      - name: Notify
+        run: echo "::notice title=Deployment Complete::Ticketing Frontend deployed"
