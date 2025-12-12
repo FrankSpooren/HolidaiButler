@@ -1,0 +1,102 @@
+# =============================================================================
+# Platform Core API Deployment Pipeline
+# =============================================================================
+# Triggers: Only when platform-core/** files change
+# Deploys: Backend API to api.holidaibutler.com
+# =============================================================================
+
+name: "Deploy: Platform Core API"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'platform-core/**'
+      - '!platform-core/README.md'
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
+
+env:
+  NODE_VERSION: '20'
+  MODULE_NAME: 'platform-core'
+  PM2_PROCESS_NAME: 'holidaibutler-api'
+  DEPLOY_PATH: '/var/www/api.holidaibutler.com/platform-core'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build & Deploy
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy Platform Core API
+    runs-on: ubuntu-latest
+    environment: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: platform-core/package-lock.json
+
+      - name: Install dependencies (for build if needed)
+        working-directory: platform-core
+        run: npm ci
+
+      - name: Build (if applicable)
+        working-directory: platform-core
+        run: npm run build --if-present
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Backup current version
+        run: |
+          ssh root@91.98.71.87 "mkdir -p /var/www/backups/platform-core && cp -r ${{ env.DEPLOY_PATH }} /var/www/backups/platform-core/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+
+      - name: Deploy backend
+        run: |
+          ssh root@91.98.71.87 "mkdir -p ${{ env.DEPLOY_PATH }}"
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            --exclude 'logs' \
+            --exclude '.git' \
+            platform-core/ \
+            root@91.98.71.87:${{ env.DEPLOY_PATH }}/
+
+      - name: Install dependencies and restart PM2
+        run: |
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && npm ci --only=production && mkdir -p logs && (pm2 restart ${{ env.PM2_PROCESS_NAME }} 2>/dev/null || pm2 start src/index.js --name ${{ env.PM2_PROCESS_NAME }} --cwd ${{ env.DEPLOY_PATH }}) && pm2 save"
+
+      - name: Health check
+        run: |
+          sleep 8
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://test.holidaibutler.com/health 2>/dev/null || echo "000")
+          echo "Platform Core API status: $STATUS"
+          if [ "$STATUS" -eq 200 ]; then
+            echo "Platform Core API deployed successfully!"
+          else
+            echo "Warning: Health check returned $STATUS (may still be starting)"
+          fi
+
+      - name: Notify
+        if: success()
+        run: echo "::notice title=Deployment Complete::Platform Core API deployed to test environment"

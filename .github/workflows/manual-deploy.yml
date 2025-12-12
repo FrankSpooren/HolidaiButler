@@ -1,0 +1,68 @@
+# =============================================================================
+# Manual Module Deployment
+# =============================================================================
+# Use this workflow to manually deploy any module to any environment
+# Useful for hotfixes, rollbacks, or deploying without code changes
+# =============================================================================
+
+name: "Manual Deploy"
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 'Module to deploy'
+        required: true
+        type: choice
+        options:
+          - customer-portal
+          - admin-module
+          - platform-core
+          - agenda-module
+          - ticketing-module
+          - reservations-module
+          - payment-module
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
+      branch:
+        description: 'Branch to deploy from'
+        required: true
+        default: 'main'
+
+jobs:
+  trigger-deploy:
+    name: Trigger ${{ inputs.module }} Deployment
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout specified branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Trigger module workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const module = '${{ inputs.module }}';
+            const workflowFile = `deploy-${module}.yml`;
+            
+            console.log(`Triggering ${workflowFile} for ${module}`);
+            
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflowFile,
+              ref: '${{ inputs.branch }}',
+              inputs: {
+                environment: '${{ inputs.environment }}'
+              }
+            });
+            
+            console.log(`Triggered deployment of ${module} to ${{ inputs.environment }}`);

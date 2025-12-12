@@ -1,0 +1,207 @@
+# =============================================================================
+# Admin Module Deployment Pipeline
+# =============================================================================
+# Triggers: Only when admin-module/** files change
+# Deploys: Frontend + Backend to admin.test.holidaibutler.com
+# =============================================================================
+
+name: "Deploy: Admin Module"
+
+on:
+  push:
+    branches: [main, admin-module-standalone]
+    paths:
+      - 'admin-module/**'
+      - '!admin-module/README.md'
+      - '!admin-module/docs/**'
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
+      component:
+        description: 'Component to deploy'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - frontend
+          - backend
+          - both
+
+env:
+  NODE_VERSION: '20'
+  MODULE_NAME: 'admin-module'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Detect Changes
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'admin-module/frontend/**'
+            backend:
+              - 'admin-module/backend/**'
+
+  # ---------------------------------------------------------------------------
+  # Build Frontend
+  # ---------------------------------------------------------------------------
+  build-frontend:
+    name: Build Admin Frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event.inputs.component != 'backend'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: admin-module/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: admin-module/frontend
+        run: npm ci
+
+      - name: Create production environment
+        working-directory: admin-module/frontend
+        run: |
+          echo "VITE_API_BASE_URL=https://admin.test.holidaibutler.com/api/v1" > .env.production
+          echo "VITE_APP_NAME=HolidaiButler Admin" >> .env.production
+
+      - name: Build
+        working-directory: admin-module/frontend
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-frontend-dist
+          path: admin-module/frontend/dist
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Build Backend
+  # ---------------------------------------------------------------------------
+  build-backend:
+    name: Prepare Admin Backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event.inputs.component != 'frontend'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-backend
+          path: |
+            admin-module/backend/
+            !admin-module/backend/node_modules
+            !admin-module/backend/.env
+            !admin-module/backend/logs
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Deploy Frontend
+  # ---------------------------------------------------------------------------
+  deploy-frontend:
+    name: Deploy Admin Frontend
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    environment: test
+    
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: admin-frontend-dist
+          path: dist
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Backup current version
+        run: |
+          ssh root@91.98.71.87 "mkdir -p /var/www/backups/admin-frontend && cp -r /var/www/admin.test.holidaibutler.com /var/www/backups/admin-frontend/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+
+      - name: Deploy frontend
+        run: |
+          rsync -avz --delete dist/ root@91.98.71.87:/var/www/admin.test.holidaibutler.com/
+
+      - name: Fix permissions and reload
+        run: |
+          ssh root@91.98.71.87 "chown -R www-data:www-data /var/www/admin.test.holidaibutler.com && chmod -R 755 /var/www/admin.test.holidaibutler.com && systemctl reload apache2"
+
+      - name: Health check
+        run: |
+          sleep 3
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://admin.test.holidaibutler.com)
+          echo "Admin Frontend status: $STATUS"
+          if [ "$STATUS" -eq 200 ]; then echo "Admin Frontend deployed!"; else exit 1; fi
+
+  # ---------------------------------------------------------------------------
+  # Deploy Backend
+  # ---------------------------------------------------------------------------
+  deploy-backend:
+    name: Deploy Admin Backend
+    needs: build-backend
+    runs-on: ubuntu-latest
+    environment: test
+    
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: admin-backend
+          path: backend
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Deploy Backend
+        run: |
+          ssh root@91.98.71.87 "mkdir -p /var/www/api.holidaibutler.com/admin-module"
+          rsync -avz --delete --exclude 'node_modules' --exclude '.env' --exclude 'logs' backend/ root@91.98.71.87:/var/www/api.holidaibutler.com/admin-module/
+
+      - name: Install dependencies and restart
+        run: |
+          ssh root@91.98.71.87 "cd /var/www/api.holidaibutler.com/admin-module && npm ci --only=production && mkdir -p logs && (pm2 restart holidaibutler-admin-api 2>/dev/null || pm2 start server.js --name holidaibutler-admin-api) && pm2 save"
+
+      - name: Health check
+        run: |
+          sleep 5
+          echo "Admin Backend deployed!"
