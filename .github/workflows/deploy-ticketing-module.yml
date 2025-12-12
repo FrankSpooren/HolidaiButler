@@ -21,9 +21,10 @@ on:
       environment:
         description: 'Deployment environment'
         required: true
-        default: 'test'
+        default: 'development'
         type: choice
         options:
+          - development
           - test
           - production
       component:
