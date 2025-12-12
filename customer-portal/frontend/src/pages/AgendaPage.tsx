@@ -7,9 +7,12 @@ import { nl, enUS, de, es, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
+import { useAgendaComparison } from '../shared/contexts/AgendaComparisonContext';
 import { AgendaCard } from '@/features/agenda/components/AgendaCard';
 import { AgendaDetailModal } from '@/features/agenda/components/AgendaDetailModal';
 import { AgendaFilterModal, type AgendaFilters } from '@/features/agenda/components/AgendaFilterModal';
+import { AgendaComparisonBar } from '@/features/agenda/components/AgendaComparisonBar';
+import { AgendaComparisonModal } from '@/features/agenda/components/AgendaComparisonModal';
 import { agendaService, type AgendaEvent } from '@/features/agenda/services/agendaService';
 import { getUserLocation, getDistanceFromUser, type Coordinates } from '@/shared/utils/distance';
 import './AgendaPage.css';
@@ -17,6 +20,7 @@ import './AgendaPage.css';
 /**
  * AgendaPage - Events & Activities Calendar
  * Route: /agenda
+ * Updated with comparison functionality
  */
 
 // Interest category configuration
@@ -144,16 +148,18 @@ const defaultFilters: AgendaFilters = { interests: [], distance: 50, company: []
 export function AgendaPage() {
   const { t, language } = useLanguage();
   const { isAgendaFavorite, toggleAgendaFavorite } = useAgendaFavorites();
+  const { isInComparison, toggleComparison, canAddMore, comparisonEvents } = useAgendaComparison();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [limit, setLimit] = useState<number>(12);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
+  const [comparisonModalOpen, setComparisonModalOpen] = useState<boolean>(false);
   const [filters, setFilters] = useState<AgendaFilters>(defaultFilters);
   const [showHeader, setShowHeader] = useState<boolean>(true);
   const [lastScrollY, setLastScrollY] = useState<number>(0);
-  const [visibleDateKey, setVisibleDateKey] = useState<string>(''); // Store date key, not formatted string
+  const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
   // Fetch events
   const { data: eventsData, isLoading, error } = useQuery({
@@ -224,27 +230,6 @@ export function AgendaPage() {
     result.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
     return result.slice(0, limit);
   }, [allEvents, selectedCategory, filters, userLocation, searchQuery, language, limit]);
-
-  // Group events by date
-  const eventsByDate = useMemo(() => {
-    const groups: { date: string; dateFormatted: string; events: typeof filteredEvents }[] = [];
-    const locale = dateLocales[language] || dateLocales.en;
-    const formatStr = dateHeaderFormats[language] || dateHeaderFormats.en;
-
-    filteredEvents.forEach(event => {
-      const eventDate = new Date(event.startDate);
-      const dateKey = eventDate.toISOString().split('T')[0];
-      const dateFormatted = format(eventDate, formatStr, { locale });
-      const existingGroup = groups.find(g => g.date === dateKey);
-      if (existingGroup) {
-        existingGroup.events.push(event);
-      } else {
-        groups.push({ date: dateKey, dateFormatted, events: [event] });
-      }
-    });
-    groups.sort((a, b) => a.date.localeCompare(b.date));
-    return groups;
-  }, [filteredEvents, language]);
 
   const hasMore = filteredEvents.length >= limit && allEvents.length > limit;
 
@@ -318,6 +303,10 @@ export function AgendaPage() {
     if (filters.company.length > 0) count += filters.company.length;
     if (filters.dateType !== 'all') count++;
     return count;
+  };
+
+  const handleCompare = () => {
+    setComparisonModalOpen(true);
   };
 
   const noResults = noResultsLabels[language] || noResultsLabels.en;
@@ -410,6 +399,10 @@ export function AgendaPage() {
                   isSaved={isAgendaFavorite(event._id)}
                   distance={getDistance(event)}
                   detectedCategory={detectCategory(event, language)}
+                  isInComparison={isInComparison(event._id)}
+                  onToggleComparison={toggleComparison}
+                  canAddMore={canAddMore}
+                  showComparison={true}
                 />
               </div>
             );
@@ -450,6 +443,18 @@ export function AgendaPage() {
           onClose={() => setSelectedEventId(null)}
         />
       )}
+
+      {/* Comparison Modal */}
+      {comparisonModalOpen && (
+        <AgendaComparisonModal
+          eventIds={Array.from(comparisonEvents)}
+          isOpen={comparisonModalOpen}
+          onClose={() => setComparisonModalOpen(false)}
+        />
+      )}
+
+      {/* Comparison Bar */}
+      <AgendaComparisonBar onCompare={handleCompare} />
 
       {/* Footer */}
       <footer className="agenda-footer">
