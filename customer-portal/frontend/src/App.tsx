@@ -7,6 +7,7 @@ import { LanguageProvider } from './i18n/LanguageContext';
 import { FavoritesProvider } from './shared/contexts/FavoritesContext';
 import { AgendaFavoritesProvider } from './shared/contexts/AgendaFavoritesContext';
 import { ComparisonProvider } from './shared/contexts/ComparisonContext';
+import { AgendaComparisonProvider } from './shared/contexts/AgendaComparisonContext';
 
 /**
  * App Component - Main Application Entry Point
@@ -32,12 +33,14 @@ function App() {
       <FavoritesProvider>
         <AgendaFavoritesProvider>
           <ComparisonProvider>
-            <HoliBotProvider>
-              <QueryClientProvider client={queryClient}>
-                {/* React Router v7 - Data Router */}
-                <RouterProvider router={router} />
-              </QueryClientProvider>
-            </HoliBotProvider>
+            <AgendaComparisonProvider>
+              <HoliBotProvider>
+                <QueryClientProvider client={queryClient}>
+                  {/* React Router v7 - Data Router */}
+                  <RouterProvider router={router} />
+                </QueryClientProvider>
+              </HoliBotProvider>
+            </AgendaComparisonProvider>
           </ComparisonProvider>
         </AgendaFavoritesProvider>
       </FavoritesProvider>

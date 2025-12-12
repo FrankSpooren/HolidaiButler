@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { nl, enUS, es, de, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
-import { Calendar, MapPin, Star, Heart } from 'lucide-react';
+import { Calendar, MapPin, Star, Share2, Info } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import type { AgendaEvent } from '../services/agendaService';
 import './AgendaCard.css';
@@ -10,6 +10,7 @@ import './AgendaCard.css';
 /**
  * AgendaCard Component
  * Displays event in POI Grid style - matching POILandingPage cards exactly
+ * Now includes comparison functionality
  */
 
 interface AgendaCardProps {
@@ -19,6 +20,11 @@ interface AgendaCardProps {
   isSaved?: boolean;
   distance?: string;
   detectedCategory?: string;
+  // Comparison props
+  isInComparison?: boolean;
+  onToggleComparison?: (eventId: string) => void;
+  canAddMore?: boolean;
+  showComparison?: boolean;
 }
 
 const dateLocales: Record<string, Locale> = {
@@ -108,12 +114,12 @@ const categoryLabels: Record<string, Record<string, string>> = {
 
 // UI labels translations
 const uiLabels: Record<string, Record<string, string>> = {
-  nl: { free: 'Gratis', featured: 'Uitgelicht', share: 'Delen', agenda: 'Agenda', map: 'Kaart', details: 'Details' },
-  en: { free: 'Free', featured: 'Featured', share: 'Share', agenda: 'Agenda', map: 'Map', details: 'Details' },
-  de: { free: 'Kostenlos', featured: 'Empfohlen', share: 'Teilen', agenda: 'Kalender', map: 'Karte', details: 'Details' },
-  es: { free: 'Gratis', featured: 'Destacado', share: 'Compartir', agenda: 'Agenda', map: 'Mapa', details: 'Detalles' },
-  sv: { free: 'Gratis', featured: 'Utvalda', share: 'Dela', agenda: 'Kalender', map: 'Karta', details: 'Detaljer' },
-  pl: { free: 'Bezpłatne', featured: 'Polecane', share: 'Udostępnij', agenda: 'Kalendarz', map: 'Mapa', details: 'Szczegóły' },
+  nl: { free: 'Gratis', featured: 'Uitgelicht', share: 'Delen', agenda: 'Agenda', map: 'Kaart', details: 'Details', compare: 'Vergelijk' },
+  en: { free: 'Free', featured: 'Featured', share: 'Share', agenda: 'Agenda', map: 'Map', details: 'Details', compare: 'Compare' },
+  de: { free: 'Kostenlos', featured: 'Empfohlen', share: 'Teilen', agenda: 'Kalender', map: 'Karte', details: 'Details', compare: 'Vergleichen' },
+  es: { free: 'Gratis', featured: 'Destacado', share: 'Compartir', agenda: 'Agenda', map: 'Mapa', details: 'Detalles', compare: 'Comparar' },
+  sv: { free: 'Gratis', featured: 'Utvalda', share: 'Dela', agenda: 'Kalender', map: 'Karta', details: 'Detaljer', compare: 'Jämför' },
+  pl: { free: 'Bezpłatne', featured: 'Polecane', share: 'Udostępnij', agenda: 'Kalendarz', map: 'Mapa', details: 'Szczegóły', compare: 'Porównaj' },
 };
 
 export const AgendaCard: React.FC<AgendaCardProps> = ({
@@ -122,10 +128,15 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
   onSave,
   isSaved = false,
   distance,
-  detectedCategory
+  detectedCategory,
+  isInComparison = false,
+  onToggleComparison,
+  canAddMore = true,
+  showComparison = true
 }) => {
   const { language } = useLanguage();
   const locale = dateLocales[language] || nl;
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
   // Get localized title
   const title = typeof event.title === 'string'
@@ -171,9 +182,85 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
       .join(' ');
   };
 
+  // Show toast notification
+  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const handleSaveClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onSave?.(event._id);
+  };
+
+  const handleToggleComparison = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleComparison?.(event._id);
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/agenda/${event._id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: title,
+          text: description || `Check out ${title}!`,
+          url
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        showToast('Link copied!', 'info');
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        showToast('Failed to share', 'info');
+      }
+    }
+  };
+
+  const handleAddToCalendar = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    const startStr = format(startDate, "yyyyMMdd'T'HHmmss");
+    const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+    const endStr = format(endDate, "yyyyMMdd'T'HHmmss");
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'BEGIN:VEVENT',
+      `DTSTART:${startStr}`,
+      `DTEND:${endStr}`,
+      `SUMMARY:${title}`,
+      `DESCRIPTION:${description?.substring(0, 200) || ''}`,
+      `LOCATION:${event.location?.name || ''}`,
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${title.replace(/[^a-z0-9]/gi, '_')}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast('Calendar event downloaded!', 'success');
+  };
+
+  const handleShowMap = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (event.location?.coordinates) {
+      const { lat, lng } = event.location.coordinates;
+      window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+    } else if (event.location?.name) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location.name)}`, '_blank');
+    }
   };
 
   return (
@@ -233,50 +320,88 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
           </div>
         )}
 
-        {/* Location & Distance Row */}
+        {/* Location, Distance & Comparison Row */}
         <div className="agenda-bottom-row">
-          {event.location?.name && (
-            <div className="agenda-location">
-              <MapPin className="agenda-icon" />
-              <span className="agenda-location-text">{event.location.name}</span>
-            </div>
-          )}
-          {distance && (
-            <div className="agenda-distance">
-              <svg className="agenda-map-icon" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
-                  fill="#0273ae"
-                  stroke="#0273ae"
-                  strokeWidth="2"
-                />
-                <circle cx="12" cy="10" r="3" fill="white" />
-              </svg>
-              {distance}
-            </div>
+          <div className="agenda-location-distance">
+            {event.location?.name && (
+              <div className="agenda-location">
+                <MapPin className="agenda-icon" />
+                <span className="agenda-location-text">{event.location.name}</span>
+              </div>
+            )}
+            {distance && (
+              <div className="agenda-distance">
+                <svg className="agenda-map-icon" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                    fill="#0273ae"
+                    stroke="#0273ae"
+                    strokeWidth="2"
+                  />
+                  <circle cx="12" cy="10" r="3" fill="white" />
+                </svg>
+                {distance}
+              </div>
+            )}
+          </div>
+
+          {/* Comparison Checkbox */}
+          {showComparison && onToggleComparison && (
+            <label className="agenda-comparison-checkbox" onClick={handleToggleComparison}>
+              <input
+                type="checkbox"
+                checked={isInComparison}
+                onChange={() => {}}
+                disabled={!canAddMore && !isInComparison}
+              />
+              <span className="agenda-comparison-label">{ui.compare}</span>
+            </label>
           )}
         </div>
       </div>
 
       {/* Action Buttons */}
       <div className="agenda-actions">
-        <button className="agenda-action-btn" title={ui.share}>
-          <span>↗️</span>
+        <button className="agenda-action-btn" title={ui.share} onClick={handleShare}>
+          <Share2 size={16} color="#0273ae" />
           <span>{ui.share}</span>
         </button>
-        <button className="agenda-action-btn" title={ui.agenda}>
-          <span>📅</span>
+        <button className="agenda-action-btn" title={ui.agenda} onClick={handleAddToCalendar}>
+          <Calendar size={16} color="#0273ae" />
           <span>{ui.agenda}</span>
         </button>
-        <button className="agenda-action-btn" title={ui.map}>
-          <span>📍</span>
+        <button className="agenda-action-btn" title={ui.map} onClick={handleShowMap}>
+          <MapPin size={16} color="#0273ae" />
           <span>{ui.map}</span>
         </button>
         <button className="agenda-action-btn agenda-action-primary" title={ui.details} onClick={onClick}>
-          <span>ℹ️</span>
+          <Info size={16} color="#7FA594" />
           <span>{ui.details}</span>
         </button>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '80px',
+            right: '24px',
+            backgroundColor: toast.type === 'success' ? '#10B981' : '#0273ae',
+            color: 'white',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+            zIndex: 10000,
+            animation: 'slideInUp 0.3s ease-out',
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            fontWeight: 500
+          }}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 };
