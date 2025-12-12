@@ -25,9 +25,10 @@ on:
       environment:
         description: 'Target environment'
         required: true
-        default: 'test'
+        default: 'development'
         type: choice
         options:
+          - development
           - test
           - production
       branch:
