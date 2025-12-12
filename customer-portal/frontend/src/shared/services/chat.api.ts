@@ -4,16 +4,31 @@
  *
  * API client for HoliBot chat endpoint
  * Endpoint: POST /api/v1/chat/message
+ * 
+ * Uses hybrid URL detection:
+ * - Central config from apiConfig.ts
+ * - Service-level fallback for production environments
  */
 
 import type { ChatRequest, ChatResponse } from '../types/chat.types';
+import { API_CONFIG, isProduction } from '../config/apiConfig';
 
-// HoliBot/Chat API - Platform Core includes chat routes on :3001
-// Use VITE_WIDGET_API_URL if Widget API runs separately on :3002
-const API_BASE_URL = import.meta.env.VITE_WIDGET_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+// Get base URL with production fallback (hybrid approach)
+const getBaseUrl = (): string => {
+  const configUrl = API_CONFIG.widgetApi.baseUrl;
+  // If configUrl is a localhost URL but we're in production, use relative URL
+  if (isProduction() && configUrl.includes('localhost')) {
+    return '/api/v1';
+  }
+  return configUrl;
+};
 
 class ChatAPI {
   private sessionId: string | null = null;
+  
+  private get baseUrl(): string {
+    return getBaseUrl();
+  }
 
   /**
    * Send a chat message to HoliBot AI
@@ -29,7 +44,7 @@ class ChatAPI {
         requestBody.sessionId = this.sessionId;
       }
 
-      const response = await fetch(`${API_BASE_URL}/chat/message`, {
+      const response = await fetch(`${this.baseUrl}/chat/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +88,7 @@ class ChatAPI {
     if (!this.sessionId) return true;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/chat/session/${this.sessionId}`, {
+      const response = await fetch(`${this.baseUrl}/chat/session/${this.sessionId}`, {
         method: 'DELETE'
       });
 
@@ -101,7 +116,7 @@ class ChatAPI {
    */
   async getDailyTip(): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE_URL}/holibot/daily-tip`, {
+      const response = await fetch(`${this.baseUrl}/holibot/daily-tip`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
