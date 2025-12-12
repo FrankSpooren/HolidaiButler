@@ -87,9 +87,6 @@ const filterTranslations: Record<string, {
       label: 'Datum',
       options: {
         all: 'Alle data',
-        today: 'Vandaag',
-        tomorrow: 'Morgen',
-        weekend: 'Dit weekend',
         custom: 'Aangepast',
       },
       startDate: 'Startdatum',
@@ -134,9 +131,6 @@ const filterTranslations: Record<string, {
       label: 'Date',
       options: {
         all: 'All dates',
-        today: 'Today',
-        tomorrow: 'Tomorrow',
-        weekend: 'This weekend',
         custom: 'Custom',
       },
       startDate: 'Start date',
@@ -181,9 +175,6 @@ const filterTranslations: Record<string, {
       label: 'Datum',
       options: {
         all: 'Alle Termine',
-        today: 'Heute',
-        tomorrow: 'Morgen',
-        weekend: 'Dieses Wochenende',
         custom: 'Benutzerdefiniert',
       },
       startDate: 'Startdatum',
@@ -228,9 +219,6 @@ const filterTranslations: Record<string, {
       label: 'Fecha',
       options: {
         all: 'Todas las fechas',
-        today: 'Hoy',
-        tomorrow: 'Mañana',
-        weekend: 'Este fin de semana',
         custom: 'Personalizado',
       },
       startDate: 'Fecha de inicio',
@@ -275,9 +263,6 @@ const filterTranslations: Record<string, {
       label: 'Datum',
       options: {
         all: 'Alla datum',
-        today: 'Idag',
-        tomorrow: 'Imorgon',
-        weekend: 'Denna helg',
         custom: 'Anpassad',
       },
       startDate: 'Startdatum',
@@ -322,9 +307,6 @@ const filterTranslations: Record<string, {
       label: 'Data',
       options: {
         all: 'Wszystkie daty',
-        today: 'Dzisiaj',
-        tomorrow: 'Jutro',
-        weekend: 'Ten weekend',
         custom: 'Niestandardowy',
       },
       startDate: 'Data rozpoczęcia',
