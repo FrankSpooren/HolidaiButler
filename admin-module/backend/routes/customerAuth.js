@@ -1,9 +1,11 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import { User } from '../models/index.js';
+import { Op } from 'sequelize';
 
 const router = express.Router();
 
-// JWT Secrets (shared with admin auth for simplicity in dev)
+// JWT Secrets
 const JWT_SECRET = process.env.JWT_ADMIN_SECRET || 'your-admin-secret-key-change-in-production';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key-change-in-production';
 
@@ -11,46 +13,9 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secre
 const ACCESS_TOKEN_EXPIRY = '24h';
 const REFRESH_TOKEN_EXPIRY = '7d';
 
-// Development fallback customer user
-const DEV_FALLBACK_CUSTOMER = {
-  id: 'dev-customer-001',
-  email: 'user@holidaibutler.com',
-  password: 'User2024',
-  firstName: 'Demo',
-  lastName: 'User',
-  role: 'customer',
-  status: 'active',
-  language: 'nl',
-  preferences: {
-    notifications: true,
-    newsletter: false
-  }
-};
-
-// Alternative customer accounts for testing
-const DEV_CUSTOMERS = [
-  DEV_FALLBACK_CUSTOMER,
-  {
-    id: 'dev-customer-002',
-    email: 'admin@holidaibutler.com',
-    password: 'Admin2024',
-    firstName: 'Admin',
-    lastName: 'User',
-    role: 'customer',
-    status: 'active',
-    language: 'en'
-  },
-  {
-    id: 'dev-customer-003',
-    email: 'test@test.com',
-    password: 'test123',
-    firstName: 'Test',
-    lastName: 'Account',
-    role: 'customer',
-    status: 'active',
-    language: 'nl'
-  }
-];
+// Max login attempts before lockout
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_TIME = 15 * 60 * 1000; // 15 minutes
 
 /**
  * @route   POST /api/v1/auth/login
@@ -69,24 +34,84 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find matching dev customer
-    const customer = DEV_CUSTOMERS.find(
-      c => c.email.toLowerCase() === email.toLowerCase() && c.password === password
-    );
+    // Find user by email
+    const user = await User.findOne({
+      where: {
+        email: email.toLowerCase(),
+        status: { [Op.ne]: 'deleted' }
+      }
+    });
 
-    if (!customer) {
+    if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials.',
-        hint: 'Development accounts: user@holidaibutler.com / User2024 or test@test.com / test123'
+        message: 'Invalid email or password.'
       });
     }
+
+    // Check if account is locked
+    if (user.lock_until && new Date(user.lock_until) > new Date()) {
+      const remainingTime = Math.ceil((new Date(user.lock_until) - new Date()) / 60000);
+      return res.status(423).json({
+        success: false,
+        message: `Account is locked. Try again in ${remainingTime} minutes.`
+      });
+    }
+
+    // Check if account is suspended
+    if (user.status === 'suspended') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been suspended. Please contact support.'
+      });
+    }
+
+    // Check if account is pending
+    if (user.status === 'pending') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is pending approval. Please wait for activation.'
+      });
+    }
+
+    // Compare password
+    const isMatch = await user.comparePassword(password);
+
+    if (!isMatch) {
+      // Increment login attempts
+      const loginAttempts = (user.login_attempts || 0) + 1;
+      const updateData = { login_attempts: loginAttempts };
+
+      // Lock account if max attempts reached
+      if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+        updateData.lock_until = new Date(Date.now() + LOCK_TIME);
+        await user.update(updateData);
+        return res.status(423).json({
+          success: false,
+          message: 'Too many failed login attempts. Account locked for 15 minutes.'
+        });
+      }
+
+      await user.update(updateData);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password.',
+        attemptsRemaining: MAX_LOGIN_ATTEMPTS - loginAttempts
+      });
+    }
+
+    // Reset login attempts on successful login
+    await user.update({
+      login_attempts: 0,
+      lock_until: null,
+      last_login: new Date()
+    });
 
     // Generate tokens
     const accessToken = jwt.sign(
       {
-        userId: customer.id,
-        role: customer.role,
+        userId: user.id,
+        role: 'customer',
         type: 'access'
       },
       JWT_SECRET,
@@ -95,33 +120,34 @@ router.post('/login', async (req, res) => {
 
     const refreshToken = jwt.sign(
       {
-        userId: customer.id,
+        userId: user.id,
         type: 'refresh'
       },
       JWT_REFRESH_SECRET,
       { expiresIn: REFRESH_TOKEN_EXPIRY }
     );
 
-    console.log(`✅ Customer login successful: ${customer.email}`);
+    console.log(`✅ Customer login successful: ${user.email}`);
 
     res.json({
       success: true,
       message: 'Login successful.',
       data: {
         user: {
-          id: customer.id,
-          email: customer.email,
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          role: customer.role,
-          status: customer.status,
-          language: customer.language,
-          preferences: customer.preferences
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          avatar: user.avatar,
+          language: user.language,
+          subscriptionType: user.subscription_type,
+          status: user.status,
+          emailVerified: user.email_verified,
+          preferences: user.preferences
         },
         accessToken,
         refreshToken,
-        expiresIn: ACCESS_TOKEN_EXPIRY,
-        _devMode: true
+        expiresIn: ACCESS_TOKEN_EXPIRY
       }
     });
 
@@ -136,12 +162,12 @@ router.post('/login', async (req, res) => {
 
 /**
  * @route   POST /api/v1/auth/signup
- * @desc    Customer registration (dev mode - auto approve)
+ * @desc    Customer registration
  * @access  Public
  */
 router.post('/signup', async (req, res) => {
   try {
-    const { email, password, firstName, lastName } = req.body || {};
+    const { email, password, firstName, lastName, language } = req.body || {};
 
     // Validate input
     if (!email || !password || !firstName || !lastName) {
@@ -151,35 +177,53 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    // Check if email already exists in dev accounts
-    const existingUser = DEV_CUSTOMERS.find(c => c.email.toLowerCase() === email.toLowerCase());
-    if (existingUser) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
-        message: 'Email already registered.'
+        message: 'Please provide a valid email address.'
       });
     }
 
-    // Create new dev user (in-memory only for this session)
-    const newUser = {
-      id: `dev-customer-${Date.now()}`,
-      email: email.toLowerCase(),
-      password,
-      firstName,
-      lastName,
-      role: 'customer',
-      status: 'active',
-      language: 'nl'
-    };
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters long.'
+      });
+    }
 
-    // Add to dev customers array
-    DEV_CUSTOMERS.push(newUser);
+    // Check if email already exists
+    const existingUser = await User.findOne({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email already exists.'
+      });
+    }
+
+    // Create new user
+    const newUser = await User.create({
+      email: email.toLowerCase(),
+      password, // Will be hashed by beforeCreate hook
+      first_name: firstName,
+      last_name: lastName,
+      language: language || 'nl',
+      status: 'active',
+      email_verified: false,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
 
     // Generate tokens
     const accessToken = jwt.sign(
       {
         userId: newUser.id,
-        role: newUser.role,
+        role: 'customer',
         type: 'access'
       },
       JWT_SECRET,
@@ -197,27 +241,35 @@ router.post('/signup', async (req, res) => {
 
     console.log(`✅ New customer registered: ${newUser.email}`);
 
-    res.json({
+    res.status(201).json({
       success: true,
       message: 'Registration successful.',
       data: {
         user: {
           id: newUser.id,
           email: newUser.email,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-          role: newUser.role,
+          firstName: newUser.first_name,
+          lastName: newUser.last_name,
+          language: newUser.language,
           status: newUser.status
         },
         accessToken,
         refreshToken,
-        expiresIn: ACCESS_TOKEN_EXPIRY,
-        _devMode: true
+        expiresIn: ACCESS_TOKEN_EXPIRY
       }
     });
 
   } catch (error) {
     console.error('Customer signup error:', error);
+
+    // Handle Sequelize unique constraint error
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email already exists.'
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Server error during registration.'
@@ -251,7 +303,16 @@ router.post('/refresh', async (req, res) => {
       });
     }
 
-    // Generate new access token
+    // Check if user still exists and is active
+    const user = await User.findByPk(decoded.userId);
+    if (!user || user.status === 'deleted' || user.status === 'suspended') {
+      return res.status(401).json({
+        success: false,
+        message: 'User account is no longer valid.'
+      });
+    }
+
+    // Generate new tokens
     const accessToken = jwt.sign(
       {
         userId: decoded.userId,
@@ -262,7 +323,6 @@ router.post('/refresh', async (req, res) => {
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
 
-    // Generate new refresh token
     const newRefreshToken = jwt.sign(
       {
         userId: decoded.userId,
@@ -317,10 +377,10 @@ router.get('/me', async (req, res) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // Find user in dev customers
-    const customer = DEV_CUSTOMERS.find(c => c.id === decoded.userId);
+    // Find user in database
+    const user = await User.findByPk(decoded.userId);
 
-    if (!customer) {
+    if (!user || user.status === 'deleted') {
       return res.status(404).json({
         success: false,
         message: 'User not found.'
@@ -330,14 +390,22 @@ router.get('/me', async (req, res) => {
     res.json({
       success: true,
       data: {
-        id: customer.id,
-        email: customer.email,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        role: customer.role,
-        status: customer.status,
-        language: customer.language,
-        preferences: customer.preferences
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        avatar: user.avatar,
+        phoneNumber: user.phone_number,
+        language: user.language,
+        country: user.country,
+        subscriptionType: user.subscription_type,
+        subscriptionEndsAt: user.subscription_ends_at,
+        status: user.status,
+        emailVerified: user.email_verified,
+        preferences: user.preferences,
+        stats: user.stats,
+        lastLogin: user.last_login,
+        createdAt: user.created_at
       }
     });
 
@@ -350,6 +418,78 @@ router.get('/me', async (req, res) => {
     }
 
     console.error('Get me error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error.'
+    });
+  }
+});
+
+/**
+ * @route   PUT /api/v1/auth/profile
+ * @desc    Update customer profile
+ * @access  Private
+ */
+router.put('/profile', async (req, res) => {
+  try {
+    // Get token from header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided.'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Find user
+    const user = await User.findByPk(decoded.userId);
+    if (!user || user.status === 'deleted') {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+
+    // Update allowed fields
+    const { firstName, lastName, phoneNumber, language, country, preferences } = req.body;
+    const updateData = { updated_at: new Date() };
+
+    if (firstName) updateData.first_name = firstName;
+    if (lastName) updateData.last_name = lastName;
+    if (phoneNumber !== undefined) updateData.phone_number = phoneNumber;
+    if (language) updateData.language = language;
+    if (country !== undefined) updateData.country = country;
+    if (preferences) updateData.preferences = preferences;
+
+    await user.update(updateData);
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully.',
+      data: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phoneNumber: user.phone_number,
+        language: user.language,
+        country: user.country,
+        preferences: user.preferences
+      }
+    });
+
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token.'
+      });
+    }
+
+    console.error('Update profile error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error.'
