@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { nl, enUS, es, de, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
-import { Calendar, MapPin, Star, Share2, Info } from 'lucide-react';
+import { MapPin, Star } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import type { AgendaEvent } from '../services/agendaService';
 import './AgendaCard.css';
@@ -10,7 +10,7 @@ import './AgendaCard.css';
 /**
  * AgendaCard Component
  * Displays event in POI Grid style - matching POILandingPage cards exactly
- * Now includes comparison functionality
+ * With comparison functionality
  */
 
 interface AgendaCardProps {
@@ -150,7 +150,6 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
 
   // Format date
   const startDate = new Date(event.startDate);
-  const dateDisplay = format(startDate, 'd MMM yyyy', { locale });
 
   // Get primary image
   const primaryImage = event.images?.find((img) => img.isPrimary)?.url || event.images?.[0]?.url;
@@ -310,7 +309,7 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
         <div className="agenda-title">{toTitleCase(title)}</div>
         <div className="agenda-description">{truncateDescription(description)}</div>
 
-        {/* Featured Badge Row (date moved to sticky header) */}
+        {/* Featured Badge Row */}
         {event.featured && (
           <div className="agenda-meta-row">
             <div className="agenda-rating">
@@ -360,22 +359,22 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons - ORIGINAL EMOJI ICONS */}
       <div className="agenda-actions">
         <button className="agenda-action-btn" title={ui.share} onClick={handleShare}>
-          <Share2 size={16} color="#0273ae" />
+          <span>↗️</span>
           <span>{ui.share}</span>
         </button>
         <button className="agenda-action-btn" title={ui.agenda} onClick={handleAddToCalendar}>
-          <Calendar size={16} color="#0273ae" />
+          <span>📅</span>
           <span>{ui.agenda}</span>
         </button>
         <button className="agenda-action-btn" title={ui.map} onClick={handleShowMap}>
-          <MapPin size={16} color="#0273ae" />
+          <span>📍</span>
           <span>{ui.map}</span>
         </button>
         <button className="agenda-action-btn agenda-action-primary" title={ui.details} onClick={onClick}>
-          <Info size={16} color="#7FA594" />
+          <span>ℹ️</span>
           <span>{ui.details}</span>
         </button>
       </div>
@@ -393,7 +392,6 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
             borderRadius: '8px',
             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
             zIndex: 10000,
-            animation: 'slideInUp 0.3s ease-out',
             fontFamily: 'Inter, sans-serif',
             fontSize: '14px',
             fontWeight: 500

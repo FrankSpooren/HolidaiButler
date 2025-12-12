@@ -1,7 +1,7 @@
 /**
  * AgendaCard CSS - POI Grid style matching
  * Exact same styling as POILandingPage.css cards
- * Updated with comparison checkbox styling
+ * With comparison checkbox styling added
  */
 
 .agenda-card {
@@ -118,6 +118,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
   gap: 8px;
 }
 
@@ -180,7 +181,7 @@
   color: #D4AF37;
 }
 
-/* Bottom Row - Updated for comparison */
+/* Bottom Row */
 .agenda-bottom-row {
   display: flex;
   align-items: center;
@@ -193,7 +194,7 @@
 .agenda-location-distance {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   flex: 1;
   min-width: 0;
 }
@@ -226,7 +227,7 @@
   height: 16px;
 }
 
-/* Comparison Checkbox - Matching POI styling */
+/* Comparison Checkbox */
 .agenda-comparison-checkbox {
   display: flex;
   align-items: center;
@@ -276,6 +277,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
   align-items: center;
   gap: 2px;
   padding: 10px 4px;
@@ -286,7 +288,6 @@
   font-size: 10px;
   color: #6B7280;
   transition: background 0.2s ease, color 0.2s ease;
-  font-family: 'Inter', sans-serif;
 }
 
 .agenda-action-btn:last-child {
@@ -298,9 +299,8 @@
   color: #1F2937;
 }
 
-.agenda-action-btn span {
-  font-size: 12px;
-  font-weight: 500;
+.agenda-action-btn span:first-child {
+  font-size: 16px;
 }
 
 .agenda-action-primary {
@@ -331,6 +331,7 @@
 
 .agenda-card.list-view .agenda-actions {
   flex-direction: column;
+  height: 100%;
   border-top: none;
   border-left: 1px solid #F3F4F6;
   width: auto;
@@ -346,18 +347,6 @@
 
 .agenda-card.list-view .agenda-action-btn:last-child {
   border-bottom: none;
-}
-
-/* Toast animation */
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* Responsive */
@@ -378,12 +367,16 @@
     font-size: 12px;
   }
 
-  .agenda-action-btn span {
+  .agenda-action-btn span:last-child {
     display: none;
   }
 
   .agenda-action-btn {
     padding: 12px 8px;
+  }
+
+  .agenda-action-btn span:first-child {
+    font-size: 18px;
   }
 
   .agenda-comparison-checkbox {
