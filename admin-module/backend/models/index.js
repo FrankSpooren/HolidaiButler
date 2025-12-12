@@ -13,6 +13,7 @@ import POIImportHistory from './POIImportHistory.js';
 import Reservation from './Reservation.js';
 import Ticket from './Ticket.js';
 import Transaction from './Transaction.js';
+import User from './User.js';
 
 // Define Associations
 
@@ -74,7 +75,8 @@ export {
   POIImportHistory,
   Reservation,
   Ticket,
-  Transaction
+  Transaction,
+  User
 };
 
 // Default export for convenience
@@ -90,5 +92,6 @@ export default {
   POIImportHistory,
   Reservation,
   Ticket,
-  Transaction
+  Transaction,
+  User
 };
