@@ -273,19 +273,20 @@ export function AgendaPage() {
 
   // Set initial visible date key
   useEffect(() => {
-    if (eventsByDate.length > 0 && !visibleDateKey) {
-      setVisibleDateKey(eventsByDate[0].date);
+    if (filteredEvents.length > 0 && !visibleDateKey) {
+      const firstDateKey = new Date(filteredEvents[0].startDate).toISOString().split('T')[0];
+      setVisibleDateKey(firstDateKey);
     }
-  }, [eventsByDate, visibleDateKey]);
+  }, [filteredEvents, visibleDateKey]);
 
   // Update visible date key on scroll (for the subheader)
   useEffect(() => {
     const handleDateScroll = () => {
-      const dateHeaders = document.querySelectorAll('.agenda-date-header');
-      for (let i = dateHeaders.length - 1; i >= 0; i--) {
-        const header = dateHeaders[i] as HTMLElement;
-        if (header.getBoundingClientRect().top <= 290) {
-          const dateKey = header.getAttribute('data-date-key');
+      const cards = document.querySelectorAll('.agenda-card-wrapper');
+      for (let i = cards.length - 1; i >= 0; i--) {
+        const card = cards[i] as HTMLElement;
+        if (card.getBoundingClientRect().top <= 290) {
+          const dateKey = card.getAttribute('data-date-key');
           if (dateKey && dateKey !== visibleDateKey) setVisibleDateKey(dateKey);
           break;
         }
@@ -393,25 +394,26 @@ export function AgendaPage() {
         </div>
       )}
 
-      {/* Grid View - Grouped by Date */}
-      {!isLoading && !error && eventsByDate.map((group) => (
-        <div key={group.date} className="agenda-date-section">
-          <div className="agenda-date-header" data-date-key={group.date} />
-          <div className="agenda-grid">
-            {group.events.map((event) => (
-              <AgendaCard
-                key={event._id}
-                event={event}
-                onClick={() => setSelectedEventId(event._id)}
-                onSave={toggleAgendaFavorite}
-                isSaved={isAgendaFavorite(event._id)}
-                distance={getDistance(event)}
-                detectedCategory={detectCategory(event, language)}
-              />
-            ))}
-          </div>
+      {/* Single continuous grid - all events flow together, 4 per row */}
+      {!isLoading && !error && filteredEvents.length > 0 && (
+        <div className="agenda-grid">
+          {filteredEvents.map((event) => {
+            const eventDateKey = new Date(event.startDate).toISOString().split('T')[0];
+            return (
+              <div key={event._id} className="agenda-card-wrapper" data-date-key={eventDateKey}>
+                <AgendaCard
+                  event={event}
+                  onClick={() => setSelectedEventId(event._id)}
+                  onSave={toggleAgendaFavorite}
+                  isSaved={isAgendaFavorite(event._id)}
+                  distance={getDistance(event)}
+                  detectedCategory={detectCategory(event, language)}
+                />
+              </div>
+            );
+          })}
         </div>
-      ))}
+      )}
 
       {/* Load More */}
       {!isLoading && !error && hasMore && (

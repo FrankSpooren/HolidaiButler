@@ -238,20 +238,12 @@
   text-transform: capitalize;
 }
 
-/* Date Section - for scroll detection only (invisible) */
-.agenda-date-section {
-  margin-bottom: 0;
+/* Card wrapper - contains the card, used for scroll detection */
+.agenda-card-wrapper {
+  /* Normal block element, fills grid cell */
 }
 
-.agenda-date-header {
-  height: 0;
-  padding: 0;
-  margin: 0;
-  border: none;
-  visibility: hidden;
-}
-
-/* Grid Layout - Matching POILandingPage.css exactly */
+/* Grid Layout - Single continuous grid, 4 columns on desktop */
 .agenda-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
