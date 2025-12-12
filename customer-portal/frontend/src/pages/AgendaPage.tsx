@@ -238,7 +238,8 @@ export function AgendaPage() {
     if (!visibleDateKey) return '';
     const locale = dateLocales[language] || dateLocales.en;
     const formatStr = dateHeaderFormats[language] || dateHeaderFormats.en;
-    const date = new Date(visibleDateKey);
+    const [year, month, day] = visibleDateKey.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     return format(date, formatStr, { locale });
   }, [visibleDateKey, language]);
 
@@ -261,7 +262,8 @@ export function AgendaPage() {
   // Set initial visible date key
   useEffect(() => {
     if (filteredEvents.length > 0 && !visibleDateKey) {
-      const firstDateKey = new Date(filteredEvents[0].startDate).toISOString().split('T')[0];
+      const d = new Date(filteredEvents[0].startDate);
+      const firstDateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       setVisibleDateKey(firstDateKey);
     }
   }, [filteredEvents, visibleDateKey]);
@@ -389,7 +391,8 @@ export function AgendaPage() {
       {!isLoading && !error && filteredEvents.length > 0 && (
         <div className="agenda-grid">
           {filteredEvents.map((event) => {
-            const eventDateKey = new Date(event.startDate).toISOString().split('T')[0];
+            const ed = new Date(event.startDate);
+            const eventDateKey = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
             return (
               <AgendaCard
                 key={event._id}
