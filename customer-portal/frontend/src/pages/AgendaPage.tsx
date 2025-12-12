@@ -61,17 +61,27 @@ const quickFilterLabels: Record<string, { today: string; tomorrow: string; weeke
   pl: { today: 'Dzisiaj', tomorrow: 'Jutro', weekend: 'Ten weekend' },
 };
 
+// No results translations
+const noResultsLabels: Record<string, { title: string; subtitle: string }> = {
+  nl: { title: 'Geen Events gevonden', subtitle: 'Pas je zoekfilter(s) aan' },
+  en: { title: 'No Events found', subtitle: 'Adjust your search filter(s)' },
+  de: { title: 'Keine Events gefunden', subtitle: 'Passen Sie Ihre Suchfilter an' },
+  es: { title: 'No se encontraron eventos', subtitle: 'Ajusta tus filtros de búsqueda' },
+  sv: { title: 'Inga evenemang hittades', subtitle: 'Justera dina sökfilter' },
+  pl: { title: 'Nie znaleziono wydarzeń', subtitle: 'Dostosuj filtry wyszukiwania' },
+};
+
 // Date locales for formatting
 const dateLocales: Record<string, Locale> = { nl: nl, en: enUS, de: de, es: es, sv: sv, pl: pl };
 
-// Date header formats
+// Date header formats - WITHOUT comma after day
 const dateHeaderFormats: Record<string, string> = {
-  nl: 'EEEE, d MMMM yyyy',
-  en: 'EEEE, MMMM d, yyyy',
-  de: 'EEEE, d. MMMM yyyy',
-  es: "EEEE, d 'de' MMMM 'de' yyyy",
+  nl: 'EEEE d MMMM yyyy',
+  en: 'EEEE MMMM d yyyy',
+  de: 'EEEE d. MMMM yyyy',
+  es: "EEEE d 'de' MMMM 'de' yyyy",
   sv: 'EEEE d MMMM yyyy',
-  pl: 'EEEE, d MMMM yyyy',
+  pl: 'EEEE d MMMM yyyy',
 };
 
 // Keywords for smart categorization
@@ -259,7 +269,7 @@ export function AgendaPage() {
     }
   }, [eventsByDate, visibleDate]);
 
-  // Update visible date on scroll
+  // Update visible date on scroll (for the subheader)
   useEffect(() => {
     const handleDateScroll = () => {
       const dateHeaders = document.querySelectorAll('.agenda-date-header');
@@ -298,6 +308,8 @@ export function AgendaPage() {
     return count;
   };
 
+  const noResults = noResultsLabels[language] || noResultsLabels.en;
+
   return (
     <>
       {/* Search Section */}
@@ -331,7 +343,7 @@ export function AgendaPage() {
         </div>
       </div>
 
-      {/* Filter Row with Quick Filters */}
+      {/* Filter Row with Quick Filters - all on same row */}
       <div className={`agenda-filter-row ${showHeader ? 'header-visible' : 'header-hidden'}`}>
         <button className="agenda-filter-btn" onClick={() => setFilterModalOpen(true)}>
           🔽 {t.poi?.filters || 'Filters'} ({getActiveFilterCount()})
@@ -349,10 +361,10 @@ export function AgendaPage() {
         </div>
       </div>
 
-      {/* Sticky Date Subheader */}
+      {/* Date Subheader - updates on scroll, no separate sticky bar */}
       {!isLoading && !error && filteredEvents.length > 0 && (
-        <div className="agenda-sticky-date-header">
-          <span className="agenda-sticky-date-text">{visibleDate}</span>
+        <div className="agenda-date-subheader">
+          <span className="agenda-date-subheader-text">{visibleDate}</span>
         </div>
       )}
 
@@ -374,9 +386,7 @@ export function AgendaPage() {
       {/* Grid View - Grouped by Date */}
       {!isLoading && !error && eventsByDate.map((group) => (
         <div key={group.date} className="agenda-date-section">
-          <div className="agenda-date-header" data-date-formatted={group.dateFormatted}>
-            {group.dateFormatted}
-          </div>
+          <div className="agenda-date-header" data-date-formatted={group.dateFormatted} />
           <div className="agenda-grid">
             {group.events.map((event) => (
               <AgendaCard
@@ -400,12 +410,12 @@ export function AgendaPage() {
         </button>
       )}
 
-      {/* No Results */}
+      {/* No Results - Updated text */}
       {!isLoading && !error && filteredEvents.length === 0 && (
         <div className="agenda-no-results">
           <p className="agenda-no-results-icon">🔍</p>
-          <h3>{t.poi?.noResults || 'No results found'}</h3>
-          <p>{t.poi?.noResultsDesc || 'Try adjusting your filters or search criteria'}</p>
+          <h3>{noResults.title}</h3>
+          <p>{noResults.subtitle}</p>
         </div>
       )}
 
