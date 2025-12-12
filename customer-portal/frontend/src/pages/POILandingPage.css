@@ -1,4 +1,5 @@
-/* POI Landing Page Styles - Updated to match Agenda Card design */
+/* POI Landing Page Styles - Fixed Version */
+/* Compact card matching Agenda Card, 14px title restored */
 
 /* Search Section */
 .search-section {
@@ -242,11 +243,11 @@
   padding: 16px;
 }
 
-/* POI Card - Updated to match Agenda Card design */
+/* POI Card - COMPACT like Agenda Card */
 .poi-card {
   position: relative;
   background: white;
-  border-radius: 16px; /* Match Agenda Card */
+  border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -257,11 +258,11 @@
 }
 
 .poi-card:hover {
-  transform: translateY(-4px); /* Match Agenda Card */
+  transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-/* Category Label - Match Agenda Card */
+/* Category Label */
 .poi-category-label,
 .poi-category-label-uniform {
   position: absolute;
@@ -278,11 +279,11 @@
   font-family: 'Inter', sans-serif;
 }
 
-/* Image Container - Match Agenda Card */
+/* Image Container - COMPACT height */
 .poi-image-container {
   position: relative;
   width: 100%;
-  height: 200px;
+  height: 180px;
   overflow: hidden;
   background: #f5f5f5;
 }
@@ -298,7 +299,7 @@
   transform: scale(1.05);
 }
 
-/* Save Button - Match Agenda Card */
+/* Save Button */
 .save-btn {
   position: absolute;
   top: 12px;
@@ -326,18 +327,19 @@
   background: #FFF0F0;
 }
 
-/* Content - Match Agenda Card */
+/* Content - COMPACT padding */
 .poi-content {
-  padding: 16px;
+  padding: 12px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
+/* Title - RESTORED to 14px */
 .poi-title,
 .poi-title-smaller {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: #1F2937;
   line-height: 1.3;
@@ -350,9 +352,9 @@
 }
 
 .poi-description {
-  font-size: 13px;
+  font-size: 12px;
   color: #6B7280;
-  line-height: 1.5;
+  line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -361,12 +363,12 @@
   margin: 0;
 }
 
-/* Rating - Match Agenda Card meta styling */
+/* Rating */
 .poi-rating {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+  font-size: 12px;
   color: #D4AF37;
   font-weight: 500;
   margin: 0;
@@ -374,7 +376,7 @@
 
 .rating-stars {
   color: #D4AF37;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .rating-star {
@@ -386,41 +388,41 @@
   color: #D4AF37;
 }
 
-/* Bottom Row - Match Agenda Card */
+/* Bottom Row - COMPACT */
 .poi-bottom-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: auto;
-  padding-top: 8px;
-  gap: 8px;
+  padding-top: 4px;
+  gap: 6px;
 }
 
 .poi-distance {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 11px;
   color: #0273ae;
   font-weight: 500;
   font-family: 'Inter', sans-serif;
 }
 
 .map-icon {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
-/* Comparison Checkbox - Match Agenda Card styling */
+/* Comparison Checkbox - COMPACT */
 .comparison-checkbox-inline {
   display: flex;
   align-items: center;
   gap: 4px;
   cursor: pointer;
   user-select: none;
-  font-size: 11px;
+  font-size: 10px;
   font-family: 'Inter', sans-serif;
-  padding: 4px 8px;
+  padding: 3px 6px;
   background: rgba(127, 165, 148, 0.1);
   border-radius: 6px;
   transition: all 0.2s ease;
@@ -432,8 +434,8 @@
 }
 
 .comparison-checkbox {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   cursor: pointer;
   accent-color: #7FA594;
   margin: 0;
@@ -445,14 +447,14 @@
 }
 
 .comparison-checkbox-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: #1F2937;
   white-space: nowrap;
 }
 
-/* Action Buttons - Match Agenda Card */
-.poi-tile-actions {
+/* Action Buttons - Match Agenda Card exactly */
+.poi-actions {
   display: flex;
   border-top: 1px solid #F3F4F6;
 }
@@ -461,9 +463,10 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
   align-items: center;
   gap: 2px;
-  padding: 10px 4px;
+  padding: 8px 4px;
   background: none;
   border: none;
   border-right: 1px solid #F3F4F6;
@@ -497,6 +500,12 @@
   color: #7FA594;
 }
 
+/* Legacy tile actions support */
+.poi-tile-actions {
+  display: flex;
+  border-top: 1px solid #F3F4F6;
+}
+
 /* POI List View */
 .poi-list {
   display: flex;
@@ -522,8 +531,8 @@
 }
 
 .poi-list-image-wrapper {
-  width: 140px;
-  height: 140px;
+  width: 120px;
+  height: 120px;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -540,7 +549,7 @@
 }
 
 .poi-list-content {
-  padding: 12px;
+  padding: 10px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -551,23 +560,23 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .poi-list-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #1F2937;
   font-family: 'Inter', sans-serif;
-  margin-bottom: 4px;
-  line-height: 1.4;
+  margin-bottom: 2px;
+  line-height: 1.3;
 }
 
 .poi-list-category,
 .poi-list-category-uniform {
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   font-family: 'Inter', sans-serif;
   display: inline-block;
@@ -577,9 +586,9 @@
 }
 
 .poi-list-description {
-  font-size: 13px;
+  font-size: 12px;
   color: #6B7280;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-family: 'Inter', sans-serif;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -591,20 +600,20 @@
 .poi-list-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .poi-list-save-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 36px;
-  height: 36px;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
   background: white;
   border: none;
   border-radius: 50%;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -626,14 +635,14 @@
 .comparison-checkbox-list {
   background: rgba(127, 165, 148, 0.1);
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 3px 6px;
   display: flex;
   align-items: center;
   gap: 4px;
   cursor: pointer;
   user-select: none;
   transition: all 0.2s ease;
-  font-size: 11px;
+  font-size: 10px;
   font-family: 'Inter', sans-serif;
 }
 
@@ -680,23 +689,23 @@
   border-color: #D4AF37;
 }
 
-/* Mobile Responsive */
+/* Mobile Responsive - COMPACT */
 @media (max-width: 640px) {
   .poi-image-container {
-    height: 160px;
+    height: 140px;
   }
 
   .poi-content {
-    padding: 12px;
+    padding: 10px;
   }
 
   .poi-title,
   .poi-title-smaller {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .poi-description {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .poi-action-btn span:last-child {
@@ -704,7 +713,7 @@
   }
 
   .poi-action-btn {
-    padding: 12px 8px;
+    padding: 10px 6px;
   }
 
   .poi-action-btn span:first-child {
@@ -712,16 +721,16 @@
   }
 
   .comparison-checkbox-inline {
-    padding: 3px 6px;
+    padding: 2px 4px;
   }
 
   .comparison-checkbox-label {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .comparison-checkbox {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
   }
 }
 
@@ -732,11 +741,11 @@
   }
 
   .poi-list-title {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .poi-list-description {
-    font-size: 12px;
+    font-size: 11px;
   }
 }
 
@@ -746,8 +755,8 @@
   }
 
   .poi-list-image-wrapper {
-    width: 140px;
-    height: 140px;
+    width: 120px;
+    height: 120px;
   }
 }
 
