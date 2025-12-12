@@ -8,7 +8,28 @@
  * - Payment Module:              3005
  * - Reservations Module:         3006
  * - Agenda Module:               3007
+ *
+ * Environment Detection:
+ * - Production: test.holidaibutler.com (uses relative /api/v1 via Apache proxy)
+ * - Codespaces: *.app.github.dev
+ * - Local: localhost / 127.0.0.1
  */
+
+// Environment detection helpers - exported for service-level fallbacks
+export const isLocalhost = (): boolean => {
+  if (typeof window === 'undefined') return true;
+  const hostname = window.location.hostname;
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+};
+
+export const isCodespaces = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname.includes('.app.github.dev');
+};
+
+export const isProduction = (): boolean => {
+  return !isLocalhost() && !isCodespaces();
+};
 
 // Helper to detect and construct Codespaces URL
 const getCodespacesUrl = (port: number): string | null => {
@@ -27,11 +48,16 @@ const getCodespacesUrl = (port: number): string | null => {
   return null;
 };
 
-// Get API URL for a specific port, with Codespaces support
+// Get API URL for a specific port, with production and Codespaces support
 const getApiUrl = (envVar: string | undefined, port: number): string => {
   // First check environment variable
   if (envVar) {
     return envVar;
+  }
+
+  // Production: use relative URL (Apache reverse proxy handles routing)
+  if (isProduction()) {
+    return '/api/v1';
   }
 
   // Check for Codespaces environment
@@ -43,6 +69,14 @@ const getApiUrl = (envVar: string | undefined, port: number): string => {
   // Default to localhost for local development
   return `http://localhost:${port}/api/v1`;
 };
+
+// Export ENV helpers for service-level fallbacks (hybrid approach)
+export const ENV = {
+  isLocalhost,
+  isCodespaces,
+  isProduction,
+  getApiUrl: (port: number) => getApiUrl(undefined, port),
+} as const;
 
 export const API_CONFIG = {
   // Platform Core - Uses Admin Backend for Auth (port 3003)
@@ -114,9 +148,9 @@ export const API_CONFIG = {
   },
 
   // Agenda Module - Events & Calendar (via Platform Core API)
-  // Production: https://test.holidaibutler.com/api/v1/agenda
+  // Production: uses relative /api/v1/agenda via Apache proxy
   agenda: {
-    baseUrl: (import.meta.env.VITE_API_URL || 'https://test.holidaibutler.com/api/v1') + '/agenda',
+    baseUrl: getApiUrl(import.meta.env.VITE_API_URL, 3003) + '/agenda',
     endpoints: {
       events: '/events',
       upcoming: '/events/upcoming',
