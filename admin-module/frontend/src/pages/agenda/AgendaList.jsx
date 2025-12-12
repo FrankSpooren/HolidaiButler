@@ -26,23 +26,11 @@ import {
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
   Visibility as ViewIcon,
   Refresh as RefreshIcon,
   CalendarMonth as CalendarIcon
 } from '@mui/icons-material';
-import { toast } from 'react-toastify';
 import { agendaAPI } from '../../services/api';
-
-const statusColors = {
-  scheduled: 'info',
-  in_progress: 'warning',
-  completed: 'success',
-  cancelled: 'error',
-  draft: 'default'
-};
 
 export default function AgendaList() {
   const navigate = useNavigate();
@@ -53,7 +41,7 @@ export default function AgendaList() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [inCalpeAreaFilter, setInCalpeAreaFilter] = useState('');
 
   const fetchItems = async () => {
     try {
@@ -63,11 +51,11 @@ export default function AgendaList() {
         page: page + 1,
         limit: rowsPerPage,
         search: searchQuery,
-        status: statusFilter
+        inCalpeArea: inCalpeAreaFilter
       });
-      // Handle both API response format and fallback data format
-      setItems(response.data?.items || response.items || response.data || []);
-      setTotalCount(response.data?.total || response.total || response.data?.length || 0);
+      // Handle API response format from admin backend (agendaItems) and legacy formats
+      setItems(response.data?.agendaItems || response.data?.items || response.items || []);
+      setTotalCount(response.data?.pagination?.total || response.data?.total || response.total || 0);
     } catch (err) {
       console.error('Failed to fetch agenda items:', err);
       setError('Failed to load agenda items. Please check if the Agenda service is running.');
@@ -79,20 +67,7 @@ export default function AgendaList() {
 
   useEffect(() => {
     fetchItems();
-  }, [page, rowsPerPage, searchQuery, statusFilter]);
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this agenda item?')) {
-      return;
-    }
-    try {
-      await agendaAPI.delete(id);
-      toast.success('Agenda item deleted successfully');
-      fetchItems();
-    } catch (err) {
-      toast.error('Failed to delete agenda item');
-    }
-  };
+  }, [page, rowsPerPage, searchQuery, inCalpeAreaFilter]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -116,22 +91,13 @@ export default function AgendaList() {
             Manage calendar and scheduled items
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={fetchItems}
-          >
-            Refresh
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate('/agenda/new')}
-          >
-            Add Item
-          </Button>
-        </Box>
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={fetchItems}
+        >
+          Refresh
+        </Button>
       </Box>
 
       {/* Filters */}
@@ -151,18 +117,15 @@ export default function AgendaList() {
             sx={{ minWidth: 300 }}
           />
           <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel>Status</InputLabel>
+            <InputLabel>Location</InputLabel>
             <Select
-              value={statusFilter}
-              label="Status"
-              onChange={(e) => setStatusFilter(e.target.value)}
+              value={inCalpeAreaFilter}
+              label="Location"
+              onChange={(e) => setInCalpeAreaFilter(e.target.value)}
             >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="scheduled">Scheduled</MenuItem>
-              <MenuItem value="in_progress">In Progress</MenuItem>
-              <MenuItem value="completed">Completed</MenuItem>
-              <MenuItem value="cancelled">Cancelled</MenuItem>
-              <MenuItem value="draft">Draft</MenuItem>
+              <MenuItem value="">All Events</MenuItem>
+              <MenuItem value="true">In Calpe Area</MenuItem>
+              <MenuItem value="false">Outside Calpe</MenuItem>
             </Select>
           </FormControl>
         </Box>
@@ -182,24 +145,23 @@ export default function AgendaList() {
             <TableHead>
               <TableRow>
                 <TableCell>Title</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Start Date</TableCell>
-                <TableCell>End Date</TableCell>
-                <TableCell>Status</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell>Time</TableCell>
                 <TableCell>Location</TableCell>
+                <TableCell>Calpe Area</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
               ) : items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                     <CalendarIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                     <Typography color="text.secondary">
                       No agenda items found
@@ -211,31 +173,40 @@ export default function AgendaList() {
                   <TableRow key={item.id || item._id} hover>
                     <TableCell>
                       <Typography variant="subtitle2" fontWeight="medium">
-                        {item.title}
+                        {item.title || item.title_en || 'Untitled'}
                       </Typography>
-                      {item.description && (
-                        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200, display: 'block' }}>
-                          {item.description}
+                      {(item.short_description || item.short_description_en) && (
+                        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 300, display: 'block' }}>
+                          {item.short_description || item.short_description_en}
                         </Typography>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={item.type || 'General'}
-                        size="small"
-                        variant="outlined"
-                      />
+                      {item.date ? new Date(item.date).toLocaleDateString('nl-NL', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      }) : '-'}
                     </TableCell>
-                    <TableCell>{formatDate(item.start_date || item.startDate)}</TableCell>
-                    <TableCell>{formatDate(item.end_date || item.endDate)}</TableCell>
+                    <TableCell>{item.time || '-'}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
+                        {item.location_name || '-'}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <Chip
-                        label={item.status || 'scheduled'}
+                        label={item.is_in_calpe_area ? 'Yes' : 'No'}
                         size="small"
-                        color={statusColors[item.status] || 'default'}
+                        color={item.is_in_calpe_area ? 'success' : 'default'}
+                        variant={item.is_in_calpe_area ? 'filled' : 'outlined'}
                       />
+                      {item.calpe_distance && (
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {item.calpe_distance} km
+                        </Typography>
+                      )}
                     </TableCell>
-                    <TableCell>{item.location || '-'}</TableCell>
                     <TableCell align="right">
                       <Tooltip title="View">
                         <IconButton
@@ -243,23 +214,6 @@ export default function AgendaList() {
                           onClick={() => navigate(`/agenda/${item.id || item._id}`)}
                         >
                           <ViewIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Edit">
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/agenda/edit/${item.id || item._id}`)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleDelete(item.id || item._id)}
-                        >
-                          <DeleteIcon />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
