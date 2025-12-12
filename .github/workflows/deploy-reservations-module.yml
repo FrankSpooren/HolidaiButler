@@ -1,0 +1,169 @@
+# =============================================================================
+# Reservations Module Deployment Pipeline
+# =============================================================================
+# Triggers: Only when reservations-module/** files change
+# Deploys: Reservations service (backend + widget)
+# Port: 3006
+# =============================================================================
+
+name: "Deploy: Reservations Module"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'reservations-module/**'
+      - 'modules/reservations-module/**'
+      - '!**/README.md'
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
+      component:
+        description: 'Component to deploy'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - widget
+          - backend
+          - both
+
+env:
+  NODE_VERSION: '20'
+  MODULE_NAME: 'reservations-module'
+  PM2_PROCESS_NAME: 'holidaibutler-reservations'
+  DEPLOY_PATH: '/var/www/api.holidaibutler.com/reservations-module'
+  WIDGET_PATH: '/var/www/reservations-widget.holidaibutler.com'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Detect Changes
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      widget: ${{ steps.filter.outputs.widget }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            widget:
+              - 'reservations-module/widget/**'
+              - 'modules/reservations-module/widget/**'
+            backend:
+              - 'reservations-module/backend/**'
+              - 'modules/reservations-module/backend/**'
+
+  # ---------------------------------------------------------------------------
+  # Deploy Backend
+  # ---------------------------------------------------------------------------
+  deploy-backend:
+    name: Deploy Reservations Backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event.inputs.component != 'widget'
+    runs-on: ubuntu-latest
+    environment: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine source path
+        id: source
+        run: |
+          if [ -d "modules/reservations-module/backend" ]; then
+            echo "path=modules/reservations-module/backend" >> $GITHUB_OUTPUT
+          else
+            echo "path=reservations-module/backend" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Backup and Deploy
+        run: |
+          ssh root@91.98.71.87 "mkdir -p ${{ env.DEPLOY_PATH }} /var/www/backups/reservations-module"
+          ssh root@91.98.71.87 "cp -r ${{ env.DEPLOY_PATH }} /var/www/backups/reservations-module/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            --exclude 'logs' \
+            ${{ steps.source.outputs.path }}/ \
+            root@91.98.71.87:${{ env.DEPLOY_PATH }}/
+
+      - name: Install and restart
+        run: |
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && npm ci --only=production 2>/dev/null || npm install --only=production && mkdir -p logs && (pm2 restart ${{ env.PM2_PROCESS_NAME }} 2>/dev/null || pm2 start server.js --name ${{ env.PM2_PROCESS_NAME }} --cwd ${{ env.DEPLOY_PATH }} 2>/dev/null || echo 'PM2 start pending') && pm2 save"
+
+      - name: Notify
+        run: echo "::notice title=Deployment Complete::Reservations Backend deployed to port 3006"
+
+  # ---------------------------------------------------------------------------
+  # Deploy Widget
+  # ---------------------------------------------------------------------------
+  deploy-widget:
+    name: Deploy Reservations Widget
+    needs: changes
+    if: needs.changes.outputs.widget == 'true' || github.event.inputs.component != 'backend'
+    runs-on: ubuntu-latest
+    environment: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine source path
+        id: source
+        run: |
+          if [ -d "modules/reservations-module/widget" ]; then
+            echo "path=modules/reservations-module/widget" >> $GITHUB_OUTPUT
+          else
+            echo "path=reservations-module/widget" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install and Build
+        working-directory: ${{ steps.source.outputs.path }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Deploy Widget
+        run: |
+          ssh root@91.98.71.87 "mkdir -p ${{ env.WIDGET_PATH }}"
+          rsync -avz --delete \
+            ${{ steps.source.outputs.path }}/dist/ \
+            root@91.98.71.87:${{ env.WIDGET_PATH }}/
+          ssh root@91.98.71.87 "chown -R www-data:www-data ${{ env.WIDGET_PATH }} && systemctl reload apache2"
+
+      - name: Notify
+        run: echo "::notice title=Deployment Complete::Reservations Widget deployed"
