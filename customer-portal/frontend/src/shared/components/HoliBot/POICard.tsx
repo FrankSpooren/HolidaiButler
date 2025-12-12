@@ -12,7 +12,7 @@ export function POICard({ poi, onClick }: POICardProps) {
   const imageUrl = poi.images && poi.images.length > 0 ? poi.images[0] : null;
 
   return (
-    <div className="poi-card" onClick={onClick}>
+    <div className="holibot-poi-card" onClick={onClick}>
       {imageUrl && (
         <div className="poi-card-image" style={{ backgroundImage: `url(${imageUrl})` }} />
       )}
