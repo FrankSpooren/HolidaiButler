@@ -238,9 +238,11 @@
   text-transform: capitalize;
 }
 
-/* Card wrapper - contains the card, used for scroll detection */
+/* Card wrapper - MUST fill grid cell for consistent card heights */
 .agenda-card-wrapper {
-  /* Normal block element, fills grid cell */
+  display: flex;
+  height: 100%;
+  min-height: 0;
 }
 
 /* Grid Layout - Single continuous grid, 4 columns on desktop */

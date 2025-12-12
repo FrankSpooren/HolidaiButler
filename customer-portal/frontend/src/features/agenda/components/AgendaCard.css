@@ -112,17 +112,17 @@
   background: #FFF0F0;
 }
 
-/* Content */
-.agenda-content {
+/* Content - HIGH SPECIFICITY */
+.agenda-card .agenda-content {
   padding: 16px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  
   gap: 8px;
 }
 
-.agenda-title {
+.agenda-card .agenda-title {
   font-size: 16px;
   font-weight: 600;
   color: #1F2937;
@@ -133,7 +133,7 @@
   overflow: hidden;
 }
 
-.agenda-description {
+.agenda-card .agenda-description {
   font-size: 13px;
   color: #6B7280;
   line-height: 1.5;
@@ -144,14 +144,14 @@
 }
 
 /* Meta Row */
-.agenda-meta-row {
+.agenda-card .agenda-meta-row {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-top: 4px;
 }
 
-.agenda-date {
+.agenda-card .agenda-date {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -159,13 +159,13 @@
   color: #6B7280;
 }
 
-.agenda-icon {
+.agenda-card .agenda-icon {
   width: 14px;
   height: 14px;
   color: #7FA594;
 }
 
-.agenda-rating {
+.agenda-card .agenda-rating {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -174,7 +174,7 @@
   font-weight: 500;
 }
 
-.agenda-star-icon {
+.agenda-card .agenda-star-icon {
   width: 14px;
   height: 14px;
   fill: #D4AF37;
@@ -182,7 +182,7 @@
 }
 
 /* Bottom Row */
-.agenda-bottom-row {
+.agenda-card .agenda-bottom-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -191,7 +191,7 @@
   gap: 8px;
 }
 
-.agenda-location-distance {
+.agenda-card .agenda-location-distance {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -199,7 +199,7 @@
   min-width: 0;
 }
 
-.agenda-location {
+.agenda-card .agenda-location {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -207,13 +207,13 @@
   color: #9CA3AF;
 }
 
-.agenda-location-text {
+.agenda-card .agenda-location-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.agenda-distance {
+.agenda-card .agenda-distance {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -222,13 +222,13 @@
   font-weight: 500;
 }
 
-.agenda-map-icon {
+.agenda-card .agenda-map-icon {
   width: 16px;
   height: 16px;
 }
 
 /* Comparison Checkbox */
-.agenda-comparison-checkbox {
+.agenda-card .agenda-comparison-checkbox {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -243,7 +243,7 @@
   flex-shrink: 0;
 }
 
-.agenda-comparison-checkbox:hover {
+.agenda-card .agenda-comparison-checkbox:hover {
   background: rgba(127, 165, 148, 0.2);
 }
 
@@ -260,7 +260,7 @@
   opacity: 0.5;
 }
 
-.agenda-comparison-label {
+.agenda-card .agenda-comparison-label {
   font-size: 11px;
   font-weight: 600;
   color: #1F2937;
@@ -268,12 +268,12 @@
 }
 
 /* Action Buttons */
-.agenda-actions {
+.agenda-card .agenda-actions {
   display: flex;
   border-top: 1px solid #F3F4F6;
 }
 
-.agenda-action-btn {
+.agenda-card .agenda-action-btn {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -290,25 +290,25 @@
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.agenda-action-btn:last-child {
+.agenda-card .agenda-action-btn:last-child {
   border-right: none;
 }
 
-.agenda-action-btn:hover {
+.agenda-card .agenda-action-btn:hover {
   background: #F9FAFB;
   color: #1F2937;
 }
 
-.agenda-action-btn span:first-child {
+.agenda-card .agenda-action-btn span:first-child {
   font-size: 16px;
 }
 
-.agenda-action-primary {
+.agenda-card .agenda-action-primary {
   color: #7FA594;
   font-weight: 600;
 }
 
-.agenda-action-primary:hover {
+.agenda-card .agenda-action-primary:hover {
   background: #7FA59410;
   color: #7FA594;
 }
@@ -351,39 +351,39 @@
 
 /* Responsive */
 @media (max-width: 640px) {
-  .agenda-image-container {
+  .agenda-card .agenda-image-container {
     height: 160px;
   }
 
-  .agenda-content {
+  .agenda-card .agenda-content {
     padding: 12px;
   }
 
-  .agenda-title {
+  .agenda-card .agenda-title {
     font-size: 14px;
   }
 
-  .agenda-description {
+  .agenda-card .agenda-description {
     font-size: 12px;
   }
 
-  .agenda-action-btn span:last-child {
+  .agenda-card .agenda-action-btn span:last-child {
     display: none;
   }
 
-  .agenda-action-btn {
+  .agenda-card .agenda-action-btn {
     padding: 12px 8px;
   }
 
-  .agenda-action-btn span:first-child {
+  .agenda-card .agenda-action-btn span:first-child {
     font-size: 18px;
   }
 
-  .agenda-comparison-checkbox {
+  .agenda-card .agenda-comparison-checkbox {
     padding: 3px 6px;
   }
 
-  .agenda-comparison-label {
+  .agenda-card .agenda-comparison-label {
     font-size: 10px;
   }
 
