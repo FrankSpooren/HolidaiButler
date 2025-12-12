@@ -153,7 +153,7 @@ export function AgendaPage() {
   const [filters, setFilters] = useState<AgendaFilters>(defaultFilters);
   const [showHeader, setShowHeader] = useState<boolean>(true);
   const [lastScrollY, setLastScrollY] = useState<number>(0);
-  const [visibleDate, setVisibleDate] = useState<string>('');
+  const [visibleDateKey, setVisibleDateKey] = useState<string>(''); // Store date key, not formatted string
 
   // Fetch events
   const { data: eventsData, isLoading, error } = useQuery({
@@ -246,6 +246,15 @@ export function AgendaPage() {
 
   const hasMore = filteredEvents.length >= limit && allEvents.length > limit;
 
+  // Compute formatted visible date from key - updates when language changes
+  const visibleDateFormatted = useMemo(() => {
+    if (!visibleDateKey) return '';
+    const locale = dateLocales[language] || dateLocales.en;
+    const formatStr = dateHeaderFormats[language] || dateHeaderFormats.en;
+    const date = new Date(visibleDateKey);
+    return format(date, formatStr, { locale });
+  }, [visibleDateKey, language]);
+
   // Get user location
   useEffect(() => {
     getUserLocation().then(setUserLocation).catch(() => {});
@@ -262,29 +271,29 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Set initial visible date
+  // Set initial visible date key
   useEffect(() => {
-    if (eventsByDate.length > 0 && !visibleDate) {
-      setVisibleDate(eventsByDate[0].dateFormatted);
+    if (eventsByDate.length > 0 && !visibleDateKey) {
+      setVisibleDateKey(eventsByDate[0].date);
     }
-  }, [eventsByDate, visibleDate]);
+  }, [eventsByDate, visibleDateKey]);
 
-  // Update visible date on scroll (for the subheader)
+  // Update visible date key on scroll (for the subheader)
   useEffect(() => {
     const handleDateScroll = () => {
       const dateHeaders = document.querySelectorAll('.agenda-date-header');
       for (let i = dateHeaders.length - 1; i >= 0; i--) {
         const header = dateHeaders[i] as HTMLElement;
         if (header.getBoundingClientRect().top <= 290) {
-          const dateStr = header.getAttribute('data-date-formatted');
-          if (dateStr && dateStr !== visibleDate) setVisibleDate(dateStr);
+          const dateKey = header.getAttribute('data-date-key');
+          if (dateKey && dateKey !== visibleDateKey) setVisibleDateKey(dateKey);
           break;
         }
       }
     };
     window.addEventListener('scroll', handleDateScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleDateScroll);
-  }, [visibleDate]);
+  }, [visibleDateKey]);
 
   const getDistance = (event: AgendaEvent): string => {
     if (!event.location?.coordinates || !userLocation) return '';
@@ -364,7 +373,7 @@ export function AgendaPage() {
         {/* Date subheader - inside filter row so they move together */}
         {!isLoading && !error && filteredEvents.length > 0 && (
           <div className="agenda-date-subheader">
-            <span className="agenda-date-subheader-text">{visibleDate}</span>
+            <span className="agenda-date-subheader-text">{visibleDateFormatted}</span>
           </div>
         )}
       </div>
@@ -387,7 +396,7 @@ export function AgendaPage() {
       {/* Grid View - Grouped by Date */}
       {!isLoading && !error && eventsByDate.map((group) => (
         <div key={group.date} className="agenda-date-section">
-          <div className="agenda-date-header" data-date-formatted={group.dateFormatted} />
+          <div className="agenda-date-header" data-date-key={group.date} />
           <div className="agenda-grid">
             {group.events.map((event) => (
               <AgendaCard
