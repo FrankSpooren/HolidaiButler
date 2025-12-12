@@ -17,10 +17,9 @@ import './AgendaPage.css';
 /**
  * AgendaPage - Events & Activities Calendar
  * Route: /agenda
- * Design: Matches POILandingPage exactly
  */
 
-// Interest category configuration - Colors matching POI page, with emoji icons
+// Interest category configuration
 const INTEREST_CATEGORIES = [
   { id: 'music', icon: '🎵', color: 'linear-gradient(135deg, #354f48, #49605a)' },
   { id: 'culture', icon: '🏛️', color: 'linear-gradient(135deg, #253444, #3a4856)' },
@@ -32,68 +31,14 @@ const INTEREST_CATEGORIES = [
   { id: 'creative', icon: '🎨', color: 'linear-gradient(135deg, #004568, #195777)' },
 ];
 
-// Category labels in all 6 languages - original Agenda labels
+// Category labels in all 6 languages
 const categoryLabels: Record<string, Record<string, string>> = {
-  nl: {
-    music: 'Muziek',
-    culture: 'Cultuur',
-    active: 'Actief',
-    nature: 'Natuur',
-    food: 'Food',
-    festivals: 'Festivals',
-    markets: 'Markten',
-    creative: 'Creatief',
-  },
-  en: {
-    music: 'Music',
-    culture: 'Culture',
-    active: 'Active',
-    nature: 'Nature',
-    food: 'Food',
-    festivals: 'Festivals',
-    markets: 'Markets',
-    creative: 'Creative',
-  },
-  de: {
-    music: 'Musik',
-    culture: 'Kultur',
-    active: 'Aktiv',
-    nature: 'Natur',
-    food: 'Essen',
-    festivals: 'Festivals',
-    markets: 'Märkte',
-    creative: 'Kreativ',
-  },
-  es: {
-    music: 'Música',
-    culture: 'Cultura',
-    active: 'Activo',
-    nature: 'Naturaleza',
-    food: 'Comida',
-    festivals: 'Festivales',
-    markets: 'Mercados',
-    creative: 'Creativo',
-  },
-  sv: {
-    music: 'Musik',
-    culture: 'Kultur',
-    active: 'Aktiv',
-    nature: 'Natur',
-    food: 'Mat',
-    festivals: 'Festivaler',
-    markets: 'Marknader',
-    creative: 'Kreativ',
-  },
-  pl: {
-    music: 'Muzyka',
-    culture: 'Kultura',
-    active: 'Aktywne',
-    nature: 'Natura',
-    food: 'Jedzenie',
-    festivals: 'Festiwale',
-    markets: 'Targi',
-    creative: 'Kreatywny',
-  },
+  nl: { music: 'Muziek', culture: 'Cultuur', active: 'Actief', nature: 'Natuur', food: 'Food', festivals: 'Festivals', markets: 'Markten', creative: 'Creatief' },
+  en: { music: 'Music', culture: 'Culture', active: 'Active', nature: 'Nature', food: 'Food', festivals: 'Festivals', markets: 'Markets', creative: 'Creative' },
+  de: { music: 'Musik', culture: 'Kultur', active: 'Aktiv', nature: 'Natur', food: 'Essen', festivals: 'Festivals', markets: 'Märkte', creative: 'Kreativ' },
+  es: { music: 'Música', culture: 'Cultura', active: 'Activo', nature: 'Naturaleza', food: 'Comida', festivals: 'Festivales', markets: 'Mercados', creative: 'Creativo' },
+  sv: { music: 'Musik', culture: 'Kultur', active: 'Aktiv', nature: 'Natur', food: 'Mat', festivals: 'Festivaler', markets: 'Marknader', creative: 'Kreativ' },
+  pl: { music: 'Muzyka', culture: 'Kultura', active: 'Aktywne', nature: 'Natura', food: 'Jedzenie', festivals: 'Festiwale', markets: 'Targi', creative: 'Kreatywny' },
 };
 
 // Search placeholder translations
@@ -116,18 +61,10 @@ const quickFilterLabels: Record<string, { today: string; tomorrow: string; weeke
   pl: { today: 'Dzisiaj', tomorrow: 'Jutro', weekend: 'Ten weekend' },
 };
 
-
 // Date locales for formatting
-const dateLocales: Record<string, Locale> = {
-  nl: nl,
-  en: enUS,
-  de: de,
-  es: es,
-  sv: sv,
-  pl: pl,
-};
+const dateLocales: Record<string, Locale> = { nl: nl, en: enUS, de: de, es: es, sv: sv, pl: pl };
 
-// Date header translations
+// Date header formats
 const dateHeaderFormats: Record<string, string> = {
   nl: 'EEEE, d MMMM yyyy',
   en: 'EEEE, MMMM d, yyyy',
@@ -137,51 +74,40 @@ const dateHeaderFormats: Record<string, string> = {
   pl: 'EEEE, d MMMM yyyy',
 };
 
-// Keywords for smart categorization based on title/description
+// Keywords for smart categorization
 const categoryKeywords: Record<string, string[]> = {
-  music: ['music', 'concert', 'band', 'orchestra', 'jazz', 'rock', 'live music', 'dj', 'festival music', 'singing', 'choir', 'guitar', 'piano', 'flamenco'],
-  culture: ['museum', 'history', 'heritage', 'castle', 'church', 'cathedral', 'monument', 'archaeological', 'historic', 'cultural', 'tradition', 'folklore', 'exhibition', 'gallery', 'art exhibition'],
+  music: ['music', 'concert', 'band', 'orchestra', 'jazz', 'rock', 'live music', 'dj', 'singing', 'choir', 'guitar', 'piano', 'flamenco'],
+  culture: ['museum', 'history', 'heritage', 'castle', 'church', 'cathedral', 'monument', 'archaeological', 'historic', 'cultural', 'tradition', 'folklore', 'exhibition', 'gallery'],
   active: ['hiking', 'cycling', 'running', 'sport', 'fitness', 'yoga', 'swimming', 'tennis', 'golf', 'football', 'basketball', 'climbing', 'kayak', 'surfing', 'diving', 'walk', 'tour', 'adventure'],
-  nature: ['beach', 'nature', 'park', 'garden', 'mountain', 'forest', 'wildlife', 'bird', 'botanical', 'landscape', 'outdoor', 'natural', 'eco', 'hiking', 'trail', 'peñon', 'ifach', 'sierra'],
+  nature: ['beach', 'nature', 'park', 'garden', 'mountain', 'forest', 'wildlife', 'bird', 'botanical', 'landscape', 'outdoor', 'natural', 'eco', 'trail', 'peñon', 'ifach', 'sierra'],
   food: ['food', 'restaurant', 'tapas', 'wine', 'gastronomy', 'cooking', 'culinary', 'tasting', 'dinner', 'lunch', 'brunch', 'cafe', 'bar', 'paella', 'cuisine'],
   festivals: ['festival', 'fiesta', 'carnival', 'parade', 'celebration', 'party', 'fireworks', 'fair', 'feria', 'hogueras', 'moors', 'christians'],
-  markets: ['market', 'mercado', 'flea', 'antique', 'craft', 'artisan', 'farmers', 'street market', 'bazaar', 'fair'],
-  creative: ['painting', 'art class', 'workshop', 'craft', 'pottery', 'sculpture', 'photography', 'drawing', 'creative', 'artistic', 'design', 'handmade', 'diy', 'oil painting', 'watercolor', 'ceramic'],
+  markets: ['market', 'mercado', 'flea', 'antique', 'craft', 'artisan', 'farmers', 'street market', 'bazaar'],
+  creative: ['painting', 'art class', 'workshop', 'craft', 'pottery', 'sculpture', 'photography', 'drawing', 'creative', 'artistic', 'design', 'handmade', 'diy'],
 };
 
-// Smart categorization function - scans title and description
+// Smart categorization function
 function detectCategory(event: AgendaEvent, language: string): string {
   const title = typeof event.title === 'string'
     ? event.title.toLowerCase()
     : (event.title?.[language] || event.title?.en || event.title?.nl || '').toLowerCase();
-
   const description = typeof event.description === 'string'
     ? event.description.toLowerCase()
     : (event.description?.[language] || event.description?.en || event.description?.nl || '').toLowerCase();
-
   const combinedText = `${title} ${description}`;
 
-  // Score each category based on keyword matches
   const scores: Record<string, number> = {};
-
   for (const [category, keywords] of Object.entries(categoryKeywords)) {
     scores[category] = 0;
     for (const keyword of keywords) {
       if (combinedText.includes(keyword)) {
-        // Title matches are worth more
-        if (title.includes(keyword)) {
-          scores[category] += 3;
-        } else {
-          scores[category] += 1;
-        }
+        scores[category] += title.includes(keyword) ? 3 : 1;
       }
     }
   }
 
-  // Find the category with highest score
   let maxScore = 0;
-  let bestCategory = 'culture'; // default fallback
-
+  let bestCategory = 'culture';
   for (const [category, score] of Object.entries(scores)) {
     if (score > maxScore) {
       maxScore = score;
@@ -189,43 +115,25 @@ function detectCategory(event: AgendaEvent, language: string): string {
     }
   }
 
-  // If no keywords matched, use the event's primaryCategory with mapping
   if (maxScore === 0 && event.primaryCategory) {
     const mapped = categoryMapping[event.primaryCategory];
     if (mapped) return mapped;
   }
-
   return bestCategory;
 }
 
-// Map event categories to interest categories (fallback)
 const categoryMapping: Record<string, string> = {
-  culture: 'culture',
-  exhibitions: 'culture',
-  festivals: 'festivals',
-  music: 'music',
-  markets: 'markets',
-  'food-drink': 'food',
-  'active-sports': 'active',
-  nature: 'nature',
-  tours: 'culture',
-  workshops: 'creative',
-  entertainment: 'festivals',
-  folklore: 'culture',
-  beach: 'nature',
-  creative: 'creative',
+  culture: 'culture', exhibitions: 'culture', festivals: 'festivals', music: 'music',
+  markets: 'markets', 'food-drink': 'food', 'active-sports': 'active', nature: 'nature',
+  tours: 'culture', workshops: 'creative', entertainment: 'festivals', folklore: 'culture',
+  beach: 'nature', creative: 'creative',
 };
 
-const defaultFilters: AgendaFilters = {
-  interests: [],
-  distance: 50,
-  company: [],
-  dateType: 'all',
-};
+const defaultFilters: AgendaFilters = { interests: [], distance: 50, company: [], dateType: 'all' };
 
 export function AgendaPage() {
   const { t, language } = useLanguage();
-  const { agendaFavorites, isAgendaFavorite, toggleAgendaFavorite } = useAgendaFavorites();
+  const { isAgendaFavorite, toggleAgendaFavorite } = useAgendaFavorites();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [limit, setLimit] = useState<number>(12);
@@ -243,7 +151,7 @@ export function AgendaPage() {
     queryFn: () => agendaService.getEvents({
       search: searchQuery || undefined,
       categories: selectedCategory || undefined,
-      limit: 100, // Fetch more for client-side filtering
+      limit: 100,
       page: 1,
     }),
     staleTime: 60000,
@@ -251,115 +159,61 @@ export function AgendaPage() {
 
   const allEvents = eventsData?.data || [];
 
-  // Filter events based on filters with smart categorization
+  // Filter events
   const filteredEvents = useMemo(() => {
     let result = [...allEvents];
 
-    // Filter by selected category chip using smart detection
     if (selectedCategory) {
-      result = result.filter(event => {
-        const detectedCategory = detectCategory(event, language);
-        return detectedCategory === selectedCategory;
-      });
+      result = result.filter(event => detectCategory(event, language) === selectedCategory);
     }
-
-    // Filter by interests from filter modal using smart detection
     if (filters.interests.length > 0) {
-      result = result.filter(event => {
-        const detectedCategory = detectCategory(event, language);
-        return filters.interests.includes(detectedCategory);
-      });
+      result = result.filter(event => filters.interests.includes(detectCategory(event, language)));
     }
-
-    // Filter by distance
     if (filters.distance < 50 && userLocation) {
       result = result.filter(event => {
         if (!event.location?.coordinates) return true;
-        const dist = parseFloat(
-          getDistanceFromUser(
-            { latitude: event.location.coordinates.lat, longitude: event.location.coordinates.lng },
-            userLocation
-          ).replace(' km', '')
-        );
+        const dist = parseFloat(getDistanceFromUser(
+          { latitude: event.location.coordinates.lat, longitude: event.location.coordinates.lng },
+          userLocation
+        ).replace(' km', ''));
         return !isNaN(dist) && dist <= filters.distance;
       });
     }
-
-    // Filter by date
     if (filters.dateType !== 'all') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const endOfWeekend = new Date(today);
-      const dayOfWeek = today.getDay();
-      const daysUntilSunday = 7 - dayOfWeek;
-      endOfWeekend.setDate(endOfWeekend.getDate() + daysUntilSunday);
+      endOfWeekend.setDate(endOfWeekend.getDate() + (7 - today.getDay()));
 
       result = result.filter(event => {
         const eventDate = new Date(event.startDate);
         eventDate.setHours(0, 0, 0, 0);
-
         switch (filters.dateType) {
-          case 'today':
-            return eventDate.getTime() === today.getTime();
-          case 'tomorrow':
-            return eventDate.getTime() === tomorrow.getTime();
-          case 'weekend':
-            return eventDate >= today && eventDate <= endOfWeekend;
+          case 'today': return eventDate.getTime() === today.getTime();
+          case 'tomorrow': return eventDate.getTime() === tomorrow.getTime();
+          case 'weekend': return eventDate >= today && eventDate <= endOfWeekend;
           case 'custom':
             if (filters.dateStart && filters.dateEnd) {
-              const start = new Date(filters.dateStart);
-              const end = new Date(filters.dateEnd);
-              return eventDate >= start && eventDate <= end;
+              return eventDate >= new Date(filters.dateStart) && eventDate <= new Date(filters.dateEnd);
             }
             return true;
-          default:
-            return true;
+          default: return true;
         }
       });
     }
-
-    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(event => {
-        const title = typeof event.title === 'string'
-          ? event.title
-          : event.title?.[language] || event.title?.nl || event.title?.en || '';
+        const title = typeof event.title === 'string' ? event.title : event.title?.[language] || event.title?.nl || event.title?.en || '';
         return title.toLowerCase().includes(query);
       });
     }
-
     return result.slice(0, limit);
   }, [allEvents, selectedCategory, filters, userLocation, searchQuery, language, limit]);
 
-  const hasMore = filteredEvents.length >= limit && allEvents.length > limit;
-
-  // Get user location
-  useEffect(() => {
-    getUserLocation()
-      .then(setUserLocation)
-      .catch(() => console.log('Geolocation not available'));
-  }, []);
-
-  // Scroll direction detection
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      if (currentScrollY < 50) {
-        setShowHeader(true);
-      } else if (currentScrollY > lastScrollY) {
-        setShowHeader(false);
-      } else {
-        setShowHeader(true);
-      }
-      setLastScrollY(currentScrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-  
-  // Group events by date for display
+  // Group events by date
   const eventsByDate = useMemo(() => {
     const groups: { date: string; dateFormatted: string; events: typeof filteredEvents }[] = [];
     const locale = dateLocales[language] || dateLocales.en;
@@ -369,7 +223,6 @@ export function AgendaPage() {
       const eventDate = new Date(event.startDate);
       const dateKey = eventDate.toISOString().split('T')[0];
       const dateFormatted = format(eventDate, formatStr, { locale });
-
       const existingGroup = groups.find(g => g.date === dateKey);
       if (existingGroup) {
         existingGroup.events.push(event);
@@ -377,46 +230,52 @@ export function AgendaPage() {
         groups.push({ date: dateKey, dateFormatted, events: [event] });
       }
     });
-
-    // Sort groups by date
     groups.sort((a, b) => a.date.localeCompare(b.date));
-
-    // Set initial visible date
-    if (groups.length > 0 && !visibleDate) {
-      setVisibleDate(groups[0].dateFormatted);
-    }
-
     return groups;
-  }, [filteredEvents, language, visibleDate]);
+  }, [filteredEvents, language]);
 
-  // Update visible date based on scroll position
+  const hasMore = filteredEvents.length >= limit && allEvents.length > limit;
+
+  // Get user location
+  useEffect(() => {
+    getUserLocation().then(setUserLocation).catch(() => {});
+  }, []);
+
+  // Scroll direction detection
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setShowHeader(currentScrollY < 50 || currentScrollY <= lastScrollY);
+      setLastScrollY(currentScrollY);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
+  // Set initial visible date
+  useEffect(() => {
+    if (eventsByDate.length > 0 && !visibleDate) {
+      setVisibleDate(eventsByDate[0].dateFormatted);
+    }
+  }, [eventsByDate, visibleDate]);
+
+  // Update visible date on scroll
   useEffect(() => {
     const handleDateScroll = () => {
       const dateHeaders = document.querySelectorAll('.agenda-date-header');
-      const stickyOffset = 280; // Height of sticky elements above
-
       for (let i = dateHeaders.length - 1; i >= 0; i--) {
         const header = dateHeaders[i] as HTMLElement;
-        const rect = header.getBoundingClientRect();
-
-        if (rect.top <= stickyOffset + 10) {
+        if (header.getBoundingClientRect().top <= 290) {
           const dateStr = header.getAttribute('data-date-formatted');
-          if (dateStr && dateStr !== visibleDate) {
-            setVisibleDate(dateStr);
-          }
+          if (dateStr && dateStr !== visibleDate) setVisibleDate(dateStr);
           break;
         }
       }
     };
-
     window.addEventListener('scroll', handleDateScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleDateScroll);
   }, [visibleDate]);
 
-  return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
-
-  // Calculate distance to event
   const getDistance = (event: AgendaEvent): string => {
     if (!event.location?.coordinates || !userLocation) return '';
     return getDistanceFromUser(
@@ -425,44 +284,8 @@ export function AgendaPage() {
     );
   };
 
-  // Handlers
-  const handleEventClick = (eventId: string) => {
-    setSelectedEventId(eventId);
-  };
-
-  const handleCloseModal = () => {
-    setSelectedEventId(null);
-  };
-
-  const handleCategoryClick = (categoryId: string) => {
-    setSelectedCategory(prev => prev === categoryId ? '' : categoryId);
-    setLimit(12);
-  };
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    setLimit(12);
-  };
-
-  const handleLoadMore = () => {
-    setLimit(prev => prev + 12);
-  };
-
-  const handleToggleSave = (eventId: string) => {
-    toggleAgendaFavorite(eventId);
-  };
-
-  const handleApplyFilters = (newFilters: AgendaFilters) => {
-    setFilters(newFilters);
-    setLimit(12);
-  };
-
-  // Handle quick filter button clicks
   const handleQuickFilter = (type: 'today' | 'tomorrow' | 'weekend') => {
-    setFilters(prev => ({
-      ...prev,
-      dateType: prev.dateType === type ? 'all' : type, // Toggle off if already active
-    }));
+    setFilters(prev => ({ ...prev, dateType: prev.dateType === type ? 'all' : type }));
     setLimit(12);
   };
 
@@ -486,7 +309,7 @@ export function AgendaPage() {
             className="agenda-search-input"
             placeholder={searchPlaceholders[language] || searchPlaceholders.en}
             value={searchQuery}
-            onChange={handleSearch}
+            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); }}
           />
         </div>
       </div>
@@ -499,7 +322,7 @@ export function AgendaPage() {
               key={category.id}
               className={`agenda-category-chip ${selectedCategory === category.id ? 'active' : ''}`}
               style={{ background: category.color }}
-              onClick={() => handleCategoryClick(category.id)}
+              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); }}
             >
               <span className="agenda-category-icon">{category.icon}</span>
               {categoryLabels[language]?.[category.id] || categoryLabels.en[category.id]}
@@ -511,28 +334,27 @@ export function AgendaPage() {
       {/* Filter Row with Quick Filters */}
       <div className={`agenda-filter-row ${showHeader ? 'header-visible' : 'header-hidden'}`}>
         <button className="agenda-filter-btn" onClick={() => setFilterModalOpen(true)}>
+          🔽 {t.poi?.filters || 'Filters'} ({getActiveFilterCount()})
         </button>
         <div className="agenda-quick-filters">
-          <button
-            className={`agenda-quick-filter-btn ${filters.dateType === 'today' ? 'active' : ''}`}
-            onClick={() => handleQuickFilter('today')}
-          >
+          <button className={`agenda-quick-filter-btn ${filters.dateType === 'today' ? 'active' : ''}`} onClick={() => handleQuickFilter('today')}>
             {quickFilterLabels[language]?.today || 'Today'}
           </button>
-          <button
-            className={`agenda-quick-filter-btn ${filters.dateType === 'tomorrow' ? 'active' : ''}`}
-            onClick={() => handleQuickFilter('tomorrow')}
-          >
+          <button className={`agenda-quick-filter-btn ${filters.dateType === 'tomorrow' ? 'active' : ''}`} onClick={() => handleQuickFilter('tomorrow')}>
             {quickFilterLabels[language]?.tomorrow || 'Tomorrow'}
           </button>
-          <button
-            className={`agenda-quick-filter-btn ${filters.dateType === 'weekend' ? 'active' : ''}`}
-            onClick={() => handleQuickFilter('weekend')}
-          >
+          <button className={`agenda-quick-filter-btn ${filters.dateType === 'weekend' ? 'active' : ''}`} onClick={() => handleQuickFilter('weekend')}>
             {quickFilterLabels[language]?.weekend || 'This Weekend'}
           </button>
         </div>
       </div>
+
+      {/* Sticky Date Subheader */}
+      {!isLoading && !error && filteredEvents.length > 0 && (
+        <div className="agenda-sticky-date-header">
+          <span className="agenda-sticky-date-text">{visibleDate}</span>
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && (
@@ -549,32 +371,37 @@ export function AgendaPage() {
         </div>
       )}
 
-      {/* Grid View */}
-      {!isLoading && !error && (
-        <div className="agenda-grid">
-          {filteredEvents.map((event) => (
-            <AgendaCard
-              key={event._id}
-              event={event}
-              onClick={() => handleEventClick(event._id)}
-              onSave={handleToggleSave}
-              isSaved={isAgendaFavorite(event._id)}
-              distance={getDistance(event)}
-              detectedCategory={detectCategory(event, language)}
-            />
-          ))}
+      {/* Grid View - Grouped by Date */}
+      {!isLoading && !error && eventsByDate.map((group) => (
+        <div key={group.date} className="agenda-date-section">
+          <div className="agenda-date-header" data-date-formatted={group.dateFormatted}>
+            {group.dateFormatted}
+          </div>
+          <div className="agenda-grid">
+            {group.events.map((event) => (
+              <AgendaCard
+                key={event._id}
+                event={event}
+                onClick={() => setSelectedEventId(event._id)}
+                onSave={toggleAgendaFavorite}
+                isSaved={isAgendaFavorite(event._id)}
+                distance={getDistance(event)}
+                detectedCategory={detectCategory(event, language)}
+              />
+            ))}
+          </div>
         </div>
-      )}
+      ))}
 
       {/* Load More */}
       {!isLoading && !error && hasMore && (
-        <button className="agenda-load-more" onClick={handleLoadMore}>
+        <button className="agenda-load-more" onClick={() => setLimit(prev => prev + 12)}>
           {t.poi?.loadMore || 'Load more'} ({allEvents.length - filteredEvents.length} remaining)
         </button>
       )}
 
       {/* No Results */}
-      {!isLoading && !error && eventsByDate.length === 0 && (
+      {!isLoading && !error && filteredEvents.length === 0 && (
         <div className="agenda-no-results">
           <p className="agenda-no-results-icon">🔍</p>
           <h3>{t.poi?.noResults || 'No results found'}</h3>
@@ -586,7 +413,7 @@ export function AgendaPage() {
       <AgendaFilterModal
         isOpen={filterModalOpen}
         onClose={() => setFilterModalOpen(false)}
-        onApply={handleApplyFilters}
+        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); }}
         initialFilters={filters}
         resultCount={filteredEvents.length}
       />
@@ -596,7 +423,7 @@ export function AgendaPage() {
         <AgendaDetailModal
           eventId={selectedEventId}
           isOpen={selectedEventId !== null}
-          onClose={handleCloseModal}
+          onClose={() => setSelectedEventId(null)}
         />
       )}
 
@@ -609,9 +436,7 @@ export function AgendaPage() {
             <Link to="/terms" className="agenda-footer-link">Terms of Service</Link>
             <Link to="/contact" className="agenda-footer-link">Contact</Link>
           </div>
-          <p className="agenda-footer-copy">
-            © 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.
-          </p>
+          <p className="agenda-footer-copy">© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.</p>
         </div>
       </footer>
     </>
