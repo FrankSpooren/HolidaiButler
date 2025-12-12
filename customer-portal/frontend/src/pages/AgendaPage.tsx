@@ -106,6 +106,37 @@ const searchPlaceholders: Record<string, string> = {
   pl: 'Szukaj wydarzeń i aktywności',
 };
 
+// Quick filter button translations
+const quickFilterLabels: Record<string, { today: string; tomorrow: string; weekend: string }> = {
+  nl: { today: 'Vandaag', tomorrow: 'Morgen', weekend: 'Dit weekend' },
+  en: { today: 'Today', tomorrow: 'Tomorrow', weekend: 'This Weekend' },
+  de: { today: 'Heute', tomorrow: 'Morgen', weekend: 'Dieses Wochenende' },
+  es: { today: 'Hoy', tomorrow: 'Mañana', weekend: 'Este fin de semana' },
+  sv: { today: 'Idag', tomorrow: 'Imorgon', weekend: 'Denna helg' },
+  pl: { today: 'Dzisiaj', tomorrow: 'Jutro', weekend: 'Ten weekend' },
+};
+
+
+// Date locales for formatting
+const dateLocales: Record<string, Locale> = {
+  nl: nl,
+  en: enUS,
+  de: de,
+  es: es,
+  sv: sv,
+  pl: pl,
+};
+
+// Date header translations
+const dateHeaderFormats: Record<string, string> = {
+  nl: 'EEEE, d MMMM yyyy',
+  en: 'EEEE, MMMM d, yyyy',
+  de: 'EEEE, d. MMMM yyyy',
+  es: "EEEE, d 'de' MMMM 'de' yyyy",
+  sv: 'EEEE d MMMM yyyy',
+  pl: 'EEEE, d MMMM yyyy',
+};
+
 // Keywords for smart categorization based on title/description
 const categoryKeywords: Record<string, string[]> = {
   music: ['music', 'concert', 'band', 'orchestra', 'jazz', 'rock', 'live music', 'dj', 'festival music', 'singing', 'choir', 'guitar', 'piano', 'flamenco'],
