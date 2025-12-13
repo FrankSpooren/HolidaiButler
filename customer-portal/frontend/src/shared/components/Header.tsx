@@ -149,8 +149,10 @@ export function Header() {
           💬 {t.nav.holibot}
         </a>
         <Link to="/agenda" className="nav-link" onClick={() => setMenuOpen(false)}>📅 {t.nav.agenda}</Link>
+        {/* TEMPORARILY DISABLED - modules not ready for production
         <Link to="/reservations" className="nav-link" onClick={() => setMenuOpen(false)}>🍽️ {t.nav.reservations || 'Reserveren'}</Link>
         <Link to="/tickets" className="nav-link" onClick={() => setMenuOpen(false)}>🎫 {t.nav.tickets || 'Tickets'}</Link>
+        */}
         <Link to="/favorites" className="nav-link" onClick={() => setMenuOpen(false)}>❤️ {t.nav.favorites}</Link>
         <div className="nav-separator"></div>
         <Link to="/account" className="nav-link" onClick={() => setMenuOpen(false)}>👤 {t.nav.account}</Link>
