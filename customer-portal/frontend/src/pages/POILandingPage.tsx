@@ -4,7 +4,7 @@ import { usePOIs } from '../features/poi/hooks/usePOIs';
 import { poiService } from '../features/poi/services/poiService';
 import type { POI } from '../features/poi/types/poi.types';
 import { MapView } from '../features/poi/components/MapView';
-import { POIImage } from '../features/poi/components/POIImage';
+import { POITileCarousel } from '../features/poi/components/POITileCarousel';
 import { POIRating } from '../features/poi/components/POIRating';
 import { POITileActions } from '../features/poi/components/POITileActions';
 import { POIDetailModal } from '../features/poi/components/POIDetailModal';
@@ -593,8 +593,10 @@ export function POILandingPage() {
               </div>
 
               {/* POI Image - NEW COMPONENT */}
-              <POIImage
-                poi={poi}
+              <POITileCarousel
+                images={poi.images || []}
+                thumbnailUrl={poi.thumbnail_url}
+                poiName={poi.name}
                 height="200px"
                 categoryColor={getCategoryColor(poi.category)}
                 categoryIcon={getCategoryIcon(poi.category)}
@@ -675,12 +677,13 @@ export function POILandingPage() {
             <div key={poi.id} className="poi-list-item">
               {/* POI Image - NEW COMPONENT */}
               <div className="poi-list-image-wrapper" onClick={() => handlePOIClick(poi.id)} style={{ cursor: 'pointer' }}>
-                <POIImage
-                  poi={poi}
+                <POITileCarousel
+                  images={poi.images || []}
+                  thumbnailUrl={poi.thumbnail_url}
+                  poiName={poi.name}
                   height="120px"
                   categoryColor={getCategoryColor(poi.category)}
                   categoryIcon={getCategoryIcon(poi.category)}
-                  className="poi-list-image"
                 />
               </div>
 
