@@ -82,36 +82,36 @@
   opacity: 0.8;
 }
 
-/* Dot indicators */
+/* Dot indicators - compact style */
 .poi-tile-carousel-dots {
   position: absolute;
-  bottom: 12px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 6px;
+  gap: 4px;
   z-index: 10;
 }
 
 .poi-tile-carousel-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   padding: 0;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .poi-tile-carousel-dot:hover {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .poi-tile-carousel-dot.active {
   background: white;
-  transform: scale(1.2);
+  transform: scale(1.3);
 }
 
 /* Image counter */
@@ -140,15 +140,15 @@
   z-index: 5;
 }
 
-/* Touch feedback */
+/* Touch feedback - slightly larger for touch targets */
 @media (hover: none) {
   .poi-tile-carousel-dot {
-    width: 10px;
-    height: 10px;
+    width: 7px;
+    height: 7px;
   }
   
   .poi-tile-carousel-dots {
-    gap: 8px;
+    gap: 5px;
   }
 }
 
