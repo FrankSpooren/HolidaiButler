@@ -29,6 +29,8 @@ export interface POI {
   content_quality_score: number | null;
   created_at: string;
   updated_at: string;
+  // Language info from API
+  _language?: string;
 }
 
 export interface POISearchParams {
@@ -45,7 +47,9 @@ export interface POISearchParams {
   sort?: string;
   limit?: number;
   offset?: number;
-  require_images?: boolean; // NEW: Optional filter for POIs with images (presentation mode)
+  require_images?: boolean;
+  // Language parameter for translations (en, nl, de, es, sv, pl)
+  lang?: string;
 }
 
 export interface POIResponse {
@@ -60,5 +64,6 @@ export interface POIResponse {
     next_cursor: number | null;
     has_more: boolean;
     pagination_type: string;
+    language?: string;
   };
 }
