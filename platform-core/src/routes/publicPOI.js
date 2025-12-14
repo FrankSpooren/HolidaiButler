@@ -3,6 +3,7 @@
  * Endpoints for customer-facing POI data (no authentication required)
  * FIXED: Use correct field names (verified, active) instead of non-existent 'status' field
  * Merged: Supports both page-based and offset-based pagination
+ * Updated: 2025-12-14 - Added language support for POI translations (NL, DE, ES, SV, PL)
  */
 
 import express from 'express';
@@ -11,6 +12,9 @@ import { Op } from 'sequelize';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
+
+// Supported languages for POI translations
+const SUPPORTED_LANGUAGES = ['en', 'nl', 'de', 'es', 'sv', 'pl'];
 
 // Import POI model dynamically to handle connection issues
 let POI = null;
@@ -26,6 +30,38 @@ const getPOIModel = async () => {
     }
   }
   return POI;
+};
+
+/**
+ * Extract language from request (query param or Accept-Language header)
+ * @param {Request} req - Express request object
+ * @returns {string} Language code (en, nl, de, es, sv, pl)
+ */
+const getLanguageFromRequest = (req) => {
+  // 1. Check query parameter first (highest priority)
+  if (req.query.lang && SUPPORTED_LANGUAGES.includes(req.query.lang.toLowerCase())) {
+    return req.query.lang.toLowerCase();
+  }
+
+  // 2. Check Accept-Language header
+  const acceptLanguage = req.headers['accept-language'];
+  if (acceptLanguage) {
+    // Parse Accept-Language header (e.g., "nl-NL,nl;q=0.9,en;q=0.8")
+    const languages = acceptLanguage.split(',').map(lang => {
+      const [code] = lang.trim().split(';');
+      return code.split('-')[0].toLowerCase(); // Get base language code
+    });
+
+    // Find first supported language
+    for (const lang of languages) {
+      if (SUPPORTED_LANGUAGES.includes(lang)) {
+        return lang;
+      }
+    }
+  }
+
+  // 3. Default to English
+  return 'en';
 };
 
 /**
@@ -54,10 +90,32 @@ const safeJSONParse = (data, defaultValue = null) => {
 };
 
 /**
+ * Get translated field value with fallback to English
+ * @param {Object} data - POI data object
+ * @param {string} fieldBase - Base field name (e.g., 'enriched_tile_description')
+ * @param {string} lang - Target language code
+ * @returns {string|null} Translated value or fallback
+ */
+const getTranslatedField = (data, fieldBase, lang) => {
+  // For English, return the base field
+  if (lang === 'en') {
+    return data[fieldBase];
+  }
+
+  // Try to get the translated field
+  const translatedField = `${fieldBase}_${lang}`;
+  const translatedValue = data[translatedField];
+
+  // Return translated value if exists, otherwise fallback to English
+  return translatedValue || data[fieldBase];
+};
+
+/**
  * Format POI from database to public API response format
  * Uses actual database column names (is_active, rating, etc.)
+ * Supports language-specific translations for enriched content
  */
-const formatPOIForPublic = (poi) => {
+const formatPOIForPublic = (poi, lang = 'en') => {
   const data = poi.toJSON ? poi.toJSON() : poi;
   return {
     id: data.id,
@@ -91,6 +149,13 @@ const formatPOIForPublic = (poi) => {
     featured: data.featured || false,
     popularity_score: data.popularity_score || 0,
     google_placeid: data.google_placeid,
+    // Translated enriched content
+    enriched_tile_description: getTranslatedField(data, 'enriched_tile_description', lang),
+    enriched_detail_description: getTranslatedField(data, 'enriched_detail_description', lang),
+    enriched_highlights: safeJSONParse(data.enriched_highlights, []),
+    enriched_target_audience: data.enriched_target_audience,
+    // Include language info in response
+    _language: lang,
     created_at: data.created_at || data.last_updated || new Date().toISOString(),
     updated_at: data.last_updated || new Date().toISOString()
   };
@@ -100,6 +165,7 @@ const formatPOIForPublic = (poi) => {
  * @route   GET /api/v1/pois
  * @desc    Get all published POIs (public)
  * @access  Public
+ * @query   lang - Language code (en, nl, de, es, sv, pl) - optional, defaults to Accept-Language header or 'en'
  */
 router.get('/', async (req, res) => {
   try {
@@ -111,6 +177,9 @@ router.get('/', async (req, res) => {
         message: 'Database not connected'
       });
     }
+
+    // Get language from request
+    const lang = getLanguageFromRequest(req);
 
     const {
       q,
@@ -173,8 +242,8 @@ router.get('/', async (req, res) => {
       order
     });
 
-    // Transform data for frontend compatibility
-    const pois = rows.map(formatPOIForPublic);
+    // Transform data for frontend compatibility with language support
+    const pois = rows.map(poi => formatPOIForPublic(poi, lang));
 
     // Return in format that supports both pagination styles
     res.json({
@@ -188,7 +257,8 @@ router.get('/', async (req, res) => {
         pages: Math.ceil(count / parseInt(limit)),
         count: pois.length,
         has_more: calculatedOffset + pois.length < count,
-        next_cursor: calculatedOffset + pois.length < count ? calculatedOffset + parseInt(limit) : null
+        next_cursor: calculatedOffset + pois.length < count ? calculatedOffset + parseInt(limit) : null,
+        language: lang
       }
     });
   } catch (error) {
@@ -275,14 +345,16 @@ router.get('/cities', async (req, res) => {
  * @access  Public
  * @query   per_category - Number of POIs per category (default: all)
  * @query   city - Filter by city (default: Calpe area)
+ * @query   lang - Language code for translations
  */
 router.get('/geojson', async (req, res) => {
   try {
     const model = await getPOIModel();
+    const lang = getLanguageFromRequest(req);
 
     if (!model) {
       // Return sample data in GeoJSON format if model not available
-      return res.json(convertToGeoJSON(getSamplePOIs()));
+      return res.json(convertToGeoJSON(getSamplePOIs(), lang));
     }
 
     const {
@@ -349,12 +421,12 @@ router.get('/geojson', async (req, res) => {
       });
     }
 
-    res.json(convertToGeoJSON(pois));
+    res.json(convertToGeoJSON(pois, lang));
   } catch (error) {
     logger.error('Error fetching POIs as GeoJSON:', error);
 
     // Return sample data on error for development
-    res.json(convertToGeoJSON(getSamplePOIs()));
+    res.json(convertToGeoJSON(getSamplePOIs(), 'en'));
   }
 });
 
@@ -362,17 +434,19 @@ router.get('/geojson', async (req, res) => {
  * @route   GET /api/v1/pois/search
  * @desc    Search POIs with fuzzy matching
  * @access  Public
+ * @query   lang - Language code for translations
  */
 router.get('/search', async (req, res) => {
   try {
     const model = await getPOIModel();
+    const lang = getLanguageFromRequest(req);
 
     if (!model) {
       return res.json({
         success: true,
         message: 'Database not available - returning sample data',
         data: getSamplePOIs(),
-        meta: { total: 5, page: 1, limit: 20, pages: 1 }
+        meta: { total: 5, page: 1, limit: 20, pages: 1, language: lang }
       });
     }
 
@@ -409,12 +483,13 @@ router.get('/search', async (req, res) => {
 
     res.json({
       success: true,
-      data: rows.map(formatPOIForPublic),
+      data: rows.map(poi => formatPOIForPublic(poi, lang)),
       meta: {
         total: count,
         page: parseInt(page),
         limit: parseInt(limit),
-        pages: Math.ceil(count / parseInt(limit))
+        pages: Math.ceil(count / parseInt(limit)),
+        language: lang
       }
     });
   } catch (error) {
@@ -473,8 +548,10 @@ router.get('/autocomplete', async (req, res) => {
 
 /**
  * Convert POIs array to GeoJSON FeatureCollection
+ * @param {Array} pois - Array of POI objects
+ * @param {string} lang - Language code for translations
  */
-function convertToGeoJSON(pois) {
+function convertToGeoJSON(pois, lang = 'en') {
   return {
     type: 'FeatureCollection',
     features: pois.map(poi => {
@@ -493,6 +570,7 @@ function convertToGeoJSON(pois) {
           name: poiData.name,
           slug: poiData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
           description: poiData.description,
+          enriched_tile_description: getTranslatedField(poiData, 'enriched_tile_description', lang),
           category: poiData.category,
           city: poiData.city,
           address: poiData.address,
@@ -511,10 +589,12 @@ function convertToGeoJSON(pois) {
  * @route   GET /api/v1/pois/:id
  * @desc    Get single POI by ID (public)
  * @access  Public
+ * @query   lang - Language code for translations
  */
 router.get('/:id', async (req, res) => {
   try {
     const model = await getPOIModel();
+    const lang = getLanguageFromRequest(req);
 
     if (!model) {
       return res.status(503).json({
@@ -541,22 +621,19 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // If not found by numeric ID, try other fields
+    // If not found by numeric ID, try google_place_id
     if (!poi) {
       poi = await model.findOne({
         where: {
           ...baseWhere,
-          [Op.or]: [
-            { slug: id },
-            { google_place_id: id }
-          ]
+          google_place_id: id
         }
       });
     }
 
-    // If not found, try slug-based search as fallback
+    // If not found, try name-based search as fallback (slug-style)
     if (!poi) {
-      const slugSearch = id.replace(/-/g, '%');
+      const slugSearch = id.replace(/-/g, ' ');
       poi = await model.findOne({
         where: {
           ...baseWhere,
@@ -574,7 +651,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: formatPOIForPublic(poi)
+      data: formatPOIForPublic(poi, lang)
     });
   } catch (error) {
     logger.error('Error fetching POI:', error);

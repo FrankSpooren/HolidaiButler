@@ -1,14 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
 import { poiService } from '../services/poiService';
 import type { POISearchParams } from '../types/poi.types';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 /**
  * Hook to fetch POIs with optional filtering
+ * Automatically includes current language for translated content
  */
 export function usePOIs(params?: POISearchParams) {
+  const { language } = useLanguage();
+
+  // Include language in params for translated content
+  const paramsWithLang = {
+    ...params,
+    lang: params?.lang || language,
+  };
+
   return useQuery({
-    queryKey: ['pois', params],
-    queryFn: () => poiService.getPOIs(params),
+    queryKey: ['pois', paramsWithLang],
+    queryFn: () => poiService.getPOIs(paramsWithLang),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000,   // 10 minutes (cache time)
   });
@@ -16,11 +26,14 @@ export function usePOIs(params?: POISearchParams) {
 
 /**
  * Hook to fetch a single POI by ID
+ * Automatically includes current language for translated content
  */
 export function usePOI(id: number) {
+  const { language } = useLanguage();
+
   return useQuery({
-    queryKey: ['poi', id],
-    queryFn: () => poiService.getPOIById(id),
+    queryKey: ['poi', id, language],
+    queryFn: () => poiService.getPOIById(id, language),
     enabled: !!id,
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
@@ -28,11 +41,19 @@ export function usePOI(id: number) {
 
 /**
  * Hook to search POIs with advanced features
+ * Automatically includes current language for translated content
  */
 export function usePOISearch(params: POISearchParams) {
+  const { language } = useLanguage();
+
+  const paramsWithLang = {
+    ...params,
+    lang: params?.lang || language,
+  };
+
   return useQuery({
-    queryKey: ['pois', 'search', params],
-    queryFn: () => poiService.searchPOIs(params),
+    queryKey: ['pois', 'search', paramsWithLang],
+    queryFn: () => poiService.searchPOIs(paramsWithLang),
     enabled: !!(params.q || params.category), // Only run if query or category provided
     staleTime: 5 * 60 * 1000,
   });
@@ -40,11 +61,19 @@ export function usePOISearch(params: POISearchParams) {
 
 /**
  * Hook to get POIs by category
+ * Automatically includes current language for translated content
  */
 export function usePOIsByCategory(category: string, params?: Omit<POISearchParams, 'category'>) {
+  const { language } = useLanguage();
+
+  const paramsWithLang = {
+    ...params,
+    lang: (params as any)?.lang || language,
+  };
+
   return useQuery({
-    queryKey: ['pois', 'category', category, params],
-    queryFn: () => poiService.getPOIsByCategory(category, params),
+    queryKey: ['pois', 'category', category, paramsWithLang],
+    queryFn: () => poiService.getPOIsByCategory(category, paramsWithLang),
     enabled: !!category,
     staleTime: 5 * 60 * 1000,
   });

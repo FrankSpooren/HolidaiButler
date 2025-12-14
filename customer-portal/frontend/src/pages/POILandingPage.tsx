@@ -64,7 +64,7 @@ export function POILandingPage() {
   // Use centralized category configuration (single source of truth)
   const categories: Category[] = CATEGORIES_ARRAY.map(cat => ({
     id: cat.id,
-    label: cat.name,
+    label: t.categories[cat.id as keyof typeof t.categories] || cat.name,
     icon: cat.icon,
     color: cat.color
   }));

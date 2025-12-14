@@ -1,16 +1,17 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import type { POI } from '../types/poi.types';
 import { MapPin, Star, Phone, Globe } from 'lucide-react';
-import { cardHoverVariants } from '@/shared/utils/animations';
+import { getCategoryByName } from '../../../shared/config/categoryConfig';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface POICardProps {
   poi: POI;
   onClick?: () => void;
-  index?: number; // For staggered animations
 }
 
-export const POICard: React.FC<POICardProps> = ({ poi, onClick, index = 0 }) => {
+export const POICard: React.FC<POICardProps> = ({ poi, onClick }) => {
+  const { t } = useLanguage();
+
   // Format rating to 1 decimal place
   const formattedRating = poi.rating ? poi.rating.toFixed(1) : null;
 
@@ -28,19 +29,20 @@ export const POICard: React.FC<POICardProps> = ({ poi, onClick, index = 0 }) => 
 
   const formattedName = toTitleCase(poi.name);
 
+  // Get translated category
+  const getTranslatedCategory = (category: string): string => {
+    const categoryConfig = getCategoryByName(category);
+    const categoryId = categoryConfig?.id || '';
+    if (categoryId && t.categories[categoryId as keyof typeof t.categories]) {
+      return t.categories[categoryId as keyof typeof t.categories];
+    }
+    return category;
+  };
+
   return (
-    <motion.div
+    <div
       onClick={onClick}
-      className="bg-white rounded-card border border-border-light p-4 shadow-card cursor-pointer"
-      variants={cardHoverVariants}
-      initial="initial"
-      whileHover="hover"
-      whileTap="tap"
-      animate={{
-        opacity: 1,
-        y: 0,
-        transition: { delay: index * 0.05, duration: 0.3 },
-      }}
+      className="bg-white rounded-card border border-border-light p-4 shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer active:scale-98 md:hover:translate-y-[-2px]"
     >
       {/* POI Image Placeholder */}
       <div className="w-full h-40 bg-bg-gray rounded-lg mb-3 flex items-center justify-center overflow-hidden">
@@ -62,7 +64,7 @@ export const POICard: React.FC<POICardProps> = ({ poi, onClick, index = 0 }) => 
         {poi.category && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-holibot-accent bg-holibot-accent/10 px-3 py-1 rounded-chip whitespace-nowrap">
-              {poi.category}
+              {getTranslatedCategory(poi.category)}
             </span>
             {poi.verified && (
               <span className="text-xs font-medium text-verified-navy bg-verified-navy/10 px-3 py-1 rounded-chip whitespace-nowrap">
@@ -135,7 +137,7 @@ export const POICard: React.FC<POICardProps> = ({ poi, onClick, index = 0 }) => 
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

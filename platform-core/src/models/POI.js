@@ -1,7 +1,7 @@
 /**
  * POI Model (MySQL)
  * Central POI data - ALIGNED with actual pxoziy_db1.POI table structure
- * Updated: 2025-12-09 - Removed non-existent columns
+ * Updated: 2025-12-14 - Added translation fields for NL, DE, ES, SV, PL
  */
 
 import { DataTypes } from 'sequelize';
@@ -171,7 +171,7 @@ const POI = mysqlSequelize.define('POI', {
     allowNull: true,
   },
 
-  // Enriched Content
+  // Enriched Content (English - default)
   enriched_tile_description: {
     type: DataTypes.TEXT,
     allowNull: true,
@@ -186,6 +186,56 @@ const POI = mysqlSequelize.define('POI', {
   },
   enriched_target_audience: {
     type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+
+  // Enriched Content Translations - Dutch (NL)
+  enriched_tile_description_nl: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  enriched_detail_description_nl: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+
+  // Enriched Content Translations - German (DE)
+  enriched_tile_description_de: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  enriched_detail_description_de: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+
+  // Enriched Content Translations - Spanish (ES)
+  enriched_tile_description_es: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  enriched_detail_description_es: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+
+  // Enriched Content Translations - Swedish (SV)
+  enriched_tile_description_sv: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  enriched_detail_description_sv: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+
+  // Enriched Content Translations - Polish (PL)
+  enriched_tile_description_pl: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  enriched_detail_description_pl: {
+    type: DataTypes.TEXT,
     allowNull: true,
   },
 
@@ -218,8 +268,8 @@ const POI = mysqlSequelize.define('POI', {
   ],
 });
 
-// Instance method to format POI for API response
-POI.prototype.toPublicJSON = function() {
+// Instance method to format POI for API response with language support
+POI.prototype.toPublicJSON = function(lang = 'en') {
   const values = this.get();
 
   // Safe JSON parse helper
@@ -231,6 +281,17 @@ POI.prototype.toPublicJSON = function() {
     } catch {
       return defaultValue;
     }
+  };
+
+  // Get translated description based on language
+  const getTranslatedTileDescription = () => {
+    const langField = `enriched_tile_description_${lang}`;
+    return values[langField] || values.enriched_tile_description;
+  };
+
+  const getTranslatedDetailDescription = () => {
+    const langField = `enriched_detail_description_${lang}`;
+    return values[langField] || values.enriched_detail_description;
   };
 
   return {
@@ -262,10 +323,11 @@ POI.prototype.toPublicJSON = function() {
     website: values.website,
     email: values.email,
     thumbnail_url: values.thumbnail_url,
-    enriched_tile_description: values.enriched_tile_description,
-    enriched_detail_description: values.enriched_detail_description,
+    enriched_tile_description: getTranslatedTileDescription(),
+    enriched_detail_description: getTranslatedDetailDescription(),
     enriched_highlights: parseJSON(values.enriched_highlights, []),
     enriched_target_audience: values.enriched_target_audience,
+    google_placeid: values.google_place_id,
   };
 };
 
