@@ -1,5 +1,6 @@
 /**
- * POIAirbnbGallery - AirBnB-style image gallery for POI Detail
+ * POIAirbnbGallery - Adaptive image gallery for POI Detail
+ * Renders different layouts based on number of available images
  */
 
 import { useState, useCallback } from "react";
@@ -26,20 +27,22 @@ export function POIAirbnbGallery({
   onShowAll,
   onImageClick
 }: POIAirbnbGalleryProps) {
-  const displayImages = images && images.length > 0 ? images : thumbnailUrl ? [thumbnailUrl] : [];
+  // Only use real images, no fallbacks
+  const realImages = images && images.length > 0 ? images : thumbnailUrl ? [thumbnailUrl] : [];
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
   const [mobileIndex, setMobileIndex] = useState(0);
   const [direction, setDirection] = useState(0);
 
-  const hasImages = displayImages.length > 0;
-  const gridImages = displayImages.slice(0, 5);
-  const totalImages = displayImages.length;
+  // Filter out failed images
+  const displayImages = realImages.filter((_, idx) => !failedImages.has(idx));
+  const imageCount = displayImages.length;
+  const totalImages = realImages.length;
 
   const handleImageError = useCallback((index: number) => {
     setFailedImages(prev => new Set(prev).add(index));
   }, []);
 
-  const handleDragEnd = useCallback((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 50;
     if (info.offset.x > threshold && mobileIndex > 0) {
       setDirection(-1);
@@ -56,89 +59,107 @@ export function POIAirbnbGallery({
     exit: (dir: number) => ({ x: dir < 0 ? "100%" : "-100%", opacity: 0.5 }),
   };
 
-  if (!hasImages || failedImages.size === displayImages.length) {
+  // No images - show fallback
+  if (imageCount === 0) {
     return (
-      <div className="poi-airbnb-gallery-fallback" style={{ background: categoryColor }}>
-        <div className="poi-airbnb-gallery-fallback-overlay" />
-        <img src={categoryIcon} alt={poiName} className="poi-airbnb-gallery-fallback-icon" />
-        <span className="poi-airbnb-gallery-fallback-text">No photos available</span>
+      <div className="poi-gallery-fallback" style={{ background: categoryColor }}>
+        <div className="poi-gallery-fallback-overlay" />
+        <img src={categoryIcon} alt={poiName} className="poi-gallery-fallback-icon" />
+        <span className="poi-gallery-fallback-text">No photos available</span>
       </div>
     );
   }
 
-  if (displayImages.length === 1) {
-    return (
-      <div className="poi-airbnb-gallery-single" onClick={() => onImageClick?.(0)}>
-        <img src={displayImages[0]} alt={poiName} className="poi-airbnb-gallery-single-image" loading="lazy" onError={() => handleImageError(0)} />
-        {onShowAll && (
-          <button className="poi-airbnb-gallery-show-all" onClick={(e) => { e.stopPropagation(); onShowAll(); }}>
-            <Images size={16} /><span>Show photo</span>
-          </button>
-        )}
-      </div>
-    );
-  }
+  // Determine layout class based on image count
+  const getLayoutClass = () => {
+    if (imageCount === 1) return "layout-1";
+    if (imageCount === 2) return "layout-2";
+    if (imageCount === 3) return "layout-3";
+    if (imageCount === 4) return "layout-4";
+    return "layout-5";
+  };
 
-  const getSecondaryClass = (idx: number) => "poi-airbnb-gallery-secondary-item pos-" + idx;
-  const getDotClass = (idx: number) => "poi-airbnb-gallery-mobile-dot" + (idx === mobileIndex ? " active" : "");
+  const renderShowAllButton = () => {
+    if (!onShowAll || totalImages <= 1) return null;
+    return (
+      <button className="poi-gallery-show-all" onClick={onShowAll}>
+        <Images size={16} />
+        <span>{"Show all photos (" + totalImages + ")"}</span>
+      </button>
+    );
+  };
 
   return (
     <>
-      <div className="poi-airbnb-gallery-grid">
-        <div className="poi-airbnb-gallery-primary" onClick={() => onImageClick?.(0)}>
-          {failedImages.has(0) ? (
-            <div className="poi-airbnb-gallery-placeholder" style={{ background: categoryColor }}><img src={categoryIcon} alt={poiName} /></div>
-          ) : (
-            <img src={gridImages[0]} alt={poiName} loading="lazy" onError={() => handleImageError(0)} />
-          )}
-        </div>
-        <div className="poi-airbnb-gallery-secondary">
-          {[1, 2, 3, 4].map((idx) => (
-            <div key={idx} className={getSecondaryClass(idx)} onClick={() => gridImages[idx] && onImageClick?.(idx)}>
-              {gridImages[idx] ? (
-                failedImages.has(idx) ? (
-                  <div className="poi-airbnb-gallery-placeholder" style={{ background: categoryColor }}><img src={categoryIcon} alt={poiName} /></div>
-                ) : (
-                  <img src={gridImages[idx]} alt={poiName} loading="lazy" onError={() => handleImageError(idx)} />
-                )
-              ) : (
-                <div className="poi-airbnb-gallery-placeholder" style={{ background: categoryColor }}><img src={categoryIcon} alt={poiName} /></div>
-              )}
-            </div>
-          ))}
-        </div>
-        {onShowAll && totalImages > 1 && (
-          <button className="poi-airbnb-gallery-show-all" onClick={onShowAll}>
-            <Images size={16} /><span>Show all photos ({totalImages})</span>
-          </button>
-        )}
+      {/* Desktop Grid - Adaptive Layout */}
+      <div className={"poi-gallery-grid " + getLayoutClass()}>
+        {displayImages.slice(0, 5).map((img, idx) => (
+          <div
+            key={idx}
+            className={"poi-gallery-item item-" + (idx + 1)}
+            onClick={() => onImageClick?.(idx)}
+          >
+            <img
+              src={img}
+              alt={poiName + " - Photo " + (idx + 1)}
+              loading={idx === 0 ? "eager" : "lazy"}
+              onError={() => handleImageError(realImages.indexOf(img))}
+            />
+          </div>
+        ))}
+        {renderShowAllButton()}
       </div>
-      <div className="poi-airbnb-gallery-mobile">
-        <div className="poi-airbnb-gallery-mobile-viewport">
+
+      {/* Mobile Carousel */}
+      <div className="poi-gallery-mobile">
+        <div className="poi-gallery-mobile-viewport">
           <AnimatePresence initial={false} custom={direction}>
-            <motion.div key={mobileIndex} custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit"
+            <motion.div
+              key={mobileIndex}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
               transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
-              drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.2} onDragEnd={handleDragEnd}
-              className="poi-airbnb-gallery-mobile-slide" onClick={() => onImageClick?.(mobileIndex)}>
-              {failedImages.has(mobileIndex) ? (
-                <div className="poi-airbnb-gallery-placeholder" style={{ background: categoryColor }}><img src={categoryIcon} alt={poiName} /></div>
-              ) : (
-                <img src={displayImages[mobileIndex]} alt={poiName} loading="lazy" onError={() => handleImageError(mobileIndex)} draggable={false} />
-              )}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.2}
+              onDragEnd={handleDragEnd}
+              className="poi-gallery-mobile-slide"
+              onClick={() => onImageClick?.(mobileIndex)}
+            >
+              <img
+                src={displayImages[mobileIndex]}
+                alt={poiName}
+                loading="lazy"
+                onError={() => handleImageError(realImages.indexOf(displayImages[mobileIndex]))}
+                draggable={false}
+              />
             </motion.div>
           </AnimatePresence>
         </div>
-        <div className="poi-airbnb-gallery-mobile-counter">{mobileIndex + 1} / {displayImages.length}</div>
-        <div className="poi-airbnb-gallery-mobile-dots">
+        <div className="poi-gallery-mobile-counter">{(mobileIndex + 1) + " / " + displayImages.length}</div>
+        <div className="poi-gallery-mobile-dots">
           {displayImages.slice(0, 5).map((_, idx) => (
-            <button key={idx} className={getDotClass(idx)}
-              onClick={(e) => { e.stopPropagation(); setDirection(idx > mobileIndex ? 1 : -1); setMobileIndex(idx); }} />
+            <button
+              key={idx}
+              className={"poi-gallery-mobile-dot" + (idx === mobileIndex ? " active" : "")}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDirection(idx > mobileIndex ? 1 : -1);
+                setMobileIndex(idx);
+              }}
+            />
           ))}
-          {displayImages.length > 5 && <span className="poi-airbnb-gallery-mobile-more">+{displayImages.length - 5}</span>}
+          {displayImages.length > 5 && (
+            <span className="poi-gallery-mobile-more">{"+ " + (displayImages.length - 5)}</span>
+          )}
         </div>
-        {onShowAll && (
-          <button className="poi-airbnb-gallery-mobile-show-all" onClick={onShowAll}>
-            <Images size={14} /><span>All ({totalImages})</span>
+        {onShowAll && totalImages > 1 && (
+          <button className="poi-gallery-mobile-show-all" onClick={onShowAll}>
+            <Images size={14} />
+            <span>{"All (" + totalImages + ")"}</span>
           </button>
         )}
       </div>
