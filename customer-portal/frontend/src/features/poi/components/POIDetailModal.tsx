@@ -21,7 +21,7 @@ import { getCategoryIcon, getCategoryColor } from '../../../shared/config/catego
 import { shareContent, generatePOIShareURL } from '../../../shared/utils/share';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import { useFavorites } from '../../../shared/contexts/FavoritesContext';
-import { POIImageCarousel } from './POIImageCarousel';
+import { POIAirbnbGallery } from './POIAirbnbGallery';
 import { POIImageLightbox } from './POIImageLightbox';
 import { POIBadge } from './POIBadge';
 import { POIReviewSection } from './POIReviewSection';
@@ -347,11 +347,13 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
               {/* Hero Section */}
               <div className="poi-hero">
                 <div className="poi-hero-image">
-                  <POIImageCarousel
-                    images={poi.images}
+                  <POIAirbnbGallery
+                    images={poi.images || []}
                     thumbnailUrl={poi.thumbnail_url}
                     poiName={poi.name}
-                    category={poi.category}
+                    categoryColor={getCategoryColor(poi.category)}
+                    categoryIcon={getCategoryIcon(poi.category)}
+                    onShowAll={() => handleOpenLightbox(0)}
                     onImageClick={handleOpenLightbox}
                   />
                 </div>
