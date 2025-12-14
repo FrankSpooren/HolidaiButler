@@ -33,6 +33,7 @@ export interface Translations {
       adventure: string;
     };
     noEvents: string;
+    loadMore: string;
     moreInfo: string;
     newsletter: {
       title: string;
@@ -465,6 +466,7 @@ export const translations: Record<Language, Translations> = {
         adventure: 'Avontuur',
       },
       noEvents: 'Geen evenementen gevonden voor deze categorie.',
+      loadMore: 'Meer Events laden',
       moreInfo: 'Meer info',
       newsletter: {
         title: 'Mis geen enkel evenement!',
@@ -893,6 +895,7 @@ export const translations: Record<Language, Translations> = {
         adventure: 'Adventure',
       },
       noEvents: 'No events found for this category.',
+      loadMore: 'Load More Events',
       moreInfo: 'More info',
       newsletter: {
         title: "Don't miss any event!",
@@ -1321,6 +1324,7 @@ export const translations: Record<Language, Translations> = {
         adventure: 'Abenteuer',
       },
       noEvents: 'Keine Veranstaltungen für diese Kategorie gefunden.',
+      loadMore: 'Mehr Events laden',
       moreInfo: 'Mehr Info',
       newsletter: {
         title: 'Verpassen Sie keine Veranstaltung!',
@@ -1749,6 +1753,7 @@ export const translations: Record<Language, Translations> = {
         adventure: 'Aventura',
       },
       noEvents: 'No se encontraron eventos para esta categoría.',
+      loadMore: 'Cargar más Eventos',
       moreInfo: 'Más información',
       newsletter: {
         title: '¡No te pierdas ningún evento!',
@@ -2177,6 +2182,7 @@ export const translations: Record<Language, Translations> = {
         adventure: 'Äventyr',
       },
       noEvents: 'Inga evenemang hittades för denna kategori.',
+      loadMore: 'Ladda fler Evenemang',
       moreInfo: 'Mer info',
       newsletter: {
         title: 'Missa inget evenemang!',
@@ -2605,6 +2611,7 @@ export const translations: Record<Language, Translations> = {
         adventure: 'Przygoda',
       },
       noEvents: 'Nie znaleziono wydarzeń dla tej kategorii.',
+      loadMore: 'Załaduj więcej Wydarzeń',
       moreInfo: 'Więcej informacji',
       newsletter: {
         title: 'Nie przegap żadnego wydarzenia!',
