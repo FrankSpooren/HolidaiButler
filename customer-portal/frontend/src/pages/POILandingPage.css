@@ -1128,3 +1128,32 @@
   font-size: 13px !important;
   margin: 0 !important;
 }
+
+/* Mobile Icon Fix - Ensure 4 action buttons always fit in one row */
+@media (max-width: 640px) {
+  .poi-card .poi-actions {
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  
+  .poi-card .poi-action-btn {
+    min-width: 0;
+    flex: 1 1 0;
+    padding: 8px 2px;
+  }
+  
+  .poi-card .poi-action-btn span:first-child {
+    font-size: 16px !important;
+  }
+}
+
+/* Extra small screens - even more compact */
+@media (max-width: 375px) {
+  .poi-card .poi-action-btn {
+    padding: 6px 1px;
+  }
+  
+  .poi-card .poi-action-btn span:first-child {
+    font-size: 14px !important;
+  }
+}
