@@ -416,7 +416,7 @@ export function AgendaPage() {
       {/* Load More */}
       {!isLoading && !error && hasMore && (
         <button className="agenda-load-more" onClick={() => setLimit(prev => prev + 12)}>
-          {t.poi?.loadMore || 'Load more'} ({allEvents.length - filteredEvents.length} remaining)
+          {t.agenda?.loadMore || 'Load More Events'} ({allEvents.length - filteredEvents.length} remaining)
         </button>
       )}
 

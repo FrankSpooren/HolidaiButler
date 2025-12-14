@@ -143,8 +143,8 @@ router.get('/events', async (req, res) => {
       params.push(searchTerm, searchTerm, searchTerm);
     }
 
-    // Only Calpe area events
-    conditions.push('a.is_in_calpe_area = 1');
+    // Show all events (not just Calpe area)
+    // conditions.push('a.is_in_calpe_area = 1');
 
     const whereClause = conditions.join(' AND ');
 
@@ -222,7 +222,7 @@ router.get('/events/featured', async (req, res) => {
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE d.event_date >= CURDATE()
         AND d.event_date <= DATE_ADD(CURDATE(), INTERVAL 14 DAY)
-        AND a.is_in_calpe_area = 1
+        -- Show all events
         AND a.image IS NOT NULL
         AND a.image != ''
       GROUP BY a.id
@@ -335,7 +335,7 @@ router.get('/stats', async (req, res) => {
       FROM agenda a
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE d.event_date >= CURDATE()
-        AND a.is_in_calpe_area = 1
+        -- Show all events
     `;
 
     // Events this week
@@ -344,7 +344,7 @@ router.get('/stats', async (req, res) => {
       FROM agenda a
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE d.event_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
-        AND a.is_in_calpe_area = 1
+        -- Show all events
     `;
 
     // Events this month
@@ -353,7 +353,7 @@ router.get('/stats', async (req, res) => {
       FROM agenda a
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE d.event_date BETWEEN CURDATE() AND LAST_DAY(CURDATE())
-        AND a.is_in_calpe_area = 1
+        -- Show all events
     `;
 
     // Events today
@@ -362,7 +362,7 @@ router.get('/stats', async (req, res) => {
       FROM agenda a
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE d.event_date = CURDATE()
-        AND a.is_in_calpe_area = 1
+        -- Show all events
     `;
 
     const [totalResult, weekResult, monthResult, todayResult] = await Promise.all([
