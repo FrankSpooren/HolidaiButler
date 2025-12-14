@@ -100,13 +100,14 @@
   overflow: hidden;
   box-shadow: none;
   margin-bottom: 0;
+  /* Full-width gallery container */
 }
 
 .poi-detail-modal .poi-hero-image {
   width: 100%;
   position: relative;
   overflow: hidden;
-  /* Gallery controls its own dimensions */
+  /* Gallery fills entire width, no padding */
 }
 
 .poi-detail-modal .poi-hero-content {

@@ -1,23 +1,22 @@
 /**
- * POIAirbnbGallery - Adaptive Layout Styles
- * Different layouts based on image count (1-5+)
+ * POIAirbnbGallery - Full-Width Adaptive Layout
+ * Fills 100% of container width, no white space
  */
 
-/* Base Grid */
+/* Base Grid - Full Width */
 .poi-gallery-grid {
   display: grid;
-  gap: 8px;
-  border-radius: 12px;
-  overflow: hidden;
-  max-height: 400px;
+  gap: 4px;
+  width: 100%;
+  max-height: 350px;
   position: relative;
+  overflow: hidden;
 }
 
 /* Layout 1: Single full-width image */
 .poi-gallery-grid.layout-1 {
   grid-template-columns: 1fr;
-  grid-template-rows: 1fr;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 21 / 9;
 }
 
 .poi-gallery-grid.layout-1 .item-1 {
@@ -25,18 +24,17 @@
   grid-row: 1;
 }
 
-/* Layout 2: Two images side by side */
+/* Layout 2: Two images side by side (50/50) */
 .poi-gallery-grid.layout-2 {
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr;
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 21 / 9;
 }
 
-/* Layout 3: 1 large + 2 stacked */
+/* Layout 3: 1 large (50%) + 2 stacked (50%) */
 .poi-gallery-grid.layout-3 {
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 21 / 9;
 }
 
 .poi-gallery-grid.layout-3 .item-1 {
@@ -54,11 +52,11 @@
   grid-row: 2;
 }
 
-/* Layout 4: 1 large + 3 small */
+/* Layout 4: 1 large (50%) + 3 small */
 .poi-gallery-grid.layout-4 {
   grid-template-columns: 1fr 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 21 / 9;
 }
 
 .poi-gallery-grid.layout-4 .item-1 {
@@ -81,11 +79,11 @@
   grid-row: 2;
 }
 
-/* Layout 5: 1 large + 4 small (AirBnB style) */
+/* Layout 5+: 1 large (50%) + 4 small (AirBnB style) */
 .poi-gallery-grid.layout-5 {
   grid-template-columns: 1fr 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 21 / 9;
 }
 
 .poi-gallery-grid.layout-5 .item-1 {
@@ -118,80 +116,39 @@
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  background: #f0f0f0;
+  background: #e5e5e5;
 }
 
 .poi-gallery-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, filter 0.3s ease;
 }
 
 .poi-gallery-item:hover img {
   transform: scale(1.03);
-}
-
-/* Corner radius for specific items */
-.poi-gallery-grid.layout-1 .item-1 {
-  border-radius: 12px;
-}
-
-.poi-gallery-grid.layout-2 .item-1 {
-  border-top-left-radius: 12px;
-  border-bottom-left-radius: 12px;
-}
-
-.poi-gallery-grid.layout-2 .item-2 {
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
-}
-
-.poi-gallery-grid.layout-3 .item-1,
-.poi-gallery-grid.layout-4 .item-1,
-.poi-gallery-grid.layout-5 .item-1 {
-  border-top-left-radius: 12px;
-  border-bottom-left-radius: 12px;
-}
-
-.poi-gallery-grid.layout-3 .item-2 {
-  border-top-right-radius: 12px;
-}
-
-.poi-gallery-grid.layout-3 .item-3 {
-  border-bottom-right-radius: 12px;
-}
-
-.poi-gallery-grid.layout-4 .item-3,
-.poi-gallery-grid.layout-5 .item-3 {
-  border-top-right-radius: 12px;
-}
-
-.poi-gallery-grid.layout-4 .item-4 {
-  border-bottom-right-radius: 12px;
-}
-
-.poi-gallery-grid.layout-5 .item-5 {
-  border-bottom-right-radius: 12px;
+  filter: brightness(0.95);
 }
 
 /* Show all button */
 .poi-gallery-show-all {
   position: absolute;
-  bottom: 16px;
-  right: 16px;
+  bottom: 12px;
+  right: 12px;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 8px 14px;
   background: white;
   border: 1px solid #222;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .poi-gallery-show-all:hover {
@@ -202,9 +159,8 @@
 /* Fallback (no images) */
 .poi-gallery-fallback {
   width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: 400px;
-  border-radius: 12px;
+  aspect-ratio: 21 / 9;
+  max-height: 350px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -220,8 +176,8 @@
 }
 
 .poi-gallery-fallback-icon {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   filter: brightness(0) invert(1);
   opacity: 0.8;
   z-index: 1;
@@ -230,7 +186,7 @@
 .poi-gallery-fallback-text {
   color: white;
   font-size: 14px;
-  margin-top: 12px;
+  margin-top: 10px;
   opacity: 0.8;
   z-index: 1;
 }
@@ -249,12 +205,10 @@
   .poi-gallery-mobile {
     display: block;
     position: relative;
-    width: 100%;
+    width: calc(100% + 32px);
+    margin: 0 -16px;
     aspect-ratio: 4 / 3;
     overflow: hidden;
-    border-radius: 0;
-    margin: 0 -16px;
-    width: calc(100% + 32px);
   }
   
   .poi-gallery-mobile-viewport {

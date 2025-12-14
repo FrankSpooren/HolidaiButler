@@ -37,11 +37,10 @@
 }
 
 .poi-hero-image {
-    /* Allow POIAirbnbGallery to control its own dimensions */
+    /* Full-width gallery container */
     width: 100%;
     position: relative;
     overflow: hidden;
-    border-radius: 12px 12px 0 0;
 }
 
 .poi-hero-content {
