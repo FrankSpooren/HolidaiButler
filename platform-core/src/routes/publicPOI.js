@@ -9,6 +9,7 @@
 import express from 'express';
 import { mysqlSequelize } from '../config/database.js';
 import { Op } from 'sequelize';
+import { getImagesForPOI, getImagesForPOIs } from "../models/ImageUrl.js";
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -115,7 +116,7 @@ const getTranslatedField = (data, fieldBase, lang) => {
  * Uses actual database column names (is_active, rating, etc.)
  * Supports language-specific translations for enriched content
  */
-const formatPOIForPublic = (poi, lang = 'en') => {
+const formatPOIForPublic = (poi, lang = "en", images = null) => {
   const data = poi.toJSON ? poi.toJSON() : poi;
   return {
     id: data.id,
@@ -137,7 +138,7 @@ const formatPOIForPublic = (poi, lang = 'en') => {
     reviewCount: data.review_count || 0,
     review_count: data.review_count || 0,
     price_level: data.price_level,
-    images: safeJSONParse(data.images, []),
+    images: images || safeJSONParse(data.images, []),
     thumbnail_url: data.thumbnail_url,
     amenities: safeJSONParse(data.amenities, []),
     accessibility_features: safeJSONParse(data.accessibility_features, []),
@@ -243,7 +244,12 @@ router.get('/', async (req, res) => {
     });
 
     // Transform data for frontend compatibility with language support
-    const pois = rows.map(poi => formatPOIForPublic(poi, lang));
+    // Batch fetch images for all POIs (3 per tile)
+    const poiIds = rows.map(poi => poi.id);
+    const imageMap = await getImagesForPOIs(poiIds, 3);
+    
+    // Transform data for frontend compatibility with language support
+    const pois = rows.map(poi => formatPOIForPublic(poi, lang, imageMap.get(poi.id) || []));
 
     // Return in format that supports both pagination styles
     res.json({
@@ -481,9 +487,13 @@ router.get('/search', async (req, res) => {
       order: [['rating', 'DESC'], ['name', 'ASC']]
     });
 
+    // Batch fetch images for POIs (3 per tile)
+    const poiIds = rows.map(poi => poi.id);
+    const imageMap = await getImagesForPOIs(poiIds, 3);
+    
     res.json({
       success: true,
-      data: rows.map(poi => formatPOIForPublic(poi, lang)),
+      data: rows.map(poi => formatPOIForPublic(poi, lang, imageMap.get(poi.id) || [])),
       meta: {
         total: count,
         page: parseInt(page),
@@ -649,9 +659,12 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+    // Fetch images for detail view (10 images)
+    const images = await getImagesForPOI(poi.id, 10);
+    
     res.json({
       success: true,
-      data: formatPOIForPublic(poi, lang)
+      data: formatPOIForPublic(poi, lang, images)
     });
   } catch (error) {
     logger.error('Error fetching POI:', error);

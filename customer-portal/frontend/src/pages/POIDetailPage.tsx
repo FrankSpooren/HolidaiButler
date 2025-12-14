@@ -20,7 +20,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { poiService } from '../features/poi/services/poiService';
 import { getCategoryIcon, getCategoryColor } from '../shared/config/categoryConfig';
-import { POIImageCarousel } from '../features/poi/components/POIImageCarousel';
+import { POIAirbnbGallery } from '../features/poi/components/POIAirbnbGallery';
 import { POIImageLightbox } from '../features/poi/components/POIImageLightbox';
 import { POIBadge } from '../features/poi/components/POIBadge';
 import { POIReviewSection } from '../features/poi/components/POIReviewSection';
@@ -317,11 +317,13 @@ export function POIDetailPage() {
       {/* Hero Section */}
       <div className="poi-hero">
         <div className="poi-hero-image">
-          <POIImageCarousel
-            images={poi.images}
+          <POIAirbnbGallery
+            images={poi.images || []}
             thumbnailUrl={poi.thumbnail_url}
             poiName={poi.name}
-            category={poi.category}
+            categoryColor={getCategoryColor(poi.category)}
+            categoryIcon={getCategoryIcon(poi.category)}
+            onShowAll={() => handleOpenLightbox(0)}
             onImageClick={handleOpenLightbox}
           />
         </div>
@@ -329,7 +331,7 @@ export function POIDetailPage() {
           {/* Badges */}
           <div className="poi-badges-container">
             <POIBadge type="category" category={poi.category} />
-            {Boolean(poi.verified) && <POIBadge type="verified" />}
+            {poi.verified === 1 && <POIBadge type="verified" />}
             {poi.rating > 4.5 && poi.review_count > 50 && <POIBadge type="popular" />}
           </div>
 
