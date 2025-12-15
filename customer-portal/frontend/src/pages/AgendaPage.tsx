@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { Loader2 } from 'lucide-react';
@@ -161,6 +161,10 @@ export function AgendaPage() {
   const [lastScrollY, setLastScrollY] = useState<number>(0);
   const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
+  // Ref to track previous event count for scroll-to-new-items
+  const prevEventCountRef = useRef<number>(0);
+  const gridRef = useRef<HTMLDivElement>(null);
+
   // Fetch events
   const { data: eventsData, isLoading, error } = useQuery({
     queryKey: ['agenda-events', searchQuery, selectedCategory, limit],
@@ -259,14 +263,17 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Set initial visible date key
+  // Set initial visible date key AND update when first event changes
   useEffect(() => {
-    if (filteredEvents.length > 0 && !visibleDateKey) {
+    if (filteredEvents.length > 0) {
       const d = new Date(filteredEvents[0].startDate);
       const firstDateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      setVisibleDateKey(firstDateKey);
+      // Always update if at top of page or no date key set
+      if (!visibleDateKey || window.scrollY < 100) {
+        setVisibleDateKey(firstDateKey);
+      }
     }
-  }, [filteredEvents, visibleDateKey]);
+  }, [filteredEvents]);
 
   // Update visible date key on scroll (for the subheader)
   useEffect(() => {
@@ -284,6 +291,35 @@ export function AgendaPage() {
     window.addEventListener('scroll', handleDateScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleDateScroll);
   }, [visibleDateKey]);
+
+  // Scroll to first new item after Load More
+  useEffect(() => {
+    const currentCount = filteredEvents.length;
+    const prevCount = prevEventCountRef.current;
+
+    // Only scroll if we loaded more (not on initial load or filter changes)
+    if (prevCount > 0 && currentCount > prevCount && gridRef.current) {
+      const cards = gridRef.current.querySelectorAll('.agenda-card');
+      const firstNewCard = cards[prevCount] as HTMLElement | undefined;
+      if (firstNewCard) {
+        // Small delay to ensure DOM is updated
+        setTimeout(() => {
+          firstNewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Offset for sticky header (approximately 200px)
+          setTimeout(() => {
+            window.scrollBy({ top: -200, behavior: 'smooth' });
+          }, 300);
+        }, 100);
+      }
+    }
+
+    prevEventCountRef.current = currentCount;
+  }, [filteredEvents.length]);
+
+  // Reset prev count when filters change (not just limit)
+  useEffect(() => {
+    prevEventCountRef.current = 0;
+  }, [searchQuery, selectedCategory, filters]);
 
   const getDistance = (event: AgendaEvent): string => {
     if (!event.location?.coordinates || !userLocation) return '';
@@ -389,7 +425,7 @@ export function AgendaPage() {
 
       {/* Single continuous grid - all events flow together, 4 per row */}
       {!isLoading && !error && filteredEvents.length > 0 && (
-        <div className="agenda-grid">
+        <div className="agenda-grid" ref={gridRef}>
           {filteredEvents.map((event) => {
             const ed = new Date(event.startDate);
             const eventDateKey = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;

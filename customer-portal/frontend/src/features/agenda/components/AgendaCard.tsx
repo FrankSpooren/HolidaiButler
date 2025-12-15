@@ -293,10 +293,6 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
           </div>
         )}
 
-        {/* Free Badge */}
-        {event.pricing?.isFree && (
-          <div className="agenda-free-badge">{ui.free}</div>
-        )}
       </div>
 
       {/* Save Button */}
