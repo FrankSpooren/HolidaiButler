@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Calendar, MapPin, Clock, Euro } from 'lucide-react';
+import { X, Calendar, MapPin, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl, enUS, de, es, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
@@ -17,12 +17,12 @@ interface AgendaComparisonModalProps {
 const dateLocales: Record<string, Locale> = { nl: nl, en: enUS, de: de, es: es, sv: sv, pl: pl };
 
 const translations: Record<string, Record<string, string>> = {
-  nl: { title: 'Vergelijk Events', date: 'Datum', location: 'Locatie', price: 'Prijs', free: 'Gratis', close: 'Sluiten', remove: 'Verwijderen' },
-  en: { title: 'Compare Events', date: 'Date', location: 'Location', price: 'Price', free: 'Free', close: 'Close', remove: 'Remove' },
-  de: { title: 'Events vergleichen', date: 'Datum', location: 'Ort', price: 'Preis', free: 'Kostenlos', close: 'Schließen', remove: 'Entfernen' },
-  es: { title: 'Comparar Eventos', date: 'Fecha', location: 'Ubicación', price: 'Precio', free: 'Gratis', close: 'Cerrar', remove: 'Eliminar' },
-  sv: { title: 'Jämför Evenemang', date: 'Datum', location: 'Plats', price: 'Pris', free: 'Gratis', close: 'Stäng', remove: 'Ta bort' },
-  pl: { title: 'Porównaj wydarzenia', date: 'Data', location: 'Lokalizacja', price: 'Cena', free: 'Bezpłatnie', close: 'Zamknij', remove: 'Usuń' },
+  nl: { title: 'Vergelijk Events', date: 'Datum', location: 'Locatie', close: 'Sluiten', remove: 'Verwijderen' },
+  en: { title: 'Compare Events', date: 'Date', location: 'Location', close: 'Close', remove: 'Remove' },
+  de: { title: 'Events vergleichen', date: 'Datum', location: 'Ort', close: 'Schließen', remove: 'Entfernen' },
+  es: { title: 'Comparar Eventos', date: 'Fecha', location: 'Ubicación', close: 'Cerrar', remove: 'Eliminar' },
+  sv: { title: 'Jämför Evenemang', date: 'Datum', location: 'Plats', close: 'Stäng', remove: 'Ta bort' },
+  pl: { title: 'Porównaj wydarzenia', date: 'Data', location: 'Lokalizacja', close: 'Zamknij', remove: 'Usuń' },
 };
 
 export function AgendaComparisonModal({ eventIds, isOpen, onClose }: AgendaComparisonModalProps) {
@@ -131,7 +131,7 @@ export function AgendaComparisonModal({ eventIds, isOpen, onClose }: AgendaCompa
                   {/* Description */}
                   <p className="agenda-comparison-description">{getDescription(event)}</p>
 
-                  {/* Details */}
+                  {/* Details - NO pricing info */}
                   <div className="agenda-comparison-details">
                     {/* Date */}
                     <div className="agenda-comparison-row">
@@ -154,18 +154,6 @@ export function AgendaComparisonModal({ eventIds, isOpen, onClose }: AgendaCompa
                         <span>{event.location.name}</span>
                       </div>
                     )}
-
-                    {/* Price */}
-                    <div className="agenda-comparison-row">
-                      <Euro size={16} />
-                      <span>
-                        {event.pricing?.isFree
-                          ? t.free
-                          : event.pricing?.price
-                            ? `€${event.pricing.price}`
-                            : '-'}
-                      </span>
-                    </div>
                   </div>
                 </div>
               ))}

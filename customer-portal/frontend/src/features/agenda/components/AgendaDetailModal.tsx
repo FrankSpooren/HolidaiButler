@@ -229,14 +229,11 @@ export function AgendaDetailModal({ eventId, isOpen, onClose }: AgendaDetailModa
                   )}
                 </div>
                 <div className="agenda-hero-content">
-                  {/* Badge */}
+                  {/* Badge - Only category and featured, NO FREE badge */}
                   <div className="agenda-badges">
                     <span className="agenda-badge" style={{ background: category?.color }}>
                       {category?.label}
                     </span>
-                    {event.pricing?.isFree && (
-                      <span className="agenda-badge agenda-badge-free">Free</span>
-                    )}
                     {event.featured && (
                       <span className="agenda-badge agenda-badge-featured">Featured</span>
                     )}
@@ -383,19 +380,13 @@ export function AgendaDetailModal({ eventId, isOpen, onClose }: AgendaDetailModa
                     </div>
                   </div>
 
-                  {/* Details */}
+                  {/* Details - NO pricing info until real data available */}
                   <div className="agenda-section">
                     <h2 className="agenda-section-title">Details</h2>
                     <div className="agenda-contact-info">
                       <div className="agenda-contact-item">
                         <span className="agenda-contact-icon">💰</span>
-                        <span>
-                          {event.pricing?.isFree
-                            ? 'Free entrance'
-                            : event.pricing?.minPrice
-                              ? `From €${event.pricing.minPrice}`
-                              : 'Check website for prices'}
-                        </span>
+                        <span>Check website for prices</span>
                       </div>
                       {event.targetAudience && event.targetAudience.length > 0 && (
                         <div className="agenda-contact-item">

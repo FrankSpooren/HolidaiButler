@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { format } from 'date-fns';
 import { nl, enUS, es, de, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
@@ -10,7 +10,7 @@ import './AgendaCard.css';
 /**
  * AgendaCard Component
  * Displays event in POI Grid style - matching POILandingPage cards exactly
- * With comparison functionality
+ * With comparison functionality and forwardRef for scroll-to-new-items
  */
 
 interface AgendaCardProps {
@@ -116,15 +116,15 @@ const categoryLabels: Record<string, Record<string, string>> = {
 
 // UI labels translations
 const uiLabels: Record<string, Record<string, string>> = {
-  nl: { free: 'Gratis', featured: 'Uitgelicht', share: 'Delen', agenda: 'Agenda', map: 'Kaart', details: 'Details', compare: 'Vergelijk' },
-  en: { free: 'Free', featured: 'Featured', share: 'Share', agenda: 'Agenda', map: 'Map', details: 'Details', compare: 'Compare' },
-  de: { free: 'Kostenlos', featured: 'Empfohlen', share: 'Teilen', agenda: 'Kalender', map: 'Karte', details: 'Details', compare: 'Vergleichen' },
-  es: { free: 'Gratis', featured: 'Destacado', share: 'Compartir', agenda: 'Agenda', map: 'Mapa', details: 'Detalles', compare: 'Comparar' },
-  sv: { free: 'Gratis', featured: 'Utvalda', share: 'Dela', agenda: 'Kalender', map: 'Karta', details: 'Detaljer', compare: 'Jämför' },
-  pl: { free: 'Bezpłatne', featured: 'Polecane', share: 'Udostępnij', agenda: 'Kalendarz', map: 'Mapa', details: 'Szczegóły', compare: 'Porównaj' },
+  nl: { featured: 'Uitgelicht', share: 'Delen', agenda: 'Agenda', map: 'Kaart', details: 'Details', compare: 'Vergelijk' },
+  en: { featured: 'Featured', share: 'Share', agenda: 'Agenda', map: 'Map', details: 'Details', compare: 'Compare' },
+  de: { featured: 'Empfohlen', share: 'Teilen', agenda: 'Kalender', map: 'Karte', details: 'Details', compare: 'Vergleichen' },
+  es: { featured: 'Destacado', share: 'Compartir', agenda: 'Agenda', map: 'Mapa', details: 'Detalles', compare: 'Comparar' },
+  sv: { featured: 'Utvalda', share: 'Dela', agenda: 'Kalender', map: 'Karta', details: 'Detaljer', compare: 'Jämför' },
+  pl: { featured: 'Polecane', share: 'Udostępnij', agenda: 'Kalendarz', map: 'Mapa', details: 'Szczegóły', compare: 'Porównaj' },
 };
 
-export const AgendaCard: React.FC<AgendaCardProps> = ({
+export const AgendaCard = forwardRef<HTMLDivElement, AgendaCardProps>(({
   event,
   onClick,
   onSave,
@@ -136,7 +136,7 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
   canAddMore = true,
   showComparison = true,
   dateKey
-}) => {
+}, ref) => {
   const { language } = useLanguage();
   const locale = dateLocales[language] || nl;
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
@@ -266,7 +266,7 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
   };
 
   return (
-    <div className="agenda-card" onClick={onClick} data-date-key={dateKey}>
+    <div className="agenda-card" onClick={onClick} data-date-key={dateKey} ref={ref}>
       {/* Category Label */}
       <div
         className="agenda-category-label"
@@ -401,6 +401,8 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
       )}
     </div>
   );
-};
+});
+
+AgendaCard.displayName = 'AgendaCard';
 
 export default AgendaCard;
