@@ -284,8 +284,15 @@ export function AgendaPage() {
     getUserLocation().then(setUserLocation).catch(() => {});
   }, []);
 
-  // Scroll direction detection (throttled for mobile performance)
+  // Scroll direction detection (disabled on mobile to prevent scroll jumping)
   useEffect(() => {
+    // Skip on mobile - header always visible via CSS
+    const isMobile = window.innerWidth <= 640;
+    if (isMobile) {
+      setShowHeader(true);
+      return;
+    }
+
     let lastY = lastScrollY;
     const handleScroll = () => {
       const now = Date.now();
