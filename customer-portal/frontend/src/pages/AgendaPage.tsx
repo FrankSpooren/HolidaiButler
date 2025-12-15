@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { Loader2 } from 'lucide-react';
@@ -161,9 +161,10 @@ export function AgendaPage() {
   const [lastScrollY, setLastScrollY] = useState<number>(0);
   const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
-  // Ref to track previous event count for scroll-to-new-items
-  const prevEventCountRef = useRef<number>(0);
-  const gridRef = useRef<HTMLDivElement>(null);
+  // Refs for scroll-to-new-items functionality
+  const firstNewItemRef = useRef<HTMLDivElement>(null);
+  const [scrollToNewItem, setScrollToNewItem] = useState<boolean>(false);
+  const prevLimitRef = useRef<number>(12);
 
   // Fetch events
   const { data: eventsData, isLoading, error } = useQuery({
@@ -204,22 +205,48 @@ export function AgendaPage() {
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const endOfWeekend = new Date(today);
-      endOfWeekend.setDate(endOfWeekend.getDate() + (7 - today.getDay()));
 
       result = result.filter(event => {
         const eventDate = new Date(event.startDate);
         eventDate.setHours(0, 0, 0, 0);
         switch (filters.dateType) {
-          case 'today': return eventDate.getTime() === today.getTime();
-          case 'tomorrow': return eventDate.getTime() === tomorrow.getTime();
-          case 'weekend': return eventDate >= today && eventDate <= endOfWeekend;
+          case 'today':
+            return eventDate.getTime() === today.getTime();
+          case 'tomorrow':
+            return eventDate.getTime() === tomorrow.getTime();
+          case 'weekend': {
+            // Calculate the upcoming weekend (Saturday and Sunday)
+            const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
+            let weekendStart = new Date(today);
+            let weekendEnd = new Date(today);
+
+            if (dayOfWeek === 0) {
+              // It's Sunday - show today only
+              weekendStart = today;
+              weekendEnd = today;
+            } else if (dayOfWeek === 6) {
+              // It's Saturday - show today and tomorrow (Sunday)
+              weekendStart = today;
+              weekendEnd = new Date(today);
+              weekendEnd.setDate(today.getDate() + 1);
+            } else {
+              // It's a weekday (Mon-Fri) - show upcoming Saturday and Sunday
+              const daysUntilSaturday = 6 - dayOfWeek;
+              weekendStart = new Date(today);
+              weekendStart.setDate(today.getDate() + daysUntilSaturday);
+              weekendEnd = new Date(weekendStart);
+              weekendEnd.setDate(weekendStart.getDate() + 1);
+            }
+
+            return eventDate >= weekendStart && eventDate <= weekendEnd;
+          }
           case 'custom':
             if (filters.dateStart && filters.dateEnd) {
               return eventDate >= new Date(filters.dateStart) && eventDate <= new Date(filters.dateEnd);
             }
             return true;
-          default: return true;
+          default:
+            return true;
         }
       });
     }
@@ -292,34 +319,20 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleDateScroll);
   }, [visibleDateKey]);
 
-  // Scroll to first new item after Load More
-  useEffect(() => {
-    const currentCount = filteredEvents.length;
-    const prevCount = prevEventCountRef.current;
-
-    // Only scroll if we loaded more (not on initial load or filter changes)
-    if (prevCount > 0 && currentCount > prevCount && gridRef.current) {
-      const cards = gridRef.current.querySelectorAll('.agenda-card');
-      const firstNewCard = cards[prevCount] as HTMLElement | undefined;
-      if (firstNewCard) {
-        // Small delay to ensure DOM is updated
-        setTimeout(() => {
-          firstNewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // Offset for sticky header (approximately 200px)
-          setTimeout(() => {
-            window.scrollBy({ top: -200, behavior: 'smooth' });
-          }, 300);
-        }, 100);
-      }
+  // Scroll to first new item after Load More - using useLayoutEffect for timing
+  useLayoutEffect(() => {
+    if (scrollToNewItem && firstNewItemRef.current) {
+      firstNewItemRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setScrollToNewItem(false);
     }
+  }, [scrollToNewItem, filteredEvents.length]);
 
-    prevEventCountRef.current = currentCount;
-  }, [filteredEvents.length]);
-
-  // Reset prev count when filters change (not just limit)
-  useEffect(() => {
-    prevEventCountRef.current = 0;
-  }, [searchQuery, selectedCategory, filters]);
+  // Handle Load More click
+  const handleLoadMore = () => {
+    prevLimitRef.current = limit;
+    setScrollToNewItem(true);
+    setLimit(prev => prev + 12);
+  };
 
   const getDistance = (event: AgendaEvent): string => {
     if (!event.location?.coordinates || !userLocation) return '';
@@ -332,6 +345,7 @@ export function AgendaPage() {
   const handleQuickFilter = (type: 'today' | 'tomorrow' | 'weekend') => {
     setFilters(prev => ({ ...prev, dateType: prev.dateType === type ? 'all' : type }));
     setLimit(12);
+    prevLimitRef.current = 12;
   };
 
   const getActiveFilterCount = (): number => {
@@ -360,7 +374,7 @@ export function AgendaPage() {
             className="agenda-search-input"
             placeholder={searchPlaceholders[language] || searchPlaceholders.en}
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); }}
+            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); prevLimitRef.current = 12; }}
           />
         </div>
       </div>
@@ -373,7 +387,7 @@ export function AgendaPage() {
               key={category.id}
               className={`agenda-category-chip ${selectedCategory === category.id ? 'active' : ''}`}
               style={{ background: category.color }}
-              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); }}
+              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); prevLimitRef.current = 12; }}
             >
               <span className="agenda-category-icon">{category.icon}</span>
               {categoryLabels[language]?.[category.id] || categoryLabels.en[category.id]}
@@ -425,23 +439,26 @@ export function AgendaPage() {
 
       {/* Single continuous grid - all events flow together, 4 per row */}
       {!isLoading && !error && filteredEvents.length > 0 && (
-        <div className="agenda-grid" ref={gridRef}>
-          {filteredEvents.map((event) => {
+        <div className="agenda-grid">
+          {filteredEvents.map((event, index) => {
             const ed = new Date(event.startDate);
             const eventDateKey = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
+            // Attach ref to the first new item (index equals previous limit)
+            const isFirstNewItem = index === prevLimitRef.current;
             return (
               <AgendaCard
                 key={event._id}
-                  event={event}
-                  onClick={() => setSelectedEventId(event._id)}
-                  onSave={toggleAgendaFavorite}
-                  isSaved={isAgendaFavorite(event._id)}
-                  distance={getDistance(event)}
-                  detectedCategory={detectCategory(event, language)}
-                  isInComparison={isInComparison(event._id)}
-                  onToggleComparison={toggleComparison}
-                  canAddMore={canAddMore}
-                  showComparison={true}
+                ref={isFirstNewItem ? firstNewItemRef : undefined}
+                event={event}
+                onClick={() => setSelectedEventId(event._id)}
+                onSave={toggleAgendaFavorite}
+                isSaved={isAgendaFavorite(event._id)}
+                distance={getDistance(event)}
+                detectedCategory={detectCategory(event, language)}
+                isInComparison={isInComparison(event._id)}
+                onToggleComparison={toggleComparison}
+                canAddMore={canAddMore}
+                showComparison={true}
                 dateKey={eventDateKey}
               />
             );
@@ -451,7 +468,7 @@ export function AgendaPage() {
 
       {/* Load More */}
       {!isLoading && !error && hasMore && (
-        <button className="agenda-load-more" onClick={() => setLimit(prev => prev + 12)}>
+        <button className="agenda-load-more" onClick={handleLoadMore}>
           {t.agenda?.loadMore || 'Load More Events'} ({allEvents.length - filteredEvents.length} remaining)
         </button>
       )}
@@ -469,7 +486,7 @@ export function AgendaPage() {
       <AgendaFilterModal
         isOpen={filterModalOpen}
         onClose={() => setFilterModalOpen(false)}
-        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); }}
+        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); prevLimitRef.current = 12; }}
         initialFilters={filters}
         resultCount={filteredEvents.length}
       />
