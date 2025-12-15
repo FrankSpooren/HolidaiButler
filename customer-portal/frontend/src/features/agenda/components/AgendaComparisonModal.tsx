@@ -39,12 +39,19 @@ export function AgendaComparisonModal({ eventIds, isOpen, onClose }: AgendaCompa
     const fetchEvents = async () => {
       setLoading(true);
       try {
-        const fetchedEvents = await Promise.all(
-          eventIds.map(id => agendaService.getEventById(id))
+        const fetchedResponses = await Promise.all(
+          eventIds.map(id => agendaService.getEventById(id).catch(() => null))
         );
-        setEvents(fetchedEvents.filter((e): e is AgendaEvent => e !== null));
+        // Extract .data from each response and filter out nulls
+        const validEvents = fetchedResponses
+          .filter((response): response is { success: boolean; data: AgendaEvent } =>
+            response !== null && response.success && response.data !== null
+          )
+          .map(response => response.data);
+        setEvents(validEvents);
       } catch (error) {
         console.error('Error fetching events for comparison:', error);
+        setEvents([]);
       } finally {
         setLoading(false);
       }
@@ -94,6 +101,8 @@ export function AgendaComparisonModal({ eventIds, isOpen, onClose }: AgendaCompa
         <div className="agenda-comparison-content">
           {loading ? (
             <div className="agenda-comparison-loading">Loading...</div>
+          ) : events.length === 0 ? (
+            <div className="agenda-comparison-loading">No events to compare</div>
           ) : (
             <div className="agenda-comparison-grid">
               {events.map((event) => (
