@@ -290,14 +290,15 @@ export function AgendaPage() {
   // Calculate row count based on displayed items
   const rowCount = Math.ceil(displayedEvents.length / columnCount);
 
-  // Row height based on screen size
-  const rowHeight = columnCount <= 2 ? 380 : 420;
-  const rowGap = 12;
+  // Row height based on screen size - must fit entire card + gap
+  // Mobile: image 160px + content ~190px = ~350px + 12px gap = 362px
+  // Desktop: image 200px + content ~220px = ~420px + 12px gap = 432px
+  const rowHeight = columnCount <= 2 ? 362 : 432;
 
   // Window virtualizer - scrolls with the WINDOW, not a container
   const virtualizer = useWindowVirtualizer({
     count: rowCount,
-    estimateSize: () => rowHeight + rowGap,
+    estimateSize: () => rowHeight,
     overscan: 3, // Render 3 extra rows above/below for smooth scrolling
     scrollMargin: gridContainerRef.current?.offsetTop ?? 0,
   });
@@ -522,6 +523,9 @@ export function AgendaPage() {
             const startIndex = rowIndex * columnCount;
             const rowEvents = displayedEvents.slice(startIndex, startIndex + columnCount);
 
+            // Card height = rowHeight - gap (12px)
+            const cardHeight = rowHeight - 12;
+
             return (
               <div
                 key={virtualRow.key}
@@ -531,7 +535,7 @@ export function AgendaPage() {
                   top: 0,
                   left: 0,
                   width: '100%',
-                  height: `${rowHeight}px`,
+                  height: `${cardHeight}px`,
                   transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
                 }}
               >
