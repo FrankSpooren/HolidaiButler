@@ -399,6 +399,30 @@
 
 /* Mobile Responsive */
 @media (max-width: 640px) {
+  /* CRITICAL: Disable header hide/show animation on mobile to prevent scroll jumping */
+  .agenda-search-section,
+  .agenda-category-section {
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  .agenda-search-section.header-hidden,
+  .agenda-category-section.header-hidden {
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  .agenda-filter-row {
+    transition: none !important;
+  }
+
+  .agenda-filter-row.header-hidden {
+    top: 168px !important; /* Keep same position, don't move up */
+  }
+
   .agenda-search-section {
     top: 56px;
     padding: 12px 16px;
