@@ -27,7 +27,7 @@ const Review = mysqlSequelize.define('Review', {
 
   // Reviewer info
   user_name: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.STRING(100),
     allowNull: false,
     defaultValue: 'Anonymous',
   },
@@ -41,7 +41,7 @@ const Review = mysqlSequelize.define('Review', {
 
   // Rating (1-5)
   rating: {
-    type: DataTypes.DECIMAL(2, 1),
+    type: DataTypes.INTEGER,
     allowNull: false,
     validate: {
       min: 1,
