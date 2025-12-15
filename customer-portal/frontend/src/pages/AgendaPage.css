@@ -415,12 +415,12 @@
     pointer-events: auto !important;
   }
 
-  .agenda-filter-row {
-    transition: none !important;
-  }
-
+  /* Filter row: always same position on mobile, regardless of header state */
+  .agenda-filter-row,
+  .agenda-filter-row.header-visible,
   .agenda-filter-row.header-hidden {
-    top: 168px !important; /* Keep same position, don't move up */
+    transition: none !important;
+    top: 160px !important; /* Directly below category chips (112px + ~48px height) */
   }
 
   .agenda-search-section {
@@ -446,11 +446,6 @@
 
   .agenda-category-icon {
     font-size: 16px;
-  }
-
-  /* Mobile: Filter row contains buttons and date */
-  .agenda-filter-row {
-    top: 168px;
   }
 
   .agenda-filter-buttons {
