@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl, enUS, de, es, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
-import { List, useListRef } from 'react-window';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { useAgendaComparison } from '../shared/contexts/AgendaComparisonContext';
@@ -21,8 +21,8 @@ import './AgendaPage.css';
 /**
  * AgendaPage - Events & Activities Calendar
  * Route: /agenda
- * Enterprise-level virtualized infinite scroll using react-window
- * Only renders visible items for optimal performance at any scale
+ * Enterprise-level virtualized infinite scroll using @tanstack/react-virtual
+ * Uses WINDOW SCROLLING for unified scroll experience - no nested scroll containers
  */
 
 // Hook to get responsive column count
@@ -45,24 +45,6 @@ function useColumnCount() {
   }, []);
 
   return columnCount;
-}
-
-// Hook to get container width
-function useContainerWidth(containerRef: React.RefObject<HTMLDivElement | null>) {
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setWidth(containerRef.current.offsetWidth);
-      }
-    };
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
-  }, [containerRef]);
-
-  return width;
 }
 
 // Interest category configuration
@@ -201,11 +183,9 @@ export function AgendaPage() {
   const [showHeader, setShowHeader] = useState<boolean>(true);
   const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
-  // Virtualized grid state
-  const containerRef = useRef<HTMLDivElement>(null);
-  const listRef = useListRef();
+  // Grid container ref for measuring width
+  const gridContainerRef = useRef<HTMLDivElement>(null);
   const columnCount = useColumnCount();
-  const containerWidth = useContainerWidth(containerRef);
 
   // For infinite loading - how many items are currently loaded
   const [loadedCount, setLoadedCount] = useState<number>(24);
@@ -224,7 +204,7 @@ export function AgendaPage() {
 
   const allEvents = eventsData?.data || [];
 
-  // Filter and sort ALL events (no slicing - virtualization handles this)
+  // Filter and sort ALL events
   const filteredEvents = useMemo(() => {
     let result = [...allEvents];
 
@@ -302,7 +282,27 @@ export function AgendaPage() {
     return result;
   }, [allEvents, selectedCategory, filters, userLocation, searchQuery, language]);
 
-  // Compute formatted visible date from key - updates when language changes
+  // Events to display (limited by loadedCount for infinite scroll)
+  const displayedEvents = useMemo(() => {
+    return filteredEvents.slice(0, loadedCount);
+  }, [filteredEvents, loadedCount]);
+
+  // Calculate row count based on displayed items
+  const rowCount = Math.ceil(displayedEvents.length / columnCount);
+
+  // Row height based on screen size
+  const rowHeight = columnCount <= 2 ? 380 : 420;
+  const rowGap = 12;
+
+  // Window virtualizer - scrolls with the WINDOW, not a container
+  const virtualizer = useWindowVirtualizer({
+    count: rowCount,
+    estimateSize: () => rowHeight + rowGap,
+    overscan: 3, // Render 3 extra rows above/below for smooth scrolling
+    scrollMargin: gridContainerRef.current?.offsetTop ?? 0,
+  });
+
+  // Compute formatted visible date from key
   const visibleDateFormatted = useMemo(() => {
     if (!visibleDateKey) return '';
     const locale = dateLocales[language] || dateLocales.en;
@@ -366,39 +366,40 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Update visible date based on virtualizer scroll position
+  useEffect(() => {
+    const virtualItems = virtualizer.getVirtualItems();
+    if (virtualItems.length > 0) {
+      const firstVisibleRowIndex = virtualItems[0].index;
+      const eventIndex = firstVisibleRowIndex * columnCount;
+      if (displayedEvents[eventIndex]) {
+        const d = new Date(displayedEvents[eventIndex].startDate);
+        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (dateKey !== visibleDateKey) {
+          setVisibleDateKey(dateKey);
+        }
+      }
+    }
+  }, [virtualizer.getVirtualItems(), displayedEvents, columnCount, visibleDateKey]);
+
+  // Infinite scroll - load more when near bottom
+  useEffect(() => {
+    const virtualItems = virtualizer.getVirtualItems();
+    if (virtualItems.length > 0) {
+      const lastVisibleRowIndex = virtualItems[virtualItems.length - 1].index;
+      // Load more when within 2 rows of the end
+      if (lastVisibleRowIndex >= rowCount - 2 && loadedCount < filteredEvents.length) {
+        setLoadedCount(prev => Math.min(prev + 12, filteredEvents.length));
+      }
+    }
+  }, [virtualizer.getVirtualItems(), rowCount, loadedCount, filteredEvents.length]);
+
   // Reset loadedCount when filters change
   useEffect(() => {
     setLoadedCount(24);
-    if (listRef.current) {
-      listRef.current.scrollToRow({ index: 0 });
-    }
-  }, [selectedCategory, searchQuery, filters, listRef]);
-
-  // Calculate row count based on loaded items
-  const rowCount = Math.ceil(Math.min(loadedCount, filteredEvents.length) / columnCount);
-
-  // Handle infinite scroll via onRowsRendered callback
-  const handleRowsRendered = useCallback((
-    visibleRows: { startIndex: number; stopIndex: number },
-    allRows: { startIndex: number; stopIndex: number }
-  ) => {
-    // Update visible date based on first visible row
-    const eventIndex = visibleRows.startIndex * columnCount;
-    if (filteredEvents[eventIndex]) {
-      const d = new Date(filteredEvents[eventIndex].startDate);
-      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      if (dateKey !== visibleDateKey) {
-        setVisibleDateKey(dateKey);
-      }
-    }
-
-    // Load more when near the end (within 3 rows of bottom)
-    const totalRows = Math.ceil(filteredEvents.length / columnCount);
-    const loadedRows = Math.ceil(loadedCount / columnCount);
-    if (allRows.stopIndex >= loadedRows - 3 && loadedCount < filteredEvents.length) {
-      setLoadedCount(prev => Math.min(prev + 12, filteredEvents.length));
-    }
-  }, [filteredEvents, columnCount, visibleDateKey, loadedCount]);
+    // Scroll to top when filters change
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [selectedCategory, searchQuery, filters]);
 
   // Helper function for distance calculation
   const getDistance = useCallback((event: AgendaEvent): string => {
@@ -408,102 +409,6 @@ export function AgendaPage() {
       userLocation
     );
   }, [userLocation]);
-
-  // Row props type for v2 API
-  type RowProps = {
-    events: AgendaEvent[];
-    columnCount: number;
-    containerWidth: number;
-    language: string;
-    onEventClick: (id: string) => void;
-    onSave: (id: string) => void;
-    isSaved: (id: string) => boolean;
-    getDistance: (event: AgendaEvent) => string;
-    isInComparison: (id: string) => boolean;
-    onToggleComparison: (id: string) => void;
-    canAddMore: boolean;
-  };
-
-  // Row component for react-window v2 API
-  const RowComponent = useCallback(({
-    index,
-    style,
-    events,
-    columnCount: cols,
-    containerWidth: width,
-    language: lang,
-    onEventClick,
-    onSave,
-    isSaved,
-    getDistance: getDist,
-    isInComparison: isCompare,
-    onToggleComparison,
-    canAddMore: canAdd
-  }: {
-    ariaAttributes: object;
-    index: number;
-    style: React.CSSProperties;
-  } & RowProps) => {
-    const startIndex = index * cols;
-    const rowEvents = events.slice(startIndex, startIndex + cols);
-
-    const gap = 12;
-    const padding = 16;
-    const availableWidth = width - (padding * 2);
-    const cardWidth = (availableWidth - (gap * (cols - 1))) / cols;
-
-    return (
-      <div
-        style={{
-          ...style,
-          display: 'flex',
-          gap: `${gap}px`,
-          padding: `0 ${padding}px`,
-        }}
-      >
-        {rowEvents.map((event) => {
-          const ed = new Date(event.startDate);
-          const eventDateKey = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
-          return (
-            <div key={event._id} style={{ width: cardWidth, flexShrink: 0 }}>
-              <AgendaCard
-                event={event}
-                onClick={() => onEventClick(event._id)}
-                onSave={onSave}
-                isSaved={isSaved(event._id)}
-                distance={getDist(event)}
-                detectedCategory={detectCategory(event, lang)}
-                isInComparison={isCompare(event._id)}
-                onToggleComparison={onToggleComparison}
-                canAddMore={canAdd}
-                showComparison={true}
-                dateKey={eventDateKey}
-              />
-            </div>
-          );
-        })}
-        {/* Fill empty slots for incomplete rows */}
-        {rowEvents.length < cols && Array.from({ length: cols - rowEvents.length }).map((_, i) => (
-          <div key={`empty-${i}`} style={{ width: cardWidth, flexShrink: 0 }} />
-        ))}
-      </div>
-    );
-  }, []);
-
-  // Memoized row props to pass to List
-  const rowProps: RowProps = useMemo(() => ({
-    events: filteredEvents,
-    columnCount,
-    containerWidth,
-    language,
-    onEventClick: setSelectedEventId,
-    onSave: toggleAgendaFavorite,
-    isSaved: isAgendaFavorite,
-    getDistance,
-    isInComparison,
-    onToggleComparison: toggleComparison,
-    canAddMore,
-  }), [filteredEvents, columnCount, containerWidth, language, toggleAgendaFavorite, isAgendaFavorite, getDistance, isInComparison, toggleComparison, canAddMore]);
 
   const handleQuickFilter = (type: 'today' | 'tomorrow' | 'weekend') => {
     setFilters(prev => ({ ...prev, dateType: prev.dateType === type ? 'all' : type }));
@@ -523,6 +428,9 @@ export function AgendaPage() {
   };
 
   const noResults = noResultsLabels[language] || noResultsLabels.en;
+
+  // Get virtual items for rendering
+  const virtualItems = virtualizer.getVirtualItems();
 
   return (
     <>
@@ -598,25 +506,65 @@ export function AgendaPage() {
         </div>
       )}
 
-      {/* Virtualized Grid - Enterprise-level performance with react-window v2 */}
+      {/* Virtualized Grid - Window scrolling for unified scroll experience */}
       {!isLoading && !error && filteredEvents.length > 0 && (
-        <div ref={containerRef} className="agenda-virtualized-container">
-          {containerWidth > 0 && (
-            <List
-              listRef={listRef}
-              rowComponent={RowComponent}
-              rowProps={rowProps}
-              rowCount={rowCount}
-              rowHeight={columnCount <= 2 ? 380 : 420}
-              onRowsRendered={handleRowsRendered}
-              className="agenda-virtual-list"
-              style={{ height: typeof window !== 'undefined' ? window.innerHeight - 280 : 600 }}
-            />
-          )}
+        <div
+          ref={gridContainerRef}
+          className="agenda-grid-container"
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {virtualItems.map((virtualRow) => {
+            const rowIndex = virtualRow.index;
+            const startIndex = rowIndex * columnCount;
+            const rowEvents = displayedEvents.slice(startIndex, startIndex + columnCount);
+
+            return (
+              <div
+                key={virtualRow.key}
+                className="agenda-virtual-row"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${rowHeight}px`,
+                  transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
+                }}
+              >
+                <div className="agenda-grid-row">
+                  {rowEvents.map((event) => {
+                    const ed = new Date(event.startDate);
+                    const eventDateKey = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
+                    return (
+                      <div key={event._id} className="agenda-grid-item">
+                        <AgendaCard
+                          event={event}
+                          onClick={() => setSelectedEventId(event._id)}
+                          onSave={toggleAgendaFavorite}
+                          isSaved={isAgendaFavorite(event._id)}
+                          distance={getDistance(event)}
+                          detectedCategory={detectCategory(event, language)}
+                          isInComparison={isInComparison(event._id)}
+                          onToggleComparison={toggleComparison}
+                          canAddMore={canAddMore}
+                          showComparison={true}
+                          dateKey={eventDateKey}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* No Results - Updated text */}
+      {/* No Results */}
       {!isLoading && !error && filteredEvents.length === 0 && (
         <div className="agenda-no-results">
           <p className="agenda-no-results-icon">🔍</p>

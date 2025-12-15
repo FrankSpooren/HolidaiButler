@@ -239,24 +239,45 @@
 }
 
 
-/* Virtualized Grid Container - Enterprise-level infinite scroll */
-.agenda-virtualized-container {
+/* Virtualized Grid Container - Enterprise-level window scrolling */
+.agenda-grid-container {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding-top: 16px;
+  padding: 16px;
 }
 
-.agenda-virtual-list {
-  /* Smooth scrolling on mobile */
-  -webkit-overflow-scrolling: touch;
-  /* Hide scrollbar for cleaner look */
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+/* Virtual row - positioned absolutely by virtualizer */
+.agenda-virtual-row {
+  width: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
-.agenda-virtual-list::-webkit-scrollbar {
-  display: none;
+/* Grid row - flexbox with gap */
+.agenda-grid-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .agenda-grid-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .agenda-grid-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Grid item */
+.agenda-grid-item {
+  width: 100%;
+  min-width: 0; /* Prevent overflow */
 }
 
 /* Legacy grid for fallback (not used with virtualization) */
