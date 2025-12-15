@@ -27,6 +27,8 @@ interface AgendaCardProps {
   showComparison?: boolean;
   // Date key for scroll detection (applied directly to card)
   dateKey?: string;
+  // Style prop for virtualized list positioning
+  style?: React.CSSProperties;
 }
 
 const dateLocales: Record<string, Locale> = {
@@ -135,7 +137,8 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
   onToggleComparison,
   canAddMore = true,
   showComparison = true,
-  dateKey
+  dateKey,
+  style
 }) => {
   const { language } = useLanguage();
   const locale = dateLocales[language] || nl;
@@ -266,7 +269,7 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
   };
 
   return (
-    <div className="agenda-card" onClick={onClick} data-date-key={dateKey}>
+    <div className="agenda-card" onClick={onClick} data-date-key={dateKey} style={style}>
       {/* Category Label */}
       <div
         className="agenda-category-label"

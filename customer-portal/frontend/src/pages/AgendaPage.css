@@ -239,16 +239,32 @@
 }
 
 
-/* Grid Layout - Single continuous grid, 4 columns on desktop */
+/* Virtualized Grid Container - Enterprise-level infinite scroll */
+.agenda-virtualized-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-top: 16px;
+}
+
+.agenda-virtual-list {
+  /* Smooth scrolling on mobile */
+  -webkit-overflow-scrolling: touch;
+  /* Hide scrollbar for cleaner look */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.agenda-virtual-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* Legacy grid for fallback (not used with virtualization) */
 .agenda-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   padding: 16px;
-  /* CRITICAL: Scroll anchoring - browser maintains scroll position during DOM changes */
-  overflow-anchor: auto;
-  /* Containment - isolate layout recalculations from affecting scroll */
-  contain: layout style;
 }
 
 @media (min-width: 768px) {
