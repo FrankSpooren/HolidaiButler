@@ -399,9 +399,13 @@
 
 /* Mobile Responsive */
 @media (max-width: 640px) {
-  /* CRITICAL: Disable header hide/show animation on mobile to prevent scroll jumping */
+  /* CRITICAL: Remove ALL sticky positioning on mobile to prevent scroll jumping */
+  /* Headers scroll with content - simpler and more reliable */
   .agenda-search-section,
-  .agenda-category-section {
+  .agenda-category-section,
+  .agenda-filter-row {
+    position: relative !important;
+    top: auto !important;
     transition: none !important;
     transform: none !important;
     opacity: 1 !important;
@@ -409,32 +413,23 @@
   }
 
   .agenda-search-section.header-hidden,
-  .agenda-category-section.header-hidden {
+  .agenda-category-section.header-hidden,
+  .agenda-filter-row.header-hidden,
+  .agenda-filter-row.header-visible {
+    position: relative !important;
+    top: auto !important;
     transform: none !important;
     opacity: 1 !important;
     pointer-events: auto !important;
   }
 
-  /* Filter row: always same position on mobile, regardless of header state */
-  .agenda-filter-row,
-  .agenda-filter-row.header-visible,
-  .agenda-filter-row.header-hidden {
-    transition: none !important;
-    top: 160px !important; /* Directly below category chips (112px + ~48px height) */
-  }
-
   .agenda-search-section {
-    top: 56px;
     padding: 12px 16px;
   }
 
   .agenda-search-input {
     height: 44px;
     font-size: 15px;
-  }
-
-  .agenda-category-section {
-    top: 112px;
   }
 
   .agenda-category-chip {
