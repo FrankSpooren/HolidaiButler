@@ -1,4 +1,4 @@
-import React, { useState, forwardRef } from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { nl, enUS, es, de, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
@@ -10,7 +10,7 @@ import './AgendaCard.css';
 /**
  * AgendaCard Component
  * Displays event in POI Grid style - matching POILandingPage cards exactly
- * With comparison functionality and forwardRef for scroll-to-new-items
+ * With comparison functionality
  */
 
 interface AgendaCardProps {
@@ -114,7 +114,7 @@ const categoryLabels: Record<string, Record<string, string>> = {
   },
 };
 
-// UI labels translations
+// UI labels translations (removed 'free' since we're not showing it)
 const uiLabels: Record<string, Record<string, string>> = {
   nl: { featured: 'Uitgelicht', share: 'Delen', agenda: 'Agenda', map: 'Kaart', details: 'Details', compare: 'Vergelijk' },
   en: { featured: 'Featured', share: 'Share', agenda: 'Agenda', map: 'Map', details: 'Details', compare: 'Compare' },
@@ -124,7 +124,7 @@ const uiLabels: Record<string, Record<string, string>> = {
   pl: { featured: 'Polecane', share: 'Udostępnij', agenda: 'Kalendarz', map: 'Mapa', details: 'Szczegóły', compare: 'Porównaj' },
 };
 
-export const AgendaCard = forwardRef<HTMLDivElement, AgendaCardProps>(({
+export const AgendaCard: React.FC<AgendaCardProps> = ({
   event,
   onClick,
   onSave,
@@ -136,7 +136,7 @@ export const AgendaCard = forwardRef<HTMLDivElement, AgendaCardProps>(({
   canAddMore = true,
   showComparison = true,
   dateKey
-}, ref) => {
+}) => {
   const { language } = useLanguage();
   const locale = dateLocales[language] || nl;
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
@@ -266,7 +266,7 @@ export const AgendaCard = forwardRef<HTMLDivElement, AgendaCardProps>(({
   };
 
   return (
-    <div className="agenda-card" onClick={onClick} data-date-key={dateKey} ref={ref}>
+    <div className="agenda-card" onClick={onClick} data-date-key={dateKey}>
       {/* Category Label */}
       <div
         className="agenda-category-label"
@@ -401,8 +401,6 @@ export const AgendaCard = forwardRef<HTMLDivElement, AgendaCardProps>(({
       )}
     </div>
   );
-});
-
-AgendaCard.displayName = 'AgendaCard';
+};
 
 export default AgendaCard;

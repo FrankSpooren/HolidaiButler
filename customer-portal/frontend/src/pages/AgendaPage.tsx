@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { Loader2 } from 'lucide-react';
@@ -20,7 +20,7 @@ import './AgendaPage.css';
 /**
  * AgendaPage - Events & Activities Calendar
  * Route: /agenda
- * Updated with comparison functionality
+ * Simple Load More - no scroll, items just appear
  */
 
 // Interest category configuration
@@ -160,11 +160,6 @@ export function AgendaPage() {
   const [showHeader, setShowHeader] = useState<boolean>(true);
   const [lastScrollY, setLastScrollY] = useState<number>(0);
   const [visibleDateKey, setVisibleDateKey] = useState<string>('');
-
-  // Refs for scroll-to-new-items functionality
-  const firstNewItemRef = useRef<HTMLDivElement>(null);
-  const [scrollToNewItem, setScrollToNewItem] = useState<boolean>(false);
-  const prevLimitRef = useRef<number>(12);
 
   // Fetch events
   const { data: eventsData, isLoading, error } = useQuery({
@@ -319,21 +314,6 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleDateScroll);
   }, [visibleDateKey]);
 
-  // Scroll to first new item after Load More - using useLayoutEffect for timing
-  useLayoutEffect(() => {
-    if (scrollToNewItem && firstNewItemRef.current) {
-      firstNewItemRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setScrollToNewItem(false);
-    }
-  }, [scrollToNewItem, filteredEvents.length]);
-
-  // Handle Load More click
-  const handleLoadMore = () => {
-    prevLimitRef.current = limit;
-    setScrollToNewItem(true);
-    setLimit(prev => prev + 12);
-  };
-
   const getDistance = (event: AgendaEvent): string => {
     if (!event.location?.coordinates || !userLocation) return '';
     return getDistanceFromUser(
@@ -345,7 +325,6 @@ export function AgendaPage() {
   const handleQuickFilter = (type: 'today' | 'tomorrow' | 'weekend') => {
     setFilters(prev => ({ ...prev, dateType: prev.dateType === type ? 'all' : type }));
     setLimit(12);
-    prevLimitRef.current = 12;
   };
 
   const getActiveFilterCount = (): number => {
@@ -374,7 +353,7 @@ export function AgendaPage() {
             className="agenda-search-input"
             placeholder={searchPlaceholders[language] || searchPlaceholders.en}
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); prevLimitRef.current = 12; }}
+            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); }}
           />
         </div>
       </div>
@@ -387,7 +366,7 @@ export function AgendaPage() {
               key={category.id}
               className={`agenda-category-chip ${selectedCategory === category.id ? 'active' : ''}`}
               style={{ background: category.color }}
-              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); prevLimitRef.current = 12; }}
+              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); }}
             >
               <span className="agenda-category-icon">{category.icon}</span>
               {categoryLabels[language]?.[category.id] || categoryLabels.en[category.id]}
@@ -440,15 +419,12 @@ export function AgendaPage() {
       {/* Single continuous grid - all events flow together, 4 per row */}
       {!isLoading && !error && filteredEvents.length > 0 && (
         <div className="agenda-grid">
-          {filteredEvents.map((event, index) => {
+          {filteredEvents.map((event) => {
             const ed = new Date(event.startDate);
             const eventDateKey = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
-            // Attach ref to the first new item (index equals previous limit)
-            const isFirstNewItem = index === prevLimitRef.current;
             return (
               <AgendaCard
                 key={event._id}
-                ref={isFirstNewItem ? firstNewItemRef : undefined}
                 event={event}
                 onClick={() => setSelectedEventId(event._id)}
                 onSave={toggleAgendaFavorite}
@@ -466,9 +442,9 @@ export function AgendaPage() {
         </div>
       )}
 
-      {/* Load More */}
+      {/* Load More - Simple: just add more items, no scrolling */}
       {!isLoading && !error && hasMore && (
-        <button className="agenda-load-more" onClick={handleLoadMore}>
+        <button className="agenda-load-more" onClick={() => setLimit(prev => prev + 12)}>
           {t.agenda?.loadMore || 'Load More Events'} ({allEvents.length - filteredEvents.length} remaining)
         </button>
       )}
@@ -486,7 +462,7 @@ export function AgendaPage() {
       <AgendaFilterModal
         isOpen={filterModalOpen}
         onClose={() => setFilterModalOpen(false)}
-        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); prevLimitRef.current = 12; }}
+        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); }}
         initialFilters={filters}
         resultCount={filteredEvents.length}
       />
