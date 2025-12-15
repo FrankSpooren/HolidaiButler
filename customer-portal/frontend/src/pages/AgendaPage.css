@@ -324,23 +324,36 @@
   font-family: 'Inter', sans-serif;
 }
 
-/* Load More - Matching POILandingPage.css exactly */
-.agenda-load-more {
-  width: calc(100% - 32px);
-  height: 48px;
-  margin: 16px;
-  background: white;
-  border: 2px solid #E5E7EB;
-  border-radius: 24px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Inter', sans-serif;
+/* Infinite Scroll Sentinel */
+.agenda-scroll-sentinel {
+  width: 100%;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
 }
 
-.agenda-load-more:hover {
-  border-color: #D4AF37;
+.agenda-loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #6B7280;
+  font-size: 14px;
+}
+
+.agenda-loading-more .agenda-spinner {
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+}
+
+.agenda-end-message {
+  color: #9CA3AF;
+  font-size: 14px;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Footer - Matching POILandingPage.css exactly */

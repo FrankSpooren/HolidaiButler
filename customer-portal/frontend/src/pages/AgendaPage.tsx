@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { Loader2 } from 'lucide-react';
@@ -20,7 +20,7 @@ import './AgendaPage.css';
 /**
  * AgendaPage - Events & Activities Calendar
  * Route: /agenda
- * Load More scrolls to first new item after DOM is fully rendered
+ * Infinite Scroll - loads more items automatically as user scrolls
  */
 
 // Interest category configuration
@@ -161,9 +161,9 @@ export function AgendaPage() {
   const [lastScrollY, setLastScrollY] = useState<number>(0);
   const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
-  // Scroll-to-new-items state
-  const [shouldScrollToNew, setShouldScrollToNew] = useState<boolean>(false);
-  const prevLimitRef = useRef<number>(12);
+  // Infinite scroll - sentinel ref for Intersection Observer
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
   // Fetch events
   const { data: eventsData, isLoading, error } = useQuery({
@@ -318,29 +318,39 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleDateScroll);
   }, [visibleDateKey]);
 
-  // Scroll to first new item AFTER render is complete
-  useEffect(() => {
-    if (shouldScrollToNew && filteredEvents.length > prevLimitRef.current) {
-      // Use double requestAnimationFrame to ensure DOM is fully painted
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const cards = document.querySelectorAll('.agenda-card');
-          const firstNewCard = cards[prevLimitRef.current] as HTMLElement | undefined;
-          if (firstNewCard) {
-            firstNewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-          setShouldScrollToNew(false);
-        });
-      });
+  // Infinite Scroll - Intersection Observer
+  const loadMore = useCallback(() => {
+    if (!isLoadingMore && hasMore) {
+      setIsLoadingMore(true);
+      // Small delay to show loading state, then load more
+      setTimeout(() => {
+        setLimit(prev => prev + 12);
+        setIsLoadingMore(false);
+      }, 300);
     }
-  }, [filteredEvents.length, shouldScrollToNew]);
+  }, [isLoadingMore, hasMore]);
 
-  // Handle Load More click
-  const handleLoadMore = () => {
-    prevLimitRef.current = limit;
-    setShouldScrollToNew(true);
-    setLimit(prev => prev + 12);
-  };
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // When sentinel becomes visible, load more items
+        if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
+          loadMore();
+        }
+      },
+      {
+        // Start loading when sentinel is 200px from viewport
+        rootMargin: '200px',
+        threshold: 0,
+      }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isLoading, isLoadingMore, loadMore]);
 
   const getDistance = (event: AgendaEvent): string => {
     if (!event.location?.coordinates || !userLocation) return '';
@@ -353,7 +363,6 @@ export function AgendaPage() {
   const handleQuickFilter = (type: 'today' | 'tomorrow' | 'weekend') => {
     setFilters(prev => ({ ...prev, dateType: prev.dateType === type ? 'all' : type }));
     setLimit(12);
-    prevLimitRef.current = 12;
   };
 
   const getActiveFilterCount = (): number => {
@@ -382,7 +391,7 @@ export function AgendaPage() {
             className="agenda-search-input"
             placeholder={searchPlaceholders[language] || searchPlaceholders.en}
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); prevLimitRef.current = 12; }}
+            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); }}
           />
         </div>
       </div>
@@ -395,7 +404,7 @@ export function AgendaPage() {
               key={category.id}
               className={`agenda-category-chip ${selectedCategory === category.id ? 'active' : ''}`}
               style={{ background: category.color }}
-              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); prevLimitRef.current = 12; }}
+              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); }}
             >
               <span className="agenda-category-icon">{category.icon}</span>
               {categoryLabels[language]?.[category.id] || categoryLabels.en[category.id]}
@@ -471,11 +480,20 @@ export function AgendaPage() {
         </div>
       )}
 
-      {/* Load More */}
-      {!isLoading && !error && hasMore && (
-        <button className="agenda-load-more" onClick={handleLoadMore}>
-          {t.agenda?.loadMore || 'Load More Events'} ({allEvents.length - filteredEvents.length} remaining)
-        </button>
+      {/* Infinite Scroll Sentinel - triggers loading when visible */}
+      {!isLoading && !error && filteredEvents.length > 0 && (
+        <div ref={sentinelRef} className="agenda-scroll-sentinel">
+          {isLoadingMore && (
+            <div className="agenda-loading-more">
+              <Loader2 className="agenda-spinner" />
+            </div>
+          )}
+          {!hasMore && filteredEvents.length >= 12 && (
+            <p className="agenda-end-message">
+              {t.agenda?.noMoreEvents || 'No more events to load'}
+            </p>
+          )}
+        </div>
       )}
 
       {/* No Results - Updated text */}
@@ -491,7 +509,7 @@ export function AgendaPage() {
       <AgendaFilterModal
         isOpen={filterModalOpen}
         onClose={() => setFilterModalOpen(false)}
-        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); prevLimitRef.current = 12; }}
+        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); }}
         initialFilters={filters}
         resultCount={filteredEvents.length}
       />
