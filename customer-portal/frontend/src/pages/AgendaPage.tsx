@@ -352,10 +352,11 @@ export function AgendaPage() {
     const windowHeight = window.innerHeight;
     const documentHeight = document.documentElement.scrollHeight;
 
-    // Load more when within 300px of the bottom
+    // Load more when within 1 viewport height of the bottom (more aggressive on mobile)
+    const threshold = Math.max(windowHeight, 600);
     const distanceFromBottom = documentHeight - (scrollY + windowHeight);
 
-    if (distanceFromBottom < 300) {
+    if (distanceFromBottom < threshold) {
       // Set refs immediately (synchronous) to prevent double-triggers
       isLoadingMoreRef.current = true;
       loadCooldownRef.current = true;
