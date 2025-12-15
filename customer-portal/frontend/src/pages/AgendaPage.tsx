@@ -1,10 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl, enUS, de, es, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
+import { List } from 'react-window';
+import { InfiniteLoader } from 'react-window-infinite-loader';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { useAgendaComparison } from '../shared/contexts/AgendaComparisonContext';
@@ -20,8 +22,49 @@ import './AgendaPage.css';
 /**
  * AgendaPage - Events & Activities Calendar
  * Route: /agenda
- * Infinite Scroll - loads more items automatically as user scrolls
+ * Enterprise-level virtualized infinite scroll using react-window
+ * Only renders visible items for optimal performance at any scale
  */
+
+// Hook to get responsive column count
+function useColumnCount() {
+  const [columnCount, setColumnCount] = useState(() => {
+    if (typeof window === 'undefined') return 2;
+    if (window.innerWidth >= 1024) return 4;
+    if (window.innerWidth >= 768) return 3;
+    return 2;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setColumnCount(4);
+      else if (window.innerWidth >= 768) setColumnCount(3);
+      else setColumnCount(2);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return columnCount;
+}
+
+// Hook to get container width
+function useContainerWidth(containerRef: React.RefObject<HTMLDivElement | null>) {
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setWidth(containerRef.current.offsetWidth);
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, [containerRef]);
+
+  return width;
+}
 
 // Interest category configuration
 const INTEREST_CATEGORIES = [
@@ -151,26 +194,30 @@ export function AgendaPage() {
   const { isInComparison, toggleComparison, canAddMore, comparisonEvents } = useAgendaComparison();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [limit, setLimit] = useState<number>(12);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
   const [comparisonModalOpen, setComparisonModalOpen] = useState<boolean>(false);
   const [filters, setFilters] = useState<AgendaFilters>(defaultFilters);
   const [showHeader, setShowHeader] = useState<boolean>(true);
-  const [lastScrollY, setLastScrollY] = useState<number>(0);
   const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
-  // Infinite scroll state
-  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  // Virtualized grid state
+  const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<List>(null);
+  const columnCount = useColumnCount();
+  const containerWidth = useContainerWidth(containerRef);
 
-  // Fetch events
+  // For infinite loading - how many items are currently loaded
+  const [loadedCount, setLoadedCount] = useState<number>(24);
+
+  // Fetch ALL events - virtualization handles display efficiently
   const { data: eventsData, isLoading, error } = useQuery({
-    queryKey: ['agenda-events', searchQuery, selectedCategory, limit],
+    queryKey: ['agenda-events', searchQuery, selectedCategory],
     queryFn: () => agendaService.getEvents({
       search: searchQuery || undefined,
       categories: selectedCategory || undefined,
-      limit: 100,
+      limit: 500, // Fetch more - virtualization renders only visible
       page: 1,
     }),
     staleTime: 60000,
@@ -178,7 +225,7 @@ export function AgendaPage() {
 
   const allEvents = eventsData?.data || [];
 
-  // Filter events
+  // Filter and sort ALL events (no slicing - virtualization handles this)
   const filteredEvents = useMemo(() => {
     let result = [...allEvents];
 
@@ -213,22 +260,18 @@ export function AgendaPage() {
           case 'tomorrow':
             return eventDate.getTime() === tomorrow.getTime();
           case 'weekend': {
-            // Calculate the upcoming weekend (Saturday and Sunday)
-            const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
+            const dayOfWeek = today.getDay();
             let weekendStart = new Date(today);
             let weekendEnd = new Date(today);
 
             if (dayOfWeek === 0) {
-              // It's Sunday - show today only
               weekendStart = today;
               weekendEnd = today;
             } else if (dayOfWeek === 6) {
-              // It's Saturday - show today and tomorrow (Sunday)
               weekendStart = today;
               weekendEnd = new Date(today);
               weekendEnd.setDate(today.getDate() + 1);
             } else {
-              // It's a weekday (Mon-Fri) - show upcoming Saturday and Sunday
               const daysUntilSaturday = 6 - dayOfWeek;
               weekendStart = new Date(today);
               weekendStart.setDate(today.getDate() + daysUntilSaturday);
@@ -257,10 +300,12 @@ export function AgendaPage() {
     }
     // Sort by date ascending (chronological order)
     result.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-    return result.slice(0, limit);
-  }, [allEvents, selectedCategory, filters, userLocation, searchQuery, language, limit]);
+    return result;
+  }, [allEvents, selectedCategory, filters, userLocation, searchQuery, language]);
 
-  const hasMore = filteredEvents.length >= limit && allEvents.length > limit;
+  // Calculate row count for virtualized grid
+  const rowCount = Math.ceil(filteredEvents.length / columnCount);
+  const hasMore = filteredEvents.length > loadedCount;
 
   // Compute formatted visible date from key - updates when language changes
   const visibleDateFormatted = useMemo(() => {
@@ -277,111 +322,98 @@ export function AgendaPage() {
     getUserLocation().then(setUserLocation).catch(() => {});
   }, []);
 
-  // Scroll direction detection (disabled on mobile to prevent scroll jumping)
-  useEffect(() => {
-    // Skip on mobile - header always visible via CSS
-    const isMobile = window.innerWidth <= 640;
-    if (isMobile) {
-      setShowHeader(true);
-      return;
-    }
-
-    let lastY = lastScrollY;
-    const handleScroll = () => {
-      const now = Date.now();
-      if (now - lastScrollTime.current < scrollThrottleMs) return;
-      lastScrollTime.current = now;
-
-      const currentScrollY = window.scrollY;
-      setShowHeader(currentScrollY < 50 || currentScrollY <= lastY);
-      lastY = currentScrollY;
-      setLastScrollY(currentScrollY);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Set initial visible date key AND update when first event changes
+  // Set initial visible date key when events load
   useEffect(() => {
     if (filteredEvents.length > 0) {
       const d = new Date(filteredEvents[0].startDate);
       const firstDateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      // Always update if at top of page or no date key set
-      if (!visibleDateKey || window.scrollY < 100) {
+      if (!visibleDateKey) {
         setVisibleDateKey(firstDateKey);
       }
     }
-  }, [filteredEvents]);
+  }, [filteredEvents, visibleDateKey]);
 
-  // Update visible date key on scroll (throttled for mobile performance)
+  // Reset loadedCount when filters change
   useEffect(() => {
-    let lastDateScrollTime = 0;
-    const handleDateScroll = () => {
-      const now = Date.now();
-      if (now - lastDateScrollTime < 150) return; // Throttle to 150ms
-      lastDateScrollTime = now;
+    setLoadedCount(24);
+    if (listRef.current) {
+      listRef.current.scrollTo(0);
+    }
+  }, [selectedCategory, searchQuery, filters]);
 
-      const cards = document.querySelectorAll('.agenda-card');
-      for (let i = cards.length - 1; i >= 0; i--) {
-        const card = cards[i] as HTMLElement;
-        if (card.getBoundingClientRect().top <= 290) {
-          const dateKey = card.getAttribute('data-date-key');
-          if (dateKey) setVisibleDateKey(dateKey);
-          break;
-        }
+  // InfiniteLoader callbacks
+  const isItemLoaded = useCallback((index: number) => {
+    const itemIndex = index * columnCount;
+    return itemIndex < loadedCount;
+  }, [columnCount, loadedCount]);
+
+  const loadMoreItems = useCallback(() => {
+    setLoadedCount(prev => Math.min(prev + 12, filteredEvents.length));
+    return Promise.resolve();
+  }, [filteredEvents.length]);
+
+  // Calculate visible row count (limited by loadedCount)
+  const visibleRowCount = Math.ceil(Math.min(loadedCount, filteredEvents.length) / columnCount);
+
+  // Row renderer for virtualized grid
+  const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const startIndex = index * columnCount;
+    const rowEvents = filteredEvents.slice(startIndex, startIndex + columnCount);
+
+    const gap = 12;
+    const padding = 16;
+    const availableWidth = containerWidth - (padding * 2);
+    const cardWidth = (availableWidth - (gap * (columnCount - 1))) / columnCount;
+
+    return (
+      <div
+        style={{
+          ...style,
+          display: 'flex',
+          gap: `${gap}px`,
+          padding: `0 ${padding}px`,
+        }}
+      >
+        {rowEvents.map((event) => {
+          const ed = new Date(event.startDate);
+          const eventDateKey = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
+          return (
+            <div key={event._id} style={{ width: cardWidth, flexShrink: 0 }}>
+              <AgendaCard
+                event={event}
+                onClick={() => setSelectedEventId(event._id)}
+                onSave={toggleAgendaFavorite}
+                isSaved={isAgendaFavorite(event._id)}
+                distance={getDistance(event)}
+                detectedCategory={detectCategory(event, language)}
+                isInComparison={isInComparison(event._id)}
+                onToggleComparison={toggleComparison}
+                canAddMore={canAddMore}
+                showComparison={true}
+                dateKey={eventDateKey}
+              />
+            </div>
+          );
+        })}
+        {/* Fill empty slots for incomplete rows */}
+        {rowEvents.length < columnCount && Array.from({ length: columnCount - rowEvents.length }).map((_, i) => (
+          <div key={`empty-${i}`} style={{ width: cardWidth, flexShrink: 0 }} />
+        ))}
+      </div>
+    );
+  }, [filteredEvents, columnCount, containerWidth, language, toggleAgendaFavorite, isAgendaFavorite, isInComparison, toggleComparison, canAddMore]);
+
+  // Update visible date on scroll
+  const handleItemsRendered = useCallback(({ visibleStartIndex }: { visibleStartIndex: number }) => {
+    const eventIndex = visibleStartIndex * columnCount;
+    if (filteredEvents[eventIndex]) {
+      const d = new Date(filteredEvents[eventIndex].startDate);
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (dateKey !== visibleDateKey) {
+        setVisibleDateKey(dateKey);
       }
-    };
-    window.addEventListener('scroll', handleDateScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleDateScroll);
-  }, []);
-
-  // Simple and reliable: Load more when scrolling near bottom
-  // Uses scroll position calculation - works on all browsers including mobile Safari
-  useEffect(() => {
-    if (!hasMore || isLoading) return;
-
-    let loadingInProgress = false;
-
-    const handleScroll = () => {
-      if (loadingInProgress) return;
-
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight;
-      const clientHeight = document.documentElement.clientHeight;
-
-      // Load more when 500px from bottom
-      if (scrollHeight - scrollTop - clientHeight < 500) {
-        loadingInProgress = true;
-        setIsLoadingMore(true);
-
-        // Immediate state update - data is already in memory
-        setLimit(prev => prev + 12);
-
-        // Reset after render
-        requestAnimationFrame(() => {
-          setIsLoadingMore(false);
-          // Allow next load after a short delay
-          setTimeout(() => {
-            loadingInProgress = false;
-          }, 200);
-        });
-      }
-    };
-
-    // Check immediately on mount/change
-    handleScroll();
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, isLoading, filteredEvents.length]);
-
-  // Manual load more handler (backup button)
-  const handleLoadMore = () => {
-    if (!hasMore || isLoadingMore) return;
-    setIsLoadingMore(true);
-    setLimit(prev => prev + 12);
-    requestAnimationFrame(() => setIsLoadingMore(false));
-  };
+    }
+  }, [filteredEvents, columnCount, visibleDateKey]);
 
   const getDistance = (event: AgendaEvent): string => {
     if (!event.location?.coordinates || !userLocation) return '';
@@ -393,7 +425,6 @@ export function AgendaPage() {
 
   const handleQuickFilter = (type: 'today' | 'tomorrow' | 'weekend') => {
     setFilters(prev => ({ ...prev, dateType: prev.dateType === type ? 'all' : type }));
-    setLimit(12);
   };
 
   const getActiveFilterCount = (): number => {
@@ -422,7 +453,7 @@ export function AgendaPage() {
             className="agenda-search-input"
             placeholder={searchPlaceholders[language] || searchPlaceholders.en}
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); }}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
@@ -435,7 +466,7 @@ export function AgendaPage() {
               key={category.id}
               className={`agenda-category-chip ${selectedCategory === category.id ? 'active' : ''}`}
               style={{ background: category.color }}
-              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); }}
+              onClick={() => setSelectedCategory(prev => prev === category.id ? '' : category.id)}
             >
               <span className="agenda-category-icon">{category.icon}</span>
               {categoryLabels[language]?.[category.id] || categoryLabels.en[category.id]}
@@ -485,48 +516,37 @@ export function AgendaPage() {
         </div>
       )}
 
-      {/* Single continuous grid - all events flow together, 4 per row */}
+      {/* Virtualized Grid - Enterprise-level performance */}
       {!isLoading && !error && filteredEvents.length > 0 && (
-        <div className="agenda-grid">
-          {filteredEvents.map((event) => {
-            const ed = new Date(event.startDate);
-            const eventDateKey = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
-            return (
-              <AgendaCard
-                key={event._id}
-                event={event}
-                onClick={() => setSelectedEventId(event._id)}
-                onSave={toggleAgendaFavorite}
-                isSaved={isAgendaFavorite(event._id)}
-                distance={getDistance(event)}
-                detectedCategory={detectCategory(event, language)}
-                isInComparison={isInComparison(event._id)}
-                onToggleComparison={toggleComparison}
-                canAddMore={canAddMore}
-                showComparison={true}
-                dateKey={eventDateKey}
-              />
-            );
-          })}
-        </div>
-      )}
-
-      {/* Load More Section */}
-      {!isLoading && !error && filteredEvents.length > 0 && (
-        <div className="agenda-load-more-section">
-          {isLoadingMore ? (
-            <div className="agenda-loading-more">
-              <Loader2 className="agenda-spinner" />
-            </div>
-          ) : hasMore ? (
-            <button className="agenda-load-more-btn" onClick={handleLoadMore}>
-              {t.agenda?.loadMore || 'Load More Events'}
-            </button>
-          ) : filteredEvents.length >= 12 ? (
-            <p className="agenda-end-message">
-              {t.agenda?.noMoreEvents || 'All events loaded'}
-            </p>
-          ) : null}
+        <div ref={containerRef} className="agenda-virtualized-container">
+          {containerWidth > 0 && (
+            <InfiniteLoader
+              isItemLoaded={isItemLoaded}
+              itemCount={rowCount}
+              loadMoreItems={loadMoreItems}
+              threshold={3}
+            >
+              {({ onItemsRendered, ref }) => (
+                <List
+                  ref={(list) => {
+                    ref(list);
+                    (listRef as React.MutableRefObject<List | null>).current = list;
+                  }}
+                  height={typeof window !== 'undefined' ? window.innerHeight - 280 : 600}
+                  itemCount={visibleRowCount}
+                  itemSize={columnCount <= 2 ? 380 : 420}
+                  width={containerWidth}
+                  onItemsRendered={(props) => {
+                    handleItemsRendered(props);
+                    onItemsRendered(props);
+                  }}
+                  className="agenda-virtual-list"
+                >
+                  {Row}
+                </List>
+              )}
+            </InfiniteLoader>
+          )}
         </div>
       )}
 
@@ -543,7 +563,7 @@ export function AgendaPage() {
       <AgendaFilterModal
         isOpen={filterModalOpen}
         onClose={() => setFilterModalOpen(false)}
-        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); }}
+        onApply={(newFilters) => setFilters(newFilters)}
         initialFilters={filters}
         resultCount={filteredEvents.length}
       />
