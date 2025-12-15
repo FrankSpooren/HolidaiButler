@@ -235,7 +235,51 @@
   height: 20px;
 }
 
-/* POI Grid View */
+/* POI Grid View - Virtualized with window scrolling */
+.poi-grid-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* Virtual row - positioned absolutely by virtualizer */
+.poi-virtual-row {
+  width: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+/* Grid row - CSS grid with consistent gap */
+.poi-grid-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+}
+
+@media (min-width: 768px) {
+  .poi-grid-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .poi-grid-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Grid item - constrained height to prevent overlap */
+.poi-grid-item {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Legacy grid (fallback) */
 .poi-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
