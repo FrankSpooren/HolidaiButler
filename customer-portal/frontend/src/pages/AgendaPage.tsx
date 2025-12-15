@@ -161,9 +161,9 @@ export function AgendaPage() {
   const [lastScrollY, setLastScrollY] = useState<number>(0);
   const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
-  // Infinite scroll - refs for synchronous checks (state is async!)
-  const isLoadingMoreRef = useRef<boolean>(false);
-  const loadCooldownRef = useRef<boolean>(false);
+  // Infinite scroll refs
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
   // Throttle helper for scroll handlers
@@ -341,76 +341,49 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleDateScroll);
   }, []);
 
-  // ENTERPRISE: Scroll-based infinite loading with auto-load for short pages
-  const checkAndLoadMore = useCallback(() => {
-    // Skip if already loading or in cooldown
-    if (isLoadingMoreRef.current || loadCooldownRef.current || !hasMore || isLoading) {
-      return;
+  // Intersection Observer for infinite scroll (with CSS scroll anchoring for stability)
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    // Cleanup previous observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
     }
 
-    const scrollY = window.scrollY;
-    const windowHeight = window.innerHeight;
-    const documentHeight = document.documentElement.scrollHeight;
+    // Don't observe if no more items or currently loading
+    if (!hasMore || isLoading || isLoadingMore) return;
 
-    // Load more when within 1 viewport height of the bottom (more aggressive on mobile)
-    const threshold = Math.max(windowHeight, 600);
-    const distanceFromBottom = documentHeight - (scrollY + windowHeight);
-
-    if (distanceFromBottom < threshold) {
-      // Set refs immediately (synchronous) to prevent double-triggers
-      isLoadingMoreRef.current = true;
-      loadCooldownRef.current = true;
-      setIsLoadingMore(true);
-
-      // Use requestAnimationFrame to batch the state update
-      requestAnimationFrame(() => {
-        setLimit(prev => prev + 12);
-
-        // Reset after DOM has updated
+    const handleIntersect = (entries: IntersectionObserverEntry[]) => {
+      const entry = entries[0];
+      if (entry.isIntersecting && hasMore && !isLoading && !isLoadingMore) {
+        setIsLoadingMore(true);
+        // Use setTimeout to ensure state update happens after current render
         setTimeout(() => {
-          setIsLoadingMore(false);
-          isLoadingMoreRef.current = false;
-
-          // Cooldown: prevent re-triggering for 800ms
+          setLimit(prev => prev + 12);
+          // Reset loading state after a short delay
           setTimeout(() => {
-            loadCooldownRef.current = false;
-          }, 800);
-        }, 100);
-      });
-    }
-  }, [hasMore, isLoading]);
-
-  // Auto-load if page is too short (no scroll needed to see footer)
-  useEffect(() => {
-    if (!hasMore || isLoading || filteredEvents.length === 0) return;
-
-    // Check after a short delay to ensure DOM has rendered
-    const timer = setTimeout(() => {
-      checkAndLoadMore();
-    }, 200);
-
-    return () => clearTimeout(timer);
-  }, [filteredEvents.length, hasMore, isLoading, checkAndLoadMore]);
-
-  // Scroll-based loading
-  useEffect(() => {
-    if (!hasMore || isLoading) return;
-
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (ticking) return;
-
-      ticking = true;
-      requestAnimationFrame(() => {
-        checkAndLoadMore();
-        ticking = false;
-      });
+            setIsLoadingMore(false);
+          }, 300);
+        }, 50);
+      }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, isLoading, checkAndLoadMore]);
+    observerRef.current = new IntersectionObserver(handleIntersect, {
+      root: null,
+      // Large margin to trigger loading well before sentinel is visible
+      rootMargin: '400px',
+      threshold: 0,
+    });
+
+    observerRef.current.observe(sentinel);
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMore, isLoading, isLoadingMore]);
 
   const getDistance = (event: AgendaEvent): string => {
     if (!event.location?.coordinates || !userLocation) return '';
@@ -542,9 +515,9 @@ export function AgendaPage() {
         </div>
       )}
 
-      {/* Infinite Scroll Loading Indicator */}
+      {/* Infinite Scroll Sentinel */}
       {!isLoading && !error && filteredEvents.length > 0 && (
-        <div className="agenda-scroll-sentinel">
+        <div ref={sentinelRef} className="agenda-scroll-sentinel">
           {isLoadingMore && (
             <div className="agenda-loading-more">
               <Loader2 className="agenda-spinner" />
