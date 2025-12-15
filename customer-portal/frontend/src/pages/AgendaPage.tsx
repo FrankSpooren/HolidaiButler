@@ -341,8 +341,57 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleDateScroll);
   }, []);
 
-  // ENTERPRISE: Scroll-based infinite loading (more reliable than Intersection Observer)
-  // Uses scroll position calculation instead of observer for predictable behavior
+  // ENTERPRISE: Scroll-based infinite loading with auto-load for short pages
+  const checkAndLoadMore = useCallback(() => {
+    // Skip if already loading or in cooldown
+    if (isLoadingMoreRef.current || loadCooldownRef.current || !hasMore || isLoading) {
+      return;
+    }
+
+    const scrollY = window.scrollY;
+    const windowHeight = window.innerHeight;
+    const documentHeight = document.documentElement.scrollHeight;
+
+    // Load more when within 300px of the bottom
+    const distanceFromBottom = documentHeight - (scrollY + windowHeight);
+
+    if (distanceFromBottom < 300) {
+      // Set refs immediately (synchronous) to prevent double-triggers
+      isLoadingMoreRef.current = true;
+      loadCooldownRef.current = true;
+      setIsLoadingMore(true);
+
+      // Use requestAnimationFrame to batch the state update
+      requestAnimationFrame(() => {
+        setLimit(prev => prev + 12);
+
+        // Reset after DOM has updated
+        setTimeout(() => {
+          setIsLoadingMore(false);
+          isLoadingMoreRef.current = false;
+
+          // Cooldown: prevent re-triggering for 800ms
+          setTimeout(() => {
+            loadCooldownRef.current = false;
+          }, 800);
+        }, 100);
+      });
+    }
+  }, [hasMore, isLoading]);
+
+  // Auto-load if page is too short (no scroll needed to see footer)
+  useEffect(() => {
+    if (!hasMore || isLoading || filteredEvents.length === 0) return;
+
+    // Check after a short delay to ensure DOM has rendered
+    const timer = setTimeout(() => {
+      checkAndLoadMore();
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [filteredEvents.length, hasMore, isLoading, checkAndLoadMore]);
+
+  // Scroll-based loading
   useEffect(() => {
     if (!hasMore || isLoading) return;
 
@@ -353,49 +402,14 @@ export function AgendaPage() {
 
       ticking = true;
       requestAnimationFrame(() => {
-        // Skip if already loading or in cooldown
-        if (isLoadingMoreRef.current || loadCooldownRef.current) {
-          ticking = false;
-          return;
-        }
-
-        const scrollY = window.scrollY;
-        const windowHeight = window.innerHeight;
-        const documentHeight = document.documentElement.scrollHeight;
-
-        // Load more when within 300px of the bottom
-        const distanceFromBottom = documentHeight - (scrollY + windowHeight);
-
-        if (distanceFromBottom < 300 && hasMore) {
-          // Set refs immediately (synchronous) to prevent double-triggers
-          isLoadingMoreRef.current = true;
-          loadCooldownRef.current = true;
-          setIsLoadingMore(true);
-
-          // Use requestAnimationFrame to batch the state update
-          requestAnimationFrame(() => {
-            setLimit(prev => prev + 12);
-
-            // Reset after DOM has updated
-            setTimeout(() => {
-              setIsLoadingMore(false);
-              isLoadingMoreRef.current = false;
-
-              // Cooldown: prevent re-triggering for 800ms
-              setTimeout(() => {
-                loadCooldownRef.current = false;
-              }, 800);
-            }, 100);
-          });
-        }
-
+        checkAndLoadMore();
         ticking = false;
       });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, isLoading]);
+  }, [hasMore, isLoading, checkAndLoadMore]);
 
   const getDistance = (event: AgendaEvent): string => {
     if (!event.location?.coordinates || !userLocation) return '';
