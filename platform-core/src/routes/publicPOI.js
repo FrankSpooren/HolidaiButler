@@ -8,9 +8,10 @@
 
 import express from 'express';
 import { mysqlSequelize } from '../config/database.js';
-import { Op } from 'sequelize';
+import { Op, fn, col, literal } from 'sequelize';
 import { getImagesForPOI, getImagesForPOIs } from "../models/ImageUrl.js";
 import logger from '../utils/logger.js';
+import Review from '../models/Review.js';
 
 const router = express.Router();
 
@@ -671,6 +672,278 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching POI'
+    });
+  }
+});
+
+// ============================================
+// REVIEW ROUTES - Sprint 7.6
+// ============================================
+
+/**
+ * @route   GET /api/v1/pois/:poiId/reviews
+ * @desc    Get reviews for a specific POI
+ * @access  Public
+ */
+router.get('/:poiId/reviews', async (req, res) => {
+  try {
+    const { poiId } = req.params;
+    const {
+      travel_party,
+      sentiment,
+      sort = 'helpful',
+      limit = 10,
+      offset = 0
+    } = req.query;
+
+    // Build where clause
+    const where = { poi_id: parseInt(poiId) };
+
+    if (travel_party && travel_party !== 'all') {
+      where.travel_party_type = travel_party;
+    }
+
+    if (sentiment && sentiment !== 'all') {
+      where.sentiment = sentiment;
+    }
+
+    // Build order clause
+    let order;
+    switch (sort) {
+      case 'recent':
+        order = [['created_at', 'DESC']];
+        break;
+      case 'helpful':
+        order = [['helpful_count', 'DESC'], ['created_at', 'DESC']];
+        break;
+      case 'highRating':
+        order = [['rating', 'DESC'], ['created_at', 'DESC']];
+        break;
+      case 'lowRating':
+        order = [['rating', 'ASC'], ['created_at', 'DESC']];
+        break;
+      default:
+        order = [['helpful_count', 'DESC']];
+    }
+
+    const { count, rows } = await Review.findAndCountAll({
+      where,
+      order,
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    res.json({
+      success: true,
+      data: rows.map(review => ({
+        id: review.id,
+        poi_id: review.poi_id,
+        user_name: review.user_name,
+        travel_party_type: review.travel_party_type,
+        rating: parseFloat(review.rating),
+        review_text: review.review_text,
+        sentiment: review.sentiment,
+        helpful_count: review.helpful_count,
+        visit_date: review.visit_date,
+        created_at: review.created_at
+      })),
+      total: count,
+      filters: {
+        travel_party: travel_party || 'all',
+        sentiment: sentiment || 'all',
+        sort,
+        limit: parseInt(limit),
+        offset: parseInt(offset)
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching reviews:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching reviews',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
+ * @route   GET /api/v1/pois/:poiId/reviews/summary
+ * @desc    Get review summary statistics for a POI
+ * @access  Public
+ */
+router.get('/:poiId/reviews/summary', async (req, res) => {
+  try {
+    const { poiId } = req.params;
+
+    // Get all reviews for this POI to calculate statistics
+    const reviews = await Review.findAll({
+      where: { poi_id: parseInt(poiId) },
+      attributes: ['rating', 'sentiment', 'travel_party_type']
+    });
+
+    if (reviews.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          average_rating: 0,
+          total_count: 0,
+          sentiment_breakdown: {
+            positive: 0,
+            neutral: 0,
+            negative: 0
+          },
+          party_breakdown: {
+            couples: 0,
+            families: 0,
+            solo: 0,
+            friends: 0,
+            business: 0
+          }
+        }
+      });
+    }
+
+    // Calculate average rating
+    const totalRating = reviews.reduce((sum, r) => sum + parseFloat(r.rating), 0);
+    const averageRating = (totalRating / reviews.length).toFixed(1);
+
+    // Calculate sentiment breakdown
+    const sentimentBreakdown = {
+      positive: reviews.filter(r => r.sentiment === 'positive').length,
+      neutral: reviews.filter(r => r.sentiment === 'neutral').length,
+      negative: reviews.filter(r => r.sentiment === 'negative').length
+    };
+
+    // Calculate travel party breakdown
+    const partyBreakdown = {
+      couples: reviews.filter(r => r.travel_party_type === 'couples').length,
+      families: reviews.filter(r => r.travel_party_type === 'families').length,
+      solo: reviews.filter(r => r.travel_party_type === 'solo').length,
+      friends: reviews.filter(r => r.travel_party_type === 'friends').length,
+      business: reviews.filter(r => r.travel_party_type === 'business').length
+    };
+
+    res.json({
+      success: true,
+      data: {
+        average_rating: parseFloat(averageRating),
+        total_count: reviews.length,
+        sentiment_breakdown: sentimentBreakdown,
+        party_breakdown: partyBreakdown
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching review summary:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching review summary',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
+ * @route   GET /api/v1/pois/:poiId/reviews/insights
+ * @desc    Get review insights (common keywords/themes) for a POI
+ * @access  Public
+ */
+router.get('/:poiId/reviews/insights', async (req, res) => {
+  try {
+    const { poiId } = req.params;
+
+    // Get reviews with text
+    const reviews = await Review.findAll({
+      where: {
+        poi_id: parseInt(poiId),
+        review_text: { [Op.ne]: null }
+      },
+      attributes: ['review_text']
+    });
+
+    // Simple keyword extraction (can be enhanced with NLP later)
+    const keywords = {};
+    const commonWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'very', 'really', 'just', 'also', 'it', 'this', 'that', 'these', 'those', 'i', 'we', 'you', 'he', 'she', 'they', 'my', 'our', 'your', 'his', 'her', 'their', 'its'];
+
+    reviews.forEach(review => {
+      if (review.review_text) {
+        const words = review.review_text.toLowerCase()
+          .replace(/[^\w\s]/g, '')
+          .split(/\s+/)
+          .filter(word => word.length > 3 && !commonWords.includes(word));
+
+        words.forEach(word => {
+          keywords[word] = (keywords[word] || 0) + 1;
+        });
+      }
+    });
+
+    // Get top keywords
+    const topKeywords = Object.entries(keywords)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([keyword, count]) => ({
+        keyword,
+        count,
+        label: keyword.charAt(0).toUpperCase() + keyword.slice(1)
+      }));
+
+    res.json({
+      success: true,
+      data: {
+        insights: topKeywords,
+        sample_size: reviews.length
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching review insights:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching review insights',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
+ * @route   POST /api/v1/pois/:poiId/reviews/:reviewId/helpful
+ * @desc    Mark a review as helpful
+ * @access  Public
+ */
+router.post('/:poiId/reviews/:reviewId/helpful', async (req, res) => {
+  try {
+    const { poiId, reviewId } = req.params;
+
+    const review = await Review.findOne({
+      where: {
+        id: parseInt(reviewId),
+        poi_id: parseInt(poiId)
+      }
+    });
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: 'Review not found'
+      });
+    }
+
+    // Increment helpful count
+    review.helpful_count += 1;
+    await review.save();
+
+    res.json({
+      success: true,
+      data: {
+        id: review.id,
+        helpful_count: review.helpful_count
+      }
+    });
+  } catch (error) {
+    logger.error('Error marking review as helpful:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error marking review as helpful',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
