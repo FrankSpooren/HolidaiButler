@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { usePOIs } from '../features/poi/hooks/usePOIs';
 import { poiService } from '../features/poi/services/poiService';
 import type { POI } from '../features/poi/types/poi.types';
@@ -16,6 +17,28 @@ import { ComparisonBar } from '../shared/components/ComparisonBar';
 import { getDistanceFromUser, getUserLocation, type Coordinates } from '../shared/utils/distance';
 import { CATEGORIES_ARRAY, getCategoryIcon, getCategoryColor } from '../shared/config/categoryConfig';
 import './POILandingPage.css';
+
+// Hook to get responsive column count
+function useColumnCount() {
+  const [columnCount, setColumnCount] = useState(() => {
+    if (typeof window === 'undefined') return 2;
+    if (window.innerWidth >= 1024) return 4;
+    if (window.innerWidth >= 768) return 3;
+    return 2;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setColumnCount(4);
+      else if (window.innerWidth >= 768) setColumnCount(3);
+      else setColumnCount(2);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return columnCount;
+}
 
 /**
  * POILandingPage - Browse POIs with Grid, List, and Map views
@@ -59,7 +82,10 @@ export function POILandingPage() {
   const [viewModeBeforeModal, setViewModeBeforeModal] = useState<ViewMode>('grid');
   const [comparisonModalOpen, setComparisonModalOpen] = useState<boolean>(false);
   const [showHeader, setShowHeader] = useState<boolean>(true);
-  const [lastScrollY, setLastScrollY] = useState<number>(0);
+
+  // Grid virtualization
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const columnCount = useColumnCount();
 
   // Use centralized category configuration (single source of truth)
   const categories: Category[] = CATEGORIES_ARRAY.map(cat => ({
@@ -266,6 +292,32 @@ export function POILandingPage() {
   const pois = processedPOIs;
   const hasMore = data?.meta?.has_more || false;
 
+  // Virtualizer setup for grid view
+  const rowCount = Math.ceil(pois.length / columnCount);
+  // Row height: mobile 362px (350px card + 12px gap), desktop 432px (420px card + 12px gap)
+  const rowHeight = columnCount <= 2 ? 362 : 432;
+  const cardHeight = rowHeight - 12;
+
+  const virtualizer = useWindowVirtualizer({
+    count: rowCount,
+    estimateSize: () => rowHeight,
+    overscan: 3,
+    scrollMargin: gridContainerRef.current?.offsetTop ?? 0,
+  });
+
+  const virtualItems = virtualizer.getVirtualItems();
+
+  // Infinite scroll via virtualizer - load more when near bottom
+  useEffect(() => {
+    if (viewMode !== 'grid') return;
+    if (virtualItems.length > 0 && hasMore) {
+      const lastVisibleRowIndex = virtualItems[virtualItems.length - 1].index;
+      if (lastVisibleRowIndex >= rowCount - 2) {
+        setLimit(prev => prev + 12);
+      }
+    }
+  }, [virtualItems, rowCount, hasMore, viewMode]);
+
   // Debounced autocomplete fetch
   useEffect(() => {
     if (searchQuery.length < 2) {
@@ -286,36 +338,43 @@ export function POILandingPage() {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  // Scroll direction detection for hide/show header
+  // Scroll direction detection for hide/show header (with requestAnimationFrame for performance)
   useEffect(() => {
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      if (ticking) return;
 
-      // Don't hide if near top (< 50px)
-      if (currentScrollY < 50) {
-        setShowHeader(true);
-        setLastScrollY(currentScrollY);
-        return;
-      }
+      ticking = true;
+      requestAnimationFrame(() => {
+        const currentScrollY = window.scrollY;
+        const scrollDiff = currentScrollY - lastScrollY;
 
-      // Detect scroll direction
-      if (currentScrollY > lastScrollY) {
-        // Scrolling down - hide header
-        setShowHeader(false);
-      } else if (currentScrollY < lastScrollY) {
-        // Scrolling up - show header
-        setShowHeader(true);
-      }
+        // Only trigger after scrolling more than 10px to avoid jitter
+        if (Math.abs(scrollDiff) > 10) {
+          if (scrollDiff > 0 && currentScrollY > 100) {
+            // Scrolling DOWN and past initial threshold - hide header
+            setShowHeader(false);
+          } else if (scrollDiff < 0) {
+            // Scrolling UP - show header
+            setShowHeader(true);
+          }
+          lastScrollY = currentScrollY;
+        }
 
-      setLastScrollY(currentScrollY);
+        // Always show header when at top of page
+        if (currentScrollY < 50) {
+          setShowHeader(true);
+        }
+
+        ticking = false;
+      });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [lastScrollY]);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Toggle save/favorite
   const handleToggleFavorite = (poiId: number, event: React.MouseEvent) => {
@@ -582,91 +641,124 @@ export function POILandingPage() {
         </div>
       )}
 
-      {/* Grid View */}
-      {viewMode === 'grid' && !isLoading && !error && (
-        <div className="poi-grid">
-          {pois.map((poi) => (
-            <div key={poi.id} className="poi-card">
-              {/* Category Label */}
-              <div className="poi-category-label-uniform" style={{ background: getCategoryColor(poi.category) }}>
-                {poi.category}
-              </div>
+      {/* Grid View - Virtualized with window scrolling */}
+      {viewMode === 'grid' && !isLoading && !error && pois.length > 0 && (
+        <div
+          ref={gridContainerRef}
+          className="poi-grid-container"
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {virtualItems.map((virtualRow) => {
+            const rowIndex = virtualRow.index;
+            const startIndex = rowIndex * columnCount;
+            const rowPOIs = pois.slice(startIndex, startIndex + columnCount);
 
-              {/* POI Image - NEW COMPONENT */}
-              <POITileCarousel
-                images={poi.images || []}
-                thumbnailUrl={poi.thumbnail_url}
-                poiName={poi.name}
-                height="200px"
-                categoryColor={getCategoryColor(poi.category)}
-                categoryIcon={getCategoryIcon(poi.category)}
-              />
-
-              {/* Save Button */}
-              <button
-                className={`save-btn ${isFavorite(poi.id) ? 'saved' : ''}`}
-                onClick={(e) => handleToggleFavorite(poi.id, e)}
-              >
-                {isFavorite(poi.id) ? '❤️' : '🤍'}
-              </button>
-
-              {/* POI Content */}
-              <div className="poi-content" onClick={() => handlePOIClick(poi.id)} style={{ cursor: 'pointer' }}>
-                <div className="poi-title poi-title-smaller">{toTitleCase(poi.name)}</div>
-                <div className="poi-description">{truncateToOneSentence(poi.enriched_tile_description || poi.description)}</div>
-
-                {/* POI Rating - NEW COMPONENT */}
-                <div className="poi-rating">
-                  <POIRating rating={poi.rating} size="small" showReviewCount={false} />
-                </div>
-
-                {/* Distance & Comparison Row */}
-                <div className="poi-bottom-row">
-                  {/* Distance */}
-                  <div className="poi-distance">
-                    <svg className="map-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path
-                        d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
-                        fill="#0273ae"
-                        stroke="#0273ae"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <circle cx="12" cy="10" r="3" fill="white" />
-                    </svg>
-                    {getDistance(poi)}
-                  </div>
-
-                  {/* Comparison Checkbox - Sprint 8.0 */}
-                  <label className="comparison-checkbox-inline" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      className="comparison-checkbox"
-                      checked={isInComparison(poi.id)}
-                      onChange={(e) => handleToggleComparison(poi.id, e as any)}
-                      disabled={!canAddMore && !isInComparison(poi.id)}
-                    />
-                    <span className="comparison-checkbox-label">
-                      {t.poi.comparison.compare}
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Action Buttons - NEW COMPONENT */}
-              <POITileActions
-                poi={poi}
-                onDetailsClick={() => handlePOIClick(poi.id)}
-                labels={{
-                  share: t.poi.share,
-                  agenda: t.poi.agenda,
-                  map: t.poi.map,
-                  details: t.poi.details
+            return (
+              <div
+                key={virtualRow.key}
+                className="poi-virtual-row"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${cardHeight}px`,
+                  transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
                 }}
-              />
-            </div>
-          ))}
+              >
+                <div className="poi-grid-row">
+                  {rowPOIs.map((poi) => (
+                    <div key={poi.id} className="poi-grid-item">
+                      <div className="poi-card">
+                        {/* Category Label */}
+                        <div className="poi-category-label-uniform" style={{ background: getCategoryColor(poi.category) }}>
+                          {poi.category}
+                        </div>
+
+                        {/* POI Image */}
+                        <POITileCarousel
+                          images={poi.images || []}
+                          thumbnailUrl={poi.thumbnail_url}
+                          poiName={poi.name}
+                          height="200px"
+                          categoryColor={getCategoryColor(poi.category)}
+                          categoryIcon={getCategoryIcon(poi.category)}
+                        />
+
+                        {/* Save Button */}
+                        <button
+                          className={`save-btn ${isFavorite(poi.id) ? 'saved' : ''}`}
+                          onClick={(e) => handleToggleFavorite(poi.id, e)}
+                        >
+                          {isFavorite(poi.id) ? '❤️' : '🤍'}
+                        </button>
+
+                        {/* POI Content */}
+                        <div className="poi-content" onClick={() => handlePOIClick(poi.id)} style={{ cursor: 'pointer' }}>
+                          <div className="poi-title poi-title-smaller">{toTitleCase(poi.name)}</div>
+                          <div className="poi-description">{truncateToOneSentence(poi.enriched_tile_description || poi.description)}</div>
+
+                          {/* POI Rating */}
+                          <div className="poi-rating">
+                            <POIRating rating={poi.rating} size="small" showReviewCount={false} />
+                          </div>
+
+                          {/* Distance & Comparison Row */}
+                          <div className="poi-bottom-row">
+                            {/* Distance */}
+                            <div className="poi-distance">
+                              <svg className="map-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                  d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                                  fill="#0273ae"
+                                  stroke="#0273ae"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                <circle cx="12" cy="10" r="3" fill="white" />
+                              </svg>
+                              {getDistance(poi)}
+                            </div>
+
+                            {/* Comparison Checkbox */}
+                            <label className="comparison-checkbox-inline" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                className="comparison-checkbox"
+                                checked={isInComparison(poi.id)}
+                                onChange={(e) => handleToggleComparison(poi.id, e as any)}
+                                disabled={!canAddMore && !isInComparison(poi.id)}
+                              />
+                              <span className="comparison-checkbox-label">
+                                {t.poi.comparison.compare}
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <POITileActions
+                          poi={poi}
+                          onDetailsClick={() => handlePOIClick(poi.id)}
+                          labels={{
+                            share: t.poi.share,
+                            agenda: t.poi.agenda,
+                            map: t.poi.map,
+                            details: t.poi.details
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
