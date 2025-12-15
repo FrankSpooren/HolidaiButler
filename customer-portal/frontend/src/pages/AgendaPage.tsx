@@ -328,6 +328,44 @@ export function AgendaPage() {
     }
   }, [filteredEvents, visibleDateKey]);
 
+  // Scroll direction detection - hide header on scroll down, show on scroll up
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (ticking) return;
+
+      ticking = true;
+      requestAnimationFrame(() => {
+        const currentScrollY = window.scrollY;
+        const scrollDiff = currentScrollY - lastScrollY;
+
+        // Only trigger after scrolling more than 10px to avoid jitter
+        if (Math.abs(scrollDiff) > 10) {
+          if (scrollDiff > 0 && currentScrollY > 100) {
+            // Scrolling DOWN and past initial threshold - hide header
+            setShowHeader(false);
+          } else if (scrollDiff < 0) {
+            // Scrolling UP - show header
+            setShowHeader(true);
+          }
+          lastScrollY = currentScrollY;
+        }
+
+        // Always show header when at top of page
+        if (currentScrollY < 50) {
+          setShowHeader(true);
+        }
+
+        ticking = false;
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Reset loadedCount when filters change
   useEffect(() => {
     setLoadedCount(24);
