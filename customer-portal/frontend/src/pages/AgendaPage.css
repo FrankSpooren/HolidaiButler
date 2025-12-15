@@ -328,8 +328,8 @@
   font-family: 'Inter', sans-serif;
 }
 
-/* Infinite Scroll Sentinel */
-.agenda-scroll-sentinel {
+/* Load More Section */
+.agenda-load-more-section {
   width: 100%;
   min-height: 60px;
   display: flex;
@@ -338,6 +338,28 @@
   padding: 20px 16px;
   /* Prevent this element from being used as scroll anchor */
   overflow-anchor: none;
+}
+
+.agenda-load-more-btn {
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #5E8B7E, #4A7066);
+  color: white;
+  border: none;
+  border-radius: 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.agenda-load-more-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(94, 139, 126, 0.3);
+}
+
+.agenda-load-more-btn:active {
+  transform: translateY(0);
 }
 
 .agenda-loading-more {

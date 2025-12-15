@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { Loader2 } from 'lucide-react';
@@ -161,14 +161,8 @@ export function AgendaPage() {
   const [lastScrollY, setLastScrollY] = useState<number>(0);
   const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
-  // Infinite scroll refs
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  // Infinite scroll state
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
-
-  // Throttle helper for scroll handlers
-  const lastScrollTime = useRef<number>(0);
-  const scrollThrottleMs = 100;
 
   // Fetch events
   const { data: eventsData, isLoading, error } = useQuery({
@@ -341,49 +335,53 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleDateScroll);
   }, []);
 
-  // Intersection Observer for infinite scroll (with CSS scroll anchoring for stability)
+  // Simple and reliable: Load more when scrolling near bottom
+  // Uses scroll position calculation - works on all browsers including mobile Safari
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    if (!hasMore || isLoading) return;
 
-    // Cleanup previous observer
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
+    let loadingInProgress = false;
 
-    // Don't observe if no more items or currently loading
-    if (!hasMore || isLoading || isLoadingMore) return;
+    const handleScroll = () => {
+      if (loadingInProgress) return;
 
-    const handleIntersect = (entries: IntersectionObserverEntry[]) => {
-      const entry = entries[0];
-      if (entry.isIntersecting && hasMore && !isLoading && !isLoadingMore) {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = document.documentElement.clientHeight;
+
+      // Load more when 500px from bottom
+      if (scrollHeight - scrollTop - clientHeight < 500) {
+        loadingInProgress = true;
         setIsLoadingMore(true);
-        // Use setTimeout to ensure state update happens after current render
-        setTimeout(() => {
-          setLimit(prev => prev + 12);
-          // Reset loading state after a short delay
+
+        // Immediate state update - data is already in memory
+        setLimit(prev => prev + 12);
+
+        // Reset after render
+        requestAnimationFrame(() => {
+          setIsLoadingMore(false);
+          // Allow next load after a short delay
           setTimeout(() => {
-            setIsLoadingMore(false);
-          }, 300);
-        }, 50);
+            loadingInProgress = false;
+          }, 200);
+        });
       }
     };
 
-    observerRef.current = new IntersectionObserver(handleIntersect, {
-      root: null,
-      // Large margin to trigger loading well before sentinel is visible
-      rootMargin: '400px',
-      threshold: 0,
-    });
+    // Check immediately on mount/change
+    handleScroll();
 
-    observerRef.current.observe(sentinel);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [hasMore, isLoading, filteredEvents.length]);
 
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [hasMore, isLoading, isLoadingMore]);
+  // Manual load more handler (backup button)
+  const handleLoadMore = () => {
+    if (!hasMore || isLoadingMore) return;
+    setIsLoadingMore(true);
+    setLimit(prev => prev + 12);
+    requestAnimationFrame(() => setIsLoadingMore(false));
+  };
 
   const getDistance = (event: AgendaEvent): string => {
     if (!event.location?.coordinates || !userLocation) return '';
@@ -396,8 +394,6 @@ export function AgendaPage() {
   const handleQuickFilter = (type: 'today' | 'tomorrow' | 'weekend') => {
     setFilters(prev => ({ ...prev, dateType: prev.dateType === type ? 'all' : type }));
     setLimit(12);
-    loadCooldownRef.current = false;
-    isLoadingMoreRef.current = false;
   };
 
   const getActiveFilterCount = (): number => {
@@ -426,7 +422,7 @@ export function AgendaPage() {
             className="agenda-search-input"
             placeholder={searchPlaceholders[language] || searchPlaceholders.en}
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); loadCooldownRef.current = false; isLoadingMoreRef.current = false; }}
+            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); }}
           />
         </div>
       </div>
@@ -439,7 +435,7 @@ export function AgendaPage() {
               key={category.id}
               className={`agenda-category-chip ${selectedCategory === category.id ? 'active' : ''}`}
               style={{ background: category.color }}
-              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); loadCooldownRef.current = false; isLoadingMoreRef.current = false; }}
+              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); }}
             >
               <span className="agenda-category-icon">{category.icon}</span>
               {categoryLabels[language]?.[category.id] || categoryLabels.en[category.id]}
@@ -515,19 +511,22 @@ export function AgendaPage() {
         </div>
       )}
 
-      {/* Infinite Scroll Sentinel */}
+      {/* Load More Section */}
       {!isLoading && !error && filteredEvents.length > 0 && (
-        <div ref={sentinelRef} className="agenda-scroll-sentinel">
-          {isLoadingMore && (
+        <div className="agenda-load-more-section">
+          {isLoadingMore ? (
             <div className="agenda-loading-more">
               <Loader2 className="agenda-spinner" />
             </div>
-          )}
-          {!hasMore && filteredEvents.length >= 12 && (
+          ) : hasMore ? (
+            <button className="agenda-load-more-btn" onClick={handleLoadMore}>
+              {t.agenda?.loadMore || 'Load More Events'}
+            </button>
+          ) : filteredEvents.length >= 12 ? (
             <p className="agenda-end-message">
-              {t.agenda?.noMoreEvents || 'No more events to load'}
+              {t.agenda?.noMoreEvents || 'All events loaded'}
             </p>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -544,7 +543,7 @@ export function AgendaPage() {
       <AgendaFilterModal
         isOpen={filterModalOpen}
         onClose={() => setFilterModalOpen(false)}
-        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); loadCooldownRef.current = false; isLoadingMoreRef.current = false; }}
+        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); }}
         initialFilters={filters}
         resultCount={filteredEvents.length}
       />
