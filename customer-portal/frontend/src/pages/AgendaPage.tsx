@@ -161,9 +161,15 @@ export function AgendaPage() {
   const [lastScrollY, setLastScrollY] = useState<number>(0);
   const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
-  // Infinite scroll - sentinel ref for Intersection Observer
+  // Infinite scroll - refs for synchronous checks (state is async!)
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const isLoadingMoreRef = useRef<boolean>(false);
+  const loadCooldownRef = useRef<boolean>(false);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+
+  // Throttle helper for scroll handlers
+  const lastScrollTime = useRef<number>(0);
+  const scrollThrottleMs = 100;
 
   // Fetch events
   const { data: eventsData, isLoading, error } = useQuery({
@@ -278,16 +284,22 @@ export function AgendaPage() {
     getUserLocation().then(setUserLocation).catch(() => {});
   }, []);
 
-  // Scroll direction detection
+  // Scroll direction detection (throttled for mobile performance)
   useEffect(() => {
+    let lastY = lastScrollY;
     const handleScroll = () => {
+      const now = Date.now();
+      if (now - lastScrollTime.current < scrollThrottleMs) return;
+      lastScrollTime.current = now;
+
       const currentScrollY = window.scrollY;
-      setShowHeader(currentScrollY < 50 || currentScrollY <= lastScrollY);
+      setShowHeader(currentScrollY < 50 || currentScrollY <= lastY);
+      lastY = currentScrollY;
       setLastScrollY(currentScrollY);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, []);
 
   // Set initial visible date key AND update when first event changes
   useEffect(() => {
@@ -301,56 +313,79 @@ export function AgendaPage() {
     }
   }, [filteredEvents]);
 
-  // Update visible date key on scroll (for the subheader)
+  // Update visible date key on scroll (throttled for mobile performance)
   useEffect(() => {
+    let lastDateScrollTime = 0;
     const handleDateScroll = () => {
+      const now = Date.now();
+      if (now - lastDateScrollTime < 150) return; // Throttle to 150ms
+      lastDateScrollTime = now;
+
       const cards = document.querySelectorAll('.agenda-card');
       for (let i = cards.length - 1; i >= 0; i--) {
         const card = cards[i] as HTMLElement;
         if (card.getBoundingClientRect().top <= 290) {
           const dateKey = card.getAttribute('data-date-key');
-          if (dateKey && dateKey !== visibleDateKey) setVisibleDateKey(dateKey);
+          if (dateKey) setVisibleDateKey(dateKey);
           break;
         }
       }
     };
     window.addEventListener('scroll', handleDateScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleDateScroll);
-  }, [visibleDateKey]);
+  }, []);
 
-  // Infinite Scroll - Intersection Observer
+  // Infinite Scroll - with synchronous ref checks to prevent rapid-fire on mobile
   const loadMore = useCallback(() => {
-    if (!isLoadingMore && hasMore) {
-      setIsLoadingMore(true);
-      // Small delay to show loading state, then load more
-      setTimeout(() => {
-        setLimit(prev => prev + 12);
-        setIsLoadingMore(false);
-      }, 300);
+    // Use refs for SYNCHRONOUS check - state updates are async!
+    if (isLoadingMoreRef.current || loadCooldownRef.current || !hasMore) {
+      return;
     }
-  }, [isLoadingMore, hasMore]);
+
+    // Set ref immediately (synchronous)
+    isLoadingMoreRef.current = true;
+    loadCooldownRef.current = true;
+    setIsLoadingMore(true);
+
+    // Load more items
+    setTimeout(() => {
+      setLimit(prev => prev + 12);
+      setIsLoadingMore(false);
+      isLoadingMoreRef.current = false;
+
+      // Cooldown period - prevent re-triggering for 500ms after load completes
+      setTimeout(() => {
+        loadCooldownRef.current = false;
+      }, 500);
+    }, 100);
+  }, [hasMore]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    if (!sentinel || !hasMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        // When sentinel becomes visible, load more items
-        if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
+        // Only trigger if: intersecting AND not in cooldown AND not loading AND has more
+        if (
+          entries[0].isIntersecting &&
+          !isLoadingMoreRef.current &&
+          !loadCooldownRef.current &&
+          !isLoading
+        ) {
           loadMore();
         }
       },
       {
-        // Start loading when sentinel is 200px from viewport
-        rootMargin: '200px',
+        // Reduced margin for mobile - less aggressive triggering
+        rootMargin: '100px',
         threshold: 0,
       }
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, isLoading, isLoadingMore, loadMore]);
+  }, [hasMore, isLoading, loadMore]);
 
   const getDistance = (event: AgendaEvent): string => {
     if (!event.location?.coordinates || !userLocation) return '';
@@ -363,6 +398,8 @@ export function AgendaPage() {
   const handleQuickFilter = (type: 'today' | 'tomorrow' | 'weekend') => {
     setFilters(prev => ({ ...prev, dateType: prev.dateType === type ? 'all' : type }));
     setLimit(12);
+    loadCooldownRef.current = false;
+    isLoadingMoreRef.current = false;
   };
 
   const getActiveFilterCount = (): number => {
@@ -391,7 +428,7 @@ export function AgendaPage() {
             className="agenda-search-input"
             placeholder={searchPlaceholders[language] || searchPlaceholders.en}
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); }}
+            onChange={(e) => { setSearchQuery(e.target.value); setLimit(12); loadCooldownRef.current = false; isLoadingMoreRef.current = false; }}
           />
         </div>
       </div>
@@ -404,7 +441,7 @@ export function AgendaPage() {
               key={category.id}
               className={`agenda-category-chip ${selectedCategory === category.id ? 'active' : ''}`}
               style={{ background: category.color }}
-              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); }}
+              onClick={() => { setSelectedCategory(prev => prev === category.id ? '' : category.id); setLimit(12); loadCooldownRef.current = false; isLoadingMoreRef.current = false; }}
             >
               <span className="agenda-category-icon">{category.icon}</span>
               {categoryLabels[language]?.[category.id] || categoryLabels.en[category.id]}
@@ -509,7 +546,7 @@ export function AgendaPage() {
       <AgendaFilterModal
         isOpen={filterModalOpen}
         onClose={() => setFilterModalOpen(false)}
-        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); }}
+        onApply={(newFilters) => { setFilters(newFilters); setLimit(12); loadCooldownRef.current = false; isLoadingMoreRef.current = false; }}
         initialFilters={filters}
         resultCount={filteredEvents.length}
       />
