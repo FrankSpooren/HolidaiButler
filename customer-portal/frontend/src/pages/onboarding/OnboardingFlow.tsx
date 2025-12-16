@@ -173,7 +173,7 @@ const OnboardingFlow: React.FC = () => {
       : (ob.skipConfirm || 'Skip onboarding? You can set preferences later in your account.');
 
     if (confirm(message)) {
-      navigate(isEditMode ? '/account' : '/pois');
+      navigate(isEditMode ? '/account' : '/');
     }
   };
 
@@ -189,7 +189,7 @@ const OnboardingFlow: React.FC = () => {
     if (isEditMode) {
       navigate('/account');
     } else {
-      navigate('/pois');
+      navigate('/');
     }
   };
 
