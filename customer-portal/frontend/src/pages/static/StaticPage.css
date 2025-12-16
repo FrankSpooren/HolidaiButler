@@ -91,6 +91,13 @@
   margin: 0 0 1rem 0;
 }
 
+.static-section .section-subheader {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0 0 0.75rem 0;
+}
+
 .static-section ul {
   margin: 0 0 1rem 0;
   padding-left: 1.5rem;
