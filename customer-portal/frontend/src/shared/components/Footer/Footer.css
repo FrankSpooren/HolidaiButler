@@ -158,7 +158,7 @@
 
   .footer-container {
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.15rem;
   }
 
   .footer-links-grid {
