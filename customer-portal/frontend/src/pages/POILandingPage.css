@@ -574,7 +574,8 @@
   display: flex;
   overflow: hidden;
   position: relative;
-  min-height: 180px;
+  /* CRITICAL: stretch children to full height */
+  align-items: stretch;
 }
 
 .poi-list-item:hover {
@@ -582,13 +583,22 @@
   transform: translateY(-2px);
 }
 
-/* Desktop: Vertical image spanning full tile height */
+/* Desktop: Vertical image spanning FULL tile height */
 .poi-list-image-wrapper {
   width: 220px;
-  min-height: 180px;
   flex-shrink: 0;
   overflow: hidden;
   position: relative;
+  /* Stretch to fill parent height */
+  align-self: stretch;
+}
+
+/* Force carousel to fill wrapper height */
+.poi-list-image-wrapper .poi-tile-carousel,
+.poi-list-image-wrapper .poi-tile-carousel-viewport,
+.poi-list-image-wrapper .poi-tile-carousel-fallback {
+  height: 100% !important;
+  min-height: 100% !important;
 }
 
 .poi-list-image {
@@ -859,7 +869,7 @@
 }
 
 @media (max-width: 768px) {
-  /* List View Mobile - Compact layout, reduced whitespace */
+  /* List View Mobile - MINIMAL whitespace */
   .poi-list-item {
     flex-direction: column;
     min-height: auto;
@@ -871,28 +881,36 @@
     min-height: 200px;
   }
 
-  /* REDUCED WHITESPACE - compact padding */
+  /* AGGRESSIVE whitespace reduction - tight padding */
   .poi-list-content {
-    padding: 12px 12px 10px 12px;
+    padding: 10px 12px 8px 12px !important;
   }
 
   .poi-list-header {
-    margin-bottom: 4px;
+    margin-bottom: 2px !important;
   }
 
   .poi-list-title {
     font-size: 16px !important;
-    margin-bottom: 2px;
+    margin-bottom: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  .poi-list-category,
+  .poi-list-category-uniform {
+    margin-top: 4px;
   }
 
   .poi-list-description {
     font-size: 13px;
-    margin-bottom: 8px;
+    margin-bottom: 6px !important;
+    margin-top: 6px !important;
     -webkit-line-clamp: 2;
   }
 
   .poi-list-meta {
     margin-bottom: 0;
+    margin-top: 0;
   }
 
   /* 2x2 Grid for action buttons on mobile */
@@ -900,8 +918,8 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
-    margin-top: 10px;
-    padding-top: 10px;
+    margin-top: 8px !important;
+    padding-top: 8px;
   }
 
   .poi-list-item .poi-action-btn {
