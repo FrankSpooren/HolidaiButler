@@ -143,14 +143,14 @@ router.get('/events', async (req, res) => {
       params.push(searchTerm, searchTerm, searchTerm);
     }
 
-    // Show all events (not just Calpe area)
-    // conditions.push('a.is_in_calpe_area = 1');
+    // Distance filter: max 25km from Calpe, include 0km, exclude NULL
+    conditions.push('(a.calpe_distance IS NOT NULL AND a.calpe_distance <= 25)');
 
     const whereClause = conditions.join(' AND ');
 
-    // Get total count
+    // Get total count (count each event-date occurrence, not just unique events)
     const countQuery = `
-      SELECT COUNT(DISTINCT a.id) as total
+      SELECT COUNT(*) as total
       FROM agenda a
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE ${whereClause}
@@ -159,17 +159,16 @@ router.get('/events', async (req, res) => {
     const countResult = await query(countQuery, params);
     const total = countResult[0]?.total || 0;
 
-    // Get events with next occurrence date
+    // Get events with each date occurrence (multi-day events appear on each day)
     const eventsQuery = `
       SELECT
         a.*,
-        MIN(d.event_date) as event_date,
-        MIN(d.event_time) as event_time
+        d.event_date as event_date,
+        d.event_time as event_time
       FROM agenda a
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE ${whereClause}
-      GROUP BY a.id
-      ORDER BY event_date ${sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'}
+      ORDER BY d.event_date ${sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'}, a.id
       LIMIT ? OFFSET ?
     `;
 
@@ -222,7 +221,7 @@ router.get('/events/featured', async (req, res) => {
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE d.event_date >= CURDATE()
         AND d.event_date <= DATE_ADD(CURDATE(), INTERVAL 14 DAY)
-        -- Show all events
+        AND (a.calpe_distance IS NOT NULL AND a.calpe_distance <= 25)
         AND a.image IS NOT NULL
         AND a.image != ''
       GROUP BY a.id
@@ -329,13 +328,16 @@ router.get('/events/:id', async (req, res) => {
  */
 router.get('/stats', async (req, res) => {
   try {
+    // Distance filter for all stats queries
+    const distanceFilter = 'AND (a.calpe_distance IS NOT NULL AND a.calpe_distance <= 25)';
+
     // Total events
     const totalQuery = `
       SELECT COUNT(DISTINCT a.id) as total
       FROM agenda a
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE d.event_date >= CURDATE()
-        -- Show all events
+        ${distanceFilter}
     `;
 
     // Events this week
@@ -344,7 +346,7 @@ router.get('/stats', async (req, res) => {
       FROM agenda a
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE d.event_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
-        -- Show all events
+        ${distanceFilter}
     `;
 
     // Events this month
@@ -353,7 +355,7 @@ router.get('/stats', async (req, res) => {
       FROM agenda a
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE d.event_date BETWEEN CURDATE() AND LAST_DAY(CURDATE())
-        -- Show all events
+        ${distanceFilter}
     `;
 
     // Events today
@@ -362,7 +364,7 @@ router.get('/stats', async (req, res) => {
       FROM agenda a
       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
       WHERE d.event_date = CURDATE()
-        -- Show all events
+        ${distanceFilter}
     `;
 
     const [totalResult, weekResult, monthResult, todayResult] = await Promise.all([
