@@ -146,7 +146,7 @@ export function POILandingPage() {
 
   // Fetch POIs with filters
   // Fetch more upfront - virtualization only renders visible items
-  const fetchLimit = 200;
+  const fetchLimit = 500;
 
   const { data, isLoading, error } = usePOIs({
     q: searchQuery || undefined,
@@ -236,57 +236,12 @@ export function POILandingPage() {
         }
       }
 
-      // Filter out POIs without images in random/default overview (when no search/category filter)
-      if (!searchQuery && !selectedCategory) {
-        if (!poi.images || poi.images.length === 0) {
-          if (!poi.thumbnail_url) return false;
-        }
-      }
+      // Note: Image filtering handled by API via require_images parameter
 
       return true;
     });
 
-    // If no filters active, create vacation-focused mix from priority categories
-    if (!searchQuery && !selectedCategory) {
-      const vacationCategories = [
-        'Beaches & Nature',
-        'Culture & History',
-        'Food & Drinks',
-        'Recreation',
-        'Active'
-      ];
-
-      // Group by vacation categories
-      const byCategory: Record<string, typeof filtered> = {};
-      vacationCategories.forEach(cat => {
-        byCategory[cat] = filtered.filter(p => p.category === cat);
-      });
-
-      // Create balanced mix: take 10 from each category alternating
-      const mixed: typeof filtered = [];
-      const maxPerCategory = 10;
-
-      for (let i = 0; i < maxPerCategory; i++) {
-        vacationCategories.forEach(cat => {
-          if (byCategory[cat][i]) {
-            mixed.push(byCategory[cat][i]);
-          }
-        });
-      }
-
-      // Fill remaining with rest of vacation categories
-      if (mixed.length < 100) {
-        vacationCategories.forEach(cat => {
-          byCategory[cat].slice(maxPerCategory).forEach(poi => {
-            if (mixed.length < 100) mixed.push(poi);
-          });
-        });
-      }
-
-      return mixed;
-    }
-
-    // For filtered views, return all filtered results
+    // Return all filtered POIs - loadedCount controls display
     return filtered;
   }, [data?.data, searchQuery, selectedCategory, minReviews, distance, userLocation, accessibility]);
 
@@ -529,7 +484,7 @@ export function POILandingPage() {
 
   const getActiveFilterCount = (): number => {
     let count = 0;
-    if (distance !== 10) count++;
+    if (distance !== 25) count++;
     if (minReviews !== 0) count++;
     if (minRating !== 0) count++;
     if (priceLevel.length > 0) count++;
