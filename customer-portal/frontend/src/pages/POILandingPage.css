@@ -555,12 +555,14 @@
   border-top: 1px solid #F3F4F6;
 }
 
-/* POI List View */
+/* POI List View - Redesigned for optimal UX */
 .poi-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   padding: 16px !important;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .poi-list-item {
@@ -572,18 +574,21 @@
   display: flex;
   overflow: hidden;
   position: relative;
+  min-height: 180px;
 }
 
 .poi-list-item:hover {
-  transform: translateX(4px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
 }
 
+/* Desktop: Vertical image spanning full tile height */
 .poi-list-image-wrapper {
-  width: 120px;
-  height: 120px;
+  width: 220px;
+  min-height: 180px;
   flex-shrink: 0;
   overflow: hidden;
+  position: relative;
 }
 
 .poi-list-image {
@@ -597,27 +602,29 @@
   transform: scale(1.05);
 }
 
+/* Content area - better vertical distribution */
 .poi-list-content {
-  padding: 10px;
+  padding: 16px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  min-width: 0;
 }
 
 .poi-list-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 4px;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
 .poi-list-title {
-  font-size: 13px !important;
+  font-size: 16px !important;
   font-weight: 600;
   color: #1F2937;
   font-family: 'Inter', sans-serif;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   line-height: 1.3;
 }
 
@@ -632,25 +639,29 @@
   white-space: nowrap;
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
 }
 
 .poi-list-description {
-  font-size: 12px;
+  font-size: 13px;
   color: #6B7280;
-  margin-bottom: 6px;
+  margin-bottom: 12px;
   font-family: 'Inter', sans-serif;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  line-height: 1.5;
+  flex: 1;
 }
 
+/* Meta row with Compare right-aligned */
 .poi-list-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 12px;
+  flex-wrap: nowrap;
 }
 
 /* Distance icon in List View - fixed size */
@@ -658,7 +669,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 12px;
   color: #0273ae;
   font-weight: 500;
 }
@@ -670,33 +681,40 @@
   flex-shrink: 0;
 }
 
-/* List View Action Buttons - 2x2 grid on mobile */
+/* Comparison Checkbox - RIGHT ALIGNED */
+.poi-list-meta .comparison-checkbox-list {
+  margin-left: auto;
+}
+
+/* List View Action Buttons - Horizontal row */
 .poi-list-item .poi-actions {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
   gap: 4px;
   border-top: 1px solid #F3F4F6;
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
 }
 
 .poi-list-item .poi-action-btn {
+  flex: 1;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 2px;
-  padding: 6px 4px;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 4px;
   background: none;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 11px;
   color: #6B7280;
   transition: background 0.2s ease;
+  white-space: nowrap;
 }
 
 .poi-list-item .poi-action-btn:hover {
-  background: #F9FAFB;
+  background: #F3F4F6;
   color: #1F2937;
 }
 
@@ -708,10 +726,11 @@
   color: #7FA594;
 }
 
+/* Save button on image */
 .poi-list-save-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 12px;
+  left: 176px;
   width: 32px;
   height: 32px;
   background: white;
@@ -739,15 +758,16 @@
 .comparison-checkbox-list {
   background: rgba(127, 165, 148, 0.1);
   border-radius: 6px;
-  padding: 3px 6px;
+  padding: 4px 8px;
   display: flex;
   align-items: center;
-  gap: 8px !important;
+  gap: 6px !important;
   cursor: pointer;
   user-select: none;
   transition: all 0.2s ease;
-  font-size: 10px;
+  font-size: 11px;
   font-family: 'Inter', sans-serif;
+  flex-shrink: 0;
 }
 
 .comparison-checkbox-list:hover {
@@ -839,33 +859,49 @@
 }
 
 @media (max-width: 768px) {
-  /* List View Mobile - Larger image, 2x2 button grid */
+  /* List View Mobile - Compact layout, reduced whitespace */
   .poi-list-item {
     flex-direction: column;
+    min-height: auto;
   }
 
   .poi-list-image-wrapper {
     width: 100%;
-    height: 180px;
+    height: 200px;
+    min-height: 200px;
   }
 
+  /* REDUCED WHITESPACE - compact padding */
   .poi-list-content {
-    padding: 12px;
+    padding: 12px 12px 10px 12px;
+  }
+
+  .poi-list-header {
+    margin-bottom: 4px;
   }
 
   .poi-list-title {
-    font-size: 15px !important;
+    font-size: 16px !important;
+    margin-bottom: 2px;
   }
 
   .poi-list-description {
-    font-size: 12px;
-    -webkit-line-clamp: 3;
+    font-size: 13px;
+    margin-bottom: 8px;
+    -webkit-line-clamp: 2;
+  }
+
+  .poi-list-meta {
+    margin-bottom: 0;
   }
 
   /* 2x2 Grid for action buttons on mobile */
   .poi-list-item .poi-actions {
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
   }
 
   .poi-list-item .poi-action-btn {
@@ -885,10 +921,11 @@
     font-weight: 500;
   }
 
-  /* Save button repositioned for mobile list layout */
+  /* Save button on image top-right for mobile */
   .poi-list-save-btn {
     top: 12px;
     right: 12px;
+    left: auto;
     width: 36px;
     height: 36px;
   }
@@ -899,9 +936,16 @@
     grid-template-columns: repeat(3, 1fr);
   }
 
+  /* Desktop list: keep vertical image full height */
   .poi-list-image-wrapper {
-    width: 120px;
-    height: 120px;
+    width: 220px;
+    min-height: 180px;
+    height: auto;
+  }
+
+  /* Image stretches to match content height */
+  .poi-list-item {
+    align-items: stretch;
   }
 }
 
