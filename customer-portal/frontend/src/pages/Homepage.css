@@ -455,17 +455,17 @@
   color: #D4AF37;
 }
 
-.rating-text {
+.rating-section .rating-text {
   font-size: 24px;
   font-weight: 700;
   font-family: 'Inter', sans-serif;
-  color: white;
+  color: white !important;
 }
 
-.rating-subtext {
+.rating-section .rating-subtext {
   font-size: 16px;
   font-family: 'Inter', sans-serif;
-  color: white;
+  color: white !important;
 }
 
 .review-btn {
