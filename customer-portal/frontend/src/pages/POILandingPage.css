@@ -653,6 +653,61 @@
   flex-wrap: wrap;
 }
 
+/* Distance icon in List View - fixed size */
+.poi-list-meta .poi-distance {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #0273ae;
+  font-weight: 500;
+}
+
+.poi-list-meta .poi-distance .map-icon,
+.poi-list-meta .poi-distance svg {
+  width: 14px !important;
+  height: 14px !important;
+  flex-shrink: 0;
+}
+
+/* List View Action Buttons - 2x2 grid on mobile */
+.poi-list-item .poi-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  border-top: 1px solid #F3F4F6;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.poi-list-item .poi-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 10px;
+  color: #6B7280;
+  transition: background 0.2s ease;
+}
+
+.poi-list-item .poi-action-btn:hover {
+  background: #F9FAFB;
+  color: #1F2937;
+}
+
+.poi-list-item .poi-action-btn span:first-child {
+  font-size: 16px;
+}
+
+.poi-list-item .poi-action-btn.poi-action-primary {
+  color: #7FA594;
+}
+
 .poi-list-save-btn {
   position: absolute;
   top: 10px;
@@ -784,17 +839,58 @@
 }
 
 @media (max-width: 768px) {
+  /* List View Mobile - Larger image, 2x2 button grid */
+  .poi-list-item {
+    flex-direction: column;
+  }
+
   .poi-list-image-wrapper {
-    width: 100px;
-    height: 100px;
+    width: 100%;
+    height: 180px;
+  }
+
+  .poi-list-content {
+    padding: 12px;
   }
 
   .poi-list-title {
-    font-size: 13px !important;
+    font-size: 15px !important;
   }
 
   .poi-list-description {
-    font-size: 11px;
+    font-size: 12px;
+    -webkit-line-clamp: 3;
+  }
+
+  /* 2x2 Grid for action buttons on mobile */
+  .poi-list-item .poi-actions {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .poi-list-item .poi-action-btn {
+    flex-direction: row;
+    justify-content: center;
+    padding: 10px 8px;
+    background: #F9FAFB;
+    border-radius: 8px;
+  }
+
+  .poi-list-item .poi-action-btn span:first-child {
+    font-size: 18px;
+  }
+
+  .poi-list-item .poi-action-btn span:last-child {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* Save button repositioned for mobile list layout */
+  .poi-list-save-btn {
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
   }
 }
 
