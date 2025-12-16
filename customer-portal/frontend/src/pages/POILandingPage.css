@@ -825,8 +825,26 @@
 
 /* Mobile Responsive - COMPACT */
 @media (max-width: 640px) {
+  /* FIXED HEIGHT for uniform mobile images */
   .poi-card .poi-image-container {
-    height: 140px;
+    height: 140px !important;
+    min-height: 140px !important;
+    max-height: 140px !important;
+  }
+
+  /* Force carousel and images to fill container uniformly */
+  .poi-card .poi-image-container .poi-tile-carousel,
+  .poi-card .poi-image-container .poi-tile-carousel-viewport,
+  .poi-card .poi-image-container .poi-tile-carousel-fallback {
+    height: 100% !important;
+    min-height: 100% !important;
+  }
+
+  .poi-card .poi-image-container img,
+  .poi-card .poi-tile-carousel-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
   }
 
   .poi-card .poi-content {

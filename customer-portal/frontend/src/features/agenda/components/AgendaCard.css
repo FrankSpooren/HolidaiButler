@@ -354,8 +354,20 @@
   .agenda-card {
     scroll-margin-top: 220px;
   }
+
+  /* FIXED HEIGHT for uniform mobile images */
   .agenda-card .agenda-image-container {
-    height: 160px;
+    height: 140px !important;
+    min-height: 140px !important;
+    max-height: 140px !important;
+  }
+
+  /* Force image to fill container uniformly */
+  .agenda-card .agenda-image-container img,
+  .agenda-card .agenda-image-container .agenda-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
   }
 
   .agenda-card .agenda-content {
