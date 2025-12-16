@@ -75,7 +75,8 @@ export function POILandingPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [limit, setLimit] = useState<number>(12);
+  // Display control: how many POIs to show (virtualization renders only visible)
+  const [loadedCount, setLoadedCount] = useState<number>(24);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [selectedPOIId, setSelectedPOIId] = useState<number | null>(null);
   const [scrollPosition, setScrollPosition] = useState<number>(0);
@@ -144,8 +145,8 @@ export function POILandingPage() {
   };
 
   // Fetch POIs with filters
-  // For default view (no filters), fetch more to create vacation-focused mix
-  const fetchLimit = (!searchQuery && !selectedCategory) ? 200 : limit;
+  // Fetch more upfront - virtualization only renders visible items
+  const fetchLimit = 200;
 
   const { data, isLoading, error } = usePOIs({
     q: searchQuery || undefined,
@@ -273,24 +274,29 @@ export function POILandingPage() {
         });
       }
 
-      // Fill remaining with rest of vacation categories if less than limit
-      if (mixed.length < limit) {
+      // Fill remaining with rest of vacation categories
+      if (mixed.length < 100) {
         vacationCategories.forEach(cat => {
           byCategory[cat].slice(maxPerCategory).forEach(poi => {
-            if (mixed.length < limit) mixed.push(poi);
+            if (mixed.length < 100) mixed.push(poi);
           });
         });
       }
 
-      return mixed.slice(0, limit);
+      return mixed;
     }
 
-    // For filtered views, return as is (limited to requested limit)
-    return filtered.slice(0, limit);
-  }, [data?.data, searchQuery, selectedCategory, limit, minReviews, distance, userLocation, accessibility]);
+    // For filtered views, return all filtered results
+    return filtered;
+  }, [data?.data, searchQuery, selectedCategory, minReviews, distance, userLocation, accessibility]);
 
-  const pois = processedPOIs;
-  const hasMore = data?.meta?.has_more || false;
+  // Display only loadedCount items (virtualization renders only visible)
+  const pois = useMemo(() => {
+    return processedPOIs.slice(0, loadedCount);
+  }, [processedPOIs, loadedCount]);
+
+  // Check if there are more POIs to display
+  const hasMore = loadedCount < processedPOIs.length;
 
   // Virtualizer setup for grid view
   const rowCount = Math.ceil(pois.length / columnCount);
@@ -307,16 +313,35 @@ export function POILandingPage() {
 
   const virtualItems = virtualizer.getVirtualItems();
 
-  // Infinite scroll via virtualizer - load more when near bottom
+  // Infinite scroll via virtualizer - load more when near bottom (grid view)
   useEffect(() => {
     if (viewMode !== 'grid') return;
-    if (virtualItems.length > 0 && hasMore) {
+    if (virtualItems.length > 0) {
       const lastVisibleRowIndex = virtualItems[virtualItems.length - 1].index;
-      if (lastVisibleRowIndex >= rowCount - 2) {
-        setLimit(prev => prev + 12);
+      // Load more when approaching the last 2 rows
+      if (lastVisibleRowIndex >= rowCount - 2 && loadedCount < processedPOIs.length) {
+        setLoadedCount(prev => Math.min(prev + 12, processedPOIs.length));
       }
     }
-  }, [virtualItems, rowCount, hasMore, viewMode]);
+  }, [virtualItems, rowCount, loadedCount, processedPOIs.length, viewMode]);
+
+  // Infinite scroll for list view - load more when near bottom
+  useEffect(() => {
+    if (viewMode !== 'list') return;
+
+    const handleListScroll = () => {
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const pageHeight = document.documentElement.scrollHeight;
+
+      // Load more when within 500px of bottom
+      if (pageHeight - scrollPosition < 500 && loadedCount < processedPOIs.length) {
+        setLoadedCount(prev => Math.min(prev + 12, processedPOIs.length));
+      }
+    };
+
+    window.addEventListener('scroll', handleListScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleListScroll);
+  }, [viewMode, loadedCount, processedPOIs.length]);
 
   // Debounced autocomplete fetch
   useEffect(() => {
@@ -382,11 +407,6 @@ export function POILandingPage() {
     toggleFavorite(poiId);
   };
 
-  // Load more POIs
-  const handleLoadMore = () => {
-    setLimit((prev) => prev + 12);
-  };
-
   // Navigate to POI detail (now opens modal instead of navigating)
   const handlePOIClick = (poiId: number) => {
     // Save current scroll position and view mode
@@ -409,14 +429,14 @@ export function POILandingPage() {
   // Category selection
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategory((prev) => (prev === categoryId ? '' : categoryId));
-    setLimit(12); // Reset limit when category changes
+    setLoadedCount(24); // Reset display count when category changes
   };
 
   // Search handler with autocomplete
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
-    setLimit(12); // Reset limit when search changes
+    setLoadedCount(24); // Reset display count when search changes
 
     // Show autocomplete if query is 2+ characters
     if (value.length >= 2) {
@@ -490,8 +510,8 @@ export function POILandingPage() {
 
   const applyFilters = () => {
     // Filters will be applied via the usePOIs hook params
-    // Reset limit when filters change
-    setLimit(12);
+    // Reset display count when filters change
+    setLoadedCount(24);
     closeFilterModal();
   };
 
@@ -862,13 +882,6 @@ export function POILandingPage() {
             onMarkerClick={handlePOIClick}
           />
         </div>
-      )}
-
-      {/* Load More */}
-      {!isLoading && !error && hasMore && viewMode !== 'map' && (
-        <button className="load-more" onClick={handleLoadMore}>
-          {t.poi.loadMore} ({data?.meta?.total ? data.meta.total - pois.length : '...'} remaining)
-        </button>
       )}
 
       {/* No Results */}
