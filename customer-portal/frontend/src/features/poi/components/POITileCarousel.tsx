@@ -160,7 +160,7 @@ export function POITileCarousel({
         )}
       </div>
 
-      {/* Dot indicators */}
+      {/* Dot indicators - these replace the counter (cleaner UX) */}
       {showDots && (
         <div className="poi-tile-carousel-dots">
           {displayImages.map((_, index) => (
@@ -174,13 +174,6 @@ export function POITileCarousel({
               aria-label={`Go to image ${index + 1}`}
             />
           ))}
-        </div>
-      )}
-
-      {/* Image counter */}
-      {showDots && (
-        <div className="poi-tile-carousel-counter">
-          {currentIndex + 1}/{displayImages.length}
         </div>
       )}
     </div>
