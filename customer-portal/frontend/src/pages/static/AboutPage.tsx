@@ -30,7 +30,8 @@ export function AboutPage() {
             {sp?.missionTitle || 'Onze Missie'}
           </h2>
           <p>
-            {sp?.missionText || 'HolidaiButler is jouw persoonlijke digitale butler voor de Costa Blanca. Wij combineren lokale expertise met AI-technologie om je de beste ervaring te bieden tijdens je verblijf in Spanje.'}
+            <strong>{sp?.missionBold || 'HolidaiButler is jouw persoonlijke digitale butler voor de Costa Blanca.'}</strong>{' '}
+            {sp?.missionText || 'Geen generieke tips of toeristische clichés, maar aanbevelingen die passen bij jou, je gezelschap en het moment. Gebaseerd op actuele omstandigheden, lokale expertise en jouw voorkeuren. Objectief, betrouwbaar en transparant — in dienst van jouw ervaring.'}
           </p>
         </div>
 
@@ -45,7 +46,8 @@ export function AboutPage() {
             {sp?.visionTitle || 'Onze Visie'}
           </h2>
           <p>
-            {sp?.visionText || 'Wij geloven dat elke vakantieganger de ervaring van een lokale expert verdient. Met HolidaiButler krijg je gepersonaliseerde aanbevelingen die passen bij jouw voorkeuren, budget en reisgezelschap.'}
+            <strong>{sp?.visionBold || 'Wij bouwen aan het meest persoonlijke en betrouwbare toerismeplatform van Europa.'}</strong>{' '}
+            {sp?.visionText || 'Door lokale partnerships, DMO-endorsement en AI-technologie bieden we hyperpersoonlijke en realtime informatie — afgestemd op jouw profiel, voorkeuren en omstandigheden. HolidaiButler is er voor reizigers die méér willen dan generieke tips: transparant, ethisch en met diepe lokale expertise. Jij bent in control. Wij zorgen dat je niets mist — en nergens over hoeft na te denken.'}
           </p>
         </div>
 

@@ -37,11 +37,10 @@ export function HowItWorksPage() {
               <div className="step-content">
                 <h3>{sp?.step2Title || 'Ontvang Gepersonaliseerde Suggesties'}</h3>
                 <p>
-                  {sp?.step2Text || 'HolidaiButler analyseert je voorkeuren en geeft je aanbevelingen op maat.'}{' '}
                   <Link to="/login" style={{ color: '#7FA594', fontWeight: 500 }}>
                     {sp?.step2AccountLink || 'Maak je een account aan'}
                   </Link>{' '}
-                  {sp?.step2TextAfterLink || 'met behulp van enkele simpele vragen dan worden deze aanbevelingen nog passender bij je wensen en voorkeuren. Of je nu zoekt naar een rustig terrasje, die ene unieke wandelroute, of een parel van een museum, wij vinden de perfecte match voor jou.'}
+                  {sp?.step2Text || 'met behulp van enkele simpele vragen, dan worden alle HolidaiButler-aanbevelingen compleet afgestemd op je wensen en voorkeuren. En dat scheelt heel wat speurwerk en overbodige informatie. Of je nu zoekt naar een rustig terrasje, die ene unieke wandelroute, of een parel van een museum, wij vinden de perfecte match voor jou.'}
                 </p>
               </div>
             </div>
