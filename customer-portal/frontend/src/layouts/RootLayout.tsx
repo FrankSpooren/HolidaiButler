@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router';
 import { Header } from '../shared/components/Header';
 import { Footer } from '../shared/components/Footer';
 import { HoliBotWidget } from '../shared/components/HoliBot';
+import { ScrollToTop } from '../shared/components/ScrollToTop';
 
 /**
  * RootLayout - Main layout for most pages
@@ -27,6 +28,9 @@ export function RootLayout() {
 
   return (
     <div className="min-h-screen bg-bg-gray flex flex-col">
+      {/* Scroll to top on route change */}
+      <ScrollToTop />
+
       {/* Header - Enterprise Navigation Component */}
       <Header />
 
