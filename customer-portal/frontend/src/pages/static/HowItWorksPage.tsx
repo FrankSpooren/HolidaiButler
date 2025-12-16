@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { useLanguage } from '../../i18n/LanguageContext';
 import './StaticPage.css';
 
@@ -25,8 +26,8 @@ export function HowItWorksPage() {
             <div className="static-step">
               <div className="step-number">1</div>
               <div className="step-content">
-                <h3>{sp?.step1Title || 'Start met HoliBot'}</h3>
-                <p>{sp?.step1Text || 'Open de app of website en start een gesprek met HoliBot, onze AI-assistent. Vertel in je eigen taal wat je zoekt - een romantisch restaurant, een familievriendelijk strand, of een avontuurlijke activiteit.'}</p>
+                <h3>{sp?.step1Title || 'Start met HolidaiButler'}</h3>
+                <p>{sp?.step1Text || 'Open de app of website, check de complete en up-to-date agenda, bekijk locaties en start een gesprek met HoliBot, onze AI-assistent. Vertel in je eigen taal wat je zoekt - een romantisch restaurant, een familievriendelijk strand, of een avontuurlijke activiteit.'}</p>
               </div>
             </div>
 
@@ -35,7 +36,13 @@ export function HowItWorksPage() {
               <div className="step-number">2</div>
               <div className="step-content">
                 <h3>{sp?.step2Title || 'Ontvang Gepersonaliseerde Suggesties'}</h3>
-                <p>{sp?.step2Text || 'HoliBot analyseert je voorkeuren en geeft je aanbevelingen op maat. Of je nu zoekt naar een rustig terrasje of een bruisende club, wij vinden de perfecte match voor jou.'}</p>
+                <p>
+                  {sp?.step2Text || 'HolidaiButler analyseert je voorkeuren en geeft je aanbevelingen op maat.'}{' '}
+                  <Link to="/login" style={{ color: '#7FA594', fontWeight: 500 }}>
+                    {sp?.step2AccountLink || 'Maak je een account aan'}
+                  </Link>{' '}
+                  {sp?.step2TextAfterLink || 'met behulp van enkele simpele vragen dan worden deze aanbevelingen nog passender bij je wensen en voorkeuren. Of je nu zoekt naar een rustig terrasje, die ene unieke wandelroute, of een parel van een museum, wij vinden de perfecte match voor jou.'}
+                </p>
               </div>
             </div>
 
