@@ -49,6 +49,13 @@
     width: 75px;
 }
 
+/* Header logo image (PNG) */
+.header-logo-img {
+    height: 50px;
+    width: auto;
+    display: block;
+}
+
 /* Language & Accessibility Icons */
 .header-icons {
     display: flex;

@@ -53,15 +53,11 @@ export function Footer() {
           {/* Brand Section */}
           <div className="footer-brand">
             <Link to="/" className="footer-logo">
-              <svg className="footer-logo-svg" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
-                <g transform="translate(40, 40) scale(0.5)">
-                  <path d="M -40,20 Q -20,5 0,20 Q 20,35 40,20" stroke="#7FA594" strokeWidth="3" fill="none"/>
-                  <circle cx="0" cy="0" r="25" fill="none" stroke="#7FA594" strokeWidth="2" strokeDasharray="3,2"/>
-                  <polygon points="0,-35 -4,-10 -14,-10 -7,-3 -10,7 0,0 10,7 7,-3 14,-10 4,-10" fill="#D4AF37"/>
-                  <circle cx="0" cy="0" r="2" fill="#7FA594"/>
-                </g>
-                <text x="100" y="55" textAnchor="middle" fill="#7FA594" fontFamily="'Inter', sans-serif" fontSize="16" fontWeight="600">HolidaiButler</text>
-              </svg>
+              <img
+                src="/assets/images/hb-logo-footer.png"
+                alt="HolidaiButler"
+                className="footer-logo-img"
+              />
             </Link>
             <p className="footer-tagline">
               {footer.tagline || 'Jouw Persoonlijke Butler aan de Costa Blanca'}
