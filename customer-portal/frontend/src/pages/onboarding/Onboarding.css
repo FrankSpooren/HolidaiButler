@@ -490,6 +490,37 @@
     cursor: not-allowed;
 }
 
+/* Mobile: Fixed CTA button at bottom */
+@media (max-width: 768px) {
+    .onboarding {
+        min-height: calc(100vh - 81px);
+        display: flex;
+        flex-direction: column;
+        padding-bottom: 80px;
+    }
+
+    .onboarding-container {
+        flex: 1;
+        padding-bottom: 100px;
+    }
+
+    .onboarding-cta {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: 0;
+        border-radius: 0;
+        height: 56px;
+        z-index: 100;
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .onboarding-cta:hover:not(:disabled) {
+        transform: none;
+    }
+}
+
 /* Confirm Modal */
 .confirm-modal-overlay {
     position: fixed;
