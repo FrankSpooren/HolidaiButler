@@ -153,12 +153,12 @@
 /* Responsive */
 @media (max-width: 768px) {
   .footer-main {
-    padding: 1rem;
+    padding: 1.25rem 1rem;
   }
 
   .footer-container {
     flex-direction: column;
-    gap: 0;
+    gap: 0.75rem;
   }
 
   .footer-links-grid {
@@ -172,7 +172,6 @@
 
   .footer-brand {
     align-items: center;
-    padding-bottom: 0.5rem;
   }
 
   .footer-accordion {
