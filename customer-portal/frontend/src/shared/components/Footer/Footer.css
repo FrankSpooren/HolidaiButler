@@ -173,13 +173,6 @@
   .footer-brand {
     align-items: center;
   }
-
-  .footer-accordion {
-    display: block;
-    width: 100%;
-    margin-top: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
 }
 
 @media (max-width: 480px) {
@@ -245,8 +238,16 @@
   min-height: 48px;
 }
 
+/* Mobile: Show accordion, hide grid */
 @media (max-width: 768px) {
   .footer-links-grid {
     display: none;
+  }
+
+  .footer-accordion {
+    display: block !important;
+    width: 100%;
+    margin-top: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
