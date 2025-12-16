@@ -15,8 +15,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 import { ArrowLeft, X } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import './Onboarding.css';
 
 // Types
@@ -34,6 +35,8 @@ interface OnboardingData {
 const OnboardingFlow: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
+  const ob = (t as any).onboarding || {};
   const isEditMode = searchParams.get('mode') === 'edit';
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -76,52 +79,52 @@ const OnboardingFlow: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
 
-  // Step 1: Travel Companion
+  // Step 1: Travel Companion (Solo stays "Solo" in all languages)
   const companions = [
-    { id: 'couple', icon: '💑', title: 'Couple', subtitle: 'Enjoying a romantic trip' },
-    { id: 'family', icon: '👨‍👩‍👧‍👦', title: 'Family', subtitle: 'Great for family fun and bonding' },
-    { id: 'solo', icon: '👤', title: 'Solo', subtitle: 'Explore at your own pace' },
-    { id: 'group', icon: '👥', title: 'Group', subtitle: 'Perfect for friends and colleagues' },
+    { id: 'couple', icon: '💑', title: ob.couple || 'Couple', subtitle: ob.coupleDesc || 'Enjoying a romantic trip' },
+    { id: 'family', icon: '👨‍👩‍👧‍👦', title: ob.family || 'Family', subtitle: ob.familyDesc || 'Great for family fun and bonding' },
+    { id: 'solo', icon: '👤', title: 'Solo', subtitle: ob.soloDesc || 'Explore at your own pace' },
+    { id: 'group', icon: '👥', title: ob.group || 'Group', subtitle: ob.groupDesc || 'Perfect for friends and colleagues' },
   ];
 
   // Step 2: Interests
   const interests = [
-    { id: 'relax', icon: '🏖️', title: 'Relax', subtitle: 'Unwind and recharge' },
-    { id: 'active', icon: '⚡', title: 'Active', subtitle: 'Adventure and sports' },
-    { id: 'culture', icon: '🎭', title: 'Culture', subtitle: 'Local arts & creative experiences' },
-    { id: 'food', icon: '🍽️', title: 'Food', subtitle: 'Culinary adventures' },
-    { id: 'nature', icon: '🌲', title: 'Nature', subtitle: 'Outdoor exploration' },
-    { id: 'nightlife', icon: '🌙', title: 'Nightlife', subtitle: 'Evening entertainment' },
-    { id: 'history', icon: '🏛️', title: 'History', subtitle: 'Discover the past' },
-    { id: 'shopping', icon: '🛍️', title: 'Shopping', subtitle: 'Retail therapy' },
+    { id: 'relax', icon: '🏖️', title: ob.relax || 'Relax', subtitle: ob.relaxDesc || 'Unwind and recharge' },
+    { id: 'active', icon: '⚡', title: ob.active || 'Active', subtitle: ob.activeDesc || 'Adventure and sports' },
+    { id: 'culture', icon: '🎭', title: ob.culture || 'Culture', subtitle: ob.cultureDesc || 'Local arts & creative experiences' },
+    { id: 'food', icon: '🍽️', title: ob.food || 'Food', subtitle: ob.foodDesc || 'Culinary adventures' },
+    { id: 'nature', icon: '🌲', title: ob.nature || 'Nature', subtitle: ob.natureDesc || 'Outdoor exploration' },
+    { id: 'nightlife', icon: '🌙', title: ob.nightlife || 'Nightlife', subtitle: ob.nightlifeDesc || 'Evening entertainment' },
+    { id: 'history', icon: '🏛️', title: ob.history || 'History', subtitle: ob.historyDesc || 'Discover the past' },
+    { id: 'shopping', icon: '🛍️', title: ob.shopping || 'Shopping', subtitle: ob.shoppingDesc || 'Retail therapy' },
   ];
 
   // Step 3: Duration options
   const durations = [
-    { id: '1-3-days', label: '1-3 days (weekend)' },
-    { id: '4-7-days', label: '4-7 days (week)' },
-    { id: '1-2-weeks', label: '1-2 weeks' },
-    { id: '2+-weeks', label: '2+ weeks' },
-    { id: 'flexible', label: 'Flexible/Not sure' },
+    { id: '1-3-days', label: ob.duration1 || '1-3 days (weekend)' },
+    { id: '4-7-days', label: ob.duration2 || '4-7 days (week)' },
+    { id: '1-2-weeks', label: ob.duration3 || '1-2 weeks' },
+    { id: '2+-weeks', label: ob.duration4 || '2+ weeks' },
+    { id: 'flexible', label: ob.durationFlex || 'Flexible/Not sure' },
   ];
 
   // Step 4: Dietary options
   const dietaryOptions = [
-    { id: 'vegetarian', label: 'Vegetarian' },
-    { id: 'vegan', label: 'Vegan' },
-    { id: 'gluten-free', label: 'Gluten-free' },
-    { id: 'halal', label: 'Halal' },
-    { id: 'kosher', label: 'Kosher' },
-    { id: 'lactose-free', label: 'Lactose-free' },
-    { id: 'nut-allergies', label: 'Nut allergies' },
+    { id: 'vegetarian', label: ob.vegetarian || 'Vegetarian' },
+    { id: 'vegan', label: ob.vegan || 'Vegan' },
+    { id: 'gluten-free', label: ob.glutenFree || 'Gluten-free' },
+    { id: 'halal', label: ob.halal || 'Halal' },
+    { id: 'kosher', label: ob.kosher || 'Kosher' },
+    { id: 'lactose-free', label: ob.lactoseFree || 'Lactose-free' },
+    { id: 'nut-allergies', label: ob.nutAllergies || 'Nut allergies' },
   ];
 
   // Step 4: Accessibility options
   const accessibilityOptions = [
-    { id: 'wheelchair-accessible', label: 'Wheelchair accessible' },
-    { id: 'mobility-assistance', label: 'Mobility assistance' },
-    { id: 'visual-impairment', label: 'Visual impairment' },
-    { id: 'hearing-impairment', label: 'Hearing impairment' },
+    { id: 'wheelchair-accessible', label: ob.wheelchair || 'Wheelchair accessible' },
+    { id: 'mobility-assistance', label: ob.mobility || 'Mobility assistance' },
+    { id: 'visual-impairment', label: ob.visual || 'Visual impairment' },
+    { id: 'hearing-impairment', label: ob.hearing || 'Hearing impairment' },
   ];
 
   // Handlers
@@ -166,8 +169,8 @@ const OnboardingFlow: React.FC = () => {
 
   const skipOnboarding = () => {
     const message = isEditMode
-      ? 'Cancel editing preferences and return to your account?'
-      : 'Skip onboarding? You can set preferences later in your account.';
+      ? (ob.cancelEdit || 'Cancel editing preferences and return to your account?')
+      : (ob.skipConfirm || 'Skip onboarding? You can set preferences later in your account.');
 
     if (confirm(message)) {
       navigate(isEditMode ? '/account' : '/pois');
@@ -210,16 +213,16 @@ const OnboardingFlow: React.FC = () => {
 
   return (
     <div className="onboarding">
-      {/* Header */}
-      <div className="onboarding-header">
+      {/* Navigation Bar */}
+      <div className="onboarding-nav">
         {currentStep > 1 && (
-          <button className="back-btn" onClick={goBack}>
-            <ArrowLeft size={24} />
+          <button className="onboarding-back-btn" onClick={goBack}>
+            <ArrowLeft size={20} /> {ob.back || 'Back'}
           </button>
         )}
-        {currentStep === 1 && <span className="menu-icon">☰</span>}
-        <button className="skip-btn" onClick={skipOnboarding}>
-          <X size={16} /> Skip
+        <div className="onboarding-nav-spacer" />
+        <button className="onboarding-skip-btn" onClick={skipOnboarding}>
+          {ob.skip || 'Skip'} <X size={16} />
         </button>
       </div>
 
@@ -237,13 +240,13 @@ const OnboardingFlow: React.FC = () => {
             fontWeight: 500,
             textAlign: 'center'
           }}>
-            ✏️ Editing your preferences - Your current selections are shown below
+            ✏️ {ob.editMode || 'Editing your preferences - Your current selections are shown below'}
           </div>
         )}
 
         {/* Progress Indicator */}
         <div className="progress-section">
-          <div className="step-text">Step {currentStep} of 4</div>
+          <div className="step-text">{ob.stepOf || 'Step'} {currentStep} {ob.of || 'of'} 4</div>
           <div className="progress-dots">
             {[1, 2, 3, 4].map((step) => (
               <div
@@ -259,7 +262,7 @@ const OnboardingFlow: React.FC = () => {
           <>
             <div className="onboarding-heading">
               <div className="heading-icon">👥</div>
-              Who are you traveling with?
+              {ob.step1Title || 'Who are you traveling with?'}
             </div>
 
             <div className="option-grid">
@@ -285,9 +288,9 @@ const OnboardingFlow: React.FC = () => {
           <>
             <div className="onboarding-heading">
               <div className="heading-icon">🎯</div>
-              What are you looking for in Calpe?
+              {ob.step2Title || 'What are you looking for in Calpe?'}
             </div>
-            <div className="onboarding-subheading">(Select all that apply)</div>
+            <div className="onboarding-subheading">{ob.selectAll || '(Select all that apply)'}</div>
 
             <div className="category-grid">
               {interests.map((interest) => (
@@ -306,7 +309,7 @@ const OnboardingFlow: React.FC = () => {
             </div>
 
             <div className="selection-count">
-              Selected: <strong>{formData.interests.length}</strong> {formData.interests.length === 1 ? 'option' : 'options'}
+              {ob.selected || 'Selected'}: <strong>{formData.interests.length}</strong> {formData.interests.length === 1 ? (ob.option || 'option') : (ob.options || 'options')}
             </div>
           </>
         )}
@@ -316,12 +319,12 @@ const OnboardingFlow: React.FC = () => {
           <>
             <div className="onboarding-heading">
               <div className="heading-icon">📅</div>
-              Tell us about your trip
+              {ob.step3Title || 'Tell us about your trip'}
             </div>
 
             {/* Type of Stay */}
             <div className="form-section">
-              <label className="form-label">Type of stay</label>
+              <label className="form-label">{ob.stayType || 'Type of stay'}</label>
               <div className="radio-group">
                 <div className="radio-option">
                   <input
@@ -332,7 +335,7 @@ const OnboardingFlow: React.FC = () => {
                     checked={formData.stayType === 'pleasure'}
                     onChange={(e) => setFormData({ ...formData, stayType: e.target.value })}
                   />
-                  <label htmlFor="pleasure">Pleasure</label>
+                  <label htmlFor="pleasure">{ob.pleasure || 'Pleasure'}</label>
                 </div>
                 <div className="radio-option">
                   <input
@@ -343,14 +346,14 @@ const OnboardingFlow: React.FC = () => {
                     checked={formData.stayType === 'business'}
                     onChange={(e) => setFormData({ ...formData, stayType: e.target.value })}
                   />
-                  <label htmlFor="business">Business</label>
+                  <label htmlFor="business">{ob.business || 'Business'}</label>
                 </div>
               </div>
             </div>
 
             {/* Visit Status */}
             <div className="form-section">
-              <label className="form-label">Visit status</label>
+              <label className="form-label">{ob.visitStatus || 'Visit status'}</label>
               <div className="radio-group">
                 <div className="radio-option">
                   <input
@@ -361,7 +364,7 @@ const OnboardingFlow: React.FC = () => {
                     checked={formData.visitStatus === 'first-time'}
                     onChange={(e) => setFormData({ ...formData, visitStatus: e.target.value })}
                   />
-                  <label htmlFor="first-time">First time</label>
+                  <label htmlFor="first-time">{ob.firstTime || 'First time'}</label>
                 </div>
                 <div className="radio-option">
                   <input
@@ -372,7 +375,7 @@ const OnboardingFlow: React.FC = () => {
                     checked={formData.visitStatus === 'returning'}
                     onChange={(e) => setFormData({ ...formData, visitStatus: e.target.value })}
                   />
-                  <label htmlFor="returning">Returning visitor</label>
+                  <label htmlFor="returning">{ob.returning || 'Returning visitor'}</label>
                 </div>
                 <div className="radio-option">
                   <input
@@ -383,14 +386,14 @@ const OnboardingFlow: React.FC = () => {
                     checked={formData.visitStatus === 'local'}
                     onChange={(e) => setFormData({ ...formData, visitStatus: e.target.value })}
                   />
-                  <label htmlFor="local">Local resident</label>
+                  <label htmlFor="local">{ob.localResident || 'Local resident'}</label>
                 </div>
               </div>
             </div>
 
             {/* Trip Date */}
             <div className="form-section">
-              <label className="form-label">When are you visiting?</label>
+              <label className="form-label">{ob.whenVisiting || 'When are you visiting?'}</label>
               <div className="input-wrapper">
                 <span className="input-icon">📅</span>
                 <input
@@ -404,7 +407,7 @@ const OnboardingFlow: React.FC = () => {
 
             {/* Duration */}
             <div className="form-section">
-              <label className="form-label">Trip duration</label>
+              <label className="form-label">{ob.tripDuration || 'Trip duration'}</label>
               <div className="radio-group">
                 {durations.map((duration) => (
                   <div className="radio-option" key={duration.id}>
@@ -428,16 +431,16 @@ const OnboardingFlow: React.FC = () => {
         {currentStep === 4 && (
           <>
             <div className="optional-header">
-              <div className="onboarding-heading" style={{ marginBottom: 0 }}>Optional</div>
+              <div className="onboarding-heading" style={{ marginBottom: 0 }}>{ob.optional || 'Optional'}</div>
               <a className="skip-link" onClick={goNext}>
-                Skip <span>→</span>
+                {ob.skip || 'Skip'} <span>→</span>
               </a>
             </div>
 
             {/* Dietary */}
             <div className="form-section">
-              <label className="form-label">Any dietary requirements?</label>
-              <span className="form-sublabel">(Select multiple)</span>
+              <label className="form-label">{ob.dietaryTitle || 'Any dietary requirements?'}</label>
+              <span className="form-sublabel">{ob.selectMultiple || '(Select multiple)'}</span>
               <div className="checkbox-group">
                 {dietaryOptions.map((option) => (
                   <div className="checkbox-option" key={option.id}>
@@ -455,8 +458,8 @@ const OnboardingFlow: React.FC = () => {
 
             {/* Accessibility */}
             <div className="form-section">
-              <label className="form-label">Accessibility needs?</label>
-              <span className="form-sublabel">(Select multiple)</span>
+              <label className="form-label">{ob.accessibilityTitle || 'Accessibility needs?'}</label>
+              <span className="form-sublabel">{ob.selectMultiple || '(Select multiple)'}</span>
               <div className="checkbox-group">
                 {accessibilityOptions.map((option) => (
                   <div className="checkbox-option" key={option.id}>
@@ -481,8 +484,8 @@ const OnboardingFlow: React.FC = () => {
           onClick={goNext}
         >
           {currentStep === 4
-            ? (isEditMode ? 'Save Preferences →' : 'Finish & Explore →')
-            : 'Continue →'}
+            ? (isEditMode ? (ob.savePreferences || 'Save Preferences →') : (ob.finishExplore || 'Finish & Explore →'))
+            : (ob.continue || 'Continue →')}
         </button>
       </div>
     </div>
