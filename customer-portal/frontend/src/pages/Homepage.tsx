@@ -192,7 +192,7 @@ export function Homepage() {
           </Link>
 
           {/* Feature 3: Personalized Experience */}
-          <Link to="/signup" className="feature-card">
+          <Link to="/onboarding" className="feature-card">
             <span className="feature-icon">✨</span>
             <h3 className="feature-title">{t.homepage.features.tailored.title}</h3>
             <p className="feature-description">

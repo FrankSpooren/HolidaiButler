@@ -450,6 +450,86 @@ export interface Translations {
     madeWith: string;
     partners: string;
   };
+  // Onboarding
+  onboarding: {
+    // Navigation
+    back: string;
+    skip: string;
+    continue: string;
+    // Progress
+    stepOf: string;
+    of: string;
+    // Step 1: Travel Companion
+    step1Title: string;
+    couple: string;
+    coupleDesc: string;
+    family: string;
+    familyDesc: string;
+    soloDesc: string;
+    group: string;
+    groupDesc: string;
+    // Step 2: Interests
+    step2Title: string;
+    selectAll: string;
+    selected: string;
+    option: string;
+    options: string;
+    relax: string;
+    relaxDesc: string;
+    active: string;
+    activeDesc: string;
+    culture: string;
+    cultureDesc: string;
+    food: string;
+    foodDesc: string;
+    nature: string;
+    natureDesc: string;
+    nightlife: string;
+    nightlifeDesc: string;
+    history: string;
+    historyDesc: string;
+    shopping: string;
+    shoppingDesc: string;
+    // Step 3: Trip Context
+    step3Title: string;
+    stayType: string;
+    pleasure: string;
+    business: string;
+    visitStatus: string;
+    firstTime: string;
+    returning: string;
+    localResident: string;
+    whenVisiting: string;
+    tripDuration: string;
+    duration1: string;
+    duration2: string;
+    duration3: string;
+    duration4: string;
+    durationFlex: string;
+    // Step 4: Optional
+    optional: string;
+    selectMultiple: string;
+    dietaryTitle: string;
+    vegetarian: string;
+    vegan: string;
+    glutenFree: string;
+    halal: string;
+    kosher: string;
+    lactoseFree: string;
+    nutAllergies: string;
+    accessibilityTitle: string;
+    wheelchair: string;
+    mobility: string;
+    visual: string;
+    hearing: string;
+    // Buttons
+    finishExplore: string;
+    savePreferences: string;
+    // Edit mode
+    editMode: string;
+    cancelEdit: string;
+    skipConfirm: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -893,6 +973,85 @@ export const translations: Record<Language, Translations> = {
       madeWith: 'Gemaakt met ❤️ in Costa Blanca',
       partners: 'Partners',
     },
+    onboarding: {
+      // Navigation
+      back: 'Terug',
+      skip: 'Overslaan',
+      continue: 'Doorgaan →',
+      // Progress
+      stepOf: 'Stap',
+      of: 'van',
+      // Step 1: Travel Companion
+      step1Title: 'Met wie reis je?',
+      couple: 'Koppel',
+      coupleDesc: 'Geniet van een romantische reis',
+      family: 'Familie',
+      familyDesc: 'Geweldig voor gezinsplezier',
+      soloDesc: 'Ontdek op je eigen tempo',
+      group: 'Groep',
+      groupDesc: 'Perfect voor vrienden en collega\'s',
+      // Step 2: Interests
+      step2Title: 'Waar ben je naar op zoek in Calpe?',
+      selectAll: '(Selecteer alles dat van toepassing is)',
+      selected: 'Geselecteerd',
+      option: 'optie',
+      options: 'opties',
+      relax: 'Relaxen',
+      relaxDesc: 'Ontspannen en opladen',
+      active: 'Actief',
+      activeDesc: 'Avontuur en sport',
+      culture: 'Cultuur',
+      cultureDesc: 'Lokale kunst & creatieve ervaringen',
+      food: 'Eten',
+      foodDesc: 'Culinaire avonturen',
+      nature: 'Natuur',
+      natureDesc: 'Buitenactiviteiten',
+      nightlife: 'Nachtleven',
+      nightlifeDesc: 'Avondentertainment',
+      history: 'Geschiedenis',
+      historyDesc: 'Ontdek het verleden',
+      shopping: 'Winkelen',
+      shoppingDesc: 'Retailtherapie',
+      // Step 3: Trip Context
+      step3Title: 'Vertel ons over je reis',
+      stayType: 'Type verblijf',
+      pleasure: 'Vakantie',
+      business: 'Zakelijk',
+      visitStatus: 'Bezoekstatus',
+      firstTime: 'Eerste keer',
+      returning: 'Terugkerend bezoeker',
+      localResident: 'Lokale bewoner',
+      whenVisiting: 'Wanneer bezoek je?',
+      tripDuration: 'Reisduur',
+      duration1: '1-3 dagen (weekend)',
+      duration2: '4-7 dagen (week)',
+      duration3: '1-2 weken',
+      duration4: '2+ weken',
+      durationFlex: 'Flexibel/Weet nog niet',
+      // Step 4: Optional
+      optional: 'Optioneel',
+      selectMultiple: '(Selecteer meerdere)',
+      dietaryTitle: 'Dieetwensen?',
+      vegetarian: 'Vegetarisch',
+      vegan: 'Veganistisch',
+      glutenFree: 'Glutenvrij',
+      halal: 'Halal',
+      kosher: 'Koosjer',
+      lactoseFree: 'Lactosevrij',
+      nutAllergies: 'Notenallergie',
+      accessibilityTitle: 'Toegankelijkheidsbehoeften?',
+      wheelchair: 'Rolstoeltoegankelijk',
+      mobility: 'Mobiliteitshulp',
+      visual: 'Visuele beperking',
+      hearing: 'Gehoorbeperking',
+      // Buttons
+      finishExplore: 'Voltooien & Verkennen →',
+      savePreferences: 'Voorkeuren Opslaan →',
+      // Edit mode
+      editMode: 'Je voorkeuren bewerken - Je huidige selecties worden hieronder getoond',
+      cancelEdit: 'Bewerken annuleren en terug naar je account?',
+      skipConfirm: 'Onboarding overslaan? Je kunt later voorkeuren instellen in je account.',
+    },
   },
   en: {
     nav: {
@@ -1333,6 +1492,85 @@ export const translations: Record<Language, Translations> = {
       allRights: 'All rights reserved.',
       madeWith: 'Made with ❤️ in Costa Blanca',
       partners: 'Partners',
+    },
+    onboarding: {
+      // Navigation
+      back: 'Back',
+      skip: 'Skip',
+      continue: 'Continue →',
+      // Progress
+      stepOf: 'Step',
+      of: 'of',
+      // Step 1: Travel Companion
+      step1Title: 'Who are you traveling with?',
+      couple: 'Couple',
+      coupleDesc: 'Enjoying a romantic trip',
+      family: 'Family',
+      familyDesc: 'Great for family fun and bonding',
+      soloDesc: 'Explore at your own pace',
+      group: 'Group',
+      groupDesc: 'Perfect for friends and colleagues',
+      // Step 2: Interests
+      step2Title: 'What are you looking for in Calpe?',
+      selectAll: '(Select all that apply)',
+      selected: 'Selected',
+      option: 'option',
+      options: 'options',
+      relax: 'Relax',
+      relaxDesc: 'Unwind and recharge',
+      active: 'Active',
+      activeDesc: 'Adventure and sports',
+      culture: 'Culture',
+      cultureDesc: 'Local arts & creative experiences',
+      food: 'Food',
+      foodDesc: 'Culinary adventures',
+      nature: 'Nature',
+      natureDesc: 'Outdoor exploration',
+      nightlife: 'Nightlife',
+      nightlifeDesc: 'Evening entertainment',
+      history: 'History',
+      historyDesc: 'Discover the past',
+      shopping: 'Shopping',
+      shoppingDesc: 'Retail therapy',
+      // Step 3: Trip Context
+      step3Title: 'Tell us about your trip',
+      stayType: 'Type of stay',
+      pleasure: 'Pleasure',
+      business: 'Business',
+      visitStatus: 'Visit status',
+      firstTime: 'First time',
+      returning: 'Returning visitor',
+      localResident: 'Local resident',
+      whenVisiting: 'When are you visiting?',
+      tripDuration: 'Trip duration',
+      duration1: '1-3 days (weekend)',
+      duration2: '4-7 days (week)',
+      duration3: '1-2 weeks',
+      duration4: '2+ weeks',
+      durationFlex: 'Flexible/Not sure',
+      // Step 4: Optional
+      optional: 'Optional',
+      selectMultiple: '(Select multiple)',
+      dietaryTitle: 'Any dietary requirements?',
+      vegetarian: 'Vegetarian',
+      vegan: 'Vegan',
+      glutenFree: 'Gluten-free',
+      halal: 'Halal',
+      kosher: 'Kosher',
+      lactoseFree: 'Lactose-free',
+      nutAllergies: 'Nut allergies',
+      accessibilityTitle: 'Accessibility needs?',
+      wheelchair: 'Wheelchair accessible',
+      mobility: 'Mobility assistance',
+      visual: 'Visual impairment',
+      hearing: 'Hearing impairment',
+      // Buttons
+      finishExplore: 'Finish & Explore →',
+      savePreferences: 'Save Preferences →',
+      // Edit mode
+      editMode: 'Editing your preferences - Your current selections are shown below',
+      cancelEdit: 'Cancel editing preferences and return to your account?',
+      skipConfirm: 'Skip onboarding? You can set preferences later in your account.',
     },
   },
   de: {
@@ -1775,6 +2013,85 @@ export const translations: Record<Language, Translations> = {
       madeWith: 'Mit ❤️ an der Costa Blanca gemacht',
       partners: 'Partner',
     },
+    onboarding: {
+      // Navigation
+      back: 'Zurück',
+      skip: 'Überspringen',
+      continue: 'Weiter →',
+      // Progress
+      stepOf: 'Schritt',
+      of: 'von',
+      // Step 1: Travel Companion
+      step1Title: 'Mit wem reisen Sie?',
+      couple: 'Paar',
+      coupleDesc: 'Eine romantische Reise genießen',
+      family: 'Familie',
+      familyDesc: 'Ideal für Familienspaß',
+      soloDesc: 'Entdecken Sie in Ihrem eigenen Tempo',
+      group: 'Gruppe',
+      groupDesc: 'Perfekt für Freunde und Kollegen',
+      // Step 2: Interests
+      step2Title: 'Was suchen Sie in Calpe?',
+      selectAll: '(Alle zutreffenden auswählen)',
+      selected: 'Ausgewählt',
+      option: 'Option',
+      options: 'Optionen',
+      relax: 'Entspannen',
+      relaxDesc: 'Erholen und auftanken',
+      active: 'Aktiv',
+      activeDesc: 'Abenteuer und Sport',
+      culture: 'Kultur',
+      cultureDesc: 'Lokale Kunst & kreative Erlebnisse',
+      food: 'Essen',
+      foodDesc: 'Kulinarische Abenteuer',
+      nature: 'Natur',
+      natureDesc: 'Outdoor-Erkundung',
+      nightlife: 'Nachtleben',
+      nightlifeDesc: 'Abendunterhaltung',
+      history: 'Geschichte',
+      historyDesc: 'Die Vergangenheit entdecken',
+      shopping: 'Shopping',
+      shoppingDesc: 'Einkaufsbummel',
+      // Step 3: Trip Context
+      step3Title: 'Erzählen Sie uns von Ihrer Reise',
+      stayType: 'Art des Aufenthalts',
+      pleasure: 'Freizeit',
+      business: 'Geschäftlich',
+      visitStatus: 'Besuchsstatus',
+      firstTime: 'Erstbesuch',
+      returning: 'Wiederkehrender Besucher',
+      localResident: 'Einheimischer',
+      whenVisiting: 'Wann besuchen Sie uns?',
+      tripDuration: 'Reisedauer',
+      duration1: '1-3 Tage (Wochenende)',
+      duration2: '4-7 Tage (Woche)',
+      duration3: '1-2 Wochen',
+      duration4: '2+ Wochen',
+      durationFlex: 'Flexibel/Noch nicht sicher',
+      // Step 4: Optional
+      optional: 'Optional',
+      selectMultiple: '(Mehrere auswählen)',
+      dietaryTitle: 'Ernährungsanforderungen?',
+      vegetarian: 'Vegetarisch',
+      vegan: 'Vegan',
+      glutenFree: 'Glutenfrei',
+      halal: 'Halal',
+      kosher: 'Koscher',
+      lactoseFree: 'Laktosefrei',
+      nutAllergies: 'Nussallergien',
+      accessibilityTitle: 'Barrierefreiheit?',
+      wheelchair: 'Rollstuhlzugänglich',
+      mobility: 'Mobilitätshilfe',
+      visual: 'Sehbehinderung',
+      hearing: 'Hörbehinderung',
+      // Buttons
+      finishExplore: 'Fertig & Entdecken →',
+      savePreferences: 'Einstellungen speichern →',
+      // Edit mode
+      editMode: 'Ihre Präferenzen bearbeiten - Ihre aktuellen Auswahlen werden unten angezeigt',
+      cancelEdit: 'Bearbeitung abbrechen und zu Ihrem Konto zurückkehren?',
+      skipConfirm: 'Onboarding überspringen? Sie können später in Ihrem Konto Präferenzen festlegen.',
+    },
   },
   es: {
     nav: {
@@ -2215,6 +2532,85 @@ export const translations: Record<Language, Translations> = {
       allRights: 'Todos los derechos reservados.',
       madeWith: 'Hecho con ❤️ en la Costa Blanca',
       partners: 'Socios',
+    },
+    onboarding: {
+      // Navigation
+      back: 'Atrás',
+      skip: 'Omitir',
+      continue: 'Continuar →',
+      // Progress
+      stepOf: 'Paso',
+      of: 'de',
+      // Step 1: Travel Companion
+      step1Title: '¿Con quién viajas?',
+      couple: 'Pareja',
+      coupleDesc: 'Disfrutando de un viaje romántico',
+      family: 'Familia',
+      familyDesc: 'Ideal para diversión familiar',
+      soloDesc: 'Explora a tu propio ritmo',
+      group: 'Grupo',
+      groupDesc: 'Perfecto para amigos y colegas',
+      // Step 2: Interests
+      step2Title: '¿Qué buscas en Calpe?',
+      selectAll: '(Selecciona todos los que apliquen)',
+      selected: 'Seleccionado',
+      option: 'opción',
+      options: 'opciones',
+      relax: 'Relajarse',
+      relaxDesc: 'Descansar y recargar',
+      active: 'Activo',
+      activeDesc: 'Aventura y deportes',
+      culture: 'Cultura',
+      cultureDesc: 'Arte local y experiencias creativas',
+      food: 'Comida',
+      foodDesc: 'Aventuras culinarias',
+      nature: 'Naturaleza',
+      natureDesc: 'Exploración al aire libre',
+      nightlife: 'Vida nocturna',
+      nightlifeDesc: 'Entretenimiento nocturno',
+      history: 'Historia',
+      historyDesc: 'Descubre el pasado',
+      shopping: 'Compras',
+      shoppingDesc: 'Terapia de compras',
+      // Step 3: Trip Context
+      step3Title: 'Cuéntanos sobre tu viaje',
+      stayType: 'Tipo de estancia',
+      pleasure: 'Placer',
+      business: 'Negocios',
+      visitStatus: 'Estado de visita',
+      firstTime: 'Primera vez',
+      returning: 'Visitante recurrente',
+      localResident: 'Residente local',
+      whenVisiting: '¿Cuándo nos visitas?',
+      tripDuration: 'Duración del viaje',
+      duration1: '1-3 días (fin de semana)',
+      duration2: '4-7 días (semana)',
+      duration3: '1-2 semanas',
+      duration4: '2+ semanas',
+      durationFlex: 'Flexible/No estoy seguro',
+      // Step 4: Optional
+      optional: 'Opcional',
+      selectMultiple: '(Selecciona múltiples)',
+      dietaryTitle: '¿Requisitos dietéticos?',
+      vegetarian: 'Vegetariano',
+      vegan: 'Vegano',
+      glutenFree: 'Sin gluten',
+      halal: 'Halal',
+      kosher: 'Kosher',
+      lactoseFree: 'Sin lactosa',
+      nutAllergies: 'Alergias a frutos secos',
+      accessibilityTitle: '¿Necesidades de accesibilidad?',
+      wheelchair: 'Accesible en silla de ruedas',
+      mobility: 'Asistencia de movilidad',
+      visual: 'Discapacidad visual',
+      hearing: 'Discapacidad auditiva',
+      // Buttons
+      finishExplore: 'Finalizar y Explorar →',
+      savePreferences: 'Guardar Preferencias →',
+      // Edit mode
+      editMode: 'Editando tus preferencias - Tus selecciones actuales se muestran abajo',
+      cancelEdit: '¿Cancelar la edición y volver a tu cuenta?',
+      skipConfirm: '¿Omitir el onboarding? Puedes establecer preferencias más tarde en tu cuenta.',
     },
   },
   sv: {
@@ -2657,6 +3053,85 @@ export const translations: Record<Language, Translations> = {
       madeWith: 'Gjord med ❤️ på Costa Blanca',
       partners: 'Partners',
     },
+    onboarding: {
+      // Navigation
+      back: 'Tillbaka',
+      skip: 'Hoppa över',
+      continue: 'Fortsätt →',
+      // Progress
+      stepOf: 'Steg',
+      of: 'av',
+      // Step 1: Travel Companion
+      step1Title: 'Vem reser du med?',
+      couple: 'Par',
+      coupleDesc: 'Njut av en romantisk resa',
+      family: 'Familj',
+      familyDesc: 'Perfekt för familjekul',
+      soloDesc: 'Utforska i din egen takt',
+      group: 'Grupp',
+      groupDesc: 'Perfekt för vänner och kollegor',
+      // Step 2: Interests
+      step2Title: 'Vad letar du efter i Calpe?',
+      selectAll: '(Välj alla som gäller)',
+      selected: 'Valt',
+      option: 'alternativ',
+      options: 'alternativ',
+      relax: 'Avkoppling',
+      relaxDesc: 'Vila och ladda om',
+      active: 'Aktiv',
+      activeDesc: 'Äventyr och sport',
+      culture: 'Kultur',
+      cultureDesc: 'Lokal konst & kreativa upplevelser',
+      food: 'Mat',
+      foodDesc: 'Kulinariska äventyr',
+      nature: 'Natur',
+      natureDesc: 'Utomhusutforskning',
+      nightlife: 'Nattliv',
+      nightlifeDesc: 'Kvällsunderhållning',
+      history: 'Historia',
+      historyDesc: 'Upptäck det förflutna',
+      shopping: 'Shopping',
+      shoppingDesc: 'Shoppingterapi',
+      // Step 3: Trip Context
+      step3Title: 'Berätta om din resa',
+      stayType: 'Typ av vistelse',
+      pleasure: 'Nöje',
+      business: 'Affärer',
+      visitStatus: 'Besöksstatus',
+      firstTime: 'Första gången',
+      returning: 'Återkommande besökare',
+      localResident: 'Lokal invånare',
+      whenVisiting: 'När besöker du?',
+      tripDuration: 'Resans längd',
+      duration1: '1-3 dagar (helg)',
+      duration2: '4-7 dagar (vecka)',
+      duration3: '1-2 veckor',
+      duration4: '2+ veckor',
+      durationFlex: 'Flexibel/Inte säker',
+      // Step 4: Optional
+      optional: 'Valfritt',
+      selectMultiple: '(Välj flera)',
+      dietaryTitle: 'Kostbehov?',
+      vegetarian: 'Vegetarisk',
+      vegan: 'Vegansk',
+      glutenFree: 'Glutenfri',
+      halal: 'Halal',
+      kosher: 'Kosher',
+      lactoseFree: 'Laktosfri',
+      nutAllergies: 'Nötallergier',
+      accessibilityTitle: 'Tillgänglighetsbehov?',
+      wheelchair: 'Rullstolsanpassad',
+      mobility: 'Rörelsehjälp',
+      visual: 'Synnedsättning',
+      hearing: 'Hörselnedsättning',
+      // Buttons
+      finishExplore: 'Slutför & Utforska →',
+      savePreferences: 'Spara Inställningar →',
+      // Edit mode
+      editMode: 'Redigerar dina preferenser - Dina nuvarande val visas nedan',
+      cancelEdit: 'Avbryt redigering och återgå till ditt konto?',
+      skipConfirm: 'Hoppa över onboarding? Du kan ställa in preferenser senare i ditt konto.',
+    },
   },
   pl: {
     nav: {
@@ -3097,6 +3572,85 @@ export const translations: Record<Language, Translations> = {
       allRights: 'Wszelkie prawa zastrzeżone.',
       madeWith: 'Stworzone z ❤️ na Costa Blanca',
       partners: 'Partnerzy',
+    },
+    onboarding: {
+      // Navigation
+      back: 'Wstecz',
+      skip: 'Pomiń',
+      continue: 'Kontynuuj →',
+      // Progress
+      stepOf: 'Krok',
+      of: 'z',
+      // Step 1: Travel Companion
+      step1Title: 'Z kim podróżujesz?',
+      couple: 'Para',
+      coupleDesc: 'Romantyczna podróż',
+      family: 'Rodzina',
+      familyDesc: 'Świetne dla rodzinnej zabawy',
+      soloDesc: 'Odkrywaj w swoim tempie',
+      group: 'Grupa',
+      groupDesc: 'Idealne dla przyjaciół i współpracowników',
+      // Step 2: Interests
+      step2Title: 'Czego szukasz w Calpe?',
+      selectAll: '(Wybierz wszystkie, które pasują)',
+      selected: 'Wybrano',
+      option: 'opcja',
+      options: 'opcje',
+      relax: 'Relaks',
+      relaxDesc: 'Odpoczynek i regeneracja',
+      active: 'Aktywność',
+      activeDesc: 'Przygoda i sport',
+      culture: 'Kultura',
+      cultureDesc: 'Lokalna sztuka i kreatywne doświadczenia',
+      food: 'Jedzenie',
+      foodDesc: 'Kulinarne przygody',
+      nature: 'Natura',
+      natureDesc: 'Eksploracja na świeżym powietrzu',
+      nightlife: 'Życie nocne',
+      nightlifeDesc: 'Wieczorna rozrywka',
+      history: 'Historia',
+      historyDesc: 'Odkryj przeszłość',
+      shopping: 'Zakupy',
+      shoppingDesc: 'Terapia zakupowa',
+      // Step 3: Trip Context
+      step3Title: 'Opowiedz nam o swojej podróży',
+      stayType: 'Typ pobytu',
+      pleasure: 'Przyjemność',
+      business: 'Biznes',
+      visitStatus: 'Status wizyty',
+      firstTime: 'Pierwszy raz',
+      returning: 'Powracający gość',
+      localResident: 'Lokalny mieszkaniec',
+      whenVisiting: 'Kiedy nas odwiedzasz?',
+      tripDuration: 'Długość podróży',
+      duration1: '1-3 dni (weekend)',
+      duration2: '4-7 dni (tydzień)',
+      duration3: '1-2 tygodnie',
+      duration4: '2+ tygodnie',
+      durationFlex: 'Elastyczny/Nie jestem pewien',
+      // Step 4: Optional
+      optional: 'Opcjonalne',
+      selectMultiple: '(Wybierz wiele)',
+      dietaryTitle: 'Wymagania dietetyczne?',
+      vegetarian: 'Wegetariańskie',
+      vegan: 'Wegańskie',
+      glutenFree: 'Bezglutenowe',
+      halal: 'Halal',
+      kosher: 'Koszerne',
+      lactoseFree: 'Bez laktozy',
+      nutAllergies: 'Alergie na orzechy',
+      accessibilityTitle: 'Potrzeby dostępności?',
+      wheelchair: 'Dostępne dla wózków',
+      mobility: 'Pomoc w poruszaniu się',
+      visual: 'Wada wzroku',
+      hearing: 'Wada słuchu',
+      // Buttons
+      finishExplore: 'Zakończ i Odkrywaj →',
+      savePreferences: 'Zapisz Preferencje →',
+      // Edit mode
+      editMode: 'Edytujesz swoje preferencje - Twoje aktualne wybory są pokazane poniżej',
+      cancelEdit: 'Anulować edycję i wrócić do konta?',
+      skipConfirm: 'Pominąć onboarding? Możesz ustawić preferencje później w swoim koncie.',
     },
   },
 };

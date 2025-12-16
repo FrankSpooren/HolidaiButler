@@ -134,6 +134,11 @@ export const router = createBrowserRouter([
         element: <CookiesPage />,
       },
       {
+        // Onboarding Flow (now with Header/Footer)
+        path: '/onboarding',
+        element: <OnboardingFlow />,
+      },
+      {
         // 404 Not Found (catch-all)
         path: '*',
         element: <NotFoundPage />,
@@ -156,11 +161,5 @@ export const router = createBrowserRouter([
         element: <SignupPage />,
       },
     ],
-  },
-  {
-    // Onboarding Flow (no layout, standalone)
-    path: '/onboarding',
-    element: <OnboardingFlow />,
-    errorElement: <ErrorBoundary />,
   },
 ]);
