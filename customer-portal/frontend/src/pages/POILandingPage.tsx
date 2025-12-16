@@ -146,7 +146,8 @@ export function POILandingPage() {
 
   // Fetch POIs with filters
   // Fetch more upfront - virtualization only renders visible items
-  const fetchLimit = 500;
+  // Browse: ~800 presentation POIs, Search: all POIs for full searchability
+  const fetchLimit = searchQuery ? 2000 : 1000;
 
   const { data, isLoading, error } = usePOIs({
     q: searchQuery || undefined,
@@ -168,16 +169,40 @@ export function POILandingPage() {
 
   // Filter and sort POIs
   const processedPOIs = useMemo(() => {
+    // Presentation-worthy categories (for default browse view)
+    const presentationCategories = [
+      'Active',
+      'Beaches & Nature',
+      'Culture & History',
+      'Food & Drinks',
+      'Recreation',
+      'Shopping'
+    ];
     let filtered = (data?.data || []).filter(poi => {
-      // Filter out Accommodation category
+      // Always filter out Accommodation category
       if (poi.category === 'Accommodation (do not communicate)') return false;
 
-      // Filter out accommodation-related POIs in other categories
+      // Always filter out accommodation-related POIs in other categories
       const accomKeywords = ['realty', 'villa', 'apartment', 'apartamento', 'hotel', 'hostel', 'residencial'];
       const lowerName = poi.name.toLowerCase();
       if (accomKeywords.some(keyword => lowerName.includes(keyword))) return false;
 
-      // Client-side filter: minimum reviews
+      // DEFAULT BROWSE VIEW: Apply presentation filters (no search active)
+      if (!searchQuery) {
+        // Only show presentation-worthy categories (unless specific category selected)
+        if (!selectedCategory && !presentationCategories.includes(poi.category)) {
+          return false;
+        }
+
+        // Quality filter: rating >= 4.0 AND review_count >= 3
+        if (!poi.rating || poi.rating < 4) return false;
+        if (!poi.review_count || poi.review_count < 3) return false;
+      }
+
+      // SEARCH VIEW: Show all POIs matching search (any category, no rating filter)
+      // This allows users to find any POI via search bar / HoliBot
+
+      // Client-side filter: minimum reviews (from filter modal, additional to default)
       if (minReviews > 0 && (!poi.review_count || poi.review_count < minReviews)) {
         return false;
       }
