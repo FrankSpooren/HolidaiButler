@@ -32,6 +32,51 @@ interface OnboardingData {
   accessibility: string[];
 }
 
+// Confirm Modal Component
+interface ConfirmModalProps {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmText: string;
+  cancelText: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const ConfirmModal: React.FC<ConfirmModalProps> = ({
+  isOpen,
+  title,
+  message,
+  confirmText,
+  cancelText,
+  onConfirm,
+  onCancel,
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="confirm-modal-overlay" onClick={onCancel}>
+      <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="confirm-modal-header">
+          <div className="confirm-modal-icon">🤔</div>
+          <h3 className="confirm-modal-title">{title}</h3>
+        </div>
+        <div className="confirm-modal-body">
+          <p className="confirm-modal-message">{message}</p>
+        </div>
+        <div className="confirm-modal-buttons">
+          <button className="confirm-modal-btn cancel" onClick={onCancel}>
+            {cancelText}
+          </button>
+          <button className="confirm-modal-btn confirm" onClick={onConfirm}>
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const OnboardingFlow: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -40,6 +85,7 @@ const OnboardingFlow: React.FC = () => {
   const isEditMode = searchParams.get('mode') === 'edit';
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [showSkipModal, setShowSkipModal] = useState(false);
 
   // Load existing preferences if available
   const loadExistingPreferences = (): OnboardingData => {
@@ -168,13 +214,16 @@ const OnboardingFlow: React.FC = () => {
   };
 
   const skipOnboarding = () => {
-    const message = isEditMode
-      ? (ob.cancelEdit || 'Cancel editing preferences and return to your account?')
-      : (ob.skipConfirm || 'Skip onboarding? You can set preferences later in your account.');
+    setShowSkipModal(true);
+  };
 
-    if (confirm(message)) {
-      navigate(isEditMode ? '/account' : '/');
-    }
+  const handleSkipConfirm = () => {
+    setShowSkipModal(false);
+    navigate(isEditMode ? '/account' : '/');
+  };
+
+  const handleSkipCancel = () => {
+    setShowSkipModal(false);
   };
 
   const handleComplete = async () => {
@@ -488,6 +537,20 @@ const OnboardingFlow: React.FC = () => {
             : (ob.continue || 'Continue →')}
         </button>
       </div>
+
+      {/* Skip Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showSkipModal}
+        title={isEditMode ? (ob.cancelEditTitle || 'Bewerken annuleren?') : (ob.skipTitle || 'Onboarding overslaan?')}
+        message={isEditMode
+          ? (ob.cancelEditMessage || 'Je wijzigingen worden niet opgeslagen. Weet je het zeker?')
+          : (ob.skipMessage || 'Je kunt later voorkeuren instellen in je account.')
+        }
+        confirmText={ob.confirmSkip || 'Ja, overslaan'}
+        cancelText={ob.cancelSkip || 'Annuleren'}
+        onConfirm={handleSkipConfirm}
+        onCancel={handleSkipCancel}
+      />
     </div>
   );
 };
