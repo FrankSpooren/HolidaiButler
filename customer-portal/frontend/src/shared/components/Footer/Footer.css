@@ -55,8 +55,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: rgba(127, 165, 148, 0.1);
   color: #64748b;
@@ -70,8 +70,8 @@
 }
 
 .social-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 /* Link Columns Grid */
@@ -107,7 +107,9 @@
   font-size: 0.9rem;
   transition: color 0.2s ease;
   display: inline-block;
-  padding: 0.25rem 0;
+  padding: 0.625rem 0;
+  min-height: 44px;
+  line-height: 1.4;
 }
 
 .footer-link:hover {
@@ -176,5 +178,74 @@
   .footer-tagline {
     margin-left: auto;
     margin-right: auto;
+  }
+}
+
+/* Mobile Accordion Styles */
+.footer-accordion {
+  display: none;
+}
+
+.footer-accordion-section {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 1rem 0;
+  min-height: 48px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.footer-accordion-icon {
+  width: 20px;
+  height: 20px;
+  color: #64748b;
+  transition: transform 0.3s ease;
+}
+
+.footer-accordion-icon.open {
+  transform: rotate(180deg);
+}
+
+.footer-accordion-content {
+  overflow: hidden;
+}
+
+.footer-accordion-list {
+  list-style: none;
+  padding: 0 0 1rem 0;
+  margin: 0;
+}
+
+.footer-accordion-list li {
+  margin-bottom: 0.25rem;
+}
+
+.footer-accordion-list .footer-link {
+  display: block;
+  padding: 0.75rem 0;
+  min-height: 48px;
+}
+
+@media (max-width: 768px) {
+  .footer-links-grid {
+    display: none;
+  }
+
+  .footer-accordion {
+    display: block;
+    width: 100%;
+    margin-top: 1.5rem;
   }
 }

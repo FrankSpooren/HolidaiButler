@@ -436,6 +436,19 @@ export interface Translations {
     terms: string;
     contact: string;
     copyright: string;
+    // Extended footer properties
+    platformTitle: string;
+    supportTitle: string;
+    legalTitle: string;
+    howItWorks: string;
+    pois: string;
+    faq: string;
+    help: string;
+    cookies: string;
+    tagline: string;
+    allRights: string;
+    madeWith: string;
+    partners: string;
   };
 }
 
@@ -862,11 +875,23 @@ export const translations: Record<Language, Translations> = {
       },
     },
     footer: {
-      about: 'Over',
+      about: 'Over Ons',
       privacy: 'Privacybeleid',
-      terms: 'Servicevoorwaarden',
+      terms: 'Voorwaarden',
       contact: 'Contact',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Made with love for travelers.',
+      platformTitle: 'Platform',
+      supportTitle: 'Support',
+      legalTitle: 'Juridisch',
+      howItWorks: 'Hoe Het Werkt',
+      pois: 'Ontdekken',
+      faq: 'FAQ',
+      help: 'Help',
+      cookies: 'Cookies',
+      tagline: 'Jouw Persoonlijke Butler aan de Costa Blanca',
+      allRights: 'Alle rechten voorbehouden.',
+      madeWith: 'Gemaakt met liefde in Costa Blanca',
+      partners: 'Partners',
     },
   },
   en: {
@@ -1291,11 +1316,23 @@ export const translations: Record<Language, Translations> = {
       },
     },
     footer: {
-      about: 'About',
+      about: 'About Us',
       privacy: 'Privacy Policy',
       terms: 'Terms of Service',
       contact: 'Contact',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Made with love for travelers.',
+      platformTitle: 'Platform',
+      supportTitle: 'Support',
+      legalTitle: 'Legal',
+      howItWorks: 'How It Works',
+      pois: 'Explore',
+      faq: 'FAQ',
+      help: 'Help',
+      cookies: 'Cookies',
+      tagline: 'Your Personal Butler on the Costa Blanca',
+      allRights: 'All rights reserved.',
+      madeWith: 'Made with love in Costa Blanca',
+      partners: 'Partners',
     },
   },
   de: {
@@ -1720,11 +1757,23 @@ export const translations: Record<Language, Translations> = {
       },
     },
     footer: {
-      about: 'Über',
-      privacy: 'Datenschutzrichtlinie',
+      about: 'Über Uns',
+      privacy: 'Datenschutz',
       terms: 'Nutzungsbedingungen',
       contact: 'Kontakt',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Mit Liebe für Reisende gemacht.',
+      platformTitle: 'Plattform',
+      supportTitle: 'Hilfe',
+      legalTitle: 'Rechtliches',
+      howItWorks: 'So funktioniert es',
+      pois: 'Entdecken',
+      faq: 'FAQ',
+      help: 'Hilfe',
+      cookies: 'Cookies',
+      tagline: 'Ihr persönlicher Butler an der Costa Blanca',
+      allRights: 'Alle Rechte vorbehalten.',
+      madeWith: 'Mit Liebe an der Costa Blanca gemacht',
+      partners: 'Partner',
     },
   },
   es: {
@@ -2149,11 +2198,23 @@ export const translations: Record<Language, Translations> = {
       },
     },
     footer: {
-      about: 'Acerca de',
-      privacy: 'Política de Privacidad',
-      terms: 'Términos de Servicio',
+      about: 'Sobre Nosotros',
+      privacy: 'Privacidad',
+      terms: 'Condiciones',
       contact: 'Contacto',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Hecho con amor para viajeros.',
+      platformTitle: 'Plataforma',
+      supportTitle: 'Soporte',
+      legalTitle: 'Legal',
+      howItWorks: 'Cómo Funciona',
+      pois: 'Descubrir',
+      faq: 'FAQ',
+      help: 'Ayuda',
+      cookies: 'Cookies',
+      tagline: 'Tu Butler Personal en la Costa Blanca',
+      allRights: 'Todos los derechos reservados.',
+      madeWith: 'Hecho con amor en la Costa Blanca',
+      partners: 'Socios',
     },
   },
   sv: {
@@ -2578,11 +2639,23 @@ export const translations: Record<Language, Translations> = {
       },
     },
     footer: {
-      about: 'Om',
+      about: 'Om Oss',
       privacy: 'Integritetspolicy',
-      terms: 'Användarvillkor',
+      terms: 'Villkor',
       contact: 'Kontakt',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Gjord med kärlek för resenärer.',
+      platformTitle: 'Plattform',
+      supportTitle: 'Support',
+      legalTitle: 'Juridiskt',
+      howItWorks: 'Så Fungerar Det',
+      pois: 'Utforska',
+      faq: 'FAQ',
+      help: 'Hjälp',
+      cookies: 'Cookies',
+      tagline: 'Din Personliga Butler på Costa Blanca',
+      allRights: 'Alla rättigheter förbehållna.',
+      madeWith: 'Gjord med kärlek på Costa Blanca',
+      partners: 'Partners',
     },
   },
   pl: {
@@ -3007,11 +3080,23 @@ export const translations: Record<Language, Translations> = {
       },
     },
     footer: {
-      about: 'O nas',
-      privacy: 'Polityka Prywatności',
-      terms: 'Warunki Użytkowania',
+      about: 'O Nas',
+      privacy: 'Prywatność',
+      terms: 'Regulamin',
       contact: 'Kontakt',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Stworzone z miłością dla podróżników.',
+      platformTitle: 'Platforma',
+      supportTitle: 'Wsparcie',
+      legalTitle: 'Informacje Prawne',
+      howItWorks: 'Jak To Działa',
+      pois: 'Odkrywaj',
+      faq: 'FAQ',
+      help: 'Pomoc',
+      cookies: 'Cookies',
+      tagline: 'Twój Osobisty Butler na Costa Blanca',
+      allRights: 'Wszelkie prawa zastrzeżone.',
+      madeWith: 'Stworzone z miłością na Costa Blanca',
+      partners: 'Partnerzy',
     },
   },
 };

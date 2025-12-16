@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import './Footer.css';
 
@@ -16,6 +18,12 @@ import './Footer.css';
 export function Footer() {
   const { t } = useLanguage();
   const currentYear = new Date().getFullYear();
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+
+  // Toggle accordion section
+  const toggleSection = (section: string) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   // Cast footer to any to handle optional properties
   const footer = t.footer as Record<string, string>;
@@ -130,6 +138,126 @@ export function Footer() {
                   </li>
                 ))}
               </ul>
+            </div>
+          </div>
+
+          {/* Mobile Accordion - shown only on mobile */}
+          <div className="footer-accordion">
+            {/* Platform Section */}
+            <div className="footer-accordion-section">
+              <button
+                className="footer-accordion-header"
+                onClick={() => toggleSection('platform')}
+                aria-expanded={openSections.platform}
+              >
+                <span>{footer.platformTitle || 'Platform'}</span>
+                <svg
+                  className={`footer-accordion-icon ${openSections.platform ? 'open' : ''}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+              <AnimatePresence>
+                {openSections.platform && (
+                  <motion.div
+                    className="footer-accordion-content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ul className="footer-accordion-list">
+                      {footerLinks.platform.map((link) => (
+                        <li key={link.path}>
+                          <Link to={link.path} className="footer-link">{link.label}</Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Support Section */}
+            <div className="footer-accordion-section">
+              <button
+                className="footer-accordion-header"
+                onClick={() => toggleSection('support')}
+                aria-expanded={openSections.support}
+              >
+                <span>{footer.supportTitle || 'Support'}</span>
+                <svg
+                  className={`footer-accordion-icon ${openSections.support ? 'open' : ''}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+              <AnimatePresence>
+                {openSections.support && (
+                  <motion.div
+                    className="footer-accordion-content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ul className="footer-accordion-list">
+                      {footerLinks.support.map((link) => (
+                        <li key={link.path}>
+                          <Link to={link.path} className="footer-link">{link.label}</Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Legal Section */}
+            <div className="footer-accordion-section">
+              <button
+                className="footer-accordion-header"
+                onClick={() => toggleSection('legal')}
+                aria-expanded={openSections.legal}
+              >
+                <span>{footer.legalTitle || 'Juridisch'}</span>
+                <svg
+                  className={`footer-accordion-icon ${openSections.legal ? 'open' : ''}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+              <AnimatePresence>
+                {openSections.legal && (
+                  <motion.div
+                    className="footer-accordion-content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ul className="footer-accordion-list">
+                      {footerLinks.legal.map((link) => (
+                        <li key={link.path}>
+                          <Link to={link.path} className="footer-link">{link.label}</Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
