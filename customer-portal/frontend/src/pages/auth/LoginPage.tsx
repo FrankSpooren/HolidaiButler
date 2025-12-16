@@ -30,9 +30,9 @@ export function LoginPage() {
       await authService.login({ email, password });
 
       // Get return URL from query params (if exists)
-      const returnUrl = searchParams.get('returnUrl') || '/';
+      const returnUrl = searchParams.get('returnUrl') || '/account';
 
-      // Navigate to return URL or homepage after successful login
+      // Navigate to return URL or account page after successful login
       navigate(returnUrl);
     } catch (err: any) {
       // Handle different error types
