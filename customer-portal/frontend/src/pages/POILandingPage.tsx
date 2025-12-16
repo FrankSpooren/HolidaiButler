@@ -60,7 +60,8 @@ type ViewMode = 'grid' | 'list' | 'map';
 
 interface Category {
   id: string;
-  label: string;
+  name: string;  // Database category name (for API)
+  label: string; // Translated label (for display)
   icon: string;
   color: string;
 }
@@ -89,12 +90,17 @@ export function POILandingPage() {
   const columnCount = useColumnCount();
 
   // Use centralized category configuration (single source of truth)
-  const categories: Category[] = CATEGORIES_ARRAY.map(cat => ({
-    id: cat.id,
-    label: t.categories[cat.id as keyof typeof t.categories] || cat.name,
-    icon: cat.icon,
-    color: cat.color
-  }));
+  // Exclude Health & Wellbeing and Practical - no presentable POIs after quality filter
+  const excludedCategories = ['health', 'practical'];
+  const categories: Category[] = CATEGORIES_ARRAY
+    .filter(cat => !excludedCategories.includes(cat.id))
+    .map(cat => ({
+      id: cat.id,
+      name: cat.name, // Database name for API calls
+      label: t.categories[cat.id as keyof typeof t.categories] || cat.name,
+      icon: cat.icon,
+      color: cat.color
+    }));
 
   // Convert text to title case
   const toTitleCase = (str: string) => {
@@ -138,10 +144,10 @@ export function POILandingPage() {
   const [openNow, setOpenNow] = useState<boolean>(false);
   const [accessibility, setAccessibility] = useState<string[]>([]);
 
-  // Get category label for backend (backend expects "Active", "Food", etc. not "active", "food")
-  const getCategoryLabel = (categoryId: string): string => {
+  // Get category name for backend (database expects "Active", "Food & Drinks", etc.)
+  const getCategoryName = (categoryId: string): string => {
     const cat = categories.find((c) => c.id === categoryId);
-    return cat?.label || categoryId;
+    return cat?.name || categoryId;
   };
 
   // Fetch POIs with filters
@@ -151,7 +157,7 @@ export function POILandingPage() {
 
   const { data, isLoading, error } = usePOIs({
     q: searchQuery || undefined,
-    category: selectedCategory ? getCategoryLabel(selectedCategory) : undefined,
+    category: selectedCategory ? getCategoryName(selectedCategory) : undefined,
     limit: fetchLimit,
     // Use alphabetical sorting for default view to get varied ratings
     // (default popularity sort returns first 260 POIs all with 5.0 rating)
@@ -187,10 +193,10 @@ export function POILandingPage() {
       const lowerName = poi.name.toLowerCase();
       if (accomKeywords.some(keyword => lowerName.includes(keyword))) return false;
 
-      // DEFAULT BROWSE VIEW: Apply presentation filters (no search active)
-      if (!searchQuery) {
-        // Only show presentation-worthy categories (unless specific category selected)
-        if (!selectedCategory && !presentationCategories.includes(poi.category)) {
+      // DEFAULT BROWSE VIEW: Apply presentation + quality filters (no search, no category)
+      if (!searchQuery && !selectedCategory) {
+        // Only show presentation-worthy categories
+        if (!presentationCategories.includes(poi.category)) {
           return false;
         }
 
@@ -199,8 +205,8 @@ export function POILandingPage() {
         if (!poi.review_count || poi.review_count < 3) return false;
       }
 
+      // CATEGORY VIEW: Show all POIs in selected category (no quality filter)
       // SEARCH VIEW: Show all POIs matching search (any category, no rating filter)
-      // This allows users to find any POI via search bar / HoliBot
 
       // Client-side filter: minimum reviews (from filter modal, additional to default)
       if (minReviews > 0 && (!poi.review_count || poi.review_count < minReviews)) {
@@ -856,7 +862,7 @@ export function POILandingPage() {
           <MapView
             searchParams={{
               q: searchQuery || undefined,
-              category: selectedCategory ? getCategoryLabel(selectedCategory) : undefined,
+              category: selectedCategory ? getCategoryName(selectedCategory) : undefined,
             }}
             height="600px"
             onMarkerClick={handlePOIClick}
