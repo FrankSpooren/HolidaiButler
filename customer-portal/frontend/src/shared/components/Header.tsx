@@ -66,25 +66,12 @@ export function Header() {
       <div className={`header-content ${isHomePage ? 'homepage-header' : ''}`}>
         {!isHomePage && (
           <Link to="/" className="logo-container">
-            {/* Icon-Only Logo for non-homepage pages */}
-            <svg className="logo-svg logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <g transform="translate(50, 50)">
-                <path d="M -30,15 Q -15,5 0,15 Q 15,25 30,15" stroke="white" strokeWidth="2" fill="none"/>
-                <path d="M -30,20 Q -15,10 0,20 Q 15,30 30,20" stroke="white" strokeWidth="1.5" fill="none" opacity="0.6"/>
-                <circle cx="0" cy="0" r="20" fill="none" stroke="white" strokeWidth="1.5" strokeDasharray="2,1"/>
-                <g fill="#D4AF37">
-                  <polygon points="0,-28 -3.5,-8 -12,-8 -6,-3 -8.5,6 0,0 8.5,6 6,-3 12,-8 3.5,-8" />
-                </g>
-                <g fill="#D4AF37" opacity="0.7">
-                  <circle cx="0" cy="-20" r="1.5"/>
-                  <circle cx="20" cy="0" r="1.5"/>
-                  <circle cx="0" cy="20" r="1.5"/>
-                  <circle cx="-20" cy="0" r="1.5"/>
-                </g>
-                <circle cx="0" cy="0" r="2" fill="white"/>
-                <circle cx="0" cy="0" r="1" fill="#D4AF37"/>
-              </g>
-            </svg>
+            {/* Brand Icon for non-homepage pages */}
+            <img
+              src="/assets/images/hb-merkicoon.png"
+              alt="HolidaiButler"
+              className="header-logo-img"
+            />
           </Link>
         )}
 

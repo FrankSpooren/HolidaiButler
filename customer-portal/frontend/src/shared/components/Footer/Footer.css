@@ -37,6 +37,12 @@
   height: 60px;
 }
 
+.footer-logo-img {
+  height: 60px;
+  width: auto;
+  display: block;
+}
+
 .footer-tagline {
   margin: 1rem 0 1.5rem;
   font-size: 0.9rem;

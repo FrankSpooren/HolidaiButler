@@ -7,16 +7,16 @@
   justify-content: center;
   gap: 0;
   background: white;
-  padding: 8px 12px;
-  border-radius: 12px;
+  padding: 6px 10px;
+  border-radius: 10px;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
   position: fixed;
-  left: 40px;
+  left: 16px;
   top: 5px;
   z-index: 1001;
-  border: 2px solid #2C3E50;
+  border: 2px solid #1a3a4a;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
@@ -25,21 +25,22 @@
   box-shadow: 0 6px 16px rgba(0,0,0,0.2);
 }
 
-.homepage-logo-svg {
-  height: 140px;
+.homepage-logo-img {
+  height: 70px;
   width: auto;
+  display: block;
 }
 
 /* Responsive: smaller logo on mobile */
 @media (max-width: 768px) {
   .homepage-logo-container {
-    left: 20px;
+    left: 12px;
     top: 5px;
-    padding: 6px 12px;
+    padding: 4px 8px;
   }
 
-  .homepage-logo-svg {
-    height: 100px;
+  .homepage-logo-img {
+    height: 50px;
   }
 }
 
