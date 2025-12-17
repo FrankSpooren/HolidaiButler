@@ -15,6 +15,8 @@ import DestinationConfig from './DestinationConfig.js';
 import User from './User.js';
 import Role from './Role.js';
 import Permission from './Permission.js';
+import UserConsent from './UserConsent.js';
+import ConsentHistory from './ConsentHistory.js';
 
 // ============================================================================
 // Define Associations
@@ -59,6 +61,14 @@ Permission.belongsToMany(User, {
   as: 'usersWithPermission',
 });
 
+// User-Consent Association
+User.hasOne(UserConsent, { foreignKey: 'user_id', as: 'consent' });
+UserConsent.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// User-ConsentHistory Association
+User.hasMany(ConsentHistory, { foreignKey: 'user_id', as: 'consentHistory' });
+ConsentHistory.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
 // ============================================================================
 // Export Models
 // ============================================================================
@@ -74,6 +84,8 @@ export {
   User,
   Role,
   Permission,
+  UserConsent,
+  ConsentHistory,
 };
 
 export default {
@@ -87,4 +99,6 @@ export default {
   User,
   Role,
   Permission,
+  UserConsent,
+  ConsentHistory,
 };
