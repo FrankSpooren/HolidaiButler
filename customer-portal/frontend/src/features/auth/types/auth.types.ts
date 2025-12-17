@@ -1,9 +1,17 @@
 export interface User {
   id: number;
+  uuid?: string;
   email: string;
   name: string | null;
+  firstName?: string;
+  lastName?: string;
   role: string;
   permissions?: string[];
+  avatarUrl?: string | null;
+  createdAt?: string;
+  onboardingCompleted?: boolean;
+  totpEnabled?: boolean;
+  isActive?: boolean;
 }
 
 export interface AuthState {

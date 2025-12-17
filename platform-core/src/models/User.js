@@ -61,6 +61,10 @@ class User extends Model {
     values.status = values.isActive ? 'active' : 'inactive';
     // Add 2FA status (without exposing secret)
     values.totpEnabled = values.totpEnabled || false;
+    // Ensure createdAt is included (map from created_at if needed)
+    values.createdAt = values.createdAt || values.created_at;
+    // Include avatar URL
+    values.avatarUrl = values.avatarUrl || values.avatar_url || null;
 
     return values;
   }
