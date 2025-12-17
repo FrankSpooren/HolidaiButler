@@ -48,12 +48,19 @@ class User extends Model {
     delete values.reset_token;
     delete values.emailVerificationToken;
     delete values.email_verification_token;
+    // Exclude 2FA secrets
+    delete values.totpSecret;
+    delete values.totp_secret;
+    delete values.backupCodes;
+    delete values.backup_codes;
 
     // Add computed fields for frontend compatibility
     const nameParts = (values.name || '').split(' ');
     values.firstName = nameParts[0] || '';
     values.lastName = nameParts.slice(1).join(' ') || '';
     values.status = values.isActive ? 'active' : 'inactive';
+    // Add 2FA status (without exposing secret)
+    values.totpEnabled = values.totpEnabled || false;
 
     return values;
   }
@@ -222,6 +229,31 @@ User.init({
     type: DataTypes.INTEGER,
     allowNull: true,
     field: 'role_id'
+  },
+
+  // Two-Factor Authentication fields
+  totpSecret: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'totp_secret'
+  },
+
+  totpEnabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'totp_enabled'
+  },
+
+  totpVerifiedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'totp_verified_at'
+  },
+
+  backupCodes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'backup_codes'
   }
 
 }, {

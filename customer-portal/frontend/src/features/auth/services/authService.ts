@@ -9,12 +9,22 @@ import { useAuthStore } from '../stores/authStore';
 export const authService = {
   /**
    * Login user with email and password
+   * Returns AuthResponse or 2FA pending response
    */
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const { data } = await apiClient.post<{ success: boolean; data: AuthResponse }>('/auth/login', credentials);
+  async login(credentials: LoginCredentials): Promise<AuthResponse & { requires2FA?: boolean; pendingToken?: string }> {
+    const { data } = await apiClient.post<{ success: boolean; data: AuthResponse; requires2FA?: boolean }>('/auth/login', credentials);
 
     if (!data.success) {
       throw new Error('Login failed');
+    }
+
+    // Check if 2FA is required
+    if (data.requires2FA || data.data?.requires2FA) {
+      return {
+        ...data.data,
+        requires2FA: true,
+        pendingToken: data.data?.pendingToken
+      };
     }
 
     // Store tokens in localStorage
@@ -164,6 +174,90 @@ export const authService = {
 
     if (!data.success) {
       throw new Error('Apple login failed');
+    }
+
+    // Store tokens
+    localStorage.setItem('accessToken', data.data.accessToken);
+    localStorage.setItem('refreshToken', data.data.refreshToken);
+
+    // Update auth store
+    const { setAuth } = useAuthStore.getState();
+    setAuth(data.data.user, data.data.accessToken, data.data.refreshToken);
+
+    return data.data;
+  },
+
+  // ==========================================
+  // TWO-FACTOR AUTHENTICATION
+  // ==========================================
+
+  /**
+   * Get 2FA status for current user
+   */
+  async get2FAStatus(): Promise<{ enabled: boolean; enabledAt: string | null }> {
+    const { data } = await apiClient.get<{ success: boolean; data: { enabled: boolean; enabledAt: string | null } }>(
+      '/auth/2fa/status'
+    );
+    return data.data;
+  },
+
+  /**
+   * Setup 2FA - returns secret and QR code URI
+   */
+  async setup2FA(): Promise<{ secret: string; otpauthUri: string }> {
+    const { data } = await apiClient.post<{ success: boolean; data: { secret: string; otpauthUri: string } }>(
+      '/auth/2fa/setup'
+    );
+
+    if (!data.success) {
+      throw new Error('2FA setup failed');
+    }
+
+    return data.data;
+  },
+
+  /**
+   * Verify 2FA code and enable 2FA
+   */
+  async verify2FA(code: string): Promise<{ enabled: boolean; backupCodes: string[] }> {
+    const { data } = await apiClient.post<{ success: boolean; data: { enabled: boolean; backupCodes: string[] } }>(
+      '/auth/2fa/verify',
+      { code }
+    );
+
+    if (!data.success) {
+      throw new Error('2FA verification failed');
+    }
+
+    return data.data;
+  },
+
+  /**
+   * Disable 2FA
+   */
+  async disable2FA(codeOrPassword: string, usePassword = false): Promise<void> {
+    const payload = usePassword ? { password: codeOrPassword } : { code: codeOrPassword };
+    const { data } = await apiClient.post<{ success: boolean }>(
+      '/auth/2fa/disable',
+      payload
+    );
+
+    if (!data.success) {
+      throw new Error('Failed to disable 2FA');
+    }
+  },
+
+  /**
+   * Validate 2FA code during login
+   */
+  async validate2FA(code: string, pendingToken: string): Promise<AuthResponse> {
+    const { data } = await apiClient.post<{ success: boolean; data: AuthResponse }>(
+      '/auth/2fa/validate',
+      { code, pendingToken }
+    );
+
+    if (!data.success) {
+      throw new Error('2FA validation failed');
     }
 
     // Store tokens

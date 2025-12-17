@@ -15,11 +15,10 @@ import './AccountModals.css';
 interface TwoFactorSetupModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSetup: () => Promise<{ secret: string; otpauthUri: string }>;
   onEnable: (verificationCode: string) => Promise<{ backupCodes: string[] }>;
-  onDisable: () => Promise<void>;
+  onDisable: (code?: string) => Promise<void>;
   isEnabled: boolean;
-  qrCodeUrl?: string;
-  secretKey?: string;
 }
 
 type Step = 'intro' | 'scan' | 'verify' | 'backup' | 'disable';
@@ -27,20 +26,22 @@ type Step = 'intro' | 'scan' | 'verify' | 'backup' | 'disable';
 export function TwoFactorSetupModal({
   isOpen,
   onClose,
+  onSetup,
   onEnable,
   onDisable,
   isEnabled,
-  qrCodeUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-  secretKey = 'JBSWY3DPEHPK3PXP',
 }: TwoFactorSetupModalProps) {
   const { t } = useLanguage();
   const [step, setStep] = useState<Step>(isEnabled ? 'disable' : 'intro');
   const [verificationCode, setVerificationCode] = useState('');
+  const [disableCode, setDisableCode] = useState('');
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [showSecret, setShowSecret] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedBackup, setCopiedBackup] = useState(false);
+  const [secretKey, setSecretKey] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
 
   const handleVerify = async () => {
     if (verificationCode.length !== 6) return;
@@ -59,12 +60,35 @@ export function TwoFactorSetupModal({
     }
   };
 
-  const handleDisable = async () => {
+  const handleStartSetup = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      await onDisable();
+      const setupData = await onSetup();
+      setSecretKey(setupData.secret);
+      // Generate QR code URL from otpauthUri using a QR code service
+      // For now, we'll use a simple Google Charts API
+      setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(setupData.otpauthUri)}`);
+      setStep('scan');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Fout bij starten 2FA setup');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDisable = async () => {
+    if (!disableCode || disableCode.length !== 6) {
+      setError('Voer een geldige 6-cijferige code in');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await onDisable(disableCode);
       handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : t.account.modals.twoFactorDisableError);
@@ -82,8 +106,11 @@ export function TwoFactorSetupModal({
   const handleClose = () => {
     setStep(isEnabled ? 'disable' : 'intro');
     setVerificationCode('');
+    setDisableCode('');
     setError(null);
     setBackupCodes([]);
+    setSecretKey('');
+    setQrCodeUrl('');
     onClose();
   };
 
@@ -257,6 +284,22 @@ export function TwoFactorSetupModal({
               <div className="disable-warning">
                 <p>⚠️ {t.account.modals.disableWarning}</p>
               </div>
+
+              <div className="verification-code-input" style={{ marginTop: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                  Voer je 2FA code in om uit te schakelen:
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={disableCode}
+                  onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  className="code-input"
+                />
+              </div>
             </div>
           )}
         </div>
@@ -270,9 +313,10 @@ export function TwoFactorSetupModal({
               <button
                 type="button"
                 className="modal-btn-primary"
-                onClick={() => setStep('scan')}
+                onClick={handleStartSetup}
+                disabled={isLoading}
               >
-                {t.account.modals.startSetup}
+                {isLoading ? 'Laden...' : t.account.modals.startSetup}
               </button>
             </>
           )}
