@@ -6,6 +6,7 @@ import { HoliBotProvider } from './shared/contexts/HoliBotContext';
 import { LanguageProvider } from './i18n/LanguageContext';
 import { FavoritesProvider } from './shared/contexts/FavoritesContext';
 import { AgendaFavoritesProvider } from './shared/contexts/AgendaFavoritesContext';
+import { VisitedProvider } from './shared/contexts/VisitedContext';
 import { ComparisonProvider } from './shared/contexts/ComparisonContext';
 import { AgendaComparisonProvider } from './shared/contexts/AgendaComparisonContext';
 
@@ -32,16 +33,18 @@ function App() {
     <LanguageProvider>
       <FavoritesProvider>
         <AgendaFavoritesProvider>
-          <ComparisonProvider>
-            <AgendaComparisonProvider>
-              <HoliBotProvider>
-                <QueryClientProvider client={queryClient}>
-                  {/* React Router v7 - Data Router */}
-                  <RouterProvider router={router} />
-                </QueryClientProvider>
-              </HoliBotProvider>
-            </AgendaComparisonProvider>
-          </ComparisonProvider>
+          <VisitedProvider>
+            <ComparisonProvider>
+              <AgendaComparisonProvider>
+                <HoliBotProvider>
+                  <QueryClientProvider client={queryClient}>
+                    {/* React Router v7 - Data Router */}
+                    <RouterProvider router={router} />
+                  </QueryClientProvider>
+                </HoliBotProvider>
+              </AgendaComparisonProvider>
+            </ComparisonProvider>
+          </VisitedProvider>
         </AgendaFavoritesProvider>
       </FavoritesProvider>
     </LanguageProvider>

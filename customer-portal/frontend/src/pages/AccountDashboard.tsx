@@ -17,11 +17,14 @@
  * - Account deletion flow
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { useFavorites } from '../shared/contexts/FavoritesContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
+import { useVisited } from '../shared/contexts/VisitedContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { usePOIsByIds } from '../features/poi/hooks/usePOIs';
+import { useEventsByIds, getEventTitle, getEventImage } from '../features/agenda/hooks/useEvents';
 import {
   ChangePasswordModal,
   TwoFactorSetupModal,
@@ -42,7 +45,20 @@ export default function AccountDashboard() {
   const navigate = useNavigate();
   const { favorites } = useFavorites();
   const { agendaFavorites } = useAgendaFavorites();
-  const { t } = useLanguage();
+  const { visitedPOIs, visitedEvents, getVisitedPOIIds, getVisitedEventIds } = useVisited();
+  const { t, language } = useLanguage();
+
+  // Get IDs for data fetching
+  const favoritePoiIds = useMemo(() => Array.from(favorites || []), [favorites]);
+  const favoriteEventIds = useMemo(() => Array.from(agendaFavorites || []), [agendaFavorites]);
+  const visitedPoiIds = useMemo(() => getVisitedPOIIds(), [visitedPOIs]);
+  const visitedEventIds = useMemo(() => getVisitedEventIds(), [visitedEvents]);
+
+  // Fetch actual POI and Event data
+  const { data: favoritePOIs, isLoading: loadingFavPOIs } = usePOIsByIds(favoritePoiIds.slice(0, 10));
+  const { data: favoriteEvents, isLoading: loadingFavEvents } = useEventsByIds(favoriteEventIds.slice(0, 10));
+  const { data: visitedPOIData, isLoading: loadingVisPOIs } = usePOIsByIds(visitedPoiIds.slice(0, 10));
+  const { data: visitedEventData, isLoading: loadingVisEvents } = useEventsByIds(visitedEventIds.slice(0, 10));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<TabType>('profiel');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -715,15 +731,31 @@ export default function AccountDashboard() {
         <div className="section-title" style={{ marginTop: '16px' }}>
           📍 {t.account.favorites.poiTitle} ({favorites?.size || 0})
         </div>
-        {favorites && favorites.size > 0 ? (
+        {loadingFavPOIs ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <span>Laden...</span>
+          </div>
+        ) : favorites && favorites.size > 0 ? (
           <div className="favorites-list">
-            {Array.from(favorites).slice(0, 5).map((poiId) => (
-              <div key={String(poiId)} className="favorite-list-item" onClick={() => navigate(`/poi/${poiId}`)}>
+            {favoritePOIs.slice(0, 5).map((poi) => (
+              <div key={poi.id} className="favorite-list-item" onClick={() => navigate(`/pois/${poi.id}`)}>
                 <div className="favorite-item-left">
-                  <span className="favorite-item-icon">📍</span>
+                  {poi.thumbnail_url ? (
+                    <img src={poi.thumbnail_url} alt={poi.name} className="favorite-item-image" />
+                  ) : (
+                    <span className="favorite-item-icon">📍</span>
+                  )}
                   <div className="favorite-item-info">
-                    <div className="favorite-item-title">POI #{String(poiId).substring(0, 8)}</div>
-                    <div className="favorite-item-subtitle">Costa Blanca</div>
+                    <div className="favorite-item-title">{poi.name}</div>
+                    <div className="favorite-item-subtitle">
+                      {poi.city || 'Costa Blanca'} • {poi.category}
+                    </div>
+                    {poi.rating && (
+                      <div className="favorite-item-rating">
+                        ⭐ {poi.rating.toFixed(1)}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <span className="nav-arrow">→</span>
@@ -749,22 +781,38 @@ export default function AccountDashboard() {
         <div className="section-title" style={{ marginTop: '24px' }}>
           🎉 {t.account.favorites.eventsTitle} ({agendaFavorites?.size || 0})
         </div>
-        {agendaFavorites && agendaFavorites.size > 0 ? (
+        {loadingFavEvents ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <span>Laden...</span>
+          </div>
+        ) : agendaFavorites && agendaFavorites.size > 0 ? (
           <div className="favorites-list">
-            {Array.from(agendaFavorites).slice(0, 5).map((eventId) => (
-              <div key={String(eventId)} className="favorite-list-item" onClick={() => navigate(`/agenda/${eventId}`)}>
+            {favoriteEvents.slice(0, 5).map((event) => (
+              <div key={event._id} className="favorite-list-item" onClick={() => navigate(`/agenda/${event._id}`)}>
                 <div className="favorite-item-left">
-                  <span className="favorite-item-icon">🎉</span>
+                  {getEventImage(event) ? (
+                    <img src={getEventImage(event)} alt={getEventTitle(event, language)} className="favorite-item-image" />
+                  ) : (
+                    <span className="favorite-item-icon">🎉</span>
+                  )}
                   <div className="favorite-item-info">
-                    <div className="favorite-item-title">Event #{String(eventId).substring(0, 8)}</div>
-                    <div className="favorite-item-subtitle">Costa Blanca</div>
+                    <div className="favorite-item-title">{getEventTitle(event, language)}</div>
+                    <div className="favorite-item-subtitle">
+                      {event.location?.name || 'Costa Blanca'} • {new Date(event.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                    </div>
+                    {event.pricing && (
+                      <div className="favorite-item-price">
+                        {event.pricing.isFree ? '🎟️ Gratis' : `€${event.pricing.minPrice}`}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <span className="nav-arrow">→</span>
               </div>
             ))}
             {agendaFavorites.size > 5 && (
-              <button className="secondary-button" onClick={() => navigate('/favorites')}>
+              <button className="secondary-button" onClick={() => navigate('/agenda')}>
                 {t.account.favorites.viewAll} {agendaFavorites.size} Events →
               </button>
             )}
@@ -792,28 +840,116 @@ export default function AccountDashboard() {
 
         {/* Visited POIs */}
         <div className="section-title" style={{ marginTop: '16px' }}>
-          📍 {t.account.visited.poisTitle}
+          📍 {t.account.visited.poisTitle} ({visitedPOIs.size})
         </div>
-        <div className="empty-state">
-          <div className="empty-state-icon">🚀</div>
-          <div className="empty-state-text">
-            {t.account.visited.emptyPois}
+        {loadingVisPOIs ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <span>Laden...</span>
           </div>
-          <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>
-            {t.account.visited.trackingInfo}
+        ) : visitedPOIs.size > 0 ? (
+          <div className="favorites-list">
+            {visitedPOIData.slice(0, 5).map((poi) => {
+              const visitDate = visitedPOIs.get(poi.id);
+              return (
+                <div key={poi.id} className="favorite-list-item" onClick={() => navigate(`/pois/${poi.id}`)}>
+                  <div className="favorite-item-left">
+                    {poi.thumbnail_url ? (
+                      <img src={poi.thumbnail_url} alt={poi.name} className="favorite-item-image" />
+                    ) : (
+                      <span className="favorite-item-icon">📍</span>
+                    )}
+                    <div className="favorite-item-info">
+                      <div className="favorite-item-title">{poi.name}</div>
+                      <div className="favorite-item-subtitle">
+                        {poi.city || 'Costa Blanca'} • {poi.category}
+                      </div>
+                      {visitDate && (
+                        <div className="favorite-item-date">
+                          🕐 {new Date(visitDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <span className="nav-arrow">→</span>
+                </div>
+              );
+            })}
+            {visitedPOIs.size > 5 && (
+              <button className="secondary-button" onClick={() => navigate('/visited')}>
+                {t.account.favorites.viewAll} {visitedPOIs.size} POIs →
+              </button>
+            )}
           </div>
-        </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-state-icon">🚀</div>
+            <div className="empty-state-text">
+              {t.account.visited.emptyPois}
+            </div>
+            <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>
+              {t.account.visited.trackingInfo}
+            </div>
+            <button className="secondary-button" onClick={() => navigate('/explore')}>
+              {t.account.favorites.discoverPois}
+            </button>
+          </div>
+        )}
 
         {/* Visited Events */}
         <div className="section-title" style={{ marginTop: '24px' }}>
-          🎉 {t.account.visited.eventsTitle}
+          🎉 {t.account.visited.eventsTitle} ({visitedEvents.size})
         </div>
-        <div className="empty-state">
-          <div className="empty-state-icon">📅</div>
-          <div className="empty-state-text">
-            {t.account.visited.emptyEvents}
+        {loadingVisEvents ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <span>Laden...</span>
           </div>
-        </div>
+        ) : visitedEvents.size > 0 ? (
+          <div className="favorites-list">
+            {visitedEventData.slice(0, 5).map((event) => {
+              const visitDate = visitedEvents.get(event._id);
+              return (
+                <div key={event._id} className="favorite-list-item" onClick={() => navigate(`/agenda/${event._id}`)}>
+                  <div className="favorite-item-left">
+                    {getEventImage(event) ? (
+                      <img src={getEventImage(event)} alt={getEventTitle(event, language)} className="favorite-item-image" />
+                    ) : (
+                      <span className="favorite-item-icon">🎉</span>
+                    )}
+                    <div className="favorite-item-info">
+                      <div className="favorite-item-title">{getEventTitle(event, language)}</div>
+                      <div className="favorite-item-subtitle">
+                        {event.location?.name || 'Costa Blanca'}
+                      </div>
+                      {visitDate && (
+                        <div className="favorite-item-date">
+                          🕐 {new Date(visitDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <span className="nav-arrow">→</span>
+                </div>
+              );
+            })}
+            {visitedEvents.size > 5 && (
+              <button className="secondary-button" onClick={() => navigate('/agenda')}>
+                {t.account.favorites.viewAll} {visitedEvents.size} Events →
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-state-icon">📅</div>
+            <div className="empty-state-text">
+              {t.account.visited.emptyEvents}
+            </div>
+            <button className="secondary-button" onClick={() => navigate('/agenda')}>
+              {t.account.favorites.viewAgenda}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tab 6: Reviews */}

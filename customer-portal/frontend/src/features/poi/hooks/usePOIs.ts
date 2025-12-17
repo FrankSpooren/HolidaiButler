@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { poiService } from '../services/poiService';
-import type { POISearchParams } from '../types/poi.types';
+import type { POI, POISearchParams } from '../types/poi.types';
 import { useLanguage } from '../../../i18n/LanguageContext';
 
 /**
@@ -77,4 +77,35 @@ export function usePOIsByCategory(category: string, params?: Omit<POISearchParam
     enabled: !!category,
     staleTime: 5 * 60 * 1000,
   });
+}
+
+/**
+ * Hook to fetch multiple POIs by their IDs
+ * Uses parallel queries for efficient fetching
+ * Automatically includes current language for translated content
+ */
+export function usePOIsByIds(ids: number[]) {
+  const { language } = useLanguage();
+
+  const queries = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ['poi', id, language],
+      queryFn: () => poiService.getPOIById(id, language),
+      enabled: !!id,
+      staleTime: 10 * 60 * 1000,
+    })),
+  });
+
+  const isLoading = queries.some((q) => q.isLoading);
+  const isError = queries.some((q) => q.isError);
+  const data: POI[] = queries
+    .filter((q) => q.data)
+    .map((q) => q.data as POI);
+
+  return {
+    data,
+    isLoading,
+    isError,
+    queries,
+  };
 }
