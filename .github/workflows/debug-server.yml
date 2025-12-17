@@ -1,0 +1,43 @@
+name: "Debug: Server Status"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    name: Check Server Status
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: PM2 Status
+        run: |
+          echo "=== PM2 List ==="
+          ssh root@91.98.71.87 "pm2 list"
+
+      - name: PM2 Logs (last 100 lines)
+        run: |
+          echo "=== PM2 Logs ==="
+          ssh root@91.98.71.87 "pm2 logs holidaibutler-api --lines 100 --nostream" || echo "No logs available"
+
+      - name: Check if process exists
+        run: |
+          echo "=== Process Check ==="
+          ssh root@91.98.71.87 "ps aux | grep node || echo 'No node processes found'"
+
+      - name: Check port 3001
+        run: |
+          echo "=== Port 3001 Check ==="
+          ssh root@91.98.71.87 "netstat -tlnp | grep 3001 || echo 'Port 3001 not in use'"
+
+      - name: Try to start manually and show error
+        run: |
+          echo "=== Manual Start Attempt ==="
+          ssh root@91.98.71.87 "cd /var/www/api.holidaibutler.com/platform-core && node src/index.js 2>&1 | head -50" || true
