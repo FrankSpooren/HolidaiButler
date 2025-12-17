@@ -95,7 +95,11 @@ jobs:
           if [ "$STATUS" -eq 200 ]; then
             echo "Platform Core API deployed successfully!"
           else
-            echo "Warning: Health check returned $STATUS (may still be starting)"
+            echo "Warning: Health check returned $STATUS"
+            echo "=== PM2 Status ==="
+            ssh root@91.98.71.87 "pm2 list"
+            echo "=== Recent PM2 Logs ==="
+            ssh root@91.98.71.87 "pm2 logs ${{ env.PM2_PROCESS_NAME }} --lines 50 --nostream" || true
           fi
 
       - name: Notify
