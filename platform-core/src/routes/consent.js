@@ -62,7 +62,7 @@ router.get('/', authenticate, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Fout bij ophalen van privacy-instellingen',
-      debug: process.env.NODE_ENV !== 'production' ? error.message : undefined
+      debug: error.message // Tijdelijk voor debugging
     });
   }
 });
@@ -185,7 +185,7 @@ router.put('/', authenticate, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Fout bij opslaan van privacy-instellingen',
-      debug: process.env.NODE_ENV !== 'production' ? error.message : undefined
+      debug: error.message // Tijdelijk voor debugging
     });
   }
 });
