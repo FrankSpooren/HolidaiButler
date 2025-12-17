@@ -17,9 +17,11 @@
  * - Account deletion flow
  */
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { authService } from '../features/auth/services/authService';
+import { useAuthStore } from '../features/auth/stores/authStore';
+import { profileService } from '../features/account/services/profileService';
 import { consentService, type ConsentData } from '../features/account/services/consentService';
 import { useFavorites } from '../shared/contexts/FavoritesContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
@@ -56,6 +58,9 @@ export default function AccountDashboard() {
   const { reviews, isLoading: loadingReviews, updateReview, deleteReview, totalReviewsCount } = useUserReviews();
   const { t, language } = useLanguage();
 
+  // Get user from auth store
+  const { user, setUser } = useAuthStore();
+
   // Get IDs for data fetching
   const favoritePoiIds = useMemo(() => Array.from(favorites || []), [favorites]);
   const favoriteEventIds = useMemo(() => Array.from(agendaFavorites || []), [agendaFavorites]);
@@ -69,7 +74,13 @@ export default function AccountDashboard() {
   const { data: visitedEventData, isLoading: loadingVisEvents } = useEventsByIds(visitedEventIds.slice(0, 10));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<TabType>('profiel');
+
+  // Avatar - prefer user.avatarUrl from API, fallback to localStorage
   const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    // First check auth store user
+    const authUser = useAuthStore.getState().user;
+    if (authUser?.avatarUrl) return authUser.avatarUrl;
+    // Fallback to localStorage for uploaded but not yet synced avatars
     try {
       return localStorage.getItem('userAvatar');
     } catch (error) {
@@ -80,27 +91,21 @@ export default function AccountDashboard() {
 
   // Profile editing state
   const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState(() => {
-    try {
-      const saved = localStorage.getItem('userProfile');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          name: parsed.name || 'Naam invoeren',
-          email: parsed.email || 'email@voorbeeld.nl',
-          registrationDate: parsed.registrationDate || '27 oktober 2025',
-        };
-      }
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    }
-    return {
-      name: 'Naam invoeren',
-      email: 'email@voorbeeld.nl',
-      registrationDate: '27 oktober 2025',
-    };
-  });
-  const [editedProfile, setEditedProfile] = useState({ ...profileData });
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  // Profile data derived from auth store user
+  const profileData = useMemo(() => ({
+    name: user?.name || user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`.trim()
+      : 'Naam invoeren',
+    email: user?.email || 'email@voorbeeld.nl',
+    registrationDate: profileService.formatRegistrationDate(user?.createdAt),
+    avatarUrl: user?.avatarUrl || null,
+  }), [user]);
+
+  const [editedProfile, setEditedProfile] = useState({ name: '', email: '' });
 
   // Address state (optional NAW) - load from localStorage
   const [showAddress, setShowAddress] = useState(false);
@@ -165,6 +170,25 @@ export default function AccountDashboard() {
   const [editingReview, setEditingReview] = useState<UserReview | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedPoiId, setSelectedPoiId] = useState<number | null>(null);
+
+  // Load profile from API on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const userData = await profileService.getProfile();
+        // Update avatar if returned from API
+        if (userData.avatarUrl) {
+          setAvatarUrl(userData.avatarUrl);
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        setProfileError('Fout bij laden van profiel');
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+    loadProfile();
+  }, []);
 
   // Load 2FA status from API on mount
   useEffect(() => {
@@ -277,31 +301,47 @@ export default function AccountDashboard() {
 
   // Profile editing handlers
   const handleEditProfile = () => {
-    setEditedProfile({ ...profileData });
+    setEditedProfile({
+      name: profileData.name,
+      email: profileData.email,
+    });
+    setProfileError(null);
     setIsEditing(true);
   };
 
-  const handleSaveProfile = () => {
-    setProfileData({ ...editedProfile });
-    setIsEditing(false);
-    setShowAddress(false);
-    // Save profile data to localStorage
+  const handleSaveProfile = async () => {
+    setProfileSaving(true);
+    setProfileError(null);
+
     try {
-      localStorage.setItem('userProfile', JSON.stringify(editedProfile));
+      // Save profile to backend API
+      await profileService.updateProfile({
+        name: editedProfile.name,
+      });
+
+      setIsEditing(false);
+      setShowAddress(false);
+
+      // Save address to localStorage (address is not in backend yet)
+      if (addressData.street || addressData.postalCode || addressData.city) {
+        localStorage.setItem('userAddress', JSON.stringify(addressData));
+      }
     } catch (error) {
       console.error('Error saving profile:', error);
+      setProfileError('Fout bij opslaan van profiel');
+    } finally {
+      setProfileSaving(false);
     }
-    // Save address to localStorage
-    if (addressData.street || addressData.postalCode || addressData.city) {
-      localStorage.setItem('userAddress', JSON.stringify(addressData));
-    }
-    // TODO: Save to backend
   };
 
   const handleCancelEdit = () => {
-    setEditedProfile({ ...profileData });
+    setEditedProfile({
+      name: profileData.name,
+      email: profileData.email,
+    });
     setIsEditing(false);
     setShowAddress(false);
+    setProfileError(null);
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -506,6 +546,14 @@ export default function AccountDashboard() {
 
       {/* Tab 1: Profiel (Profile + Preferences combined) */}
       <div className={`tab-content ${activeTab === 'profiel' ? 'active' : ''}`}>
+        {/* Loading State */}
+        {profileLoading ? (
+          <div className="loading-state" style={{ padding: '40px 20px' }}>
+            <div className="loading-spinner"></div>
+            <span>Profiel laden...</span>
+          </div>
+        ) : (
+        <>
         {/* Profile Card with Integrated Personal Details */}
         <div className="profile-card card-with-edit">
           {/* Edit button top-right */}
@@ -638,9 +686,19 @@ export default function AccountDashboard() {
                 </div>
               )}
 
+              {profileError && (
+                <div className="form-error" style={{ marginBottom: '12px' }}>
+                  ⚠️ {profileError}
+                </div>
+              )}
+
               <div className="profile-actions">
-                <button className="btn-cancel" onClick={handleCancelEdit}>Annuleren</button>
-                <button className="btn-save" onClick={handleSaveProfile}>Opslaan</button>
+                <button className="btn-cancel" onClick={handleCancelEdit} disabled={profileSaving}>
+                  Annuleren
+                </button>
+                <button className="btn-save" onClick={handleSaveProfile} disabled={profileSaving}>
+                  {profileSaving ? 'Opslaan...' : 'Opslaan'}
+                </button>
               </div>
             </div>
           )}
@@ -737,6 +795,8 @@ export default function AccountDashboard() {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
 
       {/* Tab 2: Instellingen (Settings) */}
