@@ -1004,7 +1004,7 @@ export const translations: Record<Language, Translations> = {
         export: 'Export',
         settings: 'Instellingen',
         favorites: 'Favorieten',
-        visited: 'Bezochte',
+        visited: 'Bezocht',
         reviews: 'Reviews',
       },
       profile: {

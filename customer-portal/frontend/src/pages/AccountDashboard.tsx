@@ -26,6 +26,7 @@ import { useUserReviews, type UserReview } from '../shared/contexts/UserReviewsC
 import { useLanguage } from '../i18n/LanguageContext';
 import { usePOIsByIds } from '../features/poi/hooks/usePOIs';
 import { useEventsByIds, getEventTitle, getEventImage } from '../features/agenda/hooks/useEvents';
+import { AgendaDetailModal } from '../features/agenda/components/AgendaDetailModal';
 import {
   ChangePasswordModal,
   TwoFactorSetupModal,
@@ -65,7 +66,14 @@ export default function AccountDashboard() {
   const { data: visitedEventData, isLoading: loadingVisEvents } = useEventsByIds(visitedEventIds.slice(0, 10));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<TabType>('profiel');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('userAvatar');
+    } catch (error) {
+      console.error('Error loading avatar:', error);
+      return null;
+    }
+  });
 
   // Profile editing state
   const [isEditing, setIsEditing] = useState(false);
@@ -131,6 +139,7 @@ export default function AccountDashboard() {
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
   const [editingReview, setEditingReview] = useState<UserReview | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   // Reload preferences when returning from onboarding
   useEffect(() => {
@@ -214,10 +223,17 @@ export default function AccountDashboard() {
         return;
       }
 
-      // Create preview URL
+      // Create preview URL and save to localStorage
       const reader = new FileReader();
       reader.onload = (e) => {
-        setAvatarUrl(e.target?.result as string);
+        const dataUrl = e.target?.result as string;
+        setAvatarUrl(dataUrl);
+        // Save to localStorage for persistence
+        try {
+          localStorage.setItem('userAvatar', dataUrl);
+        } catch (error) {
+          console.error('Error saving avatar:', error);
+        }
         // TODO: Upload to backend API
         // const formData = new FormData();
         // formData.append('avatar', file);
@@ -661,7 +677,31 @@ export default function AccountDashboard() {
           </div>
         </div>
 
-        <div className="section-title" style={{ marginTop: '16px', color: '#1F2937' }}>
+        {/* Logout Section */}
+        <div className="section-title" style={{ marginTop: '24px' }}>
+          Sessie
+        </div>
+        <div
+          className="nav-item logout-item"
+          onClick={() => {
+            // Clear session data
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            // Redirect to homepage
+            navigate('/');
+          }}
+        >
+          <div className="nav-left">
+            <span className="nav-icon">🚪</span>
+            <div>
+              <div className="nav-text">Uitloggen</div>
+              <div style={{ fontSize: '12px', color: '#6B7280' }}>Beëindig je huidige sessie</div>
+            </div>
+          </div>
+          <span className="nav-arrow">→</span>
+        </div>
+
+        <div className="section-title" style={{ marginTop: '24px', color: '#1F2937' }}>
           {t.account.settings.dangerZone}
         </div>
 
@@ -853,7 +893,7 @@ export default function AccountDashboard() {
         ) : agendaFavorites && agendaFavorites.size > 0 ? (
           <div className="favorites-list">
             {favoriteEvents.slice(0, 5).map((event) => (
-              <div key={event._id} className="favorite-list-item" onClick={() => navigate(`/agenda/${event._id}`)}>
+              <div key={event._id} className="favorite-list-item" onClick={() => setSelectedEventId(event._id)}>
                 <div className="favorite-item-left">
                   {getEventImage(event) ? (
                     <img src={getEventImage(event)} alt={getEventTitle(event, language)} className="favorite-item-image" />
@@ -974,7 +1014,7 @@ export default function AccountDashboard() {
             {visitedEventData.slice(0, 5).map((event) => {
               const visitDate = visitedEvents.get(event._id);
               return (
-                <div key={event._id} className="favorite-list-item" onClick={() => navigate(`/agenda/${event._id}`)}>
+                <div key={event._id} className="favorite-list-item" onClick={() => setSelectedEventId(event._id)}>
                   <div className="favorite-item-left">
                     {getEventImage(event) ? (
                       <img src={getEventImage(event)} alt={getEventTitle(event, language)} className="favorite-item-image" />
@@ -1272,6 +1312,15 @@ export default function AccountDashboard() {
           setEditingReview(null);
         }}
       />
+
+      {/* Event Detail Modal */}
+      {selectedEventId && (
+        <AgendaDetailModal
+          eventId={selectedEventId}
+          isOpen={!!selectedEventId}
+          onClose={() => setSelectedEventId(null)}
+        />
+      )}
     </div>
   );
 }

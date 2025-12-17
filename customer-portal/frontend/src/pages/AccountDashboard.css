@@ -1150,6 +1150,24 @@ body.account-dashboard {
     font-weight: 500;
 }
 
+/* Logout Item */
+.logout-item {
+    border: 1px solid #E5E7EB;
+    background: #F9FAFB;
+    transition: all 0.2s;
+}
+
+.logout-item:hover {
+    border-color: #D4AF37;
+    background: #FFFBEB;
+    transform: translateX(4px);
+}
+
+.logout-item .nav-text {
+    color: #374151;
+    font-weight: 600;
+}
+
 /* Mobile adjustments for reviews */
 @media (max-width: 480px) {
     .review-card {

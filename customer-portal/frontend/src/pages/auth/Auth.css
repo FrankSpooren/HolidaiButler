@@ -143,6 +143,83 @@
     text-decoration: underline;
 }
 
+/* Social Login Divider */
+.social-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 24px 0;
+}
+
+.social-divider::before,
+.social-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #E5E7EB;
+}
+
+.social-divider span {
+    color: #9CA3AF;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+/* Social Login Buttons */
+.social-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.social-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: 2px solid #E5E7EB;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    color: #374151;
+    transition: all 0.2s ease;
+    flex: 1;
+    max-width: 120px;
+}
+
+.social-button:hover {
+    border-color: #D1D5DB;
+    background: #F9FAFB;
+    transform: translateY(-1px);
+}
+
+.social-button.google:hover {
+    border-color: #4285F4;
+    background: #EBF3FF;
+}
+
+.social-button.apple {
+    color: #000;
+}
+
+.social-button.apple:hover {
+    border-color: #000;
+    background: #F5F5F5;
+}
+
+.social-button.facebook:hover {
+    border-color: #1877F2;
+    background: #EBF3FF;
+}
+
+.social-button svg {
+    flex-shrink: 0;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .auth-card {
@@ -155,5 +232,18 @@
 
     .auth-form {
         gap: 20px;
+    }
+
+    .social-buttons {
+        flex-wrap: wrap;
+    }
+
+    .social-button {
+        max-width: none;
+        flex: 1 1 calc(50% - 6px);
+    }
+
+    .social-button:last-child {
+        flex: 1 1 100%;
     }
 }
