@@ -383,47 +383,61 @@ export default function AccountDashboard() {
 
   // Helper functions to display preference labels
   const getCompanionLabel = (id: string | null) => {
+    // Use translations from onboarding section
     const labels: Record<string, string> = {
-      couple: t.account.preferences.asCouple,
-      family: 'Family',
-      solo: 'Solo',
-      group: 'Group',
+      couple: t.onboarding.couple,
+      family: t.onboarding.family,
+      solo: 'Solo', // Solo is same in all languages
+      group: t.onboarding.group,
     };
-    return id ? labels[id] || id : 'Not set';
+    return id ? labels[id] || id : language === 'nl' ? 'Niet ingesteld' : 'Not set';
   };
 
   const getInterestLabel = (id: string) => {
+    // Use translations from onboarding section
     const labels: Record<string, string> = {
-      food: t.account.preferences.foodDrinks,
-      relax: t.account.preferences.beaches,
-      culture: t.account.preferences.culture,
-      active: 'Active',
-      nature: 'Nature',
-      nightlife: 'Nightlife',
-      history: 'History',
-      shopping: 'Shopping',
+      food: t.onboarding.food,
+      relax: t.onboarding.relax,
+      culture: t.onboarding.culture,
+      active: t.onboarding.active,
+      nature: t.onboarding.nature,
+      nightlife: t.onboarding.nightlife,
+      history: t.onboarding.history,
+      shopping: t.onboarding.shopping,
     };
     return labels[id] || id;
   };
 
   const getDietaryLabel = (id: string) => {
+    // Use translations from onboarding section
     const labels: Record<string, string> = {
-      vegetarian: t.account.preferences.vegetarian,
-      vegan: 'Vegan',
-      'gluten-free': 'Gluten-free',
-      halal: 'Halal',
-      kosher: 'Kosher',
+      vegetarian: t.onboarding.vegetarian,
+      vegan: t.onboarding.vegan,
+      'gluten-free': t.onboarding.glutenFree,
+      glutenFree: t.onboarding.glutenFree,
+      halal: t.onboarding.halal,
+      kosher: t.onboarding.kosher,
+      'lactose-free': t.onboarding.lactoseFree,
+      lactoseFree: t.onboarding.lactoseFree,
+      'nut-allergies': t.onboarding.nutAllergies,
+      nutAllergies: t.onboarding.nutAllergies,
     };
     return labels[id] || id;
   };
 
   const getAccessibilityLabel = (id: string) => {
+    // Keys from OnboardingFlow.tsx accessibility options
     const labels: Record<string, string> = {
-      wheelchair: 'Rolstoelvriendelijk',
-      'visual-impaired': 'Visueel beperkt',
-      'hearing-impaired': 'Auditief beperkt',
-      'reduced-mobility': 'Beperkte mobiliteit',
-      stroller: 'Kinderwagen',
+      'wheelchair-accessible': t.onboarding.wheelchair,
+      'mobility-assistance': t.onboarding.mobility,
+      'visual-impairment': t.onboarding.visual,
+      'hearing-impairment': t.onboarding.hearing,
+      // Legacy keys (for backwards compatibility)
+      wheelchair: t.onboarding.wheelchair,
+      'visual-impaired': t.onboarding.visual,
+      'hearing-impaired': t.onboarding.hearing,
+      'reduced-mobility': t.onboarding.mobility,
+      stroller: language === 'nl' ? 'Kinderwagen' : 'Stroller',
     };
     return labels[id] || id;
   };
