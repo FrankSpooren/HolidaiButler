@@ -932,3 +932,247 @@ body.account-dashboard {
     margin-left: auto;
     margin-right: auto;
 }
+
+/* ===============================
+   REVIEWS STYLES - Sprint 4
+   =============================== */
+
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.review-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.review-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.review-target-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.review-target-image {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.review-target-placeholder {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #F3F4F6, #E5E7EB);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.review-target-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.review-target-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1F2937;
+}
+
+.review-target-category {
+    font-size: 13px;
+    color: #6B7280;
+}
+
+.review-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.review-edit-btn,
+.review-delete-btn {
+    background: #F3F4F6;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.review-edit-btn:hover {
+    background: #FFFBEB;
+    border: 1px solid #D4AF37;
+}
+
+.review-delete-btn:hover {
+    background: #FEF2F2;
+    border: 1px solid #DC2626;
+}
+
+.review-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.review-rating .star-filled {
+    color: #D4AF37;
+    font-size: 18px;
+}
+
+.review-rating .star-empty {
+    color: #E5E7EB;
+    font-size: 18px;
+}
+
+.review-date {
+    margin-left: 8px;
+    font-size: 13px;
+    color: #6B7280;
+}
+
+.review-text {
+    font-size: 15px;
+    color: #374151;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.review-meta {
+    border-top: 1px solid #F3F4F6;
+    padding-top: 10px;
+}
+
+.review-written-date {
+    font-size: 12px;
+    color: #9CA3AF;
+}
+
+/* Review Edit Modal Specific Styles */
+.review-edit-modal {
+    max-width: 480px;
+}
+
+.review-edit-target {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #F9FAFB;
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.review-edit-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.review-edit-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #E5E7EB, #D1D5DB);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.review-edit-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.review-edit-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1F2937;
+}
+
+.review-edit-category {
+    font-size: 13px;
+    color: #6B7280;
+}
+
+.star-rating-input {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.star-btn {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #E5E7EB;
+    cursor: pointer;
+    padding: 4px;
+    transition: all 0.2s;
+}
+
+.star-btn.active {
+    color: #D4AF37;
+}
+
+.star-btn:hover {
+    transform: scale(1.2);
+}
+
+.rating-label {
+    margin-left: 12px;
+    font-size: 14px;
+    color: #6B7280;
+    font-weight: 500;
+}
+
+/* Mobile adjustments for reviews */
+@media (max-width: 480px) {
+    .review-card {
+        padding: 16px;
+    }
+
+    .review-card-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .review-actions {
+        align-self: flex-end;
+    }
+
+    .review-target-image,
+    .review-target-placeholder {
+        width: 48px;
+        height: 48px;
+    }
+
+    .star-btn {
+        font-size: 24px;
+        padding: 2px;
+    }
+}
