@@ -411,11 +411,10 @@ body.account-dashboard {
     overflow: hidden;
 }
 
-/* Desktop: Tab bar at top, inline */
+/* Desktop: Tab bar at top, scrolls with content (not sticky) */
 @media (min-width: 769px) {
     .tab-bar {
-        position: sticky;
-        top: 0;
+        position: relative;
         border-top: none;
         border-bottom: 1px solid #E5E7EB;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
