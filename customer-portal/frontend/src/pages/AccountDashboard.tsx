@@ -39,6 +39,7 @@ interface UserPreferences {
   travelCompanion: string | null;
   interests: string[];
   dietary: string[];
+  accessibility: string[];
 }
 
 export default function AccountDashboard() {
@@ -72,12 +73,23 @@ export default function AccountDashboard() {
   });
   const [editedProfile, setEditedProfile] = useState({ ...profileData });
 
-  // Address state (optional NAW)
+  // Address state (optional NAW) - load from localStorage
   const [showAddress, setShowAddress] = useState(false);
-  const [addressData, setAddressData] = useState({
-    street: '',
-    postalCode: '',
-    city: '',
+  const [addressData, setAddressData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('userAddress');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          street: parsed.street || '',
+          postalCode: parsed.postalCode || '',
+          city: parsed.city || '',
+        };
+      }
+    } catch (error) {
+      console.error('Error loading address:', error);
+    }
+    return { street: '', postalCode: '', city: '' };
   });
 
   // Load user preferences from localStorage
@@ -90,7 +102,7 @@ export default function AccountDashboard() {
     } catch (error) {
       console.error('Error loading preferences:', error);
     }
-    return { travelCompanion: 'couple', interests: ['food', 'culture', 'relax'], dietary: ['vegetarian'] };
+    return { travelCompanion: 'couple', interests: ['food', 'culture', 'relax'], dietary: ['vegetarian'], accessibility: [] };
   });
 
   const [aiToggles, setAiToggles] = useState({
@@ -169,6 +181,11 @@ export default function AccountDashboard() {
   const handleSaveProfile = () => {
     setProfileData({ ...editedProfile });
     setIsEditing(false);
+    setShowAddress(false);
+    // Save address to localStorage
+    if (addressData.street || addressData.postalCode || addressData.city) {
+      localStorage.setItem('userAddress', JSON.stringify(addressData));
+    }
     // TODO: Save to backend
   };
 
@@ -240,6 +257,17 @@ export default function AccountDashboard() {
       'gluten-free': 'Gluten-free',
       halal: 'Halal',
       kosher: 'Kosher',
+    };
+    return labels[id] || id;
+  };
+
+  const getAccessibilityLabel = (id: string) => {
+    const labels: Record<string, string> = {
+      wheelchair: 'Rolstoelvriendelijk',
+      'visual-impaired': 'Visueel beperkt',
+      'hearing-impaired': 'Auditief beperkt',
+      'reduced-mobility': 'Beperkte mobiliteit',
+      stroller: 'Kinderwagen',
     };
     return labels[id] || id;
   };
@@ -403,19 +431,32 @@ export default function AccountDashboard() {
                 <>
                   <div className="profile-name-row">
                     <span className="profile-name">{profileData.name}</span>
-                    <button className="edit-icon" onClick={handleEditProfile} title="Bewerken">✏️</button>
+                    <button className="edit-icon-btn" onClick={handleEditProfile} title="Bewerken">✏️</button>
                   </div>
                   <div className="profile-email-row">
                     <span className="profile-email">{profileData.email}</span>
                   </div>
+                  {/* Display NAW data when available */}
+                  {(addressData.street || addressData.city) && (
+                    <div className="profile-address">
+                      {addressData.street && <span>{addressData.street}</span>}
+                      {addressData.postalCode && addressData.city && (
+                        <span>{addressData.postalCode}, {addressData.city}</span>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
-              <div className="butler-fan-since">
-                <span className="butler-fan-icon">🎩</span>
-                <span>{t.account.profile.butlerFanSince}: <strong>{profileData.registrationDate}</strong></span>
-              </div>
             </div>
           </div>
+
+          {/* Butler fan since - centered at bottom */}
+          {!isEditing && (
+            <div className="butler-fan-since-centered">
+              <span className="butler-fan-icon">🎩</span>
+              <span>{t.account.profile.butlerFanSince}: <strong>{profileData.registrationDate}</strong></span>
+            </div>
+          )}
 
           {/* Editable Address Section (optional NAW) */}
           {isEditing && (
@@ -468,7 +509,12 @@ export default function AccountDashboard() {
         </div>
 
         {/* Preferences Section */}
-        <div className="section-title">{t.account.preferences.title}</div>
+        <div className="section-title-with-action">
+          <span>{t.account.preferences.title}</span>
+          <button className="edit-icon-btn" onClick={() => navigate('/onboarding?mode=edit')} title="Bewerk voorkeuren">
+            ✏️
+          </button>
+        </div>
         <div className="profile-card preferences-card">
           <div style={{ textAlign: 'left' }}>
             {/* Traveling As */}
@@ -524,7 +570,7 @@ export default function AccountDashboard() {
 
             {/* Dietary */}
             {userPreferences.dietary.length > 0 && (
-              <div>
+              <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
                   {t.account.preferences.dietary}
                 </div>
@@ -537,12 +583,24 @@ export default function AccountDashboard() {
                 </div>
               </div>
             )}
+
+            {/* Accessibility */}
+            {userPreferences.accessibility && userPreferences.accessibility.length > 0 && (
+              <div>
+                <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+                  Toegankelijkheid
+                </div>
+                <div className="preference-pills">
+                  {userPreferences.accessibility.map((access) => (
+                    <div key={access} className="pill" style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}>
+                      ♿ {getAccessibilityLabel(access)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-
-        <button className="primary-button" onClick={() => navigate('/onboarding?mode=edit')}>
-          ✏️ {t.account.preferences.editButton}
-        </button>
       </div>
 
       {/* Tab 2: Instellingen (Settings) */}
