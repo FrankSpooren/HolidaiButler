@@ -22,6 +22,12 @@ import { useNavigate } from 'react-router';
 import { useFavorites } from '../shared/contexts/FavoritesContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import {
+  ChangePasswordModal,
+  TwoFactorSetupModal,
+  DeleteDataModal,
+  DeleteAccountModal,
+} from '../features/account/components';
 import './AccountDashboard.css';
 
 type TabType = 'profiel' | 'instellingen' | 'privacy' | 'favorieten' | 'bezochte' | 'reviews' | 'ai' | 'export';
@@ -86,6 +92,13 @@ export default function AccountDashboard() {
     push: false,
   });
   const [exportFormat, setExportFormat] = useState<'json' | 'pdf' | 'both'>('pdf');
+
+  // Modal state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
+  const [showDeleteDataModal, setShowDeleteDataModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
 
   // Reload preferences when returning from onboarding
   useEffect(() => {
@@ -213,6 +226,64 @@ export default function AccountDashboard() {
       kosher: 'Kosher',
     };
     return labels[id] || id;
+  };
+
+  // Modal handlers
+  const handleChangePassword = async (currentPassword: string, newPassword: string) => {
+    // TODO: Implement API call
+    console.log('Changing password...', { currentPassword, newPassword });
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // For now, just close the modal on success
+    // In production, this would call: await api.put('/users/me/password', { currentPassword, newPassword });
+  };
+
+  const handleEnable2FA = async (verificationCode: string) => {
+    // TODO: Implement API call
+    console.log('Enabling 2FA with code:', verificationCode);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIs2FAEnabled(true);
+    // Return mock backup codes
+    return {
+      backupCodes: [
+        'ABCD-1234-EFGH',
+        'IJKL-5678-MNOP',
+        'QRST-9012-UVWX',
+        'YZ12-3456-7890',
+        'BCDE-FGHI-JKLM',
+        'NOPQ-RSTU-VWXY',
+      ],
+    };
+  };
+
+  const handleDisable2FA = async () => {
+    // TODO: Implement API call
+    console.log('Disabling 2FA...');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIs2FAEnabled(false);
+  };
+
+  const handleDeleteData = async () => {
+    // TODO: Implement API call
+    console.log('Deleting personal data...');
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Reset to default state
+    setProfileData({
+      name: '',
+      email: profileData.email,
+      registrationDate: profileData.registrationDate,
+    });
+    setAddressData({ street: '', postalCode: '', city: '' });
+    setUserPreferences({ travelCompanion: null, interests: [], dietary: [] });
+    localStorage.removeItem('userPreferences');
+  };
+
+  const handleDeleteAccount = async (reason?: string) => {
+    // TODO: Implement API call
+    console.log('Scheduling account deletion...', reason ? `Reason: ${reason}` : '');
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    // In production, this would schedule the account for deletion
+    // and send a confirmation email
   };
 
   return (
@@ -462,19 +533,21 @@ export default function AccountDashboard() {
       <div className={`tab-content ${activeTab === 'instellingen' ? 'active' : ''}`}>
         <div className="section-title">{t.account.settings.security}</div>
         <div className="nav-items">
-          <div className="nav-item">
+          <div className="nav-item" onClick={() => setShowPasswordModal(true)}>
             <div className="nav-left">
               <span className="nav-icon">🔑</span>
               <span className="nav-text">{t.account.settings.changePassword}</span>
             </div>
             <span className="nav-arrow">→</span>
           </div>
-          <div className="nav-item">
+          <div className="nav-item" onClick={() => setShowTwoFactorModal(true)}>
             <div className="nav-left">
               <span className="nav-icon">🔐</span>
               <div>
                 <div className="nav-text">{t.account.settings.twoFactor}</div>
-                <div style={{ fontSize: '12px', color: '#6B7280' }}>{t.account.settings.twoFactorStatus}</div>
+                <div style={{ fontSize: '12px', color: is2FAEnabled ? '#10B981' : '#6B7280' }}>
+                  {is2FAEnabled ? '✓ Actief' : t.account.settings.twoFactorStatus}
+                </div>
               </div>
             </div>
             <span className="nav-arrow">→</span>
@@ -516,11 +589,7 @@ export default function AccountDashboard() {
         <div
           className="nav-item"
           style={{ border: '1px solid #FED7AA', background: '#FFF7ED', marginBottom: '10px' }}
-          onClick={() =>
-            alert(
-              'Data deletion flow:\n\n1. Confirmation modal\n2. Explain account remains\n3. Type DELETE DATA to confirm\n4. Delete personal data\n5. Reset to standard settings\n\nAccount remains active.'
-            )
-          }
+          onClick={() => setShowDeleteDataModal(true)}
         >
           <div className="nav-left">
             <span className="nav-icon">🗑️</span>
@@ -540,11 +609,7 @@ export default function AccountDashboard() {
         <div
           className="nav-item"
           style={{ border: '1px solid #FEE2E2', background: '#FEF2F2' }}
-          onClick={() =>
-            alert(
-              'Account deletion flow:\n\n1. Confirmation modal\n2. Reason survey (optional)\n3. Type DELETE to confirm\n4. 30-day grace period\n5. Permanent deletion\n\nSee wireframe docs for full flow.'
-            )
-          }
+          onClick={() => setShowDeleteAccountModal(true)}
         >
           <div className="nav-left">
             <span className="nav-icon">⚠️</span>
@@ -904,6 +969,36 @@ export default function AccountDashboard() {
           ℹ️ {t.account.export.validityNote}
         </div>
       </div>
+
+      {/* Modals */}
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onConfirm={handleChangePassword}
+      />
+
+      <TwoFactorSetupModal
+        isOpen={showTwoFactorModal}
+        onClose={() => setShowTwoFactorModal(false)}
+        onEnable={handleEnable2FA}
+        onDisable={handleDisable2FA}
+        isEnabled={is2FAEnabled}
+        qrCodeUrl="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=otpauth://totp/HolidaiButler:frank@email.com?secret=JBSWY3DPEHPK3PXP&issuer=HolidaiButler"
+        secretKey="JBSWY 3DPE HPK3 PXP"
+      />
+
+      <DeleteDataModal
+        isOpen={showDeleteDataModal}
+        onClose={() => setShowDeleteDataModal(false)}
+        onConfirm={handleDeleteData}
+      />
+
+      <DeleteAccountModal
+        isOpen={showDeleteAccountModal}
+        onClose={() => setShowDeleteAccountModal(false)}
+        onConfirm={handleDeleteAccount}
+        userEmail={profileData.email}
+      />
     </div>
   );
 }
