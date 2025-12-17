@@ -7,6 +7,7 @@ import { LanguageProvider } from './i18n/LanguageContext';
 import { FavoritesProvider } from './shared/contexts/FavoritesContext';
 import { AgendaFavoritesProvider } from './shared/contexts/AgendaFavoritesContext';
 import { VisitedProvider } from './shared/contexts/VisitedContext';
+import { UserReviewsProvider } from './shared/contexts/UserReviewsContext';
 import { ComparisonProvider } from './shared/contexts/ComparisonContext';
 import { AgendaComparisonProvider } from './shared/contexts/AgendaComparisonContext';
 
@@ -34,7 +35,8 @@ function App() {
       <FavoritesProvider>
         <AgendaFavoritesProvider>
           <VisitedProvider>
-            <ComparisonProvider>
+            <UserReviewsProvider>
+              <ComparisonProvider>
               <AgendaComparisonProvider>
                 <HoliBotProvider>
                   <QueryClientProvider client={queryClient}>
@@ -44,6 +46,7 @@ function App() {
                 </HoliBotProvider>
               </AgendaComparisonProvider>
             </ComparisonProvider>
+            </UserReviewsProvider>
           </VisitedProvider>
         </AgendaFavoritesProvider>
       </FavoritesProvider>

@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router';
 import { useFavorites } from '../shared/contexts/FavoritesContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { useVisited } from '../shared/contexts/VisitedContext';
+import { useUserReviews, type UserReview } from '../shared/contexts/UserReviewsContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { usePOIsByIds } from '../features/poi/hooks/usePOIs';
 import { useEventsByIds, getEventTitle, getEventImage } from '../features/agenda/hooks/useEvents';
@@ -30,6 +31,7 @@ import {
   TwoFactorSetupModal,
   DeleteDataModal,
   DeleteAccountModal,
+  ReviewEditModal,
 } from '../features/account/components';
 import './AccountDashboard.css';
 
@@ -47,6 +49,7 @@ export default function AccountDashboard() {
   const { favorites } = useFavorites();
   const { agendaFavorites } = useAgendaFavorites();
   const { visitedPOIs, visitedEvents, getVisitedPOIIds, getVisitedEventIds } = useVisited();
+  const { reviews, isLoading: loadingReviews, updateReview, deleteReview, totalReviewsCount } = useUserReviews();
   const { t, language } = useLanguage();
 
   // Get IDs for data fetching
@@ -127,6 +130,7 @@ export default function AccountDashboard() {
   const [showDeleteDataModal, setShowDeleteDataModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [editingReview, setEditingReview] = useState<UserReview | null>(null);
 
   // Reload preferences when returning from onboarding
   useEffect(() => {
@@ -1014,7 +1018,7 @@ export default function AccountDashboard() {
 
       {/* Tab 6: Reviews */}
       <div className={`tab-content ${activeTab === 'reviews' ? 'active' : ''}`}>
-        <div className="section-title">⭐ {t.account.reviews.title}</div>
+        <div className="section-title">⭐ {t.account.reviews.title} ({totalReviewsCount})</div>
 
         <div className="info-box">
           <div className="info-text">
@@ -1022,21 +1026,84 @@ export default function AccountDashboard() {
           </div>
         </div>
 
-        <div className="empty-state" style={{ marginTop: '24px' }}>
-          <div className="empty-state-icon">✍️</div>
-          <div className="empty-state-text">
-            {t.account.reviews.empty}
+        {loadingReviews ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <span>Laden...</span>
           </div>
-          <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>
-            {t.account.reviews.emptyHint}
+        ) : reviews.length > 0 ? (
+          <div className="reviews-list">
+            {reviews.map((review) => (
+              <div key={review.id} className="review-card">
+                <div className="review-card-header">
+                  <div className="review-target-info">
+                    {review.targetImage ? (
+                      <img src={review.targetImage} alt={review.targetName} className="review-target-image" />
+                    ) : (
+                      <div className="review-target-placeholder">
+                        {review.type === 'poi' ? '📍' : '🎉'}
+                      </div>
+                    )}
+                    <div className="review-target-details">
+                      <div className="review-target-name">{review.targetName}</div>
+                      <div className="review-target-category">{review.targetCategory}</div>
+                    </div>
+                  </div>
+                  <div className="review-actions">
+                    <button
+                      className="review-edit-btn"
+                      onClick={() => setEditingReview(review)}
+                      title="Bewerken"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="review-delete-btn"
+                      onClick={() => {
+                        if (window.confirm('Weet je zeker dat je deze review wilt verwijderen?')) {
+                          deleteReview(review.id);
+                        }
+                      }}
+                      title="Verwijderen"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+                <div className="review-rating">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span key={star} className={star <= review.rating ? 'star-filled' : 'star-empty'}>
+                      ★
+                    </span>
+                  ))}
+                  <span className="review-date">
+                    {new Date(review.visitDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </span>
+                </div>
+                <p className="review-text">{review.reviewText}</p>
+                <div className="review-meta">
+                  <span className="review-written-date">
+                    Geschreven op {new Date(review.createdAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {review.updatedAt !== review.createdAt && ' (bewerkt)'}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-          <button className="secondary-button" onClick={() => navigate('/explore')}>
-            {t.account.reviews.discoverToReview}
-          </button>
-        </div>
-
-        {/* Placeholder for future reviews list */}
-        {/* When reviews are available, they will be shown here in a list format */}
+        ) : (
+          <div className="empty-state" style={{ marginTop: '24px' }}>
+            <div className="empty-state-icon">✍️</div>
+            <div className="empty-state-text">
+              {t.account.reviews.empty}
+            </div>
+            <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>
+              {t.account.reviews.emptyHint}
+            </div>
+            <button className="secondary-button" onClick={() => navigate('/explore')}>
+              {t.account.reviews.discoverToReview}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tab 7: AI Settings */}
@@ -1194,6 +1261,16 @@ export default function AccountDashboard() {
         onClose={() => setShowDeleteAccountModal(false)}
         onConfirm={handleDeleteAccount}
         userEmail={profileData.email}
+      />
+
+      <ReviewEditModal
+        isOpen={!!editingReview}
+        review={editingReview}
+        onClose={() => setEditingReview(null)}
+        onSave={(id, updates) => {
+          updateReview(id, updates);
+          setEditingReview(null);
+        }}
       />
     </div>
   );
