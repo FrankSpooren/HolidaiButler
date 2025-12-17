@@ -28,7 +28,19 @@ function getClientIP(req) {
  */
 router.get('/', authenticate, async (req, res) => {
   try {
-    const userId = req.user.id;
+    // JWT contains UUID, we need to find the integer user ID
+    const userUuid = req.user.id || req.user.userId;
+
+    // Find user by UUID to get integer ID
+    const user = await User.findOne({ where: { uuid: userUuid } });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Gebruiker niet gevonden'
+      });
+    }
+
+    const userId = user.id; // Integer ID for database operations
 
     // Find or create consent record
     let consent = await UserConsent.findOne({ where: { userId } });
@@ -61,8 +73,7 @@ router.get('/', authenticate, async (req, res) => {
     logger.error('Error fetching consent:', error.message, error.stack);
     res.status(500).json({
       success: false,
-      message: 'Fout bij ophalen van privacy-instellingen',
-      debug: error.message // Tijdelijk voor debugging
+      message: 'Fout bij ophalen van privacy-instellingen'
     });
   }
 });
@@ -74,7 +85,19 @@ router.get('/', authenticate, async (req, res) => {
  */
 router.put('/', authenticate, async (req, res) => {
   try {
-    const userId = req.user.id;
+    // JWT contains UUID, we need to find the integer user ID
+    const userUuid = req.user.id || req.user.userId;
+
+    // Find user by UUID to get integer ID
+    const user = await User.findOne({ where: { uuid: userUuid } });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Gebruiker niet gevonden'
+      });
+    }
+
+    const userId = user.id; // Integer ID for database operations
     const { analytics, personalization, marketing } = req.body;
 
     // Find or create consent record
@@ -184,8 +207,7 @@ router.put('/', authenticate, async (req, res) => {
     logger.error('Error updating consent:', error.message, error.stack);
     res.status(500).json({
       success: false,
-      message: 'Fout bij opslaan van privacy-instellingen',
-      debug: error.message // Tijdelijk voor debugging
+      message: 'Fout bij opslaan van privacy-instellingen'
     });
   }
 });
@@ -197,7 +219,16 @@ router.put('/', authenticate, async (req, res) => {
  */
 router.get('/history', authenticate, async (req, res) => {
   try {
-    const userId = req.user.id;
+    // JWT contains UUID, we need to find the integer user ID
+    const userUuid = req.user.id || req.user.userId;
+    const user = await User.findOne({ where: { uuid: userUuid } });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Gebruiker niet gevonden'
+      });
+    }
+    const userId = user.id;
 
     const history = await ConsentHistory.findAll({
       where: { userId },
@@ -232,7 +263,16 @@ router.get('/history', authenticate, async (req, res) => {
  */
 router.post('/check', authenticate, async (req, res) => {
   try {
-    const userId = req.user.id;
+    // JWT contains UUID, we need to find the integer user ID
+    const userUuid = req.user.id || req.user.userId;
+    const user = await User.findOne({ where: { uuid: userUuid } });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Gebruiker niet gevonden'
+      });
+    }
+    const userId = user.id;
     const { type } = req.body;
 
     if (!['essential', 'analytics', 'personalization', 'marketing'].includes(type)) {
