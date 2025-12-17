@@ -342,9 +342,13 @@ export interface Translations {
       privacy: string;
       export: string;
       settings: string;
+      favorites: string;
+      visited: string;
+      reviews: string;
     };
     profile: {
       memberSince: string;
+      butlerFanSince: string;
       clickAvatarHint: string;
       changePhoto: string;
       quickActions: string;
@@ -353,6 +357,33 @@ export interface Translations {
       visits: string;
       reviews: string;
       comingSoon: string;
+    };
+    favorites: {
+      title: string;
+      infoText: string;
+      poiTitle: string;
+      eventsTitle: string;
+      emptyPois: string;
+      emptyEvents: string;
+      discoverPois: string;
+      viewAgenda: string;
+      viewAll: string;
+    };
+    visited: {
+      title: string;
+      infoText: string;
+      poisTitle: string;
+      eventsTitle: string;
+      emptyPois: string;
+      emptyEvents: string;
+      trackingInfo: string;
+    };
+    reviews: {
+      title: string;
+      infoText: string;
+      empty: string;
+      emptyHint: string;
+      discoverToReview: string;
     };
     preferences: {
       title: string;
@@ -867,9 +898,13 @@ export const translations: Record<Language, Translations> = {
         privacy: 'Privacy',
         export: 'Export',
         settings: 'Instellingen',
+        favorites: 'Favorieten',
+        visited: 'Bezochte',
+        reviews: 'Reviews',
       },
       profile: {
         memberSince: 'Lid sinds',
+        butlerFanSince: 'Butler-fan sinds',
         clickAvatarHint: 'Klik op avatar om foto te uploaden',
         changePhoto: 'Foto Wijzigen',
         quickActions: 'Snelle Acties',
@@ -878,6 +913,33 @@ export const translations: Record<Language, Translations> = {
         visits: 'Bezoeken',
         reviews: 'Reviews',
         comingSoon: 'Binnenkort',
+      },
+      favorites: {
+        title: 'Favorieten',
+        infoText: 'Je opgeslagen POIs en events op één plek.',
+        poiTitle: 'Favoriete POIs',
+        eventsTitle: 'Favoriete Events',
+        emptyPois: 'Je hebt nog geen favoriete POIs opgeslagen.',
+        emptyEvents: 'Je hebt nog geen favoriete events opgeslagen.',
+        discoverPois: 'Ontdek POIs →',
+        viewAgenda: 'Bekijk Agenda →',
+        viewAll: 'Bekijk alle',
+      },
+      visited: {
+        title: 'Bezochte Plekken',
+        infoText: 'Automatisch bijgehouden wanneer je POIs en events bekijkt.',
+        poisTitle: 'Bezochte POIs',
+        eventsTitle: 'Bezochte Events',
+        emptyPois: 'Bezochte POIs tracking wordt binnenkort geactiveerd.',
+        emptyEvents: 'Bezochte events tracking wordt binnenkort geactiveerd.',
+        trackingInfo: 'Je bezoekgeschiedenis wordt automatisch bijgehouden zodra je POIs bekijkt.',
+      },
+      reviews: {
+        title: 'Mijn Reviews',
+        infoText: 'Bekijk en bewerk je geschreven reviews.',
+        empty: 'Je hebt nog geen reviews geschreven.',
+        emptyHint: 'Deel je ervaringen en help andere reizigers!',
+        discoverToReview: 'Ontdek POIs om te reviewen →',
       },
       preferences: {
         title: 'Reisvoorkeuren',
@@ -1342,9 +1404,13 @@ export const translations: Record<Language, Translations> = {
         privacy: 'Privacy',
         export: 'Export',
         settings: 'Settings',
+        favorites: 'Favorites',
+        visited: 'Visited',
+        reviews: 'Reviews',
       },
       profile: {
         memberSince: 'Member since',
+        butlerFanSince: 'Butler fan since',
         clickAvatarHint: 'Click avatar to upload photo',
         changePhoto: 'Change Photo',
         quickActions: 'Quick Actions',
@@ -1353,6 +1419,33 @@ export const translations: Record<Language, Translations> = {
         visits: 'Visits',
         reviews: 'Reviews',
         comingSoon: 'Coming soon',
+      },
+      favorites: {
+        title: 'Favorites',
+        infoText: 'Your saved POIs and events in one place.',
+        poiTitle: 'Favorite POIs',
+        eventsTitle: 'Favorite Events',
+        emptyPois: 'You haven\'t saved any favorite POIs yet.',
+        emptyEvents: 'You haven\'t saved any favorite events yet.',
+        discoverPois: 'Discover POIs →',
+        viewAgenda: 'View Agenda →',
+        viewAll: 'View all',
+      },
+      visited: {
+        title: 'Visited Places',
+        infoText: 'Automatically tracked when you view POIs and events.',
+        poisTitle: 'Visited POIs',
+        eventsTitle: 'Visited Events',
+        emptyPois: 'Visited POIs tracking will be activated soon.',
+        emptyEvents: 'Visited events tracking will be activated soon.',
+        trackingInfo: 'Your visit history will be automatically tracked when you view POIs.',
+      },
+      reviews: {
+        title: 'My Reviews',
+        infoText: 'View and edit your written reviews.',
+        empty: 'You haven\'t written any reviews yet.',
+        emptyHint: 'Share your experiences and help other travelers!',
+        discoverToReview: 'Discover POIs to review →',
       },
       preferences: {
         title: 'Travel Preferences',
@@ -1862,9 +1955,13 @@ export const translations: Record<Language, Translations> = {
         privacy: 'Datenschutz',
         export: 'Export',
         settings: 'Einstellungen',
+        favorites: 'Favoriten',
+        visited: 'Besucht',
+        reviews: 'Bewertungen',
       },
       profile: {
         memberSince: 'Mitglied seit',
+        butlerFanSince: 'Butler-Fan seit',
         clickAvatarHint: 'Klicken Sie auf den Avatar, um ein Foto hochzuladen',
         changePhoto: 'Foto Ändern',
         quickActions: 'Schnellaktionen',
@@ -1873,6 +1970,33 @@ export const translations: Record<Language, Translations> = {
         visits: 'Besuche',
         reviews: 'Bewertungen',
         comingSoon: 'Demnächst',
+      },
+      favorites: {
+        title: 'Favoriten',
+        infoText: 'Ihre gespeicherten POIs und Events an einem Ort.',
+        poiTitle: 'Favoriten-POIs',
+        eventsTitle: 'Favoriten-Events',
+        emptyPois: 'Sie haben noch keine Favoriten-POIs gespeichert.',
+        emptyEvents: 'Sie haben noch keine Favoriten-Events gespeichert.',
+        discoverPois: 'POIs entdecken →',
+        viewAgenda: 'Agenda ansehen →',
+        viewAll: 'Alle anzeigen',
+      },
+      visited: {
+        title: 'Besuchte Orte',
+        infoText: 'Automatisch verfolgt, wenn Sie POIs und Events ansehen.',
+        poisTitle: 'Besuchte POIs',
+        eventsTitle: 'Besuchte Events',
+        emptyPois: 'Besuchte POIs-Tracking wird bald aktiviert.',
+        emptyEvents: 'Besuchte Events-Tracking wird bald aktiviert.',
+        trackingInfo: 'Ihr Besuchsverlauf wird automatisch verfolgt, wenn Sie POIs ansehen.',
+      },
+      reviews: {
+        title: 'Meine Bewertungen',
+        infoText: 'Ihre geschriebenen Bewertungen anzeigen und bearbeiten.',
+        empty: 'Sie haben noch keine Bewertungen geschrieben.',
+        emptyHint: 'Teilen Sie Ihre Erfahrungen und helfen Sie anderen Reisenden!',
+        discoverToReview: 'POIs zum Bewerten entdecken →',
       },
       preferences: {
         title: 'Reisepräferenzen',
@@ -2382,9 +2506,13 @@ export const translations: Record<Language, Translations> = {
         privacy: 'Privacidad',
         export: 'Exportar',
         settings: 'Configuración',
+        favorites: 'Favoritos',
+        visited: 'Visitados',
+        reviews: 'Reseñas',
       },
       profile: {
         memberSince: 'Miembro desde',
+        butlerFanSince: 'Fan del Butler desde',
         clickAvatarHint: 'Haz clic en el avatar para subir una foto',
         changePhoto: 'Cambiar Foto',
         quickActions: 'Acciones Rápidas',
@@ -2393,6 +2521,33 @@ export const translations: Record<Language, Translations> = {
         visits: 'Visitas',
         reviews: 'Reseñas',
         comingSoon: 'Próximamente',
+      },
+      favorites: {
+        title: 'Favoritos',
+        infoText: 'Tus POIs y eventos guardados en un solo lugar.',
+        poiTitle: 'POIs Favoritos',
+        eventsTitle: 'Eventos Favoritos',
+        emptyPois: 'Aún no has guardado ningún POI favorito.',
+        emptyEvents: 'Aún no has guardado ningún evento favorito.',
+        discoverPois: 'Descubrir POIs →',
+        viewAgenda: 'Ver Agenda →',
+        viewAll: 'Ver todos',
+      },
+      visited: {
+        title: 'Lugares Visitados',
+        infoText: 'Seguimiento automático cuando ves POIs y eventos.',
+        poisTitle: 'POIs Visitados',
+        eventsTitle: 'Eventos Visitados',
+        emptyPois: 'El seguimiento de POIs visitados se activará pronto.',
+        emptyEvents: 'El seguimiento de eventos visitados se activará pronto.',
+        trackingInfo: 'Tu historial de visitas se registrará automáticamente cuando veas POIs.',
+      },
+      reviews: {
+        title: 'Mis Reseñas',
+        infoText: 'Ver y editar tus reseñas escritas.',
+        empty: 'Aún no has escrito ninguna reseña.',
+        emptyHint: '¡Comparte tus experiencias y ayuda a otros viajeros!',
+        discoverToReview: 'Descubrir POIs para reseñar →',
       },
       preferences: {
         title: 'Preferencias de Viaje',
@@ -2902,9 +3057,13 @@ export const translations: Record<Language, Translations> = {
         privacy: 'Integritet',
         export: 'Exportera',
         settings: 'Inställningar',
+        favorites: 'Favoriter',
+        visited: 'Besökta',
+        reviews: 'Recensioner',
       },
       profile: {
         memberSince: 'Medlem sedan',
+        butlerFanSince: 'Butler-fan sedan',
         clickAvatarHint: 'Klicka på avataren för att ladda upp foto',
         changePhoto: 'Ändra Foto',
         quickActions: 'Snabbåtgärder',
@@ -2913,6 +3072,33 @@ export const translations: Record<Language, Translations> = {
         visits: 'Besök',
         reviews: 'Recensioner',
         comingSoon: 'Kommer snart',
+      },
+      favorites: {
+        title: 'Favoriter',
+        infoText: 'Dina sparade POI:er och evenemang på ett ställe.',
+        poiTitle: 'Favorit-POI:er',
+        eventsTitle: 'Favoritevenemang',
+        emptyPois: 'Du har inte sparat några favorit-POI:er ännu.',
+        emptyEvents: 'Du har inte sparat några favoritevenemang ännu.',
+        discoverPois: 'Upptäck POI:er →',
+        viewAgenda: 'Visa Agenda →',
+        viewAll: 'Visa alla',
+      },
+      visited: {
+        title: 'Besökta Platser',
+        infoText: 'Spåras automatiskt när du visar POI:er och evenemang.',
+        poisTitle: 'Besökta POI:er',
+        eventsTitle: 'Besökta Evenemang',
+        emptyPois: 'Spårning av besökta POI:er aktiveras snart.',
+        emptyEvents: 'Spårning av besökta evenemang aktiveras snart.',
+        trackingInfo: 'Din besökshistorik spåras automatiskt när du visar POI:er.',
+      },
+      reviews: {
+        title: 'Mina Recensioner',
+        infoText: 'Visa och redigera dina skrivna recensioner.',
+        empty: 'Du har inte skrivit några recensioner ännu.',
+        emptyHint: 'Dela dina upplevelser och hjälp andra resenärer!',
+        discoverToReview: 'Upptäck POI:er att recensera →',
       },
       preferences: {
         title: 'Resepreferenser',
@@ -3422,9 +3608,13 @@ export const translations: Record<Language, Translations> = {
         privacy: 'Prywatność',
         export: 'Eksport',
         settings: 'Ustawienia',
+        favorites: 'Ulubione',
+        visited: 'Odwiedzone',
+        reviews: 'Recenzje',
       },
       profile: {
         memberSince: 'Członek od',
+        butlerFanSince: 'Fan Butlera od',
         clickAvatarHint: 'Kliknij avatar, aby przesłać zdjęcie',
         changePhoto: 'Zmień Zdjęcie',
         quickActions: 'Szybkie Akcje',
@@ -3433,6 +3623,33 @@ export const translations: Record<Language, Translations> = {
         visits: 'Wizyty',
         reviews: 'Recenzje',
         comingSoon: 'Wkrótce',
+      },
+      favorites: {
+        title: 'Ulubione',
+        infoText: 'Twoje zapisane POI i wydarzenia w jednym miejscu.',
+        poiTitle: 'Ulubione POI',
+        eventsTitle: 'Ulubione Wydarzenia',
+        emptyPois: 'Nie masz jeszcze żadnych ulubionych POI.',
+        emptyEvents: 'Nie masz jeszcze żadnych ulubionych wydarzeń.',
+        discoverPois: 'Odkryj POI →',
+        viewAgenda: 'Zobacz Agendę →',
+        viewAll: 'Zobacz wszystkie',
+      },
+      visited: {
+        title: 'Odwiedzone Miejsca',
+        infoText: 'Automatycznie śledzone podczas przeglądania POI i wydarzeń.',
+        poisTitle: 'Odwiedzone POI',
+        eventsTitle: 'Odwiedzone Wydarzenia',
+        emptyPois: 'Śledzenie odwiedzonych POI zostanie wkrótce aktywowane.',
+        emptyEvents: 'Śledzenie odwiedzonych wydarzeń zostanie wkrótce aktywowane.',
+        trackingInfo: 'Historia odwiedzin będzie automatycznie śledzona podczas przeglądania POI.',
+      },
+      reviews: {
+        title: 'Moje Recenzje',
+        infoText: 'Przeglądaj i edytuj swoje napisane recenzje.',
+        empty: 'Nie napisałeś jeszcze żadnych recenzji.',
+        emptyHint: 'Podziel się swoimi doświadczeniami i pomóż innym podróżnikom!',
+        discoverToReview: 'Odkryj POI do zrecenzowania →',
       },
       preferences: {
         title: 'Preferencje podróżne',
