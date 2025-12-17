@@ -19,55 +19,60 @@ import UserConsent from './UserConsent.js';
 import ConsentHistory from './ConsentHistory.js';
 
 // ============================================================================
-// Define Associations
+// Define Associations (with guard to prevent duplicate registration)
 // ============================================================================
 
-// POI Associations
-POI.hasMany(POIScoreHistory, { foreignKey: 'poi_id', as: 'scoreHistory' });
-POI.hasMany(POIDataSource, { foreignKey: 'poi_id', as: 'dataSources' });
+// Guard to prevent duplicate association registration on multiple imports
+const associationsInitialized = POI.associations && Object.keys(POI.associations).length > 0;
 
-POIScoreHistory.belongsTo(POI, { foreignKey: 'poi_id', as: 'poi' });
-POIDataSource.belongsTo(POI, { foreignKey: 'poi_id', as: 'poi' });
+if (!associationsInitialized) {
+  // POI Associations
+  POI.hasMany(POIScoreHistory, { foreignKey: 'poi_id', as: 'scoreHistory' });
+  POI.hasMany(POIDataSource, { foreignKey: 'poi_id', as: 'dataSources' });
 
-// User-Role Association
-User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
-Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
+  POIScoreHistory.belongsTo(POI, { foreignKey: 'poi_id', as: 'poi' });
+  POIDataSource.belongsTo(POI, { foreignKey: 'poi_id', as: 'poi' });
 
-// Role-Permission Many-to-Many (through role_permissions table)
-Role.belongsToMany(Permission, {
-  through: 'role_permissions',
-  foreignKey: 'role_id',
-  otherKey: 'permission_id',
-  as: 'permissions',
-});
-Permission.belongsToMany(Role, {
-  through: 'role_permissions',
-  foreignKey: 'permission_id',
-  otherKey: 'role_id',
-  as: 'roles',
-});
+  // User-Role Association
+  User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
+  Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
 
-// User-Permission Many-to-Many (through user_permissions table for overrides)
-User.belongsToMany(Permission, {
-  through: 'user_permissions',
-  foreignKey: 'user_id',
-  otherKey: 'permission_id',
-  as: 'directPermissions',
-});
-Permission.belongsToMany(User, {
-  through: 'user_permissions',
-  foreignKey: 'permission_id',
-  otherKey: 'user_id',
-  as: 'usersWithPermission',
-});
+  // Role-Permission Many-to-Many (through role_permissions table)
+  Role.belongsToMany(Permission, {
+    through: 'role_permissions',
+    foreignKey: 'role_id',
+    otherKey: 'permission_id',
+    as: 'permissions',
+  });
+  Permission.belongsToMany(Role, {
+    through: 'role_permissions',
+    foreignKey: 'permission_id',
+    otherKey: 'role_id',
+    as: 'roles',
+  });
 
-// User-Consent Association
-User.hasOne(UserConsent, { foreignKey: 'user_id', as: 'consent' });
-UserConsent.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+  // User-Permission Many-to-Many (through user_permissions table for overrides)
+  User.belongsToMany(Permission, {
+    through: 'user_permissions',
+    foreignKey: 'user_id',
+    otherKey: 'permission_id',
+    as: 'directPermissions',
+  });
+  Permission.belongsToMany(User, {
+    through: 'user_permissions',
+    foreignKey: 'permission_id',
+    otherKey: 'user_id',
+    as: 'usersWithPermission',
+  });
 
-// User-ConsentHistory Association
-User.hasMany(ConsentHistory, { foreignKey: 'user_id', as: 'consentHistory' });
-ConsentHistory.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+  // User-Consent Association
+  User.hasOne(UserConsent, { foreignKey: 'user_id', as: 'consent' });
+  UserConsent.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+  // User-ConsentHistory Association
+  User.hasMany(ConsentHistory, { foreignKey: 'user_id', as: 'consentHistory' });
+  ConsentHistory.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+}
 
 // ============================================================================
 // Export Models

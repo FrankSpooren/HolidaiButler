@@ -46,6 +46,10 @@ import metricsService from './services/metrics.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for correct IP detection behind Apache/Nginx reverse proxy
+// Required for express-rate-limit to work correctly
+app.set('trust proxy', 1);
+
 /**
  * Initialize Platform Core
  */
