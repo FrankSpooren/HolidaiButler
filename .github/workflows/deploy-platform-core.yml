@@ -87,20 +87,23 @@ jobs:
         run: |
           ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && npm ci --only=production && mkdir -p logs && (pm2 restart ${{ env.PM2_PROCESS_NAME }} 2>/dev/null || pm2 start src/index.js --name ${{ env.PM2_PROCESS_NAME }} --cwd ${{ env.DEPLOY_PATH }}) && pm2 save"
 
+      - name: Server Status (always show)
+        run: |
+          echo "=== PM2 Status ==="
+          ssh root@91.98.71.87 "pm2 list"
+          echo ""
+          echo "=== PM2 Logs (last 80 lines) ==="
+          ssh root@91.98.71.87 "pm2 logs ${{ env.PM2_PROCESS_NAME }} --lines 80 --nostream" || echo "No logs found"
+          echo ""
+          echo "=== Port Check ==="
+          ssh root@91.98.71.87 "netstat -tlnp | grep :3001 || echo 'Port 3001 not listening'"
+
       - name: Health check
         run: |
-          sleep 8
-          STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://test.holidaibutler.com/health 2>/dev/null || echo "000")
-          echo "Platform Core API status: $STATUS"
-          if [ "$STATUS" -eq 200 ]; then
-            echo "Platform Core API deployed successfully!"
-          else
-            echo "Warning: Health check returned $STATUS"
-            echo "=== PM2 Status ==="
-            ssh root@91.98.71.87 "pm2 list"
-            echo "=== Recent PM2 Logs ==="
-            ssh root@91.98.71.87 "pm2 logs ${{ env.PM2_PROCESS_NAME }} --lines 50 --nostream" || true
-          fi
+          sleep 3
+          echo "=== Health Check ==="
+          STATUS=$(curl -v https://test.holidaibutler.com/health 2>&1 || echo "CURL FAILED")
+          echo "$STATUS"
 
       - name: Notify
         if: success()
