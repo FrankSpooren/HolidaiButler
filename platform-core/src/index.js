@@ -1,6 +1,7 @@
 /**
  * HolidaiButler Platform Core
  * Central Integration Hub - Main Entry Point
+ * Last deployment trigger: 2025-12-17 21:15
  */
 
 // IMPORTANT: Load environment variables FIRST, before any other imports
