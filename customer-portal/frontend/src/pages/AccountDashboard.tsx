@@ -6,11 +6,13 @@
  * Auth: Protected (requires authentication)
  *
  * Features:
- * - 6-tab navigation (Profile, Preferences, AI, Privacy, Export, Settings)
+ * - 8-tab navigation (Profiel, Instellingen, Privacy, Favorieten, Bezochte, Reviews, AI, Export)
  * - GDPR compliant (Art. 7, 15, 17, 20)
  * - EU AI Act transparency
- * - Profile management
+ * - Profile management with integrated preferences
  * - Privacy controls
+ * - Favorites & Visited tracking
+ * - Reviews management
  * - Data export
  * - Account deletion flow
  */
@@ -22,7 +24,7 @@ import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import './AccountDashboard.css';
 
-type TabType = 'profile' | 'preferences' | 'ai' | 'privacy' | 'export' | 'settings';
+type TabType = 'profiel' | 'instellingen' | 'privacy' | 'favorieten' | 'bezochte' | 'reviews' | 'ai' | 'export';
 
 interface UserPreferences {
   travelCompanion: string | null;
@@ -36,7 +38,7 @@ export default function AccountDashboard() {
   const { agendaFavorites } = useAgendaFavorites();
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('profile');
+  const [activeTab, setActiveTab] = useState<TabType>('profiel');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Load user preferences from localStorage
@@ -180,8 +182,8 @@ export default function AccountDashboard() {
 
   return (
     <div className="account-container">
-      {/* Tab 1: Profile */}
-      <div className={`tab-content ${activeTab === 'profile' ? 'active' : ''}`}>
+      {/* Tab 1: Profiel (Profile + Preferences combined) */}
+      <div className={`tab-content ${activeTab === 'profiel' ? 'active' : ''}`}>
         <div className="profile-card">
           <div className="avatar" onClick={handleAvatarClick} title={t.account.profile.clickAvatarHint}>
             {avatarUrl ? (
@@ -209,46 +211,18 @@ export default function AccountDashboard() {
           />
           <div className="profile-name">Frank Jansen</div>
           <div className="profile-email">frank@email.com</div>
-          <div className="profile-since">{t.account.profile.memberSince}: Oct 27, 2025</div>
+          <div className="butler-fan-since">
+            <span className="butler-fan-icon">🎩</span>
+            <span>Butler-fan sinds: <strong>27 oktober 2025</strong></span>
+          </div>
           <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '8px' }}>
             💡 {t.account.profile.clickAvatarHint}
           </div>
         </div>
 
-        <div className="section-title">{t.account.profile.quickActions}</div>
-        <div className="quick-actions">
-          <div className="action-card" onClick={() => switchTab('preferences')}>
-            <div className="action-icon">💾</div>
-            <div className="action-label">{t.account.profile.savedPOIs}</div>
-            <div className="action-value">12</div>
-          </div>
-          <div className="action-card" onClick={() => navigate('/favorites')}>
-            <div className="action-icon">❤️</div>
-            <div className="action-label">{t.account.profile.favorites}</div>
-            <div className="action-value">{favoritesCount}</div>
-          </div>
-          <div
-            className="action-card"
-            onClick={() => alert('📊 Visits Tracking\n\nDeze feature is nog in ontwikkeling.\n\nWat komt er:\n✓ Automatische tracking van bezochte POIs\n✓ Visit history met datums\n✓ Statistieken en insights\n✓ Exporteren van visit data\n\nBack-end monitoring wordt binnenkort toegevoegd!')}
-            style={{ opacity: 0.7 }}
-          >
-            <div className="action-icon">🗺️</div>
-            <div className="action-label">{t.account.profile.visits}</div>
-            <div className="action-value" style={{ fontSize: '16px' }}>🚧</div>
-            <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px' }}>{t.account.profile.comingSoon}</div>
-          </div>
-          <div className="action-card">
-            <div className="action-icon">⭐</div>
-            <div className="action-label">{t.account.profile.reviews}</div>
-            <div className="action-value">3</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tab 2: Preferences */}
-      <div className={`tab-content ${activeTab === 'preferences' ? 'active' : ''}`}>
+        {/* Preferences Section - Integrated */}
         <div className="section-title">{t.account.preferences.title}</div>
-        <div className="profile-card">
+        <div className="profile-card preferences-card">
           <div style={{ textAlign: 'left' }}>
             {/* Traveling As */}
             <div style={{ marginBottom: '16px' }}>
@@ -319,213 +293,13 @@ export default function AccountDashboard() {
           </div>
         </div>
 
-        <button className="primary-button" onClick={() => navigate('/onboarding?mode=edit')}>{t.account.preferences.editButton}</button>
-      </div>
-
-      {/* Tab 3: AI Settings */}
-      <div className={`tab-content ${activeTab === 'ai' ? 'active' : ''}`}>
-        <div className="section-title">💚 {t.account.ai.title}</div>
-
-        <div className="info-box">
-          <div className="info-text">
-            ℹ️ {t.account.ai.infoText}
-          </div>
-        </div>
-
-        <div className="section-title">{t.account.ai.features}</div>
-
-        <div className="toggle-item">
-          <div className="toggle-left">
-            <div className="toggle-title">{t.account.ai.personalizedRecs}</div>
-            <div className="toggle-desc">{t.account.ai.personalizedRecsDesc}</div>
-          </div>
-          <div
-            className={`toggle-switch ${aiToggles.personalized ? 'on' : ''}`}
-            onClick={() => toggleAiSetting('personalized')}
-          >
-            <div className="toggle-circle"></div>
-          </div>
-        </div>
-
-        <div className="toggle-item">
-          <div className="toggle-left">
-            <div className="toggle-title">{t.account.ai.smartFilters}</div>
-            <div className="toggle-desc">{t.account.ai.smartFiltersDesc}</div>
-          </div>
-          <div
-            className={`toggle-switch ${aiToggles.smartFilters ? 'on' : ''}`}
-            onClick={() => toggleAiSetting('smartFilters')}
-          >
-            <div className="toggle-circle"></div>
-          </div>
-        </div>
-
-        <div className="toggle-item">
-          <div className="toggle-left">
-            <div className="toggle-title">{t.account.ai.behavioralLearning}</div>
-            <div className="toggle-desc">{t.account.ai.behavioralLearningDesc}</div>
-          </div>
-          <div
-            className={`toggle-switch ${aiToggles.behavioralLearning ? 'on' : ''}`}
-            onClick={() => toggleAiSetting('behavioralLearning')}
-          >
-            <div className="toggle-circle"></div>
-          </div>
-        </div>
-
-        <button className="secondary-button">ℹ️ {t.account.ai.howItWorks}</button>
-      </div>
-
-      {/* Tab 4: Privacy */}
-      <div className={`tab-content ${activeTab === 'privacy' ? 'active' : ''}`}>
-        <div className="section-title">🔐 {t.account.privacy.title}</div>
-
-        <div className="info-box">
-          <div className="info-text">
-            ℹ️ {t.account.privacy.subtitle}
-          </div>
-        </div>
-
-        <div className="section-title" style={{ marginTop: '16px' }}>
-          {t.account.privacy.dataCollection}
-        </div>
-
-        <div className="toggle-item">
-          <div className="toggle-left">
-            <div className="toggle-title">{t.account.privacy.essentialCookies}</div>
-            <div className="toggle-desc">{t.account.privacy.essentialCookiesDesc}</div>
-          </div>
-          <div
-            style={{
-              padding: '8px 12px',
-              background: '#E5E7EB',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: '#6B7280',
-            }}
-          >
-            {t.account.privacy.required}
-          </div>
-        </div>
-
-        <div className="toggle-item">
-          <div className="toggle-left">
-            <div className="toggle-title">{t.account.privacy.analytics}</div>
-            <div className="toggle-desc">{t.account.privacy.analyticsDesc}</div>
-          </div>
-          <div
-            className={`toggle-switch ${privacyToggles.analytics ? 'on' : ''}`}
-            onClick={() => togglePrivacySetting('analytics')}
-          >
-            <div className="toggle-circle"></div>
-          </div>
-        </div>
-
-        <div className="toggle-item">
-          <div className="toggle-left">
-            <div className="toggle-title">{t.account.privacy.personalization}</div>
-            <div className="toggle-desc">{t.account.privacy.personalizationDesc}</div>
-          </div>
-          <div
-            className={`toggle-switch ${privacyToggles.personalization ? 'on' : ''}`}
-            onClick={() => togglePrivacySetting('personalization')}
-          >
-            <div className="toggle-circle"></div>
-          </div>
-        </div>
-
-        <div className="toggle-item">
-          <div className="toggle-left">
-            <div className="toggle-title">{t.account.privacy.marketing}</div>
-            <div className="toggle-desc">{t.account.privacy.marketingDesc}</div>
-          </div>
-          <div
-            className={`toggle-switch ${privacyToggles.marketing ? 'on' : ''}`}
-            onClick={() => togglePrivacySetting('marketing')}
-          >
-            <div className="toggle-circle"></div>
-          </div>
-        </div>
-
-        <button className="primary-button">{t.account.privacy.updateButton}</button>
-      </div>
-
-      {/* Tab 5: Export */}
-      <div className={`tab-content ${activeTab === 'export' ? 'active' : ''}`}>
-        <div className="section-title">📥 {t.account.export.title}</div>
-
-        <div className="info-box">
-          <div className="info-text">
-            ℹ️ {t.account.export.infoText}
-          </div>
-        </div>
-
-        <div className="section-title">{t.account.export.whatIncluded}</div>
-        <div className="data-export-list">
-          <ul>
-            <li>✓ {t.account.export.includeList.profile}</li>
-            <li>✓ {t.account.export.includeList.preferences}</li>
-            <li>✓ {t.account.export.includeList.savedPOIs}</li>
-            <li>✓ {t.account.export.includeList.reviews}</li>
-            <li>✓ {t.account.export.includeList.visitHistory}</li>
-            <li>✓ {t.account.export.includeList.activityLog}</li>
-            <li>✓ {t.account.export.includeList.consentSettings}</li>
-          </ul>
-        </div>
-
-        <div className="section-title">{t.account.export.format}</div>
-        <div className="export-format-box">
-          <label>
-            <input
-              type="radio"
-              name="format"
-              value="json"
-              checked={exportFormat === 'json'}
-              onChange={() => setExportFormat('json')}
-            />
-            <span style={{ fontSize: '14px' }}>{t.account.export.formatJSON}</span>
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="format"
-              value="pdf"
-              checked={exportFormat === 'pdf'}
-              onChange={() => setExportFormat('pdf')}
-            />
-            <span style={{ fontSize: '14px' }}>{t.account.export.formatPDF}</span>
-          </label>
-          <label style={{ marginBottom: 0 }}>
-            <input
-              type="radio"
-              name="format"
-              value="both"
-              checked={exportFormat === 'both'}
-              onChange={() => setExportFormat('both')}
-            />
-            <span style={{ fontSize: '14px' }}>{t.account.export.formatBoth}</span>
-          </label>
-        </div>
-
-        <button
-          className="primary-button"
-          onClick={() =>
-            alert(
-              'Data export requested!\n\nYou will receive an email when your data is ready (typically 2-5 minutes).\n\nDownload link will be valid for 7 days.'
-            )
-          }
-        >
-          {t.account.export.requestButton}
+        <button className="primary-button" onClick={() => navigate('/onboarding?mode=edit')}>
+          ✏️ {t.account.preferences.editButton}
         </button>
-
-        <div style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', marginTop: '12px', lineHeight: 1.5 }}>
-          ℹ️ {t.account.export.validityNote}
-        </div>
       </div>
 
-      {/* Tab 6: Settings */}
-      <div className={`tab-content ${activeTab === 'settings' ? 'active' : ''}`}>
+      {/* Tab 2: Instellingen (Settings) */}
+      <div className={`tab-content ${activeTab === 'instellingen' ? 'active' : ''}`}>
         <div className="section-title">{t.account.settings.security}</div>
         <div className="nav-items">
           <div className="nav-item">
@@ -627,38 +401,389 @@ export default function AccountDashboard() {
         </div>
       </div>
 
-      {/* Bottom Tab Bar */}
+      {/* Tab 3: Privacy */}
+      <div className={`tab-content ${activeTab === 'privacy' ? 'active' : ''}`}>
+        <div className="section-title">🔐 {t.account.privacy.title}</div>
+
+        <div className="info-box">
+          <div className="info-text">
+            ℹ️ {t.account.privacy.subtitle}
+          </div>
+        </div>
+
+        <div className="section-title" style={{ marginTop: '16px' }}>
+          {t.account.privacy.dataCollection}
+        </div>
+
+        <div className="toggle-item">
+          <div className="toggle-left">
+            <div className="toggle-title">{t.account.privacy.essentialCookies}</div>
+            <div className="toggle-desc">{t.account.privacy.essentialCookiesDesc}</div>
+          </div>
+          <div
+            style={{
+              padding: '8px 12px',
+              background: '#E5E7EB',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#6B7280',
+            }}
+          >
+            {t.account.privacy.required}
+          </div>
+        </div>
+
+        <div className="toggle-item">
+          <div className="toggle-left">
+            <div className="toggle-title">{t.account.privacy.analytics}</div>
+            <div className="toggle-desc">{t.account.privacy.analyticsDesc}</div>
+          </div>
+          <div
+            className={`toggle-switch ${privacyToggles.analytics ? 'on' : ''}`}
+            onClick={() => togglePrivacySetting('analytics')}
+          >
+            <div className="toggle-circle"></div>
+          </div>
+        </div>
+
+        <div className="toggle-item">
+          <div className="toggle-left">
+            <div className="toggle-title">{t.account.privacy.personalization}</div>
+            <div className="toggle-desc">{t.account.privacy.personalizationDesc}</div>
+          </div>
+          <div
+            className={`toggle-switch ${privacyToggles.personalization ? 'on' : ''}`}
+            onClick={() => togglePrivacySetting('personalization')}
+          >
+            <div className="toggle-circle"></div>
+          </div>
+        </div>
+
+        <div className="toggle-item">
+          <div className="toggle-left">
+            <div className="toggle-title">{t.account.privacy.marketing}</div>
+            <div className="toggle-desc">{t.account.privacy.marketingDesc}</div>
+          </div>
+          <div
+            className={`toggle-switch ${privacyToggles.marketing ? 'on' : ''}`}
+            onClick={() => togglePrivacySetting('marketing')}
+          >
+            <div className="toggle-circle"></div>
+          </div>
+        </div>
+
+        <button className="primary-button">{t.account.privacy.updateButton}</button>
+      </div>
+
+      {/* Tab 4: Favorieten */}
+      <div className={`tab-content ${activeTab === 'favorieten' ? 'active' : ''}`}>
+        <div className="section-title">❤️ Favorieten</div>
+
+        <div className="info-box">
+          <div className="info-text">
+            ℹ️ Je opgeslagen POIs en events op één plek.
+          </div>
+        </div>
+
+        {/* POI Favorites */}
+        <div className="section-title" style={{ marginTop: '16px' }}>
+          📍 Favoriete POIs ({favorites.size})
+        </div>
+        {favorites.size > 0 ? (
+          <div className="favorites-list">
+            {Array.from(favorites).slice(0, 5).map((poiId) => (
+              <div key={poiId} className="favorite-list-item" onClick={() => navigate(`/poi/${poiId}`)}>
+                <div className="favorite-item-left">
+                  <span className="favorite-item-icon">📍</span>
+                  <div className="favorite-item-info">
+                    <div className="favorite-item-title">POI #{poiId.slice(0, 8)}</div>
+                    <div className="favorite-item-subtitle">Costa Blanca</div>
+                  </div>
+                </div>
+                <span className="nav-arrow">→</span>
+              </div>
+            ))}
+            {favorites.size > 5 && (
+              <button className="secondary-button" onClick={() => navigate('/favorites')}>
+                Bekijk alle {favorites.size} POIs →
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-state-icon">💔</div>
+            <div className="empty-state-text">Je hebt nog geen favoriete POIs opgeslagen.</div>
+            <button className="secondary-button" onClick={() => navigate('/explore')}>
+              Ontdek POIs →
+            </button>
+          </div>
+        )}
+
+        {/* Event Favorites */}
+        <div className="section-title" style={{ marginTop: '24px' }}>
+          🎉 Favoriete Events ({agendaFavorites.size})
+        </div>
+        {agendaFavorites.size > 0 ? (
+          <div className="favorites-list">
+            {Array.from(agendaFavorites).slice(0, 5).map((eventId) => (
+              <div key={eventId} className="favorite-list-item" onClick={() => navigate(`/agenda/${eventId}`)}>
+                <div className="favorite-item-left">
+                  <span className="favorite-item-icon">🎉</span>
+                  <div className="favorite-item-info">
+                    <div className="favorite-item-title">Event #{eventId.slice(0, 8)}</div>
+                    <div className="favorite-item-subtitle">Datum te bekijken</div>
+                  </div>
+                </div>
+                <span className="nav-arrow">→</span>
+              </div>
+            ))}
+            {agendaFavorites.size > 5 && (
+              <button className="secondary-button" onClick={() => navigate('/favorites')}>
+                Bekijk alle {agendaFavorites.size} Events →
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-state-icon">📅</div>
+            <div className="empty-state-text">Je hebt nog geen favoriete events opgeslagen.</div>
+            <button className="secondary-button" onClick={() => navigate('/agenda')}>
+              Bekijk Agenda →
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Tab 5: Bezochte */}
+      <div className={`tab-content ${activeTab === 'bezochte' ? 'active' : ''}`}>
+        <div className="section-title">🗺️ Bezochte Plekken</div>
+
+        <div className="info-box">
+          <div className="info-text">
+            ℹ️ Automatisch bijgehouden wanneer je POIs en events bekijkt.
+          </div>
+        </div>
+
+        {/* Visited POIs */}
+        <div className="section-title" style={{ marginTop: '16px' }}>
+          📍 Bezochte POIs
+        </div>
+        <div className="empty-state">
+          <div className="empty-state-icon">🚀</div>
+          <div className="empty-state-text">
+            Bezochte POIs tracking wordt binnenkort geactiveerd.
+          </div>
+          <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>
+            Je bezoekgeschiedenis wordt automatisch bijgehouden zodra je POIs bekijkt.
+          </div>
+        </div>
+
+        {/* Visited Events */}
+        <div className="section-title" style={{ marginTop: '24px' }}>
+          🎉 Bezochte Events
+        </div>
+        <div className="empty-state">
+          <div className="empty-state-icon">📅</div>
+          <div className="empty-state-text">
+            Bezochte events tracking wordt binnenkort geactiveerd.
+          </div>
+          <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>
+            Events die je hebt bekeken worden hier weergegeven.
+          </div>
+        </div>
+      </div>
+
+      {/* Tab 6: Reviews */}
+      <div className={`tab-content ${activeTab === 'reviews' ? 'active' : ''}`}>
+        <div className="section-title">⭐ Mijn Reviews</div>
+
+        <div className="info-box">
+          <div className="info-text">
+            ℹ️ Bekijk en bewerk je geschreven reviews.
+          </div>
+        </div>
+
+        <div className="empty-state" style={{ marginTop: '24px' }}>
+          <div className="empty-state-icon">✍️</div>
+          <div className="empty-state-text">
+            Je hebt nog geen reviews geschreven.
+          </div>
+          <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>
+            Deel je ervaringen en help andere reizigers!
+          </div>
+          <button className="secondary-button" onClick={() => navigate('/explore')}>
+            Ontdek POIs om te reviewen →
+          </button>
+        </div>
+
+        {/* Placeholder for future reviews list */}
+        {/* When reviews are available, they will be shown here in a list format */}
+      </div>
+
+      {/* Tab 7: AI Settings */}
+      <div className={`tab-content ${activeTab === 'ai' ? 'active' : ''}`}>
+        <div className="section-title">🤖 {t.account.ai.title}</div>
+
+        <div className="info-box">
+          <div className="info-text">
+            ℹ️ {t.account.ai.infoText}
+          </div>
+        </div>
+
+        <div className="section-title">{t.account.ai.features}</div>
+
+        <div className="toggle-item">
+          <div className="toggle-left">
+            <div className="toggle-title">{t.account.ai.personalizedRecs}</div>
+            <div className="toggle-desc">{t.account.ai.personalizedRecsDesc}</div>
+          </div>
+          <div
+            className={`toggle-switch ${aiToggles.personalized ? 'on' : ''}`}
+            onClick={() => toggleAiSetting('personalized')}
+          >
+            <div className="toggle-circle"></div>
+          </div>
+        </div>
+
+        <div className="toggle-item">
+          <div className="toggle-left">
+            <div className="toggle-title">{t.account.ai.smartFilters}</div>
+            <div className="toggle-desc">{t.account.ai.smartFiltersDesc}</div>
+          </div>
+          <div
+            className={`toggle-switch ${aiToggles.smartFilters ? 'on' : ''}`}
+            onClick={() => toggleAiSetting('smartFilters')}
+          >
+            <div className="toggle-circle"></div>
+          </div>
+        </div>
+
+        <div className="toggle-item">
+          <div className="toggle-left">
+            <div className="toggle-title">{t.account.ai.behavioralLearning}</div>
+            <div className="toggle-desc">{t.account.ai.behavioralLearningDesc}</div>
+          </div>
+          <div
+            className={`toggle-switch ${aiToggles.behavioralLearning ? 'on' : ''}`}
+            onClick={() => toggleAiSetting('behavioralLearning')}
+          >
+            <div className="toggle-circle"></div>
+          </div>
+        </div>
+
+        <button className="secondary-button">ℹ️ {t.account.ai.howItWorks}</button>
+      </div>
+
+      {/* Tab 8: Export */}
+      <div className={`tab-content ${activeTab === 'export' ? 'active' : ''}`}>
+        <div className="section-title">📥 {t.account.export.title}</div>
+
+        <div className="info-box">
+          <div className="info-text">
+            ℹ️ {t.account.export.infoText}
+          </div>
+        </div>
+
+        <div className="section-title">{t.account.export.whatIncluded}</div>
+        <div className="data-export-list">
+          <ul>
+            <li>✓ {t.account.export.includeList.profile}</li>
+            <li>✓ {t.account.export.includeList.preferences}</li>
+            <li>✓ {t.account.export.includeList.savedPOIs}</li>
+            <li>✓ {t.account.export.includeList.reviews}</li>
+            <li>✓ {t.account.export.includeList.visitHistory}</li>
+            <li>✓ {t.account.export.includeList.activityLog}</li>
+            <li>✓ {t.account.export.includeList.consentSettings}</li>
+          </ul>
+        </div>
+
+        <div className="section-title">{t.account.export.format}</div>
+        <div className="export-format-box">
+          <label>
+            <input
+              type="radio"
+              name="format"
+              value="json"
+              checked={exportFormat === 'json'}
+              onChange={() => setExportFormat('json')}
+            />
+            <span style={{ fontSize: '14px' }}>{t.account.export.formatJSON}</span>
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="format"
+              value="pdf"
+              checked={exportFormat === 'pdf'}
+              onChange={() => setExportFormat('pdf')}
+            />
+            <span style={{ fontSize: '14px' }}>{t.account.export.formatPDF}</span>
+          </label>
+          <label style={{ marginBottom: 0 }}>
+            <input
+              type="radio"
+              name="format"
+              value="both"
+              checked={exportFormat === 'both'}
+              onChange={() => setExportFormat('both')}
+            />
+            <span style={{ fontSize: '14px' }}>{t.account.export.formatBoth}</span>
+          </label>
+        </div>
+
+        <button
+          className="primary-button"
+          onClick={() =>
+            alert(
+              'Data export requested!\n\nYou will receive an email when your data is ready (typically 2-5 minutes).\n\nDownload link will be valid for 7 days.'
+            )
+          }
+        >
+          {t.account.export.requestButton}
+        </button>
+
+        <div style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', marginTop: '12px', lineHeight: 1.5 }}>
+          ℹ️ {t.account.export.validityNote}
+        </div>
+      </div>
+
+      {/* Bottom Tab Bar - Horizontal Scrollable for 8 tabs */}
       <div className="tab-bar">
-        <button className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => switchTab('profile')}>
-          <span className="tab-icon">👤</span>
-          <span className="tab-label">{t.account.tabs.profile}</span>
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'preferences' ? 'active' : ''}`}
-          onClick={() => switchTab('preferences')}
-        >
-          <span className="tab-icon">🎯</span>
-          <span className="tab-label">{t.account.tabs.preferences}</span>
-        </button>
-        <button className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => switchTab('ai')}>
-          <span className="tab-icon">💚</span>
-          <span className="tab-label">{t.account.tabs.ai}</span>
-        </button>
-        <button className={`tab-btn ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => switchTab('privacy')}>
-          <span className="tab-icon">🔐</span>
-          <span className="tab-label">{t.account.tabs.privacy}</span>
-        </button>
-        <button className={`tab-btn ${activeTab === 'export' ? 'active' : ''}`} onClick={() => switchTab('export')}>
-          <span className="tab-icon">📥</span>
-          <span className="tab-label">{t.account.tabs.export}</span>
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
-          onClick={() => switchTab('settings')}
-        >
-          <span className="tab-icon">⚙️</span>
-          <span className="tab-label">{t.account.tabs.settings}</span>
-        </button>
+        <div className="tab-bar-scroll">
+          <button className={`tab-btn ${activeTab === 'profiel' ? 'active' : ''}`} onClick={() => switchTab('profiel')}>
+            <span className="tab-icon">👤</span>
+            <span className="tab-label">Profiel</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'instellingen' ? 'active' : ''}`} onClick={() => switchTab('instellingen')}>
+            <span className="tab-icon">⚙️</span>
+            <span className="tab-label">Instellingen</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => switchTab('privacy')}>
+            <span className="tab-icon">🔐</span>
+            <span className="tab-label">Privacy</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'favorieten' ? 'active' : ''}`} onClick={() => switchTab('favorieten')}>
+            <span className="tab-icon">❤️</span>
+            <span className="tab-label">Favorieten</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'bezochte' ? 'active' : ''}`} onClick={() => switchTab('bezochte')}>
+            <span className="tab-icon">🗺️</span>
+            <span className="tab-label">Bezochte</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => switchTab('reviews')}>
+            <span className="tab-icon">⭐</span>
+            <span className="tab-label">Reviews</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => switchTab('ai')}>
+            <span className="tab-icon">🤖</span>
+            <span className="tab-label">AI</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'export' ? 'active' : ''}`} onClick={() => switchTab('export')}>
+            <span className="tab-icon">📥</span>
+            <span className="tab-label">Export</span>
+          </button>
+        </div>
       </div>
     </div>
   );
