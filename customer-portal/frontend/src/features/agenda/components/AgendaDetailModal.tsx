@@ -12,6 +12,7 @@ import { nl, enUS, es, de, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { agendaService, type AgendaEvent } from '../services/agendaService';
+import { useVisited } from '@/shared/contexts/VisitedContext';
 import './AgendaDetailModal.css';
 
 interface AgendaDetailModalProps {
@@ -50,6 +51,7 @@ const categoryConfig: Record<string, { label: string; color: string }> = {
 
 export function AgendaDetailModal({ eventId, isOpen, onClose }: AgendaDetailModalProps) {
   const { t, language } = useLanguage();
+  const { markEventVisited } = useVisited();
   const [isSaved, setIsSaved] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
@@ -85,6 +87,13 @@ export function AgendaDetailModal({ eventId, isOpen, onClose }: AgendaDetailModa
   useEffect(() => {
     setDescriptionExpanded(false);
   }, [eventId]);
+
+  // Track event visit when data is loaded
+  useEffect(() => {
+    if (event?._id && isOpen) {
+      markEventVisited(event._id);
+    }
+  }, [event?._id, isOpen, markEventVisited]);
 
   if (!isOpen) return null;
 

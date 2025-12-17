@@ -15,7 +15,7 @@
  * - 2-column desktop layout
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { poiService } from '../features/poi/services/poiService';
@@ -25,12 +25,14 @@ import { POIImageLightbox } from '../features/poi/components/POIImageLightbox';
 import { POIBadge } from '../features/poi/components/POIBadge';
 import { POIReviewSection } from '../features/poi/components/POIReviewSection';
 import { POIActionButtons } from '../features/poi/components/POIActionButtons';
+import { useVisited } from '../shared/contexts/VisitedContext';
 import './POIDetailPage.css';
 
 export function POIDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { markPOIVisited } = useVisited();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
@@ -40,6 +42,13 @@ export function POIDetailPage() {
     queryFn: () => poiService.getPOIById(Number(id)),
     enabled: !!id,
   });
+
+  // Track POI visit when data is loaded
+  useEffect(() => {
+    if (poi?.id) {
+      markPOIVisited(poi.id);
+    }
+  }, [poi?.id, markPOIVisited]);
 
   // Handle opening lightbox at specific image index
   const handleOpenLightbox = (index: number) => {
