@@ -36,11 +36,15 @@ on:
         required: true
         default: 'main'
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   trigger-deploy:
     name: Trigger ${{ inputs.module }} Deployment
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout specified branch
         uses: actions/checkout@v4
