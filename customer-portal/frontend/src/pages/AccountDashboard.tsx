@@ -19,6 +19,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
+import { authService } from '../features/auth/services/authService';
 import { useFavorites } from '../shared/contexts/FavoritesContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { useVisited } from '../shared/contexts/VisitedContext';
@@ -27,6 +28,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { usePOIsByIds } from '../features/poi/hooks/usePOIs';
 import { useEventsByIds, getEventTitle, getEventImage } from '../features/agenda/hooks/useEvents';
 import { AgendaDetailModal } from '../features/agenda/components/AgendaDetailModal';
+import { POIDetailModal } from '../features/poi/components/POIDetailModal';
 import {
   ChangePasswordModal,
   TwoFactorSetupModal,
@@ -77,10 +79,25 @@ export default function AccountDashboard() {
 
   // Profile editing state
   const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState({
-    name: 'Frank Jansen',
-    email: 'frank@email.com',
-    registrationDate: '27 oktober 2025',
+  const [profileData, setProfileData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('userProfile');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          name: parsed.name || 'Naam invoeren',
+          email: parsed.email || 'email@voorbeeld.nl',
+          registrationDate: parsed.registrationDate || '27 oktober 2025',
+        };
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+    return {
+      name: 'Naam invoeren',
+      email: 'email@voorbeeld.nl',
+      registrationDate: '27 oktober 2025',
+    };
   });
   const [editedProfile, setEditedProfile] = useState({ ...profileData });
 
@@ -140,6 +157,7 @@ export default function AccountDashboard() {
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
   const [editingReview, setEditingReview] = useState<UserReview | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedPoiId, setSelectedPoiId] = useState<number | null>(null);
 
   // Reload preferences when returning from onboarding
   useEffect(() => {
@@ -195,6 +213,12 @@ export default function AccountDashboard() {
     setProfileData({ ...editedProfile });
     setIsEditing(false);
     setShowAddress(false);
+    // Save profile data to localStorage
+    try {
+      localStorage.setItem('userProfile', JSON.stringify(editedProfile));
+    } catch (error) {
+      console.error('Error saving profile:', error);
+    }
     // Save address to localStorage
     if (addressData.street || addressData.postalCode || addressData.city) {
       localStorage.setItem('userAddress', JSON.stringify(addressData));
@@ -684,11 +708,8 @@ export default function AccountDashboard() {
         <div
           className="nav-item logout-item"
           onClick={() => {
-            // Clear session data
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
-            // Redirect to homepage
-            navigate('/');
+            // Use authService to properly logout (clears tokens, auth store, and redirects)
+            authService.logout();
           }}
         >
           <div className="nav-left">
@@ -843,7 +864,7 @@ export default function AccountDashboard() {
         ) : favorites && favorites.size > 0 ? (
           <div className="favorites-list">
             {favoritePOIs.slice(0, 5).map((poi) => (
-              <div key={poi.id} className="favorite-list-item" onClick={() => navigate(`/pois/${poi.id}`)}>
+              <div key={poi.id} className="favorite-list-item" onClick={() => setSelectedPoiId(poi.id)}>
                 <div className="favorite-item-left">
                   {poi.thumbnail_url ? (
                     <img src={poi.thumbnail_url} alt={poi.name} className="favorite-item-image" />
@@ -956,7 +977,7 @@ export default function AccountDashboard() {
             {visitedPOIData.slice(0, 5).map((poi) => {
               const visitDate = visitedPOIs.get(poi.id);
               return (
-                <div key={poi.id} className="favorite-list-item" onClick={() => navigate(`/pois/${poi.id}`)}>
+                <div key={poi.id} className="favorite-list-item" onClick={() => setSelectedPoiId(poi.id)}>
                   <div className="favorite-item-left">
                     {poi.thumbnail_url ? (
                       <img src={poi.thumbnail_url} alt={poi.name} className="favorite-item-image" />
@@ -1319,6 +1340,15 @@ export default function AccountDashboard() {
           eventId={selectedEventId}
           isOpen={!!selectedEventId}
           onClose={() => setSelectedEventId(null)}
+        />
+      )}
+
+      {/* POI Detail Modal */}
+      {selectedPoiId && (
+        <POIDetailModal
+          poiId={selectedPoiId}
+          isOpen={!!selectedPoiId}
+          onClose={() => setSelectedPoiId(null)}
         />
       )}
     </div>
