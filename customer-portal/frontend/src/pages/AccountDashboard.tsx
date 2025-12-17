@@ -142,7 +142,7 @@ export default function AccountDashboard() {
     }
   };
 
-  const favoritesCount = favorites.size + agendaFavorites.size;
+  const favoritesCount = (favorites?.size || 0) + (agendaFavorites?.size || 0);
 
   // Helper functions to display preference labels
   const getCompanionLabel = (id: string | null) => {
@@ -488,16 +488,16 @@ export default function AccountDashboard() {
 
         {/* POI Favorites */}
         <div className="section-title" style={{ marginTop: '16px' }}>
-          📍 Favoriete POIs ({favorites.size})
+          📍 Favoriete POIs ({favorites?.size || 0})
         </div>
-        {favorites.size > 0 ? (
+        {favorites && favorites.size > 0 ? (
           <div className="favorites-list">
             {Array.from(favorites).slice(0, 5).map((poiId) => (
-              <div key={poiId} className="favorite-list-item" onClick={() => navigate(`/poi/${poiId}`)}>
+              <div key={String(poiId)} className="favorite-list-item" onClick={() => navigate(`/poi/${poiId}`)}>
                 <div className="favorite-item-left">
                   <span className="favorite-item-icon">📍</span>
                   <div className="favorite-item-info">
-                    <div className="favorite-item-title">POI #{poiId.slice(0, 8)}</div>
+                    <div className="favorite-item-title">POI #{String(poiId).substring(0, 8)}</div>
                     <div className="favorite-item-subtitle">Costa Blanca</div>
                   </div>
                 </div>
@@ -522,16 +522,16 @@ export default function AccountDashboard() {
 
         {/* Event Favorites */}
         <div className="section-title" style={{ marginTop: '24px' }}>
-          🎉 Favoriete Events ({agendaFavorites.size})
+          🎉 Favoriete Events ({agendaFavorites?.size || 0})
         </div>
-        {agendaFavorites.size > 0 ? (
+        {agendaFavorites && agendaFavorites.size > 0 ? (
           <div className="favorites-list">
             {Array.from(agendaFavorites).slice(0, 5).map((eventId) => (
-              <div key={eventId} className="favorite-list-item" onClick={() => navigate(`/agenda/${eventId}`)}>
+              <div key={String(eventId)} className="favorite-list-item" onClick={() => navigate(`/agenda/${eventId}`)}>
                 <div className="favorite-item-left">
                   <span className="favorite-item-icon">🎉</span>
                   <div className="favorite-item-info">
-                    <div className="favorite-item-title">Event #{eventId.slice(0, 8)}</div>
+                    <div className="favorite-item-title">Event #{String(eventId).substring(0, 8)}</div>
                     <div className="favorite-item-subtitle">Datum te bekijken</div>
                   </div>
                 </div>
