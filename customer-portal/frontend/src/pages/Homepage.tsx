@@ -65,11 +65,16 @@ export function Homepage() {
     <>
       {/* Fixed Logo Block - Homepage Only */}
       <Link to="/" className="homepage-logo-container">
-        <img
-          src="/assets/images/hb-logo-homepage.png"
-          alt="HolidaiButler"
-          className="homepage-logo-img"
-        />
+        <div className="homepage-logo-content">
+          {/* Brand Icon - stays at top */}
+          <img
+            src="/assets/images/hb-merkicoon.png"
+            alt="HolidaiButler Icon"
+            className="homepage-logo-icon"
+          />
+          {/* Brand Text - centered between icon and bottom with whitespace */}
+          <span className="homepage-logo-text">HolidaiButler</span>
+        </div>
       </Link>
 
       {/* Hero Section */}

@@ -154,7 +154,13 @@ export default function AccountDashboard() {
   const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
   const [showDeleteDataModal, setShowDeleteDataModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [is2FAEnabled, setIs2FAEnabled] = useState(() => {
+    try {
+      return localStorage.getItem('user2FAEnabled') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [editingReview, setEditingReview] = useState<UserReview | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedPoiId, setSelectedPoiId] = useState<number | null>(null);
@@ -331,6 +337,8 @@ export default function AccountDashboard() {
     console.log('Enabling 2FA with code:', verificationCode);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIs2FAEnabled(true);
+    // Save to localStorage
+    localStorage.setItem('user2FAEnabled', 'true');
     // Return mock backup codes
     return {
       backupCodes: [
@@ -349,6 +357,8 @@ export default function AccountDashboard() {
     console.log('Disabling 2FA...');
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIs2FAEnabled(false);
+    // Save to localStorage
+    localStorage.setItem('user2FAEnabled', 'false');
   };
 
   const handleDeleteData = async () => {
@@ -379,17 +389,10 @@ export default function AccountDashboard() {
       {/* Tab Bar - At top for desktop, fixed bottom for mobile */}
       <div className="tab-bar">
         <div className="tab-bar-scroll">
+          {/* Reordered: Profiel, Favorieten, Bezocht, Reviews, Instellingen, Privacy, Export, AI */}
           <button className={`tab-btn ${activeTab === 'profiel' ? 'active' : ''}`} onClick={() => switchTab('profiel')}>
             <span className="tab-icon">👤</span>
             <span className="tab-label">{t.account.tabs.profile}</span>
-          </button>
-          <button className={`tab-btn ${activeTab === 'instellingen' ? 'active' : ''}`} onClick={() => switchTab('instellingen')}>
-            <span className="tab-icon">⚙️</span>
-            <span className="tab-label">{t.account.tabs.settings}</span>
-          </button>
-          <button className={`tab-btn ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => switchTab('privacy')}>
-            <span className="tab-icon">🔐</span>
-            <span className="tab-label">{t.account.tabs.privacy}</span>
           </button>
           <button className={`tab-btn ${activeTab === 'favorieten' ? 'active' : ''}`} onClick={() => switchTab('favorieten')}>
             <span className="tab-icon">❤️</span>
@@ -403,13 +406,21 @@ export default function AccountDashboard() {
             <span className="tab-icon">⭐</span>
             <span className="tab-label">{t.account.tabs.reviews}</span>
           </button>
-          <button className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => switchTab('ai')}>
-            <span className="tab-icon">🤖</span>
-            <span className="tab-label">{t.account.tabs.ai}</span>
+          <button className={`tab-btn ${activeTab === 'instellingen' ? 'active' : ''}`} onClick={() => switchTab('instellingen')}>
+            <span className="tab-icon">⚙️</span>
+            <span className="tab-label">{t.account.tabs.settings}</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => switchTab('privacy')}>
+            <span className="tab-icon">🔐</span>
+            <span className="tab-label">{t.account.tabs.privacy}</span>
           </button>
           <button className={`tab-btn ${activeTab === 'export' ? 'active' : ''}`} onClick={() => switchTab('export')}>
             <span className="tab-icon">📥</span>
             <span className="tab-label">{t.account.tabs.export}</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => switchTab('ai')}>
+            <span className="tab-icon">🤖</span>
+            <span className="tab-label">{t.account.tabs.ai}</span>
           </button>
         </div>
       </div>
