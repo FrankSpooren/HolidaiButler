@@ -58,10 +58,11 @@ router.get('/', authenticate, async (req, res) => {
     });
 
   } catch (error) {
-    logger.error('Error fetching consent:', error);
+    logger.error('Error fetching consent:', error.message, error.stack);
     res.status(500).json({
       success: false,
-      message: 'Fout bij ophalen van privacy-instellingen'
+      message: 'Fout bij ophalen van privacy-instellingen',
+      debug: process.env.NODE_ENV !== 'production' ? error.message : undefined
     });
   }
 });
@@ -180,10 +181,11 @@ router.put('/', authenticate, async (req, res) => {
     });
 
   } catch (error) {
-    logger.error('Error updating consent:', error);
+    logger.error('Error updating consent:', error.message, error.stack);
     res.status(500).json({
       success: false,
-      message: 'Fout bij opslaan van privacy-instellingen'
+      message: 'Fout bij opslaan van privacy-instellingen',
+      debug: process.env.NODE_ENV !== 'production' ? error.message : undefined
     });
   }
 });
