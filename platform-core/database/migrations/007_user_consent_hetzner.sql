@@ -59,7 +59,7 @@ SET @fk_exists = (
 );
 SET @sql = IF(@fk_exists = 0,
     'ALTER TABLE user_consent ADD CONSTRAINT fk_user_consent_user FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE',
-    'SELECT ''FK fk_user_consent_user already exists'' AS status'
+    'SELECT 1'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -73,15 +73,15 @@ SET @fk_exists = (
 );
 SET @sql = IF(@fk_exists = 0,
     'ALTER TABLE consent_history ADD CONSTRAINT fk_consent_history_user FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE',
-    'SELECT ''FK fk_consent_history_user already exists'' AS status'
+    'SELECT 1'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
--- Verificatie
-SELECT 'user_consent' AS tabel, COUNT(*) AS rows FROM user_consent
-UNION ALL
-SELECT 'consent_history' AS tabel, COUNT(*) AS rows FROM consent_history;
+-- 4. Verificatie - toon tabel structuur
+DESCRIBE user_consent;
+DESCRIBE consent_history;
 
-SELECT 'User Consent tables created successfully!' AS result;
+-- Klaar!
+SELECT 'User Consent tabellen succesvol aangemaakt!' AS resultaat;
