@@ -154,16 +154,33 @@ export default function AccountDashboard() {
   const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
   const [showDeleteDataModal, setShowDeleteDataModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
-  const [is2FAEnabled, setIs2FAEnabled] = useState(() => {
-    try {
-      return localStorage.getItem('user2FAEnabled') === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [is2FALoading, setIs2FALoading] = useState(true);
+  const [twoFactorSetupData, setTwoFactorSetupData] = useState<{ secret: string; otpauthUri: string } | null>(null);
   const [editingReview, setEditingReview] = useState<UserReview | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedPoiId, setSelectedPoiId] = useState<number | null>(null);
+
+  // Load 2FA status from API on mount
+  useEffect(() => {
+    const load2FAStatus = async () => {
+      try {
+        const status = await authService.get2FAStatus();
+        setIs2FAEnabled(status.enabled);
+      } catch (error) {
+        console.error('Error loading 2FA status:', error);
+        // Fallback to localStorage for development
+        try {
+          setIs2FAEnabled(localStorage.getItem('user2FAEnabled') === 'true');
+        } catch {
+          setIs2FAEnabled(false);
+        }
+      } finally {
+        setIs2FALoading(false);
+      }
+    };
+    load2FAStatus();
+  }, []);
 
   // Reload preferences when returning from onboarding
   useEffect(() => {
@@ -332,33 +349,46 @@ export default function AccountDashboard() {
     // In production, this would call: await api.put('/users/me/password', { currentPassword, newPassword });
   };
 
-  const handleEnable2FA = async (verificationCode: string) => {
-    // TODO: Implement API call
-    console.log('Enabling 2FA with code:', verificationCode);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIs2FAEnabled(true);
-    // Save to localStorage
-    localStorage.setItem('user2FAEnabled', 'true');
-    // Return mock backup codes
-    return {
-      backupCodes: [
-        'ABCD-1234-EFGH',
-        'IJKL-5678-MNOP',
-        'QRST-9012-UVWX',
-        'YZ12-3456-7890',
-        'BCDE-FGHI-JKLM',
-        'NOPQ-RSTU-VWXY',
-      ],
-    };
+  // Setup 2FA - called when opening the modal
+  const handleSetup2FA = async () => {
+    try {
+      const setupData = await authService.setup2FA();
+      setTwoFactorSetupData(setupData);
+      return setupData;
+    } catch (error) {
+      console.error('Error setting up 2FA:', error);
+      throw error;
+    }
   };
 
-  const handleDisable2FA = async () => {
-    // TODO: Implement API call
-    console.log('Disabling 2FA...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIs2FAEnabled(false);
-    // Save to localStorage
-    localStorage.setItem('user2FAEnabled', 'false');
+  const handleEnable2FA = async (verificationCode: string) => {
+    try {
+      const result = await authService.verify2FA(verificationCode);
+      setIs2FAEnabled(true);
+      setTwoFactorSetupData(null);
+      // Also save to localStorage as fallback
+      localStorage.setItem('user2FAEnabled', 'true');
+      return {
+        backupCodes: result.backupCodes,
+      };
+    } catch (error) {
+      console.error('Error enabling 2FA:', error);
+      throw error;
+    }
+  };
+
+  const handleDisable2FA = async (codeOrPassword?: string) => {
+    try {
+      // If no code provided, use empty string (modal should require it)
+      await authService.disable2FA(codeOrPassword || '', false);
+      setIs2FAEnabled(false);
+      setTwoFactorSetupData(null);
+      // Also update localStorage
+      localStorage.setItem('user2FAEnabled', 'false');
+    } catch (error) {
+      console.error('Error disabling 2FA:', error);
+      throw error;
+    }
   };
 
   const handleDeleteData = async () => {
@@ -1315,11 +1345,10 @@ export default function AccountDashboard() {
       <TwoFactorSetupModal
         isOpen={showTwoFactorModal}
         onClose={() => setShowTwoFactorModal(false)}
+        onSetup={handleSetup2FA}
         onEnable={handleEnable2FA}
         onDisable={handleDisable2FA}
         isEnabled={is2FAEnabled}
-        qrCodeUrl="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=otpauth://totp/HolidaiButler:frank@email.com?secret=JBSWY3DPEHPK3PXP&issuer=HolidaiButler"
-        secretKey="JBSWY 3DPE HPK3 PXP"
       />
 
       <DeleteDataModal

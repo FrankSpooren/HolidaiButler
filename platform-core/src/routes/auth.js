@@ -10,6 +10,7 @@ import { Op } from 'sequelize';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
+import twoFactorAuth from '../services/twoFactorAuth.js';
 
 const router = express.Router();
 
@@ -306,6 +307,30 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Check if 2FA is enabled
+    if (user.totpEnabled) {
+      // Generate temporary pending token for 2FA flow
+      const tokenUserId = user.uuid || user.id;
+      const pendingToken = jwt.sign(
+        { userId: tokenUserId, type: '2fa_pending' },
+        JWT_SECRET,
+        { expiresIn: '5m' } // Short expiry for security
+      );
+
+      logger.info(`2FA required for user: ${email}`);
+
+      return res.json({
+        success: true,
+        message: '2FA verificatie vereist',
+        requires2FA: true,
+        data: {
+          requires2FA: true,
+          pendingToken,
+          message: 'Voer je 2FA code in om door te gaan'
+        }
+      });
+    }
+
     // Update last login
     user.lastLogin = new Date();
     await user.save();
@@ -569,6 +594,357 @@ router.post('/logout', authenticate, (req, res) => {
     success: true,
     message: 'Uitgelogd'
   });
+});
+
+// ==========================================
+// TWO-FACTOR AUTHENTICATION ENDPOINTS
+// ==========================================
+
+/**
+ * @route   GET /api/auth/2fa/status
+ * @desc    Get 2FA status for current user
+ * @access  Private
+ */
+router.get('/2fa/status', authenticate, async (req, res) => {
+  try {
+    const user = await User.findOne({
+      where: { uuid: req.user.userId },
+      attributes: ['id', 'totpEnabled', 'totpVerifiedAt']
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Gebruiker niet gevonden'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        enabled: Boolean(user.totpEnabled),
+        enabledAt: user.totpVerifiedAt
+      }
+    });
+  } catch (error) {
+    logger.error('2FA status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Fout bij ophalen 2FA status'
+    });
+  }
+});
+
+/**
+ * @route   POST /api/auth/2fa/setup
+ * @desc    Generate 2FA secret and QR code URI
+ * @access  Private
+ */
+router.post('/2fa/setup', authenticate, async (req, res) => {
+  try {
+    const user = await User.findOne({
+      where: { uuid: req.user.userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Gebruiker niet gevonden'
+      });
+    }
+
+    // Check if 2FA is already enabled
+    if (user.totpEnabled) {
+      return res.status(400).json({
+        success: false,
+        message: '2FA is al ingeschakeld. Schakel eerst uit om opnieuw in te stellen.'
+      });
+    }
+
+    // Generate new secret
+    const secret = twoFactorAuth.generateSecret();
+    const otpauthUri = twoFactorAuth.generateOtpauthUri(secret, user.email);
+
+    // Store secret temporarily (not enabled yet until verified)
+    await user.update({ totpSecret: secret });
+
+    logger.info(`2FA setup initiated for user: ${user.email}`);
+
+    res.json({
+      success: true,
+      data: {
+        secret,
+        otpauthUri,
+        message: 'Scan de QR-code met je authenticator app en voer de code in om te bevestigen'
+      }
+    });
+  } catch (error) {
+    logger.error('2FA setup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Fout bij instellen 2FA'
+    });
+  }
+});
+
+/**
+ * @route   POST /api/auth/2fa/verify
+ * @desc    Verify TOTP code and enable 2FA
+ * @access  Private
+ */
+router.post('/2fa/verify', authenticate, async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    if (!code || code.length !== 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ongeldige verificatiecode. Voer een 6-cijferige code in.'
+      });
+    }
+
+    const user = await User.findOne({
+      where: { uuid: req.user.userId },
+      attributes: ['id', 'email', 'totpSecret', 'totpEnabled']
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Gebruiker niet gevonden'
+      });
+    }
+
+    if (!user.totpSecret) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start eerst de 2FA setup voordat je kunt verifiëren'
+      });
+    }
+
+    // Verify the TOTP code
+    const isValid = twoFactorAuth.verifyTOTP(user.totpSecret, code);
+
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Ongeldige verificatiecode. Probeer opnieuw.'
+      });
+    }
+
+    // Generate backup codes
+    const { codes: backupCodes, hashedCodes } = twoFactorAuth.generateBackupCodes();
+
+    // Enable 2FA
+    await user.update({
+      totpEnabled: true,
+      totpVerifiedAt: new Date(),
+      backupCodes: JSON.stringify(hashedCodes)
+    });
+
+    logger.info(`2FA enabled for user: ${user.email}`);
+
+    res.json({
+      success: true,
+      data: {
+        enabled: true,
+        backupCodes,
+        message: '2FA is succesvol ingeschakeld. Bewaar je backup codes veilig!'
+      }
+    });
+  } catch (error) {
+    logger.error('2FA verify error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Fout bij verifiëren 2FA'
+    });
+  }
+});
+
+/**
+ * @route   POST /api/auth/2fa/disable
+ * @desc    Disable 2FA (requires current password or TOTP code)
+ * @access  Private
+ */
+router.post('/2fa/disable', authenticate, async (req, res) => {
+  try {
+    const { code, password } = req.body;
+
+    const user = await User.scope('withPassword').findOne({
+      where: { uuid: req.user.userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Gebruiker niet gevonden'
+      });
+    }
+
+    if (!user.totpEnabled) {
+      return res.status(400).json({
+        success: false,
+        message: '2FA is niet ingeschakeld'
+      });
+    }
+
+    // Verify either TOTP code or password
+    let verified = false;
+
+    if (code) {
+      verified = twoFactorAuth.verifyTOTP(user.totpSecret, code);
+    } else if (password) {
+      verified = await user.comparePassword(password);
+    }
+
+    if (!verified) {
+      return res.status(401).json({
+        success: false,
+        message: 'Ongeldige verificatie. Voer een geldige code of wachtwoord in.'
+      });
+    }
+
+    // Disable 2FA
+    await user.update({
+      totpEnabled: false,
+      totpSecret: null,
+      totpVerifiedAt: null,
+      backupCodes: null
+    });
+
+    logger.info(`2FA disabled for user: ${user.email}`);
+
+    res.json({
+      success: true,
+      data: {
+        enabled: false,
+        message: '2FA is uitgeschakeld'
+      }
+    });
+  } catch (error) {
+    logger.error('2FA disable error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Fout bij uitschakelen 2FA'
+    });
+  }
+});
+
+/**
+ * @route   POST /api/auth/2fa/validate
+ * @desc    Validate TOTP code during login (called after password verification)
+ * @access  Public (but requires pending 2FA session token)
+ */
+router.post('/2fa/validate', async (req, res) => {
+  try {
+    const { code, pendingToken } = req.body;
+
+    if (!code || !pendingToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Code en pendingToken zijn verplicht'
+      });
+    }
+
+    // Verify pending token
+    let decoded;
+    try {
+      decoded = jwt.verify(pendingToken, JWT_SECRET);
+      if (decoded.type !== '2fa_pending') {
+        throw new Error('Invalid token type');
+      }
+    } catch (err) {
+      return res.status(401).json({
+        success: false,
+        message: 'Ongeldige of verlopen sessie. Log opnieuw in.'
+      });
+    }
+
+    // Get user
+    const user = await User.findOne({
+      where: { uuid: decoded.userId },
+      attributes: ['id', 'uuid', 'email', 'name', 'totpSecret', 'totpEnabled', 'backupCodes', 'onboardingCompleted']
+    });
+
+    if (!user || !user.totpEnabled) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ongeldige 2FA configuratie'
+      });
+    }
+
+    // Try TOTP verification first
+    let isValid = twoFactorAuth.verifyTOTP(user.totpSecret, code);
+
+    // If TOTP fails, try backup code
+    if (!isValid && user.backupCodes) {
+      const hashedCodes = JSON.parse(user.backupCodes);
+      const backupIndex = twoFactorAuth.verifyBackupCode(code, hashedCodes);
+
+      if (backupIndex !== -1) {
+        isValid = true;
+        // Remove used backup code
+        hashedCodes.splice(backupIndex, 1);
+        await user.update({ backupCodes: JSON.stringify(hashedCodes) });
+        logger.info(`Backup code used for user: ${user.email}`);
+      }
+    }
+
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Ongeldige verificatiecode'
+      });
+    }
+
+    // Generate full access tokens
+    const tokenUserId = user.uuid || user.id;
+    const accessToken = jwt.sign(
+      { userId: tokenUserId, type: 'access' },
+      JWT_SECRET,
+      { expiresIn: ACCESS_TOKEN_EXPIRY }
+    );
+
+    const refreshToken = jwt.sign(
+      { userId: tokenUserId, type: 'refresh' },
+      JWT_REFRESH_SECRET,
+      { expiresIn: REFRESH_TOKEN_EXPIRY }
+    );
+
+    // Update last login
+    await user.update({ lastLogin: new Date() });
+
+    const userData = user.toSafeJSON ? user.toSafeJSON() : {
+      id: user.id,
+      uuid: user.uuid,
+      email: user.email,
+      name: user.name,
+      totpEnabled: true
+    };
+
+    logger.info(`2FA login completed for user: ${user.email}`);
+
+    res.json({
+      success: true,
+      message: '2FA verificatie succesvol',
+      data: {
+        user: userData,
+        accessToken,
+        refreshToken
+      },
+      // Legacy fields
+      user: userData,
+      token: accessToken,
+      refreshToken,
+      expiresIn: ACCESS_TOKEN_EXPIRY
+    });
+  } catch (error) {
+    logger.error('2FA validate error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Fout bij 2FA verificatie'
+    });
+  }
 });
 
 export default router;
