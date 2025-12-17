@@ -41,6 +41,23 @@ export default function AccountDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('profiel');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
+  // Profile editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: 'Frank Jansen',
+    email: 'frank@email.com',
+    registrationDate: '27 oktober 2025',
+  });
+  const [editedProfile, setEditedProfile] = useState({ ...profileData });
+
+  // Address state (optional NAW)
+  const [showAddress, setShowAddress] = useState(false);
+  const [addressData, setAddressData] = useState({
+    street: '',
+    postalCode: '',
+    city: '',
+  });
+
   // Load user preferences from localStorage
   const [userPreferences, setUserPreferences] = useState<UserPreferences>(() => {
     try {
@@ -114,6 +131,24 @@ export default function AccountDashboard() {
     fileInputRef.current?.click();
   };
 
+  // Profile editing handlers
+  const handleEditProfile = () => {
+    setEditedProfile({ ...profileData });
+    setIsEditing(true);
+  };
+
+  const handleSaveProfile = () => {
+    setProfileData({ ...editedProfile });
+    setIsEditing(false);
+    // TODO: Save to backend
+  };
+
+  const handleCancelEdit = () => {
+    setEditedProfile({ ...profileData });
+    setIsEditing(false);
+    setShowAddress(false);
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -182,45 +217,170 @@ export default function AccountDashboard() {
 
   return (
     <div className="account-container">
+      {/* Tab Bar - At top for desktop, fixed bottom for mobile */}
+      <div className="tab-bar">
+        <div className="tab-bar-scroll">
+          <button className={`tab-btn ${activeTab === 'profiel' ? 'active' : ''}`} onClick={() => switchTab('profiel')}>
+            <span className="tab-icon">👤</span>
+            <span className="tab-label">{t.account.tabs.profile}</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'instellingen' ? 'active' : ''}`} onClick={() => switchTab('instellingen')}>
+            <span className="tab-icon">⚙️</span>
+            <span className="tab-label">{t.account.tabs.settings}</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => switchTab('privacy')}>
+            <span className="tab-icon">🔐</span>
+            <span className="tab-label">{t.account.tabs.privacy}</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'favorieten' ? 'active' : ''}`} onClick={() => switchTab('favorieten')}>
+            <span className="tab-icon">❤️</span>
+            <span className="tab-label">{t.account.tabs.favorites}</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'bezochte' ? 'active' : ''}`} onClick={() => switchTab('bezochte')}>
+            <span className="tab-icon">🗺️</span>
+            <span className="tab-label">{t.account.tabs.visited}</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => switchTab('reviews')}>
+            <span className="tab-icon">⭐</span>
+            <span className="tab-label">{t.account.tabs.reviews}</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => switchTab('ai')}>
+            <span className="tab-icon">🤖</span>
+            <span className="tab-label">{t.account.tabs.ai}</span>
+          </button>
+          <button className={`tab-btn ${activeTab === 'export' ? 'active' : ''}`} onClick={() => switchTab('export')}>
+            <span className="tab-icon">📥</span>
+            <span className="tab-label">{t.account.tabs.export}</span>
+          </button>
+        </div>
+      </div>
+
       {/* Tab 1: Profiel (Profile + Preferences combined) */}
       <div className={`tab-content ${activeTab === 'profiel' ? 'active' : ''}`}>
+        {/* Profile Card with Integrated Personal Details */}
         <div className="profile-card">
-          <div className="avatar" onClick={handleAvatarClick} title={t.account.profile.clickAvatarHint}>
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="Profile"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '50%',
-                  objectFit: 'cover'
-                }}
-              />
-            ) : (
-              '👤'
-            )}
-            <div className="avatar-overlay">📷 {t.account.profile.changePhoto}</div>
+          <div className="profile-header">
+            {/* Avatar */}
+            <div className="avatar" onClick={handleAvatarClick} title={t.account.profile.clickAvatarHint}>
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Profile"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    objectFit: 'cover'
+                  }}
+                />
+              ) : (
+                '👤'
+              )}
+              <div className="avatar-overlay">
+                <span>📷</span>
+                <span>{t.account.profile.changePhoto}</span>
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+            />
+
+            {/* Profile Info */}
+            <div className="profile-info">
+              {isEditing ? (
+                <>
+                  <div className="profile-field" style={{ border: 'none', padding: '0 0 8px 0' }}>
+                    <input
+                      type="text"
+                      className="field-input"
+                      value={editedProfile.name}
+                      onChange={(e) => setEditedProfile({ ...editedProfile, name: e.target.value })}
+                      placeholder="Naam"
+                    />
+                  </div>
+                  <div className="profile-field" style={{ border: 'none', padding: '0 0 8px 0' }}>
+                    <input
+                      type="email"
+                      className="field-input"
+                      value={editedProfile.email}
+                      onChange={(e) => setEditedProfile({ ...editedProfile, email: e.target.value })}
+                      placeholder="E-mail"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="profile-name-row">
+                    <span className="profile-name">{profileData.name}</span>
+                    <button className="edit-icon" onClick={handleEditProfile} title="Bewerken">✏️</button>
+                  </div>
+                  <div className="profile-email-row">
+                    <span className="profile-email">{profileData.email}</span>
+                  </div>
+                </>
+              )}
+              <div className="butler-fan-since">
+                <span className="butler-fan-icon">🎩</span>
+                <span>{t.account.profile.butlerFanSince}: <strong>{profileData.registrationDate}</strong></span>
+              </div>
+            </div>
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            style={{ display: 'none' }}
-          />
-          <div className="profile-name">Frank Jansen</div>
-          <div className="profile-email">frank@email.com</div>
-          <div className="butler-fan-since">
-            <span className="butler-fan-icon">🎩</span>
-            <span>{t.account.profile.butlerFanSince}: <strong>27 oktober 2025</strong></span>
-          </div>
-          <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '8px' }}>
-            💡 {t.account.profile.clickAvatarHint}
-          </div>
+
+          {/* Editable Address Section (optional NAW) */}
+          {isEditing && (
+            <div className="profile-fields">
+              {!showAddress ? (
+                <button className="add-address-btn" onClick={() => setShowAddress(true)}>
+                  <span>➕</span>
+                  <span>Adres toevoegen (optioneel)</span>
+                </button>
+              ) : (
+                <div className="address-fields">
+                  <div className="address-field">
+                    <label>Straat + huisnummer</label>
+                    <input
+                      type="text"
+                      value={addressData.street}
+                      onChange={(e) => setAddressData({ ...addressData, street: e.target.value })}
+                      placeholder="Bijv. Hoofdstraat 123"
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div className="address-field" style={{ flex: '0 0 120px' }}>
+                      <label>Postcode</label>
+                      <input
+                        type="text"
+                        value={addressData.postalCode}
+                        onChange={(e) => setAddressData({ ...addressData, postalCode: e.target.value })}
+                        placeholder="1234 AB"
+                      />
+                    </div>
+                    <div className="address-field" style={{ flex: 1 }}>
+                      <label>Plaats</label>
+                      <input
+                        type="text"
+                        value={addressData.city}
+                        onChange={(e) => setAddressData({ ...addressData, city: e.target.value })}
+                        placeholder="Amsterdam"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="profile-actions">
+                <button className="btn-cancel" onClick={handleCancelEdit}>Annuleren</button>
+                <button className="btn-save" onClick={handleSaveProfile}>Opslaan</button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Preferences Section - Integrated */}
+        {/* Preferences Section */}
         <div className="section-title">{t.account.preferences.title}</div>
         <div className="profile-card preferences-card">
           <div style={{ textAlign: 'left' }}>
@@ -742,44 +902,6 @@ export default function AccountDashboard() {
 
         <div style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', marginTop: '12px', lineHeight: 1.5 }}>
           ℹ️ {t.account.export.validityNote}
-        </div>
-      </div>
-
-      {/* Bottom Tab Bar - Horizontal Scrollable for 8 tabs */}
-      <div className="tab-bar">
-        <div className="tab-bar-scroll">
-          <button className={`tab-btn ${activeTab === 'profiel' ? 'active' : ''}`} onClick={() => switchTab('profiel')}>
-            <span className="tab-icon">👤</span>
-            <span className="tab-label">{t.account.tabs.profile}</span>
-          </button>
-          <button className={`tab-btn ${activeTab === 'instellingen' ? 'active' : ''}`} onClick={() => switchTab('instellingen')}>
-            <span className="tab-icon">⚙️</span>
-            <span className="tab-label">{t.account.tabs.settings}</span>
-          </button>
-          <button className={`tab-btn ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => switchTab('privacy')}>
-            <span className="tab-icon">🔐</span>
-            <span className="tab-label">{t.account.tabs.privacy}</span>
-          </button>
-          <button className={`tab-btn ${activeTab === 'favorieten' ? 'active' : ''}`} onClick={() => switchTab('favorieten')}>
-            <span className="tab-icon">❤️</span>
-            <span className="tab-label">{t.account.tabs.favorites}</span>
-          </button>
-          <button className={`tab-btn ${activeTab === 'bezochte' ? 'active' : ''}`} onClick={() => switchTab('bezochte')}>
-            <span className="tab-icon">🗺️</span>
-            <span className="tab-label">{t.account.tabs.visited}</span>
-          </button>
-          <button className={`tab-btn ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => switchTab('reviews')}>
-            <span className="tab-icon">⭐</span>
-            <span className="tab-label">{t.account.tabs.reviews}</span>
-          </button>
-          <button className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => switchTab('ai')}>
-            <span className="tab-icon">🤖</span>
-            <span className="tab-label">{t.account.tabs.ai}</span>
-          </button>
-          <button className={`tab-btn ${activeTab === 'export' ? 'active' : ''}`} onClick={() => switchTab('export')}>
-            <span className="tab-icon">📥</span>
-            <span className="tab-label">{t.account.tabs.export}</span>
-          </button>
         </div>
       </div>
     </div>
