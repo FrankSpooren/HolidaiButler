@@ -20,6 +20,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { authService } from '../features/auth/services/authService';
+import { consentService, type ConsentData } from '../features/account/services/consentService';
 import { useFavorites } from '../shared/contexts/FavoritesContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { useVisited } from '../shared/contexts/VisitedContext';
@@ -139,10 +140,14 @@ export default function AccountDashboard() {
     behavioralLearning: false,
   });
   const [privacyToggles, setPrivacyToggles] = useState({
-    analytics: true,
-    personalization: true,
+    analytics: false,
+    personalization: false,
     marketing: false,
   });
+  const [privacyLoading, setPrivacyLoading] = useState(true);
+  const [privacySaving, setPrivacySaving] = useState(false);
+  const [privacyError, setPrivacyError] = useState<string | null>(null);
+  const [privacySuccess, setPrivacySuccess] = useState(false);
   const [notificationToggles, setNotificationToggles] = useState({
     email: true,
     push: false,
@@ -182,6 +187,26 @@ export default function AccountDashboard() {
     load2FAStatus();
   }, []);
 
+  // Load consent preferences from API on mount
+  useEffect(() => {
+    const loadConsent = async () => {
+      try {
+        const consent = await consentService.getConsent();
+        setPrivacyToggles({
+          analytics: consent.analytics,
+          personalization: consent.personalization,
+          marketing: consent.marketing,
+        });
+      } catch (error) {
+        console.error('Error loading consent:', error);
+        // Keep defaults on error
+      } finally {
+        setPrivacyLoading(false);
+      }
+    };
+    loadConsent();
+  }, []);
+
   // Reload preferences when returning from onboarding
   useEffect(() => {
     const handleStorageChange = () => {
@@ -216,6 +241,30 @@ export default function AccountDashboard() {
 
   const togglePrivacySetting = (setting: keyof typeof privacyToggles) => {
     setPrivacyToggles(prev => ({ ...prev, [setting]: !prev[setting] }));
+    setPrivacySuccess(false); // Clear success message when changing
+    setPrivacyError(null);
+  };
+
+  const savePrivacySettings = async () => {
+    setPrivacySaving(true);
+    setPrivacyError(null);
+    setPrivacySuccess(false);
+
+    try {
+      await consentService.updateConsent({
+        analytics: privacyToggles.analytics,
+        personalization: privacyToggles.personalization,
+        marketing: privacyToggles.marketing,
+      });
+      setPrivacySuccess(true);
+      // Clear success message after 3 seconds
+      setTimeout(() => setPrivacySuccess(false), 3000);
+    } catch (error) {
+      console.error('Error saving consent:', error);
+      setPrivacyError('Fout bij opslaan van privacy-instellingen');
+    } finally {
+      setPrivacySaving(false);
+    }
   };
 
   const toggleNotification = (setting: keyof typeof notificationToggles) => {
@@ -822,65 +871,103 @@ export default function AccountDashboard() {
           {t.account.privacy.dataCollection}
         </div>
 
-        <div className="toggle-item">
-          <div className="toggle-left">
-            <div className="toggle-title">{t.account.privacy.essentialCookies}</div>
-            <div className="toggle-desc">{t.account.privacy.essentialCookiesDesc}</div>
+        {privacyLoading ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <span>Laden...</span>
           </div>
-          <div
-            style={{
-              padding: '8px 12px',
-              background: '#E5E7EB',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: '#6B7280',
-            }}
-          >
-            {t.account.privacy.required}
-          </div>
-        </div>
+        ) : (
+          <>
+            <div className="toggle-item">
+              <div className="toggle-left">
+                <div className="toggle-title">{t.account.privacy.essentialCookies}</div>
+                <div className="toggle-desc">{t.account.privacy.essentialCookiesDesc}</div>
+              </div>
+              <div
+                style={{
+                  padding: '8px 12px',
+                  background: '#E5E7EB',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#6B7280',
+                }}
+              >
+                {t.account.privacy.required}
+              </div>
+            </div>
 
-        <div className="toggle-item">
-          <div className="toggle-left">
-            <div className="toggle-title">{t.account.privacy.analytics}</div>
-            <div className="toggle-desc">{t.account.privacy.analyticsDesc}</div>
-          </div>
-          <div
-            className={`toggle-switch ${privacyToggles.analytics ? 'on' : ''}`}
-            onClick={() => togglePrivacySetting('analytics')}
-          >
-            <div className="toggle-circle"></div>
-          </div>
-        </div>
+            <div className="toggle-item">
+              <div className="toggle-left">
+                <div className="toggle-title">{t.account.privacy.analytics}</div>
+                <div className="toggle-desc">{t.account.privacy.analyticsDesc}</div>
+              </div>
+              <div
+                className={`toggle-switch ${privacyToggles.analytics ? 'on' : ''}`}
+                onClick={() => togglePrivacySetting('analytics')}
+              >
+                <div className="toggle-circle"></div>
+              </div>
+            </div>
 
-        <div className="toggle-item">
-          <div className="toggle-left">
-            <div className="toggle-title">{t.account.privacy.personalization}</div>
-            <div className="toggle-desc">{t.account.privacy.personalizationDesc}</div>
-          </div>
-          <div
-            className={`toggle-switch ${privacyToggles.personalization ? 'on' : ''}`}
-            onClick={() => togglePrivacySetting('personalization')}
-          >
-            <div className="toggle-circle"></div>
-          </div>
-        </div>
+            <div className="toggle-item">
+              <div className="toggle-left">
+                <div className="toggle-title">{t.account.privacy.personalization}</div>
+                <div className="toggle-desc">{t.account.privacy.personalizationDesc}</div>
+              </div>
+              <div
+                className={`toggle-switch ${privacyToggles.personalization ? 'on' : ''}`}
+                onClick={() => togglePrivacySetting('personalization')}
+              >
+                <div className="toggle-circle"></div>
+              </div>
+            </div>
 
-        <div className="toggle-item">
-          <div className="toggle-left">
-            <div className="toggle-title">{t.account.privacy.marketing}</div>
-            <div className="toggle-desc">{t.account.privacy.marketingDesc}</div>
-          </div>
-          <div
-            className={`toggle-switch ${privacyToggles.marketing ? 'on' : ''}`}
-            onClick={() => togglePrivacySetting('marketing')}
-          >
-            <div className="toggle-circle"></div>
-          </div>
-        </div>
+            <div className="toggle-item">
+              <div className="toggle-left">
+                <div className="toggle-title">{t.account.privacy.marketing}</div>
+                <div className="toggle-desc">{t.account.privacy.marketingDesc}</div>
+              </div>
+              <div
+                className={`toggle-switch ${privacyToggles.marketing ? 'on' : ''}`}
+                onClick={() => togglePrivacySetting('marketing')}
+              >
+                <div className="toggle-circle"></div>
+              </div>
+            </div>
 
-        <button className="primary-button">{t.account.privacy.updateButton}</button>
+            {privacyError && (
+              <div className="form-error" style={{ marginBottom: '12px' }}>
+                ⚠️ {privacyError}
+              </div>
+            )}
+
+            {privacySuccess && (
+              <div style={{
+                padding: '12px 16px',
+                background: '#D1FAE5',
+                border: '1px solid #10B981',
+                borderRadius: '8px',
+                color: '#065F46',
+                fontSize: '14px',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                ✓ Privacy-instellingen opgeslagen
+              </div>
+            )}
+
+            <button
+              className="primary-button"
+              onClick={savePrivacySettings}
+              disabled={privacySaving}
+            >
+              {privacySaving ? 'Opslaan...' : t.account.privacy.updateButton}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Tab 4: Favorieten */}

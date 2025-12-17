@@ -8,6 +8,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
 import User from '../models/User.js';
+import { UserConsent } from '../models/index.js';
 import { authenticate } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
 import twoFactorAuth from '../services/twoFactorAuth.js';
@@ -122,6 +123,21 @@ router.post('/signup', async (req, res) => {
         onboardingCompleted: false,
         onboardingStep: 0
       });
+
+      // Create default consent record (all optional consents disabled)
+      try {
+        await UserConsent.create({
+          userId: user.id,
+          consentEssential: true,
+          consentAnalytics: false,
+          consentPersonalization: false,
+          consentMarketing: false
+        });
+        logger.info(`Created consent record for user ${user.id}`);
+      } catch (consentError) {
+        // Non-fatal: consent record can be created later via API
+        logger.warn('Failed to create consent record:', consentError.message);
+      }
     } catch (dbError) {
       isDatabaseAvailable = false;
       logger.warn('Database not available for signup:', dbError.message);
