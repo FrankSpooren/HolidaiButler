@@ -213,7 +213,7 @@ export default function AccountDashboard() {
           <div className="profile-email">frank@email.com</div>
           <div className="butler-fan-since">
             <span className="butler-fan-icon">🎩</span>
-            <span>Butler-fan sinds: <strong>27 oktober 2025</strong></span>
+            <span>{t.account.profile.butlerFanSince}: <strong>27 oktober 2025</strong></span>
           </div>
           <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '8px' }}>
             💡 {t.account.profile.clickAvatarHint}
@@ -478,17 +478,17 @@ export default function AccountDashboard() {
 
       {/* Tab 4: Favorieten */}
       <div className={`tab-content ${activeTab === 'favorieten' ? 'active' : ''}`}>
-        <div className="section-title">❤️ Favorieten</div>
+        <div className="section-title">❤️ {t.account.favorites.title}</div>
 
         <div className="info-box">
           <div className="info-text">
-            ℹ️ Je opgeslagen POIs en events op één plek.
+            ℹ️ {t.account.favorites.infoText}
           </div>
         </div>
 
         {/* POI Favorites */}
         <div className="section-title" style={{ marginTop: '16px' }}>
-          📍 Favoriete POIs ({favorites?.size || 0})
+          📍 {t.account.favorites.poiTitle} ({favorites?.size || 0})
         </div>
         {favorites && favorites.size > 0 ? (
           <div className="favorites-list">
@@ -506,23 +506,23 @@ export default function AccountDashboard() {
             ))}
             {favorites.size > 5 && (
               <button className="secondary-button" onClick={() => navigate('/favorites')}>
-                Bekijk alle {favorites.size} POIs →
+                {t.account.favorites.viewAll} {favorites.size} POIs →
               </button>
             )}
           </div>
         ) : (
           <div className="empty-state">
             <div className="empty-state-icon">💔</div>
-            <div className="empty-state-text">Je hebt nog geen favoriete POIs opgeslagen.</div>
+            <div className="empty-state-text">{t.account.favorites.emptyPois}</div>
             <button className="secondary-button" onClick={() => navigate('/explore')}>
-              Ontdek POIs →
+              {t.account.favorites.discoverPois}
             </button>
           </div>
         )}
 
         {/* Event Favorites */}
         <div className="section-title" style={{ marginTop: '24px' }}>
-          🎉 Favoriete Events ({agendaFavorites?.size || 0})
+          🎉 {t.account.favorites.eventsTitle} ({agendaFavorites?.size || 0})
         </div>
         {agendaFavorites && agendaFavorites.size > 0 ? (
           <div className="favorites-list">
@@ -532,7 +532,7 @@ export default function AccountDashboard() {
                   <span className="favorite-item-icon">🎉</span>
                   <div className="favorite-item-info">
                     <div className="favorite-item-title">Event #{String(eventId).substring(0, 8)}</div>
-                    <div className="favorite-item-subtitle">Datum te bekijken</div>
+                    <div className="favorite-item-subtitle">Costa Blanca</div>
                   </div>
                 </div>
                 <span className="nav-arrow">→</span>
@@ -540,16 +540,16 @@ export default function AccountDashboard() {
             ))}
             {agendaFavorites.size > 5 && (
               <button className="secondary-button" onClick={() => navigate('/favorites')}>
-                Bekijk alle {agendaFavorites.size} Events →
+                {t.account.favorites.viewAll} {agendaFavorites.size} Events →
               </button>
             )}
           </div>
         ) : (
           <div className="empty-state">
             <div className="empty-state-icon">📅</div>
-            <div className="empty-state-text">Je hebt nog geen favoriete events opgeslagen.</div>
+            <div className="empty-state-text">{t.account.favorites.emptyEvents}</div>
             <button className="secondary-button" onClick={() => navigate('/agenda')}>
-              Bekijk Agenda →
+              {t.account.favorites.viewAgenda}
             </button>
           </div>
         )}
@@ -557,63 +557,60 @@ export default function AccountDashboard() {
 
       {/* Tab 5: Bezochte */}
       <div className={`tab-content ${activeTab === 'bezochte' ? 'active' : ''}`}>
-        <div className="section-title">🗺️ Bezochte Plekken</div>
+        <div className="section-title">🗺️ {t.account.visited.title}</div>
 
         <div className="info-box">
           <div className="info-text">
-            ℹ️ Automatisch bijgehouden wanneer je POIs en events bekijkt.
+            ℹ️ {t.account.visited.infoText}
           </div>
         </div>
 
         {/* Visited POIs */}
         <div className="section-title" style={{ marginTop: '16px' }}>
-          📍 Bezochte POIs
+          📍 {t.account.visited.poisTitle}
         </div>
         <div className="empty-state">
           <div className="empty-state-icon">🚀</div>
           <div className="empty-state-text">
-            Bezochte POIs tracking wordt binnenkort geactiveerd.
+            {t.account.visited.emptyPois}
           </div>
           <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>
-            Je bezoekgeschiedenis wordt automatisch bijgehouden zodra je POIs bekijkt.
+            {t.account.visited.trackingInfo}
           </div>
         </div>
 
         {/* Visited Events */}
         <div className="section-title" style={{ marginTop: '24px' }}>
-          🎉 Bezochte Events
+          🎉 {t.account.visited.eventsTitle}
         </div>
         <div className="empty-state">
           <div className="empty-state-icon">📅</div>
           <div className="empty-state-text">
-            Bezochte events tracking wordt binnenkort geactiveerd.
-          </div>
-          <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>
-            Events die je hebt bekeken worden hier weergegeven.
+            {t.account.visited.emptyEvents}
           </div>
         </div>
       </div>
 
       {/* Tab 6: Reviews */}
       <div className={`tab-content ${activeTab === 'reviews' ? 'active' : ''}`}>
-        <div className="section-title">⭐ Mijn Reviews</div>
+        <div className="section-title">⭐ {t.account.reviews.title}</div>
 
         <div className="info-box">
           <div className="info-text">
-            ℹ️ Bekijk en bewerk je geschreven reviews.
+            ℹ️ {t.account.reviews.infoText}
           </div>
         </div>
 
         <div className="empty-state" style={{ marginTop: '24px' }}>
           <div className="empty-state-icon">✍️</div>
           <div className="empty-state-text">
-            Je hebt nog geen reviews geschreven.
+            {t.account.reviews.empty}
           </div>
           <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>
-            Deel je ervaringen en help andere reizigers!
+            {t.account.reviews.emptyHint}
           </div>
           <button className="secondary-button" onClick={() => navigate('/explore')}>
-            Ontdek POIs om te reviewen →
+            {t.account.reviews.discoverToReview}
           </button>
         </div>
 
@@ -753,35 +750,35 @@ export default function AccountDashboard() {
         <div className="tab-bar-scroll">
           <button className={`tab-btn ${activeTab === 'profiel' ? 'active' : ''}`} onClick={() => switchTab('profiel')}>
             <span className="tab-icon">👤</span>
-            <span className="tab-label">Profiel</span>
+            <span className="tab-label">{t.account.tabs.profile}</span>
           </button>
           <button className={`tab-btn ${activeTab === 'instellingen' ? 'active' : ''}`} onClick={() => switchTab('instellingen')}>
             <span className="tab-icon">⚙️</span>
-            <span className="tab-label">Instellingen</span>
+            <span className="tab-label">{t.account.tabs.settings}</span>
           </button>
           <button className={`tab-btn ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => switchTab('privacy')}>
             <span className="tab-icon">🔐</span>
-            <span className="tab-label">Privacy</span>
+            <span className="tab-label">{t.account.tabs.privacy}</span>
           </button>
           <button className={`tab-btn ${activeTab === 'favorieten' ? 'active' : ''}`} onClick={() => switchTab('favorieten')}>
             <span className="tab-icon">❤️</span>
-            <span className="tab-label">Favorieten</span>
+            <span className="tab-label">{t.account.tabs.favorites}</span>
           </button>
           <button className={`tab-btn ${activeTab === 'bezochte' ? 'active' : ''}`} onClick={() => switchTab('bezochte')}>
             <span className="tab-icon">🗺️</span>
-            <span className="tab-label">Bezochte</span>
+            <span className="tab-label">{t.account.tabs.visited}</span>
           </button>
           <button className={`tab-btn ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => switchTab('reviews')}>
             <span className="tab-icon">⭐</span>
-            <span className="tab-label">Reviews</span>
+            <span className="tab-label">{t.account.tabs.reviews}</span>
           </button>
           <button className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => switchTab('ai')}>
             <span className="tab-icon">🤖</span>
-            <span className="tab-label">AI</span>
+            <span className="tab-label">{t.account.tabs.ai}</span>
           </button>
           <button className={`tab-btn ${activeTab === 'export' ? 'active' : ''}`} onClick={() => switchTab('export')}>
             <span className="tab-icon">📥</span>
-            <span className="tab-label">Export</span>
+            <span className="tab-label">{t.account.tabs.export}</span>
           </button>
         </div>
       </div>
