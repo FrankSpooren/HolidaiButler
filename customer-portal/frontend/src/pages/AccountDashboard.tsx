@@ -373,7 +373,12 @@ export default function AccountDashboard() {
       {/* Tab 1: Profiel (Profile + Preferences combined) */}
       <div className={`tab-content ${activeTab === 'profiel' ? 'active' : ''}`}>
         {/* Profile Card with Integrated Personal Details */}
-        <div className="profile-card">
+        <div className="profile-card card-with-edit">
+          {/* Edit button top-right */}
+          {!isEditing && (
+            <button className="card-edit-btn" onClick={handleEditProfile} title="Bewerken">✏️</button>
+          )}
+
           <div className="profile-header">
             {/* Avatar */}
             <div className="avatar" onClick={handleAvatarClick} title={t.account.profile.clickAvatarHint}>
@@ -431,7 +436,6 @@ export default function AccountDashboard() {
                 <>
                   <div className="profile-name-row">
                     <span className="profile-name">{profileData.name}</span>
-                    <button className="edit-icon-btn" onClick={handleEditProfile} title="Bewerken">✏️</button>
                   </div>
                   <div className="profile-email-row">
                     <span className="profile-email">{profileData.email}</span>
@@ -509,13 +513,11 @@ export default function AccountDashboard() {
         </div>
 
         {/* Preferences Section */}
-        <div className="section-title-with-action">
-          <span>{t.account.preferences.title}</span>
-          <button className="edit-icon-btn" onClick={() => navigate('/onboarding?mode=edit')} title="Bewerk voorkeuren">
-            ✏️
-          </button>
-        </div>
-        <div className="profile-card preferences-card">
+        <div className="section-title">{t.account.preferences.title}</div>
+        <div className="profile-card preferences-card card-with-edit">
+          {/* Edit button top-right */}
+          <button className="card-edit-btn" onClick={() => navigate('/onboarding?mode=edit')} title="Bewerk voorkeuren">✏️</button>
+
           <div style={{ textAlign: 'left' }}>
             {/* Traveling As */}
             <div style={{ marginBottom: '16px' }}>
