@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { authService } from '@/features/auth/services/authService';
 import { useLanguage } from '@/i18n/LanguageContext';
 import './Auth.css';
 
 export function SignupPage() {
-  const navigate = useNavigate();
   const { t } = useLanguage();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -13,6 +12,7 @@ export function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,8 +42,8 @@ export function SignupPage() {
       // Call authService to signup
       await authService.signup({ email, password, name });
 
-      // Navigate to onboarding flow after successful signup
-      navigate('/onboarding');
+      // Show success message - user needs to verify email
+      setSignupSuccess(true);
     } catch (err: any) {
       // Handle different error types
       if (err.response?.status === 409) {
@@ -57,6 +57,61 @@ export function SignupPage() {
       setLoading(false);
     }
   };
+
+  // Show success message after signup
+  if (signupSuccess) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="auth-logo">
+            <div style={{
+              width: '200px',
+              height: '125px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <img
+                src="/assets/images/hb-logo-homepage.png"
+                alt="HolidaiButler"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain'
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ fontSize: '64px', marginBottom: '20px' }}>
+              📧
+            </div>
+            <h2 style={{ color: '#374151', marginBottom: '12px' }}>
+              Controleer je e-mail
+            </h2>
+            <p style={{ color: '#6B7280', marginBottom: '8px' }}>
+              We hebben een verificatie-email gestuurd naar:
+            </p>
+            <p style={{ color: '#1e3a5f', fontWeight: '600', marginBottom: '24px' }}>
+              {email}
+            </p>
+            <p style={{ color: '#6B7280', marginBottom: '24px', fontSize: '14px' }}>
+              Klik op de link in de email om je account te activeren.
+              Controleer ook je spam folder als je de email niet ziet.
+            </p>
+            <Link to="/login" className="auth-button" style={{ display: 'inline-block', textDecoration: 'none' }}>
+              Ga naar inloggen
+            </Link>
+            <div className="auth-link" style={{ marginTop: '16px' }}>
+              <Link to="/resend-verification">Geen email ontvangen?</Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-container">
