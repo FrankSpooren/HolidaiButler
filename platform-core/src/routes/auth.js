@@ -12,6 +12,7 @@ import { UserConsent } from '../models/index.js';
 import { authenticate } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
 import twoFactorAuth from '../services/twoFactorAuth.js';
+import emailService from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -113,12 +114,21 @@ router.post('/signup', async (req, res) => {
         });
       }
 
+      // Generate email verification token
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
       // Create user with schema-aligned fields
       user = await User.create({
         email: email.toLowerCase(),
         passwordHash: password, // Will be hashed by beforeCreate hook
         name: name || email.split('@')[0], // Use email prefix if no name
         emailVerified: false,
+        emailVerificationToken: verificationToken,
+        verificationToken: verificationToken,
+        verificationTokenExpires: verificationTokenExpires,
+        verificationSentAt: new Date(),
+        verificationSentCount: 1,
         isActive: true,
         onboardingCompleted: false,
         onboardingStep: 0
@@ -137,6 +147,15 @@ router.post('/signup', async (req, res) => {
       } catch (consentError) {
         // Non-fatal: consent record can be created later via API
         logger.warn('Failed to create consent record:', consentError.message);
+      }
+
+      // Send verification email
+      try {
+        await emailService.sendVerificationEmail(user, verificationToken);
+        logger.info(`Verification email sent to ${user.email}`);
+      } catch (emailError) {
+        // Non-fatal: user can request resend
+        logger.warn('Failed to send verification email:', emailError.message);
       }
     } catch (dbError) {
       isDatabaseAvailable = false;
@@ -185,7 +204,8 @@ router.post('/signup', async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Account succesvol aangemaakt',
+      message: 'Account succesvol aangemaakt. Controleer je e-mail om je account te activeren.',
+      emailVerificationRequired: true,
       data: {
         user: userData,
         accessToken,
@@ -203,6 +223,157 @@ router.post('/signup', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error tijdens registratie'
+    });
+  }
+});
+
+/**
+ * @route   GET /api/auth/verify-email
+ * @desc    Verify user email with token
+ * @access  Public
+ */
+router.get('/verify-email', async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verificatietoken ontbreekt'
+      });
+    }
+
+    // Find user with this verification token
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { emailVerificationToken: token },
+          { verificationToken: token }
+        ],
+        verificationTokenExpires: {
+          [Op.gt]: new Date()
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ongeldige of verlopen verificatielink. Vraag een nieuwe verificatie-email aan.'
+      });
+    }
+
+    // Check if already verified
+    if (user.emailVerified) {
+      return res.json({
+        success: true,
+        message: 'Je e-mailadres is al geverifieerd. Je kunt inloggen.',
+        alreadyVerified: true
+      });
+    }
+
+    // Mark email as verified
+    await user.update({
+      emailVerified: true,
+      emailVerificationToken: null,
+      verificationToken: null,
+      verificationTokenExpires: null,
+      verifiedAt: new Date()
+    });
+
+    logger.info(`Email verified for user: ${user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Je e-mailadres is succesvol geverifieerd! Je kunt nu inloggen.'
+    });
+
+  } catch (error) {
+    logger.error('Email verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error tijdens verificatie'
+    });
+  }
+});
+
+/**
+ * @route   POST /api/auth/resend-verification
+ * @desc    Resend verification email
+ * @access  Public
+ */
+router.post('/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'E-mailadres is verplicht'
+      });
+    }
+
+    const user = await User.findOne({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (!user) {
+      // Don't reveal if email exists
+      return res.json({
+        success: true,
+        message: 'Als dit e-mailadres bij ons bekend is, ontvang je een verificatie-email.'
+      });
+    }
+
+    // Check if already verified
+    if (user.emailVerified) {
+      return res.json({
+        success: true,
+        message: 'Je e-mailadres is al geverifieerd. Je kunt inloggen.'
+      });
+    }
+
+    // Rate limit: max 3 emails per hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    if (user.verificationSentAt && user.verificationSentAt > oneHourAgo && user.verificationSentCount >= 3) {
+      return res.status(429).json({
+        success: false,
+        message: 'Je hebt te veel verificatie-emails aangevraagd. Probeer het over een uur opnieuw.'
+      });
+    }
+
+    // Generate new token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Reset count if last send was more than an hour ago
+    const newCount = user.verificationSentAt && user.verificationSentAt > oneHourAgo
+      ? user.verificationSentCount + 1
+      : 1;
+
+    await user.update({
+      emailVerificationToken: verificationToken,
+      verificationToken: verificationToken,
+      verificationTokenExpires: verificationTokenExpires,
+      verificationSentAt: new Date(),
+      verificationSentCount: newCount
+    });
+
+    // Send verification email
+    await emailService.sendVerificationEmail(user, verificationToken);
+
+    logger.info(`Verification email resent to ${user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Verificatie-email is opnieuw verzonden. Controleer je inbox.'
+    });
+
+  } catch (error) {
+    logger.error('Resend verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error bij verzenden verificatie-email'
     });
   }
 });
