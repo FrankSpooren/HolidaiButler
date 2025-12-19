@@ -1,25 +1,92 @@
 /**
- * Chat Session Service
+ * Chat Session Service with Redis
  * Manages conversation sessions for HoliBot
+ *
+ * Features:
+ * - Redis storage for production scalability
+ * - Automatic fallback to in-memory if Redis unavailable
+ * - Session expiry with automatic cleanup
+ * - Conversation history management
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import Redis from 'ioredis';
 import logger from '../../utils/logger.js';
 
-// In-memory session store (for production, use Redis)
-const sessions = new Map();
+// Session expiry in seconds (24 hours)
+const SESSION_EXPIRY_SECONDS = parseInt(process.env.SESSION_EXPIRY_HOURS || '24') * 60 * 60;
 
-// Session expiry in milliseconds (24 hours)
-const SESSION_EXPIRY = parseInt(process.env.SESSION_EXPIRY_HOURS || '24') * 60 * 60 * 1000;
+// Redis key prefix
+const REDIS_PREFIX = 'holibot:session:';
 
-// Cleanup interval (1 hour)
-const CLEANUP_INTERVAL = 60 * 60 * 1000;
+// In-memory fallback store
+const memoryStore = new Map();
 
 class SessionService {
   constructor() {
-    // Start periodic cleanup
-    this.cleanupInterval = setInterval(() => this.cleanupExpiredSessions(), CLEANUP_INTERVAL);
-    logger.info('Session service initialized', { expiryHours: SESSION_EXPIRY / (60 * 60 * 1000) });
+    this.redis = null;
+    this.useRedis = false;
+    this.initializeRedis();
+  }
+
+  /**
+   * Initialize Redis connection
+   */
+  async initializeRedis() {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 3,
+        retryDelayOnFailover: 100,
+        enableReadyCheck: true,
+        lazyConnect: true
+      });
+
+      // Set up event handlers
+      this.redis.on('connect', () => {
+        logger.info('Redis connected for session storage');
+        this.useRedis = true;
+      });
+
+      this.redis.on('error', (error) => {
+        logger.warn('Redis error, falling back to in-memory storage:', error.message);
+        this.useRedis = false;
+      });
+
+      this.redis.on('close', () => {
+        logger.warn('Redis connection closed, using in-memory storage');
+        this.useRedis = false;
+      });
+
+      // Try to connect
+      await this.redis.connect();
+
+      // Test connection
+      await this.redis.ping();
+      this.useRedis = true;
+      logger.info('Session service initialized with Redis', {
+        expiryHours: SESSION_EXPIRY_SECONDS / 3600
+      });
+
+    } catch (error) {
+      logger.warn('Redis unavailable, using in-memory session storage:', error.message);
+      this.useRedis = false;
+      this.redis = null;
+
+      // Start in-memory cleanup interval
+      this.cleanupInterval = setInterval(() => this.cleanupExpiredSessions(), 60 * 60 * 1000);
+      logger.info('Session service initialized with in-memory storage', {
+        expiryHours: SESSION_EXPIRY_SECONDS / 3600
+      });
+    }
+  }
+
+  /**
+   * Get Redis key for session
+   */
+  getKey(sessionId) {
+    return `${REDIS_PREFIX}${sessionId}`;
   }
 
   /**
@@ -43,13 +110,27 @@ class SessionService {
         conversationTurn: 0
       },
       created_at: now,
-      updated_at: now,
-      expires_at: now + SESSION_EXPIRY
+      updated_at: now
     };
 
-    sessions.set(sessionId, session);
+    if (this.useRedis && this.redis) {
+      try {
+        await this.redis.setex(
+          this.getKey(sessionId),
+          SESSION_EXPIRY_SECONDS,
+          JSON.stringify(session)
+        );
+      } catch (error) {
+        logger.error('Redis setex failed, using memory fallback:', error.message);
+        session.expires_at = now + (SESSION_EXPIRY_SECONDS * 1000);
+        memoryStore.set(sessionId, session);
+      }
+    } else {
+      session.expires_at = now + (SESSION_EXPIRY_SECONDS * 1000);
+      memoryStore.set(sessionId, session);
+    }
 
-    logger.info('Chat session created', { sessionId, userId });
+    logger.info('Chat session created', { sessionId, userId, storage: this.useRedis ? 'redis' : 'memory' });
     return sessionId;
   }
 
@@ -59,15 +140,28 @@ class SessionService {
    * @returns {Object|null} Session object or null if not found/expired
    */
   async getSession(sessionId) {
-    const session = sessions.get(sessionId);
+    if (this.useRedis && this.redis) {
+      try {
+        const data = await this.redis.get(this.getKey(sessionId));
+        if (!data) {
+          return null;
+        }
+        return JSON.parse(data);
+      } catch (error) {
+        logger.error('Redis get failed:', error.message);
+        // Try memory fallback
+      }
+    }
 
+    // In-memory fallback
+    const session = memoryStore.get(sessionId);
     if (!session) {
       return null;
     }
 
     // Check if session has expired
-    if (Date.now() > session.expires_at) {
-      sessions.delete(sessionId);
+    if (session.expires_at && Date.now() > session.expires_at) {
+      memoryStore.delete(sessionId);
       logger.info('Session expired and removed', { sessionId });
       return null;
     }
@@ -81,7 +175,7 @@ class SessionService {
    * @param {Object} contextUpdate - Context updates
    */
   async updateSession(sessionId, contextUpdate) {
-    const session = sessions.get(sessionId);
+    const session = await this.getSession(sessionId);
 
     if (!session) {
       logger.warn('Attempted to update non-existent session', { sessionId });
@@ -96,10 +190,23 @@ class SessionService {
     };
     session.updated_at = Date.now();
 
-    // Extend expiry on activity
-    session.expires_at = Date.now() + SESSION_EXPIRY;
-
-    sessions.set(sessionId, session);
+    // Save back
+    if (this.useRedis && this.redis) {
+      try {
+        await this.redis.setex(
+          this.getKey(sessionId),
+          SESSION_EXPIRY_SECONDS,
+          JSON.stringify(session)
+        );
+      } catch (error) {
+        logger.error('Redis setex failed during update:', error.message);
+        session.expires_at = Date.now() + (SESSION_EXPIRY_SECONDS * 1000);
+        memoryStore.set(sessionId, session);
+      }
+    } else {
+      session.expires_at = Date.now() + (SESSION_EXPIRY_SECONDS * 1000);
+      memoryStore.set(sessionId, session);
+    }
 
     logger.debug('Session updated', {
       sessionId,
@@ -117,7 +224,7 @@ class SessionService {
    * @param {Array} pois - Optional POI results for assistant messages
    */
   async addMessage(sessionId, role, content, pois = []) {
-    const session = sessions.get(sessionId);
+    const session = await this.getSession(sessionId);
 
     if (!session) {
       logger.warn('Attempted to add message to non-existent session', { sessionId });
@@ -134,7 +241,7 @@ class SessionService {
     session.messages.push(message);
     session.updated_at = Date.now();
 
-    // Keep only last 50 messages to prevent memory issues
+    // Keep only last 50 messages to prevent memory/storage issues
     if (session.messages.length > 50) {
       session.messages = session.messages.slice(-50);
     }
@@ -144,10 +251,27 @@ class SessionService {
       const poiIds = pois.map(p => p.id || p.google_placeid).filter(Boolean);
       session.context.displayedPOIs = [
         ...new Set([...session.context.displayedPOIs, ...poiIds])
-      ].slice(-20); // Keep track of last 20 displayed POIs
+      ].slice(-20);
     }
 
-    sessions.set(sessionId, session);
+    // Save back
+    if (this.useRedis && this.redis) {
+      try {
+        await this.redis.setex(
+          this.getKey(sessionId),
+          SESSION_EXPIRY_SECONDS,
+          JSON.stringify(session)
+        );
+      } catch (error) {
+        logger.error('Redis setex failed during addMessage:', error.message);
+        session.expires_at = Date.now() + (SESSION_EXPIRY_SECONDS * 1000);
+        memoryStore.set(sessionId, session);
+      }
+    } else {
+      session.expires_at = Date.now() + (SESSION_EXPIRY_SECONDS * 1000);
+      memoryStore.set(sessionId, session);
+    }
+
     return true;
   }
 
@@ -177,48 +301,99 @@ class SessionService {
    * @param {string} sessionId - Session ID
    */
   async deleteSession(sessionId) {
-    const existed = sessions.delete(sessionId);
-    if (existed) {
+    let deleted = false;
+
+    if (this.useRedis && this.redis) {
+      try {
+        const result = await this.redis.del(this.getKey(sessionId));
+        deleted = result > 0;
+      } catch (error) {
+        logger.error('Redis del failed:', error.message);
+      }
+    }
+
+    // Also try memory store
+    if (memoryStore.delete(sessionId)) {
+      deleted = true;
+    }
+
+    if (deleted) {
       logger.info('Session deleted', { sessionId });
     }
-    return existed;
+    return deleted;
   }
 
   /**
-   * Cleanup expired sessions
+   * Cleanup expired sessions (only for in-memory storage)
    */
   cleanupExpiredSessions() {
+    if (this.useRedis) {
+      // Redis handles expiry automatically
+      return;
+    }
+
     const now = Date.now();
     let cleaned = 0;
 
-    for (const [sessionId, session] of sessions.entries()) {
-      if (now > session.expires_at) {
-        sessions.delete(sessionId);
+    for (const [sessionId, session] of memoryStore.entries()) {
+      if (session.expires_at && now > session.expires_at) {
+        memoryStore.delete(sessionId);
         cleaned++;
       }
     }
 
     if (cleaned > 0) {
-      logger.info('Expired sessions cleaned up', { count: cleaned, remaining: sessions.size });
+      logger.info('Expired sessions cleaned up', { count: cleaned, remaining: memoryStore.size });
     }
   }
 
   /**
    * Get session statistics
    */
-  getStats() {
+  async getStats() {
+    let activeSessions = 0;
+
+    if (this.useRedis && this.redis) {
+      try {
+        const keys = await this.redis.keys(`${REDIS_PREFIX}*`);
+        activeSessions = keys.length;
+      } catch (error) {
+        logger.error('Redis keys failed:', error.message);
+        activeSessions = memoryStore.size;
+      }
+    } else {
+      activeSessions = memoryStore.size;
+    }
+
     return {
-      activeSessions: sessions.size,
-      expiryHours: SESSION_EXPIRY / (60 * 60 * 1000)
+      activeSessions,
+      expiryHours: SESSION_EXPIRY_SECONDS / 3600,
+      storage: this.useRedis ? 'redis' : 'memory'
     };
   }
 
   /**
-   * Shutdown - cleanup interval
+   * Check if service is using Redis
    */
-  shutdown() {
+  isUsingRedis() {
+    return this.useRedis;
+  }
+
+  /**
+   * Shutdown - cleanup resources
+   */
+  async shutdown() {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
+    }
+
+    if (this.redis) {
+      try {
+        await this.redis.quit();
+        logger.info('Redis connection closed');
+      } catch (error) {
+        logger.error('Error closing Redis connection:', error.message);
+      }
     }
   }
 }
