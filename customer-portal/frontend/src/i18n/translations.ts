@@ -331,6 +331,50 @@ export interface Translations {
       errorPasswordTooShort: string;
       errorEmailExists: string;
       errorGeneric: string;
+      // Password requirements
+      passwordRequirements: {
+        title: string;
+        minLength: string;
+        uppercase: string;
+        lowercase: string;
+        number: string;
+        special: string;
+      };
+      // Verification success message
+      verificationSent: {
+        title: string;
+        sentTo: string;
+        instruction: string;
+        goToLogin: string;
+        noEmail: string;
+      };
+    };
+    verifyEmail: {
+      verifying: string;
+      verifyingText: string;
+      success: string;
+      successMessage: string;
+      alreadyVerified: string;
+      alreadyVerifiedMessage: string;
+      failed: string;
+      failedMessage: string;
+      goToLogin: string;
+      requestNew: string;
+      backToLogin: string;
+    };
+    resendVerification: {
+      title: string;
+      subtitle: string;
+      emailLabel: string;
+      emailPlaceholder: string;
+      sendButton: string;
+      sending: string;
+      success: string;
+      successMessage: string;
+      backToLogin: string;
+      errorEmpty: string;
+      errorTooMany: string;
+      errorGeneric: string;
     };
   };
   // Account Dashboard
@@ -990,9 +1034,51 @@ export const translations: Record<Language, Translations> = {
         backToHome: 'Terug naar home',
         errorFillFields: 'Vul alle velden in',
         errorPasswordMismatch: 'Wachtwoorden komen niet overeen',
-        errorPasswordTooShort: 'Wachtwoord moet minimaal 6 tekens bevatten',
+        errorPasswordTooShort: 'Wachtwoord moet minimaal 8 tekens bevatten',
         errorEmailExists: 'Er bestaat al een account met dit e-mailadres. Log alsjeblieft in.',
         errorGeneric: 'Registratie mislukt. Probeer het later opnieuw.',
+        passwordRequirements: {
+          title: 'Wachtwoord moet bevatten:',
+          minLength: 'Minimaal 8 tekens',
+          uppercase: 'Minimaal 1 hoofdletter',
+          lowercase: 'Minimaal 1 kleine letter',
+          number: 'Minimaal 1 cijfer',
+          special: 'Minimaal 1 speciaal teken (!@#$%^&*)',
+        },
+        verificationSent: {
+          title: 'Controleer je e-mail',
+          sentTo: 'We hebben een verificatie-email gestuurd naar:',
+          instruction: 'Klik op de link in de email om je account te activeren. Controleer ook je spam folder als je de email niet ziet.',
+          goToLogin: 'Ga naar inloggen',
+          noEmail: 'Geen email ontvangen?',
+        },
+      },
+      verifyEmail: {
+        verifying: 'E-mail verifiëren...',
+        verifyingText: 'Even geduld, we controleren je verificatielink.',
+        success: 'E-mail geverifieerd!',
+        successMessage: 'Je e-mailadres is succesvol geverifieerd. Je kunt nu inloggen.',
+        alreadyVerified: 'Al geverifieerd',
+        alreadyVerifiedMessage: 'Dit e-mailadres is al geverifieerd. Je kunt inloggen.',
+        failed: 'Verificatie mislukt',
+        failedMessage: 'Er is een fout opgetreden bij de verificatie. Probeer het opnieuw of vraag een nieuwe verificatie-email aan.',
+        goToLogin: 'Ga naar inloggen',
+        requestNew: 'Nieuwe verificatie-email aanvragen',
+        backToLogin: 'Terug naar inloggen',
+      },
+      resendVerification: {
+        title: 'Verificatie-email opnieuw verzenden',
+        subtitle: 'Voer je e-mailadres in om een nieuwe verificatie-email te ontvangen.',
+        emailLabel: 'E-mailadres',
+        emailPlaceholder: 'naam@voorbeeld.nl',
+        sendButton: 'Verzend verificatie-email',
+        sending: 'Verzenden...',
+        success: 'Verificatie-email verzonden',
+        successMessage: 'Als dit e-mailadres bij ons bekend is, ontvang je binnen enkele minuten een verificatie-email. Controleer ook je spam folder.',
+        backToLogin: 'Terug naar inloggen',
+        errorEmpty: 'Voer je e-mailadres in',
+        errorTooMany: 'Je hebt te veel verificatie-emails aangevraagd. Probeer het over een uur opnieuw.',
+        errorGeneric: 'Er is een fout opgetreden',
       },
     },
     account: {
@@ -1872,9 +1958,51 @@ export const translations: Record<Language, Translations> = {
         backToHome: 'Back to home',
         errorFillFields: 'Please fill in all fields',
         errorPasswordMismatch: 'Passwords do not match',
-        errorPasswordTooShort: 'Password must be at least 6 characters',
+        errorPasswordTooShort: 'Password must be at least 8 characters',
         errorEmailExists: 'An account with this email already exists. Please login instead.',
         errorGeneric: 'Signup failed. Please try again later.',
+        passwordRequirements: {
+          title: 'Password must contain:',
+          minLength: 'At least 8 characters',
+          uppercase: 'At least 1 uppercase letter',
+          lowercase: 'At least 1 lowercase letter',
+          number: 'At least 1 number',
+          special: 'At least 1 special character (!@#$%^&*)',
+        },
+        verificationSent: {
+          title: 'Check your email',
+          sentTo: 'We have sent a verification email to:',
+          instruction: 'Click the link in the email to activate your account. Also check your spam folder if you don\'t see the email.',
+          goToLogin: 'Go to login',
+          noEmail: 'Didn\'t receive an email?',
+        },
+      },
+      verifyEmail: {
+        verifying: 'Verifying email...',
+        verifyingText: 'Please wait, we are checking your verification link.',
+        success: 'Email verified!',
+        successMessage: 'Your email address has been successfully verified. You can now log in.',
+        alreadyVerified: 'Already verified',
+        alreadyVerifiedMessage: 'This email address has already been verified. You can log in.',
+        failed: 'Verification failed',
+        failedMessage: 'An error occurred during verification. Please try again or request a new verification email.',
+        goToLogin: 'Go to login',
+        requestNew: 'Request new verification email',
+        backToLogin: 'Back to login',
+      },
+      resendVerification: {
+        title: 'Resend verification email',
+        subtitle: 'Enter your email address to receive a new verification email.',
+        emailLabel: 'Email address',
+        emailPlaceholder: 'name@example.com',
+        sendButton: 'Send verification email',
+        sending: 'Sending...',
+        success: 'Verification email sent',
+        successMessage: 'If this email address is registered with us, you will receive a verification email within a few minutes. Also check your spam folder.',
+        backToLogin: 'Back to login',
+        errorEmpty: 'Please enter your email address',
+        errorTooMany: 'You have requested too many verification emails. Please try again in an hour.',
+        errorGeneric: 'An error occurred',
       },
     },
     footer: {
@@ -2523,9 +2651,51 @@ export const translations: Record<Language, Translations> = {
         backToHome: 'Zurück zur Startseite',
         errorFillFields: 'Bitte füllen Sie alle Felder aus',
         errorPasswordMismatch: 'Passwörter stimmen nicht überein',
-        errorPasswordTooShort: 'Passwort muss mindestens 6 Zeichen lang sein',
+        errorPasswordTooShort: 'Passwort muss mindestens 8 Zeichen lang sein',
         errorEmailExists: 'Ein Konto mit dieser E-Mail existiert bereits. Bitte melden Sie sich an.',
         errorGeneric: 'Registrierung fehlgeschlagen. Bitte versuchen Sie es später erneut.',
+        passwordRequirements: {
+          title: 'Passwort muss enthalten:',
+          minLength: 'Mindestens 8 Zeichen',
+          uppercase: 'Mindestens 1 Großbuchstaben',
+          lowercase: 'Mindestens 1 Kleinbuchstaben',
+          number: 'Mindestens 1 Zahl',
+          special: 'Mindestens 1 Sonderzeichen (!@#$%^&*)',
+        },
+        verificationSent: {
+          title: 'Überprüfen Sie Ihre E-Mail',
+          sentTo: 'Wir haben eine Bestätigungs-E-Mail gesendet an:',
+          instruction: 'Klicken Sie auf den Link in der E-Mail, um Ihr Konto zu aktivieren. Überprüfen Sie auch Ihren Spam-Ordner.',
+          goToLogin: 'Zur Anmeldung',
+          noEmail: 'Keine E-Mail erhalten?',
+        },
+      },
+      verifyEmail: {
+        verifying: 'E-Mail wird verifiziert...',
+        verifyingText: 'Bitte warten Sie, wir überprüfen Ihren Bestätigungslink.',
+        success: 'E-Mail verifiziert!',
+        successMessage: 'Ihre E-Mail-Adresse wurde erfolgreich verifiziert. Sie können sich jetzt anmelden.',
+        alreadyVerified: 'Bereits verifiziert',
+        alreadyVerifiedMessage: 'Diese E-Mail-Adresse wurde bereits verifiziert. Sie können sich anmelden.',
+        failed: 'Verifizierung fehlgeschlagen',
+        failedMessage: 'Bei der Verifizierung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut oder fordern Sie eine neue Bestätigungs-E-Mail an.',
+        goToLogin: 'Zur Anmeldung',
+        requestNew: 'Neue Bestätigungs-E-Mail anfordern',
+        backToLogin: 'Zurück zur Anmeldung',
+      },
+      resendVerification: {
+        title: 'Bestätigungs-E-Mail erneut senden',
+        subtitle: 'Geben Sie Ihre E-Mail-Adresse ein, um eine neue Bestätigungs-E-Mail zu erhalten.',
+        emailLabel: 'E-Mail-Adresse',
+        emailPlaceholder: 'name@beispiel.de',
+        sendButton: 'Bestätigungs-E-Mail senden',
+        sending: 'Senden...',
+        success: 'Bestätigungs-E-Mail gesendet',
+        successMessage: 'Falls diese E-Mail-Adresse bei uns registriert ist, erhalten Sie innerhalb weniger Minuten eine Bestätigungs-E-Mail. Überprüfen Sie auch Ihren Spam-Ordner.',
+        backToLogin: 'Zurück zur Anmeldung',
+        errorEmpty: 'Bitte geben Sie Ihre E-Mail-Adresse ein',
+        errorTooMany: 'Sie haben zu viele Bestätigungs-E-Mails angefordert. Bitte versuchen Sie es in einer Stunde erneut.',
+        errorGeneric: 'Ein Fehler ist aufgetreten',
       },
     },
     footer: {
@@ -3174,9 +3344,51 @@ export const translations: Record<Language, Translations> = {
         backToHome: 'Volver al inicio',
         errorFillFields: 'Por favor, completa todos los campos',
         errorPasswordMismatch: 'Las contraseñas no coinciden',
-        errorPasswordTooShort: 'La contraseña debe tener al menos 6 caracteres',
+        errorPasswordTooShort: 'La contraseña debe tener al menos 8 caracteres',
         errorEmailExists: 'Ya existe una cuenta con este correo. Por favor, inicia sesión.',
         errorGeneric: 'Error al registrarse. Inténtalo más tarde.',
+        passwordRequirements: {
+          title: 'La contraseña debe contener:',
+          minLength: 'Al menos 8 caracteres',
+          uppercase: 'Al menos 1 letra mayúscula',
+          lowercase: 'Al menos 1 letra minúscula',
+          number: 'Al menos 1 número',
+          special: 'Al menos 1 carácter especial (!@#$%^&*)',
+        },
+        verificationSent: {
+          title: 'Revisa tu correo',
+          sentTo: 'Hemos enviado un correo de verificación a:',
+          instruction: 'Haz clic en el enlace del correo para activar tu cuenta. También revisa tu carpeta de spam si no ves el correo.',
+          goToLogin: 'Ir a iniciar sesión',
+          noEmail: '¿No recibiste el correo?',
+        },
+      },
+      verifyEmail: {
+        verifying: 'Verificando correo...',
+        verifyingText: 'Por favor espera, estamos verificando tu enlace.',
+        success: '¡Correo verificado!',
+        successMessage: 'Tu dirección de correo ha sido verificada exitosamente. Ya puedes iniciar sesión.',
+        alreadyVerified: 'Ya verificado',
+        alreadyVerifiedMessage: 'Esta dirección de correo ya ha sido verificada. Puedes iniciar sesión.',
+        failed: 'Verificación fallida',
+        failedMessage: 'Ocurrió un error durante la verificación. Por favor intenta de nuevo o solicita un nuevo correo de verificación.',
+        goToLogin: 'Ir a iniciar sesión',
+        requestNew: 'Solicitar nuevo correo de verificación',
+        backToLogin: 'Volver a iniciar sesión',
+      },
+      resendVerification: {
+        title: 'Reenviar correo de verificación',
+        subtitle: 'Ingresa tu correo electrónico para recibir un nuevo correo de verificación.',
+        emailLabel: 'Correo electrónico',
+        emailPlaceholder: 'nombre@ejemplo.com',
+        sendButton: 'Enviar correo de verificación',
+        sending: 'Enviando...',
+        success: 'Correo de verificación enviado',
+        successMessage: 'Si esta dirección de correo está registrada con nosotros, recibirás un correo de verificación en unos minutos. También revisa tu carpeta de spam.',
+        backToLogin: 'Volver a iniciar sesión',
+        errorEmpty: 'Por favor ingresa tu correo electrónico',
+        errorTooMany: 'Has solicitado demasiados correos de verificación. Por favor intenta de nuevo en una hora.',
+        errorGeneric: 'Ocurrió un error',
       },
     },
     footer: {
@@ -3825,9 +4037,51 @@ export const translations: Record<Language, Translations> = {
         backToHome: 'Tillbaka till startsidan',
         errorFillFields: 'Vänligen fyll i alla fält',
         errorPasswordMismatch: 'Lösenorden matchar inte',
-        errorPasswordTooShort: 'Lösenordet måste vara minst 6 tecken',
+        errorPasswordTooShort: 'Lösenordet måste vara minst 8 tecken',
         errorEmailExists: 'Ett konto med denna e-post finns redan. Vänligen logga in.',
         errorGeneric: 'Registreringen misslyckades. Försök igen senare.',
+        passwordRequirements: {
+          title: 'Lösenordet måste innehålla:',
+          minLength: 'Minst 8 tecken',
+          uppercase: 'Minst 1 stor bokstav',
+          lowercase: 'Minst 1 liten bokstav',
+          number: 'Minst 1 siffra',
+          special: 'Minst 1 specialtecken (!@#$%^&*)',
+        },
+        verificationSent: {
+          title: 'Kontrollera din e-post',
+          sentTo: 'Vi har skickat ett verifieringsmail till:',
+          instruction: 'Klicka på länken i mailet för att aktivera ditt konto. Kolla även din skräppostmapp om du inte ser mailet.',
+          goToLogin: 'Gå till inloggning',
+          noEmail: 'Fick du inget mail?',
+        },
+      },
+      verifyEmail: {
+        verifying: 'Verifierar e-post...',
+        verifyingText: 'Vänta, vi kontrollerar din verifieringslänk.',
+        success: 'E-post verifierad!',
+        successMessage: 'Din e-postadress har verifierats. Du kan nu logga in.',
+        alreadyVerified: 'Redan verifierad',
+        alreadyVerifiedMessage: 'Denna e-postadress har redan verifierats. Du kan logga in.',
+        failed: 'Verifiering misslyckades',
+        failedMessage: 'Ett fel uppstod vid verifieringen. Försök igen eller begär ett nytt verifieringsmail.',
+        goToLogin: 'Gå till inloggning',
+        requestNew: 'Begär nytt verifieringsmail',
+        backToLogin: 'Tillbaka till inloggning',
+      },
+      resendVerification: {
+        title: 'Skicka verifieringsmail igen',
+        subtitle: 'Ange din e-postadress för att få ett nytt verifieringsmail.',
+        emailLabel: 'E-postadress',
+        emailPlaceholder: 'namn@exempel.se',
+        sendButton: 'Skicka verifieringsmail',
+        sending: 'Skickar...',
+        success: 'Verifieringsmail skickat',
+        successMessage: 'Om denna e-postadress finns registrerad hos oss får du ett verifieringsmail inom några minuter. Kolla även din skräppostmapp.',
+        backToLogin: 'Tillbaka till inloggning',
+        errorEmpty: 'Ange din e-postadress',
+        errorTooMany: 'Du har begärt för många verifieringsmail. Försök igen om en timme.',
+        errorGeneric: 'Ett fel uppstod',
       },
     },
     footer: {
@@ -4476,9 +4730,51 @@ export const translations: Record<Language, Translations> = {
         backToHome: 'Powrót do strony głównej',
         errorFillFields: 'Proszę wypełnić wszystkie pola',
         errorPasswordMismatch: 'Hasła nie pasują',
-        errorPasswordTooShort: 'Hasło musi mieć co najmniej 6 znaków',
+        errorPasswordTooShort: 'Hasło musi mieć co najmniej 8 znaków',
         errorEmailExists: 'Konto z tym e-mailem już istnieje. Proszę się zalogować.',
         errorGeneric: 'Rejestracja nie powiodła się. Spróbuj później.',
+        passwordRequirements: {
+          title: 'Hasło musi zawierać:',
+          minLength: 'Co najmniej 8 znaków',
+          uppercase: 'Co najmniej 1 wielką literę',
+          lowercase: 'Co najmniej 1 małą literę',
+          number: 'Co najmniej 1 cyfrę',
+          special: 'Co najmniej 1 znak specjalny (!@#$%^&*)',
+        },
+        verificationSent: {
+          title: 'Sprawdź swoją skrzynkę',
+          sentTo: 'Wysłaliśmy e-mail weryfikacyjny na adres:',
+          instruction: 'Kliknij link w e-mailu, aby aktywować swoje konto. Sprawdź również folder spam, jeśli nie widzisz wiadomości.',
+          goToLogin: 'Przejdź do logowania',
+          noEmail: 'Nie otrzymałeś e-maila?',
+        },
+      },
+      verifyEmail: {
+        verifying: 'Weryfikacja e-maila...',
+        verifyingText: 'Proszę czekać, sprawdzamy Twój link weryfikacyjny.',
+        success: 'E-mail zweryfikowany!',
+        successMessage: 'Twój adres e-mail został pomyślnie zweryfikowany. Możesz się teraz zalogować.',
+        alreadyVerified: 'Już zweryfikowany',
+        alreadyVerifiedMessage: 'Ten adres e-mail został już zweryfikowany. Możesz się zalogować.',
+        failed: 'Weryfikacja nie powiodła się',
+        failedMessage: 'Wystąpił błąd podczas weryfikacji. Spróbuj ponownie lub poproś o nowy e-mail weryfikacyjny.',
+        goToLogin: 'Przejdź do logowania',
+        requestNew: 'Poproś o nowy e-mail weryfikacyjny',
+        backToLogin: 'Powrót do logowania',
+      },
+      resendVerification: {
+        title: 'Wyślij ponownie e-mail weryfikacyjny',
+        subtitle: 'Wprowadź swój adres e-mail, aby otrzymać nowy e-mail weryfikacyjny.',
+        emailLabel: 'Adres e-mail',
+        emailPlaceholder: 'nazwa@przykład.pl',
+        sendButton: 'Wyślij e-mail weryfikacyjny',
+        sending: 'Wysyłanie...',
+        success: 'E-mail weryfikacyjny wysłany',
+        successMessage: 'Jeśli ten adres e-mail jest u nas zarejestrowany, otrzymasz e-mail weryfikacyjny w ciągu kilku minut. Sprawdź również folder spam.',
+        backToLogin: 'Powrót do logowania',
+        errorEmpty: 'Proszę wprowadzić adres e-mail',
+        errorTooMany: 'Wysłałeś zbyt wiele próśb o e-mail weryfikacyjny. Spróbuj ponownie za godzinę.',
+        errorGeneric: 'Wystąpił błąd',
       },
     },
     footer: {

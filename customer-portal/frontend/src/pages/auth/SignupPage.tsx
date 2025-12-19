@@ -1,8 +1,45 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { authService } from '@/features/auth/services/authService';
 import { useLanguage } from '@/i18n/LanguageContext';
 import './Auth.css';
+
+// Password validation helper
+const validatePassword = (password: string) => ({
+  minLength: password.length >= 8,
+  uppercase: /[A-Z]/.test(password),
+  lowercase: /[a-z]/.test(password),
+  number: /[0-9]/.test(password),
+  special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+});
+
+// Password requirement item component
+const PasswordRequirement = ({ met, label }: { met: boolean; label: string }) => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '13px',
+    color: met ? '#059669' : '#6B7280',
+    transition: 'color 0.2s ease',
+  }}>
+    <span style={{
+      width: '18px',
+      height: '18px',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: met ? '#059669' : '#E5E7EB',
+      color: met ? '#fff' : '#9CA3AF',
+      fontSize: '12px',
+      transition: 'all 0.2s ease',
+    }}>
+      {met ? '✓' : ''}
+    </span>
+    <span>{label}</span>
+  </div>
+);
 
 export function SignupPage() {
   const { t } = useLanguage();
@@ -13,6 +50,14 @@ export function SignupPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
+
+  // Memoized password validation
+  const passwordValidation = useMemo(() => validatePassword(password), [password]);
+  const isPasswordValid = useMemo(() =>
+    Object.values(passwordValidation).every(Boolean),
+    [passwordValidation]
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +77,7 @@ export function SignupPage() {
       return;
     }
 
-    if (password.length < 6) {
+    if (!isPasswordValid) {
       setError(t.auth.signup.errorPasswordTooShort);
       setLoading(false);
       return;
@@ -89,23 +134,22 @@ export function SignupPage() {
               📧
             </div>
             <h2 style={{ color: '#374151', marginBottom: '12px' }}>
-              Controleer je e-mail
+              {t.auth.signup.verificationSent.title}
             </h2>
             <p style={{ color: '#6B7280', marginBottom: '8px' }}>
-              We hebben een verificatie-email gestuurd naar:
+              {t.auth.signup.verificationSent.sentTo}
             </p>
             <p style={{ color: '#1e3a5f', fontWeight: '600', marginBottom: '24px' }}>
               {email}
             </p>
             <p style={{ color: '#6B7280', marginBottom: '24px', fontSize: '14px' }}>
-              Klik op de link in de email om je account te activeren.
-              Controleer ook je spam folder als je de email niet ziet.
+              {t.auth.signup.verificationSent.instruction}
             </p>
             <Link to="/login" className="auth-button" style={{ display: 'inline-block', textDecoration: 'none' }}>
-              Ga naar inloggen
+              {t.auth.signup.verificationSent.goToLogin}
             </Link>
             <div className="auth-link" style={{ marginTop: '16px' }}>
-              <Link to="/resend-verification">Geen email ontvangen?</Link>
+              <Link to="/resend-verification">{t.auth.signup.verificationSent.noEmail}</Link>
             </div>
           </div>
         </div>
@@ -171,9 +215,52 @@ export function SignupPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onFocus={() => setShowPasswordRequirements(true)}
               placeholder={t.auth.signup.passwordPlaceholder}
               disabled={loading}
             />
+
+            {/* Password requirements - show when focused or has content */}
+            {(showPasswordRequirements || password.length > 0) && (
+              <div style={{
+                marginTop: '12px',
+                padding: '12px',
+                backgroundColor: '#F9FAFB',
+                borderRadius: '8px',
+                border: '1px solid #E5E7EB',
+              }}>
+                <p style={{
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '8px',
+                }}>
+                  {t.auth.signup.passwordRequirements.title}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <PasswordRequirement
+                    met={passwordValidation.minLength}
+                    label={t.auth.signup.passwordRequirements.minLength}
+                  />
+                  <PasswordRequirement
+                    met={passwordValidation.uppercase}
+                    label={t.auth.signup.passwordRequirements.uppercase}
+                  />
+                  <PasswordRequirement
+                    met={passwordValidation.lowercase}
+                    label={t.auth.signup.passwordRequirements.lowercase}
+                  />
+                  <PasswordRequirement
+                    met={passwordValidation.number}
+                    label={t.auth.signup.passwordRequirements.number}
+                  />
+                  <PasswordRequirement
+                    met={passwordValidation.special}
+                    label={t.auth.signup.passwordRequirements.special}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="form-group">

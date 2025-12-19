@@ -17,7 +17,7 @@ export function VerifyEmailPage() {
 
     if (!token) {
       setStatus('error');
-      setMessage('Verificatietoken ontbreekt in de URL.');
+      setMessage(t.auth.verifyEmail.failedMessage);
       return;
     }
 
@@ -29,25 +29,25 @@ export function VerifyEmailPage() {
         if (data.success) {
           if (data.alreadyVerified) {
             setStatus('already_verified');
+            setMessage(t.auth.verifyEmail.alreadyVerifiedMessage);
           } else {
             setStatus('success');
+            setMessage(t.auth.verifyEmail.successMessage);
           }
-          setMessage(data.message);
         } else {
           setStatus('error');
-          setMessage(data.message || 'Verificatie mislukt');
+          setMessage(data.message || t.auth.verifyEmail.failedMessage);
         }
       } catch (error: any) {
         setStatus('error');
         setMessage(
-          error.response?.data?.message ||
-          'Er is een fout opgetreden bij de verificatie. Probeer het opnieuw of vraag een nieuwe verificatie-email aan.'
+          error.response?.data?.message || t.auth.verifyEmail.failedMessage
         );
       }
     };
 
     verifyEmail();
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   return (
     <div className="auth-container">
@@ -80,10 +80,10 @@ export function VerifyEmailPage() {
                 <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
               </div>
               <h2 style={{ color: '#374151', marginBottom: '12px' }}>
-                E-mail verifiëren...
+                {t.auth.verifyEmail.verifying}
               </h2>
               <p style={{ color: '#6B7280' }}>
-                Even geduld, we controleren je verificatielink.
+                {t.auth.verifyEmail.verifyingText}
               </p>
             </>
           )}
@@ -94,13 +94,13 @@ export function VerifyEmailPage() {
                 ✅
               </div>
               <h2 style={{ color: '#059669', marginBottom: '12px' }}>
-                E-mail geverifieerd!
+                {t.auth.verifyEmail.success}
               </h2>
               <p style={{ color: '#6B7280', marginBottom: '24px' }}>
                 {message}
               </p>
               <Link to="/login" className="auth-button" style={{ display: 'inline-block', textDecoration: 'none' }}>
-                Ga naar inloggen
+                {t.auth.verifyEmail.goToLogin}
               </Link>
             </>
           )}
@@ -111,13 +111,13 @@ export function VerifyEmailPage() {
                 ✓
               </div>
               <h2 style={{ color: '#2563EB', marginBottom: '12px' }}>
-                Al geverifieerd
+                {t.auth.verifyEmail.alreadyVerified}
               </h2>
               <p style={{ color: '#6B7280', marginBottom: '24px' }}>
                 {message}
               </p>
               <Link to="/login" className="auth-button" style={{ display: 'inline-block', textDecoration: 'none' }}>
-                Ga naar inloggen
+                {t.auth.verifyEmail.goToLogin}
               </Link>
             </>
           )}
@@ -128,17 +128,17 @@ export function VerifyEmailPage() {
                 ❌
               </div>
               <h2 style={{ color: '#DC2626', marginBottom: '12px' }}>
-                Verificatie mislukt
+                {t.auth.verifyEmail.failed}
               </h2>
               <p style={{ color: '#6B7280', marginBottom: '24px' }}>
                 {message}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <Link to="/resend-verification" className="auth-button" style={{ display: 'inline-block', textDecoration: 'none' }}>
-                  Nieuwe verificatie-email aanvragen
+                  {t.auth.verifyEmail.requestNew}
                 </Link>
                 <Link to="/login" style={{ color: '#7FA594', textDecoration: 'none' }}>
-                  Terug naar inloggen
+                  {t.auth.verifyEmail.backToLogin}
                 </Link>
               </div>
             </>

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useLanguage } from '@/i18n/LanguageContext';
 import apiClient from '@/shared/utils/api';
 import './Auth.css';
 
 export function ResendVerificationPage() {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -15,7 +17,7 @@ export function ResendVerificationPage() {
     setLoading(true);
 
     if (!email) {
-      setError('Voer je e-mailadres in');
+      setError(t.auth.resendVerification.errorEmpty);
       setLoading(false);
       return;
     }
@@ -26,13 +28,13 @@ export function ResendVerificationPage() {
       if (data.success) {
         setSuccess(true);
       } else {
-        setError(data.message || 'Er is een fout opgetreden');
+        setError(data.message || t.auth.resendVerification.errorGeneric);
       }
     } catch (err: any) {
       if (err.response?.status === 429) {
-        setError('Je hebt te veel verificatie-emails aangevraagd. Probeer het over een uur opnieuw.');
+        setError(t.auth.resendVerification.errorTooMany);
       } else {
-        setError(err.response?.data?.message || 'Er is een fout opgetreden');
+        setError(err.response?.data?.message || t.auth.resendVerification.errorGeneric);
       }
     } finally {
       setLoading(false);
@@ -69,14 +71,13 @@ export function ResendVerificationPage() {
               📧
             </div>
             <h2 style={{ color: '#374151', marginBottom: '12px' }}>
-              Verificatie-email verzonden
+              {t.auth.resendVerification.success}
             </h2>
             <p style={{ color: '#6B7280', marginBottom: '24px' }}>
-              Als dit e-mailadres bij ons bekend is, ontvang je binnen enkele minuten een verificatie-email.
-              Controleer ook je spam folder.
+              {t.auth.resendVerification.successMessage}
             </p>
             <Link to="/login" className="auth-button" style={{ display: 'inline-block', textDecoration: 'none' }}>
-              Terug naar inloggen
+              {t.auth.resendVerification.backToLogin}
             </Link>
           </div>
         ) : (
@@ -86,22 +87,22 @@ export function ResendVerificationPage() {
                 📧
               </div>
               <h2 style={{ color: '#374151', margin: '0 0 8px 0' }}>
-                Verificatie-email opnieuw verzenden
+                {t.auth.resendVerification.title}
               </h2>
               <p style={{ color: '#6B7280', margin: 0 }}>
-                Voer je e-mailadres in om een nieuwe verificatie-email te ontvangen.
+                {t.auth.resendVerification.subtitle}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="auth-form">
               <div className="form-group">
-                <label htmlFor="email">E-mailadres</label>
+                <label htmlFor="email">{t.auth.resendVerification.emailLabel}</label>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="naam@voorbeeld.nl"
+                  placeholder={t.auth.resendVerification.emailPlaceholder}
                   disabled={loading}
                 />
               </div>
@@ -113,12 +114,12 @@ export function ResendVerificationPage() {
                 className="auth-button"
                 disabled={loading}
               >
-                {loading ? 'Verzenden...' : 'Verzend verificatie-email'}
+                {loading ? t.auth.resendVerification.sending : t.auth.resendVerification.sendButton}
               </button>
             </form>
 
             <div className="auth-link" style={{ marginTop: '24px' }}>
-              <Link to="/login">← Terug naar inloggen</Link>
+              <Link to="/login">{t.auth.resendVerification.backToLogin}</Link>
             </div>
           </>
         )}
