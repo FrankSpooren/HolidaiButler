@@ -1,5 +1,5 @@
 /**
- * HoliBot Routes v2.0
+ * HoliBot Routes v2.1
  * API endpoints for HoliBot AI Assistant Widget
  *
  * Features:
@@ -7,9 +7,11 @@
  * - Mistral AI for embeddings and chat
  * - Multi-language support (nl, en, de, es, sv, pl)
  * - 4 Quick Actions: Itinerary, Location Info, Directions, Daily Tip
+ * - SSE Streaming for real-time chat responses
  *
  * Endpoints:
  * - POST /holibot/chat - RAG-powered chat
+ * - POST /holibot/chat/stream - SSE streaming chat (NEW)
  * - POST /holibot/search - Semantic search
  * - POST /holibot/itinerary - Build day program
  * - GET /holibot/location/:id - Location details with Q&A
@@ -26,7 +28,6 @@ import logger from '../utils/logger.js';
 
 const router = express.Router();
 
-// Try to get POI model
 let POI = null;
 const getPOIModel = async () => {
   if (!POI) {
@@ -43,55 +44,95 @@ const getPOIModel = async () => {
 
 /**
  * POST /api/v1/holibot/chat
- * RAG-powered chat with HoliBot
+ * RAG-powered chat with HoliBot (non-streaming)
  */
 router.post('/chat', async (req, res) => {
   try {
-    const {
-      message,
-      conversationHistory = [],
-      language = 'nl',
-      userPreferences = {}
-    } = req.body;
+    const { message, conversationHistory = [], language = 'nl', userPreferences = {} } = req.body;
 
-    // Validate message
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Message is required'
-      });
+      return res.status(400).json({ success: false, error: 'Message is required' });
     }
-
     if (message.length > 1000) {
-      return res.status(400).json({
-        success: false,
-        error: 'Message too long (max 1000 characters)'
-      });
+      return res.status(400).json({ success: false, error: 'Message too long (max 1000 characters)' });
     }
 
-    logger.info('HoliBot chat request', {
-      message: message.substring(0, 100),
-      language,
-      hasHistory: conversationHistory.length > 0
-    });
+    logger.info('HoliBot chat request', { message: message.substring(0, 100), language, hasHistory: conversationHistory.length > 0 });
 
-    // Use RAG service for chat
-    const response = await ragService.chat(message, language, {
-      userPreferences,
-      conversationHistory
-    });
-
-    res.json({
-      success: true,
-      data: response
-    });
+    const response = await ragService.chat(message, language, { userPreferences, conversationHistory });
+    res.json({ success: true, data: response });
 
   } catch (error) {
     logger.error('HoliBot chat error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Chat service temporarily unavailable'
-    });
+    res.status(500).json({ success: false, error: 'Chat service temporarily unavailable' });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/chat/stream
+ * SSE Streaming RAG-powered chat with HoliBot
+ * Returns Server-Sent Events for real-time response streaming
+ */
+router.post('/chat/stream', async (req, res) => {
+  try {
+    const { message, conversationHistory = [], language = 'nl', userPreferences = {} } = req.body;
+
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({ success: false, error: 'Message is required' });
+    }
+    if (message.length > 1000) {
+      return res.status(400).json({ success: false, error: 'Message too long (max 1000 characters)' });
+    }
+
+    logger.info('HoliBot streaming chat request', { message: message.substring(0, 100), language });
+
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.flushHeaders();
+
+    // Get streaming response from RAG service
+    const streamResult = await ragService.chatStream(message, language, { userPreferences, conversationHistory });
+
+    if (!streamResult.success) {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: streamResult.error })}\n\n`);
+      res.end();
+      return;
+    }
+
+    // Send initial metadata (search results, POIs)
+    res.write(`event: metadata\ndata: ${JSON.stringify({
+      pois: streamResult.pois,
+      searchTimeMs: streamResult.searchTimeMs,
+      source: streamResult.source
+    })}\n\n`);
+
+    // Stream the response chunks
+    let fullMessage = '';
+    try {
+      for await (const chunk of streamResult.stream) {
+        fullMessage += chunk;
+        res.write(`event: chunk\ndata: ${JSON.stringify({ text: chunk })}\n\n`);
+      }
+    } catch (streamError) {
+      logger.error('Streaming error:', streamError);
+      res.write(`event: error\ndata: ${JSON.stringify({ error: 'Streaming interrupted' })}\n\n`);
+    }
+
+    // Send completion event
+    res.write(`event: done\ndata: ${JSON.stringify({ fullMessage, totalLength: fullMessage.length })}\n\n`);
+    res.end();
+
+  } catch (error) {
+    logger.error('HoliBot streaming chat error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: 'Streaming chat service temporarily unavailable' });
+    } else {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
+    }
   }
 });
 
@@ -102,27 +143,14 @@ router.post('/chat', async (req, res) => {
 router.post('/search', async (req, res) => {
   try {
     const { query, limit = 10, filter } = req.body;
-
     if (!query) {
-      return res.status(400).json({
-        success: false,
-        error: 'Query is required'
-      });
+      return res.status(400).json({ success: false, error: 'Query is required' });
     }
-
     const results = await ragService.search(query, { limit, filter });
-
-    res.json({
-      success: true,
-      data: results
-    });
-
+    res.json({ success: true, data: results });
   } catch (error) {
     logger.error('HoliBot search error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Search service temporarily unavailable'
-    });
+    res.status(500).json({ success: false, error: 'Search service temporarily unavailable' });
   }
 });
 
@@ -132,34 +160,20 @@ router.post('/search', async (req, res) => {
  */
 router.post('/itinerary', async (req, res) => {
   try {
-    const {
-      date,
-      interests = [],
-      duration = 'full-day', // morning, afternoon, evening, full-day
-      travelCompanion,
-      language = 'nl'
-    } = req.body;
+    const { date, interests = [], duration = 'full-day', travelCompanion, language = 'nl' } = req.body;
 
     logger.info('HoliBot itinerary request', { date, interests, duration });
 
-    // Search for relevant POIs based on interests
-    const queries = interests.length > 0
-      ? interests.map(i => `${i} in Calpe`).join(' ')
-      : 'best things to do in Calpe';
-
+    const queries = interests.length > 0 ? interests.map(i => `${i} in Calpe`).join(' ') : 'best things to do in Calpe';
     const searchResults = await ragService.search(queries, { limit: 15 });
 
-    // Group by category for balanced itinerary
     const categories = {};
     for (const poi of searchResults.results) {
       const cat = poi.category || 'Other';
-      if (!categories[cat]) {
-        categories[cat] = [];
-      }
+      if (!categories[cat]) categories[cat] = [];
       categories[cat].push(poi);
     }
 
-    // Build itinerary based on duration
     const timeSlots = {
       'morning': ['09:00', '10:30', '12:00'],
       'afternoon': ['13:00', '15:00', '17:00'],
@@ -173,15 +187,11 @@ router.post('/itinerary', async (req, res) => {
 
     for (const slot of slots) {
       if (poiIndex < searchResults.results.length) {
-        itinerary.push({
-          time: slot,
-          poi: searchResults.results[poiIndex]
-        });
+        itinerary.push({ time: slot, poi: searchResults.results[poiIndex] });
         poiIndex++;
       }
     }
 
-    // Generate description
     const systemPrompt = embeddingService.buildSystemPrompt(language);
     const description = await embeddingService.generateChatCompletion([
       { role: 'system', content: systemPrompt },
@@ -201,10 +211,7 @@ router.post('/itinerary', async (req, res) => {
 
   } catch (error) {
     logger.error('HoliBot itinerary error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Could not generate itinerary'
-    });
+    res.status(500).json({ success: false, error: 'Could not generate itinerary' });
   }
 });
 
@@ -218,27 +225,16 @@ router.get('/location/:id', async (req, res) => {
     const { language = 'nl' } = req.query;
 
     const model = await getPOIModel();
-
     if (!model) {
-      return res.status(500).json({
-        success: false,
-        error: 'POI service not available'
-      });
+      return res.status(500).json({ success: false, error: 'POI service not available' });
     }
 
     const poi = await model.findByPk(id);
-
     if (!poi) {
-      return res.status(404).json({
-        success: false,
-        error: 'Location not found'
-      });
+      return res.status(404).json({ success: false, error: 'Location not found' });
     }
 
-    // Search for related Q&A in ChromaDB
     const contextResults = await ragService.search(poi.name, { limit: 3 });
-
-    // Generate enhanced description
     const systemPrompt = embeddingService.buildSystemPrompt(language);
     const enhancedDescription = await embeddingService.generateChatCompletion([
       { role: 'system', content: systemPrompt },
@@ -249,22 +245,11 @@ router.get('/location/:id', async (req, res) => {
       success: true,
       data: {
         poi: {
-          id: poi.id,
-          name: poi.name,
-          category: poi.category,
-          subcategory: poi.subcategory,
-          description: poi.description,
-          enhancedDescription,
-          address: poi.address,
-          latitude: poi.latitude,
-          longitude: poi.longitude,
-          rating: poi.rating,
-          reviewCount: poi.review_count,
-          priceLevel: poi.price_level,
-          phone: poi.phone,
-          website: poi.website,
-          openingHours: poi.opening_hours,
-          thumbnailUrl: poi.thumbnail_url
+          id: poi.id, name: poi.name, category: poi.category, subcategory: poi.subcategory,
+          description: poi.description, enhancedDescription, address: poi.address,
+          latitude: poi.latitude, longitude: poi.longitude, rating: poi.rating,
+          reviewCount: poi.review_count, priceLevel: poi.price_level, phone: poi.phone,
+          website: poi.website, openingHours: poi.opening_hours, thumbnailUrl: poi.thumbnail_url
         },
         relatedContext: contextResults.results.slice(0, 3)
       }
@@ -272,10 +257,7 @@ router.get('/location/:id', async (req, res) => {
 
   } catch (error) {
     logger.error('HoliBot location error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Could not fetch location details'
-    });
+    res.status(500).json({ success: false, error: 'Could not fetch location details' });
   }
 });
 
@@ -285,41 +267,20 @@ router.get('/location/:id', async (req, res) => {
  */
 router.post('/directions', async (req, res) => {
   try {
-    const {
-      from, // { lat, lng } or 'current'
-      toPoiId,
-      mode = 'walking', // walking, driving
-      language = 'nl'
-    } = req.body;
+    const { from, toPoiId, mode = 'walking', language = 'nl' } = req.body;
 
     const model = await getPOIModel();
-
     if (!model) {
-      return res.status(500).json({
-        success: false,
-        error: 'POI service not available'
-      });
+      return res.status(500).json({ success: false, error: 'POI service not available' });
     }
 
     const poi = await model.findByPk(toPoiId);
-
     if (!poi) {
-      return res.status(404).json({
-        success: false,
-        error: 'Destination not found'
-      });
+      return res.status(404).json({ success: false, error: 'Destination not found' });
     }
 
-    // Build directions response
-    // Note: For full directions, integrate with Google Maps or OpenRouteService
-    const destination = {
-      name: poi.name,
-      address: poi.address,
-      latitude: poi.latitude,
-      longitude: poi.longitude
-    };
+    const destination = { name: poi.name, address: poi.address, latitude: poi.latitude, longitude: poi.longitude };
 
-    // Generate walking/driving tips
     const tips = await embeddingService.generateChatCompletion([
       { role: 'system', content: embeddingService.buildSystemPrompt(language) },
       { role: 'user', content: `Geef 2-3 korte tips voor ${mode === 'walking' ? 'wandelen' : 'rijden'} naar ${poi.name} in Calpe. Adres: ${poi.address || 'niet beschikbaar'}` }
@@ -337,10 +298,7 @@ router.post('/directions', async (req, res) => {
 
   } catch (error) {
     logger.error('HoliBot directions error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Could not generate directions'
-    });
+    res.status(500).json({ success: false, error: 'Could not generate directions' });
   }
 });
 
@@ -350,61 +308,28 @@ router.post('/directions', async (req, res) => {
  */
 router.get('/daily-tip', async (req, res) => {
   try {
-    const {
-      language = 'nl',
-      interests,
-      userId
-    } = req.query;
+    const { language = 'nl', interests, userId } = req.query;
 
-    const model = await getPOIModel();
-
-    // Get category based on daily rotation + user interests
-    const categories = [
-      'Beaches & Nature',
-      'Culture & History',
-      'Active',
-      'Food & Drinks'
-    ];
-
-    // Use date-based rotation for variety
+    const categories = ['Beaches & Nature', 'Culture & History', 'Active', 'Food & Drinks'];
     const now = new Date();
     const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
     let selectedCategory = categories[dayOfYear % categories.length];
 
-    // Override with user interests if provided
     if (interests) {
       const userInterests = interests.split(',');
-      const categoryMatch = categories.find(c =>
-        userInterests.some(i => c.toLowerCase().includes(i.toLowerCase()))
-      );
-      if (categoryMatch) {
-        selectedCategory = categoryMatch;
-      }
+      const categoryMatch = categories.find(c => userInterests.some(i => c.toLowerCase().includes(i.toLowerCase())));
+      if (categoryMatch) selectedCategory = categoryMatch;
     }
 
-    // Search for POIs in selected category
     const searchResults = await ragService.search(selectedCategory + ' Calpe', { limit: 5 });
-
     if (searchResults.results.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'No tips available'
-      });
+      return res.status(404).json({ success: false, error: 'No tips available' });
     }
 
-    // Pick a random POI from results
     const randomIndex = Math.floor(Math.random() * searchResults.results.length);
     const selectedPoi = searchResults.results[randomIndex];
 
-    // Generate personalized tip description
-    const tipLabels = {
-      nl: 'Tip van de Dag',
-      en: 'Tip of the Day',
-      de: 'Tipp des Tages',
-      es: 'Consejo del Día',
-      sv: 'Dagens Tips',
-      pl: 'Porada Dnia'
-    };
+    const tipLabels = { nl: 'Tip van de Dag', en: 'Tip of the Day', de: 'Tipp des Tages', es: 'Consejo del Dia', sv: 'Dagens Tips', pl: 'Porada Dnia' };
 
     const tipDescription = await embeddingService.generateChatCompletion([
       { role: 'system', content: embeddingService.buildSystemPrompt(language) },
@@ -424,10 +349,7 @@ router.get('/daily-tip', async (req, res) => {
 
   } catch (error) {
     logger.error('HoliBot daily-tip error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Could not generate daily tip'
-    });
+    res.status(500).json({ success: false, error: 'Could not generate daily tip' });
   }
 });
 
@@ -440,7 +362,6 @@ router.get('/categories', async (req, res) => {
     const model = await getPOIModel();
 
     if (!model) {
-      // Return sample categories
       return res.json({
         success: true,
         data: [
@@ -456,100 +377,58 @@ router.get('/categories', async (req, res) => {
     }
 
     const { Sequelize } = await import('sequelize');
-
     const results = await model.findAll({
-      attributes: [
-        'category',
-        [Sequelize.fn('COUNT', Sequelize.col('id')), 'count']
-      ],
-      where: {
-        category: { [Sequelize.Op.ne]: null },
-        is_active: true
-      },
+      attributes: ['category', [Sequelize.fn('COUNT', Sequelize.col('id')), 'count']],
+      where: { category: { [Sequelize.Op.ne]: null }, is_active: true },
       group: ['category'],
       order: [[Sequelize.literal('count'), 'DESC']]
     });
 
-    const categories = results.map(r => ({
-      category: r.get('category'),
-      count: parseInt(r.get('count'))
-    }));
-
-    res.json({
-      success: true,
-      data: categories,
-      count: categories.length
-    });
+    const categories = results.map(r => ({ category: r.get('category'), count: parseInt(r.get('count')) }));
+    res.json({ success: true, data: categories, count: categories.length });
 
   } catch (error) {
     logger.error('Get categories error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Could not fetch categories'
-    });
+    res.status(500).json({ success: false, error: 'Could not fetch categories' });
   }
 });
 
 /**
  * POST /api/v1/holibot/admin/sync
- * Admin: Trigger sync from MySQL to ChromaDB
  */
 router.post('/admin/sync', async (req, res) => {
   try {
     const { type = 'incremental' } = req.body;
-
     logger.info(`Admin sync requested: ${type}`);
-
     let result;
     if (type === 'full') {
       result = await syncService.fullSync();
     } else {
       result = await syncService.incrementalSync();
     }
-
-    res.json({
-      success: true,
-      data: result
-    });
-
+    res.json({ success: true, data: result });
   } catch (error) {
     logger.error('Admin sync error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Sync failed'
-    });
+    res.status(500).json({ success: false, error: error.message || 'Sync failed' });
   }
 });
 
 /**
  * GET /api/v1/holibot/admin/stats
- * Admin: Get service statistics
  */
 router.get('/admin/stats', async (req, res) => {
   try {
     const stats = await ragService.getStats();
     const syncStatus = syncService.getStatus();
-
-    res.json({
-      success: true,
-      data: {
-        ...stats,
-        sync: syncStatus
-      }
-    });
-
+    res.json({ success: true, data: { ...stats, sync: syncStatus } });
   } catch (error) {
     logger.error('Admin stats error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Could not fetch stats'
-    });
+    res.status(500).json({ success: false, error: 'Could not fetch stats' });
   }
 });
 
 /**
  * GET /api/v1/holibot/health
- * Health check endpoint
  */
 router.get('/health', async (req, res) => {
   try {
@@ -568,11 +447,7 @@ router.get('/health', async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      status: 'unhealthy',
-      error: error.message
-    });
+    res.status(500).json({ success: false, status: 'unhealthy', error: error.message });
   }
 });
 
