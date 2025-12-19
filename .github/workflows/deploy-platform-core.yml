@@ -9,7 +9,7 @@ name: "Deploy: Platform Core API"
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/holibot-2.0]
     paths:
       - 'platform-core/**'
       - '!platform-core/README.md'
