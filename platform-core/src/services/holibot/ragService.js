@@ -120,6 +120,79 @@ class RAGService {
     }
   }
 
+  /**
+   * Generate streaming response with RAG context
+   * @param {string} query - User query
+   * @param {Array} context - Retrieved documents for context
+   * @param {string} language - Response language
+   * @param {Object} userPreferences - User preferences
+   * @returns {AsyncGenerator} - Async generator yielding text chunks
+   */
+  async *generateStreamingResponse(query, context, language = 'nl', userPreferences = {}) {
+    try {
+      const contextString = this.buildContextString(context, language);
+      const systemPrompt = embeddingService.buildSystemPrompt(language, userPreferences);
+      const contextInstructions = this.getContextInstructions(language);
+      const enhancedSystemPrompt = `${systemPrompt}\n\n${contextInstructions.useContext}\n\n${contextString}\n\n${contextInstructions.baseOnContext}`;
+
+      const generator = embeddingService.generateStreamingChatCompletion([
+        { role: 'system', content: enhancedSystemPrompt },
+        { role: 'user', content: query }
+      ], { temperature: 0.7, maxTokens: 500 });
+
+      for await (const chunk of generator) {
+        yield chunk;
+      }
+    } catch (error) {
+      logger.error('Failed to generate streaming RAG response:', error);
+      yield this.getFallbackResponse(query, language);
+    }
+  }
+
+  /**
+   * Streaming RAG chat pipeline
+   * @param {string} query - User query
+   * @param {string} language - Response language
+   * @param {Object} options - Options including userPreferences
+   * @returns {Object} - Contains searchResults and streaming generator
+   */
+  async chatStream(query, language = 'nl', options = {}) {
+    if (!this.isInitialized) await this.initialize();
+
+    try {
+      const startTime = Date.now();
+
+      // Step 1: Search for relevant context (non-streaming)
+      const searchResults = await this.search(query, { limit: 5 });
+      const searchTimeMs = Date.now() - startTime;
+
+      // Step 2: Return search results and streaming generator
+      const poiCards = this.extractPOICards(searchResults.results, query);
+
+      return {
+        success: true,
+        searchTimeMs,
+        pois: poiCards,
+        source: 'rag-stream',
+        // Generator for streaming response
+        stream: this.generateStreamingResponse(
+          query,
+          searchResults.results,
+          language,
+          options.userPreferences || {}
+        )
+      };
+    } catch (error) {
+      logger.error('RAG chat stream error:', error);
+      return {
+        success: false,
+        error: error.message,
+        pois: [],
+        source: 'fallback'
+      };
+    }
+  }
+
   async chat(query, language = 'nl', options = {}) {
     if (!this.isInitialized) await this.initialize();
     try {
