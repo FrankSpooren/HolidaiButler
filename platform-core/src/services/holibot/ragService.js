@@ -12,169 +12,133 @@ class RAGService {
     this.isInitialized = false;
   }
 
-  /**
-   * Initialize RAG service
-   */
   async initialize() {
-    if (this.isInitialized) {
-      return true;
-    }
-
+    if (this.isInitialized) return true;
     try {
-      // Initialize embedding service
       embeddingService.initialize();
-
-      // Connect to ChromaDB
       await chromaService.connect();
-
       this.isInitialized = true;
       logger.info('RAG service initialized successfully');
       return true;
-
     } catch (error) {
       logger.error('Failed to initialize RAG service:', error);
       throw error;
     }
   }
 
-  /**
-   * Semantic search for POIs using RAG
-   * @param {string} query - User query
-   * @param {Object} options - Search options
-   */
   async search(query, options = {}) {
-    if (!this.isInitialized) {
-      await this.initialize();
-    }
-
+    if (!this.isInitialized) await this.initialize();
     try {
       const startTime = Date.now();
       const nResults = options.limit || 10;
-
-      // Step 1: Generate embedding for query
       const queryEmbedding = await embeddingService.generateEmbedding(query);
-
-      // Step 2: Search ChromaDB for similar documents
       const results = await chromaService.search(queryEmbedding, nResults, options.filter);
-
-      // Step 3: Format and enrich results
       const enrichedResults = this.enrichResults(results);
-
       const timeMs = Date.now() - startTime;
       logger.info(`RAG search completed in ${timeMs}ms, found ${enrichedResults.length} results`);
-
-      return {
-        success: true,
-        query,
-        results: enrichedResults,
-        totalResults: enrichedResults.length,
-        searchTimeMs: timeMs
-      };
-
+      return { success: true, query, results: enrichedResults, totalResults: enrichedResults.length, searchTimeMs: timeMs };
     } catch (error) {
       logger.error('RAG search error:', error);
       throw error;
     }
   }
 
-  /**
-   * Generate AI response with context from retrieved documents
-   * @param {string} query - User query
-   * @param {Array} context - Retrieved documents for context
-   * @param {string} language - Response language
-   * @param {Object} userPreferences - User preferences
-   */
+  getContextInstructions(language) {
+    const instructions = {
+      nl: {
+        useContext: 'Gebruik de volgende informatie uit onze database om de vraag te beantwoorden:',
+        baseOnContext: 'Baseer je antwoord op deze informatie. Als de informatie niet relevant is voor de vraag, geef dan een algemeen behulpzaam antwoord.',
+        noInfo: 'Geen specifieke informatie gevonden.',
+        category: 'Categorie',
+        description: 'Beschrijving',
+        address: 'Adres',
+        rating: 'Beoordeling'
+      },
+      en: {
+        useContext: 'Use the following information from our database to answer the question:',
+        baseOnContext: 'Base your answer on this information. If the information is not relevant to the question, provide a generally helpful answer.',
+        noInfo: 'No specific information found.',
+        category: 'Category',
+        description: 'Description',
+        address: 'Address',
+        rating: 'Rating'
+      },
+      de: {
+        useContext: 'Verwende die folgenden Informationen aus unserer Datenbank, um die Frage zu beantworten:',
+        baseOnContext: 'Basiere deine Antwort auf diesen Informationen. Wenn die Informationen nicht relevant sind, gib eine allgemein hilfreiche Antwort.',
+        noInfo: 'Keine spezifischen Informationen gefunden.',
+        category: 'Kategorie',
+        description: 'Beschreibung',
+        address: 'Adresse',
+        rating: 'Bewertung'
+      },
+      es: {
+        useContext: 'Utiliza la siguiente informacion de nuestra base de datos para responder la pregunta:',
+        baseOnContext: 'Basa tu respuesta en esta informacion. Si la informacion no es relevante para la pregunta, proporciona una respuesta generalmente util.',
+        noInfo: 'No se encontro informacion especifica.',
+        category: 'Categoria',
+        description: 'Descripcion',
+        address: 'Direccion',
+        rating: 'Valoracion'
+      },
+      sv: {
+        useContext: 'Anvand foljande information fran var databas for att svara pa fragan:',
+        baseOnContext: 'Basera ditt svar pa denna information. Om informationen inte ar relevant for fragan, ge ett generellt hjalpsamt svar.',
+        noInfo: 'Ingen specifik information hittades.',
+        category: 'Kategori',
+        description: 'Beskrivning',
+        address: 'Adress',
+        rating: 'Betyg'
+      },
+      pl: {
+        useContext: 'Uzyj ponizszych informacji z naszej bazy danych, aby odpowiedziec na pytanie:',
+        baseOnContext: 'Oprzyj swoja odpowiedz na tych informacjach. Jesli informacje nie sa istotne dla pytania, udziel ogolnie pomocnej odpowiedzi.',
+        noInfo: 'Nie znaleziono konkretnych informacji.',
+        category: 'Kategoria',
+        description: 'Opis',
+        address: 'Adres',
+        rating: 'Ocena'
+      }
+    };
+    return instructions[language] || instructions.nl;
+  }
+
   async generateResponse(query, context, language = 'nl', userPreferences = {}) {
     try {
-      // Build context string from retrieved documents
-      const contextString = this.buildContextString(context);
-
-      // Build system prompt
+      const contextString = this.buildContextString(context, language);
       const systemPrompt = embeddingService.buildSystemPrompt(language, userPreferences);
-
-      // Add RAG context to system prompt
-      const enhancedSystemPrompt = `${systemPrompt}
-
-Gebruik de volgende informatie uit onze database om de vraag te beantwoorden:
-
-${contextString}
-
-Baseer je antwoord op deze informatie. Als de informatie niet relevant is voor de vraag, geef dan een algemeen behulpzaam antwoord.`;
-
-      // Generate response
+      const contextInstructions = this.getContextInstructions(language);
+      const enhancedSystemPrompt = `${systemPrompt}\n\n${contextInstructions.useContext}\n\n${contextString}\n\n${contextInstructions.baseOnContext}`;
       const response = await embeddingService.generateChatCompletion([
         { role: 'system', content: enhancedSystemPrompt },
         { role: 'user', content: query }
-      ], {
-        temperature: 0.7,
-        maxTokens: 500
-      });
-
+      ], { temperature: 0.7, maxTokens: 500 });
       return response;
-
     } catch (error) {
       logger.error('Failed to generate RAG response:', error);
       return this.getFallbackResponse(query, language);
     }
   }
 
-  /**
-   * Complete RAG pipeline: search + generate response
-   * @param {string} query - User query
-   * @param {string} language - Response language
-   * @param {Object} options - Search and generation options
-   */
   async chat(query, language = 'nl', options = {}) {
-    if (!this.isInitialized) {
-      await this.initialize();
-    }
-
+    if (!this.isInitialized) await this.initialize();
     try {
       const startTime = Date.now();
-
-      // Step 1: Search for relevant context
       const searchResults = await this.search(query, { limit: 5 });
-
-      // Step 2: Generate response with context
-      const response = await this.generateResponse(
-        query,
-        searchResults.results,
-        language,
-        options.userPreferences || {}
-      );
-
-      // Step 3: Extract POI cards to display
+      const response = await this.generateResponse(query, searchResults.results, language, options.userPreferences || {});
       const poiCards = this.extractPOICards(searchResults.results, query);
-
       const timeMs = Date.now() - startTime;
       logger.info(`RAG chat completed in ${timeMs}ms`);
-
-      return {
-        success: true,
-        message: response,
-        pois: poiCards,
-        source: 'rag',
-        searchTimeMs: timeMs
-      };
-
+      return { success: true, message: response, pois: poiCards, source: 'rag', searchTimeMs: timeMs };
     } catch (error) {
       logger.error('RAG chat error:', error);
-      return {
-        success: true,
-        message: this.getFallbackResponse(query, language),
-        pois: [],
-        source: 'fallback'
-      };
+      return { success: true, message: this.getFallbackResponse(query, language), pois: [], source: 'fallback' };
     }
   }
 
-  /**
-   * Enrich search results with additional metadata
-   */
   enrichResults(results) {
     return results.map(result => {
       const metadata = result.metadata || {};
-
       return {
         id: result.id,
         name: metadata.name || metadata.title || 'Unknown',
@@ -197,35 +161,21 @@ Baseer je antwoord op deze informatie. Als de informatie niet relevant is voor d
     });
   }
 
-  /**
-   * Build context string from retrieved documents
-   */
-  buildContextString(results) {
-    if (!results || results.length === 0) {
-      return 'Geen specifieke informatie gevonden.';
-    }
-
+  buildContextString(results, language = 'nl') {
+    const labels = this.getContextInstructions(language);
+    if (!results || results.length === 0) return labels.noInfo;
     return results.slice(0, 5).map((poi, index) => {
       const parts = [`${index + 1}. ${poi.name}`];
-
-      if (poi.category) parts.push(`Categorie: ${poi.category}`);
-      if (poi.description) parts.push(`Beschrijving: ${poi.description.substring(0, 200)}...`);
-      if (poi.address) parts.push(`Adres: ${poi.address}`);
-      if (poi.rating) parts.push(`Beoordeling: ${poi.rating}/5`);
-
+      if (poi.category) parts.push(`${labels.category}: ${poi.category}`);
+      if (poi.description) parts.push(`${labels.description}: ${poi.description.substring(0, 200)}...`);
+      if (poi.address) parts.push(`${labels.address}: ${poi.address}`);
+      if (poi.rating) parts.push(`${labels.rating}: ${poi.rating}/5`);
       return parts.join('\n   ');
     }).join('\n\n');
   }
 
-  /**
-   * Extract POI cards to display in chat
-   */
   extractPOICards(results, query) {
-    if (!results || results.length === 0) {
-      return [];
-    }
-
-    // Return top 3-5 most relevant POIs
+    if (!results || results.length === 0) return [];
     return results.slice(0, 5).map(poi => ({
       id: poi.id,
       name: poi.name,
@@ -238,45 +188,31 @@ Baseer je antwoord op deze informatie. Als de informatie niet relevant is voor d
     }));
   }
 
-  /**
-   * Fallback response when RAG fails
-   */
   getFallbackResponse(query, language) {
     const fallbacks = {
-      nl: '👋 Ik ben HoliBot, je persoonlijke gids voor Calpe! Ik help je graag met informatie over stranden, restaurants, bezienswaardigheden en activiteiten. Waar ben je naar op zoek?',
-      en: '👋 I\'m HoliBot, your personal guide to Calpe! I\'d be happy to help you with information about beaches, restaurants, attractions and activities. What are you looking for?',
-      de: '👋 Ich bin HoliBot, dein persönlicher Führer für Calpe! Ich helfe dir gerne mit Informationen über Strände, Restaurants, Sehenswürdigkeiten und Aktivitäten. Wonach suchst du?',
-      es: '👋 Soy HoliBot, tu guía personal de Calpe! Estaré encantado de ayudarte con información sobre playas, restaurantes, atracciones y actividades. ¿Qué estás buscando?',
-      sv: '👋 Jag är HoliBot, din personliga guide till Calpe! Jag hjälper dig gärna med information om stränder, restauranger, sevärdheter och aktiviteter. Vad letar du efter?',
-      pl: '👋 Jestem HoliBot, Twój osobisty przewodnik po Calpe! Chętnie pomogę Ci z informacjami o plażach, restauracjach, atrakcjach i aktywnościach. Czego szukasz?'
+      nl: 'Ik ben HoliBot, je persoonlijke gids voor Calpe! Ik help je graag met informatie over stranden, restaurants, bezienswaardigheden en activiteiten. Waar ben je naar op zoek?',
+      en: 'I am HoliBot, your personal guide to Calpe! I would be happy to help you with information about beaches, restaurants, attractions and activities. What are you looking for?',
+      de: 'Ich bin HoliBot, dein Fuehrer fuer Calpe! Ich helfe dir gerne mit Informationen ueber Straende, Restaurants, Sehenswuerdigkeiten und Aktivitaeten. Wonach suchst du?',
+      es: 'Soy HoliBot, tu guia personal de Calpe! Estare encantado de ayudarte con informacion sobre playas, restaurantes, atracciones y actividades. Que estas buscando?',
+      sv: 'Jag aer HoliBot, din personliga guide till Calpe! Jag hjaelper dig gaerna med information om straender, restauranger, sevaerdheter och aktiviteter. Vad letar du efter?',
+      pl: 'Jestem HoliBot, Twoj osobisty przewodnik po Calpe! Chetnie pomoge Ci z informacjami o plazach, restauracjach, atrakcjach i aktywnosciach. Czego szukasz?'
     };
-
     return fallbacks[language] || fallbacks.nl;
   }
 
-  /**
-   * Check if service is ready
-   */
   isReady() {
     return this.isInitialized && chromaService.isReady() && embeddingService.isReady();
   }
 
-  /**
-   * Get service statistics
-   */
   async getStats() {
     const chromaStats = await chromaService.getStats();
-
     return {
       isInitialized: this.isInitialized,
       chromaDb: chromaStats,
-      mistral: {
-        isConfigured: embeddingService.isReady()
-      }
+      mistral: { isConfigured: embeddingService.isReady() }
     };
   }
 }
 
-// Export singleton instance
 export const ragService = new RAGService();
 export default ragService;
