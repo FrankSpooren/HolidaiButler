@@ -1,70 +1,62 @@
 import { useState, useEffect, useRef } from 'react';
 import { useHoliBot } from '../../contexts/HoliBotContext';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import { WelcomeMessage } from './WelcomeMessage';
 import { QuickReplies } from './QuickReplies';
 import { POICard } from './POICard';
 import { ChatMessage } from './ChatMessage';
 import { POIDetailModal } from '../../../features/poi/components/POIDetailModal';
-import { useCategories } from '../../hooks/useCategories';
 import { chatApi } from '../../services/chat.api';
-import { poiService } from '../../../features/poi/services/poiService';
 import type { POI } from '../../types/poi.types';
-import type { PersonalityType } from '../../types/category.types';
 import './MessageList.css';
 
 /**
  * MessageList - POI Recommendations + Chat
  * Phase 4: POI Integration ✅
  * Phase 6: Chat Conversation ✅
+ * Phase 7: Multi-language Quick Actions ✅
  */
 
-const quickReplies = [
-  'Programma samenstellen',
-  'Specifieke locatie-informatie',
-  'Routebeschrijving',
-  'Mijn Tip van de Dag'
-];
-
-const personalityMap: Record<string, PersonalityType> = {
-  'Avontuur & actie': 'adventurous',
-  'Ontspanning & wellness': 'relaxed',
-  'Cultuur & geschiedenis': 'cultural',
-  'Natuur & landschap': 'nature'
-};
-
 export function MessageList() {
-  const { language, messages, isLoading, isOpen, addAssistantMessage } = useHoliBot();
-  const [selectedPersonality, setSelectedPersonality] = useState<PersonalityType | null>(null);
+  const { language, messages, isLoading, isOpen, addAssistantMessage, sendMessage } = useHoliBot();
+  const { t } = useLanguage();
+
   const [pois, setPois] = useState<POI[]>([]);
   const [loadingPOIs, setLoadingPOIs] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [dailyTipPOI, setDailyTipPOI] = useState<POI | null>(null);
   const [selectedPOIId, setSelectedPOIId] = useState<number | null>(null);
+  const [itinerary, setItinerary] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
 
-  // Categories hook is available for future use
-  useCategories(language);
+  // Get translated quick replies
+  const quickReplies = [
+    t.holibotChat.quickActions.itinerary,
+    t.holibotChat.quickActions.locationInfo,
+    t.holibotChat.quickActions.directions,
+    t.holibotChat.quickActions.dailyTip,
+  ];
 
-  // Reset state when widget closes (prepare for next open)
+  // Reset state when widget closes
   useEffect(() => {
     if (!isOpen) {
-      // Reset to initial state when closed
       setShowSuggestions(false);
       setDailyTipPOI(null);
       setSelectedPOIId(null);
+      setItinerary(null);
     } else {
-      // Scroll to top when opening
       if (messageListRef.current) {
         messageListRef.current.scrollTo({ top: 0, behavior: 'auto' });
       }
     }
   }, [isOpen]);
 
-  // Reset daily tip when messages are cleared (via reset button)
+  // Reset daily tip when messages are cleared
   useEffect(() => {
     if (messages.length === 0 && dailyTipPOI) {
       setDailyTipPOI(null);
+      setItinerary(null);
     }
   }, [messages.length, dailyTipPOI]);
 
@@ -73,49 +65,83 @@ export function MessageList() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  /**
+   * Handle Quick Action button clicks
+   */
   const handleQuickReply = async (reply: string) => {
-    // Special handling for "Mijn Tip van de Dag"
-    if (reply === 'Mijn Tip van de Dag') {
+    const { quickActions, prompts, responses } = t.holibotChat;
+
+    // Quick Action 1: Build Itinerary
+    if (reply === quickActions.itinerary) {
       setLoadingPOIs(true);
+      addAssistantMessage(responses.itineraryIntro);
 
       try {
-        // Call the daily tip API
-        const response = await chatApi.getDailyTip();
+        const response = await chatApi.buildItinerary({
+          duration: 'full-day'
+        });
 
         if (response.success && response.data) {
-          const { poi, tipDescription } = response.data;
+          setItinerary(response.data);
 
-          // Add the tip description directly as assistant message with POI for clickable link
-          addAssistantMessage(tipDescription, [poi]);
+          // Format itinerary as message
+          const itineraryText = response.data.itinerary
+            .map((item: any) => `**${item.time}** - ${item.poi.name}`)
+            .join('\n');
 
-          // Store the POI to display below
-          setDailyTipPOI(poi);
+          addAssistantMessage(`${response.data.description}\n\n${itineraryText}`,
+            response.data.itinerary.map((item: any) => item.poi));
         } else {
-          addAssistantMessage('Sorry, ik kon geen tip van de dag ophalen. Probeer het later opnieuw.');
+          addAssistantMessage(responses.error);
         }
       } catch (error) {
-        console.error('Failed to fetch daily tip:', error);
-        addAssistantMessage('Er is een fout opgetreden bij het ophalen van de tip van de dag.');
+        console.error('Itinerary error:', error);
+        addAssistantMessage(responses.error);
       } finally {
         setLoadingPOIs(false);
       }
       return;
     }
 
-    // Default behavior for other quick replies
-    const personality = personalityMap[reply] || 'auto';
-    setSelectedPersonality(personality);
-    setLoadingPOIs(true);
-
-    try {
-      // Fetch POIs based on personality using centralized API service
-      const response = await poiService.getPOIs({ limit: 6 });
-      setPois(response.data || []);
-    } catch (error) {
-      console.error('Failed to fetch POIs:', error);
-    } finally {
-      setLoadingPOIs(false);
+    // Quick Action 2: Location Info
+    if (reply === quickActions.locationInfo) {
+      addAssistantMessage(responses.locationSearch);
+      // User will type the location name, handled by regular sendMessage
+      return;
     }
+
+    // Quick Action 3: Directions
+    if (reply === quickActions.directions) {
+      addAssistantMessage(responses.directionsHelp);
+      // User will type the destination, handled by regular sendMessage
+      return;
+    }
+
+    // Quick Action 4: Daily Tip
+    if (reply === quickActions.dailyTip) {
+      setLoadingPOIs(true);
+
+      try {
+        const response = await chatApi.getDailyTip();
+
+        if (response.success && response.data) {
+          const { poi, tipDescription } = response.data;
+          addAssistantMessage(tipDescription, [poi]);
+          setDailyTipPOI(poi);
+        } else {
+          addAssistantMessage(responses.error);
+        }
+      } catch (error) {
+        console.error('Daily tip error:', error);
+        addAssistantMessage(responses.error);
+      } finally {
+        setLoadingPOIs(false);
+      }
+      return;
+    }
+
+    // Default: send as regular message
+    sendMessage(reply);
   };
 
   return (
@@ -140,7 +166,6 @@ export function MessageList() {
               replies={quickReplies}
               onSelect={handleQuickReply}
               onAllVisible={() => {
-                // Scroll to bottom after all tiles are visible
                 setTimeout(() => {
                   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
                 }, 100);
@@ -168,15 +193,16 @@ export function MessageList() {
         />
       )}
 
-      {/* POI recommendations */}
+      {/* POI loading */}
       {loadingPOIs && (
-        <div className="holibot-loading">Loading recommendations...</div>
+        <div className="holibot-loading">{t.holibotChat.responses.loading}</div>
       )}
 
-      {selectedPersonality && pois.length > 0 && (
+      {/* POI grid */}
+      {pois.length > 0 && (
         <div className="holibot-poi-grid">
           {pois.map((poi) => (
-            <POICard key={poi.id} poi={poi} />
+            <POICard key={poi.id} poi={poi} onClick={() => setSelectedPOIId(poi.id)} />
           ))}
         </div>
       )}
@@ -189,6 +215,18 @@ export function MessageList() {
             poi={dailyTipPOI}
             onClick={() => setSelectedPOIId(dailyTipPOI.id)}
           />
+        </div>
+      )}
+
+      {/* Itinerary POI Cards */}
+      {itinerary && itinerary.itinerary && (
+        <div className="holibot-itinerary-grid">
+          {itinerary.itinerary.map((item: any, index: number) => (
+            <div key={index} className="holibot-itinerary-item">
+              <span className="holibot-itinerary-time">{item.time}</span>
+              <POICard poi={item.poi} onClick={() => setSelectedPOIId(item.poi.id)} />
+            </div>
+          ))}
         </div>
       )}
 
