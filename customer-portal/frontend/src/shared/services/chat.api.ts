@@ -9,13 +9,13 @@
  * - Multi-language support (6 languages)
  * - User preferences integration
  * - All 4 Quick Actions support
+ * - SSE Streaming responses
  */
 
 import type { ChatRequest, ChatResponse } from '../types/chat.types';
 import { API_CONFIG, isProduction } from '../config/apiConfig';
 import type { Language } from '../../i18n/translations';
 
-// Get base URL with production fallback (hybrid approach)
 const getBaseUrl = (): string => {
   const configUrl = API_CONFIG.widgetApi.baseUrl;
   if (isProduction() && configUrl.includes('localhost')) {
@@ -31,6 +31,13 @@ export interface UserPreferences {
   accessibility?: string[];
 }
 
+export interface StreamCallbacks {
+  onMetadata?: (data: { pois: any[]; searchTimeMs: number; source: string }) => void;
+  onChunk?: (text: string, fullText: string) => void;
+  onDone?: (data: { fullMessage: string; totalLength: number }) => void;
+  onError?: (error: string) => void;
+}
+
 class ChatAPI {
   private sessionId: string | null = null;
   private language: Language = 'nl';
@@ -40,24 +47,105 @@ class ChatAPI {
     return getBaseUrl();
   }
 
-  /**
-   * Set the language for chat messages
-   */
   setLanguage(lang: Language): void {
     this.language = lang;
     console.log('[ChatAPI] Language set to:', lang);
   }
 
-  /**
-   * Set user preferences for personalization
-   */
   setUserPreferences(prefs: UserPreferences): void {
     this.userPreferences = prefs;
     console.log('[ChatAPI] User preferences set:', prefs);
   }
 
   /**
-   * Send a chat message to HoliBot AI
+   * Send a chat message with streaming response (SSE)
+   */
+  async sendMessageStream(
+    request: ChatRequest,
+    callbacks: StreamCallbacks
+  ): Promise<void> {
+    try {
+      const requestBody = {
+        message: request.query,
+        language: this.language,
+        conversationHistory: [],
+        userPreferences: this.userPreferences
+      };
+
+      console.log('[ChatAPI] Sending streaming message:', requestBody);
+
+      const response = await fetch(`${this.baseUrl}/holibot/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body reader available');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            const eventType = line.substring(7).trim();
+            continue;
+          }
+          if (line.startsWith('data: ')) {
+            const dataStr = line.substring(6);
+            try {
+              const data = JSON.parse(dataStr);
+
+              // Determine event type from previous line or data structure
+              if (data.pois !== undefined && data.searchTimeMs !== undefined) {
+                // metadata event
+                callbacks.onMetadata?.(data);
+              } else if (data.text !== undefined) {
+                // chunk event
+                fullText += data.text;
+                callbacks.onChunk?.(data.text, fullText);
+              } else if (data.fullMessage !== undefined) {
+                // done event
+                callbacks.onDone?.(data);
+              } else if (data.error !== undefined) {
+                // error event
+                callbacks.onError?.(data.error);
+              }
+            } catch (e) {
+              // Ignore parse errors for incomplete JSON
+            }
+          }
+        }
+      }
+
+      console.log('[ChatAPI] Streaming complete, total length:', fullText.length);
+
+    } catch (error) {
+      console.error('[ChatAPI] Streaming error:', error);
+      callbacks.onError?.(error instanceof Error ? error.message : 'Streaming unavailable');
+    }
+  }
+
+  /**
+   * Send a chat message to HoliBot AI (non-streaming)
    */
   async sendMessage(request: ChatRequest): Promise<ChatResponse> {
     try {
@@ -85,7 +173,6 @@ class ChatAPI {
       const data = await response.json();
       console.log('[ChatAPI] Response received:', data);
 
-      // Transform HoliBot 2.0 response to ChatResponse format
       if (data.success && data.data) {
         return {
           success: true,
@@ -110,10 +197,6 @@ class ChatAPI {
     }
   }
 
-  /**
-   * Build personalized itinerary
-   * Quick Action 1: Programma samenstellen
-   */
   async buildItinerary(options: {
     date?: string;
     duration?: 'morning' | 'afternoon' | 'evening' | 'full-day';
@@ -132,9 +215,7 @@ class ChatAPI {
 
       const response = await fetch(`${this.baseUrl}/holibot/itinerary`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
 
@@ -146,24 +227,15 @@ class ChatAPI {
 
     } catch (error) {
       console.error('[ChatAPI] Itinerary error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Itinerary service unavailable'
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Itinerary service unavailable' };
     }
   }
 
-  /**
-   * Get location details
-   * Quick Action 2: Specifieke locatie-informatie
-   */
   async getLocationInfo(poiId: string): Promise<any> {
     try {
       const response = await fetch(`${this.baseUrl}/holibot/location/${poiId}?language=${this.language}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) {
@@ -174,17 +246,10 @@ class ChatAPI {
 
     } catch (error) {
       console.error('[ChatAPI] Location info error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Location service unavailable'
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Location service unavailable' };
     }
   }
 
-  /**
-   * Get directions to POI
-   * Quick Action 3: Routebeschrijving
-   */
   async getDirections(options: {
     toPoiId: string;
     from?: { lat: number; lng: number } | 'current';
@@ -200,9 +265,7 @@ class ChatAPI {
 
       const response = await fetch(`${this.baseUrl}/holibot/directions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
 
@@ -214,33 +277,20 @@ class ChatAPI {
 
     } catch (error) {
       console.error('[ChatAPI] Directions error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Directions service unavailable'
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Directions service unavailable' };
     }
   }
 
-  /**
-   * Get daily POI tip (personalized)
-   * Quick Action 4: Mijn Tip van de Dag
-   */
   async getDailyTip(): Promise<any> {
     try {
-      const params = new URLSearchParams({
-        language: this.language
-      });
-
-      // Add interests if available
+      const params = new URLSearchParams({ language: this.language });
       if (this.userPreferences.interests?.length) {
         params.append('interests', this.userPreferences.interests.join(','));
       }
 
       const response = await fetch(`${this.baseUrl}/holibot/daily-tip?${params}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include'
       });
 
@@ -252,16 +302,10 @@ class ChatAPI {
 
     } catch (error) {
       console.error('[ChatAPI] Daily tip error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Daily tip service unavailable'
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Daily tip service unavailable' };
     }
   }
 
-  /**
-   * Search for POIs
-   */
   async searchPOIs(query: string, options: { limit?: number; category?: string } = {}): Promise<any> {
     try {
       const requestBody = {
@@ -272,9 +316,7 @@ class ChatAPI {
 
       const response = await fetch(`${this.baseUrl}/holibot/search`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
 
@@ -286,30 +328,18 @@ class ChatAPI {
 
     } catch (error) {
       console.error('[ChatAPI] Search error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Search service unavailable'
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Search service unavailable' };
     }
   }
 
-  /**
-   * Get current session ID
-   */
   getSessionId(): string | null {
     return this.sessionId;
   }
 
-  /**
-   * Clear current session
-   */
   clearSession(): void {
     this.sessionId = null;
   }
 
-  /**
-   * Generate unique message ID
-   */
   generateMessageId(): string {
     return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
