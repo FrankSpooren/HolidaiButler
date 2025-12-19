@@ -8,6 +8,8 @@ import { FavoritesPage } from '../pages/FavoritesPage';
 import AccountDashboard from '../pages/AccountDashboard';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { SignupPage } from '../pages/auth/SignupPage';
+import { VerifyEmailPage } from '../pages/auth/VerifyEmailPage';
+import { ResendVerificationPage } from '../pages/auth/ResendVerificationPage';
 import OnboardingFlow from '../pages/onboarding/OnboardingFlow';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { TicketsPage } from '../pages/TicketsPage';
@@ -159,6 +161,16 @@ export const router = createBrowserRouter([
         // Signup
         path: '/signup',
         element: <SignupPage />,
+      },
+      {
+        // Email Verification
+        path: '/verify-email',
+        element: <VerifyEmailPage />,
+      },
+      {
+        // Resend Verification Email
+        path: '/resend-verification',
+        element: <ResendVerificationPage />,
       },
     ],
   },
