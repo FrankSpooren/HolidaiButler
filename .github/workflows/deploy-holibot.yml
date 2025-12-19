@@ -1,0 +1,158 @@
+# =============================================================================
+# HoliBot 2.0 Deployment Pipeline
+# =============================================================================
+# Triggers: Only when HoliBot-related files change
+# Deploys: HoliBot RAG services to test.holidaibutler.com
+# =============================================================================
+
+name: "Deploy: HoliBot 2.0"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'platform-core/src/services/holibot/**'
+      - 'platform-core/src/routes/holibot.js'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
+      sync_chromadb:
+        description: 'Trigger ChromaDB sync after deploy'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  PM2_PROCESS_NAME: 'holidaibutler-api'
+  DEPLOY_PATH: '/var/www/api.holidaibutler.com/platform-core'
+  API_BASE_URL: 'https://test.holidaibutler.com/api/v1'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Deploy HoliBot Services
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy HoliBot 2.0
+    runs-on: ubuntu-latest
+    environment: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: platform-core/package-lock.json
+
+      - name: Install dependencies
+        working-directory: platform-core
+        run: npm ci
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Deploy HoliBot services
+        run: |
+          echo "📦 Deploying HoliBot services..."
+
+          # Create services directory if not exists
+          ssh root@91.98.71.87 "mkdir -p ${{ env.DEPLOY_PATH }}/src/services/holibot"
+
+          # Sync HoliBot service files
+          rsync -avz \
+            platform-core/src/services/holibot/ \
+            root@91.98.71.87:${{ env.DEPLOY_PATH }}/src/services/holibot/
+
+          # Sync HoliBot routes
+          rsync -avz \
+            platform-core/src/routes/holibot.js \
+            root@91.98.71.87:${{ env.DEPLOY_PATH }}/src/routes/
+
+      - name: Restart PM2 process
+        run: |
+          echo "🔄 Restarting API server..."
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && pm2 restart ${{ env.PM2_PROCESS_NAME }} --update-env"
+          sleep 5
+
+      - name: HoliBot Health Check
+        run: |
+          echo "🏥 Checking HoliBot health..."
+
+          HEALTH=$(curl -s ${{ env.API_BASE_URL }}/holibot/health)
+          echo "$HEALTH" | jq . || echo "$HEALTH"
+
+          STATUS=$(echo "$HEALTH" | jq -r '.status' 2>/dev/null || echo "unknown")
+
+          if [ "$STATUS" = "healthy" ]; then
+            echo "✅ HoliBot is healthy!"
+          else
+            echo "⚠️ HoliBot status: $STATUS"
+          fi
+
+      - name: Test Chat Endpoint
+        run: |
+          echo "💬 Testing chat endpoint..."
+
+          RESPONSE=$(curl -s -X POST ${{ env.API_BASE_URL }}/holibot/chat \
+            -H "Content-Type: application/json" \
+            -d '{"message": "Hallo", "language": "nl"}')
+
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.success' 2>/dev/null || echo "false")
+
+          if [ "$SUCCESS" = "true" ]; then
+            echo "✅ Chat endpoint working!"
+            echo "$RESPONSE" | jq '.data.message' 2>/dev/null || true
+          else
+            echo "❌ Chat endpoint failed"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+      - name: Trigger ChromaDB Sync (optional)
+        if: ${{ inputs.sync_chromadb == true }}
+        run: |
+          echo "🔄 Triggering ChromaDB sync..."
+
+          SYNC=$(curl -s -X POST ${{ env.API_BASE_URL }}/holibot/admin/sync \
+            -H "Content-Type: application/json" \
+            -d '{"type": "incremental"}')
+
+          echo "$SYNC" | jq . || echo "$SYNC"
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo ""
+          echo "╔═══════════════════════════════════════════════════════════╗"
+          echo "║   🤖 HoliBot 2.0 Deployed Successfully!                   ║"
+          echo "╠═══════════════════════════════════════════════════════════╣"
+          echo "║   Environment: test                                       ║"
+          echo "║   Health: ${{ env.API_BASE_URL }}/holibot/health          ║"
+          echo "║   Chat:   ${{ env.API_BASE_URL }}/holibot/chat            ║"
+          echo "╚═══════════════════════════════════════════════════════════╝"
+          echo ""
+
+      - name: Notify Success
+        if: success()
+        run: echo "::notice title=HoliBot Deployed::HoliBot 2.0 RAG services deployed to test environment"
+
+      - name: Notify Failure
+        if: failure()
+        run: echo "::error title=HoliBot Deploy Failed::Check logs for details"
