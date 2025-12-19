@@ -1,12 +1,14 @@
 /**
  * ChatMessage Styles
  * Phase 6: Mistral AI Integration ✅
+ * Phase 8: Streaming Support ✅
  *
  * Design: WhatsApp/iMessage-inspired chat bubbles
  * - User messages: Right-aligned, gold gradient
  * - Assistant messages: Left-aligned, white background
  * - Avatar for assistant
  * - Timestamp below message
+ * - Blinking cursor for streaming
  */
 
 .chat-message {
@@ -133,6 +135,17 @@
   animation-delay: 0.4s;
 }
 
+/* Streaming cursor - Blinking cursor while text streams */
+.chat-message-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background-color: #7FA594;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cursor-blink 0.8s ease-in-out infinite;
+}
+
 /* Animations */
 @keyframes message-slide-in {
   from {
@@ -151,6 +164,15 @@
   }
   30% {
     transform: translateY(-8px);
+  }
+}
+
+@keyframes cursor-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
   }
 }
 
@@ -212,6 +234,11 @@
 
   .chat-message-typing span {
     animation: none;
+  }
+
+  .chat-message-cursor {
+    animation: none;
+    opacity: 1;
   }
 
   .chat-message-poi-link {

@@ -8,6 +8,7 @@ import './ChatMessage.css';
 /**
  * ChatMessage - Individual Message Display
  * Phase 7: POI Clickability in Chat ✅
+ * Phase 8: Streaming Support ✅
  *
  * Features:
  * - User/Assistant message styling
@@ -15,7 +16,8 @@ import './ChatMessage.css';
  * - Timestamp display
  * - Clickable POI links in assistant messages
  * - POI Detail Modal popup on click
- * - Typing indicator
+ * - Streaming text with blinking cursor
+ * - Typing indicator for initial loading
  */
 
 interface ChatMessageProps {
@@ -33,7 +35,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     minute: '2-digit'
   });
 
-  // Parse message content for POI links (assistant messages only)
+  // Parse message content for POI links (assistant messages only, not while streaming)
   const segments = isAssistant && !message.isStreaming
     ? parseMessageForPOILinks(message.content, message.pois)
     : [{ type: 'text' as const, content: message.content }];
@@ -65,7 +67,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
         <div className="chat-message-content">
           <div className="chat-message-bubble">
-            {message.isStreaming ? (
+            {message.isStreaming && !message.content ? (
               <div className="chat-message-typing">
                 <span></span>
                 <span></span>
@@ -88,6 +90,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   }
                   return <span key={index}>{segment.content}</span>;
                 })}
+                {message.isStreaming && <span className="chat-message-cursor" />}
               </p>
             )}
           </div>
