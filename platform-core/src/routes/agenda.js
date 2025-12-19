@@ -110,7 +110,7 @@ router.get('/events', async (req, res) => {
     } = req.query;
 
     const pageNum = parseInt(page);
-    const limitNum = Math.min(parseInt(limit), 100);
+    const limitNum = Math.min(parseInt(limit), 500); // Allow up to 500 events for virtualized display
     const offset = (pageNum - 1) * limitNum;
 
     // Build WHERE clause
