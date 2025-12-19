@@ -1,70 +1,96 @@
 /**
  * Chat API Client
- * Widget API Integration - Updated for new chat endpoints
+ * HoliBot 2.0 RAG-powered AI Integration
  *
  * API client for HoliBot chat endpoint
- * Endpoint: POST /api/v1/chat/message
- * 
- * Uses hybrid URL detection:
- * - Central config from apiConfig.ts
- * - Service-level fallback for production environments
+ * Endpoint: POST /api/v1/holibot/chat (RAG-powered)
+ *
+ * Features:
+ * - ChromaDB semantic search
+ * - Mistral AI for embeddings and chat
+ * - Multi-language support (nl, en, de, es, sv, pl)
  */
 
 import type { ChatRequest, ChatResponse } from '../types/chat.types';
 import { API_CONFIG, isProduction } from '../config/apiConfig';
 
-// Get base URL with production fallback (hybrid approach)
 const getBaseUrl = (): string => {
   const configUrl = API_CONFIG.widgetApi.baseUrl;
-  // If configUrl is a localhost URL but we're in production, use relative URL
   if (isProduction() && configUrl.includes('localhost')) {
     return '/api/v1';
   }
   return configUrl;
 };
 
+const getCurrentLanguage = (): string => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('language') || 'nl';
+  }
+  return 'nl';
+};
+
 class ChatAPI {
   private sessionId: string | null = null;
-  
+  private conversationHistory: Array<{ role: string; content: string }> = [];
+
   private get baseUrl(): string {
     return getBaseUrl();
   }
 
-  /**
-   * Send a chat message to HoliBot AI
-   */
   async sendMessage(request: ChatRequest): Promise<ChatResponse> {
     try {
-      // Use existing sessionId or let backend create new one
-      const requestBody: { query: string; sessionId?: string } = {
-        query: request.query
+      const language = getCurrentLanguage();
+      const requestBody = {
+        message: request.query,
+        language,
+        conversationHistory: this.conversationHistory,
+        userPreferences: {}
       };
 
-      if (this.sessionId) {
-        requestBody.sessionId = this.sessionId;
-      }
-
-      const response = await fetch(`${this.baseUrl}/chat/message`, {
+      const response = await fetch(\`\${this.baseUrl}/holibot/chat\`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
       }
 
-      const data = await response.json();
+      const apiResponse = await response.json();
 
-      // Store sessionId for subsequent requests
-      if (data.success && data.data?.sessionId) {
-        this.sessionId = data.data.sessionId;
+      if (apiResponse.success && apiResponse.data) {
+        const { message, pois, source } = apiResponse.data;
+
+        this.conversationHistory.push(
+          { role: 'user', content: request.query },
+          { role: 'assistant', content: message }
+        );
+
+        if (this.conversationHistory.length > 20) {
+          this.conversationHistory = this.conversationHistory.slice(-20);
+        }
+
+        if (!this.sessionId) {
+          this.sessionId = \`session_\${Date.now()}_\${Math.random().toString(36).substr(2, 9)}\`;
+        }
+
+        return {
+          success: true,
+          data: {
+            sessionId: this.sessionId,
+            textResponse: message,
+            pois: pois || [],
+            intent: {
+              primaryIntent: source === 'rag' ? 'poi_search' : 'general',
+              confidence: source === 'rag' ? 0.9 : 0.5
+            },
+            totalResults: pois?.length || 0
+          }
+        };
       }
 
-      return data;
-
+      return { success: false, error: apiResponse.error || 'Unknown error' };
     } catch (error) {
       console.error('Chat API error:', error);
       return {
@@ -74,69 +100,98 @@ class ChatAPI {
     }
   }
 
-  /**
-   * Get current session ID
-   */
   getSessionId(): string | null {
     return this.sessionId;
   }
 
-  /**
-   * Clear current session
-   */
   async clearSession(): Promise<boolean> {
-    if (!this.sessionId) return true;
-
-    try {
-      const response = await fetch(`${this.baseUrl}/chat/session/${this.sessionId}`, {
-        method: 'DELETE'
-      });
-
-      this.sessionId = null;
-      return response.ok;
-
-    } catch (error) {
-      console.error('Clear session error:', error);
-      this.sessionId = null;
-      return false;
-    }
+    this.sessionId = null;
+    this.conversationHistory = [];
+    return true;
   }
 
-  /**
-   * Generate unique message ID
-   */
   generateMessageId(): string {
-    return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return \`msg_\${Date.now()}_\${Math.random().toString(36).substr(2, 9)}\`;
   }
 
-  /**
-   * Get daily POI tip (personalized)
-   * - Uses user preferences if logged in
-   * - Falls back to daily rotation for non-logged users
-   */
-  async getDailyTip(): Promise<any> {
+  async getDailyTip(language?: string): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/holibot/daily-tip`, {
+      const lang = language || getCurrentLanguage();
+      const response = await fetch(\`\${this.baseUrl}/holibot/daily-tip?language=\${lang}\`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include' // Include cookies for auth
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
       }
 
-      const data = await response.json();
-      return data;
-
+      return await response.json();
     } catch (error) {
       console.error('Daily tip API error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Daily tip service unavailable'
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Daily tip service unavailable' };
+    }
+  }
+
+  async buildItinerary(options: {
+    date?: string;
+    interests?: string[];
+    duration?: 'morning' | 'afternoon' | 'evening' | 'full-day';
+    language?: string;
+  }): Promise<any> {
+    try {
+      const response = await fetch(\`\${this.baseUrl}/holibot/itinerary\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: options.date,
+          interests: options.interests || [],
+          duration: options.duration || 'full-day',
+          language: options.language || getCurrentLanguage()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Itinerary API error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Itinerary service unavailable' };
+    }
+  }
+
+  async searchPOIs(query: string, limit = 10): Promise<any> {
+    try {
+      const response = await fetch(\`\${this.baseUrl}/holibot/search\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, limit })
+      });
+
+      if (!response.ok) {
+        throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Search API error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Search service unavailable' };
+    }
+  }
+
+  async checkHealth(): Promise<any> {
+    try {
+      const response = await fetch(\`\${this.baseUrl}/holibot/health\`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Health check error:', error);
+      return { success: false, status: 'unhealthy', error: error instanceof Error ? error.message : 'Health check failed' };
     }
   }
 }
