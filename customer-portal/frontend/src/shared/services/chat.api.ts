@@ -1,96 +1,84 @@
 /**
  * Chat API Client
- * HoliBot 2.0 RAG-powered AI Integration
+ * Widget API Integration - Updated for HoliBot 2.0
  *
  * API client for HoliBot chat endpoint
- * Endpoint: POST /api/v1/holibot/chat (RAG-powered)
+ * Endpoint: POST /api/v1/holibot/chat
  *
- * Features:
- * - ChromaDB semantic search
- * - Mistral AI for embeddings and chat
- * - Multi-language support (nl, en, de, es, sv, pl)
+ * Uses hybrid URL detection:
+ * - Central config from apiConfig.ts
+ * - Service-level fallback for production environments
  */
 
 import type { ChatRequest, ChatResponse } from '../types/chat.types';
 import { API_CONFIG, isProduction } from '../config/apiConfig';
 
+// Get base URL with production fallback (hybrid approach)
 const getBaseUrl = (): string => {
   const configUrl = API_CONFIG.widgetApi.baseUrl;
+  // If configUrl is a localhost URL but we're in production, use relative URL
   if (isProduction() && configUrl.includes('localhost')) {
     return '/api/v1';
   }
   return configUrl;
 };
 
-const getCurrentLanguage = (): string => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('language') || 'nl';
-  }
-  return 'nl';
-};
-
 class ChatAPI {
   private sessionId: string | null = null;
-  private conversationHistory: Array<{ role: string; content: string }> = [];
+  private language: string = 'nl';
 
   private get baseUrl(): string {
     return getBaseUrl();
   }
 
+  /**
+   * Set the language for chat messages
+   */
+  setLanguage(lang: string): void {
+    this.language = lang;
+  }
+
+  /**
+   * Send a chat message to HoliBot AI
+   */
   async sendMessage(request: ChatRequest): Promise<ChatResponse> {
     try {
-      const language = getCurrentLanguage();
+      // Build request body for HoliBot 2.0 API
       const requestBody = {
         message: request.query,
-        language,
-        conversationHistory: this.conversationHistory,
+        language: this.language,
+        conversationHistory: [],
         userPreferences: {}
       };
 
-      const response = await fetch(\`\${this.baseUrl}/holibot/chat\`, {
+      const response = await fetch(`${this.baseUrl}/holibot/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const apiResponse = await response.json();
+      const data = await response.json();
 
-      if (apiResponse.success && apiResponse.data) {
-        const { message, pois, source } = apiResponse.data;
-
-        this.conversationHistory.push(
-          { role: 'user', content: request.query },
-          { role: 'assistant', content: message }
-        );
-
-        if (this.conversationHistory.length > 20) {
-          this.conversationHistory = this.conversationHistory.slice(-20);
-        }
-
-        if (!this.sessionId) {
-          this.sessionId = \`session_\${Date.now()}_\${Math.random().toString(36).substr(2, 9)}\`;
-        }
-
+      // Transform HoliBot 2.0 response to ChatResponse format
+      if (data.success && data.data) {
         return {
           success: true,
           data: {
-            sessionId: this.sessionId,
-            textResponse: message,
-            pois: pois || [],
-            intent: {
-              primaryIntent: source === 'rag' ? 'poi_search' : 'general',
-              confidence: source === 'rag' ? 0.9 : 0.5
-            },
-            totalResults: pois?.length || 0
+            textResponse: data.data.message,
+            sources: data.data.sources || [],
+            sessionId: this.sessionId
           }
         };
       }
 
-      return { success: false, error: apiResponse.error || 'Unknown error' };
+      return data;
+
     } catch (error) {
       console.error('Chat API error:', error);
       return {
@@ -100,98 +88,55 @@ class ChatAPI {
     }
   }
 
+  /**
+   * Get current session ID
+   */
   getSessionId(): string | null {
     return this.sessionId;
   }
 
-  async clearSession(): Promise<boolean> {
+  /**
+   * Clear current session
+   */
+  clearSession(): void {
     this.sessionId = null;
-    this.conversationHistory = [];
-    return true;
   }
 
+  /**
+   * Generate unique message ID
+   */
   generateMessageId(): string {
-    return \`msg_\${Date.now()}_\${Math.random().toString(36).substr(2, 9)}\`;
+    return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  async getDailyTip(language?: string): Promise<any> {
+  /**
+   * Get daily POI tip (personalized)
+   * - Uses user preferences if logged in
+   * - Falls back to daily rotation for non-logged users
+   */
+  async getDailyTip(): Promise<any> {
     try {
-      const lang = language || getCurrentLanguage();
-      const response = await fetch(\`\${this.baseUrl}/holibot/daily-tip?language=\${lang}\`, {
+      const response = await fetch(`${this.baseUrl}/holibot/daily-tip?language=${this.language}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include' // Include cookies for auth
       });
 
       if (!response.ok) {
-        throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      return data;
+
     } catch (error) {
       console.error('Daily tip API error:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Daily tip service unavailable' };
-    }
-  }
-
-  async buildItinerary(options: {
-    date?: string;
-    interests?: string[];
-    duration?: 'morning' | 'afternoon' | 'evening' | 'full-day';
-    language?: string;
-  }): Promise<any> {
-    try {
-      const response = await fetch(\`\${this.baseUrl}/holibot/itinerary\`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: options.date,
-          interests: options.interests || [],
-          duration: options.duration || 'full-day',
-          language: options.language || getCurrentLanguage()
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Itinerary API error:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Itinerary service unavailable' };
-    }
-  }
-
-  async searchPOIs(query: string, limit = 10): Promise<any> {
-    try {
-      const response = await fetch(\`\${this.baseUrl}/holibot/search\`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, limit })
-      });
-
-      if (!response.ok) {
-        throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Search API error:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Search service unavailable' };
-    }
-  }
-
-  async checkHealth(): Promise<any> {
-    try {
-      const response = await fetch(\`\${this.baseUrl}/holibot/health\`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      return await response.json();
-    } catch (error) {
-      console.error('Health check error:', error);
-      return { success: false, status: 'unhealthy', error: error instanceof Error ? error.message : 'Health check failed' };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Daily tip service unavailable'
+      };
     }
   }
 }
