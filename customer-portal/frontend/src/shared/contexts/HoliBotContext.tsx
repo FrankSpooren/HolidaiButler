@@ -2,17 +2,19 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import type { ReactNode } from 'react';
 import type { ChatMessage } from '../types/chat.types';
 import { chatApi } from '../services/chat.api';
+import { userPreferencesApi } from '../services/userPreferences.api';
+import type { UserPreferences } from '../services/userPreferences.api';
+import { useLanguage } from '../../i18n/LanguageContext';
+import type { Language } from '../../i18n/translations';
 
 /**
  * HoliBot Context - Enterprise-Level Chat Widget State Management
  *
- * Pattern: Zendesk-inspired Context API with custom hook
  * Features:
- * - Lazy initialization (only load API on first open)
+ * - Multi-language support via LanguageContext
+ * - User preferences integration for personalization
+ * - Lazy initialization (Zendesk pattern)
  * - Global window.openHoliBot function
- * - Type-safe state management
- * - Performance-optimized callbacks
- * - Phase 6: Message history & Mistral AI integration ✅
  */
 
 interface HoliBotContextValue {
@@ -21,6 +23,7 @@ interface HoliBotContextValue {
   isReady: boolean;
   messages: ChatMessage[];
   isLoading: boolean;
+  userPreferences: UserPreferences | null;
 
   // Actions
   open: () => void;
@@ -32,7 +35,7 @@ interface HoliBotContextValue {
 
   // Configuration
   personality: 'auto' | 'adventurous' | 'relaxed' | 'cultural';
-  language: 'nl' | 'en' | 'de' | 'es' | 'sv';
+  language: Language;
 }
 
 const HoliBotContext = createContext<HoliBotContextValue | null>(null);
@@ -42,30 +45,54 @@ interface HoliBotProviderProps {
 }
 
 export function HoliBotProvider({ children }: HoliBotProviderProps) {
+  const { language } = useLanguage();
+
   const [isOpen, setIsOpen] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [personality] = useState<'auto' | 'adventurous' | 'relaxed' | 'cultural'>('auto');
-  const [language] = useState<'nl' | 'en' | 'de' | 'es' | 'sv'>('nl');
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
 
-  // Lazy initialization: only load API on first open (Zendesk pattern)
+  // Update chatApi language when app language changes
+  useEffect(() => {
+    chatApi.setLanguage(language);
+    console.log('[HoliBot] 🌐 Language set to:', language);
+  }, [language]);
+
+  // Load user preferences on mount
+  useEffect(() => {
+    const loadPreferences = async () => {
+      const prefs = await userPreferencesApi.getPreferences();
+      if (prefs) {
+        setUserPreferences(prefs);
+        chatApi.setUserPreferences(prefs);
+        console.log('[HoliBot] 👤 User preferences loaded:', prefs);
+      }
+    };
+    loadPreferences();
+  }, []);
+
+  // Lazy initialization
   const initializeAPI = useCallback(async () => {
     if (isReady) return;
 
     console.log('[HoliBot] 🔄 Initializing API...');
 
-    // TODO: Initialize Mistral AI API connection
-    // For now, just mark as ready
-    setIsReady(true);
+    // Reload preferences in case they changed
+    const prefs = await userPreferencesApi.getPreferences();
+    if (prefs) {
+      setUserPreferences(prefs);
+      chatApi.setUserPreferences(prefs);
+    }
 
+    setIsReady(true);
     console.log('[HoliBot] ✅ API ready');
   }, [isReady]);
 
   const open = useCallback(() => {
     console.log('[HoliBot] 🎯 Opening widget...');
 
-    // Lazy load API if not ready
     if (!isReady) {
       initializeAPI();
     }
@@ -89,7 +116,7 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim()) return;
 
-    console.log('[HoliBot] 📤 Sending message:', text);
+    console.log('[HoliBot] 📤 Sending message:', text, 'Language:', language);
 
     // Add user message immediately
     const userMessage: ChatMessage = {
@@ -102,32 +129,31 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
     setIsLoading(true);
 
     try {
-      // Send to backend (new chat API endpoint)
-      const response = await chatApi.sendMessage({
-        query: text
-      });
+      const response = await chatApi.sendMessage({ query: text });
 
       if (response.success && response.data) {
-        // Add assistant response with POIs for clickable links
         const assistantMessage: ChatMessage = {
           id: chatApi.generateMessageId(),
           role: 'assistant',
           content: response.data.textResponse,
           timestamp: new Date(),
-          pois: response.data.pois // Store POIs for clickable links ✅
+          pois: response.data.pois
         };
         setMessages(prev => [...prev, assistantMessage]);
-
         console.log('[HoliBot] ✅ Response received');
-        console.log(`[HoliBot] 📍 ${response.data.pois.length} POIs returned`);
-        console.log(`[HoliBot] 🔍 Intent: ${response.data.intent.primaryIntent}`);
-        console.log(`[HoliBot] 💾 Session: ${response.data.sessionId}`);
       } else {
-        // Error message
+        const errorMessages: Record<Language, string> = {
+          nl: 'Sorry, ik kon je vraag niet verwerken. Probeer het later opnieuw.',
+          en: 'Sorry, I could not process your question. Please try again later.',
+          de: 'Entschuldigung, ich konnte Ihre Frage nicht verarbeiten. Bitte versuchen Sie es später erneut.',
+          es: 'Lo siento, no pude procesar tu pregunta. Por favor, inténtalo de nuevo más tarde.',
+          sv: 'Tyvärr kunde jag inte behandla din fråga. Försök igen senare.',
+          pl: 'Przepraszam, nie mogłem przetworzyć Twojego pytania. Spróbuj ponownie później.'
+        };
         const errorMessage: ChatMessage = {
           id: chatApi.generateMessageId(),
           role: 'assistant',
-          content: 'Sorry, ik kon je vraag niet verwerken. Probeer het later opnieuw.',
+          content: errorMessages[language],
           timestamp: new Date()
         };
         setMessages(prev => [...prev, errorMessage]);
@@ -135,26 +161,34 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
       }
     } catch (error) {
       console.error('[HoliBot] ❌ Send message error:', error);
+      const errorMessages: Record<Language, string> = {
+        nl: 'Sorry, er is een fout opgetreden. Probeer het later opnieuw.',
+        en: 'Sorry, an error occurred. Please try again later.',
+        de: 'Entschuldigung, ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.',
+        es: 'Lo siento, ocurrió un error. Por favor, inténtalo de nuevo más tarde.',
+        sv: 'Tyvärr uppstod ett fel. Försök igen senare.',
+        pl: 'Przepraszam, wystąpił błąd. Spróbuj ponownie później.'
+      };
       const errorMessage: ChatMessage = {
         id: chatApi.generateMessageId(),
         role: 'assistant',
-        content: 'Sorry, er is een fout opgetreden. Probeer het later opnieuw.',
+        content: errorMessages[language],
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [language]);
 
   const addAssistantMessage = useCallback((content: string, pois?: any[]) => {
-    console.log('[HoliBot] 💬 Adding assistant message directly');
+    console.log('[HoliBot] 💬 Adding assistant message');
     const assistantMessage: ChatMessage = {
       id: chatApi.generateMessageId(),
       role: 'assistant',
       content,
       timestamp: new Date(),
-      pois // Include POIs for clickable links
+      pois
     };
     setMessages(prev => [...prev, assistantMessage]);
   }, []);
@@ -162,12 +196,10 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
   const clearMessages = useCallback(async () => {
     console.log('[HoliBot] 🗑️ Clearing messages and session');
     setMessages([]);
-
-    // Clear backend session
-    await chatApi.clearSession();
+    chatApi.clearSession();
   }, []);
 
-  // Expose global window.openHoliBot function for external access
+  // Expose global window.openHoliBot function
   useEffect(() => {
     console.log('[HoliBot] 🌐 Registering window.openHoliBot...');
 
@@ -189,6 +221,7 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
     isReady,
     messages,
     isLoading,
+    userPreferences,
     open,
     close,
     toggle,
@@ -206,10 +239,6 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
   );
 }
 
-/**
- * Custom hook to access HoliBot context
- * Throws error if used outside HoliBotProvider
- */
 export function useHoliBot() {
   const context = useContext(HoliBotContext);
 
@@ -220,7 +249,6 @@ export function useHoliBot() {
   return context;
 }
 
-// Type declaration for global window.openHoliBot
 declare global {
   interface Window {
     openHoliBot?: () => Promise<void>;

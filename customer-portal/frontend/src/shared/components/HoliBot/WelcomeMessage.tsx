@@ -4,20 +4,12 @@ import './WelcomeMessage.css';
 
 /**
  * WelcomeMessage - Sequential animated greeting
- *
- * User Requirements (2025-11-10):
- * - Auto-scroll to top on widget open
- * - 2 opening sentences + instruction sentence
- * - HoliBot avatar with HolidaiButler brand icon
- * - Followed by 4 suggestion tiles
- * - New content: Calpe-specific greeting
- *
- * Animation: Fade-in sequence
- * Design: Mobile-first, calm, sophisticated
+ * Multi-language support: nl, en, de, es, sv, pl
  */
 
 interface WelcomeMessageProps {
-  language?: 'nl' | 'en' | 'de' | 'es' | 'sv';
+  language?: 'nl' | 'en' | 'de' | 'es' | 'sv' | 'pl';
+  onComplete?: () => void;
 }
 
 const welcomeMessages: Record<string, string[]> = {
@@ -45,39 +37,35 @@ const welcomeMessages: Record<string, string[]> = {
     'Hola! Jag är HoliBot, din personliga Calpe-assistent.',
     'Hur kan jag hjälpa dig?',
     'Här är några förslag, eller skriv din fråga nedan:'
+  ],
+  pl: [
+    'Hola! Jestem HoliBot, Twój osobisty asystent Calpe.',
+    'Jak mogę Ci pomóc?',
+    'Oto kilka sugestii, lub wpisz swoje pytanie poniżej:'
   ]
 };
 
-export function WelcomeMessage({ language = 'nl', onComplete }: WelcomeMessageProps & { onComplete?: () => void }) {
+export function WelcomeMessage({ language = 'nl', onComplete }: WelcomeMessageProps) {
   const messages = welcomeMessages[language] || welcomeMessages.nl;
   const [visibleMessages, setVisibleMessages] = useState<number>(0);
 
-  // Sequential fade-in animation (1.5s intervals) - Run once on mount only
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
 
-    // Show first message immediately
     setVisibleMessages(1);
-
-    // Show second message after 1.5s
     timers.push(setTimeout(() => setVisibleMessages(2), 1500));
-
-    // Show third message after 3s
     timers.push(setTimeout(() => setVisibleMessages(3), 3000));
 
-    // Notify parent that animation is complete after 3rd message (add 500ms buffer)
     if (onComplete) {
       timers.push(setTimeout(() => onComplete(), 3500));
     }
 
-    // Cleanup
     return () => timers.forEach(timer => clearTimeout(timer));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps - only run once on mount
+  }, []);
 
   return (
     <div className="holibot-welcome-container" role="article">
-      {/* Message 1: Greeting with HoliBot avatar */}
       {visibleMessages >= 1 && (
         <div className="holibot-welcome-message holibot-welcome-animate">
           <div className="holibot-welcome-avatar">
@@ -91,14 +79,12 @@ export function WelcomeMessage({ language = 'nl', onComplete }: WelcomeMessagePr
         </div>
       )}
 
-      {/* Message 2: Question */}
       {visibleMessages >= 2 && (
         <div className="holibot-welcome-message holibot-welcome-animate holibot-welcome-secondary">
           <p className="holibot-welcome-text-secondary">{messages[1]}</p>
         </div>
       )}
 
-      {/* Message 3: Instructions */}
       {visibleMessages >= 3 && (
         <div className="holibot-welcome-message holibot-welcome-animate holibot-welcome-secondary">
           <p className="holibot-welcome-text-secondary">{messages[2]}</p>

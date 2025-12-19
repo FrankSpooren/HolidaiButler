@@ -708,7 +708,32 @@ export interface Translations {
     // Edit mode
     editMode: string;
     cancelEdit: string;
-    skipConfirm: string;
+        skipConfirm: string;
+  };
+  // HoliBot Chat Widget
+  holibotChat: {
+    welcome: string;
+    welcomeSubtitle: string;
+    inputPlaceholder: string;
+    quickActions: {
+      itinerary: string;
+      locationInfo: string;
+      directions: string;
+      dailyTip: string;
+    };
+    prompts: {
+      itinerary: string;
+      locationInfo: string;
+      directions: string;
+    };
+    responses: {
+      loading: string;
+      error: string;
+      noResults: string;
+      itineraryIntro: string;
+      locationSearch: string;
+      directionsHelp: string;
+    };
   };
 }
 
@@ -1410,6 +1435,30 @@ export const translations: Record<Language, Translations> = {
       cancelEdit: 'Bewerken annuleren en terug naar je account?',
       skipConfirm: 'Onboarding overslaan? Je kunt later voorkeuren instellen in je account.',
     },
+    holibotChat: {
+      welcome: 'Hoi! Ik ben HoliBot 🌴',
+      welcomeSubtitle: 'Jouw persoonlijke Calpe-gids. Hoe kan ik je helpen?',
+      inputPlaceholder: 'Stel een vraag over Calpe...',
+      quickActions: {
+        itinerary: 'Programma samenstellen',
+        locationInfo: 'Locatie-informatie',
+        directions: 'Routebeschrijving',
+        dailyTip: 'Mijn Tip van de Dag',
+      },
+      prompts: {
+        itinerary: 'Stel een dagprogramma voor mij samen op basis van mijn voorkeuren',
+        locationInfo: 'Ik zoek informatie over een specifieke locatie',
+        directions: 'Help me met de route naar een bestemming',
+      },
+      responses: {
+        loading: 'Even denken...',
+        error: 'Sorry, er ging iets mis. Probeer het opnieuw.',
+        noResults: 'Geen resultaten gevonden. Probeer een andere zoekopdracht.',
+        itineraryIntro: 'Hier is jouw gepersonaliseerde dagprogramma:',
+        locationSearch: 'Welke locatie wil je meer over weten?',
+        directionsHelp: 'Naar welke bestemming wil je navigeren?',
+      },
+    },
   },
   en: {
     nav: {
@@ -2102,6 +2151,30 @@ export const translations: Record<Language, Translations> = {
       editMode: 'Editing your preferences - Your current selections are shown below',
       cancelEdit: 'Cancel editing preferences and return to your account?',
       skipConfirm: 'Skip onboarding? You can set preferences later in your account.',
+    },
+    holibotChat: {
+      welcome: 'Hi! I\'m HoliBot 🌴',
+      welcomeSubtitle: 'Your personal Calpe guide. How can I help you?',
+      inputPlaceholder: 'Ask a question about Calpe...',
+      quickActions: {
+        itinerary: 'Build my itinerary',
+        locationInfo: 'Location info',
+        directions: 'Get directions',
+        dailyTip: 'My Daily Tip',
+      },
+      prompts: {
+        itinerary: 'Create a day program for me based on my preferences',
+        locationInfo: 'I\'m looking for information about a specific location',
+        directions: 'Help me with directions to a destination',
+      },
+      responses: {
+        loading: 'Thinking...',
+        error: 'Sorry, something went wrong. Please try again.',
+        noResults: 'No results found. Try a different search.',
+        itineraryIntro: 'Here\'s your personalized day program:',
+        locationSearch: 'Which location would you like to know more about?',
+        directionsHelp: 'Which destination would you like directions to?',
+      },
     },
   },
   de: {
@@ -2796,6 +2869,30 @@ export const translations: Record<Language, Translations> = {
       cancelEdit: 'Bearbeitung abbrechen und zu Ihrem Konto zurückkehren?',
       skipConfirm: 'Onboarding überspringen? Sie können später in Ihrem Konto Präferenzen festlegen.',
     },
+    holibotChat: {
+      welcome: 'Hallo! Ich bin HoliBot 🌴',
+      welcomeSubtitle: 'Dein persönlicher Calpe-Guide. Wie kann ich dir helfen?',
+      inputPlaceholder: 'Stelle eine Frage über Calpe...',
+      quickActions: {
+        itinerary: 'Programm erstellen',
+        locationInfo: 'Standort-Info',
+        directions: 'Wegbeschreibung',
+        dailyTip: 'Mein Tages-Tipp',
+      },
+      prompts: {
+        itinerary: 'Erstelle ein Tagesprogramm basierend auf meinen Vorlieben',
+        locationInfo: 'Ich suche Informationen über einen bestimmten Ort',
+        directions: 'Hilf mir mit der Route zu einem Ziel',
+      },
+      responses: {
+        loading: 'Einen Moment...',
+        error: 'Entschuldigung, etwas ist schiefgelaufen. Bitte versuche es erneut.',
+        noResults: 'Keine Ergebnisse gefunden. Versuche eine andere Suche.',
+        itineraryIntro: 'Hier ist dein personalisiertes Tagesprogramm:',
+        locationSearch: 'Über welchen Ort möchtest du mehr erfahren?',
+        directionsHelp: 'Zu welchem Ziel möchtest du navigieren?',
+      },
+    },
   },
   es: {
     nav: {
@@ -3488,6 +3585,30 @@ export const translations: Record<Language, Translations> = {
       editMode: 'Editando tus preferencias - Tus selecciones actuales se muestran abajo',
       cancelEdit: '¿Cancelar la edición y volver a tu cuenta?',
       skipConfirm: '¿Omitir el onboarding? Puedes establecer preferencias más tarde en tu cuenta.',
+    },
+    holibotChat: {
+      welcome: '¡Hola! Soy HoliBot 🌴',
+      welcomeSubtitle: 'Tu guía personal de Calpe. ¿Cómo puedo ayudarte?',
+      inputPlaceholder: 'Haz una pregunta sobre Calpe...',
+      quickActions: {
+        itinerary: 'Crear mi itinerario',
+        locationInfo: 'Info de ubicación',
+        directions: 'Indicaciones',
+        dailyTip: 'Mi Consejo del Día',
+      },
+      prompts: {
+        itinerary: 'Crea un programa del día basado en mis preferencias',
+        locationInfo: 'Busco información sobre una ubicación específica',
+        directions: 'Ayúdame con las indicaciones a un destino',
+      },
+      responses: {
+        loading: 'Pensando...',
+        error: 'Lo siento, algo salió mal. Por favor, inténtalo de nuevo.',
+        noResults: 'No se encontraron resultados. Prueba otra búsqueda.',
+        itineraryIntro: 'Aquí está tu programa personalizado del día:',
+        locationSearch: '¿Sobre qué ubicación te gustaría saber más?',
+        directionsHelp: '¿A qué destino te gustaría ir?',
+      },
     },
   },
   sv: {
@@ -4182,6 +4303,30 @@ export const translations: Record<Language, Translations> = {
       cancelEdit: 'Avbryt redigering och återgå till ditt konto?',
       skipConfirm: 'Hoppa över onboarding? Du kan ställa in preferenser senare i ditt konto.',
     },
+    holibotChat: {
+      welcome: 'Hej! Jag är HoliBot 🌴',
+      welcomeSubtitle: 'Din personliga Calpe-guide. Hur kan jag hjälpa dig?',
+      inputPlaceholder: 'Ställ en fråga om Calpe...',
+      quickActions: {
+        itinerary: 'Skapa mitt schema',
+        locationInfo: 'Platsinformation',
+        directions: 'Vägbeskrivning',
+        dailyTip: 'Mitt dagstips',
+      },
+      prompts: {
+        itinerary: 'Skapa ett dagsprogram baserat på mina preferenser',
+        locationInfo: 'Jag söker information om en specifik plats',
+        directions: 'Hjälp mig med vägen till en destination',
+      },
+      responses: {
+        loading: 'Tänker...',
+        error: 'Förlåt, något gick fel. Försök igen.',
+        noResults: 'Inga resultat hittades. Prova en annan sökning.',
+        itineraryIntro: 'Här är ditt personliga dagsprogram:',
+        locationSearch: 'Vilken plats vill du veta mer om?',
+        directionsHelp: 'Vilken destination vill du navigera till?',
+      },
+    },
   },
   pl: {
     nav: {
@@ -4875,5 +5020,29 @@ export const translations: Record<Language, Translations> = {
       cancelEdit: 'Anulować edycję i wrócić do konta?',
       skipConfirm: 'Pominąć onboarding? Możesz ustawić preferencje później w swoim koncie.',
     },
+    holibotChat: {
+      welcome: 'Cześć! Jestem HoliBot 🌴',
+      welcomeSubtitle: 'Twój osobisty przewodnik po Calpe. Jak mogę Ci pomóc?',
+      inputPlaceholder: 'Zadaj pytanie o Calpe...',
+      quickActions: {
+        itinerary: 'Stwórz mój plan',
+        locationInfo: 'Informacje o lokalizacji',
+        directions: 'Wskazówki dojazdu',
+        dailyTip: 'Moja porada dnia',
+      },
+      prompts: {
+        itinerary: 'Stwórz dla mnie program dnia na podstawie moich preferencji',
+        locationInfo: 'Szukam informacji o konkretnym miejscu',
+        directions: 'Pomóż mi znaleźć drogę do celu',
+      },
+      responses: {
+        loading: 'Myślę...',
+        error: 'Przepraszam, coś poszło nie tak. Spróbuj ponownie.',
+        noResults: 'Nie znaleziono wyników. Spróbuj innego wyszukiwania.',
+        itineraryIntro: 'Oto Twój spersonalizowany program dnia:',
+        locationSearch: 'O którym miejscu chciałbyś dowiedzieć się więcej?',
+        directionsHelp: 'Do jakiego celu chcesz nawigować?',
+      },
+    },
   },
-};
+  };
