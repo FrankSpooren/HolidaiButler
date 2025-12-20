@@ -3,6 +3,7 @@ import type { ChatMessage as ChatMessageType } from '../../types/chat.types';
 import holibotAvatar from '../../../assets/images/hb-merkicoon.png';
 import { parseMessageForPOILinks } from '../../utils/poiLinkParser';
 import { POIDetailModal } from '../../../features/poi/components/POIDetailModal';
+import { SpeakerButton } from './SpeakerButton';
 import './ChatMessage.css';
 
 /**
@@ -96,6 +97,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </div>
           <div className="chat-message-meta">
             <span className="chat-message-time">{time}</span>
+            {/* TTS Speaker button for assistant messages */}
+            {isAssistant && !message.isStreaming && message.content && (
+              <SpeakerButton text={message.content} size="small" />
+            )}
           </div>
         </div>
       </div>

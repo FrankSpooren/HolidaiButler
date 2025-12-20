@@ -19,6 +19,7 @@
   "author": "HolidaiButler",
   "license": "MIT",
   "dependencies": {
+    "@google-cloud/text-to-speech": "^5.5.0",
     "@mailerlite/mailerlite-nodejs": "^1.2.0",
     "@mistralai/mistralai": "^1.11.0",
     "@sentry/node": "^7.91.0",

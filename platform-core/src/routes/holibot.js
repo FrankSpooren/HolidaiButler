@@ -26,7 +26,7 @@
  */
 
 import express from 'express';
-import { ragService, syncService, chromaService, embeddingService } from '../services/holibot/index.js';
+import { ragService, syncService, chromaService, embeddingService, ttsService } from '../services/holibot/index.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -767,6 +767,85 @@ router.get('/health', async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ success: false, status: 'unhealthy', error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/tts
+ * Google Cloud Text-to-Speech
+ * Converts text to speech audio (MP3)
+ *
+ * Request body:
+ * - text: string (required, max 5000 chars)
+ * - language: string (optional, default 'nl')
+ *
+ * Response:
+ * - audio: base64 encoded MP3
+ * - contentType: 'audio/mp3'
+ */
+router.post('/tts', async (req, res) => {
+  try {
+    const { text, language = 'nl' } = req.body;
+
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Text is required'
+      });
+    }
+
+    if (text.length > 5000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Text too long (max 5000 characters)'
+      });
+    }
+
+    logger.info('TTS request', { language, textLength: text.length });
+
+    const result = await ttsService.synthesize(text, language);
+
+    if (!result.success) {
+      return res.status(503).json({
+        success: false,
+        error: result.error || 'TTS service unavailable'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        audio: result.audio,
+        contentType: result.contentType,
+        cached: result.cached || false
+      }
+    });
+
+  } catch (error) {
+    logger.error('TTS error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Text-to-speech conversion failed'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/tts/status
+ * Check TTS service availability
+ */
+router.get('/tts/status', async (req, res) => {
+  try {
+    const status = ttsService.checkAvailability();
+    res.json({
+      success: true,
+      data: status
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 
