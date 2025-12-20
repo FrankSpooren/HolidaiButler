@@ -156,56 +156,163 @@ router.post('/search', async (req, res) => {
 
 /**
  * POST /api/v1/holibot/itinerary
- * Quick Action 1: Build personalized day program
+ * Quick Action 1: Build personalized day program with Events
+ *
+ * Features:
+ * - Duration choice: morning, afternoon, evening, full-day
+ * - Interest-based POI selection
+ * - Events integration from agenda
+ * - Meal suggestions for appropriate time slots
  */
 router.post('/itinerary', async (req, res) => {
   try {
-    const { date, interests = [], duration = 'full-day', travelCompanion, language = 'nl' } = req.body;
+    const { date, interests = [], duration = 'full-day', travelCompanion, language = 'nl', includeMeals = true } = req.body;
 
-    logger.info('HoliBot itinerary request', { date, interests, duration });
+    logger.info('HoliBot itinerary request', { date, interests, duration, includeMeals });
 
-    const queries = interests.length > 0 ? interests.map(i => `${i} in Calpe`).join(' ') : 'best things to do in Calpe';
+    // Step 1: Search POIs based on interests
+    const queries = interests.length > 0 ? interests.map(i => i + ' in Calpe').join(' ') : 'best things to do in Calpe';
     const searchResults = await ragService.search(queries, { limit: 15 });
 
-    const categories = {};
-    for (const poi of searchResults.results) {
-      const cat = poi.category || 'Other';
-      if (!categories[cat]) categories[cat] = [];
-      categories[cat].push(poi);
+    // Step 2: Get Events for the selected date
+    let events = [];
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    try {
+      const { mysqlSequelize } = await import('../config/database.js');
+      const { QueryTypes } = (await import('sequelize')).default;
+
+      const eventResults = await mysqlSequelize.query(
+        "SELECT a.id, a.title, a.short_description as description, " +
+        "a.image as thumbnailUrl, a.location_name as address, " +
+        "d.event_date, d.start_time " +
+        "FROM agenda a " +
+        "INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash " +
+        "WHERE d.event_date = ? " +
+        "AND (a.calpe_distance IS NULL OR a.calpe_distance <= 25) " +
+        "ORDER BY d.start_time ASC LIMIT 5",
+        { replacements: [targetDate], type: QueryTypes.SELECT }
+      );
+
+      events = eventResults.map(e => ({
+        ...e,
+        type: 'event',
+        name: e.title,
+        category: 'Event'
+      }));
+    } catch (eventError) {
+      logger.warn('Could not fetch events for itinerary:', eventError.message);
     }
 
+    // Step 3: Get restaurant suggestions if meals included
+    let restaurants = [];
+    if (includeMeals) {
+      const restaurantResults = await ragService.search('restaurant Calpe ' + (interests.includes('Food & Drinks') ? 'best rated' : ''), { limit: 5 });
+      restaurants = restaurantResults.results.filter(p =>
+        p.category?.toLowerCase().includes('food') ||
+        p.category?.toLowerCase().includes('restaurant') ||
+        p.subcategory?.toLowerCase().includes('restaurant')
+      );
+    }
+
+    // Step 4: Build time slots with mixed content
     const timeSlots = {
-      'morning': ['09:00', '10:30', '12:00'],
-      'afternoon': ['13:00', '15:00', '17:00'],
-      'evening': ['18:00', '20:00', '22:00'],
-      'full-day': ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00']
+      'morning': [
+        { time: '09:00', type: 'activity' },
+        { time: '10:30', type: 'activity' },
+        { time: '12:00', type: 'lunch' }
+      ],
+      'afternoon': [
+        { time: '13:00', type: 'lunch' },
+        { time: '14:30', type: 'activity' },
+        { time: '16:30', type: 'activity' }
+      ],
+      'evening': [
+        { time: '18:00', type: 'activity' },
+        { time: '19:30', type: 'dinner' },
+        { time: '21:00', type: 'activity' }
+      ],
+      'full-day': [
+        { time: '09:30', type: 'activity' },
+        { time: '11:00', type: 'activity' },
+        { time: '13:00', type: 'lunch' },
+        { time: '15:00', type: 'activity' },
+        { time: '17:00', type: 'activity' },
+        { time: '19:30', type: 'dinner' }
+      ]
     };
 
     const slots = timeSlots[duration] || timeSlots['full-day'];
     const itinerary = [];
     let poiIndex = 0;
+    let eventIndex = 0;
+    let restaurantIndex = 0;
 
     for (const slot of slots) {
-      if (poiIndex < searchResults.results.length) {
-        itinerary.push({ time: slot, poi: searchResults.results[poiIndex] });
-        poiIndex++;
+      let item = null;
+
+      if (slot.type === 'lunch' || slot.type === 'dinner') {
+        // Add meal suggestion
+        if (includeMeals && restaurants[restaurantIndex]) {
+          item = {
+            time: slot.time,
+            type: slot.type,
+            poi: restaurants[restaurantIndex],
+            label: slot.type === 'lunch' ? 'Lunch' : 'Diner'
+          };
+          restaurantIndex++;
+        }
+      } else {
+        // Try to add event first (if time matches), otherwise POI
+        if (events[eventIndex] && events[eventIndex].start_time) {
+          const eventHour = parseInt(events[eventIndex].start_time.split(':')[0]);
+          const slotHour = parseInt(slot.time.split(':')[0]);
+          if (Math.abs(eventHour - slotHour) <= 2) {
+            item = {
+              time: events[eventIndex].start_time || slot.time,
+              type: 'event',
+              event: events[eventIndex],
+              poi: events[eventIndex]
+            };
+            eventIndex++;
+          }
+        }
+
+        if (!item && searchResults.results[poiIndex]) {
+          item = {
+            time: slot.time,
+            type: 'activity',
+            poi: searchResults.results[poiIndex]
+          };
+          poiIndex++;
+        }
+      }
+
+      if (item) {
+        itinerary.push(item);
       }
     }
 
+    // Step 5: Generate AI description
     const systemPrompt = embeddingService.buildSystemPrompt(language);
     const description = await embeddingService.generateChatCompletion([
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Maak een korte introductie (max 50 woorden) voor een ${duration} dagprogramma in Calpe gericht op: ${interests.join(', ') || 'algemene verkenning'}` }
+      { role: 'user', content: 'Maak een enthousiaste introductie (max 60 woorden) voor een ' + duration + ' dagprogramma in Calpe. ' +
+        (interests.length ? 'Interesses: ' + interests.join(', ') + '. ' : '') +
+        (events.length ? 'Er zijn ' + events.length + ' evenementen vandaag. ' : '') +
+        'Eindig met een uitnodigende zin.'
+      }
     ]);
 
     res.json({
       success: true,
       data: {
-        date: date || new Date().toISOString().split('T')[0],
+        date: targetDate,
         duration,
         description,
         itinerary,
-        totalStops: itinerary.length
+        totalStops: itinerary.length,
+        eventsIncluded: events.length,
+        hasEvents: events.length > 0
       }
     });
 
