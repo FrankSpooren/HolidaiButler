@@ -355,7 +355,7 @@ router.get('/daily-tip', async (req, res) => {
         "FROM agenda a " +
         "INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash " +
         "WHERE d.event_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) " +
-        "AND (a.calpe_distance IS NOT NULL AND a.calpe_distance <= 25) " +
+        "AND (a.calpe_distance IS NULL OR a.calpe_distance <= 25) " +
         "GROUP BY a.id ORDER BY d.event_date ASC LIMIT 10",
         { type: QueryTypes.SELECT }
       );
