@@ -342,8 +342,6 @@ router.get('/daily-tip', async (req, res) => {
       return hasGoodRating && notExcluded;
     });
 
-    logger.info('Quality POIs found:', { count: qualityPois.length });
-
     // Step 2: Get upcoming events (next 7 days)
     let events = [];
     try {
@@ -362,8 +360,6 @@ router.get('/daily-tip', async (req, res) => {
         { type: QueryTypes.SELECT }
       );
 
-      logger.info('Events query result:', { count: eventResults.length, events: eventResults.map(e => e.title) });
-
       events = eventResults.filter(event =>
         !excludedIdList.includes('event-' + event.id)
       ).map(event => ({
@@ -378,20 +374,22 @@ router.get('/daily-tip', async (req, res) => {
       logger.warn('Could not fetch events for daily tip:', eventError.message);
     }
 
-    // Combine quality POIs and Events
-    const allCandidates = [
-      ...qualityPois.map(poi => ({ ...poi, type: 'poi' })),
-      ...events
-    ];
+    // Combine quality POIs and Events - Events first (time-sensitive)
+    const poisWithType = qualityPois.map(poi => ({ ...poi, type: 'poi' }));
+    
+    // Interleave: Events get priority since they're time-sensitive
+    // Take up to 2 events and 3 POIs for variety
+    const topEvents = events.slice(0, 2);
+    const topPois = poisWithType.slice(0, 3);
+    const allCandidates = [...topEvents, ...topPois];
 
     if (allCandidates.length === 0) {
       return res.status(404).json({ success: false, error: 'No tips available' });
     }
 
-    // Select from top candidates
-    const topCandidates = allCandidates.slice(0, Math.min(5, allCandidates.length));
-    const randomIndex = Math.floor(Math.random() * topCandidates.length);
-    const selectedItem = topCandidates[randomIndex];
+    // Random selection from interleaved candidates
+    const randomIndex = Math.floor(Math.random() * allCandidates.length);
+    const selectedItem = allCandidates[randomIndex];
 
     // Generate tip description
     const tipLabels = { nl: 'Tip van de Dag', en: 'Tip of the Day', de: 'Tipp des Tages', es: 'Consejo del Dia', sv: 'Dagens Tips', pl: 'Porada Dnia' };
@@ -529,32 +527,6 @@ router.get('/health', async (req, res) => {
 });
 
 
-/**
- * GET /api/v1/holibot/debug/events
- * TEMPORARY: Debug endpoint to check Events query
- */
-router.get('/debug/events', async (req, res) => {
-  try {
-    const { mysqlSequelize } = await import('../config/database.js');
-    const { QueryTypes } = (await import('sequelize')).default;
-
-    const eventResults = await mysqlSequelize.query(
-      "SELECT a.id, a.title, a.calpe_distance, " +
-      "MIN(d.event_date) as event_date " +
-      "FROM agenda a " +
-      "INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash " +
-      "WHERE d.event_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) " +
-      "AND (a.calpe_distance IS NULL OR a.calpe_distance <= 25) " +
-      "GROUP BY a.id ORDER BY d.event_date ASC LIMIT 10",
-      { type: QueryTypes.SELECT }
-    );
-
-    res.json({
-      success: true,
-      query: 'Events within 7 days, calpe_distance NULL or <= 25',
-      count: eventResults.length,
-      events: eventResults
-    });
   } catch (error) {
     res.json({ success: false, error: error.message, stack: error.stack });
   }
