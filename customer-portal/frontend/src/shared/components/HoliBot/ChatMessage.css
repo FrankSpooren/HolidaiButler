@@ -197,6 +197,52 @@
   }
 }
 
+/* Markdown Content Styling - Phase 9 ✅ */
+.chat-message-text .markdown-content {
+  display: block;
+}
+
+.chat-message-text .markdown-content.inline {
+  display: inline;
+}
+
+/* Lists in chat */
+.chat-message-text ul,
+.chat-message-text ol {
+  margin: 8px 0;
+  padding-left: 8px;
+}
+
+.chat-message-text li {
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+/* Bold and emphasis */
+.chat-message-text strong {
+  font-weight: 600;
+}
+
+.chat-message-text em {
+  font-style: italic;
+}
+
+/* Ensure proper spacing for paragraphs */
+.chat-message-text br {
+  display: block;
+  content: "";
+  margin-top: 4px;
+}
+
+/* Headers in chat (rare, but supported) */
+.chat-message-text .font-bold {
+  font-weight: 700;
+}
+
+.chat-message-text .font-semibold {
+  font-weight: 600;
+}
+
 /* POI Clickable Links - Phase 7 ✅ */
 .chat-message-poi-link {
   display: inline;
