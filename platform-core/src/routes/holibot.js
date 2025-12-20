@@ -429,9 +429,14 @@ router.get('/daily-tip', async (req, res) => {
     // Parse excluded IDs (tips already shown this session)
     const excludedIdList = excludeIds ? excludeIds.split(',').filter(Boolean) : [];
 
-    // User interests or default categories
-    const defaultCategories = ['Beaches & Nature', 'Culture & History', 'Active', 'Food & Drinks'];
-    const userInterests = interests ? interests.split(',') : defaultCategories;
+    // ONLY tourist-friendly categories for daily tips
+    const allowedCategories = [
+      'Beaches & Nature', 'Food & Drinks', 'Shopping',
+      'Culture & History', 'Recreation', 'Active'
+    ];
+
+    // User interests or rotate through allowed categories
+    const userInterests = interests ? interests.split(',').filter(c => allowedCategories.includes(c)) : allowedCategories;
 
     // Rotate interest based on day of year
     const now = new Date();
@@ -442,14 +447,15 @@ router.get('/daily-tip', async (req, res) => {
     logger.info('Daily tip request', { language, selectedInterest, excludeCount: excludedIdList.length });
 
     // Step 1: Search POIs with quality filter (rating >= 4.4)
-    const poiSearchResults = await ragService.search(selectedInterest + ' Calpe', { limit: 15 });
+    const poiSearchResults = await ragService.search(selectedInterest + ' Calpe', { limit: 20 });
 
-    // Filter: rating >= 4.4 (or no rating) and not excluded
+    // Filter: rating >= 4.4, ONLY allowed categories, and not excluded
     const qualityPois = poiSearchResults.results.filter(poi => {
       const rating = parseFloat(poi.rating);
       const hasGoodRating = !rating || isNaN(rating) || rating >= 4.4;
+      const isAllowedCategory = allowedCategories.includes(poi.category);
       const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
-      return hasGoodRating && notExcluded;
+      return hasGoodRating && isAllowedCategory && notExcluded;
     });
 
     // Step 2: Get upcoming events (next 7 days)
