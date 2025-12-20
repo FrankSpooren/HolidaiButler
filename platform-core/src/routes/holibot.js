@@ -576,6 +576,108 @@ router.get('/categories', async (req, res) => {
 });
 
 /**
+ * GET /api/v1/holibot/categories/hierarchy
+ * Returns 3-level category hierarchy from POI table
+ * Level 1: category, Level 2: subcategory, Level 3: poi_type
+ */
+router.get('/categories/hierarchy', async (req, res) => {
+  try {
+    const { mysqlSequelize } = await import('../config/database.js');
+    const { QueryTypes } = (await import('sequelize')).default;
+
+    const results = await mysqlSequelize.query(`
+      SELECT category, subcategory, poi_type, COUNT(*) as count
+      FROM POI WHERE is_active = 1
+      GROUP BY category, subcategory, poi_type
+      ORDER BY category, subcategory, poi_type
+    `, { type: QueryTypes.SELECT });
+
+    const hierarchy = {};
+    for (const row of results) {
+      const cat = row.category || 'Overig';
+      const subcat = row.subcategory || null;
+      const poiType = row.poi_type || null;
+      const count = parseInt(row.count);
+
+      if (!hierarchy[cat]) {
+        hierarchy[cat] = { name: cat, count: 0, subcategories: {} };
+      }
+      hierarchy[cat].count += count;
+
+      if (subcat) {
+        if (!hierarchy[cat].subcategories[subcat]) {
+          hierarchy[cat].subcategories[subcat] = { name: subcat, count: 0, types: {} };
+        }
+        hierarchy[cat].subcategories[subcat].count += count;
+
+        if (poiType) {
+          if (!hierarchy[cat].subcategories[subcat].types[poiType]) {
+            hierarchy[cat].subcategories[subcat].types[poiType] = { name: poiType, count: 0 };
+          }
+          hierarchy[cat].subcategories[subcat].types[poiType].count += count;
+        }
+      }
+    }
+
+    const hierarchyArray = Object.values(hierarchy).map(cat => ({
+      name: cat.name,
+      count: cat.count,
+      subcategories: Object.values(cat.subcategories).map(sub => ({
+        name: sub.name,
+        count: sub.count,
+        types: Object.values(sub.types)
+      }))
+    })).sort((a, b) => b.count - a.count);
+
+    res.json({ success: true, data: hierarchyArray, totalCategories: hierarchyArray.length });
+
+  } catch (error) {
+    logger.error('Categories hierarchy error:', error);
+    res.status(500).json({ success: false, error: 'Could not fetch category hierarchy' });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/categories/:category/pois
+ * Get POIs for a specific category with optional filters
+ */
+router.get('/categories/:category/pois', async (req, res) => {
+  try {
+    const { category } = req.params;
+    const { subcategory, type, limit = 20 } = req.query;
+    const { mysqlSequelize } = await import('../config/database.js');
+    const { QueryTypes } = (await import('sequelize')).default;
+
+    let whereClause = 'WHERE is_active = 1 AND category = ?';
+    const params = [decodeURIComponent(category)];
+
+    if (subcategory) {
+      whereClause += ' AND subcategory = ?';
+      params.push(decodeURIComponent(subcategory));
+    }
+    if (type) {
+      whereClause += ' AND poi_type = ?';
+      params.push(decodeURIComponent(type));
+    }
+
+    const pois = await mysqlSequelize.query(`
+      SELECT id, name, description, category, subcategory, poi_type,
+             address, latitude, longitude, rating, review_count,
+             thumbnail_url, price_level, opening_hours
+      FROM POI ${whereClause}
+      ORDER BY rating DESC, review_count DESC
+      LIMIT ?
+    `, { replacements: [...params, parseInt(limit)], type: QueryTypes.SELECT });
+
+    res.json({ success: true, data: pois, count: pois.length, filter: { category, subcategory, type } });
+
+  } catch (error) {
+    logger.error('Category POIs error:', error);
+    res.status(500).json({ success: false, error: 'Could not fetch POIs for category' });
+  }
+});
+
+/**
  * POST /api/v1/holibot/admin/sync
  */
 router.post('/admin/sync', async (req, res) => {

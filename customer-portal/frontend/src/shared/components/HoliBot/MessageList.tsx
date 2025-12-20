@@ -6,6 +6,7 @@ import { QuickReplies } from './QuickReplies';
 import { POICard } from './POICard';
 import { ChatMessage } from './ChatMessage';
 import { ItineraryBuilder, type ItineraryOptions } from './ItineraryBuilder';
+import { CategoryBrowser } from './CategoryBrowser';
 import { POIDetailModal } from '../../../features/poi/components/POIDetailModal';
 import { chatApi } from '../../services/chat.api';
 import type { POI } from '../../types/poi.types';
@@ -27,6 +28,7 @@ export function MessageList() {
   const [selectedPOIId, setSelectedPOIId] = useState<number | null>(null);
   const [itinerary, setItinerary] = useState<any>(null);
   const [showItineraryBuilder, setShowItineraryBuilder] = useState(false);
+  const [showCategoryBrowser, setShowCategoryBrowser] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +46,7 @@ export function MessageList() {
       setSelectedPOIId(null);
       setItinerary(null);
       setShowItineraryBuilder(false);
+      setShowCategoryBrowser(false);
     } else {
       messageListRef.current?.scrollTo({ top: 0, behavior: 'auto' });
     }
@@ -107,7 +110,7 @@ export function MessageList() {
     }
 
     if (reply === quickActions.locationInfo) {
-      addAssistantMessage(responses.locationSearch);
+      setShowCategoryBrowser(true);
       return;
     }
 
@@ -142,7 +145,7 @@ export function MessageList() {
 
   return (
     <div ref={messageListRef} className="holibot-message-list" role="log" aria-live="polite" aria-label="Chat berichten">
-      {messages.length === 0 && !showItineraryBuilder && (
+      {messages.length === 0 && !showItineraryBuilder && !showCategoryBrowser && (
         <>
           <WelcomeMessage key={} language={language} onComplete={() => setShowSuggestions(true)} />
           {showSuggestions && (
@@ -150,6 +153,36 @@ export function MessageList() {
               onAllVisible={() => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)} />
           )}
         </>
+      )}
+
+      {showCategoryBrowser && (
+        <CategoryBrowser
+          onSelect={async (category, subcategory, type) => {
+            setShowCategoryBrowser(false);
+            setLoadingPOIs(true);
+            try {
+              const params = new URLSearchParams({ limit: '10' });
+              if (subcategory) params.append('subcategory', subcategory);
+              if (type) params.append('type', type);
+              const url = '/api/v1/holibot/categories/' + encodeURIComponent(category) + '/pois?' + params;
+              const response = await fetch(url);
+              const data = await response.json();
+              if (data.success && data.data.length > 0) {
+                const filterText = [category, subcategory, type].filter(Boolean).join(' > ');
+                addAssistantMessage('Hier zijn locaties in ' + filterText + ':', data.data);
+                setPois(data.data);
+              } else {
+                addAssistantMessage(t.holibotChat.responses.noResults);
+              }
+            } catch (error) {
+              console.error('Category search error:', error);
+              addAssistantMessage(t.holibotChat.responses.error);
+            } finally {
+              setLoadingPOIs(false);
+            }
+          }}
+          onCancel={() => setShowCategoryBrowser(false)}
+        />
       )}
 
       {showItineraryBuilder && <ItineraryBuilder onSubmit={handleItinerarySubmit} onCancel={() => setShowItineraryBuilder(false)} />}

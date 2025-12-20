@@ -1,0 +1,170 @@
+/**
+ * CategoryBrowser - Category hierarchy browser styling
+ * Golden theme matching HoliBot design
+ */
+
+.category-browser {
+  background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 12px 0;
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  animation: slideIn 0.3s ease-out;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.category-browser-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.category-browser-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.category-browser-header .breadcrumb {
+  font-size: 12px;
+  color: #D4AF37;
+  font-weight: 500;
+}
+
+.category-browser-content {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+
+.category-browser-loading,
+.category-browser-error {
+  padding: 24px;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
+.category-browser-error {
+  color: #d32f2f;
+}
+
+.category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.category-item:hover {
+  border-color: #D4AF37;
+  background: #fff9e6;
+  transform: translateX(4px);
+}
+
+.category-item:active {
+  transform: translateX(2px);
+}
+
+.category-item.all-item {
+  background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
+  border-color: #D4AF37;
+}
+
+.category-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.category-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.category-count {
+  font-size: 12px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.category-arrow {
+  font-size: 18px;
+  color: #D4AF37;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.category-browser-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.category-browser-footer .btn-back {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-browser-footer .btn-back:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+/* Scrollbar styling */
+.category-browser-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.category-browser-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.category-browser-content::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.3);
+  border-radius: 3px;
+}
+
+.category-browser-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.5);
+}
