@@ -28,6 +28,7 @@ interface HoliBotContextValue {
   isStreaming: boolean;
   error: string | null;
   userPreferences: UserPreferences | null;
+  wasReset: boolean; // True after reset, false after first message
   open: () => void;
   close: () => void;
   toggle: () => void;
@@ -60,6 +61,7 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
   const [error, setError] = useState<string | null>(null);
   const [personality] = useState<'auto' | 'adventurous' | 'relaxed' | 'cultural'>('auto');
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
+  const [wasReset, setWasReset] = useState(false); // Track if chat was just reset
 
   const streamingMessageRef = useRef<string | null>(null);
   const lastMessageRef = useRef<string | null>(null);
@@ -261,6 +263,9 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
   const sendMessage = useCallback(async (text: string, useStreaming = true) => {
     if (!text.trim()) return;
 
+    // Clear reset flag when user sends a message
+    setWasReset(false);
+
     // First attempt with streaming
     let success = await sendMessageInternal(text, useStreaming, false);
 
@@ -334,6 +339,7 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
     setError(null);
     lastMessageRef.current = null;
     retryCountRef.current = 0;
+    setWasReset(true); // Mark as reset to skip animations
     chatApi.clearSession();
   }, []);
 
@@ -358,6 +364,7 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
     isStreaming,
     error,
     userPreferences,
+    wasReset,
     open,
     close,
     toggle,

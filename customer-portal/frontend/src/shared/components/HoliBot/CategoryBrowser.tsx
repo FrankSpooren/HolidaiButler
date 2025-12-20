@@ -25,6 +25,15 @@ interface CategoryBrowserProps {
   onCancel: () => void;
 }
 
+// Categories to HIDE (grondwet: geen accommodaties)
+const hiddenCategories = [
+  'Accommodations',
+  'Accommodation (do not communicate)',
+  'Practical',
+  'Health & Wellbeing',
+  'Services'
+];
+
 // Category icons
 const categoryIcons: Record<string, string> = {
   'Beaches & Nature': '🏖️',
@@ -33,10 +42,66 @@ const categoryIcons: Record<string, string> = {
   'Active': '🚴',
   'Shopping': '🛍️',
   'Recreation': '🎡',
-  'Accommodations': '🏨',
-  'Services': '🔧',
   'Nightlife': '🎉',
   'default': '📍'
+};
+
+// Category name translations per language
+const categoryTranslations: Record<string, Record<string, string>> = {
+  nl: {
+    'Beaches & Nature': 'Stranden & Natuur',
+    'Food & Drinks': 'Eten & Drinken',
+    'Culture & History': 'Cultuur & Geschiedenis',
+    'Active': 'Actief',
+    'Shopping': 'Winkelen',
+    'Recreation': 'Recreatie',
+    'Nightlife': 'Uitgaan',
+  },
+  en: {
+    'Beaches & Nature': 'Beaches & Nature',
+    'Food & Drinks': 'Food & Drinks',
+    'Culture & History': 'Culture & History',
+    'Active': 'Active',
+    'Shopping': 'Shopping',
+    'Recreation': 'Recreation',
+    'Nightlife': 'Nightlife',
+  },
+  de: {
+    'Beaches & Nature': 'Strände & Natur',
+    'Food & Drinks': 'Essen & Trinken',
+    'Culture & History': 'Kultur & Geschichte',
+    'Active': 'Aktiv',
+    'Shopping': 'Einkaufen',
+    'Recreation': 'Freizeit',
+    'Nightlife': 'Nachtleben',
+  },
+  es: {
+    'Beaches & Nature': 'Playas y Naturaleza',
+    'Food & Drinks': 'Comida y Bebidas',
+    'Culture & History': 'Cultura e Historia',
+    'Active': 'Activo',
+    'Shopping': 'Compras',
+    'Recreation': 'Recreación',
+    'Nightlife': 'Vida Nocturna',
+  },
+  sv: {
+    'Beaches & Nature': 'Stränder & Natur',
+    'Food & Drinks': 'Mat & Dryck',
+    'Culture & History': 'Kultur & Historia',
+    'Active': 'Aktiv',
+    'Shopping': 'Shopping',
+    'Recreation': 'Rekreation',
+    'Nightlife': 'Nattliv',
+  },
+  pl: {
+    'Beaches & Nature': 'Plaże i Natura',
+    'Food & Drinks': 'Jedzenie i Napoje',
+    'Culture & History': 'Kultura i Historia',
+    'Active': 'Aktywny',
+    'Shopping': 'Zakupy',
+    'Recreation': 'Rekreacja',
+    'Nightlife': 'Życie Nocne',
+  },
 };
 
 // Multi-language labels
@@ -100,12 +165,16 @@ const labels: Record<string, Record<string, string>> = {
 export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
   const { language } = useLanguage();
   const t = labels[language] || labels.nl;
+  const catTrans = categoryTranslations[language] || categoryTranslations.nl;
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<Subcategory | null>(null);
+
+  // Translate category name
+  const translateCategory = (name: string) => catTrans[name] || name;
 
   useEffect(() => {
     loadCategories();
@@ -117,7 +186,11 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
       const response = await fetch('/api/v1/holibot/categories/hierarchy');
       const data = await response.json();
       if (data.success) {
-        setCategories(data.data);
+        // Filter out hidden categories (Accommodations, Practical, etc.)
+        const filtered = data.data.filter(
+          (cat: Category) => !hiddenCategories.includes(cat.name)
+        );
+        setCategories(filtered);
       } else {
         setError(t.error);
       }
@@ -163,7 +236,7 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
 
   const currentLevel = selectedSubcategory ? 3 : selectedCategory ? 2 : 1;
   const breadcrumb = [
-    selectedCategory?.name,
+    selectedCategory ? translateCategory(selectedCategory.name) : null,
     selectedSubcategory?.name
   ].filter(Boolean).join(' > ');
 
@@ -198,19 +271,17 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
       </div>
 
       <div className="category-browser-content">
-        {/* Level 1: Categories */}
+        {/* Level 1: Categories - Grid 2 rows x 4 cols */}
         {currentLevel === 1 && (
-          <div className="category-list">
+          <div className="category-grid">
             {categories.map(cat => (
               <button
                 key={cat.name}
-                className="category-item"
+                className="category-tile"
                 onClick={() => handleCategoryClick(cat)}
               >
                 <span className="category-icon">{getIcon(cat.name)}</span>
-                <span className="category-name">{cat.name}</span>
-                <span className="category-count">{cat.count} {t.places}</span>
-                {cat.subcategories.length > 0 && <span className="category-arrow">›</span>}
+                <span className="category-name">{translateCategory(cat.name)}</span>
               </button>
             ))}
           </div>
@@ -224,7 +295,7 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
               onClick={() => onSelect(selectedCategory.name)}
             >
               <span className="category-icon">{getIcon(selectedCategory.name)}</span>
-              <span className="category-name">{t.allIn} {selectedCategory.name}</span>
+              <span className="category-name">{t.allIn} {translateCategory(selectedCategory.name)}</span>
               <span className="category-count">{selectedCategory.count} {t.places}</span>
             </button>
             {selectedCategory.subcategories.map(sub => (
