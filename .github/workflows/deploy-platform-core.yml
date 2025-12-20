@@ -84,7 +84,9 @@ jobs:
             root@91.98.71.87:${{ env.DEPLOY_PATH }}/
 
       - name: Configure Google Cloud TTS credentials
-        if: ${{ secrets.GOOGLE_CLOUD_TTS_KEY != '' }}
+        env:
+          GOOGLE_TTS_KEY: ${{ secrets.GOOGLE_CLOUD_TTS_KEY }}
+        if: env.GOOGLE_TTS_KEY != ''
         run: |
           ssh root@91.98.71.87 "mkdir -p ${{ env.DEPLOY_PATH }}/config"
           echo '${{ secrets.GOOGLE_CLOUD_TTS_KEY }}' | ssh root@91.98.71.87 "cat > ${{ env.DEPLOY_PATH }}/config/google-tts-credentials.json"
