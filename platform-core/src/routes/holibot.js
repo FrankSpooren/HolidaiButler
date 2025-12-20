@@ -304,46 +304,119 @@ router.post('/directions', async (req, res) => {
 
 /**
  * GET /api/v1/holibot/daily-tip
- * Quick Action 4: Personalized daily tip based on user profile
+ * Quick Action 4: Enhanced personalized daily tip
+ *
+ * Quality Requirements:
+ * - POI rating minimum 4.4 stars (or no rating for new POIs)
+ * - Include Events from agenda (upcoming 7 days)
+ * - Rotate daily between user interests
+ * - Accept excludeIds to avoid repeating tips within session
  */
 router.get('/daily-tip', async (req, res) => {
   try {
-    const { language = 'nl', interests, userId } = req.query;
+    const { language = 'nl', interests, excludeIds = '', userId } = req.query;
 
-    const categories = ['Beaches & Nature', 'Culture & History', 'Active', 'Food & Drinks'];
+    // Parse excluded IDs (tips already shown this session)
+    const excludedIdList = excludeIds ? excludeIds.split(',').filter(Boolean) : [];
+
+    // User interests or default categories
+    const defaultCategories = ['Beaches & Nature', 'Culture & History', 'Active', 'Food & Drinks'];
+    const userInterests = interests ? interests.split(',') : defaultCategories;
+
+    // Rotate interest based on day of year
     const now = new Date();
     const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
-    let selectedCategory = categories[dayOfYear % categories.length];
+    const todayInterestIndex = dayOfYear % userInterests.length;
+    const selectedInterest = userInterests[todayInterestIndex];
 
-    if (interests) {
-      const userInterests = interests.split(',');
-      const categoryMatch = categories.find(c => userInterests.some(i => c.toLowerCase().includes(i.toLowerCase())));
-      if (categoryMatch) selectedCategory = categoryMatch;
+    logger.info('Daily tip request', { language, selectedInterest, excludeCount: excludedIdList.length });
+
+    // Step 1: Search POIs with quality filter (rating >= 4.4)
+    const poiSearchResults = await ragService.search(selectedInterest + ' Calpe', { limit: 15 });
+
+    // Filter: rating >= 4.4 (or no rating) and not excluded
+    const qualityPois = poiSearchResults.results.filter(poi => {
+      const rating = parseFloat(poi.rating);
+      const hasGoodRating = !rating || isNaN(rating) || rating >= 4.4;
+      const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
+      return hasGoodRating && notExcluded;
+    });
+
+    // Step 2: Get upcoming events (next 7 days)
+    let events = [];
+    try {
+      const { mysqlSequelize } = await import('../config/database.js');
+      const { QueryTypes } = (await import('sequelize')).default;
+
+      const eventResults = await mysqlSequelize.query(
+        "SELECT a.id, a.title, a.short_description as description, " +
+        "a.image as thumbnailUrl, a.location_name as address, " +
+        "MIN(d.event_date) as event_date " +
+        "FROM agenda a " +
+        "INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash " +
+        "WHERE d.event_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) " +
+        "AND (a.calpe_distance IS NOT NULL AND a.calpe_distance <= 25) " +
+        "GROUP BY a.id ORDER BY d.event_date ASC LIMIT 10",
+        { type: QueryTypes.SELECT }
+      );
+
+      events = eventResults.filter(event =>
+        !excludedIdList.includes('event-' + event.id)
+      ).map(event => ({
+        ...event,
+        id: 'event-' + event.id,
+        name: event.title,
+        type: 'event',
+        category: selectedInterest,
+        rating: null
+      }));
+    } catch (eventError) {
+      logger.warn('Could not fetch events for daily tip:', eventError.message);
     }
 
-    const searchResults = await ragService.search(selectedCategory + ' Calpe', { limit: 5 });
-    if (searchResults.results.length === 0) {
+    // Combine quality POIs and Events
+    const allCandidates = [
+      ...qualityPois.map(poi => ({ ...poi, type: 'poi' })),
+      ...events
+    ];
+
+    if (allCandidates.length === 0) {
       return res.status(404).json({ success: false, error: 'No tips available' });
     }
 
-    const randomIndex = Math.floor(Math.random() * searchResults.results.length);
-    const selectedPoi = searchResults.results[randomIndex];
+    // Select from top candidates
+    const topCandidates = allCandidates.slice(0, Math.min(5, allCandidates.length));
+    const randomIndex = Math.floor(Math.random() * topCandidates.length);
+    const selectedItem = topCandidates[randomIndex];
 
+    // Generate tip description
     const tipLabels = { nl: 'Tip van de Dag', en: 'Tip of the Day', de: 'Tipp des Tages', es: 'Consejo del Dia', sv: 'Dagens Tips', pl: 'Porada Dnia' };
+
+    const itemName = selectedItem.name || selectedItem.title || 'Unknown';
+    const itemDesc = selectedItem.description || 'Een geweldige plek in Calpe';
+    const ratingText = selectedItem.rating ? 'Beoordeling: ' + selectedItem.rating + ' sterren. ' : '';
+
+    const tipPrompt = selectedItem.type === 'event'
+      ? 'Genereer een enthousiaste "Tip van de Dag" (max 80 woorden) voor het evenement "' + itemName + '". Het vindt plaats op ' + selectedItem.event_date + '. Begin met een ster emoji. Beschrijving: ' + itemDesc
+      : 'Genereer een enthousiaste "Tip van de Dag" (max 80 woorden) voor ' + itemName + '. Begin met een ster emoji. ' + ratingText + 'Categorie: ' + selectedItem.category + '. Beschrijving: ' + itemDesc;
 
     const tipDescription = await embeddingService.generateChatCompletion([
       { role: 'system', content: embeddingService.buildSystemPrompt(language) },
-      { role: 'user', content: `Genereer een enthousiaste "Tip van de Dag" (max 80 woorden) voor ${selectedPoi.name}. Begin met een ster emoji. Categorie: ${selectedPoi.category}. Beschrijving: ${selectedPoi.description || 'Een geweldige plek in Calpe'}` }
+      { role: 'user', content: tipPrompt }
     ]);
 
     res.json({
       success: true,
       data: {
         title: tipLabels[language] || tipLabels.nl,
-        poi: selectedPoi,
+        itemType: selectedItem.type,
+        poi: selectedItem.type === 'poi' ? selectedItem : null,
+        event: selectedItem.type === 'event' ? selectedItem : null,
+        item: selectedItem,
         tipDescription,
-        category: selectedCategory,
-        date: now.toISOString().split('T')[0]
+        category: selectedInterest,
+        date: now.toISOString().split('T')[0],
+        tipId: selectedItem.id
       }
     });
 

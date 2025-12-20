@@ -1,5 +1,5 @@
 import { useHoliBot } from '../../contexts/HoliBotContext';
-import calpeTurismoLogo from '../../../assets/images/calpe-turismo-logo.png';
+import holibotAvatar from '../../../assets/images/hb-merkicoon.png';
 import './ChatHeader.css';
 
 /**
@@ -32,7 +32,7 @@ export function ChatHeader() {
       {/* HolidaiButler logo (Calpe Turismo) */}
       <div className="holibot-header-logo">
         <img
-          src={calpeTurismoLogo}
+          src={holibotAvatar}
           alt="HolidaiButler"
           width="36"
           height="36"

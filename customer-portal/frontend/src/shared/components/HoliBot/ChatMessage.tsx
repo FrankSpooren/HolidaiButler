@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ChatMessage as ChatMessageType } from '../../types/chat.types';
-import holidaiButlerIcon from '../../../assets/images/HolidaiButler_Icon_iOS.png';
+import holibotAvatar from '../../../assets/images/hb-merkicoon.png';
 import { parseMessageForPOILinks } from '../../utils/poiLinkParser';
 import { POIDetailModal } from '../../../features/poi/components/POIDetailModal';
 import './ChatMessage.css';
@@ -58,7 +58,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         {isAssistant && (
           <div className="chat-message-avatar">
             <img
-              src={holidaiButlerIcon}
+              src={holibotAvatar}
               alt="HoliBot"
               className="chat-message-avatar-img"
             />
