@@ -197,27 +197,37 @@
 }
 
 /* Mobile responsive */
+
+/* Mobile responsive */
 @media (max-width: 744px) {
   .poi-gallery-grid {
     display: none;
   }
-  
+
   .poi-gallery-mobile {
     display: block;
     position: relative;
-    width: calc(100% + 32px);
-    margin: 0 -16px;
+    width: 100%;
+    max-width: 100vw;
+    /* Remove negative margins that cause overflow */
+    margin: 0;
     aspect-ratio: 4 / 3;
     overflow: hidden;
   }
-  
+
+  /* When gallery is inside modal, ensure full width without overflow */
+  .poi-detail-modal .poi-gallery-mobile {
+    width: 100%;
+    margin: 0;
+  }
+
   .poi-gallery-mobile-viewport {
     width: 100%;
     height: 100%;
     position: relative;
     overflow: hidden;
   }
-  
+
   .poi-gallery-mobile-slide {
     position: absolute;
     inset: 0;
@@ -225,14 +235,14 @@
     align-items: center;
     justify-content: center;
   }
-  
+
   .poi-gallery-mobile-slide img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     user-select: none;
   }
-  
+
   .poi-gallery-mobile-counter {
     position: absolute;
     top: 12px;
@@ -245,7 +255,7 @@
     border-radius: 12px;
     z-index: 10;
   }
-  
+
   .poi-gallery-mobile-dots {
     position: absolute;
     bottom: 12px;
@@ -256,7 +266,7 @@
     gap: 6px;
     z-index: 10;
   }
-  
+
   .poi-gallery-mobile-dot {
     width: 8px;
     height: 8px;
@@ -267,19 +277,19 @@
     cursor: pointer;
     transition: all 0.2s ease;
   }
-  
+
   .poi-gallery-mobile-dot.active {
     background: white;
     transform: scale(1.2);
   }
-  
+
   .poi-gallery-mobile-more {
     color: white;
     font-size: 11px;
     font-weight: 500;
     margin-left: 4px;
   }
-  
+
   .poi-gallery-mobile-show-all {
     position: absolute;
     bottom: 12px;

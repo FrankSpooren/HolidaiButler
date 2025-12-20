@@ -10,6 +10,11 @@
     box-sizing: border-box;
   }
 
+  html {
+    /* Prevent horizontal overflow on mobile */
+    overflow-x: hidden;
+  }
+
   body {
     font-family: 'Inter', system-ui, sans-serif;
     background: #F9FAFB;
@@ -17,6 +22,10 @@
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent horizontal overflow on mobile */
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
   }
 
   /* Prevent iOS zoom on input focus */
@@ -39,5 +48,13 @@
   body {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Mobile viewport fix - prevent horizontal scroll */
+@media (max-width: 767px) {
+  #root {
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 }
