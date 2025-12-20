@@ -1,11 +1,11 @@
 /**
- * QuickReplies Styles - Suggestion Tiles (Updated 2025-11-09)
+ * QuickReplies Styles - Suggestion Tiles (Updated 2025-12-20)
  *
  * User Requirements:
  * - 4 suggestion tiles vertically stacked (desktop & mobile)
- * - Appear after 3rd welcome message
+ * - Smooth, non-jarring fade-in animation
  * - Huisstijl styling: gold border, white background, blue text
- * - Reduced spacing on mobile
+ * - GPU-accelerated for smooth performance
  *
  * Design: Vertical stack, Inter font, huisstijl colors
  */
@@ -16,6 +16,8 @@
   gap: 8px;
   margin-top: 16px;
   padding-left: 44px; /* Align with welcome text */
+  /* Smooth scroll when tiles appear */
+  scroll-behavior: smooth;
 }
 
 .holibot-quick-reply-button {
@@ -32,43 +34,60 @@
   outline: none;
   text-align: center;
   line-height: 1.4;
-  opacity: 0;
 
-  /* Performance */
-  transition:
-    opacity 400ms cubic-bezier(0.4, 0, 0.2, 1),
-    transform 400ms cubic-bezier(0.4, 0, 0.2, 1),
-    background-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Initial hidden state */
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+
+  /* GPU acceleration for smooth animations */
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 
   /* Prevent text selection */
   user-select: none;
+
+  /* Hover/active transitions (separate from appear animation) */
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease;
 }
 
-/* Visible state - fade in from bottom */
+/* Visible state - smooth fade in with subtle scale */
 .holibot-quick-reply-button.visible {
-  animation: fadeInUp 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: smoothFadeIn 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-@keyframes fadeInUp {
-  from {
+/* Staggered animation delays via CSS */
+.holibot-quick-reply-button:nth-child(1).visible { animation-delay: 0ms; }
+.holibot-quick-reply-button:nth-child(2).visible { animation-delay: 150ms; }
+.holibot-quick-reply-button:nth-child(3).visible { animation-delay: 300ms; }
+.holibot-quick-reply-button:nth-child(4).visible { animation-delay: 450ms; }
+
+@keyframes smoothFadeIn {
+  0% {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px) scale(0.98);
   }
-  to {
+  60% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(-2px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
 .holibot-quick-reply-button:hover {
   background: #FFF8E7; /* Light gold */
   border-color: #C49B2A; /* Darker gold */
-  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.25);
 }
 
 .holibot-quick-reply-button:active {
-  transform: translateY(0);
+  transform: scale(0.98);
   background: #D4AF37; /* Gold background */
   color: white;
 }
@@ -84,8 +103,8 @@
   .holibot-quick-replies {
     gap: 6px;
     padding-left: 0;
-    margin-top: 8px; /* Reduced from 12px */
-    margin-bottom: 4px; /* Reduced from 8px - minimal space to input bar */
+    margin-top: 8px;
+    margin-bottom: 4px;
   }
 
   .holibot-quick-reply-button {
@@ -96,9 +115,13 @@
 
 /* Reduced motion accessibility */
 @media (prefers-reduced-motion: reduce) {
-  .holibot-quick-replies,
   .holibot-quick-reply-button {
-    animation: none;
-    transition: none;
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .holibot-quick-reply-button.visible {
+    animation: none !important;
   }
 }

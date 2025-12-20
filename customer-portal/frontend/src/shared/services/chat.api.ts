@@ -15,6 +15,7 @@
 import type { ChatRequest, ChatResponse } from '../types/chat.types';
 import { API_CONFIG, isProduction } from '../config/apiConfig';
 import type { Language } from '../../i18n/translations';
+import { getExcludeIdsParam, recordShownTip } from './tipHistory';
 
 const getBaseUrl = (): string => {
   const configUrl = API_CONFIG.widgetApi.baseUrl;
@@ -281,12 +282,28 @@ class ChatAPI {
     }
   }
 
+  /**
+   * Get personalized daily tip with quality filter
+   * - Rating >= 4.4 stars
+   * - Includes Events from agenda
+   * - Excludes previously shown tips (session-based)
+   */
   async getDailyTip(): Promise<any> {
     try {
       const params = new URLSearchParams({ language: this.language });
+
+      // Add user interests
       if (this.userPreferences.interests?.length) {
         params.append('interests', this.userPreferences.interests.join(','));
       }
+
+      // Add excluded tip IDs (already shown this session)
+      const excludeIds = getExcludeIdsParam();
+      if (excludeIds) {
+        params.append('excludeIds', excludeIds);
+      }
+
+      console.log('[ChatAPI] Getting daily tip with excludeIds:', excludeIds);
 
       const response = await fetch(`${this.baseUrl}/holibot/daily-tip?${params}`, {
         method: 'GET',
@@ -298,7 +315,16 @@ class ChatAPI {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+
+      // Record shown tip to avoid repetition
+      if (result.success && result.data?.tipId) {
+        const tipType = result.data.itemType || 'poi';
+        recordShownTip(result.data.tipId, tipType);
+        console.log('[ChatAPI] Recorded tip:', result.data.tipId, tipType);
+      }
+
+      return result;
 
     } catch (error) {
       console.error('[ChatAPI] Daily tip error:', error);

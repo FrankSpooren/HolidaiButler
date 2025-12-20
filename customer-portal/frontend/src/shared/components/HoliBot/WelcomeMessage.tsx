@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import holidaiButlerIcon from '../../../assets/images/HolidaiButler_Icon_iOS.png';
+import holibotAvatar from '../../../assets/images/hb-merkicoon.png';
 import './WelcomeMessage.css';
 
 /**
@@ -70,7 +70,7 @@ export function WelcomeMessage({ language = 'nl', onComplete }: WelcomeMessagePr
         <div className="holibot-welcome-message holibot-welcome-animate">
           <div className="holibot-welcome-avatar">
             <img
-              src={holidaiButlerIcon}
+              src={holibotAvatar}
               alt="HoliBot"
               className="holibot-welcome-avatar-img"
             />
