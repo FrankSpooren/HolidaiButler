@@ -5,6 +5,7 @@ import { WelcomeMessage } from './WelcomeMessage';
 import { QuickReplies } from './QuickReplies';
 import { POICard } from './POICard';
 import { ChatMessage } from './ChatMessage';
+import { ItineraryBuilder, type ItineraryOptions } from './ItineraryBuilder';
 import { POIDetailModal } from '../../../features/poi/components/POIDetailModal';
 import { chatApi } from '../../services/chat.api';
 import type { POI } from '../../types/poi.types';
@@ -12,9 +13,7 @@ import './MessageList.css';
 
 /**
  * MessageList - POI Recommendations + Chat
- * Phase 4: POI Integration ✅
- * Phase 6: Chat Conversation ✅
- * Phase 7: Multi-language Quick Actions ✅
+ * Phase 8: Itinerary Builder with choices
  */
 
 export function MessageList() {
@@ -27,10 +26,10 @@ export function MessageList() {
   const [dailyTipPOI, setDailyTipPOI] = useState<POI | null>(null);
   const [selectedPOIId, setSelectedPOIId] = useState<number | null>(null);
   const [itinerary, setItinerary] = useState<any>(null);
+  const [showItineraryBuilder, setShowItineraryBuilder] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
 
-  // Get translated quick replies
   const quickReplies = [
     t.holibotChat.quickActions.itinerary,
     t.holibotChat.quickActions.locationInfo,
@@ -38,21 +37,18 @@ export function MessageList() {
     t.holibotChat.quickActions.dailyTip,
   ];
 
-  // Reset state when widget closes
   useEffect(() => {
     if (!isOpen) {
       setShowSuggestions(false);
       setDailyTipPOI(null);
       setSelectedPOIId(null);
       setItinerary(null);
+      setShowItineraryBuilder(false);
     } else {
-      if (messageListRef.current) {
-        messageListRef.current.scrollTo({ top: 0, behavior: 'auto' });
-      }
+      messageListRef.current?.scrollTo({ top: 0, behavior: 'auto' });
     }
   }, [isOpen]);
 
-  // Reset daily tip when messages are cleared
   useEffect(() => {
     if (messages.length === 0 && dailyTipPOI) {
       setDailyTipPOI(null);
@@ -60,74 +56,75 @@ export function MessageList() {
     }
   }, [messages.length, dailyTipPOI]);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, showItineraryBuilder]);
 
-  /**
-   * Handle Quick Action button clicks
-   */
-  const handleQuickReply = async (reply: string) => {
-    const { quickActions, prompts, responses } = t.holibotChat;
+  const handleItinerarySubmit = async (options: ItineraryOptions) => {
+    setShowItineraryBuilder(false);
+    setLoadingPOIs(true);
+    addAssistantMessage(t.holibotChat.responses.itineraryIntro);
 
-    // Quick Action 1: Build Itinerary
-    if (reply === quickActions.itinerary) {
-      setLoadingPOIs(true);
-      addAssistantMessage(responses.itineraryIntro);
+    try {
+      const response = await chatApi.buildItinerary({
+        duration: options.duration,
+        interests: options.interests,
+      });
 
-      try {
-        const response = await chatApi.buildItinerary({
-          duration: 'full-day'
-        });
+      if (response.success && response.data) {
+        setItinerary(response.data);
+        const itineraryText = response.data.itinerary
+          .map((item: any) => {
+            const typeIcon = item.type === 'event' ? '🎭' : item.type === 'lunch' ? '🍽️' : item.type === 'dinner' ? '🍷' : '📍';
+            const label = item.label ? ' (' + item.label + ')' : '';
+            return '**' + item.time + '** ' + typeIcon + ' ' + (item.poi?.name || 'TBD') + label;
+          }).join('
+');
 
-        if (response.success && response.data) {
-          setItinerary(response.data);
+        const eventsNote = response.data.hasEvents ? '
 
-          // Format itinerary as message
-          const itineraryText = response.data.itinerary
-            .map((item: any) => `**${item.time}** - ${item.poi.name}`)
-            .join('\n');
+🎭 *' + response.data.eventsIncluded + ' evenement(en) toegevoegd*' : '';
+        addAssistantMessage(response.data.description + '
 
-          addAssistantMessage(`${response.data.description}\n\n${itineraryText}`,
-            response.data.itinerary.map((item: any) => item.poi));
-        } else {
-          addAssistantMessage(responses.error);
-        }
-      } catch (error) {
-        console.error('Itinerary error:', error);
-        addAssistantMessage(responses.error);
-      } finally {
-        setLoadingPOIs(false);
+' + itineraryText + eventsNote, response.data.itinerary.map((item: any) => item.poi).filter(Boolean));
+      } else {
+        addAssistantMessage(t.holibotChat.responses.error);
       }
+    } catch (error) {
+      console.error('Itinerary error:', error);
+      addAssistantMessage(t.holibotChat.responses.error);
+    } finally {
+      setLoadingPOIs(false);
+    }
+  };
+
+  const handleQuickReply = async (reply: string) => {
+    const { quickActions, responses } = t.holibotChat;
+
+    if (reply === quickActions.itinerary) {
+      setShowItineraryBuilder(true);
       return;
     }
 
-    // Quick Action 2: Location Info
     if (reply === quickActions.locationInfo) {
       addAssistantMessage(responses.locationSearch);
-      // User will type the location name, handled by regular sendMessage
       return;
     }
 
-    // Quick Action 3: Directions
     if (reply === quickActions.directions) {
       addAssistantMessage(responses.directionsHelp);
-      // User will type the destination, handled by regular sendMessage
       return;
     }
 
-    // Quick Action 4: Daily Tip
     if (reply === quickActions.dailyTip) {
       setLoadingPOIs(true);
-
       try {
         const response = await chatApi.getDailyTip();
-
         if (response.success && response.data) {
-          const { poi, tipDescription } = response.data;
-          addAssistantMessage(tipDescription, [poi]);
-          setDailyTipPOI(poi);
+          const { poi, event, item, tipDescription } = response.data;
+          const displayItem = poi || event || item;
+          addAssistantMessage(tipDescription, displayItem ? [displayItem] : []);
+          if (displayItem) setDailyTipPOI(displayItem);
         } else {
           addAssistantMessage(responses.error);
         }
@@ -140,107 +137,60 @@ export function MessageList() {
       return;
     }
 
-    // Default: send as regular message
     sendMessage(reply);
   };
 
   return (
-    <div
-      ref={messageListRef}
-      className="holibot-message-list"
-      role="log"
-      aria-live="polite"
-      aria-label="Chat berichten"
-    >
-      {/* Welcome message - only show if no messages yet */}
-      {messages.length === 0 && (
+    <div ref={messageListRef} className="holibot-message-list" role="log" aria-live="polite" aria-label="Chat berichten">
+      {messages.length === 0 && !showItineraryBuilder && (
         <>
-          <WelcomeMessage
-            key={`welcome-${isOpen}`}
-            language={language}
-            onComplete={() => setShowSuggestions(true)}
-          />
+          <WelcomeMessage key={} language={language} onComplete={() => setShowSuggestions(true)} />
           {showSuggestions && (
-            <QuickReplies
-              key={`quickreplies-${isOpen}`}
-              replies={quickReplies}
-              onSelect={handleQuickReply}
-              onAllVisible={() => {
-                setTimeout(() => {
-                  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }}
-            />
+            <QuickReplies key={} replies={quickReplies} onSelect={handleQuickReply}
+              onAllVisible={() => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)} />
           )}
         </>
       )}
 
-      {/* Chat messages */}
-      {messages.map((message) => (
-        <ChatMessage key={message.id} message={message} />
-      ))}
+      {showItineraryBuilder && <ItineraryBuilder onSubmit={handleItinerarySubmit} onCancel={() => setShowItineraryBuilder(false)} />}
 
-      {/* Loading indicator */}
-      {isLoading && (
-        <ChatMessage
-          message={{
-            id: 'loading',
-            role: 'assistant',
-            content: '',
-            timestamp: new Date(),
-            isStreaming: true
-          }}
-        />
-      )}
+      {messages.map((message) => <ChatMessage key={message.id} message={message} />)}
 
-      {/* POI loading */}
-      {loadingPOIs && (
-        <div className="holibot-loading">{t.holibotChat.responses.loading}</div>
-      )}
+      {isLoading && <ChatMessage message={{ id: 'loading', role: 'assistant', content: '', timestamp: new Date(), isStreaming: true }} />}
 
-      {/* POI grid */}
+      {loadingPOIs && <div className="holibot-loading">{t.holibotChat.responses.loading}</div>}
+
       {pois.length > 0 && (
         <div className="holibot-poi-grid">
-          {pois.map((poi) => (
-            <POICard key={poi.id} poi={poi} onClick={() => setSelectedPOIId(poi.id)} />
-          ))}
+          {pois.map((poi) => <POICard key={poi.id} poi={poi} onClick={() => setSelectedPOIId(poi.id)} />)}
         </div>
       )}
 
-      {/* Daily Tip POI Card */}
       {dailyTipPOI && (
         <div className="holibot-daily-tip-poi">
-          <POICard
-            key={dailyTipPOI.id}
-            poi={dailyTipPOI}
-            onClick={() => setSelectedPOIId(dailyTipPOI.id)}
-          />
+          <POICard key={dailyTipPOI.id} poi={dailyTipPOI} onClick={() => setSelectedPOIId(dailyTipPOI.id)} />
         </div>
       )}
 
-      {/* Itinerary POI Cards */}
-      {itinerary && itinerary.itinerary && (
+      {itinerary?.itinerary && (
         <div className="holibot-itinerary-grid">
           {itinerary.itinerary.map((item: any, index: number) => (
             <div key={index} className="holibot-itinerary-item">
-              <span className="holibot-itinerary-time">{item.time}</span>
-              <POICard poi={item.poi} onClick={() => setSelectedPOIId(item.poi.id)} />
+              <div className="holibot-itinerary-time-badge">
+                <span className="time">{item.time}</span>
+                {item.type === 'event' && <span className="type-badge event">🎭</span>}
+                {item.type === 'lunch' && <span className="type-badge meal">🍽️</span>}
+                {item.type === 'dinner' && <span className="type-badge meal">🍷</span>}
+              </div>
+              {item.poi && <POICard poi={item.poi} onClick={() => setSelectedPOIId(item.poi.id)} />}
             </div>
           ))}
         </div>
       )}
 
-      {/* Auto-scroll anchor */}
       <div ref={messagesEndRef} />
 
-      {/* POI Detail Modal */}
-      {selectedPOIId && (
-        <POIDetailModal
-          poiId={selectedPOIId}
-          isOpen={true}
-          onClose={() => setSelectedPOIId(null)}
-        />
-      )}
+      {selectedPOIId && <POIDetailModal poiId={selectedPOIId} isOpen={true} onClose={() => setSelectedPOIId(null)} />}
     </div>
   );
 }
