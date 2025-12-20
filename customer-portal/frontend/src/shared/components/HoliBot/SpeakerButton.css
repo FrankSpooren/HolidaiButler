@@ -1,0 +1,95 @@
+/**
+ * SpeakerButton Styles - Text-to-Speech Button
+ * Phase 4: Voice Output
+ *
+ * Design: Huisstijl (gold accents, subtle interaction)
+ */
+
+.holibot-speaker-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  color: #6B7280;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.holibot-speaker-button:hover:not(:disabled) {
+  background: rgba(212, 175, 55, 0.1);
+  color: #D4AF37;
+}
+
+.holibot-speaker-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.holibot-speaker-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Size variants */
+.holibot-speaker-button--small {
+  width: 24px;
+  height: 24px;
+}
+
+.holibot-speaker-button--medium {
+  width: 32px;
+  height: 32px;
+}
+
+/* State: Loading */
+.holibot-speaker-button--loading {
+  color: #D4AF37;
+}
+
+/* State: Playing */
+.holibot-speaker-button--playing {
+  background: rgba(212, 175, 55, 0.15);
+  color: #D4AF37;
+}
+
+/* Icons */
+.holibot-speaker-icon {
+  display: block;
+}
+
+/* Spin animation for loading */
+.holibot-speaker-icon--spin {
+  animation: speakerSpin 1s linear infinite;
+}
+
+@keyframes speakerSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Pulse animation for playing */
+.holibot-speaker-icon--pulse {
+  animation: speakerPulse 1s ease-in-out infinite;
+}
+
+@keyframes speakerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Focus state (keyboard navigation) */
+.holibot-speaker-button:focus-visible {
+  outline: 2px solid #D4AF37;
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .holibot-speaker-icon--spin,
+  .holibot-speaker-icon--pulse {
+    animation: none;
+  }
+}

@@ -358,6 +358,42 @@ class ChatAPI {
     }
   }
 
+  /**
+   * Convert text to speech using Google Cloud TTS
+   * @param text - Text to convert (max 5000 characters)
+   * @param language - Language code (nl, en, de, es, sv, pl)
+   */
+  async textToSpeech(text: string, language?: string): Promise<{
+    success: boolean;
+    data?: { audio: string; contentType: string; cached: boolean };
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/holibot/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          language: language || this.language
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+
+    } catch (error) {
+      console.error('[ChatAPI] TTS error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'TTS service unavailable'
+      };
+    }
+  }
+
   getSessionId(): string | null {
     return this.sessionId;
   }
