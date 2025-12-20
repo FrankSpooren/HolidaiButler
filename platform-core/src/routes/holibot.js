@@ -1,5 +1,5 @@
 /**
- * HoliBot Routes v2.1
+ * HoliBot Routes v2.2
  * API endpoints for HoliBot AI Assistant Widget
  *
  * Features:
@@ -8,16 +8,19 @@
  * - Multi-language support (nl, en, de, es, sv, pl)
  * - 4 Quick Actions: Itinerary, Location Info, Directions, Daily Tip
  * - SSE Streaming for real-time chat responses
+ * - Category hierarchy browser (3 levels)
  *
  * Endpoints:
  * - POST /holibot/chat - RAG-powered chat
- * - POST /holibot/chat/stream - SSE streaming chat (NEW)
+ * - POST /holibot/chat/stream - SSE streaming chat
  * - POST /holibot/search - Semantic search
  * - POST /holibot/itinerary - Build day program
  * - GET /holibot/location/:id - Location details with Q&A
  * - POST /holibot/directions - Get directions to POI
  * - GET /holibot/daily-tip - Personalized daily tip
  * - GET /holibot/categories - POI categories
+ * - GET /holibot/categories/hierarchy - 3-level category tree
+ * - GET /holibot/categories/:category/pois - POIs by category filter
  * - POST /holibot/admin/sync - Sync MySQL to ChromaDB
  * - GET /holibot/admin/stats - Service statistics
  */
