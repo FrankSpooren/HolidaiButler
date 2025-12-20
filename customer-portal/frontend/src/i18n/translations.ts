@@ -733,6 +733,8 @@ export interface Translations {
       itineraryIntro: string;
       locationSearch: string;
       directionsHelp: string;
+      yourItinerary: string;
+      eventsAdded: string;
     };
   };
 }
@@ -1457,6 +1459,8 @@ export const translations: Record<Language, Translations> = {
         itineraryIntro: 'Hier is jouw gepersonaliseerde dagprogramma:',
         locationSearch: 'Welke locatie wil je meer over weten?',
         directionsHelp: 'Naar welke bestemming wil je navigeren?',
+        yourItinerary: 'Jouw Programma',
+        eventsAdded: 'evenement(en) toegevoegd',
       },
     },
   },
@@ -2174,6 +2178,8 @@ export const translations: Record<Language, Translations> = {
         itineraryIntro: 'Here\'s your personalized day program:',
         locationSearch: 'Which location would you like to know more about?',
         directionsHelp: 'Which destination would you like directions to?',
+        yourItinerary: 'Your Itinerary',
+        eventsAdded: 'event(s) added',
       },
     },
   },
@@ -2891,6 +2897,8 @@ export const translations: Record<Language, Translations> = {
         itineraryIntro: 'Hier ist dein personalisiertes Tagesprogramm:',
         locationSearch: 'Über welchen Ort möchtest du mehr erfahren?',
         directionsHelp: 'Zu welchem Ziel möchtest du navigieren?',
+        yourItinerary: 'Dein Programm',
+        eventsAdded: 'Veranstaltung(en) hinzugefügt',
       },
     },
   },
@@ -3608,6 +3616,8 @@ export const translations: Record<Language, Translations> = {
         itineraryIntro: 'Aquí está tu programa personalizado del día:',
         locationSearch: '¿Sobre qué ubicación te gustaría saber más?',
         directionsHelp: '¿A qué destino te gustaría ir?',
+        yourItinerary: 'Tu Itinerario',
+        eventsAdded: 'evento(s) añadido(s)',
       },
     },
   },
@@ -4325,6 +4335,8 @@ export const translations: Record<Language, Translations> = {
         itineraryIntro: 'Här är ditt personliga dagsprogram:',
         locationSearch: 'Vilken plats vill du veta mer om?',
         directionsHelp: 'Vilken destination vill du navigera till?',
+        yourItinerary: 'Ditt Schema',
+        eventsAdded: 'evenemang tillagt/tillagda',
       },
     },
   },
@@ -5042,6 +5054,8 @@ export const translations: Record<Language, Translations> = {
         itineraryIntro: 'Oto Twój spersonalizowany program dnia:',
         locationSearch: 'O którym miejscu chciałbyś dowiedzieć się więcej?',
         directionsHelp: 'Do jakiego celu chcesz nawigować?',
+        yourItinerary: 'Twój Plan',
+        eventsAdded: 'wydarzenie(a) dodane',
       },
     },
   },
