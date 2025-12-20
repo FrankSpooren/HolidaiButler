@@ -52,12 +52,16 @@ export function MessageList() {
     }
   }, [isOpen]);
 
+  // Clear all local states when chat is reset
   useEffect(() => {
-    if (messages.length === 0 && dailyTipPOI) {
+    if (wasReset || messages.length === 0) {
+      setPois([]);
       setDailyTipPOI(null);
       setItinerary(null);
+      setShowItineraryBuilder(false);
+      setShowCategoryBrowser(false);
     }
-  }, [messages.length, dailyTipPOI]);
+  }, [wasReset, messages.length]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -209,18 +213,58 @@ export function MessageList() {
       )}
 
       {itinerary?.itinerary && (
-        <div className="holibot-itinerary-grid">
-          {itinerary.itinerary.map((item: any, index: number) => (
-            <div key={index} className="holibot-itinerary-item">
-              <div className="holibot-itinerary-time-badge">
-                <span className="time">{item.time}</span>
-                {item.type === 'event' && <span className="type-badge event">🎭</span>}
-                {item.type === 'lunch' && <span className="type-badge meal">🍽️</span>}
-                {item.type === 'dinner' && <span className="type-badge meal">🍷</span>}
-              </div>
-              {item.poi && <POICard poi={item.poi} onClick={() => setSelectedPOIId(item.poi.id)} />}
+        <div className="holibot-itinerary-container">
+          <div className="holibot-itinerary-header">
+            <span className="holibot-itinerary-header-icon">📋</span>
+            <h4>{t.holibotChat.responses.yourItinerary || 'Jouw Programma'}</h4>
+          </div>
+          <div className="holibot-itinerary-timeline">
+            {itinerary.itinerary.map((item: any, index: number) => {
+              const typeIcon = item.type === 'event' ? '🎭' : item.type === 'lunch' ? '🍽️' : item.type === 'dinner' ? '🍷' : '📍';
+              const typeClass = item.type === 'event' ? 'event' : (item.type === 'lunch' || item.type === 'dinner') ? item.type : '';
+              const labelClass = item.type === 'event' ? 'event' : (item.type === 'lunch' || item.type === 'dinner') ? 'meal' : '';
+              return (
+                <div key={index} className="holibot-itinerary-item">
+                  <div className="holibot-itinerary-time-column">
+                    <span className="holibot-itinerary-time">{item.time}</span>
+                    <div className={'holibot-itinerary-type-badge ' + typeClass}>{typeIcon}</div>
+                  </div>
+                  <div className="holibot-itinerary-content">
+                    {item.poi ? (
+                      <div className="holibot-itinerary-card" onClick={() => setSelectedPOIId(item.poi.id)}>
+                        <div className="holibot-itinerary-card-header">
+                          {item.poi.image_url ? (
+                            <img src={item.poi.image_url} alt={item.poi.name} className="holibot-itinerary-card-image" />
+                          ) : (
+                            <div className="holibot-itinerary-card-image placeholder">{typeIcon}</div>
+                          )}
+                          <div className="holibot-itinerary-card-info">
+                            <p className="holibot-itinerary-card-name">{item.poi.name}</p>
+                            {item.label && <p className={'holibot-itinerary-card-label ' + labelClass}>{item.label}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="holibot-itinerary-card">
+                        <div className="holibot-itinerary-card-header">
+                          <div className="holibot-itinerary-card-image placeholder">{typeIcon}</div>
+                          <div className="holibot-itinerary-card-info">
+                            <p className="holibot-itinerary-card-name">{item.label || 'TBD'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {itinerary.hasEvents && (
+            <div className="holibot-itinerary-events-note">
+              <span>🎭</span>
+              <span>{itinerary.eventsIncluded} {t.holibotChat.responses.eventsAdded || 'evenement(en) toegevoegd'}</span>
             </div>
-          ))}
+          )}
         </div>
       )}
 

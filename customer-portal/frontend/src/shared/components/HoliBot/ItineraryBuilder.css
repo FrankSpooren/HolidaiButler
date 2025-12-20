@@ -1,15 +1,15 @@
 /**
  * ItineraryBuilder - Interactive wizard styling
- * Golden theme matching HoliBot design
+ * Updated 2025-12-20: QuickReplies design template (gold border, white bg, blue text)
  */
 
 .itinerary-builder {
-  background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+  background: white;
   border-radius: 16px;
   padding: 16px;
   margin: 12px 0;
-  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15);
-  border: 1px solid rgba(212, 175, 55, 0.2);
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.15);
+  border: 1.5px solid #D4AF37; /* Compass Gold - huisstijl */
   animation: slideIn 0.3s ease-out;
 }
 
@@ -30,14 +30,15 @@
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
 }
 
 .itinerary-builder-header h3 {
   margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #2C3E50; /* Deep Sea Navy - huisstijl */
 }
 
 .itinerary-builder-steps {
@@ -54,14 +55,16 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 600;
-  background: #e0e0e0;
-  color: #666;
+  background: #f0f0f0;
+  color: #888;
+  border: 1.5px solid #ddd;
   transition: all 0.3s ease;
 }
 
 .itinerary-builder-steps span.active {
-  background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+  background: #D4AF37; /* Compass Gold */
   color: white;
+  border-color: #D4AF37;
 }
 
 .itinerary-builder-content {
@@ -78,13 +81,14 @@
 }
 
 .step-label {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: #2C3E50; /* Deep Sea Navy */
   margin: 0 0 12px 0;
 }
 
-/* Duration Options */
+/* Duration Options - QuickReplies style */
 .duration-options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -96,22 +100,25 @@
   flex-direction: column;
   align-items: center;
   padding: 12px 8px;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
+  border: 1.5px solid #D4AF37; /* Compass Gold */
+  border-radius: 20px; /* Pill shape */
   background: white;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .duration-option:hover {
-  border-color: #D4AF37;
-  background: #fff9e6;
+  background: #FFF8E7; /* Light gold */
+  border-color: #C49B2A; /* Darker gold */
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.25);
 }
 
 .duration-option.selected {
-  border-color: #D4AF37;
-  background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
-  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.2);
+  background: #D4AF37; /* Compass Gold */
+  color: white;
+  border-color: #C49B2A;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
 }
 
 .duration-icon {
@@ -122,7 +129,11 @@
 .duration-label {
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #2C3E50; /* Deep Sea Navy */
+}
+
+.duration-option.selected .duration-label {
+  color: white;
 }
 
 .duration-hours {
@@ -131,11 +142,26 @@
   margin-top: 2px;
 }
 
-/* Interest Options */
+.duration-option.selected .duration-hours {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Interest Options - QuickReplies style */
 .interest-options {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+}
+
+/* 5 interests: 3-2 layout for better balance */
+@media (min-width: 320px) {
+  .interest-options {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .interest-option:nth-child(4),
+  .interest-option:nth-child(5) {
+    grid-column: span 1;
+  }
 }
 
 .interest-option {
@@ -143,20 +169,25 @@
   flex-direction: column;
   align-items: center;
   padding: 10px 6px;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
+  border: 1.5px solid #D4AF37; /* Compass Gold */
+  border-radius: 16px; /* Pill shape */
   background: white;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .interest-option:hover {
-  border-color: #D4AF37;
+  background: #FFF8E7; /* Light gold */
+  border-color: #C49B2A;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.25);
 }
 
 .interest-option.selected {
-  border-color: #D4AF37;
-  background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
+  background: #D4AF37; /* Compass Gold */
+  color: white;
+  border-color: #C49B2A;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
 }
 
 .interest-icon {
@@ -167,21 +198,31 @@
 .interest-label {
   font-size: 11px;
   font-weight: 500;
-  color: #333;
+  color: #2C3E50; /* Deep Sea Navy */
   text-align: center;
   line-height: 1.2;
 }
 
-/* Meals Toggle */
+.interest-option.selected .interest-label {
+  color: white;
+}
+
+/* Meals Toggle - QuickReplies style */
 .meals-toggle {
   display: flex;
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  padding: 12px;
+  padding: 12px 16px;
   background: white;
-  border-radius: 10px;
-  border: 1px solid #e0e0e0;
+  border-radius: 20px; /* Pill shape */
+  border: 1.5px solid #D4AF37; /* Compass Gold */
+  transition: all 0.2s ease;
+}
+
+.meals-toggle:hover {
+  background: #FFF8E7;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.25);
 }
 
 .meals-toggle input {
@@ -195,6 +236,7 @@
   background: #ccc;
   border-radius: 12px;
   transition: background 0.3s ease;
+  flex-shrink: 0;
 }
 
 .toggle-slider::after {
@@ -211,7 +253,7 @@
 }
 
 .meals-toggle input:checked + .toggle-slider {
-  background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+  background: #D4AF37; /* Compass Gold */
 }
 
 .meals-toggle input:checked + .toggle-slider::after {
@@ -219,42 +261,46 @@
 }
 
 .toggle-label {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
-  color: #333;
+  font-weight: 500;
+  color: #2C3E50; /* Deep Sea Navy */
 }
 
-/* Summary */
+/* Summary - QuickReplies style */
 .itinerary-summary {
   margin-top: 16px;
-  padding: 12px;
+  padding: 12px 16px;
   background: white;
-  border-radius: 10px;
-  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  border: 1.5px solid #D4AF37; /* Compass Gold */
 }
 
 .itinerary-summary p {
   margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
-  color: #666;
+  color: #2C3E50; /* Deep Sea Navy */
 }
 
 .itinerary-summary p:first-child {
-  color: #1a1a1a;
+  color: #2C3E50;
   margin-bottom: 4px;
 }
 
-/* Footer Buttons */
+/* Footer Buttons - QuickReplies style */
 .itinerary-builder-footer {
   display: flex;
   justify-content: space-between;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid rgba(212, 175, 55, 0.2);
+  border-top: 1px solid rgba(212, 175, 55, 0.3);
 }
 
 .itinerary-builder-footer button {
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 20px; /* Pill shape */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -264,33 +310,98 @@
 .btn-back,
 .btn-cancel {
   background: white;
-  border: 1px solid #ddd;
-  color: #666;
+  border: 1.5px solid #D4AF37; /* Compass Gold */
+  color: #2C3E50; /* Deep Sea Navy */
 }
 
 .btn-back:hover,
 .btn-cancel:hover {
-  background: #f5f5f5;
-  border-color: #ccc;
+  background: #FFF8E7;
+  border-color: #C49B2A;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.25);
 }
 
 .btn-next,
 .btn-generate {
-  background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
-  border: none;
+  background: #D4AF37; /* Compass Gold */
+  border: 1.5px solid #D4AF37;
   color: white;
 }
 
 .btn-next:hover,
 .btn-generate:hover {
-  background: linear-gradient(135deg, #B8960C 0%, #9A7D0A 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+  background: #C49B2A; /* Darker gold */
+  border-color: #C49B2A;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
 }
 
 .btn-next:disabled {
   background: #ccc;
+  border-color: #ccc;
   cursor: not-allowed;
-  transform: none;
   box-shadow: none;
+}
+
+/* Focus state (keyboard navigation - WCAG 2.1 AA) */
+.duration-option:focus-visible,
+.interest-option:focus-visible,
+.btn-back:focus-visible,
+.btn-cancel:focus-visible,
+.btn-next:focus-visible,
+.btn-generate:focus-visible {
+  outline: 3px solid #D4AF37;
+  outline-offset: 2px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .itinerary-builder {
+    padding: 12px;
+    margin: 8px 0;
+  }
+
+  .duration-options {
+    gap: 8px;
+  }
+
+  .duration-option {
+    padding: 10px 6px;
+  }
+
+  .interest-options {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .interest-option {
+    padding: 8px 4px;
+  }
+
+  .interest-label {
+    font-size: 10px;
+  }
+
+  .itinerary-builder-footer button {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .itinerary-builder,
+  .itinerary-step {
+    animation: none;
+  }
+
+  .duration-option,
+  .interest-option,
+  .btn-back,
+  .btn-cancel,
+  .btn-next,
+  .btn-generate,
+  .toggle-slider,
+  .toggle-slider::after {
+    transition: none;
+  }
 }

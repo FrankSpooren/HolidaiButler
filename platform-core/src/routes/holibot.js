@@ -514,9 +514,35 @@ router.get('/daily-tip', async (req, res) => {
     const itemDesc = selectedItem.description || 'Een geweldige plek in Calpe';
     const ratingText = selectedItem.rating ? 'Beoordeling: ' + selectedItem.rating + ' sterren. ' : '';
 
-    const tipPrompt = selectedItem.type === 'event'
-      ? 'Genereer een enthousiaste "Tip van de Dag" (max 80 woorden) voor het evenement "' + itemName + '". Het vindt plaats op ' + selectedItem.event_date + '. Begin met een ster emoji. Beschrijving: ' + itemDesc
-      : 'Genereer een enthousiaste "Tip van de Dag" (max 80 woorden) voor ' + itemName + '. Begin met een ster emoji. ' + ratingText + 'Categorie: ' + selectedItem.category + '. Beschrijving: ' + itemDesc;
+    // Multi-language tip prompts
+    const tipPrompts = {
+      nl: {
+        event: `Genereer een enthousiaste "Tip van de Dag" (max 80 woorden, in het Nederlands) voor het evenement "${itemName}". Het vindt plaats op ${selectedItem.event_date}. Begin met een ster emoji. Beschrijving: ${itemDesc}`,
+        poi: `Genereer een enthousiaste "Tip van de Dag" (max 80 woorden, in het Nederlands) voor ${itemName}. Begin met een ster emoji. ${ratingText}Categorie: ${selectedItem.category}. Beschrijving: ${itemDesc}`
+      },
+      en: {
+        event: `Generate an enthusiastic "Tip of the Day" (max 80 words, in English) for the event "${itemName}". It takes place on ${selectedItem.event_date}. Start with a star emoji. Description: ${itemDesc}`,
+        poi: `Generate an enthusiastic "Tip of the Day" (max 80 words, in English) for ${itemName}. Start with a star emoji. ${ratingText}Category: ${selectedItem.category}. Description: ${itemDesc}`
+      },
+      de: {
+        event: `Erstelle einen begeisterten "Tipp des Tages" (max 80 Wörter, auf Deutsch) für das Event "${itemName}". Es findet am ${selectedItem.event_date} statt. Beginne mit einem Stern-Emoji. Beschreibung: ${itemDesc}`,
+        poi: `Erstelle einen begeisterten "Tipp des Tages" (max 80 Wörter, auf Deutsch) für ${itemName}. Beginne mit einem Stern-Emoji. ${ratingText}Kategorie: ${selectedItem.category}. Beschreibung: ${itemDesc}`
+      },
+      es: {
+        event: `Genera un entusiasta "Consejo del Día" (máx 80 palabras, en español) para el evento "${itemName}". Se celebra el ${selectedItem.event_date}. Empieza con un emoji de estrella. Descripción: ${itemDesc}`,
+        poi: `Genera un entusiasta "Consejo del Día" (máx 80 palabras, en español) para ${itemName}. Empieza con un emoji de estrella. ${ratingText}Categoría: ${selectedItem.category}. Descripción: ${itemDesc}`
+      },
+      sv: {
+        event: `Skapa ett entusiastiskt "Dagens Tips" (max 80 ord, på svenska) för evenemanget "${itemName}". Det äger rum den ${selectedItem.event_date}. Börja med en stjärn-emoji. Beskrivning: ${itemDesc}`,
+        poi: `Skapa ett entusiastiskt "Dagens Tips" (max 80 ord, på svenska) för ${itemName}. Börja med en stjärn-emoji. ${ratingText}Kategori: ${selectedItem.category}. Beskrivning: ${itemDesc}`
+      },
+      pl: {
+        event: `Wygeneruj entuzjastyczną "Poradę Dnia" (maks 80 słów, po polsku) dla wydarzenia "${itemName}". Odbywa się ${selectedItem.event_date}. Zacznij od emoji gwiazdki. Opis: ${itemDesc}`,
+        poi: `Wygeneruj entuzjastyczną "Poradę Dnia" (maks 80 słów, po polsku) dla ${itemName}. Zacznij od emoji gwiazdki. ${ratingText}Kategoria: ${selectedItem.category}. Opis: ${itemDesc}`
+      }
+    };
+    const langPrompts = tipPrompts[language] || tipPrompts.nl;
+    const tipPrompt = selectedItem.type === 'event' ? langPrompts.event : langPrompts.poi;
 
     const tipDescription = await embeddingService.generateChatCompletion([
       { role: 'system', content: embeddingService.buildSystemPrompt(language) },
