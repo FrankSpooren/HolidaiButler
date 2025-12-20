@@ -528,4 +528,36 @@ router.get('/health', async (req, res) => {
   }
 });
 
+
+/**
+ * GET /api/v1/holibot/debug/events
+ * TEMPORARY: Debug endpoint to check Events query
+ */
+router.get('/debug/events', async (req, res) => {
+  try {
+    const { mysqlSequelize } = await import('../config/database.js');
+    const { QueryTypes } = (await import('sequelize')).default;
+
+    const eventResults = await mysqlSequelize.query(
+      "SELECT a.id, a.title, a.calpe_distance, " +
+      "MIN(d.event_date) as event_date " +
+      "FROM agenda a " +
+      "INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash " +
+      "WHERE d.event_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) " +
+      "AND (a.calpe_distance IS NULL OR a.calpe_distance <= 25) " +
+      "GROUP BY a.id ORDER BY d.event_date ASC LIMIT 10",
+      { type: QueryTypes.SELECT }
+    );
+
+    res.json({
+      success: true,
+      query: 'Events within 7 days, calpe_distance NULL or <= 25',
+      count: eventResults.length,
+      events: eventResults
+    });
+  } catch (error) {
+    res.json({ success: false, error: error.message, stack: error.stack });
+  }
+});
+
 export default router;
