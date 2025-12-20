@@ -1441,7 +1441,7 @@ export const translations: Record<Language, Translations> = {
       inputPlaceholder: 'Stel een vraag over Calpe...',
       quickActions: {
         itinerary: 'Programma samenstellen',
-        locationInfo: 'Locatie-informatie',
+        locationInfo: 'Zoeken op Rubriek',
         directions: 'Routebeschrijving',
         dailyTip: 'Mijn Tip van de Dag',
       },
@@ -2158,7 +2158,7 @@ export const translations: Record<Language, Translations> = {
       inputPlaceholder: 'Ask a question about Calpe...',
       quickActions: {
         itinerary: 'Build my itinerary',
-        locationInfo: 'Location info',
+        locationInfo: 'Browse Categories',
         directions: 'Get directions',
         dailyTip: 'My Daily Tip',
       },
@@ -2875,7 +2875,7 @@ export const translations: Record<Language, Translations> = {
       inputPlaceholder: 'Stelle eine Frage über Calpe...',
       quickActions: {
         itinerary: 'Programm erstellen',
-        locationInfo: 'Standort-Info',
+        locationInfo: 'Nach Kategorie suchen',
         directions: 'Wegbeschreibung',
         dailyTip: 'Mein Tages-Tipp',
       },
@@ -3592,7 +3592,7 @@ export const translations: Record<Language, Translations> = {
       inputPlaceholder: 'Haz una pregunta sobre Calpe...',
       quickActions: {
         itinerary: 'Crear mi itinerario',
-        locationInfo: 'Info de ubicación',
+        locationInfo: 'Buscar por categoría',
         directions: 'Indicaciones',
         dailyTip: 'Mi Consejo del Día',
       },
@@ -4309,7 +4309,7 @@ export const translations: Record<Language, Translations> = {
       inputPlaceholder: 'Ställ en fråga om Calpe...',
       quickActions: {
         itinerary: 'Skapa mitt schema',
-        locationInfo: 'Platsinformation',
+        locationInfo: 'Sök efter kategori',
         directions: 'Vägbeskrivning',
         dailyTip: 'Mitt dagstips',
       },
@@ -5026,7 +5026,7 @@ export const translations: Record<Language, Translations> = {
       inputPlaceholder: 'Zadaj pytanie o Calpe...',
       quickActions: {
         itinerary: 'Stwórz mój plan',
-        locationInfo: 'Informacje o lokalizacji',
+        locationInfo: 'Szukaj według kategorii',
         directions: 'Wskazówki dojazdu',
         dailyTip: 'Moja porada dnia',
       },
