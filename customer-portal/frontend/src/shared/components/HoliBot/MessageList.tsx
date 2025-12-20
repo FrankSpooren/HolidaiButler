@@ -81,15 +81,10 @@ export function MessageList() {
             const typeIcon = item.type === 'event' ? '🎭' : item.type === 'lunch' ? '🍽️' : item.type === 'dinner' ? '🍷' : '📍';
             const label = item.label ? ' (' + item.label + ')' : '';
             return '**' + item.time + '** ' + typeIcon + ' ' + (item.poi?.name || 'TBD') + label;
-          }).join('
-');
+          }).join('\n');
 
-        const eventsNote = response.data.hasEvents ? '
-
-🎭 *' + response.data.eventsIncluded + ' evenement(en) toegevoegd*' : '';
-        addAssistantMessage(response.data.description + '
-
-' + itineraryText + eventsNote, response.data.itinerary.map((item: any) => item.poi).filter(Boolean));
+        const eventsNote = response.data.hasEvents ? '\n\n🎭 *' + response.data.eventsIncluded + ' evenement(en) toegevoegd*' : '';
+        addAssistantMessage(response.data.description + '\n\n' + itineraryText + eventsNote, response.data.itinerary.map((item: any) => item.poi).filter(Boolean));
       } else {
         addAssistantMessage(t.holibotChat.responses.error);
       }
@@ -147,9 +142,9 @@ export function MessageList() {
     <div ref={messageListRef} className="holibot-message-list" role="log" aria-live="polite" aria-label="Chat berichten">
       {messages.length === 0 && !showItineraryBuilder && !showCategoryBrowser && (
         <>
-          <WelcomeMessage key={} language={language} onComplete={() => setShowSuggestions(true)} />
+          <WelcomeMessage language={language} onComplete={() => setShowSuggestions(true)} />
           {showSuggestions && (
-            <QuickReplies key={} replies={quickReplies} onSelect={handleQuickReply}
+            <QuickReplies replies={quickReplies} onSelect={handleQuickReply}
               onAllVisible={() => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)} />
           )}
         </>
