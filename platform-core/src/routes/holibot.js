@@ -342,6 +342,8 @@ router.get('/daily-tip', async (req, res) => {
       return hasGoodRating && notExcluded;
     });
 
+    logger.info('Quality POIs found:', { count: qualityPois.length });
+
     // Step 2: Get upcoming events (next 7 days)
     let events = [];
     try {
@@ -359,6 +361,8 @@ router.get('/daily-tip', async (req, res) => {
         "GROUP BY a.id ORDER BY d.event_date ASC LIMIT 10",
         { type: QueryTypes.SELECT }
       );
+
+      logger.info('Events query result:', { count: eventResults.length, events: eventResults.map(e => e.title) });
 
       events = eventResults.filter(event =>
         !excludedIdList.includes('event-' + event.id)
