@@ -736,9 +736,4 @@ router.get('/health', async (req, res) => {
 });
 
 
-  } catch (error) {
-    res.json({ success: false, error: error.message, stack: error.stack });
-  }
-});
-
 export default router;
