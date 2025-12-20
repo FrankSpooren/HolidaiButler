@@ -18,7 +18,7 @@ import './MessageList.css';
  */
 
 export function MessageList() {
-  const { language, messages, isLoading, isOpen, addAssistantMessage, sendMessage } = useHoliBot();
+  const { language, messages, isLoading, isOpen, addAssistantMessage, sendMessage, wasReset } = useHoliBot();
   const { t } = useLanguage();
 
   const [pois, setPois] = useState<POI[]>([]);
@@ -142,10 +142,18 @@ export function MessageList() {
     <div ref={messageListRef} className="holibot-message-list" role="log" aria-live="polite" aria-label="Chat berichten">
       {messages.length === 0 && !showItineraryBuilder && !showCategoryBrowser && (
         <>
-          <WelcomeMessage language={language} onComplete={() => setShowSuggestions(true)} />
-          {showSuggestions && (
-            <QuickReplies replies={quickReplies} onSelect={handleQuickReply}
-              onAllVisible={() => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)} />
+          <WelcomeMessage
+            language={language}
+            onComplete={() => setShowSuggestions(true)}
+            skipAnimation={wasReset}
+          />
+          {(showSuggestions || wasReset) && (
+            <QuickReplies
+              replies={quickReplies}
+              onSelect={handleQuickReply}
+              onAllVisible={() => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)}
+              skipAnimation={wasReset}
+            />
           )}
         </>
       )}

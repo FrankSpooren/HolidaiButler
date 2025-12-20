@@ -113,6 +113,13 @@
   }
 }
 
+/* No animation class (for reset) */
+.holibot-quick-reply-button.no-animation {
+  animation: none !important;
+  opacity: 1;
+  transform: none;
+}
+
 /* Reduced motion accessibility */
 @media (prefers-reduced-motion: reduce) {
   .holibot-quick-reply-button {

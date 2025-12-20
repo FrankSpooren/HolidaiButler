@@ -5,12 +5,20 @@ interface QuickRepliesProps {
   replies: string[];
   onSelect: (reply: string) => void;
   onAllVisible?: () => void;
+  skipAnimation?: boolean; // Skip animation after reset
 }
 
-export function QuickReplies({ replies, onSelect, onAllVisible }: QuickRepliesProps) {
-  const [isVisible, setIsVisible] = useState(false);
+export function QuickReplies({ replies, onSelect, onAllVisible, skipAnimation = false }: QuickRepliesProps) {
+  const [isVisible, setIsVisible] = useState(skipAnimation);
 
   useEffect(() => {
+    // If skipAnimation, show immediately
+    if (skipAnimation) {
+      setIsVisible(true);
+      onAllVisible?.();
+      return;
+    }
+
     const showTimer = setTimeout(() => {
       setIsVisible(true);
       if (onAllVisible) {
@@ -18,10 +26,10 @@ export function QuickReplies({ replies, onSelect, onAllVisible }: QuickRepliesPr
       }
     }, 800);
     return () => clearTimeout(showTimer);
-  }, []);
+  }, [skipAnimation]);
 
   const getClassName = (visible: boolean) => {
-    return 'holibot-quick-reply-button' + (visible ? ' visible' : '');
+    return 'holibot-quick-reply-button' + (visible ? ' visible' : '') + (skipAnimation ? ' no-animation' : '');
   };
 
   return (

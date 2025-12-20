@@ -10,6 +10,7 @@ import './WelcomeMessage.css';
 interface WelcomeMessageProps {
   language?: 'nl' | 'en' | 'de' | 'es' | 'sv' | 'pl';
   onComplete?: () => void;
+  skipAnimation?: boolean; // Skip animation after reset
 }
 
 const welcomeMessages: Record<string, string[]> = {
@@ -45,11 +46,18 @@ const welcomeMessages: Record<string, string[]> = {
   ]
 };
 
-export function WelcomeMessage({ language = 'nl', onComplete }: WelcomeMessageProps) {
+export function WelcomeMessage({ language = 'nl', onComplete, skipAnimation = false }: WelcomeMessageProps) {
   const messages = welcomeMessages[language] || welcomeMessages.nl;
-  const [visibleMessages, setVisibleMessages] = useState<number>(0);
+  const [visibleMessages, setVisibleMessages] = useState<number>(skipAnimation ? 3 : 0);
 
   useEffect(() => {
+    // If skipAnimation, show everything immediately
+    if (skipAnimation) {
+      setVisibleMessages(3);
+      onComplete?.();
+      return;
+    }
+
     const timers: ReturnType<typeof setTimeout>[] = [];
 
     setVisibleMessages(1);
@@ -62,7 +70,7 @@ export function WelcomeMessage({ language = 'nl', onComplete }: WelcomeMessagePr
 
     return () => timers.forEach(timer => clearTimeout(timer));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [skipAnimation]);
 
   return (
     <div className="holibot-welcome-container" role="article">
