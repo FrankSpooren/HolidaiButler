@@ -4,12 +4,14 @@ import holibotAvatar from '../../../assets/images/hb-merkicoon.png';
 import { parseMessageForPOILinks } from '../../utils/poiLinkParser';
 import { POIDetailModal } from '../../../features/poi/components/POIDetailModal';
 import { SpeakerButton } from './SpeakerButton';
+import { MarkdownRenderer } from '../../utils/markdownRenderer';
 import './ChatMessage.css';
 
 /**
  * ChatMessage - Individual Message Display
  * Phase 7: POI Clickability in Chat ✅
  * Phase 8: Streaming Support ✅
+ * Phase 9: Markdown Rendering ✅
  *
  * Features:
  * - User/Assistant message styling
@@ -19,6 +21,7 @@ import './ChatMessage.css';
  * - POI Detail Modal popup on click
  * - Streaming text with blinking cursor
  * - Typing indicator for initial loading
+ * - Markdown rendering (bold, italic, lists, headers)
  */
 
 interface ChatMessageProps {
@@ -74,25 +77,44 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 <span></span>
                 <span></span>
               </div>
+            ) : isUser ? (
+              // User messages: plain text
+              <p className="chat-message-text">{message.content}</p>
             ) : (
-              <p className="chat-message-text">
-                {segments.map((segment, index) => {
-                  if (segment.type === 'poi-link' && segment.poi) {
-                    return (
-                      <button
-                        key={index}
-                        className="chat-message-poi-link"
-                        onClick={() => handlePOIClick(segment.poi!.id)}
-                        type="button"
-                      >
-                        {segment.content}
-                      </button>
-                    );
-                  }
-                  return <span key={index}>{segment.content}</span>;
-                })}
+              // Assistant messages: markdown rendering with POI links
+              <div className="chat-message-text">
+                {segments.length === 1 && segments[0].type === 'text' ? (
+                  // No POI links, use full markdown rendering
+                  <MarkdownRenderer content={message.content} />
+                ) : (
+                  // Has POI links, render with POI buttons
+                  <>
+                    {segments.map((segment, index) => {
+                      if (segment.type === 'poi-link' && segment.poi) {
+                        return (
+                          <button
+                            key={index}
+                            className="chat-message-poi-link"
+                            onClick={() => handlePOIClick(segment.poi!.id)}
+                            type="button"
+                          >
+                            {segment.content}
+                          </button>
+                        );
+                      }
+                      // Render text segments with markdown
+                      return (
+                        <MarkdownRenderer
+                          key={index}
+                          content={segment.content}
+                          className="inline"
+                        />
+                      );
+                    })}
+                  </>
+                )}
                 {message.isStreaming && <span className="chat-message-cursor" />}
-              </p>
+              </div>
             )}
           </div>
           <div className="chat-message-meta">
