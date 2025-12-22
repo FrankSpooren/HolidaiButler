@@ -258,24 +258,90 @@ router.post('/itinerary', async (req, res) => {
       return shuffled;
     };
 
-    const shuffledPois = shuffleArray(searchResults.results);
-    const shuffledRestaurants = shuffleArray(restaurants);
+    // Separate activity POIs from food-related POIs
+    const activityPois = searchResults.results.filter(p =>
+      !p.category?.toLowerCase().includes('food') &&
+      !p.subcategory?.toLowerCase().includes('restaurant')
+    );
+    const foodPois = searchResults.results.filter(p =>
+      p.category?.toLowerCase().includes('food') ||
+      p.subcategory?.toLowerCase().includes('restaurant')
+    );
+
+    // Combine restaurants from search + explicit restaurant search
+    const allRestaurants = [...restaurants, ...foodPois];
+
+    const shuffledPois = shuffleArray(activityPois.length > 0 ? activityPois : searchResults.results);
+    const shuffledRestaurants = shuffleArray(allRestaurants);
     let poiIndex = 0;
     let restaurantIndex = 0;
+
+    // Track used subcategories to avoid duplicates (e.g., 2 gyms)
+    // Separate tracking for activities and meals
+    const usedActivitySubcats = new Set();
+    const usedMealSubcats = new Set();
+
+    // Helper: Find next POI that doesn't duplicate subcategory
+    const getNextUniquePoi = () => {
+      // First pass: try to find unique subcategory
+      let startIndex = poiIndex;
+      while (poiIndex < shuffledPois.length) {
+        const poi = shuffledPois[poiIndex];
+        poiIndex++;
+        const subcatKey = `${poi.category || 'Unknown'}:${poi.subcategory || poi.poi_type || 'General'}`;
+        if (!usedActivitySubcats.has(subcatKey)) {
+          usedActivitySubcats.add(subcatKey);
+          return poi;
+        }
+      }
+      // Fallback: if all subcategories used, just return next available POI
+      if (startIndex < shuffledPois.length) {
+        poiIndex = startIndex + 1;
+        return shuffledPois[startIndex];
+      }
+      return null;
+    };
+
+    // Helper: Find next restaurant that doesn't duplicate type
+    const getNextUniqueRestaurant = () => {
+      let startIndex = restaurantIndex;
+      while (restaurantIndex < shuffledRestaurants.length) {
+        const restaurant = shuffledRestaurants[restaurantIndex];
+        restaurantIndex++;
+        const subcatKey = restaurant.subcategory || restaurant.poi_type || 'General';
+        if (!usedMealSubcats.has(subcatKey)) {
+          usedMealSubcats.add(subcatKey);
+          return restaurant;
+        }
+      }
+      // Fallback: return next available restaurant
+      if (startIndex < shuffledRestaurants.length) {
+        restaurantIndex = startIndex + 1;
+        return shuffledRestaurants[startIndex];
+      }
+      return null;
+    };
+
+    logger.info('Itinerary building:', {
+      totalPois: searchResults.results.length,
+      activityPois: activityPois.length,
+      restaurants: shuffledRestaurants.length,
+      slots: slots.length
+    });
 
     for (const slot of slots) {
       let item = null;
 
       if (slot.type === 'lunch' || slot.type === 'dinner') {
-        // Add meal suggestion
-        if (includeMeals && shuffledRestaurants[restaurantIndex]) {
+        // Add meal suggestion (unique restaurant type)
+        const restaurant = includeMeals ? getNextUniqueRestaurant() : null;
+        if (restaurant) {
           item = {
             time: slot.time,
             type: slot.type,
-            poi: shuffledRestaurants[restaurantIndex],
+            poi: restaurant,
             label: slot.type === 'lunch' ? 'Lunch' : 'Diner'
           };
-          restaurantIndex++;
         }
       } else {
         // Try to add event first (if time matches), otherwise POI
@@ -293,13 +359,16 @@ router.post('/itinerary', async (req, res) => {
           }
         }
 
-        if (!item && shuffledPois[poiIndex]) {
-          item = {
-            time: slot.time,
-            type: 'activity',
-            poi: shuffledPois[poiIndex]
-          };
-          poiIndex++;
+        if (!item) {
+          // Get next POI with unique subcategory (no 2 gyms, no 2 museums, etc.)
+          const poi = getNextUniquePoi();
+          if (poi) {
+            item = {
+              time: slot.time,
+              type: 'activity',
+              poi
+            };
+          }
         }
       }
 
@@ -307,6 +376,8 @@ router.post('/itinerary', async (req, res) => {
         itinerary.push(item);
       }
     }
+
+    logger.info('Itinerary built:', { itemCount: itinerary.length });
 
     // Step 5: Generate AI description with language-specific prompts
     const systemPrompt = embeddingService.buildSystemPrompt(language);
@@ -321,10 +392,21 @@ router.post('/itinerary', async (req, res) => {
       pl: `Napisz entuzjastyczne, gramatycznie poprawne wprowadzenie (maks 60 słów, po polsku) do programu ${duration === 'full-day' ? 'całodniowego' : duration === 'morning' ? 'porannego' : duration === 'afternoon' ? 'popołudniowego' : 'wieczornego'} w Calpe. ${interests.length ? 'Zainteresowania: ' + interests.join(', ') + '. ' : ''}${events.length ? 'Dziś jest ' + events.length + ' wydarzeń. ' : ''}Zakończ zachęcającym zdaniem. WAŻNE: Użyj poprawnej polskiej pisowni i gramatyki. NIE używaj gwiazdek ani emoji.`
     };
 
-    const description = await embeddingService.generateChatCompletion([
+    let description = await embeddingService.generateChatCompletion([
       { role: 'system', content: systemPrompt },
       { role: 'user', content: itineraryPrompts[language] || itineraryPrompts.nl }
     ]);
+
+    // Post-process: remove any asterisks, markdown formatting, and stray symbols
+    description = description
+      .replace(/\*+/g, '')           // Remove asterisks
+      .replace(/#+\s*/g, '')         // Remove markdown headers
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert markdown links to plain text
+      .replace(/`+/g, '')            // Remove code backticks
+      .replace(/_{2,}/g, '')         // Remove double underscores
+      .replace(/~{2,}/g, '')         // Remove strikethrough
+      .replace(/\s{2,}/g, ' ')       // Normalize whitespace
+      .trim();
 
     res.json({
       success: true,
@@ -510,22 +592,45 @@ router.get('/daily-tip', async (req, res) => {
       logger.warn('Could not fetch events for daily tip:', eventError.message);
     }
 
-    // Combine quality POIs and Events - Events first (time-sensitive)
-    const poisWithType = qualityPois.map(poi => ({ ...poi, type: 'poi' }));
-    
-    // Interleave: Events get priority since they're time-sensitive
-    // Take up to 2 events and 3 POIs for variety
-    const topEvents = events.slice(0, 2);
-    const topPois = poisWithType.slice(0, 3);
-    const allCandidates = [...topEvents, ...topPois];
+    // Combine quality POIs and Events
+    // Filter: only items with valid ID for detail card linking
+    const poisWithType = qualityPois
+      .filter(poi => poi.id) // Must have valid ID for POI detail card
+      .map(poi => ({ ...poi, type: 'poi' }));
 
-    if (allCandidates.length === 0) {
-      return res.status(404).json({ success: false, error: 'No tips available' });
+    // Events must also have valid ID
+    const validEvents = events.filter(event => event.id);
+
+    logger.info('Daily tip candidates:', {
+      qualityPois: poisWithType.length,
+      events: validEvents.length,
+      selectedInterest
+    });
+
+    // Balanced selection: alternate between POIs and Events
+    // Use time-based selection to vary between POI and Event
+    const hourOfDay = new Date().getHours();
+    const preferPoi = hourOfDay % 2 === 0; // Even hours prefer POIs, odd hours prefer Events
+
+    let selectedItem = null;
+
+    if (preferPoi && poisWithType.length > 0) {
+      // Select random POI
+      const randomIndex = Math.floor(Math.random() * poisWithType.length);
+      selectedItem = poisWithType[randomIndex];
+    } else if (validEvents.length > 0) {
+      // Select random Event
+      const randomIndex = Math.floor(Math.random() * validEvents.length);
+      selectedItem = validEvents[randomIndex];
+    } else if (poisWithType.length > 0) {
+      // Fallback to POI if no events
+      const randomIndex = Math.floor(Math.random() * poisWithType.length);
+      selectedItem = poisWithType[randomIndex];
     }
 
-    // Random selection from interleaved candidates
-    const randomIndex = Math.floor(Math.random() * allCandidates.length);
-    const selectedItem = allCandidates[randomIndex];
+    if (!selectedItem) {
+      return res.status(404).json({ success: false, error: 'No tips available with valid links' });
+    }
 
     // Generate tip description
     const tipLabels = { nl: 'Tip van de Dag', en: 'Tip of the Day', de: 'Tipp des Tages', es: 'Consejo del Dia', sv: 'Dagens Tips', pl: 'Porada Dnia' };
@@ -564,10 +669,21 @@ router.get('/daily-tip', async (req, res) => {
     const langPrompts = tipPrompts[language] || tipPrompts.nl;
     const tipPrompt = selectedItem.type === 'event' ? langPrompts.event : langPrompts.poi;
 
-    const tipDescription = await embeddingService.generateChatCompletion([
+    let tipDescription = await embeddingService.generateChatCompletion([
       { role: 'system', content: embeddingService.buildSystemPrompt(language) },
       { role: 'user', content: tipPrompt }
     ]);
+
+    // Post-process: remove any asterisks, markdown formatting, and stray symbols
+    tipDescription = tipDescription
+      .replace(/\*+/g, '')           // Remove asterisks
+      .replace(/#+\s*/g, '')         // Remove markdown headers
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert markdown links to plain text
+      .replace(/`+/g, '')            // Remove code backticks
+      .replace(/_{2,}/g, '')         // Remove double underscores
+      .replace(/~{2,}/g, '')         // Remove strikethrough
+      .replace(/\s{2,}/g, ' ')       // Normalize whitespace
+      .trim();
 
     res.json({
       success: true,

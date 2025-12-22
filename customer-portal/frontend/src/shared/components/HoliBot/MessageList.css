@@ -75,9 +75,85 @@
   color: #6B7280;
 }
 
-/* Daily Tip POI container */
-.holibot-daily-tip-poi {
+/* ============================================
+   DAILY TIP - Container with Header
+   Updated 2025-12-22: Added title and refresh button
+   ============================================ */
+
+.holibot-daily-tip-container {
   margin-top: 16px;
+  background: white;
+  border-radius: 16px;
+  border: 1.5px solid #3B82F6; /* Blue accent for tips */
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.holibot-daily-tip-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.holibot-daily-tip-icon {
+  font-size: 24px;
+}
+
+.holibot-daily-tip-title {
+  margin: 0;
+  flex: 1;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2C3E50;
+}
+
+/* Daily Tip POI container (inside the main container) */
+.holibot-daily-tip-poi {
+  margin-top: 0;
+}
+
+/* ============================================
+   REFRESH BUTTON - Circular icon button
+   Replaces old shuffle button with emoji
+   ============================================ */
+
+.holibot-refresh-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: linear-gradient(135deg, #D4AF37 0%, #C49B2A 100%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.holibot-refresh-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #C49B2A 0%, #B38A1F 100%);
+  transform: rotate(90deg);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+}
+
+.holibot-refresh-button:active:not(:disabled) {
+  transform: rotate(180deg);
+}
+
+.holibot-refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.holibot-refresh-button svg {
+  stroke: white;
 }
 
 /* ============================================
