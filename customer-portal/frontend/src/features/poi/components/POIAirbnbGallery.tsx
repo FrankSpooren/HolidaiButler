@@ -139,7 +139,7 @@ export function POIAirbnbGallery({
             </motion.div>
           </AnimatePresence>
         </div>
-        <div className="poi-gallery-mobile-counter">{(mobileIndex + 1) + " / " + displayImages.length}</div>
+        {/* Counter removed per user request - dots provide sufficient navigation feedback */}
         <div className="poi-gallery-mobile-dots">
           {displayImages.slice(0, 5).map((_, idx) => (
             <button

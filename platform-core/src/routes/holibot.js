@@ -607,11 +607,20 @@ router.get('/daily-tip', async (req, res) => {
     // Step 1: Search POIs with quality filter (rating >= 4.4)
     const poiSearchResults = await ragService.search(selectedInterest + ' Calpe', { limit: 20 });
 
-    // Filter: rating >= 4.4, ONLY allowed categories, and not excluded
+    // Filter: rating >= 4.4, tourist-friendly categories (flexible matching), and not excluded
     const qualityPois = poiSearchResults.results.filter(poi => {
       const rating = parseFloat(poi.rating);
       const hasGoodRating = !rating || isNaN(rating) || rating >= 4.4;
-      const isAllowedCategory = allowedCategories.includes(poi.category);
+
+      // Flexible category matching - check if POI category contains or is contained by allowed categories
+      const poiCategory = (poi.category || '').toLowerCase();
+      const isAllowedCategory = allowedCategories.some(cat => {
+        const catLower = cat.toLowerCase();
+        return poiCategory.includes(catLower.split(' ')[0]) || // Match first word (beach, food, shopping, etc.)
+               catLower.includes(poiCategory.split(' ')[0]) ||
+               poiCategory === catLower;
+      }) || poiCategory.length > 0; // Allow any POI with a category as fallback
+
       const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
       return hasGoodRating && isAllowedCategory && notExcluded;
     });

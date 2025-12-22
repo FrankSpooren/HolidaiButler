@@ -35,6 +35,61 @@ const tipTitles: Record<string, string> = {
   pl: 'Porada Dnia'
 };
 
+// Category-specific icons for POIs
+const getCategoryIcon = (poi: any): string => {
+  if (!poi) return '📍';
+  const category = (poi.category || '').toLowerCase();
+  const subcategory = (poi.subcategory || poi.poi_type || '').toLowerCase();
+  const name = (poi.name || '').toLowerCase();
+
+  // Beach & Nature
+  if (category.includes('beach') || subcategory.includes('beach') || name.includes('playa')) return '🏖️';
+  if (category.includes('nature') || subcategory.includes('park') || subcategory.includes('hiking')) return '🌲';
+  if (subcategory.includes('viewpoint') || name.includes('mirador')) return '🏔️';
+
+  // Food & Drinks
+  if (category.includes('food') || category.includes('restaurant')) {
+    if (subcategory.includes('seafood') || name.includes('marisco')) return '🦐';
+    if (subcategory.includes('tapas')) return '🍢';
+    if (subcategory.includes('pizz')) return '🍕';
+    if (subcategory.includes('coffee') || subcategory.includes('cafe') || subcategory.includes('café')) return '☕';
+    if (subcategory.includes('bakery') || subcategory.includes('panadería')) return '🥐';
+    if (subcategory.includes('ice') || subcategory.includes('helad')) return '🍦';
+    if (subcategory.includes('bar') || subcategory.includes('wine')) return '🍷';
+    return '🍽️';
+  }
+
+  // Culture & History
+  if (category.includes('culture') || category.includes('history')) {
+    if (subcategory.includes('museum')) return '🏛️';
+    if (subcategory.includes('church') || subcategory.includes('iglesia')) return '⛪';
+    return '🏛️';
+  }
+
+  // Active & Sports
+  if (category.includes('active') || category.includes('sport')) {
+    if (subcategory.includes('diving') || subcategory.includes('snorkel')) return '🤿';
+    if (subcategory.includes('kayak') || subcategory.includes('paddle')) return '🚣';
+    if (subcategory.includes('cycling') || subcategory.includes('bike')) return '🚴';
+    if (subcategory.includes('golf')) return '⛳';
+    return '🏃';
+  }
+
+  // Shopping
+  if (category.includes('shopping')) {
+    if (subcategory.includes('market') || subcategory.includes('mercado')) return '🛒';
+    return '🛍️';
+  }
+
+  // Recreation
+  if (category.includes('recreation')) {
+    if (subcategory.includes('spa') || subcategory.includes('wellness')) return '💆';
+    return '🎯';
+  }
+
+  return '📍'; // Default
+};
+
 export function MessageList() {
   const { language, messages, isLoading, isOpen, addAssistantMessage, sendMessage, wasReset } = useHoliBot();
   const { t } = useLanguage();
@@ -102,12 +157,16 @@ export function MessageList() {
       });
 
       console.log('[HoliBot] Itinerary response:', response);
-      if (response.success && response.data) {
+      if (response.success && response.data && response.data.itinerary) {
         console.log('[HoliBot] Setting itinerary:', response.data);
         console.log('[HoliBot] Itinerary items:', response.data.itinerary?.length || 0);
-        setItinerary(response.data);
-        // Only show the intro description - the visual "Jouw Programma" card will show separately
-        addAssistantMessage(response.data.description, response.data.itinerary.map((item: any) => item.poi).filter(Boolean));
+        // Set itinerary state BEFORE adding message to prevent race condition
+        const itineraryData = { ...response.data };
+        setItinerary(itineraryData);
+        // Small delay to ensure state is set before adding message
+        setTimeout(() => {
+          addAssistantMessage(response.data.description, response.data.itinerary.map((item: any) => item.poi).filter(Boolean));
+        }, 50);
       } else {
         console.log('[HoliBot] Itinerary failed:', response);
         addAssistantMessage(t.holibotChat.responses.error);
@@ -186,16 +245,23 @@ export function MessageList() {
       setLoadingPOIs(true);
       try {
         const response = await chatApi.getDailyTip();
+        console.log('[HoliBot] Daily tip response:', response);
         if (response.success && response.data) {
-          const { poi, event, item, tipDescription } = response.data;
+          const { poi, event, item, tipDescription, title } = response.data;
           const displayItem = poi || event || item;
-          addAssistantMessage(tipDescription, displayItem ? [displayItem] : []);
-          if (displayItem) setDailyTipPOI(displayItem);
+          // Add bold title before tip description
+          const tipTitle = title || tipTitles[language] || tipTitles.nl;
+          const messageWithTitle = `**${tipTitle}**\n\n${tipDescription}`;
+          addAssistantMessage(messageWithTitle, displayItem ? [displayItem] : []);
+          if (displayItem) {
+            console.log('[HoliBot] Setting dailyTipPOI:', displayItem);
+            setDailyTipPOI(displayItem);
+          }
         } else {
           addAssistantMessage(responses.error);
         }
       } catch (error) {
-        console.error('Daily tip error:', error);
+        console.error('[HoliBot] Daily tip error:', error);
         addAssistantMessage(responses.error);
       } finally {
         setLoadingPOIs(false);
@@ -229,6 +295,7 @@ export function MessageList() {
       {showCategoryBrowser && (
         <CategoryBrowser
           onSelect={async (category, subcategory, type) => {
+            console.log('[HoliBot] Category selected:', { category, subcategory, type });
             setShowCategoryBrowser(false);
             setLoadingPOIs(true);
             try {
@@ -236,17 +303,21 @@ export function MessageList() {
               if (subcategory) params.append('subcategory', subcategory);
               if (type) params.append('type', type);
               const url = '/api/v1/holibot/categories/' + encodeURIComponent(category) + '/pois?' + params;
+              console.log('[HoliBot] Fetching POIs from:', url);
               const response = await fetch(url);
               const data = await response.json();
-              if (data.success && data.data.length > 0) {
+              console.log('[HoliBot] Category POIs response:', data);
+              if (data.success && data.data && data.data.length > 0) {
                 const filterText = [category, subcategory, type].filter(Boolean).join(' > ');
+                console.log('[HoliBot] Setting POIs:', data.data.length);
                 addAssistantMessage('Hier zijn locaties in ' + filterText + ':', data.data);
                 setPois(data.data);
               } else {
+                console.log('[HoliBot] No POIs found or API error');
                 addAssistantMessage(t.holibotChat.responses.noResults);
               }
             } catch (error) {
-              console.error('Category search error:', error);
+              console.error('[HoliBot] Category search error:', error);
               addAssistantMessage(t.holibotChat.responses.error);
             } finally {
               setLoadingPOIs(false);
@@ -290,6 +361,9 @@ export function MessageList() {
         </div>
       )}
 
+      {/* DEBUG: Log itinerary state at render */}
+      {console.log('[HoliBot RENDER] itinerary:', itinerary, 'hasItinerary:', !!itinerary?.itinerary)}
+
       {itinerary?.itinerary && (
         <div className="holibot-itinerary-container">
           <div className="holibot-itinerary-header">
@@ -306,7 +380,11 @@ export function MessageList() {
           </div>
           <div className="holibot-itinerary-timeline">
             {itinerary.itinerary.map((item: any, index: number) => {
-              const typeIcon = item.type === 'event' ? '🎭' : item.type === 'lunch' ? '🍽️' : item.type === 'dinner' ? '🍷' : '📍';
+              // Use category-specific icon for POIs, special icons for events/meals
+              const typeIcon = item.type === 'event' ? '🎭' :
+                               item.type === 'lunch' ? '🍽️' :
+                               item.type === 'dinner' ? '🍷' :
+                               getCategoryIcon(item.poi);
               const typeClass = item.type === 'event' ? 'event' : (item.type === 'lunch' || item.type === 'dinner') ? item.type : '';
               const labelClass = item.type === 'event' ? 'event' : (item.type === 'lunch' || item.type === 'dinner') ? 'meal' : '';
               return (
