@@ -180,9 +180,11 @@ export function MessageList() {
     }
   }, [isOpen]);
 
-  // Clear all local states when chat is reset
+  // Clear all local states ONLY when chat is explicitly reset (wasReset becomes true)
+  // Do NOT clear on messages.length changes - that causes itinerary to disappear
   useEffect(() => {
-    if (wasReset || messages.length === 0) {
+    if (wasReset) {
+      console.log('[HoliBot] Chat reset detected, clearing local states');
       setPois([]);
       setDailyTipPOI(null);
       setItinerary(null);
@@ -193,7 +195,7 @@ export function MessageList() {
       setCategoryPoisHasMore(false);
       setCategoryFilter(null);
     }
-  }, [wasReset, messages.length]);
+  }, [wasReset]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

@@ -591,7 +591,14 @@ router.get('/daily-tip', async (req, res) => {
     // ONLY tourist-friendly categories for daily tips
     const allowedCategories = [
       'Beaches & Nature', 'Food & Drinks', 'Shopping',
-      'Culture & History', 'Recreation', 'Active'
+      'Culture & History', 'Recreation', 'Active', 'Nightlife'
+    ];
+
+    // Categories to EXCLUDE from daily tips (not vacation-appropriate)
+    const excludedCategories = [
+      'Health & Wellbeing', 'Health & Wellness', 'Health',
+      'Accommodations', 'Accommodation', 'Accommodation (do not communicate)',
+      'Practical', 'Services'
     ];
 
     // Calpe center coordinates (for 5km radius filter)
@@ -617,6 +624,7 @@ router.get('/daily-tip', async (req, res) => {
       const { QueryTypes } = (await import('sequelize')).default;
 
       // Query POIs within 5km radius using Haversine formula
+      // Exclude Health, Accommodations, Practical, Services categories
       const poiResults = await mysqlSequelize.query(`
         SELECT id, name, description, category, subcategory, poi_type,
                address, latitude, longitude, rating, review_count,
@@ -627,27 +635,28 @@ router.get('/daily-tip', async (req, res) => {
           AND latitude IS NOT NULL
           AND longitude IS NOT NULL
           AND (rating IS NULL OR rating >= 4.4)
+          AND category IN (?, ?, ?, ?, ?, ?, ?)
         HAVING distance_km <= ?
         ORDER BY rating DESC, review_count DESC
         LIMIT 50
       `, {
-        replacements: [CALPE_CENTER_LAT, CALPE_CENTER_LNG, CALPE_CENTER_LAT, MAX_DISTANCE_KM],
+        replacements: [
+          CALPE_CENTER_LAT, CALPE_CENTER_LNG, CALPE_CENTER_LAT,
+          ...allowedCategories,
+          MAX_DISTANCE_KM
+        ],
         type: QueryTypes.SELECT
       });
 
-      // Filter by allowed categories and exclusions
+      // Filter by exclusions (IDs already shown) and add images array for POICard
       qualityPois = poiResults.filter(poi => {
-        const poiCategory = (poi.category || '').toLowerCase();
-        const isAllowedCategory = allowedCategories.some(cat => {
-          const catLower = cat.toLowerCase();
-          return poiCategory.includes(catLower.split(' ')[0]) ||
-                 catLower.includes(poiCategory.split(' ')[0]) ||
-                 poiCategory === catLower;
-        }) || poiCategory.length > 0;
-
         const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
-        return isAllowedCategory && notExcluded;
-      });
+        return notExcluded;
+      }).map(poi => ({
+        ...poi,
+        // POICard expects 'images' array, backend returns 'thumbnail_url'
+        images: poi.thumbnail_url ? [poi.thumbnail_url] : []
+      }));
 
       logger.info('Daily tip POIs from DB:', { count: qualityPois.length, maxDistance: MAX_DISTANCE_KM });
     } catch (poiError) {
@@ -657,9 +666,20 @@ router.get('/daily-tip', async (req, res) => {
       qualityPois = poiSearchResults.results.filter(poi => {
         const rating = parseFloat(poi.rating);
         const hasGoodRating = !rating || isNaN(rating) || rating >= 4.4;
+        // Strict category filtering - must be in allowed categories, not in excluded
+        const poiCategory = (poi.category || '').trim();
+        const isAllowedCategory = allowedCategories.includes(poiCategory);
+        const isExcludedCategory = excludedCategories.some(exc =>
+          poiCategory.toLowerCase().includes(exc.toLowerCase()) ||
+          exc.toLowerCase().includes(poiCategory.toLowerCase())
+        );
         const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
-        return hasGoodRating && notExcluded;
-      });
+        return hasGoodRating && isAllowedCategory && !isExcludedCategory && notExcluded;
+      }).map(poi => ({
+        ...poi,
+        // POICard expects 'images' array
+        images: poi.thumbnail_url ? [poi.thumbnail_url] : (poi.images || [])
+      }));
     }
 
     // Step 2: Get upcoming events (next 7 days) within 5km radius
