@@ -687,12 +687,35 @@ router.get('/daily-tip', async (req, res) => {
       selectedItem = poisWithType[randomIndex];
     }
 
-    if (!selectedItem) {
-      return res.status(404).json({ success: false, error: 'No tips available with valid links' });
-    }
-
-    // Generate tip description
+    // Generate tip labels
     const tipLabels = { nl: 'Tip van de Dag', en: 'Tip of the Day', de: 'Tipp des Tages', es: 'Consejo del Dia', sv: 'Dagens Tips', pl: 'Porada Dnia' };
+
+    if (!selectedItem) {
+      // When all tips are exhausted, return a friendly message instead of 404
+      const noTipsMessages = {
+        nl: 'Je hebt alle tips van vandaag gezien! Probeer het morgen opnieuw voor nieuwe suggesties.',
+        en: 'You have seen all tips for today! Try again tomorrow for new suggestions.',
+        de: 'Du hast alle Tipps für heute gesehen! Versuche es morgen wieder für neue Vorschläge.',
+        es: '¡Has visto todos los consejos de hoy! Inténtalo mañana para nuevas sugerencias.',
+        sv: 'Du har sett alla tips för idag! Försök igen imorgon för nya förslag.',
+        pl: 'Widziałeś wszystkie porady na dziś! Spróbuj jutro, aby zobaczyć nowe sugestie.'
+      };
+      return res.json({
+        success: true,
+        data: {
+          title: tipLabels[language] || tipLabels.nl,
+          itemType: 'message',
+          poi: null,
+          event: null,
+          item: null,
+          tipDescription: noTipsMessages[language] || noTipsMessages.nl,
+          category: selectedInterest,
+          date: now.toISOString().split('T')[0],
+          tipId: null,
+          exhausted: true
+        }
+      });
+    }
 
     const itemName = selectedItem.name || selectedItem.title || 'Unknown';
     const itemDesc = selectedItem.description || 'Een geweldige plek in Calpe';
