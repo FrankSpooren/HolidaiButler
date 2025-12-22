@@ -101,11 +101,15 @@ export function MessageList() {
         interests: options.interests,
       });
 
+      console.log('[HoliBot] Itinerary response:', response);
       if (response.success && response.data) {
+        console.log('[HoliBot] Setting itinerary:', response.data);
+        console.log('[HoliBot] Itinerary items:', response.data.itinerary?.length || 0);
         setItinerary(response.data);
         // Only show the intro description - the visual "Jouw Programma" card will show separately
         addAssistantMessage(response.data.description, response.data.itinerary.map((item: any) => item.poi).filter(Boolean));
       } else {
+        console.log('[HoliBot] Itinerary failed:', response);
         addAssistantMessage(t.holibotChat.responses.error);
       }
     } catch (error) {
