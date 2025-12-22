@@ -34,16 +34,123 @@ const hiddenCategories = [
   'Services'
 ];
 
-// Category icons
+// Level 1: Main category icons (matching POIs page for consistency)
 const categoryIcons: Record<string, string> = {
-  'Beaches & Nature': '🏖️',
-  'Food & Drinks': '🍽️',
-  'Culture & History': '🏛️',
-  'Active': '🚴',
-  'Shopping': '🛍️',
-  'Recreation': '🎡',
-  'Nightlife': '🎉',
-  'default': '📍'
+  'Beaches & Nature': '/assets/category-icons/beaches-nature.png',
+  'Food & Drinks': '/assets/category-icons/food-drinks.png',
+  'Culture & History': '/assets/category-icons/culture-history.png',
+  'Active': '/assets/category-icons/active.png',
+  'Shopping': '/assets/category-icons/shopping.png',
+  'Recreation': '/assets/category-icons/recreation.png',
+  'Nightlife': '/assets/category-icons/subcategories/nightlife.webp',
+  'default': '/assets/category-icons/active.png'
+};
+
+// Level 2: Subcategory icons
+const subcategoryIcons: Record<string, string> = {
+  // Beaches & Nature
+  'Beaches': '/assets/category-icons/subcategories/beaches.webp',
+  'Parks & Gardens': '/assets/category-icons/subcategories/parks-gardens.webp',
+  'Viewpoints & Nature': '/assets/category-icons/subcategories/viewpoints-nature.webp',
+
+  // Food & Drinks
+  'Bar Restaurants': '/assets/category-icons/subcategories/bar-restaurants.webp',
+  'Bars': '/assets/category-icons/subcategories/bars.webp',
+  'Breakfast & Coffee': '/assets/category-icons/subcategories/breakfast-coffee.webp',
+  'Fastfood': '/assets/category-icons/subcategories/fastfood.webp',
+  'Restaurants': '/assets/category-icons/subcategories/restaurants.webp',
+
+  // Culture & History
+  'Arts & Museums': '/assets/category-icons/subcategories/arts-museums.webp',
+  'Historical Sites': '/assets/category-icons/subcategories/historical.webp',
+  'Religious Buildings': '/assets/category-icons/subcategories/churches.webp',
+  'Squares & Public Spaces': '/assets/category-icons/subcategories/parks-gardens.webp',
+
+  // Active
+  'Cycling': '/assets/category-icons/subcategories/cycling.webp',
+  'Golf': '/assets/category-icons/active.png',
+  'Hiking': '/assets/category-icons/subcategories/hiking.webp',
+  'Padel': '/assets/category-icons/subcategories/fitness.webp',
+  'Sports & Fitness': '/assets/category-icons/subcategories/fitness.webp',
+  'Water Sports': '/assets/category-icons/subcategories/water-sports.webp',
+
+  // Shopping
+  'Fashion & Clothing': '/assets/category-icons/subcategories/fashion.webp',
+  'Home & Lifestyle': '/assets/category-icons/subcategories/home-lifestyle.webp',
+  'Markets': '/assets/category-icons/subcategories/markets.webp',
+  'Specialty Stores': '/assets/category-icons/subcategories/specialty.webp',
+  'Supermarkets & Food': '/assets/category-icons/subcategories/supermarkets.webp',
+
+  // Recreation
+  'Entertainment': '/assets/category-icons/subcategories/entertainment.webp',
+  'Nightlife & Clubs': '/assets/category-icons/subcategories/nightlife.webp',
+  'Playgrounds & Leisure Areas': '/assets/category-icons/subcategories/playground.webp',
+  'RV Parks & Camping': '/assets/category-icons/subcategories/camping.png',
+  'Theaters': '/assets/category-icons/subcategories/theater.webp',
+};
+
+// Level 3: Type icons (most specific)
+const typeIcons: Record<string, string> = {
+  // Food types
+  'Tapas Bars': '/assets/category-icons/subcategories/tapas.webp',
+  'Beach Bars & Chiringuitos': '/assets/category-icons/subcategories/bars.webp',
+  'Cocktail & Lounge Bars': '/assets/category-icons/subcategories/bars.webp',
+  'Bars & Pubs': '/assets/category-icons/subcategories/bars.webp',
+  'Gastrobars & Lounges': '/assets/category-icons/subcategories/bar-restaurants.webp',
+  'Bar & Grill': '/assets/category-icons/subcategories/grill.webp',
+  'Cafés & Coffee Shops': '/assets/category-icons/subcategories/cafe.webp',
+  'Bakeries & Pastries': '/assets/category-icons/subcategories/bakery.webp',
+  'Ice Cream & Desserts': '/assets/category-icons/subcategories/ice-cream.webp',
+  'Seafood & Fish': '/assets/category-icons/subcategories/seafood.webp',
+  'Italian': '/assets/category-icons/subcategories/italian.webp',
+  'Spanish & Tapas': '/assets/category-icons/subcategories/tapas.webp',
+  'Asian Cuisine': '/assets/category-icons/subcategories/asian.webp',
+  'Mexican': '/assets/category-icons/subcategories/mexican.webp',
+  'Mediterranean': '/assets/category-icons/subcategories/mediterranean.webp',
+  'Mediteranean': '/assets/category-icons/subcategories/mediterranean.webp',
+  'Grill & Steakhouse': '/assets/category-icons/subcategories/grill.webp',
+  'European Specialties': '/assets/category-icons/subcategories/mediterranean.webp',
+  'Contemporary Dining': '/assets/category-icons/subcategories/restaurants.webp',
+
+  // Culture types
+  'Galleries': '/assets/category-icons/subcategories/galleries.webp',
+  'Museums': '/assets/category-icons/subcategories/museums.webp',
+  'Street Art & Sculptures': '/assets/category-icons/subcategories/galleries.webp',
+  'Cultural Centers': '/assets/category-icons/subcategories/arts-museums.webp',
+  'Historical Landmarks': '/assets/category-icons/subcategories/historical.webp',
+  'Monuments & Memorials': '/assets/category-icons/subcategories/historical.webp',
+
+  // Nature types
+  'Nature Reserve': '/assets/category-icons/subcategories/viewpoints-nature.webp',
+  'Viewpoints & Miradors': '/assets/category-icons/subcategories/viewpoints-nature.webp',
+
+  // Active types
+  'Diving': '/assets/category-icons/subcategories/diving.webp',
+  'Water Sports Activities': '/assets/category-icons/subcategories/water-sports.webp',
+  'Water Sports Schools': '/assets/category-icons/subcategories/water-sports.webp',
+  'Boat Rental & Tours': '/assets/category-icons/subcategories/water-sports.webp',
+  'Marinas & Harbors': '/assets/category-icons/subcategories/water-sports.webp',
+  'Hiking Trails': '/assets/category-icons/subcategories/hiking.webp',
+  'Mountain Hikes': '/assets/category-icons/subcategories/hiking.webp',
+  'Coastal & Nature Walks': '/assets/category-icons/subcategories/hiking.webp',
+
+  // Shopping types
+  'Footwear': '/assets/category-icons/subcategories/footwear.webp',
+  'General Clothing': '/assets/category-icons/subcategories/fashion.webp',
+  'Specialty Fashion': '/assets/category-icons/subcategories/fashion.webp',
+  'Electronics & Telecom': '/assets/category-icons/subcategories/specialty.webp',
+  'Home & Hardware': '/assets/category-icons/subcategories/home-lifestyle.webp',
+  'Personal Care & Beauty': '/assets/category-icons/subcategories/specialty.webp',
+  'Supermarkets': '/assets/category-icons/subcategories/supermarkets.webp',
+  'Fresh Products': '/assets/category-icons/subcategories/supermarkets.webp',
+  'Butchers': '/assets/category-icons/subcategories/supermarkets.webp',
+
+  // Recreation types
+  'Amusement Parks': '/assets/category-icons/subcategories/theme-park.webp',
+  'Amusement & Venues': '/assets/category-icons/subcategories/entertainment.webp',
+  'Gaming & Arcades': '/assets/category-icons/subcategories/arcade.webp',
+  'Betting & Gambling': '/assets/category-icons/subcategories/gaming.webp',
+  'Nightclubs & Discos': '/assets/category-icons/subcategories/dancing.webp',
 };
 
 // Category, subcategory, and type translations per language
@@ -732,7 +839,23 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
     }
   };
 
-  const getIcon = (name: string) => categoryIcons[name] || categoryIcons.default;
+  // Get icon for any level (category, subcategory, or type)
+  const getIcon = (name: string, level: 1 | 2 | 3 = 1): string => {
+    if (level === 3) return typeIcons[name] || subcategoryIcons[name] || categoryIcons.default;
+    if (level === 2) return subcategoryIcons[name] || categoryIcons.default;
+    return categoryIcons[name] || categoryIcons.default;
+  };
+
+  // Render icon as image
+  const renderIcon = (iconPath: string, alt: string, size: number = 32) => (
+    <img
+      src={iconPath}
+      alt={alt}
+      className="category-icon-img"
+      style={{ width: size, height: size, objectFit: 'contain' }}
+      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+    />
+  );
 
   const currentLevel = selectedSubcategory ? 3 : selectedCategory ? 2 : 1;
   const breadcrumb = [
@@ -780,7 +903,7 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
                 className="category-tile"
                 onClick={() => handleCategoryClick(cat)}
               >
-                <span className="category-icon">{getIcon(cat.name)}</span>
+                <span className="category-icon">{renderIcon(getIcon(cat.name, 1), cat.name, 40)}</span>
                 <span className="category-name">{translateCategory(cat.name)}</span>
               </button>
             ))}
@@ -794,7 +917,7 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
               className="category-item all-item"
               onClick={() => onSelect(selectedCategory.name)}
             >
-              <span className="category-icon">{getIcon(selectedCategory.name)}</span>
+              <span className="category-icon">{renderIcon(getIcon(selectedCategory.name, 1), selectedCategory.name, 28)}</span>
               <span className="category-name">{t.allIn} {translateCategory(selectedCategory.name)}</span>
               <span className="category-count">{selectedCategory.count} {t.places}</span>
             </button>
@@ -804,6 +927,7 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
                 className="category-item"
                 onClick={() => handleSubcategoryClick(sub)}
               >
+                <span className="category-icon">{renderIcon(getIcon(sub.name, 2), sub.name, 24)}</span>
                 <span className="category-name">{translateCategory(sub.name)}</span>
                 <span className="category-count">{sub.count} {t.places}</span>
                 {sub.types.length > 0 && <span className="category-arrow">›</span>}
@@ -819,6 +943,7 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
               className="category-item all-item"
               onClick={() => onSelect(selectedCategory!.name, selectedSubcategory.name)}
             >
+              <span className="category-icon">{renderIcon(getIcon(selectedSubcategory.name, 2), selectedSubcategory.name, 24)}</span>
               <span className="category-name">{t.allIn} {translateCategory(selectedSubcategory.name)}</span>
               <span className="category-count">{selectedSubcategory.count} {t.places}</span>
             </button>
@@ -828,6 +953,7 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
                 className="category-item"
                 onClick={() => handleTypeClick(type.name)}
               >
+                <span className="category-icon">{renderIcon(getIcon(type.name, 3), type.name, 24)}</span>
                 <span className="category-name">{translateCategory(type.name)}</span>
                 <span className="category-count">{type.count} {t.places}</span>
               </button>

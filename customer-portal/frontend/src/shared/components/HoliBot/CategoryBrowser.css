@@ -95,6 +95,18 @@
 
 .category-tile .category-icon {
   font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.category-icon-img {
+  border-radius: 4px;
+  transition: transform 200ms ease;
+}
+
+.category-tile:hover .category-icon-img {
+  transform: scale(1.1);
 }
 
 .category-tile .category-name {
@@ -155,6 +167,11 @@
 .category-item .category-icon {
   font-size: 20px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
 }
 
 .category-item .category-name {
