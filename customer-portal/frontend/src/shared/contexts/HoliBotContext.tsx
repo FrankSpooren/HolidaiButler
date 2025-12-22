@@ -323,6 +323,8 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
 
   const addAssistantMessage = useCallback((content: string, pois?: any[]) => {
     console.log('[HoliBot] Adding assistant message');
+    // Clear wasReset flag when adding a message (same as sendMessage)
+    setWasReset(false);
     const assistantMessage: ChatMessage = {
       id: chatApi.generateMessageId(),
       role: 'assistant',
