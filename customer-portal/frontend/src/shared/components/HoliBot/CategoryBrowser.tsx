@@ -77,14 +77,15 @@ const subcategoryIcons: Record<string, string> = {
   // Shopping
   'Fashion & Clothing': '/assets/category-icons/subcategories/fashion.webp',
   'Home & Lifestyle': '/assets/category-icons/subcategories/home-lifestyle.webp',
-  'Markets': '/assets/category-icons/subcategories/markets.webp',
+  'Markets': '/assets/category-icons/subcategories/markets.webp',  // Shop icon with awning
   'Specialty Stores': '/assets/category-icons/subcategories/specialty.webp',
   'Supermarkets & Food': '/assets/category-icons/subcategories/supermarkets.webp',
+  'Personal Care & Beauty': '/assets/category-icons/subcategories/beauty.webp',  // Lipstick icon
 
   // Recreation
   'Entertainment': '/assets/category-icons/subcategories/entertainment.webp',
   'Nightlife & Clubs': '/assets/category-icons/subcategories/nightlife.webp',
-  'Playgrounds & Leisure Areas': '/assets/category-icons/subcategories/playground.webp',
+  'Playgrounds & Leisure Areas': '/assets/category-icons/subcategories/playground.png',  // Colorful playground
   'RV Parks & Camping': '/assets/category-icons/subcategories/camping.png',
   'Theaters': '/assets/category-icons/subcategories/theater.webp',
 };
@@ -121,7 +122,7 @@ const typeIcons: Record<string, string> = {
   'Monuments & Memorials': '/assets/category-icons/subcategories/historical.webp',
 
   // Nature types
-  'Nature Reserve': '/assets/category-icons/subcategories/viewpoints-nature.webp',
+  'Nature Reserve': '/assets/category-icons/subcategories/nature-reserve.png',  // Forest trees icon
   'Viewpoints & Miradors': '/assets/category-icons/subcategories/viewpoints-nature.webp',
 
   // Active types
@@ -140,16 +141,17 @@ const typeIcons: Record<string, string> = {
   'Specialty Fashion': '/assets/category-icons/subcategories/fashion.webp',
   'Electronics & Telecom': '/assets/category-icons/subcategories/specialty.webp',
   'Home & Hardware': '/assets/category-icons/subcategories/home-lifestyle.webp',
-  'Personal Care & Beauty': '/assets/category-icons/subcategories/specialty.webp',
+  'Personal Care & Beauty': '/assets/category-icons/subcategories/beauty.webp',  // Lipstick icon
+  'Second Hand & Markets': '/assets/category-icons/subcategories/markets.webp',  // Shop with awning
   'Supermarkets': '/assets/category-icons/subcategories/supermarkets.webp',
   'Fresh Products': '/assets/category-icons/subcategories/supermarkets.webp',
   'Butchers': '/assets/category-icons/subcategories/supermarkets.webp',
 
   // Recreation types
   'Amusement Parks': '/assets/category-icons/subcategories/theme-park.webp',
-  'Amusement & Venues': '/assets/category-icons/subcategories/entertainment.webp',
+  'Amusement & Venues': '/assets/category-icons/subcategories/amusement.webp',  // Dancing people icon
   'Gaming & Arcades': '/assets/category-icons/subcategories/arcade.webp',
-  'Betting & Gambling': '/assets/category-icons/subcategories/gaming.webp',
+  'Betting & Gambling': '/assets/category-icons/subcategories/gaming.webp',  // Slot machine icon
   'Nightclubs & Discos': '/assets/category-icons/subcategories/dancing.webp',
 };
 
