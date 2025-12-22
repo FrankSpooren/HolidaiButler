@@ -54,8 +54,8 @@ const subcategoryIcons: Record<string, string> = {
   'Viewpoints & Nature': '/assets/category-icons/subcategories/viewpoints-nature.webp',
 
   // Food & Drinks
-  'Bar Restaurants': '/assets/category-icons/subcategories/bar-restaurants.webp',
-  'Bars': '/assets/category-icons/subcategories/bars.webp',
+  'Bar Restaurants': '/assets/category-icons/subcategories/bar-restaurants-dining.png',  // Glass and fork
+  'Bars': '/assets/category-icons/subcategories/bars-wine.png',  // Bottle and glass
   'Breakfast & Coffee': '/assets/category-icons/subcategories/breakfast-coffee.webp',
   'Fastfood': '/assets/category-icons/subcategories/fastfood.webp',
   'Restaurants': '/assets/category-icons/subcategories/restaurants.webp',
@@ -64,15 +64,15 @@ const subcategoryIcons: Record<string, string> = {
   'Arts & Museums': '/assets/category-icons/subcategories/arts-museums.webp',
   'Historical Sites': '/assets/category-icons/subcategories/historical.webp',
   'Religious Buildings': '/assets/category-icons/subcategories/churches.webp',
-  'Squares & Public Spaces': '/assets/category-icons/subcategories/parks-gardens.webp',
+  'Squares & Public Spaces': '/assets/category-icons/subcategories/squares.png',  // Crossroads/intersection
 
   // Active
   'Cycling': '/assets/category-icons/subcategories/cycling.webp',
-  'Golf': '/assets/category-icons/active.png',
-  'Hiking': '/assets/category-icons/subcategories/hiking.webp',
-  'Padel': '/assets/category-icons/subcategories/fitness.webp',
+  'Golf': '/assets/category-icons/subcategories/golf.png',  // Golfer silhouette
+  'Hiking': '/assets/category-icons/subcategories/hiking-boot.png',  // Hiking boot
+  'Padel': '/assets/category-icons/subcategories/padel.png',  // Tennis ball
   'Sports & Fitness': '/assets/category-icons/subcategories/fitness.webp',
-  'Water Sports': '/assets/category-icons/subcategories/water-sports.webp',
+  'Water Sports': '/assets/category-icons/subcategories/water-sports-sail.png',  // Sailboat
 
   // Shopping
   'Fashion & Clothing': '/assets/category-icons/subcategories/fashion.webp',
@@ -94,11 +94,11 @@ const subcategoryIcons: Record<string, string> = {
 const typeIcons: Record<string, string> = {
   // Food types
   'Tapas Bars': '/assets/category-icons/subcategories/tapas.webp',
-  'Beach Bars & Chiringuitos': '/assets/category-icons/subcategories/bars.webp',
-  'Cocktail & Lounge Bars': '/assets/category-icons/subcategories/bars.webp',
-  'Bars & Pubs': '/assets/category-icons/subcategories/bars.webp',
-  'Gastrobars & Lounges': '/assets/category-icons/subcategories/bar-restaurants.webp',
-  'Bar & Grill': '/assets/category-icons/subcategories/grill.webp',
+  'Beach Bars & Chiringuitos': '/assets/category-icons/subcategories/beach-bars.png',  // Coconut cocktail
+  'Cocktail & Lounge Bars': '/assets/category-icons/subcategories/gastrobars.png',  // Martini glass
+  'Bars & Pubs': '/assets/category-icons/subcategories/bars-pubs.png',  // Bar counter with stools
+  'Gastrobars & Lounges': '/assets/category-icons/subcategories/gastrobars.png',  // Martini glass
+  'Bar & Grill': '/assets/category-icons/subcategories/bar-restaurants-dining.png',  // Glass and fork
   'Cafés & Coffee Shops': '/assets/category-icons/subcategories/cafe.webp',
   'Bakeries & Pastries': '/assets/category-icons/subcategories/bakery.webp',
   'Ice Cream & Desserts': '/assets/category-icons/subcategories/ice-cream.webp',
@@ -127,13 +127,13 @@ const typeIcons: Record<string, string> = {
 
   // Active types
   'Diving': '/assets/category-icons/subcategories/diving.webp',
-  'Water Sports Activities': '/assets/category-icons/subcategories/water-sports.webp',
-  'Water Sports Schools': '/assets/category-icons/subcategories/water-sports.webp',
-  'Boat Rental & Tours': '/assets/category-icons/subcategories/water-sports.webp',
-  'Marinas & Harbors': '/assets/category-icons/subcategories/water-sports.webp',
-  'Hiking Trails': '/assets/category-icons/subcategories/hiking.webp',
-  'Mountain Hikes': '/assets/category-icons/subcategories/hiking.webp',
-  'Coastal & Nature Walks': '/assets/category-icons/subcategories/hiking.webp',
+  'Water Sports Activities': '/assets/category-icons/subcategories/water-sports-sail.png',  // Sailboat
+  'Water Sports Schools': '/assets/category-icons/subcategories/water-sports-sail.png',
+  'Boat Rental & Tours': '/assets/category-icons/subcategories/water-sports-sail.png',
+  'Marinas & Harbors': '/assets/category-icons/subcategories/water-sports-sail.png',
+  'Hiking Trails': '/assets/category-icons/subcategories/hiking-boot.png',  // Hiking boot
+  'Mountain Hikes': '/assets/category-icons/subcategories/hiking-boot.png',
+  'Coastal & Nature Walks': '/assets/category-icons/subcategories/hiking-boot.png',
 
   // Shopping types
   'Footwear': '/assets/category-icons/subcategories/footwear.webp',
