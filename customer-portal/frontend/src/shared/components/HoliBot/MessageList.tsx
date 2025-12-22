@@ -35,60 +35,110 @@ const tipTitles: Record<string, string> = {
   pl: 'Porada Dnia'
 };
 
-// Category-specific icons for POIs
-const getCategoryIcon = (poi: any): string => {
-  if (!poi) return '📍';
-  const category = (poi.category || '').toLowerCase();
-  const subcategory = (poi.subcategory || poi.poi_type || '').toLowerCase();
-  const name = (poi.name || '').toLowerCase();
-
-  // Beach & Nature
-  if (category.includes('beach') || subcategory.includes('beach') || name.includes('playa')) return '🏖️';
-  if (category.includes('nature') || subcategory.includes('park') || subcategory.includes('hiking')) return '🌲';
-  if (subcategory.includes('viewpoint') || name.includes('mirador')) return '🏔️';
-
-  // Food & Drinks
-  if (category.includes('food') || category.includes('restaurant')) {
-    if (subcategory.includes('seafood') || name.includes('marisco')) return '🦐';
-    if (subcategory.includes('tapas')) return '🍢';
-    if (subcategory.includes('pizz')) return '🍕';
-    if (subcategory.includes('coffee') || subcategory.includes('cafe') || subcategory.includes('café')) return '☕';
-    if (subcategory.includes('bakery') || subcategory.includes('panadería')) return '🥐';
-    if (subcategory.includes('ice') || subcategory.includes('helad')) return '🍦';
-    if (subcategory.includes('bar') || subcategory.includes('wine')) return '🍷';
-    return '🍽️';
-  }
-
-  // Culture & History
-  if (category.includes('culture') || category.includes('history')) {
-    if (subcategory.includes('museum')) return '🏛️';
-    if (subcategory.includes('church') || subcategory.includes('iglesia')) return '⛪';
-    return '🏛️';
-  }
-
-  // Active & Sports
-  if (category.includes('active') || category.includes('sport')) {
-    if (subcategory.includes('diving') || subcategory.includes('snorkel')) return '🤿';
-    if (subcategory.includes('kayak') || subcategory.includes('paddle')) return '🚣';
-    if (subcategory.includes('cycling') || subcategory.includes('bike')) return '🚴';
-    if (subcategory.includes('golf')) return '⛳';
-    return '🏃';
-  }
-
-  // Shopping
-  if (category.includes('shopping')) {
-    if (subcategory.includes('market') || subcategory.includes('mercado')) return '🛒';
-    return '🛍️';
-  }
-
-  // Recreation
-  if (category.includes('recreation')) {
-    if (subcategory.includes('spa') || subcategory.includes('wellness')) return '💆';
-    return '🎯';
-  }
-
-  return '📍'; // Default
+// Main category icons (level 1) - for time slot badges
+const categoryIconPaths: Record<string, string> = {
+  'Beaches & Nature': '/assets/category-icons/beaches-nature.png',
+  'Food & Drinks': '/assets/category-icons/food-drinks.png',
+  'Culture & History': '/assets/category-icons/culture-history.png',
+  'Active': '/assets/category-icons/active.png',
+  'Shopping': '/assets/category-icons/shopping.png',
+  'Recreation': '/assets/category-icons/recreation.png',
+  'Nightlife': '/assets/category-icons/subcategories/nightlife.webp',
+  'default': '/assets/category-icons/active.png'
 };
+
+// Subcategory icons (level 2/3) - for POI cards in itinerary
+const subcategoryIconPaths: Record<string, string> = {
+  // Beaches & Nature
+  'Beaches': '/assets/category-icons/subcategories/beaches.webp',
+  'Parks & Gardens': '/assets/category-icons/subcategories/parks-gardens.webp',
+  'Viewpoints & Nature': '/assets/category-icons/subcategories/viewpoints-nature.webp',
+  'Nature Reserve': '/assets/category-icons/subcategories/nature-reserve.png',
+  // Food & Drinks
+  'Bar Restaurants': '/assets/category-icons/subcategories/bar-restaurants-dining.png',
+  'Bars': '/assets/category-icons/subcategories/bars-wine.png',
+  'Breakfast & Coffee': '/assets/category-icons/subcategories/breakfast-coffee.webp',
+  'Fastfood': '/assets/category-icons/subcategories/fastfood.webp',
+  'Restaurants': '/assets/category-icons/subcategories/restaurants.webp',
+  'Tapas Bars': '/assets/category-icons/subcategories/tapas.webp',
+  'Beach Bars & Chiringuitos': '/assets/category-icons/subcategories/beach-bars.png',
+  'Bars & Pubs': '/assets/category-icons/subcategories/bars-pubs.png',
+  'Gastrobars & Lounges': '/assets/category-icons/subcategories/gastrobars.png',
+  'Cocktail & Lounge Bars': '/assets/category-icons/subcategories/gastrobars.png',
+  'Cafés & Coffee Shops': '/assets/category-icons/subcategories/cafe.webp',
+  'Bakeries & Pastries': '/assets/category-icons/subcategories/bakery.webp',
+  'Ice Cream & Desserts': '/assets/category-icons/subcategories/ice-cream.webp',
+  'Seafood & Fish': '/assets/category-icons/subcategories/seafood.webp',
+  'Italian': '/assets/category-icons/subcategories/italian.webp',
+  'Spanish & Tapas': '/assets/category-icons/subcategories/tapas.webp',
+  'Mediterranean': '/assets/category-icons/subcategories/mediterranean.webp',
+  'Grill & Steakhouse': '/assets/category-icons/subcategories/grill.webp',
+  // Culture & History
+  'Arts & Museums': '/assets/category-icons/subcategories/arts-museums.webp',
+  'Historical Sites': '/assets/category-icons/subcategories/historical.webp',
+  'Religious Buildings': '/assets/category-icons/subcategories/churches.webp',
+  'Squares & Public Spaces': '/assets/category-icons/subcategories/squares.png',
+  'Museums': '/assets/category-icons/subcategories/museums.webp',
+  'Galleries': '/assets/category-icons/subcategories/galleries.webp',
+  // Active
+  'Cycling': '/assets/category-icons/subcategories/cycling.webp',
+  'Golf': '/assets/category-icons/subcategories/golf.png',
+  'Hiking': '/assets/category-icons/subcategories/hiking-boot.png',
+  'Padel': '/assets/category-icons/subcategories/padel.png',
+  'Sports & Fitness': '/assets/category-icons/subcategories/fitness.webp',
+  'Water Sports': '/assets/category-icons/subcategories/water-sports-sail.png',
+  'Diving': '/assets/category-icons/subcategories/diving.webp',
+  // Shopping
+  'Fashion & Clothing': '/assets/category-icons/subcategories/fashion.webp',
+  'Home & Lifestyle': '/assets/category-icons/subcategories/home-lifestyle.webp',
+  'Markets': '/assets/category-icons/subcategories/markets.webp',
+  'Specialty Stores': '/assets/category-icons/subcategories/specialty.webp',
+  'Supermarkets & Food': '/assets/category-icons/subcategories/supermarkets.webp',
+  'Personal Care & Beauty': '/assets/category-icons/subcategories/beauty.webp',
+  // Recreation
+  'Entertainment': '/assets/category-icons/subcategories/entertainment.webp',
+  'Nightlife & Clubs': '/assets/category-icons/subcategories/nightlife.webp',
+  'Playgrounds & Leisure Areas': '/assets/category-icons/subcategories/playground.png',
+  'Amusement & Venues': '/assets/category-icons/subcategories/amusement.webp',
+  'Betting & Gambling': '/assets/category-icons/subcategories/gaming.webp',
+};
+
+// Get main category icon path (for time slot badge)
+const getCategoryIconPath = (poi: any): string => {
+  if (!poi) return categoryIconPaths.default;
+  const category = poi.category || '';
+  return categoryIconPaths[category] || categoryIconPaths.default;
+};
+
+// Get subcategory icon path (for POI cards in itinerary)
+const getSubcategoryIconPath = (poi: any): string => {
+  if (!poi) return categoryIconPaths.default;
+
+  // First try poi_type (most specific), then subcategory, then category
+  const poiType = poi.poi_type || '';
+  const subcategory = poi.subcategory || '';
+  const category = poi.category || '';
+
+  if (poiType && subcategoryIconPaths[poiType]) {
+    return subcategoryIconPaths[poiType];
+  }
+  if (subcategory && subcategoryIconPaths[subcategory]) {
+    return subcategoryIconPaths[subcategory];
+  }
+  // Fall back to main category icon
+  return categoryIconPaths[category] || categoryIconPaths.default;
+};
+
+// Render icon as image element
+const renderIconImg = (iconPath: string, alt: string, size: number = 24) => (
+  <img
+    src={iconPath}
+    alt={alt}
+    className="itinerary-icon-img"
+    style={{ width: size, height: size, objectFit: 'contain', borderRadius: 4 }}
+    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+  />
+);
 
 export function MessageList() {
   const { language, messages, isLoading, isOpen, addAssistantMessage, sendMessage, wasReset } = useHoliBot();
@@ -102,6 +152,11 @@ export function MessageList() {
   const [itinerary, setItinerary] = useState<any>(null);
   const [showItineraryBuilder, setShowItineraryBuilder] = useState(false);
   const [showCategoryBrowser, setShowCategoryBrowser] = useState(false);
+  // Category POI pagination state
+  const [categoryPoisOffset, setCategoryPoisOffset] = useState(0);
+  const [categoryPoisHasMore, setCategoryPoisHasMore] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<{category: string; subcategory?: string; type?: string} | null>(null);
+  const [loadingMorePois, setLoadingMorePois] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
 
@@ -133,6 +188,10 @@ export function MessageList() {
       setItinerary(null);
       setShowItineraryBuilder(false);
       setShowCategoryBrowser(false);
+      // Clear pagination state
+      setCategoryPoisOffset(0);
+      setCategoryPoisHasMore(false);
+      setCategoryFilter(null);
     }
   }, [wasReset, messages.length]);
 
@@ -143,6 +202,50 @@ export function MessageList() {
   // Store last itinerary options for shuffle functionality
   const [lastItineraryOptions, setLastItineraryOptions] = useState<ItineraryOptions | null>(null);
   const [lastDailyTipExcludes, setLastDailyTipExcludes] = useState<string[]>([]);
+
+  // Load more POIs for category browser (pagination)
+  const loadMoreCategoryPois = async () => {
+    if (!categoryFilter || loadingMorePois) return;
+    setLoadingMorePois(true);
+    try {
+      const LOAD_MORE_LIMIT = 3;
+      const newOffset = pois.length;
+      const params = new URLSearchParams({
+        limit: String(LOAD_MORE_LIMIT + 1), // +1 to check if there are more
+        offset: String(newOffset)
+      });
+      if (categoryFilter.subcategory) params.append('subcategory', categoryFilter.subcategory);
+      if (categoryFilter.type) params.append('type', categoryFilter.type);
+      const url = '/api/v1/holibot/categories/' + encodeURIComponent(categoryFilter.category) + '/pois?' + params;
+      console.log('[HoliBot] Loading more POIs from:', url);
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.success && data.data && data.data.length > 0) {
+        const hasMore = data.data.length > LOAD_MORE_LIMIT;
+        const newPois = hasMore ? data.data.slice(0, LOAD_MORE_LIMIT) : data.data;
+        setCategoryPoisHasMore(hasMore);
+        setCategoryPoisOffset(newOffset + newPois.length);
+        setPois(prev => [...prev, ...newPois]);
+        console.log('[HoliBot] Loaded more POIs:', newPois.length, 'hasMore:', hasMore);
+      } else {
+        setCategoryPoisHasMore(false);
+      }
+    } catch (error) {
+      console.error('[HoliBot] Load more POIs error:', error);
+    } finally {
+      setLoadingMorePois(false);
+    }
+  };
+
+  // Multi-language "show more" labels
+  const showMoreLabels: Record<string, string> = {
+    nl: 'Meer tonen',
+    en: 'Show more',
+    de: 'Mehr anzeigen',
+    es: 'Mostrar más',
+    sv: 'Visa mer',
+    pl: 'Pokaż więcej'
+  };
 
   const handleItinerarySubmit = async (options: ItineraryOptions) => {
     setShowItineraryBuilder(false);
@@ -163,10 +266,11 @@ export function MessageList() {
         // Set itinerary state BEFORE adding message to prevent race condition
         const itineraryData = { ...response.data };
         setItinerary(itineraryData);
-        // Small delay to ensure state is set before adding message
+        // Delay to ensure state is set and React has rendered before adding message
+        // Mobile devices may need more time for state updates
         setTimeout(() => {
           addAssistantMessage(response.data.description, response.data.itinerary.map((item: any) => item.poi).filter(Boolean));
-        }, 50);
+        }, 150);
       } else {
         console.log('[HoliBot] Itinerary failed:', response);
         addAssistantMessage(t.holibotChat.responses.error);
@@ -298,8 +402,13 @@ export function MessageList() {
             console.log('[HoliBot] Category selected:', { category, subcategory, type });
             setShowCategoryBrowser(false);
             setLoadingPOIs(true);
+            // Reset pagination state
+            setCategoryPoisOffset(0);
+            setCategoryFilter({ category, subcategory, type });
             try {
-              const params = new URLSearchParams({ limit: '10' });
+              // Initial load: only 3 POIs to avoid overwhelming the user
+              const INITIAL_LIMIT = 3;
+              const params = new URLSearchParams({ limit: String(INITIAL_LIMIT + 1) }); // +1 to check if there are more
               if (subcategory) params.append('subcategory', subcategory);
               if (type) params.append('type', type);
               const url = '/api/v1/holibot/categories/' + encodeURIComponent(category) + '/pois?' + params;
@@ -309,11 +418,16 @@ export function MessageList() {
               console.log('[HoliBot] Category POIs response:', data);
               if (data.success && data.data && data.data.length > 0) {
                 const filterText = [category, subcategory, type].filter(Boolean).join(' > ');
-                console.log('[HoliBot] Setting POIs:', data.data.length);
-                addAssistantMessage('Hier zijn locaties in ' + filterText + ':', data.data);
-                setPois(data.data);
+                // Check if there are more POIs available
+                const hasMore = data.data.length > INITIAL_LIMIT;
+                const displayPois = hasMore ? data.data.slice(0, INITIAL_LIMIT) : data.data;
+                setCategoryPoisHasMore(hasMore);
+                console.log('[HoliBot] Setting POIs:', displayPois.length, 'hasMore:', hasMore);
+                addAssistantMessage('Hier zijn locaties in ' + filterText + ':', displayPois);
+                setPois(displayPois);
               } else {
                 console.log('[HoliBot] No POIs found or API error');
+                setCategoryPoisHasMore(false);
                 addAssistantMessage(t.holibotChat.responses.noResults);
               }
             } catch (error) {
@@ -336,8 +450,21 @@ export function MessageList() {
       {loadingPOIs && <div className="holibot-loading">{t.holibotChat.responses.loading}</div>}
 
       {pois.length > 0 && (
-        <div className="holibot-poi-grid">
-          {pois.map((poi) => <POICard key={poi.id} poi={poi} onClick={() => setSelectedPOIId(poi.id)} />)}
+        <div className="holibot-poi-section">
+          <div className="holibot-poi-grid">
+            {pois.map((poi) => <POICard key={poi.id} poi={poi} onClick={() => setSelectedPOIId(poi.id)} />)}
+          </div>
+          {categoryPoisHasMore && categoryFilter && (
+            <div className="holibot-show-more-container">
+              <button
+                className="holibot-show-more-button"
+                onClick={loadMoreCategoryPois}
+                disabled={loadingMorePois}
+              >
+                {loadingMorePois ? '...' : showMoreLabels[language] || showMoreLabels.nl}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -380,27 +507,43 @@ export function MessageList() {
           </div>
           <div className="holibot-itinerary-timeline">
             {itinerary.itinerary.map((item: any, index: number) => {
-              // Use category-specific icon for POIs, special icons for events/meals
-              const typeIcon = item.type === 'event' ? '🎭' :
-                               item.type === 'lunch' ? '🍽️' :
-                               item.type === 'dinner' ? '🍷' :
-                               getCategoryIcon(item.poi);
+              // TIME SLOT BADGE: Use main category icon (level 1)
+              // - For meals: use Food & Drinks icon
+              // - For events: use Recreation icon
+              // - For activities: use POI's main category icon
+              const getTimeBadgeIcon = () => {
+                if (item.type === 'lunch' || item.type === 'dinner') {
+                  return categoryIconPaths['Food & Drinks'];
+                }
+                if (item.type === 'event') {
+                  return categoryIconPaths['Recreation'];
+                }
+                return getCategoryIconPath(item.poi);
+              };
+
+              // POI CARD: Use subcategory icon (level 2/3) for consistency with POIs page
+              const poiCardIcon = item.poi ? getSubcategoryIconPath(item.poi) : getTimeBadgeIcon();
+
               const typeClass = item.type === 'event' ? 'event' : (item.type === 'lunch' || item.type === 'dinner') ? item.type : '';
               const labelClass = item.type === 'event' ? 'event' : (item.type === 'lunch' || item.type === 'dinner') ? 'meal' : '';
               return (
                 <div key={index} className="holibot-itinerary-item">
                   <div className="holibot-itinerary-time-column">
                     <span className="holibot-itinerary-time">{item.time}</span>
-                    <div className={'holibot-itinerary-type-badge ' + typeClass}>{typeIcon}</div>
+                    <div className={'holibot-itinerary-type-badge ' + typeClass}>
+                      {renderIconImg(getTimeBadgeIcon(), item.type || 'activity', 24)}
+                    </div>
                   </div>
                   <div className="holibot-itinerary-content">
                     {item.poi ? (
                       <div className="holibot-itinerary-card" onClick={() => setSelectedPOIId(item.poi.id)}>
                         <div className="holibot-itinerary-card-header">
-                          {item.poi.image_url ? (
-                            <img src={item.poi.image_url} alt={item.poi.name} className="holibot-itinerary-card-image" />
+                          {item.poi.image_url || item.poi.thumbnail_url ? (
+                            <img src={item.poi.image_url || item.poi.thumbnail_url} alt={item.poi.name} className="holibot-itinerary-card-image" />
                           ) : (
-                            <div className="holibot-itinerary-card-image placeholder">{typeIcon}</div>
+                            <div className="holibot-itinerary-card-image placeholder">
+                              {renderIconImg(poiCardIcon, item.poi.name, 28)}
+                            </div>
                           )}
                           <div className="holibot-itinerary-card-info">
                             <p className="holibot-itinerary-card-name">{item.poi.name}</p>
@@ -411,7 +554,9 @@ export function MessageList() {
                     ) : (
                       <div className="holibot-itinerary-card">
                         <div className="holibot-itinerary-card-header">
-                          <div className="holibot-itinerary-card-image placeholder">{typeIcon}</div>
+                          <div className="holibot-itinerary-card-image placeholder">
+                            {renderIconImg(getTimeBadgeIcon(), item.label || 'TBD', 28)}
+                          </div>
                           <div className="holibot-itinerary-card-info">
                             <p className="holibot-itinerary-card-name">{item.label || 'TBD'}</p>
                           </div>
