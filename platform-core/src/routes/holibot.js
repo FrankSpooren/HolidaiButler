@@ -166,6 +166,7 @@ router.post('/search', async (req, res) => {
  * - Interest-based POI selection
  * - Events integration from agenda
  * - Meal suggestions for appropriate time slots
+ * - Time-of-day awareness (morning=cafes/bakeries, evening=restaurants/bars)
  */
 router.post('/itinerary', async (req, res) => {
   try {
@@ -173,9 +174,41 @@ router.post('/itinerary', async (req, res) => {
 
     logger.info('HoliBot itinerary request', { date, interests, duration, includeMeals });
 
-    // Step 1: Search POIs based on interests
-    const queries = interests.length > 0 ? interests.map(i => i + ' in Calpe').join(' ') : 'best things to do in Calpe';
-    const searchResults = await ragService.search(queries, { limit: 15 });
+    // Time-of-day appropriate POI types
+    const timeOfDayTypes = {
+      morning: ['bakery', 'cafe', 'coffee', 'breakfast', 'beach', 'nature', 'park', 'hiking', 'cycling'],
+      afternoon: ['museum', 'shopping', 'market', 'viewpoint', 'culture', 'active', 'sport', 'beach'],
+      evening: ['restaurant', 'tapas', 'bar', 'fine dining', 'seafood', 'pizzeria', 'nightlife', 'lounge']
+    };
+
+    // Step 1: Search POIs - do SEPARATE searches per interest for better variety
+    let allSearchResults = [];
+    if (interests.length > 0) {
+      // Search each interest separately to ensure balanced results
+      for (const interest of interests) {
+        const interestResults = await ragService.search(interest + ' attractions Calpe', { limit: 10 });
+        allSearchResults = [...allSearchResults, ...interestResults.results];
+      }
+    }
+    // Always add a general search for backup POIs
+    const generalResults = await ragService.search('best things to do in Calpe', { limit: 10 });
+    allSearchResults = [...allSearchResults, ...generalResults.results];
+
+    // Remove duplicates by id
+    const seenIds = new Set();
+    const searchResults = {
+      results: allSearchResults.filter(poi => {
+        if (!poi.id || seenIds.has(poi.id)) return false;
+        seenIds.add(poi.id);
+        return true;
+      })
+    };
+
+    logger.info('Itinerary search results:', {
+      totalPois: searchResults.results.length,
+      interests,
+      duration
+    });
 
     // Step 2: Get Events for the selected date
     let events = [];
@@ -217,30 +250,30 @@ router.post('/itinerary', async (req, res) => {
       );
     }
 
-    // Step 4: Build time slots with mixed content
+    // Step 4: Build time slots with mixed content and time-of-day context
     const timeSlots = {
       'morning': [
-        { time: '09:00', type: 'activity' },
-        { time: '10:30', type: 'activity' },
-        { time: '12:00', type: 'lunch' }
+        { time: '09:00', type: 'activity', timeContext: 'morning' },
+        { time: '10:30', type: 'activity', timeContext: 'morning' },
+        { time: '12:00', type: 'lunch', timeContext: 'morning' }
       ],
       'afternoon': [
-        { time: '13:00', type: 'lunch' },
-        { time: '14:30', type: 'activity' },
-        { time: '16:30', type: 'activity' }
+        { time: '13:00', type: 'lunch', timeContext: 'afternoon' },
+        { time: '14:30', type: 'activity', timeContext: 'afternoon' },
+        { time: '16:30', type: 'activity', timeContext: 'afternoon' }
       ],
       'evening': [
-        { time: '18:00', type: 'activity' },
-        { time: '19:30', type: 'dinner' },
-        { time: '21:00', type: 'activity' }
+        { time: '18:00', type: 'activity', timeContext: 'evening' },
+        { time: '19:30', type: 'dinner', timeContext: 'evening' },
+        { time: '21:00', type: 'activity', timeContext: 'evening' }
       ],
       'full-day': [
-        { time: '09:30', type: 'activity' },
-        { time: '11:00', type: 'activity' },
-        { time: '13:00', type: 'lunch' },
-        { time: '15:00', type: 'activity' },
-        { time: '17:00', type: 'activity' },
-        { time: '19:30', type: 'dinner' }
+        { time: '09:30', type: 'activity', timeContext: 'morning' },
+        { time: '11:00', type: 'activity', timeContext: 'morning' },
+        { time: '13:00', type: 'lunch', timeContext: 'afternoon' },
+        { time: '15:00', type: 'activity', timeContext: 'afternoon' },
+        { time: '17:00', type: 'activity', timeContext: 'afternoon' },
+        { time: '19:30', type: 'dinner', timeContext: 'evening' }
       ]
     };
 
@@ -258,73 +291,96 @@ router.post('/itinerary', async (req, res) => {
       return shuffled;
     };
 
-    // Separate activity POIs from food-related POIs
-    const activityPois = searchResults.results.filter(p =>
-      !p.category?.toLowerCase().includes('food') &&
-      !p.subcategory?.toLowerCase().includes('restaurant')
-    );
-    const foodPois = searchResults.results.filter(p =>
-      p.category?.toLowerCase().includes('food') ||
-      p.subcategory?.toLowerCase().includes('restaurant')
-    );
+    // Categorize POIs by type for time-of-day selection
+    const morningPois = searchResults.results.filter(p => {
+      const subcat = (p.subcategory || p.poi_type || '').toLowerCase();
+      const cat = (p.category || '').toLowerCase();
+      return timeOfDayTypes.morning.some(t => subcat.includes(t) || cat.includes(t)) ||
+             cat.includes('beach') || cat.includes('nature') || cat.includes('active');
+    });
+
+    const afternoonPois = searchResults.results.filter(p => {
+      const subcat = (p.subcategory || p.poi_type || '').toLowerCase();
+      const cat = (p.category || '').toLowerCase();
+      return timeOfDayTypes.afternoon.some(t => subcat.includes(t) || cat.includes(t)) ||
+             cat.includes('culture') || cat.includes('shopping') || cat.includes('recreation');
+    });
+
+    const eveningPois = searchResults.results.filter(p => {
+      const subcat = (p.subcategory || p.poi_type || '').toLowerCase();
+      const cat = (p.category || '').toLowerCase();
+      return timeOfDayTypes.evening.some(t => subcat.includes(t) || cat.includes(t)) ||
+             cat.includes('food') || cat.includes('nightlife');
+    });
 
     // Combine restaurants from search + explicit restaurant search
-    const allRestaurants = [...restaurants, ...foodPois];
+    const allRestaurants = [...restaurants, ...searchResults.results.filter(p =>
+      p.category?.toLowerCase().includes('food') ||
+      p.subcategory?.toLowerCase().includes('restaurant')
+    )];
 
-    const shuffledPois = shuffleArray(activityPois.length > 0 ? activityPois : searchResults.results);
+    // Shuffle all lists for variety
+    const shuffledMorning = shuffleArray(morningPois.length > 0 ? morningPois : searchResults.results);
+    const shuffledAfternoon = shuffleArray(afternoonPois.length > 0 ? afternoonPois : searchResults.results);
+    const shuffledEvening = shuffleArray(eveningPois.length > 0 ? eveningPois : searchResults.results);
     const shuffledRestaurants = shuffleArray(allRestaurants);
-    let poiIndex = 0;
-    let restaurantIndex = 0;
+    const shuffledAllPois = shuffleArray(searchResults.results); // Fallback
 
-    // Track used subcategories to avoid duplicates (e.g., 2 gyms)
-    // Separate tracking for activities and meals
-    const usedActivitySubcats = new Set();
-    const usedMealSubcats = new Set();
+    // Track used POIs to avoid duplicates in same program
+    const usedPoiIds = new Set();
+    let morningIndex = 0, afternoonIndex = 0, eveningIndex = 0, restaurantIndex = 0, allPoiIndex = 0;
 
-    // Helper: Find next POI that doesn't duplicate subcategory
-    const getNextUniquePoi = () => {
-      // First pass: try to find unique subcategory
-      let startIndex = poiIndex;
-      while (poiIndex < shuffledPois.length) {
-        const poi = shuffledPois[poiIndex];
-        poiIndex++;
-        const subcatKey = `${poi.category || 'Unknown'}:${poi.subcategory || poi.poi_type || 'General'}`;
-        if (!usedActivitySubcats.has(subcatKey)) {
-          usedActivitySubcats.add(subcatKey);
-          return poi;
+    // Helper: Get POI based on time context with fallback
+    const getNextPoiForTime = (timeContext) => {
+      const lists = {
+        morning: { arr: shuffledMorning, idx: () => morningIndex, inc: () => morningIndex++ },
+        afternoon: { arr: shuffledAfternoon, idx: () => afternoonIndex, inc: () => afternoonIndex++ },
+        evening: { arr: shuffledEvening, idx: () => eveningIndex, inc: () => eveningIndex++ }
+      };
+
+      // Try time-appropriate POIs first
+      const list = lists[timeContext];
+      if (list) {
+        while (list.idx() < list.arr.length) {
+          const poi = list.arr[list.idx()];
+          list.inc();
+          if (!usedPoiIds.has(poi.id)) {
+            usedPoiIds.add(poi.id);
+            return poi;
+          }
         }
       }
-      // Fallback: if all subcategories used, just return next available POI
-      if (startIndex < shuffledPois.length) {
-        poiIndex = startIndex + 1;
-        return shuffledPois[startIndex];
+
+      // Fallback to any unused POI
+      while (allPoiIndex < shuffledAllPois.length) {
+        const poi = shuffledAllPois[allPoiIndex];
+        allPoiIndex++;
+        if (!usedPoiIds.has(poi.id)) {
+          usedPoiIds.add(poi.id);
+          return poi;
+        }
       }
       return null;
     };
 
-    // Helper: Find next restaurant that doesn't duplicate type
+    // Helper: Find next restaurant that hasn't been used
     const getNextUniqueRestaurant = () => {
-      let startIndex = restaurantIndex;
       while (restaurantIndex < shuffledRestaurants.length) {
         const restaurant = shuffledRestaurants[restaurantIndex];
         restaurantIndex++;
-        const subcatKey = restaurant.subcategory || restaurant.poi_type || 'General';
-        if (!usedMealSubcats.has(subcatKey)) {
-          usedMealSubcats.add(subcatKey);
+        if (!usedPoiIds.has(restaurant.id)) {
+          usedPoiIds.add(restaurant.id);
           return restaurant;
         }
-      }
-      // Fallback: return next available restaurant
-      if (startIndex < shuffledRestaurants.length) {
-        restaurantIndex = startIndex + 1;
-        return shuffledRestaurants[startIndex];
       }
       return null;
     };
 
     logger.info('Itinerary building:', {
       totalPois: searchResults.results.length,
-      activityPois: activityPois.length,
+      morningPois: morningPois.length,
+      afternoonPois: afternoonPois.length,
+      eveningPois: eveningPois.length,
       restaurants: shuffledRestaurants.length,
       slots: slots.length
     });
@@ -360,8 +416,8 @@ router.post('/itinerary', async (req, res) => {
         }
 
         if (!item) {
-          // Get next POI with unique subcategory (no 2 gyms, no 2 museums, etc.)
-          const poi = getNextUniquePoi();
+          // Get next POI using time-of-day awareness (morning=cafes, evening=restaurants, etc.)
+          const poi = getNextPoiForTime(slot.timeContext || 'afternoon');
           if (poi) {
             item = {
               time: slot.time,
@@ -579,12 +635,15 @@ router.get('/daily-tip', async (req, res) => {
       );
 
       events = eventResults.filter(event =>
-        !excludedIdList.includes('event-' + event.id)
+        !excludedIdList.includes('event-' + event.id) && !excludedIdList.includes(String(event.id))
       ).map(event => ({
         ...event,
-        id: 'event-' + event.id,
+        // Keep original numeric ID for POICard compatibility
+        id: event.id,
+        eventId: event.id, // Explicit event ID
         name: event.title,
         type: 'event',
+        isEvent: true, // Flag to identify as event
         category: selectedInterest,
         rating: null
       }));
