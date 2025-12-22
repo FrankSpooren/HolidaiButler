@@ -46,6 +46,9 @@
 
 .holibot-input-field::placeholder {
   color: #9CA3AF; /* Gray placeholder */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Send button */

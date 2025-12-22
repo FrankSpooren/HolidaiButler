@@ -17,6 +17,24 @@ import './MessageList.css';
  * Phase 8: Itinerary Builder with choices
  */
 
+// SVG Refresh Icon component - circular arrows
+const RefreshIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.04 6.65 2.88" />
+    <path d="M21 3v6h-6" />
+  </svg>
+);
+
+// Translated tip titles
+const tipTitles: Record<string, string> = {
+  nl: 'Tip van de Dag',
+  en: 'Tip of the Day',
+  de: 'Tipp des Tages',
+  es: 'Consejo del Día',
+  sv: 'Dagens Tips',
+  pl: 'Porada Dnia'
+};
+
 export function MessageList() {
   const { language, messages, isLoading, isOpen, addAssistantMessage, sendMessage, wasReset } = useHoliBot();
   const { t } = useLanguage();
@@ -249,16 +267,22 @@ export function MessageList() {
       )}
 
       {dailyTipPOI && (
-        <div className="holibot-daily-tip-poi">
-          <POICard key={dailyTipPOI.id} poi={dailyTipPOI} onClick={() => setSelectedPOIId(dailyTipPOI.id)} />
-          <button
-            className="holibot-shuffle-button"
-            onClick={handleShuffleDailyTip}
-            disabled={loadingPOIs}
-            aria-label={language === 'nl' ? 'Andere tip' : language === 'de' ? 'Anderer Tipp' : language === 'es' ? 'Otro consejo' : language === 'sv' ? 'Annat tips' : language === 'pl' ? 'Inna porada' : 'Another tip'}
-          >
-            🔀 {language === 'nl' ? 'Andere tip' : language === 'de' ? 'Anderer Tipp' : language === 'es' ? 'Otro consejo' : language === 'sv' ? 'Annat tips' : language === 'pl' ? 'Inna porada' : 'Another tip'}
-          </button>
+        <div className="holibot-daily-tip-container">
+          <div className="holibot-daily-tip-header">
+            <span className="holibot-daily-tip-icon">💡</span>
+            <h4 className="holibot-daily-tip-title">{tipTitles[language] || tipTitles.nl}</h4>
+            <button
+              className="holibot-refresh-button"
+              onClick={handleShuffleDailyTip}
+              disabled={loadingPOIs}
+              aria-label={language === 'nl' ? 'Andere tip' : language === 'de' ? 'Anderer Tipp' : language === 'es' ? 'Otro consejo' : language === 'sv' ? 'Annat tips' : language === 'pl' ? 'Inna porada' : 'Another tip'}
+            >
+              <RefreshIcon size={18} />
+            </button>
+          </div>
+          <div className="holibot-daily-tip-poi">
+            <POICard key={dailyTipPOI.id} poi={dailyTipPOI} onClick={() => setSelectedPOIId(dailyTipPOI.id)} />
+          </div>
         </div>
       )}
 
@@ -268,12 +292,12 @@ export function MessageList() {
             <span className="holibot-itinerary-header-icon">📋</span>
             <h4>{t.holibotChat.responses.yourItinerary || 'Jouw Programma'}</h4>
             <button
-              className="holibot-shuffle-button holibot-shuffle-button-small"
+              className="holibot-refresh-button"
               onClick={handleShuffleItinerary}
               disabled={loadingPOIs}
               aria-label={language === 'nl' ? 'Ander programma' : language === 'de' ? 'Anderes Programm' : language === 'es' ? 'Otro programa' : language === 'sv' ? 'Annat program' : language === 'pl' ? 'Inny program' : 'Another program'}
             >
-              🔀
+              <RefreshIcon size={18} />
             </button>
           </div>
           <div className="holibot-itinerary-timeline">

@@ -19,14 +19,14 @@ import './InputArea.css';
  * Phase 5: Voice Input ✅
  */
 
-// Fallback placeholder translations for voice input context
+// Shorter placeholder texts that fit on one line (mobile-friendly)
 const placeholderTranslations = {
-  nl: 'Typ je vraag of gebruik spraak...',
-  en: 'Type your question or use voice...',
-  de: 'Tippe deine Frage oder nutze Sprache...',
-  es: 'Escribe tu pregunta o usa voz...',
-  sv: 'Skriv din fråga eller använd röst...',
-  pl: 'Wpisz pytanie lub użyj głosu...'
+  nl: 'Vraag of spreek...',
+  en: 'Ask or speak...',
+  de: 'Frage oder spreche...',
+  es: 'Pregunta o habla...',
+  sv: 'Fråga eller tala...',
+  pl: 'Pytaj lub mów...'
 };
 
 const ariaLabelTranslations = {
