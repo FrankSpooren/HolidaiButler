@@ -46,9 +46,10 @@ const categoryIcons: Record<string, string> = {
   'default': '📍'
 };
 
-// Category name translations per language
+// Category, subcategory, and type translations per language
 const categoryTranslations: Record<string, Record<string, string>> = {
   nl: {
+    // Top-level categories
     'Beaches & Nature': 'Stranden & Natuur',
     'Food & Drinks': 'Eten & Drinken',
     'Culture & History': 'Cultuur & Geschiedenis',
@@ -56,6 +57,47 @@ const categoryTranslations: Record<string, Record<string, string>> = {
     'Shopping': 'Winkelen',
     'Recreation': 'Recreatie',
     'Nightlife': 'Uitgaan',
+    // Subcategories - Beaches & Nature
+    'Beaches': 'Stranden',
+    'Nature & Parks': 'Natuur & Parken',
+    'Viewpoints': 'Uitzichtpunten',
+    'Gardens': 'Tuinen',
+    // Subcategories - Food & Drinks
+    'Restaurants': 'Restaurants',
+    'Cafes': 'Cafés',
+    'Bars': 'Bars',
+    'Bakeries': 'Bakkerijen',
+    'Ice Cream': 'IJssalons',
+    'Fast Food': 'Fastfood',
+    'Fine Dining': 'Fijn Dineren',
+    'Tapas': 'Tapas',
+    // Subcategories - Culture & History
+    'Museums': 'Musea',
+    'Historical Sites': 'Historische Plaatsen',
+    'Churches': 'Kerken',
+    'Monuments': 'Monumenten',
+    'Art Galleries': 'Galeries',
+    // Subcategories - Active
+    'Sports': 'Sport',
+    'Water Sports': 'Watersport',
+    'Hiking': 'Wandelen',
+    'Cycling': 'Fietsen',
+    'Golf': 'Golf',
+    'Tennis': 'Tennis',
+    'Diving': 'Duiken',
+    'Fitness': 'Fitness',
+    // Subcategories - Shopping
+    'Shops': 'Winkels',
+    'Markets': 'Markten',
+    'Supermarkets': 'Supermarkten',
+    'Fashion': 'Mode',
+    'Souvenirs': 'Souvenirs',
+    // Subcategories - Recreation
+    'Entertainment': 'Entertainment',
+    'Amusement': 'Amusement',
+    'Cinema': 'Bioscoop',
+    'Wellness': 'Wellness',
+    'Spa': 'Spa',
   },
   en: {
     'Beaches & Nature': 'Beaches & Nature',
@@ -67,6 +109,7 @@ const categoryTranslations: Record<string, Record<string, string>> = {
     'Nightlife': 'Nightlife',
   },
   de: {
+    // Top-level
     'Beaches & Nature': 'Strände & Natur',
     'Food & Drinks': 'Essen & Trinken',
     'Culture & History': 'Kultur & Geschichte',
@@ -74,8 +117,45 @@ const categoryTranslations: Record<string, Record<string, string>> = {
     'Shopping': 'Einkaufen',
     'Recreation': 'Freizeit',
     'Nightlife': 'Nachtleben',
+    // Subcategories
+    'Beaches': 'Strände',
+    'Nature & Parks': 'Natur & Parks',
+    'Viewpoints': 'Aussichtspunkte',
+    'Gardens': 'Gärten',
+    'Restaurants': 'Restaurants',
+    'Cafes': 'Cafés',
+    'Bars': 'Bars',
+    'Bakeries': 'Bäckereien',
+    'Ice Cream': 'Eisdielen',
+    'Fast Food': 'Fastfood',
+    'Fine Dining': 'Gehobene Küche',
+    'Tapas': 'Tapas',
+    'Museums': 'Museen',
+    'Historical Sites': 'Historische Stätten',
+    'Churches': 'Kirchen',
+    'Monuments': 'Denkmäler',
+    'Art Galleries': 'Kunstgalerien',
+    'Sports': 'Sport',
+    'Water Sports': 'Wassersport',
+    'Hiking': 'Wandern',
+    'Cycling': 'Radfahren',
+    'Golf': 'Golf',
+    'Tennis': 'Tennis',
+    'Diving': 'Tauchen',
+    'Fitness': 'Fitness',
+    'Shops': 'Geschäfte',
+    'Markets': 'Märkte',
+    'Supermarkets': 'Supermärkte',
+    'Fashion': 'Mode',
+    'Souvenirs': 'Souvenirs',
+    'Entertainment': 'Unterhaltung',
+    'Amusement': 'Vergnügen',
+    'Cinema': 'Kino',
+    'Wellness': 'Wellness',
+    'Spa': 'Spa',
   },
   es: {
+    // Top-level
     'Beaches & Nature': 'Playas y Naturaleza',
     'Food & Drinks': 'Comida y Bebidas',
     'Culture & History': 'Cultura e Historia',
@@ -83,8 +163,45 @@ const categoryTranslations: Record<string, Record<string, string>> = {
     'Shopping': 'Compras',
     'Recreation': 'Recreación',
     'Nightlife': 'Vida Nocturna',
+    // Subcategories
+    'Beaches': 'Playas',
+    'Nature & Parks': 'Naturaleza y Parques',
+    'Viewpoints': 'Miradores',
+    'Gardens': 'Jardines',
+    'Restaurants': 'Restaurantes',
+    'Cafes': 'Cafeterías',
+    'Bars': 'Bares',
+    'Bakeries': 'Panaderías',
+    'Ice Cream': 'Heladerías',
+    'Fast Food': 'Comida Rápida',
+    'Fine Dining': 'Alta Cocina',
+    'Tapas': 'Tapas',
+    'Museums': 'Museos',
+    'Historical Sites': 'Sitios Históricos',
+    'Churches': 'Iglesias',
+    'Monuments': 'Monumentos',
+    'Art Galleries': 'Galerías de Arte',
+    'Sports': 'Deportes',
+    'Water Sports': 'Deportes Acuáticos',
+    'Hiking': 'Senderismo',
+    'Cycling': 'Ciclismo',
+    'Golf': 'Golf',
+    'Tennis': 'Tenis',
+    'Diving': 'Buceo',
+    'Fitness': 'Fitness',
+    'Shops': 'Tiendas',
+    'Markets': 'Mercados',
+    'Supermarkets': 'Supermercados',
+    'Fashion': 'Moda',
+    'Souvenirs': 'Souvenirs',
+    'Entertainment': 'Entretenimiento',
+    'Amusement': 'Diversión',
+    'Cinema': 'Cine',
+    'Wellness': 'Bienestar',
+    'Spa': 'Spa',
   },
   sv: {
+    // Top-level
     'Beaches & Nature': 'Stränder & Natur',
     'Food & Drinks': 'Mat & Dryck',
     'Culture & History': 'Kultur & Historia',
@@ -92,8 +209,45 @@ const categoryTranslations: Record<string, Record<string, string>> = {
     'Shopping': 'Shopping',
     'Recreation': 'Rekreation',
     'Nightlife': 'Nattliv',
+    // Subcategories
+    'Beaches': 'Stränder',
+    'Nature & Parks': 'Natur & Parker',
+    'Viewpoints': 'Utsiktspunkter',
+    'Gardens': 'Trädgårdar',
+    'Restaurants': 'Restauranger',
+    'Cafes': 'Kaféer',
+    'Bars': 'Barer',
+    'Bakeries': 'Bagerier',
+    'Ice Cream': 'Glassställen',
+    'Fast Food': 'Snabbmat',
+    'Fine Dining': 'Fin Dining',
+    'Tapas': 'Tapas',
+    'Museums': 'Museer',
+    'Historical Sites': 'Historiska Platser',
+    'Churches': 'Kyrkor',
+    'Monuments': 'Monument',
+    'Art Galleries': 'Konstgallerier',
+    'Sports': 'Sport',
+    'Water Sports': 'Vattensport',
+    'Hiking': 'Vandring',
+    'Cycling': 'Cykling',
+    'Golf': 'Golf',
+    'Tennis': 'Tennis',
+    'Diving': 'Dykning',
+    'Fitness': 'Fitness',
+    'Shops': 'Butiker',
+    'Markets': 'Marknader',
+    'Supermarkets': 'Stormarknader',
+    'Fashion': 'Mode',
+    'Souvenirs': 'Souvenirer',
+    'Entertainment': 'Underhållning',
+    'Amusement': 'Nöje',
+    'Cinema': 'Bio',
+    'Wellness': 'Wellness',
+    'Spa': 'Spa',
   },
   pl: {
+    // Top-level
     'Beaches & Nature': 'Plaże i Natura',
     'Food & Drinks': 'Jedzenie i Napoje',
     'Culture & History': 'Kultura i Historia',
@@ -101,6 +255,42 @@ const categoryTranslations: Record<string, Record<string, string>> = {
     'Shopping': 'Zakupy',
     'Recreation': 'Rekreacja',
     'Nightlife': 'Życie Nocne',
+    // Subcategories
+    'Beaches': 'Plaże',
+    'Nature & Parks': 'Natura i Parki',
+    'Viewpoints': 'Punkty Widokowe',
+    'Gardens': 'Ogrody',
+    'Restaurants': 'Restauracje',
+    'Cafes': 'Kawiarnie',
+    'Bars': 'Bary',
+    'Bakeries': 'Piekarnie',
+    'Ice Cream': 'Lodziarnie',
+    'Fast Food': 'Fast Food',
+    'Fine Dining': 'Elegancka Kuchnia',
+    'Tapas': 'Tapas',
+    'Museums': 'Muzea',
+    'Historical Sites': 'Miejsca Historyczne',
+    'Churches': 'Kościoły',
+    'Monuments': 'Pomniki',
+    'Art Galleries': 'Galerie Sztuki',
+    'Sports': 'Sport',
+    'Water Sports': 'Sporty Wodne',
+    'Hiking': 'Wędrówki',
+    'Cycling': 'Jazda na Rowerze',
+    'Golf': 'Golf',
+    'Tennis': 'Tenis',
+    'Diving': 'Nurkowanie',
+    'Fitness': 'Fitness',
+    'Shops': 'Sklepy',
+    'Markets': 'Targi',
+    'Supermarkets': 'Supermarkety',
+    'Fashion': 'Moda',
+    'Souvenirs': 'Pamiątki',
+    'Entertainment': 'Rozrywka',
+    'Amusement': 'Zabawa',
+    'Cinema': 'Kino',
+    'Wellness': 'Wellness',
+    'Spa': 'Spa',
   },
 };
 
@@ -237,7 +427,7 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
   const currentLevel = selectedSubcategory ? 3 : selectedCategory ? 2 : 1;
   const breadcrumb = [
     selectedCategory ? translateCategory(selectedCategory.name) : null,
-    selectedSubcategory?.name
+    selectedSubcategory ? translateCategory(selectedSubcategory.name) : null
   ].filter(Boolean).join(' > ');
 
   if (loading) {
@@ -304,7 +494,7 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
                 className="category-item"
                 onClick={() => handleSubcategoryClick(sub)}
               >
-                <span className="category-name">{sub.name}</span>
+                <span className="category-name">{translateCategory(sub.name)}</span>
                 <span className="category-count">{sub.count} {t.places}</span>
                 {sub.types.length > 0 && <span className="category-arrow">›</span>}
               </button>
@@ -319,7 +509,7 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
               className="category-item all-item"
               onClick={() => onSelect(selectedCategory!.name, selectedSubcategory.name)}
             >
-              <span className="category-name">{t.allIn} {selectedSubcategory.name}</span>
+              <span className="category-name">{t.allIn} {translateCategory(selectedSubcategory.name)}</span>
               <span className="category-count">{selectedSubcategory.count} {t.places}</span>
             </button>
             {selectedSubcategory.types.map(type => (
@@ -328,7 +518,7 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
                 className="category-item"
                 onClick={() => handleTypeClick(type.name)}
               >
-                <span className="category-name">{type.name}</span>
+                <span className="category-name">{translateCategory(type.name)}</span>
                 <span className="category-count">{type.count} {t.places}</span>
               </button>
             ))}

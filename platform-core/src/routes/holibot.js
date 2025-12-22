@@ -246,8 +246,21 @@ router.post('/itinerary', async (req, res) => {
 
     const slots = timeSlots[duration] || timeSlots['full-day'];
     const itinerary = [];
-    let poiIndex = 0;
     let eventIndex = 0;
+
+    // Shuffle POIs and restaurants for variety (Fisher-Yates shuffle)
+    const shuffleArray = (arr) => {
+      const shuffled = [...arr];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+
+    const shuffledPois = shuffleArray(searchResults.results);
+    const shuffledRestaurants = shuffleArray(restaurants);
+    let poiIndex = 0;
     let restaurantIndex = 0;
 
     for (const slot of slots) {
@@ -255,11 +268,11 @@ router.post('/itinerary', async (req, res) => {
 
       if (slot.type === 'lunch' || slot.type === 'dinner') {
         // Add meal suggestion
-        if (includeMeals && restaurants[restaurantIndex]) {
+        if (includeMeals && shuffledRestaurants[restaurantIndex]) {
           item = {
             time: slot.time,
             type: slot.type,
-            poi: restaurants[restaurantIndex],
+            poi: shuffledRestaurants[restaurantIndex],
             label: slot.type === 'lunch' ? 'Lunch' : 'Diner'
           };
           restaurantIndex++;
@@ -280,11 +293,11 @@ router.post('/itinerary', async (req, res) => {
           }
         }
 
-        if (!item && searchResults.results[poiIndex]) {
+        if (!item && shuffledPois[poiIndex]) {
           item = {
             time: slot.time,
             type: 'activity',
-            poi: searchResults.results[poiIndex]
+            poi: shuffledPois[poiIndex]
           };
           poiIndex++;
         }
@@ -295,15 +308,22 @@ router.post('/itinerary', async (req, res) => {
       }
     }
 
-    // Step 5: Generate AI description
+    // Step 5: Generate AI description with language-specific prompts
     const systemPrompt = embeddingService.buildSystemPrompt(language);
+
+    // Multi-language itinerary intro prompts - emphasize grammar quality
+    const itineraryPrompts = {
+      nl: `Schrijf een enthousiaste, grammaticaal correcte introductie (max 60 woorden, in het Nederlands) voor een ${duration === 'full-day' ? 'vol' : duration === 'morning' ? 'ochtend' : duration === 'afternoon' ? 'middag' : 'avond'} dagprogramma in Calpe. ${interests.length ? 'Interesses: ' + interests.join(', ') + '. ' : ''}${events.length ? 'Er zijn ' + events.length + ' evenementen vandaag. ' : ''}Eindig met een uitnodigende zin. BELANGRIJK: Gebruik correcte Nederlandse spelling en grammatica. Gebruik GEEN sterretjes of emoji's.`,
+      en: `Write an enthusiastic, grammatically correct introduction (max 60 words, in English) for a ${duration} day program in Calpe. ${interests.length ? 'Interests: ' + interests.join(', ') + '. ' : ''}${events.length ? 'There are ' + events.length + ' events today. ' : ''}End with an inviting sentence. IMPORTANT: Use correct English spelling and grammar. Do NOT use asterisks or emojis.`,
+      de: `Schreibe eine begeisterte, grammatikalisch korrekte Einleitung (max 60 Wörter, auf Deutsch) für ein ${duration === 'full-day' ? 'Ganztags' : duration === 'morning' ? 'Vormittags' : duration === 'afternoon' ? 'Nachmittags' : 'Abend'}-Programm in Calpe. ${interests.length ? 'Interessen: ' + interests.join(', ') + '. ' : ''}${events.length ? 'Es gibt ' + events.length + ' Veranstaltungen heute. ' : ''}Ende mit einem einladenden Satz. WICHTIG: Verwende korrekte deutsche Rechtschreibung und Grammatik. Verwende KEINE Sternchen oder Emojis.`,
+      es: `Escribe una introducción entusiasta y gramaticalmente correcta (máx 60 palabras, en español) para un programa de ${duration === 'full-day' ? 'día completo' : duration === 'morning' ? 'mañana' : duration === 'afternoon' ? 'tarde' : 'noche'} en Calpe. ${interests.length ? 'Intereses: ' + interests.join(', ') + '. ' : ''}${events.length ? 'Hay ' + events.length + ' eventos hoy. ' : ''}Termina con una frase acogedora. IMPORTANTE: Usa ortografía y gramática española correctas. NO uses asteriscos ni emojis.`,
+      sv: `Skriv en entusiastisk, grammatiskt korrekt introduktion (max 60 ord, på svenska) för ett ${duration === 'full-day' ? 'heldags' : duration === 'morning' ? 'förmiddags' : duration === 'afternoon' ? 'eftermiddags' : 'kvälls'}program i Calpe. ${interests.length ? 'Intressen: ' + interests.join(', ') + '. ' : ''}${events.length ? 'Det finns ' + events.length + ' evenemang idag. ' : ''}Avsluta med en inbjudande mening. VIKTIGT: Använd korrekt svensk stavning och grammatik. Använd INTE asterisker eller emojis.`,
+      pl: `Napisz entuzjastyczne, gramatycznie poprawne wprowadzenie (maks 60 słów, po polsku) do programu ${duration === 'full-day' ? 'całodniowego' : duration === 'morning' ? 'porannego' : duration === 'afternoon' ? 'popołudniowego' : 'wieczornego'} w Calpe. ${interests.length ? 'Zainteresowania: ' + interests.join(', ') + '. ' : ''}${events.length ? 'Dziś jest ' + events.length + ' wydarzeń. ' : ''}Zakończ zachęcającym zdaniem. WAŻNE: Użyj poprawnej polskiej pisowni i gramatyki. NIE używaj gwiazdek ani emoji.`
+    };
+
     const description = await embeddingService.generateChatCompletion([
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: 'Maak een enthousiaste introductie (max 60 woorden) voor een ' + duration + ' dagprogramma in Calpe. ' +
-        (interests.length ? 'Interesses: ' + interests.join(', ') + '. ' : '') +
-        (events.length ? 'Er zijn ' + events.length + ' evenementen vandaag. ' : '') +
-        'Eindig met een uitnodigende zin.'
-      }
+      { role: 'user', content: itineraryPrompts[language] || itineraryPrompts.nl }
     ]);
 
     res.json({
@@ -514,31 +534,31 @@ router.get('/daily-tip', async (req, res) => {
     const itemDesc = selectedItem.description || 'Een geweldige plek in Calpe';
     const ratingText = selectedItem.rating ? 'Beoordeling: ' + selectedItem.rating + ' sterren. ' : '';
 
-    // Multi-language tip prompts
+    // Multi-language tip prompts - NO emojis or asterisks, clean text for TTS
     const tipPrompts = {
       nl: {
-        event: `Genereer een enthousiaste "Tip van de Dag" (max 80 woorden, in het Nederlands) voor het evenement "${itemName}". Het vindt plaats op ${selectedItem.event_date}. Begin met een ster emoji. Beschrijving: ${itemDesc}`,
-        poi: `Genereer een enthousiaste "Tip van de Dag" (max 80 woorden, in het Nederlands) voor ${itemName}. Begin met een ster emoji. ${ratingText}Categorie: ${selectedItem.category}. Beschrijving: ${itemDesc}`
+        event: `Schrijf een enthousiaste aanbeveling (max 80 woorden, in het Nederlands) voor het evenement "${itemName}". Het vindt plaats op ${selectedItem.event_date}. Beschrijving: ${itemDesc}. BELANGRIJK: Gebruik GEEN sterretjes, asterisken of emoji's. Schrijf vloeiende, correcte zinnen geschikt voor voorlezen.`,
+        poi: `Schrijf een enthousiaste aanbeveling (max 80 woorden, in het Nederlands) voor ${itemName}. ${ratingText}Categorie: ${selectedItem.category}. Beschrijving: ${itemDesc}. BELANGRIJK: Gebruik GEEN sterretjes, asterisken of emoji's. Schrijf vloeiende, correcte zinnen geschikt voor voorlezen.`
       },
       en: {
-        event: `Generate an enthusiastic "Tip of the Day" (max 80 words, in English) for the event "${itemName}". It takes place on ${selectedItem.event_date}. Start with a star emoji. Description: ${itemDesc}`,
-        poi: `Generate an enthusiastic "Tip of the Day" (max 80 words, in English) for ${itemName}. Start with a star emoji. ${ratingText}Category: ${selectedItem.category}. Description: ${itemDesc}`
+        event: `Write an enthusiastic recommendation (max 80 words, in English) for the event "${itemName}". It takes place on ${selectedItem.event_date}. Description: ${itemDesc}. IMPORTANT: Do NOT use asterisks or emojis. Write fluent, correct sentences suitable for text-to-speech.`,
+        poi: `Write an enthusiastic recommendation (max 80 words, in English) for ${itemName}. ${ratingText}Category: ${selectedItem.category}. Description: ${itemDesc}. IMPORTANT: Do NOT use asterisks or emojis. Write fluent, correct sentences suitable for text-to-speech.`
       },
       de: {
-        event: `Erstelle einen begeisterten "Tipp des Tages" (max 80 Wörter, auf Deutsch) für das Event "${itemName}". Es findet am ${selectedItem.event_date} statt. Beginne mit einem Stern-Emoji. Beschreibung: ${itemDesc}`,
-        poi: `Erstelle einen begeisterten "Tipp des Tages" (max 80 Wörter, auf Deutsch) für ${itemName}. Beginne mit einem Stern-Emoji. ${ratingText}Kategorie: ${selectedItem.category}. Beschreibung: ${itemDesc}`
+        event: `Schreibe eine begeisterte Empfehlung (max 80 Wörter, auf Deutsch) für das Event "${itemName}". Es findet am ${selectedItem.event_date} statt. Beschreibung: ${itemDesc}. WICHTIG: Verwende KEINE Sternchen oder Emojis. Schreibe flüssige, korrekte Sätze für Sprachausgabe.`,
+        poi: `Schreibe eine begeisterte Empfehlung (max 80 Wörter, auf Deutsch) für ${itemName}. ${ratingText}Kategorie: ${selectedItem.category}. Beschreibung: ${itemDesc}. WICHTIG: Verwende KEINE Sternchen oder Emojis. Schreibe flüssige, korrekte Sätze für Sprachausgabe.`
       },
       es: {
-        event: `Genera un entusiasta "Consejo del Día" (máx 80 palabras, en español) para el evento "${itemName}". Se celebra el ${selectedItem.event_date}. Empieza con un emoji de estrella. Descripción: ${itemDesc}`,
-        poi: `Genera un entusiasta "Consejo del Día" (máx 80 palabras, en español) para ${itemName}. Empieza con un emoji de estrella. ${ratingText}Categoría: ${selectedItem.category}. Descripción: ${itemDesc}`
+        event: `Escribe una recomendación entusiasta (máx 80 palabras, en español) para el evento "${itemName}". Se celebra el ${selectedItem.event_date}. Descripción: ${itemDesc}. IMPORTANTE: NO uses asteriscos ni emojis. Escribe oraciones fluidas y correctas adecuadas para lectura por voz.`,
+        poi: `Escribe una recomendación entusiasta (máx 80 palabras, en español) para ${itemName}. ${ratingText}Categoría: ${selectedItem.category}. Descripción: ${itemDesc}. IMPORTANTE: NO uses asteriscos ni emojis. Escribe oraciones fluidas y correctas adecuadas para lectura por voz.`
       },
       sv: {
-        event: `Skapa ett entusiastiskt "Dagens Tips" (max 80 ord, på svenska) för evenemanget "${itemName}". Det äger rum den ${selectedItem.event_date}. Börja med en stjärn-emoji. Beskrivning: ${itemDesc}`,
-        poi: `Skapa ett entusiastiskt "Dagens Tips" (max 80 ord, på svenska) för ${itemName}. Börja med en stjärn-emoji. ${ratingText}Kategori: ${selectedItem.category}. Beskrivning: ${itemDesc}`
+        event: `Skriv en entusiastisk rekommendation (max 80 ord, på svenska) för evenemanget "${itemName}". Det äger rum den ${selectedItem.event_date}. Beskrivning: ${itemDesc}. VIKTIGT: Använd INTE asterisker eller emojis. Skriv flytande, korrekta meningar lämpliga för talsyntes.`,
+        poi: `Skriv en entusiastisk rekommendation (max 80 ord, på svenska) för ${itemName}. ${ratingText}Kategori: ${selectedItem.category}. Beskrivning: ${itemDesc}. VIKTIGT: Använd INTE asterisker eller emojis. Skriv flytande, korrekta meningar lämpliga för talsyntes.`
       },
       pl: {
-        event: `Wygeneruj entuzjastyczną "Poradę Dnia" (maks 80 słów, po polsku) dla wydarzenia "${itemName}". Odbywa się ${selectedItem.event_date}. Zacznij od emoji gwiazdki. Opis: ${itemDesc}`,
-        poi: `Wygeneruj entuzjastyczną "Poradę Dnia" (maks 80 słów, po polsku) dla ${itemName}. Zacznij od emoji gwiazdki. ${ratingText}Kategoria: ${selectedItem.category}. Opis: ${itemDesc}`
+        event: `Napisz entuzjastyczną rekomendację (maks 80 słów, po polsku) dla wydarzenia "${itemName}". Odbywa się ${selectedItem.event_date}. Opis: ${itemDesc}. WAŻNE: NIE używaj gwiazdek ani emoji. Pisz płynne, poprawne zdania odpowiednie do odczytu głosowego.`,
+        poi: `Napisz entuzjastyczną rekomendację (maks 80 słów, po polsku) dla ${itemName}. ${ratingText}Kategoria: ${selectedItem.category}. Opis: ${itemDesc}. WAŻNE: NIE używaj gwiazdek ani emoji. Pisz płynne, poprawne zdania odpowiednie do odczytu głosowego.`
       }
     };
     const langPrompts = tipPrompts[language] || tipPrompts.nl;
