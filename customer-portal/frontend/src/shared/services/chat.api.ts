@@ -287,8 +287,9 @@ class ChatAPI {
    * - Rating >= 4.4 stars
    * - Includes Events from agenda
    * - Excludes previously shown tips (session-based)
+   * @param additionalExcludes - Additional IDs to exclude (for shuffle functionality)
    */
-  async getDailyTip(): Promise<any> {
+  async getDailyTip(additionalExcludes: string[] = []): Promise<any> {
     try {
       const params = new URLSearchParams({ language: this.language });
 
@@ -297,13 +298,17 @@ class ChatAPI {
         params.append('interests', this.userPreferences.interests.join(','));
       }
 
-      // Add excluded tip IDs (already shown this session)
-      const excludeIds = getExcludeIdsParam();
-      if (excludeIds) {
-        params.append('excludeIds', excludeIds);
+      // Add excluded tip IDs (already shown this session + additional excludes)
+      const sessionExcludes = getExcludeIdsParam();
+      const allExcludes = sessionExcludes
+        ? [...sessionExcludes.split(','), ...additionalExcludes].filter(Boolean).join(',')
+        : additionalExcludes.filter(Boolean).join(',');
+
+      if (allExcludes) {
+        params.append('excludeIds', allExcludes);
       }
 
-      console.log('[ChatAPI] Getting daily tip with excludeIds:', excludeIds);
+      console.log('[ChatAPI] Getting daily tip with excludeIds:', allExcludes);
 
       const response = await fetch(`${this.baseUrl}/holibot/daily-tip?${params}`, {
         method: 'GET',

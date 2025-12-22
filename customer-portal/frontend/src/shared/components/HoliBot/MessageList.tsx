@@ -67,9 +67,14 @@ export function MessageList() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, showItineraryBuilder]);
 
+  // Store last itinerary options for shuffle functionality
+  const [lastItineraryOptions, setLastItineraryOptions] = useState<ItineraryOptions | null>(null);
+  const [lastDailyTipExcludes, setLastDailyTipExcludes] = useState<string[]>([]);
+
   const handleItinerarySubmit = async (options: ItineraryOptions) => {
     setShowItineraryBuilder(false);
     setLoadingPOIs(true);
+    setLastItineraryOptions(options);
     addAssistantMessage(t.holibotChat.responses.itineraryIntro);
 
     try {
@@ -80,21 +85,58 @@ export function MessageList() {
 
       if (response.success && response.data) {
         setItinerary(response.data);
-        const itineraryText = response.data.itinerary
-          .map((item: any) => {
-            const typeIcon = item.type === 'event' ? '🎭' : item.type === 'lunch' ? '🍽️' : item.type === 'dinner' ? '🍷' : '📍';
-            const label = item.label ? ' (' + item.label + ')' : '';
-            return '**' + item.time + '** ' + typeIcon + ' ' + (item.poi?.name || 'TBD') + label;
-          }).join('\n');
-
-        const eventsNote = response.data.hasEvents ? '\n\n🎭 *' + response.data.eventsIncluded + ' evenement(en) toegevoegd*' : '';
-        addAssistantMessage(response.data.description + '\n\n' + itineraryText + eventsNote, response.data.itinerary.map((item: any) => item.poi).filter(Boolean));
+        // Only show the intro description - the visual "Jouw Programma" card will show separately
+        addAssistantMessage(response.data.description, response.data.itinerary.map((item: any) => item.poi).filter(Boolean));
       } else {
         addAssistantMessage(t.holibotChat.responses.error);
       }
     } catch (error) {
       console.error('Itinerary error:', error);
       addAssistantMessage(t.holibotChat.responses.error);
+    } finally {
+      setLoadingPOIs(false);
+    }
+  };
+
+  // Shuffle itinerary - regenerate with same options
+  const handleShuffleItinerary = async () => {
+    if (!lastItineraryOptions) return;
+    setLoadingPOIs(true);
+    try {
+      const response = await chatApi.buildItinerary({
+        duration: lastItineraryOptions.duration,
+        interests: lastItineraryOptions.interests,
+      });
+      if (response.success && response.data) {
+        setItinerary(response.data);
+        const shuffleLabels = { nl: 'Nieuw programma!', en: 'New program!', de: 'Neues Programm!', es: 'Nuevo programa!', sv: 'Nytt program!', pl: 'Nowy program!' };
+        addAssistantMessage(shuffleLabels[language as keyof typeof shuffleLabels] || shuffleLabels.nl);
+      }
+    } catch (error) {
+      console.error('Shuffle error:', error);
+    } finally {
+      setLoadingPOIs(false);
+    }
+  };
+
+  // Shuffle daily tip - get new tip excluding previous ones
+  const handleShuffleDailyTip = async () => {
+    setLoadingPOIs(true);
+    try {
+      // Add current tip to exclusion list
+      const newExcludes = dailyTipPOI?.id ? [...lastDailyTipExcludes, String(dailyTipPOI.id)] : lastDailyTipExcludes;
+      setLastDailyTipExcludes(newExcludes);
+
+      const response = await chatApi.getDailyTip(newExcludes);
+      if (response.success && response.data) {
+        const { poi, event, item, tipDescription } = response.data;
+        const displayItem = poi || event || item;
+        const shuffleLabels = { nl: 'Nieuwe tip!', en: 'New tip!', de: 'Neuer Tipp!', es: 'Nuevo consejo!', sv: 'Nytt tips!', pl: 'Nowa porada!' };
+        addAssistantMessage((shuffleLabels[language as keyof typeof shuffleLabels] || shuffleLabels.nl) + ' ' + tipDescription, displayItem ? [displayItem] : []);
+        if (displayItem) setDailyTipPOI(displayItem);
+      }
+    } catch (error) {
+      console.error('Shuffle tip error:', error);
     } finally {
       setLoadingPOIs(false);
     }
@@ -209,6 +251,14 @@ export function MessageList() {
       {dailyTipPOI && (
         <div className="holibot-daily-tip-poi">
           <POICard key={dailyTipPOI.id} poi={dailyTipPOI} onClick={() => setSelectedPOIId(dailyTipPOI.id)} />
+          <button
+            className="holibot-shuffle-button"
+            onClick={handleShuffleDailyTip}
+            disabled={loadingPOIs}
+            aria-label={language === 'nl' ? 'Andere tip' : language === 'de' ? 'Anderer Tipp' : language === 'es' ? 'Otro consejo' : language === 'sv' ? 'Annat tips' : language === 'pl' ? 'Inna porada' : 'Another tip'}
+          >
+            🔀 {language === 'nl' ? 'Andere tip' : language === 'de' ? 'Anderer Tipp' : language === 'es' ? 'Otro consejo' : language === 'sv' ? 'Annat tips' : language === 'pl' ? 'Inna porada' : 'Another tip'}
+          </button>
         </div>
       )}
 
@@ -217,6 +267,14 @@ export function MessageList() {
           <div className="holibot-itinerary-header">
             <span className="holibot-itinerary-header-icon">📋</span>
             <h4>{t.holibotChat.responses.yourItinerary || 'Jouw Programma'}</h4>
+            <button
+              className="holibot-shuffle-button holibot-shuffle-button-small"
+              onClick={handleShuffleItinerary}
+              disabled={loadingPOIs}
+              aria-label={language === 'nl' ? 'Ander programma' : language === 'de' ? 'Anderes Programm' : language === 'es' ? 'Otro programa' : language === 'sv' ? 'Annat program' : language === 'pl' ? 'Inny program' : 'Another program'}
+            >
+              🔀
+            </button>
           </div>
           <div className="holibot-itinerary-timeline">
             {itinerary.itinerary.map((item: any, index: number) => {

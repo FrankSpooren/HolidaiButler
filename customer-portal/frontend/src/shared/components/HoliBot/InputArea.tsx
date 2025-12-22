@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useHoliBot } from '../../contexts/HoliBotContext';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { translations } from '../../../i18n/translations';
 import { VoiceButton } from './VoiceButton';
 import './InputArea.css';
 
@@ -12,13 +14,47 @@ import './InputArea.css';
  * - Send button (enabled when text present)
  * - Enter to send, Shift+Enter for new line
  * - Accessible (WCAG 2.1 AA)
+ * - Multi-language placeholder support ✅
  *
  * Phase 5: Voice Input ✅
  */
 
+// Fallback placeholder translations for voice input context
+const placeholderTranslations = {
+  nl: 'Typ je vraag of gebruik spraak...',
+  en: 'Type your question or use voice...',
+  de: 'Tippe deine Frage oder nutze Sprache...',
+  es: 'Escribe tu pregunta o usa voz...',
+  sv: 'Skriv din fråga eller använd röst...',
+  pl: 'Wpisz pytanie lub użyj głosu...'
+};
+
+const ariaLabelTranslations = {
+  nl: 'Typ je vraag of gebruik spraak',
+  en: 'Type your question or use voice',
+  de: 'Tippe deine Frage oder nutze Sprache',
+  es: 'Escribe tu pregunta o usa voz',
+  sv: 'Skriv din fråga eller använd röst',
+  pl: 'Wpisz pytanie lub użyj głosu'
+};
+
+const sendButtonAriaLabels = {
+  nl: 'Verstuur bericht',
+  en: 'Send message',
+  de: 'Nachricht senden',
+  es: 'Enviar mensaje',
+  sv: 'Skicka meddelande',
+  pl: 'Wyślij wiadomość'
+};
+
 export function InputArea() {
   const [message, setMessage] = useState('');
   const { language, sendMessage: sendToBackend, isLoading } = useHoliBot();
+  const { language: appLanguage } = useLanguage();
+
+  // Use HoliBot language or fall back to app language
+  const currentLang = language || appLanguage || 'nl';
+  const t = translations[currentLang as keyof typeof translations] || translations.nl;
 
   // Map language codes to Web Speech API format
   const speechLanguage = language === 'nl' ? 'nl-NL' :
@@ -49,6 +85,11 @@ export function InputArea() {
     setMessage(transcript);
   };
 
+  // Get translated strings
+  const placeholder = placeholderTranslations[currentLang as keyof typeof placeholderTranslations] || placeholderTranslations.nl;
+  const ariaLabel = ariaLabelTranslations[currentLang as keyof typeof ariaLabelTranslations] || ariaLabelTranslations.nl;
+  const sendAriaLabel = sendButtonAriaLabels[currentLang as keyof typeof sendButtonAriaLabels] || sendButtonAriaLabels.nl;
+
   return (
     <form className="holibot-input-area" onSubmit={handleSubmit}>
       <textarea
@@ -56,8 +97,8 @@ export function InputArea() {
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Typ je vraag of gebruik spraak..."
-        aria-label="Typ je vraag of gebruik spraak"
+        placeholder={placeholder}
+        aria-label={ariaLabel}
         rows={1}
         maxLength={500}
       />
@@ -72,7 +113,7 @@ export function InputArea() {
         type="submit"
         className="holibot-send-button"
         disabled={!message.trim() || isLoading}
-        aria-label="Verstuur bericht"
+        aria-label={sendAriaLabel}
       >
         <svg
           width="20"

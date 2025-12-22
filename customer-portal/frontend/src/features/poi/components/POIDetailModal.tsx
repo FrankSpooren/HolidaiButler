@@ -34,7 +34,7 @@ interface POIDetailModalProps {
 }
 
 export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -44,8 +44,8 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
 
 
   const { data: poi, isLoading, error } = useQuery({
-    queryKey: ['poi', poiId],
-    queryFn: () => poiService.getPOIById(poiId),
+    queryKey: ['poi', poiId, language],
+    queryFn: () => poiService.getPOIById(poiId, language),
     enabled: isOpen && !!poiId,
   });
 
