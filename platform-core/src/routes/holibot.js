@@ -577,6 +577,7 @@ router.post('/directions', async (req, res) => {
  * Quality Requirements:
  * - POI rating minimum 4.4 stars (or no rating for new POIs)
  * - Include Events from agenda (upcoming 7 days)
+ * - Filter POIs and Events within 5km radius of Calpe center
  * - Rotate daily between user interests
  * - Accept excludeIds to avoid repeating tips within session
  */
@@ -593,6 +594,11 @@ router.get('/daily-tip', async (req, res) => {
       'Culture & History', 'Recreation', 'Active'
     ];
 
+    // Calpe center coordinates (for 5km radius filter)
+    const CALPE_CENTER_LAT = 38.6447;
+    const CALPE_CENTER_LNG = 0.0445;
+    const MAX_DISTANCE_KM = 5;
+
     // User interests or rotate through allowed categories
     const userInterests = interests ? interests.split(',').filter(c => allowedCategories.includes(c)) : allowedCategories;
 
@@ -604,28 +610,59 @@ router.get('/daily-tip', async (req, res) => {
 
     logger.info('Daily tip request', { language, selectedInterest, excludeCount: excludedIdList.length });
 
-    // Step 1: Search POIs with quality filter (rating >= 4.4)
-    const poiSearchResults = await ragService.search(selectedInterest + ' Calpe', { limit: 20 });
+    // Step 1: Get POIs from database with distance filter (5km radius)
+    let qualityPois = [];
+    try {
+      const { mysqlSequelize } = await import('../config/database.js');
+      const { QueryTypes } = (await import('sequelize')).default;
 
-    // Filter: rating >= 4.4, tourist-friendly categories (flexible matching), and not excluded
-    const qualityPois = poiSearchResults.results.filter(poi => {
-      const rating = parseFloat(poi.rating);
-      const hasGoodRating = !rating || isNaN(rating) || rating >= 4.4;
+      // Query POIs within 5km radius using Haversine formula
+      const poiResults = await mysqlSequelize.query(`
+        SELECT id, name, description, category, subcategory, poi_type,
+               address, latitude, longitude, rating, review_count,
+               thumbnail_url, price_level, opening_hours,
+               (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance_km
+        FROM POI
+        WHERE is_active = 1
+          AND latitude IS NOT NULL
+          AND longitude IS NOT NULL
+          AND (rating IS NULL OR rating >= 4.4)
+        HAVING distance_km <= ?
+        ORDER BY rating DESC, review_count DESC
+        LIMIT 50
+      `, {
+        replacements: [CALPE_CENTER_LAT, CALPE_CENTER_LNG, CALPE_CENTER_LAT, MAX_DISTANCE_KM],
+        type: QueryTypes.SELECT
+      });
 
-      // Flexible category matching - check if POI category contains or is contained by allowed categories
-      const poiCategory = (poi.category || '').toLowerCase();
-      const isAllowedCategory = allowedCategories.some(cat => {
-        const catLower = cat.toLowerCase();
-        return poiCategory.includes(catLower.split(' ')[0]) || // Match first word (beach, food, shopping, etc.)
-               catLower.includes(poiCategory.split(' ')[0]) ||
-               poiCategory === catLower;
-      }) || poiCategory.length > 0; // Allow any POI with a category as fallback
+      // Filter by allowed categories and exclusions
+      qualityPois = poiResults.filter(poi => {
+        const poiCategory = (poi.category || '').toLowerCase();
+        const isAllowedCategory = allowedCategories.some(cat => {
+          const catLower = cat.toLowerCase();
+          return poiCategory.includes(catLower.split(' ')[0]) ||
+                 catLower.includes(poiCategory.split(' ')[0]) ||
+                 poiCategory === catLower;
+        }) || poiCategory.length > 0;
 
-      const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
-      return hasGoodRating && isAllowedCategory && notExcluded;
-    });
+        const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
+        return isAllowedCategory && notExcluded;
+      });
 
-    // Step 2: Get upcoming events (next 7 days)
+      logger.info('Daily tip POIs from DB:', { count: qualityPois.length, maxDistance: MAX_DISTANCE_KM });
+    } catch (poiError) {
+      logger.warn('Could not fetch POIs from database, falling back to search:', poiError.message);
+      // Fallback to RAG search if database query fails
+      const poiSearchResults = await ragService.search(selectedInterest + ' Calpe', { limit: 20 });
+      qualityPois = poiSearchResults.results.filter(poi => {
+        const rating = parseFloat(poi.rating);
+        const hasGoodRating = !rating || isNaN(rating) || rating >= 4.4;
+        const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
+        return hasGoodRating && notExcluded;
+      });
+    }
+
+    // Step 2: Get upcoming events (next 7 days) within 5km radius
     let events = [];
     try {
       const { mysqlSequelize } = await import('../config/database.js');
@@ -638,21 +675,20 @@ router.get('/daily-tip', async (req, res) => {
         "FROM agenda a " +
         "INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash " +
         "WHERE d.event_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) " +
-        "AND (a.calpe_distance IS NULL OR a.calpe_distance <= 25) " +
+        "AND (a.calpe_distance IS NULL OR a.calpe_distance <= ?) " +
         "GROUP BY a.id ORDER BY d.event_date ASC LIMIT 10",
-        { type: QueryTypes.SELECT }
+        { replacements: [MAX_DISTANCE_KM], type: QueryTypes.SELECT }
       );
 
       events = eventResults.filter(event =>
         !excludedIdList.includes('event-' + event.id) && !excludedIdList.includes(String(event.id))
       ).map(event => ({
         ...event,
-        // Keep original numeric ID for POICard compatibility
         id: event.id,
-        eventId: event.id, // Explicit event ID
+        eventId: event.id,
         name: event.title,
         type: 'event',
-        isEvent: true, // Flag to identify as event
+        isEvent: true,
         category: selectedInterest,
         rating: null
       }));
@@ -661,37 +697,34 @@ router.get('/daily-tip', async (req, res) => {
     }
 
     // Combine quality POIs and Events
-    // Filter: only items with valid ID for detail card linking
     const poisWithType = qualityPois
-      .filter(poi => poi.id) // Must have valid ID for POI detail card
+      .filter(poi => poi.id)
       .map(poi => ({ ...poi, type: 'poi' }));
 
-    // Events must also have valid ID
     const validEvents = events.filter(event => event.id);
 
     logger.info('Daily tip candidates:', {
       qualityPois: poisWithType.length,
       events: validEvents.length,
-      selectedInterest
+      selectedInterest,
+      maxDistanceKm: MAX_DISTANCE_KM
     });
 
-    // Balanced selection: alternate between POIs and Events
-    // Use time-based selection to vary between POI and Event
-    const hourOfDay = new Date().getHours();
-    const preferPoi = hourOfDay % 2 === 0; // Even hours prefer POIs, odd hours prefer Events
-
+    // Selection strategy: Always prefer POIs (60%), Events (40%)
+    // This ensures POIs are shown more consistently
     let selectedItem = null;
+    const random = Math.random();
 
-    if (preferPoi && poisWithType.length > 0) {
-      // Select random POI
+    if (random < 0.6 && poisWithType.length > 0) {
+      // 60% chance: Select random POI
       const randomIndex = Math.floor(Math.random() * poisWithType.length);
       selectedItem = poisWithType[randomIndex];
     } else if (validEvents.length > 0) {
-      // Select random Event
+      // 40% chance or fallback: Select random Event
       const randomIndex = Math.floor(Math.random() * validEvents.length);
       selectedItem = validEvents[randomIndex];
     } else if (poisWithType.length > 0) {
-      // Fallback to POI if no events
+      // Final fallback to POI if no events
       const randomIndex = Math.floor(Math.random() * poisWithType.length);
       selectedItem = poisWithType[randomIndex];
     }
@@ -902,11 +935,12 @@ router.get('/categories/hierarchy', async (req, res) => {
 /**
  * GET /api/v1/holibot/categories/:category/pois
  * Get POIs for a specific category with optional filters
+ * Supports pagination via limit and offset
  */
 router.get('/categories/:category/pois', async (req, res) => {
   try {
     const { category } = req.params;
-    const { subcategory, type, limit = 20 } = req.query;
+    const { subcategory, type, limit = 20, offset = 0 } = req.query;
     const { mysqlSequelize } = await import('../config/database.js');
     const { QueryTypes } = (await import('sequelize')).default;
 
@@ -928,10 +962,10 @@ router.get('/categories/:category/pois', async (req, res) => {
              thumbnail_url, price_level, opening_hours
       FROM POI ${whereClause}
       ORDER BY rating DESC, review_count DESC
-      LIMIT ?
-    `, { replacements: [...params, parseInt(limit)], type: QueryTypes.SELECT });
+      LIMIT ? OFFSET ?
+    `, { replacements: [...params, parseInt(limit), parseInt(offset)], type: QueryTypes.SELECT });
 
-    res.json({ success: true, data: pois, count: pois.length, filter: { category, subcategory, type } });
+    res.json({ success: true, data: pois, count: pois.length, filter: { category, subcategory, type }, offset: parseInt(offset) });
 
   } catch (error) {
     logger.error('Category POIs error:', error);

@@ -29,12 +29,21 @@ const durationOptions = [
   { id: 'full-day', icon: '📅', hours: '09:00 - 22:00' },
 ] as const;
 
+// Interest icons matching POIs page and CategoryBrowser for consistency
+const interestIcons: Record<string, string> = {
+  'Beaches & Nature': '/assets/category-icons/beaches-nature.png',
+  'Culture & History': '/assets/category-icons/culture-history.png',
+  'Active': '/assets/category-icons/active.png',
+  'Food & Drinks': '/assets/category-icons/food-drinks.png',
+  'Shopping': '/assets/category-icons/shopping.png',
+};
+
 const interestOptions = [
-  { id: 'Beaches & Nature', icon: '🏖️' },
-  { id: 'Culture & History', icon: '🏛️' },
-  { id: 'Active', icon: '🚴' },
-  { id: 'Food & Drinks', icon: '🍷' },
-  { id: 'Shopping', icon: '🛍️' },
+  { id: 'Beaches & Nature' },
+  { id: 'Culture & History' },
+  { id: 'Active' },
+  { id: 'Food & Drinks' },
+  { id: 'Shopping' },
 ];
 
 // Multi-language labels
@@ -231,7 +240,14 @@ export function ItineraryBuilder({ onSubmit, onCancel }: ItineraryBuilderProps) 
                   className={`interest-option ${interests.includes(option.id) ? 'selected' : ''}`}
                   onClick={() => toggleInterest(option.id)}
                 >
-                  <span className="interest-icon">{option.icon}</span>
+                  <span className="interest-icon">
+                    <img
+                      src={interestIcons[option.id]}
+                      alt={t[option.id]}
+                      className="interest-icon-img"
+                      style={{ width: 32, height: 32, objectFit: 'contain' }}
+                    />
+                  </span>
                   <span className="interest-label">{t[option.id]}</span>
                 </button>
               ))}

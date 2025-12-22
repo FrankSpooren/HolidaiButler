@@ -57,12 +57,51 @@
   margin: 0;
 }
 
+/* POI Section (grid + show more button) */
+.holibot-poi-section {
+  margin-top: 24px;
+}
+
 /* POI Grid */
 .holibot-poi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
-  margin-top: 24px;
+}
+
+/* Show More Button Container */
+.holibot-show-more-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.holibot-show-more-button {
+  padding: 10px 24px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2C3E50;
+  background: white;
+  border: 1.5px solid #D4AF37;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.holibot-show-more-button:hover:not(:disabled) {
+  background: #FFF8E7;
+  border-color: #C49B2A;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.25);
+}
+
+.holibot-show-more-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.holibot-show-more-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Loading state */
