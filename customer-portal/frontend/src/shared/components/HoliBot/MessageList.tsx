@@ -218,6 +218,8 @@ export function MessageList() {
       });
       if (categoryFilter.subcategory) params.append('subcategory', categoryFilter.subcategory);
       if (categoryFilter.type) params.append('type', categoryFilter.type);
+      // Pass language for translated descriptions
+      params.append('language', language);
       const url = '/api/v1/holibot/categories/' + encodeURIComponent(categoryFilter.category) + '/pois?' + params;
       console.log('[HoliBot] Loading more POIs from:', url);
       const response = await fetch(url);
@@ -413,6 +415,8 @@ export function MessageList() {
               const params = new URLSearchParams({ limit: String(INITIAL_LIMIT + 1) }); // +1 to check if there are more
               if (subcategory) params.append('subcategory', subcategory);
               if (type) params.append('type', type);
+              // Pass language for translated descriptions
+              params.append('language', language);
               const url = '/api/v1/holibot/categories/' + encodeURIComponent(category) + '/pois?' + params;
               console.log('[HoliBot] Fetching POIs from:', url);
               const response = await fetch(url);
