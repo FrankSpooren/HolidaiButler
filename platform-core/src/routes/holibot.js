@@ -46,6 +46,97 @@ const getPOIModel = async () => {
 };
 
 /**
+ * ============================================
+ * SHARED HELPER FUNCTIONS (used by all Quick Actions)
+ * ============================================
+ */
+
+/**
+ * Check if POI is permanently closed (all 7 days marked "Closed")
+ * CRITICAL: Never show POIs that are closed 7 days/week in any Quick Action
+ * @param {any} openingHours - Opening hours data (string JSON or parsed object)
+ * @returns {boolean} - true if permanently closed
+ */
+const isPermanentlyClosed = (openingHours) => {
+  if (!openingHours) return false; // No opening hours = assume open
+
+  try {
+    let hours = openingHours;
+    if (typeof hours === 'string') {
+      hours = JSON.parse(hours);
+    }
+
+    // Check if it's an object with day keys
+    if (typeof hours === 'object' && hours !== null) {
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+                   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+                   'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+      let closedCount = 0;
+      let totalDays = 0;
+
+      for (const day of days) {
+        if (hours[day] !== undefined) {
+          totalDays++;
+          const value = hours[day];
+          // Check various "closed" formats
+          if (value === 'Closed' || value === 'closed' || value === 'CLOSED' ||
+              value === 'Gesloten' || value === 'gesloten' ||
+              value === 'Cerrado' || value === 'cerrado' ||
+              value === false || value === null || value === '') {
+            closedCount++;
+          }
+        }
+      }
+
+      // If we found day entries and ALL are closed, it's permanently closed
+      if (totalDays >= 7 && closedCount >= 7) {
+        return true;
+      }
+
+      // Also check for array format like [{day: "Monday", hours: "Closed"}, ...]
+      if (Array.isArray(hours)) {
+        const closedDays = hours.filter(h =>
+          h.hours === 'Closed' || h.hours === 'closed' || h.hours === 'CLOSED' ||
+          h.hours === 'Gesloten' || h.open === false
+        ).length;
+        if (hours.length >= 7 && closedDays >= 7) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  } catch (e) {
+    return false; // If parsing fails, assume not permanently closed
+  }
+};
+
+/**
+ * Get translated description based on language
+ * Uses enriched_tile_description_* fields, falls back to English then original
+ * @param {object} poi - POI object with translation fields
+ * @param {string} lang - Language code (nl, en, de, es, sv, pl)
+ * @returns {string} - Translated description
+ */
+const getTranslatedDescription = (poi, lang) => {
+  if (!poi) return '';
+
+  // Language-specific field mapping
+  const langFieldMap = {
+    nl: poi.enriched_tile_description_nl,
+    de: poi.enriched_tile_description_de,
+    es: poi.enriched_tile_description_es,
+    sv: poi.enriched_tile_description_sv,
+    pl: poi.enriched_tile_description_pl,
+    en: poi.enriched_tile_description // English is default
+  };
+
+  // Return translated version, fallback to English, then original description
+  return langFieldMap[lang] || poi.enriched_tile_description || poi.description || '';
+};
+
+/**
  * POST /api/v1/holibot/chat
  * RAG-powered chat with HoliBot (non-streaming)
  */
@@ -182,64 +273,7 @@ router.post('/itinerary', async (req, res) => {
       evening: ['restaurant', 'tapas', 'bar', 'fine dining', 'seafood', 'pizzeria', 'nightlife', 'lounge']
     };
 
-    /**
-     * Helper: Check if POI is permanently closed (all 7 days marked "Closed")
-     * CRITICAL: Never show POIs that are closed 7 days/week
-     */
-    const isPermanentlyClosed = (openingHours) => {
-      if (!openingHours) return false; // No opening hours = assume open
-
-      try {
-        let hours = openingHours;
-        if (typeof hours === 'string') {
-          hours = JSON.parse(hours);
-        }
-
-        // Check if it's an object with day keys
-        if (typeof hours === 'object' && hours !== null) {
-          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
-                       'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
-                       'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-
-          let closedCount = 0;
-          let totalDays = 0;
-
-          for (const day of days) {
-            if (hours[day] !== undefined) {
-              totalDays++;
-              const value = hours[day];
-              // Check various "closed" formats
-              if (value === 'Closed' || value === 'closed' || value === 'CLOSED' ||
-                  value === 'Gesloten' || value === 'gesloten' ||
-                  value === 'Cerrado' || value === 'cerrado' ||
-                  value === false || value === null || value === '') {
-                closedCount++;
-              }
-            }
-          }
-
-          // If we found day entries and ALL are closed, it's permanently closed
-          if (totalDays >= 7 && closedCount >= 7) {
-            return true;
-          }
-
-          // Also check for array format like [{day: "Monday", hours: "Closed"}, ...]
-          if (Array.isArray(hours)) {
-            const closedDays = hours.filter(h =>
-              h.hours === 'Closed' || h.hours === 'closed' || h.hours === 'CLOSED' ||
-              h.hours === 'Gesloten' || h.open === false
-            ).length;
-            if (hours.length >= 7 && closedDays >= 7) {
-              return true;
-            }
-          }
-        }
-
-        return false;
-      } catch (e) {
-        return false; // If parsing fails, assume not permanently closed
-      }
-    };
+    // Note: isPermanentlyClosed() is now a shared helper at the top of this file
 
     // Step 1: Search POIs - do SEPARATE searches per interest for better variety
     let allSearchResults = [];
@@ -806,30 +840,21 @@ router.get('/daily-tip', async (req, res) => {
         type: QueryTypes.SELECT
       });
 
-      // Helper: Get translated description based on language
-      const getTranslatedDescription = (poi, lang) => {
-        // Language-specific field mapping
-        const langFieldMap = {
-          nl: poi.enriched_tile_description_nl,
-          de: poi.enriched_tile_description_de,
-          es: poi.enriched_tile_description_es,
-          sv: poi.enriched_tile_description_sv,
-          pl: poi.enriched_tile_description_pl,
-          en: poi.enriched_tile_description // English is default
-        };
+      // Note: getTranslatedDescription() is now a shared helper at the top of this file
 
-        // Return translated version, fallback to English, then original description
-        return langFieldMap[lang] || poi.enriched_tile_description || poi.description || '';
-      };
-
-      // Filter by exclusions (IDs already shown) and add images array for POICard
-      // CRITICAL: Use language-specific description for the daily tip
+      // Filter by exclusions (IDs already shown), permanently closed POIs, and add images array for POICard
+      // CRITICAL: Use language-specific description and exclude permanently closed POIs
       qualityPois = poiResults.filter(poi => {
         const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
-        return notExcluded;
+        // CRITICAL: Also filter out permanently closed POIs
+        const notPermanentlyClosed = !isPermanentlyClosed(poi.opening_hours);
+        if (isPermanentlyClosed(poi.opening_hours)) {
+          logger.info('Excluding permanently closed POI from daily tip:', { id: poi.id, name: poi.name });
+        }
+        return notExcluded && notPermanentlyClosed;
       }).map(poi => ({
         ...poi,
-        // Use translated description for the current language
+        // Use translated description for the current language (shared helper)
         description: getTranslatedDescription(poi, language),
         // POICard expects 'images' array, backend returns 'thumbnail_url'
         images: poi.thumbnail_url ? [poi.thumbnail_url] : []
@@ -851,7 +876,9 @@ router.get('/daily-tip', async (req, res) => {
           exc.toLowerCase().includes(poiCategory.toLowerCase())
         );
         const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
-        return hasGoodRating && isAllowedCategory && !isExcludedCategory && notExcluded;
+        // CRITICAL: Also filter out permanently closed POIs
+        const notPermanentlyClosed = !isPermanentlyClosed(poi.opening_hours || poi.openingHours);
+        return hasGoodRating && isAllowedCategory && !isExcludedCategory && notExcluded && notPermanentlyClosed;
       }).map(poi => ({
         ...poi,
         // POICard expects 'images' array
@@ -1133,11 +1160,14 @@ router.get('/categories/hierarchy', async (req, res) => {
  * GET /api/v1/holibot/categories/:category/pois
  * Get POIs for a specific category with optional filters
  * Supports pagination via limit and offset
+ * Features:
+ * - Multi-language support via enriched_tile_description_* fields
+ * - Excludes permanently closed POIs (7 days/week "Closed")
  */
 router.get('/categories/:category/pois', async (req, res) => {
   try {
     const { category } = req.params;
-    const { subcategory, type, limit = 20, offset = 0 } = req.query;
+    const { subcategory, type, limit = 20, offset = 0, language = 'nl' } = req.query;
     const { mysqlSequelize } = await import('../config/database.js');
     const { QueryTypes } = (await import('sequelize')).default;
 
@@ -1153,14 +1183,36 @@ router.get('/categories/:category/pois', async (req, res) => {
       params.push(decodeURIComponent(type));
     }
 
-    const pois = await mysqlSequelize.query(`
+    // Include translated description fields for multi-language support
+    const poiResults = await mysqlSequelize.query(`
       SELECT id, name, description, category, subcategory, poi_type,
              address, latitude, longitude, rating, review_count,
-             thumbnail_url, price_level, opening_hours
+             thumbnail_url, price_level, opening_hours,
+             enriched_tile_description,
+             enriched_tile_description_nl,
+             enriched_tile_description_de,
+             enriched_tile_description_es,
+             enriched_tile_description_sv,
+             enriched_tile_description_pl
       FROM POI ${whereClause}
       ORDER BY rating DESC, review_count DESC
       LIMIT ? OFFSET ?
     `, { replacements: [...params, parseInt(limit), parseInt(offset)], type: QueryTypes.SELECT });
+
+    // Filter out permanently closed POIs and apply translations
+    const pois = poiResults.filter(poi => {
+      const notPermanentlyClosed = !isPermanentlyClosed(poi.opening_hours);
+      if (isPermanentlyClosed(poi.opening_hours)) {
+        logger.info('Excluding permanently closed POI from category browser:', { id: poi.id, name: poi.name });
+      }
+      return notPermanentlyClosed;
+    }).map(poi => ({
+      ...poi,
+      // Use translated description for the current language (shared helper)
+      description: getTranslatedDescription(poi, language),
+      // POICard expects 'images' array
+      images: poi.thumbnail_url ? [poi.thumbnail_url] : []
+    }));
 
     res.json({ success: true, data: pois, count: pois.length, filter: { category, subcategory, type }, offset: parseInt(offset) });
 
