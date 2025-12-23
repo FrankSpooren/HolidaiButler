@@ -29,6 +29,8 @@ interface HoliBotContextValue {
   error: string | null;
   userPreferences: UserPreferences | null;
   wasReset: boolean; // True after reset, false after first message
+  currentItinerary: any | null; // Persisted itinerary data
+  currentDailyTip: any | null; // Persisted daily tip POI
   open: () => void;
   close: () => void;
   toggle: () => void;
@@ -37,6 +39,8 @@ interface HoliBotContextValue {
   clearMessages: () => void;
   clearError: () => void;
   retryLastMessage: () => Promise<void>;
+  setCurrentItinerary: (itinerary: any | null) => void;
+  setCurrentDailyTip: (tip: any | null) => void;
   personality: 'auto' | 'adventurous' | 'relaxed' | 'cultural';
   language: Language;
 }
@@ -62,6 +66,8 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
   const [personality] = useState<'auto' | 'adventurous' | 'relaxed' | 'cultural'>('auto');
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [wasReset, setWasReset] = useState(false); // Track if chat was just reset
+  const [currentItinerary, setCurrentItinerary] = useState<any | null>(null); // Persisted itinerary
+  const [currentDailyTip, setCurrentDailyTip] = useState<any | null>(null); // Persisted daily tip
 
   const streamingMessageRef = useRef<string | null>(null);
   const lastMessageRef = useRef<string | null>(null);
@@ -342,6 +348,8 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
     lastMessageRef.current = null;
     retryCountRef.current = 0;
     setWasReset(true); // Mark as reset to skip animations
+    setCurrentItinerary(null); // Clear persisted itinerary
+    setCurrentDailyTip(null); // Clear persisted daily tip
     chatApi.clearSession();
   }, []);
 
@@ -367,6 +375,8 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
     error,
     userPreferences,
     wasReset,
+    currentItinerary,
+    currentDailyTip,
     open,
     close,
     toggle,
@@ -375,6 +385,8 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
     clearMessages,
     clearError,
     retryLastMessage,
+    setCurrentItinerary,
+    setCurrentDailyTip,
     personality,
     language,
   };
