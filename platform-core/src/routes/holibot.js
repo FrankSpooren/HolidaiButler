@@ -167,6 +167,7 @@ router.post('/search', async (req, res) => {
  * - Events integration from agenda
  * - Meal suggestions for appropriate time slots
  * - Time-of-day awareness (morning=cafes/bakeries, evening=restaurants/bars)
+ * - Excludes permanently closed POIs (7 days/week "Closed")
  */
 router.post('/itinerary', async (req, res) => {
   try {
@@ -179,6 +180,65 @@ router.post('/itinerary', async (req, res) => {
       morning: ['bakery', 'cafe', 'coffee', 'breakfast', 'beach', 'nature', 'park', 'hiking', 'cycling'],
       afternoon: ['museum', 'shopping', 'market', 'viewpoint', 'culture', 'active', 'sport', 'beach'],
       evening: ['restaurant', 'tapas', 'bar', 'fine dining', 'seafood', 'pizzeria', 'nightlife', 'lounge']
+    };
+
+    /**
+     * Helper: Check if POI is permanently closed (all 7 days marked "Closed")
+     * CRITICAL: Never show POIs that are closed 7 days/week
+     */
+    const isPermanentlyClosed = (openingHours) => {
+      if (!openingHours) return false; // No opening hours = assume open
+
+      try {
+        let hours = openingHours;
+        if (typeof hours === 'string') {
+          hours = JSON.parse(hours);
+        }
+
+        // Check if it's an object with day keys
+        if (typeof hours === 'object' && hours !== null) {
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+                       'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+                       'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+          let closedCount = 0;
+          let totalDays = 0;
+
+          for (const day of days) {
+            if (hours[day] !== undefined) {
+              totalDays++;
+              const value = hours[day];
+              // Check various "closed" formats
+              if (value === 'Closed' || value === 'closed' || value === 'CLOSED' ||
+                  value === 'Gesloten' || value === 'gesloten' ||
+                  value === 'Cerrado' || value === 'cerrado' ||
+                  value === false || value === null || value === '') {
+                closedCount++;
+              }
+            }
+          }
+
+          // If we found day entries and ALL are closed, it's permanently closed
+          if (totalDays >= 7 && closedCount >= 7) {
+            return true;
+          }
+
+          // Also check for array format like [{day: "Monday", hours: "Closed"}, ...]
+          if (Array.isArray(hours)) {
+            const closedDays = hours.filter(h =>
+              h.hours === 'Closed' || h.hours === 'closed' || h.hours === 'CLOSED' ||
+              h.hours === 'Gesloten' || h.open === false
+            ).length;
+            if (hours.length >= 7 && closedDays >= 7) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      } catch (e) {
+        return false; // If parsing fails, assume not permanently closed
+      }
     };
 
     // Step 1: Search POIs - do SEPARATE searches per interest for better variety
@@ -194,11 +254,18 @@ router.post('/itinerary', async (req, res) => {
     const generalResults = await ragService.search('best things to do in Calpe', { limit: 10 });
     allSearchResults = [...allSearchResults, ...generalResults.results];
 
-    // Remove duplicates by id
+    // Remove duplicates by id AND filter out permanently closed POIs
     const seenIds = new Set();
     const searchResults = {
       results: allSearchResults.filter(poi => {
         if (!poi.id || seenIds.has(poi.id)) return false;
+
+        // CRITICAL: Exclude permanently closed POIs
+        if (isPermanentlyClosed(poi.opening_hours || poi.openingHours)) {
+          logger.info('Excluding permanently closed POI from itinerary:', { id: poi.id, name: poi.name });
+          return false;
+        }
+
         seenIds.add(poi.id);
         return true;
       })
@@ -436,16 +503,94 @@ router.post('/itinerary', async (req, res) => {
     logger.info('Itinerary built:', { itemCount: itinerary.length });
 
     // Step 5: Generate AI description with language-specific prompts
+    // IMPORTANT: Include ACTUAL POI names from the itinerary for coherent intro
     const systemPrompt = embeddingService.buildSystemPrompt(language);
 
-    // Multi-language itinerary intro prompts - emphasize grammar quality
+    // Extract actual POI names from the built itinerary (max 3 for intro)
+    const selectedPoiNames = itinerary
+      .filter(item => item.poi && item.poi.name)
+      .map(item => item.poi.name)
+      .slice(0, 3);
+
+    const poiListText = selectedPoiNames.length > 0
+      ? selectedPoiNames.join(', ')
+      : '';
+
+    // Build intro prompt that MUST reference the actual selected POIs
+    // This ensures the intro matches the program output
+    const durationLabels = {
+      nl: { 'full-day': 'vol dagprogramma', 'morning': 'ochtendprogramma', 'afternoon': 'middagprogramma', 'evening': 'avondprogramma' },
+      en: { 'full-day': 'full-day program', 'morning': 'morning program', 'afternoon': 'afternoon program', 'evening': 'evening program' },
+      de: { 'full-day': 'Ganztagsprogramm', 'morning': 'Vormittagsprogramm', 'afternoon': 'Nachmittagsprogramm', 'evening': 'Abendprogramm' },
+      es: { 'full-day': 'programa de día completo', 'morning': 'programa de mañana', 'afternoon': 'programa de tarde', 'evening': 'programa de noche' },
+      sv: { 'full-day': 'heldagsprogram', 'morning': 'förmiddagsprogram', 'afternoon': 'eftermiddagsprogram', 'evening': 'kvällsprogram' },
+      pl: { 'full-day': 'program całodniowy', 'morning': 'program poranny', 'afternoon': 'program popołudniowy', 'evening': 'program wieczorny' }
+    };
+
+    const durationLabel = (durationLabels[language] || durationLabels.nl)[duration] || duration;
+
+    // Multi-language itinerary intro prompts - MUST reference actual POI names
     const itineraryPrompts = {
-      nl: `Schrijf een enthousiaste, grammaticaal correcte introductie (max 60 woorden, in het Nederlands) voor een ${duration === 'full-day' ? 'vol' : duration === 'morning' ? 'ochtend' : duration === 'afternoon' ? 'middag' : 'avond'} dagprogramma in Calpe. ${interests.length ? 'Interesses: ' + interests.join(', ') + '. ' : ''}${events.length ? 'Er zijn ' + events.length + ' evenementen vandaag. ' : ''}Eindig met een uitnodigende zin. BELANGRIJK: Gebruik correcte Nederlandse spelling en grammatica. Gebruik GEEN sterretjes of emoji's.`,
-      en: `Write an enthusiastic, grammatically correct introduction (max 60 words, in English) for a ${duration} day program in Calpe. ${interests.length ? 'Interests: ' + interests.join(', ') + '. ' : ''}${events.length ? 'There are ' + events.length + ' events today. ' : ''}End with an inviting sentence. IMPORTANT: Use correct English spelling and grammar. Do NOT use asterisks or emojis.`,
-      de: `Schreibe eine begeisterte, grammatikalisch korrekte Einleitung (max 60 Wörter, auf Deutsch) für ein ${duration === 'full-day' ? 'Ganztags' : duration === 'morning' ? 'Vormittags' : duration === 'afternoon' ? 'Nachmittags' : 'Abend'}-Programm in Calpe. ${interests.length ? 'Interessen: ' + interests.join(', ') + '. ' : ''}${events.length ? 'Es gibt ' + events.length + ' Veranstaltungen heute. ' : ''}Ende mit einem einladenden Satz. WICHTIG: Verwende korrekte deutsche Rechtschreibung und Grammatik. Verwende KEINE Sternchen oder Emojis.`,
-      es: `Escribe una introducción entusiasta y gramaticalmente correcta (máx 60 palabras, en español) para un programa de ${duration === 'full-day' ? 'día completo' : duration === 'morning' ? 'mañana' : duration === 'afternoon' ? 'tarde' : 'noche'} en Calpe. ${interests.length ? 'Intereses: ' + interests.join(', ') + '. ' : ''}${events.length ? 'Hay ' + events.length + ' eventos hoy. ' : ''}Termina con una frase acogedora. IMPORTANTE: Usa ortografía y gramática española correctas. NO uses asteriscos ni emojis.`,
-      sv: `Skriv en entusiastisk, grammatiskt korrekt introduktion (max 60 ord, på svenska) för ett ${duration === 'full-day' ? 'heldags' : duration === 'morning' ? 'förmiddags' : duration === 'afternoon' ? 'eftermiddags' : 'kvälls'}program i Calpe. ${interests.length ? 'Intressen: ' + interests.join(', ') + '. ' : ''}${events.length ? 'Det finns ' + events.length + ' evenemang idag. ' : ''}Avsluta med en inbjudande mening. VIKTIGT: Använd korrekt svensk stavning och grammatik. Använd INTE asterisker eller emojis.`,
-      pl: `Napisz entuzjastyczne, gramatycznie poprawne wprowadzenie (maks 60 słów, po polsku) do programu ${duration === 'full-day' ? 'całodniowego' : duration === 'morning' ? 'porannego' : duration === 'afternoon' ? 'popołudniowego' : 'wieczornego'} w Calpe. ${interests.length ? 'Zainteresowania: ' + interests.join(', ') + '. ' : ''}${events.length ? 'Dziś jest ' + events.length + ' wydarzeń. ' : ''}Zakończ zachęcającym zdaniem. WAŻNE: Użyj poprawnej polskiej pisowni i gramatyki. NIE używaj gwiazdek ani emoji.`
+      nl: `Schrijf een enthousiaste, bondige introductie (max 50 woorden, in het Nederlands) voor dit ${durationLabel} in Calpe.
+
+GESELECTEERDE LOCATIES: ${poiListText || 'diverse toplocaties'}.
+
+REGELS:
+- Noem 1-2 van de geselecteerde locaties bij naam
+- Wees kort en bondig, geen lange zinnen
+- Eindig met een uitnodigende zin
+- GEEN sterretjes, emoji's of markdown
+- ALLEEN de locaties noemen die hierboven staan vermeld`,
+      en: `Write an enthusiastic, concise introduction (max 50 words, in English) for this ${durationLabel} in Calpe.
+
+SELECTED LOCATIONS: ${poiListText || 'various top attractions'}.
+
+RULES:
+- Mention 1-2 of the selected locations by name
+- Be brief and concise, no long sentences
+- End with an inviting sentence
+- NO asterisks, emojis or markdown
+- ONLY mention locations listed above`,
+      de: `Schreibe eine begeisterte, kurze Einleitung (max 50 Wörter, auf Deutsch) für dieses ${durationLabel} in Calpe.
+
+AUSGEWÄHLTE ORTE: ${poiListText || 'verschiedene Top-Attraktionen'}.
+
+REGELN:
+- Nenne 1-2 der ausgewählten Orte beim Namen
+- Sei kurz und prägnant, keine langen Sätze
+- Ende mit einem einladenden Satz
+- KEINE Sternchen, Emojis oder Markdown
+- NUR die oben genannten Orte erwähnen`,
+      es: `Escribe una introducción entusiasta y concisa (máx 50 palabras, en español) para este ${durationLabel} en Calpe.
+
+LUGARES SELECCIONADOS: ${poiListText || 'varias atracciones principales'}.
+
+REGLAS:
+- Menciona 1-2 de los lugares seleccionados por nombre
+- Sé breve y conciso, sin oraciones largas
+- Termina con una frase acogedora
+- SIN asteriscos, emojis ni markdown
+- SOLO mencionar los lugares listados arriba`,
+      sv: `Skriv en entusiastisk, koncis introduktion (max 50 ord, på svenska) för detta ${durationLabel} i Calpe.
+
+VALDA PLATSER: ${poiListText || 'olika toppatraktioner'}.
+
+REGLER:
+- Nämn 1-2 av de valda platserna vid namn
+- Var kort och koncis, inga långa meningar
+- Avsluta med en inbjudande mening
+- INGA asterisker, emojis eller markdown
+- ENDAST nämna platser listade ovan`,
+      pl: `Napisz entuzjastyczne, zwięzłe wprowadzenie (maks 50 słów, po polsku) do tego ${durationLabel} w Calpe.
+
+WYBRANE LOKALIZACJE: ${poiListText || 'różne topowe atrakcje'}.
+
+ZASADY:
+- Wymień 1-2 wybranych lokalizacji po nazwie
+- Bądź krótki i zwięzły, bez długich zdań
+- Zakończ zachęcającym zdaniem
+- BEZ gwiazdek, emoji ani markdown
+- TYLKO wymieniać lokalizacje podane powyżej`
     };
 
     let description = await embeddingService.generateChatCompletion([
@@ -618,17 +763,30 @@ router.get('/daily-tip', async (req, res) => {
     logger.info('Daily tip request', { language, selectedInterest, excludeCount: excludedIdList.length });
 
     // Step 1: Get POIs from database with distance filter (5km radius)
+    // IMPORTANT: Include language-specific translated content fields
     let qualityPois = [];
     try {
       const { mysqlSequelize } = await import('../config/database.js');
       const { QueryTypes } = (await import('sequelize')).default;
 
       // Query POIs within 5km radius using Haversine formula
-      // Exclude Health, Accommodations, Practical, Services categories
+      // Include ALL translated description fields for proper language support
       const poiResults = await mysqlSequelize.query(`
         SELECT id, name, description, category, subcategory, poi_type,
                address, latitude, longitude, rating, review_count,
                thumbnail_url, price_level, opening_hours,
+               enriched_tile_description,
+               enriched_tile_description_nl,
+               enriched_tile_description_de,
+               enriched_tile_description_es,
+               enriched_tile_description_sv,
+               enriched_tile_description_pl,
+               enriched_detail_description,
+               enriched_detail_description_nl,
+               enriched_detail_description_de,
+               enriched_detail_description_es,
+               enriched_detail_description_sv,
+               enriched_detail_description_pl,
                (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance_km
         FROM POI
         WHERE is_active = 1
@@ -648,12 +806,31 @@ router.get('/daily-tip', async (req, res) => {
         type: QueryTypes.SELECT
       });
 
+      // Helper: Get translated description based on language
+      const getTranslatedDescription = (poi, lang) => {
+        // Language-specific field mapping
+        const langFieldMap = {
+          nl: poi.enriched_tile_description_nl,
+          de: poi.enriched_tile_description_de,
+          es: poi.enriched_tile_description_es,
+          sv: poi.enriched_tile_description_sv,
+          pl: poi.enriched_tile_description_pl,
+          en: poi.enriched_tile_description // English is default
+        };
+
+        // Return translated version, fallback to English, then original description
+        return langFieldMap[lang] || poi.enriched_tile_description || poi.description || '';
+      };
+
       // Filter by exclusions (IDs already shown) and add images array for POICard
+      // CRITICAL: Use language-specific description for the daily tip
       qualityPois = poiResults.filter(poi => {
         const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
         return notExcluded;
       }).map(poi => ({
         ...poi,
+        // Use translated description for the current language
+        description: getTranslatedDescription(poi, language),
         // POICard expects 'images' array, backend returns 'thumbnail_url'
         images: poi.thumbnail_url ? [poi.thumbnail_url] : []
       }));
