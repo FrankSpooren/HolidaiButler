@@ -278,22 +278,22 @@
   position: relative;
 }
 
-/* Timeline vertical line */
+/* Timeline vertical line - neutral gray for cleaner look */
 .holibot-itinerary-timeline::before {
   content: '';
   position: absolute;
   left: 32px;
-  top: 24px;
-  bottom: 24px;
+  top: 20px;
+  bottom: 20px;
   width: 2px;
-  background: linear-gradient(to bottom, #D4AF37, rgba(212, 175, 55, 0.3));
+  background: linear-gradient(to bottom, #E5E7EB, #D1D5DB);
   border-radius: 1px;
 }
 
 .holibot-itinerary-item {
   display: flex;
   gap: 16px;
-  padding: 12px 0;
+  padding: 10px 0;
   position: relative;
 }
 
@@ -311,41 +311,80 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 6px;
   position: relative;
   z-index: 1;
 }
 
 .holibot-itinerary-time {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: #2C3E50;
   background: white;
-  padding: 4px 0;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-.holibot-itinerary-type-badge {
-  width: 32px;
-  height: 32px;
+/* ============================================
+   NEW DESIGN: Simple colored dots (no icons)
+   - Blue = Activity/Visit
+   - Gold = Meal (Lunch/Dinner)
+   - Purple = Event
+   ============================================ */
+
+.holibot-itinerary-dot {
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
+  background: #3B82F6; /* Default: Blue for activities */
+  border: 3px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Activity/Visit - Blue (default) */
+.holibot-itinerary-dot.activity {
+  background: #3B82F6;
+}
+
+/* Meal (Lunch/Dinner) - Gold */
+.holibot-itinerary-dot.meal {
+  background: #D4AF37;
+}
+
+/* Event - Purple */
+.holibot-itinerary-dot.event {
+  background: #9333EA;
+}
+
+/* ============================================
+   LEGEND - Color explanation for users
+   ============================================ */
+
+.holibot-itinerary-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #E5E7EB;
+  justify-content: center;
+}
+
+.holibot-itinerary-legend-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  background: white;
-  border: 2px solid #D4AF37;
-  box-shadow: 0 2px 4px rgba(212, 175, 55, 0.2);
+  gap: 6px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  color: #6B7280;
 }
 
-.holibot-itinerary-type-badge.event {
-  background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%);
-  border-color: #9333EA;
-}
-
-.holibot-itinerary-type-badge.lunch,
-.holibot-itinerary-type-badge.dinner {
-  background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
-  border-color: #D4AF37;
+.holibot-itinerary-legend-item .holibot-itinerary-dot {
+  width: 10px;
+  height: 10px;
+  border-width: 2px;
+  box-shadow: none;
 }
 
 .holibot-itinerary-content {

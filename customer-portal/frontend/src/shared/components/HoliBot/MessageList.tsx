@@ -513,37 +513,34 @@ export function MessageList() {
           </div>
           <div className="holibot-itinerary-timeline">
             {itinerary.itinerary.map((item: any, index: number) => {
-              // TIME SLOT BADGE: Use main category icon (level 1)
-              // - For meals: use Food & Drinks icon
-              // - For events: use Recreation icon
-              // - For activities: use POI's main category icon
-              const getTimeBadgeIcon = () => {
-                if (item.type === 'lunch' || item.type === 'dinner') {
-                  return categoryIconPaths['Food & Drinks'];
-                }
-                if (item.type === 'event') {
-                  return categoryIconPaths['Recreation'];
-                }
-                return getCategoryIconPath(item.poi);
+              // NEW DESIGN: Simple colored dots instead of confusing category icons
+              // - Blue = Activity/Visit
+              // - Gold = Meal (Lunch/Dinner)
+              // - Purple = Event
+              const getDotType = () => {
+                if (item.type === 'lunch' || item.type === 'dinner') return 'meal';
+                if (item.type === 'event') return 'event';
+                return 'activity';
               };
 
-              // POI CARD: Use subcategory icon (level 2/3) for consistency with POIs page
-              const poiCardIcon = item.poi ? getSubcategoryIconPath(item.poi) : getTimeBadgeIcon();
+              // POI CARD: Use subcategory icon (level 2/3) for consistency with Category Browser & POIs page
+              const poiCardIcon = item.poi ? getSubcategoryIconPath(item.poi) : categoryIconPaths.default;
 
-              const typeClass = item.type === 'event' ? 'event' : (item.type === 'lunch' || item.type === 'dinner') ? item.type : '';
+              const dotType = getDotType();
               const labelClass = item.type === 'event' ? 'event' : (item.type === 'lunch' || item.type === 'dinner') ? 'meal' : '';
+
               return (
                 <div key={index} className="holibot-itinerary-item">
                   <div className="holibot-itinerary-time-column">
                     <span className="holibot-itinerary-time">{item.time}</span>
-                    <div className={'holibot-itinerary-type-badge ' + typeClass}>
-                      {renderIconImg(getTimeBadgeIcon(), item.type || 'activity', 24)}
-                    </div>
+                    {/* Simple colored dot - no confusing category icons */}
+                    <div className={`holibot-itinerary-dot ${dotType}`} />
                   </div>
                   <div className="holibot-itinerary-content">
                     {item.poi ? (
                       <div className="holibot-itinerary-card" onClick={() => setSelectedPOIId(item.poi.id)}>
                         <div className="holibot-itinerary-card-header">
+                          {/* POI image or subcategory icon (consistent with Category Browser) */}
                           {item.poi.image_url || item.poi.thumbnail_url ? (
                             <img src={item.poi.image_url || item.poi.thumbnail_url} alt={item.poi.name} className="holibot-itinerary-card-image" />
                           ) : (
@@ -553,7 +550,7 @@ export function MessageList() {
                           )}
                           <div className="holibot-itinerary-card-info">
                             <p className="holibot-itinerary-card-name">{item.poi.name}</p>
-                            {item.label && <p className={'holibot-itinerary-card-label ' + labelClass}>{item.label}</p>}
+                            {item.label && <p className={`holibot-itinerary-card-label ${labelClass}`}>{item.label}</p>}
                           </div>
                         </div>
                       </div>
@@ -561,7 +558,7 @@ export function MessageList() {
                       <div className="holibot-itinerary-card">
                         <div className="holibot-itinerary-card-header">
                           <div className="holibot-itinerary-card-image placeholder">
-                            {renderIconImg(getTimeBadgeIcon(), item.label || 'TBD', 28)}
+                            {renderIconImg(poiCardIcon, item.label || 'TBD', 28)}
                           </div>
                           <div className="holibot-itinerary-card-info">
                             <p className="holibot-itinerary-card-name">{item.label || 'TBD'}</p>
@@ -574,12 +571,23 @@ export function MessageList() {
               );
             })}
           </div>
-          {itinerary.hasEvents && (
-            <div className="holibot-itinerary-events-note">
-              <span>🎭</span>
-              <span>{itinerary.eventsIncluded} {t.holibotChat.responses.eventsAdded || 'evenement(en) toegevoegd'}</span>
+          {/* Legend for color-coded dots */}
+          <div className="holibot-itinerary-legend">
+            <div className="holibot-itinerary-legend-item">
+              <span className="holibot-itinerary-dot activity" />
+              <span>{language === 'nl' ? 'Activiteit' : language === 'de' ? 'Aktivität' : language === 'es' ? 'Actividad' : language === 'sv' ? 'Aktivitet' : language === 'pl' ? 'Aktywność' : 'Activity'}</span>
             </div>
-          )}
+            <div className="holibot-itinerary-legend-item">
+              <span className="holibot-itinerary-dot meal" />
+              <span>{language === 'nl' ? 'Maaltijd' : language === 'de' ? 'Mahlzeit' : language === 'es' ? 'Comida' : language === 'sv' ? 'Måltid' : language === 'pl' ? 'Posiłek' : 'Meal'}</span>
+            </div>
+            {itinerary.hasEvents && (
+              <div className="holibot-itinerary-legend-item">
+                <span className="holibot-itinerary-dot event" />
+                <span>{language === 'nl' ? 'Evenement' : language === 'de' ? 'Veranstaltung' : language === 'es' ? 'Evento' : language === 'sv' ? 'Evenemang' : language === 'pl' ? 'Wydarzenie' : 'Event'}</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
