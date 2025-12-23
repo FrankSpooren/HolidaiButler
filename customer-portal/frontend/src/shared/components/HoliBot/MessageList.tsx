@@ -141,15 +141,17 @@ const renderIconImg = (iconPath: string, alt: string, size: number = 24) => (
 );
 
 export function MessageList() {
-  const { language, messages, isLoading, isOpen, addAssistantMessage, sendMessage, wasReset } = useHoliBot();
+  const {
+    language, messages, isLoading, isOpen, addAssistantMessage, sendMessage, wasReset,
+    currentItinerary, setCurrentItinerary, currentDailyTip, setCurrentDailyTip
+  } = useHoliBot();
   const { t } = useLanguage();
 
   const [pois, setPois] = useState<POI[]>([]);
   const [loadingPOIs, setLoadingPOIs] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [dailyTipPOI, setDailyTipPOI] = useState<POI | null>(null);
+  // dailyTipPOI and itinerary now come from context for persistence
   const [selectedPOIId, setSelectedPOIId] = useState<number | null>(null);
-  const [itinerary, setItinerary] = useState<any>(null);
   const [showItineraryBuilder, setShowItineraryBuilder] = useState(false);
   const [showCategoryBrowser, setShowCategoryBrowser] = useState(false);
   // Category POI pagination state
@@ -169,10 +171,9 @@ export function MessageList() {
 
   useEffect(() => {
     if (!isOpen) {
+      // Only clear UI states, NOT itinerary/dailyTip (they persist in context)
       setShowSuggestions(false);
-      setDailyTipPOI(null);
       setSelectedPOIId(null);
-      setItinerary(null);
       setShowItineraryBuilder(false);
       setShowCategoryBrowser(false);
     } else {
@@ -180,14 +181,12 @@ export function MessageList() {
     }
   }, [isOpen]);
 
-  // Clear all local states ONLY when chat is explicitly reset (wasReset becomes true)
-  // Do NOT clear on messages.length changes - that causes itinerary to disappear
+  // Clear LOCAL states ONLY when chat is explicitly reset (wasReset becomes true)
+  // Itinerary and dailyTip are cleared by context's clearMessages()
   useEffect(() => {
     if (wasReset) {
-      console.log('[HoliBot] Chat reset detected, clearing local states');
+      console.log('[HoliBot] Chat reset detected, clearing local UI states');
       setPois([]);
-      setDailyTipPOI(null);
-      setItinerary(null);
       setShowItineraryBuilder(false);
       setShowCategoryBrowser(false);
       // Clear pagination state
@@ -269,7 +268,7 @@ export function MessageList() {
         console.log('[HoliBot] Itinerary items:', response.data.itinerary?.length || 0);
         // Set itinerary state BEFORE adding message to prevent race condition
         const itineraryData = { ...response.data };
-        setItinerary(itineraryData);
+        setCurrentItinerary(itineraryData);
         // Delay to ensure state is set and React has rendered before adding message
         // Mobile devices may need more time for state updates
         setTimeout(() => {
@@ -297,7 +296,7 @@ export function MessageList() {
         interests: lastItineraryOptions.interests,
       });
       if (response.success && response.data) {
-        setItinerary(response.data);
+        setCurrentItinerary(response.data);
         const shuffleLabels = { nl: 'Nieuw programma!', en: 'New program!', de: 'Neues Programm!', es: 'Nuevo programa!', sv: 'Nytt program!', pl: 'Nowy program!' };
         addAssistantMessage(shuffleLabels[language as keyof typeof shuffleLabels] || shuffleLabels.nl);
       }
@@ -313,7 +312,7 @@ export function MessageList() {
     setLoadingPOIs(true);
     try {
       // Add current tip to exclusion list
-      const newExcludes = dailyTipPOI?.id ? [...lastDailyTipExcludes, String(dailyTipPOI.id)] : lastDailyTipExcludes;
+      const newExcludes = currentDailyTip?.id ? [...lastDailyTipExcludes, String(currentDailyTip.id)] : lastDailyTipExcludes;
       setLastDailyTipExcludes(newExcludes);
 
       const response = await chatApi.getDailyTip(newExcludes);
@@ -322,7 +321,7 @@ export function MessageList() {
         const displayItem = poi || event || item;
         const shuffleLabels = { nl: 'Nieuwe tip!', en: 'New tip!', de: 'Neuer Tipp!', es: 'Nuevo consejo!', sv: 'Nytt tips!', pl: 'Nowa porada!' };
         addAssistantMessage((shuffleLabels[language as keyof typeof shuffleLabels] || shuffleLabels.nl) + ' ' + tipDescription, displayItem ? [displayItem] : []);
-        if (displayItem) setDailyTipPOI(displayItem);
+        if (displayItem) setCurrentDailyTip(displayItem);
       }
     } catch (error) {
       console.error('Shuffle tip error:', error);
@@ -363,7 +362,7 @@ export function MessageList() {
           addAssistantMessage(messageWithTitle, displayItem ? [displayItem] : []);
           if (displayItem) {
             console.log('[HoliBot] Setting dailyTipPOI:', displayItem);
-            setDailyTipPOI(displayItem);
+            setCurrentDailyTip(displayItem);
           }
         } else {
           addAssistantMessage(responses.error);
@@ -474,7 +473,7 @@ export function MessageList() {
         </div>
       )}
 
-      {dailyTipPOI && (
+      {currentDailyTip && (
         <div className="holibot-daily-tip-container">
           <div className="holibot-daily-tip-header">
             <span className="holibot-daily-tip-icon">💡</span>
@@ -489,15 +488,15 @@ export function MessageList() {
             </button>
           </div>
           <div className="holibot-daily-tip-poi">
-            <POICard key={dailyTipPOI.id} poi={dailyTipPOI} onClick={() => setSelectedPOIId(dailyTipPOI.id)} />
+            <POICard key={currentDailyTip.id} poi={currentDailyTip} onClick={() => setSelectedPOIId(currentDailyTip.id)} />
           </div>
         </div>
       )}
 
       {/* DEBUG: Log itinerary state at render */}
-      {console.log('[HoliBot RENDER] itinerary:', itinerary, 'hasItinerary:', !!itinerary?.itinerary)}
+      {console.log('[HoliBot RENDER] itinerary:', currentItinerary, 'hasItinerary:', !!currentItinerary?.itinerary)}
 
-      {itinerary?.itinerary && (
+      {currentItinerary?.itinerary && (
         <div className="holibot-itinerary-container">
           <div className="holibot-itinerary-header">
             <span className="holibot-itinerary-header-icon">📋</span>
@@ -512,7 +511,7 @@ export function MessageList() {
             </button>
           </div>
           <div className="holibot-itinerary-timeline">
-            {itinerary.itinerary.map((item: any, index: number) => {
+            {currentItinerary.itinerary.map((item: any, index: number) => {
               // NEW DESIGN: Simple colored dots instead of confusing category icons
               // - Blue = Activity/Visit
               // - Gold = Meal (Lunch/Dinner)
@@ -581,7 +580,7 @@ export function MessageList() {
               <span className="holibot-itinerary-dot meal" />
               <span>{language === 'nl' ? 'Maaltijd' : language === 'de' ? 'Mahlzeit' : language === 'es' ? 'Comida' : language === 'sv' ? 'Måltid' : language === 'pl' ? 'Posiłek' : 'Meal'}</span>
             </div>
-            {itinerary.hasEvents && (
+            {currentItinerary.hasEvents && (
               <div className="holibot-itinerary-legend-item">
                 <span className="holibot-itinerary-dot event" />
                 <span>{language === 'nl' ? 'Evenement' : language === 'de' ? 'Veranstaltung' : language === 'es' ? 'Evento' : language === 'sv' ? 'Evenemang' : language === 'pl' ? 'Wydarzenie' : 'Event'}</span>

@@ -564,6 +564,7 @@ router.post('/itinerary', async (req, res) => {
     const durationLabel = (durationLabels[language] || durationLabels.nl)[duration] || duration;
 
     // Multi-language itinerary intro prompts - MUST reference actual POI names
+    // CRITICAL: Require proper spacing around POI names for clickable links
     const itineraryPrompts = {
       nl: `Schrijf een enthousiaste, bondige introductie (max 50 woorden, in het Nederlands) voor dit ${durationLabel} in Calpe.
 
@@ -574,7 +575,8 @@ REGELS:
 - Wees kort en bondig, geen lange zinnen
 - Eindig met een uitnodigende zin
 - GEEN sterretjes, emoji's of markdown
-- ALLEEN de locaties noemen die hierboven staan vermeld`,
+- ALLEEN de locaties noemen die hierboven staan vermeld
+- BELANGRIJK: Zorg voor een SPATIE voor EN na elke locatienaam (bijv. "Bezoek Playa Calpe voor" niet "BezoekPlaya Calpevoor")`,
       en: `Write an enthusiastic, concise introduction (max 50 words, in English) for this ${durationLabel} in Calpe.
 
 SELECTED LOCATIONS: ${poiListText || 'various top attractions'}.
@@ -584,7 +586,8 @@ RULES:
 - Be brief and concise, no long sentences
 - End with an inviting sentence
 - NO asterisks, emojis or markdown
-- ONLY mention locations listed above`,
+- ONLY mention locations listed above
+- IMPORTANT: Ensure a SPACE before AND after each location name (e.g., "Visit Playa Calpe for" not "VisitPlaya Calpefor")`,
       de: `Schreibe eine begeisterte, kurze Einleitung (max 50 Wörter, auf Deutsch) für dieses ${durationLabel} in Calpe.
 
 AUSGEWÄHLTE ORTE: ${poiListText || 'verschiedene Top-Attraktionen'}.
@@ -594,7 +597,8 @@ REGELN:
 - Sei kurz und prägnant, keine langen Sätze
 - Ende mit einem einladenden Satz
 - KEINE Sternchen, Emojis oder Markdown
-- NUR die oben genannten Orte erwähnen`,
+- NUR die oben genannten Orte erwähnen
+- WICHTIG: Stelle sicher, dass ein LEERZEICHEN vor UND nach jedem Ortsnamen steht`,
       es: `Escribe una introducción entusiasta y concisa (máx 50 palabras, en español) para este ${durationLabel} en Calpe.
 
 LUGARES SELECCIONADOS: ${poiListText || 'varias atracciones principales'}.
@@ -604,7 +608,8 @@ REGLAS:
 - Sé breve y conciso, sin oraciones largas
 - Termina con una frase acogedora
 - SIN asteriscos, emojis ni markdown
-- SOLO mencionar los lugares listados arriba`,
+- SOLO mencionar los lugares listados arriba
+- IMPORTANTE: Asegúrate de un ESPACIO antes Y después de cada nombre de lugar`,
       sv: `Skriv en entusiastisk, koncis introduktion (max 50 ord, på svenska) för detta ${durationLabel} i Calpe.
 
 VALDA PLATSER: ${poiListText || 'olika toppatraktioner'}.
@@ -614,7 +619,8 @@ REGLER:
 - Var kort och koncis, inga långa meningar
 - Avsluta med en inbjudande mening
 - INGA asterisker, emojis eller markdown
-- ENDAST nämna platser listade ovan`,
+- ENDAST nämna platser listade ovan
+- VIKTIGT: Se till att det finns ett MELLANSLAG före OCH efter varje platsnamn`,
       pl: `Napisz entuzjastyczne, zwięzłe wprowadzenie (maks 50 słów, po polsku) do tego ${durationLabel} w Calpe.
 
 WYBRANE LOKALIZACJE: ${poiListText || 'różne topowe atrakcje'}.
@@ -624,7 +630,8 @@ ZASADY:
 - Bądź krótki i zwięzły, bez długich zdań
 - Zakończ zachęcającym zdaniem
 - BEZ gwiazdek, emoji ani markdown
-- TYLKO wymieniać lokalizacje podane powyżej`
+- TYLKO wymieniać lokalizacje podane powyżej
+- WAŻNE: Upewnij się, że jest SPACJA przed I po każdej nazwie miejsca`
     };
 
     let description = await embeddingService.generateChatCompletion([
@@ -642,6 +649,20 @@ ZASADY:
       .replace(/~{2,}/g, '')         // Remove strikethrough
       .replace(/\s{2,}/g, ' ')       // Normalize whitespace
       .trim();
+
+    // CRITICAL: Ensure proper spacing around POI names for clickable links
+    // This fixes issues where AI might generate "BezoekPlaya Calpevoor" instead of "Bezoek Playa Calpe voor"
+    for (const poiName of selectedPoiNames) {
+      // Escape special regex chars in POI name
+      const escapedName = poiName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Add space before POI name if missing (not at start, not after space/punctuation)
+      description = description.replace(new RegExp(`([a-zA-ZáéíóúàèìòùäëïöüâêîôûñçÀÈÌÒÙÁÉÍÓÚÄËÏÖÜÂÊÎÔÛÑÇ])(${escapedName})`, 'g'), '$1 $2');
+      // Add space after POI name if missing (not at end, not before space/punctuation)
+      description = description.replace(new RegExp(`(${escapedName})([a-zA-ZáéíóúàèìòùäëïöüâêîôûñçÀÈÌÒÙÁÉÍÓÚÄËÏÖÜÂÊÎÔÛÑÇ])`, 'g'), '$1 $2');
+    }
+
+    // Final cleanup: normalize multiple spaces again
+    description = description.replace(/\s{2,}/g, ' ').trim();
 
     res.json({
       success: true,
