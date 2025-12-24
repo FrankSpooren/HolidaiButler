@@ -8,10 +8,11 @@ export { embeddingService } from './embeddingService.js';
 export { ragService } from './ragService.js';
 export { syncService } from './syncService.js';
 
-// TTS: Use OpenAI for natural, warm voice (replaces Google Cloud TTS)
-// OpenAI TTS provides better intonation, warmth, and emotional expression
-// Export as 'ttsService' for backward compatibility with existing code
-export { openaiTtsService as ttsService } from './openaiTtsService.js';
+// TTS: Use Google Cloud TTS with Chirp3-HD voices for enterprise-level voice quality
+// Chirp3-HD is Google's latest and highest quality TTS with native pronunciation
+// Voice "Aoede" provides warm, friendly female voice across all 6 languages
+// OpenAI TTS was rejected due to English accent when speaking Dutch
+export { ttsService } from './ttsService.js';
 
-// Keep Google TTS available as fallback (can be re-enabled if needed)
-// export { ttsService as googleTtsService } from './ttsService.js';
+// OpenAI TTS available as alternative (has English accent in non-English languages)
+// export { openaiTtsService as ttsService } from './openaiTtsService.js';
