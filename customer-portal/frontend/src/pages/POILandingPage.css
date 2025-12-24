@@ -336,12 +336,20 @@
   max-height: 180px !important;
   overflow: hidden;
   background: #f5f5f5;
+  border-radius: 16px 16px 0 0;
 }
 
 /* Force all images/carousels to fill container */
 .poi-image-container .poi-tile-carousel,
 .poi-image-container .poi-tile-carousel-viewport,
 .poi-image-container .poi-tile-carousel-fallback {
+  height: 100% !important;
+  border-radius: 16px 16px 0 0;
+}
+
+/* Force carousel slides to fill container */
+.poi-image-container .poi-tile-carousel-slide {
+  width: 100% !important;
   height: 100% !important;
 }
 

@@ -4,35 +4,38 @@
  *
  * Features:
  * - Multi-language support (nl, en, de, es, sv, pl)
- * - High-quality WaveNet voices with natural speech
+ * - Premium Chirp3-HD voices - Google's highest quality TTS
+ * - Native pronunciation for all supported languages
  * - SSML support for better phrasing and pauses
  * - Text preprocessing (removes markdown, emojis)
  * - Audio caching for repeated requests
- * - Fallback to Standard voices if WaveNet unavailable
+ * - Fallback to Wavenet voices if Chirp3-HD unavailable
  */
 
 import textToSpeech from '@google-cloud/text-to-speech';
 import crypto from 'crypto';
 import logger from '../../utils/logger.js';
 
-// Voice configuration per language - using more natural-sounding voices
+// Voice configuration per language - using Chirp3-HD voices (highest quality available)
+// Chirp3-HD is Google's latest and most natural voice technology with native pronunciation
+// Voice "Aoede" selected for warm, friendly female voice across all languages
 const VOICE_CONFIG = {
-  nl: { languageCode: 'nl-NL', name: 'nl-NL-Wavenet-E', ssmlGender: 'FEMALE' },
-  en: { languageCode: 'en-GB', name: 'en-GB-Wavenet-F', ssmlGender: 'FEMALE' },
-  de: { languageCode: 'de-DE', name: 'de-DE-Wavenet-F', ssmlGender: 'FEMALE' },
-  es: { languageCode: 'es-ES', name: 'es-ES-Wavenet-D', ssmlGender: 'FEMALE' },
-  sv: { languageCode: 'sv-SE', name: 'sv-SE-Wavenet-A', ssmlGender: 'FEMALE' },
-  pl: { languageCode: 'pl-PL', name: 'pl-PL-Wavenet-E', ssmlGender: 'FEMALE' },
+  nl: { languageCode: 'nl-NL', name: 'nl-NL-Chirp3-HD-Aoede' }, // Native Dutch female - warm & friendly
+  en: { languageCode: 'en-GB', name: 'en-GB-Chirp3-HD-Aoede' }, // Native British female - warm & friendly
+  de: { languageCode: 'de-DE', name: 'de-DE-Chirp3-HD-Aoede' }, // Native German female - warm & friendly
+  es: { languageCode: 'es-ES', name: 'es-ES-Chirp3-HD-Aoede' }, // Native Spanish female - warm & friendly
+  sv: { languageCode: 'sv-SE', name: 'sv-SE-Chirp3-HD-Aoede' }, // Native Swedish female - warm & friendly
+  pl: { languageCode: 'pl-PL', name: 'pl-PL-Chirp3-HD-Aoede' }, // Native Polish female - warm & friendly
 };
 
-// Standard voice fallbacks (lower quality but always available)
-const STANDARD_VOICE_CONFIG = {
-  nl: { languageCode: 'nl-NL', name: 'nl-NL-Standard-B', ssmlGender: 'FEMALE' },
-  en: { languageCode: 'en-GB', name: 'en-GB-Standard-A', ssmlGender: 'FEMALE' },
-  de: { languageCode: 'de-DE', name: 'de-DE-Standard-C', ssmlGender: 'FEMALE' },
-  es: { languageCode: 'es-ES', name: 'es-ES-Standard-C', ssmlGender: 'FEMALE' },
-  sv: { languageCode: 'sv-SE', name: 'sv-SE-Standard-A', ssmlGender: 'FEMALE' },
-  pl: { languageCode: 'pl-PL', name: 'pl-PL-Standard-A', ssmlGender: 'FEMALE' },
+// Wavenet voice fallbacks (high quality fallback)
+const FALLBACK_VOICE_CONFIG = {
+  nl: { languageCode: 'nl-NL', name: 'nl-NL-Wavenet-F', ssmlGender: 'FEMALE' },
+  en: { languageCode: 'en-GB', name: 'en-GB-Wavenet-A', ssmlGender: 'FEMALE' },
+  de: { languageCode: 'de-DE', name: 'de-DE-Wavenet-C', ssmlGender: 'FEMALE' },
+  es: { languageCode: 'es-ES', name: 'es-ES-Wavenet-C', ssmlGender: 'FEMALE' },
+  sv: { languageCode: 'sv-SE', name: 'sv-SE-Wavenet-A', ssmlGender: 'FEMALE' },
+  pl: { languageCode: 'pl-PL', name: 'pl-PL-Wavenet-A', ssmlGender: 'FEMALE' },
 };
 
 // In-memory cache for audio (max 100 entries, 1 hour TTL)
@@ -235,7 +238,7 @@ class TTSService {
     try {
       // Get voice config for language
       const voiceConfig = VOICE_CONFIG[language] || VOICE_CONFIG.en;
-      const standardVoice = STANDARD_VOICE_CONFIG[language] || STANDARD_VOICE_CONFIG.en;
+      const fallbackVoice = FALLBACK_VOICE_CONFIG[language] || FALLBACK_VOICE_CONFIG.en;
 
       // Convert text to SSML for natural speech
       const ssmlText = textToSSML(cleanText, language);
@@ -262,12 +265,12 @@ class TTSService {
 
       let response;
       try {
-        // Try WaveNet voice first
+        // Try Chirp3-HD voice first (highest quality)
         [response] = await this.client.synthesizeSpeech(request);
-      } catch (wavenetError) {
-        // Fallback to Standard voice
-        logger.warn('TTS: WaveNet voice failed, trying Standard voice:', wavenetError.message);
-        request.voice = standardVoice;
+      } catch (chirpError) {
+        // Fallback to Wavenet voice
+        logger.warn('TTS: Chirp3-HD voice failed, trying Wavenet fallback:', chirpError.message);
+        request.voice = fallbackVoice;
         [response] = await this.client.synthesizeSpeech(request);
       }
 
