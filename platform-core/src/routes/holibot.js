@@ -316,29 +316,90 @@ router.post('/itinerary', async (req, res) => {
           const { Op } = (await import('sequelize')).default;
           const mysqlPois = await model.findAll({
             where: { google_place_id: { [Op.in]: googlePlaceIds } },
-            attributes: ['id', 'google_place_id', 'category', 'subcategory', 'opening_hours'],
+            attributes: ['id', 'google_place_id', 'name', 'category', 'subcategory', 'opening_hours'],
             raw: true
           });
           // Create lookup by google_place_id
           const poiLookup = new Map(mysqlPois.map(p => [p.google_place_id, p]));
 
+          // Also create name-based lookup for POIs without google_place_id match
+          // This catches POIs like "Spasso Calpe" that exist in MySQL but without google_place_id
+          const poiNames = filteredResults.map(p => p.name).filter(Boolean);
+          const nameLookupPois = await model.findAll({
+            where: { name: { [Op.in]: poiNames } },
+            attributes: ['id', 'google_place_id', 'name', 'category', 'subcategory', 'opening_hours'],
+            raw: true
+          });
+          const poiNameLookup = new Map(nameLookupPois.map(p => [p.name.toLowerCase(), p]));
+
+          // CATEGORY FILTERING: Same rules as Daily Tip
+          // Only tourist-friendly categories allowed (including RAG category variations)
+          const allowedCategories = [
+            'Beaches & Nature', 'Food & Drinks', 'Shopping',
+            'Culture & History', 'Recreation', 'Active', 'Nightlife',
+            // RAG/Google category variations that map to tourist categories
+            'Restaurant', 'Bar', 'Cafe', 'Beach', 'Park', 'Museum',
+            'Tourist attraction', 'Point of interest', 'Natural feature',
+            'Public beach', 'Italian restaurant', 'Mediterranean restaurant',
+            'Spanish restaurant', 'Seafood restaurant', 'Tapas restaurant',
+            'General' // General often contains tourist POIs
+          ];
+          // Categories to EXCLUDE (not vacation-appropriate)
+          const excludedCategories = [
+            'Health & Wellbeing', 'Health & Wellness', 'Health',
+            'Accommodations', 'Accommodation', 'Accommodation (do not communicate)',
+            'Practical', 'Services', 'Government office', 'Pharmacy', 'Hospital',
+            'Police', 'Fire station', 'Bank', 'ATM', 'Post office'
+          ];
+
           enrichedResults = filteredResults.map(poi => {
-            const mysqlData = poiLookup.get(poi.id);
+            // Try google_place_id lookup first, then fallback to name lookup
+            let mysqlData = poiLookup.get(poi.id);
+            if (!mysqlData && poi.name) {
+              mysqlData = poiNameLookup.get(poi.name.toLowerCase());
+            }
+
             if (mysqlData) {
               // Check if permanently closed (all days empty/closed)
               if (isPermanentlyClosed(mysqlData.opening_hours)) {
-                logger.info('Excluding permanently closed POI from enrichment:', { id: poi.id, name: poi.name });
-                return null; // Will be filtered out
+                logger.info('Excluding permanently closed POI from itinerary:', { id: poi.id, name: poi.name });
+                return null;
               }
+
+              // Check category filtering
+              const poiCategory = (mysqlData.category || '').trim();
+              const isAllowedCategory = allowedCategories.includes(poiCategory);
+              const isExcludedCategory = excludedCategories.some(exc =>
+                poiCategory.toLowerCase().includes(exc.toLowerCase()) ||
+                exc.toLowerCase().includes(poiCategory.toLowerCase())
+              );
+
+              if (!isAllowedCategory || isExcludedCategory) {
+                logger.info('Excluding non-tourist POI from itinerary:', { id: poi.id, name: poi.name, category: poiCategory });
+                return null;
+              }
+
               return {
                 ...poi,
-                mysqlId: mysqlData.id, // Store MySQL ID for reference
+                mysqlId: mysqlData.id,
                 category: mysqlData.category || poi.category,
                 subcategory: mysqlData.subcategory || poi.subcategory
               };
             }
+
+            // POI not found in MySQL by ID or name - still apply category filtering using RAG category
+            const ragCategory = (poi.category || '').trim();
+            const isAllowedRagCategory = allowedCategories.includes(ragCategory);
+            const isExcludedRagCategory = excludedCategories.some(exc =>
+              ragCategory.toLowerCase().includes(exc.toLowerCase()) ||
+              exc.toLowerCase().includes(ragCategory.toLowerCase())
+            );
+            if (!isAllowedRagCategory || isExcludedRagCategory) {
+              logger.info('Excluding non-tourist POI (no MySQL match):', { id: poi.id, name: poi.name, category: ragCategory });
+              return null;
+            }
             return poi;
-          }).filter(Boolean); // Remove nulls (closed POIs)
+          }).filter(Boolean); // Remove nulls (closed/excluded POIs)
 
           logger.info('POI category enrichment:', {
             original: filteredResults.length,
