@@ -79,11 +79,12 @@ const isPermanentlyClosed = (openingHours) => {
         if (hours[day] !== undefined) {
           totalDays++;
           const value = hours[day];
-          // Check various "closed" formats
+          // Check various "closed" formats including empty arrays
           if (value === 'Closed' || value === 'closed' || value === 'CLOSED' ||
               value === 'Gesloten' || value === 'gesloten' ||
               value === 'Cerrado' || value === 'cerrado' ||
-              value === false || value === null || value === '') {
+              value === false || value === null || value === '' ||
+              (Array.isArray(value) && value.length === 0)) { // Empty array = closed that day
             closedCount++;
           }
         }
@@ -290,20 +291,80 @@ router.post('/itinerary', async (req, res) => {
 
     // Remove duplicates by id AND filter out permanently closed POIs
     const seenIds = new Set();
-    const searchResults = {
-      results: allSearchResults.filter(poi => {
-        if (!poi.id || seenIds.has(poi.id)) return false;
+    const filteredResults = allSearchResults.filter(poi => {
+      if (!poi.id || seenIds.has(poi.id)) return false;
 
-        // CRITICAL: Exclude permanently closed POIs
-        if (isPermanentlyClosed(poi.opening_hours || poi.openingHours)) {
-          logger.info('Excluding permanently closed POI from itinerary:', { id: poi.id, name: poi.name });
-          return false;
+      // CRITICAL: Exclude permanently closed POIs
+      if (isPermanentlyClosed(poi.opening_hours || poi.openingHours)) {
+        logger.info('Excluding permanently closed POI from itinerary:', { id: poi.id, name: poi.name });
+        return false;
+      }
+
+      seenIds.add(poi.id);
+      return true;
+    });
+
+    // CRITICAL FIX: Enrich POI data with correct category/subcategory from MySQL
+    // ChromaDB (RAG) returns Google Place IDs, not MySQL IDs, so lookup by google_place_id
+    const model = await getPOIModel();
+    let enrichedResults = filteredResults;
+    if (model && filteredResults.length > 0) {
+      // RAG POIs use Google Place ID as their 'id' field (e.g., "ChIJvUouKOP_nRIRLlLrjriGIDk")
+      const googlePlaceIds = filteredResults.map(p => p.id).filter(id => id && typeof id === 'string' && id.startsWith('ChIJ'));
+      if (googlePlaceIds.length > 0) {
+        try {
+          const { Op } = (await import('sequelize')).default;
+          const mysqlPois = await model.findAll({
+            where: { google_place_id: { [Op.in]: googlePlaceIds } },
+            attributes: ['id', 'google_place_id', 'category', 'subcategory', 'opening_hours'],
+            raw: true
+          });
+          // Create lookup by google_place_id
+          const poiLookup = new Map(mysqlPois.map(p => [p.google_place_id, p]));
+
+          enrichedResults = filteredResults.map(poi => {
+            const mysqlData = poiLookup.get(poi.id);
+            if (mysqlData) {
+              // Check if permanently closed (all days empty/closed)
+              const isClosed = isPermanentlyClosed(mysqlData.opening_hours);
+              if (poi.name && poi.name.toLowerCase().includes('spasso')) {
+                logger.info('DEBUG Spasso check:', {
+                  name: poi.name,
+                  openingHoursType: typeof mysqlData.opening_hours,
+                  openingHours: mysqlData.opening_hours,
+                  isPermanentlyClosed: isClosed
+                });
+              }
+              if (isClosed) {
+                logger.info('Excluding permanently closed POI from enrichment:', { id: poi.id, name: poi.name });
+                return null; // Will be filtered out
+              }
+              return {
+                ...poi,
+                mysqlId: mysqlData.id, // Store MySQL ID for reference
+                category: mysqlData.category || poi.category,
+                subcategory: mysqlData.subcategory || poi.subcategory
+              };
+            }
+            return poi;
+          }).filter(Boolean); // Remove nulls (closed POIs)
+
+          logger.info('POI category enrichment:', {
+            original: filteredResults.length,
+            enriched: enrichedResults.length,
+            excluded: filteredResults.length - enrichedResults.length,
+            googlePlaceIdsFound: googlePlaceIds.length,
+            mysqlMatches: mysqlPois.length
+          });
+        } catch (enrichError) {
+          logger.warn('POI enrichment failed, using RAG data:', enrichError.message);
         }
+      } else {
+        logger.info('No Google Place IDs found in POI results, skipping enrichment');
+      }
+    }
 
-        seenIds.add(poi.id);
-        return true;
-      })
-    };
+    const searchResults = { results: enrichedResults };
 
     logger.info('Itinerary search results:', {
       totalPois: searchResults.results.length,
