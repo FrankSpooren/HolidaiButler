@@ -44,7 +44,8 @@ const categoryIconPaths: Record<string, string> = {
   'Shopping': '/assets/category-icons/shopping.png',
   'Recreation': '/assets/category-icons/recreation.png',
   'Nightlife': '/assets/category-icons/subcategories/nightlife.webp',
-  'default': '/assets/category-icons/active.png'
+  // Default: use a neutral location/map marker icon, NOT cycling!
+  'default': '/assets/category-icons/culture-history.png'
 };
 
 // Subcategory icons (level 2/3) - for POI cards in itinerary

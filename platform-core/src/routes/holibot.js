@@ -650,49 +650,30 @@ ZASADY:
       .replace(/\s{2,}/g, ' ')       // Normalize whitespace
       .trim();
 
-    // CRITICAL: Fix spacing around common Dutch/English/German/Spanish words
-    // AI often generates "BezoekCala" or "Manzaneravoor" without spaces
+    // SAFE SPACING FIX: Only add spaces around actual POI names
+    // Previous regex approach was BROKEN - it added spaces INSIDE words like "Welkom" -> "Welk om"
+    // New approach: only process the specific POI names we know are in the text
+    for (const poiName of selectedPoiNames) {
+      if (!poiName || poiName.length < 3) continue;
 
-    // Words that need a space AFTER them (verbs, prepositions at start)
-    const wordsNeedSpaceAfter = [
-      // Dutch verbs
-      'Bezoek', 'Ontdek', 'Geniet', 'Probeer', 'Bekijk', 'Wandel', 'Verken', 'Eet', 'Drink', 'Ga', 'Zie', 'Ervaar', 'Bewonder', 'Proef',
-      // Dutch prepositions (when starting a phrase)
-      'Bij', 'Naar', 'Voor', 'Met', 'In', 'Van', 'Door', 'Over', 'Om', 'Tot',
-      // English
-      'Visit', 'Discover', 'Enjoy', 'Try', 'See', 'Explore', 'Experience', 'Taste', 'Walk', 'Go', 'At', 'To', 'For', 'With',
-      // German
-      'Besuche', 'Entdecke', 'Genieße', 'Probiere', 'Erlebe', 'Bewundere', 'Koste',
-      // Spanish
-      'Visita', 'Descubre', 'Disfruta', 'Prueba', 'Explora', 'Experimenta', 'Pasea'
-    ];
+      // Escape special regex characters in POI name
+      const escapedName = poiName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    // Words that need a space BEFORE them (prepositions, conjunctions)
-    const wordsNeedSpaceBefore = [
-      // Dutch
-      'voor', 'bij', 'naar', 'met', 'op', 'in', 'van', 'door', 'over', 'om', 'te', 'tot', 'aan', 'uit', 'tussen', 'zonder', 'tegen',
-      'en', 'of', 'maar', 'want', 'dus', 'als', 'dan', 'waar', 'die', 'dat', 'het',
-      // English
-      'for', 'at', 'to', 'with', 'on', 'in', 'of', 'by', 'from', 'and', 'or', 'but', 'the', 'a', 'an',
-      // German
-      'für', 'bei', 'nach', 'mit', 'auf', 'von', 'durch', 'über', 'um', 'und', 'oder', 'aber',
-      // Spanish
-      'para', 'por', 'con', 'en', 'de', 'desde', 'hacia', 'y', 'o', 'pero', 'el', 'la', 'los', 'las', 'un', 'una'
-    ];
+      // Only add space BEFORE POI name if preceded by a letter (not at word boundary)
+      // Use word boundary \b to ensure we're matching the complete POI name
+      description = description.replace(
+        new RegExp(`([a-zA-ZáéíóúàèìòùäëïöüâêîôûñçÀÈÌÒÙÁÉÍÓÚÄËÏÖÜÂÊÎÔÛÑÇ])(?=${escapedName}\\b)`, 'g'),
+        '$1 '
+      );
 
-    // Add space after words that need it (case-sensitive for capitalized words)
-    for (const word of wordsNeedSpaceAfter) {
-      // Match word followed by uppercase letter (start of POI name) without space
-      description = description.replace(new RegExp(`(${word})([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])`, 'g'), '$1 $2');
+      // Only add space AFTER POI name if followed by a lowercase letter (not at word boundary)
+      description = description.replace(
+        new RegExp(`(\\b${escapedName})([a-záéíóúàèìòùäëïöüâêîôûñç])`, 'g'),
+        '$1 $2'
+      );
     }
 
-    // Add space before words that need it (case-insensitive for lowercase prepositions)
-    for (const word of wordsNeedSpaceBefore) {
-      // Match lowercase letter followed by the word without space
-      description = description.replace(new RegExp(`([a-záéíóúàèìòùäëïöüâêîôûñç])(${word})\\b`, 'gi'), '$1 $2');
-    }
-
-    // Final cleanup: normalize multiple spaces again
+    // Final cleanup: normalize multiple spaces
     description = description.replace(/\s{2,}/g, ' ').trim();
 
     res.json({
