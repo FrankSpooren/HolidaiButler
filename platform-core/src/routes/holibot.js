@@ -326,16 +326,7 @@ router.post('/itinerary', async (req, res) => {
             const mysqlData = poiLookup.get(poi.id);
             if (mysqlData) {
               // Check if permanently closed (all days empty/closed)
-              const isClosed = isPermanentlyClosed(mysqlData.opening_hours);
-              if (poi.name && poi.name.toLowerCase().includes('spasso')) {
-                logger.info('DEBUG Spasso check:', {
-                  name: poi.name,
-                  openingHoursType: typeof mysqlData.opening_hours,
-                  openingHours: mysqlData.opening_hours,
-                  isPermanentlyClosed: isClosed
-                });
-              }
-              if (isClosed) {
+              if (isPermanentlyClosed(mysqlData.opening_hours)) {
                 logger.info('Excluding permanently closed POI from enrichment:', { id: poi.id, name: poi.name });
                 return null; // Will be filtered out
               }
