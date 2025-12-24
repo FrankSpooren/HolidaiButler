@@ -685,15 +685,16 @@ export function POILandingPage() {
                           {poi.category}
                         </div>
 
-                        {/* POI Image */}
-                        <POITileCarousel
-                          images={poi.images || []}
-                          thumbnailUrl={poi.thumbnail_url}
-                          poiName={poi.name}
-                          height="200px"
-                          categoryColor={getCategoryColor(poi.category)}
-                          categoryIcon={getCategoryIcon(poi.category)}
-                        />
+                        {/* POI Image - Fixed height container */}
+                        <div className="poi-image-container">
+                          <POITileCarousel
+                            images={poi.images || []}
+                            thumbnailUrl={poi.thumbnail_url}
+                            poiName={poi.name}
+                            categoryColor={getCategoryColor(poi.category)}
+                            categoryIcon={getCategoryIcon(poi.category)}
+                          />
+                        </div>
 
                         {/* Save Button */}
                         <button
