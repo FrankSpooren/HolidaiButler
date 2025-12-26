@@ -1569,6 +1569,28 @@ router.get('/admin/stats', async (req, res) => {
 });
 
 /**
+ * GET /api/v1/holibot/admin/debug/qna
+ * Debug endpoint to test QnA table access
+ */
+router.get('/admin/debug/qna', async (req, res) => {
+  try {
+    const qaItems = await syncService.getQAForSync(5); // Just get 5 for testing
+    res.json({
+      success: true,
+      count: qaItems.length,
+      sample: qaItems.slice(0, 2).map(q => ({
+        id: q.id,
+        question: q.question?.substring(0, 100),
+        language: q.language
+      }))
+    });
+  } catch (error) {
+    logger.error('QnA debug error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * GET /api/v1/holibot/health
  */
 router.get('/health', async (req, res) => {
