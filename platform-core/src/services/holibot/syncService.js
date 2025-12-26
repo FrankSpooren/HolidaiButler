@@ -109,41 +109,27 @@ class SyncService {
 
   /**
    * Get Q&A pairs for syncing from QnA table (32.000+ records)
-   * Falls back to poi_qa if QnA doesn't exist
+   * QnA table structure: id, google_placeid, question, answer, language, source, created_at
    */
   async getQAForSync(limit = 50000) {
-    // First try the main QnA table (32.000+ records)
     try {
       const sql = `
         SELECT
-          id, poi_id, question, answer, language, category,
-          COALESCE(keywords, '') as keywords
+          id,
+          google_placeid as poi_id,
+          question,
+          answer,
+          language,
+          source as category
         FROM QnA
+        WHERE question IS NOT NULL AND answer IS NOT NULL
         LIMIT ${limit}
       `;
       const results = await this.query(sql);
-      if (results.length > 0) {
-        logger.info(`Found ${results.length} Q&A pairs in QnA table`);
-        return results;
-      }
-    } catch (error) {
-      logger.debug('QnA table not available, trying poi_qa:', error.message);
-    }
-
-    // Fallback to poi_qa table
-    try {
-      const sql = `
-        SELECT
-          id, poi_id, question, answer, language, category, keywords
-        FROM poi_qa
-        WHERE is_active = 1
-        LIMIT ${limit}
-      `;
-      const results = await this.query(sql);
-      logger.info(`Found ${results.length} Q&A pairs in poi_qa table`);
+      logger.info(`Found ${results.length} Q&A pairs in QnA table`);
       return results;
     } catch (error) {
-      logger.warn('No Q&A tables available:', error.message);
+      logger.error('Failed to fetch QnA data:', error.message);
       return [];
     }
   }
