@@ -58,76 +58,52 @@ class SyncService {
         enriched_detail_description_sv,
         enriched_detail_description_pl,
         enriched_highlights,
-        enriched_target_audience,
-        updated_at
+        enriched_target_audience
       FROM POI
       WHERE is_active = 1
     `;
 
-    const params = [];
+    sql += ` ORDER BY id DESC LIMIT ${limit}`;
 
-    if (since) {
-      sql += ' AND updated_at > ?';
-      params.push(since);
-    }
-
-    sql += ` ORDER BY updated_at DESC LIMIT ${limit}`;
-
-    return this.query(sql, params);
+    return this.query(sql);
   }
 
   /**
    * Get POIs that need syncing (legacy - basic fields only)
    */
   async getPOIsForSync(since = null) {
-    let sql = `
+    const sql = `
       SELECT
         id, name, category, subcategory, description,
         address, latitude, longitude, rating, review_count,
-        price_level, thumbnail_url, opening_hours, phone, website,
-        updated_at
+        price_level, thumbnail_url, opening_hours, phone, website
       FROM POI
       WHERE is_active = 1
+      ORDER BY id DESC LIMIT 100
     `;
 
-    const params = [];
-
-    if (since) {
-      sql += ' AND updated_at > ?';
-      params.push(since);
-    }
-
-    sql += ' ORDER BY updated_at DESC LIMIT 100';
-
-    return this.query(sql, params);
+    return this.query(sql);
   }
 
   /**
    * Get Agenda events that need syncing
    */
   async getAgendaForSync(since = null) {
-    let sql = `
+    const sql = `
       SELECT
         a.id, a.title, a.description, a.category,
         a.title_en, a.title_es, a.title_de, a.title_sv, a.title_pl,
         a.location_name, a.location_address,
-        a.calpe_distance, a.updated_at,
+        a.calpe_distance,
         GROUP_CONCAT(DISTINCT d.event_date) as event_dates
       FROM agenda a
       LEFT JOIN agenda_dates d ON a.id = d.agenda_id
       WHERE d.event_date >= CURDATE()
+      GROUP BY a.id
+      ORDER BY a.id DESC LIMIT 100
     `;
 
-    const params = [];
-
-    if (since) {
-      sql += ' AND a.updated_at > ?';
-      params.push(since);
-    }
-
-    sql += ' GROUP BY a.id ORDER BY a.updated_at DESC LIMIT 100';
-
-    return this.query(sql, params);
+    return this.query(sql);
   }
 
   /**
