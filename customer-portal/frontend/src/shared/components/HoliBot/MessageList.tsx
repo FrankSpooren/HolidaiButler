@@ -162,6 +162,8 @@ export function MessageList() {
   const [loadingMorePois, setLoadingMorePois] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
+  const itineraryContainerRef = useRef<HTMLDivElement>(null);
+  const dailyTipContainerRef = useRef<HTMLDivElement>(null);
 
   const quickReplies = [
     t.holibotChat.quickActions.itinerary,
@@ -198,8 +200,29 @@ export function MessageList() {
   }, [wasReset]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Only scroll to end for regular messages, not for itinerary/tip which have their own scroll
+    if (!currentItinerary && !currentDailyTip) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages, showItineraryBuilder]);
+
+  // Scroll to itinerary header when itinerary loads (user sees title first, can scroll down)
+  useEffect(() => {
+    if (currentItinerary?.itinerary && itineraryContainerRef.current) {
+      setTimeout(() => {
+        itineraryContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
+  }, [currentItinerary]);
+
+  // Scroll to daily tip header when tip loads (user sees title first, can scroll down)
+  useEffect(() => {
+    if (currentDailyTip && dailyTipContainerRef.current) {
+      setTimeout(() => {
+        dailyTipContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
+  }, [currentDailyTip]);
 
   // Store last itinerary options for shuffle functionality
   const [lastItineraryOptions, setLastItineraryOptions] = useState<ItineraryOptions | null>(null);
@@ -475,7 +498,7 @@ export function MessageList() {
       )}
 
       {currentDailyTip && (
-        <div className="holibot-daily-tip-container">
+        <div ref={dailyTipContainerRef} className="holibot-daily-tip-container">
           <div className="holibot-daily-tip-header">
             <span className="holibot-daily-tip-icon">💡</span>
             <h4 className="holibot-daily-tip-title">{tipTitles[language] || tipTitles.nl}</h4>
@@ -498,7 +521,7 @@ export function MessageList() {
       {console.log('[HoliBot RENDER] itinerary:', currentItinerary, 'hasItinerary:', !!currentItinerary?.itinerary)}
 
       {currentItinerary?.itinerary && (
-        <div className="holibot-itinerary-container">
+        <div ref={itineraryContainerRef} className="holibot-itinerary-container">
           <div className="holibot-itinerary-header">
             <span className="holibot-itinerary-header-icon">📋</span>
             <h4>{t.holibotChat.responses.yourItinerary || 'Jouw Programma'}</h4>
