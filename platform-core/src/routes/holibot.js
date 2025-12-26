@@ -1,5 +1,5 @@
 /**
- * HoliBot Routes v2.2
+ * HoliBot Routes v2.3
  * API endpoints for HoliBot AI Assistant Widget
  *
  * Features:
@@ -9,6 +9,7 @@
  * - 4 Quick Actions: Itinerary, Location Info, Directions, Daily Tip
  * - SSE Streaming for real-time chat responses
  * - Category hierarchy browser (3 levels)
+ * - Enhanced sync with multi-language POIs, Q&A, and review sentiment
  *
  * Endpoints:
  * - POST /holibot/chat - RAG-powered chat
@@ -21,7 +22,9 @@
  * - GET /holibot/categories - POI categories
  * - GET /holibot/categories/hierarchy - 3-level category tree
  * - GET /holibot/categories/:category/pois - POIs by category filter
- * - POST /holibot/admin/sync - Sync MySQL to ChromaDB
+ * - POST /holibot/admin/sync - Legacy sync MySQL to ChromaDB
+ * - POST /holibot/admin/resync - Enhanced multi-language sync with Q&A
+ * - POST /holibot/admin/sync-single/:poiId - Sync single POI (all languages)
  * - GET /holibot/admin/stats - Service statistics
  */
 
@@ -135,6 +138,92 @@ const getTranslatedDescription = (poi, lang) => {
 
   // Return translated version, fallback to English, then original description
   return langFieldMap[lang] || poi.enriched_tile_description || poi.description || '';
+};
+
+/**
+ * Get translated event title based on language
+ * Events have title_en, title_es fields; Dutch title is in main 'title' field
+ * @param {object} event - Event object with translation fields
+ * @param {string} lang - Language code (nl, en, de, es, sv, pl)
+ * @returns {string} - Translated title
+ */
+const getTranslatedEventTitle = (event, lang) => {
+  if (!event) return '';
+
+  // Language-specific field mapping for events
+  // Dutch is the default/main language, others have specific fields
+  const langFieldMap = {
+    en: event.title_en,
+    es: event.title_es,
+    de: event.title_de,  // May not exist yet
+    sv: event.title_sv,  // May not exist yet
+    pl: event.title_pl   // May not exist yet
+  };
+
+  // For Dutch (nl), use main title; for others, try translated field first
+  if (lang === 'nl') {
+    return event.title || '';
+  }
+
+  // Return translated version, fallback to main title
+  return langFieldMap[lang] || event.title || '';
+};
+
+/**
+ * Clean AI-generated text: remove asterisks, quotes, and fix spacing
+ * @param {string} text - Raw AI text
+ * @param {string[]} poiNames - Array of POI names to fix spacing around
+ * @returns {string} - Cleaned text
+ */
+const cleanAIText = (text, poiNames = []) => {
+  if (!text) return '';
+
+  let cleaned = text
+    // Remove asterisks (bold markers)
+    .replace(/\*+/g, '')
+    // Remove quotation marks around POI names
+    .replace(/["„""'']/g, '')
+    // Remove markdown headers
+    .replace(/#+\s*/g, '')
+    // Convert markdown links to plain text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Remove code backticks
+    .replace(/`+/g, '')
+    // Remove double underscores
+    .replace(/_{2,}/g, '')
+    // Remove strikethrough
+    .replace(/~{2,}/g, '');
+
+  // Fix spacing around POI names
+  for (const poiName of poiNames) {
+    if (!poiName || poiName.length < 3) continue;
+
+    // Escape special regex characters in POI name
+    const escapedName = poiName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Add space BEFORE POI name if preceded by a letter (not punctuation or space)
+    cleaned = cleaned.replace(
+      new RegExp(`([a-zA-ZáéíóúàèìòùäëïöüâêîôûñçÀÈÌÒÙÁÉÍÓÚÄËÏÖÜÂÊÎÔÛÑÇ])(?=${escapedName})`, 'g'),
+      '$1 '
+    );
+
+    // Add space AFTER POI name if followed by a lowercase letter
+    cleaned = cleaned.replace(
+      new RegExp(`(${escapedName})([a-záéíóúàèìòùäëïöüâêîôûñç])`, 'g'),
+      '$1 $2'
+    );
+  }
+
+  // Fix common issues: period/comma stuck to next word
+  cleaned = cleaned
+    .replace(/\.([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])/g, '. $1')  // Period followed by capital
+    .replace(/,([A-Za-záéíóúàèìòùäëïöüâêîôûñç])/g, ', $1') // Comma followed by letter
+    .replace(/!([A-Za-záéíóúàèìòùäëïöüâêîôûñç])/g, '! $1') // Exclamation followed by letter
+    .replace(/\?([A-Za-záéíóúàèìòùäëïöüâêîôûñç])/g, '? $1') // Question mark followed by letter
+    .replace(/\s{2,}/g, ' ')  // Normalize multiple spaces
+    .trim();
+
+  return cleaned;
 };
 
 /**
@@ -752,42 +841,8 @@ ZASADY:
       { role: 'user', content: itineraryPrompts[language] || itineraryPrompts.nl }
     ]);
 
-    // Post-process: remove any asterisks, markdown formatting, and stray symbols
-    description = description
-      .replace(/\*+/g, '')           // Remove asterisks
-      .replace(/#+\s*/g, '')         // Remove markdown headers
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert markdown links to plain text
-      .replace(/`+/g, '')            // Remove code backticks
-      .replace(/_{2,}/g, '')         // Remove double underscores
-      .replace(/~{2,}/g, '')         // Remove strikethrough
-      .replace(/\s{2,}/g, ' ')       // Normalize whitespace
-      .trim();
-
-    // SAFE SPACING FIX: Only add spaces around actual POI names
-    // Previous regex approach was BROKEN - it added spaces INSIDE words like "Welkom" -> "Welk om"
-    // New approach: only process the specific POI names we know are in the text
-    for (const poiName of selectedPoiNames) {
-      if (!poiName || poiName.length < 3) continue;
-
-      // Escape special regex characters in POI name
-      const escapedName = poiName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-      // Only add space BEFORE POI name if preceded by a letter (not at word boundary)
-      // Use word boundary \b to ensure we're matching the complete POI name
-      description = description.replace(
-        new RegExp(`([a-zA-ZáéíóúàèìòùäëïöüâêîôûñçÀÈÌÒÙÁÉÍÓÚÄËÏÖÜÂÊÎÔÛÑÇ])(?=${escapedName}\\b)`, 'g'),
-        '$1 '
-      );
-
-      // Only add space AFTER POI name if followed by a lowercase letter (not at word boundary)
-      description = description.replace(
-        new RegExp(`(\\b${escapedName})([a-záéíóúàèìòùäëïöüâêîôûñç])`, 'g'),
-        '$1 $2'
-      );
-    }
-
-    // Final cleanup: normalize multiple spaces
-    description = description.replace(/\s{2,}/g, ' ').trim();
+    // Clean AI text: remove asterisks, quotes, fix spacing around POI names
+    description = cleanAIText(description, selectedPoiNames);
 
     res.json({
       success: true,
@@ -1033,13 +1088,15 @@ router.get('/daily-tip', async (req, res) => {
     }
 
     // Step 2: Get upcoming events (next 7 days) within 5km radius
+    // Include translated title fields (title_en, title_es) for multi-language support
     let events = [];
     try {
       const { mysqlSequelize } = await import('../config/database.js');
       const { QueryTypes } = (await import('sequelize')).default;
 
       const eventResults = await mysqlSequelize.query(
-        "SELECT a.id, a.title, a.short_description as description, " +
+        "SELECT a.id, a.title, a.title_en, a.title_es, " +
+        "a.short_description as description, " +
         "a.image as thumbnailUrl, a.location_name as address, " +
         "MIN(d.event_date) as event_date " +
         "FROM agenda a " +
@@ -1056,7 +1113,8 @@ router.get('/daily-tip', async (req, res) => {
         ...event,
         id: event.id,
         eventId: event.id,
-        name: event.title,
+        // Use translated title based on user's language
+        name: getTranslatedEventTitle(event, language),
         type: 'event',
         isEvent: true,
         category: selectedInterest,
@@ -1168,16 +1226,8 @@ router.get('/daily-tip', async (req, res) => {
       { role: 'user', content: tipPrompt }
     ]);
 
-    // Post-process: remove any asterisks, markdown formatting, and stray symbols
-    tipDescription = tipDescription
-      .replace(/\*+/g, '')           // Remove asterisks
-      .replace(/#+\s*/g, '')         // Remove markdown headers
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert markdown links to plain text
-      .replace(/`+/g, '')            // Remove code backticks
-      .replace(/_{2,}/g, '')         // Remove double underscores
-      .replace(/~{2,}/g, '')         // Remove strikethrough
-      .replace(/\s{2,}/g, ' ')       // Normalize whitespace
-      .trim();
+    // Clean AI text: remove asterisks, quotes, fix spacing around item name
+    tipDescription = cleanAIText(tipDescription, [itemName]);
 
     res.json({
       success: true,
@@ -1370,6 +1420,7 @@ router.get('/categories/:category/pois', async (req, res) => {
 
 /**
  * POST /api/v1/holibot/admin/sync
+ * Legacy sync endpoint (basic POIs only)
  */
 router.post('/admin/sync', async (req, res) => {
   try {
@@ -1385,6 +1436,121 @@ router.post('/admin/sync', async (req, res) => {
   } catch (error) {
     logger.error('Admin sync error:', error);
     res.status(500).json({ success: false, error: error.message || 'Sync failed' });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/admin/resync
+ * Enhanced sync endpoint with multi-language POIs, Q&A, and reviews
+ *
+ * Request body options:
+ * - languages: string[] (default: all 6 languages)
+ * - includeQA: boolean (default: true) - sync Q&A pairs from poi_qa table
+ * - includeReviews: boolean (default: true) - include review sentiment in POI context
+ * - includeAgenda: boolean (default: true) - sync agenda events
+ *
+ * This endpoint syncs:
+ * - POIs with all enriched multi-language descriptions
+ * - Q&A pairs for enhanced knowledge base
+ * - Review sentiment for better recommendations
+ * - Agenda events for upcoming activities
+ */
+router.post('/admin/resync', async (req, res) => {
+  try {
+    const {
+      languages = ['en', 'nl', 'de', 'es', 'sv', 'pl'],
+      includeQA = true,
+      includeReviews = true,
+      includeAgenda = true
+    } = req.body;
+
+    logger.info('Admin enhanced resync requested', {
+      languages,
+      includeQA,
+      includeReviews,
+      includeAgenda
+    });
+
+    // Validate languages
+    const validLanguages = ['en', 'nl', 'de', 'es', 'sv', 'pl'];
+    const filteredLanguages = languages.filter(lang => validLanguages.includes(lang));
+
+    if (filteredLanguages.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No valid languages specified. Valid options: ' + validLanguages.join(', ')
+      });
+    }
+
+    // Execute enhanced sync
+    const result = await syncService.fullSyncEnhanced({
+      languages: filteredLanguages,
+      includeQA,
+      includeReviews,
+      includeAgenda
+    });
+
+    logger.info('Enhanced resync completed', {
+      totalSynced: result.totalSynced,
+      totalErrors: result.totalErrors,
+      duration: result.duration
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    logger.error('Admin enhanced resync error:', error);
+
+    // Check if sync is already in progress
+    if (error.message === 'Sync already in progress') {
+      return res.status(409).json({
+        success: false,
+        error: 'Sync already in progress. Please wait for it to complete.'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Enhanced sync failed'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/admin/sync-single/:poiId
+ * Sync a single POI across all languages
+ * Useful for immediate updates after POI edits in admin
+ */
+router.post('/admin/sync-single/:poiId', async (req, res) => {
+  try {
+    const { poiId } = req.params;
+    const { languages = ['en', 'nl', 'de', 'es', 'sv', 'pl'] } = req.body;
+
+    if (!poiId || isNaN(parseInt(poiId))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid POI ID is required'
+      });
+    }
+
+    logger.info('Admin single POI sync requested', { poiId, languages });
+
+    const result = await syncService.syncSinglePOI(parseInt(poiId), languages);
+
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    logger.error('Admin single POI sync error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Single POI sync failed'
+    });
   }
 });
 

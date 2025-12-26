@@ -1,7 +1,13 @@
 /**
  * Sync Service
  * Synchronizes MySQL database with ChromaDB Cloud
- * Handles POI, Agenda, and Q&A embeddings
+ * Handles POI (multi-language), Agenda, Q&A, and Review embeddings
+ *
+ * Version 2.0 - Enhanced with:
+ * - Multi-language POI sync (nl, en, de, es, sv, pl)
+ * - Enriched descriptions support
+ * - Q&A pairs sync
+ * - Review sentiment integration
  */
 
 import { chromaService } from './chromaService.js';
@@ -10,6 +16,9 @@ import { mysqlSequelize } from '../../config/database.js';
 import logger from '../../utils/logger.js';
 
 const { QueryTypes } = (await import('sequelize')).default;
+
+// Supported languages
+const SUPPORTED_LANGUAGES = ['en', 'nl', 'de', 'es', 'sv', 'pl'];
 
 class SyncService {
   constructor() {
@@ -28,7 +37,47 @@ class SyncService {
   }
 
   /**
-   * Get POIs that need syncing (new or updated since last sync)
+   * Get POIs with ALL fields including enriched descriptions
+   */
+  async getPOIsForSyncEnriched(since = null, limit = 500) {
+    let sql = `
+      SELECT
+        id, name, category, subcategory, description,
+        address, latitude, longitude, rating, review_count,
+        price_level, thumbnail_url, opening_hours, phone, website,
+        enriched_tile_description,
+        enriched_tile_description_nl,
+        enriched_tile_description_de,
+        enriched_tile_description_es,
+        enriched_tile_description_sv,
+        enriched_tile_description_pl,
+        enriched_detail_description,
+        enriched_detail_description_nl,
+        enriched_detail_description_de,
+        enriched_detail_description_es,
+        enriched_detail_description_sv,
+        enriched_detail_description_pl,
+        enriched_highlights,
+        enriched_target_audience,
+        updated_at
+      FROM POI
+      WHERE is_active = 1
+    `;
+
+    const params = [];
+
+    if (since) {
+      sql += ' AND updated_at > ?';
+      params.push(since);
+    }
+
+    sql += ` ORDER BY updated_at DESC LIMIT ${limit}`;
+
+    return this.query(sql, params);
+  }
+
+  /**
+   * Get POIs that need syncing (legacy - basic fields only)
    */
   async getPOIsForSync(since = null) {
     let sql = `
@@ -60,6 +109,7 @@ class SyncService {
     let sql = `
       SELECT
         a.id, a.title, a.description, a.category,
+        a.title_en, a.title_es, a.title_de, a.title_sv, a.title_pl,
         a.location_name, a.location_address,
         a.calpe_distance, a.updated_at,
         GROUP_CONCAT(DISTINCT d.event_date) as event_dates
@@ -81,7 +131,102 @@ class SyncService {
   }
 
   /**
-   * Build embedding text for a POI
+   * Get Q&A pairs for syncing
+   */
+  async getQAForSync() {
+    const sql = `
+      SELECT
+        id, poi_id, question, answer, language, category, keywords
+      FROM poi_qa
+      WHERE is_active = 1
+    `;
+    return this.query(sql);
+  }
+
+  /**
+   * Get review summary for a POI
+   */
+  async getReviewSummaryForPOI(poiId) {
+    try {
+      const sql = `
+        SELECT
+          COUNT(*) as review_count,
+          AVG(rating) as avg_rating,
+          SUM(CASE WHEN sentiment = 'positive' THEN 1 ELSE 0 END) as positive_count,
+          SUM(CASE WHEN sentiment = 'negative' THEN 1 ELSE 0 END) as negative_count,
+          GROUP_CONCAT(
+            CASE WHEN rating >= 4 THEN SUBSTRING(review_text, 1, 100) END
+            SEPARATOR ' | '
+          ) as top_reviews
+        FROM reviews
+        WHERE poi_id = ? AND status = 'approved'
+        GROUP BY poi_id
+      `;
+      const results = await this.query(sql, [poiId]);
+      return results[0] || null;
+    } catch (error) {
+      // Reviews table might not exist or have different structure
+      logger.debug(`Could not fetch reviews for POI ${poiId}: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Build embedding text for a POI with language-specific enriched content
+   * @param {Object} poi - POI object with all fields
+   * @param {string} language - Language code (en, nl, de, es, sv, pl)
+   * @param {Object} reviewSummary - Optional review summary
+   */
+  buildPOIEmbeddingTextEnriched(poi, language = 'en', reviewSummary = null) {
+    // Get language-specific tile description
+    const tileDescField = language === 'en'
+      ? 'enriched_tile_description'
+      : `enriched_tile_description_${language}`;
+    const tileDesc = poi[tileDescField] || poi.enriched_tile_description || poi.description;
+
+    // Get language-specific detail description
+    const detailDescField = language === 'en'
+      ? 'enriched_detail_description'
+      : `enriched_detail_description_${language}`;
+    const detailDesc = poi[detailDescField] || poi.enriched_detail_description;
+
+    // Parse highlights if available
+    let highlights = null;
+    if (poi.enriched_highlights) {
+      try {
+        const highlightsArray = typeof poi.enriched_highlights === 'string'
+          ? JSON.parse(poi.enriched_highlights)
+          : poi.enriched_highlights;
+        if (Array.isArray(highlightsArray)) {
+          highlights = highlightsArray.join(', ');
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+
+    // Build parts array
+    const parts = [
+      poi.name,
+      poi.category,
+      poi.subcategory,
+      tileDesc,
+      detailDesc,
+      highlights,
+      poi.enriched_target_audience,
+      poi.address
+    ];
+
+    // Add review context if available
+    if (reviewSummary && reviewSummary.top_reviews) {
+      parts.push(`Reviews: ${reviewSummary.top_reviews}`);
+    }
+
+    return parts.filter(Boolean).join(' | ');
+  }
+
+  /**
+   * Build embedding text for a POI (legacy - basic)
    */
   buildPOIEmbeddingText(poi) {
     const parts = [
@@ -98,9 +243,15 @@ class SyncService {
   /**
    * Build embedding text for an Agenda event
    */
-  buildAgendaEmbeddingText(event) {
+  buildAgendaEmbeddingText(event, language = 'en') {
+    // Get language-specific title
+    let title = event.title;
+    if (language !== 'nl' && event[`title_${language}`]) {
+      title = event[`title_${language}`];
+    }
+
     const parts = [
-      event.title,
+      title,
       event.category,
       event.description,
       event.location_name,
@@ -111,7 +262,114 @@ class SyncService {
   }
 
   /**
-   * Sync POIs to ChromaDB
+   * Build embedding text for Q&A
+   */
+  buildQAEmbeddingText(qa) {
+    return `Vraag: ${qa.question}\nAntwoord: ${qa.answer}`;
+  }
+
+  /**
+   * Sync POIs to ChromaDB with multi-language support
+   * Creates one document per POI per language
+   */
+  async syncPOIsMultiLanguage(languages = SUPPORTED_LANGUAGES, includeReviews = true) {
+    logger.info(`Starting multi-language POI sync to ChromaDB for languages: ${languages.join(', ')}...`);
+
+    try {
+      const pois = await this.getPOIsForSyncEnriched(null, 2000);
+      logger.info(`Found ${pois.length} POIs to sync across ${languages.length} languages`);
+
+      if (pois.length === 0) {
+        return { synced: 0, errors: 0, languages: languages.length };
+      }
+
+      const documents = [];
+      const errors = [];
+      let processedCount = 0;
+
+      // Process each POI
+      for (const poi of pois) {
+        // Optionally get review summary
+        let reviewSummary = null;
+        if (includeReviews) {
+          reviewSummary = await this.getReviewSummaryForPOI(poi.id);
+        }
+
+        // Create document for each language
+        for (const lang of languages) {
+          try {
+            const text = this.buildPOIEmbeddingTextEnriched(poi, lang, reviewSummary);
+            const embedding = await embeddingService.generateEmbedding(text);
+
+            documents.push({
+              id: `poi_${poi.id}_${lang}`,
+              embedding,
+              metadata: {
+                type: 'poi',
+                id: poi.id,
+                name: poi.name,
+                category: poi.category,
+                subcategory: poi.subcategory || '',
+                language: lang,
+                address: poi.address || '',
+                latitude: poi.latitude?.toString() || '',
+                longitude: poi.longitude?.toString() || '',
+                rating: poi.rating?.toString() || '',
+                review_count: poi.review_count?.toString() || '',
+                price_level: poi.price_level || '',
+                thumbnail_url: poi.thumbnail_url || '',
+                opening_hours: poi.opening_hours || '',
+                phone: poi.phone || '',
+                website: poi.website || '',
+                has_enriched: (poi.enriched_tile_description ? 'true' : 'false'),
+                sentiment_score: reviewSummary?.positive_count
+                  ? (reviewSummary.positive_count / (reviewSummary.review_count || 1)).toFixed(2)
+                  : ''
+              },
+              document: text
+            });
+
+            processedCount++;
+
+            // Batch upsert every 50 documents to avoid memory issues
+            if (documents.length >= 50) {
+              await chromaService.upsert(documents);
+              logger.info(`Upserted batch of ${documents.length} documents (${processedCount} total processed)`);
+              documents.length = 0; // Clear array
+            }
+
+          } catch (error) {
+            logger.error(`Failed to process POI ${poi.id} for language ${lang}:`, error.message);
+            errors.push({ poi_id: poi.id, language: lang, error: error.message });
+          }
+        }
+      }
+
+      // Upsert remaining documents
+      if (documents.length > 0) {
+        await chromaService.upsert(documents);
+        logger.info(`Upserted final batch of ${documents.length} documents`);
+      }
+
+      const totalSynced = processedCount;
+      logger.info(`Multi-language POI sync complete: ${totalSynced} documents synced, ${errors.length} errors`);
+
+      return {
+        synced: totalSynced,
+        errors: errors.length,
+        errorDetails: errors,
+        languages: languages.length,
+        poisProcessed: pois.length
+      };
+
+    } catch (error) {
+      logger.error('Multi-language POI sync failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync POIs to ChromaDB (legacy - single language)
    */
   async syncPOIs(since = null) {
     logger.info('Starting POI sync to ChromaDB...');
@@ -188,6 +446,90 @@ class SyncService {
   }
 
   /**
+   * Sync Q&A pairs to ChromaDB
+   */
+  async syncQA() {
+    logger.info('Starting Q&A sync to ChromaDB...');
+
+    try {
+      const qaItems = await this.getQAForSync();
+      logger.info(`Found ${qaItems.length} Q&A items to sync`);
+
+      if (qaItems.length === 0) {
+        return { synced: 0, errors: 0, message: 'No Q&A items found' };
+      }
+
+      const documents = [];
+      const errors = [];
+
+      for (const qa of qaItems) {
+        try {
+          const text = this.buildQAEmbeddingText(qa);
+          const embedding = await embeddingService.generateEmbedding(text);
+
+          // Parse keywords if available
+          let keywords = '';
+          if (qa.keywords) {
+            try {
+              const keywordsArray = typeof qa.keywords === 'string'
+                ? JSON.parse(qa.keywords)
+                : qa.keywords;
+              if (Array.isArray(keywordsArray)) {
+                keywords = keywordsArray.join(', ');
+              }
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+
+          documents.push({
+            id: `qa_${qa.id}`,
+            embedding,
+            metadata: {
+              type: 'qa',
+              id: qa.id,
+              poi_id: qa.poi_id?.toString() || '',
+              question: qa.question,
+              language: qa.language || 'en',
+              category: qa.category || 'general',
+              keywords: keywords
+            },
+            document: qa.answer
+          });
+
+          // Batch upsert every 50 documents
+          if (documents.length >= 50) {
+            await chromaService.upsert(documents);
+            logger.info(`Upserted batch of ${documents.length} Q&A documents`);
+            documents.length = 0;
+          }
+
+        } catch (error) {
+          logger.error(`Failed to process Q&A ${qa.id}:`, error.message);
+          errors.push({ qa_id: qa.id, error: error.message });
+        }
+      }
+
+      // Upsert remaining documents
+      if (documents.length > 0) {
+        await chromaService.upsert(documents);
+      }
+
+      logger.info(`Q&A sync complete: ${qaItems.length - errors.length} synced, ${errors.length} errors`);
+
+      return {
+        synced: qaItems.length - errors.length,
+        errors: errors.length,
+        errorDetails: errors
+      };
+
+    } catch (error) {
+      logger.error('Q&A sync failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Sync Agenda events to ChromaDB
    */
   async syncAgenda(since = null) {
@@ -258,7 +600,7 @@ class SyncService {
   }
 
   /**
-   * Full sync of all data
+   * Full sync of all data (legacy - basic POIs)
    */
   async fullSync() {
     if (this.isSyncing) {
@@ -300,6 +642,99 @@ class SyncService {
 
     } catch (error) {
       logger.error('Full sync failed:', error);
+      throw error;
+
+    } finally {
+      this.isSyncing = false;
+    }
+  }
+
+  /**
+   * Enhanced full sync with multi-language POIs and Q&A
+   * @param {Object} options - Sync options
+   * @param {string[]} options.languages - Languages to sync (default: all)
+   * @param {boolean} options.includeQA - Include Q&A sync (default: true)
+   * @param {boolean} options.includeReviews - Include review sentiment (default: true)
+   * @param {boolean} options.includeAgenda - Include agenda sync (default: true)
+   */
+  async fullSyncEnhanced(options = {}) {
+    const {
+      languages = SUPPORTED_LANGUAGES,
+      includeQA = true,
+      includeReviews = true,
+      includeAgenda = true
+    } = options;
+
+    if (this.isSyncing) {
+      throw new Error('Sync already in progress');
+    }
+
+    this.isSyncing = true;
+    const startTime = Date.now();
+
+    try {
+      logger.info('Starting enhanced full sync to ChromaDB...', { languages, includeQA, includeReviews, includeAgenda });
+
+      // Initialize services
+      embeddingService.initialize();
+      await chromaService.connect();
+
+      const results = {
+        pois: null,
+        qa: null,
+        agenda: null
+      };
+
+      // Sync POIs with multi-language support
+      results.pois = await this.syncPOIsMultiLanguage(languages, includeReviews);
+
+      // Sync Q&A if enabled
+      if (includeQA) {
+        results.qa = await this.syncQA();
+      }
+
+      // Sync Agenda if enabled
+      if (includeAgenda) {
+        results.agenda = await this.syncAgenda();
+      }
+
+      const timeMs = Date.now() - startTime;
+      this.lastSyncTime = new Date();
+
+      const totalSynced =
+        (results.pois?.synced || 0) +
+        (results.qa?.synced || 0) +
+        (results.agenda?.synced || 0);
+
+      const totalErrors =
+        (results.pois?.errors || 0) +
+        (results.qa?.errors || 0) +
+        (results.agenda?.errors || 0);
+
+      const result = {
+        success: true,
+        type: 'enhanced',
+        timestamp: this.lastSyncTime,
+        duration: timeMs,
+        languages,
+        pois: results.pois,
+        qa: results.qa,
+        agenda: results.agenda,
+        totalSynced,
+        totalErrors
+      };
+
+      logger.info(`Enhanced full sync completed in ${timeMs}ms:`, {
+        totalSynced,
+        totalErrors,
+        poisProcessed: results.pois?.poisProcessed,
+        qaProcessed: results.qa?.synced
+      });
+
+      return result;
+
+    } catch (error) {
+      logger.error('Enhanced full sync failed:', error);
       throw error;
 
     } finally {
@@ -351,12 +786,12 @@ class SyncService {
   }
 
   /**
-   * Sync a single POI by ID
+   * Sync a single POI by ID (multi-language)
    */
-  async syncSinglePOI(poiId) {
+  async syncSinglePOI(poiId, languages = SUPPORTED_LANGUAGES) {
     try {
       const pois = await this.query(
-        'SELECT * FROM POI WHERE id = ? AND is_active = 1',
+        `SELECT * FROM POI WHERE id = ? AND is_active = 1`,
         [poiId]
       );
 
@@ -365,30 +800,38 @@ class SyncService {
       }
 
       const poi = pois[0];
-      const text = this.buildPOIEmbeddingText(poi);
-      const embedding = await embeddingService.generateEmbedding(text);
+      const reviewSummary = await this.getReviewSummaryForPOI(poiId);
+      const documents = [];
 
-      await chromaService.upsert([{
-        id: `poi_${poi.id}`,
-        embedding,
-        metadata: {
-          type: 'poi',
-          id: poi.id,
-          name: poi.name,
-          category: poi.category,
-          subcategory: poi.subcategory,
-          address: poi.address,
-          latitude: poi.latitude?.toString(),
-          longitude: poi.longitude?.toString(),
-          rating: poi.rating?.toString(),
-          review_count: poi.review_count?.toString()
-        },
-        document: poi.description || ''
-      }]);
+      for (const lang of languages) {
+        const text = this.buildPOIEmbeddingTextEnriched(poi, lang, reviewSummary);
+        const embedding = await embeddingService.generateEmbedding(text);
 
-      logger.info(`Synced single POI: ${poi.name} (ID: ${poiId})`);
+        documents.push({
+          id: `poi_${poi.id}_${lang}`,
+          embedding,
+          metadata: {
+            type: 'poi',
+            id: poi.id,
+            name: poi.name,
+            category: poi.category,
+            subcategory: poi.subcategory || '',
+            language: lang,
+            address: poi.address || '',
+            latitude: poi.latitude?.toString() || '',
+            longitude: poi.longitude?.toString() || '',
+            rating: poi.rating?.toString() || '',
+            review_count: poi.review_count?.toString() || ''
+          },
+          document: text
+        });
+      }
 
-      return { success: true, poi };
+      await chromaService.upsert(documents);
+
+      logger.info(`Synced single POI: ${poi.name} (ID: ${poiId}) in ${languages.length} languages`);
+
+      return { success: true, poi, languages: languages.length };
 
     } catch (error) {
       logger.error(`Failed to sync POI ${poiId}:`, error);
@@ -402,8 +845,29 @@ class SyncService {
   getStatus() {
     return {
       isSyncing: this.isSyncing,
-      lastSyncTime: this.lastSyncTime
+      lastSyncTime: this.lastSyncTime,
+      supportedLanguages: SUPPORTED_LANGUAGES
     };
+  }
+
+  /**
+   * Get statistics about what's in ChromaDB
+   */
+  async getStats() {
+    try {
+      const chromaStats = await chromaService.getStats();
+      return {
+        chromaDb: chromaStats,
+        lastSyncTime: this.lastSyncTime,
+        supportedLanguages: SUPPORTED_LANGUAGES
+      };
+    } catch (error) {
+      logger.error('Failed to get sync stats:', error);
+      return {
+        error: error.message,
+        lastSyncTime: this.lastSyncTime
+      };
+    }
   }
 }
 
