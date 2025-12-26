@@ -1,5 +1,5 @@
 /**
- * HoliBot Routes v2.2
+ * HoliBot Routes v2.3
  * API endpoints for HoliBot AI Assistant Widget
  *
  * Features:
@@ -9,6 +9,7 @@
  * - 4 Quick Actions: Itinerary, Location Info, Directions, Daily Tip
  * - SSE Streaming for real-time chat responses
  * - Category hierarchy browser (3 levels)
+ * - Enhanced sync with multi-language POIs, Q&A, and review sentiment
  *
  * Endpoints:
  * - POST /holibot/chat - RAG-powered chat
@@ -21,7 +22,9 @@
  * - GET /holibot/categories - POI categories
  * - GET /holibot/categories/hierarchy - 3-level category tree
  * - GET /holibot/categories/:category/pois - POIs by category filter
- * - POST /holibot/admin/sync - Sync MySQL to ChromaDB
+ * - POST /holibot/admin/sync - Legacy sync MySQL to ChromaDB
+ * - POST /holibot/admin/resync - Enhanced multi-language sync with Q&A
+ * - POST /holibot/admin/sync-single/:poiId - Sync single POI (all languages)
  * - GET /holibot/admin/stats - Service statistics
  */
 
@@ -1417,6 +1420,7 @@ router.get('/categories/:category/pois', async (req, res) => {
 
 /**
  * POST /api/v1/holibot/admin/sync
+ * Legacy sync endpoint (basic POIs only)
  */
 router.post('/admin/sync', async (req, res) => {
   try {
@@ -1432,6 +1436,121 @@ router.post('/admin/sync', async (req, res) => {
   } catch (error) {
     logger.error('Admin sync error:', error);
     res.status(500).json({ success: false, error: error.message || 'Sync failed' });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/admin/resync
+ * Enhanced sync endpoint with multi-language POIs, Q&A, and reviews
+ *
+ * Request body options:
+ * - languages: string[] (default: all 6 languages)
+ * - includeQA: boolean (default: true) - sync Q&A pairs from poi_qa table
+ * - includeReviews: boolean (default: true) - include review sentiment in POI context
+ * - includeAgenda: boolean (default: true) - sync agenda events
+ *
+ * This endpoint syncs:
+ * - POIs with all enriched multi-language descriptions
+ * - Q&A pairs for enhanced knowledge base
+ * - Review sentiment for better recommendations
+ * - Agenda events for upcoming activities
+ */
+router.post('/admin/resync', async (req, res) => {
+  try {
+    const {
+      languages = ['en', 'nl', 'de', 'es', 'sv', 'pl'],
+      includeQA = true,
+      includeReviews = true,
+      includeAgenda = true
+    } = req.body;
+
+    logger.info('Admin enhanced resync requested', {
+      languages,
+      includeQA,
+      includeReviews,
+      includeAgenda
+    });
+
+    // Validate languages
+    const validLanguages = ['en', 'nl', 'de', 'es', 'sv', 'pl'];
+    const filteredLanguages = languages.filter(lang => validLanguages.includes(lang));
+
+    if (filteredLanguages.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No valid languages specified. Valid options: ' + validLanguages.join(', ')
+      });
+    }
+
+    // Execute enhanced sync
+    const result = await syncService.fullSyncEnhanced({
+      languages: filteredLanguages,
+      includeQA,
+      includeReviews,
+      includeAgenda
+    });
+
+    logger.info('Enhanced resync completed', {
+      totalSynced: result.totalSynced,
+      totalErrors: result.totalErrors,
+      duration: result.duration
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    logger.error('Admin enhanced resync error:', error);
+
+    // Check if sync is already in progress
+    if (error.message === 'Sync already in progress') {
+      return res.status(409).json({
+        success: false,
+        error: 'Sync already in progress. Please wait for it to complete.'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Enhanced sync failed'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/admin/sync-single/:poiId
+ * Sync a single POI across all languages
+ * Useful for immediate updates after POI edits in admin
+ */
+router.post('/admin/sync-single/:poiId', async (req, res) => {
+  try {
+    const { poiId } = req.params;
+    const { languages = ['en', 'nl', 'de', 'es', 'sv', 'pl'] } = req.body;
+
+    if (!poiId || isNaN(parseInt(poiId))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid POI ID is required'
+      });
+    }
+
+    logger.info('Admin single POI sync requested', { poiId, languages });
+
+    const result = await syncService.syncSinglePOI(parseInt(poiId), languages);
+
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    logger.error('Admin single POI sync error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Single POI sync failed'
+    });
   }
 });
 
