@@ -14,9 +14,18 @@
 |---|------|--------|-----------|
 | 0.1 | Multi-language POI sync naar ChromaDB | ✅ KLAAR | `syncService.js` |
 | 0.2 | Admin resync endpoint | ✅ KLAAR | `holibot.js` |
-| 0.3 | Q&A generatie script | ✅ KLAAR | `scripts/generate-poi-qa.js` |
+| 0.3 | QnA tabel sync (32.000+ records) | ✅ KLAAR | `syncService.js` |
 | 0.4 | Review sentiment integratie | ✅ KLAAR | `syncService.js` |
-| 0.5 | Full re-sync uitvoeren | ⏳ NA DEPLOY | Via `/admin/resync` endpoint |
+| 0.5 | Full re-sync POIs (11.152 docs) | ✅ KLAAR | Via `/admin/resync` |
+| 0.6 | Full re-sync QnA (32.000 docs) | ⏳ NA DEPLOY | Via `/admin/resync` |
+
+### Data Bronnen in ChromaDB
+
+| Bron | Tabel | Records | Status |
+|------|-------|---------|--------|
+| POIs (6 talen) | `POI` | 11.152 docs | ✅ Gesynct |
+| Q&A Pairs | `QnA` | 32.000 docs | ⏳ Na deploy sync |
+| Agenda Events | `agenda` | ~100 docs | ✅ Gesynct |
 
 ### Nieuwe Endpoints
 
@@ -32,8 +41,14 @@ POST /api/v1/holibot/admin/sync-single/:poiId
 
 ### Actie na Deploy
 
-1. Run Q&A generatie script: `node scripts/generate-poi-qa.js`
-2. Trigger full resync: `POST /api/v1/holibot/admin/resync`
+Trigger full resync inclusief QnA:
+```bash
+curl -X POST https://test.holidaibutler.com/api/v1/holibot/admin/resync \
+  -H "Content-Type: application/json" \
+  -d '{"languages": ["nl","en","de","es","sv","pl"], "includeQA": true}'
+```
+
+**Verwacht resultaat:** ~43.000 documenten in ChromaDB (11.152 POIs + 32.000 QnA)
 
 ---
 

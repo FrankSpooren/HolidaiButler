@@ -3,11 +3,12 @@
  * Synchronizes MySQL database with ChromaDB Cloud
  * Handles POI (multi-language), Agenda, Q&A, and Review embeddings
  *
- * Version 2.0 - Enhanced with:
+ * Version 2.1 - Enhanced with:
  * - Multi-language POI sync (nl, en, de, es, sv, pl)
  * - Enriched descriptions support
- * - Q&A pairs sync
+ * - QnA table sync (32,000+ Q&A pairs from main database)
  * - Review sentiment integration
+ * - Optimized batch processing for large datasets
  */
 
 import { chromaService } from './chromaService.js';
@@ -107,16 +108,44 @@ class SyncService {
   }
 
   /**
-   * Get Q&A pairs for syncing
+   * Get Q&A pairs for syncing from QnA table (32.000+ records)
+   * Falls back to poi_qa if QnA doesn't exist
    */
-  async getQAForSync() {
-    const sql = `
-      SELECT
-        id, poi_id, question, answer, language, category, keywords
-      FROM poi_qa
-      WHERE is_active = 1
-    `;
-    return this.query(sql);
+  async getQAForSync(limit = 50000) {
+    // First try the main QnA table (32.000+ records)
+    try {
+      const sql = `
+        SELECT
+          id, poi_id, question, answer, language, category,
+          COALESCE(keywords, '') as keywords
+        FROM QnA
+        LIMIT ${limit}
+      `;
+      const results = await this.query(sql);
+      if (results.length > 0) {
+        logger.info(`Found ${results.length} Q&A pairs in QnA table`);
+        return results;
+      }
+    } catch (error) {
+      logger.debug('QnA table not available, trying poi_qa:', error.message);
+    }
+
+    // Fallback to poi_qa table
+    try {
+      const sql = `
+        SELECT
+          id, poi_id, question, answer, language, category, keywords
+        FROM poi_qa
+        WHERE is_active = 1
+        LIMIT ${limit}
+      `;
+      const results = await this.query(sql);
+      logger.info(`Found ${results.length} Q&A pairs in poi_qa table`);
+      return results;
+    } catch (error) {
+      logger.warn('No Q&A tables available:', error.message);
+      return [];
+    }
   }
 
   /**
@@ -422,7 +451,8 @@ class SyncService {
   }
 
   /**
-   * Sync Q&A pairs to ChromaDB
+   * Sync Q&A pairs to ChromaDB (supports 32,000+ records)
+   * Optimized with larger batch sizes and progress logging
    */
   async syncQA() {
     logger.info('Starting Q&A sync to ChromaDB...');
@@ -432,11 +462,14 @@ class SyncService {
       logger.info(`Found ${qaItems.length} Q&A items to sync`);
 
       if (qaItems.length === 0) {
-        return { synced: 0, errors: 0, message: 'No Q&A items found' };
+        return { synced: 0, errors: 0, message: 'No Q&A items found in QnA or poi_qa tables' };
       }
 
       const documents = [];
       const errors = [];
+      let processedCount = 0;
+      const totalItems = qaItems.length;
+      const BATCH_SIZE = 100; // Larger batches for 32,000+ records
 
       for (const qa of qaItems) {
         try {
@@ -454,7 +487,7 @@ class SyncService {
                 keywords = keywordsArray.join(', ');
               }
             } catch (e) {
-              // Ignore parse errors
+              keywords = qa.keywords?.toString() || '';
             }
           }
 
@@ -463,20 +496,23 @@ class SyncService {
             embedding,
             metadata: {
               type: 'qa',
-              id: qa.id,
+              id: qa.id?.toString() || '',
               poi_id: qa.poi_id?.toString() || '',
-              question: qa.question,
+              question: (qa.question || '').substring(0, 500), // Truncate for metadata
               language: qa.language || 'en',
               category: qa.category || 'general',
-              keywords: keywords
+              keywords: keywords.substring(0, 200)
             },
-            document: qa.answer
+            document: qa.answer || qa.question || ''
           });
 
-          // Batch upsert every 50 documents
-          if (documents.length >= 50) {
+          processedCount++;
+
+          // Batch upsert every BATCH_SIZE documents
+          if (documents.length >= BATCH_SIZE) {
             await chromaService.upsert(documents);
-            logger.info(`Upserted batch of ${documents.length} Q&A documents`);
+            const progress = ((processedCount / totalItems) * 100).toFixed(1);
+            logger.info(`Q&A sync progress: ${processedCount}/${totalItems} (${progress}%)`);
             documents.length = 0;
           }
 
@@ -491,12 +527,13 @@ class SyncService {
         await chromaService.upsert(documents);
       }
 
-      logger.info(`Q&A sync complete: ${qaItems.length - errors.length} synced, ${errors.length} errors`);
+      logger.info(`Q&A sync complete: ${processedCount - errors.length} synced, ${errors.length} errors`);
 
       return {
-        synced: qaItems.length - errors.length,
+        synced: processedCount - errors.length,
         errors: errors.length,
-        errorDetails: errors
+        totalProcessed: processedCount,
+        errorDetails: errors.slice(0, 10) // Only return first 10 errors
       };
 
     } catch (error) {
