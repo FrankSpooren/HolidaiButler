@@ -39,6 +39,11 @@ export interface StreamCallbacks {
   onError?: (error: string) => void;
 }
 
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 class ChatAPI {
   private sessionId: string | null = null;
   private language: Language = 'nl';
@@ -60,16 +65,20 @@ class ChatAPI {
 
   /**
    * Send a chat message with streaming response (SSE)
+   * @param request - Chat request with query
+   * @param callbacks - Streaming callbacks
+   * @param conversationHistory - Previous messages for context
    */
   async sendMessageStream(
     request: ChatRequest,
-    callbacks: StreamCallbacks
+    callbacks: StreamCallbacks,
+    conversationHistory: ConversationMessage[] = []
   ): Promise<void> {
     try {
       const requestBody = {
         message: request.query,
         language: this.language,
-        conversationHistory: [],
+        conversationHistory: conversationHistory,
         userPreferences: this.userPreferences
       };
 
@@ -147,13 +156,15 @@ class ChatAPI {
 
   /**
    * Send a chat message to HoliBot AI (non-streaming)
+   * @param request - Chat request with query
+   * @param conversationHistory - Previous messages for context
    */
-  async sendMessage(request: ChatRequest): Promise<ChatResponse> {
+  async sendMessage(request: ChatRequest, conversationHistory: ConversationMessage[] = []): Promise<ChatResponse> {
     try {
       const requestBody = {
         message: request.query,
         language: this.language,
-        conversationHistory: [],
+        conversationHistory: conversationHistory,
         userPreferences: this.userPreferences
       };
 

@@ -28,7 +28,7 @@ import { POIReviewSection } from './POIReviewSection';
 import './POIDetailModal.css';
 
 interface POIDetailModalProps {
-  poiId: number;
+  poiId: number | string;
   isOpen: boolean;
   onClose: () => void;
 }

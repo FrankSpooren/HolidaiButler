@@ -152,7 +152,7 @@ export function MessageList() {
   const [loadingPOIs, setLoadingPOIs] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   // dailyTipPOI and itinerary now come from context for persistence
-  const [selectedPOIId, setSelectedPOIId] = useState<number | null>(null);
+  const [selectedPOIId, setSelectedPOIId] = useState<number | string | null>(null);
   const [showItineraryBuilder, setShowItineraryBuilder] = useState(false);
   const [showCategoryBrowser, setShowCategoryBrowser] = useState(false);
   // Category POI pagination state
