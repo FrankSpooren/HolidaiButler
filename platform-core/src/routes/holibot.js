@@ -1,5 +1,5 @@
 /**
- * HoliBot Routes v2.3
+ * HoliBot Routes v2.5
  * API endpoints for HoliBot AI Assistant Widget
  *
  * Features:
@@ -10,9 +10,12 @@
  * - SSE Streaming for real-time chat responses
  * - Category hierarchy browser (3 levels)
  * - Enhanced sync with multi-language POIs, Q&A, and review sentiment
+ * - Spell correction with "Did you mean?" suggestions
+ * - Multi-fallback system for improved response quality
+ * - Fallback logging for analytics and continuous improvement
  *
  * Endpoints:
- * - POST /holibot/chat - RAG-powered chat
+ * - POST /holibot/chat - RAG-powered chat with spell correction
  * - POST /holibot/chat/stream - SSE streaming chat
  * - POST /holibot/search - Semantic search
  * - POST /holibot/itinerary - Build day program
@@ -26,10 +29,11 @@
  * - POST /holibot/admin/resync - Enhanced multi-language sync with Q&A
  * - POST /holibot/admin/sync-single/:poiId - Sync single POI (all languages)
  * - GET /holibot/admin/stats - Service statistics
+ * - GET /holibot/admin/fallback-stats - Fallback analytics dashboard
  */
 
 import express from 'express';
-import { ragService, syncService, chromaService, embeddingService, ttsService } from '../services/holibot/index.js';
+import { ragService, syncService, chromaService, embeddingService, ttsService, spellService } from '../services/holibot/index.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -229,6 +233,7 @@ const cleanAIText = (text, poiNames = []) => {
 /**
  * POST /api/v1/holibot/chat
  * RAG-powered chat with HoliBot (non-streaming)
+ * Includes spell correction and multi-fallback system
  */
 router.post('/chat', async (req, res) => {
   try {
@@ -243,14 +248,185 @@ router.post('/chat', async (req, res) => {
 
     logger.info('HoliBot chat request', { message: message.substring(0, 100), language, hasHistory: conversationHistory.length > 0 });
 
-    const response = await ragService.chat(message, language, { userPreferences, conversationHistory });
-    res.json({ success: true, data: response });
+    // Step 1: Spell correction and suggestion generation
+    let processedMessage = message;
+    let spellSuggestions = null;
+    let wasSpellCorrected = false;
+
+    try {
+      const spellResult = await spellService.processQuery(message);
+      if (spellResult.wasModified) {
+        processedMessage = spellResult.correctedQuery;
+        wasSpellCorrected = true;
+        logger.info('Spell correction applied', { original: message, corrected: processedMessage });
+      }
+      if (spellResult.suggestions.length > 0) {
+        spellSuggestions = spellService.formatSuggestionMessage(spellResult.suggestions, language);
+      }
+    } catch (spellError) {
+      logger.warn('Spell service error (continuing without):', spellError.message);
+    }
+
+    // Step 2: RAG chat with corrected message
+    const response = await ragService.chat(processedMessage, language, { userPreferences, conversationHistory });
+
+    // Step 3: Multi-fallback system
+    const enhancedResponse = await applyMultiFallback(response, message, language, spellSuggestions);
+
+    // Add spell correction info to response
+    if (wasSpellCorrected || spellSuggestions) {
+      enhancedResponse.spellCorrection = {
+        wasModified: wasSpellCorrected,
+        originalQuery: message,
+        correctedQuery: wasSpellCorrected ? processedMessage : null,
+        suggestion: spellSuggestions
+      };
+    }
+
+    res.json({ success: true, data: enhancedResponse });
 
   } catch (error) {
     logger.error('HoliBot chat error:', error);
     res.status(500).json({ success: false, error: 'Chat service temporarily unavailable' });
   }
 });
+
+/**
+ * Log fallback events for analytics and improvement
+ * Stores failed queries for later analysis
+ */
+async function logFallback(data) {
+  try {
+    const { mysqlSequelize } = await import('../config/database.js');
+    const { QueryTypes } = (await import('sequelize')).default;
+
+    await mysqlSequelize.query(`
+      INSERT INTO holibot_fallbacks
+      (query, corrected_query, language, fallback_type, original_source, poi_count,
+       was_spell_corrected, spell_suggestions, suggested_categories, response_time_ms, session_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, {
+      replacements: [
+        data.query?.substring(0, 5000) || '',
+        data.correctedQuery?.substring(0, 5000) || null,
+        data.language || 'nl',
+        data.fallbackType || 'no_results',
+        data.originalSource || null,
+        data.poiCount || 0,
+        data.wasSpellCorrected || false,
+        data.spellSuggestions ? JSON.stringify(data.spellSuggestions) : null,
+        data.suggestedCategories ? JSON.stringify(data.suggestedCategories) : null,
+        data.responseTimeMs || null,
+        data.sessionId || null
+      ],
+      type: QueryTypes.INSERT
+    });
+
+    logger.debug('Fallback logged', { query: data.query?.substring(0, 50), type: data.fallbackType });
+  } catch (error) {
+    // Don't fail the request if logging fails
+    logger.warn('Could not log fallback:', error.message);
+  }
+}
+
+/**
+ * Multi-fallback system for improving response quality
+ * Applies 4 strategies when RAG returns low-quality results:
+ * 1. Add spell suggestion if available
+ * 2. Suggest related categories
+ * 3. Offer popular alternatives
+ * 4. Provide helpful generic response
+ */
+async function applyMultiFallback(ragResponse, originalQuery, language, spellSuggestion) {
+  const result = { ...ragResponse };
+
+  // Check if response quality is low (no POIs found or generic fallback)
+  const isLowQuality = !ragResponse.pois || ragResponse.pois.length === 0 || ragResponse.source === 'fallback';
+
+  if (!isLowQuality) {
+    return result; // Response is good, no fallback needed
+  }
+
+  logger.info('Applying multi-fallback for low quality response', { source: ragResponse.source, poiCount: ragResponse.pois?.length });
+
+  // Fallback messages per language
+  const fallbackMessages = {
+    nl: {
+      noResults: 'Ik kon geen exacte resultaten vinden voor je vraag.',
+      tryAlternative: 'Probeer een van deze opties:',
+      popularCategories: 'Of verken populaire categorieen:',
+      categories: ['Restaurants', 'Stranden', 'Wandelen', 'Winkelen', 'Musea'],
+      helpPrompt: 'Waar kan ik je mee helpen?'
+    },
+    en: {
+      noResults: 'I could not find exact results for your question.',
+      tryAlternative: 'Try one of these options:',
+      popularCategories: 'Or explore popular categories:',
+      categories: ['Restaurants', 'Beaches', 'Hiking', 'Shopping', 'Museums'],
+      helpPrompt: 'What can I help you with?'
+    },
+    de: {
+      noResults: 'Ich konnte keine genauen Ergebnisse fuer Ihre Frage finden.',
+      tryAlternative: 'Versuchen Sie eine dieser Optionen:',
+      popularCategories: 'Oder erkunden Sie beliebte Kategorien:',
+      categories: ['Restaurants', 'Straende', 'Wandern', 'Einkaufen', 'Museen'],
+      helpPrompt: 'Wie kann ich Ihnen helfen?'
+    },
+    es: {
+      noResults: 'No pude encontrar resultados exactos para tu pregunta.',
+      tryAlternative: 'Prueba una de estas opciones:',
+      popularCategories: 'O explora categorias populares:',
+      categories: ['Restaurantes', 'Playas', 'Senderismo', 'Compras', 'Museos'],
+      helpPrompt: 'En que puedo ayudarte?'
+    },
+    sv: {
+      noResults: 'Jag kunde inte hitta exakta resultat foer din fraaga.',
+      tryAlternative: 'Proeva ett av dessa alternativ:',
+      popularCategories: 'Eller utforska populaera kategorier:',
+      categories: ['Restauranger', 'Straender', 'Vandring', 'Shopping', 'Museer'],
+      helpPrompt: 'Vad kan jag hjaelpa dig med?'
+    },
+    pl: {
+      noResults: 'Nie moglem znalezc dokladnych wynikow dla Twojego pytania.',
+      tryAlternative: 'Sprobuj jednej z tych opcji:',
+      popularCategories: 'Lub przegladaj popularne kategorie:',
+      categories: ['Restauracje', 'Plaze', 'Piesze wedrówki', 'Zakupy', 'Muzea'],
+      helpPrompt: 'W czym moge Ci pomoc?'
+    }
+  };
+
+  const fb = fallbackMessages[language] || fallbackMessages.nl;
+
+  // Build enhanced message
+  let enhancedMessage = ragResponse.message || '';
+
+  // Add spell suggestion if available
+  if (spellSuggestion) {
+    enhancedMessage = `${spellSuggestion}\n\n${enhancedMessage}`;
+  }
+
+  // If message is very generic or empty, provide better response
+  if (!enhancedMessage || enhancedMessage.length < 50) {
+    enhancedMessage = `${fb.noResults}\n\n${fb.popularCategories} ${fb.categories.join(', ')}.\n\n${fb.helpPrompt}`;
+  }
+
+  result.message = enhancedMessage;
+  result.fallbackApplied = true;
+  result.fallbackType = spellSuggestion ? 'spell_suggestion' : 'category_suggestion';
+
+  // Log fallback for analytics (async, non-blocking)
+  logFallback({
+    query: originalQuery,
+    language,
+    fallbackType: result.fallbackType,
+    originalSource: ragResponse.source,
+    poiCount: ragResponse.pois?.length || 0,
+    wasSpellCorrected: !!spellSuggestion,
+    suggestedCategories: fb.categories
+  }).catch(() => {}); // Ignore logging errors
+
+  return result;
+}
 
 /**
  * POST /api/v1/holibot/chat/stream
@@ -1565,6 +1741,82 @@ router.get('/admin/stats', async (req, res) => {
   } catch (error) {
     logger.error('Admin stats error:', error);
     res.status(500).json({ success: false, error: 'Could not fetch stats' });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/admin/fallback-stats
+ * View fallback query statistics for quality improvement
+ * Returns daily breakdown of fallback types and languages
+ */
+router.get('/admin/fallback-stats', async (req, res) => {
+  try {
+    const { days = 7 } = req.query;
+    const { mysqlSequelize } = await import('../config/database.js');
+    const { QueryTypes } = (await import('sequelize')).default;
+
+    // Get daily stats
+    const dailyStats = await mysqlSequelize.query(`
+      SELECT
+        DATE(created_at) as date,
+        language,
+        fallback_type,
+        COUNT(*) as count,
+        ROUND(AVG(response_time_ms)) as avg_response_ms,
+        SUM(CASE WHEN was_spell_corrected THEN 1 ELSE 0 END) as spell_corrected
+      FROM holibot_fallbacks
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY DATE(created_at), language, fallback_type
+      ORDER BY date DESC, count DESC
+    `, { replacements: [parseInt(days)], type: QueryTypes.SELECT });
+
+    // Get top failed queries
+    const topQueries = await mysqlSequelize.query(`
+      SELECT
+        query,
+        language,
+        COUNT(*) as occurrences,
+        MAX(created_at) as last_seen
+      FROM holibot_fallbacks
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY query, language
+      ORDER BY occurrences DESC
+      LIMIT 20
+    `, { replacements: [parseInt(days)], type: QueryTypes.SELECT });
+
+    // Get summary
+    const [summary] = await mysqlSequelize.query(`
+      SELECT
+        COUNT(*) as total_fallbacks,
+        COUNT(DISTINCT DATE(created_at)) as days_active,
+        SUM(CASE WHEN was_spell_corrected THEN 1 ELSE 0 END) as total_spell_corrected
+      FROM holibot_fallbacks
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    `, { replacements: [parseInt(days)], type: QueryTypes.SELECT });
+
+    res.json({
+      success: true,
+      data: {
+        period: `${days} days`,
+        summary: summary[0] || { total_fallbacks: 0, days_active: 0, total_spell_corrected: 0 },
+        dailyStats,
+        topQueries
+      }
+    });
+  } catch (error) {
+    // Table might not exist yet
+    if (error.message.includes("doesn't exist")) {
+      return res.json({
+        success: true,
+        data: {
+          message: 'Fallback logging table not yet created. Run the migration first.',
+          dailyStats: [],
+          topQueries: []
+        }
+      });
+    }
+    logger.error('Fallback stats error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

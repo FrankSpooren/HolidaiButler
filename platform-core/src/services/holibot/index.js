@@ -7,6 +7,7 @@ export { chromaService } from './chromaService.js';
 export { embeddingService } from './embeddingService.js';
 export { ragService } from './ragService.js';
 export { syncService } from './syncService.js';
+export { spellService } from './spellService.js';
 
 // TTS: Use Google Cloud TTS with Chirp3-HD voices for enterprise-level voice quality
 // Chirp3-HD is Google's latest and highest quality TTS with native pronunciation
