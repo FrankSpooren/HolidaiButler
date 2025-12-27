@@ -13,10 +13,10 @@ export const poiService = {
 
   /**
    * Get a single POI by ID
-   * @param id - POI ID
+   * @param id - POI ID (MySQL numeric ID or Google Place ID string)
    * @param lang - Optional language code (en, nl, de, es, sv, pl)
    */
-  async getPOIById(id: number, lang?: string): Promise<POI> {
+  async getPOIById(id: number | string, lang?: string): Promise<POI> {
     const params = lang ? { lang } : {};
     const { data } = await apiClient.get<{ data: POI }>(`/pois/${id}`, { params });
     return data.data;
