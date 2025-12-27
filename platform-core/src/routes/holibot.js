@@ -1,5 +1,5 @@
 /**
- * HoliBot Routes v2.6
+ * HoliBot Routes v2.7
  * API endpoints for HoliBot AI Assistant Widget
  *
  * Features:
@@ -15,6 +15,9 @@
  * - Fallback logging for analytics and continuous improvement
  * - Conversation logging with session tracking
  * - POI click tracking for engagement analytics
+ * - Intent detection for smarter query understanding
+ * - Context-aware responses with conversation memory
+ * - Smart follow-up suggestions per language
  *
  * Endpoints:
  * - POST /holibot/chat - RAG-powered chat with spell correction + logging
@@ -39,7 +42,7 @@
  */
 
 import express from 'express';
-import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService } from '../services/holibot/index.js';
+import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService, intentService } from '../services/holibot/index.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -297,10 +300,22 @@ router.post('/chat', async (req, res) => {
       wasSpellCorrected
     }).catch(() => {});
 
-    // Step 2: RAG chat with corrected message
-    const response = await ragService.chat(processedMessage, language, { userPreferences, conversationHistory });
+    // Step 2: Intent detection for smarter responses
+    const intentAnalysis = intentService.analyzeQuery(processedMessage, language, conversationHistory);
+    logger.debug('Intent analysis', { intent: intentAnalysis.primaryIntent, entities: intentAnalysis.entities });
 
-    // Step 3: Multi-fallback system
+    // Step 3: RAG chat with corrected message and intent context
+    const response = await ragService.chat(processedMessage, language, {
+      userPreferences,
+      conversationHistory,
+      intentContext: {
+        primaryIntent: intentAnalysis.primaryIntent,
+        categories: intentAnalysis.entities.categories,
+        isFollowUp: intentAnalysis.context.isFollowUp
+      }
+    });
+
+    // Step 4: Multi-fallback system
     const enhancedResponse = await applyMultiFallback(response, message, language, spellSuggestions);
 
     // Calculate total response time
@@ -328,6 +343,14 @@ router.post('/chat', async (req, res) => {
         suggestion: spellSuggestions
       };
     }
+
+    // Add intent analysis and follow-up suggestions to response
+    enhancedResponse.intent = {
+      detected: intentAnalysis.primaryIntent,
+      categories: intentAnalysis.entities.categories,
+      isFollowUp: intentAnalysis.context.isFollowUp
+    };
+    enhancedResponse.suggestedFollowUps = intentAnalysis.suggestedFollowUps;
 
     // Add session ID to response for client-side tracking
     enhancedResponse.sessionId = activeSessionId;
