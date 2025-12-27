@@ -1,5 +1,5 @@
 /**
- * HoliBot Routes v2.8
+ * HoliBot Routes v2.9
  * API endpoints for HoliBot AI Assistant Widget
  *
  * Features:
@@ -20,6 +20,9 @@
  * - Smart follow-up suggestions per language
  * - User preference storage and learning
  * - Personalized recommendations based on behavior
+ * - Proactive time-based and seasonal suggestions
+ * - Trending POIs based on user activity
+ * - Context-aware quick actions
  *
  * Endpoints:
  * - POST /holibot/chat - RAG-powered chat with spell correction + logging
@@ -39,6 +42,9 @@
  * - POST /holibot/preferences - Save user preferences
  * - POST /holibot/poi-rating - Rate a POI
  * - GET /holibot/recommended-categories - Personalized category list
+ * - GET /holibot/suggestions - Proactive context-aware suggestions
+ * - GET /holibot/trending - Trending POIs this week
+ * - GET /holibot/quick-actions - Time-based quick action buttons
  * - POST /holibot/admin/sync - Legacy sync MySQL to ChromaDB
  * - POST /holibot/admin/resync - Enhanced multi-language sync with Q&A
  * - POST /holibot/admin/sync-single/:poiId - Sync single POI (all languages)
@@ -48,7 +54,7 @@
  */
 
 import express from 'express';
-import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService, intentService, preferenceService } from '../services/holibot/index.js';
+import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService, intentService, preferenceService, suggestionService } from '../services/holibot/index.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -2059,6 +2065,90 @@ router.get('/recommended-categories', async (req, res) => {
     });
   } catch (error) {
     logger.error('Recommended categories error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/suggestions
+ * Get proactive, context-aware suggestions
+ * Returns time-based, seasonal, trending, and personalized suggestions
+ */
+router.get('/suggestions', async (req, res) => {
+  try {
+    const { language = 'nl', sessionId, userId } = req.query;
+
+    // Get user preferences if available
+    let preferences = null;
+    if (sessionId || userId) {
+      preferences = await preferenceService.getPreferences({ sessionId, userId });
+    }
+
+    const suggestions = await suggestionService.getProactiveSuggestions({
+      language,
+      sessionId,
+      userId,
+      preferences
+    });
+
+    res.json({
+      success: true,
+      data: suggestions
+    });
+  } catch (error) {
+    logger.error('Suggestions error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/trending
+ * Get trending POIs based on recent user activity
+ */
+router.get('/trending', async (req, res) => {
+  try {
+    const { limit = 10, days = 7, language = 'nl' } = req.query;
+
+    const trending = await suggestionService.getTrendingPois(
+      parseInt(limit),
+      parseInt(days)
+    );
+
+    res.json({
+      success: true,
+      data: {
+        label: suggestionService.getTrendingLabel(language),
+        period: `${days} days`,
+        pois: trending
+      }
+    });
+  } catch (error) {
+    logger.error('Trending error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/quick-actions
+ * Get context-aware quick action buttons
+ */
+router.get('/quick-actions', async (req, res) => {
+  try {
+    const { language = 'nl' } = req.query;
+
+    const timeSuggestions = suggestionService.getTimeSuggestions(language);
+
+    res.json({
+      success: true,
+      data: {
+        period: timeSuggestions.period,
+        greeting: timeSuggestions.greeting,
+        actions: suggestionService.getQuickActions(timeSuggestions.period, language),
+        activities: timeSuggestions.activities
+      }
+    });
+  } catch (error) {
+    logger.error('Quick actions error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
