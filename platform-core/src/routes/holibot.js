@@ -638,10 +638,16 @@ router.post('/itinerary', async (req, res) => {
     const generalResults = await ragService.search('best things to do in Calpe', { limit: 10 });
     allSearchResults = [...allSearchResults, ...generalResults.results];
 
-    // Remove duplicates by id AND filter out permanently closed POIs
+    // Remove duplicates by id AND name, filter out permanently closed POIs
     const seenIds = new Set();
+    const seenNames = new Set();
     const filteredResults = allSearchResults.filter(poi => {
-      if (!poi.id || seenIds.has(poi.id)) return false;
+      // Check for duplicate by ID
+      if (poi.id && seenIds.has(poi.id)) return false;
+
+      // Check for duplicate by normalized name (catches same POI with different IDs)
+      const normalizedName = (poi.name || '').toLowerCase().trim();
+      if (normalizedName && seenNames.has(normalizedName)) return false;
 
       // CRITICAL: Exclude permanently closed POIs
       if (isPermanentlyClosed(poi.opening_hours || poi.openingHours)) {
@@ -649,7 +655,9 @@ router.post('/itinerary', async (req, res) => {
         return false;
       }
 
-      seenIds.add(poi.id);
+      // Mark as seen
+      if (poi.id) seenIds.add(poi.id);
+      if (normalizedName) seenNames.add(normalizedName);
       return true;
     });
 
@@ -890,8 +898,25 @@ router.post('/itinerary', async (req, res) => {
     const shuffledAllPois = shuffleArray(searchResults.results); // Fallback
 
     // Track used POIs to avoid duplicates in same program
+    // Use both ID and normalized name to catch all duplicates
     const usedPoiIds = new Set();
+    const usedPoiNames = new Set();
     let morningIndex = 0, afternoonIndex = 0, eveningIndex = 0, restaurantIndex = 0, allPoiIndex = 0;
+
+    // Helper: Check if POI was already used (by ID or name)
+    const isPoiUsed = (poi) => {
+      if (!poi) return true;
+      const normalizedName = (poi.name || '').toLowerCase().trim();
+      return (poi.id && usedPoiIds.has(poi.id)) || (normalizedName && usedPoiNames.has(normalizedName));
+    };
+
+    // Helper: Mark POI as used
+    const markPoiUsed = (poi) => {
+      if (!poi) return;
+      if (poi.id) usedPoiIds.add(poi.id);
+      const normalizedName = (poi.name || '').toLowerCase().trim();
+      if (normalizedName) usedPoiNames.add(normalizedName);
+    };
 
     // Helper: Get POI based on time context with fallback
     const getNextPoiForTime = (timeContext) => {
@@ -907,8 +932,8 @@ router.post('/itinerary', async (req, res) => {
         while (list.idx() < list.arr.length) {
           const poi = list.arr[list.idx()];
           list.inc();
-          if (!usedPoiIds.has(poi.id)) {
-            usedPoiIds.add(poi.id);
+          if (!isPoiUsed(poi)) {
+            markPoiUsed(poi);
             return poi;
           }
         }
@@ -918,8 +943,8 @@ router.post('/itinerary', async (req, res) => {
       while (allPoiIndex < shuffledAllPois.length) {
         const poi = shuffledAllPois[allPoiIndex];
         allPoiIndex++;
-        if (!usedPoiIds.has(poi.id)) {
-          usedPoiIds.add(poi.id);
+        if (!isPoiUsed(poi)) {
+          markPoiUsed(poi);
           return poi;
         }
       }
@@ -931,8 +956,8 @@ router.post('/itinerary', async (req, res) => {
       while (restaurantIndex < shuffledRestaurants.length) {
         const restaurant = shuffledRestaurants[restaurantIndex];
         restaurantIndex++;
-        if (!usedPoiIds.has(restaurant.id)) {
-          usedPoiIds.add(restaurant.id);
+        if (!isPoiUsed(restaurant)) {
+          markPoiUsed(restaurant);
           return restaurant;
         }
       }
