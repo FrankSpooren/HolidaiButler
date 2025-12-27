@@ -78,7 +78,8 @@
   bottom: calc(33.33% - 100px);
   left: 50%;
   transform: translateX(-50%);
-  width: 100%;
+  width: calc(100% - 40px); /* Prevent overflow on mobile */
+  box-sizing: border-box;
 }
 
 .hero h1 {
