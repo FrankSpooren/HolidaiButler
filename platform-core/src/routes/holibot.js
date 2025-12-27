@@ -1,5 +1,5 @@
 /**
- * HoliBot Routes v2.7
+ * HoliBot Routes v2.8
  * API endpoints for HoliBot AI Assistant Widget
  *
  * Features:
@@ -18,6 +18,8 @@
  * - Intent detection for smarter query understanding
  * - Context-aware responses with conversation memory
  * - Smart follow-up suggestions per language
+ * - User preference storage and learning
+ * - Personalized recommendations based on behavior
  *
  * Endpoints:
  * - POST /holibot/chat - RAG-powered chat with spell correction + logging
@@ -32,7 +34,11 @@
  * - GET /holibot/categories/:category/pois - POIs by category filter
  * - GET /holibot/session/:id/history - Get conversation history
  * - POST /holibot/session/:id/end - End session with rating
- * - POST /holibot/poi-click - Track POI interactions
+ * - POST /holibot/poi-click - Track POI interactions + preference learning
+ * - GET /holibot/preferences - Get user preferences
+ * - POST /holibot/preferences - Save user preferences
+ * - POST /holibot/poi-rating - Rate a POI
+ * - GET /holibot/recommended-categories - Personalized category list
  * - POST /holibot/admin/sync - Legacy sync MySQL to ChromaDB
  * - POST /holibot/admin/resync - Enhanced multi-language sync with Q&A
  * - POST /holibot/admin/sync-single/:poiId - Sync single POI (all languages)
@@ -42,7 +48,7 @@
  */
 
 import express from 'express';
-import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService, intentService } from '../services/holibot/index.js';
+import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService, intentService, preferenceService } from '../services/holibot/index.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -1879,6 +1885,7 @@ router.post('/session/:sessionId/end', async (req, res) => {
 /**
  * POST /api/v1/holibot/poi-click
  * Track when a user clicks on a POI from chat results
+ * Also learns user preferences from click behavior
  */
 router.post('/poi-click', async (req, res) => {
   try {
@@ -1887,6 +1894,9 @@ router.post('/poi-click', async (req, res) => {
       messageId,
       poiId,
       poiName,
+      poiCategory,
+      poiRating,
+      poiPriceLevel,
       clickType = 'view_details',
       sourceContext = 'chat'
     } = req.body;
@@ -1900,6 +1910,7 @@ router.post('/poi-click', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid click type' });
     }
 
+    // Log the click for analytics
     await conversationService.logPoiClick({
       sessionId,
       messageId,
@@ -1908,6 +1919,16 @@ router.post('/poi-click', async (req, res) => {
       clickType,
       sourceContext
     });
+
+    // Learn from click behavior (async, non-blocking)
+    if (poiCategory) {
+      preferenceService.learnFromClick({
+        sessionId,
+        poiCategory,
+        poiRating,
+        poiPriceLevel
+      }).catch(() => {});
+    }
 
     res.json({ success: true });
   } catch (error) {
@@ -1931,6 +1952,113 @@ router.get('/admin/conversation-analytics', async (req, res) => {
     });
   } catch (error) {
     logger.error('Conversation analytics error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/preferences
+ * Get user preferences for personalization
+ */
+router.get('/preferences', async (req, res) => {
+  try {
+    const { sessionId, userId } = req.query;
+
+    if (!sessionId && !userId) {
+      return res.status(400).json({ success: false, error: 'Session ID or User ID required' });
+    }
+
+    const preferences = await preferenceService.getPreferences({ sessionId, userId });
+
+    res.json({
+      success: true,
+      data: preferences
+    });
+  } catch (error) {
+    logger.error('Get preferences error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/preferences
+ * Save user preferences
+ */
+router.post('/preferences', async (req, res) => {
+  try {
+    const { sessionId, userId, preferences } = req.body;
+
+    if (!sessionId && !userId) {
+      return res.status(400).json({ success: false, error: 'Session ID or User ID required' });
+    }
+
+    if (!preferences) {
+      return res.status(400).json({ success: false, error: 'Preferences object required' });
+    }
+
+    const success = await preferenceService.savePreferences({ sessionId, userId }, preferences);
+
+    res.json({
+      success,
+      message: success ? 'Preferences saved' : 'Failed to save preferences'
+    });
+  } catch (error) {
+    logger.error('Save preferences error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/poi-rating
+ * Rate a POI
+ */
+router.post('/poi-rating', async (req, res) => {
+  try {
+    const { sessionId, userId, poiId, rating, feedback, wouldRecommend } = req.body;
+
+    if (!sessionId && !userId) {
+      return res.status(400).json({ success: false, error: 'Session ID or User ID required' });
+    }
+
+    if (!poiId || !rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ success: false, error: 'POI ID and rating (1-5) required' });
+    }
+
+    const success = await preferenceService.ratePoi({
+      sessionId,
+      userId,
+      poiId,
+      rating,
+      feedback,
+      wouldRecommend
+    });
+
+    res.json({
+      success,
+      message: success ? 'Rating saved' : 'Failed to save rating'
+    });
+  } catch (error) {
+    logger.error('POI rating error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/recommended-categories
+ * Get personalized category recommendations
+ */
+router.get('/recommended-categories', async (req, res) => {
+  try {
+    const { sessionId, userId } = req.query;
+
+    const categories = await preferenceService.getRecommendedCategories({ sessionId, userId });
+
+    res.json({
+      success: true,
+      data: categories
+    });
+  } catch (error) {
+    logger.error('Recommended categories error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
