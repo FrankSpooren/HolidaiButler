@@ -97,6 +97,8 @@
 @media (max-width: 480px) {
   .holibot-input-area {
     padding: 12px;
+    padding-right: max(12px, env(safe-area-inset-right)); /* iOS safe area */
+    padding-bottom: max(12px, env(safe-area-inset-bottom)); /* iOS safe area */
     border-radius: 0; /* No border radius on mobile (full screen) */
   }
 }
