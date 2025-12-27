@@ -112,26 +112,35 @@ class SyncService {
    * QnA table structure: id, google_placeid, question, answer, language, source, created_at
    */
   async getQAForSync(limit = 50000) {
-    try {
-      const sql = `
-        SELECT
-          id,
-          google_placeid as poi_id,
-          question,
-          answer,
-          language,
-          source as category
-        FROM QnA
-        WHERE question IS NOT NULL AND answer IS NOT NULL
-        LIMIT ${limit}
-      `;
-      const results = await this.query(sql);
-      logger.info(`Found ${results.length} Q&A pairs in QnA table`);
-      return results;
-    } catch (error) {
-      logger.error('Failed to fetch QnA data:', error.message);
-      return [];
+    // Try multiple table name variations (case sensitivity)
+    const tableNames = ['QnA', 'qna', 'Qna'];
+
+    for (const tableName of tableNames) {
+      try {
+        const sql = `
+          SELECT
+            id,
+            google_placeid as poi_id,
+            question,
+            answer,
+            language,
+            source as category
+          FROM ${tableName}
+          WHERE question IS NOT NULL AND answer IS NOT NULL
+          LIMIT ${limit}
+        `;
+        const results = await this.query(sql);
+        if (results.length > 0) {
+          logger.info(`Found ${results.length} Q&A pairs in ${tableName} table`);
+          return results;
+        }
+      } catch (error) {
+        logger.debug(`Table ${tableName} not found or error: ${error.message}`);
+      }
     }
+
+    logger.warn('No QnA data found in any table variation');
+    return [];
   }
 
   /**
