@@ -1,5 +1,5 @@
 /**
- * HoliBot Routes v2.5
+ * HoliBot Routes v2.9
  * API endpoints for HoliBot AI Assistant Widget
  *
  * Features:
@@ -13,9 +13,19 @@
  * - Spell correction with "Did you mean?" suggestions
  * - Multi-fallback system for improved response quality
  * - Fallback logging for analytics and continuous improvement
+ * - Conversation logging with session tracking
+ * - POI click tracking for engagement analytics
+ * - Intent detection for smarter query understanding
+ * - Context-aware responses with conversation memory
+ * - Smart follow-up suggestions per language
+ * - User preference storage and learning
+ * - Personalized recommendations based on behavior
+ * - Proactive time-based and seasonal suggestions
+ * - Trending POIs based on user activity
+ * - Context-aware quick actions
  *
  * Endpoints:
- * - POST /holibot/chat - RAG-powered chat with spell correction
+ * - POST /holibot/chat - RAG-powered chat with spell correction + logging
  * - POST /holibot/chat/stream - SSE streaming chat
  * - POST /holibot/search - Semantic search
  * - POST /holibot/itinerary - Build day program
@@ -25,15 +35,26 @@
  * - GET /holibot/categories - POI categories
  * - GET /holibot/categories/hierarchy - 3-level category tree
  * - GET /holibot/categories/:category/pois - POIs by category filter
+ * - GET /holibot/session/:id/history - Get conversation history
+ * - POST /holibot/session/:id/end - End session with rating
+ * - POST /holibot/poi-click - Track POI interactions + preference learning
+ * - GET /holibot/preferences - Get user preferences
+ * - POST /holibot/preferences - Save user preferences
+ * - POST /holibot/poi-rating - Rate a POI
+ * - GET /holibot/recommended-categories - Personalized category list
+ * - GET /holibot/suggestions - Proactive context-aware suggestions
+ * - GET /holibot/trending - Trending POIs this week
+ * - GET /holibot/quick-actions - Time-based quick action buttons
  * - POST /holibot/admin/sync - Legacy sync MySQL to ChromaDB
  * - POST /holibot/admin/resync - Enhanced multi-language sync with Q&A
  * - POST /holibot/admin/sync-single/:poiId - Sync single POI (all languages)
  * - GET /holibot/admin/stats - Service statistics
  * - GET /holibot/admin/fallback-stats - Fallback analytics dashboard
+ * - GET /holibot/admin/conversation-analytics - Session & engagement metrics
  */
 
 import express from 'express';
-import { ragService, syncService, chromaService, embeddingService, ttsService, spellService } from '../services/holibot/index.js';
+import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService, intentService, preferenceService, suggestionService } from '../services/holibot/index.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -233,11 +254,20 @@ const cleanAIText = (text, poiNames = []) => {
 /**
  * POST /api/v1/holibot/chat
  * RAG-powered chat with HoliBot (non-streaming)
- * Includes spell correction and multi-fallback system
+ * Includes spell correction, multi-fallback system, and conversation logging
  */
 router.post('/chat', async (req, res) => {
+  const startTime = Date.now();
+
   try {
-    const { message, conversationHistory = [], language = 'nl', userPreferences = {} } = req.body;
+    const {
+      message,
+      conversationHistory = [],
+      language = 'nl',
+      userPreferences = {},
+      sessionId = null,
+      userAgent = null
+    } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({ success: false, error: 'Message is required' });
@@ -247,6 +277,13 @@ router.post('/chat', async (req, res) => {
     }
 
     logger.info('HoliBot chat request', { message: message.substring(0, 100), language, hasHistory: conversationHistory.length > 0 });
+
+    // Get or create session for conversation logging
+    const activeSessionId = await conversationService.getOrCreateSession({
+      sessionId,
+      language,
+      userAgent: userAgent || req.get('User-Agent')
+    });
 
     // Step 1: Spell correction and suggestion generation
     let processedMessage = message;
@@ -267,11 +304,47 @@ router.post('/chat', async (req, res) => {
       logger.warn('Spell service error (continuing without):', spellError.message);
     }
 
-    // Step 2: RAG chat with corrected message
-    const response = await ragService.chat(processedMessage, language, { userPreferences, conversationHistory });
+    // Log user message (async, non-blocking)
+    conversationService.logUserMessage({
+      sessionId: activeSessionId,
+      message: processedMessage,
+      originalMessage: wasSpellCorrected ? message : null,
+      wasSpellCorrected
+    }).catch(() => {});
 
-    // Step 3: Multi-fallback system
+    // Step 2: Intent detection for smarter responses
+    const intentAnalysis = intentService.analyzeQuery(processedMessage, language, conversationHistory);
+    logger.debug('Intent analysis', { intent: intentAnalysis.primaryIntent, entities: intentAnalysis.entities });
+
+    // Step 3: RAG chat with corrected message and intent context
+    const response = await ragService.chat(processedMessage, language, {
+      userPreferences,
+      conversationHistory,
+      intentContext: {
+        primaryIntent: intentAnalysis.primaryIntent,
+        categories: intentAnalysis.entities.categories,
+        isFollowUp: intentAnalysis.context.isFollowUp
+      }
+    });
+
+    // Step 4: Multi-fallback system
     const enhancedResponse = await applyMultiFallback(response, message, language, spellSuggestions);
+
+    // Calculate total response time
+    const totalResponseTime = Date.now() - startTime;
+
+    // Log assistant response (async, non-blocking)
+    const poiIds = enhancedResponse.pois?.map(p => p.id).filter(Boolean) || [];
+    conversationService.logAssistantMessage({
+      sessionId: activeSessionId,
+      message: enhancedResponse.message,
+      source: enhancedResponse.source,
+      poiCount: enhancedResponse.pois?.length || 0,
+      hadFallback: enhancedResponse.fallbackApplied || false,
+      searchTimeMs: enhancedResponse.searchTimeMs,
+      totalResponseTimeMs: totalResponseTime,
+      poiIds: poiIds.length > 0 ? poiIds : null
+    }).catch(() => {});
 
     // Add spell correction info to response
     if (wasSpellCorrected || spellSuggestions) {
@@ -282,6 +355,17 @@ router.post('/chat', async (req, res) => {
         suggestion: spellSuggestions
       };
     }
+
+    // Add intent analysis and follow-up suggestions to response
+    enhancedResponse.intent = {
+      detected: intentAnalysis.primaryIntent,
+      categories: intentAnalysis.entities.categories,
+      isFollowUp: intentAnalysis.context.isFollowUp
+    };
+    enhancedResponse.suggestedFollowUps = intentAnalysis.suggestedFollowUps;
+
+    // Add session ID to response for client-side tracking
+    enhancedResponse.sessionId = activeSessionId;
 
     res.json({ success: true, data: enhancedResponse });
 
@@ -1741,6 +1825,331 @@ router.get('/admin/stats', async (req, res) => {
   } catch (error) {
     logger.error('Admin stats error:', error);
     res.status(500).json({ success: false, error: 'Could not fetch stats' });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/session/:sessionId/history
+ * Get conversation history for a session
+ */
+router.get('/session/:sessionId/history', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { limit = 50 } = req.query;
+
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'Session ID is required' });
+    }
+
+    const messages = await conversationService.getSessionHistory(sessionId, parseInt(limit));
+
+    res.json({
+      success: true,
+      data: {
+        sessionId,
+        messageCount: messages.length,
+        messages
+      }
+    });
+  } catch (error) {
+    logger.error('Get session history error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/session/:sessionId/end
+ * End a chat session with optional satisfaction rating
+ */
+router.post('/session/:sessionId/end', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { satisfaction } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'Session ID is required' });
+    }
+
+    // Validate satisfaction rating if provided
+    const rating = satisfaction ? parseInt(satisfaction) : null;
+    if (rating !== null && (rating < 1 || rating > 5)) {
+      return res.status(400).json({ success: false, error: 'Satisfaction must be between 1 and 5' });
+    }
+
+    await conversationService.endSession(sessionId, rating);
+
+    res.json({
+      success: true,
+      message: 'Session ended successfully'
+    });
+  } catch (error) {
+    logger.error('End session error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/poi-click
+ * Track when a user clicks on a POI from chat results
+ * Also learns user preferences from click behavior
+ */
+router.post('/poi-click', async (req, res) => {
+  try {
+    const {
+      sessionId,
+      messageId,
+      poiId,
+      poiName,
+      poiCategory,
+      poiRating,
+      poiPriceLevel,
+      clickType = 'view_details',
+      sourceContext = 'chat'
+    } = req.body;
+
+    if (!sessionId || !poiId) {
+      return res.status(400).json({ success: false, error: 'Session ID and POI ID are required' });
+    }
+
+    const validClickTypes = ['view_details', 'get_directions', 'visit_website', 'call', 'add_to_itinerary'];
+    if (!validClickTypes.includes(clickType)) {
+      return res.status(400).json({ success: false, error: 'Invalid click type' });
+    }
+
+    // Log the click for analytics
+    await conversationService.logPoiClick({
+      sessionId,
+      messageId,
+      poiId,
+      poiName,
+      clickType,
+      sourceContext
+    });
+
+    // Learn from click behavior (async, non-blocking)
+    if (poiCategory) {
+      preferenceService.learnFromClick({
+        sessionId,
+        poiCategory,
+        poiRating,
+        poiPriceLevel
+      }).catch(() => {});
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('POI click tracking error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/admin/conversation-analytics
+ * Comprehensive analytics dashboard data
+ */
+router.get('/admin/conversation-analytics', async (req, res) => {
+  try {
+    const { days = 7 } = req.query;
+    const analytics = await conversationService.getDailyAnalytics(parseInt(days));
+
+    res.json({
+      success: true,
+      data: analytics
+    });
+  } catch (error) {
+    logger.error('Conversation analytics error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/preferences
+ * Get user preferences for personalization
+ */
+router.get('/preferences', async (req, res) => {
+  try {
+    const { sessionId, userId } = req.query;
+
+    if (!sessionId && !userId) {
+      return res.status(400).json({ success: false, error: 'Session ID or User ID required' });
+    }
+
+    const preferences = await preferenceService.getPreferences({ sessionId, userId });
+
+    res.json({
+      success: true,
+      data: preferences
+    });
+  } catch (error) {
+    logger.error('Get preferences error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/preferences
+ * Save user preferences
+ */
+router.post('/preferences', async (req, res) => {
+  try {
+    const { sessionId, userId, preferences } = req.body;
+
+    if (!sessionId && !userId) {
+      return res.status(400).json({ success: false, error: 'Session ID or User ID required' });
+    }
+
+    if (!preferences) {
+      return res.status(400).json({ success: false, error: 'Preferences object required' });
+    }
+
+    const success = await preferenceService.savePreferences({ sessionId, userId }, preferences);
+
+    res.json({
+      success,
+      message: success ? 'Preferences saved' : 'Failed to save preferences'
+    });
+  } catch (error) {
+    logger.error('Save preferences error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/holibot/poi-rating
+ * Rate a POI
+ */
+router.post('/poi-rating', async (req, res) => {
+  try {
+    const { sessionId, userId, poiId, rating, feedback, wouldRecommend } = req.body;
+
+    if (!sessionId && !userId) {
+      return res.status(400).json({ success: false, error: 'Session ID or User ID required' });
+    }
+
+    if (!poiId || !rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ success: false, error: 'POI ID and rating (1-5) required' });
+    }
+
+    const success = await preferenceService.ratePoi({
+      sessionId,
+      userId,
+      poiId,
+      rating,
+      feedback,
+      wouldRecommend
+    });
+
+    res.json({
+      success,
+      message: success ? 'Rating saved' : 'Failed to save rating'
+    });
+  } catch (error) {
+    logger.error('POI rating error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/recommended-categories
+ * Get personalized category recommendations
+ */
+router.get('/recommended-categories', async (req, res) => {
+  try {
+    const { sessionId, userId } = req.query;
+
+    const categories = await preferenceService.getRecommendedCategories({ sessionId, userId });
+
+    res.json({
+      success: true,
+      data: categories
+    });
+  } catch (error) {
+    logger.error('Recommended categories error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/suggestions
+ * Get proactive, context-aware suggestions
+ * Returns time-based, seasonal, trending, and personalized suggestions
+ */
+router.get('/suggestions', async (req, res) => {
+  try {
+    const { language = 'nl', sessionId, userId } = req.query;
+
+    // Get user preferences if available
+    let preferences = null;
+    if (sessionId || userId) {
+      preferences = await preferenceService.getPreferences({ sessionId, userId });
+    }
+
+    const suggestions = await suggestionService.getProactiveSuggestions({
+      language,
+      sessionId,
+      userId,
+      preferences
+    });
+
+    res.json({
+      success: true,
+      data: suggestions
+    });
+  } catch (error) {
+    logger.error('Suggestions error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/trending
+ * Get trending POIs based on recent user activity
+ */
+router.get('/trending', async (req, res) => {
+  try {
+    const { limit = 10, days = 7, language = 'nl' } = req.query;
+
+    const trending = await suggestionService.getTrendingPois(
+      parseInt(limit),
+      parseInt(days)
+    );
+
+    res.json({
+      success: true,
+      data: {
+        label: suggestionService.getTrendingLabel(language),
+        period: `${days} days`,
+        pois: trending
+      }
+    });
+  } catch (error) {
+    logger.error('Trending error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/holibot/quick-actions
+ * Get context-aware quick action buttons
+ */
+router.get('/quick-actions', async (req, res) => {
+  try {
+    const { language = 'nl' } = req.query;
+
+    const timeSuggestions = suggestionService.getTimeSuggestions(language);
+
+    res.json({
+      success: true,
+      data: {
+        period: timeSuggestions.period,
+        greeting: timeSuggestions.greeting,
+        actions: suggestionService.getQuickActions(timeSuggestions.period, language),
+        activities: timeSuggestions.activities
+      }
+    });
+  } catch (error) {
+    logger.error('Quick actions error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
