@@ -1151,6 +1151,10 @@ ZASADY:
 /**
  * GET /api/v1/holibot/location/:id
  * Quick Action 2: Detailed location info with Q&A context
+ *
+ * Supports both:
+ * - MySQL primary key ID (numeric)
+ * - Google Place ID (string starting with "ChIJ...")
  */
 router.get('/location/:id', async (req, res) => {
   try {
@@ -1162,8 +1166,30 @@ router.get('/location/:id', async (req, res) => {
       return res.status(500).json({ success: false, error: 'POI service not available' });
     }
 
-    const poi = await model.findByPk(id);
+    let poi = null;
+
+    // Try MySQL primary key first (numeric ID)
+    if (/^\d+$/.test(id)) {
+      poi = await model.findByPk(id);
+    }
+
+    // If not found, try Google Place ID lookup
     if (!poi) {
+      poi = await model.findOne({ where: { google_place_id: id } });
+    }
+
+    // If still not found, try by name (in case id is a name string)
+    if (!poi && id.length > 5 && !id.startsWith('ChIJ')) {
+      const { Op } = await import('sequelize');
+      poi = await model.findOne({
+        where: {
+          name: { [Op.like]: `%${id}%` }
+        }
+      });
+    }
+
+    if (!poi) {
+      logger.warn('POI not found:', { id, type: typeof id });
       return res.status(404).json({ success: false, error: 'Location not found' });
     }
 
@@ -1197,6 +1223,8 @@ router.get('/location/:id', async (req, res) => {
 /**
  * POST /api/v1/holibot/directions
  * Quick Action 3: Get directions to POI
+ *
+ * Supports both MySQL ID and Google Place ID for toPoiId
  */
 router.post('/directions', async (req, res) => {
   try {
@@ -1207,8 +1235,20 @@ router.post('/directions', async (req, res) => {
       return res.status(500).json({ success: false, error: 'POI service not available' });
     }
 
-    const poi = await model.findByPk(toPoiId);
+    let poi = null;
+
+    // Try MySQL primary key first (numeric ID)
+    if (/^\d+$/.test(toPoiId)) {
+      poi = await model.findByPk(toPoiId);
+    }
+
+    // If not found, try Google Place ID lookup
     if (!poi) {
+      poi = await model.findOne({ where: { google_place_id: toPoiId } });
+    }
+
+    if (!poi) {
+      logger.warn('Destination POI not found:', { toPoiId });
       return res.status(404).json({ success: false, error: 'Destination not found' });
     }
 
