@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { ChatMessage } from '../types/chat.types';
-import { chatApi } from '../services/chat.api';
+import { chatApi, type ConversationMessage } from '../services/chat.api';
 import { userPreferencesApi } from '../services/userPreferences.api';
 import type { UserPreferences } from '../services/userPreferences.api';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -151,12 +151,23 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
   const sendMessageInternal = useCallback(async (
     text: string,
     useStreaming: boolean,
-    isRetry: boolean = false
+    isRetry: boolean = false,
+    currentMessages: ChatMessage[] = []
   ): Promise<boolean> => {
     if (!text.trim()) return true;
 
     console.log('[HoliBot] Sending message:', text, 'Streaming:', useStreaming, 'Retry:', isRetry);
     setError(null);
+
+    // Build conversation history from existing messages (exclude streaming messages)
+    const conversationHistory: ConversationMessage[] = currentMessages
+      .filter(msg => !msg.isStreaming && msg.content.trim())
+      .map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+    console.log('[HoliBot] Conversation history:', conversationHistory.length, 'messages');
 
     // Only add user message if this is not a retry
     if (!isRetry) {
@@ -168,6 +179,9 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
       };
       setMessages(prev => [...prev, userMessage]);
       lastMessageRef.current = text;
+
+      // Add the new user message to history for this request
+      conversationHistory.push({ role: 'user', content: text });
     }
 
     if (useStreaming) {
@@ -226,7 +240,8 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
               setIsStreaming(false);
               streamingMessageRef.current = null;
             }
-          }
+          },
+          conversationHistory
         );
 
         return streamSuccess;
@@ -242,7 +257,7 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
       // Non-streaming mode (fallback)
       setIsLoading(true);
       try {
-        const response = await chatApi.sendMessage({ query: text });
+        const response = await chatApi.sendMessage({ query: text }, conversationHistory);
         if (response.success && response.data) {
           const assistantMessage: ChatMessage = {
             id: chatApi.generateMessageId(),
@@ -272,8 +287,17 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
     // Clear reset flag when user sends a message
     setWasReset(false);
 
+    // Get current messages snapshot for conversation history
+    // We use a Promise to get the latest state
+    const currentMessages = await new Promise<ChatMessage[]>(resolve => {
+      setMessages(prev => {
+        resolve([...prev]);
+        return prev;
+      });
+    });
+
     // First attempt with streaming
-    let success = await sendMessageInternal(text, useStreaming, false);
+    let success = await sendMessageInternal(text, useStreaming, false, currentMessages);
 
     // If streaming failed, retry with non-streaming as fallback
     if (!success && useStreaming && retryCountRef.current < MAX_RETRIES) {
@@ -295,8 +319,14 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
       // Remove retry message
       setMessages(prev => prev.filter(msg => msg.id !== retryMessage.id));
 
-      // Try non-streaming fallback
-      success = await sendMessageInternal(text, false, true);
+      // Try non-streaming fallback - include the user message that was already added
+      const retryMessages = await new Promise<ChatMessage[]>(resolve => {
+        setMessages(prev => {
+          resolve([...prev]);
+          return prev;
+        });
+      });
+      success = await sendMessageInternal(text, false, true, retryMessages);
     }
 
     // If all retries failed, show error message
