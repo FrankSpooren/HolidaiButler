@@ -71,8 +71,10 @@ export class HttpClient<SecurityDataType = unknown> {
     format,
     ...axiosConfig
   }: ApiConfig<SecurityDataType> = {}) {
-    // Ticketing module runs on port 3004
-    const ticketingUrl = import.meta.env.VITE_TICKETING_API_URL || "http://localhost:3004/api/v1";
+    // Ticketing module - production fallback for holidaibutler.com domains
+    const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('holidaibutler.com');
+    const ticketingUrl = import.meta.env.VITE_TICKETING_API_URL ||
+      (isProduction ? 'https://api.holidaibutler.com/api/v1' : 'http://localhost:3004/api/v1');
     this.instance = axios.create({
       ...axiosConfig,
       baseURL: axiosConfig.baseURL || ticketingUrl,

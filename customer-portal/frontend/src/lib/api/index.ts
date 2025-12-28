@@ -18,20 +18,26 @@ import { Payments } from './Payments';
 // Re-export all data contracts
 export * from './data-contracts';
 
-// API Configuration - Support cloud environments (Codespaces, Gitpod)
+// API Configuration - Support production and cloud environments
+const isProduction =
+  typeof window !== 'undefined' &&
+  window.location.hostname.includes('holidaibutler.com');
+
 const isCloudEnvironment =
   typeof window !== 'undefined' &&
   (window.location.hostname.includes('.app.github.dev') ||
     window.location.hostname.includes('.gitpod.io'));
 
-// Base URLs for different services
+// Base URLs for different services - production uses api.holidaibutler.com
 const TICKETING_API_URL =
   import.meta.env.VITE_TICKETING_API_URL ||
-  (isCloudEnvironment ? '/api/v1/ticketing' : 'http://localhost:3004/api/v1/ticketing');
+  (isProduction ? 'https://api.holidaibutler.com/api/v1/ticketing' :
+   isCloudEnvironment ? '/api/v1/ticketing' : 'http://localhost:3004/api/v1/ticketing');
 
 const PAYMENT_API_URL =
   import.meta.env.VITE_PAYMENT_API_URL ||
-  (isCloudEnvironment ? '/api/v1/payments' : 'http://localhost:3005/api/v1');
+  (isProduction ? 'https://api.holidaibutler.com/api/v1/payments' :
+   isCloudEnvironment ? '/api/v1/payments' : 'http://localhost:3005/api/v1');
 
 /**
  * Get authentication token from localStorage
