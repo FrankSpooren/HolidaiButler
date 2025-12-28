@@ -9,7 +9,7 @@ name: "Deploy: Customer Portal"
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/holibot-2.0]
     paths:
       - 'customer-portal/**'
       - '!customer-portal/README.md'
@@ -59,12 +59,13 @@ jobs:
         working-directory: ${{ env.MODULE_PATH }}
         run: |
           cat > .env.production << 'ENVFILE'
-          VITE_API_URL=https://test.holidaibutler.com/api/v1
-          VITE_WIDGET_API_URL=https://test.holidaibutler.com/api/v1
-          VITE_ADMIN_API_URL=https://test.holidaibutler.com/api/v1
-          VITE_TICKETING_API_URL=https://test.holidaibutler.com/api/v1
-          VITE_PAYMENT_API_URL=https://test.holidaibutler.com/api/v1
-          VITE_RESERVATIONS_API_URL=https://test.holidaibutler.com/api/v1
+          VITE_API_URL=/api/v1
+          VITE_WIDGET_API_URL=/api/v1
+          VITE_ADMIN_API_URL=/api/v1
+          VITE_TICKETING_API_URL=/api/v1
+          VITE_PAYMENT_API_URL=/api/v1
+          VITE_RESERVATIONS_API_URL=/api/v1
+          VITE_AGENDA_API_URL=/api/v1
           VITE_ENABLE_TICKETING=true
           VITE_ENABLE_PAYMENTS=true
           VITE_ENABLE_RESERVATIONS=true
