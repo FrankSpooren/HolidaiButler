@@ -63,7 +63,6 @@ export function FavoritesPage() {
   const [selectedPOIId, setSelectedPOIId] = useState<number | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedEventDate, setSelectedEventDate] = useState<string | null>(null);
-  const [selectedEventDate, setSelectedEventDate] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const locale = dateLocales[language] || nl;
 
