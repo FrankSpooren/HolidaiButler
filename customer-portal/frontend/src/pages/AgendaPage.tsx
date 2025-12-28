@@ -177,6 +177,7 @@ export function AgendaPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEventDate, setSelectedEventDate] = useState<string | null>(null);
   const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
   const [comparisonModalOpen, setComparisonModalOpen] = useState<boolean>(false);
   const [filters, setFilters] = useState<AgendaFilters>(defaultFilters);
@@ -547,7 +548,10 @@ export function AgendaPage() {
                       <div key={event._id} className="agenda-grid-item">
                         <AgendaCard
                           event={event}
-                          onClick={() => setSelectedEventId(event._id)}
+                          onClick={() => {
+                            setSelectedEventId(event._id);
+                            setSelectedEventDate(event.startDate);
+                          }}
                           onSave={toggleAgendaFavorite}
                           isSaved={isAgendaFavorite(event._id)}
                           distance={getDistance(event)}
@@ -591,7 +595,11 @@ export function AgendaPage() {
         <AgendaDetailModal
           eventId={selectedEventId}
           isOpen={selectedEventId !== null}
-          onClose={() => setSelectedEventId(null)}
+          onClose={() => {
+            setSelectedEventId(null);
+            setSelectedEventDate(null);
+          }}
+          selectedDate={selectedEventDate || undefined}
         />
       )}
 

@@ -13,12 +13,14 @@ import type { Locale } from 'date-fns';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { agendaService, type AgendaEvent } from '../services/agendaService';
 import { useVisited } from '@/shared/contexts/VisitedContext';
+import { useAgendaFavorites } from '@/shared/contexts/AgendaFavoritesContext';
 import './AgendaDetailModal.css';
 
 interface AgendaDetailModalProps {
   eventId: string;
   isOpen: boolean;
   onClose: () => void;
+  selectedDate?: string; // The date from the agenda card that was clicked
 }
 
 const dateLocales: Record<string, Locale> = {
@@ -49,10 +51,10 @@ const categoryConfig: Record<string, { label: string; color: string }> = {
   beach: { label: 'Beaches & Nature', color: '#1ABC9C' },
 };
 
-export function AgendaDetailModal({ eventId, isOpen, onClose }: AgendaDetailModalProps) {
+export function AgendaDetailModal({ eventId, isOpen, onClose, selectedDate }: AgendaDetailModalProps) {
   const { t, language } = useLanguage();
   const { markEventVisited } = useVisited();
-  const [isSaved, setIsSaved] = useState(false);
+  const { isAgendaFavorite, toggleAgendaFavorite } = useAgendaFavorites();
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const modalContentRef = useRef<HTMLDivElement>(null);
@@ -108,7 +110,8 @@ export function AgendaDetailModal({ eventId, isOpen, onClose }: AgendaDetailModa
   const description = getLocalizedText(event?.description);
   const longDescription = getLocalizedText(event?.longDescription) || description;
 
-  // Format dates
+  // Format dates - use selectedDate if provided, otherwise fallback to event.startDate
+  const displayDate = selectedDate || event?.startDate;
   const formatEventDate = (dateStr: string) => format(new Date(dateStr), 'EEEE d MMMM yyyy', { locale });
   const formatEventTime = (dateStr: string) => format(new Date(dateStr), 'HH:mm', { locale });
 
@@ -149,8 +152,10 @@ export function AgendaDetailModal({ eventId, isOpen, onClose }: AgendaDetailModa
     setTimeout(() => setShareMessage(null), 3000);
   };
 
+  const isSaved = isAgendaFavorite(eventId);
+
   const handleSave = () => {
-    setIsSaved(!isSaved);
+    toggleAgendaFavorite(eventId);
     setShareMessage(isSaved ? 'Removed from favorites' : 'Added to favorites!');
     setTimeout(() => setShareMessage(null), 2000);
   };
@@ -254,12 +259,12 @@ export function AgendaDetailModal({ eventId, isOpen, onClose }: AgendaDetailModa
                   <div className="agenda-meta">
                     <div className="agenda-meta-item">
                       <Calendar size={18} />
-                      <span>{formatEventDate(event.startDate)}</span>
+                      <span>{displayDate ? formatEventDate(displayDate) : ''}</span>
                     </div>
-                    {!event.allDay && (
+                    {!event.allDay && displayDate && (
                       <div className="agenda-meta-item">
                         <Clock size={18} />
-                        <span>{formatEventTime(event.startDate)}</span>
+                        <span>{formatEventTime(displayDate)}</span>
                       </div>
                     )}
                     {event.location?.name && (
