@@ -18,7 +18,7 @@ const getCodespacesUrl = (port: number): string | null => {
 };
 
 // API base URL from environment variables
-// Uses Admin Backend on port 3003 for authentication
+// Uses Platform Core API Gateway
 // In Codespaces, automatically construct the correct forwarded URL
 const getApiBaseUrl = (): string => {
   // First check environment variable
@@ -27,13 +27,18 @@ const getApiBaseUrl = (): string => {
   }
 
   // Check for Codespaces environment
-  const codespacesUrl = getCodespacesUrl(3003);
+  const codespacesUrl = getCodespacesUrl(3001);
   if (codespacesUrl) {
     return `${codespacesUrl}/api/v1`;
   }
 
-  // Default to localhost for local development
-  return 'http://localhost:3003/api/v1';
+  // Production fallback - use production API
+  if (typeof window !== 'undefined' && window.location.hostname.includes('holidaibutler.com')) {
+    return 'https://api.holidaibutler.com/api/v1';
+  }
+
+  // Default to localhost for local development only
+  return 'http://localhost:3001/api/v1';
 };
 
 const API_BASE_URL = getApiBaseUrl();
