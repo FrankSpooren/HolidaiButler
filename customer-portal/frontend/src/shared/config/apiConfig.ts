@@ -1,6 +1,7 @@
 /**
  * HolidaiButler API Configuration
  * Centralized configuration for all backend module endpoints
+ * Auto-deploys via GitHub Actions on push to main or feature/holibot-2.0
  *
  * Port Mapping:
  * - Admin Module (Auth + API):   3003
