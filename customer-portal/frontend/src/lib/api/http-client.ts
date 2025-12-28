@@ -71,10 +71,10 @@ export class HttpClient<SecurityDataType = unknown> {
     format,
     ...axiosConfig
   }: ApiConfig<SecurityDataType> = {}) {
-    // Ticketing module - production fallback for holidaibutler.com domains
+    // Ticketing module - production uses relative URL (Apache proxy)
     const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('holidaibutler.com');
     const ticketingUrl = import.meta.env.VITE_TICKETING_API_URL ||
-      (isProduction ? 'https://api.holidaibutler.com/api/v1' : 'http://localhost:3004/api/v1');
+      (isProduction ? '/api/v1' : 'http://localhost:3004/api/v1');
     this.instance = axios.create({
       ...axiosConfig,
       baseURL: axiosConfig.baseURL || ticketingUrl,
