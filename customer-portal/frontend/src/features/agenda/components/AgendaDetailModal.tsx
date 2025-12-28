@@ -153,7 +153,8 @@ export function AgendaDetailModal({ eventId, isOpen, onClose, selectedDate }: Ag
   };
 
   // Use displayDate for favorites - this is the selectedDate or event.startDate
-  const isSaved = isAgendaFavorite(eventId, displayDate);
+  // Check if event is saved on ANY date (for visual indicator)
+  const isSaved = isAgendaFavorite(eventId);
 
   const handleSave = () => {
     toggleAgendaFavorite(eventId, displayDate);
