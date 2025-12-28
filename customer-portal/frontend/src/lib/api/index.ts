@@ -28,16 +28,14 @@ const isCloudEnvironment =
   (window.location.hostname.includes('.app.github.dev') ||
     window.location.hostname.includes('.gitpod.io'));
 
-// Base URLs for different services - production uses api.holidaibutler.com
+// Base URLs for different services - production uses relative URLs (Apache proxy)
 const TICKETING_API_URL =
   import.meta.env.VITE_TICKETING_API_URL ||
-  (isProduction ? 'https://api.holidaibutler.com/api/v1/ticketing' :
-   isCloudEnvironment ? '/api/v1/ticketing' : 'http://localhost:3004/api/v1/ticketing');
+  (isProduction || isCloudEnvironment ? '/api/v1/ticketing' : 'http://localhost:3004/api/v1/ticketing');
 
 const PAYMENT_API_URL =
   import.meta.env.VITE_PAYMENT_API_URL ||
-  (isProduction ? 'https://api.holidaibutler.com/api/v1/payments' :
-   isCloudEnvironment ? '/api/v1/payments' : 'http://localhost:3005/api/v1');
+  (isProduction || isCloudEnvironment ? '/api/v1/payments' : 'http://localhost:3005/api/v1');
 
 /**
  * Get authentication token from localStorage
