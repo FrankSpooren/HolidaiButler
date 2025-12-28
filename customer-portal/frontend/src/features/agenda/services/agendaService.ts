@@ -220,16 +220,18 @@ export const agendaService = {
    */
   getEvents: async (filters: Record<string, unknown> = {}): Promise<AgendaResponse> => {
     try {
-      const url = new URL(`${getApiUrl()}/events`);
-
-      // Add filters as query params
+      const baseUrl = getApiUrl();
+      // Build query string manually to support relative URLs
+      const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== '') {
-          url.searchParams.append(key, String(value));
+          params.append(key, String(value));
         }
       });
+      const queryString = params.toString();
+      const url = `${baseUrl}/events${queryString ? `?${queryString}` : ''}`;
 
-      const response = await fetch(url.toString(), {
+      const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
         },

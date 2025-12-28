@@ -4,7 +4,11 @@
 
 import type { CategoriesResponse, Category } from '../types/category.types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api/v1';
+// Production fallback - use relative URL (Apache proxy)
+const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('holidaibutler.com');
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  (isProduction ? '/api/v1' : 'http://localhost:3001/api/v1');
 
 export const categoriesApi = {
   async getAll(language: string = 'nl'): Promise<Category[]> {

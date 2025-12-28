@@ -32,9 +32,9 @@ const getApiBaseUrl = (): string => {
     return `${codespacesUrl}/api/v1`;
   }
 
-  // Production fallback - use production API
+  // Production fallback - use relative URL (Apache reverse proxy handles routing)
   if (typeof window !== 'undefined' && window.location.hostname.includes('holidaibutler.com')) {
-    return 'https://api.holidaibutler.com/api/v1';
+    return '/api/v1';
   }
 
   // Default to localhost for local development only
