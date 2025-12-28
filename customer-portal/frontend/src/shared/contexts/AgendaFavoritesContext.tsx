@@ -1,20 +1,26 @@
 /**
  * AgendaFavoritesContext - Context for managing agenda event favorites
  *
- * Similar to FavoritesContext but uses string IDs (MongoDB _id format)
- * Stores favorites in localStorage for persistence
+ * Stores favorites with selectedDate to preserve the specific date the user selected
+ * Uses localStorage for persistence
  */
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
+export interface AgendaFavorite {
+  eventId: string;
+  selectedDate: string; // ISO date string of the selected occurrence
+}
+
 interface AgendaFavoritesContextType {
-  agendaFavorites: Set<string>;
-  isAgendaFavorite: (eventId: string) => boolean;
-  toggleAgendaFavorite: (eventId: string) => void;
-  addAgendaFavorite: (eventId: string) => void;
-  removeAgendaFavorite: (eventId: string) => void;
+  agendaFavorites: AgendaFavorite[];
+  isAgendaFavorite: (eventId: string, selectedDate?: string) => boolean;
+  toggleAgendaFavorite: (eventId: string, selectedDate?: string) => void;
+  addAgendaFavorite: (eventId: string, selectedDate: string) => void;
+  removeAgendaFavorite: (eventId: string, selectedDate?: string) => void;
   clearAgendaFavorites: () => void;
+  getSelectedDate: (eventId: string) => string | undefined;
 }
 
 const AgendaFavoritesContext = createContext<AgendaFavoritesContextType | undefined>(undefined);
@@ -22,60 +28,94 @@ const AgendaFavoritesContext = createContext<AgendaFavoritesContextType | undefi
 const STORAGE_KEY = 'holidaibutler_agenda_favorites';
 
 export function AgendaFavoritesProvider({ children }: { children: ReactNode }) {
-  const [agendaFavorites, setAgendaFavorites] = useState<Set<string>>(() => {
+  const [agendaFavorites, setAgendaFavorites] = useState<AgendaFavorite[]>(() => {
     // Initialize from localStorage
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const ids = JSON.parse(stored) as string[];
-        return new Set(ids);
+        const parsed = JSON.parse(stored);
+        // Handle migration from old format (array of strings) to new format (array of objects)
+        if (Array.isArray(parsed)) {
+          if (parsed.length === 0) return [];
+          // Check if it's old format (strings) or new format (objects)
+          if (typeof parsed[0] === 'string') {
+            // Migrate old format: convert string IDs to objects with current date as fallback
+            return parsed.map((id: string) => ({
+              eventId: id,
+              selectedDate: new Date().toISOString(),
+            }));
+          }
+          // Already new format
+          return parsed as AgendaFavorite[];
+        }
       }
     } catch (error) {
       console.error('Error loading agenda favorites from localStorage:', error);
     }
-    return new Set();
+    return [];
   });
 
   // Sync to localStorage whenever favorites change
   useEffect(() => {
     try {
-      const ids = Array.from(agendaFavorites);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(agendaFavorites));
     } catch (error) {
       console.error('Error saving agenda favorites to localStorage:', error);
     }
   }, [agendaFavorites]);
 
-  const isAgendaFavorite = (eventId: string): boolean => {
-    return agendaFavorites.has(eventId);
+  // Check if an event is a favorite (optionally check specific date)
+  const isAgendaFavorite = (eventId: string, selectedDate?: string): boolean => {
+    if (selectedDate) {
+      // Check for exact match (same event AND same date)
+      return agendaFavorites.some(
+        fav => fav.eventId === eventId && fav.selectedDate === selectedDate
+      );
+    }
+    // Check if event is favorited on ANY date
+    return agendaFavorites.some(fav => fav.eventId === eventId);
   };
 
-  const addAgendaFavorite = (eventId: string) => {
+  // Get the stored selectedDate for an event
+  const getSelectedDate = (eventId: string): string | undefined => {
+    const favorite = agendaFavorites.find(fav => fav.eventId === eventId);
+    return favorite?.selectedDate;
+  };
+
+  const addAgendaFavorite = (eventId: string, selectedDate: string) => {
     setAgendaFavorites(prev => {
-      const newSet = new Set(prev);
-      newSet.add(eventId);
-      return newSet;
+      // Don't add duplicate (same event + same date)
+      if (prev.some(fav => fav.eventId === eventId && fav.selectedDate === selectedDate)) {
+        return prev;
+      }
+      return [...prev, { eventId, selectedDate }];
     });
   };
 
-  const removeAgendaFavorite = (eventId: string) => {
+  const removeAgendaFavorite = (eventId: string, selectedDate?: string) => {
     setAgendaFavorites(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(eventId);
-      return newSet;
+      if (selectedDate) {
+        // Remove specific occurrence
+        return prev.filter(
+          fav => !(fav.eventId === eventId && fav.selectedDate === selectedDate)
+        );
+      }
+      // Remove all occurrences of this event
+      return prev.filter(fav => fav.eventId !== eventId);
     });
   };
 
-  const toggleAgendaFavorite = (eventId: string) => {
-    if (isAgendaFavorite(eventId)) {
-      removeAgendaFavorite(eventId);
+  const toggleAgendaFavorite = (eventId: string, selectedDate?: string) => {
+    const date = selectedDate || new Date().toISOString();
+    if (isAgendaFavorite(eventId, date)) {
+      removeAgendaFavorite(eventId, date);
     } else {
-      addAgendaFavorite(eventId);
+      addAgendaFavorite(eventId, date);
     }
   };
 
   const clearAgendaFavorites = () => {
-    setAgendaFavorites(new Set());
+    setAgendaFavorites([]);
   };
 
   return (
@@ -87,6 +127,7 @@ export function AgendaFavoritesProvider({ children }: { children: ReactNode }) {
         addAgendaFavorite,
         removeAgendaFavorite,
         clearAgendaFavorites,
+        getSelectedDate,
       }}
     >
       {children}
