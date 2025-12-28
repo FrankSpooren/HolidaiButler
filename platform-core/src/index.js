@@ -36,6 +36,7 @@ import holibotRoutes from './routes/holibot.js';
 import onboardingRoutes from './routes/onboarding.js';
 import agendaRoutes from './routes/agenda.js';
 import consentRoutes from './routes/consent.js';
+import imageRefreshRoutes from './routes/imageRefresh.js';
 import User from './models/User.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -142,6 +143,7 @@ app.use('/api/v1/onboarding', onboardingRoutes); // User Onboarding Flow
 app.use('/api/v1/agenda', agendaRoutes); // Agenda - Events & Calendar
 app.use('/api/v1/consent', consentRoutes); // User Privacy Consent Management
 app.use('/api/consent', consentRoutes); // Legacy route (no v1)
+app.use('/api/admin/images/refresh', imageRefreshRoutes); // POI Image Refresh (Admin)
 app.use('/api/v1', apiGateway); // API Gateway for all modules
 
 /**
