@@ -152,10 +152,11 @@ export function AgendaDetailModal({ eventId, isOpen, onClose, selectedDate }: Ag
     setTimeout(() => setShareMessage(null), 3000);
   };
 
-  const isSaved = isAgendaFavorite(eventId);
+  // Use displayDate for favorites - this is the selectedDate or event.startDate
+  const isSaved = isAgendaFavorite(eventId, displayDate);
 
   const handleSave = () => {
-    toggleAgendaFavorite(eventId);
+    toggleAgendaFavorite(eventId, displayDate);
     setShareMessage(isSaved ? 'Removed from favorites' : 'Added to favorites!');
     setTimeout(() => setShareMessage(null), 2000);
   };

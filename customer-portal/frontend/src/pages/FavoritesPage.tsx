@@ -15,7 +15,7 @@
  * - Empty state when no favorites
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { nl, enUS, es, de, sv, pl } from 'date-fns/locale';
@@ -29,7 +29,7 @@ import { AgendaDetailModal } from '../features/agenda/components/AgendaDetailMod
 import { agendaService, type AgendaEvent } from '../features/agenda/services/agendaService';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useFavorites } from '../shared/contexts/FavoritesContext';
-import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
+import { useAgendaFavorites, type AgendaFavorite } from '../shared/contexts/AgendaFavoritesContext';
 import { getCategoryIcon, getCategoryColor } from '../shared/config/categoryConfig';
 import { getDistanceFromUser, getUserLocation, type Coordinates } from '../shared/utils/distance';
 import './FavoritesPage.css';
@@ -58,10 +58,11 @@ const agendaCategoryConfig: Record<string, { color: string; icon: string }> = {
 export function FavoritesPage() {
   const { t, language } = useLanguage();
   const { favorites, toggleFavorite } = useFavorites();
-  const { agendaFavorites, toggleAgendaFavorite } = useAgendaFavorites();
+  const { agendaFavorites, removeAgendaFavorite } = useAgendaFavorites();
   const [activeTab, setActiveTab] = useState<'pois' | 'events'>('pois');
   const [selectedPOIId, setSelectedPOIId] = useState<number | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEventDate, setSelectedEventDate] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const locale = dateLocales[language] || nl;
 
@@ -195,7 +196,7 @@ export function FavoritesPage() {
         <p className="favorites-subtitle">
           {activeTab === 'pois'
             ? `${favoritePOIs.length} ${favoritePOIs.length === 1 ? 'saved place' : 'saved places'}`
-            : `${favoriteEvents.length} ${favoriteEvents.length === 1 ? 'saved event' : 'saved events'}`
+            : `${favoriteEventsWithDates.length} ${favoriteEventsWithDates.length === 1 ? 'saved event' : 'saved events'}`
           }
         </p>
       </div>
@@ -212,7 +213,7 @@ export function FavoritesPage() {
           className={`favorites-tab ${activeTab === 'events' ? 'active' : ''}`}
           onClick={() => setActiveTab('events')}
         >
-          📅 Events ({favoriteEvents.length})
+          📅 Events ({favoriteEventsWithDates.length})
         </button>
       </div>
 
@@ -321,7 +322,7 @@ export function FavoritesPage() {
       {activeTab === 'events' && (
         <>
           {/* Empty State for Events */}
-          {!isLoading && favoriteEvents.length === 0 && (
+          {!isLoading && favoriteEventsWithDates.length === 0 && (
             <div className="favorites-empty">
               <div className="empty-icon">📅</div>
               <h2 className="empty-title">No favorite events yet</h2>
@@ -335,10 +336,10 @@ export function FavoritesPage() {
           )}
 
           {/* Events Grid */}
-          {!isLoading && favoriteEvents.length > 0 && (
+          {!isLoading && favoriteEventsWithDates.length > 0 && (
             <div className="favorites-grid">
-              {favoriteEvents.map((event: AgendaEvent) => (
-                <div key={event._id} className="favorite-card">
+              {favoriteEventsWithDates.map(({ event, selectedDate, favoriteKey }) => (
+                <div key={favoriteKey} className="favorite-card">
                   {/* Category Label */}
                   <div
                     className="favorite-category-label"
@@ -350,7 +351,7 @@ export function FavoritesPage() {
                   {/* Event Image */}
                   <div
                     className="favorite-event-image-container"
-                    onClick={() => handleEventClick(event._id)}
+                    onClick={() => handleEventClick(event._id, selectedDate)}
                     style={{ cursor: 'pointer' }}
                   >
                     {event.images?.[0]?.url ? (
@@ -372,7 +373,7 @@ export function FavoritesPage() {
                   {/* Remove Button */}
                   <button
                     className="favorite-remove-btn"
-                    onClick={(e) => handleRemoveEventFavorite(event._id, e)}
+                    onClick={(e) => handleRemoveEventFavorite(event._id, selectedDate, e)}
                     title="Remove from favorites"
                   >
                     ❤️
@@ -381,7 +382,7 @@ export function FavoritesPage() {
                   {/* Event Content */}
                   <div
                     className="favorite-content"
-                    onClick={() => handleEventClick(event._id)}
+                    onClick={() => handleEventClick(event._id, selectedDate)}
                     style={{ cursor: 'pointer' }}
                   >
                     <h3 className="favorite-name">{toTitleCase(getEventTitle(event))}</h3>
@@ -391,7 +392,7 @@ export function FavoritesPage() {
 
                     {/* Date */}
                     <div className="favorite-event-date">
-                      📅 {format(new Date(event.startDate), 'd MMM yyyy', { locale })}
+                      📅 {format(new Date(selectedDate), 'd MMM yyyy', { locale })}
                     </div>
 
                     {/* Location */}
