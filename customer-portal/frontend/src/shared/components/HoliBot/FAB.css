@@ -67,8 +67,8 @@
 /* Hide FAB on mobile when widget is open */
 @media (max-width: 480px) {
   .holibot-fab {
-    bottom: 16px;
-    right: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    right: max(16px, env(safe-area-inset-right, 16px));
     width: 56px;
     height: 56px;
   }
