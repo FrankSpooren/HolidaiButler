@@ -10,6 +10,7 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  TableSortLabel,
   IconButton,
   Button,
   TextField,
@@ -87,6 +88,16 @@ export default function TicketList() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scanInput, setScanInput] = useState('');
   const [validationResult, setValidationResult] = useState(null);
+
+  // Sorting
+  const [sortBy, setSortBy] = useState('purchaseDate');
+  const [sortDirection, setSortDirection] = useState('desc');
+
+  const handleSort = (columnId) => {
+    const newDirection = sortBy === columnId && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortBy(columnId);
+    setSortDirection(newDirection);
+  };
 
   const canEdit = hasPermission('tickets.edit');
   const canCreate = hasPermission('tickets.create');
@@ -285,12 +296,44 @@ export default function TicketList() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Ticket #</TableCell>
-              <TableCell>Holder</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'ticketNumber'}
+                  direction={sortBy === 'ticketNumber' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('ticketNumber')}
+                >
+                  Ticket #
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'holder'}
+                  direction={sortBy === 'holder' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('holder')}
+                >
+                  Holder
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Type</TableCell>
               <TableCell>Event</TableCell>
-              <TableCell>Price</TableCell>
-              <TableCell>Purchase Date</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'price'}
+                  direction={sortBy === 'price' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('price')}
+                >
+                  Price
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'purchaseDate'}
+                  direction={sortBy === 'purchaseDate' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('purchaseDate')}
+                >
+                  Purchase Date
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Status</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>

@@ -10,6 +10,7 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  TableSortLabel,
   IconButton,
   Button,
   TextField,
@@ -89,6 +90,16 @@ export default function TransactionList() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   const [refundDialog, setRefundDialog] = useState({ open: false, amount: 0, reason: '' });
+
+  // Sorting
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortDirection, setSortDirection] = useState('desc');
+
+  const handleSort = (columnId) => {
+    const newDirection = sortBy === columnId && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortBy(columnId);
+    setSortDirection(newDirection);
+  };
 
   const canEdit = hasPermission('transactions.edit');
   const canView = hasPermission('transactions.view');
@@ -316,12 +327,44 @@ export default function TransactionList() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Transaction #</TableCell>
-              <TableCell>Customer</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'transactionNumber'}
+                  direction={sortBy === 'transactionNumber' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('transactionNumber')}
+                >
+                  Transaction #
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'customer'}
+                  direction={sortBy === 'customer' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('customer')}
+                >
+                  Customer
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Type</TableCell>
               <TableCell>Method</TableCell>
-              <TableCell>Amount</TableCell>
-              <TableCell>Date</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'amount'}
+                  direction={sortBy === 'amount' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('amount')}
+                >
+                  Amount
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'createdAt'}
+                  direction={sortBy === 'createdAt' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('createdAt')}
+                >
+                  Date
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Review</TableCell>
               <TableCell align="right">Actions</TableCell>
