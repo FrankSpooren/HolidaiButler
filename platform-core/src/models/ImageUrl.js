@@ -1,9 +1,15 @@
 /**
  * ImageUrl Model - Maps to imageurls table
  * Contains multiple images per POI for carousel/gallery display
+ *
+ * Supports both external URLs and locally stored images.
+ * Local images (local_path) are preferred as they're 100% reliable.
  */
 import { DataTypes } from 'sequelize';
 import { mysqlSequelize } from '../config/database.js';
+
+// Base URL for locally stored images
+const IMAGE_BASE_URL = process.env.IMAGE_BASE_URL || 'https://api.holidaibutler.com';
 
 const ImageUrl = mysqlSequelize.define('ImageUrl', {
   id: {
@@ -22,11 +28,41 @@ const ImageUrl = mysqlSequelize.define('ImageUrl', {
   image_url: {
     type: DataTypes.TEXT,
     allowNull: false
+  },
+  local_path: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  file_size: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  file_hash: {
+    type: DataTypes.STRING(64),
+    allowNull: true
+  },
+  downloaded_at: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: 'imageurls',
   timestamps: false
 });
+
+/**
+ * Get the best URL for an image (local if available, otherwise external)
+ * @param {Object} img - Image record with image_url and local_path
+ * @returns {string} Best available URL
+ */
+function getBestUrl(img) {
+  // Prefer local path (100% reliable)
+  if (img.local_path) {
+    return `${IMAGE_BASE_URL}${img.local_path}`;
+  }
+  // Fall back to external URL
+  return img.image_url;
+}
 
 /**
  * Get image priority based on URL pattern
@@ -63,6 +99,8 @@ function getImagePriority(url) {
 
 /**
  * Get images for a single POI with quality filtering
+ * Prioritizes locally stored images (100% reliable)
+ *
  * @param {number} poiId - POI ID
  * @param {number} limit - Max images to return
  * @returns {Promise<string[]>} Array of image URLs
@@ -73,12 +111,17 @@ export async function getImagesForPOI(poiId, limit = 10) {
       where: { poi_id: poiId },
       order: [['image_id', 'ASC']],
       limit: limit + 5,
-      attributes: ['image_url']
+      attributes: ['image_url', 'local_path']
     });
 
     return images
-      .map(img => img.image_url)
-      .sort((a, b) => getImagePriority(a) - getImagePriority(b))
+      .map(img => ({
+        url: getBestUrl(img),
+        hasLocal: !!img.local_path,
+        priority: img.local_path ? 0 : getImagePriority(img.image_url)
+      }))
+      .sort((a, b) => a.priority - b.priority)
+      .map(img => img.url)
       .slice(0, limit);
   } catch (error) {
     console.error('Error fetching images for POI:', poiId, error);
@@ -88,6 +131,8 @@ export async function getImagesForPOI(poiId, limit = 10) {
 
 /**
  * Batch fetch images for multiple POIs
+ * Prioritizes locally stored images (100% reliable)
+ *
  * @param {number[]} poiIds - Array of POI IDs
  * @param {number} limitPerPoi - Max images per POI
  * @returns {Promise<Map<number, string[]>>} Map of POI ID to image URLs
@@ -101,25 +146,30 @@ export async function getImagesForPOIs(poiIds, limitPerPoi = 3) {
     const images = await ImageUrl.findAll({
       where: { poi_id: poiIds },
       order: [['poi_id', 'ASC'], ['image_id', 'ASC']],
-      attributes: ['poi_id', 'image_url']
+      attributes: ['poi_id', 'image_url', 'local_path']
     });
 
-    // Group by POI and filter/limit
+    // Group by POI
     const imageMap = new Map();
     const poiImages = new Map();
 
-    // First, collect all images per POI
+    // First, collect all images per POI with metadata
     for (const img of images) {
       if (!poiImages.has(img.poi_id)) {
         poiImages.set(img.poi_id, []);
       }
-      poiImages.get(img.poi_id).push(img.image_url);
+      poiImages.get(img.poi_id).push({
+        url: getBestUrl(img),
+        hasLocal: !!img.local_path,
+        priority: img.local_path ? 0 : getImagePriority(img.image_url)
+      });
     }
 
-    // Then sort by priority and limit
-    for (const [poiId, urls] of poiImages) {
-      const sorted = urls
-        .sort((a, b) => getImagePriority(a) - getImagePriority(b))
+    // Then sort by priority (local first, then by URL type) and limit
+    for (const [poiId, imgList] of poiImages) {
+      const sorted = imgList
+        .sort((a, b) => a.priority - b.priority)
+        .map(img => img.url)
         .slice(0, limitPerPoi);
       imageMap.set(poiId, sorted);
     }
