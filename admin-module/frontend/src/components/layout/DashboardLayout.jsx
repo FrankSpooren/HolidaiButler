@@ -88,12 +88,12 @@ export default function DashboardLayout() {
       text: t.nav.pois,
       icon: <PlaceIcon />,
       path: '/pois',
-      permission: null // Allow all for development
+      permission: null
     },
     {
-      text: t.nav.events,
-      icon: <EventIcon />,
-      path: '/events',
+      text: t.nav.agenda,
+      icon: <AgendaIcon />,
+      path: '/agenda',
       permission: null
     },
     {
@@ -109,12 +109,6 @@ export default function DashboardLayout() {
       permission: null
     },
     {
-      text: t.nav.restaurants,
-      icon: <TableRestaurantIcon />,
-      path: '/reservations/restaurants',
-      permission: null
-    },
-    {
       text: t.nav.bookings,
       icon: <BookingIcon />,
       path: '/bookings',
@@ -124,12 +118,6 @@ export default function DashboardLayout() {
       text: t.nav.transactions,
       icon: <PaymentIcon />,
       path: '/transactions',
-      permission: null
-    },
-    {
-      text: t.nav.agenda,
-      icon: <AgendaIcon />,
-      path: '/agenda',
       permission: null
     },
     {
