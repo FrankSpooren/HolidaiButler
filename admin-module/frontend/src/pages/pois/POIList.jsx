@@ -7,13 +7,6 @@ import {
   Button,
   TextField,
   InputAdornment,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   Chip,
   IconButton,
   Menu,
@@ -27,8 +20,7 @@ import {
   InputLabel,
   Select,
   Grid,
-  Alert,
-  CircularProgress
+  Alert
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -38,12 +30,14 @@ import {
   MoreVert as MoreVertIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Place as PlaceIcon
 } from '@mui/icons-material';
 import { poiAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import { toast } from 'react-toastify';
 import { useLanguage } from '../../contexts/LanguageContext';
+import ResponsiveTable from '../../components/common/ResponsiveTable';
 
 export default function POIList() {
   const navigate = useNavigate();
@@ -66,6 +60,10 @@ export default function POIList() {
     category: '',
     city: ''
   });
+
+  // Sorting
+  const [sortBy, setSortBy] = useState('name');
+  const [sortDirection, setSortDirection] = useState('asc');
 
   // Menu
   const [anchorEl, setAnchorEl] = useState(null);
@@ -120,7 +118,14 @@ export default function POIList() {
 
   useEffect(() => {
     fetchPOIs();
-  }, [page, rowsPerPage, filters]);
+  }, [page, rowsPerPage, filters, sortBy, sortDirection]);
+
+  // Handle sort
+  const handleSort = (columnId, direction) => {
+    setSortBy(columnId);
+    setSortDirection(direction);
+    setPage(0);
+  };
 
   // Handle filter change
   const handleFilterChange = (field, value) => {
@@ -283,92 +288,96 @@ export default function POIList() {
         </Grid>
       </Paper>
 
-      {/* Table */}
-      <Paper>
-        {error && (
-          <Alert severity="error" sx={{ m: 2 }}>
-            {error}
-          </Alert>
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Responsive Table */}
+      <ResponsiveTable
+        columns={[
+          {
+            id: 'name',
+            label: t.labels.name,
+            sortable: true,
+            mobilePriority: 1,
+            render: (value, row) => (
+              <Typography fontWeight="medium">{row.name}</Typography>
+            )
+          },
+          {
+            id: 'category',
+            label: t.labels.category,
+            sortable: true,
+            render: (value, row) => (
+              <Chip
+                label={row.category}
+                size="small"
+                sx={{ textTransform: 'capitalize' }}
+              />
+            )
+          },
+          {
+            id: 'location',
+            label: t.pois.location,
+            sortable: true,
+            render: (value, row) => (
+              <Typography variant="body2">
+                {row.location?.city}{row.location?.country ? `, ${row.location?.country}` : ''}
+              </Typography>
+            )
+          },
+          {
+            id: 'status',
+            label: t.labels.status,
+            sortable: true,
+            render: (value, row) => (
+              <Chip
+                label={row.status}
+                size="small"
+                color={getStatusColor(row.status)}
+                sx={{ textTransform: 'capitalize' }}
+              />
+            )
+          },
+          {
+            id: 'rating',
+            label: t.pois.rating,
+            sortable: true,
+            render: (value, row) => (
+              <Typography variant="body2">
+                {row.rating?.average?.toFixed(1) || 'N/A'} ({row.rating?.count || 0})
+              </Typography>
+            )
+          },
+          {
+            id: 'views',
+            label: t.pois.views,
+            sortable: true,
+            render: (value, row) => row.stats?.views || 0
+          }
+        ]}
+        rows={pois}
+        loading={loading}
+        emptyMessage={t.table.noResults}
+        emptyIcon={<PlaceIcon sx={{ fontSize: 48, color: 'text.disabled' }} />}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalCount={totalCount}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        onSort={handleSort}
+        sortBy={sortBy}
+        sortDirection={sortDirection}
+        rowKey={(row) => row._id || row.id}
+        actions={(row) => (
+          <IconButton size="small" onClick={(e) => handleMenuOpen(e, row)}>
+            <MoreVertIcon />
+          </IconButton>
         )}
-
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>{t.labels.name}</TableCell>
-                <TableCell>{t.labels.category}</TableCell>
-                <TableCell>{t.pois.location}</TableCell>
-                <TableCell>{t.labels.status}</TableCell>
-                <TableCell>{t.pois.rating}</TableCell>
-                <TableCell>{t.pois.views}</TableCell>
-                <TableCell align="right">{t.table.actions}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                    <CircularProgress />
-                  </TableCell>
-                </TableRow>
-              ) : pois.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                    <Typography color="text.secondary">
-                      {t.table.noResults}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                pois.map((poi) => (
-                  <TableRow key={poi._id || poi.id} hover>
-                    <TableCell>
-                      <Typography fontWeight="medium">{poi.name}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={poi.category}
-                        size="small"
-                        sx={{ textTransform: 'capitalize' }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {poi.location?.city}, {poi.location?.country}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={poi.status}
-                        size="small"
-                        color={getStatusColor(poi.status)}
-                        sx={{ textTransform: 'capitalize' }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {poi.rating?.average?.toFixed(1) || 'N/A'} ({poi.rating?.count || 0})
-                    </TableCell>
-                    <TableCell>{poi.stats?.views || 0}</TableCell>
-                    <TableCell align="right">
-                      <IconButton onClick={(e) => handleMenuOpen(e, poi)}>
-                        <MoreVertIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        <TablePagination
-          rowsPerPageOptions={[10, 20, 50, 100]}
-          component="div"
-          count={totalCount}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </Paper>
+      />
 
       {/* Context Menu */}
       <Menu
