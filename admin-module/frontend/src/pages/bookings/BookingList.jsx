@@ -10,6 +10,7 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  TableSortLabel,
   IconButton,
   Button,
   TextField,
@@ -77,6 +78,16 @@ export default function BookingList() {
 
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
+
+  // Sorting
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortDirection, setSortDirection] = useState('desc');
+
+  const handleSort = (columnId) => {
+    const newDirection = sortBy === columnId && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortBy(columnId);
+    setSortDirection(newDirection);
+  };
 
   const canEdit = hasPermission('bookings.edit');
   const canCreate = hasPermission('bookings.create');
@@ -291,12 +302,44 @@ export default function BookingList() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Booking #</TableCell>
-              <TableCell>Customer</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'bookingNumber'}
+                  direction={sortBy === 'bookingNumber' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('bookingNumber')}
+                >
+                  Booking #
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'customer'}
+                  direction={sortBy === 'customer' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('customer')}
+                >
+                  Customer
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Type</TableCell>
               <TableCell>Items</TableCell>
-              <TableCell>Visit Date</TableCell>
-              <TableCell>Total</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'visitDate'}
+                  direction={sortBy === 'visitDate' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('visitDate')}
+                >
+                  Visit Date
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'total'}
+                  direction={sortBy === 'total' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('total')}
+                >
+                  Total
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Payment</TableCell>
               <TableCell>Status</TableCell>
               <TableCell align="right">Actions</TableCell>

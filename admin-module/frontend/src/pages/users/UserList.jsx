@@ -14,6 +14,7 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  TableSortLabel,
   Chip,
   IconButton,
   Menu,
@@ -76,6 +77,16 @@ export default function UserList() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+
+  // Sorting
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortDirection, setSortDirection] = useState('desc');
+
+  const handleSort = (columnId) => {
+    const newDirection = sortBy === columnId && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortBy(columnId);
+    setSortDirection(newDirection);
+  };
 
   // Check permissions - default to true for development/testing
   const canManage = hasPermission('users', 'manage') || import.meta.env.DEV;
@@ -330,11 +341,35 @@ export default function UserList() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>User</TableCell>
-                <TableCell>Email</TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'name'}
+                    direction={sortBy === 'name' ? sortDirection : 'asc'}
+                    onClick={() => handleSort('name')}
+                  >
+                    User
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'email'}
+                    direction={sortBy === 'email' ? sortDirection : 'asc'}
+                    onClick={() => handleSort('email')}
+                  >
+                    Email
+                  </TableSortLabel>
+                </TableCell>
                 <TableCell>Role</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell>Last Login</TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'lastLogin'}
+                    direction={sortBy === 'lastLogin' ? sortDirection : 'asc'}
+                    onClick={() => handleSort('lastLogin')}
+                  >
+                    Last Login
+                  </TableSortLabel>
+                </TableCell>
                 <TableCell>POIs</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
