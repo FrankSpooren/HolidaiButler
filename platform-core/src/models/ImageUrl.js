@@ -31,19 +31,32 @@ const ImageUrl = mysqlSequelize.define('ImageUrl', {
 /**
  * Get image priority based on URL pattern
  * Lower number = higher priority
+ *
+ * Priority based on reliability testing (29-12-2025):
+ * - AF1Qip URLs: 100% success rate
+ * - Worldota CDN: 100% success rate
+ * - Streetview: 100% success rate
+ * - gps-cs-s URLs: 68% success rate (32% return 403)
  */
 function getImagePriority(url) {
   if (!url) return 999;
-  
-  // Google Places Photos (highest quality)
-  if (url.includes('lh3.googleusercontent.com/gps-cs-s')) return 1;
-  
-  // User contributed Google photos
-  if (url.includes('lh3.googleusercontent.com')) return 2;
-  
-  // Street View (lowest priority)
-  if (url.includes('streetviewpixels')) return 10;
-  
+
+  // Worldota CDN (100% reliable)
+  if (url.includes('worldota.net')) return 1;
+
+  // AF1Qip Google Photos (100% reliable, highest quality)
+  // Note: Check AF1Qip BEFORE general lh3 to catch classic format
+  if (url.includes('lh3.googleusercontent.com/p/AF1Qip')) return 2;
+
+  // Other lh3.googleusercontent.com (non-gps-cs-s, non-AF1Qip)
+  if (url.includes('lh3.googleusercontent.com') && !url.includes('gps-cs-s')) return 3;
+
+  // gps-cs-s URLs (68% reliable - lower priority due to 32% failure rate)
+  if (url.includes('lh3.googleusercontent.com/gps-cs-s')) return 6;
+
+  // Street View (100% reliable, but generic images)
+  if (url.includes('streetviewpixels')) return 8;
+
   // Other sources
   return 5;
 }
@@ -66,7 +79,6 @@ export async function getImagesForPOI(poiId, limit = 10) {
     return images
       .map(img => img.image_url)
       .sort((a, b) => getImagePriority(a) - getImagePriority(b))
-      .filter(url => !url.includes('streetviewpixels'))
       .slice(0, limit);
   } catch (error) {
     console.error('Error fetching images for POI:', poiId, error);
@@ -104,13 +116,12 @@ export async function getImagesForPOIs(poiIds, limitPerPoi = 3) {
       poiImages.get(img.poi_id).push(img.image_url);
     }
 
-    // Then filter and limit
+    // Then sort by priority and limit
     for (const [poiId, urls] of poiImages) {
-      const filtered = urls
+      const sorted = urls
         .sort((a, b) => getImagePriority(a) - getImagePriority(b))
-        .filter(url => !url.includes('streetviewpixels'))
         .slice(0, limitPerPoi);
-      imageMap.set(poiId, filtered);
+      imageMap.set(poiId, sorted);
     }
 
     return imageMap;
