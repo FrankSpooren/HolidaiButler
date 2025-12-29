@@ -1,0 +1,97 @@
+# =============================================================================
+# POI Image Refresh Workflow
+# =============================================================================
+# Manually trigger to refresh POI images via Apify
+# Uses the existing scripts in platform-core
+# =============================================================================
+
+name: "Maintenance: Refresh POI Images"
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - check-stats
+          - fix-expired
+          - refresh-missing
+          - refresh-all
+      max_pois:
+        description: 'Max POIs to process (for refresh actions)'
+        required: false
+        default: '50'
+
+env:
+  DEPLOY_PATH: '/var/www/api.holidaibutler.com/platform-core'
+
+jobs:
+  refresh-images:
+    name: POI Image Refresh
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Check Image Stats
+        if: inputs.action == 'check-stats'
+        run: |
+          echo "=== POI Image Statistics ==="
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && mysql -u \$DB_USER -p\$DB_PASSWORD \$DB_NAME -e \"
+            SELECT
+              COUNT(DISTINCT poi_id) as pois_with_images,
+              COUNT(*) as total_images,
+              SUM(CASE WHEN last_fetched_at IS NULL THEN 1 ELSE 0 END) as images_no_date,
+              SUM(CASE WHEN last_fetched_at < DATE_SUB(NOW(), INTERVAL 60 DAY) THEN 1 ELSE 0 END) as needs_refresh,
+              SUM(CASE WHEN last_fetched_at < DATE_SUB(NOW(), INTERVAL 90 DAY) THEN 1 ELSE 0 END) as likely_expired
+            FROM imageurls;
+          \""
+
+          echo ""
+          echo "=== POIs Without Images ==="
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && mysql -u \$DB_USER -p\$DB_PASSWORD \$DB_NAME -e \"
+            SELECT COUNT(*) as pois_without_images
+            FROM POI p
+            WHERE p.is_active = 1
+              AND p.id NOT IN (SELECT DISTINCT poi_id FROM imageurls);
+          \""
+
+      - name: Fix Expired Images
+        if: inputs.action == 'fix-expired'
+        run: |
+          echo "=== Fixing Expired Images ==="
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && node scripts/fix-expired-images.js 2>&1" || true
+
+      - name: Refresh Missing Images
+        if: inputs.action == 'refresh-missing'
+        run: |
+          echo "=== Refreshing Missing Images ==="
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && IMAGE_REFRESH_BATCH_SIZE=${{ inputs.max_pois }} node scripts/refresh-missing-images.js 2>&1" || true
+
+      - name: Refresh All (Fix + Refresh)
+        if: inputs.action == 'refresh-all'
+        run: |
+          echo "=== Step 1: Fix Expired Images ==="
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && node scripts/fix-expired-images.js 2>&1" || true
+
+          echo ""
+          echo "=== Step 2: Refresh Missing Images ==="
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && IMAGE_REFRESH_BATCH_SIZE=${{ inputs.max_pois }} node scripts/refresh-missing-images.js 2>&1" || true
+
+      - name: Final Stats
+        run: |
+          echo ""
+          echo "=== Final Statistics ==="
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && mysql -u \$DB_USER -p\$DB_PASSWORD \$DB_NAME -e \"
+            SELECT
+              (SELECT COUNT(DISTINCT poi_id) FROM imageurls) as pois_with_images,
+              (SELECT COUNT(*) FROM POI WHERE is_active = 1 AND id NOT IN (SELECT DISTINCT poi_id FROM imageurls)) as pois_without_images;
+          \""

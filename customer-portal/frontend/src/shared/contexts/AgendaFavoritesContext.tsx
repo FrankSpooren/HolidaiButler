@@ -107,9 +107,13 @@ export function AgendaFavoritesProvider({ children }: { children: ReactNode }) {
 
   const toggleAgendaFavorite = (eventId: string, selectedDate?: string) => {
     const date = selectedDate || new Date().toISOString();
-    if (isAgendaFavorite(eventId, date)) {
-      removeAgendaFavorite(eventId, date);
+    // Check if event is already a favorite (on ANY date)
+    const existingFavorite = agendaFavorites.find(fav => fav.eventId === eventId);
+    if (existingFavorite) {
+      // Remove all favorites for this event (regardless of date)
+      removeAgendaFavorite(eventId);
     } else {
+      // Add new favorite with the specified date
       addAgendaFavorite(eventId, date);
     }
   };

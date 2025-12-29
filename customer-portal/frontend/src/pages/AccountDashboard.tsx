@@ -63,7 +63,7 @@ export default function AccountDashboard() {
 
   // Get IDs for data fetching
   const favoritePoiIds = useMemo(() => Array.from(favorites || []), [favorites]);
-  const favoriteEventIds = useMemo(() => Array.from(agendaFavorites || []), [agendaFavorites]);
+  const favoriteEventIds = useMemo(() => (agendaFavorites || []).map(fav => fav.eventId), [agendaFavorites]);
   const visitedPoiIds = useMemo(() => getVisitedPOIIds(), [visitedPOIs]);
   const visitedEventIds = useMemo(() => getVisitedEventIds(), [visitedEvents]);
 
@@ -379,7 +379,7 @@ export default function AccountDashboard() {
     }
   };
 
-  const favoritesCount = (favorites?.size || 0) + (agendaFavorites?.size || 0);
+  const favoritesCount = (favorites?.size || 0) + (agendaFavorites?.length || 0);
 
   // Helper functions to display preference labels
   const getCompanionLabel = (id: string | null) => {
@@ -1106,14 +1106,14 @@ export default function AccountDashboard() {
 
         {/* Event Favorites */}
         <div className="section-title" style={{ marginTop: '24px' }}>
-          🎉 {t.account.favorites.eventsTitle} ({agendaFavorites?.size || 0})
+          🎉 {t.account.favorites.eventsTitle} ({agendaFavorites?.length || 0})
         </div>
         {loadingFavEvents ? (
           <div className="loading-state">
             <div className="loading-spinner"></div>
             <span>Laden...</span>
           </div>
-        ) : agendaFavorites && agendaFavorites.size > 0 ? (
+        ) : agendaFavorites && agendaFavorites.length > 0 ? (
           <div className="favorites-list">
             {favoriteEvents.slice(0, 5).map((event) => (
               <div key={event._id} className="favorite-list-item" onClick={() => setSelectedEventId(event._id)}>
@@ -1138,9 +1138,9 @@ export default function AccountDashboard() {
                 <span className="nav-arrow">→</span>
               </div>
             ))}
-            {agendaFavorites.size > 5 && (
+            {agendaFavorites.length > 5 && (
               <button className="secondary-button" onClick={() => navigate('/agenda')}>
-                {t.account.favorites.viewAll} {agendaFavorites.size} Events →
+                {t.account.favorites.viewAll} {agendaFavorites.length} Events →
               </button>
             )}
           </div>

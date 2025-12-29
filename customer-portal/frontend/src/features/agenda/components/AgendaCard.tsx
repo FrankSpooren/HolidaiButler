@@ -16,7 +16,7 @@ import './AgendaCard.css';
 interface AgendaCardProps {
   event: AgendaEvent;
   onClick?: () => void;
-  onSave?: (eventId: string) => void;
+  onSave?: (eventId: string, selectedDate: string) => void;
   isSaved?: boolean;
   distance?: string;
   detectedCategory?: string;
@@ -195,7 +195,7 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
 
   const handleSaveClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSave?.(event._id);
+    onSave?.(event._id, event.startDate);
   };
 
   const handleToggleComparison = (e: React.MouseEvent) => {
