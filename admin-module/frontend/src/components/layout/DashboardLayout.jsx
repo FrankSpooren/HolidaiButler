@@ -260,26 +260,37 @@ export default function DashboardLayout() {
       <AppBar
         position="fixed"
         sx={{
-          width: { md: `calc(100% - ${drawerWidth}px)` },
+          width: { xs: '100%', md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
-          bgcolor: 'white',
+          bgcolor: 'background.paper',
           color: 'text.primary',
           boxShadow: 1
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
+          {/* Mobile hamburger menu - always visible on mobile */}
           <IconButton
-            color="inherit"
+            aria-label="open navigation menu"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
+            sx={{
+              mr: 2,
+              display: { xs: 'flex', md: 'none' },
+              color: 'primary.main',
+              bgcolor: 'action.hover',
+              '&:hover': {
+                bgcolor: 'action.selected'
+              }
+            }}
           >
             <MenuIcon />
           </IconButton>
 
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {/* Page title will be set by child components */}
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }}>
+            {/* Page title - hidden on extra small screens */}
           </Typography>
+
+          <Box sx={{ flexGrow: 1, display: { xs: 'block', sm: 'none' } }} />
 
           <IconButton onClick={handleProfileMenuOpen}>
             <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36 }}>
