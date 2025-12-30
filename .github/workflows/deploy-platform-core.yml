@@ -1,121 +1,92 @@
 # =============================================================================
-# Platform Core API Deployment Pipeline
+# Platform Core API Deployment Pipeline - Multi-Environment
 # =============================================================================
-# Triggers: Only when platform-core/** files change
-# Deploys: Backend API to api.holidaibutler.com
-# =============================================================================
-
 name: "Deploy: Platform Core API"
 
 on:
   push:
-    branches: [main, feature/holibot-2.0]
+    branches: [dev, test, main]
     paths:
       - 'platform-core/**'
       - '!platform-core/README.md'
-  
   workflow_dispatch:
     inputs:
       environment:
         description: 'Deployment environment'
         required: true
-        default: 'development'
+        default: 'dev'
         type: choice
-        options:
-          - development
-          - test
-          - production
+        options: [dev, test, production]
 
 env:
   NODE_VERSION: '20'
-  MODULE_NAME: 'platform-core'
   PM2_PROCESS_NAME: 'holidaibutler-api'
   DEPLOY_PATH: '/var/www/api.holidaibutler.com/platform-core'
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # Build & Deploy
-  # ---------------------------------------------------------------------------
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      health_url: ${{ steps.env.outputs.health_url }}
+    steps:
+      - name: Determine environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          else
+            case "${{ github.ref_name }}" in
+              dev) ENV="dev" ;; test) ENV="test" ;; main) ENV="production" ;; *) ENV="dev" ;;
+            esac
+          fi
+          case "$ENV" in
+            dev) HEALTH_URL="https://dev.holidaibutler.com/health" ;;
+            test) HEALTH_URL="https://test.holidaibutler.com/health" ;;
+            production) HEALTH_URL="https://holidaibutler.com/health" ;;
+          esac
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "health_url=$HEALTH_URL" >> $GITHUB_OUTPUT
+
   deploy:
     name: Deploy Platform Core API
+    needs: setup
     runs-on: ubuntu-latest
-    environment: test
-    
+    environment: ${{ needs.setup.outputs.environment }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: platform-core/package-lock.json
-
-      - name: Install dependencies (for build if needed)
+      - name: Install dependencies
         working-directory: platform-core
         run: npm ci
-
-      - name: Build (if applicable)
-        working-directory: platform-core
-        run: npm run build --if-present
-
       - name: Setup SSH
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
-
-      - name: Backup current version
+      - name: Backup and Deploy
         run: |
           ssh root@91.98.71.87 "mkdir -p /var/www/backups/platform-core && cp -r ${{ env.DEPLOY_PATH }} /var/www/backups/platform-core/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
-
-      - name: Deploy backend
-        run: |
           ssh root@91.98.71.87 "mkdir -p ${{ env.DEPLOY_PATH }}"
-          rsync -avz --delete \
-            --exclude 'node_modules' \
-            --exclude '.env' \
-            --exclude 'logs' \
-            --exclude '.git' \
-            platform-core/ \
-            root@91.98.71.87:${{ env.DEPLOY_PATH }}/
-
-      - name: Configure Google Cloud TTS credentials
+          rsync -avz --delete --exclude 'node_modules' --exclude '.env' --exclude 'logs' --exclude '.git' platform-core/ root@91.98.71.87:${{ env.DEPLOY_PATH }}/
+      - name: Configure TTS credentials
         env:
           GOOGLE_TTS_KEY: ${{ secrets.GOOGLE_CLOUD_TTS_KEY }}
         if: env.GOOGLE_TTS_KEY != ''
         run: |
           ssh root@91.98.71.87 "mkdir -p ${{ env.DEPLOY_PATH }}/config"
-          echo '${{ secrets.GOOGLE_CLOUD_TTS_KEY }}' | ssh root@91.98.71.87 "cat > ${{ env.DEPLOY_PATH }}/config/google-tts-credentials.json"
-          ssh root@91.98.71.87 "chmod 600 ${{ env.DEPLOY_PATH }}/config/google-tts-credentials.json"
-          # Update .env with credentials path if not already set
-          ssh root@91.98.71.87 "grep -q 'GOOGLE_APPLICATION_CREDENTIALS' ${{ env.DEPLOY_PATH }}/.env || echo 'GOOGLE_APPLICATION_CREDENTIALS=${{ env.DEPLOY_PATH }}/config/google-tts-credentials.json' >> ${{ env.DEPLOY_PATH }}/.env"
-
-      - name: Install dependencies and restart PM2
+          echo '${{ secrets.GOOGLE_CLOUD_TTS_KEY }}' | ssh root@91.98.71.87 "cat > ${{ env.DEPLOY_PATH }}/config/google-tts-credentials.json && chmod 600 ${{ env.DEPLOY_PATH }}/config/google-tts-credentials.json"
+      - name: Install and restart PM2
         run: |
-          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && npm ci --only=production && mkdir -p logs && (pm2 restart ${{ env.PM2_PROCESS_NAME }} 2>/dev/null || pm2 start src/index.js --name ${{ env.PM2_PROCESS_NAME }} --cwd ${{ env.DEPLOY_PATH }}) && pm2 save"
-
-      - name: Server Status (always show)
-        run: |
-          echo "=== PM2 Status ==="
-          ssh root@91.98.71.87 "pm2 list"
-          echo ""
-          echo "=== PM2 Logs (last 80 lines) ==="
-          ssh root@91.98.71.87 "pm2 logs ${{ env.PM2_PROCESS_NAME }} --lines 80 --nostream" || echo "No logs found"
-          echo ""
-          echo "=== Port Check ==="
-          ssh root@91.98.71.87 "netstat -tlnp | grep :3001 || echo 'Port 3001 not listening'"
-
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && npm ci --only=production && mkdir -p logs && (pm2 restart ${{ env.PM2_PROCESS_NAME }} || pm2 start src/index.js --name ${{ env.PM2_PROCESS_NAME }} --cwd ${{ env.DEPLOY_PATH }}) && pm2 save"
       - name: Health check
         run: |
-          sleep 3
-          echo "=== Health Check ==="
-          STATUS=$(curl -v https://test.holidaibutler.com/health 2>&1 || echo "CURL FAILED")
-          echo "$STATUS"
-
-      - name: Notify
-        if: success()
-        run: echo "::notice title=Deployment Complete::Platform Core API deployed to test environment"
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ needs.setup.outputs.health_url }})
+          echo "Health: $STATUS - Platform Core API deployed to ${{ needs.setup.outputs.environment }}"
