@@ -213,7 +213,7 @@ class RAGService {
     return results.map(result => {
       const metadata = result.metadata || {};
       return {
-        id: result.id,
+        id: metadata.id || result.id,
         name: metadata.name || metadata.title || 'Unknown',
         category: metadata.category || 'General',
         subcategory: metadata.subcategory || null,
