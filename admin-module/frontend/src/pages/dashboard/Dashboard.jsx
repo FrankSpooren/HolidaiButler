@@ -128,21 +128,21 @@ export default function Dashboard() {
 
   const poiStatCards = [
     {
-      title: 'Total POIs',
+      title: t('dashboard.totalPois'),
       value: poiStats?.total || 0,
       icon: <PlaceIcon sx={{ fontSize: 40 }} />,
       color: '#667eea',
       onClick: () => navigate('/pois')
     },
     {
-      title: 'Active POIs',
+      title: t('labels.active') + ' POIs',
       value: poiStats?.active || 0,
       icon: <CheckCircleIcon sx={{ fontSize: 40 }} />,
       color: '#4caf50',
       onClick: () => navigate('/pois?status=active')
     },
     {
-      title: 'Pending Review',
+      title: t('labels.pending') + ' Review',
       value: poiStats?.pending || 0,
       icon: <PendingIcon sx={{ fontSize: 40 }} />,
       color: '#ff9800',
@@ -152,7 +152,7 @@ export default function Dashboard() {
 
   const agendaStatCards = [
     {
-      title: 'Total Events',
+      title: t('nav.events'),
       value: agendaStats?.total || 0,
       icon: <EventIcon sx={{ fontSize: 40 }} />,
       color: '#9c27b0',
@@ -166,7 +166,7 @@ export default function Dashboard() {
       onClick: () => navigate('/agenda?inCalpeArea=true')
     },
     {
-      title: 'Upcoming',
+      title: t('labels.pending'),
       value: agendaStats?.upcoming || 0,
       icon: <CalendarIcon sx={{ fontSize: 40 }} />,
       color: '#e91e63',
@@ -188,10 +188,10 @@ export default function Dashboard() {
     <Box>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" fontWeight="bold" gutterBottom>
-          Welcome back, {user?.profile?.firstName}!
+          {t('dashboard.welcome')}, {user?.profile?.firstName}!
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Overview of your HolidaiButler Admin Dashboard
+          {t('dashboard.overview')} - HolidaiButler Admin
         </Typography>
       </Box>
 
