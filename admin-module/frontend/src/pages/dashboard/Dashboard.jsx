@@ -11,7 +11,9 @@ import {
   List,
   ListItem,
   ListItemText,
-  Chip
+  Chip,
+  Button,
+  Divider
 } from '@mui/material';
 import {
   Place as PlaceIcon,
@@ -19,13 +21,76 @@ import {
   Pending as PendingIcon,
   Event as EventIcon,
   CalendarMonth as CalendarIcon,
-  LocationOn as LocationIcon
+  LocationOn as LocationIcon,
+  TrendingUp as TrendingUpIcon,
+  ArrowForward as ArrowForwardIcon
 } from '@mui/icons-material';
 import { poiAPI, agendaAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
+import { useLanguage } from '../../contexts/LanguageContext';
+
+
+// Consistent StatCard component matching Analytics page style
+const StatCard = ({ title, value, icon, color, onClick, subtitle }) => (
+  <Card
+    sx={{
+      height: '100%',
+      cursor: onClick ? 'pointer' : 'default',
+      transition: 'transform 0.2s, box-shadow 0.2s',
+      '&:hover': onClick ? {
+        transform: 'translateY(-4px)',
+        boxShadow: '0 8px 25px ' + color + '25'
+      } : {}
+    }}
+    onClick={onClick}
+  >
+    <CardContent>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <Box
+          sx={{
+            width: 56,
+            height: 56,
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, ' + color + '30 0%, ' + color + '10 100%)',
+            color: color
+          }}
+        >
+          {icon}
+        </Box>
+      </Box>
+      <Typography variant="h4" fontWeight="bold" gutterBottom>
+        {typeof value === 'number' ? value.toLocaleString() : value}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {title}
+      </Typography>
+    </CardContent>
+  </Card>
+);
+
+// Section Header with Analytics link
+const SectionHeader = ({ title, analyticsTab, onViewAnalytics }) => (
+  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+    <Typography variant="h6" fontWeight="bold">
+      {title}
+    </Typography>
+    <Button
+      size="small"
+      endIcon={<ArrowForwardIcon />}
+      onClick={() => onViewAnalytics(analyticsTab)}
+      sx={{ textTransform: 'none' }}
+    >
+      View Analytics
+    </Button>
+  </Box>
+);
 
 export default function Dashboard() {
   const { user } = useAuthStore();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [poiStats, setPoiStats] = useState(null);
   const [agendaStats, setAgendaStats] = useState(null);
@@ -108,6 +173,10 @@ export default function Dashboard() {
       onClick: () => navigate('/agenda')
     }
   ];
+
+  const navigateToAnalytics = (tabIndex = 0) => {
+    navigate('/analytics', { state: { initialTab: tabIndex } });
+  };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
