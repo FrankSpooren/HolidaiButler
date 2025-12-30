@@ -1,166 +1,111 @@
 # =============================================================================
-# Customer Portal Deployment Pipeline
+# Customer Portal Deployment Pipeline - Multi-Environment
 # =============================================================================
-# Triggers: Only when customer-portal/** files change
-# Deploys: Frontend static files to test.holidaibutler.com
-# =============================================================================
-
 name: "Deploy: Customer Portal"
 
 on:
   push:
-    branches: [main, feature/holibot-2.0]
+    branches: [dev, test, main]
     paths:
       - 'customer-portal/**'
       - '!customer-portal/README.md'
-  
-  # Manual trigger with environment selection
   workflow_dispatch:
     inputs:
       environment:
         description: 'Deployment environment'
         required: true
-        default: 'development'
+        default: 'dev'
         type: choice
-        options:
-          - development
-          - test
-          - production
+        options: [dev, test, production]
 
 env:
   NODE_VERSION: '20'
-  MODULE_NAME: 'customer-portal'
   MODULE_PATH: 'customer-portal/frontend'
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # Build Job
-  # ---------------------------------------------------------------------------
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      deploy_url: ${{ steps.env.outputs.deploy_url }}
+      deploy_path: ${{ steps.env.outputs.deploy_path }}
+    steps:
+      - name: Determine environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          else
+            case "${{ github.ref_name }}" in
+              dev) ENV="dev" ;; test) ENV="test" ;; main) ENV="production" ;; *) ENV="dev" ;;
+            esac
+          fi
+          case "$ENV" in
+            dev) DEPLOY_URL="dev.holidaibutler.com"; DEPLOY_PATH="/var/www/dev.holidaibutler.com" ;;
+            test) DEPLOY_URL="test.holidaibutler.com"; DEPLOY_PATH="/var/www/test.holidaibutler.com" ;;
+            production) DEPLOY_URL="holidaibutler.com"; DEPLOY_PATH="/var/www/holidaibutler.com" ;;
+          esac
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "deploy_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "deploy_path=$DEPLOY_PATH" >> $GITHUB_OUTPUT
+
   build:
     name: Build Customer Portal
+    needs: setup
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: ${{ env.MODULE_PATH }}/package-lock.json
-
-      - name: Install dependencies
-        working-directory: ${{ env.MODULE_PATH }}
-        run: npm ci
-
-      - name: Create production environment
+      - name: Install and Build
         working-directory: ${{ env.MODULE_PATH }}
         run: |
+          npm ci
           cat > .env.production << 'ENVFILE'
           VITE_API_URL=/api/v1
-          VITE_WIDGET_API_URL=/api/v1
-          VITE_ADMIN_API_URL=/api/v1
-          VITE_TICKETING_API_URL=/api/v1
-          VITE_PAYMENT_API_URL=/api/v1
-          VITE_RESERVATIONS_API_URL=/api/v1
-          VITE_AGENDA_API_URL=/api/v1
-          VITE_ENABLE_TICKETING=true
-          VITE_ENABLE_PAYMENTS=true
-          VITE_ENABLE_RESERVATIONS=true
-          VITE_ENABLE_AGENDA=true
           VITE_ENABLE_HOLIBOT=true
           VITE_MAP_DEFAULT_LAT=38.6447
           VITE_MAP_DEFAULT_LNG=0.0410
-          VITE_MAP_DEFAULT_ZOOM=14
           VITE_DEFAULT_LANGUAGE=nl
           VITE_APP_NAME=HolidaiButler
           ENVFILE
-
-      - name: Build
-        working-directory: ${{ env.MODULE_PATH }}
-        run: npm run build
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+          echo "VITE_ENVIRONMENT=${{ needs.setup.outputs.environment }}" >> .env.production
+          npm run build
+      - uses: actions/upload-artifact@v4
         with:
-          name: customer-portal-dist
+          name: customer-portal-dist-${{ needs.setup.outputs.environment }}
           path: ${{ env.MODULE_PATH }}/dist
           retention-days: 1
 
-  # ---------------------------------------------------------------------------
-  # Deploy Job
-  # ---------------------------------------------------------------------------
   deploy:
-    name: Deploy to Test
-    needs: build
+    name: Deploy to ${{ needs.setup.outputs.environment }}
+    needs: [setup, build]
     runs-on: ubuntu-latest
-    environment: test
-    
+    environment: ${{ needs.setup.outputs.environment }}
     steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: customer-portal-dist
+          name: customer-portal-dist-${{ needs.setup.outputs.environment }}
           path: dist
-
       - name: Setup SSH
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
-
-      - name: Backup current version
+      - name: Deploy
         run: |
-          ssh root@91.98.71.87 "
-            mkdir -p /var/www/backups/customer-portal
-            BACKUP_NAME=customer-portal-\$(date +%Y%m%d-%H%M%S)
-            cp -r /var/www/test.holidaibutler.com /var/www/backups/customer-portal/\$BACKUP_NAME 2>/dev/null || true
-            # Keep only last 5 backups
-            cd /var/www/backups/customer-portal && ls -t | tail -n +6 | xargs rm -rf 2>/dev/null || true
-          "
-
-      - name: Deploy frontend
-        run: |
-          rsync -avz --delete \
-            dist/ \
-            root@91.98.71.87:/var/www/test.holidaibutler.com/
-
-      - name: Fix permissions
-        run: |
-          ssh root@91.98.71.87 "
-            chown -R www-data:www-data /var/www/test.holidaibutler.com
-            chmod -R 755 /var/www/test.holidaibutler.com
-          "
-
-      - name: Reload Apache
-        run: ssh root@91.98.71.87 "systemctl reload apache2"
-
+          ssh root@91.98.71.87 "mkdir -p /var/www/backups/customer-portal-${{ needs.setup.outputs.environment }}"
+          ssh root@91.98.71.87 "cp -r ${{ needs.setup.outputs.deploy_path }} /var/www/backups/customer-portal-${{ needs.setup.outputs.environment }}/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+          rsync -avz --delete dist/ root@91.98.71.87:${{ needs.setup.outputs.deploy_path }}/
+          ssh root@91.98.71.87 "chown -R www-data:www-data ${{ needs.setup.outputs.deploy_path }} && chmod -R 755 ${{ needs.setup.outputs.deploy_path }} && systemctl reload apache2"
       - name: Health check
         run: |
           sleep 5
-          STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://test.holidaibutler.com)
-          echo "Frontend status: $STATUS"
-          if [ "$STATUS" -ne 200 ]; then
-            echo "❌ Health check failed!"
-            exit 1
-          fi
-          echo "✅ Customer Portal deployed successfully!"
-
-      - name: Notify success
-        if: success()
-        run: echo "::notice title=Deployment Complete::Customer Portal deployed to test.holidaibutler.com"
-
-      - name: Rollback on failure
-        if: failure()
-        run: |
-          ssh root@91.98.71.87 "
-            LATEST_BACKUP=\$(ls -t /var/www/backups/customer-portal | head -1)
-            if [ -n \"\$LATEST_BACKUP\" ]; then
-              rsync -av --delete /var/www/backups/customer-portal/\$LATEST_BACKUP/ /var/www/test.holidaibutler.com/
-              echo 'Rolled back to previous version'
-            fi
-          "
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://${{ needs.setup.outputs.deploy_url }})
+          echo "Status: $STATUS - Deployed to ${{ needs.setup.outputs.deploy_url }}"
+          [ "$STATUS" -ne 200 ] && exit 1 || exit 0

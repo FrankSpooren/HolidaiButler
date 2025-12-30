@@ -9,7 +9,7 @@ name: "Deploy: HoliBot 2.0"
 
 on:
   push:
-    branches: [main]
+    branches: [dev, test, main]
     paths:
       - 'platform-core/src/services/holibot/**'
       - 'platform-core/src/routes/holibot.js'
@@ -19,7 +19,7 @@ on:
       environment:
         description: 'Deployment environment'
         required: true
-        default: 'test'
+        default: 'dev'
         type: choice
         options:
           - test
