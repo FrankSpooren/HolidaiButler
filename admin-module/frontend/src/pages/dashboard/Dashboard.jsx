@@ -202,79 +202,29 @@ export default function Dashboard() {
       ) : (
         <>
           {/* POI Stats Section */}
-          <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-            Points of Interest (POIs)
-          </Typography>
+          <SectionHeader
+            title="POIs (Points of Interest)"
+            analyticsTab={0}
+            onViewAnalytics={navigateToAnalytics}
+          />
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {poiStatCards.map((card, index) => (
               <Grid item xs={12} sm={6} md={4} key={index}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    background: `linear-gradient(135deg, ${card.color}15 0%, ${card.color}05 100%)`,
-                    border: `1px solid ${card.color}30`,
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: `0 4px 20px ${card.color}30`
-                    }
-                  }}
-                  onClick={card.onClick}
-                >
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Box sx={{ color: card.color }}>
-                        {card.icon}
-                      </Box>
-                    </Box>
-                    <Typography variant="h4" fontWeight="bold" gutterBottom>
-                      {card.value.toLocaleString()}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {card.title}
-                    </Typography>
-                  </CardContent>
-                </Card>
+                <StatCard {...card} />
               </Grid>
             ))}
           </Grid>
 
           {/* Agenda Stats Section */}
-          <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-            Agenda / Events
-          </Typography>
+          <SectionHeader
+            title="Agenda / Events"
+            analyticsTab={2}
+            onViewAnalytics={navigateToAnalytics}
+          />
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {agendaStatCards.map((card, index) => (
               <Grid item xs={12} sm={6} md={4} key={index}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    background: `linear-gradient(135deg, ${card.color}15 0%, ${card.color}05 100%)`,
-                    border: `1px solid ${card.color}30`,
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: `0 4px 20px ${card.color}30`
-                    }
-                  }}
-                  onClick={card.onClick}
-                >
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Box sx={{ color: card.color }}>
-                        {card.icon}
-                      </Box>
-                    </Box>
-                    <Typography variant="h4" fontWeight="bold" gutterBottom>
-                      {card.value.toLocaleString()}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {card.title}
-                    </Typography>
-                  </CardContent>
-                </Card>
+                <StatCard {...card} />
               </Grid>
             ))}
           </Grid>
