@@ -1,0 +1,76 @@
+# =============================================================================
+# Promote Code Between Environments
+# =============================================================================
+name: "Promote: Environment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      promotion:
+        description: 'Promotion type'
+        required: true
+        type: choice
+        options:
+          - dev-to-test
+          - test-to-production
+      create_pr:
+        description: 'Create Pull Request instead of direct merge'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  promote:
+    name: Promote ${{ inputs.promotion }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+      - name: Determine branches
+        id: branches
+        run: |
+          case "${{ inputs.promotion }}" in
+            dev-to-test) SOURCE="dev"; TARGET="test" ;;
+            test-to-production) SOURCE="test"; TARGET="main" ;;
+          esac
+          echo "source=$SOURCE" >> $GITHUB_OUTPUT
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
+      - name: Check for changes
+        id: changes
+        run: |
+          git fetch origin ${{ steps.branches.outputs.source }} ${{ steps.branches.outputs.target }}
+          COMMITS=$(git log origin/${{ steps.branches.outputs.target }}..origin/${{ steps.branches.outputs.source }} --oneline | wc -l)
+          echo "commits=$COMMITS" >> $GITHUB_OUTPUT
+          [ "$COMMITS" -eq 0 ] && echo "has_changes=false" >> $GITHUB_OUTPUT || echo "has_changes=true" >> $GITHUB_OUTPUT
+      - name: Create Pull Request
+        if: steps.changes.outputs.has_changes == 'true' && inputs.create_pr == true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const source = '${{ steps.branches.outputs.source }}';
+            const target = '${{ steps.branches.outputs.target }}';
+            try {
+              const { data: pr } = await github.rest.pulls.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: 'Promote ' + source + ' to ' + target,
+                body: 'Environment promotion from ' + source + ' to ' + target,
+                head: source, base: target
+              });
+              console.log('Created PR #' + pr.number);
+            } catch (e) { console.log('PR exists or error:', e.message); }
+      - name: Direct merge
+        if: steps.changes.outputs.has_changes == 'true' && inputs.create_pr == false
+        run: |
+          git checkout ${{ steps.branches.outputs.target }}
+          git merge origin/${{ steps.branches.outputs.source }} --no-ff -m "Promote ${{ steps.branches.outputs.source }} to ${{ steps.branches.outputs.target }}"
+          git push origin ${{ steps.branches.outputs.target }}
