@@ -11,7 +11,7 @@ name: "Deploy: Payment Module"
 
 on:
   push:
-    branches: [main]
+    branches: [dev, test, main]
     paths:
       - 'payment-module/**'
       - 'modules/payment-module/**'
@@ -22,10 +22,10 @@ on:
       environment:
         description: 'Deployment environment'
         required: true
-        default: 'development'
+        default: 'dev'
         type: choice
         options:
-          - development
+          - dev
           - test
           - production
 
