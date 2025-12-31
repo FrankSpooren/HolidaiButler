@@ -12,7 +12,6 @@ export { conversationService } from './conversationService.js';
 export { intentService } from './intentService.js';
 export { preferenceService } from './preferenceService.js';
 export { suggestionService } from './suggestionService.js';
-export { default as programService } from './programService.js';
 
 // TTS: Use Google Cloud TTS with Chirp3-HD voices for enterprise-level voice quality
 // Chirp3-HD is Google's latest and highest quality TTS with native pronunciation
