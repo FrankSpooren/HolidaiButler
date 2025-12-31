@@ -74,15 +74,34 @@ const QUALITY_CONFIG = {
   requireLocation: true
 };
 
-// Icon mapping for diversity
+// Icon mapping for diversity - using icon names that match the frontend
 const categoryIcons = {
-  'Beaches & Nature': ['🏖️', '🌴', '🌊', '☀️', '🏞️'],
-  'Food & Drinks': ['🍽️', '🍕', '☕', '🍷', '🥘'],
-  'Shopping': ['🛍️', '🛒', '🎁', '👗'],
-  'Culture & History': ['🏛️', '🏰', '📚', '🎭'],
-  'Recreation': ['🎮', '🎬', '🎵', '🎪'],
-  'Active': ['🚴', '🏊', '🥾', '⛵', '🏃'],
-  'Nightlife': ['🍸', '🎶', '💃', '🌙']
+  'Beaches & Nature': ['beach', 'waves', 'palm-tree', 'sun', 'mountain'],
+  'Food & Drinks': ['utensils', 'coffee', 'wine-glass', 'pizza', 'restaurant'],
+  'Shopping': ['shopping-bag', 'store', 'gift', 'tag'],
+  'Culture & History': ['landmark', 'museum', 'book', 'castle'],
+  'Recreation': ['film', 'music', 'gamepad', 'ticket'],
+  'Active': ['bike', 'swimmer', 'hiking', 'sailboat', 'dumbbell'],
+  'Nightlife': ['cocktail', 'music', 'moon', 'sparkles']
+};
+
+// Subcategory to icon mapping for more accurate icons
+const subcategoryIcons = {
+  'Restaurants': 'utensils',
+  'Bars': 'wine-glass',
+  'Bar Restaurants': 'utensils',
+  'Breakfast & Coffee': 'coffee',
+  'Fastfood': 'pizza',
+  'Public beach': 'beach',
+  'Beach': 'beach',
+  'Park': 'tree',
+  'Hiking': 'hiking',
+  'Museum': 'museum',
+  'Viewpoint': 'binoculars',
+  'Old Town': 'landmark',
+  'Market': 'store',
+  'Shopping center': 'shopping-bag',
+  'Supermarket': 'store'
 };
 
 // Get or create session history
@@ -112,51 +131,56 @@ function addToSessionHistory(sessionId, poiIds) {
 // Check POI quality against MySQL data
 async function checkPOIQuality(poi, mysqlPoi) {
   const issues = [];
+  const data = mysqlPoi || poi;
   
   // Rating check (>= 4.0)
-  const rating = parseFloat(mysqlPoi?.rating || poi.rating) || 0;
-  if (rating < QUALITY_CONFIG.minRating && rating > 0) {
-    issues.push('rating_below_4.0');
+  const rating = parseFloat(data.rating) || 0;
+  if (rating > 0 && rating < QUALITY_CONFIG.minRating) {
+    issues.push('rating_below_4.0:' + rating);
   }
   
   // Review check (must have reviews)
-  const reviewCount = parseInt(mysqlPoi?.review_count || poi.reviewCount) || 0;
+  const reviewCount = parseInt(data.review_count || data.reviewCount) || 0;
   if (reviewCount === 0) {
     issues.push('no_reviews');
   }
   
-  // Review freshness check (within 2 years)
-  const lastUpdated = mysqlPoi?.last_updated ? new Date(mysqlPoi.last_updated) : null;
-  if (lastUpdated && Date.now() - lastUpdated.getTime() > QUALITY_CONFIG.maxReviewAge) {
-    issues.push('reviews_too_old');
-  }
-  
-  // Image check (>= 2 images)
-  let imageCount = 0;
-  const images = mysqlPoi?.images || poi.images;
-  if (images) {
+  // Image check - use thumbnail_url as primary (images array is empty in DB)
+  const hasThumbnail = !!(data.thumbnail_url || poi.thumbnailUrl);
+  let enhancedCount = 0;
+  if (data.enhanced_images) {
     try {
-      const parsed = typeof images === 'string' ? JSON.parse(images) : images;
-      imageCount = Array.isArray(parsed) ? parsed.length : 0;
+      const parsed = typeof data.enhanced_images === 'string' ? JSON.parse(data.enhanced_images) : data.enhanced_images;
+      enhancedCount = Array.isArray(parsed) ? parsed.length : 0;
     } catch (e) {}
   }
-  const enhancedImages = mysqlPoi?.enhanced_images;
-  if (enhancedImages) {
-    try {
-      const parsed = typeof enhancedImages === 'string' ? JSON.parse(enhancedImages) : enhancedImages;
-      imageCount += Array.isArray(parsed) ? parsed.length : 0;
-    } catch (e) {}
-  }
-  if (imageCount < QUALITY_CONFIG.minImages) {
-    issues.push('insufficient_images');
+  const imageCount = (hasThumbnail ? 1 : 0) + enhancedCount;
+  // Require at least thumbnail (1 image)
+  if (!hasThumbnail) {
+    issues.push('no_thumbnail');
   }
   
   // Location check (address or GPS)
-  const hasAddress = (mysqlPoi?.address || poi.address || '').trim().length > 5;
-  const hasGPS = (parseFloat(mysqlPoi?.latitude || poi.latitude) || 0) !== 0 &&
-                 (parseFloat(mysqlPoi?.longitude || poi.longitude) || 0) !== 0;
+  const hasAddress = (data.address || '').trim().length > 5;
+  const hasGPS = parseFloat(data.latitude) !== 0 && parseFloat(data.longitude) !== 0;
   if (!hasAddress && !hasGPS) {
     issues.push('no_location');
+  }
+  
+  // Opening hours check - must have opening hours data
+  const hasOpeningHours = !!(data.opening_hours && data.opening_hours !== '{}' && data.opening_hours !== '[]');
+  if (!hasOpeningHours) {
+    issues.push('no_opening_hours');
+  }
+  
+  // Permanently closed check (all 7 days closed)
+  if (hasOpeningHours && isPermanentlyClosedFromHours(data.opening_hours)) {
+    issues.push('permanently_closed');
+  }
+  
+  // Currently closed check (realtime)
+  if (hasOpeningHours && isCurrentlyClosedFromHours(data.opening_hours)) {
+    issues.push('currently_closed');
   }
   
   return {
@@ -165,8 +189,63 @@ async function checkPOIQuality(poi, mysqlPoi) {
     rating,
     reviewCount,
     imageCount,
-    hasLocation: hasAddress || hasGPS
+    hasLocation: hasAddress || hasGPS,
+    hasOpeningHours
   };
+}
+
+// Check if POI is permanently closed (all 7 days)
+function isPermanentlyClosedFromHours(openingHours) {
+  if (!openingHours) return false;
+  try {
+    const hours = typeof openingHours === 'string' ? JSON.parse(openingHours) : openingHours;
+    if (typeof hours !== 'object' || !hours) return false;
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    let closedDays = 0;
+    for (const day of days) {
+      const h = hours[day];
+      if (!h || h === 'Closed' || h === '' || h === 'closed') closedDays++;
+    }
+    return closedDays === 7;
+  } catch (e) { return false; }
+}
+
+// Check if POI is currently closed (realtime)
+function isCurrentlyClosedFromHours(openingHours) {
+  if (!openingHours) return false;
+  try {
+    const hours = typeof openingHours === 'string' ? JSON.parse(openingHours) : openingHours;
+    if (typeof hours !== 'object' || !hours) return false;
+    
+    // Get current time in Spain timezone (CET/CEST)
+    const now = new Date();
+    const spainTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const today = dayNames[spainTime.getDay()];
+    const currentHour = spainTime.getHours();
+    const currentMinute = spainTime.getMinutes();
+    const currentTime = currentHour * 60 + currentMinute;
+    
+    const todayHours = hours[today];
+    if (!todayHours || todayHours === 'Closed' || todayHours === '' || todayHours === 'closed') {
+      return true; // Closed today
+    }
+    
+    // Parse HH:MM - HH:MM or HH:MM-HH:MM format
+    const match = String(todayHours).match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+    if (match) {
+      const openTime = parseInt(match[1]) * 60 + parseInt(match[2]);
+      const closeTime = parseInt(match[3]) * 60 + parseInt(match[4]);
+      
+      // Handle overnight hours
+      if (closeTime < openTime) {
+        return currentTime >= closeTime && currentTime < openTime;
+      }
+      return currentTime < openTime || currentTime >= closeTime;
+    }
+    
+    return false; // If can't parse, assume open
+  } catch (e) { return false; }
 }
 
 // Assign icons with diversity (avoid same icon repeated)
@@ -174,18 +253,27 @@ function assignDiverseIcons(pois) {
   const iconUsage = new Map();
   return pois.map(poi => {
     const category = poi.category || 'General';
-    const icons = categoryIcons[category] || ['📍'];
+    const subcategory = poi.subcategory || '';
     
-    // Find least-used icon
-    let selectedIcon = icons[0];
-    let minUsage = Infinity;
-    for (const icon of icons) {
-      const usage = iconUsage.get(icon) || 0;
-      if (usage < minUsage) {
-        minUsage = usage;
-        selectedIcon = icon;
+    // Try subcategory-specific icon first
+    let selectedIcon = subcategoryIcons[subcategory];
+    
+    if (!selectedIcon) {
+      // Fall back to category icons with diversity
+      const icons = categoryIcons[category] || ['location'];
+      
+      // Find least-used icon from category
+      selectedIcon = icons[0];
+      let minUsage = Infinity;
+      for (const icon of icons) {
+        const usage = iconUsage.get(icon) || 0;
+        if (usage < minUsage) {
+          minUsage = usage;
+          selectedIcon = icon;
+        }
       }
     }
+    
     iconUsage.set(selectedIcon, (iconUsage.get(selectedIcon) || 0) + 1);
     
     return { ...poi, icon: selectedIcon };
@@ -198,10 +286,29 @@ function selectWithVariation(availablePois, count, sessionId) {
   const refreshPct = count <= 4 ? 0.80 : (count <= 6 ? 0.85 : 0.90);
   const minNewCount = Math.ceil(count * refreshPct);
   
-  const newPois = availablePois.filter(p => !history.pois.has(p.id) && !history.pois.has(p.name));
-  const previousPois = availablePois.filter(p => history.pois.has(p.id) || history.pois.has(p.name));
+  // Check both id AND name (normalized) to prevent duplicates
+  const isInHistory = (poi) => {
+    const normalizedName = (poi.name || '').toLowerCase().trim();
+    return history.pois.has(String(poi.id)) || 
+           history.pois.has(normalizedName) ||
+           history.pois.has(poi.id);
+  };
   
-  // Shuffle both arrays
+  const newPois = availablePois.filter(p => !isInHistory(p));
+  const previousPois = availablePois.filter(p => isInHistory(p));
+  
+  logger.info('Refresh variation check:', {
+    sessionId: sessionId?.substring?.(0, 8) || 'none',
+    historySize: history.pois.size,
+    availableTotal: availablePois.length,
+    newPoisCount: newPois.length,
+    previousPoisCount: previousPois.length,
+    targetCount: count,
+    minNewRequired: minNewCount,
+    refreshPct: refreshPct
+  });
+  
+  // Shuffle function
   const shuffle = arr => {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -215,13 +322,34 @@ function selectWithVariation(availablePois, count, sessionId) {
   const shuffledPrevious = shuffle(previousPois);
   
   const selected = [];
-  // First add new POIs
-  selected.push(...shuffledNew.slice(0, Math.min(minNewCount, shuffledNew.length)));
   
-  // Fill remaining with any available
+  // PRIORITY 1: Add new POIs first (up to minNewCount or all available new)
+  const newToAdd = Math.min(minNewCount, shuffledNew.length);
+  selected.push(...shuffledNew.slice(0, newToAdd));
+  
+  // PRIORITY 2: If we need more, prefer remaining new POIs over previous
   const remaining = count - selected.length;
-  const pool = [...shuffledNew.slice(selected.length), ...shuffledPrevious];
-  selected.push(...pool.slice(0, remaining));
+  if (remaining > 0) {
+    const remainingNew = shuffledNew.slice(newToAdd);
+    const maxPrevious = Math.floor(count * (1 - refreshPct)); // Max 10-20% from previous
+    
+    // Add remaining new first
+    const moreNew = Math.min(remaining, remainingNew.length);
+    selected.push(...remainingNew.slice(0, moreNew));
+    
+    // Only add previous if absolutely needed and within limit
+    const stillNeeded = count - selected.length;
+    if (stillNeeded > 0) {
+      const prevToAdd = Math.min(stillNeeded, maxPrevious, shuffledPrevious.length);
+      selected.push(...shuffledPrevious.slice(0, prevToAdd));
+    }
+  }
+  
+  logger.info('Refresh variation result:', {
+    selectedTotal: selected.length,
+    newInSelection: selected.filter(p => !isInHistory(p)).length,
+    previousInSelection: selected.filter(p => isInHistory(p)).length
+  });
   
   return shuffle(selected);
 }
@@ -981,7 +1109,7 @@ router.post('/itinerary', async (req, res) => {
         const { Op } = (await import('sequelize')).default;
         const mysqlPoiData = await model.findAll({
           where: { name: { [Op.in]: poiNames } },
-          attributes: ['id', 'name', 'rating', 'review_count', 'images', 'enhanced_images', 
+          attributes: ['id', 'name', 'rating', 'review_count', 'images', 'enhanced_images', 'thumbnail_url', 'opening_hours', 'category', 'subcategory', 
                        'address', 'latitude', 'longitude', 'last_updated'],
           raw: true
         });
