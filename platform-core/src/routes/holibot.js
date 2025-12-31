@@ -57,6 +57,185 @@ import express from 'express';
 import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService, intentService, preferenceService, suggestionService } from '../services/holibot/index.js';
 import logger from '../utils/logger.js';
 
+
+// ============================================================================
+// ENTERPRISE QUALITY FILTERS & SESSION TRACKING
+// ============================================================================
+
+// Session-based POI tracking for 80-90% refresh variation
+const sessionPoiHistory = new Map();
+const SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+// Quality configuration
+const QUALITY_CONFIG = {
+  minRating: 4.0,
+  maxReviewAge: 2 * 365 * 24 * 60 * 60 * 1000, // 2 years in ms
+  minImages: 2,
+  requireLocation: true
+};
+
+// Icon mapping for diversity
+const categoryIcons = {
+  'Beaches & Nature': ['🏖️', '🌴', '🌊', '☀️', '🏞️'],
+  'Food & Drinks': ['🍽️', '🍕', '☕', '🍷', '🥘'],
+  'Shopping': ['🛍️', '🛒', '🎁', '👗'],
+  'Culture & History': ['🏛️', '🏰', '📚', '🎭'],
+  'Recreation': ['🎮', '🎬', '🎵', '🎪'],
+  'Active': ['🚴', '🏊', '🥾', '⛵', '🏃'],
+  'Nightlife': ['🍸', '🎶', '💃', '🌙']
+};
+
+// Get or create session history
+function getSessionHistory(sessionId) {
+  if (!sessionId) return { pois: new Set(), lastAccess: Date.now() };
+  let history = sessionPoiHistory.get(sessionId);
+  if (!history || Date.now() - history.lastAccess > SESSION_TTL) {
+    history = { pois: new Set(), lastAccess: Date.now() };
+    sessionPoiHistory.set(sessionId, history);
+  }
+  history.lastAccess = Date.now();
+  return history;
+}
+
+// Add POIs to session history
+function addToSessionHistory(sessionId, poiIds) {
+  if (!sessionId) return;
+  const history = getSessionHistory(sessionId);
+  poiIds.forEach(id => history.pois.add(id));
+  // Limit history size to prevent memory bloat
+  if (history.pois.size > 500) {
+    const arr = [...history.pois];
+    history.pois = new Set(arr.slice(-300));
+  }
+}
+
+// Check POI quality against MySQL data
+async function checkPOIQuality(poi, mysqlPoi) {
+  const issues = [];
+  
+  // Rating check (>= 4.0)
+  const rating = parseFloat(mysqlPoi?.rating || poi.rating) || 0;
+  if (rating < QUALITY_CONFIG.minRating && rating > 0) {
+    issues.push('rating_below_4.0');
+  }
+  
+  // Review check (must have reviews)
+  const reviewCount = parseInt(mysqlPoi?.review_count || poi.reviewCount) || 0;
+  if (reviewCount === 0) {
+    issues.push('no_reviews');
+  }
+  
+  // Review freshness check (within 2 years)
+  const lastUpdated = mysqlPoi?.last_updated ? new Date(mysqlPoi.last_updated) : null;
+  if (lastUpdated && Date.now() - lastUpdated.getTime() > QUALITY_CONFIG.maxReviewAge) {
+    issues.push('reviews_too_old');
+  }
+  
+  // Image check (>= 2 images)
+  let imageCount = 0;
+  const images = mysqlPoi?.images || poi.images;
+  if (images) {
+    try {
+      const parsed = typeof images === 'string' ? JSON.parse(images) : images;
+      imageCount = Array.isArray(parsed) ? parsed.length : 0;
+    } catch (e) {}
+  }
+  const enhancedImages = mysqlPoi?.enhanced_images;
+  if (enhancedImages) {
+    try {
+      const parsed = typeof enhancedImages === 'string' ? JSON.parse(enhancedImages) : enhancedImages;
+      imageCount += Array.isArray(parsed) ? parsed.length : 0;
+    } catch (e) {}
+  }
+  if (imageCount < QUALITY_CONFIG.minImages) {
+    issues.push('insufficient_images');
+  }
+  
+  // Location check (address or GPS)
+  const hasAddress = (mysqlPoi?.address || poi.address || '').trim().length > 5;
+  const hasGPS = (parseFloat(mysqlPoi?.latitude || poi.latitude) || 0) !== 0 &&
+                 (parseFloat(mysqlPoi?.longitude || poi.longitude) || 0) !== 0;
+  if (!hasAddress && !hasGPS) {
+    issues.push('no_location');
+  }
+  
+  return {
+    passes: issues.length === 0,
+    issues,
+    rating,
+    reviewCount,
+    imageCount,
+    hasLocation: hasAddress || hasGPS
+  };
+}
+
+// Assign icons with diversity (avoid same icon repeated)
+function assignDiverseIcons(pois) {
+  const iconUsage = new Map();
+  return pois.map(poi => {
+    const category = poi.category || 'General';
+    const icons = categoryIcons[category] || ['📍'];
+    
+    // Find least-used icon
+    let selectedIcon = icons[0];
+    let minUsage = Infinity;
+    for (const icon of icons) {
+      const usage = iconUsage.get(icon) || 0;
+      if (usage < minUsage) {
+        minUsage = usage;
+        selectedIcon = icon;
+      }
+    }
+    iconUsage.set(selectedIcon, (iconUsage.get(selectedIcon) || 0) + 1);
+    
+    return { ...poi, icon: selectedIcon };
+  });
+}
+
+// Select POIs ensuring 80-90% are new compared to previous requests
+function selectWithVariation(availablePois, count, sessionId) {
+  const history = getSessionHistory(sessionId);
+  const refreshPct = count <= 4 ? 0.80 : (count <= 6 ? 0.85 : 0.90);
+  const minNewCount = Math.ceil(count * refreshPct);
+  
+  const newPois = availablePois.filter(p => !history.pois.has(p.id) && !history.pois.has(p.name));
+  const previousPois = availablePois.filter(p => history.pois.has(p.id) || history.pois.has(p.name));
+  
+  // Shuffle both arrays
+  const shuffle = arr => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  
+  const shuffledNew = shuffle(newPois);
+  const shuffledPrevious = shuffle(previousPois);
+  
+  const selected = [];
+  // First add new POIs
+  selected.push(...shuffledNew.slice(0, Math.min(minNewCount, shuffledNew.length)));
+  
+  // Fill remaining with any available
+  const remaining = count - selected.length;
+  const pool = [...shuffledNew.slice(selected.length), ...shuffledPrevious];
+  selected.push(...pool.slice(0, remaining));
+  
+  return shuffle(selected);
+}
+
+// Cleanup old sessions periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, history] of sessionPoiHistory.entries()) {
+    if (now - history.lastAccess > SESSION_TTL) {
+      sessionPoiHistory.delete(id);
+    }
+  }
+}, 60 * 60 * 1000); // Every hour
+
 const router = express.Router();
 
 let POI = null;
@@ -612,7 +791,10 @@ router.post('/search', async (req, res) => {
  */
 router.post('/itinerary', async (req, res) => {
   try {
-    const { date, interests = [], duration = 'full-day', travelCompanion, language = 'nl', includeMeals = true } = req.body;
+    const { date, interests = [], duration = 'full-day', travelCompanion, language = 'nl', includeMeals = true, sessionId } = req.body;
+
+    // Get or generate session ID for refresh variation tracking
+    const effectiveSessionId = sessionId || req.headers['x-session-id'] || req.ip || 'anonymous';
 
     logger.info('HoliBot itinerary request', { date, interests, duration, includeMeals });
 
@@ -790,7 +972,62 @@ router.post('/itinerary', async (req, res) => {
       }
     }
 
-    const searchResults = { results: enrichedResults };
+    // QUALITY FILTERING: Apply enterprise-level POI quality standards
+    let qualityFilteredResults = enrichedResults;
+    if (model && enrichedResults.length > 0) {
+      try {
+        // Get full POI data from MySQL for quality checks
+        const poiNames = enrichedResults.map(p => p.name).filter(Boolean);
+        const { Op } = (await import('sequelize')).default;
+        const mysqlPoiData = await model.findAll({
+          where: { name: { [Op.in]: poiNames } },
+          attributes: ['id', 'name', 'rating', 'review_count', 'images', 'enhanced_images', 
+                       'address', 'latitude', 'longitude', 'last_updated'],
+          raw: true
+        });
+        const mysqlLookup = new Map(mysqlPoiData.map(p => [p.name.toLowerCase(), p]));
+        
+        // Filter by quality criteria
+        const qualityChecks = await Promise.all(enrichedResults.map(async poi => {
+          const mysqlPoi = mysqlLookup.get((poi.name || '').toLowerCase());
+          const quality = await checkPOIQuality(poi, mysqlPoi);
+          return { poi: { ...poi, ...quality }, passes: quality.passes, issues: quality.issues };
+        }));
+        
+        qualityFilteredResults = qualityChecks
+          .filter(q => q.passes)
+          .map(q => q.poi);
+        
+        const failedCount = qualityChecks.filter(q => !q.passes).length;
+        logger.info('POI quality filtering:', {
+          input: enrichedResults.length,
+          passed: qualityFilteredResults.length,
+          failed: failedCount,
+          criteria: 'rating>=4.0, has_reviews, reviews<2yr, images>=2, has_location'
+        });
+        
+        // If too few POIs pass quality, relax criteria
+        if (qualityFilteredResults.length < 6) {
+          logger.info('Relaxing quality filters due to insufficient POIs');
+          // Keep POIs with rating >= 3.5 or no rating data
+          qualityFilteredResults = qualityChecks
+            .filter(q => q.passes || (q.poi.rating >= 3.5 || q.poi.rating === 0))
+            .map(q => q.poi);
+        }
+      } catch (qualityError) {
+        logger.warn('Quality filtering failed, using unfiltered results:', qualityError.message);
+        qualityFilteredResults = enrichedResults;
+      }
+    }
+    
+    // Apply 80-90% refresh variation using session history
+    const variedResults = selectWithVariation(qualityFilteredResults, 
+      Math.min(qualityFilteredResults.length, 30), effectiveSessionId);
+    
+    const searchResults = { results: variedResults };
+    
+    // Track shown POIs in session history
+    addToSessionHistory(effectiveSessionId, variedResults.map(p => p.id || p.name));
 
     logger.info('Itinerary search results:', {
       totalPois: searchResults.results.length,
