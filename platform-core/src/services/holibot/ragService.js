@@ -30,13 +30,16 @@ class RAGService {
     if (!this.isInitialized) await this.initialize();
     try {
       const startTime = Date.now();
-      const nResults = options.limit || 10;
+      const nResults = options.limit || 50;
+      const similarityThreshold = options.similarityThreshold || 0.45;
       const queryEmbedding = await embeddingService.generateEmbedding(query);
       const results = await chromaService.search(queryEmbedding, nResults, options.filter);
       const enrichedResults = this.enrichResults(results);
+      // Filter by similarity threshold for quality
+      const filteredResults = enrichedResults.filter(r => (r.similarity || 0) >= similarityThreshold);
       const timeMs = Date.now() - startTime;
-      logger.info(`RAG search completed in ${timeMs}ms, found ${enrichedResults.length} results`);
-      return { success: true, query, results: enrichedResults, totalResults: enrichedResults.length, searchTimeMs: timeMs };
+      logger.info(`RAG search completed in ${timeMs}ms, found ${filteredResults.length} quality results (threshold: ${similarityThreshold})`);
+      return { success: true, query, results: filteredResults, totalResults: filteredResults.length, searchTimeMs: timeMs };
     } catch (error) {
       logger.error('RAG search error:', error);
       throw error;

@@ -622,6 +622,22 @@ router.post('/itinerary', async (req, res) => {
       afternoon: ['museum', 'shopping', 'market', 'viewpoint', 'culture', 'active', 'sport', 'beach'],
       evening: ['restaurant', 'tapas', 'bar', 'fine dining', 'seafood', 'pizzeria', 'nightlife', 'lounge']
     };
+    // Query variation templates for diverse results
+    const queryTemplates = [
+      "{interest} attractions Calpe",
+      "best {interest} spots in Calpe Costa Blanca",
+      "popular {interest} places Calpe area",
+      "top rated {interest} Calpe Spain",
+      "{interest} things to do near Calpe"
+    ];
+    const generalQueryTemplates = [
+      "best things to do in Calpe",
+      "top attractions Calpe Costa Blanca",
+      "popular places to visit Calpe",
+      "must see Calpe Spain vacation"
+    ];
+    const getRandomTemplate = (templates) => templates[Math.floor(Math.random() * templates.length)];
+
 
     // Note: isPermanentlyClosed() is now a shared helper at the top of this file
 
@@ -630,12 +646,13 @@ router.post('/itinerary', async (req, res) => {
     if (interests.length > 0) {
       // Search each interest separately to ensure balanced results
       for (const interest of interests) {
-        const interestResults = await ragService.search(interest + ' attractions Calpe', { limit: 10 });
+        const queryTemplate = getRandomTemplate(queryTemplates).replace('{interest}', interest);
+        const interestResults = await ragService.search(queryTemplate, { limit: 50 });
         allSearchResults = [...allSearchResults, ...interestResults.results];
       }
     }
     // Always add a general search for backup POIs
-    const generalResults = await ragService.search('best things to do in Calpe', { limit: 10 });
+    const generalResults = await ragService.search(getRandomTemplate(generalQueryTemplates), { limit: 50 });
     allSearchResults = [...allSearchResults, ...generalResults.results];
 
     // Remove duplicates by id AND name, filter out permanently closed POIs
@@ -813,7 +830,7 @@ router.post('/itinerary', async (req, res) => {
     // Step 3: Get restaurant suggestions if meals included
     let restaurants = [];
     if (includeMeals) {
-      const restaurantResults = await ragService.search('restaurant Calpe ' + (interests.includes('Food & Drinks') ? 'best rated' : ''), { limit: 5 });
+      const restaurantResults = await ragService.search('restaurant Calpe ' + (interests.includes('Food & Drinks') ? 'best rated' : ''), { limit: 25 });
       restaurants = restaurantResults.results.filter(p =>
         p.category?.toLowerCase().includes('food') ||
         p.category?.toLowerCase().includes('restaurant') ||
