@@ -68,7 +68,8 @@ export function FavoritesPage() {
 
   // Convert favorites Sets to arrays
   const savedPOIIds = Array.from(favorites);
-  const savedEventIds = Array.from(agendaFavorites);
+  // Extract event IDs from agenda favorites (which are objects with eventId and selectedDate)
+  const savedEventIds = agendaFavorites.map((fav: AgendaFavorite) => fav.eventId);
 
   // Get user location
   useEffect(() => {
