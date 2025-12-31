@@ -102,6 +102,21 @@ export function FavoritesPage() {
     savedEventIds.includes(event._id)
   );
 
+  // Create favoriteEventsWithDates that combines event data with selected dates
+  const favoriteEventsWithDates = useMemo(() => {
+    return agendaFavorites
+      .map((fav: AgendaFavorite) => {
+        const event = favoriteEvents.find((e: AgendaEvent) => e._id === fav.eventId);
+        if (!event) return null;
+        return {
+          event,
+          selectedDate: fav.selectedDate,
+          favoriteKey: fav.eventId + "_" + fav.selectedDate,
+        };
+      })
+      .filter(Boolean) as Array<{ event: AgendaEvent; selectedDate: string; favoriteKey: string }>;
+  }, [agendaFavorites, favoriteEvents]);
+
   const isLoading = activeTab === 'pois' ? isLoadingPOIs : isLoadingEvents;
 
   // Remove POI from favorites
@@ -111,9 +126,9 @@ export function FavoritesPage() {
   };
 
   // Remove Event from favorites
-  const handleRemoveEventFavorite = (eventId: string, event: React.MouseEvent) => {
+  const handleRemoveEventFavorite = (eventId: string, selectedDate: string | undefined, event: React.MouseEvent) => {
     event.stopPropagation();
-    removeAgendaFavorite(eventId);
+    removeAgendaFavorite(eventId, selectedDate);
   };
 
   // Open POI detail modal
@@ -122,8 +137,9 @@ export function FavoritesPage() {
   };
 
   // Open Event detail modal
-  const handleEventClick = (eventId: string) => {
+  const handleEventClick = (eventId: string, date?: string) => {
     setSelectedEventId(eventId);
+    if (date) setSelectedEventDate(date);
   };
 
   // Close POI modal
