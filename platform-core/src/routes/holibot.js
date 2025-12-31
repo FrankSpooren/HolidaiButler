@@ -194,23 +194,39 @@ async function checkPOIQuality(poi, mysqlPoi) {
   };
 }
 
-// Check if POI is permanently closed (all 7 days)
+// Check if POI is permanently closed (all 7 days have empty arrays or no data)
 function isPermanentlyClosedFromHours(openingHours) {
   if (!openingHours) return false;
   try {
     const hours = typeof openingHours === 'string' ? JSON.parse(openingHours) : openingHours;
     if (typeof hours !== 'object' || !hours) return false;
+    
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     let closedDays = 0;
+    
     for (const day of days) {
-      const h = hours[day];
-      if (!h || h === 'Closed' || h === '' || h === 'closed') closedDays++;
+      const dayData = hours[day];
+      // Check for closed: empty array [], null, undefined, 'Closed', or empty string
+      const isClosed = !dayData || 
+                       (Array.isArray(dayData) && dayData.length === 0) ||
+                       dayData === 'Closed' || 
+                       dayData === 'closed' || 
+                       dayData === '';
+      if (isClosed) closedDays++;
     }
-    return closedDays === 7;
-  } catch (e) { return false; }
+    
+    const isPermanentlyClosed = closedDays === 7;
+    if (isPermanentlyClosed) {
+      logger.info('POI permanently closed detected (all 7 days empty)');
+    }
+    return isPermanentlyClosed;
+  } catch (e) { 
+    logger.warn('Error parsing opening_hours for permanent closed check:', e.message);
+    return false; 
+  }
 }
 
-// Check if POI is currently closed (realtime)
+// Check if POI is currently closed (realtime check for today)
 function isCurrentlyClosedFromHours(openingHours) {
   if (!openingHours) return false;
   try {
@@ -227,25 +243,57 @@ function isCurrentlyClosedFromHours(openingHours) {
     const currentTime = currentHour * 60 + currentMinute;
     
     const todayHours = hours[today];
-    if (!todayHours || todayHours === 'Closed' || todayHours === '' || todayHours === 'closed') {
-      return true; // Closed today
+    
+    // Check if closed today: empty array, null, 'Closed', etc.
+    if (!todayHours || 
+        (Array.isArray(todayHours) && todayHours.length === 0) ||
+        todayHours === 'Closed' || 
+        todayHours === 'closed' || 
+        todayHours === '') {
+      logger.info('POI currently closed: no hours for ' + today);
+      return true;
     }
     
-    // Parse HH:MM - HH:MM or HH:MM-HH:MM format
-    const match = String(todayHours).match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
-    if (match) {
-      const openTime = parseInt(match[1]) * 60 + parseInt(match[2]);
-      const closeTime = parseInt(match[3]) * 60 + parseInt(match[4]);
-      
-      // Handle overnight hours
-      if (closeTime < openTime) {
-        return currentTime >= closeTime && currentTime < openTime;
+    // If todayHours is an array of time slots [{open: 10:00, close: 23:00}]
+    if (Array.isArray(todayHours) && todayHours.length > 0) {
+      // Check if current time falls within ANY open slot
+      for (const slot of todayHours) {
+        if (slot.open && slot.close) {
+          const [openH, openM] = slot.open.split(':').map(Number);
+          const [closeH, closeM] = slot.close.split(':').map(Number);
+          const openTime = openH * 60 + openM;
+          const closeTime = closeH * 60 + closeM;
+          
+          // Handle overnight hours
+          if (closeTime < openTime) {
+            if (currentTime >= openTime || currentTime < closeTime) return false; // Open
+          } else {
+            if (currentTime >= openTime && currentTime < closeTime) return false; // Open
+          }
+        }
       }
-      return currentTime < openTime || currentTime >= closeTime;
+      // Not within any open slot
+      return true;
+    }
+    
+    // Legacy string format HH:MM - HH:MM
+    if (typeof todayHours === 'string') {
+      const match = todayHours.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+      if (match) {
+        const openTime = parseInt(match[1]) * 60 + parseInt(match[2]);
+        const closeTime = parseInt(match[3]) * 60 + parseInt(match[4]);
+        if (closeTime < openTime) {
+          return currentTime >= closeTime && currentTime < openTime;
+        }
+        return currentTime < openTime || currentTime >= closeTime;
+      }
     }
     
     return false; // If can't parse, assume open
-  } catch (e) { return false; }
+  } catch (e) { 
+    logger.warn('Error parsing opening_hours for current closed check:', e.message);
+    return false; 
+  }
 }
 
 // Assign icons with diversity (avoid same icon repeated)
@@ -1113,13 +1161,37 @@ router.post('/itinerary', async (req, res) => {
                        'address', 'latitude', 'longitude', 'last_updated'],
           raw: true
         });
-        const mysqlLookup = new Map(mysqlPoiData.map(p => [p.name.toLowerCase(), p]));
+        const mysqlLookup = new Map(mysqlPoiData.map(p => [p.name.toLowerCase().trim(), p]));
+        
+        logger.info('MySQL POI lookup:', { 
+          ragPois: enrichedResults.length, 
+          mysqlMatches: mysqlPoiData.length,
+          mysqlNames: mysqlPoiData.slice(0, 5).map(p => p.name)
+        });
         
         // Filter by quality criteria
         const qualityChecks = await Promise.all(enrichedResults.map(async poi => {
-          const mysqlPoi = mysqlLookup.get((poi.name || '').toLowerCase());
+          const poiNameLower = (poi.name || '').toLowerCase().trim();
+          const mysqlPoi = mysqlLookup.get(poiNameLower);
+          
+          // Log if no MySQL match found
+          if (!mysqlPoi) {
+            logger.warn('No MySQL match for POI:', { name: poi.name, searchedAs: poiNameLower });
+          }
+          
           const quality = await checkPOIQuality(poi, mysqlPoi);
-          return { poi: { ...poi, ...quality }, passes: quality.passes, issues: quality.issues };
+          
+          // Log failed POIs with their issues
+          if (!quality.passes) {
+            logger.info('POI failed quality:', { 
+              name: poi.name, 
+              rating: quality.rating,
+              issues: quality.issues,
+              hasMysqlData: !!mysqlPoi
+            });
+          }
+          
+          return { poi: { ...poi, ...quality, mysqlData: mysqlPoi }, passes: quality.passes, issues: quality.issues };
         }));
         
         qualityFilteredResults = qualityChecks
@@ -1134,13 +1206,25 @@ router.post('/itinerary', async (req, res) => {
           criteria: 'rating>=4.0, has_reviews, reviews<2yr, images>=2, has_location'
         });
         
-        // If too few POIs pass quality, relax criteria
+        // If too few POIs pass quality, relax RATING criteria only (keep closed filter strict!)
         if (qualityFilteredResults.length < 6) {
-          logger.info('Relaxing quality filters due to insufficient POIs');
-          // Keep POIs with rating >= 3.5 or no rating data
-          qualityFilteredResults = qualityChecks
-            .filter(q => q.passes || (q.poi.rating >= 3.5 || q.poi.rating === 0))
-            .map(q => q.poi);
+          logger.info('Relaxing quality filters due to insufficient POIs (keeping closed filter strict)');
+          
+          qualityFilteredResults = qualityChecks.filter(q => {
+            // NEVER include permanently or currently closed POIs
+            if (q.issues.includes('permanently_closed') || q.issues.includes('currently_closed')) {
+              return false;
+            }
+            // Accept if already passed OR if only failed on rating (relax to 3.5)
+            if (q.passes) return true;
+            
+            // Relax rating requirement to 3.5 but keep other requirements
+            const nonRatingIssues = q.issues.filter(i => !i.startsWith('rating_below'));
+            const hasGoodEnoughRating = q.poi.rating >= 3.5 || q.poi.rating === 0;
+            return nonRatingIssues.length === 0 && hasGoodEnoughRating;
+          }).map(q => q.poi);
+          
+          logger.info('After relaxed filtering:', { count: qualityFilteredResults.length });
         }
       } catch (qualityError) {
         logger.warn('Quality filtering failed, using unfiltered results:', qualityError.message);
