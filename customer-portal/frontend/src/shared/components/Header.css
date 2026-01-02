@@ -2,21 +2,25 @@
 .header {
     background: linear-gradient(135deg, #7FA594, #5E8B7E, #4A7066);
     color: white;
-    padding: 8px 20px;
+    padding: 0 20px;
     border-bottom: 3px solid #D4AF37;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     position: sticky;
     top: 0;
     z-index: 1000;
-    min-height: 75px; /* Consistent height to accommodate 75px logo */
+    min-height: 80px;
+    display: flex;
+    align-items: center;
 }
 
 .header-content {
     max-width: 1400px;
     margin: 0 auto;
+    width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    min-height: 80px;
 }
 
 /* Homepage header - no logo, just icons on right */
@@ -31,7 +35,7 @@
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s ease;
-    padding: 4px 8px;
+    padding: 0;
 }
 
 .logo-container:hover {
@@ -201,10 +205,10 @@
 /* Navigation Menu */
 .nav-menu {
     position: fixed;
-    top: 70px;
+    top: 80px;
     right: -100%;
     width: 240px;
-    height: calc(100vh - 70px);
+    height: calc(100vh - 80px);
     background: linear-gradient(135deg, #7FA594, #5E8B7E);
     flex-direction: column;
     padding: 32px 20px;
