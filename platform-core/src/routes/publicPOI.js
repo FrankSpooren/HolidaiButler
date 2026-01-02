@@ -139,7 +139,7 @@ const formatPOIForPublic = (poi, lang = "en", images = null) => {
     reviewCount: data.review_count || 0,
     review_count: data.review_count || 0,
     price_level: data.price_level,
-    images: images || safeJSONParse(data.images, []),
+    images: (images && images.length > 0) ? images : safeJSONParse(data.images, []),
     thumbnail_url: data.thumbnail_url,
     amenities: safeJSONParse(data.amenities, []),
     accessibility_features: safeJSONParse(data.accessibility_features, []),
