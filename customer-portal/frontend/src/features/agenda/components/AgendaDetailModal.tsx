@@ -366,6 +366,16 @@ export function AgendaDetailModal({ eventId, isOpen, onClose, selectedDate }: Ag
                       </div>
                     </div>
                   )}
+
+                  {/* Reviews Section - Placeholder for future implementation */}
+                  <div className="agenda-section agenda-reviews-section">
+                    <h2 className="agenda-section-title">Reviews</h2>
+                    <div className="agenda-reviews-placeholder">
+                      <span className="agenda-reviews-placeholder-icon">💬</span>
+                      <p className="agenda-reviews-placeholder-text">Reviews coming soon</p>
+                      <p className="agenda-reviews-placeholder-subtext">Share your experience after attending this event</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Right Column - Sidebar */}

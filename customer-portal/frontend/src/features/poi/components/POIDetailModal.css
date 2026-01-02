@@ -20,20 +20,18 @@
 }
 
 .poi-detail-modal {
-  background: #F9FAFB;
-  border-radius: 16px;
-  max-width: 1200px;
-  width: 90%;
-  max-height: 85vh; /* Further reduced from 90vh to 85vh to prevent cutoff */
+  background: white;
+  border-radius: 20px;
+  max-width: 1000px;
+  width: 100%;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   animation: slideUp 0.3s ease-out;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   position: relative;
-  /* Ensure consistent sizing regardless of parent */
   min-width: 320px;
-  /* Ensure modal is centered and not cut off */
   margin: auto;
 }
 
@@ -111,7 +109,7 @@
 }
 
 .poi-detail-modal .poi-hero-content {
-  padding: 32px;
+  padding: 24px;
 }
 
 /* Badges Container */
@@ -123,10 +121,11 @@
 }
 
 .poi-title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   color: #1F2937;
-  margin-bottom: 12px;
+  margin: 0 0 16px 0;
+  line-height: 1.2;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
@@ -150,32 +149,43 @@
   font-size: 18px;
 }
 
-/* Action Buttons */
+/* Action Buttons - Compact pill style matching Events */
 .poi-actions {
   display: flex;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
 .poi-action-btn {
-  flex: 1;
-  min-width: 120px;
-  padding: 12px 20px;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  background: white;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.poi-action-btn:hover {
+  background: #F9FAFB;
+  border-color: #D1D5DB;
+}
+
+.poi-action-btn.saved {
+  color: #EF4444;
+  border-color: #FCA5A5;
+  background: #FEF2F2;
 }
 
 .poi-action-btn-primary {
   background: linear-gradient(135deg, #7FA594, #5E8B7E);
   color: white;
+  border: none;
 }
 
 .poi-action-btn-primary:hover {
@@ -185,12 +195,13 @@
 
 .poi-action-btn-secondary {
   background: white;
-  border: 2px solid #E5E7EB;
-  color: #1F2937;
+  border: 1px solid #E5E7EB;
+  color: #374151;
 }
 
 .poi-action-btn-secondary:hover {
-  border-color: #7FA594;
+  background: #F9FAFB;
+  border-color: #D1D5DB;
 }
 
 /* Content Sections - 2-Column Layout */
@@ -198,8 +209,8 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 24px;
-  background: #F9FAFB;
+  padding: 0 24px 24px;
+  background: white;
 }
 
 /* Column wrappers */
@@ -212,17 +223,16 @@
 }
 
 .poi-section {
-  background: white;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  background: #F9FAFB;
+  border-radius: 12px;
+  padding: 20px;
 }
 
 .poi-section-title {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
   color: #1F2937;
-  margin-bottom: 16px;
+  margin: 0 0 16px 0;
 }
 
 .poi-description {
@@ -394,21 +404,76 @@
 
 .contact-item {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #F9FAFB;
-  border-radius: 8px;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: #4B5563;
 }
 
 .contact-icon {
-  font-size: 20px;
+  font-size: 16px;
+  flex-shrink: 0;
 }
 
 .contact-text {
   flex: 1;
   font-size: 14px;
-  color: #1F2937;
+  color: #4B5563;
+}
+
+.contact-link {
+  color: #7FA594;
+  text-decoration: none;
+}
+
+.contact-link:hover {
+  text-decoration: underline;
+}
+
+/* Toast Message */
+.poi-toast {
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: #10B981;
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* External Website Button - Prominent CTA */
+.poi-external-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  background: #7FA594;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  margin-top: 8px;
+}
+
+.poi-external-btn:hover {
+  background: #6B8A7D;
 }
 
 /* Loading State */
@@ -481,25 +546,65 @@
   }
 }
 
-/* Responsive */
-@media (min-width: 768px) {
-  .poi-detail-modal {
-    width: 85%; /* Further narrower on desktop for better fit */
-    max-height: 85vh;
+/* Mobile First - Base styles are for mobile */
+
+/* Mobile: Full screen modal, hide button text */
+@media (max-width: 767px) {
+  .poi-detail-modal-overlay {
+    padding: 0;
   }
 
-  .poi-detail-modal .poi-hero-image {
-    /* Gallery controls dimensions */
+  .poi-detail-modal {
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
   }
 
   .poi-title {
-    font-size: 36px;
+    font-size: 22px;
+  }
+
+  .poi-actions {
+    flex-wrap: wrap;
+  }
+
+  /* Hide button text on mobile, show only icons */
+  .poi-action-btn span:last-child {
+    display: none;
+  }
+
+  .poi-action-btn {
+    padding: 10px 12px;
+  }
+
+  .poi-detail-modal .poi-hero-content {
+    padding: 20px;
+  }
+
+  .poi-section {
+    padding: 16px;
+  }
+
+  .poi-detail-modal .poi-content {
+    padding: 0 16px 16px;
+  }
+}
+
+/* Tablet and Desktop */
+@media (min-width: 768px) {
+  .poi-detail-modal {
+    width: 90%;
+    max-height: 90vh;
+  }
+
+  .poi-title {
+    font-size: 28px;
   }
 
   /* 2-Column Grid Layout for Desktop */
   .poi-detail-modal .poi-content {
     display: grid !important;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 1fr 320px;
     gap: 24px;
     align-items: start;
   }
@@ -515,11 +620,7 @@
   }
 
   .poi-actions {
-    flex-wrap: nowrap;
-  }
-
-  .poi-action-btn {
-    min-width: auto;
+    flex-wrap: wrap;
   }
 }
 
