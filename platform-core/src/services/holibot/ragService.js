@@ -49,8 +49,8 @@ class RAGService {
   getContextInstructions(language) {
     const instructions = {
       nl: {
-        useContext: 'Gebruik de volgende informatie uit onze database om de vraag te beantwoorden:',
-        baseOnContext: 'Baseer je antwoord op deze informatie. Als de informatie niet relevant is voor de vraag, geef dan een algemeen behulpzaam antwoord.',
+        useContext: 'Gebruik ALLEEN de volgende informatie uit onze database om de vraag te beantwoorden:',
+        baseOnContext: 'KRITISCHE REGEL: Noem ALLEEN plaatsen, restaurants, stranden of adressen die EXPLICIET in bovenstaande database-informatie staan. Verzin NOOIT namen of details die niet in de context staan. Als er geen relevante informatie is, zeg dan eerlijk dat je het niet in je database kunt vinden en bied aan om naar iets anders te zoeken.',
         noInfo: 'Geen specifieke informatie gevonden.',
         category: 'Categorie',
         description: 'Beschrijving',
@@ -58,8 +58,8 @@ class RAGService {
         rating: 'Beoordeling'
       },
       en: {
-        useContext: 'Use the following information from our database to answer the question:',
-        baseOnContext: 'Base your answer on this information. If the information is not relevant to the question, provide a generally helpful answer.',
+        useContext: 'Use ONLY the following information from our database to answer the question:',
+        baseOnContext: 'CRITICAL RULE: Only mention places, restaurants, beaches, or addresses that are EXPLICITLY listed in the database information above. NEVER make up or invent names or details not in the context. If no relevant information is available, honestly say you cannot find it in your database and offer to search for something else.',
         noInfo: 'No specific information found.',
         category: 'Category',
         description: 'Description',
@@ -67,8 +67,8 @@ class RAGService {
         rating: 'Rating'
       },
       de: {
-        useContext: 'Verwende die folgenden Informationen aus unserer Datenbank, um die Frage zu beantworten:',
-        baseOnContext: 'Basiere deine Antwort auf diesen Informationen. Wenn die Informationen nicht relevant sind, gib eine allgemein hilfreiche Antwort.',
+        useContext: 'Verwende NUR die folgenden Informationen aus unserer Datenbank, um die Frage zu beantworten:',
+        baseOnContext: 'KRITISCHE REGEL: Nenne NUR Orte, Restaurants, Straende oder Adressen, die EXPLIZIT in den obigen Datenbankinformationen stehen. Erfinde NIEMALS Namen oder Details, die nicht im Kontext stehen. Wenn keine relevanten Informationen verfuegbar sind, sage ehrlich, dass du es nicht in deiner Datenbank finden kannst.',
         noInfo: 'Keine spezifischen Informationen gefunden.',
         category: 'Kategorie',
         description: 'Beschreibung',
@@ -76,8 +76,8 @@ class RAGService {
         rating: 'Bewertung'
       },
       es: {
-        useContext: 'Utiliza la siguiente informacion de nuestra base de datos para responder la pregunta:',
-        baseOnContext: 'Basa tu respuesta en esta informacion. Si la informacion no es relevante para la pregunta, proporciona una respuesta generalmente util.',
+        useContext: 'Utiliza SOLO la siguiente informacion de nuestra base de datos para responder la pregunta:',
+        baseOnContext: 'REGLA CRITICA: Menciona SOLO lugares, restaurantes, playas o direcciones que esten EXPLICITAMENTE en la informacion de la base de datos anterior. NUNCA inventes nombres o detalles que no esten en el contexto. Si no hay informacion relevante, di honestamente que no puedes encontrarlo en tu base de datos.',
         noInfo: 'No se encontro informacion especifica.',
         category: 'Categoria',
         description: 'Descripcion',
@@ -85,8 +85,8 @@ class RAGService {
         rating: 'Valoracion'
       },
       sv: {
-        useContext: 'Anvand foljande information fran var databas for att svara pa fragan:',
-        baseOnContext: 'Basera ditt svar pa denna information. Om informationen inte ar relevant for fragan, ge ett generellt hjalpsamt svar.',
+        useContext: 'Anvand ENDAST foljande information fran var databas for att svara pa fragan:',
+        baseOnContext: 'KRITISK REGEL: Namn ENDAST platser, restauranger, strander eller adresser som UTTRYCKLIGEN finns i databasinformationen ovan. Hitta ALDRIG pa namn eller detaljer som inte finns i kontexten. Om ingen relevant information finns, sag aerligt att du inte kan hitta det i din databas.',
         noInfo: 'Ingen specifik information hittades.',
         category: 'Kategori',
         description: 'Beskrivning',
@@ -94,8 +94,8 @@ class RAGService {
         rating: 'Betyg'
       },
       pl: {
-        useContext: 'Uzyj ponizszych informacji z naszej bazy danych, aby odpowiedziec na pytanie:',
-        baseOnContext: 'Oprzyj swoja odpowiedz na tych informacjach. Jesli informacje nie sa istotne dla pytania, udziel ogolnie pomocnej odpowiedzi.',
+        useContext: 'Uzyj TYLKO ponizszych informacji z naszej bazy danych, aby odpowiedziec na pytanie:',
+        baseOnContext: 'KRYTYCZNA ZASADA: Wymien TYLKO miejsca, restauracje, plaze lub adresy, ktore sa WYRAZNIE wymienione w powyzszych informacjach z bazy danych. NIGDY nie wymyslaj nazw ani szczegolow, ktorych nie ma w kontekscie. Jesli nie ma odpowiednich informacji, powiedz szczerze, ze nie mozesz tego znalezc w swojej bazie danych.',
         noInfo: 'Nie znaleziono konkretnych informacji.',
         category: 'Kategoria',
         description: 'Opis',
