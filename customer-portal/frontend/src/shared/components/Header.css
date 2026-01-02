@@ -36,10 +36,12 @@
     cursor: pointer;
     transition: all 0.2s ease;
     padding: 0;
+    /* Shift logo up to center visually */
+    transform: translateY(-6px);
 }
 
 .logo-container:hover {
-    transform: scale(1.05);
+    transform: translateY(-6px) scale(1.05);
 }
 
 .logo-svg {
@@ -58,8 +60,6 @@
     height: 70px;
     width: auto;
     display: block;
-    /* Compensate for uneven whitespace in PNG - shift up using transform */
-    transform: translateY(-6px);
 }
 
 /* Language & Accessibility Icons */
