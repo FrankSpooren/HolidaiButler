@@ -106,16 +106,35 @@ class RAGService {
     return instructions[language] || instructions.nl;
   }
 
-  async generateResponse(query, context, language = 'nl', userPreferences = {}) {
+  async generateResponse(query, context, language = 'nl', userPreferences = {}, conversationHistory = []) {
     try {
       const contextString = this.buildContextString(context, language);
       const systemPrompt = embeddingService.buildSystemPrompt(language, userPreferences);
       const contextInstructions = this.getContextInstructions(language);
       const enhancedSystemPrompt = `${systemPrompt}\n\n${contextInstructions.useContext}\n\n${contextString}\n\n${contextInstructions.baseOnContext}`;
-      const response = await embeddingService.generateChatCompletion([
-        { role: 'system', content: enhancedSystemPrompt },
-        { role: 'user', content: query }
-      ], { temperature: 0.7, maxTokens: 500 });
+
+      // Build messages array with conversation history for context
+      const messages = [
+        { role: 'system', content: enhancedSystemPrompt }
+      ];
+
+      // Include recent conversation history (last 6 messages) for context
+      if (conversationHistory && conversationHistory.length > 0) {
+        const recentHistory = conversationHistory.slice(-6);
+        for (const msg of recentHistory) {
+          if (msg.role === 'user' || msg.role === 'assistant') {
+            messages.push({
+              role: msg.role,
+              content: msg.content || msg.message || ''
+            });
+          }
+        }
+      }
+
+      // Add current query
+      messages.push({ role: 'user', content: query });
+
+      const response = await embeddingService.generateChatCompletion(messages, { temperature: 0.7, maxTokens: 500 });
       return response;
     } catch (error) {
       logger.error('Failed to generate RAG response:', error);
@@ -129,19 +148,38 @@ class RAGService {
    * @param {Array} context - Retrieved documents for context
    * @param {string} language - Response language
    * @param {Object} userPreferences - User preferences
+   * @param {Array} conversationHistory - Previous messages for context
    * @returns {AsyncGenerator} - Async generator yielding text chunks
    */
-  async *generateStreamingResponse(query, context, language = 'nl', userPreferences = {}) {
+  async *generateStreamingResponse(query, context, language = 'nl', userPreferences = {}, conversationHistory = []) {
     try {
       const contextString = this.buildContextString(context, language);
       const systemPrompt = embeddingService.buildSystemPrompt(language, userPreferences);
       const contextInstructions = this.getContextInstructions(language);
       const enhancedSystemPrompt = `${systemPrompt}\n\n${contextInstructions.useContext}\n\n${contextString}\n\n${contextInstructions.baseOnContext}`;
 
-      const generator = embeddingService.generateStreamingChatCompletion([
-        { role: 'system', content: enhancedSystemPrompt },
-        { role: 'user', content: query }
-      ], { temperature: 0.7, maxTokens: 500 });
+      // Build messages array with conversation history for context
+      const messages = [
+        { role: 'system', content: enhancedSystemPrompt }
+      ];
+
+      // Include recent conversation history (last 6 messages) for context
+      if (conversationHistory && conversationHistory.length > 0) {
+        const recentHistory = conversationHistory.slice(-6);
+        for (const msg of recentHistory) {
+          if (msg.role === 'user' || msg.role === 'assistant') {
+            messages.push({
+              role: msg.role,
+              content: msg.content || msg.message || ''
+            });
+          }
+        }
+      }
+
+      // Add current query
+      messages.push({ role: 'user', content: query });
+
+      const generator = embeddingService.generateStreamingChatCompletion(messages, { temperature: 0.7, maxTokens: 500 });
 
       for await (const chunk of generator) {
         yield chunk;
@@ -153,10 +191,48 @@ class RAGService {
   }
 
   /**
+   * Build enhanced search query for follow-up questions
+   * Extracts key context from conversation history
+   */
+  buildEnhancedSearchQuery(query, conversationHistory, intentContext = {}) {
+    if (!intentContext.isFollowUp || !conversationHistory || conversationHistory.length === 0) {
+      return query;
+    }
+
+    // Extract key terms from recent conversation
+    const recentMessages = conversationHistory.slice(-4);
+    const contextTerms = [];
+
+    for (const msg of recentMessages) {
+      const content = (msg.content || msg.message || '').toLowerCase();
+      // Extract category terms
+      if (content.includes('restaurant') || content.includes('dinner') || content.includes('food') || content.includes('eten')) {
+        contextTerms.push('restaurant');
+      }
+      if (content.includes('beach') || content.includes('strand') || content.includes('playa')) {
+        contextTerms.push('beach');
+      }
+      if (content.includes('itinerary') || content.includes('program') || content.includes('dag')) {
+        contextTerms.push('activity');
+      }
+    }
+
+    // If we found relevant context, enhance the query
+    if (contextTerms.length > 0) {
+      const uniqueTerms = [...new Set(contextTerms)];
+      const enhancedQuery = `${query} ${uniqueTerms.join(' ')} Calpe`;
+      logger.info('Enhanced search query for follow-up', { original: query, enhanced: enhancedQuery });
+      return enhancedQuery;
+    }
+
+    return query;
+  }
+
+  /**
    * Streaming RAG chat pipeline
    * @param {string} query - User query
    * @param {string} language - Response language
-   * @param {Object} options - Options including userPreferences
+   * @param {Object} options - Options including userPreferences, conversationHistory, intentContext
    * @returns {Object} - Contains searchResults and streaming generator
    */
   async chatStream(query, language = 'nl', options = {}) {
@@ -164,12 +240,17 @@ class RAGService {
 
     try {
       const startTime = Date.now();
+      const conversationHistory = options.conversationHistory || [];
+      const intentContext = options.intentContext || {};
 
-      // Step 1: Search for relevant context (non-streaming)
-      const searchResults = await this.search(query, { limit: 5 });
+      // Step 1: Enhance search query for follow-ups
+      const searchQuery = this.buildEnhancedSearchQuery(query, conversationHistory, intentContext);
+
+      // Step 2: Search for relevant context (non-streaming)
+      const searchResults = await this.search(searchQuery, { limit: 5 });
       const searchTimeMs = Date.now() - startTime;
 
-      // Step 2: Return search results and streaming generator
+      // Step 3: Return search results and streaming generator with conversation context
       const poiCards = this.extractPOICards(searchResults.results, query);
 
       return {
@@ -177,12 +258,13 @@ class RAGService {
         searchTimeMs,
         pois: poiCards,
         source: 'rag-stream',
-        // Generator for streaming response
+        // Generator for streaming response with conversation history
         stream: this.generateStreamingResponse(
           query,
           searchResults.results,
           language,
-          options.userPreferences || {}
+          options.userPreferences || {},
+          conversationHistory
         )
       };
     } catch (error) {
@@ -200,8 +282,20 @@ class RAGService {
     if (!this.isInitialized) await this.initialize();
     try {
       const startTime = Date.now();
-      const searchResults = await this.search(query, { limit: 5 });
-      const response = await this.generateResponse(query, searchResults.results, language, options.userPreferences || {});
+      const conversationHistory = options.conversationHistory || [];
+      const intentContext = options.intentContext || {};
+
+      // Enhance search query for follow-ups
+      const searchQuery = this.buildEnhancedSearchQuery(query, conversationHistory, intentContext);
+
+      const searchResults = await this.search(searchQuery, { limit: 5 });
+      const response = await this.generateResponse(
+        query,
+        searchResults.results,
+        language,
+        options.userPreferences || {},
+        conversationHistory
+      );
       const poiCards = this.extractPOICards(searchResults.results, query);
       const timeMs = Date.now() - startTime;
       logger.info(`RAG chat completed in ${timeMs}ms`);
