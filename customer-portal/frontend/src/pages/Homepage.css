@@ -29,6 +29,8 @@
   height: 120px;
   width: auto;
   display: block;
+  /* Shift logo up to compensate for uneven whitespace in PNG */
+  transform: translateY(-6px);
 }
 
 /* Responsive: smaller logo on mobile */
