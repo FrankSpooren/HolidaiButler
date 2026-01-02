@@ -36,12 +36,10 @@
     cursor: pointer;
     transition: all 0.2s ease;
     padding: 0;
-    /* Shift logo up to center visually */
-    transform: translateY(-6px);
 }
 
 .logo-container:hover {
-    transform: translateY(-6px) scale(1.05);
+    transform: scale(1.05);
 }
 
 .logo-svg {
