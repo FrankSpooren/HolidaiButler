@@ -58,6 +58,9 @@
     height: 70px;
     width: auto;
     display: block;
+    /* Compensate for uneven whitespace in PNG - shift up slightly */
+    margin-top: -4px;
+    margin-bottom: 4px;
 }
 
 /* Language & Accessibility Icons */
