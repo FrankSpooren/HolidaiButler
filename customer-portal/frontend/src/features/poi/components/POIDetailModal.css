@@ -150,42 +150,43 @@
 }
 
 /* Action Buttons - Compact pill style matching Events */
-.poi-actions {
+/* Using high specificity to override POIDetailPage.css */
+.poi-detail-modal .poi-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  justify-content: flex-start !important;
+  justify-content: flex-start;
   margin-top: 20px;
 }
 
-.poi-action-btn {
-  display: inline-flex !important;
+.poi-detail-modal .poi-action-btn {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px !important;
-  border: 1px solid #E5E7EB !important;
-  border-radius: 10px !important;
-  background: white !important;
-  font-size: 14px !important;
+  padding: 10px 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  background: white;
+  font-size: 14px;
   font-weight: 500;
-  color: #374151 !important;
+  color: #374151;
   cursor: pointer;
   transition: all 0.2s ease;
-  /* Prevent buttons from growing */
-  flex: 0 0 auto !important;
-  width: auto !important;
-  min-width: 0 !important;
+  /* Override POIDetailPage.css flex: 1 and min-width: 120px */
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
 }
 
-.poi-action-btn:hover {
-  background: #F9FAFB !important;
-  border-color: #D1D5DB !important;
+.poi-detail-modal .poi-action-btn:hover {
+  background: #F9FAFB;
+  border-color: #D1D5DB;
 }
 
-.poi-action-btn.saved {
-  color: #EF4444 !important;
-  border-color: #FCA5A5 !important;
-  background: #FEF2F2 !important;
+.poi-detail-modal .poi-action-btn.saved {
+  color: #EF4444;
+  border-color: #FCA5A5;
+  background: #FEF2F2;
 }
 
 /* Content Sections - 2-Column Layout */
@@ -206,12 +207,13 @@
   width: 100%;
 }
 
-.poi-section {
-  background: #F9FAFB !important;
-  border-radius: 12px !important;
-  padding: 20px !important;
-  box-shadow: none !important;
-  border: none !important;
+/* Override any conflicting styles with modal-specific selector */
+.poi-detail-modal .poi-section {
+  background: #F9FAFB;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: none;
+  border: none;
 }
 
 .poi-section-title {
@@ -550,16 +552,16 @@
     font-size: 22px;
   }
 
-  .poi-actions {
+  .poi-detail-modal .poi-actions {
     flex-wrap: wrap;
   }
 
   /* Hide button text on mobile, show only icons */
-  .poi-action-btn span:last-child {
+  .poi-detail-modal .poi-action-btn span:last-child {
     display: none;
   }
 
-  .poi-action-btn {
+  .poi-detail-modal .poi-action-btn {
     padding: 10px 12px;
   }
 
@@ -567,7 +569,7 @@
     padding: 20px;
   }
 
-  .poi-section {
+  .poi-detail-modal .poi-section {
     padding: 16px;
   }
 
