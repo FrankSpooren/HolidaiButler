@@ -249,6 +249,36 @@
   margin: 0;
 }
 
+/* No Filter Results State */
+.poi-review-section__no-filter-results {
+  text-align: center;
+  padding: 48px 20px;
+  grid-column: 1 / -1;
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+}
+
+.poi-review-section__no-filter-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.poi-review-section__no-filter-results h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 8px 0;
+}
+
+.poi-review-section__no-filter-results p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
 /* Load More Button */
 .poi-review-section__load-more {
   text-align: center;
@@ -419,6 +449,19 @@
 
   .poi-review-section__empty p {
     color: #94a3b8;
+  }
+
+  .poi-review-section__no-filter-results {
+    background: #1f2937;
+    border-color: #4b5563;
+  }
+
+  .poi-review-section__no-filter-results h4 {
+    color: #f1f5f9;
+  }
+
+  .poi-review-section__no-filter-results p {
+    color: #9ca3af;
   }
 
   .poi-review-section__load-more-btn {

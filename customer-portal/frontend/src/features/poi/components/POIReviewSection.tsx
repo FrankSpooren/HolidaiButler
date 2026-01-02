@@ -155,8 +155,13 @@ export function POIReviewSection({
     );
   }
 
-  // Empty state
-  if (!isLoading && reviews.length === 0 && !error) {
+  // Check if this POI has any reviews at all (vs no reviews matching current filter)
+  const hasAnyReviews = summary && summary.total_count > 0;
+  const hasFilteredResults = reviews.length > 0;
+  const isFiltering = filters.travel_party !== 'all' || filters.sentiment !== 'all';
+
+  // Empty state - only show if POI has NO reviews at all
+  if (!isLoading && !hasAnyReviews && !error) {
     return (
       <div className="poi-review-section">
         <div className="poi-review-section__empty">
@@ -263,14 +268,22 @@ export function POIReviewSection({
 
       {/* Review Grid */}
       <div className="poi-review-section__grid">
-        {reviews.map((review) => (
-          <POIReviewCard
-            key={review.id}
-            review={review}
-            onMarkHelpful={handleMarkHelpful}
-            isMarkingHelpful={markingHelpfulId === review.id}
-          />
-        ))}
+        {hasFilteredResults ? (
+          reviews.map((review) => (
+            <POIReviewCard
+              key={review.id}
+              review={review}
+              onMarkHelpful={handleMarkHelpful}
+              isMarkingHelpful={markingHelpfulId === review.id}
+            />
+          ))
+        ) : (
+          <div className="poi-review-section__no-filter-results">
+            <span className="poi-review-section__no-filter-icon" aria-hidden="true">🔍</span>
+            <h4>No reviews match your filters</h4>
+            <p>Try adjusting your filter settings to see more reviews.</p>
+          </div>
+        )}
       </div>
 
       {/* Load More Button */}
