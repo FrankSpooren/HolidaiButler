@@ -14,7 +14,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Phone, Navigation, Heart, Share2, Printer } from 'lucide-react';
+import { X, Phone, Navigation, Heart, Share2, Printer, ExternalLink } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { poiService } from '../services/poiService';
 import { getCategoryIcon, getCategoryColor } from '../../../shared/config/categoryConfig';
@@ -393,26 +393,25 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="poi-actions" style={{ marginTop: '24px' }}>
+                  <div className="poi-actions">
                     {poi.latitude && poi.longitude && (
-                      <button className="poi-action-btn poi-action-btn-secondary" onClick={openDirections}>
+                      <button className="poi-action-btn" onClick={openDirections}>
                         <Navigation size={18} />
                         <span>{t.poi.directions || 'Directions'}</span>
                       </button>
                     )}
-                    <button className="poi-action-btn poi-action-btn-secondary" onClick={handleShare}>
+                    <button className="poi-action-btn" onClick={handleShare}>
                       <Share2 size={18} />
                       <span>{t.poi.share || 'Share'}</span>
                     </button>
                     <button
-                      className="poi-action-btn poi-action-btn-secondary"
+                      className={`poi-action-btn ${isFavorite(poiId) ? 'saved' : ''}`}
                       onClick={handleToggleSave}
-                      style={{ color: isFavorite(poiId) ? '#EF4444' : 'inherit' }}
                     >
                       <Heart size={18} fill={isFavorite(poiId) ? 'currentColor' : 'none'} />
                       <span>{isFavorite(poiId) ? (t.poi.saved || 'Saved') : (t.poi.save || 'Save')}</span>
                     </button>
-                    <button className="poi-action-btn poi-action-btn-secondary" onClick={handlePrint}>
+                    <button className="poi-action-btn" onClick={handlePrint}>
                       <Printer size={18} />
                       <span>{t.poi.print || 'Print'}</span>
                     </button>
@@ -420,17 +419,7 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
 
                   {/* Share Message Toast */}
                   {shareMessage && (
-                    <div style={{
-                      marginTop: '12px',
-                      padding: '8px 12px',
-                      backgroundColor: '#10B981',
-                      color: 'white',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500'
-                    }}>
-                      {shareMessage}
-                    </div>
+                    <div className="poi-toast">{shareMessage}</div>
                   )}
                 </div>
               </div>
@@ -553,8 +542,7 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.address)}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="contact-text"
-                              style={{ color: '#7FA594', textDecoration: 'none', cursor: 'pointer' }}
+                              className="contact-link"
                             >
                               {poi.address}
                             </a>
@@ -565,8 +553,7 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                             <span className="contact-icon">📞</span>
                             <a
                               href={`tel:${formatPhone(poi.phone)}`}
-                              className="contact-text"
-                              style={{ color: '#7FA594', textDecoration: 'none', cursor: 'pointer' }}
+                              className="contact-link"
                             >
                               {poi.phone}
                             </a>
@@ -576,20 +563,6 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                           <div className="contact-item">
                             <span className="contact-icon">✉️</span>
                             <span className="contact-text">{poi.email}</span>
-                          </div>
-                        )}
-                        {poi.website && (
-                          <div className="contact-item">
-                            <span className="contact-icon">🌐</span>
-                            <a
-                              href={poi.website}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="contact-text"
-                              style={{ color: '#7FA594', textDecoration: 'none' }}
-                            >
-                              {t.poi.visitWebsite}
-                            </a>
                           </div>
                         )}
                       </div>
@@ -641,6 +614,17 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                         </div>
                       );
                     })()}
+
+                    {/* External Website Button - Prominent CTA */}
+                    {poi.website && (
+                      <button
+                        className="poi-external-btn"
+                        onClick={() => window.open(poi.website, '_blank')}
+                      >
+                        <ExternalLink size={18} />
+                        <span>{t.poi.visitWebsite || 'Visit Website'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
