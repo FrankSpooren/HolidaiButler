@@ -58,9 +58,8 @@
     height: 70px;
     width: auto;
     display: block;
-    /* Compensate for uneven whitespace in PNG - shift up */
-    margin-top: -8px;
-    margin-bottom: 8px;
+    /* Compensate for uneven whitespace in PNG - shift up using transform */
+    transform: translateY(-6px);
 }
 
 /* Language & Accessibility Icons */
