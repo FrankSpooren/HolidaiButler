@@ -119,14 +119,15 @@ class RAGService {
       ];
 
       // Include recent conversation history (last 6 messages) for context
-      if (conversationHistory && conversationHistory.length > 0) {
+      if (conversationHistory && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
         const recentHistory = conversationHistory.slice(-6);
         for (const msg of recentHistory) {
-          if (msg.role === 'user' || msg.role === 'assistant') {
-            messages.push({
-              role: msg.role,
-              content: msg.content || msg.message || ''
-            });
+          // Skip invalid or empty messages
+          if (!msg || typeof msg !== 'object') continue;
+          const role = msg.role;
+          const content = msg.content || msg.message;
+          if ((role === 'user' || role === 'assistant') && content && content.trim()) {
+            messages.push({ role, content: content.trim() });
           }
         }
       }
@@ -164,14 +165,15 @@ class RAGService {
       ];
 
       // Include recent conversation history (last 6 messages) for context
-      if (conversationHistory && conversationHistory.length > 0) {
+      if (conversationHistory && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
         const recentHistory = conversationHistory.slice(-6);
         for (const msg of recentHistory) {
-          if (msg.role === 'user' || msg.role === 'assistant') {
-            messages.push({
-              role: msg.role,
-              content: msg.content || msg.message || ''
-            });
+          // Skip invalid or empty messages
+          if (!msg || typeof msg !== 'object') continue;
+          const role = msg.role;
+          const content = msg.content || msg.message;
+          if ((role === 'user' || role === 'assistant') && content && content.trim()) {
+            messages.push({ role, content: content.trim() });
           }
         }
       }
@@ -195,7 +197,7 @@ class RAGService {
    * Extracts key context from conversation history
    */
   buildEnhancedSearchQuery(query, conversationHistory, intentContext = {}) {
-    if (!intentContext.isFollowUp || !conversationHistory || conversationHistory.length === 0) {
+    if (!intentContext.isFollowUp || !conversationHistory || !Array.isArray(conversationHistory) || conversationHistory.length === 0) {
       return query;
     }
 
@@ -204,6 +206,7 @@ class RAGService {
     const contextTerms = [];
 
     for (const msg of recentMessages) {
+      if (!msg || typeof msg !== 'object') continue;
       const content = (msg.content || msg.message || '').toLowerCase();
       // Extract category terms
       if (content.includes('restaurant') || content.includes('dinner') || content.includes('food') || content.includes('eten')) {
