@@ -675,6 +675,7 @@ router.post('/chat', async (req, res) => {
     const response = await ragService.chat(processedMessage, language, {
       userPreferences,
       conversationHistory,
+      originalQuery: message,  // Pass original for entity extraction
       intentContext: {
         primaryIntent: intentAnalysis.primaryIntent,
         categories: intentAnalysis.entities.categories,
