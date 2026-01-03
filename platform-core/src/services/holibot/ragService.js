@@ -193,38 +193,197 @@ class RAGService {
   }
 
   /**
+   * Extract POI names mentioned in conversation history
+   * Looks for proper nouns (capitalized words) in assistant responses
+   * @param {Array} conversationHistory - Recent conversation messages
+   * @returns {Array} - Array of extracted POI names
+   */
+  extractPOINamesFromHistory(conversationHistory) {
+    const poiNames = [];
+    if (!conversationHistory || !Array.isArray(conversationHistory)) return poiNames;
+
+    // Common words to exclude (not POI names)
+    const excludeWords = new Set([
+      'ik', 'je', 'we', 'de', 'het', 'een', 'van', 'in', 'op', 'met', 'voor', 'naar', 'bij', 'om', 'als', 'maar', 'ook', 'nog', 'wel', 'niet', 'kan', 'kun', 'wil', 'zou', 'heb', 'heeft', 'zijn', 'was', 'waren', 'wordt', 'worden', 'deze', 'die', 'dat', 'dit', 'hier', 'daar', 'waar', 'wat', 'wie', 'hoe', 'waarom', 'wanneer',
+      'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because', 'until', 'while', 'although', 'though', 'after', 'before',
+      'tip', 'dag', 'day', 'today', 'week', 'calpe', 'spain', 'spanje', 'alicante', 'costa', 'blanca',
+      'restaurant', 'restaurants', 'beach', 'beaches', 'strand', 'stranden', 'hotel', 'hotels', 'bar', 'bars', 'cafe', 'museum', 'park', 'viewpoint', 'uitzichtpunt',
+      'beoordeling', 'rating', 'adres', 'address', 'telefoon', 'phone', 'website', 'openingstijden', 'hours',
+      'italiaans', 'italian', 'spaans', 'spanish', 'mediterraan', 'mediterranean', 'authentiek', 'authentic', 'populaire', 'popular', 'gezellig', 'leuk', 'mooi', 'prachtig', 'fantastisch', 'geweldig'
+    ]);
+
+    // Process assistant messages to find POI names
+    for (const msg of conversationHistory) {
+      if (!msg || msg.role !== 'assistant') continue;
+      const content = msg.content || msg.message || '';
+
+      // Pattern 1: Look for names followed by ratings like "Spasso Calpe (4/5)" or "rating: 4.5"
+      const ratingPattern = /([A-Z][A-Za-zÀ-ÿ\s&\-'|]+?)(?:\s*[\(\|]\s*(?:rating|beoordeling)?:?\s*\d+(?:\.\d+)?(?:\/5)?|\s+heeft een beoordeling|\s+has a rating)/gi;
+      let match;
+      while ((match = ratingPattern.exec(content)) !== null) {
+        const name = match[1].trim();
+        if (name.length > 2 && name.length < 60) {
+          poiNames.push(name);
+        }
+      }
+
+      // Pattern 2: Look for names after "Tip van de dag:" or similar
+      const tipPattern = /(?:tip van de dag|daily tip|tip of the day)[:\s]+([A-Z][A-Za-zÀ-ÿ\s&\-'#@]+?)(?:\s*[-–]|\s*\.|\s*!|\s+is\s|\s+biedt|\s+offers)/gi;
+      while ((match = tipPattern.exec(content)) !== null) {
+        const name = match[1].trim();
+        if (name.length > 2 && name.length < 60) {
+          poiNames.push(name);
+        }
+      }
+
+      // Pattern 3: Look for capitalized proper nouns (2+ words starting with capitals)
+      const properNounPattern = /\b([A-Z][a-zÀ-ÿ]+(?:\s+(?:de|del|la|los|las|el|van|von|of|the|&|-)?\s*[A-Z][a-zÀ-ÿ]+)+)\b/g;
+      while ((match = properNounPattern.exec(content)) !== null) {
+        const name = match[1].trim();
+        const words = name.toLowerCase().split(/\s+/);
+        // Skip if all words are common/excluded
+        const hasProperName = words.some(w => !excludeWords.has(w) && w.length > 2);
+        if (hasProperName && name.length > 4 && name.length < 50) {
+          poiNames.push(name);
+        }
+      }
+
+      // Pattern 4: Look for names in formatted lists like "- Spasso Calpe" or "1. Restaurant Name"
+      const listPattern = /(?:^|\n)\s*(?:[-•*]|\d+\.)\s*([A-Z][A-Za-zÀ-ÿ\s&\-'|]+?)(?:\s*[-–:]|\s*\n|$)/gm;
+      while ((match = listPattern.exec(content)) !== null) {
+        const name = match[1].trim();
+        if (name.length > 3 && name.length < 60) {
+          poiNames.push(name);
+        }
+      }
+    }
+
+    // Remove duplicates and clean up
+    const uniqueNames = [...new Set(poiNames.map(n => n.replace(/\s+/g, ' ').trim()))];
+    logger.debug('Extracted POI names from history', { count: uniqueNames.length, names: uniqueNames.slice(0, 5) });
+    return uniqueNames;
+  }
+
+  /**
+   * Check if query contains pronoun/reference patterns that need context
+   * @param {string} query - User query
+   * @returns {boolean} - True if query uses pronouns/references
+   */
+  hasPronounReference(query) {
+    const lowerQuery = query.toLowerCase();
+
+    // Dutch pronoun patterns
+    const dutchPatterns = [
+      /\b(dat|die|deze|dit)\s+(restaurant|plek|strand|uitzichtpunt|locatie|plaats|bar|cafe|museum|park|hotel)\b/,
+      /\b(daar|erover|hierover|ernaartoe|erheen)\b/,
+      /\bvan\s+(dat|die|deze)\b/,
+      /\bmeer\s+(over|info|informatie|weten)\b/,
+      /\bhoe\s+kom\s+ik\s+(er|daar)\b/,
+      /\bopeningstijden\s+(van|ervan)?\b/,
+      /\bwat\s+kost\b/,
+      /\bis\s+(het|dat|die)\s+(open|gesloten|duur|goedkoop)\b/
+    ];
+
+    // English pronoun patterns
+    const englishPatterns = [
+      /\b(that|this|the)\s+(restaurant|place|beach|viewpoint|location|bar|cafe|museum|park|hotel)\b/,
+      /\b(there|about it|to it|it)\b/,
+      /\bmore\s+(about|info|information)\b/,
+      /\bhow\s+do\s+i\s+get\s+(there|to)\b/,
+      /\bopening\s+hours\b/,
+      /\bhow\s+much\b/,
+      /\bis\s+it\s+(open|closed|expensive|cheap)\b/
+    ];
+
+    // German pronoun patterns
+    const germanPatterns = [
+      /\b(das|dieser|diese|dieses)\s+(restaurant|ort|strand|aussichtspunkt|bar|cafe|museum|park|hotel)\b/,
+      /\b(dort|daruber|dorthin)\b/,
+      /\bmehr\s+(uber|info|informationen)\b/,
+      /\boffnungszeiten\b/
+    ];
+
+    // Spanish pronoun patterns
+    const spanishPatterns = [
+      /\b(ese|esa|este|esta|el|la)\s+(restaurante|lugar|playa|mirador|bar|cafe|museo|parque|hotel)\b/,
+      /\b(alli|sobre eso|mas info)\b/,
+      /\bhorario\b/
+    ];
+
+    const allPatterns = [...dutchPatterns, ...englishPatterns, ...germanPatterns, ...spanishPatterns];
+    return allPatterns.some(pattern => pattern.test(lowerQuery));
+  }
+
+  /**
    * Build enhanced search query for follow-up questions
-   * Extracts key context from conversation history
+   * Extracts POI names and key context from conversation history
+   * @param {string} query - Current user query
+   * @param {Array} conversationHistory - Recent conversation messages
+   * @param {Object} intentContext - Intent analysis results
+   * @returns {string} - Enhanced search query
    */
   buildEnhancedSearchQuery(query, conversationHistory, intentContext = {}) {
-    if (!intentContext.isFollowUp || !conversationHistory || !Array.isArray(conversationHistory) || conversationHistory.length === 0) {
+    if (!conversationHistory || !Array.isArray(conversationHistory) || conversationHistory.length === 0) {
       return query;
     }
 
-    // Extract key terms from recent conversation
-    const recentMessages = conversationHistory.slice(-4);
-    const contextTerms = [];
+    // Check if this is a follow-up or uses pronoun references
+    const isFollowUp = intentContext.isFollowUp || this.hasPronounReference(query);
+    if (!isFollowUp) {
+      return query;
+    }
 
+    const recentMessages = conversationHistory.slice(-6);
+    const enhancements = [];
+
+    // Step 1: Extract POI names from conversation history
+    const poiNames = this.extractPOINamesFromHistory(recentMessages);
+    if (poiNames.length > 0) {
+      // Use the most recently mentioned POI (last in the list based on conversation order)
+      const mostRecentPOI = poiNames[poiNames.length - 1];
+      enhancements.push(mostRecentPOI);
+      logger.info('Added POI name to search query', { poiName: mostRecentPOI });
+    }
+
+    // Step 2: Extract category terms for additional context
+    const contextTerms = [];
     for (const msg of recentMessages) {
       if (!msg || typeof msg !== 'object') continue;
       const content = (msg.content || msg.message || '').toLowerCase();
+
       // Extract category terms
-      if (content.includes('restaurant') || content.includes('dinner') || content.includes('food') || content.includes('eten')) {
+      if (content.includes('restaurant') || content.includes('dinner') || content.includes('food') || content.includes('eten') || content.includes('lunch')) {
         contextTerms.push('restaurant');
       }
-      if (content.includes('beach') || content.includes('strand') || content.includes('playa')) {
+      if (content.includes('beach') || content.includes('strand') || content.includes('playa') || content.includes('zee') || content.includes('sea')) {
         contextTerms.push('beach');
       }
-      if (content.includes('itinerary') || content.includes('program') || content.includes('dag')) {
-        contextTerms.push('activity');
+      if (content.includes('uitzicht') || content.includes('viewpoint') || content.includes('mirador') || content.includes('panorama')) {
+        contextTerms.push('viewpoint');
+      }
+      if (content.includes('museum') || content.includes('cultuur') || content.includes('culture') || content.includes('history') || content.includes('geschiedenis')) {
+        contextTerms.push('museum culture');
+      }
+      if (content.includes('wandel') || content.includes('hike') || content.includes('walk') || content.includes('hiking')) {
+        contextTerms.push('hiking');
       }
     }
 
-    // If we found relevant context, enhance the query
-    if (contextTerms.length > 0) {
-      const uniqueTerms = [...new Set(contextTerms)];
-      const enhancedQuery = `${query} ${uniqueTerms.join(' ')} Calpe`;
-      logger.info('Enhanced search query for follow-up', { original: query, enhanced: enhancedQuery });
+    // Add unique category terms
+    const uniqueTerms = [...new Set(contextTerms)];
+    if (uniqueTerms.length > 0) {
+      enhancements.push(...uniqueTerms);
+    }
+
+    // Build enhanced query
+    if (enhancements.length > 0) {
+      const enhancedQuery = `${query} ${enhancements.join(' ')} Calpe`;
+      logger.info('Enhanced search query for follow-up', {
+        original: query,
+        enhanced: enhancedQuery,
+        poiNamesFound: poiNames.length,
+        categoryTerms: uniqueTerms
+      });
       return enhancedQuery;
     }
 
