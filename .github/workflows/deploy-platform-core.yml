@@ -73,6 +73,8 @@ jobs:
       - name: Backup and Deploy
         run: |
           ssh root@91.98.71.87 "mkdir -p /var/www/backups/platform-core && cp -r ${{ env.DEPLOY_PATH }} /var/www/backups/platform-core/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+          # Keep only last 5 backups to prevent disk filling up
+          ssh root@91.98.71.87 "cd /var/www/backups/platform-core && ls -1 | sort | head -n -5 | xargs -r rm -rf"
           ssh root@91.98.71.87 "mkdir -p ${{ env.DEPLOY_PATH }}"
           rsync -avz --delete --exclude 'node_modules' --exclude '.env' --exclude 'logs' --exclude '.git' platform-core/ root@91.98.71.87:${{ env.DEPLOY_PATH }}/
       - name: Configure TTS credentials
