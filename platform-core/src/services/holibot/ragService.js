@@ -202,28 +202,76 @@ class RAGService {
     const poiNames = [];
     if (!conversationHistory || !Array.isArray(conversationHistory)) return poiNames;
 
-    // Common words to exclude (not POI names)
+    // Common words and phrases to exclude (not POI names)
     const excludeWords = new Set([
       'ik', 'je', 'we', 'de', 'het', 'een', 'van', 'in', 'op', 'met', 'voor', 'naar', 'bij', 'om', 'als', 'maar', 'ook', 'nog', 'wel', 'niet', 'kan', 'kun', 'wil', 'zou', 'heb', 'heeft', 'zijn', 'was', 'waren', 'wordt', 'worden', 'deze', 'die', 'dat', 'dit', 'hier', 'daar', 'waar', 'wat', 'wie', 'hoe', 'waarom', 'wanneer',
       'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because', 'until', 'while', 'although', 'though', 'after', 'before',
-      'tip', 'dag', 'day', 'today', 'week', 'calpe', 'spain', 'spanje', 'alicante', 'costa', 'blanca',
+      'tip', 'dag', 'day', 'today', 'week', 'calpe', 'calp', 'spain', 'spanje', 'alicante', 'costa', 'blanca',
       'restaurant', 'restaurants', 'beach', 'beaches', 'strand', 'stranden', 'hotel', 'hotels', 'bar', 'bars', 'cafe', 'museum', 'park', 'viewpoint', 'uitzichtpunt',
       'beoordeling', 'rating', 'adres', 'address', 'telefoon', 'phone', 'website', 'openingstijden', 'hours',
       'italiaans', 'italian', 'spaans', 'spanish', 'mediterraan', 'mediterranean', 'authentiek', 'authentic', 'populaire', 'popular', 'gezellig', 'leuk', 'mooi', 'prachtig', 'fantastisch', 'geweldig'
     ]);
+
+    // Full phrases to completely exclude (geographical/descriptive terms, not POI names)
+    const excludePhrases = [
+      'middellandse zee', 'mediterranean sea', 'costa blanca', 'mar mediterraneo',
+      'tip van de dag', 'daily tip', 'tip of the day',
+      'italiaanse gerechten', 'italian cuisine', 'italian dishes',
+      'spaanse keuken', 'spanish cuisine',
+      'populaire optie', 'popular option', 'goede keuzes', 'good choices'
+    ];
+
+    // Priority POI names (names with ratings are most reliable)
+    const priorityNames = [];
 
     // Process assistant messages to find POI names
     for (const msg of conversationHistory) {
       if (!msg || msg.role !== 'assistant') continue;
       const content = msg.content || msg.message || '';
 
-      // Pattern 1: Look for names followed by ratings like "Spasso Calpe (4/5)" or "rating: 4.5"
-      const ratingPattern = /([A-Z][A-Za-zÀ-ÿ\s&\-'|]+?)(?:\s*[\(\|]\s*(?:rating|beoordeling)?:?\s*\d+(?:\.\d+)?(?:\/5)?|\s+heeft een beoordeling|\s+has a rating)/gi;
+      // Pattern 0 (HIGHEST PRIORITY): POI names in format "Name is een..." or "Name op Adres"
+      // e.g., "Spasso Calpe is een gezellig Italiaans restaurant"
+      const poiIsPattern = /\b([A-Z][A-Za-zÀ-ÿ]+(?:\s+(?:de|del|la|los|las|el|van|&|-)?\s*[A-Z][a-zÀ-ÿ]+)*)\s+(?:is een|is a|ist ein|es un|är en)\s/g;
       let match;
-      while ((match = ratingPattern.exec(content)) !== null) {
+      while ((match = poiIsPattern.exec(content)) !== null) {
         const name = match[1].trim();
+        if (name.length > 3 && name.length < 50) {
+          priorityNames.push(name);
+        }
+      }
+
+      // Pattern 0b: POI names mentioned with address "Name op/at/aan Adres"
+      const poiAddressPattern = /\b([A-Z][A-Za-zÀ-ÿ]+(?:\s+(?:de|del|la|&)?\s*[A-Z][a-zÀ-ÿ]+)*)\s+(?:op|at|aan|en)\s+(?:C\.|Calle|Av\.|Avenida|Carrer)/g;
+      while ((match = poiAddressPattern.exec(content)) !== null) {
+        const name = match[1].trim();
+        if (name.length > 3 && name.length < 50) {
+          priorityNames.push(name);
+        }
+      }
+
+      // Pattern 1: Look for names followed by ratings like "Spasso Calpe (4/5)" or "beoordeling 4/5"
+      // Exclude Dutch/Spanish articles at the start (Het, De, Een, El, La, Los, Las)
+      const ratingPattern = /(?:^|[.\n]\s*)([A-Z][A-Za-zÀ-ÿ\s&\-'|]+?)(?:\s*[\(\|]\s*(?:rating|beoordeling)?:?\s*\d+(?:\.\d+)?(?:\/5)?)/gi;
+      while ((match = ratingPattern.exec(content)) !== null) {
+        let name = match[1].trim();
+        // Skip if it starts with common articles
+        if (/^(Het|De|Een|El|La|Los|Las|The|A|An)\s+/i.test(name)) {
+          continue;
+        }
         if (name.length > 2 && name.length < 60) {
           poiNames.push(name);
+        }
+      }
+
+      // Pattern 1b: Look for "Name met beoordeling X/5" or "Name with rating X"
+      const ratingPattern2 = /([A-Z][A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)*)\s+(?:met\s+)?(?:een\s+)?beoordeling\s+(?:van\s+)?\d/gi;
+      while ((match = ratingPattern2.exec(content)) !== null) {
+        let name = match[1].trim();
+        if (/^(Het|De|Een|El|La|Los|Las|The|A|An)\s+/i.test(name)) {
+          continue;
+        }
+        if (name.length > 3 && name.length < 50) {
+          priorityNames.push(name);
         }
       }
 
@@ -258,9 +306,22 @@ class RAGService {
       }
     }
 
+    // Combine priority names first, then other names
+    const allNames = [...priorityNames, ...poiNames];
+
     // Remove duplicates and clean up
-    const uniqueNames = [...new Set(poiNames.map(n => n.replace(/\s+/g, ' ').trim()))];
-    logger.debug('Extracted POI names from history', { count: uniqueNames.length, names: uniqueNames.slice(0, 5) });
+    const uniqueNames = [...new Set(allNames.map(n => n.replace(/\s+/g, ' ').trim()))]
+      // Filter out excluded phrases
+      .filter(name => {
+        const lowerName = name.toLowerCase();
+        return !excludePhrases.some(phrase => lowerName.includes(phrase) || phrase.includes(lowerName));
+      });
+
+    logger.debug('Extracted POI names from history', {
+      count: uniqueNames.length,
+      priorityCount: priorityNames.length,
+      names: uniqueNames.slice(0, 5)
+    });
     return uniqueNames;
   }
 
@@ -279,9 +340,12 @@ class RAGService {
       /\bvan\s+(dat|die|deze)\b/,
       /\bmeer\s+(over|info|informatie|weten)\b/,
       /\bhoe\s+kom\s+ik\s+(er|daar)\b/,
-      /\bopeningstijden\s+(van|ervan)?\b/,
+      /\bopeningstijden\b/,  // Just "openingstijden" implies asking about something mentioned
       /\bwat\s+kost\b/,
-      /\bis\s+(het|dat|die)\s+(open|gesloten|duur|goedkoop)\b/
+      /\bis\s+(het|dat|die)\s+(open|gesloten|duur|goedkoop)\b/,
+      /\bwat\s+zijn\s+de\s+(openingstijden|prijzen|reviews)\b/,  // "Wat zijn de openingstijden"
+      /\bhoe\s+laat\s+(open|dicht)\b/,  // "Hoe laat open"
+      /\bkan\s+ik\s+(reserveren|boeken)\b/  // "Kan ik reserveren"
     ];
 
     // English pronoun patterns
