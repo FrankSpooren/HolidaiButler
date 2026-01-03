@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { POI } from '../types/poi.types';
 
 interface POIImageProps {
@@ -16,13 +16,14 @@ interface POIImageProps {
 /**
  * POIImage - Enterprise image component with intelligent fallback
  *
- * Priority order:
- * 1. Database images array (poi.images[0])
- * 2. Category gradient + icon fallback
+ * Priority order (with automatic fallback on error):
+ * 1. Local images from images array (poi.images[0]) - most reliable
+ * 2. thumbnail_url (external Google URLs - may fail with 403)
+ * 3. Category gradient + icon fallback
  *
  * Features:
  * - Lazy loading (native loading="lazy")
- * - Error handling (fallback on failed load)
+ * - Cascading error handling (tries next source on failure)
  * - Loading skeleton
  * - Optimized rendering
  */
@@ -35,29 +36,60 @@ export function POIImage({
 }: POIImageProps) {
   const [imageState, setImageState] = useState<'loading' | 'loaded' | 'error'>('loading');
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [imgKey, setImgKey] = useState(0); // Force remount on URL change
+  const [imgKey, setImgKey] = useState(0);
+  const triedSourcesRef = useRef<Set<string>>(new Set());
 
-  useEffect(() => {
-    // Reset state when POI changes
-    setImageState('loading');
-    setImgKey(prev => prev + 1);
-
-    // Priority 1: thumbnail_url (from database)
+  // Build prioritized list of image sources
+  // Prefer local images (test.holidaibutler.com) over external Google URLs
+  const getImageSources = (): string[] => {
+    const sources: string[] = [];
+    
+    // Priority 1: Local images from images array (most reliable)
+    if (poi.images && poi.images.length > 0) {
+      poi.images.forEach(img => {
+        if (img && typeof img === 'string') {
+          sources.push(img);
+        }
+      });
+    }
+    
+    // Priority 2: thumbnail_url (external, may fail)
     if (poi.thumbnail_url) {
-      setImageSrc(poi.thumbnail_url);
-      return;
+      // Add thumbnail_url at the end as fallback (gps-cs-s URLs often fail)
+      sources.push(poi.thumbnail_url);
     }
+    
+    return sources;
+  };
 
-    // Priority 2: images array (backward compatibility)
-    if (poi.images && poi.images.length > 0 && poi.images[0]) {
-      setImageSrc(poi.images[0]);
-      return;
+  // Try next available image source
+  const tryNextSource = () => {
+    const sources = getImageSources();
+    
+    for (const src of sources) {
+      if (!triedSourcesRef.current.has(src)) {
+        triedSourcesRef.current.add(src);
+        setImageSrc(src);
+        setImageState('loading');
+        setImgKey(prev => prev + 1);
+        return true;
+      }
     }
-
-    // No images available, use fallback immediately
+    
+    // All sources exhausted
     setImageSrc(null);
     setImageState('error');
-  }, [poi.id, poi.thumbnail_url, poi.images]); // Add poi.id to force reset
+    return false;
+  };
+
+  useEffect(() => {
+    // Reset when POI changes
+    triedSourcesRef.current = new Set();
+    setImageState('loading');
+    
+    // Try first source
+    tryNextSource();
+  }, [poi.id, poi.thumbnail_url, JSON.stringify(poi.images)]);
 
   const handleImageLoad = () => {
     setImageState('loaded');
@@ -65,7 +97,8 @@ export function POIImage({
 
   const handleImageError = () => {
     console.warn(`Image failed to load for POI ${poi.id}:`, imageSrc);
-    setImageState('error');
+    // Try next source instead of immediately showing fallback
+    tryNextSource();
   };
 
   // Show loading skeleton while image loads
