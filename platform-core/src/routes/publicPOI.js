@@ -250,7 +250,7 @@ router.get('/', async (req, res) => {
     const imageMap = await getImagesForPOIs(poiIds, 3);
     
     // Transform data for frontend compatibility with language support
-    const pois = rows.map(poi => formatPOIForPublic(poi, lang, imageMap.get(poi.id) || []));
+    const pois = rows.map(poi => formatPOIForPublic(poi, lang, imageMap.get(Number(poi.id)) || []));
 
     // Return in format that supports both pagination styles
     res.json({
@@ -494,7 +494,7 @@ router.get('/search', async (req, res) => {
     
     res.json({
       success: true,
-      data: rows.map(poi => formatPOIForPublic(poi, lang, imageMap.get(poi.id) || [])),
+      data: rows.map(poi => formatPOIForPublic(poi, lang, imageMap.get(Number(poi.id)) || [])),
       meta: {
         total: count,
         page: parseInt(page),
