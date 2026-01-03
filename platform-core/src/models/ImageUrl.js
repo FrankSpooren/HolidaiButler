@@ -133,6 +133,10 @@ export async function getImagesForPOI(poiId, limit = 10) {
  * Batch fetch images for multiple POIs
  * Prioritizes locally stored images (100% reliable)
  *
+ * IMPORTANT: Uses explicit Number() conversion to ensure consistent Map key types.
+ * MySQL/Sequelize may return poi_id as BigInt or string, causing Map lookup failures
+ * when comparing with numeric POI IDs from other queries.
+ *
  * @param {number[]} poiIds - Array of POI IDs
  * @param {number} limitPerPoi - Max images per POI
  * @returns {Promise<Map<number, string[]>>} Map of POI ID to image URLs
@@ -143,22 +147,27 @@ export async function getImagesForPOIs(poiIds, limitPerPoi = 3) {
       return new Map();
     }
 
+    // Ensure all POI IDs are numbers for consistent comparison
+    const numericPoiIds = poiIds.map(id => Number(id));
+
     const images = await ImageUrl.findAll({
-      where: { poi_id: poiIds },
+      where: { poi_id: numericPoiIds },
       order: [['poi_id', 'ASC'], ['image_id', 'ASC']],
       attributes: ['poi_id', 'image_url', 'local_path']
     });
 
-    // Group by POI
+    // Group by POI - use Number() for consistent Map keys
     const imageMap = new Map();
     const poiImages = new Map();
 
     // First, collect all images per POI with metadata
+    // CRITICAL: Convert poi_id to Number to ensure Map key consistency
     for (const img of images) {
-      if (!poiImages.has(img.poi_id)) {
-        poiImages.set(img.poi_id, []);
+      const poiId = Number(img.poi_id);
+      if (!poiImages.has(poiId)) {
+        poiImages.set(poiId, []);
       }
-      poiImages.get(img.poi_id).push({
+      poiImages.get(poiId).push({
         url: getBestUrl(img),
         hasLocal: !!img.local_path,
         priority: img.local_path ? 0 : getImagePriority(img.image_url)
@@ -171,7 +180,8 @@ export async function getImagesForPOIs(poiIds, limitPerPoi = 3) {
         .sort((a, b) => a.priority - b.priority)
         .map(img => img.url)
         .slice(0, limitPerPoi);
-      imageMap.set(poiId, sorted);
+      // Ensure final Map uses numeric keys
+      imageMap.set(Number(poiId), sorted);
     }
 
     return imageMap;
