@@ -147,7 +147,7 @@ class RAGService {
         /^(dónde|donde)\s+(puedo|podemos)\s+comer/i,
         /^restaurantes?\s*(recomendaci[oó]n)?$/i,
         // Polish
-        /^(szukam|chcę)\s+(dobr[aąey]+)?\s*restauracj/i,
+        /^(szukam|chcę)\s+(dobr[aąeiyj]+)?\s*restauracj/i,
         /^gdzie\s+(mogę|można)\s+zjeść/i,
         /^restauracj[aęi]$/i,
         // Swedish
