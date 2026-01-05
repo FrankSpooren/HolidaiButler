@@ -716,6 +716,31 @@ router.post('/chat', async (req, res) => {
 
     logger.info('HoliBot chat request', { message: message.substring(0, 100), language, hasHistory: conversationHistory.length > 0 });
 
+    // Step 0: Check for vague queries BEFORE spell correction (to detect original language patterns)
+    if (conversationHistory.length === 0) {
+      const vagueCheck = ragService.detectVagueQuery(message);
+      if (vagueCheck.isVague) {
+        logger.info('Vague query detected in route', { category: vagueCheck.category, query: message });
+        const clarifyingResponse = ragService.generateVagueQueryResponse(vagueCheck, language);
+        return res.json({
+          success: true,
+          data: {
+            success: true,
+            message: clarifyingResponse,
+            pois: [],
+            source: 'clarification',
+            hasEvents: false,
+            searchTimeMs: Date.now() - startTime,
+            isVagueQuery: true,
+            vagueCategory: vagueCheck.category,
+            fallbackApplied: true,
+            fallbackType: 'category_suggestion',
+            intent: { detected: 'vague_query', categories: [vagueCheck.category], isFollowUp: false }
+          }
+        });
+      }
+    }
+
     // Get or create session for conversation logging
     const activeSessionId = await conversationService.getOrCreateSession({
       sessionId,
