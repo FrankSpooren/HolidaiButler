@@ -21,6 +21,31 @@ class RAGService {
     this.POI_SIMILARITY_THRESHOLD = 0.50;
     this.QA_SIMILARITY_THRESHOLD = 0.58;
   }
+  // Cuisine and category keywords - search filters, NOT POI names
+  static CUISINE_KEYWORDS = new Set([
+    "italian", "italiaans", "italiano", "pizza", "pasta", "risotto",
+    "mexican", "mexicaans", "mexicano", "taco", "burrito", "nachos",
+    "spanish", "spaans", "tapas", "paella",
+    "chinese", "chinees", "japanese", "japans", "sushi", "asian", "aziatisch", "thai",
+    "indian", "indiaas", "greek", "grieks", "french", "frans", "mediterranean", "mediterraan",
+    "seafood", "vis", "zeevruchten", "vegetarian", "vegetarisch", "vegan",
+    "steakhouse", "grill", "fastfood", "burger", "kebab"
+  ]);
+
+  isCuisineKeyword(term) {
+    if (!term) return false;
+    return RAGService.CUISINE_KEYWORDS.has(term.toLowerCase());
+  }
+
+  extractCuisineKeywords(query) {
+    const found = [];
+    const words = query.toLowerCase().split(/\s+/);
+    for (const word of words) {
+      if (this.isCuisineKeyword(word)) found.push(word);
+    }
+    return found;
+  }
+
 
   levenshteinDistance(a, b) {
     const aL = a.toLowerCase(), bL = b.toLowerCase();
@@ -107,7 +132,7 @@ class RAGService {
       const testStr = query;
       while ((match = pattern.exec(testStr)) !== null) {
         const entity = (match[1] || match[0]).trim();
-        if (entity.length > 3 && entity.length < 50) {
+        if (entity.length > 3 && entity.length < 50 && !this.isCuisineKeyword(entity)) {
           entities.push(entity);
         }
       }
@@ -119,7 +144,7 @@ class RAGService {
     while ((match = capPattern.exec(query)) !== null) {
       const entity = match[1].trim();
       const exclude = ["Calpe", "Costa Blanca", "Alicante", "Spain", "Spanish", "Dutch", "English"];
-      if (entity.length > 4 && !exclude.includes(entity) && !entities.includes(entity)) {
+      if (entity.length > 4 && !exclude.includes(entity) && !entities.includes(entity) && !this.isCuisineKeyword(entity)) {
         entities.push(entity);
       }
     }
