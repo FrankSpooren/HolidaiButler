@@ -25,16 +25,16 @@ router.get('/', async (req, res) => {
     health.status = 'unhealthy';
   }
 
-  // Check MongoDB
+  // Check MongoDB (optional - does not affect health status)
   try {
     if (mongoose.connection.readyState === 1) {
       health.services.mongodb = 'connected';
     } else {
-      health.services.mongodb = 'disconnected';
-      health.status = 'degraded';
+      health.services.mongodb = 'not configured';
+      // MongoDB is optional, don't degrade health status
     }
   } catch (error) {
-    health.services.mongodb = 'disconnected';
+    health.services.mongodb = 'not configured';
   }
 
   const statusCode = health.status === 'healthy' ? 200 : 503;
