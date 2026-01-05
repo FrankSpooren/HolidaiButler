@@ -1145,6 +1145,12 @@ router.post('/itinerary', async (req, res) => {
         return false;
       }
 
+      // CRITICAL: Exclude currently closed POIs (e.g., closed on Mondays)
+      if (isCurrentlyClosedFromHours(poi.opening_hours || poi.openingHours)) {
+        logger.info('Excluding currently closed POI from itinerary:', { id: poi.id, name: poi.name });
+        return false;
+      }
+
       // Mark as seen
       if (poi.id) seenIds.add(poi.id);
       if (normalizedName) seenNames.add(normalizedName);
@@ -1210,6 +1216,12 @@ router.post('/itinerary', async (req, res) => {
               // Check if permanently closed (all days empty/closed)
               if (isPermanentlyClosed(mysqlData.opening_hours)) {
                 logger.info('Excluding permanently closed POI from itinerary:', { id: poi.id, name: poi.name });
+                return null;
+              }
+
+              // Check if currently closed (closed today - e.g., Monday closure)
+              if (isCurrentlyClosedFromHours(mysqlData.opening_hours)) {
+                logger.info('Excluding currently closed POI from itinerary:', { id: poi.id, name: poi.name });
                 return null;
               }
 
@@ -1949,16 +1961,21 @@ router.get('/daily-tip', async (req, res) => {
 
       // Note: getTranslatedDescription() is now a shared helper at the top of this file
 
-      // Filter by exclusions (IDs already shown), permanently closed POIs, and add images array for POICard
-      // CRITICAL: Use language-specific description and exclude permanently closed POIs
+      // Filter by exclusions (IDs already shown), closed POIs, and add images array for POICard
+      // CRITICAL: Use language-specific description and exclude closed POIs
       qualityPois = poiResults.filter(poi => {
         const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
-        // CRITICAL: Also filter out permanently closed POIs
+        // CRITICAL: Filter out permanently closed POIs
         const notPermanentlyClosed = !isPermanentlyClosed(poi.opening_hours);
         if (isPermanentlyClosed(poi.opening_hours)) {
           logger.info('Excluding permanently closed POI from daily tip:', { id: poi.id, name: poi.name });
         }
-        return notExcluded && notPermanentlyClosed;
+        // CRITICAL: Filter out currently closed POIs (e.g., closed on Mondays)
+        const notCurrentlyClosed = !isCurrentlyClosedFromHours(poi.opening_hours);
+        if (isCurrentlyClosedFromHours(poi.opening_hours)) {
+          logger.info('Excluding currently closed POI from daily tip:', { id: poi.id, name: poi.name });
+        }
+        return notExcluded && notPermanentlyClosed && notCurrentlyClosed;
       }).map(poi => ({
         ...poi,
         // Use translated description for the current language (shared helper)
@@ -2301,13 +2318,18 @@ router.get('/categories/:category/pois', async (req, res) => {
       LIMIT ? OFFSET ?
     `, { replacements: [...params, parseInt(limit), parseInt(offset)], type: QueryTypes.SELECT });
 
-    // Filter out permanently closed POIs and apply translations
+    // Filter out closed POIs and apply translations
     const pois = poiResults.filter(poi => {
       const notPermanentlyClosed = !isPermanentlyClosed(poi.opening_hours);
       if (isPermanentlyClosed(poi.opening_hours)) {
         logger.info('Excluding permanently closed POI from category browser:', { id: poi.id, name: poi.name });
       }
-      return notPermanentlyClosed;
+      // CRITICAL: Also filter out currently closed POIs (e.g., closed on Mondays)
+      const notCurrentlyClosed = !isCurrentlyClosedFromHours(poi.opening_hours);
+      if (isCurrentlyClosedFromHours(poi.opening_hours)) {
+        logger.info('Excluding currently closed POI from category browser:', { id: poi.id, name: poi.name });
+      }
+      return notPermanentlyClosed && notCurrentlyClosed;
     }).map(poi => ({
       ...poi,
       // Use translated description for the current language (shared helper)
