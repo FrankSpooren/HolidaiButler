@@ -133,16 +133,12 @@ class RAGService {
         /^(ergens\s+)?(lekker\s+)?eten/i
       ],
       clarifyingQuestions: {
-        nl: [
-          "Wat voor type keuken zoek je? (Italiaans, Spaans, Aziatisch, seafood, etc.)",
-          "Zoek je iets voor lunch of diner?",
-          "Heb je een voorkeur: zeezicht, centrum, of romantisch?"
-        ],
-        en: [
-          "What type of cuisine? (Italian, Spanish, Asian, seafood, etc.)",
-          "Looking for lunch or dinner?",
-          "Preference: sea view, city center, or romantic setting?"
-        ]
+        nl: ["Wat voor type keuken zoek je? (Italiaans, Spaans, Aziatisch, seafood, etc.)", "Zoek je iets voor lunch of diner?", "Heb je een voorkeur: zeezicht, centrum, of romantisch?"],
+        en: ["What type of cuisine? (Italian, Spanish, Asian, seafood, etc.)", "Looking for lunch or dinner?", "Preference: sea view, city center, or romantic setting?"],
+        de: ["Welche Küche suchst du? (Italienisch, Spanisch, Asiatisch, Meeresfrüchte, etc.)", "Suchst du etwas zum Mittag- oder Abendessen?", "Hast du eine Vorliebe: Meerblick, Zentrum oder romantisch?"],
+        es: ["¿Qué tipo de cocina buscas? (Italiana, Española, Asiática, mariscos, etc.)", "¿Buscas algo para almorzar o cenar?", "¿Tienes preferencia: vista al mar, centro o romántico?"],
+        pl: ["Jakiej kuchni szukasz? (Włoska, Hiszpańska, Azjatycka, owoce morza, itp.)", "Szukasz czegoś na lunch czy kolację?", "Masz preferencje: widok na morze, centrum czy romantycznie?"],
+        sv: ["Vilken typ av kök söker du? (Italienskt, Spanskt, Asiatiskt, skaldjur, etc.)", "Söker du något till lunch eller middag?", "Har du en preferens: havsutsikt, centrum eller romantiskt?"]
       }
     },
     beach: {
@@ -153,16 +149,12 @@ class RAGService {
         /^(naar\s+)?(het\s+)?strand/i
       ],
       clarifyingQuestions: {
-        nl: [
-          "Zoek je een rustig strand of eentje met faciliteiten (ligbedden, chiringuito)?",
-          "Zandstrand of rotsachtig/snorkelen?",
-          "Met kinderen of voor volwassenen?"
-        ],
-        en: [
-          "Quiet beach or one with facilities (sun beds, beach bar)?",
-          "Sandy beach or rocky/snorkeling?",
-          "With children or adults only?"
-        ]
+        nl: ["Zoek je een rustig strand of eentje met faciliteiten (ligbedden, chiringuito)?", "Zandstrand of rotsachtig/snorkelen?", "Met kinderen of voor volwassenen?"],
+        en: ["Quiet beach or one with facilities (sun beds, beach bar)?", "Sandy beach or rocky/snorkeling?", "With children or adults only?"],
+        de: ["Ruhiger Strand oder einer mit Einrichtungen (Liegen, Strandbar)?", "Sandstrand oder felsig/Schnorcheln?", "Mit Kindern oder nur für Erwachsene?"],
+        es: ["¿Playa tranquila o con instalaciones (tumbonas, chiringuito)?", "¿Playa de arena o rocosa/snorkel?", "¿Con niños o solo adultos?"],
+        pl: ["Spokojna plaża czy z udogodnieniami (leżaki, bar plażowy)?", "Piaszczysta czy skalista/do nurkowania?", "Z dziećmi czy tylko dla dorosłych?"],
+        sv: ["Lugn strand eller en med faciliteter (solstolar, strandbar)?", "Sandstrand eller klippig/snorkling?", "Med barn eller endast vuxna?"]
       }
     },
     activity: {
@@ -174,16 +166,12 @@ class RAGService {
         /^(iets\s+)?leuks?\s+(te\s+)?doen/i
       ],
       clarifyingQuestions: {
-        nl: [
-          "Zoek je outdoor (stranden, wandelen, watersport) of indoor (musea, winkelen)?",
-          "Voor wie: alleen, koppel, gezin met kinderen?",
-          "Actief of ontspannend?"
-        ],
-        en: [
-          "Outdoor (beaches, hiking, water sports) or indoor (museums, shopping)?",
-          "For whom: solo, couple, family with kids?",
-          "Active or relaxing?"
-        ]
+        nl: ["Zoek je outdoor (stranden, wandelen, watersport) of indoor (musea, winkelen)?", "Voor wie: alleen, koppel, gezin met kinderen?", "Actief of ontspannend?"],
+        en: ["Outdoor (beaches, hiking, water sports) or indoor (museums, shopping)?", "For whom: solo, couple, family with kids?", "Active or relaxing?"],
+        de: ["Outdoor (Strände, Wandern, Wassersport) oder Indoor (Museen, Shopping)?", "Für wen: allein, Paar, Familie mit Kindern?", "Aktiv oder entspannend?"],
+        es: ["¿Exterior (playas, senderismo, deportes acuáticos) o interior (museos, compras)?", "¿Para quién: solo, pareja, familia con niños?", "¿Activo o relajante?"],
+        pl: ["Na zewnątrz (plaże, wędrówki, sporty wodne) czy w pomieszczeniu (muzea, zakupy)?", "Dla kogo: sam, para, rodzina z dziećmi?", "Aktywnie czy relaksująco?"],
+        sv: ["Utomhus (stränder, vandring, vattensport) eller inomhus (museer, shopping)?", "För vem: ensam, par, familj med barn?", "Aktivt eller avkopplande?"]
       }
     },
     attraction: {
@@ -195,16 +183,12 @@ class RAGService {
         /^(iets\s+)?(te\s+)?bezichtigen/i
       ],
       clarifyingQuestions: {
-        nl: [
-          "Zoek je historische plekken, natuurlijke bezienswaardigheden, of moderne attracties?",
-          "Heb je interesse in de Peñón de Ifach, oude stad, of uitkijkpunten?",
-          "Hoeveel tijd heb je: kort bezoek of halve dag?"
-        ],
-        en: [
-          "Historical sites, natural landmarks, or modern attractions?",
-          "Interested in Peñón de Ifach, old town, or viewpoints?",
-          "How much time: quick visit or half day?"
-        ]
+        nl: ["Zoek je historische plekken, natuurlijke bezienswaardigheden, of moderne attracties?", "Heb je interesse in de Peñón de Ifach, oude stad, of uitkijkpunten?", "Hoeveel tijd heb je: kort bezoek of halve dag?"],
+        en: ["Historical sites, natural landmarks, or modern attractions?", "Interested in Peñón de Ifach, old town, or viewpoints?", "How much time: quick visit or half day?"],
+        de: ["Historische Stätten, natürliche Sehenswürdigkeiten oder moderne Attraktionen?", "Interesse am Peñón de Ifach, Altstadt oder Aussichtspunkten?", "Wie viel Zeit: kurzer Besuch oder halber Tag?"],
+        es: ["¿Sitios históricos, monumentos naturales o atracciones modernas?", "¿Interesado en el Peñón de Ifach, casco antiguo o miradores?", "¿Cuánto tiempo: visita rápida o medio día?"],
+        pl: ["Miejsca historyczne, zabytki przyrody czy nowoczesne atrakcje?", "Zainteresowany Peñón de Ifach, starym miastem czy punktami widokowymi?", "Ile czasu: krótka wizyta czy pół dnia?"],
+        sv: ["Historiska platser, naturliga landmärken eller moderna attraktioner?", "Intresserad av Peñón de Ifach, gamla stan eller utsiktspunkter?", "Hur mycket tid: kort besök eller halv dag?"]
       }
     },
     museum: {
@@ -215,16 +199,12 @@ class RAGService {
         /^(iets\s+)?cultureel(s)?/i
       ],
       clarifyingQuestions: {
-        nl: [
-          "Zoek je kunst, geschiedenis, of lokale cultuur?",
-          "Geschikt voor kinderen of volwassenen?",
-          "Modern of klassiek?"
-        ],
-        en: [
-          "Art, history, or local culture?",
-          "Suitable for children or adults?",
-          "Modern or classical?"
-        ]
+        nl: ["Zoek je kunst, geschiedenis, of lokale cultuur?", "Geschikt voor kinderen of volwassenen?", "Modern of klassiek?"],
+        en: ["Art, history, or local culture?", "Suitable for children or adults?", "Modern or classical?"],
+        de: ["Kunst, Geschichte oder lokale Kultur?", "Geeignet für Kinder oder Erwachsene?", "Modern oder klassisch?"],
+        es: ["¿Arte, historia o cultura local?", "¿Adecuado para niños o adultos?", "¿Moderno o clásico?"],
+        pl: ["Sztuka, historia czy kultura lokalna?", "Odpowiednie dla dzieci czy dorosłych?", "Nowoczesne czy klasyczne?"],
+        sv: ["Konst, historia eller lokal kultur?", "Lämpligt för barn eller vuxna?", "Modernt eller klassiskt?"]
       }
     },
     shop: {
@@ -235,16 +215,12 @@ class RAGService {
         /^(iets\s+)?kopen/i
       ],
       clarifyingQuestions: {
-        nl: [
-          "Zoek je souvenirs, kleding, lokale producten, of supermarkten?",
-          "Luxe winkels of budget-vriendelijk?",
-          "Centrum of winkelcentrum?"
-        ],
-        en: [
-          "Souvenirs, clothing, local products, or supermarkets?",
-          "Luxury shops or budget-friendly?",
-          "City center or shopping mall?"
-        ]
+        nl: ["Zoek je souvenirs, kleding, lokale producten, of supermarkten?", "Luxe winkels of budget-vriendelijk?", "Centrum of winkelcentrum?"],
+        en: ["Souvenirs, clothing, local products, or supermarkets?", "Luxury shops or budget-friendly?", "City center or shopping mall?"],
+        de: ["Souvenirs, Kleidung, lokale Produkte oder Supermärkte?", "Luxusgeschäfte oder budgetfreundlich?", "Zentrum oder Einkaufszentrum?"],
+        es: ["¿Souvenirs, ropa, productos locales o supermercados?", "¿Tiendas de lujo o económicas?", "¿Centro o centro comercial?"],
+        pl: ["Pamiątki, ubrania, lokalne produkty czy supermarkety?", "Sklepy luksusowe czy budżetowe?", "Centrum czy centrum handlowe?"],
+        sv: ["Souvenirer, kläder, lokala produkter eller stormarknader?", "Lyxbutiker eller budgetvänliga?", "Centrum eller köpcentrum?"]
       }
     },
     nightlife: {
@@ -257,16 +233,12 @@ class RAGService {
         /^(iets\s+)?drinken/i
       ],
       clarifyingQuestions: {
-        nl: [
-          "Zoek je een rustige bar, cocktailbar, of club/disco?",
-          "Met live muziek of DJ?",
-          "Zeezicht of in het centrum?"
-        ],
-        en: [
-          "Quiet bar, cocktail bar, or club/disco?",
-          "With live music or DJ?",
-          "Sea view or city center?"
-        ]
+        nl: ["Zoek je een rustige bar, cocktailbar, of club/disco?", "Met live muziek of DJ?", "Zeezicht of in het centrum?"],
+        en: ["Quiet bar, cocktail bar, or club/disco?", "With live music or DJ?", "Sea view or city center?"],
+        de: ["Ruhige Bar, Cocktailbar oder Club/Disco?", "Mit Live-Musik oder DJ?", "Meerblick oder Stadtzentrum?"],
+        es: ["¿Bar tranquilo, coctelería o club/discoteca?", "¿Con música en vivo o DJ?", "¿Vista al mar o centro?"],
+        pl: ["Spokojny bar, koktajlbar czy klub/dyskoteka?", "Z muzyką na żywo czy DJ?", "Widok na morze czy centrum?"],
+        sv: ["Lugn bar, cocktailbar eller klubb/disco?", "Med livemusik eller DJ?", "Havsutsikt eller centrum?"]
       }
     },
     event: {
@@ -278,16 +250,12 @@ class RAGService {
         /^festival|concert|markt/i
       ],
       clarifyingQuestions: {
-        nl: [
-          "Zoek je evenementen voor vandaag, dit weekend, of deze week?",
-          "Culturele events, markten, muziek, of sport?",
-          "Gratis of betaalde evenementen?"
-        ],
-        en: [
-          "Events for today, this weekend, or this week?",
-          "Cultural events, markets, music, or sports?",
-          "Free or paid events?"
-        ]
+        nl: ["Zoek je evenementen voor vandaag, dit weekend, of deze week?", "Culturele events, markten, muziek, of sport?", "Gratis of betaalde evenementen?"],
+        en: ["Events for today, this weekend, or this week?", "Cultural events, markets, music, or sports?", "Free or paid events?"],
+        de: ["Veranstaltungen für heute, dieses Wochenende oder diese Woche?", "Kulturelle Events, Märkte, Musik oder Sport?", "Kostenlose oder kostenpflichtige Veranstaltungen?"],
+        es: ["¿Eventos para hoy, este fin de semana o esta semana?", "¿Eventos culturales, mercados, música o deportes?", "¿Eventos gratuitos o de pago?"],
+        pl: ["Wydarzenia na dziś, ten weekend czy ten tydzień?", "Kulturalne, targi, muzyka czy sport?", "Darmowe czy płatne?"],
+        sv: ["Evenemang för idag, denna helg eller denna vecka?", "Kulturella evenemang, marknader, musik eller sport?", "Gratis eller betalda evenemang?"]
       }
     },
     sport: {
@@ -299,16 +267,12 @@ class RAGService {
         /^duiken|snorkelen|kayak|paddle/i
       ],
       clarifyingQuestions: {
-        nl: [
-          "Zoek je watersport (duiken, kayak, paddleboard) of landsport (tennis, golf, fitness)?",
-          "Beginner of ervaren?",
-          "Wil je een les/cursus of zelf doen?"
-        ],
-        en: [
-          "Water sports (diving, kayak, paddleboard) or land sports (tennis, golf, fitness)?",
-          "Beginner or experienced?",
-          "Want lessons/courses or self-guided?"
-        ]
+        nl: ["Zoek je watersport (duiken, kayak, paddleboard) of landsport (tennis, golf, fitness)?", "Beginner of ervaren?", "Wil je een les/cursus of zelf doen?"],
+        en: ["Water sports (diving, kayak, paddleboard) or land sports (tennis, golf, fitness)?", "Beginner or experienced?", "Want lessons/courses or self-guided?"],
+        de: ["Wassersport (Tauchen, Kajak, Paddleboard) oder Landsport (Tennis, Golf, Fitness)?", "Anfänger oder erfahren?", "Möchtest du Unterricht/Kurse oder selbstständig?"],
+        es: ["¿Deportes acuáticos (buceo, kayak, paddleboard) o terrestres (tenis, golf, fitness)?", "¿Principiante o experimentado?", "¿Quieres clases/cursos o por tu cuenta?"],
+        pl: ["Sporty wodne (nurkowanie, kajak, paddleboard) czy lądowe (tenis, golf, fitness)?", "Początkujący czy doświadczony?", "Chcesz lekcje/kursy czy samodzielnie?"],
+        sv: ["Vattensport (dykning, kajak, paddleboard) eller landsport (tennis, golf, fitness)?", "Nybörjare eller erfaren?", "Vill du ha lektioner/kurser eller på egen hand?"]
       }
     },
     nature: {
@@ -319,16 +283,12 @@ class RAGService {
         /^natuurgebied|park/i
       ],
       clarifyingQuestions: {
-        nl: [
-          "Zoek je een korte wandeling of een langere hike?",
-          "Makkelijk (vlak) of uitdagend (bergen)?",
-          "Kust/zee of binnenland/bergen?"
-        ],
-        en: [
-          "Short walk or longer hike?",
-          "Easy (flat) or challenging (mountains)?",
-          "Coast/sea or inland/mountains?"
-        ]
+        nl: ["Zoek je een korte wandeling of een langere hike?", "Makkelijk (vlak) of uitdagend (bergen)?", "Kust/zee of binnenland/bergen?"],
+        en: ["Short walk or longer hike?", "Easy (flat) or challenging (mountains)?", "Coast/sea or inland/mountains?"],
+        de: ["Kurzer Spaziergang oder längere Wanderung?", "Einfach (flach) oder anspruchsvoll (Berge)?", "Küste/Meer oder Inland/Berge?"],
+        es: ["¿Paseo corto o caminata más larga?", "¿Fácil (llano) o desafiante (montañas)?", "¿Costa/mar o interior/montañas?"],
+        pl: ["Krótki spacer czy dłuższa wędrówka?", "Łatwy (płaski) czy wymagający (góry)?", "Wybrzeże/morze czy wnętrze/góry?"],
+        sv: ["Kort promenad eller längre vandring?", "Lätt (platt) eller utmanande (berg)?", "Kust/hav eller inland/berg?"]
       }
     },
     family: {
@@ -339,21 +299,17 @@ class RAGService {
         /^speeltuin|pretpark/i
       ],
       clarifyingQuestions: {
-        nl: [
-          "Hoe oud zijn de kinderen?",
-          "Binnen of buiten activiteit?",
-          "Gratis of betaalde attractie?"
-        ],
-        en: [
-          "How old are the children?",
-          "Indoor or outdoor activity?",
-          "Free or paid attraction?"
-        ]
+        nl: ["Hoe oud zijn de kinderen?", "Binnen of buiten activiteit?", "Gratis of betaalde attractie?"],
+        en: ["How old are the children?", "Indoor or outdoor activity?", "Free or paid attraction?"],
+        de: ["Wie alt sind die Kinder?", "Drinnen oder draußen?", "Kostenlose oder kostenpflichtige Attraktion?"],
+        es: ["¿Qué edad tienen los niños?", "¿Actividad interior o exterior?", "¿Atracción gratuita o de pago?"],
+        pl: ["Ile lat mają dzieci?", "Aktywność wewnątrz czy na zewnątrz?", "Darmowa czy płatna atrakcja?"],
+        sv: ["Hur gamla är barnen?", "Inomhus eller utomhusaktivitet?", "Gratis eller betald attraktion?"]
       }
     }
   };
 
-  /**
+    /**
    * Detect if a query is too vague and needs clarification
    * Works for ALL POI categories and events
    * @param {string} query - User query
@@ -512,6 +468,13 @@ class RAGService {
         beach: "Um den perfekten Strand für dich zu finden:",
         activity: "Um die ideale Aktivität für dich zu finden:",
         attraction: "Um die besten Sehenswürdigkeiten zu empfehlen:",
+        museum: "Um das richtige Museum für dich zu finden:",
+        shop: "Um die besten Geschäfte für dich zu finden:",
+        nightlife: "Um den perfekten Ort zum Ausgehen zu finden:",
+        event: "Um die besten Veranstaltungen zu finden:",
+        sport: "Um die besten Sportmöglichkeiten zu finden:",
+        nature: "Um die schönste Wanderung/Naturstelle zu finden:",
+        family: "Um die beste Familienaktivität zu finden:",
         default: "Um dir besser zu helfen, brauche ich mehr Informationen:"
       },
       es: {
@@ -519,7 +482,42 @@ class RAGService {
         beach: "Para encontrar la playa perfecta para ti:",
         activity: "Para encontrar la actividad ideal para ti:",
         attraction: "Para recomendar las mejores atracciones:",
+        museum: "Para encontrar el museo adecuado para ti:",
+        shop: "Para encontrar las mejores tiendas para ti:",
+        nightlife: "Para encontrar el lugar perfecto para salir:",
+        event: "Para encontrar los mejores eventos:",
+        sport: "Para encontrar las mejores instalaciones deportivas:",
+        nature: "Para encontrar la mejor ruta/lugar natural:",
+        family: "Para encontrar la mejor actividad familiar:",
         default: "Para ayudarte mejor, necesito más información:"
+      },
+      pl: {
+        restaurant: "Aby dać ci najlepsze rekomendacje restauracji:",
+        beach: "Aby znaleźć idealną plażę dla ciebie:",
+        activity: "Aby znaleźć idealną aktywność dla ciebie:",
+        attraction: "Aby polecić najlepsze atrakcje:",
+        museum: "Aby znaleźć odpowiednie muzeum dla ciebie:",
+        shop: "Aby znaleźć najlepsze sklepy dla ciebie:",
+        nightlife: "Aby znaleźć idealne miejsce na wyjście:",
+        event: "Aby znaleźć najlepsze wydarzenia:",
+        sport: "Aby znaleźć najlepsze obiekty sportowe:",
+        nature: "Aby znaleźć najlepszą trasę/miejsce przyrodnicze:",
+        family: "Aby znaleźć najlepszą aktywność dla rodziny:",
+        default: "Aby lepiej ci pomóc, potrzebuję więcej informacji:"
+      },
+      sv: {
+        restaurant: "För att ge dig de bästa restaurangrekommendationerna:",
+        beach: "För att hitta den perfekta stranden för dig:",
+        activity: "För att hitta den ideala aktiviteten för dig:",
+        attraction: "För att rekommendera de bästa attraktionerna:",
+        museum: "För att hitta rätt museum för dig:",
+        shop: "För att hitta de bästa butikerna för dig:",
+        nightlife: "För att hitta den perfekta platsen att gå ut:",
+        event: "För att hitta de bästa evenemangen:",
+        sport: "För att hitta de bästa sportanläggningarna:",
+        nature: "För att hitta den bästa vandringen/naturplatsen:",
+        family: "För att hitta den bästa familjeaktiviteten:",
+        default: "För att hjälpa dig bättre behöver jag mer information:"
       }
     };
 
@@ -527,7 +525,9 @@ class RAGService {
       nl: "Of vertel me gewoon specifiek wat je zoekt!",
       en: "Or just tell me specifically what you're looking for!",
       de: "Oder sag mir einfach genau, was du suchst!",
-      es: "¡O simplemente dime qué estás buscando!"
+      es: "¡O simplemente dime qué estás buscando!",
+      pl: "Lub po prostu powiedz mi, czego szukasz!",
+      sv: "Eller berätta bara vad du letar efter!"
     };
 
     const langIntros = intros[lang] || intros['nl'];
