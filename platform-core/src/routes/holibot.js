@@ -574,6 +574,27 @@ const cleanAIText = (text, poiNames = []) => {
     // Remove strikethrough
     .replace(/~{2,}/g, '');
 
+  // CRITICAL: Fix spacing after common Dutch/Spanish prepositions stuck to next word
+  // Handles: "inCalpe" -> "in Calpe", "bijPort" -> "bij Port", "vanCalpe" -> "van Calpe"
+  const prepositions = ["in", "bij", "van", "naar", "voor", "met", "op", "aan", "over", "uit", "door", "om", "tegen", "tot", "en", "of", "de", "het", "een", "la", "el", "the", "at", "to", "from", "with"];
+  for (const prep of prepositions) {
+    // Match preposition followed directly by uppercase letter (no space)
+    const regex = new RegExp(`(\b${prep})([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])`, "gi");
+    cleaned = cleaned.replace(regex, "$1 $2");
+  }
+
+  // Fix spacing before punctuation that got stuck to words
+  cleaned = cleaned.replace(/([a-zA-ZáéíóúàèìòùäëïöüâêîôûñçÀÈÌÒÙÁÉÍÓÚÄËÏÖÜÂÊÎÔÛÑÇ])([.!?])([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])/g, "$1$2 $3");
+
+  // Fix common location names stuck to adjacent words
+  const locationNames = ["Calpe", "Benidorm", "Altea", "Alicante", "Valencia", "Spain", "Spanje", "España"];
+  for (const loc of locationNames) {
+    // Add space BEFORE location if preceded by letter
+    cleaned = cleaned.replace(new RegExp(`([a-záéíóúàèìòùäëïöüâêîôûñç])${loc}`, "g"), "$1 " + loc);
+    // Add space AFTER location if followed by lowercase letter  
+    cleaned = cleaned.replace(new RegExp(`${loc}([a-záéíóúàèìòùäëïöüâêîôûñç])`, "g"), loc + " $1");
+  }
+
   // Fix spacing around POI names
   for (const poiName of poiNames) {
     if (!poiName || poiName.length < 3) continue;
