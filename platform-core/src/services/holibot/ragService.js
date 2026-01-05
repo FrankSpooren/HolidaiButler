@@ -1470,3 +1470,4 @@ class RAGService {
 
 export const ragService = new RAGService();
 export default ragService;
+// Version bump: 20260105-210731
