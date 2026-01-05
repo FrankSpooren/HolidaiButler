@@ -32,6 +32,7 @@ import { usePOIsByIds } from '../features/poi/hooks/usePOIs';
 import { useEventsByIds, getEventTitle, getEventImage } from '../features/agenda/hooks/useEvents';
 import { AgendaDetailModal } from '../features/agenda/components/AgendaDetailModal';
 import { POIDetailModal } from '../features/poi/components/POIDetailModal';
+import { POIThumbnail } from '../features/poi/components/POIThumbnail';
 import {
   ChangePasswordModal,
   TwoFactorSetupModal,
@@ -1068,11 +1069,7 @@ export default function AccountDashboard() {
             {favoritePOIs.slice(0, 5).map((poi) => (
               <div key={poi.id} className="favorite-list-item" onClick={() => setSelectedPoiId(poi.id)}>
                 <div className="favorite-item-left">
-                  {poi.thumbnail_url ? (
-                    <img src={poi.thumbnail_url} alt={poi.name} className="favorite-item-image" />
-                  ) : (
-                    <span className="favorite-item-icon">📍</span>
-                  )}
+                  <POIThumbnail poi={poi} size="48px" className="favorite-item-image" fallbackIcon="📍" />
                   <div className="favorite-item-info">
                     <div className="favorite-item-title">{poi.name}</div>
                     <div className="favorite-item-subtitle">
@@ -1181,11 +1178,7 @@ export default function AccountDashboard() {
               return (
                 <div key={poi.id} className="favorite-list-item" onClick={() => setSelectedPoiId(poi.id)}>
                   <div className="favorite-item-left">
-                    {poi.thumbnail_url ? (
-                      <img src={poi.thumbnail_url} alt={poi.name} className="favorite-item-image" />
-                    ) : (
-                      <span className="favorite-item-icon">📍</span>
-                    )}
+                    <POIThumbnail poi={poi} size="48px" className="favorite-item-image" fallbackIcon="📍" />
                     <div className="favorite-item-info">
                       <div className="favorite-item-title">{poi.name}</div>
                       <div className="favorite-item-subtitle">
