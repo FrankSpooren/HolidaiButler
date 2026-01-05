@@ -137,7 +137,23 @@ class RAGService {
         /^(show|give|find)\s+(me\s+)?(a\s+)?restaurant/i,
         /^where\s+(can|do)\s+(i|we)\s+eat/i,
         /^restaurant\s*(recommendation|tip)?s?$/i,
-        /^(somewhere\s+)?(to\s+)?eat$/i
+        /^(somewhere\s+)?(to\s+)?eat$/i,
+        // German
+        /^(ich\s+)?(suche|möchte)\s+(ein\s+)?(gutes|nettes)\s+restaurant/i,
+        /^wo\s+kann\s+(ich|man)\s+(gut\s+)?essen/i,
+        /^restaurant\s*(empfehlung|tipp)?s?$/i,
+        // Spanish
+        /^(estoy\s+)?busca(ndo)?\s+(un\s+)?(buen)\s+restaurante/i,
+        /^(dónde|donde)\s+(puedo|podemos)\s+comer/i,
+        /^restaurantes?\s*(recomendaci[oó]n)?$/i,
+        // Polish
+        /^(szukam|chcę)\s+(dobr[aąey]+)?\s*restauracj/i,
+        /^gdzie\s+(mogę|można)\s+zjeść/i,
+        /^restauracj[aęi]$/i,
+        // Swedish
+        /^(jag\s+)?(letar|söker)\s+(efter\s+)?(en\s+)?(bra|trevlig)\s+restaurang/i,
+        /^var\s+kan\s+(jag|vi)\s+äta/i,
+        /^restaurang\s*(rekommendation|tips)?$/i
       ],
       clarifyingQuestions: {
         nl: ["Wat voor type keuken zoek je? (Italiaans, Spaans, Aziatisch, seafood, etc.)", "Zoek je iets voor lunch of diner?", "Heb je een voorkeur: zeezicht, centrum, of romantisch?"],
@@ -159,7 +175,23 @@ class RAGService {
         /^(a\s+)?(good|nice|best)\s+beach/i,
         /^where\s+(is|are|can).*(beach|swim)/i,
         /^beach\s*(recommendation|tip)?s?$/i,
-        /^(to\s+)?(the\s+)?beach$/i
+        /^(to\s+)?(the\s+)?beach$/i,
+        // German
+        /^(ein\s+)?(guter|schöner)\s+strand/i,
+        /^wo\s+(ist|sind|kann).*(strand|schwimmen)/i,
+        /^strand\s*(empfehlung|tipp)?$/i,
+        // Spanish
+        /^(una\s+)?(buena|bonita)\s+playa/i,
+        /^(dónde|donde)\s+(está|hay).*(playa|nadar)/i,
+        /^playas?$/i,
+        // Polish
+        /^(dobra|ładna)\s+plaża/i,
+        /^gdzie\s+(jest|są|mogę).*(plaża|pływać)/i,
+        /^plaż[aęy]$/i,
+        // Swedish
+        /^(en\s+)?(bra|fin)\s+strand/i,
+        /^var\s+(finns|kan).*(strand|simma)/i,
+        /^stranden?$/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je een rustig strand of eentje met faciliteiten (ligbedden, chiringuito)?", "Zandstrand of rotsachtig/snorkelen?", "Met kinderen of voor volwassenen?"],
@@ -183,7 +215,27 @@ class RAGService {
         /^(i('m| am)\s+)?(looking\s+for\s+)?(something\s+)?(fun|to\s+do)/i,
         /^activit(y|ies)\s*(in\s+calpe)?$/i,
         /^what\s+(is\s+there\s+)?to\s+do/i,
-        /^things\s+to\s+do$/i
+        /^things\s+to\s+do$/i,
+        // German
+        /^was\s+kann\s+(ich|man)\s+(machen|tun|unternehmen)/i,
+        /^(ich\s+)?(suche|möchte)\s+(etwas\s+)?(zu\s+tun|unternehmung)/i,
+        /^aktivität(en)?$/i,
+        /^was\s+gibt\s+es\s+zu\s+tun/i,
+        // Spanish
+        /^(qué|que)\s+(puedo|podemos)\s+hacer/i,
+        /^(busco|quiero)\s+(algo\s+)?(que\s+hacer|divertido)/i,
+        /^actividad(es)?$/i,
+        /^(qué|que)\s+hay\s+que\s+hacer/i,
+        // Polish
+        /^co\s+(mogę|można|możemy)\s+(robić|zrobić)/i,
+        /^(szukam|chcę)\s+(czegoś\s+)?(do\s+zrobienia|fajnego)/i,
+        /^aktywności?$/i,
+        /^co\s+jest\s+do\s+zrobienia/i,
+        // Swedish
+        /^vad\s+kan\s+(jag|vi)\s+göra/i,
+        /^(jag\s+)?(letar|söker)\s+(efter\s+)?(något\s+)?(att\s+göra|kul)/i,
+        /^aktivitet(er)?$/i,
+        /^vad\s+finns\s+(det\s+)?att\s+göra/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je outdoor (stranden, wandelen, watersport) of indoor (musea, winkelen)?", "Voor wie: alleen, koppel, gezin met kinderen?", "Actief of ontspannend?"],
@@ -207,7 +259,27 @@ class RAGService {
         /^what\s+(should|can)\s+i\s+(see|visit)/i,
         /^sights?(eeing)?/i,
         /^attractions?$/i,
-        /^(something\s+)?(to\s+)?visit$/i
+        /^(something\s+)?(to\s+)?visit$/i,
+        // German
+        /^(eine\s+)?(schöne|tolle)\s+(sehenswürdigkeit|attraktion)/i,
+        /^was\s+(soll|kann)\s+ich\s+(sehen|besuchen)/i,
+        /^sehenswürdigkeiten?$/i,
+        /^attraktionen?$/i,
+        // Spanish
+        /^(una\s+)?(buena|bonita)\s+(atracción|lugar)/i,
+        /^(qué|que)\s+(debo|puedo)\s+(ver|visitar)/i,
+        /^atracciones?$/i,
+        /^lugares\s+de\s+interés$/i,
+        // Polish
+        /^(ładna|ciekawa)\s+(atrakcja|miejsce)/i,
+        /^co\s+(powinienem|mogę)\s+(zobaczyć|odwiedzić)/i,
+        /^atrakcj[aęei]$/i,
+        /^miejsca\s+warte\s+zobaczenia$/i,
+        // Swedish
+        /^(en\s+)?(fin|bra)\s+(sevärdhet|attraktion)/i,
+        /^vad\s+(ska|kan)\s+jag\s+(se|besöka)/i,
+        /^sevärdheter?$/i,
+        /^attraktioner?$/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je historische plekken, natuurlijke bezienswaardigheden, of moderne attracties?", "Heb je interesse in de Peñón de Ifach, oude stad, of uitkijkpunten?", "Hoeveel tijd heb je: kort bezoek of halve dag?"],
@@ -224,7 +296,17 @@ class RAGService {
         /^(een\s+|a\s+)?museum/i,
         /^museums?\s*(in\s+calpe)?$/i,
         /^cultuur|cultureel|culture|cultural/i,
-        /^(iets\s+|something\s+)?cultural?/i
+        /^(iets\s+|something\s+)?cultural?/i,
+        // German
+        /^kultur(ell)?/i,
+        // Spanish
+        /^museo/i,
+        /^cultura(l)?$/i,
+        // Polish
+        /^muzeum/i,
+        /^kultur(a|alne)?$/i,
+        // Swedish
+        /^kultur(ell)?$/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je kunst, geschiedenis, of lokale cultuur?", "Geschikt voor kinderen of volwassenen?", "Modern of klassiek?"],
@@ -245,7 +327,23 @@ class RAGService {
         /^(where\s+can\s+i\s+)?(go\s+)?shopping/i,
         /^shops?\s*(in\s+calpe)?$/i,
         /^stores?$/i,
-        /^(something\s+)?to\s+buy$/i
+        /^(something\s+)?to\s+buy$/i,
+        // German
+        /^(wo\s+kann\s+ich\s+)?einkaufen/i,
+        /^geschäfte?\s*(in\s+calpe)?$/i,
+        /^(etwas\s+)?kaufen$/i,
+        // Spanish
+        /^(dónde|donde)\s+(puedo\s+)?ir\s+de\s+compras/i,
+        /^tiendas?\s*(en\s+calpe)?$/i,
+        /^(algo\s+)?comprar$/i,
+        // Polish
+        /^(gdzie\s+mogę\s+)?robić\s+zakupy/i,
+        /^sklep[y]?\s*(w\s+calpe)?$/i,
+        /^(coś\s+)?kupić$/i,
+        // Swedish
+        /^(var\s+kan\s+jag\s+)?shoppa/i,
+        /^butiker?\s*(i\s+calpe)?$/i,
+        /^(något\s+)?att\s+köpa$/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je souvenirs, kleding, lokale producten, of supermarkten?", "Luxe winkels of budget-vriendelijk?", "Centrum of winkelcentrum?"],
@@ -268,7 +366,27 @@ class RAGService {
         /^bars?\s*(in\s+calpe)?$/i,
         /^(a\s+)?(good|nice)\s+bar/i,
         /^club|disco/i,
-        /^(somewhere\s+)?(to\s+)?drink$/i
+        /^(somewhere\s+)?(to\s+)?drink$/i,
+        // German
+        /^(wo\s+kann\s+ich\s+)?ausgehen/i,
+        /^(eine\s+)?(gute|nette)\s+bar/i,
+        /^(etwas\s+)?trinken$/i,
+        /^nachtleben$/i,
+        // Spanish
+        /^(dónde|donde)\s+(puedo\s+)?salir/i,
+        /^(un\s+)?(buen|buen)\s+bar/i,
+        /^(algo\s+)?beber$/i,
+        /^vida\s+nocturna$/i,
+        // Polish
+        /^(gdzie\s+mogę\s+)?wyjść/i,
+        /^(dobry|fajny)\s+bar/i,
+        /^(coś\s+)?wypić$/i,
+        /^życie\s+nocne$/i,
+        // Swedish
+        /^(var\s+kan\s+jag\s+)?gå\s+ut/i,
+        /^(en\s+)?(bra|trevlig)\s+bar/i,
+        /^(något\s+)?att\s+dricka$/i,
+        /^nattliv$/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je een rustige bar, cocktailbar, of club/disco?", "Met live muziek of DJ?", "Zeezicht of in het centrum?"],
@@ -289,7 +407,27 @@ class RAGService {
         /^(what\s+)?events?\s*(in\s+calpe|this\s+week|today)?$/i,
         /^what('s|\s+is)\s+(on|happening)\s+(this\s+week|today|this\s+weekend)/i,
         /^schedule|program/i,
-        /^festival|concert|market/i
+        /^festival|concert|market/i,
+        // German
+        /^(was\s+für\s+)?veranstaltung(en)?/i,
+        /^was\s+(ist|gibt\s+es)\s+(diese\s+woche|heute|am\s+wochenende)/i,
+        /^termin(e)?|programm$/i,
+        /^konzert|markt/i,
+        // Spanish
+        /^(qué|que)\s+eventos?/i,
+        /^(qué|que)\s+(hay|pasa)\s+(esta\s+semana|hoy|este\s+fin\s+de\s+semana)/i,
+        /^agenda|programa$/i,
+        /^concierto|mercado/i,
+        // Polish
+        /^(jakie\s+)?wydarzeni[ae]/i,
+        /^co\s+(jest|się\s+dzieje)\s+(w\s+tym\s+tygodniu|dziś|w\s+weekend)/i,
+        /^harmonogram|program$/i,
+        /^koncert|targ/i,
+        // Swedish
+        /^(vilka\s+)?evenemang/i,
+        /^vad\s+(händer|är\s+på\s+gång)\s+(denna\s+vecka|idag|i\s+helgen)/i,
+        /^schema|program$/i,
+        /^konsert|marknad/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je evenementen voor vandaag, dit weekend, of deze week?", "Culturele events, markten, muziek, of sport?", "Gratis of betaalde evenementen?"],
@@ -310,7 +448,23 @@ class RAGService {
         /^sports?\s*(in\s+calpe)?$/i,
         /^fitness|gym|pool/i,
         /^(water)?sports?/i,
-        /^diving|snorkeling|kayak|paddle/i
+        /^diving|snorkeling|kayak|paddle/i,
+        // German
+        /^(wo\s+kann\s+ich\s+)?sport\s+(machen|treiben)/i,
+        /^schwimmbad|hallenbad/i,
+        /^tauchen|schnorcheln/i,
+        // Spanish
+        /^(dónde|donde)\s+(puedo\s+)?hacer\s+deporte/i,
+        /^piscina$/i,
+        /^buceo|bucear|snorkel/i,
+        // Polish
+        /^(gdzie\s+mogę\s+)?uprawiać\s+sport/i,
+        /^basen$/i,
+        /^nurkowanie|snorkeling/i,
+        // Swedish
+        /^(var\s+kan\s+jag\s+)?sporta/i,
+        /^simhall|pool$/i,
+        /^dykning|snorkling/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je watersport (duiken, kayak, paddleboard) of landsport (tennis, golf, fitness)?", "Beginner of ervaren?", "Wil je een les/cursus of zelf doen?"],
@@ -332,7 +486,27 @@ class RAGService {
         /^nature|hiking|walk/i,
         /^(a\s+)?(nice|good)\s+(hike|walk)/i,
         /^where\s+can\s+i\s+(hike|walk)/i,
-        /^nature\s*(area|reserve)|park/i
+        /^nature\s*(area|reserve)|park/i,
+        // German
+        /^natur|wanderung/i,
+        /^(eine\s+)?(schöne|gute)\s+wanderung/i,
+        /^wo\s+kann\s+ich\s+wandern/i,
+        /^naturgebiet/i,
+        // Spanish
+        /^naturaleza|senderismo|caminar/i,
+        /^(una\s+)?(buena|bonita)\s+(caminata|ruta)/i,
+        /^(dónde|donde)\s+puedo\s+caminar/i,
+        /^área\s+natural|parque$/i,
+        // Polish
+        /^natura|wędrówka|spacer/i,
+        /^(ładny|dobry)\s+(spacer|szlak)/i,
+        /^gdzie\s+mogę\s+(spacerować|wędrować)/i,
+        /^obszar\s+przyrodniczy/i,
+        // Swedish
+        /^natur|vandring|promenad/i,
+        /^(en\s+)?(fin|bra)\s+(vandring|promenad)/i,
+        /^var\s+kan\s+jag\s+vandra/i,
+        /^naturområde/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je een korte wandeling of een langere hike?", "Makkelijk (vlak) of uitdagend (bergen)?", "Kust/zee of binnenland/bergen?"],
@@ -354,7 +528,27 @@ class RAGService {
         /^(something\s+)?(for|with)\s+(the\s+)?kids/i,
         /^kids|family|children/i,
         /^what\s+to\s+do\s+with\s+(kids|children)/i,
-        /^playground|theme\s*park/i
+        /^playground|theme\s*park/i,
+        // German
+        /^(etwas\s+)?(für|mit)\s+(den\s+)?kindern/i,
+        /^kinder|familie/i,
+        /^was\s+(kann\s+man|können\s+wir)\s+mit\s+kindern\s+(machen|tun)/i,
+        /^spielplatz|freizeitpark/i,
+        // Spanish
+        /^(algo\s+)?(para|con)\s+(los\s+)?niños/i,
+        /^niños|familia/i,
+        /^(qué|que)\s+hacer\s+con\s+(los\s+)?niños/i,
+        /^parque\s+(infantil|de\s+atracciones)/i,
+        // Polish
+        /^(coś\s+)?(dla|z)\s+dziećmi/i,
+        /^dzieci|rodzina/i,
+        /^co\s+robić\s+z\s+dziećmi/i,
+        /^plac\s+zabaw|park\s+rozrywki/i,
+        // Swedish
+        /^(något\s+)?(för|med)\s+barn(en)?/i,
+        /^barn|familj/i,
+        /^vad\s+(kan\s+vi|ska\s+vi)\s+göra\s+med\s+barn(en)?/i,
+        /^lekplats|nöjespark/i
       ],
       clarifyingQuestions: {
         nl: ["Hoe oud zijn de kinderen?", "Binnen of buiten activiteit?", "Gratis of betaalde attractie?"],
