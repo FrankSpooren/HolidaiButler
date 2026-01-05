@@ -125,12 +125,19 @@ class RAGService {
   static POI_CATEGORIES = {
     restaurant: {
       patterns: [
+        // Dutch
         /^(ik\s+)?(zoek|wil|ken)\s+(een\s+)?(goed|leuk|lekker)e?\s+restaurant/i,
         /^(geef|toon|laat).*(restaurant|eten)/i,
         /^waar\s+kan\s+ik\s+(goed\s+)?eten/i,
         /^restaurant\s*(aanbeveling|tip|suggestie)?s?$/i,
         /^(een\s+)?restaurant\s+zoeken$/i,
-        /^(ergens\s+)?(lekker\s+)?eten/i
+        /^(ergens\s+)?(lekker\s+)?eten/i,
+        // English
+        /^(i('m| am)\s+)?(looking\s+for\s+)?(a\s+)?(good|nice)\s+restaurant/i,
+        /^(show|give|find)\s+(me\s+)?(a\s+)?restaurant/i,
+        /^where\s+(can|do)\s+(i|we)\s+eat/i,
+        /^restaurant\s*(recommendation|tip)?s?$/i,
+        /^(somewhere\s+)?(to\s+)?eat$/i
       ],
       clarifyingQuestions: {
         nl: ["Wat voor type keuken zoek je? (Italiaans, Spaans, Aziatisch, seafood, etc.)", "Zoek je iets voor lunch of diner?", "Heb je een voorkeur: zeezicht, centrum, of romantisch?"],
@@ -143,10 +150,16 @@ class RAGService {
     },
     beach: {
       patterns: [
+        // Dutch
         /^(een\s+)?(goed|mooi|leuk)e?\s+strand/i,
         /^waar\s+(is|zijn|kan).*(strand|zwemmen)/i,
         /^strand\s*(aanbeveling|tip)?s?$/i,
-        /^(naar\s+)?(het\s+)?strand/i
+        /^(naar\s+)?(het\s+)?strand/i,
+        // English
+        /^(a\s+)?(good|nice|best)\s+beach/i,
+        /^where\s+(is|are|can).*(beach|swim)/i,
+        /^beach\s*(recommendation|tip)?s?$/i,
+        /^(to\s+)?(the\s+)?beach$/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je een rustig strand of eentje met faciliteiten (ligbedden, chiringuito)?", "Zandstrand of rotsachtig/snorkelen?", "Met kinderen of voor volwassenen?"],
@@ -159,11 +172,18 @@ class RAGService {
     },
     activity: {
       patterns: [
+        // Dutch
         /^wat\s+(kan|kun)\s+(ik|je|we)\s+doen/i,
         /^(ik\s+)?(zoek|wil)\s+(iets\s+)?(leuks?|te\s+doen)/i,
         /^activiteit(en)?\s*(in\s+calpe)?$/i,
         /^wat\s+is\s+er\s+te\s+doen/i,
-        /^(iets\s+)?leuks?\s+(te\s+)?doen/i
+        /^(iets\s+)?leuks?\s+(te\s+)?doen/i,
+        // English
+        /^what\s+(can|should)\s+(i|we)\s+do/i,
+        /^(i('m| am)\s+)?(looking\s+for\s+)?(something\s+)?(fun|to\s+do)/i,
+        /^activit(y|ies)\s*(in\s+calpe)?$/i,
+        /^what\s+(is\s+there\s+)?to\s+do/i,
+        /^things\s+to\s+do$/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je outdoor (stranden, wandelen, watersport) of indoor (musea, winkelen)?", "Voor wie: alleen, koppel, gezin met kinderen?", "Actief of ontspannend?"],
@@ -176,11 +196,18 @@ class RAGService {
     },
     attraction: {
       patterns: [
+        // Dutch
         /^(een\s+)?(leuk|mooi)e?\s+(bezienswaardighe|attractie|uitje)/i,
         /^wat\s+(moet|kan)\s+ik\s+(zien|bezoeken)/i,
         /^bezienswaardighe(id|den)/i,
         /^attracties?$/i,
-        /^(iets\s+)?(te\s+)?bezichtigen/i
+        /^(iets\s+)?(te\s+)?bezichtigen/i,
+        // English
+        /^(a\s+)?(nice|good)\s+(sight|attraction|landmark)/i,
+        /^what\s+(should|can)\s+i\s+(see|visit)/i,
+        /^sights?(eeing)?/i,
+        /^attractions?$/i,
+        /^(something\s+)?(to\s+)?visit$/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je historische plekken, natuurlijke bezienswaardigheden, of moderne attracties?", "Heb je interesse in de Peñón de Ifach, oude stad, of uitkijkpunten?", "Hoeveel tijd heb je: kort bezoek of halve dag?"],
@@ -193,10 +220,11 @@ class RAGService {
     },
     museum: {
       patterns: [
-        /^(een\s+)?museum/i,
-        /^musea?\s*(in\s+calpe)?$/i,
-        /^cultuur|cultureel/i,
-        /^(iets\s+)?cultureel(s)?/i
+        // Dutch & English (museum is same)
+        /^(een\s+|a\s+)?museum/i,
+        /^museums?\s*(in\s+calpe)?$/i,
+        /^cultuur|cultureel|culture|cultural/i,
+        /^(iets\s+|something\s+)?cultural?/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je kunst, geschiedenis, of lokale cultuur?", "Geschikt voor kinderen of volwassenen?", "Modern of klassiek?"],
@@ -209,10 +237,15 @@ class RAGService {
     },
     shop: {
       patterns: [
+        // Dutch
         /^(waar\s+kan\s+ik\s+)?winkelen/i,
         /^winkels?\s*(in\s+calpe)?$/i,
-        /^shoppen|shopping/i,
-        /^(iets\s+)?kopen/i
+        /^(iets\s+)?kopen/i,
+        // English
+        /^(where\s+can\s+i\s+)?(go\s+)?shopping/i,
+        /^shops?\s*(in\s+calpe)?$/i,
+        /^stores?$/i,
+        /^(something\s+)?to\s+buy$/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je souvenirs, kleding, lokale producten, of supermarkten?", "Luxe winkels of budget-vriendelijk?", "Centrum of winkelcentrum?"],
@@ -225,12 +258,17 @@ class RAGService {
     },
     nightlife: {
       patterns: [
+        // Dutch
         /^(waar\s+kan\s+ik\s+)?uitgaan/i,
+        /^(een\s+)?(leuk|goed)e?\s+bar/i,
+        /^(iets\s+)?drinken/i,
+        // English & shared
+        /^(where\s+can\s+i\s+)?go\s+out/i,
         /^nachtleven|nightlife/i,
         /^bars?\s*(in\s+calpe)?$/i,
-        /^(een\s+)?(leuk|goed)e?\s+bar/i,
+        /^(a\s+)?(good|nice)\s+bar/i,
         /^club|disco/i,
-        /^(iets\s+)?drinken/i
+        /^(somewhere\s+)?(to\s+)?drink$/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je een rustige bar, cocktailbar, of club/disco?", "Met live muziek of DJ?", "Zeezicht of in het centrum?"],
@@ -243,11 +281,15 @@ class RAGService {
     },
     event: {
       patterns: [
+        // Dutch
         /^(wat\s+voor\s+)?evenement(en)?/i,
-        /^events?\s*(in\s+calpe|deze\s+week|vandaag)?$/i,
         /^wat\s+is\s+er\s+te\s+doen\s+(deze\s+week|vandaag|dit\s+weekend)/i,
         /^agenda|programma/i,
-        /^festival|concert|markt/i
+        // English & shared
+        /^(what\s+)?events?\s*(in\s+calpe|this\s+week|today)?$/i,
+        /^what('s|\s+is)\s+(on|happening)\s+(this\s+week|today|this\s+weekend)/i,
+        /^schedule|program/i,
+        /^festival|concert|market/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je evenementen voor vandaag, dit weekend, of deze week?", "Culturele events, markten, muziek, of sport?", "Gratis of betaalde evenementen?"],
@@ -260,11 +302,15 @@ class RAGService {
     },
     sport: {
       patterns: [
+        // Dutch
         /^(waar\s+kan\s+ik\s+)?sporten/i,
-        /^sport(en)?\s*(in\s+calpe)?$/i,
-        /^fitness|gym|zwembad/i,
-        /^(water)?sport/i,
-        /^duiken|snorkelen|kayak|paddle/i
+        /^zwembad/i,
+        // English & shared
+        /^(where\s+can\s+i\s+)?(do\s+)?sports?/i,
+        /^sports?\s*(in\s+calpe)?$/i,
+        /^fitness|gym|pool/i,
+        /^(water)?sports?/i,
+        /^diving|snorkeling|kayak|paddle/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je watersport (duiken, kayak, paddleboard) of landsport (tennis, golf, fitness)?", "Beginner of ervaren?", "Wil je een les/cursus of zelf doen?"],
@@ -277,10 +323,16 @@ class RAGService {
     },
     nature: {
       patterns: [
-        /^natuur|wandelen|hiking/i,
+        // Dutch
+        /^natuur|wandelen/i,
         /^(een\s+)?(mooi|leuk)e?\s+wandeling/i,
         /^waar\s+kan\s+ik\s+wandelen/i,
-        /^natuurgebied|park/i
+        /^natuurgebied/i,
+        // English & shared
+        /^nature|hiking|walk/i,
+        /^(a\s+)?(nice|good)\s+(hike|walk)/i,
+        /^where\s+can\s+i\s+(hike|walk)/i,
+        /^nature\s*(area|reserve)|park/i
       ],
       clarifyingQuestions: {
         nl: ["Zoek je een korte wandeling of een langere hike?", "Makkelijk (vlak) of uitdagend (bergen)?", "Kust/zee of binnenland/bergen?"],
@@ -293,10 +345,16 @@ class RAGService {
     },
     family: {
       patterns: [
+        // Dutch
         /^(iets\s+)?(voor|met)\s+(de\s+)?kinderen/i,
         /^kinder|familie|gezin/i,
         /^wat\s+te\s+doen\s+met\s+kinderen/i,
-        /^speeltuin|pretpark/i
+        /^speeltuin|pretpark/i,
+        // English
+        /^(something\s+)?(for|with)\s+(the\s+)?kids/i,
+        /^kids|family|children/i,
+        /^what\s+to\s+do\s+with\s+(kids|children)/i,
+        /^playground|theme\s*park/i
       ],
       clarifyingQuestions: {
         nl: ["Hoe oud zijn de kinderen?", "Binnen of buiten activiteit?", "Gratis of betaalde attractie?"],
