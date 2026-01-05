@@ -13,6 +13,7 @@ on:
     paths:
       - 'platform-core/src/services/holibot/**'
       - 'platform-core/src/routes/holibot.js'
+      - 'platform-core/src/routes/health.js'
 
   workflow_dispatch:
     inputs:
