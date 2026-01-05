@@ -118,6 +118,431 @@ class RAGService {
     return found;
   }
 
+  /**
+   * POI Category definitions with vague patterns and clarifying questions
+   * Covers ALL POI types: restaurants, beaches, attractions, museums, shops, nightlife, events, etc.
+   */
+  static POI_CATEGORIES = {
+    restaurant: {
+      patterns: [
+        /^(ik\s+)?(zoek|wil|ken)\s+(een\s+)?(goed|leuk|lekker)e?\s+restaurant/i,
+        /^(geef|toon|laat).*(restaurant|eten)/i,
+        /^waar\s+kan\s+ik\s+(goed\s+)?eten/i,
+        /^restaurant\s*(aanbeveling|tip|suggestie)?s?$/i,
+        /^(een\s+)?restaurant\s+zoeken$/i,
+        /^(ergens\s+)?(lekker\s+)?eten/i
+      ],
+      clarifyingQuestions: {
+        nl: [
+          "Wat voor type keuken zoek je? (Italiaans, Spaans, Aziatisch, seafood, etc.)",
+          "Zoek je iets voor lunch of diner?",
+          "Heb je een voorkeur: zeezicht, centrum, of romantisch?"
+        ],
+        en: [
+          "What type of cuisine? (Italian, Spanish, Asian, seafood, etc.)",
+          "Looking for lunch or dinner?",
+          "Preference: sea view, city center, or romantic setting?"
+        ]
+      }
+    },
+    beach: {
+      patterns: [
+        /^(een\s+)?(goed|mooi|leuk)e?\s+strand/i,
+        /^waar\s+(is|zijn|kan).*(strand|zwemmen)/i,
+        /^strand\s*(aanbeveling|tip)?s?$/i,
+        /^(naar\s+)?(het\s+)?strand/i
+      ],
+      clarifyingQuestions: {
+        nl: [
+          "Zoek je een rustig strand of eentje met faciliteiten (ligbedden, chiringuito)?",
+          "Zandstrand of rotsachtig/snorkelen?",
+          "Met kinderen of voor volwassenen?"
+        ],
+        en: [
+          "Quiet beach or one with facilities (sun beds, beach bar)?",
+          "Sandy beach or rocky/snorkeling?",
+          "With children or adults only?"
+        ]
+      }
+    },
+    activity: {
+      patterns: [
+        /^wat\s+(kan|kun)\s+(ik|je|we)\s+doen/i,
+        /^(ik\s+)?(zoek|wil)\s+(iets\s+)?(leuks?|te\s+doen)/i,
+        /^activiteit(en)?\s*(in\s+calpe)?$/i,
+        /^wat\s+is\s+er\s+te\s+doen/i,
+        /^(iets\s+)?leuks?\s+(te\s+)?doen/i
+      ],
+      clarifyingQuestions: {
+        nl: [
+          "Zoek je outdoor (stranden, wandelen, watersport) of indoor (musea, winkelen)?",
+          "Voor wie: alleen, koppel, gezin met kinderen?",
+          "Actief of ontspannend?"
+        ],
+        en: [
+          "Outdoor (beaches, hiking, water sports) or indoor (museums, shopping)?",
+          "For whom: solo, couple, family with kids?",
+          "Active or relaxing?"
+        ]
+      }
+    },
+    attraction: {
+      patterns: [
+        /^(een\s+)?(leuk|mooi)e?\s+(bezienswaardighe|attractie|uitje)/i,
+        /^wat\s+(moet|kan)\s+ik\s+(zien|bezoeken)/i,
+        /^bezienswaardighe(id|den)/i,
+        /^attracties?$/i,
+        /^(iets\s+)?(te\s+)?bezichtigen/i
+      ],
+      clarifyingQuestions: {
+        nl: [
+          "Zoek je historische plekken, natuurlijke bezienswaardigheden, of moderne attracties?",
+          "Heb je interesse in de Peñón de Ifach, oude stad, of uitkijkpunten?",
+          "Hoeveel tijd heb je: kort bezoek of halve dag?"
+        ],
+        en: [
+          "Historical sites, natural landmarks, or modern attractions?",
+          "Interested in Peñón de Ifach, old town, or viewpoints?",
+          "How much time: quick visit or half day?"
+        ]
+      }
+    },
+    museum: {
+      patterns: [
+        /^(een\s+)?museum/i,
+        /^musea?\s*(in\s+calpe)?$/i,
+        /^cultuur|cultureel/i,
+        /^(iets\s+)?cultureel(s)?/i
+      ],
+      clarifyingQuestions: {
+        nl: [
+          "Zoek je kunst, geschiedenis, of lokale cultuur?",
+          "Geschikt voor kinderen of volwassenen?",
+          "Modern of klassiek?"
+        ],
+        en: [
+          "Art, history, or local culture?",
+          "Suitable for children or adults?",
+          "Modern or classical?"
+        ]
+      }
+    },
+    shop: {
+      patterns: [
+        /^(waar\s+kan\s+ik\s+)?winkelen/i,
+        /^winkels?\s*(in\s+calpe)?$/i,
+        /^shoppen|shopping/i,
+        /^(iets\s+)?kopen/i
+      ],
+      clarifyingQuestions: {
+        nl: [
+          "Zoek je souvenirs, kleding, lokale producten, of supermarkten?",
+          "Luxe winkels of budget-vriendelijk?",
+          "Centrum of winkelcentrum?"
+        ],
+        en: [
+          "Souvenirs, clothing, local products, or supermarkets?",
+          "Luxury shops or budget-friendly?",
+          "City center or shopping mall?"
+        ]
+      }
+    },
+    nightlife: {
+      patterns: [
+        /^(waar\s+kan\s+ik\s+)?uitgaan/i,
+        /^nachtleven|nightlife/i,
+        /^bars?\s*(in\s+calpe)?$/i,
+        /^(een\s+)?(leuk|goed)e?\s+bar/i,
+        /^club|disco/i,
+        /^(iets\s+)?drinken/i
+      ],
+      clarifyingQuestions: {
+        nl: [
+          "Zoek je een rustige bar, cocktailbar, of club/disco?",
+          "Met live muziek of DJ?",
+          "Zeezicht of in het centrum?"
+        ],
+        en: [
+          "Quiet bar, cocktail bar, or club/disco?",
+          "With live music or DJ?",
+          "Sea view or city center?"
+        ]
+      }
+    },
+    event: {
+      patterns: [
+        /^(wat\s+voor\s+)?evenement(en)?/i,
+        /^events?\s*(in\s+calpe|deze\s+week|vandaag)?$/i,
+        /^wat\s+is\s+er\s+te\s+doen\s+(deze\s+week|vandaag|dit\s+weekend)/i,
+        /^agenda|programma/i,
+        /^festival|concert|markt/i
+      ],
+      clarifyingQuestions: {
+        nl: [
+          "Zoek je evenementen voor vandaag, dit weekend, of deze week?",
+          "Culturele events, markten, muziek, of sport?",
+          "Gratis of betaalde evenementen?"
+        ],
+        en: [
+          "Events for today, this weekend, or this week?",
+          "Cultural events, markets, music, or sports?",
+          "Free or paid events?"
+        ]
+      }
+    },
+    sport: {
+      patterns: [
+        /^(waar\s+kan\s+ik\s+)?sporten/i,
+        /^sport(en)?\s*(in\s+calpe)?$/i,
+        /^fitness|gym|zwembad/i,
+        /^(water)?sport/i,
+        /^duiken|snorkelen|kayak|paddle/i
+      ],
+      clarifyingQuestions: {
+        nl: [
+          "Zoek je watersport (duiken, kayak, paddleboard) of landsport (tennis, golf, fitness)?",
+          "Beginner of ervaren?",
+          "Wil je een les/cursus of zelf doen?"
+        ],
+        en: [
+          "Water sports (diving, kayak, paddleboard) or land sports (tennis, golf, fitness)?",
+          "Beginner or experienced?",
+          "Want lessons/courses or self-guided?"
+        ]
+      }
+    },
+    nature: {
+      patterns: [
+        /^natuur|wandelen|hiking/i,
+        /^(een\s+)?(mooi|leuk)e?\s+wandeling/i,
+        /^waar\s+kan\s+ik\s+wandelen/i,
+        /^natuurgebied|park/i
+      ],
+      clarifyingQuestions: {
+        nl: [
+          "Zoek je een korte wandeling of een langere hike?",
+          "Makkelijk (vlak) of uitdagend (bergen)?",
+          "Kust/zee of binnenland/bergen?"
+        ],
+        en: [
+          "Short walk or longer hike?",
+          "Easy (flat) or challenging (mountains)?",
+          "Coast/sea or inland/mountains?"
+        ]
+      }
+    },
+    family: {
+      patterns: [
+        /^(iets\s+)?(voor|met)\s+(de\s+)?kinderen/i,
+        /^kinder|familie|gezin/i,
+        /^wat\s+te\s+doen\s+met\s+kinderen/i,
+        /^speeltuin|pretpark/i
+      ],
+      clarifyingQuestions: {
+        nl: [
+          "Hoe oud zijn de kinderen?",
+          "Binnen of buiten activiteit?",
+          "Gratis of betaalde attractie?"
+        ],
+        en: [
+          "How old are the children?",
+          "Indoor or outdoor activity?",
+          "Free or paid attraction?"
+        ]
+      }
+    }
+  };
+
+  /**
+   * Detect if a query is too vague and needs clarification
+   * Works for ALL POI categories and events
+   * @param {string} query - User query
+   * @returns {object} - { isVague: boolean, category: string, clarifyingQuestions: object }
+   */
+  detectVagueQuery(query) {
+    const lq = query.toLowerCase();
+
+    // Check for specific attributes that make query NOT vague
+    const cuisineKeywords = this.extractCuisineKeywords(query);
+    const hasSpecificAttribute = cuisineKeywords.length > 0;
+
+    // Check for specific time indicators (makes event queries specific)
+    const hasTimeIndicator = /\b(vandaag|morgen|dit\s+weekend|deze\s+week|today|tomorrow|this\s+week(end)?)\b/i.test(query);
+
+    // Check for specific location/name mentions (proper nouns)
+    const hasSpecificName = /[A-Z][a-z]+\s+[A-Z][a-z]+/.test(query) &&
+                           !/(Calpe|Costa Blanca|Alicante|Spain|Spanje)/.test(query);
+
+    // Check for specific descriptors that narrow down the query
+    const hasSpecificDescriptor = /\b(goedkoop|duur|luxe|budget|romantisch|rustig|gezellig|authentiek|traditional|modern|cheap|expensive|quiet|romantic)\b/i.test(query);
+
+    if (hasSpecificAttribute || hasSpecificName || (hasTimeIndicator && /event|evenement/i.test(query)) || hasSpecificDescriptor) {
+      return { isVague: false, category: null, clarifyingQuestions: {} };
+    }
+
+    // Check all POI categories for vague patterns
+    for (const [category, config] of Object.entries(RAGService.POI_CATEGORIES)) {
+      if (config.patterns.some(p => p.test(lq))) {
+        return {
+          isVague: true,
+          category: category,
+          clarifyingQuestions: config.clarifyingQuestions
+        };
+      }
+    }
+
+    return { isVague: false, category: null, clarifyingQuestions: {} };
+  }
+
+  /**
+   * Filter search results based on cuisine/attribute keywords
+   * @param {array} results - Search results
+   * @param {array} cuisineKeywords - Extracted cuisine keywords from query
+   * @returns {array} - Filtered and prioritized results
+   */
+  filterByCuisineKeywords(results, cuisineKeywords) {
+    if (!cuisineKeywords || cuisineKeywords.length === 0) return results;
+    if (!results || results.length === 0) return results;
+
+    const keywordsLower = cuisineKeywords.map(k => k.toLowerCase());
+
+    // Score each result based on cuisine keyword matches
+    const scored = results.map(r => {
+      const text = ((r.name || "") + " " + (r.description || "") + " " + (r.category || "")).toLowerCase();
+      let matchScore = 0;
+
+      for (const keyword of keywordsLower) {
+        if (text.includes(keyword)) {
+          matchScore += 10; // Strong match
+        }
+        // Check related terms
+        const relatedTerms = this.getRelatedCuisineTerms(keyword);
+        for (const term of relatedTerms) {
+          if (text.includes(term)) {
+            matchScore += 5; // Related match
+          }
+        }
+      }
+
+      return { ...r, cuisineMatchScore: matchScore };
+    });
+
+    // Sort by cuisine match score first, then by similarity
+    scored.sort((a, b) => {
+      if (b.cuisineMatchScore !== a.cuisineMatchScore) {
+        return b.cuisineMatchScore - a.cuisineMatchScore;
+      }
+      return (b.similarity || 0) - (a.similarity || 0);
+    });
+
+    // If we have matches with cuisine keywords, prioritize them
+    const withMatches = scored.filter(r => r.cuisineMatchScore > 0);
+    if (withMatches.length >= 3) {
+      return withMatches;
+    }
+
+    // Return all results but sorted by relevance
+    return scored;
+  }
+
+  /**
+   * Get related cuisine terms for better matching
+   */
+  getRelatedCuisineTerms(keyword) {
+    const relations = {
+      'vegetarian': ['vegetarisch', 'groenten', 'salad', 'vegan', 'plantaardig', 'veggie'],
+      'vegetarisch': ['vegetarian', 'groenten', 'salad', 'vegan', 'plantaardig', 'veggie'],
+      'vegan': ['vegaans', 'plantaardig', 'vegetarian', 'vegetarisch'],
+      'italian': ['italiaans', 'pizza', 'pasta', 'risotto', 'italia'],
+      'italiaans': ['italian', 'pizza', 'pasta', 'risotto', 'italia'],
+      'mexican': ['mexicaans', 'taco', 'burrito', 'nacho'],
+      'mexicaans': ['mexican', 'taco', 'burrito', 'nacho'],
+      'seafood': ['vis', 'zeevruchten', 'mariscos', 'pescado', 'fish', 'zee'],
+      'vis': ['seafood', 'zeevruchten', 'mariscos', 'fish', 'zee'],
+      'indian': ['indiaas', 'curry', 'tandoori', 'naan'],
+      'indiaas': ['indian', 'curry', 'tandoori', 'naan'],
+      'chinese': ['chinees', 'wok', 'dim sum', 'noodles'],
+      'chinees': ['chinese', 'wok', 'dim sum', 'noodles'],
+      'tapas': ['spanish', 'spaans', 'española'],
+      'spanish': ['spaans', 'tapas', 'paella'],
+      'spaans': ['spanish', 'tapas', 'paella']
+    };
+    return relations[keyword.toLowerCase()] || [];
+  }
+
+  /**
+   * Generate a helpful response when query is too vague
+   * Works for ALL POI categories with localized intros
+   */
+  generateVagueQueryResponse(vagueInfo, lang = 'nl') {
+    const questions = vagueInfo.clarifyingQuestions[lang] || vagueInfo.clarifyingQuestions['nl'] || [];
+
+    // Category-specific intros in all supported languages
+    const intros = {
+      nl: {
+        restaurant: "Om je de beste restauranttips te geven, help je me door een paar vragen te beantwoorden:",
+        beach: "Om het perfecte strand voor je te vinden:",
+        activity: "Om de ideale activiteit voor je te vinden:",
+        attraction: "Om de beste bezienswaardigheden aan te bevelen:",
+        museum: "Om het juiste museum voor je te vinden:",
+        shop: "Om de beste winkels voor je te vinden:",
+        nightlife: "Om de perfecte uitgaansplek te vinden:",
+        event: "Om de leukste evenementen te vinden:",
+        sport: "Om de beste sportmogelijkheden te vinden:",
+        nature: "Om de mooiste wandeling/natuurplek te vinden:",
+        family: "Om de leukste gezinsactiviteit te vinden:",
+        default: "Om je beter te helpen, heb ik wat meer informatie nodig:"
+      },
+      en: {
+        restaurant: "To give you the best restaurant recommendations:",
+        beach: "To find the perfect beach for you:",
+        activity: "To find the ideal activity for you:",
+        attraction: "To recommend the best attractions:",
+        museum: "To find the right museum for you:",
+        shop: "To find the best shops for you:",
+        nightlife: "To find the perfect place to go out:",
+        event: "To find the best events:",
+        sport: "To find the best sports facilities:",
+        nature: "To find the best hiking/nature spot:",
+        family: "To find the best family activity:",
+        default: "To help you better, I need some more information:"
+      },
+      de: {
+        restaurant: "Um dir die besten Restaurantempfehlungen zu geben:",
+        beach: "Um den perfekten Strand für dich zu finden:",
+        activity: "Um die ideale Aktivität für dich zu finden:",
+        attraction: "Um die besten Sehenswürdigkeiten zu empfehlen:",
+        default: "Um dir besser zu helfen, brauche ich mehr Informationen:"
+      },
+      es: {
+        restaurant: "Para darte las mejores recomendaciones de restaurantes:",
+        beach: "Para encontrar la playa perfecta para ti:",
+        activity: "Para encontrar la actividad ideal para ti:",
+        attraction: "Para recomendar las mejores atracciones:",
+        default: "Para ayudarte mejor, necesito más información:"
+      }
+    };
+
+    const endings = {
+      nl: "Of vertel me gewoon specifiek wat je zoekt!",
+      en: "Or just tell me specifically what you're looking for!",
+      de: "Oder sag mir einfach genau, was du suchst!",
+      es: "¡O simplemente dime qué estás buscando!"
+    };
+
+    const langIntros = intros[lang] || intros['nl'];
+    const intro = langIntros[vagueInfo.category] || langIntros['default'];
+    const ending = endings[lang] || endings['nl'];
+
+    if (!questions || questions.length === 0) {
+      return intro + "\n\n" + ending;
+    }
+
+    const questionList = questions.slice(0, 3).map((q, i) => `${i + 1}. ${q}`).join('\n');
+
+    return `${intro}\n\n${questionList}\n\n${ending}`;
+  }
+
 
   levenshteinDistance(a, b) {
     const aL = a.toLowerCase(), bL = b.toLowerCase();
@@ -539,6 +964,31 @@ class RAGService {
     try {
       const start = Date.now();
       const history = opts.conversationHistory || [];
+
+      // NEW: Check for vague queries and return clarifying questions (streaming version)
+      const vagueCheck = this.detectVagueQuery(query);
+      if (vagueCheck.isVague && history.length === 0) {
+        logger.info("Vague query detected (stream)", { category: vagueCheck.category, query });
+        const clarifyingResponse = this.generateVagueQueryResponse(vagueCheck, lang);
+        // Create a simple async generator that yields the clarifying response
+        async function* clarifyingStream() {
+          yield clarifyingResponse;
+        }
+        return {
+          success: true,
+          searchTimeMs: Date.now() - start,
+          pois: [],
+          source: "clarification",
+          hasEvents: false,
+          isVagueQuery: true,
+          vagueCategory: vagueCheck.category,
+          stream: clarifyingStream()
+        };
+      }
+
+      // Extract cuisine keywords for filtering
+      const cuisineKeywords = this.extractCuisineKeywords(query);
+
       // Extract entities from ORIGINAL query (before any corrections that might change capitalization)
       const namedEntities = this.extractNamedEntities(opts.originalQuery || query);
       logger.info("Named entities extracted", { entities: namedEntities, originalQuery: opts.originalQuery || query });
@@ -559,8 +1009,14 @@ class RAGService {
       let events = [];
       if (isEvent) events = await this.searchEvents(base, 5);
       const sq = await this.buildEnhancedSearchQuery(base, history, opts.intentContext || {});
-      const sr = await this.search(sq, {limit: 10});
-      const filteredResults = this.filterRelevantResults(sr.results, query, namedEntities);
+      const sr = await this.search(sq, {limit: 20}); // Increased limit for better filtering
+      let filteredResults = this.filterRelevantResults(sr.results, query, namedEntities);
+
+      // NEW: Apply cuisine keyword filtering
+      if (cuisineKeywords.length > 0) {
+        filteredResults = this.filterByCuisineKeywords(filteredResults, cuisineKeywords);
+      }
+
       const combined = isEvent ? [...events, ...filteredResults].slice(0, 5) : filteredResults.slice(0, 5);
       // Clear unknownEntity if we found a good fuzzy match in results
       if (unknownEntity && combined.length > 0) {
@@ -589,6 +1045,31 @@ class RAGService {
     try {
       const start = Date.now();
       const history = opts.conversationHistory || [];
+
+      // NEW: Check for vague queries and return clarifying questions
+      const vagueCheck = this.detectVagueQuery(query);
+      if (vagueCheck.isVague && history.length === 0) {
+        // Only ask clarifying questions on first message, not follow-ups
+        logger.info("Vague query detected", { category: vagueCheck.category, query });
+        const clarifyingResponse = this.generateVagueQueryResponse(vagueCheck, lang);
+        return {
+          success: true,
+          message: clarifyingResponse,
+          pois: [],
+          source: "clarification",
+          hasEvents: false,
+          searchTimeMs: Date.now() - start,
+          isVagueQuery: true,
+          vagueCategory: vagueCheck.category
+        };
+      }
+
+      // Extract cuisine keywords for filtering
+      const cuisineKeywords = this.extractCuisineKeywords(query);
+      if (cuisineKeywords.length > 0) {
+        logger.info("Cuisine keywords extracted", { keywords: cuisineKeywords, query });
+      }
+
       // Extract entities from ORIGINAL query (before any corrections that might change capitalization)
       const namedEntities = this.extractNamedEntities(opts.originalQuery || query);
       logger.info("Named entities extracted", { entities: namedEntities, originalQuery: opts.originalQuery || query });
@@ -609,8 +1090,15 @@ class RAGService {
       let events = [];
       if (isEvent) events = await this.searchEvents(base, 5);
       const sq = await this.buildEnhancedSearchQuery(base, history, opts.intentContext || {});
-      const sr = await this.search(sq, {limit: 10});
-      const filteredResults = this.filterRelevantResults(sr.results, query, namedEntities);
+      const sr = await this.search(sq, {limit: 20}); // Increased limit for better cuisine filtering
+      let filteredResults = this.filterRelevantResults(sr.results, query, namedEntities);
+
+      // NEW: Apply cuisine keyword filtering
+      if (cuisineKeywords.length > 0) {
+        filteredResults = this.filterByCuisineKeywords(filteredResults, cuisineKeywords);
+        logger.info("Results after cuisine filtering", { count: filteredResults.length, keywords: cuisineKeywords });
+      }
+
       const combined = isEvent ? [...events, ...filteredResults].slice(0, 5) : filteredResults.slice(0, 5);
       // If we found results with a close fuzzy match, rewrite the query to use correct name
       let queryForLLM = base;
