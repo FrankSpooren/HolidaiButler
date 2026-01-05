@@ -95,6 +95,20 @@ class RAGService {
   }
 
 
+  
+  // Check if POI is closed (temporarily or permanently)
+  isPOIClosed(poi) {
+    if (!poi) return false;
+    if (poi.is_active === false || poi.isActive === false) return true;
+    const text = ((poi.name || "") + " " + (poi.description || "")).toLowerCase();
+    const closedIndicators = [
+      "permanently closed", "permanent gesloten", "definitief gesloten",
+      "temporarily closed", "tijdelijk gesloten", "cerrado permanentemente",
+      "closed down", "out of business", "bestaat niet meer", "is gesloten"
+    ];
+    return closedIndicators.some(ind => text.includes(ind));
+  }
+
   extractCuisineKeywords(query) {
     const found = [];
     const words = query.toLowerCase().split(/\s+/);
@@ -249,6 +263,9 @@ class RAGService {
 
   // NEW: Filter results to remove irrelevant Q&A entries
   filterRelevantResults(results, query, namedEntities = []) {
+    // Filter out closed POIs first
+    results = results.filter(r => !this.isPOIClosed(r));
+    
     if (!results?.length) return [];
     
     const queryLower = query.toLowerCase();
