@@ -619,7 +619,8 @@ const cleanAIText = (text, poiNames = []) => {
   for (const prep of prepositions) {
     // Match preposition followed directly by uppercase letter (no space)
     // NOTE: \\b is required in template strings to get \b word boundary in regex
-    const regex = new RegExp(`(\\b${prep})([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])`, "gi");
+    // IMPORTANT: Do NOT use 'i' flag - we need case-sensitive matching for uppercase detection
+    const regex = new RegExp(`(\\b${prep})([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])`, "g");
     cleaned = cleaned.replace(regex, "$1 $2");
   }
 
