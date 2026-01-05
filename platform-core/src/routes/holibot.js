@@ -587,12 +587,16 @@ const cleanAIText = (text, poiNames = []) => {
   cleaned = cleaned.replace(/([a-zA-ZáéíóúàèìòùäëïöüâêîôûñçÀÈÌÒÙÁÉÍÓÚÄËÏÖÜÂÊÎÔÛÑÇ])([.!?])([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])/g, "$1$2 $3");
 
   // Fix common location names stuck to adjacent words
+  // IMPORTANT: Only fix spacing when location is clearly a separate word
+  // Use word boundary () to prevent breaking compound words like "Calpesa"
   const locationNames = ["Calpe", "Benidorm", "Altea", "Alicante", "Valencia", "Spain", "Spanje", "España"];
   for (const loc of locationNames) {
-    // Add space BEFORE location if preceded by letter
-    cleaned = cleaned.replace(new RegExp(`([a-záéíóúàèìòùäëïöüâêîôûñç])${loc}`, "g"), "$1 " + loc);
-    // Add space AFTER location if followed by lowercase letter  
-    cleaned = cleaned.replace(new RegExp(`${loc}([a-záéíóúàèìòùäëïöüâêîôûñç])`, "g"), loc + " $1");
+    // Add space BEFORE location if preceded by lowercase letter (e.g., "inCalpe" -> "in Calpe")
+    // But only if location starts a new word (followed by word boundary or end)
+    cleaned = cleaned.replace(new RegExp(`([a-záéíóúàèìòùäëïöüâêîôûñç])(${loc})\b`, "g"), "$1 $2");
+    // Add space AFTER location ONLY if followed by UPPERCASE letter (new word)
+    // This prevents "Calpesa" -> "Calpe sa" but fixes "CalpeGeniet" -> "Calpe Geniet"
+    cleaned = cleaned.replace(new RegExp(`\b(${loc})([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])`, "g"), "$1 $2");
   }
 
   // Fix spacing around POI names
