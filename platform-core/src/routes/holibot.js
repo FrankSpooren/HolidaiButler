@@ -670,9 +670,9 @@ const cleanAIText = (text, poiNames = []) => {
     .trim();
 
   // CRITICAL: Normalize ALL CAPS POI names to Title Case
-  // Matches sequences of 3+ ALL CAPS words (like "INDIAN CURRY ORIGINAL INDIAN RESTAURANT BAR")
-  // and converts them to proper Title Case ("Indian Curry Original Indian Restaurant Bar")
-  cleaned = cleaned.replace(/\b([A-ZÁÉÍÓÚÑÇ]{2,}(?:\s+[A-ZÁÉÍÓÚÑÇ]{2,}){2,})\b/g, (match) => {
+  // Matches sequences of 2+ ALL CAPS words (like "INDIAN PALACE" or "INDIAN CURRY ORIGINAL")
+  // and converts them to proper Title Case ("Indian Palace", "Indian Curry Original")
+  cleaned = cleaned.replace(/\b([A-ZÁÉÍÓÚÑÇ]{2,}(?:\s+[A-ZÁÉÍÓÚÑÇ]{2,})+)\b/g, (match) => {
     return toTitleCase(match);
   });
 
