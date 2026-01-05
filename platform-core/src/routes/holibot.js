@@ -550,7 +550,46 @@ const getTranslatedEventTitle = (event, lang) => {
 };
 
 /**
- * Clean AI-generated text: remove asterisks, quotes, and fix spacing
+ * Convert text to Title Case (first letter uppercase, rest lowercase)
+ * Handles special cases for Dutch/Spanish articles and prepositions
+ * @param {string} text - Text to convert
+ * @returns {string} - Title cased text
+ */
+const toTitleCase = (text) => {
+  if (!text) return '';
+
+  // Words that should stay lowercase (unless at start)
+  const lowercaseWords = new Set(['de', 'het', 'een', 'van', 'in', 'op', 'aan', 'bij', 'voor', 'met', 'el', 'la', 'los', 'las', 'del', 'al', 'y', 'the', 'a', 'an', 'of', 'in', 'on', 'at', 'for', 'with', 'and']);
+
+  return text
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word, index) => {
+      // Keep short words lowercase unless first word
+      if (index > 0 && lowercaseWords.has(word)) {
+        return word;
+      }
+      // Capitalize first letter
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+};
+
+/**
+ * Check if text is ALL CAPS (more than 3 consecutive uppercase words)
+ * @param {string} text - Text to check
+ * @returns {boolean} - True if text appears to be ALL CAPS
+ */
+const isAllCaps = (text) => {
+  if (!text || text.length < 4) return false;
+  // Check if string is mostly uppercase letters
+  const upperCount = (text.match(/[A-ZÁÉÍÓÚÑÇ]/g) || []).length;
+  const lowerCount = (text.match(/[a-záéíóúñç]/g) || []).length;
+  return upperCount > 3 && upperCount > lowerCount * 2;
+};
+
+/**
+ * Clean AI-generated text: remove asterisks, quotes, fix spacing, and normalize POI names
  * @param {string} text - Raw AI text
  * @param {string[]} poiNames - Array of POI names to fix spacing around
  * @returns {string} - Cleaned text
@@ -579,7 +618,8 @@ const cleanAIText = (text, poiNames = []) => {
   const prepositions = ["in", "bij", "van", "naar", "voor", "met", "op", "aan", "over", "uit", "door", "om", "tegen", "tot", "en", "of", "de", "het", "een", "la", "el", "the", "at", "to", "from", "with"];
   for (const prep of prepositions) {
     // Match preposition followed directly by uppercase letter (no space)
-    const regex = new RegExp(`(\b${prep})([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])`, "gi");
+    // NOTE: \\b is required in template strings to get \b word boundary in regex
+    const regex = new RegExp(`(\\b${prep})([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])`, "gi");
     cleaned = cleaned.replace(regex, "$1 $2");
   }
 
@@ -593,10 +633,10 @@ const cleanAIText = (text, poiNames = []) => {
   for (const loc of locationNames) {
     // Add space BEFORE location if preceded by lowercase letter (e.g., "inCalpe" -> "in Calpe")
     // But only if location starts a new word (followed by word boundary or end)
-    cleaned = cleaned.replace(new RegExp(`([a-záéíóúàèìòùäëïöüâêîôûñç])(${loc})\b`, "g"), "$1 $2");
+    cleaned = cleaned.replace(new RegExp(`([a-záéíóúàèìòùäëïöüâêîôûñç])(${loc})\\b`, "g"), "$1 $2");
     // Add space AFTER location ONLY if followed by UPPERCASE letter (new word)
     // This prevents "Calpesa" -> "Calpe sa" but fixes "CalpeGeniet" -> "Calpe Geniet"
-    cleaned = cleaned.replace(new RegExp(`\b(${loc})([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])`, "g"), "$1 $2");
+    cleaned = cleaned.replace(new RegExp(`\\b(${loc})([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])`, "g"), "$1 $2");
   }
 
   // Fix spacing around POI names
@@ -627,6 +667,23 @@ const cleanAIText = (text, poiNames = []) => {
     .replace(/\?([A-Za-záéíóúàèìòùäëïöüâêîôûñç])/g, '? $1') // Question mark followed by letter
     .replace(/\s{2,}/g, ' ')  // Normalize multiple spaces
     .trim();
+
+  // CRITICAL: Normalize ALL CAPS POI names to Title Case
+  // Matches sequences of 3+ ALL CAPS words (like "INDIAN CURRY ORIGINAL INDIAN RESTAURANT BAR")
+  // and converts them to proper Title Case ("Indian Curry Original Indian Restaurant Bar")
+  cleaned = cleaned.replace(/\b([A-ZÁÉÍÓÚÑÇ]{2,}(?:\s+[A-ZÁÉÍÓÚÑÇ]{2,}){2,})\b/g, (match) => {
+    return toTitleCase(match);
+  });
+
+  // Also fix standalone ALL CAPS POI names (at least 4 chars, all uppercase)
+  // This handles cases like "CALPE" -> "Calpe" when appearing alone
+  for (const poiName of poiNames) {
+    if (poiName && isAllCaps(poiName)) {
+      const titleCased = toTitleCase(poiName);
+      // Replace ALL CAPS version with Title Case version
+      cleaned = cleaned.replace(new RegExp(`\\b${poiName}\\b`, 'g'), titleCased);
+    }
+  }
 
   return cleaned;
 };
