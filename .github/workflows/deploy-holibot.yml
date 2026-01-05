@@ -14,6 +14,7 @@ on:
       - 'platform-core/src/services/holibot/**'
       - 'platform-core/src/routes/holibot.js'
       - 'platform-core/src/routes/health.js'
+      - 'platform-core/package.json'
 
   workflow_dispatch:
     inputs:
@@ -86,32 +87,57 @@ jobs:
             platform-core/src/routes/holibot.js \
             root@91.98.71.87:${{ env.DEPLOY_PATH }}/src/routes/
 
+          # Sync package files for dependency management
+          rsync -avz \
+            platform-core/package.json \
+            platform-core/package-lock.json \
+            root@91.98.71.87:${{ env.DEPLOY_PATH }}/
+
+      - name: Install server dependencies
+        run: |
+          echo "📦 Installing dependencies on server..."
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && npm install --legacy-peer-deps --production 2>&1 | tail -10"
+
       - name: Restart PM2 process
         run: |
           echo "🔄 Restarting API server..."
           ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && pm2 restart ${{ env.PM2_PROCESS_NAME }} --update-env"
-          sleep 5
+
+      - name: Wait for API startup
+        run: |
+          echo "⏳ Waiting for API to start..."
+          sleep 10
 
       - name: HoliBot Health Check
         run: |
           echo "🏥 Checking HoliBot health..."
 
-          HEALTH=$(curl -s ${{ env.API_BASE_URL }}/holibot/health)
-          echo "$HEALTH" | jq . || echo "$HEALTH"
+          # Retry health check up to 3 times
+          for i in 1 2 3; do
+            HEALTH=$(curl -s --max-time 10 ${{ env.API_BASE_URL }}/holibot/health || echo '{}')
+            STATUS=$(echo "$HEALTH" | jq -r '.status' 2>/dev/null || echo "unknown")
 
-          STATUS=$(echo "$HEALTH" | jq -r '.status' 2>/dev/null || echo "unknown")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "✅ HoliBot is healthy!"
+              echo "$HEALTH" | jq .
+              break
+            fi
 
-          if [ "$STATUS" = "healthy" ]; then
-            echo "✅ HoliBot is healthy!"
-          else
-            echo "⚠️ HoliBot status: $STATUS"
+            echo "⏳ Attempt $i: Status=$STATUS, retrying in 5s..."
+            sleep 5
+          done
+
+          if [ "$STATUS" != "healthy" ]; then
+            echo "⚠️ HoliBot status after retries: $STATUS"
+            # Check PM2 logs for errors
+            ssh root@91.98.71.87 "pm2 logs ${{ env.PM2_PROCESS_NAME }} --lines 20 --nostream" || true
           fi
 
       - name: Test Chat Endpoint
         run: |
           echo "💬 Testing chat endpoint..."
 
-          RESPONSE=$(curl -s -X POST ${{ env.API_BASE_URL }}/holibot/chat \
+          RESPONSE=$(curl -s --max-time 30 -X POST ${{ env.API_BASE_URL }}/holibot/chat \
             -H "Content-Type: application/json" \
             -d '{"message": "Hallo", "language": "nl"}')
 
@@ -156,4 +182,7 @@ jobs:
 
       - name: Notify Failure
         if: failure()
-        run: echo "::error title=HoliBot Deploy Failed::Check logs for details"
+        run: |
+          echo "::error title=HoliBot Deploy Failed::Check logs for details"
+          # Show PM2 logs on failure
+          ssh root@91.98.71.87 "pm2 logs ${{ env.PM2_PROCESS_NAME }} --lines 30 --nostream" || true
