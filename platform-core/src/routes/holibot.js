@@ -706,6 +706,12 @@ router.post('/chat', async (req, res) => {
 
     // Step 4: Multi-fallback system
     const enhancedResponse = await applyMultiFallback(response, message, language, spellSuggestions);
+    
+    // Clean AI text: fix spacing around POI names and prepositions
+    if (enhancedResponse.message) {
+      const poiNames = enhancedResponse.pois?.map(p => p.name).filter(Boolean) || [];
+      enhancedResponse.message = cleanAIText(enhancedResponse.message, poiNames);
+    }
 
     // Calculate total response time
     const totalResponseTime = Date.now() - startTime;
