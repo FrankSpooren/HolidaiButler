@@ -100,10 +100,13 @@ jobs:
           cache-dependency-path: admin-module/frontend/package-lock.json
       - name: Install and Build
         working-directory: admin-module/frontend
+        env:
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
         run: |
           npm ci
           echo "VITE_API_BASE_URL=${{ needs.setup.outputs.api_base_url }}" > .env.production
           echo "VITE_APP_NAME=HolidaiButler Admin" >> .env.production
+          echo "VITE_SENTRY_DSN=$VITE_SENTRY_DSN" >> .env.production
           npm run build
       - uses: actions/upload-artifact@v4
         with:
