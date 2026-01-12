@@ -13,6 +13,9 @@ Sentry.init({
   replaysOnErrorSampleRate: 1.0,
 });
 
+// Expose Sentry globally for console testing
+(window as typeof window & { Sentry: typeof Sentry }).Sentry = Sentry;
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
