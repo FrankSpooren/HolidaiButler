@@ -3,6 +3,7 @@
  */
 
 import logger from '../utils/logger.js';
+import * as Sentry from '@sentry/node';
 
 export function errorHandler(err, req, res, next) {
   // Log error
@@ -13,6 +14,15 @@ export function errorHandler(err, req, res, next) {
     method: req.method,
     ip: req.ip,
     userId: req.user?.id,
+  });
+
+  // Send error to Sentry
+  Sentry.captureException(err, {
+    extra: {
+      url: req.originalUrl,
+      method: req.method,
+      userId: req.user?.id,
+    },
   });
 
   // Handle specific error types
