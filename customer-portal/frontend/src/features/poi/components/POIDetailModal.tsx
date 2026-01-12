@@ -36,6 +36,7 @@ interface POIDetailModalProps {
 export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) {
   const { t, language } = useLanguage();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const numericPoiId = typeof poiId === 'string' ? parseInt(poiId, 10) : poiId;
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
@@ -277,9 +278,9 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
   };
 
   const handleToggleSave = () => {
-    toggleFavorite(poiId);
+    toggleFavorite(numericPoiId);
 
-    if (isFavorite(poiId)) {
+    if (isFavorite(numericPoiId)) {
       setShareMessage(t.poi.removedFromFavorites || 'Removed from favorites');
     } else {
       setShareMessage(t.poi.addedToFavorites || 'Added to favorites!');
@@ -405,11 +406,11 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                       <span>{t.poi.share || 'Share'}</span>
                     </button>
                     <button
-                      className={`poi-action-btn ${isFavorite(poiId) ? 'saved' : ''}`}
+                      className={`poi-action-btn ${isFavorite(numericPoiId) ? 'saved' : ''}`}
                       onClick={handleToggleSave}
                     >
-                      <Heart size={18} fill={isFavorite(poiId) ? 'currentColor' : 'none'} />
-                      <span>{isFavorite(poiId) ? (t.poi.saved || 'Saved') : (t.poi.save || 'Save')}</span>
+                      <Heart size={18} fill={isFavorite(numericPoiId) ? 'currentColor' : 'none'} />
+                      <span>{isFavorite(numericPoiId) ? (t.poi.saved || 'Saved') : (t.poi.save || 'Save')}</span>
                     </button>
                     <button className="poi-action-btn" onClick={handlePrint}>
                       <Printer size={18} />
