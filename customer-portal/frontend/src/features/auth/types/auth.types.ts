@@ -37,4 +37,6 @@ export interface AuthResponse {
   user: User;
   accessToken: string;
   refreshToken: string;
+  requires2FA?: boolean;
+  pendingToken?: string;
 }
