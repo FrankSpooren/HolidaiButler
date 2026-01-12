@@ -17,7 +17,8 @@ export const useCreateBooking = () => {
   return useMutation<BookingResponse, ErrorResponse, CreateBookingRequest>({
     mutationFn: async (bookingData) => {
       const response = await bookingsApi.createBooking(bookingData);
-      return response.data;
+      if (!response.data.data) throw new Error('No booking data returned');
+      return response.data.data;
     },
     onSuccess: () => {
       // Invalidate relevant queries
@@ -49,11 +50,10 @@ export const useGetBooking = (bookingId?: number, enabled = false) => {
 export const useGetUserBookings = (
   userId?: number,
   params?: {
-    status?: string;
+    status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
     from?: string;
     to?: string;
     limit?: number;
-    offset?: number;
   },
   enabled = false
 ) => {
@@ -84,7 +84,8 @@ export const useConfirmBooking = () => {
       const response = await bookingsApi.confirmBooking(bookingId, {
         paymentTransactionId,
       });
-      return response.data;
+      if (!response.data.data) throw new Error('No booking data returned');
+      return response.data.data;
     },
     onSuccess: (_, variables) => {
       // Invalidate queries
@@ -107,8 +108,9 @@ export const useCancelBooking = () => {
     { bookingId: number; reason?: string }
   >({
     mutationFn: async ({ bookingId, reason }) => {
-      const response = await bookingsApi.cancelBooking(bookingId, { reason });
-      return response.data;
+      const response = await bookingsApi.cancelBooking(bookingId, { reason: reason || '' });
+      if (!response.data.data) throw new Error('No booking data returned');
+      return response.data.data;
     },
     onSuccess: (_, variables) => {
       // Invalidate queries
