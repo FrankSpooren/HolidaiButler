@@ -13,6 +13,9 @@ Sentry.init({
   replaysOnErrorSampleRate: 1.0,
 });
 
+// Expose Sentry globally for console testing
+window.Sentry = Sentry;
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
