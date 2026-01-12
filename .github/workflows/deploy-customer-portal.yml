@@ -63,6 +63,8 @@ jobs:
           cache-dependency-path: ${{ env.MODULE_PATH }}/package-lock.json
       - name: Install and Build
         working-directory: ${{ env.MODULE_PATH }}
+        env:
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
         run: |
           npm ci
           cat > .env.production << 'ENVFILE'
@@ -74,6 +76,7 @@ jobs:
           VITE_APP_NAME=HolidaiButler
           ENVFILE
           echo "VITE_ENVIRONMENT=${{ needs.setup.outputs.environment }}" >> .env.production
+          echo "VITE_SENTRY_DSN=$VITE_SENTRY_DSN" >> .env.production
           npm run build
       - uses: actions/upload-artifact@v4
         with:
