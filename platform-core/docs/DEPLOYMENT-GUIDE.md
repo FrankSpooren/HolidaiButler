@@ -88,9 +88,9 @@ NODE_ENV=production
 LOG_LEVEL=info
 
 # ==============================================
-# MONITORING (OPTIONAL)
+# MONITORING - Bugsink (EU-hosted, Sentry-compatible)
 # ==============================================
-SENTRY_DSN=your_sentry_dsn_here
+SENTRY_DSN=https://5685ebfa-9abe-4d0d-83c4-e83297fce9a4@errors.holidaibutler.com/1
 ENABLE_METRICS=true
 ```
 
