@@ -34,6 +34,7 @@ import logger from './utils/logger.js';
 import { initializeDatabase } from './config/database.js';
 import { initializeEventBus } from './services/eventBus.js';
 import { initializeAutomation } from './automation/index.js';
+import { initializeOrchestrator, shutdownOrchestrator } from './services/orchestrator/index.js';
 import apiGateway from './gateway/index.js';
 import healthRoutes from './routes/health.js';
 import integrationRoutes from './routes/integration.js';
@@ -89,6 +90,14 @@ async function initializePlatform() {
     if (process.env.ENABLE_CRON_JOBS === 'true') {
       await initializeAutomation();
       logger.info('✅ Automation workflows started');
+    }
+
+    // Orchestrator Agent (BullMQ scheduler + workers)
+    try {
+      await initializeOrchestrator();
+      logger.info('✅ Orchestrator Agent started');
+    } catch (orchError) {
+      logger.warn('⚠️ Orchestrator initialization failed:', orchError.message);
     }
 
     // Metrics & Observability
@@ -166,6 +175,7 @@ app.use(errorHandler);
  * Graceful Shutdown
  */
 process.on('SIGTERM', async () => {
+  await shutdownOrchestrator();
   logger.info('SIGTERM signal received: closing HTTP server');
   process.exit(0);
 });
