@@ -1,19 +1,29 @@
 ---
-version: 1.0.0
-last_updated: 2026-01-12
+version: 2.0.0
+last_updated: 2026-01-13
 author: Claude AI
 status: active
 ---
 
 # Brand Guidelines Skill
 
-> Merkidentiteit en visuele richtlijnen voor HolidaiButler
+> Merkidentiteit, strategische positionering en visuele richtlijnen voor HolidaiButler
 
 ---
 
-## 🎯 Brand Mission
+## 🎯 Brand Mission & Positioning
 
-HolidaiButler is een **premium AI-powered tourism platform** dat internationale toeristen persoonlijke lokale aanbevelingen geeft voor authentieke ervaringen.
+### Tagline
+> **"THE AI-POWERED TRAVEL COMPANION FOR ALICANTE. BUILT ON LOCAL TRUST"**
+
+### Brand Mission
+HolidaiButler is een **premium AI-powered tourism platform** dat internationale toeristen persoonlijke lokale aanbevelingen geeft voor authentieke ervaringen in de Mediterrane regio.
+
+### Core Differentiators
+1. **Hyper-local expertise** - Geen generieke content, maar diepgaande regionale kennis
+2. **EU-based technology** - Mistral AI, Hetzner, MailerLite (GDPR-compliant)
+3. **Local ecosystem integration** - Partnerships met DMO's, lokale bedrijven, overheden
+4. **Quality over quantity** - Gecureerde aanbevelingen, geen massatoerisme
 
 ### Brand Personality
 - **Premium**: Kwaliteit boven kwantiteit
@@ -27,6 +37,64 @@ HolidaiButler is een **premium AI-powered tourism platform** dat internationale 
 - Informatief zonder overweldigend
 - Lokaal expert, geen toerist
 - Behulpzaam, niet opdringerig
+
+---
+
+## 👥 Doelgroep
+
+### Primary Target Demographics
+
+| Kenmerk | Waarde |
+|---------|--------|
+| **Leeftijd** | 30-70 jaar |
+| **Dagbesteding** | €120+ per dag |
+| **Verblijfsduur** | 3+ dagen (vs 2-3 typisch) |
+| **Profiel** | Kwaliteitsgericht, authentiek zoekend |
+| **Bezoekfrequentie** | Repeat visitors, jaarlijkse Mediterranean trips |
+| **Herkomstlanden** | ES, UK, NL, DE, BE, FR, Nordics |
+
+### Doelgroep Segmenten
+
+| Segment | Kenmerken | Content Focus |
+|---------|-----------|---------------|
+| **Cultural Explorers** | Zoeken authentieke ervaringen, lokale cultuur | Verborgen parels, lokale tradities, historische context |
+| **Comfort Seekers** | Premium accommodatie, gemak, service | Kwaliteitsrestaurants, wellness, georganiseerde tours |
+| **Active Discoverers** | Outdoor activiteiten, avontuur | Wandelroutes, watersport, natuur |
+| **Culinary Enthusiasts** | Food & wine focus | Lokale gastronomie, markten, wijnproeverijen |
+
+### Content Aanpak per Segment
+- **Taalgebruik**: Warm, uitnodigend, expert-niveau kennis
+- **Beeldtaal**: Authentiek, lokaal, premium kwaliteit
+- **Aanbevelingen**: Gecureerd, niet overweldigend (max 5-7 opties)
+- **Tone**: "Insider tips van een lokale vriend"
+
+---
+
+## 💎 Unique Selling Points (USPs)
+
+### Voor Bezoekers (Tourists)
+1. **Persoonlijke AI-butler** - 24/7 beschikbaar, spreekt je taal
+2. **Lokale insider kennis** - Geen toeristenvallen, echte parels
+3. **Tijd besparen** - Geen eindeloos Googlen, direct relevante tips
+4. **Authentieke ervaringen** - Weg van de massa, lokale cultuur
+
+### Voor Lokale Bedrijven
+1. **Gerichte exposure** - Bereik de juiste bezoekers
+2. **Kwaliteitstoeristen** - Hogere spend, langere verblijf
+3. **Geen commissies** - Directe klantrelatie behouden
+4. **Data insights** - Begrijp je bezoekers beter
+
+### Voor DMO's (Tourist Offices)
+1. **Smart destination** - AI-powered bezoekersservice
+2. **Spreiding toerisme** - Stuur bezoekers naar verborgen parels
+3. **Data dashboard** - Real-time insights in bezoekersgedrag
+4. **Duurzaam toerisme** - Kwaliteit boven kwantiteit
+
+### Voor de Regio (Valencia/Alicante)
+1. **Innovatie showcase** - EU-funded smart tourism
+2. **Economische impact** - Hogere spend per bezoeker
+3. **Cultureel behoud** - Promoot authentieke ervaringen
+4. **Internationale zichtbaarheid** - Premium positionering
 
 ---
 
