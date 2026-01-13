@@ -84,9 +84,13 @@ jobs:
         run: |
           ssh root@91.98.71.87 "mkdir -p ${{ env.DEPLOY_PATH }}/config"
           echo '${{ secrets.GOOGLE_CLOUD_TTS_KEY }}' | ssh root@91.98.71.87 "cat > ${{ env.DEPLOY_PATH }}/config/google-tts-credentials.json && chmod 600 ${{ env.DEPLOY_PATH }}/config/google-tts-credentials.json"
-      - name: Install and restart PM2
+      - name: Install dependencies and restart PM2
         run: |
-          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && rm -rf node_modules && npm ci --omit=dev && mkdir -p logs && (pm2 restart ${{ env.PM2_PROCESS_NAME }} || pm2 start src/index.js --name ${{ env.PM2_PROCESS_NAME }} --cwd ${{ env.DEPLOY_PATH }}) && pm2 save"
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && rm -rf node_modules && npm ci --omit=dev && mkdir -p logs"
+          # Robust PM2 restart: delete if exists, then start fresh
+          ssh root@91.98.71.87 "pm2 delete ${{ env.PM2_PROCESS_NAME }} 2>/dev/null || true"
+          ssh root@91.98.71.87 "pm2 start ${{ env.DEPLOY_PATH }}/src/index.js --name ${{ env.PM2_PROCESS_NAME }} --cwd ${{ env.DEPLOY_PATH }}"
+          ssh root@91.98.71.87 "pm2 save"
       - name: Health check
         run: |
           sleep 5
