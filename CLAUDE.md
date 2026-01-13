@@ -227,7 +227,7 @@ MAILERLITE_API_KEY=      # Email marketing
 APIFY_TOKEN=             # Data scraping
 HETZNER_API_TOKEN=       # Server management
 ADYEN_API_KEY=           # Betalingen
-SENTRY_DSN=              # Error monitoring
+SENTRY_DSN=              # Error monitoring (Bugsink EU-hosted)
 ```
 
 ### Integratie Overzicht
