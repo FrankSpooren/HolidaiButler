@@ -10,7 +10,7 @@ export function startWorkers() {
 
   // Scheduled Tasks Worker
   scheduledWorker = new Worker('scheduled-tasks', async (job) => {
-    console.log(`[Orchestrator] Processing scheduled job: ${job.name}`);
+    console.log('[Orchestrator] Processing scheduled job: ' + job.name);
     
     switch (job.name) {
       case 'daily-briefing':
@@ -19,8 +19,18 @@ export function startWorkers() {
         break;
         
       case 'cost-check':
-        console.log('[Orchestrator] Checking budget usage...');
-        // TODO: Implement cost checking logic
+        try {
+          const { getReport } = await import('./costController/index.js');
+          const report = await getReport();
+          console.log('[Orchestrator] Cost check completed:', JSON.stringify({
+            totalSpent: report.summary.totalSpent.toFixed(2),
+            percentage: report.summary.percentageUsed.toFixed(1) + '%',
+            alerts: report.alerts.length
+          }));
+          return report;
+        } catch (error) {
+          console.error('[Orchestrator] Cost check failed:', error.message);
+        }
         break;
         
       case 'health-check':
@@ -29,12 +39,19 @@ export function startWorkers() {
         break;
         
       case 'weekly-cost-report':
-        console.log('[Orchestrator] Generating weekly cost report...');
-        // TODO: Implement weekly report logic
+        try {
+          const { getReport } = await import('./costController/index.js');
+          const report = await getReport();
+          console.log('[Orchestrator] Weekly cost report generated');
+          // TODO: Send report via email
+          return report;
+        } catch (error) {
+          console.error('[Orchestrator] Weekly report failed:', error.message);
+        }
         break;
         
       default:
-        console.log(`[Orchestrator] Unknown job type: ${job.name}`);
+        console.log('[Orchestrator] Unknown job type: ' + job.name);
     }
     
     return { success: true, processedAt: new Date().toISOString() };
@@ -42,29 +59,32 @@ export function startWorkers() {
 
   // Alert Worker
   alertWorker = new Worker('alerts', async (job) => {
-    console.log(`[Orchestrator] Processing alert: ${job.name}`);
-    // TODO: Implement alert processing
+    console.log('[Orchestrator] Processing alert: ' + job.name);
+    if (job.name === 'budget-alert') {
+      console.log('[Orchestrator] Budget alert:', JSON.stringify(job.data));
+      // TODO: Send alert to Owner Interface Agent
+    }
     return { success: true };
   }, { connection });
 
   // Main Orchestrator Worker
   orchestratorWorker = new Worker('orchestrator', async (job) => {
-    console.log(`[Orchestrator] Processing task: ${job.name}`);
+    console.log('[Orchestrator] Processing task: ' + job.name);
     // TODO: Implement main orchestration logic
     return { success: true };
   }, { connection });
 
   // Error handlers
   scheduledWorker.on('failed', (job, err) => {
-    console.error(`[Orchestrator] Scheduled job failed: ${job?.name}`, err.message);
+    console.error('[Orchestrator] Scheduled job failed: ' + (job?.name || 'unknown'), err.message);
   });
 
   alertWorker.on('failed', (job, err) => {
-    console.error(`[Orchestrator] Alert job failed: ${job?.name}`, err.message);
+    console.error('[Orchestrator] Alert job failed: ' + (job?.name || 'unknown'), err.message);
   });
 
   orchestratorWorker.on('failed', (job, err) => {
-    console.error(`[Orchestrator] Orchestrator job failed: ${job?.name}`, err.message);
+    console.error('[Orchestrator] Orchestrator job failed: ' + (job?.name || 'unknown'), err.message);
   });
 
   console.log('[Orchestrator] Workers started');
