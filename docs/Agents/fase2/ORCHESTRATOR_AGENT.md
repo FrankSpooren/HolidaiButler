@@ -12,7 +12,7 @@ Fase 2 implementeert de **CORE laag** van het agent systeem - de twee kritieke a
 
 | Agent | Prioriteit | Functie |
 |-------|------------|---------|
-| Orchestrator Agent | P0 | Centrale coordinatie + Cost Controller |
+| Orchestrator Agent | P0 | Centrale coördinatie + Cost Controller |
 | Owner Interface Agent | P0 | Communicatie met Frank & Emiel |
 
 ---
@@ -23,16 +23,16 @@ HolidaiButler positioneert zich als:
 - **"The AI-Powered Travel Companion for Alicante, Built on Local Trust"**
 - Focus op **hyper-lokale relevantie** en **data kwaliteit**
 - **EU AI Act compliant** (USP vs. US-based competitors)
-- Doelgroep: 30-70 jaar, EUR120+/dag, 3+ dagen verblijf
+- Doelgroep: 30-70 jaar, €120+/dag, 3+ dagen verblijf
 - Markten: SPA, UK, NL, GER, BE, FRA, Nordics
 
 ### Differentiators t.o.v. Concurrentie
 | Feature | HolidaiButler | Mindtrip | Gemini AI | GuideGeek |
 |---------|---------------|----------|-----------|-----------|
-| Local data alliance | Yes | Partial | No | No |
-| Personalization | Yes | Yes | Yes | Partial |
-| Real-time updates | Yes | Partial | No | No |
-| EU AI Act compliant | Yes | No | Partial | No |
+| Local data alliance | Ja | Gedeeltelijk | Nee | Nee |
+| Personalization | Ja | Ja | Ja | Gedeeltelijk |
+| Real-time updates | Ja | Gedeeltelijk | Nee | Nee |
+| EU AI Act compliant | Ja | Nee | Gedeeltelijk | Nee |
 
 **Impact op agents**: Alle agents moeten deze USPs waarborgen in hun operaties.
 
@@ -51,7 +51,7 @@ HolidaiButler positioneert zich als:
 
 ## Doel
 
-Centrale coordinatie van alle 17 agents met:
+Centrale coördinatie van alle 17 agents met:
 1. Workflow orchestratie
 2. Quality gate voor productie
 3. Kosten monitoring (Cost Controller)
@@ -61,25 +61,25 @@ Centrale coordinatie van alle 17 agents met:
 ## Architectuur
 
 ```
-+-------------------------------------------------------------+
-|                    ORCHESTRATOR AGENT                        |
-+-------------------------------------------------------------+
-|  +-----------+  +-----------+  +---------------------+       |
-|  | Scheduler |  |  Router   |  |  Cost Controller    |       |
-|  | (BullMQ)  |  |           |  |                     |       |
-|  +-----------+  +-----------+  +---------------------+       |
-|                                                              |
-|  +-----------+  +-----------+  +---------------------+       |
-|  |  Quality  |  | Conflict  |  |   Audit Trail       |       |
-|  |   Gate    |  | Resolver  |  |                     |       |
-|  +-----------+  +-----------+  +---------------------+       |
-+-------------------------------------------------------------+
-          |                |                    |
-          v                v                    v
-    +----------+    +--------------+    +--------------+
-    |Operations|    | Development  |    |   Strategy   |
-    |  Agents  |    |    Agents    |    |    Agents    |
-    +----------+    +--------------+    +--------------+
+┌─────────────────────────────────────────────────────────────┐
+│                    ORCHESTRATOR AGENT                        │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │  Scheduler  │  │   Router    │  │   Cost Controller   │  │
+│  │  (BullMQ)   │  │             │  │                     │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │   Quality   │  │  Conflict   │  │    Audit Trail      │  │
+│  │    Gate     │  │  Resolver   │  │                     │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+          │                │                    │
+          ▼                ▼                    ▼
+    ┌──────────┐    ┌──────────────┐    ┌──────────────┐
+    │Operations│    │ Development  │    │   Strategy   │
+    │  Agents  │    │    Agents    │    │    Agents    │
+    └──────────┘    └──────────────┘    └──────────────┘
 ```
 
 ## Modules
