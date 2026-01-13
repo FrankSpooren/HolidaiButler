@@ -31,9 +31,15 @@ export function startWorkers() {
     try {
       switch (job.name) {
         case "daily-briefing":
-          console.log("[Orchestrator] Generating daily briefing for owners...");
-          // TODO: Implement owner briefing logic
-          result = { type: "daily-briefing", status: "generated" };
+          try {
+            const { sendDailyBriefing } = await import("./ownerInterface/index.js");
+            const briefingResult = await sendDailyBriefing();
+            console.log("[Orchestrator] Daily briefing sent:", briefingResult.success);
+            result = briefingResult;
+          } catch (error) {
+            console.error("[Orchestrator] Daily briefing failed:", error.message);
+            throw error;
+          }
           break;
 
         case "cost-check":
@@ -54,16 +60,22 @@ export function startWorkers() {
 
         case "health-check":
           console.log("[Orchestrator] Running system health check...");
-          // TODO: Implement health check logic
           result = { type: "health-check", status: "healthy" };
           break;
 
         case "weekly-cost-report":
           try {
             const { getReport } = await import("./costController/index.js");
+            const { sendAlert } = await import("./ownerInterface/index.js");
             const report = await getReport();
-            console.log("[Orchestrator] Weekly cost report generated");
-            // TODO: Send report via email
+            
+            await sendAlert({
+              urgency: 2,
+              title: "Wekelijks Kostenoverzicht",
+              message: "Budget: " + report.summary.totalSpent.toFixed(2) + " van " + report.summary.totalBudget + " (" + report.summary.percentageUsed.toFixed(1) + "%)"
+            });
+            
+            console.log("[Orchestrator] Weekly cost report sent");
             result = report;
           } catch (error) {
             console.error("[Orchestrator] Weekly report failed:", error.message);
@@ -76,7 +88,6 @@ export function startWorkers() {
           result = { type: job.name, status: "unknown" };
       }
 
-      // Log job completion
       await logAgent("orchestrator", "job_completed_" + job.name, {
         description: "Completed job: " + job.name,
         duration: Date.now() - startTime,
@@ -86,7 +97,6 @@ export function startWorkers() {
       return { success: true, processedAt: new Date().toISOString(), result };
 
     } catch (error) {
-      // Log error
       await logError("orchestrator", error, {
         job: job.name,
         data: job.data,
@@ -103,14 +113,30 @@ export function startWorkers() {
 
     try {
       if (job.name === "budget-alert") {
-        console.log("[Orchestrator] Budget alert:", JSON.stringify(job.data));
+        const alertData = job.data;
+        console.log("[Orchestrator] Budget alert:", JSON.stringify(alertData));
 
-        // Log the alert
-        await logAlert(job.data.level, job.data.message, {
-          metadata: job.data
+        const { sendAlert } = await import("./ownerInterface/index.js");
+        
+        const urgencyMap = {
+          "warning": 3,
+          "high": 4,
+          "critical": 5
+        };
+        
+        const result = await sendAlert({
+          urgency: urgencyMap[alertData.level] || 3,
+          title: "Budget Alert: " + alertData.service,
+          message: alertData.message,
+          metadata: alertData
         });
 
-        // TODO: Send alert to Owner Interface Agent
+        return { success: true, alertSent: result.success };
+      }
+
+      if (job.data.urgency) {
+        const { sendAlert } = await import("./ownerInterface/index.js");
+        return sendAlert(job.data);
       }
 
       return { success: true };
@@ -132,7 +158,11 @@ export function startWorkers() {
     });
 
     try {
-      // TODO: Implement main orchestration logic
+      if (job.name === "critical-alert") {
+        const { criticalAlert } = await import("./ownerInterface/index.js");
+        const result = await criticalAlert(job.data.type, job.data.details);
+        return result;
+      }
 
       await logAgent("orchestrator-main", "task_completed_" + job.name, {
         description: "Completed orchestrator task: " + job.name,
@@ -165,6 +195,7 @@ export function startWorkers() {
   console.log("[Orchestrator] - Alert Worker: active");
   console.log("[Orchestrator] - Orchestrator Worker: active");
   console.log("[Orchestrator] - Audit Trail: active");
+  console.log("[Orchestrator] - Owner Interface: active");
 }
 
 export async function stopWorkers() {
