@@ -8,9 +8,9 @@
 ## Pre-Implementatie Checklist
 
 ### Infrastructuur
-- [ ] Redis geinstalleerd op Hetzner server
+- [ ] Redis geïnstalleerd op Hetzner server
 - [ ] MongoDB collection voor audit logs aangemaakt
-- [ ] BullMQ dependencies geinstalleerd
+- [ ] BullMQ dependencies geïnstalleerd
 - [ ] MailerLite API key beschikbaar
 
 ### Accounts & Credentials
@@ -49,7 +49,7 @@ cd /var/www/api.holidaibutler.com/platform-core
 npm install bullmq ioredis
 ```
 
-**Deliverable**: Redis running, BullMQ geinstalleerd
+**Deliverable**: Redis running, BullMQ geïnstalleerd
 
 ---
 
@@ -245,6 +245,7 @@ APP_BASE_URL=https://api.holidaibutler.com
 - [ ] Approval emails worden correct verstuurd
 - [ ] Approve/Deny links werken
 - [ ] Urgentie classificatie werkt
+- [ ] Threema alerts werken voor urgentie 5
 
 ### Cost Controller
 - [ ] Budget usage wordt bijgehouden
@@ -254,17 +255,105 @@ APP_BASE_URL=https://api.holidaibutler.com
 ### Integratie
 - [ ] Orchestrator kan Owner Interface triggeren
 - [ ] Owner responses worden correct gerouteerd
-- [ ] Sentry monitort alle errors
+- [ ] Bugsink monitort alle errors (vervangt Sentry)
+
+---
+
+## NIEUW: Sentry -> Bugsink Migratie
+
+### Pre-requisites
+- [ ] Bugsink migratie document gelezen (MIGRATIE_SENTRY_NAAR_BUGSINK.md)
+- [ ] DNS record `errors.holidaibutler.com` voorbereid
+
+### Week 3, Dag 0: Bugsink Setup (voorafgaand aan agent implementatie)
+
+| Stap | Actie | Tijd |
+|------|-------|------|
+| 1 | Docker container deployen op Hetzner | 30 min |
+| 2 | Nginx reverse proxy configureren | 30 min |
+| 3 | SSL certificaat aanvragen | 15 min |
+| 4 | Projecten aanmaken in Bugsink | 15 min |
+| 5 | DSN's verzamelen | 10 min |
+| 6 | Test met development environment | 1 uur |
+
+### Week 3, Dag 1-2: Code Migratie
+
+| Omgeving | Actie |
+|----------|-------|
+| Development | DSN wijzigen in .env.development |
+| Test | DSN wijzigen in .env.test, deploy, verify |
+| Productie | DSN wijzigen in .env.production, deploy, monitor |
+
+### Verificatie Checklist
+- [ ] Backend API errors -> Bugsink
+- [ ] Customer Portal errors -> Bugsink
+- [ ] Admin Portal errors -> Bugsink
+- [ ] Email alerts configuratie -> Bugsink
+
+---
+
+## NIEUW: Threema Setup voor Urgentie 5 Alerts
+
+### Pre-requisites
+- [ ] Frank: Threema app geïnstalleerd, ID genoteerd
+- [ ] Emiel: Threema app geïnstalleerd, ID genoteerd
+- [ ] Threema Gateway account aangemaakt (https://gateway.threema.ch)
+
+### Setup Stappen
+
+| Stap | Actie | Door |
+|------|-------|------|
+| 1 | Threema Gateway "Basic" account aanmaken | Frank/Emiel |
+| 2 | API credentials noteren (ID + Secret) | Frank |
+| 3 | Threema ID's van beide owners verzamelen | Frank + Emiel |
+| 4 | Environment variables configureren | Claude Code |
+| 5 | Test kritieke alert versturen | Claude Code |
+
+### Kosten
+- Threema Gateway Basic: ~CHF 65 (eenmalig, 500 credits)
+- Per bericht: ~CHF 0.07 (~€0.07)
+- Geschat gebruik: <10 berichten/maand = <€1/maand
 
 ---
 
 ## Vragen voor Owner voordat we starten
 
-1. **MailerLite API key**: Heb je deze beschikbaar?
-2. **Redis**: Mag dit op dezelfde server als de app?
-3. **Daily briefing tijd**: Is 08:00 CET correct?
-4. **SMS notificaties**: Willen jullie dit activeren voor urgentie 5?
-5. **Emiel**: Is hij op de hoogte van dit systeem en de email notificaties?
+### Oorspronkelijke vragen
+1. ~~**MailerLite API key**: Heb je deze beschikbaar?~~ - Nog te beantwoorden
+2. ~~**Redis**: Mag dit op dezelfde server als de app?~~ - Ja (91.98.71.87)
+3. ~~**Daily briefing tijd**: Is 08:00 CET correct?~~ - Ja
+4. ~~**SMS notificaties**: Willen jullie dit activeren?~~ - Threema i.p.v. SMS
+5. ~~**Emiel**: Is hij op de hoogte?~~ - Ja
+
+### Nieuwe vragen
+6. **Threema**: Hebben jij en Emiel al Threema geïnstalleerd?
+7. **DNS**: Heb je toegang tot DNS voor `errors.holidaibutler.com`?
+8. **Sentry account**: Wat is de huidige Sentry project structuur?
+
+---
+
+## Geüpdatete Timeline
+
+### Week 3
+
+| Dag | Focus | Deliverable |
+|-----|-------|-------------|
+| **0** | **Bugsink migratie** | errors.holidaibutler.com live |
+| 1 | Redis + BullMQ setup | Scheduler basis |
+| 2 | Scheduler implementeren | Cron jobs werken |
+| 3 | Cost Controller basis | API cost tracking |
+| 4 | Audit trail | Logging operationeel |
+| 5 | Testing | Orchestrator v0.1 |
+
+### Week 4
+
+| Dag | Focus | Deliverable |
+|-----|-------|-------------|
+| 1 | Owner Interface basis | MailerLite werkt |
+| 2 | Daily Briefing | 08:00 emails |
+| 3 | Approval System | Approve/Deny flow |
+| 4 | **Threema integratie** | Urgentie 5 alerts |
+| 5 | End-to-end testing | Fase 2 compleet |
 
 ---
 
@@ -272,8 +361,8 @@ APP_BASE_URL=https://api.holidaibutler.com
 
 Zodra bovenstaande vragen beantwoord zijn, kunnen we starten met:
 
-**Week 3, Dag 1**: Redis installeren op Hetzner server via Claude Code
+**Week 3, Dag 0**: Bugsink installeren op Hetzner server via Claude Code
 
 ---
 
-*Document versie 1.0 - Fase 2 Implementation Checklist*
+*Document versie 1.1 - Fase 2 Implementation Checklist (met Bugsink + Threema)*
