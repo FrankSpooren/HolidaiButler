@@ -18,25 +18,25 @@ Primaire communicatielaag tussen het agent systeem en de owners:
 ## Architectuur
 
 ```
-+-------------------------------------------------------------+
-|                   OWNER INTERFACE AGENT                      |
-+-------------------------------------------------------------+
-|  +-----------+  +-----------+  +---------------------+       |
-|  |Notification|  | Approval |  |    Response         |       |
-|  |Consolidator|  | Manager  |  |    Router           |       |
-|  +-----------+  +-----------+  +---------------------+       |
-|                                                              |
-|  +-----------+  +-----------+  +---------------------+       |
-|  |  Daily    |  |  Weekly   |  |   Urgency           |       |
-|  | Briefing  |  |  Digest   |  |   Classifier        |       |
-|  +-----------+  +-----------+  +---------------------+       |
-+-------------------------------------------------------------+
-          |                |                    |
-          v                v                    v
-    +----------+    +--------------+    +--------------+
-    |MailerLite|    |    SMS       |    |  Dashboard   |
-    |  Email   |    | (Optional)   |    |    API       |
-    +----------+    +--------------+    +--------------+
+┌─────────────────────────────────────────────────────────────┐
+│                   OWNER INTERFACE AGENT                      │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │ Notification│  │   Approval  │  │     Response        │  │
+│  │ Consolidator│  │   Manager   │  │     Router          │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │   Daily     │  │   Weekly    │  │    Urgency          │  │
+│  │  Briefing   │  │   Digest    │  │   Classifier        │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+          │                │                    │
+          ▼                ▼                    ▼
+    ┌──────────┐    ┌──────────────┐    ┌──────────────┐
+    │ MailerLite│    │    SMS      │    │  Dashboard   │
+    │   Email   │    │  (Optional) │    │    API       │
+    └──────────┘    └──────────────┘    └──────────────┘
 ```
 
 ## Owners Configuratie
@@ -455,7 +455,7 @@ Hier is je dagelijkse update:
 
 ## Kosten Status
 - Budget gebruikt: {budget_used}%
-- Verwacht einde maand: EUR{projected_cost}
+- Verwacht einde maand: EUR {projected_cost}
 
 ## Agent Activiteit
 - Taken voltooid: {tasks_completed}
@@ -598,10 +598,221 @@ OWNER_EMIEL_EMAIL=emiellangeberg@gmail.com
 APP_BASE_URL=https://api.holidaibutler.com
 APPROVAL_TOKEN_SECRET=
 
-# SMS (optional, disabled by default)
-SMS_ENABLED=false
+# Threema Gateway (Urgentie 5 alerts)
+THREEMA_ENABLED=true
+THREEMA_API_ID=
+THREEMA_API_SECRET=
+THREEMA_FRANK_ID=           # Frank's Threema ID (8 karakters)
+THREEMA_EMIEL_ID=           # Emiel's Threema ID (8 karakters)
 ```
 
 ---
 
-*Document versie 1.0 - Fase 2 Owner Interface Agent*
+## Threema Integratie (Urgentie 5)
+
+### Waarom Threema?
+
+| Aspect | Threema | WhatsApp |
+|--------|---------|----------|
+| **Herkomst** | Zwitserland | USA (Meta) |
+| **GDPR** | Volledig compliant | Metadata risico |
+| **EU AI Act** | Compliant | Onduidelijk |
+| **End-to-end encryptie** | Altijd | Berichten, niet metadata |
+| **Business API** | Threema Gateway | Business API |
+| **Kosten** | ~€0.05/bericht | ~€0.04/bericht |
+
+### Alert Kanalen Beslisboom
+
+```
+Urgentie 1 (Informatief)    -> Daily Briefing (geen directe notificatie)
+Urgentie 2 (Laag)           -> MailerLite Email
+Urgentie 3 (Medium)         -> MailerLite Email
+Urgentie 4 (Hoog)           -> MailerLite Email (priority flag)
+Urgentie 5 (Kritiek)        -> MailerLite Email + Threema
+```
+
+### Threema Gateway Implementatie
+
+```typescript
+// threemaGateway.ts
+
+interface ThreemaConfig {
+  apiId: string;
+  apiSecret: string;
+}
+
+interface SendMessageParams {
+  recipientId: string;
+  message: string;
+}
+
+class ThreemaGateway {
+  private config: ThreemaConfig;
+  private baseUrl = 'https://msgapi.threema.ch';
+
+  constructor(config: ThreemaConfig) {
+    this.config = config;
+  }
+
+  async sendTextMessage(params: SendMessageParams): Promise<boolean> {
+    const { recipientId, message } = params;
+
+    try {
+      const response = await fetch(`${this.baseUrl}/send_simple`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          from: this.config.apiId,
+          to: recipientId,
+          text: message,
+          secret: this.config.apiSecret,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Threema API error: ${response.status}`);
+      }
+
+      const messageId = await response.text();
+      console.log(`Threema message sent: ${messageId}`);
+      return true;
+    } catch (error) {
+      console.error('Threema send failed:', error);
+      return false;
+    }
+  }
+}
+
+// Singleton instance
+export const threema = new ThreemaGateway({
+  apiId: process.env.THREEMA_API_ID!,
+  apiSecret: process.env.THREEMA_API_SECRET!,
+});
+```
+
+### Urgentie 5 Alert Handler
+
+```typescript
+// urgentAlert.ts
+import { sendOwnerEmail } from './emailTemplates';
+import { threema } from './threemaGateway';
+
+interface CriticalAlertParams {
+  type: string;
+  message: string;
+  details: Record<string, any>;
+}
+
+export async function sendCriticalAlert(params: CriticalAlertParams) {
+  const { type, message, details } = params;
+
+  const owners = [
+    {
+      name: 'Frank',
+      email: process.env.OWNER_FRANK_EMAIL!,
+      threemaId: process.env.THREEMA_FRANK_ID!,
+    },
+    {
+      name: 'Emiel',
+      email: process.env.OWNER_EMIEL_EMAIL!,
+      threemaId: process.env.THREEMA_EMIEL_ID!,
+    },
+  ];
+
+  const timestamp = new Date().toLocaleString('nl-NL', {
+    timeZone: 'Europe/Amsterdam',
+  });
+
+  // Send to all owners in parallel
+  await Promise.all(
+    owners.map(async (owner) => {
+      // 1. Send Email via MailerLite
+      await sendOwnerEmail({
+        to: owner.email,
+        subject: `[KRITIEK] HolidaiButler: ${type}`,
+        template: 'critical-alert',
+        variables: {
+          owner_name: owner.name,
+          alert_type: type,
+          message,
+          details: JSON.stringify(details, null, 2),
+          timestamp,
+        },
+      });
+
+      // 2. Send Threema message
+      if (process.env.THREEMA_ENABLED === 'true') {
+        const threemaMessage = `KRITIEK ALERT
+${type}
+
+${message}
+
+Tijd: ${timestamp}
+Check email voor details.`;
+
+        await threema.sendTextMessage({
+          recipientId: owner.threemaId,
+          message: threemaMessage,
+        });
+      }
+    })
+  );
+
+  // Log to audit trail
+  await logToAudit({
+    action: 'critical-alert-sent',
+    type,
+    recipients: owners.map((o) => o.name),
+    channels: ['email', 'threema'],
+    timestamp: new Date(),
+  });
+}
+```
+
+### Threema Setup Instructies
+
+1. **Threema Gateway Account aanmaken**:
+   - Ga naar https://gateway.threema.ch
+   - Maak een "Basic" account aan (~CHF 65 voor 500 credits)
+   - Noteer API ID (begint met *) en Secret
+
+2. **Owner Threema ID's verzamelen**:
+   - Frank: installeer Threema app, noteer 8-karakter ID (bijv. ABCD1234)
+   - Emiel: installeer Threema app, noteer 8-karakter ID
+
+3. **Environment variables configureren**:
+   ```bash
+   THREEMA_ENABLED=true
+   THREEMA_API_ID=*XXXXXXX
+   THREEMA_API_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   THREEMA_FRANK_ID=XXXXXXXX
+   THREEMA_EMIEL_ID=XXXXXXXX
+   ```
+
+### Urgentie 5 Trigger Scenarios
+
+| Scenario | Threema Bericht |
+|----------|-----------------|
+| Productie down | "API niet bereikbaar sinds {time}" |
+| Security breach | "Verdachte activiteit gedetecteerd" |
+| Data leak | "Mogelijke data exposure gedetecteerd" |
+| Budget 100% + hard limit | "Kritieke budget overschrijding: {service}" |
+| Database failure | "Database connectie verloren" |
+
+### Dependencies Update
+
+```json
+{
+  "@mailerlite/mailerlite-nodejs": "^1.x",
+  "handlebars": "^4.x",
+  "node-cron": "^3.x"
+}
+```
+
+Geen extra dependencies nodig voor Threema - gebruikt native `fetch`.
+
+---
+
+*Document versie 1.1 - Fase 2 Owner Interface Agent (met Threema integratie)*
