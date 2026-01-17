@@ -16,7 +16,8 @@ class DatabaseHealthCheck {
   async checkMySQL() {
     try {
       // Dynamic import - database.js exports { mysql: sequelize instance }
-      const dbConfig = await import('../../../../../config/database.js');
+      // Path: checks -> healthMonitor -> agents -> services -> src -> config
+      const dbConfig = await import('../../../../config/database.js');
       const sequelize = dbConfig.default?.mysql || dbConfig.mysql;
 
       if (!sequelize) {

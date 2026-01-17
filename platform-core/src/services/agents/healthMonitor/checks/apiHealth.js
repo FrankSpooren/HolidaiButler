@@ -53,8 +53,8 @@ class APIHealthCheck {
    * @returns {Promise<Object>} API health result
    */
   async checkHolidaiButlerAPI() {
-    // First try internal health endpoint (localhost)
-    const internalUrl = process.env.API_INTERNAL_URL || 'http://localhost:3000/api/v1/health';
+    // First try internal health endpoint (localhost on port 3001)
+    const internalUrl = process.env.API_INTERNAL_URL || 'http://localhost:3001/api/v1/health';
     let result = await this.makeRequest(internalUrl);
 
     // If internal check fails, try external with SSL verification disabled
