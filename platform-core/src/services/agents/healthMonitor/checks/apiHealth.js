@@ -54,12 +54,12 @@ class APIHealthCheck {
    */
   async checkHolidaiButlerAPI() {
     // First try internal health endpoint (localhost on port 3001)
-    const internalUrl = process.env.API_INTERNAL_URL || 'http://localhost:3001/api/v1/health';
+    const internalUrl = process.env.API_INTERNAL_URL || 'http://localhost:3001/health';
     let result = await this.makeRequest(internalUrl);
 
     // If internal check fails, try external with SSL verification disabled
     if (!result.success) {
-      const externalUrl = process.env.API_URL || 'https://api.holidaibutler.com/api/v1/health';
+      const externalUrl = process.env.API_URL || 'https://api.holidaibutler.com/health';
       result = await this.makeRequest(externalUrl, {
         httpsAgent: this.httpsAgent
       });
@@ -116,7 +116,8 @@ class APIHealthCheck {
    */
   async checkApify() {
     try {
-      const apiToken = process.env.APIFY_API_TOKEN;
+      // Support both APIFY_API_TOKEN and APIFY_TOKEN
+      const apiToken = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN;
 
       if (!apiToken) {
         return {
@@ -176,8 +177,8 @@ class APIHealthCheck {
           };
         }
 
-        // ChromaDB Cloud API endpoint
-        const cloudUrl = 'https://api.trychroma.com/api/v1/heartbeat';
+        // ChromaDB Cloud API endpoint (v2 - v1 is deprecated)
+        const cloudUrl = 'https://api.trychroma.com/api/v2/heartbeat';
         const result = await this.makeRequest(cloudUrl, {
           headers: {
             'Authorization': `Bearer ${apiKey}`,
