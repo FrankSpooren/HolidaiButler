@@ -15,14 +15,20 @@ class DatabaseHealthCheck {
    */
   async checkMySQL() {
     try {
-      // Dynamic import to handle cases where database.js might not exist yet
-      const { sequelize } = await import('../../../../config/database.js');
+      // Dynamic import - database.js exports { mysql: sequelize instance }
+      const dbConfig = await import('../../../../../config/database.js');
+      const sequelize = dbConfig.default?.mysql || dbConfig.mysql;
+
+      if (!sequelize) {
+        throw new Error('MySQL sequelize instance not found in database config');
+      }
+
       await sequelize.authenticate();
 
       return {
         check: 'mysql',
         status: 'healthy',
-        database: 'attexel',
+        database: process.env.DB_NAME || 'attexel',
         timestamp: new Date().toISOString()
       };
     } catch (error) {
@@ -48,6 +54,30 @@ class DatabaseHealthCheck {
         2: 'connecting',
         3: 'disconnecting'
       };
+
+      // If disconnected, try to connect using MONGODB_URI from env
+      if (state === 0 && process.env.MONGODB_URI) {
+        try {
+          await mongoose.connect(process.env.MONGODB_URI, {
+            serverSelectionTimeoutMS: 5000,
+          });
+          return {
+            check: 'mongodb',
+            status: 'healthy',
+            state: 'connected',
+            note: 'Connected during health check',
+            timestamp: new Date().toISOString()
+          };
+        } catch (connectError) {
+          return {
+            check: 'mongodb',
+            status: 'unhealthy',
+            state: 'disconnected',
+            error: connectError.message,
+            timestamp: new Date().toISOString()
+          };
+        }
+      }
 
       return {
         check: 'mongodb',
