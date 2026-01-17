@@ -68,19 +68,78 @@ export function startWorkers() {
             const { getReport } = await import("./costController/index.js");
             const { sendAlert } = await import("./ownerInterface/index.js");
             const report = await getReport();
-            
+
             await sendAlert({
               urgency: 2,
               title: "Wekelijks Kostenoverzicht",
               message: "Budget: " + report.summary.totalSpent.toFixed(2) + " van " + report.summary.totalBudget + " (" + report.summary.percentageUsed.toFixed(1) + "%)"
             });
-            
+
             console.log("[Orchestrator] Weekly cost report sent");
             result = report;
           } catch (error) {
             console.error("[Orchestrator] Weekly report failed:", error.message);
             throw error;
           }
+          break;
+
+        // Data Sync Agent jobs
+        case "poi-sync-tier1":
+        case "poi-sync-tier2":
+        case "poi-sync-tier3":
+        case "poi-sync-tier4":
+        case "poi-sync-tier1-manual":
+        case "poi-sync-tier2-manual":
+        case "poi-sync-tier3-manual":
+        case "poi-sync-tier4-manual":
+          try {
+            const dataSyncAgent = await import("../agents/dataSync/index.js");
+            const syncResult = await dataSyncAgent.default.handleJob(job);
+            console.log(`[Orchestrator] POI sync tier ${job.data.tier}:`, JSON.stringify({
+              updated: syncResult.result?.updated,
+              total: syncResult.result?.total
+            }));
+            result = syncResult;
+          } catch (error) {
+            console.error("[Orchestrator] POI sync failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "poi-tier-recalc":
+        case "poi-tier-recalc-manual":
+          try {
+            const dataSyncRecalc = await import("../agents/dataSync/index.js");
+            const recalcResult = await dataSyncRecalc.default.handleJob(job);
+            console.log("[Orchestrator] POI tier recalculation:", JSON.stringify({
+              total: recalcResult.result?.total,
+              tierCounts: recalcResult.result?.tierCounts
+            }));
+            result = recalcResult;
+          } catch (error) {
+            console.error("[Orchestrator] POI tier recalc failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "poi-discovery-manual":
+          try {
+            const dataSyncDiscovery = await import("../agents/dataSync/index.js");
+            const discoveryResult = await dataSyncDiscovery.default.handleJob(job);
+            console.log("[Orchestrator] POI discovery:", JSON.stringify({
+              found: discoveryResult.result?.found,
+              added: discoveryResult.result?.added
+            }));
+            result = discoveryResult;
+          } catch (error) {
+            console.error("[Orchestrator] POI discovery failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "review-sync":
+          console.log("[Orchestrator] Review sync - not yet implemented");
+          result = { status: "pending", message: "Review sync not yet implemented" };
           break;
 
         default:
@@ -196,6 +255,7 @@ export function startWorkers() {
   console.log("[Orchestrator] - Orchestrator Worker: active");
   console.log("[Orchestrator] - Audit Trail: active");
   console.log("[Orchestrator] - Owner Interface: active");
+  console.log("[Orchestrator] - Data Sync Agent: active");
 }
 
 export async function stopWorkers() {
