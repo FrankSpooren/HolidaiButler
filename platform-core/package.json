@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "npx nodemon src/index.js",
+    "workers": "node src/workers.js",
+    "health-check": "node -e \"import('./src/services/agents/healthMonitor/index.js').then(m => m.default.runFullHealthCheck().then(r => console.log(r.summary)))\"",
     "test": "jest",
     "lint": "eslint src/**/*.js"
   },
@@ -44,6 +46,7 @@
     "mongoose": "^7.6.3",
     "mysql2": "^3.6.5",
     "node-cron": "^3.0.3",
+    "ping": "^0.4.4",
     "prom-client": "^15.1.0",
     "rate-limit-redis": "^4.2.0",
     "redis": "^4.6.11",
