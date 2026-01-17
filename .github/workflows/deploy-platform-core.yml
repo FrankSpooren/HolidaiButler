@@ -86,8 +86,13 @@ jobs:
           echo '${{ secrets.GOOGLE_CLOUD_TTS_KEY }}' | ssh root@91.98.71.87 "cat > ${{ env.DEPLOY_PATH }}/config/google-tts-credentials.json && chmod 600 ${{ env.DEPLOY_PATH }}/config/google-tts-credentials.json"
       - name: Install dependencies and restart PM2
         run: |
-          ssh root@91.98.71.87 "pm2 stop ${{ env.PM2_PROCESS_NAME }} 2>/dev/null || true; cd ${{ env.DEPLOY_PATH }} && (rm -rf node_modules 2>/dev/null; find node_modules -delete 2>/dev/null; rm -rf node_modules) || true; npm ci --omit=dev && mkdir -p logs"
-          # Robust PM2 restart: try restart first, if fails then delete and start fresh
+          # Stop PM2 and wait for file handles to release
+          ssh root@91.98.71.87 "pm2 stop ${{ env.PM2_PROCESS_NAME }} 2>/dev/null || true; sleep 2"
+          # Robust cleanup with verification
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && rm -rf node_modules 2>/dev/null; find node_modules -type f -delete 2>/dev/null; find node_modules -type d -empty -delete 2>/dev/null; rm -rf node_modules; test ! -d node_modules && echo 'Cleanup verified' || (echo 'Cleanup failed' && exit 1)"
+          # Install dependencies
+          ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && npm ci --omit=dev && mkdir -p logs"
+          # Robust PM2 restart
           ssh root@91.98.71.87 "pm2 restart ${{ env.PM2_PROCESS_NAME }} --update-env 2>/dev/null || (pm2 delete ${{ env.PM2_PROCESS_NAME }} 2>/dev/null; pm2 start ${{ env.DEPLOY_PATH }}/src/index.js --name ${{ env.PM2_PROCESS_NAME }} --cwd ${{ env.DEPLOY_PATH }})"
           ssh root@91.98.71.87 "pm2 save"
       - name: Health check
