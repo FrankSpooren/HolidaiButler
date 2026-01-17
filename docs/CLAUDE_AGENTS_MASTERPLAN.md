@@ -1,0 +1,513 @@
+# HolidaiButler Claude Agents - Masterplan v3.0
+
+> **Versie**: 3.0.0  
+> **Datum**: 14 januari 2026  
+> **Status**: Fase 2 Compleet, Fase 3 Ready  
+> **Eigenaar**: Frank Spooren  
+
+---
+
+## 📋 Document Changelog
+
+| Versie | Datum | Wijzigingen |
+|--------|-------|-------------|
+| 1.0 | Dec 2025 | Origineel concept met agent suggesties |
+| 2.0 | Jan 2026 | Technische details + deployment protocol |
+| **3.0** | **14 Jan 2026** | **Fase 1-2 resultaten, EU-compliance updates, geactualiseerde architectuur** |
+
+---
+
+## 🎯 Project Overzicht
+
+### Missie
+HolidaiButler is een enterprise-level AI-powered tourism platform dat internationale toeristen (30-70 jaar) persoonlijke lokale aanbevelingen geeft voor premium bestemmingen.
+
+### Huidige Bestemmingen
+- **Costa Blanca** (Calpe/Alicante) - Primary
+- **Texel** (Nederland) - Secondary
+
+### Kernwaarden
+- ✅ **Personalisatie**: AI-driven aanbevelingen
+- ✅ **Kwaliteit**: Enterprise-level UX
+- ✅ **Betrouwbaarheid**: Accurate, actuele data
+- ✅ **Privacy**: GDPR-compliant, EU AI Act ready
+- ✅ **EU-First**: Alle infrastructuur EU-gehost
+
+---
+
+## 🏗️ Architectuur Overzicht
+
+### Infrastructuur Stack (Geactualiseerd)
+
+| Component | Platform | Locatie | Status |
+|-----------|----------|---------|--------|
+| **Server** | Hetzner VPS | 🇩🇪 Duitsland | ✅ Live |
+| **Database (SQL)** | MySQL | 🇩🇪 Hetzner | ✅ Live |
+| **Database (NoSQL)** | MongoDB | 🇩🇪 Hetzner | ✅ Live |
+| **Cache** | Redis 7.0.15 | 🇩🇪 Hetzner | ✅ Live |
+| **Queue** | BullMQ | 🇩🇪 Hetzner | ✅ Live |
+| **Vector DB** | ChromaDB | 🇩🇪 Hetzner | ✅ Live |
+| **Error Monitoring** | Bugsink | 🇳🇱 Nederland | ✅ Live |
+| **Email** | MailerLite | 🇱🇹 Litouwen (EU) | ✅ Live |
+| **Alerts (Critical)** | Threema Gateway | 🇨🇭 Zwitserland | ✅ Live |
+
+### ⚠️ Belangrijke Wijziging: Sentry → Bugsink
+
+**Beslissing (13 Jan 2026)**: Sentry.io vervangen door Bugsink voor EU-compliance.
+
+| Aspect | Sentry.io (Oud) | Bugsink (Nieuw) |
+|--------|-----------------|-----------------|
+| Bedrijf | 🇺🇸 USA | 🇳🇱 Nederland |
+| GDPR | ⚠️ CLOUD Act risico | ✅ Volledig compliant |
+| Data locatie | EU datacenter (US bedrijf) | 🇩🇪 Self-hosted Hetzner |
+| Kosten | €0-29+/maand | €0 (self-hosted) |
+| SDK | @sentry/node | @sentry/node (compatible) |
+
+**Bugsink Details**:
+- URL: https://errors.holidaibutler.com
+- Server: 91.98.71.87 (Hetzner)
+- Admin: Geconfigureerd
+- Projects: API, Customer Portal, Admin Portal
+
+---
+
+## 🔧 Externe Services & API Keys
+
+### Actieve Integraties
+
+| Service | Functie | API Key Identifier | Status |
+|---------|---------|-------------------|--------|
+| **MistralAI** | HoliBot LLM | `HolidaiButler-HoliBot NEW (171125)` | ✅ |
+| **MailerLite** | Email campagnes | `HolidaiButler NEW (171125)` | ✅ |
+| **Apify** | Google Places scraping | Personal Token | ✅ |
+| **Hetzner** | Server management | Claude API Toegang | ✅ |
+| **Threema** | Critical alerts | Gateway *HOL1791 | ✅ |
+| **Bugsink** | Error monitoring | Self-hosted (geen key) | ✅ |
+| **Adyen** | Betalingen | Web SDK | ✅ |
+
+### Verwijderde/Vervangen Services
+
+| Service | Reden | Vervanger |
+|---------|-------|-----------|
+| Sentry.io | US bedrijf, CLOUD Act | Bugsink (NL) |
+| SMS alerts | Kosten, privacy | Threema (CH) |
+
+---
+
+## 📊 Implementatie Status
+
+### Fase 1: Foundation ✅ COMPLEET
+
+| Component | Status | Datum |
+|-----------|--------|-------|
+| Repository structuur | ✅ | Dec 2025 |
+| CI/CD pipeline | ✅ | Dec 2025 |
+| Database schema | ✅ | Dec 2025 |
+| Basic API endpoints | ✅ | Dec 2025 |
+
+### Fase 2: Core Agents ✅ COMPLEET
+
+| Component | Status | Datum | Details |
+|-----------|--------|-------|---------|
+| **Bugsink Migration** | ✅ | 13 Jan 2026 | EU-compliant error monitoring |
+| **Redis Setup** | ✅ | 13 Jan 2026 | v7.0.15, localhost:6379 |
+| **BullMQ Orchestrator** | ✅ | 13 Jan 2026 | 4 scheduled jobs |
+| **Cost Controller** | ✅ | 13 Jan 2026 | MongoDB tracking, €515/maand budget |
+| **Audit Trail** | ✅ | 13 Jan 2026 | 30 dagen retention |
+| **Owner Interface** | ✅ | 13 Jan 2026 | Email + Threema alerts |
+| **Daily Briefing** | ✅ | 13 Jan 2026 | 08:00 Amsterdam |
+| **Threema Integration** | ✅ | 13 Jan 2026 | Urgency 5 alerts |
+
+### Fase 3: Specialized Agents ⏳ READY TO START
+
+| Agent | Functie | Week | Status |
+|-------|---------|------|--------|
+| Platform Health Monitor | System monitoring | 1 | ⏳ |
+| Data Sync Agent | POI Tier + Apify | 2 | ⏳ |
+| Communication Flow Agent | MailerLite automation | 3 | ⏳ |
+| GDPR Agent | Privacy compliance | 4 | ⏳ |
+| Development Agents | Code/Security review | 5-6 | ⏳ |
+
+### Fase 4: Strategy Agents 📅 PLANNED
+
+| Agent | Functie | Status |
+|-------|---------|--------|
+| Architecture Agent | System design | 📅 |
+| Learning Agent | Analytics & insights | 📅 |
+| Adaptive Agent | Future planning | 📅 |
+
+---
+
+## 🤖 Agent Architectuur (Definitief)
+
+### Laag 1: Core Layer (Fase 2) ✅
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ORCHESTRATOR AGENT                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │   BullMQ    │  │    Cost     │  │    Audit Trail      │  │
+│  │  Scheduler  │  │  Controller │  │    (MongoDB)        │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │              OWNER INTERFACE AGENT                       ││
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  ││
+│  │  │  MailerLite │  │   Threema   │  │ Daily Briefing  │  ││
+│  │  │   (Email)   │  │  (Critical) │  │    (08:00)      │  ││
+│  │  └─────────────┘  └─────────────┘  └─────────────────┘  ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Laag 2: Operations Layer (Fase 3)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   OPERATIONS AGENTS                          │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
+│  │ Platform Health │  │   Data Sync     │  │  HoliBot    │  │
+│  │    Monitor      │  │     Agent       │  │   Sync      │  │
+│  │                 │  │                 │  │             │  │
+│  │ • Server health │  │ • POI Tier mgmt │  │ • ChromaDB  │  │
+│  │ • DB checks     │  │ • Apify scraping│  │ • Embeddings│  │
+│  │ • API status    │  │ • Q&A sync      │  │ • MistralAI │  │
+│  │ • Portal checks │  │ • Review updates│  │             │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────┘  │
+│                                                              │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
+│  │  Communication  │  │    Content &    │  │   Disaster  │  │
+│  │   Flow Agent    │  │  Branding Agent │  │   Recovery  │  │
+│  │                 │  │                 │  │             │  │
+│  │ • User emails   │  │ • Brand check   │  │ • Backups   │  │
+│  │ • Admin emails  │  │ • Tone of voice │  │ • Recovery  │  │
+│  │ • Notifications │  │ • Consistency   │  │ • Failover  │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Laag 3: Compliance Layer (Fase 3-4)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   COMPLIANCE AGENTS                          │
+│  ┌─────────────────────────────────┐  ┌─────────────────┐   │
+│  │      GDPR / Data Rights         │  │   EU AI Act     │   │
+│  │                                 │  │   Compliance    │   │
+│  │ • 72-uur deletion              │  │                 │   │
+│  │ • Data export                  │  │ • Transparency  │   │
+│  │ • Consent management           │  │ • Human control │   │
+│  │ • Audit logging                │  │ • Bias monitor  │   │
+│  └─────────────────────────────────┘  └─────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Laag 4: Development Layer (Fase 3-4)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  DEVELOPMENT AGENTS                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │   UX/UI     │  │    Code     │  │     Security        │  │
+│  │  Reviewer   │  │   Reviewer  │  │     Reviewer        │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │   Quality   │  │    Test &   │  │      Tech Lead      │  │
+│  │   Checker   │  │  Validation │  │       Agent         │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 💰 Budget Configuratie (Fase 2)
+
+### Maandelijks Budget: €515
+
+| Service | Budget | Type | Tracking |
+|---------|--------|------|----------|
+| Claude API | €300 | Variabel | Cost Controller |
+| Apify | €100 | Variabel | Cost Controller |
+| MistralAI | €50 | Variabel | Cost Controller |
+| Hetzner | €50 | Fixed | - |
+| MailerLite | €15 | Fixed | - |
+
+### Alert Thresholds
+
+| Level | Percentage | Actie |
+|-------|------------|-------|
+| Info | 50% | Log only |
+| Warning | 75% | Email alert |
+| High | 90% | Priority email |
+| Critical | 100% | Email + Threema |
+
+---
+
+## 📞 Urgency & Alert Routing
+
+### Urgency Levels
+
+| Level | Naam | Kanaal | Response Time |
+|-------|------|--------|---------------|
+| 1 | Informatief | Daily Digest | Wekelijks |
+| 2 | Laag | Email | 24 uur |
+| 3 | Medium | Email | 4 uur |
+| 4 | Hoog | Email (priority) | 1 uur |
+| 5 | Kritiek | Email + Threema | Direct |
+
+### Urgency 5 Triggers
+
+- Production server down
+- Security breach detected
+- Data leak possibility
+- Budget 100% exceeded + hard limit
+- Database connection lost
+- Critical API failure (MistralAI, Apify)
+
+### Owner Contact
+
+- **Email**: info@holidaibutler.com
+- **Threema ID (Frank)**: V9VUJ8K6
+- **Threema ID (Emiel)**: Pending (vakantie januari)
+
+---
+
+## 📁 Code Structuur (Geactualiseerd)
+
+```
+platform-core/src/services/
+├── orchestrator/                    # ✅ FASE 2 COMPLEET
+│   ├── index.js                     # Orchestrator entry point
+│   ├── queues.js                    # BullMQ queue definities
+│   ├── scheduler.js                 # Scheduled jobs (4 active)
+│   ├── workers.js                   # Job workers
+│   │
+│   ├── costController/              # ✅ Budget tracking
+│   │   ├── index.js
+│   │   ├── budgetConfig.js          # €515/maand config
+│   │   ├── costTracker.js           # API cost logging
+│   │   └── models/
+│   │       └── CostLog.js           # MongoDB model
+│   │
+│   ├── auditTrail/                  # ✅ Comprehensive logging
+│   │   ├── index.js
+│   │   ├── auditLogger.js           # Logging functionaliteit
+│   │   └── models/
+│   │       └── AuditLog.js          # MongoDB model (30d retention)
+│   │
+│   └── ownerInterface/              # ✅ Owner communication
+│       ├── index.js
+│       ├── emailService.js          # MailerLite integration
+│       ├── dailyBriefing.js         # 08:00 briefing
+│       └── alertHandler.js          # Urgency routing + Threema
+│
+├── agents/                          # ⏳ FASE 3
+│   ├── healthMonitor/               # Week 1
+│   │   ├── index.js
+│   │   ├── checks/
+│   │   │   ├── serverHealth.js
+│   │   │   ├── databaseHealth.js
+│   │   │   ├── apiHealth.js
+│   │   │   ├── frontendHealth.js
+│   │   │   └── queueHealth.js
+│   │   ├── reporter.js
+│   │   └── alertIntegration.js
+│   │
+│   ├── dataSync/                    # Week 2
+│   │   ├── index.js
+│   │   ├── poiTierManager.js
+│   │   ├── apifyIntegration.js
+│   │   ├── poiSyncService.js
+│   │   └── syncScheduler.js
+│   │
+│   ├── communicationFlow/           # Week 3
+│   ├── gdprAgent/                   # Week 4
+│   └── devAgents/                   # Week 5-6
+│       ├── uxReviewer/
+│       ├── codeReviewer/
+│       ├── securityReviewer/
+│       └── qualityChecker/
+│
+└── holibot/                         # Bestaand
+    ├── ragService.js
+    ├── embeddingService.js
+    └── chromaService.js
+```
+
+---
+
+## 🗄️ Database Tabellen
+
+### MySQL (Hetzner - attexel)
+
+| Tabel | Beschrijving | Agent |
+|-------|--------------|-------|
+| POIs | Points of Interest | Data Sync |
+| Q&As | Vraag-antwoord pairs | Data Sync |
+| Reviews | Gebruikersreviews | Data Sync |
+| Users | Klantaccounts | Communication Flow |
+| AdminUsers | Partner accounts | Communication Flow |
+| agenda | Events | Data Sync |
+| agenda_dates | Event datums | Data Sync |
+| Tickets | Ticketverkoop | - |
+| Transactions | Betalingen | - |
+
+### MongoDB (Mongoose)
+
+| Collection | Beschrijving | Retention |
+|------------|--------------|-----------|
+| cost_logs | API cost tracking | 90 dagen |
+| audit_logs | Agent action logs | 30 dagen |
+| chat_logs | HoliBot conversations | Configurable |
+
+### HoliBot Tabellen (MySQL)
+
+| Tabel | Beschrijving |
+|-------|--------------|
+| holibot_fallbacks | Fallback responses |
+| holibot_learned_preferences | User preferences |
+| holibot_messages | Chat messages |
+| holibot_poi_clicks | POI interactions |
+| holibot_poi_ratings | POI ratings |
+| holibot_sessions | Chat sessions |
+| holibot_user_preferences | Explicit preferences |
+
+---
+
+## 🔄 Scheduled Jobs (Actief)
+
+### BullMQ Scheduler
+
+| Job | Schedule | Functie |
+|-----|----------|---------|
+| `daily-briefing` | 08:00 | Owner briefing email |
+| `cost-check` | */6 uur | Budget monitoring |
+| `health-check` | */1 uur | System health |
+| `weekly-cost-report` | Ma 09:00 | Wekelijks rapport |
+
+### Geplande Jobs (Fase 3)
+
+| Job | Schedule | Agent |
+|-----|----------|-------|
+| `poi-sync-tier1` | */30 min | Data Sync |
+| `poi-sync-tier2` | */6 uur | Data Sync |
+| `poi-sync-tier3` | Ma/Do 06:00 | Data Sync |
+| `poi-sync-tier4` | 1e/15e 06:00 | Data Sync |
+| `poi-tier-recalc` | Zo 03:00 | Data Sync |
+| `review-sync` | 6-maandelijks | Data Sync |
+
+---
+
+## 📋 POI Tier Strategie
+
+### Score Berekening
+
+```javascript
+score = (review_count × 0.30) + 
+        (average_rating × 0.20) + 
+        (tourist_relevance × 0.30) + 
+        (booking_frequency × 0.20)
+```
+
+### Tier Classificatie
+
+| Tier | Score | Update Frequentie | Beschrijving |
+|------|-------|-------------------|--------------|
+| 1 | ≥ 8.5 | Realtime (30 min) | Top attractions |
+| 2 | ≥ 7.0 | Dagelijks (6 uur) | Popular POIs |
+| 3 | ≥ 5.0 | Wekelijks | Standard POIs |
+| 4 | < 5.0 | Maandelijks | Low priority |
+
+---
+
+## 🔐 Security & Compliance
+
+### GDPR Compliance
+
+| Requirement | Implementation | Agent |
+|-------------|----------------|-------|
+| Data deletion | 72 uur na verzoek | GDPR Agent |
+| Data export | 24 uur na verzoek | GDPR Agent |
+| Consent tracking | Users tabel | Communication Flow |
+| Audit trail | 30 dagen retention | Audit Trail |
+
+### EU AI Act Compliance
+
+| Requirement | Implementation |
+|-------------|----------------|
+| Transparantie | Duidelijke AI disclosure |
+| Menselijke controle | Owner approval workflows |
+| Bias monitoring | Learning Agent |
+
+### Infrastructuur Security
+
+| Aspect | Implementatie |
+|--------|---------------|
+| Data sovereignty | 100% EU-gehost |
+| Error monitoring | Bugsink (NL, self-hosted) |
+| Alerts | Threema (CH, E2E encrypted) |
+| Email | MailerLite (EU) |
+
+---
+
+## 🌐 Omgevingen
+
+| Omgeving | Customer Portal | Admin Portal | API |
+|----------|-----------------|--------------|-----|
+| **Production** | holidaibutler.com | admin.holidaibutler.com | api.holidaibutler.com |
+| **Test** | test.holidaibutler.com | admin.test.holidaibutler.com | api.test.holidaibutler.com |
+| **Development** | dev.holidaibutler.com | admin.dev.holidaibutler.com | api.dev.holidaibutler.com |
+
+### Git Workflow
+
+| Branch | Omgeving | Auto-deploy |
+|--------|----------|-------------|
+| `main` | Production | Ja (na approval) |
+| `test` | Test/Staging | Ja |
+| `dev` | Development | Ja |
+
+---
+
+## ⚠️ Kritieke Regels
+
+### NOOIT doen:
+- ❌ Direct naar `main` pushen zonder approval
+- ❌ API keys in code of documenten hardcoden
+- ❌ Dependencies updaten zonder impact check
+- ❌ Database schema's wijzigen zonder migratie
+- ❌ User data verwijderen zonder GDPR protocol
+- ❌ US-based services gebruiken voor EU user data
+- ❌ Sentry.io of andere US monitoring tools
+
+### ALTIJD doen:
+- ✅ Tests draaien voor commit
+- ✅ Owner notificeren bij kritieke wijzigingen
+- ✅ Audit trail bijhouden
+- ✅ EU-compliant services gebruiken
+- ✅ Cost tracking voor API calls
+- ✅ Error logging naar Bugsink
+
+---
+
+## 📚 Gerelateerde Documentatie
+
+| Document | Locatie | Status |
+|----------|---------|--------|
+| CLAUDE.md | GitHub repo root | ⚠️ Update nodig |
+| Fase 2 Docs | docs/agents/fase2/ | ✅ Actueel |
+| Fase 3 Prompts | docs/agents/fase3/ | ⏳ Ready |
+| API Docs | docs/api/ | ✅ |
+| Deployment Guide | infrastructure/README.md | ✅ |
+
+---
+
+## 📞 Contact & Escalatie
+
+| Rol | Naam | Contact |
+|-----|------|---------|
+| Owner | Frank Spooren | info@holidaibutler.com |
+| Co-Owner | Emiel | (Threema ID pending) |
+
+---
+
+*Dit document is de single source of truth voor de HolidaiButler Claude Agents architectuur. Laatste update: 14 januari 2026.*
