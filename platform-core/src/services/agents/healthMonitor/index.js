@@ -14,6 +14,18 @@
  * - Alert integration with Owner Interface Agent
  */
 
+// Load environment variables before any checks
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Try to load .env from platform-core root
+const envPath = path.resolve(__dirname, '../../../../.env');
+dotenv.config({ path: envPath });
+
 import reporter from './reporter.js';
 import alertIntegration from './alertIntegration.js';
 import serverHealth from './checks/serverHealth.js';
