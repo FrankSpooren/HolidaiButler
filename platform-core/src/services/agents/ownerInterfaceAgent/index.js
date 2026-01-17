@@ -1,20 +1,34 @@
 /**
- * Owner Interface Agent (Stub)
+ * Owner Interface Agent
  * Handles communication with the project owner
+ * Uses the existing orchestrator's alertHandler for email/Threema
  *
  * @module agents/ownerInterfaceAgent
- * @version 1.0.0
- *
- * Note: This is a minimal stub for the Health Monitor integration.
- * The full Owner Interface Agent implementation should be imported from the existing codebase.
+ * @version 1.1.0
  */
-
-import axios from 'axios';
 
 class OwnerInterfaceAgent {
   constructor() {
     this.name = 'Owner Interface Agent';
-    this.version = '1.0.0';
+    this.version = '1.1.0';
+    this.alertHandler = null;
+  }
+
+  /**
+   * Lazy load the alert handler from orchestrator
+   * @returns {Promise<Object>} Alert handler instance
+   */
+  async getAlertHandler() {
+    if (!this.alertHandler) {
+      try {
+        const orchestratorOwnerInterface = await import('../../orchestrator/ownerInterface/index.js');
+        this.alertHandler = orchestratorOwnerInterface.alertHandler || orchestratorOwnerInterface.default?.alertHandler;
+      } catch (error) {
+        console.warn('[OwnerInterfaceAgent] Could not load orchestrator alertHandler:', error.message);
+        return null;
+      }
+    }
+    return this.alertHandler;
   }
 
   /**
@@ -34,30 +48,42 @@ class OwnerInterfaceAgent {
     console.log(`[OwnerInterfaceAgent] Sending notification: ${subject} (urgency: ${urgency})`);
 
     try {
-      // Urgency 1-2: Dashboard only (logged)
-      if (urgency <= 2) {
-        console.log(`[OwnerInterfaceAgent] Low urgency notification logged`);
-        channels.push('dashboard');
-      }
+      const alertHandler = await this.getAlertHandler();
 
-      // Urgency 3: Email + Dashboard
-      if (urgency >= 3) {
-        await this.sendEmail(subject, message);
-        channels.push('email');
-      }
+      if (alertHandler) {
+        // Use the existing orchestrator's alert system
+        const result = await alertHandler.sendAlert({
+          urgency,
+          title: subject,
+          message,
+          metadata: { category, ...metadata }
+        });
 
-      // Urgency 4-5: Email + SMS/Threema
-      if (urgency >= 4) {
-        await this.sendThreema(subject, message);
-        channels.push('threema');
-      }
+        // Determine channels based on urgency
+        if (urgency === 1) channels.push('digest');
+        if (urgency >= 2) channels.push('email');
+        if (urgency >= 5) channels.push('threema');
 
-      return {
-        success: true,
-        channels,
-        urgency,
-        timestamp: new Date().toISOString()
-      };
+        return {
+          success: result.success !== false,
+          channels,
+          urgency,
+          result,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        // Fallback: just log the notification
+        console.log(`[OwnerInterfaceAgent] Alert (urgency ${urgency}): ${subject}`);
+        console.log(`[OwnerInterfaceAgent] Message: ${message.substring(0, 200)}...`);
+
+        return {
+          success: true,
+          channels: ['console'],
+          urgency,
+          note: 'AlertHandler not available, logged to console',
+          timestamp: new Date().toISOString()
+        };
+      }
     } catch (error) {
       console.error('[OwnerInterfaceAgent] Notification failed:', error.message);
       return {
@@ -70,83 +96,25 @@ class OwnerInterfaceAgent {
   }
 
   /**
-   * Send email notification via MailerLite
-   * @param {string} subject - Email subject
-   * @param {string} message - Email body
-   * @returns {Promise<Object>} Email result
+   * Send critical alert (urgency 5)
+   * @param {string} type - Alert type
+   * @param {string} details - Alert details
+   * @returns {Promise<Object>} Alert result
    */
-  async sendEmail(subject, message) {
-    try {
-      const apiKey = process.env.MAILERLITE_API_KEY;
+  async sendCriticalAlert(type, details) {
+    const alertHandler = await this.getAlertHandler();
 
-      if (!apiKey) {
-        console.warn('[OwnerInterfaceAgent] MAILERLITE_API_KEY not configured');
-        return { success: false, error: 'API key not configured' };
-      }
-
-      // Send via MailerLite API
-      const response = await axios.post(
-        'https://connect.mailerlite.com/api/subscribers/info@holidaibutler.com/emails',
-        {
-          subject: `[HolidaiButler] ${subject}`,
-          html: `<pre>${message}</pre>`
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      return { success: true, response: response.status };
-    } catch (error) {
-      console.error('[OwnerInterfaceAgent] Email failed:', error.message);
-      // Graceful fallback - don't throw
-      return { success: false, error: error.message };
+    if (alertHandler && alertHandler.criticalAlert) {
+      return alertHandler.criticalAlert(type, details);
     }
-  }
 
-  /**
-   * Send Threema message for critical alerts
-   * @param {string} subject - Message subject
-   * @param {string} message - Message body
-   * @returns {Promise<Object>} Threema result
-   */
-  async sendThreema(subject, message) {
-    try {
-      const gatewayId = process.env.THREEMA_GATEWAY_ID;
-      const secret = process.env.THREEMA_SECRET;
-      const recipientId = process.env.OWNER_THREEMA_ID;
-
-      if (!gatewayId || !secret || !recipientId) {
-        console.warn('[OwnerInterfaceAgent] Threema not fully configured');
-        return { success: false, error: 'Threema not configured' };
-      }
-
-      const fullMessage = `${subject}\n\n${message}`;
-
-      const response = await axios.post(
-        'https://msgapi.threema.ch/send_simple',
-        new URLSearchParams({
-          from: gatewayId,
-          to: recipientId,
-          secret: secret,
-          text: fullMessage.substring(0, 3500) // Threema limit
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
-        }
-      );
-
-      return { success: true, messageId: response.data };
-    } catch (error) {
-      console.error('[OwnerInterfaceAgent] Threema failed:', error.message);
-      // Graceful fallback - don't throw
-      return { success: false, error: error.message };
-    }
+    // Fallback
+    return this.sendNotification({
+      subject: `CRITICAL: ${type}`,
+      message: details,
+      urgency: 5,
+      category: 'critical'
+    });
   }
 }
 
