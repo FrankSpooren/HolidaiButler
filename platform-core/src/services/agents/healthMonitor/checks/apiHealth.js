@@ -6,10 +6,13 @@
  */
 
 import axios from 'axios';
+import https from 'https';
 
 class APIHealthCheck {
   constructor() {
     this.timeout = 10000; // 10 second timeout
+    // Agent that allows self-signed or mismatched certs for internal checks
+    this.httpsAgent = new https.Agent({ rejectUnauthorized: false });
   }
 
   /**
@@ -46,12 +49,21 @@ class APIHealthCheck {
 
   /**
    * Check HolidaiButler API
+   * Uses internal localhost check when running on server, external check otherwise
    * @returns {Promise<Object>} API health result
    */
   async checkHolidaiButlerAPI() {
-    const result = await this.makeRequest(
-      process.env.API_URL || 'https://api.holidaibutler.com/health'
-    );
+    // First try internal health endpoint (localhost on port 3001)
+    const internalUrl = process.env.API_INTERNAL_URL || 'http://localhost:3001/health';
+    let result = await this.makeRequest(internalUrl);
+
+    // If internal check fails, try external with SSL verification disabled
+    if (!result.success) {
+      const externalUrl = process.env.API_URL || 'https://api.holidaibutler.com/health';
+      result = await this.makeRequest(externalUrl, {
+        httpsAgent: this.httpsAgent
+      });
+    }
 
     return {
       check: 'holidaibutler_api',
@@ -99,18 +111,36 @@ class APIHealthCheck {
 
   /**
    * Check Apify API connectivity
+   * Uses the user endpoint with API token to verify connectivity
    * @returns {Promise<Object>} Apify health result
    */
   async checkApify() {
     try {
-      const result = await this.makeRequest('https://api.apify.com/v2/status');
+      // Support both APIFY_API_TOKEN and APIFY_TOKEN
+      const apiToken = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN;
+
+      if (!apiToken) {
+        return {
+          check: 'apify',
+          status: 'warning',
+          message: 'APIFY_API_TOKEN not configured',
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      // Use the user endpoint to verify API token and connectivity
+      const result = await this.makeRequest(`https://api.apify.com/v2/users/me?token=${apiToken}`);
+
+      // 200 = success, 401 = bad token but API reachable
+      const isReachable = result.success && (result.statusCode === 200 || result.statusCode === 401);
 
       return {
         check: 'apify',
-        status: result.success && result.statusCode === 200 ? 'healthy' : 'unhealthy',
+        status: isReachable ? 'healthy' : 'unhealthy',
         statusCode: result.statusCode,
         latency: result.latency,
         error: result.error,
+        authenticated: result.statusCode === 200,
         timestamp: new Date().toISOString()
       };
     } catch (error) {
@@ -125,21 +155,62 @@ class APIHealthCheck {
 
   /**
    * Check ChromaDB connectivity
+   * Supports both local and cloud ChromaDB configurations
    * @returns {Promise<Object>} ChromaDB health result
    */
   async checkChromaDB() {
     try {
-      const chromaHost = process.env.CHROMA_HOST || 'http://localhost:8000';
-      const result = await this.makeRequest(`${chromaHost}/api/v1/heartbeat`);
+      const useCloud = process.env.USE_CHROMADB_CLOUD === 'true';
 
-      return {
-        check: 'chromadb',
-        status: result.success && result.statusCode === 200 ? 'healthy' : 'unhealthy',
-        statusCode: result.statusCode,
-        latency: result.latency,
-        error: result.error,
-        timestamp: new Date().toISOString()
-      };
+      if (useCloud) {
+        // ChromaDB Cloud check
+        const apiKey = process.env.CHROMADB_API_KEY;
+        const tenant = process.env.CHROMADB_TENANT;
+        const database = process.env.CHROMADB_DATABASE;
+
+        if (!apiKey || !tenant) {
+          return {
+            check: 'chromadb',
+            status: 'warning',
+            message: 'ChromaDB Cloud credentials not fully configured',
+            timestamp: new Date().toISOString()
+          };
+        }
+
+        // ChromaDB Cloud API endpoint (v2 - v1 is deprecated)
+        const cloudUrl = 'https://api.trychroma.com/api/v2/heartbeat';
+        const result = await this.makeRequest(cloudUrl, {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'X-Chroma-Tenant': tenant,
+            'X-Chroma-Database': database || 'default'
+          }
+        });
+
+        return {
+          check: 'chromadb',
+          status: result.success ? 'healthy' : 'warning',
+          mode: 'cloud',
+          statusCode: result.statusCode,
+          latency: result.latency,
+          error: result.error,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        // Local ChromaDB check
+        const chromaHost = process.env.CHROMA_HOST || 'http://localhost:8000';
+        const result = await this.makeRequest(`${chromaHost}/api/v1/heartbeat`);
+
+        return {
+          check: 'chromadb',
+          status: result.success && result.statusCode === 200 ? 'healthy' : 'unhealthy',
+          mode: 'local',
+          statusCode: result.statusCode,
+          latency: result.latency,
+          error: result.error,
+          timestamp: new Date().toISOString()
+        };
+      }
     } catch (error) {
       return {
         check: 'chromadb',
