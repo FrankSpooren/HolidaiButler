@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 2.1.0  
-> **Laatst bijgewerkt**: 14 januari 2026  
+> **Versie**: 2.2.0
+> **Laatst bijgewerkt**: 18 januari 2026  
 > **Eigenaar**: Frank Spooren  
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -80,7 +80,15 @@ HolidaiButler/
 │   │   │   │   ├── costController/
 │   │   │   │   ├── auditTrail/
 │   │   │   │   └── ownerInterface/
-│   │   │   └── agents/            # ⏳ Fase 3: Specialized Agents
+│   │   │   └── agents/            # ✅ Fase 3: Specialized Agents
+│   │   │       └── dataSync/      # ✅ Data Sync Agent v2.0
+│   │   │           ├── index.js
+│   │   │           ├── syncScheduler.js
+│   │   │           ├── poiLifecycleManager.js
+│   │   │           ├── reviewsManager.js
+│   │   │           ├── qaGenerator.js
+│   │   │           ├── dataValidator.js
+│   │   │           └── syncReporter.js
 │   │   └── middleware/
 │   └── package.json
 │
@@ -279,18 +287,34 @@ REDIS_PORT=6379
 
 ## 📊 Database Structuur
 
-### MySQL (Hetzner - attexel database)
+### MySQL (Hetzner - pxoziy_db1 database)
 | Tabel | Beschrijving | Sync Frequentie |
 |-------|--------------|-----------------|
-| POIs | Points of Interest | Tier-based |
-| Q&As | Vraag-antwoord pairs | Bij POI update |
-| Reviews | Gebruikersreviews | 6-maandelijks |
+| POIs | Points of Interest (+ status, tier_score, duplicate_hash) | Tier-based |
+| Q&As | AI-generated Q&A pairs (NL/EN/ES, approval workflow) | Maandelijks |
+| Reviews | Reviews met sentiment analysis, spam scores | Wekelijks/Maandelijks |
 | Users | Klantaccounts | Realtime |
 | AdminUsers | Partner accounts | Realtime |
 | agenda | Events | Dagelijks |
 | agenda_dates | Event datums | Bij event update |
 | Tickets | Ticketverkoop | Realtime |
 | Transactions | Betalingen | Realtime |
+
+#### POI Enterprise Columns (v2.0)
+- `status`: active/pending_deactivation/deactivated/merged
+- `pending_deactivation_date`: 30-day grace period tracking
+- `duplicate_hash`: MD5 for duplicate detection
+- `tier_score`: Calculated tier score (0-10)
+
+#### Reviews Enterprise Columns (v2.0)
+- `sentiment_score`: -1.0 to 1.0 sentiment analysis
+- `sentiment_label`: positive/negative/neutral
+- `spam_score`: 0.0 to 1.0 spam detection
+
+#### Q&A Enterprise Columns (v2.0)
+- `source`: manual/ai_generated/imported
+- `status`: draft/pending_review/approved/rejected
+- `priority`: 1-5 importance ranking
 
 ### MongoDB (via Mongoose)
 | Collection | Beschrijving | Retention |
@@ -316,7 +340,7 @@ REDIS_PORT=6379
 | **Owner Interface Agent** | Email + Threema communicatie | ✅ Live |
 
 #### Orchestrator Components
-- BullMQ Scheduler (4 recurring jobs)
+- BullMQ Scheduler (17 recurring jobs)
 - Cost Controller (€515/maand budget)
 - Audit Trail (30 dagen retention)
 
@@ -325,14 +349,22 @@ REDIS_PORT=6379
 - Threema Gateway (urgency 5)
 - Daily Briefing (08:00)
 
-### Fase 3 - Operations Layer ⏳ READY
+### Fase 3 - Operations Layer ⏳ IN PROGRESS
 
 | Agent | Functie | Status |
 |-------|---------|--------|
 | Platform Health Monitor | System monitoring | ⏳ Week 1 |
-| Data Sync Agent | POI Tier + Apify | ⏳ Week 2 |
+| **Data Sync Agent v2.0** | POI Lifecycle, Reviews, Q&A, Validation | ✅ Live |
 | Communication Flow Agent | Email automation | ⏳ Week 3 |
 | GDPR Agent | Privacy compliance | ⏳ Week 4 |
+
+#### Data Sync Agent v2.0 Components
+- **POI Lifecycle Manager**: Creation, deactivation (30-day grace), duplicate detection
+- **Reviews Manager**: Sentiment analysis, spam detection, 2-year retention
+- **Q&A Generator**: AI-powered multi-language (NL/EN/ES) generation
+- **Data Validator**: Schema validation, referential integrity, auto-rollback
+- **Sync Reporter**: Daily/weekly health reports, quality scores, alerts
+- **Scheduled Jobs**: 13 enterprise jobs (POI sync, review sync, Q&A sync, etc.)
 
 ### Fase 4 - Development Layer 📅 PLANNED
 
@@ -446,12 +478,12 @@ score = (review_count × 0.30) +
 ```
 
 ### Tier Classificatie
-| Tier | Score | Update Frequentie |
-|------|-------|-------------------|
-| 1 | ≥ 8.5 | Realtime (30 min) |
-| 2 | ≥ 7.0 | Dagelijks (6 uur) |
-| 3 | ≥ 5.0 | Wekelijks |
-| 4 | < 5.0 | Maandelijks |
+| Tier | Score | Update Frequentie | Max POIs |
+|------|-------|-------------------|----------|
+| 1 | ≥ 8.0 | Dagelijks 06:00 | 25 |
+| 2 | ≥ 7.0 | Wekelijks (maandag) | 250 |
+| 3 | ≥ 5.0 | Maandelijks (1e) | 1000 |
+| 4 | < 5.0 | Kwartaal (Jan/Apr/Jul/Oct) | Onbeperkt |
 
 ### Data Bronnen
 - Google Places (via Apify)
@@ -518,6 +550,7 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| 2.2.0 | 2026-01-18 | Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation |
 | 2.1.0 | 2026-01-14 | Fase 2 compleet, Sentry→Bugsink, Threema, EU-compliance |
 | 2.0.0 | 2026-01-12 | Merge technische details + agent architectuur |
 | 1.0.0 | 2026-01-05 | Origineel: deployment protocol, code conventies |

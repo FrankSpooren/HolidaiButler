@@ -1,8 +1,8 @@
 # HolidaiButler Claude Agents - Masterplan v3.0
 
-> **Versie**: 3.0.0  
-> **Datum**: 14 januari 2026  
-> **Status**: Fase 2 Compleet, Fase 3 Ready  
+> **Versie**: 3.1.0
+> **Datum**: 18 januari 2026
+> **Status**: Fase 2 Compleet, Fase 3 Week 2 Compleet (Data Sync Agent v2.0)  
 > **Eigenaar**: Frank Spooren  
 
 ---
@@ -13,7 +13,8 @@
 |--------|-------|-------------|
 | 1.0 | Dec 2025 | Origineel concept met agent suggesties |
 | 2.0 | Jan 2026 | Technische details + deployment protocol |
-| **3.0** | **14 Jan 2026** | **Fase 1-2 resultaten, EU-compliance updates, geactualiseerde architectuur** |
+| 3.0 | 14 Jan 2026 | Fase 1-2 resultaten, EU-compliance updates, geactualiseerde architectuur |
+| **3.1** | **18 Jan 2026** | **Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation** |
 
 ---
 
@@ -118,15 +119,33 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 | **Daily Briefing** | ✅ | 13 Jan 2026 | 08:00 Amsterdam |
 | **Threema Integration** | ✅ | 13 Jan 2026 | Urgency 5 alerts |
 
-### Fase 3: Specialized Agents ⏳ READY TO START
+### Fase 3: Specialized Agents ⏳ IN PROGRESS
 
 | Agent | Functie | Week | Status |
 |-------|---------|------|--------|
 | Platform Health Monitor | System monitoring | 1 | ⏳ |
-| Data Sync Agent | POI Tier + Apify | 2 | ⏳ |
+| **Data Sync Agent v2.0** | POI Lifecycle, Reviews, Q&A, Validation | 2 | ✅ Live |
 | Communication Flow Agent | MailerLite automation | 3 | ⏳ |
 | GDPR Agent | Privacy compliance | 4 | ⏳ |
 | Development Agents | Code/Security review | 5-6 | ⏳ |
+
+#### Data Sync Agent v2.0 Details (Compleet 18 Jan 2026)
+
+**Enterprise Modules:**
+- **POI Lifecycle Manager**: Creation, deactivation (30-day grace), duplicate detection, auto-categorization
+- **Reviews Manager**: Sentiment analysis (NL/EN/ES), spam detection, 2-year retention policy
+- **Q&A Generator**: AI-powered multi-language generation, approval workflow, priority ranking
+- **Data Validator**: Schema validation, referential integrity, automatic rollback (>10% failures)
+- **Sync Reporter**: Daily/weekly health reports, quality scores, email digests
+
+**Scheduled Jobs (13 Enterprise Jobs):**
+- POI Sync: Tier 1 (daily), Tier 2 (weekly), Tier 3 (monthly), Tier 4 (quarterly)
+- Review Sync: Tier 1-2 (weekly), Tier 3-4 (monthly), Retention (weekly)
+- Q&A Sync: Tier 1-2 (monthly), Tier 3-4 (quarterly)
+- Lifecycle: Deactivation check (daily)
+- Reporting: Health report (daily/weekly)
+
+**Database Migration**: 009_data_sync_agent_enterprise.sql deployed to pxoziy_db1
 
 ### Fase 4: Strategy Agents 📅 PLANNED
 
@@ -301,8 +320,8 @@ platform-core/src/services/
 │       ├── dailyBriefing.js         # 08:00 briefing
 │       └── alertHandler.js          # Urgency routing + Threema
 │
-├── agents/                          # ⏳ FASE 3
-│   ├── healthMonitor/               # Week 1
+├── agents/                          # FASE 3
+│   ├── healthMonitor/               # ⏳ Week 1
 │   │   ├── index.js
 │   │   ├── checks/
 │   │   │   ├── serverHealth.js
@@ -313,16 +332,18 @@ platform-core/src/services/
 │   │   ├── reporter.js
 │   │   └── alertIntegration.js
 │   │
-│   ├── dataSync/                    # Week 2
-│   │   ├── index.js
-│   │   ├── poiTierManager.js
-│   │   ├── apifyIntegration.js
-│   │   ├── poiSyncService.js
-│   │   └── syncScheduler.js
+│   ├── dataSync/                    # ✅ Week 2 COMPLEET
+│   │   ├── index.js                 # v2.0 Entry point
+│   │   ├── syncScheduler.js         # 13 scheduled jobs
+│   │   ├── poiLifecycleManager.js   # Creation, deactivation, duplicates
+│   │   ├── reviewsManager.js        # Sentiment, spam, retention
+│   │   ├── qaGenerator.js           # AI-powered Q&A generation
+│   │   ├── dataValidator.js         # Schema validation, rollback
+│   │   └── syncReporter.js          # Health reports, alerts
 │   │
-│   ├── communicationFlow/           # Week 3
-│   ├── gdprAgent/                   # Week 4
-│   └── devAgents/                   # Week 5-6
+│   ├── communicationFlow/           # ⏳ Week 3
+│   ├── gdprAgent/                   # ⏳ Week 4
+│   └── devAgents/                   # ⏳ Week 5-6
 │       ├── uxReviewer/
 │       ├── codeReviewer/
 │       ├── securityReviewer/
@@ -338,19 +359,35 @@ platform-core/src/services/
 
 ## 🗄️ Database Tabellen
 
-### MySQL (Hetzner - attexel)
+### MySQL (Hetzner - pxoziy_db1)
 
 | Tabel | Beschrijving | Agent |
 |-------|--------------|-------|
-| POIs | Points of Interest | Data Sync |
-| Q&As | Vraag-antwoord pairs | Data Sync |
-| Reviews | Gebruikersreviews | Data Sync |
+| POIs | Points of Interest (+ status, tier_score, duplicate_hash) | Data Sync v2.0 |
+| Q&As | AI-generated Q&A pairs (source, status, priority) | Data Sync v2.0 |
+| Reviews | Reviews (sentiment_score, sentiment_label, spam_score) | Data Sync v2.0 |
 | Users | Klantaccounts | Communication Flow |
 | AdminUsers | Partner accounts | Communication Flow |
 | agenda | Events | Data Sync |
 | agenda_dates | Event datums | Data Sync |
 | Tickets | Ticketverkoop | - |
 | Transactions | Betalingen | - |
+
+#### POI Enterprise Columns (v2.0)
+- `status`: ENUM('active','pending_deactivation','deactivated','merged')
+- `pending_deactivation_date`: DATE - 30-day grace period tracking
+- `duplicate_hash`: VARCHAR(32) - MD5 for duplicate detection
+- `tier_score`: DECIMAL(5,2) - Calculated tier score (0-10)
+
+#### Reviews Enterprise Columns (v2.0)
+- `sentiment_score`: DECIMAL(3,2) - Range -1.0 to 1.0
+- `sentiment_label`: ENUM('positive','negative','neutral')
+- `spam_score`: DECIMAL(3,2) - Range 0.0 to 1.0
+
+#### Q&A Enterprise Columns (v2.0)
+- `source`: ENUM('manual','ai_generated','imported')
+- `status`: ENUM('draft','pending_review','approved','rejected')
+- `priority`: INT(1) - Importance 1-5
 
 ### MongoDB (Mongoose)
 
@@ -374,9 +411,9 @@ platform-core/src/services/
 
 ---
 
-## 🔄 Scheduled Jobs (Actief)
+## 🔄 Scheduled Jobs (Actief - 17 Total)
 
-### BullMQ Scheduler
+### Core Jobs (Fase 2)
 
 | Job | Schedule | Functie |
 |-----|----------|---------|
@@ -385,16 +422,23 @@ platform-core/src/services/
 | `health-check` | */1 uur | System health |
 | `weekly-cost-report` | Ma 09:00 | Wekelijks rapport |
 
-### Geplande Jobs (Fase 3)
+### Data Sync Agent v2.0 Jobs (Fase 3) ✅ LIVE
 
-| Job | Schedule | Agent |
-|-----|----------|-------|
-| `poi-sync-tier1` | */30 min | Data Sync |
-| `poi-sync-tier2` | */6 uur | Data Sync |
-| `poi-sync-tier3` | Ma/Do 06:00 | Data Sync |
-| `poi-sync-tier4` | 1e/15e 06:00 | Data Sync |
-| `poi-tier-recalc` | Zo 03:00 | Data Sync |
-| `review-sync` | 6-maandelijks | Data Sync |
+| Job | Schedule | Functie |
+|-----|----------|---------|
+| `poi-sync-tier1` | Dagelijks 06:00 | Tier 1 POI sync (max 25) |
+| `poi-sync-tier2` | Maandag 06:00 | Tier 2 POI sync (max 250) |
+| `poi-sync-tier3` | 1e vd maand 06:00 | Tier 3 POI sync (max 1000) |
+| `poi-sync-tier4` | Kwartaal (Jan/Apr/Jul/Oct) | Tier 4 POI sync |
+| `poi-tier-recalc` | Zondag 03:00 | Tier herberekening |
+| `review-sync-tier12` | Woensdag 05:00 | Tier 1-2 review sync |
+| `review-sync-tier34` | 15e vd maand 05:00 | Tier 3-4 review sync |
+| `review-retention` | Zondag 02:00 | 2-jaar retention enforcement |
+| `qa-sync-tier12` | 1e vd maand 04:00 | Tier 1-2 Q&A generation |
+| `qa-sync-tier34` | Kwartaal 04:00 | Tier 3-4 Q&A generation |
+| `poi-deactivation-check` | Dagelijks 01:00 | Grace period processing |
+| `health-report-daily` | Dagelijks 07:00 | Daily health report |
+| `health-report-weekly` | Maandag 07:00 | Weekly health report + alerts |
 
 ---
 
@@ -409,14 +453,14 @@ score = (review_count × 0.30) +
         (booking_frequency × 0.20)
 ```
 
-### Tier Classificatie
+### Tier Classificatie (Geactualiseerd v2.0)
 
-| Tier | Score | Update Frequentie | Beschrijving |
-|------|-------|-------------------|--------------|
-| 1 | ≥ 8.5 | Realtime (30 min) | Top attractions |
-| 2 | ≥ 7.0 | Dagelijks (6 uur) | Popular POIs |
-| 3 | ≥ 5.0 | Wekelijks | Standard POIs |
-| 4 | < 5.0 | Maandelijks | Low priority |
+| Tier | Score | Update Frequentie | Max POIs | Beschrijving |
+|------|-------|-------------------|----------|--------------|
+| 1 | ≥ 8.0 | Dagelijks 06:00 | 25 | Top attractions, balanced categories |
+| 2 | ≥ 7.0 | Wekelijks (maandag) | 250 | Popular + critical practical POIs |
+| 3 | ≥ 5.0 | Maandelijks (1e) | 1000 | Standard POIs |
+| 4 | < 5.0 | Kwartaal (Jan/Apr/Jul/Oct) | Onbeperkt | Low priority |
 
 ---
 
@@ -493,7 +537,7 @@ score = (review_count × 0.30) +
 
 | Document | Locatie | Status |
 |----------|---------|--------|
-| CLAUDE.md | GitHub repo root | ⚠️ Update nodig |
+| CLAUDE.md | GitHub repo root | ✅ v2.2.0 (18 Jan 2026) |
 | Fase 2 Docs | docs/agents/fase2/ | ✅ Actueel |
 | Fase 3 Prompts | docs/agents/fase3/ | ⏳ Ready |
 | API Docs | docs/api/ | ✅ |
@@ -510,4 +554,4 @@ score = (review_count × 0.30) +
 
 ---
 
-*Dit document is de single source of truth voor de HolidaiButler Claude Agents architectuur. Laatste update: 14 januari 2026.*
+*Dit document is de single source of truth voor de HolidaiButler Claude Agents architectuur. Laatste update: 18 januari 2026.*
