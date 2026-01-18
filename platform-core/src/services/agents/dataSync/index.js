@@ -1,41 +1,60 @@
 /**
  * Data Sync Agent
- * Main entry point for POI data synchronization
+ * Enterprise-level POI lifecycle management and data synchronization
  *
  * Features:
  * - POI tier classification with balanced categories
+ * - POI lifecycle management (creation, deactivation, duplicate detection)
+ * - Reviews management (sync, sentiment analysis, spam detection, 2-year retention)
+ * - Q&A generation (AI-powered, multi-language, approval workflow)
+ * - Data validation (schema check, integrity, rollback, anomaly detection)
+ * - Health reporting (daily/weekly reports, quality scores, alerts)
  * - Apify integration with budget management (€100/month)
  * - Scheduled sync jobs (daily, weekly, monthly, quarterly)
- * - Critical practical POI prioritization
- * - Accommodation exclusion
  *
  * @module agents/dataSync
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 import poiTierManager from "./poiTierManager.js";
 import poiSyncService from "./poiSyncService.js";
 import apifyIntegration from "./apifyIntegration.js";
 import syncScheduler from "./syncScheduler.js";
+import poiLifecycleManager from "./poiLifecycleManager.js";
+import reviewsManager from "./reviewsManager.js";
+import qaGenerator from "./qaGenerator.js";
+import dataValidator from "./dataValidator.js";
+import syncReporter from "./syncReporter.js";
 import { logAgent } from "../../orchestrator/auditTrail/index.js";
 
 class DataSyncAgent {
   constructor() {
     this.name = "Data Sync Agent";
-    this.version = "1.0.0";
+    this.version = "2.0.0";
     this.initialized = false;
   }
 
   /**
    * Initialize the Data Sync Agent
    * @param {Object} sequelize - Sequelize instance
+   * @param {Object} options - Optional configuration
    */
-  async initialize(sequelize) {
-    console.log("[DataSyncAgent] Initializing...");
+  async initialize(sequelize, options = {}) {
+    console.log("[DataSyncAgent] Initializing enterprise-level agent...");
 
     try {
-      // Set sequelize for POI sync service
+      // Set sequelize for all services that need it
       poiSyncService.setSequelize(sequelize);
+      poiLifecycleManager.setSequelize(sequelize);
+      reviewsManager.setSequelize(sequelize);
+      qaGenerator.setSequelize(sequelize);
+      dataValidator.setSequelize(sequelize);
+      syncReporter.setSequelize(sequelize);
+
+      // Set Mistral client for Q&A generation if provided
+      if (options.mistralClient) {
+        qaGenerator.setMistralClient(options.mistralClient);
+      }
 
       // Initialize scheduled jobs
       await syncScheduler.initializeScheduledJobs();
@@ -43,11 +62,24 @@ class DataSyncAgent {
       this.initialized = true;
 
       await logAgent("data-sync", "agent_initialized", {
-        description: "Data Sync Agent initialized successfully",
-        metadata: { version: this.version }
+        description: "Data Sync Agent v2.0 initialized successfully",
+        metadata: {
+          version: this.version,
+          modules: [
+            "poiTierManager", "poiSyncService", "poiLifecycleManager",
+            "reviewsManager", "qaGenerator", "dataValidator", "syncReporter"
+          ]
+        }
       });
 
-      console.log("[DataSyncAgent] Ready");
+      console.log("[DataSyncAgent] Enterprise agent ready");
+      console.log("[DataSyncAgent] - POI Tier Manager: active");
+      console.log("[DataSyncAgent] - POI Lifecycle Manager: active");
+      console.log("[DataSyncAgent] - Reviews Manager: active");
+      console.log("[DataSyncAgent] - Q&A Generator: active");
+      console.log("[DataSyncAgent] - Data Validator: active");
+      console.log("[DataSyncAgent] - Sync Reporter: active");
+
       return { success: true, version: this.version };
     } catch (error) {
       console.error("[DataSyncAgent] Initialization failed:", error.message);
@@ -55,108 +87,168 @@ class DataSyncAgent {
     }
   }
 
-  /**
-   * Recalculate tier scores for all POIs
-   * @param {Object} sequelize - Sequelize instance
-   */
+  // === POI TIER MANAGEMENT ===
+
   async recalculateTiers(sequelize) {
     console.log("[DataSyncAgent] Recalculating POI tiers...");
     return poiTierManager.classifyAllPOIs(sequelize);
   }
 
-  /**
-   * Sync POIs for a specific tier
-   * @param {number} tier - Tier number (1-4)
-   * @param {string} destination - Destination name
-   */
   async syncTier(tier, destination = "Calpe, Spain") {
     console.log(`[DataSyncAgent] Syncing tier ${tier} for ${destination}`);
     return poiSyncService.syncPOIsByTier(tier, destination);
   }
 
-  /**
-   * Discover new POIs in a destination
-   * @param {string} destination - Destination name
-   * @param {Array} categories - Search categories
-   */
   async discoverPOIs(destination, categories) {
     console.log(`[DataSyncAgent] Discovering POIs in ${destination}`);
     return poiSyncService.discoverNewPOIs(destination, categories);
   }
 
-  /**
-   * Trigger manual sync for a tier
-   * @param {number} tier - Tier number (1-4)
-   */
+  // === POI LIFECYCLE MANAGEMENT ===
+
+  async createPOI(poiData, destination) {
+    return poiLifecycleManager.createPOI(poiData, destination);
+  }
+
+  async checkClosureStatus(poiId, apifyData) {
+    return poiLifecycleManager.checkClosureStatus(poiId, apifyData);
+  }
+
+  async processPendingDeactivations() {
+    return poiLifecycleManager.processPendingDeactivations();
+  }
+
+  async getPendingDeactivations() {
+    return poiLifecycleManager.getPendingDeactivations();
+  }
+
+  async cancelDeactivation(poiId, reason) {
+    return poiLifecycleManager.cancelDeactivation(poiId, reason);
+  }
+
+  // === REVIEWS MANAGEMENT ===
+
+  async syncReviewsForPOI(poiId, googlePlaceId) {
+    return reviewsManager.syncReviewsForPOI(poiId, googlePlaceId);
+  }
+
+  async batchSyncReviews(pois) {
+    return reviewsManager.batchSyncReviews(pois);
+  }
+
+  async enforceRetentionPolicy() {
+    return reviewsManager.enforceRetentionPolicy();
+  }
+
+  async generateReviewSummary(poiId) {
+    return reviewsManager.generateSummary(poiId);
+  }
+
+  // === Q&A MANAGEMENT ===
+
+  async syncQAForPOI(poiId, options) {
+    return qaGenerator.syncQAForPOI(poiId, options);
+  }
+
+  async batchSyncQA(poiIds, options) {
+    return qaGenerator.batchSyncQA(poiIds, options);
+  }
+
+  async getPendingQAApprovals() {
+    return qaGenerator.getPendingApprovals();
+  }
+
+  async approveQA(qaId, editedAnswer) {
+    return qaGenerator.approveQA(qaId, editedAnswer);
+  }
+
+  async rejectQA(qaId, reason) {
+    return qaGenerator.rejectQA(qaId, reason);
+  }
+
+  // === HEALTH REPORTING ===
+
+  async generateHealthReport(options) {
+    return syncReporter.generateHealthReport(options);
+  }
+
+  async getDailyReport() {
+    return syncReporter.generateHealthReport({ period: "daily" });
+  }
+
+  async getWeeklyReport() {
+    return syncReporter.generateHealthReport({ period: "weekly", sendAlert: true });
+  }
+
+  // === TRIGGER METHODS ===
+
   async triggerSync(tier) {
     return syncScheduler.triggerManualSync(tier);
   }
 
-  /**
-   * Trigger POI discovery
-   * @param {string} destination - Destination name
-   * @param {Array} categories - Search categories
-   */
   async triggerDiscovery(destination, categories) {
     return syncScheduler.triggerDiscovery(destination, categories);
   }
 
-  /**
-   * Trigger tier recalculation
-   */
   async triggerTierRecalc() {
     return syncScheduler.triggerTierRecalculation();
   }
 
-  /**
-   * Check Apify budget status
-   */
+  async triggerReviewSync(tiers) {
+    return syncScheduler.triggerReviewSync(tiers);
+  }
+
+  async triggerQASync(tiers, languages) {
+    return syncScheduler.triggerQASync(tiers, languages);
+  }
+
+  async triggerRetentionEnforcement() {
+    return syncScheduler.triggerRetentionEnforcement();
+  }
+
+  async triggerDeactivationCheck() {
+    return syncScheduler.triggerDeactivationCheck();
+  }
+
+  async triggerHealthReport(period, sendAlert) {
+    return syncScheduler.triggerHealthReport(period, sendAlert);
+  }
+
+  // === STATUS & INFO ===
+
   async checkBudget() {
     return apifyIntegration.checkBudget();
   }
 
-  /**
-   * Get Apify account info
-   */
   async getApifyInfo() {
     return apifyIntegration.getAccountInfo();
   }
 
-  /**
-   * Get tier configuration
-   */
   getTierConfig() {
     return poiTierManager.getTierConfig();
   }
 
-  /**
-   * Get Tier 1 category targets
-   */
   getTier1CategoryTargets() {
     return poiTierManager.getTier1CategoryTargets();
   }
 
-  /**
-   * Get scheduled jobs
-   */
   getScheduledJobs() {
     return syncScheduler.getJobs();
   }
 
-  /**
-   * Get job schedule details
-   */
   getJobSchedule() {
     return syncScheduler.getJobSchedule();
   }
 
-  /**
-   * Get agent status
-   */
   async getStatus() {
     const syncStatus = await poiSyncService.getStatus();
     const jobs = syncScheduler.getJobs();
     const budgetStatus = await apifyIntegration.checkBudget();
+    const lifecycleStats = await poiLifecycleManager.getStats();
+    const reviewStats = await reviewsManager.getStats();
+    const qaStats = await qaGenerator.getStats();
+    const validatorStats = dataValidator.getStats();
+    const reporterStats = syncReporter.getStats();
 
     return {
       agent: this.name,
@@ -165,6 +257,11 @@ class DataSyncAgent {
       scheduledJobs: Object.keys(jobs).length,
       jobs: Object.keys(jobs),
       poiStatus: syncStatus,
+      lifecycleStats,
+      reviewStats,
+      qaStats,
+      validatorStats,
+      reporterStats,
       budgetStatus: {
         allowed: budgetStatus.allowed,
         percentageUsed: budgetStatus.percentageUsed,
@@ -176,38 +273,101 @@ class DataSyncAgent {
     };
   }
 
+  // === JOB HANDLER ===
+
   /**
-   * BullMQ job handler
+   * BullMQ job handler - routes jobs to appropriate modules
    * @param {Object} job - BullMQ job
    */
   async handleJob(job) {
-    const { type, tier, destination, categories, manual } = job.data;
+    const { type, tier, tiers, destination, categories, languages, period, sendAlert, manual } = job.data;
 
     console.log(`[DataSyncAgent] Processing job: ${job.name} (type: ${type})`);
 
     try {
       let result;
 
-      if (type === "data-sync" && tier) {
-        result = await this.syncTier(tier, destination || "Calpe, Spain");
-      } else if (type === "data-sync-discovery") {
-        result = await this.discoverPOIs(destination, categories);
-      } else if (type === "data-sync-recalc" || job.name === "poi-tier-recalc") {
-        // Tier recalculation needs sequelize from poiSyncService
-        if (poiSyncService.sequelize) {
-          result = await this.recalculateTiers(poiSyncService.sequelize);
-        } else {
-          result = { status: "skipped", message: "Sequelize not initialized" };
-        }
-      } else if (job.name === "review-sync") {
-        result = { status: "pending", message: "Review sync not yet implemented" };
-      } else {
-        result = { status: "unknown", jobName: job.name };
+      switch (type) {
+        // === POI SYNC ===
+        case "data-sync":
+          if (tier) {
+            result = await this.syncTier(tier, destination || "Calpe, Spain");
+          } else {
+            result = { status: "error", message: "No tier specified" };
+          }
+          break;
+
+        case "data-sync-discovery":
+          result = await this.discoverPOIs(destination, categories);
+          break;
+
+        case "data-sync-recalc":
+          if (poiSyncService.sequelize) {
+            result = await this.recalculateTiers(poiSyncService.sequelize);
+          } else {
+            result = { status: "skipped", message: "Sequelize not initialized" };
+          }
+          break;
+
+        // === REVIEW SYNC ===
+        case "review-sync":
+          if (tiers && tiers.length > 0) {
+            // Get POIs for specified tiers
+            const poisForReview = await this.getPOIsForTiers(tiers);
+            result = await this.batchSyncReviews(poisForReview);
+          } else {
+            result = { status: "error", message: "No tiers specified" };
+          }
+          break;
+
+        case "review-retention":
+          result = await this.enforceRetentionPolicy();
+          break;
+
+        // === Q&A SYNC ===
+        case "qa-sync":
+          if (tiers && tiers.length > 0) {
+            const poisForQA = await this.getPOIIdsForTiers(tiers);
+            result = await this.batchSyncQA(poisForQA, {
+              languages: languages || ["nl", "en", "es"],
+              useAI: true,
+              autoApprove: false
+            });
+          } else {
+            result = { status: "error", message: "No tiers specified" };
+          }
+          break;
+
+        // === LIFECYCLE ===
+        case "lifecycle-deactivation":
+          result = await this.processPendingDeactivations();
+          break;
+
+        // === HEALTH REPORTS ===
+        case "health-report":
+          result = await this.generateHealthReport({
+            period: period || "daily",
+            sendAlert: sendAlert || false
+          });
+          break;
+
+        default:
+          // Handle legacy job names
+          if (job.name === "poi-tier-recalc" || job.name === "poi-tier-recalc-manual") {
+            if (poiSyncService.sequelize) {
+              result = await this.recalculateTiers(poiSyncService.sequelize);
+            } else {
+              result = { status: "skipped", message: "Sequelize not initialized" };
+            }
+          } else {
+            result = { status: "unknown", jobName: job.name, type };
+          }
       }
 
       return {
         success: true,
         jobName: job.name,
+        type,
         manual: manual || false,
         result,
         timestamp: new Date().toISOString()
@@ -217,16 +377,68 @@ class DataSyncAgent {
       throw error;
     }
   }
+
+  // === HELPER METHODS ===
+
+  /**
+   * Get POIs for specified tiers (with google_placeid)
+   * @param {Array} tiers - Tier numbers
+   * @returns {Array} POIs
+   */
+  async getPOIsForTiers(tiers) {
+    if (!poiSyncService.sequelize) {
+      return [];
+    }
+
+    const tierConfig = this.getTierConfig();
+    const conditions = tiers.map(tier => {
+      const config = tierConfig[tier];
+      if (tier === 1) {
+        return `tier_score >= ${config.minScore}`;
+      } else if (tier === 4) {
+        return `tier_score < ${tierConfig[3].minScore}`;
+      } else {
+        const nextTierConfig = tierConfig[tier - 1];
+        return `tier_score >= ${config.minScore} AND tier_score < ${nextTierConfig.minScore}`;
+      }
+    });
+
+    const [pois] = await poiSyncService.sequelize.query(`
+      SELECT id, google_placeid
+      FROM POI
+      WHERE (is_active = 1 OR is_active IS NULL)
+        AND google_placeid IS NOT NULL
+        AND (${conditions.join(" OR ")})
+      LIMIT 100
+    `);
+
+    return pois;
+  }
+
+  /**
+   * Get POI IDs for specified tiers
+   * @param {Array} tiers - Tier numbers
+   * @returns {Array} POI IDs
+   */
+  async getPOIIdsForTiers(tiers) {
+    const pois = await this.getPOIsForTiers(tiers);
+    return pois.map(p => p.id);
+  }
 }
 
 // Export singleton instance
 const dataSyncAgent = new DataSyncAgent();
 export default dataSyncAgent;
 
-// Also export individual components
+// Export individual components for direct access
 export {
   poiTierManager,
   poiSyncService,
   apifyIntegration,
-  syncScheduler
+  syncScheduler,
+  poiLifecycleManager,
+  reviewsManager,
+  qaGenerator,
+  dataValidator,
+  syncReporter
 };

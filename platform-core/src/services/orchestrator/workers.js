@@ -137,9 +137,90 @@ export function startWorkers() {
           }
           break;
 
-        case "review-sync":
-          console.log("[Orchestrator] Review sync - not yet implemented");
-          result = { status: "pending", message: "Review sync not yet implemented" };
+        // === REVIEW SYNC JOBS ===
+        case "review-sync-tier12":
+        case "review-sync-tier34":
+        case "review-sync-manual":
+          try {
+            const dataSyncReviews = await import("../agents/dataSync/index.js");
+            const reviewResult = await dataSyncReviews.default.handleJob(job);
+            console.log("[Orchestrator] Review sync:", JSON.stringify({
+              tiers: job.data.tiers,
+              synced: reviewResult.result?.synced || 0
+            }));
+            result = reviewResult;
+          } catch (error) {
+            console.error("[Orchestrator] Review sync failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "review-retention":
+        case "review-retention-manual":
+          try {
+            const dataSyncRetention = await import("../agents/dataSync/index.js");
+            const retentionResult = await dataSyncRetention.default.handleJob(job);
+            console.log("[Orchestrator] Review retention:", JSON.stringify({
+              deleted: retentionResult.result?.deleted || 0
+            }));
+            result = retentionResult;
+          } catch (error) {
+            console.error("[Orchestrator] Review retention failed:", error.message);
+            throw error;
+          }
+          break;
+
+        // === Q&A SYNC JOBS ===
+        case "qa-sync-tier12":
+        case "qa-sync-tier34":
+        case "qa-sync-manual":
+          try {
+            const dataSyncQA = await import("../agents/dataSync/index.js");
+            const qaResult = await dataSyncQA.default.handleJob(job);
+            console.log("[Orchestrator] Q&A sync:", JSON.stringify({
+              tiers: job.data.tiers,
+              generated: qaResult.result?.totalGenerated || 0
+            }));
+            result = qaResult;
+          } catch (error) {
+            console.error("[Orchestrator] Q&A sync failed:", error.message);
+            throw error;
+          }
+          break;
+
+        // === LIFECYCLE JOBS ===
+        case "poi-deactivation-check":
+        case "poi-deactivation-check-manual":
+          try {
+            const dataSyncLifecycle = await import("../agents/dataSync/index.js");
+            const deactivationResult = await dataSyncLifecycle.default.handleJob(job);
+            console.log("[Orchestrator] Deactivation check:", JSON.stringify({
+              processed: deactivationResult.result?.processed || 0,
+              deactivated: deactivationResult.result?.deactivated || 0
+            }));
+            result = deactivationResult;
+          } catch (error) {
+            console.error("[Orchestrator] Deactivation check failed:", error.message);
+            throw error;
+          }
+          break;
+
+        // === HEALTH REPORT JOBS ===
+        case "health-report-daily":
+        case "health-report-weekly":
+        case "health-report-manual":
+          try {
+            const dataSyncReporter = await import("../agents/dataSync/index.js");
+            const reportResult = await dataSyncReporter.default.handleJob(job);
+            console.log("[Orchestrator] Health report:", JSON.stringify({
+              period: job.data.period,
+              health: reportResult.result?.summary?.overallHealth
+            }));
+            result = reportResult;
+          } catch (error) {
+            console.error("[Orchestrator] Health report failed:", error.message);
+            throw error;
+          }
           break;
 
         default:
