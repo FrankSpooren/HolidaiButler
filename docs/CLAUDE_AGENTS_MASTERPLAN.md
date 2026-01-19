@@ -1,9 +1,9 @@
 # HolidaiButler Claude Agents - Masterplan v3.0
 
-> **Versie**: 3.1.0
-> **Datum**: 18 januari 2026
-> **Status**: Fase 2 Compleet, Fase 3 Week 2 Compleet (Data Sync Agent v2.0)  
-> **Eigenaar**: Frank Spooren  
+> **Versie**: 3.2.0
+> **Datum**: 19 januari 2026
+> **Status**: Fase 2 Compleet, Fase 3 Week 2 Compleet (Data Sync Agent v2.0)
+> **Eigenaar**: Frank Spooren
 
 ---
 
@@ -14,7 +14,8 @@
 | 1.0 | Dec 2025 | Origineel concept met agent suggesties |
 | 2.0 | Jan 2026 | Technische details + deployment protocol |
 | 3.0 | 14 Jan 2026 | Fase 1-2 resultaten, EU-compliance updates, geactualiseerde architectuur |
-| **3.1** | **18 Jan 2026** | **Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation** |
+| 3.1 | 18 Jan 2026 | Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation |
+| **3.2** | **19 Jan 2026** | **MailerLite automation-based email: group-trigger flow, custom fields, template config** |
 
 ---
 
@@ -118,6 +119,7 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 | **Owner Interface** | ✅ | 13 Jan 2026 | Email + Threema alerts |
 | **Daily Briefing** | ✅ | 13 Jan 2026 | 08:00 Amsterdam |
 | **Threema Integration** | ✅ | 13 Jan 2026 | Urgency 5 alerts |
+| **MailerLite Automation** | ✅ | 19 Jan 2026 | Group-trigger flow, custom fields |
 
 ### Fase 3: Specialized Agents ⏳ IN PROGRESS
 
@@ -178,6 +180,46 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 │  └─────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
 ```
+
+#### MailerLite Automation Configuratie (19 Jan 2026)
+
+**Methode:** Group-trigger automation (Growing Business plan compatible)
+
+| Aspect | Waarde |
+|--------|--------|
+| **Trigger Group** | System Alerts Owner |
+| **Group ID** | 176972381290498029 |
+| **Subscriber** | info@holidaibutler.com |
+| **Re-enter limiet** | 24 uur per subscriber |
+
+**Flow:**
+1. API verwijdert subscriber uit trigger group (axios DELETE)
+2. API update subscriber custom fields (axios PUT)
+3. API voegt subscriber toe aan trigger group (axios POST)
+4. MailerLite automation triggert automatisch
+5. Email wordt verzonden met gepersonaliseerde template
+
+**Custom Fields:**
+
+| Field | Type | Beschrijving |
+|-------|------|--------------|
+| `last_system_alert` | Text | Email subject |
+| `last_alert_time` | Text | Timestamp (ISO) |
+| `briefing_date` | Text | Datum (Nederlands formaat) |
+| `budget_spent` | Text | Uitgegeven bedrag (€) |
+| `budget_percentage` | Text | % van budget |
+| `budget_total` | Text | Totaal budget (€) |
+| `budget_remaining` | Text | Resterend budget (€) |
+| `jobs_count` | Text | Jobs uitgevoerd (24u) |
+| `alerts_count` | Text | Alerts (24u) |
+| `errors_count` | Text | Errors (24u) |
+| `pending_count` | Text | Items pending approval |
+| `status_summary` | Text | Status tekst met emoji |
+
+**Template Configuratie:**
+- Gebruik MailerLite personalization function: `{$field_name}`
+- Voorbeeld: `{$briefing_date}`, `{$budget_spent}`, `{$status_summary}`
+- Template is vaste HTML, alleen velden zijn dynamisch
 
 ### Laag 2: Operations Layer (Fase 3)
 
@@ -537,7 +579,7 @@ score = (review_count × 0.30) +
 
 | Document | Locatie | Status |
 |----------|---------|--------|
-| CLAUDE.md | GitHub repo root | ✅ v2.2.0 (18 Jan 2026) |
+| CLAUDE.md | GitHub repo root | ✅ v2.3.0 (19 Jan 2026) |
 | Fase 2 Docs | docs/agents/fase2/ | ✅ Actueel |
 | Fase 3 Prompts | docs/agents/fase3/ | ⏳ Ready |
 | API Docs | docs/api/ | ✅ |
@@ -554,4 +596,4 @@ score = (review_count × 0.30) +
 
 ---
 
-*Dit document is de single source of truth voor de HolidaiButler Claude Agents architectuur. Laatste update: 18 januari 2026.*
+*Dit document is de single source of truth voor de HolidaiButler Claude Agents architectuur. Laatste update: 19 januari 2026.*

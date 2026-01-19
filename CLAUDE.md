@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 2.2.0
-> **Laatst bijgewerkt**: 18 januari 2026  
+> **Versie**: 2.3.0
+> **Laatst bijgewerkt**: 19 januari 2026  
 > **Eigenaar**: Frank Spooren  
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -345,9 +345,28 @@ REDIS_PORT=6379
 - Audit Trail (30 dagen retention)
 
 #### Owner Interface Components
-- MailerLite Email Service
+- MailerLite Email Service (Automation-based)
 - Threema Gateway (urgency 5)
 - Daily Briefing (08:00)
+
+#### MailerLite Automation Configuratie
+**Methode:** Group-trigger automation (Growing Business plan compatible)
+- **Trigger:** Subscriber joins group "System Alerts Owner"
+- **Flow:** API removes → updates fields → re-adds subscriber → automation triggers
+- **Limiet:** 1 email per 24 uur per subscriber (MailerLite platform limiet)
+- **Template:** Vaste template met dynamic fields via personalization
+
+**Custom Fields (MailerLite):**
+| Field | Beschrijving |
+|-------|--------------|
+| `last_system_alert` | Email subject |
+| `briefing_date` | Datum (Nederlands) |
+| `budget_spent` | Uitgegeven bedrag |
+| `budget_percentage` | % van budget |
+| `budget_remaining` | Resterend budget |
+| `jobs_count` | Jobs uitgevoerd (24u) |
+| `errors_count` | Errors (24u) |
+| `status_summary` | Status tekst |
 
 ### Fase 3 - Operations Layer ⏳ IN PROGRESS
 
@@ -550,6 +569,7 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| 2.3.0 | 2026-01-19 | MailerLite automation-based email, custom fields, group-trigger flow |
 | 2.2.0 | 2026-01-18 | Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation |
 | 2.1.0 | 2026-01-14 | Fase 2 compleet, Sentry→Bugsink, Threema, EU-compliance |
 | 2.0.0 | 2026-01-12 | Merge technische details + agent architectuur |
