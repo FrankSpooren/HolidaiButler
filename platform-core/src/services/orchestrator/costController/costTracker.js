@@ -1,10 +1,21 @@
+import mongoose from 'mongoose';
 import CostLog from './models/CostLog.js';
 import { MONTHLY_BUDGET, ALERT_THRESHOLDS } from './budgetConfig.js';
 import { alertQueue } from '../queues.js';
 
 class CostTracker {
 
+  isMongoConnected() {
+    return mongoose.connection.readyState === 1;
+  }
+
   async logCost(service, operation, cost, metadata = {}) {
+    // Check MongoDB connection first
+    if (!this.isMongoConnected()) {
+      console.warn('[CostTracker] MongoDB not connected, skipping cost log');
+      return null;
+    }
+
     try {
       const log = new CostLog({
         service,
@@ -24,6 +35,12 @@ class CostTracker {
   }
 
   async getMonthlyCosts(service = null) {
+    // Check MongoDB connection first
+    if (!this.isMongoConnected()) {
+      console.warn('[CostTracker] MongoDB not connected, returning empty costs');
+      return {};
+    }
+
     try {
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
@@ -33,7 +50,7 @@ class CostTracker {
       const result = await CostLog.aggregate([
         { $match: match },
         { $group: { _id: '$service', totalCost: { $sum: '$cost' }, count: { $sum: 1 } } }
-      ]);
+      ]).maxTimeMS(10000);  // 10s max query time
       return result.reduce((acc, item) => {
         acc[item._id] = {
           spent: item.totalCost,
