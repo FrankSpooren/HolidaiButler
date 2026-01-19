@@ -1,53 +1,52 @@
 /**
  * ChromaDB Service for HoliBot Sync Agent
  * Manages vector database collections and operations
- * Supports both local and cloud ChromaDB instances
+ * Uses CloudClient for ChromaDB Cloud connection
  */
 
-import { ChromaClient } from 'chromadb';
+import { CloudClient } from 'chromadb';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 
 class ChromaService {
   constructor() {
     this.client = null;
     this.collections = {};
-    this.isCloud = process.env.USE_CHROMADB_CLOUD === 'true';
+    this.isConnected = false;
+    this.config = {
+      apiKey: process.env.CHROMADB_API_KEY,
+      tenant: process.env.CHROMADB_TENANT,
+      database: process.env.CHROMADB_DATABASE
+    };
   }
 
   async connect() {
-    if (this.client) return this.client;
+    if (this.isConnected && this.client) return this.client;
+
+    const { apiKey, tenant, database } = this.config;
+
+    if (!apiKey || !tenant || !database) {
+      const error = new Error('ChromaDB Cloud credentials not configured (CHROMADB_API_KEY, CHROMADB_TENANT, CHROMADB_DATABASE required)');
+      await logError('holibot-sync', error, { action: 'chroma_connect' });
+      throw error;
+    }
 
     try {
-      if (this.isCloud) {
-        // ChromaDB Cloud configuration
-        console.log('[ChromaService] Connecting to ChromaDB Cloud...');
-        this.client = new ChromaClient({
-          path: 'https://api.trychroma.com',
-          auth: {
-            provider: 'token',
-            credentials: process.env.CHROMADB_API_KEY
-          },
-          tenant: process.env.CHROMADB_TENANT,
-          database: process.env.CHROMADB_DATABASE || 'default_database'
-        });
-      } else {
-        // Local ChromaDB configuration
-        console.log('[ChromaService] Connecting to local ChromaDB...');
-        this.client = new ChromaClient({
-          path: process.env.CHROMA_URL || 'http://localhost:8000'
-        });
-      }
+      console.log('[ChromaService] Connecting to ChromaDB Cloud...');
 
-      // Verify connection
-      await this.client.heartbeat();
-      console.log(`[ChromaService] Connected to ChromaDB (${this.isCloud ? 'Cloud' : 'Local'})`);
+      this.client = new CloudClient({
+        apiKey,
+        tenant,
+        database
+      });
 
+      // Test connection by listing collections
+      const collections = await this.client.listCollections();
+      console.log(`[ChromaService] Connected to ChromaDB Cloud. Found ${collections.length} collection(s)`);
+
+      this.isConnected = true;
       return this.client;
     } catch (error) {
-      await logError('holibot-sync', error, {
-        action: 'chroma_connect',
-        isCloud: this.isCloud
-      });
+      await logError('holibot-sync', error, { action: 'chroma_connect' });
       throw error;
     }
   }
@@ -58,19 +57,28 @@ class ChromaService {
     await this.connect();
 
     try {
-      const collection = await this.client.getOrCreateCollection({
-        name: name,
-        metadata: {
-          ...metadata,
-          'hnsw:space': 'cosine',
-          'last_updated': new Date().toISOString()
-        }
-      });
-
-      this.collections[name] = collection;
-      console.log(`[ChromaService] Collection ready: ${name}`);
-
-      return collection;
+      // Try to get existing collection first
+      try {
+        const collection = await this.client.getCollection({ name });
+        this.collections[name] = collection;
+        const count = await collection.count();
+        console.log(`[ChromaService] Collection "${name}" loaded with ${count} documents`);
+        return collection;
+      } catch (getError) {
+        // Collection doesn't exist, create it
+        console.log(`[ChromaService] Creating new collection: ${name}`);
+        const collection = await this.client.createCollection({
+          name: name,
+          metadata: {
+            ...metadata,
+            'hnsw:space': 'cosine',
+            'created_at': new Date().toISOString()
+          }
+        });
+        this.collections[name] = collection;
+        console.log(`[ChromaService] Collection created: ${name}`);
+        return collection;
+      }
     } catch (error) {
       await logError('holibot-sync', error, { action: 'get_collection', collection: name });
       throw error;
@@ -93,6 +101,7 @@ class ChromaService {
         metadata: { collection: collectionName, count: ids.length }
       });
 
+      console.log(`[ChromaService] Upserted ${ids.length} documents to ${collectionName}`);
       return { success: true, count: ids.length };
     } catch (error) {
       await logError('holibot-sync', error, {
@@ -115,6 +124,7 @@ class ChromaService {
         metadata: { collection: collectionName, count: ids.length }
       });
 
+      console.log(`[ChromaService] Deleted ${ids.length} documents from ${collectionName}`);
       return { success: true, count: ids.length };
     } catch (error) {
       await logError('holibot-sync', error, {
@@ -132,27 +142,33 @@ class ChromaService {
       return {
         collection: collectionName,
         documentCount: count,
-        mode: this.isCloud ? 'cloud' : 'local'
+        isConnected: this.isConnected
       };
     } catch (error) {
       return {
         collection: collectionName,
         documentCount: 0,
         error: error.message,
-        mode: this.isCloud ? 'cloud' : 'local'
+        isConnected: this.isConnected
       };
     }
   }
 
-  async query(collectionName, queryEmbedding, nResults = 5) {
+  async query(collectionName, queryEmbedding, nResults = 5, whereFilter = null) {
     const collection = await this.getOrCreateCollection(collectionName);
 
     try {
-      const results = await collection.query({
+      const queryOptions = {
         queryEmbeddings: [queryEmbedding],
-        nResults: nResults
-      });
+        nResults: nResults,
+        include: ['metadatas', 'documents', 'distances']
+      };
 
+      if (whereFilter) {
+        queryOptions.where = whereFilter;
+      }
+
+      const results = await collection.query(queryOptions);
       return results;
     } catch (error) {
       await logError('holibot-sync', error, { action: 'query', collection: collectionName });
@@ -160,8 +176,8 @@ class ChromaService {
     }
   }
 
-  isCloudMode() {
-    return this.isCloud;
+  isReady() {
+    return this.isConnected && this.client !== null;
   }
 }
 

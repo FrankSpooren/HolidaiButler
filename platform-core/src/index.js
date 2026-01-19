@@ -1,7 +1,7 @@
 /**
  * HolidaiButler Platform Core
  * Central Integration Hub - Main Entry Point
- * Last deployment trigger: 2026-01-19 17:00 - HoliBot Sync Agent implementation
+ * Last deployment trigger: 2026-01-19 17:15 - HoliBot Sync Agent CloudClient fix
  */
 
 // IMPORTANT: Load environment variables FIRST, before any other imports
