@@ -237,6 +237,70 @@ export function startWorkers() {
           }
           break;
 
+        // === HOLIBOT SYNC AGENT JOBS ===
+        case "holibot-poi-sync":
+        case "holibot-manual-pois":
+          try {
+            const holibotSyncPOI = await import("../agents/holibotSync/index.js");
+            const poiSyncResult = await holibotSyncPOI.default.syncPOIs();
+            console.log("[Orchestrator] HoliBot POI sync:", JSON.stringify({
+              synced: poiSyncResult.synced,
+              collection: poiSyncResult.collection
+            }));
+            result = poiSyncResult;
+          } catch (error) {
+            console.error("[Orchestrator] HoliBot POI sync failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "holibot-qa-sync":
+        case "holibot-manual-qas":
+          try {
+            const holibotSyncQA = await import("../agents/holibotSync/index.js");
+            const qaSyncResult = await holibotSyncQA.default.syncQAs();
+            console.log("[Orchestrator] HoliBot Q&A sync:", JSON.stringify({
+              synced: qaSyncResult.synced,
+              collection: qaSyncResult.collection
+            }));
+            result = qaSyncResult;
+          } catch (error) {
+            console.error("[Orchestrator] HoliBot Q&A sync failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "holibot-full-reindex":
+        case "holibot-manual-full":
+          try {
+            const holibotSyncFull = await import("../agents/holibotSync/index.js");
+            const fullResult = await holibotSyncFull.default.fullSync();
+            console.log("[Orchestrator] HoliBot full sync:", JSON.stringify({
+              pois: fullResult.pois.synced,
+              qas: fullResult.qas.synced
+            }));
+            result = fullResult;
+          } catch (error) {
+            console.error("[Orchestrator] HoliBot full sync failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "holibot-cleanup":
+          try {
+            const holibotSyncCleanup = await import("../agents/holibotSync/index.js");
+            const cleanupResult = await holibotSyncCleanup.default.cleanup();
+            console.log("[Orchestrator] HoliBot cleanup:", JSON.stringify({
+              deletedPOIs: cleanupResult.deletedPOIs,
+              deletedQAs: cleanupResult.deletedQAs
+            }));
+            result = cleanupResult;
+          } catch (error) {
+            console.error("[Orchestrator] HoliBot cleanup failed:", error.message);
+            throw error;
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -351,6 +415,7 @@ export function startWorkers() {
   console.log("[Orchestrator] - Audit Trail: active");
   console.log("[Orchestrator] - Owner Interface: active");
   console.log("[Orchestrator] - Data Sync Agent: active");
+  console.log("[Orchestrator] - HoliBot Sync Agent: active");
 }
 
 export async function stopWorkers() {

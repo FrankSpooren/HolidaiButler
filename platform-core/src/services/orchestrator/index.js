@@ -3,6 +3,7 @@ import { startWorkers, stopWorkers } from './workers.js';
 import { orchestratorQueue, alertQueue, scheduledQueue, connection } from './queues.js';
 import { mysqlSequelize } from '../../config/database.js';
 import dataSyncAgent from '../agents/dataSync/index.js';
+import holibotSyncAgent from '../agents/holibotSync/index.js';
 
 let isInitialized = false;
 
@@ -29,6 +30,17 @@ export async function initializeOrchestrator() {
     } catch (error) {
       console.error('[Orchestrator] Data Sync Agent initialization failed:', error.message);
       // Don't throw - allow orchestrator to continue without Data Sync
+      // Jobs will be skipped if agent is not initialized
+    }
+
+    // Initialize HoliBot Sync Agent with database connection
+    // This registers 4 ChromaDB sync jobs (POI sync, Q&A sync, full reindex, cleanup)
+    try {
+      await holibotSyncAgent.initialize(mysqlSequelize);
+      console.log('[Orchestrator] HoliBot Sync Agent initialized');
+    } catch (error) {
+      console.error('[Orchestrator] HoliBot Sync Agent initialization failed:', error.message);
+      // Don't throw - allow orchestrator to continue without HoliBot Sync
       // Jobs will be skipped if agent is not initialized
     }
 
