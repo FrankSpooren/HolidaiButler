@@ -90,9 +90,10 @@ jobs:
           ssh root@91.98.71.87 "pm2 stop ${{ env.PM2_PROCESS_NAME }} 2>/dev/null || true; sleep 3"
 
           # Robust node_modules cleanup with multiple fallback strategies
+          # NOTE: Do NOT delete package-lock.json - it's required for npm ci
           ssh root@91.98.71.87 "cd ${{ env.DEPLOY_PATH }} && \
             echo 'Cleaning node_modules...' && \
-            rm -rf node_modules package-lock.json 2>/dev/null || true; \
+            rm -rf node_modules 2>/dev/null || true; \
             if [ -d node_modules ]; then \
               echo 'Standard rm failed, trying force cleanup...'; \
               find node_modules -type f -exec rm -f {} \; 2>/dev/null || true; \
