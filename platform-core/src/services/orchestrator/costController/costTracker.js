@@ -50,7 +50,7 @@ class CostTracker {
       const result = await CostLog.aggregate([
         { $match: match },
         { $group: { _id: '$service', totalCost: { $sum: '$cost' }, count: { $sum: 1 } } }
-      ]).maxTimeMS(10000);  // 10s max query time
+      ]).option({ maxTimeMS: 10000 });  // 10s max query time
       return result.reduce((acc, item) => {
         acc[item._id] = {
           spent: item.totalCost,
