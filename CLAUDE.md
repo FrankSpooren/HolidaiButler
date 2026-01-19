@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 2.7.0
-> **Laatst bijgewerkt**: 19 januari 2026 (17:50 UTC)
+> **Versie**: 2.7.1
+> **Laatst bijgewerkt**: 19 januari 2026 (18:00 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -388,6 +388,8 @@ REDIS_PORT=6379
 | agenda_dates | Event datums | Bij event update |
 | Tickets | Ticketverkoop | Realtime |
 | Transactions | Betalingen | Realtime |
+| user_journeys | Journey tracking per user (Communication Flow) | Elke 15 min |
+| journey_scheduled_emails | Scheduled email queue (Communication Flow) | Elke 15 min |
 
 #### POI Enterprise Columns (v2.0)
 - `status`: active/pending_deactivation/deactivated/merged
@@ -749,7 +751,7 @@ score = (review_count × 0.30) +
 
 | Document | Locatie |
 |----------|---------|
-| Agent Masterplan | `CLAUDE_AGENTS_MASTERPLAN_v3.md` |
+| Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` (v3.4.0) |
 | Fase 2 Docs | `docs/agents/fase2/` |
 | Fase 3 Docs | `docs/agents/fase3/` |
 | API Documentatie | `docs/api/` |
@@ -762,7 +764,8 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **2.7.0** | **2026-01-19** | **Communication Flow Agent v1.0 LIVE: User journeys, notification routing, MailerLite sync. 3 nieuwe jobs (24 totaal). Fase 3 nu 87.5% compleet.** |
+| **2.7.1** | **2026-01-19** | **Database tabellen toegevoegd (user_journeys, journey_scheduled_emails), MASTERPLAN referentie gecorrigeerd naar v3.4.0** |
+| 2.7.0 | 2026-01-19 | Communication Flow Agent v1.0 LIVE: User journeys, notification routing, MailerLite sync. 3 nieuwe jobs (24 totaal). Fase 3 nu 87.5% compleet. |
 | 2.6.0 | 2026-01-19 | HoliBot Sync Agent v1.0 LIVE: ChromaDB Cloud sync, MistralAI embeddings, 4 jobs. Enterprise kwaliteitsstandaarden toegevoegd. Fase 3 nu 75% compleet. |
 | 2.5.1 | 2026-01-19 | Deployment volgorde gedocumenteerd (Dev→Test→Main), concurrency control fix, Sentry.io kan verwijderd |
 | 2.5.0 | 2026-01-19 | Data Sync Agent v2.0 ACTIVATED: 17 scheduled jobs live (13 data sync + 4 core), all components operational |
