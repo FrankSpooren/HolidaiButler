@@ -59,8 +59,22 @@ export function startWorkers() {
           break;
 
         case "health-check":
-          console.log("[Orchestrator] Running system health check...");
-          result = { type: "health-check", status: "healthy" };
+          try {
+            console.log("[Orchestrator] Running Platform Health Monitor...");
+            const healthMonitor = await import("../agents/healthMonitor/index.js");
+            const healthResult = await healthMonitor.default.runFullHealthCheck({ sendAlerts: true });
+            console.log("[Orchestrator] Health check complete:", JSON.stringify({
+              status: healthResult.report.overallStatus,
+              checks: healthResult.report.summary.totalChecks,
+              issues: healthResult.report.summary.issues,
+              alertsSent: healthResult.alerts?.alertsSent || 0
+            }));
+            result = healthResult;
+          } catch (error) {
+            console.error("[Orchestrator] Health check failed:", error.message);
+            // Still return a result so we know it ran
+            result = { type: "health-check", status: "error", error: error.message };
+          }
           break;
 
         case "weekly-cost-report":

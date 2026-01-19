@@ -1,8 +1,8 @@
 # HolidaiButler Claude Agents - Masterplan v3.0
 
-> **Versie**: 3.2.0
-> **Datum**: 19 januari 2026
-> **Status**: Fase 2 Compleet, Fase 3 Week 2 Compleet (Data Sync Agent v2.0)
+> **Versie**: 3.3.0
+> **Datum**: 19 januari 2026 (13:50 UTC)
+> **Status**: Fase 2 Compleet, Fase 3 50% Compleet (Health Monitor + Data Sync Agent)
 > **Eigenaar**: Frank Spooren
 
 ---
@@ -15,7 +15,8 @@
 | 2.0 | Jan 2026 | Technische details + deployment protocol |
 | 3.0 | 14 Jan 2026 | Fase 1-2 resultaten, EU-compliance updates, geactualiseerde architectuur |
 | 3.1 | 18 Jan 2026 | Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation |
-| **3.2** | **19 Jan 2026** | **MailerLite automation-based email: group-trigger flow, custom fields, template config** |
+| 3.2 | 19 Jan 2026 | MailerLite automation-based email: group-trigger flow, custom fields, template config |
+| **3.3** | **19 Jan 2026** | **Platform Health Monitor v1.0 GEACTIVEERD: 5 health check categorieën, hourly monitoring, alert integration met Owner Interface** |
 
 ---
 
@@ -121,15 +122,40 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 | **Threema Integration** | ✅ | 13 Jan 2026 | Urgency 5 alerts |
 | **MailerLite Automation** | ✅ | 19 Jan 2026 | Group-trigger flow, custom fields |
 
-### Fase 3: Specialized Agents ⏳ IN PROGRESS
+### Fase 3: Specialized Agents ⏳ IN PROGRESS (50% Compleet)
 
 | Agent | Functie | Week | Status |
 |-------|---------|------|--------|
-| Platform Health Monitor | System monitoring | 1 | ⏳ |
+| **Platform Health Monitor v1.0** | System monitoring (5 categorieën) | 1 | ✅ Live |
 | **Data Sync Agent v2.0** | POI Lifecycle, Reviews, Q&A, Validation | 2 | ✅ Live |
-| Communication Flow Agent | MailerLite automation | 3 | ⏳ |
-| GDPR Agent | Privacy compliance | 4 | ⏳ |
-| Development Agents | Code/Security review | 5-6 | ⏳ |
+| Communication Flow Agent | MailerLite automation | 3 | ⏳ Planned |
+| GDPR Agent | Privacy compliance | 4 | ⏳ Planned |
+| Development Agents | Code/Security review | 5-6 | ⏳ Planned |
+
+#### Platform Health Monitor v1.0 Details (Geactiveerd 19 Jan 2026)
+
+**Health Check Categorieën:**
+- **Server Health**: Ping (91.98.71.87), CPU/memory usage, disk space
+- **Database Health**: MySQL, MongoDB, Redis connection status
+- **API Health**: HolidaiButler API, MistralAI, Apify, ChromaDB, Bugsink
+- **Frontend Health**: Production, test, dev, admin portals (latency tracking)
+- **Queue Health**: BullMQ queues, worker status monitoring
+
+**Features:**
+- Full health check: Alle 5 categorieën (17+ individuele checks)
+- Quick health check: Kritieke systemen only (server, mysql, redis, api)
+- Alert Integration: Automatische koppeling met Owner Interface Agent
+- Cooldown System: Intelligent throttling per urgency level
+- History Tracking: Laatste 100 checks opgeslagen
+
+**Scheduled Jobs:**
+- `health-check`: Elk uur via BullMQ (cron: `0 * * * *`)
+
+**Bestanden:**
+- `platform-core/src/services/agents/healthMonitor/index.js`
+- `platform-core/src/services/agents/healthMonitor/reporter.js`
+- `platform-core/src/services/agents/healthMonitor/alertIntegration.js`
+- `platform-core/src/services/agents/healthMonitor/checks/*.js` (5 files)
 
 #### Data Sync Agent v2.0 Details (Compleet 18 Jan 2026)
 
