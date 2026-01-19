@@ -4,6 +4,7 @@ import { orchestratorQueue, alertQueue, scheduledQueue, connection } from './que
 import { mysqlSequelize } from '../../config/database.js';
 import dataSyncAgent from '../agents/dataSync/index.js';
 import holibotSyncAgent from '../agents/holibotSync/index.js';
+import communicationFlowAgent from '../agents/communicationFlow/index.js';
 
 let isInitialized = false;
 
@@ -41,6 +42,17 @@ export async function initializeOrchestrator() {
     } catch (error) {
       console.error('[Orchestrator] HoliBot Sync Agent initialization failed:', error.message);
       // Don't throw - allow orchestrator to continue without HoliBot Sync
+      // Jobs will be skipped if agent is not initialized
+    }
+
+    // Initialize Communication Flow Agent with database connection
+    // This registers 3 communication jobs (journey processor, user sync, cleanup)
+    try {
+      await communicationFlowAgent.initialize(mysqlSequelize);
+      console.log('[Orchestrator] Communication Flow Agent initialized');
+    } catch (error) {
+      console.error('[Orchestrator] Communication Flow Agent initialization failed:', error.message);
+      // Don't throw - allow orchestrator to continue without Communication Flow
       // Jobs will be skipped if agent is not initialized
     }
 
