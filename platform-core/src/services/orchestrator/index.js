@@ -5,6 +5,7 @@ import { mysqlSequelize } from '../../config/database.js';
 import dataSyncAgent from '../agents/dataSync/index.js';
 import holibotSyncAgent from '../agents/holibotSync/index.js';
 import communicationFlowAgent from '../agents/communicationFlow/index.js';
+import gdprAgent from '../agents/gdpr/index.js';
 
 let isInitialized = false;
 
@@ -53,6 +54,18 @@ export async function initializeOrchestrator() {
     } catch (error) {
       console.error('[Orchestrator] Communication Flow Agent initialization failed:', error.message);
       // Don't throw - allow orchestrator to continue without Communication Flow
+      // Jobs will be skipped if agent is not initialized
+    }
+
+    // Initialize GDPR Agent with database connection
+    // This handles GDPR compliance: data export, erasure, consent management
+    // 4 scheduled jobs (overdue check, export cleanup, retention check, consent audit)
+    try {
+      await gdprAgent.initialize(mysqlSequelize);
+      console.log('[Orchestrator] GDPR Agent initialized');
+    } catch (error) {
+      console.error('[Orchestrator] GDPR Agent initialization failed:', error.message);
+      // Don't throw - allow orchestrator to continue without GDPR Agent
       // Jobs will be skipped if agent is not initialized
     }
 

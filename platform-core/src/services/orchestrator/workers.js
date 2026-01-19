@@ -348,6 +348,63 @@ export function startWorkers() {
           }
           break;
 
+        // === GDPR AGENT JOBS ===
+        case "gdpr-overdue-check":
+          try {
+            const gdprOverdue = await import("../agents/gdpr/index.js");
+            const overdueResult = await gdprOverdue.default.checkOverdueRequests();
+            console.log("[Orchestrator] GDPR overdue check:", JSON.stringify({
+              overdueCount: overdueResult.overdueCount
+            }));
+            result = overdueResult;
+          } catch (error) {
+            console.error("[Orchestrator] GDPR overdue check failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "gdpr-export-cleanup":
+          try {
+            const gdprExportCleanup = await import("../agents/gdpr/index.js");
+            const exportCleanupResult = await gdprExportCleanup.default.cleanupOldExports();
+            console.log("[Orchestrator] GDPR export cleanup:", JSON.stringify({
+              deleted: exportCleanupResult.deleted
+            }));
+            result = exportCleanupResult;
+          } catch (error) {
+            console.error("[Orchestrator] GDPR export cleanup failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "gdpr-retention-check":
+          try {
+            const gdprRetention = await import("../agents/gdpr/index.js");
+            const retentionResult = await gdprRetention.default.checkDataRetention();
+            console.log("[Orchestrator] GDPR retention check:", JSON.stringify({
+              issues: retentionResult.issues?.length || 0
+            }));
+            result = retentionResult;
+          } catch (error) {
+            console.error("[Orchestrator] GDPR retention check failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "gdpr-consent-audit":
+          try {
+            const gdprConsent = await import("../agents/gdpr/index.js");
+            const consentResult = await gdprConsent.default.generateConsentAudit();
+            console.log("[Orchestrator] GDPR consent audit:", JSON.stringify({
+              totalUsers: consentResult.statistics?.totalUsers || 0
+            }));
+            result = consentResult;
+          } catch (error) {
+            console.error("[Orchestrator] GDPR consent audit failed:", error.message);
+            throw error;
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -464,6 +521,7 @@ export function startWorkers() {
   console.log("[Orchestrator] - Data Sync Agent: active");
   console.log("[Orchestrator] - HoliBot Sync Agent: active");
   console.log("[Orchestrator] - Communication Flow Agent: active");
+  console.log("[Orchestrator] - GDPR Agent: active");
 }
 
 export async function stopWorkers() {
