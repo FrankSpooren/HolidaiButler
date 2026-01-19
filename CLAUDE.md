@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 2.5.0
-> **Laatst bijgewerkt**: 19 januari 2026 (14:05 UTC)  
+> **Versie**: 2.5.1
+> **Laatst bijgewerkt**: 19 januari 2026 (16:25 UTC)  
 > **Eigenaar**: Frank Spooren  
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -217,6 +217,26 @@ HolidaiButler/
 5. QA goedkeuring → merge naar `test`
 6. Owner approval → merge naar `main`
 
+### ⚠️ Deployment Volgorde (KRITIEK)
+**ALTIJD deployen in volgorde: Dev → Test → Main**
+
+```bash
+# Stap 1: Push naar dev, wacht op deployment success
+git push origin dev
+# Wacht tot workflow compleet (2-3 min)
+
+# Stap 2: Push naar test, wacht op deployment success
+git push origin dev:test
+# Wacht tot workflow compleet (2-3 min)
+
+# Stap 3: Push naar main (productie)
+git push origin dev:main
+```
+
+**Waarom:** GitHub Actions concurrency control queued workflows. Bij gelijktijdige pushes worden intermediate workflows gecanceld. Dit veroorzaakt gemiste deployments.
+
+**Workflow file:** `.github/workflows/deploy-platform-core.yml` bevat concurrency control om race conditions te voorkomen.
+
 ---
 
 ## 🔑 Belangrijke Code Conventies
@@ -290,10 +310,12 @@ REDIS_PORT=6379
 
 ### ⚠️ Verwijderde Services
 
-| Service | Reden | Vervanger |
-|---------|-------|-----------|
-| Sentry.io | US bedrijf, CLOUD Act risico | Bugsink (NL) |
-| SMS alerts | Kosten, privacy concerns | Threema (CH) |
+| Service | Reden | Vervanger | Account Status |
+|---------|-------|-----------|----------------|
+| Sentry.io | US bedrijf, CLOUD Act risico | Bugsink (NL) | **Kan verwijderd worden** |
+| SMS alerts | Kosten, privacy concerns | Threema (CH) | N.v.t. |
+
+> **Actie:** Sentry.io account kan volledig verwijderd worden. Bugsink is 100% compatibel (zelfde SDK).
 
 ---
 
@@ -591,7 +613,8 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **2.5.0** | **2026-01-19** | **Data Sync Agent v2.0 ACTIVATED: 17 scheduled jobs live (13 data sync + 4 core), all components operational** |
+| **2.5.1** | **2026-01-19** | **Deployment volgorde gedocumenteerd (Dev→Test→Main), concurrency control fix, Sentry.io kan verwijderd** |
+| 2.5.0 | 2026-01-19 | Data Sync Agent v2.0 ACTIVATED: 17 scheduled jobs live (13 data sync + 4 core), all components operational |
 | 2.4.0 | 2026-01-19 | Platform Health Monitor v1.0 LIVE: 5 health check categorieën, hourly monitoring, alert integration |
 | 2.3.0 | 2026-01-19 | MailerLite automation-based email, custom fields, group-trigger flow |
 | 2.2.0 | 2026-01-18 | Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation |
