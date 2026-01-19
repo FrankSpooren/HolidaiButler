@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 2.4.0
-> **Laatst bijgewerkt**: 19 januari 2026 (13:50 UTC)  
+> **Versie**: 2.5.0
+> **Laatst bijgewerkt**: 19 januari 2026 (14:05 UTC)  
 > **Eigenaar**: Frank Spooren  
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -591,7 +591,8 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **2.4.0** | **2026-01-19** | **Platform Health Monitor v1.0 LIVE: 5 health check categorieën, hourly monitoring, alert integration** |
+| **2.5.0** | **2026-01-19** | **Data Sync Agent v2.0 ACTIVATED: 17 scheduled jobs live (13 data sync + 4 core), all components operational** |
+| 2.4.0 | 2026-01-19 | Platform Health Monitor v1.0 LIVE: 5 health check categorieën, hourly monitoring, alert integration |
 | 2.3.0 | 2026-01-19 | MailerLite automation-based email, custom fields, group-trigger flow |
 | 2.2.0 | 2026-01-18 | Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation |
 | 2.1.0 | 2026-01-14 | Fase 2 compleet, Sentry→Bugsink, Threema, EU-compliance |
