@@ -68,6 +68,29 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: gdpr-consent-audit (Sunday 04:00)');
 
+  // === Development Layer Agent Jobs ===
+
+  // Security Scan - daily at 02:00
+  await scheduledQueue.add('dev-security-scan', { type: 'dev-layer' }, {
+    repeat: { cron: '0 2 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'dev-security-scan-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: dev-security-scan (daily 02:00)');
+
+  // Dependency Audit - weekly Sunday at 03:00
+  await scheduledQueue.add('dev-dependency-audit', { type: 'dev-layer' }, {
+    repeat: { cron: '0 3 * * 0', tz: 'Europe/Amsterdam' },
+    jobId: 'dev-dependency-audit-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: dev-dependency-audit (Sunday 03:00)');
+
+  // Quality Report - weekly Monday at 06:00
+  await scheduledQueue.add('dev-quality-report', { type: 'dev-layer' }, {
+    repeat: { cron: '0 6 * * 1', tz: 'Europe/Amsterdam' },
+    jobId: 'dev-quality-report-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: dev-quality-report (Monday 06:00)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);
