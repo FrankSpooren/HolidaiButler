@@ -1,8 +1,8 @@
 # HolidaiButler Claude Agents - Masterplan v3.0
 
-> **Versie**: 3.3.0
-> **Datum**: 19 januari 2026 (13:50 UTC)
-> **Status**: Fase 2 Compleet, Fase 3 50% Compleet (Health Monitor + Data Sync Agent)
+> **Versie**: 3.4.0
+> **Datum**: 19 januari 2026 (17:45 UTC)
+> **Status**: Fase 2 Compleet, Fase 3 87.5% Compleet (4 van 5 agents live)
 > **Eigenaar**: Frank Spooren
 
 ---
@@ -16,7 +16,8 @@
 | 3.0 | 14 Jan 2026 | Fase 1-2 resultaten, EU-compliance updates, geactualiseerde architectuur |
 | 3.1 | 18 Jan 2026 | Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation |
 | 3.2 | 19 Jan 2026 | MailerLite automation-based email: group-trigger flow, custom fields, template config |
-| **3.3** | **19 Jan 2026** | **Platform Health Monitor v1.0 GEACTIVEERD: 5 health check categorieën, hourly monitoring, alert integration met Owner Interface** |
+| 3.3 | 19 Jan 2026 | Platform Health Monitor v1.0 GEACTIVEERD: 5 health check categorieën, hourly monitoring, alert integration met Owner Interface |
+| **3.4** | **19 Jan 2026** | **HoliBot Sync Agent v1.0 + Communication Flow Agent v1.0 LIVE: ChromaDB vector sync, user journeys, 24 scheduled jobs totaal. Fase 3 nu 87.5% compleet.** |
 
 ---
 
@@ -122,15 +123,15 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 | **Threema Integration** | ✅ | 13 Jan 2026 | Urgency 5 alerts |
 | **MailerLite Automation** | ✅ | 19 Jan 2026 | Group-trigger flow, custom fields |
 
-### Fase 3: Specialized Agents ⏳ IN PROGRESS (50% Compleet)
+### Fase 3: Specialized Agents ⏳ IN PROGRESS (87.5% Compleet)
 
 | Agent | Functie | Week | Status |
 |-------|---------|------|--------|
 | **Platform Health Monitor v1.0** | System monitoring (5 categorieën) | 1 | ✅ Live |
 | **Data Sync Agent v2.0** | POI Lifecycle, Reviews, Q&A, Validation | 2 | ✅ Live |
-| Communication Flow Agent | MailerLite automation | 3 | ⏳ Planned |
+| **HoliBot Sync Agent v1.0** | ChromaDB vector sync voor chatbot | 2 | ✅ Live |
+| **Communication Flow Agent v1.0** | User journeys, notifications, MailerLite sync | 3 | ✅ Live |
 | GDPR Agent | Privacy compliance | 4 | ⏳ Planned |
-| Development Agents | Code/Security review | 5-6 | ⏳ Planned |
 
 #### Platform Health Monitor v1.0 Details (Geactiveerd 19 Jan 2026)
 
@@ -174,6 +175,69 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 - Reporting: Health report (daily/weekly)
 
 **Database Migration**: 009_data_sync_agent_enterprise.sql deployed to pxoziy_db1
+
+#### HoliBot Sync Agent v1.0 Details (Geactiveerd 19 Jan 2026)
+
+**Components:**
+- **ChromaDB Cloud Service**: CloudClient voor vector database connectie
+- **Embedding Service**: MistralAI embedding generatie (mistral-embed model)
+- **POI Sync Service**: Synchroniseert POI data naar ChromaDB voor vector search
+- **Q&A Sync Service**: Synchroniseert Q&A data naar ChromaDB voor vector search
+- **Sync Scheduler**: 4 scheduled jobs voor ChromaDB synchronisatie
+
+**Scheduled Jobs (4):**
+| Job | Schedule | Beschrijving |
+|-----|----------|--------------|
+| `holibot-poi-sync` | 06:30 dagelijks | POI sync naar ChromaDB (na Data Sync) |
+| `holibot-qa-sync` | 07:00 dagelijks | Q&A sync naar ChromaDB |
+| `holibot-full-reindex` | Zondag 04:00 | Volledige ChromaDB reindex |
+| `holibot-cleanup` | 05:00 dagelijks | Cleanup deactivated/rejected items |
+
+**ChromaDB Collections:**
+- `holidaibutler_pois`: POI vector embeddings voor semantic search
+- `holidaibutler_qas`: Q&A vector embeddings voor chatbot context
+
+**Bestanden:**
+- `platform-core/src/services/agents/holibotSync/index.js`
+- `platform-core/src/services/agents/holibotSync/chromaService.js`
+- `platform-core/src/services/agents/holibotSync/embeddingService.js`
+- `platform-core/src/services/agents/holibotSync/poiSyncService.js`
+- `platform-core/src/services/agents/holibotSync/qaSyncService.js`
+- `platform-core/src/services/agents/holibotSync/syncScheduler.js`
+
+#### Communication Flow Agent v1.0 Details (Geactiveerd 19 Jan 2026)
+
+**Components:**
+- **User Journey Manager**: Automated customer journeys (welcome, booking, re-engagement, review)
+- **MailerLite Service**: Extended email automation, user sync, campaign management
+- **Notification Router**: Multi-channel routing (email, Threema) based on urgency
+- **Sync Scheduler**: 3 scheduled jobs for communication automation
+
+**User Journey Types:**
+| Journey | Beschrijving | Steps |
+|---------|--------------|-------|
+| `WELCOME` | New user onboarding | Day 0, 2, 7 |
+| `BOOKING_CONFIRMATION` | Post-booking flow | Day 0, -3, +1 |
+| `RE_ENGAGEMENT` | Inactive user reactivation | Day 30, 60, 90 |
+| `REVIEW_REQUEST` | Post-visit review solicitation | Day 1, 7 |
+
+**Scheduled Jobs (3):**
+| Job | Schedule | Beschrijving |
+|-----|----------|--------------|
+| `comm-journey-processor` | Elke 15 minuten | Process pending journey emails |
+| `comm-user-sync` | 03:00 dagelijks | Sync users to MailerLite |
+| `comm-cleanup` | Zondag 04:00 | Cleanup completed journeys (90 days) |
+
+**Database Tables:**
+- `user_journeys`: Journey tracking per user
+- `journey_scheduled_emails`: Scheduled email queue
+
+**Bestanden:**
+- `platform-core/src/services/agents/communicationFlow/index.js`
+- `platform-core/src/services/agents/communicationFlow/userJourneyManager.js`
+- `platform-core/src/services/agents/communicationFlow/mailerliteService.js`
+- `platform-core/src/services/agents/communicationFlow/notificationRouter.js`
+- `platform-core/src/services/agents/communicationFlow/syncScheduler.js`
 
 ### Fase 4: Strategy Agents 📅 PLANNED
 
@@ -247,28 +311,28 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 - Voorbeeld: `{$briefing_date}`, `{$budget_spent}`, `{$status_summary}`
 - Template is vaste HTML, alleen velden zijn dynamisch
 
-### Laag 2: Operations Layer (Fase 3)
+### Laag 2: Operations Layer (Fase 3) - 87.5% Compleet
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                   OPERATIONS AGENTS                          │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
 │  │ Platform Health │  │   Data Sync     │  │  HoliBot    │  │
-│  │    Monitor      │  │     Agent       │  │   Sync      │  │
+│  │    Monitor ✅   │  │   Agent ✅      │  │  Sync ✅    │  │
 │  │                 │  │                 │  │             │  │
 │  │ • Server health │  │ • POI Tier mgmt │  │ • ChromaDB  │  │
 │  │ • DB checks     │  │ • Apify scraping│  │ • Embeddings│  │
 │  │ • API status    │  │ • Q&A sync      │  │ • MistralAI │  │
-│  │ • Portal checks │  │ • Review updates│  │             │  │
+│  │ • Portal checks │  │ • Review updates│  │ • Vector DB │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────┘  │
 │                                                              │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
-│  │  Communication  │  │    Content &    │  │   Disaster  │  │
-│  │   Flow Agent    │  │  Branding Agent │  │   Recovery  │  │
-│  │                 │  │                 │  │             │  │
-│  │ • User emails   │  │ • Brand check   │  │ • Backups   │  │
-│  │ • Admin emails  │  │ • Tone of voice │  │ • Recovery  │  │
-│  │ • Notifications │  │ • Consistency   │  │ • Failover  │  │
+│  │  Communication  │  │   GDPR Agent    │  │   Disaster  │  │
+│  │   Flow ✅       │  │      ⏳         │  │   Recovery  │  │
+│  │                 │  │                 │  │     📅      │  │
+│  │ • User journeys │  │ • 72-hr deletion│  │ • Backups   │  │
+│  │ • MailerLite    │  │ • Data export   │  │ • Recovery  │  │
+│  │ • Notifications │  │ • Consent mgmt  │  │ • Failover  │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -409,7 +473,21 @@ platform-core/src/services/
 │   │   ├── dataValidator.js         # Schema validation, rollback
 │   │   └── syncReporter.js          # Health reports, alerts
 │   │
-│   ├── communicationFlow/           # ⏳ Week 3
+│   ├── holibotSync/                 # ✅ Week 2 COMPLEET
+│   │   ├── index.js                 # v1.0 Entry point
+│   │   ├── chromaService.js         # ChromaDB Cloud client
+│   │   ├── embeddingService.js      # MistralAI embeddings
+│   │   ├── poiSyncService.js        # POI vector sync
+│   │   ├── qaSyncService.js         # Q&A vector sync
+│   │   └── syncScheduler.js         # 4 scheduled jobs
+│   │
+│   ├── communicationFlow/           # ✅ Week 3 COMPLEET
+│   │   ├── index.js                 # v1.0 Entry point
+│   │   ├── userJourneyManager.js    # User journey automation
+│   │   ├── mailerliteService.js     # MailerLite integration
+│   │   ├── notificationRouter.js    # Multi-channel routing
+│   │   └── syncScheduler.js         # 3 scheduled jobs
+│   │
 │   ├── gdprAgent/                   # ⏳ Week 4
 │   └── devAgents/                   # ⏳ Week 5-6
 │       ├── uxReviewer/
@@ -436,6 +514,8 @@ platform-core/src/services/
 | Reviews | Reviews (sentiment_score, sentiment_label, spam_score) | Data Sync v2.0 |
 | Users | Klantaccounts | Communication Flow |
 | AdminUsers | Partner accounts | Communication Flow |
+| user_journeys | Journey tracking per user | Communication Flow v1.0 |
+| journey_scheduled_emails | Scheduled email queue | Communication Flow v1.0 |
 | agenda | Events | Data Sync |
 | agenda_dates | Event datums | Data Sync |
 | Tickets | Ticketverkoop | - |
@@ -479,9 +559,9 @@ platform-core/src/services/
 
 ---
 
-## 🔄 Scheduled Jobs (Actief - 17 Total)
+## 🔄 Scheduled Jobs (Actief - 24 Total)
 
-### Core Jobs (Fase 2)
+### Core Jobs (4)
 
 | Job | Schedule | Functie |
 |-----|----------|---------|
@@ -490,7 +570,7 @@ platform-core/src/services/
 | `health-check` | */1 uur | System health |
 | `weekly-cost-report` | Ma 09:00 | Wekelijks rapport |
 
-### Data Sync Agent v2.0 Jobs (Fase 3) ✅ LIVE
+### Data Sync Agent v2.0 Jobs (13) ✅ LIVE
 
 | Job | Schedule | Functie |
 |-----|----------|---------|
@@ -507,6 +587,23 @@ platform-core/src/services/
 | `poi-deactivation-check` | Dagelijks 01:00 | Grace period processing |
 | `health-report-daily` | Dagelijks 07:00 | Daily health report |
 | `health-report-weekly` | Maandag 07:00 | Weekly health report + alerts |
+
+### HoliBot Sync Agent v1.0 Jobs (4) ✅ LIVE
+
+| Job | Schedule | Functie |
+|-----|----------|---------|
+| `holibot-poi-sync` | 06:30 dagelijks | POI sync naar ChromaDB |
+| `holibot-qa-sync` | 07:00 dagelijks | Q&A sync naar ChromaDB |
+| `holibot-full-reindex` | Zondag 04:00 | Volledige ChromaDB reindex |
+| `holibot-cleanup` | 05:00 dagelijks | Cleanup deactivated items |
+
+### Communication Flow Agent v1.0 Jobs (3) ✅ LIVE
+
+| Job | Schedule | Functie |
+|-----|----------|---------|
+| `comm-journey-processor` | Elke 15 minuten | Process pending journey emails |
+| `comm-user-sync` | 03:00 dagelijks | Sync users to MailerLite |
+| `comm-cleanup` | Zondag 04:00 | Cleanup completed journeys |
 
 ---
 
@@ -605,9 +702,9 @@ score = (review_count × 0.30) +
 
 | Document | Locatie | Status |
 |----------|---------|--------|
-| CLAUDE.md | GitHub repo root | ✅ v2.3.0 (19 Jan 2026) |
+| CLAUDE.md | GitHub repo root | ✅ v2.7.0 (19 Jan 2026) |
 | Fase 2 Docs | docs/agents/fase2/ | ✅ Actueel |
-| Fase 3 Prompts | docs/agents/fase3/ | ⏳ Ready |
+| Fase 3 Prompts | docs/agents/fase3/ | ✅ Actueel |
 | API Docs | docs/api/ | ✅ |
 | Deployment Guide | infrastructure/README.md | ✅ |
 
@@ -622,4 +719,4 @@ score = (review_count × 0.30) +
 
 ---
 
-*Dit document is de single source of truth voor de HolidaiButler Claude Agents architectuur. Laatste update: 19 januari 2026.*
+*Dit document is de single source of truth voor de HolidaiButler Claude Agents architectuur. Laatste update: 19 januari 2026 (v3.4.0).*
