@@ -158,7 +158,7 @@ class AuditLogger {
             count: { $sum: 1 }
           }
         }
-      ]).maxTimeMS(10000);  // 10s max query time
+      ]).option({ maxTimeMS: 10000 });  // 10s max query time
 
       return stats;
     } catch (error) {
