@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 2.7.1
-> **Laatst bijgewerkt**: 19 januari 2026 (18:00 UTC)
+> **Versie**: 2.8.0
+> **Laatst bijgewerkt**: 19 januari 2026 (20:00 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -142,12 +142,19 @@ HolidaiButler/
 │   │   │       │   ├── poiSyncService.js   # POI vector sync
 │   │   │       │   ├── qaSyncService.js    # Q&A vector sync
 │   │   │       │   └── syncScheduler.js    # 4 scheduled jobs
-│   │   │       └── communicationFlow/  # ✅ Communication Flow Agent v1.0 (NIEUW)
-│   │   │           ├── index.js
-│   │   │           ├── userJourneyManager.js  # User journey automation
-│   │   │           ├── mailerliteService.js   # MailerLite integration
-│   │   │           ├── notificationRouter.js  # Multi-channel routing
-│   │   │           └── syncScheduler.js       # 3 scheduled jobs
+│   │   │       ├── communicationFlow/  # ✅ Communication Flow Agent v1.0
+│   │   │       │   ├── index.js
+│   │   │       │   ├── userJourneyManager.js  # User journey automation
+│   │   │       │   ├── mailerliteService.js   # MailerLite integration
+│   │   │       │   ├── notificationRouter.js  # Multi-channel routing
+│   │   │       │   └── syncScheduler.js       # 3 scheduled jobs
+│   │   │       └── gdpr/               # ✅ GDPR Agent v1.0 (NIEUW)
+│   │   │           ├── index.js               # Main entry point
+│   │   │           ├── dataInventory.js       # Art. 30 data mapping
+│   │   │           ├── dataExporter.js        # Art. 15/20 data export
+│   │   │           ├── dataEraser.js          # Art. 17 right to erasure
+│   │   │           ├── consentManager.js      # Art. 7 consent tracking
+│   │   │           └── syncScheduler.js       # 4 scheduled jobs
 │   │   └── middleware/
 │   └── package.json
 │
@@ -244,7 +251,7 @@ HolidaiButler/
 | Vitest, Jest, Playwright | Testing |
 | ESLint + Prettier | Linting |
 | GitHub Actions | CI/CD |
-| BullMQ | Job scheduling (24 jobs) |
+| BullMQ | Job scheduling (28 jobs) |
 | **Bugsink** | Error tracking (EU) |
 
 ---
@@ -390,6 +397,8 @@ REDIS_PORT=6379
 | Transactions | Betalingen | Realtime |
 | user_journeys | Journey tracking per user (Communication Flow) | Elke 15 min |
 | journey_scheduled_emails | Scheduled email queue (Communication Flow) | Elke 15 min |
+| user_consent | GDPR consent tracking (essential, analytics, personalization, marketing) | Realtime |
+| gdpr_deletion_requests | Art. 17 deletion requests (72h deadline tracking) | Elke 4 uur |
 
 #### POI Enterprise Columns (v2.0)
 - `status`: active/pending_deactivation/deactivated/merged
@@ -433,7 +442,7 @@ REDIS_PORT=6379
 | **Owner Interface Agent** | Email + Threema communicatie | ✅ Live |
 
 #### Orchestrator Components
-- BullMQ Scheduler (24 recurring jobs)
+- BullMQ Scheduler (28 recurring jobs)
 - Cost Controller (€515/maand budget)
 - Audit Trail (30 dagen retention)
 
@@ -461,7 +470,7 @@ REDIS_PORT=6379
 | `errors_count` | Errors (24u) |
 | `status_summary` | Status tekst |
 
-### Fase 3 - Operations Layer ⏳ IN PROGRESS (87.5% Compleet)
+### Fase 3 - Operations Layer ✅ COMPLEET (100%)
 
 | Agent | Functie | Status |
 |-------|---------|--------|
@@ -469,7 +478,7 @@ REDIS_PORT=6379
 | **Data Sync Agent v2.0** | POI Lifecycle, Reviews, Q&A, Validation | ✅ Live |
 | **HoliBot Sync Agent v1.0** | ChromaDB vector sync voor chatbot | ✅ Live |
 | **Communication Flow Agent v1.0** | User journeys, notifications, MailerLite sync | ✅ Live |
-| GDPR Agent | Privacy compliance | ⏳ Planned |
+| **GDPR Agent v1.0** | Privacy compliance (Art. 7, 15, 17, 20, 30) | ✅ Live |
 
 #### Platform Health Monitor v1.0 Components
 - **Server Health**: Ping, CPU/memory usage, disk space monitoring
@@ -531,6 +540,32 @@ REDIS_PORT=6379
 - `user_journeys`: Journey tracking per user
 - `journey_scheduled_emails`: Scheduled email queue
 
+#### GDPR Agent v1.0 Components (NIEUW - 19 Jan 2026)
+- **Data Inventory**: Maps all personal data locations per Art. 30 GDPR
+- **Data Exporter**: Handles Art. 15 (Access) and Art. 20 (Portability) requests
+- **Data Eraser**: Handles Art. 17 (Right to Erasure) with 72h deadline
+- **Consent Manager**: Tracks Art. 7 consent (essential, analytics, personalization, marketing)
+- **Sync Scheduler**: 4 scheduled jobs for GDPR compliance monitoring
+
+**GDPR Scheduled Jobs (4):**
+| Job | Schedule | Beschrijving |
+|-----|----------|--------------|
+| `gdpr-overdue-check` | Elke 4 uur | Check 72h deletion deadline violations |
+| `gdpr-export-cleanup` | 03:00 dagelijks | Cleanup old export files (7+ days) |
+| `gdpr-retention-check` | 1e van maand 02:00 | Check data retention compliance |
+| `gdpr-consent-audit` | Zondag 04:00 | Generate consent statistics report |
+
+**GDPR Articles Implemented:**
+- **Art. 7**: Conditions for Consent (consent tracking)
+- **Art. 15**: Right of Access (data export JSON)
+- **Art. 17**: Right to Erasure (72h deadline, owner approval for partners)
+- **Art. 20**: Data Portability (portable ZIP/CSV export)
+- **Art. 30**: Records of Processing Activities (data inventory)
+
+**Database Tables:**
+- `user_consent`: Consent tracking per user
+- `gdpr_deletion_requests`: Deletion request tracking with approval workflow
+
 ### Fase 4 - Development Layer 📅 PLANNED
 
 | Agent | Functie |
@@ -544,7 +579,7 @@ REDIS_PORT=6379
 
 ---
 
-## 📊 Scheduled Jobs Overzicht (24 totaal)
+## 📊 Scheduled Jobs Overzicht (28 totaal)
 
 ### Core Jobs (4)
 | Job | Schedule | Component |
@@ -585,6 +620,14 @@ REDIS_PORT=6379
 | `comm-journey-processor` | Elke 15 minuten | Communication Flow Agent |
 | `comm-user-sync` | 03:00 dagelijks | Communication Flow Agent |
 | `comm-cleanup` | Zondag 04:00 | Communication Flow Agent |
+
+### GDPR Jobs (4)
+| Job | Schedule | Component |
+|-----|----------|-----------|
+| `gdpr-overdue-check` | Elke 4 uur | GDPR Agent |
+| `gdpr-export-cleanup` | 03:00 dagelijks | GDPR Agent |
+| `gdpr-retention-check` | 1e van maand 02:00 | GDPR Agent |
+| `gdpr-consent-audit` | Zondag 04:00 | GDPR Agent |
 
 ---
 
@@ -764,7 +807,8 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **2.7.1** | **2026-01-19** | **Database tabellen toegevoegd (user_journeys, journey_scheduled_emails), MASTERPLAN referentie gecorrigeerd naar v3.4.0** |
+| **2.8.0** | **2026-01-19** | **GDPR Agent v1.0 LIVE: Art. 7/15/17/20/30 compliance, data export, erasure (72h), consent management. 4 nieuwe jobs (28 totaal). Fase 3 nu 100% compleet!** |
+| 2.7.1 | 2026-01-19 | Database tabellen toegevoegd (user_journeys, journey_scheduled_emails), MASTERPLAN referentie gecorrigeerd naar v3.4.0 |
 | 2.7.0 | 2026-01-19 | Communication Flow Agent v1.0 LIVE: User journeys, notification routing, MailerLite sync. 3 nieuwe jobs (24 totaal). Fase 3 nu 87.5% compleet. |
 | 2.6.0 | 2026-01-19 | HoliBot Sync Agent v1.0 LIVE: ChromaDB Cloud sync, MistralAI embeddings, 4 jobs. Enterprise kwaliteitsstandaarden toegevoegd. Fase 3 nu 75% compleet. |
 | 2.5.1 | 2026-01-19 | Deployment volgorde gedocumenteerd (Dev→Test→Main), concurrency control fix, Sentry.io kan verwijderd |

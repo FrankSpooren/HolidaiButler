@@ -38,6 +38,36 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: weekly-cost-report (Monday 09:00)');
 
+  // === GDPR Agent Jobs ===
+
+  // GDPR Overdue Check - every 4 hours (check for 72h deadline violations)
+  await scheduledQueue.add('gdpr-overdue-check', { type: 'gdpr-compliance' }, {
+    repeat: { cron: '0 */4 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'gdpr-overdue-check-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: gdpr-overdue-check (every 4 hours)');
+
+  // GDPR Export Cleanup - daily at 03:00 (cleanup old export files)
+  await scheduledQueue.add('gdpr-export-cleanup', { type: 'gdpr-compliance' }, {
+    repeat: { cron: '0 3 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'gdpr-export-cleanup-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: gdpr-export-cleanup (daily 03:00)');
+
+  // GDPR Retention Check - monthly on 1st at 02:00
+  await scheduledQueue.add('gdpr-retention-check', { type: 'gdpr-compliance' }, {
+    repeat: { cron: '0 2 1 * *', tz: 'Europe/Amsterdam' },
+    jobId: 'gdpr-retention-check-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: gdpr-retention-check (monthly 1st 02:00)');
+
+  // GDPR Consent Audit - weekly Sunday at 04:00
+  await scheduledQueue.add('gdpr-consent-audit', { type: 'gdpr-compliance' }, {
+    repeat: { cron: '0 4 * * 0', tz: 'Europe/Amsterdam' },
+    jobId: 'gdpr-consent-audit-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: gdpr-consent-audit (Sunday 04:00)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);
