@@ -1,8 +1,8 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 2.5.1
-> **Laatst bijgewerkt**: 19 januari 2026 (16:25 UTC)  
-> **Eigenaar**: Frank Spooren  
+> **Versie**: 2.6.0
+> **Laatst bijgewerkt**: 19 januari 2026 (17:20 UTC)
+> **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
 ---
@@ -17,6 +17,40 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 - **Betrouwbaarheid**: Accurate, actuele data uit gerenommeerde bronnen
 - **Privacy**: GDPR-compliant, EU AI Act ready
 - **EU-First**: 100% EU-gehoste infrastructuur
+
+---
+
+## 🚨 Enterprise Kwaliteitsstandaarden (KRITIEK)
+
+> **Dit zijn bindende afspraken voor alle ontwikkeling en implementatie.**
+
+### 1. Enterprise Level Kwaliteit
+Elke stap, feature of uitwerking resulteert in een **enterprise-level waardig product** dat **state-of-the-art** is. Dit is het verwachtingspatroon van investeerders, eigenaren en gebruikers. Geen concessies, geen "goed genoeg".
+
+### 2. Foutloze Deployments
+**Alle errors en foutmeldingen moeten opgelost zijn VOORDAT een feature:**
+- Als afgerond wordt beschouwd
+- Wordt gepusht naar de server
+- Wordt gepusht naar GitHub
+
+Ook niet-kritieke errors zijn onacceptabel in productie.
+
+### 3. CLAUDE.md Actualisatie
+Na elke relevante aanpassing, uitbreiding of update:
+- CLAUDE.md bijwerken met wijzigingen
+- Opslaan op Hetzner server: `/var/www/api.holidaibutler.com/platform-core/CLAUDE.md`
+- Pushen naar GitHub (alle branches via Dev → Test → Main)
+
+### 4. Context Verificatie
+**Alvorens te starten met een volgende fase, stap of feature:**
+- CLAUDE.md volledig lezen en bestuderen
+- Actuele status verifiëren in codebase
+- Geen aannames maken over implementatie status
+
+### 5. Geen Workarounds
+- Geen "known issues" accepteren
+- Geen tijdelijke oplossingen die permanent worden
+- Problemen oplossen bij de root cause
 
 ---
 
@@ -50,7 +84,7 @@ HolidaiButler/
 │
 ├── .github/
 │   └── workflows/
-│       └── deploy-holibot.yml  # CI/CD workflow
+│       └── deploy-platform-core.yml  # CI/CD workflow met concurrency control
 │
 ├── customer-portal/        # React 19 + Tailwind (holidaibutler.com)
 │   └── frontend/
@@ -93,14 +127,21 @@ HolidaiButler/
 │   │   │       │       └── queueHealth.js
 │   │   │       ├── ownerInterfaceAgent/  # ✅ Owner Interface Agent v1.1
 │   │   │       │   └── index.js
-│   │   │       └── dataSync/      # ✅ Data Sync Agent v2.0
+│   │   │       ├── dataSync/      # ✅ Data Sync Agent v2.0
+│   │   │       │   ├── index.js
+│   │   │       │   ├── syncScheduler.js
+│   │   │       │   ├── poiLifecycleManager.js
+│   │   │       │   ├── reviewsManager.js
+│   │   │       │   ├── qaGenerator.js
+│   │   │       │   ├── dataValidator.js
+│   │   │       │   └── syncReporter.js
+│   │   │       └── holibotSync/   # ✅ HoliBot Sync Agent v1.0 (NIEUW)
 │   │   │           ├── index.js
-│   │   │           ├── syncScheduler.js
-│   │   │           ├── poiLifecycleManager.js
-│   │   │           ├── reviewsManager.js
-│   │   │           ├── qaGenerator.js
-│   │   │           ├── dataValidator.js
-│   │   │           └── syncReporter.js
+│   │   │           ├── chromaService.js    # ChromaDB Cloud client
+│   │   │           ├── embeddingService.js # MistralAI embeddings
+│   │   │           ├── poiSyncService.js   # POI vector sync
+│   │   │           ├── qaSyncService.js    # Q&A vector sync
+│   │   │           └── syncScheduler.js    # 4 scheduled jobs
 │   │   └── middleware/
 │   └── package.json
 │
@@ -114,7 +155,7 @@ HolidaiButler/
 ├── docs/
 │   └── agents/
 │       ├── fase2/          # ✅ Orchestrator documentatie
-│       └── fase3/          # ⏳ Specialized agents
+│       └── fase3/          # ✅ Specialized agents
 └── agents/                 # Claude Agent implementaties
 ```
 
@@ -128,7 +169,7 @@ HolidaiButler/
 | **Server IP** | 91.98.71.87 (Hetzner, 🇩🇪 Duitsland) |
 | **Deploy path** | `/var/www/api.holidaibutler.com/platform-core` |
 | **PM2 process** | `holidaibutler-api` |
-| **GitHub Actions** | `.github/workflows/deploy-holibot.yml` |
+| **GitHub Actions** | `.github/workflows/deploy-platform-core.yml` |
 
 ### HoliBot API Endpoints
 - **Base path**: `/api/v1/holibot/*`
@@ -187,6 +228,8 @@ HolidaiButler/
 | Email | MailerLite | - | ✅ |
 | Alerts | Threema Gateway | - | ✅ |
 | Scraping | Apify Client | - | ✅ |
+| **Vector DB** | **ChromaDB Cloud** | 3.1.8 | ✅ |
+| **Embeddings** | **MistralAI** | - | ✅ |
 
 ### DevOps
 | Tool | Doel |
@@ -195,7 +238,7 @@ HolidaiButler/
 | Vitest, Jest, Playwright | Testing |
 | ESLint + Prettier | Linting |
 | GitHub Actions | CI/CD |
-| BullMQ | Job scheduling |
+| BullMQ | Job scheduling (21 jobs) |
 | **Bugsink** | Error tracking (EU) |
 
 ---
@@ -273,13 +316,19 @@ Alle keys staan in `.env` files (niet in repo):
 
 # AI Services
 ANTHROPIC_API_KEY=           # Claude API
-MISTRAL_API_KEY=             # HoliBot LLM
+MISTRAL_API_KEY=             # HoliBot LLM + Embeddings
 
 # EU-Compliant Services
 MAILERLITE_API_KEY=          # Email marketing (EU)
 THREEMA_GATEWAY_ID=          # Critical alerts (CH)
 THREEMA_SECRET=              # Threema API secret
 OWNER_THREEMA_ID=            # Owner Threema ID
+
+# ChromaDB Cloud (Vector Database)
+CHROMADB_API_KEY=            # ChromaDB Cloud API key
+CHROMADB_TENANT=             # ChromaDB tenant ID
+CHROMADB_DATABASE=           # ChromaDB database name
+CHROMADB_COLLECTION_NAME=    # Default collection
 
 # Data Services
 APIFY_TOKEN=                 # Data scraping
@@ -300,8 +349,8 @@ REDIS_PORT=6379
 |----------|---------|---------|--------|
 | Hetzner | Server hosting | 🇩🇪 Duitsland | ✅ |
 | GitHub | Code repository | - | ✅ |
-| ChromaDB | Vector database | 🇩🇪 Hetzner | ✅ |
-| MistralAI | Chatbot LLM | 🇫🇷 Frankrijk | ✅ |
+| **ChromaDB Cloud** | **Vector database** | **Cloud** | ✅ |
+| MistralAI | Chatbot LLM + Embeddings | 🇫🇷 Frankrijk | ✅ |
 | MailerLite | Email flows | 🇱🇹 EU | ✅ |
 | **Bugsink** | **Error monitoring** | 🇳🇱 **Nederland (self-hosted)** | ✅ |
 | Threema | Critical alerts | 🇨🇭 Zwitserland | ✅ |
@@ -357,10 +406,12 @@ REDIS_PORT=6379
 | audit_logs | Agent action logs | 30 dagen |
 | chat_logs | HoliBot conversations | Configurable |
 
-### ChromaDB (Vector Database)
-- POI embeddings
-- Q&A embeddings
-- Semantic search indices
+### ChromaDB Cloud (Vector Database)
+| Collection | Beschrijving | Sync |
+|------------|--------------|------|
+| `holidaibutler_pois` | POI vector embeddings | Dagelijks 06:30 |
+| `holidaibutler_qas` | Q&A vector embeddings | Dagelijks 07:00 |
+| `calpe_pois` | Legacy POI collection | - |
 
 ---
 
@@ -374,7 +425,7 @@ REDIS_PORT=6379
 | **Owner Interface Agent** | Email + Threema communicatie | ✅ Live |
 
 #### Orchestrator Components
-- BullMQ Scheduler (17 recurring jobs)
+- BullMQ Scheduler (21 recurring jobs)
 - Cost Controller (€515/maand budget)
 - Audit Trail (30 dagen retention)
 
@@ -402,16 +453,17 @@ REDIS_PORT=6379
 | `errors_count` | Errors (24u) |
 | `status_summary` | Status tekst |
 
-### Fase 3 - Operations Layer ⏳ IN PROGRESS (50% Compleet)
+### Fase 3 - Operations Layer ⏳ IN PROGRESS (75% Compleet)
 
 | Agent | Functie | Status |
 |-------|---------|--------|
 | **Platform Health Monitor v1.0** | System monitoring (5 categorieën) | ✅ Live |
 | **Data Sync Agent v2.0** | POI Lifecycle, Reviews, Q&A, Validation | ✅ Live |
+| **HoliBot Sync Agent v1.0** | ChromaDB vector sync voor chatbot | ✅ Live |
 | Communication Flow Agent | Email automation | ⏳ Planned |
 | GDPR Agent | Privacy compliance | ⏳ Planned |
 
-#### Platform Health Monitor v1.0 Components (NIEUW - 19 Jan 2026)
+#### Platform Health Monitor v1.0 Components
 - **Server Health**: Ping, CPU/memory usage, disk space monitoring
 - **Database Health**: MySQL, MongoDB, Redis connection checks
 - **API Health**: HolidaiButler API, MistralAI, Apify, ChromaDB, Bugsink
@@ -429,6 +481,25 @@ REDIS_PORT=6379
 - **Sync Reporter**: Daily/weekly health reports, quality scores, alerts
 - **Scheduled Jobs**: 13 enterprise jobs (POI sync, review sync, Q&A sync, etc.)
 
+#### HoliBot Sync Agent v1.0 Components (NIEUW - 19 Jan 2026)
+- **ChromaDB Cloud Service**: CloudClient voor vector database connectie
+- **Embedding Service**: MistralAI embedding generatie (mistral-embed model)
+- **POI Sync Service**: Synchroniseert POI data naar ChromaDB voor vector search
+- **Q&A Sync Service**: Synchroniseert Q&A data naar ChromaDB voor vector search
+- **Sync Scheduler**: 4 scheduled jobs voor ChromaDB synchronisatie
+
+**HoliBot Sync Scheduled Jobs (4):**
+| Job | Schedule | Beschrijving |
+|-----|----------|--------------|
+| `holibot-poi-sync` | 06:30 dagelijks | POI sync naar ChromaDB (na Data Sync) |
+| `holibot-qa-sync` | 07:00 dagelijks | Q&A sync naar ChromaDB |
+| `holibot-full-reindex` | Zondag 04:00 | Volledige ChromaDB reindex |
+| `holibot-cleanup` | 05:00 dagelijks | Cleanup deactivated/rejected items |
+
+**ChromaDB Collections:**
+- `holidaibutler_pois`: POI vector embeddings voor semantic search
+- `holidaibutler_qas`: Q&A vector embeddings voor chatbot context
+
 ### Fase 4 - Development Layer 📅 PLANNED
 
 | Agent | Functie |
@@ -439,6 +510,43 @@ REDIS_PORT=6379
 | Quality Checker | Tests & linting |
 
 **Volledige specificaties**: Zie `docs/agents/` en `CLAUDE_AGENTS_MASTERPLAN_v3.md`
+
+---
+
+## 📊 Scheduled Jobs Overzicht (21 totaal)
+
+### Core Jobs (4)
+| Job | Schedule | Component |
+|-----|----------|-----------|
+| `health-check` | Elk uur | Platform Health Monitor |
+| `daily-briefing` | 08:00 dagelijks | Owner Interface |
+| `cost-check` | Elke 6 uur | Cost Controller |
+| `weekly-cost-report` | Maandag 09:00 | Cost Controller |
+
+### Data Sync Jobs (13)
+| Job | Schedule | Component |
+|-----|----------|-----------|
+| `poi-sync-tier1` | 06:00 dagelijks | Data Sync Agent |
+| `poi-sync-tier2` | Maandag 06:00 | Data Sync Agent |
+| `poi-sync-tier3` | 1e van maand 06:00 | Data Sync Agent |
+| `poi-sync-tier4` | Kwartaal 06:00 | Data Sync Agent |
+| `poi-tier-recalc` | Zondag 03:00 | Data Sync Agent |
+| `poi-deactivation-check` | 01:00 dagelijks | Data Sync Agent |
+| `review-sync-tier12` | Woensdag 05:00 | Data Sync Agent |
+| `review-sync-tier34` | 15e van maand 05:00 | Data Sync Agent |
+| `review-retention` | Zondag 02:00 | Data Sync Agent |
+| `qa-sync-tier12` | 1e van maand 04:00 | Data Sync Agent |
+| `qa-sync-tier34` | Kwartaal 04:00 | Data Sync Agent |
+| `health-report-daily` | 07:00 dagelijks | Data Sync Agent |
+| `health-report-weekly` | Maandag 07:00 | Data Sync Agent |
+
+### HoliBot Sync Jobs (4)
+| Job | Schedule | Component |
+|-----|----------|-----------|
+| `holibot-poi-sync` | 06:30 dagelijks | HoliBot Sync Agent |
+| `holibot-qa-sync` | 07:00 dagelijks | HoliBot Sync Agent |
+| `holibot-full-reindex` | Zondag 04:00 | HoliBot Sync Agent |
+| `holibot-cleanup` | 05:00 dagelijks | HoliBot Sync Agent |
 
 ---
 
@@ -454,6 +562,8 @@ REDIS_PORT=6379
 - ❌ POI data verwijderen zonder owner approval
 - ❌ Direct naar productie server via SSH voor code wijzigingen
 - ❌ **US-based monitoring services gebruiken (geen Sentry.io)**
+- ❌ **Features deployen met bekende errors of foutmeldingen**
+- ❌ **Starten met nieuwe fase/feature zonder CLAUDE.md te lezen**
 
 ### ALTIJD doen:
 - ✅ Tests draaien voor commit (`npm test`)
@@ -467,6 +577,8 @@ REDIS_PORT=6379
 - ✅ `isPOIClosed()` gebruiken om gesloten POIs te filteren
 - ✅ **EU-compliant services gebruiken**
 - ✅ **Errors loggen naar Bugsink**
+- ✅ **CLAUDE.md updaten na elke relevante wijziging**
+- ✅ **Alle errors oplossen vóór deployment**
 
 ---
 
@@ -483,6 +595,7 @@ feat(customer): add POI thumbnail component
 fix(core): resolve database connection timeout
 docs(agents): update orchestrator specification
 feat(orchestrator): add Threema integration for critical alerts
+feat(agents): add HoliBot Sync Agent for ChromaDB vector sync
 ```
 
 ---
@@ -534,9 +647,9 @@ Elke bestemming heeft eigen skills in `.claude/skills/destinations/`:
 
 ### Score Berekening
 ```
-score = (review_count × 0.30) + 
-        (average_rating × 0.20) + 
-        (tourist_relevance × 0.30) + 
+score = (review_count × 0.30) +
+        (average_rating × 0.20) +
+        (tourist_relevance × 0.30) +
         (booking_frequency × 0.20)
 ```
 
@@ -591,7 +704,7 @@ score = (review_count × 0.30) +
 | 4 (Hoog) | Priority email | MailerLite |
 | 5 (Kritiek) | Email + Threema | Alle kanalen |
 
-**Owner Email**: info@holidaibutler.com  
+**Owner Email**: info@holidaibutler.com
 **Owner Threema**: V9VUJ8K6
 
 ---
@@ -613,7 +726,8 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **2.5.1** | **2026-01-19** | **Deployment volgorde gedocumenteerd (Dev→Test→Main), concurrency control fix, Sentry.io kan verwijderd** |
+| **2.6.0** | **2026-01-19** | **HoliBot Sync Agent v1.0 LIVE: ChromaDB Cloud sync, MistralAI embeddings, 4 jobs. Enterprise kwaliteitsstandaarden toegevoegd. Fase 3 nu 75% compleet.** |
+| 2.5.1 | 2026-01-19 | Deployment volgorde gedocumenteerd (Dev→Test→Main), concurrency control fix, Sentry.io kan verwijderd |
 | 2.5.0 | 2026-01-19 | Data Sync Agent v2.0 ACTIVATED: 17 scheduled jobs live (13 data sync + 4 core), all components operational |
 | 2.4.0 | 2026-01-19 | Platform Health Monitor v1.0 LIVE: 5 health check categorieën, hourly monitoring, alert integration |
 | 2.3.0 | 2026-01-19 | MailerLite automation-based email, custom fields, group-trigger flow |
@@ -634,6 +748,11 @@ Bij elke nieuwe sessie of na context compaction:
 3. Maak GEEN aannames over implementatie status
 4. Check `/services/agents/` voor daadwerkelijk geïmplementeerde agents
 5. Check `/services/orchestrator/workers.js` voor actieve job handlers
+
+**Enterprise Kwaliteitsstandaarden:**
+- Elke feature moet enterprise-level en state-of-the-art zijn
+- Geen errors of foutmeldingen bij deployment
+- CLAUDE.md updaten na elke relevante wijziging
 
 **Locaties van dit bestand:**
 - GitHub: `HolidaiButler/CLAUDE.md` (alle branches)
