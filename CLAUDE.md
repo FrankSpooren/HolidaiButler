@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 2.3.0
-> **Laatst bijgewerkt**: 19 januari 2026  
+> **Versie**: 2.4.0
+> **Laatst bijgewerkt**: 19 januari 2026 (13:50 UTC)  
 > **Eigenaar**: Frank Spooren  
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -81,6 +81,18 @@ HolidaiButler/
 │   │   │   │   ├── auditTrail/
 │   │   │   │   └── ownerInterface/
 │   │   │   └── agents/            # ✅ Fase 3: Specialized Agents
+│   │   │       ├── healthMonitor/ # ✅ Platform Health Monitor v1.0
+│   │   │       │   ├── index.js
+│   │   │       │   ├── reporter.js
+│   │   │       │   ├── alertIntegration.js
+│   │   │       │   └── checks/
+│   │   │       │       ├── serverHealth.js
+│   │   │       │       ├── databaseHealth.js
+│   │   │       │       ├── apiHealth.js
+│   │   │       │       ├── frontendHealth.js
+│   │   │       │       └── queueHealth.js
+│   │   │       ├── ownerInterfaceAgent/  # ✅ Owner Interface Agent v1.1
+│   │   │       │   └── index.js
 │   │   │       └── dataSync/      # ✅ Data Sync Agent v2.0
 │   │   │           ├── index.js
 │   │   │           ├── syncScheduler.js
@@ -368,14 +380,24 @@ REDIS_PORT=6379
 | `errors_count` | Errors (24u) |
 | `status_summary` | Status tekst |
 
-### Fase 3 - Operations Layer ⏳ IN PROGRESS
+### Fase 3 - Operations Layer ⏳ IN PROGRESS (50% Compleet)
 
 | Agent | Functie | Status |
 |-------|---------|--------|
-| Platform Health Monitor | System monitoring | ⏳ Week 1 |
+| **Platform Health Monitor v1.0** | System monitoring (5 categorieën) | ✅ Live |
 | **Data Sync Agent v2.0** | POI Lifecycle, Reviews, Q&A, Validation | ✅ Live |
-| Communication Flow Agent | Email automation | ⏳ Week 3 |
-| GDPR Agent | Privacy compliance | ⏳ Week 4 |
+| Communication Flow Agent | Email automation | ⏳ Planned |
+| GDPR Agent | Privacy compliance | ⏳ Planned |
+
+#### Platform Health Monitor v1.0 Components (NIEUW - 19 Jan 2026)
+- **Server Health**: Ping, CPU/memory usage, disk space monitoring
+- **Database Health**: MySQL, MongoDB, Redis connection checks
+- **API Health**: HolidaiButler API, MistralAI, Apify, ChromaDB, Bugsink
+- **Frontend Health**: Production, test, dev, admin portals (latency tracking)
+- **Queue Health**: BullMQ queues status, worker monitoring
+- **Alert Integration**: Automatische koppeling met Owner Interface Agent
+- **Scheduled**: Elk uur via BullMQ (hourly full health check)
+- **Cooldowns**: Intelligent alert throttling (5min critical → 24h info)
 
 #### Data Sync Agent v2.0 Components
 - **POI Lifecycle Manager**: Creation, deactivation (30-day grace), duplicate detection
@@ -569,11 +591,29 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **2.4.0** | **2026-01-19** | **Platform Health Monitor v1.0 LIVE: 5 health check categorieën, hourly monitoring, alert integration** |
 | 2.3.0 | 2026-01-19 | MailerLite automation-based email, custom fields, group-trigger flow |
 | 2.2.0 | 2026-01-18 | Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation |
 | 2.1.0 | 2026-01-14 | Fase 2 compleet, Sentry→Bugsink, Threema, EU-compliance |
 | 2.0.0 | 2026-01-12 | Merge technische details + agent architectuur |
 | 1.0.0 | 2026-01-05 | Origineel: deployment protocol, code conventies |
+
+---
+
+## ⚠️ Belangrijke Notitie voor Toekomstige Sessies
+
+**Dit document (CLAUDE.md) is de SINGLE SOURCE OF TRUTH voor het HolidaiButler Agents project.**
+
+Bij elke nieuwe sessie of na context compaction:
+1. Lees ALTIJD eerst dit bestand volledig
+2. Verifieer de actuele status in de codebase VOORDAT je status updates geeft
+3. Maak GEEN aannames over implementatie status
+4. Check `/services/agents/` voor daadwerkelijk geïmplementeerde agents
+5. Check `/services/orchestrator/workers.js` voor actieve job handlers
+
+**Locaties van dit bestand:**
+- GitHub: `HolidaiButler/CLAUDE.md` (alle branches)
+- Hetzner: `/var/www/api.holidaibutler.com/platform-core/CLAUDE.md`
 
 ---
 
