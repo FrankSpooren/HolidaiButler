@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 2.6.0
-> **Laatst bijgewerkt**: 19 januari 2026 (17:20 UTC)
+> **Versie**: 2.7.0
+> **Laatst bijgewerkt**: 19 januari 2026 (17:50 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -135,13 +135,19 @@ HolidaiButler/
 │   │   │       │   ├── qaGenerator.js
 │   │   │       │   ├── dataValidator.js
 │   │   │       │   └── syncReporter.js
-│   │   │       └── holibotSync/   # ✅ HoliBot Sync Agent v1.0 (NIEUW)
+│   │   │       ├── holibotSync/   # ✅ HoliBot Sync Agent v1.0
+│   │   │       │   ├── index.js
+│   │   │       │   ├── chromaService.js    # ChromaDB Cloud client
+│   │   │       │   ├── embeddingService.js # MistralAI embeddings
+│   │   │       │   ├── poiSyncService.js   # POI vector sync
+│   │   │       │   ├── qaSyncService.js    # Q&A vector sync
+│   │   │       │   └── syncScheduler.js    # 4 scheduled jobs
+│   │   │       └── communicationFlow/  # ✅ Communication Flow Agent v1.0 (NIEUW)
 │   │   │           ├── index.js
-│   │   │           ├── chromaService.js    # ChromaDB Cloud client
-│   │   │           ├── embeddingService.js # MistralAI embeddings
-│   │   │           ├── poiSyncService.js   # POI vector sync
-│   │   │           ├── qaSyncService.js    # Q&A vector sync
-│   │   │           └── syncScheduler.js    # 4 scheduled jobs
+│   │   │           ├── userJourneyManager.js  # User journey automation
+│   │   │           ├── mailerliteService.js   # MailerLite integration
+│   │   │           ├── notificationRouter.js  # Multi-channel routing
+│   │   │           └── syncScheduler.js       # 3 scheduled jobs
 │   │   └── middleware/
 │   └── package.json
 │
@@ -238,7 +244,7 @@ HolidaiButler/
 | Vitest, Jest, Playwright | Testing |
 | ESLint + Prettier | Linting |
 | GitHub Actions | CI/CD |
-| BullMQ | Job scheduling (21 jobs) |
+| BullMQ | Job scheduling (24 jobs) |
 | **Bugsink** | Error tracking (EU) |
 
 ---
@@ -425,7 +431,7 @@ REDIS_PORT=6379
 | **Owner Interface Agent** | Email + Threema communicatie | ✅ Live |
 
 #### Orchestrator Components
-- BullMQ Scheduler (21 recurring jobs)
+- BullMQ Scheduler (24 recurring jobs)
 - Cost Controller (€515/maand budget)
 - Audit Trail (30 dagen retention)
 
@@ -453,14 +459,14 @@ REDIS_PORT=6379
 | `errors_count` | Errors (24u) |
 | `status_summary` | Status tekst |
 
-### Fase 3 - Operations Layer ⏳ IN PROGRESS (75% Compleet)
+### Fase 3 - Operations Layer ⏳ IN PROGRESS (87.5% Compleet)
 
 | Agent | Functie | Status |
 |-------|---------|--------|
 | **Platform Health Monitor v1.0** | System monitoring (5 categorieën) | ✅ Live |
 | **Data Sync Agent v2.0** | POI Lifecycle, Reviews, Q&A, Validation | ✅ Live |
 | **HoliBot Sync Agent v1.0** | ChromaDB vector sync voor chatbot | ✅ Live |
-| Communication Flow Agent | Email automation | ⏳ Planned |
+| **Communication Flow Agent v1.0** | User journeys, notifications, MailerLite sync | ✅ Live |
 | GDPR Agent | Privacy compliance | ⏳ Planned |
 
 #### Platform Health Monitor v1.0 Components
@@ -500,6 +506,29 @@ REDIS_PORT=6379
 - `holidaibutler_pois`: POI vector embeddings voor semantic search
 - `holidaibutler_qas`: Q&A vector embeddings voor chatbot context
 
+#### Communication Flow Agent v1.0 Components (NIEUW - 19 Jan 2026)
+- **User Journey Manager**: Automated customer journeys (welcome, booking, re-engagement, review)
+- **MailerLite Service**: Extended email automation, user sync, campaign management
+- **Notification Router**: Multi-channel routing (email, Threema) based on urgency
+- **Sync Scheduler**: 3 scheduled jobs for communication automation
+
+**Communication Flow Scheduled Jobs (3):**
+| Job | Schedule | Beschrijving |
+|-----|----------|--------------|
+| `comm-journey-processor` | Elke 15 minuten | Process pending journey emails |
+| `comm-user-sync` | 03:00 dagelijks | Sync users to MailerLite |
+| `comm-cleanup` | Zondag 04:00 | Cleanup completed journeys (90 days) |
+
+**User Journey Types:**
+- `WELCOME`: New user onboarding (day 0, 2, 7)
+- `BOOKING_CONFIRMATION`: Post-booking flow (day 0, -3, +1)
+- `RE_ENGAGEMENT`: Inactive user reactivation (day 30, 60, 90)
+- `REVIEW_REQUEST`: Post-visit review solicitation (day 1, 7)
+
+**Database Tables:**
+- `user_journeys`: Journey tracking per user
+- `journey_scheduled_emails`: Scheduled email queue
+
 ### Fase 4 - Development Layer 📅 PLANNED
 
 | Agent | Functie |
@@ -513,7 +542,7 @@ REDIS_PORT=6379
 
 ---
 
-## 📊 Scheduled Jobs Overzicht (21 totaal)
+## 📊 Scheduled Jobs Overzicht (24 totaal)
 
 ### Core Jobs (4)
 | Job | Schedule | Component |
@@ -547,6 +576,13 @@ REDIS_PORT=6379
 | `holibot-qa-sync` | 07:00 dagelijks | HoliBot Sync Agent |
 | `holibot-full-reindex` | Zondag 04:00 | HoliBot Sync Agent |
 | `holibot-cleanup` | 05:00 dagelijks | HoliBot Sync Agent |
+
+### Communication Flow Jobs (3)
+| Job | Schedule | Component |
+|-----|----------|-----------|
+| `comm-journey-processor` | Elke 15 minuten | Communication Flow Agent |
+| `comm-user-sync` | 03:00 dagelijks | Communication Flow Agent |
+| `comm-cleanup` | Zondag 04:00 | Communication Flow Agent |
 
 ---
 
@@ -726,7 +762,8 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **2.6.0** | **2026-01-19** | **HoliBot Sync Agent v1.0 LIVE: ChromaDB Cloud sync, MistralAI embeddings, 4 jobs. Enterprise kwaliteitsstandaarden toegevoegd. Fase 3 nu 75% compleet.** |
+| **2.7.0** | **2026-01-19** | **Communication Flow Agent v1.0 LIVE: User journeys, notification routing, MailerLite sync. 3 nieuwe jobs (24 totaal). Fase 3 nu 87.5% compleet.** |
+| 2.6.0 | 2026-01-19 | HoliBot Sync Agent v1.0 LIVE: ChromaDB Cloud sync, MistralAI embeddings, 4 jobs. Enterprise kwaliteitsstandaarden toegevoegd. Fase 3 nu 75% compleet. |
 | 2.5.1 | 2026-01-19 | Deployment volgorde gedocumenteerd (Dev→Test→Main), concurrency control fix, Sentry.io kan verwijderd |
 | 2.5.0 | 2026-01-19 | Data Sync Agent v2.0 ACTIVATED: 17 scheduled jobs live (13 data sync + 4 core), all components operational |
 | 2.4.0 | 2026-01-19 | Platform Health Monitor v1.0 LIVE: 5 health check categorieën, hourly monitoring, alert integration |

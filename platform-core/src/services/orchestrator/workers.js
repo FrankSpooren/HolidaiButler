@@ -301,6 +301,53 @@ export function startWorkers() {
           }
           break;
 
+        // === COMMUNICATION FLOW AGENT JOBS ===
+        case "comm-journey-processor":
+          try {
+            const commFlowJourney = await import("../agents/communicationFlow/index.js");
+            const journeyResult = await commFlowJourney.default.processJourneyEmails();
+            console.log("[Orchestrator] Journey emails processed:", JSON.stringify({
+              processed: journeyResult.processed,
+              sent: journeyResult.sent,
+              failed: journeyResult.failed
+            }));
+            result = journeyResult;
+          } catch (error) {
+            console.error("[Orchestrator] Journey processor failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "comm-user-sync":
+          try {
+            const commFlowSync = await import("../agents/communicationFlow/index.js");
+            const syncResult = await commFlowSync.default.syncUsers();
+            console.log("[Orchestrator] Users synced to MailerLite:", JSON.stringify({
+              total: syncResult.total,
+              synced: syncResult.synced,
+              failed: syncResult.failed
+            }));
+            result = syncResult;
+          } catch (error) {
+            console.error("[Orchestrator] User sync failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "comm-cleanup":
+          try {
+            const commFlowCleanup = await import("../agents/communicationFlow/index.js");
+            const cleanupResult = await commFlowCleanup.default.cleanupJourneys();
+            console.log("[Orchestrator] Journey cleanup:", JSON.stringify({
+              journeysDeleted: cleanupResult.journeysDeleted
+            }));
+            result = cleanupResult;
+          } catch (error) {
+            console.error("[Orchestrator] Journey cleanup failed:", error.message);
+            throw error;
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -416,6 +463,7 @@ export function startWorkers() {
   console.log("[Orchestrator] - Owner Interface: active");
   console.log("[Orchestrator] - Data Sync Agent: active");
   console.log("[Orchestrator] - HoliBot Sync Agent: active");
+  console.log("[Orchestrator] - Communication Flow Agent: active");
 }
 
 export async function stopWorkers() {
