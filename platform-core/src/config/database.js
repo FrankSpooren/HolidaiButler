@@ -101,7 +101,10 @@ export async function connectMongoDB() {
     mongoConnection = await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 15000,  // 15s for Atlas network latency
+      socketTimeoutMS: 45000,           // 45s socket timeout
+      maxPoolSize: 10,                  // Connection pool
+      retryWrites: true,
     });
 
     console.log('✅ MongoDB connected successfully');

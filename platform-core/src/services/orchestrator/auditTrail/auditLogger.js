@@ -1,9 +1,23 @@
+import mongoose from "mongoose";
 import AuditLog from "./models/AuditLog.js";
 
 class AuditLogger {
 
+  isMongoConnected() {
+    return mongoose.connection.readyState === 1;
+  }
+
   // Log een actie
   async log(params) {
+    // Check MongoDB connection first - don't block on unavailable DB
+    if (!this.isMongoConnected()) {
+      // Silent skip in production, log in development
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[AuditLogger] MongoDB not connected, skipping log");
+      }
+      return null;
+    }
+
     const {
       actor,
       action,
@@ -127,19 +141,30 @@ class AuditLogger {
   }
 
   async getStats(hours = 24) {
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+    // Check MongoDB connection first
+    if (!this.isMongoConnected()) {
+      console.warn('[AuditLogger] MongoDB not connected, returning empty stats');
+      return [];
+    }
 
-    const stats = await AuditLog.aggregate([
-      { $match: { timestamp: { $gte: since } } },
-      {
-        $group: {
-          _id: { category: "$category", status: "$status" },
-          count: { $sum: 1 }
+    try {
+      const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+      const stats = await AuditLog.aggregate([
+        { $match: { timestamp: { $gte: since } } },
+        {
+          $group: {
+            _id: { category: "$category", status: "$status" },
+            count: { $sum: 1 }
+          }
         }
-      }
-    ]);
+      ]).maxTimeMS(10000);  // 10s max query time
 
-    return stats;
+      return stats;
+    } catch (error) {
+      console.error('[AuditLogger] Error getting stats:', error.message);
+      return [];
+    }
   }
 }
 
