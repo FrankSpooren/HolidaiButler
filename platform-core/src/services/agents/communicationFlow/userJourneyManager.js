@@ -150,7 +150,7 @@ class UserJourneyManager {
         SELECT
           jse.id, jse.journey_id, jse.step_index, jse.template_id, jse.subject,
           uj.user_id, uj.journey_type, uj.metadata,
-          u.email, u.first_name, u.last_name, u.language
+          u.email, u.name
         FROM journey_scheduled_emails jse
         JOIN user_journeys uj ON jse.journey_id = uj.id
         JOIN Users u ON uj.user_id = u.id
@@ -221,9 +221,7 @@ class UserJourneyManager {
       subject: emailData.subject,
       templateId: emailData.template_id,
       variables: {
-        first_name: emailData.first_name || 'Gast',
-        last_name: emailData.last_name || '',
-        language: emailData.language || 'nl',
+        name: emailData.name || 'Gast',
         ...JSON.parse(emailData.metadata || '{}')
       }
     });

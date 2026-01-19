@@ -238,11 +238,12 @@ class MailerLiteService {
     try {
       const group = await this.getOrCreateGroup(groupName);
 
+      // Query uses actual Users table columns: name (not first_name/last_name), is_active (not email_opt_in)
       const [users] = await sequelize.query(`
-        SELECT email, first_name, last_name, language, created_at
+        SELECT email, name, created_at
         FROM Users
         WHERE email IS NOT NULL AND email != ''
-        AND email_opt_in = 1
+        AND is_active = 1
         LIMIT 500
       `);
 
@@ -252,8 +253,7 @@ class MailerLiteService {
       for (const user of users) {
         try {
           await this.upsertSubscriber(user.email, {
-            name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-            language: user.language || 'nl',
+            name: user.name || '',
             signup_date: user.created_at
           }, [group.id]);
           synced++;
