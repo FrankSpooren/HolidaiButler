@@ -3,6 +3,12 @@
 # =============================================================================
 name: "Deploy: Platform Core API"
 
+# CRITICAL: Prevent concurrent deployments to avoid node_modules corruption
+# All branches deploy to same server, so only ONE deployment can run at a time
+concurrency:
+  group: deploy-platform-core-${{ github.repository }}
+  cancel-in-progress: false  # Queue deployments, don't cancel them
+
 on:
   push:
     branches: [dev, test, main]
