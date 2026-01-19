@@ -405,6 +405,51 @@ export function startWorkers() {
           }
           break;
 
+        // === DEVELOPMENT LAYER AGENT JOBS ===
+        case "dev-security-scan":
+          try {
+            const devLayerSecurity = await import("../agents/devLayer/index.js");
+            const securityResults = {
+              "platform-core": await devLayerSecurity.default.checkProject("platform-core"),
+              timestamp: new Date().toISOString()
+            };
+            console.log("[Orchestrator] Security scan completed");
+            result = securityResults;
+          } catch (error) {
+            console.error("[Orchestrator] Security scan failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "dev-dependency-audit":
+          try {
+            const devLayerAudit = await import("../agents/devLayer/index.js");
+            const auditResult = await devLayerAudit.default.checkProject("platform-core");
+            console.log("[Orchestrator] Dependency audit:", JSON.stringify({
+              critical: auditResult.dependencyAudit?.critical || 0,
+              high: auditResult.dependencyAudit?.high || 0
+            }));
+            result = auditResult.dependencyAudit;
+          } catch (error) {
+            console.error("[Orchestrator] Dependency audit failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "dev-quality-report":
+          try {
+            const devLayerReport = await import("../agents/devLayer/index.js");
+            const qualityReport = await devLayerReport.default.checkProject("platform-core");
+            console.log("[Orchestrator] Quality report generated:", JSON.stringify({
+              status: qualityReport.overallStatus
+            }));
+            result = qualityReport;
+          } catch (error) {
+            console.error("[Orchestrator] Quality report failed:", error.message);
+            throw error;
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -522,6 +567,7 @@ export function startWorkers() {
   console.log("[Orchestrator] - HoliBot Sync Agent: active");
   console.log("[Orchestrator] - Communication Flow Agent: active");
   console.log("[Orchestrator] - GDPR Agent: active");
+  console.log("[Orchestrator] - Development Layer Agent: active");
 }
 
 export async function stopWorkers() {

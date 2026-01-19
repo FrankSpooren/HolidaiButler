@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 2.8.0
-> **Laatst bijgewerkt**: 19 januari 2026 (20:00 UTC)
+> **Versie**: 2.9.0
+> **Laatst bijgewerkt**: 19 januari 2026 (22:30 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -148,13 +148,21 @@ HolidaiButler/
 │   │   │       │   ├── mailerliteService.js   # MailerLite integration
 │   │   │       │   ├── notificationRouter.js  # Multi-channel routing
 │   │   │       │   └── syncScheduler.js       # 3 scheduled jobs
-│   │   │       └── gdpr/               # ✅ GDPR Agent v1.0 (NIEUW)
+│   │   │       ├── gdpr/               # ✅ GDPR Agent v1.0
+│   │   │       │   ├── index.js               # Main entry point
+│   │   │       │   ├── dataInventory.js       # Art. 30 data mapping
+│   │   │       │   ├── dataExporter.js        # Art. 15/20 data export
+│   │   │       │   ├── dataEraser.js          # Art. 17 right to erasure
+│   │   │       │   ├── consentManager.js      # Art. 7 consent tracking
+│   │   │       │   └── syncScheduler.js       # 4 scheduled jobs
+│   │   │       └── devLayer/           # ✅ Fase 4: Development Layer v1.0 (NIEUW)
 │   │   │           ├── index.js               # Main entry point
-│   │   │           ├── dataInventory.js       # Art. 30 data mapping
-│   │   │           ├── dataExporter.js        # Art. 15/20 data export
-│   │   │           ├── dataEraser.js          # Art. 17 right to erasure
-│   │   │           ├── consentManager.js      # Art. 7 consent tracking
-│   │   │           └── syncScheduler.js       # 4 scheduled jobs
+│   │   │           ├── qualityChecker.js      # Orchestration & CI/CD
+│   │   │           ├── syncScheduler.js       # 3 scheduled jobs
+│   │   │           └── reviewers/
+│   │   │               ├── uxReviewer.js      # UX/UI quality analysis
+│   │   │               ├── codeReviewer.js    # Code standards & patterns
+│   │   │               └── securityReviewer.js # OWASP Top 10 & security
 │   │   └── middleware/
 │   └── package.json
 │
@@ -251,7 +259,7 @@ HolidaiButler/
 | Vitest, Jest, Playwright | Testing |
 | ESLint + Prettier | Linting |
 | GitHub Actions | CI/CD |
-| BullMQ | Job scheduling (28 jobs) |
+| BullMQ | Job scheduling (31 jobs) |
 | **Bugsink** | Error tracking (EU) |
 
 ---
@@ -566,20 +574,33 @@ REDIS_PORT=6379
 - `user_consent`: Consent tracking per user
 - `gdpr_deletion_requests`: Deletion request tracking with approval workflow
 
-### Fase 4 - Development Layer 📅 PLANNED
+### Fase 4 - Development Layer ✅ COMPLEET (100%)
 
-| Agent | Functie |
-|-------|---------|
-| UX/UI Reviewer | Interface kwaliteit |
-| Code Reviewer | Code quality |
-| Security Reviewer | Security audits |
-| Quality Checker | Tests & linting |
+| Agent | Functie | Status |
+|-------|---------|--------|
+| **UX/UI Reviewer v1.0** | Interface quality (brand colors, a11y, responsive, UX principles) | ✅ Live |
+| **Code Reviewer v1.0** | Code quality (conventions, error handling, performance, docs) | ✅ Live |
+| **Security Reviewer v1.0** | Security audits (OWASP Top 10, secrets detection, GDPR) | ✅ Live |
+| **Quality Checker v1.0** | Orchestration, lint, tests, dependency audit, CI/CD | ✅ Live |
+
+#### Development Layer Agent v1.0 Components (NIEUW - 19 Jan 2026)
+- **UX/UI Reviewer**: Brand color compliance, typography, WCAG accessibility, responsive design, UX principles (Miller's Law, Hick's Law, Fitts' Law)
+- **Code Reviewer**: HolidaiButler conventions, error handling patterns, performance anti-patterns, security patterns, code complexity, documentation
+- **Security Reviewer**: OWASP Top 10 2021 checks, API security, authentication, GDPR data protection, secrets detection
+- **Quality Checker**: Orchestrates all reviewers, ESLint integration, test runner, dependency audit
+
+**Development Layer Scheduled Jobs (3):**
+| Job | Schedule | Beschrijving |
+|-----|----------|--------------|
+| `dev-security-scan` | 02:00 dagelijks | Full security scan of all projects |
+| `dev-dependency-audit` | Zondag 03:00 | Dependency vulnerability audit |
+| `dev-quality-report` | Maandag 06:00 | Weekly quality report generation |
 
 **Volledige specificaties**: Zie `docs/agents/` en `CLAUDE_AGENTS_MASTERPLAN_v3.md`
 
 ---
 
-## 📊 Scheduled Jobs Overzicht (28 totaal)
+## 📊 Scheduled Jobs Overzicht (31 totaal)
 
 ### Core Jobs (4)
 | Job | Schedule | Component |
@@ -628,6 +649,13 @@ REDIS_PORT=6379
 | `gdpr-export-cleanup` | 03:00 dagelijks | GDPR Agent |
 | `gdpr-retention-check` | 1e van maand 02:00 | GDPR Agent |
 | `gdpr-consent-audit` | Zondag 04:00 | GDPR Agent |
+
+### Development Layer Jobs (3)
+| Job | Schedule | Component |
+|-----|----------|-----------|
+| `dev-security-scan` | 02:00 dagelijks | Development Layer Agent |
+| `dev-dependency-audit` | Zondag 03:00 | Development Layer Agent |
+| `dev-quality-report` | Maandag 06:00 | Development Layer Agent |
 
 ---
 
@@ -807,7 +835,8 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **2.8.0** | **2026-01-19** | **GDPR Agent v1.0 LIVE: Art. 7/15/17/20/30 compliance, data export, erasure (72h), consent management. 4 nieuwe jobs (28 totaal). Fase 3 nu 100% compleet!** |
+| **2.9.0** | **2026-01-19** | **Fase 4 Development Layer COMPLEET: UX/UI Reviewer, Code Reviewer, Security Reviewer, Quality Checker. OWASP Top 10 checks, brand compliance, code conventions. 3 nieuwe jobs (31 totaal). Fase 4 nu 100% compleet!** |
+| 2.8.0 | 2026-01-19 | GDPR Agent v1.0 LIVE: Art. 7/15/17/20/30 compliance, data export, erasure (72h), consent management. 4 nieuwe jobs (28 totaal). Fase 3 nu 100% compleet! |
 | 2.7.1 | 2026-01-19 | Database tabellen toegevoegd (user_journeys, journey_scheduled_emails), MASTERPLAN referentie gecorrigeerd naar v3.4.0 |
 | 2.7.0 | 2026-01-19 | Communication Flow Agent v1.0 LIVE: User journeys, notification routing, MailerLite sync. 3 nieuwe jobs (24 totaal). Fase 3 nu 87.5% compleet. |
 | 2.6.0 | 2026-01-19 | HoliBot Sync Agent v1.0 LIVE: ChromaDB Cloud sync, MistralAI embeddings, 4 jobs. Enterprise kwaliteitsstandaarden toegevoegd. Fase 3 nu 75% compleet. |
