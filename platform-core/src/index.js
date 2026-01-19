@@ -1,7 +1,7 @@
 /**
  * HolidaiButler Platform Core
  * Central Integration Hub - Main Entry Point
- * Last deployment trigger: 2026-01-19 13:25 - test CI workflow fix
+ * Last deployment trigger: 2026-01-19 13:35 - verify workflow npm ci fix
  */
 
 // IMPORTANT: Load environment variables FIRST, before any other imports
