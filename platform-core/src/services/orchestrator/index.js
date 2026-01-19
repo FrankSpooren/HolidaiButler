@@ -6,6 +6,7 @@ import dataSyncAgent from '../agents/dataSync/index.js';
 import holibotSyncAgent from '../agents/holibotSync/index.js';
 import communicationFlowAgent from '../agents/communicationFlow/index.js';
 import gdprAgent from '../agents/gdpr/index.js';
+import devLayerAgent from '../agents/devLayer/index.js';
 
 let isInitialized = false;
 
@@ -66,6 +67,18 @@ export async function initializeOrchestrator() {
     } catch (error) {
       console.error('[Orchestrator] GDPR Agent initialization failed:', error.message);
       // Don't throw - allow orchestrator to continue without GDPR Agent
+      // Jobs will be skipped if agent is not initialized
+    }
+
+    // Initialize Development Layer Agent
+    // This handles code quality automation: UX review, code review, security review
+    // 3 scheduled jobs (security scan, dependency audit, quality report)
+    try {
+      await devLayerAgent.initialize(mysqlSequelize);
+      console.log('[Orchestrator] Development Layer Agent initialized');
+    } catch (error) {
+      console.error('[Orchestrator] Development Layer Agent initialization failed:', error.message);
+      // Don't throw - allow orchestrator to continue without Dev Layer Agent
       // Jobs will be skipped if agent is not initialized
     }
 
