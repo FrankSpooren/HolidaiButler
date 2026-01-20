@@ -15,7 +15,7 @@
 }
 
 .agenda-search-section.header-visible {
-  transform: translateY(0);
+  /* No transform - prevents sticky positioning issues */
   opacity: 1;
 }
 
@@ -71,7 +71,7 @@
 }
 
 .agenda-category-section.header-visible {
-  transform: translateY(0);
+  /* No transform - prevents sticky positioning issues */
   opacity: 1;
 }
 
