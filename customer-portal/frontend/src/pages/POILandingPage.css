@@ -13,7 +13,7 @@
 }
 
 .search-section.header-visible {
-  transform: translateY(0);
+  /* No transform - prevents sticky positioning issues */
   opacity: 1;
 }
 
@@ -108,7 +108,7 @@
 }
 
 .category-section.header-visible {
-  transform: translateY(0);
+  /* No transform - prevents sticky positioning issues */
   opacity: 1;
 }
 
