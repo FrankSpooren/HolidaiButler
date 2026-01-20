@@ -283,17 +283,12 @@
   overflow: hidden;
 }
 
-/* Date Section - Groups events by date (no visible header, header is sticky above) */
-.agenda-date-section {
-  /* No margin needed, sections flow naturally */
-}
-
-/* Grid - Events layout per date section */
+/* Legacy grid for fallback (not used with virtualization) */
 .agenda-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  padding: 0 16px 16px 16px;
+  padding: 16px;
 }
 
 @media (min-width: 768px) {
