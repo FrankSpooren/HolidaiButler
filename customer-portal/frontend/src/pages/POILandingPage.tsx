@@ -354,6 +354,11 @@ export function POILandingPage() {
     let lastScrollY = window.scrollY;
     let ticking = false;
 
+    // Check initial scroll position on mount (handles browser scroll restore after refresh)
+    if (window.scrollY > 100) {
+      setShowHeader(false);
+    }
+
     const handleScroll = () => {
       if (ticking) return;
 
