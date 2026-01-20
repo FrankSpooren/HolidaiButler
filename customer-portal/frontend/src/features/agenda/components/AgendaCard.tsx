@@ -126,6 +126,16 @@ const uiLabels: Record<string, Record<string, string>> = {
   pl: { featured: 'Polecane', share: 'Udostępnij', agenda: 'Kalendarz', map: 'Mapa', details: 'Szczegóły', compare: 'Porównaj' },
 };
 
+// Date display formats per language (short format for card badge)
+const dateDisplayFormats: Record<string, string> = {
+  nl: 'EEE d MMM', // "di 20 jan"
+  en: 'EEE MMM d', // "Tue Jan 20"
+  de: 'EEE d. MMM', // "Di 20. Jan"
+  es: 'EEE d MMM', // "mar 20 ene"
+  sv: 'EEE d MMM', // "tis 20 jan"
+  pl: 'EEE d MMM', // "wt 20 sty"
+};
+
 export const AgendaCard: React.FC<AgendaCardProps> = ({
   event,
   onClick,
@@ -156,6 +166,8 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
 
   // Format date
   const startDate = new Date(event.startDate);
+  const dateFormat = dateDisplayFormats[language] || dateDisplayFormats.en;
+  const formattedDate = format(startDate, dateFormat, { locale });
 
   // Get primary image
   const primaryImage = event.images?.find((img) => img.isPrimary)?.url || event.images?.[0]?.url;
@@ -296,6 +308,10 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
           </div>
         )}
 
+        {/* Date Badge - shows event date prominently */}
+        <div className="agenda-date-badge">
+          {formattedDate}
+        </div>
       </div>
 
       {/* Save Button */}
