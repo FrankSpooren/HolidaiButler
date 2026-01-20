@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 HolidaiButler App Demo - Interactive Prototype</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: #ffffff;
+            padding: 2rem;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .demo-container {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            padding: 3rem;
+            border-radius: 20px;
+            border: 3px solid #10b981;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .phone-frame {
+            background: #000;
+            border-radius: 30px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .phone-screen {
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            border-radius: 20px;
+            min-height: 600px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .status-bar {
+            background: #1e293b;
+            color: white;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #5E8B7E, #D4AF37);
+            color: white;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .app-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+            background: white;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .app-content {
+            padding: 2rem 1.5rem;
+            color: #1e293b;
+            flex: 1;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 2px solid #5E8B7E;
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .chat-preview {
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
+            margin: 1rem 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .chat-message {
+            background: #5E8B7E;
+            color: white;
+            padding: 0.8rem;
+            border-radius: 15px;
+            margin-bottom: 0.5rem;
+        }
+
+        .ai-response {
+            background: #f1f5f9;
+            color: #1e293b;
+            padding: 0.8rem;
+            border-radius: 15px;
+            border-left: 4px solid #D4AF37;
+        }
+
+        .bottom-nav {
+            background: #1e293b;
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-around;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .nav-item {
+            text-align: center;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .nav-item:hover {
+            color: #D4AF37;
+        }
+
+        .nav-icon {
+            font-size: 1.2rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .demo-controls {
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .demo-btn {
+            background: linear-gradient(135deg, #10b981, #22c55e);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .demo-container {
+                padding: 1rem;
+                margin: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="phone-frame">
+            <div class="phone-screen">
+                <div class="status-bar">
+                    <span>9:41</span>
+                    <span>🔋 100%</span>
+                </div>
+
+                <!-- Splash Screen -->
+                <div class="screen active" id="splash">
+                    <div class="app-header" style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                        <div class="app-logo">
+                            <svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" style="width: 60px; height: auto;">
+                                <g transform="translate(200, 80)">
+                                    <!-- Wave-inspired base -->
+                                    <path d="M -60,30 Q -30,10 0,30 Q 30,50 60,30" stroke="#5E8B7E" stroke-width="3" fill="none"/>
+                                    <path d="M -60,40 Q -30,20 0,40 Q 30,60 60,40" stroke="#5E8B7E" stroke-width="2" fill="none" opacity="0.6"/>
+                                    
+                                    <!-- Enhanced compass ring -->
+                                    <circle cx="0" cy="0" r="35" fill="none" stroke="#5E8B7E" stroke-width="2" stroke-dasharray="4,2"/>
+                                    <circle cx="0" cy="0" r="28" fill="none" stroke="#5E8B7E" stroke-width="1" opacity="0.4"/>
+                                    
+                                    <!-- Centered navigation star -->
+                                    <g fill="#D4AF37">
+                                        <polygon points="0,-50 -6,-15 -20,-15 -10,-5 -15,10 0,0 15,10 10,-5 20,-15 6,-15" />
+                                    </g>
+                                    
+                                    <!-- Cardinal direction markers -->
+                                    <g fill="#D4AF37" opacity="0.7">
+                                        <circle cx="0" cy="-35" r="2"/>
+                                        <circle cx="35" cy="0" r="2"/>
+                                        <circle cx="0" cy="35" r="2"/>
+                                        <circle cx="-35" cy="0" r="2"/>
+                                    </g>
+                                    
+                                    <!-- Center navigation point -->
+                                    <circle cx="0" cy="0" r="3" fill="#5E8B7E"/>
+                                    <circle cx="0" cy="0" r="1.5" fill="#D4AF37"/>
+                                </g>
+                            </svg>
+                        </div>
+                        <h1 style="font-size: 2rem; margin-bottom: 0.5rem; font-weight: 700;">HolidaiButler</h1>
+                        <p style="font-style: italic; opacity: 0.9;">Je persoonlijke AI-reiscompas</p>
+                        <div style="margin-top: 2rem;">
+                            <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 10px;">
+                                <p style="font-size: 0.9rem;">🌊 Discover authentic Mediterranean experiences</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Home Screen -->
+                <div class="screen" id="home">
+                    <div class="app-header">
+                        <div class="app-logo">
+                            <svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" style="width: 50px; height: auto;">
+                                <g transform="translate(200, 80)">
+                                    <path d="M -60,30 Q -30,10 0,30 Q 30,50 60,30" stroke="#5E8B7E" stroke-width="3" fill="none"/>
+                                    <circle cx="0" cy="0" r="35" fill="none" stroke="#5E8B7E" stroke-width="2" stroke-dasharray="4,2"/>
+                                    <g fill="#D4AF37">
+                                        <polygon points="0,-50 -6,-15 -20,-15 -10,-5 -15,10 0,0 15,10 10,-5 20,-15 6,-15" />
+                                    </g>
+                                    <circle cx="0" cy="0" r="3" fill="#5E8B7E"/>
+                                </g>
+                            </svg>
+                        </div>
+                        <h2 style="font-size: 1.3rem; margin-bottom: 0.3rem;">HolidaiButler</h2>
+                        <p style="font-size: 0.9rem; opacity: 0.9;">Your Mediterranean AI Companion</p>
+                    </div>
+
+                    <div class="app-content">
+                        <div style="background: linear-gradient(135deg, #5E8B7E, #D4AF37); color: white; padding: 1.5rem; border-radius: 15px; margin-bottom: 2rem; text-align: center;">
+                            <h3 style="margin-bottom: 0.5rem;">🌊 Welcome to Costa Blanca!</h3>
+                            <p style="font-size: 0.9rem;">Perfect weather today: 24°C and sunny</p>
+                        </div>
+
+                        <div class="feature-grid">
+                            <div class="feature-card" onclick="showScreen('chat')">
+                                <div class="feature-icon">💬</div>
+                                <h4 style="color: #5E8B7E; margin-bottom: 0.5rem;">AI Chat</h4>
+                                <p style="font-size: 0.8rem; color: #666;">Ask about local experiences</p>
+                            </div>
+                            <div class="feature-card" onclick="showScreen('map')">
+                                <div class="feature-icon">🗺️</div>
+                                <h4 style="color: #5E8B7E; margin-bottom: 0.5rem;">Explore</h4>
+                                <p style="font-size: 0.8rem; color: #666;">Discover hidden gems</p>
+                            </div>
+                            <div class="feature-card" onclick="showScreen('recommendations')">
+                                <div class="feature-icon">⭐</div>
+                                <h4 style="color: #5E8B7E; margin-bottom: 0.5rem;">Recommendations</h4>
+                                <p style="font-size: 0.8rem; color: #666;">Personalized suggestions</p>
+                            </div>
+                            <div class="feature-card" onclick="showScreen('bookings')">
+                                <div class="feature-icon">📅</div>
+                                <h4 style="color: #5E8B7E; margin-bottom: 0.5rem;">Book</h4>
+                                <p style="font-size: 0.8rem; color: #666;">Reserve experiences</p>
+                            </div>
+                        </div>
+
+                        <div class="chat-preview">
+                            <h4 style="color: #5E8B7E; margin-bottom: 1rem;">Recent Suggestions</h4>
+                            <div class="ai-response">
+                                <p style="font-size: 0.9rem;">🏖️ <strong>Playa de San Juan</strong> is perfect for today's weather. Try <strong>La Taberna del Gourmet</strong> for authentic paella nearby!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bottom-nav">
+                        <div class="nav-item" onclick="showScreen('home')">
+                            <div class="nav-icon">🏠</div>
+                            <div>Home</div>
+                        </div>
+                        <div class="nav-item" onclick="showScreen('chat')">
+                            <div class="nav-icon">💬</div>
+                            <div>Chat</div>
+                        </div>
+                        <div class="nav-item" onclick="showScreen('map')">
+                            <div class="nav-icon">🗺️</div>
+                            <div>Explore</div>
+                        </div>
+                        <div class="nav-item" onclick="showScreen('profile')">
+                            <div class="nav-icon">👤</div>
+                            <div>Profile</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Screen -->
+                <div class="screen" id="chat">
+                    <div class="app-header">
+                        <h2 style="font-size: 1.3rem;">💬 AI Travel Assistant</h2>
+                        <p style="font-size: 0.9rem; opacity: 0.9;">Your Mediterranean expert</p>
+                    </div>
+
+                    <div class="app-content" style="padding-bottom: 4rem;">
+                        <div class="chat-message">
+                            What would you like to do in Alicante today?
+                        </div>
+                        <div class="ai-response">
+                            <p style="margin-bottom: 1rem;">🌊 Great question! Based on today's perfect weather (24°C), here are my top recommendations:</p>
+                            <p style="font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>🏰 Santa Barbara Castle</strong> - Stunning views, open until 8pm</p>
+                            <p style="font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>🏖️ Playa del Postiguet</strong> - City beach, perfect for swimming</p>
+                            <p style="font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>🍽️ Barrio Santa Cruz</strong> - Authentic tapas in old town</p>
+                            <p style="margin-top: 1rem; font-size: 0.8rem; color: #666;">💡 Tip: Visit the castle first for sunset views around 7pm!</p>
+                        </div>
+                        <div class="chat-message">
+                            Can you book a table at a good restaurant?
+                        </div>
+                        <div class="ai-response">
+                            <p style="margin-bottom: 1rem;">🍽️ Absolutely! I recommend <strong>La Taberna del Gourmet</strong> - they have availability for tonight at 8:30pm.</p>
+                            <div style="background: #5E8B7E; color: white; padding: 1rem; border-radius: 10px; margin: 1rem 0;">
+                                <p style="font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>La Taberna del Gourmet</strong></p>
+                                <p style="font-size: 0.8rem;">⭐ 4.6/5 rating • €€€ • Mediterranean cuisine</p>
+                                <button style="background: #D4AF37; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; margin-top: 0.5rem; font-weight: 600;">Book Table</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bottom-nav">
+                        <div class="nav-item" onclick="showScreen('home')">
+                            <div class="nav-icon">🏠</div>
+                            <div>Home</div>
+                        </div>
+                        <div class="nav-item" onclick="showScreen('chat')">
+                            <div class="nav-icon">💬</div>
+                            <div>Chat</div>
+                        </div>
+                        <div class="nav-item" onclick="showScreen('map')">
+                            <div class="nav-icon">🗺️</div>
+                            <div>Explore</div>
+                        </div>
+                        <div class="nav-item" onclick="showScreen('profile')">
+                            <div class="nav-icon">👤</div>
+                            <div>Profile</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map Screen -->
+                <div class="screen" id="map">
+                    <div class="app-header">
+                        <h2 style="font-size: 1.3rem;">🗺️ Explore Costa Blanca</h2>
+                        <p style="font-size: 0.9rem; opacity: 0.9;">AI-curated local discoveries</p>
+                    </div>
+
+                    <div class="app-content" style="padding-bottom: 4rem;">
+                        <div style="background: linear-gradient(135deg, #e0f2fe, #b3e5fc); height: 200px; border-radius: 15px; margin-bottom: 2rem; position: relative; border: 2px solid #5E8B7E;">
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #1e293b;">
+                                <h3 style="margin-bottom: 0.5rem;">📍 Interactive Map</h3>
+                                <p style="font-size: 0.9rem;">AI-powered POI recommendations</p>
+                            </div>
+                            
+                            <!-- Sample POI markers -->
+                            <div style="position: absolute; top: 30%; left: 40%; background: #5E8B7E; color: white; padding: 0.3rem; border-radius: 50%; font-size: 0.8rem;">🏰</div>
+                            <div style="position: absolute; top: 60%; left: 30%; background: #D4AF37; color: white; padding: 0.3rem; border-radius: 50%; font-size: 0.8rem;">🏖️</div>
+                            <div style="position: absolute; top: 45%; left: 70%; background: #5E8B7E; color: white; padding: 0.3rem; border-radius: 50%; font-size: 0.8rem;">🍽️</div>
+                        </div>
+
+                        <h4 style="color: #5E8B7E; margin-bottom: 1rem;">🌟 Nearby Highlights</h4>
+                        <div style="background: white; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                            <h5 style="color: #5E8B7E; margin-bottom: 0.5rem;">🏰 Santa Barbara Castle</h5>
+                            <p style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">Historic fortress • 0.8km away • ⭐ 4.4/5</p>
+                            <p style="font-size: 0.8rem;">📍 2 min walk from city center</p>
+                        </div>
+                        
+                        <div style="background: white; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                            <h5 style="color: #5E8B7E; margin-bottom: 0.5rem;">🏖️ Playa del Postiguet</h5>
+                            <p style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">City beach • 0.3km away • ⭐ 4.2/5</p>
+                            <p style="font-size: 0.8rem;">🌊 Perfect swimming conditions today</p>
+                        </div>
+                    </div>
+
+                    <div class="bottom-nav">
+                        <div class="nav-item" onclick="showScreen('home')">
+                            <div class="nav-icon">🏠</div>
+                            <div>Home</div>
+                        </div>
+                        <div class="nav-item" onclick="showScreen('chat')">
+                            <div class="nav-icon">💬</div>
+                            <div>Chat</div>
+                        </div>
+                        <div class="nav-item" onclick="showScreen('map')">
+                            <div class="nav-icon">🗺️</div>
+                            <div>Explore</div>
+                        </div>
+                        <div class="nav-item" onclick="showScreen('profile')">
+                            <div class="nav-icon">👤</div>
+                            <div>Profile</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-controls">
+            <h3 style="color: #10b981; margin-bottom: 1rem;">📱 Interactive Demo Controls</h3>
+            <button class="demo-btn" onclick="showScreen('splash')">🚀 Splash Screen</button>
+            <button class="demo-btn" onclick="showScreen('home')">🏠 Home</button>
+            <button class="demo-btn" onclick="showScreen('chat')">💬 AI Chat</button>
+            <button class="demo-btn" onclick="showScreen('map')">🗺️ Map</button>
+            <div style="margin-top: 1rem; font-size: 0.9rem; color: #ccc;">
+                Mediterranean logo perfectly integrated • Responsive design • Quality tested
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showScreen(screenId) {
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // Show selected screen
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // Auto-advance from splash screen
+        setTimeout(() => {
+            showScreen('home');
+        }, 3000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,335 @@
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: holidaibutler-production
+  labels:
+    app: holidaibutler
+    environment: production
+
+---
+# ConfigMap for app configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: holidaibutler-config
+  namespace: holidaibutler-production
+data:
+  NODE_ENV: "production"
+  PORT: "3001"
+  CORS_ORIGIN: "https://holidaibutler.com,https://app.holidaibutler.com"
+  REDIS_URL: "redis://holidaibutler-redis:6379"
+  LOG_LEVEL: "info"
+
+---
+# Secret for sensitive data
+apiVersion: v1
+kind: Secret
+metadata:
+  name: holidaibutler-secrets
+  namespace: holidaibutler-production
+type: Opaque
+stringData:
+  MONGODB_URI: "mongodb+srv://user:password@cluster.mongodb.net/holidaibutler"
+  CLAUDE_API_KEY: "sk-ant-api03-..."
+  JWT_SECRET: "your-jwt-secret-256-bit"
+  JWT_REFRESH_SECRET: "your-jwt-refresh-secret"
+  WEATHER_API_KEY: "your-weather-api-key"
+  GOOGLE_MAPS_API_KEY: "your-google-maps-api-key"
+  SENDGRID_API_KEY: "SG.your-sendgrid-api-key"
+  STRIPE_SECRET_KEY: "sk_live_your-stripe-secret-key"
+  DMO_API_KEY: "your-dmo-api-key"
+  REDIS_PASSWORD: "your-redis-password"
+
+---
+# Redis Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: holidaibutler-redis
+  namespace: holidaibutler-production
+  labels:
+    app: holidaibutler-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: holidaibutler-redis
+  template:
+    metadata:
+      labels:
+        app: holidaibutler-redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        command: ["redis-server"]
+        args: ["--appendonly", "yes", "--requirepass", "$(REDIS_PASSWORD)"]
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: holidaibutler-secrets
+              key: REDIS_PASSWORD
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-pvc
+
+---
+# Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: holidaibutler-redis
+  namespace: holidaibutler-production
+spec:
+  selector:
+    app: holidaibutler-redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+
+---
+# Redis PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: holidaibutler-production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+
+---
+# Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: holidaibutler-backend
+  namespace: holidaibutler-production
+  labels:
+    app: holidaibutler-backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: holidaibutler-backend
+  template:
+    metadata:
+      labels:
+        app: holidaibutler-backend
+    spec:
+      containers:
+      - name: backend
+        image: holidaibutler/backend:latest
+        ports:
+        - containerPort: 3001
+        envFrom:
+        - configMapRef:
+            name: holidaibutler-config
+        - secretRef:
+            name: holidaibutler-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: logs
+        emptyDir: {}
+
+---
+# Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: holidaibutler-backend
+  namespace: holidaibutler-production
+spec:
+  selector:
+    app: holidaibutler-backend
+  ports:
+  - port: 80
+    targetPort: 3001
+  type: ClusterIP
+
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: holidaibutler-backend-hpa
+  namespace: holidaibutler-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: holidaibutler-backend
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: holidaibutler-ingress
+  namespace: holidaibutler-production
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/rate-limit: "1000"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  tls:
+  - hosts:
+    - api.holidaibutler.com
+    secretName: holidaibutler-api-tls
+  rules:
+  - host: api.holidaibutler.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: holidaibutler-backend
+            port:
+              number: 80
+
+---
+# Network Policy for security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: holidaibutler-network-policy
+  namespace: holidaibutler-production
+spec:
+  podSelector:
+    matchLabels:
+      app: holidaibutler-backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 3001
+  egress:
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443  # HTTPS
+    - protocol: TCP
+      port: 80   # HTTP
+    - protocol: TCP
+      port: 53   # DNS
+    - protocol: UDP
+      port: 53   # DNS
+
+---
+# Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: holidaibutler-backend-pdb
+  namespace: holidaibutler-production
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: holidaibutler-backend
+
+---
+# Service Monitor for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: holidaibutler-backend-metrics
+  namespace: holidaibutler-production
+  labels:
+    app: holidaibutler-backend
+spec:
+  selector:
+    matchLabels:
+      app: holidaibutler-backend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
