@@ -21,7 +21,7 @@ import './AgendaPage.css';
  * AgendaPage - Events & Activities Calendar
  * Route: /agenda
  * Enterprise-level date-grouped event display
- * Events grouped by date with dedicated headers per date section
+ * One sticky date header that updates based on visible section
  */
 
 
@@ -160,9 +160,11 @@ export function AgendaPage() {
   const [comparisonModalOpen, setComparisonModalOpen] = useState<boolean>(false);
   const [filters, setFilters] = useState<AgendaFilters>(defaultFilters);
   const [showHeader, setShowHeader] = useState<boolean>(true);
+  const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
-  // Grid container ref
+  // Refs for scroll detection
   const gridContainerRef = useRef<HTMLDivElement>(null);
+  const dateSectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // For infinite loading - how many items are currently loaded
   const [loadedCount, setLoadedCount] = useState<number>(24);
@@ -285,10 +287,58 @@ export function AgendaPage() {
     return groups;
   }, [displayedEvents, language]);
 
+  // Compute formatted visible date from key
+  const visibleDateFormatted = useMemo(() => {
+    if (!visibleDateKey) return '';
+    const locale = dateLocales[language] || dateLocales.en;
+    const formatStr = dateHeaderFormats[language] || dateHeaderFormats.en;
+    const [year, month, day] = visibleDateKey.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return format(date, formatStr, { locale });
+  }, [visibleDateKey, language]);
+
   // Get user location
   useEffect(() => {
     getUserLocation().then(setUserLocation).catch(() => {});
   }, []);
+
+  // Set initial visible date key when events load
+  useEffect(() => {
+    if (eventsByDate.length > 0 && !visibleDateKey) {
+      setVisibleDateKey(eventsByDate[0].date);
+    }
+  }, [eventsByDate, visibleDateKey]);
+
+  // IntersectionObserver to detect which date section is visible
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the first section that is intersecting from the top
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const dateKey = entry.target.getAttribute('data-date');
+            if (dateKey && dateKey !== visibleDateKey) {
+              setVisibleDateKey(dateKey);
+            }
+            break;
+          }
+        }
+      },
+      {
+        root: null,
+        // Observe when section enters the top portion of the viewport
+        rootMargin: '-200px 0px -70% 0px',
+        threshold: 0,
+      }
+    );
+
+    // Observe all date sections
+    dateSectionRefs.current.forEach((element) => {
+      observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, [eventsByDate, visibleDateKey]);
 
   // Scroll direction detection - hide header on scroll down, show on scroll up
   useEffect(() => {
@@ -431,6 +481,12 @@ export function AgendaPage() {
             </button>
           </div>
         </div>
+        {/* Sticky date header - updates based on visible section */}
+        {!isLoading && !error && filteredEvents.length > 0 && (
+          <div className="agenda-date-subheader">
+            <span className="agenda-date-subheader-text">{visibleDateFormatted}</span>
+          </div>
+        )}
       </div>
 
       {/* Loading State */}
@@ -448,12 +504,22 @@ export function AgendaPage() {
         </div>
       )}
 
-      {/* Grid View - Grouped by Date */}
+      {/* Grid View - Grouped by Date (no per-section headers, sticky header updates on scroll) */}
       {!isLoading && !error && filteredEvents.length > 0 && (
         <div ref={gridContainerRef} className="agenda-grid-container">
           {eventsByDate.map((group) => (
-            <div key={group.date} className="agenda-date-section">
-              <div className="agenda-date-header">{group.dateFormatted}</div>
+            <div
+              key={group.date}
+              className="agenda-date-section"
+              data-date={group.date}
+              ref={(el) => {
+                if (el) {
+                  dateSectionRefs.current.set(group.date, el);
+                } else {
+                  dateSectionRefs.current.delete(group.date);
+                }
+              }}
+            >
               <div className="agenda-grid">
                 {group.events.map((event) => {
                   const ed = new Date(event.startDate);

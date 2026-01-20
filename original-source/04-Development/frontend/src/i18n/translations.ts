@@ -1,0 +1,2342 @@
+/**
+ * Translations for HolidaiButler Platform
+ * Supported languages: nl, en, de, es, sv, pl
+ */
+
+export type Language = 'nl' | 'en' | 'de' | 'es' | 'sv' | 'pl';
+
+export interface Translations {
+  // Navigation
+  nav: {
+    home: string;
+    explore: string;
+    holibot: string;
+    agenda: string;
+    favorites: string;
+    account: string;
+    about: string;
+    faq: string;
+  };
+  // Homepage
+  homepage: {
+    hero: {
+      title: string;
+      payoff: string;
+      subtitle: string;
+    };
+    why: {
+      title: string;
+    };
+    usps: {
+      partner: { title: string; description: string };
+      ai: { title: string; description: string };
+      local: { title: string; description: string };
+      realtime: { title: string; description: string };
+      trusted: { title: string; description: string };
+    };
+    cta: {
+      explore: string;
+      agenda: string;
+    };
+    features: {
+      aiAssistant: { title: string; description: string };
+      localPois: { title: string; description: string };
+      tailored: { title: string; description: string };
+      account: { title: string; description: string };
+    };
+    rating: {
+      score: string;
+      text: string;
+      button: string;
+    };
+  };
+  // POI Landing
+  poi: {
+    searchPlaceholder: string;
+    filters: string;
+    loadMore: string;
+    noResults: string;
+    noResultsDesc: string;
+    noReviews: string;
+    moreInfo: string;
+    // Action buttons
+    share: string;
+    agenda: string;
+    map: string;
+    details: string;
+    call: string;
+    directions: string;
+    save: string;
+    saved: string;
+    print: string;
+    visitWebsite: string;
+    // POI Detail sections
+    about: string;
+    openingHours: string;
+    contact: string;
+    highlights: string;
+    perfectFor: string;
+    readMore: string;
+    readLess: string;
+    // Share messages
+    shareCopied: string;
+    shareSuccess: string;
+    addedToFavorites: string;
+    removedFromFavorites: string;
+    // Sprint 8.0: POI Detail Content i18n
+    categoryHighlights: {
+      active: [string, string, string];
+      beaches: [string, string, string];
+      culture: [string, string, string];
+      recreation: [string, string, string];
+      food: [string, string, string];
+      health: [string, string, string];
+      shopping: [string, string, string];
+      practical: [string, string, string];
+      default: [string, string, string];
+    };
+    categoryPerfectFor: {
+      active: [string, string, string];
+      beaches: [string, string, string];
+      culture: [string, string, string];
+      recreation: [string, string, string];
+      food: [string, string, string];
+      health: [string, string, string];
+      shopping: [string, string, string];
+      practical: [string, string, string];
+      default: [string, string, string];
+    };
+    budgetLabels: {
+      budget: string;
+      midRange: string;
+      upscale: string;
+      luxury: string;
+      priceLevel: string;
+    };
+    openingStatus: {
+      open: string;
+      closed: string;
+      closesAt: string;
+      closedToday: string;
+    };
+    amenities: {
+      wheelchairAccessible: string;
+      freeWifi: string;
+      creditCards: string;
+      noDetails: string;
+    };
+    loadingStates: {
+      loadingDetails: string;
+      notFound: string;
+      notFoundDescription: string;
+    };
+    comparison: {
+      compare: string;
+      comparing: string;
+      addToCompare: string;
+      removeFromCompare: string;
+      compareTitle: string;
+      selectedCount: string;
+      maxReached: string;
+      clearAll: string;
+      noItemsSelected: string;
+      selectToCompare: string;
+    };
+  };
+  // Categories
+  categories: {
+    active: string;
+    beaches: string;
+    culture: string;
+    recreation: string;
+    food: string;
+    health: string;
+    shopping: string;
+    practical: string;
+  };
+  // Reviews (Sprint 7.6)
+  reviews: {
+    title: string;
+    travelParty: {
+      all: string;
+      couples: string;
+      families: string;
+      solo: string;
+      friends: string;
+      business: string;
+    };
+    sort: {
+      recent: string;
+      helpful: string;
+      highRating: string;
+      lowRating: string;
+    };
+    sentiment: {
+      positive: string;
+      neutral: string;
+      negative: string;
+    };
+    filterByTraveler: string;
+    filterBySentiment: string;
+    sortBy: string;
+    helpful: string;
+    noReviews: string;
+    writeReview: string;
+    readMore: string;
+    showLess: string;
+    visited: string;
+    loadingReviews: string;
+    loadMoreReviews: string;
+    reviewCount: string;
+    averageRating: string;
+  };
+  // Common
+  common: {
+    save: string;
+    close: string;
+    apply: string;
+    reset: string;
+    loading: string;
+  };
+  // Auth Pages
+  auth: {
+    login: {
+      title: string;
+      subtitle: string;
+      emailLabel: string;
+      emailPlaceholder: string;
+      passwordLabel: string;
+      passwordPlaceholder: string;
+      forgotPassword: string;
+      signInButton: string;
+      signingIn: string;
+      noAccount: string;
+      signUp: string;
+      backToHome: string;
+      errorFillFields: string;
+      errorInvalidCredentials: string;
+      errorGeneric: string;
+    };
+    signup: {
+      title: string;
+      subtitle: string;
+      nameLabel: string;
+      namePlaceholder: string;
+      emailLabel: string;
+      emailPlaceholder: string;
+      passwordLabel: string;
+      passwordPlaceholder: string;
+      confirmPasswordLabel: string;
+      confirmPasswordPlaceholder: string;
+      termsText: string;
+      termsLink: string;
+      and: string;
+      privacyLink: string;
+      signUpButton: string;
+      signingUp: string;
+      haveAccount: string;
+      signIn: string;
+      backToHome: string;
+      errorFillFields: string;
+      errorPasswordMismatch: string;
+      errorPasswordTooShort: string;
+      errorEmailExists: string;
+      errorGeneric: string;
+    };
+  };
+  // Account Dashboard
+  account: {
+    tabs: {
+      profile: string;
+      preferences: string;
+      ai: string;
+      privacy: string;
+      export: string;
+      settings: string;
+    };
+    profile: {
+      memberSince: string;
+      clickAvatarHint: string;
+      changePhoto: string;
+      quickActions: string;
+      savedPOIs: string;
+      favorites: string;
+      visits: string;
+      reviews: string;
+      comingSoon: string;
+    };
+    preferences: {
+      title: string;
+      travelingAs: string;
+      interests: string;
+      dietary: string;
+      editButton: string;
+    };
+    ai: {
+      title: string;
+      subtitle: string;
+      infoText: string;
+      features: string;
+      personalizedRecs: string;
+      personalizedRecsDesc: string;
+      smartFilters: string;
+      smartFiltersDesc: string;
+      behavioralLearning: string;
+      behavioralLearningDesc: string;
+      howItWorks: string;
+    };
+    privacy: {
+      title: string;
+      subtitle: string;
+      dataCollection: string;
+      essentialCookies: string;
+      essentialCookiesDesc: string;
+      required: string;
+      analytics: string;
+      analyticsDesc: string;
+      personalization: string;
+      personalizationDesc: string;
+      marketing: string;
+      marketingDesc: string;
+      updateButton: string;
+    };
+    export: {
+      title: string;
+      infoText: string;
+      whatIncluded: string;
+      includeList: {
+        profile: string;
+        preferences: string;
+        savedPOIs: string;
+        reviews: string;
+        visitHistory: string;
+        activityLog: string;
+        consentSettings: string;
+      };
+      format: string;
+      formatJSON: string;
+      formatPDF: string;
+      formatBoth: string;
+      requestButton: string;
+      validityNote: string;
+    };
+    settings: {
+      security: string;
+      changePassword: string;
+      twoFactor: string;
+      twoFactorStatus: string;
+      notifications: string;
+      emailNotifications: string;
+      pushNotifications: string;
+      dangerZone: string;
+      deleteData: string;
+      deleteDataDesc: string;
+      deleteAccount: string;
+      deleteAccountDesc: string;
+    };
+  };
+  // Footer
+  footer: {
+    about: string;
+    privacy: string;
+    terms: string;
+    contact: string;
+    copyright: string;
+  };
+}
+
+export const translations: Record<Language, Translations> = {
+  nl: {
+    nav: {
+      home: 'Home',
+      explore: 'Verkennen',
+      holibot: 'HoliBot',
+      agenda: 'Agenda',
+      favorites: 'Favorieten',
+      account: 'Account',
+      about: 'Over',
+      faq: 'FAQ',
+    },
+    homepage: {
+      hero: {
+        title: 'Jouw verblijf, jouw stijl.',
+        payoff: 'Ontdek Calpe met jouw persoonlijke Calpe-Assistent',
+        subtitle: 'Ervaar deze mediterrane juweel volledig op jou afgestemd',
+      },
+      why: {
+        title: 'Waarom HolidaiButler?',
+      },
+      usps: {
+        partner: { title: 'Official Partner', description: 'Official Partner Calpe Turismo' },
+        ai: { title: 'Calpe AI-Assistent', description: 'HolidAIButler: Jouw (hyper) persoonlijke Butler' },
+        local: { title: '100% Lokaal', description: 'Ondersteun de economie & identiteit van Calpe' },
+        realtime: { title: 'Realtime accurate info', description: 'Over locaties, evenementen, activiteiten en weer' },
+        trusted: { title: 'Vertrouwd & Veilig', description: 'Van data tot betaling: wij geven om jouw privacy' },
+      },
+      cta: {
+        explore: '🗺️ Verken Calpe',
+        agenda: '📅 Agenda',
+      },
+      features: {
+        aiAssistant: {
+          title: 'AI-Aangedreven Assistent',
+          description: 'HoliBot begrijpt jouw voorkeuren en geeft gepersonaliseerde aanbevelingen voor restaurants, activiteiten en verborgen pareltjes.'
+        },
+        localPois: {
+          title: '1.600+ Lokale POI\'s',
+          description: 'Ontdek authentieke ervaringen samengesteld door locals. Van stranden tot musea, restaurants tot uitgaan - wij hebben alles voor je.'
+        },
+        tailored: {
+          title: 'Op Maat voor Jou',
+          description: 'Vertel ons over jouw reisstijl, voorkeuren en interesses. Wij passen jouw ervaring aan om te passen bij jouw perfecte vakantie.'
+        },
+        account: {
+          title: 'Jouw Reishub',
+          description: 'Bewaar favorieten, houd bezoeken bij, beheer voorkeuren en controleer jouw privacy - allemaal op één plek.'
+        },
+      },
+      rating: {
+        score: 'Gebaseerd op 2.500+ reizigerbeoordelingen',
+        text: '4.8 / 5.0',
+        button: 'Lees Beoordelingen',
+      },
+    },
+    poi: {
+      searchPlaceholder: 'Zoek POI\'s, restaurants, stranden...',
+      filters: 'Filters',
+      loadMore: 'Meer POI\'s laden',
+      noResults: 'Geen POI\'s gevonden',
+      noResultsDesc: 'Probeer je zoekfilter of categorie aan te passen',
+      noReviews: 'Geen reviews beschikbaar',
+      moreInfo: 'Meer Info',
+      share: 'Delen',
+      agenda: 'Agenda',
+      map: 'Kaart',
+      details: 'Details',
+      call: 'Bellen',
+      directions: 'Routebeschrijving',
+      save: 'Bewaren',
+      saved: 'Bewaard',
+      print: 'Printen',
+      visitWebsite: 'Bezoek Website',
+      about: 'Over',
+      openingHours: 'Openingstijden',
+      contact: 'Contact',
+      highlights: 'Highlights',
+      perfectFor: 'Perfect voor',
+      readMore: 'Lees meer',
+      readLess: 'Lees minder',
+      shareCopied: 'Link gekopieerd naar klembord!',
+      shareSuccess: 'Succesvol gedeeld!',
+      addedToFavorites: 'Toegevoegd aan favorieten!',
+      removedFromFavorites: 'Verwijderd uit favorieten',
+      categoryHighlights: {
+        active: ['Buitenactiviteiten', 'Avontuursport', 'Fysieke fitness'],
+        beaches: ['Schilderachtig uitzicht', 'Ontspanning', 'Natuurlijke schoonheid'],
+        culture: ['Historisch belang', 'Cultureel erfgoed', 'Educatief'],
+        recreation: ['Vermaak', 'Gezinsvriendelijk', 'Leuke activiteiten'],
+        food: ['Lokale keuken', 'Dineerervaring', 'Smaak & aroma'],
+        health: ['Wellness', 'Zelfzorg', 'Gezondheidsdiensten'],
+        shopping: ['Winkelbeleving', 'Lokale producten', 'Winkeltherapie'],
+        practical: ['Essentiële diensten', 'Gemak', 'Praktische behoeften'],
+        default: ['Geweldige ervaring', 'Bezoek waard', 'Populaire keuze'],
+      },
+      categoryPerfectFor: {
+        active: ['Sportliefhebbers', 'Avonturiers', 'Fitnessliefhebbers'],
+        beaches: ['Strandliefhebbers', 'Natuurliefhebbers', 'Fotografen'],
+        culture: ['Geschiedenisliefhebbers', 'Cultuurliefhebbers', 'Educatieve reizen'],
+        recreation: ['Gezinnen', 'Groepen', 'Entertainmentseekers'],
+        food: ['Foodies', 'Culinaire verkenners', 'Sociaal dineren'],
+        health: ['Wellnesszoekers', 'Spa-liefhebbers', 'Gezondheidsbewusten'],
+        shopping: ['Shoppers', 'Souvenirjagers', 'Modefiefhebbers'],
+        practical: ['Reizigers', 'Lokale bewoners', 'Iedereen die diensten nodig heeft'],
+        default: ['Alle bezoekers', 'Reizigers', 'Lokale verkenners'],
+      },
+      budgetLabels: {
+        budget: 'Budgetvriendelijk',
+        midRange: 'Middencategorie',
+        upscale: 'Luxe',
+        luxury: 'Premium',
+        priceLevel: 'Prijsniveau',
+      },
+      openingStatus: {
+        open: 'Nu geopend',
+        closed: 'Gesloten',
+        closesAt: 'Sluit om',
+        closedToday: 'Vandaag gesloten',
+      },
+      amenities: {
+        wheelchairAccessible: 'Rolstoeltoegankelijk',
+        freeWifi: 'Gratis WiFi Beschikbaar',
+        creditCards: 'Accepteert Creditcards',
+        noDetails: 'Geen aanvullende details beschikbaar',
+      },
+      loadingStates: {
+        loadingDetails: 'POI details laden...',
+        notFound: 'POI Niet Gevonden',
+        notFoundDescription: 'De POI die u zoekt bestaat niet.',
+      },
+      comparison: {
+        compare: 'Vergelijk',
+        comparing: 'Vergelijken',
+        addToCompare: 'Toevoegen aan vergelijking',
+        removeFromCompare: 'Verwijderen uit vergelijking',
+        compareTitle: 'POI Vergelijking',
+        selectedCount: '{count} POI(s) geselecteerd',
+        maxReached: 'Maximaal 3 POI\'s kunnen worden vergeleken',
+        clearAll: 'Alles wissen',
+        noItemsSelected: 'Geen POI\'s geselecteerd',
+        selectToCompare: 'Selecteer 2-3 POI\'s om te vergelijken',
+      },
+    },
+    categories: {
+      active: 'Actief',
+      beaches: 'Stranden & Natuur',
+      culture: 'Cultuur & Geschiedenis',
+      recreation: 'Recreatie',
+      food: 'Eten & Drinken',
+      health: 'Gezondheid & Welzijn',
+      shopping: 'Winkelen',
+      practical: 'Praktisch',
+    },
+    reviews: {
+      title: 'Reviews',
+      travelParty: {
+        all: 'Alle Reizigers',
+        couples: 'Stellen',
+        families: 'Gezinnen',
+        solo: 'Solo Reizigers',
+        friends: 'Vrienden',
+        business: 'Zakelijk',
+      },
+      sort: {
+        recent: 'Meest Recente',
+        helpful: 'Meest Helpvol',
+        highRating: 'Hoogste Beoordeling',
+        lowRating: 'Laagste Beoordeling',
+      },
+      sentiment: {
+        positive: 'Positief',
+        neutral: 'Neutraal',
+        negative: 'Negatief',
+      },
+      filterByTraveler: 'Filter op Reizigerstype',
+      filterBySentiment: 'Filter op Sentiment',
+      sortBy: 'Sorteer op',
+      helpful: 'Helpvol',
+      noReviews: 'Nog geen reviews',
+      writeReview: 'Schrijf een Review',
+      readMore: 'Lees meer',
+      showLess: 'Toon minder',
+      visited: 'Bezocht',
+      loadingReviews: 'Reviews laden...',
+      loadMoreReviews: 'Meer Reviews Laden',
+      reviewCount: 'reviews',
+      averageRating: 'Gemiddelde beoordeling',
+    },
+    common: {
+      save: 'Opslaan',
+      close: 'Sluiten',
+      apply: 'Toepassen',
+      reset: 'Reset',
+      loading: 'Laden...',
+    },
+    auth: {
+      login: {
+        title: 'HolidaiButler',
+        subtitle: 'Welkom terug! Log in op je account',
+        emailLabel: 'E-mailadres',
+        emailPlaceholder: 'jouw.email@voorbeeld.nl',
+        passwordLabel: 'Wachtwoord',
+        passwordPlaceholder: 'Voer je wachtwoord in',
+        forgotPassword: 'Wachtwoord vergeten?',
+        signInButton: 'Inloggen',
+        signingIn: 'Inloggen...',
+        noAccount: 'Nog geen account?',
+        signUp: 'Registreren',
+        backToHome: 'Terug naar home',
+        errorFillFields: 'Vul alle velden in',
+        errorInvalidCredentials: 'Ongeldig e-mailadres of wachtwoord. Probeer het opnieuw.',
+        errorGeneric: 'Inloggen mislukt. Probeer het later opnieuw.',
+      },
+      signup: {
+        title: 'HolidaiButler',
+        subtitle: 'Maak een account aan',
+        nameLabel: 'Naam',
+        namePlaceholder: 'Jouw naam',
+        emailLabel: 'E-mailadres',
+        emailPlaceholder: 'jouw.email@voorbeeld.nl',
+        passwordLabel: 'Wachtwoord',
+        passwordPlaceholder: 'Kies een wachtwoord',
+        confirmPasswordLabel: 'Bevestig wachtwoord',
+        confirmPasswordPlaceholder: 'Voer wachtwoord opnieuw in',
+        signUpButton: 'Registreren',
+        signingUp: 'Registreren...',
+        haveAccount: 'Heb je al een account?',
+        signIn: 'Inloggen',
+        backToHome: 'Terug naar home',
+        errorFillFields: 'Vul alle velden in',
+        errorPasswordMismatch: 'Wachtwoorden komen niet overeen',
+        errorPasswordTooShort: 'Wachtwoord moet minimaal 6 tekens bevatten',
+        errorEmailExists: 'Er bestaat al een account met dit e-mailadres. Log alsjeblieft in.',
+        errorGeneric: 'Registratie mislukt. Probeer het later opnieuw.',
+      },
+    },
+    account: {
+      tabs: {
+        profile: 'Profiel',
+        preferences: 'Voorkeuren',
+        ai: 'AI',
+        privacy: 'Privacy',
+        export: 'Export',
+        settings: 'Instellingen',
+      },
+      profile: {
+        memberSince: 'Lid sinds',
+        clickAvatarHint: 'Klik op avatar om foto te uploaden',
+        changePhoto: 'Foto Wijzigen',
+        quickActions: 'Snelle Acties',
+        savedPOIs: 'Opgeslagen POI\'s',
+        favorites: 'Favorieten',
+        visits: 'Bezoeken',
+        reviews: 'Reviews',
+        comingSoon: 'Binnenkort',
+      },
+      preferences: {
+        title: 'Reisvoorkeuren',
+        travelingAs: 'Reizen als',
+        interests: 'Interesses',
+        dietary: 'Dieet',
+        editButton: 'Voorkeuren Bewerken',
+      },
+      ai: {
+        title: 'AI-Aangedreven Personalisatie',
+        subtitle: 'AI-functies',
+        infoText: 'Wij gebruiken lokale data, maar ook AI om jouw aanbevelingen te personaliseren en optimaliseren. Je hebt 100% controle over hoe AI wordt gebruikt',
+        features: 'AI-functies',
+        personalizedRecs: 'Gepersonaliseerde Aanbevelingen',
+        personalizedRecsDesc: 'Gebruik AI om POI\'s voor te stellen',
+        smartFilters: 'Slimme Filters',
+        smartFiltersDesc: 'AI-aangedreven zoekfilters',
+        behavioralLearning: 'Gedragsleren',
+        behavioralLearningDesc: 'Leer van jouw interacties',
+        howItWorks: 'Hoe werkt AI-personalisatie?',
+      },
+      privacy: {
+        title: 'Jouw privacy is belangrijk voor ons',
+        subtitle: 'Data opgeslagen op jouw apparaat • Auto-verwijderen na 30 dagen • 100% veiligheid',
+        dataCollection: 'Dataverzameling & Toestemming',
+        essentialCookies: 'Essentiële Cookies',
+        essentialCookiesDesc: 'Vereist voor de werking van de site',
+        required: 'VEREIST',
+        analytics: 'Analytics',
+        analyticsDesc: 'Inzicht in sitegebruik',
+        personalization: 'Personalisatie',
+        personalizationDesc: 'Verbeter aanbevelingen',
+        marketing: 'Marketing',
+        marketingDesc: 'Promotionele e-mails',
+        updateButton: 'Toestemmingsinstellingen Bijwerken',
+      },
+      export: {
+        title: 'Download Jouw Data',
+        infoText: 'Je hebt het recht om al jouw persoonlijke data te downloaden in een leesbaar formaat (AVG Art. 15).',
+        whatIncluded: 'Wat is inbegrepen?',
+        includeList: {
+          profile: 'Profielinformatie',
+          preferences: 'Reisvoorkeuren',
+          savedPOIs: 'Opgeslagen POI\'s & favorieten',
+          reviews: 'Reviews & beoordelingen',
+          visitHistory: 'Bezoekgeschiedenis',
+          activityLog: 'Activiteitenlog',
+          consentSettings: 'Toestemming & privacy-instellingen',
+        },
+        format: 'Exportformaat',
+        formatJSON: 'JSON (machine-leesbaar)',
+        formatPDF: 'PDF (mens-leesbaar)',
+        formatBoth: 'Beide formaten',
+        requestButton: 'Data-export Aanvragen',
+        validityNote: 'Exports zijn 7 dagen beschikbaar na generatie.',
+      },
+      settings: {
+        security: 'Beveiliging',
+        changePassword: 'Wachtwoord Wijzigen',
+        twoFactor: 'Twee-Factor Authenticatie',
+        twoFactorStatus: 'Niet ingeschakeld',
+        notifications: 'Notificaties',
+        emailNotifications: 'E-mailnotificaties',
+        pushNotifications: 'Pushnotificaties',
+        dangerZone: 'Punt van geen terugkeer',
+        deleteData: 'Verwijder mijn Persoonlijke Data',
+        deleteDataDesc: 'Account blijft met standaardinstellingen',
+        deleteAccount: 'Verwijder mijn Account',
+        deleteAccountDesc: 'Deze actie kan niet ongedaan worden gemaakt',
+      },
+    },
+    footer: {
+      about: 'Over',
+      privacy: 'Privacybeleid',
+      terms: 'Servicevoorwaarden',
+      contact: 'Contact',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+    },
+  },
+  en: {
+    nav: {
+      home: 'Home',
+      explore: 'Explore',
+      holibot: 'HoliBot',
+      agenda: 'Agenda',
+      favorites: 'Favorites',
+      account: 'Account',
+      about: 'About',
+      faq: 'FAQ',
+    },
+    homepage: {
+      hero: {
+        title: 'Your stay, your style.',
+        payoff: 'Discover Calpe with your personal Calpe Assistant',
+        subtitle: 'Experience this Mediterranean jewel fully tailored to you',
+      },
+      why: {
+        title: 'Why HolidaiButler?',
+      },
+      usps: {
+        partner: { title: 'Official Partner', description: 'Official Partner Calpe Turismo' },
+        ai: { title: 'Calpe AI-Assistant', description: 'HolidAIButler: Your (hyper) personal Butler' },
+        local: { title: '100% Local', description: 'Support Calpe economy & identity' },
+        realtime: { title: 'Realtime accurate info', description: 'About locations, events, activities and weather' },
+        trusted: { title: 'Trusted & Safe', description: 'Data till payment: we care about your Privacy' },
+      },
+      cta: {
+        explore: '🗺️ Explore Calpe',
+        agenda: '📅 Agenda',
+      },
+      features: {
+        aiAssistant: {
+          title: 'AI-Powered Assistant',
+          description: 'HoliBot understands your preferences and provides personalized recommendations for restaurants, activities, and hidden gems.'
+        },
+        localPois: {
+          title: '1,600+ Local POIs',
+          description: 'Discover authentic experiences curated by locals. From beaches to museums, restaurants to nightlife - we\'ve got you covered.'
+        },
+        tailored: {
+          title: 'Tailored to You',
+          description: 'Tell us about your travel style, preferences, and interests. We\'ll customize your experience to match your perfect holiday.'
+        },
+        account: {
+          title: 'Your Travel Hub',
+          description: 'Save favorites, track visits, manage preferences, and control your privacy - all in one place.'
+        },
+      },
+      rating: {
+        score: 'Based on 2,500+ traveler reviews',
+        text: '4.8 / 5.0',
+        button: 'Read Reviews',
+      },
+    },
+    poi: {
+      searchPlaceholder: 'Search POIs, restaurants, beaches...',
+      filters: 'Filters',
+      loadMore: 'Load More POIs',
+      noResults: 'No POIs Found',
+      noResultsDesc: 'Try adjusting your search or category filter',
+      noReviews: 'No reviews available',
+      moreInfo: 'More Info',
+      share: 'Share',
+      agenda: 'Agenda',
+      map: 'Map',
+      details: 'Details',
+      call: 'Call',
+      directions: 'Directions',
+      save: 'Save',
+      saved: 'Saved',
+      print: 'Print',
+      visitWebsite: 'Visit Website',
+      about: 'About',
+      openingHours: 'Opening Hours',
+      contact: 'Contact',
+      highlights: 'Highlights',
+      perfectFor: 'Perfect for',
+      readMore: 'Read more',
+      readLess: 'Read less',
+      shareCopied: 'Link copied to clipboard!',
+      shareSuccess: 'Shared successfully!',
+      addedToFavorites: 'Added to favorites!',
+      removedFromFavorites: 'Removed from favorites',
+      categoryHighlights: {
+        active: ['Outdoor activities', 'Adventure sports', 'Physical fitness'],
+        beaches: ['Scenic views', 'Relaxation', 'Natural beauty'],
+        culture: ['Historical significance', 'Cultural heritage', 'Educational'],
+        recreation: ['Entertainment', 'Family-friendly', 'Fun activities'],
+        food: ['Local cuisine', 'Dining experience', 'Taste & flavor'],
+        health: ['Wellness', 'Self-care', 'Health services'],
+        shopping: ['Shopping experience', 'Local products', 'Retail therapy'],
+        practical: ['Essential services', 'Convenience', 'Practical needs'],
+        default: ['Great experience', 'Worth visiting', 'Popular choice'],
+      },
+      categoryPerfectFor: {
+        active: ['Sports enthusiasts', 'Adventure seekers', 'Fitness lovers'],
+        beaches: ['Beach lovers', 'Nature enthusiasts', 'Photographers'],
+        culture: ['History buffs', 'Culture lovers', 'Educational trips'],
+        recreation: ['Families', 'Groups', 'Entertainment seekers'],
+        food: ['Foodies', 'Culinary explorers', 'Social dining'],
+        health: ['Wellness seekers', 'Spa lovers', 'Health conscious'],
+        shopping: ['Shoppers', 'Souvenir hunters', 'Fashion lovers'],
+        practical: ['Travelers', 'Local residents', 'Anyone needing services'],
+        default: ['All visitors', 'Travelers', 'Local explorers'],
+      },
+      budgetLabels: {
+        budget: 'Budget-friendly',
+        midRange: 'Mid-range',
+        upscale: 'Upscale',
+        luxury: 'Luxury',
+        priceLevel: 'Price Level',
+      },
+      openingStatus: {
+        open: 'Open now',
+        closed: 'Closed',
+        closesAt: 'Closes at',
+        closedToday: 'Closed today',
+      },
+      amenities: {
+        wheelchairAccessible: 'Wheelchair Accessible',
+        freeWifi: 'Free WiFi Available',
+        creditCards: 'Accepts Credit Cards',
+        noDetails: 'No additional details available',
+      },
+      loadingStates: {
+        loadingDetails: 'Loading POI details...',
+        notFound: 'POI Not Found',
+        notFoundDescription: 'The POI you are looking for does not exist.',
+      },
+      comparison: {
+        compare: 'Compare',
+        comparing: 'Comparing',
+        addToCompare: 'Add to comparison',
+        removeFromCompare: 'Remove from comparison',
+        compareTitle: 'POI Comparison',
+        selectedCount: '{count} POI(s) selected',
+        maxReached: 'Maximum 3 POIs can be compared',
+        clearAll: 'Clear all',
+        noItemsSelected: 'No POIs selected',
+        selectToCompare: 'Select 2-3 POIs to compare',
+      },
+    },
+    categories: {
+      active: 'Active',
+      beaches: 'Beaches & Nature',
+      culture: 'Culture & History',
+      recreation: 'Recreation',
+      food: 'Food & Drinks',
+      health: 'Health & Wellbeing',
+      shopping: 'Shopping',
+      practical: 'Practical',
+    },
+    reviews: {
+      title: 'Reviews',
+      travelParty: {
+        all: 'All Travelers',
+        couples: 'Couples',
+        families: 'Families',
+        solo: 'Solo Travelers',
+        friends: 'Friends',
+        business: 'Business',
+      },
+      sort: {
+        recent: 'Most Recent',
+        helpful: 'Most Helpful',
+        highRating: 'Highest Rating',
+        lowRating: 'Lowest Rating',
+      },
+      sentiment: {
+        positive: 'Positive',
+        neutral: 'Neutral',
+        negative: 'Negative',
+      },
+      filterByTraveler: 'Filter by Traveler Type',
+      filterBySentiment: 'Filter by Sentiment',
+      sortBy: 'Sort By',
+      helpful: 'Helpful',
+      noReviews: 'No reviews yet',
+      writeReview: 'Write a Review',
+      readMore: 'Read more',
+      showLess: 'Show less',
+      visited: 'Visited',
+      loadingReviews: 'Loading reviews...',
+      loadMoreReviews: 'Load More Reviews',
+      reviewCount: 'reviews',
+      averageRating: 'Average rating',
+    },
+    common: {
+      save: 'Save',
+      close: 'Close',
+      apply: 'Apply',
+      reset: 'Reset',
+      loading: 'Loading...',
+    },
+    account: {
+      tabs: {
+        profile: 'Profile',
+        preferences: 'Preferences',
+        ai: 'AI',
+        privacy: 'Privacy',
+        export: 'Export',
+        settings: 'Settings',
+      },
+      profile: {
+        memberSince: 'Member since',
+        clickAvatarHint: 'Click avatar to upload photo',
+        changePhoto: 'Change Photo',
+        quickActions: 'Quick Actions',
+        savedPOIs: 'Saved POIs',
+        favorites: 'Favorites',
+        visits: 'Visits',
+        reviews: 'Reviews',
+        comingSoon: 'Coming soon',
+      },
+      preferences: {
+        title: 'Travel Preferences',
+        travelingAs: 'Traveling as',
+        interests: 'Interests',
+        dietary: 'Dietary',
+        editButton: 'Edit Preferences',
+      },
+      ai: {
+        title: 'AI-Powered Personalization',
+        subtitle: 'AI Features',
+        infoText: 'We use local data, but also AI to personalize and optimize your recommendations. You have 100% control over how AI is used',
+        features: 'AI Features',
+        personalizedRecs: 'Personalized Recommendations',
+        personalizedRecsDesc: 'Use AI to suggest POIs',
+        smartFilters: 'Smart Filters',
+        smartFiltersDesc: 'AI-powered search filters',
+        behavioralLearning: 'Behavioral Learning',
+        behavioralLearningDesc: 'Learn from your interactions',
+        howItWorks: 'How does AI personalization work?',
+      },
+      privacy: {
+        title: 'Your privacy matters to us',
+        subtitle: 'Data stored on your device • Auto-delete after 30 days • 100% safety',
+        dataCollection: 'Data Collection & Consent',
+        essentialCookies: 'Essential Cookies',
+        essentialCookiesDesc: 'Required for site to work',
+        required: 'REQUIRED',
+        analytics: 'Analytics',
+        analyticsDesc: 'Understand site usage',
+        personalization: 'Personalization',
+        personalizationDesc: 'Improve recommendations',
+        marketing: 'Marketing',
+        marketingDesc: 'Promotional emails',
+        updateButton: 'Update Consent Settings',
+      },
+      export: {
+        title: 'Download Your Data',
+        infoText: 'You have the right to download all your personal data in a readable format (GDPR Art. 15).',
+        whatIncluded: 'What\'s included?',
+        includeList: {
+          profile: 'Profile information',
+          preferences: 'Travel preferences',
+          savedPOIs: 'Saved POIs & favorites',
+          reviews: 'Reviews & ratings',
+          visitHistory: 'Visit history',
+          activityLog: 'Account activity log',
+          consentSettings: 'Consent & privacy settings',
+        },
+        format: 'Export Format',
+        formatJSON: 'JSON (machine-readable)',
+        formatPDF: 'PDF (human-readable)',
+        formatBoth: 'Both formats',
+        requestButton: 'Request Data Export',
+        validityNote: 'Exports are available for 7 days after generation.',
+      },
+      settings: {
+        security: 'Security',
+        changePassword: 'Change Password',
+        twoFactor: 'Two-Factor Authentication',
+        twoFactorStatus: 'Not enabled',
+        notifications: 'Notifications',
+        emailNotifications: 'Email Notifications',
+        pushNotifications: 'Push Notifications',
+        dangerZone: 'Point of no return',
+        deleteData: 'Delete my Personal Data',
+        deleteDataDesc: 'Account remains with standard settings',
+        deleteAccount: 'Delete my Account',
+        deleteAccountDesc: 'This action cannot be undone',
+      },
+    },
+    auth: {
+      login: {
+        title: 'HolidaiButler',
+        subtitle: 'Welcome back! Log in to your account',
+        emailLabel: 'Email address',
+        emailPlaceholder: 'your.email@example.com',
+        passwordLabel: 'Password',
+        passwordPlaceholder: 'Enter your password',
+        forgotPassword: 'Forgot password?',
+        signInButton: 'Sign In',
+        signingIn: 'Signing in...',
+        noAccount: 'Don\'t have an account?',
+        signUp: 'Sign up',
+        backToHome: 'Back to home',
+        errorFillFields: 'Please fill in all fields',
+        errorInvalidCredentials: 'Invalid email or password. Please try again.',
+        errorGeneric: 'Login failed. Please try again later.',
+      },
+      signup: {
+        title: 'HolidaiButler',
+        subtitle: 'Create your account',
+        nameLabel: 'Full name',
+        namePlaceholder: 'Your full name',
+        emailLabel: 'Email address',
+        emailPlaceholder: 'your.email@example.com',
+        passwordLabel: 'Password',
+        passwordPlaceholder: 'Choose a secure password',
+        confirmPasswordLabel: 'Confirm password',
+        confirmPasswordPlaceholder: 'Re-enter your password',
+        termsText: 'I agree to the',
+        termsLink: 'Terms of Service',
+        and: 'and',
+        privacyLink: 'Privacy Policy',
+        signUpButton: 'Create Account',
+        signingUp: 'Creating account...',
+        haveAccount: 'Already have an account?',
+        signIn: 'Sign in',
+        backToHome: 'Back to home',
+        errorFillFields: 'Please fill in all fields',
+        errorPasswordMismatch: 'Passwords do not match',
+        errorPasswordTooShort: 'Password must be at least 6 characters',
+        errorEmailExists: 'An account with this email already exists. Please login instead.',
+        errorGeneric: 'Signup failed. Please try again later.',
+      },
+    },
+    footer: {
+      about: 'About',
+      privacy: 'Privacy Policy',
+      terms: 'Terms of Service',
+      contact: 'Contact',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+    },
+  },
+  de: {
+    nav: {
+      home: 'Startseite',
+      explore: 'Erkunden',
+      holibot: 'HoliBot',
+      agenda: 'Terminkalender',
+      favorites: 'Favoriten',
+      account: 'Konto',
+      about: 'Über',
+      faq: 'FAQ',
+    },
+    homepage: {
+      hero: {
+        title: 'Ihr Aufenthalt, Ihr Stil.',
+        payoff: 'Entdecken Sie Calpe mit Ihrem persönlichen Calpe-Assistenten',
+        subtitle: 'Erleben Sie dieses mediterrane Juwel vollständig auf Sie zugeschnitten',
+      },
+      why: {
+        title: 'Warum HolidaiButler?',
+      },
+      usps: {
+        partner: { title: 'Offizieller Partner', description: 'Offizieller Partner Calpe Turismo' },
+        ai: { title: 'Calpe KI-Assistent', description: 'HolidAIButler: Ihr (hyper) persönlicher Butler' },
+        local: { title: '100% Lokal', description: 'Unterstützen Sie Calpes Wirtschaft & Identität' },
+        realtime: { title: 'Echtzeit, präzise Informationen', description: 'Über Orte, Veranstaltungen, Aktivitäten und Wetter' },
+        trusted: { title: 'Vertrauenswürdig & Sicher', description: 'Von Daten bis Zahlung: Ihre Privatsphäre liegt uns am Herzen' },
+      },
+      cta: {
+        explore: '🗺️ Calpe Erkunden',
+        agenda: '📅 Terminkalender',
+      },
+      features: {
+        aiAssistant: {
+          title: 'KI-gestützter Assistent',
+          description: 'HoliBot versteht Ihre Vorlieben und bietet personalisierte Empfehlungen für Restaurants, Aktivitäten und versteckte Perlen.'
+        },
+        localPois: {
+          title: '1.600+ lokale POIs',
+          description: 'Entdecken Sie authentische Erlebnisse, kuratiert von Einheimischen. Von Stränden bis Museen, Restaurants bis Nachtleben - wir haben alles für Sie.'
+        },
+        tailored: {
+          title: 'Maßgeschneidert für Sie',
+          description: 'Erzählen Sie uns von Ihrem Reisestil, Vorlieben und Interessen. Wir passen Ihr Erlebnis an Ihren perfekten Urlaub an.'
+        },
+        account: {
+          title: 'Ihr Reise-Hub',
+          description: 'Speichern Sie Favoriten, verfolgen Sie Besuche, verwalten Sie Einstellungen und kontrollieren Sie Ihre Privatsphäre - alles an einem Ort.'
+        },
+      },
+      rating: {
+        score: 'Basierend auf 2.500+ Reisendenbewertungen',
+        text: '4.8 / 5.0',
+        button: 'Bewertungen Lesen',
+      },
+    },
+    poi: {
+      searchPlaceholder: 'Suche POIs, Restaurants, Strände...',
+      filters: 'Filter',
+      loadMore: 'Mehr POIs laden',
+      noResults: 'Keine POIs gefunden',
+      noResultsDesc: 'Versuchen Sie, Ihren Such- oder Kategoriefilter anzupassen',
+      noReviews: 'Keine Bewertungen verfügbar',
+      moreInfo: 'Mehr Info',
+      share: 'Teilen',
+      agenda: 'Kalender',
+      map: 'Karte',
+      details: 'Details',
+      call: 'Anrufen',
+      directions: 'Wegbeschreibung',
+      save: 'Speichern',
+      saved: 'Gespeichert',
+      print: 'Drucken',
+      visitWebsite: 'Website Besuchen',
+      about: 'Über',
+      openingHours: 'Öffnungszeiten',
+      contact: 'Kontakt',
+      highlights: 'Highlights',
+      perfectFor: 'Perfekt für',
+      readMore: 'Weiterlesen',
+      readLess: 'Weniger lesen',
+      shareCopied: 'Link in Zwischenablage kopiert!',
+      shareSuccess: 'Erfolgreich geteilt!',
+      addedToFavorites: 'Zu Favoriten hinzugefügt!',
+      removedFromFavorites: 'Aus Favoriten entfernt',
+      categoryHighlights: {
+        active: ['Outdoor-Aktivitäten', 'Abenteuersport', 'Körperliche Fitness'],
+        beaches: ['Malerische Aussichten', 'Entspannung', 'Natürliche Schönheit'],
+        culture: ['Historische Bedeutung', 'Kulturelles Erbe', 'Bildung'],
+        recreation: ['Unterhaltung', 'Familienfreundlich', 'Spaßige Aktivitäten'],
+        food: ['Lokale Küche', 'Esserlebnis', 'Geschmack & Aroma'],
+        health: ['Wellness', 'Selbstfürsorge', 'Gesundheitsdienste'],
+        shopping: ['Einkaufserlebnis', 'Lokale Produkte', 'Shopping-Therapie'],
+        practical: ['Wesentliche Dienste', 'Bequemlichkeit', 'Praktische Bedürfnisse'],
+        default: ['Tolles Erlebnis', 'Besuchenswert', 'Beliebte Wahl'],
+      },
+      categoryPerfectFor: {
+        active: ['Sportbegeisterte', 'Abenteurer', 'Fitnessliebhaber'],
+        beaches: ['Strandliebhaber', 'Naturfreunde', 'Fotografen'],
+        culture: ['Geschichtsinteressierte', 'Kulturliebhaber', 'Bildungsreisen'],
+        recreation: ['Familien', 'Gruppen', 'Unterhaltungssuchende'],
+        food: ['Feinschmecker', 'Kulinarische Entdecker', 'Geselliges Essen'],
+        health: ['Wellness-Suchende', 'Spa-Liebhaber', 'Gesundheitsbewusste'],
+        shopping: ['Shopper', 'Souvenir-Jäger', 'Modefreunde'],
+        practical: ['Reisende', 'Einheimische', 'Jeder der Dienste benötigt'],
+        default: ['Alle Besucher', 'Reisende', 'Lokale Erkunder'],
+      },
+      budgetLabels: {
+        budget: 'Budgetfreundlich',
+        midRange: 'Mittelklasse',
+        upscale: 'Gehoben',
+        luxury: 'Luxus',
+        priceLevel: 'Preisniveau',
+      },
+      openingStatus: {
+        open: 'Jetzt geöffnet',
+        closed: 'Geschlossen',
+        closesAt: 'Schließt um',
+        closedToday: 'Heute geschlossen',
+      },
+      amenities: {
+        wheelchairAccessible: 'Rollstuhlgerecht',
+        freeWifi: 'Kostenloses WLAN verfügbar',
+        creditCards: 'Akzeptiert Kreditkarten',
+        noDetails: 'Keine zusätzlichen Details verfügbar',
+      },
+      loadingStates: {
+        loadingDetails: 'POI-Details laden...',
+        notFound: 'POI Nicht Gefunden',
+        notFoundDescription: 'Der gesuchte POI existiert nicht.',
+      },
+      comparison: {
+        compare: 'Vergleichen',
+        comparing: 'Vergleichend',
+        addToCompare: 'Zum Vergleich hinzufügen',
+        removeFromCompare: 'Aus Vergleich entfernen',
+        compareTitle: 'POI-Vergleich',
+        selectedCount: '{count} POI(s) ausgewählt',
+        maxReached: 'Maximal 3 POIs können verglichen werden',
+        clearAll: 'Alles löschen',
+        noItemsSelected: 'Keine POIs ausgewählt',
+        selectToCompare: 'Wählen Sie 2-3 POIs zum Vergleichen aus',
+      },
+    },
+    categories: {
+      active: 'Aktiv',
+      beaches: 'Strände & Natur',
+      culture: 'Kultur & Geschichte',
+      recreation: 'Erholung',
+      food: 'Essen & Trinken',
+      health: 'Gesundheit & Wohlbefinden',
+      shopping: 'Einkaufen',
+      practical: 'Praktisch',
+    },
+    reviews: {
+      title: 'Bewertungen',
+      travelParty: {
+        all: 'Alle Reisenden',
+        couples: 'Paare',
+        families: 'Familien',
+        solo: 'Alleinreisende',
+        friends: 'Freunde',
+        business: 'Geschäftlich',
+      },
+      sort: {
+        recent: 'Neueste',
+        helpful: 'Hilfreichste',
+        highRating: 'Höchste Bewertung',
+        lowRating: 'Niedrigste Bewertung',
+      },
+      sentiment: {
+        positive: 'Positiv',
+        neutral: 'Neutral',
+        negative: 'Negativ',
+      },
+      filterByTraveler: 'Nach Reiseart filtern',
+      filterBySentiment: 'Nach Stimmung filtern',
+      sortBy: 'Sortieren nach',
+      helpful: 'Hilfreich',
+      noReviews: 'Noch keine Bewertungen',
+      writeReview: 'Bewertung schreiben',
+      readMore: 'Mehr lesen',
+      showLess: 'Weniger anzeigen',
+      visited: 'Besucht',
+      loadingReviews: 'Bewertungen laden...',
+      loadMoreReviews: 'Mehr Bewertungen laden',
+      reviewCount: 'Bewertungen',
+      averageRating: 'Durchschnittliche Bewertung',
+    },
+    common: {
+      save: 'Speichern',
+      close: 'Schließen',
+      apply: 'Anwenden',
+      reset: 'Zurücksetzen',
+      loading: 'Laden...',
+    },
+    account: {
+      tabs: {
+        profile: 'Profil',
+        preferences: 'Präferenzen',
+        ai: 'KI',
+        privacy: 'Datenschutz',
+        export: 'Export',
+        settings: 'Einstellungen',
+      },
+      profile: {
+        memberSince: 'Mitglied seit',
+        clickAvatarHint: 'Klicken Sie auf den Avatar, um ein Foto hochzuladen',
+        changePhoto: 'Foto Ändern',
+        quickActions: 'Schnellaktionen',
+        savedPOIs: 'Gespeicherte POIs',
+        favorites: 'Favoriten',
+        visits: 'Besuche',
+        reviews: 'Bewertungen',
+        comingSoon: 'Demnächst',
+      },
+      preferences: {
+        title: 'Reisepräferenzen',
+        travelingAs: 'Reisen als',
+        interests: 'Interessen',
+        dietary: 'Ernährung',
+        editButton: 'Präferenzen bearbeiten',
+      },
+      ai: {
+        title: 'KI-gestützte Personalisierung',
+        subtitle: 'KI-Funktionen',
+        infoText: 'Wir verwenden lokale Daten, aber auch KI, um Ihre Empfehlungen zu personalisieren und zu optimieren. Sie haben 100% Kontrolle darüber, wie KI verwendet wird',
+        features: 'KI-Funktionen',
+        personalizedRecs: 'Personalisierte Empfehlungen',
+        personalizedRecsDesc: 'Verwenden Sie KI, um POIs vorzuschlagen',
+        smartFilters: 'Intelligente Filter',
+        smartFiltersDesc: 'KI-gestützte Suchfilter',
+        behavioralLearning: 'Verhaltensbasiertes Lernen',
+        behavioralLearningDesc: 'Lernen Sie aus Ihren Interaktionen',
+        howItWorks: 'Wie funktioniert KI-Personalisierung?',
+      },
+      privacy: {
+        title: 'Ihre Privatsphäre ist uns wichtig',
+        subtitle: 'Daten auf Ihrem Gerät gespeichert • Automatisches Löschen nach 30 Tagen • 100% Sicherheit',
+        dataCollection: 'Datenerfassung & Einwilligung',
+        essentialCookies: 'Essentielle Cookies',
+        essentialCookiesDesc: 'Erforderlich für die Funktion der Website',
+        required: 'ERFORDERLICH',
+        analytics: 'Analyse',
+        analyticsDesc: 'Website-Nutzung verstehen',
+        personalization: 'Personalisierung',
+        personalizationDesc: 'Empfehlungen verbessern',
+        marketing: 'Marketing',
+        marketingDesc: 'Werbliche E-Mails',
+        updateButton: 'Einwilligungseinstellungen aktualisieren',
+      },
+      export: {
+        title: 'Ihre Daten herunterladen',
+        infoText: 'Sie haben das Recht, all Ihre persönlichen Daten in einem lesbaren Format herunterzuladen (DSGVO Art. 15).',
+        whatIncluded: 'Was ist enthalten?',
+        includeList: {
+          profile: 'Profilinformationen',
+          preferences: 'Reisepräferenzen',
+          savedPOIs: 'Gespeicherte POIs & Favoriten',
+          reviews: 'Bewertungen & Ratings',
+          visitHistory: 'Besuchshistorie',
+          activityLog: 'Konto-Aktivitätsprotokoll',
+          consentSettings: 'Einwilligungs- & Datenschutzeinstellungen',
+        },
+        format: 'Exportformat',
+        formatJSON: 'JSON (maschinenlesbar)',
+        formatPDF: 'PDF (menschenlesbar)',
+        formatBoth: 'Beide Formate',
+        requestButton: 'Datenexport anfordern',
+        validityNote: 'Exporte sind 7 Tage nach der Erstellung verfügbar.',
+      },
+      settings: {
+        security: 'Sicherheit',
+        changePassword: 'Passwort ändern',
+        twoFactor: 'Zwei-Faktor-Authentifizierung',
+        twoFactorStatus: 'Nicht aktiviert',
+        notifications: 'Benachrichtigungen',
+        emailNotifications: 'E-Mail-Benachrichtigungen',
+        pushNotifications: 'Push-Benachrichtigungen',
+        dangerZone: 'Punkt ohne Wiederkehr',
+        deleteData: 'Meine persönlichen Daten löschen',
+        deleteDataDesc: 'Konto bleibt mit Standardeinstellungen',
+        deleteAccount: 'Mein Konto löschen',
+        deleteAccountDesc: 'Diese Aktion kann nicht rückgängig gemacht werden',
+      },
+    },
+    auth: {
+      login: {
+        title: 'HolidaiButler',
+        subtitle: 'Willkommen zurück! Melden Sie sich in Ihrem Konto an',
+        emailLabel: 'E-Mail-Adresse',
+        emailPlaceholder: 'ihre.email@beispiel.de',
+        passwordLabel: 'Passwort',
+        passwordPlaceholder: 'Geben Sie Ihr Passwort ein',
+        forgotPassword: 'Passwort vergessen?',
+        signInButton: 'Anmelden',
+        signingIn: 'Anmelden...',
+        noAccount: 'Noch kein Konto?',
+        signUp: 'Registrieren',
+        backToHome: 'Zurück zur Startseite',
+        errorFillFields: 'Bitte füllen Sie alle Felder aus',
+        errorInvalidCredentials: 'Ungültige E-Mail oder Passwort. Bitte versuchen Sie es erneut.',
+        errorGeneric: 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es später erneut.',
+      },
+      signup: {
+        title: 'HolidaiButler',
+        subtitle: 'Erstellen Sie Ihr Konto',
+        nameLabel: 'Vollständiger Name',
+        namePlaceholder: 'Ihr vollständiger Name',
+        emailLabel: 'E-Mail-Adresse',
+        emailPlaceholder: 'ihre.email@beispiel.de',
+        passwordLabel: 'Passwort',
+        passwordPlaceholder: 'Wählen Sie ein sicheres Passwort',
+        confirmPasswordLabel: 'Passwort bestätigen',
+        confirmPasswordPlaceholder: 'Geben Sie Ihr Passwort erneut ein',
+        termsText: 'Ich stimme den',
+        termsLink: 'Nutzungsbedingungen',
+        and: 'und',
+        privacyLink: 'Datenschutzrichtlinie',
+        signUpButton: 'Konto erstellen',
+        signingUp: 'Konto wird erstellt...',
+        haveAccount: 'Haben Sie bereits ein Konto?',
+        signIn: 'Anmelden',
+        backToHome: 'Zurück zur Startseite',
+        errorFillFields: 'Bitte füllen Sie alle Felder aus',
+        errorPasswordMismatch: 'Passwörter stimmen nicht überein',
+        errorPasswordTooShort: 'Passwort muss mindestens 6 Zeichen lang sein',
+        errorEmailExists: 'Ein Konto mit dieser E-Mail existiert bereits. Bitte melden Sie sich an.',
+        errorGeneric: 'Registrierung fehlgeschlagen. Bitte versuchen Sie es später erneut.',
+      },
+    },
+    footer: {
+      about: 'Über',
+      privacy: 'Datenschutzrichtlinie',
+      terms: 'Nutzungsbedingungen',
+      contact: 'Kontakt',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+    },
+  },
+  es: {
+    nav: {
+      home: 'Inicio',
+      explore: 'Explorar',
+      holibot: 'HoliBot',
+      agenda: 'Agenda',
+      favorites: 'Favoritos',
+      account: 'Cuenta',
+      about: 'Acerca de',
+      faq: 'FAQ',
+    },
+    homepage: {
+      hero: {
+        title: 'Tu estancia, tu estilo.',
+        payoff: 'Descubre Calpe con tu Asistente personal de Calpe',
+        subtitle: 'Experimenta esta joya mediterránea completamente adaptada a ti',
+      },
+      why: {
+        title: '¿Por qué HolidaiButler?',
+      },
+      usps: {
+        partner: { title: 'Socio Oficial', description: 'Socio Oficial Calpe Turismo' },
+        ai: { title: 'Asistente IA de Calpe', description: 'HolidAIButler: Tu mayordomo (hiper) personal' },
+        local: { title: '100% Local', description: 'Apoya la economía e identidad de Calpe' },
+        realtime: { title: 'Información precisa en tiempo real', description: 'Sobre ubicaciones, eventos, actividades y clima' },
+        trusted: { title: 'Confiable y Seguro', description: 'Desde datos hasta pagos: nos importa tu privacidad' },
+      },
+      cta: {
+        explore: '🗺️ Explorar Calpe',
+        agenda: '📅 Agenda',
+      },
+      features: {
+        aiAssistant: {
+          title: 'Asistente Impulsado por IA',
+          description: 'HoliBot comprende tus preferencias y proporciona recomendaciones personalizadas de restaurantes, actividades y joyas ocultas.'
+        },
+        localPois: {
+          title: 'Más de 1.600 POIs locales',
+          description: 'Descubre experiencias auténticas seleccionadas por locales. Desde playas hasta museos, restaurantes hasta vida nocturna - lo tenemos todo cubierto.'
+        },
+        tailored: {
+          title: 'Personalizado para ti',
+          description: 'Cuéntanos sobre tu estilo de viaje, preferencias e intereses. Personalizaremos tu experiencia para que coincida con tus vacaciones perfectas.'
+        },
+        account: {
+          title: 'Tu Centro de Viajes',
+          description: 'Guarda favoritos, rastrea visitas, gestiona preferencias y controla tu privacidad - todo en un solo lugar.'
+        },
+      },
+      rating: {
+        score: 'Basado en más de 2.500 reseñas de viajeros',
+        text: '4.8 / 5.0',
+        button: 'Leer Reseñas',
+      },
+    },
+    poi: {
+      searchPlaceholder: 'Buscar POIs, restaurantes, playas...',
+      filters: 'Filtros',
+      loadMore: 'Cargar más POIs',
+      noResults: 'No se encontraron POIs',
+      noResultsDesc: 'Intenta ajustar tu búsqueda o filtro de categoría',
+      noReviews: 'No hay reseñas disponibles',
+      moreInfo: 'Más Info',
+      share: 'Compartir',
+      agenda: 'Agenda',
+      map: 'Mapa',
+      details: 'Detalles',
+      call: 'Llamar',
+      directions: 'Direcciones',
+      save: 'Guardar',
+      saved: 'Guardado',
+      print: 'Imprimir',
+      visitWebsite: 'Visitar Sitio Web',
+      about: 'Acerca de',
+      openingHours: 'Horario de apertura',
+      contact: 'Contacto',
+      highlights: 'Aspectos destacados',
+      perfectFor: 'Perfecto para',
+      readMore: 'Leer más',
+      readLess: 'Leer menos',
+      shareCopied: '¡Enlace copiado al portapapeles!',
+      shareSuccess: '¡Compartido con éxito!',
+      addedToFavorites: '¡Añadido a favoritos!',
+      removedFromFavorites: 'Eliminado de favoritos',
+      categoryHighlights: {
+        active: ['Actividades al aire libre', 'Deportes de aventura', 'Fitness físico'],
+        beaches: ['Vistas panorámicas', 'Relajación', 'Belleza natural'],
+        culture: ['Importancia histórica', 'Patrimonio cultural', 'Educativo'],
+        recreation: ['Entretenimiento', 'Apto para familias', 'Actividades divertidas'],
+        food: ['Cocina local', 'Experiencia gastronómica', 'Sabor y aroma'],
+        health: ['Bienestar', 'Autocuidado', 'Servicios de salud'],
+        shopping: ['Experiencia de compras', 'Productos locales', 'Terapia de compras'],
+        practical: ['Servicios esenciales', 'Comodidad', 'Necesidades prácticas'],
+        default: ['Gran experiencia', 'Vale la pena visitar', 'Opción popular'],
+      },
+      categoryPerfectFor: {
+        active: ['Entusiastas del deporte', 'Buscadores de aventuras', 'Amantes del fitness'],
+        beaches: ['Amantes de la playa', 'Entusiastas de la naturaleza', 'Fotógrafos'],
+        culture: ['Aficionados a la historia', 'Amantes de la cultura', 'Viajes educativos'],
+        recreation: ['Familias', 'Grupos', 'Buscadores de entretenimiento'],
+        food: ['Amantes de la comida', 'Exploradores culinarios', 'Cenas sociales'],
+        health: ['Buscadores de bienestar', 'Amantes del spa', 'Conscientes de la salud'],
+        shopping: ['Compradores', 'Cazadores de souvenirs', 'Amantes de la moda'],
+        practical: ['Viajeros', 'Residentes locales', 'Cualquiera que necesite servicios'],
+        default: ['Todos los visitantes', 'Viajeros', 'Exploradores locales'],
+      },
+      budgetLabels: {
+        budget: 'Económico',
+        midRange: 'Gama media',
+        upscale: 'Alto nivel',
+        luxury: 'Lujo',
+        priceLevel: 'Nivel de Precio',
+      },
+      openingStatus: {
+        open: 'Abierto ahora',
+        closed: 'Cerrado',
+        closesAt: 'Cierra a las',
+        closedToday: 'Cerrado hoy',
+      },
+      amenities: {
+        wheelchairAccessible: 'Accesible en silla de ruedas',
+        freeWifi: 'WiFi Gratis Disponible',
+        creditCards: 'Acepta Tarjetas de Crédito',
+        noDetails: 'No hay detalles adicionales disponibles',
+      },
+      loadingStates: {
+        loadingDetails: 'Cargando detalles del POI...',
+        notFound: 'POI No Encontrado',
+        notFoundDescription: 'El POI que buscas no existe.',
+      },
+      comparison: {
+        compare: 'Comparar',
+        comparing: 'Comparando',
+        addToCompare: 'Añadir a comparación',
+        removeFromCompare: 'Eliminar de comparación',
+        compareTitle: 'Comparación de POI',
+        selectedCount: '{count} POI(s) seleccionado(s)',
+        maxReached: 'Se pueden comparar un máximo de 3 POIs',
+        clearAll: 'Limpiar todo',
+        noItemsSelected: 'No se han seleccionado POIs',
+        selectToCompare: 'Selecciona 2-3 POIs para comparar',
+      },
+    },
+    categories: {
+      active: 'Activo',
+      beaches: 'Playas y Naturaleza',
+      culture: 'Cultura e Historia',
+      recreation: 'Recreación',
+      food: 'Comida y Bebida',
+      health: 'Salud y Bienestar',
+      shopping: 'Compras',
+      practical: 'Práctico',
+    },
+    reviews: {
+      title: 'Reseñas',
+      travelParty: {
+        all: 'Todos los Viajeros',
+        couples: 'Parejas',
+        families: 'Familias',
+        solo: 'Viajeros Solos',
+        friends: 'Amigos',
+        business: 'Negocios',
+      },
+      sort: {
+        recent: 'Más Recientes',
+        helpful: 'Más Útiles',
+        highRating: 'Mejor Valoradas',
+        lowRating: 'Peor Valoradas',
+      },
+      sentiment: {
+        positive: 'Positivo',
+        neutral: 'Neutral',
+        negative: 'Negativo',
+      },
+      filterByTraveler: 'Filtrar por Tipo de Viajero',
+      filterBySentiment: 'Filtrar por Sentimiento',
+      sortBy: 'Ordenar por',
+      helpful: 'Útil',
+      noReviews: 'Aún no hay reseñas',
+      writeReview: 'Escribir una Reseña',
+      readMore: 'Leer más',
+      showLess: 'Mostrar menos',
+      visited: 'Visitado',
+      loadingReviews: 'Cargando reseñas...',
+      loadMoreReviews: 'Cargar Más Reseñas',
+      reviewCount: 'reseñas',
+      averageRating: 'Valoración media',
+    },
+    common: {
+      save: 'Guardar',
+      close: 'Cerrar',
+      apply: 'Aplicar',
+      reset: 'Restablecer',
+      loading: 'Cargando...',
+    },
+    account: {
+      tabs: {
+        profile: 'Perfil',
+        preferences: 'Preferencias',
+        ai: 'IA',
+        privacy: 'Privacidad',
+        export: 'Exportar',
+        settings: 'Configuración',
+      },
+      profile: {
+        memberSince: 'Miembro desde',
+        clickAvatarHint: 'Haz clic en el avatar para subir una foto',
+        changePhoto: 'Cambiar Foto',
+        quickActions: 'Acciones Rápidas',
+        savedPOIs: 'POIs Guardados',
+        favorites: 'Favoritos',
+        visits: 'Visitas',
+        reviews: 'Reseñas',
+        comingSoon: 'Próximamente',
+      },
+      preferences: {
+        title: 'Preferencias de Viaje',
+        travelingAs: 'Viajando como',
+        interests: 'Intereses',
+        dietary: 'Dietético',
+        editButton: 'Editar Preferencias',
+      },
+      ai: {
+        title: 'Personalización con IA',
+        subtitle: 'Funciones de IA',
+        infoText: 'Utilizamos datos locales, pero también IA para personalizar y optimizar tus recomendaciones. Tienes 100% de control sobre cómo se utiliza la IA',
+        features: 'Funciones de IA',
+        personalizedRecs: 'Recomendaciones Personalizadas',
+        personalizedRecsDesc: 'Usar IA para sugerir POIs',
+        smartFilters: 'Filtros Inteligentes',
+        smartFiltersDesc: 'Filtros de búsqueda con IA',
+        behavioralLearning: 'Aprendizaje Conductual',
+        behavioralLearningDesc: 'Aprender de tus interacciones',
+        howItWorks: '¿Cómo funciona la personalización con IA?',
+      },
+      privacy: {
+        title: 'Tu privacidad nos importa',
+        subtitle: 'Datos almacenados en tu dispositivo • Eliminación automática después de 30 días • 100% seguridad',
+        dataCollection: 'Recopilación de Datos y Consentimiento',
+        essentialCookies: 'Cookies Esenciales',
+        essentialCookiesDesc: 'Necesarias para que el sitio funcione',
+        required: 'REQUERIDO',
+        analytics: 'Análisis',
+        analyticsDesc: 'Entender el uso del sitio',
+        personalization: 'Personalización',
+        personalizationDesc: 'Mejorar recomendaciones',
+        marketing: 'Marketing',
+        marketingDesc: 'Correos promocionales',
+        updateButton: 'Actualizar Configuración de Consentimiento',
+      },
+      export: {
+        title: 'Descargar Tus Datos',
+        infoText: 'Tienes derecho a descargar todos tus datos personales en un formato legible (RGPD Art. 15).',
+        whatIncluded: '¿Qué está incluido?',
+        includeList: {
+          profile: 'Información del perfil',
+          preferences: 'Preferencias de viaje',
+          savedPOIs: 'POIs guardados y favoritos',
+          reviews: 'Reseñas y valoraciones',
+          visitHistory: 'Historial de visitas',
+          activityLog: 'Registro de actividad de la cuenta',
+          consentSettings: 'Configuración de consentimiento y privacidad',
+        },
+        format: 'Formato de Exportación',
+        formatJSON: 'JSON (legible por máquina)',
+        formatPDF: 'PDF (legible por humanos)',
+        formatBoth: 'Ambos formatos',
+        requestButton: 'Solicitar Exportación de Datos',
+        validityNote: 'Las exportaciones están disponibles durante 7 días después de su generación.',
+      },
+      settings: {
+        security: 'Seguridad',
+        changePassword: 'Cambiar Contraseña',
+        twoFactor: 'Autenticación de Dos Factores',
+        twoFactorStatus: 'No activado',
+        notifications: 'Notificaciones',
+        emailNotifications: 'Notificaciones por Correo',
+        pushNotifications: 'Notificaciones Push',
+        dangerZone: 'Punto sin retorno',
+        deleteData: 'Eliminar mis Datos Personales',
+        deleteDataDesc: 'La cuenta permanece con configuración estándar',
+        deleteAccount: 'Eliminar mi Cuenta',
+        deleteAccountDesc: 'Esta acción no se puede deshacer',
+      },
+    },
+    auth: {
+      login: {
+        title: 'HolidaiButler',
+        subtitle: '¡Bienvenido de nuevo! Inicia sesión en tu cuenta',
+        emailLabel: 'Correo electrónico',
+        emailPlaceholder: 'tu.email@ejemplo.com',
+        passwordLabel: 'Contraseña',
+        passwordPlaceholder: 'Ingresa tu contraseña',
+        forgotPassword: '¿Olvidaste tu contraseña?',
+        signInButton: 'Iniciar Sesión',
+        signingIn: 'Iniciando sesión...',
+        noAccount: '¿No tienes cuenta?',
+        signUp: 'Regístrate',
+        backToHome: 'Volver al inicio',
+        errorFillFields: 'Por favor, completa todos los campos',
+        errorInvalidCredentials: 'Correo o contraseña incorrectos. Inténtalo de nuevo.',
+        errorGeneric: 'Error al iniciar sesión. Inténtalo más tarde.',
+      },
+      signup: {
+        title: 'HolidaiButler',
+        subtitle: 'Crea tu cuenta',
+        nameLabel: 'Nombre completo',
+        namePlaceholder: 'Tu nombre completo',
+        emailLabel: 'Correo electrónico',
+        emailPlaceholder: 'tu.email@ejemplo.com',
+        passwordLabel: 'Contraseña',
+        passwordPlaceholder: 'Elige una contraseña segura',
+        confirmPasswordLabel: 'Confirmar contraseña',
+        confirmPasswordPlaceholder: 'Vuelve a ingresar tu contraseña',
+        termsText: 'Acepto los',
+        termsLink: 'Términos de Servicio',
+        and: 'y',
+        privacyLink: 'Política de Privacidad',
+        signUpButton: 'Crear Cuenta',
+        signingUp: 'Creando cuenta...',
+        haveAccount: '¿Ya tienes una cuenta?',
+        signIn: 'Iniciar sesión',
+        backToHome: 'Volver al inicio',
+        errorFillFields: 'Por favor, completa todos los campos',
+        errorPasswordMismatch: 'Las contraseñas no coinciden',
+        errorPasswordTooShort: 'La contraseña debe tener al menos 6 caracteres',
+        errorEmailExists: 'Ya existe una cuenta con este correo. Por favor, inicia sesión.',
+        errorGeneric: 'Error al registrarse. Inténtalo más tarde.',
+      },
+    },
+    footer: {
+      about: 'Acerca de',
+      privacy: 'Política de Privacidad',
+      terms: 'Términos de Servicio',
+      contact: 'Contacto',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+    },
+  },
+  sv: {
+    nav: {
+      home: 'Hem',
+      explore: 'Utforska',
+      holibot: 'HoliBot',
+      agenda: 'Agenda',
+      favorites: 'Favoriter',
+      account: 'Konto',
+      about: 'Om',
+      faq: 'FAQ',
+    },
+    homepage: {
+      hero: {
+        title: 'Din vistelse, din stil.',
+        payoff: 'Upptäck Calpe med din personliga Calpe-Assistent',
+        subtitle: 'Upplev denna medelhavsjuvel helt anpassad till dig',
+      },
+      why: {
+        title: 'Varför HolidaiButler?',
+      },
+      usps: {
+        partner: { title: 'Officiell Partner', description: 'Officiell Partner Calpe Turismo' },
+        ai: { title: 'Calpe AI-Assistent', description: 'HolidAIButler: Din (hyper) personliga butler' },
+        local: { title: '100% Lokalt', description: 'Stöd Calpes ekonomi & identitet' },
+        realtime: { title: 'Realtid noggrann information', description: 'Om platser, evenemang, aktiviteter och väder' },
+        trusted: { title: 'Pålitlig & Säker', description: 'Från data till betalning: vi bryr oss om din integritet' },
+      },
+      cta: {
+        explore: '🗺️ Utforska Calpe',
+        agenda: '📅 Agenda',
+      },
+      features: {
+        aiAssistant: {
+          title: 'AI-driven Assistent',
+          description: 'HoliBot förstår dina preferenser och ger personliga rekommendationer för restauranger, aktiviteter och dolda pärlor.'
+        },
+        localPois: {
+          title: '1 600+ lokala POI:er',
+          description: 'Upptäck autentiska upplevelser kurerade av lokalbefolkningen. Från stränder till museer, restauranger till nattliv - vi har allt du behöver.'
+        },
+        tailored: {
+          title: 'Skräddarsydd för dig',
+          description: 'Berätta om din resestil, preferenser och intressen. Vi anpassar din upplevelse för att matcha din perfekta semester.'
+        },
+        account: {
+          title: 'Din Resehub',
+          description: 'Spara favoriter, håll koll på besök, hantera inställningar och kontrollera din integritet - allt på ett ställe.'
+        },
+      },
+      rating: {
+        score: 'Baserat på 2 500+ resenärsomdömen',
+        text: '4.8 / 5.0',
+        button: 'Läs Omdömen',
+      },
+    },
+    poi: {
+      searchPlaceholder: 'Sök POI:er, restauranger, stränder...',
+      filters: 'Filter',
+      loadMore: 'Ladda fler POI:er',
+      noResults: 'Inga POI:er hittades',
+      noResultsDesc: 'Försök justera din sökning eller kategorifilter',
+      noReviews: 'Inga recensioner tillgängliga',
+      moreInfo: 'Mer Info',
+      share: 'Dela',
+      agenda: 'Agenda',
+      map: 'Karta',
+      details: 'Detaljer',
+      call: 'Ring',
+      directions: 'Vägbeskrivning',
+      save: 'Spara',
+      saved: 'Sparad',
+      print: 'Skriv ut',
+      visitWebsite: 'Besök Webbplats',
+      about: 'Om',
+      openingHours: 'Öppettider',
+      contact: 'Kontakt',
+      highlights: 'Höjdpunkter',
+      perfectFor: 'Perfekt för',
+      readMore: 'Läs mer',
+      readLess: 'Läs mindre',
+      shareCopied: 'Länk kopierad till urklipp!',
+      shareSuccess: 'Delat framgångsrikt!',
+      addedToFavorites: 'Tillagt till favoriter!',
+      removedFromFavorites: 'Borttagen från favoriter',
+      categoryHighlights: {
+        active: ['Utomhusaktiviteter', 'Äventyrssport', 'Fysisk träning'],
+        beaches: ['Vackra vyer', 'Avkoppling', 'Naturlig skönhet'],
+        culture: ['Historisk betydelse', 'Kulturarv', 'Pedagogisk'],
+        recreation: ['Underhållning', 'Familjevänligt', 'Roliga aktiviteter'],
+        food: ['Lokal mat', 'Matupplevelse', 'Smak & arom'],
+        health: ['Välbefinnande', 'Egenvård', 'Hälsotjänster'],
+        shopping: ['Shoppingupplevelse', 'Lokala produkter', 'Shoppingterapi'],
+        practical: ['Väsentliga tjänster', 'Bekvämlighet', 'Praktiska behov'],
+        default: ['Bra upplevelse', 'Värt att besöka', 'Populärt val'],
+      },
+      categoryPerfectFor: {
+        active: ['Sportentusiaster', 'Äventyrssökare', 'Fitnessälskare'],
+        beaches: ['Strandälskare', 'Naturentusiaster', 'Fotografer'],
+        culture: ['Historiebuffs', 'Kulturälskare', 'Pedagogiska resor'],
+        recreation: ['Familjer', 'Grupper', 'Underhållningssökare'],
+        food: ['Matälskare', 'Kulinariska utforskare', 'Social matning'],
+        health: ['Välbefinnandesökare', 'Spaälskare', 'Hälsomedvetna'],
+        shopping: ['Shoppare', 'Souvenirjägare', 'Modeälskare'],
+        practical: ['Resenärer', 'Lokala invånare', 'Vem som helst som behöver tjänster'],
+        default: ['Alla besökare', 'Resenärer', 'Lokala upptäckare'],
+      },
+      budgetLabels: {
+        budget: 'Budgetvänlig',
+        midRange: 'Mellanpris',
+        upscale: 'Exklusiv',
+        luxury: 'Lyx',
+        priceLevel: 'Prisnivå',
+      },
+      openingStatus: {
+        open: 'Öppet nu',
+        closed: 'Stängt',
+        closesAt: 'Stänger kl',
+        closedToday: 'Stängt idag',
+      },
+      amenities: {
+        wheelchairAccessible: 'Rullstolsanpassat',
+        freeWifi: 'Gratis WiFi Tillgängligt',
+        creditCards: 'Accepterar Kreditkort',
+        noDetails: 'Inga ytterligare detaljer tillgängliga',
+      },
+      loadingStates: {
+        loadingDetails: 'Laddar POI-detaljer...',
+        notFound: 'POI Hittades Inte',
+        notFoundDescription: 'POI:n du söker existerar inte.',
+      },
+      comparison: {
+        compare: 'Jämför',
+        comparing: 'Jämföra',
+        addToCompare: 'Lägg till i jämförelse',
+        removeFromCompare: 'Ta bort från jämförelse',
+        compareTitle: 'POI-jämförelse',
+        selectedCount: '{count} POI(er) valda',
+        maxReached: 'Maximalt 3 POI:er kan jämföras',
+        clearAll: 'Rensa alla',
+        noItemsSelected: 'Inga POI:er valda',
+        selectToCompare: 'Välj 2-3 POI:er att jämföra',
+      },
+    },
+    categories: {
+      active: 'Aktiv',
+      beaches: 'Stränder & Natur',
+      culture: 'Kultur & Historia',
+      recreation: 'Rekreation',
+      food: 'Mat & Dryck',
+      health: 'Hälsa & Välbefinnande',
+      shopping: 'Shopping',
+      practical: 'Praktiskt',
+    },
+    reviews: {
+      title: 'Recensioner',
+      travelParty: {
+        all: 'Alla Resenärer',
+        couples: 'Par',
+        families: 'Familjer',
+        solo: 'Soloresenärer',
+        friends: 'Vänner',
+        business: 'Affärs',
+      },
+      sort: {
+        recent: 'Senaste',
+        helpful: 'Mest Hjälpsam',
+        highRating: 'Högsta Betyg',
+        lowRating: 'Lägsta Betyg',
+      },
+      sentiment: {
+        positive: 'Positiv',
+        neutral: 'Neutral',
+        negative: 'Negativ',
+      },
+      filterByTraveler: 'Filtrera efter Resenärstyp',
+      filterBySentiment: 'Filtrera efter Känsla',
+      sortBy: 'Sortera efter',
+      helpful: 'Hjälpsam',
+      noReviews: 'Inga recensioner ännu',
+      writeReview: 'Skriv en Recension',
+      readMore: 'Läs mer',
+      showLess: 'Visa mindre',
+      visited: 'Besökt',
+      loadingReviews: 'Laddar recensioner...',
+      loadMoreReviews: 'Ladda Fler Recensioner',
+      reviewCount: 'recensioner',
+      averageRating: 'Genomsnittligt betyg',
+    },
+    common: {
+      save: 'Spara',
+      close: 'Stäng',
+      apply: 'Tillämpa',
+      reset: 'Återställ',
+      loading: 'Laddar...',
+    },
+    account: {
+      tabs: {
+        profile: 'Profil',
+        preferences: 'Preferenser',
+        ai: 'AI',
+        privacy: 'Integritet',
+        export: 'Exportera',
+        settings: 'Inställningar',
+      },
+      profile: {
+        memberSince: 'Medlem sedan',
+        clickAvatarHint: 'Klicka på avataren för att ladda upp foto',
+        changePhoto: 'Ändra Foto',
+        quickActions: 'Snabbåtgärder',
+        savedPOIs: 'Sparade POI:er',
+        favorites: 'Favoriter',
+        visits: 'Besök',
+        reviews: 'Recensioner',
+        comingSoon: 'Kommer snart',
+      },
+      preferences: {
+        title: 'Resepreferenser',
+        travelingAs: 'Reser som',
+        interests: 'Intressen',
+        dietary: 'Kost',
+        editButton: 'Redigera Preferenser',
+      },
+      ai: {
+        title: 'AI-driven Personalisering',
+        subtitle: 'AI-funktioner',
+        infoText: 'Vi använder lokal data, men även AI för att personalisera och optimera dina rekommendationer. Du har 100% kontroll över hur AI används',
+        features: 'AI-funktioner',
+        personalizedRecs: 'Personliga Rekommendationer',
+        personalizedRecsDesc: 'Använd AI för att föreslå POI:er',
+        smartFilters: 'Smarta Filter',
+        smartFiltersDesc: 'AI-drivna sökfilter',
+        behavioralLearning: 'Beteendeinlärning',
+        behavioralLearningDesc: 'Lär av dina interaktioner',
+        howItWorks: 'Hur fungerar AI-personalisering?',
+      },
+      privacy: {
+        title: 'Din integritet är viktig för oss',
+        subtitle: 'Data lagrad på din enhet • Auto-radering efter 30 dagar • 100% säkerhet',
+        dataCollection: 'Datainsamling & Samtycke',
+        essentialCookies: 'Nödvändiga Cookies',
+        essentialCookiesDesc: 'Krävs för att webbplatsen ska fungera',
+        required: 'KRÄVS',
+        analytics: 'Analys',
+        analyticsDesc: 'Förstå webbplatsanvändning',
+        personalization: 'Personalisering',
+        personalizationDesc: 'Förbättra rekommendationer',
+        marketing: 'Marknadsföring',
+        marketingDesc: 'Reklam e-post',
+        updateButton: 'Uppdatera Samtyckeinställningar',
+      },
+      export: {
+        title: 'Ladda Ner Dina Data',
+        infoText: 'Du har rätt att ladda ner all din personliga data i ett läsbart format (GDPR Art. 15).',
+        whatIncluded: 'Vad ingår?',
+        includeList: {
+          profile: 'Profilinformation',
+          preferences: 'Resepreferenser',
+          savedPOIs: 'Sparade POI:er & favoriter',
+          reviews: 'Recensioner & betyg',
+          visitHistory: 'Besökshistorik',
+          activityLog: 'Kontoaktivitetslogg',
+          consentSettings: 'Samtycke- & integritetsinställningar',
+        },
+        format: 'Exportformat',
+        formatJSON: 'JSON (maskinläsbar)',
+        formatPDF: 'PDF (mänskligt läsbar)',
+        formatBoth: 'Båda formaten',
+        requestButton: 'Begär Dataexport',
+        validityNote: 'Export är tillgängliga i 7 dagar efter generering.',
+      },
+      settings: {
+        security: 'Säkerhet',
+        changePassword: 'Ändra Lösenord',
+        twoFactor: 'Tvåfaktorsautentisering',
+        twoFactorStatus: 'Inte aktiverad',
+        notifications: 'Notifikationer',
+        emailNotifications: 'E-postmeddelanden',
+        pushNotifications: 'Push-notifikationer',
+        dangerZone: 'Punkt utan återvändo',
+        deleteData: 'Radera mina Personuppgifter',
+        deleteDataDesc: 'Kontot förblir med standardinställningar',
+        deleteAccount: 'Radera mitt Konto',
+        deleteAccountDesc: 'Denna åtgärd kan inte ångras',
+      },
+    },
+    auth: {
+      login: {
+        title: 'HolidaiButler',
+        subtitle: 'Välkommen tillbaka! Logga in på ditt konto',
+        emailLabel: 'E-postadress',
+        emailPlaceholder: 'din.email@exempel.se',
+        passwordLabel: 'Lösenord',
+        passwordPlaceholder: 'Ange ditt lösenord',
+        forgotPassword: 'Glömt lösenord?',
+        signInButton: 'Logga In',
+        signingIn: 'Loggar in...',
+        noAccount: 'Har du inget konto?',
+        signUp: 'Registrera dig',
+        backToHome: 'Tillbaka till startsidan',
+        errorFillFields: 'Vänligen fyll i alla fält',
+        errorInvalidCredentials: 'Ogiltig e-post eller lösenord. Försök igen.',
+        errorGeneric: 'Inloggning misslyckades. Försök igen senare.',
+      },
+      signup: {
+        title: 'HolidaiButler',
+        subtitle: 'Skapa ditt konto',
+        nameLabel: 'Fullständigt namn',
+        namePlaceholder: 'Ditt fullständiga namn',
+        emailLabel: 'E-postadress',
+        emailPlaceholder: 'din.email@exempel.se',
+        passwordLabel: 'Lösenord',
+        passwordPlaceholder: 'Välj ett säkert lösenord',
+        confirmPasswordLabel: 'Bekräfta lösenord',
+        confirmPasswordPlaceholder: 'Ange ditt lösenord igen',
+        termsText: 'Jag godkänner',
+        termsLink: 'Användarvillkoren',
+        and: 'och',
+        privacyLink: 'Integritetspolicyn',
+        signUpButton: 'Skapa Konto',
+        signingUp: 'Skapar konto...',
+        haveAccount: 'Har du redan ett konto?',
+        signIn: 'Logga in',
+        backToHome: 'Tillbaka till startsidan',
+        errorFillFields: 'Vänligen fyll i alla fält',
+        errorPasswordMismatch: 'Lösenorden matchar inte',
+        errorPasswordTooShort: 'Lösenordet måste vara minst 6 tecken',
+        errorEmailExists: 'Ett konto med denna e-post finns redan. Vänligen logga in.',
+        errorGeneric: 'Registreringen misslyckades. Försök igen senare.',
+      },
+    },
+    footer: {
+      about: 'Om',
+      privacy: 'Integritetspolicy',
+      terms: 'Användarvillkor',
+      contact: 'Kontakt',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+    },
+  },
+  pl: {
+    nav: {
+      home: 'Strona główna',
+      explore: 'Odkryj',
+      holibot: 'HoliBot',
+      agenda: 'Agenda',
+      favorites: 'Ulubione',
+      account: 'Konto',
+      about: 'O nas',
+      faq: 'FAQ',
+    },
+    homepage: {
+      hero: {
+        title: 'Twój pobyt, Twój styl.',
+        payoff: 'Odkryj Calpe z Twoim osobistym asystentem Calpe',
+        subtitle: 'Doświadcz tego śródziemnomorskiego klejnotu w pełni dostosowanego do Ciebie',
+      },
+      why: {
+        title: 'Dlaczego HolidaiButler?',
+      },
+      usps: {
+        partner: { title: 'Oficjalny Partner', description: 'Oficjalny Partner Calpe Turismo' },
+        ai: { title: 'Asystent AI Calpe', description: 'HolidAIButler: Twój (bardzo) osobisty Butler' },
+        local: { title: '100% Lokalny', description: 'Wspieraj gospodarkę i tożsamość Calpe' },
+        realtime: { title: 'Informacje w czasie rzeczywistym', description: 'O lokalizacjach, wydarzeniach, aktywnościach i pogodzie' },
+        trusted: { title: 'Zaufany i Bezpieczny', description: 'Od danych do płatności: dbamy o Twoją prywatność' },
+      },
+      cta: {
+        explore: '🗺️ Odkryj Calpe',
+        agenda: '📅 Agenda',
+      },
+      features: {
+        aiAssistant: {
+          title: 'Asystent AI',
+          description: 'HoliBot rozumie Twoje preferencje i dostarcza spersonalizowane rekomendacje restauracji, atrakcji i ukrytych perełek.'
+        },
+        localPois: {
+          title: '1600+ lokalnych POI',
+          description: 'Odkryj autentyczne doświadczenia wybrane przez mieszkańców. Od plaż po muzea, restauracje po życie nocne - mamy wszystko.'
+        },
+        tailored: {
+          title: 'Dostosowane do Ciebie',
+          description: 'Powiedz nam o swoim stylu podróżowania, preferencjach i zainteresowaniach. Dostosujemy Twoje doświadczenie do idealnych wakacji.'
+        },
+        account: {
+          title: 'Twoje Centrum Podróży',
+          description: 'Zapisuj ulubione, śledź wizyty, zarządzaj preferencjami i kontroluj prywatność - wszystko w jednym miejscu.'
+        },
+      },
+      rating: {
+        score: 'Na podstawie 2500+ recenzji podróżnych',
+        text: '4.8 / 5.0',
+        button: 'Czytaj Recenzje',
+      },
+    },
+    poi: {
+      searchPlaceholder: 'Szukaj POI, restauracji, plaż...',
+      filters: 'Filtry',
+      loadMore: 'Załaduj więcej POI',
+      noResults: 'Nie znaleziono POI',
+      noResultsDesc: 'Spróbuj dostosować wyszukiwanie lub filtr kategorii',
+      noReviews: 'Brak dostępnych recenzji',
+      moreInfo: 'Więcej informacji',
+      share: 'Udostępnij',
+      agenda: 'Agenda',
+      map: 'Mapa',
+      details: 'Szczegóły',
+      call: 'Zadzwoń',
+      directions: 'Dojazd',
+      save: 'Zapisz',
+      saved: 'Zapisano',
+      print: 'Drukuj',
+      visitWebsite: 'Odwiedź stronę',
+      about: 'O miejscu',
+      openingHours: 'Godziny otwarcia',
+      contact: 'Kontakt',
+      highlights: 'Najważniejsze',
+      perfectFor: 'Idealne dla',
+      readMore: 'Czytaj więcej',
+      readLess: 'Czytaj mniej',
+      shareCopied: 'Link skopiowany do schowka!',
+      shareSuccess: 'Udostępniono pomyślnie!',
+      addedToFavorites: 'Dodano do ulubionych!',
+      removedFromFavorites: 'Usunięto z ulubionych',
+      categoryHighlights: {
+        active: ['Aktywności na świeżym powietrzu', 'Sporty przygodowe', 'Fitness'],
+        beaches: ['Malownicze widoki', 'Relaks', 'Piękno natury'],
+        culture: ['Znaczenie historyczne', 'Dziedzictwo kulturowe', 'Edukacja'],
+        recreation: ['Rozrywka', 'Dla rodzin', 'Zabawne aktywności'],
+        food: ['Lokalna kuchnia', 'Doznania kulinarne', 'Smak i aromat'],
+        health: ['Wellness', 'Troska o siebie', 'Usługi zdrowotne'],
+        shopping: ['Zakupy', 'Lokalne produkty', 'Terapia zakupowa'],
+        practical: ['Podstawowe usługi', 'Wygoda', 'Praktyczne potrzeby'],
+        default: ['Świetne doświadczenie', 'Warte odwiedzenia', 'Popularny wybór'],
+      },
+      categoryPerfectFor: {
+        active: ['Entuzjaści sportu', 'Poszukiwacze przygód', 'Miłośnicy fitnessu'],
+        beaches: ['Miłośnicy plaż', 'Entuzjaści natury', 'Fotografowie'],
+        culture: ['Miłośnicy historii', 'Miłośnicy kultury', 'Wycieczki edukacyjne'],
+        recreation: ['Rodziny', 'Grupy', 'Szukający rozrywki'],
+        food: ['Smakoszach', 'Odkrywcy kulinarne', 'Wspólne jedzenie'],
+        health: ['Poszukiwacze wellness', 'Miłośnicy spa', 'Świadomi zdrowia'],
+        shopping: ['Kupujący', 'Łowcy pamiątek', 'Miłośnicy mody'],
+        practical: ['Podróżnych', 'Mieszkańcy lokalni', 'Wszyscy potrzebujący usług'],
+        default: ['Wszyscy odwiedzający', 'Podróżni', 'Lokalni odkrywcy'],
+      },
+      budgetLabels: {
+        budget: 'Przystępny',
+        midRange: 'Średni',
+        upscale: 'Wyższa klasa',
+        luxury: 'Luksusowy',
+        priceLevel: 'Poziom cen',
+      },
+      openingStatus: {
+        open: 'Teraz otwarte',
+        closed: 'Zamknięte',
+        closesAt: 'Zamyka się o',
+        closedToday: 'Dzisiaj zamknięte',
+      },
+      amenities: {
+        wheelchairAccessible: 'Dostępne dla wózków inwalidzkich',
+        freeWifi: 'Darmowe WiFi',
+        creditCards: 'Akceptuje karty kredytowe',
+        noDetails: 'Brak dodatkowych szczegółów',
+      },
+      loadingStates: {
+        loadingDetails: 'Ładowanie szczegółów POI...',
+        notFound: 'POI nie znaleziono',
+        notFoundDescription: 'POI, którego szukasz, nie istnieje.',
+      },
+      comparison: {
+        compare: 'Porównaj',
+        comparing: 'Porównywanie',
+        addToCompare: 'Dodaj do porównania',
+        removeFromCompare: 'Usuń z porównania',
+        compareTitle: 'Porównanie POI',
+        selectedCount: '{count} POI wybrano',
+        maxReached: 'Maksymalnie 3 POI można porównać',
+        clearAll: 'Wyczyść wszystko',
+        noItemsSelected: 'Nie wybrano POI',
+        selectToCompare: 'Wybierz 2-3 POI do porównania',
+      },
+    },
+    categories: {
+      active: 'Aktywność',
+      beaches: 'Plaże i Natura',
+      culture: 'Kultura i Historia',
+      recreation: 'Rekreacja',
+      food: 'Jedzenie i Napoje',
+      health: 'Zdrowie i Wellness',
+      shopping: 'Zakupy',
+      practical: 'Praktyczne',
+      events: 'Wydarzenia',
+      all: 'Wszystkie',
+    },
+    common: {
+      save: 'Zapisz',
+      close: 'Zamknij',
+      apply: 'Zastosuj',
+      reset: 'Resetuj',
+      loading: 'Ładowanie...',
+    },
+    reviews: {
+      title: 'Recenzje',
+      writeReview: 'Napisz recenzję',
+      editReview: 'Edytuj recenzję',
+      deleteReview: 'Usuń recenzję',
+      yourRating: 'Twoja ocena',
+      yourReview: 'Twoja recenzja',
+      submitReview: 'Prześlij recenzję',
+      updateReview: 'Zaktualizuj recenzję',
+      cancel: 'Anuluj',
+      reviewDeleted: 'Recenzja usunięta',
+      reviewSubmitted: 'Recenzja przesłana',
+      reviewUpdated: 'Recenzja zaktualizowana',
+      loginToReview: 'Zaloguj się, aby napisać recenzję',
+      filters: {
+        all: 'Wszystkie recenzje',
+        positive: 'Pozytywne',
+        neutral: 'Neutralne',
+        negative: 'Negatywne',
+      },
+      sortBy: {
+        label: 'Sortuj według',
+        newest: 'Najnowsze',
+        oldest: 'Najstarsze',
+        highestRated: 'Najwyżej oceniane',
+        lowestRated: 'Najniżej oceniane',
+      },
+      ratingDistribution: 'Rozkład ocen',
+      averageRating: 'Średnia ocena',
+      totalReviews: '{count} recenzji',
+    },
+    favorites: {
+      title: 'Moje Ulubione',
+      empty: 'Brak ulubionych',
+      emptyDescription: 'Zacznij dodawać miejsca do swoich ulubionych!',
+      removeConfirm: 'Czy na pewno chcesz usunąć z ulubionych?',
+      removed: 'Usunięto z ulubionych',
+    },
+    account: {
+      title: 'Moje Konto',
+      profile: {
+        title: 'Profil',
+        name: 'Imię',
+        email: 'E-mail',
+        phone: 'Telefon',
+        language: 'Język',
+        saveChanges: 'Zapisz zmiany',
+        changesSaved: 'Zmiany zapisane',
+      },
+      preferences: {
+        title: 'Preferencje',
+        categories: 'Ulubione kategorie',
+        budget: 'Budżet',
+        notifications: 'Powiadomienia',
+      },
+      privacy: {
+        title: 'Prywatność i Dane',
+        downloadData: 'Pobierz Moje Dane',
+        deleteAccount: 'Usuń Konto',
+        dataExport: 'Eksport Danych',
+        whatIncluded: 'Co jest zawarte?',
+        includeList: {
+          profile: 'Informacje profilowe',
+          preferences: 'Preferencje podróżne',
+          savedPOIs: 'Zapisane POI i ulubione',
+          reviews: 'Recenzje i oceny',
+          visitHistory: 'Historia wizyt',
+          activityLog: 'Dziennik aktywności konta',
+          consentSettings: 'Ustawienia zgody i prywatności',
+        },
+        format: 'Format eksportu',
+        formatJSON: 'JSON (czytelny dla maszyn)',
+        formatPDF: 'PDF (czytelny dla ludzi)',
+        formatBoth: 'Oba formaty',
+        requestButton: 'Poproś o Eksport Danych',
+        validityNote: 'Eksporty są dostępne przez 7 dni po wygenerowaniu.',
+      },
+      settings: {
+        security: 'Bezpieczeństwo',
+        changePassword: 'Zmień Hasło',
+        twoFactor: 'Uwierzytelnianie dwuskładnikowe',
+        twoFactorStatus: 'Nie włączone',
+        notifications: 'Powiadomienia',
+        emailNotifications: 'Powiadomienia e-mail',
+        pushNotifications: 'Powiadomienia push',
+        dangerZone: 'Strefa niebezpieczna',
+        deleteData: 'Usuń Moje Dane Osobowe',
+        deleteDataDesc: 'Konto pozostanie z domyślnymi ustawieniami',
+        deleteAccount: 'Usuń Moje Konto',
+        deleteAccountDesc: 'Tej czynności nie można cofnąć',
+      },
+    },
+    auth: {
+      login: {
+        title: 'HolidaiButler',
+        subtitle: 'Witaj ponownie! Zaloguj się na swoje konto',
+        emailLabel: 'Adres e-mail',
+        emailPlaceholder: 'twoj.email@example.pl',
+        passwordLabel: 'Hasło',
+        passwordPlaceholder: 'Wprowadź swoje hasło',
+        forgotPassword: 'Zapomniałeś hasła?',
+        signInButton: 'Zaloguj się',
+        signingIn: 'Logowanie...',
+        noAccount: 'Nie masz konta?',
+        signUp: 'Zarejestruj się',
+        backToHome: 'Powrót do strony głównej',
+        errorFillFields: 'Proszę wypełnić wszystkie pola',
+        errorInvalidCredentials: 'Nieprawidłowy e-mail lub hasło. Spróbuj ponownie.',
+        errorGeneric: 'Logowanie nie powiodło się. Spróbuj później.',
+      },
+      signup: {
+        title: 'HolidaiButler',
+        subtitle: 'Utwórz swoje konto',
+        nameLabel: 'Pełne imię',
+        namePlaceholder: 'Twoje pełne imię',
+        emailLabel: 'Adres e-mail',
+        emailPlaceholder: 'twoj.email@example.pl',
+        passwordLabel: 'Hasło',
+        passwordPlaceholder: 'Wybierz bezpieczne hasło',
+        confirmPasswordLabel: 'Potwierdź hasło',
+        confirmPasswordPlaceholder: 'Wprowadź ponownie swoje hasło',
+        termsText: 'Akceptuję',
+        termsLink: 'Warunki Użytkowania',
+        and: 'i',
+        privacyLink: 'Politykę Prywatności',
+        signUpButton: 'Utwórz Konto',
+        signingUp: 'Tworzenie konta...',
+        haveAccount: 'Masz już konto?',
+        signIn: 'Zaloguj się',
+        backToHome: 'Powrót do strony głównej',
+        errorFillFields: 'Proszę wypełnić wszystkie pola',
+        errorPasswordMismatch: 'Hasła nie pasują',
+        errorPasswordTooShort: 'Hasło musi mieć co najmniej 6 znaków',
+        errorEmailExists: 'Konto z tym e-mailem już istnieje. Proszę się zalogować.',
+        errorGeneric: 'Rejestracja nie powiodła się. Spróbuj później.',
+      },
+    },
+    footer: {
+      about: 'O nas',
+      privacy: 'Polityka Prywatności',
+      terms: 'Warunki Użytkowania',
+      contact: 'Kontakt',
+      copyright: '© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.',
+    },
+  },
+};

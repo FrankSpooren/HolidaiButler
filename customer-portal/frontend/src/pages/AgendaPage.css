@@ -283,19 +283,9 @@
   overflow: hidden;
 }
 
-/* Date Section - Groups events by date with header */
+/* Date Section - Groups events by date (no visible header, header is sticky above) */
 .agenda-date-section {
-  margin-bottom: 8px;
-}
-
-.agenda-date-header {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1F2937;
-  padding: 16px 16px 8px 16px;
-  font-family: 'Inter', sans-serif;
-  text-transform: capitalize;
-  background: white;
+  /* No margin needed, sections flow naturally */
 }
 
 /* Grid - Events layout per date section */
@@ -584,12 +574,6 @@
   .agenda-quick-filter-btn {
     padding: 6px 10px;
     font-size: 12px;
-  }
-
-  /* Date section headers mobile */
-  .agenda-date-header {
-    font-size: 15px;
-    padding: 12px 16px 8px 16px;
   }
 
   /* Date subheader mobile */

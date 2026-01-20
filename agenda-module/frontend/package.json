@@ -1,0 +1,38 @@
+{
+  "name": "holidaibutler-agenda-frontend",
+  "version": "1.0.0",
+  "description": "HolidaiButler Agenda Module - Frontend for Calpe Events",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext js,jsx"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.14.13",
+    "@mui/material": "^5.14.13",
+    "@mui/x-date-pickers": "^6.18.0",
+    "axios": "^1.6.0",
+    "date-fns": "^2.30.0",
+    "i18next": "^23.7.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-i18next": "^13.5.0",
+    "react-query": "^3.39.3",
+    "react-router-dom": "^6.16.0",
+    "react-toastify": "^9.1.3",
+    "zustand": "^4.4.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@vitejs/plugin-react": "^4.1.0",
+    "eslint": "^8.54.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "vite": "^4.5.0"
+  }
+}
