@@ -288,6 +288,12 @@ export function AgendaPage() {
     return filteredEvents.slice(0, loadedCount);
   }, [filteredEvents, loadedCount]);
 
+  // Helper to get local date key (YYYY-MM-DD) without timezone issues
+  const getLocalDateKey = (dateStr: string): string => {
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
   // Group events by date and create rows that DON'T cross date boundaries
   const virtualRows = useMemo(() => {
     const rows: { dateKey: string; events: typeof displayedEvents }[] = [];
@@ -295,8 +301,7 @@ export function AgendaPage() {
     let currentRow: typeof displayedEvents = [];
 
     displayedEvents.forEach((event) => {
-      const eventDate = new Date(event.startDate);
-      const dateKey = eventDate.toISOString().split('T')[0];
+      const dateKey = getLocalDateKey(event.startDate);
 
       if (dateKey !== currentDateKey) {
         // New date - finish current row if any and start fresh
@@ -356,12 +361,8 @@ export function AgendaPage() {
 
   // Set initial visible date key when events load
   useEffect(() => {
-    if (filteredEvents.length > 0) {
-      const d = new Date(filteredEvents[0].startDate);
-      const firstDateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      if (!visibleDateKey) {
-        setVisibleDateKey(firstDateKey);
-      }
+    if (filteredEvents.length > 0 && !visibleDateKey) {
+      setVisibleDateKey(getLocalDateKey(filteredEvents[0].startDate));
     }
   }, [filteredEvents, visibleDateKey]);
 
