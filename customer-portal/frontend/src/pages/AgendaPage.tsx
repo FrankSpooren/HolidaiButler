@@ -369,16 +369,16 @@ export function AgendaPage() {
   }, []);
 
   // Update visible date based on which card is at the top of the viewport
-  // This DOM-based approach checks each card's position for accurate date tracking
+  // Iterate FORWARDS to find the FIRST (leftmost, topmost) visible card
   useEffect(() => {
     const handleDateScroll = () => {
       const cards = document.querySelectorAll('.agenda-card');
-      // Iterate backwards to find the last card that's above the threshold
-      for (let i = cards.length - 1; i >= 0; i--) {
+      // Find the first card that's visible in the viewport (top > 0 and near header)
+      for (let i = 0; i < cards.length; i++) {
         const card = cards[i] as HTMLElement;
-        // Card is considered "at top" when its top edge is <= 290px from viewport top
-        // This accounts for the sticky header height
-        if (card.getBoundingClientRect().top <= 290) {
+        const top = card.getBoundingClientRect().top;
+        // Card is "at top" when visible (top > 0) and below header area (top <= 350)
+        if (top > 0 && top <= 350) {
           const dateKey = card.getAttribute('data-date-key');
           if (dateKey && dateKey !== visibleDateKey) {
             setVisibleDateKey(dateKey);
