@@ -368,21 +368,31 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Update visible date based on virtualizer scroll position
+  // Update visible date based on which card is at the top of the viewport
+  // This DOM-based approach checks each card's position for accurate date tracking
   useEffect(() => {
-    const virtualItems = virtualizer.getVirtualItems();
-    if (virtualItems.length > 0) {
-      const firstVisibleRowIndex = virtualItems[0].index;
-      const eventIndex = firstVisibleRowIndex * columnCount;
-      if (displayedEvents[eventIndex]) {
-        const d = new Date(displayedEvents[eventIndex].startDate);
-        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (dateKey !== visibleDateKey) {
-          setVisibleDateKey(dateKey);
+    const handleDateScroll = () => {
+      const cards = document.querySelectorAll('.agenda-card');
+      // Iterate backwards to find the last card that's above the threshold
+      for (let i = cards.length - 1; i >= 0; i--) {
+        const card = cards[i] as HTMLElement;
+        // Card is considered "at top" when its top edge is <= 290px from viewport top
+        // This accounts for the sticky header height
+        if (card.getBoundingClientRect().top <= 290) {
+          const dateKey = card.getAttribute('data-date-key');
+          if (dateKey && dateKey !== visibleDateKey) {
+            setVisibleDateKey(dateKey);
+          }
+          break;
         }
       }
-    }
-  }, [virtualizer.getVirtualItems(), displayedEvents, columnCount, visibleDateKey]);
+    };
+
+    // Run on mount and on scroll
+    handleDateScroll();
+    window.addEventListener('scroll', handleDateScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleDateScroll);
+  }, [visibleDateKey]);
 
   // Infinite scroll - load more when near bottom
   useEffect(() => {

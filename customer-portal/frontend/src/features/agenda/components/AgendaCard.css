@@ -86,23 +86,6 @@
   text-transform: uppercase;
 }
 
-/* Date Badge - Shows event date prominently */
-.agenda-date-badge {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  padding: 6px 12px;
-  background: rgba(0, 0, 0, 0.75);
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 8px;
-  text-transform: capitalize;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  z-index: 5;
-}
-
 /* Save Button */
 .agenda-save-btn {
   position: absolute;
