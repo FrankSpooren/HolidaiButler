@@ -283,12 +283,27 @@
   overflow: hidden;
 }
 
-/* Legacy grid for fallback (not used with virtualization) */
+/* Date Section - Groups events by date with header */
+.agenda-date-section {
+  margin-bottom: 8px;
+}
+
+.agenda-date-header {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1F2937;
+  padding: 16px 16px 8px 16px;
+  font-family: 'Inter', sans-serif;
+  text-transform: capitalize;
+  background: white;
+}
+
+/* Grid - Events layout per date section */
 .agenda-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  padding: 16px;
+  padding: 0 16px 16px 16px;
 }
 
 @media (min-width: 768px) {
@@ -569,6 +584,12 @@
   .agenda-quick-filter-btn {
     padding: 6px 10px;
     font-size: 12px;
+  }
+
+  /* Date section headers mobile */
+  .agenda-date-header {
+    font-size: 15px;
+    padding: 12px 16px 8px 16px;
   }
 
   /* Date subheader mobile */

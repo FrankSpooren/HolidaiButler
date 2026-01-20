@@ -5,7 +5,6 @@ import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl, enUS, de, es, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
-import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { useAgendaComparison } from '../shared/contexts/AgendaComparisonContext';
@@ -21,31 +20,10 @@ import './AgendaPage.css';
 /**
  * AgendaPage - Events & Activities Calendar
  * Route: /agenda
- * Enterprise-level virtualized infinite scroll using @tanstack/react-virtual
- * Uses WINDOW SCROLLING for unified scroll experience - no nested scroll containers
+ * Enterprise-level date-grouped event display
+ * Events grouped by date with dedicated headers per date section
  */
 
-// Hook to get responsive column count
-function useColumnCount() {
-  const [columnCount, setColumnCount] = useState(() => {
-    if (typeof window === 'undefined') return 2;
-    if (window.innerWidth >= 1024) return 4;
-    if (window.innerWidth >= 768) return 3;
-    return 2;
-  });
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) setColumnCount(4);
-      else if (window.innerWidth >= 768) setColumnCount(3);
-      else setColumnCount(2);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  return columnCount;
-}
 
 // Interest category configuration
 const INTEREST_CATEGORIES = [
@@ -182,22 +160,20 @@ export function AgendaPage() {
   const [comparisonModalOpen, setComparisonModalOpen] = useState<boolean>(false);
   const [filters, setFilters] = useState<AgendaFilters>(defaultFilters);
   const [showHeader, setShowHeader] = useState<boolean>(true);
-  const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
-  // Grid container ref for measuring width
+  // Grid container ref
   const gridContainerRef = useRef<HTMLDivElement>(null);
-  const columnCount = useColumnCount();
 
   // For infinite loading - how many items are currently loaded
   const [loadedCount, setLoadedCount] = useState<number>(24);
 
-  // Fetch ALL events - virtualization handles display efficiently
+  // Fetch events with infinite scroll
   const { data: eventsData, isLoading, error } = useQuery({
     queryKey: ['agenda-events', searchQuery, selectedCategory],
     queryFn: () => agendaService.getEvents({
       search: searchQuery || undefined,
       categories: selectedCategory || undefined,
-      limit: 500, // Fetch more - virtualization renders only visible
+      limit: 500,
       page: 1,
     }),
     staleTime: 60000,
@@ -288,47 +264,31 @@ export function AgendaPage() {
     return filteredEvents.slice(0, loadedCount);
   }, [filteredEvents, loadedCount]);
 
-  // Calculate row count based on displayed items
-  const rowCount = Math.ceil(displayedEvents.length / columnCount);
-
-  // Row height based on screen size - must fit entire card + gap
-  // Mobile: image 160px + content ~190px = ~350px + 12px gap = 362px
-  // Desktop: image 200px + content ~220px = ~420px + 12px gap = 432px
-  const rowHeight = columnCount <= 2 ? 362 : 432;
-
-  // Window virtualizer - scrolls with the WINDOW, not a container
-  const virtualizer = useWindowVirtualizer({
-    count: rowCount,
-    estimateSize: () => rowHeight,
-    overscan: 3, // Render 3 extra rows above/below for smooth scrolling
-    scrollMargin: gridContainerRef.current?.offsetTop ?? 0,
-  });
-
-  // Compute formatted visible date from key
-  const visibleDateFormatted = useMemo(() => {
-    if (!visibleDateKey) return '';
+  // Group events by date - RESTORED from original implementation
+  const eventsByDate = useMemo(() => {
+    const groups: { date: string; dateFormatted: string; events: typeof displayedEvents }[] = [];
     const locale = dateLocales[language] || dateLocales.en;
     const formatStr = dateHeaderFormats[language] || dateHeaderFormats.en;
-    const [year, month, day] = visibleDateKey.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    return format(date, formatStr, { locale });
-  }, [visibleDateKey, language]);
+
+    displayedEvents.forEach(event => {
+      const eventDate = new Date(event.startDate);
+      const dateKey = eventDate.toISOString().split('T')[0];
+      const dateFormatted = format(eventDate, formatStr, { locale });
+      const existingGroup = groups.find(g => g.date === dateKey);
+      if (existingGroup) {
+        existingGroup.events.push(event);
+      } else {
+        groups.push({ date: dateKey, dateFormatted, events: [event] });
+      }
+    });
+    groups.sort((a, b) => a.date.localeCompare(b.date));
+    return groups;
+  }, [displayedEvents, language]);
 
   // Get user location
   useEffect(() => {
     getUserLocation().then(setUserLocation).catch(() => {});
   }, []);
-
-  // Set initial visible date key when events load
-  useEffect(() => {
-    if (filteredEvents.length > 0) {
-      const d = new Date(filteredEvents[0].startDate);
-      const firstDateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      if (!visibleDateKey) {
-        setVisibleDateKey(firstDateKey);
-      }
-    }
-  }, [filteredEvents, visibleDateKey]);
 
   // Scroll direction detection - hide header on scroll down, show on scroll up
   useEffect(() => {
@@ -368,33 +328,22 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Update visible date based on virtualizer scroll position
-  useEffect(() => {
-    const virtualItems = virtualizer.getVirtualItems();
-    if (virtualItems.length > 0) {
-      const firstVisibleRowIndex = virtualItems[0].index;
-      const eventIndex = firstVisibleRowIndex * columnCount;
-      if (displayedEvents[eventIndex]) {
-        const d = new Date(displayedEvents[eventIndex].startDate);
-        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (dateKey !== visibleDateKey) {
-          setVisibleDateKey(dateKey);
-        }
-      }
-    }
-  }, [virtualizer.getVirtualItems(), displayedEvents, columnCount, visibleDateKey]);
-
   // Infinite scroll - load more when near bottom
   useEffect(() => {
-    const virtualItems = virtualizer.getVirtualItems();
-    if (virtualItems.length > 0) {
-      const lastVisibleRowIndex = virtualItems[virtualItems.length - 1].index;
-      // Load more when within 2 rows of the end
-      if (lastVisibleRowIndex >= rowCount - 2 && loadedCount < filteredEvents.length) {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+
+      // Load more when within 500px of bottom
+      if (scrollTop + windowHeight >= documentHeight - 500 && loadedCount < filteredEvents.length) {
         setLoadedCount(prev => Math.min(prev + 12, filteredEvents.length));
       }
-    }
-  }, [virtualizer.getVirtualItems(), rowCount, loadedCount, filteredEvents.length]);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [loadedCount, filteredEvents.length]);
 
   // Reset loadedCount when filters change
   useEffect(() => {
@@ -430,9 +379,6 @@ export function AgendaPage() {
   };
 
   const noResults = noResultsLabels[language] || noResultsLabels.en;
-
-  // Get virtual items for rendering
-  const virtualItems = virtualizer.getVirtualItems();
 
   return (
     <>
@@ -485,12 +431,6 @@ export function AgendaPage() {
             </button>
           </div>
         </div>
-        {/* Date subheader - inside filter row so they move together */}
-        {!isLoading && !error && filteredEvents.length > 0 && (
-          <div className="agenda-date-subheader">
-            <span className="agenda-date-subheader-text">{visibleDateFormatted}</span>
-          </div>
-        )}
       </div>
 
       {/* Loading State */}
@@ -508,67 +448,40 @@ export function AgendaPage() {
         </div>
       )}
 
-      {/* Virtualized Grid - Window scrolling for unified scroll experience */}
+      {/* Grid View - Grouped by Date */}
       {!isLoading && !error && filteredEvents.length > 0 && (
-        <div
-          ref={gridContainerRef}
-          className="agenda-grid-container"
-          style={{
-            height: `${virtualizer.getTotalSize()}px`,
-            width: '100%',
-            position: 'relative',
-          }}
-        >
-          {virtualItems.map((virtualRow) => {
-            const rowIndex = virtualRow.index;
-            const startIndex = rowIndex * columnCount;
-            const rowEvents = displayedEvents.slice(startIndex, startIndex + columnCount);
-
-            // Card height = rowHeight - gap (12px)
-            const cardHeight = rowHeight - 12;
-
-            return (
-              <div
-                key={virtualRow.key}
-                className="agenda-virtual-row"
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: `${cardHeight}px`,
-                  transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
-                }}
-              >
-                <div className="agenda-grid-row">
-                  {rowEvents.map((event) => {
-                    const ed = new Date(event.startDate);
-                    const eventDateKey = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
-                    return (
-                      <div key={event._id} className="agenda-grid-item">
-                        <AgendaCard
-                          event={event}
-                          onClick={() => {
-                            setSelectedEventId(event._id);
-                            setSelectedEventDate(event.startDate);
-                          }}
-                          onSave={toggleAgendaFavorite}
-                          isSaved={isAgendaFavorite(event._id)}
-                          distance={getDistance(event)}
-                          detectedCategory={detectCategory(event, language)}
-                          isInComparison={isInComparison(event._id)}
-                          onToggleComparison={toggleComparison}
-                          canAddMore={canAddMore}
-                          showComparison={true}
-                          dateKey={eventDateKey}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+        <div ref={gridContainerRef} className="agenda-grid-container">
+          {eventsByDate.map((group) => (
+            <div key={group.date} className="agenda-date-section">
+              <div className="agenda-date-header">{group.dateFormatted}</div>
+              <div className="agenda-grid">
+                {group.events.map((event) => {
+                  const ed = new Date(event.startDate);
+                  const eventDateKey = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
+                  return (
+                    <div key={event._id} className="agenda-grid-item">
+                      <AgendaCard
+                        event={event}
+                        onClick={() => {
+                          setSelectedEventId(event._id);
+                          setSelectedEventDate(event.startDate);
+                        }}
+                        onSave={toggleAgendaFavorite}
+                        isSaved={isAgendaFavorite(event._id)}
+                        distance={getDistance(event)}
+                        detectedCategory={detectCategory(event, language)}
+                        isInComparison={isInComparison(event._id)}
+                        onToggleComparison={toggleComparison}
+                        canAddMore={canAddMore}
+                        showComparison={true}
+                        dateKey={eventDateKey}
+                      />
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
 
