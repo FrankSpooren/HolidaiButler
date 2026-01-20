@@ -368,31 +368,21 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Update visible date based on which card is at the top of the viewport
-  // Iterate FORWARDS to find the FIRST (leftmost, topmost) visible card
+  // Update visible date based on virtualizer scroll position
   useEffect(() => {
-    const handleDateScroll = () => {
-      const cards = document.querySelectorAll('.agenda-card');
-      // Find the first card that's visible in the viewport (top > 0 and near header)
-      for (let i = 0; i < cards.length; i++) {
-        const card = cards[i] as HTMLElement;
-        const top = card.getBoundingClientRect().top;
-        // Card is "at top" when visible (top > 0) and below header area (top <= 350)
-        if (top > 0 && top <= 350) {
-          const dateKey = card.getAttribute('data-date-key');
-          if (dateKey && dateKey !== visibleDateKey) {
-            setVisibleDateKey(dateKey);
-          }
-          break;
+    const virtualItems = virtualizer.getVirtualItems();
+    if (virtualItems.length > 0) {
+      const firstVisibleRowIndex = virtualItems[0].index;
+      const eventIndex = firstVisibleRowIndex * columnCount;
+      if (displayedEvents[eventIndex]) {
+        const d = new Date(displayedEvents[eventIndex].startDate);
+        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (dateKey !== visibleDateKey) {
+          setVisibleDateKey(dateKey);
         }
       }
-    };
-
-    // Run on mount and on scroll
-    handleDateScroll();
-    window.addEventListener('scroll', handleDateScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleDateScroll);
-  }, [visibleDateKey]);
+    }
+  }, [virtualizer.getVirtualItems(), displayedEvents, columnCount, visibleDateKey]);
 
   // Infinite scroll - load more when near bottom
   useEffect(() => {
