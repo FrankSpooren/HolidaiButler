@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl, enUS, de, es, sv, pl } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgendaFavorites } from '../shared/contexts/AgendaFavoritesContext';
 import { useAgendaComparison } from '../shared/contexts/AgendaComparisonContext';
@@ -20,10 +21,31 @@ import './AgendaPage.css';
 /**
  * AgendaPage - Events & Activities Calendar
  * Route: /agenda
- * Enterprise-level date-grouped event display
- * One sticky date header that updates based on visible section
+ * Enterprise-level virtualized infinite scroll using @tanstack/react-virtual
+ * Uses WINDOW SCROLLING for unified scroll experience - no nested scroll containers
  */
 
+// Hook to get responsive column count
+function useColumnCount() {
+  const [columnCount, setColumnCount] = useState(() => {
+    if (typeof window === 'undefined') return 2;
+    if (window.innerWidth >= 1024) return 4;
+    if (window.innerWidth >= 768) return 3;
+    return 2;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setColumnCount(4);
+      else if (window.innerWidth >= 768) setColumnCount(3);
+      else setColumnCount(2);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return columnCount;
+}
 
 // Interest category configuration
 const INTEREST_CATEGORIES = [
@@ -162,20 +184,20 @@ export function AgendaPage() {
   const [showHeader, setShowHeader] = useState<boolean>(true);
   const [visibleDateKey, setVisibleDateKey] = useState<string>('');
 
-  // Refs for scroll detection
+  // Grid container ref for measuring width
   const gridContainerRef = useRef<HTMLDivElement>(null);
-  const dateSectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const columnCount = useColumnCount();
 
   // For infinite loading - how many items are currently loaded
   const [loadedCount, setLoadedCount] = useState<number>(24);
 
-  // Fetch events with infinite scroll
+  // Fetch ALL events - virtualization handles display efficiently
   const { data: eventsData, isLoading, error } = useQuery({
     queryKey: ['agenda-events', searchQuery, selectedCategory],
     queryFn: () => agendaService.getEvents({
       search: searchQuery || undefined,
       categories: selectedCategory || undefined,
-      limit: 500,
+      limit: 500, // Fetch more - virtualization renders only visible
       page: 1,
     }),
     staleTime: 60000,
@@ -266,26 +288,56 @@ export function AgendaPage() {
     return filteredEvents.slice(0, loadedCount);
   }, [filteredEvents, loadedCount]);
 
-  // Group events by date - RESTORED from original implementation
-  const eventsByDate = useMemo(() => {
-    const groups: { date: string; dateFormatted: string; events: typeof displayedEvents }[] = [];
-    const locale = dateLocales[language] || dateLocales.en;
-    const formatStr = dateHeaderFormats[language] || dateHeaderFormats.en;
+  // Group events by date and create rows that DON'T cross date boundaries
+  const virtualRows = useMemo(() => {
+    const rows: { dateKey: string; events: typeof displayedEvents }[] = [];
+    let currentDateKey = '';
+    let currentRow: typeof displayedEvents = [];
 
-    displayedEvents.forEach(event => {
+    displayedEvents.forEach((event) => {
       const eventDate = new Date(event.startDate);
       const dateKey = eventDate.toISOString().split('T')[0];
-      const dateFormatted = format(eventDate, formatStr, { locale });
-      const existingGroup = groups.find(g => g.date === dateKey);
-      if (existingGroup) {
-        existingGroup.events.push(event);
+
+      if (dateKey !== currentDateKey) {
+        // New date - finish current row if any and start fresh
+        if (currentRow.length > 0) {
+          rows.push({ dateKey: currentDateKey, events: [...currentRow] });
+        }
+        currentDateKey = dateKey;
+        currentRow = [event];
+      } else if (currentRow.length >= columnCount) {
+        // Same date but row is full - start new row
+        rows.push({ dateKey: currentDateKey, events: [...currentRow] });
+        currentRow = [event];
       } else {
-        groups.push({ date: dateKey, dateFormatted, events: [event] });
+        // Same date and row has space
+        currentRow.push(event);
       }
     });
-    groups.sort((a, b) => a.date.localeCompare(b.date));
-    return groups;
-  }, [displayedEvents, language]);
+
+    // Don't forget the last row
+    if (currentRow.length > 0) {
+      rows.push({ dateKey: currentDateKey, events: [...currentRow] });
+    }
+
+    return rows;
+  }, [displayedEvents, columnCount]);
+
+  // Calculate row count based on virtualRows
+  const rowCount = virtualRows.length;
+
+  // Row height based on screen size - must fit entire card + gap
+  // Mobile: image 160px + content ~190px = ~350px + 12px gap = 362px
+  // Desktop: image 200px + content ~220px = ~420px + 12px gap = 432px
+  const rowHeight = columnCount <= 2 ? 362 : 432;
+
+  // Window virtualizer - scrolls with the WINDOW, not a container
+  const virtualizer = useWindowVirtualizer({
+    count: rowCount,
+    estimateSize: () => rowHeight,
+    overscan: 3, // Render 3 extra rows above/below for smooth scrolling
+    scrollMargin: gridContainerRef.current?.offsetTop ?? 0,
+  });
 
   // Compute formatted visible date from key
   const visibleDateFormatted = useMemo(() => {
@@ -304,41 +356,14 @@ export function AgendaPage() {
 
   // Set initial visible date key when events load
   useEffect(() => {
-    if (eventsByDate.length > 0 && !visibleDateKey) {
-      setVisibleDateKey(eventsByDate[0].date);
-    }
-  }, [eventsByDate, visibleDateKey]);
-
-  // IntersectionObserver to detect which date section is visible
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // Find the first section that is intersecting from the top
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const dateKey = entry.target.getAttribute('data-date');
-            if (dateKey && dateKey !== visibleDateKey) {
-              setVisibleDateKey(dateKey);
-            }
-            break;
-          }
-        }
-      },
-      {
-        root: null,
-        // Observe when section enters the top portion of the viewport
-        rootMargin: '-200px 0px -70% 0px',
-        threshold: 0,
+    if (filteredEvents.length > 0) {
+      const d = new Date(filteredEvents[0].startDate);
+      const firstDateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (!visibleDateKey) {
+        setVisibleDateKey(firstDateKey);
       }
-    );
-
-    // Observe all date sections
-    dateSectionRefs.current.forEach((element) => {
-      observer.observe(element);
-    });
-
-    return () => observer.disconnect();
-  }, [eventsByDate, visibleDateKey]);
+    }
+  }, [filteredEvents, visibleDateKey]);
 
   // Scroll direction detection - hide header on scroll down, show on scroll up
   useEffect(() => {
@@ -378,22 +403,31 @@ export function AgendaPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Update visible date based on virtualizer scroll position
+  useEffect(() => {
+    const virtualItems = virtualizer.getVirtualItems();
+    if (virtualItems.length > 0 && virtualRows.length > 0) {
+      const firstVisibleRowIndex = virtualItems[0].index;
+      if (virtualRows[firstVisibleRowIndex]) {
+        const dateKey = virtualRows[firstVisibleRowIndex].dateKey;
+        if (dateKey !== visibleDateKey) {
+          setVisibleDateKey(dateKey);
+        }
+      }
+    }
+  }, [virtualizer.getVirtualItems(), virtualRows, visibleDateKey]);
+
   // Infinite scroll - load more when near bottom
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
-
-      // Load more when within 500px of bottom
-      if (scrollTop + windowHeight >= documentHeight - 500 && loadedCount < filteredEvents.length) {
+    const virtualItems = virtualizer.getVirtualItems();
+    if (virtualItems.length > 0) {
+      const lastVisibleRowIndex = virtualItems[virtualItems.length - 1].index;
+      // Load more when within 2 rows of the end
+      if (lastVisibleRowIndex >= rowCount - 2 && loadedCount < filteredEvents.length) {
         setLoadedCount(prev => Math.min(prev + 12, filteredEvents.length));
       }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [loadedCount, filteredEvents.length]);
+    }
+  }, [virtualizer.getVirtualItems(), rowCount, loadedCount, filteredEvents.length]);
 
   // Reset loadedCount when filters change
   useEffect(() => {
@@ -429,6 +463,9 @@ export function AgendaPage() {
   };
 
   const noResults = noResultsLabels[language] || noResultsLabels.en;
+
+  // Get virtual items for rendering
+  const virtualItems = virtualizer.getVirtualItems();
 
   return (
     <>
@@ -481,7 +518,7 @@ export function AgendaPage() {
             </button>
           </div>
         </div>
-        {/* Sticky date header - updates based on visible section */}
+        {/* Date subheader - inside filter row so they move together */}
         {!isLoading && !error && filteredEvents.length > 0 && (
           <div className="agenda-date-subheader">
             <span className="agenda-date-subheader-text">{visibleDateFormatted}</span>
@@ -504,50 +541,68 @@ export function AgendaPage() {
         </div>
       )}
 
-      {/* Grid View - Grouped by Date (no per-section headers, sticky header updates on scroll) */}
+      {/* Virtualized Grid - Window scrolling for unified scroll experience */}
       {!isLoading && !error && filteredEvents.length > 0 && (
-        <div ref={gridContainerRef} className="agenda-grid-container">
-          {eventsByDate.map((group) => (
-            <div
-              key={group.date}
-              className="agenda-date-section"
-              data-date={group.date}
-              ref={(el) => {
-                if (el) {
-                  dateSectionRefs.current.set(group.date, el);
-                } else {
-                  dateSectionRefs.current.delete(group.date);
-                }
-              }}
-            >
-              <div className="agenda-grid">
-                {group.events.map((event) => {
-                  const ed = new Date(event.startDate);
-                  const eventDateKey = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
-                  return (
-                    <div key={event._id} className="agenda-grid-item">
-                      <AgendaCard
-                        event={event}
-                        onClick={() => {
-                          setSelectedEventId(event._id);
-                          setSelectedEventDate(event.startDate);
-                        }}
-                        onSave={toggleAgendaFavorite}
-                        isSaved={isAgendaFavorite(event._id)}
-                        distance={getDistance(event)}
-                        detectedCategory={detectCategory(event, language)}
-                        isInComparison={isInComparison(event._id)}
-                        onToggleComparison={toggleComparison}
-                        canAddMore={canAddMore}
-                        showComparison={true}
-                        dateKey={eventDateKey}
-                      />
-                    </div>
-                  );
-                })}
+        <div
+          ref={gridContainerRef}
+          className="agenda-grid-container"
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {virtualItems.map((virtualRow) => {
+            const rowIndex = virtualRow.index;
+            const rowData = virtualRows[rowIndex];
+            if (!rowData) return null;
+
+            const rowEvents = rowData.events;
+
+            // Card height = rowHeight - gap (12px)
+            const cardHeight = rowHeight - 12;
+
+            return (
+              <div
+                key={virtualRow.key}
+                className="agenda-virtual-row"
+                data-date={rowData.dateKey}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${cardHeight}px`,
+                  transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
+                }}
+              >
+                <div className="agenda-grid-row">
+                  {rowEvents.map((event) => {
+                    return (
+                      <div key={event._id} className="agenda-grid-item">
+                        <AgendaCard
+                          event={event}
+                          onClick={() => {
+                            setSelectedEventId(event._id);
+                            setSelectedEventDate(event.startDate);
+                          }}
+                          onSave={toggleAgendaFavorite}
+                          isSaved={isAgendaFavorite(event._id)}
+                          distance={getDistance(event)}
+                          detectedCategory={detectCategory(event, language)}
+                          isInComparison={isInComparison(event._id)}
+                          onToggleComparison={toggleComparison}
+                          canAddMore={canAddMore}
+                          showComparison={true}
+                          dateKey={rowData.dateKey}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
