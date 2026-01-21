@@ -130,24 +130,25 @@
 }
 
 /* Filter Row - Contains buttons AND date, all move together */
+/* DIAGNOSTIC: !important added to test if something overrides sticky */
 .agenda-filter-row {
   display: flex;
   flex-direction: column;
   gap: 0;
   background: white;
   border-bottom: 1px solid #E5E7EB;
-  position: sticky;
-  top: 198px;
+  position: sticky !important;
+  top: 198px !important;
   z-index: 80;
   transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .agenda-filter-row.header-hidden {
-  top: 75px;
+  top: 75px !important;
 }
 
 .agenda-filter-row.header-visible {
-  top: 198px;
+  top: 198px !important;
 }
 
 /* Filter buttons row */
