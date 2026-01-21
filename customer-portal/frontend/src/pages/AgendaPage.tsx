@@ -519,12 +519,12 @@ export function AgendaPage() {
             </button>
           </div>
         </div>
-        {/* Date subheader - inside filter row so they move together */}
-        {!isLoading && !error && filteredEvents.length > 0 && (
-          <div className="agenda-date-subheader">
+        {/* Date subheader - always render container for consistent sticky height */}
+        <div className="agenda-date-subheader">
+          {!isLoading && !error && filteredEvents.length > 0 && visibleDateFormatted && (
             <span className="agenda-date-subheader-text">{visibleDateFormatted}</span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Loading State */}
