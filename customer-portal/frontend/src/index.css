@@ -60,3 +60,17 @@
     overflow-x: hidden;
   }
 }
+
+/* CRITICAL: Agenda sticky positioning - loaded in global CSS to ensure availability on hard refresh */
+/* This fixes timing issue where page-specific CSS may not be loaded when React first renders */
+.agenda-filter-row {
+  position: sticky !important;
+  z-index: 80;
+  background: white;
+}
+
+.agenda-search-section,
+.agenda-category-section {
+  position: sticky !important;
+  background: white;
+}
