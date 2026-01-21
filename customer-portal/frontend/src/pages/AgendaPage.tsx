@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { Loader2 } from 'lucide-react';
@@ -188,6 +188,27 @@ export function AgendaPage() {
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const columnCount = useColumnCount();
 
+  // ScrollMargin state - calculated after layout completion for accurate positioning
+  // This fixes sticky positioning issue on hard refresh (layout not yet calculated)
+  const [scrollMargin, setScrollMargin] = useState<number>(0);
+
+  // Calculate scrollMargin after layout is complete (useLayoutEffect runs synchronously after DOM mutations)
+  // This ensures accurate offsetTop calculation, fixing sticky issues on hard refresh
+  useLayoutEffect(() => {
+    const updateScrollMargin = () => {
+      if (gridContainerRef.current) {
+        setScrollMargin(gridContainerRef.current.offsetTop);
+      }
+    };
+
+    // Initial calculation after layout
+    updateScrollMargin();
+
+    // Recalculate on window resize (layout may change)
+    window.addEventListener('resize', updateScrollMargin);
+    return () => window.removeEventListener('resize', updateScrollMargin);
+  }, [showHeader]); // Recalculate when header visibility changes (affects layout)
+
   // For infinite loading - how many items are currently loaded
   const [loadedCount, setLoadedCount] = useState<number>(24);
 
@@ -341,7 +362,7 @@ export function AgendaPage() {
     count: rowCount,
     estimateSize: () => rowHeight,
     overscan: 3, // Render 3 extra rows above/below for smooth scrolling
-    scrollMargin: gridContainerRef.current?.offsetTop ?? 0,
+    scrollMargin: scrollMargin, // Use state-based value calculated after layout completion
   });
 
   // Compute formatted visible date from key
@@ -502,16 +523,7 @@ export function AgendaPage() {
       </div>
 
       {/* Filter Row with Quick Filters AND Date - all move together */}
-      {/* Inline styles ensure sticky works immediately on load (CSS loading timing fix) */}
-      <div
-        className={`agenda-filter-row ${showHeader ? 'header-visible' : 'header-hidden'}`}
-        style={{
-          position: 'sticky',
-          top: showHeader ? '198px' : '75px',
-          zIndex: 80,
-          background: 'white',
-        }}
-      >
+      <div className={`agenda-filter-row ${showHeader ? 'header-visible' : 'header-hidden'}`}>
         <div className="agenda-filter-buttons">
           <button className="agenda-filter-btn" onClick={() => setFilterModalOpen(true)}>
             🔽 {t.poi?.filters || 'Filters'} ({getActiveFilterCount()})
