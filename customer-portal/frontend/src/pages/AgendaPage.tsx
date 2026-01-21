@@ -502,7 +502,16 @@ export function AgendaPage() {
       </div>
 
       {/* Filter Row with Quick Filters AND Date - all move together */}
-      <div className={`agenda-filter-row ${showHeader ? 'header-visible' : 'header-hidden'}`}>
+      {/* Inline styles ensure sticky works immediately on load (CSS loading timing fix) */}
+      <div
+        className={`agenda-filter-row ${showHeader ? 'header-visible' : 'header-hidden'}`}
+        style={{
+          position: 'sticky',
+          top: showHeader ? '198px' : '75px',
+          zIndex: 80,
+          background: 'white',
+        }}
+      >
         <div className="agenda-filter-buttons">
           <button className="agenda-filter-btn" onClick={() => setFilterModalOpen(true)}>
             🔽 {t.poi?.filters || 'Filters'} ({getActiveFilterCount()})
