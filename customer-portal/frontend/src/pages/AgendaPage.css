@@ -3,7 +3,7 @@
  * Updated: Quick filter buttons with gold active color, mobile layout fix
  */
 
-/* Search Section */
+/* Search Section - Matching POILandingPage.css exactly */
 .agenda-search-section {
   background: white;
   padding: 12px 16px;
@@ -11,14 +11,18 @@
   position: sticky;
   top: 75px;
   z-index: 99;
-  /* No transition on base - only when hiding */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.agenda-search-section.header-visible {
+  transform: translateY(0);
+  opacity: 1;
 }
 
 .agenda-search-section.header-hidden {
   transform: translateY(-100%);
   opacity: 0;
   pointer-events: none;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 
 .agenda-search-bar {
@@ -55,7 +59,7 @@
   color: #9CA3AF;
 }
 
-/* Category Section */
+/* Category Section - Matching POILandingPage.css exactly */
 .agenda-category-section {
   padding: 12px 0;
   background: white;
@@ -63,14 +67,18 @@
   position: sticky;
   top: 134px;
   z-index: 90;
-  /* No transition on base - only when hiding */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.agenda-category-section.header-visible {
+  transform: translateY(0);
+  opacity: 1;
 }
 
 .agenda-category-section.header-hidden {
   transform: translateY(-100%);
   opacity: 0;
   pointer-events: none;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 
 .agenda-category-scroll {
@@ -135,7 +143,7 @@
 }
 
 .agenda-filter-row.header-hidden {
-  top: 75px;
+  top: 95px;
 }
 
 .agenda-filter-row.header-visible {
@@ -459,8 +467,74 @@
 
 /* Mobile Responsive */
 @media (max-width: 640px) {
-  /* Mobile uses same sticky positioning as desktop (matching POILandingPage pattern) */
-  /* Header height is 80px on all screen sizes, so top values remain consistent */
+  /* Search section - hide on scroll down, show on scroll up */
+  .agenda-search-section {
+    position: sticky;
+    top: 56px;
+    z-index: 99;
+    padding: 12px 16px;
+    /* GPU acceleration for smooth animations */
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    /* Smooth hide/show transition */
+    transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+  }
+
+  .agenda-search-section.header-visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .agenda-search-section.header-hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Category section - hide on scroll down, show on scroll up */
+  .agenda-category-section {
+    position: sticky;
+    top: 112px;
+    z-index: 98;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+  }
+
+  .agenda-category-section.header-visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .agenda-category-section.header-hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Filter row - ALWAYS visible, adjusts position when header hides */
+  .agenda-filter-row {
+    position: sticky;
+    z-index: 97;
+    will-change: top;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transition: top 0.25s ease-out;
+  }
+
+  /* When header is visible, filter row sits below search + category */
+  .agenda-filter-row.header-visible {
+    top: 160px;
+  }
+
+  /* When header is hidden, filter row moves up to just below main header */
+  .agenda-filter-row.header-hidden {
+    top: 56px;
+  }
 
   .agenda-search-input {
     height: 44px;
