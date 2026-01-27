@@ -1,8 +1,8 @@
-# HolidaiButler Claude Agents - Masterplan v3.0
+# HolidaiButler Claude Agents - Masterplan v4.0
 
-> **Versie**: 3.4.0
-> **Datum**: 19 januari 2026 (17:45 UTC)
-> **Status**: Fase 2 Compleet, Fase 3 87.5% Compleet (4 van 5 agents live)
+> **Versie**: 4.0.0
+> **Datum**: 27 januari 2026 (13:00 UTC)
+> **Status**: Fase 1-5 COMPLEET - Alle agents live (35 scheduled jobs)
 > **Eigenaar**: Frank Spooren
 
 ---
@@ -17,7 +17,10 @@
 | 3.1 | 18 Jan 2026 | Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation |
 | 3.2 | 19 Jan 2026 | MailerLite automation-based email: group-trigger flow, custom fields, template config |
 | 3.3 | 19 Jan 2026 | Platform Health Monitor v1.0 GEACTIVEERD: 5 health check categorieën, hourly monitoring, alert integration met Owner Interface |
-| **3.4** | **19 Jan 2026** | **HoliBot Sync Agent v1.0 + Communication Flow Agent v1.0 LIVE: ChromaDB vector sync, user journeys, 24 scheduled jobs totaal. Fase 3 nu 87.5% compleet.** |
+| 3.4 | 19 Jan 2026 | HoliBot Sync Agent v1.0 + Communication Flow Agent v1.0 LIVE: ChromaDB vector sync, user journeys, 24 scheduled jobs totaal. Fase 3 nu 87.5% compleet. |
+| 3.5 | 19 Jan 2026 | GDPR Agent v1.0 LIVE: Art. 7/15/17/20/30 compliance, data export, erasure (72h), consent management. 4 nieuwe jobs (28 totaal). Fase 3 nu 100% compleet. |
+| 3.6 | 19 Jan 2026 | Fase 4 Development Layer v1.0 COMPLEET: UX/UI Reviewer, Code Reviewer, Security Reviewer, Quality Checker. OWASP Top 10, brand compliance. 3 nieuwe jobs (31 totaal). |
+| **4.0** | **27 Jan 2026** | **Fase 5 Strategy Layer v1.0 COMPLEET: Architecture Advisor, Learning Agent, Adaptive Config Agent, Prediction Agent. Pattern analysis, predictive alerts. 4 nieuwe jobs (35 totaal). Alle fases compleet!** |
 
 ---
 
@@ -123,7 +126,7 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 | **Threema Integration** | ✅ | 13 Jan 2026 | Urgency 5 alerts |
 | **MailerLite Automation** | ✅ | 19 Jan 2026 | Group-trigger flow, custom fields |
 
-### Fase 3: Specialized Agents ⏳ IN PROGRESS (87.5% Compleet)
+### Fase 3: Operations Layer ✅ COMPLEET (100%)
 
 | Agent | Functie | Week | Status |
 |-------|---------|------|--------|
@@ -131,7 +134,7 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 | **Data Sync Agent v2.0** | POI Lifecycle, Reviews, Q&A, Validation | 2 | ✅ Live |
 | **HoliBot Sync Agent v1.0** | ChromaDB vector sync voor chatbot | 2 | ✅ Live |
 | **Communication Flow Agent v1.0** | User journeys, notifications, MailerLite sync | 3 | ✅ Live |
-| GDPR Agent | Privacy compliance | 4 | ⏳ Planned |
+| **GDPR Agent v1.0** | Privacy compliance (Art. 7, 15, 17, 20, 30) | 4 | ✅ Live |
 
 #### Platform Health Monitor v1.0 Details (Geactiveerd 19 Jan 2026)
 
@@ -239,13 +242,135 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 - `platform-core/src/services/agents/communicationFlow/notificationRouter.js`
 - `platform-core/src/services/agents/communicationFlow/syncScheduler.js`
 
-### Fase 4: Strategy Agents 📅 PLANNED
+#### GDPR Agent v1.0 Details (Geactiveerd 19 Jan 2026)
+
+**Components:**
+- **Data Inventory**: Maps all personal data locations per Art. 30 GDPR
+- **Data Exporter**: Handles Art. 15 (Access) and Art. 20 (Portability) requests
+- **Data Eraser**: Handles Art. 17 (Right to Erasure) with 72h deadline
+- **Consent Manager**: Tracks Art. 7 consent (essential, analytics, personalization, marketing)
+- **Sync Scheduler**: 4 scheduled jobs for GDPR compliance monitoring
+
+**GDPR Articles Implemented:**
+| Article | Description | Implementation |
+|---------|-------------|----------------|
+| Art. 7 | Conditions for Consent | Consent tracking per category |
+| Art. 15 | Right of Access | Data export (JSON) |
+| Art. 17 | Right to Erasure | 72h deadline, owner approval for partners |
+| Art. 20 | Data Portability | Portable ZIP/CSV export |
+| Art. 30 | Records of Processing | Automated data inventory |
+
+**Scheduled Jobs (4):**
+| Job | Schedule | Beschrijving |
+|-----|----------|--------------|
+| `gdpr-overdue-check` | Elke 4 uur | Check 72h deletion deadline violations |
+| `gdpr-export-cleanup` | 03:00 dagelijks | Cleanup old export files (7+ days) |
+| `gdpr-retention-check` | 1e van maand 02:00 | Check data retention compliance |
+| `gdpr-consent-audit` | Zondag 04:00 | Generate consent statistics report |
+
+**Database Tables:**
+- `user_consent`: Consent tracking per user (essential, analytics, personalization, marketing)
+- `gdpr_deletion_requests`: Deletion request tracking with approval workflow
+
+**Bestanden:**
+- `platform-core/src/services/agents/gdpr/index.js`
+- `platform-core/src/services/agents/gdpr/dataInventory.js`
+- `platform-core/src/services/agents/gdpr/dataExporter.js`
+- `platform-core/src/services/agents/gdpr/dataEraser.js`
+- `platform-core/src/services/agents/gdpr/consentManager.js`
+- `platform-core/src/services/agents/gdpr/syncScheduler.js`
+
+### Fase 4: Development Layer ✅ COMPLEET (100%)
 
 | Agent | Functie | Status |
 |-------|---------|--------|
-| Architecture Agent | System design | 📅 |
-| Learning Agent | Analytics & insights | 📅 |
-| Adaptive Agent | Future planning | 📅 |
+| **UX/UI Reviewer v1.0** | Interface quality (brand colors, a11y, responsive, UX principles) | ✅ Live |
+| **Code Reviewer v1.0** | Code quality (conventions, error handling, performance, docs) | ✅ Live |
+| **Security Reviewer v1.0** | Security audits (OWASP Top 10, secrets detection, GDPR) | ✅ Live |
+| **Quality Checker v1.0** | Orchestration, lint, tests, dependency audit, CI/CD | ✅ Live |
+
+#### Development Layer Agent v1.0 Details (Geactiveerd 19 Jan 2026)
+
+**Components:**
+- **UX/UI Reviewer**: Brand color compliance, typography, WCAG accessibility, responsive design, UX principles (Miller's Law, Hick's Law, Fitts' Law)
+- **Code Reviewer**: HolidaiButler conventions, error handling patterns, performance anti-patterns, security patterns, code complexity, documentation
+- **Security Reviewer**: OWASP Top 10 2021 checks (A01-Broken Access Control, A02-Cryptographic Failures, A03-Injection, A07-Auth Failures, A10-SSRF), API security (rate limiting, CORS, input validation), authentication patterns, GDPR data protection, hardcoded secrets detection
+- **Quality Checker**: Orchestrates all reviewers, ESLint integration, test runner, dependency audit
+
+**Quality Thresholds:**
+| Level | Score | Result |
+|-------|-------|--------|
+| PASS | >= 80% | Approved |
+| WARNING | 60-79% | Needs attention |
+| FAIL | < 60% | Rejected |
+| CRITICAL | Any critical issue | Immediate action required |
+
+**Scheduled Jobs (3):**
+| Job | Schedule | Beschrijving |
+|-----|----------|--------------|
+| `dev-security-scan` | 02:00 dagelijks | Full security scan of all projects |
+| `dev-dependency-audit` | Zondag 03:00 | Dependency vulnerability audit |
+| `dev-quality-report` | Maandag 06:00 | Weekly quality report generation |
+
+**Bestanden:**
+- `platform-core/src/services/agents/devLayer/index.js`
+- `platform-core/src/services/agents/devLayer/qualityChecker.js`
+- `platform-core/src/services/agents/devLayer/syncScheduler.js`
+- `platform-core/src/services/agents/devLayer/reviewers/uxReviewer.js`
+- `platform-core/src/services/agents/devLayer/reviewers/codeReviewer.js`
+- `platform-core/src/services/agents/devLayer/reviewers/securityReviewer.js`
+
+### Fase 5: Strategy Layer ✅ COMPLEET (100%)
+
+| Agent | Functie | Status |
+|-------|---------|--------|
+| **Architecture Advisor v1.0** | System design recommendations, health assessment | ✅ Live |
+| **Learning Agent v1.0** | Pattern analysis, optimization suggestions | ✅ Live |
+| **Adaptive Config Agent v1.0** | Dynamic configuration tuning | ✅ Live |
+| **Prediction Agent v1.0** | Proactive issue detection, forecasting | ✅ Live |
+
+#### Strategy Layer Agent v1.0 Details (Geactiveerd 27 Jan 2026)
+
+**Components:**
+- **Pattern Analyzer**: Shared analysis engine for error patterns (recurring, spikes), performance patterns (degradation, peaks), cost patterns (anomalies, trends), user journey patterns (drop-offs)
+- **Architecture Advisor**: 5-category system assessment (stability, performance, cost efficiency, scalability, EU compliance), scored 0-100 per category with overall health score
+- **Learning Agent**: Learns from error patterns, performance trends, and usage patterns. In-memory learning store with 30-day retention. Generates optimization suggestions with confidence scores
+- **Adaptive Config Agent**: Dynamic configuration tuning with rule-based triggers (HIGH_TRAFFIC, HIGH_ERROR_RATE, LOW_RESOURCES, PEAK_HOURS). Manages rate limiting, queue concurrency, cache TTLs, alert thresholds
+- **Prediction Agent**: Proactive issue detection with linear regression trend analysis. Predicts resource exhaustion, error escalation, cost overruns, performance decline. Sends alerts via Owner Interface for high-risk predictions
+
+**Assessment Categories (Architecture Advisor):**
+| Category | Weight | Description |
+|----------|--------|-------------|
+| Stability | 25% | Error rates, uptime, recovery time |
+| Performance | 25% | Response times, throughput |
+| Cost Efficiency | 20% | Budget utilization, cost per transaction |
+| Scalability | 15% | Resource headroom, growth capacity |
+| EU Compliance | 15% | GDPR, data sovereignty, EU AI Act |
+
+**Prediction Models:**
+| Model | Metric | Alert Threshold |
+|-------|--------|----------------|
+| Resource Exhaustion | CPU/memory/disk trends | Risk > 0.7 |
+| Error Escalation | Error rate acceleration | Risk > 0.6 |
+| Cost Overrun | Budget burn rate | Risk > 0.7 |
+| Performance Decline | Response time trends | Risk > 0.6 |
+
+**Scheduled Jobs (4):**
+| Job | Schedule | Beschrijving |
+|-----|----------|--------------|
+| `strategy-assessment` | Maandag 06:00 | Weekly architecture assessment |
+| `strategy-learning` | 03:00 dagelijks | Learning cycle and optimizations |
+| `strategy-prediction` | Elke 6 uur | Predictive analysis for proactive alerts |
+| `strategy-config-eval` | Elke 30 minuten | System metrics evaluation and config adaptation |
+
+**Bestanden:**
+- `platform-core/src/services/agents/strategyLayer/index.js`
+- `platform-core/src/services/agents/strategyLayer/analyzers/patternAnalyzer.js`
+- `platform-core/src/services/agents/strategyLayer/architectureAdvisor.js`
+- `platform-core/src/services/agents/strategyLayer/learningAgent.js`
+- `platform-core/src/services/agents/strategyLayer/adaptiveConfigAgent.js`
+- `platform-core/src/services/agents/strategyLayer/predictionAgent.js`
+- `platform-core/src/services/agents/strategyLayer/syncScheduler.js`
 
 ---
 
@@ -311,7 +436,7 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 - Voorbeeld: `{$briefing_date}`, `{$budget_spent}`, `{$status_summary}`
 - Template is vaste HTML, alleen velden zijn dynamisch
 
-### Laag 2: Operations Layer (Fase 3) - 87.5% Compleet
+### Laag 2: Operations Layer (Fase 3) ✅ COMPLEET
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -326,46 +451,69 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 │  │ • Portal checks │  │ • Review updates│  │ • Vector DB │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────┘  │
 │                                                              │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
-│  │  Communication  │  │   GDPR Agent    │  │   Disaster  │  │
-│  │   Flow ✅       │  │      ⏳         │  │   Recovery  │  │
-│  │                 │  │                 │  │     📅      │  │
-│  │ • User journeys │  │ • 72-hr deletion│  │ • Backups   │  │
-│  │ • MailerLite    │  │ • Data export   │  │ • Recovery  │  │
-│  │ • Notifications │  │ • Consent mgmt  │  │ • Failover  │  │
-│  └─────────────────┘  └─────────────────┘  └─────────────┘  │
+│  ┌─────────────────┐  ┌─────────────────┐                    │
+│  │  Communication  │  │   GDPR Agent    │                    │
+│  │   Flow ✅       │  │      ✅         │                    │
+│  │                 │  │                 │                    │
+│  │ • User journeys │  │ • 72-hr deletion│                    │
+│  │ • MailerLite    │  │ • Data export   │                    │
+│  │ • Notifications │  │ • Consent mgmt  │                    │
+│  └─────────────────┘  └─────────────────┘                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Laag 3: Compliance Layer (Fase 3-4)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   COMPLIANCE AGENTS                          │
-│  ┌─────────────────────────────────┐  ┌─────────────────┐   │
-│  │      GDPR / Data Rights         │  │   EU AI Act     │   │
-│  │                                 │  │   Compliance    │   │
-│  │ • 72-uur deletion              │  │                 │   │
-│  │ • Data export                  │  │ • Transparency  │   │
-│  │ • Consent management           │  │ • Human control │   │
-│  │ • Audit logging                │  │ • Bias monitor  │   │
-│  └─────────────────────────────────┘  └─────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Laag 4: Development Layer (Fase 3-4)
+### Laag 3: Development Layer (Fase 4) ✅ COMPLEET
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                  DEVELOPMENT AGENTS                          │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │   UX/UI     │  │    Code     │  │     Security        │  │
-│  │  Reviewer   │  │   Reviewer  │  │     Reviewer        │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │   Quality   │  │    Test &   │  │      Tech Lead      │  │
-│  │   Checker   │  │  Validation │  │       Agent         │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
+│  │   UX/UI        │  │    Code         │  │  Security   │  │
+│  │  Reviewer ✅   │  │   Reviewer ✅   │  │ Reviewer ✅ │  │
+│  │                 │  │                 │  │             │  │
+│  │ • Brand colors  │  │ • Conventions   │  │ • OWASP T10 │  │
+│  │ • Typography    │  │ • Error handler │  │ • Secrets   │  │
+│  │ • WCAG a11y     │  │ • Performance   │  │ • API sec   │  │
+│  │ • Responsive    │  │ • Complexity    │  │ • GDPR      │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────┘  │
+│                                                              │
+│  ┌─────────────────┐                                         │
+│  │   Quality       │                                         │
+│  │  Checker ✅     │                                         │
+│  │                 │                                         │
+│  │ • Orchestration │                                         │
+│  │ • ESLint        │                                         │
+│  │ • Tests         │                                         │
+│  │ • Dep audit     │                                         │
+│  └─────────────────┘                                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Laag 4: Strategy Layer (Fase 5) ✅ COMPLEET
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   STRATEGY AGENTS                            │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
+│  │  Architecture   │  │   Learning      │  │  Adaptive   │  │
+│  │  Advisor ✅     │  │   Agent ✅      │  │ Config ✅   │  │
+│  │                 │  │                 │  │             │  │
+│  │ • Stability     │  │ • Error learn   │  │ • Rate limit│  │
+│  │ • Performance   │  │ • Perf trends   │  │ • Queue cfg │  │
+│  │ • Cost effic.   │  │ • Usage patterns│  │ • Cache TTL │  │
+│  │ • Scalability   │  │ • Optimization  │  │ • Alerts    │  │
+│  │ • EU Compliance │  │ • Confidence    │  │ • Auto-tune │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────┘  │
+│                                                              │
+│  ┌─────────────────┐  ┌─────────────────┐                    │
+│  │  Prediction     │  │   Pattern       │                    │
+│  │  Agent ✅       │  │  Analyzer ✅    │                    │
+│  │                 │  │                 │                    │
+│  │ • Resource exh. │  │ • Error spikes  │                    │
+│  │ • Error escalat.│  │ • Perf degrad.  │                    │
+│  │ • Cost overrun  │  │ • Cost anomaly  │                    │
+│  │ • Perf decline  │  │ • Journey drops │                    │
+│  └─────────────────┘  └─────────────────┘                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -452,8 +600,8 @@ platform-core/src/services/
 │       ├── dailyBriefing.js         # 08:00 briefing
 │       └── alertHandler.js          # Urgency routing + Threema
 │
-├── agents/                          # FASE 3
-│   ├── healthMonitor/               # ⏳ Week 1
+├── agents/                          # ✅ FASE 3-5 COMPLEET
+│   ├── healthMonitor/               # ✅ Platform Health Monitor v1.0
 │   │   ├── index.js
 │   │   ├── checks/
 │   │   │   ├── serverHealth.js
@@ -488,12 +636,32 @@ platform-core/src/services/
 │   │   ├── notificationRouter.js    # Multi-channel routing
 │   │   └── syncScheduler.js         # 3 scheduled jobs
 │   │
-│   ├── gdprAgent/                   # ⏳ Week 4
-│   └── devAgents/                   # ⏳ Week 5-6
-│       ├── uxReviewer/
-│       ├── codeReviewer/
-│       ├── securityReviewer/
-│       └── qualityChecker/
+│   ├── gdpr/                        # ✅ GDPR Agent v1.0
+│   │   ├── index.js                 # Main entry point
+│   │   ├── dataInventory.js         # Art. 30 data mapping
+│   │   ├── dataExporter.js          # Art. 15/20 data export
+│   │   ├── dataEraser.js            # Art. 17 right to erasure
+│   │   ├── consentManager.js        # Art. 7 consent tracking
+│   │   └── syncScheduler.js         # 4 scheduled jobs
+│   │
+│   ├── devLayer/                    # ✅ FASE 4 COMPLEET
+│   │   ├── index.js                 # Main entry point
+│   │   ├── qualityChecker.js        # Orchestration & CI/CD
+│   │   ├── syncScheduler.js         # 3 scheduled jobs
+│   │   └── reviewers/
+│   │       ├── uxReviewer.js        # UX/UI quality analysis
+│   │       ├── codeReviewer.js      # Code standards & patterns
+│   │       └── securityReviewer.js  # OWASP Top 10 & security
+│   │
+│   └── strategyLayer/               # ✅ FASE 5 COMPLEET
+│       ├── index.js                 # Main entry point
+│       ├── analyzers/
+│       │   └── patternAnalyzer.js   # Shared pattern analysis engine
+│       ├── architectureAdvisor.js   # System design assessment
+│       ├── learningAgent.js         # Pattern learning & optimization
+│       ├── adaptiveConfigAgent.js   # Dynamic config tuning
+│       ├── predictionAgent.js       # Proactive issue detection
+│       └── syncScheduler.js         # 4 scheduled jobs
 │
 └── holibot/                         # Bestaand
     ├── ragService.js
@@ -516,6 +684,8 @@ platform-core/src/services/
 | AdminUsers | Partner accounts | Communication Flow |
 | user_journeys | Journey tracking per user | Communication Flow v1.0 |
 | journey_scheduled_emails | Scheduled email queue | Communication Flow v1.0 |
+| user_consent | GDPR consent tracking (essential, analytics, personalization, marketing) | GDPR Agent v1.0 |
+| gdpr_deletion_requests | Art. 17 deletion requests (72h deadline tracking) | GDPR Agent v1.0 |
 | agenda | Events | Data Sync |
 | agenda_dates | Event datums | Data Sync |
 | Tickets | Ticketverkoop | - |
@@ -559,7 +729,7 @@ platform-core/src/services/
 
 ---
 
-## 🔄 Scheduled Jobs (Actief - 24 Total)
+## 🔄 Scheduled Jobs (Actief - 35 Total)
 
 ### Core Jobs (4)
 
@@ -604,6 +774,32 @@ platform-core/src/services/
 | `comm-journey-processor` | Elke 15 minuten | Process pending journey emails |
 | `comm-user-sync` | 03:00 dagelijks | Sync users to MailerLite |
 | `comm-cleanup` | Zondag 04:00 | Cleanup completed journeys |
+
+### GDPR Agent v1.0 Jobs (4) ✅ LIVE
+
+| Job | Schedule | Functie |
+|-----|----------|---------|
+| `gdpr-overdue-check` | Elke 4 uur | Check 72h deletion deadline violations |
+| `gdpr-export-cleanup` | 03:00 dagelijks | Cleanup old export files (7+ days) |
+| `gdpr-retention-check` | 1e van maand 02:00 | Check data retention compliance |
+| `gdpr-consent-audit` | Zondag 04:00 | Generate consent statistics report |
+
+### Development Layer Agent v1.0 Jobs (3) ✅ LIVE
+
+| Job | Schedule | Functie |
+|-----|----------|---------|
+| `dev-security-scan` | 02:00 dagelijks | Full security scan of all projects |
+| `dev-dependency-audit` | Zondag 03:00 | Dependency vulnerability audit |
+| `dev-quality-report` | Maandag 06:00 | Weekly quality report generation |
+
+### Strategy Layer Agent v1.0 Jobs (4) ✅ LIVE
+
+| Job | Schedule | Functie |
+|-----|----------|---------|
+| `strategy-assessment` | Maandag 06:00 | Weekly architecture assessment |
+| `strategy-learning` | 03:00 dagelijks | Learning cycle and optimizations |
+| `strategy-prediction` | Elke 6 uur | Predictive analysis for proactive alerts |
+| `strategy-config-eval` | Elke 30 minuten | System metrics evaluation and config adaptation |
 
 ---
 
@@ -702,9 +898,10 @@ score = (review_count × 0.30) +
 
 | Document | Locatie | Status |
 |----------|---------|--------|
-| CLAUDE.md | GitHub repo root | ✅ v2.7.0 (19 Jan 2026) |
-| Fase 2 Docs | docs/agents/fase2/ | ✅ Actueel |
-| Fase 3 Prompts | docs/agents/fase3/ | ✅ Actueel |
+| CLAUDE.md | GitHub repo root | ✅ v3.0.0 (27 Jan 2026) |
+| Fase 2 Docs | docs/Agents/fase2/ | ✅ Actueel |
+| Fase 4 Docs | docs/Agents/fase4/ | ✅ Actueel |
+| Fase 5 Docs | docs/Agents/fase5/ | ✅ Actueel |
 | API Docs | docs/api/ | ✅ |
 | Deployment Guide | infrastructure/README.md | ✅ |
 
@@ -719,4 +916,4 @@ score = (review_count × 0.30) +
 
 ---
 
-*Dit document is de single source of truth voor de HolidaiButler Claude Agents architectuur. Laatste update: 19 januari 2026 (v3.4.0).*
+*Dit document is de single source of truth voor de HolidaiButler Claude Agents architectuur. Laatste update: 27 januari 2026 (v4.0.0).*
