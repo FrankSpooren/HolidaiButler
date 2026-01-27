@@ -354,6 +354,14 @@ export function AgendaPage() {
     return format(date, formatStr, { locale });
   }, [visibleDateKey, language]);
 
+  // Disable browser scroll restoration on mount
+  useEffect(() => {
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+  }, []);
+
   // Get user location
   useEffect(() => {
     getUserLocation().then(setUserLocation).catch(() => {});
@@ -470,7 +478,7 @@ export function AgendaPage() {
 
   return (
     <>
-      {/* Search Section */}
+      {/* Search Section - Sticky element 1 */}
       <div className={`agenda-search-section ${showHeader ? 'header-visible' : 'header-hidden'}`}>
         <div className="agenda-search-bar">
           <span className="agenda-search-icon">🔍</span>
@@ -484,7 +492,7 @@ export function AgendaPage() {
         </div>
       </div>
 
-      {/* Category Chips */}
+      {/* Category Chips - Sticky element 2 */}
       <div className={`agenda-category-section ${showHeader ? 'header-visible' : 'header-hidden'}`}>
         <div className="agenda-category-scroll">
           {INTEREST_CATEGORIES.map((category) => (
@@ -501,30 +509,29 @@ export function AgendaPage() {
         </div>
       </div>
 
-      {/* Filter Row with Quick Filters AND Date - all move together */}
+      {/* Filter Row - Sticky element 3 (FIXED HEIGHT - no dynamic content) */}
       <div className={`agenda-filter-row ${showHeader ? 'header-visible' : 'header-hidden'}`}>
-        <div className="agenda-filter-buttons">
-          <button className="agenda-filter-btn" onClick={() => setFilterModalOpen(true)}>
-            🔽 {t.poi?.filters || 'Filters'} ({getActiveFilterCount()})
+        <button className="agenda-filter-btn" onClick={() => setFilterModalOpen(true)}>
+          🔽 {t.poi?.filters || 'Filters'} ({getActiveFilterCount()})
+        </button>
+        <div className="agenda-quick-filters">
+          <button className={`agenda-quick-filter-btn ${filters.dateType === 'today' ? 'active' : ''}`} onClick={() => handleQuickFilter('today')}>
+            {quickFilterLabels[language]?.today || 'Today'}
           </button>
-          <div className="agenda-quick-filters">
-            <button className={`agenda-quick-filter-btn ${filters.dateType === 'today' ? 'active' : ''}`} onClick={() => handleQuickFilter('today')}>
-              {quickFilterLabels[language]?.today || 'Today'}
-            </button>
-            <button className={`agenda-quick-filter-btn ${filters.dateType === 'tomorrow' ? 'active' : ''}`} onClick={() => handleQuickFilter('tomorrow')}>
-              {quickFilterLabels[language]?.tomorrow || 'Tomorrow'}
-            </button>
-            <button className={`agenda-quick-filter-btn ${filters.dateType === 'weekend' ? 'active' : ''}`} onClick={() => handleQuickFilter('weekend')}>
-              {quickFilterLabels[language]?.weekend || 'This Weekend'}
-            </button>
-          </div>
+          <button className={`agenda-quick-filter-btn ${filters.dateType === 'tomorrow' ? 'active' : ''}`} onClick={() => handleQuickFilter('tomorrow')}>
+            {quickFilterLabels[language]?.tomorrow || 'Tomorrow'}
+          </button>
+          <button className={`agenda-quick-filter-btn ${filters.dateType === 'weekend' ? 'active' : ''}`} onClick={() => handleQuickFilter('weekend')}>
+            {quickFilterLabels[language]?.weekend || 'This Weekend'}
+          </button>
         </div>
-        {/* Date subheader - always render container for consistent sticky height */}
-        <div className="agenda-date-subheader">
-          {!isLoading && !error && filteredEvents.length > 0 && visibleDateFormatted && (
-            <span className="agenda-date-subheader-text">{visibleDateFormatted}</span>
-          )}
-        </div>
+      </div>
+
+      {/* Date Subheader - Sticky element 4 (separate from filter row for consistent heights) */}
+      <div className={`agenda-date-subheader ${showHeader ? 'header-visible' : 'header-hidden'}`}>
+        {!isLoading && !error && filteredEvents.length > 0 && visibleDateFormatted && (
+          <span className="agenda-date-subheader-text">{visibleDateFormatted}</span>
+        )}
       </div>
 
       {/* Loading State */}
