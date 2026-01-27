@@ -2,11 +2,13 @@ import { initializeScheduler } from './scheduler.js';
 import { startWorkers, stopWorkers } from './workers.js';
 import { orchestratorQueue, alertQueue, scheduledQueue, connection } from './queues.js';
 import { mysqlSequelize } from '../../config/database.js';
+import mongoose from 'mongoose';
 import dataSyncAgent from '../agents/dataSync/index.js';
 import holibotSyncAgent from '../agents/holibotSync/index.js';
 import communicationFlowAgent from '../agents/communicationFlow/index.js';
 import gdprAgent from '../agents/gdpr/index.js';
 import devLayerAgent from '../agents/devLayer/index.js';
+import strategyLayerAgent from '../agents/strategyLayer/index.js';
 
 let isInitialized = false;
 
@@ -79,6 +81,18 @@ export async function initializeOrchestrator() {
     } catch (error) {
       console.error('[Orchestrator] Development Layer Agent initialization failed:', error.message);
       // Don't throw - allow orchestrator to continue without Dev Layer Agent
+      // Jobs will be skipped if agent is not initialized
+    }
+
+    // Initialize Strategy Layer Agent
+    // This handles intelligent architecture and adaptive optimization
+    // 4 scheduled jobs (assessment, learning, prediction, config eval)
+    try {
+      await strategyLayerAgent.initialize(mysqlSequelize, mongoose);
+      console.log('[Orchestrator] Strategy Layer Agent initialized');
+    } catch (error) {
+      console.error('[Orchestrator] Strategy Layer Agent initialization failed:', error.message);
+      // Don't throw - allow orchestrator to continue without Strategy Layer
       // Jobs will be skipped if agent is not initialized
     }
 
