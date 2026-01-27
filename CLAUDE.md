@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.0.0
-> **Laatst bijgewerkt**: 27 januari 2026 (12:40 UTC)
+> **Versie**: 3.0.1
+> **Laatst bijgewerkt**: 27 januari 2026 (14:20 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -470,11 +470,15 @@ REDIS_PORT=6379
 - Daily Briefing (08:00)
 
 #### MailerLite Automation Configuratie
-**Methode:** Group-trigger automation (Growing Business plan compatible)
-- **Trigger:** Subscriber joins group "System Alerts Owner"
+**Methode:** Dual-group rotation (Growing Business plan compatible)
+- **Probleem:** MailerLite re-entry cooldown >24h per subscriber per automation
+- **Oplossing:** Twee groepen/automations die dagelijks alterneren (48h per groep)
+- **Group 1:** "System Alerts Owner" (ID: 176972381290498029) → Automation "Daily system update"
+- **Group 2:** "System Alerts Owner 2" (ID: 177755949282362712) → Automation "Daily system update 2"
+- **Rotatie:** Oneven dag-van-jaar → Group 1, even dag-van-jaar → Group 2
 - **Flow:** API removes → updates fields → re-adds subscriber → automation triggers
-- **Limiet:** 1 email per 24 uur per subscriber (MailerLite platform limiet)
 - **Template:** Vaste template met dynamic fields via personalization
+- **Plan limiet:** Campaign API HTML content vereist Advanced plan (niet beschikbaar)
 
 **Custom Fields (MailerLite):**
 | Field | Beschrijving |
@@ -903,7 +907,8 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **3.0.0** | **2026-01-27** | **Fase 5 Strategy Layer COMPLEET: Architecture Advisor, Learning Agent, Adaptive Config Agent, Prediction Agent. Pattern analysis, proactive issue detection, dynamic config tuning. 4 nieuwe jobs (35 totaal). Major version - alle 5 fases compleet!** |
+| **3.0.1** | **2026-01-27** | **Email fix: Dual-group rotation voor dagelijkse briefing. MailerLite re-entry cooldown (>24h) omzeild door 2 groepen/automations die dagelijks alterneren (48h per groep). Campaign API HTML content niet beschikbaar op Growing Business plan.** |
+| 3.0.0 | 2026-01-27 | Fase 5 Strategy Layer COMPLEET: Architecture Advisor, Learning Agent, Adaptive Config Agent, Prediction Agent. Pattern analysis, proactive issue detection, dynamic config tuning. 4 nieuwe jobs (35 totaal). Major version - alle 5 fases compleet! |
 | 2.9.1 | 2026-01-20 | CLAUDE.md correcties: Job count (31), docs/agents/fase4/ toegevoegd, MASTERPLAN referentie fix, OWASP details (A01/A02/A03/A07/A10), quality thresholds, UX Reviewer cross-reference. |
 | 2.9.0 | 2026-01-19 | Fase 4 Development Layer COMPLEET: UX/UI Reviewer, Code Reviewer, Security Reviewer, Quality Checker. OWASP Top 10 checks, brand compliance, code conventions. 3 nieuwe jobs (31 totaal). Fase 4 nu 100% compleet! |
 | 2.8.0 | 2026-01-19 | GDPR Agent v1.0 LIVE: Art. 7/15/17/20/30 compliance, data export, erasure (72h), consent management. 4 nieuwe jobs (28 totaal). Fase 3 nu 100% compleet! |

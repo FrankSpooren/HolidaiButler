@@ -3,18 +3,27 @@ import axios from "axios";
 /**
  * Email Service for HolidaiButler System Notifications
  *
- * Uses MailerLite Automation trigger approach:
- * 1. Remove subscriber from trigger group
- * 2. Update subscriber custom fields with alert data
- * 3. Add subscriber back to trigger group
- * 4. MailerLite automation triggers and sends email
+ * Method: MailerLite Automation trigger via dual-group rotation
+ * - Two groups alternate daily to avoid MailerLite's >24h re-entry cooldown
+ * - Odd days (day-of-year): Group 1 "System Alerts Owner"
+ * - Even days (day-of-year): Group 2 "System Alerts Owner 2"
+ * - Each group is triggered at most every 48h, well within the cooldown limit
+ *
+ * Requires two MailerLite automations:
+ * - "Daily system update" triggered by Group 1 join
+ * - "Daily system update 2" triggered by Group 2 join
  *
  * @module ownerInterface/emailService
  */
 
 const MAILERLITE_API = "https://connect.mailerlite.com/api";
 const OWNER_EMAIL = process.env.OWNER_EMAIL || "info@holidaibutler.com";
-const SYSTEM_ALERTS_GROUP_ID = "176972381290498029";
+
+// Dual-group rotation to avoid MailerLite re-entry cooldown (>24h)
+const ALERT_GROUPS = [
+  { id: "176972381290498029", name: "System Alerts Owner" },
+  { id: "177755949282362712", name: "System Alerts Owner 2" }
+];
 
 class EmailService {
   getApiKey() {
@@ -24,83 +33,97 @@ class EmailService {
   getHeaders() {
     return {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${this.getApiKey()}`
+      Authorization: `Bearer ${this.getApiKey()}`
     };
   }
 
   /**
-   * Send email via MailerLite automation trigger
-   * @param {Object} options
-   * @param {string} options.to - Recipient email
-   * @param {string} options.subject - Email subject
-   * @param {Object} options.fields - Custom fields to update
+   * Get today's alert group based on day-of-year parity.
+   * Odd days → group 0, even days → group 1.
+   * Each group is used every other day = 48h between triggers.
    */
-  async sendEmail({ to = OWNER_EMAIL, subject, fields = {} }) {
-    const timestamp = new Date().toISOString();
-    const logPrefix = `[EmailService] ${timestamp}`;
+  getTodayGroup() {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 0);
+    const dayOfYear = Math.floor((now - startOfYear) / (1000 * 60 * 60 * 24));
+    const groupIndex = dayOfYear % 2;
+    return ALERT_GROUPS[groupIndex];
+  }
 
-    console.log(logPrefix);
+  /**
+   * Send email via MailerLite automation trigger with dual-group rotation.
+   * Removes subscriber from today's group, updates fields, re-adds to trigger automation.
+   */
+  async sendViaAutomation({ to = OWNER_EMAIL, subject, fields = {} }) {
+    const timestamp = new Date().toISOString();
+    const group = this.getTodayGroup();
+    console.log(`[EmailService] Automation trigger - ${timestamp}`);
     console.log(`  To: ${to}`);
     console.log(`  Subject: ${subject}`);
-
-    const apiKey = this.getApiKey();
-    if (!apiKey) {
-      console.error(`  Status: FAILED - No MAILERLITE_API_KEY configured`);
-      return { success: false, status: "failed", error: "No API key" };
-    }
+    console.log(`  Group: ${group.name} (${group.id})`);
 
     try {
-      // Step 1: Remove subscriber from group (to allow re-trigger)
-      console.log(`  Step 1: Removing from trigger group...`);
+      // Step 1: Remove subscriber from today's group
+      console.log(`  Step 1: Removing from ${group.name}...`);
       await axios.delete(
-        `${MAILERLITE_API}/subscribers/${to}/groups/${SYSTEM_ALERTS_GROUP_ID}`,
+        `${MAILERLITE_API}/subscribers/${to}/groups/${group.id}`,
         { headers: this.getHeaders() }
       ).catch(() => {
-        // Ignore error if subscriber not in group
         console.log(`  Step 1: Subscriber not in group (OK)`);
       });
 
       // Step 2: Update subscriber custom fields
       console.log(`  Step 2: Updating subscriber fields...`);
-      const subscriberData = {
-        email: to,
-        fields: {
-          last_system_alert: subject,
-          last_alert_time: timestamp,
-          ...fields
-        }
-      };
-
       await axios.put(
         `${MAILERLITE_API}/subscribers/${to}`,
-        subscriberData,
+        {
+          email: to,
+          fields: {
+            last_system_alert: subject,
+            last_alert_time: timestamp,
+            ...fields
+          }
+        },
         { headers: this.getHeaders() }
       );
 
-      // Step 3: Add subscriber back to group (triggers automation)
-      console.log(`  Step 3: Adding to trigger group...`);
+      // Step 3: Add subscriber to today's group (triggers automation)
+      console.log(`  Step 3: Adding to ${group.name}...`);
       await axios.post(
-        `${MAILERLITE_API}/subscribers/${to}/groups/${SYSTEM_ALERTS_GROUP_ID}`,
+        `${MAILERLITE_API}/subscribers/${to}/groups/${group.id}`,
         {},
         { headers: this.getHeaders() }
       );
 
-      console.log(`  Status: SUCCESS - Automation triggered`);
+      console.log(`  Status: SUCCESS - Automation triggered via ${group.name}`);
       return {
         success: true,
         status: "triggered",
-        message: "MailerLite automation triggered"
+        message: `MailerLite automation triggered via ${group.name}`
       };
 
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.message;
-      console.error(`  Status: FAILED - ${errorMsg}`);
+      console.error(`  Automation trigger FAILED: ${errorMsg}`);
       return {
         success: false,
         status: "failed",
         error: errorMsg
       };
     }
+  }
+
+  /**
+   * Send email via dual-group rotation
+   */
+  async sendEmail({ to = OWNER_EMAIL, subject, fields = {} }) {
+    const apiKey = this.getApiKey();
+    if (!apiKey) {
+      console.error(`[EmailService] No MAILERLITE_API_KEY configured`);
+      return { success: false, status: "failed", error: "No API key" };
+    }
+
+    return this.sendViaAutomation({ to, subject, fields });
   }
 
   /**
@@ -117,7 +140,7 @@ class EmailService {
   }
 
   /**
-   * Send alert via automation
+   * Send alert via email
    */
   async sendAlert({ to = OWNER_EMAIL, urgency, title, message, metadata = {} }) {
     const urgencyLabels = {
