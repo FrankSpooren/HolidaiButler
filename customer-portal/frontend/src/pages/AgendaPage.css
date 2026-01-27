@@ -15,8 +15,9 @@
 }
 
 .agenda-search-section.header-visible {
-  transform: translateY(0);
   opacity: 1;
+  /* No transform here — translateY(0) is a no-op but creates a compositing layer
+     that can trigger implicit transitions on hard refresh, breaking sticky positioning */
 }
 
 .agenda-search-section.header-hidden {
@@ -71,8 +72,8 @@
 }
 
 .agenda-category-section.header-visible {
-  transform: translateY(0);
   opacity: 1;
+  /* No transform — same reason as search-section above */
 }
 
 .agenda-category-section.header-hidden {
@@ -129,41 +130,33 @@
   line-height: 1;
 }
 
-/* Filter Row - Contains buttons AND date, all move together */
-/* DIAGNOSTIC: !important added to test if something overrides sticky */
+/* Filter Row - Sticky element 3 (FIXED HEIGHT like POI - no nested structure) */
 .agenda-filter-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  background: white;
-  border-bottom: 1px solid #E5E7EB;
-  position: sticky !important;
-  top: 198px !important;
-  z-index: 80;
-  transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.agenda-filter-row.header-hidden {
-  top: 75px !important;
-}
-
-.agenda-filter-row.header-visible {
-  top: 198px !important;
-}
-
-/* Filter buttons row */
-.agenda-filter-buttons {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
+  background: white;
+  border-bottom: 1px solid #E5E7EB;
+  position: sticky;
+  top: 198px;
+  z-index: 80;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.agenda-filter-buttons::-webkit-scrollbar {
+.agenda-filter-row::-webkit-scrollbar {
   display: none;
+}
+
+.agenda-filter-row.header-hidden {
+  top: 75px;
+}
+
+.agenda-filter-row.header-visible {
+  top: 198px;
 }
 
 .agenda-filter-btn {
@@ -223,14 +216,25 @@
   border-color: #c9a432;
 }
 
-/* Date Subheader - inside filter row, moves together with filters */
-/* Always render with consistent height for stable sticky positioning */
+/* Date Subheader - Sticky element 4 (separate from filter row for consistent heights) */
 .agenda-date-subheader {
   background: white;
   padding: 12px 16px;
   text-align: left;
-  border-top: 1px solid #E5E7EB;
+  border-bottom: 1px solid #E5E7EB;
   min-height: 42px; /* Consistent height even when empty */
+  position: sticky;
+  top: 250px; /* Below filter row: 198px + 52px filter row height */
+  z-index: 70;
+  transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.agenda-date-subheader.header-hidden {
+  top: 127px; /* 75px + 52px filter row height */
+}
+
+.agenda-date-subheader.header-visible {
+  top: 250px;
 }
 
 .agenda-date-subheader-text {
@@ -489,7 +493,7 @@
     font-size: 16px;
   }
 
-  .agenda-filter-buttons {
+  .agenda-filter-row {
     padding: 10px 12px;
     gap: 6px;
   }

@@ -13,8 +13,9 @@
 }
 
 .search-section.header-visible {
-  transform: translateY(0);
   opacity: 1;
+  /* No transform — translateY(0) is a no-op but creates a compositing layer
+     that can interfere with sticky positioning on hard refresh */
 }
 
 .search-section.header-hidden {
@@ -108,8 +109,8 @@
 }
 
 .category-section.header-visible {
-  transform: translateY(0);
   opacity: 1;
+  /* No transform — same reason as search-section above */
 }
 
 .category-section.header-hidden {
