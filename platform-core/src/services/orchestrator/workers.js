@@ -450,6 +450,79 @@ export function startWorkers() {
           }
           break;
 
+        // === STRATEGY LAYER AGENT JOBS ===
+        case "strategy-assessment":
+          try {
+            const strategyAssess = await import("../agents/strategyLayer/index.js");
+            const assessmentResult = await strategyAssess.default.generateAssessment();
+            console.log("[Orchestrator] Architecture assessment completed:", JSON.stringify({
+              status: assessmentResult.status,
+              score: assessmentResult.overallScore
+            }));
+            result = assessmentResult;
+          } catch (error) {
+            console.error("[Orchestrator] Architecture assessment failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "strategy-learning":
+          try {
+            const strategyLearn = await import("../agents/strategyLayer/index.js");
+            const learningResult = await strategyLearn.default.learn();
+            console.log("[Orchestrator] Learning cycle completed:", JSON.stringify({
+              optimizations: learningResult.optimizations?.length || 0
+            }));
+            result = learningResult;
+          } catch (error) {
+            console.error("[Orchestrator] Learning cycle failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "strategy-prediction":
+          try {
+            const strategyPredict = await import("../agents/strategyLayer/index.js");
+            const predictionResult = await strategyPredict.default.predict();
+            console.log("[Orchestrator] Predictions completed:", JSON.stringify({
+              predictions: predictionResult.predictions?.length || 0,
+              alerts: predictionResult.alerts?.length || 0
+            }));
+            result = predictionResult;
+          } catch (error) {
+            console.error("[Orchestrator] Predictions failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "strategy-config-eval":
+          try {
+            const strategyConfig = await import("../agents/strategyLayer/index.js");
+            // Get current metrics from health monitor if available
+            let configMetrics = {};
+            try {
+              const healthMon = await import("../agents/healthMonitor/index.js");
+              const health = await healthMon.default.runFullHealthCheck({ sendAlerts: false });
+              configMetrics = {
+                cpu: health.report?.checks?.server?.cpu,
+                memory: health.report?.checks?.server?.memory,
+                errorRate: health.report?.checks?.api?.errorRate,
+                trafficMultiplier: health.report?.checks?.traffic?.multiplier
+              };
+            } catch (e) {
+              console.log("[Orchestrator] Could not get health metrics for config eval");
+            }
+            const configResult = await strategyConfig.default.evaluateConfig(configMetrics);
+            console.log("[Orchestrator] Config evaluation completed:", JSON.stringify({
+              adaptations: configResult.adaptationsApplied?.length || 0
+            }));
+            result = configResult;
+          } catch (error) {
+            console.error("[Orchestrator] Config evaluation failed:", error.message);
+            throw error;
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -568,6 +641,7 @@ export function startWorkers() {
   console.log("[Orchestrator] - Communication Flow Agent: active");
   console.log("[Orchestrator] - GDPR Agent: active");
   console.log("[Orchestrator] - Development Layer Agent: active");
+  console.log("[Orchestrator] - Strategy Layer Agent: active");
 }
 
 export async function stopWorkers() {

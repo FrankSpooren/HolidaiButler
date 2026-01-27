@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 2.9.1
-> **Laatst bijgewerkt**: 20 januari 2026 (00:15 UTC)
+> **Versie**: 3.0.0
+> **Laatst bijgewerkt**: 27 januari 2026 (12:40 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -155,14 +155,23 @@ HolidaiButler/
 │   │   │       │   ├── dataEraser.js          # Art. 17 right to erasure
 │   │   │       │   ├── consentManager.js      # Art. 7 consent tracking
 │   │   │       │   └── syncScheduler.js       # 4 scheduled jobs
-│   │   │       └── devLayer/           # ✅ Fase 4: Development Layer v1.0 (NIEUW)
+│   │   │       ├── devLayer/           # ✅ Fase 4: Development Layer v1.0
+│   │   │       │   ├── index.js               # Main entry point
+│   │   │       │   ├── qualityChecker.js      # Orchestration & CI/CD
+│   │   │       │   ├── syncScheduler.js       # 3 scheduled jobs
+│   │   │       │   └── reviewers/
+│   │   │       │       ├── uxReviewer.js      # UX/UI quality analysis
+│   │   │       │       ├── codeReviewer.js    # Code standards & patterns
+│   │   │       │       └── securityReviewer.js # OWASP Top 10 & security
+│   │   │       └── strategyLayer/     # ✅ Fase 5: Strategy Layer v1.0 (NIEUW)
 │   │   │           ├── index.js               # Main entry point
-│   │   │           ├── qualityChecker.js      # Orchestration & CI/CD
-│   │   │           ├── syncScheduler.js       # 3 scheduled jobs
-│   │   │           └── reviewers/
-│   │   │               ├── uxReviewer.js      # UX/UI quality analysis
-│   │   │               ├── codeReviewer.js    # Code standards & patterns
-│   │   │               └── securityReviewer.js # OWASP Top 10 & security
+│   │   │           ├── architectureAdvisor.js # System design recommendations
+│   │   │           ├── learningAgent.js       # Pattern learning & optimization
+│   │   │           ├── adaptiveConfigAgent.js # Dynamic config tuning
+│   │   │           ├── predictionAgent.js     # Proactive issue detection
+│   │   │           ├── syncScheduler.js       # 4 scheduled jobs
+│   │   │           └── analyzers/
+│   │   │               └── patternAnalyzer.js # Core pattern detection engine
 │   │   └── middleware/
 │   └── package.json
 │
@@ -260,7 +269,7 @@ HolidaiButler/
 | Vitest, Jest, Playwright | Testing |
 | ESLint + Prettier | Linting |
 | GitHub Actions | CI/CD |
-| BullMQ | Job scheduling (31 jobs) |
+| BullMQ | Job scheduling (35 jobs) |
 | **Bugsink** | Error tracking (EU) |
 
 ---
@@ -451,7 +460,7 @@ REDIS_PORT=6379
 | **Owner Interface Agent** | Email + Threema communicatie | ✅ Live |
 
 #### Orchestrator Components
-- BullMQ Scheduler (31 recurring jobs)
+- BullMQ Scheduler (35 recurring jobs)
 - Cost Controller (€515/maand budget)
 - Audit Trail (30 dagen retention)
 
@@ -605,9 +614,49 @@ REDIS_PORT=6379
 
 **Volledige specificaties**: Zie `docs/agents/fase4/` en `docs/CLAUDE_AGENTS_MASTERPLAN.md` (v3.4.0)
 
+### Fase 5 - Strategy Layer ✅ COMPLEET (100%)
+
+| Agent | Functie | Status |
+|-------|---------|--------|
+| **Architecture Advisor v1.0** | System design recommendations, health assessment (5 categories) | ✅ Live |
+| **Learning Agent v1.0** | Pattern analysis, optimization suggestions | ✅ Live |
+| **Adaptive Config Agent v1.0** | Dynamic configuration tuning (rate limiting, queue, cache, alerts) | ✅ Live |
+| **Prediction Agent v1.0** | Proactive issue detection, forecasting | ✅ Live |
+
+#### Strategy Layer Agent v1.0 Components (NIEUW - 27 Jan 2026)
+- **Pattern Analyzer**: Core pattern detection engine (errors, performance, costs, user journeys)
+- **Architecture Advisor**: System design recommendations, health assessment across 5 categories (stability, performance, cost efficiency, scalability, EU compliance)
+- **Learning Agent**: Pattern recognition, trend analysis, optimization suggestions with confidence scores
+- **Adaptive Config Agent**: Dynamic configuration tuning for rate limiting, queue concurrency, cache TTLs, alert thresholds. Rule-based triggers (HIGH_TRAFFIC, HIGH_ERROR_RATE, LOW_RESOURCES, PEAK_HOURS)
+- **Prediction Agent**: Proactive issue detection using linear regression trends. Predicts resource exhaustion, error escalation, cost overruns, performance decline
+- **Sync Scheduler**: 4 scheduled jobs for strategy analysis and optimization
+
+**Strategy Layer Scheduled Jobs (4):**
+| Job | Schedule | Beschrijving |
+|-----|----------|--------------|
+| `strategy-assessment` | Maandag 06:00 | Weekly architecture assessment |
+| `strategy-learning` | 03:00 dagelijks | Learning cycle and optimizations |
+| `strategy-prediction` | Elke 6 uur | Predictive analysis for proactive alerts |
+| `strategy-config-eval` | Elke 30 minuten | System metrics evaluation and config adaptation |
+
+**Architecture Assessment Categories:**
+- Stability (error patterns, recurring issues)
+- Performance (degradation, peak usage)
+- Cost Efficiency (budget anomalies, service costs)
+- Scalability (queue backlog, database connections)
+- EU Compliance (service locations, GDPR agent status)
+
+**Prediction Models:**
+- Resource Exhaustion (disk, memory trend analysis)
+- Error Escalation (hourly error rate trending)
+- Cost Overrun (projected monthly vs budget)
+- Performance Decline (multi-metric degradation)
+
+**Volledige specificaties**: Zie `docs/agents/fase5/`
+
 ---
 
-## 📊 Scheduled Jobs Overzicht (31 totaal)
+## 📊 Scheduled Jobs Overzicht (35 totaal)
 
 ### Core Jobs (4)
 | Job | Schedule | Component |
@@ -663,6 +712,14 @@ REDIS_PORT=6379
 | `dev-security-scan` | 02:00 dagelijks | Development Layer Agent |
 | `dev-dependency-audit` | Zondag 03:00 | Development Layer Agent |
 | `dev-quality-report` | Maandag 06:00 | Development Layer Agent |
+
+### Strategy Layer Jobs (4)
+| Job | Schedule | Component |
+|-----|----------|-----------|
+| `strategy-assessment` | Maandag 06:00 | Strategy Layer Agent |
+| `strategy-learning` | 03:00 dagelijks | Strategy Layer Agent |
+| `strategy-prediction` | Elke 6 uur | Strategy Layer Agent |
+| `strategy-config-eval` | Elke 30 minuten | Strategy Layer Agent |
 
 ---
 
@@ -835,6 +892,7 @@ score = (review_count × 0.30) +
 | Fase 2 Docs | `docs/agents/fase2/` |
 | Fase 3 Docs | `docs/agents/fase3/` |
 | Fase 4 Docs | `docs/agents/fase4/` |
+| Fase 5 Docs | `docs/agents/fase5/` |
 | API Documentatie | `docs/api/` |
 | Deployment Guide | `infrastructure/README.md` |
 | Contributing Guide | `CONTRIBUTING.md` |
@@ -845,7 +903,8 @@ score = (review_count × 0.30) +
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **2.9.1** | **2026-01-20** | **CLAUDE.md correcties: Job count (31), docs/agents/fase4/ toegevoegd, MASTERPLAN referentie fix, OWASP details (A01/A02/A03/A07/A10), quality thresholds, UX Reviewer cross-reference.** |
+| **3.0.0** | **2026-01-27** | **Fase 5 Strategy Layer COMPLEET: Architecture Advisor, Learning Agent, Adaptive Config Agent, Prediction Agent. Pattern analysis, proactive issue detection, dynamic config tuning. 4 nieuwe jobs (35 totaal). Major version - alle 5 fases compleet!** |
+| 2.9.1 | 2026-01-20 | CLAUDE.md correcties: Job count (31), docs/agents/fase4/ toegevoegd, MASTERPLAN referentie fix, OWASP details (A01/A02/A03/A07/A10), quality thresholds, UX Reviewer cross-reference. |
 | 2.9.0 | 2026-01-19 | Fase 4 Development Layer COMPLEET: UX/UI Reviewer, Code Reviewer, Security Reviewer, Quality Checker. OWASP Top 10 checks, brand compliance, code conventions. 3 nieuwe jobs (31 totaal). Fase 4 nu 100% compleet! |
 | 2.8.0 | 2026-01-19 | GDPR Agent v1.0 LIVE: Art. 7/15/17/20/30 compliance, data export, erasure (72h), consent management. 4 nieuwe jobs (28 totaal). Fase 3 nu 100% compleet! |
 | 2.7.1 | 2026-01-19 | Database tabellen toegevoegd (user_journeys, journey_scheduled_emails), MASTERPLAN referentie gecorrigeerd naar v3.4.0 |
