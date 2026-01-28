@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.1.1
-> **Laatst bijgewerkt**: 28 januari 2026 (14:00 UTC)
+> **Versie**: 3.2.0
+> **Laatst bijgewerkt**: 28 januari 2026 (17:10 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -173,6 +173,15 @@ HolidaiButler/
 │   │   │           └── analyzers/
 │   │   │               └── patternAnalyzer.js # Core pattern detection engine
 │   │   └── middleware/
+│   ├── config/                # ✅ Multi-Destination Config (NIEUW)
+│   │   ├── shared.config.js          # Platform-wide settings
+│   │   └── destinations/
+│   │       ├── index.js              # Config exports + utilities
+│   │       ├── calpe.config.js       # Calpe destination config
+│   │       ├── texel.config.js       # Texel destination config
+│   │       └── alicante.config.js    # Alicante destination config
+│   ├── migrations/            # ✅ Database Migrations (NIEUW)
+│   │   └── 001_multi_destination.sql
 │   └── package.json
 │
 ├── modules/
@@ -807,11 +816,53 @@ feat(agents): add HoliBot Sync Agent for ChromaDB vector sync
 
 ---
 
-## 🌍 Multi-Destination Support
+## 🌍 Multi-Destination Architecture
 
-### Huidige Bestemmingen
-1. **Calpe** (Costa Blanca, Spanje) - Primary
-2. **Texel** (Nederland) - Secondary
+### Bestemmingen Database (destinations table)
+| ID | Code | Display Name | Country | Status | Domain |
+|----|------|--------------|---------|--------|--------|
+| 1 | calpe | Calpe | Spain | ✅ Active | holidaibutler.com |
+| 2 | texel | Texel | Netherlands | ⏸️ Planned | texelmaps.nl |
+| 3 | alicante | Alicante | Spain | ⏸️ Planned | alicante.holidaibutler.com |
+
+### Database Multi-Tenancy
+Tabellen met `destination_id` foreign key:
+- `POI` (1593 records → Calpe)
+- `QA` (0 records)
+- `agenda` (314 records → Calpe)
+- `Users` (10 records → Calpe)
+- `user_journeys` (0 records)
+- `holibot_sessions` (169 records → Calpe)
+
+### Configuration Files
+```
+platform-core/config/
+├── shared.config.js           # Platform-wide settings
+└── destinations/
+    ├── index.js               # Export + utility functions
+    ├── calpe.config.js        # Calpe configuration
+    ├── texel.config.js        # Texel configuration
+    └── alicante.config.js     # Alicante configuration
+```
+
+### Migration Files
+```
+platform-core/migrations/
+└── 001_multi_destination.sql  # Multi-destination schema migration
+```
+
+### Destination Config Utility Functions
+```javascript
+import { getDestinationConfig, isFeatureEnabled } from './config/destinations';
+
+// Get config by code
+const config = getDestinationConfig('calpe');
+
+// Check feature availability
+if (isFeatureEnabled('calpe', 'holibot')) {
+  // Feature enabled
+}
+```
 
 ### Bestemming-specifieke Skills
 Elke bestemming heeft eigen skills in `.claude/skills/destinations/`:
@@ -950,7 +1001,8 @@ pm2 logs holidaibutler-api --lines 50 --nostream 2>&1 | grep -iE "error|failed"
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **3.1.1** | **2026-01-28** | **HoliBot sync bug gefixed: kolomnamen gecorrigeerd (rating, tier_score, city AS destination, last_updated). Alle 35 jobs operationeel, 0 failed.** |
+| **3.2.0** | **2026-01-28** | **Multi-Destination Architecture Fase 1 COMPLEET: destinations table (3 destinations), destination_id toegevoegd aan 6 tabellen (POI, QA, agenda, Users, user_journeys, holibot_sessions), config files (shared + 3 destinations), migration file. Database backup gemaakt.** |
+| 3.1.1 | 2026-01-28 | HoliBot sync bug gefixed: kolomnamen gecorrigeerd (rating, tier_score, city AS destination, last_updated). Alle 35 jobs operationeel, 0 failed. |
 | **3.1.0** | **2026-01-28** | **Server monitoring toolkit toegevoegd. Database tabelnamen gecorrigeerd (POI/QA, niet POIs/QAs). HoliBot sync issue gedocumenteerd. Server opschoning: backups van 2.8GB naar 870MB. SSH key hersteld voor root@91.98.71.87.** |
 | 3.0.1 | 2026-01-27 | Email fix: Dual-group rotation voor dagelijkse briefing. MailerLite re-entry cooldown (>24h) omzeild door 2 groepen/automations die dagelijks alterneren (48h per groep). Campaign API HTML content niet beschikbaar op Growing Business plan. |
 | 3.0.0 | 2026-01-27 | Fase 5 Strategy Layer COMPLEET: Architecture Advisor, Learning Agent, Adaptive Config Agent, Prediction Agent. Pattern analysis, proactive issue detection, dynamic config tuning. 4 nieuwe jobs (35 totaal). Major version - alle 5 fases compleet! |
