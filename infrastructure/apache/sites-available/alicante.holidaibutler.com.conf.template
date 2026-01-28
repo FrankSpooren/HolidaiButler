@@ -1,0 +1,7 @@
+# Alicante HolidaiButler - HTTP to HTTPS redirect
+<VirtualHost *:80>
+    ServerName alicante.holidaibutler.com
+
+    RewriteEngine On
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
+</VirtualHost>

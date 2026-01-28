@@ -1,0 +1,8 @@
+# Texel Maps - HTTP to HTTPS redirect
+<VirtualHost *:80>
+    ServerName texelmaps.nl
+    ServerAlias www.texelmaps.nl
+
+    RewriteEngine On
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
+</VirtualHost>
