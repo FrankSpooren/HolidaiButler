@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.0.1
-> **Laatst bijgewerkt**: 27 januari 2026 (14:20 UTC)
+> **Versie**: 3.1.0
+> **Laatst bijgewerkt**: 28 januari 2026 (14:00 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -404,8 +404,8 @@ REDIS_PORT=6379
 ### MySQL (Hetzner - pxoziy_db1 database)
 | Tabel | Beschrijving | Sync Frequentie |
 |-------|--------------|-----------------|
-| POIs | Points of Interest (+ status, tier_score, duplicate_hash) | Tier-based |
-| Q&As | AI-generated Q&A pairs (NL/EN/ES, approval workflow) | Maandelijks |
+| POI | Points of Interest (+ status, tier_score, duplicate_hash) | Tier-based |
+| QA | AI-generated Q&A pairs (NL/EN/ES, approval workflow) | Maandelijks |
 | Reviews | Reviews met sentiment analysis, spam scores | Wekelijks/Maandelijks |
 | Users | Klantaccounts | Realtime |
 | AdminUsers | Partner accounts | Realtime |
@@ -475,7 +475,7 @@ REDIS_PORT=6379
 - **Oplossing:** Twee groepen/automations die dagelijks alterneren (48h per groep)
 - **Group 1:** "System Alerts Owner" (ID: 176972381290498029) → Automation "Daily system update"
 - **Group 2:** "System Alerts Owner 2" (ID: 177755949282362712) → Automation "Daily system update 2"
-- **Rotatie:** Oneven dag-van-jaar → Group 1, even dag-van-jaar → Group 2
+- **Rotatie:** Even dag-van-jaar → Group 1, oneven dag-van-jaar → Group 2
 - **Flow:** API removes → updates fields → re-adds subscriber → automation triggers
 - **Template:** Vaste template met dynamic fields via personalization
 - **Plan limiet:** Campaign API HTML content vereist Advanced plan (niet beschikbaar)
@@ -903,11 +903,55 @@ score = (review_count × 0.30) +
 
 ---
 
+## 🖥️ Server Monitoring & Onderhoud
+
+### Quick Health Check Commands
+```bash
+# SSH naar server
+ssh root@91.98.71.87
+
+# PM2 status
+pm2 status
+
+# Redis check
+redis-cli ping
+
+# Check scheduled jobs (35 verwacht)
+cd /var/www/api.holidaibutler.com/platform-core
+node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); async function c() { const conn = new Redis(); const q = new Queue('scheduled-tasks', { connection: conn }); const jobs = await q.getRepeatableJobs(); console.log('Jobs:', jobs.length); await q.close(); await conn.quit(); } c();"
+
+# Check failed jobs
+node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); async function c() { const conn = new Redis(); const q = new Queue('scheduled-tasks', { connection: conn }); const failed = await q.getFailedCount(); console.log('Failed:', failed); await q.close(); await conn.quit(); } c();"
+
+# PM2 logs (laatste errors)
+pm2 logs holidaibutler-api --lines 50 --nostream 2>&1 | grep -iE "error|failed"
+```
+
+### Server Disk Status (28 jan 2026)
+| Path | Grootte | Status |
+|------|---------|--------|
+| `/` (totaal) | 38 GB | 48% gebruikt |
+| `/var/www/api.holidaibutler.com/` | 9.0 GB | Actief |
+| `/var/www/api.holidaibutler.com/storage/poi-images/` | 8.3 GB | 1576 afbeeldingen |
+| `/var/www/backups/` | 870 MB | Opgeschoond (was 2.8 GB) |
+
+### Queue Name
+**Let op:** De BullMQ queue heet `scheduled-tasks` (NIET `scheduled-jobs`)
+
+### Bekende Issues (28 jan 2026)
+| Issue | Status | Oorzaak |
+|-------|--------|---------|
+| HoliBot sync jobs falen | ⚠️ Open | Code zoekt `POIs`/`QAs` maar tabellen heten `POI`/`QA` |
+| Daily briefing email | ✅ Gefixed | Dual-group rotation actief, cooldowns moeten verlopen |
+
+---
+
 ## 📋 Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **3.0.1** | **2026-01-27** | **Email fix: Dual-group rotation voor dagelijkse briefing. MailerLite re-entry cooldown (>24h) omzeild door 2 groepen/automations die dagelijks alterneren (48h per groep). Campaign API HTML content niet beschikbaar op Growing Business plan.** |
+| **3.1.0** | **2026-01-28** | **Server monitoring toolkit toegevoegd. Database tabelnamen gecorrigeerd (POI/QA, niet POIs/QAs). HoliBot sync issue gedocumenteerd. Server opschoning: backups van 2.8GB naar 870MB. SSH key hersteld voor root@91.98.71.87.** |
+| 3.0.1 | 2026-01-27 | Email fix: Dual-group rotation voor dagelijkse briefing. MailerLite re-entry cooldown (>24h) omzeild door 2 groepen/automations die dagelijks alterneren (48h per groep). Campaign API HTML content niet beschikbaar op Growing Business plan. |
 | 3.0.0 | 2026-01-27 | Fase 5 Strategy Layer COMPLEET: Architecture Advisor, Learning Agent, Adaptive Config Agent, Prediction Agent. Pattern analysis, proactive issue detection, dynamic config tuning. 4 nieuwe jobs (35 totaal). Major version - alle 5 fases compleet! |
 | 2.9.1 | 2026-01-20 | CLAUDE.md correcties: Job count (31), docs/agents/fase4/ toegevoegd, MASTERPLAN referentie fix, OWASP details (A01/A02/A03/A07/A10), quality thresholds, UX Reviewer cross-reference. |
 | 2.9.0 | 2026-01-19 | Fase 4 Development Layer COMPLEET: UX/UI Reviewer, Code Reviewer, Security Reviewer, Quality Checker. OWASP Top 10 checks, brand compliance, code conventions. 3 nieuwe jobs (31 totaal). Fase 4 nu 100% compleet! |
