@@ -29,19 +29,19 @@ class POISyncService {
       // Get POIs updated since last sync
       let query = `
         SELECT id, name, category, subcategory, description, address,
-               opening_hours, average_rating, price_level, destination,
-               latitude, longitude, tier, updated_at
-        FROM POIs
+               opening_hours, rating, price_level, city AS destination,
+               latitude, longitude, tier_score, last_updated
+        FROM POI
         WHERE is_active = 1
       `;
 
       const replacements = [];
       if (since) {
-        query += ' AND updated_at > ?';
+        query += ' AND last_updated > ?';
         replacements.push(since);
       }
 
-      query += ' ORDER BY tier ASC, updated_at DESC LIMIT 100';
+      query += ' ORDER BY tier_score ASC, last_updated DESC LIMIT 100';
 
       const [pois] = await this.sequelize.query(query, { replacements });
 
@@ -61,11 +61,11 @@ class POISyncService {
         category: p.category || 'other',
         subcategory: p.subcategory || '',
         destination: p.destination || 'calpe',
-        tier: p.tier || 4,
-        rating: p.average_rating || 0,
+        tier: p.tier_score || 4,
+        rating: p.rating || 0,
         latitude: p.latitude || 0,
         longitude: p.longitude || 0,
-        updated_at: p.updated_at ? p.updated_at.toISOString() : new Date().toISOString()
+        last_updated: p.last_updated ? p.last_updated.toISOString() : new Date().toISOString()
       }));
 
       // Generate embeddings
@@ -98,9 +98,9 @@ class POISyncService {
     try {
       // Get recently deactivated POIs
       const [deactivatedPOIs] = await this.sequelize.query(`
-        SELECT id FROM POIs
+        SELECT id FROM POI
         WHERE is_active = 0
-        AND updated_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        AND last_updated > DATE_SUB(NOW(), INTERVAL 24 HOUR)
       `);
 
       if (deactivatedPOIs.length === 0) {

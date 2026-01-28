@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.1.0
+> **Versie**: 3.1.1
 > **Laatst bijgewerkt**: 28 januari 2026 (14:00 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -941,7 +941,7 @@ pm2 logs holidaibutler-api --lines 50 --nostream 2>&1 | grep -iE "error|failed"
 ### Bekende Issues (28 jan 2026)
 | Issue | Status | Oorzaak |
 |-------|--------|---------|
-| HoliBot sync jobs falen | ⚠️ Open | Code zoekt `POIs`/`QAs` maar tabellen heten `POI`/`QA` |
+| HoliBot sync jobs falen | ✅ Gefixed | Tabel- en kolomnamen gecorrigeerd |
 | Daily briefing email | ✅ Gefixed | Dual-group rotation actief, cooldowns moeten verlopen |
 
 ---
@@ -950,6 +950,7 @@ pm2 logs holidaibutler-api --lines 50 --nostream 2>&1 | grep -iE "error|failed"
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.1.1** | **2026-01-28** | **HoliBot sync bug gefixed: kolomnamen gecorrigeerd (rating, tier_score, city AS destination, last_updated). Alle 35 jobs operationeel, 0 failed.** |
 | **3.1.0** | **2026-01-28** | **Server monitoring toolkit toegevoegd. Database tabelnamen gecorrigeerd (POI/QA, niet POIs/QAs). HoliBot sync issue gedocumenteerd. Server opschoning: backups van 2.8GB naar 870MB. SSH key hersteld voor root@91.98.71.87.** |
 | 3.0.1 | 2026-01-27 | Email fix: Dual-group rotation voor dagelijkse briefing. MailerLite re-entry cooldown (>24h) omzeild door 2 groepen/automations die dagelijks alterneren (48h per groep). Campaign API HTML content niet beschikbaar op Growing Business plan. |
 | 3.0.0 | 2026-01-27 | Fase 5 Strategy Layer COMPLEET: Architecture Advisor, Learning Agent, Adaptive Config Agent, Prediction Agent. Pattern analysis, proactive issue detection, dynamic config tuning. 4 nieuwe jobs (35 totaal). Major version - alle 5 fases compleet! |

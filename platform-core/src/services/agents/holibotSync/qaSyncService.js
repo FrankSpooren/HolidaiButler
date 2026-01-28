@@ -29,19 +29,19 @@ class QASyncService {
       // Get Q&As updated since last sync (only approved ones)
       let query = `
         SELECT qa.id, qa.question, qa.answer, qa.language, qa.poi_id,
-               qa.priority, qa.updated_at, p.name as poi_name, p.category, p.destination
-        FROM QAs qa
-        LEFT JOIN POIs p ON qa.poi_id = p.id
+               qa.priority, qa.last_updated, p.name as poi_name, p.category, p.city AS destination
+        FROM QA qa
+        LEFT JOIN POI p ON qa.poi_id = p.id
         WHERE qa.status = 'approved'
       `;
 
       const replacements = [];
       if (since) {
-        query += ' AND qa.updated_at > ?';
+        query += ' AND qa.last_updated > ?';
         replacements.push(since);
       }
 
-      query += ' ORDER BY qa.priority DESC, qa.updated_at DESC LIMIT 200';
+      query += ' ORDER BY qa.priority DESC, qa.last_updated DESC LIMIT 200';
 
       const [qas] = await this.sequelize.query(query, { replacements });
 
@@ -63,7 +63,7 @@ class QASyncService {
         destination: q.destination || 'calpe',
         language: q.language || 'en',
         priority: q.priority || 3,
-        updated_at: q.updated_at ? q.updated_at.toISOString() : new Date().toISOString()
+        updated_at: q.last_updated ? q.last_updated.toISOString() : new Date().toISOString()
       }));
 
       // Generate embeddings
@@ -96,9 +96,9 @@ class QASyncService {
     try {
       // Get recently rejected Q&As
       const [rejectedQAs] = await this.sequelize.query(`
-        SELECT id FROM QAs
+        SELECT id FROM QA
         WHERE status = 'rejected'
-        AND updated_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        AND last_updated > DATE_SUB(NOW(), INTERVAL 24 HOUR)
       `);
 
       if (rejectedQAs.length === 0) {
