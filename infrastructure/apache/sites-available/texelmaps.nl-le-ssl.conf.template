@@ -1,0 +1,70 @@
+# Texel Maps - SSL VirtualHost Configuration
+# Multi-Destination Architecture: texel (destination_id=2)
+#
+# Prerequisites:
+# 1. DNS records pointing to server IP
+# 2. SSL certificate: certbot --apache -d texelmaps.nl -d www.texelmaps.nl
+# 3. Frontend deployed to /var/www/texelmaps.nl
+# 4. Texel destination activated in database (UPDATE destinations SET is_active=1 WHERE code='texel')
+
+<IfModule mod_ssl.c>
+<VirtualHost *:443>
+    ServerName texelmaps.nl
+    ServerAlias www.texelmaps.nl
+    DocumentRoot /var/www/texelmaps.nl
+
+    # Set destination header for backend routing
+    RequestHeader set X-Destination-ID "texel"
+
+    # API Proxy to Node.js backend (shared with Calpe)
+    ProxyPreserveHost On
+    ProxyPass /poi-images !
+    ProxyPass /api http://127.0.0.1:3001/api
+    ProxyPassReverse /api http://127.0.0.1:3001/api
+    ProxyPass /health http://127.0.0.1:3001/health
+    ProxyPassReverse /health http://127.0.0.1:3001/health
+
+    # POI Images - Texel destination storage
+    Alias /poi-images /var/www/api.holidaibutler.com/storage/destinations/texel/poi-images
+    <Directory /var/www/api.holidaibutler.com/storage/destinations/texel/poi-images>
+        Options -Indexes
+        AllowOverride None
+        Require all granted
+        Header set Access-Control-Allow-Origin "*"
+        Header set Cache-Control "public, max-age=2592000"
+    </Directory>
+
+    # CORS Headers for API
+    <Location /api>
+        Header always set Access-Control-Allow-Origin "https://texelmaps.nl"
+        Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Destination-ID"
+        Header always set Access-Control-Allow-Credentials "true"
+    </Location>
+
+    <Directory /var/www/texelmaps.nl>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+
+        # SPA routing - serve index.html for non-existing paths
+        RewriteEngine On
+        RewriteBase /
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteCond %{REQUEST_URI} !^/api
+        RewriteCond %{REQUEST_URI} !^/health
+        RewriteCond %{REQUEST_URI} !^/poi-images
+        RewriteRule . /index.html [L]
+    </Directory>
+
+    # Logging - destination-specific
+    ErrorLog ${APACHE_LOG_DIR}/texelmaps_error.log
+    CustomLog ${APACHE_LOG_DIR}/texelmaps_access.log combined
+
+    # SSL Configuration (update paths after certbot)
+    SSLCertificateFile /etc/letsencrypt/live/texelmaps.nl/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/texelmaps.nl/privkey.pem
+    Include /etc/letsencrypt/options-ssl-apache.conf
+</VirtualHost>
+</IfModule>
