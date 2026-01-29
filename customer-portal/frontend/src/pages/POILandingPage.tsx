@@ -169,10 +169,9 @@ export function POILandingPage() {
     open_now: openNow || undefined,
     price_min: priceLevel.length > 0 ? Math.min(...priceLevel) : undefined,
     price_max: priceLevel.length > 0 ? Math.max(...priceLevel) : undefined,
-    // IMAGE FILTERING: Presentation layers require images, search does not
-    // - Grids show only POIs with valid images for professional appearance
-    // - Search shows ALL POIs for maximum results
-    require_images: searchQuery ? undefined : true,
+    // IMAGE FILTERING: Temporarily disabled for Texel data completeness check
+    // TODO: Re-enable after verifying Texel images are properly linked
+    // require_images: searchQuery ? undefined : true,
   });
 
   // Filter and sort POIs
@@ -189,16 +188,17 @@ export function POILandingPage() {
       const lowerName = poi.name.toLowerCase();
       if (accomKeywords.some(keyword => lowerName.includes(keyword))) return false;
 
-      // DEFAULT BROWSE VIEW: Apply presentation + quality filters (no search, no category)
+      // DEFAULT BROWSE VIEW: Apply presentation category filter (no search, no category)
       if (!searchQuery && !selectedCategory) {
         // Only show presentation-worthy categories
         if (!presentationCategories.includes(poi.category)) {
           return false;
         }
 
-        // Quality filter: rating >= 4.0 AND review_count >= 3
-        if (!poi.rating || poi.rating < 4) return false;
-        if (!poi.review_count || poi.review_count < 3) return false;
+        // Quality filters temporarily disabled for Texel data completeness check
+        // TODO: Re-enable after verifying Texel data quality
+        // if (!poi.rating || poi.rating < 4) return false;
+        // if (!poi.review_count || poi.review_count < 3) return false;
       }
 
       // CATEGORY VIEW: Show all POIs in selected category (no quality filter)
