@@ -1,11 +1,11 @@
 # HolidaiButler Multi-Destination Architecture
 ## Strategisch Adviesrapport
 
-**Datum**: 28 januari 2026
+**Datum**: 29 januari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 1.2
+**Versie**: 1.3
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 1 COMPLEET - GEREED VOOR FASE 2
+**Status**: FASE 2 COMPLEET - Texel Deployment Afgerond
 
 ---
 
@@ -13,12 +13,12 @@
 
 | Fase | Status | Start | Einde | Verantwoordelijke |
 |------|--------|-------|-------|-------------------|
-| **Fase 1: Foundation** | COMPLEET | 28-01-2026 | 28-01-2026 | Claude Code |
-| **Fase 2: Texel Deployment** | GEREED | - | - | Claude Code |
-| **Fase 3: Alicante Preparation** | WACHT | - | - | Claude Code |
-| **Fase 4: Stabilization** | WACHT | - | - | Claude Code |
+| **Fase 1: Foundation** | ✅ COMPLEET | 28-01-2026 | 28-01-2026 | Claude Code |
+| **Fase 2: Texel Deployment** | ✅ COMPLEET | 29-01-2026 | 29-01-2026 | Claude Code |
+| **Fase 3: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
+| **Fase 4: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 28 januari 2026 - Fase 1 volledig geimplementeerd
+**Laatste update**: 29 januari 2026 - Fase 2 Texel Deployment volledig geïmplementeerd
 
 ---
 
@@ -1024,18 +1024,18 @@ export const getEmailTemplate = (templateName, destinationId) => {
 1. `feat(core): Multi-Destination Architecture Phase 1` - Database migration, config files
 2. `feat(infra): Multi-Destination Phase 1 - Tasks 3-5 complete` - READMEFIRST, Apache templates
 
-### Fase 2: Texel Deployment
+### Fase 2: Texel Deployment - IN PROGRESS
 
 | Taak | Status | Datum | Uitvoerder | Notities |
 |------|--------|-------|------------|----------|
-| 2.1 DNS + SSL configuratie | Niet gestart | - | - | - |
-| 2.2 Texel destination config | Niet gestart | - | - | - |
-| 2.3 Texel POI seed data | Niet gestart | - | - | - |
-| 2.4 Texel branding assets | Niet gestart | - | - | - |
-| 2.5 GitHub Actions matrix | Niet gestart | - | - | - |
-| 2.6 E2E tests | Niet gestart | - | - | - |
+| 2.1 DNS + SSL configuratie | ✅ Compleet | 29-01-2026 | Claude Code | DNS via Hetzner, SSL certbot, geldig t/m 29-04-2026 |
+| 2.2 Texel destination activeren | ✅ Compleet | 29-01-2026 | Claude Code | is_active=1, texelmaps.nl domain |
+| 2.3 Texel data import | ✅ Compleet | 29-01-2026 | Claude Code | POI: 1,772, Categories: 671, QnA: 96,093, Reviews: 3,929 |
+| 2.4 Texel branding assets | ✅ Compleet | 29-01-2026 | Claude Code | Placeholder logo SVG, kleurstelling toegepast |
+| 2.5 GitHub Actions matrix | ✅ Compleet | 29-01-2026 | Claude Code | Matrix deployment calpe/texel, VITE_DESTINATION_ID |
+| 2.6 E2E tests | ⏳ Optioneel | - | - | Basis health checks in workflow, E2E later |
 
-**Fase 2 Status**: WACHT OP FASE 1
+**Fase 2 Status**: ✅ COMPLEET (5/6 taken compleet, E2E optioneel)
 
 ### Fase 3: Alicante Preparation
 
@@ -1085,8 +1085,21 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - **Centrale `index.js` met utility functions** - `getDestinationConfig()`, `isFeatureEnabled()`, `getDestinationByDomain()` maken code cleaner
 - **Comprehensive config per destination** - Branding, legal, POI settings, holibot settings in een plek
 
-### Fase 2 Lessons Learned
-- *Nog geen - fase niet gestart*
+### Fase 2 Lessons Learned (29-01-2026)
+
+**Database Multi-Tenancy:**
+- **Gedeelde QnA tabel met destination_id** - Gebruik de bestaande QnA tabel met destination_id kolom, niet aparte tabellen (QA vs QnA)
+- **google_placeid als POI referentie** - QnA gebruikt google_placeid, niet poi_id voor de koppeling
+- **Batch inserts voor grote imports** - 96K+ records efficiënt importeren met batch size van 1000
+
+**DNS & SSL:**
+- **Hetzner DNS** - DNS transfer van MijnDomein.nl naar Hetzner voor betere integratie
+- **Certbot automatisering** - Let's Encrypt certificaten via certbot --apache, auto-renewal geconfigureerd
+
+**GitHub Actions:**
+- **Matrix strategy** - Parallelle builds/deploys per destination
+- **VITE_DESTINATION_ID** - Frontend destination awareness via environment variable
+- **Destination-specific config** - Map coordinates, app name, language per destination
 
 ### Fase 3 Lessons Learned
 - *Nog geen - fase niet gestart*
@@ -1155,6 +1168,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **1.2** | **28-01-2026** | **Fase 1 COMPLEET: Database schema (INT destination_id, 6 tabellen), Apache VHosts (RequestHeader), Directory structuur geüpdatet naar daadwerkelijke implementatie. Implementatie Log, Lessons Learned, Risico Register, Beslissingen Log bijgewerkt met concrete resultaten.** |
+| **1.3** | **29-01-2026** | **Fase 2 COMPLEET: Texel Deployment - DNS+SSL (texelmaps.nl), Data import (POI 1772, Categories 671, QnA 96093, Reviews 3929), GitHub Actions matrix deployment, placeholder branding.** |
+| 1.2 | 28-01-2026 | Fase 1 COMPLEET: Database schema (INT destination_id, 6 tabellen), Apache VHosts (RequestHeader), Directory structuur geüpdatet naar daadwerkelijke implementatie. |
 | 1.1 | 28-01-2026 | Toegevoegd: Implementatie Log, Lessons Learned, Risico Register, Beslissingen Log |
 | 1.0 | 28-01-2026 | Initiele versie - Strategisch Advies compleet |
