@@ -3,6 +3,7 @@ import type { POI } from '../types/poi.types';
 import { shareContent, generatePOIShareURL } from '../../../shared/utils/share';
 import { addPOIToCalendar } from '../../../shared/utils/calendar';
 import { POIMapModal } from './POIMapModal';
+import { useDestination } from '../../../shared/contexts/DestinationContext';
 
 interface POITileActionsProps {
   poi: POI;
@@ -22,6 +23,7 @@ interface POITileActionsProps {
  * Updated to match Agenda Card styling with emoji icons
  */
 export function POITileActions({ poi, onDetailsClick, labels }: POITileActionsProps) {
+  const destination = useDestination();
   const [mapModalOpen, setMapModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
@@ -35,7 +37,7 @@ export function POITileActions({ poi, onDetailsClick, labels }: POITileActionsPr
     const url = generatePOIShareURL(poi.id);
     const result = await shareContent({
       title: poi.name,
-      text: poi.description || `Check out ${poi.name} in Calpe!`,
+      text: poi.description || `Check out ${poi.name} in ${destination.name}!`,
       url
     });
     if (result.success && result.method === 'clipboard') {
@@ -48,7 +50,7 @@ export function POITileActions({ poi, onDetailsClick, labels }: POITileActionsPr
   const handleAddToCalendar = (e: React.MouseEvent) => {
     e.stopPropagation();
     const url = generatePOIShareURL(poi.id);
-    addPOIToCalendar(poi.name, poi.address, poi.description, url);
+    addPOIToCalendar(poi.name, poi.address, poi.description, url, destination.name);
     showToast('Calendar event downloaded!', 'success');
   };
 

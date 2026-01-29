@@ -120,16 +120,20 @@ export function createPOICalendarEvent(
   poiName: string,
   poiAddress: string | null,
   poiDescription: string | null,
-  poiUrl: string
+  poiUrl: string,
+  destinationName?: string
 ): CalendarEvent {
   // Create start date: tomorrow at 10:00 AM
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(10, 0, 0, 0);
 
+  // Use destination name if provided, otherwise use generic text
+  const locationText = destinationName || 'your destination';
+
   return {
     title: `Visit ${poiName}`,
-    description: poiDescription || `Plan to visit ${poiName} in Calpe`,
+    description: poiDescription || `Plan to visit ${poiName} in ${locationText}`,
     location: poiAddress || undefined,
     url: poiUrl,
     startDate: tomorrow,
@@ -145,9 +149,10 @@ export function addPOIToCalendar(
   poiName: string,
   poiAddress: string | null,
   poiDescription: string | null,
-  poiUrl: string
+  poiUrl: string,
+  destinationName?: string
 ): void {
-  const event = createPOICalendarEvent(poiName, poiAddress, poiDescription, poiUrl);
+  const event = createPOICalendarEvent(poiName, poiAddress, poiDescription, poiUrl, destinationName);
   const content = generateICalContent(event);
   const filename = `${poiName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-visit.ics`;
 

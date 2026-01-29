@@ -16,6 +16,15 @@ const destinationConfigs = {
     coordinates: { lat: 38.6447, lng: 0.0410 },
     languages: ['nl', 'en', 'es', 'de'],
     defaultLanguage: 'nl',
+    // Category configuration for Calpe
+    categories: {
+      // Categories to show in menu (by id)
+      enabled: ['active', 'beaches', 'culture', 'food', 'recreation', 'shopping'],
+      // Categories excluded from menu
+      excluded: ['health', 'practical'],
+      // Categories for default browse view (presentation quality)
+      presentation: ['Active', 'Beaches & Nature', 'Culture & History', 'Food & Drinks', 'Recreation', 'Shopping'],
+    },
     // Calpe branding colors
     colors: {
       primary: '#7FA594',
@@ -43,6 +52,15 @@ const destinationConfigs = {
     coordinates: { lat: 53.0833, lng: 4.8000 },
     languages: ['nl', 'de', 'en'],
     defaultLanguage: 'nl',
+    // Category configuration for Texel
+    categories: {
+      // Categories to show in menu (by id)
+      enabled: ['active', 'beaches', 'culture', 'food', 'recreation', 'shopping'],
+      // Categories excluded from menu
+      excluded: ['health', 'practical'],
+      // Categories for default browse view (presentation quality)
+      presentation: ['Active', 'Beaches & Nature', 'Culture & History', 'Food & Drinks', 'Recreation', 'Shopping'],
+    },
     // Texel branding colors (RGB: 0,255,100 / 0,202,255 / 242,255,0)
     colors: {
       primary: '#00FF64',
