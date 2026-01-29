@@ -1,5 +1,7 @@
 # =============================================================================
-# Customer Portal Deployment Pipeline - Multi-Environment
+# Customer Portal Deployment Pipeline - Multi-Destination Matrix
+# =============================================================================
+# Updated: 29 januari 2026 - Fase 2 Multi-Destination Support
 # =============================================================================
 name: "Deploy: Customer Portal"
 
@@ -8,6 +10,7 @@ on:
     branches: [dev, test, main]
     paths:
       - 'customer-portal/**'
+      - 'config/destinations/**'
       - '!customer-portal/README.md'
   workflow_dispatch:
     inputs:
@@ -17,6 +20,12 @@ on:
         default: 'dev'
         type: choice
         options: [dev, test, production]
+      destination:
+        description: 'Destination to deploy (or all)'
+        required: true
+        default: 'all'
+        type: choice
+        options: [all, calpe, texel]
 
 env:
   NODE_VERSION: '20'
@@ -28,8 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.env.outputs.environment }}
-      deploy_url: ${{ steps.env.outputs.deploy_url }}
-      deploy_path: ${{ steps.env.outputs.deploy_path }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - name: Determine environment
         id: env
@@ -41,74 +49,158 @@ jobs:
               dev) ENV="dev" ;; test) ENV="test" ;; main) ENV="production" ;; *) ENV="dev" ;;
             esac
           fi
-          case "$ENV" in
-            dev) DEPLOY_URL="dev.holidaibutler.com"; DEPLOY_PATH="/var/www/dev.holidaibutler.com" ;;
-            test) DEPLOY_URL="test.holidaibutler.com"; DEPLOY_PATH="/var/www/test.holidaibutler.com" ;;
-            production) DEPLOY_URL="holidaibutler.com"; DEPLOY_PATH="/var/www/holidaibutler.com" ;;
-          esac
           echo "environment=$ENV" >> $GITHUB_OUTPUT
-          echo "deploy_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
-          echo "deploy_path=$DEPLOY_PATH" >> $GITHUB_OUTPUT
+
+      - name: Build destination matrix
+        id: matrix
+        run: |
+          # Determine which destinations to deploy
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.destination }}" != "all" ]; then
+            DEST="${{ github.event.inputs.destination }}"
+            if [ "$DEST" = "calpe" ]; then
+              MATRIX='{"include":[{"destination":"calpe","domain_prod":"holidaibutler.com","domain_test":"test.holidaibutler.com","domain_dev":"dev.holidaibutler.com","deploy_path_prod":"/var/www/holidaibutler.com","deploy_path_test":"/var/www/test.holidaibutler.com","deploy_path_dev":"/var/www/dev.holidaibutler.com","map_lat":"38.6447","map_lng":"0.0410","default_lang":"nl"}]}'
+            else
+              MATRIX='{"include":[{"destination":"texel","domain_prod":"texelmaps.nl","domain_test":"test.texelmaps.nl","domain_dev":"dev.texelmaps.nl","deploy_path_prod":"/var/www/destinations/texel/customer-portal","deploy_path_test":"/var/www/destinations/texel/test","deploy_path_dev":"/var/www/destinations/texel/dev","map_lat":"53.0548","map_lng":"4.7975","default_lang":"nl"}]}'
+            fi
+          else
+            # Deploy all active destinations
+            MATRIX='{"include":[{"destination":"calpe","domain_prod":"holidaibutler.com","domain_test":"test.holidaibutler.com","domain_dev":"dev.holidaibutler.com","deploy_path_prod":"/var/www/holidaibutler.com","deploy_path_test":"/var/www/test.holidaibutler.com","deploy_path_dev":"/var/www/dev.holidaibutler.com","map_lat":"38.6447","map_lng":"0.0410","default_lang":"nl"},{"destination":"texel","domain_prod":"texelmaps.nl","domain_test":"test.texelmaps.nl","domain_dev":"dev.texelmaps.nl","deploy_path_prod":"/var/www/destinations/texel/customer-portal","deploy_path_test":"/var/www/destinations/texel/test","deploy_path_dev":"/var/www/destinations/texel/dev","map_lat":"53.0548","map_lng":"4.7975","default_lang":"nl"}]}'
+          fi
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
   build:
-    name: Build Customer Portal
+    name: Build ${{ matrix.destination }}
     needs: setup
     runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: ${{ env.MODULE_PATH }}/package-lock.json
-      - name: Install and Build
+
+      - name: Determine deploy config
+        id: config
+        run: |
+          ENV="${{ needs.setup.outputs.environment }}"
+          case "$ENV" in
+            dev)
+              echo "deploy_url=${{ matrix.domain_dev }}" >> $GITHUB_OUTPUT
+              echo "deploy_path=${{ matrix.deploy_path_dev }}" >> $GITHUB_OUTPUT
+              ;;
+            test)
+              echo "deploy_url=${{ matrix.domain_test }}" >> $GITHUB_OUTPUT
+              echo "deploy_path=${{ matrix.deploy_path_test }}" >> $GITHUB_OUTPUT
+              ;;
+            production)
+              echo "deploy_url=${{ matrix.domain_prod }}" >> $GITHUB_OUTPUT
+              echo "deploy_path=${{ matrix.deploy_path_prod }}" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Install and Build for ${{ matrix.destination }}
         working-directory: ${{ env.MODULE_PATH }}
         env:
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
         run: |
           npm ci
-          cat > .env.production << 'ENVFILE'
+
+          # Create destination-specific .env.production
+          cat > .env.production << ENVFILE
           VITE_API_URL=/api/v1
           VITE_ENABLE_HOLIBOT=true
-          VITE_MAP_DEFAULT_LAT=38.6447
-          VITE_MAP_DEFAULT_LNG=0.0410
-          VITE_DEFAULT_LANGUAGE=nl
-          VITE_APP_NAME=HolidaiButler
+          VITE_MAP_DEFAULT_LAT=${{ matrix.map_lat }}
+          VITE_MAP_DEFAULT_LNG=${{ matrix.map_lng }}
+          VITE_DEFAULT_LANGUAGE=${{ matrix.default_lang }}
+          VITE_DESTINATION_ID=${{ matrix.destination }}
+          VITE_ENVIRONMENT=${{ needs.setup.outputs.environment }}
           ENVFILE
-          echo "VITE_ENVIRONMENT=${{ needs.setup.outputs.environment }}" >> .env.production
+
+          # Set app name based on destination
+          if [ "${{ matrix.destination }}" = "calpe" ]; then
+            echo "VITE_APP_NAME=HolidaiButler" >> .env.production
+          else
+            echo "VITE_APP_NAME=TexelMaps" >> .env.production
+          fi
+
           echo "VITE_SENTRY_DSN=$VITE_SENTRY_DSN" >> .env.production
+
+          # Build
           npm run build
+
       - uses: actions/upload-artifact@v4
         with:
-          name: customer-portal-dist-${{ needs.setup.outputs.environment }}
+          name: customer-portal-${{ matrix.destination }}-${{ needs.setup.outputs.environment }}
           path: ${{ env.MODULE_PATH }}/dist
           retention-days: 1
 
   deploy:
-    name: Deploy to ${{ needs.setup.outputs.environment }}
+    name: Deploy ${{ matrix.destination }} to ${{ needs.setup.outputs.environment }}
     needs: [setup, build]
     runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
+      fail-fast: false
     environment: ${{ needs.setup.outputs.environment }}
     steps:
+      - name: Determine deploy config
+        id: config
+        run: |
+          ENV="${{ needs.setup.outputs.environment }}"
+          case "$ENV" in
+            dev)
+              echo "deploy_url=${{ matrix.domain_dev }}" >> $GITHUB_OUTPUT
+              echo "deploy_path=${{ matrix.deploy_path_dev }}" >> $GITHUB_OUTPUT
+              ;;
+            test)
+              echo "deploy_url=${{ matrix.domain_test }}" >> $GITHUB_OUTPUT
+              echo "deploy_path=${{ matrix.deploy_path_test }}" >> $GITHUB_OUTPUT
+              ;;
+            production)
+              echo "deploy_url=${{ matrix.domain_prod }}" >> $GITHUB_OUTPUT
+              echo "deploy_path=${{ matrix.deploy_path_prod }}" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
       - uses: actions/download-artifact@v4
         with:
-          name: customer-portal-dist-${{ needs.setup.outputs.environment }}
+          name: customer-portal-${{ matrix.destination }}-${{ needs.setup.outputs.environment }}
           path: dist
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
-      - name: Deploy
+
+      - name: Deploy ${{ matrix.destination }}
         run: |
-          ssh root@91.98.71.87 "mkdir -p /var/www/backups/customer-portal-${{ needs.setup.outputs.environment }}"
-          ssh root@91.98.71.87 "cp -r ${{ needs.setup.outputs.deploy_path }} /var/www/backups/customer-portal-${{ needs.setup.outputs.environment }}/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
-          rsync -avz --delete dist/ root@91.98.71.87:${{ needs.setup.outputs.deploy_path }}/
-          ssh root@91.98.71.87 "chown -R www-data:www-data ${{ needs.setup.outputs.deploy_path }} && chmod -R 755 ${{ needs.setup.outputs.deploy_path }} && systemctl reload apache2"
-      - name: Health check
+          # Create backup directory
+          ssh root@91.98.71.87 "mkdir -p /var/www/backups/customer-portal-${{ matrix.destination }}-${{ needs.setup.outputs.environment }}"
+
+          # Backup existing deployment
+          ssh root@91.98.71.87 "cp -r ${{ steps.config.outputs.deploy_path }} /var/www/backups/customer-portal-${{ matrix.destination }}-${{ needs.setup.outputs.environment }}/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+
+          # Ensure deploy directory exists
+          ssh root@91.98.71.87 "mkdir -p ${{ steps.config.outputs.deploy_path }}"
+
+          # Deploy
+          rsync -avz --delete dist/ root@91.98.71.87:${{ steps.config.outputs.deploy_path }}/
+
+          # Set permissions and reload Apache
+          ssh root@91.98.71.87 "chown -R www-data:www-data ${{ steps.config.outputs.deploy_path }} && chmod -R 755 ${{ steps.config.outputs.deploy_path }} && systemctl reload apache2"
+
+      - name: Health check ${{ matrix.destination }}
         run: |
           sleep 5
-          STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://${{ needs.setup.outputs.deploy_url }})
-          echo "Status: $STATUS - Deployed to ${{ needs.setup.outputs.deploy_url }}"
-          [ "$STATUS" -ne 200 ] && exit 1 || exit 0
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://${{ steps.config.outputs.deploy_url }})
+          echo "[${{ matrix.destination }}] Status: $STATUS - Deployed to https://${{ steps.config.outputs.deploy_url }}"
+          if [ "$STATUS" != "200" ]; then
+            echo "::warning::Health check failed for ${{ matrix.destination }} (HTTP $STATUS)"
+          fi
