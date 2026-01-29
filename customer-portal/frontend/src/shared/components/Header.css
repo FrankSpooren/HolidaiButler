@@ -1,9 +1,10 @@
 /* Header - Widget Style */
+/* Uses CSS variables from DestinationContext for multi-destination branding */
 .header {
-    background: linear-gradient(135deg, #7FA594, #5E8B7E, #4A7066);
+    background: var(--header-gradient);
     color: white;
     padding: 0 20px;
-    border-bottom: 3px solid #D4AF37;
+    border-bottom: 3px solid var(--color-accent);
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     position: sticky;
     top: 0;
@@ -203,13 +204,14 @@
 }
 
 /* Navigation Menu */
+/* Uses CSS variables from DestinationContext for multi-destination branding */
 .nav-menu {
     position: fixed;
     top: 80px;
     right: -100%;
     width: 240px;
     height: calc(100vh - 80px);
-    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    background: var(--header-gradient);
     flex-direction: column;
     padding: 32px 20px;
     gap: 0;

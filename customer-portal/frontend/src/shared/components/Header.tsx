@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
 import { WCAGModal } from './WCAGModal';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useDestination } from '../contexts/DestinationContext';
 import './Header.css';
 
 export function Header() {
   const location = useLocation();
+  const destination = useDestination();
   const { language, setLanguage, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
@@ -50,7 +52,8 @@ export function Header() {
     };
   }, [menuOpen]);
 
-  const languages = [
+  // All available languages
+  const allLanguages = [
     { code: 'nl', name: 'Nederlands', flag: '/assets/flags/nl.png' },
     { code: 'en', name: 'English', flag: '/assets/flags/en.png' },
     { code: 'de', name: 'Deutsch', flag: '/assets/flags/de.png' },
@@ -59,17 +62,22 @@ export function Header() {
     { code: 'pl', name: 'Polski', flag: '/assets/flags/pl.png' },
   ];
 
-  const currentLangData = languages.find(l => l.code === language) || languages[1];
+  // Filter languages based on destination config
+  const languages = allLanguages.filter(lang =>
+    destination.languages.includes(lang.code)
+  );
+
+  const currentLangData = languages.find(l => l.code === language) || languages[0];
 
   return (
     <header className="header">
       <div className={`header-content ${isHomePage ? 'homepage-header' : ''}`}>
         {!isHomePage && (
           <Link to="/" className="logo-container">
-            {/* Brand Icon for non-homepage pages */}
+            {/* Brand Icon for non-homepage pages - destination aware */}
             <img
-              src="/assets/images/hb-merkicoon.png"
-              alt="HolidaiButler"
+              src={destination.icon}
+              alt={destination.name}
               className="header-logo-img"
             />
           </Link>

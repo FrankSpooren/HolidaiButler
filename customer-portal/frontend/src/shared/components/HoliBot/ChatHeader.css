@@ -2,8 +2,8 @@
  * ChatHeader Styles
  *
  * Design Requirements:
- * - Green background (#7FA594 Mediterranean Teal) with gradient
- * - Golden line at bottom (2px solid #D4AF37 Compass Gold)
+ * - Uses CSS variables from DestinationContext for multi-destination branding
+ * - Accent color gradient background
  * - Logo icon top-left (32x32px)
  * - White typography
  * - Close button accessible (WCAG 2.1 AA)
@@ -16,11 +16,11 @@
   gap: 12px;
   padding: 16px;
 
-  /* Appearance - Gold gradient (User requirement updated) */
-  background: linear-gradient(135deg, #D4AF37 0%, #C49B2A 100%);
+  /* Appearance - Uses destination accent color */
+  background: linear-gradient(135deg, var(--color-accent) 0%, color-mix(in srgb, var(--color-accent) 85%, black) 100%);
 
-  /* Golden line at bottom (User requirement) */
-  border-bottom: 2px solid #D4AF37; /* Compass Gold */
+  /* Accent line at bottom */
+  border-bottom: 2px solid var(--color-accent);
 
   /* Border radius (top corners only) */
   border-radius: 16px 16px 0 0;
@@ -84,7 +84,7 @@
 
 /* Focus state (keyboard navigation - WCAG 2.1 AA) */
 .holibot-reset-button:focus-visible {
-  outline: 3px solid #D4AF37; /* Compass Gold */
+  outline: 3px solid var(--color-accent);
   outline-offset: 2px;
 }
 
@@ -119,7 +119,7 @@
 
 /* Focus state (keyboard navigation - WCAG 2.1 AA) */
 .holibot-close-button:focus-visible {
-  outline: 3px solid #D4AF37; /* Compass Gold */
+  outline: 3px solid var(--color-accent);
   outline-offset: 2px;
 }
 

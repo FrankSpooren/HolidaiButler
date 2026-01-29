@@ -71,17 +71,19 @@ export default {
   },
   
   branding: {
-    primaryColor: '#FF6B00',
-    secondaryColor: '#004B87',
-    accentColor: '#7CB342',
-    headerGradient: ['#FF6B00', '#E65C00', '#CC5200'],
-    buttonPrimary: '#FF6B00',
+    // Texel brand colors: RGB(0,255,100), RGB(0,202,255), RGB(242,255,0)
+    primaryColor: '#00FF64',
+    secondaryColor: '#00CAFF',
+    tertiaryColor: '#00A3CC',
+    accentColor: '#F2FF00',
+    headerGradient: ['#00CAFF', '#00A3CC', '#008FB3'],
+    buttonPrimary: '#00CAFF',
     textPrimary: '#1A1A1A',
     textSecondary: '#666666',
     logo: '/assets/destinations/texel/logo.svg',
     logoWhite: '/assets/destinations/texel/logo-white.svg',
     favicon: '/assets/destinations/texel/favicon.ico',
-    heroImage: '/assets/destinations/texel/hero.jpg',
+    heroImage: '/assets/images/hero-texel.jpg',
     ogImage: '/assets/destinations/texel/og-image.jpg'
   },
   

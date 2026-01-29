@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../../../i18n/LanguageContext';
+import { useDestination } from '../../contexts/DestinationContext';
 import './Footer.css';
 
 /**
@@ -9,14 +10,15 @@ import './Footer.css';
  * Combined design from NEW + ORIGINAL styling
  *
  * Features:
+ * - Multi-destination aware (uses DestinationContext)
  * - Social media links
  * - Multi-column navigation
- * - i18n support (6 languages)
- * - HolidaiButler branding
+ * - i18n support
  * - WCAG compliant
  */
 export function Footer() {
   const { t } = useLanguage();
+  const destination = useDestination();
   const currentYear = new Date().getFullYear();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
@@ -54,19 +56,19 @@ export function Footer() {
           <div className="footer-brand">
             <Link to="/" className="footer-logo">
               <img
-                src="/assets/images/hb-logo-footer.png"
-                alt="HolidaiButler"
+                src={destination.icon}
+                alt={destination.name}
                 className="footer-logo-img"
               />
             </Link>
             <p className="footer-tagline">
-              {footer.tagline || 'Jouw Persoonlijke Butler aan de Costa Blanca'}
+              {destination.description}
             </p>
 
-            {/* Social Links */}
+            {/* Social Links - destination-aware */}
             <div className="footer-social">
               <a
-                href="https://facebook.com/holidaibutler"
+                href={destination.id === 'texel' ? 'https://facebook.com/texelmaps' : 'https://facebook.com/holidaibutler'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="social-link"
@@ -77,7 +79,7 @@ export function Footer() {
                 </svg>
               </a>
               <a
-                href="https://instagram.com/holidaibutler"
+                href={destination.id === 'texel' ? 'https://instagram.com/texelmaps' : 'https://instagram.com/holidaibutler'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="social-link"
@@ -88,7 +90,7 @@ export function Footer() {
                 </svg>
               </a>
               <a
-                href="https://linkedin.com/company/holidaibutler"
+                href={destination.id === 'texel' ? 'https://linkedin.com/company/texelmaps' : 'https://linkedin.com/company/holidaibutler'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="social-link"
@@ -263,10 +265,12 @@ export function Footer() {
       <div className="footer-bottom">
         <div className="footer-container">
           <p className="footer-copyright">
-            © {currentYear} HolidaiButler. {footer.allRights || 'Alle rechten voorbehouden.'}
+            © {currentYear} {destination.name}. {footer.allRights || 'Alle rechten voorbehouden.'}
           </p>
           <p className="footer-made-with">
-            {footer.madeWith || 'Gemaakt met ❤️ in Costa Blanca'}
+            {destination.id === 'texel'
+              ? 'Gemaakt met ❤️ voor Texel'
+              : (footer.madeWith || 'Gemaakt met ❤️ in Costa Blanca')}
           </p>
         </div>
       </div>
