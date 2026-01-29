@@ -1,24 +1,20 @@
 import { useHoliBot } from '../../contexts/HoliBotContext';
-import holibotAvatar from '../../../assets/images/hb-merkicoon.png';
+import { useDestination } from '../../contexts/DestinationContext';
 import './ChatHeader.css';
 
 /**
- * ChatHeader - Golden header with HolidaiButler logo
+ * ChatHeader - Destination-aware header with brand logo
  *
- * User Requirements:
- * - Golden gradient header (updated from green)
- * - Golden line at bottom (2px solid #D4AF37 Compass Gold)
- * - HolidaiButler (Calpe Turismo) logo icon top-left (NO brand name)
- * - Close button top-right
- *
- * Design: MindTrip-inspired sophistication
- * - Linear gradient for depth
- * - Clean typography
- * - Accessible close button
+ * Features:
+ * - Multi-destination support via DestinationContext
+ * - Accent color gradient header (uses CSS variables)
+ * - Destination-specific logo icon
+ * - Close button with accessibility
  */
 
 export function ChatHeader() {
   const { close, clearMessages, messages } = useHoliBot();
+  const destination = useDestination();
 
   const handleReset = async () => {
     await clearMessages();
@@ -29,11 +25,11 @@ export function ChatHeader() {
 
   return (
     <div className="holibot-chat-header">
-      {/* HolidaiButler logo (Calpe Turismo) */}
+      {/* Destination logo */}
       <div className="holibot-header-logo">
         <img
-          src={holibotAvatar}
-          alt="HolidaiButler"
+          src={destination.icon}
+          alt={destination.name}
           width="36"
           height="36"
           style={{ objectFit: 'contain' }}

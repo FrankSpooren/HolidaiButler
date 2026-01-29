@@ -2,46 +2,85 @@
  * USPSection - Unique Selling Points section
  *
  * Features:
+ * - Multi-destination aware via DestinationContext
  * - Desktop (≥768px): 5-column grid showing all USPs
  * - Mobile (<768px): Carousel with auto-rotate (4s interval)
  * - Dot navigation for carousel
  * - Responsive breakpoints
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { USPCard } from './USPCard';
+import { useDestination } from '@/shared/contexts/DestinationContext';
 
-const usps = [
-  {
-    logoSrc: '/assets/images/calpe-turismo-logo.png',
-    title: 'Official Partner',
-    description: 'Official Partner Calpe Turismo',
-  },
-  {
-    icon: '🤖',
-    title: 'Calpe AI-Assistant',
-    description: 'HolidAIButler: Your (hyper) personal Butler',
-  },
-  {
-    icon: '🏘️',
-    title: '100% Local',
-    description: 'Support Calpe economy & identity',
-  },
-  {
-    icon: '⚡',
-    title: 'Realtime, accurate info',
-    description: 'About locations, events, activities and weather',
-  },
-  {
-    icon: '🔒',
-    title: 'Trusted & Safe',
-    description: 'Data till payment: we care about your Privacy',
-  },
-];
+// Destination-specific USP content
+const destinationUSPs = {
+  calpe: [
+    {
+      logoSrc: '/assets/images/calpe-turismo-logo.png',
+      title: 'Official Partner',
+      description: 'Official Partner Calpe Turismo',
+    },
+    {
+      icon: '🤖',
+      title: 'Calpe AI-Assistant',
+      description: 'HolidAIButler: Your (hyper) personal Butler',
+    },
+    {
+      icon: '🏘️',
+      title: '100% Local',
+      description: 'Support Calpe economy & identity',
+    },
+    {
+      icon: '⚡',
+      title: 'Realtime, accurate info',
+      description: 'About locations, events, activities and weather',
+    },
+    {
+      icon: '🔒',
+      title: 'Trusted & Safe',
+      description: 'Data till payment: we care about your Privacy',
+    },
+  ],
+  texel: [
+    {
+      icon: '🏝️',
+      title: 'Texel Expert',
+      description: 'Jouw persoonlijke eilandgids',
+    },
+    {
+      icon: '🤖',
+      title: 'Texel AI-Assistent',
+      description: 'TexelBot: Je (hyper) persoonlijke gids',
+    },
+    {
+      icon: '🌊',
+      title: '100% Lokaal',
+      description: 'Ondersteun Texel economie & identiteit',
+    },
+    {
+      icon: '⚡',
+      title: 'Realtime info',
+      description: 'Stranden, veerboot, weer en evenementen',
+    },
+    {
+      icon: '🔒',
+      title: 'Veilig & Betrouwbaar',
+      description: 'We geven om je privacy',
+    },
+  ],
+};
 
 export function USPSection() {
+  const destination = useDestination();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Get destination-specific USPs
+  const usps = useMemo(() => {
+    return destinationUSPs[destination.id as keyof typeof destinationUSPs] || destinationUSPs.calpe;
+  }, [destination.id]);
+
   const totalSlides = usps.length;
 
   // Detect screen size
