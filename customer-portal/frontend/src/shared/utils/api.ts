@@ -33,8 +33,12 @@ const getApiBaseUrl = (): string => {
   }
 
   // Production fallback - use relative URL (Apache reverse proxy handles routing)
-  if (typeof window !== 'undefined' && window.location.hostname.includes('holidaibutler.com')) {
-    return '/api/v1';
+  // Support multiple destination domains (holidaibutler.com, texelmaps.nl, etc.)
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname.includes('holidaibutler.com') || hostname.includes('texelmaps.nl')) {
+      return '/api/v1';
+    }
   }
 
   // Default to localhost for local development only

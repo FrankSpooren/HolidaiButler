@@ -103,16 +103,24 @@ const getLanguageFromRequest = (req) => {
 };
 
 /**
+ * Accommodation category name (excluded from public display)
+ */
+const ACCOMMODATION_CATEGORY = 'Accommodation (do not communicate)';
+
+/**
  * Build base where clause for public POI queries
  * Note: verified filter disabled for test environment (no POIs verified yet)
  * Uses is_active to filter only active POIs
  * Filters by destination_id for multi-destination support
+ * Excludes accommodation POIs from public display
  * @param {number} destinationId - The destination ID to filter by
  */
 const buildPublicWhereClause = async (destinationId) => {
   return {
     is_active: true,
-    destination_id: destinationId
+    destination_id: destinationId,
+    // Exclude accommodation category from public display
+    category: { [Op.ne]: ACCOMMODATION_CATEGORY }
     // verified: true  // Re-enable when POIs are verified in production
   };
 };
