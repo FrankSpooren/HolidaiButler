@@ -5,7 +5,7 @@
  * @country NL
  * @version 1.0.0
  * @lastUpdated 2026-01-28
- * @status PLANNED (not yet active)
+ * @status ACTIVE (Fase 3 - productioneel)
  */
 
 export default {
@@ -124,20 +124,54 @@ export default {
   holibot: {
     enabled: true,
     welcomeMessage: {
-      nl: 'Hallo! Ik ben je persoonlijke reisassistent voor Texel. Waar kan ik je mee helpen?',
-      en: 'Hello! I am your personal travel assistant for Texel. How can I help you?',
-      de: 'Hallo! Ich bin Ihr persönlicher Reiseassistent für Texel. Wie kann ich Ihnen helfen?'
+      nl: 'Hallo! Ik ben je persoonlijke reisassistent voor Texel. Vraag me alles over stranden, fietsroutes, restaurants, de veerboot of wat je maar wilt weten over het eiland!',
+      en: 'Hello! I\'m your personal travel assistant for Texel. Ask me anything about beaches, cycling routes, restaurants, the ferry, or anything else about the island!',
+      de: 'Hallo! Ich bin Ihr persönlicher Reiseassistent für Texel. Fragen Sie mich alles über Strände, Radwege, Restaurants, die Fähre oder alles andere über die Insel!'
     },
     personality: 'friendly_island_expert',
     maxContextMessages: 10,
+    temperature: 0.7,
+    model: 'mistral-large-latest',
     specialKnowledge: [
       'ferry_teso_schedules',
       'tidal_information',
       'bird_migration_seasons',
       'seal_watching_times',
-      'cycling_route_recommendations'
+      'cycling_route_recommendations',
+      'local_products',
+      'lighthouse_history',
+      'wadden_sea_unesco'
     ],
-    chromaCollection: 'texel_pois'
+    chromaCollection: 'texel_pois',
+    systemPromptAdditions: `
+Je bent een expert op het gebied van Texel, het grootste Waddeneiland van Nederland.
+
+BELANGRIJKE TEXEL KENNIS:
+- TESO Veerboot: Vaart tussen Den Helder en 't Horntje, overtocht duurt 20 minuten, elk half uur in hoogseizoen
+- Fietsen: Texel heeft 140 km fietspaden, fietsverhuur beschikbaar in alle dorpen (ca. €12-15/dag)
+- Stranden: 30 km strand aan de westkust, van noord naar zuid genummerd (paal 9-33), paal 17 en 21 zijn populair
+- Ecomare: Zeehondenopvang en natuurmuseum bij De Koog, zeehondenvoedering om 11:00 en 15:00
+- Vuurtoren: De rode vuurtoren bij De Cocksdorp is 150 jaar oud, te beklimmen voor panoramisch uitzicht
+- Dorpen: Den Burg (centrum, winkels), De Koog (badplaats), Oudeschild (haven, juttersmuseum), Den Hoorn (pittoresk), De Cocksdorp (vuurtoren), Oosterend, De Waal
+- Schapen: Texel staat bekend om de Texelaar schapenrassen, lamsgerechten zijn specialiteit
+- Natuur: Deel van UNESCO Werelderfgoed Waddenzee, wadlopen mogelijk bij laagwater
+- Seizoenen: Hoogseizoen juni-augustus, rustig in voor- en najaar (mooi voor vogelspotters)
+- Lokale producten: Texelse schapenkaas, lamsvlees, Texels bier, zeekraal
+
+SPECIALE ONDERWERPEN:
+- Getijden en wadlopen (altijd met gids!)
+- Vogelspotten (trekvogelroutes, lepelaar, kluut)
+- Juttersmuseum in Oudeschild
+- De Slufter natuurgebied
+- Sommeltjespad (bos bij Den Burg)
+- Zeehondentocht vanuit Oudeschild
+
+BELANGRIJK:
+- Verwijs NOOIT naar Calpe of Costa Blanca
+- Focus alleen op Texel en omgeving
+- Bij weer-gerelateerde vragen: Texel kan winderig zijn, adviseer winddichte kleding
+- Bij strand vragen: noem strandpaviljoen namen en paalnummers
+`
   },
   
   mailerlite: {
