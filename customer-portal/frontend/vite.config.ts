@@ -53,13 +53,31 @@ const destinationConfigs = {
     languages: ['nl', 'de', 'en'],
     defaultLanguage: 'nl',
     // Category configuration for Texel
+    // IMPORTANT: Category names MUST match POI.category values exactly (verified from poi_texel_insert.sql)
+    // Total 23 unique categories in database, 13 tourist-relevant for presentation
     categories: {
-      // Categories to show in menu (by id)
-      enabled: ['active', 'beaches', 'culture', 'food', 'recreation', 'shopping'],
-      // Categories excluded from menu
-      excluded: ['health', 'practical'],
-      // Categories for default browse view (presentation quality)
-      presentation: ['Active', 'Beaches & Nature', 'Culture & History', 'Food & Drinks', 'Recreation', 'Shopping'],
+      // Categories to show in menu (by id) - maps to presentation categories
+      enabled: ['restaurant', 'strand', 'natuur', 'cultuur', 'shopping'],
+      // Categories excluded - mainly accommodation
+      excluded: ['accommodation'],
+      // Categories for default browse view - MUST match POI.category column values EXACTLY
+      // Excludes: Hotel, Motel, Herberg, Bed & Breakfast, Appartementencomplex, Vakantieappartement,
+      //           Vakantiepark, Vakantiewoningverhuur, Kampeerterrein, Binnenovernachting
+      presentation: [
+        'Restaurant',
+        'Italiaans restaurant',
+        'Strand',
+        'Nationaal park',
+        'Dune',
+        'Aquarium',
+        'Lokaal historisch museum',
+        'Toeristische attractie',
+        'Supermarkt',
+        'Wijngaard',
+        'Eiland',
+        'Catering',
+        'Maaltijdbezorging'
+      ],
     },
     // Texel branding colors (RGB: 0,255,100 / 0,202,255 / 242,255,0)
     colors: {
