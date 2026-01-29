@@ -23,6 +23,12 @@ export interface DestinationConfig {
   };
   languages: string[];
   defaultLanguage: string;
+  // Category configuration for destination-specific filtering
+  categories: {
+    enabled: string[];      // Categories to show in menu (by id)
+    excluded: string[];     // Categories excluded from menu
+    presentation: string[]; // Categories for default browse view (full names)
+  };
   colors: {
     primary: string;
     secondary: string;

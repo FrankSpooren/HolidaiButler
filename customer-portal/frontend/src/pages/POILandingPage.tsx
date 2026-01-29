@@ -16,6 +16,7 @@ import { useComparison } from '../shared/contexts/ComparisonContext';
 import { ComparisonBar } from '../shared/components/ComparisonBar';
 import { getDistanceFromUser, getUserLocation, type Coordinates } from '../shared/utils/distance';
 import { CATEGORIES_ARRAY, getCategoryIcon, getCategoryColor } from '../shared/config/categoryConfig';
+import { useDestination } from '../shared/contexts/DestinationContext';
 import './POILandingPage.css';
 
 // Hook to get responsive column count
@@ -71,6 +72,7 @@ interface Category {
 export function POILandingPage() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const destination = useDestination();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { isInComparison, toggleComparison, canAddMore, comparisonPOIs } = useComparison();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -90,8 +92,8 @@ export function POILandingPage() {
   const columnCount = useColumnCount();
 
   // Use centralized category configuration (single source of truth)
-  // Exclude Health & Wellbeing and Practical - no presentable POIs after quality filter
-  const excludedCategories = ['health', 'practical'];
+  // Excluded categories are destination-specific (configured in vite.config.ts)
+  const excludedCategories = destination.categories.excluded;
   const categories: Category[] = CATEGORIES_ARRAY
     .filter(cat => !excludedCategories.includes(cat.id))
     .map(cat => ({
@@ -176,14 +178,8 @@ export function POILandingPage() {
   // Filter and sort POIs
   const processedPOIs = useMemo(() => {
     // Presentation-worthy categories (for default browse view)
-    const presentationCategories = [
-      'Active',
-      'Beaches & Nature',
-      'Culture & History',
-      'Food & Drinks',
-      'Recreation',
-      'Shopping'
-    ];
+    // Now destination-specific (configured in vite.config.ts)
+    const presentationCategories = destination.categories.presentation;
     let filtered = (data?.data || []).filter(poi => {
       // Always filter out Accommodation category
       if (poi.category === 'Accommodation (do not communicate)') return false;
@@ -274,7 +270,7 @@ export function POILandingPage() {
 
     // Return all filtered POIs - loadedCount controls display
     return filtered;
-  }, [data?.data, searchQuery, selectedCategory, minReviews, distance, userLocation, accessibility]);
+  }, [data?.data, searchQuery, selectedCategory, minReviews, distance, userLocation, accessibility, destination.categories.presentation]);
 
   // Display only loadedCount items (virtualization renders only visible)
   const pois = useMemo(() => {
@@ -465,8 +461,8 @@ export function POILandingPage() {
     getUserLocation()
       .then(setUserLocation)
       .catch(() => {
-        // Silently fall back to Calpe center if geolocation fails
-        console.log('Geolocation not available, using Calpe center as fallback');
+        // Silently fall back to destination center if geolocation fails
+        console.log('Geolocation not available, using destination center as fallback');
       });
   }, []);
 
@@ -1142,7 +1138,7 @@ export function POILandingPage() {
             <Link to="/contact" className="footer-link">Contact</Link>
           </div>
           <p className="footer-copy">
-            © 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.
+            © 2025 {destination.name}. Powered by AI. Made with ❤️ for travelers.
           </p>
         </div>
       </footer>
