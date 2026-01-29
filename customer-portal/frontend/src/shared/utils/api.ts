@@ -43,12 +43,18 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-// Create axios instance
+// Get destination ID from build-time environment variable
+const getDestinationId = (): string => {
+  return import.meta.env.VITE_DESTINATION_ID || 'calpe';
+};
+
+// Create axios instance with destination header
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
+    'X-Destination-ID': getDestinationId(),
   },
 });
 

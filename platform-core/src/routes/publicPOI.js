@@ -18,6 +18,42 @@ const router = express.Router();
 // Supported languages for POI translations
 const SUPPORTED_LANGUAGES = ['en', 'nl', 'de', 'es', 'sv', 'pl'];
 
+// Destination ID mapping
+const DESTINATION_IDS = {
+  'calpe': 1,
+  'texel': 2,
+  'alicante': 3
+};
+
+/**
+ * Extract destination_id from request
+ * Priority: X-Destination-ID header > query param > default (1 = Calpe)
+ * @param {Request} req - Express request object
+ * @returns {number} Destination ID
+ */
+const getDestinationFromRequest = (req) => {
+  // 1. Check X-Destination-ID header (set by Apache vhost)
+  const headerDestination = req.headers['x-destination-id'];
+  if (headerDestination) {
+    const destId = DESTINATION_IDS[headerDestination.toLowerCase()];
+    if (destId) return destId;
+    // If numeric, use directly
+    const numId = parseInt(headerDestination);
+    if (!isNaN(numId) && numId > 0) return numId;
+  }
+
+  // 2. Check query parameter
+  if (req.query.destination) {
+    const destId = DESTINATION_IDS[req.query.destination.toLowerCase()];
+    if (destId) return destId;
+    const numId = parseInt(req.query.destination);
+    if (!isNaN(numId) && numId > 0) return numId;
+  }
+
+  // 3. Default to Calpe (1)
+  return 1;
+};
+
 // Import POI model dynamically to handle connection issues
 let POI = null;
 
@@ -70,10 +106,13 @@ const getLanguageFromRequest = (req) => {
  * Build base where clause for public POI queries
  * Note: verified filter disabled for test environment (no POIs verified yet)
  * Uses is_active to filter only active POIs
+ * Filters by destination_id for multi-destination support
+ * @param {number} destinationId - The destination ID to filter by
  */
-const buildPublicWhereClause = async () => {
+const buildPublicWhereClause = async (destinationId) => {
   return {
-    is_active: true
+    is_active: true,
+    destination_id: destinationId
     // verified: true  // Re-enable when POIs are verified in production
   };
 };
@@ -180,8 +219,9 @@ router.get('/', async (req, res) => {
       });
     }
 
-    // Get language from request
+    // Get language and destination from request
     const lang = getLanguageFromRequest(req);
+    const destinationId = getDestinationFromRequest(req);
 
     const {
       q,
@@ -199,8 +239,8 @@ router.get('/', async (req, res) => {
     // Calculate offset from page if not provided directly
     const calculatedOffset = offset !== undefined ? parseInt(offset) : (parseInt(page) - 1) * parseInt(limit);
 
-    // Build where clause - only show verified (and active if column exists) POIs
-    const where = await buildPublicWhereClause(model);
+    // Build where clause - filter by destination and active status
+    const where = await buildPublicWhereClause(destinationId);
     if (category) where.category = category;
     if (city) where.city = { [Op.like]: `%${city}%` };
 
@@ -265,7 +305,8 @@ router.get('/', async (req, res) => {
         count: pois.length,
         has_more: calculatedOffset + pois.length < count,
         next_cursor: calculatedOffset + pois.length < count ? calculatedOffset + parseInt(limit) : null,
-        language: lang
+        language: lang,
+        destination_id: destinationId
       }
     });
   } catch (error) {
@@ -294,8 +335,12 @@ router.get('/categories', async (req, res) => {
       });
     }
 
+    // Get destination from request
+    const destinationId = getDestinationFromRequest(req);
+
     const categories = await model.findAll({
       attributes: [[mysqlSequelize.fn('DISTINCT', mysqlSequelize.col('category')), 'category']],
+      where: { destination_id: destinationId, is_active: true },
       order: [['category', 'ASC']]
     });
 
@@ -328,8 +373,12 @@ router.get('/cities', async (req, res) => {
       });
     }
 
+    // Get destination from request
+    const destinationId = getDestinationFromRequest(req);
+
     const cities = await model.findAll({
       attributes: [[mysqlSequelize.fn('DISTINCT', mysqlSequelize.col('city')), 'city']],
+      where: { destination_id: destinationId, is_active: true },
       order: [['city', 'ASC']]
     });
 
@@ -358,10 +407,11 @@ router.get('/geojson', async (req, res) => {
   try {
     const model = await getPOIModel();
     const lang = getLanguageFromRequest(req);
+    const destinationId = getDestinationFromRequest(req);
 
     if (!model) {
       // Return sample data in GeoJSON format if model not available
-      return res.json(convertToGeoJSON(getSamplePOIs(), lang));
+      return res.json(convertToGeoJSON(getSamplePOIs(destinationId), lang));
     }
 
     const {
@@ -370,8 +420,8 @@ router.get('/geojson', async (req, res) => {
       per_category // New: limit POIs per category for cleaner map display
     } = req.query;
 
-    // Build where clause - only show verified (and active if column exists) POIs
-    const where = await buildPublicWhereClause(model);
+    // Build where clause - filter by destination and active status
+    const where = await buildPublicWhereClause(destinationId);
     if (category) where.category = category;
     if (city) where.city = { [Op.like]: `%${city}%` };
 
@@ -388,15 +438,13 @@ router.get('/geojson', async (req, res) => {
         raw: true
       });
 
-      // Fetch limited POIs for each category (prioritize Calpe, high rating)
+      // Fetch limited POIs for each category (prioritize high rating within destination)
       const categoryPOIs = await Promise.all(
         categories.map(async (cat) => {
           return model.findAll({
             where: {
               ...where,
-              category: cat.category,
-              // Focus on Calpe area for better presentation
-              city: { [Op.in]: ['Calp', 'Calpe', 'Calp/Calpe'] }
+              category: cat.category
             },
             order: [['rating', 'DESC'], ['review_count', 'DESC']],
             limit
@@ -407,7 +455,7 @@ router.get('/geojson', async (req, res) => {
       // Flatten and filter out empty results
       pois = categoryPOIs.flat();
 
-      // If we don't have enough POIs from Calpe, fill with nearby cities
+      // If we don't have enough POIs, fill with more from destination
       if (pois.length < categories.length * limit) {
         const existingIds = pois.map(p => p.id);
         const additionalPOIs = await model.findAll({
@@ -421,7 +469,7 @@ router.get('/geojson', async (req, res) => {
         pois = [...pois, ...additionalPOIs];
       }
     } else {
-      // Original behavior - fetch all matching POIs
+      // Original behavior - fetch all matching POIs for this destination
       pois = await model.findAll({
         where,
         order: [['rating', 'DESC'], ['name', 'ASC']]
@@ -433,7 +481,8 @@ router.get('/geojson', async (req, res) => {
     logger.error('Error fetching POIs as GeoJSON:', error);
 
     // Return sample data on error for development
-    res.json(convertToGeoJSON(getSamplePOIs(), 'en'));
+    const destinationId = getDestinationFromRequest(req);
+    res.json(convertToGeoJSON(getSamplePOIs(destinationId), 'en'));
   }
 });
 
@@ -447,13 +496,14 @@ router.get('/search', async (req, res) => {
   try {
     const model = await getPOIModel();
     const lang = getLanguageFromRequest(req);
+    const destinationId = getDestinationFromRequest(req);
 
     if (!model) {
       return res.json({
         success: true,
         message: 'Database not available - returning sample data',
-        data: getSamplePOIs(),
-        meta: { total: 5, page: 1, limit: 20, pages: 1, language: lang }
+        data: getSamplePOIs(destinationId),
+        meta: { total: 5, page: 1, limit: 20, pages: 1, language: lang, destination_id: destinationId }
       });
     }
 
@@ -468,8 +518,8 @@ router.get('/search', async (req, res) => {
     const searchTerm = q || query || '';
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    // Build where clause - only show verified (and active if column exists) POIs
-    const where = await buildPublicWhereClause(model);
+    // Build where clause - filter by destination and active status
+    const where = await buildPublicWhereClause(destinationId);
     if (category) where.category = category;
 
     if (searchTerm) {
@@ -500,16 +550,18 @@ router.get('/search', async (req, res) => {
         page: parseInt(page),
         limit: parseInt(limit),
         pages: Math.ceil(count / parseInt(limit)),
-        language: lang
+        language: lang,
+        destination_id: destinationId
       }
     });
   } catch (error) {
     logger.error('Error searching POIs:', error);
+    const destinationId = getDestinationFromRequest(req);
     res.json({
       success: true,
       message: 'Database error - returning sample data',
-      data: getSamplePOIs(),
-      meta: { total: 5, page: 1, limit: 20, pages: 1 }
+      data: getSamplePOIs(destinationId),
+      meta: { total: 5, page: 1, limit: 20, pages: 1, destination_id: destinationId }
     });
   }
 });
@@ -522,6 +574,7 @@ router.get('/search', async (req, res) => {
 router.get('/autocomplete', async (req, res) => {
   try {
     const { q, limit = 10 } = req.query;
+    const destinationId = getDestinationFromRequest(req);
 
     if (!q || q.length < 2) {
       return res.json({ success: true, data: [] });
@@ -532,7 +585,7 @@ router.get('/autocomplete', async (req, res) => {
       return res.json({ success: true, data: [] });
     }
 
-    const where = await buildPublicWhereClause(model);
+    const where = await buildPublicWhereClause(destinationId);
     where.name = { [Op.like]: `%${q}%` };
 
     const pois = await model.findAll({
@@ -606,6 +659,7 @@ router.get('/:id', async (req, res) => {
   try {
     const model = await getPOIModel();
     const lang = getLanguageFromRequest(req);
+    const destinationId = getDestinationFromRequest(req);
 
     if (!model) {
       return res.status(503).json({
@@ -616,8 +670,8 @@ router.get('/:id', async (req, res) => {
 
     const { id } = req.params;
 
-    // Get base where clause (verified + active if column exists)
-    const baseWhere = await buildPublicWhereClause(model);
+    // Get base where clause (filter by destination and active status)
+    const baseWhere = await buildPublicWhereClause(destinationId);
 
     // Try to find by ID first, then by slug or google_place_id
     let poi = null;
@@ -949,9 +1003,97 @@ router.post('/:poiId/reviews/:reviewId/helpful', async (req, res) => {
 });
 
 /**
- * Sample POIs for development/demo
+ * Sample POIs for development/demo (destination-aware)
+ * @param {number} destinationId - 1=Calpe, 2=Texel, 3=Alicante
  */
-function getSamplePOIs() {
+function getSamplePOIs(destinationId = 1) {
+  // Texel sample POIs
+  if (destinationId === 2) {
+    return [
+      {
+        id: '1001',
+        name: 'Ecomare',
+        slug: 'ecomare',
+        description: 'Zeehondencentrum en natuurmuseum',
+        category: 'museum',
+        city: 'De Koog',
+        address: 'Ruijslaan 92',
+        latitude: 53.0947,
+        longitude: 4.7547,
+        status: 'active',
+        tier: 1,
+        images: [{ url: '/images/ecomare.jpg', isPrimary: true }],
+        rating: 4.7,
+        reviewCount: 1245
+      },
+      {
+        id: '1002',
+        name: 'Vuurtoren Texel',
+        slug: 'vuurtoren-texel',
+        description: 'Historische vuurtoren met panoramisch uitzicht',
+        category: 'attraction',
+        city: 'De Cocksdorp',
+        address: 'Vuurtorenweg 184',
+        latitude: 53.1789,
+        longitude: 4.8556,
+        status: 'active',
+        tier: 1,
+        images: [{ url: '/images/vuurtoren.jpg', isPrimary: true }],
+        rating: 4.6,
+        reviewCount: 892
+      },
+      {
+        id: '1003',
+        name: 'Strand Paal 17',
+        slug: 'strand-paal-17',
+        description: 'Populair strand met strandpaviljoen',
+        category: 'beach',
+        city: 'De Koog',
+        address: 'Paal 17',
+        latitude: 53.0833,
+        longitude: 4.7333,
+        status: 'active',
+        tier: 1,
+        images: [{ url: '/images/paal17.jpg', isPrimary: true }],
+        rating: 4.5,
+        reviewCount: 567
+      },
+      {
+        id: '1004',
+        name: 'Kaasboerderij Wezenspyk',
+        slug: 'kaasboerderij-wezenspyk',
+        description: 'Authentieke Texelse kaasmakerij',
+        category: 'food_drinks',
+        city: 'Den Burg',
+        address: 'Hoornderweg 29',
+        latitude: 53.0556,
+        longitude: 4.7944,
+        status: 'active',
+        tier: 2,
+        images: [{ url: '/images/wezenspyk.jpg', isPrimary: true }],
+        rating: 4.4,
+        reviewCount: 234
+      },
+      {
+        id: '1005',
+        name: 'TESO Veerhaven',
+        slug: 'teso-veerhaven',
+        description: 'Veerboot naar Den Helder',
+        category: 'transport',
+        city: "'t Horntje",
+        address: 'Pontweg 1',
+        latitude: 53.0000,
+        longitude: 4.7833,
+        status: 'active',
+        tier: 1,
+        images: [{ url: '/images/teso.jpg', isPrimary: true }],
+        rating: 4.3,
+        reviewCount: 1567
+      }
+    ];
+  }
+
+  // Calpe sample POIs (default)
   return [
     {
       id: '1',
