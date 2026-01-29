@@ -172,7 +172,8 @@ export const FEATURES = {
   holibot: import.meta.env.VITE_ENABLE_HOLIBOT === 'true',
 } as const;
 
-// Map defaults for Calpe, Costa Blanca
+// Map defaults from environment (set at build time per destination)
+// Note: Components should prefer using useDestination().coordinates for runtime values
 export const MAP_CONFIG = {
   defaultLat: parseFloat(import.meta.env.VITE_MAP_DEFAULT_LAT || '38.6447'),
   defaultLng: parseFloat(import.meta.env.VITE_MAP_DEFAULT_LNG || '0.0410'),

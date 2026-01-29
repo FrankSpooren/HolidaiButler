@@ -6,13 +6,13 @@
  * - Category-colored markers
  * - Click handler to open POI detail modal (via onMarkerClick callback)
  * - Integrates with search/filter params
- * - Centered on Calpe, Spain
+ * - Multi-destination aware (uses DestinationContext for coordinates)
  */
 
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-// Removed useNavigate - using onMarkerClick callback instead
+import { useDestination } from '@/shared/contexts/DestinationContext';
 import { poiService } from '../services/poiService';
 import type { POISearchParams } from '../types/poi.types';
 import 'leaflet/dist/leaflet.css';
@@ -103,16 +103,17 @@ export function MapView({
   height = '600px',
   onMarkerClick,
   perCategory = 2, // Default: 2 POIs per category for cleaner map
-  disableAutoBounds = true // Default: keep centered on Calpe
+  disableAutoBounds = true // Default: keep centered on destination
 }: MapViewProps) {
   const [geoData, setGeoData] = useState<GeoJSONResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
 
-  // Calpe center coordinates (Plaza de la Constitución - city center)
-  const DEFAULT_CENTER: [number, number] = [38.6447, 0.0445];
-  const DEFAULT_ZOOM = 15; // Zoomed in for Calpe centrum view
+  // Get destination-specific coordinates from context
+  const destination = useDestination();
+  const DEFAULT_CENTER: [number, number] = [destination.coordinates.lat, destination.coordinates.lng];
+  const DEFAULT_ZOOM = 14; // Good zoom level for destination overview
 
   useEffect(() => {
     const fetchGeoJSON = async () => {
