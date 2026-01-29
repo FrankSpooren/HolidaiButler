@@ -103,24 +103,40 @@ const getLanguageFromRequest = (req) => {
 };
 
 /**
- * Accommodation category name (excluded from public display)
+ * Accommodation categories to exclude from public display
+ * Calpe: Single category name
+ * Texel: Multiple Dutch category names (verified from poi_texel_insert.sql 2026-01-29)
  */
-const ACCOMMODATION_CATEGORY = 'Accommodation (do not communicate)';
+const ACCOMMODATION_CATEGORIES = [
+  // Calpe
+  'Accommodation (do not communicate)',
+  // Texel (Dutch)
+  'Hotel',
+  'Motel',
+  'Herberg',
+  'Bed & Breakfast',
+  'Appartementencomplex',
+  'Vakantieappartement',
+  'Vakantiepark',
+  'Vakantiewoningverhuur',
+  'Kampeerterrein',
+  'Binnenovernachting',
+];
 
 /**
  * Build base where clause for public POI queries
  * Note: verified filter disabled for test environment (no POIs verified yet)
  * Uses is_active to filter only active POIs
  * Filters by destination_id for multi-destination support
- * Excludes accommodation POIs from public display
+ * Excludes accommodation POIs from public display (both Calpe and Texel formats)
  * @param {number} destinationId - The destination ID to filter by
  */
 const buildPublicWhereClause = async (destinationId) => {
   return {
     is_active: true,
     destination_id: destinationId,
-    // Exclude accommodation category from public display
-    category: { [Op.ne]: ACCOMMODATION_CATEGORY }
+    // Exclude all accommodation categories from public display
+    category: { [Op.notIn]: ACCOMMODATION_CATEGORIES }
     // verified: true  // Re-enable when POIs are verified in production
   };
 };
