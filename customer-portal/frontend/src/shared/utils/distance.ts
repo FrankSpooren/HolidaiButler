@@ -1,14 +1,26 @@
 /**
  * Distance Calculation Utilities
  * Using Haversine formula for accurate distance between coordinates
+ * Multi-destination aware via DestinationContext
  */
+
+import { getDestinationConfig } from '@/shared/contexts/DestinationContext';
 
 export interface Coordinates {
   latitude: number;
   longitude: number;
 }
 
-/** Calpe city center coordinates (fallback location) */
+/** Get destination center coordinates (fallback location) */
+export function getDestinationCenter(): Coordinates {
+  const config = getDestinationConfig();
+  return {
+    latitude: config.coordinates.lat,
+    longitude: config.coordinates.lng
+  };
+}
+
+/** @deprecated Use getDestinationCenter() instead */
 export const CALPE_CENTER: Coordinates = {
   latitude: 38.6439,
   longitude: 0.0410
@@ -102,18 +114,18 @@ export function getUserLocation(): Promise<Coordinates> {
 }
 
 /**
- * Calculate and format distance from user location (or Calpe center fallback)
+ * Calculate and format distance from user location (or destination center fallback)
  * This is the main function to use in components
  *
  * @param poiCoords - POI coordinates
- * @param userCoords - Optional user coordinates (will use Calpe center if not provided)
+ * @param userCoords - Optional user coordinates (will use destination center if not provided)
  * @returns Formatted distance string
  */
 export function getDistanceFromUser(
   poiCoords: Coordinates,
   userCoords?: Coordinates | null
 ): string {
-  const fromLocation = userCoords || CALPE_CENTER;
+  const fromLocation = userCoords || getDestinationCenter();
   const distanceKm = calculateDistance(fromLocation, poiCoords);
   return formatDistance(distanceKm);
 }
@@ -142,6 +154,6 @@ export function createUserLocationHook() {
     calculateDistance,
     formatDistance,
     getDistanceFromUser,
-    CALPE_CENTER
+    getDestinationCenter
   };
 }
