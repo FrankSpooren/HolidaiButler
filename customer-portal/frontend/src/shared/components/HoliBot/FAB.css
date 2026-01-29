@@ -2,7 +2,7 @@
  * FAB (Floating Action Button) Styles
  *
  * Design System:
- * - Mediterranean Teal gradient (#7FA594 → #6B9283)
+ * - Uses CSS variables from DestinationContext for multi-destination branding
  * - Fixed bottom-right positioning
  * - GPU-accelerated animations
  * - Mobile-responsive
@@ -21,11 +21,11 @@
   height: 60px;
   padding: 0;
 
-  /* Appearance */
+  /* Appearance - Uses destination accent color */
   border: none;
   border-radius: 50%;
-  background: linear-gradient(135deg, #D4AF37 0%, #C49B2A 100%);
-  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.3);
+  background: linear-gradient(135deg, var(--color-accent) 0%, color-mix(in srgb, var(--color-accent) 85%, black) 100%);
+  box-shadow: 0 10px 25px color-mix(in srgb, var(--color-accent) 30%, transparent);
   cursor: pointer;
 
   /* Performance optimization (Enterprise doc pattern) */
@@ -49,7 +49,7 @@
 .holibot-fab:hover {
   animation-play-state: paused;
   transform: scale(1.1);
-  box-shadow: 0 15px 30px rgba(212, 175, 55, 0.4);
+  box-shadow: 0 15px 30px color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
 
 /* Active state (click) */
@@ -60,7 +60,7 @@
 
 /* Focus state (keyboard navigation - WCAG 2.1 AA) */
 .holibot-fab:focus-visible {
-  outline: 3px solid #D4AF37; /* Compass Gold */
+  outline: 3px solid var(--color-accent);
   outline-offset: 4px;
 }
 
