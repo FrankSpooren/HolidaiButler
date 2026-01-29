@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { Language, Translations } from './translations';
 import { translations } from './translations';
+import { processTranslations } from './destinationText';
 
 interface LanguageContextType {
   language: Language;
@@ -28,8 +29,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('language', lang);
   };
 
-  // Memoize translations to ensure they update when language changes
-  const t = useMemo(() => translations[language], [language]);
+  // Memoize translations with destination-specific replacements
+  const t = useMemo(() => {
+    const baseTranslations = translations[language];
+    // Process translations to replace destination-specific placeholders
+    return processTranslations(baseTranslations, language);
+  }, [language]);
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
