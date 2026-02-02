@@ -59,9 +59,10 @@ interface GeoJSONResponse {
   features: POIFeature[];
 }
 
-// Category color mapping (matching POILandingPage)
+// Category color mapping (Calpe English + Texel Dutch categories)
 const getCategoryColor = (category: string): string => {
   const colors: Record<string, string> = {
+    // Calpe categories (English)
     'Active': '#FF6B35',
     'Beaches & Nature': '#4ECDC4',
     'Culture & History': '#F7931E',
@@ -70,6 +71,14 @@ const getCategoryColor = (category: string): string => {
     'Recreation': '#FFD23F',
     'Shopping': '#FF006E',
     'Practical': '#8B8B8B',
+    // Texel categories (Dutch) with brand colors
+    'Actief': '#FF6B00',
+    'Cultuur & Historie': '#004B87',
+    'Eten & Drinken': '#E53935',
+    'Gezondheid & Verzorging': '#43A047',
+    'Natuur': '#7CB342',
+    'Praktisch': '#607D8B',
+    'Winkelen': '#AB47BC',
   };
   return colors[category] || '#5E8B7E';
 };
@@ -113,7 +122,10 @@ export function MapView({
   // Get destination-specific coordinates from context
   const destination = useDestination();
   const DEFAULT_CENTER: [number, number] = [destination.coordinates.lat, destination.coordinates.lng];
-  const DEFAULT_ZOOM = 14; // Good zoom level for destination overview
+  // Zoom level depends on destination size:
+  // - Texel is a 25km island, needs lower zoom (11) to show entire island
+  // - Calpe is a compact city, zoom 14 is appropriate
+  const DEFAULT_ZOOM = destination.id === 'texel' ? 11 : 14;
 
   useEffect(() => {
     const fetchGeoJSON = async () => {
