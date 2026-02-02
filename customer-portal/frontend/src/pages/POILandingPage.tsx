@@ -180,9 +180,15 @@ export function POILandingPage() {
     // Presentation-worthy categories (for default browse view)
     // Now destination-specific (configured in vite.config.ts)
     const presentationCategories = destination.categories.presentation;
+
+    // POIs to exclude from browse view (but keep searchable)
+    const excludedSubcategories = ['Laadpunten']; // Charging stations
+    const excludedNameKeywords = ['begraafplaats', 'kerkhof', 'cemetery', 'erebegraafplaats'];
+
     let filtered = (data?.data || []).filter(poi => {
       // Always filter out Accommodation category
       if (poi.category === 'Accommodation (do not communicate)') return false;
+      if (poi.category === 'Accommodation') return false;
 
       // Always filter out accommodation-related POIs in other categories
       const accomKeywords = ['realty', 'villa', 'apartment', 'apartamento', 'hotel', 'hostel', 'residencial'];
@@ -196,14 +202,47 @@ export function POILandingPage() {
           return false;
         }
 
-        // Quality filters temporarily disabled for Texel data completeness check
-        // TODO: Re-enable after verifying Texel data quality
-        // if (!poi.rating || poi.rating < 4) return false;
-        // if (!poi.review_count || poi.review_count < 3) return false;
+        // Quality filters - POI must meet ALL criteria for browse view
+        // Rating >= 4.0
+        if (!poi.rating || poi.rating < 4) return false;
+        // At least 3 reviews
+        if (!poi.review_count || poi.review_count < 3) return false;
+        // Must have enriched description
+        if (!poi.enriched_tile_description) return false;
+        // Must have at least 3 images
+        if (!poi.images || poi.images.length < 3) return false;
+
+        // Exclude charging stations (Laadpunten) from Praktisch overview
+        if (poi.subcategory && excludedSubcategories.includes(poi.subcategory)) {
+          return false;
+        }
+
+        // Exclude cemeteries from overview (by name keywords)
+        if (excludedNameKeywords.some(keyword => lowerName.includes(keyword))) {
+          return false;
+        }
       }
 
-      // CATEGORY VIEW: Show all POIs in selected category (no quality filter)
-      // SEARCH VIEW: Show all POIs matching search (any category, no rating filter)
+      // CATEGORY VIEW: Apply quality filters but allow category-specific browsing
+      if (selectedCategory && !searchQuery) {
+        // Quality filters for category view
+        if (!poi.rating || poi.rating < 4) return false;
+        if (!poi.review_count || poi.review_count < 3) return false;
+        if (!poi.enriched_tile_description) return false;
+        if (!poi.images || poi.images.length < 3) return false;
+
+        // Exclude charging stations from Praktisch category view
+        if (poi.subcategory && excludedSubcategories.includes(poi.subcategory)) {
+          return false;
+        }
+
+        // Exclude cemeteries from category view
+        if (excludedNameKeywords.some(keyword => lowerName.includes(keyword))) {
+          return false;
+        }
+      }
+
+      // SEARCH VIEW: Show all POIs matching search (no quality filter - full searchability)
 
       // Client-side filter: minimum reviews (from filter modal, additional to default)
       if (minReviews > 0 && (!poi.review_count || poi.review_count < minReviews)) {
@@ -269,9 +308,45 @@ export function POILandingPage() {
       return true;
     });
 
+    // Apply category mix for DEFAULT BROWSE VIEW only (no search, no category selected)
+    if (!searchQuery && !selectedCategory && destination.id === 'texel') {
+      // Category mix percentages as per spec
+      const categoryMix: Record<string, number> = {
+        'Actief': 0.20,
+        'Cultuur & Historie': 0.20,
+        'Eten & Drinken': 0.15,
+        'Gezondheid & Verzorging': 0.10,
+        'Natuur': 0.20,
+        'Praktisch': 0.05,
+        'Winkelen': 0.10,
+      };
+
+      // Group POIs by category
+      const byCategory: Record<string, typeof filtered> = {};
+      filtered.forEach(poi => {
+        if (!byCategory[poi.category]) byCategory[poi.category] = [];
+        byCategory[poi.category].push(poi);
+      });
+
+      // Calculate target counts based on mix (aim for ~100 POIs initial display)
+      const targetTotal = 100;
+      const mixedPOIs: typeof filtered = [];
+
+      Object.entries(categoryMix).forEach(([category, percentage]) => {
+        const categoryPOIs = byCategory[category] || [];
+        const targetCount = Math.ceil(targetTotal * percentage);
+        // Shuffle and take target count
+        const shuffled = [...categoryPOIs].sort(() => Math.random() - 0.5);
+        mixedPOIs.push(...shuffled.slice(0, targetCount));
+      });
+
+      // Shuffle the final mix to interleave categories
+      return mixedPOIs.sort(() => Math.random() - 0.5);
+    }
+
     // Return all filtered POIs - loadedCount controls display
     return filtered;
-  }, [data?.data, searchQuery, selectedCategory, minReviews, distance, userLocation, accessibility, destination.categories.presentation]);
+  }, [data?.data, searchQuery, selectedCategory, minReviews, distance, userLocation, accessibility, destination.categories.presentation, destination.id]);
 
   // Display only loadedCount items (virtualization renders only visible)
   const pois = useMemo(() => {
@@ -864,6 +939,7 @@ export function POILandingPage() {
             }}
             height="600px"
             onMarkerClick={handlePOIClick}
+            perCategory={7}
           />
         </div>
       )}
