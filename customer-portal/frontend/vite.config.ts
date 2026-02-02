@@ -52,14 +52,16 @@ const destinationConfigs = {
     coordinates: { lat: 53.0833, lng: 4.8000 },
     languages: ['nl', 'de', 'en'],
     defaultLanguage: 'nl',
-    // Category configuration for Texel
+    // Category configuration for Texel (7 button categories with specific colors)
+    // Colors: Actief (#FF6B00), Cultuur (#004B87), Eten (#E53935), Gezondheid (#43A047)
+    //         Natuur (#7CB342), Praktisch (#607D8B), Winkelen (#AB47BC)
     categories: {
-      // Categories to show in menu (by id)
-      enabled: ['active', 'beaches', 'culture', 'food', 'recreation', 'shopping'],
-      // Categories excluded from menu
-      excluded: ['health', 'practical'],
-      // Categories for default browse view (presentation quality)
-      presentation: ['Active', 'Beaches & Nature', 'Culture & History', 'Food & Drinks', 'Recreation', 'Shopping'],
+      // Categories to show in menu (by id) - 7 Texel button categories
+      enabled: ['actief', 'cultuur', 'eten', 'natuur', 'winkelen', 'gezondheid', 'praktisch'],
+      // Categories excluded from menu (accommodation is hidden via is_hidden_category flag)
+      excluded: ['accommodatie'],
+      // Categories for default browse view (presentation quality) - database names
+      presentation: ['Actief', 'Cultuur & Historie', 'Eten & Drinken', 'Natuur', 'Winkelen', 'Gezondheid & Verzorging', 'Praktisch'],
     },
     // Texel branding colors (RGB: 0,255,100 / 0,202,255 / 242,255,0)
     colors: {

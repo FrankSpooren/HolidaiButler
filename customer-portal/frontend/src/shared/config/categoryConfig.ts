@@ -8,6 +8,11 @@
  * - Located: frontend/public/assets/category-icons/
  * - Original source: holibot-widget/TEST en print screens/Iconen/
  * - Format: PNG, 96-100px
+ *
+ * MULTI-DESTINATION:
+ * - Calpe categories: English names (Active, Beaches & Nature, etc.)
+ * - Texel categories: Dutch names (Actief, Natuur, etc.)
+ * - destination.categories.enabled controls which categories to show
  */
 
 export interface CategoryConfig {
@@ -21,6 +26,8 @@ export interface CategoryConfig {
   color: string;
   /** Translation key */
   translationKey?: string;
+  /** Destination this category belongs to (optional, empty = all) */
+  destination?: string;
 }
 
 /**
@@ -86,6 +93,82 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     icon: '/assets/category-icons/accommodation.png',  // fallback
     color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
   },
+
+  // ===========================================
+  // TEXEL CATEGORIES (Dutch names, specific colors)
+  // ===========================================
+
+  // 1. Actief - Orange (#FF6B00)
+  'Actief': {
+    name: 'Actief',
+    id: 'actief',
+    icon: '/assets/category-icons/active.png',
+    color: 'linear-gradient(135deg, #FF6B00, #FF8533)',
+    destination: 'texel',
+  },
+
+  // 2. Cultuur & Historie - Dark Blue (#004B87)
+  'Cultuur & Historie': {
+    name: 'Cultuur & Historie',
+    id: 'cultuur',
+    icon: '/assets/category-icons/culture-history.png',
+    color: 'linear-gradient(135deg, #004B87, #0066B3)',
+    destination: 'texel',
+  },
+
+  // 3. Eten & Drinken - Red (#E53935)
+  'Eten & Drinken': {
+    name: 'Eten & Drinken',
+    id: 'eten',
+    icon: '/assets/category-icons/food-drinks.png',
+    color: 'linear-gradient(135deg, #E53935, #EF5350)',
+    destination: 'texel',
+  },
+
+  // 4. Gezondheid & Verzorging - Green (#43A047)
+  'Gezondheid & Verzorging': {
+    name: 'Gezondheid & Verzorging',
+    id: 'gezondheid',
+    icon: '/assets/category-icons/health-wellbeing.png',
+    color: 'linear-gradient(135deg, #43A047, #66BB6A)',
+    destination: 'texel',
+  },
+
+  // 5. Natuur - Light Green (#7CB342)
+  'Natuur': {
+    name: 'Natuur',
+    id: 'natuur',
+    icon: '/assets/category-icons/beaches-nature.png',
+    color: 'linear-gradient(135deg, #7CB342, #9CCC65)',
+    destination: 'texel',
+  },
+
+  // 6. Praktisch - Grey (#607D8B)
+  'Praktisch': {
+    name: 'Praktisch',
+    id: 'praktisch',
+    icon: '/assets/category-icons/practical.png',
+    color: 'linear-gradient(135deg, #607D8B, #78909C)',
+    destination: 'texel',
+  },
+
+  // 7. Winkelen - Purple (#AB47BC)
+  'Winkelen': {
+    name: 'Winkelen',
+    id: 'winkelen',
+    icon: '/assets/category-icons/shopping.png',
+    color: 'linear-gradient(135deg, #AB47BC, #BA68C8)',
+    destination: 'texel',
+  },
+
+  // Texel Accommodation (hidden)
+  'Accommodatie': {
+    name: 'Accommodatie',
+    id: 'accommodatie',
+    icon: '/assets/category-icons/accommodation.png',
+    color: 'linear-gradient(135deg, #00CAFF, #00A3CC)',
+    destination: 'texel',
+  },
 } as const;
 
 /**
@@ -112,15 +195,31 @@ export function getCategoryColor(categoryName: string): string {
 }
 
 /**
- * Get all vacation-focused categories (excludes Accommodation)
+ * Get all vacation-focused categories (excludes Accommodation for all destinations)
  */
 export function getVacationCategories(): CategoryConfig[] {
   return Object.values(CATEGORY_CONFIG).filter(
-    cat => cat.name !== 'Accommodation (do not communicate)'
+    cat => cat.name !== 'Accommodation (do not communicate)' && cat.name !== 'Accommodatie'
   );
 }
 
 /**
+ * Get categories for a specific destination
+ * @param destinationId - 'calpe' or 'texel'
+ */
+export function getCategoriesForDestination(destinationId: string): CategoryConfig[] {
+  return Object.values(CATEGORY_CONFIG).filter(cat => {
+    // Exclude accommodation categories
+    if (cat.name === 'Accommodation (do not communicate)' || cat.name === 'Accommodatie') {
+      return false;
+    }
+    // Include if no destination specified (shared) or matches the destination
+    return !cat.destination || cat.destination === destinationId;
+  });
+}
+
+/**
  * Export as array for iteration (excludes Accommodation)
+ * Note: This includes ALL categories - destination filtering happens in POILandingPage
  */
 export const CATEGORIES_ARRAY = getVacationCategories();

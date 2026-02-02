@@ -106,23 +106,48 @@ const getLanguageFromRequest = (req) => {
  * Accommodation category name (excluded from public display)
  */
 const ACCOMMODATION_CATEGORY = 'Accommodation (do not communicate)';
+const ACCOMMODATIE_CATEGORY = 'Accommodatie';  // Texel accommodation category
 
 /**
  * Build base where clause for public POI queries
  * Note: verified filter disabled for test environment (no POIs verified yet)
  * Uses is_active to filter only active POIs
  * Filters by destination_id for multi-destination support
- * Excludes accommodation POIs from public display
+ * Visibility flags:
+ * - is_searchable_only: POIs without google_placeid, only shown in search results
+ * - is_hidden_category: Accommodation POIs, hidden from browse but searchable
  * @param {number} destinationId - The destination ID to filter by
+ * @param {boolean} isSearchMode - Whether this is a search query (shows hidden POIs)
  */
-const buildPublicWhereClause = async (destinationId) => {
-  return {
+const buildPublicWhereClause = async (destinationId, isSearchMode = false) => {
+  const whereClause = {
     is_active: true,
     destination_id: destinationId,
-    // Exclude accommodation category from public display
-    category: { [Op.ne]: ACCOMMODATION_CATEGORY }
+    // Exclude accommodation categories from public display (both EN and NL)
+    category: { [Op.notIn]: [ACCOMMODATION_CATEGORY, ACCOMMODATIE_CATEGORY] }
     // verified: true  // Re-enable when POIs are verified in production
   };
+
+  // In browse mode (not searching), hide POIs with visibility flags
+  // In search mode, show ALL POIs including those with visibility flags
+  if (!isSearchMode) {
+    // Only show POIs that are NOT searchable-only and NOT hidden-category
+    whereClause[Op.and] = [
+      { [Op.or]: [
+        { is_searchable_only: false },
+        { is_searchable_only: null },
+        { is_searchable_only: 0 }
+      ]},
+      { [Op.or]: [
+        { is_hidden_category: false },
+        { is_hidden_category: null },
+        { is_hidden_category: 0 }
+      ]}
+    ];
+  }
+  // In search mode: no additional filters, all active POIs are searchable
+
+  return whereClause;
 };
 
 /**
@@ -247,13 +272,19 @@ router.get('/', async (req, res) => {
     // Calculate offset from page if not provided directly
     const calculatedOffset = offset !== undefined ? parseInt(offset) : (parseInt(page) - 1) * parseInt(limit);
 
+    // Support both 'q' and 'search' parameters
+    const searchTerm = search || q;
+
+    // Determine if this is search mode (shows hidden POIs) or browse mode (hides them)
+    const isSearchMode = !!searchTerm;
+
     // Build where clause - filter by destination and active status
-    const where = await buildPublicWhereClause(destinationId);
+    // In search mode, hidden POIs (is_searchable_only, is_hidden_category) are included
+    const where = await buildPublicWhereClause(destinationId, isSearchMode);
     if (category) where.category = category;
     if (city) where.city = { [Op.like]: `%${city}%` };
 
-    // Support both 'q' and 'search' parameters
-    const searchTerm = search || q;
+    // Add search term conditions if searching
     if (searchTerm) {
       where[Op.or] = [
         { name: { [Op.like]: `%${searchTerm}%` } },
@@ -429,7 +460,8 @@ router.get('/geojson', async (req, res) => {
     } = req.query;
 
     // Build where clause - filter by destination and active status
-    const where = await buildPublicWhereClause(destinationId);
+    // GeoJSON is for map display (browse mode) - hide searchable-only POIs
+    const where = await buildPublicWhereClause(destinationId, false);
     if (category) where.category = category;
     if (city) where.city = { [Op.like]: `%${city}%` };
 
@@ -527,7 +559,9 @@ router.get('/search', async (req, res) => {
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     // Build where clause - filter by destination and active status
-    const where = await buildPublicWhereClause(destinationId);
+    // Search mode = true: includes POIs with is_searchable_only and is_hidden_category flags
+    const isSearchMode = true;  // This is the dedicated search endpoint
+    const where = await buildPublicWhereClause(destinationId, isSearchMode);
     if (category) where.category = category;
 
     if (searchTerm) {
@@ -593,7 +627,8 @@ router.get('/autocomplete', async (req, res) => {
       return res.json({ success: true, data: [] });
     }
 
-    const where = await buildPublicWhereClause(destinationId);
+    // Autocomplete is search functionality - include hidden POIs
+    const where = await buildPublicWhereClause(destinationId, true);
     where.name = { [Op.like]: `%${q}%` };
 
     const pois = await model.findAll({
@@ -679,7 +714,8 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
 
     // Get base where clause (filter by destination and active status)
-    const baseWhere = await buildPublicWhereClause(destinationId);
+    // Direct POI access: allow viewing hidden POIs via direct link
+    const baseWhere = await buildPublicWhereClause(destinationId, true);
 
     // Try to find by ID first, then by slug or google_place_id
     let poi = null;
