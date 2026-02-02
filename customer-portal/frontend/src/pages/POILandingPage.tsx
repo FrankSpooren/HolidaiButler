@@ -940,6 +940,9 @@ export function POILandingPage() {
             height="600px"
             onMarkerClick={handlePOIClick}
             perCategory={7}
+            maxPOIs={50}
+            minRating={4}
+            categories={destination.categories.presentation}
           />
         </div>
       )}
