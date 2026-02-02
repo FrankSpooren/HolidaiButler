@@ -37,6 +37,9 @@ interface MapViewProps {
   onMarkerClick?: (poiId: number) => void;
   perCategory?: number; // Limit POIs per category for cleaner display
   disableAutoBounds?: boolean; // Keep map centered on Calpe instead of auto-fitting
+  maxPOIs?: number; // Maximum total POIs to display
+  minRating?: number; // Quality filter: minimum rating
+  categories?: string[]; // Allowed categories (presentation categories)
 }
 
 interface POIFeature {
@@ -112,7 +115,10 @@ export function MapView({
   height = '600px',
   onMarkerClick,
   perCategory = 2, // Default: 2 POIs per category for cleaner map
-  disableAutoBounds = true // Default: keep centered on destination
+  disableAutoBounds = true, // Default: keep centered on destination
+  maxPOIs = 50, // Default: max 50 POIs for cleaner map
+  minRating = 4, // Default: quality filter rating >= 4
+  categories // Allowed categories (presentation categories)
 }: MapViewProps) {
   const [geoData, setGeoData] = useState<GeoJSONResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,9 +129,9 @@ export function MapView({
   const destination = useDestination();
   const DEFAULT_CENTER: [number, number] = [destination.coordinates.lat, destination.coordinates.lng];
   // Zoom level depends on destination size:
-  // - Texel is a 25km island, needs lower zoom (11) to show entire island
+  // - Texel is a 25km island, needs lower zoom (10) to show entire island
   // - Calpe is a compact city, zoom 14 is appropriate
-  const DEFAULT_ZOOM = destination.id === 'texel' ? 11 : 14;
+  const DEFAULT_ZOOM = destination.id === 'texel' ? 10 : 14;
 
   useEffect(() => {
     const fetchGeoJSON = async () => {
@@ -133,11 +139,19 @@ export function MapView({
       setError(null);
 
       try {
-        // Add per_category parameter for balanced POI display
-        const params = {
+        // Build params with quality filters and limits
+        const params: Record<string, any> = {
           ...searchParams,
-          per_category: perCategory
+          per_category: perCategory,
+          limit: maxPOIs,
+          min_rating: minRating
         };
+
+        // Add categories filter if provided
+        if (categories && categories.length > 0) {
+          params.categories = categories.join(',');
+        }
+
         const data = await poiService.getGeoJSON(params);
         setGeoData(data);
 
@@ -162,7 +176,7 @@ export function MapView({
     };
 
     fetchGeoJSON();
-  }, [searchParams, perCategory, disableAutoBounds]);
+  }, [searchParams, perCategory, disableAutoBounds, maxPOIs, minRating, categories]);
 
   const handleMarkerClick = (poiId: number) => {
     // Open POI detail modal (if callback provided)

@@ -448,6 +448,9 @@ router.get('/cities', async (req, res) => {
  * @query   per_category - Number of POIs per category (default: all)
  * @query   city - Filter by city (default: Calpe area)
  * @query   lang - Language code for translations
+ * @query   min_rating - Minimum rating filter (default: none)
+ * @query   limit - Maximum total POIs to return (default: none)
+ * @query   categories - Comma-separated list of allowed categories
  */
 router.get('/geojson', async (req, res) => {
   try {
@@ -463,7 +466,10 @@ router.get('/geojson', async (req, res) => {
     const {
       category,
       city,
-      per_category // New: limit POIs per category for cleaner map display
+      per_category, // Limit POIs per category for cleaner map display
+      min_rating,   // Quality filter: minimum rating
+      limit,        // Total maximum POIs
+      categories    // Comma-separated allowed categories
     } = req.query;
 
     // Build where clause - filter by destination and active status
@@ -471,6 +477,17 @@ router.get('/geojson', async (req, res) => {
     const where = await buildPublicWhereClause(destinationId, false);
     if (category) where.category = category;
     if (city) where.city = { [Op.like]: `%${city}%` };
+
+    // Quality filter: minimum rating
+    if (min_rating) {
+      where.rating = { [Op.gte]: parseFloat(min_rating) };
+    }
+
+    // Filter by allowed categories (presentation categories)
+    if (categories && !category) {
+      const allowedCategories = categories.split(',').map(c => c.trim());
+      where.category = { [Op.in]: allowedCategories };
+    }
 
     let pois;
 
@@ -502,25 +519,24 @@ router.get('/geojson', async (req, res) => {
       // Flatten and filter out empty results
       pois = categoryPOIs.flat();
 
-      // If we don't have enough POIs, fill with more from destination
-      if (pois.length < categories.length * limit) {
-        const existingIds = pois.map(p => p.id);
-        const additionalPOIs = await model.findAll({
-          where: {
-            ...where,
-            id: { [Op.notIn]: existingIds }
-          },
-          order: [['rating', 'DESC'], ['review_count', 'DESC']],
-          limit: (categories.length * limit) - pois.length
-        });
-        pois = [...pois, ...additionalPOIs];
+      // Apply total limit if specified
+      const totalLimit = limit ? parseInt(limit) : null;
+      if (totalLimit && pois.length > totalLimit) {
+        pois = pois.slice(0, totalLimit);
       }
     } else {
       // Original behavior - fetch all matching POIs for this destination
-      pois = await model.findAll({
+      const queryOptions = {
         where,
         order: [['rating', 'DESC'], ['name', 'ASC']]
-      });
+      };
+
+      // Apply total limit if specified
+      if (limit) {
+        queryOptions.limit = parseInt(limit);
+      }
+
+      pois = await model.findAll(queryOptions);
     }
 
     res.json(convertToGeoJSON(pois, lang));
