@@ -104,23 +104,14 @@ const getLanguageFromRequest = (req) => {
 
 /**
  * Accommodation categories to exclude from public display
- * Calpe: Single category name
- * Texel: Multiple Dutch category names (verified from poi_texel_insert.sql 2026-01-29)
+ * Calpe: 'Accommodation (do not communicate)'
+ * Texel: 'Accommodation' (grouped category - verified 2026-02-02)
  */
 const ACCOMMODATION_CATEGORIES = [
   // Calpe
   'Accommodation (do not communicate)',
-  // Texel (Dutch)
-  'Hotel',
-  'Motel',
-  'Herberg',
-  'Bed & Breakfast',
-  'Appartementencomplex',
-  'Vakantieappartement',
-  'Vakantiepark',
-  'Vakantiewoningverhuur',
-  'Kampeerterrein',
-  'Binnenovernachting',
+  // Texel (grouped category)
+  'Accommodation',
 ];
 
 /**

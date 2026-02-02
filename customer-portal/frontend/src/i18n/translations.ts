@@ -230,8 +230,9 @@ export interface Translations {
       hint: string;
     };
   };
-  // Categories
+  // Categories (Calpe + Texel)
   categories: {
+    // Calpe categories
     active: string;
     beaches: string;
     culture: string;
@@ -240,6 +241,14 @@ export interface Translations {
     health: string;
     shopping: string;
     practical: string;
+    // Texel categories
+    actief: string;
+    cultuur: string;
+    eten: string;
+    gezondheid: string;
+    natuur: string;
+    praktisch: string;
+    winkelen: string;
   };
   // Reviews (Sprint 7.6)
   reviews: {
@@ -968,6 +977,7 @@ export const translations: Record<Language, Translations> = {
       },
     },
     categories: {
+      // Calpe categories
       active: 'Actief',
       beaches: 'Stranden & Natuur',
       culture: 'Cultuur & Geschiedenis',
@@ -976,6 +986,14 @@ export const translations: Record<Language, Translations> = {
       health: 'Gezondheid & Welzijn',
       shopping: 'Winkelen',
       practical: 'Praktisch',
+      // Texel categories
+      actief: 'Actief',
+      cultuur: 'Cultuur & Historie',
+      eten: 'Eten & Drinken',
+      gezondheid: 'Gezondheid & Verzorging',
+      natuur: 'Natuur',
+      praktisch: 'Praktisch',
+      winkelen: 'Winkelen',
     },
     reviews: {
       title: 'Reviews',
@@ -1692,6 +1710,7 @@ export const translations: Record<Language, Translations> = {
       },
     },
     categories: {
+      // Calpe categories
       active: 'Active',
       beaches: 'Beaches & Nature',
       culture: 'Culture & History',
@@ -1700,6 +1719,14 @@ export const translations: Record<Language, Translations> = {
       health: 'Health & Wellbeing',
       shopping: 'Shopping',
       practical: 'Practical',
+      // Texel categories
+      actief: 'Active',
+      cultuur: 'Culture & History',
+      eten: 'Food & Drinks',
+      gezondheid: 'Health & Wellness',
+      natuur: 'Nature',
+      praktisch: 'Practical',
+      winkelen: 'Shopping',
     },
     reviews: {
       title: 'Reviews',
@@ -2411,6 +2438,7 @@ export const translations: Record<Language, Translations> = {
       },
     },
     categories: {
+      // Calpe categories
       active: 'Aktiv',
       beaches: 'Strände & Natur',
       culture: 'Kultur & Geschichte',
@@ -2419,6 +2447,14 @@ export const translations: Record<Language, Translations> = {
       health: 'Gesundheit & Wohlbefinden',
       shopping: 'Einkaufen',
       practical: 'Praktisch',
+      // Texel categories
+      actief: 'Aktiv',
+      cultuur: 'Kultur & Geschichte',
+      eten: 'Essen & Trinken',
+      gezondheid: 'Gesundheit & Wellness',
+      natuur: 'Natur',
+      praktisch: 'Praktisch',
+      winkelen: 'Einkaufen',
     },
     reviews: {
       title: 'Bewertungen',
@@ -3130,6 +3166,7 @@ export const translations: Record<Language, Translations> = {
       },
     },
     categories: {
+      // Calpe categories
       active: 'Activo',
       beaches: 'Playas y Naturaleza',
       culture: 'Cultura e Historia',
@@ -3138,6 +3175,14 @@ export const translations: Record<Language, Translations> = {
       health: 'Salud y Bienestar',
       shopping: 'Compras',
       practical: 'Práctico',
+      // Texel categories
+      actief: 'Activo',
+      cultuur: 'Cultura e Historia',
+      eten: 'Comida y Bebida',
+      gezondheid: 'Salud y Bienestar',
+      natuur: 'Naturaleza',
+      praktisch: 'Práctico',
+      winkelen: 'Compras',
     },
     reviews: {
       title: 'Reseñas',
@@ -3849,6 +3894,7 @@ export const translations: Record<Language, Translations> = {
       },
     },
     categories: {
+      // Calpe categories
       active: 'Aktiv',
       beaches: 'Stränder & Natur',
       culture: 'Kultur & Historia',
@@ -3857,6 +3903,14 @@ export const translations: Record<Language, Translations> = {
       health: 'Hälsa & Välbefinnande',
       shopping: 'Shopping',
       practical: 'Praktiskt',
+      // Texel categories
+      actief: 'Aktiv',
+      cultuur: 'Kultur & Historia',
+      eten: 'Mat & Dryck',
+      gezondheid: 'Hälsa & Välbefinnande',
+      natuur: 'Natur',
+      praktisch: 'Praktiskt',
+      winkelen: 'Shopping',
     },
     reviews: {
       title: 'Recensioner',
@@ -4568,6 +4622,7 @@ export const translations: Record<Language, Translations> = {
       },
     },
     categories: {
+      // Calpe categories
       active: 'Aktywność',
       beaches: 'Plaże i Natura',
       culture: 'Kultura i Historia',
@@ -4576,6 +4631,14 @@ export const translations: Record<Language, Translations> = {
       health: 'Zdrowie i Wellness',
       shopping: 'Zakupy',
       practical: 'Praktyczne',
+      // Texel categories
+      actief: 'Aktywność',
+      cultuur: 'Kultura i Historia',
+      eten: 'Jedzenie i Napoje',
+      gezondheid: 'Zdrowie i Wellness',
+      natuur: 'Przyroda',
+      praktisch: 'Praktyczne',
+      winkelen: 'Zakupy',
     },
     common: {
       save: 'Zapisz',
