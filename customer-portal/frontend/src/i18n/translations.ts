@@ -230,7 +230,7 @@ export interface Translations {
       hint: string;
     };
   };
-  // Categories (Calpe + Texel)
+  // Categories (Calpe - English IDs, Texel - Dutch IDs)
   categories: {
     // Calpe categories
     active: string;
@@ -241,7 +241,7 @@ export interface Translations {
     health: string;
     shopping: string;
     practical: string;
-    // Texel categories
+    // Texel categories (Dutch IDs)
     actief: string;
     cultuur: string;
     eten: string;
@@ -2451,7 +2451,7 @@ export const translations: Record<Language, Translations> = {
       actief: 'Aktiv',
       cultuur: 'Kultur & Geschichte',
       eten: 'Essen & Trinken',
-      gezondheid: 'Gesundheit & Wellness',
+      gezondheid: 'Gesundheit & Pflege',
       natuur: 'Natur',
       praktisch: 'Praktisch',
       winkelen: 'Einkaufen',
