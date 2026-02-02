@@ -1,11 +1,11 @@
 # HolidaiButler Multi-Destination Architecture
 ## Strategisch Adviesrapport
 
-**Datum**: 29 januari 2026
+**Datum**: 2 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 1.3
+**Versie**: 1.4
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 2 COMPLEET - Texel Deployment Afgerond
+**Status**: FASE 3 COMPLEET - Texel Data Kwaliteitsreview Afgerond
 
 ---
 
@@ -15,10 +15,11 @@
 |------|--------|-------|-------|-------------------|
 | **Fase 1: Foundation** | ✅ COMPLEET | 28-01-2026 | 28-01-2026 | Claude Code |
 | **Fase 2: Texel Deployment** | ✅ COMPLEET | 29-01-2026 | 29-01-2026 | Claude Code |
-| **Fase 3: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
-| **Fase 4: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
+| **Fase 3: Texel Data Quality** | ✅ COMPLEET | 02-02-2026 | 02-02-2026 | Claude Code |
+| **Fase 4: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
+| **Fase 5: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 29 januari 2026 - Fase 2 Texel Deployment volledig geïmplementeerd
+**Laatste update**: 2 februari 2026 - Fase 3 Texel Data Kwaliteitsreview compleet
 
 ---
 
@@ -1037,15 +1038,45 @@ export const getEmailTemplate = (templateName, destinationId) => {
 
 **Fase 2 Status**: ✅ COMPLEET (5/6 taken compleet, E2E optioneel)
 
-### Fase 3: Alicante Preparation
+### Fase 3: Texel Data Kwaliteitsreview - COMPLEET
 
 | Taak | Status | Datum | Uitvoerder | Notities |
 |------|--------|-------|------------|----------|
-| 3.1 Alicante config | Niet gestart | - | - | - |
-| 3.2 POI discovery via Apify | Niet gestart | - | - | - |
-| 3.3 Subdomain setup | Niet gestart | - | - | - |
+| 3.1 POI data synchronisatie | ✅ Compleet | 02-02-2026 | Claude Code | 1,772→1,739 POIs (97 deleted, 64 added), google_placeid als unique identifier |
+| 3.2 Category hiërarchie update | ✅ Compleet | 02-02-2026 | Claude Code | 671→129 categories (14 level 1 + 115 level 2), 7 button categories met kleuren |
+| 3.3 Visibility flags implementatie | ✅ Compleet | 02-02-2026 | Claude Code | is_searchable_only (161 POIs), is_hidden_category (411 POIs) |
+| 3.4 Frontend category buttons | ✅ Compleet | 02-02-2026 | Claude Code | 7 Texel categories met specifieke kleuren in categoryConfig.ts |
+| 3.5 Search functionaliteit | ✅ Compleet | 02-02-2026 | Claude Code | Browse mode hides flags, search mode shows all POIs |
+| 3.6 Data kwaliteit check | ✅ Compleet | 02-02-2026 | Claude Code | Geen markdown gevonden in descriptions |
 
-**Fase 3 Status**: WACHT OP FASE 2
+**Fase 3 Status**: ✅ COMPLEET (02 februari 2026)
+
+**POI Sync Resultaten:**
+- POIs verwijderd: 97 (niet in nieuwe Excel)
+- POIs toegevoegd: 64 (zonder google_placeid)
+- POIs bijgewerkt: 1,675
+- QnA automatisch opgeschoond: 96,093→93,241 (orphaned records)
+
+**7 Texel Button Categories:**
+| Categorie | Kleur | ID |
+|-----------|-------|-----|
+| Actief | #FF6B00 | actief |
+| Cultuur & Historie | #004B87 | cultuur |
+| Eten & Drinken | #E53935 | eten |
+| Gezondheid & Verzorging | #43A047 | gezondheid |
+| Natuur | #7CB342 | natuur |
+| Praktisch | #607D8B | praktisch |
+| Winkelen | #AB47BC | winkelen |
+
+### Fase 4: Alicante Preparation
+
+| Taak | Status | Datum | Uitvoerder | Notities |
+|------|--------|-------|------------|----------|
+| 4.1 Alicante config | Niet gestart | - | - | - |
+| 4.2 POI discovery via Apify | Niet gestart | - | - | - |
+| 4.3 Subdomain setup | Niet gestart | - | - | - |
+
+**Fase 4 Status**: WACHT OP GOEDKEURING
 
 ### Fase 4: Stabilization & Documentation
 
@@ -1101,8 +1132,26 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - **VITE_DESTINATION_ID** - Frontend destination awareness via environment variable
 - **Destination-specific config** - Map coordinates, app name, language per destination
 
-### Fase 3 Lessons Learned
-- *Nog geen - fase niet gestart*
+### Fase 3 Lessons Learned (02-02-2026)
+
+**POI Data Synchronisatie:**
+- **google_placeid als unique identifier** - Betrouwbaarder dan database ID voor Excel-database sync
+- **CRLF line endings probleem** - Windows tekstbestanden hebben \r\n, SQL matching faalde; opgelost met `sed -i 's/\r$//'`
+- **NULL category handling** - 97 POIs zonder category; opgelost door DEFAULT 'Uncategorized' en regeneratie SQL
+
+**Category Hiërarchie:**
+- **INSERT IGNORE voor duplicates** - Sommige categorienamen kwamen meerdere keren voor in Excel
+- **3-level hierarchy** - category (level 1) → subcategory (level 2) → poi_type (level 3)
+- **Destination-specifieke kleuren** - Texel heeft eigen kleurenschema (niet Calpe hergebruiken)
+
+**Visibility Flags:**
+- **is_searchable_only** - POIs zonder google_placeid, alleen vindbaar via search
+- **is_hidden_category** - Accommodatie POIs, verborgen in browse maar searchbaar
+- **Backend search mode** - `buildPublicWhereClause(destinationId, isSearchMode)` voor conditionele filtering
+
+**Frontend Multi-Destination:**
+- **destination.categories.enabled** - Gebruik enabled filter in plaats van excluded voor cleaner destination-specifieke categorieën
+- **CATEGORIES_ARRAY bevat alle** - Filtering per destination gebeurt in POILandingPage via enabled array
 
 ### Fase 4 Lessons Learned
 - *Nog geen - fase niet gestart*
@@ -1159,8 +1208,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 28 januari 2026 - Fase 1 Compleet*
-*Volgende review: Na voltooiing Fase 2 (Texel Deployment)*
+*Laatst bijgewerkt: 2 februari 2026 - Fase 3 Compleet*
+*Volgende review: Na voltooiing Fase 4 (Alicante Preparation)*
 
 ---
 
@@ -1168,7 +1217,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **1.3** | **29-01-2026** | **Fase 2 COMPLEET: Texel Deployment - DNS+SSL (texelmaps.nl), Data import (POI 1772, Categories 671, QnA 96093, Reviews 3929), GitHub Actions matrix deployment, placeholder branding.** |
+| **1.4** | **02-02-2026** | **Fase 3 COMPLEET: Texel Data Kwaliteitsreview - POI sync (1739 POIs), Category hiërarchie (129 categories, 7 button colors), Visibility flags (is_searchable_only, is_hidden_category), Frontend category buttons, Search functionaliteit. Calpe data ongewijzigd (1593 POIs).** |
+| 1.3 | 29-01-2026 | Fase 2 COMPLEET: Texel Deployment - DNS+SSL (texelmaps.nl), Data import (POI 1772, Categories 671, QnA 96093, Reviews 3929), GitHub Actions matrix deployment, placeholder branding. |
 | 1.2 | 28-01-2026 | Fase 1 COMPLEET: Database schema (INT destination_id, 6 tabellen), Apache VHosts (RequestHeader), Directory structuur geüpdatet naar daadwerkelijke implementatie. |
 | 1.1 | 28-01-2026 | Toegevoegd: Implementatie Log, Lessons Learned, Risico Register, Beslissingen Log |
 | 1.0 | 28-01-2026 | Initiele versie - Strategisch Advies compleet |
