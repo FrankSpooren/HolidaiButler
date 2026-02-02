@@ -93,156 +93,71 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
   },
 
   // ============================================
-  // TEXEL CATEGORIES (Dutch - from POI database)
-  // Verified from poi_texel_insert.sql 2026-01-29
+  // TEXEL CATEGORIES (7 button categories)
+  // Database verified 2026-02-02: Actief(57), Cultuur & Historie(96),
+  // Eten & Drinken(138), Natuur(98), Winkelen(160), Gezondheid(75), Praktisch(296)
   // ============================================
 
-  // Food & Drinks
-  'Restaurant': {
-    name: 'Restaurant',
-    id: 'restaurant',
-    icon: '/assets/category-icons/food-drinks.png',
-    color: 'linear-gradient(135deg, #4f766b, #608379)',
-  },
-  'Italiaans restaurant': {
-    name: 'Italiaans restaurant',
-    id: 'italiaans-restaurant',
-    icon: '/assets/category-icons/food-drinks.png',
-    color: 'linear-gradient(135deg, #4f766b, #608379)',
-  },
-  'Catering': {
-    name: 'Catering',
-    id: 'catering',
-    icon: '/assets/category-icons/food-drinks.png',
-    color: 'linear-gradient(135deg, #4f766b, #608379)',
-  },
-  'Maaltijdbezorging': {
-    name: 'Maaltijdbezorging',
-    id: 'maaltijdbezorging',
-    icon: '/assets/category-icons/food-drinks.png',
-    color: 'linear-gradient(135deg, #4f766b, #608379)',
-  },
-  'Wijngaard': {
-    name: 'Wijngaard',
-    id: 'wijngaard',
-    icon: '/assets/category-icons/food-drinks.png',
-    color: 'linear-gradient(135deg, #4f766b, #608379)',
+  // Actief - Orange (#FF6B00)
+  'Actief': {
+    name: 'Actief',
+    id: 'actief',
+    icon: '/assets/category-icons/active.png',
+    color: 'linear-gradient(135deg, #FF6B00, #FF8533)',
   },
 
-  // Nature & Beaches
-  'Strand': {
-    name: 'Strand',
-    id: 'strand',
-    icon: '/assets/category-icons/beaches-nature.png',
-    color: 'linear-gradient(135deg, #b4942e, #bb9e42)',
-  },
-  'Nationaal park': {
-    name: 'Nationaal park',
-    id: 'nationaal-park',
-    icon: '/assets/category-icons/beaches-nature.png',
-    color: 'linear-gradient(135deg, #b4942e, #bb9e42)',
-  },
-  'Dune': {
-    name: 'Dune',
-    id: 'dune',
-    icon: '/assets/category-icons/beaches-nature.png',
-    color: 'linear-gradient(135deg, #b4942e, #bb9e42)',
-  },
-  'Eiland': {
-    name: 'Eiland',
-    id: 'eiland',
-    icon: '/assets/category-icons/beaches-nature.png',
-    color: 'linear-gradient(135deg, #b4942e, #bb9e42)',
-  },
-
-  // Culture & Attractions
-  'Lokaal historisch museum': {
-    name: 'Lokaal historisch museum',
-    id: 'museum',
+  // Cultuur & Historie - Blue (#004B87)
+  'Cultuur & Historie': {
+    name: 'Cultuur & Historie',
+    id: 'cultuur',
     icon: '/assets/category-icons/culture-history.png',
-    color: 'linear-gradient(135deg, #253444, #3a4856)',
-  },
-  'Toeristische attractie': {
-    name: 'Toeristische attractie',
-    id: 'toeristische-attractie',
-    icon: '/assets/category-icons/culture-history.png',
-    color: 'linear-gradient(135deg, #253444, #3a4856)',
+    color: 'linear-gradient(135deg, #004B87, #0066B3)',
   },
 
-  // Recreation
-  'Aquarium': {
-    name: 'Aquarium',
-    id: 'aquarium',
-    icon: '/assets/category-icons/recreation.png',
-    color: 'linear-gradient(135deg, #354f48, #49605a)',
+  // Eten & Drinken - Red (#E53935)
+  'Eten & Drinken': {
+    name: 'Eten & Drinken',
+    id: 'eten',
+    icon: '/assets/category-icons/food-drinks.png',
+    color: 'linear-gradient(135deg, #E53935, #EF5350)',
   },
 
-  // Shopping
-  'Supermarkt': {
-    name: 'Supermarkt',
-    id: 'supermarkt',
+  // Gezondheid & Verzorging - Green (#43A047)
+  'Gezondheid & Verzorging': {
+    name: 'Gezondheid & Verzorging',
+    id: 'gezondheid',
+    icon: '/assets/category-icons/health-wellbeing.png',
+    color: 'linear-gradient(135deg, #43A047, #66BB6A)',
+  },
+
+  // Natuur - Light Green (#7CB342)
+  'Natuur': {
+    name: 'Natuur',
+    id: 'natuur',
+    icon: '/assets/category-icons/beaches-nature.png',
+    color: 'linear-gradient(135deg, #7CB342, #9CCC65)',
+  },
+
+  // Praktisch - Gray (#607D8B)
+  'Praktisch': {
+    name: 'Praktisch',
+    id: 'praktisch',
+    icon: '/assets/category-icons/practical.png',
+    color: 'linear-gradient(135deg, #607D8B, #78909C)',
+  },
+
+  // Winkelen - Purple (#AB47BC)
+  'Winkelen': {
+    name: 'Winkelen',
+    id: 'winkelen',
     icon: '/assets/category-icons/shopping.png',
-    color: 'linear-gradient(135deg, #b4892e, #bb9442)',
+    color: 'linear-gradient(135deg, #AB47BC, #BA68C8)',
   },
 
-  // Texel Accommodation (filtered out but needed for color mapping)
-  'Hotel': {
-    name: 'Hotel',
-    id: 'hotel',
-    icon: '/assets/category-icons/accommodation.png',
-    color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
-  },
-  'Motel': {
-    name: 'Motel',
-    id: 'motel',
-    icon: '/assets/category-icons/accommodation.png',
-    color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
-  },
-  'Herberg': {
-    name: 'Herberg',
-    id: 'herberg',
-    icon: '/assets/category-icons/accommodation.png',
-    color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
-  },
-  'Bed & Breakfast': {
-    name: 'Bed & Breakfast',
-    id: 'bed-breakfast',
-    icon: '/assets/category-icons/accommodation.png',
-    color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
-  },
-  'Appartementencomplex': {
-    name: 'Appartementencomplex',
-    id: 'appartementencomplex',
-    icon: '/assets/category-icons/accommodation.png',
-    color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
-  },
-  'Vakantieappartement': {
-    name: 'Vakantieappartement',
-    id: 'vakantieappartement',
-    icon: '/assets/category-icons/accommodation.png',
-    color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
-  },
-  'Vakantiepark': {
-    name: 'Vakantiepark',
-    id: 'vakantiepark',
-    icon: '/assets/category-icons/accommodation.png',
-    color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
-  },
-  'Vakantiewoningverhuur': {
-    name: 'Vakantiewoningverhuur',
-    id: 'vakantiewoningverhuur',
-    icon: '/assets/category-icons/accommodation.png',
-    color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
-  },
-  'Kampeerterrein': {
-    name: 'Kampeerterrein',
-    id: 'kampeerterrein',
-    icon: '/assets/category-icons/accommodation.png',
-    color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
-  },
-  'Binnenovernachting': {
-    name: 'Binnenovernachting',
-    id: 'binnenovernachting',
+  // Texel Accommodation (filtered out from display)
+  'Accommodation': {
+    name: 'Accommodation',
+    id: 'accommodation',
     icon: '/assets/category-icons/accommodation.png',
     color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
   },

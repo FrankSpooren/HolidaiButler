@@ -92,10 +92,11 @@ export function POILandingPage() {
   const columnCount = useColumnCount();
 
   // Use centralized category configuration (single source of truth)
-  // Excluded categories are destination-specific (configured in vite.config.ts)
-  const excludedCategories = destination.categories.excluded;
+  // Enabled categories are destination-specific (configured in vite.config.ts)
+  // This ensures Calpe shows Calpe categories and Texel shows Texel categories
+  const enabledCategories = destination.categories.enabled;
   const categories: Category[] = CATEGORIES_ARRAY
-    .filter(cat => !excludedCategories.includes(cat.id))
+    .filter(cat => enabledCategories.includes(cat.id))
     .map(cat => ({
       id: cat.id,
       name: cat.name, // Database name for API calls

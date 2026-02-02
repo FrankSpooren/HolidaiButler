@@ -52,31 +52,23 @@ const destinationConfigs = {
     coordinates: { lat: 53.0833, lng: 4.8000 },
     languages: ['nl', 'de', 'en'],
     defaultLanguage: 'nl',
-    // Category configuration for Texel
-    // IMPORTANT: Category names MUST match POI.category values exactly (verified from poi_texel_insert.sql)
-    // Total 23 unique categories in database, 13 tourist-relevant for presentation
+    // Category configuration for Texel (7 button categories)
+    // Database categories verified 2026-02-02: Actief(57), Cultuur & Historie(96), Eten & Drinken(138),
+    // Natuur(98), Winkelen(160), Gezondheid & Verzorging(75), Praktisch(296), Accommodation(401-excluded)
     categories: {
-      // Categories to show in menu (by id) - maps to presentation categories
-      enabled: ['restaurant', 'strand', 'natuur', 'cultuur', 'shopping'],
-      // Categories excluded - mainly accommodation
+      // Categories to show in menu (by id) - 7 Texel button categories
+      enabled: ['actief', 'cultuur', 'eten', 'natuur', 'winkelen', 'gezondheid', 'praktisch'],
+      // Categories excluded from menu
       excluded: ['accommodation'],
       // Categories for default browse view - MUST match POI.category column values EXACTLY
-      // Excludes: Hotel, Motel, Herberg, Bed & Breakfast, Appartementencomplex, Vakantieappartement,
-      //           Vakantiepark, Vakantiewoningverhuur, Kampeerterrein, Binnenovernachting
       presentation: [
-        'Restaurant',
-        'Italiaans restaurant',
-        'Strand',
-        'Nationaal park',
-        'Dune',
-        'Aquarium',
-        'Lokaal historisch museum',
-        'Toeristische attractie',
-        'Supermarkt',
-        'Wijngaard',
-        'Eiland',
-        'Catering',
-        'Maaltijdbezorging'
+        'Actief',
+        'Cultuur & Historie',
+        'Eten & Drinken',
+        'Natuur',
+        'Winkelen',
+        'Gezondheid & Verzorging',
+        'Praktisch'
       ],
     },
     // Texel branding colors (RGB: 0,255,100 / 0,202,255 / 242,255,0)
