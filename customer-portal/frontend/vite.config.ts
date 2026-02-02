@@ -52,9 +52,11 @@ const destinationConfigs = {
     coordinates: { lat: 53.0833, lng: 4.8000 },
     languages: ['nl', 'de', 'en'],
     defaultLanguage: 'nl',
-    // Category configuration for Texel (7 button categories)
-    // Database categories verified 2026-02-02: Actief(57), Cultuur & Historie(96), Eten & Drinken(138),
+    // Category configuration for Texel (7 button categories with specific colors)
+    // Database verified 2026-02-02: Actief(57), Cultuur & Historie(96), Eten & Drinken(138),
     // Natuur(98), Winkelen(160), Gezondheid & Verzorging(75), Praktisch(296), Accommodation(401-excluded)
+    // Colors: Actief (#FF6B00), Cultuur (#004B87), Eten (#E53935), Gezondheid (#43A047)
+    //         Natuur (#7CB342), Praktisch (#607D8B), Winkelen (#AB47BC)
     categories: {
       // Categories to show in menu (by id) - 7 Texel button categories
       enabled: ['actief', 'cultuur', 'eten', 'natuur', 'winkelen', 'gezondheid', 'praktisch'],
