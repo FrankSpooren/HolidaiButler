@@ -3,9 +3,9 @@
 
 **Datum**: 2 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 1.4
+**Versie**: 1.5
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 3 COMPLEET - Texel Data Kwaliteitsreview Afgerond
+**Status**: FASE 3 COMPLEET - Texel Data Kwaliteitsreview + POI Quality Filters Afgerond
 
 ---
 
@@ -1048,6 +1048,9 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 3.4 Frontend category buttons | ✅ Compleet | 02-02-2026 | Claude Code | 7 Texel categories met specifieke kleuren in categoryConfig.ts |
 | 3.5 Search functionaliteit | ✅ Compleet | 02-02-2026 | Claude Code | Browse mode hides flags, search mode shows all POIs |
 | 3.6 Data kwaliteit check | ✅ Compleet | 02-02-2026 | Claude Code | Geen markdown gevonden in descriptions |
+| 3.7 POI quality filters | ✅ Compleet | 02-02-2026 | Claude Code | Rating >= 4, reviews >= 3, images >= 3, enriched description required |
+| 3.8 Category mix percentages | ✅ Compleet | 02-02-2026 | Claude Code | Texel browse view: 7 categories met specifieke verdelingen |
+| 3.9 MapView improvements | ✅ Compleet | 02-02-2026 | Claude Code | perCategory=7 (~50 POIs), zoom=11 voor Texel eiland, category colors fixed |
 
 **Fase 3 Status**: ✅ COMPLEET (02 februari 2026)
 
@@ -1067,6 +1070,29 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | Natuur | #7CB342 | natuur |
 | Praktisch | #607D8B | praktisch |
 | Winkelen | #AB47BC | winkelen |
+
+**POI Quality Filters (Browse View):**
+- Rating >= 4.0
+- Review count >= 3
+- Enriched tile description required
+- At least 3 images required
+- Exclusies: Laadpunten (charging stations), begraafplaatsen (cemeteries)
+
+**Category Mix Percentages (Texel Default Browse):**
+| Categorie | Percentage |
+|-----------|------------|
+| Actief | 20% |
+| Cultuur & Historie | 20% |
+| Natuur | 20% |
+| Eten & Drinken | 15% |
+| Winkelen | 10% |
+| Gezondheid & Verzorging | 10% |
+| Praktisch | 5% |
+
+**MapView Configuratie:**
+- perCategory=7 voor ~50 POIs initieel
+- Texel zoom level: 11 (toont volledig eiland)
+- Category colors: Texel Dutch categories toegevoegd aan getCategoryColor()
 
 ### Fase 4: Alicante Preparation
 
@@ -1153,6 +1179,17 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - **destination.categories.enabled** - Gebruik enabled filter in plaats van excluded voor cleaner destination-specifieke categorieën
 - **CATEGORIES_ARRAY bevat alle** - Filtering per destination gebeurt in POILandingPage via enabled array
 
+**POI Quality Filters:**
+- **enriched_tile_description** - Correct kolomnaam (niet 'description'), MistralAI-gegenereerd
+- **POI.images JSON column** - Images opgeslagen als JSON array, niet in aparte ImageUrl tabel voor Texel
+- **Category mix implementatie** - Client-side shuffling voor gevarieerde presentatie per refresh
+- **Exclusion patterns** - Laadpunten via subcategory, begraafplaatsen via name keywords
+
+**MapView Multi-Destination:**
+- **Zoom per destination** - Texel (eiland ~25km) vereist zoom 11, Calpe (stad) vereist zoom 14
+- **getCategoryColor() uitbreiden** - Beide EN en NL categorienamen in color mapping nodig
+- **perCategory parameter** - API limit per category voor gebalanceerde kaart display
+
 ### Fase 4 Lessons Learned
 - *Nog geen - fase niet gestart*
 
@@ -1208,7 +1245,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 2 februari 2026 - Fase 3 Compleet*
+*Laatst bijgewerkt: 2 februari 2026 - Fase 3 Compleet + POI Quality Filters*
 *Volgende review: Na voltooiing Fase 4 (Alicante Preparation)*
 
 ---
@@ -1217,7 +1254,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **1.4** | **02-02-2026** | **Fase 3 COMPLEET: Texel Data Kwaliteitsreview - POI sync (1739 POIs), Category hiërarchie (129 categories, 7 button colors), Visibility flags (is_searchable_only, is_hidden_category), Frontend category buttons, Search functionaliteit. Calpe data ongewijzigd (1593 POIs).** |
+| **1.5** | **02-02-2026** | **Fase 3 UITGEBREID: POI Quality Filters (rating >= 4, reviews >= 3, images >= 3, enriched description), Category mix percentages, Exclusies (Laadpunten, begraafplaatsen), MapView improvements (zoom=11 Texel, category colors, perCategory=7).** |
+| 1.4 | 02-02-2026 | Fase 3 COMPLEET: Texel Data Kwaliteitsreview - POI sync (1739 POIs), Category hiërarchie (129 categories, 7 button colors), Visibility flags (is_searchable_only, is_hidden_category), Frontend category buttons, Search functionaliteit. Calpe data ongewijzigd (1593 POIs). |
 | 1.3 | 29-01-2026 | Fase 2 COMPLEET: Texel Deployment - DNS+SSL (texelmaps.nl), Data import (POI 1772, Categories 671, QnA 96093, Reviews 3929), GitHub Actions matrix deployment, placeholder branding. |
 | 1.2 | 28-01-2026 | Fase 1 COMPLEET: Database schema (INT destination_id, 6 tabellen), Apache VHosts (RequestHeader), Directory structuur geüpdatet naar daadwerkelijke implementatie. |
 | 1.1 | 28-01-2026 | Toegevoegd: Implementatie Log, Lessons Learned, Risico Register, Beslissingen Log |
