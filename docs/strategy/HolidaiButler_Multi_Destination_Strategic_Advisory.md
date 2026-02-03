@@ -1,11 +1,11 @@
 # HolidaiButler Multi-Destination Architecture
 ## Strategisch Adviesrapport
 
-**Datum**: 2 februari 2026
+**Datum**: 3 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 1.5
+**Versie**: 1.6
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 3 COMPLEET - Texel Data Kwaliteitsreview + POI Quality Filters Afgerond
+**Status**: FASE 3 COMPLEET - Texel Productioneel + MapView Bug Fixes
 
 ---
 
@@ -19,7 +19,7 @@
 | **Fase 4: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
 | **Fase 5: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 2 februari 2026 - Fase 3 Texel Data Kwaliteitsreview compleet
+**Laatste update**: 3 februari 2026 - Fase 3 Texel Productioneel + MapView Bug Fixes
 
 ---
 
@@ -1051,8 +1051,11 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 3.7 POI quality filters | ✅ Compleet | 02-02-2026 | Claude Code | Rating >= 4, reviews >= 3, images >= 3, enriched description required |
 | 3.8 Category mix percentages | ✅ Compleet | 02-02-2026 | Claude Code | Texel browse view: 7 categories met specifieke verdelingen |
 | 3.9 MapView improvements | ✅ Compleet | 02-02-2026 | Claude Code | perCategory=7 (~50 POIs), zoom=11 voor Texel eiland, category colors fixed |
+| 3.10 MapView zoom fix | ✅ Compleet | 03-02-2026 | Claude Code | Zoom 11→10 voor volledig Texel eiland zichtbaarheid |
+| 3.11 GeoJSON per_category bug | ✅ Compleet | 03-02-2026 | Claude Code | Variable shadowing fix: limit→perCategoryLimit, categories→distinctCategories |
+| 3.12 GitHub Actions recovery | ✅ Compleet | 03-02-2026 | Claude Code | Outage (runner issues) opgelost, alle 6 workflows successvol deployed |
 
-**Fase 3 Status**: ✅ COMPLEET (02 februari 2026)
+**Fase 3 Status**: ✅ COMPLEET (03 februari 2026)
 
 **POI Sync Resultaten:**
 - POIs verwijderd: 97 (niet in nieuwe Excel)
@@ -1090,9 +1093,11 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | Praktisch | 5% |
 
 **MapView Configuratie:**
-- perCategory=7 voor ~50 POIs initieel
-- Texel zoom level: 11 (toont volledig eiland)
+- perCategory=7 voor ~49 POIs (7 categorieën × 7 POIs)
+- Texel zoom level: 10 (toont volledig eiland - 25km)
+- Calpe zoom level: 14 (compacte stad)
 - Category colors: Texel Dutch categories toegevoegd aan getCategoryColor()
+- GeoJSON endpoint: variable shadowing bug gefixed (limit→perCategoryLimit)
 
 ### Fase 4: Alicante Preparation
 
@@ -1186,9 +1191,34 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - **Exclusion patterns** - Laadpunten via subcategory, begraafplaatsen via name keywords
 
 **MapView Multi-Destination:**
-- **Zoom per destination** - Texel (eiland ~25km) vereist zoom 11, Calpe (stad) vereist zoom 14
+- **Zoom per destination** - Texel (eiland ~25km) vereist zoom 10, Calpe (stad) vereist zoom 14
 - **getCategoryColor() uitbreiden** - Beide EN en NL categorienamen in color mapping nodig
 - **perCategory parameter** - API limit per category voor gebalanceerde kaart display
+
+### Fase 3 Lessons Learned - Productioneel (03-02-2026)
+
+**Variable Shadowing Bug:**
+- **`const limit = parseInt(per_category)`** - Shadowed de outer `limit` query parameter
+- **`const categories = await model.findAll(...)`** - Shadowed de outer `categories` query parameter
+- **Fix: Rename variables** - `limit`→`perCategoryLimit`, `categories`→`distinctCategories`
+- **Impact** - GeoJSON endpoint returneerde alleen 7 POIs (eerste categorie) i.p.v. 49 (7×7)
+
+**MapView Zoom Calibratie:**
+- **Texel is 25km eiland** - Zoom 11 was te dichtbij, zoom 10 toont volledig eiland
+- **Calpe is compacte stad** - Zoom 14 blijft correct
+- **Destination-aware zoom** - `destination.id === 'texel' ? 10 : 14`
+
+**GitHub Actions Outage:**
+- **Runner acquisition failures** - "The job was not acquired by Runner of type hosted even after multiple attempts"
+- **Internal server errors** - GitHub infrastructure issues, niet code-gerelateerd
+- **Recovery** - Version bumps (customer-portal 1.0.1, platform-core 2.1.1) om fresh CI/CD runs te triggeren
+- **Deploy volgorde** - ALTIJD dev→test→main met wachttijd tussen elke push
+- **Path filters** - Empty commits triggeren GEEN workflows; file changes in paths nodig
+
+**API X-Destination-ID Header:**
+- **Frontend apiClient** - Stuurt automatisch `X-Destination-ID: texel` header via axios defaults
+- **Backend getDestinationFromRequest()** - Checkt header→query param→default (1=Calpe)
+- **Texelmaps.nl Apache** - `RequestHeader set X-Destination-ID "texel"` in vhost config
 
 ### Fase 4 Lessons Learned
 - *Nog geen - fase niet gestart*
@@ -1245,7 +1275,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 2 februari 2026 - Fase 3 Compleet + POI Quality Filters*
+*Laatst bijgewerkt: 3 februari 2026 - Fase 3 Productioneel + MapView Bug Fixes*
 *Volgende review: Na voltooiing Fase 4 (Alicante Preparation)*
 
 ---
@@ -1254,7 +1284,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **1.5** | **02-02-2026** | **Fase 3 UITGEBREID: POI Quality Filters (rating >= 4, reviews >= 3, images >= 3, enriched description), Category mix percentages, Exclusies (Laadpunten, begraafplaatsen), MapView improvements (zoom=11 Texel, category colors, perCategory=7).** |
+| **1.6** | **03-02-2026** | **Fase 3 PRODUCTIONEEL: MapView zoom fix (11→10 voor volledig Texel eiland), GeoJSON per_category bug fix (variable shadowing: limit→perCategoryLimit), GitHub Actions outage recovery (6 workflows success), Version bumps (customer-portal 1.0.1, platform-core 2.1.1).** |
+| 1.5 | 02-02-2026 | Fase 3 UITGEBREID: POI Quality Filters (rating >= 4, reviews >= 3, images >= 3, enriched description), Category mix percentages, Exclusies (Laadpunten, begraafplaatsen), MapView improvements (zoom=11 Texel, category colors, perCategory=7). |
 | 1.4 | 02-02-2026 | Fase 3 COMPLEET: Texel Data Kwaliteitsreview - POI sync (1739 POIs), Category hiërarchie (129 categories, 7 button colors), Visibility flags (is_searchable_only, is_hidden_category), Frontend category buttons, Search functionaliteit. Calpe data ongewijzigd (1593 POIs). |
 | 1.3 | 29-01-2026 | Fase 2 COMPLEET: Texel Deployment - DNS+SSL (texelmaps.nl), Data import (POI 1772, Categories 671, QnA 96093, Reviews 3929), GitHub Actions matrix deployment, placeholder branding. |
 | 1.2 | 28-01-2026 | Fase 1 COMPLEET: Database schema (INT destination_id, 6 tabellen), Apache VHosts (RequestHeader), Directory structuur geüpdatet naar daadwerkelijke implementatie. |
