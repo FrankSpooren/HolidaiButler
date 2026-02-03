@@ -3,9 +3,9 @@
 
 **Datum**: 3 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 1.6
+**Versie**: 1.7
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 3 COMPLEET - Texel Productioneel + MapView Bug Fixes
+**Status**: FASE 3 COMPLEET - Texel Productioneel + Branding Finalisatie
 
 ---
 
@@ -1054,6 +1054,7 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 3.10 MapView zoom fix | ✅ Compleet | 03-02-2026 | Claude Code | Zoom 11→10 voor volledig Texel eiland zichtbaarheid |
 | 3.11 GeoJSON per_category bug | ✅ Compleet | 03-02-2026 | Claude Code | Variable shadowing fix: limit→perCategoryLimit, categories→distinctCategories |
 | 3.12 GitHub Actions recovery | ✅ Compleet | 03-02-2026 | Claude Code | Outage (runner issues) opgelost, alle 6 workflows successvol deployed |
+| 3.13 Branding Finalisatie | ✅ Compleet | 03-02-2026 | Claude Code | TexelMaps logo, VVV Texel partner, hero vuurtoren, kleuren #30c59b/#3572de/#ecde3c, footer fix |
 
 **Fase 3 Status**: ✅ COMPLEET (03 februari 2026)
 
@@ -1220,6 +1221,24 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - **Backend getDestinationFromRequest()** - Checkt header→query param→default (1=Calpe)
 - **Texelmaps.nl Apache** - `RequestHeader set X-Destination-ID "texel"` in vhost config
 
+### Fase 3 Lessons Learned - Branding Finalisatie (03-02-2026)
+
+**TexelMaps Huisstijl:**
+- **Definitieve kleuren vastgesteld** - Primary #30c59b (natuur groen), Secondary #3572de (zee blauw), Accent #ecde3c (zongeel)
+- **DestinationContext voor dynamische branding** - CSS variabelen worden runtime gezet vanuit vite.config.ts
+- **VVV Texel partnership** - Partner badge in USP sectie voor lokale autoriteit en vertrouwen
+- **Logo assets** - Transparante PNG voor header, icon versie voor favicon en kleine weergaves
+
+**Frontend Architectuur:**
+- **vite.config.ts als single source of truth** - Alle destination-specifieke config op één plek
+- **Multi-destination aware componenten** - HeroSection, Footer, USPSection gebruiken useDestination() hook
+- **Footer tagline overflow** - `white-space: nowrap` veroorzaakte tekst overlap; opgelost met max-width
+
+**Asset Management:**
+- **Assets in public/assets/images/texel/** - Separate directory per destination
+- **Server sync** - Assets ook naar `/var/www/api.holidaibutler.com/storage/destinations/texel/branding/`
+- **Backup voor deploy** - Altijd backup maken voordat nieuwe versie wordt uitgerold
+
 ### Fase 4 Lessons Learned
 - *Nog geen - fase niet gestart*
 
@@ -1250,6 +1269,8 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 28-01-2026 | RequestHeader i.p.v. SetEnv | Betrouwbaarder voor backend routing via HTTP header | Claude Code |
 | 28-01-2026 | Symlink voor backward compat | Bestaande Calpe POI images blijven werken zonder code wijzigingen | Claude Code |
 | 28-01-2026 | Config in platform-core/config/ | Dicht bij backend code, eenvoudiger imports | Claude Code |
+| 03-02-2026 | TexelMaps huisstijl definitief | #30c59b/#3572de/#ecde3c - Texelse identiteit (groen, blauw, geel) | Owner |
+| 03-02-2026 | VVV Texel partner badge | Lokale autoriteit, vertrouwen bezoekers, professionele uitstraling | Owner |
 
 ---
 
@@ -1275,7 +1296,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 3 februari 2026 - Fase 3 Productioneel + MapView Bug Fixes*
+*Laatst bijgewerkt: 3 februari 2026 - Fase 3 Branding Finalisatie*
 *Volgende review: Na voltooiing Fase 4 (Alicante Preparation)*
 
 ---
@@ -1284,7 +1305,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **1.6** | **03-02-2026** | **Fase 3 PRODUCTIONEEL: MapView zoom fix (11→10 voor volledig Texel eiland), GeoJSON per_category bug fix (variable shadowing: limit→perCategoryLimit), GitHub Actions outage recovery (6 workflows success), Version bumps (customer-portal 1.0.1, platform-core 2.1.1).** |
+| **1.7** | **03-02-2026** | **Fase 3 BRANDING FINALISATIE: TexelMaps officiële huisstijl (#30c59b/#3572de/#ecde3c), TexelMaps logo met vuurtoren/zeehond/kompas, VVV Texel partner badge, hero vuurtoren afbeelding, "Waddenjuweel" payoff, footer overlap fix.** |
+| 1.6 | 03-02-2026 | Fase 3 PRODUCTIONEEL: MapView zoom fix (11→10 voor volledig Texel eiland), GeoJSON per_category bug fix (variable shadowing: limit→perCategoryLimit), GitHub Actions outage recovery (6 workflows success), Version bumps (customer-portal 1.0.1, platform-core 2.1.1). |
 | 1.5 | 02-02-2026 | Fase 3 UITGEBREID: POI Quality Filters (rating >= 4, reviews >= 3, images >= 3, enriched description), Category mix percentages, Exclusies (Laadpunten, begraafplaatsen), MapView improvements (zoom=11 Texel, category colors, perCategory=7). |
 | 1.4 | 02-02-2026 | Fase 3 COMPLEET: Texel Data Kwaliteitsreview - POI sync (1739 POIs), Category hiërarchie (129 categories, 7 button colors), Visibility flags (is_searchable_only, is_hidden_category), Frontend category buttons, Search functionaliteit. Calpe data ongewijzigd (1593 POIs). |
 | 1.3 | 29-01-2026 | Fase 2 COMPLEET: Texel Deployment - DNS+SSL (texelmaps.nl), Data import (POI 1772, Categories 671, QnA 96093, Reviews 3929), GitHub Actions matrix deployment, placeholder branding. |

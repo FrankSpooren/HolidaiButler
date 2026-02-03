@@ -1,11 +1,12 @@
 /**
  * HolidaiButler - Texel (Netherlands) Configuration
- * 
+ *
  * @destination Texel
  * @country NL
- * @version 1.0.0
- * @lastUpdated 2026-01-28
+ * @version 1.1.0
+ * @lastUpdated 2026-02-03
  * @status ACTIVE (Fase 3 - productioneel)
+ * @branding TexelMaps Official Brand Colors + VVV Partner
  */
 
 export default {
@@ -71,20 +72,30 @@ export default {
   },
   
   branding: {
-    // Texel brand colors: RGB(0,255,100), RGB(0,202,255), RGB(242,255,0)
-    primaryColor: '#00FF64',
-    secondaryColor: '#00CAFF',
-    tertiaryColor: '#00A3CC',
-    accentColor: '#F2FF00',
-    headerGradient: ['#00CAFF', '#00A3CC', '#008FB3'],
-    buttonPrimary: '#00CAFF',
-    textPrimary: '#1A1A1A',
+    // TexelMaps Official Brand Colors (updated 2026-02-03)
+    // Primary: #30c59b (Texel nature green)
+    // Secondary: #3572de (sea blue)
+    // Accent: #ecde3c (Texel sun yellow)
+    primaryColor: '#30c59b',
+    secondaryColor: '#3572de',
+    tertiaryColor: '#2a5cb8',
+    accentColor: '#ecde3c',
+    headerGradient: ['#30c59b', '#28a883', '#209070'],
+    buttonPrimary: '#30c59b',
+    textPrimary: '#1a1a2e',
     textSecondary: '#666666',
-    logo: '/assets/destinations/texel/logo.svg',
-    logoWhite: '/assets/destinations/texel/logo-white.svg',
-    favicon: '/assets/destinations/texel/favicon.ico',
-    heroImage: '/assets/images/hero-texel.jpg',
-    ogImage: '/assets/destinations/texel/og-image.jpg'
+    textLight: '#ffffff',
+    backgroundColor: '#f8fffe',
+    footerBackground: '#1a1a2e',
+    logo: '/assets/images/texel/texelmaps-logo.png',
+    logoIcon: '/assets/images/texel/texelmaps-icon.png',
+    partnerLogo: '/assets/images/texel/vvv-texel-logo.gif',
+    partnerText: 'Officieel Partner VVV Texel',
+    favicon: '/assets/images/texel/texelmaps-icon.png',
+    heroImage: '/assets/images/texel/hero-texel-vuurtoren.jpg',
+    heroSubtitle: 'Ervaar dit Waddenjuweel volledig op jou afgestemd',
+    footerTagline: 'Jouw persoonlijke eilandgids voor Texel',
+    ogImage: '/assets/images/texel/texelmaps-logo.png'
   },
   
   legal: {

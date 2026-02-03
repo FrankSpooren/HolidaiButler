@@ -47,11 +47,12 @@
 }
 
 .footer-tagline {
-  margin: 0.25rem 0 1.25rem;
+  margin: 0.75rem 0 1.25rem;
   font-size: 0.9rem;
-  line-height: 1.4;
+  line-height: 1.5;
   color: white;
-  white-space: nowrap;
+  max-width: 280px;
+  /* Allow text to wrap naturally - prevents overlap with columns */
 }
 
 /* Social Links */

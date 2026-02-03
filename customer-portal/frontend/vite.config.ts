@@ -47,8 +47,8 @@ const destinationConfigs = {
     tagline: 'Ontdek Texel',
     description: 'Jouw persoonlijke eilandgids voor Texel. Ontdek stranden, fietsroutes, restaurants en natuur.',
     domain: 'texelmaps.nl',
-    icon: '/assets/images/TexelMaps_Icon_Web.png',
-    heroImage: '/assets/images/hero-texel.jpg',
+    icon: '/assets/images/texel/texelmaps-icon.png',
+    heroImage: '/assets/images/texel/hero-texel-vuurtoren.jpg',
     coordinates: { lat: 53.0833, lng: 4.8000 },
     languages: ['nl', 'de', 'en'],
     defaultLanguage: 'nl',
@@ -73,18 +73,21 @@ const destinationConfigs = {
         'Praktisch'
       ],
     },
-    // Texel branding colors (RGB: 0,255,100 / 0,202,255 / 242,255,0)
+    // TexelMaps Official Brand Colors (updated 2026-02-03)
+    // Primary: #30c59b (Texel nature green)
+    // Secondary: #3572de (sea blue)
+    // Accent: #ecde3c (Texel sun yellow)
     colors: {
-      primary: '#00FF64',
-      secondary: '#00CAFF',
-      tertiary: '#00A3CC',
-      accent: '#F2FF00',
-      headerGradient: 'linear-gradient(135deg, #00CAFF, #00A3CC, #008FB3)',
-      heroOverlay: 'linear-gradient(135deg, rgba(0, 202, 255, 0.4), rgba(0, 163, 204, 0.3))',
+      primary: '#30c59b',
+      secondary: '#3572de',
+      tertiary: '#2a5cb8',
+      accent: '#ecde3c',
+      headerGradient: 'linear-gradient(135deg, #30c59b, #28a883, #209070)',
+      heroOverlay: 'linear-gradient(135deg, rgba(48, 197, 155, 0.4), rgba(53, 114, 222, 0.3))',
     },
     hero: {
       title: 'Jouw eilandavontuur begint hier.',
-      subtitle: 'Ontdek Texel met persoonlijke AI-tips',
+      subtitle: 'Ervaar dit Waddenjuweel volledig op jou afgestemd',
       description: 'Stranden, natuur, fietsen en lokale parels - alles op één plek',
     },
   },
