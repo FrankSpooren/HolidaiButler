@@ -493,10 +493,10 @@ router.get('/geojson', async (req, res) => {
 
     if (per_category && !category) {
       // Fetch limited POIs per category for balanced map display
-      const limit = parseInt(per_category) || 2;
+      const perCategoryLimit = parseInt(per_category) || 2;
 
-      // Get all categories first
-      const categories = await model.findAll({
+      // Get all distinct categories matching the where clause
+      const distinctCategories = await model.findAll({
         attributes: [[mysqlSequelize.fn('DISTINCT', mysqlSequelize.col('category')), 'category']],
         where,
         raw: true
@@ -504,14 +504,14 @@ router.get('/geojson', async (req, res) => {
 
       // Fetch limited POIs for each category (prioritize high rating within destination)
       const categoryPOIs = await Promise.all(
-        categories.map(async (cat) => {
+        distinctCategories.map(async (cat) => {
           return model.findAll({
             where: {
               ...where,
               category: cat.category
             },
             order: [['rating', 'DESC'], ['review_count', 'DESC']],
-            limit
+            limit: perCategoryLimit
           });
         })
       );
@@ -519,7 +519,7 @@ router.get('/geojson', async (req, res) => {
       // Flatten and filter out empty results
       pois = categoryPOIs.flat();
 
-      // Apply total limit if specified
+      // Apply total limit if specified (from 'limit' query param, not per_category)
       const totalLimit = limit ? parseInt(limit) : null;
       if (totalLimit && pois.length > totalLimit) {
         pois = pois.slice(0, totalLimit);
