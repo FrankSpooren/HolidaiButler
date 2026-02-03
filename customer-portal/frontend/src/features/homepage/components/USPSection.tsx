@@ -44,9 +44,9 @@ const destinationUSPs = {
   ],
   texel: [
     {
-      icon: '🏝️',
-      title: 'Texel Expert',
-      description: 'Jouw persoonlijke eilandgids',
+      logoSrc: '/assets/images/texel/vvv-texel-logo.gif',
+      title: 'Officieel Partner',
+      description: 'Officieel Partner VVV Texel',
     },
     {
       icon: '🤖',
