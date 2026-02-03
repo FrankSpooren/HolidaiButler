@@ -48,13 +48,41 @@
 /* Responsive: smaller logo on mobile */
 @media (max-width: 768px) {
   .homepage-logo-container {
-    left: 12px;
-    top: 5px;
-    padding: 4px 8px;
+    left: 8px;
+    top: 8px;
+    padding: 4px 6px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   }
 
   .homepage-logo-img {
-    height: 70px;
+    height: 50px;
+  }
+
+  /* Texel logo - smaller on mobile to prevent overlap */
+  .texel-logo .homepage-logo-img {
+    height: 55px;
+  }
+
+  .homepage-logo-container.texel-logo {
+    padding: 2px 4px;
+  }
+}
+
+/* Extra small screens (iPhone SE, etc.) */
+@media (max-width: 375px) {
+  .homepage-logo-container {
+    left: 6px;
+    top: 6px;
+    padding: 3px 5px;
+  }
+
+  .homepage-logo-img {
+    height: 40px;
+  }
+
+  .texel-logo .homepage-logo-img {
+    height: 45px;
   }
 }
 
