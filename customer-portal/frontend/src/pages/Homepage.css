@@ -16,8 +16,14 @@
   left: 16px;
   top: 16px;
   z-index: 1001;
-  border: 2px solid #1a3a4a;
+  border: 2px solid var(--color-secondary, #1a3a4a);
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Texel-specific logo styling - minimal padding, larger logo */
+.homepage-logo-container.texel-logo {
+  border-color: var(--color-primary, #30c59b);
+  padding: 2px 3px;
 }
 
 .homepage-logo-container:hover {
@@ -33,6 +39,12 @@
   transform: translateY(-6px);
 }
 
+/* Texel logo - larger size, no transform needed */
+.texel-logo .homepage-logo-img {
+  height: 160px;
+  transform: none;
+}
+
 /* Responsive: smaller logo on mobile */
 @media (max-width: 768px) {
   .homepage-logo-container {
@@ -46,14 +58,14 @@
   }
 }
 
-/* Hero Section */
+/* Hero Section - Background set via inline style for multi-destination */
 .hero {
   position: relative;
   height: 55vh;
   min-height: 400px;
-  background:
-    linear-gradient(135deg, rgba(1, 97, 147, 0.5), rgba(26, 112, 157, 0.4)),
-    url('/assets/images/hero-calpe.jpg') center/cover no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -96,7 +108,7 @@
 .hero-payoff {
   font-size: 24px;
   font-weight: 600;
-  color: #D4AF37;
+  color: var(--color-accent, #D4AF37);
   margin-bottom: 12px;
   font-family: 'Inter', sans-serif;
   text-shadow: 0 2px 4px rgba(0,0,0,0.3);
@@ -166,7 +178,7 @@
 .usp-card:active {
   transform: translateY(-4px);
   box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-  border-color: #7FA594;
+  border-color: var(--color-primary, #7FA594);
 }
 
 .usp-icon {
@@ -243,7 +255,7 @@
 }
 
 .carousel-dot.active {
-  background: #7FA594;
+  background: var(--color-primary, #7FA594);
   width: 24px;
   border-radius: 4px;
 }
@@ -282,25 +294,25 @@
 }
 
 .cta-btn.explore {
-  background: #7FA594;
+  background: var(--color-secondary, #7FA594);
   color: white;
 }
 
 .cta-btn.explore:hover {
-  background: #5E8B7E;
+  background: var(--color-tertiary, #5E8B7E);
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(127,165,148,0.3);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
 }
 
 .cta-btn.agenda {
-  background: #016193;
+  background: var(--color-primary, #016193);
   color: white;
 }
 
 .cta-btn.agenda:hover {
-  background: #014a70;
+  background: var(--color-secondary, #014a70);
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(1,97,147,0.3);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
 }
 
 /* Mobile Responsive */
@@ -409,7 +421,7 @@
 .feature-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 24px rgba(0,0,0,0.12);
-  border: 2px solid #D4AF37;
+  border: 2px solid var(--color-accent, #D4AF37);
 }
 
 .feature-icon {
@@ -433,12 +445,12 @@
   font-family: 'Inter', sans-serif;
 }
 
-/* Rating Section - Adjusted */
+/* Rating Section - Pre-footer CTA with destination colors */
 .rating-section {
   max-width: 100%;
   margin: 0;
   padding: 24px 20px;
-  background: linear-gradient(135deg, #7FA594, #5E8B7E);
+  background: var(--header-gradient, linear-gradient(135deg, #7FA594, #5E8B7E));
   text-align: center;
   color: white;
 }
@@ -455,7 +467,7 @@
 
 .stars {
   font-size: 28px;
-  color: #D4AF37;
+  color: var(--color-accent, #D4AF37);
 }
 
 .rating-section .rating-text {
@@ -518,7 +530,7 @@
 }
 
 .footer-link:hover {
-  color: #D4AF37;
+  color: var(--color-accent, #D4AF37);
 }
 
 .footer-copy {

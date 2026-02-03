@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useDestination } from '../shared/contexts/DestinationContext';
 import { Footer } from '../shared/components/Footer';
 import './Homepage.css';
 
@@ -10,15 +11,44 @@ import './Homepage.css';
  * Route: /
  * Layout: RootLayout
  * Auth: Public
+ * Multi-destination aware via DestinationContext
  */
 
 export function Homepage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const destination = useDestination();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
-  // USPs with translations
-  const usps = [
+  // Texel USP translations
+  const texelUsps = {
+    nl: [
+      { logoSrc: '/assets/images/texel/vvv-texel-logo.gif', title: 'Officieel Partner', description: 'Officieel Partner VVV Texel' },
+      { icon: '🤖', title: 'Texla AI-Assistent', description: 'Texla: Jouw (hyper) persoonlijke Butler' },
+      { icon: '🌊', title: '100% Lokaal', description: 'Ondersteun Texel economie & identiteit' },
+      { icon: '⚡', title: 'Realtime info', description: 'Stranden, veerboot, weer en evenementen' },
+      { icon: '🔒', title: 'Veilig & Betrouwbaar', description: 'We geven om je privacy' },
+    ],
+    en: [
+      { logoSrc: '/assets/images/texel/vvv-texel-logo.gif', title: 'Official Partner', description: 'Official Partner VVV Texel' },
+      { icon: '🤖', title: 'Texla AI Assistant', description: 'Texla: Your (hyper) personal Butler' },
+      { icon: '🌊', title: '100% Local', description: 'Support Texel economy & identity' },
+      { icon: '⚡', title: 'Real-time info', description: 'Beaches, ferry, weather and events' },
+      { icon: '🔒', title: 'Safe & Reliable', description: 'We care about your privacy' },
+    ],
+    de: [
+      { logoSrc: '/assets/images/texel/vvv-texel-logo.gif', title: 'Offizieller Partner', description: 'Offizieller Partner VVV Texel' },
+      { icon: '🤖', title: 'Texla KI-Assistent', description: 'Texla: Ihr (hyper) persönlicher Butler' },
+      { icon: '🌊', title: '100% Lokal', description: 'Unterstützen Sie die Texeler Wirtschaft & Identität' },
+      { icon: '⚡', title: 'Echtzeit-Info', description: 'Strände, Fähre, Wetter und Veranstaltungen' },
+      { icon: '🔒', title: 'Sicher & Zuverlässig', description: 'Wir kümmern uns um Ihre Privatsphäre' },
+    ],
+  };
+
+  // Destination-specific USPs
+  const usps = destination.id === 'texel'
+    ? (texelUsps[language as keyof typeof texelUsps] || texelUsps.nl)
+    : [
     {
       logoSrc: '/assets/images/calpe-turismo-logo.png',
       title: t.homepage.usps.partner.title,
@@ -61,29 +91,76 @@ export function Homepage() {
     return () => clearInterval(interval);
   }, [isMobile]);
 
+  // Texel hero translations
+  const texelHero = {
+    nl: {
+      title: 'Jouw eilandavontuur begint hier.',
+      payoff: 'Ervaar dit Waddenjuweel volledig op jou afgestemd',
+      subtitle: 'Stranden, natuur, fietsen en lokale parels - alles op één plek',
+      why: 'Waarom TexelMaps?',
+    },
+    en: {
+      title: 'Your island adventure starts here.',
+      payoff: 'Experience this Wadden gem fully tailored to you',
+      subtitle: 'Beaches, nature, cycling and local gems - all in one place',
+      why: 'Why TexelMaps?',
+    },
+    de: {
+      title: 'Ihr Inselabenteuer beginnt hier.',
+      payoff: 'Erleben Sie dieses Wattenjuwel ganz auf Sie abgestimmt',
+      subtitle: 'Strände, Natur, Radfahren und lokale Perlen - alles an einem Ort',
+      why: 'Warum TexelMaps?',
+    },
+  };
+
+  const currentTexelHero = texelHero[language as keyof typeof texelHero] || texelHero.nl;
+
+  // Destination-specific hero content
+  const heroContent = destination.id === 'texel' ? {
+    title: currentTexelHero.title,
+    payoff: currentTexelHero.payoff,
+    subtitle: currentTexelHero.subtitle,
+    logoSrc: '/assets/images/texel/texelmaps-logo.png',
+    logoAlt: 'TexelMaps',
+  } : {
+    title: t.homepage.hero.title,
+    payoff: t.homepage.hero.payoff,
+    subtitle: t.homepage.hero.subtitle,
+    logoSrc: '/assets/images/hb-logo-homepage.png',
+    logoAlt: 'HolidaiButler',
+  };
+
   return (
     <>
-      {/* Fixed Logo Block - Homepage Only */}
-      <Link to="/" className="homepage-logo-container">
+      {/* Fixed Logo Block - Homepage Only - Destination aware */}
+      <Link to="/" className={`homepage-logo-container ${destination.id === 'texel' ? 'texel-logo' : ''}`}>
         <img
-          src="/assets/images/hb-logo-homepage.png"
-          alt="HolidaiButler"
+          src={heroContent.logoSrc}
+          alt={heroContent.logoAlt}
           className="homepage-logo-img"
         />
       </Link>
 
-      {/* Hero Section */}
-      <section className="hero">
+      {/* Hero Section - Uses CSS variables from DestinationContext */}
+      <section className="hero" style={{
+        backgroundImage: `
+          var(--hero-overlay),
+          linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+          url('${destination.heroImage}')
+        `
+      }}>
         <div className="hero-content">
-          <h1>{t.homepage.hero.title}</h1>
-          <p className="hero-payoff">{t.homepage.hero.payoff}</p>
-          <p className="hero-sub">{t.homepage.hero.subtitle}</p>
+          <h1>{heroContent.title}</h1>
+          <p className="hero-payoff">{heroContent.payoff}</p>
+          <p className="hero-sub">{heroContent.subtitle}</p>
         </div>
       </section>
 
-      {/* Why HolidaiButler Section */}
+      {/* Why Section - Destination aware */}
       <section className="why-section">
-        <h2 className="why-title">{t.homepage.why.title}</h2>
+        <h2 className="why-title">
+          {destination.id === 'texel' ? currentTexelHero.why : t.homepage.why.title}
+        </h2>
       </section>
 
       {/* USP Section */}

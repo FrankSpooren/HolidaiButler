@@ -74,6 +74,16 @@ export function DestinationProvider({ children }: DestinationProviderProps) {
     root.style.setProperty('--header-gradient', colors.headerGradient);
     root.style.setProperty('--hero-overlay', colors.heroOverlay);
 
+    // Auth page gradients (Texel uses blue secondary, others use primary green)
+    // For Texel: blue gradient, for Calpe: green gradient
+    if (destinationConfig.id === 'texel') {
+      root.style.setProperty('--auth-gradient', `linear-gradient(135deg, ${colors.secondary} 0%, ${colors.tertiary} 100%)`);
+      root.style.setProperty('--auth-button-gradient', `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`);
+    } else {
+      root.style.setProperty('--auth-gradient', `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 50%, ${colors.tertiary} 100%)`);
+      root.style.setProperty('--auth-button-gradient', `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`);
+    }
+
     // Also set Tailwind-compatible CSS variables
     root.style.setProperty('--tw-color-brand-primary', colors.primary);
     root.style.setProperty('--tw-color-brand-secondary', colors.secondary);
