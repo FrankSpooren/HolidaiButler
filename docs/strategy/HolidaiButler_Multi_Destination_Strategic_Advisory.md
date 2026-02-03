@@ -3,9 +3,9 @@
 
 **Datum**: 3 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 1.7
+**Versie**: 1.8
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 3 COMPLEET - Texel Productioneel + Branding Finalisatie
+**Status**: FASE 3 COMPLEET - Texel Productioneel + Performance Optimalisatie
 
 ---
 
@@ -19,7 +19,7 @@
 | **Fase 4: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
 | **Fase 5: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 3 februari 2026 - Fase 3 Texel Productioneel + MapView Bug Fixes
+**Laatste update**: 3 februari 2026 - Fase 3 Texel Performance Optimalisatie + Mobile Logo Fix
 
 ---
 
@@ -1055,6 +1055,8 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 3.11 GeoJSON per_category bug | ✅ Compleet | 03-02-2026 | Claude Code | Variable shadowing fix: limit→perCategoryLimit, categories→distinctCategories |
 | 3.12 GitHub Actions recovery | ✅ Compleet | 03-02-2026 | Claude Code | Outage (runner issues) opgelost, alle 6 workflows successvol deployed |
 | 3.13 Branding Finalisatie | ✅ Compleet | 03-02-2026 | Claude Code | TexelMaps logo, VVV Texel partner, hero vuurtoren, kleuren #30c59b/#3572de/#ecde3c, footer fix |
+| 3.14 Performance Optimalisatie | ✅ Compleet | 03-02-2026 | Claude Code | Sentry DSN fix, code splitting, lazy loading, -32% bundle size |
+| 3.15 Mobile Logo Fix | ✅ Compleet | 03-02-2026 | Claude Code | Logo vergroot voor leesbaarheid (55px→80px), header overlap effect |
 
 **Fase 3 Status**: ✅ COMPLEET (03 februari 2026)
 
@@ -1239,6 +1241,24 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - **Server sync** - Assets ook naar `/var/www/api.holidaibutler.com/storage/destinations/texel/branding/`
 - **Backup voor deploy** - Altijd backup maken voordat nieuwe versie wordt uitgerold
 
+### Fase 3 Lessons Learned - Performance Optimalisatie (03-02-2026)
+
+**Sentry/Bugsink DSN:**
+- **Texel heeft geen eigen Bugsink instance** - HolidaiButler DSN veroorzaakte "Invalid Sentry Dsn" console errors
+- **Conditionale initialisatie** - DSN uitgecommenteerd in `.env.texel`, main.tsx try-catch wrapper bleef intact
+- **Aparte error monitoring per destination** - Overweeg Texel-specifieke Bugsink instance in productie
+
+**Frontend Performance:**
+- **Code splitting met manualChunks** - Vendor dependencies (react, framer-motion, leaflet, sentry) apart gebundeld
+- **Route-based lazy loading** - 16 pagina's naar React.lazy(), critical pages laden direct
+- **Bundle size reductie** - Main bundle van 1,049 kB naar 713 kB (-32%)
+- **Image lazy loading** - `loading="lazy"` attribute op USP logo afbeeldingen
+
+**Mobile Responsiveness:**
+- **Logo leesbaarheid** - 55px was te klein op mobiel, 80px biedt goede balans
+- **Header overlap effect** - Logo dat over header balk valt creëert visuele connectie met hero
+- **Extra small screens (375px)** - Aparte breakpoint voor iPhone SE met 70px logo
+
 ### Fase 4 Lessons Learned
 - *Nog geen - fase niet gestart*
 
@@ -1296,7 +1316,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 3 februari 2026 - Fase 3 Branding Finalisatie*
+*Laatst bijgewerkt: 3 februari 2026 - Fase 3 Performance Optimalisatie*
 *Volgende review: Na voltooiing Fase 4 (Alicante Preparation)*
 
 ---
@@ -1305,7 +1325,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **1.7** | **03-02-2026** | **Fase 3 BRANDING FINALISATIE: TexelMaps officiële huisstijl (#30c59b/#3572de/#ecde3c), TexelMaps logo met vuurtoren/zeehond/kompas, VVV Texel partner badge, hero vuurtoren afbeelding, "Waddenjuweel" payoff, footer overlap fix.** |
+| **1.8** | **03-02-2026** | **Fase 3 PERFORMANCE: Sentry DSN fix (.env.texel), Code splitting (manualChunks: react/framer-motion/leaflet/sentry), Route-based lazy loading (16 pagina's), Bundle -32% (1049→713 kB). Mobile logo fix: 55px→80px voor leesbaarheid + header overlap effect.** |
+| 1.7 | 03-02-2026 | Fase 3 BRANDING FINALISATIE: TexelMaps officiële huisstijl (#30c59b/#3572de/#ecde3c), TexelMaps logo met vuurtoren/zeehond/kompas, VVV Texel partner badge, hero vuurtoren afbeelding, "Waddenjuweel" payoff, footer overlap fix. |
 | 1.6 | 03-02-2026 | Fase 3 PRODUCTIONEEL: MapView zoom fix (11→10 voor volledig Texel eiland), GeoJSON per_category bug fix (variable shadowing: limit→perCategoryLimit), GitHub Actions outage recovery (6 workflows success), Version bumps (customer-portal 1.0.1, platform-core 2.1.1). |
 | 1.5 | 02-02-2026 | Fase 3 UITGEBREID: POI Quality Filters (rating >= 4, reviews >= 3, images >= 3, enriched description), Category mix percentages, Exclusies (Laadpunten, begraafplaatsen), MapView improvements (zoom=11 Texel, category colors, perCategory=7). |
 | 1.4 | 02-02-2026 | Fase 3 COMPLEET: Texel Data Kwaliteitsreview - POI sync (1739 POIs), Category hiërarchie (129 categories, 7 button colors), Visibility flags (is_searchable_only, is_hidden_category), Frontend category buttons, Search functionaliteit. Calpe data ongewijzigd (1593 POIs). |
