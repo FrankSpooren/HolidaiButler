@@ -45,44 +45,47 @@
   transform: none;
 }
 
-/* Responsive: smaller logo on mobile */
+/* Responsive: logo on mobile - overlaps header bar for visual connection */
 @media (max-width: 768px) {
   .homepage-logo-container {
-    left: 8px;
-    top: 8px;
+    left: 10px;
+    top: 10px;
     padding: 4px 6px;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
   }
 
   .homepage-logo-img {
-    height: 50px;
+    height: 60px;
   }
 
-  /* Texel logo - smaller on mobile to prevent overlap */
+  /* Texel logo - readable size, overlaps green header bar */
   .texel-logo .homepage-logo-img {
-    height: 55px;
+    height: 80px;
   }
 
   .homepage-logo-container.texel-logo {
-    padding: 2px 4px;
+    padding: 3px 5px;
+    /* Positioned to overlap header and hero for visual connection */
+    top: 8px;
   }
 }
 
 /* Extra small screens (iPhone SE, etc.) */
 @media (max-width: 375px) {
   .homepage-logo-container {
-    left: 6px;
-    top: 6px;
+    left: 8px;
+    top: 8px;
     padding: 3px 5px;
   }
 
   .homepage-logo-img {
-    height: 40px;
+    height: 50px;
   }
 
+  /* Texel logo - still readable on small screens */
   .texel-logo .homepage-logo-img {
-    height: 45px;
+    height: 70px;
   }
 }
 
