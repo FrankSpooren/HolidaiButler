@@ -127,6 +127,25 @@ export default defineConfig(({ mode }) => {
       include: ['@adyen/adyen-web'],
       force: true,
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // Vendor chunks - split large dependencies
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-motion': ['framer-motion'],
+            'vendor-map': ['leaflet', 'react-leaflet'],
+            'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+            'vendor-query': ['@tanstack/react-query'],
+            'vendor-i18n': ['i18next', 'react-i18next'],
+            // Sentry loaded conditionally - separate chunk
+            'vendor-monitoring': ['@sentry/react'],
+          },
+        },
+      },
+      // Enable chunk size warnings
+      chunkSizeWarningLimit: 500,
+    },
     server: {
       host: true,
       allowedHosts: [
