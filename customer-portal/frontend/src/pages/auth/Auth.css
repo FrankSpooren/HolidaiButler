@@ -1,8 +1,10 @@
-/* Auth Pages - Enterprise Styling */
+/* Auth Pages - Enterprise Styling (Multi-Destination Aware) */
 
 .auth-container {
     min-height: 100vh;
-    background: linear-gradient(135deg, #7FA594 0%, #5E8B7E 50%, #4A7066 100%);
+    /* Uses CSS variables from DestinationContext for multi-destination branding */
+    /* Texel: blue gradient (#3572de → #2a5cb8), Calpe: green gradient (#7FA594 → #4A7066) */
+    background: var(--auth-gradient, linear-gradient(135deg, #7FA594 0%, #5E8B7E 50%, #4A7066 100%));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -27,7 +29,7 @@
 .auth-logo h1 {
     font-size: 32px;
     font-weight: 700;
-    color: #5E8B7E;
+    color: var(--color-secondary, #5E8B7E);
     margin-bottom: 8px;
 }
 
@@ -65,8 +67,8 @@
 
 .form-group input:focus {
     outline: none;
-    border-color: #7FA594;
-    box-shadow: 0 0 0 3px rgba(127, 165, 148, 0.1);
+    border-color: var(--color-primary, #7FA594);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #7FA594) 10%, transparent);
 }
 
 .form-group input::placeholder {
@@ -80,7 +82,7 @@
 }
 
 .auth-button {
-    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    background: var(--auth-button-gradient, linear-gradient(135deg, #7FA594, #5E8B7E));
     color: white;
     padding: 14px 24px;
     border: none;
@@ -94,7 +96,7 @@
 
 .auth-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(127, 165, 148, 0.4);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary, #7FA594) 40%, transparent);
 }
 
 .auth-button:active {
@@ -115,14 +117,14 @@
 }
 
 .auth-link a {
-    color: #7FA594;
+    color: var(--color-primary, #7FA594);
     font-weight: 600;
     text-decoration: none;
     transition: color 0.2s ease;
 }
 
 .auth-link a:hover {
-    color: #5E8B7E;
+    color: var(--color-secondary, #5E8B7E);
     text-decoration: underline;
 }
 
@@ -132,14 +134,30 @@
 }
 
 .forgot-password a {
-    color: #7FA594;
+    color: var(--color-primary, #7FA594);
     text-decoration: none;
     font-weight: 500;
     transition: color 0.2s ease;
 }
 
 .forgot-password a:hover {
-    color: #5E8B7E;
+    color: var(--color-secondary, #5E8B7E);
+    text-decoration: underline;
+}
+
+/* Back link in 2FA mode */
+.auth-back-link {
+    background: none;
+    border: none;
+    color: var(--color-primary, #7FA594);
+    cursor: pointer;
+    margin-top: 12px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.auth-back-link:hover {
+    color: var(--color-secondary, #5E8B7E);
     text-decoration: underline;
 }
 

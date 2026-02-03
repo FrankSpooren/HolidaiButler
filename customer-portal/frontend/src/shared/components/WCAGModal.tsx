@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import './WCAGModal.css';
 
 interface WCAGModalProps {
@@ -6,7 +7,61 @@ interface WCAGModalProps {
   onClose: () => void;
 }
 
+// WCAG translations
+const wcagTranslations = {
+  nl: {
+    title: 'Toegankelijkheidsinstellingen',
+    fontSize: 'Lettergrootte',
+    letterSpacing: 'Letterafstand',
+    lineHeight: 'Regelhoogte',
+    contrastMode: 'Contrastmodus',
+    normal: 'Normaal',
+    highContrast: 'Hoog contrast',
+    grayscale: 'Grijstintenmodus',
+    resetToDefault: 'Standaardinstellingen',
+    applyAndClose: 'Toepassen & Sluiten',
+  },
+  en: {
+    title: 'Accessibility Settings',
+    fontSize: 'Font Size',
+    letterSpacing: 'Letter Spacing',
+    lineHeight: 'Line Height',
+    contrastMode: 'Contrast Mode',
+    normal: 'Normal',
+    highContrast: 'High Contrast',
+    grayscale: 'Grayscale Mode',
+    resetToDefault: 'Reset to Default',
+    applyAndClose: 'Apply & Close',
+  },
+  de: {
+    title: 'Barrierefreiheitseinstellungen',
+    fontSize: 'Schriftgröße',
+    letterSpacing: 'Zeichenabstand',
+    lineHeight: 'Zeilenhöhe',
+    contrastMode: 'Kontrastmodus',
+    normal: 'Normal',
+    highContrast: 'Hoher Kontrast',
+    grayscale: 'Graustufenmodus',
+    resetToDefault: 'Zurücksetzen',
+    applyAndClose: 'Anwenden & Schließen',
+  },
+  es: {
+    title: 'Configuración de Accesibilidad',
+    fontSize: 'Tamaño de Fuente',
+    letterSpacing: 'Espaciado de Letras',
+    lineHeight: 'Altura de Línea',
+    contrastMode: 'Modo de Contraste',
+    normal: 'Normal',
+    highContrast: 'Alto Contraste',
+    grayscale: 'Modo Escala de Grises',
+    resetToDefault: 'Restablecer',
+    applyAndClose: 'Aplicar y Cerrar',
+  },
+};
+
 export function WCAGModal({ isOpen, onClose }: WCAGModalProps) {
+  const { language } = useLanguage();
+  const t = wcagTranslations[language as keyof typeof wcagTranslations] || wcagTranslations.en;
   const [fontSize, setFontSize] = useState<number>(100);
   const [contrast, setContrast] = useState<'normal' | 'high'>('normal');
   const [letterSpacing, setLetterSpacing] = useState<number>(0);
@@ -67,7 +122,7 @@ export function WCAGModal({ isOpen, onClose }: WCAGModalProps) {
     <div className="wcag-modal-overlay" onClick={onClose}>
       <div className="wcag-modal" onClick={(e) => e.stopPropagation()}>
         <div className="wcag-modal-header">
-          <h2 className="wcag-modal-title">Accessibility Settings</h2>
+          <h2 className="wcag-modal-title">{t.title}</h2>
           <button className="wcag-close-btn" onClick={onClose} aria-label="Close">
             ×
           </button>
@@ -77,7 +132,7 @@ export function WCAGModal({ isOpen, onClose }: WCAGModalProps) {
           {/* Font Size */}
           <div className="wcag-control">
             <label htmlFor="font-size" className="wcag-label">
-              Font Size: {fontSize}%
+              {t.fontSize}: {fontSize}%
             </label>
             <div className="wcag-slider-container">
               <button
@@ -111,7 +166,7 @@ export function WCAGModal({ isOpen, onClose }: WCAGModalProps) {
           {/* Letter Spacing */}
           <div className="wcag-control">
             <label htmlFor="letter-spacing" className="wcag-label">
-              Letter Spacing: {letterSpacing}px
+              {t.letterSpacing}: {letterSpacing}px
             </label>
             <input
               id="letter-spacing"
@@ -129,7 +184,7 @@ export function WCAGModal({ isOpen, onClose }: WCAGModalProps) {
           {/* Line Height */}
           <div className="wcag-control">
             <label htmlFor="line-height" className="wcag-label">
-              Line Height: {lineHeight.toFixed(1)}
+              {t.lineHeight}: {lineHeight.toFixed(1)}
             </label>
             <input
               id="line-height"
@@ -146,19 +201,19 @@ export function WCAGModal({ isOpen, onClose }: WCAGModalProps) {
 
           {/* Contrast Mode */}
           <div className="wcag-control">
-            <label className="wcag-label">Contrast Mode</label>
+            <label className="wcag-label">{t.contrastMode}</label>
             <div className="wcag-toggle-group">
               <button
                 className={`wcag-toggle-btn ${contrast === 'normal' ? 'active' : ''}`}
                 onClick={() => setContrast('normal')}
               >
-                Normal
+                {t.normal}
               </button>
               <button
                 className={`wcag-toggle-btn ${contrast === 'high' ? 'active' : ''}`}
                 onClick={() => setContrast('high')}
               >
-                High Contrast
+                {t.highContrast}
               </button>
             </div>
           </div>
@@ -172,17 +227,17 @@ export function WCAGModal({ isOpen, onClose }: WCAGModalProps) {
                 onChange={(e) => setGrayscale(e.target.checked)}
                 className="wcag-checkbox"
               />
-              <span>Grayscale Mode</span>
+              <span>{t.grayscale}</span>
             </label>
           </div>
         </div>
 
         <div className="wcag-modal-footer">
           <button className="wcag-reset-btn" onClick={resetToDefault}>
-            Reset to Default
+            {t.resetToDefault}
           </button>
           <button className="wcag-apply-btn" onClick={onClose}>
-            Apply & Close
+            {t.applyAndClose}
           </button>
         </div>
       </div>

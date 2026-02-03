@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/features/auth/services/authService';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useDestination } from '@/shared/contexts/DestinationContext';
 import './Auth.css';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const destination = useDestination();
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -104,7 +106,7 @@ export function LoginPage() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-logo">
-          {/* Butler with compass logo */}
+          {/* Destination-aware logo */}
           <div style={{
             width: '200px',
             height: '125px',
@@ -114,8 +116,10 @@ export function LoginPage() {
             justifyContent: 'center'
           }}>
             <img
-              src="/assets/images/hb-logo-homepage.png"
-              alt="HolidaiButler"
+              src={destination.id === 'texel'
+                ? '/assets/images/texel/texelmaps-logo.png'
+                : '/assets/images/hb-logo-homepage.png'}
+              alt={destination.id === 'texel' ? 'TexelMaps' : 'HolidaiButler'}
               style={{
                 maxWidth: '100%',
                 maxHeight: '100%',
@@ -205,15 +209,7 @@ export function LoginPage() {
             <button
               type="button"
               onClick={handleBack}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#7FA594',
-                cursor: 'pointer',
-                marginTop: '12px',
-                fontSize: '14px',
-                fontWeight: 500
-              }}
+              className="auth-back-link"
             >
               ← Terug naar inloggen
             </button>

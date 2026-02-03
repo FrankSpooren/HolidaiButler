@@ -17,7 +17,7 @@ import './Footer.css';
  * - WCAG compliant
  */
 export function Footer() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const destination = useDestination();
   const currentYear = new Date().getFullYear();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
@@ -56,13 +56,19 @@ export function Footer() {
           <div className="footer-brand">
             <Link to="/" className="footer-logo">
               <img
-                src={destination.icon}
+                src={destination.id === 'texel'
+                  ? '/assets/images/texel/texelmaps-logo-transparent.png'
+                  : destination.icon}
                 alt={destination.name}
-                className="footer-logo-img"
+                className={`footer-logo-img ${destination.id === 'texel' ? 'texel-footer-logo' : ''}`}
               />
             </Link>
             <p className="footer-tagline">
-              {destination.description}
+              {destination.id === 'texel'
+                ? (language === 'en' ? 'Your personal island guide for Texel'
+                  : language === 'de' ? 'Ihr persönlicher Inselführer für Texel'
+                  : 'Jouw persoonlijke eilandgids voor Texel')
+                : destination.description}
             </p>
 
             {/* Social Links - destination-aware */}

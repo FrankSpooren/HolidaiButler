@@ -18,6 +18,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { ArrowLeft, X } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useDestination } from '../../shared/contexts/DestinationContext';
 import './Onboarding.css';
 
 // Types
@@ -80,9 +81,25 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 const OnboardingFlow: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const destination = useDestination();
   const ob = (t as any).onboarding || {};
   const isEditMode = searchParams.get('mode') === 'edit';
+
+  // Texel-specific step 2 translations (island = "op" not "in")
+  const texelStep2Titles = {
+    nl: 'Waar ben je naar op zoek op Texel?',
+    en: 'What are you looking for on Texel?',
+    de: 'Was suchst du auf Texel?',
+  };
+
+  // Get step 2 title based on destination
+  const getStep2Title = () => {
+    if (destination.id === 'texel') {
+      return texelStep2Titles[language as keyof typeof texelStep2Titles] || texelStep2Titles.nl;
+    }
+    return ob.step2Title || 'What are you looking for in Calpe?';
+  };
 
   const [currentStep, setCurrentStep] = useState(1);
   const [showSkipModal, setShowSkipModal] = useState(false);
@@ -337,7 +354,7 @@ const OnboardingFlow: React.FC = () => {
           <>
             <div className="onboarding-heading">
               <div className="heading-icon">🎯</div>
-              {ob.step2Title || 'What are you looking for in Calpe?'}
+              {getStep2Title()}
             </div>
             <div className="onboarding-subheading">{ob.selectAll || '(Select all that apply)'}</div>
 

@@ -44,6 +44,15 @@
   height: 80px;
   width: auto;
   display: block;
+  /* Ensure transparent PNG displays correctly on dark footer background */
+  background: transparent;
+}
+
+/* Texel footer logo - full logo with transparent background */
+.footer-logo-img.texel-footer-logo {
+  height: 100px;
+  width: auto;
+  background: transparent;
 }
 
 .footer-tagline {
