@@ -172,7 +172,7 @@ export function Homepage() {
               {usps.map((usp, index) => (
                 <div key={index} className="usp-card">
                   {usp.logoSrc ? (
-                    <img src={usp.logoSrc} alt={usp.title} className="usp-icon logo-calpe" />
+                    <img src={usp.logoSrc} alt={usp.title} className="usp-icon logo-calpe" loading="lazy" />
                   ) : (
                     <div className="usp-icon">{usp.icon}</div>
                   )}
@@ -190,7 +190,7 @@ export function Homepage() {
                 {usps.map((usp, index) => (
                   <div key={index} className="usp-card">
                     {usp.logoSrc ? (
-                      <img src={usp.logoSrc} alt={usp.title} className="usp-icon logo-calpe" />
+                      <img src={usp.logoSrc} alt={usp.title} className="usp-icon logo-calpe" loading="lazy" />
                     ) : (
                       <div className="usp-icon">{usp.icon}</div>
                     )}
