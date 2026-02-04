@@ -222,14 +222,14 @@
 }
 
 .comparison-link {
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s ease;
 }
 
 .comparison-link:hover {
-  color: #5E8B7E;
+  color: var(--color-secondary, #30c59b);
   text-decoration: underline;
 }
 

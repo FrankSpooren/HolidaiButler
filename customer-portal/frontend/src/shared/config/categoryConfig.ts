@@ -96,7 +96,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     name: 'Accommodation (do not communicate)',
     id: 'accommodation',
     icon: '/assets/category-icons/accommodation.png',
-    color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
+    color: 'linear-gradient(135deg, #30c59b, #3572de)',
   },
 
   // ============================================
@@ -166,7 +166,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     name: 'Accommodation',
     id: 'accommodation',
     icon: '/assets/category-icons/accommodation.png',
-    color: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
+    color: 'linear-gradient(135deg, #30c59b, #3572de)',
   },
 
   // ===========================================
@@ -266,7 +266,7 @@ export function getCategoryIcon(categoryName: string): string {
  * Returns fallback color if category not found
  */
 export function getCategoryColor(categoryName: string): string {
-  return CATEGORY_CONFIG[categoryName]?.color || 'linear-gradient(135deg, #7FA594, #5E8B7E)';
+  return CATEGORY_CONFIG[categoryName]?.color || 'linear-gradient(135deg, #30c59b, #3572de)';
 }
 
 /**

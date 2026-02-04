@@ -1,11 +1,11 @@
 # HolidaiButler Multi-Destination Architecture
 ## Strategisch Adviesrapport
 
-**Datum**: 3 februari 2026
+**Datum**: 4 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 1.8
+**Versie**: 1.9
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 3 COMPLEET - Texel Productioneel + Performance Optimalisatie
+**Status**: FASE 3 COMPLEET - Texel Productioneel + Complete Branding Migratie
 
 ---
 
@@ -19,7 +19,7 @@
 | **Fase 4: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
 | **Fase 5: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 3 februari 2026 - Fase 3 Texel Performance Optimalisatie + Mobile Logo Fix
+**Laatste update**: 4 februari 2026 - Fase 3 Complete Branding Migratie (CSS variabelen)
 
 ---
 
@@ -1057,8 +1057,9 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 3.13 Branding Finalisatie | ✅ Compleet | 03-02-2026 | Claude Code | TexelMaps logo, VVV Texel partner, hero vuurtoren, kleuren #30c59b/#3572de/#ecde3c, footer fix |
 | 3.14 Performance Optimalisatie | ✅ Compleet | 03-02-2026 | Claude Code | Sentry DSN fix, code splitting, lazy loading, -32% bundle size |
 | 3.15 Mobile Logo Fix | ✅ Compleet | 03-02-2026 | Claude Code | Logo vergroot voor leesbaarheid (55px→80px), header overlap effect |
+| 3.16 CSS Variabelen Migratie | ✅ Compleet | 04-02-2026 | Claude Code | ALLE hardcoded HolidaiButler kleuren (#7FA594, #5E8B7E, #4A7066) → CSS variabelen met Texel fallbacks (#30c59b, #3572de) in 33+ bestanden |
 
-**Fase 3 Status**: ✅ COMPLEET (03 februari 2026)
+**Fase 3 Status**: ✅ COMPLEET (04 februari 2026)
 
 **POI Sync Resultaten:**
 - POIs verwijderd: 97 (niet in nieuwe Excel)
@@ -1259,6 +1260,29 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - **Header overlap effect** - Logo dat over header balk valt creëert visuele connectie met hero
 - **Extra small screens (375px)** - Aparte breakpoint voor iPhone SE met 70px logo
 
+### Fase 3 Lessons Learned - CSS Variabelen Migratie (04-02-2026)
+
+**Hardcoded Kleuren Migratie:**
+- **33+ bestanden met hardcoded kleuren** - HolidaiButler kleuren (#7FA594, #5E8B7E, #4A7066) waren verspreid door CSS en TSX bestanden
+- **Systematische zoekactie met Grep** - Pattern `#7FA594|#5E8B7E|#4A7066` identificeerde alle bestanden
+- **CSS variabelen met fallbacks** - `var(--color-primary, #30c59b)` zorgt dat UI automatisch Texel kleuren toont
+- **replace_all flag** - Edit tool met replace_all=true voor efficiënte bulk replacements
+
+**Bestanden Categorieën:**
+- **CSS bestanden (24+)** - POIDetailPage.css, Homepage.css, Auth.css, Onboarding.css, etc.
+- **TSX bestanden (9)** - Inline styles en Tailwind classes in POIDetailPage.tsx, FilterPanel.tsx, etc.
+- **Config bestanden (3)** - router.tsx, categoryConfig.ts, ErrorBoundary.tsx
+
+**Root CSS Variabelen:**
+- **index.css als single source of truth** - Texel defaults in :root voor hele applicatie
+- **DestinationContext runtime injectie** - CSS variabelen worden gezet vanuit destination config
+- **Fallback strategie** - Altijd Texel kleur als fallback: `var(--color-primary, #30c59b)`
+
+**Texel Huisstijl Definitief:**
+- Primary: #30c59b (natuur groen)
+- Secondary: #3572de (zee blauw)
+- Accent: #ecde3c (zongeel)
+
 ### Fase 4 Lessons Learned
 - *Nog geen - fase niet gestart*
 
@@ -1316,7 +1340,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 3 februari 2026 - Fase 3 Performance Optimalisatie*
+*Laatst bijgewerkt: 4 februari 2026 - Fase 3 Complete Branding Migratie*
 *Volgende review: Na voltooiing Fase 4 (Alicante Preparation)*
 
 ---
@@ -1325,7 +1349,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **1.8** | **03-02-2026** | **Fase 3 PERFORMANCE: Sentry DSN fix (.env.texel), Code splitting (manualChunks: react/framer-motion/leaflet/sentry), Route-based lazy loading (16 pagina's), Bundle -32% (1049→713 kB). Mobile logo fix: 55px→80px voor leesbaarheid + header overlap effect.** |
+| **1.9** | **04-02-2026** | **Fase 3 CSS VARIABELEN MIGRATIE: ALLE hardcoded HolidaiButler kleuren (#7FA594, #5E8B7E, #4A7066) vervangen door CSS variabelen met Texel fallbacks (#30c59b, #3572de). 33+ bestanden bijgewerkt (CSS + TSX). index.css :root als single source of truth. Texel huisstijl definitief: Primary #30c59b, Secondary #3572de, Accent #ecde3c.** |
+| 1.8 | 03-02-2026 | Fase 3 PERFORMANCE: Sentry DSN fix (.env.texel), Code splitting (manualChunks: react/framer-motion/leaflet/sentry), Route-based lazy loading (16 pagina's), Bundle -32% (1049→713 kB). Mobile logo fix: 55px→80px voor leesbaarheid + header overlap effect. |
 | 1.7 | 03-02-2026 | Fase 3 BRANDING FINALISATIE: TexelMaps officiële huisstijl (#30c59b/#3572de/#ecde3c), TexelMaps logo met vuurtoren/zeehond/kompas, VVV Texel partner badge, hero vuurtoren afbeelding, "Waddenjuweel" payoff, footer overlap fix. |
 | 1.6 | 03-02-2026 | Fase 3 PRODUCTIONEEL: MapView zoom fix (11→10 voor volledig Texel eiland), GeoJSON per_category bug fix (variable shadowing: limit→perCategoryLimit), GitHub Actions outage recovery (6 workflows success), Version bumps (customer-portal 1.0.1, platform-core 2.1.1). |
 | 1.5 | 02-02-2026 | Fase 3 UITGEBREID: POI Quality Filters (rating >= 4, reviews >= 3, images >= 3, enriched description), Category mix percentages, Exclusies (Laadpunten, begraafplaatsen), MapView improvements (zoom=11 Texel, category colors, perCategory=7). |

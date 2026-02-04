@@ -137,7 +137,7 @@ export function VerifyEmailPage() {
                 <Link to="/resend-verification" className="auth-button" style={{ display: 'inline-block', textDecoration: 'none' }}>
                   {t.auth.verifyEmail.requestNew}
                 </Link>
-                <Link to="/login" style={{ color: '#7FA594', textDecoration: 'none' }}>
+                <Link to="/login" style={{ color: '#30c59b', textDecoration: 'none' }}>
                   {t.auth.verifyEmail.backToLogin}
                 </Link>
               </div>

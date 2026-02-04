@@ -116,7 +116,7 @@ export function AgendaDetailModal({ eventId, isOpen, onClose, selectedDate }: Ag
   const formatEventTime = (dateStr: string) => format(new Date(dateStr), 'HH:mm', { locale });
 
   // Get category
-  const category = event ? (categoryConfig[event.primaryCategory] || { label: 'Event', color: '#7FA594' }) : null;
+  const category = event ? (categoryConfig[event.primaryCategory] || { label: 'Event', color: '#30c59b' }) : null;
 
   // Get primary image
   const primaryImage = event?.images?.find((img) => img.isPrimary)?.url || event?.images?.[0]?.url;

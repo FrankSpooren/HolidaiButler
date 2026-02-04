@@ -42,7 +42,7 @@ const PageLoader = () => (
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '50vh',
-    color: 'var(--color-primary, #7FA594)'
+    color: 'var(--color-primary, #30c59b)'
   }}>
     <div style={{ textAlign: 'center' }}>
       <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>

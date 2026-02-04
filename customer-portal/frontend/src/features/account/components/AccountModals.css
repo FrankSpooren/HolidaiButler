@@ -65,7 +65,7 @@
   gap: 12px;
   padding: 20px 24px;
   border-bottom: 1px solid #E5E7EB;
-  background: linear-gradient(135deg, #7FA594, #5E8B7E);
+  background: linear-gradient(135deg, var(--color-primary, #30c59b), var(--color-primary, #30c59b));
 }
 
 .account-modal-header.warning-header {
@@ -148,7 +148,7 @@
 .modal-btn-primary {
   flex: 1;
   padding: 12px 20px;
-  background: linear-gradient(135deg, #4A7066, #5E8B7E);
+  background: linear-gradient(135deg, var(--color-secondary, #3572de), var(--color-primary, #30c59b));
   border: none;
   border-radius: 10px;
   font-size: 14px;
@@ -254,7 +254,7 @@
 .modal-field input:focus,
 .modal-field textarea:focus {
   outline: none;
-  border-color: #5E8B7E;
+  border-color: var(--color-primary, #30c59b);
   box-shadow: 0 0 0 3px rgba(94, 139, 126, 0.1);
 }
 
@@ -654,8 +654,8 @@
 }
 
 .show-secret-btn:hover {
-  border-color: #5E8B7E;
-  color: #5E8B7E;
+  border-color: var(--color-primary, #30c59b);
+  color: var(--color-primary, #30c59b);
 }
 
 .secret-key {
@@ -727,7 +727,7 @@
 
 .code-input:focus {
   outline: none;
-  border-color: #5E8B7E;
+  border-color: var(--color-primary, #30c59b);
   box-shadow: 0 0 0 3px rgba(94, 139, 126, 0.1);
 }
 
@@ -776,7 +776,7 @@
 .copy-backup-btn {
   width: 100%;
   padding: 12px;
-  background: #5E8B7E;
+  background: var(--color-primary, #30c59b);
   color: white;
   border: none;
   border-radius: 8px;
@@ -787,7 +787,7 @@
 }
 
 .copy-backup-btn:hover {
-  background: #4A7066;
+  background: var(--color-secondary, #3572de);
 }
 
 /* 2FA Status */
@@ -911,7 +911,7 @@
 .reason-option input[type="radio"] {
   width: 20px;
   height: 20px;
-  accent-color: #5E8B7E;
+  accent-color: var(--color-primary, #30c59b);
 }
 
 .reason-option input[type="radio"]:checked + .reason-label {

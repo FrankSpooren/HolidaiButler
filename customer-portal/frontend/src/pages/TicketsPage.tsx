@@ -9,7 +9,7 @@
  * - Adyen Drop-in payment
  * - Booking confirmation
  *
- * Template: HolidaiButler design system (white hero, #7FA594 accents)
+ * Template: HolidaiButler design system (white hero, #30c59b accents)
  */
 
 import { useState, useEffect } from 'react';
@@ -272,7 +272,7 @@ export const TicketsPage = () => {
       onClick={() => handleSelectEvent(event)}
     >
       {/* Event Image */}
-      <div className="h-48 bg-gradient-to-r from-[#5E8B7E] to-[#7FA594] flex items-center justify-center">
+      <div className="h-48 bg-gradient-to-r from-[#30c59b] to-[#30c59b] flex items-center justify-center">
         {event.imageUrl ? (
           <img src={event.imageUrl} alt={event.name} className="w-full h-full object-cover" />
         ) : (
@@ -313,7 +313,7 @@ export const TicketsPage = () => {
             {event.availableTickets || 0} {t.tickets?.available || 'available'}
           </span>
 
-          <button className="flex items-center gap-1 text-[#7FA594] font-medium text-sm hover:underline">
+          <button className="flex items-center gap-1 text-[#30c59b] font-medium text-sm hover:underline">
             {t.tickets?.buyTickets || 'Buy tickets'}
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -334,7 +334,7 @@ export const TicketsPage = () => {
             placeholder={t.tickets?.searchPlaceholder || 'Search events...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#7FA594] focus:border-transparent"
+            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#30c59b] focus:border-transparent"
           />
         </div>
       </div>
@@ -342,7 +342,7 @@ export const TicketsPage = () => {
       {/* Events Grid */}
       {eventsLoading ? (
         <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="w-10 h-10 text-[#7FA594] animate-spin mb-4" />
+          <Loader2 className="w-10 h-10 text-[#30c59b] animate-spin mb-4" />
           <p className="text-gray-600">Loading events...</p>
         </div>
       ) : eventsError ? (
@@ -401,7 +401,7 @@ export const TicketsPage = () => {
 
         {ticketTypesLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-8 h-8 text-[#7FA594] animate-spin" />
+            <Loader2 className="w-8 h-8 text-[#30c59b] animate-spin" />
           </div>
         ) : (
           <div className="space-y-4">
@@ -419,7 +419,7 @@ export const TicketsPage = () => {
                     {ticketType.description && (
                       <p className="text-sm text-gray-500">{ticketType.description}</p>
                     )}
-                    <p className="text-[#7FA594] font-semibold mt-1">
+                    <p className="text-[#30c59b] font-semibold mt-1">
                       {formatPrice(ticketType.price, ticketType.currency)}
                     </p>
                   </div>
@@ -466,7 +466,7 @@ export const TicketsPage = () => {
 
           <div className="border-t border-gray-200 pt-4 flex justify-between">
             <span className="font-semibold text-gray-900">{t.tickets?.total || 'Total'}</span>
-            <span className="font-bold text-xl text-[#7FA594]">{formatPrice(calculateTotal())}</span>
+            <span className="font-bold text-xl text-[#30c59b]">{formatPrice(calculateTotal())}</span>
           </div>
         </div>
       )}
@@ -483,7 +483,7 @@ export const TicketsPage = () => {
       <button
         onClick={handleProceedToGuestInfo}
         disabled={selectedTickets.length === 0}
-        className="w-full py-4 bg-[#7FA594] text-white font-semibold rounded-lg hover:bg-[#5E8B7E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full py-4 bg-[#30c59b] text-white font-semibold rounded-lg hover:bg-[#30c59b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {t.tickets?.continueToCheckout || 'Continue to Checkout'}
         <ChevronRight className="w-5 h-5" />
@@ -521,7 +521,7 @@ export const TicketsPage = () => {
                 value={guestInfo.name}
                 onChange={(e) => setGuestInfo({ ...guestInfo, name: e.target.value })}
                 required
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7FA594] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#30c59b] focus:border-transparent"
                 placeholder="John Doe"
               />
             </div>
@@ -538,7 +538,7 @@ export const TicketsPage = () => {
                 value={guestInfo.email}
                 onChange={(e) => setGuestInfo({ ...guestInfo, email: e.target.value })}
                 required
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7FA594] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#30c59b] focus:border-transparent"
                 placeholder="john@example.com"
               />
             </div>
@@ -554,7 +554,7 @@ export const TicketsPage = () => {
                 type="tel"
                 value={guestInfo.phone}
                 onChange={(e) => setGuestInfo({ ...guestInfo, phone: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7FA594] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#30c59b] focus:border-transparent"
                 placeholder="+31 6 12345678"
               />
             </div>
@@ -580,7 +580,7 @@ export const TicketsPage = () => {
             </div>
             <div className="flex justify-between font-semibold text-gray-900">
               <span>{t.tickets?.total || 'Total'}</span>
-              <span className="text-[#7FA594]">{formatPrice(calculateTotal())}</span>
+              <span className="text-[#30c59b]">{formatPrice(calculateTotal())}</span>
             </div>
           </div>
 
@@ -588,7 +588,7 @@ export const TicketsPage = () => {
           <button
             type="submit"
             disabled={createBookingMutation.isPending}
-            className="w-full py-4 bg-[#7FA594] text-white font-semibold rounded-lg hover:bg-[#5E8B7E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-4 bg-[#30c59b] text-white font-semibold rounded-lg hover:bg-[#30c59b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {createBookingMutation.isPending ? (
               <>
@@ -635,7 +635,7 @@ export const TicketsPage = () => {
           </div>
           <div className="flex justify-between font-semibold text-gray-900 border-t border-gray-200 pt-2">
             <span>{t.tickets?.total || 'Total'}</span>
-            <span className="text-[#7FA594]">{formatPrice(calculateTotal())}</span>
+            <span className="text-[#30c59b]">{formatPrice(calculateTotal())}</span>
           </div>
         </div>
 
@@ -657,7 +657,7 @@ export const TicketsPage = () => {
           />
         ) : (
           <div className="flex flex-col items-center justify-center py-8">
-            <Loader2 className="w-10 h-10 text-[#7FA594] animate-spin mb-4" />
+            <Loader2 className="w-10 h-10 text-[#30c59b] animate-spin mb-4" />
             <p className="text-gray-600">{t.tickets?.loadingPayment || 'Loading payment methods...'}</p>
           </div>
         )}
@@ -702,7 +702,7 @@ export const TicketsPage = () => {
               setPaymentSession(null);
               setError(null);
             }}
-            className="w-full py-3 bg-[#7FA594] text-white font-semibold rounded-lg hover:bg-[#5E8B7E] transition-colors"
+            className="w-full py-3 bg-[#30c59b] text-white font-semibold rounded-lg hover:bg-[#30c59b] transition-colors"
           >
             {t.tickets?.browseMoreEvents || 'Browse More Events'}
           </button>
@@ -738,7 +738,7 @@ export const TicketsPage = () => {
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                       ['events', 'tickets', 'guest-info', 'payment'].indexOf(currentStep) >= index
-                        ? 'bg-[#7FA594] text-white'
+                        ? 'bg-[#30c59b] text-white'
                         : 'bg-gray-200 text-gray-600'
                     }`}
                   >
@@ -748,7 +748,7 @@ export const TicketsPage = () => {
                     <div
                       className={`flex-1 h-1 mx-2 ${
                         ['events', 'tickets', 'guest-info', 'payment'].indexOf(currentStep) > index
-                          ? 'bg-[#7FA594]'
+                          ? 'bg-[#30c59b]'
                           : 'bg-gray-200'
                       }`}
                     />

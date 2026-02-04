@@ -63,7 +63,7 @@ export function ErrorBoundary() {
             to="/"
             style={{
               display: 'inline-block',
-              background: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
+              background: 'linear-gradient(135deg, #30c59b, #3572de)',
               color: 'white',
               padding: '14px 32px',
               borderRadius: '8px',
@@ -186,7 +186,7 @@ export function ErrorBoundary() {
           <button
             onClick={() => window.location.reload()}
             style={{
-              background: 'linear-gradient(135deg, #7FA594, #5E8B7E)',
+              background: 'linear-gradient(135deg, #30c59b, #3572de)',
               color: 'white',
               padding: '14px 32px',
               borderRadius: '8px',
@@ -213,8 +213,8 @@ export function ErrorBoundary() {
             style={{
               display: 'inline-block',
               background: 'white',
-              color: '#7FA594',
-              border: '2px solid #7FA594',
+              color: '#30c59b',
+              border: '2px solid #30c59b',
               padding: '14px 32px',
               borderRadius: '8px',
               textDecoration: 'none',

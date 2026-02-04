@@ -1,4 +1,4 @@
-/* Favorites Page Styles */
+/* Favorites Page Styles (Multi-Destination Aware) */
 
 .favorites-page {
   min-height: 100vh;
@@ -41,13 +41,13 @@
 }
 
 .favorites-tab:hover {
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
   color: #1F2937;
 }
 
 .favorites-tab.active {
-  background: linear-gradient(135deg, #7FA594, #5E8B7E);
-  border-color: #7FA594;
+  background: var(--header-gradient, linear-gradient(135deg, var(--color-primary, #30c59b), var(--color-secondary, #3572de)));
+  border-color: var(--color-primary, #30c59b);
   color: white;
 }
 
@@ -118,7 +118,7 @@
 .empty-cta {
   display: inline-block;
   padding: 14px 32px;
-  background: linear-gradient(135deg, #7FA594, #5E8B7E);
+  background: var(--header-gradient, linear-gradient(135deg, var(--color-primary, #30c59b), var(--color-secondary, #3572de)));
   color: white;
   border-radius: 12px;
   text-decoration: none;
@@ -129,7 +129,7 @@
 
 .empty-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(127, 165, 148, 0.3);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary, #30c59b) 30%, transparent);
 }
 
 /* Favorites Grid */
@@ -160,7 +160,7 @@
   position: absolute;
   top: 12px;
   left: 12px;
-  background: rgba(74, 112, 102, 0.9);
+  background: color-mix(in srgb, var(--color-primary, #30c59b) 90%, transparent);
   color: white;
   padding: 4px 8px;
   border-radius: 6px;

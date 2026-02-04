@@ -74,7 +74,7 @@
 }
 
 .search-input-wrapper:focus-within {
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
   background: white;
 }
 
@@ -108,12 +108,12 @@
 }
 
 .input-group:focus-within {
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
   background: white;
 }
 
 .input-group svg {
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
 }
 
 .input-group select,
@@ -151,13 +151,13 @@
 }
 
 .cuisine-btn:hover {
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
 }
 
 .cuisine-btn.active {
-  background: #7FA594;
+  background: var(--color-primary, #30c59b);
   color: white;
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
 }
 
 /* Restaurants Section */
@@ -213,7 +213,7 @@
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #5E8B7E;
+  color: var(--color-primary, #30c59b);
 }
 
 .price-tag {
@@ -282,7 +282,7 @@
 }
 
 .info-item svg {
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
 }
 
 .restaurant-features {
@@ -294,7 +294,7 @@
 
 .feature-tag {
   background: #f0f9f6;
-  color: #5E8B7E;
+  color: var(--color-primary, #30c59b);
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -303,7 +303,7 @@
 
 .reserve-btn {
   width: 100%;
-  background: linear-gradient(135deg, #7FA594 0%, #5E8B7E 100%);
+  background: linear-gradient(135deg, var(--color-primary, #30c59b) 0%, var(--color-primary, #30c59b) 100%);
   color: white;
   border: none;
   padding: 14px;
@@ -405,7 +405,7 @@
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
 }
 
 .form-group textarea {
@@ -414,7 +414,7 @@
 }
 
 .submit-btn {
-  background: linear-gradient(135deg, #7FA594 0%, #5E8B7E 100%);
+  background: linear-gradient(135deg, var(--color-primary, #30c59b) 0%, var(--color-primary, #30c59b) 100%);
   color: white;
   border: none;
   padding: 16px;
