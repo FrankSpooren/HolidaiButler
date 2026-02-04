@@ -3,9 +3,9 @@
 
 **Datum**: 4 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 1.9
+**Versie**: 2.0
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 3 COMPLEET - Texel Productioneel + Complete Branding Migratie
+**Status**: FASE 3 COMPLEET + FASE 0A Excel Sync - Texel tile descriptions + highlights gesynchroniseerd
 
 ---
 
@@ -19,7 +19,7 @@
 | **Fase 4: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
 | **Fase 5: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 4 februari 2026 - Fase 3 Complete Branding Migratie (CSS variabelen)
+**Laatste update**: 4 februari 2026 - Fase 0A Excel→Hetzner Sync (tile descriptions + highlights)
 
 ---
 
@@ -1058,6 +1058,7 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 3.14 Performance Optimalisatie | ✅ Compleet | 03-02-2026 | Claude Code | Sentry DSN fix, code splitting, lazy loading, -32% bundle size |
 | 3.15 Mobile Logo Fix | ✅ Compleet | 03-02-2026 | Claude Code | Logo vergroot voor leesbaarheid (55px→80px), header overlap effect |
 | 3.16 CSS Variabelen Migratie | ✅ Compleet | 04-02-2026 | Claude Code | ALLE hardcoded HolidaiButler kleuren (#7FA594, #5E8B7E, #4A7066) → CSS variabelen met Texel fallbacks (#30c59b, #3572de) in 33+ bestanden |
+| 3.17 Fase 0A Excel→Hetzner Sync | ✅ Compleet | 04-02-2026 | Claude Code | Sync van AtTexel_POI_FIXED.xlsx: tile_en (0→1675), highlights (0→1675), markdown verwijderd, taalfouten gefixed |
 
 **Fase 3 Status**: ✅ COMPLEET (04 februari 2026)
 
@@ -1349,7 +1350,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **1.9** | **04-02-2026** | **Fase 3 CSS VARIABELEN MIGRATIE: ALLE hardcoded HolidaiButler kleuren (#7FA594, #5E8B7E, #4A7066) vervangen door CSS variabelen met Texel fallbacks (#30c59b, #3572de). 33+ bestanden bijgewerkt (CSS + TSX). index.css :root als single source of truth. Texel huisstijl definitief: Primary #30c59b, Secondary #3572de, Accent #ecde3c.** |
+| **2.0** | **04-02-2026** | **FASE 0A EXCEL→HETZNER SYNC: Texel tile descriptions + highlights gesynchroniseerd. tile_en kolom toegevoegd (0→1675 POIs), highlights (0→1675), markdown verwijderd, taalfouten "in Texel"→"op Texel" gefixed. AtTexel_POI_FIXED.xlsx als bron. Backup gemaakt. detail_description NIET gesync (wordt later nieuw gegenereerd).** |
+| 1.9 | 04-02-2026 | Fase 3 CSS VARIABELEN MIGRATIE: ALLE hardcoded HolidaiButler kleuren (#7FA594, #5E8B7E, #4A7066) vervangen door CSS variabelen met Texel fallbacks (#30c59b, #3572de). 33+ bestanden bijgewerkt (CSS + TSX). index.css :root als single source of truth. Texel huisstijl definitief: Primary #30c59b, Secondary #3572de, Accent #ecde3c. |
 | 1.8 | 03-02-2026 | Fase 3 PERFORMANCE: Sentry DSN fix (.env.texel), Code splitting (manualChunks: react/framer-motion/leaflet/sentry), Route-based lazy loading (16 pagina's), Bundle -32% (1049→713 kB). Mobile logo fix: 55px→80px voor leesbaarheid + header overlap effect. |
 | 1.7 | 03-02-2026 | Fase 3 BRANDING FINALISATIE: TexelMaps officiële huisstijl (#30c59b/#3572de/#ecde3c), TexelMaps logo met vuurtoren/zeehond/kompas, VVV Texel partner badge, hero vuurtoren afbeelding, "Waddenjuweel" payoff, footer overlap fix. |
 | 1.6 | 03-02-2026 | Fase 3 PRODUCTIONEEL: MapView zoom fix (11→10 voor volledig Texel eiland), GeoJSON per_category bug fix (variable shadowing: limit→perCategoryLimit), GitHub Actions outage recovery (6 workflows success), Version bumps (customer-portal 1.0.1, platform-core 2.1.1). |
