@@ -140,7 +140,7 @@
   display: inline-block;
   width: 2px;
   height: 1em;
-  background-color: #7FA594;
+  background-color: var(--color-primary, #30c59b);
   margin-left: 2px;
   vertical-align: text-bottom;
   animation: cursor-blink 0.8s ease-in-out infinite;
@@ -250,7 +250,7 @@
   background: none;
   padding: 0;
   font: inherit;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
@@ -258,7 +258,7 @@
 }
 
 .chat-message-poi-link:hover {
-  color: #5E8B7E;
+  color: #30c59b;
   text-decoration-thickness: 2px;
 }
 
@@ -267,7 +267,7 @@
 }
 
 .chat-message-poi-link:focus {
-  outline: 2px solid #7FA594;
+  outline: 2px solid var(--color-primary, #30c59b);
   outline-offset: 2px;
   border-radius: 2px;
 }

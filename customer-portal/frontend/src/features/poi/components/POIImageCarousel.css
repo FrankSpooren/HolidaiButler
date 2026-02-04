@@ -201,8 +201,8 @@
 }
 
 .poi-carousel-thumbnail.active {
-  border-color: #7FA594;
-  box-shadow: 0 0 0 1px #7FA594;
+  border-color: var(--color-primary, #30c59b);
+  box-shadow: 0 0 0 1px var(--color-primary, #30c59b);
 }
 
 .poi-carousel-thumbnail-image {

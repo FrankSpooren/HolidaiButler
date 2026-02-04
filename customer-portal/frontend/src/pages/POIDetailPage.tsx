@@ -296,7 +296,7 @@ export function POIDetailPage() {
           marginBottom: '12px',
           background: 'transparent',
           border: 'none',
-          color: '#7FA594',
+          color: '#30c59b',
           fontSize: '14px',
           fontWeight: '500',
           cursor: 'pointer',
@@ -525,7 +525,7 @@ export function POIDetailPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="contact-text"
-                    style={{ color: '#7FA594', textDecoration: 'none' }}
+                    style={{ color: '#30c59b', textDecoration: 'none' }}
                   >
                     Visit Website
                   </a>

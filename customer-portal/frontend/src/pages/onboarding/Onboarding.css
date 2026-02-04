@@ -38,7 +38,7 @@
     gap: 6px;
     background: none;
     border: none;
-    color: #5E8B7E;
+    color: #30c59b;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -75,7 +75,7 @@
 
 /* Legacy Header (kept for backwards compatibility) */
 .onboarding-header {
-    background: linear-gradient(135deg, #7FA594, #5E8B7E, #4A7066);
+    background: linear-gradient(135deg, #30c59b, #30c59b, #30c59b);
     height: 56px;
     display: flex;
     align-items: center;
@@ -149,7 +149,7 @@
 }
 
 .dot.completed {
-    background: #5E8B7E;
+    background: #30c59b;
 }
 
 /* Heading */
@@ -465,7 +465,7 @@
 .onboarding-cta {
     width: 100%;
     height: 48px;
-    background: linear-gradient(135deg, #4A7066, #5E8B7E);
+    background: linear-gradient(135deg, #30c59b, #30c59b);
     color: white;
     border: none;
     border-radius: 24px;
@@ -564,7 +564,7 @@
 }
 
 .confirm-modal-header {
-    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    background: linear-gradient(135deg, #30c59b, #30c59b);
     padding: 20px;
     text-align: center;
 }

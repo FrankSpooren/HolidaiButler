@@ -113,7 +113,7 @@ export function HowItWorksPage() {
               <div className="step-content">
                 <h3>{getContent('step2Title', 'Ontvang Gepersonaliseerde Suggesties')}</h3>
                 <p>
-                  <Link to="/login" style={{ color: 'var(--color-primary, #7FA594)', fontWeight: 500 }}>
+                  <Link to="/login" style={{ color: 'var(--color-primary, #30c59b)', fontWeight: 500 }}>
                     {getContent('step2AccountLink', 'Maak je een account aan')}
                   </Link>{' '}
                   {getContent('step2Text', 'met behulp van enkele simpele vragen, dan worden alle HolidaiButler-aanbevelingen compleet afgestemd op je wensen en voorkeuren. En dat scheelt heel wat speurwerk en overbodige informatie. Of je nu zoekt naar een rustig terrasje, die ene unieke wandelroute, of een parel van een museum, wij vinden de perfecte match voor jou.')}

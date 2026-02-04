@@ -77,10 +77,10 @@ export function FilterPanel({ open, onClose, isMobile = false }: FilterPanelProp
       {/* Header */}
       <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
         <div className="flex items-center gap-2">
-          <Filter className="w-5 h-5 text-[#7FA594]" />
+          <Filter className="w-5 h-5 text-[#30c59b]" />
           <h2 className="font-semibold text-gray-900">Filters</h2>
           {activeFiltersCount > 0 && (
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#7FA594] text-white text-xs font-medium">
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#30c59b] text-white text-xs font-medium">
               {activeFiltersCount}
             </span>
           )}
@@ -105,7 +105,7 @@ export function FilterPanel({ open, onClose, isMobile = false }: FilterPanelProp
           <select
             value={filters.dateRange}
             onChange={(e) => setFilter('dateRange', e.target.value)}
-            className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#7FA594] focus:border-transparent"
+            className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#30c59b] focus:border-transparent"
           >
             {DATE_RANGES.map((range) => (
               <option key={range.id} value={range.id}>
@@ -131,7 +131,7 @@ export function FilterPanel({ open, onClose, isMobile = false }: FilterPanelProp
                 onClick={() => toggleCategory(category.id)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                   isSelected
-                    ? 'bg-[#7FA594] text-white shadow-sm'
+                    ? 'bg-[#30c59b] text-white shadow-sm'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -155,7 +155,7 @@ export function FilterPanel({ open, onClose, isMobile = false }: FilterPanelProp
           <select
             value={filters.timeOfDay || ''}
             onChange={(e) => setFilter('timeOfDay', e.target.value || null)}
-            className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#7FA594] focus:border-transparent"
+            className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#30c59b] focus:border-transparent"
           >
             <option value="">Alle tijdstippen</option>
             {TIME_OF_DAY.map((time) => (
@@ -177,7 +177,7 @@ export function FilterPanel({ open, onClose, isMobile = false }: FilterPanelProp
           <select
             value={filters.audience || ''}
             onChange={(e) => setFilter('audience', e.target.value || null)}
-            className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#7FA594] focus:border-transparent"
+            className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#30c59b] focus:border-transparent"
           >
             <option value="">Alle doelgroepen</option>
             {AUDIENCES.map((audience) => (
@@ -200,7 +200,7 @@ export function FilterPanel({ open, onClose, isMobile = false }: FilterPanelProp
             type="checkbox"
             checked={filters.isFree === true}
             onChange={(e) => setFilter('isFree', e.target.checked ? true : null)}
-            className="w-5 h-5 text-[#7FA594] border-gray-300 rounded focus:ring-[#7FA594] focus:ring-offset-0"
+            className="w-5 h-5 text-[#30c59b] border-gray-300 rounded focus:ring-[#30c59b] focus:ring-offset-0"
           />
           <span className="text-sm font-medium text-gray-700">
             Alleen gratis evenementen
@@ -220,7 +220,7 @@ export function FilterPanel({ open, onClose, isMobile = false }: FilterPanelProp
         {isMobile && onClose && (
           <button
             onClick={onClose}
-            className="w-full py-2.5 px-4 bg-[#7FA594] text-white rounded-lg text-sm font-medium hover:bg-[#5E8B7E] transition-colors"
+            className="w-full py-2.5 px-4 bg-[#30c59b] text-white rounded-lg text-sm font-medium hover:bg-[#30c59b] transition-colors"
           >
             Toepassen ({activeFiltersCount})
           </button>

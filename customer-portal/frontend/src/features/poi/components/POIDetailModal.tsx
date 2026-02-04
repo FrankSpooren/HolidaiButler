@@ -462,7 +462,7 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                               style={{
                                 display: 'block',
                                 marginTop: '12px',
-                                color: '#7FA594',
+                                color: '#30c59b',
                                 textDecoration: 'underline',
                                 cursor: 'pointer',
                                 border: 'none',

@@ -4,20 +4,20 @@
 
 /* Destination-specific CSS Variables
    These are set dynamically by DestinationContext based on build-time config.
-   Default values are Calpe branding - overridden at runtime for other destinations. */
+   Default values are Texel branding - overridden at runtime for other destinations. */
 :root {
   /* Brand Colors - set by DestinationContext */
-  --color-primary: #7FA594;
-  --color-secondary: #5E8B7E;
-  --color-tertiary: #4A7066;
-  --color-accent: #D4AF37;
-  --header-gradient: linear-gradient(135deg, #7FA594, #5E8B7E, #4A7066);
-  --hero-overlay: linear-gradient(135deg, rgba(1, 97, 147, 0.5), rgba(26, 112, 157, 0.4));
+  --color-primary: #30c59b;
+  --color-secondary: #3572de;
+  --color-tertiary: #3572de;
+  --color-accent: #ecde3c;
+  --header-gradient: linear-gradient(135deg, #30c59b, #3572de);
+  --hero-overlay: linear-gradient(135deg, rgba(48, 197, 155, 0.5), rgba(53, 114, 222, 0.4));
 
   /* Tailwind-compatible brand colors */
-  --tw-color-brand-primary: #7FA594;
-  --tw-color-brand-secondary: #5E8B7E;
-  --tw-color-brand-accent: #D4AF37;
+  --tw-color-brand-primary: #30c59b;
+  --tw-color-brand-secondary: #3572de;
+  --tw-color-brand-accent: #ecde3c;
 }
 
 /* Global styles from DESIGN_SYSTEM.md */

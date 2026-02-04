@@ -64,7 +64,7 @@
   padding: 16px 24px;
   font-size: 18px;
   font-weight: 600;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   background: #F9FAFB;
   border-bottom: 1px solid #E5E7EB;
 }
@@ -162,13 +162,13 @@
 }
 
 .travel-party-option:hover {
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
   background: #F9FAFB;
 }
 
 .travel-party-option.active {
-  background: linear-gradient(135deg, #7FA594, #5E8B7E);
-  border-color: #5E8B7E;
+  background: linear-gradient(135deg, var(--color-primary, #30c59b), var(--color-secondary, #30c59b));
+  border-color: var(--color-secondary, #30c59b);
   color: white;
 }
 
@@ -195,7 +195,7 @@
 
 .write-review-textarea:focus {
   outline: none;
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
 }
 
 .write-review-char-count {
@@ -228,9 +228,9 @@
 }
 
 .write-review-photo-upload:hover {
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
   background: white;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
 }
 
 .write-review-photo-preview {
@@ -297,7 +297,7 @@
 .write-review-submit {
   width: 100%;
   padding: 14px 24px;
-  background: linear-gradient(135deg, #7FA594, #5E8B7E);
+  background: linear-gradient(135deg, var(--color-primary, #30c59b), var(--color-secondary, #30c59b));
   color: white;
   border: none;
   border-radius: 12px;

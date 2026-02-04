@@ -83,7 +83,7 @@
 }
 
 .wcag-close-btn:focus-visible {
-  outline: 2px solid var(--color-secondary, #5E8B7E);
+  outline: 2px solid var(--color-secondary, #30c59b);
   outline-offset: 2px;
 }
 
@@ -133,11 +133,11 @@
 
 .wcag-btn-small:hover {
   background: #E5E7EB;
-  border-color: var(--color-secondary, #5E8B7E);
+  border-color: var(--color-secondary, #30c59b);
 }
 
 .wcag-btn-small:focus-visible {
-  outline: 2px solid var(--color-secondary, #5E8B7E);
+  outline: 2px solid var(--color-secondary, #30c59b);
   outline-offset: 2px;
 }
 
@@ -145,7 +145,7 @@
   flex: 1;
   height: 8px;
   border-radius: 4px;
-  background: linear-gradient(to right, #E5E7EB 0%, var(--color-secondary, #5E8B7E) 100%);
+  background: linear-gradient(to right, #E5E7EB 0%, var(--color-secondary, #30c59b) 100%);
   outline: none;
   -webkit-appearance: none;
   cursor: pointer;
@@ -158,7 +158,7 @@
   height: 24px;
   border-radius: 50%;
   background: white;
-  border: 3px solid var(--color-secondary, #5E8B7E);
+  border: 3px solid var(--color-secondary, #30c59b);
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.2s;
@@ -174,7 +174,7 @@
   height: 24px;
   border-radius: 50%;
   background: white;
-  border: 3px solid var(--color-secondary, #5E8B7E);
+  border: 3px solid var(--color-secondary, #30c59b);
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.2s;
@@ -186,7 +186,7 @@
 }
 
 .wcag-slider:focus-visible {
-  outline: 2px solid var(--color-secondary, #5E8B7E);
+  outline: 2px solid var(--color-secondary, #30c59b);
   outline-offset: 4px;
 }
 
@@ -211,17 +211,17 @@
 
 .wcag-toggle-btn:hover {
   background: #F9FAFB;
-  border-color: var(--color-secondary, #5E8B7E);
+  border-color: var(--color-secondary, #30c59b);
 }
 
 .wcag-toggle-btn.active {
-  background: var(--color-secondary, #5E8B7E);
+  background: var(--color-secondary, #30c59b);
   color: white;
-  border-color: var(--color-secondary, #5E8B7E);
+  border-color: var(--color-secondary, #30c59b);
 }
 
 .wcag-toggle-btn:focus-visible {
-  outline: 2px solid var(--color-secondary, #5E8B7E);
+  outline: 2px solid var(--color-secondary, #30c59b);
   outline-offset: 2px;
 }
 
@@ -247,13 +247,13 @@
   width: 24px;
   height: 24px;
   cursor: pointer;
-  accent-color: var(--color-secondary, #5E8B7E);
+  accent-color: var(--color-secondary, #30c59b);
   border: 2px solid #D1D5DB;
   border-radius: 4px;
 }
 
 .wcag-checkbox:focus-visible {
-  outline: 2px solid var(--color-secondary, #5E8B7E);
+  outline: 2px solid var(--color-secondary, #30c59b);
   outline-offset: 2px;
 }
 
@@ -285,14 +285,14 @@
 }
 
 .wcag-reset-btn:focus-visible {
-  outline: 2px solid var(--color-secondary, #5E8B7E);
+  outline: 2px solid var(--color-secondary, #30c59b);
   outline-offset: 2px;
 }
 
 .wcag-apply-btn {
   flex: 2;
   padding: 12px 24px;
-  background: var(--color-secondary, #5E8B7E);
+  background: var(--color-secondary, #30c59b);
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -304,11 +304,11 @@
 }
 
 .wcag-apply-btn:hover {
-  background: var(--color-tertiary, #4A7066);
+  background: var(--color-tertiary, #3572de);
 }
 
 .wcag-apply-btn:focus-visible {
-  outline: 2px solid var(--color-secondary, #5E8B7E);
+  outline: 2px solid var(--color-secondary, #30c59b);
   outline-offset: 2px;
 }
 

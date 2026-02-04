@@ -209,7 +209,7 @@
 .usp-card:active {
   transform: translateY(-4px);
   box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-  border-color: var(--color-primary, #7FA594);
+  border-color: var(--color-primary, #30c59b);
 }
 
 .usp-icon {
@@ -227,6 +227,16 @@
   height: 80px;
   object-position: center;
   object-fit: contain;
+}
+
+/* VVV Texel partner logo - significantly larger to match emoji icon visual weight */
+/* Emoji icons at 64px font-size appear visually larger, so logo needs ~150px */
+.usp-icon.logo-texel-partner {
+  width: 150px;
+  height: 150px;
+  object-position: center;
+  object-fit: contain;
+  margin-bottom: 0;
 }
 
 .usp-title {
@@ -286,7 +296,7 @@
 }
 
 .carousel-dot.active {
-  background: var(--color-primary, #7FA594);
+  background: var(--color-primary, #30c59b);
   width: 24px;
   border-radius: 4px;
 }
@@ -325,12 +335,12 @@
 }
 
 .cta-btn.explore {
-  background: var(--color-secondary, #7FA594);
+  background: var(--color-secondary, #30c59b);
   color: white;
 }
 
 .cta-btn.explore:hover {
-  background: var(--color-tertiary, #5E8B7E);
+  background: var(--color-tertiary, #3572de);
   transform: translateY(-2px);
   box-shadow: 0 8px 16px rgba(0,0,0,0.2);
 }
@@ -481,7 +491,7 @@
   max-width: 100%;
   margin: 0;
   padding: 24px 20px;
-  background: var(--header-gradient, linear-gradient(135deg, #7FA594, #5E8B7E));
+  background: var(--header-gradient, linear-gradient(135deg, #30c59b, #3572de));
   text-align: center;
   color: white;
 }

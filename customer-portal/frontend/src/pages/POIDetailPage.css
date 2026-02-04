@@ -18,13 +18,13 @@
 }
 
 .breadcrumb a {
-    color: #7FA594;
+    color: var(--color-primary, #30c59b);
     text-decoration: none;
     transition: color 0.2s ease;
 }
 
 .breadcrumb a:hover {
-    color: #5E8B7E;
+    color: var(--color-secondary, #30c59b);
 }
 
 /* Hero Section */
@@ -50,7 +50,7 @@
 .poi-category {
     display: inline-block;
     padding: 6px 12px;
-    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    background: var(--color-primary, #30c59b);
     color: white;
     border-radius: 20px;
     font-size: 14px;
@@ -110,13 +110,13 @@
 }
 
 .poi-action-btn-primary {
-    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    background: var(--color-primary, #30c59b);
     color: white;
 }
 
 .poi-action-btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(127, 165, 148, 0.3);
+    box-shadow: 0 4px 12px rgba(48, 197, 155, 0.3);
 }
 
 .poi-action-btn-secondary {
@@ -126,7 +126,7 @@
 }
 
 .poi-action-btn-secondary:hover {
-    border-color: #7FA594;
+    border-color: var(--color-primary, #30c59b);
 }
 
 /* Content Sections */
@@ -193,7 +193,7 @@
 .poi-read-more-btn {
     background: none;
     border: none;
-    color: #7FA594;
+    color: var(--color-primary, #30c59b);
     font-size: 14px;
     font-weight: 600;
     padding: 8px 0;
@@ -203,11 +203,11 @@
 }
 
 .poi-read-more-btn:hover {
-    color: #5E8B7E;
+    color: var(--color-secondary, #30c59b);
 }
 
 .poi-read-more-btn:focus {
-    outline: 2px solid #7FA594;
+    outline: 2px solid var(--color-primary, #30c59b);
     outline-offset: 2px;
     border-radius: 4px;
 }
@@ -250,7 +250,7 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    background: var(--color-primary, #30c59b);
     color: white;
     font-size: 12px;
     font-weight: 700;
@@ -281,10 +281,10 @@
 }
 
 .poi-perfect-for-tag:hover {
-    background: linear-gradient(135deg, #7FA594, #5E8B7E);
+    background: var(--color-primary, #30c59b);
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(127, 165, 148, 0.2);
+    box-shadow: 0 4px 8px rgba(48, 197, 155, 0.3);
 }
 
 /* Section Header with Status */

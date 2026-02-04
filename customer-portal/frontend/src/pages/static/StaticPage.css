@@ -114,7 +114,7 @@
 .section-icon {
   width: 32px;
   height: 32px;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
 }
 
 /* Steps/Process */
@@ -133,7 +133,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7FA594 0%, #5C8374 100%);
+  background: linear-gradient(135deg, var(--color-primary, #30c59b) 0%, var(--color-secondary, #3572de) 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -194,7 +194,7 @@
 .faq-icon {
   width: 20px;
   height: 20px;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   transition: transform 0.2s ease;
   flex-shrink: 0;
 }
@@ -244,7 +244,7 @@
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
   box-shadow: 0 0 0 3px rgba(127, 165, 148, 0.15);
 }
 
@@ -255,7 +255,7 @@
 
 .form-submit {
   padding: 1rem 2rem;
-  background: linear-gradient(135deg, #7FA594 0%, #5C8374 100%);
+  background: linear-gradient(135deg, var(--color-primary, #30c59b) 0%, var(--color-secondary, #3572de) 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -288,7 +288,7 @@
 .contact-icon {
   width: 24px;
   height: 24px;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -307,7 +307,7 @@
 }
 
 .contact-item-content a {
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   text-decoration: none;
 }
 
@@ -352,7 +352,7 @@
 .help-topic-icon svg {
   width: 24px;
   height: 24px;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
 }
 
 .help-topic-card h3 {
@@ -439,7 +439,7 @@
 .partner-cta-btn {
   display: inline-block;
   padding: 1rem 2rem;
-  background: linear-gradient(135deg, #7FA594 0%, #5C8374 100%);
+  background: linear-gradient(135deg, var(--color-primary, #30c59b) 0%, var(--color-secondary, #3572de) 100%);
   color: white;
   text-decoration: none;
   border-radius: 8px;
@@ -478,7 +478,7 @@
 .feature-icon svg {
   width: 32px;
   height: 32px;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
 }
 
 .feature-card h3 {

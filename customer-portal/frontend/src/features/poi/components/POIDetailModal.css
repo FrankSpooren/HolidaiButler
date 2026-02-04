@@ -240,7 +240,7 @@
 .poi-read-more-btn {
   background: none;
   border: none;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   font-size: 14px;
   font-weight: 600;
   padding: 8px 0;
@@ -250,11 +250,11 @@
 }
 
 .poi-read-more-btn:hover {
-  color: #5E8B7E;
+  color: var(--color-secondary, #30c59b);
 }
 
 .poi-read-more-btn:focus {
-  outline: 2px solid #7FA594;
+  outline: 2px solid var(--color-primary, #30c59b);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -297,7 +297,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7FA594, #5E8B7E);
+  background: var(--color-primary, #30c59b);
   color: white;
   font-size: 12px;
   font-weight: 700;
@@ -328,10 +328,10 @@
 }
 
 .poi-perfect-for-tag:hover {
-  background: linear-gradient(135deg, #7FA594, #5E8B7E);
+  background: var(--color-primary, #30c59b);
   color: white;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(127, 165, 148, 0.2);
+  box-shadow: 0 4px 8px rgba(48, 197, 155, 0.3);
 }
 
 /* Section Header with Status */
@@ -410,12 +410,13 @@
 }
 
 .contact-link {
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   text-decoration: none;
 }
 
 .contact-link:hover {
   text-decoration: underline;
+  color: var(--color-secondary, #30c59b);
 }
 
 /* Toast Message */
@@ -449,7 +450,7 @@
   gap: 10px;
   width: 100%;
   padding: 14px;
-  background: #7FA594;
+  background: var(--color-primary, #30c59b);
   color: white;
   border: none;
   border-radius: 12px;
@@ -461,7 +462,7 @@
 }
 
 .poi-external-btn:hover {
-  background: #6B8A7D;
+  background: var(--color-secondary, #30c59b);
 }
 
 /* Loading State */

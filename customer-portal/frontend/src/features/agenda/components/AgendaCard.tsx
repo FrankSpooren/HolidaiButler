@@ -163,7 +163,7 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
   // Get category config - use detected category or fallback
   const categoryKey = detectedCategory || event.primaryCategory || 'culture';
   const categoryStyle = categoryConfig[categoryKey] || {
-    color: '#7FA594',
+    color: '#30c59b',
     icon: '📅',
   };
   const categoryLabel = categoryLabels[language]?.[categoryKey] || categoryLabels.en[categoryKey] || 'Event';

@@ -53,7 +53,7 @@ export function ContactPage() {
           {submitted ? (
             <div style={{ textAlign: 'center', padding: '2rem' }}>
               <svg
-                style={{ width: '64px', height: '64px', color: '#7FA594', margin: '0 auto 1rem' }}
+                style={{ width: '64px', height: '64px', color: '#30c59b', margin: '0 auto 1rem' }}
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"

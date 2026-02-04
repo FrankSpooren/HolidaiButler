@@ -201,7 +201,7 @@ export const AdyenCheckoutComponent: React.FC<AdyenCheckoutProps> = ({
       {/* Loading State */}
       {isLoading && (
         <div className="flex flex-col items-center justify-center p-8 min-h-[300px]">
-          <Loader2 className="w-10 h-10 text-[#7FA594] animate-spin mb-4" />
+          <Loader2 className="w-10 h-10 text-[#30c59b] animate-spin mb-4" />
           <p className="text-gray-600">Loading payment methods...</p>
         </div>
       )}
