@@ -3,9 +3,9 @@
 
 **Datum**: 4 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 2.1
+**Versie**: 2.2
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 0B Database Prep COMPLEET - POI schema uitgebreid, staging tabel, exclusies gemarkeerd
+**Status**: FASE 2 Lokale Bronnen COMPLEET - Calpe.es + POI websites gescraped, 294 records in staging
 
 ---
 
@@ -19,7 +19,7 @@
 | **Fase 4: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
 | **Fase 5: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 4 februari 2026 - Fase 0B Database Voorbereiding (POI schema, staging, exclusies)
+**Laatste update**: 5 februari 2026 - Fase 2 Lokale Bronnen Scrapen (Calpe.es stranden/natuur, POI websites Texel+Calpe)
 
 ---
 
@@ -1060,8 +1060,9 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 3.16 CSS Variabelen Migratie | ✅ Compleet | 04-02-2026 | Claude Code | ALLE hardcoded HolidaiButler kleuren (#7FA594, #5E8B7E, #4A7066) → CSS variabelen met Texel fallbacks (#30c59b, #3572de) in 33+ bestanden |
 | 3.17 Fase 0A Excel→Hetzner Sync | ✅ Compleet | 04-02-2026 | Claude Code | Sync van AtTexel_POI_FIXED.xlsx: tile_en (0→1675), highlights (0→1675), markdown verwijderd, taalfouten gefixed |
 | 3.18 Fase 0B Database Prep | ✅ Compleet | 04-02-2026 | Claude Code | POI schema +21 kolommen, staging tabel poi_content_staging, foto dirs, reviews +6 kolommen, exclusies (Calpe 98, Texel 597), templates 186 POIs |
+| 3.19 Fase 2 Lokale Bronnen Scrapen | ✅ Compleet | 05-02-2026 | Claude Code | VVV Texel: React SPA (niet scrapbaar). Calpe.es: 18 POIs (14 stranden + 4 natuur). POI websites: 276 POIs (154 Texel + 122 Calpe). Totaal 294 staging records (pending). Coverage: Calpe 9%, Texel 13%. |
 
-**Fase 3 Status**: ✅ COMPLEET (04 februari 2026)
+**Fase 3 Status**: ✅ COMPLEET (05 februari 2026)
 
 **POI Sync Resultaten:**
 - POIs verwijderd: 97 (niet in nieuwe Excel)
@@ -1285,6 +1286,40 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - Secondary: #3572de (zee blauw)
 - Accent: #ecde3c (zongeel)
 
+### Fase 2 Lessons Learned - Lokale Bronnen Scrapen (05-02-2026)
+
+**VVV Texel Scraping:**
+- **texel.net is een React SPA** - Content laadt dynamisch via JavaScript, niet scrapbaar met standaard HTTP requests
+- **Geen server-side rendered content** - Zelfs met user-agent spoofing retourneert texel.net een lege HTML shell
+- **Alternatief**: Headless browser (Puppeteer/Playwright) zou nodig zijn, maar is disproportioneel voor deze fase
+
+**Calpe.es Scraping:**
+- **14 stranden + 4 natuurgebieden succesvol gescraped** - Calpe.es heeft statische pagina's met bruikbare content
+- **Fuzzy matching faalde voor Dutch→Spanish** - Slug namen als "baai-el-collao-o-raco-del-corb" matchten niet goed op "Cala del Raco del Corb"
+- **Handmatige POI mapping was noodzakelijk** - 18 calpe.es entries moesten handmatig aan juiste POI IDs gekoppeld worden
+- **NL versie van calpe.es** - Bruikbaar als basis voor Nederlandse beschrijvingen
+
+**POI Website Scraping:**
+- **Texel: 154/200 succesvol** (77% success rate) - Meta descriptions + OG tags + main content
+- **Calpe: 122/200 succesvol** (61% success rate) - Lager door meer dode links en Facebook-only pagina's
+- **Facebook URLs niet scrapbaar** - Redirect naar login pagina (400 Bad Request)
+- **Veelvoorkomende failures**: 403 Forbidden, DNS resolution failures, SSL expired, connection timeouts
+- **Rate limiting cruciaal** - 1 request/seconde voorkomt IP blocks
+
+**Content Kwaliteit:**
+- **80 beschrijvingen in target range** (80-120 woorden) - 27% van totaal
+- **214 beschrijvingen in medium range** (30-79 woorden) - 73% van totaal
+- **Website meta descriptions vaak kort** - Veel sites hebben slechts 1-2 zinnen als meta description
+- **Calpe.es content is rijker** - Detail pagina's hebben 100+ woorden beschrijvingen
+
+**Database:**
+- **mysql-connector-python 8.0.15 incompatibel met Python 3.12** - `ssl.wrap_socket` verwijderd in Python 3.12+; upgrade naar 9.5.0 nodig
+- **POI tabel heet `POI` (uppercase)** - Case-sensitive in queries op Hetzner
+
+**Social Media Status:**
+- **Calpe: 0 Facebook/Instagram URLs in database** - Alle social media links ontbreken
+- **Texel: 467 Facebook + 364 Instagram URLs** - Beter gevuld vanuit AtTexel import
+
 ### Fase 4 Lessons Learned
 - *Nog geen - fase niet gestart*
 
@@ -1317,6 +1352,10 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 28-01-2026 | Config in platform-core/config/ | Dicht bij backend code, eenvoudiger imports | Claude Code |
 | 03-02-2026 | TexelMaps huisstijl definitief | #30c59b/#3572de/#ecde3c - Texelse identiteit (groen, blauw, geel) | Owner |
 | 03-02-2026 | VVV Texel partner badge | Lokale autoriteit, vertrouwen bezoekers, professionele uitstraling | Owner |
+| 05-02-2026 | Fase 1 overslaan | Tijdgebrek eigenaar, direct naar Fase 2 lokale bronnen | Owner |
+| 05-02-2026 | Staging-first workflow | Alle content via poi_content_staging, review voordat POI update | Claude Code |
+| 05-02-2026 | Handmatige POI mapping calpe.es | Fuzzy matching onbetrouwbaar voor Dutch→Spanish namen, expliciet mapping | Claude Code |
+| 05-02-2026 | VVV Texel scraping overslaan | React SPA niet scrapbaar zonder headless browser, disproportioneel | Claude Code |
 
 ---
 
@@ -1342,8 +1381,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 4 februari 2026 - Fase 3 Complete Branding Migratie*
-*Volgende review: Na voltooiing Fase 4 (Alicante Preparation)*
+*Laatst bijgewerkt: 5 februari 2026 - Fase 2 Lokale Bronnen Scrapen Compleet*
+*Volgende review: Na voltooiing Fase 3 (Google Places Enrichment)*
 
 ---
 
@@ -1351,6 +1390,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **2.2** | **05-02-2026** | **FASE 2 LOKALE BRONNEN SCRAPEN: VVV Texel niet scrapbaar (React SPA). Calpe.es gescraped (18 POIs: 14 stranden + 4 natuur, handmatige mapping). POI websites gescraped (276 POIs: 154 Texel + 122 Calpe). Totaal 294 records naar poi_content_staging (status=pending). Coverage: Texel 13% (154/1142), Calpe 9% (139/1495). Content: 80 target (80-120 woorden) + 214 medium (30-79 woorden). mysql-connector-python upgrade 8.0.15→9.5.0 voor Python 3.12. Fase 1 (Frank handmatig) overgeslagen vanwege tijdgebrek.** |
 | **2.1** | **04-02-2026** | **FASE 0B DATABASE VOORBEREIDING: POI schema uitgebreid (+21 kolommen: google_rating, photos_local_path, content_source, exclusie flags etc). Staging tabel poi_content_staging aangemaakt voor approval workflow. Foto directories /var/www/images/pois/[dest]/. Reviews schema +6 kolommen. Exclusies: Calpe 98 (accommodatie), Texel 597 (411 accommodatie + 132 laadpunten + 49 parking + 5 OV). Template teksten voor 186 Texel POIs (laadpunten/OV/parking). Te verrijken: Calpe 1495, Texel 1142.** |
 | 2.0 | 04-02-2026 | FASE 0A EXCEL→HETZNER SYNC: Texel tile descriptions + highlights gesynchroniseerd. tile_en kolom toegevoegd (0→1675 POIs), highlights (0→1675), markdown verwijderd, taalfouten "in Texel"→"op Texel" gefixed. AtTexel_POI_FIXED.xlsx als bron. Backup gemaakt. detail_description NIET gesync (wordt later nieuw gegenereerd). |
 | 1.9 | 04-02-2026 | Fase 3 CSS VARIABELEN MIGRATIE: ALLE hardcoded HolidaiButler kleuren (#7FA594, #5E8B7E, #4A7066) vervangen door CSS variabelen met Texel fallbacks (#30c59b, #3572de). 33+ bestanden bijgewerkt (CSS + TSX). index.css :root als single source of truth. Texel huisstijl definitief: Primary #30c59b, Secondary #3572de, Accent #ecde3c. |
