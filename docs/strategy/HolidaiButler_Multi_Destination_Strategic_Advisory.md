@@ -3,9 +3,9 @@
 
 **Datum**: 5 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 2.3
+**Versie**: 2.4
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 2 Lokale Bronnen COMPLEET - 534 staging records + VVV contactdata op 115 Texel POIs. Klaar voor Fase 3 (Google Places/Apify).
+**Status**: FASE 3 LLM Content Enrichment Pilot COMPLEET - 100 POIs (50 Texel + 50 Calpe) geanalyseerd. Advies: Hybride aanpak (Texel volledige vervanging, Calpe per categorie).
 
 ---
 
@@ -16,10 +16,11 @@
 | **Fase 1: Foundation** | ✅ COMPLEET | 28-01-2026 | 28-01-2026 | Claude Code |
 | **Fase 2: Texel Deployment** | ✅ COMPLEET | 29-01-2026 | 29-01-2026 | Claude Code |
 | **Fase 3: Texel Data Quality** | ✅ COMPLEET | 02-02-2026 | 02-02-2026 | Claude Code |
+| **Fase 3b: LLM Content Enrichment** | ✅ PILOT COMPLEET | 05-02-2026 | 05-02-2026 | Claude Code |
 | **Fase 4: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
 | **Fase 5: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 5 februari 2026 - Fase 2 Lokale Bronnen Scrapen COMPLEET (534 staging records + VVV Texel contactdata op 115 POIs)
+**Laatste update**: 5 februari 2026 - Fase 3 LLM Content Enrichment Pilot (100 POIs, Mistral Medium, EUR 0.24, hybride vervangingsadvies)
 
 ---
 
@@ -1062,6 +1063,11 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 3.18 Fase 0B Database Prep | ✅ Compleet | 04-02-2026 | Claude Code | POI schema +21 kolommen, staging tabel poi_content_staging, foto dirs, reviews +6 kolommen, exclusies (Calpe 98, Texel 597), templates 186 POIs |
 | 3.19 Fase 2 Lokale Bronnen Scrapen | ✅ Compleet | 05-02-2026 | Claude Code | VVV Texel: 240 POIs via GraphQL API (Next.js __NEXT_DATA__ → gateway-texel.prod.oberon.dev/graphql). Calpe.es: 18 POIs (14 stranden + 4 natuur). POI websites: 276 POIs (154 Texel + 122 Calpe). Totaal 534 staging records (pending). Coverage: Calpe 9%, Texel 30%. |
 | 3.20 VVV Texel Contactdata → POI | ✅ Compleet | 05-02-2026 | Claude Code | 115 Texel POIs bijgewerkt: 50 Facebook URLs, 45 Instagram URLs, 73 emails, 21 telefoon, 14 websites. Via VVV Texel GraphQL API → fuzzy match → fill-only-if-empty. Texel contactvelden: website 73%, facebook 45%, instagram 35%, email 53%, phone 70%. |
+| 3.21 Fase 3 Stap 1: Database Backup | ✅ Compleet | 05-02-2026 | Claude Code | POI_backup_fase3_20260205_114056.sql (30 MB) op /root/backups/ |
+| 3.22 Fase 3 Stap 2: POI Selectie | ✅ Compleet | 05-02-2026 | Claude Code | 50 Texel (Actief/Natuur/Cultuur/Eten/Winkelen, elk 10) + 50 Calpe (Active/Beaches/Culture/Recreation/Food/Shopping). Criteria: rating>=3.5, enriched_detail_description NOT NULL, is_active=1. |
+| 3.23 Fase 3 Stap 3: Mistral AI Generatie | ✅ Compleet | 05-02-2026 | Claude Code | 100/100 POIs succesvol. Model: mistral-medium-latest. Kosten: EUR 0.2350 (4.7% budget). Tokens: 61.538 input + 18.656 output = 80.194 totaal. Woordenaantal: min 111, max 152, avg 132, 41% in range. |
+| 3.24 Fase 3 Stap 4: Kwaliteitsanalyse | ✅ Compleet | 05-02-2026 | Claude Code | NEW scoort beter op ALLE 9 criteria. Grootste verbeteringen: Herhaling (79%→2%), AIDA (2.0→3.8), ToV (2.8→4.2). Texel OLD onbruikbaar (NL, markdown, 346 woorden). Calpe OLD redelijk maar verouderd (Amerikaans, hardcoded data). |
+| 3.25 Fase 3 Stap 5: Vervangingsadvies | ✅ Compleet | 05-02-2026 | Claude Code | Advies: Optie 3 Hybride. Texel: volledige vervanging (OLD is NL, onbruikbaar als EN). Calpe: hybride per categorie. Prompt optimalisatie nodig (woordenaantal + markdown fix). Geschatte kosten volledige run: EUR 6.20 voor ~2.637 POIs. |
 
 **Fase 3 Status**: ✅ COMPLEET (05 februari 2026)
 
@@ -1356,6 +1362,33 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - Content moet door AI (MistralAI) herschreven worden naar 80-120 woorden, correct taalgebruik ("op Texel", "in Calpe")
 - Staging-first workflow behouden: alle nieuwe content → poi_content_staging → Frank review
 
+### Fase 3 Lessons Learned - LLM Content Enrichment Pilot (05-02-2026)
+
+**Mistral AI Content Generatie:**
+- **mistral-medium-latest** levert consistent goede kwaliteit voor POI-beschrijvingen
+- **EUR 0.00235 per POI** — extreem kostenefficiënt (100 POIs voor EUR 0.24)
+- **80.194 tokens totaal** voor 100 POIs (gemiddeld 802 tokens per POI: 615 input + 187 output)
+- **0% fouten** — alle 100 API calls succesvol, geen retries nodig
+- **Rate limiting 5 req/sec** werkt goed; geen 429 errors ontvangen
+
+**Content Kwaliteit Bevindingen:**
+- **Woordenaantal overshooting** — gemiddeld 132 woorden i.p.v. target 120. Prompt moet strikter: "EXACTLY 115-125 words"
+- **Markdown lekkage** — 17% van output bevat `*italic*` of `[hyperlinks]()`. Dubbele mitigatie nodig: strikte prompt + post-processing regex
+- **"Tucked" opening pattern** — Mistral herhaalt "Tucked away..." openingszinnen. Prompt moet opening-diversiteit afdwingen
+- **AIDA-model werkt** — 3.8/5 gemiddeld, consistent herkenbare Attention→Interest→Desire→Action structuur
+- **Categorie-specifieke toon** — Natuur-beschrijvingen zijn langer (avg 141w), Cultuur is meest compact (avg 127w)
+
+**OLD Content Problemen:**
+- **Texel OLD is fundamenteel onbruikbaar als EN content**: Nederlands, markdown, 346 woorden gemiddeld, formulaisch
+- **Calpe OLD is redelijk maar verouderd**: Amerikaans taalgebruik, hardcoded review data die veroudert
+- **48% van OLD bevat `**markdown**`** — structureel probleem in bestaande content pipeline
+- **79% van OLD bevat herhaalde zinnen** — "Of je nu... komt", "een must-visit voor iedereen"
+
+**Hybride Strategie:**
+- **Texel heeft volledige vervanging nodig** — OLD is NL, niet EN
+- **Calpe profiteert van per-categorie selectie** — sommige OLD beschrijvingen bevatten nuttige details (prijzen, certificeringen)
+- **Archivering OLD is essentieel** — Texel NL teksten herbruikbaar voor `enriched_detail_description_nl`
+
 ### Fase 4 Lessons Learned
 - *Nog geen - fase niet gestart*
 
@@ -1394,6 +1427,9 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 05-02-2026 | VVV Texel via GraphQL API | Next.js __NEXT_DATA__ → JS chunk analyse → GraphQL endpoint, 382 bedrijven | Claude Code |
 | 05-02-2026 | VVV contactdata fill-only-if-empty | Bestaande POI data niet overschrijven, alleen lege velden aanvullen met VVV Texel data | Claude Code |
 | 05-02-2026 | SPA techniek niet breed toepasbaar | 90% POI websites is traditioneel HTML, Instagram/Facebook blokkeren scraping, techniek beperkt tot Next.js/React sites met __NEXT_DATA__ | Claude Code |
+| 05-02-2026 | Fase 3 LLM Pilot: Optie 3 Hybride | Texel volledige vervanging (OLD=NL, onbruikbaar), Calpe hybride per categorie. NEW scoort beter op ALLE 9 criteria. | Claude Code |
+| 05-02-2026 | Mistral Medium voor content generatie | mistral-medium-latest biedt optimale balans kwaliteit/kosten: EUR 0.00235/POI, 0% errors, consistent AIDA-model | Claude Code |
+| 05-02-2026 | Prompt optimalisatie nodig voor volledige run | Woordenaantal strikter (115-125), markdown verbod versterken, opening-diversiteit afdwingen | Claude Code |
 
 ---
 
@@ -1419,8 +1455,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 5 februari 2026 - Fase 2 Lokale Bronnen Scrapen COMPLEET + VVV Texel Contactdata*
-*Volgende review: Na voltooiing Fase 3 (Google Places / Apify Enrichment)*
+*Laatst bijgewerkt: 5 februari 2026 - Fase 3 LLM Content Enrichment Pilot COMPLEET*
+*Volgende review: Na beslissing Frank over vervangingsadvies (Optie 3 Hybride) en volledige run*
 
 ---
 
@@ -1428,7 +1464,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **2.3** | **05-02-2026** | **VVV TEXEL CONTACTDATA: 115 Texel POIs bijgewerkt met contactdata uit VVV Texel GraphQL API (50 Facebook, 45 Instagram, 73 email, 21 telefoon, 14 website). Fill-only-if-empty strategie. Texel contactdekking: website 73%, facebook 45%, instagram 35%, email 53%, phone 70%. SPA techniek analyse: niet breed toepasbaar (90% POI sites traditioneel HTML). Voorbereiding Fase 3 sectie toegevoegd met coverage gaps en aandachtspunten.** |
+| **2.4** | **05-02-2026** | **FASE 3 LLM CONTENT ENRICHMENT PILOT: 100 POIs (50 Texel + 50 Calpe) via Mistral Medium. Kosten EUR 0.24 (4.7% budget). NEW scoort beter op ALLE 9 criteria (grammatica, spelling, ToV, AIDA, herhaling, concreetheid, formatting, naam, woordenaantal). Advies: Optie 3 Hybride — Texel volledige vervanging (OLD=NL, markdown, 346w avg), Calpe hybride per categorie. Prompt optimalisatie nodig (woordenaantal 132→120, markdown fix). Volledige run geschat EUR 6.20 voor ~2.637 POIs. Deliverables: fase3_pilot_output.json, fase3_quality_analysis.md, fase3_replacement_advice.md op Hetzner /root/.** |
+| 2.3 | 05-02-2026 | VVV TEXEL CONTACTDATA: 115 Texel POIs bijgewerkt met contactdata uit VVV Texel GraphQL API (50 Facebook, 45 Instagram, 73 email, 21 telefoon, 14 website). Fill-only-if-empty strategie. Texel contactdekking: website 73%, facebook 45%, instagram 35%, email 53%, phone 70%. SPA techniek analyse: niet breed toepasbaar (90% POI sites traditioneel HTML). Voorbereiding Fase 3 sectie toegevoegd met coverage gaps en aandachtspunten. |
 | 2.2 | 05-02-2026 | FASE 2 LOKALE BRONNEN SCRAPEN: VVV Texel gescraped via GraphQL API (382 bedrijven, 240 POIs gematcht, 197 in 80-120 woorden target). Calpe.es gescraped (18 POIs: 14 stranden + 4 natuur). POI websites gescraped (276 POIs: 154 Texel + 122 Calpe). Totaal 534 records naar poi_content_staging (status=pending). Coverage: Texel 30% (346/1142), Calpe 9% (139/1495). VVV Texel doorbraak: Next.js __NEXT_DATA__ → GraphQL endpoint ontdekt. mysql-connector-python upgrade 8.0.15→9.5.0. Fase 1 overgeslagen. |
 | **2.1** | **04-02-2026** | **FASE 0B DATABASE VOORBEREIDING: POI schema uitgebreid (+21 kolommen: google_rating, photos_local_path, content_source, exclusie flags etc). Staging tabel poi_content_staging aangemaakt voor approval workflow. Foto directories /var/www/images/pois/[dest]/. Reviews schema +6 kolommen. Exclusies: Calpe 98 (accommodatie), Texel 597 (411 accommodatie + 132 laadpunten + 49 parking + 5 OV). Template teksten voor 186 Texel POIs (laadpunten/OV/parking). Te verrijken: Calpe 1495, Texel 1142.** |
 | 2.0 | 04-02-2026 | FASE 0A EXCEL→HETZNER SYNC: Texel tile descriptions + highlights gesynchroniseerd. tile_en kolom toegevoegd (0→1675 POIs), highlights (0→1675), markdown verwijderd, taalfouten "in Texel"→"op Texel" gefixed. AtTexel_POI_FIXED.xlsx als bron. Backup gemaakt. detail_description NIET gesync (wordt later nieuw gegenereerd). |
