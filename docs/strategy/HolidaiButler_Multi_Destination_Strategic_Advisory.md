@@ -5,7 +5,7 @@
 **Auteur**: Claude (Strategic Analysis)
 **Versie**: 2.5
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 4 Volledige LLM Content Run COMPLEET - 2.515 POIs (1.442 Calpe + 1.073 Texel) gegenereerd via Mistral Medium. EUR 8,93. 0% failures. Content in staging (status=pending), wacht op Frank's review.
+**Status**: FASE 4 Full LLM Content Run COMPLEET - 2.515 POIs (1.442 Calpe + 1.073 Texel) gegenereerd via Mistral Medium. Kosten EUR 8,93. 100% succespercentage. Alle content in staging voor review.
 
 ---
 
@@ -17,11 +17,11 @@
 | **Fase 2: Texel Deployment** | ✅ COMPLEET | 29-01-2026 | 29-01-2026 | Claude Code |
 | **Fase 3: Texel Data Quality** | ✅ COMPLEET | 02-02-2026 | 02-02-2026 | Claude Code |
 | **Fase 3b: LLM Content Enrichment** | ✅ PILOT COMPLEET | 05-02-2026 | 05-02-2026 | Claude Code |
-| **Fase 4: LLM Content Volledige Run** | ✅ COMPLEET | 05-02-2026 | 05-02-2026 | Claude Code |
+| **Fase 4: Full LLM Content Run** | ✅ COMPLEET | 05-02-2026 | 05-02-2026 | Claude Code |
 | **Fase 5: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
 | **Fase 6: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 5 februari 2026 - Fase 4 LLM Content Volledige Run COMPLEET (2.515 POIs, Mistral Medium, EUR 8,93, 0% failures, content in staging)
+**Laatste update**: 6 februari 2026 - Fase 4 Full LLM Content Run COMPLEET (2.515 POIs, Mistral Medium, EUR 8,93, 100% success, alle content in staging)
 
 ---
 
@@ -966,7 +966,16 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | GitHub Actions matrix update | P0 | 2u |
 | E2E testen Texel environment | P0 | 4u |
 
-### Fase 3: Alicante Preparation (Week 5-6)
+### Fase 4: Full LLM Content Run (Week 5) - COMPLEET
+
+| Task | Prioriteit | Effort | Status |
+|------|------------|--------|--------|
+| Prompt optimalisatie (woordenaantal, markdown, openings) | P0 | 2u | COMPLEET |
+| Volledige LLM generatie (2.515 POIs) | P0 | 5u | COMPLEET |
+| Kwaliteitsanalyse & rapportage | P0 | 2u | COMPLEET |
+| Staging tabel vullen | P0 | 1u | COMPLEET |
+
+### Fase 5: Alicante Preparation (Week 6-7)
 
 | Task | Prioriteit | Effort |
 |------|------------|--------|
@@ -974,7 +983,7 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | Alicante POI discovery via Apify | P1 | 8u |
 | Subdomain setup (alicante.holidaibutler.com) | P1 | 1u |
 
-### Fase 4: Stabilization & Documentation (Week 7-8)
+### Fase 6: Stabilization & Documentation (Week 8-9)
 
 | Task | Prioriteit | Effort |
 |------|------------|--------|
@@ -1114,41 +1123,89 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - Category colors: Texel Dutch categories toegevoegd aan getCategoryColor()
 - GeoJSON endpoint: variable shadowing bug gefixed (limit→perCategoryLimit)
 
-### Fase 4: LLM Content Volledige Run - COMPLEET
+### Fase 4: Full LLM Content Run - COMPLEET
 
 | Taak | Status | Datum | Uitvoerder | Notities |
 |------|--------|-------|------------|----------|
-| 4.1 Database backup | ✅ Compleet | 05-02-2026 | Claude Code | POI_backup_fase4_20260205_115237.sql (31 MB) + staging backup op /root/backups/ |
-| 4.2 Prompt optimalisatie | ✅ Compleet | 05-02-2026 | Claude Code | Woordenaantal "EXACTLY 115-125" + retry gate (105-135), markdown verbod versterkt, opening-diversiteit, forbidden openings list |
-| 4.3 POI selectie & batch generatie | ✅ Compleet | 05-02-2026 | Claude Code | 2.515 POIs (1.442 Calpe + 1.073 Texel), 51 batches van 50, Mistral Medium. 303 minuten, EUR 8,93 (89,3% budget). 0 failures, 1.276 retries. |
-| 4.4 Staging insert | ✅ Compleet | 05-02-2026 | Claude Code | Alle 2.515 beschrijvingen naar poi_content_staging (source='mistral_medium_fase4', priority=3, status='pending') |
-| 4.5 Kwaliteitsrapportage | ✅ Compleet | 05-02-2026 | Claude Code | 3 rapporten: fase4_generation_report.md, fase4_quality_sample.md (20 samples), fase4_quality_flags.json (148 >145w, 162 "The scent of", 2 "in Texel" errors). British English 97,6%. |
-| 4.6 Texel OLD NL archivering | ✅ Compleet | 05-02-2026 | Claude Code | 186 Texel OLD NL beschrijvingen gearchiveerd naar texel_old_nl_archive.json voor toekomstig gebruik als enriched_detail_description_nl |
+| 4.1 Prompt optimalisatie | ✅ Compleet | 05-02-2026 | Claude Code | Striktere woordenaantal (115-125), markdown verbod, opening diversiteit, forbidden openings ("Tucked away", "Nestled in") geëlimineerd |
+| 4.2 Volledige LLM generatie run | ✅ Compleet | 05-02-2026 | Claude Code | 2.515 POIs (1.442 Calpe + 1.073 Texel), 100% success, 0 failures, 303 min (~5 uur) |
+| 4.3 Quality retry systeem | ✅ Compleet | 05-02-2026 | Claude Code | 1.276 retries (50,7% retry rate) voor woordenaantal compliance |
+| 4.4 Kwaliteitsanalyse & rapportage | ✅ Compleet | 05-02-2026 | Claude Code | Markdown 0%, British English 97,6%, AIDA-indicatoren sterk, 2x "in Texel" fout |
+| 4.5 Staging tabel vullen | ✅ Compleet | 05-02-2026 | Claude Code | 2.515 records in poi_content_staging (source: mistral_medium_fase4, status: pending) |
 
 **Fase 4 Status**: ✅ COMPLEET (05 februari 2026)
 
-**Fase 4 Kerncijfers:**
-| Metriek | Waarde |
-|---------|--------|
-| POIs verwerkt | 2.515 (1.442 Calpe + 1.073 Texel) |
-| Model | mistral-medium-latest |
-| Doorlooptijd | 303,1 minuten |
-| Totale kosten | EUR 8,93 (EUR 0,00355/POI) |
-| Tokens | 2.768.892 (1.921.299 input + 847.593 output) |
-| Failures | 0 (0%) |
-| Retries | 1.276 |
-| Woordenaantal | Min 110, Max 161, Avg 135 |
-| Markdown lekkage | 0% |
-| British English | 97,6% |
+**Fase 4 Kernresultaten:**
 
-**Deliverables op Hetzner /root/:**
-- `fase4_generation_report.md` (9.752 bytes)
-- `fase4_quality_sample.md` (24.801 bytes)
-- `fase4_quality_flags.json` (50.373 bytes)
-- `fase4_quality_analysis.json`
-- `texel_old_nl_archive.json` (186 beschrijvingen)
-- `fase4_full_output.json`
-- `fase4_checkpoint.json`
+| Metriek | Pilot (Fase 3b) | Full Run (Fase 4) | Verschil |
+|---------|-----------------|-------------------|----------|
+| POIs verwerkt | 100 | 2.515 | +2.415 |
+| Succespercentage | 100% | 100% | = |
+| Kosten totaal | EUR 0,24 | EUR 8,93 | +3.621% |
+| Kosten per POI | EUR 0,00235 | EUR 0,00355 | +51% (door retries) |
+| Totaal tokens | 80.194 | 2.768.892 | +3.353% |
+| Markdown lekkage | 17% | **0%** | -100% (opgelost) |
+| Verboden openingszinnen | 4% | **0%** | -100% (opgelost) |
+| British English | n/a | **97,6%** | Nieuw gemeten |
+| Gem. woordenaantal | 132 | 135 | +2,3% |
+| Retry rate | ~15% | 50,7% | +238% |
+
+**Woordenaantal Distributie (2.515 POIs):**
+| Range | Aantal | % |
+|-------|--------|---|
+| 110-115 | 4 | 0,2% |
+| 116-125 | 189 | 7,5% |
+| 126-130 | 420 | 16,7% |
+| 131-135 | 827 | 32,9% |
+| 136-140 | 631 | 25,1% |
+| 141-150 | 420 | 16,7% |
+| 150+ | 24 | 1,0% |
+
+**Locatiereferenties:**
+| Calpe | % | Texel | % |
+|-------|---|-------|---|
+| Costa Blanca | 75,1% | Wadden(zee) | 63,4% |
+| Mediterranean | 69,8% | North Sea | 47,3% |
+| Penon de Ifach | 64,1% | Den Burg | 43,5% |
+| Chiringuito | 43,2% | De Koog | 22,1% |
+| Tapas | 27,8% | Oudeschild | 17,9% |
+| "in Calpe" | 5,8% | "on Texel" | 12,8% |
+| | | **"in Texel" (FOUT)** | **0,2% (2x)** |
+
+**Opening Diversiteit Issues:**
+- 57% begint met "A" — onvoldoende divers
+- "The scent of" komt 162x voor (6,4%) — voornaamste repetitiepatroon
+- Verboden openingszinnen ("Tucked away", "Nestled in") succesvol geëlimineerd
+
+**AIDA-model Indicatoren:**
+| Indicator | Calpe | Texel | Totaal |
+|-----------|-------|-------|--------|
+| Prijsvermelding | 71,2% | 61,1% | 66,9% |
+| Openingstijden | 60,4% | 58,4% | 59,6% |
+| Afstandsreferentie | 76,3% | 75,7% | 76,0% |
+| Call-to-action | 49,9% | 43,7% | 47,3% |
+
+**Staging Status na Fase 4:**
+| Content Source | Aantal | Status |
+|---------------|--------|--------|
+| mistral_medium_fase4 | 2.515 | pending |
+| poi_website | 276 | pending |
+| vvv_texel | 240 | pending |
+| calpe_es | 18 | pending |
+| **Totaal staging** | **3.049** | **pending** |
+
+**Deliverables op Hetzner (/root/):**
+- `fase4_full_output.json` (3,4 MB) — alle 2.515 gegenereerde beschrijvingen
+- `fase4_generation_report.md` — uitvoeringsrapport met statistieken
+- `fase4_quality_analysis.json` — gedetailleerde kwaliteitsmetrieken per destination/categorie
+- `fase4_quality_sample.md` — steekproef 20 POIs (10 Texel + 10 Calpe)
+- `fase4_quality_flags.json` — quality flags per POI
+- `fase4_checkpoint.json` — checkpoint met alle verwerkte POI IDs
+- `fase4_exceptions.json` — lege lijst (0 exceptions)
+- `texel_old_nl_archive.json` — archief Texel oude NL beschrijvingen
+
+**GitHub Commits:**
+- `feat(content): Fase 4 Full LLM Content Run — 2.515 POIs via Mistral Medium`
 
 ### Fase 5: Alicante Preparation
 
@@ -1426,39 +1483,39 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - **Calpe profiteert van per-categorie selectie** — sommige OLD beschrijvingen bevatten nuttige details (prijzen, certificeringen)
 - **Archivering OLD is essentieel** — Texel NL teksten herbruikbaar voor `enriched_detail_description_nl`
 
-### Fase 4 Lessons Learned - LLM Content Volledige Run (05-02-2026)
+### Fase 4 Lessons Learned - Full LLM Content Run (05-02-2026)
 
-**Mistral Medium Schaalgedrag:**
-- **Woordenaantal overshooting persistent** — Ondanks "EXACTLY 115-125 words" prompt schrijft Mistral Medium consistent ~135 woorden. Retry gate (>135 of <105) helpt maar lost het probleem niet volledig op. Model heeft inherente neiging tot langere output.
-- **Retry rate van 50,7%** — 1.276 retries op 2.515 POIs, voornamelijk door woordenaantal overschrijding. Verhoogt kosten en doorlooptijd maar geen failures.
-- **EUR 0,00355 per POI** — Kostenefficienter dan pilot (EUR 0,00235/POI) ondanks retries, door lagere per-token kosten bij schaal.
-- **0% failure rate** — Mistral Medium is uiterst betrouwbaar bij schaal. Alle 2.515 API calls succesvol (na retries).
+**Prompt Optimalisatie:**
+- **Verboden openingszinnen werken** — "Tucked away" en "Nestled in" volledig geëlimineerd (0% vs 4% in pilot)
+- **Markdown verbod werkt met post-processing** — 0% lekkage (was 17% in pilot). Combinatie van strikte prompt + regex post-processing is effectief
+- **Woordenaantal target wordt structureel overschreden** — Model convergeert rond 135 woorden ondanks "EXACTLY 115-125 words" instructie. Dit is een inherente eigenschap van Mistral Medium, niet oplosbaar via prompt engineering alleen
+- **Nieuwe repetitiepatronen ontstaan** — Na eliminatie van "Tucked away" vervalt model in "The scent of" (162x, 6,4%). Whack-a-mole effect bij opening constraints
 
-**Content Kwaliteit bij Schaal:**
-- **Nieuwe repetitieve patronen** — "The scent of" (162x, 6,4%), "A 19th-century farmhouse" (42x), "A stone's throw" (43x). Ondanks verbod op "Tucked away" verschuift het model naar andere formulaische openingen.
-- **British English 97,6%** — 3.249 Britse vs 79 Amerikaanse spellingen. Zeer goede naleving van stijlvoorschrift.
-- **Markdown lekkage 0%** — Volledige eliminatie door versterkt prompt + post-processing regex. Significant verbeterd t.o.v. pilot (17%).
-- **"In Texel" fout** — 2 beschrijvingen bevatten "in Texel" i.p.v. "op Texel". Prompt moet strikter voor Nederlandse taalconventies.
+**Productie Run Inzichten:**
+- **Retry rate 3x hoger dan pilot** — 50,7% vs ~15%. Veroorzaakt door striktere woordenaantal threshold (>135 triggert retry)
+- **Kosten per POI 51% hoger door retries** — EUR 0,00355 vs EUR 0,00235. Elke retry verdubbelt tokens voor die POI
+- **Totale kosten 44% boven schatting** — EUR 8,93 vs geschatte EUR 6,20. Budget van EUR 10 was net voldoende
+- **5 uur runtime voor 2.515 POIs** — Rate limiting van 5 req/sec effectief, geen 429 errors
+- **0 failures** — Mistral Medium API extreem betrouwbaar voor batch processing
 
-**AIDA Model Naleving:**
-- **67% bevat prijzen** — Goed voor Desire-component
-- **60% bevat openingstijden** — Praktische informatie aanwezig
-- **76% bevat afstandsindicaties** — Locatiecontext sterk
-- **47% bevat CTA** — Action-component kan sterker; overweeg explicieter CTA-vereiste in prompt
+**Content Kwaliteit:**
+- **British English excellent** — 97,6% compliance. "Practice" (49x) is zowel British als American als zelfstandig naamwoord
+- **"in Texel" bijna geëlimineerd** — Slechts 2 van 1.073 Texel-teksten (0,2%). Prompt instructie "on Texel, NOT in Texel" werkt
+- **AIDA-structuur goed verankerd** — 67% prijzen, 60% openingstijden, 76% afstandsreferenties. CTA (47%) is zwakste element
+- **Lokale verankering sterk** — 64% Calpe noemt Penon de Ifach, 63% Texel noemt Waddenzee
+- **Categorie-invloed op woordenaantal** — Food/Shopping schrijft compacter (132-133w), Active/Nature langer (136-138w)
 
-**Technische Lessons:**
-- **pymysql niet beschikbaar op Hetzner** — Python 3.12 externally-managed-environment blokkeert pip install. Gebruik mysql.connector (voorgeinstalleerd).
-- **Case-sensitive tabelnamen op Linux** — `POI` (uppercase), `Categories` (capital C). Altijd exacte casing gebruiken.
-- **POI.category is varchar, geen FK** — POI tabel heeft geen category_id foreign key naar Categories tabel. Direct VARCHAR veld gebruiken.
-- **Shell escaping met SSH** — SQL queries met `$`, `()`, en speciale tekens falen via SSH. Gebruik Python scripts of SQL files op de server.
-- **Checkpoint granulariteit** — Checkpoints slaan alleen op bij batch-grenzen (elke 50 POIs), niet per POI. Dit veroorzaakt schijnbare "stalls" bij monitoring.
+**Staging & Review:**
+- **3.049 records totaal in staging** — 2.515 Fase 4 + 534 eerdere bronnen (VVV Texel, POI websites, calpe.es)
+- **Smart quotes in alle beschrijvingen** — Typografische aanhalingstekens (''"") en em-dashes (—). Correct voor publicatie maar verifieer frontend rendering
+- **Encoding: 0 issues** — Geen corruptie in 2.515 beschrijvingen
 
-**Aanbevelingen voor Fase 5:**
-- Prompt optimalisatie: strikter woordenaantal (110-120 target), opening-diversiteit vergroten
-- "Op Texel" vs "in Texel" hard valideren in post-processing
-- CTA-percentage verhogen door explicieter Action-vereiste
-- Repetitieve opening detectie als pre-batch analyse (niet alleen post-hoc)
-- Smart quotes verificatie voor frontend rendering
+**Aanbevelingen voor Fase 5 (Review & Apply):**
+1. Accepteer 130-140 als werkbaar woordenaantal bereik, of implementeer post-processing truncatie
+2. Identificeer en herschrijf 162 "The scent of" openingszinnen (deduplicatie pass)
+3. Fix 2 "in Texel" fouten
+4. Verifieer smart quotes rendering in frontend
+5. Review prioritering: Beaches & Nature + Culture eerst (bepalend toeristervaring), Practical + Services laatst
 
 ---
 
@@ -1467,16 +1524,15 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | Risico | Impact | Kans | Mitigatie | Status |
 |--------|--------|------|-----------|--------|
 | Database migratie verstoort productie | Hoog | Laag | Backup + maintenance window | Gemitigeerd (backup 44.7 MB gemaakt) |
-| DNS propagatie vertraging Texel | Medium | Medium | 48u buffer inplannen | Gemitigeerd (Fase 2 compleet) |
-| POI data kwaliteit Texel | Medium | Medium | Handmatige review na scraping | Gemitigeerd (Fase 3+4 compleet) |
+| DNS propagatie vertraging Texel | Medium | Medium | 48u buffer inplannen | Open (Fase 2) |
+| POI data kwaliteit Texel | Medium | Medium | Handmatige review na scraping | Open (Fase 2) |
 | Apache config conflict | Hoog | Laag | Test eerst op dev omgeving | Gemitigeerd (templates klaar) |
 | GitHub Actions overschrijft server files | Medium | Hoog | Documentatie + handmatige re-upload | Bekend - CLAUDE.md moest hersteld |
 | MySQL root zonder wachtwoord | Medium | Laag | Altijd .env credentials gebruiken | Gemitigeerd (credentials gedocumenteerd) |
-| LLM woordenaantal overschrijding | Medium | Hoog | Retry gate (105-135w), post-processing | Bekend - avg 135w i.p.v. target 120w |
-| Repetitieve LLM openingen | Medium | Hoog | Forbidden openings list, opening-diversiteit prompt | Bekend - "The scent of" 162x (6,4%) |
-| "In Texel" taalfout in LLM content | Laag | Laag | Post-processing validatie, prompt instructie | Bekend - 2 van 1.073 Texel POIs |
-| Smart quotes rendering in frontend | Medium | Medium | Frontend verificatie nodig | Open - 100% smart quotes, nog niet getest |
-| Staging content approval backlog | Medium | Medium | Frank review workflow, prioritering | Open - 2.515 POIs wachten op review |
+| LLM content kwaliteit inconsistent | Medium | Medium | Quality retry systeem + handmatige review | Gemitigeerd (0% markdown, 97,6% British EN) |
+| Opening repetitie patronen | Laag | Hoog | Post-processing deduplicatie of tweede pass | Open — 162x "The scent of" |
+| Woordenaantal boven target | Laag | Hoog | Accepteer 130-140 bereik of truncatie | Open — model convergeert rond 135 |
+| Smart quotes rendering | Medium | Laag | Frontend verifiëren | Open — alle 2.515 beschrijvingen bevatten curly quotes |
 
 ---
 
@@ -1503,11 +1559,10 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 05-02-2026 | Fase 3 LLM Pilot: Optie 3 Hybride | Texel volledige vervanging (OLD=NL, onbruikbaar), Calpe hybride per categorie. NEW scoort beter op ALLE 9 criteria. | Claude Code |
 | 05-02-2026 | Mistral Medium voor content generatie | mistral-medium-latest biedt optimale balans kwaliteit/kosten: EUR 0.00235/POI, 0% errors, consistent AIDA-model | Claude Code |
 | 05-02-2026 | Prompt optimalisatie nodig voor volledige run | Woordenaantal strikter (115-125), markdown verbod versterken, opening-diversiteit afdwingen | Claude Code |
-| 05-02-2026 | Fase 4 volledige run met Mistral Medium | 2.515 POIs (1.442 Calpe + 1.073 Texel) via mistral-medium-latest, EUR 8,93 budget, staging-first workflow | Claude Code |
-| 05-02-2026 | Retry gate op 105-135 woorden | Woordenaantal retry bij <105 of >135 woorden. Strikter dan pilot maar accepteert avg 135w als pragmatisch compromis | Claude Code |
-| 05-02-2026 | Batch size 50 met 0.2s rate limiting | Optimale balans tussen doorlooptijd en API stabiliteit. 51 batches, 303 minuten totaal | Claude Code |
-| 05-02-2026 | Content source 'mistral_medium_fase4' priority 3 | Hogere prioriteit dan lokale bronnen (priority 1-2), duidelijk onderscheid in staging tabel | Claude Code |
-| 05-02-2026 | Texel OLD NL archivering | 186 Texel OLD NL beschrijvingen bewaard voor toekomstig gebruik als enriched_detail_description_nl | Claude Code |
+| 05-02-2026 | Fase 4 Full Run uitvoeren met geoptimaliseerde prompt | Pilot bewees kwaliteit; full run voor alle 2.515 enrichable POIs (Calpe + Texel) | Claude Code |
+| 05-02-2026 | 130-140 woorden als werkbaar bereik accepteren | Mistral Medium convergeert structureel rond 135 woorden ondanks "EXACTLY 115-125" instructie; inherente modeleigenschap | Claude Code |
+| 05-02-2026 | Quality retry threshold op >135 woorden | Balans tussen kwaliteit en kosten; retry rate 50,7% maar 0% failures | Claude Code |
+| 05-02-2026 | Alle content naar staging (niet direct naar POI) | Staging-first workflow behouden voor Frank's review voordat productie POI tabel wordt bijgewerkt | Claude Code |
 
 ---
 
@@ -1533,8 +1588,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 5 februari 2026 - Fase 4 LLM Content Volledige Run COMPLEET (2.515 POIs)*
-*Volgende review: Na Frank's review van 2.515 staging beschrijvingen en beslissing over promotie naar POI tabel*
+*Laatst bijgewerkt: 6 februari 2026 - Fase 4 Full LLM Content Run COMPLEET*
+*Volgende review: Na Frank's review van 3.049 staging records en beslissing over apply naar POI tabel*
 
 ---
 
@@ -1542,8 +1597,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **2.5** | **05-02-2026** | **FASE 4 LLM CONTENT VOLLEDIGE RUN COMPLEET: 2.515 POIs (1.442 Calpe + 1.073 Texel) via Mistral Medium. EUR 8,93 (89,3% van EUR 10 budget). 0% failures, 1.276 retries. Avg 135 woorden, 0% markdown, 97,6% British English. Quality flags: 148 >145w, 162 "The scent of" openingen, 2 "in Texel" fouten. Content in poi_content_staging (status=pending). Texel OLD NL archief (186 beschrijvingen). Deliverables: fase4_generation_report.md, fase4_quality_sample.md, fase4_quality_flags.json op Hetzner /root/. Fase tracking hernummerd (Alicante→Fase 5, Stabilization→Fase 6).** |
-| **2.4** | **05-02-2026** | **FASE 3 LLM CONTENT ENRICHMENT PILOT: 100 POIs (50 Texel + 50 Calpe) via Mistral Medium. Kosten EUR 0.24 (4.7% budget). NEW scoort beter op ALLE 9 criteria (grammatica, spelling, ToV, AIDA, herhaling, concreetheid, formatting, naam, woordenaantal). Advies: Optie 3 Hybride — Texel volledige vervanging (OLD=NL, markdown, 346w avg), Calpe hybride per categorie. Prompt optimalisatie nodig (woordenaantal 132→120, markdown fix). Volledige run geschat EUR 6.20 voor ~2.637 POIs. Deliverables: fase3_pilot_output.json, fase3_quality_analysis.md, fase3_replacement_advice.md op Hetzner /root/.** |
+| **2.5** | **06-02-2026** | **FASE 4 FULL LLM CONTENT RUN: 2.515 POIs (1.442 Calpe + 1.073 Texel) gegenereerd via Mistral Medium Latest. Kosten EUR 8,93 (89,3% van EUR 10 budget). 100% succespercentage, 0 failures. Kwaliteitsverbeteringen: markdown 0% (was 17%), forbidden openings 0% (was 4%), British English 97,6%. Gem. woordenaantal 135 (target 115-125, model convergeert structureel rond 135). Opening diversiteit issue: 57% begint met "A", "The scent of" 162x. Slechts 2x "in Texel" fout (0,2%). 2.768.892 tokens totaal, 1.276 quality retries (50,7%). 3.049 records in staging (2.515 Fase 4 + 534 eerder). Deliverables: fase4_full_output.json, fase4_generation_report.md, fase4_quality_analysis.json, fase4_quality_sample.md, fase4_quality_flags.json op Hetzner /root/. Fasen hernummerd: Alicante→Fase 5, Stabilization→Fase 6.** |
+| 2.4 | 05-02-2026 | FASE 3 LLM CONTENT ENRICHMENT PILOT: 100 POIs (50 Texel + 50 Calpe) via Mistral Medium. Kosten EUR 0.24 (4.7% budget). NEW scoort beter op ALLE 9 criteria (grammatica, spelling, ToV, AIDA, herhaling, concreetheid, formatting, naam, woordenaantal). Advies: Optie 3 Hybride — Texel volledige vervanging (OLD=NL, markdown, 346w avg), Calpe hybride per categorie. Prompt optimalisatie nodig (woordenaantal 132→120, markdown fix). Volledige run geschat EUR 6.20 voor ~2.637 POIs. Deliverables: fase3_pilot_output.json, fase3_quality_analysis.md, fase3_replacement_advice.md op Hetzner /root/. |
 | 2.3 | 05-02-2026 | VVV TEXEL CONTACTDATA: 115 Texel POIs bijgewerkt met contactdata uit VVV Texel GraphQL API (50 Facebook, 45 Instagram, 73 email, 21 telefoon, 14 website). Fill-only-if-empty strategie. Texel contactdekking: website 73%, facebook 45%, instagram 35%, email 53%, phone 70%. SPA techniek analyse: niet breed toepasbaar (90% POI sites traditioneel HTML). Voorbereiding Fase 3 sectie toegevoegd met coverage gaps en aandachtspunten. |
 | 2.2 | 05-02-2026 | FASE 2 LOKALE BRONNEN SCRAPEN: VVV Texel gescraped via GraphQL API (382 bedrijven, 240 POIs gematcht, 197 in 80-120 woorden target). Calpe.es gescraped (18 POIs: 14 stranden + 4 natuur). POI websites gescraped (276 POIs: 154 Texel + 122 Calpe). Totaal 534 records naar poi_content_staging (status=pending). Coverage: Texel 30% (346/1142), Calpe 9% (139/1495). VVV Texel doorbraak: Next.js __NEXT_DATA__ → GraphQL endpoint ontdekt. mysql-connector-python upgrade 8.0.15→9.5.0. Fase 1 overgeslagen. |
 | **2.1** | **04-02-2026** | **FASE 0B DATABASE VOORBEREIDING: POI schema uitgebreid (+21 kolommen: google_rating, photos_local_path, content_source, exclusie flags etc). Staging tabel poi_content_staging aangemaakt voor approval workflow. Foto directories /var/www/images/pois/[dest]/. Reviews schema +6 kolommen. Exclusies: Calpe 98 (accommodatie), Texel 597 (411 accommodatie + 132 laadpunten + 49 parking + 5 OV). Template teksten voor 186 Texel POIs (laadpunten/OV/parking). Te verrijken: Calpe 1495, Texel 1142.** |
