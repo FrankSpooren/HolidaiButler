@@ -3,9 +3,9 @@
 
 **Datum**: 5 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 2.5
+**Versie**: 2.6
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 4 Full LLM Content Run COMPLEET - 2.515 POIs (1.442 Calpe + 1.073 Texel) gegenereerd via Mistral Medium. Kosten EUR 8,93. 100% succespercentage. Alle content in staging voor review.
+**Status**: FASE 4b Content Vergelijking COMPLEET - 2.515 POIs vergeleken. 2.481 approved (98,6%), 34 manual review (1,4%). NEW scoort +2,17 punten boven OLD. Wacht op Frank's review van 34 POIs.
 
 ---
 
@@ -18,10 +18,11 @@
 | **Fase 3: Texel Data Quality** | ✅ COMPLEET | 02-02-2026 | 02-02-2026 | Claude Code |
 | **Fase 3b: LLM Content Enrichment** | ✅ PILOT COMPLEET | 05-02-2026 | 05-02-2026 | Claude Code |
 | **Fase 4: Full LLM Content Run** | ✅ COMPLEET | 05-02-2026 | 05-02-2026 | Claude Code |
+| **Fase 4b: Content Vergelijking** | ✅ COMPLEET | 06-02-2026 | 06-02-2026 | Claude Code |
 | **Fase 5: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
 | **Fase 6: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 6 februari 2026 - Fase 4 Full LLM Content Run COMPLEET (2.515 POIs, Mistral Medium, EUR 8,93, 100% success, alle content in staging)
+**Laatste update**: 6 februari 2026 - Fase 4b Content Vergelijking COMPLEET (2.481 approved, 34 manual review, EUR 6,02, NEW +2,17 punten boven OLD)
 
 ---
 
@@ -1207,6 +1208,60 @@ export const getEmailTemplate = (templateName, destinationId) => {
 **GitHub Commits:**
 - `feat(content): Fase 4 Full LLM Content Run — 2.515 POIs via Mistral Medium`
 
+### Fase 4b: Content Vergelijking — COMPLEET
+
+| Taak | Status | Datum | Uitvoerder | Notities |
+|------|--------|-------|------------|----------|
+| 4b.1 Database voorbereiding | ✅ Compleet | 06-02-2026 | Claude Code | 7 kolommen + status enum + index toegevoegd aan poi_content_staging |
+| 4b.2 Pre-filter Texel | ✅ Compleet | 06-02-2026 | Claude Code | 1.073 Texel auto-approved (OLD=NL, onbruikbaar als EN) |
+| 4b.3 Pre-filter Calpe NULL | ✅ Compleet | 06-02-2026 | Claude Code | 0 POIs — alle 1.442 Calpe POIs hadden OLD content (enriched_detail_description) |
+| 4b.4 OLD content snapshot | ✅ Compleet | 06-02-2026 | Claude Code | 1.442 Calpe OLD snapshots opgeslagen in old_content_snapshot kolom |
+| 4b.5 LLM vergelijking Calpe | ✅ Compleet | 06-02-2026 | Claude Code | 1.442 POIs via Mistral Medium, 9 criteria, gewogen scoring. EUR 6,02, ~25 min |
+| 4b.6 Rapportage | ✅ Compleet | 06-02-2026 | Claude Code | 4 rapporten: summary, review_required, category_analysis, exceptions |
+
+**Fase 4b Status**: ✅ COMPLEET (06 februari 2026)
+
+**Fase 4b Kernresultaten:**
+
+| Resultaat | Aantal | % |
+|-----------|--------|---|
+| **Approved (USE_NEW)** | 2.481 | 98,6% |
+| **Manual Review** | 34 | 1,4% |
+| **Keep OLD** | 0 | 0% |
+| **Totaal** | 2.515 | 100% |
+
+**Score Vergelijking OLD vs NEW (Calpe, 1.442 POIs):**
+| Metriek | OLD | NEW | Verschil |
+|---------|-----|-----|----------|
+| Gemiddelde totaalscore | 7,79 | 9,96 | **+2,17** |
+| C1: Grammatica | 9,93 | 9,99 | +0,06 |
+| C2: British English | 8,42 | 9,88 | **+1,46** |
+| C3: Tone of Voice | 7,62 | 9,97 | **+2,35** |
+| C7: Concreetheid | 5,60 | 9,98 | **+4,38** |
+| C8: Lokale Verankering | 6,75 | 9,94 | **+3,19** |
+
+**MANUAL_REVIEW Concentratie:**
+- Active: 9 POIs (5,7% van categorie) — OLD Active content was relatief sterk
+- Culture & History: 7 POIs (9,5%) — OLD bevatte waardevolle historische details
+- Food & Drinks: 6 POIs (1,4%)
+- Practical: 5 POIs (1,8%)
+- Overig: 7 POIs
+
+**Kosten Fase 4b:**
+| Component | Waarde |
+|-----------|--------|
+| Input tokens | 1.902.863 |
+| Output tokens | 339.456 |
+| **Totaal kosten** | **EUR 6,02** |
+
+**Deliverables op Hetzner (/root/):**
+- `fase4b_comparison_summary.md` — samenvatting met statistieken
+- `fase4b_review_required.json` — 34 POIs voor handmatige review
+- `fase4b_category_analysis.md` — per-categorie analyse
+- `fase4b_exceptions.json` — leeg (0 exceptions)
+- `fase4b_content_comparison.py` — vergelijkingsscript
+- `fase4b_checkpoint.json` — checkpoint met alle resultaten
+
 ### Fase 5: Alicante Preparation
 
 | Taak | Status | Datum | Uitvoerder | Notities |
@@ -1517,6 +1572,34 @@ export const getEmailTemplate = (templateName, destinationId) => {
 4. Verifieer smart quotes rendering in frontend
 5. Review prioritering: Beaches & Nature + Culture eerst (bepalend toeristervaring), Practical + Services laatst
 
+### Fase 4b Lessons Learned - Content Vergelijking (06-02-2026)
+
+**OLD Content Kolom Identificatie:**
+- **`enriched_detail_description` is de correcte OLD kolom** — NIET `enriched_detail_description_en`. De `_en` variant was volledig leeg (0 records). Zonder verificatie zouden alle 1.442 Calpe POIs foutief auto-approved zijn als "NULL OLD content"
+- **INFORMATION_SCHEMA.COLUMNS + fill rate check is essentieel** — Altijd kolom vulling verifiëren voordat pre-filters op basis van NULL/empty worden uitgevoerd
+- **Revert-strategie werkte** — Na ontdekking fout snel alle 1.442 teruggedraaid naar 'pending' + old_content_snapshot ingevuld
+
+**Database Schema Verkenning:**
+- **Geen `categories` tabel** — Categorie staat direct in `POI.category` als VARCHAR. Script faalde initieel op `JOIN categories c ON p.category_id = c.id`. Altijd SHOW TABLES + DESCRIBE gebruiken vóór complexe JOINs
+- **poi_content_staging kolom toevoegingen** — 7 nieuwe kolommen (comparison_scores, old_total_score, new_total_score, comparison_recommendation, comparison_rationale, compared_at, old_content_snapshot) + status enum uitbreiding met 'review_required'. Geïndexeerd op (destination_id, status)
+
+**LLM Vergelijking Inzichten:**
+- **NEW scoort structureel hoger** — Gemiddeld +2,17 punten (OLD 7,79 vs NEW 9,96). Grootste verbeteringen: Concreetheid (+4,38), Lokale Verankering (+3,19), Tone of Voice (+2,35)
+- **0% KEEP_OLD** — Geen enkele POI waar OLD content significant beter is dan NEW. Dit bevestigt de kwaliteit van de Fase 4 Mistral Medium prompt
+- **MANUAL_REVIEW concentreert in specifieke categorieën** — Active (5,7%) en Culture & History (9,5%) bevatten relatief sterke OLD content. 34 van 1.442 (2,4%) vereist handmatige review
+- **Scoring bias richting NEW** — Mistral Medium geeft NEW content consequent 9,5-10,0 scores. Dit is deels model-bias (consistent formatted content scoort hoger) en deels echte kwaliteitsverbetering
+
+**Operationele Lessen:**
+- **Checkpoint systeem bewees waarde** — SSH connectie viel uit bij 1.300/1.442 POIs, maar `nohup` + checkpoint bestand bewaarde alle voortgang. Herstart verwerkte alleen resterende 142 POIs
+- **Rate limiting effectief** — 5 req/sec, geen 429 errors, ~25 minuten voor 1.442 POIs
+- **Texel pre-filter correct** — 1.073 Texel POIs direct approved (OLD=NL, onbruikbaar als Engels). Geen LLM-vergelijking nodig, bespaart EUR ~4,50
+- **Kosten EUR 6,02** — 39% van Fase 4 generatiekosten (EUR 8,93). Totale pipeline Fase 4+4b: EUR 14,95
+
+**Aanbevelingen voor volgende stap:**
+1. Frank reviewt 34 MANUAL_REVIEW POIs (focus: Active + Culture & History categorieën)
+2. Na review: approved POIs doorvoeren naar productie POI tabel (UPDATE POI SET enriched_detail_description = staging.detail_description_en)
+3. Overweeg drempelwaarde MANUAL_REVIEW te verlagen naar 0,5 bij toekomstige runs (huidige 1,0 is conservatief)
+
 ---
 
 ## Deel 14: Risico Register
@@ -1533,6 +1616,9 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | Opening repetitie patronen | Laag | Hoog | Post-processing deduplicatie of tweede pass | Open — 162x "The scent of" |
 | Woordenaantal boven target | Laag | Hoog | Accepteer 130-140 bereik of truncatie | Open — model convergeert rond 135 |
 | Smart quotes rendering | Medium | Laag | Frontend verifiëren | Open — alle 2.515 beschrijvingen bevatten curly quotes |
+| Scoring bias richting NEW content | Laag | Hoog | MANUAL_REVIEW drempel behouden op 1,0 | Gemitigeerd — 34 POIs voor handmatige review |
+| 34 MANUAL_REVIEW POIs niet gereviewed | Medium | Medium | Frank moet reviewen voor apply naar productie | Open — wacht op eigenaar review |
+| OLD kolom misidentificatie | Hoog | Laag | Altijd INFORMATION_SCHEMA + fill rate check | Gemitigeerd — ontdekt en gecorrigeerd tijdens Fase 4b |
 
 ---
 
@@ -1563,6 +1649,11 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 05-02-2026 | 130-140 woorden als werkbaar bereik accepteren | Mistral Medium convergeert structureel rond 135 woorden ondanks "EXACTLY 115-125" instructie; inherente modeleigenschap | Claude Code |
 | 05-02-2026 | Quality retry threshold op >135 woorden | Balans tussen kwaliteit en kosten; retry rate 50,7% maar 0% failures | Claude Code |
 | 05-02-2026 | Alle content naar staging (niet direct naar POI) | Staging-first workflow behouden voor Frank's review voordat productie POI tabel wordt bijgewerkt | Claude Code |
+| 06-02-2026 | Texel 1.073 auto-approved (geen LLM vergelijking) | OLD content is Nederlands, onbruikbaar als Engels. NEW is altijd beter. Bespaart EUR ~4,50 aan LLM kosten | Claude Code |
+| 06-02-2026 | DECISION_THRESHOLD op 1,0 punten | Conservatief: alleen USE_NEW als verschil >1,0. Resulteert in 34 MANUAL_REVIEW (2,4%). Voorkomt foutieve auto-approvals | Claude Code |
+| 06-02-2026 | 9-criteria gewogen scoring (Language 30%, Structure 25%, Content 45%) | Content-zwaarste weging: concreetheid (20%) + lokale verankering (15%) + currency (10%) bepalen meeste waarde voor toeristen | Claude Code |
+| 06-02-2026 | enriched_detail_description als OLD kolom (niet _en) | Fill rate verificatie toonde _en variant 0% gevuld. enriched_detail_description bevat 1.536 records. Foutieve pre-filter teruggedraaid | Claude Code |
+| 06-02-2026 | Checkpoint systeem met nohup voor lange runs | SSH connectie viel uit bij 1.300 POIs. nohup + JSON checkpoint behoudt voortgang en voorkomt dubbele LLM calls | Claude Code |
 
 ---
 
@@ -1588,8 +1679,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 6 februari 2026 - Fase 4 Full LLM Content Run COMPLEET*
-*Volgende review: Na Frank's review van 3.049 staging records en beslissing over apply naar POI tabel*
+*Laatst bijgewerkt: 6 februari 2026 - Fase 4b Content Vergelijking COMPLEET*
+*Volgende review: Frank reviewt 34 MANUAL_REVIEW POIs, daarna apply approved content naar productie POI tabel*
 
 ---
 
@@ -1597,6 +1688,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **2.6** | **06-02-2026** | **FASE 4b CONTENT VERGELIJKING: 2.515 POIs vergeleken (1.442 Calpe via LLM + 1.073 Texel auto-approved). 9-criteria gewogen scoring (Grammar, British EN, Tone, AIDA, Wordcount, Formatting, Concreteness, Local Anchoring, Currency). Resultaat: 2.481 approved (98,6%), 34 manual review (1,4%), 0 keep old (0%). NEW scoort +2,17 punten boven OLD (9,96 vs 7,79). Grootste verbeteringen: Concreetheid +4,38, Lokale Verankering +3,19, British English +1,46. Kosten EUR 6,02 (1,9M input + 339K output tokens). MANUAL_REVIEW concentratie: Active (5,7%) en Culture & History (9,5%). Deliverables: fase4b_comparison_summary.md, fase4b_review_required.json (34 POIs), fase4b_category_analysis.md, fase4b_exceptions.json op Hetzner /root/. Totale pipeline Fase 4+4b: EUR 14,95.** |
 | **2.5** | **06-02-2026** | **FASE 4 FULL LLM CONTENT RUN: 2.515 POIs (1.442 Calpe + 1.073 Texel) gegenereerd via Mistral Medium Latest. Kosten EUR 8,93 (89,3% van EUR 10 budget). 100% succespercentage, 0 failures. Kwaliteitsverbeteringen: markdown 0% (was 17%), forbidden openings 0% (was 4%), British English 97,6%. Gem. woordenaantal 135 (target 115-125, model convergeert structureel rond 135). Opening diversiteit issue: 57% begint met "A", "The scent of" 162x. Slechts 2x "in Texel" fout (0,2%). 2.768.892 tokens totaal, 1.276 quality retries (50,7%). 3.049 records in staging (2.515 Fase 4 + 534 eerder). Deliverables: fase4_full_output.json, fase4_generation_report.md, fase4_quality_analysis.json, fase4_quality_sample.md, fase4_quality_flags.json op Hetzner /root/. Fasen hernummerd: Alicante→Fase 5, Stabilization→Fase 6.** |
 | 2.4 | 05-02-2026 | FASE 3 LLM CONTENT ENRICHMENT PILOT: 100 POIs (50 Texel + 50 Calpe) via Mistral Medium. Kosten EUR 0.24 (4.7% budget). NEW scoort beter op ALLE 9 criteria (grammatica, spelling, ToV, AIDA, herhaling, concreetheid, formatting, naam, woordenaantal). Advies: Optie 3 Hybride — Texel volledige vervanging (OLD=NL, markdown, 346w avg), Calpe hybride per categorie. Prompt optimalisatie nodig (woordenaantal 132→120, markdown fix). Volledige run geschat EUR 6.20 voor ~2.637 POIs. Deliverables: fase3_pilot_output.json, fase3_quality_analysis.md, fase3_replacement_advice.md op Hetzner /root/. |
 | 2.3 | 05-02-2026 | VVV TEXEL CONTACTDATA: 115 Texel POIs bijgewerkt met contactdata uit VVV Texel GraphQL API (50 Facebook, 45 Instagram, 73 email, 21 telefoon, 14 website). Fill-only-if-empty strategie. Texel contactdekking: website 73%, facebook 45%, instagram 35%, email 53%, phone 70%. SPA techniek analyse: niet breed toepasbaar (90% POI sites traditioneel HTML). Voorbereiding Fase 3 sectie toegevoegd met coverage gaps en aandachtspunten. |
