@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.2.0
-> **Laatst bijgewerkt**: 28 januari 2026 (17:10 UTC)
+> **Versie**: 3.3.0
+> **Laatst bijgewerkt**: 7 februari 2026 (14:30 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -9,7 +9,14 @@
 
 ## 🎯 Project Mission
 
-HolidaiButler is een enterprise-level AI-powered tourism platform dat internationale toeristen (30-70 jaar) persoonlijke lokale aanbevelingen geeft voor premium bestemmingen, met huidige focus op **Costa Blanca (Calpe/Alicante)** en **Texel**.
+HolidaiButler is een enterprise-level AI-powered tourism platform dat internationale toeristen (30-70 jaar) persoonlijke lokale aanbevelingen geeft voor premium bestemmingen.
+
+### Actieve Bestemmingen
+| Bestemming | Status | Domein | destination_id |
+|------------|--------|--------|----------------|
+| **Calpe** | ✅ LIVE | holidaibutler.com | 1 |
+| **Texel** | ✅ LIVE | texelmaps.nl | 2 |
+| **Alicante** | 🟡 GEPLAND | alicante.holidaibutler.com | 3 |
 
 ### Kernwaarden
 - **Personalisatie**: AI-driven aanbevelingen gebaseerd op gebruikersvoorkeuren
@@ -44,6 +51,7 @@ Na elke relevante aanpassing, uitbreiding of update:
 ### 4. Context Verificatie
 **Alvorens te starten met een volgende fase, stap of feature:**
 - CLAUDE.md volledig lezen en bestuderen
+- Strategische documentatie raadplegen (zie Deel: Strategische Documentatie)
 - Actuele status verifiëren in codebase
 - Geen aannames maken over implementatie status
 
@@ -51,6 +59,13 @@ Na elke relevante aanpassing, uitbreiding of update:
 - Geen "known issues" accepteren
 - Geen tijdelijke oplossingen die permanent worden
 - Problemen oplossen bij de root cause
+
+### 6. Staging-First Workflow
+**Voor alle content wijzigingen:**
+- Eerst naar `poi_content_staging` tabel
+- Review/approval door Frank
+- Dan pas naar POI tabel
+- Nooit directe productie updates zonder backup
 
 ---
 
@@ -73,6 +88,23 @@ Na elke relevante aanpassing, uitbreiding of update:
 
 ---
 
+## 📋 Strategische Documentatie (NIEUW)
+
+### Primaire Documenten
+| Document | Locatie | Versie | Inhoud |
+|----------|---------|--------|--------|
+| **Strategic Advisory** | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 2.6 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
+| **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 | Agent architectuur, scheduled jobs |
+| **CLAUDE.md** | Repository root + Hetzner | 3.3.0 | Dit bestand - project context |
+
+### Leesadvies voor Claude
+**Bij elke nieuwe sessie of complexe taak, lees in deze volgorde:**
+1. CLAUDE.md (dit bestand) — project context
+2. Strategic Advisory — actuele fase status en beslissingen
+3. Relevante fase documentatie op Hetzner (`/root/fase*`)
+
+---
+
 ## 🏗️ Repository Structuur
 
 ```
@@ -86,7 +118,11 @@ HolidaiButler/
 │   └── workflows/
 │       └── deploy-platform-core.yml  # CI/CD workflow met concurrency control
 │
-├── customer-portal/        # React 19 + Tailwind (holidaibutler.com)
+├── docs/
+│   └── strategy/
+│       └── HolidaiButler_Multi_Destination_Strategic_Advisory.md  # ✅ NIEUW
+│
+├── customer-portal/        # React 19 + Tailwind
 │   └── frontend/
 │       ├── src/
 │       │   ├── components/
@@ -115,761 +151,214 @@ HolidaiButler/
 │   │   │   │   ├── auditTrail/
 │   │   │   │   └── ownerInterface/
 │   │   │   └── agents/            # ✅ Fase 3: Specialized Agents
-│   │   │       ├── healthMonitor/ # ✅ Platform Health Monitor v1.0
-│   │   │       │   ├── index.js
-│   │   │       │   ├── reporter.js
-│   │   │       │   ├── alertIntegration.js
-│   │   │       │   └── checks/
-│   │   │       │       ├── serverHealth.js
-│   │   │       │       ├── databaseHealth.js
-│   │   │       │       ├── apiHealth.js
-│   │   │       │       ├── frontendHealth.js
-│   │   │       │       └── queueHealth.js
-│   │   │       ├── ownerInterfaceAgent/  # ✅ Owner Interface Agent v1.1
-│   │   │       │   └── index.js
-│   │   │       ├── dataSync/      # ✅ Data Sync Agent v2.0
-│   │   │       │   ├── index.js
-│   │   │       │   ├── syncScheduler.js
-│   │   │       │   ├── poiLifecycleManager.js
-│   │   │       │   ├── reviewsManager.js
-│   │   │       │   ├── qaGenerator.js
-│   │   │       │   ├── dataValidator.js
-│   │   │       │   └── syncReporter.js
-│   │   │       ├── holibotSync/   # ✅ HoliBot Sync Agent v1.0
-│   │   │       │   ├── index.js
-│   │   │       │   ├── chromaService.js    # ChromaDB Cloud client
-│   │   │       │   ├── embeddingService.js # MistralAI embeddings
-│   │   │       │   ├── poiSyncService.js   # POI vector sync
-│   │   │       │   ├── qaSyncService.js    # Q&A vector sync
-│   │   │       │   └── syncScheduler.js    # 4 scheduled jobs
-│   │   │       ├── communicationFlow/  # ✅ Communication Flow Agent v1.0
-│   │   │       │   ├── index.js
-│   │   │       │   ├── userJourneyManager.js  # User journey automation
-│   │   │       │   ├── mailerliteService.js   # MailerLite integration
-│   │   │       │   ├── notificationRouter.js  # Multi-channel routing
-│   │   │       │   └── syncScheduler.js       # 3 scheduled jobs
-│   │   │       ├── gdpr/               # ✅ GDPR Agent v1.0
-│   │   │       │   ├── index.js               # Main entry point
-│   │   │       │   ├── dataInventory.js       # Art. 30 data mapping
-│   │   │       │   ├── dataExporter.js        # Art. 15/20 data export
-│   │   │       │   ├── dataEraser.js          # Art. 17 right to erasure
-│   │   │       │   ├── consentManager.js      # Art. 7 consent tracking
-│   │   │       │   └── syncScheduler.js       # 4 scheduled jobs
-│   │   │       ├── devLayer/           # ✅ Fase 4: Development Layer v1.0
-│   │   │       │   ├── index.js               # Main entry point
-│   │   │       │   ├── qualityChecker.js      # Orchestration & CI/CD
-│   │   │       │   ├── syncScheduler.js       # 3 scheduled jobs
-│   │   │       │   └── reviewers/
-│   │   │       │       ├── uxReviewer.js      # UX/UI quality analysis
-│   │   │       │       ├── codeReviewer.js    # Code standards & patterns
-│   │   │       │       └── securityReviewer.js # OWASP Top 10 & security
-│   │   │       └── strategyLayer/     # ✅ Fase 5: Strategy Layer v1.0 (NIEUW)
-│   │   │           ├── index.js               # Main entry point
-│   │   │           ├── architectureAdvisor.js # System design recommendations
-│   │   │           ├── learningAgent.js       # Pattern learning & optimization
-│   │   │           ├── adaptiveConfigAgent.js # Dynamic config tuning
-│   │   │           ├── predictionAgent.js     # Proactive issue detection
-│   │   │           ├── syncScheduler.js       # 4 scheduled jobs
-│   │   │           └── analyzers/
-│   │   │               └── patternAnalyzer.js # Core pattern detection engine
+│   │   │       ├── healthMonitor/
+│   │   │       ├── ownerInterfaceAgent/
+│   │   │       ├── dataSync/
+│   │   │       ├── holibotSync/
+│   │   │       ├── communicationFlow/
+│   │   │       ├── gdpr/
+│   │   │       ├── devLayer/
+│   │   │       └── strategyLayer/
 │   │   └── middleware/
-│   ├── config/                # ✅ Multi-Destination Config (NIEUW)
+│   ├── config/                # ✅ Multi-Destination Config
 │   │   ├── shared.config.js          # Platform-wide settings
 │   │   └── destinations/
 │   │       ├── index.js              # Config exports + utilities
 │   │       ├── calpe.config.js       # Calpe destination config
 │   │       ├── texel.config.js       # Texel destination config
 │   │       └── alicante.config.js    # Alicante destination config
-│   ├── migrations/            # ✅ Database Migrations (NIEUW)
-│   │   └── 001_multi_destination.sql
 │   └── package.json
 │
 ├── modules/
+│   ├── admin-module/
 │   ├── agenda-module/
-│   ├── payment-module/
-│   ├── reservations-module/
-│   └── ticketing-module/
+│   ├── ticketing-module/
+│   └── payment-module/
 │
-├── infrastructure/         # Docker configs
-├── docs/
-│   └── agents/
-│       ├── fase2/          # ✅ Orchestrator documentatie
-│       ├── fase3/          # ✅ Specialized agents
-│       └── fase4/          # ✅ Development Layer documentatie
-└── agents/                 # Claude Agent implementaties
+└── infrastructure/
+    ├── apache/
+    │   └── vhosts/
+    │       ├── holidaibutler.com.conf
+    │       └── texelmaps.nl.conf      # ✅ NIEUW
+    └── docker/
 ```
 
 ---
 
-## 🖥️ Server & Deployment
+## 🌍 Multi-Destination Architectuur
 
-### Server Details
-| Aspect | Waarde |
-|--------|--------|
-| **Server IP** | 91.98.71.87 (Hetzner, 🇩🇪 Duitsland) |
-| **Deploy path** | `/var/www/api.holidaibutler.com/platform-core` |
-| **PM2 process** | `holidaibutler-api` |
-| **GitHub Actions** | `.github/workflows/deploy-platform-core.yml` |
+### Destination Configuratie
+| Destination | ID | Domein | Status | Branding |
+|-------------|----|---------| -------|----------|
+| Calpe | 1 | holidaibutler.com | ✅ LIVE | #7FA594 / #5E8B7E |
+| Texel | 2 | texelmaps.nl | ✅ LIVE | #30c59b / #3572de / #ecde3c |
+| Alicante | 3 | alicante.holidaibutler.com | 🟡 GEPLAND | TBD |
 
-### HoliBot API Endpoints
-- **Base path**: `/api/v1/holibot/*`
-- **Routes file**: `platform-core/src/routes/holibot.js`
-
----
-
-## 🌐 Omgevingen & URLs
-
-| Omgeving | Customer Portal | Admin Portal | API URL | Branch |
-|----------|-----------------|--------------|---------|--------|
-| **Production** | holidaibutler.com | admin.holidaibutler.com | api.holidaibutler.com | `main` |
-| **Test** | test.holidaibutler.com | admin.test.holidaibutler.com | api.test.holidaibutler.com | `test` |
-| **Development** | dev.holidaibutler.com | admin.dev.holidaibutler.com | api.dev.holidaibutler.com | `dev` |
-
----
-
-## 🔧 Tech Stack
-
-### Customer Portal (holidaibutler.com)
-| Component | Technologie | Versie |
-|-----------|-------------|--------|
-| Framework | React + TypeScript | 19 |
-| Build | Vite | 7 |
-| Styling | Tailwind CSS | 4 |
-| State | Zustand + TanStack Query | 5 |
-| Routing | React Router | 7 |
-| Forms | React Hook Form + Zod | - |
-| i18n | i18next | - |
-| Maps | Leaflet + React-Leaflet | - |
-| Animaties | Framer Motion | - |
-| Betalingen | Adyen Web SDK | - |
-
-### Admin Portal (admin.holidaibutler.com)
-| Component | Technologie | Versie |
-|-----------|-------------|--------|
-| Framework | React | 18 |
-| Build | Vite | 4 |
-| UI Library | Material UI (MUI) | 5 |
-| State | Zustand + React Query | 4/3 |
-| Routing | React Router | 6 |
-| Charts | Recharts | - |
-| WYSIWYG | React Quill | - |
-
-### Backend (Platform Core)
-| Component | Technologie | Versie | Status |
-|-----------|-------------|--------|--------|
-| Runtime | Node.js | 18+ | ✅ |
-| Framework | Express | 4 | ✅ |
-| Database | MySQL (Sequelize) + MongoDB (Mongoose) | - | ✅ |
-| Caching | Redis + ioredis | 7.0.15 | ✅ |
-| Queue | BullMQ | - | ✅ |
-| Auth | JWT + bcrypt | - | ✅ |
-| Logging | Winston | - | ✅ |
-| **Monitoring** | **Bugsink (EU-hosted)** | - | ✅ |
-| Email | MailerLite | - | ✅ |
-| Alerts | Threema Gateway | - | ✅ |
-| Scraping | Apify Client | - | ✅ |
-| **Vector DB** | **ChromaDB Cloud** | 3.1.8 | ✅ |
-| **Embeddings** | **MistralAI** | - | ✅ |
-
-### DevOps
-| Tool | Doel |
-|------|------|
-| Docker + Docker Compose | Containerization |
-| Vitest, Jest, Playwright | Testing |
-| ESLint + Prettier | Linting |
-| GitHub Actions | CI/CD |
-| BullMQ | Job scheduling (35 jobs) |
-| **Bugsink** | Error tracking (EU) |
-
----
-
-## 🌿 Branch Strategy
-
-| Branch | Doel | URL | Auto-deploy |
-|--------|------|-----|-------------|
-| `main` | Productie | holidaibutler.com | Ja, na approval |
-| `test` | Staging/QA | test.holidaibutler.com | Ja |
-| `dev` | Development | dev.holidaibutler.com | Ja |
-| `feature/*` | Nieuwe features | - | Nee |
-
-### Git Workflow
-1. Nieuwe feature → maak branch van `dev`
-2. Development klaar → PR naar `dev`
-3. Code review door agent(s)
-4. Merge naar `dev` → auto-deploy naar dev environment
-5. QA goedkeuring → merge naar `test`
-6. Owner approval → merge naar `main`
-
-### ⚠️ Deployment Volgorde (KRITIEK)
-**ALTIJD deployen in volgorde: Dev → Test → Main**
-
-```bash
-# Stap 1: Push naar dev, wacht op deployment success
-git push origin dev
-# Wacht tot workflow compleet (2-3 min)
-
-# Stap 2: Push naar test, wacht op deployment success
-git push origin dev:test
-# Wacht tot workflow compleet (2-3 min)
-
-# Stap 3: Push naar main (productie)
-git push origin dev:main
-```
-
-**Waarom:** GitHub Actions concurrency control queued workflows. Bij gelijktijdige pushes worden intermediate workflows gecanceld. Dit veroorzaakt gemiste deployments.
-
-**Workflow file:** `.github/workflows/deploy-platform-core.yml` bevat concurrency control om race conditions te voorkomen.
-
----
-
-## 🔑 Belangrijke Code Conventies
-
-### AI Text Processing
-```javascript
-// Gebruik cleanAIText() voor ALLE AI-gegenereerde tekst
-// Locatie: platform-core/src/routes/holibot.js
-const cleanedText = cleanAIText(aiResponse);
-```
-
-### POI Filtering
-```javascript
-// Gebruik isPOIClosed() om gesloten POIs te filteren
-if (isPOIClosed(poi)) {
-  // Skip deze POI
+### TexelMaps Huisstijl (Definitief)
+```css
+:root {
+  --color-primary: #30c59b;    /* Natuur groen */
+  --color-secondary: #3572de;  /* Zee blauw */
+  --color-accent: #ecde3c;     /* Zon geel */
 }
 ```
-
-### Image Handling
-- **Model**: `ImageUrl` voor meerdere afbeeldingen per POI
-- **Prioriteit**: Lokale afbeeldingen boven externe URLs
-- **Fallback**: Category gradient + icon
-
----
-
-## 📌 Externe Integraties
-
-### API Keys (NOOIT hardcoden!)
-Alle keys staan in `.env` files (niet in repo):
-
-```bash
-# Locatie: platform-core/.env
-
-# AI Services
-ANTHROPIC_API_KEY=           # Claude API
-MISTRAL_API_KEY=             # HoliBot LLM + Embeddings
-
-# EU-Compliant Services
-MAILERLITE_API_KEY=          # Email marketing (EU)
-THREEMA_GATEWAY_ID=          # Critical alerts (CH)
-THREEMA_SECRET=              # Threema API secret
-OWNER_THREEMA_ID=            # Owner Threema ID
-
-# ChromaDB Cloud (Vector Database)
-CHROMADB_API_KEY=            # ChromaDB Cloud API key
-CHROMADB_TENANT=             # ChromaDB tenant ID
-CHROMADB_DATABASE=           # ChromaDB database name
-CHROMADB_COLLECTION_NAME=    # Default collection
-
-# Data Services
-APIFY_TOKEN=                 # Data scraping
-HETZNER_API_TOKEN=           # Server management
-ADYEN_API_KEY=               # Betalingen
-
-# Monitoring (EU-hosted)
-SENTRY_DSN=                  # Bugsink EU-hosted (Sentry SDK compatible)
-
-# Database
-REDIS_HOST=localhost
-REDIS_PORT=6379
-```
-
-### Integratie Overzicht
-
-| Platform | Functie | Locatie | Status |
-|----------|---------|---------|--------|
-| Hetzner | Server hosting | 🇩🇪 Duitsland | ✅ |
-| GitHub | Code repository | - | ✅ |
-| **ChromaDB Cloud** | **Vector database** | **Cloud** | ✅ |
-| MistralAI | Chatbot LLM + Embeddings | 🇫🇷 Frankrijk | ✅ |
-| MailerLite | Email flows | 🇱🇹 EU | ✅ |
-| **Bugsink** | **Error monitoring** | 🇳🇱 **Nederland (self-hosted)** | ✅ |
-| Threema | Critical alerts | 🇨🇭 Zwitserland | ✅ |
-| Apify | Data scraping | - | ✅ |
-| Adyen | Betalingen | 🇳🇱 Nederland | ✅ |
-
-### ⚠️ Verwijderde Services
-
-| Service | Reden | Vervanger | Account Status |
-|---------|-------|-----------|----------------|
-| Sentry.io | US bedrijf, CLOUD Act risico | Bugsink (NL) | **Kan verwijderd worden** |
-| SMS alerts | Kosten, privacy concerns | Threema (CH) | N.v.t. |
-
-> **Actie:** Sentry.io account kan volledig verwijderd worden. Bugsink is 100% compatibel (zelfde SDK).
-
----
-
-## 📊 Database Structuur
-
-### MySQL (Hetzner - pxoziy_db1 database)
-| Tabel | Beschrijving | Sync Frequentie |
-|-------|--------------|-----------------|
-| POI | Points of Interest (+ status, tier_score, duplicate_hash) | Tier-based |
-| QA | AI-generated Q&A pairs (NL/EN/ES, approval workflow) | Maandelijks |
-| Reviews | Reviews met sentiment analysis, spam scores | Wekelijks/Maandelijks |
-| Users | Klantaccounts | Realtime |
-| AdminUsers | Partner accounts | Realtime |
-| agenda | Events | Dagelijks |
-| agenda_dates | Event datums | Bij event update |
-| Tickets | Ticketverkoop | Realtime |
-| Transactions | Betalingen | Realtime |
-| user_journeys | Journey tracking per user (Communication Flow) | Elke 15 min |
-| journey_scheduled_emails | Scheduled email queue (Communication Flow) | Elke 15 min |
-| user_consent | GDPR consent tracking (essential, analytics, personalization, marketing) | Realtime |
-| gdpr_deletion_requests | Art. 17 deletion requests (72h deadline tracking) | Elke 4 uur |
-
-#### POI Enterprise Columns (v2.0)
-- `status`: active/pending_deactivation/deactivated/merged
-- `pending_deactivation_date`: 30-day grace period tracking
-- `duplicate_hash`: MD5 for duplicate detection
-- `tier_score`: Calculated tier score (0-10)
-
-#### Reviews Enterprise Columns (v2.0)
-- `sentiment_score`: -1.0 to 1.0 sentiment analysis
-- `sentiment_label`: positive/negative/neutral
-- `spam_score`: 0.0 to 1.0 spam detection
-
-#### Q&A Enterprise Columns (v2.0)
-- `source`: manual/ai_generated/imported
-- `status`: draft/pending_review/approved/rejected
-- `priority`: 1-5 importance ranking
-
-### MongoDB (via Mongoose)
-| Collection | Beschrijving | Retention |
-|------------|--------------|-----------|
-| cost_logs | API cost tracking | 90 dagen |
-| audit_logs | Agent action logs | 30 dagen |
-| chat_logs | HoliBot conversations | Configurable |
-
-### ChromaDB Cloud (Vector Database)
-| Collection | Beschrijving | Sync |
-|------------|--------------|------|
-| `holidaibutler_pois` | POI vector embeddings | Dagelijks 06:30 |
-| `holidaibutler_qas` | Q&A vector embeddings | Dagelijks 07:00 |
-| `calpe_pois` | Legacy POI collection | - |
-
----
-
-## 🤖 Claude Agents Architectuur
-
-### Fase 2 - Core Layer ✅ COMPLEET
-
-| Agent | Functie | Status |
-|-------|---------|--------|
-| **Orchestrator Agent** | Centrale coördinatie + Cost Controller | ✅ Live |
-| **Owner Interface Agent** | Email + Threema communicatie | ✅ Live |
-
-#### Orchestrator Components
-- BullMQ Scheduler (35 recurring jobs)
-- Cost Controller (€515/maand budget)
-- Audit Trail (30 dagen retention)
-
-#### Owner Interface Components
-- MailerLite Email Service (Automation-based)
-- Threema Gateway (urgency 5)
-- Daily Briefing (08:00)
-
-#### MailerLite Automation Configuratie
-**Methode:** Dual-group rotation (Growing Business plan compatible)
-- **Probleem:** MailerLite re-entry cooldown >24h per subscriber per automation
-- **Oplossing:** Twee groepen/automations die dagelijks alterneren (48h per groep)
-- **Group 1:** "System Alerts Owner" (ID: 176972381290498029) → Automation "Daily system update"
-- **Group 2:** "System Alerts Owner 2" (ID: 177755949282362712) → Automation "Daily system update 2"
-- **Rotatie:** Even dag-van-jaar → Group 1, oneven dag-van-jaar → Group 2
-- **Flow:** API removes → updates fields → re-adds subscriber → automation triggers
-- **Template:** Vaste template met dynamic fields via personalization
-- **Plan limiet:** Campaign API HTML content vereist Advanced plan (niet beschikbaar)
-
-**Custom Fields (MailerLite):**
-| Field | Beschrijving |
-|-------|--------------|
-| `last_system_alert` | Email subject |
-| `briefing_date` | Datum (Nederlands) |
-| `budget_spent` | Uitgegeven bedrag |
-| `budget_percentage` | % van budget |
-| `budget_remaining` | Resterend budget |
-| `jobs_count` | Jobs uitgevoerd (24u) |
-| `errors_count` | Errors (24u) |
-| `status_summary` | Status tekst |
-
-### Fase 3 - Operations Layer ✅ COMPLEET (100%)
-
-| Agent | Functie | Status |
-|-------|---------|--------|
-| **Platform Health Monitor v1.0** | System monitoring (5 categorieën) | ✅ Live |
-| **Data Sync Agent v2.0** | POI Lifecycle, Reviews, Q&A, Validation | ✅ Live |
-| **HoliBot Sync Agent v1.0** | ChromaDB vector sync voor chatbot | ✅ Live |
-| **Communication Flow Agent v1.0** | User journeys, notifications, MailerLite sync | ✅ Live |
-| **GDPR Agent v1.0** | Privacy compliance (Art. 7, 15, 17, 20, 30) | ✅ Live |
-
-#### Platform Health Monitor v1.0 Components
-- **Server Health**: Ping, CPU/memory usage, disk space monitoring
-- **Database Health**: MySQL, MongoDB, Redis connection checks
-- **API Health**: HolidaiButler API, MistralAI, Apify, ChromaDB, Bugsink
-- **Frontend Health**: Production, test, dev, admin portals (latency tracking)
-- **Queue Health**: BullMQ queues status, worker monitoring
-- **Alert Integration**: Automatische koppeling met Owner Interface Agent
-- **Scheduled**: Elk uur via BullMQ (hourly full health check)
-- **Cooldowns**: Intelligent alert throttling (5min critical → 24h info)
-
-#### Data Sync Agent v2.0 Components
-- **POI Lifecycle Manager**: Creation, deactivation (30-day grace), duplicate detection
-- **Reviews Manager**: Sentiment analysis, spam detection, 2-year retention
-- **Q&A Generator**: AI-powered multi-language (NL/EN/ES) generation
-- **Data Validator**: Schema validation, referential integrity, auto-rollback
-- **Sync Reporter**: Daily/weekly health reports, quality scores, alerts
-- **Scheduled Jobs**: 13 enterprise jobs (POI sync, review sync, Q&A sync, etc.)
-
-#### HoliBot Sync Agent v1.0 Components (NIEUW - 19 Jan 2026)
-- **ChromaDB Cloud Service**: CloudClient voor vector database connectie
-- **Embedding Service**: MistralAI embedding generatie (mistral-embed model)
-- **POI Sync Service**: Synchroniseert POI data naar ChromaDB voor vector search
-- **Q&A Sync Service**: Synchroniseert Q&A data naar ChromaDB voor vector search
-- **Sync Scheduler**: 4 scheduled jobs voor ChromaDB synchronisatie
-
-**HoliBot Sync Scheduled Jobs (4):**
-| Job | Schedule | Beschrijving |
-|-----|----------|--------------|
-| `holibot-poi-sync` | 06:30 dagelijks | POI sync naar ChromaDB (na Data Sync) |
-| `holibot-qa-sync` | 07:00 dagelijks | Q&A sync naar ChromaDB |
-| `holibot-full-reindex` | Zondag 04:00 | Volledige ChromaDB reindex |
-| `holibot-cleanup` | 05:00 dagelijks | Cleanup deactivated/rejected items |
-
-**ChromaDB Collections:**
-- `holidaibutler_pois`: POI vector embeddings voor semantic search
-- `holidaibutler_qas`: Q&A vector embeddings voor chatbot context
-
-#### Communication Flow Agent v1.0 Components (NIEUW - 19 Jan 2026)
-- **User Journey Manager**: Automated customer journeys (welcome, booking, re-engagement, review)
-- **MailerLite Service**: Extended email automation, user sync, campaign management
-- **Notification Router**: Multi-channel routing (email, Threema) based on urgency
-- **Sync Scheduler**: 3 scheduled jobs for communication automation
-
-**Communication Flow Scheduled Jobs (3):**
-| Job | Schedule | Beschrijving |
-|-----|----------|--------------|
-| `comm-journey-processor` | Elke 15 minuten | Process pending journey emails |
-| `comm-user-sync` | 03:00 dagelijks | Sync users to MailerLite |
-| `comm-cleanup` | Zondag 04:00 | Cleanup completed journeys (90 days) |
-
-**User Journey Types:**
-- `WELCOME`: New user onboarding (day 0, 2, 7)
-- `BOOKING_CONFIRMATION`: Post-booking flow (day 0, -3, +1)
-- `RE_ENGAGEMENT`: Inactive user reactivation (day 30, 60, 90)
-- `REVIEW_REQUEST`: Post-visit review solicitation (day 1, 7)
-
-**Database Tables:**
-- `user_journeys`: Journey tracking per user
-- `journey_scheduled_emails`: Scheduled email queue
-
-#### GDPR Agent v1.0 Components (NIEUW - 19 Jan 2026)
-- **Data Inventory**: Maps all personal data locations per Art. 30 GDPR
-- **Data Exporter**: Handles Art. 15 (Access) and Art. 20 (Portability) requests
-- **Data Eraser**: Handles Art. 17 (Right to Erasure) with 72h deadline
-- **Consent Manager**: Tracks Art. 7 consent (essential, analytics, personalization, marketing)
-- **Sync Scheduler**: 4 scheduled jobs for GDPR compliance monitoring
-
-**GDPR Scheduled Jobs (4):**
-| Job | Schedule | Beschrijving |
-|-----|----------|--------------|
-| `gdpr-overdue-check` | Elke 4 uur | Check 72h deletion deadline violations |
-| `gdpr-export-cleanup` | 03:00 dagelijks | Cleanup old export files (7+ days) |
-| `gdpr-retention-check` | 1e van maand 02:00 | Check data retention compliance |
-| `gdpr-consent-audit` | Zondag 04:00 | Generate consent statistics report |
-
-**GDPR Articles Implemented:**
-- **Art. 7**: Conditions for Consent (consent tracking)
-- **Art. 15**: Right of Access (data export JSON)
-- **Art. 17**: Right to Erasure (72h deadline, owner approval for partners)
-- **Art. 20**: Data Portability (portable ZIP/CSV export)
-- **Art. 30**: Records of Processing Activities (data inventory)
-
-**Database Tables:**
-- `user_consent`: Consent tracking per user
-- `gdpr_deletion_requests`: Deletion request tracking with approval workflow
-
-### Fase 4 - Development Layer ✅ COMPLEET (100%)
-
-| Agent | Functie | Status |
-|-------|---------|--------|
-| **UX/UI Reviewer v1.0** | Interface quality (brand colors, a11y, responsive, UX principles) | ✅ Live |
-| **Code Reviewer v1.0** | Code quality (conventions, error handling, performance, docs) | ✅ Live |
-| **Security Reviewer v1.0** | Security audits (OWASP Top 10, secrets detection, GDPR) | ✅ Live |
-| **Quality Checker v1.0** | Orchestration, lint, tests, dependency audit, CI/CD | ✅ Live |
-
-#### Development Layer Agent v1.0 Components (NIEUW - 19 Jan 2026)
-- **UX/UI Reviewer**: Brand color compliance, typography, WCAG accessibility, responsive design, UX principles (Miller's Law, Hick's Law, Fitts' Law)
-- **Code Reviewer**: HolidaiButler conventions, error handling patterns, performance anti-patterns, security patterns, code complexity, documentation
-- **Security Reviewer**: OWASP Top 10 2021 checks (A01-Broken Access Control, A02-Cryptographic Failures, A03-Injection, A07-Auth Failures, A10-SSRF), API security (rate limiting, CORS, input validation), authentication patterns, GDPR data protection alignment, hardcoded secrets detection
-- **Quality Checker**: Orchestrates all reviewers, ESLint integration, test runner, dependency audit
-
-**Quality Thresholds:**
-- PASS: Score ≥ 80%
-- WARNING: Score 60-79%
-- FAIL: Score < 60%
-- CRITICAL: Any critical security issue detected
-
-**Development Layer Scheduled Jobs (3):**
-| Job | Schedule | Beschrijving |
-|-----|----------|--------------|
-| `dev-security-scan` | 02:00 dagelijks | Full security scan of all projects |
-| `dev-dependency-audit` | Zondag 03:00 | Dependency vulnerability audit |
-| `dev-quality-report` | Maandag 06:00 | Weekly quality report generation |
-
-**Volledige specificaties**: Zie `docs/agents/fase4/` en `docs/CLAUDE_AGENTS_MASTERPLAN.md` (v3.4.0)
-
-### Fase 5 - Strategy Layer ✅ COMPLEET (100%)
-
-| Agent | Functie | Status |
-|-------|---------|--------|
-| **Architecture Advisor v1.0** | System design recommendations, health assessment (5 categories) | ✅ Live |
-| **Learning Agent v1.0** | Pattern analysis, optimization suggestions | ✅ Live |
-| **Adaptive Config Agent v1.0** | Dynamic configuration tuning (rate limiting, queue, cache, alerts) | ✅ Live |
-| **Prediction Agent v1.0** | Proactive issue detection, forecasting | ✅ Live |
-
-#### Strategy Layer Agent v1.0 Components (NIEUW - 27 Jan 2026)
-- **Pattern Analyzer**: Core pattern detection engine (errors, performance, costs, user journeys)
-- **Architecture Advisor**: System design recommendations, health assessment across 5 categories (stability, performance, cost efficiency, scalability, EU compliance)
-- **Learning Agent**: Pattern recognition, trend analysis, optimization suggestions with confidence scores
-- **Adaptive Config Agent**: Dynamic configuration tuning for rate limiting, queue concurrency, cache TTLs, alert thresholds. Rule-based triggers (HIGH_TRAFFIC, HIGH_ERROR_RATE, LOW_RESOURCES, PEAK_HOURS)
-- **Prediction Agent**: Proactive issue detection using linear regression trends. Predicts resource exhaustion, error escalation, cost overruns, performance decline
-- **Sync Scheduler**: 4 scheduled jobs for strategy analysis and optimization
-
-**Strategy Layer Scheduled Jobs (4):**
-| Job | Schedule | Beschrijving |
-|-----|----------|--------------|
-| `strategy-assessment` | Maandag 06:00 | Weekly architecture assessment |
-| `strategy-learning` | 03:00 dagelijks | Learning cycle and optimizations |
-| `strategy-prediction` | Elke 6 uur | Predictive analysis for proactive alerts |
-| `strategy-config-eval` | Elke 30 minuten | System metrics evaluation and config adaptation |
-
-**Architecture Assessment Categories:**
-- Stability (error patterns, recurring issues)
-- Performance (degradation, peak usage)
-- Cost Efficiency (budget anomalies, service costs)
-- Scalability (queue backlog, database connections)
-- EU Compliance (service locations, GDPR agent status)
-
-**Prediction Models:**
-- Resource Exhaustion (disk, memory trend analysis)
-- Error Escalation (hourly error rate trending)
-- Cost Overrun (projected monthly vs budget)
-- Performance Decline (multi-metric degradation)
-
-**Volledige specificaties**: Zie `docs/agents/fase5/`
-
----
-
-## 📊 Scheduled Jobs Overzicht (35 totaal)
-
-### Core Jobs (4)
-| Job | Schedule | Component |
-|-----|----------|-----------|
-| `health-check` | Elk uur | Platform Health Monitor |
-| `daily-briefing` | 08:00 dagelijks | Owner Interface |
-| `cost-check` | Elke 6 uur | Cost Controller |
-| `weekly-cost-report` | Maandag 09:00 | Cost Controller |
-
-### Data Sync Jobs (13)
-| Job | Schedule | Component |
-|-----|----------|-----------|
-| `poi-sync-tier1` | 06:00 dagelijks | Data Sync Agent |
-| `poi-sync-tier2` | Maandag 06:00 | Data Sync Agent |
-| `poi-sync-tier3` | 1e van maand 06:00 | Data Sync Agent |
-| `poi-sync-tier4` | Kwartaal 06:00 | Data Sync Agent |
-| `poi-tier-recalc` | Zondag 03:00 | Data Sync Agent |
-| `poi-deactivation-check` | 01:00 dagelijks | Data Sync Agent |
-| `review-sync-tier12` | Woensdag 05:00 | Data Sync Agent |
-| `review-sync-tier34` | 15e van maand 05:00 | Data Sync Agent |
-| `review-retention` | Zondag 02:00 | Data Sync Agent |
-| `qa-sync-tier12` | 1e van maand 04:00 | Data Sync Agent |
-| `qa-sync-tier34` | Kwartaal 04:00 | Data Sync Agent |
-| `health-report-daily` | 07:00 dagelijks | Data Sync Agent |
-| `health-report-weekly` | Maandag 07:00 | Data Sync Agent |
-
-### HoliBot Sync Jobs (4)
-| Job | Schedule | Component |
-|-----|----------|-----------|
-| `holibot-poi-sync` | 06:30 dagelijks | HoliBot Sync Agent |
-| `holibot-qa-sync` | 07:00 dagelijks | HoliBot Sync Agent |
-| `holibot-full-reindex` | Zondag 04:00 | HoliBot Sync Agent |
-| `holibot-cleanup` | 05:00 dagelijks | HoliBot Sync Agent |
-
-### Communication Flow Jobs (3)
-| Job | Schedule | Component |
-|-----|----------|-----------|
-| `comm-journey-processor` | Elke 15 minuten | Communication Flow Agent |
-| `comm-user-sync` | 03:00 dagelijks | Communication Flow Agent |
-| `comm-cleanup` | Zondag 04:00 | Communication Flow Agent |
-
-### GDPR Jobs (4)
-| Job | Schedule | Component |
-|-----|----------|-----------|
-| `gdpr-overdue-check` | Elke 4 uur | GDPR Agent |
-| `gdpr-export-cleanup` | 03:00 dagelijks | GDPR Agent |
-| `gdpr-retention-check` | 1e van maand 02:00 | GDPR Agent |
-| `gdpr-consent-audit` | Zondag 04:00 | GDPR Agent |
-
-### Development Layer Jobs (3)
-| Job | Schedule | Component |
-|-----|----------|-----------|
-| `dev-security-scan` | 02:00 dagelijks | Development Layer Agent |
-| `dev-dependency-audit` | Zondag 03:00 | Development Layer Agent |
-| `dev-quality-report` | Maandag 06:00 | Development Layer Agent |
-
-### Strategy Layer Jobs (4)
-| Job | Schedule | Component |
-|-----|----------|-----------|
-| `strategy-assessment` | Maandag 06:00 | Strategy Layer Agent |
-| `strategy-learning` | 03:00 dagelijks | Strategy Layer Agent |
-| `strategy-prediction` | Elke 6 uur | Strategy Layer Agent |
-| `strategy-config-eval` | Elke 30 minuten | Strategy Layer Agent |
-
----
-
-## ⚠️ Kritieke Regels
-
-### NOOIT doen:
-- ❌ Direct naar `main` pushen zonder approval
-- ❌ API keys in code of documenten zetten
-- ❌ Dependencies updaten zonder impact check
-- ❌ Database schema's wijzigen zonder migratie
-- ❌ API endpoints verwijderen (breaking changes)
-- ❌ User data verwijderen zonder GDPR protocol
-- ❌ POI data verwijderen zonder owner approval
-- ❌ Direct naar productie server via SSH voor code wijzigingen
-- ❌ **US-based monitoring services gebruiken (geen Sentry.io)**
-- ❌ **Features deployen met bekende errors of foutmeldingen**
-- ❌ **Starten met nieuwe fase/feature zonder CLAUDE.md te lezen**
-
-### ALTIJD doen:
-- ✅ Tests draaien voor commit (`npm test`)
-- ✅ Conventional commit messages gebruiken
-- ✅ TypeScript types toevoegen aan nieuwe code
-- ✅ Error handling implementeren
-- ✅ Owner notificeren bij kritieke wijzigingen
-- ✅ Skills raadplegen voor domeinkennis
-- ✅ Audit trail bijhouden voor data wijzigingen
-- ✅ `cleanAIText()` gebruiken voor AI-gegenereerde tekst
-- ✅ `isPOIClosed()` gebruiken om gesloten POIs te filteren
-- ✅ **EU-compliant services gebruiken**
-- ✅ **Errors loggen naar Bugsink**
-- ✅ **CLAUDE.md updaten na elke relevante wijziging**
-- ✅ **Alle errors oplossen vóór deployment**
-
----
-
-## 📝 Commit Message Format
-
-```
-type(scope): description
-
-Types: feat, fix, docs, style, refactor, test, chore
-Scope: customer, admin, core, modules, infra, agents
-
-Voorbeelden:
-feat(customer): add POI thumbnail component
-fix(core): resolve database connection timeout
-docs(agents): update orchestrator specification
-feat(orchestrator): add Threema integration for critical alerts
-feat(agents): add HoliBot Sync Agent for ChromaDB vector sync
-```
-
----
-
-## 🎨 Design System
-
-### Brand Colors
-| Naam | Hex | Gebruik |
-|------|-----|---------|
-| Header Gradient Start | #7FA594 | Header achtergrond |
-| Header Gradient Mid | #5E8B7E | - |
-| Header Gradient End | #4A7066 | - |
-| Gouden Accent | #D4AF37 | CTAs, highlights |
-| Button Primary | #8BA99D | Knoppen |
-| Text Primary | #2C3E50 | Hoofdtekst |
-| Text Secondary | #687684 | Subtekst |
-
-### Typography
-- **Font**: Inter
-- **Headings**: Bold, Primary color
-- **Body**: Regular, 16px
-
-### UX Principes
-- Miller's Law: Beperk keuzestress
-- Jakob's Law: Herkenbare patronen
-- Proximity Principle: Groepeer gerelateerde elementen
-- Hick's Law: Progressive disclosure
-- Fitts' Law: Mobile thumb-friendly CTAs
-- WCAG: Accessibility compliance
-
-> **Note:** Deze UX principes worden automatisch gevalideerd door de UX/UI Reviewer Agent (Fase 4). Zie sectie "Development Layer Agent v1.0 Components".
-
----
-
-## 🌍 Multi-Destination Architecture
-
-### Bestemmingen Database (destinations table)
-| ID | Code | Display Name | Country | Status | Domain |
-|----|------|--------------|---------|--------|--------|
-| 1 | calpe | Calpe | Spain | ✅ Active | holidaibutler.com |
-| 2 | texel | Texel | Netherlands | ⏸️ Planned | texelmaps.nl |
-| 3 | alicante | Alicante | Spain | ⏸️ Planned | alicante.holidaibutler.com |
 
 ### Database Multi-Tenancy
-Tabellen met `destination_id` foreign key:
-- `POI` (1593 records → Calpe)
-- `QA` (0 records)
-- `agenda` (314 records → Calpe)
-- `Users` (10 records → Calpe)
-- `user_journeys` (0 records)
-- `holibot_sessions` (169 records → Calpe)
+Alle tabellen met destination-specifieke data hebben `destination_id` kolom:
+- `POI` — Points of Interest
+- `QnA` — Q&A voor HoliBot
+- `agenda` — Events
+- `Users` — Gebruikers
+- `user_journeys` — User journey tracking
+- `holibot_sessions` — Chatbot sessies
+- `poi_content_staging` — Content staging (NIEUW)
 
-### Configuration Files
+### Destination Routing
 ```
-platform-core/config/
-├── shared.config.js           # Platform-wide settings
-└── destinations/
-    ├── index.js               # Export + utility functions
-    ├── calpe.config.js        # Calpe configuration
-    ├── texel.config.js        # Texel configuration
-    └── alicante.config.js     # Alicante configuration
-```
-
-### Migration Files
-```
-platform-core/migrations/
-└── 001_multi_destination.sql  # Multi-destination schema migration
+Request → Apache VHost → X-Destination-ID Header → Backend
+                                ↓
+                    getDestinationFromRequest()
+                                ↓
+                    destination_id voor queries
 ```
 
-### Destination Config Utility Functions
-```javascript
-import { getDestinationConfig, isFeatureEnabled } from './config/destinations';
+---
 
-// Get config by code
-const config = getDestinationConfig('calpe');
+## 📊 POI Content Pipeline (NIEUW - Fase 3-4)
 
-// Check feature availability
-if (isFeatureEnabled('calpe', 'holibot')) {
-  // Feature enabled
-}
+### Content Staging Workflow
+```
+Bronnen (VVV, Websites, LLM) → poi_content_staging → Review → POI tabel
+                                     ↓
+                              status: pending
+                                     ↓
+                              status: approved/rejected
+                                     ↓
+                              status: applied
 ```
 
-### Bestemming-specifieke Skills
-Elke bestemming heeft eigen skills in `.claude/skills/destinations/`:
-- `DESTINATION.md` - Algemene info
-- `poi-categories.md` - POI categorieën
-- `local-events.md` - Lokale evenementen
-- `seasonal.md` - Seizoensinformatie
+### poi_content_staging Tabel Schema
+| Kolom | Type | Beschrijving |
+|-------|------|--------------|
+| id | INT | Primary key |
+| poi_id | INT | FK naar POI.id |
+| destination_id | INT | 1=Calpe, 2=Texel |
+| content_source | VARCHAR | 'mistral_medium_fase4', 'vvv_texel', 'poi_website', 'calpe_es' |
+| detail_description_en | TEXT | Gegenereerde EN beschrijving |
+| status | ENUM | 'pending', 'approved', 'rejected', 'applied', 'review_required' |
+| old_content_snapshot | TEXT | Backup van OLD content |
+| comparison_scores | JSON | LLM scoring per criterium |
+| old_total_score | DECIMAL | Gewogen OLD score |
+| new_total_score | DECIMAL | Gewogen NEW score |
+| comparison_recommendation | ENUM | 'USE_NEW', 'KEEP_OLD', 'MANUAL_REVIEW' |
+| applied_at | TIMESTAMP | Wanneer naar POI tabel |
+
+### Content Bronnen
+| Bron | POIs | Status | Kwaliteit |
+|------|------|--------|-----------|
+| mistral_medium_fase4 | 2.515 | ✅ Gegenereerd | Excellent (9.96/10) |
+| vvv_texel | 240 | ✅ Gescraped | Goed |
+| poi_website | 276 | ✅ Gescraped | Variabel |
+| calpe_es | 18 | ✅ Gescraped | Goed |
+| **Totaal staging** | **3.049** | | |
+
+### LLM Content Generatie (Mistral AI)
+| Parameter | Waarde |
+|-----------|--------|
+| Model | mistral-medium-latest |
+| API | https://api.mistral.ai/v1/chat/completions |
+| Rate limit | 5 requests/seconde |
+| Kosten | ~EUR 0.0035/POI |
+| Success rate | 100% |
+
+### Content Kwaliteitscriteria (9 criteria, gewogen)
+| # | Criterium | Gewicht | Beschrijving |
+|---|-----------|---------|--------------|
+| C1 | Grammatica & Spelling | 10% | Foutloos taalgebruik |
+| C2 | British English | 10% | colour, centre, specialise |
+| C3 | Tone of Voice | 10% | Professioneel, warm, uitnodigend |
+| C4 | AIDA Model | 10% | Attention-Interest-Desire-Action |
+| C5 | Woordenaantal | 5% | 115-135 woorden optimaal |
+| C6 | Formatting | 10% | Geen markdown, plain text |
+| C7 | Concreetheid | 20% | Prijzen, tijden, specifieke details |
+| C8 | Lokale Verankering | 15% | Costa Blanca, Waddenzee referenties |
+| C9 | Actualiteit | 10% | Geen verouderde info |
+
+### Taalregels per Destination
+| Destination | Regel | Voorbeeld |
+|-------------|-------|-----------|
+| Texel EN | "on Texel" (NIET "in Texel") | "Located on Texel..." |
+| Texel NL | "op Texel" | "Gelegen op Texel..." |
+| Texel DE | "auf Texel" | "Auf Texel gelegen..." |
+| Calpe EN/ES/DE/NL | "in Calpe" | "In Calpe you'll find..." |
+
+---
+
+## 🗃️ Database Schema
+
+### Server Verbinding
+```
+Host: jotx.your-database.de
+Database: pxoziy_db1
+User: pxoziy_1_w
+Password: i9)PUR^2k=}!
+```
+
+### POI Tabel Kolommen (Content-gerelateerd)
+| Kolom | Type | Beschrijving | Status |
+|-------|------|--------------|--------|
+| enriched_tile_description_en | TEXT | Korte beschrijving (tile) | ✅ Gevuld |
+| enriched_detail_description_en | TEXT | Lange beschrijving (detail card) | ✅ Fase 5 |
+| enriched_detail_description_es | TEXT | Spaanse vertaling | 🟡 Fase 5 |
+| enriched_detail_description_de | TEXT | Duitse vertaling | 🟡 Fase 5 |
+| enriched_detail_description_nl | TEXT | Nederlandse vertaling | 🟡 Fase 5 |
+| enriched_highlights | TEXT | Key highlights | ✅ Gevuld |
+
+### POI Coverage na Fase 4
+| Destination | Totaal | Met EN Content | Coverage |
+|-------------|--------|----------------|----------|
+| Calpe | 1.495 | ~1.442 | 96% |
+| Texel | 1.142 | ~1.073 | 94% |
+
+---
+
+## 📈 Implementatie Status
+
+### Multi-Destination Fasen
+| Fase | Beschrijving | Status | Datum |
+|------|--------------|--------|-------|
+| **Fase 1** | Foundation (DB schema, config) | ✅ COMPLEET | 28-01-2026 |
+| **Fase 2** | Texel Deployment (DNS, SSL, data) | ✅ COMPLEET | 29-01-2026 |
+| **Fase 3** | Texel Data Quality | ✅ COMPLEET | 02-02-2026 |
+| **Fase 3b** | LLM Content Pilot (100 POIs) | ✅ COMPLEET | 05-02-2026 |
+| **Fase 4** | Full LLM Content Run (2.515 POIs) | ✅ COMPLEET | 05-02-2026 |
+| **Fase 4b** | Content Vergelijking (OLD vs NEW) | ✅ COMPLEET | 06-02-2026 |
+| **Fase 5** | Content Apply & Translation | 🟡 IN UITVOERING | 07-02-2026 |
+| **Fase 6** | Alicante Preparation | ⏸️ WACHT | - |
+| **Fase 7** | Stabilization | ⏸️ WACHT | - |
+
+### Fase 4/4b Resultaten
+| Metriek | Waarde |
+|---------|--------|
+| POIs gegenereerd | 2.515 |
+| Success rate | 100% |
+| Kosten Fase 4 | EUR 8.93 |
+| Kosten Fase 4b | EUR 6.02 |
+| Approved | 2.481 (98.6%) |
+| Manual Review | 34 (1.4%) → Frank akkoord: USE_NEW |
+| Keep OLD | 0 (0%) |
+| NEW vs OLD score | +2.17 punten |
+
+### Agent Systeem Fasen (Eerder Voltooid)
+| Fase | Beschrijving | Status |
+|------|--------------|--------|
+| Fase 1 | Foundation | ✅ COMPLEET |
+| Fase 2 | Orchestrator | ✅ COMPLEET |
+| Fase 3 | Specialized Agents | ✅ COMPLEET |
+| Fase 4 | Development Layer | ✅ COMPLEET |
+| Fase 5 | Strategy Layer | ✅ COMPLEET |
+
+**Totaal Scheduled Jobs**: 35
 
 ---
 
@@ -891,12 +380,18 @@ score = (review_count × 0.30) +
 | 3 | ≥ 5.0 | Maandelijks (1e) | 1000 |
 | 4 | < 5.0 | Kwartaal (Jan/Apr/Jul/Oct) | Onbeperkt |
 
-### Data Bronnen
-- Google Places (via Apify)
-- TripAdvisor
-- TheFork
-- Trustpilot
-- Booking.com
+### POI Quality Filters (Browse View)
+- Rating >= 4.0
+- Review count >= 3
+- Enriched tile description required
+- At least 3 images required
+- Exclusies: Laadpunten, begraafplaatsen, accommodatie (is_hidden_category)
+
+### MapView Configuratie
+| Destination | Zoom | POIs per Category |
+|-------------|------|-------------------|
+| Texel | 10 | 7 |
+| Calpe | 14 | 7 |
 
 ---
 
@@ -916,11 +411,67 @@ score = (review_count × 0.30) +
 ### EU-First Infrastructure
 | Component | Locatie | Compliance |
 |-----------|---------|------------|
-| Server | 🇩🇪 Hetzner | ✅ GDPR |
+| Server | 🇩🇪 Hetzner (91.98.71.87) | ✅ GDPR |
 | Database | 🇩🇪 Hetzner | ✅ GDPR |
 | Monitoring | 🇳🇱 Bugsink | ✅ GDPR |
 | Email | 🇱🇹 MailerLite | ✅ GDPR |
 | Alerts | 🇨🇭 Threema | ✅ GDPR |
+| LLM | 🇫🇷 Mistral AI | ✅ GDPR |
+
+---
+
+## 🖥️ Server Informatie
+
+### SSH Toegang
+```bash
+ssh root@91.98.71.87
+```
+
+### Belangrijke Paden
+| Pad | Beschrijving |
+|-----|--------------|
+| `/var/www/api.holidaibutler.com/platform-core/` | Backend |
+| `/var/www/holidaibutler.com/customer-portal/` | Calpe frontend |
+| `/var/www/texelmaps.nl/customer-portal/` | Texel frontend |
+| `/var/www/images/pois/` | POI afbeeldingen |
+| `/root/backups/` | Database backups |
+| `/root/fase*` | Fase output bestanden |
+
+### Fase Output Bestanden op Hetzner
+```
+/root/
+├── fase3_pilot_output.json
+├── fase3_quality_analysis.md
+├── fase3_replacement_advice.md
+├── fase4_full_output.json
+├── fase4_generation_report.md
+├── fase4_quality_analysis.json
+├── fase4_quality_sample.md
+├── fase4_checkpoint.json
+├── fase4b_comparison_summary.md
+├── fase4b_review_required.json
+├── fase4b_category_analysis.md
+├── fase4b_content_comparison.py
+├── fase4b_checkpoint.json
+└── texel_old_nl_archive.json
+```
+
+### Quick Health Check Commands
+```bash
+# PM2 status
+pm2 status
+
+# Redis check
+redis-cli ping
+
+# Check scheduled jobs (35 verwacht)
+cd /var/www/api.holidaibutler.com/platform-core
+node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); async function c() { const conn = new Redis(); const q = new Queue('scheduled-tasks', { connection: conn }); const jobs = await q.getRepeatableJobs(); console.log('Jobs:', jobs.length); await q.close(); await conn.quit(); } c();"
+
+# Check staging status
+mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
+  -e "SELECT content_source, status, COUNT(*) FROM poi_content_staging GROUP BY content_source, status;"
+```
 
 ---
 
@@ -941,59 +492,16 @@ score = (review_count × 0.30) +
 
 ## 📚 Gerelateerde Documentatie
 
-| Document | Locatie |
-|----------|---------|
-| Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` (v3.4.0) |
-| Fase 2 Docs | `docs/agents/fase2/` |
-| Fase 3 Docs | `docs/agents/fase3/` |
-| Fase 4 Docs | `docs/agents/fase4/` |
-| Fase 5 Docs | `docs/agents/fase5/` |
-| API Documentatie | `docs/api/` |
-| Deployment Guide | `infrastructure/README.md` |
-| Contributing Guide | `CONTRIBUTING.md` |
-
----
-
-## 🖥️ Server Monitoring & Onderhoud
-
-### Quick Health Check Commands
-```bash
-# SSH naar server
-ssh root@91.98.71.87
-
-# PM2 status
-pm2 status
-
-# Redis check
-redis-cli ping
-
-# Check scheduled jobs (35 verwacht)
-cd /var/www/api.holidaibutler.com/platform-core
-node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); async function c() { const conn = new Redis(); const q = new Queue('scheduled-tasks', { connection: conn }); const jobs = await q.getRepeatableJobs(); console.log('Jobs:', jobs.length); await q.close(); await conn.quit(); } c();"
-
-# Check failed jobs
-node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); async function c() { const conn = new Redis(); const q = new Queue('scheduled-tasks', { connection: conn }); const failed = await q.getFailedCount(); console.log('Failed:', failed); await q.close(); await conn.quit(); } c();"
-
-# PM2 logs (laatste errors)
-pm2 logs holidaibutler-api --lines 50 --nostream 2>&1 | grep -iE "error|failed"
-```
-
-### Server Disk Status (28 jan 2026)
-| Path | Grootte | Status |
-|------|---------|--------|
-| `/` (totaal) | 38 GB | 48% gebruikt |
-| `/var/www/api.holidaibutler.com/` | 9.0 GB | Actief |
-| `/var/www/api.holidaibutler.com/storage/poi-images/` | 8.3 GB | 1576 afbeeldingen |
-| `/var/www/backups/` | 870 MB | Opgeschoond (was 2.8 GB) |
-
-### Queue Name
-**Let op:** De BullMQ queue heet `scheduled-tasks` (NIET `scheduled-jobs`)
-
-### Bekende Issues (28 jan 2026)
-| Issue | Status | Oorzaak |
-|-------|--------|---------|
-| HoliBot sync jobs falen | ✅ Gefixed | Tabel- en kolomnamen gecorrigeerd |
-| Daily briefing email | ✅ Gefixed | Dual-group rotation actief, cooldowns moeten verlopen |
+| Document | Locatie | Versie |
+|----------|---------|--------|
+| Strategic Advisory | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 2.6 |
+| Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 |
+| Fase 2 Docs | `docs/agents/fase2/` | - |
+| Fase 3 Docs | `docs/agents/fase3/` | - |
+| Fase 4 Docs | `docs/agents/fase4/` | - |
+| Fase 5 Docs | `docs/agents/fase5/` | - |
+| API Documentatie | `docs/api/` | - |
+| Deployment Guide | `infrastructure/README.md` | - |
 
 ---
 
@@ -1001,43 +509,46 @@ pm2 logs holidaibutler-api --lines 50 --nostream 2>&1 | grep -iE "error|failed"
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **3.2.0** | **2026-01-28** | **Multi-Destination Architecture Fase 1 COMPLEET: destinations table (3 destinations), destination_id toegevoegd aan 6 tabellen (POI, QA, agenda, Users, user_journeys, holibot_sessions), config files (shared + 3 destinations), migration file. Database backup gemaakt.** |
-| 3.1.1 | 2026-01-28 | HoliBot sync bug gefixed: kolomnamen gecorrigeerd (rating, tier_score, city AS destination, last_updated). Alle 35 jobs operationeel, 0 failed. |
-| **3.1.0** | **2026-01-28** | **Server monitoring toolkit toegevoegd. Database tabelnamen gecorrigeerd (POI/QA, niet POIs/QAs). HoliBot sync issue gedocumenteerd. Server opschoning: backups van 2.8GB naar 870MB. SSH key hersteld voor root@91.98.71.87.** |
-| 3.0.1 | 2026-01-27 | Email fix: Dual-group rotation voor dagelijkse briefing. MailerLite re-entry cooldown (>24h) omzeild door 2 groepen/automations die dagelijks alterneren (48h per groep). Campaign API HTML content niet beschikbaar op Growing Business plan. |
-| 3.0.0 | 2026-01-27 | Fase 5 Strategy Layer COMPLEET: Architecture Advisor, Learning Agent, Adaptive Config Agent, Prediction Agent. Pattern analysis, proactive issue detection, dynamic config tuning. 4 nieuwe jobs (35 totaal). Major version - alle 5 fases compleet! |
-| 2.9.1 | 2026-01-20 | CLAUDE.md correcties: Job count (31), docs/agents/fase4/ toegevoegd, MASTERPLAN referentie fix, OWASP details (A01/A02/A03/A07/A10), quality thresholds, UX Reviewer cross-reference. |
-| 2.9.0 | 2026-01-19 | Fase 4 Development Layer COMPLEET: UX/UI Reviewer, Code Reviewer, Security Reviewer, Quality Checker. OWASP Top 10 checks, brand compliance, code conventions. 3 nieuwe jobs (31 totaal). Fase 4 nu 100% compleet! |
-| 2.8.0 | 2026-01-19 | GDPR Agent v1.0 LIVE: Art. 7/15/17/20/30 compliance, data export, erasure (72h), consent management. 4 nieuwe jobs (28 totaal). Fase 3 nu 100% compleet! |
-| 2.7.1 | 2026-01-19 | Database tabellen toegevoegd (user_journeys, journey_scheduled_emails), MASTERPLAN referentie gecorrigeerd naar v3.4.0 |
-| 2.7.0 | 2026-01-19 | Communication Flow Agent v1.0 LIVE: User journeys, notification routing, MailerLite sync. 3 nieuwe jobs (24 totaal). Fase 3 nu 87.5% compleet. |
-| 2.6.0 | 2026-01-19 | HoliBot Sync Agent v1.0 LIVE: ChromaDB Cloud sync, MistralAI embeddings, 4 jobs. Enterprise kwaliteitsstandaarden toegevoegd. Fase 3 nu 75% compleet. |
-| 2.5.1 | 2026-01-19 | Deployment volgorde gedocumenteerd (Dev→Test→Main), concurrency control fix, Sentry.io kan verwijderd |
-| 2.5.0 | 2026-01-19 | Data Sync Agent v2.0 ACTIVATED: 17 scheduled jobs live (13 data sync + 4 core), all components operational |
-| 2.4.0 | 2026-01-19 | Platform Health Monitor v1.0 LIVE: 5 health check categorieën, hourly monitoring, alert integration |
-| 2.3.0 | 2026-01-19 | MailerLite automation-based email, custom fields, group-trigger flow |
-| 2.2.0 | 2026-01-18 | Data Sync Agent v2.0 Enterprise: POI lifecycle, reviews, Q&A, validation |
-| 2.1.0 | 2026-01-14 | Fase 2 compleet, Sentry→Bugsink, Threema, EU-compliance |
-| 2.0.0 | 2026-01-12 | Merge technische details + agent architectuur |
-| 1.0.0 | 2026-01-05 | Origineel: deployment protocol, code conventies |
+| **3.3.0** | **2026-02-07** | **MAJOR UPDATE: Fase 2-4b documentatie toegevoegd. Texel LIVE (texelmaps.nl). TexelMaps huisstijl (#30c59b/#3572de/#ecde3c). POI Content Pipeline gedocumenteerd (staging workflow, LLM generatie, 9 kwaliteitscriteria). poi_content_staging tabel schema. Fase 4 resultaten: 2.515 POIs, EUR 8.93, 100% success. Fase 4b: 2.481 approved, 34 manual review → Frank akkoord. Strategic Advisory referentie toegevoegd (v2.6). Hetzner fase output bestanden gedocumenteerd.** |
+| 3.2.0 | 2026-01-28 | Multi-Destination Architecture Fase 1 COMPLEET: destinations table, destination_id toegevoegd aan 6 tabellen, config files. |
+| 3.1.1 | 2026-01-28 | HoliBot sync bug gefixed: kolomnamen gecorrigeerd. Alle 35 jobs operationeel. |
+| 3.1.0 | 2026-01-28 | Server monitoring toolkit toegevoegd. Database tabelnamen gecorrigeerd. |
+| 3.0.1 | 2026-01-27 | Email fix: Dual-group rotation voor dagelijkse briefing. |
+| 3.0.0 | 2026-01-27 | Fase 5 Strategy Layer COMPLEET. Major version - alle 5 agent fases compleet! |
+| 2.9.1 | 2026-01-20 | CLAUDE.md correcties: Job count, docs referenties. |
+| 2.9.0 | 2026-01-19 | Fase 4 Development Layer COMPLEET. |
+| 2.8.0 | 2026-01-19 | GDPR Agent v1.0 LIVE. |
+| 2.7.1 | 2026-01-19 | Database tabellen toegevoegd (user_journeys). |
+| 2.7.0 | 2026-01-19 | Communication Flow Agent v1.0 LIVE. |
+| 2.6.0 | 2026-01-19 | HoliBot Sync Agent v1.0 LIVE. |
+| 2.5.1 | 2026-01-19 | Deployment volgorde gedocumenteerd. |
+| 2.5.0 | 2026-01-19 | Data Sync Agent v2.0 ACTIVATED. |
+| 2.4.0 | 2026-01-19 | Platform Health Monitor v1.0 LIVE. |
+| 2.3.0 | 2026-01-19 | MailerLite automation-based email. |
+| 2.2.0 | 2026-01-18 | Data Sync Agent v2.0 Enterprise. |
+| 2.1.0 | 2026-01-14 | Fase 2 compleet, Sentry→Bugsink, Threema. |
+| 2.0.0 | 2026-01-12 | Merge technische details + agent architectuur. |
+| 1.0.0 | 2026-01-05 | Origineel: deployment protocol, code conventies. |
 
 ---
 
 ## ⚠️ Belangrijke Notitie voor Toekomstige Sessies
 
-**Dit document (CLAUDE.md) is de SINGLE SOURCE OF TRUTH voor het HolidaiButler Agents project.**
+**Dit document (CLAUDE.md) is de SINGLE SOURCE OF TRUTH voor het HolidaiButler project.**
 
 Bij elke nieuwe sessie of na context compaction:
 1. Lees ALTIJD eerst dit bestand volledig
-2. Verifieer de actuele status in de codebase VOORDAT je status updates geeft
-3. Maak GEEN aannames over implementatie status
-4. Check `/services/agents/` voor daadwerkelijk geïmplementeerde agents
-5. Check `/services/orchestrator/workers.js` voor actieve job handlers
+2. Lees daarna de Strategic Advisory (`docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md`)
+3. Verifieer de actuele status in de codebase VOORDAT je status updates geeft
+4. Maak GEEN aannames over implementatie status
+5. Check `/services/agents/` voor daadwerkelijk geïmplementeerde agents
+6. Check `poi_content_staging` voor content pipeline status
 
 **Enterprise Kwaliteitsstandaarden:**
 - Elke feature moet enterprise-level en state-of-the-art zijn
 - Geen errors of foutmeldingen bij deployment
 - CLAUDE.md updaten na elke relevante wijziging
+- Staging-first workflow voor alle content wijzigingen
 
 **Locaties van dit bestand:**
 - GitHub: `HolidaiButler/CLAUDE.md` (alle branches)
