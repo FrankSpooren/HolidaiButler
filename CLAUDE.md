@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.5.0
-> **Laatst bijgewerkt**: 8 februari 2026 (16:00 UTC)
+> **Versie**: 3.6.0
+> **Laatst bijgewerkt**: 8 februari 2026 (23:00 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -336,6 +336,60 @@ Password: i9)PUR^2k=}!
 
 ---
 
+## 🤖 HoliBot / Tessa — AI Chatbot (Fase 6)
+
+### Architectuur
+```
+User Request → X-Destination-ID Header → getDestinationFromRequest()
+                                              ↓
+                              destinationConfig.holibot.chromaCollection
+                                              ↓
+                              ChromaDB Cloud (collection per destination)
+                                              ↓
+                              RAG: similarity search → context → Mistral LLM
+                                              ↓
+                              Streaming SSE response
+```
+
+### Chatbot per Destination
+| Destination | Chatbot Naam | Collection | Vectoren | Persona |
+|-------------|-------------|------------|----------|---------|
+| Calpe | HoliBot | `calpe_pois` | ~3.000 | Vriendelijke Calpe-gids |
+| Texel | Tessa | `texel_pois` | 94.980 | Persoonlijke Texel-gids |
+
+### ChromaDB Cloud
+| Parameter | Waarde |
+|-----------|--------|
+| Provider | ChromaDB Cloud |
+| Tenant/Database | Geconfigureerd in .env |
+| Embedding model | `mistral-embed` (1024 dims) |
+| LLM model | `mistral-small-latest` |
+| Texel vectoren | 93.241 QnA + 1.739 POI = 94.980 |
+| Vectorisatie kosten | ~EUR 19 |
+
+### Backend Bestanden (Destination-Aware)
+| Bestand | Rol |
+|---------|-----|
+| `src/routes/holibot.js` | Destination extractie, routing |
+| `src/services/holibot/chromaService.js` | Multi-collection support |
+| `src/services/holibot/embeddingService.js` | Destination system prompts |
+| `src/services/holibot/ragService.js` | RAG met collection + config |
+| `src/services/holibot/conversationService.js` | destination_id in sessie |
+| `src/services/holibot/intentService.js` | Texel location patterns |
+| `src/services/agents/holibotSync/poiSyncService.js` | Sync per destination |
+| `src/services/agents/holibotSync/qaSyncService.js` | QnA/QA dual-table sync |
+
+### Frontend Bestanden (Destination-Aware)
+| Bestand | Wijziging |
+|---------|-----------|
+| `vite.config.ts` | `holibot.name` + `holibot.welcomeMessages` per destination |
+| `DestinationContext.tsx` | `holibot?` interface veld |
+| `WelcomeMessage.tsx` | Destination-aware welkomstberichten |
+| `ChatHeader.tsx` | `destination.holibot?.name` in titel |
+| `ChatMessage.tsx` | Destination-aware botName |
+
+---
+
 ## 📈 Implementatie Status
 
 ### Multi-Destination Fasen
@@ -350,8 +404,9 @@ Password: i9)PUR^2k=}!
 | **Fase 5** | Content Apply & Translation | ✅ COMPLEET | 07-02-2026 |
 | **Fase 5b** | Frontend Content Verificatie | ✅ COMPLEET | 08-02-2026 |
 | **Fase 5c** | Texel Image Fix | ✅ COMPLEET | 08-02-2026 |
-| **Fase 6** | Alicante Preparation | ⏸️ WACHT | - |
-| **Fase 7** | Stabilization | ⏸️ WACHT | - |
+| **Fase 6** | AI Chatbot Texel "Tessa" | ✅ COMPLEET | 08-02-2026 |
+| **Fase 7** | Alicante Preparation | ⏸️ WACHT | - |
+| **Fase 8** | Stabilization | ⏸️ WACHT | - |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -364,6 +419,21 @@ Password: i9)PUR^2k=}!
 | Manual Review | 34 (1.4%) → Frank akkoord: USE_NEW |
 | Keep OLD | 0 (0%) |
 | NEW vs OLD score | +2.17 punten |
+
+### Fase 6 Resultaten (AI Chatbot Texel "Tessa")
+| Metriek | Waarde |
+|---------|--------|
+| QnA vectoren (Texel) | 93.241 |
+| POI vectoren (Texel) | 1.739 |
+| Totaal in `texel_pois` | 94.980 |
+| Vectorisatie errors | 0 |
+| Vectorisatie kosten | ~EUR 19 |
+| Backend bestanden gewijzigd | 8 |
+| Frontend bestanden gewijzigd | 5 |
+| Talen ondersteund | NL, EN, DE |
+| API test Texel | ✅ Correct (Texel stranden) |
+| API test Calpe regressie | ✅ Geen regressie |
+| Session destination_id | ✅ Correct opgeslagen |
 
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
@@ -472,7 +542,9 @@ ssh root@91.98.71.87
 ├── texel_old_nl_archive.json
 ├── texel_image_linker.py
 ├── texel_image_linker_checkpoint.json
-└── texel_image_linker_output.log
+├── texel_image_linker_output.log
+├── texel_vectorize_qna.py
+└── texel_vectorize_output.log
 ```
 
 ### Quick Health Check Commands
@@ -513,7 +585,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Strategic Advisory | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 2.9 |
+| Strategic Advisory | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 3.0 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 |
 | Fase 2 Docs | `docs/agents/fase2/` | - |
 | Fase 3 Docs | `docs/agents/fase3/` | - |
@@ -528,6 +600,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.6.0** | **2026-02-08** | **Fase 6 AI Chatbot Texel "Tessa" COMPLEET: Multi-destination HoliBot met eigen ChromaDB collection per destination. Texel chatbot "Tessa" met 94.980 vectoren (93.241 QnA + 1.739 POI). 14 bestanden gewijzigd (8 backend + 5 frontend + 1 config). Destination-aware: chromaService multi-collection, ragService, intentService Texel patterns, embeddingService system prompts, conversationService destination_id. Frontend: welkomstberichten, chatnaam, avatar per destination. Geen Calpe regressie. Kosten: ~EUR 19 vectorisatie. Strategic Advisory v3.0.** |
 | **3.5.0** | **2026-02-08** | **Fase 5c Texel Image Fix COMPLEET: 11.506 imageurls records aangemaakt voor 1.606 Texel POIs. Images bestonden op disk (4,1 GB) maar waren niet gekoppeld aan database. Apache configs gefixed (texelmaps.nl + dev + test). POI Image Pipeline sectie toegevoegd. Strategic Advisory v2.9.** |
 | **3.4.0** | **2026-02-08** | **Fase 5/5b COMPLEET: Content Apply & Translation afgerond (6.844 vertalingen, EUR 18,22). Fase 5b: kolom mismatch gevonden (enriched_detail_description_en vs base), database-only fix (2.701 POIs _en→base, 414 markdown strip). POI tabel kolommen geactualiseerd: base=EN (geen _en suffix). Strategic Advisory v2.8.** |
 | **3.3.0** | **2026-02-07** | **MAJOR UPDATE: Fase 2-4b documentatie toegevoegd. Texel LIVE (texelmaps.nl). TexelMaps huisstijl (#30c59b/#3572de/#ecde3c). POI Content Pipeline gedocumenteerd (staging workflow, LLM generatie, 9 kwaliteitscriteria). poi_content_staging tabel schema. Fase 4 resultaten: 2.515 POIs, EUR 8.93, 100% success. Fase 4b: 2.481 approved, 34 manual review → Frank akkoord. Strategic Advisory referentie toegevoegd (v2.6). Hetzner fase output bestanden gedocumenteerd.** |

@@ -3,9 +3,9 @@
 
 **Datum**: 5 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 2.9
+**Versie**: 3.0
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 5c Texel Image Fix COMPLEET - 11.506 imageurls records aangemaakt voor 1.606 Texel POIs. Images bestonden al op disk (4,1 GB, 1.700 dirs) maar waren niet gekoppeld aan database. Apache configs gefixed voor alle texelmaps.nl vhosts. Geen code wijzigingen, alleen database + Apache.
+**Status**: FASE 6 AI Chatbot Texel "Tessa" COMPLEET - Multi-destination HoliBot met eigen ChromaDB collection per destination. 94.980 vectoren in texel_pois (93.241 QnA + 1.739 POI). 14 bestanden gewijzigd. Destination-aware backend + frontend. Geen Calpe regressie.
 
 ---
 
@@ -22,10 +22,11 @@
 | **Fase 5: Content Apply & Translation** | ✅ COMPLEET | 07-02-2026 | 08-02-2026 | Claude Code |
 | **Fase 5b: Frontend Content Verificatie** | ✅ COMPLEET | 08-02-2026 | 08-02-2026 | Claude Code |
 | **Fase 5c: Texel Image Fix** | ✅ COMPLEET | 08-02-2026 | 08-02-2026 | Claude Code |
-| **Fase 6: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
-| **Fase 7: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
+| **Fase 6: AI Chatbot Texel "Tessa"** | ✅ COMPLEET | 08-02-2026 | 08-02-2026 | Claude Code |
+| **Fase 7: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
+| **Fase 8: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 8 februari 2026 - Fase 5c Texel Image Fix COMPLEET. 11.506 imageurls records aangemaakt, Apache configs gefixed. Texel POI images nu zichtbaar op alle texelmaps.nl omgevingen.
+**Laatste update**: 8 februari 2026 - Fase 6 AI Chatbot Texel "Tessa" COMPLEET. Multi-destination HoliBot: 94.980 vectoren in texel_pois ChromaDB collection, 14 bestanden gewijzigd (8 backend + 5 frontend + 1 config), 3 talen (NL/EN/DE). Geen Calpe regressie.
 
 ---
 
@@ -1420,26 +1421,57 @@ Texel images (4,1 GB, 11.947 bestanden) waren WEL gedownload naar de server in `
 - `texel_image_linker_checkpoint.json` — checkpoint data
 - `texel_image_linker_output.log` — volledige output log
 
-### Fase 6: Alicante Preparation
+### Fase 6: AI Chatbot Texel "Tessa" - COMPLEET
 
 | Taak | Status | Datum | Uitvoerder | Notities |
 |------|--------|-------|------------|----------|
-| 6.1 Alicante config | Niet gestart | - | - | - |
-| 6.2 POI discovery via Apify | Niet gestart | - | - | - |
-| 6.3 Subdomain setup | Niet gestart | - | - | - |
+| 6.1 ChromaDB vectorisatie | ✅ COMPLEET | 08-02-2026 | Claude Code | 94.980 vectoren (93.241 QnA + 1.739 POI) |
+| 6.2 Backend multi-destination | ✅ COMPLEET | 08-02-2026 | Claude Code | 8 bestanden: chromaService, embeddingService, ragService, conversationService, intentService, holibot.js, poiSyncService, qaSyncService |
+| 6.3 Frontend multi-destination | ✅ COMPLEET | 08-02-2026 | Claude Code | 5 bestanden: vite.config.ts, DestinationContext.tsx, WelcomeMessage.tsx, ChatHeader.tsx, ChatMessage.tsx |
+| 6.4 Config activatie | ✅ COMPLEET | 08-02-2026 | Claude Code | getActiveDestinations() retourneert [calpe, texel] |
+| 6.5 Verificatie | ✅ COMPLEET | 08-02-2026 | Claude Code | API test Texel NL/EN/DE ✅, Calpe regressie ✅, session destination_id ✅ |
+| 6.6 Deploy (dev→test→main) | ✅ COMPLEET | 08-02-2026 | Claude Code | Git commit 66b37ed, pushed alle branches |
 
-**Fase 6 Status**: WACHT OP GOEDKEURING
+**Fase 6 Status**: COMPLEET
 
-### Fase 7: Stabilization & Documentation
+**Fase 6 Architectuur:**
+```
+getDestinationFromRequest(req) → { destinationId, destinationConfig, collectionName }
+                                        ↓
+chromaService.search(embedding, n, filter, collectionName)  ← multi-collection
+embeddingService.buildSystemPrompt(lang, prefs, destinationConfig)  ← persona
+ragService.chat(query, lang, { collectionName, destinationConfig })  ← RAG routing
+conversationService.getOrCreateSession(..., destinationId)  ← session tracking
+intentService.analyzeQuery(query, lang, history, destinationId)  ← location patterns
+```
+
+**Fase 6 Kosten:**
+| Component | Kosten |
+|-----------|--------|
+| Vectorisatie (94.980 embeddings via Mistral) | ~EUR 19 |
+| Test LLM calls | ~EUR 5 |
+| **Totaal** | **~EUR 24** |
+
+### Fase 7: Alicante Preparation
 
 | Taak | Status | Datum | Uitvoerder | Notities |
 |------|--------|-------|------------|----------|
-| 7.1 Multi-destination E2E tests | Niet gestart | - | - | - |
-| 7.2 Documentatie update | Niet gestart | - | - | - |
-| 7.3 Partner onboarding flow | Niet gestart | - | - | - |
-| 7.4 Performance monitoring | Niet gestart | - | - | - |
+| 7.1 Alicante config | Niet gestart | - | - | - |
+| 7.2 POI discovery via Apify | Niet gestart | - | - | - |
+| 7.3 Subdomain setup | Niet gestart | - | - | - |
 
-**Fase 7 Status**: WACHT OP FASE 6
+**Fase 7 Status**: WACHT OP GOEDKEURING
+
+### Fase 8: Stabilization & Documentation
+
+| Taak | Status | Datum | Uitvoerder | Notities |
+|------|--------|-------|------------|----------|
+| 8.1 Multi-destination E2E tests | Niet gestart | - | - | - |
+| 8.2 Documentatie update | Niet gestart | - | - | - |
+| 8.3 Partner onboarding flow | Niet gestart | - | - | - |
+| 8.4 Performance monitoring | Niet gestart | - | - | - |
+
+**Fase 8 Status**: WACHT OP FASE 7
 
 ---
 
@@ -1910,8 +1942,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 8 februari 2026 - Fase 5c Texel Image Fix COMPLEET*
-*Volgende review: Fase 6 Alicante voorbereiding wanneer eigenaar gereed.*
+*Laatst bijgewerkt: 8 februari 2026 - Fase 6 AI Chatbot Texel "Tessa" COMPLEET*
+*Volgende review: Fase 7 Alicante voorbereiding wanneer eigenaar gereed.*
 
 ---
 
@@ -1919,6 +1951,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.0** | **08-02-2026** | **FASE 6 AI CHATBOT TEXEL "TESSA": Multi-destination HoliBot geimplementeerd. Vectorisatie: 94.980 documenten in texel_pois ChromaDB Cloud collection (93.241 QnA + 1.739 POI, EUR 19, 0 errors). Backend: 8 bestanden — chromaService multi-collection support, embeddingService destination system prompts, ragService collection+config threading, conversationService destination_id tracking, intentService Texel location patterns, holibot.js getDestinationFromRequest() helper voor alle endpoints, poiSyncService+qaSyncService destination filtering. Frontend: 5 bestanden — vite.config.ts holibot config per destination (name+welcomeMessages), DestinationContext.tsx interface, WelcomeMessage.tsx+ChatHeader.tsx+ChatMessage.tsx destination-aware. Config: getActiveDestinations() retourneert [calpe, texel]. Verificatie: Texel chat NL/EN/DE retourneert correcte Texel-specifieke antwoorden, Calpe geen regressie, session destination_id correct opgeslagen. Git commit 66b37ed, deployed via dev→test→main.** |
 | **2.9** | **08-02-2026** | **FASE 5c TEXEL IMAGE FIX: Texel POI images op disk (4,1 GB, 1.700 dirs, 11.947 files) waren niet gekoppeld aan backend — 0 imageurls records. Python linker script: 11.506 records aangemaakt voor 1.606 POIs (mapping google_placeid→poi_id). Apache configs gefixed: texelmaps.nl Alias naar correcte directory, dev/test configs aangevuld met /poi-images Alias + ProxyPass exclusion + SPA RewriteCond. Verificatie: API retourneert lokale URLs, Apache serveert HTTP 200 met CORS/caching headers, Calpe geen regressie. Deliverables: texel_image_linker.py + checkpoint + log op Hetzner.** |
 | **2.8** | **08-02-2026** | **FASE 5b FRONTEND CONTENT VERIFICATIE: Kritieke kolom mismatch gevonden — Fase 5 schreef naar enriched_detail_description_en maar backend leest enriched_detail_description (base, zonder _en). Texel EN toonde Nederlandse content + markdown. Database-only fix: COPY _en→base (2.701 POIs) + STRIP markdown (414 POIs). Geen code wijzigingen, geen deployment. API verificatie: EN/NL/DE/ES correct voor Calpe + Texel. Backup gemaakt (3.079 records JSON). 337 Texel Accommodation POIs zonder EN (is_hidden_category, minimale impact).** |
 | **2.7** | **08-02-2026** | **FASE 5 CONTENT APPLY & TRANSLATION: 2.515 POIs applied naar enriched_detail_description_en. 34 manual review → approved (Frank akkoord). 6.844 vertalingen via Mistral Medium (Calpe: EN→ES/DE/NL, Texel: EN→NL/DE). EUR 18,22 (39% onder budget). 0 errors, 9,4 uur runtime. Post-processing: 840 markdown fixes, 95 voorzetsel fixes (op/auf Texel). Coverage: Calpe 93,8% EN / 96,4% NL/ES/DE, Texel 75,8% EN / 96,1% NL/DE. Kolom inventarisatie: PL/SV kandidaten voor opschonen. Fasen hernummerd: Content Apply→Fase 5, Alicante→Fase 6, Stabilization→Fase 7.** |
