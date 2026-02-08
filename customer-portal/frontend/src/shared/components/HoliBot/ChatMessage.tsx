@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ChatMessage as ChatMessageType } from '../../types/chat.types';
+import { useDestination } from '../../contexts/DestinationContext';
 import holibotAvatar from '../../../assets/images/hb-merkicoon.png';
 import { parseMessageForPOILinks } from '../../utils/poiLinkParser';
 import { POIDetailModal } from '../../../features/poi/components/POIDetailModal';
@@ -30,6 +31,8 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const [selectedPOIId, setSelectedPOIId] = useState<number | null>(null);
+  const destination = useDestination();
+  const botName = destination.holibot?.name || 'HoliBot';
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
 
@@ -57,13 +60,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
       <div
         className={`chat-message chat-message--${message.role}`}
         role="article"
-        aria-label={`${isUser ? 'Jouw bericht' : 'HoliBot antwoord'}`}
+        aria-label={`${isUser ? 'Jouw bericht' : `${botName} antwoord`}`}
       >
         {isAssistant && (
           <div className="chat-message-avatar">
             <img
               src={holibotAvatar}
-              alt="HoliBot"
+              alt={botName}
               className="chat-message-avatar-img"
             />
           </div>

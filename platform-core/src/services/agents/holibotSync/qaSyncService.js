@@ -7,7 +7,12 @@ import embeddingService from './embeddingService.js';
 import chromaService from './chromaService.js';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 
-const QA_COLLECTION = 'holidaibutler_qas';
+// Default collection per destination
+const DESTINATION_COLLECTIONS = {
+  1: 'calpe_pois',
+  2: 'texel_pois'
+};
+const DEFAULT_COLLECTION = 'holidaibutler_qas';
 
 class QASyncService {
   constructor() {
@@ -18,36 +23,58 @@ class QASyncService {
     this.sequelize = sequelize;
   }
 
-  async syncUpdatedQAs(since = null) {
+  async syncUpdatedQAs(since = null, destinationId = null) {
     if (!this.sequelize) {
       throw new Error('Sequelize not initialized');
     }
 
-    console.log('[QASyncService] Starting Q&A sync to ChromaDB...');
+    const collectionName = destinationId ? (DESTINATION_COLLECTIONS[destinationId] || DEFAULT_COLLECTION) : DEFAULT_COLLECTION;
+
+    console.log(`[QASyncService] Starting Q&A sync to ChromaDB collection "${collectionName}"...`);
 
     try {
-      // Get Q&As updated since last sync (only approved ones)
-      let query = `
-        SELECT qa.id, qa.question, qa.answer, qa.language, qa.poi_id,
-               qa.priority, qa.last_updated, p.name as poi_name, p.category, p.city AS destination
-        FROM QA qa
-        LEFT JOIN POI p ON qa.poi_id = p.id
-        WHERE qa.status = 'approved'
-      `;
+      // For QnA table (Texel uses destination_id, no status/priority)
+      // For QA table (Calpe uses status/priority/poi_id)
+      let query, replacements = [];
 
-      const replacements = [];
-      if (since) {
-        query += ' AND qa.last_updated > ?';
-        replacements.push(since);
+      if (destinationId && destinationId !== 1) {
+        // Use QnA table for non-Calpe destinations
+        query = `
+          SELECT q.id, q.question, q.answer, q.language, q.google_placeid as poi_id,
+                 q.source, q.created_at as last_updated,
+                 p.name as poi_name, p.category, p.city AS destination
+          FROM QnA q
+          LEFT JOIN POI p ON q.google_placeid = p.google_place_id
+          WHERE q.destination_id = ?
+            AND q.question IS NOT NULL AND q.answer IS NOT NULL
+        `;
+        replacements.push(destinationId);
+        if (since) {
+          query += ' AND q.created_at > ?';
+          replacements.push(since);
+        }
+        query += ' ORDER BY q.id DESC LIMIT 200';
+      } else {
+        // Use QA table for Calpe (original behavior)
+        query = `
+          SELECT qa.id, qa.question, qa.answer, qa.language, qa.poi_id,
+                 qa.priority, qa.last_updated, p.name as poi_name, p.category, p.city AS destination
+          FROM QA qa
+          LEFT JOIN POI p ON qa.poi_id = p.id
+          WHERE qa.status = 'approved'
+        `;
+        if (since) {
+          query += ' AND qa.last_updated > ?';
+          replacements.push(since);
+        }
+        query += ' ORDER BY qa.priority DESC, qa.last_updated DESC LIMIT 200';
       }
-
-      query += ' ORDER BY qa.priority DESC, qa.last_updated DESC LIMIT 200';
 
       const [qas] = await this.sequelize.query(query, { replacements });
 
       if (qas.length === 0) {
         console.log('[QASyncService] No Q&As to sync');
-        return { synced: 0, collection: QA_COLLECTION };
+        return { synced: 0, collection: collectionName };
       }
 
       console.log(`[QASyncService] Syncing ${qas.length} Q&As...`);
@@ -72,16 +99,16 @@ class QASyncService {
 
       // Upsert to ChromaDB
       console.log('[QASyncService] Upserting to ChromaDB...');
-      await chromaService.upsertDocuments(QA_COLLECTION, ids, embeddings, documents, metadatas);
+      await chromaService.upsertDocuments(collectionName, ids, embeddings, documents, metadatas);
 
       await logAgent('holibot-sync', 'qa_sync_complete', {
         description: `Synced ${qas.length} Q&As to ChromaDB`,
-        metadata: { count: qas.length, collection: QA_COLLECTION }
+        metadata: { count: qas.length, collection: collectionName }
       });
 
       console.log(`[QASyncService] Successfully synced ${qas.length} Q&As`);
 
-      return { synced: qas.length, collection: QA_COLLECTION };
+      return { synced: qas.length, collection: collectionName };
     } catch (error) {
       await logError('holibot-sync', error, { action: 'sync_qas' });
       throw error;
@@ -106,7 +133,7 @@ class QASyncService {
       }
 
       const ids = rejectedQAs.map(q => `qa_${q.id}`);
-      await chromaService.deleteDocuments(QA_COLLECTION, ids);
+      await chromaService.deleteDocuments(DEFAULT_COLLECTION, ids);
 
       await logAgent('holibot-sync', 'rejected_qas_removed', {
         description: `Removed ${ids.length} rejected Q&As from ChromaDB`,

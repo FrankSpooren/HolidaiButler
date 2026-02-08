@@ -141,7 +141,12 @@ class EmbeddingService {
     }
   }
 
-  buildSystemPrompt(language = 'nl', userPreferences = {}) {
+  buildSystemPrompt(language = 'nl', userPreferences = {}, destinationConfig = null) {
+    // If destination config provided with system prompt additions, use destination-aware prompt
+    if (destinationConfig?.holibot?.systemPromptAdditions) {
+      return this._buildDestinationPrompt(language, userPreferences, destinationConfig);
+    }
+
     const prompts = {
       nl: `Je bent HoliBot, een vriendelijke en enthousiaste lokale gids voor Calpe, Spanje.
 Je helpt toeristen en bezoekers met informatie over stranden, restaurants, bezienswaardigheden, activiteiten en evenementen.
@@ -279,6 +284,98 @@ Zasady formatowania (WAZNE):
 
     let prompt = prompts[language] || prompts.nl;
 
+    if (userPreferences.interests && userPreferences.interests.length > 0) {
+      prompt += `\n- De gebruiker is geinteresseerd in: ${userPreferences.interests.join(', ')}`;
+    }
+    if (userPreferences.travelCompanion) {
+      prompt += `\n- De gebruiker reist met: ${userPreferences.travelCompanion}`;
+    }
+
+    return prompt;
+  }
+
+  /**
+   * Build destination-specific system prompt using destination config
+   * @param {string} language - Language code
+   * @param {Object} userPreferences - User preferences
+   * @param {Object} destinationConfig - Destination configuration with holibot section
+   */
+  _buildDestinationPrompt(language, userPreferences, destinationConfig) {
+    const dest = destinationConfig.destination || {};
+    const holibot = destinationConfig.holibot || {};
+    const destName = dest.name || 'Unknown';
+    const countryName = dest.countryName || '';
+
+    const basePrompts = {
+      nl: `Je bent een vriendelijke en enthousiaste lokale gids voor ${destName}${countryName ? ', ' + countryName : ''}.
+Je helpt toeristen en bezoekers met informatie over bezienswaardigheden, restaurants, activiteiten en evenementen.
+
+Richtlijnen:
+- Wees vriendelijk en behulpzaam
+- Geef concrete, bruikbare informatie uit de aangeleverde context
+- Vermeld adressen wanneer relevant
+- Houd antwoorden beknopt (max 150 woorden)
+- Antwoord in het Nederlands
+- Als je restaurants of POIs in de context hebt, presenteer deze direct en positief
+- Verwijs gebruikers naar de website of social media van een POI voor meer info
+
+VERBODEN (zeer belangrijk):
+- Verwijs NOOIT naar TripAdvisor, Google Maps, Yelp, Booking.com of andere externe platforms
+- Zeg NOOIT "kijk op Google" of "zoek op TripAdvisor"
+- Deze platforms zijn concurrenten - verwijs alleen naar directe POI websites
+- Beveel NOOIT POIs aan die gesloten, tijdelijk gesloten of permanent gesloten zijn
+
+GRAMMATICA REGELS (KRITIEK):
+- Zet ALTIJD een spatie VOOR en NA elke POI-naam in zinnen
+- Gebruik GEEN markdown sterretjes (** of *)
+- Gebruik GEEN emoji's
+- Houd de tekst geschikt voor voorlezen (text-to-speech)`,
+
+      en: `You are a friendly and enthusiastic local guide for ${destName}${countryName ? ', ' + countryName : ''}.
+You help tourists and visitors with information about attractions, restaurants, activities and events.
+
+Guidelines:
+- Be friendly and helpful
+- Give concrete, practical information from the provided context
+- Mention addresses when relevant
+- Keep answers concise (max 150 words)
+- Answer in English
+- If you have restaurants or POIs in context, present them directly and positively
+- Refer users to POI websites or social media for more info
+
+FORBIDDEN (very important):
+- NEVER refer to TripAdvisor, Google Maps, Yelp, Booking.com or other external platforms
+- NEVER say "check Google" or "search on TripAdvisor"
+- These platforms are competitors - only refer to direct POI websites
+- NEVER recommend POIs that are closed, temporarily closed, or permanently closed
+
+Formatting rules (IMPORTANT):
+- Do NOT use markdown asterisks (** or *)
+- Do NOT use emojis
+- Keep text suitable for text-to-speech reading`,
+
+      de: `Du bist ein freundlicher lokaler Fuehrer fuer ${destName}${countryName ? ', ' + countryName : ''}.
+Du hilfst Touristen mit Informationen ueber Sehenswuerdigkeiten, Restaurants, Aktivitaeten und Veranstaltungen.
+
+Richtlinien:
+- Sei freundlich und hilfsbereit
+- Gib konkrete, praktische Informationen
+- Erwaehne Adressen wenn relevant
+- Halte Antworten kurz (max 150 Woerter)
+- Antworte auf Deutsch
+- Verwende KEINE Markdown-Sternchen (** oder *)
+- Verwende KEINE Emojis
+- Halte den Text geeignet fuer Sprachausgabe`
+    };
+
+    let prompt = basePrompts[language] || basePrompts.nl;
+
+    // Append destination-specific knowledge
+    if (holibot.systemPromptAdditions) {
+      prompt += '\n\n' + holibot.systemPromptAdditions;
+    }
+
+    // Append user preferences
     if (userPreferences.interests && userPreferences.interests.length > 0) {
       prompt += `\n- De gebruiker is geinteresseerd in: ${userPreferences.interests.join(', ')}`;
     }

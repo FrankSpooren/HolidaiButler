@@ -1,6 +1,7 @@
 /**
- * ChromaDB Cloud Service
- * Connects to ChromaDB Cloud for semantic search with POI embeddings
+ * ChromaDB Cloud Service - Multi-Collection Support
+ * Connects to ChromaDB Cloud for semantic search with POI/QnA embeddings
+ * Supports multiple collections for multi-destination (Calpe, Texel, etc.)
  */
 
 import { CloudClient } from 'chromadb';
@@ -9,13 +10,13 @@ import logger from '../../utils/logger.js';
 class ChromaService {
   constructor() {
     this.client = null;
-    this.collection = null;
+    this.collections = {};  // Map: collectionName → collection object
     this.isConnected = false;
     this.config = {
       apiKey: process.env.CHROMADB_API_KEY,
       tenant: process.env.CHROMADB_TENANT,
       database: process.env.CHROMADB_DATABASE,
-      collectionName: process.env.CHROMADB_COLLECTION_NAME || 'calpe_pois'
+      defaultCollectionName: process.env.CHROMADB_COLLECTION_NAME || 'calpe_pois'
     };
   }
 
@@ -46,8 +47,8 @@ class ChromaService {
       const collections = await this.client.listCollections();
       logger.info(`ChromaDB Cloud connected. Found ${collections.length} collection(s)`);
 
-      // Get the main collection
-      await this.initializeCollection();
+      // Get the default collection (backward compatible)
+      await this.getCollection(this.config.defaultCollectionName);
 
       this.isConnected = true;
       return true;
@@ -60,25 +61,34 @@ class ChromaService {
   }
 
   /**
-   * Initialize the POI collection
+   * Get a collection by name (lazy-load and cache)
+   * @param {string} collectionName - Collection name (defaults to env config)
+   * @returns {Object} ChromaDB collection
    */
-  async initializeCollection() {
+  async getCollection(collectionName = null) {
+    const name = collectionName || this.config.defaultCollectionName;
+
+    // Return cached collection
+    if (this.collections[name]) {
+      return this.collections[name];
+    }
+
+    if (!this.client) {
+      await this.connect();
+    }
+
     try {
-      const { collectionName } = this.config;
+      logger.info(`Getting collection: ${name}`);
 
-      logger.info(`Getting collection: ${collectionName}`);
+      const collection = await this.client.getCollection({ name });
+      const count = await collection.count();
+      logger.info(`Collection "${name}" loaded with ${count} documents`);
 
-      this.collection = await this.client.getCollection({
-        name: collectionName
-      });
-
-      const count = await this.collection.count();
-      logger.info(`Collection "${collectionName}" loaded with ${count} documents`);
-
-      return this.collection;
+      this.collections[name] = collection;
+      return collection;
 
     } catch (error) {
-      logger.error('Failed to initialize collection:', error);
+      logger.error(`Failed to get collection "${name}":`, error);
       throw error;
     }
   }
@@ -88,13 +98,16 @@ class ChromaService {
    * @param {number[]} embedding - Query embedding vector
    * @param {number} nResults - Number of results to return
    * @param {Object} whereFilter - Optional metadata filter
+   * @param {string} collectionName - Collection to search (defaults to env config)
    */
-  async search(embedding, nResults = 10, whereFilter = null) {
-    if (!this.isConnected || !this.collection) {
+  async search(embedding, nResults = 10, whereFilter = null, collectionName = null) {
+    if (!this.isConnected) {
       await this.connect();
     }
 
     try {
+      const collection = await this.getCollection(collectionName);
+
       const queryOptions = {
         queryEmbeddings: [embedding],
         nResults,
@@ -105,9 +118,9 @@ class ChromaService {
         queryOptions.where = whereFilter;
       }
 
-      const results = await this.collection.query(queryOptions);
+      const results = await collection.query(queryOptions);
 
-      logger.info(`ChromaDB search returned ${results.ids[0]?.length || 0} results`);
+      logger.info(`ChromaDB search returned ${results.ids[0]?.length || 0} results from "${collectionName || this.config.defaultCollectionName}"`);
 
       return this.formatResults(results);
 
@@ -147,26 +160,29 @@ class ChromaService {
   /**
    * Add or update documents in ChromaDB
    * @param {Array} documents - Array of {id, embedding, metadata, document}
+   * @param {string} collectionName - Collection to upsert into (defaults to env config)
    */
-  async upsert(documents) {
-    if (!this.isConnected || !this.collection) {
+  async upsert(documents, collectionName = null) {
+    if (!this.isConnected) {
       await this.connect();
     }
 
     try {
+      const collection = await this.getCollection(collectionName);
+
       const ids = documents.map(d => d.id);
       const embeddings = documents.map(d => d.embedding);
       const metadatas = documents.map(d => d.metadata || {});
       const docs = documents.map(d => d.document || '');
 
-      await this.collection.upsert({
+      await collection.upsert({
         ids,
         embeddings,
         metadatas,
         documents: docs
       });
 
-      logger.info(`Upserted ${documents.length} documents to ChromaDB`);
+      logger.info(`Upserted ${documents.length} documents to ChromaDB "${collectionName || this.config.defaultCollectionName}"`);
 
     } catch (error) {
       logger.error('ChromaDB upsert error:', error);
@@ -177,15 +193,17 @@ class ChromaService {
   /**
    * Delete documents from ChromaDB
    * @param {string[]} ids - Document IDs to delete
+   * @param {string} collectionName - Collection to delete from (defaults to env config)
    */
-  async delete(ids) {
-    if (!this.isConnected || !this.collection) {
+  async delete(ids, collectionName = null) {
+    if (!this.isConnected) {
       await this.connect();
     }
 
     try {
-      await this.collection.delete({ ids });
-      logger.info(`Deleted ${ids.length} documents from ChromaDB`);
+      const collection = await this.getCollection(collectionName);
+      await collection.delete({ ids });
+      logger.info(`Deleted ${ids.length} documents from ChromaDB "${collectionName || this.config.defaultCollectionName}"`);
 
     } catch (error) {
       logger.error('ChromaDB delete error:', error);
@@ -195,16 +213,19 @@ class ChromaService {
 
   /**
    * Get collection statistics
+   * @param {string} collectionName - Collection name (defaults to env config)
    */
-  async getStats() {
-    if (!this.isConnected || !this.collection) {
+  async getStats(collectionName = null) {
+    if (!this.isConnected) {
       await this.connect();
     }
 
     try {
-      const count = await this.collection.count();
+      const name = collectionName || this.config.defaultCollectionName;
+      const collection = await this.getCollection(name);
+      const count = await collection.count();
       return {
-        collectionName: this.config.collectionName,
+        collectionName: name,
         documentCount: count,
         isConnected: this.isConnected
       };
@@ -219,7 +240,7 @@ class ChromaService {
    * Check if service is ready
    */
   isReady() {
-    return this.isConnected && this.collection !== null;
+    return this.isConnected && Object.keys(this.collections).length > 0;
   }
 }
 

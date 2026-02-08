@@ -56,8 +56,7 @@ export function getDestinationById(destinationId) {
  * @returns {array} Array of active destination configurations
  */
 export function getActiveDestinations() {
-  // For now, only Calpe is active. Others will be activated when ready.
-  return [calpeConfig];
+  return [calpeConfig, texelConfig];
 }
 
 /**

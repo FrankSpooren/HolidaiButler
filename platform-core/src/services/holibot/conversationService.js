@@ -63,7 +63,8 @@ class ConversationService {
       language = 'nl',
       userAgent = null,
       deviceFingerprint = null,
-      referrer = null
+      referrer = null,
+      destinationId = 1
     } = options;
 
     try {
@@ -89,10 +90,10 @@ class ConversationService {
 
       await mysqlSequelize.query(`
         INSERT INTO holibot_sessions
-        (id, user_id, language, user_agent, device_fingerprint, referrer)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (id, destination_id, user_id, language, user_agent, device_fingerprint, referrer)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `, {
-        replacements: [newSessionId, userId, language, userAgent, deviceFingerprint, referrer],
+        replacements: [newSessionId, destinationId, userId, language, userAgent, deviceFingerprint, referrer],
         type: QueryTypes.INSERT
       });
 

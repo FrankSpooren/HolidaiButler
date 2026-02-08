@@ -39,6 +39,31 @@ const destinationConfigs = {
       subtitle: 'Discover Calpe Through local and AI-Powered Insights',
       description: 'Experience this Mediterranean gem with personalized recommendations',
     },
+    holibot: {
+      name: 'HoliBot',
+      welcomeMessages: {
+        nl: [
+          'Hola! Ik ben HoliBot, je persoonlijke Calpe-Assistent.',
+          'Waar kan ik je bij helpen?',
+          'Laat me enkele suggesties voor je doen, typ of spreek je vraag hieronder in:'
+        ],
+        en: [
+          'Hola! I\'m HoliBot, your personal Calpe Assistant.',
+          'How can I help you?',
+          'Let me give you some suggestions, or type or speak your question below:'
+        ],
+        de: [
+          'Hola! Ich bin HoliBot, Ihr persönlicher Calpe-Assistent.',
+          'Wie kann ich Ihnen helfen?',
+          'Hier sind einige Vorschläge, oder geben Sie Ihre Frage unten ein:'
+        ],
+        es: [
+          'Hola! Soy HoliBot, tu asistente personal de Calpe.',
+          '¿En qué puedo ayudarte?',
+          'Aquí tienes algunas sugerencias, o escribe tu pregunta abajo:'
+        ],
+      },
+    },
   },
   texel: {
     id: 'texel',
@@ -89,6 +114,26 @@ const destinationConfigs = {
       title: 'Jouw eilandavontuur begint hier.',
       subtitle: 'Ervaar dit Waddenjuweel volledig op jou afgestemd',
       description: 'Stranden, natuur, fietsen en lokale parels - alles op één plek',
+    },
+    holibot: {
+      name: 'Tessa',
+      welcomeMessages: {
+        nl: [
+          'Hoi! Ik ben Tessa, je persoonlijke gids voor Texel.',
+          'Waar kan ik je bij helpen?',
+          'Stel je vraag hieronder, of kies een suggestie:'
+        ],
+        en: [
+          'Hi! I\'m Tessa, your personal guide for Texel.',
+          'How can I help you?',
+          'Ask your question below, or choose a suggestion:'
+        ],
+        de: [
+          'Hallo! Ich bin Tessa, dein persönlicher Reiseführer für Texel.',
+          'Wie kann ich dir helfen?',
+          'Stelle deine Frage unten, oder wähle einen Vorschlag:'
+        ],
+      },
     },
   },
 }

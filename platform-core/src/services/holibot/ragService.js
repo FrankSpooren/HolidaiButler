@@ -1036,7 +1036,7 @@ class RAGService {
       const n = opts.limit || 50;
       const thresh = opts.similarityThreshold || this.POI_SIMILARITY_THRESHOLD;
       const emb = await embeddingService.generateEmbedding(query);
-      const results = await chromaService.search(emb, n, opts.filter);
+      const results = await chromaService.search(emb, n, opts.filter, opts.collectionName || null);
       const enriched = this.enrichResults(results);
       const filtered = enriched.filter(r => (r.similarity||0) >= thresh);
       logger.info("RAG search: " + filtered.length + " results in " + (Date.now()-start) + "ms");
@@ -1122,11 +1122,11 @@ class RAGService {
     return r;
   }
 
-  async generateResponse(query, context, lang = "nl", prefs = {}, history = [], unknownEntity = null) {
+  async generateResponse(query, context, lang = "nl", prefs = {}, history = [], unknownEntity = null, destinationConfig = null) {
     try {
       const hasResults = context && context.length > 0;
       const ctxStr = this.buildContextString(context, lang);
-      const sysPrompt = embeddingService.buildSystemPrompt(lang, prefs);
+      const sysPrompt = embeddingService.buildSystemPrompt(lang, prefs, destinationConfig);
       const ctxInstr = this.getContextInstructions(lang, hasResults, unknownEntity);
       const enhanced = sysPrompt + "\n\n" + ctxInstr.useContext + "\n\n" + ctxStr + "\n\n" + ctxInstr.baseOnContext;
       const msgs = [{role: "system", content: enhanced}];
@@ -1145,11 +1145,11 @@ class RAGService {
     }
   }
 
-  async *generateStreamingResponse(query, context, lang = "nl", prefs = {}, history = [], unknownEntity = null) {
+  async *generateStreamingResponse(query, context, lang = "nl", prefs = {}, history = [], unknownEntity = null, destinationConfig = null) {
     try {
       const hasResults = context && context.length > 0;
       const ctxStr = this.buildContextString(context, lang);
-      const sysPrompt = embeddingService.buildSystemPrompt(lang, prefs);
+      const sysPrompt = embeddingService.buildSystemPrompt(lang, prefs, destinationConfig);
       const ctxInstr = this.getContextInstructions(lang, hasResults, unknownEntity);
       const enhanced = sysPrompt + "\n\n" + ctxInstr.useContext + "\n\n" + ctxStr + "\n\n" + ctxInstr.baseOnContext;
       const msgs = [{role: "system", content: enhanced}];
@@ -1261,7 +1261,7 @@ class RAGService {
       let events = [];
       if (isEvent) events = await this.searchEvents(base, 5);
       const sq = await this.buildEnhancedSearchQuery(base, history, opts.intentContext || {});
-      const sr = await this.search(sq, {limit: 20}); // Increased limit for better filtering
+      const sr = await this.search(sq, {limit: 20, collectionName: opts.collectionName || null}); // Increased limit for better filtering
       let filteredResults = this.filterRelevantResults(sr.results, query, namedEntities);
 
       // NEW: Apply cuisine keyword filtering
@@ -1284,7 +1284,7 @@ class RAGService {
         success: true, searchTimeMs: Date.now()-start, pois: this.extractPOICards(combined),
         source: isEvent ? "rag-events-stream" : "rag-stream", hasEvents: events.length > 0,
         fuzzyCorrection: fuzzy.wasCorrection ? fuzzy.suggestionMessage : null, unknownEntity,
-        stream: this.generateStreamingResponse(base, combined, lang, opts.userPreferences || {}, history, unknownEntity)
+        stream: this.generateStreamingResponse(base, combined, lang, opts.userPreferences || {}, history, unknownEntity, opts.destinationConfig || null)
       };
     } catch (e) {
       logger.error("chatStream error:", e);
@@ -1342,7 +1342,7 @@ class RAGService {
       let events = [];
       if (isEvent) events = await this.searchEvents(base, 5);
       const sq = await this.buildEnhancedSearchQuery(base, history, opts.intentContext || {});
-      const sr = await this.search(sq, {limit: 20}); // Increased limit for better cuisine filtering
+      const sr = await this.search(sq, {limit: 20, collectionName: opts.collectionName || null}); // Increased limit for better cuisine filtering
       let filteredResults = this.filterRelevantResults(sr.results, query, namedEntities);
 
       // NEW: Apply cuisine keyword filtering
@@ -1371,7 +1371,7 @@ class RAGService {
           if (queryForLLM !== base) break;
         }
       }
-      const response = await this.generateResponse(queryForLLM, combined, lang, opts.userPreferences || {}, history, unknownEntity);
+      const response = await this.generateResponse(queryForLLM, combined, lang, opts.userPreferences || {}, history, unknownEntity, opts.destinationConfig || null);
       return {
         success: true, message: response, pois: this.extractPOICards(combined),
         source: isEvent ? "rag-events" : "rag", hasEvents: events.length > 0, searchTimeMs: Date.now()-start,
