@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.3.0
-> **Laatst bijgewerkt**: 7 februari 2026 (14:30 UTC)
+> **Versie**: 3.4.0
+> **Laatst bijgewerkt**: 8 februari 2026 (15:00 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -93,9 +93,9 @@ Na elke relevante aanpassing, uitbreiding of update:
 ### Primaire Documenten
 | Document | Locatie | Versie | Inhoud |
 |----------|---------|--------|--------|
-| **Strategic Advisory** | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 2.6 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
+| **Strategic Advisory** | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 2.8 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 | Agent architectuur, scheduled jobs |
-| **CLAUDE.md** | Repository root + Hetzner | 3.3.0 | Dit bestand - project context |
+| **CLAUDE.md** | Repository root + Hetzner | 3.4.0 | Dit bestand - project context |
 
 ### Leesadvies voor Claude
 **Bij elke nieuwe sessie of complexe taak, lees in deze volgorde:**
@@ -308,10 +308,11 @@ Password: i9)PUR^2k=}!
 | Kolom | Type | Beschrijving | Status |
 |-------|------|--------------|--------|
 | enriched_tile_description_en | TEXT | Korte beschrijving (tile) | ✅ Gevuld |
-| enriched_detail_description_en | TEXT | Lange beschrijving (detail card) | ✅ Fase 5 |
-| enriched_detail_description_es | TEXT | Spaanse vertaling | 🟡 Fase 5 |
-| enriched_detail_description_de | TEXT | Duitse vertaling | 🟡 Fase 5 |
-| enriched_detail_description_nl | TEXT | Nederlandse vertaling | 🟡 Fase 5 |
+| enriched_detail_description | TEXT | EN content (base, GEEN _en suffix) | ✅ Fase 5b |
+| enriched_detail_description_en | TEXT | EN content (backup, niet door backend gelezen) | ✅ Fase 5 |
+| enriched_detail_description_es | TEXT | Spaanse vertaling | ✅ Fase 5 |
+| enriched_detail_description_de | TEXT | Duitse vertaling | ✅ Fase 5 |
+| enriched_detail_description_nl | TEXT | Nederlandse vertaling | ✅ Fase 5 |
 | enriched_highlights | TEXT | Key highlights | ✅ Gevuld |
 
 ### POI Coverage na Fase 4
@@ -333,7 +334,8 @@ Password: i9)PUR^2k=}!
 | **Fase 3b** | LLM Content Pilot (100 POIs) | ✅ COMPLEET | 05-02-2026 |
 | **Fase 4** | Full LLM Content Run (2.515 POIs) | ✅ COMPLEET | 05-02-2026 |
 | **Fase 4b** | Content Vergelijking (OLD vs NEW) | ✅ COMPLEET | 06-02-2026 |
-| **Fase 5** | Content Apply & Translation | 🟡 IN UITVOERING | 07-02-2026 |
+| **Fase 5** | Content Apply & Translation | ✅ COMPLEET | 07-02-2026 |
+| **Fase 5b** | Frontend Content Verificatie | ✅ COMPLEET | 08-02-2026 |
 | **Fase 6** | Alicante Preparation | ⏸️ WACHT | - |
 | **Fase 7** | Stabilization | ⏸️ WACHT | - |
 
@@ -494,7 +496,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Strategic Advisory | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 2.6 |
+| Strategic Advisory | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 2.8 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 |
 | Fase 2 Docs | `docs/agents/fase2/` | - |
 | Fase 3 Docs | `docs/agents/fase3/` | - |
@@ -509,6 +511,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.4.0** | **2026-02-08** | **Fase 5/5b COMPLEET: Content Apply & Translation afgerond (6.844 vertalingen, EUR 18,22). Fase 5b: kolom mismatch gevonden (enriched_detail_description_en vs base), database-only fix (2.701 POIs _en→base, 414 markdown strip). POI tabel kolommen geactualiseerd: base=EN (geen _en suffix). Strategic Advisory v2.8.** |
 | **3.3.0** | **2026-02-07** | **MAJOR UPDATE: Fase 2-4b documentatie toegevoegd. Texel LIVE (texelmaps.nl). TexelMaps huisstijl (#30c59b/#3572de/#ecde3c). POI Content Pipeline gedocumenteerd (staging workflow, LLM generatie, 9 kwaliteitscriteria). poi_content_staging tabel schema. Fase 4 resultaten: 2.515 POIs, EUR 8.93, 100% success. Fase 4b: 2.481 approved, 34 manual review → Frank akkoord. Strategic Advisory referentie toegevoegd (v2.6). Hetzner fase output bestanden gedocumenteerd.** |
 | 3.2.0 | 2026-01-28 | Multi-Destination Architecture Fase 1 COMPLEET: destinations table, destination_id toegevoegd aan 6 tabellen, config files. |
 | 3.1.1 | 2026-01-28 | HoliBot sync bug gefixed: kolomnamen gecorrigeerd. Alle 35 jobs operationeel. |

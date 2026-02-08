@@ -3,9 +3,9 @@
 
 **Datum**: 5 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 2.7
+**Versie**: 2.8
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 5 Content Apply & Translation COMPLEET - 2.515 POIs applied naar enriched_detail_description_en. 6.844 vertalingen (ES/DE/NL) via Mistral Medium. EUR 18,22. Coverage: Calpe 93,8% EN / 96,4% NL/ES/DE. Texel 75,8% EN / 96,1% NL/DE.
+**Status**: FASE 5b Frontend Verificatie COMPLEET - Kolom mismatch gevonden en gefixed: enriched_detail_description_en → enriched_detail_description (2.701 POIs). Texel EN toonde NL content + markdown → gefixed. Backend/frontend code correct, alleen database fix nodig. Geen deployment.
 
 ---
 
@@ -20,10 +20,11 @@
 | **Fase 4: Full LLM Content Run** | ✅ COMPLEET | 05-02-2026 | 05-02-2026 | Claude Code |
 | **Fase 4b: Content Vergelijking** | ✅ COMPLEET | 06-02-2026 | 06-02-2026 | Claude Code |
 | **Fase 5: Content Apply & Translation** | ✅ COMPLEET | 07-02-2026 | 08-02-2026 | Claude Code |
+| **Fase 5b: Frontend Content Verificatie** | ✅ COMPLEET | 08-02-2026 | 08-02-2026 | Claude Code |
 | **Fase 6: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
 | **Fase 7: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 8 februari 2026 - Fase 5 Content Apply & Translation COMPLEET (2.515 POIs applied, 6.844 vertalingen, EUR 18,22, 0 errors)
+**Laatste update**: 8 februari 2026 - Fase 5b Frontend Verificatie COMPLEET. Kolom mismatch _en→base gefixed (2.701 POIs). Markdown gestript. Geen code wijzigingen nodig.
 
 ---
 
@@ -1326,6 +1327,46 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - `fase5_translation_exceptions.json` — exceptions (leeg)
 - `fase5_translation_output.log` — volledige log
 
+### Fase 5b: Frontend Content Verificatie — COMPLEET
+
+| Taak | Status | Datum | Uitvoerder | Notities |
+|------|--------|-------|------------|----------|
+| 5b.1 Database kolommen verificatie | ✅ Compleet | 08-02-2026 | Claude Code | Beide kolommen bestaan: base (zonder _en) + _en suffix |
+| 5b.2 Backend API analyse | ✅ Compleet | 08-02-2026 | Claude Code | getTranslatedField() correct, leest base voor EN |
+| 5b.3 Frontend component analyse | ✅ Compleet | 08-02-2026 | Claude Code | Types en componenten matchen API response |
+| 5b.4 Gap analyse | ✅ Compleet | 08-02-2026 | Claude Code | Kritiek: _en content niet in base kolom |
+| 5b.5 Database fix | ✅ Compleet | 08-02-2026 | Claude Code | 2.701 POIs: _en → base gekopieerd |
+| 5b.6 Markdown cleanup | ✅ Compleet | 08-02-2026 | Claude Code | 414 POIs ** gestript uit base |
+| 5b.7 API verificatie | ✅ Compleet | 08-02-2026 | Claude Code | EN/NL/DE/ES correct, Calpe + Texel |
+
+**Fase 5b Status**: ✅ COMPLEET (08 februari 2026)
+
+**Kritieke Bevinding:**
+Fase 5 schreef EN content naar `enriched_detail_description_en` (MET _en suffix), maar de backend `getTranslatedField()` leest `enriched_detail_description` (ZONDER suffix) voor Engels. Resultaat: EN gebruikers zagen verouderde content (Calpe) of zelfs Nederlandse content + markdown (Texel).
+
+**Root Cause:** Twee kolommen met verschillende content:
+- `enriched_detail_description` (base, geen suffix) = OLD content (pre-Fase 4)
+- `enriched_detail_description_en` (met _en suffix) = NEW Fase 5 content
+- Backend model (POI.js) definieert `enriched_detail_description` als EN base, niet `_en`
+
+**Fix:** Database-only — geen code wijzigingen, geen deployment:
+1. Kopieer `enriched_detail_description_en` → `enriched_detail_description` (2.701 rows)
+2. Strip resterende `**` markdown uit base kolom (414 rows)
+
+**Impact per groep:**
+
+| Destination | Groep | POIs | Situatie na fix |
+|-------------|-------|------|-----------------|
+| Calpe | A (Fase 5) | 1.442 | base=NEW EN, NL/DE/ES=Fase 5 vertalingen |
+| Calpe | B (Accommodation) | 41 | base=OLD EN, NL/DE/ES=OLD vertalingen |
+| Texel | A (Fase 5) | 1.259 | base=NEW EN, NL/DE=Fase 5 vertalingen |
+| Texel | B (Accommodation) | 337 | base=OLD NL (cleaned), NL/DE=OLD vertalingen |
+| Texel | C (geen content) | 64 | Geen enriched content |
+
+**Deliverables op Hetzner (/root/):**
+- `fase5b_frontend_verification.md` — verificatierapport
+- `backups/enriched_detail_description_base_backup_20260208_123637.json` — rollback backup
+
 ### Fase 6: Alicante Preparation
 
 | Taak | Status | Datum | Uitvoerder | Notities |
@@ -1683,6 +1724,22 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - **Python output buffering** — Log was leeg tijdens run. `PYTHONUNBUFFERED=1` of `python3 -u` nodig voor real-time monitoring
 - **mysqldump --no-defaults vereist** — Hetzner my.cnf bevat `database=` setting die mysqldump breekt. Altijd --no-defaults gebruiken
 
+### Fase 5b Lessons Learned - Frontend Content Verificatie (08/02/2026)
+
+**Kolom Architectuur:**
+- **Backend EN = base kolom (geen _en suffix)** — `getTranslatedField()` in publicPOI.js retourneert `data[fieldBase]` voor Engels, niet `data[fieldBase + '_en']`. De kolom `enriched_detail_description` IS de Engelse content. De `_en` kolom bestond wel in de database maar werd niet door de backend gelezen
+- **Altijd backend code verifiëren vóór database writes** — Fase 5 schreef naar `_en` kolom gebaseerd op kolomnaam-conventie, maar de backend verwachtte base kolom. Code lezen is sneller dan bugs fixen
+- **Twee kolommen, twee werelden** — `enriched_detail_description` (base) bevatte 3.079 OLD records, `enriched_detail_description_en` bevatte 2.701 NEW records. Alle 2.701 waren VERSCHILLEND. Zonder verificatie was de mismatch onzichtbaar
+
+**Texel-specifiek:**
+- **Texel base kolom bevatte Nederlands** — Alle 1.596 Texel POIs met base content hadden NL tekst + `**` markdown. Dit werd als "Engels" geserveerd aan EN gebruikers. Pre-Fase 4 enrichment had niet-taalspecifieke content in de base kolom gezet
+- **337 Texel Accommodation POIs hadden pre-Fase 4 NL/DE** — Deze POIs hadden nooit staging records, waren nooit in Fase 4/5 pipeline, maar hadden al NL/DE vertalingen van een eerder enrichment. Verklaart discrepantie NL/DE (1.596) vs EN (1.259): 1.259 + 337 = 1.596
+
+**Fix Strategie:**
+- **Database-only fix mogelijk** — Backend code (getTranslatedField, formatPOIForPublic) en frontend (poi.types.ts, POIDetailModal, POICard) waren correct. Alleen de data moest gecorrigeerd worden: COPY _en → base + STRIP markdown
+- **Backup vóór elke productie UPDATE** — 3.079 records gebackupt naar JSON. Rollback in <5 minuten mogelijk
+- **Geen deployment = geen risico** — Database fix vereiste geen code wijzigingen, geen GitHub push, geen PM2 restart. Minimaal impact window
+
 ---
 
 ## Deel 14: Risico Register
@@ -1705,6 +1762,9 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | Markdown lekkage in vertalingen | Laag | Hoog | Post-processing regex strip + prompt instructie | Gemitigeerd — 840 POIs gefixed via SQL REPLACE |
 | Texel voorzetselfout in vertalingen | Laag | Medium | SQL REPLACE post-processing | Gemitigeerd — 95 POIs gefixed, 6 vals-positieven (POI-namen) |
 | PL/SV kolommen ongebruikt na Fase 5 | Laag | Laag | Inventariseren, na 30 dagen evalueren | Open — kandidaten voor opschonen |
+| Kolom mismatch _en vs base | Hoog | Hoog | Backend code verifiëren vóór database writes | Gemitigeerd — _en gekopieerd naar base (2.701 POIs) |
+| Texel EN toont NL content | Hoog | Hoog | API verificatie per taal per destination | Gemitigeerd — base kolom nu Engels voor alle Fase 5 POIs |
+| 337 Texel Accommodation zonder EN | Laag | Hoog | is_hidden_category, verschijnt niet in browse | Geaccepteerd — minimale gebruikersimpact |
 
 ---
 
@@ -1746,6 +1806,9 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 07-02-2026 | Vertalingen overschrijven OLD translations | Bestaande NL/DE/ES translations waren van OLD content. NEW content is beter (+2,17 punten), vertalingen moeten ook nieuw | Claude Code |
 | 07-02-2026 | Mistral Medium voor vertalingen (temperature 0.2) | Lagere temperature dan generatie (0.1 vs 0.2) voor consistentere vertalingen. EUR 0,0027/vertaling | Claude Code |
 | 08-02-2026 | Post-processing markdown strip + voorzetsels fix | 840 markdown fixes + 95 voorzetsel fixes via SQL REPLACE. Preventief i.p.v. per-POI correctie | Claude Code |
+| 08-02-2026 | Database-only fix voor kolom mismatch (geen code wijzigingen) | Backend getTranslatedField() en frontend types correct. Alleen data in verkeerde kolom. COPY _en→base + STRIP markdown. Geen deployment nodig | Claude Code |
+| 08-02-2026 | Base kolom als single source voor EN content | enriched_detail_description (base, geen _en) is de kolom die backend serveert voor EN. _en kolom behouden als backup maar niet actief gebruikt | Claude Code |
+| 08-02-2026 | 337 Texel Accommodation: geen actie | is_hidden_category POIs zonder Fase 5 EN content. NL content in base geaccepteerd. Minimale gebruikersimpact, geen prioriteit | Claude Code |
 
 ---
 
@@ -1771,8 +1834,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 8 februari 2026 - Fase 5 Content Apply & Translation COMPLEET*
-*Volgende review: Frontend verifiëren dat vertalingen correct renderen. Fase 6 Alicante voorbereiding wanneer eigenaar gereed.*
+*Laatst bijgewerkt: 8 februari 2026 - Fase 5b Frontend Content Verificatie COMPLEET*
+*Volgende review: Fase 6 Alicante voorbereiding wanneer eigenaar gereed.*
 
 ---
 
@@ -1780,6 +1843,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **2.8** | **08-02-2026** | **FASE 5b FRONTEND CONTENT VERIFICATIE: Kritieke kolom mismatch gevonden — Fase 5 schreef naar enriched_detail_description_en maar backend leest enriched_detail_description (base, zonder _en). Texel EN toonde Nederlandse content + markdown. Database-only fix: COPY _en→base (2.701 POIs) + STRIP markdown (414 POIs). Geen code wijzigingen, geen deployment. API verificatie: EN/NL/DE/ES correct voor Calpe + Texel. Backup gemaakt (3.079 records JSON). 337 Texel Accommodation POIs zonder EN (is_hidden_category, minimale impact).** |
 | **2.7** | **08-02-2026** | **FASE 5 CONTENT APPLY & TRANSLATION: 2.515 POIs applied naar enriched_detail_description_en. 34 manual review → approved (Frank akkoord). 6.844 vertalingen via Mistral Medium (Calpe: EN→ES/DE/NL, Texel: EN→NL/DE). EUR 18,22 (39% onder budget). 0 errors, 9,4 uur runtime. Post-processing: 840 markdown fixes, 95 voorzetsel fixes (op/auf Texel). Coverage: Calpe 93,8% EN / 96,4% NL/ES/DE, Texel 75,8% EN / 96,1% NL/DE. Kolom inventarisatie: PL/SV kandidaten voor opschonen. Fasen hernummerd: Content Apply→Fase 5, Alicante→Fase 6, Stabilization→Fase 7.** |
 | **2.6** | **06-02-2026** | **FASE 4b CONTENT VERGELIJKING: 2.515 POIs vergeleken (1.442 Calpe via LLM + 1.073 Texel auto-approved). 9-criteria gewogen scoring (Grammar, British EN, Tone, AIDA, Wordcount, Formatting, Concreteness, Local Anchoring, Currency). Resultaat: 2.481 approved (98,6%), 34 manual review (1,4%), 0 keep old (0%). NEW scoort +2,17 punten boven OLD (9,96 vs 7,79). Grootste verbeteringen: Concreetheid +4,38, Lokale Verankering +3,19, British English +1,46. Kosten EUR 6,02 (1,9M input + 339K output tokens). MANUAL_REVIEW concentratie: Active (5,7%) en Culture & History (9,5%). Deliverables: fase4b_comparison_summary.md, fase4b_review_required.json (34 POIs), fase4b_category_analysis.md, fase4b_exceptions.json op Hetzner /root/. Totale pipeline Fase 4+4b: EUR 14,95.** |
 | **2.5** | **06-02-2026** | **FASE 4 FULL LLM CONTENT RUN: 2.515 POIs (1.442 Calpe + 1.073 Texel) gegenereerd via Mistral Medium Latest. Kosten EUR 8,93 (89,3% van EUR 10 budget). 100% succespercentage, 0 failures. Kwaliteitsverbeteringen: markdown 0% (was 17%), forbidden openings 0% (was 4%), British English 97,6%. Gem. woordenaantal 135 (target 115-125, model convergeert structureel rond 135). Opening diversiteit issue: 57% begint met "A", "The scent of" 162x. Slechts 2x "in Texel" fout (0,2%). 2.768.892 tokens totaal, 1.276 quality retries (50,7%). 3.049 records in staging (2.515 Fase 4 + 534 eerder). Deliverables: fase4_full_output.json, fase4_generation_report.md, fase4_quality_analysis.json, fase4_quality_sample.md, fase4_quality_flags.json op Hetzner /root/. Fasen hernummerd: Alicante→Fase 5, Stabilization→Fase 6.** |
