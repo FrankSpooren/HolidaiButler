@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.4.0
-> **Laatst bijgewerkt**: 8 februari 2026 (15:00 UTC)
+> **Versie**: 3.5.0
+> **Laatst bijgewerkt**: 8 februari 2026 (16:00 UTC)
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -321,6 +321,19 @@ Password: i9)PUR^2k=}!
 | Calpe | 1.495 | ~1.442 | 96% |
 | Texel | 1.142 | ~1.073 | 94% |
 
+### POI Image Pipeline
+| Aspect | Calpe | Texel |
+|--------|-------|-------|
+| **imageurls records** | 13.704 | 11.506 |
+| **POIs met images** | ~1.538 | 1.606 |
+| **Opslag pad** | `/poi-images/{poi_id}/{hash}.jpg` | `/poi-images/texel/{google_placeid}/image_N.jpg` |
+| **Totale grootte** | 8,3 GB | 4,1 GB |
+
+**Configuratie:**
+- `IMAGE_BASE_URL` in `.env`: `https://test.holidaibutler.com`
+- `getBestUrl()` in `ImageUrl.js`: prefereert `local_path`, fallback naar `image_url`
+- Apache: alle vhosts met `Alias /poi-images /var/www/.../storage/poi-images`
+
 ---
 
 ## 📈 Implementatie Status
@@ -336,6 +349,7 @@ Password: i9)PUR^2k=}!
 | **Fase 4b** | Content Vergelijking (OLD vs NEW) | ✅ COMPLEET | 06-02-2026 |
 | **Fase 5** | Content Apply & Translation | ✅ COMPLEET | 07-02-2026 |
 | **Fase 5b** | Frontend Content Verificatie | ✅ COMPLEET | 08-02-2026 |
+| **Fase 5c** | Texel Image Fix | ✅ COMPLEET | 08-02-2026 |
 | **Fase 6** | Alicante Preparation | ⏸️ WACHT | - |
 | **Fase 7** | Stabilization | ⏸️ WACHT | - |
 
@@ -435,7 +449,7 @@ ssh root@91.98.71.87
 | `/var/www/api.holidaibutler.com/platform-core/` | Backend |
 | `/var/www/holidaibutler.com/customer-portal/` | Calpe frontend |
 | `/var/www/texelmaps.nl/customer-portal/` | Texel frontend |
-| `/var/www/images/pois/` | POI afbeeldingen |
+| `/var/www/api.holidaibutler.com/storage/poi-images/` | POI images (Calpe + Texel) |
 | `/root/backups/` | Database backups |
 | `/root/fase*` | Fase output bestanden |
 
@@ -455,7 +469,10 @@ ssh root@91.98.71.87
 ├── fase4b_category_analysis.md
 ├── fase4b_content_comparison.py
 ├── fase4b_checkpoint.json
-└── texel_old_nl_archive.json
+├── texel_old_nl_archive.json
+├── texel_image_linker.py
+├── texel_image_linker_checkpoint.json
+└── texel_image_linker_output.log
 ```
 
 ### Quick Health Check Commands
@@ -496,7 +513,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Strategic Advisory | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 2.8 |
+| Strategic Advisory | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 2.9 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 |
 | Fase 2 Docs | `docs/agents/fase2/` | - |
 | Fase 3 Docs | `docs/agents/fase3/` | - |
@@ -511,6 +528,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.5.0** | **2026-02-08** | **Fase 5c Texel Image Fix COMPLEET: 11.506 imageurls records aangemaakt voor 1.606 Texel POIs. Images bestonden op disk (4,1 GB) maar waren niet gekoppeld aan database. Apache configs gefixed (texelmaps.nl + dev + test). POI Image Pipeline sectie toegevoegd. Strategic Advisory v2.9.** |
 | **3.4.0** | **2026-02-08** | **Fase 5/5b COMPLEET: Content Apply & Translation afgerond (6.844 vertalingen, EUR 18,22). Fase 5b: kolom mismatch gevonden (enriched_detail_description_en vs base), database-only fix (2.701 POIs _en→base, 414 markdown strip). POI tabel kolommen geactualiseerd: base=EN (geen _en suffix). Strategic Advisory v2.8.** |
 | **3.3.0** | **2026-02-07** | **MAJOR UPDATE: Fase 2-4b documentatie toegevoegd. Texel LIVE (texelmaps.nl). TexelMaps huisstijl (#30c59b/#3572de/#ecde3c). POI Content Pipeline gedocumenteerd (staging workflow, LLM generatie, 9 kwaliteitscriteria). poi_content_staging tabel schema. Fase 4 resultaten: 2.515 POIs, EUR 8.93, 100% success. Fase 4b: 2.481 approved, 34 manual review → Frank akkoord. Strategic Advisory referentie toegevoegd (v2.6). Hetzner fase output bestanden gedocumenteerd.** |
 | 3.2.0 | 2026-01-28 | Multi-Destination Architecture Fase 1 COMPLEET: destinations table, destination_id toegevoegd aan 6 tabellen, config files. |
