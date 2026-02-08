@@ -3,9 +3,9 @@
 
 **Datum**: 5 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 2.8
+**Versie**: 2.9
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 5b Frontend Verificatie COMPLEET - Kolom mismatch gevonden en gefixed: enriched_detail_description_en → enriched_detail_description (2.701 POIs). Texel EN toonde NL content + markdown → gefixed. Backend/frontend code correct, alleen database fix nodig. Geen deployment.
+**Status**: FASE 5c Texel Image Fix COMPLEET - 11.506 imageurls records aangemaakt voor 1.606 Texel POIs. Images bestonden al op disk (4,1 GB, 1.700 dirs) maar waren niet gekoppeld aan database. Apache configs gefixed voor alle texelmaps.nl vhosts. Geen code wijzigingen, alleen database + Apache.
 
 ---
 
@@ -21,10 +21,11 @@
 | **Fase 4b: Content Vergelijking** | ✅ COMPLEET | 06-02-2026 | 06-02-2026 | Claude Code |
 | **Fase 5: Content Apply & Translation** | ✅ COMPLEET | 07-02-2026 | 08-02-2026 | Claude Code |
 | **Fase 5b: Frontend Content Verificatie** | ✅ COMPLEET | 08-02-2026 | 08-02-2026 | Claude Code |
+| **Fase 5c: Texel Image Fix** | ✅ COMPLEET | 08-02-2026 | 08-02-2026 | Claude Code |
 | **Fase 6: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
 | **Fase 7: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 8 februari 2026 - Fase 5b Frontend Verificatie COMPLEET. Kolom mismatch _en→base gefixed (2.701 POIs). Markdown gestript. Geen code wijzigingen nodig.
+**Laatste update**: 8 februari 2026 - Fase 5c Texel Image Fix COMPLEET. 11.506 imageurls records aangemaakt, Apache configs gefixed. Texel POI images nu zichtbaar op alle texelmaps.nl omgevingen.
 
 ---
 
@@ -1367,6 +1368,58 @@ Fase 5 schreef EN content naar `enriched_detail_description_en` (MET _en suffix)
 - `fase5b_frontend_verification.md` — verificatierapport
 - `backups/enriched_detail_description_base_backup_20260208_123637.json` — rollback backup
 
+### Fase 5c: Texel Image Fix — COMPLEET
+
+| Taak | Status | Datum | Uitvoerder | Notities |
+|------|--------|-------|------------|----------|
+| 5c.1 Server image inventarisatie | ✅ Compleet | 08-02-2026 | Claude Code | 1.700 dirs, 11.947 files, 4,1 GB in poi-images/texel/ |
+| 5c.2 Database mapping verificatie | ✅ Compleet | 08-02-2026 | Claude Code | 1.609 matched (disk→DB), 91 disk-only, 66 DB-only |
+| 5c.3 Image linker script | ✅ Compleet | 08-02-2026 | Claude Code | 11.506 imageurls records, 1.606 POIs, 0 fouten |
+| 5c.4 Apache configs fix | ✅ Compleet | 08-02-2026 | Claude Code | texelmaps.nl + dev + test: Alias naar unified storage |
+| 5c.5 End-to-end verificatie | ✅ Compleet | 08-02-2026 | Claude Code | API, Apache, browse view — alles OK. Calpe OK |
+
+**Fase 5c Status**: ✅ COMPLEET (08 februari 2026)
+
+**Probleem:**
+Op dev.texelmaps.nl toonden Texel POIs fallback-iconen i.p.v. afbeeldingen.
+
+**Root Cause:**
+Texel images (4,1 GB, 11.947 bestanden) waren WEL gedownload naar de server in `/poi-images/texel/{google_placeid}/image_N.jpg`, maar:
+1. **0 `imageurls` database records** — backend kon de bestanden niet vinden
+2. **Apache Alias fout** — texelmaps.nl wees naar lege directory (`destinations/texel/poi-images/`)
+3. **dev/test configs misten** — geen /poi-images Alias geconfigureerd
+
+**Verschil Calpe vs Texel image opslag:**
+
+| Aspect | Calpe | Texel |
+|--------|-------|-------|
+| Pad-patroon | `/poi-images/{poi_id}/{sha256_hash}.jpg` | `/poi-images/texel/{google_placeid}/image_N.jpg` |
+| Directory key | POI ID (numeriek) | Google Place ID (string) |
+| Bestandsnaam | SHA256 hash (16 chars) | Sequentieel (image_1, image_2...) |
+| imageurls records | 13.704 (pre-existing) | 0 → 11.506 (nu aangemaakt) |
+
+**Fix:**
+1. Python linker script (`/root/texel_image_linker.py`) — mapt google_placeid dirs naar poi_id, insert imageurls records
+2. Apache configs — texelmaps.nl Alias gecorrigeerd, dev/test configs aangevuld
+3. Apache reload
+
+**Verificatie resultaten:**
+
+| Check | Resultaat |
+|-------|-----------|
+| imageurls records | 11.506 records, 1.606 POIs |
+| API detail view | 10 images met lokale URLs |
+| API browse view | 3 images per POI |
+| dev.texelmaps.nl image serving | HTTP 200, image/jpeg, CORS OK |
+| texelmaps.nl image serving | HTTP 200 |
+| test.holidaibutler.com (IMAGE_BASE_URL) | HTTP 200 |
+| Calpe regressie | Geen — images werken onveranderd |
+
+**Deliverables op Hetzner (/root/):**
+- `texel_image_linker.py` — koppelscript
+- `texel_image_linker_checkpoint.json` — checkpoint data
+- `texel_image_linker_output.log` — volledige output log
+
 ### Fase 6: Alicante Preparation
 
 | Taak | Status | Datum | Uitvoerder | Notities |
@@ -1740,6 +1793,22 @@ Fase 5 schreef EN content naar `enriched_detail_description_en` (MET _en suffix)
 - **Backup vóór elke productie UPDATE** — 3.079 records gebackupt naar JSON. Rollback in <5 minuten mogelijk
 - **Geen deployment = geen risico** — Database fix vereiste geen code wijzigingen, geen GitHub push, geen PM2 restart. Minimaal impact window
 
+### Fase 5c Lessons Learned - Texel Image Fix (08/02/2026)
+
+**Image Pipeline Architectuur:**
+- **Altijd `imageurls` tabel vullen bij image download** — bestanden op disk zonder database records zijn onzichtbaar voor de backend. `getBestUrl()` in ImageUrl.js werkt uitsluitend via `imageurls` tabel, niet via filesystem scans
+- **Pad-patronen documenteren per destination** — Calpe gebruikt `{poi_id}/{hash}.jpg`, Texel gebruikt `texel/{google_placeid}/image_N.jpg`. Verschillende patronen werken, maar moeten consistent gedocumenteerd zijn
+- **IMAGE_BASE_URL is cruciaal** — `.env` bevat `IMAGE_BASE_URL=https://test.holidaibutler.com`. Alle lokale image URLs worden geconstrueerd als `IMAGE_BASE_URL + local_path`. Apache op die host moet het pad serveren
+
+**Apache Configuratie:**
+- **Elke vhost apart controleren** — texelmaps.nl had een Alias naar een lege directory, dev/test hadden helemaal geen image config. Productie (holidaibutler.com) werkte wel. Drie verschillende configuratiestaten op drie domeinen
+- **`ProxyPass /poi-images !` moet VOOR andere ProxyPass regels** — anders wordt het image-pad doorgestuurd naar Node.js backend i.p.v. direct door Apache geserveerd
+- **SPA RewriteRule uitzondering nodig** — zonder `RewriteCond %{REQUEST_URI} !^/poi-images` stuurt de SPA alle image requests naar index.html
+
+**Proces:**
+- **Altijd volledige filesystem inventarisatie voordat conclusies worden getrokken** — initieel werd geconcludeerd dat Texel images niet bestonden, terwijl 4,1 GB aan bestanden aanwezig was in een `texel/` subdirectory
+- **Koppeling tussen systemen verifiëren** — bestanden op disk, database records, Apache config en backend code moeten allemaal op elkaar aansluiten. Een ontbrekende schakel maakt alles onbruikbaar
+
 ---
 
 ## Deel 14: Risico Register
@@ -1765,6 +1834,10 @@ Fase 5 schreef EN content naar `enriched_detail_description_en` (MET _en suffix)
 | Kolom mismatch _en vs base | Hoog | Hoog | Backend code verifiëren vóór database writes | Gemitigeerd — _en gekopieerd naar base (2.701 POIs) |
 | Texel EN toont NL content | Hoog | Hoog | API verificatie per taal per destination | Gemitigeerd — base kolom nu Engels voor alle Fase 5 POIs |
 | 337 Texel Accommodation zonder EN | Laag | Hoog | is_hidden_category, verschijnt niet in browse | Geaccepteerd — minimale gebruikersimpact |
+| Texel images op disk maar niet in DB | Hoog | Hoog | imageurls records altijd aanmaken bij download | Gemitigeerd — 11.506 records aangemaakt via linker script |
+| Apache Alias naar lege directory | Hoog | Hoog | Per vhost verifiëren dat Alias naar correct pad wijst | Gemitigeerd — alle 3 texelmaps.nl vhosts gecorrigeerd |
+| Pad-patroon verschil Calpe vs Texel | Laag | Medium | Documenteer per destination; getBestUrl() is pad-agnostisch | Geaccepteerd — beide patronen werken |
+| 91 image dirs zonder DB match | Laag | Laag | Waarschijnlijk verwijderde POIs; directories behouden als backup | Geaccepteerd — geen gebruikersimpact |
 
 ---
 
@@ -1809,6 +1882,9 @@ Fase 5 schreef EN content naar `enriched_detail_description_en` (MET _en suffix)
 | 08-02-2026 | Database-only fix voor kolom mismatch (geen code wijzigingen) | Backend getTranslatedField() en frontend types correct. Alleen data in verkeerde kolom. COPY _en→base + STRIP markdown. Geen deployment nodig | Claude Code |
 | 08-02-2026 | Base kolom als single source voor EN content | enriched_detail_description (base, geen _en) is de kolom die backend serveert voor EN. _en kolom behouden als backup maar niet actief gebruikt | Claude Code |
 | 08-02-2026 | 337 Texel Accommodation: geen actie | is_hidden_category POIs zonder Fase 5 EN content. NL content in base geaccepteerd. Minimale gebruikersimpact, geen prioriteit | Claude Code |
+| 08-02-2026 | Linker script i.p.v. re-download | Texel images bestaan al op disk (4,1 GB). Koppelen via imageurls records i.p.v. opnieuw downloaden bespaart tijd en bandbreedte | Claude Code |
+| 08-02-2026 | Unified storage path voor alle vhosts | Alle texelmaps.nl vhosts wijzen naar `/var/www/.../storage/poi-images` (zelfde als holidaibutler.com). POI IDs zijn uniek, geen conflict tussen destinations | Claude Code |
+| 08-02-2026 | Texel pad-patroon behouden (google_placeid) | Bestaande structuur `/poi-images/texel/{google_placeid}/image_N.jpg` behouden. getBestUrl() is pad-agnostisch, werkt met elk local_path formaat | Claude Code |
 
 ---
 
@@ -1834,7 +1910,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 8 februari 2026 - Fase 5b Frontend Content Verificatie COMPLEET*
+*Laatst bijgewerkt: 8 februari 2026 - Fase 5c Texel Image Fix COMPLEET*
 *Volgende review: Fase 6 Alicante voorbereiding wanneer eigenaar gereed.*
 
 ---
@@ -1843,6 +1919,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **2.9** | **08-02-2026** | **FASE 5c TEXEL IMAGE FIX: Texel POI images op disk (4,1 GB, 1.700 dirs, 11.947 files) waren niet gekoppeld aan backend — 0 imageurls records. Python linker script: 11.506 records aangemaakt voor 1.606 POIs (mapping google_placeid→poi_id). Apache configs gefixed: texelmaps.nl Alias naar correcte directory, dev/test configs aangevuld met /poi-images Alias + ProxyPass exclusion + SPA RewriteCond. Verificatie: API retourneert lokale URLs, Apache serveert HTTP 200 met CORS/caching headers, Calpe geen regressie. Deliverables: texel_image_linker.py + checkpoint + log op Hetzner.** |
 | **2.8** | **08-02-2026** | **FASE 5b FRONTEND CONTENT VERIFICATIE: Kritieke kolom mismatch gevonden — Fase 5 schreef naar enriched_detail_description_en maar backend leest enriched_detail_description (base, zonder _en). Texel EN toonde Nederlandse content + markdown. Database-only fix: COPY _en→base (2.701 POIs) + STRIP markdown (414 POIs). Geen code wijzigingen, geen deployment. API verificatie: EN/NL/DE/ES correct voor Calpe + Texel. Backup gemaakt (3.079 records JSON). 337 Texel Accommodation POIs zonder EN (is_hidden_category, minimale impact).** |
 | **2.7** | **08-02-2026** | **FASE 5 CONTENT APPLY & TRANSLATION: 2.515 POIs applied naar enriched_detail_description_en. 34 manual review → approved (Frank akkoord). 6.844 vertalingen via Mistral Medium (Calpe: EN→ES/DE/NL, Texel: EN→NL/DE). EUR 18,22 (39% onder budget). 0 errors, 9,4 uur runtime. Post-processing: 840 markdown fixes, 95 voorzetsel fixes (op/auf Texel). Coverage: Calpe 93,8% EN / 96,4% NL/ES/DE, Texel 75,8% EN / 96,1% NL/DE. Kolom inventarisatie: PL/SV kandidaten voor opschonen. Fasen hernummerd: Content Apply→Fase 5, Alicante→Fase 6, Stabilization→Fase 7.** |
 | **2.6** | **06-02-2026** | **FASE 4b CONTENT VERGELIJKING: 2.515 POIs vergeleken (1.442 Calpe via LLM + 1.073 Texel auto-approved). 9-criteria gewogen scoring (Grammar, British EN, Tone, AIDA, Wordcount, Formatting, Concreteness, Local Anchoring, Currency). Resultaat: 2.481 approved (98,6%), 34 manual review (1,4%), 0 keep old (0%). NEW scoort +2,17 punten boven OLD (9,96 vs 7,79). Grootste verbeteringen: Concreetheid +4,38, Lokale Verankering +3,19, British English +1,46. Kosten EUR 6,02 (1,9M input + 339K output tokens). MANUAL_REVIEW concentratie: Active (5,7%) en Culture & History (9,5%). Deliverables: fase4b_comparison_summary.md, fase4b_review_required.json (34 POIs), fase4b_category_analysis.md, fase4b_exceptions.json op Hetzner /root/. Totale pipeline Fase 4+4b: EUR 14,95.** |
