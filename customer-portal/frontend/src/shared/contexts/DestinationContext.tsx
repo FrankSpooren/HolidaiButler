@@ -42,6 +42,10 @@ export interface DestinationConfig {
     subtitle: string;
     description: string;
   };
+  holibot?: {
+    name: string;
+    welcomeMessages: Record<string, string[]>;
+  };
 }
 
 // Declare the global type for __DESTINATION_CONFIG__

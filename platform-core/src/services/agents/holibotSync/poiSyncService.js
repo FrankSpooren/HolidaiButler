@@ -7,7 +7,12 @@ import embeddingService from './embeddingService.js';
 import chromaService from './chromaService.js';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 
-const POI_COLLECTION = 'holidaibutler_pois';
+// Default collection per destination
+const DESTINATION_COLLECTIONS = {
+  1: 'calpe_pois',
+  2: 'texel_pois'
+};
+const DEFAULT_COLLECTION = 'holidaibutler_pois';
 
 class POISyncService {
   constructor() {
@@ -18,24 +23,30 @@ class POISyncService {
     this.sequelize = sequelize;
   }
 
-  async syncUpdatedPOIs(since = null) {
+  async syncUpdatedPOIs(since = null, destinationId = null) {
     if (!this.sequelize) {
       throw new Error('Sequelize not initialized');
     }
 
-    console.log('[POISyncService] Starting POI sync to ChromaDB...');
+    const collectionName = destinationId ? (DESTINATION_COLLECTIONS[destinationId] || DEFAULT_COLLECTION) : DEFAULT_COLLECTION;
+
+    console.log(`[POISyncService] Starting POI sync to ChromaDB collection "${collectionName}"...`);
 
     try {
       // Get POIs updated since last sync
       let query = `
         SELECT id, name, category, subcategory, description, address,
                opening_hours, rating, price_level, city AS destination,
-               latitude, longitude, tier_score, last_updated
+               latitude, longitude, tier_score, last_updated, destination_id
         FROM POI
         WHERE is_active = 1
       `;
 
       const replacements = [];
+      if (destinationId) {
+        query += ' AND destination_id = ?';
+        replacements.push(destinationId);
+      }
       if (since) {
         query += ' AND last_updated > ?';
         replacements.push(since);
@@ -47,7 +58,7 @@ class POISyncService {
 
       if (pois.length === 0) {
         console.log('[POISyncService] No POIs to sync');
-        return { synced: 0, collection: POI_COLLECTION };
+        return { synced: 0, collection: collectionName };
       }
 
       console.log(`[POISyncService] Syncing ${pois.length} POIs...`);
@@ -74,16 +85,16 @@ class POISyncService {
 
       // Upsert to ChromaDB
       console.log('[POISyncService] Upserting to ChromaDB...');
-      await chromaService.upsertDocuments(POI_COLLECTION, ids, embeddings, documents, metadatas);
+      await chromaService.upsertDocuments(collectionName, ids, embeddings, documents, metadatas);
 
       await logAgent('holibot-sync', 'poi_sync_complete', {
         description: `Synced ${pois.length} POIs to ChromaDB`,
-        metadata: { count: pois.length, collection: POI_COLLECTION }
+        metadata: { count: pois.length, collection: collectionName }
       });
 
       console.log(`[POISyncService] Successfully synced ${pois.length} POIs`);
 
-      return { synced: pois.length, collection: POI_COLLECTION };
+      return { synced: pois.length, collection: collectionName };
     } catch (error) {
       await logError('holibot-sync', error, { action: 'sync_pois' });
       throw error;
@@ -108,7 +119,7 @@ class POISyncService {
       }
 
       const ids = deactivatedPOIs.map(p => `poi_${p.id}`);
-      await chromaService.deleteDocuments(POI_COLLECTION, ids);
+      await chromaService.deleteDocuments(DEFAULT_COLLECTION, ids);
 
       await logAgent('holibot-sync', 'deactivated_pois_removed', {
         description: `Removed ${ids.length} deactivated POIs from ChromaDB`,

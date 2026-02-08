@@ -55,8 +55,24 @@
 
 import express from 'express';
 import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService, intentService, preferenceService, suggestionService } from '../services/holibot/index.js';
+import { getDestinationById } from '../../config/destinations/index.js';
 import logger from '../utils/logger.js';
 
+
+// ============================================================================
+// DESTINATION EXTRACTION HELPER
+// ============================================================================
+
+/**
+ * Extract destination config from request headers
+ * Uses X-Destination-ID header set by Apache VHost, defaults to Calpe (1)
+ */
+function getDestinationFromRequest(req) {
+  const destinationId = parseInt(req.headers['x-destination-id']) || 1;
+  const destinationConfig = getDestinationById(destinationId);
+  const collectionName = destinationConfig?.holibot?.chromaCollection || 'calpe_pois';
+  return { destinationId, destinationConfig, collectionName };
+}
 
 // ============================================================================
 // ENTERPRISE QUALITY FILTERS & SESSION TRACKING
@@ -630,7 +646,7 @@ const cleanAIText = (text, poiNames = []) => {
   // Fix common location names stuck to adjacent words
   // IMPORTANT: Only fix spacing when location is clearly a separate word
   // Use word boundary () to prevent breaking compound words like "Calpesa"
-  const locationNames = ["Calpe", "Benidorm", "Altea", "Alicante", "Valencia", "Spain", "Spanje", "España"];
+  const locationNames = ["Calpe", "Benidorm", "Altea", "Alicante", "Valencia", "Spain", "Spanje", "España", "Texel", "Den Burg", "De Koog", "Oudeschild", "Den Hoorn", "Nederland", "Netherlands"];
   for (const loc of locationNames) {
     // Add space BEFORE location if preceded by lowercase letter (e.g., "inCalpe" -> "in Calpe")
     // But only if location starts a new word (followed by word boundary or end)
@@ -714,7 +730,10 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Message too long (max 1000 characters)' });
     }
 
-    logger.info('HoliBot chat request', { message: message.substring(0, 100), language, hasHistory: conversationHistory.length > 0 });
+    // Extract destination from request
+    const { destinationId, destinationConfig, collectionName } = getDestinationFromRequest(req);
+
+    logger.info('HoliBot chat request', { message: message.substring(0, 100), language, hasHistory: conversationHistory.length > 0, destinationId });
 
     // Step 0: Check for vague queries BEFORE spell correction (to detect original language patterns)
     if (conversationHistory.length === 0) {
@@ -745,7 +764,8 @@ router.post('/chat', async (req, res) => {
     const activeSessionId = await conversationService.getOrCreateSession({
       sessionId,
       language,
-      userAgent: userAgent || req.get('User-Agent')
+      userAgent: userAgent || req.get('User-Agent'),
+      destinationId
     });
 
     // Step 1: Spell correction and suggestion generation
@@ -776,7 +796,7 @@ router.post('/chat', async (req, res) => {
     }).catch(() => {});
 
     // Step 2: Intent detection for smarter responses
-    const intentAnalysis = intentService.analyzeQuery(processedMessage, language, conversationHistory);
+    const intentAnalysis = intentService.analyzeQuery(processedMessage, language, conversationHistory, destinationId);
     logger.debug('Intent analysis', { intent: intentAnalysis.primaryIntent, entities: intentAnalysis.entities });
 
     // Step 3: RAG chat with corrected message and intent context
@@ -784,6 +804,8 @@ router.post('/chat', async (req, res) => {
       userPreferences,
       conversationHistory,
       originalQuery: message,  // Pass original for entity extraction
+      collectionName,
+      destinationConfig,
       intentContext: {
         primaryIntent: intentAnalysis.primaryIntent,
         categories: intentAnalysis.entities.categories,
@@ -998,7 +1020,10 @@ router.post('/chat/stream', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Message too long (max 1000 characters)' });
     }
 
-    logger.info('HoliBot streaming chat request', { message: message.substring(0, 100), language });
+    // Extract destination from request
+    const { destinationId, destinationConfig, collectionName } = getDestinationFromRequest(req);
+
+    logger.info('HoliBot streaming chat request', { message: message.substring(0, 100), language, destinationId });
 
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
@@ -1008,7 +1033,7 @@ router.post('/chat/stream', async (req, res) => {
     res.flushHeaders();
 
     // Get streaming response from RAG service
-    const streamResult = await ragService.chatStream(message, language, { userPreferences, conversationHistory });
+    const streamResult = await ragService.chatStream(message, language, { userPreferences, conversationHistory, collectionName, destinationConfig });
 
     if (!streamResult.success) {
       res.write(`event: error\ndata: ${JSON.stringify({ error: streamResult.error })}\n\n`);
@@ -1060,7 +1085,8 @@ router.post('/search', async (req, res) => {
     if (!query) {
       return res.status(400).json({ success: false, error: 'Query is required' });
     }
-    const results = await ragService.search(query, { limit, filter });
+    const { collectionName } = getDestinationFromRequest(req);
+    const results = await ragService.search(query, { limit, filter, collectionName });
     res.json({ success: true, data: results });
   } catch (error) {
     logger.error('HoliBot search error:', error);
@@ -1084,10 +1110,15 @@ router.post('/itinerary', async (req, res) => {
   try {
     const { date, interests = [], duration = 'full-day', travelCompanion, language = 'nl', includeMeals = true, sessionId } = req.body;
 
+    // Extract destination from request
+    const { destinationId, destinationConfig, collectionName } = getDestinationFromRequest(req);
+    const destName = destinationConfig?.destination?.name || 'Calpe';
+    const destRegion = destinationConfig?.destination?.region || 'Costa Blanca';
+
     // Get or generate session ID for refresh variation tracking
     const effectiveSessionId = sessionId || req.headers['x-session-id'] || req.ip || 'anonymous';
 
-    logger.info('HoliBot itinerary request', { date, interests, duration, includeMeals });
+    logger.info('HoliBot itinerary request', { date, interests, duration, includeMeals, destinationId });
 
     // Time-of-day appropriate POI types
     const timeOfDayTypes = {
@@ -1095,19 +1126,19 @@ router.post('/itinerary', async (req, res) => {
       afternoon: ['museum', 'shopping', 'market', 'viewpoint', 'culture', 'active', 'sport', 'beach'],
       evening: ['restaurant', 'tapas', 'bar', 'fine dining', 'seafood', 'pizzeria', 'nightlife', 'lounge']
     };
-    // Query variation templates for diverse results
+    // Query variation templates for diverse results (destination-aware)
     const queryTemplates = [
-      "{interest} attractions Calpe",
-      "best {interest} spots in Calpe Costa Blanca",
-      "popular {interest} places Calpe area",
-      "top rated {interest} Calpe Spain",
-      "{interest} things to do near Calpe"
+      `{interest} attractions ${destName}`,
+      `best {interest} spots in ${destName} ${destRegion}`,
+      `popular {interest} places ${destName} area`,
+      `top rated {interest} ${destName}`,
+      `{interest} things to do near ${destName}`
     ];
     const generalQueryTemplates = [
-      "best things to do in Calpe",
-      "top attractions Calpe Costa Blanca",
-      "popular places to visit Calpe",
-      "must see Calpe Spain vacation"
+      `best things to do in ${destName}`,
+      `top attractions ${destName} ${destRegion}`,
+      `popular places to visit ${destName}`,
+      `must see ${destName} vacation`
     ];
     const getRandomTemplate = (templates) => templates[Math.floor(Math.random() * templates.length)];
 
@@ -1120,12 +1151,12 @@ router.post('/itinerary', async (req, res) => {
       // Search each interest separately to ensure balanced results
       for (const interest of interests) {
         const queryTemplate = getRandomTemplate(queryTemplates).replace('{interest}', interest);
-        const interestResults = await ragService.search(queryTemplate, { limit: 50 });
+        const interestResults = await ragService.search(queryTemplate, { limit: 50, collectionName });
         allSearchResults = [...allSearchResults, ...interestResults.results];
       }
     }
     // Always add a general search for backup POIs
-    const generalResults = await ragService.search(getRandomTemplate(generalQueryTemplates), { limit: 50 });
+    const generalResults = await ragService.search(getRandomTemplate(generalQueryTemplates), { limit: 50, collectionName });
     allSearchResults = [...allSearchResults, ...generalResults.results];
 
     // Remove duplicates by id AND name, filter out permanently closed POIs
@@ -1406,7 +1437,7 @@ router.post('/itinerary', async (req, res) => {
     // Step 3: Get restaurant suggestions if meals included
     let restaurants = [];
     if (includeMeals) {
-      const restaurantResults = await ragService.search('restaurant Calpe ' + (interests.includes('Food & Drinks') ? 'best rated' : ''), { limit: 25 });
+      const restaurantResults = await ragService.search(`restaurant ${destName} ` + (interests.includes('Food & Drinks') ? 'best rated' : ''), { limit: 25, collectionName });
       restaurants = restaurantResults.results.filter(p =>
         p.category?.toLowerCase().includes('food') ||
         p.category?.toLowerCase().includes('restaurant') ||
@@ -1618,7 +1649,7 @@ router.post('/itinerary', async (req, res) => {
 
     // Step 5: Generate AI description with language-specific prompts
     // IMPORTANT: Include ACTUAL POI names from the itinerary for coherent intro
-    const systemPrompt = embeddingService.buildSystemPrompt(language);
+    const systemPrompt = embeddingService.buildSystemPrompt(language, {}, destinationConfig);
 
     // Extract actual POI names from the built itinerary (max 3 for intro)
     const selectedPoiNames = itinerary
@@ -1646,7 +1677,7 @@ router.post('/itinerary', async (req, res) => {
     // Multi-language itinerary intro prompts - MUST reference actual POI names
     // CRITICAL: Require proper spacing around POI names for clickable links
     const itineraryPrompts = {
-      nl: `Schrijf een enthousiaste, bondige introductie (max 50 woorden, in het Nederlands) voor dit ${durationLabel} in Calpe.
+      nl: `Schrijf een enthousiaste, bondige introductie (max 50 woorden, in het Nederlands) voor dit ${durationLabel} in ${destName}.
 
 GESELECTEERDE LOCATIES: ${poiListText || 'diverse toplocaties'}.
 
@@ -1656,8 +1687,8 @@ REGELS:
 - Eindig met een uitnodigende zin
 - GEEN sterretjes, emoji's of markdown
 - ALLEEN de locaties noemen die hierboven staan vermeld
-- BELANGRIJK: Zorg voor een SPATIE voor EN na elke locatienaam (bijv. "Bezoek Playa Calpe voor" niet "BezoekPlaya Calpevoor")`,
-      en: `Write an enthusiastic, concise introduction (max 50 words, in English) for this ${durationLabel} in Calpe.
+- BELANGRIJK: Zorg voor een SPATIE voor EN na elke locatienaam`,
+      en: `Write an enthusiastic, concise introduction (max 50 words, in English) for this ${durationLabel} in ${destName}.
 
 SELECTED LOCATIONS: ${poiListText || 'various top attractions'}.
 
@@ -1667,8 +1698,8 @@ RULES:
 - End with an inviting sentence
 - NO asterisks, emojis or markdown
 - ONLY mention locations listed above
-- IMPORTANT: Ensure a SPACE before AND after each location name (e.g., "Visit Playa Calpe for" not "VisitPlaya Calpefor")`,
-      de: `Schreibe eine begeisterte, kurze Einleitung (max 50 Wörter, auf Deutsch) für dieses ${durationLabel} in Calpe.
+- IMPORTANT: Ensure a SPACE before AND after each location name`,
+      de: `Schreibe eine begeisterte, kurze Einleitung (max 50 Wörter, auf Deutsch) für dieses ${durationLabel} in ${destName}.
 
 AUSGEWÄHLTE ORTE: ${poiListText || 'verschiedene Top-Attraktionen'}.
 
@@ -1679,7 +1710,7 @@ REGELN:
 - KEINE Sternchen, Emojis oder Markdown
 - NUR die oben genannten Orte erwähnen
 - WICHTIG: Stelle sicher, dass ein LEERZEICHEN vor UND nach jedem Ortsnamen steht`,
-      es: `Escribe una introducción entusiasta y concisa (máx 50 palabras, en español) para este ${durationLabel} en Calpe.
+      es: `Escribe una introducción entusiasta y concisa (máx 50 palabras, en español) para este ${durationLabel} en ${destName}.
 
 LUGARES SELECCIONADOS: ${poiListText || 'varias atracciones principales'}.
 
@@ -1690,7 +1721,7 @@ REGLAS:
 - SIN asteriscos, emojis ni markdown
 - SOLO mencionar los lugares listados arriba
 - IMPORTANTE: Asegúrate de un ESPACIO antes Y después de cada nombre de lugar`,
-      sv: `Skriv en entusiastisk, koncis introduktion (max 50 ord, på svenska) för detta ${durationLabel} i Calpe.
+      sv: `Skriv en entusiastisk, koncis introduktion (max 50 ord, på svenska) för detta ${durationLabel} i ${destName}.
 
 VALDA PLATSER: ${poiListText || 'olika toppatraktioner'}.
 
@@ -1701,7 +1732,7 @@ REGLER:
 - INGA asterisker, emojis eller markdown
 - ENDAST nämna platser listade ovan
 - VIKTIGT: Se till att det finns ett MELLANSLAG före OCH efter varje platsnamn`,
-      pl: `Napisz entuzjastyczne, zwięzłe wprowadzenie (maks 50 słów, po polsku) do tego ${durationLabel} w Calpe.
+      pl: `Napisz entuzjastyczne, zwięzłe wprowadzenie (maks 50 słów, po polsku) do tego ${durationLabel} w ${destName}.
 
 WYBRANE LOKALIZACJE: ${poiListText || 'różne topowe atrakcje'}.
 
@@ -1786,11 +1817,14 @@ router.get('/location/:id', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Location not found' });
     }
 
-    const contextResults = await ragService.search(poi.name, { limit: 3 });
-    const systemPrompt = embeddingService.buildSystemPrompt(language);
+    const { destinationConfig, collectionName } = getDestinationFromRequest(req);
+    const destName = destinationConfig?.destination?.name || 'Calpe';
+
+    const contextResults = await ragService.search(poi.name, { limit: 3, collectionName });
+    const systemPrompt = embeddingService.buildSystemPrompt(language, {}, destinationConfig);
     const enhancedDescription = await embeddingService.generateChatCompletion([
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Geef een aantrekkelijke beschrijving (max 100 woorden) van ${poi.name} in Calpe. Categorie: ${poi.category}. Originele beschrijving: ${poi.description || 'Geen beschrijving'}` }
+      { role: 'user', content: `Geef een aantrekkelijke beschrijving (max 100 woorden) van ${poi.name} in ${destName}. Categorie: ${poi.category}. Originele beschrijving: ${poi.description || 'Geen beschrijving'}` }
     ]);
 
     res.json({
@@ -1847,9 +1881,11 @@ router.post('/directions', async (req, res) => {
 
     const destination = { name: poi.name, address: poi.address, latitude: poi.latitude, longitude: poi.longitude };
 
+    const { destinationConfig: dirDestConfig } = getDestinationFromRequest(req);
+    const dirDestName = dirDestConfig?.destination?.name || 'Calpe';
     const tips = await embeddingService.generateChatCompletion([
-      { role: 'system', content: embeddingService.buildSystemPrompt(language) },
-      { role: 'user', content: `Geef 2-3 korte tips voor ${mode === 'walking' ? 'wandelen' : 'rijden'} naar ${poi.name} in Calpe. Adres: ${poi.address || 'niet beschikbaar'}` }
+      { role: 'system', content: embeddingService.buildSystemPrompt(language, {}, dirDestConfig) },
+      { role: 'user', content: `Geef 2-3 korte tips voor ${mode === 'walking' ? 'wandelen' : 'rijden'} naar ${poi.name} in ${dirDestName}. Adres: ${poi.address || 'niet beschikbaar'}` }
     ]);
 
     res.json({
@@ -1883,6 +1919,9 @@ router.get('/daily-tip', async (req, res) => {
   try {
     const { language = 'nl', interests, excludeIds = '', userId } = req.query;
 
+    // Extract destination from request
+    const { destinationId, destinationConfig } = getDestinationFromRequest(req);
+
     // Parse excluded IDs (tips already shown this session)
     const excludedIdList = excludeIds ? excludeIds.split(',').filter(Boolean) : [];
 
@@ -1899,10 +1938,10 @@ router.get('/daily-tip', async (req, res) => {
       'Practical', 'Services'
     ];
 
-    // Calpe center coordinates (for 5km radius filter)
-    const CALPE_CENTER_LAT = 38.6447;
-    const CALPE_CENTER_LNG = 0.0445;
-    const MAX_DISTANCE_KM = 5;
+    // Destination center coordinates (for radius filter)
+    const CALPE_CENTER_LAT = destinationConfig?.destination?.coordinates?.lat || 38.6447;
+    const CALPE_CENTER_LNG = destinationConfig?.destination?.coordinates?.lng || 0.0445;
+    const MAX_DISTANCE_KM = destinationId === 2 ? 15 : 5; // Texel is larger than Calpe
 
     // User interests or rotate through allowed categories
     const userInterests = interests ? interests.split(',').filter(c => allowedCategories.includes(c)) : allowedCategories;
@@ -1943,6 +1982,7 @@ router.get('/daily-tip', async (req, res) => {
                (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance_km
         FROM POI
         WHERE is_active = 1
+          AND destination_id = ?
           AND latitude IS NOT NULL
           AND longitude IS NOT NULL
           AND (rating IS NULL OR rating >= 4.4)
@@ -1953,6 +1993,7 @@ router.get('/daily-tip', async (req, res) => {
       `, {
         replacements: [
           CALPE_CENTER_LAT, CALPE_CENTER_LNG, CALPE_CENTER_LAT,
+          destinationId,
           ...allowedCategories,
           MAX_DISTANCE_KM
         ],
@@ -1988,7 +2029,8 @@ router.get('/daily-tip', async (req, res) => {
     } catch (poiError) {
       logger.warn('Could not fetch POIs from database, falling back to search:', poiError.message);
       // Fallback to RAG search if database query fails
-      const poiSearchResults = await ragService.search(selectedInterest + ' Calpe', { limit: 20 });
+      const destNameFallback = destinationConfig?.destination?.name || 'Calpe';
+      const poiSearchResults = await ragService.search(selectedInterest + ' ' + destNameFallback, { limit: 20 });
       qualityPois = poiSearchResults.results.filter(poi => {
         const rating = parseFloat(poi.rating);
         const hasGoodRating = !rating || isNaN(rating) || rating >= 4.4;
@@ -2111,7 +2153,8 @@ router.get('/daily-tip', async (req, res) => {
     }
 
     const itemName = selectedItem.name || selectedItem.title || 'Unknown';
-    const itemDesc = selectedItem.description || 'Een geweldige plek in Calpe';
+    const destNameForTip = destinationConfig?.destination?.name || 'Calpe';
+    const itemDesc = selectedItem.description || `Een geweldige plek in ${destNameForTip}`;
     const ratingText = selectedItem.rating ? 'Beoordeling: ' + selectedItem.rating + ' sterren. ' : '';
 
     // Multi-language tip prompts - NO emojis or asterisks, clean text for TTS
@@ -2145,7 +2188,7 @@ router.get('/daily-tip', async (req, res) => {
     const tipPrompt = selectedItem.type === 'event' ? langPrompts.event : langPrompts.poi;
 
     let tipDescription = await embeddingService.generateChatCompletion([
-      { role: 'system', content: embeddingService.buildSystemPrompt(language) },
+      { role: 'system', content: embeddingService.buildSystemPrompt(language, {}, destinationConfig) },
       { role: 'user', content: tipPrompt }
     ]);
 

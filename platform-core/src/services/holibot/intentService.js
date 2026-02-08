@@ -13,6 +13,7 @@ import logger from '../../utils/logger.js';
 
 class IntentService {
   constructor() {
+    this._destinationId = 1; // Default to Calpe
     // Intent patterns with keywords and regex
     this.intentPatterns = {
       // Greetings
@@ -181,7 +182,8 @@ class IntentService {
    * @param {Array} conversationHistory - Previous messages for context
    * @returns {Object} Analysis result
    */
-  analyzeQuery(query, language = 'nl', conversationHistory = []) {
+  analyzeQuery(query, language = 'nl', conversationHistory = [], destinationId = 1) {
+    this._destinationId = destinationId;
     const normalizedQuery = query.toLowerCase().trim();
     const result = {
       originalQuery: query,
@@ -303,8 +305,12 @@ class IntentService {
       }
     }
 
-    // Extract location references (Calpe-specific)
-    const locationPatterns = ['calpe', 'calp', 'arenal', 'fossa', 'ifach', 'peñon', 'penon', 'puerto', 'haven', 'centro', 'centrum'];
+    // Extract location references (destination-specific)
+    const locationPatternsByDest = {
+      1: ['calpe', 'calp', 'arenal', 'fossa', 'ifach', 'peñon', 'penon', 'puerto', 'haven', 'centro', 'centrum'],
+      2: ['texel', 'den burg', 'de koog', 'oudeschild', 'den hoorn', 'de cocksdorp', 'oosterend', 'de waal', 'ecomare', 'teso', 'slufter', 'paal', 'wadden']
+    };
+    const locationPatterns = locationPatternsByDest[this._destinationId] || [...(locationPatternsByDest[1] || []), ...(locationPatternsByDest[2] || [])];
     for (const location of locationPatterns) {
       if (query.includes(location)) {
         entities.locationReferences.push(location);
@@ -368,7 +374,7 @@ class IntentService {
         directions: ['Wil je ook de openingstijden weten?', 'Zal ik alternatieven tonen?'],
         recommendation: ['Wil je meer opties zien?', 'Zal ik ook restaurants in de buurt tonen?'],
         opening_hours: ['Wil je weten hoe je er komt?', 'Zal ik je meer vertellen over deze plek?'],
-        greeting: ['Wat wil je vandaag ontdekken in Calpe?', 'Zoek je een restaurant, strand of activiteit?'],
+        greeting: [this._destinationId === 2 ? 'Wat wil je vandaag ontdekken op Texel?' : 'Wat wil je vandaag ontdekken in Calpe?', 'Zoek je een restaurant, strand of activiteit?'],
         events: ['Wil je meer details over een evenement?', 'Zal ik restaurants in de buurt tonen?'],
         general_search: ['Wil je meer weten over een specifieke plek?', 'Kan ik je ergens anders mee helpen?']
       },
@@ -377,7 +383,7 @@ class IntentService {
         directions: ['Want to know the opening hours too?', 'Shall I show alternatives?'],
         recommendation: ['Want to see more options?', 'Shall I show nearby restaurants?'],
         opening_hours: ['Want directions there?', 'Shall I tell you more about this place?'],
-        greeting: ['What would you like to discover in Calpe today?', 'Looking for a restaurant, beach or activity?'],
+        greeting: [this._destinationId === 2 ? 'What would you like to discover on Texel today?' : 'What would you like to discover in Calpe today?', 'Looking for a restaurant, beach or activity?'],
         events: ['Want more details about an event?', 'Shall I show nearby restaurants?'],
         general_search: ['Want to know more about a specific place?', 'Can I help you with anything else?']
       }

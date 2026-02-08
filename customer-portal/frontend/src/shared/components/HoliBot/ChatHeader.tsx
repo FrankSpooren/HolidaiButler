@@ -36,9 +36,9 @@ export function ChatHeader() {
         />
       </div>
 
-      {/* Title */}
+      {/* Title - destination-aware chatbot name */}
       <h2 id="holibot-title" className="holibot-header-title">
-        HoliBot
+        {destination.holibot?.name || 'HoliBot'}
       </h2>
 
       {/* Spacer to push buttons right */}

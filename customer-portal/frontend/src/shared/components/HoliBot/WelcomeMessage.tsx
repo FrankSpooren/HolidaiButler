@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useDestination } from '../../contexts/DestinationContext';
 import holibotAvatar from '../../../assets/images/hb-merkicoon.png';
 import './WelcomeMessage.css';
 
 /**
  * WelcomeMessage - Sequential animated greeting
  * Multi-language support: nl, en, de, es, sv, pl
+ * Destination-aware: uses holibot.welcomeMessages from config
  */
 
 interface WelcomeMessageProps {
@@ -13,7 +15,8 @@ interface WelcomeMessageProps {
   skipAnimation?: boolean; // Skip animation after reset
 }
 
-const welcomeMessages: Record<string, string[]> = {
+// Fallback messages if not in destination config
+const defaultWelcomeMessages: Record<string, string[]> = {
   nl: [
     'Hola! Ik ben HoliBot, je persoonlijke Calpe-Assistent.',
     'Waar kan ik je bij helpen?',
@@ -47,7 +50,9 @@ const welcomeMessages: Record<string, string[]> = {
 };
 
 export function WelcomeMessage({ language = 'nl', onComplete, skipAnimation = false }: WelcomeMessageProps) {
-  const messages = welcomeMessages[language] || welcomeMessages.nl;
+  const destination = useDestination();
+  const destMessages = destination.holibot?.welcomeMessages;
+  const messages = destMessages?.[language] || destMessages?.['nl'] || defaultWelcomeMessages[language] || defaultWelcomeMessages.nl;
   const [visibleMessages, setVisibleMessages] = useState<number>(skipAnimation ? 3 : 0);
 
   useEffect(() => {
@@ -79,7 +84,7 @@ export function WelcomeMessage({ language = 'nl', onComplete, skipAnimation = fa
           <div className="holibot-welcome-avatar">
             <img
               src={holibotAvatar}
-              alt="HoliBot"
+              alt={destination.holibot?.name || 'HoliBot'}
               className="holibot-welcome-avatar-img"
             />
           </div>
