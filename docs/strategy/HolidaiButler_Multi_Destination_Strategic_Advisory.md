@@ -3,9 +3,9 @@
 
 **Datum**: 5 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 2.6
+**Versie**: 2.7
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 4b Content Vergelijking COMPLEET - 2.515 POIs vergeleken. 2.481 approved (98,6%), 34 manual review (1,4%). NEW scoort +2,17 punten boven OLD. Wacht op Frank's review van 34 POIs.
+**Status**: FASE 5 Content Apply & Translation COMPLEET - 2.515 POIs applied naar enriched_detail_description_en. 6.844 vertalingen (ES/DE/NL) via Mistral Medium. EUR 18,22. Coverage: Calpe 93,8% EN / 96,4% NL/ES/DE. Texel 75,8% EN / 96,1% NL/DE.
 
 ---
 
@@ -19,10 +19,11 @@
 | **Fase 3b: LLM Content Enrichment** | ✅ PILOT COMPLEET | 05-02-2026 | 05-02-2026 | Claude Code |
 | **Fase 4: Full LLM Content Run** | ✅ COMPLEET | 05-02-2026 | 05-02-2026 | Claude Code |
 | **Fase 4b: Content Vergelijking** | ✅ COMPLEET | 06-02-2026 | 06-02-2026 | Claude Code |
-| **Fase 5: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
-| **Fase 6: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
+| **Fase 5: Content Apply & Translation** | ✅ COMPLEET | 07-02-2026 | 08-02-2026 | Claude Code |
+| **Fase 6: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
+| **Fase 7: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 6 februari 2026 - Fase 4b Content Vergelijking COMPLEET (2.481 approved, 34 manual review, EUR 6,02, NEW +2,17 punten boven OLD)
+**Laatste update**: 8 februari 2026 - Fase 5 Content Apply & Translation COMPLEET (2.515 POIs applied, 6.844 vertalingen, EUR 18,22, 0 errors)
 
 ---
 
@@ -1262,26 +1263,89 @@ export const getEmailTemplate = (templateName, destinationId) => {
 - `fase4b_content_comparison.py` — vergelijkingsscript
 - `fase4b_checkpoint.json` — checkpoint met alle resultaten
 
-### Fase 5: Alicante Preparation
+### Fase 5: Content Apply & Translation — COMPLEET
 
 | Taak | Status | Datum | Uitvoerder | Notities |
 |------|--------|-------|------------|----------|
-| 5.1 Alicante config | Niet gestart | - | - | - |
-| 5.2 POI discovery via Apify | Niet gestart | - | - | - |
-| 5.3 Subdomain setup | Niet gestart | - | - | - |
+| 5.1 Database backup | ✅ Compleet | 07-02-2026 | Claude Code | POI 30MB + staging 11MB |
+| 5.2 Schema voorbereiding | ✅ Compleet | 07-02-2026 | Claude Code | applied_at kolom + vertaalkolommen bestonden al |
+| 5.3 Manual review approve | ✅ Compleet | 07-02-2026 | Claude Code | 34 POIs → approved (Frank akkoord) |
+| 5.4 Content apply | ✅ Compleet | 07-02-2026 | Claude Code | 2.515 POIs naar enriched_detail_description_en |
+| 5.5 Kolom inventarisatie | ✅ Compleet | 07-02-2026 | Claude Code | 24 kolommen gedocumenteerd, PL/SV kandidaten voor opschonen |
+| 5.6 Vertaling pipeline | ✅ Compleet | 07-08/02/2026 | Claude Code | 6.844 vertalingen, EUR 18,22, 0 errors, 9,4 uur |
+| 5.7 Kwaliteitsvalidatie | ✅ Compleet | 08-02-2026 | Claude Code | Markdown gestript (840 POIs), voorzetsels gefixed (95 POIs) |
 
-**Fase 5 Status**: WACHT OP GOEDKEURING
+**Fase 5 Status**: ✅ COMPLEET (08 februari 2026)
 
-### Fase 6: Stabilization & Documentation
+**Fase 5 Kernresultaten:**
+
+| Resultaat | Waarde |
+|-----------|--------|
+| **POIs applied (EN)** | 2.515 |
+| **Vertalingen** | 6.844 (0 errors) |
+| **Kosten vertaling** | EUR 18,22 (onder budget EUR 25-30) |
+| **Runtime** | 9,4 uur |
+
+**Coverage na Fase 5:**
+
+| Destination | Totaal | EN | NL | ES | DE |
+|-------------|--------|----|----|----|----|
+| Calpe (1.538) | 100% | 1.442 (93,8%) | 1.483 (96,4%) | 1.483 (96,4%) | 1.483 (96,4%) |
+| Texel (1.660) | 100% | 1.259 (75,8%) | 1.596 (96,1%) | N/A | 1.596 (96,1%) |
+
+**Vertalingen per route:**
+
+| Route | POIs | Status |
+|-------|------|--------|
+| Calpe EN → ES | 1.442 | ✅ |
+| Calpe EN → DE | 1.442 | ✅ |
+| Calpe EN → NL | 1.442 | ✅ |
+| Texel EN → NL | 1.259 | ✅ |
+| Texel EN → DE | 1.259 | ✅ |
+
+**Post-processing fixes:**
+- Texel NL: 25 "in Texel" → "op Texel"
+- Texel DE: 70 "in Texel" → "auf Texel"
+- NL markdown: 416 POIs ** gestript
+- DE markdown: 424 POIs ** gestript
+
+**Kosten Fase 5:**
+| Component | Waarde |
+|-----------|--------|
+| Input tokens | 2.597.215 |
+| Output tokens | 2.170.373 |
+| **Totaal kosten** | **EUR 18,22** |
+
+**Deliverables op Hetzner (/root/):**
+- `fase5_apply_report.md` — apply resultaten
+- `fase5_column_inventory.md` — kolom inventarisatie
+- `fase5_translation_report.md` — vertaalrapport
+- `fase5_translation_pipeline.py` — vertaalscript
+- `fase5_translation_checkpoint.json` — checkpoint
+- `fase5_translation_quality_issues.json` — kwaliteitsissues
+- `fase5_translation_exceptions.json` — exceptions (leeg)
+- `fase5_translation_output.log` — volledige log
+
+### Fase 6: Alicante Preparation
 
 | Taak | Status | Datum | Uitvoerder | Notities |
 |------|--------|-------|------------|----------|
-| 6.1 Multi-destination E2E tests | Niet gestart | - | - | - |
-| 6.2 Documentatie update | Niet gestart | - | - | - |
-| 6.3 Partner onboarding flow | Niet gestart | - | - | - |
-| 6.4 Performance monitoring | Niet gestart | - | - | - |
+| 6.1 Alicante config | Niet gestart | - | - | - |
+| 6.2 POI discovery via Apify | Niet gestart | - | - | - |
+| 6.3 Subdomain setup | Niet gestart | - | - | - |
 
-**Fase 6 Status**: WACHT OP FASE 5
+**Fase 6 Status**: WACHT OP GOEDKEURING
+
+### Fase 7: Stabilization & Documentation
+
+| Taak | Status | Datum | Uitvoerder | Notities |
+|------|--------|-------|------------|----------|
+| 7.1 Multi-destination E2E tests | Niet gestart | - | - | - |
+| 7.2 Documentatie update | Niet gestart | - | - | - |
+| 7.3 Partner onboarding flow | Niet gestart | - | - | - |
+| 7.4 Performance monitoring | Niet gestart | - | - | - |
+
+**Fase 7 Status**: WACHT OP FASE 6
 
 ---
 
@@ -1600,6 +1664,25 @@ export const getEmailTemplate = (templateName, destinationId) => {
 2. Na review: approved POIs doorvoeren naar productie POI tabel (UPDATE POI SET enriched_detail_description = staging.detail_description_en)
 3. Overweeg drempelwaarde MANUAL_REVIEW te verlagen naar 0,5 bij toekomstige runs (huidige 1,0 is conservatief)
 
+### Fase 5 Lessons Learned - Content Apply & Translation (07-08/02/2026)
+
+**Content Apply:**
+- **Fase 2 bronnen hebben geen EN content** — VVV Texel, POI Websites, Calpe.es bevatten alleen NL content in `detail_description_nl`. De kolom `generated_description_en` bestaat niet in staging. Alleen Fase 4 mistral_medium_fase4 content had EN content
+- **enriched_detail_description_en was bijna leeg** — Calpe 0 records, Texel 186 records. Alle 2.515 Fase 4 POIs konden veilig geschreven worden zonder overschrijfrisico
+- **Vertaalkolommen bestonden al** — `_es`, `_de`, `_nl`, `_pl`, `_sv` waren al aanwezig. Alleen `applied_at` moest toegevoegd worden aan staging
+
+**Vertaling Pipeline:**
+- **Kosten 39% onder budget** — EUR 18,22 vs EUR 25-30 budget. Gemiddeld EUR 0,0027 per vertaling (goedkoper dan generatie: EUR 0,0035)
+- **0 API errors in 6.844 calls** — Mistral Medium API extreem betrouwbaar voor vertaalbatches
+- **Markdown lekkage in vertalingen** — 424 DE + 416 NL vertalingen bevatten `**bold**` markers ondanks "no markdown" instructie in prompt. Post-processing regex stripping was noodzakelijk
+- **Texel voorzetselfout in 95 vertalingen** — 25 NL "in Texel" (moet "op Texel") + 70 DE "in Texel" (moet "auf Texel"). SQL REPLACE fix effectief maar 6 vals-positieven (POI-namen als "Texelhuis")
+- **Woordenaantal verschilt per taal** — ES vertalingen ~30% langer dan EN (romance taal expansie). DE vertalingen ~15% langer. NL vergelijkbaar met EN. Word count validation flag is informatief, geen actie vereist
+
+**Operationeel:**
+- **9,4 uur runtime voor 6.844 vertalingen** — ~12 vertalingen/minuut bij 5 req/sec. Checkpoint elke 50 POIs bewaart voortgang
+- **Python output buffering** — Log was leeg tijdens run. `PYTHONUNBUFFERED=1` of `python3 -u` nodig voor real-time monitoring
+- **mysqldump --no-defaults vereist** — Hetzner my.cnf bevat `database=` setting die mysqldump breekt. Altijd --no-defaults gebruiken
+
 ---
 
 ## Deel 14: Risico Register
@@ -1619,6 +1702,9 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | Scoring bias richting NEW content | Laag | Hoog | MANUAL_REVIEW drempel behouden op 1,0 | Gemitigeerd — 34 POIs voor handmatige review |
 | 34 MANUAL_REVIEW POIs niet gereviewed | Medium | Medium | Frank moet reviewen voor apply naar productie | Open — wacht op eigenaar review |
 | OLD kolom misidentificatie | Hoog | Laag | Altijd INFORMATION_SCHEMA + fill rate check | Gemitigeerd — ontdekt en gecorrigeerd tijdens Fase 4b |
+| Markdown lekkage in vertalingen | Laag | Hoog | Post-processing regex strip + prompt instructie | Gemitigeerd — 840 POIs gefixed via SQL REPLACE |
+| Texel voorzetselfout in vertalingen | Laag | Medium | SQL REPLACE post-processing | Gemitigeerd — 95 POIs gefixed, 6 vals-positieven (POI-namen) |
+| PL/SV kolommen ongebruikt na Fase 5 | Laag | Laag | Inventariseren, na 30 dagen evalueren | Open — kandidaten voor opschonen |
 
 ---
 
@@ -1654,6 +1740,12 @@ export const getEmailTemplate = (templateName, destinationId) => {
 | 06-02-2026 | 9-criteria gewogen scoring (Language 30%, Structure 25%, Content 45%) | Content-zwaarste weging: concreetheid (20%) + lokale verankering (15%) + currency (10%) bepalen meeste waarde voor toeristen | Claude Code |
 | 06-02-2026 | enriched_detail_description als OLD kolom (niet _en) | Fill rate verificatie toonde _en variant 0% gevuld. enriched_detail_description bevat 1.536 records. Foutieve pre-filter teruggedraaid | Claude Code |
 | 06-02-2026 | Checkpoint systeem met nohup voor lange runs | SSH connectie viel uit bij 1.300 POIs. nohup + JSON checkpoint behoudt voortgang en voorkomt dubbele LLM calls | Claude Code |
+| 07-02-2026 | 34 manual review POIs → USE_NEW | Frank akkoord: alle 34 review_required POIs approved. Geen individuele review nodig | Owner |
+| 07-02-2026 | Content apply naar enriched_detail_description_en | Nieuwe kolom (niet overwrite oude enriched_detail_description). 2.515 Fase 4 POIs, Fase 2 bronnen geen EN content | Claude Code |
+| 07-02-2026 | Fase 2 bronnen niet toepasbaar op EN | VVV Texel, POI Websites, Calpe.es bevatten alleen NL content. Geen EN in staging. Blijven pending | Claude Code |
+| 07-02-2026 | Vertalingen overschrijven OLD translations | Bestaande NL/DE/ES translations waren van OLD content. NEW content is beter (+2,17 punten), vertalingen moeten ook nieuw | Claude Code |
+| 07-02-2026 | Mistral Medium voor vertalingen (temperature 0.2) | Lagere temperature dan generatie (0.1 vs 0.2) voor consistentere vertalingen. EUR 0,0027/vertaling | Claude Code |
+| 08-02-2026 | Post-processing markdown strip + voorzetsels fix | 840 markdown fixes + 95 voorzetsel fixes via SQL REPLACE. Preventief i.p.v. per-POI correctie | Claude Code |
 
 ---
 
@@ -1679,8 +1771,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 6 februari 2026 - Fase 4b Content Vergelijking COMPLEET*
-*Volgende review: Frank reviewt 34 MANUAL_REVIEW POIs, daarna apply approved content naar productie POI tabel*
+*Laatst bijgewerkt: 8 februari 2026 - Fase 5 Content Apply & Translation COMPLEET*
+*Volgende review: Frontend verifiëren dat vertalingen correct renderen. Fase 6 Alicante voorbereiding wanneer eigenaar gereed.*
 
 ---
 
@@ -1688,6 +1780,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **2.7** | **08-02-2026** | **FASE 5 CONTENT APPLY & TRANSLATION: 2.515 POIs applied naar enriched_detail_description_en. 34 manual review → approved (Frank akkoord). 6.844 vertalingen via Mistral Medium (Calpe: EN→ES/DE/NL, Texel: EN→NL/DE). EUR 18,22 (39% onder budget). 0 errors, 9,4 uur runtime. Post-processing: 840 markdown fixes, 95 voorzetsel fixes (op/auf Texel). Coverage: Calpe 93,8% EN / 96,4% NL/ES/DE, Texel 75,8% EN / 96,1% NL/DE. Kolom inventarisatie: PL/SV kandidaten voor opschonen. Fasen hernummerd: Content Apply→Fase 5, Alicante→Fase 6, Stabilization→Fase 7.** |
 | **2.6** | **06-02-2026** | **FASE 4b CONTENT VERGELIJKING: 2.515 POIs vergeleken (1.442 Calpe via LLM + 1.073 Texel auto-approved). 9-criteria gewogen scoring (Grammar, British EN, Tone, AIDA, Wordcount, Formatting, Concreteness, Local Anchoring, Currency). Resultaat: 2.481 approved (98,6%), 34 manual review (1,4%), 0 keep old (0%). NEW scoort +2,17 punten boven OLD (9,96 vs 7,79). Grootste verbeteringen: Concreetheid +4,38, Lokale Verankering +3,19, British English +1,46. Kosten EUR 6,02 (1,9M input + 339K output tokens). MANUAL_REVIEW concentratie: Active (5,7%) en Culture & History (9,5%). Deliverables: fase4b_comparison_summary.md, fase4b_review_required.json (34 POIs), fase4b_category_analysis.md, fase4b_exceptions.json op Hetzner /root/. Totale pipeline Fase 4+4b: EUR 14,95.** |
 | **2.5** | **06-02-2026** | **FASE 4 FULL LLM CONTENT RUN: 2.515 POIs (1.442 Calpe + 1.073 Texel) gegenereerd via Mistral Medium Latest. Kosten EUR 8,93 (89,3% van EUR 10 budget). 100% succespercentage, 0 failures. Kwaliteitsverbeteringen: markdown 0% (was 17%), forbidden openings 0% (was 4%), British English 97,6%. Gem. woordenaantal 135 (target 115-125, model convergeert structureel rond 135). Opening diversiteit issue: 57% begint met "A", "The scent of" 162x. Slechts 2x "in Texel" fout (0,2%). 2.768.892 tokens totaal, 1.276 quality retries (50,7%). 3.049 records in staging (2.515 Fase 4 + 534 eerder). Deliverables: fase4_full_output.json, fase4_generation_report.md, fase4_quality_analysis.json, fase4_quality_sample.md, fase4_quality_flags.json op Hetzner /root/. Fasen hernummerd: Alicante→Fase 5, Stabilization→Fase 6.** |
 | 2.4 | 05-02-2026 | FASE 3 LLM CONTENT ENRICHMENT PILOT: 100 POIs (50 Texel + 50 Calpe) via Mistral Medium. Kosten EUR 0.24 (4.7% budget). NEW scoort beter op ALLE 9 criteria (grammatica, spelling, ToV, AIDA, herhaling, concreetheid, formatting, naam, woordenaantal). Advies: Optie 3 Hybride — Texel volledige vervanging (OLD=NL, markdown, 346w avg), Calpe hybride per categorie. Prompt optimalisatie nodig (woordenaantal 132→120, markdown fix). Volledige run geschat EUR 6.20 voor ~2.637 POIs. Deliverables: fase3_pilot_output.json, fase3_quality_analysis.md, fase3_replacement_advice.md op Hetzner /root/. |
