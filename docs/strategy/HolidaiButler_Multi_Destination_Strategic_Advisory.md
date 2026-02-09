@@ -3,9 +3,9 @@
 
 **Datum**: 5 februari 2026
 **Auteur**: Claude (Strategic Analysis)
-**Versie**: 3.0
+**Versie**: 3.1
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 6 AI Chatbot Texel "Tessa" COMPLEET - Multi-destination HoliBot met eigen ChromaDB collection per destination. 94.980 vectoren in texel_pois (93.241 QnA + 1.739 POI). 14 bestanden gewijzigd. Destination-aware backend + frontend. Geen Calpe regressie.
+**Status**: FASE 6b Quick Actions Fix COMPLEET - 4 gebroken quick action endpoints gefixed voor Texel destination support. daily-tip Haversine + destination_id, directions POI lookup met destination filter, suggestions destination-aware greetings/tips, trending JOIN met POI tabel. Texel-specifieke tips (fietstocht, zilte lucht, woeste golven). Geen Calpe regressie.
 
 ---
 
@@ -23,10 +23,11 @@
 | **Fase 5b: Frontend Content Verificatie** | ✅ COMPLEET | 08-02-2026 | 08-02-2026 | Claude Code |
 | **Fase 5c: Texel Image Fix** | ✅ COMPLEET | 08-02-2026 | 08-02-2026 | Claude Code |
 | **Fase 6: AI Chatbot Texel "Tessa"** | ✅ COMPLEET | 08-02-2026 | 08-02-2026 | Claude Code |
+| **Fase 6b: Quick Actions Destination Fix** | ✅ COMPLEET | 09-02-2026 | 09-02-2026 | Claude Code |
 | **Fase 7: Alicante Preparation** | 🟡 GEREED | - | - | Claude Code |
 | **Fase 8: Stabilization** | ⏸️ WACHT | - | - | Claude Code |
 
-**Laatste update**: 8 februari 2026 - Fase 6 AI Chatbot Texel "Tessa" COMPLEET. Multi-destination HoliBot: 94.980 vectoren in texel_pois ChromaDB collection, 14 bestanden gewijzigd (8 backend + 5 frontend + 1 config), 3 talen (NL/EN/DE). Geen Calpe regressie.
+**Laatste update**: 9 februari 2026 - Fase 6b Quick Actions Fix COMPLEET. 4 gebroken quick action endpoints (daily-tip, directions, suggestions, trending) gefixed voor Texel destination support. Haversine formula + destination_id filter, destination-aware greetings/tips/season highlights, trending via JOIN met POI tabel. Texel-specifieke tips per eigenaar feedback. Geen Calpe regressie.
 
 ---
 
@@ -1841,6 +1842,30 @@ intentService.analyzeQuery(query, lang, history, destinationId)  ← location pa
 - **Altijd volledige filesystem inventarisatie voordat conclusies worden getrokken** — initieel werd geconcludeerd dat Texel images niet bestonden, terwijl 4,1 GB aan bestanden aanwezig was in een `texel/` subdirectory
 - **Koppeling tussen systemen verifiëren** — bestanden op disk, database records, Apache config en backend code moeten allemaal op elkaar aansluiten. Een ontbrekende schakel maakt alles onbruikbaar
 
+### Fase 6 Lessons Learned - AI Chatbot Texel "Tessa" (08/02/2026)
+
+**Vectorisatie:**
+- **ChromaDB Cloud als vector store** — 94.980 documenten (93.241 QnA + 1.739 POI) in `texel_pois` collection. Kosten ~EUR 19. Mistral-embed (1024 dims) voor embeddings, mistral-small-latest voor LLM
+- **Batch processing met checkpoints** — Python script met nohup + checkpoint JSON. Bij 93K+ records is resilience cruciaal. 0 errors dankzij retry logica per batch
+- **Separate collection per destination** — `calpe_pois` vs `texel_pois`. Clean scheiding, geen cross-destination leakage in RAG resultaten
+
+**Multi-Destination Chatbot Pattern:**
+- **Config-driven persona** — `destinationConfig.holibot` bevat name, welcomeMessages, systemPromptAdditions, chromaCollection per destination. Nieuwe destination = alleen config toevoegen
+- **`getDestinationFromRequest(req)`** — Centrale helper die X-Destination-ID header + query param + body extracteert. Eenmaal gedefinieerd, overal hergebruikt
+- **Frontend destination-aware via build config** — `VITE_DESTINATION_ID=texel` in build, vite.config.ts laadt juiste config, `__DESTINATION_CONFIG__` global in bundle
+
+### Fase 6b Lessons Learned - Quick Actions Destination Fix (09/02/2026)
+
+**Quick Actions als "vergeten" endpoints:**
+- **Core chat werkte, quick actions niet** — Chat endpoint (RAG) was destination-aware, maar 4 quick action endpoints (daily-tip, directions, suggestions, trending) gebruikten nog hardcoded Calpe logica. Elk endpoint apart testen na multi-destination refactor
+- **`calpe_distance` kolom is destination-specifiek** — Event query gebruikte hardcoded `calpe_distance` kolom i.p.v. Haversine formula. Haversine met `destination_id` filter is universeel en werkt voor elke destination
+- **`holibot_poi_clicks` mist `destination_id`** — Trending endpoint kon niet direct filteren. Oplossing: JOIN met POI tabel voor destination filtering
+
+**Destination-aware content:**
+- **Preposities per destination** — "op Texel" (NL), "on Texel" (EN), "auf Texel" (DE) vs "in Calpe". Vereist taal+destination matrix in alle user-facing teksten
+- **Config-driven categories** — `quickActionCategories.allowed` in destination config. Texel gebruikt NL categorienamen (Actief, Eten & Drinken), Calpe EN (Beaches & Nature, Food & Drinks). Dynamic IN-clause i.p.v. hardcoded 7 placeholders
+- **Eigenaar feedback cruciaal** — Texel-specifieke tips moesten worden gecorrigeerd: "maakt een fietstocht" (niet "neemt"), zomer 20+ graden + zilte lucht, winter = woeste golven spectacle
+
 ---
 
 ## Deel 14: Risico Register
@@ -1917,6 +1942,10 @@ intentService.analyzeQuery(query, lang, history, destinationId)  ← location pa
 | 08-02-2026 | Linker script i.p.v. re-download | Texel images bestaan al op disk (4,1 GB). Koppelen via imageurls records i.p.v. opnieuw downloaden bespaart tijd en bandbreedte | Claude Code |
 | 08-02-2026 | Unified storage path voor alle vhosts | Alle texelmaps.nl vhosts wijzen naar `/var/www/.../storage/poi-images` (zelfde als holidaibutler.com). POI IDs zijn uniek, geen conflict tussen destinations | Claude Code |
 | 08-02-2026 | Texel pad-patroon behouden (google_placeid) | Bestaande structuur `/poi-images/texel/{google_placeid}/image_N.jpg` behouden. getBestUrl() is pad-agnostisch, werkt met elk local_path formaat | Claude Code |
+| 09-02-2026 | Haversine i.p.v. calpe_distance voor events | calpe_distance kolom is destination-specifiek. Haversine formula met destination center coords is universeel | Claude Code |
+| 09-02-2026 | quickActionCategories in destination config | Categories per destination (NL namen Texel, EN namen Calpe) i.p.v. hardcoded array. Dynamic IN-clause past zich aan | Claude Code |
+| 09-02-2026 | Trending via JOIN met POI tabel | holibot_poi_clicks heeft geen destination_id kolom. JOIN met POI tabel voor destination filtering | Claude Code |
+| 09-02-2026 | Texel contextual tips per eigenaar specificatie | Fietstocht ("maakt" niet "neemt"), zomer zilte lucht+zon, voor/najaar winddicht, winter woeste golven spectakel | Owner |
 
 ---
 
@@ -1942,8 +1971,8 @@ Zie: `docs/strategy/` voor complete documentatie.
 **Einde Adviesrapport**
 
 *Dit document is een levend document dat wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 8 februari 2026 - Fase 6 AI Chatbot Texel "Tessa" COMPLEET*
-*Volgende review: Fase 7 Alicante voorbereiding wanneer eigenaar gereed.*
+*Laatst bijgewerkt: 9 februari 2026 - Fase 6b Quick Actions Destination Fix COMPLEET*
+*Volgende review: Fase 7 Reviews Integratie of Alicante voorbereiding wanneer eigenaar gereed.*
 
 ---
 
@@ -1951,6 +1980,7 @@ Zie: `docs/strategy/` voor complete documentatie.
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.1** | **09-02-2026** | **FASE 6b QUICK ACTIONS DESTINATION FIX: 4 gebroken quick action endpoints gefixed voor Texel. daily-tip: Haversine formula + destination_id filter in event query vervangt calpe_distance, dynamic allowedCategories uit destinationConfig.holibot.quickActionCategories. directions: POI lookup met destination_id filter + fallback, preposition fix ("op Texel" vs "in Calpe"). suggestions: destinationId/destinationConfig doorgegeven aan suggestionService, destination-aware greetings/tips/season highlights. trending: JOIN met POI tabel voor destination filtering (holibot_poi_clicks mist destination_id), cache per destination. suggestionService.js: getTimeGreeting/getSeasonHighlight/getContextualTips met destName parameter, Texel-specifieke tips per eigenaar feedback (fietstocht, zilte lucht, woeste golven). Config: quickActionCategories toegevoegd aan texel.config.js en calpe.config.js. 4 bestanden gewijzigd. Verificatie: alle 4 endpoints correct voor Texel, Calpe geen regressie. Git commit 24aa6d9.** |
 | **3.0** | **08-02-2026** | **FASE 6 AI CHATBOT TEXEL "TESSA": Multi-destination HoliBot geimplementeerd. Vectorisatie: 94.980 documenten in texel_pois ChromaDB Cloud collection (93.241 QnA + 1.739 POI, EUR 19, 0 errors). Backend: 8 bestanden — chromaService multi-collection support, embeddingService destination system prompts, ragService collection+config threading, conversationService destination_id tracking, intentService Texel location patterns, holibot.js getDestinationFromRequest() helper voor alle endpoints, poiSyncService+qaSyncService destination filtering. Frontend: 5 bestanden — vite.config.ts holibot config per destination (name+welcomeMessages), DestinationContext.tsx interface, WelcomeMessage.tsx+ChatHeader.tsx+ChatMessage.tsx destination-aware. Config: getActiveDestinations() retourneert [calpe, texel]. Verificatie: Texel chat NL/EN/DE retourneert correcte Texel-specifieke antwoorden, Calpe geen regressie, session destination_id correct opgeslagen. Git commit 66b37ed, deployed via dev→test→main.** |
 | **2.9** | **08-02-2026** | **FASE 5c TEXEL IMAGE FIX: Texel POI images op disk (4,1 GB, 1.700 dirs, 11.947 files) waren niet gekoppeld aan backend — 0 imageurls records. Python linker script: 11.506 records aangemaakt voor 1.606 POIs (mapping google_placeid→poi_id). Apache configs gefixed: texelmaps.nl Alias naar correcte directory, dev/test configs aangevuld met /poi-images Alias + ProxyPass exclusion + SPA RewriteCond. Verificatie: API retourneert lokale URLs, Apache serveert HTTP 200 met CORS/caching headers, Calpe geen regressie. Deliverables: texel_image_linker.py + checkpoint + log op Hetzner.** |
 | **2.8** | **08-02-2026** | **FASE 5b FRONTEND CONTENT VERIFICATIE: Kritieke kolom mismatch gevonden — Fase 5 schreef naar enriched_detail_description_en maar backend leest enriched_detail_description (base, zonder _en). Texel EN toonde Nederlandse content + markdown. Database-only fix: COPY _en→base (2.701 POIs) + STRIP markdown (414 POIs). Geen code wijzigingen, geen deployment. API verificatie: EN/NL/DE/ES correct voor Calpe + Texel. Backup gemaakt (3.079 records JSON). 337 Texel Accommodation POIs zonder EN (is_hidden_category, minimale impact).** |
