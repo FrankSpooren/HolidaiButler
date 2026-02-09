@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.6.0
-> **Laatst bijgewerkt**: 8 februari 2026 (23:00 UTC)
+> **Versie**: 3.7.0
+> **Laatst bijgewerkt**: 9 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -376,6 +376,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | `src/services/holibot/ragService.js` | RAG met collection + config |
 | `src/services/holibot/conversationService.js` | destination_id in sessie |
 | `src/services/holibot/intentService.js` | Texel location patterns |
+| `src/services/holibot/suggestionService.js` | Destination-aware tips, trending, greetings |
 | `src/services/agents/holibotSync/poiSyncService.js` | Sync per destination |
 | `src/services/agents/holibotSync/qaSyncService.js` | QnA/QA dual-table sync |
 
@@ -405,6 +406,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 5b** | Frontend Content Verificatie | ✅ COMPLEET | 08-02-2026 |
 | **Fase 5c** | Texel Image Fix | ✅ COMPLEET | 08-02-2026 |
 | **Fase 6** | AI Chatbot Texel "Tessa" | ✅ COMPLEET | 08-02-2026 |
+| **Fase 6b** | Quick Actions Destination Fix | ✅ COMPLEET | 09-02-2026 |
 | **Fase 7** | Alicante Preparation | ⏸️ WACHT | - |
 | **Fase 8** | Stabilization | ⏸️ WACHT | - |
 
@@ -434,6 +436,18 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | API test Texel | ✅ Correct (Texel stranden) |
 | API test Calpe regressie | ✅ Geen regressie |
 | Session destination_id | ✅ Correct opgeslagen |
+
+### Fase 6b Resultaten (Quick Actions Destination Fix)
+| Endpoint | Probleem | Fix | Status |
+|----------|----------|-----|--------|
+| GET /daily-tip | Event query gebruikte `calpe_distance`, geen `destination_id` filter | Haversine formula + `destination_id` filter, dynamic `allowedCategories` uit config | ✅ |
+| POST /directions | POI lookup zonder `destination_id` filter | `destination_id` filter met fallback voor backward compat | ✅ |
+| GET /suggestions | Hardcoded "Calpe" in seizoen/tijd teksten | Destination-aware greetings, tips, season highlights via `destName` parameter | ✅ |
+| GET /trending | Geen destination filter in trending SQL | JOIN met POI tabel voor destination filtering, cache per destination | ✅ |
+
+**Bestanden gewijzigd (4)**: calpe.config.js, texel.config.js (quickActionCategories), suggestionService.js (destination-aware), holibot.js (4 endpoints)
+**Texel-specifieke tips**: "op Texel" (NL), fietstocht, zilte lucht/zon, woeste golven/prachtige luchten
+**Calpe regressie**: ✅ Geen regressie
 
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
@@ -600,6 +614,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.7.0** | **2026-02-09** | **Fase 6b Quick Actions Destination Fix COMPLEET: 4 gebroken quick action endpoints gefixed voor Texel. daily-tip: Haversine formula + destination_id filter (geen Calpe events meer voor Texel). directions: POI lookup met destination_id. suggestions: destination-aware greetings/tips/season highlights. trending: JOIN met POI tabel voor destination filter. Texel-specifieke tips: fietstocht, zilte lucht, woeste golven. Config: quickActionCategories per destination. Geen Calpe regressie.** |
 | **3.6.0** | **2026-02-08** | **Fase 6 AI Chatbot Texel "Tessa" COMPLEET: Multi-destination HoliBot met eigen ChromaDB collection per destination. Texel chatbot "Tessa" met 94.980 vectoren (93.241 QnA + 1.739 POI). 14 bestanden gewijzigd (8 backend + 5 frontend + 1 config). Destination-aware: chromaService multi-collection, ragService, intentService Texel patterns, embeddingService system prompts, conversationService destination_id. Frontend: welkomstberichten, chatnaam, avatar per destination. Geen Calpe regressie. Kosten: ~EUR 19 vectorisatie. Strategic Advisory v3.0.** |
 | **3.5.0** | **2026-02-08** | **Fase 5c Texel Image Fix COMPLEET: 11.506 imageurls records aangemaakt voor 1.606 Texel POIs. Images bestonden op disk (4,1 GB) maar waren niet gekoppeld aan database. Apache configs gefixed (texelmaps.nl + dev + test). POI Image Pipeline sectie toegevoegd. Strategic Advisory v2.9.** |
 | **3.4.0** | **2026-02-08** | **Fase 5/5b COMPLEET: Content Apply & Translation afgerond (6.844 vertalingen, EUR 18,22). Fase 5b: kolom mismatch gevonden (enriched_detail_description_en vs base), database-only fix (2.701 POIs _en→base, 414 markdown strip). POI tabel kolommen geactualiseerd: base=EN (geen _en suffix). Strategic Advisory v2.8.** |
