@@ -115,8 +115,8 @@ const SEASONAL_SUGGESTIONS = {
 class SuggestionService {
   constructor() {
     this.isInitialized = false;
-    this.trendingCache = null;
-    this.trendingCacheTime = null;
+    this.trendingCache = {};
+    this.trendingCacheTime = {};
     this.CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
   }
 
@@ -174,7 +174,7 @@ class SuggestionService {
    * @param {string} language - Language code
    * @returns {Object} Time-based suggestions
    */
-  getTimeSuggestions(language = 'nl') {
+  getTimeSuggestions(language = 'nl', destName = 'Calpe') {
     const period = this.getTimePeriod();
     const suggestions = TIME_BASED_SUGGESTIONS[period];
 
@@ -182,14 +182,19 @@ class SuggestionService {
       period,
       categories: suggestions.categories,
       activities: suggestions.activities[language] || suggestions.activities.en,
-      greeting: this.getTimeGreeting(period, language)
+      greeting: this.getTimeGreeting(period, language, destName)
     };
   }
 
   /**
    * Get time-appropriate greeting
    */
-  getTimeGreeting(period, language) {
+  getTimeGreeting(period, language, destName = 'Calpe') {
+    // Preposition rules: "op Texel" (NL), "on Texel" (EN), "auf Texel" (DE)
+    const nlPrep = destName === 'Texel' ? 'op' : 'in';
+    const enPrep = destName === 'Texel' ? 'on' : 'in';
+    const dePrep = destName === 'Texel' ? 'auf' : 'in';
+
     const greetings = {
       morning: {
         nl: 'Goedemorgen! Wat wil je vandaag ontdekken?',
@@ -208,20 +213,20 @@ class SuggestionService {
         pl: 'Dzień dobry! Jak mogę Ci pomóc?'
       },
       evening: {
-        nl: 'Goedenavond! Klaar voor een mooie avond in Calpe?',
-        en: 'Good evening! Ready for a lovely evening in Calpe?',
-        de: 'Guten Abend! Bereit für einen schönen Abend in Calpe?',
-        es: '¡Buenas noches! ¿Listo para una bonita noche en Calpe?',
-        sv: 'God kväll! Redo för en fin kväll i Calpe?',
-        pl: 'Dobry wieczór! Gotowy na piękny wieczór w Calpe?'
+        nl: `Goedenavond! Klaar voor een mooie avond ${nlPrep} ${destName}?`,
+        en: `Good evening! Ready for a lovely evening ${enPrep} ${destName}?`,
+        de: `Guten Abend! Bereit für einen schönen Abend ${dePrep} ${destName}?`,
+        es: `¡Buenas noches! ¿Listo para una bonita noche en ${destName}?`,
+        sv: `God kväll! Redo för en fin kväll ${destName === 'Texel' ? 'på' : 'i'} ${destName}?`,
+        pl: `Dobry wieczór! Gotowy na piękny wieczór w ${destName}?`
       },
       night: {
-        nl: 'Nog wakker? Ontdek het nachtleven van Calpe!',
-        en: 'Still awake? Discover the nightlife of Calpe!',
-        de: 'Noch wach? Entdecken Sie das Nachtleben von Calpe!',
-        es: '¿Todavía despierto? ¡Descubre la vida nocturna de Calpe!',
-        sv: 'Fortfarande vaken? Upptäck Calpes nattliv!',
-        pl: 'Jeszcze nie śpisz? Odkryj nocne życie Calpe!'
+        nl: `Nog wakker? ${destName === 'Texel' ? `Geniet van de avondrust op ${destName}!` : `Ontdek het nachtleven van ${destName}!`}`,
+        en: `Still awake? ${destName === 'Texel' ? `Enjoy the evening tranquility on ${destName}!` : `Discover the nightlife of ${destName}!`}`,
+        de: `Noch wach? ${destName === 'Texel' ? `Genießen Sie die Abendruhe auf ${destName}!` : `Entdecken Sie das Nachtleben von ${destName}!`}`,
+        es: `¿Todavía despierto? ¡Descubre la vida nocturna de ${destName}!`,
+        sv: `Fortfarande vaken? ${destName === 'Texel' ? `Njut av kvällslugnet på ${destName}!` : `Upptäck nattlivet i ${destName}!`}`,
+        pl: `Jeszcze nie śpisz? Odkryj nocne życie ${destName}!`
       }
     };
 
@@ -233,15 +238,67 @@ class SuggestionService {
    * @param {string} language - Language code
    * @returns {Object} Seasonal suggestions
    */
-  getSeasonalSuggestions(language = 'nl') {
+  getSeasonalSuggestions(language = 'nl', destName = 'Calpe') {
     const season = this.getSeason();
     const suggestions = SEASONAL_SUGGESTIONS[season];
 
     return {
       season,
       categories: suggestions.categories,
-      highlight: suggestions.highlight[language] || suggestions.highlight.en
+      highlight: this.getSeasonHighlight(season, language, destName)
     };
+  }
+
+  /**
+   * Get destination-specific seasonal highlight text
+   */
+  getSeasonHighlight(season, language, destName = 'Calpe') {
+    const nlPrep = destName === 'Texel' ? 'op' : 'van';
+    const enPrep = destName === 'Texel' ? 'on' : 'of';
+    const dePrep = destName === 'Texel' ? 'auf' : 'von';
+
+    const highlights = {
+      summer: {
+        nl: `Perfect strandweer! Ontdek de mooiste stranden ${nlPrep} ${destName}.`,
+        en: `Perfect beach weather! Discover the most beautiful beaches ${enPrep} ${destName}.`,
+        de: `Perfektes Strandwetter! Entdecken Sie die schönsten Strände ${dePrep} ${destName}.`,
+        es: `¡Tiempo perfecto para la playa! Descubre las playas más bonitas de ${destName}.`,
+        sv: `Perfekt strandväder! Upptäck ${destName}s vackraste stränder.`,
+        pl: `Idealna pogoda na plażę! Odkryj najpiękniejsze plaże ${destName}.`
+      },
+      spring: {
+        nl: 'Ideaal weer voor wandelen en fietsen!',
+        en: 'Ideal weather for hiking and cycling!',
+        de: 'Ideales Wetter zum Wandern und Radfahren!',
+        es: '¡Clima ideal para senderismo y ciclismo!',
+        sv: 'Perfekt väder för vandring och cykling!',
+        pl: 'Idealna pogoda na wędrówki i rower!'
+      },
+      autumn: {
+        nl: 'Geniet van de lokale gastronomie en cultuur!',
+        en: 'Enjoy local gastronomy and culture!',
+        de: 'Genießen Sie lokale Gastronomie und Kultur!',
+        es: '¡Disfruta de la gastronomía y cultura local!',
+        sv: 'Njut av lokal gastronomi och kultur!',
+        pl: 'Ciesz się lokalną gastronomią i kulturą!'
+      },
+      winter: {
+        nl: destName === 'Texel'
+          ? `Ontdek de ruige schoonheid op ${destName} in de winter.`
+          : `Ontdek de rustige charme van ${destName} in de winter.`,
+        en: destName === 'Texel'
+          ? `Discover the rugged beauty on ${destName} in winter.`
+          : `Discover the quiet charm of ${destName} in winter.`,
+        de: destName === 'Texel'
+          ? `Entdecken Sie die raue Schönheit auf ${destName} im Winter.`
+          : `Entdecken Sie den ruhigen Charme von ${destName} im Winter.`,
+        es: `Descubre el encanto tranquilo de ${destName} en invierno.`,
+        sv: `Upptäck ${destName}s lugna charm på vintern.`,
+        pl: `Odkryj spokojny urok ${destName} zimą.`
+      }
+    };
+
+    return highlights[season][language] || highlights[season].en;
   }
 
   /**
@@ -250,33 +307,63 @@ class SuggestionService {
    * @param {number} days - Look back period
    * @returns {Array} Trending POIs
    */
-  async getTrendingPois(limit = 10, days = 7) {
+  async getTrendingPois(limit = 10, days = 7, destinationId = null) {
     if (!this.isInitialized) await this.initialize();
 
-    // Check cache
-    if (this.trendingCache && this.trendingCacheTime &&
-        Date.now() - this.trendingCacheTime < this.CACHE_DURATION) {
-      return this.trendingCache.slice(0, limit);
+    // Cache per destination
+    const cacheKey = destinationId || 'all';
+    if (this.trendingCache[cacheKey] && this.trendingCacheTime[cacheKey] &&
+        Date.now() - this.trendingCacheTime[cacheKey] < this.CACHE_DURATION) {
+      return this.trendingCache[cacheKey].slice(0, limit);
     }
 
     try {
-      const trending = await mysqlSequelize.query(`
-        SELECT
-          pc.poi_id,
-          pc.poi_name,
-          COUNT(*) as click_count,
-          COUNT(DISTINCT pc.session_id) as unique_sessions,
-          MAX(pc.clicked_at) as last_clicked
-        FROM holibot_poi_clicks pc
-        WHERE pc.clicked_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-          AND pc.poi_name IS NOT NULL
-        GROUP BY pc.poi_id, pc.poi_name
-        ORDER BY click_count DESC, unique_sessions DESC
-        LIMIT 20
-      `, { replacements: [days], type: QueryTypes.SELECT });
+      let query, replacements;
 
-      this.trendingCache = trending;
-      this.trendingCacheTime = Date.now();
+      if (destinationId) {
+        // Filter by destination via JOIN with POI table (holibot_poi_clicks has no destination_id)
+        query = `
+          SELECT
+            pc.poi_id,
+            pc.poi_name,
+            COUNT(*) as click_count,
+            COUNT(DISTINCT pc.session_id) as unique_sessions,
+            MAX(pc.clicked_at) as last_clicked
+          FROM holibot_poi_clicks pc
+          INNER JOIN POI p ON pc.poi_id = p.id
+          WHERE pc.clicked_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+            AND pc.poi_name IS NOT NULL
+            AND p.destination_id = ?
+          GROUP BY pc.poi_id, pc.poi_name
+          ORDER BY click_count DESC, unique_sessions DESC
+          LIMIT 20
+        `;
+        replacements = [days, destinationId];
+      } else {
+        query = `
+          SELECT
+            pc.poi_id,
+            pc.poi_name,
+            COUNT(*) as click_count,
+            COUNT(DISTINCT pc.session_id) as unique_sessions,
+            MAX(pc.clicked_at) as last_clicked
+          FROM holibot_poi_clicks pc
+          WHERE pc.clicked_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+            AND pc.poi_name IS NOT NULL
+          GROUP BY pc.poi_id, pc.poi_name
+          ORDER BY click_count DESC, unique_sessions DESC
+          LIMIT 20
+        `;
+        replacements = [days];
+      }
+
+      const trending = await mysqlSequelize.query(query, {
+        replacements,
+        type: QueryTypes.SELECT
+      });
+
+      this.trendingCache[cacheKey] = trending;
+      this.trendingCacheTime[cacheKey] = Date.now();
 
       return trending.slice(0, limit);
     } catch (error) {
@@ -309,11 +396,12 @@ class SuggestionService {
    * @returns {Object} Comprehensive suggestions
    */
   async getProactiveSuggestions(context = {}) {
-    const { language = 'nl', sessionId, userId, preferences } = context;
+    const { language = 'nl', sessionId, userId, preferences, destinationId, destinationConfig } = context;
+    const destName = destinationConfig?.destination?.name || 'Calpe';
 
-    const timeSuggestions = this.getTimeSuggestions(language);
-    const seasonalSuggestions = this.getSeasonalSuggestions(language);
-    const trendingPois = await this.getTrendingPois(5);
+    const timeSuggestions = this.getTimeSuggestions(language, destName);
+    const seasonalSuggestions = this.getSeasonalSuggestions(language, destName);
+    const trendingPois = await this.getTrendingPois(5, 7, destinationId);
 
     // Build quick actions based on time and context
     const quickActions = this.getQuickActions(timeSuggestions.period, language);
@@ -342,7 +430,7 @@ class SuggestionService {
       },
       quickActions,
       personalizedCategories,
-      tips: this.getContextualTips(timeSuggestions.period, seasonalSuggestions.season, language)
+      tips: this.getContextualTips(timeSuggestions.period, seasonalSuggestions.season, language, destName)
     };
   }
 
@@ -438,23 +526,69 @@ class SuggestionService {
   /**
    * Get contextual tips
    */
-  getContextualTips(period, season, language) {
+  getContextualTips(period, season, language, destName = 'Calpe') {
+    const isTexel = destName === 'Texel';
+
     const tips = {
       nl: {
         morning: 'Tip: De stranden zijn het rustigst voor 10 uur!',
-        afternoon: 'Tip: Vermijd de middagzon en geniet van een siësta.',
+        afternoon: isTexel
+          ? 'Tip: Maak een fietstocht over het eiland!'
+          : 'Tip: Vermijd de middagzon en geniet van een siësta.',
         evening: 'Tip: Reserveer populaire restaurants vooraf.',
         night: 'Tip: Het centrum is veilig om te wandelen.',
-        summer: 'Tip: Breng voldoende water en zonnebrandcrème mee!',
-        winter: 'Tip: Geniet van de rust en lagere prijzen.'
+        summer: isTexel
+          ? 'Tip: Ook op Texel is het ruim 20 graden, smeer je goed in door de zilte lucht en zon!'
+          : 'Tip: Breng voldoende water en zonnebrandcrème mee!',
+        spring: isTexel
+          ? 'Tip: Neem winddichte kleding mee, het kan flink waaien op Texel!'
+          : null,
+        autumn: isTexel
+          ? 'Tip: Neem winddichte kleding mee, het kan flink waaien op Texel!'
+          : null,
+        winter: isTexel
+          ? 'Tip: Flinke wind, woeste golven en prachtige luchten zorgen voor een indrukwekkend schouwspel!'
+          : 'Tip: Geniet van de rust en lagere prijzen.'
       },
       en: {
         morning: 'Tip: Beaches are quietest before 10 AM!',
-        afternoon: 'Tip: Avoid the midday sun and enjoy a siesta.',
+        afternoon: isTexel
+          ? 'Tip: Take a cycling tour across the island!'
+          : 'Tip: Avoid the midday sun and enjoy a siesta.',
         evening: 'Tip: Book popular restaurants in advance.',
         night: 'Tip: The center is safe to walk around.',
-        summer: 'Tip: Bring plenty of water and sunscreen!',
-        winter: 'Tip: Enjoy the peace and lower prices.'
+        summer: isTexel
+          ? 'Tip: Temperatures on Texel reach 20+ degrees, apply sunscreen due to the salty air and sun!'
+          : 'Tip: Bring plenty of water and sunscreen!',
+        spring: isTexel
+          ? 'Tip: Bring windproof clothing, it can be quite windy on Texel!'
+          : null,
+        autumn: isTexel
+          ? 'Tip: Bring windproof clothing, it can be quite windy on Texel!'
+          : null,
+        winter: isTexel
+          ? 'Tip: Strong winds, wild waves and beautiful skies make for an impressive spectacle!'
+          : 'Tip: Enjoy the peace and lower prices.'
+      },
+      de: {
+        morning: 'Tipp: Strände sind vor 10 Uhr am ruhigsten!',
+        afternoon: isTexel
+          ? 'Tipp: Machen Sie eine Radtour über die Insel!'
+          : 'Tipp: Vermeiden Sie die Mittagssonne und genießen Sie eine Siesta.',
+        evening: 'Tipp: Reservieren Sie beliebte Restaurants im Voraus.',
+        night: 'Tipp: Das Zentrum ist sicher zum Spazierengehen.',
+        summer: isTexel
+          ? 'Tipp: Auch auf Texel wird es über 20 Grad, cremen Sie sich wegen der salzigen Luft und Sonne gut ein!'
+          : 'Tipp: Bringen Sie ausreichend Wasser und Sonnencreme mit!',
+        spring: isTexel
+          ? 'Tipp: Nehmen Sie winddichte Kleidung mit, auf Texel kann es kräftig wehen!'
+          : null,
+        autumn: isTexel
+          ? 'Tipp: Nehmen Sie winddichte Kleidung mit, auf Texel kann es kräftig wehen!'
+          : null,
+        winter: isTexel
+          ? 'Tipp: Kräftiger Wind, wilde Wellen und wunderschöne Himmel bieten ein beeindruckendes Schauspiel!'
+          : 'Tipp: Genießen Sie die Ruhe und niedrigere Preise.'
       }
     };
 

@@ -1862,30 +1862,34 @@ router.post('/directions', async (req, res) => {
       return res.status(500).json({ success: false, error: 'POI service not available' });
     }
 
+    const { destinationId: dirDestId, destinationConfig: dirDestConfig } = getDestinationFromRequest(req);
+
     let poi = null;
 
-    // Try MySQL primary key first (numeric ID)
+    // Try MySQL primary key first (numeric ID), with destination filter
     if (/^\d+$/.test(toPoiId)) {
-      poi = await model.findByPk(toPoiId);
+      poi = await model.findOne({ where: { id: toPoiId, destination_id: dirDestId } });
+      // Fallback without destination filter for backward compatibility
+      if (!poi) poi = await model.findByPk(toPoiId);
     }
 
-    // If not found, try Google Place ID lookup
+    // If not found, try Google Place ID lookup with destination filter
     if (!poi) {
-      poi = await model.findOne({ where: { google_place_id: toPoiId } });
+      poi = await model.findOne({ where: { google_place_id: toPoiId, destination_id: dirDestId } });
+      if (!poi) poi = await model.findOne({ where: { google_place_id: toPoiId } });
     }
 
     if (!poi) {
-      logger.warn('Destination POI not found:', { toPoiId });
+      logger.warn('Destination POI not found:', { toPoiId, destinationId: dirDestId });
       return res.status(404).json({ success: false, error: 'Destination not found' });
     }
 
     const destination = { name: poi.name, address: poi.address, latitude: poi.latitude, longitude: poi.longitude };
-
-    const { destinationConfig: dirDestConfig } = getDestinationFromRequest(req);
     const dirDestName = dirDestConfig?.destination?.name || 'Calpe';
+    const dirPrep = dirDestName === 'Texel' ? 'op' : 'in';
     const tips = await embeddingService.generateChatCompletion([
       { role: 'system', content: embeddingService.buildSystemPrompt(language, {}, dirDestConfig) },
-      { role: 'user', content: `Geef 2-3 korte tips voor ${mode === 'walking' ? 'wandelen' : 'rijden'} naar ${poi.name} in ${dirDestName}. Adres: ${poi.address || 'niet beschikbaar'}` }
+      { role: 'user', content: `Geef 2-3 korte tips voor ${mode === 'walking' ? 'wandelen' : 'rijden'} naar ${poi.name} ${dirPrep} ${dirDestName}. Adres: ${poi.address || 'niet beschikbaar'}` }
     ]);
 
     res.json({
@@ -1925,18 +1929,20 @@ router.get('/daily-tip', async (req, res) => {
     // Parse excluded IDs (tips already shown this session)
     const excludedIdList = excludeIds ? excludeIds.split(',').filter(Boolean) : [];
 
-    // ONLY tourist-friendly categories for daily tips
-    const allowedCategories = [
+    // ONLY tourist-friendly categories for daily tips (destination-aware via config)
+    const defaultAllowedCategories = [
       'Beaches & Nature', 'Food & Drinks', 'Shopping',
       'Culture & History', 'Recreation', 'Active', 'Nightlife'
     ];
+    const allowedCategories = destinationConfig?.holibot?.quickActionCategories?.allowed || defaultAllowedCategories;
 
     // Categories to EXCLUDE from daily tips (not vacation-appropriate)
-    const excludedCategories = [
+    const defaultExcludedCategories = [
       'Health & Wellbeing', 'Health & Wellness', 'Health',
       'Accommodations', 'Accommodation', 'Accommodation (do not communicate)',
       'Practical', 'Services'
     ];
+    const excludedCategories = destinationConfig?.holibot?.quickActionCategories?.excluded || defaultExcludedCategories;
 
     // Destination center coordinates (for radius filter)
     const CALPE_CENTER_LAT = destinationConfig?.destination?.coordinates?.lat || 38.6447;
@@ -1986,7 +1992,7 @@ router.get('/daily-tip', async (req, res) => {
           AND latitude IS NOT NULL
           AND longitude IS NOT NULL
           AND (rating IS NULL OR rating >= 4.4)
-          AND category IN (?, ?, ?, ?, ?, ?, ?)
+          AND category IN (${allowedCategories.map(() => '?').join(', ')})
         HAVING distance_km <= ?
         ORDER BY rating DESC, review_count DESC
         LIMIT 50
@@ -2060,16 +2066,22 @@ router.get('/daily-tip', async (req, res) => {
       const { QueryTypes } = (await import('sequelize')).default;
 
       const eventResults = await mysqlSequelize.query(
-        "SELECT a.id, a.title, a.title_en, a.title_es, " +
-        "a.short_description as description, " +
-        "a.image as thumbnailUrl, a.location_name as address, " +
-        "MIN(d.event_date) as event_date " +
-        "FROM agenda a " +
-        "INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash " +
-        "WHERE d.event_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) " +
-        "AND (a.calpe_distance IS NULL OR a.calpe_distance <= ?) " +
-        "GROUP BY a.id ORDER BY d.event_date ASC LIMIT 10",
-        { replacements: [MAX_DISTANCE_KM], type: QueryTypes.SELECT }
+        `SELECT a.id, a.title, a.title_en, a.title_es,
+          a.short_description as description,
+          a.image as thumbnailUrl, a.location_name as address,
+          MIN(d.event_date) as event_date,
+          CASE WHEN a.location_lat IS NOT NULL AND a.location_lon IS NOT NULL
+            THEN (6371 * acos(cos(radians(?)) * cos(radians(a.location_lat)) * cos(radians(a.location_lon) - radians(?)) + sin(radians(?)) * sin(radians(a.location_lat))))
+            ELSE NULL
+          END AS distance_km
+        FROM agenda a
+        INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
+        WHERE d.event_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+          AND a.destination_id = ?
+        GROUP BY a.id
+        HAVING distance_km IS NULL OR distance_km <= ?
+        ORDER BY d.event_date ASC LIMIT 10`,
+        { replacements: [CALPE_CENTER_LAT, CALPE_CENTER_LNG, CALPE_CENTER_LAT, destinationId, MAX_DISTANCE_KM], type: QueryTypes.SELECT }
       );
 
       events = eventResults.filter(event =>
@@ -2788,6 +2800,7 @@ router.get('/recommended-categories', async (req, res) => {
 router.get('/suggestions', async (req, res) => {
   try {
     const { language = 'nl', sessionId, userId } = req.query;
+    const { destinationId, destinationConfig } = getDestinationFromRequest(req);
 
     // Get user preferences if available
     let preferences = null;
@@ -2799,7 +2812,9 @@ router.get('/suggestions', async (req, res) => {
       language,
       sessionId,
       userId,
-      preferences
+      preferences,
+      destinationId,
+      destinationConfig
     });
 
     res.json({
@@ -2819,10 +2834,12 @@ router.get('/suggestions', async (req, res) => {
 router.get('/trending', async (req, res) => {
   try {
     const { limit = 10, days = 7, language = 'nl' } = req.query;
+    const { destinationId } = getDestinationFromRequest(req);
 
     const trending = await suggestionService.getTrendingPois(
       parseInt(limit),
-      parseInt(days)
+      parseInt(days),
+      destinationId
     );
 
     res.json({

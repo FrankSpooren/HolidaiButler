@@ -128,7 +128,14 @@ export default {
     },
     personality: 'friendly_local_expert',
     maxContextMessages: 10,
-    chromaCollection: 'holidaibutler_pois'
+    chromaCollection: 'holidaibutler_pois',
+    quickActionCategories: {
+      allowed: ['Beaches & Nature', 'Food & Drinks', 'Shopping', 'Culture & History',
+                'Recreation', 'Active', 'Nightlife'],
+      excluded: ['Health & Wellbeing', 'Health & Wellness', 'Health',
+                 'Accommodations', 'Accommodation', 'Accommodation (do not communicate)',
+                 'Practical', 'Services']
+    }
   },
   
   mailerlite: {
