@@ -156,6 +156,12 @@ export default {
       'wadden_sea_unesco'
     ],
     chromaCollection: 'texel_pois',
+    quickActionCategories: {
+      allowed: ['Actief', 'Cultuur & Historie', 'Eten & Drinken', 'Natuur', 'Winkelen'],
+      excluded: ['Accommodations', 'Accommodation', 'Accommodation (do not communicate)',
+                 'Praktisch', 'Gezondheid & Verzorging', 'Health & Wellbeing', 'Health & Wellness',
+                 'Health', 'Practical', 'Services']
+    },
     systemPromptAdditions: `
 Je bent een expert op het gebied van Texel, het grootste Waddeneiland van Nederland.
 
