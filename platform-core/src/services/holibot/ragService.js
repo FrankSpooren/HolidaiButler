@@ -843,20 +843,55 @@ class RAGService {
     return parts[0].trim();
   }
 
+  // Normalize Dutch number words for better POI name matching
+  normalizeDutchNumbers(text) {
+    const numberMap = {
+      '1': 'een', '2': 'twee', '3': 'drie', '4': 'vier', '5': 'vijf',
+      '6': 'zes', '7': 'zeven', '8': 'acht', '9': 'negen', '10': 'tien',
+      '11': 'elf', '12': 'twaalf', '13': 'dertien', '14': 'veertien',
+      '15': 'vijftien', '20': 'twintig', '100': 'honderd'
+    };
+    let normalized = text;
+    for (const [num, word] of Object.entries(numberMap)) {
+      normalized = normalized.replace(new RegExp(`\\b${num}\\b`, 'g'), word);
+    }
+    return normalized;
+  }
+
   async findFuzzyMatch(term, opts = {}) {
     await this.loadPOINameCache();
     const threshold = opts.threshold || 0.65;
     const tL = term.toLowerCase();
+    const tNorm = this.normalizeDutchNumbers(tL);
+    // Extract significant words (3+ chars) for partial matching
+    const sigWords = tL.split(/\s+/).filter(w => w.length >= 3 && !['het','de','een','van','the','die','dat','naar'].includes(w));
     const matches = this.poiNameCache.map(poi => {
       const mainName = this.extractMainName(poi.name);
       const nL = mainName.toLowerCase();
-      if (nL === tL) return {...poi, similarity: 1.0, matchType: "exact"};
+      const nNorm = this.normalizeDutchNumbers(nL);
+      if (nL === tL || nNorm === tNorm) return {...poi, similarity: 1.0, matchType: "exact"};
       if (nL.includes(tL) || tL.includes(nL)) {
         return {...poi, similarity: 0.85 + (Math.min(tL.length, nL.length)/Math.max(tL.length, nL.length)*0.1), matchType: "contains"};
       }
-      return {...poi, similarity: this.calculateSimilarity(tL, nL), matchType: "fuzzy"};
+      // Check normalized (number→word) contains match
+      if (nNorm.includes(tNorm) || tNorm.includes(nNorm)) {
+        return {...poi, similarity: 0.83 + (Math.min(tNorm.length, nNorm.length)/Math.max(tNorm.length, nNorm.length)*0.1), matchType: "normalized"};
+      }
+      // Check if significant words appear in the POI name
+      if (sigWords.length > 0) {
+        const wordMatches = sigWords.filter(w => nL.includes(w) || nNorm.includes(w));
+        if (wordMatches.length > 0 && wordMatches.length >= Math.ceil(sigWords.length * 0.5)) {
+          const wordScore = 0.70 + (wordMatches.length / sigWords.length * 0.15);
+          return {...poi, similarity: wordScore, matchType: "partial-words"};
+        }
+      }
+      // Standard Levenshtein for normalized forms
+      const normSim = this.calculateSimilarity(tNorm, nNorm);
+      const rawSim = this.calculateSimilarity(tL, nL);
+      const bestSim = Math.max(normSim, rawSim);
+      return {...poi, similarity: bestSim, matchType: "fuzzy"};
     }).filter(m => m.similarity >= threshold).sort((a,b) => b.similarity - a.similarity).slice(0, opts.maxResults || 3);
-    if (matches.length > 0) logger.info("Fuzzy match", {query: term, top: matches[0]?.name});
+    if (matches.length > 0) logger.info("Fuzzy match", {query: term, top: matches[0]?.name, matchType: matches[0]?.matchType});
     return matches;
   }
 
@@ -865,15 +900,18 @@ class RAGService {
     const entities = [];
     const lq = query.toLowerCase();
     
-    // Patterns for named entities
+    // Patterns for named entities (destination-neutral: Calpe, Texel, etc.)
+    const destEnd = '(?:\\s+(?:in|op|auf)\\s+\\w+|\\?|$)';
     const patterns = [
-      /(?:restaurant|restaurante)\s+([A-Z][a-zA-Z\s]+?)(?:\s+in|\s+Calpe|\?|$)/gi,
-      /(?:museum|museu)\s+([A-Z][a-zA-Z\s]+?)(?:\s+in|\s+Calpe|\?|$)/gi,
-      /(?:beach|strand|playa)\s+([A-Z][a-zA-Z\s]+?)(?:\s+in|\s+Calpe|\?|$)/gi,
-      /(?:hotel)\s+([A-Z][a-zA-Z\s]+?)(?:\s+in|\s+Calpe|\?|$)/gi,
-      /(?:bar|cafe|café)\s+([A-Z][a-zA-Z\s]+?)(?:\s+in|\s+Calpe|\?|$)/gi,
-      /(?:over|about|naar|to|van|of)\s+(?:het|de|the)?\s*([A-Z][a-zA-Z\s]{3,}?)(?:\s+in|\s+Calpe|\?|$)/gi,
+      new RegExp(`(?:restaurant|restaurante)\\s+([A-Z][a-zA-Z\\s]+?)${destEnd}`, 'gi'),
+      new RegExp(`(?:museum|museu)\\s+([A-Z][a-zA-Z\\s]+?)${destEnd}`, 'gi'),
+      new RegExp(`(?:beach|strand|playa)\\s+([A-Z][a-zA-Z\\s]+?)${destEnd}`, 'gi'),
+      new RegExp(`(?:hotel)\\s+([A-Z][a-zA-Z\\s]+?)${destEnd}`, 'gi'),
+      new RegExp(`(?:bar|cafe|café)\\s+([A-Z][a-zA-Z\\s]+?)${destEnd}`, 'gi'),
+      new RegExp(`(?:over|about|naar|to|van|of)\\s+(?:het|de|the)?\\s*([A-Z][a-zA-Z\\s]{3,}?)${destEnd}`, 'gi'),
       /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)\s+(?:museum|restaurant|beach|hotel)/gi,
+      // Also match queries with numbers + name (e.g., "12 Balcken", "3 Gezusters")
+      /\b(\d+\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\b/g,
     ];
     
     for (const pattern of patterns) {
@@ -892,7 +930,7 @@ class RAGService {
     let match;
     while ((match = capPattern.exec(query)) !== null) {
       const entity = match[1].trim();
-      const exclude = ["Calpe", "Costa Blanca", "Alicante", "Spain", "Spanish", "Dutch", "English"];
+      const exclude = ["Calpe", "Texel", "Costa Blanca", "Alicante", "Spain", "Spanish", "Dutch", "English", "Den Burg", "De Koog", "Oudeschild", "Den Hoorn", "De Cocksdorp", "Oosterend", "De Waal"];
       if (entity.length > 4 && !exclude.includes(entity) && !entities.includes(entity) && !this.isCuisineKeyword(entity) && !this.isCommonPhrase(entity)) {
         entities.push(entity);
       }
@@ -1122,6 +1160,16 @@ class RAGService {
     return r;
   }
 
+  // Fix common LLM spacing errors (e.g., "inDen Burg" → "in Den Burg")
+  fixResponseSpacing(text) {
+    if (!text) return text;
+    // Fix lowercase followed by uppercase without space (e.g., "inDen" → "in Den")
+    let fixed = text.replace(/([a-zà-ü])([A-ZÀ-Ü])/g, '$1 $2');
+    // Fix common Dutch preposition merges
+    fixed = fixed.replace(/\b(in|op|van|naar|bij|uit|met|voor|over|door|aan)(Den|De|Het|Texel|Calpe)\b/g, '$1 $2');
+    return fixed;
+  }
+
   async generateResponse(query, context, lang = "nl", prefs = {}, history = [], unknownEntity = null, destinationConfig = null) {
     try {
       const hasResults = context && context.length > 0;
@@ -1138,7 +1186,8 @@ class RAGService {
         }
       }
       msgs.push({role: "user", content: query});
-      return await embeddingService.generateChatCompletion(msgs, {temperature: 0.4, maxTokens: 500});
+      const response = await embeddingService.generateChatCompletion(msgs, {temperature: 0.4, maxTokens: 500});
+      return this.fixResponseSpacing(response);
     } catch (e) {
       logger.error("RAG response failed:", e);
       return this.getFallbackResponse(query, lang);
@@ -1205,7 +1254,7 @@ class RAGService {
     for (const n of names) {
       if (await this.validatePOIName(n)) {
         logger.info("Enhanced query", {original: query, added: n});
-        return query + " " + n + " Calpe";
+        return query + " " + n;
       }
     }
     return query;
@@ -1381,7 +1430,8 @@ class RAGService {
       };
     } catch (e) {
       logger.error("chat error:", e);
-      return {success: true, message: this.getFallbackResponse(query, lang), pois: [], source: "fallback"};
+      const destName = opts.destinationConfig?.destination?.name;
+      return {success: true, message: this.getFallbackResponse(query, lang, destName), pois: [], source: "fallback"};
     }
   }
 
@@ -1443,14 +1493,15 @@ class RAGService {
     }));
   }
 
-  getFallbackResponse(query, lang) {
+  getFallbackResponse(query, lang, destName) {
+    const name = destName || 'Calpe';
     const fb = {
-      nl: "Ik ben HoliBot, je gids voor Calpe! Waar kan ik je mee helpen?",
-      en: "I am HoliBot, your Calpe guide! How can I help you?",
-      de: "Ich bin HoliBot, dein Calpe-Guide! Wie kann ich helfen?",
-      es: "Soy HoliBot, tu guia de Calpe! Como puedo ayudarte?",
-      sv: "Jag ar HoliBot, din Calpe-guide! Hur kan jag hjalpa?",
-      pl: "Jestem HoliBot, Twoj przewodnik po Calpe! Jak moge pomoc?"
+      nl: `Ik ben je persoonlijke gids voor ${name}! Waar kan ik je mee helpen?`,
+      en: `I am your personal guide for ${name}! How can I help you?`,
+      de: `Ich bin dein persönlicher Guide für ${name}! Wie kann ich helfen?`,
+      es: `Soy tu guía personal de ${name}! ¿Cómo puedo ayudarte?`,
+      sv: `Jag är din personliga guide för ${name}! Hur kan jag hjälpa?`,
+      pl: `Jestem Twoim osobistym przewodnikiem po ${name}! Jak mogę pomóc?`
     };
     return fb[lang] || fb.nl;
   }
