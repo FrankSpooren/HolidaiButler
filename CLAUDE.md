@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.7.0
-> **Laatst bijgewerkt**: 9 februari 2026
+> **Versie**: 3.9.0
+> **Laatst bijgewerkt**: 10 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -300,9 +300,10 @@ Bronnen (VVV, Websites, LLM) → poi_content_staging → Review → POI tabel
 ```
 Host: jotx.your-database.de
 Database: pxoziy_db1
-User: pxoziy_1_w
-Password: i9)PUR^2k=}!
+User: pxoziy_1
+Password: j8,DrtshJSm$
 ```
+> **Let op**: Credentials `pxoziy_1_w` / `i9)PUR^2k=}!` zijn FOUT (staan in oude docs) en geven ACCESS DENIED.
 
 ### POI Tabel Kolommen (Content-gerelateerd)
 | Kolom | Type | Beschrijving | Status |
@@ -407,8 +408,11 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 5c** | Texel Image Fix | ✅ COMPLEET | 08-02-2026 |
 | **Fase 6** | AI Chatbot Texel "Tessa" | ✅ COMPLEET | 08-02-2026 |
 | **Fase 6b** | Quick Actions Destination Fix | ✅ COMPLEET | 09-02-2026 |
-| **Fase 7** | Alicante Preparation | ⏸️ WACHT | - |
-| **Fase 8** | Stabilization | ⏸️ WACHT | - |
+| **Fase 6c** | SSL Fix + Sentry DSN + Suggestion Content Fix | ✅ COMPLEET | 10-02-2026 |
+| **Fase 6d** | Destination Routing + Categories + Fuzzy Match + Spacing | ✅ COMPLEET | 10-02-2026 |
+| **Fase 7** | Reviews Integratie | ⏸️ WACHT | - |
+| **Fase 8** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
+| **Fase 8b** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -448,6 +452,40 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 **Bestanden gewijzigd (4)**: calpe.config.js, texel.config.js (quickActionCategories), suggestionService.js (destination-aware), holibot.js (4 endpoints)
 **Texel-specifieke tips**: "op Texel" (NL), fietstocht, zilte lucht/zon, woeste golven/prachtige luchten
 **Calpe regressie**: ✅ Geen regressie
+
+### Fase 6c Resultaten (SSL + Sentry + Suggestion Content Fix)
+| Issue | Probleem | Fix | Status |
+|-------|----------|-----|--------|
+| SSL Certificate | **GEEN SSL cert + Apache VHost voor api.holidaibutler.com** → ERR_CERT_COMMON_NAME_INVALID voor alle API calls | Certbot cert + Apache VHost met ProxyPass naar 127.0.0.1:3001, CORS headers | ✅ |
+| Sentry DSN | Frontend DSN met hyphens in key (`bd88b00e-1507...`) + .env.texel disabled + .env.production missing | DSN key zonder hyphens, alle env files gefixed (project 2 = customer-portal) | ✅ |
+| Suggestion Content | TIME_BASED_SUGGESTIONS had hardcoded Calpe content (Peñón de Ifach, tapas tour) voor alle destinations | Per-destination suggestions: calpe + texel keys met lokale content (eilandcafé, duinen, Ecomare, Den Burg) | ✅ |
+| SEASONAL_SUGGESTIONS | Hardcoded "stranden van Calpe", "charme van Calpe" | Refactored naar SEASONAL_CATEGORIES (destination-neutral) + getSeasonHighlight() (destination-aware) | ✅ |
+
+**Bestanden gewijzigd**: suggestionService.js, .env, .env.texel, .env.production
+**Server configs aangemaakt**: api.holidaibutler.com.conf, api.holidaibutler.com-le-ssl.conf
+**SSL cert**: Let's Encrypt, geldig tot 2026-05-11
+**Bugsink projects**: 1=api, 2=customer-portal, 3=admin-portal
+**Calpe regressie**: ✅ Geen regressie
+
+### Fase 6d Resultaten (Destination Routing + Categories + Fuzzy Match + Spacing)
+| Issue | Probleem | Fix | Status |
+|-------|----------|-----|--------|
+| Destination Routing | **ROOT CAUSE**: `getDestinationFromRequest()` deed `parseInt("texel")` → NaN → default 1 (Calpe). Frontend stuurt string "texel", backend verwachtte nummer. ALLE endpoints waren gebroken voor Texel. | Accepteert nu zowel string ("texel", "calpe") als numeric (1, 2) IDs via `codeToId` mapping | ✅ |
+| CORS Fix | `Access-Control-Allow-Origin` was `/usr/bin/bash` (shell variable expansie bug). `$0` in heredoc werd door bash geïnterpreteerd. | Apache RewriteRule met `%{HTTP:Origin}` matching + `[E=ORIGIN_OK:%{HTTP:Origin}]` environment variable | ✅ |
+| Category Filtering | Te veel categorieën: Uncategorized, Media, Evenementen, Verenigingen zichtbaar. Ontbrekende iconen (fallback naar Actief icon). | **Whitelist** i.p.v. blacklist: exact 8 toegestane categorieën voor Texel. Iconen toegevoegd voor Recreatief, Gezondheid & Verzorging, Praktisch. | ✅ |
+| Spacing Errors | LLM output: "inDen Burg", "BalckeninDen Burg" — Mistral merges woorden samen. | `fixResponseSpacing()` in ragService + extra locatie namen in `cleanAIText()` (De Cocksdorp, Oosterend, De Waal, Ecomare) | ✅ |
+| POI Name Recognition | "12 Balcken" niet herkend als "Taveerne De Twaalf Balcken". | `normalizeDutchNumbers()`: 1-20 → Nederlandse woorden. `findFuzzyMatch()` uitgebreid met normalized+partial-words matching. | ✅ |
+| Itinerary Events | Event query gebruikte `calpe_distance` (hardcoded) i.p.v. `destination_id`. | SQL filter gewijzigd naar `destination_id = ?` | ✅ |
+| Itinerary Categories | `allowedCategories` bevatte alleen Engelse (Calpe) categorienamen. | Nederlandse Texel categorieën toegevoegd aan allowlist | ✅ |
+| Entity Extraction | Regex patterns hadden hardcoded "Calpe", misten Texel locaties en numerieke entiteiten ("12 Balcken"). | Destination-neutral patterns, Texel locaties in exclude list, numeric entity pattern toegevoegd | ✅ |
+| Fallback Response | `getFallbackResponse()` hardcoded "Calpe" in alle talen. | Destination-aware met `destName` parameter | ✅ |
+| Enhanced Search | `buildEnhancedSearchQuery()` voegde hardcoded " Calpe" toe aan queries. | Verwijderd — destination filtering gebeurt via ChromaDB collection routing | ✅ |
+
+**Texel categorieën (whitelist)**: Eten & Drinken, Natuur, Cultuur & Historie, Winkelen, Recreatief, Actief, Gezondheid & Verzorging, Praktisch
+**Bestanden gewijzigd**: holibot.js (6 fixes), ragService.js (6 fixes), CategoryBrowser.tsx (whitelist + iconen)
+**Apache config**: api.holidaibutler.com-le-ssl.conf (RewriteRule CORS)
+**Frontend herbouwd**: Texel build deployed naar dev.texelmaps.nl + texelmaps.nl
+**Calpe regressie**: ✅ Geen regressie (itinerary test: "Pizzería Restaurante 1948")
 
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
@@ -614,6 +652,8 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.9.0** | **2026-02-10** | **Fase 6d Destination Routing + Categories + Fuzzy Match + Spacing: ROOT CAUSE gefixed — getDestinationFromRequest() accepteert nu string ("texel") EN numeric (2) IDs (parseInt("texel")=NaN→default Calpe was ROOT CAUSE alle gebroken Texel endpoints). CORS fix: Apache RewriteRule i.p.v. SetEnvIf ($0 shell expansion bug). Category whitelist: exact 8 Texel categorieën + 3 ontbrekende iconen. normalizeDutchNumbers() voor POI name matching (12→twaalf). fixResponseSpacing() voor LLM spacing errors. Itinerary event query: destination_id i.p.v. hardcoded calpe_distance. 10 issues gefixed in 3 backend + 1 frontend + 1 Apache config.** |
+| **3.8.0** | **2026-02-10** | **Fase 6c SSL + Sentry DSN + Suggestion Content Fix: (1) SSL certificaat + Apache VHost aangemaakt voor api.holidaibutler.com — was ROOT CAUSE van ERR_CERT_COMMON_NAME_INVALID (cert ontbrak volledig, Apache viel terug op admin.dev.holidaibutler.com). (2) Sentry DSN gefixed: key zonder hyphens, .env.texel enabled, .env.production toegevoegd (Bugsink project 2). (3) suggestionService.js volledig destination-aware: TIME_BASED_SUGGESTIONS nu per-destination (calpe/texel) met lokale content (Texel: eilandcafé, duinen, Ecomare, Den Burg, vuurtoren, Oudeschild). SEASONAL_SUGGESTIONS → SEASONAL_CATEGORIES (neutral). Fase 7-8 hernummerd conform origineel strategic plan.** |
 | **3.7.0** | **2026-02-09** | **Fase 6b Quick Actions Destination Fix COMPLEET: 4 gebroken quick action endpoints gefixed voor Texel. daily-tip: Haversine formula + destination_id filter (geen Calpe events meer voor Texel). directions: POI lookup met destination_id. suggestions: destination-aware greetings/tips/season highlights. trending: JOIN met POI tabel voor destination filter. Texel-specifieke tips: fietstocht, zilte lucht, woeste golven. Config: quickActionCategories per destination. Geen Calpe regressie.** |
 | **3.6.0** | **2026-02-08** | **Fase 6 AI Chatbot Texel "Tessa" COMPLEET: Multi-destination HoliBot met eigen ChromaDB collection per destination. Texel chatbot "Tessa" met 94.980 vectoren (93.241 QnA + 1.739 POI). 14 bestanden gewijzigd (8 backend + 5 frontend + 1 config). Destination-aware: chromaService multi-collection, ragService, intentService Texel patterns, embeddingService system prompts, conversationService destination_id. Frontend: welkomstberichten, chatnaam, avatar per destination. Geen Calpe regressie. Kosten: ~EUR 19 vectorisatie. Strategic Advisory v3.0.** |
 | **3.5.0** | **2026-02-08** | **Fase 5c Texel Image Fix COMPLEET: 11.506 imageurls records aangemaakt voor 1.606 Texel POIs. Images bestonden op disk (4,1 GB) maar waren niet gekoppeld aan database. Apache configs gefixed (texelmaps.nl + dev + test). POI Image Pipeline sectie toegevoegd. Strategic Advisory v2.9.** |

@@ -16,100 +16,96 @@ import logger from '../../utils/logger.js';
 
 const { QueryTypes } = (await import('sequelize')).default;
 
-// Time-based category recommendations
+// Time-based category recommendations per destination
 const TIME_BASED_SUGGESTIONS = {
-  morning: { // 6:00 - 11:59
-    categories: ['Food & Drinks', 'Beaches & Nature', 'Active'],
-    activities: {
-      nl: ['Ontbijt bij een lokaal café', 'Ochtendwandeling langs het strand', 'Vroege duik in zee'],
-      en: ['Breakfast at a local café', 'Morning walk along the beach', 'Early swim in the sea'],
-      de: ['Frühstück in einem lokalen Café', 'Morgenspaziergang am Strand', 'Früh schwimmen im Meer'],
-      es: ['Desayuno en un café local', 'Paseo matutino por la playa', 'Baño temprano en el mar'],
-      sv: ['Frukost på ett lokalt kafé', 'Morgonpromenad längs stranden', 'Tidigt dopp i havet'],
-      pl: ['Śniadanie w lokalnej kawiarni', 'Poranny spacer wzdłuż plaży', 'Wczesna kąpiel w morzu']
+  calpe: {
+    morning: {
+      categories: ['Food & Drinks', 'Beaches & Nature', 'Active'],
+      activities: {
+        nl: ['Ontbijt bij een lokaal café', 'Ochtendwandeling langs het strand', 'Vroege duik in zee'],
+        en: ['Breakfast at a local café', 'Morning walk along the beach', 'Early swim in the sea'],
+        de: ['Frühstück in einem lokalen Café', 'Morgenspaziergang am Strand', 'Früh schwimmen im Meer'],
+        es: ['Desayuno en un café local', 'Paseo matutino por la playa', 'Baño temprano en el mar'],
+        sv: ['Frukost på ett lokalt kafé', 'Morgonpromenad längs stranden', 'Tidigt dopp i havet'],
+        pl: ['Śniadanie w lokalnej kawiarni', 'Poranny spacer wzdłuż plaży', 'Wczesna kąpiel w morzu']
+      }
+    },
+    afternoon: {
+      categories: ['Beaches & Nature', 'Culture & History', 'Shopping'],
+      activities: {
+        nl: ['Lunch met zeezicht', 'Bezoek het Peñón de Ifach', 'Winkelen in het centrum'],
+        en: ['Lunch with sea view', 'Visit the Peñón de Ifach', 'Shopping in the center'],
+        de: ['Mittagessen mit Meerblick', 'Besuch des Peñón de Ifach', 'Einkaufen im Zentrum'],
+        es: ['Almuerzo con vista al mar', 'Visitar el Peñón de Ifach', 'Compras en el centro'],
+        sv: ['Lunch med havsutsikt', 'Besök Peñón de Ifach', 'Shopping i centrum'],
+        pl: ['Lunch z widokiem na morze', 'Odwiedź Peñón de Ifach', 'Zakupy w centrum']
+      }
+    },
+    evening: {
+      categories: ['Food & Drinks', 'Nightlife', 'Culture & History'],
+      activities: {
+        nl: ['Diner bij zonsondergang', 'Tapas tour', 'Avondwandeling door de oude stad'],
+        en: ['Dinner at sunset', 'Tapas tour', 'Evening walk through the old town'],
+        de: ['Abendessen bei Sonnenuntergang', 'Tapas-Tour', 'Abendspaziergang durch die Altstadt'],
+        es: ['Cena al atardecer', 'Ruta de tapas', 'Paseo nocturno por el casco antiguo'],
+        sv: ['Middag vid solnedgång', 'Tapasrunda', 'Kvällspromenad genom gamla stan'],
+        pl: ['Kolacja o zachodzie słońca', 'Trasa tapas', 'Wieczorny spacer po starym mieście']
+      }
+    },
+    night: {
+      categories: ['Nightlife', 'Food & Drinks'],
+      activities: {
+        nl: ['Cocktails aan het strand', 'Live muziek', 'Nachtelijke strandwandeling'],
+        en: ['Cocktails on the beach', 'Live music', 'Night beach walk'],
+        de: ['Cocktails am Strand', 'Live-Musik', 'Nächtlicher Strandspaziergang'],
+        es: ['Cócteles en la playa', 'Música en vivo', 'Paseo nocturno por la playa'],
+        sv: ['Cocktails på stranden', 'Livemusik', 'Nattlig strandpromenad'],
+        pl: ['Koktajle na plaży', 'Muzyka na żywo', 'Nocny spacer po plaży']
+      }
     }
   },
-  afternoon: { // 12:00 - 17:59
-    categories: ['Beaches & Nature', 'Culture & History', 'Shopping'],
-    activities: {
-      nl: ['Lunch met zeezicht', 'Bezoek het Peñón de Ifach', 'Winkelen in het centrum'],
-      en: ['Lunch with sea view', 'Visit the Peñón de Ifach', 'Shopping in the center'],
-      de: ['Mittagessen mit Meerblick', 'Besuch des Peñón de Ifach', 'Einkaufen im Zentrum'],
-      es: ['Almuerzo con vista al mar', 'Visitar el Peñón de Ifach', 'Compras en el centro'],
-      sv: ['Lunch med havsutsikt', 'Besök Peñón de Ifach', 'Shopping i centrum'],
-      pl: ['Lunch z widokiem na morze', 'Odwiedź Peñón de Ifach', 'Zakupy w centrum']
-    }
-  },
-  evening: { // 18:00 - 21:59
-    categories: ['Food & Drinks', 'Nightlife', 'Culture & History'],
-    activities: {
-      nl: ['Diner bij zonsondergang', 'Tapas tour', 'Avondwandeling door de oude stad'],
-      en: ['Dinner at sunset', 'Tapas tour', 'Evening walk through the old town'],
-      de: ['Abendessen bei Sonnenuntergang', 'Tapas-Tour', 'Abendspaziergang durch die Altstadt'],
-      es: ['Cena al atardecer', 'Ruta de tapas', 'Paseo nocturno por el casco antiguo'],
-      sv: ['Middag vid solnedgång', 'Tapasrunda', 'Kvällspromenad genom gamla stan'],
-      pl: ['Kolacja o zachodzie słońca', 'Trasa tapas', 'Wieczorny spacer po starym mieście']
-    }
-  },
-  night: { // 22:00 - 5:59
-    categories: ['Nightlife', 'Food & Drinks'],
-    activities: {
-      nl: ['Cocktails aan het strand', 'Live muziek', 'Nachtelijke strandwandeling'],
-      en: ['Cocktails on the beach', 'Live music', 'Night beach walk'],
-      de: ['Cocktails am Strand', 'Live-Musik', 'Nächtlicher Strandspaziergang'],
-      es: ['Cócteles en la playa', 'Música en vivo', 'Paseo nocturno por la playa'],
-      sv: ['Cocktails på stranden', 'Livemusik', 'Nattlig strandpromenad'],
-      pl: ['Koktajle na plaży', 'Muzyka na żywo', 'Nocny spacer po plaży']
+  texel: {
+    morning: {
+      categories: ['Eten & Drinken', 'Natuur', 'Actief'],
+      activities: {
+        nl: ['Ontbijt bij een eilandcafé', 'Ochtendwandeling door de duinen', 'Fietsen langs het strand'],
+        en: ['Breakfast at an island café', 'Morning walk through the dunes', 'Cycling along the beach'],
+        de: ['Frühstück in einem Inselcafé', 'Morgenspaziergang durch die Dünen', 'Radfahren am Strand']
+      }
+    },
+    afternoon: {
+      categories: ['Natuur', 'Cultuur & Historie', 'Winkelen'],
+      activities: {
+        nl: ['Lunch op een terras in Den Burg', 'Bezoek Ecomare', 'Winkelen in De Koog'],
+        en: ['Lunch on a terrace in Den Burg', 'Visit Ecomare', 'Shopping in De Koog'],
+        de: ['Mittagessen auf einer Terrasse in Den Burg', 'Besuch von Ecomare', 'Einkaufen in De Koog']
+      }
+    },
+    evening: {
+      categories: ['Eten & Drinken', 'Natuur', 'Cultuur & Historie'],
+      activities: {
+        nl: ['Diner bij zonsondergang op het strand', 'Wandeling naar de vuurtoren', 'Avondwandeling door Oudeschild'],
+        en: ['Dinner at sunset on the beach', 'Walk to the lighthouse', 'Evening stroll through Oudeschild'],
+        de: ['Abendessen bei Sonnenuntergang am Strand', 'Spaziergang zum Leuchtturm', 'Abendspaziergang durch Oudeschild']
+      }
+    },
+    night: {
+      categories: ['Eten & Drinken', 'Natuur'],
+      activities: {
+        nl: ['Sterren kijken op het strand', 'Afsluitend drankje in Den Burg', 'Nachtelijke strandwandeling'],
+        en: ['Stargazing on the beach', 'Nightcap in Den Burg', 'Night beach walk'],
+        de: ['Sternbeobachtung am Strand', 'Absacker in Den Burg', 'Nächtlicher Strandspaziergang']
+      }
     }
   }
 };
 
-// Seasonal recommendations
-const SEASONAL_SUGGESTIONS = {
-  summer: { // June - August
-    categories: ['Beaches & Nature', 'Active', 'Nightlife'],
-    highlight: {
-      nl: 'Perfect strandweer! Ontdek de mooiste stranden van Calpe.',
-      en: 'Perfect beach weather! Discover the most beautiful beaches of Calpe.',
-      de: 'Perfektes Strandwetter! Entdecken Sie die schönsten Strände von Calpe.',
-      es: '¡Tiempo perfecto para la playa! Descubre las playas más bonitas de Calpe.',
-      sv: 'Perfekt strandväder! Upptäck Calpes vackraste stränder.',
-      pl: 'Idealna pogoda na plażę! Odkryj najpiękniejsze plaże Calpe.'
-    }
-  },
-  spring: { // March - May
-    categories: ['Active', 'Culture & History', 'Beaches & Nature'],
-    highlight: {
-      nl: 'Ideaal weer voor wandelen en fietsen!',
-      en: 'Ideal weather for hiking and cycling!',
-      de: 'Ideales Wetter zum Wandern und Radfahren!',
-      es: '¡Clima ideal para senderismo y ciclismo!',
-      sv: 'Perfekt väder för vandring och cykling!',
-      pl: 'Idealna pogoda na wędrówki i rower!'
-    }
-  },
-  autumn: { // September - November
-    categories: ['Culture & History', 'Food & Drinks', 'Active'],
-    highlight: {
-      nl: 'Geniet van de lokale gastronomie en cultuur!',
-      en: 'Enjoy local gastronomy and culture!',
-      de: 'Genießen Sie lokale Gastronomie und Kultur!',
-      es: '¡Disfruta de la gastronomía y cultura local!',
-      sv: 'Njut av lokal gastronomi och kultur!',
-      pl: 'Ciesz się lokalną gastronomią i kulturą!'
-    }
-  },
-  winter: { // December - February
-    categories: ['Culture & History', 'Food & Drinks', 'Shopping'],
-    highlight: {
-      nl: 'Ontdek de rustige charme van Calpe in de winter.',
-      en: 'Discover the quiet charm of Calpe in winter.',
-      de: 'Entdecken Sie den ruhigen Charme von Calpe im Winter.',
-      es: 'Descubre el encanto tranquilo de Calpe en invierno.',
-      sv: 'Upptäck Calpes lugna charm på vintern.',
-      pl: 'Odkryj spokojny urok Calpe zimą.'
-    }
-  }
+// Seasonal category recommendations (destination-neutral; highlight text via getSeasonHighlight)
+const SEASONAL_CATEGORIES = {
+  summer: ['Beaches & Nature', 'Active', 'Nightlife'],
+  spring: ['Active', 'Culture & History', 'Beaches & Nature'],
+  autumn: ['Culture & History', 'Food & Drinks', 'Active'],
+  winter: ['Culture & History', 'Food & Drinks', 'Shopping']
 };
 
 class SuggestionService {
@@ -176,7 +172,8 @@ class SuggestionService {
    */
   getTimeSuggestions(language = 'nl', destName = 'Calpe') {
     const period = this.getTimePeriod();
-    const suggestions = TIME_BASED_SUGGESTIONS[period];
+    const destKey = destName === 'Texel' ? 'texel' : 'calpe';
+    const suggestions = TIME_BASED_SUGGESTIONS[destKey]?.[period] || TIME_BASED_SUGGESTIONS.calpe[period];
 
     return {
       period,
@@ -240,11 +237,10 @@ class SuggestionService {
    */
   getSeasonalSuggestions(language = 'nl', destName = 'Calpe') {
     const season = this.getSeason();
-    const suggestions = SEASONAL_SUGGESTIONS[season];
 
     return {
       season,
-      categories: suggestions.categories,
+      categories: SEASONAL_CATEGORIES[season] || SEASONAL_CATEGORIES.summer,
       highlight: this.getSeasonHighlight(season, language, destName)
     };
   }

@@ -65,10 +65,24 @@ import logger from '../utils/logger.js';
 
 /**
  * Extract destination config from request headers
- * Uses X-Destination-ID header set by Apache VHost, defaults to Calpe (1)
+ * Accepts both numeric IDs (1, 2) and string codes ('calpe', 'texel')
+ * Uses X-Destination-ID header set by Apache VHost or frontend axios client
  */
 function getDestinationFromRequest(req) {
-  const destinationId = parseInt(req.headers['x-destination-id']) || 1;
+  const headerValue = req.headers['x-destination-id'];
+  let destinationId = 1; // default to Calpe
+
+  if (headerValue) {
+    const numericId = parseInt(headerValue);
+    if (!isNaN(numericId) && numericId > 0) {
+      destinationId = numericId;
+    } else {
+      // Map string codes to numeric IDs
+      const codeToId = { calpe: 1, texel: 2, alicante: 3 };
+      destinationId = codeToId[headerValue.toLowerCase()] || 1;
+    }
+  }
+
   const destinationConfig = getDestinationById(destinationId);
   const collectionName = destinationConfig?.holibot?.chromaCollection || 'calpe_pois';
   return { destinationId, destinationConfig, collectionName };
@@ -646,7 +660,7 @@ const cleanAIText = (text, poiNames = []) => {
   // Fix common location names stuck to adjacent words
   // IMPORTANT: Only fix spacing when location is clearly a separate word
   // Use word boundary () to prevent breaking compound words like "Calpesa"
-  const locationNames = ["Calpe", "Benidorm", "Altea", "Alicante", "Valencia", "Spain", "Spanje", "España", "Texel", "Den Burg", "De Koog", "Oudeschild", "Den Hoorn", "Nederland", "Netherlands"];
+  const locationNames = ["Calpe", "Benidorm", "Altea", "Alicante", "Valencia", "Spain", "Spanje", "España", "Texel", "Den Burg", "De Koog", "Oudeschild", "Den Hoorn", "De Cocksdorp", "Oosterend", "De Waal", "Ecomare", "Nederland", "Netherlands"];
   for (const loc of locationNames) {
     // Add space BEFORE location if preceded by lowercase letter (e.g., "inCalpe" -> "in Calpe")
     // But only if location starts a new word (followed by word boundary or end)
@@ -1219,8 +1233,12 @@ router.post('/itinerary', async (req, res) => {
           // CATEGORY FILTERING: Same rules as Daily Tip
           // Only tourist-friendly categories allowed (including RAG category variations)
           const allowedCategories = [
+            // English (Calpe)
             'Beaches & Nature', 'Food & Drinks', 'Shopping',
             'Culture & History', 'Recreation', 'Active', 'Nightlife',
+            // Dutch (Texel)
+            'Eten & Drinken', 'Natuur', 'Cultuur & Historie', 'Winkelen',
+            'Recreatief', 'Actief', 'Gezondheid & Verzorging', 'Praktisch',
             // RAG/Google category variations that map to tourist categories
             'Restaurant', 'Bar', 'Cafe', 'Beach', 'Park', 'Museum',
             'Tourist attraction', 'Point of interest', 'Natural feature',
@@ -1419,9 +1437,9 @@ router.post('/itinerary', async (req, res) => {
         "FROM agenda a " +
         "INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash " +
         "WHERE d.event_date = ? " +
-        "AND (a.calpe_distance IS NULL OR a.calpe_distance <= 25) " +
+        "AND a.destination_id = ? " +
         "ORDER BY d.start_time ASC LIMIT 5",
-        { replacements: [targetDate], type: QueryTypes.SELECT }
+        { replacements: [targetDate, destinationId], type: QueryTypes.SELECT }
       );
 
       events = eventResults.map(e => ({
@@ -1887,10 +1905,12 @@ router.post('/directions', async (req, res) => {
     const destination = { name: poi.name, address: poi.address, latitude: poi.latitude, longitude: poi.longitude };
     const dirDestName = dirDestConfig?.destination?.name || 'Calpe';
     const dirPrep = dirDestName === 'Texel' ? 'op' : 'in';
-    const tips = await embeddingService.generateChatCompletion([
+    let tips = await embeddingService.generateChatCompletion([
       { role: 'system', content: embeddingService.buildSystemPrompt(language, {}, dirDestConfig) },
       { role: 'user', content: `Geef 2-3 korte tips voor ${mode === 'walking' ? 'wandelen' : 'rijden'} naar ${poi.name} ${dirPrep} ${dirDestName}. Adres: ${poi.address || 'niet beschikbaar'}` }
     ]);
+    // Fix LLM spacing errors (e.g., "inDen Burg" → "in Den Burg")
+    if (tips) tips = tips.replace(/([a-zà-ü])([A-ZÀ-Ü])/g, '$1 $2');
 
     res.json({
       success: true,
@@ -2275,15 +2295,16 @@ router.get('/categories', async (req, res) => {
  */
 router.get('/categories/hierarchy', async (req, res) => {
   try {
+    const { destinationId } = getDestinationFromRequest(req);
     const { mysqlSequelize } = await import('../config/database.js');
     const { QueryTypes } = (await import('sequelize')).default;
 
     const results = await mysqlSequelize.query(`
       SELECT category, subcategory, poi_type, COUNT(*) as count
-      FROM POI WHERE is_active = 1
+      FROM POI WHERE is_active = 1 AND destination_id = ?
       GROUP BY category, subcategory, poi_type
       ORDER BY category, subcategory, poi_type
-    `, { type: QueryTypes.SELECT });
+    `, { replacements: [destinationId], type: QueryTypes.SELECT });
 
     const hierarchy = {};
     for (const row of results) {
@@ -2342,11 +2363,12 @@ router.get('/categories/:category/pois', async (req, res) => {
   try {
     const { category } = req.params;
     const { subcategory, type, limit = 20, offset = 0, language = 'nl' } = req.query;
+    const { destinationId } = getDestinationFromRequest(req);
     const { mysqlSequelize } = await import('../config/database.js');
     const { QueryTypes } = (await import('sequelize')).default;
 
-    let whereClause = 'WHERE is_active = 1 AND category = ?';
-    const params = [decodeURIComponent(category)];
+    let whereClause = 'WHERE is_active = 1 AND destination_id = ? AND category = ?';
+    const params = [destinationId, decodeURIComponent(category)];
 
     if (subcategory) {
       whereClause += ' AND subcategory = ?';

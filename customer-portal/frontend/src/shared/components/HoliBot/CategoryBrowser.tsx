@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../i18n/LanguageContext';
+import { useDestination } from '../../contexts/DestinationContext';
 import { chatApi } from '../../services/chat.api';
 import './CategoryBrowser.css';
 
@@ -25,17 +26,30 @@ interface CategoryBrowserProps {
   onCancel: () => void;
 }
 
-// Categories to HIDE (grondwet: geen accommodaties)
-const hiddenCategories = [
-  'Accommodations',
-  'Accommodation (do not communicate)',
-  'Practical',
-  'Health & Wellbeing',
-  'Services'
+// Categories to SHOW per destination (whitelist approach — only these appear)
+const allowedCategoriesCalpe = [
+  'Beaches & Nature',
+  'Food & Drinks',
+  'Culture & History',
+  'Active',
+  'Shopping',
+  'Recreation',
+  'Nightlife'
+];
+const allowedCategoriesTexel = [
+  'Eten & Drinken',
+  'Natuur',
+  'Cultuur & Historie',
+  'Winkelen',
+  'Recreatief',
+  'Actief',
+  'Gezondheid & Verzorging',
+  'Praktisch'
 ];
 
 // Level 1: Main category icons (matching POIs page for consistency)
 const categoryIcons: Record<string, string> = {
+  // Calpe (English names)
   'Beaches & Nature': '/assets/category-icons/beaches-nature.png',
   'Food & Drinks': '/assets/category-icons/food-drinks.png',
   'Culture & History': '/assets/category-icons/culture-history.png',
@@ -43,6 +57,15 @@ const categoryIcons: Record<string, string> = {
   'Shopping': '/assets/category-icons/shopping.png',
   'Recreation': '/assets/category-icons/recreation.png',
   'Nightlife': '/assets/category-icons/subcategories/nightlife.webp',
+  // Texel (Dutch names)
+  'Eten & Drinken': '/assets/category-icons/food-drinks.png',
+  'Actief': '/assets/category-icons/active.png',
+  'Natuur': '/assets/category-icons/beaches-nature.png',
+  'Cultuur & Historie': '/assets/category-icons/culture-history.png',
+  'Winkelen': '/assets/category-icons/shopping.png',
+  'Recreatief': '/assets/category-icons/recreation.png',
+  'Gezondheid & Verzorging': '/assets/category-icons/subcategories/beauty.webp',
+  'Praktisch': '/assets/category-icons/subcategories/specialty.webp',
   'default': '/assets/category-icons/active.png'
 };
 
@@ -773,8 +796,10 @@ const labels: Record<string, Record<string, string>> = {
 
 export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
   const { language } = useLanguage();
+  const destination = useDestination();
   const t = labels[language] || labels.nl;
   const catTrans = categoryTranslations[language] || categoryTranslations.nl;
+  const allowedCategories = destination.id === 'texel' ? allowedCategoriesTexel : allowedCategoriesCalpe;
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -795,9 +820,9 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
       const response = await fetch('/api/v1/holibot/categories/hierarchy');
       const data = await response.json();
       if (data.success) {
-        // Filter out hidden categories (Accommodations, Practical, etc.)
+        // Only show allowed categories (whitelist approach)
         const filtered = data.data.filter(
-          (cat: Category) => !hiddenCategories.includes(cat.name)
+          (cat: Category) => allowedCategories.includes(cat.name)
         );
         setCategories(filtered);
       } else {
