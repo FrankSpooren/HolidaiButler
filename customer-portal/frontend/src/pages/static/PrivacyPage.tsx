@@ -21,7 +21,7 @@ export function PrivacyPage() {
       section1Title: '1. Inleiding',
       section1Text: 'TexelMaps ("wij", "ons", "onze") respecteert je privacy en zet zich in voor de bescherming van je persoonlijke gegevens. Dit privacybeleid informeert je over hoe wij omgaan met je persoonlijke gegevens wanneer je onze website of app gebruikt.',
       section2Title: '2. Welke Gegevens Verzamelen Wij',
-      use2: 'Het personaliseren van aanbevelingen via Texla',
+      use2: 'Het personaliseren van aanbevelingen via Tessa',
       section8Text: 'Voor vragen over dit privacybeleid of om je rechten uit te oefenen, neem contact met ons op via privacy@texelmaps.nl.',
     },
     en: {
@@ -31,7 +31,7 @@ export function PrivacyPage() {
       section1Title: '1. Introduction',
       section1Text: 'TexelMaps ("we", "us", "our") respects your privacy and is committed to protecting your personal data. This privacy policy informs you about how we handle your personal data when you use our website or app.',
       section2Title: '2. What Data We Collect',
-      use2: 'Personalizing recommendations via Texla',
+      use2: 'Personalizing recommendations via Tessa',
       section8Text: 'For questions about this privacy policy or to exercise your rights, contact us at privacy@texelmaps.nl.',
     },
     de: {
@@ -41,7 +41,7 @@ export function PrivacyPage() {
       section1Title: '1. Einleitung',
       section1Text: 'TexelMaps ("wir", "uns", "unser") respektiert Ihre Privatsphäre und verpflichtet sich zum Schutz Ihrer persönlichen Daten. Diese Datenschutzrichtlinie informiert Sie darüber, wie wir mit Ihren persönlichen Daten umgehen, wenn Sie unsere Website oder App nutzen.',
       section2Title: '2. Welche Daten Wir Sammeln',
-      use2: 'Personalisierung von Empfehlungen über Texla',
+      use2: 'Personalisierung von Empfehlungen über Tessa',
       section8Text: 'Bei Fragen zu dieser Datenschutzrichtlinie oder zur Ausübung Ihrer Rechte kontaktieren Sie uns unter privacy@texelmaps.nl.',
     },
   };
@@ -108,7 +108,7 @@ export function PrivacyPage() {
             <p>{sp?.section3Intro || 'Wij gebruiken je gegevens voor de volgende doeleinden:'}</p>
             <ul>
               <li>{sp?.use1 || 'Het leveren van onze diensten aan jou'}</li>
-              <li>{getContent('use2', destination.id === 'texel' ? 'Het personaliseren van aanbevelingen via Texla' : 'Het personaliseren van aanbevelingen via HoliBot')}</li>
+              <li>{getContent('use2', destination.id === 'texel' ? 'Het personaliseren van aanbevelingen via Tessa' : 'Het personaliseren van aanbevelingen via HoliBot')}</li>
               <li>{sp?.use3 || 'Het verwerken van boekingen en reserveringen'}</li>
               <li>{sp?.use4 || 'Het verbeteren van onze diensten'}</li>
               <li>{sp?.use5 || 'Het communiceren met je over je account of boekingen'}</li>

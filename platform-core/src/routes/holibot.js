@@ -697,7 +697,12 @@ const cleanAIText = (text, poiNames = []) => {
     // Remove strikethrough
     .replace(/~{2,}/g, '');
 
-  // CRITICAL: Fix spacing after common Dutch/Spanish prepositions stuck to next word
+  // CRITICAL: Generic camelCase split — fixes LLM artifacts where spaces are removed
+  // Handles: "deTegeltjes" -> "de Tegeltjes", "inDen" -> "in Den", "bijRestaurant" -> "bij Restaurant"
+  // Must run BEFORE preposition handling so word boundaries work correctly after splitting
+  cleaned = cleaned.replace(/([a-zà-ü])([A-ZÀ-Ü])/g, '$1 $2');
+
+  // Fix spacing after common Dutch/Spanish prepositions stuck to next word
   // Handles: "inCalpe" -> "in Calpe", "bijPort" -> "bij Port", "vanCalpe" -> "van Calpe"
   const prepositions = ["in", "bij", "van", "naar", "voor", "met", "op", "aan", "over", "uit", "door", "om", "tegen", "tot", "en", "of", "de", "het", "een", "la", "el", "the", "at", "to", "from", "with"];
   for (const prep of prepositions) {
@@ -1849,6 +1854,38 @@ ZASADY:
 
     // Clean AI text: remove asterisks, quotes, fix spacing around POI names
     description = cleanAIText(description, selectedPoiNames);
+
+    // Step 6: Batch-load images from imageurls table for richer POI cards
+    // Extract MySQL POI IDs from itinerary items
+    // Sources: mysqlId (enrichment), mysqlData.id (quality filter), or poi_XXXX ID pattern
+    const getPoiMysqlId = (poi) => {
+      if (poi.mysqlId) return Number(poi.mysqlId);
+      if (poi.mysqlData?.id) return Number(poi.mysqlData.id);
+      // ChromaDB POI IDs use "poi_XXXX" format where XXXX is the MySQL ID
+      if (typeof poi.id === 'string' && poi.id.startsWith('poi_')) {
+        const numId = parseInt(poi.id.replace('poi_', ''), 10);
+        if (!isNaN(numId)) return numId;
+      }
+      return null;
+    };
+    const itineraryPoiIds = itinerary
+      .map(item => item.poi ? getPoiMysqlId(item.poi) : null)
+      .filter(id => id !== null);
+    const itineraryImageMap = itineraryPoiIds.length > 0 ? await getImagesForPOIs(itineraryPoiIds, 5) : new Map();
+
+    // Enrich itinerary POIs with images
+    for (const item of itinerary) {
+      if (item.poi) {
+        const mysqlId = getPoiMysqlId(item.poi);
+        if (mysqlId) {
+          const images = itineraryImageMap.get(Number(mysqlId)) || [];
+          item.poi.images = images;
+          if (images.length > 0 && !item.poi.thumbnailUrl) {
+            item.poi.thumbnailUrl = images[0];
+          }
+        }
+      }
+    }
 
     res.json({
       success: true,

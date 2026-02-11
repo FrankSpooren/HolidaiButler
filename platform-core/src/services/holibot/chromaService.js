@@ -7,6 +7,15 @@
 import { CloudClient } from 'chromadb';
 import logger from '../../utils/logger.js';
 
+/**
+ * No-op embedding function for ChromaDB.
+ * We provide our own Mistral embeddings, so ChromaDB doesn't need to compute them.
+ * Without this, ChromaDB loads the default ONNX embedding model and logs warnings.
+ */
+const noOpEmbeddingFunction = {
+  generate: async (texts) => texts.map(() => [])
+};
+
 class ChromaService {
   constructor() {
     this.client = null;
@@ -80,7 +89,7 @@ class ChromaService {
     try {
       logger.info(`Getting collection: ${name}`);
 
-      const collection = await this.client.getCollection({ name });
+      const collection = await this.client.getCollection({ name, embeddingFunction: noOpEmbeddingFunction });
       const count = await collection.count();
       logger.info(`Collection "${name}" loaded with ${count} documents`);
 

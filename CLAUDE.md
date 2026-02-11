@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.11.0
+> **Versie**: 3.12.0
 > **Laatst bijgewerkt**: 11 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -519,6 +519,22 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 **API herstart**: PM2 restart holidaibutler-api
 **Commit**: dae659e, pushed dev→test→main
 
+### Fase 6e Round 3 Resultaten (Texla→Tessa + ChromaDB + Spacing + Icons + Itinerary Images)
+| Issue | Probleem | Fix | Status |
+|-------|----------|-----|--------|
+| Texla → Tessa | 23 occurrences van "Texla" i.p.v. "Tessa" in 6 frontend pagina's (Homepage, FAQ, About, HowItWorks, Terms, Privacy) in NL/EN/DE content. | `replace_all` Texla → Tessa in alle 6 bestanden. | ✅ |
+| ChromaDB Warnings | 15+ warnings bij PM2 start: "Cannot instantiate DefaultEmbeddingFunction", "Collection created with default-embed". Collections waren aangemaakt met `default-embed` metadata maar package niet geïnstalleerd. | `@chroma-core/default-embed` npm package geïnstalleerd. No-op embedding function toegevoegd aan `getCollection()` en `createCollection()` in beide chromaService bestanden. Warnings teruggebracht van 15+ naar 3 (niet-kritieke schema deserialization). | ✅ |
+| Spacing "deTegeltjes" | **ROOT CAUSE**: `cleanAIText()` had GEEN generieke camelCase regex. De `\b` word boundary in preposition regex matcht niet voor "deTegeltjes" omdat het één woord is zonder boundaries. `fixResponseSpacing()` (ragService) had wél de regex maar wordt niet aangeroepen voor streaming. | Generieke camelCase split `([a-zà-ü])([A-ZÀ-Ü])` → `$1 $2` toegevoegd aan `cleanAIText()` VÓÓR preposition handling. Fix werkt nu voor alle endpoints (streaming + non-streaming). | ✅ |
+| Icon Centering | Chat avatar CSS had `width: 120%; height: 120%; object-fit: cover; object-position: center 30%; transform: translateX(-10%)` — geoptimaliseerd voor oude HB icon (100x100). TexelMaps icon (256x256) werd afgesneden. | CSS gewijzigd naar `width: 100%; height: 100%; object-fit: contain; object-position: center;` in zowel ChatMessage.css als WelcomeMessage.css. Werkt voor beide destinations. | ✅ |
+| Itinerary Images | **ROOT CAUSE**: Itinerary endpoint haalde GEEN images op uit `imageurls` tabel. POIs kwamen terug met `thumbnailUrl: null`. Frontend kon geen POI cards met visuals tonen. | `getImagesForPOIs()` batch-fetch toegevoegd aan itinerary endpoint. MySQL ID extractie uit `poi_XXXX` ChromaDB ID format. POIs krijgen nu tot 5 images + thumbnailUrl. | ✅ |
+| 404 Error | Gemeld als itinerary 404, maar API endpoint `/api/v1/holibot/itinerary` retourneert 200. Waarschijnlijk veroorzaakt door ontbrekende POI images (nu gefixed) of eenmalige network fout. | Onderzocht: API route correct, assets correct gedeployed. Itinerary images fix voorkomt mogelijk de 404 (browser laadde `null` als image URL). | ✅ |
+
+**Bestanden gewijzigd**: Homepage.tsx, FAQPage.tsx, AboutPage.tsx, HowItWorksPage.tsx, TermsPage.tsx, PrivacyPage.tsx, holibot/chromaService.js, holibotSync/chromaService.js, holibot.js, ChatMessage.css, WelcomeMessage.css
+**NPM package**: `@chroma-core/default-embed` geïnstalleerd (lokaal + Hetzner)
+**Frontend herbouwd**: Texel build deployed naar dev.texelmaps.nl + texelmaps.nl
+**API herstart**: PM2 restart holidaibutler-api
+**ChromaDB warnings**: 15+ → 3 (niet-kritiek)
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -684,6 +700,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.12.0** | **2026-02-11** | **Fase 6e Round 3: Texla→Tessa in 6 frontend pagina's (23 occurrences, NL/EN/DE). ChromaDB warnings: @chroma-core/default-embed geïnstalleerd + no-op embedding function in getCollection()/createCollection() (15+ warnings → 3). Spacing ROOT CAUSE gefixed: generieke camelCase regex ([a-z])([A-Z])→$1 $2 in cleanAIText() (\\b word boundary werkt niet voor "deTegeltjes"). Icon centering: object-fit:contain i.p.v. cover+transform. Itinerary images: getImagesForPOIs() toegevoegd aan itinerary endpoint, poi_XXXX→MySQL ID extractie. 11 bestanden gewijzigd.** |
 | **3.11.0** | **2026-02-11** | **Fase 6e Round 2: Opening hours format mismatch ROOT CAUSE gefixed (array+Dutch day names vs object+English). Itinerary: Dutch categorie matching voor time-of-day selectie (natuur, actief, cultuur, eten). 60+ Nederlandse subcategorie iconen in MessageList.tsx + CategoryBrowser.tsx. Streaming chat: cleanAIText() toegevoegd aan done event. Image priority: getLocalImagePriority() deprioritiseert street view ook als lokaal opgeslagen. Chat avatar: destination-aware (texelmaps-icon.png voor Texel). 6 bestanden gewijzigd.** |
 | **3.10.0** | **2026-02-11** | **Fase 6e X-Destination-ID + Daily Tip Overhaul + Spacing + Icons: 11 fetch() calls gefixed met X-Destination-ID header. Daily tip: LLM verwijderd, imageurls lookup, golden rule filter. Spacing: connectingWords na locatienamen.** |
 | **3.9.0** | **2026-02-10** | **Fase 6d Destination Routing + Categories + Fuzzy Match + Spacing: ROOT CAUSE gefixed — getDestinationFromRequest() accepteert nu string ("texel") EN numeric (2) IDs (parseInt("texel")=NaN→default Calpe was ROOT CAUSE alle gebroken Texel endpoints). CORS fix: Apache RewriteRule i.p.v. SetEnvIf ($0 shell expansion bug). Category whitelist: exact 8 Texel categorieën + 3 ontbrekende iconen. normalizeDutchNumbers() voor POI name matching (12→twaalf). fixResponseSpacing() voor LLM spacing errors. Itinerary event query: destination_id i.p.v. hardcoded calpe_distance. 10 issues gefixed in 3 backend + 1 frontend + 1 Apache config.** |
