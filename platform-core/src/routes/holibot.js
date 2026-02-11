@@ -231,29 +231,37 @@ function isPermanentlyClosedFromHours(openingHours) {
   try {
     const hours = typeof openingHours === 'string' ? JSON.parse(openingHours) : openingHours;
     if (typeof hours !== 'object' || !hours) return false;
-    
+
+    // Handle ARRAY format: [{day: "dinsdag", hours: "Gesloten"}, ...]
+    if (Array.isArray(hours)) {
+      if (hours.length < 7) return false;
+      const closedDays = hours.filter(h => {
+        const hoursStr = (h.hours || '').toLowerCase().trim();
+        return hoursStr === 'closed' || hoursStr === 'gesloten' || hoursStr === '';
+      }).length;
+      return closedDays >= 7;
+    }
+
+    // Handle OBJECT format: {monday: "Closed", tuesday: [{...}], ...}
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     let closedDays = 0;
-    
     for (const day of days) {
       const dayData = hours[day];
-      // Check for closed: empty array [], null, undefined, 'Closed', or empty string
-      const isClosed = !dayData || 
+      const isClosed = !dayData ||
                        (Array.isArray(dayData) && dayData.length === 0) ||
-                       dayData === 'Closed' || 
-                       dayData === 'closed' || 
+                       dayData === 'Closed' || dayData === 'closed' ||
+                       dayData === 'Gesloten' || dayData === 'gesloten' ||
                        dayData === '';
       if (isClosed) closedDays++;
     }
-    
-    const isPermanentlyClosed = closedDays === 7;
-    if (isPermanentlyClosed) {
+    if (closedDays === 7) {
       logger.info('POI permanently closed detected (all 7 days empty)');
+      return true;
     }
-    return isPermanentlyClosed;
-  } catch (e) { 
+    return false;
+  } catch (e) {
     logger.warn('Error parsing opening_hours for permanent closed check:', e.message);
-    return false; 
+    return false;
   }
 }
 
@@ -263,50 +271,95 @@ function isCurrentlyClosedFromHours(openingHours) {
   try {
     const hours = typeof openingHours === 'string' ? JSON.parse(openingHours) : openingHours;
     if (typeof hours !== 'object' || !hours) return false;
-    
-    // Get current time in Spain timezone (CET/CEST)
+
+    // Get current time in EU timezone (works for both Spain CET and Netherlands CET)
     const now = new Date();
-    const spainTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const today = dayNames[spainTime.getDay()];
-    const currentHour = spainTime.getHours();
-    const currentMinute = spainTime.getMinutes();
+    const euTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' }));
+    const dayIndex = euTime.getDay(); // 0=Sunday
+    const currentHour = euTime.getHours();
+    const currentMinute = euTime.getMinutes();
     const currentTime = currentHour * 60 + currentMinute;
-    
-    const todayHours = hours[today];
-    
+
+    // Day name mappings (English + Dutch)
+    const dayNamesEn = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayNamesNl = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
+    const dayNamesEnCap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const todayEn = dayNamesEn[dayIndex];
+    const todayNl = dayNamesNl[dayIndex];
+    const todayEnCap = dayNamesEnCap[dayIndex];
+
+    // Handle ARRAY format: [{day: "dinsdag", hours: "06:00 to 16:00"}, ...]
+    // This is the Texel format (Dutch day names + "hours" string)
+    if (Array.isArray(hours)) {
+      const todayEntry = hours.find(h => {
+        const d = (h.day || '').toLowerCase();
+        return d === todayEn || d === todayNl;
+      });
+
+      if (!todayEntry) return false; // Day not listed = assume open
+
+      const hoursStr = (todayEntry.hours || '').trim();
+      // Check if closed today
+      if (hoursStr === 'Closed' || hoursStr === 'closed' || hoursStr === 'CLOSED' ||
+          hoursStr === 'Gesloten' || hoursStr === 'gesloten' || hoursStr === '') {
+        return true;
+      }
+
+      // Try to parse time range: "06:00 to 16:00" or "8:30 AM to 4 PM" or "06:00 - 16:00"
+      const timeMatch = hoursStr.match(/(\d{1,2}):?(\d{2})?\s*(?:AM|PM)?\s*(?:to|–|-)\s*(\d{1,2}):?(\d{2})?\s*(?:AM|PM)?/i);
+      if (timeMatch) {
+        let openH = parseInt(timeMatch[1]);
+        const openM = parseInt(timeMatch[2] || '0');
+        let closeH = parseInt(timeMatch[3]);
+        const closeM = parseInt(timeMatch[4] || '0');
+        // Handle AM/PM
+        if (hoursStr.includes('PM') && closeH < 12) closeH += 12;
+        if (hoursStr.includes('AM') && openH === 12) openH = 0;
+        const openTime = openH * 60 + openM;
+        const closeTime = closeH * 60 + closeM;
+        if (closeTime < openTime) {
+          return currentTime >= closeTime && currentTime < openTime;
+        }
+        return currentTime < openTime || currentTime >= closeTime;
+      }
+
+      return false; // Can't parse hours = assume open
+    }
+
+    // Handle OBJECT format: {monday: [{open: "10:00", close: "23:00"}], ...}
+    // This is the Calpe format (English day keys)
+    const todayHours = hours[todayEn] || hours[todayEnCap] || hours[todayNl];
+
+    // If day key not found at all, assume open (don't filter out)
+    if (todayHours === undefined) return false;
+
     // Check if closed today: empty array, null, 'Closed', etc.
-    if (!todayHours || 
+    if (!todayHours ||
         (Array.isArray(todayHours) && todayHours.length === 0) ||
-        todayHours === 'Closed' || 
-        todayHours === 'closed' || 
+        todayHours === 'Closed' || todayHours === 'closed' ||
+        todayHours === 'Gesloten' || todayHours === 'gesloten' ||
         todayHours === '') {
-      logger.info('POI currently closed: no hours for ' + today);
       return true;
     }
-    
+
     // If todayHours is an array of time slots [{open: 10:00, close: 23:00}]
     if (Array.isArray(todayHours) && todayHours.length > 0) {
-      // Check if current time falls within ANY open slot
       for (const slot of todayHours) {
         if (slot.open && slot.close) {
           const [openH, openM] = slot.open.split(':').map(Number);
           const [closeH, closeM] = slot.close.split(':').map(Number);
           const openTime = openH * 60 + openM;
           const closeTime = closeH * 60 + closeM;
-          
-          // Handle overnight hours
           if (closeTime < openTime) {
-            if (currentTime >= openTime || currentTime < closeTime) return false; // Open
+            if (currentTime >= openTime || currentTime < closeTime) return false;
           } else {
-            if (currentTime >= openTime && currentTime < closeTime) return false; // Open
+            if (currentTime >= openTime && currentTime < closeTime) return false;
           }
         }
       }
-      // Not within any open slot
       return true;
     }
-    
+
     // Legacy string format HH:MM - HH:MM
     if (typeof todayHours === 'string') {
       const match = todayHours.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
@@ -319,11 +372,11 @@ function isCurrentlyClosedFromHours(openingHours) {
         return currentTime < openTime || currentTime >= closeTime;
       }
     }
-    
+
     return false; // If can't parse, assume open
-  } catch (e) { 
+  } catch (e) {
     logger.warn('Error parsing opening_hours for current closed check:', e.message);
-    return false; 
+    return false;
   }
 }
 
@@ -1080,8 +1133,12 @@ router.post('/chat/stream', async (req, res) => {
       res.write(`event: error\ndata: ${JSON.stringify({ error: 'Streaming interrupted' })}\n\n`);
     }
 
-    // Send completion event
-    res.write(`event: done\ndata: ${JSON.stringify({ fullMessage, totalLength: fullMessage.length })}\n\n`);
+    // Clean AI text: fix spacing around POI names and prepositions
+    const streamPoiNames = streamResult.pois?.map(p => p.name).filter(Boolean) || [];
+    const cleanedMessage = cleanAIText(fullMessage, streamPoiNames);
+
+    // Send completion event with cleaned message
+    res.write(`event: done\ndata: ${JSON.stringify({ fullMessage: cleanedMessage, totalLength: cleanedMessage.length })}\n\n`);
     res.end();
 
   } catch (error) {
@@ -1142,9 +1199,15 @@ router.post('/itinerary', async (req, res) => {
 
     // Time-of-day appropriate POI types
     const timeOfDayTypes = {
-      morning: ['bakery', 'cafe', 'coffee', 'breakfast', 'beach', 'nature', 'park', 'hiking', 'cycling'],
-      afternoon: ['museum', 'shopping', 'market', 'viewpoint', 'culture', 'active', 'sport', 'beach'],
-      evening: ['restaurant', 'tapas', 'bar', 'fine dining', 'seafood', 'pizzeria', 'nightlife', 'lounge']
+      morning: ['bakery', 'cafe', 'coffee', 'breakfast', 'beach', 'nature', 'park', 'hiking', 'cycling',
+        // Dutch (Texel)
+        'ontbijt', 'strand', 'natuur', 'wandel', 'fiets', 'bossen'],
+      afternoon: ['museum', 'shopping', 'market', 'viewpoint', 'culture', 'active', 'sport', 'beach',
+        // Dutch (Texel)
+        'musea', 'winkel', 'markt', 'uitkijk', 'cultuur', 'actief', 'galerie', 'monument', 'dorpskern'],
+      evening: ['restaurant', 'tapas', 'bar', 'fine dining', 'seafood', 'pizzeria', 'nightlife', 'lounge',
+        // Dutch (Texel)
+        'eetcafe', 'strandpaviljoen', 'cocktail', 'wijndomein']
     };
     // Query variation templates for diverse results (destination-aware)
     const queryTemplates = [
@@ -1465,7 +1528,10 @@ router.post('/itinerary', async (req, res) => {
       restaurants = restaurantResults.results.filter(p =>
         p.category?.toLowerCase().includes('food') ||
         p.category?.toLowerCase().includes('restaurant') ||
-        p.subcategory?.toLowerCase().includes('restaurant')
+        p.category?.toLowerCase().includes('eten') ||
+        p.subcategory?.toLowerCase().includes('restaurant') ||
+        p.subcategory?.toLowerCase().includes('eetcafe') ||
+        p.subcategory?.toLowerCase().includes('strandpaviljoen')
       );
     }
 
@@ -1511,31 +1577,38 @@ router.post('/itinerary', async (req, res) => {
     };
 
     // Categorize POIs by type for time-of-day selection
+    // Supports both English (Calpe) and Dutch (Texel) category names
     const morningPois = searchResults.results.filter(p => {
       const subcat = (p.subcategory || p.poi_type || '').toLowerCase();
       const cat = (p.category || '').toLowerCase();
       return timeOfDayTypes.morning.some(t => subcat.includes(t) || cat.includes(t)) ||
-             cat.includes('beach') || cat.includes('nature') || cat.includes('active');
+             cat.includes('beach') || cat.includes('nature') || cat.includes('active') ||
+             cat.includes('natuur') || cat.includes('actief') || cat.includes('strand');
     });
 
     const afternoonPois = searchResults.results.filter(p => {
       const subcat = (p.subcategory || p.poi_type || '').toLowerCase();
       const cat = (p.category || '').toLowerCase();
       return timeOfDayTypes.afternoon.some(t => subcat.includes(t) || cat.includes(t)) ||
-             cat.includes('culture') || cat.includes('shopping') || cat.includes('recreation');
+             cat.includes('culture') || cat.includes('shopping') || cat.includes('recreation') ||
+             cat.includes('cultuur') || cat.includes('winkel') || cat.includes('recreat');
     });
 
     const eveningPois = searchResults.results.filter(p => {
       const subcat = (p.subcategory || p.poi_type || '').toLowerCase();
       const cat = (p.category || '').toLowerCase();
       return timeOfDayTypes.evening.some(t => subcat.includes(t) || cat.includes(t)) ||
-             cat.includes('food') || cat.includes('nightlife');
+             cat.includes('food') || cat.includes('nightlife') ||
+             cat.includes('eten') || cat.includes('drinken');
     });
 
     // Combine restaurants from search + explicit restaurant search
     const allRestaurants = [...restaurants, ...searchResults.results.filter(p =>
       p.category?.toLowerCase().includes('food') ||
-      p.subcategory?.toLowerCase().includes('restaurant')
+      p.category?.toLowerCase().includes('eten') ||
+      p.subcategory?.toLowerCase().includes('restaurant') ||
+      p.subcategory?.toLowerCase().includes('eetcafe') ||
+      p.subcategory?.toLowerCase().includes('strandpaviljoen')
     )];
 
     // Shuffle all lists for variety

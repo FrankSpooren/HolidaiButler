@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDestination } from '../../contexts/DestinationContext';
-import holibotAvatar from '../../../assets/images/hb-merkicoon.png';
+import defaultAvatar from '../../../assets/images/hb-merkicoon.png';
 import './WelcomeMessage.css';
 
 /**
@@ -51,6 +51,7 @@ const defaultWelcomeMessages: Record<string, string[]> = {
 
 export function WelcomeMessage({ language = 'nl', onComplete, skipAnimation = false }: WelcomeMessageProps) {
   const destination = useDestination();
+  const botAvatar = destination.icon || defaultAvatar;
   const destMessages = destination.holibot?.welcomeMessages;
   const messages = destMessages?.[language] || destMessages?.['nl'] || defaultWelcomeMessages[language] || defaultWelcomeMessages.nl;
   const [visibleMessages, setVisibleMessages] = useState<number>(skipAnimation ? 3 : 0);
@@ -83,7 +84,7 @@ export function WelcomeMessage({ language = 'nl', onComplete, skipAnimation = fa
         <div className="holibot-welcome-message holibot-welcome-animate">
           <div className="holibot-welcome-avatar">
             <img
-              src={holibotAvatar}
+              src={botAvatar}
               alt={destination.holibot?.name || 'HoliBot'}
               className="holibot-welcome-avatar-img"
             />

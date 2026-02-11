@@ -65,24 +65,23 @@ function getBestUrl(img) {
 }
 
 /**
- * Get image priority based on URL pattern
- * Lower number = higher priority
+ * Get image quality priority based on URL pattern
+ * Lower number = higher priority (better quality/more relevant)
  *
- * Priority based on reliability testing (29-12-2025):
- * - AF1Qip URLs: 100% success rate
- * - Worldota CDN: 100% success rate
- * - Streetview: 100% success rate
+ * Priority based on reliability testing (29-12-2025) + quality assessment:
+ * - AF1Qip URLs: 100% success rate, user-uploaded photos (best quality)
+ * - Worldota CDN: 100% success rate, professional hotel photos
+ * - Streetview: 100% reliable but generic/low-quality for POI display
  * - gps-cs-s URLs: 68% success rate (32% return 403)
  */
 function getImagePriority(url) {
   if (!url) return 999;
 
-  // Worldota CDN (100% reliable)
-  if (url.includes('worldota.net')) return 1;
+  // AF1Qip Google Photos (user-uploaded, highest relevance for POI)
+  if (url.includes('lh3.googleusercontent.com/p/AF1Qip')) return 1;
 
-  // AF1Qip Google Photos (100% reliable, highest quality)
-  // Note: Check AF1Qip BEFORE general lh3 to catch classic format
-  if (url.includes('lh3.googleusercontent.com/p/AF1Qip')) return 2;
+  // Worldota CDN (professional photos)
+  if (url.includes('worldota.net')) return 2;
 
   // Other lh3.googleusercontent.com (non-gps-cs-s, non-AF1Qip)
   if (url.includes('lh3.googleusercontent.com') && !url.includes('gps-cs-s')) return 3;
@@ -90,11 +89,32 @@ function getImagePriority(url) {
   // gps-cs-s URLs (68% reliable - lower priority due to 32% failure rate)
   if (url.includes('lh3.googleusercontent.com/gps-cs-s')) return 6;
 
-  // Street View (100% reliable, but generic images)
-  if (url.includes('streetviewpixels')) return 8;
+  // Street View (100% reliable, but generic exterior/street images — worst for display)
+  if (url.includes('streetviewpixels') || url.includes('streetview')) return 9;
 
   // Other sources
   return 5;
+}
+
+/**
+ * Get local image priority (for locally stored images)
+ * Even local images should be sorted by quality of the original source.
+ * This prevents street view thumbnails from appearing as the first image.
+ */
+function getLocalImagePriority(imageUrl) {
+  if (!imageUrl) return 1; // Unknown source, assume decent quality
+
+  // Street View — deprioritize even when stored locally
+  if (imageUrl.includes('streetviewpixels') || imageUrl.includes('streetview')) return 5;
+
+  // gps-cs-s — lower quality
+  if (imageUrl.includes('gps-cs-s')) return 3;
+
+  // AF1Qip — best quality user photos
+  if (imageUrl.includes('AF1Qip')) return 0;
+
+  // Default local — good quality
+  return 1;
 }
 
 /**
@@ -118,7 +138,7 @@ export async function getImagesForPOI(poiId, limit = 10) {
       .map(img => ({
         url: getBestUrl(img),
         hasLocal: !!img.local_path,
-        priority: img.local_path ? 0 : getImagePriority(img.image_url)
+        priority: img.local_path ? getLocalImagePriority(img.image_url) : getImagePriority(img.image_url)
       }))
       .sort((a, b) => a.priority - b.priority)
       .map(img => img.url)
@@ -170,7 +190,7 @@ export async function getImagesForPOIs(poiIds, limitPerPoi = 3) {
       poiImages.get(poiId).push({
         url: getBestUrl(img),
         hasLocal: !!img.local_path,
-        priority: img.local_path ? 0 : getImagePriority(img.image_url)
+        priority: img.local_path ? getLocalImagePriority(img.image_url) : getImagePriority(img.image_url)
       });
     }
 
