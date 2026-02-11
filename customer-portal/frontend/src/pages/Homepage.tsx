@@ -24,21 +24,21 @@ export function Homepage() {
   const texelUsps = {
     nl: [
       { logoSrc: '/assets/images/texel/vvv-texel-logo.gif', title: 'Officieel Partner', description: 'Officieel Partner VVV Texel' },
-      { icon: '🤖', title: 'Texla AI-Assistent', description: 'Texla: Jouw (hyper) persoonlijke Butler' },
+      { icon: '🤖', title: 'Tessa AI-Assistent', description: 'Tessa: Jouw (hyper) persoonlijke Butler' },
       { icon: '🌊', title: '100% Lokaal', description: 'Ondersteun Texel economie & identiteit' },
       { icon: '⚡', title: 'Realtime info', description: 'Stranden, veerboot, weer en evenementen' },
       { icon: '🔒', title: 'Veilig & Betrouwbaar', description: 'We geven om je privacy' },
     ],
     en: [
       { logoSrc: '/assets/images/texel/vvv-texel-logo.gif', title: 'Official Partner', description: 'Official Partner VVV Texel' },
-      { icon: '🤖', title: 'Texla AI Assistant', description: 'Texla: Your (hyper) personal Butler' },
+      { icon: '🤖', title: 'Tessa AI Assistant', description: 'Tessa: Your (hyper) personal Butler' },
       { icon: '🌊', title: '100% Local', description: 'Support Texel economy & identity' },
       { icon: '⚡', title: 'Real-time info', description: 'Beaches, ferry, weather and events' },
       { icon: '🔒', title: 'Safe & Reliable', description: 'We care about your privacy' },
     ],
     de: [
       { logoSrc: '/assets/images/texel/vvv-texel-logo.gif', title: 'Offizieller Partner', description: 'Offizieller Partner VVV Texel' },
-      { icon: '🤖', title: 'Texla KI-Assistent', description: 'Texla: Ihr (hyper) persönlicher Butler' },
+      { icon: '🤖', title: 'Tessa KI-Assistent', description: 'Tessa: Ihr (hyper) persönlicher Butler' },
       { icon: '🌊', title: '100% Lokal', description: 'Unterstützen Sie die Texeler Wirtschaft & Identität' },
       { icon: '⚡', title: 'Echtzeit-Info', description: 'Strände, Fähre, Wetter und Veranstaltungen' },
       { icon: '🔒', title: 'Sicher & Zuverlässig', description: 'Wir kümmern uns um Ihre Privatsphäre' },
@@ -172,7 +172,7 @@ export function Homepage() {
               {usps.map((usp, index) => (
                 <div key={index} className="usp-card">
                   {usp.logoSrc ? (
-                    <img src={usp.logoSrc} alt={usp.title} className="usp-icon logo-calpe" loading="lazy" />
+                    <img src={usp.logoSrc} alt={usp.title} className={`usp-icon ${destination.id === 'texel' ? 'logo-texel-partner' : 'logo-calpe'}`} loading="lazy" />
                   ) : (
                     <div className="usp-icon">{usp.icon}</div>
                   )}
@@ -190,7 +190,7 @@ export function Homepage() {
                 {usps.map((usp, index) => (
                   <div key={index} className="usp-card">
                     {usp.logoSrc ? (
-                      <img src={usp.logoSrc} alt={usp.title} className="usp-icon logo-calpe" loading="lazy" />
+                      <img src={usp.logoSrc} alt={usp.title} className={`usp-icon ${destination.id === 'texel' ? 'logo-texel-partner' : 'logo-calpe'}`} loading="lazy" />
                     ) : (
                       <div className="usp-icon">{usp.icon}</div>
                     )}

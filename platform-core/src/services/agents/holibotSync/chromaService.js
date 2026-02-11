@@ -7,6 +7,15 @@
 import { CloudClient } from 'chromadb';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 
+/**
+ * No-op embedding function for ChromaDB.
+ * We provide our own Mistral embeddings, so ChromaDB doesn't need to compute them.
+ * Without this, ChromaDB loads the default ONNX embedding model and logs warnings.
+ */
+const noOpEmbeddingFunction = {
+  generate: async (texts) => texts.map(() => [])
+};
+
 class ChromaService {
   constructor() {
     this.client = null;
@@ -59,7 +68,7 @@ class ChromaService {
     try {
       // Try to get existing collection first
       try {
-        const collection = await this.client.getCollection({ name });
+        const collection = await this.client.getCollection({ name, embeddingFunction: noOpEmbeddingFunction });
         this.collections[name] = collection;
         const count = await collection.count();
         console.log(`[ChromaService] Collection "${name}" loaded with ${count} documents`);
@@ -69,6 +78,7 @@ class ChromaService {
         console.log(`[ChromaService] Creating new collection: ${name}`);
         const collection = await this.client.createCollection({
           name: name,
+          embeddingFunction: noOpEmbeddingFunction,
           metadata: {
             ...metadata,
             'hnsw:space': 'cosine',

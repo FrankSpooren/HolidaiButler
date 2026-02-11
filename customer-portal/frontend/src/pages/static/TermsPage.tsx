@@ -18,7 +18,7 @@ export function TermsPage() {
       title: 'Algemene Voorwaarden',
       subtitle: 'De voorwaarden voor het gebruik van TexelMaps',
       lastUpdated: 'Laatst bijgewerkt: December 2025',
-      section2Text: 'TexelMaps is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten op Texel. Onze AI-assistent Texla biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.',
+      section2Text: 'TexelMaps is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten op Texel. Onze AI-assistent Tessa biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.',
       section6Text: 'Alle content op TexelMaps, inclusief teksten, afbeeldingen, logo\'s en software, is eigendom van TexelMaps of onze licentiegevers en wordt beschermd door auteursrecht en andere intellectuele eigendomsrechten.',
       section7Text: 'TexelMaps fungeert als tussenpersoon tussen gebruikers en lokale partners. Wij zijn niet aansprakelijk voor de kwaliteit van diensten geleverd door partners. Onze aansprakelijkheid is beperkt tot het maximaal door jou betaalde bedrag voor de betreffende dienst.',
       section10Text: 'Voor vragen over deze voorwaarden kun je contact met ons opnemen via legal@texelmaps.nl.',
@@ -27,7 +27,7 @@ export function TermsPage() {
       title: 'Terms and Conditions',
       subtitle: 'The terms of use for TexelMaps',
       lastUpdated: 'Last updated: December 2025',
-      section2Text: 'TexelMaps is a platform that helps users discover local attractions, restaurants and activities on Texel. Our AI assistant Texla provides personalized recommendations and you can make reservations and buy tickets through our platform.',
+      section2Text: 'TexelMaps is a platform that helps users discover local attractions, restaurants and activities on Texel. Our AI assistant Tessa provides personalized recommendations and you can make reservations and buy tickets through our platform.',
       section6Text: 'All content on TexelMaps, including texts, images, logos and software, is owned by TexelMaps or our licensors and is protected by copyright and other intellectual property rights.',
       section7Text: 'TexelMaps acts as an intermediary between users and local partners. We are not liable for the quality of services provided by partners. Our liability is limited to the maximum amount paid by you for the relevant service.',
       section10Text: 'For questions about these terms, you can contact us at legal@texelmaps.nl.',
@@ -36,7 +36,7 @@ export function TermsPage() {
       title: 'Allgemeine Geschäftsbedingungen',
       subtitle: 'Die Nutzungsbedingungen für TexelMaps',
       lastUpdated: 'Zuletzt aktualisiert: Dezember 2025',
-      section2Text: 'TexelMaps ist eine Plattform, die Benutzern hilft, lokale Attraktionen, Restaurants und Aktivitäten auf Texel zu entdecken. Unser KI-Assistent Texla bietet personalisierte Empfehlungen und Sie können über unsere Plattform Reservierungen vornehmen und Tickets kaufen.',
+      section2Text: 'TexelMaps ist eine Plattform, die Benutzern hilft, lokale Attraktionen, Restaurants und Aktivitäten auf Texel zu entdecken. Unser KI-Assistent Tessa bietet personalisierte Empfehlungen und Sie können über unsere Plattform Reservierungen vornehmen und Tickets kaufen.',
       section6Text: 'Alle Inhalte auf TexelMaps, einschließlich Texte, Bilder, Logos und Software, sind Eigentum von TexelMaps oder unseren Lizenzgebern und werden durch Urheberrecht und andere geistige Eigentumsrechte geschützt.',
       section7Text: 'TexelMaps fungiert als Vermittler zwischen Benutzern und lokalen Partnern. Wir haften nicht für die Qualität der von Partnern erbrachten Dienstleistungen. Unsere Haftung ist auf den von Ihnen gezahlten Höchstbetrag für die betreffende Dienstleistung begrenzt.',
       section10Text: 'Bei Fragen zu diesen Bedingungen können Sie uns unter legal@texelmaps.nl kontaktieren.',
@@ -93,7 +93,7 @@ export function TermsPage() {
             <h2>{sp?.section2Title || '2. Beschrijving van de Dienst'}</h2>
             <p>
               {getContent('section2Text', destination.id === 'texel'
-                ? 'TexelMaps is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten op Texel. Onze AI-assistent Texla biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.'
+                ? 'TexelMaps is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten op Texel. Onze AI-assistent Tessa biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.'
                 : 'HolidaiButler is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten aan de Costa Blanca. Onze AI-assistent HoliBot biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.')}
             </p>
 
