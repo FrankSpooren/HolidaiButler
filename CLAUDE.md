@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.9.0
-> **Laatst bijgewerkt**: 10 februari 2026
+> **Versie**: 3.10.0
+> **Laatst bijgewerkt**: 11 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -410,6 +410,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 6b** | Quick Actions Destination Fix | ✅ COMPLEET | 09-02-2026 |
 | **Fase 6c** | SSL Fix + Sentry DSN + Suggestion Content Fix | ✅ COMPLEET | 10-02-2026 |
 | **Fase 6d** | Destination Routing + Categories + Fuzzy Match + Spacing | ✅ COMPLEET | 10-02-2026 |
+| **Fase 6e** | X-Destination-ID + Daily Tip Overhaul + Spacing + Icons | ✅ COMPLEET | 11-02-2026 |
 | **Fase 7** | Reviews Integratie | ⏸️ WACHT | - |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
@@ -486,6 +487,22 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 **Apache config**: api.holidaibutler.com-le-ssl.conf (RewriteRule CORS)
 **Frontend herbouwd**: Texel build deployed naar dev.texelmaps.nl + texelmaps.nl
 **Calpe regressie**: ✅ Geen regressie (itinerary test: "Pizzería Restaurante 1948")
+
+### Fase 6e Resultaten (X-Destination-ID + Daily Tip Overhaul + Spacing + Icons)
+| Issue | Probleem | Fix | Status |
+|-------|----------|-----|--------|
+| X-Destination-ID | **ROOT CAUSE**: Alle `fetch()` calls in chat.api.ts, MessageList.tsx, CategoryBrowser.tsx misten `X-Destination-ID` header. Backend defaulted naar Calpe (1). Texel categorieën → 0 resultaten. | `defaultHeaders` getter met `X-Destination-ID: getDestinationId()` in ChatAPI class. Header toegevoegd aan alle 11 fetch() calls. | ✅ |
+| Category Icons | `categoryIconPaths` in MessageList.tsx had alleen Engelse namen. Nederlandse Texel categorieën → default icon (culture-history). | 8 Nederlandse categorienamen toegevoegd (kopie van CategoryBrowser.tsx mappings). | ✅ |
+| Spacing | "Texelof" → missing space after location name. `cleanAIText()` en `fixResponseSpacing()` handelden alleen uppercase na locatienamen af. | `connectingWords` array (30+ woorden: "of", "en", "is", etc.) toegevoegd. Loop over locatienamen + connecting words. | ✅ |
+| Daily Tip Hallucinatie | MistralAI genereerde beschrijvingen met niet-bestaande POIs ("Kerkvoogdij Waal Koog Den Hoorn"). | MistralAI call VERWIJDERD uit daily-tip endpoint. Geen LLM-tekst meer → geen hallucinaties. | ✅ |
+| Daily Tip Images | POIs met 10 images toonden geen visual. Alleen `thumbnail_url` werd gebruikt. | `getImagesForPOIs()` uit ImageUrl.js geïmporteerd. Images geladen uit `imageurls` tabel (priority-sorted, local_path preferred). | ✅ |
+| Daily Tip Golden Rule | POIs zonder reviews of visuals werden getoond. | `review_count >= 1` WHERE clause + filter op POIs met 0 images uit imageurls tabel. | ✅ |
+| Daily Tip Format | LLM-alinea boven POI card was overbodig en bevatte onjuistheden. | Frontend toont alleen POI card met "Tip van de Dag" titel, geen LLM tekst. | ✅ |
+
+**Bestanden gewijzigd**: chat.api.ts, MessageList.tsx, CategoryBrowser.tsx, holibot.js, ragService.js
+**Frontend herbouwd**: Texel build deployed naar dev.texelmaps.nl + texelmaps.nl
+**API herstart**: PM2 restart holidaibutler-api
+**Commit**: 4c3d894, pushed dev→test→main
 
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
