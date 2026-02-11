@@ -44,6 +44,11 @@ export interface ConversationMessage {
   content: string;
 }
 
+// Get destination ID from build-time environment variable (same as api.ts)
+const getDestinationId = (): string => {
+  return import.meta.env.VITE_DESTINATION_ID || 'calpe';
+};
+
 class ChatAPI {
   private sessionId: string | null = null;
   private language: Language = 'nl';
@@ -51,6 +56,14 @@ class ChatAPI {
 
   private get baseUrl(): string {
     return getBaseUrl();
+  }
+
+  /** Standard headers including X-Destination-ID for multi-destination routing */
+  private get defaultHeaders(): Record<string, string> {
+    return {
+      'Content-Type': 'application/json',
+      'X-Destination-ID': getDestinationId(),
+    };
   }
 
   setLanguage(lang: Language): void {
@@ -87,7 +100,7 @@ class ChatAPI {
       const response = await fetch(`${this.baseUrl}/holibot/chat/stream`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          ...this.defaultHeaders,
           'Accept': 'text/event-stream'
         },
         body: JSON.stringify(requestBody)
@@ -172,9 +185,7 @@ class ChatAPI {
 
       const response = await fetch(`${this.baseUrl}/holibot/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.defaultHeaders,
         body: JSON.stringify(requestBody)
       });
 
@@ -227,7 +238,7 @@ class ChatAPI {
 
       const response = await fetch(`${this.baseUrl}/holibot/itinerary`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.defaultHeaders,
         body: JSON.stringify(requestBody)
       });
 
@@ -247,7 +258,7 @@ class ChatAPI {
     try {
       const response = await fetch(`${this.baseUrl}/holibot/location/${poiId}?language=${this.language}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: this.defaultHeaders
       });
 
       if (!response.ok) {
@@ -277,7 +288,7 @@ class ChatAPI {
 
       const response = await fetch(`${this.baseUrl}/holibot/directions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.defaultHeaders,
         body: JSON.stringify(requestBody)
       });
 
@@ -323,7 +334,7 @@ class ChatAPI {
 
       const response = await fetch(`${this.baseUrl}/holibot/daily-tip?${params}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.defaultHeaders,
         credentials: 'include'
       });
 
@@ -358,7 +369,7 @@ class ChatAPI {
 
       const response = await fetch(`${this.baseUrl}/holibot/search`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.defaultHeaders,
         body: JSON.stringify(requestBody)
       });
 
@@ -387,7 +398,7 @@ class ChatAPI {
     try {
       const response = await fetch(`${this.baseUrl}/holibot/tts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.defaultHeaders,
         body: JSON.stringify({
           text,
           language: language || this.language

@@ -37,6 +37,7 @@ const tipTitles: Record<string, string> = {
 
 // Main category icons (level 1) - for time slot badges
 const categoryIconPaths: Record<string, string> = {
+  // Calpe (English names)
   'Beaches & Nature': '/assets/category-icons/beaches-nature.png',
   'Food & Drinks': '/assets/category-icons/food-drinks.png',
   'Culture & History': '/assets/category-icons/culture-history.png',
@@ -44,6 +45,15 @@ const categoryIconPaths: Record<string, string> = {
   'Shopping': '/assets/category-icons/shopping.png',
   'Recreation': '/assets/category-icons/recreation.png',
   'Nightlife': '/assets/category-icons/subcategories/nightlife.webp',
+  // Texel (Dutch names)
+  'Eten & Drinken': '/assets/category-icons/food-drinks.png',
+  'Actief': '/assets/category-icons/active.png',
+  'Natuur': '/assets/category-icons/beaches-nature.png',
+  'Cultuur & Historie': '/assets/category-icons/culture-history.png',
+  'Winkelen': '/assets/category-icons/shopping.png',
+  'Recreatief': '/assets/category-icons/recreation.png',
+  'Gezondheid & Verzorging': '/assets/category-icons/subcategories/beauty.webp',
+  'Praktisch': '/assets/category-icons/subcategories/specialty.webp',
   // Default: use a neutral location/map marker icon, NOT cycling!
   'default': '/assets/category-icons/culture-history.png'
 };
@@ -245,7 +255,9 @@ export function MessageList() {
       params.append('language', language);
       const url = '/api/v1/holibot/categories/' + encodeURIComponent(categoryFilter.category) + '/pois?' + params;
       console.log('[HoliBot] Loading more POIs from:', url);
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: { 'X-Destination-ID': import.meta.env.VITE_DESTINATION_ID || 'calpe' }
+      });
       const data = await response.json();
       if (data.success && data.data && data.data.length > 0) {
         const hasMore = data.data.length > LOAD_MORE_LIMIT;
@@ -341,10 +353,10 @@ export function MessageList() {
 
       const response = await chatApi.getDailyTip(newExcludes);
       if (response.success && response.data) {
-        const { poi, event, item, tipDescription } = response.data;
+        const { poi, event, item } = response.data;
         const displayItem = poi || event || item;
         const shuffleLabels = { nl: 'Nieuwe tip!', en: 'New tip!', de: 'Neuer Tipp!', es: 'Nuevo consejo!', sv: 'Nytt tips!', pl: 'Nowa porada!' };
-        addAssistantMessage((shuffleLabels[language as keyof typeof shuffleLabels] || shuffleLabels.nl) + ' ' + tipDescription, displayItem ? [displayItem] : []);
+        addAssistantMessage(shuffleLabels[language as keyof typeof shuffleLabels] || shuffleLabels.nl, displayItem ? [displayItem] : []);
         if (displayItem) setCurrentDailyTip(displayItem);
       }
     } catch (error) {
@@ -378,12 +390,11 @@ export function MessageList() {
         const response = await chatApi.getDailyTip();
         console.log('[HoliBot] Daily tip response:', response);
         if (response.success && response.data) {
-          const { poi, event, item, tipDescription, title } = response.data;
+          const { poi, event, item, title } = response.data;
           const displayItem = poi || event || item;
-          // Add bold title before tip description
+          // Only show the POI card — no LLM text (cleaner UX, no hallucinations)
           const tipTitle = title || tipTitles[language] || tipTitles.nl;
-          const messageWithTitle = `**${tipTitle}**\n\n${tipDescription}`;
-          addAssistantMessage(messageWithTitle, displayItem ? [displayItem] : []);
+          addAssistantMessage(tipTitle, displayItem ? [displayItem] : []);
           if (displayItem) {
             console.log('[HoliBot] Setting dailyTipPOI:', displayItem);
             setCurrentDailyTip(displayItem);
@@ -442,7 +453,9 @@ export function MessageList() {
               params.append('language', language);
               const url = '/api/v1/holibot/categories/' + encodeURIComponent(category) + '/pois?' + params;
               console.log('[HoliBot] Fetching POIs from:', url);
-              const response = await fetch(url);
+              const response = await fetch(url, {
+                headers: { 'X-Destination-ID': import.meta.env.VITE_DESTINATION_ID || 'calpe' }
+              });
               const data = await response.json();
               console.log('[HoliBot] Category POIs response:', data);
               if (data.success && data.data && data.data.length > 0) {

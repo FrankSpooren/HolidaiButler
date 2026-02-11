@@ -1160,13 +1160,24 @@ class RAGService {
     return r;
   }
 
-  // Fix common LLM spacing errors (e.g., "inDen Burg" → "in Den Burg")
+  // Fix common LLM spacing errors (e.g., "inDen Burg" → "in Den Burg", "Texelof" → "Texel of")
   fixResponseSpacing(text) {
     if (!text) return text;
     // Fix lowercase followed by uppercase without space (e.g., "inDen" → "in Den")
     let fixed = text.replace(/([a-zà-ü])([A-ZÀ-Ü])/g, '$1 $2');
     // Fix common Dutch preposition merges
     fixed = fixed.replace(/\b(in|op|van|naar|bij|uit|met|voor|over|door|aan)(Den|De|Het|Texel|Calpe)\b/g, '$1 $2');
+    // Fix location names stuck to common connecting words (e.g., "Texelof" → "Texel of")
+    const locationNames = ["Calpe", "Texel", "Den Burg", "De Koog", "Oudeschild", "Den Hoorn", "De Cocksdorp", "Oosterend", "De Waal", "Ecomare"];
+    const connectingWords = ["of", "en", "is", "was", "het", "de", "een", "maar", "dan", "dat", "die", "ook", "nog", "wel", "niet", "voor", "naar", "bij", "met", "kan", "waar"];
+    for (const loc of locationNames) {
+      // Space before location if preceded by lowercase letter
+      fixed = fixed.replace(new RegExp(`([a-záéíóúàèìòùäëïöüâêîôûñç])(${loc})\\b`, 'g'), '$1 $2');
+      // Space after location if followed by connecting word
+      for (const cw of connectingWords) {
+        fixed = fixed.replace(new RegExp(`\\b(${loc})(${cw})\\b`, 'g'), '$1 $2');
+      }
+    }
     return fixed;
   }
 
