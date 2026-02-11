@@ -66,7 +66,7 @@ const categoryIcons: Record<string, string> = {
   'Recreatief': '/assets/category-icons/recreation.png',
   'Gezondheid & Verzorging': '/assets/category-icons/subcategories/beauty.webp',
   'Praktisch': '/assets/category-icons/subcategories/specialty.webp',
-  'default': '/assets/category-icons/active.png'
+  'default': '/assets/category-icons/culture-history.png'
 };
 
 // Level 2: Subcategory icons
@@ -108,9 +108,74 @@ const subcategoryIcons: Record<string, string> = {
   // Recreation
   'Entertainment': '/assets/category-icons/subcategories/entertainment.webp',
   'Nightlife & Clubs': '/assets/category-icons/subcategories/nightlife.webp',
-  'Playgrounds & Leisure Areas': '/assets/category-icons/subcategories/playground.png',  // Colorful playground
+  'Playgrounds & Leisure Areas': '/assets/category-icons/subcategories/playground.png',
   'RV Parks & Camping': '/assets/category-icons/subcategories/camping.png',
   'Theaters': '/assets/category-icons/subcategories/theater.webp',
+
+  // === Texel (Dutch subcategory names) ===
+  // Eten & Drinken
+  'Restaurants': '/assets/category-icons/subcategories/restaurants.webp',
+  'Cafe': '/assets/category-icons/subcategories/cafe.webp',
+  'Eetcafe': '/assets/category-icons/subcategories/bar-restaurants-dining.png',
+  'Strandpaviljoens': '/assets/category-icons/subcategories/beach-bars.png',
+  'Strandkiosk': '/assets/category-icons/subcategories/beach-bars.png',
+  'Ontbijt & Lunch': '/assets/category-icons/subcategories/breakfast-coffee.webp',
+  'Fastfood': '/assets/category-icons/subcategories/fastfood.webp',
+  'Foodtrucks': '/assets/category-icons/subcategories/fastfood.webp',
+  'Ijs & Desserts': '/assets/category-icons/subcategories/ice-cream.webp',
+  'Cocktail Bar': '/assets/category-icons/subcategories/gastrobars.png',
+  'Cafetaria': '/assets/category-icons/subcategories/fastfood.webp',
+  'Pizzeria': '/assets/category-icons/subcategories/italian.webp',
+  'Wijndomein': '/assets/category-icons/subcategories/bars-wine.png',
+  // Natuur
+  'Natuurgebieden': '/assets/category-icons/subcategories/nature-reserve.png',
+  'Stranden': '/assets/category-icons/subcategories/beaches.webp',
+  'Uitkijkpunten': '/assets/category-icons/subcategories/viewpoints-nature.webp',
+  'Bossen': '/assets/category-icons/subcategories/nature-reserve.png',
+  'Park': '/assets/category-icons/subcategories/parks-gardens.webp',
+  'Landmarks': '/assets/category-icons/subcategories/historical.webp',
+  // Cultuur & Historie
+  'Musea': '/assets/category-icons/subcategories/museums.webp',
+  'Galerieen': '/assets/category-icons/subcategories/galleries.webp',
+  'Monumenten': '/assets/category-icons/subcategories/historical.webp',
+  'Monuments': '/assets/category-icons/subcategories/historical.webp',
+  'Religieuze gebouwen': '/assets/category-icons/subcategories/churches.webp',
+  'Kunst': '/assets/category-icons/subcategories/galleries.webp',
+  'Dorpskernen': '/assets/category-icons/subcategories/squares.png',
+  // Winkelen
+  'Mode & Lifestyle': '/assets/category-icons/subcategories/fashion.webp',
+  'Speciaalzaken': '/assets/category-icons/subcategories/specialty.webp',
+  'Supermarkten': '/assets/category-icons/subcategories/supermarkets.webp',
+  'Souvenirwinkel': '/assets/category-icons/subcategories/specialty.webp',
+  // Actief
+  'Fietsenverhuur': '/assets/category-icons/subcategories/cycling.webp',
+  'Fiets': '/assets/category-icons/subcategories/cycling.webp',
+  'Wandelroutes': '/assets/category-icons/subcategories/hiking-boot.png',
+  'Watersporten': '/assets/category-icons/subcategories/water-sports-sail.png',
+  'Rondvaarten': '/assets/category-icons/subcategories/water-sports-sail.png',
+  'Excursies': '/assets/category-icons/subcategories/entertainment.webp',
+  'Golfbaan': '/assets/category-icons/subcategories/golf.png',
+  'Tennis': '/assets/category-icons/subcategories/padel.png',
+  'Zwemmen': '/assets/category-icons/subcategories/water-sports-sail.png',
+  'MTB': '/assets/category-icons/subcategories/cycling.webp',
+  'Minigolf': '/assets/category-icons/subcategories/golf.png',
+  'Paarden': '/assets/category-icons/subcategories/hiking-boot.png',
+  'Sport': '/assets/category-icons/subcategories/fitness.webp',
+  'Fitness': '/assets/category-icons/subcategories/fitness.webp',
+  'Yoga': '/assets/category-icons/subcategories/fitness.webp',
+  // Recreatief
+  'Speeltuinen': '/assets/category-icons/subcategories/playground.png',
+  'Indoor': '/assets/category-icons/subcategories/entertainment.webp',
+  'Camping': '/assets/category-icons/subcategories/camping.png',
+  'Kinderboerderij': '/assets/category-icons/subcategories/playground.png',
+  'Texels schaap': '/assets/category-icons/subcategories/nature-reserve.png',
+  // Gezondheid & Verzorging
+  'Kapper': '/assets/category-icons/subcategories/beauty.webp',
+  'Beauty salon': '/assets/category-icons/subcategories/beauty.webp',
+  'Spa': '/assets/category-icons/subcategories/beauty.webp',
+  'Wellness': '/assets/category-icons/subcategories/beauty.webp',
+  'Fysiotherapie': '/assets/category-icons/subcategories/fitness.webp',
+  'Behandelingen': '/assets/category-icons/subcategories/beauty.webp',
 };
 
 // Level 3: Type icons (most specific)
