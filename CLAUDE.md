@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.10.0
+> **Versie**: 3.11.0
 > **Laatst bijgewerkt**: 11 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -504,6 +504,21 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 **API herstart**: PM2 restart holidaibutler-api
 **Commit**: 4c3d894, pushed dev→test→main
 
+### Fase 6e Round 2 Resultaten (Opening Hours + Dutch Icons + Streaming + Image Priority)
+| Issue | Probleem | Fix | Status |
+|-------|----------|-----|--------|
+| Opening Hours Format | **ROOT CAUSE**: `isCurrentlyClosedFromHours()` verwachtte object format met Engelse dagnamen (`hours['tuesday']`). Texel heeft array format met Nederlandse dagnamen (`[{day: "dinsdag", hours: "06:00 to 16:00"}]`). ALLE Texel POIs met opening_hours → "closed" → 0 resultaten bij rubriekbrowsing. | Complete rewrite: detecteert array/object format, Dutch+English day mapping, timezone Europe/Amsterdam. Als dag niet gevonden → assume open (niet closed). | ✅ |
+| Itinerary Only Restaurants | `timeOfDayTypes` en categorie-filters in itinerary gebruikten alleen Engelse namen. Texel categorieën (Natuur, Actief, Cultuur) werden niet herkend → alle non-restaurant POIs vallen in fallback. | Dutch types toegevoegd (natuur, actief, strand, musea, winkel, eetcafe). Categorie matching uitgebreid met Dutch equivalents. Restaurant filter: eten, eetcafe, strandpaviljoen. | ✅ |
+| Subcategory Icons Level 2/3 | `subcategoryIconPaths` in MessageList.tsx had alleen Engelse namen. `categoryIcons.default` in CategoryBrowser was `active.png` (fietser). | 60+ Nederlandse subcategorie-iconen in MessageList.tsx + CategoryBrowser.tsx. Default icon → culture-history.png. | ✅ |
+| Spacing Streaming | `cleanAIText()` was NIET aangeroepen in streaming endpoint. Alleen non-streaming chat had spacing fix. Streaming responses hadden "Balckenis een" etc. | `cleanAIText()` toegevoegd aan streaming endpoint "done" event met POI names. Frontend `onDone` vervangt al streamed text met cleaned version. | ✅ |
+| Image Quality Order | Eerste image was vaak street view (laagste kwaliteit). Alle lokale images hadden priority 0, ongeacht bron. | Nieuwe `getLocalImagePriority()`: checkt `image_url` ook voor lokale images. AF1Qip (user photos) → priority 0, street view → priority 5 (zelfs als lokaal opgeslagen). | ✅ |
+| Chat Avatar | ChatMessage.tsx en WelcomeMessage.tsx gebruikten hardcoded `hb-merkicoon.png` (HolidaiButler icoon) voor alle destinations. | Destination-aware: `destination.icon` (texelmaps-icon.png voor Texel, HolidaiButler_Icon_Web.png voor Calpe). Fallback naar default avatar. | ✅ |
+
+**Bestanden gewijzigd**: CategoryBrowser.tsx, ChatMessage.tsx, MessageList.tsx, WelcomeMessage.tsx, ImageUrl.js, holibot.js
+**Frontend herbouwd**: Texel build deployed naar dev.texelmaps.nl + texelmaps.nl
+**API herstart**: PM2 restart holidaibutler-api
+**Commit**: dae659e, pushed dev→test→main
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -669,6 +684,8 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.11.0** | **2026-02-11** | **Fase 6e Round 2: Opening hours format mismatch ROOT CAUSE gefixed (array+Dutch day names vs object+English). Itinerary: Dutch categorie matching voor time-of-day selectie (natuur, actief, cultuur, eten). 60+ Nederlandse subcategorie iconen in MessageList.tsx + CategoryBrowser.tsx. Streaming chat: cleanAIText() toegevoegd aan done event. Image priority: getLocalImagePriority() deprioritiseert street view ook als lokaal opgeslagen. Chat avatar: destination-aware (texelmaps-icon.png voor Texel). 6 bestanden gewijzigd.** |
+| **3.10.0** | **2026-02-11** | **Fase 6e X-Destination-ID + Daily Tip Overhaul + Spacing + Icons: 11 fetch() calls gefixed met X-Destination-ID header. Daily tip: LLM verwijderd, imageurls lookup, golden rule filter. Spacing: connectingWords na locatienamen.** |
 | **3.9.0** | **2026-02-10** | **Fase 6d Destination Routing + Categories + Fuzzy Match + Spacing: ROOT CAUSE gefixed — getDestinationFromRequest() accepteert nu string ("texel") EN numeric (2) IDs (parseInt("texel")=NaN→default Calpe was ROOT CAUSE alle gebroken Texel endpoints). CORS fix: Apache RewriteRule i.p.v. SetEnvIf ($0 shell expansion bug). Category whitelist: exact 8 Texel categorieën + 3 ontbrekende iconen. normalizeDutchNumbers() voor POI name matching (12→twaalf). fixResponseSpacing() voor LLM spacing errors. Itinerary event query: destination_id i.p.v. hardcoded calpe_distance. 10 issues gefixed in 3 backend + 1 frontend + 1 Apache config.** |
 | **3.8.0** | **2026-02-10** | **Fase 6c SSL + Sentry DSN + Suggestion Content Fix: (1) SSL certificaat + Apache VHost aangemaakt voor api.holidaibutler.com — was ROOT CAUSE van ERR_CERT_COMMON_NAME_INVALID (cert ontbrak volledig, Apache viel terug op admin.dev.holidaibutler.com). (2) Sentry DSN gefixed: key zonder hyphens, .env.texel enabled, .env.production toegevoegd (Bugsink project 2). (3) suggestionService.js volledig destination-aware: TIME_BASED_SUGGESTIONS nu per-destination (calpe/texel) met lokale content (Texel: eilandcafé, duinen, Ecomare, Den Burg, vuurtoren, Oudeschild). SEASONAL_SUGGESTIONS → SEASONAL_CATEGORIES (neutral). Fase 7-8 hernummerd conform origineel strategic plan.** |
 | **3.7.0** | **2026-02-09** | **Fase 6b Quick Actions Destination Fix COMPLEET: 4 gebroken quick action endpoints gefixed voor Texel. daily-tip: Haversine formula + destination_id filter (geen Calpe events meer voor Texel). directions: POI lookup met destination_id. suggestions: destination-aware greetings/tips/season highlights. trending: JOIN met POI tabel voor destination filter. Texel-specifieke tips: fietstocht, zilte lucht, woeste golven. Config: quickActionCategories per destination. Geen Calpe regressie.** |
