@@ -56,6 +56,7 @@
 import express from 'express';
 import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService, intentService, preferenceService, suggestionService } from '../services/holibot/index.js';
 import { getDestinationById } from '../../config/destinations/index.js';
+import { getImagesForPOI, getImagesForPOIs } from '../models/ImageUrl.js';
 import logger from '../utils/logger.js';
 
 
@@ -661,13 +662,18 @@ const cleanAIText = (text, poiNames = []) => {
   // IMPORTANT: Only fix spacing when location is clearly a separate word
   // Use word boundary () to prevent breaking compound words like "Calpesa"
   const locationNames = ["Calpe", "Benidorm", "Altea", "Alicante", "Valencia", "Spain", "Spanje", "España", "Texel", "Den Burg", "De Koog", "Oudeschild", "Den Hoorn", "De Cocksdorp", "Oosterend", "De Waal", "Ecomare", "Nederland", "Netherlands"];
+  // Common Dutch/Spanish connecting words that may get stuck after location names
+  const connectingWords = ["of", "en", "is", "was", "het", "de", "een", "maar", "dan", "dat", "die", "ook", "nog", "wel", "niet", "voor", "naar", "bij", "met", "kan", "waar", "heb", "heeft", "zijn", "worden", "y", "el", "la", "del", "los", "las", "con"];
   for (const loc of locationNames) {
     // Add space BEFORE location if preceded by lowercase letter (e.g., "inCalpe" -> "in Calpe")
     // But only if location starts a new word (followed by word boundary or end)
     cleaned = cleaned.replace(new RegExp(`([a-záéíóúàèìòùäëïöüâêîôûñç])(${loc})\\b`, "g"), "$1 $2");
-    // Add space AFTER location ONLY if followed by UPPERCASE letter (new word)
-    // This prevents "Calpesa" -> "Calpe sa" but fixes "CalpeGeniet" -> "Calpe Geniet"
+    // Add space AFTER location if followed by UPPERCASE letter (new word)
     cleaned = cleaned.replace(new RegExp(`\\b(${loc})([A-ZÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ])`, "g"), "$1 $2");
+    // Add space AFTER location if followed by common connecting word (e.g., "Texelof" -> "Texel of")
+    for (const cw of connectingWords) {
+      cleaned = cleaned.replace(new RegExp(`\\b(${loc})(${cw})\\b`, "g"), "$1 $2");
+    }
   }
 
   // Fix spacing around POI names
@@ -2012,6 +2018,7 @@ router.get('/daily-tip', async (req, res) => {
           AND latitude IS NOT NULL
           AND longitude IS NOT NULL
           AND (rating IS NULL OR rating >= 4.4)
+          AND review_count >= 1
           AND category IN (${allowedCategories.map(() => '?').join(', ')})
         HAVING distance_km <= ?
         ORDER BY rating DESC, review_count DESC
@@ -2028,27 +2035,40 @@ router.get('/daily-tip', async (req, res) => {
 
       // Note: getTranslatedDescription() is now a shared helper at the top of this file
 
-      // Filter by exclusions (IDs already shown), closed POIs, and add images array for POICard
-      // CRITICAL: Use language-specific description and exclude closed POIs
-      qualityPois = poiResults.filter(poi => {
+      // Filter by exclusions (IDs already shown), closed POIs
+      const filteredPois = poiResults.filter(poi => {
         const notExcluded = !excludedIdList.includes(String(poi.id)) && !excludedIdList.includes('poi-' + poi.id);
-        // CRITICAL: Filter out permanently closed POIs
         const notPermanentlyClosed = !isPermanentlyClosed(poi.opening_hours);
         if (isPermanentlyClosed(poi.opening_hours)) {
           logger.info('Excluding permanently closed POI from daily tip:', { id: poi.id, name: poi.name });
         }
-        // CRITICAL: Filter out currently closed POIs (e.g., closed on Mondays)
         const notCurrentlyClosed = !isCurrentlyClosedFromHours(poi.opening_hours);
         if (isCurrentlyClosedFromHours(poi.opening_hours)) {
           logger.info('Excluding currently closed POI from daily tip:', { id: poi.id, name: poi.name });
         }
         return notExcluded && notPermanentlyClosed && notCurrentlyClosed;
+      });
+
+      // CRITICAL: Batch-load images from imageurls table (not just thumbnail_url)
+      const poiIds = filteredPois.map(p => p.id).filter(Boolean);
+      const imageMap = poiIds.length > 0 ? await getImagesForPOIs(poiIds, 5) : new Map();
+
+      // Golden rule: exclude POIs without any images
+      qualityPois = filteredPois.filter(poi => {
+        const images = imageMap.get(Number(poi.id)) || [];
+        const hasThumbnail = !!poi.thumbnail_url;
+        if (!hasThumbnail && images.length === 0) {
+          logger.info('Excluding POI without images from daily tip:', { id: poi.id, name: poi.name });
+          return false;
+        }
+        return true;
       }).map(poi => ({
         ...poi,
-        // Use translated description for the current language (shared helper)
         description: getTranslatedDescription(poi, language),
-        // POICard expects 'images' array, backend returns 'thumbnail_url'
-        images: poi.thumbnail_url ? [poi.thumbnail_url] : []
+        // Use images from imageurls table, fallback to thumbnail_url
+        images: (imageMap.get(Number(poi.id)) || []).length > 0
+          ? imageMap.get(Number(poi.id))
+          : (poi.thumbnail_url ? [poi.thumbnail_url] : [])
       }));
 
       logger.info('Daily tip POIs from DB:', { count: qualityPois.length, maxDistance: MAX_DISTANCE_KM });
@@ -2184,48 +2204,9 @@ router.get('/daily-tip', async (req, res) => {
       });
     }
 
-    const itemName = selectedItem.name || selectedItem.title || 'Unknown';
-    const destNameForTip = destinationConfig?.destination?.name || 'Calpe';
-    const itemDesc = selectedItem.description || `Een geweldige plek in ${destNameForTip}`;
-    const ratingText = selectedItem.rating ? 'Beoordeling: ' + selectedItem.rating + ' sterren. ' : '';
-
-    // Multi-language tip prompts - NO emojis or asterisks, clean text for TTS
-    const tipPrompts = {
-      nl: {
-        event: `Schrijf een enthousiaste aanbeveling (max 80 woorden, in het Nederlands) voor het evenement "${itemName}". Het vindt plaats op ${selectedItem.event_date}. Beschrijving: ${itemDesc}. BELANGRIJK: Gebruik GEEN sterretjes, asterisken of emoji's. Schrijf vloeiende, correcte zinnen geschikt voor voorlezen.`,
-        poi: `Schrijf een enthousiaste aanbeveling (max 80 woorden, in het Nederlands) voor ${itemName}. ${ratingText}Categorie: ${selectedItem.category}. Beschrijving: ${itemDesc}. BELANGRIJK: Gebruik GEEN sterretjes, asterisken of emoji's. Schrijf vloeiende, correcte zinnen geschikt voor voorlezen.`
-      },
-      en: {
-        event: `Write an enthusiastic recommendation (max 80 words, in English) for the event "${itemName}". It takes place on ${selectedItem.event_date}. Description: ${itemDesc}. IMPORTANT: Do NOT use asterisks or emojis. Write fluent, correct sentences suitable for text-to-speech.`,
-        poi: `Write an enthusiastic recommendation (max 80 words, in English) for ${itemName}. ${ratingText}Category: ${selectedItem.category}. Description: ${itemDesc}. IMPORTANT: Do NOT use asterisks or emojis. Write fluent, correct sentences suitable for text-to-speech.`
-      },
-      de: {
-        event: `Schreibe eine begeisterte Empfehlung (max 80 Wörter, auf Deutsch) für das Event "${itemName}". Es findet am ${selectedItem.event_date} statt. Beschreibung: ${itemDesc}. WICHTIG: Verwende KEINE Sternchen oder Emojis. Schreibe flüssige, korrekte Sätze für Sprachausgabe.`,
-        poi: `Schreibe eine begeisterte Empfehlung (max 80 Wörter, auf Deutsch) für ${itemName}. ${ratingText}Kategorie: ${selectedItem.category}. Beschreibung: ${itemDesc}. WICHTIG: Verwende KEINE Sternchen oder Emojis. Schreibe flüssige, korrekte Sätze für Sprachausgabe.`
-      },
-      es: {
-        event: `Escribe una recomendación entusiasta (máx 80 palabras, en español) para el evento "${itemName}". Se celebra el ${selectedItem.event_date}. Descripción: ${itemDesc}. IMPORTANTE: NO uses asteriscos ni emojis. Escribe oraciones fluidas y correctas adecuadas para lectura por voz.`,
-        poi: `Escribe una recomendación entusiasta (máx 80 palabras, en español) para ${itemName}. ${ratingText}Categoría: ${selectedItem.category}. Descripción: ${itemDesc}. IMPORTANTE: NO uses asteriscos ni emojis. Escribe oraciones fluidas y correctas adecuadas para lectura por voz.`
-      },
-      sv: {
-        event: `Skriv en entusiastisk rekommendation (max 80 ord, på svenska) för evenemanget "${itemName}". Det äger rum den ${selectedItem.event_date}. Beskrivning: ${itemDesc}. VIKTIGT: Använd INTE asterisker eller emojis. Skriv flytande, korrekta meningar lämpliga för talsyntes.`,
-        poi: `Skriv en entusiastisk rekommendation (max 80 ord, på svenska) för ${itemName}. ${ratingText}Kategori: ${selectedItem.category}. Beskrivning: ${itemDesc}. VIKTIGT: Använd INTE asterisker eller emojis. Skriv flytande, korrekta meningar lämpliga för talsyntes.`
-      },
-      pl: {
-        event: `Napisz entuzjastyczną rekomendację (maks 80 słów, po polsku) dla wydarzenia "${itemName}". Odbywa się ${selectedItem.event_date}. Opis: ${itemDesc}. WAŻNE: NIE używaj gwiazdek ani emoji. Pisz płynne, poprawne zdania odpowiednie do odczytu głosowego.`,
-        poi: `Napisz entuzjastyczną rekomendację (maks 80 słów, po polsku) dla ${itemName}. ${ratingText}Kategoria: ${selectedItem.category}. Opis: ${itemDesc}. WAŻNE: NIE używaj gwiazdek ani emoji. Pisz płynne, poprawne zdania odpowiednie do odczytu głosowego.`
-      }
-    };
-    const langPrompts = tipPrompts[language] || tipPrompts.nl;
-    const tipPrompt = selectedItem.type === 'event' ? langPrompts.event : langPrompts.poi;
-
-    let tipDescription = await embeddingService.generateChatCompletion([
-      { role: 'system', content: embeddingService.buildSystemPrompt(language, {}, destinationConfig) },
-      { role: 'user', content: tipPrompt }
-    ]);
-
-    // Clean AI text: remove asterisks, quotes, fix spacing around item name
-    tipDescription = cleanAIText(tipDescription, [itemName]);
+    // No LLM-generated text — only show the POI/Event card directly
+    // This eliminates hallucinations, saves API cost, and gives cleaner UX
+    const tipDescription = '';
 
     res.json({
       success: true,
@@ -2395,24 +2376,30 @@ router.get('/categories/:category/pois', async (req, res) => {
       LIMIT ? OFFSET ?
     `, { replacements: [...params, parseInt(limit), parseInt(offset)], type: QueryTypes.SELECT });
 
-    // Filter out closed POIs and apply translations
-    const pois = poiResults.filter(poi => {
+    // Filter out closed POIs
+    const filteredPois = poiResults.filter(poi => {
       const notPermanentlyClosed = !isPermanentlyClosed(poi.opening_hours);
       if (isPermanentlyClosed(poi.opening_hours)) {
         logger.info('Excluding permanently closed POI from category browser:', { id: poi.id, name: poi.name });
       }
-      // CRITICAL: Also filter out currently closed POIs (e.g., closed on Mondays)
       const notCurrentlyClosed = !isCurrentlyClosedFromHours(poi.opening_hours);
       if (isCurrentlyClosedFromHours(poi.opening_hours)) {
         logger.info('Excluding currently closed POI from category browser:', { id: poi.id, name: poi.name });
       }
       return notPermanentlyClosed && notCurrentlyClosed;
-    }).map(poi => ({
+    });
+
+    // Batch-load images from imageurls table for richer POI cards
+    const catPoiIds = filteredPois.map(p => p.id).filter(Boolean);
+    const catImageMap = catPoiIds.length > 0 ? await getImagesForPOIs(catPoiIds, 3) : new Map();
+
+    const pois = filteredPois.map(poi => ({
       ...poi,
-      // Use translated description for the current language (shared helper)
       description: getTranslatedDescription(poi, language),
-      // POICard expects 'images' array
-      images: poi.thumbnail_url ? [poi.thumbnail_url] : []
+      // Use images from imageurls table, fallback to thumbnail_url
+      images: (catImageMap.get(Number(poi.id)) || []).length > 0
+        ? catImageMap.get(Number(poi.id))
+        : (poi.thumbnail_url ? [poi.thumbnail_url] : [])
     }));
 
     res.json({ success: true, data: pois, count: pois.length, filter: { category, subcategory, type }, offset: parseInt(offset) });

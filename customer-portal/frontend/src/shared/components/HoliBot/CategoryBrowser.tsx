@@ -817,7 +817,9 @@ export function CategoryBrowser({ onSelect, onCancel }: CategoryBrowserProps) {
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/v1/holibot/categories/hierarchy');
+      const response = await fetch('/api/v1/holibot/categories/hierarchy', {
+        headers: { 'X-Destination-ID': import.meta.env.VITE_DESTINATION_ID || 'calpe' }
+      });
       const data = await response.json();
       if (data.success) {
         // Only show allowed categories (whitelist approach)
