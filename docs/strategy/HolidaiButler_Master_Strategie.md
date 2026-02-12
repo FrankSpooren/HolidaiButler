@@ -1,19 +1,19 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 10 februari 2026
-**Versie**: 4.0
+**Datum**: 12 februari 2026
+**Versie**: 5.0
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 6d COMPLEET - Destination Routing ROOT CAUSE + 10 kritieke fixes. Texel chatbot Tessa volledig operationeel.
+**Status**: FASE R1 COMPLEET - Content Damage Assessment. 61% hallucinatiepercentage in LLM-gegenereerde content. NO-GO voor productie. Content Repair Pipeline R2-R5 gepland.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.9.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.13.0) in repo root + Hetzner
 
 ---
 
@@ -36,6 +36,12 @@
 | **Fase 6b** | Quick Actions Destination Fix | ✅ COMPLEET | 09-02 | 09-02 | EUR 0 |
 | **Fase 6c** | SSL Fix + Sentry DSN + Suggestion Content | ✅ COMPLEET | 10-02 | 10-02 | EUR 0 |
 | **Fase 6d** | Destination Routing + Categories + Fuzzy Match + Spacing | ✅ COMPLEET | 10-02 | 10-02 | EUR 0 |
+| **Fase 6e** | X-Destination-ID + Daily Tip + Spacing + Icons (3 rounds) | ✅ COMPLEET | 11-02 | 11-02 | EUR 0 |
+| **Fase R1** | Content Damage Assessment (100 POIs fact-check) | ✅ COMPLEET | 12-02 | 12-02 | ~EUR 1 |
+| **Fase R2** | Source Data Verrijking (website scraping alle POIs) | ❌ OPEN | - | - | ~EUR 0 |
+| **Fase R3** | Prompt Redesign (anti-hallucinatie) | ❌ OPEN | - | - | EUR 0 |
+| **Fase R4** | Regeneratie + Verificatie Loop | ❌ OPEN | - | - | ~EUR 13 |
+| **Fase R5** | Safeguards & Kwaliteitsborging | ❌ OPEN | - | - | EUR 0 |
 | **Fase 7** | Reviews Integratie | ❌ OPEN | - | - | ~EUR 0 |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ❌ OPEN | - | - | ~EUR 0 |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ❌ OPEN | - | - | ~EUR 0 |
@@ -170,6 +176,61 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 **Bestanden gewijzigd**: holibot.js (6 fixes), ragService.js (6 fixes), CategoryBrowser.tsx (whitelist + iconen), api.holidaibutler.com-le-ssl.conf (CORS RewriteRule)
 
 **Git**: commit f9ec10e, pushed dev → test → main
+
+### Fase 6e: X-Destination-ID + Daily Tip + Spacing + Icons — 3 Rounds (11/02/2026)
+
+**Round 1**: X-Destination-ID headers (11 fetch calls), Daily Tip LLM verwijderd, imageurls lookup, spacing connectingWords, Dutch category icons.
+**Round 2**: Opening hours format mismatch (array+Dutch vs object+English), Dutch itinerary categories, 60+ subcategory icons, streaming cleanAIText, image priority sort, destination-aware chat avatar.
+**Round 3**: Texla→Tessa (23 occurrences, 6 files), ChromaDB warnings (@chroma-core/default-embed + no-op), camelCase spacing regex, icon centering (contain vs cover), itinerary images (getImagesForPOIs + poi_XXXX ID extraction).
+
+**Commits**: 4c3d894, dae659e, 02629c6, afe23a5 — pushed dev → test → main
+
+### Content Repair Pipeline — Fase R1: Damage Assessment (12/02/2026)
+
+**Aanleiding**: Handmatige steekproef door Frank (Texel-bewoner) onthulde systematische feitelijke hallucinaties in Fase 4 LLM-output. 6/6 gecontroleerde Texel POIs bevatten verzonnen details.
+
+**Root Cause**: Het LLM (Mistral Medium) ontving per POI ONVOLDOENDE feitelijke brondata. Alleen naam, coördinaten, categorie, highlights werden meegegeven. De website-URL werd wél meegegeven maar de INHOUD van die website NIET. De prompt-instructie "Include at least one concrete detail" dwong het LLM om details te verzinnen.
+
+**Methode**: Geautomatiseerde fact-check pipeline:
+1. 50 Texel + 50 Calpe POIs geselecteerd (Top-rated met website)
+2. Alle 100 websites gescrapet (96% success rate)
+3. LLM fact-check: elke claim in de gegenereerde tekst vergeleken met website-data
+4. Gestructureerd rapport gegenereerd
+
+**Resultaten**:
+
+| Metric | Texel | Calpe | Totaal |
+|--------|-------|-------|--------|
+| POIs gecontroleerd | 48 | 47 | 95 |
+| Gemiddeld hallucinatie% | 61% | 62% | 61% |
+| POIs severity HIGH/CRITICAL | 48 (100%) | 47 (100%) | 95 (100%) |
+| Verified claims | 22% | 19% | 20% |
+| Hallucinated claims | 53% | 56% | 55% |
+| Factually wrong claims | 6% | 4% | 5% |
+
+**Conclusie**: **NO-GO** voor productie. Content Repair Pipeline R2-R5 verplicht.
+
+**Ergste categorieën**: Food & Drinks Calpe (75% hallucinated), Praktisch Texel (69%), Shopping (67%), Recreatief (64%).
+
+**Typische foutpatronen**: Verzonnen prijzen (11%), verzonnen afstanden (11%), verzonnen openingstijden (6%), verzonnen menu-items (3%), verzonnen faciliteiten (3%).
+
+**Deliverables op Hetzner**:
+- `/root/fase_r1_damage_assessment.md` — Volledig rapport
+- `/root/fase_r1_summary_for_frank.md` — Samenvatting voor Frank (NL)
+- `/root/fase_r1_factcheck_texel.json` + `_calpe.json` — Fact-check data
+- `/root/fase_r2_scrape_targets.json` — 1.923 POIs voor volledige scraping
+- `/root/fase_r3_prompt_improvements.md` — Anti-hallucinatie prompt ontwerp
+
+**Lessons Learned**:
+1. Feitelijke correctheid moet ALTIJD onderdeel zijn van kwaliteitscriteria
+2. "Concreetheid" in kwaliteitsscoring beloont hallucinaties — een verzonnen prijs scoort hoger dan geen prijs
+3. Website URL meegeven ≠ website INHOUD meegeven — het LLM leest de URL niet
+4. Anti-hallucinatie prompt regels: "verzin NOOIT details", "gebruik ALLEEN brondata"
+
+**Risico Register**:
+- LLM hallucinatie-risico bij onvoldoende brondata → MATERIEEL BEWEZEN (61% foutenpercentage)
+- Kwaliteitscriteria die hallucinaties belonen → GEFIXED in R3 prompt ontwerp
+- Vertalingen gebaseerd op foutieve content → MOET opnieuw na R4
 
 ---
 
