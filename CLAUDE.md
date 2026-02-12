@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.12.0
-> **Laatst bijgewerkt**: 11 februari 2026
+> **Versie**: 3.13.0
+> **Laatst bijgewerkt**: 12 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -256,7 +256,7 @@ Bronnen (VVV, Websites, LLM) → poi_content_staging → Review → POI tabel
 ### Content Bronnen
 | Bron | POIs | Status | Kwaliteit |
 |------|------|--------|-----------|
-| mistral_medium_fase4 | 2.515 | ✅ Gegenereerd | Excellent (9.96/10) |
+| mistral_medium_fase4 | 2.515 | ⚠️ 61% hallucinaties (R1) | Feitelijk onbetrouwbaar |
 | vvv_texel | 240 | ✅ Gescraped | Goed |
 | poi_website | 276 | ✅ Gescraped | Variabel |
 | calpe_es | 18 | ✅ Gescraped | Goed |
@@ -410,7 +410,12 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 6b** | Quick Actions Destination Fix | ✅ COMPLEET | 09-02-2026 |
 | **Fase 6c** | SSL Fix + Sentry DSN + Suggestion Content Fix | ✅ COMPLEET | 10-02-2026 |
 | **Fase 6d** | Destination Routing + Categories + Fuzzy Match + Spacing | ✅ COMPLEET | 10-02-2026 |
-| **Fase 6e** | X-Destination-ID + Daily Tip Overhaul + Spacing + Icons | ✅ COMPLEET | 11-02-2026 |
+| **Fase 6e** | X-Destination-ID + Daily Tip Overhaul + Spacing + Icons (3 rounds) | ✅ COMPLEET | 11-02-2026 |
+| **Fase R1** | Content Damage Assessment (100 POIs fact-check) | ✅ COMPLEET | 12-02-2026 |
+| **Fase R2** | Source Data Verrijking (website scraping alle POIs) | ❌ GEPLAND | - |
+| **Fase R3** | Prompt Redesign (anti-hallucinatie) | ❌ GEPLAND | - |
+| **Fase R4** | Regeneratie + Verificatie Loop | ❌ GEPLAND | - |
+| **Fase R5** | Safeguards & Kwaliteitsborging | ❌ GEPLAND | - |
 | **Fase 7** | Reviews Integratie | ⏸️ WACHT | - |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
@@ -534,6 +539,41 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 **Frontend herbouwd**: Texel build deployed naar dev.texelmaps.nl + texelmaps.nl
 **API herstart**: PM2 restart holidaibutler-api
 **ChromaDB warnings**: 15+ → 3 (niet-kritiek)
+
+### Fase R1 Resultaten (Content Damage Assessment — 12/02/2026)
+
+**Aanleiding**: Handmatige steekproef door Frank (Texel-bewoner) onthulde 100% foutenpercentage in 6 Texel POIs. Verzonnen haardvuren, prijzen, afstanden, openingstijden.
+
+**Root Cause**: Prompt-instructie "Include at least one concrete detail" zonder brondata. Website URL meegegeven maar INHOUD niet. LLM vulde informatiegaten met plausibele maar verzonnen details. Kwaliteitscriteria beloonden hallucinaties (concreetheid-score).
+
+**Methode**: Geautomatiseerde fact-check pipeline (Python):
+1. 50 Texel + 50 Calpe POIs geselecteerd (top-rated met website)
+2. 100 websites gescrapet (96% success rate, 48 Texel OK, 47 Calpe OK)
+3. LLM fact-check per POI: elke claim vergeleken met gescrapete website-data
+4. Gestructureerd rapport + samenvatting gegenereerd
+
+| Metric | Texel | Calpe | Totaal |
+|--------|-------|-------|--------|
+| POIs met data | 48 | 47 | 95 |
+| Gem. hallucinatie% | 61% | 62% | 61% |
+| Severity HIGH/CRITICAL | 100% | 100% | 100% |
+| Verified claims | 22% | 19% | 20% |
+| Hallucinated claims | 53% | 56% | 55% |
+| Factually wrong | 6% | 4% | 5% |
+
+**Conclusie**: **NO-GO** voor productie. Content Repair Pipeline R2-R5 verplicht.
+
+**Ergste categorieën**: Food & Drinks Calpe (75% hallucinated), Praktisch Texel (69%), Shopping (67%), Recreatief (64%).
+**Typische fouten**: Verzonnen prijzen (11%), afstanden (11%), openingstijden (6%), menu-items (3%), faciliteiten (3%).
+
+**Deliverables op Hetzner**:
+- `/root/fase_r1_damage_assessment.md` — Volledig rapport (26 KB)
+- `/root/fase_r1_summary_for_frank.md` — Samenvatting voor Frank (NL)
+- `/root/fase_r1_factcheck_texel.json` + `_calpe.json` — Fact-check data (380 KB)
+- `/root/fase_r1_website_data_texel.json` + `_calpe.json` — Gescrapete website-data (687 KB)
+- `/root/fase_r2_scrape_targets.json` — 1.923 POIs voor volledige scraping
+- `/root/fase_r3_prompt_improvements.md` — Anti-hallucinatie prompt ontwerp
+- Script: `/root/fase_r1_damage_assessment.py` (herbruikbaar voor toekomstige assessments)
 
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
@@ -700,6 +740,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.13.0** | **2026-02-12** | **Fase R1 Content Damage Assessment COMPLEET: Geautomatiseerde fact-check van 100 POIs (50 Texel + 50 Calpe). Resultaat: 61% gemiddeld hallucinatiepercentage. 100% van POIs severity HIGH/CRITICAL. NO-GO voor productie. Root cause: prompt "Include concrete detail" zonder brondata. 10 deliverables op Hetzner (rapport, fact-check data, scrape targets, prompt verbeteringen). Content Repair Pipeline R2-R5 gepland. Master Strategie v5.0.** |
 | **3.12.0** | **2026-02-11** | **Fase 6e Round 3: Texla→Tessa in 6 frontend pagina's (23 occurrences, NL/EN/DE). ChromaDB warnings: @chroma-core/default-embed geïnstalleerd + no-op embedding function in getCollection()/createCollection() (15+ warnings → 3). Spacing ROOT CAUSE gefixed: generieke camelCase regex ([a-z])([A-Z])→$1 $2 in cleanAIText() (\\b word boundary werkt niet voor "deTegeltjes"). Icon centering: object-fit:contain i.p.v. cover+transform. Itinerary images: getImagesForPOIs() toegevoegd aan itinerary endpoint, poi_XXXX→MySQL ID extractie. 11 bestanden gewijzigd.** |
 | **3.11.0** | **2026-02-11** | **Fase 6e Round 2: Opening hours format mismatch ROOT CAUSE gefixed (array+Dutch day names vs object+English). Itinerary: Dutch categorie matching voor time-of-day selectie (natuur, actief, cultuur, eten). 60+ Nederlandse subcategorie iconen in MessageList.tsx + CategoryBrowser.tsx. Streaming chat: cleanAIText() toegevoegd aan done event. Image priority: getLocalImagePriority() deprioritiseert street view ook als lokaal opgeslagen. Chat avatar: destination-aware (texelmaps-icon.png voor Texel). 6 bestanden gewijzigd.** |
 | **3.10.0** | **2026-02-11** | **Fase 6e X-Destination-ID + Daily Tip Overhaul + Spacing + Icons: 11 fetch() calls gefixed met X-Destination-ID header. Daily tip: LLM verwijderd, imageurls lookup, golden rule filter. Spacing: connectingWords na locatienamen.** |
