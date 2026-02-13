@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.14.0
+> **Versie**: 3.15.0
 > **Laatst bijgewerkt**: 13 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -414,7 +414,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 6e** | X-Destination-ID + Daily Tip Overhaul + Spacing + Icons (3 rounds) | ✅ COMPLEET | 11-02-2026 |
 | **Fase R1** | Content Damage Assessment (100 POIs fact-check) | ✅ COMPLEET | 12-02-2026 |
 | **Fase R2** | Source Data Verrijking (1.923 websites gescrapet, 3.079 fact sheets) | ✅ COMPLEET | 12-02-2026 |
-| **Fase R3** | Prompt Redesign (anti-hallucinatie) | ❌ GEPLAND | - |
+| **Fase R3** | Prompt Redesign (anti-hallucinatie, 16 regels, 4 kwaliteitsniveaus, verificatie-prompt) | ✅ COMPLEET | 13-02-2026 |
 | **Fase R4** | Regeneratie + Verificatie Loop | ❌ GEPLAND | - |
 | **Fase R5** | Safeguards & Kwaliteitsborging | ❌ GEPLAND | - |
 | **Fase 7** | Reviews Integratie | ⏸️ WACHT | - |
@@ -608,6 +608,41 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 - `/root/fase_r2_summary_for_frank.md` — Samenvatting voor Frank (NL)
 - Script: `/root/fase_r2_source_data_enrichment.py`
 
+### Fase R3 Resultaten (Prompt Redesign — 13/02/2026)
+
+**Doel**: Fundamentele herontwerp van de content-generatie prompt om hallucinaties te elimineren, op basis van R1 foutpatronen en R2 brondata.
+
+**Aanpak**:
+1. 16 expliciete anti-hallucinatie regels (gebaseerd op R1 top-9 fouttypen)
+2. 4 prompt-strategieen per data quality level (rich/moderate/minimal/none)
+3. Categorie-specifieke guardrails (8 categorieparen NL+EN)
+4. Brondata-injectie: source_text_for_llm uit R2 fact sheets direct in prompt
+5. Vertaal-bewuste verificatie-prompt (NL/ES brondata naar EN output)
+6. AIDA structuur aangepast per kwaliteitsniveau (vol/beperkt/kort/generiek)
+
+**Verwijderde hallucinatie-veroorzakers uit Fase 4 prompt**:
+- "Include at least one concrete detail (price, distance, time, feature)"
+- "Hook with a unique fact, sensory detail, or surprising element"
+- "What will the visitor experience? Be specific"
+
+**Test Resultaten (12 POIs, 3 per kwaliteitsniveau)**:
+
+| Metriek | R1 (oude prompt) | R3 (nieuwe prompt) |
+|---------|-------------------|-------------------|
+| Hallucinatie-rate | 61% | **~14%** (daling: 47 procentpunt) |
+| PASS (0% fouten) | 0% | **25%** (3/12) |
+| REVIEW (minder dan 20%) | 0% | **58%** (7/12) |
+| FAIL (meer dan 20%) | 100% | **8%** (1/12) |
+
+**Woorddoelen per kwaliteit**: Rich: 110-140, Moderate: 85-115, Minimal: 55-85, None: 30-60.
+
+**Deliverables op Hetzner**:
+- `/root/fase_r3_prompt_templates.py` — Productie-klare prompt module voor R4
+- `/root/fase_r3_test_prompts.py` — Test script met verificatie
+- `/root/fase_r3_test_results.json` — Volledige testresultaten
+- `/root/fase_r3_test_report.md` — Gedetailleerd testrapport
+- `/root/fase_r3_summary_for_frank.md` — Samenvatting voor Frank (NL)
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -773,6 +808,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.15.0** | **2026-02-13** | **Fase R3 Prompt Redesign COMPLEET: Anti-hallucinatie prompt templates met 16 regels, 4 kwaliteitsniveaus (rich/moderate/minimal/none), categorie-specifieke guardrails, vertaal-bewuste verificatie-prompt. Test: 61% hallucinatie (R1) gedaald naar ~14% (R3). 3/12 PASS, 7/12 REVIEW, 1/12 FAIL. Verwijderde R1-root causes: "concrete detail", "surprising element", "be specific". Brondata-injectie uit R2 fact sheets. Woorddoelen: 110-140 (rich) tot 30-60 (none). 5 deliverables op Hetzner. Klaar voor R4 regeneratie.** |
 | **3.14.0** | **2026-02-13** | **Fase R2 Source Data Verrijking COMPLEET: 1.923 POI-websites gescrapet (92% success rate), 3.079 fact sheets gegenereerd. Data quality: 1.462 rich (47%), 231 moderate (8%), 1.066 minimal (35%), 320 none (10%). Texel 65% dekking, Calpe 44%. Geëxtraheerde feiten: 488 openingstijden, 265 prijzen, 835 telefoonnummers. 29 MB fact sheets klaar voor R4 regeneratie. 380 minuten doorlooptijd.** |
 | **3.13.0** | **2026-02-12** | **Fase R1 Content Damage Assessment COMPLEET: Geautomatiseerde fact-check van 100 POIs (50 Texel + 50 Calpe). Resultaat: 61% gemiddeld hallucinatiepercentage. 100% van POIs severity HIGH/CRITICAL. NO-GO voor productie. Root cause: prompt "Include concrete detail" zonder brondata. 10 deliverables op Hetzner (rapport, fact-check data, scrape targets, prompt verbeteringen). Content Repair Pipeline R2-R5 gepland. Master Strategie v5.0.** |
 | **3.12.0** | **2026-02-11** | **Fase 6e Round 3: Texla→Tessa in 6 frontend pagina's (23 occurrences, NL/EN/DE). ChromaDB warnings: @chroma-core/default-embed geïnstalleerd + no-op embedding function in getCollection()/createCollection() (15+ warnings → 3). Spacing ROOT CAUSE gefixed: generieke camelCase regex ([a-z])([A-Z])→$1 $2 in cleanAIText() (\\b word boundary werkt niet voor "deTegeltjes"). Icon centering: object-fit:contain i.p.v. cover+transform. Itinerary images: getImagesForPOIs() toegevoegd aan itinerary endpoint, poi_XXXX→MySQL ID extractie. 11 bestanden gewijzigd.** |
