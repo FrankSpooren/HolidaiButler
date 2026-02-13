@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.15.0
+> **Versie**: 3.16.0
 > **Laatst bijgewerkt**: 13 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -415,7 +415,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase R1** | Content Damage Assessment (100 POIs fact-check) | ✅ COMPLEET | 12-02-2026 |
 | **Fase R2** | Source Data Verrijking (1.923 websites gescrapet, 3.079 fact sheets) | ✅ COMPLEET | 12-02-2026 |
 | **Fase R3** | Prompt Redesign (anti-hallucinatie, 16 regels, 4 kwaliteitsniveaus, verificatie-prompt) | ✅ COMPLEET | 13-02-2026 |
-| **Fase R4** | Regeneratie + Verificatie Loop | ❌ GEPLAND | - |
+| **Fase R4** | Regeneratie + Verificatie Loop (3.079 POIs, 19.5% hallucinatie, 0 errors) | ✅ COMPLEET | 13-02-2026 |
 | **Fase R5** | Safeguards & Kwaliteitsborging | ❌ GEPLAND | - |
 | **Fase 7** | Reviews Integratie | ⏸️ WACHT | - |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
@@ -643,6 +643,39 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 - `/root/fase_r3_test_report.md` — Gedetailleerd testrapport
 - `/root/fase_r3_summary_for_frank.md` — Samenvatting voor Frank (NL)
 
+### Fase R4 Resultaten (Regeneratie + Verificatie Loop)
+- **Status**: COMPLEET (13-02-2026)
+- **Doorlooptijd**: 449 minuten (7,5 uur) voor 3.079 POIs
+- **Model**: mistral-large-latest (generatie + verificatie)
+- **Gemiddelde hallucinatie-rate**: 19.5% (was 61% in R1, -41.5 procentpunt)
+- **Errors**: 0 (van 3.079 POIs)
+
+**Verdicts per kwaliteitsniveau:**
+
+| Kwaliteit | Aantal | Gem. Hall. | PASS | REVIEW | FAIL |
+|-----------|--------|-----------|------|--------|------|
+| Rich | 1.462 | 18.5% | 91 | 1.088 | 283 |
+| Moderate | 231 | 20.6% | 8 | 180 | 43 |
+| Minimal | 1.066 | 19.0% | 244 | 638 | 184 |
+| None | 320 | 24.6% | 54 | 208 | 58 |
+| **Totaal** | **3.079** | **19.5%** | **397** | **2.114** | **568** |
+
+**Aanbevelingen**: 2.511 USE_NEW (82%), 568 MANUAL_REVIEW (18%)
+
+**Workflow**:
+1. Generatie met R3 anti-hallucinatie prompts + R2 brondata-injectie
+2. Automatische verificatie (second-pass LLM fact-check)
+3. Staging in `poi_content_staging` tabel (niet direct in productie)
+4. Triage rapport met Top 30 per bestemming voor Frank's review
+
+**Deliverables op Hetzner** (`/root/`):
+- `/root/fase_r4_regeneration.py` — Hoofdscript (generatie + verificatie + staging)
+- `/root/fase_r4_results.json` — Volledige resultaten per POI
+- `/root/fase_r4_triage_report.md` — Review queue met Top 30 per bestemming
+- `/root/fase_r4_summary_for_frank.md` — Samenvatting voor Frank (NL)
+- `/root/fase_r4_checkpoint.json` — Voortgang checkpoint
+- `poi_content_staging` tabel — Alle nieuwe content met review status
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -808,6 +841,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.16.0** | **2026-02-13** | **Fase R4 Regeneratie + Verificatie Loop COMPLEET: 3.079 POIs opnieuw gegenereerd met R3 anti-hallucinatie prompts + R2 brondata. Gemiddelde hallucinatie: 19.5% (was 61% in R1, -41.5 procentpunt). 0 errors. Verdicts: 397 PASS (13%), 2.114 REVIEW (69%), 568 FAIL (18%). Aanbevelingen: 2.511 USE_NEW (82%), 568 MANUAL_REVIEW (18%). Per kwaliteit: rich 18.5%, moderate 20.6%, minimal 19.0%, none 24.6%. Staging-first workflow: poi_content_staging tabel. Triage rapport met Top 30 per bestemming. 449 minuten doorlooptijd (mistral-large-latest gen+verify). 6 deliverables op Hetzner.** |
 | **3.15.0** | **2026-02-13** | **Fase R3 Prompt Redesign COMPLEET: Anti-hallucinatie prompt templates met 16 regels, 4 kwaliteitsniveaus (rich/moderate/minimal/none), categorie-specifieke guardrails, vertaal-bewuste verificatie-prompt. Test: 61% hallucinatie (R1) gedaald naar ~14% (R3). 3/12 PASS, 7/12 REVIEW, 1/12 FAIL. Verwijderde R1-root causes: "concrete detail", "surprising element", "be specific". Brondata-injectie uit R2 fact sheets. Woorddoelen: 110-140 (rich) tot 30-60 (none). 5 deliverables op Hetzner. Klaar voor R4 regeneratie.** |
 | **3.14.0** | **2026-02-13** | **Fase R2 Source Data Verrijking COMPLEET: 1.923 POI-websites gescrapet (92% success rate), 3.079 fact sheets gegenereerd. Data quality: 1.462 rich (47%), 231 moderate (8%), 1.066 minimal (35%), 320 none (10%). Texel 65% dekking, Calpe 44%. Geëxtraheerde feiten: 488 openingstijden, 265 prijzen, 835 telefoonnummers. 29 MB fact sheets klaar voor R4 regeneratie. 380 minuten doorlooptijd.** |
 | **3.13.0** | **2026-02-12** | **Fase R1 Content Damage Assessment COMPLEET: Geautomatiseerde fact-check van 100 POIs (50 Texel + 50 Calpe). Resultaat: 61% gemiddeld hallucinatiepercentage. 100% van POIs severity HIGH/CRITICAL. NO-GO voor productie. Root cause: prompt "Include concrete detail" zonder brondata. 10 deliverables op Hetzner (rapport, fact-check data, scrape targets, prompt verbeteringen). Content Repair Pipeline R2-R5 gepland. Master Strategie v5.0.** |

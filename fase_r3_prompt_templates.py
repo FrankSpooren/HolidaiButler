@@ -478,32 +478,13 @@ CLASSIFICATION RULES:
 
 IMPORTANT: The source data is often in Dutch or Spanish. A claim in the English output that faithfully translates the source data should be classified as VERIFIED or TRANSLATED_OK, NOT as UNSUPPORTED.
 
-OUTPUT FORMAT (JSON):
-{
-    "total_claims": <number>,
-    "verified": <number>,
-    "translated_ok": <number>,
-    "unsupported": <number>,
-    "general_ok": <number>,
-    "unsupported_claims": [
-        {"claim": "exact quote from description", "reason": "why this is not in source data", "severity": "HIGH|MEDIUM|LOW"}
-    ],
-    "hallucination_rate": <float 0.0-1.0 based on unsupported/total_claims>,
-    "verdict": "PASS" | "REVIEW" | "FAIL",
-    "suggested_fix": "brief suggestion if REVIEW/FAIL"
-}
+OUTPUT FORMAT — CONCISE JSON ONLY (keep reasons SHORT, max 15 words each):
+{"total_claims": N, "verified": N, "translated_ok": N, "unsupported": N, "general_ok": N, "unsupported_claims": [{"claim": "short quote", "reason": "brief reason max 15 words", "severity": "HIGH|MEDIUM|LOW"}], "hallucination_rate": 0.0-1.0, "verdict": "PASS|REVIEW|FAIL"}
 
-SEVERITY LEVELS for unsupported claims:
-- HIGH: Invented prices, distances, specific products/services, historical facts, awards
-- MEDIUM: Embellishment adjectives, inferred experiences, atmosphere not in source
-- LOW: Minor paraphrase liberties, slight geographic assumptions
+SEVERITY: HIGH=invented prices/distances/products/facts, MEDIUM=embellishments/atmosphere, LOW=minor paraphrase
+VERDICT: PASS=rate 0.0, REVIEW=rate<=0.20 no HIGH, FAIL=rate>0.20 or any HIGH
 
-VERDICT THRESHOLDS:
-- PASS: hallucination_rate = 0.0 (zero unsupported claims)
-- REVIEW: hallucination_rate > 0.0 and <= 0.20 (minor unsupported claims, no HIGH severity)
-- FAIL: hallucination_rate > 0.20 OR any HIGH severity unsupported claim
-
-Be thorough but fair. Count each distinct factual claim separately. Remember: faithful translations are VERIFIED."""
+Be thorough but CONCISE. Keep the entire JSON under 500 tokens. Faithful translations are VERIFIED."""
 
 
 def build_verification_prompt(fact_sheet: dict, generated_text: str) -> tuple:

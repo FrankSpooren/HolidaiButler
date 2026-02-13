@@ -2,7 +2,7 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 13 februari 2026
-**Versie**: 5.2
+**Versie**: 5.3
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -40,7 +40,7 @@
 | **Fase R1** | Content Damage Assessment (100 POIs fact-check) | ✅ COMPLEET | 12-02 | 12-02 | ~EUR 1 |
 | **Fase R2** | Source Data Verrijking (1.923 websites, 3.079 fact sheets) | ✅ COMPLEET | 12-02-2026 | 13-02-2026 | EUR 0 |
 | **Fase R3** | Prompt Redesign (16 anti-hallucinatie regels, 4 kwaliteitsniveaus, verificatie-prompt) | ✅ COMPLEET | 13-02-2026 | ~14% hallucinatie (was 61%) | EUR 0.50 |
-| **Fase R4** | Regeneratie + Verificatie Loop | ❌ OPEN | - | - | ~EUR 13 |
+| **Fase R4** | Regeneratie + Verificatie Loop (3.079 POIs, 19.5% hallucinatie, 0 errors) | ✅ COMPLEET | 13-02-2026 | 19.5% hallucinatie (was 61%) | ~EUR 12 |
 | **Fase R5** | Safeguards & Kwaliteitsborging | ❌ OPEN | - | - | EUR 0 |
 | **Fase 7** | Reviews Integratie | ❌ OPEN | - | - | ~EUR 0 |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ❌ OPEN | - | - | ~EUR 0 |
@@ -316,6 +316,44 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 - `/root/fase_r3_test_results.json` — Volledige testresultaten
 - `/root/fase_r3_test_report.md` — Gedetailleerd testrapport
 - `/root/fase_r3_summary_for_frank.md` — Samenvatting voor Frank (NL)
+
+### Content Repair Pipeline — Fase R4: Regeneratie + Verificatie Loop
+
+**Status**: ✅ COMPLEET (13 februari 2026)
+**Doorlooptijd**: 449 minuten (7,5 uur)
+**Kosten**: ~EUR 12 (Mistral API — generatie + verificatie voor 3.079 POIs)
+
+**Methode**: Twee-pass LLM pipeline per POI:
+1. **Generatie**: R3 anti-hallucinatie prompts + R2 brondata-injectie → nieuwe beschrijving
+2. **Verificatie**: Second-pass LLM fact-check → verdict (PASS/REVIEW/FAIL) + hallucinatie-rate
+3. **Staging**: Resultaat in `poi_content_staging` tabel (niet direct in productie)
+
+**Resultaten**:
+
+| Kwaliteit | Aantal | Gem. Hall. | PASS | REVIEW | FAIL |
+|-----------|--------|-----------|------|--------|------|
+| Rich | 1.462 | 18.5% | 91 | 1.088 | 283 |
+| Moderate | 231 | 20.6% | 8 | 180 | 43 |
+| Minimal | 1.066 | 19.0% | 244 | 638 | 184 |
+| None | 320 | 24.6% | 54 | 208 | 58 |
+| **Totaal** | **3.079** | **19.5%** | **397** | **2.114** | **568** |
+
+**Vergelijking met R1**: Hallucinatie-rate gedaald van 61% naar 19.5% (-41.5 procentpunt).
+
+**Aanbevelingen**: 2.511 USE_NEW (82%), 568 MANUAL_REVIEW (18%)
+
+**Volgende stappen**:
+1. Frank: Review Top 30 per bestemming in triage rapport
+2. Goedgekeurde content van staging naar productie (POI tabel)
+3. Vertalingen opnieuw draaien (Fase 5 herhaling)
+4. Fase R5: Safeguards implementeren (permanente fact-check)
+
+**Deliverables op Hetzner** (`/root/`):
+- `/root/fase_r4_regeneration.py` — Hoofdscript
+- `/root/fase_r4_results.json` — Volledige resultaten per POI
+- `/root/fase_r4_triage_report.md` — Review queue per bestemming
+- `/root/fase_r4_summary_for_frank.md` — Samenvatting voor Frank (NL)
+- `poi_content_staging` tabel — Alle nieuwe content met review status
 
 ---
 
@@ -717,10 +755,11 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **5.3** | **13-02-2026** | **Fase R4 Regeneratie + Verificatie Loop COMPLEET: 3.079 POIs opnieuw gegenereerd. Hallucinatie: 19.5% (was 61%). 0 errors. 397 PASS, 2.114 REVIEW, 568 FAIL. Staging-first workflow. ~EUR 12 Mistral API.** |
 | **4.0** | **10-02-2026** | **MASTER DOCUMENT: 3 strategische documenten geintegreerd (Strategic Advisory v3.1, Status Actieplan v1.0, Claude Code Commando v3.0). Bijgewerkt met Fase 6c (SSL, Sentry, Suggestions) en Fase 6d (ROOT CAUSE destination routing, CORS, categories, fuzzy matching, spacing, itinerary). Alle 13 voltooide fasen gedocumenteerd. Budget: EUR 52,41 van EUR 69 (76%). Resterende fasen: 7 (Reviews), 8 (Agents), 8b (Dashboard).** |
 
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 10 februari 2026 - Fase 6d COMPLEET, Master Document v4.0*
-*Volgende fase: Fase 7 Reviews Integratie (P0 - blokkeert launch)*
+*Laatst bijgewerkt: 13 februari 2026 - Fase R4 COMPLEET, Master Document v5.3*
+*Volgende fase: Fase R5 Safeguards & Kwaliteitsborging*
