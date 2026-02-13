@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 12 februari 2026
-**Versie**: 5.0
+**Datum**: 13 februari 2026
+**Versie**: 5.1
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE R1 COMPLEET - Content Damage Assessment. 61% hallucinatiepercentage in LLM-gegenereerde content. NO-GO voor productie. Content Repair Pipeline R2-R5 gepland.
+**Status**: FASE R2 COMPLEET - Source Data Verrijking. 1.923 websites gescrapet, 3.079 fact sheets. 55% bruikbare brondata. Fase R3 (Prompt Redesign) is volgende stap.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -38,7 +38,7 @@
 | **Fase 6d** | Destination Routing + Categories + Fuzzy Match + Spacing | ✅ COMPLEET | 10-02 | 10-02 | EUR 0 |
 | **Fase 6e** | X-Destination-ID + Daily Tip + Spacing + Icons (3 rounds) | ✅ COMPLEET | 11-02 | 11-02 | EUR 0 |
 | **Fase R1** | Content Damage Assessment (100 POIs fact-check) | ✅ COMPLEET | 12-02 | 12-02 | ~EUR 1 |
-| **Fase R2** | Source Data Verrijking (website scraping alle POIs) | ❌ OPEN | - | - | ~EUR 0 |
+| **Fase R2** | Source Data Verrijking (1.923 websites, 3.079 fact sheets) | ✅ COMPLEET | 12-02-2026 | 13-02-2026 | EUR 0 |
 | **Fase R3** | Prompt Redesign (anti-hallucinatie) | ❌ OPEN | - | - | EUR 0 |
 | **Fase R4** | Regeneratie + Verificatie Loop | ❌ OPEN | - | - | ~EUR 13 |
 | **Fase R5** | Safeguards & Kwaliteitsborging | ❌ OPEN | - | - | EUR 0 |
@@ -231,6 +231,48 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 - LLM hallucinatie-risico bij onvoldoende brondata → MATERIEEL BEWEZEN (61% foutenpercentage)
 - Kwaliteitscriteria die hallucinaties belonen → GEFIXED in R3 prompt ontwerp
 - Vertalingen gebaseerd op foutieve content → MOET opnieuw na R4
+
+### Content Repair Pipeline — Fase R2: Source Data Verrijking (12-13/02/2026)
+
+**Doel**: Alle POI-websites scrapen en gestructureerde "fact sheets" bouwen als brondata voor content regeneratie in R4.
+
+**Methode**: Geautomatiseerde scraping pipeline:
+1. 1.923 POI-websites gescrapet (1.209 Texel, 714 Calpe)
+2. Per website: hoofdpagina + subpagina's (/over-ons, /menu, /openingstijden, etc.)
+3. Gestructureerde feiten geëxtraheerd (openingstijden, prijzen, adres, telefoon, email)
+4. Gecombineerd met Google Places beschrijvingen en enriched_highlights uit DB
+5. Per POI een "fact sheet" met source_text_for_llm (klaar voor R4)
+
+**Resultaten**:
+
+| Metric | Texel | Calpe | Totaal |
+|--------|-------|-------|--------|
+| POIs met content | 1.596 | 1.483 | 3.079 |
+| Websites gescrapet | 1.144 | 626 | 1.770 |
+| Scrape success rate | 95% | 88% | 92% |
+| Data quality: rich | 984 (62%) | 478 (32%) | 1.462 (47%) |
+| Data quality: moderate | 59 (4%) | 172 (12%) | 231 (8%) |
+| Data quality: minimal | 452 (28%) | 614 (41%) | 1.066 (35%) |
+| Data quality: none | 101 (6%) | 219 (15%) | 320 (10%) |
+| Gem. bronwoorden per POI | 580 | 535 | 557 |
+| Doorlooptijd | — | — | 380 minuten |
+
+**Coverage**: 55% van POIs heeft bruikbare brondata (rich + moderate). Texel (65%) significant beter dan Calpe (44%).
+
+**Geëxtraheerde feiten**: 488 openingstijden, 265 prijzen, 3.073 adressen, 835 telefoonnummers, 825 e-mailadressen, 1.036 features/kenmerken.
+
+**Prompt Strategie per Data Quality** (voor R4):
+- **Rich** (1.462): Volledige AIDA met grounded facts, 120-140 woorden
+- **Moderate** (231): AIDA met beschikbare facts + generiek, 100-120 woorden
+- **Minimal** (1.066): Korte veilige beschrijving, 70-90 woorden
+- **None** (320): Generieke template, 40-60 woorden
+
+**Deliverables op Hetzner**:
+- `/root/fase_r2_scraped_data.json` — Gescrapete website-data (13 MB, 1.770 POIs)
+- `/root/fase_r2_fact_sheets.json` — Gestructureerde fact sheets (29 MB, 3.079 POIs)
+- `/root/fase_r2_coverage_report.md` — Coverage rapport per categorie
+- `/root/fase_r2_summary_for_frank.md` — Samenvatting voor Frank (NL)
+- Script: `/root/fase_r2_source_data_enrichment.py`
 
 ---
 
