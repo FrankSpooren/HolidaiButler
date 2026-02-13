@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 13 februari 2026
-**Versie**: 5.1
+**Versie**: 5.2
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE R2 COMPLEET - Source Data Verrijking. 1.923 websites gescrapet, 3.079 fact sheets. 55% bruikbare brondata. Fase R3 (Prompt Redesign) is volgende stap.
+**Status**: FASE R3 COMPLEET - Prompt Redesign. Hallucinatie-rate gedaald van 61% naar ~14%. 16 anti-hallucinatie regels, 4 kwaliteitsniveaus, verificatie-prompt. Fase R4 (Regeneratie) is volgende stap.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -39,7 +39,7 @@
 | **Fase 6e** | X-Destination-ID + Daily Tip + Spacing + Icons (3 rounds) | ✅ COMPLEET | 11-02 | 11-02 | EUR 0 |
 | **Fase R1** | Content Damage Assessment (100 POIs fact-check) | ✅ COMPLEET | 12-02 | 12-02 | ~EUR 1 |
 | **Fase R2** | Source Data Verrijking (1.923 websites, 3.079 fact sheets) | ✅ COMPLEET | 12-02-2026 | 13-02-2026 | EUR 0 |
-| **Fase R3** | Prompt Redesign (anti-hallucinatie) | ❌ OPEN | - | - | EUR 0 |
+| **Fase R3** | Prompt Redesign (16 anti-hallucinatie regels, 4 kwaliteitsniveaus, verificatie-prompt) | ✅ COMPLEET | 13-02-2026 | ~14% hallucinatie (was 61%) | EUR 0.50 |
 | **Fase R4** | Regeneratie + Verificatie Loop | ❌ OPEN | - | - | ~EUR 13 |
 | **Fase R5** | Safeguards & Kwaliteitsborging | ❌ OPEN | - | - | EUR 0 |
 | **Fase 7** | Reviews Integratie | ❌ OPEN | - | - | ~EUR 0 |
@@ -273,6 +273,49 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 - `/root/fase_r2_coverage_report.md` — Coverage rapport per categorie
 - `/root/fase_r2_summary_for_frank.md` — Samenvatting voor Frank (NL)
 - Script: `/root/fase_r2_source_data_enrichment.py`
+
+### Content Repair Pipeline — Fase R3: Prompt Redesign (13/02/2026)
+
+**Doel**: Fundamentele herontwerp van de content-generatie prompt om hallucinaties te elimineren, op basis van R1 foutpatronen en R2 brondata.
+
+**Aanpak**:
+1. 16 expliciete anti-hallucinatie regels (gebaseerd op R1 top-9 fouttypen: fabricatie, openingstijden, prijzen, afstanden, menu-items, awards, sensorisch, faciliteiten, historisch)
+2. 4 prompt-strategieen per data quality level (rich/moderate/minimal/none)
+3. Categorie-specifieke guardrails (8 categorieparen NL+EN)
+4. Brondata-injectie: source_text_for_llm uit R2 fact sheets direct in prompt
+5. Vertaal-bewuste verificatie-prompt (NL/ES brondata naar EN output)
+6. Verwijderde R1-root causes: "concrete detail", "surprising element", "be specific"
+
+**Verwijderde hallucinatie-veroorzakers** (root cause uit R1):
+- Rule 8: "Include at least one concrete detail (price, distance, time, feature)"
+- AIDA Attention: "Hook with a unique fact, sensory detail, or surprising element"
+- AIDA Desire: "What will the visitor experience? Be specific"
+- Geen brondata in prompt (enkel URL, niet de inhoud)
+
+**Test Resultaten (12 POIs, 3 per kwaliteitsniveau)**:
+
+| Metriek | R1 (oude prompt) | R3 (nieuwe prompt) | Verbetering |
+|---------|-------------------|-------------------|-------------|
+| Hallucinatie-rate | 61% | ~14% | -47 procentpunt |
+| PASS (0% fouten) | 0% | 25% (3/12) | +25pp |
+| REVIEW (minder dan 20%) | 0% | 58% (7/12) | +58pp |
+| FAIL (meer dan 20%) | 100% | 8% (1/12) | -92pp |
+
+**Opgeloste fouttypen** (0 gevallen in test):
+- Verzonnen prijzen (was 11.2% van R1 fouten)
+- Verzonnen afstanden (was 10.9%)
+- Verzonnen menu-items bij minimal/none POIs (was 3.6%)
+- Verzonnen openingstijden (was 16.6%)
+- Verzonnen faciliteiten (was 2.4%)
+
+**Woorddoelen per kwaliteit**: Rich: 110-140, Moderate: 85-115, Minimal: 55-85, None: 30-60.
+
+**Deliverables op Hetzner**:
+- `/root/fase_r3_prompt_templates.py` — Productie-klare prompt module voor R4
+- `/root/fase_r3_test_prompts.py` — Test script met verificatie
+- `/root/fase_r3_test_results.json` — Volledige testresultaten
+- `/root/fase_r3_test_report.md` — Gedetailleerd testrapport
+- `/root/fase_r3_summary_for_frank.md` — Samenvatting voor Frank (NL)
 
 ---
 
