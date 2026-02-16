@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.16.0
-> **Laatst bijgewerkt**: 13 februari 2026
+> **Versie**: 3.17.0
+> **Laatst bijgewerkt**: 16 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -416,7 +416,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase R2** | Source Data Verrijking (1.923 websites gescrapet, 3.079 fact sheets) | ✅ COMPLEET | 12-02-2026 |
 | **Fase R3** | Prompt Redesign (anti-hallucinatie, 16 regels, 4 kwaliteitsniveaus, verificatie-prompt) | ✅ COMPLEET | 13-02-2026 |
 | **Fase R4** | Regeneratie + Verificatie Loop (3.079 POIs, 19.5% hallucinatie, 0 errors) | ✅ COMPLEET | 13-02-2026 |
-| **Fase R5** | Safeguards & Kwaliteitsborging | ❌ GEPLAND | - |
+| **Fase R5** | Safeguards & Kwaliteitsborging (1.730 POIs gepromoveerd, audit trail, monitoring) | ✅ COMPLEET | 16-02-2026 |
 | **Fase 7** | Reviews Integratie | ⏸️ WACHT | - |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
@@ -676,6 +676,33 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 - `/root/fase_r4_checkpoint.json` — Voortgang checkpoint
 - `poi_content_staging` tabel — Alle nieuwe content met review status
 
+### Fase R5 Resultaten (Safeguards & Kwaliteitsborging)
+- **Status**: COMPLEET (16-02-2026)
+- **1.730 POIs gepromoveerd** naar productie (0 errors)
+- **1.003 POIs geblokkeerd** door safeguards (HIGH severity of hallucinatie > 20%)
+- **1.730 audit trail entries** in `poi_content_history` tabel
+
+**Safeguard regels**:
+1. HIGH severity unsupported claims → GEBLOKKEERD
+2. Hallucinatie-rate > 20% (30% voor 'none' quality) → GEBLOKKEERD
+3. Woordaantal buiten range → WARNING
+4. Embellishment woorden → WARNING
+5. Onbekende bestemming → GEBLOKKEERD (verplichte handmatige review)
+
+**Staging status na R5**:
+| Status | Calpe | Texel | Totaal |
+|--------|-------|-------|--------|
+| Applied | 538 | 1.192 | 1.730 |
+| Pending | 537 | 244 | 781 |
+| Review Required | 408 | 160 | 568 |
+
+**Deliverables**:
+- `fase_r5_safeguards.py` — Content validatie regels module
+- `fase_r5_promote_staging.py` — Staging naar productie promotie + rollback
+- `fase_r5_monitoring.py` — Kwaliteitsrapportage + quarterly audit
+- `contentSafeguards/contentValidator.js` — Backend validatie hook (Node.js)
+- `poi_content_history` tabel — Audit trail + rollback capability
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -841,6 +868,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.17.0** | **2026-02-16** | **Fase R5 Safeguards & Kwaliteitsborging COMPLEET: 1.730 POIs gepromoveerd naar productie (0 errors), 1.003 geblokkeerd door safeguards (HIGH severity/hallucinatie > 20%). poi_content_history audit trail (1.730 entries). Safeguard regels: HIGH claim blocker, hallucinatie threshold, woordaantal, embellishment blocklist, onbekende bestemming enforcer. Monitoring script met quarterly audit capability. Backend contentValidator.js hook. Content Repair Pipeline R1-R5 COMPLEET.** |
 | **3.16.0** | **2026-02-13** | **Fase R4 Regeneratie + Verificatie Loop COMPLEET: 3.079 POIs opnieuw gegenereerd met R3 anti-hallucinatie prompts + R2 brondata. Gemiddelde hallucinatie: 19.5% (was 61% in R1, -41.5 procentpunt). 0 errors. Verdicts: 397 PASS (13%), 2.114 REVIEW (69%), 568 FAIL (18%). Aanbevelingen: 2.511 USE_NEW (82%), 568 MANUAL_REVIEW (18%). Per kwaliteit: rich 18.5%, moderate 20.6%, minimal 19.0%, none 24.6%. Staging-first workflow: poi_content_staging tabel. Triage rapport met Top 30 per bestemming. 449 minuten doorlooptijd (mistral-large-latest gen+verify). 6 deliverables op Hetzner.** |
 | **3.15.0** | **2026-02-13** | **Fase R3 Prompt Redesign COMPLEET: Anti-hallucinatie prompt templates met 16 regels, 4 kwaliteitsniveaus (rich/moderate/minimal/none), categorie-specifieke guardrails, vertaal-bewuste verificatie-prompt. Test: 61% hallucinatie (R1) gedaald naar ~14% (R3). 3/12 PASS, 7/12 REVIEW, 1/12 FAIL. Verwijderde R1-root causes: "concrete detail", "surprising element", "be specific". Brondata-injectie uit R2 fact sheets. Woorddoelen: 110-140 (rich) tot 30-60 (none). 5 deliverables op Hetzner. Klaar voor R4 regeneratie.** |
 | **3.14.0** | **2026-02-13** | **Fase R2 Source Data Verrijking COMPLEET: 1.923 POI-websites gescrapet (92% success rate), 3.079 fact sheets gegenereerd. Data quality: 1.462 rich (47%), 231 moderate (8%), 1.066 minimal (35%), 320 none (10%). Texel 65% dekking, Calpe 44%. Geëxtraheerde feiten: 488 openingstijden, 265 prijzen, 835 telefoonnummers. 29 MB fact sheets klaar voor R4 regeneratie. 380 minuten doorlooptijd.** |

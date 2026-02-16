@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 13 februari 2026
-**Versie**: 5.3
+**Datum**: 16 februari 2026
+**Versie**: 5.4
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -41,7 +41,7 @@
 | **Fase R2** | Source Data Verrijking (1.923 websites, 3.079 fact sheets) | ✅ COMPLEET | 12-02-2026 | 13-02-2026 | EUR 0 |
 | **Fase R3** | Prompt Redesign (16 anti-hallucinatie regels, 4 kwaliteitsniveaus, verificatie-prompt) | ✅ COMPLEET | 13-02-2026 | ~14% hallucinatie (was 61%) | EUR 0.50 |
 | **Fase R4** | Regeneratie + Verificatie Loop (3.079 POIs, 19.5% hallucinatie, 0 errors) | ✅ COMPLEET | 13-02-2026 | 19.5% hallucinatie (was 61%) | ~EUR 12 |
-| **Fase R5** | Safeguards & Kwaliteitsborging | ❌ OPEN | - | - | EUR 0 |
+| **Fase R5** | Safeguards & Kwaliteitsborging (1.730 POIs gepromoveerd, audit trail, monitoring) | ✅ COMPLEET | 16-02-2026 | 1.730 promoted, 1.003 blocked | EUR 0 |
 | **Fase 7** | Reviews Integratie | ❌ OPEN | - | - | ~EUR 0 |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ❌ OPEN | - | - | ~EUR 0 |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ❌ OPEN | - | - | ~EUR 0 |
@@ -354,6 +354,33 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 - `/root/fase_r4_triage_report.md` — Review queue per bestemming
 - `/root/fase_r4_summary_for_frank.md` — Samenvatting voor Frank (NL)
 - `poi_content_staging` tabel — Alle nieuwe content met review status
+
+### Content Repair Pipeline — Fase R5: Safeguards & Kwaliteitsborging
+
+**Status**: ✅ COMPLEET (16 februari 2026)
+**Kosten**: EUR 0 (geen LLM calls nodig)
+
+**Resultaten**:
+- **1.730 POIs gepromoveerd** naar productie (POI tabel) — 0 errors
+- **1.003 POIs geblokkeerd** door safeguards — HIGH severity claims of hallucinatie > 20%
+- **1.730 audit trail entries** in `poi_content_history` tabel
+- Monitoring rapport met hallucination distributie, per-destination breakdown
+
+**Safeguard regels (permanent)**:
+1. HIGH severity unsupported claims → GEBLOKKEERD
+2. Hallucinatie-rate > 20% (30% voor 'none' quality) → GEBLOKKEERD
+3. Onbekende bestemming → GEBLOKKEERD (verplichte handmatige review)
+4. Woordaantal buiten range → WARNING
+5. Embellishment woorden blocklist → WARNING
+
+**Remaining**: 781 pending + 568 review_required = 1.349 POIs nog in staging voor Frank's review.
+
+**Deliverables op Hetzner** (`/root/`):
+- `/root/fase_r5_safeguards.py` — Content validatie regels module
+- `/root/fase_r5_promote_staging.py` — Staging promotie + rollback
+- `/root/fase_r5_monitoring.py` — Kwaliteitsrapportage + quarterly audit
+- `/root/fase_r5_quality_report.md` — Gegenereerd kwaliteitsrapport
+- `poi_content_history` tabel — Audit trail + rollback capability
 
 ---
 
@@ -755,11 +782,12 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **5.4** | **16-02-2026** | **Fase R5 Safeguards COMPLEET: 1.730 POIs gepromoveerd naar productie. 1.003 geblokkeerd door safeguards. Audit trail. Monitoring. Content Repair Pipeline R1-R5 COMPLEET.** |
 | **5.3** | **13-02-2026** | **Fase R4 Regeneratie + Verificatie Loop COMPLEET: 3.079 POIs opnieuw gegenereerd. Hallucinatie: 19.5% (was 61%). 0 errors. 397 PASS, 2.114 REVIEW, 568 FAIL. Staging-first workflow. ~EUR 12 Mistral API.** |
 | **4.0** | **10-02-2026** | **MASTER DOCUMENT: 3 strategische documenten geintegreerd (Strategic Advisory v3.1, Status Actieplan v1.0, Claude Code Commando v3.0). Bijgewerkt met Fase 6c (SSL, Sentry, Suggestions) en Fase 6d (ROOT CAUSE destination routing, CORS, categories, fuzzy matching, spacing, itinerary). Alle 13 voltooide fasen gedocumenteerd. Budget: EUR 52,41 van EUR 69 (76%). Resterende fasen: 7 (Reviews), 8 (Agents), 8b (Dashboard).** |
 
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 13 februari 2026 - Fase R4 COMPLEET, Master Document v5.3*
-*Volgende fase: Fase R5 Safeguards & Kwaliteitsborging*
+*Laatst bijgewerkt: 16 februari 2026 - Fase R5 COMPLEET, Master Document v5.4*
+*Content Repair Pipeline R1-R5 COMPLEET. Volgende fase: Fase 7 Reviews Integratie*
