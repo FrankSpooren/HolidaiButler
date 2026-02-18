@@ -1,19 +1,19 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 16 februari 2026
-**Versie**: 5.4
+**Datum**: 18 februari 2026
+**Versie**: 5.5
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE R3 COMPLEET - Prompt Redesign. Hallucinatie-rate gedaald van 61% naar ~14%. 16 anti-hallucinatie regels, 4 kwaliteitsniveaus, verificatie-prompt. Fase R4 (Regeneratie) is volgende stap.
+**Status**: FASE R6 COMPLEET - Content Completion & Vertaling. Alle 3.079 POIs hebben nu content in 4 talen (EN/NL/DE/ES). Content Repair Pipeline R1-R6 COMPLEET.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.13.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.18.0) in repo root + Hetzner
 
 ---
 
@@ -42,6 +42,7 @@
 | **Fase R3** | Prompt Redesign (16 anti-hallucinatie regels, 4 kwaliteitsniveaus, verificatie-prompt) | ✅ COMPLEET | 13-02-2026 | ~14% hallucinatie (was 61%) | EUR 0.50 |
 | **Fase R4** | Regeneratie + Verificatie Loop (3.079 POIs, 19.5% hallucinatie, 0 errors) | ✅ COMPLEET | 13-02-2026 | 19.5% hallucinatie (was 61%) | ~EUR 12 |
 | **Fase R5** | Safeguards & Kwaliteitsborging (1.730 POIs gepromoveerd, audit trail, monitoring) | ✅ COMPLEET | 16-02-2026 | 1.730 promoted, 1.003 blocked | EUR 0 |
+| **Fase R6** | Content Completion & Vertaling (884 generic + 9.066 vertalingen NL/DE/ES) | ✅ COMPLEET | 18-02-2026 | 3.079 POIs × 4 talen | ~EUR 8 |
 | **Fase 7** | Reviews Integratie | ❌ OPEN | - | - | ~EUR 0 |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ❌ OPEN | - | - | ~EUR 0 |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ❌ OPEN | - | - | ~EUR 0 |
@@ -55,9 +56,11 @@
 | Fase 4b Content Vergelijking | EUR 8 | EUR 6,02 | ✅ |
 | Fase 5 Vertalingen | EUR 25 | EUR 18,22 | ✅ |
 | Fase 6 Vectorisatie | EUR 25 | EUR 19,00 | ✅ |
+| Fase R1-R4 Content Repair | EUR 15 | EUR 13,50 | ✅ |
+| Fase R6 Content Completion | EUR 10 | EUR 8,00 | ✅ |
 | Fase 7 Reviews | EUR 0 | - | ❌ |
 | Fase 8 Agents | EUR 0 | - | ❌ |
-| **Totaal** | **EUR 69** | **EUR 52,41** | **76,0% van budget** |
+| **Totaal** | **EUR 94** | **EUR 73,91** | **78,6% van budget** |
 
 ### 1.3 Openstaande Componenten
 
@@ -230,7 +233,7 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 **Risico Register**:
 - LLM hallucinatie-risico bij onvoldoende brondata → MATERIEEL BEWEZEN (61% foutenpercentage)
 - Kwaliteitscriteria die hallucinaties belonen → GEFIXED in R3 prompt ontwerp
-- Vertalingen gebaseerd op foutieve content → MOET opnieuw na R4
+- Vertalingen gebaseerd op foutieve content → ✅ Gemitigeerd (R6 hervertaling na R4 regeneratie)
 
 ### Content Repair Pipeline — Fase R2: Source Data Verrijking (12-13/02/2026)
 
@@ -381,6 +384,56 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 - `/root/fase_r5_monitoring.py` — Kwaliteitsrapportage + quarterly audit
 - `/root/fase_r5_quality_report.md` — Gegenereerd kwaliteitsrapport
 - `poi_content_history` tabel — Audit trail + rollback capability
+
+### Content Repair Pipeline — Fase R6: Content Completion & Vertaling
+
+**Status**: ✅ COMPLEET (18 februari 2026)
+**Kosten**: ~EUR 8 (Mistral API — generic descriptions + 3 talen × 3.079 POIs)
+
+**Doel**: Alle 1.349 resterende POIs in staging afhandelen + alle 3.079 POIs vertalen naar NL, DE, ES.
+
+**4-stappen aanpak**:
+
+| Stap | Beschrijving | Resultaat |
+|------|--------------|-----------|
+| **A.4** | Frank's Top 150 review verwerken (Excel) | 87 GOED → productie, 61 AANPASSEN → Frank's tekst, 2 AFKEUREN |
+| **A.5** | Resterende pending promoveren (threshold 25%) | 317 gepromoveerd, 382 geblokkeerd |
+| **B** | Generieke veilige beschrijvingen (40-70 woorden) | 884 gegenereerd, 0 failed, gem. 44 woorden |
+| **C** | Vertalingen NL, DE, ES (parallel, 10 workers) | 9.066 vertalingen, 49 minuten, 0 missing |
+
+**Resultaten**:
+
+| Metric | Calpe | Texel | Totaal |
+|--------|-------|-------|--------|
+| POIs met EN content | 1.483 | 1.596 | 3.079 |
+| POIs met NL content | 1.483 | 1.596 | 3.079 |
+| POIs met DE content | 1.483 | 1.596 | 3.079 |
+| POIs met ES content | 1.483 | 1.596 | 3.079 |
+| Staging status | applied | applied | **Alle 3.079 = applied** |
+
+**Kwaliteitschecks**:
+- 0 POIs met EN maar zonder NL vertaling
+- 0 vertalingen met markdown lekkage (**)
+- 3 "in Texel" matches (false positives — POI-namen bevatten "in Texel")
+- 884 generieke beschrijvingen: gem. 44 woorden, range 27-58
+
+**Performance**: Vertaalscript herschreven van sequentieel (~10 uur geschat) naar parallel met `concurrent.futures.ThreadPoolExecutor` (10 workers). Resultaat: 49 minuten voor 8.766 vertalingen (178/min).
+
+**Deliverables op Hetzner** (`/root/`):
+- `/root/fase_r6_process_review.py` — Frank's Excel review verwerking
+- `/root/fase_r6_promote_remaining.py` — Threshold-based promotie (25%)
+- `/root/fase_r6_generic_descriptions.py` — Generieke beschrijvingen
+- `/root/fase_r6_translations.py` — Parallelle vertalingen (10 workers)
+- `/root/fase_r6_summary_for_frank.md` — Samenvatting voor Frank (NL)
+- `/root/fase_r6_translation_results.json` — Vertaalresultaten
+
+**Content Repair Pipeline R1-R6: COMPLEET**
+- R1: Damage Assessment → 61% hallucinatie ontdekt
+- R2: Source Data → 1.923 websites gescrapet, 3.079 fact sheets
+- R3: Prompt Redesign → 61% → ~14% hallucinatie
+- R4: Regeneratie → 3.079 POIs, 19.5% hallucinatie
+- R5: Safeguards → 1.730 gepromoveerd, audit trail
+- R6: Content Completion → **Alle 3.079 POIs × 4 talen = 12.316 beschrijvingen in productie**
 
 ---
 
@@ -782,6 +835,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **5.5** | **18-02-2026** | **Fase R6 Content Completion & Vertaling COMPLEET: Alle 3.079 POIs × 4 talen (EN/NL/DE/ES) = 12.316 beschrijvingen in productie. 884 generieke beschrijvingen, 9.066 vertalingen, 0 missing. Content Repair Pipeline R1-R6 COMPLEET.** |
 | **5.4** | **16-02-2026** | **Fase R5 Safeguards COMPLEET: 1.730 POIs gepromoveerd naar productie. 1.003 geblokkeerd door safeguards. Audit trail. Monitoring. Content Repair Pipeline R1-R5 COMPLEET.** |
 | **5.3** | **13-02-2026** | **Fase R4 Regeneratie + Verificatie Loop COMPLEET: 3.079 POIs opnieuw gegenereerd. Hallucinatie: 19.5% (was 61%). 0 errors. 397 PASS, 2.114 REVIEW, 568 FAIL. Staging-first workflow. ~EUR 12 Mistral API.** |
 | **4.0** | **10-02-2026** | **MASTER DOCUMENT: 3 strategische documenten geintegreerd (Strategic Advisory v3.1, Status Actieplan v1.0, Claude Code Commando v3.0). Bijgewerkt met Fase 6c (SSL, Sentry, Suggestions) en Fase 6d (ROOT CAUSE destination routing, CORS, categories, fuzzy matching, spacing, itinerary). Alle 13 voltooide fasen gedocumenteerd. Budget: EUR 52,41 van EUR 69 (76%). Resterende fasen: 7 (Reviews), 8 (Agents), 8b (Dashboard).** |
@@ -789,5 +843,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 16 februari 2026 - Fase R5 COMPLEET, Master Document v5.4*
-*Content Repair Pipeline R1-R5 COMPLEET. Volgende fase: Fase 7 Reviews Integratie*
+*Laatst bijgewerkt: 18 februari 2026 - Fase R6 COMPLEET, Master Document v5.5*
+*Content Repair Pipeline R1-R6 COMPLEET. Alle 3.079 POIs × 4 talen in productie. Volgende fase: Fase 7 Reviews Integratie*

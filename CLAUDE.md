@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.17.0
-> **Laatst bijgewerkt**: 16 februari 2026
+> **Versie**: 3.18.0
+> **Laatst bijgewerkt**: 18 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -317,11 +317,12 @@ Password: j8,DrtshJSm$
 | enriched_detail_description_nl | TEXT | Nederlandse vertaling | ✅ Fase 5 |
 | enriched_highlights | TEXT | Key highlights | ✅ Gevuld |
 
-### POI Coverage na Fase 4
-| Destination | Totaal | Met EN Content | Coverage |
-|-------------|--------|----------------|----------|
-| Calpe | 1.495 | ~1.442 | 96% |
-| Texel | 1.142 | ~1.073 | 94% |
+### POI Coverage na Fase R6
+| Destination | Actief | EN | NL | DE | ES | Coverage |
+|-------------|--------|----|----|----|----|----------|
+| Calpe | 1.538 | 1.483 | 1.483 | 1.483 | 1.483 | 96% |
+| Texel | 1.660 | 1.596 | 1.596 | 1.596 | 1.596 | 96% |
+| **Totaal** | **3.198** | **3.079** | **3.079** | **3.079** | **3.079** | **96%** |
 
 ### POI Image Pipeline
 | Aspect | Calpe | Texel |
@@ -417,6 +418,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase R3** | Prompt Redesign (anti-hallucinatie, 16 regels, 4 kwaliteitsniveaus, verificatie-prompt) | ✅ COMPLEET | 13-02-2026 |
 | **Fase R4** | Regeneratie + Verificatie Loop (3.079 POIs, 19.5% hallucinatie, 0 errors) | ✅ COMPLEET | 13-02-2026 |
 | **Fase R5** | Safeguards & Kwaliteitsborging (1.730 POIs gepromoveerd, audit trail, monitoring) | ✅ COMPLEET | 16-02-2026 |
+| **Fase R6** | Content Completion & Vertaling (3.079 POIs productie-gereed, 9.066 vertalingen NL/DE/ES) | ✅ COMPLEET | 18-02-2026 |
 | **Fase 7** | Reviews Integratie | ⏸️ WACHT | - |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
@@ -689,12 +691,14 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 4. Embellishment woorden → WARNING
 5. Onbekende bestemming → GEBLOKKEERD (verplichte handmatige review)
 
-**Staging status na R5**:
+**Staging status na R5** (voor R6):
 | Status | Calpe | Texel | Totaal |
 |--------|-------|-------|--------|
 | Applied | 538 | 1.192 | 1.730 |
 | Pending | 537 | 244 | 781 |
 | Review Required | 408 | 160 | 568 |
+
+**Staging status na R6** (finaal): **Alle 3.079 = Applied**
 
 **Deliverables**:
 - `fase_r5_safeguards.py` — Content validatie regels module
@@ -702,6 +706,45 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 - `fase_r5_monitoring.py` — Kwaliteitsrapportage + quarterly audit
 - `contentSafeguards/contentValidator.js` — Backend validatie hook (Node.js)
 - `poi_content_history` tabel — Audit trail + rollback capability
+
+### Fase R6 Resultaten (Content Completion & Vertaling — 18/02/2026)
+- **Status**: COMPLEET (18-02-2026)
+- **Alle 3.079 POIs productie-gereed** met EN, NL, DE, ES content
+- **Alle staging entries**: status = applied (0 pending, 0 review_required)
+- **Content Repair Pipeline R1-R6 COMPLEET**
+
+**STAP A: Frank's Handmatige Review (Top 150 POIs)**:
+- GOED (naar productie): 87
+- AANPASSEN (Frank's tekst): 61
+- AFKEUREN (rejected): 2
+- Extra gepromoveerd (25% threshold): 317
+
+**STAP B: Generieke Beschrijvingen (884 POIs)**:
+- Korte veilige teksten (gem. 44 woorden, 0 failures)
+- Doorlooptijd: 34 minuten
+
+**STAP C: Vertalingen (NL, DE, ES)**:
+- 9.066 vertalingen (3.079 POIs x 3 talen)
+- 100% coverage alle talen, 0 markdown lekkage
+- Doorlooptijd: 49 minuten (10 parallel workers)
+
+**Audit trail (poi_content_history)**:
+| Bron | Telling |
+|------|---------|
+| fase_r4_staging (R5 promote) | 1.730 |
+| generic_safe_r6 (Stap B) | 884 |
+| r6_threshold_promote (Stap A.5) | 317 |
+| frank_review_r6 (Frank GOED) | 87 |
+| frank_manual_edit_r6 (Frank AANPASSEN) | 61 |
+
+**Deliverables op Hetzner** (`/root/`):
+- `fase_r6_excel_generator.py` — Excel generatie voor Frank's review
+- `fase_r6_process_review.py` — Verwerking Frank's beoordelingen
+- `fase_r6_promote_remaining.py` — A.5 threshold promote
+- `fase_r6_generic_descriptions.py` — Stap B generieke beschrijvingen
+- `fase_r6_translations.py` — Stap C vertalingen (parallel)
+- `fase_r6_summary_for_frank.md` — Samenvatting voor Frank (NL)
+- `fase_r6_frank_processed.json`, `fase_r6_a5_results.json`, `fase_r6_generic_results.json`, `fase_r6_translation_results.json`
 
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
@@ -868,6 +911,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.18.0** | **2026-02-18** | **Fase R6 Content Completion & Vertaling COMPLEET: Alle 3.079 POIs productie-gereed. Stap A: Frank's handmatige review Top 150 (87 GOED, 61 AANPASSEN, 2 AFKEUREN) + 317 threshold-verhoogd gepromoveerd. Stap B: 884 generieke veilige beschrijvingen (gem. 44 woorden, 0 failures). Stap C: 9.066 vertalingen NL/DE/ES (100% coverage, 49 min parallel). Staging: alle 3.079 entries applied. Audit trail: 3.079 entries in poi_content_history. Content Repair Pipeline R1-R6 COMPLEET.** |
 | **3.17.0** | **2026-02-16** | **Fase R5 Safeguards & Kwaliteitsborging COMPLEET: 1.730 POIs gepromoveerd naar productie (0 errors), 1.003 geblokkeerd door safeguards (HIGH severity/hallucinatie > 20%). poi_content_history audit trail (1.730 entries). Safeguard regels: HIGH claim blocker, hallucinatie threshold, woordaantal, embellishment blocklist, onbekende bestemming enforcer. Monitoring script met quarterly audit capability. Backend contentValidator.js hook. Content Repair Pipeline R1-R5 COMPLEET.** |
 | **3.16.0** | **2026-02-13** | **Fase R4 Regeneratie + Verificatie Loop COMPLEET: 3.079 POIs opnieuw gegenereerd met R3 anti-hallucinatie prompts + R2 brondata. Gemiddelde hallucinatie: 19.5% (was 61% in R1, -41.5 procentpunt). 0 errors. Verdicts: 397 PASS (13%), 2.114 REVIEW (69%), 568 FAIL (18%). Aanbevelingen: 2.511 USE_NEW (82%), 568 MANUAL_REVIEW (18%). Per kwaliteit: rich 18.5%, moderate 20.6%, minimal 19.0%, none 24.6%. Staging-first workflow: poi_content_staging tabel. Triage rapport met Top 30 per bestemming. 449 minuten doorlooptijd (mistral-large-latest gen+verify). 6 deliverables op Hetzner.** |
 | **3.15.0** | **2026-02-13** | **Fase R3 Prompt Redesign COMPLEET: Anti-hallucinatie prompt templates met 16 regels, 4 kwaliteitsniveaus (rich/moderate/minimal/none), categorie-specifieke guardrails, vertaal-bewuste verificatie-prompt. Test: 61% hallucinatie (R1) gedaald naar ~14% (R3). 3/12 PASS, 7/12 REVIEW, 1/12 FAIL. Verwijderde R1-root causes: "concrete detail", "surprising element", "be specific". Brondata-injectie uit R2 fact sheets. Woorddoelen: 110-140 (rich) tot 30-60 (none). 5 deliverables op Hetzner. Klaar voor R4 regeneratie.** |
