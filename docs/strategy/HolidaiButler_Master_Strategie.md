@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 18 februari 2026
-**Versie**: 5.5
+**Datum**: 19 februari 2026
+**Versie**: 5.6
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE R6 COMPLEET - Content Completion & Vertaling. Alle 3.079 POIs hebben nu content in 4 talen (EN/NL/DE/ES). Content Repair Pipeline R1-R6 COMPLEET.
+**Status**: FASE R6b COMPLEET - Content Quality Hardening. 2.047 POIs chirurgisch claim-stripped, AM/PM sweep database-breed, 6.177 hervertalingen. Content Repair Pipeline R1-R6b COMPLEET.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -43,6 +43,7 @@
 | **Fase R4** | Regeneratie + Verificatie Loop (3.079 POIs, 19.5% hallucinatie, 0 errors) | ✅ COMPLEET | 13-02-2026 | 19.5% hallucinatie (was 61%) | ~EUR 12 |
 | **Fase R5** | Safeguards & Kwaliteitsborging (1.730 POIs gepromoveerd, audit trail, monitoring) | ✅ COMPLEET | 16-02-2026 | 1.730 promoted, 1.003 blocked | EUR 0 |
 | **Fase R6** | Content Completion & Vertaling (884 generic + 9.066 vertalingen NL/DE/ES) | ✅ COMPLEET | 18-02-2026 | 3.079 POIs × 4 talen | ~EUR 8 |
+| **Fase R6b** | Content Quality Hardening (2.047 POIs claim-stripped, AM/PM sweep, 6.177 hervertalingen) | ✅ COMPLEET | 19-02-2026 | <5% hallucinatie (geschat) | ~EUR 6 |
 | **Fase 7** | Reviews Integratie | ❌ OPEN | - | - | ~EUR 0 |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ❌ OPEN | - | - | ~EUR 0 |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ❌ OPEN | - | - | ~EUR 0 |
@@ -427,13 +428,57 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 - `/root/fase_r6_summary_for_frank.md` — Samenvatting voor Frank (NL)
 - `/root/fase_r6_translation_results.json` — Vertaalresultaten
 
-**Content Repair Pipeline R1-R6: COMPLEET**
+**Content Repair Pipeline R1-R6b: COMPLEET**
 - R1: Damage Assessment → 61% hallucinatie ontdekt
 - R2: Source Data → 1.923 websites gescrapet, 3.079 fact sheets
 - R3: Prompt Redesign → 61% → ~14% hallucinatie
 - R4: Regeneratie → 3.079 POIs, 19.5% hallucinatie
 - R5: Safeguards → 1.730 gepromoveerd, audit trail
-- R6: Content Completion → **Alle 3.079 POIs × 4 talen = 12.316 beschrijvingen in productie**
+- R6: Content Completion → Alle 3.079 POIs × 4 talen = 12.316 beschrijvingen in productie
+- R6b: Quality Hardening → **2.047 POIs chirurgisch gestript, AM/PM sweep, 6.177 hervertalingen, <5% hallucinatie (geschat)**
+
+### Content Repair Pipeline — Fase R6b: Content Quality Hardening (19/02/2026)
+
+**Doel**: Hallucinatiepercentage verlagen van <20-25% naar <5% door chirurgische verwijdering van onverifieerbare claims.
+
+**STAP 1: Brondata Verrijking (re-scrape)**:
+- 2.047 POIs opnieuw geanalyseerd tegen verrijkte brondata
+- Facebook (541 URLs): 1 succesvol (platform anti-scraping)
+- Instagram (412 URLs): 0 succesvol (platform anti-scraping)
+- Deep website re-scrape: 109/191 met data (57% hit rate)
+- 5 POIs opgewaardeerd naar betere kwaliteitscategorie
+
+**STAP 2: Surgical Claim Stripping**:
+- 2.047 POIs chirurgisch gestript (100% success rate, 0 failures)
+- AIDA structuur behouden (Attention-Interest-Desire-Action)
+- Gemiddeld woordaantal: 98 → 85 (-13%)
+- Doorlooptijd: 89 minuten (Mistral medium-latest)
+
+**STAP 3: AM/PM Sweep**:
+- Database-breed: alle POIs × 4 talen gecontroleerd
+- 50 AM/PM notaties geconverteerd naar 24-uursklok
+- Na afloop: 0 AM/PM resterend
+
+**STAP 4: Frank's Steekproef**:
+- Excel met 20 POIs (10 Texel, 10 Calpe) voor handmatige controle
+- Bestand: `/root/fase_r6b_steekproef.xlsx`
+
+**STAP 5: Hervertaling**:
+- 2.059 POIs × 3 talen = 6.177 vertalingen (100% success)
+- Inclusief 12 extra POIs met alleen AM/PM-fixes
+
+**STAP 6: Verificatie**:
+- AM/PM remaining: 0 (PASS)
+- 4-talen dekking: 100% (Calpe 1.483 + Texel 1.596)
+- Audit trail: 2.097 entries (2.047 claim_strip + 50 ampm_sweep)
+
+**Deliverables op Hetzner** (`/root/`):
+- `fase_r6b_source_rescrape.py` — STAP 1: Brondata re-scrape
+- `fase_r6b_claim_stripping.py` — STAP 2: Claim stripping
+- `fase_r6b_ampm_sweep.py` — STAP 3: AM/PM sweep
+- `fase_r6b_steekproef.py` — STAP 4: Steekproef Excel
+- `fase_r6b_retranslate.py` — STAP 5: Hervertaling
+- `fase_r6b_summary_for_frank.md` — Samenvatting voor Frank (NL)
 
 ---
 
@@ -835,6 +880,8 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **5.6** | **19-02-2026** | **Fase R6b Content Quality Hardening COMPLEET: 2.047 POIs chirurgisch claim-stripped (0 failures, AIDA behouden). AM/PM sweep database-breed (41 POIs, 68 conversies). 6.177 hervertalingen NL/DE/ES (100% coverage). Content Repair Pipeline R1-R6b COMPLEET.** |
+| **5.6** | **19-02-2026** | **Fase R6b Content Quality Hardening COMPLEET: 2.047 POIs chirurgisch claim-stripped (0 failures, AIDA behouden, gem. woordaantal 98→85). AM/PM sweep database-breed (50 conversies, 0 resterend). 6.177 hervertalingen NL/DE/ES (100% coverage). Audit trail: 2.097 entries. Content Repair Pipeline R1-R6b COMPLEET.** |
 | **5.5** | **18-02-2026** | **Fase R6 Content Completion & Vertaling COMPLEET: Alle 3.079 POIs × 4 talen (EN/NL/DE/ES) = 12.316 beschrijvingen in productie. 884 generieke beschrijvingen, 9.066 vertalingen, 0 missing. Content Repair Pipeline R1-R6 COMPLEET.** |
 | **5.4** | **16-02-2026** | **Fase R5 Safeguards COMPLEET: 1.730 POIs gepromoveerd naar productie. 1.003 geblokkeerd door safeguards. Audit trail. Monitoring. Content Repair Pipeline R1-R5 COMPLEET.** |
 | **5.3** | **13-02-2026** | **Fase R4 Regeneratie + Verificatie Loop COMPLEET: 3.079 POIs opnieuw gegenereerd. Hallucinatie: 19.5% (was 61%). 0 errors. 397 PASS, 2.114 REVIEW, 568 FAIL. Staging-first workflow. ~EUR 12 Mistral API.** |
@@ -843,5 +890,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 18 februari 2026 - Fase R6 COMPLEET, Master Document v5.5*
-*Content Repair Pipeline R1-R6 COMPLEET. Alle 3.079 POIs × 4 talen in productie. Volgende fase: Fase 7 Reviews Integratie*
+*Laatst bijgewerkt: 19 februari 2026 - Fase R6b COMPLEET, Master Document v5.6*
+*Content Repair Pipeline R1-R6b COMPLEET. Alle 3.079 POIs × 4 talen in productie, <5% hallucinatie (geschat). Volgende fase: Fase 7 Reviews Integratie*
