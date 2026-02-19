@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.21.0
+> **Versie**: 3.22.0
 > **Laatst bijgewerkt**: 19 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -422,6 +422,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase R6** | Content Completion & Vertaling (3.079 POIs productie-gereed, 9.066 vertalingen NL/DE/ES) | ✅ COMPLEET | 18-02-2026 |
 | **Fase R6b** | Content Quality Hardening (2.047 POIs claim-stripped, AM/PM sweep, 6.177 hervertalingen) | ✅ COMPLEET | 19-02-2026 |
 | **Fase R6c** | ChromaDB Re-vectorisatie Texel + Calpe + Steekproef Fix (12.316 vectoren, 2 POI-correcties) | ✅ COMPLEET | 19-02-2026 |
+| **Fase R6d** | Openstaande Acties Afhandeling (markdown fix 388 POIs, 119 POIs inventarisatie, social media besluit) | ✅ COMPLEET | 19-02-2026 |
 | **Fase 7** | Reviews Integratie | ⏸️ WACHT | - |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
@@ -833,6 +834,42 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 - `steekproef_fix_2_pois.py` — Steekproef fix script
 - `steekproef_fix_backup_20260219.json` — Steekproef fix backup
 
+### Fase R6d Resultaten (Openstaande Acties Afhandeling — 19/02/2026)
+- **Status**: COMPLEET (19-02-2026)
+- **Doel**: Drie openstaande acties uit Content Pipeline afhandelen
+
+**ACTIE 3: Social Media Bronnen — BESLUIT (19-02-2026)**:
+- Status: Geaccepteerd als technische beperking
+- Reden: Meta anti-bot maatregelen blokkeren scraping (0,2% Facebook, 0% Instagram)
+- Impact: Beperkt — claim stripping compenseert het gebrek aan bronverificatie via social media
+- Verbetering Alicante: Overweeg Meta Graph API (vereist developer account + app review)
+- Verbetering generiek: Manual enrichment voor Tier 1-2 POIs (top 50-100 per destination)
+
+**ACTIE 4: 119 POIs Zonder Content — INVENTARISATIE**:
+- Alle 119 POIs = Accommodation categorie (bewust excluded via `is_excluded_from_enrichment`)
+- Texel: 64 POIs (alle Accommodation)
+- Calpe: 55 POIs (alle "Accommodation (do not communicate)")
+- Groep B/C/D (geen data, brondata aanwezig, recent) = **0 POIs**
+- Conclusie: Geen actie nodig — alle POIs zijn bewust uitgesloten
+- Content coverage: Texel 96,1% (1.596/1.660), Calpe 96,4% (1.483/1.538)
+
+**ACTIE 5: Markdown Fix Database-Breed**:
+- Verwacht: 1 POI (2279 Kaap Noord), Gevonden: **388 POIs** met markdown links
+- Calpe: 186 POIs, Texel: 202 POIs
+- EN: 383, NL: 384, DE: 386, ES: 382 velden gefixed
+- Totaal veldupdates: 1.535
+- Regex: `\[text\](http...)` → `text` (link text behouden, URL verwijderd)
+- Overige markdown (**bold**, ## headers): 0 POIs gevonden
+- Audit trail: 1.535 entries in poi_content_history (bron: `markdown_fix_post_r6b`)
+- Verificatie: **0 markdown links resterend** in database
+
+**Deliverables op Hetzner** (`/root/`):
+- `markdown_fix_post_r6b.py` — Scan + fix script
+- `markdown_fix_backup_20260219.json` — Backup 388 POIs (alle 4 talen)
+- `markdown_fix_log_20260219.json` — Fix log met details per POI
+- `inventarisatie_119_pois.py` — Inventarisatie script
+- `inventarisatie_pois_zonder_content.json` — Volledig rapport
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -998,6 +1035,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.22.0** | **2026-02-19** | **Fase R6d Openstaande Acties Afhandeling COMPLEET: (1) Social Media Bronnen besluit: geaccepteerd als technische beperking (0,2% FB, 0% IG scraping door Meta anti-bot). (2) 119 POIs inventarisatie: alle 119 = Accommodation (bewust excluded), 0 POIs gemist. (3) Markdown fix database-breed: 388 POIs gerepareerd (verwacht: 1), 1.535 velden gecorrigeerd, 0 markdown links resterend. Audit trail: 1.535 entries. Content Repair Pipeline R1-R6d COMPLEET.** |
 | **3.21.0** | **2026-02-19** | **Fase R6c Calpe Re-vectorisatie COMPLEET: calpe_pois collectie ge-revectoriseerd met R6b claim-stripped content. 5.932 nieuwe vectoren (1.483 POIs × 4 talen), 1 error (gefixed), 25,7 min, €2,37. Texel ongewijzigd (PASS). 5/5 test queries passed. Beide chatbots (Tessa + HoliBot) serveren nu feitelijk correcte R6b content.** |
 | **3.20.0** | **2026-02-19** | **Fase R6c ChromaDB Re-vectorisatie Texel + Steekproef Fix COMPLEET: texel_pois collectie ge-revectoriseerd met R6b claim-stripped content. 6.384 nieuwe vectoren (1.596 POIs × 4 talen), 0 errors, 27,6 min, €2,55. 2 POI-correcties: Vuurtoren Texel (Battle of Kikkert → notaris campagne) + Terra Mítica (year-round → seasonal). Steekproef fixes incl. NL/DE/ES hervertalingen + audit trail (8+1 entries). Tessa serveert nu feitelijk correcte content.** |
 | **3.19.0** | **2026-02-19** | **Fase R6b Content Quality Hardening COMPLEET: 2.047 POIs chirurgisch claim-stripped (0 failures, AIDA behouden, gem. woordaantal 98→85). AM/PM sweep database-breed (41 POIs, 68 conversies, 0 resterend). 6.177 hervertalingen NL/DE/ES (100% coverage). Enhanced fact sheets via deep website re-scrape (109 successen). Frank's steekproef Excel (20 POIs). Audit trail: 2.097 entries (2.047 claim_strip + 50 ampm_sweep). Content Repair Pipeline R1-R6b COMPLEET.** |
