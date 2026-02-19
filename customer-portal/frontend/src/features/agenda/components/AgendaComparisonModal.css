@@ -194,7 +194,7 @@
 }
 
 .agenda-comparison-row svg {
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   flex-shrink: 0;
 }
 
@@ -220,7 +220,7 @@
 }
 
 .agenda-comparison-close-btn:hover {
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
   background: #F9FAFB;
 }
 

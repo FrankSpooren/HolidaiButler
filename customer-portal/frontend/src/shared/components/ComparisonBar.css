@@ -8,7 +8,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(135deg, #7FA594 0%, #6B8B7D 100%);
+  background: linear-gradient(135deg, var(--color-primary, #30c59b) 0%, #6B8B7D 100%);
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
   padding: 16px 24px;
   z-index: 900;
@@ -86,7 +86,7 @@
 
 .comparison-bar-btn-compare {
   background: white;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
 }
 
 .comparison-bar-btn-compare.enabled:hover {

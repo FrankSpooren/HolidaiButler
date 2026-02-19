@@ -178,7 +178,7 @@
 }
 
 .agenda-meta-item svg {
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
 }
 
 /* Action Buttons Row */
@@ -293,7 +293,7 @@
   padding: 0;
   background: none;
   border: none;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -364,7 +364,7 @@
 
 .agenda-more-dates {
   font-size: 13px;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   margin: 8px 0 0;
 }
 
@@ -389,7 +389,7 @@
 }
 
 .agenda-contact-link {
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   text-decoration: none;
 }
 
@@ -405,7 +405,7 @@
   gap: 10px;
   width: 100%;
   padding: 14px;
-  background: #7FA594;
+  background: var(--color-primary, #30c59b);
   color: white;
   border: none;
   border-radius: 12px;

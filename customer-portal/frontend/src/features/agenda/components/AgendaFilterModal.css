@@ -157,8 +157,8 @@
 }
 
 .agenda-filter-chip.active {
-  background: #7FA594;
-  border-color: #7FA594;
+  background: var(--color-primary, #30c59b);
+  border-color: var(--color-primary, #30c59b);
   color: white;
 }
 
@@ -183,7 +183,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #7FA594;
+  background: var(--color-primary, #30c59b);
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
@@ -192,7 +192,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #7FA594;
+  background: var(--color-primary, #30c59b);
   cursor: pointer;
   border: none;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
@@ -223,7 +223,7 @@
 .agenda-filter-radio input[type="radio"] {
   width: 20px;
   height: 20px;
-  accent-color: #7FA594;
+  accent-color: var(--color-primary, #30c59b);
   cursor: pointer;
 }
 
@@ -259,7 +259,7 @@
 
 .agenda-filter-date-input input:focus {
   outline: none;
-  border-color: #7FA594;
+  border-color: var(--color-primary, #30c59b);
 }
 
 /* Footer */
@@ -291,7 +291,7 @@
 .agenda-filter-apply {
   flex: 2;
   padding: 14px;
-  background: #7FA594;
+  background: var(--color-primary, #30c59b);
   border: none;
   border-radius: 12px;
   font-size: 15px;

@@ -70,7 +70,7 @@ const getCategoryColor = (category: string): string => {
     'Beaches & Nature': '#4ECDC4',
     'Culture & History': '#F7931E',
     'Food & Drinks': '#6A4C93',
-    'Health & Wellbeing': '#7FA594',
+    'Health & Wellbeing': '#30c59b',
     'Recreation': '#FFD23F',
     'Shopping': '#FF006E',
     'Practical': '#8B8B8B',
@@ -83,7 +83,7 @@ const getCategoryColor = (category: string): string => {
     'Praktisch': '#607D8B',
     'Winkelen': '#AB47BC',
   };
-  return colors[category] || '#5E8B7E';
+  return colors[category] || '#30c59b';
 };
 
 // Create custom colored marker icon
