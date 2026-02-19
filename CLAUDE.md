@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.20.0
+> **Versie**: 3.21.0
 > **Laatst bijgewerkt**: 19 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -357,8 +357,8 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 ### Chatbot per Destination
 | Destination | Chatbot Naam | Collection | Vectoren | Persona |
 |-------------|-------------|------------|----------|---------|
-| Calpe | HoliBot | `calpe_pois` | ~3.000 | Vriendelijke Calpe-gids |
-| Texel | Tessa | `texel_pois` | 94.724 | Persoonlijke Texel-gids |
+| Calpe | HoliBot | `calpe_pois` | 43.086 | Vriendelijke Calpe-gids |
+| Texel | Tessa | `texel_pois` | 101.364 | Persoonlijke Texel-gids |
 
 ### ChromaDB Cloud
 | Parameter | Waarde |
@@ -367,8 +367,9 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | Tenant/Database | Geconfigureerd in .env |
 | Embedding model | `mistral-embed` (1024 dims) |
 | LLM model | `mistral-small-latest` |
-| Texel vectoren | 88.340 QnA + 6.384 POI = 94.724 |
-| Vectorisatie kosten | ~EUR 19 |
+| Texel vectoren | 94.980 QnA + 6.384 POI = 101.364 |
+| Calpe vectoren | 37.154 QnA + 5.932 POI = 43.086 |
+| Vectorisatie kosten | ~EUR 24 |
 
 ### Backend Bestanden (Destination-Aware)
 | Bestand | Rol |
@@ -420,7 +421,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase R5** | Safeguards & Kwaliteitsborging (1.730 POIs gepromoveerd, audit trail, monitoring) | ✅ COMPLEET | 16-02-2026 |
 | **Fase R6** | Content Completion & Vertaling (3.079 POIs productie-gereed, 9.066 vertalingen NL/DE/ES) | ✅ COMPLEET | 18-02-2026 |
 | **Fase R6b** | Content Quality Hardening (2.047 POIs claim-stripped, AM/PM sweep, 6.177 hervertalingen) | ✅ COMPLEET | 19-02-2026 |
-| **Fase R6c** | ChromaDB Re-vectorisatie Tessa + Steekproef Fix (6.384 vectoren, 2 POI-correcties) | ✅ COMPLEET | 19-02-2026 |
+| **Fase R6c** | ChromaDB Re-vectorisatie Texel + Calpe + Steekproef Fix (12.316 vectoren, 2 POI-correcties) | ✅ COMPLEET | 19-02-2026 |
 | **Fase 7** | Reviews Integratie | ⏸️ WACHT | - |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
@@ -794,15 +795,26 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 
 ### Fase R6c Resultaten (ChromaDB Re-vectorisatie + Steekproef Fix — 19/02/2026)
 - **Status**: COMPLEET (19-02-2026)
-- **Doel**: ChromaDB `texel_pois` collectie updaten met R6b claim-stripped content zodat Tessa feitelijk correcte beschrijvingen serveert
-- **Vectoren verwijderd**: 6.640 (oude POI vectoren)
-- **Vectoren aangemaakt**: 6.384 (1.596 POIs × 4 talen EN/NL/DE/ES)
-- **Errors**: 0
-- **Duur**: 27,6 minuten
-- **Kosten**: €2,55 (Mistral embed)
-- **Calpe ongewijzigd**: PASS (43.306 vectoren intact)
-- **Test queries**: 5/5 PASSED (Ecomare NL, Lighthouse EN, Essen DE, Get to Texel EN, Calpe restaurants)
+- **Doel**: ChromaDB `texel_pois` en `calpe_pois` collecties updaten met R6b claim-stripped content zodat beide chatbots feitelijk correcte beschrijvingen serveren
 - **Embedding model**: mistral-embed (1024 dims)
+
+**Texel (`texel_pois`)**:
+- Vectoren verwijderd: 6.640 (oude POI vectoren)
+- Vectoren aangemaakt: 6.384 (1.596 POIs × 4 talen)
+- Errors: 0
+- Duur: 27,6 min | Kosten: €2,55
+- Calpe ongewijzigd: PASS
+- Test queries: 5/5 PASSED
+
+**Calpe (`calpe_pois`)**:
+- Vectoren verwijderd: 6.152 (oude POI vectoren)
+- Vectoren aangemaakt: 5.932 (1.483 POIs × 4 talen)
+- Errors: 1 (POI 1111 DE network timeout — handmatig gefixed)
+- Duur: 25,7 min | Kosten: €2,37
+- Texel ongewijzigd: PASS
+- Test queries: 5/5 PASSED (Peñón EN, Calpe NL, Essen DE, Playas ES, Ecomare cross-check)
+
+**Totaal**: 12.316 nieuwe vectoren, €4,92 kosten, 53 min
 
 **Steekproef Fix (2 POI-correcties)**:
 - POI 2562 (Vuurtoren Texel): "Battle of Kikkert" → notaris Kikkert campagne
@@ -810,10 +822,14 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 - Beide POIs: EN gecorrigeerd + NL/DE/ES hervertaald + audit trail
 
 **Deliverables op Hetzner** (`/root/`):
-- `chromadb_r6b_revectorize.mjs` — Re-vectorisatie script (Node.js ESM)
-- `chromadb_r6b_revectorize_report_20260219.json` — Volledig rapport
-- `chromadb_pre_r6b_revectorize_backup_20260219.json` — Pre-revectorisatie backup
-- `chromadb_r6b_revectorize.log` — Uitvoeringslog
+- `chromadb_r6b_revectorize.mjs` — Texel re-vectorisatie script (Node.js ESM)
+- `chromadb_r6b_revectorize_calpe.mjs` — Calpe re-vectorisatie script (Node.js ESM)
+- `chromadb_r6b_revectorize_report_20260219.json` — Texel rapport
+- `chromadb_calpe_r6b_revectorize_report_20260219.json` — Calpe rapport
+- `chromadb_pre_r6b_revectorize_backup_20260219.json` — Texel pre-revectorisatie backup
+- `chromadb_calpe_pre_r6b_revectorize_backup_20260219.json` — Calpe pre-revectorisatie backup
+- `chromadb_r6b_revectorize.log` — Texel uitvoeringslog
+- `chromadb_calpe_r6b_revectorize.log` — Calpe uitvoeringslog
 - `steekproef_fix_2_pois.py` — Steekproef fix script
 - `steekproef_fix_backup_20260219.json` — Steekproef fix backup
 
@@ -982,7 +998,8 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **3.20.0** | **2026-02-19** | **Fase R6c ChromaDB Re-vectorisatie + Steekproef Fix COMPLEET: texel_pois collectie ge-revectoriseerd met R6b claim-stripped content. 6.384 nieuwe vectoren (1.596 POIs × 4 talen), 0 errors, 27,6 min, €2,55. Calpe ongewijzigd (PASS). 5/5 test queries passed. 2 POI-correcties: Vuurtoren Texel (Battle of Kikkert → notaris campagne) + Terra Mítica (year-round → seasonal). Steekproef fixes incl. NL/DE/ES hervertalingen + audit trail (8+1 entries). Tessa serveert nu feitelijk correcte content.** |
+| **3.21.0** | **2026-02-19** | **Fase R6c Calpe Re-vectorisatie COMPLEET: calpe_pois collectie ge-revectoriseerd met R6b claim-stripped content. 5.932 nieuwe vectoren (1.483 POIs × 4 talen), 1 error (gefixed), 25,7 min, €2,37. Texel ongewijzigd (PASS). 5/5 test queries passed. Beide chatbots (Tessa + HoliBot) serveren nu feitelijk correcte R6b content.** |
+| **3.20.0** | **2026-02-19** | **Fase R6c ChromaDB Re-vectorisatie Texel + Steekproef Fix COMPLEET: texel_pois collectie ge-revectoriseerd met R6b claim-stripped content. 6.384 nieuwe vectoren (1.596 POIs × 4 talen), 0 errors, 27,6 min, €2,55. 2 POI-correcties: Vuurtoren Texel (Battle of Kikkert → notaris campagne) + Terra Mítica (year-round → seasonal). Steekproef fixes incl. NL/DE/ES hervertalingen + audit trail (8+1 entries). Tessa serveert nu feitelijk correcte content.** |
 | **3.19.0** | **2026-02-19** | **Fase R6b Content Quality Hardening COMPLEET: 2.047 POIs chirurgisch claim-stripped (0 failures, AIDA behouden, gem. woordaantal 98→85). AM/PM sweep database-breed (41 POIs, 68 conversies, 0 resterend). 6.177 hervertalingen NL/DE/ES (100% coverage). Enhanced fact sheets via deep website re-scrape (109 successen). Frank's steekproef Excel (20 POIs). Audit trail: 2.097 entries (2.047 claim_strip + 50 ampm_sweep). Content Repair Pipeline R1-R6b COMPLEET.** |
 | **3.18.0** | **2026-02-18** | **Fase R6 Content Completion & Vertaling COMPLEET: Alle 3.079 POIs productie-gereed. Stap A: Frank's handmatige review Top 150 (87 GOED, 61 AANPASSEN, 2 AFKEUREN) + 317 threshold-verhoogd gepromoveerd. Stap B: 884 generieke veilige beschrijvingen (gem. 44 woorden, 0 failures). Stap C: 9.066 vertalingen NL/DE/ES (100% coverage, 49 min parallel). Staging: alle 3.079 entries applied. Audit trail: 3.079 entries in poi_content_history. Content Repair Pipeline R1-R6 COMPLEET.** |
 | **3.17.0** | **2026-02-16** | **Fase R5 Safeguards & Kwaliteitsborging COMPLEET: 1.730 POIs gepromoveerd naar productie (0 errors), 1.003 geblokkeerd door safeguards (HIGH severity/hallucinatie > 20%). poi_content_history audit trail (1.730 entries). Safeguard regels: HIGH claim blocker, hallucinatie threshold, woordaantal, embellishment blocklist, onbekende bestemming enforcer. Monitoring script met quarterly audit capability. Backend contentValidator.js hook. Content Repair Pipeline R1-R5 COMPLEET.** |
