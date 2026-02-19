@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.22.0
+> **Versie**: 3.23.0
 > **Laatst bijgewerkt**: 19 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -212,6 +212,7 @@ Alle tabellen met destination-specifieke data hebben `destination_id` kolom:
 - `user_journeys` — User journey tracking
 - `holibot_sessions` — Chatbot sessies
 - `poi_content_staging` — Content staging (NIEUW)
+- `reviews` — User reviews (heeft eigen `destination_id` kolom)
 
 ### Destination Routing
 ```
@@ -423,7 +424,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase R6b** | Content Quality Hardening (2.047 POIs claim-stripped, AM/PM sweep, 6.177 hervertalingen) | ✅ COMPLEET | 19-02-2026 |
 | **Fase R6c** | ChromaDB Re-vectorisatie Texel + Calpe + Steekproef Fix (12.316 vectoren, 2 POI-correcties) | ✅ COMPLEET | 19-02-2026 |
 | **Fase R6d** | Openstaande Acties Afhandeling (markdown fix 388 POIs, 119 POIs inventarisatie, social media besluit) | ✅ COMPLEET | 19-02-2026 |
-| **Fase 7** | Reviews Integratie | ⏸️ WACHT | - |
+| **Fase 7** | Reviews Integratie (8.964 reviews live, rating_distribution, poiName fix) | ✅ COMPLEET | 19-02-2026 |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
 
@@ -870,6 +871,53 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 - `inventarisatie_119_pois.py` — Inventarisatie script
 - `inventarisatie_pois_zonder_content.json` — Volledig rapport
 
+### Fase 7 Resultaten (Reviews Integratie — 19/02/2026)
+- **Status**: COMPLEET (19-02-2026)
+- **Kosten**: EUR 0 (geen LLM calls, pure code fix + deploy)
+
+**Diagnostic (Step 0)**: API werkte al correct — Outcome A. Alle 8.964 reviews hebben real data in model kolommen (user_name, review_text, sentiment, visit_date). Migration 009 kolommen (reviewer_name, text, sentiment_label etc.) bestaan NIET in productie DB. Geen schema mismatch.
+
+**Reviews Data**:
+
+| Metric | Texel | Calpe | Totaal |
+|--------|-------|-------|--------|
+| Reviews | 3.869 | 5.095 | 8.964 |
+| Met review_text | ~3.200 | ~4.300 | 7.519 |
+| Sentiment: positive | ~2.800 | ~3.900 | 6.691 |
+| Sentiment: neutral | ~700 | ~800 | 1.523 |
+| Sentiment: negative | ~300 | ~400 | 750 |
+
+**Database Schema**: 18 kolommen — 11 model + 7 extra (destination_id, google_review_id, is_archived, archived_at, language, likes_count, source). Reviews tabel heeft eigen `destination_id` kolom.
+
+**Backend Wijzigingen**:
+- `publicPOI.js`: `rating_distribution` toegevoegd aan `/reviews/summary` endpoint (5-star breakdown)
+- `Review.js` model: Geen wijzigingen nodig (model matched productie DB)
+
+**Frontend Wijzigingen**:
+- `POIDetailPage.tsx`: `poiName={poi.name}` toegevoegd aan `<POIReviewSection>` (was "This Place" in WriteReviewModal)
+- `UserReviewsContext.tsx`: Mock reviews (3 hardcoded reviews) gated achter `import.meta.env.DEV` check
+
+**Bestaande Code (Ongewijzigd)**:
+- `POIReviewSection.tsx` — Container met summary, filters, cards, pagination
+- `POIReviewCard.tsx` — Individuele review kaart
+- `POIReviewFilters.tsx` — Travel party, sentiment, sort filters
+- `reviewService.ts` — API client (gebruikt apiClient met X-Destination-ID)
+- `review.types.ts` — TypeScript interfaces
+- `sentimentAnalysis.ts` — Badges, formatting, calculations
+- `WriteReviewModal.tsx` — Review schrijven (TODO: API submission)
+- 5 CSS bestanden (Section, Card, Filters, WriteReview, Metadata)
+
+**Testing**: 7/7 API tests PASS:
+1. Texel POI met reviews: 200 + real data
+2. Texel POI zonder reviews: 200 + total 0
+3. Calpe regressie: 200 + real data
+4. Sort highRating: correct descending
+5. Sort lowRating: correct ascending
+6. Pagination offset/limit: correct
+7. Summary met rating_distribution: correct
+
+**Deployed naar**: texelmaps.nl, dev.texelmaps.nl, holidaibutler.com (alle 3 frontends + backend)
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -1035,6 +1083,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.23.0** | **2026-02-19** | **Fase 7 Reviews Integratie COMPLEET: 8.964 reviews (3.869 Texel, 5.095 Calpe) live op beide frontends. Diagnostic: API werkte al correct (Outcome A), model kolommen hebben real data, migration 009 kolommen bestaan niet. Backend: rating_distribution toegevoegd aan /reviews/summary endpoint. Frontend: poiName fix (POIDetailPage.tsx), mock reviews gated achter DEV check (UserReviewsContext.tsx). 7/7 API tests PASS, Calpe regressie PASS. Kosten: EUR 0.** |
 | **3.22.0** | **2026-02-19** | **Fase R6d Openstaande Acties Afhandeling COMPLEET: (1) Social Media Bronnen besluit: geaccepteerd als technische beperking (0,2% FB, 0% IG scraping door Meta anti-bot). (2) 119 POIs inventarisatie: alle 119 = Accommodation (bewust excluded), 0 POIs gemist. (3) Markdown fix database-breed: 388 POIs gerepareerd (verwacht: 1), 1.535 velden gecorrigeerd, 0 markdown links resterend. Audit trail: 1.535 entries. Content Repair Pipeline R1-R6d COMPLEET.** |
 | **3.21.0** | **2026-02-19** | **Fase R6c Calpe Re-vectorisatie COMPLEET: calpe_pois collectie ge-revectoriseerd met R6b claim-stripped content. 5.932 nieuwe vectoren (1.483 POIs × 4 talen), 1 error (gefixed), 25,7 min, €2,37. Texel ongewijzigd (PASS). 5/5 test queries passed. Beide chatbots (Tessa + HoliBot) serveren nu feitelijk correcte R6b content.** |
 | **3.20.0** | **2026-02-19** | **Fase R6c ChromaDB Re-vectorisatie Texel + Steekproef Fix COMPLEET: texel_pois collectie ge-revectoriseerd met R6b claim-stripped content. 6.384 nieuwe vectoren (1.596 POIs × 4 talen), 0 errors, 27,6 min, €2,55. 2 POI-correcties: Vuurtoren Texel (Battle of Kikkert → notaris campagne) + Terra Mítica (year-round → seasonal). Steekproef fixes incl. NL/DE/ES hervertalingen + audit trail (8+1 entries). Tessa serveert nu feitelijk correcte content.** |

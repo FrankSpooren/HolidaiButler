@@ -97,9 +97,13 @@ export function UserReviewsProvider({ children }: { children: ReactNode }) {
         const parsed = JSON.parse(stored);
         setReviews(parsed);
       } else {
-        // Use mock data for development
-        setReviews(MOCK_REVIEWS);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_REVIEWS));
+        // Start with empty reviews in production; use mock data only in dev
+        if (import.meta.env.DEV) {
+          setReviews(MOCK_REVIEWS);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_REVIEWS));
+        } else {
+          setReviews([]);
+        }
       }
     } catch (error) {
       console.error('Error loading reviews from localStorage:', error);
