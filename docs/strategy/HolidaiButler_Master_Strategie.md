@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 19 februari 2026
-**Versie**: 5.6
+**Versie**: 5.7
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE R6b COMPLEET - Content Quality Hardening. 2.047 POIs chirurgisch claim-stripped, AM/PM sweep database-breed, 6.177 hervertalingen. Content Repair Pipeline R1-R6b COMPLEET.
+**Status**: FASE R6c COMPLEET - ChromaDB re-vectorisatie Tessa + steekproef fix. 6.384 vectoren aangemaakt, 0 errors, 5/5 test queries passed. 2 POI-correcties (Vuurtoren Texel + Terra Mítica). Tessa serveert nu R6b claim-stripped content.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -44,6 +44,7 @@
 | **Fase R5** | Safeguards & Kwaliteitsborging (1.730 POIs gepromoveerd, audit trail, monitoring) | ✅ COMPLEET | 16-02-2026 | 1.730 promoted, 1.003 blocked | EUR 0 |
 | **Fase R6** | Content Completion & Vertaling (884 generic + 9.066 vertalingen NL/DE/ES) | ✅ COMPLEET | 18-02-2026 | 3.079 POIs × 4 talen | ~EUR 8 |
 | **Fase R6b** | Content Quality Hardening (2.047 POIs claim-stripped, AM/PM sweep, 6.177 hervertalingen) | ✅ COMPLEET | 19-02-2026 | <5% hallucinatie (geschat) | ~EUR 6 |
+| **Fase R6c** | ChromaDB Re-vectorisatie Tessa + Steekproef Fix (6.384 vectoren, 2 POI-correcties) | ✅ COMPLEET | 19-02-2026 | 5/5 test queries PASS | EUR 2,55 |
 | **Fase 7** | Reviews Integratie | ❌ OPEN | - | - | ~EUR 0 |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ❌ OPEN | - | - | ~EUR 0 |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ❌ OPEN | - | - | ~EUR 0 |
@@ -880,6 +881,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **5.7** | **19-02-2026** | **Fase R6c ChromaDB Re-vectorisatie + Steekproef Fix COMPLEET: texel_pois collectie ge-revectoriseerd met R6b content. 6.384 vectoren (1.596 POIs × 4 talen), 0 errors, 27,6 min, EUR 2,55. 2 POI-correcties (Vuurtoren Texel + Terra Mítica). 5/5 test queries passed. Calpe ongewijzigd. Tessa serveert nu feitelijk correcte content.** |
 | **5.6** | **19-02-2026** | **Fase R6b Content Quality Hardening COMPLEET: 2.047 POIs chirurgisch claim-stripped (0 failures, AIDA behouden, gem. woordaantal 98→85). AM/PM sweep database-breed (50 conversies, 0 resterend). 6.177 hervertalingen NL/DE/ES (100% coverage). Audit trail: 2.097 entries. Content Repair Pipeline R1-R6b COMPLEET.** |
 | **5.5** | **18-02-2026** | **Fase R6 Content Completion & Vertaling COMPLEET: Alle 3.079 POIs × 4 talen (EN/NL/DE/ES) = 12.316 beschrijvingen in productie. 884 generieke beschrijvingen, 9.066 vertalingen, 0 missing. Content Repair Pipeline R1-R6 COMPLEET.** |
 | **5.4** | **16-02-2026** | **Fase R5 Safeguards COMPLEET: 1.730 POIs gepromoveerd naar productie. 1.003 geblokkeerd door safeguards. Audit trail. Monitoring. Content Repair Pipeline R1-R5 COMPLEET.** |
@@ -889,5 +891,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 19 februari 2026 - Fase R6b COMPLEET, Master Document v5.6*
+*Laatst bijgewerkt: 19 februari 2026 - Fase R6c COMPLEET, Master Document v5.7*
 *Content Repair Pipeline R1-R6b COMPLEET. Alle 3.079 POIs × 4 talen in productie, <5% hallucinatie (geschat). Volgende fase: Fase 7 Reviews Integratie*
