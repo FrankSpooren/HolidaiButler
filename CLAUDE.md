@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.18.0
-> **Laatst bijgewerkt**: 18 februari 2026
+> **Versie**: 3.19.0
+> **Laatst bijgewerkt**: 19 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -419,6 +419,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase R4** | Regeneratie + Verificatie Loop (3.079 POIs, 19.5% hallucinatie, 0 errors) | ✅ COMPLEET | 13-02-2026 |
 | **Fase R5** | Safeguards & Kwaliteitsborging (1.730 POIs gepromoveerd, audit trail, monitoring) | ✅ COMPLEET | 16-02-2026 |
 | **Fase R6** | Content Completion & Vertaling (3.079 POIs productie-gereed, 9.066 vertalingen NL/DE/ES) | ✅ COMPLEET | 18-02-2026 |
+| **Fase R6b** | Content Quality Hardening (2.047 POIs claim-stripped, AM/PM sweep, 6.177 hervertalingen) | ✅ COMPLEET | 19-02-2026 |
 | **Fase 7** | Reviews Integratie | ⏸️ WACHT | - |
 | **Fase 8** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
 | **Fase 8b** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
@@ -746,6 +747,50 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 - `fase_r6_summary_for_frank.md` — Samenvatting voor Frank (NL)
 - `fase_r6_frank_processed.json`, `fase_r6_a5_results.json`, `fase_r6_generic_results.json`, `fase_r6_translation_results.json`
 
+### Fase R6b Resultaten (Content Quality Hardening — 19/02/2026)
+- **Status**: COMPLEET (19-02-2026)
+- **Doel**: Hallucinatie-rate verlagen van <20-25% naar <5% voor 2.047 automatisch gepromoveerde POIs
+- **Totaal gewijzigde POIs**: 2.047 (claim-stripped) + 12 (AM/PM-only) = 2.059
+
+**STAP 1: Source Re-scrape**:
+- Deep website scrape: 109 data, 82 empty, 5 quality upgrades
+- Facebook/Instagram: geblokkeerd (anti-scraping maatregelen)
+- Enhanced fact sheets: 2.047 POIs verrijkt met nieuwe brondata
+
+**STAP 2: Chirurgisch Claim Strippen**:
+- 2.047 POIs verwerkt (0 failures, 89 min)
+- Gemiddeld woordaantal: 98 → 85 (chirurgisch, niet destructief)
+- AIDA structuur behouden, onbewezen claims verwijderd
+- Audit trail: 2.047 entries in `poi_content_history` (bron: `r6b_claim_strip`)
+
+**STAP 3: AM/PM Sweep**:
+- Database-breed: 3.079 POIs × 4 talen gescand
+- 28 POIs + 13 post-vertaling = 41 POIs gefixed
+- 68 AM/PM → 24h conversies totaal
+- Verificatie: 0 AM/PM notaties resterend in database
+- Audit trail: 50 entries (bron: `r6b_ampm_sweep`)
+
+**STAP 4: Frank's Steekproef Excel**:
+- 20 POIs (10 Texel + 10 Calpe) met OUDE vs NIEUWE tekst
+- Excel: `/root/fase_r6b_steekproef.xlsx` + `C:\Users\frank\Downloads\fase_r6b_steekproef.xlsx`
+
+**STAP 5: Hervertaling (NL, DE, ES)**:
+- 6.177 vertalingen (2.059 POIs × 3 talen)
+- 100% success na 3 runs (rate limiting retry met checkpoint)
+- Full coverage behouden: Calpe 1.483, Texel 1.596 per taal
+- Doorlooptijd: ~54 min totaal (3 runs)
+
+**Deliverables op Hetzner** (`/root/`):
+- `fase_r6b_source_rescrape.py` — Stap 1: source re-scrape
+- `fase_r6b_claim_stripping.py` — Stap 2: chirurgisch claim strippen + DB apply
+- `fase_r6b_ampm_sweep.py` — Stap 3: AM/PM sweep database-breed
+- `fase_r6b_steekproef.py` — Stap 4: Frank's steekproef Excel
+- `fase_r6b_retranslate.py` — Stap 5: hervertaling NL/DE/ES
+- `fase_r6b_enhanced_facts.json` — Verrijkte fact sheets
+- `fase_r6b_stripped_results.json` — Claim stripping resultaten
+- `fase_r6b_steekproef.xlsx` — Frank's review Excel
+- `fase_r6b_translate_checkpoint.json` — Vertaling checkpoint
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -911,6 +956,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.19.0** | **2026-02-19** | **Fase R6b Content Quality Hardening COMPLEET: 2.047 POIs chirurgisch claim-stripped (0 failures, AIDA behouden, gem. woordaantal 98→85). AM/PM sweep database-breed (41 POIs, 68 conversies, 0 resterend). 6.177 hervertalingen NL/DE/ES (100% coverage). Enhanced fact sheets via deep website re-scrape (109 successen). Frank's steekproef Excel (20 POIs). Audit trail: 2.097 entries (2.047 claim_strip + 50 ampm_sweep). Content Repair Pipeline R1-R6b COMPLEET.** |
 | **3.18.0** | **2026-02-18** | **Fase R6 Content Completion & Vertaling COMPLEET: Alle 3.079 POIs productie-gereed. Stap A: Frank's handmatige review Top 150 (87 GOED, 61 AANPASSEN, 2 AFKEUREN) + 317 threshold-verhoogd gepromoveerd. Stap B: 884 generieke veilige beschrijvingen (gem. 44 woorden, 0 failures). Stap C: 9.066 vertalingen NL/DE/ES (100% coverage, 49 min parallel). Staging: alle 3.079 entries applied. Audit trail: 3.079 entries in poi_content_history. Content Repair Pipeline R1-R6 COMPLEET.** |
 | **3.17.0** | **2026-02-16** | **Fase R5 Safeguards & Kwaliteitsborging COMPLEET: 1.730 POIs gepromoveerd naar productie (0 errors), 1.003 geblokkeerd door safeguards (HIGH severity/hallucinatie > 20%). poi_content_history audit trail (1.730 entries). Safeguard regels: HIGH claim blocker, hallucinatie threshold, woordaantal, embellishment blocklist, onbekende bestemming enforcer. Monitoring script met quarterly audit capability. Backend contentValidator.js hook. Content Repair Pipeline R1-R5 COMPLEET.** |
 | **3.16.0** | **2026-02-13** | **Fase R4 Regeneratie + Verificatie Loop COMPLEET: 3.079 POIs opnieuw gegenereerd met R3 anti-hallucinatie prompts + R2 brondata. Gemiddelde hallucinatie: 19.5% (was 61% in R1, -41.5 procentpunt). 0 errors. Verdicts: 397 PASS (13%), 2.114 REVIEW (69%), 568 FAIL (18%). Aanbevelingen: 2.511 USE_NEW (82%), 568 MANUAL_REVIEW (18%). Per kwaliteit: rich 18.5%, moderate 20.6%, minimal 19.0%, none 24.6%. Staging-first workflow: poi_content_staging tabel. Triage rapport met Top 30 per bestemming. 449 minuten doorlooptijd (mistral-large-latest gen+verify). 6 deliverables op Hetzner.** |
