@@ -209,11 +209,11 @@ export function FavoritesPage() {
     <div className="favorites-page">
       {/* Header */}
       <div className="favorites-header">
-        <h1 className="favorites-title">❤️ {t.nav?.favorites || 'My Favorites'}</h1>
+        <h1 className="favorites-title">❤️ {t.account?.favorites?.title || t.nav?.favorites || 'Favorieten'}</h1>
         <p className="favorites-subtitle">
           {activeTab === 'pois'
-            ? `${favoritePOIs.length} ${favoritePOIs.length === 1 ? 'saved place' : 'saved places'}`
-            : `${favoriteEventsWithDates.length} ${favoriteEventsWithDates.length === 1 ? 'saved event' : 'saved events'}`
+            ? `${favoritePOIs.length} ${favoritePOIs.length === 1 ? (language === 'nl' ? 'opgeslagen plek' : 'saved place') : (language === 'nl' ? 'opgeslagen plekken' : 'saved places')}`
+            : `${favoriteEventsWithDates.length} ${favoriteEventsWithDates.length === 1 ? (language === 'nl' ? 'opgeslagen event' : 'saved event') : (language === 'nl' ? 'opgeslagen events' : 'saved events')}`
           }
         </p>
       </div>
@@ -224,13 +224,13 @@ export function FavoritesPage() {
           className={`favorites-tab ${activeTab === 'pois' ? 'active' : ''}`}
           onClick={() => setActiveTab('pois')}
         >
-          📍 POIs ({favoritePOIs.length})
+          📍 {t.account?.favorites?.poiTitle || 'POIs'} ({favoritePOIs.length})
         </button>
         <button
           className={`favorites-tab ${activeTab === 'events' ? 'active' : ''}`}
           onClick={() => setActiveTab('events')}
         >
-          📅 Events ({favoriteEventsWithDates.length})
+          📅 {t.account?.favorites?.eventsTitle || 'Events'} ({favoriteEventsWithDates.length})
         </button>
       </div>
 
@@ -238,7 +238,7 @@ export function FavoritesPage() {
       {isLoading && (
         <div className="favorites-loading">
           <div className="loading-spinner">⏳</div>
-          <p>Loading your favorites...</p>
+          <p>{language === 'nl' ? 'Je favorieten laden...' : 'Loading your favorites...'}</p>
         </div>
       )}
 
@@ -249,12 +249,16 @@ export function FavoritesPage() {
           {!isLoading && favoritePOIs.length === 0 && (
             <div className="favorites-empty">
               <div className="empty-icon">💔</div>
-              <h2 className="empty-title">No favorite places yet</h2>
+              <h2 className="empty-title">
+                {language === 'nl' ? 'Nog geen favoriete plekken' : 'No favorite places yet'}
+              </h2>
               <p className="empty-text">
-                Start exploring and save your favorite places to see them here!
+                {t.account?.favorites?.emptyPois || (language === 'nl'
+                  ? 'Je hebt nog geen favoriete POIs opgeslagen.'
+                  : 'Start exploring and save your favorite places to see them here!')}
               </p>
               <a href="/pois" className="empty-cta">
-                Explore POIs
+                {t.account?.favorites?.discoverPois || (language === 'nl' ? 'Ontdek POIs →' : 'Explore POIs')}
               </a>
             </div>
           )}
@@ -299,7 +303,7 @@ export function FavoritesPage() {
                   >
                     <h3 className="favorite-name">{toTitleCase(poi.name)}</h3>
                     <div className="favorite-description">
-                      {poi.description || 'No description available'}
+                      {poi.description || (language === 'nl' ? 'Geen beschrijving beschikbaar' : 'No description available')}
                     </div>
 
                     {/* Rating */}
@@ -342,12 +346,16 @@ export function FavoritesPage() {
           {!isLoading && favoriteEventsWithDates.length === 0 && (
             <div className="favorites-empty">
               <div className="empty-icon">📅</div>
-              <h2 className="empty-title">No favorite events yet</h2>
+              <h2 className="empty-title">
+                {language === 'nl' ? 'Nog geen favoriete events' : 'No favorite events yet'}
+              </h2>
               <p className="empty-text">
-                Browse the agenda and save your favorite events to see them here!
+                {t.account?.favorites?.emptyEvents || (language === 'nl'
+                  ? 'Je hebt nog geen favoriete events opgeslagen.'
+                  : 'Browse the agenda and save your favorite events to see them here!')}
               </p>
               <a href="/agenda" className="empty-cta">
-                Explore Agenda
+                {t.account?.favorites?.viewAgenda || (language === 'nl' ? 'Bekijk Agenda →' : 'Explore Agenda')}
               </a>
             </div>
           )}
@@ -404,7 +412,7 @@ export function FavoritesPage() {
                   >
                     <h3 className="favorite-name">{toTitleCase(getEventTitle(event))}</h3>
                     <div className="favorite-description">
-                      {getEventDescription(event) || 'No description available'}
+                      {getEventDescription(event) || (language === 'nl' ? 'Geen beschrijving beschikbaar' : 'No description available')}
                     </div>
 
                     {/* Date */}
