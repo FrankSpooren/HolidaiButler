@@ -31,7 +31,7 @@
   line-height: 1.5;
   color: #2C3E50; /* Deep Sea Navy */
   background: #F8F9FA; /* Light gray */
-  border: 2px solid #7FA594; /* Mediterranean Teal - huisstijl (User requirement 2025-11-09) */
+  border: 2px solid var(--color-primary, #30c59b); /* Mediterranean Teal - huisstijl (User requirement 2025-11-09) */
   border-radius: 8px;
   resize: none;
   outline: none;

@@ -164,7 +164,7 @@
 .agenda-card .agenda-icon {
   width: 14px;
   height: 14px;
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
 }
 
 .agenda-card .agenda-rating {
@@ -253,7 +253,7 @@
   width: 14px;
   height: 14px;
   cursor: pointer;
-  accent-color: #7FA594;
+  accent-color: var(--color-primary, #30c59b);
   margin: 0;
 }
 
@@ -306,13 +306,13 @@
 }
 
 .agenda-card .agenda-action-primary {
-  color: #7FA594;
+  color: var(--color-primary, #30c59b);
   font-weight: 600;
 }
 
 .agenda-card .agenda-action-primary:hover {
-  background: #7FA59410;
-  color: #7FA594;
+  background: var(--color-primary, #30c59b)10;
+  color: var(--color-primary, #30c59b);
 }
 
 /* List View Variant */

@@ -71,7 +71,7 @@
   padding: 10px 24px;
   border: none;
   border-radius: 8px;
-  background: #7FA594;
+  background: var(--color-primary, #30c59b);
   color: white;
   font-size: 14px;
   font-weight: 600;

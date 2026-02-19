@@ -43,7 +43,7 @@
   width: 100%;
   height: 48px;
   padding: 0 16px 0 48px;
-  border: 2px solid #5E8B7E;
+  border: 2px solid var(--color-primary, #30c59b);
   border-radius: 24px;
   font-size: 16px;
   background: #F9FAFB;
@@ -52,7 +52,7 @@
 
 .agenda-search-input:focus {
   outline: none;
-  border-color: #4A7066;
+  border-color: var(--color-secondary, #3572de);
   box-shadow: 0 0 0 3px rgba(94, 139, 126, 0.1);
 }
 
@@ -325,7 +325,7 @@
 .agenda-spinner {
   width: 40px;
   height: 40px;
-  color: #5E8B7E;
+  color: var(--color-primary, #30c59b);
   animation: spin 1s linear infinite;
 }
 
@@ -389,7 +389,7 @@
 
 .agenda-load-more-btn {
   padding: 12px 32px;
-  background: linear-gradient(135deg, #5E8B7E, #4A7066);
+  background: linear-gradient(135deg, var(--color-primary, #30c59b), var(--color-secondary, #3572de));
   color: white;
   border: none;
   border-radius: 24px;
