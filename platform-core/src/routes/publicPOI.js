@@ -908,6 +908,7 @@ router.get('/:poiId/reviews/summary', async (req, res) => {
         data: {
           average_rating: 0,
           total_count: 0,
+          rating_distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
           sentiment_breakdown: {
             positive: 0,
             neutral: 0,
@@ -935,6 +936,13 @@ router.get('/:poiId/reviews/summary', async (req, res) => {
       negative: reviews.filter(r => r.sentiment === 'negative').length
     };
 
+    // Calculate rating distribution (1-5 stars)
+    const ratingDistribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    reviews.forEach(r => {
+      const rating = parseInt(r.rating);
+      if (rating >= 1 && rating <= 5) ratingDistribution[rating]++;
+    });
+
     // Calculate travel party breakdown
     const partyBreakdown = {
       couples: reviews.filter(r => r.travel_party_type === 'couples').length,
@@ -949,6 +957,7 @@ router.get('/:poiId/reviews/summary', async (req, res) => {
       data: {
         average_rating: parseFloat(averageRating),
         total_count: reviews.length,
+        rating_distribution: ratingDistribution,
         sentiment_breakdown: sentimentBreakdown,
         party_breakdown: partyBreakdown
       }

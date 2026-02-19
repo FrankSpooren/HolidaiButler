@@ -586,7 +586,7 @@ export function POIDetailPage() {
         {/* Reviews Section - Full Width Below Columns (Sprint 7.6) */}
         <div className="poi-section poi-reviews-section">
           <h2 className="poi-section-title">Reviews</h2>
-          <POIReviewSection poiId={poi.id} />
+          <POIReviewSection poiId={poi.id} poiName={poi.name} />
         </div>
       </div>
 
