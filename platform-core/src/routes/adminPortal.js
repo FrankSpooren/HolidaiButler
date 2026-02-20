@@ -1,20 +1,32 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1
- * ========================================
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D
+ * ==============================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
  *
  * Endpoints:
- *   POST /auth/login      — Admin login (rate limited)
- *   POST /auth/refresh    — Refresh access token
- *   POST /auth/logout     — Admin logout
- *   GET  /auth/me         — Current admin user info
- *   GET  /dashboard       — KPI data (Redis cached 120s)
- *   GET  /health          — System health checks
- *   GET  /agents/status   — Agent status dashboard (Redis cached 60s) [Fase 8C-1]
+ *   POST /auth/login           — Admin login (rate limited)
+ *   POST /auth/refresh         — Refresh access token
+ *   POST /auth/logout          — Admin logout
+ *   GET  /auth/me              — Current admin user info
+ *   GET  /dashboard            — KPI data (Redis cached 120s)
+ *   GET  /health               — System health checks
+ *   GET  /agents/status        — Agent status dashboard (Redis cached 60s)
+ *   GET  /pois                 — POI list with pagination, search, filters
+ *   GET  /pois/stats           — POI statistics per destination (Redis cached 5min)
+ *   GET  /pois/:id             — POI detail with content, images, reviews
+ *   PUT  /pois/:id             — Update POI content (audit logged)
+ *   GET  /reviews              — Review list with pagination, filters, summary
+ *   GET  /reviews/:id          — Single review detail
+ *   PUT  /reviews/:id          — Archive/unarchive review (audit logged)
+ *   GET  /analytics            — Analytics overview (Redis cached 10min)
+ *   GET  /analytics/export     — CSV export (pois/reviews/summary)
+ *   GET  /settings             — System info, destinations, features
+ *   GET  /settings/audit-log   — Admin audit log (paginated)
+ *   POST /settings/cache/clear — Redis cache invalidation
  *
  * @module routes/adminPortal
- * @version 1.1.0
+ * @version 2.0.0
  */
 
 import { Router } from 'express';
@@ -825,6 +837,1238 @@ router.get('/agents/status', verifyAdminToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: { code: 'SERVER_ERROR', message: 'An error occurred fetching agent status' }
+    });
+  }
+});
+
+// ============================================================
+// MODULE 8D-1: POI MANAGEMENT
+// ============================================================
+
+/**
+ * GET /pois
+ * POI list with pagination, search, and filters.
+ */
+router.get('/pois', verifyAdminToken, async (req, res) => {
+  try {
+    const {
+      destination, category, search, hasContent, isActive,
+      page = 1, limit = 25, sort = 'name', order = 'asc'
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 25));
+    const offset = (pageNum - 1) * limitNum;
+
+    // Build WHERE clauses
+    const where = [];
+    const params = [];
+
+    if (destination) {
+      where.push('p.destination_id = ?');
+      params.push(parseInt(destination));
+    }
+    if (category) {
+      where.push('p.category = ?');
+      params.push(category);
+    }
+    if (search) {
+      where.push('(p.name LIKE ? OR p.enriched_detail_description LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    if (hasContent === 'true') {
+      where.push("p.enriched_detail_description IS NOT NULL AND p.enriched_detail_description != ''");
+    } else if (hasContent === 'false') {
+      where.push("(p.enriched_detail_description IS NULL OR p.enriched_detail_description = '')");
+    }
+    if (isActive === 'true') {
+      where.push('p.is_active = 1');
+    } else if (isActive === 'false') {
+      where.push('p.is_active = 0');
+    }
+
+    const whereClause = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
+
+    // Sort mapping
+    const sortMap = {
+      name: 'p.name', category: 'p.category', rating: 'p.rating',
+      updated: 'p.last_updated', destination: 'p.destination_id'
+    };
+    const sortCol = sortMap[sort] || 'p.name';
+    const sortDir = order === 'desc' ? 'DESC' : 'ASC';
+
+    // Count query
+    const countResult = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total FROM POI p ${whereClause}`,
+      { replacements: params, type: QueryTypes.SELECT }
+    );
+    const total = parseInt(countResult[0]?.total || 0);
+
+    // Data query with aggregated counts
+    const pois = await mysqlSequelize.query(
+      `SELECT p.id, p.name, p.destination_id, p.category, p.subcategory,
+              p.is_active, p.rating, p.last_updated,
+              p.enriched_detail_description,
+              p.enriched_detail_description_nl,
+              p.enriched_detail_description_de,
+              p.enriched_detail_description_es,
+              (SELECT COUNT(*) FROM imageurls i WHERE i.poi_id = p.id) as imageCount,
+              (SELECT COUNT(*) FROM reviews r WHERE r.poi_id = p.id) as reviewCount,
+              (SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.poi_id = p.id) as avgRating
+       FROM POI p
+       ${whereClause}
+       ORDER BY ${sortCol} ${sortDir}
+       LIMIT ? OFFSET ?`,
+      { replacements: [...params, limitNum, offset], type: QueryTypes.SELECT }
+    );
+
+    // Compute content language count
+    const poiList = pois.map(p => ({
+      id: p.id,
+      name: p.name,
+      destination_id: p.destination_id,
+      destinationName: p.destination_id === 1 ? 'Calpe' : p.destination_id === 2 ? 'Texel' : 'Unknown',
+      category: p.category,
+      subcategory: p.subcategory,
+      is_active: !!p.is_active,
+      hasContent: !!(p.enriched_detail_description && p.enriched_detail_description.trim()),
+      contentLanguages:
+        (p.enriched_detail_description ? 1 : 0) +
+        (p.enriched_detail_description_nl ? 1 : 0) +
+        (p.enriched_detail_description_de ? 1 : 0) +
+        (p.enriched_detail_description_es ? 1 : 0),
+      imageCount: parseInt(p.imageCount) || 0,
+      reviewCount: parseInt(p.reviewCount) || 0,
+      avgRating: p.avgRating ? parseFloat(p.avgRating) : null,
+      last_updated: p.last_updated
+    }));
+
+    // Get filter options
+    const categories = await mysqlSequelize.query(
+      `SELECT DISTINCT category FROM POI WHERE category IS NOT NULL ORDER BY category`,
+      { type: QueryTypes.SELECT }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        pois: poiList,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum)
+        },
+        filters: {
+          categories: categories.map(c => c.category),
+          destinations: [
+            { id: 1, name: 'Calpe' },
+            { id: 2, name: 'Texel' }
+          ]
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] POI list error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching POIs' }
+    });
+  }
+});
+
+/**
+ * GET /pois/stats
+ * POI statistics per destination. Redis cached 5 minutes.
+ */
+router.get('/pois/stats', verifyAdminToken, async (req, res) => {
+  try {
+    const { destination } = req.query;
+    const cacheKey = destination ? `admin:pois:stats:${destination}` : 'admin:pois:stats';
+    const redis = getRedis();
+
+    if (redis) {
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) return res.json(JSON.parse(cached));
+      } catch { /* cache miss */ }
+    }
+
+    const destFilter = destination ? 'WHERE p.destination_id = ?' : '';
+    const destParams = destination ? [parseInt(destination)] : [];
+
+    // Basic counts
+    const counts = await mysqlSequelize.query(
+      `SELECT
+         COUNT(*) as total,
+         SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active,
+         SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) as inactive
+       FROM POI p ${destFilter}`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    // Content coverage
+    const coverage = await mysqlSequelize.query(
+      `SELECT
+         SUM(CASE WHEN enriched_detail_description IS NOT NULL AND enriched_detail_description != '' THEN 1 ELSE 0 END) as en,
+         SUM(CASE WHEN enriched_detail_description_nl IS NOT NULL AND enriched_detail_description_nl != '' THEN 1 ELSE 0 END) as nl,
+         SUM(CASE WHEN enriched_detail_description_de IS NOT NULL AND enriched_detail_description_de != '' THEN 1 ELSE 0 END) as de_lang,
+         SUM(CASE WHEN enriched_detail_description_es IS NOT NULL AND enriched_detail_description_es != '' THEN 1 ELSE 0 END) as es
+       FROM POI p ${destFilter}`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    // By destination
+    const byDest = await mysqlSequelize.query(
+      `SELECT destination_id, COUNT(*) as total,
+              SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active
+       FROM POI GROUP BY destination_id`,
+      { type: QueryTypes.SELECT }
+    );
+
+    const byDestMap = {};
+    for (const d of byDest) {
+      const key = d.destination_id === 1 ? 'calpe' : d.destination_id === 2 ? 'texel' : `dest_${d.destination_id}`;
+      byDestMap[key] = { total: parseInt(d.total), active: parseInt(d.active) };
+    }
+
+    // By category
+    const byCat = await mysqlSequelize.query(
+      `SELECT category, COUNT(*) as cnt FROM POI p
+       WHERE is_active = 1 ${destination ? 'AND destination_id = ?' : ''}
+       GROUP BY category ORDER BY cnt DESC`,
+      { replacements: destination ? [parseInt(destination)] : [], type: QueryTypes.SELECT }
+    );
+
+    const totalActive = parseInt(counts[0]?.active || 0);
+    const byCategory = byCat.map(c => ({
+      category: c.category,
+      count: parseInt(c.cnt),
+      pct: totalActive > 0 ? parseFloat(((parseInt(c.cnt) / totalActive) * 100).toFixed(1)) : 0
+    }));
+
+    // Image stats
+    const imgStats = await mysqlSequelize.query(
+      `SELECT COUNT(*) as totalImages,
+              COUNT(DISTINCT i.poi_id) as poisWithImages
+       FROM imageurls i
+       ${destination ? 'INNER JOIN POI p ON i.poi_id = p.id WHERE p.destination_id = ?' : ''}`,
+      { replacements: destination ? [parseInt(destination)] : [], type: QueryTypes.SELECT }
+    );
+
+    // Review stats
+    const revStats = await mysqlSequelize.query(
+      `SELECT COUNT(*) as totalReviews,
+              COUNT(DISTINCT poi_id) as poisWithReviews,
+              ROUND(AVG(rating), 1) as avgRating
+       FROM reviews ${destination ? 'WHERE destination_id = ?' : ''}`,
+      { replacements: destination ? [parseInt(destination)] : [], type: QueryTypes.SELECT }
+    );
+
+    const result = {
+      success: true,
+      data: {
+        total: parseInt(counts[0]?.total || 0),
+        active: totalActive,
+        inactive: parseInt(counts[0]?.inactive || 0),
+        withContent: {
+          en: parseInt(coverage[0]?.en || 0),
+          nl: parseInt(coverage[0]?.nl || 0),
+          de: parseInt(coverage[0]?.de_lang || 0),
+          es: parseInt(coverage[0]?.es || 0)
+        },
+        byDestination: byDestMap,
+        byCategory,
+        imageStats: {
+          totalImages: parseInt(imgStats[0]?.totalImages || 0),
+          poisWithImages: parseInt(imgStats[0]?.poisWithImages || 0),
+          avgPerPoi: totalActive > 0 ? parseFloat((parseInt(imgStats[0]?.totalImages || 0) / totalActive).toFixed(1)) : 0
+        },
+        reviewStats: {
+          totalReviews: parseInt(revStats[0]?.totalReviews || 0),
+          poisWithReviews: parseInt(revStats[0]?.poisWithReviews || 0),
+          avgRating: revStats[0]?.avgRating ? parseFloat(revStats[0].avgRating) : null
+        }
+      }
+    };
+
+    if (redis) {
+      try { await redis.set(cacheKey, JSON.stringify(result), 'EX', 300); } catch { /* non-critical */ }
+    }
+
+    res.json(result);
+  } catch (error) {
+    logger.error('[AdminPortal] POI stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching POI stats' }
+    });
+  }
+});
+
+/**
+ * GET /pois/:id
+ * POI detail with content, images, and reviews summary.
+ */
+router.get('/pois/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const poiId = parseInt(req.params.id);
+    if (!poiId || isNaN(poiId)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid POI ID' } });
+    }
+
+    const pois = await mysqlSequelize.query(
+      `SELECT * FROM POI WHERE id = ?`,
+      { replacements: [poiId], type: QueryTypes.SELECT }
+    );
+
+    if (pois.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'POI not found' } });
+    }
+
+    const poi = pois[0];
+
+    // Images
+    const images = await mysqlSequelize.query(
+      `SELECT id, image_url, local_path, source FROM imageurls WHERE poi_id = ? ORDER BY id LIMIT 20`,
+      { replacements: [poiId], type: QueryTypes.SELECT }
+    );
+
+    // Reviews summary
+    const reviewSummary = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total, ROUND(AVG(rating), 1) as avgRating,
+              SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as r5,
+              SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as r4,
+              SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as r3,
+              SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as r2,
+              SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as r1
+       FROM reviews WHERE poi_id = ?`,
+      { replacements: [poiId], type: QueryTypes.SELECT }
+    );
+
+    const rs = reviewSummary[0] || {};
+
+    res.json({
+      success: true,
+      data: {
+        poi: {
+          id: poi.id,
+          name: poi.name,
+          destination_id: poi.destination_id,
+          destinationName: poi.destination_id === 1 ? 'Calpe' : poi.destination_id === 2 ? 'Texel' : 'Unknown',
+          category: poi.category,
+          subcategory: poi.subcategory,
+          address: poi.address,
+          city: poi.city,
+          latitude: poi.latitude ? parseFloat(poi.latitude) : null,
+          longitude: poi.longitude ? parseFloat(poi.longitude) : null,
+          phone: poi.phone,
+          website: poi.website,
+          email: poi.email,
+          is_active: !!poi.is_active,
+          content: {
+            en: {
+              description: poi.enriched_detail_description || '',
+              tileDescription: poi.enriched_tile_description_en || poi.enriched_tile_description || '',
+              highlights: poi.enriched_highlights || ''
+            },
+            nl: { description: poi.enriched_detail_description_nl || '' },
+            de: { description: poi.enriched_detail_description_de || '' },
+            es: { description: poi.enriched_detail_description_es || '' }
+          },
+          images: images.map((img, idx) => ({
+            id: img.id,
+            url: img.local_path
+              ? `${process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com'}${img.local_path}`
+              : img.image_url,
+            localPath: img.local_path,
+            source: img.source,
+            isPrimary: idx === 0
+          })),
+          reviews: {
+            total: parseInt(rs.total) || 0,
+            avgRating: rs.avgRating ? parseFloat(rs.avgRating) : null,
+            distribution: {
+              5: parseInt(rs.r5) || 0,
+              4: parseInt(rs.r4) || 0,
+              3: parseInt(rs.r3) || 0,
+              2: parseInt(rs.r2) || 0,
+              1: parseInt(rs.r1) || 0
+            }
+          },
+          created_at: poi.created_at,
+          last_updated: poi.last_updated
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] POI detail error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching POI details' }
+    });
+  }
+});
+
+/**
+ * PUT /pois/:id
+ * Update POI content and/or is_active. Audit logged.
+ */
+router.put('/pois/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const poiId = parseInt(req.params.id);
+    if (!poiId || isNaN(poiId)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid POI ID' } });
+    }
+
+    const { content, is_active } = req.body;
+    if (!content && is_active === undefined) {
+      return res.status(400).json({ success: false, error: { code: 'NO_CHANGES', message: 'No fields to update' } });
+    }
+
+    // Verify POI exists
+    const existing = await mysqlSequelize.query(
+      `SELECT id, destination_id, name, enriched_detail_description,
+              enriched_detail_description_nl, enriched_detail_description_de,
+              enriched_detail_description_es, is_active FROM POI WHERE id = ?`,
+      { replacements: [poiId], type: QueryTypes.SELECT }
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'POI not found' } });
+    }
+
+    const old = existing[0];
+    const sets = [];
+    const vals = [];
+    const changes = {};
+
+    // Content updates
+    const langMap = {
+      en: 'enriched_detail_description',
+      nl: 'enriched_detail_description_nl',
+      de: 'enriched_detail_description_de',
+      es: 'enriched_detail_description_es'
+    };
+
+    if (content) {
+      for (const [lang, fields] of Object.entries(content)) {
+        if (fields?.description !== undefined && langMap[lang]) {
+          const desc = String(fields.description).slice(0, 2000);
+          sets.push(`${langMap[lang]} = ?`);
+          vals.push(desc);
+          const oldVal = old[langMap[lang]] || '';
+          changes[lang] = { description: `${oldVal.slice(0, 50)}... → ${desc.slice(0, 50)}...` };
+        }
+      }
+    }
+
+    if (is_active !== undefined) {
+      sets.push('is_active = ?');
+      vals.push(is_active ? 1 : 0);
+      changes.is_active = `${old.is_active} → ${is_active ? 1 : 0}`;
+    }
+
+    if (sets.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_CHANGES', message: 'No valid fields to update' } });
+    }
+
+    // Update
+    await mysqlSequelize.query(
+      `UPDATE POI SET ${sets.join(', ')} WHERE id = ?`,
+      { replacements: [...vals, poiId] }
+    );
+
+    // Audit log to MongoDB
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const db = mongoose.connection.db;
+        await db.collection('audit_logs').insertOne({
+          action: 'poi_content_updated',
+          poi_id: poiId,
+          poi_name: old.name,
+          destination_id: old.destination_id,
+          admin_id: req.adminUser.id || req.adminUser.userId,
+          admin_email: req.adminUser.email,
+          changes,
+          timestamp: new Date(),
+          actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch (auditErr) {
+      logger.warn('[AdminPortal] Audit log write failed:', auditErr.message);
+    }
+
+    // Invalidate POI stats cache
+    const redis = getRedis();
+    if (redis) {
+      try {
+        await redis.del('admin:pois:stats');
+        await redis.del(`admin:pois:stats:${old.destination_id}`);
+      } catch { /* non-critical */ }
+    }
+
+    // Return updated POI (re-fetch)
+    const updatedReq = { params: { id: String(poiId) }, adminUser: req.adminUser };
+    const updatedPois = await mysqlSequelize.query(
+      `SELECT id, name, destination_id, category FROM POI WHERE id = ?`,
+      { replacements: [poiId], type: QueryTypes.SELECT }
+    );
+
+    res.json({
+      success: true,
+      data: { message: 'POI updated successfully', poi: updatedPois[0] || { id: poiId }, changes }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] POI update error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred updating the POI' }
+    });
+  }
+});
+
+// ============================================================
+// MODULE 8D-2: REVIEWS MODERATION
+// ============================================================
+
+/**
+ * GET /reviews
+ * Review list with pagination, filters, and summary stats.
+ */
+router.get('/reviews', verifyAdminToken, async (req, res) => {
+  try {
+    const {
+      destination, rating, sentiment, archived = 'false', search, poi_id,
+      dateFrom, dateTo, page = 1, limit = 25, sort = 'date'
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 25));
+    const offset = (pageNum - 1) * limitNum;
+
+    const where = [];
+    const params = [];
+
+    if (destination) {
+      where.push('r.destination_id = ?');
+      params.push(parseInt(destination));
+    }
+    if (rating) {
+      where.push('r.rating = ?');
+      params.push(parseInt(rating));
+    }
+    if (sentiment) {
+      where.push('r.sentiment = ?');
+      params.push(sentiment);
+    }
+    if (archived === 'true') {
+      where.push('r.is_archived = 1');
+    } else if (archived === 'false') {
+      where.push('r.is_archived = 0');
+    }
+    if (search) {
+      where.push('(r.user_name LIKE ? OR r.review_text LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    if (poi_id) {
+      where.push('r.poi_id = ?');
+      params.push(parseInt(poi_id));
+    }
+    if (dateFrom) {
+      where.push('r.created_at >= ?');
+      params.push(dateFrom);
+    }
+    if (dateTo) {
+      where.push('r.created_at <= ?');
+      params.push(`${dateTo} 23:59:59`);
+    }
+
+    const whereClause = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
+
+    // Sort mapping
+    const sortMap = {
+      date: 'r.created_at DESC',
+      rating: 'r.rating DESC',
+      poi: 'p.name ASC'
+    };
+    const orderBy = sortMap[sort] || 'r.created_at DESC';
+
+    // Count
+    const countResult = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total FROM reviews r ${whereClause}`,
+      { replacements: params, type: QueryTypes.SELECT }
+    );
+    const total = parseInt(countResult[0]?.total || 0);
+
+    // Data
+    const reviews = await mysqlSequelize.query(
+      `SELECT r.id, r.poi_id, p.name as poiName, r.destination_id,
+              r.user_name, r.rating, r.review_text, r.sentiment,
+              r.visit_date, r.language, r.is_archived, r.created_at
+       FROM reviews r
+       LEFT JOIN POI p ON r.poi_id = p.id
+       ${whereClause}
+       ORDER BY ${orderBy}
+       LIMIT ? OFFSET ?`,
+      { replacements: [...params, limitNum, offset], type: QueryTypes.SELECT }
+    );
+
+    const reviewList = reviews.map(r => ({
+      id: r.id,
+      poi_id: r.poi_id,
+      poiName: r.poiName || 'Unknown POI',
+      destination_id: r.destination_id,
+      destinationName: r.destination_id === 1 ? 'Calpe' : r.destination_id === 2 ? 'Texel' : 'Unknown',
+      user_name: r.user_name,
+      rating: r.rating,
+      review_text: r.review_text,
+      sentiment: r.sentiment,
+      visit_date: r.visit_date,
+      language: r.language,
+      is_archived: !!r.is_archived,
+      created_at: r.created_at
+    }));
+
+    // Summary (always unfiltered for overview)
+    const summaryResult = await mysqlSequelize.query(
+      `SELECT
+         COUNT(*) as totalReviews,
+         ROUND(AVG(rating), 1) as avgRating,
+         SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as r5,
+         SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as r4,
+         SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as r3,
+         SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as r2,
+         SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as r1,
+         SUM(CASE WHEN sentiment = 'positive' THEN 1 ELSE 0 END) as positive,
+         SUM(CASE WHEN sentiment = 'neutral' THEN 1 ELSE 0 END) as neutral,
+         SUM(CASE WHEN sentiment = 'negative' THEN 1 ELSE 0 END) as negative,
+         SUM(CASE WHEN is_archived = 1 THEN 1 ELSE 0 END) as archived
+       FROM reviews`,
+      { type: QueryTypes.SELECT }
+    );
+
+    const s = summaryResult[0] || {};
+
+    // Per destination
+    const destSummary = await mysqlSequelize.query(
+      `SELECT destination_id, COUNT(*) as total, ROUND(AVG(rating), 1) as avgRating
+       FROM reviews GROUP BY destination_id`,
+      { type: QueryTypes.SELECT }
+    );
+
+    const byDest = {};
+    for (const d of destSummary) {
+      const key = d.destination_id === 1 ? 'calpe' : d.destination_id === 2 ? 'texel' : `dest_${d.destination_id}`;
+      byDest[key] = { total: parseInt(d.total), avgRating: d.avgRating ? parseFloat(d.avgRating) : null };
+    }
+
+    res.json({
+      success: true,
+      data: {
+        reviews: reviewList,
+        pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
+        summary: {
+          totalReviews: parseInt(s.totalReviews) || 0,
+          avgRating: s.avgRating ? parseFloat(s.avgRating) : null,
+          distribution: {
+            5: parseInt(s.r5) || 0, 4: parseInt(s.r4) || 0, 3: parseInt(s.r3) || 0,
+            2: parseInt(s.r2) || 0, 1: parseInt(s.r1) || 0
+          },
+          sentimentBreakdown: {
+            positive: parseInt(s.positive) || 0,
+            neutral: parseInt(s.neutral) || 0,
+            negative: parseInt(s.negative) || 0
+          },
+          archived: parseInt(s.archived) || 0,
+          byDestination: byDest
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Reviews list error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching reviews' }
+    });
+  }
+});
+
+/**
+ * GET /reviews/:id
+ * Single review detail with POI context.
+ */
+router.get('/reviews/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const reviewId = parseInt(req.params.id);
+    if (!reviewId || isNaN(reviewId)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid review ID' } });
+    }
+
+    const reviews = await mysqlSequelize.query(
+      `SELECT r.*, p.name as poiName, p.category as poiCategory, p.destination_id as poiDest
+       FROM reviews r
+       LEFT JOIN POI p ON r.poi_id = p.id
+       WHERE r.id = ?`,
+      { replacements: [reviewId], type: QueryTypes.SELECT }
+    );
+
+    if (reviews.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Review not found' } });
+    }
+
+    const r = reviews[0];
+    res.json({
+      success: true,
+      data: {
+        review: {
+          ...r,
+          is_archived: !!r.is_archived,
+          destinationName: r.destination_id === 1 ? 'Calpe' : r.destination_id === 2 ? 'Texel' : 'Unknown',
+          poi: { id: r.poi_id, name: r.poiName, category: r.poiCategory }
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Review detail error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching review details' }
+    });
+  }
+});
+
+/**
+ * PUT /reviews/:id
+ * Archive or unarchive a review. Audit logged.
+ */
+router.put('/reviews/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const reviewId = parseInt(req.params.id);
+    if (!reviewId || isNaN(reviewId)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid review ID' } });
+    }
+
+    const { is_archived } = req.body;
+    if (is_archived === undefined) {
+      return res.status(400).json({ success: false, error: { code: 'NO_CHANGES', message: 'is_archived field required' } });
+    }
+
+    // Verify review exists
+    const existing = await mysqlSequelize.query(
+      `SELECT r.id, r.poi_id, r.destination_id, r.is_archived, p.name as poiName
+       FROM reviews r LEFT JOIN POI p ON r.poi_id = p.id WHERE r.id = ?`,
+      { replacements: [reviewId], type: QueryTypes.SELECT }
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Review not found' } });
+    }
+
+    const old = existing[0];
+    const archivedVal = is_archived ? 1 : 0;
+    const archivedAt = is_archived ? 'NOW()' : 'NULL';
+
+    await mysqlSequelize.query(
+      `UPDATE reviews SET is_archived = ?, archived_at = ${archivedAt} WHERE id = ?`,
+      { replacements: [archivedVal, reviewId] }
+    );
+
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const db = mongoose.connection.db;
+        await db.collection('audit_logs').insertOne({
+          action: is_archived ? 'review_archived' : 'review_unarchived',
+          review_id: reviewId,
+          poi_id: old.poi_id,
+          poi_name: old.poiName,
+          destination_id: old.destination_id,
+          admin_id: req.adminUser.id || req.adminUser.userId,
+          admin_email: req.adminUser.email,
+          changes: { is_archived: `${old.is_archived} → ${archivedVal}` },
+          timestamp: new Date(),
+          actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch (auditErr) {
+      logger.warn('[AdminPortal] Audit log write failed:', auditErr.message);
+    }
+
+    res.json({
+      success: true,
+      data: { message: is_archived ? 'Review archived' : 'Review unarchived', review: { id: reviewId, is_archived: !!is_archived } }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Review update error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred updating the review' }
+    });
+  }
+});
+
+// ============================================================
+// MODULE 8D-3: ANALYTICS DASHBOARD
+// ============================================================
+
+/**
+ * GET /analytics
+ * Analytics overview data. Redis cached 10 minutes.
+ */
+router.get('/analytics', verifyAdminToken, async (req, res) => {
+  try {
+    const { destination } = req.query;
+    const cacheKey = destination ? `admin:analytics:${destination}` : 'admin:analytics';
+    const redis = getRedis();
+
+    if (redis) {
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) return res.json(JSON.parse(cached));
+      } catch { /* cache miss */ }
+    }
+
+    const destFilter = destination ? 'WHERE destination_id = ?' : '';
+    const destFilterAnd = destination ? 'AND destination_id = ?' : '';
+    const destParams = destination ? [parseInt(destination)] : [];
+
+    // Overview
+    const poiOverview = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total,
+              SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active
+       FROM POI ${destFilter}`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    const reviewOverview = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total, ROUND(AVG(rating), 1) as avgRating
+       FROM reviews ${destFilter}`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    const imageOverview = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total FROM imageurls i
+       ${destination ? 'INNER JOIN POI p ON i.poi_id = p.id WHERE p.destination_id = ?' : ''}`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    // Content coverage
+    const contentCov = await mysqlSequelize.query(
+      `SELECT
+         SUM(CASE WHEN enriched_detail_description IS NOT NULL AND enriched_detail_description != '' THEN 1 ELSE 0 END) as en,
+         SUM(CASE WHEN enriched_detail_description_nl IS NOT NULL AND enriched_detail_description_nl != '' THEN 1 ELSE 0 END) as nl,
+         SUM(CASE WHEN enriched_detail_description_de IS NOT NULL AND enriched_detail_description_de != '' THEN 1 ELSE 0 END) as de_lang,
+         SUM(CASE WHEN enriched_detail_description_es IS NOT NULL AND enriched_detail_description_es != '' THEN 1 ELSE 0 END) as es,
+         COUNT(*) as total
+       FROM POI WHERE is_active = 1 ${destFilterAnd}`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    const cov = contentCov[0] || {};
+    const covTotal = parseInt(cov.total) || 1;
+
+    // Review trends (last 12 months)
+    const reviewTrends = await mysqlSequelize.query(
+      `SELECT DATE_FORMAT(created_at, '%Y-%m') as month,
+              COUNT(*) as count,
+              ROUND(AVG(rating), 1) as avgRating
+       FROM reviews
+       WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH) ${destFilterAnd}
+       GROUP BY month ORDER BY month`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    // Top POIs by review count
+    const topPOIs = await mysqlSequelize.query(
+      `SELECT p.id, p.name, p.destination_id, COUNT(r.id) as reviewCount,
+              ROUND(AVG(r.rating), 1) as avgRating
+       FROM reviews r
+       INNER JOIN POI p ON r.poi_id = p.id
+       WHERE p.is_active = 1 ${destFilterAnd.replace('destination_id', 'r.destination_id')}
+       GROUP BY p.id ORDER BY reviewCount DESC LIMIT 10`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    // Category distribution
+    const catDist = await mysqlSequelize.query(
+      `SELECT category, COUNT(*) as cnt FROM POI
+       WHERE is_active = 1 ${destFilterAnd}
+       GROUP BY category ORDER BY cnt DESC`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    const totalActive = parseInt(poiOverview[0]?.active || 0);
+
+    const result = {
+      success: true,
+      data: {
+        overview: {
+          totalPOIs: parseInt(poiOverview[0]?.total || 0),
+          activePOIs: totalActive,
+          totalReviews: parseInt(reviewOverview[0]?.total || 0),
+          avgRating: reviewOverview[0]?.avgRating ? parseFloat(reviewOverview[0].avgRating) : null,
+          totalImages: parseInt(imageOverview[0]?.total || 0),
+          totalAgents: 18,
+          healthyAgents: 16
+        },
+        contentCoverage: {
+          en: { total: parseInt(cov.en || 0), pct: parseFloat(((parseInt(cov.en || 0) / covTotal) * 100).toFixed(1)) },
+          nl: { total: parseInt(cov.nl || 0), pct: parseFloat(((parseInt(cov.nl || 0) / covTotal) * 100).toFixed(1)) },
+          de: { total: parseInt(cov.de_lang || 0), pct: parseFloat(((parseInt(cov.de_lang || 0) / covTotal) * 100).toFixed(1)) },
+          es: { total: parseInt(cov.es || 0), pct: parseFloat(((parseInt(cov.es || 0) / covTotal) * 100).toFixed(1)) }
+        },
+        reviewTrends: reviewTrends.map(t => ({
+          month: t.month,
+          count: parseInt(t.count),
+          avgRating: t.avgRating ? parseFloat(t.avgRating) : null
+        })),
+        topPOIs: topPOIs.map(p => ({
+          id: p.id,
+          name: p.name,
+          destination_id: p.destination_id,
+          destinationName: p.destination_id === 1 ? 'Calpe' : 'Texel',
+          reviewCount: parseInt(p.reviewCount),
+          avgRating: p.avgRating ? parseFloat(p.avgRating) : null
+        })),
+        categoryDistribution: catDist.map(c => ({
+          category: c.category,
+          count: parseInt(c.cnt),
+          pct: totalActive > 0 ? parseFloat(((parseInt(c.cnt) / totalActive) * 100).toFixed(1)) : 0
+        }))
+      }
+    };
+
+    if (redis) {
+      try { await redis.set(cacheKey, JSON.stringify(result), 'EX', 600); } catch { /* non-critical */ }
+    }
+
+    res.json(result);
+  } catch (error) {
+    logger.error('[AdminPortal] Analytics error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching analytics' }
+    });
+  }
+});
+
+/**
+ * GET /analytics/export
+ * CSV export for POIs, reviews, or summary.
+ */
+router.get('/analytics/export', verifyAdminToken, async (req, res) => {
+  try {
+    const { type = 'summary', destination, format = 'csv' } = req.query;
+
+    if (format !== 'csv') {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_FORMAT', message: 'Only CSV format is supported' } });
+    }
+
+    const destFilter = destination ? 'WHERE destination_id = ?' : '';
+    const destParams = destination ? [parseInt(destination)] : [];
+    let csvContent = '';
+
+    if (type === 'pois') {
+      const pois = await mysqlSequelize.query(
+        `SELECT p.id, p.name, p.destination_id, p.category, p.is_active, p.rating,
+                LEFT(p.enriched_detail_description, 200) as description_preview,
+                (SELECT COUNT(*) FROM reviews r WHERE r.poi_id = p.id) as review_count,
+                (SELECT COUNT(*) FROM imageurls i WHERE i.poi_id = p.id) as image_count
+         FROM POI p ${destFilter}
+         ORDER BY p.id LIMIT 10000`,
+        { replacements: destParams, type: QueryTypes.SELECT }
+      );
+
+      csvContent = 'id,name,destination,category,is_active,rating,description_preview,review_count,image_count\n';
+      for (const p of pois) {
+        const dest = p.destination_id === 1 ? 'Calpe' : 'Texel';
+        const desc = (p.description_preview || '').replace(/"/g, '""').replace(/\n/g, ' ');
+        csvContent += `${p.id},"${(p.name || '').replace(/"/g, '""')}",${dest},"${(p.category || '').replace(/"/g, '""')}",${p.is_active},${p.rating || ''},"${desc}",${p.review_count || 0},${p.image_count || 0}\n`;
+      }
+    } else if (type === 'reviews') {
+      const reviews = await mysqlSequelize.query(
+        `SELECT r.id, p.name as poi_name, r.destination_id, r.user_name, r.rating,
+                r.sentiment, LEFT(r.review_text, 500) as review_text, r.created_at
+         FROM reviews r
+         LEFT JOIN POI p ON r.poi_id = p.id
+         ${destFilter.replace('destination_id', 'r.destination_id')}
+         ORDER BY r.created_at DESC LIMIT 10000`,
+        { replacements: destParams, type: QueryTypes.SELECT }
+      );
+
+      csvContent = 'id,poi_name,destination,user_name,rating,sentiment,review_text,date\n';
+      for (const r of reviews) {
+        const dest = r.destination_id === 1 ? 'Calpe' : 'Texel';
+        const text = (r.review_text || '').replace(/"/g, '""').replace(/\n/g, ' ');
+        csvContent += `${r.id},"${(r.poi_name || '').replace(/"/g, '""')}",${dest},"${(r.user_name || '').replace(/"/g, '""')}",${r.rating},${r.sentiment || ''},"${text}",${r.created_at || ''}\n`;
+      }
+    } else {
+      // Summary export
+      const stats = await mysqlSequelize.query(
+        `SELECT destination_id, COUNT(*) as pois, SUM(is_active) as active
+         FROM POI GROUP BY destination_id`, { type: QueryTypes.SELECT });
+      const revStats = await mysqlSequelize.query(
+        `SELECT destination_id, COUNT(*) as reviews, ROUND(AVG(rating),1) as avg_rating
+         FROM reviews GROUP BY destination_id`, { type: QueryTypes.SELECT });
+
+      csvContent = 'metric,calpe,texel,total\n';
+      const calpe = stats.find(s => s.destination_id === 1) || {};
+      const texel = stats.find(s => s.destination_id === 2) || {};
+      const cRev = revStats.find(s => s.destination_id === 1) || {};
+      const tRev = revStats.find(s => s.destination_id === 2) || {};
+
+      csvContent += `total_pois,${calpe.pois || 0},${texel.pois || 0},${(parseInt(calpe.pois || 0) + parseInt(texel.pois || 0))}\n`;
+      csvContent += `active_pois,${calpe.active || 0},${texel.active || 0},${(parseInt(calpe.active || 0) + parseInt(texel.active || 0))}\n`;
+      csvContent += `reviews,${cRev.reviews || 0},${tRev.reviews || 0},${(parseInt(cRev.reviews || 0) + parseInt(tRev.reviews || 0))}\n`;
+      csvContent += `avg_rating,${cRev.avg_rating || ''},${tRev.avg_rating || ''},\n`;
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="holidaibutler_${type}_export.csv"`);
+    res.send(csvContent);
+  } catch (error) {
+    logger.error('[AdminPortal] Export error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred generating the export' }
+    });
+  }
+});
+
+// ============================================================
+// MODULE 8D-4: SETTINGS
+// ============================================================
+
+/**
+ * GET /settings
+ * System info, destinations, admin info, feature flags.
+ */
+router.get('/settings', verifyAdminToken, async (req, res) => {
+  try {
+    // System info
+    const system = {
+      nodeVersion: process.version,
+      uptime: parseFloat((process.uptime() / 3600).toFixed(1)),
+      uptimeFormatted: formatUptime(process.uptime()),
+      pm2Name: 'holidaibutler-api',
+      environment: process.env.NODE_ENV || 'development',
+      mysqlHost: 'jotx.your-database.de',
+      mongodbStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      redisStatus: 'disconnected'
+    };
+
+    const redis = getRedis();
+    if (redis) {
+      try {
+        const pong = await redis.ping();
+        system.redisStatus = pong === 'PONG' ? 'connected' : 'disconnected';
+      } catch { /* leave disconnected */ }
+    }
+
+    // Destination data
+    const destStats = await mysqlSequelize.query(
+      `SELECT destination_id,
+              COUNT(*) as poiCount,
+              SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as activeCount
+       FROM POI GROUP BY destination_id`,
+      { type: QueryTypes.SELECT }
+    );
+
+    const revCounts = await mysqlSequelize.query(
+      `SELECT destination_id, COUNT(*) as cnt FROM reviews GROUP BY destination_id`,
+      { type: QueryTypes.SELECT }
+    );
+
+    const destMap = {};
+    for (const d of destStats) destMap[d.destination_id] = { pois: parseInt(d.poiCount), active: parseInt(d.activeCount) };
+    const revMap = {};
+    for (const r of revCounts) revMap[r.destination_id] = parseInt(r.cnt);
+
+    const destinations = [
+      {
+        id: 1, code: 'calpe', name: 'Calpe', domain: 'holidaibutler.com',
+        chatbotName: 'HoliBot', poiCount: destMap[1]?.pois || 0, activePoiCount: destMap[1]?.active || 0,
+        reviewCount: revMap[1] || 0, chromaCollection: 'calpe_pois', isActive: true
+      },
+      {
+        id: 2, code: 'texel', name: 'Texel', domain: 'texelmaps.nl',
+        chatbotName: 'Tessa', poiCount: destMap[2]?.pois || 0, activePoiCount: destMap[2]?.active || 0,
+        reviewCount: revMap[2] || 0, chromaCollection: 'texel_pois', isActive: true
+      }
+    ];
+
+    // Admin info from JWT
+    const admin = {
+      id: req.adminUser.id || req.adminUser.userId,
+      email: req.adminUser.email,
+      role: req.adminUser.role || 'admin'
+    };
+
+    // Feature flags
+    const features = {
+      agentSystem: true,
+      reviewsLive: true,
+      chatbotCalpe: true,
+      chatbotTexel: true,
+      adminPortal: true
+    };
+
+    res.json({
+      success: true,
+      data: { system, destinations, admin, features }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Settings error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching settings' }
+    });
+  }
+});
+
+/** Format uptime seconds to human readable string */
+function formatUptime(seconds) {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const parts = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0) parts.push(`${m}m`);
+  return parts.join(' ') || '< 1m';
+}
+
+/**
+ * GET /settings/audit-log
+ * Admin audit log from MongoDB.
+ */
+router.get('/settings/audit-log', verifyAdminToken, async (req, res) => {
+  try {
+    const { page = 1, limit = 25, action } = req.query;
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 25));
+    const skip = (pageNum - 1) * limitNum;
+
+    if (mongoose.connection.readyState !== 1) {
+      return res.json({
+        success: true,
+        data: { entries: [], pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 0 }, partial: true }
+      });
+    }
+
+    const db = mongoose.connection.db;
+    const collection = db.collection('audit_logs');
+
+    const filter = { 'actor.type': 'admin' };
+    if (action) filter.action = action;
+
+    const total = await collection.countDocuments(filter);
+    const entries = await collection.find(filter)
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .toArray();
+
+    const entryList = entries.map(e => ({
+      timestamp: e.timestamp,
+      action: e.action,
+      admin_email: e.admin_email || 'unknown',
+      details: buildAuditDetail(e),
+      destination: e.destination_id === 1 ? 'calpe' : e.destination_id === 2 ? 'texel' : null,
+      changes: e.changes || null
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        entries: entryList,
+        pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) }
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Audit log error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching audit log' }
+    });
+  }
+});
+
+/** Build human-readable audit detail string */
+function buildAuditDetail(entry) {
+  if (entry.action === 'poi_content_updated') {
+    const langs = entry.changes ? Object.keys(entry.changes).join(', ') : '';
+    return `POI #${entry.poi_id} (${entry.poi_name || 'unknown'}): ${langs} updated`;
+  }
+  if (entry.action === 'review_archived' || entry.action === 'review_unarchived') {
+    return `Review #${entry.review_id} (${entry.poi_name || 'POI #' + entry.poi_id}): ${entry.action.replace('review_', '')}`;
+  }
+  return entry.description || entry.action || 'unknown action';
+}
+
+/**
+ * POST /settings/cache/clear
+ * Clear Redis cache keys.
+ */
+router.post('/settings/cache/clear', verifyAdminToken, async (req, res) => {
+  try {
+    const { keys, all } = req.body;
+    const redis = getRedis();
+
+    if (!redis) {
+      return res.status(503).json({
+        success: false,
+        error: { code: 'REDIS_UNAVAILABLE', message: 'Redis is not connected' }
+      });
+    }
+
+    let cleared = 0;
+
+    if (all) {
+      // Clear all admin cache keys
+      const adminKeys = await redis.keys('admin:*');
+      if (adminKeys.length > 0) {
+        cleared = await redis.del(...adminKeys);
+      }
+    } else if (Array.isArray(keys) && keys.length > 0) {
+      // Validate keys are admin-only
+      const safeKeys = keys.filter(k => k.startsWith('admin:'));
+      if (safeKeys.length > 0) {
+        cleared = await redis.del(...safeKeys);
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'NO_KEYS', message: 'Specify keys array or all: true' }
+      });
+    }
+
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const db = mongoose.connection.db;
+        await db.collection('audit_logs').insertOne({
+          action: 'cache_cleared',
+          admin_id: req.adminUser.id || req.adminUser.userId,
+          admin_email: req.adminUser.email,
+          details: all ? `all admin keys (${cleared})` : `${cleared} specific keys`,
+          cleared_count: cleared,
+          timestamp: new Date(),
+          actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    res.json({
+      success: true,
+      data: { cleared, timestamp: new Date().toISOString() }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Cache clear error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred clearing cache' }
     });
   }
 });

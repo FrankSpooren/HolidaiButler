@@ -76,6 +76,178 @@
     "partial": "Sommige databronnen zijn niet bereikbaar. Getoonde data kan onvolledig zijn.",
     "noResults": "Geen agents gevonden voor de geselecteerde filters."
   },
+  "pois": {
+    "title": "POI Beheer",
+    "subtitle": "Beheer Points of Interest voor alle bestemmingen",
+    "searchPlaceholder": "Zoek op naam...",
+    "noResults": "Geen POIs gevonden voor de geselecteerde filters.",
+    "rowsPerPage": "Rijen per pagina",
+    "active": "Actief",
+    "inactive": "Inactief",
+    "view": "Bekijken",
+    "edit": "Bewerken",
+    "close": "Sluiten",
+    "cancel": "Annuleren",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
+    "editTitle": "Bewerk POI",
+    "characters": "tekens",
+    "stats": {
+      "total": "Totaal",
+      "active": "Actief",
+      "withContent": "Met content",
+      "avgRating": "Gem. rating"
+    },
+    "filter": {
+      "destination": "Bestemming",
+      "content": "Content",
+      "status": "Status",
+      "sortBy": "Sorteer op",
+      "sortName": "Naam",
+      "sortRating": "Rating",
+      "sortUpdated": "Laatst bijgewerkt",
+      "all": "Alle",
+      "withContent": "Met content",
+      "withoutContent": "Zonder content",
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "table": {
+      "name": "Naam",
+      "destination": "Bestemming",
+      "category": "Categorie",
+      "content": "Content",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "detail": {
+      "description": "Beschrijving",
+      "tileDescription": "Korte beschrijving (tile)",
+      "noContent": "Geen content beschikbaar",
+      "reviews": "Reviews",
+      "totalReviews": "Totaal reviews",
+      "avgRating": "Gem. rating",
+      "distribution": "Verdeling"
+    }
+  },
+  "reviews": {
+    "title": "Reviews Moderatie",
+    "subtitle": "Beheer en modereer gebruikersreviews",
+    "searchPlaceholder": "Zoek op POI naam of reviewtekst...",
+    "noResults": "Geen reviews gevonden voor de geselecteerde filters.",
+    "noText": "Geen reviewtekst",
+    "rowsPerPage": "Rijen per pagina",
+    "view": "Bekijken",
+    "archive": "Archiveren",
+    "unarchive": "Dearchiveren",
+    "close": "Sluiten",
+    "summary": {
+      "total": "Totaal reviews",
+      "avgRating": "Gem. rating",
+      "positive": "Positief",
+      "negative": "Negatief"
+    },
+    "filter": {
+      "destination": "Bestemming",
+      "rating": "Rating",
+      "sentiment": "Sentiment",
+      "archived": "Status",
+      "allRatings": "Alle ratings",
+      "allSentiments": "Alle sentimenten",
+      "positive": "Positief",
+      "neutral": "Neutraal",
+      "negative": "Negatief",
+      "active": "Actief",
+      "archivedOnly": "Gearchiveerd",
+      "all": "Alle"
+    },
+    "table": {
+      "poi": "POI",
+      "user": "Gebruiker",
+      "rating": "Rating",
+      "sentiment": "Sentiment",
+      "text": "Tekst",
+      "date": "Datum",
+      "actions": "Acties"
+    },
+    "detail": {
+      "title": "Review Details",
+      "poi": "POI",
+      "destination": "Bestemming",
+      "user": "Gebruiker",
+      "rating": "Rating",
+      "sentiment": "Sentiment",
+      "reviewText": "Reviewtekst",
+      "visitDate": "Bezoekdatum",
+      "createdAt": "Aangemaakt op",
+      "archivedAt": "Gearchiveerd op"
+    }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Platform statistieken en inzichten",
+    "contentCoverage": "Content dekking",
+    "topPois": "Top 10 POIs (meeste reviews)",
+    "kpi": {
+      "totalPois": "Totaal POIs",
+      "totalReviews": "Totaal Reviews",
+      "totalImages": "Totaal Afbeeldingen",
+      "contentCoverage": "Content Dekking"
+    },
+    "charts": {
+      "reviewTrends": "Review trends (12 maanden)",
+      "categoryDistribution": "Categorieverdeling"
+    },
+    "export": {
+      "summary": "Samenvatting",
+      "pois": "POIs",
+      "reviews": "Reviews"
+    },
+    "table": {
+      "name": "Naam",
+      "destination": "Bestemming",
+      "reviews": "Reviews",
+      "rating": "Rating"
+    }
+  },
+  "settings": {
+    "title": "Instellingen",
+    "subtitle": "Systeemconfiguratie en beheer",
+    "cancel": "Annuleren",
+    "system": {
+      "title": "Systeem informatie",
+      "runtime": "Runtime",
+      "services": "Services",
+      "admin": "Admin",
+      "uptime": "Uptime",
+      "environment": "Omgeving",
+      "adminUser": "Admin gebruiker",
+      "role": "Rol"
+    },
+    "destinations": {
+      "title": "Bestemmingen"
+    },
+    "cache": {
+      "title": "Cache beheer",
+      "description": "Wis de Redis cache om verouderde data te verwijderen. Dit kan korte vertraging veroorzaken.",
+      "clear": "Cache wissen",
+      "clearTitle": "Cache wissen?",
+      "clearWarning": "Alle admin cache keys worden verwijderd. Data wordt opnieuw opgehaald uit de database.",
+      "confirmClear": "Bevestig wissen",
+      "clearing": "Bezig met wissen...",
+      "cleared": "Cache succesvol gewist!"
+    },
+    "audit": {
+      "title": "Admin Audit Log",
+      "filterAction": "Filter op actie",
+      "allActions": "Alle acties",
+      "date": "Datum",
+      "action": "Actie",
+      "user": "Gebruiker",
+      "details": "Details",
+      "noEntries": "Geen audit log entries gevonden."
+    }
+  },
   "common": {
     "loading": "Laden...",
     "error": "Er is een fout opgetreden",

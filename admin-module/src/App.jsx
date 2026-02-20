@@ -1,14 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import PlaceIcon from '@mui/icons-material/Place';
-import StarIcon from '@mui/icons-material/Star';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import SettingsIcon from '@mui/icons-material/Settings';
 import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 import AdminLayout from './components/layout/AdminLayout.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import AgentsPage from './pages/AgentsPage.jsx';
-import PlaceholderPage from './pages/PlaceholderPage.jsx';
+import POIsPage from './pages/POIsPage.jsx';
+import ReviewsPage from './pages/ReviewsPage.jsx';
+import AnalyticsPage from './pages/AnalyticsPage.jsx';
+import SettingsPage from './pages/SettingsPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import useAuthStore from './stores/authStore.js';
 
@@ -26,10 +25,10 @@ export default function App() {
           <Route element={<AdminLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/agents" element={<AgentsPage />} />
-            <Route path="/pois" element={<PlaceholderPage title="POI Management" icon={PlaceIcon} />} />
-            <Route path="/reviews" element={<PlaceholderPage title="Reviews" icon={StarIcon} />} />
-            <Route path="/analytics" element={<PlaceholderPage title="Analytics" icon={BarChartIcon} />} />
-            <Route path="/settings" element={<PlaceholderPage title="Instellingen" icon={SettingsIcon} />} />
+            <Route path="/pois" element={<POIsPage />} />
+            <Route path="/reviews" element={<ReviewsPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>
 

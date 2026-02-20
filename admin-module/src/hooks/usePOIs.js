@@ -1,0 +1,40 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { poiService } from '../api/poiService.js';
+
+export function usePOIList(filters = {}) {
+  return useQuery({
+    queryKey: ['pois', filters],
+    queryFn: () => poiService.list(filters),
+    staleTime: 60 * 1000,
+    keepPreviousData: true
+  });
+}
+
+export function usePOIStats() {
+  return useQuery({
+    queryKey: ['poi-stats'],
+    queryFn: () => poiService.stats(),
+    staleTime: 5 * 60 * 1000
+  });
+}
+
+export function usePOIDetail(id) {
+  return useQuery({
+    queryKey: ['poi-detail', id],
+    queryFn: () => poiService.getById(id),
+    enabled: !!id,
+    staleTime: 30 * 1000
+  });
+}
+
+export function usePOIUpdate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => poiService.update(id, data),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['pois'] });
+      queryClient.invalidateQueries({ queryKey: ['poi-detail', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['poi-stats'] });
+    }
+  });
+}
