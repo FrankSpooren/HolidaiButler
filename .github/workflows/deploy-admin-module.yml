@@ -1,6 +1,9 @@
 # =============================================================================
 # Admin Module Deployment Pipeline - Multi-Environment
 # =============================================================================
+# Architecture: Admin frontend only (React 18 + MUI + Vite)
+# Backend: Admin API routes are in platform-core (deployed separately)
+# =============================================================================
 name: "Deploy: Admin Module"
 
 on:
@@ -8,7 +11,7 @@ on:
     branches: [dev, test, main]
     paths:
       - 'admin-module/**'
-      - '!admin-module/README.md'
+      - '.github/workflows/deploy-admin-module.yml'
   workflow_dispatch:
     inputs:
       environment:
@@ -17,26 +20,38 @@ on:
         default: 'dev'
         type: choice
         options: [dev, test, production]
-      component:
-        description: 'Component to deploy'
-        required: true
-        default: 'both'
-        type: choice
-        options: [frontend, backend, both]
+
+concurrency:
+  group: deploy-admin-${{ github.ref_name }}
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'
+  SERVER_HOST: '91.98.71.87'
 
 jobs:
-  setup:
-    name: Setup Environment
+  deploy:
+    name: Build & Deploy Admin Portal
     runs-on: ubuntu-latest
-    outputs:
-      environment: ${{ steps.env.outputs.environment }}
-      frontend_url: ${{ steps.env.outputs.frontend_url }}
-      frontend_path: ${{ steps.env.outputs.frontend_path }}
-      api_base_url: ${{ steps.env.outputs.api_base_url }}
     steps:
+      # 1. Checkout
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: admin-module/package-lock.json
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        working-directory: admin-module
+        run: npm ci
+
+      # 4. Determine environment
       - name: Determine environment
         id: env
         run: |
@@ -44,133 +59,96 @@ jobs:
             ENV="${{ github.event.inputs.environment }}"
           else
             case "${{ github.ref_name }}" in
-              dev) ENV="dev" ;; test) ENV="test" ;; main) ENV="production" ;; *) ENV="dev" ;;
+              dev) ENV="dev" ;;
+              test) ENV="test" ;;
+              main) ENV="production" ;;
+              *) ENV="dev" ;;
             esac
           fi
+
           case "$ENV" in
             dev)
-              FRONTEND_URL="admin.dev.holidaibutler.com"
-              FRONTEND_PATH="/var/www/admin.dev.holidaibutler.com"
-              API_BASE_URL="https://admin.dev.holidaibutler.com/api/v1"
+              DEPLOY_DIR="/var/www/admin.dev.holidaibutler.com"
+              DEPLOY_HOST="admin.dev.holidaibutler.com"
+              ENV_FILE=".env.development"
               ;;
             test)
-              FRONTEND_URL="admin.test.holidaibutler.com"
-              FRONTEND_PATH="/var/www/admin.test.holidaibutler.com"
-              API_BASE_URL="https://admin.test.holidaibutler.com/api/v1"
+              DEPLOY_DIR="/var/www/admin.test.holidaibutler.com"
+              DEPLOY_HOST="admin.test.holidaibutler.com"
+              ENV_FILE=".env.test"
               ;;
             production)
-              FRONTEND_URL="admin.holidaibutler.com"
-              FRONTEND_PATH="/var/www/admin.holidaibutler.com"
-              API_BASE_URL="https://admin.holidaibutler.com/api/v1"
+              DEPLOY_DIR="/var/www/admin.holidaibutler.com"
+              DEPLOY_HOST="admin.holidaibutler.com"
+              ENV_FILE=".env.production"
               ;;
           esac
+
           echo "environment=$ENV" >> $GITHUB_OUTPUT
-          echo "frontend_url=$FRONTEND_URL" >> $GITHUB_OUTPUT
-          echo "frontend_path=$FRONTEND_PATH" >> $GITHUB_OUTPUT
-          echo "api_base_url=$API_BASE_URL" >> $GITHUB_OUTPUT
+          echo "deploy_dir=$DEPLOY_DIR" >> $GITHUB_OUTPUT
+          echo "deploy_host=$DEPLOY_HOST" >> $GITHUB_OUTPUT
+          echo "env_file=$ENV_FILE" >> $GITHUB_OUTPUT
 
-  changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      frontend: ${{ steps.filter.outputs.frontend }}
-      backend: ${{ steps.filter.outputs.backend }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            frontend:
-              - 'admin-module/frontend/**'
-            backend:
-              - 'admin-module/backend/**'
+      # 5. Copy correct env file
+      - name: Copy environment file
+        working-directory: admin-module
+        run: cp ${{ steps.env.outputs.env_file }} .env
 
-  build-frontend:
-    name: Build Admin Frontend
-    needs: [setup, changes]
-    if: needs.changes.outputs.frontend == 'true' || github.event.inputs.component != 'backend'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: admin-module/frontend/package-lock.json
-      - name: Install and Build
-        working-directory: admin-module/frontend
-        env:
-          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
-        run: |
-          npm ci
-          echo "VITE_API_BASE_URL=${{ needs.setup.outputs.api_base_url }}" > .env.production
-          echo "VITE_APP_NAME=HolidaiButler Admin" >> .env.production
-          echo "VITE_SENTRY_DSN=$VITE_SENTRY_DSN" >> .env.production
-          npm run build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: admin-frontend-dist-${{ needs.setup.outputs.environment }}
-          path: admin-module/frontend/dist
-          retention-days: 1
+      # 6. Build
+      - name: Build admin portal
+        working-directory: admin-module
+        run: npm run build
 
-  build-backend:
-    name: Prepare Admin Backend
-    needs: [setup, changes]
-    if: needs.changes.outputs.backend == 'true' || github.event.inputs.component != 'frontend'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/upload-artifact@v4
-        with:
-          name: admin-backend-${{ needs.setup.outputs.environment }}
-          path: |
-            admin-module/backend/
-            !admin-module/backend/node_modules
-            !admin-module/backend/.env
-            !admin-module/backend/logs
-          retention-days: 1
-
-  deploy-frontend:
-    name: Deploy Admin Frontend
-    needs: [setup, build-frontend]
-    if: always() && needs.build-frontend.result == 'success'
-    runs-on: ubuntu-latest
-    environment: ${{ needs.setup.outputs.environment }}
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: admin-frontend-dist-${{ needs.setup.outputs.environment }}
-          path: dist
-      - name: Setup SSH and Deploy
+      # 7. Setup SSH
+      - name: Setup SSH
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
-          ssh root@91.98.71.87 "mkdir -p ${{ needs.setup.outputs.frontend_path }}"
-          rsync -avz --delete dist/ root@91.98.71.87:${{ needs.setup.outputs.frontend_path }}/
-          ssh root@91.98.71.87 "chown -R www-data:www-data ${{ needs.setup.outputs.frontend_path }} && systemctl reload apache2"
-          echo "Admin Frontend deployed to ${{ needs.setup.outputs.frontend_url }}"
+          ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-  deploy-backend:
-    name: Deploy Admin Backend
-    needs: [setup, build-backend]
-    if: always() && needs.build-backend.result == 'success'
-    runs-on: ubuntu-latest
-    environment: ${{ needs.setup.outputs.environment }}
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: admin-backend-${{ needs.setup.outputs.environment }}
-          path: backend
-      - name: Setup SSH and Deploy
+      # 8. Backup current deployment
+      - name: Backup current deployment
         run: |
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
-          ssh root@91.98.71.87 "mkdir -p /var/www/api.holidaibutler.com/admin-module"
-          rsync -avz --delete --exclude 'node_modules' --exclude '.env' --exclude 'logs' backend/ root@91.98.71.87:/var/www/api.holidaibutler.com/admin-module/
-          ssh root@91.98.71.87 "cd /var/www/api.holidaibutler.com/admin-module && npm ci --only=production && mkdir -p logs && (pm2 restart holidaibutler-admin-api || pm2 start server.js --name holidaibutler-admin-api) && pm2 save"
-          echo "Admin Backend deployed"
+          ssh root@${{ env.SERVER_HOST }} "
+            if [ -d '${{ steps.env.outputs.deploy_dir }}' ]; then
+              rsync -a --delete '${{ steps.env.outputs.deploy_dir }}/' '${{ steps.env.outputs.deploy_dir }}-backup/'
+              echo 'Backup created at ${{ steps.env.outputs.deploy_dir }}-backup/'
+            else
+              echo 'No existing deployment to backup'
+            fi
+          "
+
+      # 9. Deploy
+      - name: Deploy to server
+        run: |
+          rsync -avz --delete \
+            admin-module/dist/ \
+            root@${{ env.SERVER_HOST }}:${{ steps.env.outputs.deploy_dir }}/
+
+      # 10. Fix permissions
+      - name: Fix permissions
+        run: |
+          ssh root@${{ env.SERVER_HOST }} "
+            chown -R www-data:www-data '${{ steps.env.outputs.deploy_dir }}'
+            chmod -R 755 '${{ steps.env.outputs.deploy_dir }}'
+          "
+
+      # 11. Health check with rollback
+      - name: Health check
+        run: |
+          sleep 2
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" "https://${{ steps.env.outputs.deploy_host }}")
+          echo "Health check status: $STATUS"
+          if [ "$STATUS" -ne 200 ]; then
+            echo "::error::Health check failed with status $STATUS — rolling back"
+            ssh root@${{ env.SERVER_HOST }} "
+              if [ -d '${{ steps.env.outputs.deploy_dir }}-backup' ]; then
+                rsync -a --delete '${{ steps.env.outputs.deploy_dir }}-backup/' '${{ steps.env.outputs.deploy_dir }}/'
+                chown -R www-data:www-data '${{ steps.env.outputs.deploy_dir }}'
+                echo 'Rollback completed'
+              fi
+            "
+            exit 1
+          fi
+          echo "Admin Portal deployed successfully to https://${{ steps.env.outputs.deploy_host }}"

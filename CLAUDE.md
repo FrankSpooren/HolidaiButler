@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.26.0
+> **Versie**: 3.27.0
 > **Laatst bijgewerkt**: 20 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -94,8 +94,8 @@ Na elke relevante aanpassing, uitbreiding of update:
 | Document | Locatie | Versie | Inhoud |
 |----------|---------|--------|--------|
 | **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.3 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
-| **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 | Agent architectuur, scheduled jobs |
-| **CLAUDE.md** | Repository root + Hetzner | 3.26.0 | Dit bestand - project context |
+| **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.1.0 | Agent architectuur, scheduled jobs |
+| **CLAUDE.md** | Repository root + Hetzner | 3.27.0 | Dit bestand - project context |
 
 ### Leesadvies voor Claude
 **Bij elke nieuwe sessie of complexe taak, lees in deze volgorde:**
@@ -120,7 +120,7 @@ HolidaiButler/
 │
 ├── docs/
 │   └── strategy/
-│       └── HolidaiButler_Multi_Destination_Strategic_Advisory.md  # ✅ NIEUW
+│       └── HolidaiButler_Master_Strategie.md  # ✅ Single master doc
 │
 ├── customer-portal/        # React 19 + Tailwind
 │   └── frontend/
@@ -133,6 +133,14 @@ HolidaiButler/
 │
 ├── admin-module/           # React 18 + MUI (admin.holidaibutler.com)
 │   ├── src/
+│   │   ├── api/            # API services (axios client, auth, dashboard)
+│   │   ├── components/     # Layout, dashboard, common components
+│   │   ├── hooks/          # useAuth, useDashboard
+│   │   ├── pages/          # Login, Dashboard, Agents (placeholder)
+│   │   ├── stores/         # Zustand auth store
+│   │   ├── i18n/           # NL/EN vertalingen
+│   │   └── utils/          # Helpers (formatters, destinations)
+│   ├── vite.config.js
 │   └── package.json
 │
 ├── platform-core/          # Node.js/Express backend
@@ -432,7 +440,8 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 8A** | Agent Reparatie & Versterking (7 agents gerepareerd) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8A+** | Agent Monitoring & Briefing Expansion (3 modules, 5 jobs) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8B** | AI Agents Multi-Destination (BaseAgent, 18 agents, Threema) | ✅ COMPLEET | 20-02-2026 |
-| **Fase 8C** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
+| **Fase 8C-0** | Admin Portal Foundation (3 VHosts, 6 endpoints, React app, CI/CD) | ✅ COMPLEET | 20-02-2026 |
+| **Fase 8C** | Agent Dashboard (Admin Portal) | ⏸️ WACHT (8C-0 Foundation COMPLEET) | - |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -1066,6 +1075,68 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 | MODIFIED | `src/services/agents/healthMonitor/smokeTestRunner.js` (+Threema check, +threema schema) |
 | MODIFIED | `src/services/orchestrator/ownerInterface/dailyBriefing.js` (+threema_status, +alert_items) |
 
+### Fase 8C-0 Resultaten (Admin Portal Foundation — 20/02/2026)
+- **Status**: COMPLEET (20-02-2026)
+- **Kosten**: EUR 0 (pure code, geen LLM calls)
+- **Doel**: Enterprise-level admin portal foundation met login, dashboard, en CI/CD
+
+**Architectuur Beslissing**: Admin API routes DIRECT in platform-core (unified backend op port 3001). GEEN apart admin-module backend. Frontend praat met api.holidaibutler.com.
+
+**Infrastructuur**:
+- 3 Apache VHosts: admin.dev/test/holidaibutler.com (aangemaakt in eerdere sessie)
+- 3 SSL certs: Let's Encrypt (aangemaakt in eerdere sessie)
+- CORS uitgebreid: admin.* origins toegevoegd aan api.holidaibutler.com-le-ssl.conf
+
+**Backend (6 endpoints in platform-core/src/routes/adminPortal.js)**:
+
+| Endpoint | Functie | Auth | Beschrijving |
+|----------|---------|------|-------------|
+| POST /auth/login | Login | Rate limit (5/15min) | bcrypt verify + JWT (8h) + refresh (7d) |
+| GET /auth/me | Profiel | Admin token | User data + role |
+| POST /auth/refresh | Token refresh | Refresh token | Nieuwe access token |
+| POST /auth/logout | Uitloggen | Admin token | Session cleanup |
+| GET /dashboard | KPIs | Admin token | POI counts, reviews, users, agents, jobs (Redis cache 120s) |
+| GET /health | Systeem status | Admin token | MySQL, MongoDB, Redis, BullMQ status |
+
+**Frontend (React 18 + Vite 4 + MUI 5 + Zustand 4)**:
+
+| Component | Beschrijving |
+|-----------|-------------|
+| LoginPage | Email/password form met gradient background |
+| DashboardPage | KPI cards, destination cards, system health, quick links |
+| AdminLayout | Sidebar (6 items) + header + destination selector |
+| ProtectedRoute | JWT check + redirect naar /login |
+| authStore (Zustand) | JWT persist in localStorage, auto-refresh |
+| Axios interceptor | JWT attach + 401→refresh→retry pattern |
+| i18n | NL (default) + EN vertalingen |
+| Bugsink | Project 3 (admin-portal) DSN |
+
+**CI/CD**: `.github/workflows/deploy-admin-module.yml`
+- Single job: build from admin-module/ root + rsync to Hetzner
+- Environment mapping: dev→admin.dev, test→admin.test, main→admin
+- Backup + health check + automatic rollback on failure
+- Concurrency control per branch
+
+**Admin User**: admin@holidaibutler.com (id=3, role=admin)
+
+**Test Resultaten**: 15/15 PASS
+- Backend: 8/8 (login 400/401/200/403, auth/me 401/200, dashboard 401/200)
+- Frontend: 4/4 (LoginPage, ProtectedRoute, DashboardPage, Sidebar)
+- Infra: 3/3 (production 200, test 200, CORS header)
+
+**Bestanden**:
+
+| Actie | Bestand |
+|-------|---------|
+| NEW | `platform-core/src/routes/adminPortal.js` (6 endpoints) |
+| MODIFIED | `platform-core/src/index.js` (route registration) |
+| NEW | `admin-module/package.json` (root level) |
+| NEW | `admin-module/vite.config.js` |
+| NEW | `admin-module/index.html` |
+| NEW | `admin-module/.env.development`, `.env.test`, `.env.production` |
+| NEW | `admin-module/src/` (30+ files: pages, components, stores, hooks, api, i18n) |
+| MODIFIED | `.github/workflows/deploy-admin-module.yml` (rewrite for new architecture) |
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -1151,6 +1222,9 @@ ssh root@91.98.71.87
 | `/var/www/holidaibutler.com/customer-portal/` | Calpe frontend |
 | `/var/www/texelmaps.nl/customer-portal/` | Texel frontend |
 | `/var/www/api.holidaibutler.com/storage/poi-images/` | POI images (Calpe + Texel) |
+| `/var/www/admin.holidaibutler.com/` | Admin portal (production) |
+| `/var/www/admin.test.holidaibutler.com/` | Admin portal (test) |
+| `/var/www/admin.dev.holidaibutler.com/` | Admin portal (dev) |
 | `/root/backups/` | Database backups |
 | `/root/fase*` | Fase output bestanden |
 
@@ -1216,7 +1290,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Strategic Advisory | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 3.0 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.4 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 |
 | Fase 2 Docs | `docs/agents/fase2/` | - |
 | Fase 3 Docs | `docs/agents/fase3/` | - |
@@ -1231,6 +1305,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.27.0** | **2026-02-20** | **Fase 8C-0 Admin Portal Foundation COMPLEET: Infrastructuur (3 VHosts + SSL + CORS). Backend: 6 admin API endpoints in platform-core (login, refresh, logout, me, dashboard, health). JWT auth (8h access + 7d refresh), bcrypt, rate limiting, Redis cache. Frontend: React 18 + MUI 5 + Vite 4 + Zustand (login, dashboard, layout, i18n NL/EN). CI/CD: deploy-admin-module.yml met backup + health check + rollback. Admin user: admin@holidaibutler.com. 15/15 tests PASS. Kosten: EUR 0. 8B audit correcties (doc references). CLAUDE.md v3.27.0, Master Strategie v6.4.** |
 | **3.26.0** | **2026-02-20** | **Fase 8B Agent Multi-Destination COMPLEET: BaseAgent pattern (run/runForDestination/aggregateResults). 3 nieuwe bestanden: BaseAgent.js, destinationRunner.js, agentRegistry.js. 18 agents geregistreerd (13 Categorie A destination-aware, 5 Categorie B shared). Threema configuratie verificatie in smoke tests (dagelijks, passief). Daily briefing: threema_status + alert_items velden. Config mapping fix (c.destination.id i.p.v. c.id). 22/22 tests PASS. Kosten: EUR 0. Repo structuur bijgewerkt. CLAUDE.md v3.26.0, Master Strategie v6.3.** |
 | **3.25.0** | **2026-02-20** | **Fase 8A+ Agent Monitoring & Briefing Expansion COMPLEET: 3 nieuwe monitoring modules (contentQualityChecker, backupHealthChecker, smokeTestRunner). 5 nieuwe scheduled jobs (content-quality-audit, backup-recency-check, smoke-test, chromadb-state-snapshot, agent-success-rate). Totaal jobs: 35→40. Daily briefing (De Bode) uitgebreid met smoke test summary, backup summary, content quality summary (3 MailerLite fields). ChromaDB state snapshot via Het Geheugen. 16/16 tests PASS. Kosten: EUR 0. CLAUDE.md v3.25.0.** |
 | **3.24.0** | **2026-02-20** | **Fase 8A Agent Reparatie & Versterking COMPLEET: 7 agents gerepareerd/versterkt. De Koerier (P0): column mapping fix (9 kolommen, table name casing, destination_id passthrough). De Leermeester (P1): MongoDB persistence (agent_learning_patterns collection). De Thermostaat (P1): complete rewrite naar alerting-only + Redis persistence. De Bode (P1): destination stats, prediction alerts, optimization count (7 MailerLite fields). De Stylist (P2): DESTINATION_BRAND_COLORS map (calpe + texel). De Dokter (P2): 3 nieuwe portals + SSL expiry monitoring (5 domains). Legacy workers.js deprecated. 15 agent naamgeving gedocumenteerd. Kosten: EUR 0. CLAUDE.md v3.24.0, Master Strategie v6.1.** |
@@ -1283,7 +1358,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 Bij elke nieuwe sessie of na context compaction:
 1. Lees ALTIJD eerst dit bestand volledig
-2. Lees daarna de Strategic Advisory (`docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md`)
+2. Lees daarna de Master Strategie (`docs/strategy/HolidaiButler_Master_Strategie.md`)
 3. Verifieer de actuele status in de codebase VOORDAT je status updates geeft
 4. Maak GEEN aannames over implementatie status
 5. Check `/services/agents/` voor daadwerkelijk geïmplementeerde agents

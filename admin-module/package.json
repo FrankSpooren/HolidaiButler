@@ -1,0 +1,39 @@
+{
+  "name": "holidaibutler-admin-portal",
+  "version": "1.0.0",
+  "description": "HolidaiButler Admin Portal — Fase 8C",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@fontsource/inter": "^5.2.8",
+    "@mui/icons-material": "^5.14.13",
+    "@mui/material": "^5.14.13",
+    "@sentry/react": "^8.48.0",
+    "@tanstack/react-query": "^4.36.1",
+    "axios": "^1.5.1",
+    "i18next": "^23.5.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-i18next": "^13.3.1",
+    "react-router-dom": "^6.16.0",
+    "recharts": "^2.9.0",
+    "zustand": "^4.4.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.28",
+    "@types/react-dom": "^18.2.13",
+    "@vitejs/plugin-react": "^4.1.0",
+    "eslint": "^8.51.0",
+    "vite": "^4.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

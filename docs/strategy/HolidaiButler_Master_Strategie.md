@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 20 februari 2026
-**Versie**: 6.3
+**Versie**: 6.4
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 8B COMPLEET - Agent Multi-Destination. BaseAgent pattern (run/runForDestination/aggregateResults), 18 agents geregistreerd (13 Categorie A destination-aware, 5 Categorie B shared), Threema configuratie verificatie, config mapping fix. 22/22 tests PASS.
+**Status**: FASE 8C-0 COMPLEET - Admin Portal Foundation. 6 admin API endpoints in platform-core, React 18 + MUI frontend, CI/CD pipeline, 15/15 tests PASS. Fase 8C Agent Dashboard volgende.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -50,7 +50,8 @@
 | **Fase 8A** | Agent Reparatie & Versterking (7 agents) | ✅ COMPLEET | 20-02-2026 | 20-02-2026 | EUR 0 |
 | **Fase 8A+** | Agent Monitoring & Briefing Expansion (3 modules, 5 jobs, 40 totaal) | ✅ COMPLEET | 20-02-2026 | 16/16 tests PASS | EUR 0 |
 | **Fase 8B** | Agent Multi-Destination (BaseAgent, 18 agents, Threema) | ✅ COMPLEET | 20-02-2026 | 22/22 tests PASS | EUR 0 |
-| **Fase 8C** | Agent Dashboard (Admin Portal) | ❌ OPEN | - | - | ~EUR 0 |
+| **Fase 8C-0** | Admin Portal Foundation (infra, backend, frontend, CI/CD) | ✅ COMPLEET | 20-02-2026 | 15/15 tests PASS | EUR 0 |
+| **Fase 8C** | Agent Dashboard (Admin Portal) | ❌ OPEN (8C-0 Foundation COMPLEET) | - | - | ~EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -66,6 +67,7 @@
 | Fase 7 Reviews | EUR 0 | EUR 0 | ✅ |
 | Fase 8A Agents Reparatie | EUR 0 | EUR 0 | ✅ |
 | Fase 8B Agents Multi-Destination | EUR 0 | EUR 0 | ✅ |
+| Fase 8C-0 Admin Portal Foundation | EUR 0 | EUR 0 | ✅ |
 | Fase 8C Agent Dashboard | EUR 0 | - | ❌ |
 | **Totaal** | **EUR 94** | **EUR 73,91** | **78,6% van budget** |
 
@@ -648,7 +650,34 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 | NEW | `src/services/agents/base/destinationRunner.js` |
 | NEW | `src/services/agents/base/agentRegistry.js` |
 | MODIFIED | `src/services/agents/healthMonitor/smokeTestRunner.js` (+Threema check, +threema schema) |
-| MODIFIED | `src/services/orchestrator/ownerInterface/dailyBriefing.js` (+threama_status, +alert_items) |
+| MODIFIED | `src/services/orchestrator/ownerInterface/dailyBriefing.js` (+threema_status, +alert_items) |
+
+---
+
+### Fase 8C-0: Admin Portal Foundation (20/02/2026)
+
+**Status**: COMPLEET | **Kosten**: EUR 0 | **Tests**: 15/15 PASS
+
+**Architectuurbesluit**: Admin API endpoints DIRECT in platform-core (unified backend, port 3001). Geen apart admin-module backend op port 3003.
+
+**Infrastructuur**: 3 Apache VHosts (admin.dev/test/holidaibutler.com), 3 SSL certs (Let's Encrypt), CORS uitgebreid voor admin origins.
+
+**Backend** (platform-core/src/routes/adminPortal.js):
+- POST /auth/login — bcrypt + JWT (8h) + refresh (7d) + rate limit (5/15min)
+- GET /auth/me — user data + role
+- POST /auth/refresh — token refresh via sessions tabel
+- POST /auth/logout — session cleanup
+- GET /dashboard — POI counts, reviews, users, agents, jobs (Redis cache 120s)
+- GET /health — MySQL, MongoDB, Redis, BullMQ status
+
+**Frontend** (admin-module/ root):
+- React 18 + Vite 4 + MUI 5 + Zustand 4 + @tanstack/react-query 4
+- LoginPage, DashboardPage (KPIs, destination cards, system health), AdminLayout (sidebar + header)
+- JWT persist + auto-refresh interceptor, i18n NL/EN, Bugsink project 3
+
+**CI/CD**: .github/workflows/deploy-admin-module.yml — single job, 3-environment deploy, backup + health check + rollback
+
+**Admin User**: admin@holidaibutler.com (id=3, role=admin)
 
 ---
 
@@ -858,6 +887,13 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - Test scripts op Hetzner: altijd `sed -i 's/\r$//'` voor Windows line endings
 - BullMQ timeout bij agent imports: split tests in groepen en gebruik `timeout` command
 
+### Fase 8C-0 (20/02) - Admin Portal Foundation
+- **KRITIEK**: Unified backend architectuur — admin routes in platform-core, NIET apart admin-module backend. Voorkomt port conflicten en dubbele dependencies
+- Bash `!` in wachtwoorden (bijv. `HB-Admin-2026!`) veroorzaakt history expansion via SSH. Fix: single-quoted heredoc `<<'EOF'` of schrijf naar tempfile
+- Rate limiter (express-rate-limit) slaat in-memory op per IP — bij testen via SSH allemaal zelfde server IP. Test via localhost:3001 om rate limit te bypassen
+- POI tabel kolom heet `is_active` (NIET `active`) — SQL queries altijd verifiëren tegen actueel schema
+- Vite build chunk warnings (614KB) zijn acceptabel voor admin portal — alleen intern gebruik, geen SEO-gevoelig
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -898,6 +934,9 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 20-02 | 13/5 agent split (Cat A/B) | Destination-aware vs shared — sommige agents zijn inherent platform-breed | Claude Code |
 | 20-02 | Threema passieve check only | ENV var check, NOOIT echte berichten (EUR 0.05/bericht) | Claude Code |
 | 20-02 | Agent registry metadata-only | Geen daadwerkelijke agent imports in registry (voorkomt DB connections) | Claude Code |
+| 20-02 | Unified backend (admin in platform-core) | Geen apart admin-module backend — voorkomt port conflicten, shared middleware | Claude Code |
+| 20-02 | MUI 5 voor admin portal | Enterprise-grade component library, consistent met brand theming | Claude Code |
+| 20-02 | SPA routing via Apache RewriteRule | Voorkomt 404 bij page refresh, standaard voor React apps | Claude Code |
 
 ---
 
@@ -916,7 +955,7 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | PL/SV kolommen ongebruikt | Laag | Open — kandidaten voor opschonen |
 | SSL cert vervalt 2026-05-11 | Medium | ✅ Gemitigeerd (De Dokter SSL monitoring) |
 | Config structure mismatch (c.id vs c.destination.id) | Hoog | ✅ Gemitigeerd (config mapping fix in BaseAgent + destinationRunner) |
-| Threama Gateway niet geconfigureerd | Medium | Open — env vars niet gezet, dagelijkse smoke test alert |
+| Threema Gateway niet geconfigureerd | Medium | Open — env vars niet gezet, dagelijkse smoke test alert |
 | Agent registry circular imports | Medium | ✅ Gemitigeerd (metadata-only registry, geen agent imports) |
 | Windows line endings in deploy scripts | Laag | ✅ Gemitigeerd (sed strip protocol) |
 
@@ -977,7 +1016,8 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **6.3** | **20-02-2026** | **Fase 8B Agent Multi-Destination COMPLEET: BaseAgent pattern (run/runForDestination/aggregateResults). 3 nieuwe bestanden: BaseAgent.js, destinationRunner.js, agentRegistry.js. 18 agents geregistreerd (13 Categorie A destination-aware, 5 Categorie B shared). Threama configuratie verificatie in smoke tests (dagelijks, passief). Config mapping fix (c.destination.id i.p.v. c.id). 22/22 tests PASS. Audit gap D2 inhaal: Fase 8A+ detail subsectie toegevoegd. Lessons Learned 8A+/8B. Beslissingen Log 8A+/8B. Risico Register 8A+/8B. Kosten: EUR 0. CLAUDE.md v3.26.0.** |
+| **6.4** | **20-02-2026** | **Fase 8C-0 Admin Portal Foundation COMPLEET: 3 VHosts + SSL + CORS. 6 admin API endpoints in platform-core (login, refresh, logout, me, dashboard, health). JWT auth (8h+7d), bcrypt, rate limiting, Redis cache. React 18 + MUI 5 + Vite 4 + Zustand frontend (login, dashboard, i18n NL/EN). CI/CD: deploy-admin-module.yml met backup + rollback. Admin user: admin@holidaibutler.com. 15/15 tests PASS. Typo fixes: threama→threema. Kosten: EUR 0. CLAUDE.md v3.27.0.** |
+| **6.3** | **20-02-2026** | **Fase 8B Agent Multi-Destination COMPLEET: BaseAgent pattern (run/runForDestination/aggregateResults). 3 nieuwe bestanden: BaseAgent.js, destinationRunner.js, agentRegistry.js. 18 agents geregistreerd (13 Categorie A destination-aware, 5 Categorie B shared). Threema configuratie verificatie in smoke tests (dagelijks, passief). Config mapping fix (c.destination.id i.p.v. c.id). 22/22 tests PASS. Audit gap D2 inhaal: Fase 8A+ detail subsectie toegevoegd. Lessons Learned 8A+/8B. Beslissingen Log 8A+/8B. Risico Register 8A+/8B. Kosten: EUR 0. CLAUDE.md v3.26.0.** |
 | **6.2** | **20-02-2026** | **Fase 8A+ Agent Monitoring & Briefing Expansion COMPLEET: 3 nieuwe monitoring modules (contentQualityChecker, backupHealthChecker, smokeTestRunner). 5 nieuwe scheduled jobs (totaal 35→40). Daily briefing uitgebreid met smoke test/backup/content quality sections + 3 nieuwe MailerLite fields. ChromaDB state snapshot via Het Geheugen. 16/16 tests PASS. Kosten: EUR 0.** |
 | **6.1** | **20-02-2026** | **Fase 8A Agent Reparatie & Versterking COMPLEET: 7 agents gerepareerd/versterkt. De Koerier: column mapping fix (9 kolommen). De Leermeester: MongoDB persistence (agent_learning_patterns). De Thermostaat: herschreven naar alerting-only + Redis. De Bode: destination stats + predictions (7 MailerLite fields). De Stylist: Texel brand colors (DESTINATION_BRAND_COLORS map). De Dokter: 3 nieuwe portals + SSL monitoring (5 domains). Legacy workers.js deprecated. Kosten: EUR 0.** |
 | **6.0** | **19-02-2026** | **Fase 7 Reviews Integratie COMPLEET: 8.964 reviews (3.869 Texel, 5.095 Calpe) live op beide frontends. API werkte al correct (Outcome A). Backend: rating_distribution toegevoegd. Frontend: poiName fix + mock data DEV-only. 7/7 API tests PASS. Reviews verwijderd uit Openstaande Componenten. Kosten: EUR 0.** |
@@ -993,5 +1033,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 20 februari 2026 - Fase 8B COMPLEET (Agent Multi-Destination), Master Document v6.3*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A + 8A+ + 8B COMPLEET. Volgende fase: Fase 8C Agent Dashboard (Admin Portal)*
+*Laatst bijgewerkt: 20 februari 2026 - Fase 8C-0 COMPLEET (Admin Portal Foundation), Master Document v6.4*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A + 8A+ + 8B + 8C-0 COMPLEET. Volgende fase: Fase 8C Agent Dashboard (Admin Portal)*

@@ -1,8 +1,8 @@
-# HolidaiButler Claude Agents - Masterplan v4.1
+# HolidaiButler Claude Agents - Masterplan v4.2
 
-> **Versie**: 4.1.0
-> **Datum**: 28 januari 2026 (15:00 UTC)
-> **Status**: Alle 5 fases COMPLEET - 35 scheduled jobs operationeel
+> **Versie**: 4.2.0
+> **Datum**: 20 februari 2026
+> **Status**: Fase 8A + 8A+ + 8B COMPLEET — 18 agents (13 destination-aware, 5 shared), 40 scheduled jobs, BaseAgent pattern
 > **Eigenaar**: Frank Spooren
 
 ---
@@ -15,8 +15,8 @@ HolidaiButler heeft een volledig geautomatiseerd AI-agents ecosysteem geïmpleme
 
 | Metric | Waarde |
 |--------|--------|
-| **Actieve AI Agents** | 14 gespecialiseerde agents |
-| **Scheduled Jobs** | 35 geautomatiseerde taken |
+| **Actieve AI Agents** | 18 geregistreerd (15 agents + 3 monitoring modules) |
+| **Scheduled Jobs** | 40 geautomatiseerde taken |
 | **Uptime Target** | 99.9% |
 | **EU Compliance** | 100% GDPR & EU AI Act ready |
 | **Maandelijks Budget** | €515 (volledig gecontroleerd) |
@@ -174,6 +174,36 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 | **Learning Agent v1.0** | Pattern analysis, optimization | ✅ Live |
 | **Adaptive Config Agent v1.0** | Dynamic configuration tuning | ✅ Live |
 | **Prediction Agent v1.0** | Proactive issue detection | ✅ Live |
+
+---
+
+## 🔄 Multi-Destination Pattern (Fase 8B)
+
+### BaseAgent & destinationRunner
+
+Alle agents zijn destination-aware gemaakt via twee complementaire patterns:
+
+| Bestand | Beschrijving |
+|---------|-------------|
+| `src/services/agents/base/BaseAgent.js` | Foundation class met `run('all')` / `run(destinationId)` / `aggregateResults()` |
+| `src/services/agents/base/destinationRunner.js` | Mixin helper die `runForDestination()` toevoegt aan bestaande singletons |
+| `src/services/agents/base/agentRegistry.js` | Centrale registratie van alle 18 agents met metadata (naam, categorie, type) |
+
+### Agent Classificatie (18 entries)
+
+| Categorie | Agents | Pattern | Beschrijving |
+|-----------|--------|---------|-------------|
+| **A: Destination-Aware** (13) | Maestro, Bode, Dokter, Koerier, Geheugen, Gastheer, Poortwachter, Inspecteur, Leermeester, Thermostaat, Weermeester, Content Quality, Smoke Test | `runForDestination(id)` | Draait per destination |
+| **B: Shared** (5) | Stylist, Corrector, Bewaker, Architect, Backup Health | `execute()` | Platform-breed, draait 1x |
+
+### Scheduled Jobs: 40 totaal
+
+Fase 8A+ voegde 5 nieuwe jobs toe (35→40):
+- `content-quality-audit` (Monday 05:00)
+- `backup-recency-check` (Daily 07:30)
+- `smoke-test` (Daily 07:45)
+- `chromadb-state-snapshot` (Sunday 03:00)
+- `agent-success-rate` (Monday 05:30)
 
 ---
 
