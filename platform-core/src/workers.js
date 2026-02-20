@@ -1,8 +1,21 @@
 /**
- * BullMQ Workers
- * Handles scheduled jobs and background tasks for HolidaiButler
+ * ╔══════════════════════════════════════════════════════════════╗
+ * ║  DEPRECATED — DO NOT USE                                    ║
+ * ║                                                              ║
+ * ║  This file is the LEGACY worker system from Fase 1.          ║
+ * ║  All job processing has been migrated to:                    ║
+ * ║    src/services/orchestrator/workers.js  (De Maestro)        ║
+ * ║    src/services/orchestrator/scheduler.js                    ║
+ * ║    src/services/orchestrator/queues.js                       ║
+ * ║                                                              ║
+ * ║  This file is NOT imported anywhere in the codebase.         ║
+ * ║  Kept temporarily for reference. Will be removed in 8B.      ║
+ * ║                                                              ║
+ * ║  Deprecated: 2026-02-20 (Fase 8A)                           ║
+ * ╚══════════════════════════════════════════════════════════════╝
  *
- * @module workers
+ * @deprecated Use orchestrator/workers.js instead
+ * @module workers (LEGACY)
  */
 
 import { Worker, Queue } from 'bullmq';
@@ -271,8 +284,8 @@ async function scheduleRecurringJobs() {
 // Export for use in main application
 export { startWorkers, scheduleRecurringJobs, redisConnection };
 
-// Start workers if running directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  startWorkers();
-  scheduleRecurringJobs().catch(console.error);
-}
+// DEPRECATED: Self-execution disabled (Fase 8A, 2026-02-20)
+// if (import.meta.url === `file://${process.argv[1]}`) {
+//   startWorkers();
+//   scheduleRecurringJobs().catch(console.error);
+// }

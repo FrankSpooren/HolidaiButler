@@ -21,19 +21,19 @@ class StrategyLayerAgent {
   }
 
   async initialize(sequelize, mongoose) {
-    console.log('[StrategyLayerAgent] Initializing...');
+    console.log('[De Architect] Initializing...');
 
     try {
       // Set database connections for all components
       architectureAdvisor.setConnections(sequelize, mongoose);
-      learningAgent.setConnections(sequelize, mongoose);
+      await learningAgent.setConnections(sequelize, mongoose);
       predictionAgent.setConnections(sequelize, mongoose);
 
       // Initialize scheduled jobs
       await syncScheduler.initializeScheduledJobs();
 
       this.initialized = true;
-      console.log('[StrategyLayerAgent] Ready');
+      console.log('[De Architect] Ready');
 
       await logAgent('strategy-layer', 'initialized', {
         description: 'Strategy Layer Agent v1.0 initialized successfully',

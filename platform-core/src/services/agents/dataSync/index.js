@@ -40,7 +40,7 @@ class DataSyncAgent {
    * @param {Object} options - Optional configuration
    */
   async initialize(sequelize, options = {}) {
-    console.log("[DataSyncAgent] Initializing enterprise-level agent...");
+    console.log("[De Koerier] Initializing enterprise-level agent...");
 
     try {
       // Set sequelize for all services that need it
@@ -72,17 +72,17 @@ class DataSyncAgent {
         }
       });
 
-      console.log("[DataSyncAgent] Enterprise agent ready");
-      console.log("[DataSyncAgent] - POI Tier Manager: active");
-      console.log("[DataSyncAgent] - POI Lifecycle Manager: active");
-      console.log("[DataSyncAgent] - Reviews Manager: active");
-      console.log("[DataSyncAgent] - Q&A Generator: active");
-      console.log("[DataSyncAgent] - Data Validator: active");
-      console.log("[DataSyncAgent] - Sync Reporter: active");
+      console.log("[De Koerier] Enterprise agent ready");
+      console.log("[De Koerier] - POI Tier Manager: active");
+      console.log("[De Koerier] - POI Lifecycle Manager: active");
+      console.log("[De Koerier] - Reviews Manager: active");
+      console.log("[De Koerier] - Q&A Generator: active");
+      console.log("[De Koerier] - Data Validator: active");
+      console.log("[De Koerier] - Sync Reporter: active");
 
       return { success: true, version: this.version };
     } catch (error) {
-      console.error("[DataSyncAgent] Initialization failed:", error.message);
+      console.error("[De Koerier] Initialization failed:", error.message);
       throw error;
     }
   }
@@ -90,17 +90,17 @@ class DataSyncAgent {
   // === POI TIER MANAGEMENT ===
 
   async recalculateTiers(sequelize) {
-    console.log("[DataSyncAgent] Recalculating POI tiers...");
+    console.log("[De Koerier] Recalculating POI tiers...");
     return poiTierManager.classifyAllPOIs(sequelize);
   }
 
   async syncTier(tier, destination = "Calpe, Spain") {
-    console.log(`[DataSyncAgent] Syncing tier ${tier} for ${destination}`);
+    console.log(`[De Koerier] Syncing tier ${tier} for ${destination}`);
     return poiSyncService.syncPOIsByTier(tier, destination);
   }
 
   async discoverPOIs(destination, categories) {
-    console.log(`[DataSyncAgent] Discovering POIs in ${destination}`);
+    console.log(`[De Koerier] Discovering POIs in ${destination}`);
     return poiSyncService.discoverNewPOIs(destination, categories);
   }
 
@@ -128,8 +128,8 @@ class DataSyncAgent {
 
   // === REVIEWS MANAGEMENT ===
 
-  async syncReviewsForPOI(poiId, googlePlaceId) {
-    return reviewsManager.syncReviewsForPOI(poiId, googlePlaceId);
+  async syncReviewsForPOI(poiId, googlePlaceId, destinationId = 1) {
+    return reviewsManager.syncReviewsForPOI(poiId, googlePlaceId, destinationId);
   }
 
   async batchSyncReviews(pois) {
@@ -282,7 +282,7 @@ class DataSyncAgent {
   async handleJob(job) {
     const { type, tier, tiers, destination, categories, languages, period, sendAlert, manual } = job.data;
 
-    console.log(`[DataSyncAgent] Processing job: ${job.name} (type: ${type})`);
+    console.log(`[De Koerier] Processing job: ${job.name} (type: ${type})`);
 
     try {
       let result;
@@ -373,7 +373,7 @@ class DataSyncAgent {
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      console.error(`[DataSyncAgent] Job ${job.name} failed:`, error.message);
+      console.error(`[De Koerier] Job ${job.name} failed:`, error.message);
       throw error;
     }
   }
@@ -404,7 +404,7 @@ class DataSyncAgent {
     });
 
     const [pois] = await poiSyncService.sequelize.query(`
-      SELECT id, google_placeid
+      SELECT id, google_placeid, destination_id
       FROM POI
       WHERE (is_active = 1 OR is_active IS NULL)
         AND google_placeid IS NOT NULL

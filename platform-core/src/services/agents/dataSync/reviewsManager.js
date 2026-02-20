@@ -203,14 +203,15 @@ class ReviewsManager {
    * Sync reviews for a POI
    * @param {number} poiId - POI ID
    * @param {string} googlePlaceId - Google Place ID
+   * @param {number} destinationId - Destination ID (1=Calpe, 2=Texel)
    * @returns {Object} Sync result
    */
-  async syncReviewsForPOI(poiId, googlePlaceId) {
+  async syncReviewsForPOI(poiId, googlePlaceId, destinationId = 1) {
     if (!this.sequelize) {
       throw new Error("Sequelize not initialized");
     }
 
-    console.log(`[ReviewsManager] Syncing reviews for POI ${poiId}`);
+    console.log(`[De Koerier] Syncing reviews for POI ${poiId} (destination: ${destinationId})`);
 
     try {
       // Fetch reviews from Apify
@@ -250,42 +251,41 @@ class ReviewsManager {
           review.stars || review.rating || 3
         );
 
-        // Generate review hash for duplicate detection
-        const reviewHash = this.generateReviewHash(review);
+        // Check if review already exists (dedup via google_review_id)
+        const googleReviewId = review.reviewId || null;
+        if (googleReviewId) {
+          const [existing] = await this.sequelize.query(
+            "SELECT id FROM reviews WHERE google_review_id = ? AND poi_id = ?",
+            { replacements: [googleReviewId, poiId] }
+          );
 
-        // Check if review already exists
-        const [existing] = await this.sequelize.query(
-          "SELECT id FROM Reviews WHERE review_hash = ?",
-          { replacements: [reviewHash] }
-        );
-
-        if (existing.length > 0) {
-          skippedDuplicate++;
-          continue;
+          if (existing.length > 0) {
+            skippedDuplicate++;
+            continue;
+          }
         }
 
-        // Insert review
+        // Insert review (column names match production schema)
         await this.sequelize.query(`
-          INSERT INTO Reviews (
-            poi_id, google_review_id, reviewer_name, reviewer_photo,
-            rating, text, language, review_date, review_hash,
-            sentiment_score, sentiment_label, spam_score,
-            created_at, last_updated
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+          INSERT INTO reviews (
+            poi_id, destination_id, google_review_id, user_name,
+            rating, review_text, language, visit_date, sentiment,
+            source, likes_count,
+            created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         `, {
           replacements: [
             poiId,
-            review.reviewId || null,
+            destinationId,
+            googleReviewId,
             review.name || review.reviewerName || "Anonymous",
-            review.reviewerPhotoUrl || null,
             review.stars || review.rating || 3,
             review.text || review.snippet || "",
             language,
             reviewDate,
-            reviewHash,
-            sentiment.score,
             sentiment.label,
-            spamCheck.spamScore
+            "apify",
+            review.likesCount || 0
           ]
         });
 
@@ -295,7 +295,7 @@ class ReviewsManager {
       // Update POI review count and average
       await this.updatePOIReviewStats(poiId);
 
-      console.log(`[ReviewsManager] POI ${poiId}: added ${added}, skipped spam ${skippedSpam}, duplicates ${skippedDuplicate}`);
+      console.log(`[De Koerier] POI ${poiId}: added ${added}, skipped spam ${skippedSpam}, duplicates ${skippedDuplicate}`);
 
       return {
         poiId,
@@ -308,17 +308,6 @@ class ReviewsManager {
       await logError("reviews-manager", error, { poiId, googlePlaceId });
       throw error;
     }
-  }
-
-  /**
-   * Generate hash for review deduplication
-   * @param {Object} review - Review object
-   * @returns {string} Hash
-   */
-  generateReviewHash(review) {
-    const crypto = require("crypto");
-    const content = `${review.name || ""}|${review.text || review.snippet || ""}|${review.stars || review.rating || 0}`;
-    return crypto.createHash("md5").update(content).digest("hex");
   }
 
   /**
@@ -372,8 +361,8 @@ class ReviewsManager {
   async updatePOIReviewStats(poiId) {
     await this.sequelize.query(`
       UPDATE POI SET
-        review_count = (SELECT COUNT(*) FROM Reviews WHERE poi_id = ? AND spam_score < 0.5),
-        rating = (SELECT COALESCE(AVG(rating), 0) FROM Reviews WHERE poi_id = ? AND spam_score < 0.5),
+        review_count = (SELECT COUNT(*) FROM reviews WHERE poi_id = ?),
+        rating = (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE poi_id = ?),
         last_updated = NOW()
       WHERE id = ?
     `, { replacements: [poiId, poiId, poiId] });
@@ -393,7 +382,7 @@ class ReviewsManager {
 
     // Get count before deletion
     const [countResult] = await this.sequelize.query(`
-      SELECT COUNT(*) as count FROM Reviews WHERE review_date < ?
+      SELECT COUNT(*) as count FROM reviews WHERE visit_date < ?
     `, { replacements: [retentionDate] });
 
     const toDelete = countResult[0]?.count || 0;
@@ -401,12 +390,12 @@ class ReviewsManager {
     if (toDelete > 0) {
       // Get affected POI IDs for stats update
       const [affectedPOIs] = await this.sequelize.query(`
-        SELECT DISTINCT poi_id FROM Reviews WHERE review_date < ?
+        SELECT DISTINCT poi_id FROM reviews WHERE visit_date < ?
       `, { replacements: [retentionDate] });
 
       // Delete old reviews
       await this.sequelize.query(`
-        DELETE FROM Reviews WHERE review_date < ?
+        DELETE FROM reviews WHERE visit_date < ?
       `, { replacements: [retentionDate] });
 
       // Update stats for affected POIs
@@ -423,7 +412,7 @@ class ReviewsManager {
         }
       });
 
-      console.log(`[ReviewsManager] Retention enforcement: deleted ${toDelete} old reviews`);
+      console.log(`[De Koerier] Retention enforcement: deleted ${toDelete} old reviews`);
     }
 
     return {
@@ -444,10 +433,10 @@ class ReviewsManager {
     }
 
     const [reviews] = await this.sequelize.query(`
-      SELECT rating, sentiment_label, language, text
-      FROM Reviews
-      WHERE poi_id = ? AND spam_score < 0.5
-      ORDER BY review_date DESC
+      SELECT rating, sentiment, language, review_text
+      FROM reviews
+      WHERE poi_id = ?
+      ORDER BY visit_date DESC
       LIMIT 50
     `, { replacements: [poiId] });
 
@@ -463,12 +452,12 @@ class ReviewsManager {
     const languageCounts = {};
 
     for (const review of reviews) {
-      sentimentCounts[review.sentiment_label || "neutral"]++;
+      sentimentCounts[review.sentiment || "neutral"]++;
       languageCounts[review.language || "unknown"] = (languageCounts[review.language || "unknown"] || 0) + 1;
     }
 
     // Extract common themes (basic keyword extraction)
-    const allText = reviews.map(r => r.text || "").join(" ").toLowerCase();
+    const allText = reviews.map(r => r.review_text || "").join(" ").toLowerCase();
     const themes = this.extractThemes(allText);
 
     return {
@@ -529,7 +518,7 @@ class ReviewsManager {
 
     for (const poi of pois) {
       try {
-        const result = await this.syncReviewsForPOI(poi.id, poi.google_placeid);
+        const result = await this.syncReviewsForPOI(poi.id, poi.google_placeid, poi.destination_id || 1);
         results.synced++;
         results.details.push({ poiId: poi.id, ...result });
 
@@ -559,34 +548,34 @@ class ReviewsManager {
     }
 
     const [totalResult] = await this.sequelize.query(
-      "SELECT COUNT(*) as count FROM Reviews"
-    );
-
-    const [spamResult] = await this.sequelize.query(
-      "SELECT COUNT(*) as count FROM Reviews WHERE spam_score >= 0.5"
+      "SELECT COUNT(*) as count FROM reviews"
     );
 
     const [sentimentResult] = await this.sequelize.query(`
-      SELECT sentiment_label, COUNT(*) as count
-      FROM Reviews
-      WHERE spam_score < 0.5
-      GROUP BY sentiment_label
+      SELECT sentiment, COUNT(*) as count
+      FROM reviews
+      GROUP BY sentiment
     `);
 
     const [languageResult] = await this.sequelize.query(`
       SELECT language, COUNT(*) as count
-      FROM Reviews
-      WHERE spam_score < 0.5
+      FROM reviews
       GROUP BY language
       ORDER BY count DESC
       LIMIT 5
     `);
 
+    const [destinationResult] = await this.sequelize.query(`
+      SELECT destination_id, COUNT(*) as count
+      FROM reviews
+      GROUP BY destination_id
+    `);
+
     return {
       totalReviews: totalResult[0]?.count || 0,
-      spamReviews: spamResult[0]?.count || 0,
       bySentiment: sentimentResult,
       byLanguage: languageResult,
+      byDestination: destinationResult,
       retentionDays: RETENTION_DAYS,
       timestamp: new Date().toISOString()
     };

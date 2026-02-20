@@ -1,19 +1,19 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 19 februari 2026
-**Versie**: 6.0
+**Datum**: 20 februari 2026
+**Versie**: 6.1
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 7 COMPLEET - Reviews Integratie. 8.964 reviews (3.869 Texel, 5.095 Calpe) live op beide frontends. API werkte al correct, rating_distribution toegevoegd. Frontend: poiName fix + mock data cleanup. 7/7 API tests PASS.
+**Status**: FASE 8A COMPLEET - Agent Reparatie & Versterking. 7 agents gerepareerd/versterkt: De Koerier (column mapping fix), De Leermeester (MongoDB persistence), De Thermostaat (alerting-only), De Bode (destination stats), De Stylist (Texel brand colors), De Dokter (Texel URLs + SSL monitoring), legacy cleanup.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.23.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.24.0) in repo root + Hetzner
 
 ---
 
@@ -47,8 +47,9 @@
 | **Fase R6c** | ChromaDB Re-vectorisatie Texel + Calpe + Steekproef Fix (12.316 vectoren, 2 POI-correcties) | ✅ COMPLEET | 19-02-2026 | 10/10 test queries PASS | EUR 4,92 |
 | **Fase R6d** | Openstaande Acties (markdown fix 388 POIs, 119 POIs inventarisatie, social media besluit) | ✅ COMPLEET | 19-02-2026 | 0 markdown resterend | EUR 0 |
 | **Fase 7** | Reviews Integratie (8.964 reviews live, rating_distribution, poiName fix) | ✅ COMPLEET | 19-02-2026 | 7/7 API tests PASS | EUR 0 |
-| **Fase 8** | AI Agents Multi-Destination (15 agents) | ❌ OPEN | - | - | ~EUR 0 |
-| **Fase 8b** | Agent Dashboard (Admin Portal) | ❌ OPEN | - | - | ~EUR 0 |
+| **Fase 8A** | Agent Reparatie & Versterking (7 agents) | ✅ COMPLEET | 20-02-2026 | 20-02-2026 | EUR 0 |
+| **Fase 8B** | Agent Multi-Destination (15 agents) | ❌ OPEN | - | - | ~EUR 0 |
+| **Fase 8C** | Agent Dashboard (Admin Portal) | ❌ OPEN | - | - | ~EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -62,7 +63,8 @@
 | Fase R1-R4 Content Repair | EUR 15 | EUR 13,50 | ✅ |
 | Fase R6 Content Completion | EUR 10 | EUR 8,00 | ✅ |
 | Fase 7 Reviews | EUR 0 | EUR 0 | ✅ |
-| Fase 8 Agents | EUR 0 | - | ❌ |
+| Fase 8A Agents Reparatie | EUR 0 | EUR 0 | ✅ |
+| Fase 8B/8C Agents | EUR 0 | - | ❌ |
 | **Totaal** | **EUR 94** | **EUR 73,91** | **78,6% van budget** |
 
 ### 1.3 Openstaande Componenten
@@ -70,8 +72,8 @@
 | # | Component | Fase | Prioriteit | Blokkeert Launch? | Details |
 |---|-----------|------|------------|-------------------|---------|
 | ~~B~~ | ~~Reviews Integratie~~ | ~~Fase 7~~ | ~~P0~~ | ~~JA~~ | ✅ **COMPLEET** (19-02-2026) |
-| C | **AI Agents Multi-Destination** | Fase 8 | P1 | Operationeel | 15 agents destination-aware maken |
-| D | **Agent Dashboard (Admin Portal)** | Fase 8b | P1 | Operationeel | Monitoring dashboard voor 15 agents |
+| C | **AI Agents Multi-Destination** | Fase 8B | P1 | Operationeel | 15 agents destination-aware maken (8A reparatie COMPLEET) |
+| D | **Agent Dashboard (Admin Portal)** | Fase 8C | P1 | Operationeel | Monitoring dashboard voor 15 agents |
 
 ---
 
@@ -519,41 +521,60 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 
 ---
 
-### Fase 8: AI Agents Multi-Destination (15 Agents)
+### Fase 8A: Agent Reparatie & Versterking (20/02/2026)
 
-**15 Agents:**
+**Status**: ✅ COMPLEET (20 februari 2026)
+**Kosten**: EUR 0 (pure code, geen LLM calls)
 
-| # | Agent | Categorie | Destination-Aware | Status |
-|---|-------|-----------|-------------------|--------|
-| 1 | Orchestrator | Core | ❌ | OPEN |
-| 2 | Owner Interface | Core | ❌ | OPEN |
-| 3 | Health Monitor | Operations | ❌ | OPEN |
-| 4 | Data Sync | Operations | ❌ | OPEN |
-| 5 | HoliBot Sync | Operations | ✅ (Fase 6) | COMPLEET |
-| 6 | Communication Flow | Operations | ❌ | OPEN |
-| 7 | GDPR | Operations | ❌ | OPEN |
-| 8 | UX/UI | Development | ❌ | OPEN |
-| 9 | Code | Development | ❌ | OPEN |
-| 10 | Security | Development | ❌ | OPEN |
-| 11 | Quality | Development | ❌ | OPEN |
-| 12 | Architecture | Strategy | ❌ | OPEN |
-| 13 | Learning | Strategy | ❌ | OPEN |
-| 14 | Adaptive Config | Strategy | ❌ | OPEN |
-| 15 | Prediction | Strategy | ❌ | OPEN |
+**Doel**: Calpe agent baseline = 100% werkend. Fixen wat kapot is vóór multi-destination uitrol (8B).
 
-**Claude Code Commando - Fase 8:**
+**15 Agents met Nederlandse namen en 8A status:**
+
+| # | Agent | Nederlandse Naam | Categorie | 8A Status | Fase 8B |
+|---|-------|-----------------|-----------|-----------|---------|
+| 1 | Orchestrator | De Maestro | Core | ✅ Werkend | OPEN |
+| 2 | Owner Interface | De Bode | Core | ✅ **8A: Versterkt** (destination stats, predictions) | OPEN |
+| 3 | Health Monitor | De Dokter | Operations | ✅ **8A: Versterkt** (Texel URLs + SSL monitoring) | OPEN |
+| 4 | Data Sync | De Koerier | Operations | ✅ **8A: Gerepareerd** (column mapping fix) | OPEN |
+| 5 | HoliBot Sync | Het Geheugen | Operations | ✅ Werkend (Fase 6) | COMPLEET |
+| 6 | Communication Flow | De Gastheer | Operations | ✅ Werkend | OPEN |
+| 7 | GDPR | De Poortwachter | Operations | ✅ Werkend | OPEN |
+| 8 | UX/UI | De Stylist | Development | ✅ **8A: Versterkt** (Texel brand colors) | OPEN |
+| 9 | Code | De Corrector | Development | ✅ Werkend | OPEN |
+| 10 | Security | De Bewaker | Development | ✅ Werkend | OPEN |
+| 11 | Quality | De Inspecteur | Development | ✅ Werkend | OPEN |
+| 12 | Architecture | De Architect | Strategy | ✅ Werkend | OPEN |
+| 13 | Learning | De Leermeester | Strategy | ✅ **8A: Gerepareerd** (MongoDB persistence) | OPEN |
+| 14 | Adaptive Config | De Thermostaat | Strategy | ✅ **8A: Herschreven** (alerting-only + Redis) | OPEN |
+| 15 | Prediction | De Weermeester | Strategy | ✅ Werkend | OPEN |
+
+**8A Wijzigingen per agent:**
+
+| # | Agent | Wijziging | Prioriteit |
+|---|-------|-----------|-----------|
+| 8A-1 | De Koerier | Column mapping fix (reviewer_name→user_name, text→review_text, etc.), destination_id passthrough | P0 |
+| 8A-2 | De Bode | Per-destination POI counts, review counts, prediction alerts, optimization count (7 nieuwe MailerLite fields) | P1 |
+| 8A-3 | De Leermeester | MongoDB `agent_learning_patterns` collection, in-memory cache backed by persistent storage | P1 |
+| 8A-4 | De Thermostaat | Complete rewrite: simulation-only → alerting-only. Redis persistence (thermostaat:last_evaluation + history) | P1 |
+| 8A-5 | De Stylist | DESTINATION_BRAND_COLORS map (calpe + texel), detectDestination(filePath), destination-aware color check | P2 |
+| 8A-6 | De Dokter | 3 nieuwe portals (API, Texel prod, Texel dev), SSL expiry monitoring voor 5 domains | P2 |
+| 8A-7 | Legacy | workers.js deprecated banner, self-execution disabled | P3 |
+
+**Claude Code Commando - Fase 8B (Multi-Destination):**
+
+> Fase 8A (Reparatie) is COMPLEET — zie tabel hierboven.
 
 ```
-FASE 8: AI AGENTS MULTI-DESTINATION (15 AGENTS)
+FASE 8B: AI AGENTS MULTI-DESTINATION (15 AGENTS)
 
 INSTRUCTIE VOOR CLAUDE CODE:
-Je gaat Fase 8 uitvoeren: maak de 15 AI agents destination-aware.
-Dit is de meest complexe fase - plan zorgvuldig en werk incrementeel.
+Je gaat Fase 8B uitvoeren: maak de 15 AI agents destination-aware.
+Fase 8A (reparatie) is COMPLEET — alle agents werken nu op Calpe baseline.
 
 STAP 0: STRATEGISCHE DOCUMENTATIE ANALYSEREN (VERPLICHT!)
 
 LEES VOORDAT JE BEGINT:
-1. CLAUDE.md - Check Fase 7 = COMPLEET
+1. CLAUDE.md - Check Fase 8A = COMPLEET
 2. docs/strategy/HolidaiButler_Master_Strategie.md - Actuele status
 3. Agent Masterplan: docs/CLAUDE_AGENTS_MASTERPLAN.md
 4. Bestaande agent code: ls -la platform-core/src/services/agents/
@@ -573,7 +594,7 @@ NA AFRONDING - DOCUMENTATIE UPDATE (VERPLICHT!):
 
 ---
 
-### Fase 8b: Agent Dashboard (Admin Portal)
+### Fase 8C: Agent Dashboard (Admin Portal)
 
 **Vereisten (per eigenaar):**
 - Frank wil dagelijks eenvoudig kunnen monitoren
@@ -583,19 +604,19 @@ NA AFRONDING - DOCUMENTATIE UPDATE (VERPLICHT!):
 - Recente activiteit log
 - Error/warning highlighting
 
-**Claude Code Commando - Fase 8b:**
+**Claude Code Commando - Fase 8C:**
 
 ```
-FASE 8b: AGENT DASHBOARD IN ADMIN PORTAL
+FASE 8C: AGENT DASHBOARD IN ADMIN PORTAL
 
 INSTRUCTIE VOOR CLAUDE CODE:
-Je gaat Fase 8b uitvoeren: implementeer een Agent Dashboard in de Admin Portal
+Je gaat Fase 8C uitvoeren: implementeer een Agent Dashboard in de Admin Portal
 zodat Frank dagelijks kan monitoren wat de 15 agents doen/hebben gedaan.
 
 STAP 0: STRATEGISCHE DOCUMENTATIE ANALYSEREN (VERPLICHT!)
 
 LEES VOORDAT JE BEGINT:
-1. CLAUDE.md - Check Fase 8 = COMPLEET
+1. CLAUDE.md - Check Fase 8B = COMPLEET
 2. docs/strategy/HolidaiButler_Master_Strategie.md
 3. Admin Portal structuur: ls -la admin-module/src/pages/
 
@@ -755,6 +776,14 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - SCP deployment: oude build artifacts blijven op server (disk space waste) — overweeg `rsync --delete` of pre-clean
 - Mock data in Context providers kan per ongeluk in productie terechtkomen — altijd gaten achter DEV check
 
+### Fase 8A (20/02) - Agent Reparatie
+- In-memory Maps (learningStore, configHistory) gaan verloren bij PM2 restart — altijd persistent storage (MongoDB/Redis)
+- Agents die config wijzigen moeten alerting-only zijn tenzij owner expliciet auto-apply goedkeurt
+- reviewsManager.js schreef naar kolommen die NIET BESTAAN in productie — altijd `DESCRIBE table` vóór INSERT fixes
+- Legacy workers.js was niet geïmporteerd maar ook niet gemarkeerd als deprecated — altijd opruimen
+- Brand colors hardcoded voor 1 destination → gebruik per-destination map + detectDestination() helper
+- SSL cert monitoring kan met native Node.js `tls.connect()` — geen externe dependency nodig
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -784,6 +813,10 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 19-02 | Diagnostic-first approach Fase 7 | Test API vóór code wijzigingen — bleek al te werken | Claude Code |
 | 19-02 | rating_distribution aan summary endpoint | 5-star breakdown voor frontend UX | Claude Code |
 | 19-02 | Mock data DEV-only gating | Voorkom placeholder reviews in productie | Claude Code |
+| 20-02 | Fase 8 drieledig: 8A→8B→8C | Eerst repareren, dan multi-destination, dan dashboard | Claude Code |
+| 20-02 | De Thermostaat alerting-only | Geen auto-apply config wijzigingen — owner beslist | Claude Code |
+| 20-02 | De Leermeester MongoDB persistence | `agent_learning_patterns` collection, survives PM2 restart | Claude Code |
+| 20-02 | De Dokter SSL monitoring | Native tls.connect() voor cert expiry check, geen npm dependency | Claude Code |
 
 ---
 
@@ -800,7 +833,7 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 337 Texel Accommodation zonder EN | Laag | Geaccepteerd (is_hidden_category) |
 | Opening repetitie ("The scent of" 162x) | Laag | Open |
 | PL/SV kolommen ongebruikt | Laag | Open — kandidaten voor opschonen |
-| SSL cert vervalt 2026-05-11 | Medium | Open — renewal nodig |
+| SSL cert vervalt 2026-05-11 | Medium | ✅ Gemitigeerd (De Dokter SSL monitoring) |
 
 ---
 
@@ -859,6 +892,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **6.1** | **20-02-2026** | **Fase 8A Agent Reparatie & Versterking COMPLEET: 7 agents gerepareerd/versterkt. De Koerier: column mapping fix (9 kolommen). De Leermeester: MongoDB persistence (agent_learning_patterns). De Thermostaat: herschreven naar alerting-only + Redis. De Bode: destination stats + predictions (7 MailerLite fields). De Stylist: Texel brand colors (DESTINATION_BRAND_COLORS map). De Dokter: 3 nieuwe portals + SSL monitoring (5 domains). Legacy workers.js deprecated. Kosten: EUR 0.** |
 | **6.0** | **19-02-2026** | **Fase 7 Reviews Integratie COMPLEET: 8.964 reviews (3.869 Texel, 5.095 Calpe) live op beide frontends. API werkte al correct (Outcome A). Backend: rating_distribution toegevoegd. Frontend: poiName fix + mock data DEV-only. 7/7 API tests PASS. Reviews verwijderd uit Openstaande Componenten. Kosten: EUR 0.** |
 | **5.9** | **19-02-2026** | **Fase R6d Openstaande Acties COMPLEET: (1) Markdown fix: 388 POIs gerepareerd (1.535 velden, 0 resterend). (2) 119 POIs inventarisatie: alle Accommodation (bewust excluded). (3) Social media bronnen: geaccepteerd als technische beperking (Meta anti-bot). Content Repair Pipeline R1-R6d COMPLEET.** |
 | **5.8** | **19-02-2026** | **Fase R6c Calpe Re-vectorisatie COMPLEET: calpe_pois collectie ge-revectoriseerd met R6b content. 5.932 vectoren (1.483 POIs × 4 talen), 1 error (gefixed), 25,7 min, EUR 2,37. Texel ongewijzigd (PASS). 5/5 test queries passed. Beide chatbots (Tessa + HoliBot) serveren nu R6b claim-stripped content. Totaal R6c: 12.316 vectoren, EUR 4,92.** |
@@ -872,5 +906,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 19 februari 2026 - Fase 7 COMPLEET (Reviews Integratie), Master Document v6.0*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. 8.964 reviews live. Volgende fase: Fase 8 AI Agents Multi-Destination*
+*Laatst bijgewerkt: 20 februari 2026 - Fase 8A COMPLEET (Agent Reparatie & Versterking), Master Document v6.1*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A COMPLEET. Volgende fase: Fase 8B AI Agents Multi-Destination*

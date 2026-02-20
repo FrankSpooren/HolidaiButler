@@ -1,9 +1,11 @@
+import mongoose from 'mongoose';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 import patternAnalyzer from './analyzers/patternAnalyzer.js';
 
 /**
- * Learning Agent
+ * De Leermeester — Learning Agent
  * Learns from system patterns and suggests optimizations
+ * Persistent storage via MongoDB (survives PM2 restart)
  *
  * Capabilities:
  * - Pattern recognition over time
@@ -12,24 +14,74 @@ import patternAnalyzer from './analyzers/patternAnalyzer.js';
  * - Optimization suggestions
  */
 
+// MongoDB schema for persistent pattern storage
+const LearningPatternSchema = new mongoose.Schema({
+  date: { type: String, required: true, unique: true },
+  timestamp: { type: Date, default: Date.now },
+  errorLearnings: { type: Array, default: [] },
+  performanceLearnings: { type: Array, default: [] },
+  usageLearnings: { type: Array, default: [] },
+  optimizations: { type: Array, default: [] }
+}, {
+  collection: 'agent_learning_patterns',
+  timestamps: true
+});
+
+let LearningPattern;
+try {
+  LearningPattern = mongoose.model('LearningPattern');
+} catch {
+  LearningPattern = mongoose.model('LearningPattern', LearningPatternSchema);
+}
+
 class LearningAgent {
   constructor() {
     this.sequelize = null;
     this.mongoose = null;
-    this.learningStore = new Map(); // In-memory learning store
+    this.learningCache = new Map(); // In-memory cache, backed by MongoDB
+    this.initialized = false;
   }
 
-  setConnections(sequelize, mongoose) {
+  async setConnections(sequelize, mongoose) {
     this.sequelize = sequelize;
     this.mongoose = mongoose;
     patternAnalyzer.setConnections(sequelize, mongoose);
+    await this.loadFromDB();
+  }
+
+  /**
+   * Load recent patterns from MongoDB into in-memory cache
+   */
+  async loadFromDB() {
+    try {
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const patterns = await LearningPattern.find({
+        timestamp: { $gte: cutoff }
+      }).lean();
+
+      for (const pattern of patterns) {
+        this.learningCache.set(pattern.date, {
+          timestamp: pattern.timestamp,
+          errorLearnings: pattern.errorLearnings,
+          performanceLearnings: pattern.performanceLearnings,
+          usageLearnings: pattern.usageLearnings,
+          optimizations: pattern.optimizations
+        });
+      }
+
+      this.initialized = true;
+      console.log(`[De Leermeester] Loaded ${patterns.length} learning patterns from MongoDB`);
+    } catch (error) {
+      console.error('[De Leermeester] Failed to load patterns from MongoDB:', error.message);
+      this.initialized = true; // Continue without historical data
+    }
   }
 
   /**
    * Learn from recent patterns and update knowledge
    */
   async learn() {
-    console.log('[LearningAgent] Learning from recent patterns...');
+    console.log('[De Leermeester] Learning from recent patterns...');
 
     try {
       const learnings = {
@@ -43,18 +95,38 @@ class LearningAgent {
       // Generate optimizations based on learnings
       learnings.optimizations = this.generateOptimizations(learnings);
 
-      // Store learnings
-      this.learningStore.set(new Date().toISOString().substring(0, 10), learnings);
+      // Store in cache
+      const dateKey = new Date().toISOString().substring(0, 10);
+      this.learningCache.set(dateKey, learnings);
 
-      // Keep only last 30 days of learnings
+      // Persist to MongoDB
+      try {
+        await LearningPattern.findOneAndUpdate(
+          { date: dateKey },
+          {
+            date: dateKey,
+            timestamp: new Date(),
+            errorLearnings: learnings.errorLearnings,
+            performanceLearnings: learnings.performanceLearnings,
+            usageLearnings: learnings.usageLearnings,
+            optimizations: learnings.optimizations
+          },
+          { upsert: true, new: true }
+        );
+        console.log(`[De Leermeester] Persisted learnings to MongoDB (${dateKey})`);
+      } catch (dbError) {
+        console.error('[De Leermeester] Failed to persist learnings:', dbError.message);
+      }
+
+      // Prune cache (keep last 30 days)
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
-      for (const [key] of this.learningStore) {
-        if (key < cutoff) this.learningStore.delete(key);
+      for (const [key] of this.learningCache) {
+        if (key < cutoff) this.learningCache.delete(key);
       }
 
       await logAgent('strategy-layer', 'learning_completed', {
-        description: `Learning cycle completed. ${learnings.optimizations.length} optimizations suggested.`,
-        metadata: { optimizationCount: learnings.optimizations.length }
+        description: `[De Leermeester] Learning cycle completed. ${learnings.optimizations.length} optimizations suggested. Persisted to MongoDB.`,
+        metadata: { optimizationCount: learnings.optimizations.length, persistent: true }
       });
 
       return learnings;
@@ -251,7 +323,7 @@ class LearningAgent {
     const history = [];
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
 
-    for (const [date, learnings] of this.learningStore) {
+    for (const [date, learnings] of this.learningCache) {
       if (date >= cutoff) {
         history.push({ date, ...learnings });
       }
