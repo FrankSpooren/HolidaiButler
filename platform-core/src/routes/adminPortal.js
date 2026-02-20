@@ -1,19 +1,20 @@
 /**
- * Admin Portal Routes — Fase 8C-0
- * ================================
+ * Admin Portal Routes — Fase 8C-0 + 8C-1
+ * ========================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
  *
  * Endpoints:
- *   POST /auth/login     — Admin login (rate limited)
- *   POST /auth/refresh   — Refresh access token
- *   POST /auth/logout    — Admin logout
- *   GET  /auth/me        — Current admin user info
+ *   POST /auth/login      — Admin login (rate limited)
+ *   POST /auth/refresh    — Refresh access token
+ *   POST /auth/logout     — Admin logout
+ *   GET  /auth/me         — Current admin user info
  *   GET  /dashboard       — KPI data (Redis cached 120s)
  *   GET  /health          — System health checks
+ *   GET  /agents/status   — Agent status dashboard (Redis cached 60s) [Fase 8C-1]
  *
  * @module routes/adminPortal
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 import { Router } from 'express';
@@ -504,6 +505,328 @@ router.get('/health', verifyAdminToken, async (req, res) => {
       timestamp: new Date().toISOString()
     }
   });
+});
+
+// ============================================================
+// AGENT STATUS ENDPOINT (Fase 8C-1)
+// ============================================================
+
+/**
+ * Static agent metadata — avoids importing the full agentRegistry tree
+ * which would trigger initialization of all agent modules.
+ * Kept in sync with agentRegistry.js entries.
+ */
+const AGENT_METADATA = [
+  { id: 'maestro',        name: 'De Maestro',              englishName: 'Orchestrator',             category: 'core',        type: 'A', description: 'Orkestreert alle agents en scheduled jobs',   schedule: null,           actorNames: ['orchestrator'] },
+  { id: 'bode',           name: 'De Bode',                 englishName: 'Owner Interface Agent',    category: 'core',        type: 'A', description: 'Daily briefing en owner communicatie',        schedule: '0 8 * * *',   actorNames: ['orchestrator'] },
+  { id: 'dokter',         name: 'De Dokter',               englishName: 'Health Monitor Agent',     category: 'operations',  type: 'A', description: 'Systeem monitoring en health checks',         schedule: '0 * * * *',   actorNames: ['health-monitor'] },
+  { id: 'koerier',        name: 'De Koerier',              englishName: 'Data Sync Agent',          category: 'operations',  type: 'A', description: 'POI en review data synchronisatie',           schedule: '0 6 * * *',   actorNames: ['data-sync', 'reviews-manager'] },
+  { id: 'geheugen',       name: 'Het Geheugen',            englishName: 'HoliBot Sync Agent',       category: 'operations',  type: 'A', description: 'ChromaDB vectorisatie en QnA sync',           schedule: '0 4 * * *',   actorNames: ['holibot-sync'] },
+  { id: 'gastheer',       name: 'De Gastheer',             englishName: 'Communication Flow Agent', category: 'operations',  type: 'A', description: 'Gebruikerscommunicatie en journey processing', schedule: '0 */4 * * *', actorNames: ['communication-flow'] },
+  { id: 'poortwachter',   name: 'De Poortwachter',         englishName: 'GDPR Agent',               category: 'operations',  type: 'A', description: 'GDPR compliance en data bescherming',         schedule: '0 */4 * * *', actorNames: ['gdpr'] },
+  { id: 'stylist',        name: 'De Stylist',              englishName: 'UX/UI Agent',              category: 'development', type: 'B', description: 'UX/UI review en brand consistency',           schedule: '0 6 * * 1',   actorNames: ['dev-layer'] },
+  { id: 'corrector',      name: 'De Corrector',            englishName: 'Code Agent',               category: 'development', type: 'B', description: 'Code quality en best practices',              schedule: '0 6 * * 1',   actorNames: ['dev-layer'] },
+  { id: 'bewaker',        name: 'De Bewaker',              englishName: 'Security Agent',           category: 'development', type: 'B', description: 'Security scanning en vulnerability checks',    schedule: '0 2 * * *',   actorNames: ['dev-layer'] },
+  { id: 'inspecteur',     name: 'De Inspecteur',           englishName: 'Quality Agent',            category: 'development', type: 'A', description: 'Kwaliteitscontrole en rapportage',            schedule: '0 6 * * 1',   actorNames: ['dev-layer'] },
+  { id: 'architect',      name: 'De Architect',            englishName: 'Architecture Agent',       category: 'strategy',    type: 'B', description: 'Architectuur assessment en aanbevelingen',     schedule: '0 3 * * 0',   actorNames: ['strategy-layer'] },
+  { id: 'leermeester',    name: 'De Leermeester',          englishName: 'Learning Agent',           category: 'strategy',    type: 'A', description: 'Pattern learning en optimalisatie',            schedule: '30 5 * * 1',  actorNames: ['strategy-layer'] },
+  { id: 'thermostaat',    name: 'De Thermostaat',          englishName: 'Adaptive Config Agent',    category: 'strategy',    type: 'A', description: 'Configuratie evaluatie en alerting',           schedule: '0 */6 * * *', actorNames: ['strategy-layer'] },
+  { id: 'weermeester',    name: 'De Weermeester',          englishName: 'Prediction Agent',         category: 'strategy',    type: 'A', description: 'Voorspellingen en trend analyse',              schedule: '0 3 * * 0',   actorNames: ['strategy-layer'] },
+  { id: 'contentQuality', name: 'Content Quality Checker', englishName: 'Content Quality Checker',  category: 'monitoring',  type: 'A', description: 'POI content completeness en consistency',      schedule: '0 5 * * 1',   actorNames: ['data-sync'] },
+  { id: 'smokeTest',      name: 'Smoke Test Runner',       englishName: 'Smoke Test Runner',        category: 'monitoring',  type: 'A', description: 'E2E smoke tests per destination',              schedule: '45 7 * * *',  actorNames: ['health-monitor'] },
+  { id: 'backupHealth',   name: 'Backup Health Checker',   englishName: 'Backup Health Checker',    category: 'monitoring',  type: 'B', description: 'Backup recency en disk space monitoring',      schedule: '30 7 * * *',  actorNames: ['health-monitor'] }
+];
+
+/**
+ * Convert cron expression to human-readable Dutch string
+ */
+function cronToHuman(cron) {
+  if (!cron) return 'On-demand';
+  const parts = cron.split(' ');
+  if (parts.length !== 5) return cron;
+  const [min, hour, dom, , dow] = parts;
+
+  // Every N minutes
+  if (min.startsWith('*/') && hour === '*') return `Elke ${min.slice(2)} min`;
+  // Every N hours
+  if (min === '0' && hour.startsWith('*/')) return `Elke ${hour.slice(2)} uur`;
+  // Specific hour:min patterns
+  const hh = hour.padStart(2, '0');
+  const mm = min.padStart(2, '0');
+  const time = `${hh}:${mm}`;
+  // Monthly on Nth
+  if (dom !== '*') return `Maandelijks ${dom}e ${time}`;
+  // Day of week
+  const dayNames = { '0': 'Zondag', '1': 'Maandag', '2': 'Dinsdag', '3': 'Woensdag', '4': 'Donderdag', '5': 'Vrijdag', '6': 'Zaterdag' };
+  if (dow !== '*') return `${dayNames[dow] || `Dag ${dow}`} ${time}`;
+  // Daily at specific time
+  return `Dagelijks ${time}`;
+}
+
+/**
+ * Calculate agent status based on last run and schedule
+ */
+function calculateAgentStatus(lastRun, schedule) {
+  if (!lastRun) return 'unknown';
+  if (lastRun.status === 'error' || lastRun.status === 'failed') return 'error';
+
+  if (!schedule) return lastRun.status === 'completed' ? 'healthy' : 'warning';
+
+  // Parse schedule to get interval in ms
+  const parts = schedule.split(' ');
+  const [min, hour] = parts;
+  let intervalMs;
+  if (min.startsWith('*/') && hour === '*') {
+    intervalMs = parseInt(min.slice(2)) * 60 * 1000;
+  } else if (min === '0' && hour.startsWith('*/')) {
+    intervalMs = parseInt(hour.slice(2)) * 3600 * 1000;
+  } else if (hour === '*') {
+    intervalMs = 60 * 60 * 1000; // hourly
+  } else {
+    intervalMs = 24 * 3600 * 1000; // daily default
+  }
+
+  const elapsed = Date.now() - new Date(lastRun.timestamp).getTime();
+  if (elapsed < intervalMs * 2) return 'healthy';
+  if (elapsed < 24 * 3600 * 1000) return 'warning';
+  return 'warning';
+}
+
+/**
+ * GET /agents/status
+ * Agent dashboard data. Redis cached for 60 seconds.
+ * Sources: static metadata + MongoDB audit_logs + Redis state + monitoring collections
+ */
+router.get('/agents/status', verifyAdminToken, async (req, res) => {
+  try {
+    const { category, destination, refresh } = req.query;
+    const cacheKey = 'admin:agents:status';
+    const redis = getRedis();
+
+    // Check cache (unless force refresh)
+    if (redis && refresh !== 'true') {
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) return res.json(JSON.parse(cached));
+      } catch { /* cache miss */ }
+    }
+
+    // Build agent list from static metadata
+    const agents = AGENT_METADATA.map(meta => ({
+      id: meta.id,
+      name: meta.name,
+      englishName: meta.englishName,
+      category: meta.category,
+      type: meta.type,
+      description: meta.description,
+      schedule: meta.schedule,
+      scheduleHuman: cronToHuman(meta.schedule),
+      destinationAware: meta.type === 'A',
+      status: 'unknown',
+      lastRun: null,
+      destinations: meta.type === 'A' ? { calpe: { lastRun: null, status: 'unknown' }, texel: { lastRun: null, status: 'unknown' } } : null
+    }));
+
+    let partial = false;
+    const recentActivity = [];
+
+    // BRON 2: MongoDB audit_logs (last 24h)
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const db = mongoose.connection.db;
+        const auditLogs = db.collection('audit_logs');
+        const since = new Date(Date.now() - 24 * 3600 * 1000);
+
+        // Get last runs per actor
+        const lastRuns = await auditLogs.aggregate([
+          { $match: { 'actor.type': 'agent', timestamp: { $gte: since } } },
+          { $sort: { timestamp: -1 } },
+          { $group: {
+            _id: '$actor.name',
+            lastTimestamp: { $first: '$timestamp' },
+            lastAction: { $first: '$action' },
+            lastStatus: { $first: '$status' },
+            lastDuration: { $first: '$duration' },
+            lastDescription: { $first: '$description' },
+            lastResult: { $first: '$result' }
+          }}
+        ]).toArray();
+
+        // Map audit log actors to agents
+        for (const agent of agents) {
+          const meta = AGENT_METADATA.find(m => m.id === agent.id);
+          if (!meta) continue;
+
+          const matchingRuns = lastRuns.filter(r => meta.actorNames.includes(r._id));
+          if (matchingRuns.length > 0) {
+            // Use the most recent run across all actor names
+            const latest = matchingRuns.sort((a, b) => new Date(b.lastTimestamp) - new Date(a.lastTimestamp))[0];
+            agent.lastRun = {
+              timestamp: latest.lastTimestamp,
+              duration: latest.lastDuration || null,
+              status: latest.lastStatus === 'completed' ? 'success' : latest.lastStatus || 'unknown',
+              error: latest.lastResult?.success === false ? (latest.lastResult?.error || latest.lastDescription) : null
+            };
+            agent.status = calculateAgentStatus(agent.lastRun, meta.schedule);
+          }
+        }
+
+        // Get recent activity (last 50 entries)
+        const recentLogs = await auditLogs.find(
+          { 'actor.type': 'agent', timestamp: { $gte: since } }
+        ).sort({ timestamp: -1 }).limit(50).toArray();
+
+        for (const log of recentLogs) {
+          // Map actor name to agent display name
+          const matchedAgent = AGENT_METADATA.find(m => m.actorNames.includes(log.actor?.name));
+          recentActivity.push({
+            timestamp: log.timestamp,
+            agent: matchedAgent ? matchedAgent.name : (log.actor?.name || 'Unknown'),
+            action: log.action?.replace(/^job_(started|completed)_/, '') || log.description || 'unknown',
+            destination: log.metadata?.destinationId ? (log.metadata.destinationId === 1 ? 'calpe' : log.metadata.destinationId === 2 ? 'texel' : 'all') : 'all',
+            status: log.status === 'completed' ? 'success' : log.status || 'unknown',
+            details: log.description || null,
+            duration: log.duration || null
+          });
+        }
+
+        // BRON 4: MongoDB monitoring collections
+        try {
+          const smokeAgent = agents.find(a => a.id === 'smokeTest');
+          if (smokeAgent) {
+            const smokeResult = await db.collection('smoke_test_results').findOne({}, { sort: { timestamp: -1 } });
+            if (smokeResult) {
+              smokeAgent.lastRun = {
+                timestamp: smokeResult.timestamp,
+                duration: null,
+                status: smokeResult.total_failed === 0 ? 'success' : 'partial',
+                error: smokeResult.total_failed > 0 ? `${smokeResult.total_failed}/${smokeResult.total_tests} tests failed` : null
+              };
+              smokeAgent.status = calculateAgentStatus(smokeAgent.lastRun, AGENT_METADATA.find(m => m.id === 'smokeTest').schedule);
+              if (smokeAgent.destinations) {
+                if (smokeResult.destinations?.calpe) {
+                  smokeAgent.destinations.calpe = {
+                    lastRun: smokeResult.timestamp,
+                    status: smokeResult.destinations.calpe.tests_failed === 0 ? 'success' : 'partial'
+                  };
+                }
+                if (smokeResult.destinations?.texel) {
+                  smokeAgent.destinations.texel = {
+                    lastRun: smokeResult.timestamp,
+                    status: smokeResult.destinations.texel.tests_failed === 0 ? 'success' : 'partial'
+                  };
+                }
+              }
+            }
+          }
+
+          const contentAgent = agents.find(a => a.id === 'contentQuality');
+          if (contentAgent) {
+            const contentResult = await db.collection('content_quality_audits').findOne({}, { sort: { timestamp: -1 } });
+            if (contentResult) {
+              contentAgent.lastRun = {
+                timestamp: contentResult.timestamp,
+                duration: null,
+                status: contentResult.overall_score >= 8 ? 'success' : 'partial',
+                error: contentResult.overall_score < 8 ? `Quality score: ${contentResult.overall_score}/10` : null
+              };
+              contentAgent.status = calculateAgentStatus(contentAgent.lastRun, AGENT_METADATA.find(m => m.id === 'contentQuality').schedule);
+            }
+          }
+
+          const backupAgent = agents.find(a => a.id === 'backupHealth');
+          if (backupAgent) {
+            const backupResult = await db.collection('backup_health_checks').findOne({}, { sort: { timestamp: -1 } });
+            if (backupResult) {
+              backupAgent.lastRun = {
+                timestamp: backupResult.timestamp,
+                duration: null,
+                status: backupResult.overall === 'HEALTHY' ? 'success' : 'error',
+                error: backupResult.overall !== 'HEALTHY' ? `Backup status: ${backupResult.overall}` : null
+              };
+              backupAgent.status = backupResult.overall === 'HEALTHY' ? 'healthy' : 'error';
+            }
+          }
+        } catch (monitorErr) {
+          logger.warn('[AdminPortal] Monitoring collections query failed:', monitorErr.message);
+        }
+      } else {
+        partial = true;
+      }
+    } catch (mongoErr) {
+      logger.warn('[AdminPortal] MongoDB agent query failed:', mongoErr.message);
+      partial = true;
+    }
+
+    // BRON 3: Redis agent state (thermostaat)
+    if (redis) {
+      try {
+        const thermoData = await redis.get('thermostaat:last_evaluation');
+        if (thermoData) {
+          const thermo = JSON.parse(thermoData);
+          const thermoAgent = agents.find(a => a.id === 'thermostaat');
+          if (thermoAgent && thermo.timestamp) {
+            if (!thermoAgent.lastRun || new Date(thermo.timestamp) > new Date(thermoAgent.lastRun.timestamp)) {
+              thermoAgent.lastRun = {
+                timestamp: thermo.timestamp,
+                duration: null,
+                status: 'success',
+                error: null
+              };
+              thermoAgent.status = calculateAgentStatus(thermoAgent.lastRun, AGENT_METADATA.find(m => m.id === 'thermostaat').schedule);
+            }
+          }
+        }
+      } catch (redisErr) {
+        logger.warn('[AdminPortal] Redis agent state query failed:', redisErr.message);
+      }
+    }
+
+    // Build summary
+    const summary = {
+      total: agents.length,
+      healthy: agents.filter(a => a.status === 'healthy').length,
+      warning: agents.filter(a => a.status === 'warning').length,
+      error: agents.filter(a => a.status === 'error').length,
+      unknown: agents.filter(a => a.status === 'unknown').length
+    };
+
+    // Apply server-side filters (client can also filter)
+    let filteredAgents = agents;
+    if (category && category !== 'all') {
+      filteredAgents = agents.filter(a => a.category === category);
+    }
+
+    const result = {
+      success: true,
+      data: {
+        timestamp: new Date().toISOString(),
+        partial,
+        summary,
+        destinations: {
+          calpe: { id: 1, activeAgents: agents.filter(a => a.type === 'A').length },
+          texel: { id: 2, activeAgents: agents.filter(a => a.type === 'A').length }
+        },
+        agents: filteredAgents,
+        recentActivity
+      }
+    };
+
+    // Cache for 60 seconds
+    if (redis) {
+      try {
+        await redis.set(cacheKey, JSON.stringify(result), 'EX', 60);
+      } catch { /* non-critical */ }
+    }
+
+    res.json(result);
+  } catch (error) {
+    logger.error('[AdminPortal] Agent status error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching agent status' }
+    });
+  }
 });
 
 export default router;

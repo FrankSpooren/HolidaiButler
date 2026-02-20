@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 20 februari 2026
-**Versie**: 6.4
+**Versie**: 6.5
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 8C-0 COMPLEET - Admin Portal Foundation. 6 admin API endpoints in platform-core, React 18 + MUI frontend, CI/CD pipeline, 15/15 tests PASS. Fase 8C Agent Dashboard volgende.
+**Status**: FASE 8C-1 COMPLEET - Agent Dashboard. GET /agents/status endpoint (18 agents, MongoDB+Redis data), AgentsPage frontend (summary cards, filter, agent tabel, activity log), 12/12 tests PASS. Fase 8C 100% COMPLEET.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.26.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.28.0) in repo root + Hetzner
 
 ---
 
@@ -51,7 +51,7 @@
 | **Fase 8A+** | Agent Monitoring & Briefing Expansion (3 modules, 5 jobs, 40 totaal) | ✅ COMPLEET | 20-02-2026 | 16/16 tests PASS | EUR 0 |
 | **Fase 8B** | Agent Multi-Destination (BaseAgent, 18 agents, Threema) | ✅ COMPLEET | 20-02-2026 | 22/22 tests PASS | EUR 0 |
 | **Fase 8C-0** | Admin Portal Foundation (infra, backend, frontend, CI/CD) | ✅ COMPLEET | 20-02-2026 | 15/15 tests PASS | EUR 0 |
-| **Fase 8C** | Agent Dashboard (Admin Portal) | ❌ OPEN (8C-0 Foundation COMPLEET) | - | - | ~EUR 0 |
+| **Fase 8C-1** | Agent Dashboard (backend + frontend + i18n) | ✅ COMPLEET | 20-02-2026 | 12/12 tests PASS | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -1016,6 +1016,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **6.5** | **20-02-2026** | **Fase 8C-1 Agent Dashboard COMPLEET: Backend GET /agents/status (AGENT_METADATA 18 entries, MongoDB audit_logs, Redis thermostaat+cache, monitoring collections, graceful degradation). Frontend AgentsPage: 4 summary cards, 6 category filter chips, destination dropdown, sortable agent tabel (Cat A destination-aware, Cat B shared), recent activity (10/50), auto-refresh 5 min, i18n NL/EN (30+ keys). 12/12 tests PASS. Kosten: EUR 0. adminPortal.js v1.1.0 (7 endpoints). Lessons: static metadata > registry import (dependency isolation), MongoDB audit_logs als primary source (Redis te beperkt). CLAUDE.md v3.28.0.** |
 | **6.4** | **20-02-2026** | **Fase 8C-0 Admin Portal Foundation COMPLEET: 3 VHosts + SSL + CORS. 6 admin API endpoints in platform-core (login, refresh, logout, me, dashboard, health). JWT auth (8h+7d), bcrypt, rate limiting, Redis cache. React 18 + MUI 5 + Vite 4 + Zustand frontend (login, dashboard, i18n NL/EN). CI/CD: deploy-admin-module.yml met backup + rollback. Admin user: admin@holidaibutler.com. 15/15 tests PASS. Typo fixes: threama→threema. Kosten: EUR 0. CLAUDE.md v3.27.0.** |
 | **6.3** | **20-02-2026** | **Fase 8B Agent Multi-Destination COMPLEET: BaseAgent pattern (run/runForDestination/aggregateResults). 3 nieuwe bestanden: BaseAgent.js, destinationRunner.js, agentRegistry.js. 18 agents geregistreerd (13 Categorie A destination-aware, 5 Categorie B shared). Threema configuratie verificatie in smoke tests (dagelijks, passief). Config mapping fix (c.destination.id i.p.v. c.id). 22/22 tests PASS. Audit gap D2 inhaal: Fase 8A+ detail subsectie toegevoegd. Lessons Learned 8A+/8B. Beslissingen Log 8A+/8B. Risico Register 8A+/8B. Kosten: EUR 0. CLAUDE.md v3.26.0.** |
 | **6.2** | **20-02-2026** | **Fase 8A+ Agent Monitoring & Briefing Expansion COMPLEET: 3 nieuwe monitoring modules (contentQualityChecker, backupHealthChecker, smokeTestRunner). 5 nieuwe scheduled jobs (totaal 35→40). Daily briefing uitgebreid met smoke test/backup/content quality sections + 3 nieuwe MailerLite fields. ChromaDB state snapshot via Het Geheugen. 16/16 tests PASS. Kosten: EUR 0.** |
@@ -1033,5 +1034,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 20 februari 2026 - Fase 8C-0 COMPLEET (Admin Portal Foundation), Master Document v6.4*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A + 8A+ + 8B + 8C-0 COMPLEET. Volgende fase: Fase 8C Agent Dashboard (Admin Portal)*
+*Laatst bijgewerkt: 20 februari 2026 - Fase 8C-1 COMPLEET (Agent Dashboard), Master Document v6.5*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A + 8A+ + 8B + 8C-0 + 8C-1 COMPLEET. Fase 8C 100% COMPLEET.*
