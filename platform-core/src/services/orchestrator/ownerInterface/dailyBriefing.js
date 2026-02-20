@@ -101,8 +101,9 @@ async function generateDailyBriefing() {
     console.log("[De Bode] Learning data unavailable:", error.message);
   }
 
-  // === Fase 8A+ — Smoke Test Results ===
+  // === Fase 8A+ / 8B — Smoke Test Results + Threema Status ===
   let smokeTestSummary = "Geen recente test";
+  let threemaStatus = "UNKNOWN";
   try {
     const smokeRunner = await import("../../agents/healthMonitor/smokeTestRunner.js");
     const latestSmoke = await smokeRunner.default.getLatestResult();
@@ -122,6 +123,11 @@ async function generateDailyBriefing() {
         }
         for (const f of (latestSmoke.infrastructure?.failures || [])) failNames.push(f.name);
         smokeTestSummary += ` | FAILURES: ${failNames.join(', ')}`;
+      }
+      // Threema status from smoke test (Fase 8B)
+      if (latestSmoke.threema) {
+        threemaStatus = latestSmoke.threema.status || 'UNKNOWN';
+        smokeTestSummary += ` | Threema: ${threemaStatus}`;
       }
     }
   } catch (error) {
@@ -193,38 +199,48 @@ async function generateDailyBriefing() {
 
   // Determine status (considers smoke test + backup failures too)
   let statusSummary = "Systeem OK";
+  const alertItems = [];
   if (errorCount > 0) {
     statusSummary = `${errorCount} error(s) gedetecteerd`;
+    alertItems.push(`${errorCount} error(s) gedetecteerd`);
   }
   if (costReport.alerts.length > 0) {
     statusSummary = `${costReport.alerts.length} budget alert(s)`;
+    alertItems.push(`${costReport.alerts.length} budget alert(s)`);
   }
   if (pendingApprovals.length > 0) {
     statusSummary = `${pendingApprovals.length} item(s) wachten op goedkeuring`;
   }
   if (predictionAlerts.length > 0) {
     statusSummary = `${predictionAlerts.length} voorspellingswaarschuwing(en)`;
+    alertItems.push(`${predictionAlerts.length} voorspellingswaarschuwing(en)`);
+  }
+  // Fase 8B: Threema alert if not configured
+  if (threemaStatus === 'NOT_CONFIGURED') {
+    alertItems.push('Threema NIET GECONFIGUREERD — urgentie 5 alerts alleen via email');
   }
   if (errorCount > 5 || costReport.summary.percentageUsed > 90) {
     statusSummary = "Actie vereist - check dashboard";
   }
 
   // Build fields for MailerLite template
-  // Section ordering: alerts → smoke → backups → POI → content → predictions → agents → budget
+  // Section ordering (Fase 8B): alerts → smoke → backups → destinations → content → predictions → agents → budget
   const fields = {
     briefing_date: today,
     // Status (top)
     status_summary: statusSummary,
-    // Smoke Tests (NEW in 8A+)
+    // Alerts (Fase 8B: includes Threema warning)
+    alert_items: alertItems.length > 0 ? alertItems.join(" | ") : "Geen waarschuwingen",
+    // Smoke Tests (8A+ + 8B Threema)
     smoke_test_summary: smokeTestSummary,
-    // Backups (NEW in 8A+)
+    // Backups (8A+)
     backup_summary: backupSummary,
-    // Destinations
+    // Destinations (8B: per-destination aggregated)
     calpe_pois: String(destinationStats.calpe.activePois || "?"),
     texel_pois: String(destinationStats.texel.activePois || "?"),
     calpe_reviews: String(destinationStats.calpe.reviewCount || "?"),
     texel_reviews: String(destinationStats.texel.reviewCount || "?"),
-    // Content Quality (NEW in 8A+)
+    // Content Quality (8A+)
     content_quality_summary: contentQualitySummary,
     // Predictions
     prediction_alerts: String(predictionAlerts.length),
@@ -238,6 +254,8 @@ async function generateDailyBriefing() {
     pending_count: String(pendingApprovals.length),
     // Optimizations
     optimization_count: String(optimizationCount),
+    // Threema (Fase 8B)
+    threema_status: threemaStatus,
     // Budget
     budget_spent: `${costReport.summary.totalSpent.toFixed(2)}`,
     budget_percentage: `${costReport.summary.percentageUsed.toFixed(1)}%`,
@@ -258,7 +276,8 @@ async function generateDailyBriefing() {
       optimizations: optimizationCount,
       smokeTests: smokeTestSummary,
       backups: backupSummary,
-      contentQuality: contentQualitySummary
+      contentQuality: contentQualitySummary,
+      threemaStatus
     }
   };
 }

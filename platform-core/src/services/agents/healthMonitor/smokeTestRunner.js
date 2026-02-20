@@ -37,6 +37,7 @@ const smokeTestResultSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
   destinations: { type: mongoose.Schema.Types.Mixed },
   infrastructure: { type: mongoose.Schema.Types.Mixed },
+  threema: { type: mongoose.Schema.Types.Mixed },
   total_passed: { type: Number },
   total_failed: { type: Number },
   total_tests: { type: Number }
@@ -238,6 +239,14 @@ class SmokeTestRunner {
 
       const infrastructure = await this.runInfrastructureSmokeTests();
 
+      // Threema configuration check (passive — no real messages sent)
+      const threemaCheck = await this.checkThreemaConfiguration();
+      if (threemaCheck.status === 'NOT_CONFIGURED') {
+        console.warn('[De Dokter] Threema NOT CONFIGURED — urgentie 5 alerts disabled');
+      } else {
+        console.log('[De Dokter] Threema: CONFIGURED');
+      }
+
       // Calculate totals
       let totalPassed = infrastructure.tests_passed;
       let totalFailed = infrastructure.tests_failed;
@@ -255,6 +264,7 @@ class SmokeTestRunner {
         timestamp: new Date(),
         destinations,
         infrastructure,
+        threema: threemaCheck,
         total_passed: totalPassed,
         total_failed: totalFailed,
         total_tests: totalTests
@@ -298,6 +308,45 @@ class SmokeTestRunner {
         error: error.message
       };
     }
+  }
+
+  /**
+   * Check Threema Gateway configuration status
+   * PASSIVE check only — never sends a real message (costs €0.05/msg)
+   * Verifies that environment variables are present.
+   * @returns {Promise<Object>} Threema configuration status
+   */
+  async checkThreemaConfiguration() {
+    const THREEMA_GATEWAY_ID = process.env.THREEMA_GATEWAY_ID;
+    const THREEMA_SECRET = process.env.THREEMA_SECRET;
+    const OWNER_THREEMA_ID = process.env.OWNER_THREEMA_ID;
+
+    const results = {
+      test: 'Threema Configuration',
+      checks: {
+        THREEMA_GATEWAY_ID: !!THREEMA_GATEWAY_ID,
+        THREEMA_SECRET: !!THREEMA_SECRET,
+        OWNER_THREEMA_ID: !!OWNER_THREEMA_ID
+      },
+      all_configured: false,
+      status: 'UNKNOWN'
+    };
+
+    results.all_configured = Object.values(results.checks).every(v => v);
+
+    if (results.all_configured) {
+      results.status = 'CONFIGURED';
+      results.gateway_id_prefix = THREEMA_GATEWAY_ID.substring(0, 2) + '***';
+      results.owner_id_prefix = OWNER_THREEMA_ID.substring(0, 3) + '***';
+    } else {
+      results.status = 'NOT_CONFIGURED';
+      results.missing = Object.entries(results.checks)
+        .filter(([, v]) => !v)
+        .map(([k]) => k);
+      results.warning = 'Urgentie 5 alerts (production_down, security_breach, etc.) worden NIET via Threema verstuurd';
+    }
+
+    return results;
   }
 
   /**

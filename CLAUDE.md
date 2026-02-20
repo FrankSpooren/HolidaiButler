@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.25.0
+> **Versie**: 3.26.0
 > **Laatst bijgewerkt**: 20 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -93,9 +93,9 @@ Na elke relevante aanpassing, uitbreiding of update:
 ### Primaire Documenten
 | Document | Locatie | Versie | Inhoud |
 |----------|---------|--------|--------|
-| **Strategic Advisory** | `docs/strategy/HolidaiButler_Multi_Destination_Strategic_Advisory.md` | 2.8 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.3 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 | Agent architectuur, scheduled jobs |
-| **CLAUDE.md** | Repository root + Hetzner | 3.4.0 | Dit bestand - project context |
+| **CLAUDE.md** | Repository root + Hetzner | 3.26.0 | Dit bestand - project context |
 
 ### Leesadvies voor Claude
 **Bij elke nieuwe sessie of complexe taak, lees in deze volgorde:**
@@ -151,6 +151,10 @@ HolidaiButler/
 │   │   │   │   ├── auditTrail/
 │   │   │   │   └── ownerInterface/
 │   │   │   └── agents/            # ✅ Fase 3: Specialized Agents
+│   │   │       ├── base/              # ✅ Fase 8B: BaseAgent + Registry
+│   │   │       │   ├── BaseAgent.js
+│   │   │       │   ├── destinationRunner.js
+│   │   │       │   └── agentRegistry.js
 │   │   │       ├── healthMonitor/
 │   │   │       ├── ownerInterfaceAgent/
 │   │   │       ├── dataSync/
@@ -427,7 +431,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 7** | Reviews Integratie (8.964 reviews live, rating_distribution, poiName fix) | ✅ COMPLEET | 19-02-2026 |
 | **Fase 8A** | Agent Reparatie & Versterking (7 agents gerepareerd) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8A+** | Agent Monitoring & Briefing Expansion (3 modules, 5 jobs) | ✅ COMPLEET | 20-02-2026 |
-| **Fase 8B** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
+| **Fase 8B** | AI Agents Multi-Destination (BaseAgent, 18 agents, Threema) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8C** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
 
 ### Fase 4/4b Resultaten
@@ -1011,6 +1015,57 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | MODIFIED | `src/services/agents/holibotSync/index.js` (+createChromaDBSnapshot) |
 | MODIFIED | `src/services/orchestrator/ownerInterface/dailyBriefing.js` (rewrite) |
 
+### Fase 8B Resultaten (Agent Multi-Destination — 20/02/2026)
+- **Status**: COMPLEET (20-02-2026)
+- **Kosten**: EUR 0 (pure code refactoring, geen LLM calls)
+- **Doel**: Alle 15 agents destination-aware maken via BaseAgent pattern + Threema verificatie
+
+**BaseAgent Pattern:**
+- `BaseAgent.js`: Foundation class met `run('all')` / `run(destinationId)` / `aggregateResults()`
+- `destinationRunner.js`: Mixin helper die `run()` toevoegt aan bestaande agent singletons zonder herschrijven
+- `agentRegistry.js`: Centrale registratie van alle 18 entries (15 agents + 3 monitoring modules)
+- Config bridge: `createRequire()` voor ESM→CJS import van destination configs
+
+**Agent Classificatie:**
+
+| Categorie | Agents | Pattern | Beschrijving |
+|-----------|--------|---------|-------------|
+| **A: Destination-Aware** | 13 | `runForDestination(id)` | Draait per destination (Calpe + Texel) |
+| **B: Shared** | 5 | `execute()` | Platform-breed, draait 1x |
+
+**Categorie A Agents (13):**
+De Maestro (#1), De Bode (#2), De Dokter (#3), De Koerier (#4), Het Geheugen (#5), De Gastheer (#6), De Poortwachter (#7), De Inspecteur (#11), De Leermeester (#13), De Thermostaat (#14), De Weermeester (#15), Content Quality Checker, Smoke Test Runner
+
+**Categorie B Agents (5):**
+De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup Health Checker
+
+**Threema Verificatie:**
+- `checkThreemaConfiguration()` in smokeTestRunner.js (passieve env var check, GEEN echte berichten)
+- Status: NOT_CONFIGURED (env vars niet gezet op Hetzner)
+- Dagelijkse check via smoke-test job (07:45)
+- Alert in daily briefing als NOT_CONFIGURED
+- Daily briefing velden: `threema_status`, `alert_items` (incl. Threema warning)
+
+**Config Mapping Fix:**
+- ROOT CAUSE: `getActiveDestinations()` returns config met `config.destination.id`, NIET `config.id`
+- Fix: beide `destinationRunner.js` en `BaseAgent.js` gebruiken nu `c.destination.id/code/name`
+
+**Test Resultaten**: 22/22 PASS
+- BaseAgent unit tests: 10/10 (instantiation, config mapping, single dest, error isolation, timing)
+- Threema tests: 4/4 (method exists, status check, dailyBriefing fields)
+- Agent registry: 4/4 (18 agents, all have run(), dest-aware have runForDestination(), shared have execute())
+- Integration: 4/4 (40 BullMQ jobs, health Calpe/Texel, POI API Calpe/Texel)
+
+**Bestanden:**
+
+| Actie | Bestand |
+|-------|---------|
+| NEW | `src/services/agents/base/BaseAgent.js` |
+| NEW | `src/services/agents/base/destinationRunner.js` |
+| NEW | `src/services/agents/base/agentRegistry.js` |
+| MODIFIED | `src/services/agents/healthMonitor/smokeTestRunner.js` (+Threema check, +threema schema) |
+| MODIFIED | `src/services/orchestrator/ownerInterface/dailyBriefing.js` (+threema_status, +alert_items) |
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -1176,6 +1231,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.26.0** | **2026-02-20** | **Fase 8B Agent Multi-Destination COMPLEET: BaseAgent pattern (run/runForDestination/aggregateResults). 3 nieuwe bestanden: BaseAgent.js, destinationRunner.js, agentRegistry.js. 18 agents geregistreerd (13 Categorie A destination-aware, 5 Categorie B shared). Threema configuratie verificatie in smoke tests (dagelijks, passief). Daily briefing: threema_status + alert_items velden. Config mapping fix (c.destination.id i.p.v. c.id). 22/22 tests PASS. Kosten: EUR 0. Repo structuur bijgewerkt. CLAUDE.md v3.26.0, Master Strategie v6.3.** |
 | **3.25.0** | **2026-02-20** | **Fase 8A+ Agent Monitoring & Briefing Expansion COMPLEET: 3 nieuwe monitoring modules (contentQualityChecker, backupHealthChecker, smokeTestRunner). 5 nieuwe scheduled jobs (content-quality-audit, backup-recency-check, smoke-test, chromadb-state-snapshot, agent-success-rate). Totaal jobs: 35→40. Daily briefing (De Bode) uitgebreid met smoke test summary, backup summary, content quality summary (3 MailerLite fields). ChromaDB state snapshot via Het Geheugen. 16/16 tests PASS. Kosten: EUR 0. CLAUDE.md v3.25.0.** |
 | **3.24.0** | **2026-02-20** | **Fase 8A Agent Reparatie & Versterking COMPLEET: 7 agents gerepareerd/versterkt. De Koerier (P0): column mapping fix (9 kolommen, table name casing, destination_id passthrough). De Leermeester (P1): MongoDB persistence (agent_learning_patterns collection). De Thermostaat (P1): complete rewrite naar alerting-only + Redis persistence. De Bode (P1): destination stats, prediction alerts, optimization count (7 MailerLite fields). De Stylist (P2): DESTINATION_BRAND_COLORS map (calpe + texel). De Dokter (P2): 3 nieuwe portals + SSL expiry monitoring (5 domains). Legacy workers.js deprecated. 15 agent naamgeving gedocumenteerd. Kosten: EUR 0. CLAUDE.md v3.24.0, Master Strategie v6.1.** |
 | **3.23.0** | **2026-02-19** | **Fase 7 Reviews Integratie COMPLEET: 8.964 reviews (3.869 Texel, 5.095 Calpe) live op beide frontends. Diagnostic: API werkte al correct (Outcome A), model kolommen hebben real data, migration 009 kolommen bestaan niet. Backend: rating_distribution toegevoegd aan /reviews/summary endpoint. Frontend: poiName fix (POIDetailPage.tsx), mock reviews gated achter DEV check (UserReviewsContext.tsx). 7/7 API tests PASS, Calpe regressie PASS. Kosten: EUR 0.** |
