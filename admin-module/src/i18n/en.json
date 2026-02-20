@@ -76,6 +76,178 @@
     "partial": "Some data sources are unavailable. Displayed data may be incomplete.",
     "noResults": "No agents found for the selected filters."
   },
+  "pois": {
+    "title": "POI Management",
+    "subtitle": "Manage Points of Interest for all destinations",
+    "searchPlaceholder": "Search by name...",
+    "noResults": "No POIs found for the selected filters.",
+    "rowsPerPage": "Rows per page",
+    "active": "Active",
+    "inactive": "Inactive",
+    "view": "View",
+    "edit": "Edit",
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "editTitle": "Edit POI",
+    "characters": "characters",
+    "stats": {
+      "total": "Total",
+      "active": "Active",
+      "withContent": "With content",
+      "avgRating": "Avg. rating"
+    },
+    "filter": {
+      "destination": "Destination",
+      "content": "Content",
+      "status": "Status",
+      "sortBy": "Sort by",
+      "sortName": "Name",
+      "sortRating": "Rating",
+      "sortUpdated": "Last updated",
+      "all": "All",
+      "withContent": "With content",
+      "withoutContent": "Without content",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "table": {
+      "name": "Name",
+      "destination": "Destination",
+      "category": "Category",
+      "content": "Content",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "detail": {
+      "description": "Description",
+      "tileDescription": "Short description (tile)",
+      "noContent": "No content available",
+      "reviews": "Reviews",
+      "totalReviews": "Total reviews",
+      "avgRating": "Avg. rating",
+      "distribution": "Distribution"
+    }
+  },
+  "reviews": {
+    "title": "Reviews Moderation",
+    "subtitle": "Manage and moderate user reviews",
+    "searchPlaceholder": "Search by POI name or review text...",
+    "noResults": "No reviews found for the selected filters.",
+    "noText": "No review text",
+    "rowsPerPage": "Rows per page",
+    "view": "View",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "close": "Close",
+    "summary": {
+      "total": "Total reviews",
+      "avgRating": "Avg. rating",
+      "positive": "Positive",
+      "negative": "Negative"
+    },
+    "filter": {
+      "destination": "Destination",
+      "rating": "Rating",
+      "sentiment": "Sentiment",
+      "archived": "Status",
+      "allRatings": "All ratings",
+      "allSentiments": "All sentiments",
+      "positive": "Positive",
+      "neutral": "Neutral",
+      "negative": "Negative",
+      "active": "Active",
+      "archivedOnly": "Archived",
+      "all": "All"
+    },
+    "table": {
+      "poi": "POI",
+      "user": "User",
+      "rating": "Rating",
+      "sentiment": "Sentiment",
+      "text": "Text",
+      "date": "Date",
+      "actions": "Actions"
+    },
+    "detail": {
+      "title": "Review Details",
+      "poi": "POI",
+      "destination": "Destination",
+      "user": "User",
+      "rating": "Rating",
+      "sentiment": "Sentiment",
+      "reviewText": "Review text",
+      "visitDate": "Visit date",
+      "createdAt": "Created at",
+      "archivedAt": "Archived at"
+    }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Platform statistics and insights",
+    "contentCoverage": "Content coverage",
+    "topPois": "Top 10 POIs (most reviews)",
+    "kpi": {
+      "totalPois": "Total POIs",
+      "totalReviews": "Total Reviews",
+      "totalImages": "Total Images",
+      "contentCoverage": "Content Coverage"
+    },
+    "charts": {
+      "reviewTrends": "Review trends (12 months)",
+      "categoryDistribution": "Category distribution"
+    },
+    "export": {
+      "summary": "Summary",
+      "pois": "POIs",
+      "reviews": "Reviews"
+    },
+    "table": {
+      "name": "Name",
+      "destination": "Destination",
+      "reviews": "Reviews",
+      "rating": "Rating"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "System configuration and management",
+    "cancel": "Cancel",
+    "system": {
+      "title": "System information",
+      "runtime": "Runtime",
+      "services": "Services",
+      "admin": "Admin",
+      "uptime": "Uptime",
+      "environment": "Environment",
+      "adminUser": "Admin user",
+      "role": "Role"
+    },
+    "destinations": {
+      "title": "Destinations"
+    },
+    "cache": {
+      "title": "Cache management",
+      "description": "Clear Redis cache to remove stale data. This may cause brief delays.",
+      "clear": "Clear cache",
+      "clearTitle": "Clear cache?",
+      "clearWarning": "All admin cache keys will be removed. Data will be fetched fresh from the database.",
+      "confirmClear": "Confirm clear",
+      "clearing": "Clearing...",
+      "cleared": "Cache cleared successfully!"
+    },
+    "audit": {
+      "title": "Admin Audit Log",
+      "filterAction": "Filter by action",
+      "allActions": "All actions",
+      "date": "Date",
+      "action": "Action",
+      "user": "User",
+      "details": "Details",
+      "noEntries": "No audit log entries found."
+    }
+  },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",

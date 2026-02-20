@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.28.0
+> **Versie**: 3.29.0
 > **Laatst bijgewerkt**: 20 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -93,9 +93,9 @@ Na elke relevante aanpassing, uitbreiding of update:
 ### Primaire Documenten
 | Document | Locatie | Versie | Inhoud |
 |----------|---------|--------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.5 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.6 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 | Agent architectuur, scheduled jobs |
-| **CLAUDE.md** | Repository root + Hetzner | 3.28.0 | Dit bestand - project context |
+| **CLAUDE.md** | Repository root + Hetzner | 3.29.0 | Dit bestand - project context |
 
 ### Leesadvies voor Claude
 **Bij elke nieuwe sessie of complexe taak, lees in deze volgorde:**
@@ -134,10 +134,10 @@ HolidaiButler/
 │
 ├── admin-module/           # React 18 + MUI (admin.holidaibutler.com)
 │   ├── src/
-│   │   ├── api/            # API services (axios client, auth, dashboard, agents)
+│   │   ├── api/            # API services (client, auth, dashboard, agents, pois, reviews, analytics, settings)
 │   │   ├── components/     # Layout, dashboard, common components
-│   │   ├── hooks/          # useAuth, useDashboard, useAgentStatus
-│   │   ├── pages/          # Login, Dashboard, AgentsPage (✅ Fase 8C-1)
+│   │   ├── hooks/          # useAuth, useDashboard, useAgentStatus, usePOIs, useReviews, useAnalytics, useSettings
+│   │   ├── pages/          # Login, Dashboard, Agents, POIs, Reviews, Analytics, Settings (✅ Fase 8D)
 │   │   ├── stores/         # Zustand auth store
 │   │   ├── i18n/           # NL/EN vertalingen
 │   │   └── utils/          # Helpers (formatters, destinations, agents)
@@ -147,7 +147,8 @@ HolidaiButler/
 ├── platform-core/          # Node.js/Express backend
 │   ├── src/
 │   │   ├── routes/
-│   │   │   └── holibot.js
+│   │   │   ├── holibot.js
+│   │   │   └── adminPortal.js        # ✅ Fase 8C-0/8D: Admin API (19 endpoints)
 │   │   ├── controllers/
 │   │   ├── models/
 │   │   ├── services/
@@ -443,6 +444,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 8B** | AI Agents Multi-Destination (BaseAgent, 18 agents, Threema) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8C-0** | Admin Portal Foundation (3 VHosts, 6 endpoints, React app, CI/CD) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8C-1** | Agent Dashboard (backend GET /agents/status + frontend AgentsPage + i18n) | ✅ COMPLEET | 20-02-2026 |
+| **Fase 8D** | Admin Portal Feature Pack (POI Management, Reviews Moderatie, Analytics, Settings — 12 endpoints, 4 pagina's) | ✅ COMPLEET | 20-02-2026 |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -1192,6 +1194,54 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 | MODIFIED | `admin-module/src/i18n/nl.json` (+agents section) |
 | MODIFIED | `admin-module/src/i18n/en.json` (+agents section) |
 
+### Fase 8D Resultaten (Admin Portal Feature Pack — 20/02/2026)
+- **Status**: COMPLEET (20-02-2026)
+- **Kosten**: EUR 0 (pure code, geen LLM calls)
+- **Doel**: 4 resterende admin portal modules: POI Management, Reviews Moderatie, Analytics Dashboard, Settings
+
+**Backend (12 nieuwe endpoints in adminPortal.js v2.0.0)**:
+
+| Module | Endpoints | Beschrijving |
+|--------|-----------|-------------|
+| 8D-1 POI Management | GET /pois, GET /pois/stats, GET /pois/:id, PUT /pois/:id | List+pagination+search+filters, stats per destination (Redis 5min), detail met content 4 talen + images + reviews, edit content + is_active (audit logged) |
+| 8D-2 Reviews Moderatie | GET /reviews, GET /reviews/:id, PUT /reviews/:id | List+pagination+filters+summary, detail met POI context, archive/unarchive toggle (audit logged) |
+| 8D-3 Analytics | GET /analytics, GET /analytics/export | Overview+trends+top10+categories (Redis 10min), CSV export pois/reviews/summary (max 10k rows) |
+| 8D-4 Settings | GET /settings, GET /settings/audit-log, POST /settings/cache/clear | System info+service status+destinations, admin audit log (MongoDB, paginated), Redis cache invalidation (audit logged) |
+
+**Frontend (4 nieuwe pagina's + 4 API services + 4 hooks)**:
+
+| Module | Pagina | Features |
+|--------|--------|----------|
+| POIs | POIsPage.jsx | Stats cards per destination, filter bar (destination/content/status/sort), sortable table, detail dialog (images, 4-lang content tabs, review summary), edit dialog (4-lang content, is_active toggle, 2000 char validation) |
+| Reviews | ReviewsPage.jsx | Summary cards (total/avg/positive/negative), filter bar (destination/rating/sentiment/archived), table met sentiment icons, detail dialog, archive/unarchive toggle |
+| Analytics | AnalyticsPage.jsx | KPI cards, line chart review trends (12 maanden), pie chart categorie verdeling, content coverage bars per destination, top 10 POIs table, CSV export (summary/pois/reviews) |
+| Settings | SettingsPage.jsx | System info (runtime/services/admin), destination data cards, cache management met confirmation dialog, audit log table met action filter en pagination |
+
+**i18n**: 100+ nieuwe keys in nl.json en en.json (pois.*, reviews.*, analytics.*, settings.*)
+
+**Routing**: App.jsx PlaceholderPage → echte pagina componenten (alle 6 sidebar items nu actief)
+
+**Bestanden**:
+
+| Actie | Bestand |
+|-------|---------|
+| MODIFIED | `platform-core/src/routes/adminPortal.js` (v2.0.0, 19 endpoints) |
+| NEW | `admin-module/src/api/poiService.js` |
+| NEW | `admin-module/src/api/reviewService.js` |
+| NEW | `admin-module/src/api/analyticsService.js` |
+| NEW | `admin-module/src/api/settingsService.js` |
+| NEW | `admin-module/src/hooks/usePOIs.js` |
+| NEW | `admin-module/src/hooks/useReviews.js` |
+| NEW | `admin-module/src/hooks/useAnalytics.js` |
+| NEW | `admin-module/src/hooks/useSettings.js` |
+| REWRITTEN | `admin-module/src/pages/POIsPage.jsx` (was placeholder) |
+| REWRITTEN | `admin-module/src/pages/ReviewsPage.jsx` (was placeholder) |
+| REWRITTEN | `admin-module/src/pages/AnalyticsPage.jsx` (was placeholder) |
+| REWRITTEN | `admin-module/src/pages/SettingsPage.jsx` (was placeholder) |
+| MODIFIED | `admin-module/src/App.jsx` (routing update) |
+| MODIFIED | `admin-module/src/i18n/nl.json` (+100 keys) |
+| MODIFIED | `admin-module/src/i18n/en.json` (+100 keys) |
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -1345,7 +1395,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.5 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.6 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 |
 | Fase 2 Docs | `docs/agents/fase2/` | - |
 | Fase 3 Docs | `docs/agents/fase3/` | - |
@@ -1360,6 +1410,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.29.0** | **2026-02-20** | **Fase 8D Admin Portal Feature Pack COMPLEET: 4 modules: POI Management (list/detail/edit/stats, 4 endpoints), Reviews Moderatie (list/detail/archive, 3 endpoints), Analytics Dashboard (overview/trends/export, 2 endpoints), Settings (system/audit-log/cache, 3 endpoints). 4 nieuwe pagina's, 4 API services, 4 hooks, 100+ i18n keys NL/EN. Alle sidebar items actief. adminPortal.js v2.0.0 (19 endpoints). Build OK. 8C-1 audit correcties (adminPortal.js in routes tree, agents/status in endpoint tabel). Kosten: EUR 0. CLAUDE.md v3.29.0, Master Strategie v6.6.** |
 | **3.28.0** | **2026-02-20** | **Fase 8C-1 Agent Dashboard COMPLEET: Backend: GET /agents/status endpoint (AGENT_METADATA 18 entries, MongoDB audit_logs, Redis thermostaat, monitoring collections, Redis cache 60s, graceful degradation). Frontend: AgentsPage met summary cards (4), filter bar (6 category chips + destination dropdown), sortable agent tabel (18 rijen, Cat A destination-aware, Cat B shared), recent activity (10/50 entries), auto-refresh 5 min. i18n NL/EN (30+ keys). 12/12 tests PASS. Kosten: EUR 0. adminPortal.js v1.1.0 (7 endpoints). 8C-0 audit correcties (doc refs). CLAUDE.md v3.28.0, Master Strategie v6.5.** |
 | **3.27.0** | **2026-02-20** | **Fase 8C-0 Admin Portal Foundation COMPLEET: Infrastructuur (3 VHosts + SSL + CORS). Backend: 6 admin API endpoints in platform-core (login, refresh, logout, me, dashboard, health). JWT auth (8h access + 7d refresh), bcrypt, rate limiting, Redis cache. Frontend: React 18 + MUI 5 + Vite 4 + Zustand (login, dashboard, layout, i18n NL/EN). CI/CD: deploy-admin-module.yml met backup + health check + rollback. Admin user: admin@holidaibutler.com. 15/15 tests PASS. Kosten: EUR 0. 8B audit correcties (doc references). CLAUDE.md v3.27.0, Master Strategie v6.4.** |
 | **3.26.0** | **2026-02-20** | **Fase 8B Agent Multi-Destination COMPLEET: BaseAgent pattern (run/runForDestination/aggregateResults). 3 nieuwe bestanden: BaseAgent.js, destinationRunner.js, agentRegistry.js. 18 agents geregistreerd (13 Categorie A destination-aware, 5 Categorie B shared). Threema configuratie verificatie in smoke tests (dagelijks, passief). Daily briefing: threema_status + alert_items velden. Config mapping fix (c.destination.id i.p.v. c.id). 22/22 tests PASS. Kosten: EUR 0. Repo structuur bijgewerkt. CLAUDE.md v3.26.0, Master Strategie v6.3.** |
