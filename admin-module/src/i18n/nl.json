@@ -39,6 +39,43 @@
     "unhealthy": "Niet beschikbaar",
     "uptime": "API Uptime"
   },
+  "agents": {
+    "title": "Agent Dashboard",
+    "subtitle": "{{count}} agents gemonitord",
+    "refresh": "Vernieuwen",
+    "autoRefresh": "Auto-refresh: 5 min",
+    "lastUpdated": "Laatst bijgewerkt",
+    "healthy": "Gezond",
+    "warning": "Waarschuwing",
+    "error": "Fout",
+    "unknown": "Onbekend",
+    "filter": {
+      "all": "Alle",
+      "core": "Core",
+      "operations": "Operations",
+      "development": "Development",
+      "strategy": "Strategy",
+      "monitoring": "Monitoring",
+      "destination": "Destination"
+    },
+    "table": {
+      "name": "Agent",
+      "category": "Categorie",
+      "type": "Type",
+      "schedule": "Schema",
+      "calpe": "Calpe",
+      "texel": "Texel",
+      "status": "Status",
+      "shared": "\u2014 (gedeeld)"
+    },
+    "activity": {
+      "title": "Recente Activiteit",
+      "showMore": "Toon meer",
+      "showLess": "Toon minder"
+    },
+    "partial": "Sommige databronnen zijn niet bereikbaar. Getoonde data kan onvolledig zijn.",
+    "noResults": "Geen agents gevonden voor de geselecteerde filters."
+  },
   "common": {
     "loading": "Laden...",
     "error": "Er is een fout opgetreden",

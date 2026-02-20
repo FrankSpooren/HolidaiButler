@@ -39,6 +39,43 @@
     "unhealthy": "Unhealthy",
     "uptime": "API Uptime"
   },
+  "agents": {
+    "title": "Agent Dashboard",
+    "subtitle": "{{count}} agents monitored",
+    "refresh": "Refresh",
+    "autoRefresh": "Auto-refresh: 5 min",
+    "lastUpdated": "Last updated",
+    "healthy": "Healthy",
+    "warning": "Warning",
+    "error": "Error",
+    "unknown": "Unknown",
+    "filter": {
+      "all": "All",
+      "core": "Core",
+      "operations": "Operations",
+      "development": "Development",
+      "strategy": "Strategy",
+      "monitoring": "Monitoring",
+      "destination": "Destination"
+    },
+    "table": {
+      "name": "Agent",
+      "category": "Category",
+      "type": "Type",
+      "schedule": "Schedule",
+      "calpe": "Calpe",
+      "texel": "Texel",
+      "status": "Status",
+      "shared": "\u2014 (shared)"
+    },
+    "activity": {
+      "title": "Recent Activity",
+      "showMore": "Show more",
+      "showLess": "Show less"
+    },
+    "partial": "Some data sources are unavailable. Displayed data may be incomplete.",
+    "noResults": "No agents found for the selected filters."
+  },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",
