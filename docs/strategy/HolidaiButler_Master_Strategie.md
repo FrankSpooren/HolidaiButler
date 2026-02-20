@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 20 februari 2026
-**Versie**: 6.5
+**Versie**: 6.6
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 8C-1 COMPLEET - Agent Dashboard. GET /agents/status endpoint (18 agents, MongoDB+Redis data), AgentsPage frontend (summary cards, filter, agent tabel, activity log), 12/12 tests PASS. Fase 8C 100% COMPLEET.
+**Status**: FASE 8D COMPLEET - Admin Portal Feature Pack. 4 modules (POI Management, Reviews Moderatie, Analytics, Settings), 12 backend endpoints, 4 frontend pagina's, adminPortal.js v2.0.0 (19 endpoints totaal). Alle 6 admin sidebar items actief.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.28.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.29.0) in repo root + Hetzner
 
 ---
 
@@ -52,6 +52,7 @@
 | **Fase 8B** | Agent Multi-Destination (BaseAgent, 18 agents, Threema) | ✅ COMPLEET | 20-02-2026 | 22/22 tests PASS | EUR 0 |
 | **Fase 8C-0** | Admin Portal Foundation (infra, backend, frontend, CI/CD) | ✅ COMPLEET | 20-02-2026 | 15/15 tests PASS | EUR 0 |
 | **Fase 8C-1** | Agent Dashboard (backend + frontend + i18n) | ✅ COMPLEET | 20-02-2026 | 12/12 tests PASS | EUR 0 |
+| **Fase 8D** | Admin Portal Feature Pack (POIs, Reviews, Analytics, Settings — 12 endpoints, 4 pagina's) | ✅ COMPLEET | 20-02-2026 | Build OK, 401 auth OK | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -68,7 +69,8 @@
 | Fase 8A Agents Reparatie | EUR 0 | EUR 0 | ✅ |
 | Fase 8B Agents Multi-Destination | EUR 0 | EUR 0 | ✅ |
 | Fase 8C-0 Admin Portal Foundation | EUR 0 | EUR 0 | ✅ |
-| Fase 8C Agent Dashboard | EUR 0 | - | ❌ |
+| Fase 8C-1 Agent Dashboard | EUR 0 | EUR 0 | ✅ |
+| Fase 8D Admin Portal Feature Pack | EUR 0 | EUR 0 | ✅ |
 | **Totaal** | **EUR 94** | **EUR 73,91** | **78,6% van budget** |
 
 ### 1.3 Openstaande Componenten
@@ -77,7 +79,7 @@
 |---|-----------|------|------------|-------------------|---------|
 | ~~B~~ | ~~Reviews Integratie~~ | ~~Fase 7~~ | ~~P0~~ | ~~JA~~ | ✅ **COMPLEET** (19-02-2026) |
 | ~~C~~ | ~~AI Agents Multi-Destination~~ | ~~Fase 8B~~ | ~~P1~~ | ~~Operationeel~~ | ✅ **COMPLEET** (20-02-2026) — BaseAgent pattern, 18 agents, Threema |
-| D | **Agent Dashboard (Admin Portal)** | Fase 8C | P1 | Operationeel | Monitoring dashboard voor 15 agents |
+| ~~D~~ | ~~Agent Dashboard (Admin Portal)~~ | ~~Fase 8C~~ | ~~P1~~ | ~~Operationeel~~ | ✅ **COMPLEET** (20-02-2026) — Agent Dashboard + 4 feature modules |
 
 ---
 
@@ -894,6 +896,23 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - POI tabel kolom heet `is_active` (NIET `active`) — SQL queries altijd verifiëren tegen actueel schema
 - Vite build chunk warnings (614KB) zijn acceptabel voor admin portal — alleen intern gebruik, geen SEO-gevoelig
 
+### Fase 8C-1 (20/02) - Agent Dashboard
+- Static AGENT_METADATA (18 entries) in adminPortal.js > dynamic registry import — voorkomt DB connections bij route load
+- MongoDB audit_logs als primary data source voor agent status (Redis te beperkt voor historische data)
+- Graceful degradation pattern: als MongoDB/Redis faalt, return partial data met `partial: true` flag
+- Server-side filtering + Redis cache (60s) voor agent status — frontend refetcht elke 5 min
+
+### Fase 8D (20/02) - Admin Portal Feature Pack
+- **KRITIEK**: DB table names zijn case-sensitive: `POI` (uppercase), `reviews` (lowercase), `Users` (uppercase) — altijd SSH `DESCRIBE table` vóór SQL schrijven
+- **KRITIEK**: `model_reviews` tabel bestaat NIET — command doc refereerde naar verkeerde tabelnaam; correcte tabel = `reviews`
+- Column `category` (NIET `main_category`), `subcategory` (NIET `sub_category`), `last_updated` (NIET `updated_at`)
+- EN content = base kolom `enriched_detail_description` (GEEN _en suffix) — consistent met Fase 5b lesson
+- React Query `keepPreviousData` voor smooth pagination transitions (geen flash naar loading state)
+- CSV export: `responseType: 'blob'` in axios + `createObjectURL` + temporary anchor element pattern
+- Redis caching strategie: 5min voor POI stats, 10min voor analytics, 60s voor agents, GEEN cache op list endpoints (te dynamisch)
+- Audit log via MongoDB `insertOne` op elke PUT/POST actie — actor.type='admin' + IP logging
+- Parameterized SQL via Sequelize `replacements` (NOOIT string interpolatie — SQL injection prevention)
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -937,6 +956,12 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 20-02 | Unified backend (admin in platform-core) | Geen apart admin-module backend — voorkomt port conflicten, shared middleware | Claude Code |
 | 20-02 | MUI 5 voor admin portal | Enterprise-grade component library, consistent met brand theming | Claude Code |
 | 20-02 | SPA routing via Apache RewriteRule | Voorkomt 404 bij page refresh, standaard voor React apps | Claude Code |
+| 20-02 | Static AGENT_METADATA i.p.v. registry import (8C-1) | Dependency isolation — agent registry zou DB connections triggeren bij route load | Claude Code |
+| 20-02 | Graceful degradation admin endpoints | `partial: true` flag als MongoDB/Redis faalt — dashboard altijd bereikbaar | Claude Code |
+| 20-02 | Pre-flight DB schema check via SSH (8D) | Command doc had verkeerde table/column names — altijd DESCRIBE vóór SQL | Claude Code |
+| 20-02 | Redis caching strategie per endpoint type (8D) | Stats = 5min, analytics = 10min, agents = 60s, lists = geen cache | Claude Code |
+| 20-02 | keepPreviousData voor admin list hooks | Smooth pagination zonder flash naar loading state | Claude Code |
+| 20-02 | adminPortal.js als single backend file | Alle 19 admin endpoints in één bestand — eenvoudiger deployment + beheer | Claude Code |
 
 ---
 
@@ -1016,6 +1041,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **6.6** | **20-02-2026** | **Fase 8D Admin Portal Feature Pack COMPLEET: 4 modules — POI Management (list/detail/edit/stats, 4 endpoints), Reviews Moderatie (list/detail/archive, 3 endpoints), Analytics (overview/trends/export, 2 endpoints), Settings (system/audit-log/cache, 3 endpoints). 12 nieuwe endpoints, 4 pagina's, 4 API services, 4 React Query hooks, 100+ i18n keys NL/EN. adminPortal.js v2.0.0 (19 endpoints totaal). Alle 6 admin sidebar items actief. Pre-flight DB schema check via SSH (command doc had verkeerde table/column names). Deployed naar alle 3 omgevingen + Hetzner. Kosten: EUR 0. CLAUDE.md v3.29.0.** |
 | **6.5** | **20-02-2026** | **Fase 8C-1 Agent Dashboard COMPLEET: Backend GET /agents/status (AGENT_METADATA 18 entries, MongoDB audit_logs, Redis thermostaat+cache, monitoring collections, graceful degradation). Frontend AgentsPage: 4 summary cards, 6 category filter chips, destination dropdown, sortable agent tabel (Cat A destination-aware, Cat B shared), recent activity (10/50), auto-refresh 5 min, i18n NL/EN (30+ keys). 12/12 tests PASS. Kosten: EUR 0. adminPortal.js v1.1.0 (7 endpoints). Lessons: static metadata > registry import (dependency isolation), MongoDB audit_logs als primary source (Redis te beperkt). CLAUDE.md v3.28.0.** |
 | **6.4** | **20-02-2026** | **Fase 8C-0 Admin Portal Foundation COMPLEET: 3 VHosts + SSL + CORS. 6 admin API endpoints in platform-core (login, refresh, logout, me, dashboard, health). JWT auth (8h+7d), bcrypt, rate limiting, Redis cache. React 18 + MUI 5 + Vite 4 + Zustand frontend (login, dashboard, i18n NL/EN). CI/CD: deploy-admin-module.yml met backup + rollback. Admin user: admin@holidaibutler.com. 15/15 tests PASS. Typo fixes: threama→threema. Kosten: EUR 0. CLAUDE.md v3.27.0.** |
 | **6.3** | **20-02-2026** | **Fase 8B Agent Multi-Destination COMPLEET: BaseAgent pattern (run/runForDestination/aggregateResults). 3 nieuwe bestanden: BaseAgent.js, destinationRunner.js, agentRegistry.js. 18 agents geregistreerd (13 Categorie A destination-aware, 5 Categorie B shared). Threema configuratie verificatie in smoke tests (dagelijks, passief). Config mapping fix (c.destination.id i.p.v. c.id). 22/22 tests PASS. Audit gap D2 inhaal: Fase 8A+ detail subsectie toegevoegd. Lessons Learned 8A+/8B. Beslissingen Log 8A+/8B. Risico Register 8A+/8B. Kosten: EUR 0. CLAUDE.md v3.26.0.** |
@@ -1034,5 +1060,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 20 februari 2026 - Fase 8C-1 COMPLEET (Agent Dashboard), Master Document v6.5*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A + 8A+ + 8B + 8C-0 + 8C-1 COMPLEET. Fase 8C 100% COMPLEET.*
+*Laatst bijgewerkt: 20 februari 2026 - Fase 8D COMPLEET (Admin Portal Feature Pack), Master Document v6.6*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A + 8A+ + 8B + 8C-0 + 8C-1 + 8D COMPLEET. Admin Portal 100% COMPLEET (19 endpoints, 6 pagina's).*
