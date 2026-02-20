@@ -12,16 +12,42 @@ import { logAgent, logError } from '../../../orchestrator/auditTrail/index.js';
  * - UX principles (Miller's Law, Hick's Law, etc.)
  */
 
-// HolidaiButler Brand Colors (from CLAUDE.md)
-const BRAND_COLORS = {
-  headerGradientStart: '#7FA594',
-  headerGradientMid: '#5E8B7E',
-  headerGradientEnd: '#4A7066',
-  goldenAccent: '#D4AF37',
-  buttonPrimary: '#8BA99D',
-  textPrimary: '#2C3E50',
-  textSecondary: '#687684'
+// Per-destination brand colors (from CLAUDE.md)
+const DESTINATION_BRAND_COLORS = {
+  calpe: {
+    headerGradientStart: '#7FA594',
+    headerGradientMid: '#5E8B7E',
+    headerGradientEnd: '#4A7066',
+    goldenAccent: '#D4AF37',
+    buttonPrimary: '#8BA99D',
+    textPrimary: '#2C3E50',
+    textSecondary: '#687684'
+  },
+  texel: {
+    primaryColor: '#30c59b',
+    secondaryColor: '#3572de',
+    tertiaryColor: '#2a5cb8',
+    accentColor: '#ecde3c',
+    headerGradientStart: '#30c59b',
+    headerGradientMid: '#28a883',
+    headerGradientEnd: '#209070',
+    buttonPrimary: '#30c59b',
+    textPrimary: '#1a1a2e',
+    textSecondary: '#666666',
+    backgroundColor: '#f8fffe',
+    footerBackground: '#1a1a2e'
+  }
 };
+
+// Combined palette (union of all destination colors) for shared files
+const ALL_BRAND_COLORS = [...new Set(
+  Object.values(DESTINATION_BRAND_COLORS)
+    .flatMap(dest => Object.values(dest))
+    .map(c => c.toLowerCase())
+)];
+
+// Legacy export (Calpe defaults for backward compat)
+const BRAND_COLORS = DESTINATION_BRAND_COLORS.calpe;
 
 // UX Principles to validate
 const UX_PRINCIPLES = {
@@ -84,7 +110,7 @@ class UXReviewer {
    * Review a component or page file
    */
   async reviewFile(filePath, fileContent) {
-    console.log(`[UXReviewer] Reviewing: ${filePath}`);
+    console.log(`[De Stylist] Reviewing: ${filePath}`);
 
     const review = {
       file: filePath,
@@ -97,7 +123,7 @@ class UXReviewer {
 
     try {
       // 1. Check brand colors
-      const colorResult = this.checkBrandColors(fileContent);
+      const colorResult = this.checkBrandColors(fileContent, filePath);
       review.scores.brandColors = colorResult.score;
       review.issues.push(...colorResult.issues);
       review.passed.push(...colorResult.passed);
@@ -145,15 +171,31 @@ class UXReviewer {
   }
 
   /**
-   * Check brand color compliance
+   * Detect destination from file path
    */
-  checkBrandColors(content) {
+  detectDestination(filePath) {
+    if (!filePath) return null;
+    const pathLower = filePath.toLowerCase();
+    if (pathLower.includes('texel') || pathLower.includes('texelmaps')) return 'texel';
+    if (pathLower.includes('calpe') || pathLower.includes('holidaibutler.com')) return 'calpe';
+    return null; // Unknown — use combined palette
+  }
+
+  /**
+   * Check brand color compliance (destination-aware)
+   */
+  checkBrandColors(content, filePath = null) {
     const result = { score: 100, issues: [], passed: [] };
+
+    // Determine which color palette to use based on file path
+    const destination = this.detectDestination(filePath);
+    const brandColorValues = destination && DESTINATION_BRAND_COLORS[destination]
+      ? Object.values(DESTINATION_BRAND_COLORS[destination]).map(c => c.toLowerCase())
+      : ALL_BRAND_COLORS;
 
     // Check for non-brand colors (hex codes not in our palette)
     const hexPattern = /#[0-9A-Fa-f]{6}\b/g;
     const foundColors = content.match(hexPattern) || [];
-    const brandColorValues = Object.values(BRAND_COLORS).map(c => c.toLowerCase());
 
     const nonBrandColors = foundColors.filter(c =>
       !brandColorValues.includes(c.toLowerCase()) &&
@@ -409,9 +451,12 @@ class UXReviewer {
   }
 
   /**
-   * Get brand colors reference
+   * Get brand colors reference (destination-aware)
    */
-  getBrandColors() {
+  getBrandColors(destination = null) {
+    if (destination && DESTINATION_BRAND_COLORS[destination]) {
+      return DESTINATION_BRAND_COLORS[destination];
+    }
     return BRAND_COLORS;
   }
 
@@ -430,5 +475,5 @@ class UXReviewer {
   }
 }
 
-export { BRAND_COLORS, UX_PRINCIPLES, WCAG_CHECKS };
+export { BRAND_COLORS, DESTINATION_BRAND_COLORS, UX_PRINCIPLES, WCAG_CHECKS };
 export default new UXReviewer();

@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.23.0
-> **Laatst bijgewerkt**: 19 februari 2026
+> **Versie**: 3.24.0
+> **Laatst bijgewerkt**: 20 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -425,8 +425,9 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase R6c** | ChromaDB Re-vectorisatie Texel + Calpe + Steekproef Fix (12.316 vectoren, 2 POI-correcties) | ✅ COMPLEET | 19-02-2026 |
 | **Fase R6d** | Openstaande Acties Afhandeling (markdown fix 388 POIs, 119 POIs inventarisatie, social media besluit) | ✅ COMPLEET | 19-02-2026 |
 | **Fase 7** | Reviews Integratie (8.964 reviews live, rating_distribution, poiName fix) | ✅ COMPLEET | 19-02-2026 |
-| **Fase 8** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
-| **Fase 8b** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
+| **Fase 8A** | Agent Reparatie & Versterking (7 agents gerepareerd) | ✅ COMPLEET | 20-02-2026 |
+| **Fase 8B** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
+| **Fase 8C** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -918,6 +919,47 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 
 **Deployed naar**: texelmaps.nl, dev.texelmaps.nl, holidaibutler.com (alle 3 frontends + backend)
 
+### Fase 8A Resultaten (Agent Reparatie & Versterking — 20/02/2026)
+- **Status**: COMPLEET (20-02-2026)
+- **Kosten**: EUR 0 (pure code, geen LLM calls)
+- **Doel**: Calpe agent baseline = 100% werkend vóór multi-destination uitrol (8B)
+
+**15 Agent Naamgeving (Nederlands):**
+
+| # | Agent | Nederlandse Naam | Categorie |
+|---|-------|-----------------|-----------|
+| 1 | Orchestrator | De Maestro | Core |
+| 2 | Owner Interface | De Bode | Core |
+| 3 | Health Monitor | De Dokter | Operations |
+| 4 | Data Sync | De Koerier | Operations |
+| 5 | HoliBot Sync | Het Geheugen | Operations |
+| 6 | Communication Flow | De Gastheer | Operations |
+| 7 | GDPR | De Poortwachter | Operations |
+| 8 | UX/UI | De Stylist | Development |
+| 9 | Code | De Corrector | Development |
+| 10 | Security | De Bewaker | Development |
+| 11 | Quality | De Inspecteur | Development |
+| 12 | Architecture | De Architect | Strategy |
+| 13 | Learning | De Leermeester | Strategy |
+| 14 | Adaptive Config | De Thermostaat | Strategy |
+| 15 | Prediction | De Weermeester | Strategy |
+
+**8A Wijzigingen (7 agents):**
+
+| Step | Agent | Wijziging | Bestanden |
+|------|-------|-----------|-----------|
+| 8A-1 (P0) | De Koerier | Column mapping fix: reviewer_name→user_name, text→review_text, sentiment_label→sentiment, review_date→visit_date. Removed spam_score/review_hash. Added destination_id passthrough. | reviewsManager.js, dataSync/index.js |
+| 8A-2 (P1) | De Bode | Per-destination POI counts + review counts (MySQL). Prediction alerts + optimization count. 7 nieuwe MailerLite custom fields. | dailyBriefing.js |
+| 8A-3 (P1) | De Leermeester | MongoDB persistence: `agent_learning_patterns` collection. In-memory cache backed by DB. Survives PM2 restart. | learningAgent.js, strategyLayer/index.js |
+| 8A-4 (P1) | De Thermostaat | Complete rewrite: simulation-only → alerting-only. Redis persistence (thermostaat:last_evaluation + history). Owner decides manually. | adaptiveConfigAgent.js |
+| 8A-5 (P2) | De Stylist | DESTINATION_BRAND_COLORS map (calpe + texel). detectDestination(filePath). Texel #30c59b niet meer geflagged als violation. | uxReviewer.js |
+| 8A-6 (P2) | De Dokter | 3 nieuwe portals (API, Texel prod, Texel dev). SSL expiry monitoring voor 5 domains via tls.connect(). | frontendHealth.js |
+| 8A-7 (P3) | Legacy | workers.js deprecated banner + self-execution disabled. | workers.js |
+
+**MailerLite Custom Fields (Frank: aanmaken in dashboard, alle type `text`):**
+- `calpe_pois`, `texel_pois`, `calpe_reviews`, `texel_reviews`
+- `prediction_alerts`, `prediction_summary`, `optimization_count`
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -1083,6 +1125,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.24.0** | **2026-02-20** | **Fase 8A Agent Reparatie & Versterking COMPLEET: 7 agents gerepareerd/versterkt. De Koerier (P0): column mapping fix (9 kolommen, table name casing, destination_id passthrough). De Leermeester (P1): MongoDB persistence (agent_learning_patterns collection). De Thermostaat (P1): complete rewrite naar alerting-only + Redis persistence. De Bode (P1): destination stats, prediction alerts, optimization count (7 MailerLite fields). De Stylist (P2): DESTINATION_BRAND_COLORS map (calpe + texel). De Dokter (P2): 3 nieuwe portals + SSL expiry monitoring (5 domains). Legacy workers.js deprecated. 15 agent naamgeving gedocumenteerd. Kosten: EUR 0. CLAUDE.md v3.24.0, Master Strategie v6.1.** |
 | **3.23.0** | **2026-02-19** | **Fase 7 Reviews Integratie COMPLEET: 8.964 reviews (3.869 Texel, 5.095 Calpe) live op beide frontends. Diagnostic: API werkte al correct (Outcome A), model kolommen hebben real data, migration 009 kolommen bestaan niet. Backend: rating_distribution toegevoegd aan /reviews/summary endpoint. Frontend: poiName fix (POIDetailPage.tsx), mock reviews gated achter DEV check (UserReviewsContext.tsx). 7/7 API tests PASS, Calpe regressie PASS. Kosten: EUR 0.** |
 | **3.22.0** | **2026-02-19** | **Fase R6d Openstaande Acties Afhandeling COMPLEET: (1) Social Media Bronnen besluit: geaccepteerd als technische beperking (0,2% FB, 0% IG scraping door Meta anti-bot). (2) 119 POIs inventarisatie: alle 119 = Accommodation (bewust excluded), 0 POIs gemist. (3) Markdown fix database-breed: 388 POIs gerepareerd (verwacht: 1), 1.535 velden gecorrigeerd, 0 markdown links resterend. Audit trail: 1.535 entries. Content Repair Pipeline R1-R6d COMPLEET.** |
 | **3.21.0** | **2026-02-19** | **Fase R6c Calpe Re-vectorisatie COMPLEET: calpe_pois collectie ge-revectoriseerd met R6b claim-stripped content. 5.932 nieuwe vectoren (1.483 POIs × 4 talen), 1 error (gefixed), 25,7 min, €2,37. Texel ongewijzigd (PASS). 5/5 test queries passed. Beide chatbots (Tessa + HoliBot) serveren nu feitelijk correcte R6b content.** |

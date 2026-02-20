@@ -1,18 +1,23 @@
+import Redis from 'ioredis';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 import { sendAlert } from '../../orchestrator/ownerInterface/index.js';
 
 /**
- * Adaptive Config Agent
- * Dynamically adjusts system configuration based on conditions
+ * De Thermostaat — Adaptive Config Agent
+ * Monitors system conditions and RECOMMENDS configuration adjustments.
  *
- * Manages:
+ * MODE: Alerting-only — recommendations are stored in Redis and
+ * reported to the owner. Changes are NOT auto-applied to runtime.
+ * The owner decides manually whether to act on recommendations.
+ *
+ * Monitors:
  * - Rate limiting thresholds
  * - Queue concurrency
  * - Cache TTLs
  * - Alert thresholds
  */
 
-// Configuration domains
+// Default configuration domains (reference values, NOT modified at runtime)
 const CONFIG_DOMAINS = {
   RATE_LIMITING: {
     name: 'Rate Limiting',
@@ -83,60 +88,78 @@ const ADAPTATION_RULES = {
 
 class AdaptiveConfigAgent {
   constructor() {
-    this.currentConfig = JSON.parse(JSON.stringify(CONFIG_DOMAINS));
-    this.configHistory = [];
-    this.activeAdaptations = new Set();
+    this.mode = 'alerting-only';
   }
 
   /**
-   * Evaluate conditions and adapt configuration
+   * Get a Redis connection
+   */
+  getRedis() {
+    return new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: process.env.REDIS_PORT || 6379,
+      maxRetriesPerRequest: 3
+    });
+  }
+
+  /**
+   * Evaluate conditions and generate recommendations (NOT auto-applied)
    */
   async evaluate(metrics) {
-    console.log('[AdaptiveConfigAgent] Evaluating system metrics...');
+    console.log('[De Thermostaat] Evaluating system metrics (alerting-only mode)...');
 
-    const adaptations = [];
+    const recommendations = [];
 
     try {
       // Check HIGH_TRAFFIC condition
       if (metrics.trafficMultiplier && metrics.trafficMultiplier > 2) {
-        adaptations.push(await this.applyRule('HIGH_TRAFFIC', metrics));
+        const rec = this.recommendRule('HIGH_TRAFFIC', metrics);
+        if (rec) recommendations.push(rec);
       }
 
       // Check HIGH_ERROR_RATE condition
       if (metrics.errorRate && metrics.errorRate > 0.05) {
-        adaptations.push(await this.applyRule('HIGH_ERROR_RATE', metrics));
+        const rec = this.recommendRule('HIGH_ERROR_RATE', metrics);
+        if (rec) recommendations.push(rec);
       }
 
       // Check LOW_RESOURCES condition
       if ((metrics.cpu && metrics.cpu > 80) || (metrics.memory && metrics.memory > 85)) {
-        adaptations.push(await this.applyRule('LOW_RESOURCES', metrics));
+        const rec = this.recommendRule('LOW_RESOURCES', metrics);
+        if (rec) recommendations.push(rec);
       }
 
       // Check PEAK_HOURS condition
       const hour = new Date().getHours();
       if (metrics.peakHours && metrics.peakHours.includes(hour)) {
-        adaptations.push(await this.applyRule('PEAK_HOURS', metrics));
+        const rec = this.recommendRule('PEAK_HOURS', metrics);
+        if (rec) recommendations.push(rec);
       }
 
-      // Filter out null adaptations
-      const validAdaptations = adaptations.filter(a => a !== null);
+      const result = {
+        timestamp: new Date().toISOString(),
+        mode: this.mode,
+        metrics,
+        recommendations,
+        note: recommendations.length > 0
+          ? 'Recommendations generated. NOT auto-applied. Manual action required.'
+          : 'No adjustments needed. System within normal parameters.'
+      };
 
-      if (validAdaptations.length > 0) {
-        await logAgent('strategy-layer', 'config_adapted', {
-          description: `Applied ${validAdaptations.length} configuration adaptations`,
-          metadata: { adaptations: validAdaptations.map(a => a.rule) }
+      // Persist to Redis
+      await this.persistToRedis(result);
+
+      if (recommendations.length > 0) {
+        await logAgent('strategy-layer', 'config_recommendations', {
+          description: `[De Thermostaat] Generated ${recommendations.length} recommendations (alerting-only, NOT auto-applied)`,
+          metadata: { rules: recommendations.map(r => r.rule), mode: this.mode }
         });
 
-        // Alert owner about significant adaptations
-        await this.notifyAdaptations(validAdaptations);
+        // Alert owner about critical recommendations
+        await this.notifyRecommendations(recommendations);
       }
 
-      return {
-        timestamp: new Date().toISOString(),
-        metrics,
-        adaptationsApplied: validAdaptations,
-        currentConfig: this.getCurrentConfig()
-      };
+      return result;
     } catch (error) {
       await logError('strategy-layer', error, { action: 'evaluate_config' });
       throw error;
@@ -144,166 +167,154 @@ class AdaptiveConfigAgent {
   }
 
   /**
-   * Apply an adaptation rule
+   * Generate a recommendation for a rule (does NOT modify config)
    */
-  async applyRule(ruleName, metrics) {
+  recommendRule(ruleName, metrics) {
     const rule = ADAPTATION_RULES[ruleName];
     if (!rule) return null;
 
-    // Check if rule is already active (prevent stacking)
-    if (this.activeAdaptations.has(ruleName)) {
-      return null;
-    }
+    console.log(`[De Thermostaat] Generating recommendation: ${ruleName}`);
 
-    console.log(`[AdaptiveConfigAgent] Applying rule: ${ruleName}`);
-
-    const changes = [];
+    const actions = [];
 
     for (const action of rule.actions) {
-      const domain = this.currentConfig[action.domain];
+      const domain = CONFIG_DOMAINS[action.domain];
       if (domain && domain.params[action.param] !== undefined) {
-        const oldValue = domain.params[action.param];
-        const newValue = Math.round(oldValue * action.factor);
+        const currentValue = domain.params[action.param];
+        const suggestedValue = Math.round(currentValue * action.factor);
 
-        domain.params[action.param] = newValue;
-
-        changes.push({
+        actions.push({
           domain: action.domain,
           param: action.param,
-          oldValue,
-          newValue,
-          factor: action.factor
+          currentValue,
+          suggestedValue,
+          factor: action.factor,
+          actionRequired: `Adjust ${domain.name} → ${action.param}: ${currentValue} → ${suggestedValue}`
         });
       }
     }
 
-    if (changes.length > 0) {
-      this.activeAdaptations.add(ruleName);
+    if (actions.length === 0) return null;
 
-      // Store in history
-      this.configHistory.push({
-        timestamp: new Date().toISOString(),
-        rule: ruleName,
-        trigger: rule.trigger,
-        changes,
-        metrics
-      });
-
-      // Keep history limited
-      if (this.configHistory.length > 100) {
-        this.configHistory = this.configHistory.slice(-100);
-      }
-
-      return {
-        rule: ruleName,
-        trigger: rule.trigger,
-        changes
-      };
-    }
-
-    return null;
+    return {
+      rule: ruleName,
+      trigger: rule.trigger,
+      actions,
+      timestamp: new Date().toISOString()
+    };
   }
 
   /**
-   * Reset configuration to defaults
+   * Persist evaluation result to Redis
    */
-  async reset(ruleName = null) {
-    console.log(`[AdaptiveConfigAgent] Resetting configuration${ruleName ? ` for ${ruleName}` : ''}...`);
+  async persistToRedis(result) {
+    let redis;
+    try {
+      redis = this.getRedis();
 
-    if (ruleName) {
-      this.activeAdaptations.delete(ruleName);
-    } else {
-      this.activeAdaptations.clear();
+      // Store latest evaluation (24h TTL)
+      await redis.set(
+        'thermostaat:last_evaluation',
+        JSON.stringify(result),
+        'EX', 86400
+      );
+
+      // Store in history (capped list, keep last 100)
+      await redis.lpush(
+        'thermostaat:history',
+        JSON.stringify({ timestamp: result.timestamp, recommendations: result.recommendations })
+      );
+      await redis.ltrim('thermostaat:history', 0, 99);
+
+      console.log('[De Thermostaat] Evaluation persisted to Redis');
+    } catch (error) {
+      console.error('[De Thermostaat] Failed to persist to Redis:', error.message);
+    } finally {
+      if (redis) await redis.quit();
     }
-
-    // Reset to defaults
-    this.currentConfig = JSON.parse(JSON.stringify(CONFIG_DOMAINS));
-
-    await logAgent('strategy-layer', 'config_reset', {
-      description: `Configuration reset${ruleName ? ` for ${ruleName}` : ' to defaults'}`,
-      metadata: { ruleName }
-    });
-
-    return this.getCurrentConfig();
   }
 
   /**
-   * Get current configuration
+   * Get current configuration (returns defaults + mode info)
    */
   getCurrentConfig() {
     const config = {};
-    for (const [domain, data] of Object.entries(this.currentConfig)) {
+    for (const [domain, data] of Object.entries(CONFIG_DOMAINS)) {
       config[domain] = {
         name: data.name,
         ...data.params
       };
     }
-    return config;
+    return {
+      mode: this.mode,
+      defaults: config,
+      note: 'De Thermostaat is in alerting-only mode. Values shown are defaults, not runtime config.'
+    };
   }
 
   /**
-   * Get configuration history
+   * Get latest recommendations from Redis
    */
-  getConfigHistory(limit = 20) {
-    return this.configHistory.slice(-limit);
+  async getRecommendations() {
+    let redis;
+    try {
+      redis = this.getRedis();
+      const data = await redis.get('thermostaat:last_evaluation');
+      if (data) {
+        return JSON.parse(data);
+      }
+      return { mode: this.mode, recommendations: [], note: 'No recent evaluation data' };
+    } catch (error) {
+      console.error('[De Thermostaat] Failed to read from Redis:', error.message);
+      return { mode: this.mode, recommendations: [], error: error.message };
+    } finally {
+      if (redis) await redis.quit();
+    }
   }
 
   /**
-   * Get active adaptations
+   * Get evaluation history from Redis
+   */
+  async getConfigHistory(limit = 20) {
+    let redis;
+    try {
+      redis = this.getRedis();
+      const items = await redis.lrange('thermostaat:history', 0, limit - 1);
+      return items.map(item => JSON.parse(item));
+    } catch (error) {
+      console.error('[De Thermostaat] Failed to read history:', error.message);
+      return [];
+    } finally {
+      if (redis) await redis.quit();
+    }
+  }
+
+  /**
+   * Get active adaptations (always empty in alerting-only mode)
    */
   getActiveAdaptations() {
-    return Array.from(this.activeAdaptations);
+    return [];
   }
 
   /**
-   * Notify owner about adaptations
+   * Notify owner about recommendations
    */
-  async notifyAdaptations(adaptations) {
+  async notifyRecommendations(recommendations) {
     const criticalRules = ['HIGH_ERROR_RATE', 'LOW_RESOURCES'];
-    const hasCritical = adaptations.some(a => criticalRules.includes(a.rule));
+    const hasCritical = recommendations.some(r => criticalRules.includes(r.rule));
 
     if (hasCritical) {
+      const actionItems = recommendations.map(r =>
+        `• ${r.rule}: ${r.trigger}\n  ${r.actions.map(a => a.actionRequired).join('\n  ')}`
+      ).join('\n');
+
       await sendAlert({
         urgency: 4,
-        title: 'Adaptive Config: Critical Adjustment',
-        message: `System configuration automatically adjusted:\n${adaptations.map(a => `- ${a.rule}: ${a.trigger}`).join('\n')}\n\nReview system health and consider manual intervention if needed.`,
-        metadata: { adaptations }
+        title: 'De Thermostaat: Aanbevelingen voor handmatige aanpassing',
+        message: `Systeem configuratie aanbevelingen:\n\n${actionItems}\n\nDeze wijzigingen zijn NIET automatisch toegepast.\nControleer en pas handmatig aan indien nodig.`,
+        metadata: { recommendations, mode: this.mode }
       });
     }
-  }
-
-  /**
-   * Get configuration recommendations
-   */
-  getRecommendations() {
-    const recommendations = [];
-    const activeRules = this.getActiveAdaptations();
-
-    if (activeRules.includes('HIGH_ERROR_RATE')) {
-      recommendations.push({
-        priority: 'HIGH',
-        message: 'Error rate triggered adaptation - investigate root cause',
-        action: 'Review error logs and fix underlying issues'
-      });
-    }
-
-    if (activeRules.includes('LOW_RESOURCES')) {
-      recommendations.push({
-        priority: 'HIGH',
-        message: 'Resource constraints triggered adaptation',
-        action: 'Consider scaling infrastructure or optimizing resource usage'
-      });
-    }
-
-    if (activeRules.length > 2) {
-      recommendations.push({
-        priority: 'MEDIUM',
-        message: 'Multiple adaptations active - system under stress',
-        action: 'Review overall system health and consider architectural improvements'
-      });
-    }
-
-    return recommendations;
   }
 }
 
