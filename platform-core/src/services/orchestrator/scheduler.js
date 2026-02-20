@@ -91,6 +91,43 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: dev-quality-report (Monday 06:00)');
 
+  // === Fase 8A+ Monitoring Jobs ===
+
+  // Content Quality Audit - weekly Monday at 05:00 (before daily briefing)
+  await scheduledQueue.add('content-quality-audit', { type: 'content-quality' }, {
+    repeat: { cron: '0 5 * * 1', tz: 'Europe/Amsterdam' },
+    jobId: 'content-quality-audit-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-quality-audit (Monday 05:00)');
+
+  // Backup Recency Check - daily at 07:30 (before daily briefing)
+  await scheduledQueue.add('backup-recency-check', { type: 'backup-health' }, {
+    repeat: { cron: '30 7 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'backup-recency-check-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: backup-recency-check (daily 07:30)');
+
+  // Smoke Test - daily at 07:45 (after backup check, before briefing)
+  await scheduledQueue.add('smoke-test', { type: 'smoke-test' }, {
+    repeat: { cron: '45 7 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'smoke-test-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: smoke-test (daily 07:45)');
+
+  // ChromaDB State Snapshot - weekly Sunday at 03:00
+  await scheduledQueue.add('chromadb-state-snapshot', { type: 'chromadb-snapshot' }, {
+    repeat: { cron: '0 3 * * 0', tz: 'Europe/Amsterdam' },
+    jobId: 'chromadb-state-snapshot-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: chromadb-state-snapshot (Sunday 03:00)');
+
+  // Agent Success Rate - weekly Monday at 05:30 (after content audit, before briefing)
+  await scheduledQueue.add('agent-success-rate', { type: 'agent-metrics' }, {
+    repeat: { cron: '30 5 * * 1', tz: 'Europe/Amsterdam' },
+    jobId: 'agent-success-rate-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: agent-success-rate (Monday 05:30)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);

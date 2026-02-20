@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.24.0
+> **Versie**: 3.25.0
 > **Laatst bijgewerkt**: 20 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -426,6 +426,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase R6d** | Openstaande Acties Afhandeling (markdown fix 388 POIs, 119 POIs inventarisatie, social media besluit) | ✅ COMPLEET | 19-02-2026 |
 | **Fase 7** | Reviews Integratie (8.964 reviews live, rating_distribution, poiName fix) | ✅ COMPLEET | 19-02-2026 |
 | **Fase 8A** | Agent Reparatie & Versterking (7 agents gerepareerd) | ✅ COMPLEET | 20-02-2026 |
+| **Fase 8A+** | Agent Monitoring & Briefing Expansion (3 modules, 5 jobs) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8B** | AI Agents Multi-Destination (15 agents) | ⏸️ WACHT | - |
 | **Fase 8C** | Agent Dashboard (Admin Portal) | ⏸️ WACHT | - |
 
@@ -960,6 +961,56 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 - `calpe_pois`, `texel_pois`, `calpe_reviews`, `texel_reviews`
 - `prediction_alerts`, `prediction_summary`, `optimization_count`
 
+### Fase 8A+ Resultaten (Agent Monitoring & Briefing Expansion — 20/02/2026)
+- **Status**: COMPLEET (20-02-2026)
+- **Kosten**: EUR 0 (pure code, geen LLM calls)
+- **Doel**: 3 monitoring modules + 5 scheduled jobs + daily briefing expansion
+
+**Nieuwe Modules:**
+
+| Module | Agent | Beschrijving | MongoDB Collection |
+|--------|-------|-------------|-------------------|
+| contentQualityChecker.js | De Koerier (#4) | POI content completeness + consistency checks (heuristic, geen AI) | content_quality_audits |
+| backupHealthChecker.js | De Dokter (#3) | Backup recency + disk space monitoring. Alert on CRITICAL. | backup_health_checks |
+| smokeTestRunner.js | De Dokter (#3) | E2E smoke tests: 5 per destination + 3 infrastructure. READ-ONLY. | smoke_test_results |
+
+**Nieuwe Scheduled Jobs (5):**
+
+| Job | Cron | Beschrijving |
+|-----|------|-------------|
+| content-quality-audit | Monday 05:00 | Content completeness + consistency per destination |
+| backup-recency-check | Daily 07:30 | Backup file age + disk space |
+| smoke-test | Daily 07:45 | All smoke tests (Calpe + Texel + Infra) |
+| chromadb-state-snapshot | Sunday 03:00 | ChromaDB vector count snapshot (Het Geheugen) |
+| agent-success-rate | Monday 05:30 | 7-day agent success rate aggregation |
+
+**Daily Briefing Expansion (De Bode):**
+- Section ordering: Alerts → Smoke Tests → Backups → POI & Reviews → Content Quality → Predictions → Agents → Budget
+- 3 nieuwe MailerLite fields: `smoke_test_summary`, `backup_summary`, `content_quality_summary`
+
+**MailerLite Custom Fields (Frank: aanmaken in dashboard, alle type `text`):**
+- 8A fields: `calpe_pois`, `texel_pois`, `calpe_reviews`, `texel_reviews`, `prediction_alerts`, `prediction_summary`, `optimization_count`
+- 8A+ fields: `smoke_test_summary`, `backup_summary`, `content_quality_summary`
+
+**Test Resultaten**: 16/16 PASS
+- Content Quality: 5/5 (completeness Calpe 100%, Texel 100%, consistency 12 flags, audit 9/10, MongoDB persist)
+- Backup Health: 3/3 (recency CRITICAL detected, disk 67% HEALTHY, alert sent)
+- Smoke Tests: 3/3 (Calpe 4/5, Texel 4/5, Infra 3/3)
+- Scheduling: 2/2 (40 jobs registered, Calpe regression PASS)
+- Daily Briefing: 3/3 (smoke, backup, content sections populated)
+
+**Bestanden:**
+
+| Actie | Bestand |
+|-------|---------|
+| NEW | `src/services/agents/dataSync/contentQualityChecker.js` |
+| NEW | `src/services/agents/healthMonitor/backupHealthChecker.js` |
+| NEW | `src/services/agents/healthMonitor/smokeTestRunner.js` |
+| MODIFIED | `src/services/orchestrator/scheduler.js` (+5 jobs) |
+| MODIFIED | `src/services/orchestrator/workers.js` (+5 handlers) |
+| MODIFIED | `src/services/agents/holibotSync/index.js` (+createChromaDBSnapshot) |
+| MODIFIED | `src/services/orchestrator/ownerInterface/dailyBriefing.js` (rewrite) |
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -969,7 +1020,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | Fase 4 | Development Layer | ✅ COMPLEET |
 | Fase 5 | Strategy Layer | ✅ COMPLEET |
 
-**Totaal Scheduled Jobs**: 35
+**Totaal Scheduled Jobs**: 40
 
 ---
 
@@ -1080,7 +1131,7 @@ pm2 status
 # Redis check
 redis-cli ping
 
-# Check scheduled jobs (35 verwacht)
+# Check scheduled jobs (40 verwacht)
 cd /var/www/api.holidaibutler.com/platform-core
 node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); async function c() { const conn = new Redis(); const q = new Queue('scheduled-tasks', { connection: conn }); const jobs = await q.getRepeatableJobs(); console.log('Jobs:', jobs.length); await q.close(); await conn.quit(); } c();"
 
@@ -1125,6 +1176,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.25.0** | **2026-02-20** | **Fase 8A+ Agent Monitoring & Briefing Expansion COMPLEET: 3 nieuwe monitoring modules (contentQualityChecker, backupHealthChecker, smokeTestRunner). 5 nieuwe scheduled jobs (content-quality-audit, backup-recency-check, smoke-test, chromadb-state-snapshot, agent-success-rate). Totaal jobs: 35→40. Daily briefing (De Bode) uitgebreid met smoke test summary, backup summary, content quality summary (3 MailerLite fields). ChromaDB state snapshot via Het Geheugen. 16/16 tests PASS. Kosten: EUR 0. CLAUDE.md v3.25.0.** |
 | **3.24.0** | **2026-02-20** | **Fase 8A Agent Reparatie & Versterking COMPLEET: 7 agents gerepareerd/versterkt. De Koerier (P0): column mapping fix (9 kolommen, table name casing, destination_id passthrough). De Leermeester (P1): MongoDB persistence (agent_learning_patterns collection). De Thermostaat (P1): complete rewrite naar alerting-only + Redis persistence. De Bode (P1): destination stats, prediction alerts, optimization count (7 MailerLite fields). De Stylist (P2): DESTINATION_BRAND_COLORS map (calpe + texel). De Dokter (P2): 3 nieuwe portals + SSL expiry monitoring (5 domains). Legacy workers.js deprecated. 15 agent naamgeving gedocumenteerd. Kosten: EUR 0. CLAUDE.md v3.24.0, Master Strategie v6.1.** |
 | **3.23.0** | **2026-02-19** | **Fase 7 Reviews Integratie COMPLEET: 8.964 reviews (3.869 Texel, 5.095 Calpe) live op beide frontends. Diagnostic: API werkte al correct (Outcome A), model kolommen hebben real data, migration 009 kolommen bestaan niet. Backend: rating_distribution toegevoegd aan /reviews/summary endpoint. Frontend: poiName fix (POIDetailPage.tsx), mock reviews gated achter DEV check (UserReviewsContext.tsx). 7/7 API tests PASS, Calpe regressie PASS. Kosten: EUR 0.** |
 | **3.22.0** | **2026-02-19** | **Fase R6d Openstaande Acties Afhandeling COMPLEET: (1) Social Media Bronnen besluit: geaccepteerd als technische beperking (0,2% FB, 0% IG scraping door Meta anti-bot). (2) 119 POIs inventarisatie: alle 119 = Accommodation (bewust excluded), 0 POIs gemist. (3) Markdown fix database-breed: 388 POIs gerepareerd (verwacht: 1), 1.535 velden gecorrigeerd, 0 markdown links resterend. Audit trail: 1.535 entries. Content Repair Pipeline R1-R6d COMPLEET.** |

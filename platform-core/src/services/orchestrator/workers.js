@@ -495,6 +495,95 @@ export function startWorkers() {
           }
           break;
 
+        // === FASE 8A+ MONITORING JOBS ===
+        case "content-quality-audit":
+          try {
+            const contentChecker = await import("../agents/dataSync/contentQualityChecker.js");
+            const calpeAudit = await contentChecker.default.runContentAudit(1);
+            const texelAudit = await contentChecker.default.runContentAudit(2);
+            console.log("[Orchestrator] Content quality audit:", JSON.stringify({
+              calpe_score: calpeAudit.overall_score,
+              texel_score: texelAudit.overall_score
+            }));
+            result = { calpe: calpeAudit, texel: texelAudit };
+          } catch (error) {
+            console.error("[Orchestrator] Content quality audit failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "backup-recency-check":
+          try {
+            const backupChecker = await import("../agents/healthMonitor/backupHealthChecker.js");
+            const backupResult = await backupChecker.default.runBackupHealthCheck();
+            console.log("[Orchestrator] Backup health check:", JSON.stringify({
+              overall: backupResult.overall,
+              mysql: backupResult.mysql?.status,
+              mongodb: backupResult.mongodb?.status
+            }));
+            result = backupResult;
+          } catch (error) {
+            console.error("[Orchestrator] Backup health check failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "smoke-test":
+          try {
+            const smokeRunner = await import("../agents/healthMonitor/smokeTestRunner.js");
+            const smokeResult = await smokeRunner.default.runAllSmokeTests();
+            console.log("[Orchestrator] Smoke tests:", JSON.stringify({
+              passed: smokeResult.total_passed,
+              failed: smokeResult.total_failed,
+              total: smokeResult.total_tests
+            }));
+            result = smokeResult;
+          } catch (error) {
+            console.error("[Orchestrator] Smoke tests failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "chromadb-state-snapshot":
+          try {
+            const holibotSnapshot = await import("../agents/holibotSync/index.js");
+            const snapshotResult = await holibotSnapshot.default.createChromaDBSnapshot();
+            console.log("[Orchestrator] ChromaDB snapshot:", JSON.stringify({
+              collections: Object.keys(snapshotResult.collections || {}).length
+            }));
+            result = snapshotResult;
+          } catch (error) {
+            console.error("[Orchestrator] ChromaDB snapshot failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "agent-success-rate":
+          try {
+            const { getStats } = await import("./auditTrail/index.js");
+            const weekStats = await getStats(168); // 7 days in hours
+            // Aggregate per agent
+            const agentStats = {};
+            for (const stat of weekStats) {
+              const agent = stat._id?.agent || 'unknown';
+              if (!agentStats[agent]) agentStats[agent] = { total: 0, succeeded: 0, failed: 0 };
+              if (stat._id?.category === 'error') {
+                agentStats[agent].failed += stat.count;
+              } else {
+                agentStats[agent].succeeded += stat.count;
+              }
+              agentStats[agent].total += stat.count;
+            }
+            console.log("[Orchestrator] Agent success rates:", JSON.stringify({
+              agents: Object.keys(agentStats).length
+            }));
+            result = agentStats;
+          } catch (error) {
+            console.error("[Orchestrator] Agent success rate failed:", error.message);
+            throw error;
+          }
+          break;
+
         case "strategy-config-eval":
           try {
             const strategyConfig = await import("../agents/strategyLayer/index.js");

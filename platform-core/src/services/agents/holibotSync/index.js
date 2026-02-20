@@ -118,6 +118,65 @@ class HolibotSyncAgent {
     }
   }
 
+  /**
+   * Create a ChromaDB state snapshot for recovery reference
+   * Logs collection document counts to MongoDB for comparison after re-vectorisation
+   */
+  async createChromaDBSnapshot() {
+    console.log('[Het Geheugen] Creating ChromaDB state snapshot...');
+
+    try {
+      const mongoose = (await import('mongoose')).default;
+
+      // Define schema if not exists
+      let ChromaDBSnapshot;
+      try {
+        ChromaDBSnapshot = mongoose.model('ChromaDBStateSnapshot');
+      } catch {
+        const schema = new mongoose.Schema({
+          timestamp: { type: Date, default: Date.now },
+          collections: { type: mongoose.Schema.Types.Mixed }
+        }, { collection: 'chromadb_state_snapshots' });
+        ChromaDBSnapshot = mongoose.model('ChromaDBStateSnapshot', schema);
+      }
+
+      // Get collection counts
+      const collections = {};
+      const collectionNames = ['calpe_pois', 'texel_pois'];
+
+      for (const name of collectionNames) {
+        try {
+          const collection = await chromaService.getCollection(name);
+          const count = await collection.count();
+          collections[name] = count;
+          console.log(`[Het Geheugen] ${name}: ${count} vectors`);
+        } catch (error) {
+          collections[name] = { error: error.message };
+          console.error(`[Het Geheugen] Failed to count ${name}:`, error.message);
+        }
+      }
+
+      // Save snapshot
+      await ChromaDBSnapshot.create({ timestamp: new Date(), collections });
+
+      // Retention: remove snapshots older than 90 days
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      const deleted = await ChromaDBSnapshot.deleteMany({ timestamp: { $lt: ninetyDaysAgo } });
+
+      await logAgent('holibot-sync', 'chromadb_snapshot_created', {
+        description: `ChromaDB snapshot: ${Object.entries(collections).map(([k, v]) => `${k}=${typeof v === 'number' ? v : 'error'}`).join(', ')}`,
+        metadata: { collections, deleted_old: deleted.deletedCount || 0 }
+      });
+
+      console.log(`[Het Geheugen] Snapshot saved. Old snapshots deleted: ${deleted.deletedCount || 0}`);
+      return { collections, timestamp: new Date().toISOString() };
+    } catch (error) {
+      await logError('holibot-sync', error, { action: 'chromadb_snapshot' });
+      console.error('[Het Geheugen] ChromaDB snapshot failed:', error.message);
+      return { collections: {}, error: error.message, timestamp: new Date().toISOString() };
+    }
+  }
+
   async getStatus() {
     const poiStats = await chromaService.getCollectionStats('holidaibutler_pois');
     const qaStats = await chromaService.getCollectionStats('holidaibutler_qas');
