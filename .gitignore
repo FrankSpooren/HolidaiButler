@@ -88,3 +88,10 @@ customer-portal/frontend-backup/
 # ============================================================================
 uploads/
 exports/
+
+# ============================================================================
+# Admin Module env files (public URLs + Bugsink DSN only, no secrets)
+# ============================================================================
+!admin-module/.env.development
+!admin-module/.env.test
+!admin-module/.env.production

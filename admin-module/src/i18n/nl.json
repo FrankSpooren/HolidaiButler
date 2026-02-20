@@ -1,0 +1,49 @@
+{
+  "app": {
+    "title": "Admin Portal",
+    "brand": "HolidaiButler"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "agents": "Agents",
+    "pois": "POI Management",
+    "reviews": "Reviews",
+    "analytics": "Analytics",
+    "settings": "Instellingen"
+  },
+  "auth": {
+    "login": "Inloggen",
+    "logout": "Uitloggen",
+    "email": "E-mailadres",
+    "password": "Wachtwoord",
+    "loginTitle": "Admin Portal",
+    "loginSubtitle": "Beheer je HolidaiButler platform",
+    "invalidCredentials": "Ongeldige inloggegevens",
+    "serverError": "Er is een fout opgetreden. Probeer het opnieuw.",
+    "sessionExpired": "Je sessie is verlopen. Log opnieuw in."
+  },
+  "dashboard": {
+    "welcome": "Welkom terug",
+    "destinations": "Bestemmingen",
+    "totalUsers": "Totaal Gebruikers",
+    "chatSessions": "Chatbot Sessies (7d)",
+    "activeAgents": "Actieve Agents",
+    "scheduledJobs": "Scheduled Jobs",
+    "systemHealth": "Systeem Status",
+    "quickLinks": "Snelkoppelingen",
+    "pois": "POIs",
+    "activePois": "actief",
+    "reviews": "Reviews",
+    "healthy": "Gezond",
+    "degraded": "Verslechterd",
+    "unhealthy": "Niet beschikbaar",
+    "uptime": "API Uptime"
+  },
+  "common": {
+    "loading": "Laden...",
+    "error": "Er is een fout opgetreden",
+    "retry": "Opnieuw proberen",
+    "comingSoon": "Binnenkort beschikbaar",
+    "allDestinations": "Alle Bestemmingen"
+  }
+}

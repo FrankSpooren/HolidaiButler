@@ -1,0 +1,49 @@
+{
+  "app": {
+    "title": "Admin Portal",
+    "brand": "HolidaiButler"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "agents": "Agents",
+    "pois": "POI Management",
+    "reviews": "Reviews",
+    "analytics": "Analytics",
+    "settings": "Settings"
+  },
+  "auth": {
+    "login": "Log in",
+    "logout": "Log out",
+    "email": "Email address",
+    "password": "Password",
+    "loginTitle": "Admin Portal",
+    "loginSubtitle": "Manage your HolidaiButler platform",
+    "invalidCredentials": "Invalid credentials",
+    "serverError": "An error occurred. Please try again.",
+    "sessionExpired": "Your session has expired. Please log in again."
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "destinations": "Destinations",
+    "totalUsers": "Total Users",
+    "chatSessions": "Chatbot Sessions (7d)",
+    "activeAgents": "Active Agents",
+    "scheduledJobs": "Scheduled Jobs",
+    "systemHealth": "System Health",
+    "quickLinks": "Quick Links",
+    "pois": "POIs",
+    "activePois": "active",
+    "reviews": "Reviews",
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "unhealthy": "Unhealthy",
+    "uptime": "API Uptime"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "comingSoon": "Coming soon",
+    "allDestinations": "All Destinations"
+  }
+}
