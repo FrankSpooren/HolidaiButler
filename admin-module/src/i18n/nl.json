@@ -74,7 +74,8 @@
       "showLess": "Toon minder"
     },
     "partial": "Sommige databronnen zijn niet bereikbaar. Getoonde data kan onvolledig zijn.",
-    "noResults": "Geen agents gevonden voor de geselecteerde filters."
+    "noResults": "Geen agents gevonden voor de geselecteerde filters.",
+    "close": "Sluiten"
   },
   "pois": {
     "title": "POI Beheer",
@@ -140,6 +141,9 @@
     "view": "Bekijken",
     "archive": "Archiveren",
     "unarchive": "Dearchiveren",
+    "archived": "Review gearchiveerd",
+    "unarchived": "Review gedearchiveerd",
+    "undo": "Ongedaan maken",
     "close": "Sluiten",
     "summary": {
       "total": "Totaal reviews",

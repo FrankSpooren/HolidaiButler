@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.29.0
-> **Laatst bijgewerkt**: 20 februari 2026
+> **Versie**: 3.30.0
+> **Laatst bijgewerkt**: 21 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -93,9 +93,9 @@ Na elke relevante aanpassing, uitbreiding of update:
 ### Primaire Documenten
 | Document | Locatie | Versie | Inhoud |
 |----------|---------|--------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.6 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.7 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 | Agent architectuur, scheduled jobs |
-| **CLAUDE.md** | Repository root + Hetzner | 3.29.0 | Dit bestand - project context |
+| **CLAUDE.md** | Repository root + Hetzner | 3.30.0 | Dit bestand - project context |
 
 ### Leesadvies voor Claude
 **Bij elke nieuwe sessie of complexe taak, lees in deze volgorde:**
@@ -445,6 +445,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 8C-0** | Admin Portal Foundation (3 VHosts, 6 endpoints, React app, CI/CD) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8C-1** | Agent Dashboard (backend GET /agents/status + frontend AgentsPage + i18n) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8D** | Admin Portal Feature Pack (POI Management, Reviews Moderatie, Analytics, Settings — 12 endpoints, 4 pagina's) | ✅ COMPLEET | 20-02-2026 |
+| **Fase 8D-FIX** | Admin Portal Bug Fix (12 bugs: POI stats/detail/edit, Review stats/detail/archive, Settings services/destinations/audit-log, QuickLinks, Agent detail, Sentry DSN) | ✅ COMPLEET | 21-02-2026 |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -1242,6 +1243,55 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 | MODIFIED | `admin-module/src/i18n/nl.json` (+100 keys) |
 | MODIFIED | `admin-module/src/i18n/en.json` (+100 keys) |
 
+### Fase 8D-FIX Resultaten (Admin Portal Bug Fix — 21/02/2026)
+- **Status**: COMPLEET (21-02-2026)
+- **Kosten**: EUR 0 (pure code fixes, geen LLM calls)
+- **Doel**: 12 bugs gevonden bij live testing van admin.dev.holidaibutler.com oplossen
+
+**Root Cause**: Frontend-backend response structure mismatches door snelle 8D development (field naming, nesting, data types).
+
+**Backend Fixes (adminPortal.js v2.0.0 → v2.1.0)**:
+
+| Fix | Bug | Root Cause | Oplossing |
+|-----|-----|-----------|-----------|
+| Fix 1 | POI Stats 500 | `parseInt("texel")` = NaN | `resolveDestinationId()` helper (string→id mapping) |
+| Fix 1b | POI Stats missing keys | Frontend leest `data.calpe`, backend had `data.byDestination.calpe` | Per-destination top-level keys (calpe, texel) met total/active/contentCoverage/avgRating |
+| Fix 2-3 | POI Detail wrong data | Backend: `data.description`/`data.tileDescription`, Frontend: `data.detail`/`data.tile` | Renamed: `description`→`detail`, `tileDescription`→`tile` |
+| Fix 2b | POI Detail reviewSummary | Backend: `reviews` (object distribution), Frontend: `reviewSummary` (array distribution) | Key renamed + distribution als `[{rating: 5, count: N}, ...]` array |
+| Fix 4 | Review stats not loaded | Backend: `summary.totalReviews` + nested `sentimentBreakdown`, Frontend: `summary.total` + flat keys | Flattened: `totalReviews`→`total`, sentimentBreakdown keys naar top-level |
+| Fix 5 | Review detail mismatch | Backend: `data.review`, Frontend: `data?.data` | Frontend fix: `data?.data?.review` |
+| Fix 10 | Settings services disconnected | Backend: `system.mysqlHost`/`mongodbStatus`/`redisStatus`, Frontend: `system.mysql`/`mongodb`/`redis` | Keys renamed + MySQL `SELECT 1` health check toegevoegd |
+| Fix 10b | Destinations Texel=Calpe | Backend returns array, Frontend uses `Object.entries()` | Array→Object keyed by destination code |
+| Fix 10c | Audit log dashes | Backend: `admin_email` + `details`, Frontend: `actor.email` + `detail` | Field mapping: `admin_email`→`actor.email`, `details`→`detail` |
+
+**Frontend Fixes**:
+
+| Fix | Bug | Oplossing |
+|-----|-----|-----------|
+| Fix 2-3 | POI Detail data | `data?.data`→`data?.data?.poi` (POIsPage.jsx) |
+| Fix 5 | Review Detail data | `data?.data`→`data?.data?.review` (ReviewsPage.jsx) |
+| Fix 6 | Review archive no undo | Snackbar + undo handler (ReviewsPage.jsx) |
+| Fix 7 | QuickLinks "Coming soon" | Chip removed, Reviews/Analytics/Settings links added (QuickLinks.jsx) |
+| Fix 8 | Agent detail dialog | Click-to-detail dialog met agent info, destination status, errors (AgentsPage.jsx) |
+| Fix 9 | Sentry DSN invalid | Hyphens verwijderd uit DSN key (.env.development/.test/.production) |
+
+**Bestanden gewijzigd**:
+
+| Actie | Bestand |
+|-------|---------|
+| MODIFIED | `platform-core/src/routes/adminPortal.js` (v2.1.0, resolveDestinationId, 11 fixes) |
+| MODIFIED | `admin-module/src/pages/POIsPage.jsx` (poi wrapper fix) |
+| MODIFIED | `admin-module/src/pages/ReviewsPage.jsx` (review wrapper + snackbar undo) |
+| MODIFIED | `admin-module/src/pages/AgentsPage.jsx` (click-to-detail dialog) |
+| MODIFIED | `admin-module/src/components/dashboard/QuickLinks.jsx` (removed Coming soon, added links) |
+| MODIFIED | `admin-module/.env.development` (Sentry DSN key fix) |
+| MODIFIED | `admin-module/.env.test` (Sentry DSN key fix) |
+| MODIFIED | `admin-module/.env.production` (Sentry DSN key fix) |
+| MODIFIED | `admin-module/src/i18n/nl.json` (+reviews.archived/unarchived/undo, +agents.close) |
+| MODIFIED | `admin-module/src/i18n/en.json` (+reviews.archived/unarchived/undo, +agents.close) |
+
+**Test Resultaten**: 33/33 PASS (T1-T19, meerdere assertions per test)
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -1395,7 +1445,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.6 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.7 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 |
 | Fase 2 Docs | `docs/agents/fase2/` | - |
 | Fase 3 Docs | `docs/agents/fase3/` | - |
@@ -1410,6 +1460,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.30.0** | **2026-02-21** | **Fase 8D-FIX Admin Portal Bug Fix COMPLEET: 12 bugs gefixed bij live testing. Backend (adminPortal.js v2.1.0): resolveDestinationId() helper (string→id mapping), POI stats per-destination top-level keys, POI detail field renames (description→detail, tileDescription→tile, reviews→reviewSummary array), review summary flattened (totalReviews→total, sentimentBreakdown→top-level), settings system keys (mysql/mongodb/redis + SELECT 1 health check), destinations array→object, audit-log field mapping (admin_email→actor.email, details→detail). Frontend: POI/review detail wrapper fix, snackbar undo archive, QuickLinks live links, agent click-to-detail dialog, Sentry DSN hyphens removed. 33/33 tests PASS. Kosten: EUR 0. CLAUDE.md v3.30.0, Master Strategie v6.7.** |
 | **3.29.0** | **2026-02-20** | **Fase 8D Admin Portal Feature Pack COMPLEET: 4 modules: POI Management (list/detail/edit/stats, 4 endpoints), Reviews Moderatie (list/detail/archive, 3 endpoints), Analytics Dashboard (overview/trends/export, 2 endpoints), Settings (system/audit-log/cache, 3 endpoints). 4 nieuwe pagina's, 4 API services, 4 hooks, 100+ i18n keys NL/EN. Alle sidebar items actief. adminPortal.js v2.0.0 (19 endpoints). Build OK. 8C-1 audit correcties (adminPortal.js in routes tree, agents/status in endpoint tabel). Kosten: EUR 0. CLAUDE.md v3.29.0, Master Strategie v6.6.** |
 | **3.28.0** | **2026-02-20** | **Fase 8C-1 Agent Dashboard COMPLEET: Backend: GET /agents/status endpoint (AGENT_METADATA 18 entries, MongoDB audit_logs, Redis thermostaat, monitoring collections, Redis cache 60s, graceful degradation). Frontend: AgentsPage met summary cards (4), filter bar (6 category chips + destination dropdown), sortable agent tabel (18 rijen, Cat A destination-aware, Cat B shared), recent activity (10/50 entries), auto-refresh 5 min. i18n NL/EN (30+ keys). 12/12 tests PASS. Kosten: EUR 0. adminPortal.js v1.1.0 (7 endpoints). 8C-0 audit correcties (doc refs). CLAUDE.md v3.28.0, Master Strategie v6.5.** |
 | **3.27.0** | **2026-02-20** | **Fase 8C-0 Admin Portal Foundation COMPLEET: Infrastructuur (3 VHosts + SSL + CORS). Backend: 6 admin API endpoints in platform-core (login, refresh, logout, me, dashboard, health). JWT auth (8h access + 7d refresh), bcrypt, rate limiting, Redis cache. Frontend: React 18 + MUI 5 + Vite 4 + Zustand (login, dashboard, layout, i18n NL/EN). CI/CD: deploy-admin-module.yml met backup + health check + rollback. Admin user: admin@holidaibutler.com. 15/15 tests PASS. Kosten: EUR 0. 8B audit correcties (doc references). CLAUDE.md v3.27.0, Master Strategie v6.4.** |

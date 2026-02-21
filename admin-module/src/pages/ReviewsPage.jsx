@@ -4,7 +4,7 @@ import {
   TableHead, TableRow, Paper, Chip, TextField, Select, MenuItem,
   FormControl, InputLabel, Grid, Skeleton, TablePagination,
   IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
-  DialogActions, Button, Alert, InputAdornment
+  DialogActions, Button, Alert, InputAdornment, Snackbar
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ArchiveIcon from '@mui/icons-material/Archive';
@@ -37,6 +37,7 @@ export default function ReviewsPage() {
   const [sentiment, setSentiment] = useState('');
   const [archived, setArchived] = useState('false');
   const [detailId, setDetailId] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', undoReview: null });
 
   const filters = {
     page: page + 1,
@@ -59,12 +60,29 @@ export default function ReviewsPage() {
 
   const handleArchiveToggle = async (review, e) => {
     e.stopPropagation();
+    const wasArchived = review.is_archived;
     try {
       await updateMutation.mutateAsync({
         id: review.id,
-        data: { is_archived: !review.is_archived }
+        data: { is_archived: !wasArchived }
+      });
+      setSnackbar({
+        open: true,
+        message: wasArchived ? t('reviews.unarchived') : t('reviews.archived'),
+        undoReview: { id: review.id, is_archived: wasArchived }
       });
     } catch { /* shown in UI */ }
+  };
+
+  const handleUndo = async () => {
+    if (!snackbar.undoReview) return;
+    try {
+      await updateMutation.mutateAsync({
+        id: snackbar.undoReview.id,
+        data: { is_archived: snackbar.undoReview.is_archived }
+      });
+    } catch { /* ignore */ }
+    setSnackbar({ open: false, message: '', undoReview: null });
   };
 
   return (
@@ -285,6 +303,19 @@ export default function ReviewsPage() {
 
       {/* Detail Dialog */}
       {detailId && <ReviewDetailDialog reviewId={detailId} onClose={() => setDetailId(null)} />}
+
+      {/* Archive Snackbar with Undo */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+        message={snackbar.message}
+        action={
+          <Button color="inherit" size="small" onClick={handleUndo}>
+            {t('reviews.undo')}
+          </Button>
+        }
+      />
     </Box>
   );
 }
@@ -293,7 +324,7 @@ export default function ReviewsPage() {
 function ReviewDetailDialog({ reviewId, onClose }) {
   const { t } = useTranslation();
   const { data, isLoading, error } = useReviewDetail(reviewId);
-  const review = data?.data || {};
+  const review = data?.data?.review || {};
   const sc = SENTIMENT_CONFIG[review.sentiment] || SENTIMENT_CONFIG.neutral;
 
   return (

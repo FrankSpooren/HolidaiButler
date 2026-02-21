@@ -26,7 +26,7 @@
  *   POST /settings/cache/clear — Redis cache invalidation
  *
  * @module routes/adminPortal
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 import { Router } from 'express';
@@ -66,6 +66,16 @@ function getRedis() {
     }
   }
   return redisClient;
+}
+
+/** Resolve destination filter value to numeric ID. Accepts 'calpe', 'texel', 1, 2, '1', '2'. */
+function resolveDestinationId(val) {
+  if (!val) return null;
+  const codeMap = { calpe: 1, texel: 2 };
+  const lower = String(val).toLowerCase();
+  if (codeMap[lower]) return codeMap[lower];
+  const parsed = parseInt(val);
+  return isNaN(parsed) ? null : parsed;
 }
 
 // ============================================================
@@ -865,8 +875,11 @@ router.get('/pois', verifyAdminToken, async (req, res) => {
     const params = [];
 
     if (destination) {
-      where.push('p.destination_id = ?');
-      params.push(parseInt(destination));
+      const destId = resolveDestinationId(destination);
+      if (destId) {
+        where.push('p.destination_id = ?');
+        params.push(destId);
+      }
     }
     if (category) {
       where.push('p.category = ?');
@@ -994,8 +1007,9 @@ router.get('/pois/stats', verifyAdminToken, async (req, res) => {
       } catch { /* cache miss */ }
     }
 
-    const destFilter = destination ? 'WHERE p.destination_id = ?' : '';
-    const destParams = destination ? [parseInt(destination)] : [];
+    const destId = resolveDestinationId(destination);
+    const destFilter = destId ? 'WHERE p.destination_id = ?' : '';
+    const destParams = destId ? [destId] : [];
 
     // Basic counts
     const counts = await mysqlSequelize.query(
@@ -1035,9 +1049,9 @@ router.get('/pois/stats', verifyAdminToken, async (req, res) => {
     // By category
     const byCat = await mysqlSequelize.query(
       `SELECT category, COUNT(*) as cnt FROM POI p
-       WHERE is_active = 1 ${destination ? 'AND destination_id = ?' : ''}
+       WHERE is_active = 1 ${destId ? 'AND destination_id = ?' : ''}
        GROUP BY category ORDER BY cnt DESC`,
-      { replacements: destination ? [parseInt(destination)] : [], type: QueryTypes.SELECT }
+      { replacements: destId ? [destId] : [], type: QueryTypes.SELECT }
     );
 
     const totalActive = parseInt(counts[0]?.active || 0);
@@ -1052,8 +1066,8 @@ router.get('/pois/stats', verifyAdminToken, async (req, res) => {
       `SELECT COUNT(*) as totalImages,
               COUNT(DISTINCT i.poi_id) as poisWithImages
        FROM imageurls i
-       ${destination ? 'INNER JOIN POI p ON i.poi_id = p.id WHERE p.destination_id = ?' : ''}`,
-      { replacements: destination ? [parseInt(destination)] : [], type: QueryTypes.SELECT }
+       ${destId ? 'INNER JOIN POI p ON i.poi_id = p.id WHERE p.destination_id = ?' : ''}`,
+      { replacements: destId ? [destId] : [], type: QueryTypes.SELECT }
     );
 
     // Review stats
@@ -1061,13 +1075,50 @@ router.get('/pois/stats', verifyAdminToken, async (req, res) => {
       `SELECT COUNT(*) as totalReviews,
               COUNT(DISTINCT poi_id) as poisWithReviews,
               ROUND(AVG(rating), 1) as avgRating
-       FROM reviews ${destination ? 'WHERE destination_id = ?' : ''}`,
-      { replacements: destination ? [parseInt(destination)] : [], type: QueryTypes.SELECT }
+       FROM reviews ${destId ? 'WHERE destination_id = ?' : ''}`,
+      { replacements: destId ? [destId] : [], type: QueryTypes.SELECT }
     );
+
+    // Per-destination content coverage
+    const destContentCoverage = await mysqlSequelize.query(
+      `SELECT destination_id,
+              COUNT(*) as total,
+              SUM(CASE WHEN enriched_detail_description IS NOT NULL AND enriched_detail_description != '' THEN 1 ELSE 0 END) as withContent
+       FROM POI GROUP BY destination_id`,
+      { type: QueryTypes.SELECT }
+    );
+    const destCoverageMap = {};
+    for (const dc of destContentCoverage) {
+      const total = parseInt(dc.total) || 1;
+      destCoverageMap[dc.destination_id] = parseFloat(((parseInt(dc.withContent) || 0) / total * 100).toFixed(1));
+    }
+
+    // Per-destination avg rating from reviews
+    const destAvgRating = await mysqlSequelize.query(
+      `SELECT destination_id, ROUND(AVG(rating), 1) as avgRating FROM reviews GROUP BY destination_id`,
+      { type: QueryTypes.SELECT }
+    );
+    const destRatingMap = {};
+    for (const dr of destAvgRating) {
+      destRatingMap[dr.destination_id] = dr.avgRating ? parseFloat(dr.avgRating) : null;
+    }
+
+    // Build top-level per-destination objects (what frontend expects: data.calpe, data.texel)
+    const perDest = {};
+    for (const d of byDest) {
+      const key = d.destination_id === 1 ? 'calpe' : d.destination_id === 2 ? 'texel' : `dest_${d.destination_id}`;
+      perDest[key] = {
+        total: parseInt(d.total),
+        active: parseInt(d.active),
+        contentCoverage: destCoverageMap[d.destination_id] || 0,
+        avgRating: destRatingMap[d.destination_id] || null
+      };
+    }
 
     const result = {
       success: true,
       data: {
+        ...perDest,
         total: parseInt(counts[0]?.total || 0),
         active: totalActive,
         inactive: parseInt(counts[0]?.inactive || 0),
@@ -1168,13 +1219,13 @@ router.get('/pois/:id', verifyAdminToken, async (req, res) => {
           is_active: !!poi.is_active,
           content: {
             en: {
-              description: poi.enriched_detail_description || '',
-              tileDescription: poi.enriched_tile_description_en || poi.enriched_tile_description || '',
+              detail: poi.enriched_detail_description || '',
+              tile: poi.enriched_tile_description_en || poi.enriched_tile_description || '',
               highlights: poi.enriched_highlights || ''
             },
-            nl: { description: poi.enriched_detail_description_nl || '' },
-            de: { description: poi.enriched_detail_description_de || '' },
-            es: { description: poi.enriched_detail_description_es || '' }
+            nl: { detail: poi.enriched_detail_description_nl || '' },
+            de: { detail: poi.enriched_detail_description_de || '' },
+            es: { detail: poi.enriched_detail_description_es || '' }
           },
           images: images.map((img, idx) => ({
             id: img.id,
@@ -1185,16 +1236,13 @@ router.get('/pois/:id', verifyAdminToken, async (req, res) => {
             source: img.source,
             isPrimary: idx === 0
           })),
-          reviews: {
+          reviewSummary: {
             total: parseInt(rs.total) || 0,
             avgRating: rs.avgRating ? parseFloat(rs.avgRating) : null,
-            distribution: {
-              5: parseInt(rs.r5) || 0,
-              4: parseInt(rs.r4) || 0,
-              3: parseInt(rs.r3) || 0,
-              2: parseInt(rs.r2) || 0,
-              1: parseInt(rs.r1) || 0
-            }
+            distribution: [5, 4, 3, 2, 1].map(r => ({
+              rating: r,
+              count: parseInt(rs[`r${r}`]) || 0
+            }))
           },
           created_at: poi.created_at,
           last_updated: poi.last_updated
@@ -1221,8 +1269,8 @@ router.put('/pois/:id', verifyAdminToken, async (req, res) => {
       return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid POI ID' } });
     }
 
-    const { content, is_active } = req.body;
-    if (!content && is_active === undefined) {
+    const { content, descriptions, is_active } = req.body;
+    if (!content && !descriptions && is_active === undefined) {
       return res.status(400).json({ success: false, error: { code: 'NO_CHANGES', message: 'No fields to update' } });
     }
 
@@ -1251,14 +1299,20 @@ router.put('/pois/:id', verifyAdminToken, async (req, res) => {
       es: 'enriched_detail_description_es'
     };
 
-    if (content) {
-      for (const [lang, fields] of Object.entries(content)) {
-        if (fields?.description !== undefined && langMap[lang]) {
-          const desc = String(fields.description).slice(0, 2000);
+    // Accept both formats: content: { en: { description: '...' } } or descriptions: { en: '...' }
+    const contentSource = content || (descriptions ? Object.fromEntries(
+      Object.entries(descriptions).map(([lang, text]) => [lang, { description: text }])
+    ) : null);
+
+    if (contentSource) {
+      for (const [lang, fields] of Object.entries(contentSource)) {
+        const desc = typeof fields === 'string' ? fields : fields?.description;
+        if (desc !== undefined && langMap[lang]) {
+          const trimmed = String(desc).slice(0, 2000);
           sets.push(`${langMap[lang]} = ?`);
-          vals.push(desc);
+          vals.push(trimmed);
           const oldVal = old[langMap[lang]] || '';
-          changes[lang] = { description: `${oldVal.slice(0, 50)}... → ${desc.slice(0, 50)}...` };
+          changes[lang] = { description: `${oldVal.slice(0, 50)}... → ${trimmed.slice(0, 50)}...` };
         }
       }
     }
@@ -1351,8 +1405,11 @@ router.get('/reviews', verifyAdminToken, async (req, res) => {
     const params = [];
 
     if (destination) {
-      where.push('r.destination_id = ?');
-      params.push(parseInt(destination));
+      const destId = resolveDestinationId(destination);
+      if (destId) {
+        where.push('r.destination_id = ?');
+        params.push(destId);
+      }
     }
     if (rating) {
       where.push('r.rating = ?');
@@ -1469,16 +1526,14 @@ router.get('/reviews', verifyAdminToken, async (req, res) => {
         reviews: reviewList,
         pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
         summary: {
-          totalReviews: parseInt(s.totalReviews) || 0,
+          total: parseInt(s.totalReviews) || 0,
           avgRating: s.avgRating ? parseFloat(s.avgRating) : null,
+          positive: parseInt(s.positive) || 0,
+          neutral: parseInt(s.neutral) || 0,
+          negative: parseInt(s.negative) || 0,
           distribution: {
             5: parseInt(s.r5) || 0, 4: parseInt(s.r4) || 0, 3: parseInt(s.r3) || 0,
             2: parseInt(s.r2) || 0, 1: parseInt(s.r1) || 0
-          },
-          sentimentBreakdown: {
-            positive: parseInt(s.positive) || 0,
-            neutral: parseInt(s.neutral) || 0,
-            negative: parseInt(s.negative) || 0
           },
           archived: parseInt(s.archived) || 0,
           byDestination: byDest
@@ -1847,24 +1902,34 @@ router.get('/analytics/export', verifyAdminToken, async (req, res) => {
 router.get('/settings', verifyAdminToken, async (req, res) => {
   try {
     // System info
+    const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    let redisStatus = 'disconnected';
+
+    const redis = getRedis();
+    if (redis) {
+      try {
+        const pong = await redis.ping();
+        redisStatus = pong === 'PONG' ? 'connected' : 'disconnected';
+      } catch { /* leave disconnected */ }
+    }
+
+    // MySQL status: if we got this far the query below will confirm
+    let mysqlStatus = 'disconnected';
+    try {
+      await mysqlSequelize.query('SELECT 1', { type: QueryTypes.SELECT });
+      mysqlStatus = 'connected';
+    } catch { /* leave disconnected */ }
+
     const system = {
       nodeVersion: process.version,
       uptime: parseFloat((process.uptime() / 3600).toFixed(1)),
       uptimeFormatted: formatUptime(process.uptime()),
       pm2Name: 'holidaibutler-api',
       environment: process.env.NODE_ENV || 'development',
-      mysqlHost: 'jotx.your-database.de',
-      mongodbStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-      redisStatus: 'disconnected'
+      mysql: mysqlStatus,
+      mongodb: mongoStatus,
+      redis: redisStatus
     };
-
-    const redis = getRedis();
-    if (redis) {
-      try {
-        const pong = await redis.ping();
-        system.redisStatus = pong === 'PONG' ? 'connected' : 'disconnected';
-      } catch { /* leave disconnected */ }
-    }
 
     // Destination data
     const destStats = await mysqlSequelize.query(
@@ -1885,18 +1950,18 @@ router.get('/settings', verifyAdminToken, async (req, res) => {
     const revMap = {};
     for (const r of revCounts) revMap[r.destination_id] = parseInt(r.cnt);
 
-    const destinations = [
-      {
+    const destinations = {
+      calpe: {
         id: 1, code: 'calpe', name: 'Calpe', domain: 'holidaibutler.com',
         chatbotName: 'HoliBot', poiCount: destMap[1]?.pois || 0, activePoiCount: destMap[1]?.active || 0,
         reviewCount: revMap[1] || 0, chromaCollection: 'calpe_pois', isActive: true
       },
-      {
+      texel: {
         id: 2, code: 'texel', name: 'Texel', domain: 'texelmaps.nl',
         chatbotName: 'Tessa', poiCount: destMap[2]?.pois || 0, activePoiCount: destMap[2]?.active || 0,
         reviewCount: revMap[2] || 0, chromaCollection: 'texel_pois', isActive: true
       }
-    ];
+    };
 
     // Admin info from JWT
     const admin = {
@@ -1971,10 +2036,11 @@ router.get('/settings/audit-log', verifyAdminToken, async (req, res) => {
       .toArray();
 
     const entryList = entries.map(e => ({
+      _id: e._id,
       timestamp: e.timestamp,
       action: e.action,
-      admin_email: e.admin_email || 'unknown',
-      details: buildAuditDetail(e),
+      actor: { email: e.admin_email || e.actor?.name || 'system', type: 'admin' },
+      detail: buildAuditDetail(e),
       destination: e.destination_id === 1 ? 'calpe' : e.destination_id === 2 ? 'texel' : null,
       changes: e.changes || null
     }));

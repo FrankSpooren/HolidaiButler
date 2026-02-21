@@ -323,7 +323,7 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
   const { t } = useTranslation();
   const { data, isLoading, error } = usePOIDetail(poiId);
   const [langTab, setLangTab] = useState(0);
-  const poi = data?.data || {};
+  const poi = data?.data?.poi || {};
 
   return (
     <Dialog open maxWidth="md" fullWidth onClose={onClose}>
@@ -433,7 +433,7 @@ function POIEditDialog({ poiId, onClose, onSaved }) {
   const [activeState, setActiveState] = useState(null);
   const [initialized, setInitialized] = useState(false);
 
-  const poi = data?.data || {};
+  const poi = data?.data?.poi || {};
 
   // Initialize form when data loads
   if (!isLoading && poi.id && !initialized) {

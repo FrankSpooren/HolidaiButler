@@ -3,7 +3,8 @@ import {
   Box, Typography, Grid, Card, CardContent, Chip, Select, MenuItem,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
   Paper, Skeleton, Alert, Button, Tooltip, IconButton, Collapse, List, ListItem,
-  ListItemText, useMediaQuery, useTheme
+  ListItemText, useMediaQuery, useTheme,
+  Dialog, DialogTitle, DialogContent, DialogActions, Divider
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -23,6 +24,7 @@ export default function AgentsPage() {
   const [sortBy, setSortBy] = useState('category');
   const [sortDir, setSortDir] = useState('asc');
   const [activityExpanded, setActivityExpanded] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState(null);
 
   const { data, isLoading, error, refetch, isFetching } = useAgentStatus({});
 
@@ -225,7 +227,9 @@ export default function AgentsPage() {
               {filteredAgents.map((agent, idx) => (
                 <TableRow
                   key={agent.id}
+                  onClick={() => setSelectedAgent(agent)}
                   sx={{
+                    cursor: 'pointer',
                     bgcolor: agent.status === 'error' ? 'rgba(244,67,54,0.04)' : undefined,
                     '&:hover': { bgcolor: 'grey.50' }
                   }}
@@ -286,6 +290,11 @@ export default function AgentsPage() {
         </TableContainer>
       )}
 
+      {/* Agent Detail Dialog */}
+      {selectedAgent && (
+        <AgentDetailDialog agent={selectedAgent} onClose={() => setSelectedAgent(null)} />
+      )}
+
       {/* ROW 5: Recent Activity */}
       <Paper sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -336,5 +345,119 @@ export default function AgentsPage() {
         )}
       </Paper>
     </Box>
+  );
+}
+
+/* ===== Agent Detail Dialog ===== */
+function AgentDetailDialog({ agent, onClose }) {
+  const { t } = useTranslation();
+
+  return (
+    <Dialog open maxWidth="sm" fullWidth onClose={onClose}>
+      <DialogTitle>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <span style={{ fontSize: '1.4rem' }}>{getAgentIcon(agent.name)}</span>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>{agent.name}</Typography>
+            <Typography variant="body2" color="text.secondary">{agent.description}</Typography>
+          </Box>
+        </Box>
+      </DialogTitle>
+      <DialogContent dividers>
+        <Grid container spacing={2} sx={{ mb: 2 }}>
+          <Grid item xs={6}>
+            <Typography variant="caption" color="text.secondary">{t('agents.table.category')}</Typography>
+            <Box sx={{ mt: 0.5 }}>
+              <Chip
+                label={t(`agents.filter.${agent.category}`)}
+                size="small"
+                sx={{ bgcolor: CATEGORY_COLORS[agent.category] || '#607d8b', color: '#fff', fontSize: '0.75rem' }}
+              />
+            </Box>
+          </Grid>
+          <Grid item xs={3}>
+            <Typography variant="caption" color="text.secondary">{t('agents.table.type')}</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Cat {agent.type}</Typography>
+          </Grid>
+          <Grid item xs={3}>
+            <Typography variant="caption" color="text.secondary">{t('agents.table.status')}</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: STATUS_COLORS[agent.status] || STATUS_COLORS.unknown }} />
+              <Typography variant="body2" sx={{ fontWeight: 600, color: STATUS_COLORS[agent.status] }}>
+                {agent.status}
+              </Typography>
+            </Box>
+          </Grid>
+        </Grid>
+
+        <Divider sx={{ my: 1.5 }} />
+
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <Typography variant="caption" color="text.secondary">{t('agents.table.schedule')}</Typography>
+            <Typography variant="body2">{agent.scheduleHuman || '—'}</Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="caption" color="text.secondary">{t('agents.lastUpdated')}</Typography>
+            <Typography variant="body2">
+              {agent.lastRun?.timestamp ? new Date(agent.lastRun.timestamp).toLocaleString('nl-NL') : '—'}
+            </Typography>
+          </Grid>
+        </Grid>
+
+        {agent.lastRun?.error && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {agent.lastRun.error}
+          </Alert>
+        )}
+
+        {agent.type === 'A' && (
+          <>
+            <Divider sx={{ my: 1.5 }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+              {t('agents.filter.destination')}
+            </Typography>
+            <Grid container spacing={2}>
+              {['calpe', 'texel'].map(dest => {
+                const d = agent.destinations?.[dest];
+                return (
+                  <Grid item xs={6} key={dest}>
+                    <Card variant="outlined" sx={{ p: 1.5 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        {dest === 'calpe' ? 'Calpe' : 'Texel'}
+                      </Typography>
+                      {d ? (
+                        <>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Box sx={{
+                              width: 8, height: 8, borderRadius: '50%',
+                              bgcolor: d.status === 'success' ? STATUS_COLORS.healthy
+                                : d.status === 'partial' ? STATUS_COLORS.warning
+                                : d.status === 'error' ? STATUS_COLORS.error
+                                : STATUS_COLORS.unknown
+                            }} />
+                            <Typography variant="body2">{d.status || 'unknown'}</Typography>
+                          </Box>
+                          {d.lastRun && (
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(d.lastRun).toLocaleString('nl-NL')}
+                            </Typography>
+                          )}
+                        </>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">—</Typography>
+                      )}
+                    </Card>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('agents.close') || 'Sluiten'}</Button>
+      </DialogActions>
+    </Dialog>
   );
 }
