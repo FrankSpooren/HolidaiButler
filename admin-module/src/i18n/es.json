@@ -9,7 +9,8 @@
     "pois": "Gesti\u00f3n de POIs",
     "reviews": "Rese\u00f1as",
     "analytics": "Anal\u00edticas",
-    "settings": "Configuraci\u00f3n"
+    "settings": "Configuraci\u00f3n",
+    "users": "Usuarios"
   },
   "auth": {
     "login": "Iniciar sesi\u00f3n",
@@ -88,6 +89,18 @@
       "destinationStatus": "Estado por destino",
       "duration": "\u00daltima duraci\u00f3n"
     },
+    "config": {
+      "title": "Configuraci\u00f3n del agente",
+      "edit": "Configuraci\u00f3n",
+      "displayName": "Nombre visible",
+      "emoji": "Emoji",
+      "descriptionNL": "Descripci\u00f3n (NL)",
+      "descriptionEN": "Descripci\u00f3n (EN)",
+      "active": "Agente activo",
+      "save": "Guardar",
+      "saving": "Guardando...",
+      "saved": "Configuraci\u00f3n del agente guardada"
+    },
     "partial": "Algunas fuentes de datos no est\u00e1n disponibles. Los datos mostrados pueden estar incompletos.",
     "noResults": "No se encontraron agentes para los filtros seleccionados.",
     "noActivity": "Sin actividad reciente",
@@ -125,6 +138,7 @@
       "sortName": "Nombre",
       "sortRating": "Valoraci\u00f3n",
       "sortUpdated": "\u00daltima actualizaci\u00f3n",
+      "category": "Categor\u00eda",
       "all": "Todos",
       "withContent": "Con contenido",
       "withoutContent": "Sin contenido",
@@ -147,7 +161,10 @@
       "totalReviews": "Rese\u00f1as totales",
       "avgRating": "Valoraci\u00f3n media",
       "distribution": "Distribuci\u00f3n"
-    }
+    },
+    "images": "Im\u00e1genes",
+    "primary": "Principal",
+    "imageReordered": "Orden de im\u00e1genes actualizado"
   },
   "reviews": {
     "title": "Moderaci\u00f3n de Rese\u00f1as",
@@ -231,6 +248,25 @@
       "destination": "Destino",
       "reviews": "Rese\u00f1as",
       "rating": "Valoraci\u00f3n"
+    },
+    "contentTitle": "Contenido y Rese\u00f1as",
+    "chatbot": {
+      "title": "Anal\u00edticas del Chatbot",
+      "sessions": "Sesiones de chat",
+      "messages": "Mensajes",
+      "avgMessages": "Prom. mensajes/sesi\u00f3n",
+      "avgResponse": "Tiempo de respuesta prom.",
+      "fallbackRate": "Tasa de fallback",
+      "sessionsPerDay": "Sesiones por d\u00eda (30d)",
+      "languages": "Idiomas",
+      "noData": "No hay datos de chatbot disponibles"
+    },
+    "delta": {
+      "vs7d": "vs \u00faltimos 7 d\u00edas"
+    },
+    "trend": {
+      "title": "Tendencia",
+      "noData": "Sin datos para el per\u00edodo seleccionado"
     }
   },
   "settings": {
@@ -258,6 +294,16 @@
       "de": "Deutsch",
       "es": "Espa\u00f1ol"
     },
+    "branding": {
+      "title": "Marca",
+      "primary": "Primario",
+      "secondary": "Secundario",
+      "accent": "Acento",
+      "chatbot": "Chatbot",
+      "customized": "Personalizado",
+      "editTitle": "Editar marca",
+      "saved": "Marca guardada exitosamente"
+    },
     "cache": {
       "title": "Gesti\u00f3n de cach\u00e9",
       "description": "Limpiar la cach\u00e9 de Redis para eliminar datos obsoletos. Esto puede causar breves retrasos.",
@@ -276,7 +322,85 @@
       "action": "Acci\u00f3n",
       "user": "Usuario",
       "details": "Detalles",
-      "noEntries": "No se encontraron entradas en el registro de auditor\u00eda."
+      "noEntries": "No se encontraron entradas en el registro de auditor\u00eda.",
+      "undo": "Deshacer",
+      "undoAction": "Deshacer esta acci\u00f3n",
+      "undone": "Acci\u00f3n deshecha exitosamente"
+    }
+  },
+  "users": {
+    "title": "Gesti\u00f3n de usuarios",
+    "subtitle": "Gestionar usuarios admin y permisos de acceso",
+    "add": "A\u00f1adir usuario",
+    "addTitle": "Nuevo usuario",
+    "editTitle": "Editar usuario",
+    "deleteTitle": "\u00bfEliminar usuario?",
+    "resetPasswordTitle": "Restablecer contrase\u00f1a",
+    "searchPlaceholder": "Buscar por nombre o email...",
+    "noResults": "No se encontraron usuarios para los filtros seleccionados.",
+    "rowsPerPage": "Filas por p\u00e1gina",
+    "refresh": "Actualizar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "resetPassword": "Restablecer contrase\u00f1a",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "create": "Crear",
+    "creating": "Creando...",
+    "close": "Cerrar",
+    "confirmDelete": "Confirmar eliminaci\u00f3n",
+    "deleting": "Eliminando...",
+    "resetting": "Restableciendo...",
+    "created": "Usuario creado",
+    "updated": "Usuario actualizado",
+    "deleted": "Usuario eliminado",
+    "passwordCopied": "Contrase\u00f1a copiada",
+    "passwordHint": "M\u00edn. 12 caracteres, 1 may\u00fascula, 1 d\u00edgito",
+    "passwordGenerated": "Contrase\u00f1a temporal generada",
+    "copyPassword": "Copiar contrase\u00f1a",
+    "shareSecurely": "Comparta esta contrase\u00f1a de forma segura con el usuario",
+    "deleteConfirm": "\u00bfEst\u00e1s seguro de que quieres eliminar a {{name}} ({{email}})?",
+    "deleteSoftNote": "El usuario ser\u00e1 desactivado (no eliminado permanentemente)",
+    "resetPasswordConfirm": "\u00bfGenerar nueva contrase\u00f1a temporal para {{name}}?",
+    "resetPasswordNote": "La contrase\u00f1a actual ser\u00e1 invalidada",
+    "roles": {
+      "platform_admin": "Admin de plataforma",
+      "poi_owner": "Propietario de POI",
+      "editor": "Editor",
+      "reviewer": "Revisor"
+    },
+    "statuses": {
+      "active": "Activo",
+      "suspended": "Suspendido",
+      "pending": "Pendiente"
+    },
+    "filter": {
+      "role": "Rol",
+      "status": "Estado",
+      "all": "Todos"
+    },
+    "table": {
+      "name": "Nombre",
+      "email": "Email",
+      "role": "Rol",
+      "destinations": "Destinos",
+      "status": "Estado",
+      "created": "Creado",
+      "actions": "Acciones"
+    },
+    "fields": {
+      "email": "Correo electr\u00f3nico",
+      "password": "Contrase\u00f1a",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "role": "Rol",
+      "status": "Estado",
+      "destinations": "Destinos"
+    },
+    "errors": {
+      "required": "Este campo es obligatorio",
+      "passwordWeak": "M\u00edn. 12 caracteres, 1 may\u00fascula, 1 d\u00edgito"
     }
   },
   "common": {

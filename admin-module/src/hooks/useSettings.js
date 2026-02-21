@@ -27,3 +27,32 @@ export function useClearCache() {
     }
   });
 }
+
+export function useUndoAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (auditLogId) => settingsService.undoAction(auditLogId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audit-log'] });
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    }
+  });
+}
+
+export function useBranding() {
+  return useQuery({
+    queryKey: ['branding'],
+    queryFn: () => settingsService.getBranding(),
+    staleTime: 5 * 60 * 1000
+  });
+}
+
+export function useUpdateBranding() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ destination, data }) => settingsService.updateBranding(destination, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['branding'] });
+    }
+  });
+}

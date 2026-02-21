@@ -38,3 +38,21 @@ export function usePOIUpdate() {
     }
   });
 }
+
+export function usePOICategories(destination) {
+  return useQuery({
+    queryKey: ['poi-categories', destination],
+    queryFn: () => poiService.categories(destination !== 'all' ? destination : undefined),
+    staleTime: 5 * 60 * 1000
+  });
+}
+
+export function usePOIImageReorder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ poiId, imageIds }) => poiService.reorderImages(poiId, imageIds),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['poi-detail', variables.poiId] });
+    }
+  });
+}

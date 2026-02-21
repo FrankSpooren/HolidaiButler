@@ -9,7 +9,8 @@
     "pois": "POI Management",
     "reviews": "Reviews",
     "analytics": "Analytics",
-    "settings": "Instellingen"
+    "settings": "Instellingen",
+    "users": "Gebruikers"
   },
   "auth": {
     "login": "Inloggen",
@@ -88,6 +89,18 @@
       "destinationStatus": "Status per bestemming",
       "duration": "Laatste duur"
     },
+    "config": {
+      "title": "Agent configuratie",
+      "edit": "Configuratie",
+      "displayName": "Weergavenaam",
+      "emoji": "Emoji",
+      "descriptionNL": "Beschrijving (NL)",
+      "descriptionEN": "Description (EN)",
+      "active": "Agent actief",
+      "save": "Opslaan",
+      "saving": "Opslaan...",
+      "saved": "Agent configuratie opgeslagen"
+    },
     "partial": "Sommige databronnen zijn niet bereikbaar. Getoonde data kan onvolledig zijn.",
     "noResults": "Geen agents gevonden voor de geselecteerde filters.",
     "noActivity": "Geen recente activiteit",
@@ -119,6 +132,7 @@
     },
     "filter": {
       "destination": "Bestemming",
+      "category": "Categorie",
       "content": "Content",
       "status": "Status",
       "sortBy": "Sorteer op",
@@ -147,7 +161,10 @@
       "totalReviews": "Totaal reviews",
       "avgRating": "Gem. rating",
       "distribution": "Verdeling"
-    }
+    },
+    "images": "Afbeeldingen",
+    "primary": "Primair",
+    "imageReordered": "Afbeeldingvolgorde bijgewerkt"
   },
   "reviews": {
     "title": "Reviews Moderatie",
@@ -231,6 +248,25 @@
       "destination": "Bestemming",
       "reviews": "Reviews",
       "rating": "Rating"
+    },
+    "contentTitle": "Content & Reviews",
+    "chatbot": {
+      "title": "Chatbot Analytics",
+      "sessions": "Chatsessies",
+      "messages": "Berichten",
+      "avgMessages": "Gem. berichten/sessie",
+      "avgResponse": "Gem. responstijd",
+      "fallbackRate": "Fallback percentage",
+      "sessionsPerDay": "Sessies per dag (30d)",
+      "languages": "Talen",
+      "noData": "Geen chatbot data beschikbaar"
+    },
+    "delta": {
+      "vs7d": "t.o.v. vorige 7 dagen"
+    },
+    "trend": {
+      "title": "Trend",
+      "noData": "Geen data voor de geselecteerde periode"
     }
   },
   "settings": {
@@ -268,6 +304,16 @@
       "de": "Deutsch",
       "es": "Español"
     },
+    "branding": {
+      "title": "Huisstijl",
+      "primary": "Primair",
+      "secondary": "Secundair",
+      "accent": "Accent",
+      "chatbot": "Chatbot",
+      "customized": "Aangepast",
+      "editTitle": "Huisstijl bewerken",
+      "saved": "Huisstijl succesvol opgeslagen"
+    },
     "audit": {
       "title": "Admin Audit Log",
       "filterAction": "Filter op actie",
@@ -276,7 +322,85 @@
       "action": "Actie",
       "user": "Gebruiker",
       "details": "Details",
-      "noEntries": "Geen audit log entries gevonden."
+      "noEntries": "Geen audit log entries gevonden.",
+      "undo": "Ongedaan",
+      "undoAction": "Actie ongedaan maken",
+      "undone": "Actie succesvol ongedaan gemaakt"
+    }
+  },
+  "users": {
+    "title": "Gebruikersbeheer",
+    "subtitle": "Beheer admin gebruikers en toegangsrechten",
+    "add": "Gebruiker toevoegen",
+    "addTitle": "Nieuwe gebruiker",
+    "editTitle": "Gebruiker bewerken",
+    "deleteTitle": "Gebruiker verwijderen?",
+    "resetPasswordTitle": "Wachtwoord resetten",
+    "searchPlaceholder": "Zoek op naam of e-mail...",
+    "noResults": "Geen gebruikers gevonden voor de geselecteerde filters.",
+    "rowsPerPage": "Rijen per pagina",
+    "refresh": "Vernieuwen",
+    "edit": "Bewerken",
+    "delete": "Verwijderen",
+    "resetPassword": "Wachtwoord resetten",
+    "cancel": "Annuleren",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
+    "create": "Aanmaken",
+    "creating": "Aanmaken...",
+    "close": "Sluiten",
+    "confirmDelete": "Bevestig verwijdering",
+    "deleting": "Verwijderen...",
+    "resetting": "Resetten...",
+    "created": "Gebruiker aangemaakt",
+    "updated": "Gebruiker bijgewerkt",
+    "deleted": "Gebruiker verwijderd",
+    "passwordCopied": "Wachtwoord gekopieerd",
+    "passwordHint": "Min. 12 tekens, 1 hoofdletter, 1 cijfer",
+    "passwordGenerated": "Tijdelijk wachtwoord gegenereerd",
+    "copyPassword": "Kopieer wachtwoord",
+    "shareSecurely": "Deel dit wachtwoord veilig met de gebruiker",
+    "deleteConfirm": "Weet je zeker dat je {{name}} ({{email}}) wilt verwijderen?",
+    "deleteSoftNote": "De gebruiker wordt gedeactiveerd (niet permanent verwijderd)",
+    "resetPasswordConfirm": "Nieuw tijdelijk wachtwoord genereren voor {{name}}?",
+    "resetPasswordNote": "Het huidige wachtwoord wordt ongeldig",
+    "roles": {
+      "platform_admin": "Platform Admin",
+      "poi_owner": "POI Eigenaar",
+      "editor": "Redacteur",
+      "reviewer": "Reviewer"
+    },
+    "statuses": {
+      "active": "Actief",
+      "suspended": "Geblokkeerd",
+      "pending": "In afwachting"
+    },
+    "filter": {
+      "role": "Rol",
+      "status": "Status",
+      "all": "Alle"
+    },
+    "table": {
+      "name": "Naam",
+      "email": "E-mail",
+      "role": "Rol",
+      "destinations": "Bestemmingen",
+      "status": "Status",
+      "created": "Aangemaakt",
+      "actions": "Acties"
+    },
+    "fields": {
+      "email": "E-mailadres",
+      "password": "Wachtwoord",
+      "firstName": "Voornaam",
+      "lastName": "Achternaam",
+      "role": "Rol",
+      "status": "Status",
+      "destinations": "Bestemmingen"
+    },
+    "errors": {
+      "required": "Dit veld is verplicht",
+      "passwordWeak": "Min. 12 tekens, 1 hoofdletter, 1 cijfer"
     }
   },
   "common": {

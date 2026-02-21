@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 21 februari 2026
-**Versie**: 6.8
+**Versie**: 6.9
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 8E COMPLEET - Admin Portal Hardening & UX Upgrade. Agent ecosystem fixes (Backup Health, De Maestro 18/18 HEALTHY, daily backup cron). Content audit (14 asterisks, 79 ES translations, 121 inactive). 11 UX fixes (destination filter, sorting, analytics, i18n DE/ES). 5 doc fixes. Kosten: ~EUR 0,50.
+**Status**: FASE 9A COMPLEET - Admin Portal Enhancement. 3 sub-fases: 9A-1 RBAC + Undo + Agent Config (user management, audit undo, agent config editing), 9A-2 Analytics & Data (chatbot analytics, trend API, snapshot), 9A-3 POI & UX Polish (category management, image ranking, branding UI, dark mode). 16 nieuwe endpoints (19→35 totaal). Kosten: EUR 0.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.31.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.32.0) in repo root + Hetzner
 
 ---
 
@@ -55,6 +55,7 @@
 | **Fase 8D** | Admin Portal Feature Pack (POIs, Reviews, Analytics, Settings — 12 endpoints, 4 pagina's) | ✅ COMPLEET | 20-02-2026 | Build OK, 401 auth OK | EUR 0 |
 | **Fase 8D-FIX** | Admin Portal Bug Fix (12 bugs: response structure mismatches, destination filters, Sentry DSN, UX) | ✅ COMPLEET | 21-02-2026 | 33/33 tests PASS | EUR 0 |
 | **Fase 8E** | Admin Portal Hardening & UX Upgrade (agent ecosystem fixes, content audit, destination filter, sorting, analytics, agent profielen, i18n DE/ES, taalversie) | ✅ COMPLEET | 21-02-2026 | 18/18 agents HEALTHY | ~EUR 0,50 |
+| **Fase 9A** | Admin Portal Enhancement (RBAC + Undo + Agent Config, Chatbot Analytics, POI Category/Image/Branding, Dark Mode — 16 nieuwe endpoints, 35 totaal) | ✅ COMPLEET | 21-02-2026 | Build OK, 0 errors | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -75,6 +76,7 @@
 | Fase 8D Admin Portal Feature Pack | EUR 0 | EUR 0 | ✅ |
 | Fase 8D-FIX Admin Portal Bug Fix | EUR 0 | EUR 0 | ✅ |
 | Fase 8E Admin Portal Hardening & UX | EUR 1 | EUR 0,50 | ✅ |
+| Fase 9A Admin Portal Enhancement | EUR 0 | EUR 0 | ✅ |
 | **Totaal** | **EUR 95** | **EUR 74,41** | **78,3% van budget** |
 
 ### 1.3 Openstaande Componenten
@@ -697,35 +699,13 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 - Recente activiteit log
 - Error/warning highlighting
 
-**Claude Code Commando - Fase 8C:**
+**Fase 8C Resultaten:**
 
-```
-FASE 8C: AGENT DASHBOARD IN ADMIN PORTAL
+Fase 8C is uitgevoerd in twee stappen:
+- **8C-0**: Foundation (6 admin API endpoints, React 18 + MUI 5 frontend, 3 VHosts + SSL, CI/CD). 15/15 tests PASS.
+- **8C-1**: Agent Dashboard (GET /agents/status, 18 agent entries, summary cards, filter bar, sortable tabel, recent activity). 12/12 tests PASS.
 
-INSTRUCTIE VOOR CLAUDE CODE:
-Je gaat Fase 8C uitvoeren: implementeer een Agent Dashboard in de Admin Portal
-zodat Frank dagelijks kan monitoren wat de 15 agents doen/hebben gedaan.
-
-STAP 0: STRATEGISCHE DOCUMENTATIE ANALYSEREN (VERPLICHT!)
-
-LEES VOORDAT JE BEGINT:
-1. CLAUDE.md - Check Fase 8B = COMPLEET
-2. docs/strategy/HolidaiButler_Master_Strategie.md
-3. Admin Portal structuur: ls -la admin-module/src/pages/
-
-DASHBOARD WIREFRAME:
-- Overview cards: Calpe/Texel status, Active agents count, Errors
-- Filter bar: [Alle] [Core] [Operations] [Development] [Strategy] + Destination
-- Agent tabel: #, Name, Calpe status, Texel status, Last run, Status
-- Activity log: laatste 50 entries
-
-UITVOERING:
-1. Backend API: GET /admin/agents/status (admin auth required)
-2. Frontend: AgentDashboard.tsx met useQuery (refetchInterval 5min)
-3. Routing + navigation
-4. Testing
-5. Documentatie update (CLAUDE.md + Master Strategie + Git + Hetzner)
-```
+Zie Fase 8C-0 en 8C-1 secties hierboven voor volledige resultaten.
 
 ---
 
@@ -744,10 +724,18 @@ HolidaiButler/
 │   │   ├── calpe.config.js
 │   │   └── texel.config.js
 │   └── src/
-│       ├── routes/holibot.js      # HoliBot API (destination-aware)
+│       ├── routes/
+│       │   ├── holibot.js         # HoliBot API (destination-aware)
+│       │   └── adminPortal.js     # Admin Portal API (35 endpoints)
 │       └── services/holibot/      # RAG pipeline
 ├── customer-portal/frontend/      # React 19 + Tailwind (per destination build)
-├── admin-module/                  # React 18 + MUI (admin.holidaibutler.com)
+├── admin-module/                  # React 18 + MUI 5 (admin.holidaibutler.com)
+│   └── src/
+│       ├── api/                   # API services (auth, agents, pois, reviews, analytics, settings, users)
+│       ├── hooks/                 # React Query hooks
+│       ├── pages/                 # Dashboard, Agents, POIs, Reviews, Analytics, Settings, Users
+│       ├── stores/                # Zustand (auth, theme)
+│       └── i18n/                  # NL/EN/DE/ES vertalingen
 ├── docs/strategy/                 # Dit document
 └── infrastructure/apache/         # VHost templates
 ```
@@ -925,6 +913,17 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - Content audit als standaard hardening stap: zelfs na R6b pipeline bleken 14 POIs asterisks en 79 POIs missing ES translations te hebben
 - `calculateAgentStatus()`: MongoDB stores 'completed', maar transformatie naar 'success' voor frontend → status vergelijking moet BEIDE waarden accepteren
 
+### Fase 9A (21/02) - Admin Portal Enhancement
+- RBAC: `adminAuth(minRole)` middleware met role hierarchy — editor kan alles wat reviewer kan + schrijfacties
+- Audit undo: alleen `reversible: true` acties ondersteunen undo — bewaar snapshot in `previousData` veld bij elke audit entry
+- Agent config: MongoDB `agent_configurations` collection als override layer boven static AGENT_METADATA — frontend hoeft niet te weten welke bron
+- Chatbot analytics: `holibot_sessions` tabel bevat sessie metadata, `holibot_message_log` bevat per-bericht data met `response_time_ms`
+- Image reorder: `display_order` kolom in `imageurls` tabel. COALESCE(display_order, 999) zorgt dat niet-geordende images onderaan staan
+- Branding: DEFAULT_BRAND_CONFIG constante als fallback — MongoDB `brand_configurations` voor customization. Hex validatie server-side
+- Dark mode: Zustand store met `localStorage` persist — geen backend call nodig, instant toggle
+- Autocomplete freeSolo: `Autocomplete` met `freeSolo` prop maakt zowel bestaande categorieën selecteerbaar als nieuwe invoerbaar
+- Analytics trend/snapshot endpoints: generiek ontwerp met `metric` parameter — herbruikbaar voor toekomstige KPIs
+
 ### Fase 8D-FIX (21/02) - Admin Portal Bug Fix
 - **KRITIEK**: Frontend-backend response structure ALTIJD contractueel definiëren — 8D had 12 mismatches door snelle development
 - `resolveDestinationId()` helper: centraal string→numeric destination mapping (voorkomt `parseInt("texel")` = NaN)
@@ -990,6 +989,15 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 21-02 | i18n DE/ES via aparte JSON bestanden (8E) | Zelfde structuur als nl.json/en.json — schaalbaar voor toekomstige talen | Claude Code |
 | 21-02 | 121 inactive POIs niet auto-reactiveren (8E) | Mogelijk intentioneel gedeactiveerd (100 = Montaditos chain) — Frank beslist | Frank / Claude Code |
 | 21-02 | Daily MySQL backup cron met 7-day rotation (8E) | Backup Health Checker had CRITICAL door ontbreken automated backups — nu dagelijks 03:00 | Claude Code |
+| 21-02 | resolveDestinationId() centraal helper (8D-FIX) | Voorkomt parseInt("texel")=NaN door centraal string→numeric mapping — herbruikbaar door alle endpoints | Claude Code |
+| 21-02 | Response structure contract als lesson (8D-FIX) | 12 mismatches door snelle 8D dev — frontend-backend keys ALTIJD vooraf definiëren | Claude Code |
+| 21-02 | RBAC met 4 rollen (9A-1) | platform_admin > poi_owner > editor > reviewer — minimale privilege per endpoint | Claude Code |
+| 21-02 | Audit undo via MongoDB snapshots (9A-1) | Reversible actions (POI edit, review archive) slaan snapshot op voor undo — audit trail behouden | Claude Code |
+| 21-02 | Agent config in MongoDB (9A-1) | AGENT_METADATA in adminPortal.js is static fallback — MongoDB overschrijft displayName/emoji/description/active | Claude Code |
+| 21-02 | Chatbot analytics from holibot_sessions (9A-2) | Sessions + messages + languages uit MySQL, avg response uit holibot_message_log — geen extra tracking nodig | Claude Code |
+| 21-02 | display_order voor image ranking (9A-3) | ALTER TABLE imageurls ADD display_order — COALESCE(display_order, 999) als fallback voor niet-geordende images | Claude Code |
+| 21-02 | Branding defaults + MongoDB override (9A-3) | DEFAULT_BRAND_CONFIG als fallback, MongoDB brand_configurations voor customization — werkt ook als MongoDB offline | Claude Code |
+| 21-02 | Dark mode via Zustand + localStorage (9A-3) | MUI buildTheme(mode) factory, persist voorkeur — geen backend nodig | Claude Code |
 
 ---
 
@@ -1069,9 +1077,10 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **6.9** | **21-02-2026** | **Fase 9A Admin Portal Enhancement COMPLEET: 3 sub-fases. 9A-1: RBAC user management (CRUD, 4 rollen, soft-delete, password reset), audit log undo (reversible actions + MongoDB snapshot), agent config editing (displayName, emoji, description, active). 9A-2: Chatbot analytics (sessions, messages, avg response, fallback rate, language distribution), analytics trend API, analytics snapshot. 9A-3: POI category management (filter dropdown + autocomplete), image ranking (display_order, reorder UI), branding UI (color management per destination), dark mode (Zustand + MUI theme factory). 16 nieuwe endpoints (35 totaal). 4 nieuwe bestanden (userService.js, useUsers.js, UsersPage.jsx, themeStore.js). Kosten: EUR 0. CLAUDE.md v3.32.0.** |
 | **6.8** | **21-02-2026** | **Fase 8E Admin Portal Hardening & UX Upgrade COMPLEET: BLOK 1: Agent ecosystem fixes (Backup Health regex+dir, dailyBriefing URGENT, De Maestro calculateAgentStatus fix → 18/18 HEALTHY, daily MySQL backup cron). BLOK 2: Content audit (14 asterisk POIs fixed, 79 missing ES translations, 121 inactive POIs gedocumenteerd). BLOK 3: 11 UX fixes (global destination filter+vlaggen, sortable columns, analytics trends, reviews filter, POI detail link, agent profielen NL, categorie kleuren, scheduled jobs popup, taalversie NL/EN/DE/ES). BLOK 4: 5 doc fixes. Kosten: ~EUR 0,50. CLAUDE.md v3.31.0.** |
 | **6.7** | **21-02-2026** | **Fase 8D-FIX Admin Portal Bug Fix COMPLEET: 12 bugs gefixed bij live testing. Backend (adminPortal.js v2.1.0): resolveDestinationId() helper, POI stats per-destination keys, POI detail field renames, review summary flattened, settings system keys, destinations object format, audit-log field mapping. Frontend: POI/review detail wrapper fix, snackbar undo, QuickLinks live, agent detail dialog, Sentry DSN fix. 33/33 tests PASS. Kosten: EUR 0. CLAUDE.md v3.30.0.** |
-| **6.6** | **20-02-2026** | **Fase 8D Admin Portal Feature Pack COMPLEET: 4 modules — POI Management (list/detail/edit/stats, 4 endpoints), Reviews Moderatie (list/detail/archive, 3 endpoints), Analytics (overview/trends/export, 2 endpoints), Settings (system/audit-log/cache, 3 endpoints). 12 nieuwe endpoints, 4 pagina's, 4 API services, 4 React Query hooks, 100+ i18n keys NL/EN. adminPortal.js v2.0.0 (19 endpoints totaal). Alle 6 admin sidebar items actief. Pre-flight DB schema check via SSH (command doc had verkeerde table/column names). Deployed naar alle 3 omgevingen + Hetzner. Kosten: EUR 0. CLAUDE.md v3.29.0.** |
+| **6.6** | **20-02-2026** | **Fase 8D Admin Portal Feature Pack COMPLEET: 4 modules — POI Management (list/detail/edit/stats, 4 endpoints), Reviews Moderatie (list/detail/archive, 3 endpoints), Analytics (overview/trends/export, 2 endpoints), Settings (system/audit-log/cache, 3 endpoints). 12 nieuwe endpoints, 4 pagina's, 4 API services, 4 React Query hooks, 100+ i18n keys NL/EN. adminPortal.js v2.0.0 (35 endpoints totaal). Alle 6 admin sidebar items actief. Pre-flight DB schema check via SSH (command doc had verkeerde table/column names). Deployed naar alle 3 omgevingen + Hetzner. Kosten: EUR 0. CLAUDE.md v3.29.0.** |
 | **6.5** | **20-02-2026** | **Fase 8C-1 Agent Dashboard COMPLEET: Backend GET /agents/status (AGENT_METADATA 18 entries, MongoDB audit_logs, Redis thermostaat+cache, monitoring collections, graceful degradation). Frontend AgentsPage: 4 summary cards, 6 category filter chips, destination dropdown, sortable agent tabel (Cat A destination-aware, Cat B shared), recent activity (10/50), auto-refresh 5 min, i18n NL/EN (30+ keys). 12/12 tests PASS. Kosten: EUR 0. adminPortal.js v1.1.0 (7 endpoints). Lessons: static metadata > registry import (dependency isolation), MongoDB audit_logs als primary source (Redis te beperkt). CLAUDE.md v3.28.0.** |
 | **6.4** | **20-02-2026** | **Fase 8C-0 Admin Portal Foundation COMPLEET: 3 VHosts + SSL + CORS. 6 admin API endpoints in platform-core (login, refresh, logout, me, dashboard, health). JWT auth (8h+7d), bcrypt, rate limiting, Redis cache. React 18 + MUI 5 + Vite 4 + Zustand frontend (login, dashboard, i18n NL/EN). CI/CD: deploy-admin-module.yml met backup + rollback. Admin user: admin@holidaibutler.com. 15/15 tests PASS. Typo fixes: threama→threema. Kosten: EUR 0. CLAUDE.md v3.27.0.** |
 | **6.3** | **20-02-2026** | **Fase 8B Agent Multi-Destination COMPLEET: BaseAgent pattern (run/runForDestination/aggregateResults). 3 nieuwe bestanden: BaseAgent.js, destinationRunner.js, agentRegistry.js. 18 agents geregistreerd (13 Categorie A destination-aware, 5 Categorie B shared). Threema configuratie verificatie in smoke tests (dagelijks, passief). Config mapping fix (c.destination.id i.p.v. c.id). 22/22 tests PASS. Audit gap D2 inhaal: Fase 8A+ detail subsectie toegevoegd. Lessons Learned 8A+/8B. Beslissingen Log 8A+/8B. Risico Register 8A+/8B. Kosten: EUR 0. CLAUDE.md v3.26.0.** |
@@ -1090,5 +1099,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 21 februari 2026 - Fase 8D-FIX COMPLEET (Admin Portal Bug Fix), Master Document v6.7*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A + 8A+ + 8B + 8C-0 + 8C-1 + 8D + 8D-FIX COMPLEET. Admin Portal 100% COMPLEET (19 endpoints, 6 pagina's, 33/33 tests PASS).*
+*Laatst bijgewerkt: 21 februari 2026 - Fase 9A COMPLEET (Admin Portal Enhancement), Master Document v6.9*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→8E + 9A COMPLEET. Admin Portal: 35 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode.*

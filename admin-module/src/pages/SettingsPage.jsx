@@ -3,7 +3,8 @@ import {
   Box, Typography, Card, Grid, Skeleton, Chip, Button,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   TablePagination, Dialog, DialogTitle, DialogContent, DialogActions,
-  Alert, Select, MenuItem, FormControl, InputLabel
+  Alert, Select, MenuItem, FormControl, InputLabel, Snackbar,
+  IconButton, Tooltip, TextField
 } from '@mui/material';
 import StorageIcon from '@mui/icons-material/Storage';
 import MemoryIcon from '@mui/icons-material/Memory';
@@ -13,8 +14,11 @@ import HistoryIcon from '@mui/icons-material/History';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import TranslateIcon from '@mui/icons-material/Translate';
+import PaletteIcon from '@mui/icons-material/Palette';
+import UndoIcon from '@mui/icons-material/Undo';
+import SaveIcon from '@mui/icons-material/Save';
 import { useTranslation } from 'react-i18next';
-import { useSettings, useAuditLog, useClearCache } from '../hooks/useSettings.js';
+import { useSettings, useAuditLog, useClearCache, useUndoAction, useBranding, useUpdateBranding } from '../hooks/useSettings.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatDate } from '../utils/formatters.js';
 
@@ -129,6 +133,9 @@ export default function SettingsPage() {
           </Grid>
         </>
       )}
+
+      {/* Branding */}
+      <BrandingSection />
 
       {/* Cache Management */}
       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
@@ -250,9 +257,154 @@ function LanguageSelector() {
   );
 }
 
+/* ===== Branding Section ===== */
+function BrandingSection() {
+  const { t } = useTranslation();
+  const { data, isLoading } = useBranding();
+  const updateMut = useUpdateBranding();
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({});
+  const [snack, setSnack] = useState(null);
+
+  const branding = data?.data?.branding || {};
+  const DEST_FLAGS = { calpe: '\uD83C\uDDEA\uD83C\uDDF8', texel: '\uD83C\uDDF3\uD83C\uDDF1' };
+
+  const startEdit = (dest) => {
+    setForm({ ...branding[dest] });
+    setEditing(dest);
+  };
+
+  const handleSave = async () => {
+    try {
+      await updateMut.mutateAsync({ destination: editing, data: form });
+      setSnack(t('settings.branding.saved'));
+      setEditing(null);
+    } catch {
+      setSnack(t('common.error'));
+    }
+  };
+
+  return (
+    <>
+      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+        <PaletteIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'text-bottom' }} />
+        {t('settings.branding.title')}
+      </Typography>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {isLoading ? (
+          [0, 1].map(i => (
+            <Grid item xs={12} md={6} key={i}>
+              <Skeleton variant="rounded" height={140} />
+            </Grid>
+          ))
+        ) : Object.entries(branding).map(([dest, brand]) => (
+          <Grid item xs={12} md={6} key={dest}>
+            <Card sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  {DEST_FLAGS[dest]} {dest.charAt(0).toUpperCase() + dest.slice(1)}
+                </Typography>
+                <Button size="small" variant="outlined" onClick={() => startEdit(dest)}>
+                  {t('pois.edit')}
+                </Button>
+              </Box>
+              <Grid container spacing={1}>
+                <Grid item xs={4}>
+                  <Typography variant="caption" color="text.secondary">{t('settings.branding.primary')}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: brand.primary, border: '1px solid #ccc' }} />
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{brand.primary}</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={4}>
+                  <Typography variant="caption" color="text.secondary">{t('settings.branding.secondary')}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: brand.secondary, border: '1px solid #ccc' }} />
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{brand.secondary}</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={4}>
+                  <Typography variant="caption" color="text.secondary">{t('settings.branding.accent')}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: brand.accent, border: '1px solid #ccc' }} />
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{brand.accent}</Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  {t('settings.branding.chatbot')}: <b>{brand.chatbotName}</b> | {brand.domain}
+                  {brand.customized && <Chip size="small" label={t('settings.branding.customized')} sx={{ ml: 1, fontSize: '0.65rem', height: 18 }} color="info" />}
+                </Typography>
+              </Box>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Edit Branding Dialog */}
+      {editing && (
+        <Dialog open maxWidth="xs" fullWidth onClose={() => setEditing(null)}>
+          <DialogTitle>
+            {t('settings.branding.editTitle')} — {DEST_FLAGS[editing]} {editing.charAt(0).toUpperCase() + editing.slice(1)}
+          </DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2} sx={{ mt: 0.5 }}>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth size="small" label={t('settings.branding.primary')}
+                  value={form.primary || ''} onChange={(e) => setForm(f => ({ ...f, primary: e.target.value }))}
+                  InputProps={{ startAdornment: <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: form.primary, border: '1px solid #ccc', mr: 1, flexShrink: 0 }} /> }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth size="small" label={t('settings.branding.secondary')}
+                  value={form.secondary || ''} onChange={(e) => setForm(f => ({ ...f, secondary: e.target.value }))}
+                  InputProps={{ startAdornment: <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: form.secondary, border: '1px solid #ccc', mr: 1, flexShrink: 0 }} /> }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth size="small" label={t('settings.branding.accent')}
+                  value={form.accent || ''} onChange={(e) => setForm(f => ({ ...f, accent: e.target.value }))}
+                  InputProps={{ startAdornment: <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: form.accent, border: '1px solid #ccc', mr: 1, flexShrink: 0 }} /> }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth size="small" label={t('settings.branding.chatbot')}
+                  value={form.chatbotName || ''} onChange={(e) => setForm(f => ({ ...f, chatbotName: e.target.value }))}
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditing(null)}>{t('settings.cancel')}</Button>
+            <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave} disabled={updateMut.isPending}>
+              {updateMut.isPending ? t('pois.saving') : t('pois.save')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
+      <Snackbar
+        open={!!snack}
+        autoHideDuration={3000}
+        onClose={() => setSnack(null)}
+        message={snack}
+      />
+    </>
+  );
+}
+
 /* ===== Audit Log Table ===== */
+const UNDOABLE_ACTIONS = ['poi_update', 'review_archive', 'review_unarchive', 'user_created', 'user_updated', 'user_deleted', 'agent_config_updated'];
+
 function AuditLogTable({ page, setPage, action, setAction }) {
   const { t } = useTranslation();
+  const undoMut = useUndoAction();
+  const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
   const filters = {
     page: page + 1,
     limit: 25,
@@ -261,6 +413,18 @@ function AuditLogTable({ page, setPage, action, setAction }) {
   const { data, isLoading, error } = useAuditLog(filters);
   const entries = data?.data?.entries || [];
   const pagination = data?.data?.pagination || {};
+
+  const handleUndo = async (entry) => {
+    try {
+      await undoMut.mutateAsync(entry._id);
+      setSnack({ open: true, message: t('settings.audit.undone'), severity: 'success' });
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || t('common.error');
+      setSnack({ open: true, message: msg, severity: 'error' });
+    }
+  };
+
+  const isUndoable = (entry) => UNDOABLE_ACTIONS.includes(entry.action) && entry.action !== 'action_undone';
 
   return (
     <Card>
@@ -271,6 +435,10 @@ function AuditLogTable({ page, setPage, action, setAction }) {
             <MenuItem value="">{t('settings.audit.allActions')}</MenuItem>
             <MenuItem value="poi_update">POI Update</MenuItem>
             <MenuItem value="review_archive">Review Archive</MenuItem>
+            <MenuItem value="user_created">User Created</MenuItem>
+            <MenuItem value="user_updated">User Updated</MenuItem>
+            <MenuItem value="user_deleted">User Deleted</MenuItem>
+            <MenuItem value="agent_config_updated">Agent Config</MenuItem>
             <MenuItem value="cache_clear">Cache Clear</MenuItem>
           </Select>
         </FormControl>
@@ -286,18 +454,19 @@ function AuditLogTable({ page, setPage, action, setAction }) {
               <TableCell>{t('settings.audit.action')}</TableCell>
               <TableCell>{t('settings.audit.user')}</TableCell>
               <TableCell>{t('settings.audit.details')}</TableCell>
+              <TableCell align="right">{t('settings.audit.undo')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {isLoading ? (
               [...Array(5)].map((_, i) => (
                 <TableRow key={i}>
-                  {[...Array(4)].map((_, j) => <TableCell key={j}><Skeleton /></TableCell>)}
+                  {[...Array(5)].map((_, j) => <TableCell key={j}><Skeleton /></TableCell>)}
                 </TableRow>
               ))
             ) : entries.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                   <Typography color="text.secondary">{t('settings.audit.noEntries')}</Typography>
                 </TableCell>
               </TableRow>
@@ -320,6 +489,19 @@ function AuditLogTable({ page, setPage, action, setAction }) {
                       {entry.detail || '—'}
                     </Typography>
                   </TableCell>
+                  <TableCell align="right">
+                    {isUndoable(entry) && (
+                      <Tooltip title={t('settings.audit.undoAction')}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleUndo(entry)}
+                          disabled={undoMut.isPending}
+                        >
+                          <UndoIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -336,6 +518,12 @@ function AuditLogTable({ page, setPage, action, setAction }) {
           rowsPerPageOptions={[25]}
         />
       )}
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={4000}
+        onClose={() => setSnack(s => ({ ...s, open: false }))}
+        message={snack.message}
+      />
     </Card>
   );
 }

@@ -4,7 +4,8 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
   Paper, Skeleton, Alert, Button, Tooltip, IconButton, Collapse, List, ListItem,
   ListItemText, useMediaQuery, useTheme,
-  Dialog, DialogTitle, DialogContent, DialogActions, Divider
+  Dialog, DialogTitle, DialogContent, DialogActions, Divider,
+  TextField, Switch, FormControlLabel, Snackbar
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -12,8 +13,10 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { useTranslation } from 'react-i18next';
-import { useAgentStatus } from '../hooks/useAgentStatus';
+import { useAgentStatus, useAgentConfigs, useUpdateAgentConfig } from '../hooks/useAgentStatus';
+import useAuthStore from '../stores/authStore.js';
 import { getAgentIcon, getAgentDescription, getAgentTasks, formatTimestamp, CATEGORY_COLORS, STATUS_COLORS } from '../utils/agents';
 
 const CATEGORIES = ['all', 'core', 'operations', 'development', 'strategy', 'monitoring'];
@@ -351,13 +354,18 @@ export default function AgentsPage() {
   );
 }
 
-/* ===== Agent Detail Dialog (Uitgebreid - Fase 8E) ===== */
+/* ===== Agent Detail Dialog (Uitgebreid - Fase 8E + 9A-1 Config) ===== */
 function AgentDetailDialog({ agent, onClose }) {
   const { t } = useTranslation();
+  const currentUser = useAuthStore(s => s.user);
+  const isPlatformAdmin = currentUser?.role === 'platform_admin';
   const descriptionNL = getAgentDescription(agent.name);
   const tasks = getAgentTasks(agent.name);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [snack, setSnack] = useState({ open: false, message: '' });
 
   return (
+    <>
     <Dialog open maxWidth="sm" fullWidth onClose={onClose}>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -503,7 +511,154 @@ function AgentDetailDialog({ agent, onClose }) {
         </Grid>
       </DialogContent>
       <DialogActions>
+        {isPlatformAdmin && (
+          <Button
+            startIcon={<SettingsIcon />}
+            onClick={() => setConfigOpen(true)}
+            sx={{ mr: 'auto' }}
+          >
+            {t('agents.config.edit')}
+          </Button>
+        )}
         <Button onClick={onClose}>{t('agents.close')}</Button>
+      </DialogActions>
+    </Dialog>
+
+    {/* Agent Config Dialog */}
+    {configOpen && (
+      <AgentConfigDialog
+        agentKey={agent.id}
+        agentName={agent.name}
+        onClose={() => setConfigOpen(false)}
+        onSaved={(msg) => { setConfigOpen(false); setSnack({ open: true, message: msg }); }}
+      />
+    )}
+    <Snackbar
+      open={snack.open}
+      autoHideDuration={4000}
+      onClose={() => setSnack({ open: false, message: '' })}
+      message={snack.message}
+    />
+    </>
+  );
+}
+
+/* ===== Agent Config Dialog (Fase 9A-1) ===== */
+function AgentConfigDialog({ agentKey, agentName, onClose, onSaved }) {
+  const { t } = useTranslation();
+  const { data: configsData, isLoading } = useAgentConfigs();
+  const updateMut = useUpdateAgentConfig();
+
+  const configs = configsData?.data?.configs || [];
+  const agentConfig = configs.find(c => c.agent_key === agentKey) || {};
+
+  const initialForm = useMemo(() => {
+    if (isLoading) return null;
+    return {
+      display_name: agentConfig.display_name || agentName,
+      emoji: agentConfig.emoji || '',
+      description_nl: agentConfig.description_nl || '',
+      description_en: agentConfig.description_en || '',
+      is_active: agentConfig.is_active !== false
+    };
+  }, [isLoading, agentConfig.display_name, agentConfig.emoji, agentConfig.description_nl, agentConfig.description_en, agentConfig.is_active, agentName]);
+
+  const [form, setForm] = useState(null);
+
+  // Initialize form when data arrives
+  if (!form && initialForm) {
+    setForm(initialForm);
+  }
+
+  const handleSave = async () => {
+    try {
+      await updateMut.mutateAsync({ key: agentKey, data: form });
+      onSaved(t('agents.config.saved'));
+    } catch (err) {
+      // Show error in the dialog
+    }
+  };
+
+  return (
+    <Dialog open maxWidth="sm" fullWidth onClose={onClose}>
+      <DialogTitle>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <SettingsIcon color="primary" />
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            {t('agents.config.title')}: {agentName}
+          </Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+        {isLoading || !form ? (
+          <Box sx={{ py: 2 }}>
+            {[...Array(4)].map((_, i) => <Skeleton key={i} height={56} sx={{ mb: 1 }} />)}
+          </Box>
+        ) : (
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            {updateMut.isError && (
+              <Grid item xs={12}>
+                <Alert severity="error">
+                  {updateMut.error?.response?.data?.error?.message || t('common.error')}
+                </Alert>
+              </Grid>
+            )}
+            <Grid item xs={12} md={8}>
+              <TextField
+                size="small" fullWidth
+                label={t('agents.config.displayName')}
+                value={form.display_name}
+                onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                size="small" fullWidth
+                label={t('agents.config.emoji')}
+                value={form.emoji}
+                onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))}
+                inputProps={{ maxLength: 4 }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                size="small" fullWidth multiline rows={2}
+                label={t('agents.config.descriptionNL')}
+                value={form.description_nl}
+                onChange={e => setForm(f => ({ ...f, description_nl: e.target.value }))}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                size="small" fullWidth multiline rows={2}
+                label={t('agents.config.descriptionEN')}
+                value={form.description_en}
+                onChange={e => setForm(f => ({ ...f, description_en: e.target.value }))}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={form.is_active}
+                    onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))}
+                  />
+                }
+                label={t('agents.config.active')}
+              />
+            </Grid>
+          </Grid>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('agents.close')}</Button>
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={updateMut.isPending || !form}
+        >
+          {updateMut.isPending ? t('agents.config.saving') : t('agents.config.save')}
+        </Button>
       </DialogActions>
     </Dialog>
   );

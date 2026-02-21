@@ -9,3 +9,9 @@ export const fetchAgentStatus = async (params = {}) => {
   const qs = queryParams.toString();
   return client.get(`/agents/status${qs ? `?${qs}` : ''}`);
 };
+
+export const fetchAgentConfigs = () =>
+  client.get('/agents/config').then(r => r.data);
+
+export const updateAgentConfig = (key, data) =>
+  client.put(`/agents/config/${key}`, data).then(r => r.data);

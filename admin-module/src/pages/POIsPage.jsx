@@ -4,7 +4,8 @@ import {
   TableHead, TableRow, Paper, Chip, TextField, Select, MenuItem,
   FormControl, InputLabel, Grid, Skeleton, TablePagination, TableSortLabel,
   IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
-  DialogActions, Button, Alert, Tabs, Tab, InputAdornment
+  DialogActions, Button, Alert, Tabs, Tab, InputAdornment, Snackbar,
+  Autocomplete
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
@@ -14,8 +15,10 @@ import ImageIcon from '@mui/icons-material/Image';
 import StarIcon from '@mui/icons-material/Star';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { useTranslation } from 'react-i18next';
-import { usePOIList, usePOIStats, usePOIDetail, usePOIUpdate } from '../hooks/usePOIs.js';
+import { usePOIList, usePOIStats, usePOIDetail, usePOIUpdate, usePOICategories, usePOIImageReorder } from '../hooks/usePOIs.js';
 import useDestinationStore from '../stores/destinationStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatNumber } from '../utils/formatters.js';
@@ -71,10 +74,12 @@ export default function POIsPage() {
 
   const { data, isLoading, error, refetch } = usePOIList(filters);
   const { data: stats, isLoading: statsLoading } = usePOIStats();
+  const { data: catData } = usePOICategories(destination);
 
   const pois = data?.data?.pois || [];
   const pagination = data?.data?.pagination || {};
   const statsData = stats?.data || {};
+  const categories = catData?.data?.categories || [];
 
   const handleSearch = useCallback(() => {
     setSearch(searchInput);
@@ -176,6 +181,17 @@ export default function POIsPage() {
           </Grid>
           <Grid item xs={6} md={2}>
             <FormControl fullWidth size="small">
+              <InputLabel>{t('pois.filter.category')}</InputLabel>
+              <Select value={category} label={t('pois.filter.category')} onChange={(e) => { setCategory(e.target.value); setPage(0); }}>
+                <MenuItem value="">{t('pois.filter.all')}</MenuItem>
+                {categories.map(c => (
+                  <MenuItem key={c.name} value={c.name}>{c.name} ({c.count})</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={6} md={2}>
+            <FormControl fullWidth size="small">
               <InputLabel>{t('pois.filter.content')}</InputLabel>
               <Select value={hasContent} label={t('pois.filter.content')} onChange={(e) => { setHasContent(e.target.value); setPage(0); }}>
                 <MenuItem value="">{t('pois.filter.all')}</MenuItem>
@@ -191,16 +207,6 @@ export default function POIsPage() {
                 <MenuItem value="">{t('pois.filter.all')}</MenuItem>
                 <MenuItem value="true">{t('pois.filter.active')}</MenuItem>
                 <MenuItem value="false">{t('pois.filter.inactive')}</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={6} md={2}>
-            <FormControl fullWidth size="small">
-              <InputLabel>{t('pois.filter.sortBy')}</InputLabel>
-              <Select value={sort} label={t('pois.filter.sortBy')} onChange={(e) => { setSort(e.target.value); setPage(0); }}>
-                <MenuItem value="name">{t('pois.filter.sortName')}</MenuItem>
-                <MenuItem value="rating">{t('pois.filter.sortRating')}</MenuItem>
-                <MenuItem value="last_updated">{t('pois.filter.sortUpdated')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -358,13 +364,30 @@ export default function POIsPage() {
 /* ===== Detail Dialog ===== */
 function POIDetailDialog({ poiId, onClose, onEdit }) {
   const { t } = useTranslation();
-  const { data, isLoading, error } = usePOIDetail(poiId);
+  const { data, isLoading, error, refetch } = usePOIDetail(poiId);
   const [langTab, setLangTab] = useState(0);
+  const reorderMutation = usePOIImageReorder();
+  const [snack, setSnack] = useState(null);
   const poi = data?.data?.poi || {};
 
   const frontendUrl = poi.destination_id === 2
     ? `https://texelmaps.nl/pois/${poi.id}`
     : `https://holidaibutler.com/pois/${poi.id}`;
+
+  const handleMoveImage = async (images, fromIdx, direction) => {
+    const toIdx = fromIdx + direction;
+    if (toIdx < 0 || toIdx >= images.length) return;
+    const newOrder = [...images];
+    [newOrder[fromIdx], newOrder[toIdx]] = [newOrder[toIdx], newOrder[fromIdx]];
+    const imageIds = newOrder.map(img => img.id);
+    try {
+      await reorderMutation.mutateAsync({ poiId: poi.id, imageIds });
+      refetch();
+      setSnack(t('pois.imageReordered'));
+    } catch {
+      setSnack(t('common.error'));
+    }
+  };
 
   return (
     <Dialog open maxWidth="md" fullWidth onClose={onClose}>
@@ -402,20 +425,45 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
           <Box><Skeleton height={40} /><Skeleton height={200} /><Skeleton height={100} /></Box>
         ) : (
           <>
-            {/* Images */}
+            {/* Images with reorder */}
             {poi.images?.length > 0 && (
-              <Box sx={{ display: 'flex', gap: 1, mb: 2, overflowX: 'auto', pb: 1 }}>
-                {poi.images.slice(0, 6).map((img, i) => (
-                  <Box
-                    key={i}
-                    component="img"
-                    src={img.url}
-                    alt={`${poi.name} ${i + 1}`}
-                    sx={{ height: 80, borderRadius: 1, objectFit: 'cover', flexShrink: 0 }}
-                    onError={(e) => { e.target.style.display = 'none'; }}
-                  />
-                ))}
-              </Box>
+              <>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                  {t('pois.images')} ({poi.images.length})
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, mb: 2, overflowX: 'auto', pb: 1 }}>
+                  {poi.images.slice(0, 10).map((img, i) => (
+                    <Box key={img.id} sx={{ position: 'relative', flexShrink: 0 }}>
+                      <Box
+                        component="img"
+                        src={img.url}
+                        alt={`${poi.name} ${i + 1}`}
+                        sx={{ height: 80, width: 100, borderRadius: 1, objectFit: 'cover', border: i === 0 ? '2px solid #1976d2' : '1px solid #e2e8f0' }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                      {i === 0 && (
+                        <Chip label={t('pois.primary')} size="small" color="primary" sx={{ position: 'absolute', top: 2, left: 2, fontSize: '0.6rem', height: 18 }} />
+                      )}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0 }}>
+                        <IconButton
+                          size="small" disabled={i === 0 || reorderMutation.isPending}
+                          onClick={() => handleMoveImage(poi.images, i, -1)}
+                          sx={{ p: 0.2 }}
+                        >
+                          <ArrowUpwardIcon sx={{ fontSize: 14, transform: 'rotate(-90deg)' }} />
+                        </IconButton>
+                        <IconButton
+                          size="small" disabled={i === poi.images.length - 1 || reorderMutation.isPending}
+                          onClick={() => handleMoveImage(poi.images, i, 1)}
+                          sx={{ p: 0.2 }}
+                        >
+                          <ArrowDownwardIcon sx={{ fontSize: 14, transform: 'rotate(-90deg)' }} />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </>
             )}
 
             {/* Content tabs per language */}
@@ -473,6 +521,12 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
       <DialogActions>
         <Button onClick={onClose}>{t('pois.close')}</Button>
       </DialogActions>
+      <Snackbar
+        open={!!snack}
+        autoHideDuration={3000}
+        onClose={() => setSnack(null)}
+        message={snack}
+      />
     </Dialog>
   );
 }
@@ -482,12 +536,15 @@ function POIEditDialog({ poiId, onClose, onSaved }) {
   const { t } = useTranslation();
   const { data, isLoading } = usePOIDetail(poiId);
   const updateMutation = usePOIUpdate();
+  const { data: catData } = usePOICategories();
   const [langTab, setLangTab] = useState(0);
   const [descriptions, setDescriptions] = useState({});
   const [activeState, setActiveState] = useState(null);
+  const [categoryValue, setCategoryValue] = useState('');
   const [initialized, setInitialized] = useState(false);
 
   const poi = data?.data?.poi || {};
+  const categories = catData?.data?.categories || [];
 
   // Initialize form when data loads
   if (!isLoading && poi.id && !initialized) {
@@ -497,13 +554,15 @@ function POIEditDialog({ poiId, onClose, onSaved }) {
     });
     setDescriptions(descs);
     setActiveState(poi.is_active ? 'true' : 'false');
+    setCategoryValue(poi.category || '');
     setInitialized(true);
   }
 
   const handleSave = async () => {
     const payload = {
       descriptions,
-      is_active: activeState === 'true'
+      is_active: activeState === 'true',
+      category: categoryValue
     };
     try {
       await updateMutation.mutateAsync({ id: poiId, data: payload });
@@ -534,13 +593,30 @@ function POIEditDialog({ poiId, onClose, onSaved }) {
               </Alert>
             )}
 
-            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel>{t('pois.filter.status')}</InputLabel>
-              <Select value={activeState || ''} label={t('pois.filter.status')} onChange={(e) => setActiveState(e.target.value)}>
-                <MenuItem value="true">{t('pois.active')}</MenuItem>
-                <MenuItem value="false">{t('pois.inactive')}</MenuItem>
-              </Select>
-            </FormControl>
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid item xs={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('pois.filter.status')}</InputLabel>
+                  <Select value={activeState || ''} label={t('pois.filter.status')} onChange={(e) => setActiveState(e.target.value)}>
+                    <MenuItem value="true">{t('pois.active')}</MenuItem>
+                    <MenuItem value="false">{t('pois.inactive')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={6}>
+                <Autocomplete
+                  freeSolo
+                  size="small"
+                  options={categories.map(c => c.name)}
+                  value={categoryValue}
+                  onChange={(_e, v) => setCategoryValue(v || '')}
+                  onInputChange={(_e, v) => setCategoryValue(v || '')}
+                  renderInput={(params) => (
+                    <TextField {...params} label={t('pois.table.category')} />
+                  )}
+                />
+              </Grid>
+            </Grid>
 
             <Tabs value={langTab} onChange={(_e, v) => setLangTab(v)} sx={{ mb: 2 }}>
               {CONTENT_LANGS.map(l => <Tab key={l} label={LANG_LABELS[l]} />)}
