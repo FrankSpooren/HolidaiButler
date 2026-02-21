@@ -363,8 +363,8 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
   const poi = data?.data?.poi || {};
 
   const frontendUrl = poi.destination_id === 2
-    ? `https://texelmaps.nl/poi/${poi.id}`
-    : `https://holidaibutler.com/poi/${poi.id}`;
+    ? `https://texelmaps.nl/pois/${poi.id}`
+    : `https://holidaibutler.com/pois/${poi.id}`;
 
   return (
     <Dialog open maxWidth="md" fullWidth onClose={onClose}>
