@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 20 februari 2026
-**Versie**: 6.6
+**Datum**: 21 februari 2026
+**Versie**: 6.7
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 8D COMPLEET - Admin Portal Feature Pack. 4 modules (POI Management, Reviews Moderatie, Analytics, Settings), 12 backend endpoints, 4 frontend pagina's, adminPortal.js v2.0.0 (19 endpoints totaal). Alle 6 admin sidebar items actief.
+**Status**: FASE 8D-FIX COMPLEET - Admin Portal Bug Fix. 12 bugs gefixed (POI stats/detail/edit, Review stats/detail/archive, Settings services/destinations/audit-log, QuickLinks, Agent detail, Sentry DSN). adminPortal.js v2.1.0 met resolveDestinationId() helper. 33/33 tests PASS.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -53,6 +53,7 @@
 | **Fase 8C-0** | Admin Portal Foundation (infra, backend, frontend, CI/CD) | ✅ COMPLEET | 20-02-2026 | 15/15 tests PASS | EUR 0 |
 | **Fase 8C-1** | Agent Dashboard (backend + frontend + i18n) | ✅ COMPLEET | 20-02-2026 | 12/12 tests PASS | EUR 0 |
 | **Fase 8D** | Admin Portal Feature Pack (POIs, Reviews, Analytics, Settings — 12 endpoints, 4 pagina's) | ✅ COMPLEET | 20-02-2026 | Build OK, 401 auth OK | EUR 0 |
+| **Fase 8D-FIX** | Admin Portal Bug Fix (12 bugs: response structure mismatches, destination filters, Sentry DSN, UX) | ✅ COMPLEET | 21-02-2026 | 33/33 tests PASS | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -913,6 +914,17 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - Audit log via MongoDB `insertOne` op elke PUT/POST actie — actor.type='admin' + IP logging
 - Parameterized SQL via Sequelize `replacements` (NOOIT string interpolatie — SQL injection prevention)
 
+### Fase 8D-FIX (21/02) - Admin Portal Bug Fix
+- **KRITIEK**: Frontend-backend response structure ALTIJD contractueel definiëren — 8D had 12 mismatches door snelle development
+- `resolveDestinationId()` helper: centraal string→numeric destination mapping (voorkomt `parseInt("texel")` = NaN)
+- POI detail: content veldnamen moeten matchen met frontend keys (`detail` niet `description`, `tile` niet `tileDescription`)
+- Review summary: frontend verwacht flat keys (`total`, `positive`), NIET geneste objecten (`sentimentBreakdown.positive`)
+- Settings: service health keys moeten exact matchen met frontend (`mysql`, `mongodb`, `redis` — NIET `mysqlHost`, `mongodbStatus`)
+- Destinations endpoint: frontend gebruikt `Object.entries()` → response MOET object zijn (niet array)
+- Audit log: consistent field mapping (`actor.email` niet `admin_email`, `detail` niet `details`)
+- Bugsink/Sentry DSN: keys mogen GEEN hyphens bevatten (Bugsink specifiek)
+- Analytics export retourneert CSV (niet JSON) — test scripts moeten non-JSON responses afhandelen
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -1041,6 +1053,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **6.7** | **21-02-2026** | **Fase 8D-FIX Admin Portal Bug Fix COMPLEET: 12 bugs gefixed bij live testing. Backend (adminPortal.js v2.1.0): resolveDestinationId() helper, POI stats per-destination keys, POI detail field renames, review summary flattened, settings system keys, destinations object format, audit-log field mapping. Frontend: POI/review detail wrapper fix, snackbar undo, QuickLinks live, agent detail dialog, Sentry DSN fix. 33/33 tests PASS. Kosten: EUR 0. CLAUDE.md v3.30.0.** |
 | **6.6** | **20-02-2026** | **Fase 8D Admin Portal Feature Pack COMPLEET: 4 modules — POI Management (list/detail/edit/stats, 4 endpoints), Reviews Moderatie (list/detail/archive, 3 endpoints), Analytics (overview/trends/export, 2 endpoints), Settings (system/audit-log/cache, 3 endpoints). 12 nieuwe endpoints, 4 pagina's, 4 API services, 4 React Query hooks, 100+ i18n keys NL/EN. adminPortal.js v2.0.0 (19 endpoints totaal). Alle 6 admin sidebar items actief. Pre-flight DB schema check via SSH (command doc had verkeerde table/column names). Deployed naar alle 3 omgevingen + Hetzner. Kosten: EUR 0. CLAUDE.md v3.29.0.** |
 | **6.5** | **20-02-2026** | **Fase 8C-1 Agent Dashboard COMPLEET: Backend GET /agents/status (AGENT_METADATA 18 entries, MongoDB audit_logs, Redis thermostaat+cache, monitoring collections, graceful degradation). Frontend AgentsPage: 4 summary cards, 6 category filter chips, destination dropdown, sortable agent tabel (Cat A destination-aware, Cat B shared), recent activity (10/50), auto-refresh 5 min, i18n NL/EN (30+ keys). 12/12 tests PASS. Kosten: EUR 0. adminPortal.js v1.1.0 (7 endpoints). Lessons: static metadata > registry import (dependency isolation), MongoDB audit_logs als primary source (Redis te beperkt). CLAUDE.md v3.28.0.** |
 | **6.4** | **20-02-2026** | **Fase 8C-0 Admin Portal Foundation COMPLEET: 3 VHosts + SSL + CORS. 6 admin API endpoints in platform-core (login, refresh, logout, me, dashboard, health). JWT auth (8h+7d), bcrypt, rate limiting, Redis cache. React 18 + MUI 5 + Vite 4 + Zustand frontend (login, dashboard, i18n NL/EN). CI/CD: deploy-admin-module.yml met backup + rollback. Admin user: admin@holidaibutler.com. 15/15 tests PASS. Typo fixes: threama→threema. Kosten: EUR 0. CLAUDE.md v3.27.0.** |
@@ -1060,5 +1073,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 20 februari 2026 - Fase 8D COMPLEET (Admin Portal Feature Pack), Master Document v6.6*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A + 8A+ + 8B + 8C-0 + 8C-1 + 8D COMPLEET. Admin Portal 100% COMPLEET (19 endpoints, 6 pagina's).*
+*Laatst bijgewerkt: 21 februari 2026 - Fase 8D-FIX COMPLEET (Admin Portal Bug Fix), Master Document v6.7*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A + 8A+ + 8B + 8C-0 + 8C-1 + 8D + 8D-FIX COMPLEET. Admin Portal 100% COMPLEET (19 endpoints, 6 pagina's, 33/33 tests PASS).*

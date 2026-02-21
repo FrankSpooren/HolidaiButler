@@ -74,7 +74,8 @@
       "showLess": "Show less"
     },
     "partial": "Some data sources are unavailable. Displayed data may be incomplete.",
-    "noResults": "No agents found for the selected filters."
+    "noResults": "No agents found for the selected filters.",
+    "close": "Close"
   },
   "pois": {
     "title": "POI Management",
@@ -140,6 +141,9 @@
     "view": "View",
     "archive": "Archive",
     "unarchive": "Unarchive",
+    "archived": "Review archived",
+    "unarchived": "Review unarchived",
+    "undo": "Undo",
     "close": "Close",
     "summary": {
       "total": "Total reviews",
