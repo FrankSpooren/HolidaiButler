@@ -29,6 +29,13 @@
     "chatSessions": "Chatbot Sessions (7d)",
     "activeAgents": "Active Agents",
     "scheduledJobs": "Scheduled Jobs",
+    "jobsDialog": {
+      "title": "Scheduled Jobs",
+      "category": "Category",
+      "job": "Agent",
+      "schedule": "Schedule",
+      "close": "Close"
+    },
     "systemHealth": "System Health",
     "quickLinks": "Quick Links",
     "pois": "POIs",
@@ -73,8 +80,17 @@
       "showMore": "Show more",
       "showLess": "Show less"
     },
+    "detail": {
+      "errorTitle": "Error",
+      "warningTitle": "Warning",
+      "checkLogs": "Check PM2 logs for more details",
+      "tasks": "Tasks",
+      "destinationStatus": "Status per destination",
+      "duration": "Last duration"
+    },
     "partial": "Some data sources are unavailable. Displayed data may be incomplete.",
     "noResults": "No agents found for the selected filters.",
+    "noActivity": "No recent activity",
     "close": "Close"
   },
   "pois": {
@@ -87,6 +103,8 @@
     "inactive": "Inactive",
     "view": "View",
     "edit": "Edit",
+    "viewOnFrontend": "View on frontend",
+    "inactiveOnFrontend": "POI inactive on frontend",
     "close": "Close",
     "cancel": "Cancel",
     "save": "Save",
@@ -195,11 +213,12 @@
     "kpi": {
       "totalPois": "Total POIs",
       "totalReviews": "Total Reviews",
-      "totalImages": "Total Images",
-      "contentCoverage": "Content Coverage"
+      "contentCoverage": "Content Coverage",
+      "avgRating": "Avg. Rating"
     },
     "charts": {
       "reviewTrends": "Review trends (12 months)",
+      "reviewTrendsTooltip": "Number of new reviews per month over the past 12 months",
       "categoryDistribution": "Category distribution"
     },
     "export": {
@@ -240,6 +259,14 @@
       "confirmClear": "Confirm clear",
       "clearing": "Clearing...",
       "cleared": "Cache cleared successfully!"
+    },
+    "language": {
+      "title": "Language",
+      "description": "Select the language for the admin portal",
+      "nl": "Nederlands",
+      "en": "English",
+      "de": "Deutsch",
+      "es": "Español"
     },
     "audit": {
       "title": "Admin Audit Log",

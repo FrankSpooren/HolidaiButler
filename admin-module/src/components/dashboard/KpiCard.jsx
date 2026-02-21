@@ -1,9 +1,9 @@
 import { Card, CardContent, Typography, Box } from '@mui/material';
 import { formatNumber } from '../../utils/formatters.js';
 
-export default function KpiCard({ icon: Icon, label, value, color }) {
+export default function KpiCard({ icon: Icon, label, value, color, onClick, sx }) {
   return (
-    <Card sx={{ height: '100%' }}>
+    <Card sx={{ height: '100%', ...sx }} onClick={onClick}>
       <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Box sx={{
           width: 48, height: 48, borderRadius: 2,

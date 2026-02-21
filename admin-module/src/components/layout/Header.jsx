@@ -1,15 +1,16 @@
-import { useState } from 'react';
 import { AppBar, Toolbar, Typography, Button, Chip, Box, IconButton } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../../stores/authStore.js';
+import useDestinationStore from '../../stores/destinationStore.js';
 import DestinationSelector from './DestinationSelector.jsx';
 import { SIDEBAR_STYLES } from '../../theme.js';
 
-export default function Header({ onMenuToggle, selectedDestination, onDestinationChange }) {
+export default function Header({ onMenuToggle }) {
   const { t } = useTranslation();
   const { user, logout } = useAuthStore();
+  const { selectedDestination, setDestination } = useDestinationStore();
 
   return (
     <AppBar
@@ -34,7 +35,7 @@ export default function Header({ onMenuToggle, selectedDestination, onDestinatio
 
         <Box sx={{ flex: 1 }} />
 
-        <DestinationSelector value={selectedDestination} onChange={onDestinationChange} />
+        <DestinationSelector value={selectedDestination} onChange={setDestination} />
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 500 }}>{user?.name || user?.email}</Typography>

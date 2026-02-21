@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Chip, TextField, Select, MenuItem,
-  FormControl, InputLabel, Grid, Skeleton, TablePagination,
+  FormControl, InputLabel, Grid, Skeleton, TablePagination, TableSortLabel,
   IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
   DialogActions, Button, Alert, InputAdornment, Snackbar
 } from '@mui/material';
@@ -16,6 +16,7 @@ import SentimentNeutralIcon from '@mui/icons-material/SentimentNeutral';
 import SentimentDissatisfiedIcon from '@mui/icons-material/SentimentDissatisfied';
 import { useTranslation } from 'react-i18next';
 import { useReviewList, useReviewDetail, useReviewUpdate } from '../hooks/useReviews.js';
+import useDestinationStore from '../stores/destinationStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatDate, formatNumber } from '../utils/formatters.js';
 import { DESTINATIONS, getDestinationColor } from '../utils/destinations.js';
@@ -28,16 +29,25 @@ const SENTIMENT_CONFIG = {
 
 export default function ReviewsPage() {
   const { t } = useTranslation();
+  const globalDestination = useDestinationStore(s => s.selectedDestination);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [destination, setDestination] = useState('all');
+  const [destination, setDestination] = useState(globalDestination);
   const [rating, setRating] = useState('');
   const [sentiment, setSentiment] = useState('');
   const [archived, setArchived] = useState('false');
+  const [sort, setSort] = useState('created_at');
+  const [order, setOrder] = useState('DESC');
   const [detailId, setDetailId] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', undoReview: null });
+
+  // Sync with global destination
+  useEffect(() => {
+    setDestination(globalDestination);
+    setPage(0);
+  }, [globalDestination]);
 
   const filters = {
     page: page + 1,
@@ -46,7 +56,9 @@ export default function ReviewsPage() {
     ...(destination !== 'all' && { destination }),
     ...(rating && { rating }),
     ...(sentiment && { sentiment }),
-    archived
+    archived,
+    sort,
+    order
   };
 
   const { data, isLoading, error, refetch } = useReviewList(filters);
@@ -57,6 +69,16 @@ export default function ReviewsPage() {
   const summary = data?.data?.summary || {};
 
   const handleSearch = () => { setSearch(searchInput); setPage(0); };
+
+  const handleSort = (col) => {
+    if (sort === col) {
+      setOrder(o => o === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      setSort(col);
+      setOrder(col === 'created_at' ? 'DESC' : 'ASC');
+    }
+    setPage(0);
+  };
 
   const handleArchiveToggle = async (review, e) => {
     e.stopPropagation();
@@ -163,7 +185,7 @@ export default function ReviewsPage() {
               <InputLabel>{t('reviews.filter.rating')}</InputLabel>
               <Select value={rating} label={t('reviews.filter.rating')} onChange={(e) => { setRating(e.target.value); setPage(0); }}>
                 <MenuItem value="">{t('reviews.filter.allRatings')}</MenuItem>
-                {[5, 4, 3, 2, 1].map(r => <MenuItem key={r} value={String(r)}>{r} {'★'.repeat(r)}</MenuItem>)}
+                {[5, 4, 3, 2, 1].map(r => <MenuItem key={r} value={String(r)}>{r} {'\u2605'.repeat(r)}</MenuItem>)}
               </Select>
             </FormControl>
           </Grid>
@@ -196,12 +218,32 @@ export default function ReviewsPage() {
         <Table size="small">
           <TableHead>
             <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: '#f8fafc' } }}>
-              <TableCell>{t('reviews.table.poi')}</TableCell>
-              <TableCell>{t('reviews.table.user')}</TableCell>
-              <TableCell align="center">{t('reviews.table.rating')}</TableCell>
-              <TableCell>{t('reviews.table.sentiment')}</TableCell>
+              <TableCell>
+                <TableSortLabel active={sort === 'poiName'} direction={sort === 'poiName' ? order.toLowerCase() : 'asc'} onClick={() => handleSort('poiName')}>
+                  {t('reviews.table.poi')}
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel active={sort === 'user_name'} direction={sort === 'user_name' ? order.toLowerCase() : 'asc'} onClick={() => handleSort('user_name')}>
+                  {t('reviews.table.user')}
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="center">
+                <TableSortLabel active={sort === 'rating'} direction={sort === 'rating' ? order.toLowerCase() : 'asc'} onClick={() => handleSort('rating')}>
+                  {t('reviews.table.rating')}
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel active={sort === 'sentiment'} direction={sort === 'sentiment' ? order.toLowerCase() : 'asc'} onClick={() => handleSort('sentiment')}>
+                  {t('reviews.table.sentiment')}
+                </TableSortLabel>
+              </TableCell>
               <TableCell>{t('reviews.table.text')}</TableCell>
-              <TableCell>{t('reviews.table.date')}</TableCell>
+              <TableCell>
+                <TableSortLabel active={sort === 'created_at'} direction={sort === 'created_at' ? order.toLowerCase() : 'asc'} onClick={() => handleSort('created_at')}>
+                  {t('reviews.table.date')}
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="center">{t('reviews.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -235,7 +277,7 @@ export default function ReviewsPage() {
                         </Typography>
                         <Chip
                           size="small"
-                          label={review.destination_id === 2 ? 'Texel' : 'Calpe'}
+                          label={review.destination_id === 2 ? '\uD83C\uDDF3\uD83C\uDDF1 Texel' : '\uD83C\uDDEA\uD83C\uDDF8 Calpe'}
                           sx={{ mt: 0.3, bgcolor: getDestinationColor(review.destination_id === 2 ? 'texel' : 'calpe') + '22', fontSize: '0.65rem' }}
                         />
                       </Box>
@@ -345,7 +387,7 @@ function ReviewDetailDialog({ reviewId, onClose }) {
               </Grid>
               <Grid item xs={6}>
                 <Typography variant="caption" color="text.secondary">{t('reviews.detail.destination')}</Typography>
-                <Typography variant="body2">{review.destination_id === 2 ? 'Texel' : 'Calpe'}</Typography>
+                <Typography variant="body2">{review.destination_id === 2 ? '\uD83C\uDDF3\uD83C\uDDF1 Texel' : '\uD83C\uDDEA\uD83C\uDDF8 Calpe'}</Typography>
               </Grid>
               <Grid item xs={6}>
                 <Typography variant="caption" color="text.secondary">{t('reviews.detail.user')}</Typography>

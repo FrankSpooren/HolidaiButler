@@ -592,7 +592,7 @@ function calculateAgentStatus(lastRun, schedule) {
   if (!lastRun) return 'unknown';
   if (lastRun.status === 'error' || lastRun.status === 'failed') return 'error';
 
-  if (!schedule) return lastRun.status === 'completed' ? 'healthy' : 'warning';
+  if (!schedule) return (lastRun.status === 'completed' || lastRun.status === 'success') ? 'healthy' : 'warning';
 
   // Parse schedule to get interval in ms
   const parts = schedule.split(' ');

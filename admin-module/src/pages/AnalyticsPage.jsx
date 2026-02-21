@@ -1,20 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Box, Typography, Card, Grid, Skeleton, Button, ButtonGroup,
+  Box, Typography, Card, Grid, Skeleton, Button, ButtonGroup, Tooltip,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import PlaceIcon from '@mui/icons-material/Place';
 import StarIcon from '@mui/icons-material/Star';
-import ImageIcon from '@mui/icons-material/Image';
 import ArticleIcon from '@mui/icons-material/Article';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line
+  XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { useAnalyticsOverview } from '../hooks/useAnalytics.js';
 import { analyticsService } from '../api/analyticsService.js';
+import useDestinationStore from '../stores/destinationStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatNumber } from '../utils/formatters.js';
 
@@ -22,8 +23,14 @@ const PIE_COLORS = ['#1976d2', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b
 
 export default function AnalyticsPage() {
   const { t } = useTranslation();
-  const { data, isLoading, error, refetch } = useAnalyticsOverview();
+  const globalDestination = useDestinationStore(s => s.selectedDestination);
+  const [destination, setDestination] = useState(globalDestination);
+  const { data, isLoading, error, refetch } = useAnalyticsOverview(destination !== 'all' ? destination : undefined);
   const [exporting, setExporting] = useState(null);
+
+  useEffect(() => {
+    setDestination(globalDestination);
+  }, [globalDestination]);
 
   const analytics = data?.data || {};
   const overview = analytics.overview || {};
@@ -35,7 +42,7 @@ export default function AnalyticsPage() {
   const handleExport = async (type) => {
     setExporting(type);
     try {
-      const blob = await analyticsService.exportCsv(type);
+      const blob = await analyticsService.exportCsv(type, destination !== 'all' ? destination : undefined);
       const url = window.URL.createObjectURL(new Blob([blob]));
       const a = document.createElement('a');
       a.href = url;
@@ -51,8 +58,8 @@ export default function AnalyticsPage() {
   const kpiCards = [
     { icon: PlaceIcon, label: t('analytics.kpi.totalPois'), value: overview.totalPois, color: '#1976d2' },
     { icon: StarIcon, label: t('analytics.kpi.totalReviews'), value: overview.totalReviews, color: '#f59e0b' },
-    { icon: ImageIcon, label: t('analytics.kpi.totalImages'), value: overview.totalImages, color: '#22c55e' },
-    { icon: ArticleIcon, label: t('analytics.kpi.contentCoverage'), value: contentCoverage.overall ? `${contentCoverage.overall}%` : '—', color: '#8b5cf6' }
+    { icon: ArticleIcon, label: t('analytics.kpi.contentCoverage'), value: contentCoverage.overall ? `${contentCoverage.overall}%` : '—', color: '#8b5cf6' },
+    { icon: TrendingUpIcon, label: t('analytics.kpi.avgRating'), value: overview.avgRating ? Number(overview.avgRating).toFixed(1) : '—', color: '#22c55e' }
   ];
 
   return (
@@ -108,9 +115,11 @@ export default function AnalyticsPage() {
         <Grid item xs={12} md={8}>
           {isLoading ? <Skeleton variant="rounded" height={300} /> : (
             <Card sx={{ p: 2 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-                {t('analytics.charts.reviewTrends')}
-              </Typography>
+              <Tooltip title={t('analytics.charts.reviewTrendsTooltip')} arrow>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
+                  {t('analytics.charts.reviewTrends')}
+                </Typography>
+              </Tooltip>
               <ResponsiveContainer width="100%" height={260}>
                 <LineChart data={reviewTrends}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -161,7 +170,7 @@ export default function AnalyticsPage() {
             <Grid item xs={12} md={6} key={dest}>
               <Card sx={{ p: 2 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                  {dest === 'calpe' ? '🇪🇸 Calpe' : '🇳🇱 Texel'} — {t('analytics.contentCoverage')}
+                  {dest === 'calpe' ? '\uD83C\uDDEA\uD83C\uDDF8 Calpe' : '\uD83C\uDDF3\uD83C\uDDF1 Texel'} — {t('analytics.contentCoverage')}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Box sx={{ flexGrow: 1, bgcolor: '#e2e8f0', borderRadius: 1, height: 12 }}>
@@ -197,7 +206,7 @@ export default function AnalyticsPage() {
                   <TableRow key={poi.id} hover>
                     <TableCell>{i + 1}</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>{poi.name}</TableCell>
-                    <TableCell>{poi.destination_id === 2 ? 'Texel' : 'Calpe'}</TableCell>
+                    <TableCell>{poi.destination_id === 2 ? '\uD83C\uDDF3\uD83C\uDDF1 Texel' : '\uD83C\uDDEA\uD83C\uDDF8 Calpe'}</TableCell>
                     <TableCell align="center">{poi.reviewCount}</TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.3 }}>

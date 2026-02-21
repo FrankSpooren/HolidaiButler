@@ -14,7 +14,7 @@ import { execSync } from 'child_process';
 import mongoose from 'mongoose';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 
-const BACKUP_DIR = '/var/backups/holidaibutler';
+const BACKUP_DIR = '/root/backups';
 const IMAGES_DIR = '/var/www/api.holidaibutler.com/storage/poi-images';
 
 // MongoDB schema for backup health checks
@@ -58,11 +58,16 @@ class BackupHealthChecker {
 
       const files = fs.readdirSync(BACKUP_DIR);
 
-      // Check MySQL backups (mysql_*.gz)
-      result.mysql = this._checkBackupType(files, /^mysql.*\.gz$/i, 'MySQL');
+      // Check MySQL backups (db_*.sql.gz, mysql*.sql, *_backup_*.sql, any .sql/.sql.gz)
+      result.mysql = this._checkBackupType(files, /\.(sql|sql\.gz)$/i, 'MySQL');
 
-      // Check MongoDB backups (mongodb_*.tar.gz)
-      result.mongodb = this._checkBackupType(files, /^mongodb.*\.tar\.gz$/i, 'MongoDB');
+      // Check MongoDB backups — skip if Atlas cloud-managed
+      const mongoUri = process.env.MONGODB_URI || '';
+      if (mongoUri.includes('mongodb+srv') || mongoUri.includes('mongodb.net')) {
+        result.mongodb = { status: 'HEALTHY', note: 'Atlas Cloud Managed — automated backups by MongoDB Atlas' };
+      } else {
+        result.mongodb = this._checkBackupType(files, /^mongo.*\.(gz|tar\.gz|archive)$/i, 'MongoDB');
+      }
 
       // Determine overall status
       if (result.mysql.status === 'CRITICAL' || result.mongodb.status === 'CRITICAL') {

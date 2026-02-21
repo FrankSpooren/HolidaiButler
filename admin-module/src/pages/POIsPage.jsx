@@ -1,41 +1,57 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Box, Typography, Card, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Chip, TextField, Select, MenuItem,
-  FormControl, InputLabel, Grid, Skeleton, TablePagination,
+  FormControl, InputLabel, Grid, Skeleton, TablePagination, TableSortLabel,
   IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
   DialogActions, Button, Alert, Tabs, Tab, InputAdornment
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import ImageIcon from '@mui/icons-material/Image';
 import StarIcon from '@mui/icons-material/Star';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useTranslation } from 'react-i18next';
 import { usePOIList, usePOIStats, usePOIDetail, usePOIUpdate } from '../hooks/usePOIs.js';
+import useDestinationStore from '../stores/destinationStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatNumber } from '../utils/formatters.js';
 import { DESTINATIONS, getDestinationColor } from '../utils/destinations.js';
 
 const CONTENT_LANGS = ['en', 'nl', 'de', 'es'];
-const LANG_LABELS = { en: 'English', nl: 'Nederlands', de: 'Deutsch', es: 'Espanol' };
+const LANG_LABELS = { en: 'English', nl: 'Nederlands', de: 'Deutsch', es: 'Español' };
+
+const SORTABLE_COLUMNS = [
+  { id: 'id', label: 'ID', align: 'left' },
+  { id: 'name', label: 'pois.table.name', i18n: true, align: 'left' },
+  { id: 'destination_id', label: 'pois.table.destination', i18n: true, align: 'left' },
+  { id: 'category', label: 'pois.table.category', i18n: true, align: 'left' },
+];
 
 export default function POIsPage() {
   const { t } = useTranslation();
+  const globalDestination = useDestinationStore(s => s.selectedDestination);
 
   // Filters
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [destination, setDestination] = useState('all');
+  const [destination, setDestination] = useState(globalDestination);
   const [category, setCategory] = useState('');
   const [hasContent, setHasContent] = useState('');
   const [isActive, setIsActive] = useState('');
   const [sort, setSort] = useState('name');
   const [order, setOrder] = useState('ASC');
+
+  // Sync with global destination
+  useEffect(() => {
+    setDestination(globalDestination);
+    setPage(0);
+  }, [globalDestination]);
 
   // Detail/Edit dialogs
   const [detailId, setDetailId] = useState(null);
@@ -67,6 +83,16 @@ export default function POIsPage() {
 
   const handleSearchKeyDown = (e) => {
     if (e.key === 'Enter') handleSearch();
+  };
+
+  const handleSort = (col) => {
+    if (sort === col) {
+      setOrder(o => o === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      setSort(col);
+      setOrder('ASC');
+    }
+    setPage(0);
   };
 
   return (
@@ -196,12 +222,23 @@ export default function POIsPage() {
         <Table size="small">
           <TableHead>
             <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: '#f8fafc' } }}>
-              <TableCell>ID</TableCell>
-              <TableCell>{t('pois.table.name')}</TableCell>
-              <TableCell>{t('pois.table.destination')}</TableCell>
-              <TableCell>{t('pois.table.category')}</TableCell>
+              {SORTABLE_COLUMNS.map(col => (
+                <TableCell key={col.id} align={col.align}>
+                  <TableSortLabel
+                    active={sort === col.id}
+                    direction={sort === col.id ? order.toLowerCase() : 'asc'}
+                    onClick={() => handleSort(col.id)}
+                  >
+                    {col.i18n ? t(col.label) : col.label}
+                  </TableSortLabel>
+                </TableCell>
+              ))}
               <TableCell align="center"><ImageIcon fontSize="small" /></TableCell>
-              <TableCell align="center"><StarIcon fontSize="small" /></TableCell>
+              <TableCell align="center">
+                <TableSortLabel active={sort === 'rating'} direction={sort === 'rating' ? order.toLowerCase() : 'asc'} onClick={() => handleSort('rating')}>
+                  <StarIcon fontSize="small" />
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="center">{t('pois.table.content')}</TableCell>
               <TableCell align="center">{t('pois.table.status')}</TableCell>
               <TableCell align="center">{t('pois.table.actions')}</TableCell>
@@ -232,7 +269,7 @@ export default function POIsPage() {
                   <TableCell>
                     <Chip
                       size="small"
-                      label={poi.destination_id === 2 ? 'Texel' : 'Calpe'}
+                      label={poi.destination_id === 2 ? '\uD83C\uDDF3\uD83C\uDDF1 Texel' : '\uD83C\uDDEA\uD83C\uDDF8 Calpe'}
                       sx={{ bgcolor: getDestinationColor(poi.destination_id === 2 ? 'texel' : 'calpe') + '22', fontWeight: 600, fontSize: '0.75rem' }}
                     />
                   </TableCell>
@@ -325,6 +362,10 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
   const [langTab, setLangTab] = useState(0);
   const poi = data?.data?.poi || {};
 
+  const frontendUrl = poi.destination_id === 2
+    ? `https://texelmaps.nl/poi/${poi.id}`
+    : `https://holidaibutler.com/poi/${poi.id}`;
+
   return (
     <Dialog open maxWidth="md" fullWidth onClose={onClose}>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -334,13 +375,26 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
           </Typography>
           {!isLoading && (
             <Typography variant="body2" color="text.secondary">
-              ID: {poi.id} | {poi.destination_id === 2 ? 'Texel' : 'Calpe'} | {poi.category}
+              ID: {poi.id} | {poi.destination_id === 2 ? '\uD83C\uDDF3\uD83C\uDDF1 Texel' : '\uD83C\uDDEA\uD83C\uDDF8 Calpe'} | {poi.category}
             </Typography>
           )}
         </Box>
-        <Button variant="outlined" size="small" startIcon={<EditIcon />} onClick={onEdit}>
-          {t('pois.edit')}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {!isLoading && poi.is_active && (
+            <Button
+              variant="outlined" size="small" startIcon={<OpenInNewIcon />}
+              onClick={() => window.open(frontendUrl, '_blank')}
+            >
+              {t('pois.viewOnFrontend')}
+            </Button>
+          )}
+          {!isLoading && !poi.is_active && (
+            <Chip label={t('pois.inactiveOnFrontend')} size="small" color="default" variant="outlined" />
+          )}
+          <Button variant="outlined" size="small" startIcon={<EditIcon />} onClick={onEdit}>
+            {t('pois.edit')}
+          </Button>
+        </Box>
       </DialogTitle>
       <DialogContent dividers>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{t('common.error')}</Alert>}

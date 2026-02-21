@@ -12,10 +12,18 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import HistoryIcon from '@mui/icons-material/History';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+import TranslateIcon from '@mui/icons-material/Translate';
 import { useTranslation } from 'react-i18next';
 import { useSettings, useAuditLog, useClearCache } from '../hooks/useSettings.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatDate } from '../utils/formatters.js';
+
+const LANGUAGES = [
+  { code: 'nl', flag: '\uD83C\uDDF3\uD83C\uDDF1' },
+  { code: 'en', flag: '\uD83C\uDDEC\uD83C\uDDE7' },
+  { code: 'de', flag: '\uD83C\uDDE9\uD83C\uDDEA' },
+  { code: 'es', flag: '\uD83C\uDDEA\uD83C\uDDF8' }
+];
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -39,6 +47,9 @@ export default function SettingsPage() {
       </Typography>
 
       {error && <ErrorBanner onRetry={refetch} />}
+
+      {/* Language Selector */}
+      <LanguageSelector />
 
       {/* System Info */}
       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
@@ -202,6 +213,40 @@ function ClearCacheDialog({ open, onClose }) {
         )}
       </DialogActions>
     </Dialog>
+  );
+}
+
+/* ===== Language Selector ===== */
+function LanguageSelector() {
+  const { t, i18n } = useTranslation();
+
+  const handleChange = (e) => {
+    const lang = e.target.value;
+    i18n.changeLanguage(lang);
+    localStorage.setItem('hb-admin-lang', lang);
+  };
+
+  return (
+    <>
+      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+        <TranslateIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'text-bottom' }} />
+        {t('settings.language.title')}
+      </Typography>
+      <Card sx={{ p: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="body2">{t('settings.language.description')}</Typography>
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <Select value={i18n.language} onChange={handleChange}>
+              {LANGUAGES.map(lang => (
+                <MenuItem key={lang.code} value={lang.code}>
+                  {lang.flag} {t(`settings.language.${lang.code}`)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </Card>
+    </>
   );
 }
 
