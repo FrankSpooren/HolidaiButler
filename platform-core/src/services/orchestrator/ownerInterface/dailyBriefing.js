@@ -219,6 +219,15 @@ async function generateDailyBriefing() {
   if (threemaStatus === 'NOT_CONFIGURED') {
     alertItems.push('Threema NIET GECONFIGUREERD — urgentie 5 alerts alleen via email');
   }
+  // Fase 8E: Include backup health + smoke test failures in status
+  if (backupSummary.includes('CRITICAL')) {
+    statusSummary = 'Backup Health CRITICAL';
+    alertItems.push('Backup Health CRITICAL — controleer /root/backups/');
+  }
+  if (smokeTestSummary.includes('FAILURES')) {
+    statusSummary = 'Smoke test failures gedetecteerd';
+    alertItems.push('Smoke test failures — check dashboard');
+  }
   if (errorCount > 5 || costReport.summary.percentageUsed > 90) {
     statusSummary = "Actie vereist - check dashboard";
   }
@@ -285,9 +294,14 @@ async function generateDailyBriefing() {
 async function sendDailyBriefing() {
   const briefing = await generateDailyBriefing();
 
-  const subject = `Daily Briefing - ${new Date().toLocaleDateString("nl-NL")}`;
+  const dateStr = new Date().toLocaleDateString("nl-NL");
   const hasCritical = briefing.summary.alerts > 0 || briefing.summary.errors > 0 || briefing.summary.predictionAlerts > 0;
-  const priority = hasCritical ? "high" : "normal";
+  const hasCriticalAgents = (briefing.fields.backup_summary || '').includes('CRITICAL') ||
+    (briefing.fields.smoke_test_summary || '').includes('FAILURES');
+  const subject = (hasCritical || hasCriticalAgents)
+    ? `[URGENT] Daily Briefing - ${dateStr}`
+    : `Daily Briefing - ${dateStr}`;
+  const priority = (hasCritical || hasCriticalAgents) ? "high" : "normal";
 
   console.log(`[De Bode] Subject: ${subject}`);
   console.log(`[De Bode] Fields:`, JSON.stringify(briefing.fields, null, 2));

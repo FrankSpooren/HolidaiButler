@@ -9,9 +9,12 @@ import {
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { useTranslation } from 'react-i18next';
 import { useAgentStatus } from '../hooks/useAgentStatus';
-import { getAgentIcon, formatTimestamp, CATEGORY_COLORS, STATUS_COLORS } from '../utils/agents';
+import { getAgentIcon, getAgentDescription, getAgentTasks, formatTimestamp, CATEGORY_COLORS, STATUS_COLORS } from '../utils/agents';
 
 const CATEGORIES = ['all', 'core', 'operations', 'development', 'strategy', 'monitoring'];
 
@@ -72,17 +75,17 @@ export default function AgentsPage() {
 
   // Destination cell for a Cat A agent
   const DestCell = ({ destData }) => {
-    if (!destData) return <Typography variant="body2" color="text.secondary">—</Typography>;
+    if (!destData) return <Typography variant="body2" color="text.secondary">\u2014</Typography>;
     const statusColor = destData.status === 'success' ? STATUS_COLORS.healthy
       : destData.status === 'partial' ? STATUS_COLORS.warning
       : destData.status === 'error' ? STATUS_COLORS.error
       : STATUS_COLORS.unknown;
     return (
-      <Tooltip title={destData.lastRun ? `${destData.status} — ${new Date(destData.lastRun).toLocaleString('nl-NL')}` : t('agents.unknown')}>
+      <Tooltip title={destData.lastRun ? `${destData.status} \u2014 ${new Date(destData.lastRun).toLocaleString('nl-NL')}` : t('agents.unknown')}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: statusColor, flexShrink: 0 }} />
           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-            {destData.lastRun ? formatTimestamp(destData.lastRun) : '—'}
+            {destData.lastRun ? formatTimestamp(destData.lastRun) : '\u2014'}
           </Typography>
         </Box>
       </Tooltip>
@@ -182,8 +185,8 @@ export default function AgentsPage() {
           sx={{ ml: 'auto', minWidth: 130 }}
         >
           <MenuItem value="all">{t('agents.filter.destination')}: {t('agents.filter.all')}</MenuItem>
-          <MenuItem value="calpe">Calpe</MenuItem>
-          <MenuItem value="texel">Texel</MenuItem>
+          <MenuItem value="calpe">\uD83C\uDDEA\uD83C\uDDF8 Calpe</MenuItem>
+          <MenuItem value="texel">\uD83C\uDDF3\uD83C\uDDF1 Texel</MenuItem>
         </Select>
       </Box>
 
@@ -214,8 +217,8 @@ export default function AgentsPage() {
                   </TableCell>
                 )}
                 <TableCell>{t('agents.table.schedule')}</TableCell>
-                <TableCell>{t('agents.table.calpe')}</TableCell>
-                <TableCell>{t('agents.table.texel')}</TableCell>
+                <TableCell>\uD83C\uDDEA\uD83C\uDDF8 Calpe</TableCell>
+                <TableCell>\uD83C\uDDF3\uD83C\uDDF1 Texel</TableCell>
                 <TableCell>
                   <TableSortLabel active={sortBy === 'status'} direction={sortBy === 'status' ? sortDir : 'asc'} onClick={() => handleSort('status')}>
                     {t('agents.table.status')}
@@ -236,7 +239,7 @@ export default function AgentsPage() {
                 >
                   <TableCell sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{idx + 1}</TableCell>
                   <TableCell>
-                    <Tooltip title={agent.description} arrow>
+                    <Tooltip title={getAgentDescription(agent.name) || agent.description} arrow>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         <span style={{ fontSize: '1.1rem' }}>{getAgentIcon(agent.name)}</span>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>{agent.name}</Typography>
@@ -272,7 +275,7 @@ export default function AgentsPage() {
                     </>
                   )}
                   <TableCell>
-                    <Tooltip title={agent.lastRun?.error || (agent.lastRun ? `${agent.lastRun.status} — ${agent.lastRun.duration ? `${agent.lastRun.duration}ms` : ''}` : t('agents.unknown'))} arrow>
+                    <Tooltip title={agent.lastRun?.error || (agent.lastRun ? `${agent.lastRun.status} \u2014 ${agent.lastRun.duration ? `${agent.lastRun.duration}ms` : ''}` : t('agents.unknown'))} arrow>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         <StatusDot status={agent.status} />
                         {!isMobile && (
@@ -306,7 +309,7 @@ export default function AgentsPage() {
           )}
         </Box>
         {visibleActivity.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">Geen recente activiteit</Typography>
+          <Typography variant="body2" color="text.secondary">{t('agents.noActivity')}</Typography>
         ) : (
           <List dense disablePadding>
             {visibleActivity.map((entry, i) => (
@@ -348,74 +351,101 @@ export default function AgentsPage() {
   );
 }
 
-/* ===== Agent Detail Dialog ===== */
+/* ===== Agent Detail Dialog (Uitgebreid - Fase 8E) ===== */
 function AgentDetailDialog({ agent, onClose }) {
   const { t } = useTranslation();
+  const descriptionNL = getAgentDescription(agent.name);
+  const tasks = getAgentTasks(agent.name);
 
   return (
     <Dialog open maxWidth="sm" fullWidth onClose={onClose}>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <span style={{ fontSize: '1.4rem' }}>{getAgentIcon(agent.name)}</span>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>{agent.name}</Typography>
-            <Typography variant="body2" color="text.secondary">{agent.description}</Typography>
+          <span style={{ fontSize: '1.6rem' }}>{getAgentIcon(agent.name)}</span>
+          <Box sx={{ flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>{agent.name}</Typography>
+              <Chip
+                label={t(`agents.filter.${agent.category}`)}
+                size="small"
+                sx={{ bgcolor: CATEGORY_COLORS[agent.category] || '#607d8b', color: '#fff', fontSize: '0.7rem', height: 20 }}
+              />
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              {descriptionNL || agent.description}
+            </Typography>
           </Box>
         </Box>
       </DialogTitle>
       <DialogContent dividers>
+        {/* Status + Type + Schema */}
         <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={6}>
-            <Typography variant="caption" color="text.secondary">{t('agents.table.category')}</Typography>
-            <Box sx={{ mt: 0.5 }}>
-              <Chip
-                label={t(`agents.filter.${agent.category}`)}
-                size="small"
-                sx={{ bgcolor: CATEGORY_COLORS[agent.category] || '#607d8b', color: '#fff', fontSize: '0.75rem' }}
-              />
-            </Box>
-          </Grid>
-          <Grid item xs={3}>
+          <Grid item xs={4}>
             <Typography variant="caption" color="text.secondary">{t('agents.table.type')}</Typography>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>Cat {agent.type}</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {agent.type === 'A' ? 'A (per destination)' : 'B (platform-breed)'}
+            </Typography>
           </Grid>
-          <Grid item xs={3}>
+          <Grid item xs={4}>
+            <Typography variant="caption" color="text.secondary">{t('agents.table.schedule')}</Typography>
+            <Typography variant="body2">{agent.scheduleHuman || '\u2014'}</Typography>
+          </Grid>
+          <Grid item xs={4}>
             <Typography variant="caption" color="text.secondary">{t('agents.table.status')}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
               <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: STATUS_COLORS[agent.status] || STATUS_COLORS.unknown }} />
-              <Typography variant="body2" sx={{ fontWeight: 600, color: STATUS_COLORS[agent.status] }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: STATUS_COLORS[agent.status], textTransform: 'capitalize' }}>
                 {agent.status}
               </Typography>
             </Box>
           </Grid>
         </Grid>
 
-        <Divider sx={{ my: 1.5 }} />
-
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
-            <Typography variant="caption" color="text.secondary">{t('agents.table.schedule')}</Typography>
-            <Typography variant="body2">{agent.scheduleHuman || '—'}</Typography>
-          </Grid>
-          <Grid item xs={6}>
-            <Typography variant="caption" color="text.secondary">{t('agents.lastUpdated')}</Typography>
-            <Typography variant="body2">
-              {agent.lastRun?.timestamp ? new Date(agent.lastRun.timestamp).toLocaleString('nl-NL') : '—'}
+        {/* Warning / Error Details */}
+        {(agent.status === 'warning' || agent.status === 'error') && (
+          <Alert
+            severity={agent.status === 'error' ? 'error' : 'warning'}
+            icon={agent.status === 'error' ? <ErrorOutlineIcon /> : <WarningAmberIcon />}
+            sx={{ mb: 2 }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              {agent.status === 'error' ? t('agents.detail.errorTitle') : t('agents.detail.warningTitle')}
             </Typography>
-          </Grid>
-        </Grid>
-
-        {agent.lastRun?.error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {agent.lastRun.error}
+            <Typography variant="body2">
+              {agent.lastRun?.error || agent.statusMessage || t('agents.detail.checkLogs')}
+            </Typography>
           </Alert>
         )}
 
+        <Divider sx={{ my: 1.5 }} />
+
+        {/* Takenpakket */}
+        {tasks.length > 0 && (
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+              <AssignmentIcon fontSize="small" color="action" />
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                {t('agents.detail.tasks')}
+              </Typography>
+            </Box>
+            <List dense disablePadding sx={{ mb: 2 }}>
+              {tasks.map((task, i) => (
+                <ListItem key={i} sx={{ py: 0.25, pl: 2 }}>
+                  <ListItemText
+                    primary={<Typography variant="body2">\u2022 {task}</Typography>}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </>
+        )}
+
+        {/* Destination Status (Cat A agents) */}
         {agent.type === 'A' && (
           <>
             <Divider sx={{ my: 1.5 }} />
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-              {t('agents.filter.destination')}
+              {t('agents.detail.destinationStatus')}
             </Typography>
             <Grid container spacing={2}>
               {['calpe', 'texel'].map(dest => {
@@ -424,7 +454,7 @@ function AgentDetailDialog({ agent, onClose }) {
                   <Grid item xs={6} key={dest}>
                     <Card variant="outlined" sx={{ p: 1.5 }}>
                       <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        {dest === 'calpe' ? 'Calpe' : 'Texel'}
+                        {dest === 'calpe' ? '\uD83C\uDDEA\uD83C\uDDF8 Calpe' : '\uD83C\uDDF3\uD83C\uDDF1 Texel'}
                       </Typography>
                       {d ? (
                         <>
@@ -436,7 +466,7 @@ function AgentDetailDialog({ agent, onClose }) {
                                 : d.status === 'error' ? STATUS_COLORS.error
                                 : STATUS_COLORS.unknown
                             }} />
-                            <Typography variant="body2">{d.status || 'unknown'}</Typography>
+                            <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>{d.status || 'unknown'}</Typography>
                           </Box>
                           {d.lastRun && (
                             <Typography variant="caption" color="text.secondary">
@@ -445,7 +475,7 @@ function AgentDetailDialog({ agent, onClose }) {
                           )}
                         </>
                       ) : (
-                        <Typography variant="body2" color="text.secondary">—</Typography>
+                        <Typography variant="body2" color="text.secondary">\u2014</Typography>
                       )}
                     </Card>
                   </Grid>
@@ -454,9 +484,26 @@ function AgentDetailDialog({ agent, onClose }) {
             </Grid>
           </>
         )}
+
+        {/* Laatste run info */}
+        <Divider sx={{ my: 1.5 }} />
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <Typography variant="caption" color="text.secondary">{t('agents.lastUpdated')}</Typography>
+            <Typography variant="body2">
+              {agent.lastRun?.timestamp ? new Date(agent.lastRun.timestamp).toLocaleString('nl-NL') : '\u2014'}
+            </Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="caption" color="text.secondary">{t('agents.detail.duration')}</Typography>
+            <Typography variant="body2">
+              {agent.lastRun?.duration ? `${agent.lastRun.duration}ms` : '\u2014'}
+            </Typography>
+          </Grid>
+        </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('agents.close') || 'Sluiten'}</Button>
+        <Button onClick={onClose}>{t('agents.close')}</Button>
       </DialogActions>
     </Dialog>
   );

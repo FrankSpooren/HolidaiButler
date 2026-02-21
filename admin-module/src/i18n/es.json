@@ -1,0 +1,289 @@
+{
+  "app": {
+    "title": "Admin Portal",
+    "brand": "HolidaiButler"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "agents": "Agentes",
+    "pois": "Gesti\u00f3n de POIs",
+    "reviews": "Rese\u00f1as",
+    "analytics": "Anal\u00edticas",
+    "settings": "Configuraci\u00f3n"
+  },
+  "auth": {
+    "login": "Iniciar sesi\u00f3n",
+    "logout": "Cerrar sesi\u00f3n",
+    "email": "Correo electr\u00f3nico",
+    "password": "Contrase\u00f1a",
+    "loginTitle": "Admin Portal",
+    "loginSubtitle": "Gestiona tu plataforma HolidaiButler",
+    "invalidCredentials": "Credenciales inv\u00e1lidas",
+    "serverError": "Ha ocurrido un error. Por favor, int\u00e9ntalo de nuevo.",
+    "sessionExpired": "Tu sesi\u00f3n ha expirado. Por favor, inicia sesi\u00f3n de nuevo."
+  },
+  "dashboard": {
+    "welcome": "Bienvenido de nuevo",
+    "destinations": "Destinos",
+    "totalUsers": "Usuarios totales",
+    "chatSessions": "Sesiones de chatbot (7d)",
+    "activeAgents": "Agentes activos",
+    "scheduledJobs": "Tareas programadas",
+    "jobsDialog": {
+      "title": "Tareas Programadas",
+      "category": "Categor\u00eda",
+      "job": "Agente",
+      "schedule": "Frecuencia",
+      "close": "Cerrar"
+    },
+    "systemHealth": "Estado del sistema",
+    "quickLinks": "Accesos r\u00e1pidos",
+    "pois": "POIs",
+    "activePois": "activos",
+    "reviews": "Rese\u00f1as",
+    "healthy": "Saludable",
+    "degraded": "Degradado",
+    "unhealthy": "No disponible",
+    "uptime": "Disponibilidad API"
+  },
+  "agents": {
+    "title": "Panel de Agentes",
+    "subtitle": "{{count}} agentes monitorizados",
+    "refresh": "Actualizar",
+    "autoRefresh": "Auto-actualizaci\u00f3n: 5 min",
+    "lastUpdated": "\u00daltima actualizaci\u00f3n",
+    "healthy": "Saludable",
+    "warning": "Advertencia",
+    "error": "Error",
+    "unknown": "Desconocido",
+    "filter": {
+      "all": "Todos",
+      "core": "Core",
+      "operations": "Operations",
+      "development": "Development",
+      "strategy": "Strategy",
+      "monitoring": "Monitoring",
+      "destination": "Destino"
+    },
+    "table": {
+      "name": "Agente",
+      "category": "Categor\u00eda",
+      "type": "Tipo",
+      "schedule": "Horario",
+      "calpe": "Calpe",
+      "texel": "Texel",
+      "status": "Estado",
+      "shared": "\u2014 (compartido)"
+    },
+    "activity": {
+      "title": "Actividad reciente",
+      "showMore": "Mostrar m\u00e1s",
+      "showLess": "Mostrar menos"
+    },
+    "detail": {
+      "errorTitle": "Error",
+      "warningTitle": "Advertencia",
+      "checkLogs": "Revisar logs de PM2 para m\u00e1s detalles",
+      "tasks": "Tareas",
+      "destinationStatus": "Estado por destino",
+      "duration": "\u00daltima duraci\u00f3n"
+    },
+    "partial": "Algunas fuentes de datos no est\u00e1n disponibles. Los datos mostrados pueden estar incompletos.",
+    "noResults": "No se encontraron agentes para los filtros seleccionados.",
+    "noActivity": "Sin actividad reciente",
+    "close": "Cerrar"
+  },
+  "pois": {
+    "title": "Gesti\u00f3n de POIs",
+    "subtitle": "Gestiona Puntos de Inter\u00e9s para todos los destinos",
+    "searchPlaceholder": "Buscar por nombre...",
+    "noResults": "No se encontraron POIs para los filtros seleccionados.",
+    "rowsPerPage": "Filas por p\u00e1gina",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "viewOnFrontend": "Ver en el frontend",
+    "inactiveOnFrontend": "POI no activo en el frontend",
+    "view": "Ver",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "editTitle": "Editar POI",
+    "characters": "caracteres",
+    "stats": {
+      "total": "Total",
+      "active": "Activos",
+      "withContent": "Con contenido",
+      "avgRating": "Valoraci\u00f3n media"
+    },
+    "filter": {
+      "destination": "Destino",
+      "content": "Contenido",
+      "status": "Estado",
+      "sortBy": "Ordenar por",
+      "sortName": "Nombre",
+      "sortRating": "Valoraci\u00f3n",
+      "sortUpdated": "\u00daltima actualizaci\u00f3n",
+      "all": "Todos",
+      "withContent": "Con contenido",
+      "withoutContent": "Sin contenido",
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "table": {
+      "name": "Nombre",
+      "destination": "Destino",
+      "category": "Categor\u00eda",
+      "content": "Contenido",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "detail": {
+      "description": "Descripci\u00f3n",
+      "tileDescription": "Descripci\u00f3n corta (tarjeta)",
+      "noContent": "Sin contenido disponible",
+      "reviews": "Rese\u00f1as",
+      "totalReviews": "Rese\u00f1as totales",
+      "avgRating": "Valoraci\u00f3n media",
+      "distribution": "Distribuci\u00f3n"
+    }
+  },
+  "reviews": {
+    "title": "Moderaci\u00f3n de Rese\u00f1as",
+    "subtitle": "Gestionar y moderar rese\u00f1as de usuarios",
+    "searchPlaceholder": "Buscar por nombre de POI o texto de rese\u00f1a...",
+    "noResults": "No se encontraron rese\u00f1as para los filtros seleccionados.",
+    "noText": "Sin texto de rese\u00f1a",
+    "rowsPerPage": "Filas por p\u00e1gina",
+    "view": "Ver",
+    "archive": "Archivar",
+    "unarchive": "Desarchivar",
+    "archived": "Rese\u00f1a archivada",
+    "unarchived": "Rese\u00f1a desarchivada",
+    "undo": "Deshacer",
+    "close": "Cerrar",
+    "summary": {
+      "total": "Rese\u00f1as totales",
+      "avgRating": "Valoraci\u00f3n media",
+      "positive": "Positivas",
+      "negative": "Negativas"
+    },
+    "filter": {
+      "destination": "Destino",
+      "rating": "Valoraci\u00f3n",
+      "sentiment": "Sentimiento",
+      "archived": "Estado",
+      "allRatings": "Todas las valoraciones",
+      "allSentiments": "Todos los sentimientos",
+      "positive": "Positivo",
+      "neutral": "Neutral",
+      "negative": "Negativo",
+      "active": "Activo",
+      "archivedOnly": "Archivado",
+      "all": "Todos"
+    },
+    "table": {
+      "poi": "POI",
+      "user": "Usuario",
+      "rating": "Valoraci\u00f3n",
+      "sentiment": "Sentimiento",
+      "text": "Texto",
+      "date": "Fecha",
+      "actions": "Acciones"
+    },
+    "detail": {
+      "title": "Detalles de la rese\u00f1a",
+      "poi": "POI",
+      "destination": "Destino",
+      "user": "Usuario",
+      "rating": "Valoraci\u00f3n",
+      "sentiment": "Sentimiento",
+      "reviewText": "Texto de la rese\u00f1a",
+      "visitDate": "Fecha de visita",
+      "createdAt": "Creado el",
+      "archivedAt": "Archivado el"
+    }
+  },
+  "analytics": {
+    "title": "Anal\u00edticas",
+    "subtitle": "Estad\u00edsticas e informaci\u00f3n de la plataforma",
+    "contentCoverage": "Cobertura de contenido",
+    "topPois": "Top 10 POIs (m\u00e1s rese\u00f1as)",
+    "kpi": {
+      "totalPois": "POIs totales",
+      "totalReviews": "Rese\u00f1as totales",
+      "contentCoverage": "Cobertura de contenido",
+      "avgRating": "Valoraci\u00f3n media"
+    },
+    "charts": {
+      "reviewTrends": "Tendencias de rese\u00f1as (12 meses)",
+      "reviewTrendsTooltip": "N\u00famero de nuevas rese\u00f1as por mes en los \u00faltimos 12 meses",
+      "categoryDistribution": "Distribuci\u00f3n por categor\u00eda"
+    },
+    "export": {
+      "summary": "Resumen",
+      "pois": "POIs",
+      "reviews": "Rese\u00f1as"
+    },
+    "table": {
+      "name": "Nombre",
+      "destination": "Destino",
+      "reviews": "Rese\u00f1as",
+      "rating": "Valoraci\u00f3n"
+    }
+  },
+  "settings": {
+    "title": "Configuraci\u00f3n",
+    "subtitle": "Configuraci\u00f3n del sistema y gesti\u00f3n",
+    "cancel": "Cancelar",
+    "system": {
+      "title": "Informaci\u00f3n del sistema",
+      "runtime": "Entorno de ejecuci\u00f3n",
+      "services": "Servicios",
+      "admin": "Admin",
+      "uptime": "Tiempo de actividad",
+      "environment": "Entorno",
+      "adminUser": "Usuario admin",
+      "role": "Rol"
+    },
+    "destinations": {
+      "title": "Destinos"
+    },
+    "language": {
+      "title": "Idioma",
+      "description": "Selecciona el idioma para el portal de administraci\u00f3n",
+      "nl": "Nederlands",
+      "en": "English",
+      "de": "Deutsch",
+      "es": "Espa\u00f1ol"
+    },
+    "cache": {
+      "title": "Gesti\u00f3n de cach\u00e9",
+      "description": "Limpiar la cach\u00e9 de Redis para eliminar datos obsoletos. Esto puede causar breves retrasos.",
+      "clear": "Limpiar cach\u00e9",
+      "clearTitle": "\u00bfLimpiar cach\u00e9?",
+      "clearWarning": "Se eliminar\u00e1n todas las claves de cach\u00e9 del admin. Los datos se obtendr\u00e1n de nuevo de la base de datos.",
+      "confirmClear": "Confirmar limpieza",
+      "clearing": "Limpiando...",
+      "cleared": "\u00a1Cach\u00e9 limpiada exitosamente!"
+    },
+    "audit": {
+      "title": "Registro de auditor\u00eda",
+      "filterAction": "Filtrar por acci\u00f3n",
+      "allActions": "Todas las acciones",
+      "date": "Fecha",
+      "action": "Acci\u00f3n",
+      "user": "Usuario",
+      "details": "Detalles",
+      "noEntries": "No se encontraron entradas en el registro de auditor\u00eda."
+    }
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Ha ocurrido un error",
+    "retry": "Reintentar",
+    "comingSoon": "Pr\u00f3ximamente",
+    "allDestinations": "Todos los destinos"
+  }
+}

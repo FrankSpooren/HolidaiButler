@@ -29,6 +29,13 @@
     "chatSessions": "Chatbot Sessies (7d)",
     "activeAgents": "Actieve Agents",
     "scheduledJobs": "Scheduled Jobs",
+    "jobsDialog": {
+      "title": "Geplande Taken",
+      "category": "Categorie",
+      "job": "Agent",
+      "schedule": "Frequentie",
+      "close": "Sluiten"
+    },
     "systemHealth": "Systeem Status",
     "quickLinks": "Snelkoppelingen",
     "pois": "POIs",
@@ -73,8 +80,17 @@
       "showMore": "Toon meer",
       "showLess": "Toon minder"
     },
+    "detail": {
+      "errorTitle": "Foutmelding",
+      "warningTitle": "Waarschuwing",
+      "checkLogs": "Bekijk PM2 logs voor meer details",
+      "tasks": "Takenpakket",
+      "destinationStatus": "Status per bestemming",
+      "duration": "Laatste duur"
+    },
     "partial": "Sommige databronnen zijn niet bereikbaar. Getoonde data kan onvolledig zijn.",
     "noResults": "Geen agents gevonden voor de geselecteerde filters.",
+    "noActivity": "Geen recente activiteit",
     "close": "Sluiten"
   },
   "pois": {
@@ -87,6 +103,8 @@
     "inactive": "Inactief",
     "view": "Bekijken",
     "edit": "Bewerken",
+    "viewOnFrontend": "Bekijk op frontend",
+    "inactiveOnFrontend": "POI niet actief op frontend",
     "close": "Sluiten",
     "cancel": "Annuleren",
     "save": "Opslaan",
@@ -195,11 +213,12 @@
     "kpi": {
       "totalPois": "Totaal POIs",
       "totalReviews": "Totaal Reviews",
-      "totalImages": "Totaal Afbeeldingen",
-      "contentCoverage": "Content Dekking"
+      "contentCoverage": "Content Dekking",
+      "avgRating": "Gem. Rating"
     },
     "charts": {
       "reviewTrends": "Review trends (12 maanden)",
+      "reviewTrendsTooltip": "Aantal nieuwe reviews per maand over de afgelopen 12 maanden",
       "categoryDistribution": "Categorieverdeling"
     },
     "export": {
@@ -240,6 +259,14 @@
       "confirmClear": "Bevestig wissen",
       "clearing": "Bezig met wissen...",
       "cleared": "Cache succesvol gewist!"
+    },
+    "language": {
+      "title": "Taal",
+      "description": "Selecteer de taal voor de admin portal",
+      "nl": "Nederlands",
+      "en": "English",
+      "de": "Deutsch",
+      "es": "Español"
     },
     "audit": {
       "title": "Admin Audit Log",

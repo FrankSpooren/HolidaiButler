@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.30.0
+> **Versie**: 3.31.0
 > **Laatst bijgewerkt**: 21 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -93,9 +93,9 @@ Na elke relevante aanpassing, uitbreiding of update:
 ### Primaire Documenten
 | Document | Locatie | Versie | Inhoud |
 |----------|---------|--------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.7 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.8 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 | Agent architectuur, scheduled jobs |
-| **CLAUDE.md** | Repository root + Hetzner | 3.30.0 | Dit bestand - project context |
+| **CLAUDE.md** | Repository root + Hetzner | 3.31.0 | Dit bestand - project context |
 
 ### Leesadvies voor Claude
 **Bij elke nieuwe sessie of complexe taak, lees in deze volgorde:**
@@ -446,6 +446,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 8C-1** | Agent Dashboard (backend GET /agents/status + frontend AgentsPage + i18n) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8D** | Admin Portal Feature Pack (POI Management, Reviews Moderatie, Analytics, Settings — 12 endpoints, 4 pagina's) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8D-FIX** | Admin Portal Bug Fix (12 bugs: POI stats/detail/edit, Review stats/detail/archive, Settings services/destinations/audit-log, QuickLinks, Agent detail, Sentry DSN) | ✅ COMPLEET | 21-02-2026 |
+| **Fase 8E** | Admin Portal Hardening & UX Upgrade (agent ecosystem fixes, content audit, destination filter, sorting, analytics, agent profielen, i18n DE/ES, taalversie keuze) | ✅ COMPLEET | 21-02-2026 |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -1091,7 +1092,7 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 - 3 SSL certs: Let's Encrypt (aangemaakt in eerdere sessie)
 - CORS uitgebreid: admin.* origins toegevoegd aan api.holidaibutler.com-le-ssl.conf
 
-**Backend (7 endpoints in platform-core/src/routes/adminPortal.js)**:
+**Backend (6 endpoints in platform-core/src/routes/adminPortal.js)**:
 
 | Endpoint | Functie | Auth | Beschrijving |
 |----------|---------|------|-------------|
@@ -1132,7 +1133,7 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 
 | Actie | Bestand |
 |-------|---------|
-| NEW | `platform-core/src/routes/adminPortal.js` (6 endpoints) |
+| NEW | `platform-core/src/routes/adminPortal.js` (6 endpoints, 7th added in 8C-1) |
 | MODIFIED | `platform-core/src/index.js` (route registration) |
 | NEW | `admin-module/package.json` (root level) |
 | NEW | `admin-module/vite.config.js` |
@@ -1292,6 +1293,77 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 
 **Test Resultaten**: 33/33 PASS (T1-T19, meerdere assertions per test)
 
+### Fase 8E Resultaten (Admin Portal Hardening & UX Upgrade — 21/02/2026)
+- **Status**: COMPLEET (21-02-2026)
+- **Kosten**: ~EUR 0,50 (79 ES vertalingen via Mistral AI, rest pure code)
+- **Doel**: Agent ecosystem fixes, content audit & repair, admin portal UX hardening
+
+**BLOK 1: Agent Ecosystem Fixes (4 items)**:
+
+| Fix | Probleem | Oplossing | Status |
+|-----|----------|-----------|--------|
+| Backup Health Checker | BACKUP_DIR `/root/backups` bestond niet, regex matched alleen `.gz` | Dir aangemaakt, regex uitgebreid naar `.sql`/`.sql.gz` patterns | ✅ |
+| Daily Briefing URGENT | `hasCritical` checkte alleen budget/errors, NIET smoke/backup failures | `hasCriticalAgents` variabele: backup CRITICAL + smoke FAILURES → [URGENT] subject | ✅ |
+| De Maestro status | **ROOT CAUSE**: `calculateAgentStatus()` checkte `lastRun.status === 'completed'` maar line 689 transformeert naar `'success'` | Fix: `(lastRun.status === 'completed' \|\| lastRun.status === 'success')` → **18/18 agents HEALTHY** | ✅ |
+| Daily MySQL backup | Geen automated MySQL backup cron op Hetzner | Cron job `0 3 * * *` mysqldump naar `/root/backups/` met 7-day rotation | ✅ |
+
+**BLOK 2: Content Audit & Repair (3 items)**:
+
+| Audit | Bevinding | Actie | Status |
+|-------|-----------|-------|--------|
+| Walvisvaardershuisje (POI 2465) | Content is R6b-era clean, maar ES vertaling ONTBRAK | 79 Texel POIs met ontbrekende ES vertalingen batch-vertaald (Mistral AI) | ✅ |
+| Asterisken scan | 14 POIs (11 Texel + 3 Calpe) met stray markdown `*` in content | `REPLACE('*', '')` op EN/NL/DE/ES kolommen, 0 resterend | ✅ |
+| is_active audit | 121 non-Accommodation POIs inactive (100 = Montaditos chain Food & Drinks) | Gedocumenteerd voor Frank's review — mogelijk intentioneel gedeactiveerd | ✅ |
+
+**BLOK 3: Admin Portal UX Fixes (11 items)**:
+
+| # | Fix | Beschrijving |
+|---|-----|-------------|
+| 3A | Destination filter header | Global destination selector in AdminLayout header (alle pagina's) |
+| 3B | Vlaggen bij destination | 🇪🇸 Calpe / 🇳🇱 Texel emoji vlaggen in selector + agent tabel |
+| 3C | Sorteerbare kolommen | Sortable columns op POIs (naam/rating/reviews), Reviews (rating/date), Analytics (views) |
+| 3D | Analytics review trends | Vervangt lege trend chart: 12-maanden grouped by month (line chart data fix) |
+| 3E | Reviews destination filter | Filter reviews op Calpe/Texel via destination selector |
+| 3F | POI detail link | "Bekijk op website" link naar live frontend POI pagina |
+| 3G | Agent profielen NL | Nederlandse beschrijvingen voor alle 18 agents in AGENT_METADATA |
+| 3H | Categorie kleuren | 5 unieke kleuren per categorie chip (Core/Operations/Development/Strategy/Monitoring) |
+| 3I | Scheduled jobs popup | Klik op "40 jobs" → dialog met alle scheduled jobs (naam, cron, beschrijving) |
+| 3J | Taalversie keuze | Language selector NL/EN/DE/ES in Settings met i18n voor DE + ES |
+| 3K | Agent detail uitbreiding | Warning/error agents tonen detail + aanbevolen actie in detail dialog |
+
+**BLOK 4: Documentatie & Deploy (5 doc fixes)**:
+
+| Fix | Probleem | Oplossing |
+|-----|----------|-----------|
+| Agent Masterplan versie | L1449 zei `3.4.0`, L97 zei `4.2.0` | Geharmoniseerd naar `4.2.0` |
+| 8C-0 endpoint count | Documentatie zei "7 endpoints" maar 8C-0 had 6 (7e was agents/status in 8C-1) | Gecorrigeerd naar "6 endpoints" + note |
+| CLAUDE.md self-ref | Strategische Documentatie tabel verwees naar `3.30.0` | Bijgewerkt naar `3.31.0` |
+| Master Strategie versie ref | MS verwees naar CLAUDE.md `v3.29.0` | Bijgewerkt naar `v3.31.0` |
+| MS Budget tabel | 8D-FIX en 8E ontbraken | Toegevoegd |
+
+**Bestanden gewijzigd**:
+
+| Actie | Bestand |
+|-------|---------|
+| MODIFIED | `platform-core/src/routes/adminPortal.js` (calculateAgentStatus fix) |
+| MODIFIED | `platform-core/src/services/agents/healthMonitor/backupHealthChecker.js` (regex + dir) |
+| MODIFIED | `platform-core/src/services/orchestrator/ownerInterface/dailyBriefing.js` (URGENT subject) |
+| MODIFIED | `admin-module/src/components/layout/AdminLayout.jsx` (destination selector) |
+| MODIFIED | `admin-module/src/pages/AgentsPage.jsx` (flags, colors, profiles, jobs popup, detail) |
+| MODIFIED | `admin-module/src/pages/POIsPage.jsx` (sorting, detail link, destination filter) |
+| MODIFIED | `admin-module/src/pages/ReviewsPage.jsx` (destination filter, sorting) |
+| MODIFIED | `admin-module/src/pages/AnalyticsPage.jsx` (trend data fix, sorting) |
+| MODIFIED | `admin-module/src/pages/SettingsPage.jsx` (language selector, DE/ES i18n) |
+| MODIFIED | `admin-module/src/i18n/nl.json` (+agent profiles, +scheduled jobs, +language) |
+| MODIFIED | `admin-module/src/i18n/en.json` (+agent profiles, +scheduled jobs, +language) |
+| NEW | `admin-module/src/i18n/de.json` (German i18n) |
+| NEW | `admin-module/src/i18n/es.json` (Spanish i18n) |
+
+**Database wijzigingen**:
+- 14 POIs asterisks verwijderd (11 Texel + 3 Calpe)
+- 79 Texel POIs ES vertalingen toegevoegd (0 resterend missing)
+- Hetzner: `/root/fase_8e_missing_es.py` + cron backup job
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -1445,8 +1517,8 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.7 |
-| Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 3.4.0 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.8 |
+| Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase 2 Docs | `docs/agents/fase2/` | - |
 | Fase 3 Docs | `docs/agents/fase3/` | - |
 | Fase 4 Docs | `docs/agents/fase4/` | - |
@@ -1460,6 +1532,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.31.0** | **2026-02-21** | **Fase 8E Admin Portal Hardening & UX Upgrade COMPLEET: BLOK 1: Agent ecosystem fixes (Backup Health regex+dir, dailyBriefing URGENT subject, De Maestro calculateAgentStatus 'completed'/'success' fix → 18/18 HEALTHY, daily MySQL backup cron). BLOK 2: Content audit (14 asterisk POIs fixed, 79 missing ES translations batch-vertaald, 121 inactive POIs gedocumenteerd). BLOK 3: 11 UX fixes (global destination filter+vlaggen, sortable columns, analytics trends, reviews destination filter, POI detail link, agent profielen NL, categorie kleuren, scheduled jobs popup, taalversie NL/EN/DE/ES). BLOK 4: 5 doc fixes (Agent Masterplan versie, endpoint count, version refs). Kosten: ~EUR 0,50. CLAUDE.md v3.31.0, Master Strategie v6.8.** |
 | **3.30.0** | **2026-02-21** | **Fase 8D-FIX Admin Portal Bug Fix COMPLEET: 12 bugs gefixed bij live testing. Backend (adminPortal.js v2.1.0): resolveDestinationId() helper (string→id mapping), POI stats per-destination top-level keys, POI detail field renames (description→detail, tileDescription→tile, reviews→reviewSummary array), review summary flattened (totalReviews→total, sentimentBreakdown→top-level), settings system keys (mysql/mongodb/redis + SELECT 1 health check), destinations array→object, audit-log field mapping (admin_email→actor.email, details→detail). Frontend: POI/review detail wrapper fix, snackbar undo archive, QuickLinks live links, agent click-to-detail dialog, Sentry DSN hyphens removed. 33/33 tests PASS. Kosten: EUR 0. CLAUDE.md v3.30.0, Master Strategie v6.7.** |
 | **3.29.0** | **2026-02-20** | **Fase 8D Admin Portal Feature Pack COMPLEET: 4 modules: POI Management (list/detail/edit/stats, 4 endpoints), Reviews Moderatie (list/detail/archive, 3 endpoints), Analytics Dashboard (overview/trends/export, 2 endpoints), Settings (system/audit-log/cache, 3 endpoints). 4 nieuwe pagina's, 4 API services, 4 hooks, 100+ i18n keys NL/EN. Alle sidebar items actief. adminPortal.js v2.0.0 (19 endpoints). Build OK. 8C-1 audit correcties (adminPortal.js in routes tree, agents/status in endpoint tabel). Kosten: EUR 0. CLAUDE.md v3.29.0, Master Strategie v6.6.** |
 | **3.28.0** | **2026-02-20** | **Fase 8C-1 Agent Dashboard COMPLEET: Backend: GET /agents/status endpoint (AGENT_METADATA 18 entries, MongoDB audit_logs, Redis thermostaat, monitoring collections, Redis cache 60s, graceful degradation). Frontend: AgentsPage met summary cards (4), filter bar (6 category chips + destination dropdown), sortable agent tabel (18 rijen, Cat A destination-aware, Cat B shared), recent activity (10/50 entries), auto-refresh 5 min. i18n NL/EN (30+ keys). 12/12 tests PASS. Kosten: EUR 0. adminPortal.js v1.1.0 (7 endpoints). 8C-0 audit correcties (doc refs). CLAUDE.md v3.28.0, Master Strategie v6.5.** |

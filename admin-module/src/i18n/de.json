@@ -1,0 +1,289 @@
+{
+  "app": {
+    "title": "Admin Portal",
+    "brand": "HolidaiButler"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "agents": "Agents",
+    "pois": "POI-Verwaltung",
+    "reviews": "Bewertungen",
+    "analytics": "Analytik",
+    "settings": "Einstellungen"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "email": "E-Mail-Adresse",
+    "password": "Passwort",
+    "loginTitle": "Admin Portal",
+    "loginSubtitle": "Verwalten Sie Ihre HolidaiButler Plattform",
+    "invalidCredentials": "Ung\u00fcltige Anmeldedaten",
+    "serverError": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+    "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
+  },
+  "dashboard": {
+    "welcome": "Willkommen zur\u00fcck",
+    "destinations": "Reiseziele",
+    "totalUsers": "Benutzer gesamt",
+    "chatSessions": "Chatbot-Sitzungen (7T)",
+    "activeAgents": "Aktive Agents",
+    "scheduledJobs": "Geplante Aufgaben",
+    "jobsDialog": {
+      "title": "Geplante Aufgaben",
+      "category": "Kategorie",
+      "job": "Agent",
+      "schedule": "H\u00e4ufigkeit",
+      "close": "Schlie\u00dfen"
+    },
+    "systemHealth": "Systemstatus",
+    "quickLinks": "Schnellzugriff",
+    "pois": "POIs",
+    "activePois": "aktiv",
+    "reviews": "Bewertungen",
+    "healthy": "Gesund",
+    "degraded": "Beeintr\u00e4chtigt",
+    "unhealthy": "Nicht verf\u00fcgbar",
+    "uptime": "API-Betriebszeit"
+  },
+  "agents": {
+    "title": "Agent Dashboard",
+    "subtitle": "{{count}} Agents \u00fcberwacht",
+    "refresh": "Aktualisieren",
+    "autoRefresh": "Auto-Aktualisierung: 5 Min",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "healthy": "Gesund",
+    "warning": "Warnung",
+    "error": "Fehler",
+    "unknown": "Unbekannt",
+    "filter": {
+      "all": "Alle",
+      "core": "Core",
+      "operations": "Operations",
+      "development": "Development",
+      "strategy": "Strategy",
+      "monitoring": "Monitoring",
+      "destination": "Reiseziel"
+    },
+    "table": {
+      "name": "Agent",
+      "category": "Kategorie",
+      "type": "Typ",
+      "schedule": "Zeitplan",
+      "calpe": "Calpe",
+      "texel": "Texel",
+      "status": "Status",
+      "shared": "\u2014 (geteilt)"
+    },
+    "activity": {
+      "title": "Letzte Aktivit\u00e4t",
+      "showMore": "Mehr anzeigen",
+      "showLess": "Weniger anzeigen"
+    },
+    "detail": {
+      "errorTitle": "Fehler",
+      "warningTitle": "Warnung",
+      "checkLogs": "PM2-Logs f\u00fcr weitere Details pr\u00fcfen",
+      "tasks": "Aufgaben",
+      "destinationStatus": "Status pro Reiseziel",
+      "duration": "Letzte Dauer"
+    },
+    "partial": "Einige Datenquellen sind nicht erreichbar. Angezeigte Daten k\u00f6nnen unvollst\u00e4ndig sein.",
+    "noResults": "Keine Agents f\u00fcr die ausgew\u00e4hlten Filter gefunden.",
+    "noActivity": "Keine aktuelle Aktivit\u00e4t",
+    "close": "Schlie\u00dfen"
+  },
+  "pois": {
+    "title": "POI-Verwaltung",
+    "subtitle": "Verwalten Sie Points of Interest f\u00fcr alle Reiseziele",
+    "searchPlaceholder": "Nach Name suchen...",
+    "noResults": "Keine POIs f\u00fcr die ausgew\u00e4hlten Filter gefunden.",
+    "rowsPerPage": "Zeilen pro Seite",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "viewOnFrontend": "Im Frontend ansehen",
+    "inactiveOnFrontend": "POI nicht aktiv im Frontend",
+    "view": "Ansehen",
+    "edit": "Bearbeiten",
+    "close": "Schlie\u00dfen",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "saving": "Speichern...",
+    "editTitle": "POI bearbeiten",
+    "characters": "Zeichen",
+    "stats": {
+      "total": "Gesamt",
+      "active": "Aktiv",
+      "withContent": "Mit Inhalt",
+      "avgRating": "Durchschn. Bewertung"
+    },
+    "filter": {
+      "destination": "Reiseziel",
+      "content": "Inhalt",
+      "status": "Status",
+      "sortBy": "Sortieren nach",
+      "sortName": "Name",
+      "sortRating": "Bewertung",
+      "sortUpdated": "Zuletzt aktualisiert",
+      "all": "Alle",
+      "withContent": "Mit Inhalt",
+      "withoutContent": "Ohne Inhalt",
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "table": {
+      "name": "Name",
+      "destination": "Reiseziel",
+      "category": "Kategorie",
+      "content": "Inhalt",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "detail": {
+      "description": "Beschreibung",
+      "tileDescription": "Kurzbeschreibung (Kachel)",
+      "noContent": "Kein Inhalt verf\u00fcgbar",
+      "reviews": "Bewertungen",
+      "totalReviews": "Bewertungen gesamt",
+      "avgRating": "Durchschn. Bewertung",
+      "distribution": "Verteilung"
+    }
+  },
+  "reviews": {
+    "title": "Bewertungen Moderation",
+    "subtitle": "Benutzerbewertungen verwalten und moderieren",
+    "searchPlaceholder": "Nach POI-Name oder Bewertungstext suchen...",
+    "noResults": "Keine Bewertungen f\u00fcr die ausgew\u00e4hlten Filter gefunden.",
+    "noText": "Kein Bewertungstext",
+    "rowsPerPage": "Zeilen pro Seite",
+    "view": "Ansehen",
+    "archive": "Archivieren",
+    "unarchive": "Dearchivieren",
+    "archived": "Bewertung archiviert",
+    "unarchived": "Bewertung dearchiviert",
+    "undo": "R\u00fcckg\u00e4ngig",
+    "close": "Schlie\u00dfen",
+    "summary": {
+      "total": "Bewertungen gesamt",
+      "avgRating": "Durchschn. Bewertung",
+      "positive": "Positiv",
+      "negative": "Negativ"
+    },
+    "filter": {
+      "destination": "Reiseziel",
+      "rating": "Bewertung",
+      "sentiment": "Stimmung",
+      "archived": "Status",
+      "allRatings": "Alle Bewertungen",
+      "allSentiments": "Alle Stimmungen",
+      "positive": "Positiv",
+      "neutral": "Neutral",
+      "negative": "Negativ",
+      "active": "Aktiv",
+      "archivedOnly": "Archiviert",
+      "all": "Alle"
+    },
+    "table": {
+      "poi": "POI",
+      "user": "Benutzer",
+      "rating": "Bewertung",
+      "sentiment": "Stimmung",
+      "text": "Text",
+      "date": "Datum",
+      "actions": "Aktionen"
+    },
+    "detail": {
+      "title": "Bewertungsdetails",
+      "poi": "POI",
+      "destination": "Reiseziel",
+      "user": "Benutzer",
+      "rating": "Bewertung",
+      "sentiment": "Stimmung",
+      "reviewText": "Bewertungstext",
+      "visitDate": "Besuchsdatum",
+      "createdAt": "Erstellt am",
+      "archivedAt": "Archiviert am"
+    }
+  },
+  "analytics": {
+    "title": "Analytik",
+    "subtitle": "Plattformstatistiken und Einblicke",
+    "contentCoverage": "Inhaltsabdeckung",
+    "topPois": "Top 10 POIs (meiste Bewertungen)",
+    "kpi": {
+      "totalPois": "POIs gesamt",
+      "totalReviews": "Bewertungen gesamt",
+      "contentCoverage": "Inhaltsabdeckung",
+      "avgRating": "Durchschn. Bewertung"
+    },
+    "charts": {
+      "reviewTrends": "Bewertungstrends (12 Monate)",
+      "reviewTrendsTooltip": "Anzahl neuer Bewertungen pro Monat in den letzten 12 Monaten",
+      "categoryDistribution": "Kategorieverteilung"
+    },
+    "export": {
+      "summary": "Zusammenfassung",
+      "pois": "POIs",
+      "reviews": "Bewertungen"
+    },
+    "table": {
+      "name": "Name",
+      "destination": "Reiseziel",
+      "reviews": "Bewertungen",
+      "rating": "Bewertung"
+    }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "subtitle": "Systemkonfiguration und Verwaltung",
+    "cancel": "Abbrechen",
+    "system": {
+      "title": "Systeminformationen",
+      "runtime": "Laufzeit",
+      "services": "Dienste",
+      "admin": "Admin",
+      "uptime": "Betriebszeit",
+      "environment": "Umgebung",
+      "adminUser": "Admin-Benutzer",
+      "role": "Rolle"
+    },
+    "destinations": {
+      "title": "Reiseziele"
+    },
+    "language": {
+      "title": "Sprache",
+      "description": "Sprache f\u00fcr das Admin Portal ausw\u00e4hlen",
+      "nl": "Nederlands",
+      "en": "English",
+      "de": "Deutsch",
+      "es": "Espa\u00f1ol"
+    },
+    "cache": {
+      "title": "Cache-Verwaltung",
+      "description": "Redis-Cache leeren, um veraltete Daten zu entfernen. Dies kann kurze Verz\u00f6gerungen verursachen.",
+      "clear": "Cache leeren",
+      "clearTitle": "Cache leeren?",
+      "clearWarning": "Alle Admin-Cache-Schl\u00fcssel werden entfernt. Daten werden erneut aus der Datenbank geladen.",
+      "confirmClear": "L\u00f6schen best\u00e4tigen",
+      "clearing": "Wird geleert...",
+      "cleared": "Cache erfolgreich geleert!"
+    },
+    "audit": {
+      "title": "Admin Audit-Log",
+      "filterAction": "Nach Aktion filtern",
+      "allActions": "Alle Aktionen",
+      "date": "Datum",
+      "action": "Aktion",
+      "user": "Benutzer",
+      "details": "Details",
+      "noEntries": "Keine Audit-Log-Eintr\u00e4ge gefunden."
+    }
+  },
+  "common": {
+    "loading": "Laden...",
+    "error": "Ein Fehler ist aufgetreten",
+    "retry": "Erneut versuchen",
+    "comingSoon": "Demnächst verfügbar",
+    "allDestinations": "Alle Reiseziele"
+  }
+}

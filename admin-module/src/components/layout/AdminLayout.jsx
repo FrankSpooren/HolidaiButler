@@ -9,7 +9,6 @@ export default function AdminLayout() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [selectedDestination, setSelectedDestination] = useState('all');
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -33,13 +32,9 @@ export default function AdminLayout() {
 
       {/* Main content */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <Header
-          onMenuToggle={() => setMobileOpen(!mobileOpen)}
-          selectedDestination={selectedDestination}
-          onDestinationChange={setSelectedDestination}
-        />
+        <Header onMenuToggle={() => setMobileOpen(!mobileOpen)} />
         <Box component="main" sx={{ flex: 1, p: 3, mt: 8 }}>
-          <Outlet context={{ selectedDestination }} />
+          <Outlet />
         </Box>
       </Box>
     </Box>

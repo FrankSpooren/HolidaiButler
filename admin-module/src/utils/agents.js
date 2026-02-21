@@ -1,6 +1,6 @@
 /**
- * Agent Dashboard Utilities — Fase 8C-1
- * Icons, colors, and helpers for the agent dashboard.
+ * Agent Dashboard Utilities — Fase 8E
+ * Icons, colors, descriptions, and helpers for the agent dashboard.
  */
 
 export const AGENT_ICONS = {
@@ -27,9 +27,9 @@ export const AGENT_ICONS = {
 export const CATEGORY_COLORS = {
   core: '#1976d2',
   operations: '#2e7d32',
-  development: '#ed6c02',
-  strategy: '#9c27b0',
-  monitoring: '#607d8b'
+  development: '#5d4037',
+  strategy: '#7b1fa2',
+  monitoring: '#e65100'
 };
 
 export const STATUS_COLORS = {
@@ -39,12 +39,152 @@ export const STATUS_COLORS = {
   unknown: '#9e9e9e'
 };
 
+export const AGENT_DESCRIPTIONS_NL = {
+  'De Maestro': 'Centrale coordinatie van alle agents + taakplanning',
+  'De Bode': 'Dagelijkse statusupdate via email + systeemwaarschuwingen',
+  'De Dokter': 'Platform health monitoring (DB, API, SSL, portals)',
+  'De Koerier': 'POI data synchronisatie en lifecycle management',
+  'Het Geheugen': 'ChromaDB vectorisatie en chatbot kennisbeheer',
+  'De Gastheer': 'Chatbot sessie management en prestatie monitoring',
+  'De Poortwachter': 'GDPR compliance en privacybewaking',
+  'De Stylist': 'UX/UI review en brand consistency check',
+  'De Corrector': 'Automatische code fixes en dependency updates',
+  'De Bewaker': 'Beveiligingsscans, SSL monitoring, code review',
+  'De Inspecteur': 'Kwaliteitscontrole POI data + content verificatie',
+  'De Architect': 'Architectuuranalyse en refactoring aanbevelingen',
+  'De Leermeester': 'Pattern learning en adaptieve optimalisatie',
+  'De Thermostaat': 'Systeem alerts en resource monitoring',
+  'De Weermeester': 'Predictive analytics en trendanalyse',
+  'Content Quality Checker': 'Wekelijkse content kwaliteitscheck',
+  'Smoke Test Runner': 'Dagelijkse endpoint tests alle portals',
+  'Backup Health Checker': 'Dagelijkse controle database backups'
+};
+
+export const AGENT_TASKS = {
+  'De Maestro': [
+    'Coordinatie van alle 18 agents',
+    'Taakplanning en scheduling',
+    'Foutafhandeling en escalatie',
+    'Dagelijkse briefing orchestratie'
+  ],
+  'De Bode': [
+    'Dagelijkse briefing email generatie',
+    'Alert notificaties bij kritieke issues',
+    'MailerLite veld updates (20+ velden)',
+    'Per-destination statistieken'
+  ],
+  'De Dokter': [
+    'MySQL, MongoDB, Redis health checks',
+    'SSL certificaat monitoring (5 domeinen)',
+    'Portal beschikbaarheid (7 portals)',
+    'API response time monitoring',
+    'Disk space en memory usage'
+  ],
+  'De Koerier': [
+    'POI data synchronisatie (tier 1-4)',
+    'Review data sync en deduplicatie',
+    'Content lifecycle management',
+    'Destination-specifieke data validatie'
+  ],
+  'Het Geheugen': [
+    'ChromaDB vectorisatie beheer',
+    'QnA en POI vector synchronisatie',
+    'Collection state snapshots',
+    'Embedding model monitoring'
+  ],
+  'De Gastheer': [
+    'Chatbot sessie tracking',
+    'Response kwaliteit monitoring',
+    'Gebruikersfeedback analyse',
+    'Prestatie statistieken'
+  ],
+  'De Poortwachter': [
+    'GDPR data retention checks',
+    'Verwijderingsverzoeken afhandeling',
+    'Privacy audit logging',
+    'Consent management'
+  ],
+  'De Stylist': [
+    'Frontend UI consistency check',
+    'Brand kleur verificatie (Calpe + Texel)',
+    'Responsive design monitoring',
+    'Accessibility checks'
+  ],
+  'De Corrector': [
+    'Dependency update scanning',
+    'Code quality analyse',
+    'Automatische fixes voor bekende patronen'
+  ],
+  'De Bewaker': [
+    'Beveiligingsscan (OWASP)',
+    'SSL certificaat monitoring',
+    'Code review op security patronen',
+    'Vulnerability scanning'
+  ],
+  'De Inspecteur': [
+    'POI data completeness checks',
+    'Content kwaliteitsaudits',
+    'Afbeeldingen validatie',
+    'Multi-taal content verificatie'
+  ],
+  'De Architect': [
+    'Architectuur analyse',
+    'Refactoring aanbevelingen',
+    'Performance optimalisatie tips',
+    'Code complexiteit monitoring'
+  ],
+  'De Leermeester': [
+    'Pattern herkenning in agent data',
+    'Adaptieve optimalisatie regels',
+    'MongoDB persistente patronen',
+    'Learning feedback loops'
+  ],
+  'De Thermostaat': [
+    'Systeem resource monitoring',
+    'Alert drempel evaluatie',
+    'Redis persistent state',
+    'Escalatie bij overschrijding'
+  ],
+  'De Weermeester': [
+    'Predictive analytics',
+    'Trend analyse (7/30/90 dagen)',
+    'Seizoensgebonden voorspellingen',
+    'Anomalie detectie'
+  ],
+  'Content Quality Checker': [
+    'Content completeness audit',
+    'Consistentie checks per taal',
+    'Woordaantal validatie',
+    'Wekelijks rapport'
+  ],
+  'Smoke Test Runner': [
+    'API endpoint testing (Calpe + Texel)',
+    'Frontend beschikbaarheid (6 portals)',
+    'Infrastructure checks (Redis, MongoDB, BullMQ)',
+    'Threema configuratie check'
+  ],
+  'Backup Health Checker': [
+    'MySQL backup recency check',
+    'MongoDB backup recency check',
+    'Disk space monitoring',
+    'Alert bij CRITICAL status'
+  ]
+};
+
 export function getAgentIcon(name) {
   return AGENT_ICONS[name] || '\u{1F916}';
 }
 
+export function getAgentDescription(name) {
+  return AGENT_DESCRIPTIONS_NL[name] || '';
+}
+
+export function getAgentTasks(name) {
+  return AGENT_TASKS[name] || [];
+}
+
 export function formatTimestamp(ts) {
-  if (!ts) return '—';
+  if (!ts) return '\u2014';
   const d = new Date(ts);
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
