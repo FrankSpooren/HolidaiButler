@@ -1,37 +1,54 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D
- * ==============================================
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A
+ * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
  *
  * Endpoints:
- *   POST /auth/login           — Admin login (rate limited)
+ *   POST /auth/login           — Admin login (rate limited, admin_users table)
  *   POST /auth/refresh         — Refresh access token
  *   POST /auth/logout          — Admin logout
  *   GET  /auth/me              — Current admin user info
  *   GET  /dashboard            — KPI data (Redis cached 120s)
  *   GET  /health               — System health checks
  *   GET  /agents/status        — Agent status dashboard (Redis cached 60s)
+ *   GET  /agents/config        — Agent configurations (MongoDB)
+ *   PUT  /agents/config/:key   — Update agent configuration (admin audit)
  *   GET  /pois                 — POI list with pagination, search, filters
  *   GET  /pois/stats           — POI statistics per destination (Redis cached 5min)
+ *   GET  /pois/categories      — Distinct categories for filter dropdowns
  *   GET  /pois/:id             — POI detail with content, images, reviews
- *   PUT  /pois/:id             — Update POI content (audit logged)
+ *   PUT  /pois/:id             — Update POI content + category (audit logged, undo snapshot)
+ *   PUT  /pois/:id/images      — Reorder POI images (display_order)
  *   GET  /reviews              — Review list with pagination, filters, summary
  *   GET  /reviews/:id          — Single review detail
- *   PUT  /reviews/:id          — Archive/unarchive review (audit logged)
+ *   PUT  /reviews/:id          — Archive/unarchive review (audit logged, undo snapshot)
  *   GET  /analytics            — Analytics overview (Redis cached 10min)
  *   GET  /analytics/export     — CSV export (pois/reviews/summary)
+ *   GET  /analytics/chatbot    — Chatbot analytics (sessions, messages, languages)
+ *   GET  /analytics/trend/:metric — Time-series trend data (grouped by month)
+ *   GET  /analytics/snapshot   — Point-in-time KPI snapshot
  *   GET  /settings             — System info, destinations, features
  *   GET  /settings/audit-log   — Admin audit log (paginated)
+ *   POST /settings/undo/:auditLogId — Undo reversible action
  *   POST /settings/cache/clear — Redis cache invalidation
+ *   GET  /settings/branding    — Brand configuration per destination
+ *   PUT  /settings/branding/:destination — Update brand colors
+ *   GET  /users                — List admin users (platform_admin only)
+ *   POST /users                — Create admin user (platform_admin only)
+ *   GET  /users/:id            — Admin user detail (platform_admin only)
+ *   PUT  /users/:id            — Update admin user (platform_admin only)
+ *   DELETE /users/:id          — Soft-delete admin user (platform_admin only)
+ *   POST /users/:id/reset-password — Reset admin user password (platform_admin only)
  *
  * @module routes/adminPortal
- * @version 2.1.0
+ * @version 3.0.0
  */
 
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import Redis from 'ioredis';
 import mongoose from 'mongoose';
 import { mysqlSequelize } from '../config/database.js';
@@ -79,12 +96,177 @@ function resolveDestinationId(val) {
 }
 
 // ============================================================
+// RBAC ROLE HIERARCHY + MIDDLEWARE (Fase 9A-1)
+// ============================================================
+
+const ROLE_HIERARCHY = {
+  platform_admin: 100,
+  poi_owner: 70,
+  editor: 50,
+  reviewer: 30
+};
+
+/**
+ * RBAC middleware for admin endpoints.
+ * Verifies JWT, checks role hierarchy, and validates destination access.
+ * Uses admin_users table (not Users table).
+ *
+ * @param {string} requiredRole - Minimum role required (default: 'reviewer')
+ * @returns {Function} Express middleware
+ */
+function adminAuth(requiredRole = 'reviewer') {
+  return async (req, res, next) => {
+    try {
+      // 1. Extract and verify JWT
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'NO_TOKEN', message: 'No admin token provided.' }
+        });
+      }
+
+      const token = authHeader.substring(7);
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_ADMIN_SECRET || process.env.JWT_SECRET);
+      } catch (err) {
+        const code = err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN';
+        const message = err.name === 'TokenExpiredError' ? 'Admin token has expired.' : 'Invalid admin token.';
+        return res.status(401).json({ success: false, error: { code, message } });
+      }
+
+      // 2. Verify user still exists and is active in admin_users
+      const userId = decoded.userId || decoded.id;
+      const adminUsers = await mysqlSequelize.query(
+        `SELECT id, email, first_name, last_name, role, allowed_destinations, permissions, status
+         FROM admin_users WHERE id = ? AND status = 'active'`,
+        { replacements: [userId], type: QueryTypes.SELECT }
+      );
+
+      if (adminUsers.length === 0) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'USER_INACTIVE', message: 'Admin account not found or suspended.' }
+        });
+      }
+
+      const user = adminUsers[0];
+
+      // 3. Check role hierarchy
+      const userLevel = ROLE_HIERARCHY[user.role] || 0;
+      const requiredLevel = ROLE_HIERARCHY[requiredRole] || 0;
+      if (userLevel < requiredLevel) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'INSUFFICIENT_ROLE', message: `Role '${requiredRole}' or higher required.` }
+        });
+      }
+
+      // 4. Parse allowed destinations
+      let allowedDests = [];
+      try { allowedDests = JSON.parse(user.allowed_destinations || '[]'); } catch { allowedDests = []; }
+
+      // 5. Check destination access (if destination filter applied)
+      const destFilter = req.query.destination || req.headers['x-admin-destination'] || null;
+      if (destFilter && user.role !== 'platform_admin' && allowedDests.length > 0) {
+        const destCode = String(destFilter).toLowerCase();
+        if (!allowedDests.includes(destCode)) {
+          return res.status(403).json({
+            success: false,
+            error: { code: 'DESTINATION_FORBIDDEN', message: `No access to destination '${destFilter}'.` }
+          });
+        }
+      }
+
+      // 6. Set enriched adminUser on request
+      let parsedPerms = {};
+      try { parsedPerms = JSON.parse(user.permissions || '{}'); } catch { /* empty */ }
+
+      req.adminUser = {
+        id: user.id,
+        email: user.email,
+        name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        role: user.role,
+        allowed_destinations: allowedDests,
+        permissions: parsedPerms,
+        ...decoded
+      };
+
+      next();
+    } catch (error) {
+      logger.error('[AdminPortal] RBAC middleware error:', error);
+      res.status(500).json({
+        success: false,
+        error: { code: 'AUTH_ERROR', message: 'Server error during authentication.' }
+      });
+    }
+  };
+}
+
+/**
+ * Save an undo snapshot to MongoDB admin_action_snapshots.
+ * Returns the snapshot _id for linking to audit log.
+ */
+async function saveUndoSnapshot({ auditLogId, action, entityType, entityId, previousState, newState, createdBy }) {
+  try {
+    if (mongoose.connection.readyState !== 1) return null;
+    const db = mongoose.connection.db;
+    const result = await db.collection('admin_action_snapshots').insertOne({
+      audit_log_id: auditLogId,
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      previous_state: previousState,
+      new_state: newState,
+      is_undone: false,
+      undone_at: null,
+      undone_by: null,
+      created_at: new Date(),
+      created_by: createdBy,
+      ttl: new Date(Date.now() + 30 * 24 * 3600 * 1000) // 30 days
+    });
+    return result.insertedId;
+  } catch (err) {
+    logger.warn('[AdminPortal] Snapshot save failed:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Save an audit log entry to MongoDB. Returns the _id.
+ */
+async function saveAuditLog({ action, adminId, adminEmail, details, entityType, entityId, metadata }) {
+  try {
+    if (mongoose.connection.readyState !== 1) return null;
+    const db = mongoose.connection.db;
+    const result = await db.collection('audit_logs').insertOne({
+      action,
+      admin_id: adminId,
+      admin_email: adminEmail,
+      details,
+      entity_type: entityType || null,
+      entity_id: entityId || null,
+      metadata: metadata || {},
+      timestamp: new Date(),
+      actor: { type: 'admin', name: 'admin-portal' }
+    });
+    return result.insertedId;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================
 // AUTH ENDPOINTS
 // ============================================================
 
 /**
  * POST /auth/login
  * Admin login with email/password. Rate limited: 5 per 15 min.
+ * Queries admin_users table first, falls back to Users table for backward compatibility.
  */
 router.post('/auth/login', authRateLimiter, async (req, res) => {
   try {
@@ -97,56 +279,139 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
       });
     }
 
-    // Find user with role
-    const users = await mysqlSequelize.query(
-      `SELECT u.id, u.uuid, u.email, u.name, u.password_hash, u.role_id, r.name as role
-       FROM Users u
-       LEFT JOIN Roles r ON u.role_id = r.id
-       WHERE u.email = ?`,
+    // Try admin_users table FIRST (Fase 9A)
+    let user = null;
+    let userSource = null;
+
+    const adminUsers = await mysqlSequelize.query(
+      `SELECT id, email, password, first_name, last_name, role, allowed_destinations, permissions, status, login_attempts, lock_until
+       FROM admin_users WHERE email = ?`,
       { replacements: [email], type: QueryTypes.SELECT }
     );
 
-    if (users.length === 0) {
-      return res.status(401).json({
-        success: false,
-        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
-      });
-    }
+    if (adminUsers.length > 0) {
+      const au = adminUsers[0];
 
-    const user = users[0];
+      // Check account status
+      if (au.status !== 'active') {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCOUNT_INACTIVE', message: 'Account is suspended or pending activation.' }
+        });
+      }
 
-    // Verify admin role
-    const adminRoles = ['admin', 'owner', 'super_admin'];
-    if (!user.role || !adminRoles.includes(user.role)) {
-      logger.warn(`[AdminPortal] Non-admin login attempt: ${email} (role: ${user.role || 'none'})`);
-      return res.status(403).json({
-        success: false,
-        error: { code: 'ADMIN_REQUIRED', message: 'Admin access required' }
-      });
-    }
+      // Check account lock
+      if (au.lock_until && new Date(au.lock_until) > new Date()) {
+        return res.status(429).json({
+          success: false,
+          error: { code: 'ACCOUNT_LOCKED', message: 'Account temporarily locked due to too many failed attempts.' }
+        });
+      }
 
-    // Verify password
-    if (!user.password_hash) {
-      return res.status(401).json({
-        success: false,
-        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
-      });
-    }
+      // Verify password (admin_users uses 'password' column)
+      if (!au.password) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
+        });
+      }
 
-    const passwordValid = await bcrypt.compare(password, user.password_hash);
-    if (!passwordValid) {
-      return res.status(401).json({
-        success: false,
-        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
-      });
+      const passwordValid = await bcrypt.compare(password, au.password);
+      if (!passwordValid) {
+        // Increment login_attempts
+        const attempts = (au.login_attempts || 0) + 1;
+        const lockUntil = attempts >= 5 ? 'DATE_ADD(NOW(), INTERVAL 15 MINUTE)' : 'NULL';
+        await mysqlSequelize.query(
+          `UPDATE admin_users SET login_attempts = ?, lock_until = ${lockUntil} WHERE id = ?`,
+          { replacements: [attempts, au.id] }
+        ).catch(() => {});
+        return res.status(401).json({
+          success: false,
+          error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
+        });
+      }
+
+      // Reset login attempts on success
+      await mysqlSequelize.query(
+        `UPDATE admin_users SET login_attempts = 0, lock_until = NULL WHERE id = ?`,
+        { replacements: [au.id] }
+      ).catch(() => {});
+
+      let allowedDests = [];
+      try { allowedDests = JSON.parse(au.allowed_destinations || '[]'); } catch { /* empty */ }
+
+      user = {
+        id: au.id,
+        email: au.email,
+        name: `${au.first_name || ''} ${au.last_name || ''}`.trim() || au.email,
+        role: au.role,
+        allowed_destinations: allowedDests
+      };
+      userSource = 'admin_users';
+    } else {
+      // Fallback: try Users table for backward compatibility
+      const legacyUsers = await mysqlSequelize.query(
+        `SELECT u.id, u.uuid, u.email, u.name, u.password_hash, r.name as role
+         FROM Users u LEFT JOIN Roles r ON u.role_id = r.id
+         WHERE u.email = ?`,
+        { replacements: [email], type: QueryTypes.SELECT }
+      );
+
+      if (legacyUsers.length === 0) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
+        });
+      }
+
+      const lu = legacyUsers[0];
+      const legacyAdminRoles = ['admin', 'owner', 'super_admin'];
+      if (!lu.role || !legacyAdminRoles.includes(lu.role)) {
+        logger.warn(`[AdminPortal] Non-admin login attempt: ${email} (role: ${lu.role || 'none'})`);
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ADMIN_REQUIRED', message: 'Admin access required' }
+        });
+      }
+
+      if (!lu.password_hash) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
+        });
+      }
+
+      const passwordValid = await bcrypt.compare(password, lu.password_hash);
+      if (!passwordValid) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
+        });
+      }
+
+      // Map legacy role to admin_users role
+      const roleMap = { admin: 'platform_admin', owner: 'platform_admin', super_admin: 'platform_admin' };
+      user = {
+        id: lu.uuid || lu.id,
+        email: lu.email,
+        name: lu.name || lu.email,
+        role: roleMap[lu.role] || 'reviewer',
+        allowed_destinations: ['calpe', 'texel']
+      };
+      userSource = 'Users';
     }
 
     // Generate tokens
-    const tokenPayload = { userId: user.id, uuid: user.uuid, email: user.email, role: user.role };
+    const tokenPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      allowed_destinations: user.allowed_destinations
+    };
     const accessToken = generateAdminToken(tokenPayload, '8h');
 
     const refreshToken = jwt.sign(
-      { userId: user.id, uuid: user.uuid, type: 'admin_refresh' },
+      { userId: user.id, type: 'admin_refresh' },
       process.env.JWT_ADMIN_SECRET || process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -158,18 +423,18 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
       { replacements: [user.id, refreshToken] }
     );
 
-    // Update last login
-    await mysqlSequelize.query(
-      `UPDATE Users SET last_login = NOW() WHERE id = ?`,
-      { replacements: [user.id] }
-    ).catch(() => {}); // Non-critical
-
-    logger.info(`[AdminPortal] Admin login: ${email}`);
+    logger.info(`[AdminPortal] Admin login: ${email} (source: ${userSource})`);
 
     res.json({
       success: true,
       data: {
-        user: { id: user.id, uuid: user.uuid, email: user.email, name: user.name, role: user.role },
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          allowed_destinations: user.allowed_destinations
+        },
         accessToken,
         refreshToken
       }
@@ -223,24 +488,42 @@ router.post('/auth/refresh', async (req, res) => {
       });
     }
 
-    // Get user with role for new token
-    const users = await mysqlSequelize.query(
-      `SELECT u.id, u.uuid, u.email, u.name, r.name as role
-       FROM Users u LEFT JOIN Roles r ON u.role_id = r.id
-       WHERE u.id = ?`,
+    // Get user from admin_users (primary) or Users (fallback)
+    let user = null;
+    const adminUsers = await mysqlSequelize.query(
+      `SELECT id, email, first_name, last_name, role, allowed_destinations, status
+       FROM admin_users WHERE id = ? AND status = 'active'`,
       { replacements: [decoded.userId], type: QueryTypes.SELECT }
     );
 
-    if (users.length === 0) {
+    if (adminUsers.length > 0) {
+      const au = adminUsers[0];
+      let allowedDests = [];
+      try { allowedDests = JSON.parse(au.allowed_destinations || '[]'); } catch { /* empty */ }
+      user = { id: au.id, email: au.email, role: au.role, allowed_destinations: allowedDests };
+    } else {
+      // Fallback to Users table
+      const legacyUsers = await mysqlSequelize.query(
+        `SELECT u.id, u.uuid, u.email, u.name, r.name as role
+         FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE u.id = ?`,
+        { replacements: [decoded.userId], type: QueryTypes.SELECT }
+      );
+      if (legacyUsers.length > 0) {
+        const lu = legacyUsers[0];
+        const roleMap = { admin: 'platform_admin', owner: 'platform_admin', super_admin: 'platform_admin' };
+        user = { id: lu.uuid || lu.id, email: lu.email, role: roleMap[lu.role] || 'reviewer', allowed_destinations: ['calpe', 'texel'] };
+      }
+    }
+
+    if (!user) {
       return res.status(401).json({
         success: false,
         error: { code: 'USER_NOT_FOUND', message: 'User no longer exists' }
       });
     }
 
-    const user = users[0];
     const accessToken = generateAdminToken(
-      { userId: user.id, uuid: user.uuid, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, role: user.role, allowed_destinations: user.allowed_destinations },
       '8h'
     );
 
@@ -258,7 +541,7 @@ router.post('/auth/refresh', async (req, res) => {
  * POST /auth/logout
  * Admin logout — removes session.
  */
-router.post('/auth/logout', verifyAdminToken, async (req, res) => {
+router.post('/auth/logout', adminAuth('reviewer'), async (req, res) => {
   try {
     const { refreshToken } = req.body;
     const userId = req.adminUser.id || req.adminUser.userId;
@@ -289,27 +572,24 @@ router.post('/auth/logout', verifyAdminToken, async (req, res) => {
 
 /**
  * GET /auth/me
- * Get current admin user info.
+ * Get current admin user info from admin_users table.
  */
-router.get('/auth/me', verifyAdminToken, async (req, res) => {
+router.get('/auth/me', adminAuth('reviewer'), async (req, res) => {
   try {
-    const userId = req.adminUser.id || req.adminUser.userId;
-
-    const users = await mysqlSequelize.query(
-      `SELECT u.id, u.uuid, u.email, u.name, r.name as role
-       FROM Users u LEFT JOIN Roles r ON u.role_id = r.id
-       WHERE u.id = ?`,
-      { replacements: [userId], type: QueryTypes.SELECT }
-    );
-
-    if (users.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: { code: 'USER_NOT_FOUND', message: 'User not found' }
-      });
-    }
-
-    res.json({ success: true, data: users[0] });
+    // adminAuth already verified and populated req.adminUser
+    res.json({
+      success: true,
+      data: {
+        id: req.adminUser.id,
+        email: req.adminUser.email,
+        name: req.adminUser.name,
+        firstName: req.adminUser.firstName,
+        lastName: req.adminUser.lastName,
+        role: req.adminUser.role,
+        allowed_destinations: req.adminUser.allowed_destinations,
+        permissions: req.adminUser.permissions
+      }
+    });
   } catch (error) {
     logger.error('[AdminPortal] GetMe error:', error);
     res.status(500).json({
@@ -327,7 +607,7 @@ router.get('/auth/me', verifyAdminToken, async (req, res) => {
  * GET /dashboard
  * Aggregated KPI data. Redis cached for 120 seconds.
  */
-router.get('/dashboard', verifyAdminToken, async (req, res) => {
+router.get('/dashboard', adminAuth('reviewer'), async (req, res) => {
   try {
     const cacheKey = 'admin:dashboard:kpis';
     const redis = getRedis();
@@ -413,7 +693,7 @@ router.get('/dashboard', verifyAdminToken, async (req, res) => {
     try {
       const chatSessions = await mysqlSequelize.query(
         `SELECT COUNT(*) as total FROM holibot_sessions
-         WHERE created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`,
+         WHERE started_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`,
         { type: QueryTypes.SELECT }
       );
       result.data.platform.chatbotSessions7d = parseInt(chatSessions[0]?.total || 0);
@@ -457,7 +737,7 @@ router.get('/dashboard', verifyAdminToken, async (req, res) => {
  * GET /health
  * System health checks: MySQL, MongoDB, Redis, BullMQ.
  */
-router.get('/health', verifyAdminToken, async (req, res) => {
+router.get('/health', adminAuth('reviewer'), async (req, res) => {
   const checks = {};
 
   // MySQL
@@ -619,7 +899,7 @@ function calculateAgentStatus(lastRun, schedule) {
  * Agent dashboard data. Redis cached for 60 seconds.
  * Sources: static metadata + MongoDB audit_logs + Redis state + monitoring collections
  */
-router.get('/agents/status', verifyAdminToken, async (req, res) => {
+router.get('/agents/status', adminAuth('reviewer'), async (req, res) => {
   try {
     const { category, destination, refresh } = req.query;
     const cacheKey = 'admin:agents:status';
@@ -859,7 +1139,7 @@ router.get('/agents/status', verifyAdminToken, async (req, res) => {
  * GET /pois
  * POI list with pagination, search, and filters.
  */
-router.get('/pois', verifyAdminToken, async (req, res) => {
+router.get('/pois', adminAuth('reviewer'), async (req, res) => {
   try {
     const {
       destination, category, search, hasContent, isActive,
@@ -994,7 +1274,7 @@ router.get('/pois', verifyAdminToken, async (req, res) => {
  * GET /pois/stats
  * POI statistics per destination. Redis cached 5 minutes.
  */
-router.get('/pois/stats', verifyAdminToken, async (req, res) => {
+router.get('/pois/stats', adminAuth('reviewer'), async (req, res) => {
   try {
     const { destination } = req.query;
     const cacheKey = destination ? `admin:pois:stats:${destination}` : 'admin:pois:stats';
@@ -1158,10 +1438,41 @@ router.get('/pois/stats', verifyAdminToken, async (req, res) => {
 });
 
 /**
+ * GET /pois/categories
+ * Distinct categories from POI table for filter dropdowns.
+ */
+router.get('/pois/categories', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const { destination } = req.query;
+    const destId = resolveDestinationId(destination);
+
+    const categories = await mysqlSequelize.query(
+      `SELECT category, COUNT(*) as count
+       FROM POI
+       WHERE category IS NOT NULL AND category != ''
+       ${destId ? 'AND destination_id = ?' : ''}
+       GROUP BY category ORDER BY count DESC`,
+      { replacements: destId ? [destId] : [], type: QueryTypes.SELECT }
+    );
+
+    res.json({
+      success: true,
+      data: { categories: categories.map(c => ({ name: c.category, count: parseInt(c.count) })) }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] POI categories error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching categories' }
+    });
+  }
+});
+
+/**
  * GET /pois/:id
  * POI detail with content, images, and reviews summary.
  */
-router.get('/pois/:id', verifyAdminToken, async (req, res) => {
+router.get('/pois/:id', adminAuth('reviewer'), async (req, res) => {
   try {
     const poiId = parseInt(req.params.id);
     if (!poiId || isNaN(poiId)) {
@@ -1181,7 +1492,7 @@ router.get('/pois/:id', verifyAdminToken, async (req, res) => {
 
     // Images
     const images = await mysqlSequelize.query(
-      `SELECT id, image_url, local_path, source FROM imageurls WHERE poi_id = ? ORDER BY id LIMIT 20`,
+      `SELECT id, image_url, local_path, source, display_order FROM imageurls WHERE poi_id = ? ORDER BY COALESCE(display_order, 999), id LIMIT 20`,
       { replacements: [poiId], type: QueryTypes.SELECT }
     );
 
@@ -1262,21 +1573,21 @@ router.get('/pois/:id', verifyAdminToken, async (req, res) => {
  * PUT /pois/:id
  * Update POI content and/or is_active. Audit logged.
  */
-router.put('/pois/:id', verifyAdminToken, async (req, res) => {
+router.put('/pois/:id', adminAuth('editor'), async (req, res) => {
   try {
     const poiId = parseInt(req.params.id);
     if (!poiId || isNaN(poiId)) {
       return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid POI ID' } });
     }
 
-    const { content, descriptions, is_active } = req.body;
-    if (!content && !descriptions && is_active === undefined) {
+    const { content, descriptions, is_active, category } = req.body;
+    if (!content && !descriptions && is_active === undefined && category === undefined) {
       return res.status(400).json({ success: false, error: { code: 'NO_CHANGES', message: 'No fields to update' } });
     }
 
     // Verify POI exists
     const existing = await mysqlSequelize.query(
-      `SELECT id, destination_id, name, enriched_detail_description,
+      `SELECT id, destination_id, name, category, enriched_detail_description,
               enriched_detail_description_nl, enriched_detail_description_de,
               enriched_detail_description_es, is_active FROM POI WHERE id = ?`,
       { replacements: [poiId], type: QueryTypes.SELECT }
@@ -1321,6 +1632,12 @@ router.put('/pois/:id', verifyAdminToken, async (req, res) => {
       sets.push('is_active = ?');
       vals.push(is_active ? 1 : 0);
       changes.is_active = `${old.is_active} → ${is_active ? 1 : 0}`;
+    }
+
+    if (category !== undefined) {
+      sets.push('category = ?');
+      vals.push(String(category).slice(0, 100));
+      changes.category = `${old.category || '—'} → ${category}`;
     }
 
     if (sets.length === 0) {
@@ -1382,6 +1699,75 @@ router.put('/pois/:id', verifyAdminToken, async (req, res) => {
   }
 });
 
+/**
+ * PUT /pois/:id/images
+ * Reorder POI images. Accepts ordered array of image IDs.
+ * Requires display_order column in imageurls table.
+ */
+router.put('/pois/:id/images', adminAuth('editor'), async (req, res) => {
+  try {
+    const poiId = parseInt(req.params.id);
+    if (!poiId || isNaN(poiId)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid POI ID' } });
+    }
+
+    const { imageIds } = req.body;
+    if (!Array.isArray(imageIds) || imageIds.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_DATA', message: 'imageIds array required' } });
+    }
+
+    // Verify images belong to this POI
+    const existing = await mysqlSequelize.query(
+      `SELECT id FROM imageurls WHERE poi_id = ?`,
+      { replacements: [poiId], type: QueryTypes.SELECT }
+    );
+    const existingIds = new Set(existing.map(i => i.id));
+    const validIds = imageIds.filter(id => existingIds.has(parseInt(id)));
+
+    if (validIds.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_VALID_IMAGES', message: 'No valid image IDs for this POI' } });
+    }
+
+    // Update display_order for each image
+    for (let i = 0; i < validIds.length; i++) {
+      await mysqlSequelize.query(
+        `UPDATE imageurls SET display_order = ? WHERE id = ? AND poi_id = ?`,
+        { replacements: [i, parseInt(validIds[i]), poiId] }
+      );
+    }
+
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const db = mongoose.connection.db;
+        await db.collection('audit_logs').insertOne({
+          action: 'poi_images_reordered',
+          poi_id: poiId,
+          admin_id: req.adminUser.id || req.adminUser.userId,
+          admin_email: req.adminUser.email,
+          imageOrder: validIds.map(Number),
+          timestamp: new Date(),
+          actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    // Invalidate POI detail cache
+    const redis = getRedis();
+    if (redis) {
+      try { await redis.del(`admin:poi:${poiId}`); } catch { /* */ }
+    }
+
+    res.json({ success: true, data: { message: 'Image order updated', count: validIds.length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Image reorder error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred reordering images' }
+    });
+  }
+});
+
 // ============================================================
 // MODULE 8D-2: REVIEWS MODERATION
 // ============================================================
@@ -1390,7 +1776,7 @@ router.put('/pois/:id', verifyAdminToken, async (req, res) => {
  * GET /reviews
  * Review list with pagination, filters, and summary stats.
  */
-router.get('/reviews', verifyAdminToken, async (req, res) => {
+router.get('/reviews', adminAuth('reviewer'), async (req, res) => {
   try {
     const {
       destination, rating, sentiment, archived = 'false', search, poi_id,
@@ -1553,7 +1939,7 @@ router.get('/reviews', verifyAdminToken, async (req, res) => {
  * GET /reviews/:id
  * Single review detail with POI context.
  */
-router.get('/reviews/:id', verifyAdminToken, async (req, res) => {
+router.get('/reviews/:id', adminAuth('reviewer'), async (req, res) => {
   try {
     const reviewId = parseInt(req.params.id);
     if (!reviewId || isNaN(reviewId)) {
@@ -1597,7 +1983,7 @@ router.get('/reviews/:id', verifyAdminToken, async (req, res) => {
  * PUT /reviews/:id
  * Archive or unarchive a review. Audit logged.
  */
-router.put('/reviews/:id', verifyAdminToken, async (req, res) => {
+router.put('/reviews/:id', adminAuth('editor'), async (req, res) => {
   try {
     const reviewId = parseInt(req.params.id);
     if (!reviewId || isNaN(reviewId)) {
@@ -1671,7 +2057,7 @@ router.put('/reviews/:id', verifyAdminToken, async (req, res) => {
  * GET /analytics
  * Analytics overview data. Redis cached 10 minutes.
  */
-router.get('/analytics', verifyAdminToken, async (req, res) => {
+router.get('/analytics', adminAuth('reviewer'), async (req, res) => {
   try {
     const { destination } = req.query;
     const cacheKey = destination ? `admin:analytics:${destination}` : 'admin:analytics';
@@ -1686,7 +2072,7 @@ router.get('/analytics', verifyAdminToken, async (req, res) => {
 
     const destFilter = destination ? 'WHERE destination_id = ?' : '';
     const destFilterAnd = destination ? 'AND destination_id = ?' : '';
-    const destParams = destination ? [parseInt(destination)] : [];
+    const destParams = destination ? [resolveDestinationId(destination)] : [];
 
     // Overview
     const poiOverview = await mysqlSequelize.query(
@@ -1759,8 +2145,8 @@ router.get('/analytics', verifyAdminToken, async (req, res) => {
       success: true,
       data: {
         overview: {
-          totalPOIs: parseInt(poiOverview[0]?.total || 0),
-          activePOIs: totalActive,
+          totalPois: parseInt(poiOverview[0]?.total || 0),
+          activePois: totalActive,
           totalReviews: parseInt(reviewOverview[0]?.total || 0),
           avgRating: reviewOverview[0]?.avgRating ? parseFloat(reviewOverview[0].avgRating) : null,
           totalImages: parseInt(imageOverview[0]?.total || 0),
@@ -1778,7 +2164,7 @@ router.get('/analytics', verifyAdminToken, async (req, res) => {
           count: parseInt(t.count),
           avgRating: t.avgRating ? parseFloat(t.avgRating) : null
         })),
-        topPOIs: topPOIs.map(p => ({
+        topPois: topPOIs.map(p => ({
           id: p.id,
           name: p.name,
           destination_id: p.destination_id,
@@ -1812,7 +2198,7 @@ router.get('/analytics', verifyAdminToken, async (req, res) => {
  * GET /analytics/export
  * CSV export for POIs, reviews, or summary.
  */
-router.get('/analytics/export', verifyAdminToken, async (req, res) => {
+router.get('/analytics/export', adminAuth('editor'), async (req, res) => {
   try {
     const { type = 'summary', destination, format = 'csv' } = req.query;
 
@@ -1821,7 +2207,7 @@ router.get('/analytics/export', verifyAdminToken, async (req, res) => {
     }
 
     const destFilter = destination ? 'WHERE destination_id = ?' : '';
-    const destParams = destination ? [parseInt(destination)] : [];
+    const destParams = destination ? [resolveDestinationId(destination)] : [];
     let csvContent = '';
 
     if (type === 'pois') {
@@ -1892,6 +2278,365 @@ router.get('/analytics/export', verifyAdminToken, async (req, res) => {
 });
 
 // ============================================================
+// MODULE 9A-2: CHATBOT ANALYTICS
+// ============================================================
+
+/**
+ * GET /analytics/chatbot
+ * Chatbot usage analytics: sessions, languages, fallbacks, engagement, popular POIs.
+ */
+router.get('/analytics/chatbot', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const { destination, period = '30' } = req.query;
+    const days = Math.min(parseInt(period) || 30, 365);
+    const cacheKey = `admin:analytics:chatbot:${destination || 'all'}:${days}`;
+    const redis = getRedis();
+
+    if (redis) {
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) return res.json(JSON.parse(cached));
+      } catch { /* cache miss */ }
+    }
+
+    const destFilter = destination ? 'AND hs.destination_id = ?' : '';
+    const destParams = destination ? [resolveDestinationId(destination)] : [];
+
+    // 1. Sessions per day
+    const sessionsPerDay = await mysqlSequelize.query(
+      `SELECT DATE(hs.started_at) as date,
+              COUNT(*) as sessions,
+              SUM(hs.message_count) as messages,
+              ROUND(AVG(hs.message_count), 1) as avgMessages,
+              ROUND(AVG(hs.avg_response_time_ms), 0) as avgResponseMs,
+              SUM(CASE WHEN hs.had_fallback = 1 THEN 1 ELSE 0 END) as fallbacks
+       FROM holibot_sessions hs
+       WHERE hs.started_at >= DATE_SUB(NOW(), INTERVAL ? DAY) ${destFilter}
+       GROUP BY date ORDER BY date`,
+      { replacements: [days, ...destParams], type: QueryTypes.SELECT }
+    );
+
+    // 2. Language breakdown
+    const languages = await mysqlSequelize.query(
+      `SELECT hs.language, COUNT(*) as count
+       FROM holibot_sessions hs
+       WHERE hs.started_at >= DATE_SUB(NOW(), INTERVAL ? DAY) ${destFilter}
+       GROUP BY hs.language ORDER BY count DESC`,
+      { replacements: [days, ...destParams], type: QueryTypes.SELECT }
+    );
+
+    // 3. Overall totals
+    const totals = await mysqlSequelize.query(
+      `SELECT COUNT(*) as totalSessions,
+              SUM(hs.message_count) as totalMessages,
+              ROUND(AVG(hs.message_count), 1) as avgMessagesPerSession,
+              ROUND(AVG(hs.avg_response_time_ms), 0) as avgResponseMs,
+              SUM(CASE WHEN hs.had_fallback = 1 THEN 1 ELSE 0 END) as fallbackSessions,
+              ROUND(AVG(CASE WHEN hs.user_satisfaction IS NOT NULL THEN hs.user_satisfaction END), 1) as avgSatisfaction,
+              ROUND(AVG(TIMESTAMPDIFF(SECOND, hs.started_at, COALESCE(hs.ended_at, hs.last_activity_at))), 0) as avgDurationSec
+       FROM holibot_sessions hs
+       WHERE hs.started_at >= DATE_SUB(NOW(), INTERVAL ? DAY) ${destFilter}`,
+      { replacements: [days, ...destParams], type: QueryTypes.SELECT }
+    );
+
+    // 4. Per-destination breakdown (only when no destination filter)
+    let perDestination = null;
+    if (!destination) {
+      const destBreakdown = await mysqlSequelize.query(
+        `SELECT hs.destination_id,
+                COUNT(*) as sessions,
+                SUM(hs.message_count) as messages,
+                ROUND(AVG(hs.message_count), 1) as avgMessages
+         FROM holibot_sessions hs
+         WHERE hs.started_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+         GROUP BY hs.destination_id`,
+        { replacements: [days], type: QueryTypes.SELECT }
+      );
+      perDestination = {};
+      for (const row of destBreakdown) {
+        const code = row.destination_id === 2 ? 'texel' : 'calpe';
+        perDestination[code] = {
+          sessions: parseInt(row.sessions),
+          messages: parseInt(row.messages || 0),
+          avgMessages: parseFloat(row.avgMessages || 0)
+        };
+      }
+    }
+
+    // 5. Popular POIs (from holibot_poi_clicks)
+    const destClickFilter = destination ? 'AND hpc.session_id IN (SELECT id FROM holibot_sessions WHERE destination_id = ?)' : '';
+    const popularPois = await mysqlSequelize.query(
+      `SELECT hpc.poi_id, hpc.poi_name, COUNT(*) as clicks,
+              COUNT(DISTINCT hpc.session_id) as uniqueSessions
+       FROM holibot_poi_clicks hpc
+       WHERE hpc.clicked_at >= DATE_SUB(NOW(), INTERVAL ? DAY) ${destClickFilter}
+       GROUP BY hpc.poi_id, hpc.poi_name
+       ORDER BY clicks DESC LIMIT 10`,
+      { replacements: [days, ...destParams], type: QueryTypes.SELECT }
+    );
+
+    // 6. Quick action usage (from holibot_poi_clicks)
+    const actionUsage = await mysqlSequelize.query(
+      `SELECT hpc.click_type, COUNT(*) as count
+       FROM holibot_poi_clicks hpc
+       WHERE hpc.clicked_at >= DATE_SUB(NOW(), INTERVAL ? DAY) ${destClickFilter}
+       GROUP BY hpc.click_type ORDER BY count DESC`,
+      { replacements: [days, ...destParams], type: QueryTypes.SELECT }
+    );
+
+    const t = totals[0] || {};
+    const totalSessions = parseInt(t.totalSessions || 0);
+
+    const result = {
+      success: true,
+      data: {
+        period: days,
+        totals: {
+          sessions: totalSessions,
+          messages: parseInt(t.totalMessages || 0),
+          avgMessagesPerSession: parseFloat(t.avgMessagesPerSession || 0),
+          avgResponseMs: parseInt(t.avgResponseMs || 0),
+          fallbackSessions: parseInt(t.fallbackSessions || 0),
+          fallbackRate: totalSessions > 0 ? parseFloat(((parseInt(t.fallbackSessions || 0) / totalSessions) * 100).toFixed(1)) : 0,
+          avgSatisfaction: t.avgSatisfaction ? parseFloat(t.avgSatisfaction) : null,
+          avgDurationSec: parseInt(t.avgDurationSec || 0)
+        },
+        sessionsPerDay: sessionsPerDay.map(d => ({
+          date: d.date,
+          sessions: parseInt(d.sessions),
+          messages: parseInt(d.messages || 0),
+          avgMessages: parseFloat(d.avgMessages || 0),
+          avgResponseMs: parseInt(d.avgResponseMs || 0),
+          fallbacks: parseInt(d.fallbacks || 0)
+        })),
+        languages: languages.map(l => ({
+          language: l.language,
+          count: parseInt(l.count),
+          pct: totalSessions > 0 ? parseFloat(((parseInt(l.count) / totalSessions) * 100).toFixed(1)) : 0
+        })),
+        perDestination,
+        popularPois: popularPois.map(p => ({
+          poiId: p.poi_id,
+          poiName: p.poi_name,
+          clicks: parseInt(p.clicks),
+          uniqueSessions: parseInt(p.uniqueSessions)
+        })),
+        actionUsage: actionUsage.map(a => ({
+          type: a.click_type,
+          count: parseInt(a.count)
+        }))
+      }
+    };
+
+    if (redis) {
+      try { await redis.set(cacheKey, JSON.stringify(result), 'EX', 300); } catch { /* non-critical */ }
+    }
+
+    res.json(result);
+  } catch (error) {
+    logger.error('[AdminPortal] Chatbot analytics error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching chatbot analytics' }
+    });
+  }
+});
+
+/**
+ * GET /analytics/trend/:metric
+ * Drill-down trend data for a specific metric over time.
+ * Supported metrics: sessions, reviews, pois, messages
+ */
+router.get('/analytics/trend/:metric', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const { metric } = req.params;
+    const { destination, period = '30' } = req.query;
+    const days = Math.min(parseInt(period) || 30, 365);
+
+    const validMetrics = ['sessions', 'reviews', 'pois', 'messages'];
+    if (!validMetrics.includes(metric)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_METRIC', message: `Metric must be one of: ${validMetrics.join(', ')}` }
+      });
+    }
+
+    const destId = destination ? resolveDestinationId(destination) : null;
+    let query, replacements;
+
+    switch (metric) {
+      case 'sessions':
+        query = `SELECT DATE(hs.started_at) as date, COUNT(*) as value,
+                        ROUND(AVG(hs.message_count), 1) as avgMessages
+                 FROM holibot_sessions hs
+                 WHERE hs.started_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                 ${destId ? 'AND hs.destination_id = ?' : ''}
+                 GROUP BY date ORDER BY date`;
+        replacements = destId ? [days, destId] : [days];
+        break;
+      case 'reviews':
+        query = `SELECT DATE(r.created_at) as date, COUNT(*) as value,
+                        ROUND(AVG(r.rating), 1) as avgRating
+                 FROM reviews r
+                 WHERE r.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                 ${destId ? 'AND r.destination_id = ?' : ''}
+                 GROUP BY date ORDER BY date`;
+        replacements = destId ? [days, destId] : [days];
+        break;
+      case 'pois':
+        query = `SELECT DATE(p.last_updated) as date, COUNT(*) as value
+                 FROM POI p
+                 WHERE p.last_updated >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                 ${destId ? 'AND p.destination_id = ?' : ''}
+                 GROUP BY date ORDER BY date`;
+        replacements = destId ? [days, destId] : [days];
+        break;
+      case 'messages':
+        query = `SELECT DATE(hm.created_at) as date, COUNT(*) as value,
+                        SUM(CASE WHEN hm.role = 'user' THEN 1 ELSE 0 END) as userMessages,
+                        SUM(CASE WHEN hm.role = 'assistant' THEN 1 ELSE 0 END) as botMessages
+                 FROM holibot_messages hm
+                 ${destId ? 'INNER JOIN holibot_sessions hs ON hm.session_id = hs.id' : ''}
+                 WHERE hm.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                 ${destId ? 'AND hs.destination_id = ?' : ''}
+                 GROUP BY date ORDER BY date`;
+        replacements = destId ? [days, destId] : [days];
+        break;
+    }
+
+    const data = await mysqlSequelize.query(query, { replacements, type: QueryTypes.SELECT });
+
+    res.json({
+      success: true,
+      data: {
+        metric,
+        period: days,
+        destination: destination || 'all',
+        points: data.map(d => ({
+          date: d.date,
+          value: parseInt(d.value),
+          ...(d.avgMessages !== undefined && { avgMessages: parseFloat(d.avgMessages || 0) }),
+          ...(d.avgRating !== undefined && { avgRating: parseFloat(d.avgRating || 0) }),
+          ...(d.userMessages !== undefined && { userMessages: parseInt(d.userMessages || 0) }),
+          ...(d.botMessages !== undefined && { botMessages: parseInt(d.botMessages || 0) })
+        }))
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Trend error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching trend data' }
+    });
+  }
+});
+
+/**
+ * GET /analytics/snapshot
+ * Daily snapshot for delta badges (today vs yesterday, vs last week).
+ * Uses live MySQL queries — no separate snapshot table needed.
+ */
+router.get('/analytics/snapshot', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const { destination } = req.query;
+    const cacheKey = `admin:analytics:snapshot:${destination || 'all'}`;
+    const redis = getRedis();
+
+    if (redis) {
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) return res.json(JSON.parse(cached));
+      } catch { /* cache miss */ }
+    }
+
+    const destId = destination ? resolveDestinationId(destination) : null;
+    const destFilterPoi = destId ? 'AND destination_id = ?' : '';
+    const destFilterReview = destId ? 'AND destination_id = ?' : '';
+    const destFilterSession = destId ? 'AND destination_id = ?' : '';
+    const destParams = destId ? [destId] : [];
+
+    // Helper: get count for a date range
+    const getCount = async (table, dateCol, daysBack, daysEnd = 0, extraFilter = '') => {
+      const result = await mysqlSequelize.query(
+        `SELECT COUNT(*) as c FROM ${table}
+         WHERE ${dateCol} >= DATE_SUB(NOW(), INTERVAL ? DAY)
+         AND ${dateCol} < DATE_SUB(NOW(), INTERVAL ? DAY)
+         ${extraFilter}`,
+        { replacements: [daysBack, daysEnd, ...destParams], type: QueryTypes.SELECT }
+      );
+      return parseInt(result[0]?.c || 0);
+    };
+
+    // Current totals
+    const [poiTotal] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as c FROM POI WHERE is_active = 1 ${destFilterPoi}`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+    const [reviewTotal] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as c, ROUND(AVG(rating), 2) as avgRating FROM reviews WHERE 1=1 ${destFilterReview}`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+    const [sessionTotal] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as c FROM holibot_sessions WHERE 1=1 ${destFilterSession}`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    // Deltas: last 24h vs previous 24h, last 7d vs previous 7d
+    const reviewsToday = await getCount('reviews', 'created_at', 1, 0, destFilterReview);
+    const reviewsYesterday = await getCount('reviews', 'created_at', 2, 1, destFilterReview);
+    const reviewsWeek = await getCount('reviews', 'created_at', 7, 0, destFilterReview);
+    const reviewsPrevWeek = await getCount('reviews', 'created_at', 14, 7, destFilterReview);
+
+    const sessionsToday = await getCount('holibot_sessions', 'started_at', 1, 0, destFilterSession);
+    const sessionsYesterday = await getCount('holibot_sessions', 'started_at', 2, 1, destFilterSession);
+    const sessionsWeek = await getCount('holibot_sessions', 'started_at', 7, 0, destFilterSession);
+    const sessionsPrevWeek = await getCount('holibot_sessions', 'started_at', 14, 7, destFilterSession);
+
+    const result = {
+      success: true,
+      data: {
+        current: {
+          totalPois: parseInt(poiTotal?.c || 0),
+          totalReviews: parseInt(reviewTotal?.c || 0),
+          avgRating: reviewTotal?.avgRating ? parseFloat(reviewTotal.avgRating) : null,
+          totalSessions: parseInt(sessionTotal?.c || 0)
+        },
+        deltas: {
+          reviews: {
+            today: reviewsToday,
+            yesterday: reviewsYesterday,
+            dailyChange: reviewsToday - reviewsYesterday,
+            week: reviewsWeek,
+            prevWeek: reviewsPrevWeek,
+            weeklyChange: reviewsWeek - reviewsPrevWeek
+          },
+          sessions: {
+            today: sessionsToday,
+            yesterday: sessionsYesterday,
+            dailyChange: sessionsToday - sessionsYesterday,
+            week: sessionsWeek,
+            prevWeek: sessionsPrevWeek,
+            weeklyChange: sessionsWeek - sessionsPrevWeek
+          }
+        }
+      }
+    };
+
+    if (redis) {
+      try { await redis.set(cacheKey, JSON.stringify(result), 'EX', 300); } catch { /* non-critical */ }
+    }
+
+    res.json(result);
+  } catch (error) {
+    logger.error('[AdminPortal] Snapshot error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching snapshot data' }
+    });
+  }
+});
+
+// ============================================================
 // MODULE 8D-4: SETTINGS
 // ============================================================
 
@@ -1899,7 +2644,7 @@ router.get('/analytics/export', verifyAdminToken, async (req, res) => {
  * GET /settings
  * System info, destinations, admin info, feature flags.
  */
-router.get('/settings', verifyAdminToken, async (req, res) => {
+router.get('/settings', adminAuth('reviewer'), async (req, res) => {
   try {
     // System info
     const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
@@ -2008,7 +2753,7 @@ function formatUptime(seconds) {
  * GET /settings/audit-log
  * Admin audit log from MongoDB.
  */
-router.get('/settings/audit-log', verifyAdminToken, async (req, res) => {
+router.get('/settings/audit-log', adminAuth('reviewer'), async (req, res) => {
   try {
     const { page = 1, limit = 25, action } = req.query;
     const pageNum = Math.max(1, parseInt(page) || 1);
@@ -2077,7 +2822,7 @@ function buildAuditDetail(entry) {
  * POST /settings/cache/clear
  * Clear Redis cache keys.
  */
-router.post('/settings/cache/clear', verifyAdminToken, async (req, res) => {
+router.post('/settings/cache/clear', adminAuth('poi_owner'), async (req, res) => {
   try {
     const { keys, all } = req.body;
     const redis = getRedis();
@@ -2135,6 +2880,893 @@ router.post('/settings/cache/clear', verifyAdminToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: { code: 'SERVER_ERROR', message: 'An error occurred clearing cache' }
+    });
+  }
+});
+
+// ============================================================
+// MODULE 9A-3C: BRANDING
+// ============================================================
+
+/** Default brand configuration per destination */
+const DEFAULT_BRAND_CONFIG = {
+  calpe: {
+    primary: '#7FA594', secondary: '#5E8B7E', accent: '#ffffff',
+    domain: 'holidaibutler.com', chatbotName: 'HoliBot', logo: 'HolidaiButler_Icon_Web.png'
+  },
+  texel: {
+    primary: '#30c59b', secondary: '#3572de', accent: '#ecde3c',
+    domain: 'texelmaps.nl', chatbotName: 'Tessa', logo: 'texelmaps-icon.png'
+  }
+};
+
+/**
+ * GET /settings/branding
+ * Brand configuration per destination. MongoDB overrides on top of defaults.
+ */
+router.get('/settings/branding', adminAuth('reviewer'), async (req, res) => {
+  try {
+    let overrides = {};
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const db = mongoose.connection.db;
+        const docs = await db.collection('brand_configurations').find({}).toArray();
+        for (const d of docs) {
+          overrides[d.destination] = d;
+        }
+      } catch { /* fallback to defaults */ }
+    }
+
+    const branding = {};
+    for (const [dest, defaults] of Object.entries(DEFAULT_BRAND_CONFIG)) {
+      const ov = overrides[dest] || {};
+      branding[dest] = {
+        primary: ov.primary || defaults.primary,
+        secondary: ov.secondary || defaults.secondary,
+        accent: ov.accent || defaults.accent,
+        domain: defaults.domain,
+        chatbotName: ov.chatbotName || defaults.chatbotName,
+        logo: ov.logo || defaults.logo,
+        customized: !!overrides[dest]
+      };
+    }
+
+    res.json({ success: true, data: { branding } });
+  } catch (error) {
+    logger.error('[AdminPortal] Branding fetch error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'An error occurred' } });
+  }
+});
+
+/**
+ * PUT /settings/branding/:destination
+ * Update brand colors for a destination. Stored in MongoDB.
+ */
+router.put('/settings/branding/:destination', adminAuth('poi_owner'), async (req, res) => {
+  try {
+    const dest = req.params.destination.toLowerCase();
+    if (!DEFAULT_BRAND_CONFIG[dest]) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_DESTINATION', message: 'Unknown destination' } });
+    }
+
+    const { primary, secondary, accent, chatbotName } = req.body;
+    const hexRegex = /^#[0-9a-fA-F]{6}$/;
+
+    if (primary && !hexRegex.test(primary)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_COLOR', message: 'primary must be a hex color (#RRGGBB)' } });
+    }
+    if (secondary && !hexRegex.test(secondary)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_COLOR', message: 'secondary must be a hex color (#RRGGBB)' } });
+    }
+    if (accent && !hexRegex.test(accent)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_COLOR', message: 'accent must be a hex color (#RRGGBB)' } });
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ success: false, error: { code: 'MONGODB_UNAVAILABLE', message: 'MongoDB not connected' } });
+    }
+
+    const db = mongoose.connection.db;
+    const update = {
+      destination: dest,
+      ...(primary && { primary }),
+      ...(secondary && { secondary }),
+      ...(accent && { accent }),
+      ...(chatbotName && { chatbotName: String(chatbotName).slice(0, 50) }),
+      updated_at: new Date(),
+      updated_by: req.adminUser.email
+    };
+
+    await db.collection('brand_configurations').updateOne(
+      { destination: dest },
+      { $set: update },
+      { upsert: true }
+    );
+
+    // Audit log
+    try {
+      await db.collection('audit_logs').insertOne({
+        action: 'branding_updated',
+        destination: dest,
+        admin_id: req.adminUser.id || req.adminUser.userId,
+        admin_email: req.adminUser.email,
+        changes: update,
+        timestamp: new Date(),
+        actor: { type: 'admin', name: 'admin-portal' }
+      });
+    } catch { /* non-critical */ }
+
+    res.json({ success: true, data: { message: `Branding updated for ${dest}`, destination: dest } });
+  } catch (error) {
+    logger.error('[AdminPortal] Branding update error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'An error occurred' } });
+  }
+});
+
+// ============================================================
+// UNDO ENDPOINT (Fase 9A-1B)
+// ============================================================
+
+/**
+ * POST /settings/undo/:auditLogId
+ * Undo a reversible admin action using the snapshot system.
+ */
+router.post('/settings/undo/:auditLogId', adminAuth('poi_owner'), async (req, res) => {
+  try {
+    const { auditLogId } = req.params;
+    const { confirm } = req.body;
+
+    if (!confirm) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'CONFIRM_REQUIRED', message: 'Set confirm: true to undo this action.' }
+      });
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        error: { code: 'DB_UNAVAILABLE', message: 'MongoDB not available for undo.' }
+      });
+    }
+
+    const db = mongoose.connection.db;
+    let objectId;
+    try { objectId = new mongoose.Types.ObjectId(auditLogId); } catch {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_ID', message: 'Invalid audit log ID format.' }
+      });
+    }
+
+    const snapshot = await db.collection('admin_action_snapshots').findOne({ audit_log_id: objectId });
+    if (!snapshot) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'SNAPSHOT_NOT_FOUND', message: 'No undo snapshot found for this action.' }
+      });
+    }
+
+    if (snapshot.is_undone) {
+      return res.status(409).json({
+        success: false,
+        error: { code: 'ALREADY_UNDONE', message: 'This action has already been undone.' }
+      });
+    }
+
+    // Check age (30 days max)
+    const ageMs = Date.now() - new Date(snapshot.created_at).getTime();
+    if (ageMs > 30 * 24 * 3600 * 1000) {
+      return res.status(410).json({
+        success: false,
+        error: { code: 'SNAPSHOT_EXPIRED', message: 'This snapshot is older than 30 days and can no longer be undone.' }
+      });
+    }
+
+    // Execute undo based on entity type
+    const prev = snapshot.previous_state;
+    switch (snapshot.entity_type) {
+      case 'poi': {
+        const fields = [];
+        const values = [];
+        for (const [key, val] of Object.entries(prev)) {
+          if (['id', 'destination_id', 'google_place_id', 'created_at'].includes(key)) continue;
+          fields.push(`\`${key}\` = ?`);
+          values.push(val);
+        }
+        if (fields.length > 0) {
+          values.push(snapshot.entity_id);
+          await mysqlSequelize.query(
+            `UPDATE POI SET ${fields.join(', ')} WHERE id = ?`,
+            { replacements: values }
+          );
+        }
+        break;
+      }
+      case 'review': {
+        if (prev.is_archived !== undefined) {
+          await mysqlSequelize.query(
+            `UPDATE reviews SET is_archived = ?, archived_at = ? WHERE id = ?`,
+            { replacements: [prev.is_archived ? 1 : 0, prev.archived_at || null, snapshot.entity_id] }
+          );
+        }
+        break;
+      }
+      case 'user': {
+        if (snapshot.action === 'user_created') {
+          await mysqlSequelize.query(
+            `UPDATE admin_users SET status = 'suspended' WHERE id = ?`,
+            { replacements: [snapshot.entity_id] }
+          );
+        } else if (snapshot.action === 'user_deleted') {
+          await mysqlSequelize.query(
+            `UPDATE admin_users SET status = 'active' WHERE id = ?`,
+            { replacements: [snapshot.entity_id] }
+          );
+        } else if (snapshot.action === 'user_updated' && prev) {
+          const updateFields = [];
+          const updateVals = [];
+          for (const [key, val] of Object.entries(prev)) {
+            if (['id', 'password', 'created_at'].includes(key)) continue;
+            updateFields.push(`\`${key}\` = ?`);
+            updateVals.push(typeof val === 'object' ? JSON.stringify(val) : val);
+          }
+          if (updateFields.length > 0) {
+            updateVals.push(snapshot.entity_id);
+            await mysqlSequelize.query(
+              `UPDATE admin_users SET ${updateFields.join(', ')} WHERE id = ?`,
+              { replacements: updateVals }
+            );
+          }
+        }
+        break;
+      }
+      case 'agent_config': {
+        await db.collection('agent_configurations').updateOne(
+          { agent_key: snapshot.entity_id },
+          { $set: prev }
+        );
+        // Invalidate agent status cache
+        const redis = getRedis();
+        if (redis) await redis.del('admin:agents:status').catch(() => {});
+        break;
+      }
+      default:
+        return res.status(400).json({
+          success: false,
+          error: { code: 'UNKNOWN_ENTITY', message: `Cannot undo entity type '${snapshot.entity_type}'.` }
+        });
+    }
+
+    // Mark snapshot as undone
+    await db.collection('admin_action_snapshots').updateOne(
+      { _id: snapshot._id },
+      { $set: { is_undone: true, undone_at: new Date(), undone_by: req.adminUser.email } }
+    );
+
+    // Log the undo action
+    await saveAuditLog({
+      action: 'action_undone',
+      adminId: req.adminUser.id,
+      adminEmail: req.adminUser.email,
+      details: `Undone: ${snapshot.action} on ${snapshot.entity_type} ${snapshot.entity_id}`,
+      entityType: snapshot.entity_type,
+      entityId: snapshot.entity_id
+    });
+
+    logger.info(`[AdminPortal] Action undone: ${snapshot.action} on ${snapshot.entity_type} ${snapshot.entity_id} by ${req.adminUser.email}`);
+
+    res.json({
+      success: true,
+      data: { action: 'undone', entity_type: snapshot.entity_type, entity_id: snapshot.entity_id }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Undo error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred during undo.' }
+    });
+  }
+});
+
+// ============================================================
+// USER MANAGEMENT ENDPOINTS (Fase 9A-1A)
+// ============================================================
+
+/**
+ * GET /users
+ * List all admin users. Platform_admin only.
+ */
+router.get('/users', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const { page = 1, limit = 25, role, status: statusFilter, search } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let where = '1=1';
+    const replacements = [];
+
+    if (role) {
+      where += ' AND role = ?';
+      replacements.push(role);
+    }
+    if (statusFilter) {
+      where += ' AND status = ?';
+      replacements.push(statusFilter);
+    }
+    if (search) {
+      where += ' AND (email LIKE ? OR first_name LIKE ? OR last_name LIKE ?)';
+      const s = `%${search}%`;
+      replacements.push(s, s, s);
+    }
+
+    const countResult = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total FROM admin_users WHERE ${where}`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+    const total = parseInt(countResult[0]?.total || 0);
+
+    replacements.push(parseInt(limit), offset);
+    const users = await mysqlSequelize.query(
+      `SELECT id, email, first_name, last_name, role, allowed_destinations, permissions,
+              status, email_verified, two_factor_enabled, created_at, updated_at,
+              login_attempts, created_by_id
+       FROM admin_users WHERE ${where}
+       ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    // Parse JSON fields
+    const parsed = users.map(u => ({
+      ...u,
+      name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+      allowed_destinations: (() => { try { return JSON.parse(u.allowed_destinations || '[]'); } catch { return []; } })(),
+      permissions: (() => { try { return JSON.parse(u.permissions || '{}'); } catch { return {}; } })()
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        users: parsed,
+        pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) }
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] List users error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred listing users.' }
+    });
+  }
+});
+
+/**
+ * POST /users
+ * Create new admin user. Platform_admin only.
+ */
+router.post('/users', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const { email, firstName, lastName, password, role, allowed_destinations } = req.body;
+
+    // Validate required fields
+    if (!email || !firstName || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'MISSING_FIELDS', message: 'email, firstName, password, and role are required.' }
+      });
+    }
+
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_EMAIL', message: 'Invalid email format.' }
+      });
+    }
+
+    // Validate password strength
+    if (password.length < 12 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'WEAK_PASSWORD', message: 'Password must be at least 12 characters with 1 uppercase and 1 digit.' }
+      });
+    }
+
+    // Validate role
+    const validRoles = Object.keys(ROLE_HIERARCHY);
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_ROLE', message: `Role must be one of: ${validRoles.join(', ')}` }
+      });
+    }
+
+    // Check duplicate email
+    const existing = await mysqlSequelize.query(
+      `SELECT id FROM admin_users WHERE email = ?`,
+      { replacements: [email], type: QueryTypes.SELECT }
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: { code: 'EMAIL_EXISTS', message: 'An admin user with this email already exists.' }
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const userId = crypto.randomUUID();
+    const dests = JSON.stringify(allowed_destinations || ['calpe', 'texel']);
+
+    await mysqlSequelize.query(
+      `INSERT INTO admin_users (id, email, password, first_name, last_name, role, allowed_destinations, status, email_verified, created_by_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, NOW(), NOW())`,
+      { replacements: [userId, email, hashedPassword, firstName, lastName || '', role, dests, req.adminUser.id] }
+    );
+
+    // Audit log + snapshot
+    const auditId = await saveAuditLog({
+      action: 'user_created',
+      adminId: req.adminUser.id,
+      adminEmail: req.adminUser.email,
+      details: `Created admin user: ${email} (role: ${role})`,
+      entityType: 'user',
+      entityId: userId
+    });
+    if (auditId) {
+      await saveUndoSnapshot({
+        auditLogId: auditId,
+        action: 'user_created',
+        entityType: 'user',
+        entityId: userId,
+        previousState: null,
+        newState: { email, firstName, lastName, role, allowed_destinations: allowed_destinations || ['calpe', 'texel'] },
+        createdBy: req.adminUser.email
+      });
+    }
+
+    logger.info(`[AdminPortal] User created: ${email} by ${req.adminUser.email}`);
+
+    res.status(201).json({
+      success: true,
+      data: { id: userId, email, firstName, lastName: lastName || '', role, allowed_destinations: allowed_destinations || ['calpe', 'texel'] }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Create user error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred creating the user.' }
+    });
+  }
+});
+
+/**
+ * GET /users/:id
+ * Get admin user detail. Platform_admin only.
+ */
+router.get('/users/:id', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const users = await mysqlSequelize.query(
+      `SELECT id, email, first_name, last_name, role, allowed_destinations, permissions,
+              owned_pois, status, email_verified, two_factor_enabled,
+              login_attempts, lock_until, activity_log, preferences,
+              created_by_id, created_at, updated_at
+       FROM admin_users WHERE id = ?`,
+      { replacements: [req.params.id], type: QueryTypes.SELECT }
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'Admin user not found.' }
+      });
+    }
+
+    const u = users[0];
+    res.json({
+      success: true,
+      data: {
+        ...u,
+        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+        allowed_destinations: (() => { try { return JSON.parse(u.allowed_destinations || '[]'); } catch { return []; } })(),
+        permissions: (() => { try { return JSON.parse(u.permissions || '{}'); } catch { return {}; } })(),
+        owned_pois: (() => { try { return JSON.parse(u.owned_pois || '[]'); } catch { return []; } })(),
+        activity_log: (() => { try { return JSON.parse(u.activity_log || '[]'); } catch { return []; } })(),
+        preferences: (() => { try { return JSON.parse(u.preferences || '{}'); } catch { return {}; } })()
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Get user error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred.' }
+    });
+  }
+});
+
+/**
+ * PUT /users/:id
+ * Update admin user. Platform_admin only.
+ */
+router.put('/users/:id', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, role, allowed_destinations, status, permissions } = req.body;
+
+    // Fetch current state for undo snapshot
+    const current = await mysqlSequelize.query(
+      `SELECT id, email, first_name, last_name, role, allowed_destinations, permissions, status
+       FROM admin_users WHERE id = ?`,
+      { replacements: [id], type: QueryTypes.SELECT }
+    );
+    if (current.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'Admin user not found.' }
+      });
+    }
+
+    // Prevent self-demotion
+    if (id === req.adminUser.id && role && role !== current[0].role) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'SELF_DEMOTION', message: 'You cannot change your own role.' }
+      });
+    }
+
+    // Build update
+    const updates = [];
+    const values = [];
+    if (firstName !== undefined) { updates.push('first_name = ?'); values.push(firstName); }
+    if (lastName !== undefined) { updates.push('last_name = ?'); values.push(lastName); }
+    if (role !== undefined) {
+      if (!Object.keys(ROLE_HIERARCHY).includes(role)) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_ROLE', message: `Role must be one of: ${Object.keys(ROLE_HIERARCHY).join(', ')}` }
+        });
+      }
+      updates.push('role = ?'); values.push(role);
+    }
+    if (allowed_destinations !== undefined) {
+      updates.push('allowed_destinations = ?'); values.push(JSON.stringify(allowed_destinations));
+    }
+    if (status !== undefined) {
+      if (!['active', 'suspended', 'pending'].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_STATUS', message: 'Status must be active, suspended, or pending.' }
+        });
+      }
+      updates.push('status = ?'); values.push(status);
+    }
+    if (permissions !== undefined) {
+      updates.push('permissions = ?'); values.push(JSON.stringify(permissions));
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'NO_CHANGES', message: 'No fields to update.' }
+      });
+    }
+
+    updates.push('updated_at = NOW()');
+    values.push(id);
+    await mysqlSequelize.query(
+      `UPDATE admin_users SET ${updates.join(', ')} WHERE id = ?`,
+      { replacements: values }
+    );
+
+    // Audit log + undo snapshot
+    const auditId = await saveAuditLog({
+      action: 'user_updated',
+      adminId: req.adminUser.id,
+      adminEmail: req.adminUser.email,
+      details: `Updated admin user: ${current[0].email}`,
+      entityType: 'user',
+      entityId: id
+    });
+    if (auditId) {
+      await saveUndoSnapshot({
+        auditLogId: auditId,
+        action: 'user_updated',
+        entityType: 'user',
+        entityId: id,
+        previousState: current[0],
+        newState: req.body,
+        createdBy: req.adminUser.email
+      });
+    }
+
+    logger.info(`[AdminPortal] User updated: ${current[0].email} by ${req.adminUser.email}`);
+    res.json({ success: true, data: { id, updated: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Update user error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred updating the user.' }
+    });
+  }
+});
+
+/**
+ * DELETE /users/:id
+ * Soft-delete admin user (set status = suspended). Platform_admin only.
+ */
+router.delete('/users/:id', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent self-deletion
+    if (id === req.adminUser.id) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'SELF_DELETE', message: 'You cannot delete your own account.' }
+      });
+    }
+
+    const current = await mysqlSequelize.query(
+      `SELECT id, email, first_name, last_name, role, status FROM admin_users WHERE id = ?`,
+      { replacements: [id], type: QueryTypes.SELECT }
+    );
+    if (current.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'Admin user not found.' }
+      });
+    }
+
+    await mysqlSequelize.query(
+      `UPDATE admin_users SET status = 'suspended', updated_at = NOW() WHERE id = ?`,
+      { replacements: [id] }
+    );
+
+    // Invalidate sessions
+    await mysqlSequelize.query(
+      `DELETE FROM Sessions WHERE user_id = ?`,
+      { replacements: [id] }
+    ).catch(() => {});
+
+    // Audit log + undo snapshot
+    const auditId = await saveAuditLog({
+      action: 'user_deleted',
+      adminId: req.adminUser.id,
+      adminEmail: req.adminUser.email,
+      details: `Soft-deleted admin user: ${current[0].email}`,
+      entityType: 'user',
+      entityId: id
+    });
+    if (auditId) {
+      await saveUndoSnapshot({
+        auditLogId: auditId,
+        action: 'user_deleted',
+        entityType: 'user',
+        entityId: id,
+        previousState: current[0],
+        newState: { status: 'suspended' },
+        createdBy: req.adminUser.email
+      });
+    }
+
+    logger.info(`[AdminPortal] User deleted (soft): ${current[0].email} by ${req.adminUser.email}`);
+    res.json({ success: true, data: { id, deleted: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred deleting the user.' }
+    });
+  }
+});
+
+/**
+ * POST /users/:id/reset-password
+ * Generate a temporary password for admin user. Platform_admin only.
+ */
+router.post('/users/:id/reset-password', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const users = await mysqlSequelize.query(
+      `SELECT id, email FROM admin_users WHERE id = ?`,
+      { replacements: [id], type: QueryTypes.SELECT }
+    );
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'Admin user not found.' }
+      });
+    }
+
+    // Generate temporary password (16 chars, mixed case + digits)
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    const tempPassword = Array.from(crypto.randomBytes(16))
+      .map(b => chars[b % chars.length])
+      .join('');
+
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+    await mysqlSequelize.query(
+      `UPDATE admin_users SET password = ?, login_attempts = 0, lock_until = NULL, updated_at = NOW() WHERE id = ?`,
+      { replacements: [hashedPassword, id] }
+    );
+
+    // Invalidate sessions
+    await mysqlSequelize.query(
+      `DELETE FROM Sessions WHERE user_id = ?`,
+      { replacements: [id] }
+    ).catch(() => {});
+
+    // Audit log
+    await saveAuditLog({
+      action: 'password_reset',
+      adminId: req.adminUser.id,
+      adminEmail: req.adminUser.email,
+      details: `Password reset for: ${users[0].email}`,
+      entityType: 'user',
+      entityId: id
+    });
+
+    logger.info(`[AdminPortal] Password reset: ${users[0].email} by ${req.adminUser.email}`);
+
+    res.json({
+      success: true,
+      data: {
+        tempPassword,
+        message: 'Temporary password generated. Share securely with the user. They should change it after first login.'
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Password reset error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred resetting the password.' }
+    });
+  }
+});
+
+// ============================================================
+// AGENT CONFIGURATION ENDPOINTS (Fase 9A-1C)
+// ============================================================
+
+/**
+ * GET /agents/config
+ * Get all agent configurations from MongoDB (fallback to AGENT_METADATA).
+ */
+router.get('/agents/config', adminAuth('editor'), async (req, res) => {
+  try {
+    let configs = [];
+
+    if (mongoose.connection.readyState === 1) {
+      const db = mongoose.connection.db;
+      configs = await db.collection('agent_configurations').find({}).sort({ agent_key: 1 }).toArray();
+    }
+
+    // If MongoDB empty or unavailable, return static metadata
+    if (configs.length === 0) {
+      configs = AGENT_METADATA.map(m => ({
+        agent_key: m.id,
+        display_name: m.name,
+        english_name: m.englishName,
+        emoji: '',
+        category: m.category,
+        type: m.type,
+        description_nl: m.description,
+        description_en: '',
+        tasks: [],
+        schedule: m.schedule,
+        is_active: true,
+        source: 'static'
+      }));
+    }
+
+    res.json({ success: true, data: { configs } });
+  } catch (error) {
+    logger.error('[AdminPortal] Get agent configs error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching agent configs.' }
+    });
+  }
+});
+
+/**
+ * PUT /agents/config/:key
+ * Update agent configuration in MongoDB. Platform_admin only.
+ */
+router.put('/agents/config/:key', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const { key } = req.params;
+
+    // Validate agent_key exists in known agents
+    const knownAgent = AGENT_METADATA.find(m => m.id === key);
+    if (!knownAgent) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'AGENT_NOT_FOUND', message: `Unknown agent key: ${key}` }
+      });
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        error: { code: 'DB_UNAVAILABLE', message: 'MongoDB not available.' }
+      });
+    }
+
+    const db = mongoose.connection.db;
+    const collection = db.collection('agent_configurations');
+
+    // Get current state for undo snapshot
+    const currentConfig = await collection.findOne({ agent_key: key });
+
+    // Build update from allowed fields
+    const allowedFields = ['display_name', 'emoji', 'description_nl', 'description_en', 'description_de', 'description_es', 'tasks', 'monitoring_scope', 'schedule', 'is_active', 'custom_config'];
+    const updateDoc = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateDoc[field] = req.body[field];
+      }
+    }
+
+    if (Object.keys(updateDoc).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'NO_CHANGES', message: 'No valid fields to update.' }
+      });
+    }
+
+    updateDoc.updated_at = new Date();
+    updateDoc.updated_by = req.adminUser.email;
+
+    // Upsert: create if not exists (first edit after migration)
+    await collection.updateOne(
+      { agent_key: key },
+      {
+        $set: updateDoc,
+        $setOnInsert: {
+          agent_key: key,
+          display_name: knownAgent.name,
+          english_name: knownAgent.englishName,
+          category: knownAgent.category,
+          type: knownAgent.type,
+          created_at: new Date()
+        }
+      },
+      { upsert: true }
+    );
+
+    // Invalidate agent status cache
+    const redis = getRedis();
+    if (redis) await redis.del('admin:agents:status').catch(() => {});
+
+    // Audit log + undo snapshot
+    const auditId = await saveAuditLog({
+      action: 'agent_config_updated',
+      adminId: req.adminUser.id,
+      adminEmail: req.adminUser.email,
+      details: `Updated agent config: ${key} (${knownAgent.name})`,
+      entityType: 'agent_config',
+      entityId: key
+    });
+    if (auditId && currentConfig) {
+      await saveUndoSnapshot({
+        auditLogId: auditId,
+        action: 'agent_config_updated',
+        entityType: 'agent_config',
+        entityId: key,
+        previousState: currentConfig,
+        newState: updateDoc,
+        createdBy: req.adminUser.email
+      });
+    }
+
+    logger.info(`[AdminPortal] Agent config updated: ${key} by ${req.adminUser.email}`);
+    res.json({ success: true, data: { agent_key: key, updated: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Update agent config error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred updating agent config.' }
     });
   }
 });

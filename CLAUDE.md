@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.31.0
+> **Versie**: 3.32.0
 > **Laatst bijgewerkt**: 21 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -93,9 +93,9 @@ Na elke relevante aanpassing, uitbreiding of update:
 ### Primaire Documenten
 | Document | Locatie | Versie | Inhoud |
 |----------|---------|--------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.8 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.9 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 | Agent architectuur, scheduled jobs |
-| **CLAUDE.md** | Repository root + Hetzner | 3.31.0 | Dit bestand - project context |
+| **CLAUDE.md** | Repository root + Hetzner | 3.32.0 | Dit bestand - project context |
 
 ### Leesadvies voor Claude
 **Bij elke nieuwe sessie of complexe taak, lees in deze volgorde:**
@@ -132,14 +132,14 @@ HolidaiButler/
 │       │   └── utils/
 │       └── package.json
 │
-├── admin-module/           # React 18 + MUI (admin.holidaibutler.com)
+├── admin-module/           # React 18 + MUI 5 (admin.holidaibutler.com)
 │   ├── src/
-│   │   ├── api/            # API services (client, auth, dashboard, agents, pois, reviews, analytics, settings)
+│   │   ├── api/            # API services (client, auth, dashboard, agents, pois, reviews, analytics, settings, users)
 │   │   ├── components/     # Layout, dashboard, common components
-│   │   ├── hooks/          # useAuth, useDashboard, useAgentStatus, usePOIs, useReviews, useAnalytics, useSettings
-│   │   ├── pages/          # Login, Dashboard, Agents, POIs, Reviews, Analytics, Settings (✅ Fase 8D)
-│   │   ├── stores/         # Zustand auth store
-│   │   ├── i18n/           # NL/EN vertalingen
+│   │   ├── hooks/          # useAuth, useDashboard, useAgentStatus, usePOIs, useReviews, useAnalytics, useSettings, useUsers
+│   │   ├── pages/          # Login, Dashboard, Agents, POIs, Reviews, Analytics, Settings, Users (✅ Fase 9A)
+│   │   ├── stores/         # Zustand auth + theme stores
+│   │   ├── i18n/           # NL/EN/DE/ES vertalingen
 │   │   └── utils/          # Helpers (formatters, destinations, agents)
 │   ├── vite.config.js
 │   └── package.json
@@ -148,7 +148,7 @@ HolidaiButler/
 │   ├── src/
 │   │   ├── routes/
 │   │   │   ├── holibot.js
-│   │   │   └── adminPortal.js        # ✅ Fase 8C-0/8D: Admin API (19 endpoints)
+│   │   │   └── adminPortal.js        # ✅ Fase 8C→9A: Admin API (35 endpoints)
 │   │   ├── controllers/
 │   │   ├── models/
 │   │   ├── services/
@@ -447,6 +447,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 8D** | Admin Portal Feature Pack (POI Management, Reviews Moderatie, Analytics, Settings — 12 endpoints, 4 pagina's) | ✅ COMPLEET | 20-02-2026 |
 | **Fase 8D-FIX** | Admin Portal Bug Fix (12 bugs: POI stats/detail/edit, Review stats/detail/archive, Settings services/destinations/audit-log, QuickLinks, Agent detail, Sentry DSN) | ✅ COMPLEET | 21-02-2026 |
 | **Fase 8E** | Admin Portal Hardening & UX Upgrade (agent ecosystem fixes, content audit, destination filter, sorting, analytics, agent profielen, i18n DE/ES, taalversie keuze) | ✅ COMPLEET | 21-02-2026 |
+| **Fase 9A** | Admin Portal Enhancement (RBAC + Undo + Agent Config, Chatbot Analytics, POI Category/Image/Branding, Dark Mode — 16 nieuwe endpoints, 35 totaal) | ✅ COMPLEET | 21-02-2026 |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -1364,6 +1365,69 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 - 79 Texel POIs ES vertalingen toegevoegd (0 resterend missing)
 - Hetzner: `/root/fase_8e_missing_es.py` + cron backup job
 
+### Fase 9A Resultaten (Admin Portal Enhancement — 21/02/2026)
+- **Status**: COMPLEET (21-02-2026)
+- **Kosten**: EUR 0 (pure code, geen LLM calls)
+- **Doel**: Admin portal uitbreiden met RBAC, undo, agent config, chatbot analytics, POI category/image management, branding, dark mode
+
+**SUB-FASE 9A-1: RBAC + Undo + Agent Config**:
+
+| Feature | Beschrijving | Endpoints |
+|---------|-------------|-----------|
+| User Management | CRUD admin users met 4 rollen (platform_admin, poi_owner, editor, reviewer), soft-delete, password reset | GET/POST /users, GET/PUT/DELETE /users/:id, POST /users/:id/reset-password |
+| Audit Undo | Reversible actions (POI edit, review archive) met MongoDB snapshot voor undo | POST /settings/undo/:auditLogId |
+| Agent Config | displayName, emoji, description, active toggle per agent — MongoDB override boven static AGENT_METADATA | GET /agents/config, PUT /agents/config/:key |
+
+**SUB-FASE 9A-2: Analytics & Data**:
+
+| Feature | Beschrijving | Endpoints |
+|---------|-------------|-----------|
+| Chatbot Analytics | Sessions, messages, avg response time, fallback rate, language distribution uit holibot_sessions + holibot_message_log | GET /analytics/chatbot |
+| Analytics Trend | Time-series data voor elke metric (reviews, sessions, pois) — grouped by month | GET /analytics/trend/:metric |
+| Analytics Snapshot | Point-in-time KPI snapshot voor delta-vergelijking | GET /analytics/snapshot |
+
+**SUB-FASE 9A-3: POI & UX Polish**:
+
+| Feature | Beschrijving | Endpoints |
+|---------|-------------|-----------|
+| Category Management | Filter dropdown (populated from DB) + Autocomplete freeSolo in POI edit dialog | GET /pois/categories |
+| Image Ranking | display_order kolom in imageurls, reorder UI met pijltjes, primary image chip | PUT /pois/:id/images |
+| Branding UI | Color swatches per destination, edit dialog met hex inputs, MongoDB persist | GET /settings/branding, PUT /settings/branding/:destination |
+| Dark Mode | Zustand themeStore + localStorage persist, MUI buildTheme(mode) factory, toggle in header | — (frontend only) |
+
+**Totalen**: 16 nieuwe endpoints (35 totaal), 4 nieuwe bestanden, 21 gewijzigde bestanden
+
+**Bestanden**:
+
+| Actie | Bestand |
+|-------|---------|
+| MODIFIED | `platform-core/src/routes/adminPortal.js` (v3.0.0, 35 endpoints) |
+| NEW | `admin-module/src/api/userService.js` |
+| NEW | `admin-module/src/hooks/useUsers.js` |
+| NEW | `admin-module/src/pages/UsersPage.jsx` |
+| NEW | `admin-module/src/stores/themeStore.js` |
+| MODIFIED | `admin-module/src/api/agentService.js` (+config methods) |
+| MODIFIED | `admin-module/src/api/analyticsService.js` (+chatbot, trend, snapshot) |
+| MODIFIED | `admin-module/src/api/poiService.js` (+categories, reorderImages) |
+| MODIFIED | `admin-module/src/api/settingsService.js` (+branding, undo) |
+| MODIFIED | `admin-module/src/hooks/useAgentStatus.js` (+useAgentConfig, useUpdateAgentConfig) |
+| MODIFIED | `admin-module/src/hooks/useAnalytics.js` (+useChatbotAnalytics) |
+| MODIFIED | `admin-module/src/hooks/usePOIs.js` (+usePOICategories, usePOIImageReorder) |
+| MODIFIED | `admin-module/src/hooks/useSettings.js` (+useBranding, useUpdateBranding) |
+| MODIFIED | `admin-module/src/components/layout/Header.jsx` (+dark mode toggle) |
+| MODIFIED | `admin-module/src/components/layout/Sidebar.jsx` (+Users nav item) |
+| MODIFIED | `admin-module/src/App.jsx` (+UsersPage route) |
+| MODIFIED | `admin-module/src/main.jsx` (Root component met themeStore) |
+| MODIFIED | `admin-module/src/theme.js` (buildTheme factory) |
+| MODIFIED | `admin-module/src/pages/AgentsPage.jsx` (+config edit dialog) |
+| MODIFIED | `admin-module/src/pages/AnalyticsPage.jsx` (+chatbot analytics tab) |
+| MODIFIED | `admin-module/src/pages/POIsPage.jsx` (+category filter, +image reorder, +category edit) |
+| MODIFIED | `admin-module/src/pages/SettingsPage.jsx` (+branding section, +undo) |
+| MODIFIED | `admin-module/src/i18n/nl.json` (+users, +branding, +agent config keys) |
+| MODIFIED | `admin-module/src/i18n/en.json` (+users, +branding, +agent config keys) |
+| MODIFIED | `admin-module/src/i18n/de.json` (+users, +branding, +agent config keys) |
+| MODIFIED | `admin-module/src/i18n/es.json` (+users, +branding, +agent config keys) |
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -1517,7 +1581,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.8 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.9 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase 2 Docs | `docs/agents/fase2/` | - |
 | Fase 3 Docs | `docs/agents/fase3/` | - |
@@ -1532,6 +1596,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.32.0** | **2026-02-21** | **Fase 9A Admin Portal Enhancement COMPLEET: 3 sub-fases. 9A-1: RBAC user management (CRUD, 4 rollen, soft-delete, password reset), audit log undo (reversible actions + MongoDB snapshot), agent config editing (displayName, emoji, description, active). 9A-2: Chatbot analytics (sessions, messages, avg response, fallback rate, languages), analytics trend API, analytics snapshot. 9A-3: POI category management (filter dropdown + autocomplete), image ranking (display_order, reorder UI), branding UI (color management per destination), dark mode (Zustand + MUI theme factory). 16 nieuwe endpoints (35 totaal). 4 nieuwe bestanden. Kosten: EUR 0. CLAUDE.md v3.32.0, Master Strategie v6.9.** |
 | **3.31.0** | **2026-02-21** | **Fase 8E Admin Portal Hardening & UX Upgrade COMPLEET: BLOK 1: Agent ecosystem fixes (Backup Health regex+dir, dailyBriefing URGENT subject, De Maestro calculateAgentStatus 'completed'/'success' fix → 18/18 HEALTHY, daily MySQL backup cron). BLOK 2: Content audit (14 asterisk POIs fixed, 79 missing ES translations batch-vertaald, 121 inactive POIs gedocumenteerd). BLOK 3: 11 UX fixes (global destination filter+vlaggen, sortable columns, analytics trends, reviews destination filter, POI detail link, agent profielen NL, categorie kleuren, scheduled jobs popup, taalversie NL/EN/DE/ES). BLOK 4: 5 doc fixes (Agent Masterplan versie, endpoint count, version refs). Kosten: ~EUR 0,50. CLAUDE.md v3.31.0, Master Strategie v6.8.** |
 | **3.30.0** | **2026-02-21** | **Fase 8D-FIX Admin Portal Bug Fix COMPLEET: 12 bugs gefixed bij live testing. Backend (adminPortal.js v2.1.0): resolveDestinationId() helper (string→id mapping), POI stats per-destination top-level keys, POI detail field renames (description→detail, tileDescription→tile, reviews→reviewSummary array), review summary flattened (totalReviews→total, sentimentBreakdown→top-level), settings system keys (mysql/mongodb/redis + SELECT 1 health check), destinations array→object, audit-log field mapping (admin_email→actor.email, details→detail). Frontend: POI/review detail wrapper fix, snackbar undo archive, QuickLinks live links, agent click-to-detail dialog, Sentry DSN hyphens removed. 33/33 tests PASS. Kosten: EUR 0. CLAUDE.md v3.30.0, Master Strategie v6.7.** |
 | **3.29.0** | **2026-02-20** | **Fase 8D Admin Portal Feature Pack COMPLEET: 4 modules: POI Management (list/detail/edit/stats, 4 endpoints), Reviews Moderatie (list/detail/archive, 3 endpoints), Analytics Dashboard (overview/trends/export, 2 endpoints), Settings (system/audit-log/cache, 3 endpoints). 4 nieuwe pagina's, 4 API services, 4 hooks, 100+ i18n keys NL/EN. Alle sidebar items actief. adminPortal.js v2.0.0 (19 endpoints). Build OK. 8C-1 audit correcties (adminPortal.js in routes tree, agents/status in endpoint tabel). Kosten: EUR 0. CLAUDE.md v3.29.0, Master Strategie v6.6.** |

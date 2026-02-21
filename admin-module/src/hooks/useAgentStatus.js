@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { fetchAgentStatus } from '../api/agentService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchAgentStatus, fetchAgentConfigs, updateAgentConfig } from '../api/agentService';
 
 export const useAgentStatus = (filters = {}) => {
   return useQuery({
@@ -9,5 +9,24 @@ export const useAgentStatus = (filters = {}) => {
     staleTime: 60 * 1000,
     retry: 2,
     select: (response) => response.data?.data || response.data
+  });
+};
+
+export const useAgentConfigs = () => {
+  return useQuery({
+    queryKey: ['agent-configs'],
+    queryFn: fetchAgentConfigs,
+    staleTime: 60 * 1000
+  });
+};
+
+export const useUpdateAgentConfig = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, data }) => updateAgentConfig(key, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agent-configs'] });
+      queryClient.invalidateQueries({ queryKey: ['agent-status'] });
+    }
   });
 };

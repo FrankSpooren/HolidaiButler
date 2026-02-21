@@ -9,7 +9,8 @@
     "pois": "POI-Verwaltung",
     "reviews": "Bewertungen",
     "analytics": "Analytik",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "users": "Benutzer"
   },
   "auth": {
     "login": "Anmelden",
@@ -88,6 +89,18 @@
       "destinationStatus": "Status pro Reiseziel",
       "duration": "Letzte Dauer"
     },
+    "config": {
+      "title": "Agent-Konfiguration",
+      "edit": "Konfiguration",
+      "displayName": "Anzeigename",
+      "emoji": "Emoji",
+      "descriptionNL": "Beschreibung (NL)",
+      "descriptionEN": "Beschreibung (EN)",
+      "active": "Agent aktiv",
+      "save": "Speichern",
+      "saving": "Speichern...",
+      "saved": "Agent-Konfiguration gespeichert"
+    },
     "partial": "Einige Datenquellen sind nicht erreichbar. Angezeigte Daten k\u00f6nnen unvollst\u00e4ndig sein.",
     "noResults": "Keine Agents f\u00fcr die ausgew\u00e4hlten Filter gefunden.",
     "noActivity": "Keine aktuelle Aktivit\u00e4t",
@@ -125,6 +138,7 @@
       "sortName": "Name",
       "sortRating": "Bewertung",
       "sortUpdated": "Zuletzt aktualisiert",
+      "category": "Kategorie",
       "all": "Alle",
       "withContent": "Mit Inhalt",
       "withoutContent": "Ohne Inhalt",
@@ -147,7 +161,10 @@
       "totalReviews": "Bewertungen gesamt",
       "avgRating": "Durchschn. Bewertung",
       "distribution": "Verteilung"
-    }
+    },
+    "images": "Bilder",
+    "primary": "Prim\u00e4r",
+    "imageReordered": "Bildreihenfolge aktualisiert"
   },
   "reviews": {
     "title": "Bewertungen Moderation",
@@ -231,6 +248,25 @@
       "destination": "Reiseziel",
       "reviews": "Bewertungen",
       "rating": "Bewertung"
+    },
+    "contentTitle": "Inhalte & Bewertungen",
+    "chatbot": {
+      "title": "Chatbot Analytik",
+      "sessions": "Chat-Sitzungen",
+      "messages": "Nachrichten",
+      "avgMessages": "Durchschn. Nachrichten/Sitzung",
+      "avgResponse": "Durchschn. Antwortzeit",
+      "fallbackRate": "Fallback-Rate",
+      "sessionsPerDay": "Sitzungen pro Tag (30T)",
+      "languages": "Sprachen",
+      "noData": "Keine Chatbot-Daten verfügbar"
+    },
+    "delta": {
+      "vs7d": "ggü. letzten 7 Tagen"
+    },
+    "trend": {
+      "title": "Trend",
+      "noData": "Keine Daten für den ausgewählten Zeitraum"
     }
   },
   "settings": {
@@ -258,6 +294,16 @@
       "de": "Deutsch",
       "es": "Espa\u00f1ol"
     },
+    "branding": {
+      "title": "Markenidentit\u00e4t",
+      "primary": "Prim\u00e4r",
+      "secondary": "Sekund\u00e4r",
+      "accent": "Akzent",
+      "chatbot": "Chatbot",
+      "customized": "Angepasst",
+      "editTitle": "Markenidentit\u00e4t bearbeiten",
+      "saved": "Markenidentit\u00e4t erfolgreich gespeichert"
+    },
     "cache": {
       "title": "Cache-Verwaltung",
       "description": "Redis-Cache leeren, um veraltete Daten zu entfernen. Dies kann kurze Verz\u00f6gerungen verursachen.",
@@ -276,14 +322,92 @@
       "action": "Aktion",
       "user": "Benutzer",
       "details": "Details",
-      "noEntries": "Keine Audit-Log-Eintr\u00e4ge gefunden."
+      "noEntries": "Keine Audit-Log-Eintr\u00e4ge gefunden.",
+      "undo": "R\u00fcckg\u00e4ngig",
+      "undoAction": "Aktion r\u00fcckg\u00e4ngig machen",
+      "undone": "Aktion erfolgreich r\u00fcckg\u00e4ngig gemacht"
+    }
+  },
+  "users": {
+    "title": "Benutzerverwaltung",
+    "subtitle": "Admin-Benutzer und Zugriffsrechte verwalten",
+    "add": "Benutzer hinzuf\u00fcgen",
+    "addTitle": "Neuer Benutzer",
+    "editTitle": "Benutzer bearbeiten",
+    "deleteTitle": "Benutzer l\u00f6schen?",
+    "resetPasswordTitle": "Passwort zur\u00fccksetzen",
+    "searchPlaceholder": "Nach Name oder E-Mail suchen...",
+    "noResults": "Keine Benutzer f\u00fcr die ausgew\u00e4hlten Filter gefunden.",
+    "rowsPerPage": "Zeilen pro Seite",
+    "refresh": "Aktualisieren",
+    "edit": "Bearbeiten",
+    "delete": "L\u00f6schen",
+    "resetPassword": "Passwort zur\u00fccksetzen",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "saving": "Speichern...",
+    "create": "Erstellen",
+    "creating": "Erstellen...",
+    "close": "Schlie\u00dfen",
+    "confirmDelete": "L\u00f6schung best\u00e4tigen",
+    "deleting": "L\u00f6schen...",
+    "resetting": "Zur\u00fccksetzen...",
+    "created": "Benutzer erstellt",
+    "updated": "Benutzer aktualisiert",
+    "deleted": "Benutzer gel\u00f6scht",
+    "passwordCopied": "Passwort kopiert",
+    "passwordHint": "Mind. 12 Zeichen, 1 Gro\u00dfbuchstabe, 1 Ziffer",
+    "passwordGenerated": "Tempor\u00e4res Passwort erstellt",
+    "copyPassword": "Passwort kopieren",
+    "shareSecurely": "Teilen Sie dieses Passwort sicher mit dem Benutzer",
+    "deleteConfirm": "Sind Sie sicher, dass Sie {{name}} ({{email}}) l\u00f6schen m\u00f6chten?",
+    "deleteSoftNote": "Der Benutzer wird deaktiviert (nicht dauerhaft gel\u00f6scht)",
+    "resetPasswordConfirm": "Neues tempor\u00e4res Passwort f\u00fcr {{name}} erstellen?",
+    "resetPasswordNote": "Das aktuelle Passwort wird ung\u00fcltig",
+    "roles": {
+      "platform_admin": "Plattform-Admin",
+      "poi_owner": "POI-Eigent\u00fcmer",
+      "editor": "Redakteur",
+      "reviewer": "Reviewer"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "suspended": "Gesperrt",
+      "pending": "Ausstehend"
+    },
+    "filter": {
+      "role": "Rolle",
+      "status": "Status",
+      "all": "Alle"
+    },
+    "table": {
+      "name": "Name",
+      "email": "E-Mail",
+      "role": "Rolle",
+      "destinations": "Reiseziele",
+      "status": "Status",
+      "created": "Erstellt",
+      "actions": "Aktionen"
+    },
+    "fields": {
+      "email": "E-Mail-Adresse",
+      "password": "Passwort",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "role": "Rolle",
+      "status": "Status",
+      "destinations": "Reiseziele"
+    },
+    "errors": {
+      "required": "Dieses Feld ist erforderlich",
+      "passwordWeak": "Mind. 12 Zeichen, 1 Gro\u00dfbuchstabe, 1 Ziffer"
     }
   },
   "common": {
     "loading": "Laden...",
     "error": "Ein Fehler ist aufgetreten",
     "retry": "Erneut versuchen",
-    "comingSoon": "Demnächst verfügbar",
+    "comingSoon": "Demn\u00e4chst verf\u00fcgbar",
     "allDestinations": "Alle Reiseziele"
   }
 }

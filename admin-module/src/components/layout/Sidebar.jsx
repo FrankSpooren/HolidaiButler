@@ -6,8 +6,10 @@ import PlaceIcon from '@mui/icons-material/Place';
 import StarIcon from '@mui/icons-material/Star';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
+import PeopleIcon from '@mui/icons-material/People';
 import { useTranslation } from 'react-i18next';
 import { SIDEBAR_STYLES } from '../../theme.js';
+import useAuthStore from '../../stores/authStore.js';
 
 const MENU_ITEMS = [
   { key: 'dashboard', path: '/dashboard', icon: DashboardIcon },
@@ -15,13 +17,20 @@ const MENU_ITEMS = [
   { key: 'pois', path: '/pois', icon: PlaceIcon },
   { key: 'reviews', path: '/reviews', icon: StarIcon },
   { key: 'analytics', path: '/analytics', icon: BarChartIcon },
-  { key: 'settings', path: '/settings', icon: SettingsIcon }
+  { key: 'settings', path: '/settings', icon: SettingsIcon },
+  { key: 'users', path: '/users', icon: PeopleIcon, requiredRole: 'platform_admin' }
 ];
 
 export default function Sidebar() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const user = useAuthStore(s => s.user);
+
+  const visibleItems = MENU_ITEMS.filter(item => {
+    if (!item.requiredRole) return true;
+    return user?.role === item.requiredRole;
+  });
 
   return (
     <Box sx={{
@@ -42,7 +51,7 @@ export default function Sidebar() {
       </Box>
 
       <List sx={{ flex: 1, pt: 1 }}>
-        {MENU_ITEMS.map(({ key, path, icon: Icon }) => {
+        {visibleItems.map(({ key, path, icon: Icon }) => {
           const isActive = location.pathname === path;
           return (
             <ListItemButton
@@ -66,7 +75,7 @@ export default function Sidebar() {
 
       <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)' }}>
-          v1.0.0
+          v1.1.0
         </Typography>
       </Box>
     </Box>

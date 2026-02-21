@@ -9,7 +9,8 @@
     "pois": "POI Management",
     "reviews": "Reviews",
     "analytics": "Analytics",
-    "settings": "Settings"
+    "settings": "Settings",
+    "users": "Users"
   },
   "auth": {
     "login": "Log in",
@@ -88,6 +89,18 @@
       "destinationStatus": "Status per destination",
       "duration": "Last duration"
     },
+    "config": {
+      "title": "Agent configuration",
+      "edit": "Configuration",
+      "displayName": "Display name",
+      "emoji": "Emoji",
+      "descriptionNL": "Description (NL)",
+      "descriptionEN": "Description (EN)",
+      "active": "Agent active",
+      "save": "Save",
+      "saving": "Saving...",
+      "saved": "Agent configuration saved"
+    },
     "partial": "Some data sources are unavailable. Displayed data may be incomplete.",
     "noResults": "No agents found for the selected filters.",
     "noActivity": "No recent activity",
@@ -119,6 +132,7 @@
     },
     "filter": {
       "destination": "Destination",
+      "category": "Category",
       "content": "Content",
       "status": "Status",
       "sortBy": "Sort by",
@@ -147,7 +161,10 @@
       "totalReviews": "Total reviews",
       "avgRating": "Avg. rating",
       "distribution": "Distribution"
-    }
+    },
+    "images": "Images",
+    "primary": "Primary",
+    "imageReordered": "Image order updated"
   },
   "reviews": {
     "title": "Reviews Moderation",
@@ -231,6 +248,25 @@
       "destination": "Destination",
       "reviews": "Reviews",
       "rating": "Rating"
+    },
+    "contentTitle": "Content & Reviews",
+    "chatbot": {
+      "title": "Chatbot Analytics",
+      "sessions": "Chat Sessions",
+      "messages": "Messages",
+      "avgMessages": "Avg. Messages/Session",
+      "avgResponse": "Avg. Response Time",
+      "fallbackRate": "Fallback Rate",
+      "sessionsPerDay": "Sessions per day (30d)",
+      "languages": "Languages",
+      "noData": "No chatbot data available"
+    },
+    "delta": {
+      "vs7d": "vs last 7 days"
+    },
+    "trend": {
+      "title": "Trend",
+      "noData": "No data for the selected period"
     }
   },
   "settings": {
@@ -268,6 +304,16 @@
       "de": "Deutsch",
       "es": "Español"
     },
+    "branding": {
+      "title": "Branding",
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "accent": "Accent",
+      "chatbot": "Chatbot",
+      "customized": "Customized",
+      "editTitle": "Edit Branding",
+      "saved": "Branding saved successfully"
+    },
     "audit": {
       "title": "Admin Audit Log",
       "filterAction": "Filter by action",
@@ -276,7 +322,85 @@
       "action": "Action",
       "user": "User",
       "details": "Details",
-      "noEntries": "No audit log entries found."
+      "noEntries": "No audit log entries found.",
+      "undo": "Undo",
+      "undoAction": "Undo this action",
+      "undone": "Action successfully undone"
+    }
+  },
+  "users": {
+    "title": "User Management",
+    "subtitle": "Manage admin users and access permissions",
+    "add": "Add User",
+    "addTitle": "New User",
+    "editTitle": "Edit User",
+    "deleteTitle": "Delete User?",
+    "resetPasswordTitle": "Reset Password",
+    "searchPlaceholder": "Search by name or email...",
+    "noResults": "No users found for the selected filters.",
+    "rowsPerPage": "Rows per page",
+    "refresh": "Refresh",
+    "edit": "Edit",
+    "delete": "Delete",
+    "resetPassword": "Reset password",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "create": "Create",
+    "creating": "Creating...",
+    "close": "Close",
+    "confirmDelete": "Confirm deletion",
+    "deleting": "Deleting...",
+    "resetting": "Resetting...",
+    "created": "User created",
+    "updated": "User updated",
+    "deleted": "User deleted",
+    "passwordCopied": "Password copied",
+    "passwordHint": "Min. 12 chars, 1 uppercase, 1 digit",
+    "passwordGenerated": "Temporary password generated",
+    "copyPassword": "Copy password",
+    "shareSecurely": "Share this password securely with the user",
+    "deleteConfirm": "Are you sure you want to delete {{name}} ({{email}})?",
+    "deleteSoftNote": "The user will be deactivated (not permanently deleted)",
+    "resetPasswordConfirm": "Generate a new temporary password for {{name}}?",
+    "resetPasswordNote": "The current password will be invalidated",
+    "roles": {
+      "platform_admin": "Platform Admin",
+      "poi_owner": "POI Owner",
+      "editor": "Editor",
+      "reviewer": "Reviewer"
+    },
+    "statuses": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "pending": "Pending"
+    },
+    "filter": {
+      "role": "Role",
+      "status": "Status",
+      "all": "All"
+    },
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "destinations": "Destinations",
+      "status": "Status",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "fields": {
+      "email": "Email address",
+      "password": "Password",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "role": "Role",
+      "status": "Status",
+      "destinations": "Destinations"
+    },
+    "errors": {
+      "required": "This field is required",
+      "passwordWeak": "Min. 12 chars, 1 uppercase, 1 digit"
     }
   },
   "common": {

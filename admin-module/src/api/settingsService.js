@@ -14,5 +14,14 @@ export const settingsService = {
   },
 
   clearCache: (payload) =>
-    client.post('/settings/cache/clear', payload).then(r => r.data)
+    client.post('/settings/cache/clear', payload).then(r => r.data),
+
+  undoAction: (auditLogId) =>
+    client.post(`/settings/undo/${auditLogId}`, { confirm: true }).then(r => r.data),
+
+  getBranding: () =>
+    client.get('/settings/branding').then(r => r.data),
+
+  updateBranding: (destination, data) =>
+    client.put(`/settings/branding/${destination}`, data).then(r => r.data)
 };

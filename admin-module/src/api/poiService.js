@@ -23,5 +23,11 @@ export const poiService = {
     client.get(`/pois/${id}`).then(r => r.data),
 
   update: (id, data) =>
-    client.put(`/pois/${id}`, data).then(r => r.data)
+    client.put(`/pois/${id}`, data).then(r => r.data),
+
+  categories: (destination) =>
+    client.get('/pois/categories', { params: destination ? { destination } : {} }).then(r => r.data),
+
+  reorderImages: (poiId, imageIds) =>
+    client.put(`/pois/${poiId}/images`, { imageIds }).then(r => r.data)
 };

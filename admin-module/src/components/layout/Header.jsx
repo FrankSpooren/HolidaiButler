@@ -1,9 +1,12 @@
-import { AppBar, Toolbar, Typography, Button, Chip, Box, IconButton } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Chip, Box, IconButton, Tooltip } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../../stores/authStore.js';
 import useDestinationStore from '../../stores/destinationStore.js';
+import useThemeStore from '../../stores/themeStore.js';
 import DestinationSelector from './DestinationSelector.jsx';
 import { SIDEBAR_STYLES } from '../../theme.js';
 
@@ -11,6 +14,7 @@ export default function Header({ onMenuToggle }) {
   const { t } = useTranslation();
   const { user, logout } = useAuthStore();
   const { selectedDestination, setDestination } = useDestinationStore();
+  const { mode, toggleMode } = useThemeStore();
 
   return (
     <AppBar
@@ -19,9 +23,9 @@ export default function Header({ onMenuToggle }) {
       sx={{
         ml: { md: `${SIDEBAR_STYLES.width}px` },
         width: { md: `calc(100% - ${SIDEBAR_STYLES.width}px)` },
-        bgcolor: '#fff',
-        color: '#1e293b',
-        borderBottom: '1px solid #e2e8f0'
+        bgcolor: mode === 'dark' ? '#1e293b' : '#fff',
+        color: mode === 'dark' ? '#e2e8f0' : '#1e293b',
+        borderBottom: `1px solid ${mode === 'dark' ? '#334155' : '#e2e8f0'}`
       }}
     >
       <Toolbar sx={{ gap: 2 }}>
@@ -36,6 +40,12 @@ export default function Header({ onMenuToggle }) {
         <Box sx={{ flex: 1 }} />
 
         <DestinationSelector value={selectedDestination} onChange={setDestination} />
+
+        <Tooltip title={mode === 'dark' ? 'Light mode' : 'Dark mode'}>
+          <IconButton onClick={toggleMode} size="small" color="inherit">
+            {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 500 }}>{user?.name || user?.email}</Typography>
