@@ -416,12 +416,12 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    // Store refresh token in Sessions table
-    await mysqlSequelize.query(
+    // Store refresh token in Sessions table (non-blocking — UUID admin_users vs INT Sessions.user_id)
+    mysqlSequelize.query(
       `INSERT INTO Sessions (user_id, refresh_token, expires_at, created_at)
        VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), NOW())`,
       { replacements: [user.id, refreshToken] }
-    );
+    ).catch(err => logger.warn('[AdminPortal] Session store skipped (non-critical):', err.message));
 
     logger.info(`[AdminPortal] Admin login: ${email} (source: ${userSource})`);
 
