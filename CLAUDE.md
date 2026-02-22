@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.34.0
+> **Versie**: 3.35.0
 > **Laatst bijgewerkt**: 22 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -95,7 +95,7 @@ Na elke relevante aanpassing, uitbreiding of update:
 |----------|---------|--------|--------|
 | **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.1 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 | Agent architectuur, scheduled jobs |
-| **CLAUDE.md** | Repository root + Hetzner | 3.34.0 | Dit bestand - project context |
+| **CLAUDE.md** | Repository root + Hetzner | 3.35.0 | Dit bestand - project context |
 
 ### Leesadvies voor Claude
 **Bij elke nieuwe sessie of complexe taak, lees in deze volgorde:**
@@ -451,6 +451,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 9A-FIX** | Admin Login Fix (rate limiter 5→15, account lockout 5→10/5min, Sessions UUID mismatch non-blocking) | ✅ COMPLEET | 22-02-2026 |
 | **Fase 9B** | Admin Portal Bug Fix & UX Hardening (6 P0 bugs, 13 UX fixes, pageview tracking, enterprise password policy — 2 nieuwe endpoints, 37 totaal) | ✅ COMPLEET | 22-02-2026 |
 | **Fase 9C** | Admin Portal Live Verificatie & Reparatie (user creation fix, image reorder e2e, enterprise agent profiel popup 4-tab, subcategory editing, logo upload, deploy 6 omgevingen — 1 nieuw endpoint, 38 totaal) | ✅ COMPLEET | 22-02-2026 |
+| **Fase 9D** | Admin Portal Zero-Tolerance Reparatie (UsersPage crash null-safety, category chip kleuren 5x uniek, MongoDB $set/$setOnInsert conflict, POI update + review archive undo snapshots, buildAuditDetail backward-compat, display_order in image response — 28/28 tests PASS) | ✅ COMPLEET | 22-02-2026 |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -1746,6 +1747,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.35.0** | **2026-02-22** | **Fase 9D Admin Portal Zero-Tolerance Reparatie COMPLEET: 8 persistente bugs uit audit (38% Fase 9C score). Blok 1: UsersPage crash null-safety (isSelf bij editUser=null, MUI Dialog eager eval). Category chip kleuren 5x maximaal onderscheidend (bruin, dieppaars, petrolblauw, smaragdgroen). MongoDB $set/$setOnInsert conflict fix (display_name dubbel in agent config PUT). Blok 2: POI update handler saveAuditLog + saveUndoSnapshot (was directe audit_logs insert). Review archive handler saveAuditLog + saveUndoSnapshot. buildAuditDetail backward-compatible (poi_update + poi_content_updated, review_archive + review_archived). display_order veld in POI detail image response. 28/28 live tests PASS. Kosten: EUR 0. adminPortal.js v3.3.0. CLAUDE.md v3.35.0.** |
 | **3.34.0** | **2026-02-22** | **Fase 9C Admin Portal Live Verificatie & Reparatie COMPLEET: Blok 1: 2 P0 bug fixes (POST /users permissions kolom fix, image reorder display_order persistence + ImageUrl.js ordering). Blok 2A: Enterprise agent profiel popup (4 MUI tabs: Profiel/Status/Configuratie/Warnings, AGENT_TASKS 18 agents met volledig takenpakket, per-destination status, PM2 log copy). Blok 2B-2G: UX fixes (subcategory editing 2-level, branding logo upload met multer + POST endpoint + preview + i18n 4 talen, 2B/2D/2E/2F reeds geïmplementeerd bevestigd). Blok 3: Deploy alle 6 omgevingen (3 admin + 2 customer-portal + API). 1 nieuw endpoint (38 totaal). adminPortal.js v3.2.0. Kosten: EUR 0. CLAUDE.md v3.34.0, Master Strategie v7.1.** |
 | **3.33.0** | **2026-02-22** | **Fase 9B Admin Portal Bug Fix & UX Hardening COMPLEET: Blok 1: 6 P0 bugs (unicode emoji/bullet rendering, agent destination status Unknown→actual, user creation 500→201 met volledige validatie, image reorder persistence, audit log actor type badges 🤖/⚙️/👤). Blok 2: 13 UX fixes (reviews destination filter, agent warning details+actions, NL/EN consistency, 5-sectie agent config popup, scheduled job descriptions, category chip kleuren, environment-aware frontend links, branding merknaam+payoff, is_active audit, rolnamen consistent 4 talen, enterprise password policy 7-punts checklist, gebruikersnamen verplicht, audit actor badges). Blok 3: Pageview tracking GDPR-compliant (page_views MySQL tabel, POST /api/v1/track fire-and-forget met rate limit 100/min, GET /analytics/pageviews, AnalyticsPage sectie KPI+charts). Blok 4: 6 doc fixes. 2 nieuwe endpoints (37 totaal). adminPortal.js v3.1.0. 28/28 tests PASS. Kosten: EUR 0. CLAUDE.md v3.33.0, Master Strategie v7.0.** |
 | **3.32.1** | **2026-02-22** | **Fase 9A-FIX Admin Login Fix: 3 bugs opgelost bij live testing. (1) Rate limiter te streng: authRateLimiter 5→15 req/15min. (2) Account lockout te agressief: threshold 5→10 attempts, lock duration 15→5 min. (3) Sessions.user_id INT(11) vs admin_users CHAR(36) UUID mismatch → INSERT "Data truncated" crash. Fix: Sessions INSERT non-blocking (.catch). Admin wachtwoord: HolidaiAdmin2026. Kosten: EUR 0. CLAUDE.md v3.32.1, Master Strategie v6.9.1.** |
