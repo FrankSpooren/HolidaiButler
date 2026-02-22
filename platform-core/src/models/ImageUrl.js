@@ -138,9 +138,19 @@ export async function getImagesForPOI(poiId, limit = 10) {
       .map(img => ({
         url: getBestUrl(img),
         hasLocal: !!img.local_path,
+        displayOrder: img.display_order,
         priority: img.local_path ? getLocalImagePriority(img.image_url) : getImagePriority(img.image_url)
       }))
-      .sort((a, b) => a.priority - b.priority)
+      .sort((a, b) => {
+        const aHasOrder = a.displayOrder != null && a.displayOrder !== 999;
+        const bHasOrder = b.displayOrder != null && b.displayOrder !== 999;
+        // Images with explicit display_order come first, sorted by display_order
+        if (aHasOrder && bHasOrder) return a.displayOrder - b.displayOrder;
+        if (aHasOrder) return -1;
+        if (bHasOrder) return 1;
+        // Images without display_order: sort by quality priority
+        return a.priority - b.priority;
+      })
       .map(img => img.url)
       .slice(0, limit);
   } catch (error) {
@@ -190,14 +200,22 @@ export async function getImagesForPOIs(poiIds, limitPerPoi = 3) {
       poiImages.get(poiId).push({
         url: getBestUrl(img),
         hasLocal: !!img.local_path,
+        displayOrder: img.display_order,
         priority: img.local_path ? getLocalImagePriority(img.image_url) : getImagePriority(img.image_url)
       });
     }
 
-    // Then sort by priority (local first, then by URL type) and limit
+    // Then sort: explicit display_order first, then by quality priority
     for (const [poiId, imgList] of poiImages) {
       const sorted = imgList
-        .sort((a, b) => a.priority - b.priority)
+        .sort((a, b) => {
+          const aHasOrder = a.displayOrder != null && a.displayOrder !== 999;
+          const bHasOrder = b.displayOrder != null && b.displayOrder !== 999;
+          if (aHasOrder && bHasOrder) return a.displayOrder - b.displayOrder;
+          if (aHasOrder) return -1;
+          if (bHasOrder) return 1;
+          return a.priority - b.priority;
+        })
         .map(img => img.url)
         .slice(0, limitPerPoi);
       // Ensure final Map uses numeric keys

@@ -81,25 +81,46 @@
       "showMore": "Mostrar m\u00e1s",
       "showLess": "Mostrar menos"
     },
+    "tabs": {
+      "profile": "Perfil",
+      "status": "Estado",
+      "configuration": "Configuración",
+      "warnings": "Advertencias"
+    },
     "detail": {
       "errorTitle": "Error",
       "warningTitle": "Advertencia",
-      "checkLogs": "Revisar logs de PM2 para m\u00e1s detalles",
+      "checkLogs": "Revisar logs de PM2 para más detalles",
       "tasks": "Tareas",
       "destinationStatus": "Estado por destino",
-      "duration": "\u00daltima duraci\u00f3n"
+      "duration": "Última duración",
+      "description": "Descripción",
+      "monitoringScope": "Alcance de monitorización",
+      "outputTitle": "Salida",
+      "outputType": "Tipo",
+      "outputFrequency": "Frecuencia",
+      "outputRecipients": "Destinatarios",
+      "dependencies": "Dependencias",
+      "scheduledJobs": "Tareas programadas",
+      "recentActivity": "Actividad reciente",
+      "lastStatus": "Último estado",
+      "recommendedAction": "Acción recomendada",
+      "recentErrors": "Errores recientes",
+      "copied": "Copiado al portapapeles",
+      "copyCommand": "Copiar comando"
     },
     "config": {
-      "title": "Configuraci\u00f3n del agente",
-      "edit": "Configuraci\u00f3n",
+      "title": "Configuración del agente",
+      "edit": "Configuración",
       "displayName": "Nombre visible",
       "emoji": "Emoji",
-      "descriptionNL": "Descripci\u00f3n (NL)",
-      "descriptionEN": "Descripci\u00f3n (EN)",
+      "descriptionNL": "Descripción (NL)",
+      "descriptionEN": "Descripción (EN)",
       "active": "Agente activo",
       "save": "Guardar",
       "saving": "Guardando...",
-      "saved": "Configuraci\u00f3n del agente guardada"
+      "saved": "Configuración del agente guardada",
+      "addTask": "Añadir nueva tarea..."
     },
     "partial": "Algunas fuentes de datos no est\u00e1n disponibles. Los datos mostrados pueden estar incompletos.",
     "noResults": "No se encontraron agentes para los filtros seleccionados.",
@@ -135,6 +156,7 @@
       "content": "Contenido",
       "status": "Estado",
       "sortBy": "Ordenar por",
+      "subcategory": "Subcategoría",
       "sortName": "Nombre",
       "sortRating": "Valoraci\u00f3n",
       "sortUpdated": "\u00daltima actualizaci\u00f3n",
@@ -313,7 +335,15 @@
       "chatbot": "Chatbot",
       "customized": "Personalizado",
       "editTitle": "Editar marca",
-      "saved": "Marca guardada exitosamente"
+      "saved": "Marca guardada exitosamente",
+      "brandName": "Nombre de marca",
+      "payoff": "Eslogan / Tagline",
+      "logo": "Logo",
+      "uploadLogo": "Subir logo",
+      "uploading": "Subiendo...",
+      "logoUploaded": "Logo subido exitosamente",
+      "logoTooLarge": "Archivo demasiado grande (máx 2MB)",
+      "logoUrl": "URL del logo"
     },
     "cache": {
       "title": "Gesti\u00f3n de cach\u00e9",
@@ -414,6 +444,7 @@
       "passwordWeak": "La contraseña no cumple todos los requisitos",
       "lastNameRequired": "El apellido es obligatorio"
     },
+    "selfEditWarning": "Estás editando tu propia cuenta. El rol y el estado no se pueden cambiar.",
     "password": {
       "minLength": "Mínimo 12 caracteres",
       "uppercase": "Mínimo 1 mayúscula (A-Z)",

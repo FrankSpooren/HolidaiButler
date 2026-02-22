@@ -33,7 +33,8 @@
  *   POST /settings/undo/:auditLogId — Undo reversible action
  *   POST /settings/cache/clear — Redis cache invalidation
  *   GET  /settings/branding    — Brand configuration per destination
- *   PUT  /settings/branding/:destination — Update brand colors
+ *   PUT  /settings/branding/:destination — Update brand colors/settings
+ *   POST /settings/branding/:destination/logo — Upload brand logo (multipart/form-data)
  *   GET  /users                — List admin users (platform_admin only)
  *   POST /users                — Create admin user (platform_admin only)
  *   GET  /users/:id            — Admin user detail (platform_admin only)
@@ -43,7 +44,7 @@
  *   GET  /analytics/pageviews  — Pageview analytics (page_views table, GDPR compliant)
  *
  * @module routes/adminPortal
- * @version 3.1.0
+ * @version 3.2.0
  */
 
 import { Router } from 'express';
@@ -52,6 +53,10 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import Redis from 'ioredis';
 import mongoose from 'mongoose';
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { mysqlSequelize } from '../config/database.js';
 import { QueryTypes } from 'sequelize';
 import {
@@ -1000,6 +1005,84 @@ const SCHEDULED_JOBS_METADATA = [
 ];
 
 /**
+ * Extended agent data: dependencies + output per agent (Fase 9C BLOK 2A)
+ */
+const AGENT_EXTENDED_DATA = {
+  maestro: {
+    dependencies: ['BullMQ', 'Redis', 'MongoDB audit_logs'],
+    output: { type: 'Job Scheduling', frequency: 'Continu', recipients: 'Intern', description: 'Job scheduling, error logging, agent lifecycle management' }
+  },
+  bode: {
+    dependencies: ['MongoDB audit_logs', 'Redis agent status', 'MailerLite API', 'MySQL POI/review counts'],
+    output: { type: 'Email + MailerLite', frequency: 'Dagelijks 08:00', recipients: 'Eigenaar (via MailerLite)', description: 'Status email met agent health, budget, alerts en aanbevolen acties' }
+  },
+  dokter: {
+    dependencies: ['HTTP portals (7)', 'SSL certs via tls.connect (5 domeinen)', 'MySQL', 'MongoDB', 'Redis'],
+    output: { type: 'Health Alerts', frequency: 'Elk uur', recipients: 'MongoDB + De Bode', description: 'Uptime monitoring, SSL expiry waarschuwingen, health rapportage' }
+  },
+  koerier: {
+    dependencies: ['MySQL POI/reviews', 'Google Places API', 'MongoDB content_quality_audits'],
+    output: { type: 'Data Sync', frequency: 'Dagelijks 06:00', recipients: 'MySQL Database', description: 'Gesynchroniseerde POI/review data, content quality audits' }
+  },
+  geheugen: {
+    dependencies: ['MySQL POI/QnA', 'ChromaDB Cloud', 'Mistral Embed API', 'MongoDB chromadb_state_snapshots'],
+    output: { type: 'Vectorisatie', frequency: 'Dagelijks 04:00', recipients: 'ChromaDB Cloud', description: 'Gevectoriseerde POI/QnA content, state snapshots in MongoDB' }
+  },
+  gastheer: {
+    dependencies: ['MySQL user_journeys', 'Redis session state', 'MailerLite API'],
+    output: { type: 'Journey Analytics', frequency: 'Elke 4 uur', recipients: 'MySQL Database', description: 'User journey analytics, communicatie logs, engagement metrics' }
+  },
+  poortwachter: {
+    dependencies: ['MySQL Users/consent', 'Redis sessions', 'MongoDB audit_logs'],
+    output: { type: 'GDPR Compliance', frequency: 'Elke 4 uur', recipients: 'MySQL + MongoDB', description: 'GDPR compliance rapportages, consent audit logs, data retention' }
+  },
+  stylist: {
+    dependencies: ['Frontend codebase', 'Destination brand configs'],
+    output: { type: 'UX Review', frequency: 'Wekelijks (maandag 06:00)', recipients: 'MongoDB audit_logs', description: 'UX review rapporten, brand violation alerts' }
+  },
+  corrector: {
+    dependencies: ['Node.js codebase', 'npm dependencies', 'ESLint config'],
+    output: { type: 'Code Quality', frequency: 'Wekelijks (maandag 06:00)', recipients: 'MongoDB audit_logs', description: 'Code quality rapporten, dependency vulnerability alerts' }
+  },
+  bewaker: {
+    dependencies: ['npm audit', 'API endpoints', 'Auth middleware', 'Rate limiter config'],
+    output: { type: 'Security Scan', frequency: 'Dagelijks 02:00', recipients: 'MongoDB audit_logs', description: 'Security scan rapporten, vulnerability alerts' }
+  },
+  inspecteur: {
+    dependencies: ['MySQL data integriteit', 'API endpoints', 'MongoDB audit_logs'],
+    output: { type: 'Quality Reports', frequency: 'Wekelijks (maandag 06:00)', recipients: 'MongoDB audit_logs', description: 'Kwaliteitsrapporten, data integriteit alerts' }
+  },
+  architect: {
+    dependencies: ['Codebase structuur', 'Dependencies graph', 'Destination configs'],
+    output: { type: 'Architecture Review', frequency: 'Wekelijks (zondag 03:00)', recipients: 'MongoDB audit_logs', description: 'Architectuur rapporten, schaalbaarheids aanbevelingen' }
+  },
+  leermeester: {
+    dependencies: ['MongoDB agent_learning_patterns', 'MySQL analytics data', 'Redis cache'],
+    output: { type: 'Learning Patterns', frequency: 'Wekelijks (maandag 05:30)', recipients: 'MongoDB', description: 'Optimalisatie suggesties, learning patterns in MongoDB' }
+  },
+  thermostaat: {
+    dependencies: ['Redis config state', 'MySQL performance metrics', 'MongoDB audit_logs'],
+    output: { type: 'Config Alerts', frequency: 'Elke 6 uur', recipients: 'Redis + Eigenaar', description: 'Configuratie alerts, evaluatie resultaten in Redis' }
+  },
+  weermeester: {
+    dependencies: ['MySQL POI/review trends', 'MongoDB agent_learning_patterns', 'Seizoensdata'],
+    output: { type: 'Predictions', frequency: 'Wekelijks (zondag 03:00)', recipients: 'MongoDB + De Bode', description: 'Trend analyses, prediction alerts, seizoensvoorspellingen' }
+  },
+  contentQuality: {
+    dependencies: ['MySQL POI content (4 talen)', 'MongoDB content_quality_audits'],
+    output: { type: 'Content Audit', frequency: 'Wekelijks (maandag 05:00)', recipients: 'MongoDB', description: 'Content completeness audits, kwaliteitsscore per destination' }
+  },
+  smokeTest: {
+    dependencies: ['HTTP endpoints (5 per destination + 3 infra)', 'MongoDB smoke_test_results'],
+    output: { type: 'Test Results', frequency: 'Dagelijks 07:45', recipients: 'MongoDB + De Bode', description: 'E2E smoke test resultaten, failure alerts' }
+  },
+  backupHealth: {
+    dependencies: ['/root/backups/ directory', 'Disk space (df)', 'MongoDB backup_health_checks'],
+    output: { type: 'Backup Health', frequency: 'Dagelijks 07:30', recipients: 'MongoDB + De Bode', description: 'Backup recency checks, disk space monitoring, CRITICAL alerts' }
+  }
+};
+
+/**
  * Convert cron expression to human-readable Dutch string
  */
 function cronToHuman(cron) {
@@ -1073,21 +1156,36 @@ router.get('/agents/status', adminAuth('reviewer'), async (req, res) => {
       } catch { /* cache miss */ }
     }
 
-    // Build agent list from static metadata
-    const agents = AGENT_METADATA.map(meta => ({
-      id: meta.id,
-      name: meta.name,
-      englishName: meta.englishName,
-      category: meta.category,
-      type: meta.type,
-      description: meta.description,
-      schedule: meta.schedule,
-      scheduleHuman: cronToHuman(meta.schedule),
-      destinationAware: meta.type === 'A',
-      status: 'unknown',
-      lastRun: null,
-      destinations: meta.type === 'A' ? { calpe: { lastRun: null, status: 'unknown' }, texel: { lastRun: null, status: 'unknown' } } : null
-    }));
+    // Build agent list from static metadata + extended data
+    const agents = AGENT_METADATA.map(meta => {
+      const ext = AGENT_EXTENDED_DATA[meta.id] || {};
+      return {
+        id: meta.id,
+        name: meta.name,
+        englishName: meta.englishName,
+        category: meta.category,
+        type: meta.type,
+        description: meta.description,
+        description_en: meta.description_en,
+        tasks: meta.tasks || [],
+        monitoring_scope: meta.monitoring_scope || null,
+        output_description: meta.output_description || null,
+        dependencies: ext.dependencies || [],
+        output: ext.output || null,
+        scheduledJobs: SCHEDULED_JOBS_METADATA.filter(j => j.agent === meta.name).map(j => ({
+          name: j.name,
+          cron: j.cron,
+          cronHuman: cronToHuman(j.cron),
+          description: j.description
+        })),
+        schedule: meta.schedule,
+        scheduleHuman: cronToHuman(meta.schedule),
+        destinationAware: meta.type === 'A',
+        status: 'unknown',
+        lastRun: null,
+        destinations: meta.type === 'A' ? { calpe: { lastRun: null, status: 'unknown' }, texel: { lastRun: null, status: 'unknown' } } : null
+      };
+    });
 
     let partial = false;
     const recentActivity = [];
@@ -1683,9 +1781,29 @@ router.get('/pois/categories', adminAuth('reviewer'), async (req, res) => {
       { replacements: destId ? [destId] : [], type: QueryTypes.SELECT }
     );
 
+    // Also fetch subcategories grouped by category
+    const subcategories = await mysqlSequelize.query(
+      `SELECT category, subcategory, COUNT(*) as count
+       FROM POI
+       WHERE subcategory IS NOT NULL AND subcategory != ''
+       ${destId ? 'AND destination_id = ?' : ''}
+       GROUP BY category, subcategory ORDER BY category, count DESC`,
+      { replacements: destId ? [destId] : [], type: QueryTypes.SELECT }
+    );
+
+    // Build subcategory map: { "Food & Drinks": ["Restaurant", "Bar", ...] }
+    const subcatMap = {};
+    for (const s of subcategories) {
+      if (!subcatMap[s.category]) subcatMap[s.category] = [];
+      subcatMap[s.category].push(s.subcategory);
+    }
+
     res.json({
       success: true,
-      data: { categories: categories.map(c => ({ name: c.category, count: parseInt(c.count) })) }
+      data: {
+        categories: categories.map(c => ({ name: c.category, count: parseInt(c.count) })),
+        subcategories: subcatMap
+      }
     });
   } catch (error) {
     logger.error('[AdminPortal] POI categories error:', error);
@@ -1808,14 +1926,14 @@ router.put('/pois/:id', adminAuth('editor'), async (req, res) => {
       return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid POI ID' } });
     }
 
-    const { content, descriptions, is_active, category } = req.body;
-    if (!content && !descriptions && is_active === undefined && category === undefined) {
+    const { content, descriptions, is_active, category, subcategory } = req.body;
+    if (!content && !descriptions && is_active === undefined && category === undefined && subcategory === undefined) {
       return res.status(400).json({ success: false, error: { code: 'NO_CHANGES', message: 'No fields to update' } });
     }
 
     // Verify POI exists
     const existing = await mysqlSequelize.query(
-      `SELECT id, destination_id, name, category, enriched_detail_description,
+      `SELECT id, destination_id, name, category, subcategory, enriched_detail_description,
               enriched_detail_description_nl, enriched_detail_description_de,
               enriched_detail_description_es, is_active FROM POI WHERE id = ?`,
       { replacements: [poiId], type: QueryTypes.SELECT }
@@ -1866,6 +1984,12 @@ router.put('/pois/:id', adminAuth('editor'), async (req, res) => {
       sets.push('category = ?');
       vals.push(String(category).slice(0, 100));
       changes.category = `${old.category || '—'} → ${category}`;
+    }
+
+    if (subcategory !== undefined) {
+      sets.push('subcategory = ?');
+      vals.push(subcategory ? String(subcategory).slice(0, 100) : null);
+      changes.subcategory = `${old.subcategory || '—'} → ${subcategory || '—'}`;
     }
 
     if (sets.length === 0) {
@@ -3258,6 +3382,9 @@ router.get('/settings/branding', adminAuth('reviewer'), async (req, res) => {
         domain: defaults.domain,
         chatbotName: ov.chatbotName || defaults.chatbotName,
         logo: ov.logo || defaults.logo,
+        logo_url: ov.logo_url || null,
+        brand_name: ov.brand_name || null,
+        payoff: ov.payoff || null,
         customized: !!overrides[dest]
       };
     }
@@ -3280,7 +3407,7 @@ router.put('/settings/branding/:destination', adminAuth('poi_owner'), async (req
       return res.status(400).json({ success: false, error: { code: 'INVALID_DESTINATION', message: 'Unknown destination' } });
     }
 
-    const { primary, secondary, accent, chatbotName } = req.body;
+    const { primary, secondary, accent, chatbotName, brand_name, payoff } = req.body;
     const hexRegex = /^#[0-9a-fA-F]{6}$/;
 
     if (primary && !hexRegex.test(primary)) {
@@ -3304,6 +3431,8 @@ router.put('/settings/branding/:destination', adminAuth('poi_owner'), async (req
       ...(secondary && { secondary }),
       ...(accent && { accent }),
       ...(chatbotName && { chatbotName: String(chatbotName).slice(0, 50) }),
+      ...(brand_name !== undefined && { brand_name: brand_name ? String(brand_name).slice(0, 100) : null }),
+      ...(payoff !== undefined && { payoff: payoff ? String(payoff).slice(0, 200) : null }),
       updated_at: new Date(),
       updated_by: req.adminUser.email
     };
@@ -3332,6 +3461,90 @@ router.put('/settings/branding/:destination', adminAuth('poi_owner'), async (req
     logger.error('[AdminPortal] Branding update error:', error);
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'An error occurred' } });
   }
+});
+
+/**
+ * POST /settings/branding/:destination/logo
+ * Upload a brand logo for a destination. Accepts PNG, JPG, SVG (max 2MB).
+ * Stores file in public/branding/ and updates MongoDB logo_url.
+ */
+const BRANDING_DIR = process.env.NODE_ENV === 'production'
+  ? '/var/www/api.holidaibutler.com/platform-core/public/branding'
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public/branding');
+
+const logoStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    fs.mkdirSync(BRANDING_DIR, { recursive: true });
+    cb(null, BRANDING_DIR);
+  },
+  filename: (req, file, cb) => {
+    const dest = req.params.destination.toLowerCase();
+    const ext = path.extname(file.originalname).toLowerCase() || '.png';
+    cb(null, `${dest}_logo${ext}`);
+  }
+});
+
+const logoUpload = multer({
+  storage: logoStorage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/png', 'image/jpeg', 'image/svg+xml'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PNG, JPG, and SVG files are allowed'));
+    }
+  }
+});
+
+router.post('/settings/branding/:destination/logo', adminAuth('poi_owner'), (req, res) => {
+  const dest = req.params.destination.toLowerCase();
+  if (!DEFAULT_BRAND_CONFIG[dest]) {
+    return res.status(400).json({ success: false, error: { code: 'INVALID_DESTINATION', message: 'Unknown destination' } });
+  }
+
+  logoUpload.single('logo')(req, res, async (err) => {
+    if (err) {
+      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 2MB)' : err.message;
+      return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: { code: 'NO_FILE', message: 'No file uploaded' } });
+    }
+
+    try {
+      const logoUrl = `/branding/${req.file.filename}`;
+
+      // Update MongoDB
+      if (mongoose.connection.readyState === 1) {
+        const db = mongoose.connection.db;
+        await db.collection('brand_configurations').updateOne(
+          { destination: dest },
+          { $set: { logo_url: logoUrl, updated_at: new Date(), updated_by: req.adminUser.email } },
+          { upsert: true }
+        );
+
+        // Audit log
+        try {
+          await db.collection('audit_logs').insertOne({
+            action: 'branding_logo_uploaded',
+            destination: dest,
+            admin_id: req.adminUser.id || req.adminUser.userId,
+            admin_email: req.adminUser.email,
+            changes: { logo_url: logoUrl, filename: req.file.filename, size: req.file.size },
+            timestamp: new Date(),
+            actor: { type: 'admin', name: 'admin-portal' }
+          });
+        } catch { /* non-critical */ }
+      }
+
+      res.json({ success: true, data: { logo_url: logoUrl } });
+    } catch (error) {
+      logger.error('[AdminPortal] Logo upload error:', error);
+      res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'An error occurred' } });
+    }
+  });
 });
 
 // ============================================================
@@ -3639,8 +3852,8 @@ router.post('/users', adminAuth('platform_admin'), async (req, res) => {
     const dests = JSON.stringify(allowed_destinations || ['calpe', 'texel']);
 
     await mysqlSequelize.query(
-      `INSERT INTO admin_users (id, email, password, first_name, last_name, role, allowed_destinations, status, email_verified, created_by_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, NOW(), NOW())`,
+      `INSERT INTO admin_users (id, email, password, first_name, last_name, role, allowed_destinations, permissions, status, email_verified, created_by_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, '{}', 'active', 1, ?, NOW(), NOW())`,
       { replacements: [userId, email, hashedPassword, firstName, lastName || '', role, dests, req.adminUser.id] }
     );
 
@@ -3751,6 +3964,14 @@ router.put('/users/:id', adminAuth('platform_admin'), async (req, res) => {
       return res.status(400).json({
         success: false,
         error: { code: 'SELF_DEMOTION', message: 'You cannot change your own role.' }
+      });
+    }
+
+    // Prevent self-status change (e.g. suspending yourself)
+    if (id === req.adminUser.id && status && status !== current[0].status) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'SELF_STATUS_CHANGE', message: 'You cannot change your own status.' }
       });
     }
 

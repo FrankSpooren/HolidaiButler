@@ -45,6 +45,7 @@
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.6.3",
+    "multer": "^2.0.2",
     "mysql2": "^3.6.5",
     "node-cron": "^3.0.3",
     "openai": "^4.77.0",

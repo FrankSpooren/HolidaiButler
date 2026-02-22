@@ -405,7 +405,7 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
           </Typography>
           {!isLoading && (
             <Typography variant="body2" color="text.secondary">
-              ID: {poi.id} | {poi.destination_id === 2 ? '\uD83C\uDDF3\uD83C\uDDF1 Texel' : '\uD83C\uDDEA\uD83C\uDDF8 Calpe'} | {poi.category}
+              ID: {poi.id} | {poi.destination_id === 2 ? '🇳🇱 Texel' : '🇪🇸 Calpe'} | {poi.category}{poi.subcategory ? ` > ${poi.subcategory}` : ''}
             </Typography>
           )}
         </Box>
@@ -548,10 +548,13 @@ function POIEditDialog({ poiId, onClose, onSaved }) {
   const [descriptions, setDescriptions] = useState({});
   const [activeState, setActiveState] = useState(null);
   const [categoryValue, setCategoryValue] = useState('');
+  const [subcategoryValue, setSubcategoryValue] = useState('');
   const [initialized, setInitialized] = useState(false);
 
   const poi = data?.data?.poi || {};
   const categories = catData?.data?.categories || [];
+  const subcatMap = catData?.data?.subcategories || {};
+  const subcatOptions = subcatMap[categoryValue] || [];
 
   // Initialize form when data loads
   if (!isLoading && poi.id && !initialized) {
@@ -562,6 +565,7 @@ function POIEditDialog({ poiId, onClose, onSaved }) {
     setDescriptions(descs);
     setActiveState(poi.is_active ? 'true' : 'false');
     setCategoryValue(poi.category || '');
+    setSubcategoryValue(poi.subcategory || '');
     setInitialized(true);
   }
 
@@ -569,7 +573,8 @@ function POIEditDialog({ poiId, onClose, onSaved }) {
     const payload = {
       descriptions,
       is_active: activeState === 'true',
-      category: categoryValue
+      category: categoryValue,
+      subcategory: subcategoryValue || null
     };
     try {
       await updateMutation.mutateAsync({ id: poiId, data: payload });
@@ -616,10 +621,23 @@ function POIEditDialog({ poiId, onClose, onSaved }) {
                   size="small"
                   options={categories.map(c => c.name)}
                   value={categoryValue}
-                  onChange={(_e, v) => setCategoryValue(v || '')}
-                  onInputChange={(_e, v) => setCategoryValue(v || '')}
+                  onChange={(_e, v) => { setCategoryValue(v || ''); setSubcategoryValue(''); }}
+                  onInputChange={(_e, v) => { setCategoryValue(v || ''); }}
                   renderInput={(params) => (
                     <TextField {...params} label={t('pois.table.category')} />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <Autocomplete
+                  freeSolo
+                  size="small"
+                  options={subcatOptions}
+                  value={subcategoryValue}
+                  onChange={(_e, v) => setSubcategoryValue(v || '')}
+                  onInputChange={(_e, v) => setSubcategoryValue(v || '')}
+                  renderInput={(params) => (
+                    <TextField {...params} label={t('pois.filter.subcategory')} />
                   )}
                 />
               </Grid>

@@ -81,13 +81,33 @@
       "showMore": "Show more",
       "showLess": "Show less"
     },
+    "tabs": {
+      "profile": "Profile",
+      "status": "Status",
+      "configuration": "Configuration",
+      "warnings": "Warnings"
+    },
     "detail": {
       "errorTitle": "Error",
       "warningTitle": "Warning",
       "checkLogs": "Check PM2 logs for more details",
       "tasks": "Tasks",
       "destinationStatus": "Status per destination",
-      "duration": "Last duration"
+      "duration": "Last duration",
+      "description": "Description",
+      "monitoringScope": "Monitoring Scope",
+      "outputTitle": "Output",
+      "outputType": "Type",
+      "outputFrequency": "Frequency",
+      "outputRecipients": "Recipients",
+      "dependencies": "Dependencies",
+      "scheduledJobs": "Scheduled Jobs",
+      "recentActivity": "Recent Activity",
+      "lastStatus": "Last status",
+      "recommendedAction": "Recommended Action",
+      "recentErrors": "Recent Errors",
+      "copied": "Copied to clipboard",
+      "copyCommand": "Copy command"
     },
     "config": {
       "title": "Agent configuration",
@@ -99,7 +119,8 @@
       "active": "Agent active",
       "save": "Save",
       "saving": "Saving...",
-      "saved": "Agent configuration saved"
+      "saved": "Agent configuration saved",
+      "addTask": "Add new task..."
     },
     "partial": "Some data sources are unavailable. Displayed data may be incomplete.",
     "noResults": "No agents found for the selected filters.",
@@ -136,6 +157,7 @@
       "content": "Content",
       "status": "Status",
       "sortBy": "Sort by",
+      "subcategory": "Subcategory",
       "sortName": "Name",
       "sortRating": "Rating",
       "sortUpdated": "Last updated",
@@ -323,7 +345,15 @@
       "chatbot": "Chatbot",
       "customized": "Customized",
       "editTitle": "Edit Branding",
-      "saved": "Branding saved successfully"
+      "saved": "Branding saved successfully",
+      "brandName": "Brand name",
+      "payoff": "Payoff / Tagline",
+      "logo": "Logo",
+      "uploadLogo": "Upload logo",
+      "uploading": "Uploading...",
+      "logoUploaded": "Logo uploaded successfully",
+      "logoTooLarge": "File too large (max 2MB)",
+      "logoUrl": "Logo URL"
     },
     "audit": {
       "title": "Admin Audit Log",
@@ -414,6 +444,7 @@
       "passwordWeak": "Password does not meet all requirements",
       "lastNameRequired": "Last name is required"
     },
+    "selfEditWarning": "You are editing your own account. Role and status cannot be changed.",
     "password": {
       "minLength": "At least 12 characters",
       "uppercase": "At least 1 uppercase letter (A-Z)",

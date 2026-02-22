@@ -304,7 +304,7 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell align="right">
                       <Tooltip title={t('users.edit')}>
-                        <IconButton size="small" onClick={() => openEdit(user)} disabled={isSelf(user)}>
+                        <IconButton size="small" onClick={() => openEdit(user)}>
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -413,6 +413,7 @@ export default function UsersPage() {
         <DialogContent>
           {formErrors.submit && <Alert severity="error" sx={{ mb: 2 }}>{formErrors.submit}</Alert>}
           <Alert severity="info" sx={{ mb: 2 }}>{editUser?.email}</Alert>
+          {isSelf(editUser) && <Alert severity="warning" sx={{ mb: 1 }}>{t('users.selfEditWarning')}</Alert>}
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12} md={6}>
               <TextField size="small" fullWidth label={t('users.fields.firstName')}
@@ -423,7 +424,7 @@ export default function UsersPage() {
                 value={formData.lastName} onChange={e => setFormData(d => ({ ...d, lastName: e.target.value }))} />
             </Grid>
             <Grid item xs={12} md={6}>
-              <FormControl size="small" fullWidth>
+              <FormControl size="small" fullWidth disabled={isSelf(editUser)}>
                 <InputLabel>{t('users.fields.role')}</InputLabel>
                 <Select value={formData.role} label={t('users.fields.role')}
                   onChange={e => setFormData(d => ({ ...d, role: e.target.value }))}>
@@ -432,7 +433,7 @@ export default function UsersPage() {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
-              <FormControl size="small" fullWidth>
+              <FormControl size="small" fullWidth disabled={isSelf(editUser)}>
                 <InputLabel>{t('users.fields.status')}</InputLabel>
                 <Select value={formData.status} label={t('users.fields.status')}
                   onChange={e => setFormData(d => ({ ...d, status: e.target.value }))}>
