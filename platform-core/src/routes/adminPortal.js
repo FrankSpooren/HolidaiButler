@@ -1891,6 +1891,7 @@ router.get('/pois/:id', adminAuth('reviewer'), async (req, res) => {
               : img.image_url,
             localPath: img.local_path,
             source: img.source,
+            display_order: img.display_order ?? idx,
             isPrimary: idx === 0
           })),
           reviewSummary: {
