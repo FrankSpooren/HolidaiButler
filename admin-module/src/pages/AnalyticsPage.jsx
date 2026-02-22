@@ -26,7 +26,8 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, BarChart, Bar, Area, AreaChart
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
-import { useAnalyticsOverview, useChatbotAnalytics, useAnalyticsTrend, useAnalyticsSnapshot } from '../hooks/useAnalytics.js';
+import { useAnalyticsOverview, useChatbotAnalytics, useAnalyticsTrend, useAnalyticsSnapshot, usePageviewAnalytics } from '../hooks/useAnalytics.js';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { analyticsService } from '../api/analyticsService.js';
 import useDestinationStore from '../stores/destinationStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
@@ -113,6 +114,102 @@ function TrendDialog({ open, onClose, metric, destination, t }) {
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PageviewSection({ destination, t }) {
+  const { data, isLoading } = usePageviewAnalytics(destination);
+  const pv = data?.data || {};
+  const trend = pv.trend || [];
+  const byType = pv.by_page_type || [];
+  const topPois = pv.top_pois || [];
+
+  return (
+    <Card sx={{ p: 3, mt: 3 }}>
+      <Typography variant="h6" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <VisibilityIcon /> {t('analytics.pageviews.title')}
+      </Typography>
+      {pv.first_date && (
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+          {t('analytics.pageviews.dataAvailableSince')} {new Date(pv.first_date).toLocaleDateString('nl-NL')}
+        </Typography>
+      )}
+      {isLoading ? <Skeleton variant="rounded" height={200} /> : (
+        <>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={6} md={3}>
+              <Box sx={{ textAlign: 'center', p: 1.5, bgcolor: 'action.hover', borderRadius: 2 }}>
+                <Typography variant="h5" fontWeight={700}>{formatNumber(pv.total || 0)}</Typography>
+                <Typography variant="caption" color="text.secondary">{t('analytics.pageviews.totalViews')}</Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Box sx={{ textAlign: 'center', p: 1.5, bgcolor: 'action.hover', borderRadius: 2 }}>
+                <Typography variant="h5" fontWeight={700}>{formatNumber(pv.today || 0)}</Typography>
+                <Typography variant="caption" color="text.secondary">{t('analytics.pageviews.today')}</Typography>
+              </Box>
+            </Grid>
+          </Grid>
+          {trend.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('analytics.pageviews.trend')}</Typography>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={trend}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={d => d?.slice(5)} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <ReTooltip />
+                  <Bar dataKey="views" fill="#1976d2" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          )}
+          {byType.length > 0 && (
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('analytics.pageviews.byType')}</Typography>
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie data={byType} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label={({ type, count }) => `${type} (${count})`}>
+                      {byType.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <ReTooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Grid>
+              {topPois.length > 0 && (
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('analytics.pageviews.topPois')}</Typography>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>#</TableCell>
+                        <TableCell>POI</TableCell>
+                        <TableCell align="right">{t('analytics.pageviews.views')}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {topPois.map((poi, i) => (
+                        <TableRow key={poi.poi_id}>
+                          <TableCell>{i + 1}</TableCell>
+                          <TableCell>{poi.name || `POI #${poi.poi_id}`}</TableCell>
+                          <TableCell align="right">{poi.views}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Grid>
+              )}
+            </Grid>
+          )}
+          {!pv.total && (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              {t('analytics.pageviews.noData')}
+            </Typography>
+          )}
+        </>
+      )}
+    </Card>
   );
 }
 
@@ -456,7 +553,7 @@ export default function AnalyticsPage() {
                   <TableRow key={poi.id} hover>
                     <TableCell>{i + 1}</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>{poi.name}</TableCell>
-                    <TableCell>{poi.destination_id === 2 ? '\uD83C\uDDF3\uD83C\uDDF1 Texel' : '\uD83C\uDDEA\uD83C\uDDF8 Calpe'}</TableCell>
+                    <TableCell>{poi.destination_id === 2 ? '🇳🇱 Texel' : '🇪🇸 Calpe'}</TableCell>
                     <TableCell align="center">{poi.reviewCount}</TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.3 }}>
@@ -471,6 +568,9 @@ export default function AnalyticsPage() {
           </TableContainer>
         </Card>
       )}
+
+      {/* Pageview Analytics (Fase 9B) */}
+      <PageviewSection destination={destParam} t={t} />
 
       {/* Trend Drill-down Dialog */}
       <TrendDialog

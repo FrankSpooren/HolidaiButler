@@ -267,6 +267,17 @@
     "trend": {
       "title": "Trend",
       "noData": "Geen data voor de geselecteerde periode"
+    },
+    "pageviews": {
+      "title": "Paginabezoek",
+      "totalViews": "Totaal views",
+      "today": "Vandaag",
+      "trend": "Views per maand",
+      "byType": "Per paginatype",
+      "topPois": "Meest bekeken POIs",
+      "views": "Views",
+      "noData": "Nog geen paginabezoek data beschikbaar",
+      "dataAvailableSince": "Data beschikbaar vanaf"
     }
   },
   "settings": {
@@ -366,9 +377,9 @@
     "resetPasswordNote": "Het huidige wachtwoord wordt ongeldig",
     "roles": {
       "platform_admin": "Platform Admin",
-      "poi_owner": "POI Eigenaar",
-      "editor": "Redacteur",
-      "reviewer": "Reviewer"
+      "poi_owner": "POI Owner",
+      "editor": "Content Editor",
+      "reviewer": "Content Reviewer"
     },
     "statuses": {
       "active": "Actief",
@@ -400,7 +411,20 @@
     },
     "errors": {
       "required": "Dit veld is verplicht",
-      "passwordWeak": "Min. 12 tekens, 1 hoofdletter, 1 cijfer"
+      "passwordWeak": "Wachtwoord voldoet niet aan alle vereisten",
+      "lastNameRequired": "Achternaam is verplicht"
+    },
+    "password": {
+      "minLength": "Minimaal 12 karakters",
+      "uppercase": "Minimaal 1 hoofdletter (A-Z)",
+      "lowercase": "Minimaal 1 kleine letter (a-z)",
+      "digit": "Minimaal 1 cijfer (0-9)",
+      "special": "Minimaal 1 speciaal teken (!@#$%&*)",
+      "notEmail": "Bevat geen deel van het e-mailadres",
+      "notName": "Bevat geen deel van de naam",
+      "weak": "Zwak",
+      "medium": "Matig",
+      "strong": "Sterk"
     }
   },
   "common": {

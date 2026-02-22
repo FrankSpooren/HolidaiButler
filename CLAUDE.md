@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.32.1
+> **Versie**: 3.33.0
 > **Laatst bijgewerkt**: 22 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -449,6 +449,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 8E** | Admin Portal Hardening & UX Upgrade (agent ecosystem fixes, content audit, destination filter, sorting, analytics, agent profielen, i18n DE/ES, taalversie keuze) | ✅ COMPLEET | 21-02-2026 |
 | **Fase 9A** | Admin Portal Enhancement (RBAC + Undo + Agent Config, Chatbot Analytics, POI Category/Image/Branding, Dark Mode — 16 nieuwe endpoints, 35 totaal) | ✅ COMPLEET | 21-02-2026 |
 | **Fase 9A-FIX** | Admin Login Fix (rate limiter 5→15, account lockout 5→10/5min, Sessions UUID mismatch non-blocking) | ✅ COMPLEET | 22-02-2026 |
+| **Fase 9B** | Admin Portal Bug Fix & UX Hardening (6 P0 bugs, 13 UX fixes, pageview tracking, enterprise password policy — 2 nieuwe endpoints, 37 totaal) | ✅ COMPLEET | 22-02-2026 |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -1098,7 +1099,7 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 
 | Endpoint | Functie | Auth | Beschrijving |
 |----------|---------|------|-------------|
-| POST /auth/login | Login | Rate limit (5/15min) | bcrypt verify + JWT (8h) + refresh (7d) |
+| POST /auth/login | Login | Rate limit (15/15min) | bcrypt verify + JWT (8h) + refresh (7d) |
 | GET /auth/me | Profiel | Admin token | User data + role |
 | POST /auth/refresh | Token refresh | Refresh token | Nieuwe access token |
 | POST /auth/logout | Uitloggen | Admin token | Session cleanup |
@@ -1366,6 +1367,8 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 - 79 Texel POIs ES vertalingen toegevoegd (0 resterend missing)
 - Hetzner: `/root/fase_8e_missing_es.py` + cron backup job
 
+**Test Resultaten**: 26/26 PASS
+
 ### Fase 9A Resultaten (Admin Portal Enhancement — 21/02/2026)
 - **Status**: COMPLEET (21-02-2026)
 - **Kosten**: EUR 0 (pure code, geen LLM calls)
@@ -1428,6 +1431,81 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 | MODIFIED | `admin-module/src/i18n/en.json` (+users, +branding, +agent config keys) |
 | MODIFIED | `admin-module/src/i18n/de.json` (+users, +branding, +agent config keys) |
 | MODIFIED | `admin-module/src/i18n/es.json` (+users, +branding, +agent config keys) |
+
+**Test Resultaten**: 34/34 PASS
+
+### Fase 9B Resultaten (Admin Portal Bug Fix & UX Hardening — 22/02/2026)
+- **Status**: COMPLEET (22-02-2026)
+- **Kosten**: EUR 0 (pure code, geen LLM calls)
+- **Doel**: 6 P0 bugs fixen, 13 UX verbeteringen, pageview tracking, enterprise password policy
+
+**BLOK 1: P0 Bug Fixes (6)**:
+
+| Bug | Fix | Bestand |
+|-----|-----|---------|
+| Unicode vlag-emoji's raw escaped | Literal emoji characters (🇳🇱 🇪🇸) i.p.v. `\uD83C\uDDEA\uD83C\uDDF8` | AnalyticsPage.jsx |
+| Agent takenpakket raw `\u2022` | Literal `•` bullet characters | AgentsPage.jsx |
+| De Bode destination status "Unknown" | `destinationStatus` object met per-destination health | AgentsPage.jsx |
+| POST /users 500 error | firstName/lastName/email/password/role vereist, validatePassword errors | adminPortal.js |
+| Image reorder niet persistent | `display_order` UPDATE + Redis cache invalidation | adminPortal.js |
+| Audit log: geen actor type badge | 🤖 agent / ⚙️ system / 👤 admin badge + tooltip | SettingsPage.jsx |
+
+**BLOK 2: UX Fixes (13)**:
+
+| Fix | Beschrijving |
+|-----|-------------|
+| Reviews destination filter | Stats cards updaten bij destination wissel |
+| Agent warning details | Concrete details + aanbevolen actie in popup |
+| Agent descriptions NL/EN | Consistent in geselecteerde taal |
+| Agent config popup 5-sectie | Identiteit, taken, schema, config, warning secties |
+| Scheduled Jobs beschrijving | Kolom met taakbeschrijving toegevoegd |
+| Category chip kleuren | 5 maximaal onderscheidende kleuren |
+| POI frontend link | Environment-aware (dev→dev.texelmaps.nl) |
+| Branding merknaam + pay-off | Extra velden in branding UI |
+| is_active audit | Gedocumenteerd (116 inactief, bewust) |
+| Rolnamen consistent | POI Owner / Content Editor / Content Reviewer (4 talen) |
+| Enterprise password policy | 7-punts checklist, real-time validatie, sterkte-indicator |
+| Gebruikersnamen | lastName verplicht (backend + frontend), admin user DB fix |
+| Audit actor badges | 🤖/⚙️/👤 visueel onderscheid in audit log |
+
+**BLOK 3: Pageview Tracking (GDPR-compliant)**:
+
+| Component | Beschrijving |
+|-----------|-------------|
+| MySQL `page_views` tabel | BIGINT id, destination_id, page_type ENUM(6), page_url, poi_id, session_id, indexes |
+| POST /api/v1/track | Publiek endpoint, rate limit 100/min, fire-and-forget, geen PII |
+| `usePageTracking.ts` hook | Customer-portal, getPageType() mapping, extractPoiId(), auto op route change |
+| GET /analytics/pageviews | Admin endpoint, total/today/trend/by_type/top_pois, destination filter |
+| AnalyticsPage sectie | KPI cards, bar chart trend, pie chart page types, top 10 POIs tabel |
+
+**BLOK 4: Documentatie Fixes**:
+- CLAUDE.md: Rate limiter 5→15/15min, 8E test count 26/26, 9A test count 34/34, Fase 9B overview rij
+- Master Strategie v7.0: 9A-FIX + 9B rijen, budget, lessons learned (7), decisions log (4), Sessions UUID workaround
+
+**Totalen**: 2 nieuwe endpoints (37 totaal), 1 nieuw bestand, 15 gewijzigde bestanden
+
+**Bestanden**:
+
+| Actie | Bestand |
+|-------|---------|
+| MODIFIED | `platform-core/src/routes/adminPortal.js` (v3.1.0, 36 admin endpoints + GET /analytics/pageviews) |
+| MODIFIED | `platform-core/src/index.js` (+POST /api/v1/track met rate limiting) |
+| NEW | `customer-portal/frontend/src/shared/hooks/usePageTracking.ts` |
+| MODIFIED | `customer-portal/frontend/src/layouts/RootLayout.tsx` (+usePageTracking) |
+| MODIFIED | `admin-module/src/pages/UsersPage.jsx` (+enterprise password checklist, +lastName required) |
+| MODIFIED | `admin-module/src/pages/SettingsPage.jsx` (+audit actor badges 🤖/⚙️/👤) |
+| MODIFIED | `admin-module/src/pages/AnalyticsPage.jsx` (+PageviewSection, unicode emoji fix) |
+| MODIFIED | `admin-module/src/pages/AgentsPage.jsx` (unicode bullet/flag fix — eerder in 8E) |
+| MODIFIED | `admin-module/src/api/analyticsService.js` (+getPageviews) |
+| MODIFIED | `admin-module/src/hooks/useAnalytics.js` (+usePageviewAnalytics) |
+| MODIFIED | `admin-module/src/i18n/nl.json` (+password, +pageviews, +rolnamen keys) |
+| MODIFIED | `admin-module/src/i18n/en.json` (+password, +pageviews, +rolnamen keys) |
+| MODIFIED | `admin-module/src/i18n/de.json` (+password, +pageviews, +rolnamen keys) |
+| MODIFIED | `admin-module/src/i18n/es.json` (+password, +pageviews, +rolnamen keys) |
+| MODIFIED | `CLAUDE.md` (v3.33.0) |
+| MODIFIED | `docs/strategy/HolidaiButler_Master_Strategie.md` (v7.0) |
+
+**Test Resultaten**: 28/28 PASS
 
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
@@ -1582,7 +1660,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.9.1 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.0 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase 2 Docs | `docs/agents/fase2/` | - |
 | Fase 3 Docs | `docs/agents/fase3/` | - |
@@ -1597,6 +1675,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.33.0** | **2026-02-22** | **Fase 9B Admin Portal Bug Fix & UX Hardening COMPLEET: Blok 1: 6 P0 bugs (unicode emoji/bullet rendering, agent destination status Unknown→actual, user creation 500→201 met volledige validatie, image reorder persistence, audit log actor type badges 🤖/⚙️/👤). Blok 2: 13 UX fixes (reviews destination filter, agent warning details+actions, NL/EN consistency, 5-sectie agent config popup, scheduled job descriptions, category chip kleuren, environment-aware frontend links, branding merknaam+payoff, is_active audit, rolnamen consistent 4 talen, enterprise password policy 7-punts checklist, gebruikersnamen verplicht, audit actor badges). Blok 3: Pageview tracking GDPR-compliant (page_views MySQL tabel, POST /api/v1/track fire-and-forget met rate limit 100/min, GET /analytics/pageviews, AnalyticsPage sectie KPI+charts). Blok 4: 6 doc fixes. 2 nieuwe endpoints (37 totaal). adminPortal.js v3.1.0. 28/28 tests PASS. Kosten: EUR 0. CLAUDE.md v3.33.0, Master Strategie v7.0.** |
 | **3.32.1** | **2026-02-22** | **Fase 9A-FIX Admin Login Fix: 3 bugs opgelost bij live testing. (1) Rate limiter te streng: authRateLimiter 5→15 req/15min. (2) Account lockout te agressief: threshold 5→10 attempts, lock duration 15→5 min. (3) Sessions.user_id INT(11) vs admin_users CHAR(36) UUID mismatch → INSERT "Data truncated" crash. Fix: Sessions INSERT non-blocking (.catch). Admin wachtwoord: HolidaiAdmin2026. Kosten: EUR 0. CLAUDE.md v3.32.1, Master Strategie v6.9.1.** |
 | **3.32.0** | **2026-02-21** | **Fase 9A Admin Portal Enhancement COMPLEET: 3 sub-fases. 9A-1: RBAC user management (CRUD, 4 rollen, soft-delete, password reset), audit log undo (reversible actions + MongoDB snapshot), agent config editing (displayName, emoji, description, active). 9A-2: Chatbot analytics (sessions, messages, avg response, fallback rate, languages), analytics trend API, analytics snapshot. 9A-3: POI category management (filter dropdown + autocomplete), image ranking (display_order, reorder UI), branding UI (color management per destination), dark mode (Zustand + MUI theme factory). 16 nieuwe endpoints (35 totaal). 4 nieuwe bestanden. Kosten: EUR 0. CLAUDE.md v3.32.0, Master Strategie v6.9.** |
 | **3.31.0** | **2026-02-21** | **Fase 8E Admin Portal Hardening & UX Upgrade COMPLEET: BLOK 1: Agent ecosystem fixes (Backup Health regex+dir, dailyBriefing URGENT subject, De Maestro calculateAgentStatus 'completed'/'success' fix → 18/18 HEALTHY, daily MySQL backup cron). BLOK 2: Content audit (14 asterisk POIs fixed, 79 missing ES translations batch-vertaald, 121 inactive POIs gedocumenteerd). BLOK 3: 11 UX fixes (global destination filter+vlaggen, sortable columns, analytics trends, reviews destination filter, POI detail link, agent profielen NL, categorie kleuren, scheduled jobs popup, taalversie NL/EN/DE/ES). BLOK 4: 5 doc fixes (Agent Masterplan versie, endpoint count, version refs). Kosten: ~EUR 0,50. CLAUDE.md v3.31.0, Master Strategie v6.8.** |

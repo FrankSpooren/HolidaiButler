@@ -94,14 +94,32 @@ export default function UsersPage() {
     setCreateOpen(true);
   };
 
+  // Password policy checks (real-time)
+  const getPasswordChecks = (pw) => {
+    if (!pw) return [];
+    return [
+      { label: t('users.password.minLength'), pass: pw.length >= 12 },
+      { label: t('users.password.uppercase'), pass: /[A-Z]/.test(pw) },
+      { label: t('users.password.lowercase'), pass: /[a-z]/.test(pw) },
+      { label: t('users.password.digit'), pass: /[0-9]/.test(pw) },
+      { label: t('users.password.special'), pass: /[!@#$%^&*()\-_+=.,;:?]/.test(pw) },
+      { label: t('users.password.notEmail'), pass: !formData.email || !pw.toLowerCase().includes(formData.email.split('@')[0]?.toLowerCase()) },
+      { label: t('users.password.notName'), pass: !formData.firstName || formData.firstName.length < 2 || !pw.toLowerCase().includes(formData.firstName.toLowerCase()) }
+    ];
+  };
+
+  const passwordChecks = getPasswordChecks(formData.password);
+  const passwordStrength = passwordChecks.filter(c => c.pass).length;
+  const passwordStrengthLabel = passwordStrength <= 3 ? t('users.password.weak') : passwordStrength <= 5 ? t('users.password.medium') : t('users.password.strong');
+  const passwordStrengthColor = passwordStrength <= 3 ? 'error.main' : passwordStrength <= 5 ? 'warning.main' : 'success.main';
+
   const handleCreate = async () => {
     const errors = {};
     if (!formData.email) errors.email = t('users.errors.required');
     if (!formData.firstName) errors.firstName = t('users.errors.required');
-    if (!formData.password || formData.password.length < 12) errors.password = t('users.errors.passwordWeak');
-    if (formData.password && (!/[A-Z]/.test(formData.password) || !/[0-9]/.test(formData.password))) {
-      errors.password = t('users.errors.passwordWeak');
-    }
+    if (!formData.lastName) errors.lastName = t('users.errors.lastNameRequired');
+    if (formData.password && passwordChecks.some(c => !c.pass)) errors.password = t('users.errors.passwordWeak');
+    if (!formData.password) errors.password = t('users.errors.required');
     if (Object.keys(errors).length) { setFormErrors(errors); return; }
 
     try {
@@ -333,7 +351,22 @@ export default function UsersPage() {
             <Grid item xs={12} md={6}>
               <TextField size="small" fullWidth required label={t('users.fields.password')} type="password"
                 value={formData.password} onChange={e => setFormData(d => ({ ...d, password: e.target.value }))}
-                error={!!formErrors.password} helperText={formErrors.password || t('users.passwordHint')} />
+                error={!!formErrors.password} helperText={formErrors.password} />
+              {formData.password && (
+                <Box sx={{ mt: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    <Box sx={{ flex: 1, height: 4, borderRadius: 2, bgcolor: 'action.hover' }}>
+                      <Box sx={{ width: `${(passwordStrength / 7) * 100}%`, height: '100%', borderRadius: 2, bgcolor: passwordStrengthColor, transition: 'width 0.3s' }} />
+                    </Box>
+                    <Typography variant="caption" sx={{ color: passwordStrengthColor, fontWeight: 600, minWidth: 40 }}>{passwordStrengthLabel}</Typography>
+                  </Box>
+                  {passwordChecks.map((c, i) => (
+                    <Typography key={i} variant="caption" sx={{ display: 'block', color: c.pass ? 'success.main' : 'text.secondary', lineHeight: 1.6 }}>
+                      {c.pass ? '\u2705' : '\u274C'} {c.label}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField size="small" fullWidth required label={t('users.fields.firstName')}
@@ -341,8 +374,9 @@ export default function UsersPage() {
                 error={!!formErrors.firstName} helperText={formErrors.firstName} />
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField size="small" fullWidth label={t('users.fields.lastName')}
-                value={formData.lastName} onChange={e => setFormData(d => ({ ...d, lastName: e.target.value }))} />
+              <TextField size="small" fullWidth required label={t('users.fields.lastName')}
+                value={formData.lastName} onChange={e => setFormData(d => ({ ...d, lastName: e.target.value }))}
+                error={!!formErrors.lastName} helperText={formErrors.lastName} />
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl size="small" fullWidth>

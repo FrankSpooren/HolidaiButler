@@ -53,6 +53,8 @@ import adminPortalRoutes from './routes/adminPortal.js';
 import User from './models/User.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
+import rateLimit from 'express-rate-limit';
+import { mysqlSequelize } from './config/database.js';
 import prometheusMiddleware, { metricsEndpoint } from './middleware/prometheus.js';
 import correlationIdMiddleware from './middleware/correlationId.js';
 import metricsService from './services/metrics.js';
@@ -166,6 +168,22 @@ app.use('/api/v1/consent', consentRoutes); // User Privacy Consent Management
 app.use('/api/consent', consentRoutes); // Legacy route (no v1)
 app.use('/api/admin/images/refresh', imageRefreshRoutes); // POI Image Refresh (Admin)
 app.use('/api/v1/admin-portal', adminPortalRoutes); // Admin Portal (Fase 8C-0)
+
+// Pageview tracking — public, fire-and-forget (Fase 9B)
+const trackRateLimit = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: false, legacyHeaders: false });
+app.post('/api/v1/track', trackRateLimit, (req, res) => {
+  res.status(204).end();
+  const { destination, page_type, url, poi_id } = req.body || {};
+  const validTypes = ['home', 'poi_list', 'poi_detail', 'chatbot', 'search', 'other'];
+  if (!destination || !validTypes.includes(page_type)) return;
+  const destId = destination === 'texel' ? 2 : destination === 'calpe' ? 1 : null;
+  if (!destId) return;
+  mysqlSequelize.query(
+    `INSERT INTO page_views (destination_id, page_type, page_url, poi_id, session_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,
+    { replacements: [destId, page_type, (url || '').substring(0, 500), poi_id || null, null] }
+  ).catch(() => {});
+});
+
 app.use('/api/v1', apiGateway); // API Gateway for all modules
 
 /**

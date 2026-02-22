@@ -267,6 +267,17 @@
     "trend": {
       "title": "Trend",
       "noData": "No data for the selected period"
+    },
+    "pageviews": {
+      "title": "Page Views",
+      "totalViews": "Total views",
+      "today": "Today",
+      "trend": "Views per month",
+      "byType": "By page type",
+      "topPois": "Most viewed POIs",
+      "views": "Views",
+      "noData": "No pageview data available yet",
+      "dataAvailableSince": "Data available since"
     }
   },
   "settings": {
@@ -367,8 +378,8 @@
     "roles": {
       "platform_admin": "Platform Admin",
       "poi_owner": "POI Owner",
-      "editor": "Editor",
-      "reviewer": "Reviewer"
+      "editor": "Content Editor",
+      "reviewer": "Content Reviewer"
     },
     "statuses": {
       "active": "Active",
@@ -400,7 +411,20 @@
     },
     "errors": {
       "required": "This field is required",
-      "passwordWeak": "Min. 12 chars, 1 uppercase, 1 digit"
+      "passwordWeak": "Password does not meet all requirements",
+      "lastNameRequired": "Last name is required"
+    },
+    "password": {
+      "minLength": "At least 12 characters",
+      "uppercase": "At least 1 uppercase letter (A-Z)",
+      "lowercase": "At least 1 lowercase letter (a-z)",
+      "digit": "At least 1 digit (0-9)",
+      "special": "At least 1 special character (!@#$%&*)",
+      "notEmail": "Does not contain part of the email",
+      "notName": "Does not contain part of the name",
+      "weak": "Weak",
+      "medium": "Medium",
+      "strong": "Strong"
     }
   },
   "common": {

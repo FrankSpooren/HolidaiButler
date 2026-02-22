@@ -3,6 +3,7 @@ import { Header } from '../shared/components/Header';
 import { Footer } from '../shared/components/Footer';
 import { HoliBotWidget } from '../shared/components/HoliBot';
 import { ScrollToTop } from '../shared/components/ScrollToTop';
+import { usePageTracking } from '../shared/hooks/usePageTracking';
 
 /**
  * RootLayout - Main layout for most pages
@@ -25,6 +26,7 @@ import { ScrollToTop } from '../shared/components/ScrollToTop';
 export function RootLayout() {
   const location = useLocation();
   const isAccountPage = location.pathname === '/account';
+  usePageTracking();
 
   return (
     <div className="min-h-screen bg-bg-gray flex flex-col">

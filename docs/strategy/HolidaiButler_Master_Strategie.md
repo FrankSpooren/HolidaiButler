@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 22 februari 2026
-**Versie**: 6.9.1
+**Versie**: 7.0
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 9A COMPLEET - Admin Portal Enhancement. 3 sub-fases: 9A-1 RBAC + Undo + Agent Config (user management, audit undo, agent config editing), 9A-2 Analytics & Data (chatbot analytics, trend API, snapshot), 9A-3 POI & UX Polish (category management, image ranking, branding UI, dark mode). 16 nieuwe endpoints (19→35 totaal). Kosten: EUR 0.
+**Status**: FASE 9B COMPLEET - Admin Portal Bug Fix & UX Hardening. Blok 1: 6 P0 bugs (unicode, status, 500, image, email, audit actor). Blok 2: 13 UX fixes (reviews filter, agent warnings, descriptions, config popup, scheduled jobs, colors, frontend link, branding, is_active, rolnamen, namen, wachtwoord). Blok 3: Pageview tracking (page_views, POST /track, analytics). Kosten: EUR 0.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.32.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.33.0) in repo root + Hetzner
 
 ---
 
@@ -56,6 +56,8 @@
 | **Fase 8D-FIX** | Admin Portal Bug Fix (12 bugs: response structure mismatches, destination filters, Sentry DSN, UX) | ✅ COMPLEET | 21-02-2026 | 33/33 tests PASS | EUR 0 |
 | **Fase 8E** | Admin Portal Hardening & UX Upgrade (agent ecosystem fixes, content audit, destination filter, sorting, analytics, agent profielen, i18n DE/ES, taalversie) | ✅ COMPLEET | 21-02-2026 | 18/18 agents HEALTHY | ~EUR 0,50 |
 | **Fase 9A** | Admin Portal Enhancement (RBAC + Undo + Agent Config, Chatbot Analytics, POI Category/Image/Branding, Dark Mode — 16 nieuwe endpoints, 35 totaal) | ✅ COMPLEET | 21-02-2026 | Build OK, 0 errors | EUR 0 |
+| **Fase 9A-FIX** | Admin Login Fix (rate limiter 5→15, lockout 5→10/5min, Sessions UUID non-blocking) | ✅ COMPLEET | 22-02-2026 | Login OK | EUR 0 |
+| **Fase 9B** | Admin Portal Bug Fix & UX Hardening (6 P0 bugs, 13 UX fixes, pageview tracking, enterprise password policy — 2 nieuwe endpoints, 37 totaal) | ✅ COMPLEET | 22-02-2026 | 28/28 tests PASS | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -77,6 +79,8 @@
 | Fase 8D-FIX Admin Portal Bug Fix | EUR 0 | EUR 0 | ✅ |
 | Fase 8E Admin Portal Hardening & UX | EUR 1 | EUR 0,50 | ✅ |
 | Fase 9A Admin Portal Enhancement | EUR 0 | EUR 0 | ✅ |
+| Fase 9A-FIX Admin Login Fix | EUR 0 | EUR 0 | ✅ |
+| Fase 9B Admin Portal Bug Fix & UX Hardening | EUR 0 | EUR 0 | ✅ |
 | **Totaal** | **EUR 95** | **EUR 74,41** | **78,3% van budget** |
 
 ### 1.3 Openstaande Componenten
@@ -935,6 +939,20 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - Bugsink/Sentry DSN: keys mogen GEEN hyphens bevatten (Bugsink specifiek)
 - Analytics export retourneert CSV (niet JSON) — test scripts moeten non-JSON responses afhandelen
 
+### Fase 9A-FIX (22/02) - Admin Login Fix
+- Rate limiter: 5 req/15min te streng voor development — 15 req/15min is productie-ready
+- Account lockout: 5 attempts / 15 min lock te agressief — 10 attempts / 5 min lock is enterprise standaard
+- Sessions tabel: `user_id INT(11)` vs admin_users `CHAR(36)` UUID mismatch → non-blocking INSERT met `.catch()` als workaround. Permanente fix: `ALTER TABLE Sessions MODIFY user_id VARCHAR(36)`
+
+### Fase 9B (22/02) - Admin Portal Bug Fix & UX Hardening
+- Unicode: NOOIT escaped sequences (`\uD83C\uDDEA\uD83C\uDDF8`) in JSX source code — altijd literal emoji characters of `{'🇪🇸'}` syntax
+- Enterprise password policy: ALTIJD implementeren VÓÓR eerste user creation — niet achteraf toevoegen
+- Agent detail popup: owner verwacht VOLLEDIG profiel (5 secties), niet minimale metadata — investeer in rijke AGENT_METADATA
+- Image reorder: end-to-end verificatie essentieel (admin → DB → Redis cache invalidation → frontend)
+- Actor type in audit log: essentieel voor traceerbaarheid — admin/agent/system badges geven instant context
+- Pageview tracking: GDPR compliant = geen PII (geen IP, geen user agent) — fire-and-forget met rate limiting
+- Role name consistency: standaardiseer naar Engels in ALLE i18n bestanden voor platform-wide consistency
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -1001,6 +1019,10 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 22-02 | Rate limiter 5→15 req/15min (9A-FIX) | 5 was te streng voor admin testing — locked account na normale gebruik | Claude Code |
 | 22-02 | Account lockout 5→10 attempts, 15→5 min (9A-FIX) | Proportioneler voor admin panel met enkele gebruikers | Claude Code |
 | 22-02 | Sessions INSERT non-blocking (9A-FIX) | Sessions.user_id=INT vs admin_users.id=UUID(CHAR 36) → "Data truncated" crash. Non-blocking .catch() als workaround | Claude Code |
+| 22-02 | Literal emoji in JSX (9B) | Unicode escape sequences gaven rendering problemen in browsers — literal characters altijd veilig | Claude Code |
+| 22-02 | Enterprise password policy (9B) | 12+ chars, uppercase, lowercase, digit, special — standaard enterprise security requirement | Frank |
+| 22-02 | Pageview tracking GDPR compliant (9B) | Geen IP, geen user agent, fire-and-forget — privacy-first analytics | Claude Code |
+| 22-02 | Role names in Engels (9B) | POI Owner / Content Editor / Content Reviewer — consistent in alle 4 talen | Frank |
 
 ---
 
@@ -1017,7 +1039,7 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 337 Texel Accommodation zonder EN | Laag | Geaccepteerd (is_hidden_category) |
 | Opening repetitie ("The scent of" 162x) | Laag | Open |
 | PL/SV kolommen ongebruikt | Laag | Open — kandidaten voor opschonen |
-| Sessions.user_id INT vs admin UUID | Medium | ✅ Gemitigeerd (non-blocking INSERT) |
+| Sessions.user_id INT vs admin UUID | Medium | ⚠️ Workaround (non-blocking INSERT). Permanente fix: ALTER TABLE Sessions MODIFY user_id VARCHAR(36) |
 | SSL cert vervalt 2026-05-11 | Medium | ✅ Gemitigeerd (De Dokter SSL monitoring) |
 | Config structure mismatch (c.id vs c.destination.id) | Hoog | ✅ Gemitigeerd (config mapping fix in BaseAgent + destinationRunner) |
 | Threema Gateway niet geconfigureerd | Medium | Open — env vars niet gezet, dagelijkse smoke test alert |
@@ -1081,6 +1103,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.0** | **22-02-2026** | **Fase 9B Admin Portal Bug Fix & UX Hardening COMPLEET: Blok 1: 6 P0 bugs (unicode emoji fix, agent status Unknown→actual, user creation 500→201, image reorder persistence, daily email severity prefix, audit log actor type). Blok 2: 13 UX fixes (reviews destination filter, agent warning details+actions, NL/EN agent descriptions, extended agent config popup 5-section, scheduled job descriptions, category chip colors, environment-aware frontend links, branding merknaam+payoff, is_active audit, role name consistency, real user names, enterprise password policy). Blok 3: Pageview tracking (page_views tabel, POST /track, GET /analytics/pageviews, AnalyticsPage section). 6 doc fixes (8E test count, 9A test count, MS version refs, 9A-FIX row, rate limiter). 2 nieuwe endpoints (37 totaal). adminPortal.js v3.1.0. 28/28 tests PASS. Kosten: EUR 0. CLAUDE.md v3.33.0.** |
 | **6.9.1** | **22-02-2026** | **Fase 9A-FIX Admin Login Fix: 3 bugs opgelost bij live testing. (1) authRateLimiter 5→15 req/15min. (2) Account lockout threshold 5→10 attempts, lock duration 15→5 min. (3) Sessions.user_id INT(11) vs admin_users CHAR(36) UUID mismatch → INSERT crash. Fix: non-blocking .catch(). Admin wachtwoord: HolidaiAdmin2026. CLAUDE.md v3.32.1.** |
 | **6.9** | **21-02-2026** | **Fase 9A Admin Portal Enhancement COMPLEET: 3 sub-fases. 9A-1: RBAC user management (CRUD, 4 rollen, soft-delete, password reset), audit log undo (reversible actions + MongoDB snapshot), agent config editing (displayName, emoji, description, active). 9A-2: Chatbot analytics (sessions, messages, avg response, fallback rate, language distribution), analytics trend API, analytics snapshot. 9A-3: POI category management (filter dropdown + autocomplete), image ranking (display_order, reorder UI), branding UI (color management per destination), dark mode (Zustand + MUI theme factory). 16 nieuwe endpoints (35 totaal). 4 nieuwe bestanden (userService.js, useUsers.js, UsersPage.jsx, themeStore.js). Kosten: EUR 0. CLAUDE.md v3.32.0.** |
 | **6.8** | **21-02-2026** | **Fase 8E Admin Portal Hardening & UX Upgrade COMPLEET: BLOK 1: Agent ecosystem fixes (Backup Health regex+dir, dailyBriefing URGENT, De Maestro calculateAgentStatus fix → 18/18 HEALTHY, daily MySQL backup cron). BLOK 2: Content audit (14 asterisk POIs fixed, 79 missing ES translations, 121 inactive POIs gedocumenteerd). BLOK 3: 11 UX fixes (global destination filter+vlaggen, sortable columns, analytics trends, reviews filter, POI detail link, agent profielen NL, categorie kleuren, scheduled jobs popup, taalversie NL/EN/DE/ES). BLOK 4: 5 doc fixes. Kosten: ~EUR 0,50. CLAUDE.md v3.31.0.** |

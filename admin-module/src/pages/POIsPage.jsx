@@ -370,9 +370,16 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
   const [snack, setSnack] = useState(null);
   const poi = data?.data?.poi || {};
 
+  const getEnvPrefix = () => {
+    const hostname = window.location.hostname;
+    if (hostname.includes('admin.dev')) return 'dev.';
+    if (hostname.includes('admin.test')) return 'test.';
+    return '';
+  };
+  const envPrefix = getEnvPrefix();
   const frontendUrl = poi.destination_id === 2
-    ? `https://texelmaps.nl/pois/${poi.id}`
-    : `https://holidaibutler.com/pois/${poi.id}`;
+    ? `https://${envPrefix}texelmaps.nl/pois/${poi.id}`
+    : `https://${envPrefix}holidaibutler.com/pois/${poi.id}`;
 
   const handleMoveImage = async (images, fromIdx, direction) => {
     const toIdx = fromIdx + direction;
