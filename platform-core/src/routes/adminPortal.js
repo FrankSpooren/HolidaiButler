@@ -2002,24 +2002,26 @@ router.put('/pois/:id', adminAuth('editor'), async (req, res) => {
       { replacements: [...vals, poiId] }
     );
 
-    // Audit log to MongoDB
-    try {
-      if (mongoose.connection.readyState === 1) {
-        const db = mongoose.connection.db;
-        await db.collection('audit_logs').insertOne({
-          action: 'poi_content_updated',
-          poi_id: poiId,
-          poi_name: old.name,
-          destination_id: old.destination_id,
-          admin_id: req.adminUser.id || req.adminUser.userId,
-          admin_email: req.adminUser.email,
-          changes,
-          timestamp: new Date(),
-          actor: { type: 'admin', name: 'admin-portal' }
-        });
-      }
-    } catch (auditErr) {
-      logger.warn('[AdminPortal] Audit log write failed:', auditErr.message);
+    // Audit log + undo snapshot
+    const auditId = await saveAuditLog({
+      action: 'poi_update',
+      adminId: req.adminUser.id,
+      adminEmail: req.adminUser.email,
+      details: `Updated POI #${poiId}: ${old.name}`,
+      entityType: 'poi',
+      entityId: String(poiId),
+      metadata: { poi_name: old.name, destination_id: old.destination_id, changes }
+    });
+    if (auditId) {
+      await saveUndoSnapshot({
+        auditLogId: auditId,
+        action: 'poi_update',
+        entityType: 'poi',
+        entityId: String(poiId),
+        previousState: old,
+        newState: { ...changes, poiId },
+        createdBy: req.adminUser.email
+      });
     }
 
     // Invalidate POI stats cache
@@ -2378,25 +2380,27 @@ router.put('/reviews/:id', adminAuth('editor'), async (req, res) => {
       { replacements: [archivedVal, reviewId] }
     );
 
-    // Audit log
-    try {
-      if (mongoose.connection.readyState === 1) {
-        const db = mongoose.connection.db;
-        await db.collection('audit_logs').insertOne({
-          action: is_archived ? 'review_archived' : 'review_unarchived',
-          review_id: reviewId,
-          poi_id: old.poi_id,
-          poi_name: old.poiName,
-          destination_id: old.destination_id,
-          admin_id: req.adminUser.id || req.adminUser.userId,
-          admin_email: req.adminUser.email,
-          changes: { is_archived: `${old.is_archived} → ${archivedVal}` },
-          timestamp: new Date(),
-          actor: { type: 'admin', name: 'admin-portal' }
-        });
-      }
-    } catch (auditErr) {
-      logger.warn('[AdminPortal] Audit log write failed:', auditErr.message);
+    // Audit log + undo snapshot
+    const archiveAction = is_archived ? 'review_archive' : 'review_unarchive';
+    const auditId = await saveAuditLog({
+      action: archiveAction,
+      adminId: req.adminUser.id,
+      adminEmail: req.adminUser.email,
+      details: `${is_archived ? 'Archived' : 'Unarchived'} review #${reviewId} (${old.poiName || 'POI #' + old.poi_id})`,
+      entityType: 'review',
+      entityId: String(reviewId),
+      metadata: { review_id: reviewId, poi_id: old.poi_id, poi_name: old.poiName, destination_id: old.destination_id }
+    });
+    if (auditId) {
+      await saveUndoSnapshot({
+        auditLogId: auditId,
+        action: archiveAction,
+        entityType: 'review',
+        entityId: String(reviewId),
+        previousState: { is_archived: old.is_archived },
+        newState: { is_archived: archivedVal },
+        createdBy: req.adminUser.email
+      });
     }
 
     res.json({
@@ -3263,12 +3267,13 @@ router.get('/settings/audit-log', adminAuth('reviewer'), async (req, res) => {
 
 /** Build human-readable audit detail string */
 function buildAuditDetail(entry) {
-  if (entry.action === 'poi_content_updated') {
+  if (entry.action === 'poi_update' || entry.action === 'poi_content_updated') {
     const langs = entry.changes ? Object.keys(entry.changes).join(', ') : '';
-    return `POI #${entry.poi_id} (${entry.poi_name || 'unknown'}): ${langs} updated`;
+    return `POI #${entry.poi_id || entry.entityId || ''} (${entry.poi_name || 'unknown'}): ${langs} updated`;
   }
-  if (entry.action === 'review_archived' || entry.action === 'review_unarchived') {
-    return `Review #${entry.review_id} (${entry.poi_name || 'POI #' + entry.poi_id}): ${entry.action.replace('review_', '')}`;
+  if (entry.action === 'review_archive' || entry.action === 'review_unarchive' || entry.action === 'review_archived' || entry.action === 'review_unarchived') {
+    const action = entry.action.replace('review_', '').replace('d', '');
+    return `Review #${entry.review_id || entry.entityId || ''} (${entry.poi_name || 'POI'}): ${action}`;
   }
   return entry.description || entry.action || 'unknown action';
 }
@@ -4290,7 +4295,6 @@ router.put('/agents/config/:key', adminAuth('platform_admin'), async (req, res) 
         $set: updateDoc,
         $setOnInsert: {
           agent_key: key,
-          display_name: knownAgent.name,
           english_name: knownAgent.englishName,
           category: knownAgent.category,
           type: knownAgent.type,

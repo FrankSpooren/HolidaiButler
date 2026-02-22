@@ -182,7 +182,7 @@ export default function UsersPage() {
   };
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-  const isSelf = (user) => user.id === currentUser?.id;
+  const isSelf = (user) => !!user?.id && !!currentUser?.id && user.id === currentUser.id;
 
   if (error) return <ErrorBanner message={error.message} onRetry={refetch} />;
 
