@@ -1,8 +1,8 @@
 import { DESTINATION_COLORS } from '../theme.js';
 
 export const DESTINATIONS = [
-  { id: 1, code: 'calpe', name: 'Calpe', flag: '\uD83C\uDDEA\uD83C\uDDF8', color: DESTINATION_COLORS.calpe },
-  { id: 2, code: 'texel', name: 'Texel', flag: '\uD83C\uDDF3\uD83C\uDDF1', color: DESTINATION_COLORS.texel }
+  { id: 1, code: 'calpe', name: 'Calpe', flag: '🇪🇸', color: DESTINATION_COLORS.calpe },
+  { id: 2, code: 'texel', name: 'Texel', flag: '🇳🇱', color: DESTINATION_COLORS.texel }
 ];
 
 export function getDestinationColor(code) {

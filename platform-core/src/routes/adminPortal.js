@@ -44,7 +44,7 @@
  *   GET  /analytics/pageviews  — Pageview analytics (page_views table, GDPR compliant)
  *
  * @module routes/adminPortal
- * @version 3.2.0
+ * @version 3.4.0
  */
 
 import { Router } from 'express';
@@ -65,6 +65,7 @@ import {
   authRateLimiter
 } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
+import emailService from '../services/emailService.js';
 
 const router = Router();
 
@@ -1117,24 +1118,39 @@ function calculateAgentStatus(lastRun, schedule) {
 
   if (!schedule) return (lastRun.status === 'completed' || lastRun.status === 'success') ? 'healthy' : 'warning';
 
-  // Parse schedule to get interval in ms
+  // Parse cron schedule to determine expected interval in ms
+  // Format: min hour dayOfMonth month dayOfWeek
   const parts = schedule.split(' ');
-  const [min, hour] = parts;
+  const [min, hour, dayOfMonth, , dayOfWeek] = parts;
   let intervalMs;
-  if (min.startsWith('*/') && hour === '*') {
+
+  if (dayOfWeek && dayOfWeek !== '*') {
+    // Weekly schedule (e.g., '0 5 * * 1' = Monday 05:00)
+    intervalMs = 7 * 24 * 3600 * 1000; // 168 hours
+  } else if (dayOfMonth && dayOfMonth !== '*') {
+    // Monthly schedule (e.g., '0 3 1 * *' = 1st of month)
+    intervalMs = 30 * 24 * 3600 * 1000;
+  } else if (min.startsWith('*/') && hour === '*') {
+    // Sub-hourly (e.g., '*/30 * * * *' = every 30 min)
     intervalMs = parseInt(min.slice(2)) * 60 * 1000;
   } else if (min === '0' && hour.startsWith('*/')) {
+    // Multi-hourly (e.g., '0 */4 * * *' = every 4 hours)
     intervalMs = parseInt(hour.slice(2)) * 3600 * 1000;
   } else if (hour === '*') {
-    intervalMs = 60 * 60 * 1000; // hourly
+    // Hourly (e.g., '0 * * * *')
+    intervalMs = 60 * 60 * 1000;
   } else {
-    intervalMs = 24 * 3600 * 1000; // daily default
+    // Daily default (e.g., '0 6 * * *')
+    intervalMs = 24 * 3600 * 1000;
   }
 
   const elapsed = Date.now() - new Date(lastRun.timestamp).getTime();
+  // Healthy if within 2x the expected interval
   if (elapsed < intervalMs * 2) return 'healthy';
-  if (elapsed < 24 * 3600 * 1000) return 'warning';
-  return 'warning';
+  // Warning if within 3x the expected interval
+  if (elapsed < intervalMs * 3) return 'warning';
+  // Error if very stale (more than 3x expected interval)
+  return 'error';
 }
 
 /**
@@ -1189,6 +1205,33 @@ router.get('/agents/status', adminAuth('reviewer'), async (req, res) => {
 
     let partial = false;
     const recentActivity = [];
+
+    // BRON 1b: MongoDB agent_configurations (merge custom config over static metadata)
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const db = mongoose.connection.db;
+        const dbConfigs = await db.collection('agent_configurations').find({}).toArray();
+        const configMap = {};
+        dbConfigs.forEach(c => { configMap[c.agent_key] = c; });
+
+        for (const agent of agents) {
+          const dbConfig = configMap[agent.id];
+          if (dbConfig) {
+            if (dbConfig.display_name) agent.name = dbConfig.display_name;
+            if (dbConfig.emoji) agent.emoji = dbConfig.emoji;
+            if (dbConfig.description_nl) agent.description = dbConfig.description_nl;
+            if (dbConfig.description_en) agent.description_en = dbConfig.description_en;
+            if (dbConfig.description_de) agent.description_de = dbConfig.description_de;
+            if (dbConfig.description_es) agent.description_es = dbConfig.description_es;
+            if (dbConfig.tasks) agent.tasks = dbConfig.tasks;
+            if (dbConfig.is_active !== undefined) agent.is_active = dbConfig.is_active;
+          }
+        }
+      }
+    } catch (configErr) {
+      logger.warn('[AdminPortal] Agent config merge failed:', configErr.message);
+      // Non-critical: continue with static metadata
+    }
 
     // BRON 2: MongoDB audit_logs (last 24h)
     try {
@@ -3885,6 +3928,71 @@ router.post('/users', adminAuth('platform_admin'), async (req, res) => {
     }
 
     logger.info(`[AdminPortal] User created: ${email} by ${req.adminUser.email}`);
+
+    // Send welcome email (non-blocking — user IS created, email failure is not critical)
+    const roleLabels = { platform_admin: 'Platform Admin', poi_owner: 'POI Owner', editor: 'Content Editor', reviewer: 'Content Reviewer' };
+    const welcomeHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+        <tr><td style="background:linear-gradient(135deg,#1e3a5f 0%,#2d5a87 100%);padding:40px;text-align:center;">
+          <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:600;">HolidaiButler Admin Portal</h1>
+        </td></tr>
+        <tr><td style="padding:40px;">
+          <h2 style="color:#1e3a5f;margin:0 0 20px 0;font-size:24px;">Welkom, ${firstName}!</h2>
+          <p style="color:#4a5568;font-size:16px;line-height:1.6;margin:0 0 20px 0;">
+            Er is een account voor je aangemaakt op het HolidaiButler Admin Portal.
+          </p>
+          <table style="border-collapse:collapse;margin:20px 0;width:100%;">
+            <tr><td style="padding:10px 12px;font-weight:bold;color:#1e3a5f;border-bottom:1px solid #e2e8f0;">Login URL:</td>
+                <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;"><a href="https://admin.holidaibutler.com" style="color:#2d5a87;">admin.holidaibutler.com</a></td></tr>
+            <tr><td style="padding:10px 12px;font-weight:bold;color:#1e3a5f;border-bottom:1px solid #e2e8f0;">Email:</td>
+                <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">${email}</td></tr>
+            <tr><td style="padding:10px 12px;font-weight:bold;color:#1e3a5f;border-bottom:1px solid #e2e8f0;">Tijdelijk wachtwoord:</td>
+                <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:15px;">${password}</td></tr>
+            <tr><td style="padding:10px 12px;font-weight:bold;color:#1e3a5f;">Rol:</td>
+                <td style="padding:10px 12px;">${roleLabels[role] || role}</td></tr>
+          </table>
+          <p style="color:#e53e3e;font-size:15px;font-weight:600;margin:20px 0;">
+            Wijzig je wachtwoord direct na je eerste login.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
+            <tr><td align="center">
+              <a href="https://admin.holidaibutler.com" style="display:inline-block;background:linear-gradient(135deg,#d4af37 0%,#c9a227 100%);color:#1e3a5f;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:600;font-size:16px;">
+                Inloggen
+              </a>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="background-color:#f7fafc;padding:30px 40px;text-align:center;">
+          <p style="color:#718096;font-size:14px;margin:0;">&copy; ${new Date().getFullYear()} HolidaiButler. Alle rechten voorbehouden.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+    const welcomeText = `Welkom ${firstName}!\n\nEr is een account voor je aangemaakt op het HolidaiButler Admin Portal.\n\nLogin URL: https://admin.holidaibutler.com\nEmail: ${email}\nTijdelijk wachtwoord: ${password}\nRol: ${roleLabels[role] || role}\n\nWijzig je wachtwoord direct na je eerste login.\n\n---\nHolidaiButler Team`;
+
+    emailService.sendEmail({
+      to: email,
+      toName: `${firstName} ${lastName || ''}`.trim(),
+      subject: 'Welkom bij HolidaiButler Admin Portal \u2014 Inloggegevens',
+      html: welcomeHtml,
+      text: welcomeText
+    }).then(result => {
+      if (result.success) {
+        logger.info(`[AdminPortal] Welcome email sent to ${email}`);
+      } else {
+        logger.warn(`[AdminPortal] Welcome email failed for ${email}: ${result.error}`);
+      }
+    }).catch(err => {
+      logger.warn(`[AdminPortal] Welcome email error for ${email}: ${err.message}`);
+    });
 
     res.status(201).json({
       success: true,

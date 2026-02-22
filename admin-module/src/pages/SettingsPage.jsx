@@ -24,10 +24,10 @@ import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatDate } from '../utils/formatters.js';
 
 const LANGUAGES = [
-  { code: 'nl', flag: '\uD83C\uDDF3\uD83C\uDDF1' },
-  { code: 'en', flag: '\uD83C\uDDEC\uD83C\uDDE7' },
-  { code: 'de', flag: '\uD83C\uDDE9\uD83C\uDDEA' },
-  { code: 'es', flag: '\uD83C\uDDEA\uD83C\uDDF8' }
+  { code: 'nl', flag: '🇳🇱' },
+  { code: 'en', flag: '🇬🇧' },
+  { code: 'de', flag: '🇩🇪' },
+  { code: 'es', flag: '🇪🇸' }
 ];
 
 export default function SettingsPage() {

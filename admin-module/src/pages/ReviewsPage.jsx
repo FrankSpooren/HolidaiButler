@@ -277,7 +277,7 @@ export default function ReviewsPage() {
                         </Typography>
                         <Chip
                           size="small"
-                          label={review.destination_id === 2 ? '\uD83C\uDDF3\uD83C\uDDF1 Texel' : '\uD83C\uDDEA\uD83C\uDDF8 Calpe'}
+                          label={review.destination_id === 2 ? '🇳🇱 Texel' : '🇪🇸 Calpe'}
                           sx={{ mt: 0.3, bgcolor: getDestinationColor(review.destination_id === 2 ? 'texel' : 'calpe') + '22', fontSize: '0.65rem' }}
                         />
                       </Box>
@@ -387,7 +387,7 @@ function ReviewDetailDialog({ reviewId, onClose }) {
               </Grid>
               <Grid item xs={6}>
                 <Typography variant="caption" color="text.secondary">{t('reviews.detail.destination')}</Typography>
-                <Typography variant="body2">{review.destination_id === 2 ? '\uD83C\uDDF3\uD83C\uDDF1 Texel' : '\uD83C\uDDEA\uD83C\uDDF8 Calpe'}</Typography>
+                <Typography variant="body2">{review.destination_id === 2 ? '🇳🇱 Texel' : '🇪🇸 Calpe'}</Typography>
               </Grid>
               <Grid item xs={6}>
                 <Typography variant="caption" color="text.secondary">{t('reviews.detail.user')}</Typography>
