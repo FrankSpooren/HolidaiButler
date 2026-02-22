@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 21 februari 2026
-**Versie**: 6.9
+**Datum**: 22 februari 2026
+**Versie**: 6.9.1
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -998,6 +998,9 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 21-02 | display_order voor image ranking (9A-3) | ALTER TABLE imageurls ADD display_order — COALESCE(display_order, 999) als fallback voor niet-geordende images | Claude Code |
 | 21-02 | Branding defaults + MongoDB override (9A-3) | DEFAULT_BRAND_CONFIG als fallback, MongoDB brand_configurations voor customization — werkt ook als MongoDB offline | Claude Code |
 | 21-02 | Dark mode via Zustand + localStorage (9A-3) | MUI buildTheme(mode) factory, persist voorkeur — geen backend nodig | Claude Code |
+| 22-02 | Rate limiter 5→15 req/15min (9A-FIX) | 5 was te streng voor admin testing — locked account na normale gebruik | Claude Code |
+| 22-02 | Account lockout 5→10 attempts, 15→5 min (9A-FIX) | Proportioneler voor admin panel met enkele gebruikers | Claude Code |
+| 22-02 | Sessions INSERT non-blocking (9A-FIX) | Sessions.user_id=INT vs admin_users.id=UUID(CHAR 36) → "Data truncated" crash. Non-blocking .catch() als workaround | Claude Code |
 
 ---
 
@@ -1014,6 +1017,7 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 337 Texel Accommodation zonder EN | Laag | Geaccepteerd (is_hidden_category) |
 | Opening repetitie ("The scent of" 162x) | Laag | Open |
 | PL/SV kolommen ongebruikt | Laag | Open — kandidaten voor opschonen |
+| Sessions.user_id INT vs admin UUID | Medium | ✅ Gemitigeerd (non-blocking INSERT) |
 | SSL cert vervalt 2026-05-11 | Medium | ✅ Gemitigeerd (De Dokter SSL monitoring) |
 | Config structure mismatch (c.id vs c.destination.id) | Hoog | ✅ Gemitigeerd (config mapping fix in BaseAgent + destinationRunner) |
 | Threema Gateway niet geconfigureerd | Medium | Open — env vars niet gezet, dagelijkse smoke test alert |
@@ -1077,6 +1081,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **6.9.1** | **22-02-2026** | **Fase 9A-FIX Admin Login Fix: 3 bugs opgelost bij live testing. (1) authRateLimiter 5→15 req/15min. (2) Account lockout threshold 5→10 attempts, lock duration 15→5 min. (3) Sessions.user_id INT(11) vs admin_users CHAR(36) UUID mismatch → INSERT crash. Fix: non-blocking .catch(). Admin wachtwoord: HolidaiAdmin2026. CLAUDE.md v3.32.1.** |
 | **6.9** | **21-02-2026** | **Fase 9A Admin Portal Enhancement COMPLEET: 3 sub-fases. 9A-1: RBAC user management (CRUD, 4 rollen, soft-delete, password reset), audit log undo (reversible actions + MongoDB snapshot), agent config editing (displayName, emoji, description, active). 9A-2: Chatbot analytics (sessions, messages, avg response, fallback rate, language distribution), analytics trend API, analytics snapshot. 9A-3: POI category management (filter dropdown + autocomplete), image ranking (display_order, reorder UI), branding UI (color management per destination), dark mode (Zustand + MUI theme factory). 16 nieuwe endpoints (35 totaal). 4 nieuwe bestanden (userService.js, useUsers.js, UsersPage.jsx, themeStore.js). Kosten: EUR 0. CLAUDE.md v3.32.0.** |
 | **6.8** | **21-02-2026** | **Fase 8E Admin Portal Hardening & UX Upgrade COMPLEET: BLOK 1: Agent ecosystem fixes (Backup Health regex+dir, dailyBriefing URGENT, De Maestro calculateAgentStatus fix → 18/18 HEALTHY, daily MySQL backup cron). BLOK 2: Content audit (14 asterisk POIs fixed, 79 missing ES translations, 121 inactive POIs gedocumenteerd). BLOK 3: 11 UX fixes (global destination filter+vlaggen, sortable columns, analytics trends, reviews filter, POI detail link, agent profielen NL, categorie kleuren, scheduled jobs popup, taalversie NL/EN/DE/ES). BLOK 4: 5 doc fixes. Kosten: ~EUR 0,50. CLAUDE.md v3.31.0.** |
 | **6.7** | **21-02-2026** | **Fase 8D-FIX Admin Portal Bug Fix COMPLEET: 12 bugs gefixed bij live testing. Backend (adminPortal.js v2.1.0): resolveDestinationId() helper, POI stats per-destination keys, POI detail field renames, review summary flattened, settings system keys, destinations object format, audit-log field mapping. Frontend: POI/review detail wrapper fix, snackbar undo, QuickLinks live, agent detail dialog, Sentry DSN fix. 33/33 tests PASS. Kosten: EUR 0. CLAUDE.md v3.30.0.** |
@@ -1099,5 +1104,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 21 februari 2026 - Fase 9A COMPLEET (Admin Portal Enhancement), Master Document v6.9*
+*Laatst bijgewerkt: 22 februari 2026 - Fase 9A-FIX COMPLEET (Admin Login Fix), Master Document v6.9.1*
 *Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→8E + 9A COMPLEET. Admin Portal: 35 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode.*

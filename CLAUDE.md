@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.32.0
-> **Laatst bijgewerkt**: 21 februari 2026
+> **Versie**: 3.32.1
+> **Laatst bijgewerkt**: 22 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -93,9 +93,9 @@ Na elke relevante aanpassing, uitbreiding of update:
 ### Primaire Documenten
 | Document | Locatie | Versie | Inhoud |
 |----------|---------|--------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.9 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.9.1 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 | Agent architectuur, scheduled jobs |
-| **CLAUDE.md** | Repository root + Hetzner | 3.32.0 | Dit bestand - project context |
+| **CLAUDE.md** | Repository root + Hetzner | 3.32.1 | Dit bestand - project context |
 
 ### Leesadvies voor Claude
 **Bij elke nieuwe sessie of complexe taak, lees in deze volgorde:**
@@ -448,6 +448,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 8D-FIX** | Admin Portal Bug Fix (12 bugs: POI stats/detail/edit, Review stats/detail/archive, Settings services/destinations/audit-log, QuickLinks, Agent detail, Sentry DSN) | ✅ COMPLEET | 21-02-2026 |
 | **Fase 8E** | Admin Portal Hardening & UX Upgrade (agent ecosystem fixes, content audit, destination filter, sorting, analytics, agent profielen, i18n DE/ES, taalversie keuze) | ✅ COMPLEET | 21-02-2026 |
 | **Fase 9A** | Admin Portal Enhancement (RBAC + Undo + Agent Config, Chatbot Analytics, POI Category/Image/Branding, Dark Mode — 16 nieuwe endpoints, 35 totaal) | ✅ COMPLEET | 21-02-2026 |
+| **Fase 9A-FIX** | Admin Login Fix (rate limiter 5→15, account lockout 5→10/5min, Sessions UUID mismatch non-blocking) | ✅ COMPLEET | 22-02-2026 |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -1581,7 +1582,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.9 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 6.9.1 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase 2 Docs | `docs/agents/fase2/` | - |
 | Fase 3 Docs | `docs/agents/fase3/` | - |
@@ -1596,6 +1597,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.32.1** | **2026-02-22** | **Fase 9A-FIX Admin Login Fix: 3 bugs opgelost bij live testing. (1) Rate limiter te streng: authRateLimiter 5→15 req/15min. (2) Account lockout te agressief: threshold 5→10 attempts, lock duration 15→5 min. (3) Sessions.user_id INT(11) vs admin_users CHAR(36) UUID mismatch → INSERT "Data truncated" crash. Fix: Sessions INSERT non-blocking (.catch). Admin wachtwoord: HolidaiAdmin2026. Kosten: EUR 0. CLAUDE.md v3.32.1, Master Strategie v6.9.1.** |
 | **3.32.0** | **2026-02-21** | **Fase 9A Admin Portal Enhancement COMPLEET: 3 sub-fases. 9A-1: RBAC user management (CRUD, 4 rollen, soft-delete, password reset), audit log undo (reversible actions + MongoDB snapshot), agent config editing (displayName, emoji, description, active). 9A-2: Chatbot analytics (sessions, messages, avg response, fallback rate, languages), analytics trend API, analytics snapshot. 9A-3: POI category management (filter dropdown + autocomplete), image ranking (display_order, reorder UI), branding UI (color management per destination), dark mode (Zustand + MUI theme factory). 16 nieuwe endpoints (35 totaal). 4 nieuwe bestanden. Kosten: EUR 0. CLAUDE.md v3.32.0, Master Strategie v6.9.** |
 | **3.31.0** | **2026-02-21** | **Fase 8E Admin Portal Hardening & UX Upgrade COMPLEET: BLOK 1: Agent ecosystem fixes (Backup Health regex+dir, dailyBriefing URGENT subject, De Maestro calculateAgentStatus 'completed'/'success' fix → 18/18 HEALTHY, daily MySQL backup cron). BLOK 2: Content audit (14 asterisk POIs fixed, 79 missing ES translations batch-vertaald, 121 inactive POIs gedocumenteerd). BLOK 3: 11 UX fixes (global destination filter+vlaggen, sortable columns, analytics trends, reviews destination filter, POI detail link, agent profielen NL, categorie kleuren, scheduled jobs popup, taalversie NL/EN/DE/ES). BLOK 4: 5 doc fixes (Agent Masterplan versie, endpoint count, version refs). Kosten: ~EUR 0,50. CLAUDE.md v3.31.0, Master Strategie v6.8.** |
 | **3.30.0** | **2026-02-21** | **Fase 8D-FIX Admin Portal Bug Fix COMPLEET: 12 bugs gefixed bij live testing. Backend (adminPortal.js v2.1.0): resolveDestinationId() helper (string→id mapping), POI stats per-destination top-level keys, POI detail field renames (description→detail, tileDescription→tile, reviews→reviewSummary array), review summary flattened (totalReviews→total, sentimentBreakdown→top-level), settings system keys (mysql/mongodb/redis + SELECT 1 health check), destinations array→object, audit-log field mapping (admin_email→actor.email, details→detail). Frontend: POI/review detail wrapper fix, snackbar undo archive, QuickLinks live links, agent click-to-detail dialog, Sentry DSN hyphens removed. 33/33 tests PASS. Kosten: EUR 0. CLAUDE.md v3.30.0, Master Strategie v6.7.** |
