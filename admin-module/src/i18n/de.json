@@ -81,13 +81,33 @@
       "showMore": "Mehr anzeigen",
       "showLess": "Weniger anzeigen"
     },
+    "tabs": {
+      "profile": "Profil",
+      "status": "Status",
+      "configuration": "Konfiguration",
+      "warnings": "Warnungen"
+    },
     "detail": {
       "errorTitle": "Fehler",
       "warningTitle": "Warnung",
-      "checkLogs": "PM2-Logs f\u00fcr weitere Details pr\u00fcfen",
+      "checkLogs": "PM2-Logs für weitere Details prüfen",
       "tasks": "Aufgaben",
       "destinationStatus": "Status pro Reiseziel",
-      "duration": "Letzte Dauer"
+      "duration": "Letzte Dauer",
+      "description": "Beschreibung",
+      "monitoringScope": "Überwachungsbereich",
+      "outputTitle": "Ausgabe",
+      "outputType": "Typ",
+      "outputFrequency": "Häufigkeit",
+      "outputRecipients": "Empfänger",
+      "dependencies": "Abhängigkeiten",
+      "scheduledJobs": "Geplante Aufgaben",
+      "recentActivity": "Letzte Aktivität",
+      "lastStatus": "Letzter Status",
+      "recommendedAction": "Empfohlene Aktion",
+      "recentErrors": "Letzte Fehler",
+      "copied": "In Zwischenablage kopiert",
+      "copyCommand": "Befehl kopieren"
     },
     "config": {
       "title": "Agent-Konfiguration",
@@ -99,7 +119,8 @@
       "active": "Agent aktiv",
       "save": "Speichern",
       "saving": "Speichern...",
-      "saved": "Agent-Konfiguration gespeichert"
+      "saved": "Agent-Konfiguration gespeichert",
+      "addTask": "Neue Aufgabe hinzufügen..."
     },
     "partial": "Einige Datenquellen sind nicht erreichbar. Angezeigte Daten k\u00f6nnen unvollst\u00e4ndig sein.",
     "noResults": "Keine Agents f\u00fcr die ausgew\u00e4hlten Filter gefunden.",
@@ -135,6 +156,7 @@
       "content": "Inhalt",
       "status": "Status",
       "sortBy": "Sortieren nach",
+      "subcategory": "Unterkategorie",
       "sortName": "Name",
       "sortRating": "Bewertung",
       "sortUpdated": "Zuletzt aktualisiert",
@@ -312,8 +334,16 @@
       "accent": "Akzent",
       "chatbot": "Chatbot",
       "customized": "Angepasst",
-      "editTitle": "Markenidentit\u00e4t bearbeiten",
-      "saved": "Markenidentit\u00e4t erfolgreich gespeichert"
+      "editTitle": "Markenidentität bearbeiten",
+      "saved": "Markenidentität erfolgreich gespeichert",
+      "brandName": "Markenname",
+      "payoff": "Slogan / Tagline",
+      "logo": "Logo",
+      "uploadLogo": "Logo hochladen",
+      "uploading": "Hochladen...",
+      "logoUploaded": "Logo erfolgreich hochgeladen",
+      "logoTooLarge": "Datei zu groß (max 2MB)",
+      "logoUrl": "Logo URL"
     },
     "cache": {
       "title": "Cache-Verwaltung",
@@ -414,6 +444,7 @@
       "passwordWeak": "Passwort erfüllt nicht alle Anforderungen",
       "lastNameRequired": "Nachname ist erforderlich"
     },
+    "selfEditWarning": "Sie bearbeiten Ihr eigenes Konto. Rolle und Status können nicht geändert werden.",
     "password": {
       "minLength": "Mindestens 12 Zeichen",
       "uppercase": "Mindestens 1 Großbuchstabe (A-Z)",

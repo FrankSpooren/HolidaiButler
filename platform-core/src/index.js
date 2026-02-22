@@ -169,6 +169,12 @@ app.use('/api/consent', consentRoutes); // Legacy route (no v1)
 app.use('/api/admin/images/refresh', imageRefreshRoutes); // POI Image Refresh (Admin)
 app.use('/api/v1/admin-portal', adminPortalRoutes); // Admin Portal (Fase 8C-0)
 
+// Static file serving for branding assets (logo uploads)
+const brandingDir = process.env.NODE_ENV === 'production'
+  ? '/var/www/api.holidaibutler.com/platform-core/public/branding'
+  : path.resolve(__dirname, '../public/branding');
+app.use('/branding', express.static(brandingDir));
+
 // Pageview tracking — public, fire-and-forget (Fase 9B)
 const trackRateLimit = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: false, legacyHeaders: false });
 app.post('/api/v1/track', trackRateLimit, (req, res) => {

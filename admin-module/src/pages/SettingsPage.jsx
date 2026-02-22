@@ -17,8 +17,9 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import PaletteIcon from '@mui/icons-material/Palette';
 import UndoIcon from '@mui/icons-material/Undo';
 import SaveIcon from '@mui/icons-material/Save';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useTranslation } from 'react-i18next';
-import { useSettings, useAuditLog, useClearCache, useUndoAction, useBranding, useUpdateBranding } from '../hooks/useSettings.js';
+import { useSettings, useAuditLog, useClearCache, useUndoAction, useBranding, useUpdateBranding, useUploadLogo } from '../hooks/useSettings.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatDate } from '../utils/formatters.js';
 
@@ -262,9 +263,11 @@ function BrandingSection() {
   const { t } = useTranslation();
   const { data, isLoading } = useBranding();
   const updateMut = useUpdateBranding();
+  const uploadMut = useUploadLogo();
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [snack, setSnack] = useState(null);
+  const API_BASE = import.meta.env.VITE_API_URL || '';
 
   const branding = data?.data?.branding || {};
   const DEST_FLAGS = { calpe: '🇪🇸', texel: '🇳🇱' };
@@ -347,7 +350,15 @@ function BrandingSection() {
                   )}
                 </Grid>
               )}
-              <Box sx={{ mt: 1 }}>
+              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                {brand.logo_url && (
+                  <Box
+                    component="img"
+                    src={`${API_BASE}${brand.logo_url}`}
+                    alt={`${dest} logo`}
+                    sx={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 0.5, border: '1px solid #eee' }}
+                  />
+                )}
                 <Typography variant="body2" color="text.secondary">
                   {t('settings.branding.chatbot')}: <b>{brand.chatbotName}</b> | {brand.domain}
                   {brand.customized && <Chip size="small" label={t('settings.branding.customized')} sx={{ ml: 1, fontSize: '0.65rem', height: 18 }} color="info" />}
@@ -401,11 +412,52 @@ function BrandingSection() {
                 />
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth size="small" label={t('settings.branding.logoUrl')}
-                  value={form.logo_url || ''} onChange={(e) => setForm(f => ({ ...f, logo_url: e.target.value }))}
-                  placeholder="/images/branding/logo.svg"
-                />
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                  {t('settings.branding.logo')}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  {form.logo_url && (
+                    <Box
+                      component="img"
+                      src={`${API_BASE}${form.logo_url}`}
+                      alt="logo"
+                      sx={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 1, border: '1px solid #ddd', p: 0.5 }}
+                    />
+                  )}
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    component="label"
+                    startIcon={<CloudUploadIcon />}
+                    disabled={uploadMut.isPending}
+                  >
+                    {uploadMut.isPending ? t('settings.branding.uploading') : t('settings.branding.uploadLogo')}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/png,image/jpeg,image/svg+xml"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 2 * 1024 * 1024) {
+                          setSnack(t('settings.branding.logoTooLarge'));
+                          return;
+                        }
+                        try {
+                          const result = await uploadMut.mutateAsync({ destination: editing, file });
+                          setForm(f => ({ ...f, logo_url: result.data.logo_url }));
+                          setSnack(t('settings.branding.logoUploaded'));
+                        } catch {
+                          setSnack(t('common.error'));
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                  </Button>
+                  <Typography variant="caption" color="text.secondary">
+                    PNG, JPG, SVG (max 2MB)
+                  </Typography>
+                </Box>
               </Grid>
               <Grid item xs={12}>
                 <TextField

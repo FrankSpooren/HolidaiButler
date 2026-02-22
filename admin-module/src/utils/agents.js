@@ -26,9 +26,9 @@ export const AGENT_ICONS = {
 
 export const CATEGORY_COLORS = {
   core: '#1565c0',
-  operations: '#2e7d32',
-  development: '#6d4c41',
-  strategy: '#6a1b9a',
+  operations: '#00695c',
+  development: '#4527a0',
+  strategy: '#bf360c',
   monitoring: '#e65100'
 };
 

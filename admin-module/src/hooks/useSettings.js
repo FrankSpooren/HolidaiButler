@@ -56,3 +56,13 @@ export function useUpdateBranding() {
     }
   });
 }
+
+export function useUploadLogo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ destination, file }) => settingsService.uploadLogo(destination, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['branding'] });
+    }
+  });
+}

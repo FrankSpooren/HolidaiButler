@@ -81,13 +81,33 @@
       "showMore": "Toon meer",
       "showLess": "Toon minder"
     },
+    "tabs": {
+      "profile": "Profiel",
+      "status": "Status",
+      "configuration": "Configuratie",
+      "warnings": "Waarschuwingen"
+    },
     "detail": {
       "errorTitle": "Foutmelding",
       "warningTitle": "Waarschuwing",
       "checkLogs": "Bekijk PM2 logs voor meer details",
       "tasks": "Takenpakket",
       "destinationStatus": "Status per bestemming",
-      "duration": "Laatste duur"
+      "duration": "Laatste duur",
+      "description": "Beschrijving",
+      "monitoringScope": "Monitoring Bereik",
+      "outputTitle": "Output",
+      "outputType": "Type",
+      "outputFrequency": "Frequentie",
+      "outputRecipients": "Ontvangers",
+      "dependencies": "Afhankelijkheden",
+      "scheduledJobs": "Geplande Taken",
+      "recentActivity": "Recente Activiteit",
+      "lastStatus": "Laatste status",
+      "recommendedAction": "Aanbevolen Actie",
+      "recentErrors": "Recente Fouten",
+      "copied": "Gekopieerd naar klembord",
+      "copyCommand": "Kopieer commando"
     },
     "config": {
       "title": "Agent configuratie",
@@ -99,7 +119,8 @@
       "active": "Agent actief",
       "save": "Opslaan",
       "saving": "Opslaan...",
-      "saved": "Agent configuratie opgeslagen"
+      "saved": "Agent configuratie opgeslagen",
+      "addTask": "Nieuwe taak toevoegen..."
     },
     "partial": "Sommige databronnen zijn niet bereikbaar. Getoonde data kan onvolledig zijn.",
     "noResults": "Geen agents gevonden voor de geselecteerde filters.",
@@ -136,6 +157,7 @@
       "content": "Content",
       "status": "Status",
       "sortBy": "Sorteer op",
+      "subcategory": "Subcategorie",
       "sortName": "Naam",
       "sortRating": "Rating",
       "sortUpdated": "Laatst bijgewerkt",
@@ -323,7 +345,15 @@
       "chatbot": "Chatbot",
       "customized": "Aangepast",
       "editTitle": "Huisstijl bewerken",
-      "saved": "Huisstijl succesvol opgeslagen"
+      "saved": "Huisstijl succesvol opgeslagen",
+      "brandName": "Merknaam",
+      "payoff": "Pay-off / Tagline",
+      "logo": "Logo",
+      "uploadLogo": "Logo uploaden",
+      "uploading": "Uploaden...",
+      "logoUploaded": "Logo succesvol geüpload",
+      "logoTooLarge": "Bestand te groot (max 2MB)",
+      "logoUrl": "Logo URL"
     },
     "audit": {
       "title": "Admin Audit Log",
@@ -414,6 +444,7 @@
       "passwordWeak": "Wachtwoord voldoet niet aan alle vereisten",
       "lastNameRequired": "Achternaam is verplicht"
     },
+    "selfEditWarning": "Je bewerkt je eigen account. Rol en status kunnen niet worden gewijzigd.",
     "password": {
       "minLength": "Minimaal 12 karakters",
       "uppercase": "Minimaal 1 hoofdletter (A-Z)",

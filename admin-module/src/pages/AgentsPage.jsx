@@ -3,7 +3,7 @@ import {
   Box, Typography, Grid, Card, CardContent, Chip, Select, MenuItem,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
   Paper, Skeleton, Alert, Button, Tooltip, IconButton, Collapse, List, ListItem,
-  ListItemText, useMediaQuery, useTheme,
+  ListItemText, useMediaQuery, useTheme, Tab, Tabs,
   Dialog, DialogTitle, DialogContent, DialogActions, Divider,
   TextField, Switch, FormControlLabel, Snackbar
 } from '@mui/material';
@@ -14,6 +14,9 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import SettingsIcon from '@mui/icons-material/Settings';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CloseIcon from '@mui/icons-material/Close';
+import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from 'react-i18next';
 import { useAgentStatus, useAgentConfigs, useUpdateAgentConfig } from '../hooks/useAgentStatus';
 import useAuthStore from '../stores/authStore.js';
@@ -400,15 +403,66 @@ export default function AgentsPage() {
   );
 }
 
-/* ===== Agent Detail Dialog (Fase 9B — 5-sectie profiel) ===== */
+/* ===== Agent Detail Dialog (Fase 9C BLOK 2A — 4-tab Enterprise Profile) ===== */
 function AgentDetailDialog({ agent, onClose }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const currentUser = useAuthStore(s => s.user);
   const isPlatformAdmin = currentUser?.role === 'platform_admin';
   const descriptionNL = getAgentDescription(agent.name);
   const tasks = getAgentTasks(agent.name);
-  const [configOpen, setConfigOpen] = useState(false);
+  const hasWarning = agent.status === 'warning' || agent.status === 'error';
+
+  const [tabValue, setTabValue] = useState(0);
   const [snack, setSnack] = useState({ open: false, message: '' });
+
+  // Config state (Tab 3 — only loaded for platform_admin)
+  const { data: configsData, isLoading: configLoading } = useAgentConfigs();
+  const updateMut = useUpdateAgentConfig();
+  const configs = configsData?.data?.configs || [];
+  const agentConfig = configs.find(c => c.agent_key === agent.id) || {};
+
+  const [configForm, setConfigForm] = useState(null);
+  const [descLang, setDescLang] = useState('nl');
+  const [editTasks, setEditTasks] = useState(null);
+  const [newTask, setNewTask] = useState('');
+
+  // Initialize config form when data arrives
+  if (!configForm && !configLoading) {
+    setConfigForm({
+      display_name: agentConfig.display_name || agent.name,
+      emoji: agentConfig.emoji || '',
+      description_nl: agentConfig.description_nl || '',
+      description_en: agentConfig.description_en || '',
+      description_de: agentConfig.description_de || '',
+      description_es: agentConfig.description_es || '',
+      is_active: agentConfig.is_active !== false
+    });
+  }
+  if (!editTasks && tasks.length > 0) {
+    setEditTasks([...tasks]);
+  }
+
+  const handleConfigSave = async () => {
+    try {
+      const payload = { ...configForm };
+      if (editTasks) payload.tasks = editTasks;
+      await updateMut.mutateAsync({ key: agent.id, data: payload });
+      setSnack({ open: true, message: t('agents.config.saved') });
+    } catch (err) {
+      // Error shown via updateMut.isError
+    }
+  };
+
+  const handleAddTask = () => {
+    if (newTask.trim() && editTasks) {
+      setEditTasks([...editTasks, newTask.trim()]);
+      setNewTask('');
+    }
+  };
+
+  const handleRemoveTask = (idx) => {
+    setEditTasks(editTasks.filter((_, i) => i !== idx));
+  };
 
   const destStatusColor = (status) =>
     status === 'success' ? STATUS_COLORS.healthy
@@ -416,233 +470,464 @@ function AgentDetailDialog({ agent, onClose }) {
     : status === 'error' ? STATUS_COLORS.error
     : STATUS_COLORS.unknown;
 
+  // Build tab list dynamically
+  const tabDefs = [
+    { key: 'profile', label: t('agents.tabs.profile') },
+    { key: 'status', label: t('agents.tabs.status') }
+  ];
+  if (isPlatformAdmin) tabDefs.push({ key: 'config', label: t('agents.tabs.configuration'), icon: <SettingsIcon sx={{ fontSize: 16 }} /> });
+  if (hasWarning) tabDefs.push({
+    key: 'warnings', label: t('agents.tabs.warnings'),
+    icon: agent.status === 'error' ? <ErrorOutlineIcon sx={{ fontSize: 16 }} /> : <WarningAmberIcon sx={{ fontSize: 16 }} />
+  });
+
+  const currentTab = tabDefs[tabValue]?.key || 'profile';
+
   return (
     <>
     <Dialog open maxWidth="md" fullWidth onClose={onClose}>
-      <DialogTitle>
+      <DialogTitle sx={{ pb: 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <span style={{ fontSize: '1.6rem' }}>{getAgentIcon(agent.name)}</span>
           <Box sx={{ flex: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>{agent.name}</Typography>
-              <Chip
-                label={t(`agents.filter.${agent.category}`)}
-                size="small"
-                sx={{ bgcolor: CATEGORY_COLORS[agent.category] || '#607d8b', color: '#fff', fontSize: '0.7rem', height: 20 }}
-              />
+              <Chip label={t(`agents.filter.${agent.category}`)} size="small"
+                sx={{ bgcolor: CATEGORY_COLORS[agent.category] || '#607d8b', color: '#fff', fontSize: '0.7rem', height: 20 }} />
               <Chip label={agent.type === 'A' ? 'Type A' : 'Type B'} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
             </Box>
-            <Typography variant="body2" color="text.secondary">
-              {descriptionNL || agent.description}
-            </Typography>
           </Box>
         </Box>
       </DialogTitle>
-      <DialogContent dividers>
-        {/* SECTIE 5: Warning/Error Details (alleen bij problemen — altijd bovenaan) */}
-        {(agent.status === 'warning' || agent.status === 'error') && (
-          <Alert
-            severity={agent.status === 'error' ? 'error' : 'warning'}
-            icon={agent.status === 'error' ? <ErrorOutlineIcon /> : <WarningAmberIcon />}
-            sx={{ mb: 2 }}
-          >
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-              {agent.status === 'error' ? t('agents.detail.errorTitle') : t('agents.detail.warningTitle')}
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 0.5 }}>
-              {agent.warningDetail || agent.lastRun?.error || t('agents.detail.checkLogs')}
-            </Typography>
-            {agent.recommendedAction && (
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {t('agents.detail.recommendedAction')}: {agent.recommendedAction}
-              </Typography>
-            )}
-          </Alert>
-        )}
 
-        {/* SECTIE 1: Identiteit */}
-        <Grid container spacing={2} sx={{ mb: 1.5 }}>
-          <Grid item xs={4}>
-            <Typography variant="caption" color="text.secondary">{t('agents.table.type')}</Typography>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {agent.type === 'A' ? 'A (per destination)' : 'B (platform-breed)'}
-            </Typography>
-          </Grid>
-          <Grid item xs={4}>
-            <Typography variant="caption" color="text.secondary">{t('agents.table.schedule')}</Typography>
-            <Typography variant="body2">{agent.scheduleHuman || '\u2014'}</Typography>
-          </Grid>
-          <Grid item xs={4}>
-            <Typography variant="caption" color="text.secondary">{t('agents.table.status')}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-              <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: STATUS_COLORS[agent.status] || STATUS_COLORS.unknown }} />
-              <Typography variant="body2" sx={{ fontWeight: 600, color: STATUS_COLORS[agent.status], textTransform: 'capitalize' }}>
-                {agent.status}
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
+      {/* Tab Bar */}
+      <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}
+        sx={{ borderBottom: 1, borderColor: 'divider', px: 3, minHeight: 40 }}
+        variant="scrollable" scrollButtons="auto">
+        {tabDefs.map((tab, i) => (
+          <Tab key={tab.key} label={tab.label}
+            icon={tab.icon || undefined} iconPosition="start"
+            sx={{ minHeight: 40, textTransform: 'none', fontSize: '0.85rem' }} />
+        ))}
+      </Tabs>
 
-        {/* Monitoring scope + Output */}
-        {(agent.monitoring_scope || agent.output_description) && (
-          <Grid container spacing={2} sx={{ mb: 1.5 }}>
-            {agent.monitoring_scope && (
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">{t('agents.detail.monitoringScope')}</Typography>
-                <Typography variant="body2">{agent.monitoring_scope}</Typography>
+      <DialogContent sx={{ minHeight: 320, pt: 2 }}>
+        {/* ═══ TAB 1 — PROFIEL (readonly) ═══ */}
+        {currentTab === 'profile' && (
+          <Box>
+            {/* Description */}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {i18n.language === 'nl' ? (descriptionNL || agent.description) : (agent.description_en || agent.description)}
+            </Typography>
+
+            {/* Identity grid */}
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid item xs={4}>
+                <Typography variant="caption" color="text.secondary">{t('agents.table.type')}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {agent.type === 'A' ? 'A (per destination)' : 'B (platform-breed)'}
+                </Typography>
               </Grid>
-            )}
-            {agent.output_description && (
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">{t('agents.detail.output')}</Typography>
-                <Typography variant="body2">{agent.output_description}</Typography>
+              <Grid item xs={4}>
+                <Typography variant="caption" color="text.secondary">{t('agents.table.schedule')}</Typography>
+                <Typography variant="body2">{agent.scheduleHuman || '\u2014'}</Typography>
               </Grid>
-            )}
-          </Grid>
-        )}
-
-        <Divider sx={{ my: 1.5 }} />
-
-        {/* SECTIE 2: Takenpakket (volledig) */}
-        {tasks.length > 0 && (
-          <>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-              <AssignmentIcon fontSize="small" color="action" />
-              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                {t('agents.detail.tasks')}
-              </Typography>
-            </Box>
-            <List dense disablePadding sx={{ mb: 1.5 }}>
-              {tasks.map((task, i) => (
-                <ListItem key={i} sx={{ py: 0.15, pl: 2 }}>
-                  <ListItemText
-                    primary={<Typography variant="body2">{'•'} {task}</Typography>}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </>
-        )}
-
-        <Divider sx={{ my: 1.5 }} />
-
-        {/* SECTIE 3: Schema & Status */}
-        {/* Destination Status (Cat A agents) */}
-        {agent.type === 'A' && (
-          <>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-              {t('agents.detail.destinationStatus')}
-            </Typography>
-            <Grid container spacing={2} sx={{ mb: 1.5 }}>
-              {['calpe', 'texel'].map(dest => {
-                const d = agent.destinations?.[dest];
-                return (
-                  <Grid item xs={6} key={dest}>
-                    <Card variant="outlined" sx={{ p: 1.5 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        {dest === 'calpe' ? '🇪🇸 Calpe' : '🇳🇱 Texel'}
-                      </Typography>
-                      {d ? (
-                        <>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: destStatusColor(d.status) }} />
-                            <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>{d.status || 'unknown'}</Typography>
-                          </Box>
-                          {d.lastRun && (
-                            <Typography variant="caption" color="text.secondary">
-                              {new Date(d.lastRun).toLocaleString('nl-NL')}
-                            </Typography>
-                          )}
-                        </>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">{'\u2014'}</Typography>
-                      )}
-                    </Card>
-                  </Grid>
-                );
-              })}
+              <Grid item xs={4}>
+                <Typography variant="caption" color="text.secondary">{t('agents.table.status')}</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: STATUS_COLORS[agent.status] || STATUS_COLORS.unknown }} />
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: STATUS_COLORS[agent.status], textTransform: 'capitalize' }}>
+                    {agent.status}
+                  </Typography>
+                </Box>
+              </Grid>
             </Grid>
-          </>
+
+            <Divider sx={{ my: 1.5 }} />
+
+            {/* Tasks */}
+            {tasks.length > 0 && (
+              <>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                  <AssignmentIcon fontSize="small" color="action" />
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    {t('agents.detail.tasks')} ({tasks.length})
+                  </Typography>
+                </Box>
+                <List dense disablePadding sx={{ mb: 2 }}>
+                  {tasks.map((task, i) => (
+                    <ListItem key={i} sx={{ py: 0.15, pl: 2 }}>
+                      <ListItemText primary={<Typography variant="body2">• {task}</Typography>} />
+                    </ListItem>
+                  ))}
+                </List>
+              </>
+            )}
+
+            {/* Monitoring Scope */}
+            {agent.monitoring_scope && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {t('agents.detail.monitoringScope')}
+                </Typography>
+                <Typography variant="body2">{agent.monitoring_scope}</Typography>
+              </Box>
+            )}
+
+            {/* Output Details */}
+            {agent.output && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {t('agents.detail.outputTitle')}
+                </Typography>
+                <Grid container spacing={1}>
+                  <Grid item xs={6} sm={3}>
+                    <Typography variant="caption" color="text.secondary">{t('agents.detail.outputType')}</Typography>
+                    <Typography variant="body2">{agent.output.type}</Typography>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Typography variant="caption" color="text.secondary">{t('agents.detail.outputFrequency')}</Typography>
+                    <Typography variant="body2">{agent.output.frequency}</Typography>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Typography variant="caption" color="text.secondary">{t('agents.detail.outputRecipients')}</Typography>
+                    <Typography variant="body2">{agent.output.recipients}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <Typography variant="caption" color="text.secondary">{t('agents.detail.description')}</Typography>
+                    <Typography variant="body2">{agent.output.description}</Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+            )}
+
+            {/* Dependencies */}
+            {agent.dependencies?.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {t('agents.detail.dependencies')}
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {agent.dependencies.map((dep, i) => (
+                    <Chip key={i} label={dep} size="small" variant="outlined" sx={{ fontSize: '0.75rem' }} />
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Box>
         )}
 
-        {/* Laatste run + Recente activiteit */}
-        <Grid container spacing={2} sx={{ mb: 1.5 }}>
-          <Grid item xs={4}>
-            <Typography variant="caption" color="text.secondary">{t('agents.lastUpdated')}</Typography>
-            <Typography variant="body2">
-              {agent.lastRun?.timestamp ? new Date(agent.lastRun.timestamp).toLocaleString('nl-NL') : '\u2014'}
-            </Typography>
-          </Grid>
-          <Grid item xs={4}>
-            <Typography variant="caption" color="text.secondary">{t('agents.detail.duration')}</Typography>
-            <Typography variant="body2">
-              {agent.lastRun?.duration ? `${agent.lastRun.duration}ms` : '\u2014'}
-            </Typography>
-          </Grid>
-          <Grid item xs={4}>
-            <Typography variant="caption" color="text.secondary">{t('agents.detail.lastStatus')}</Typography>
-            <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-              {agent.lastRun?.status || '\u2014'}
-            </Typography>
-          </Grid>
-        </Grid>
+        {/* ═══ TAB 2 — STATUS (readonly) ═══ */}
+        {currentTab === 'status' && (
+          <Box>
+            {/* Overall status */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{t('agents.table.status')}:</Typography>
+              <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: STATUS_COLORS[agent.status] || STATUS_COLORS.unknown }} />
+              <Typography variant="body2" sx={{ fontWeight: 600, color: STATUS_COLORS[agent.status], textTransform: 'capitalize' }}>
+                {t(`agents.${agent.status}`) || agent.status}
+              </Typography>
+            </Box>
 
-        {/* Recente activiteit (laatste 5) */}
-        {agent.recentRuns?.length > 0 && (
-          <>
-            <Divider sx={{ my: 1.5 }} />
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-              {t('agents.detail.recentActivity')}
-            </Typography>
-            <List dense disablePadding>
-              {agent.recentRuns.map((run, i) => (
-                <ListItem key={i} sx={{ py: 0.25, px: 1 }} divider={i < agent.recentRuns.length - 1}>
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 80 }}>
-                          {formatTimestamp(run.timestamp)}
-                        </Typography>
-                        <Box sx={{
-                          width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                          bgcolor: run.status === 'success' ? STATUS_COLORS.healthy : run.status === 'error' ? STATUS_COLORS.error : STATUS_COLORS.unknown
-                        }} />
-                        <Typography variant="body2">{run.action}</Typography>
-                        {run.destination && (
-                          <Chip label={run.destination} size="small" sx={{ height: 16, fontSize: '0.6rem' }} />
-                        )}
-                      </Box>
-                    }
+            {/* Destination Status (Cat A) */}
+            {agent.type === 'A' && (
+              <>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                  {t('agents.detail.destinationStatus')}
+                </Typography>
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  {['calpe', 'texel'].map(dest => {
+                    const d = agent.destinations?.[dest];
+                    return (
+                      <Grid item xs={6} key={dest}>
+                        <Card variant="outlined" sx={{ p: 1.5 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            {dest === 'calpe' ? '🇪🇸 Calpe' : '🇳🇱 Texel'}
+                          </Typography>
+                          {d ? (
+                            <>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: destStatusColor(d.status) }} />
+                                <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>{d.status || 'unknown'}</Typography>
+                              </Box>
+                              {d.lastRun && (
+                                <Typography variant="caption" color="text.secondary">
+                                  {new Date(d.lastRun).toLocaleString('nl-NL')}
+                                </Typography>
+                              )}
+                            </>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">{'\u2014'}</Typography>
+                          )}
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </>
+            )}
+
+            {/* Scheduled Jobs for this agent */}
+            {agent.scheduledJobs?.length > 0 && (
+              <>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                  {t('agents.detail.scheduledJobs')} ({agent.scheduledJobs.length})
+                </Typography>
+                <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: 'grey.50' }}>
+                        <TableCell sx={{ fontWeight: 600, py: 0.5 }}>Job</TableCell>
+                        <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.table.schedule')}</TableCell>
+                        <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.description')}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {agent.scheduledJobs.map((job, i) => (
+                        <TableRow key={i}>
+                          <TableCell sx={{ py: 0.5 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>{job.name}</Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 0.5 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{job.cronHuman}</Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">{job.description}</Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </>
+            )}
+
+            {/* Last run info */}
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid item xs={4}>
+                <Typography variant="caption" color="text.secondary">{t('agents.lastUpdated')}</Typography>
+                <Typography variant="body2">
+                  {agent.lastRun?.timestamp ? new Date(agent.lastRun.timestamp).toLocaleString('nl-NL') : '\u2014'}
+                </Typography>
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" color="text.secondary">{t('agents.detail.duration')}</Typography>
+                <Typography variant="body2">{agent.lastRun?.duration ? `${agent.lastRun.duration}ms` : '\u2014'}</Typography>
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" color="text.secondary">{t('agents.detail.lastStatus')}</Typography>
+                <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                  {agent.lastRun?.status || '\u2014'}
+                </Typography>
+              </Grid>
+            </Grid>
+
+            {/* Recent activity (last 5) */}
+            {agent.recentRuns?.length > 0 && (
+              <>
+                <Divider sx={{ my: 1.5 }} />
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                  {t('agents.detail.recentActivity')}
+                </Typography>
+                <List dense disablePadding>
+                  {agent.recentRuns.map((run, i) => (
+                    <ListItem key={i} sx={{ py: 0.25, px: 1 }} divider={i < agent.recentRuns.length - 1}>
+                      <ListItemText primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ minWidth: 80 }}>
+                            {formatTimestamp(run.timestamp)}
+                          </Typography>
+                          <Box sx={{
+                            width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                            bgcolor: run.status === 'success' ? STATUS_COLORS.healthy : run.status === 'error' ? STATUS_COLORS.error : STATUS_COLORS.unknown
+                          }} />
+                          <Typography variant="body2">{run.action}</Typography>
+                          {run.destination && <Chip label={run.destination} size="small" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                        </Box>
+                      } />
+                    </ListItem>
+                  ))}
+                </List>
+              </>
+            )}
+          </Box>
+        )}
+
+        {/* ═══ TAB 3 — CONFIGURATIE (platform_admin only) ═══ */}
+        {currentTab === 'config' && isPlatformAdmin && (
+          <Box>
+            {configLoading || !configForm ? (
+              <Box sx={{ py: 2 }}>
+                {[...Array(4)].map((_, i) => <Skeleton key={i} height={56} sx={{ mb: 1 }} />)}
+              </Box>
+            ) : (
+              <Grid container spacing={2}>
+                {updateMut.isError && (
+                  <Grid item xs={12}>
+                    <Alert severity="error">
+                      {updateMut.error?.response?.data?.error?.message || t('common.error')}
+                    </Alert>
+                  </Grid>
+                )}
+                <Grid item xs={12} md={8}>
+                  <TextField size="small" fullWidth
+                    label={t('agents.config.displayName')}
+                    value={configForm.display_name}
+                    onChange={e => setConfigForm(f => ({ ...f, display_name: e.target.value }))}
                   />
-                </ListItem>
-              ))}
-            </List>
-          </>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField size="small" fullWidth
+                    label={t('agents.config.emoji')}
+                    value={configForm.emoji}
+                    onChange={e => setConfigForm(f => ({ ...f, emoji: e.target.value }))}
+                    inputProps={{ maxLength: 4 }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={<Switch checked={configForm.is_active}
+                      onChange={e => setConfigForm(f => ({ ...f, is_active: e.target.checked }))} />}
+                    label={t('agents.config.active')}
+                  />
+                </Grid>
+
+                {/* Description with 4-language tabs */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                    {t('agents.detail.description')}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
+                    {['nl', 'en', 'de', 'es'].map(lang => (
+                      <Chip key={lang} label={lang.toUpperCase()} size="small"
+                        variant={descLang === lang ? 'filled' : 'outlined'}
+                        color={descLang === lang ? 'primary' : 'default'}
+                        onClick={() => setDescLang(lang)}
+                        sx={{ fontWeight: descLang === lang ? 700 : 400, cursor: 'pointer' }}
+                      />
+                    ))}
+                  </Box>
+                  <TextField size="small" fullWidth multiline rows={3}
+                    value={configForm[`description_${descLang}`] || ''}
+                    onChange={e => setConfigForm(f => ({ ...f, [`description_${descLang}`]: e.target.value }))}
+                  />
+                </Grid>
+
+                {/* Editable tasks array */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                    {t('agents.detail.tasks')}
+                  </Typography>
+                  {editTasks?.map((task, i) => (
+                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                      <TextField size="small" fullWidth value={task}
+                        onChange={e => {
+                          const next = [...editTasks];
+                          next[i] = e.target.value;
+                          setEditTasks(next);
+                        }}
+                      />
+                      <IconButton size="small" color="error" onClick={() => handleRemoveTask(i)}>
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  ))}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                    <TextField size="small" fullWidth
+                      placeholder={t('agents.config.addTask')}
+                      value={newTask}
+                      onChange={e => setNewTask(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleAddTask()}
+                    />
+                    <IconButton size="small" color="primary" onClick={handleAddTask} disabled={!newTask.trim()}>
+                      <AddIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Grid>
+
+                {/* Save button */}
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 1 }}>
+                    <Button variant="contained" onClick={handleConfigSave}
+                      disabled={updateMut.isPending}>
+                      {updateMut.isPending ? t('agents.config.saving') : t('agents.config.save')}
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
+            )}
+          </Box>
+        )}
+
+        {/* ═══ TAB 4 — WAARSCHUWINGEN (only when warning/error) ═══ */}
+        {currentTab === 'warnings' && hasWarning && (
+          <Box>
+            <Alert
+              severity={agent.status === 'error' ? 'error' : 'warning'}
+              icon={agent.status === 'error' ? <ErrorOutlineIcon /> : <WarningAmberIcon />}
+              sx={{ mb: 2 }}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                {agent.status === 'error' ? t('agents.detail.errorTitle') : t('agents.detail.warningTitle')}
+              </Typography>
+              <Typography variant="body2">
+                {agent.warningDetail || agent.lastRun?.error || t('agents.detail.checkLogs')}
+              </Typography>
+            </Alert>
+
+            {/* Recommended action with copy */}
+            {agent.recommendedAction && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {t('agents.detail.recommendedAction')}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1.5, bgcolor: 'grey.100', borderRadius: 1 }}>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', flex: 1, wordBreak: 'break-all' }}>
+                    {agent.recommendedAction}
+                  </Typography>
+                  <Tooltip title={t('agents.detail.copyCommand')}>
+                    <IconButton size="small" onClick={() => {
+                      navigator.clipboard.writeText(agent.recommendedAction);
+                      setSnack({ open: true, message: t('agents.detail.copied') });
+                    }}>
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Box>
+            )}
+
+            {/* Recent errors */}
+            {agent.recentRuns?.filter(r => r.status === 'error').length > 0 && (
+              <>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                  {t('agents.detail.recentErrors')}
+                </Typography>
+                <List dense disablePadding>
+                  {agent.recentRuns.filter(r => r.status === 'error').map((run, i) => (
+                    <ListItem key={i} sx={{ py: 0.25, px: 1, bgcolor: 'rgba(244,67,54,0.04)', borderRadius: 1, mb: 0.5 }}>
+                      <ListItemText primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ minWidth: 80 }}>
+                            {formatTimestamp(run.timestamp)}
+                          </Typography>
+                          <Typography variant="body2">{run.action}</Typography>
+                          {run.destination && <Chip label={run.destination} size="small" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                        </Box>
+                      } />
+                    </ListItem>
+                  ))}
+                </List>
+              </>
+            )}
+          </Box>
         )}
       </DialogContent>
       <DialogActions>
-        {isPlatformAdmin && (
-          <Button
-            startIcon={<SettingsIcon />}
-            onClick={() => setConfigOpen(true)}
-            sx={{ mr: 'auto' }}
-          >
-            {t('agents.config.edit')}
-          </Button>
-        )}
         <Button onClick={onClose}>{t('agents.close')}</Button>
       </DialogActions>
     </Dialog>
 
-    {/* Agent Config Dialog */}
-    {configOpen && (
-      <AgentConfigDialog
-        agentKey={agent.id}
-        agentName={agent.name}
-        onClose={() => setConfigOpen(false)}
-        onSaved={(msg) => { setConfigOpen(false); setSnack({ open: true, message: msg }); }}
-      />
-    )}
     <Snackbar
       open={snack.open}
       autoHideDuration={4000}
@@ -650,126 +935,5 @@ function AgentDetailDialog({ agent, onClose }) {
       message={snack.message}
     />
     </>
-  );
-}
-
-/* ===== Agent Config Dialog (Fase 9A-1) ===== */
-function AgentConfigDialog({ agentKey, agentName, onClose, onSaved }) {
-  const { t } = useTranslation();
-  const { data: configsData, isLoading } = useAgentConfigs();
-  const updateMut = useUpdateAgentConfig();
-
-  const configs = configsData?.data?.configs || [];
-  const agentConfig = configs.find(c => c.agent_key === agentKey) || {};
-
-  const initialForm = useMemo(() => {
-    if (isLoading) return null;
-    return {
-      display_name: agentConfig.display_name || agentName,
-      emoji: agentConfig.emoji || '',
-      description_nl: agentConfig.description_nl || '',
-      description_en: agentConfig.description_en || '',
-      is_active: agentConfig.is_active !== false
-    };
-  }, [isLoading, agentConfig.display_name, agentConfig.emoji, agentConfig.description_nl, agentConfig.description_en, agentConfig.is_active, agentName]);
-
-  const [form, setForm] = useState(null);
-
-  // Initialize form when data arrives
-  if (!form && initialForm) {
-    setForm(initialForm);
-  }
-
-  const handleSave = async () => {
-    try {
-      await updateMut.mutateAsync({ key: agentKey, data: form });
-      onSaved(t('agents.config.saved'));
-    } catch (err) {
-      // Show error in the dialog
-    }
-  };
-
-  return (
-    <Dialog open maxWidth="sm" fullWidth onClose={onClose}>
-      <DialogTitle>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <SettingsIcon color="primary" />
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            {t('agents.config.title')}: {agentName}
-          </Typography>
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        {isLoading || !form ? (
-          <Box sx={{ py: 2 }}>
-            {[...Array(4)].map((_, i) => <Skeleton key={i} height={56} sx={{ mb: 1 }} />)}
-          </Box>
-        ) : (
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            {updateMut.isError && (
-              <Grid item xs={12}>
-                <Alert severity="error">
-                  {updateMut.error?.response?.data?.error?.message || t('common.error')}
-                </Alert>
-              </Grid>
-            )}
-            <Grid item xs={12} md={8}>
-              <TextField
-                size="small" fullWidth
-                label={t('agents.config.displayName')}
-                value={form.display_name}
-                onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                size="small" fullWidth
-                label={t('agents.config.emoji')}
-                value={form.emoji}
-                onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))}
-                inputProps={{ maxLength: 4 }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                size="small" fullWidth multiline rows={2}
-                label={t('agents.config.descriptionNL')}
-                value={form.description_nl}
-                onChange={e => setForm(f => ({ ...f, description_nl: e.target.value }))}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                size="small" fullWidth multiline rows={2}
-                label={t('agents.config.descriptionEN')}
-                value={form.description_en}
-                onChange={e => setForm(f => ({ ...f, description_en: e.target.value }))}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={form.is_active}
-                    onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))}
-                  />
-                }
-                label={t('agents.config.active')}
-              />
-            </Grid>
-          </Grid>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>{t('agents.close')}</Button>
-        <Button
-          variant="contained"
-          onClick={handleSave}
-          disabled={updateMut.isPending || !form}
-        >
-          {updateMut.isPending ? t('agents.config.saving') : t('agents.config.save')}
-        </Button>
-      </DialogActions>
-    </Dialog>
   );
 }

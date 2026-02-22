@@ -23,5 +23,13 @@ export const settingsService = {
     client.get('/settings/branding').then(r => r.data),
 
   updateBranding: (destination, data) =>
-    client.put(`/settings/branding/${destination}`, data).then(r => r.data)
+    client.put(`/settings/branding/${destination}`, data).then(r => r.data),
+
+  uploadLogo: (destination, file) => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    return client.post(`/settings/branding/${destination}/logo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then(r => r.data);
+  }
 };

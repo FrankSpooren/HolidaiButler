@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 22 februari 2026
-**Versie**: 7.0
+**Versie**: 7.1
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 9B COMPLEET - Admin Portal Bug Fix & UX Hardening. Blok 1: 6 P0 bugs (unicode, status, 500, image, email, audit actor). Blok 2: 13 UX fixes (reviews filter, agent warnings, descriptions, config popup, scheduled jobs, colors, frontend link, branding, is_active, rolnamen, namen, wachtwoord). Blok 3: Pageview tracking (page_views, POST /track, analytics). Kosten: EUR 0.
+**Status**: FASE 9C COMPLEET - Admin Portal Live Verificatie & Reparatie. Blok 1: 2 P0 bug fixes (user creation permissions, image reorder e2e). Blok 2A: Enterprise agent profiel popup (4 MUI tabs, AGENT_TASKS 18 agents). Blok 2B-2G: UX fixes (subcategory editing, logo upload, 4 items reeds bevestigd). Blok 3: Deploy 6 omgevingen. adminPortal.js v3.2.0, 38 endpoints. Kosten: EUR 0.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.33.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.34.0) in repo root + Hetzner
 
 ---
 
@@ -58,6 +58,7 @@
 | **Fase 9A** | Admin Portal Enhancement (RBAC + Undo + Agent Config, Chatbot Analytics, POI Category/Image/Branding, Dark Mode — 16 nieuwe endpoints, 35 totaal) | ✅ COMPLEET | 21-02-2026 | Build OK, 0 errors | EUR 0 |
 | **Fase 9A-FIX** | Admin Login Fix (rate limiter 5→15, lockout 5→10/5min, Sessions UUID non-blocking) | ✅ COMPLEET | 22-02-2026 | Login OK | EUR 0 |
 | **Fase 9B** | Admin Portal Bug Fix & UX Hardening (6 P0 bugs, 13 UX fixes, pageview tracking, enterprise password policy — 2 nieuwe endpoints, 37 totaal) | ✅ COMPLEET | 22-02-2026 | 28/28 tests PASS | EUR 0 |
+| **Fase 9C** | Admin Portal Live Verificatie & Reparatie (user creation fix, image reorder e2e, enterprise agent profiel popup 4-tab, subcategory editing, logo upload — 1 nieuw endpoint, 38 totaal) | ✅ COMPLEET | 22-02-2026 | Deploy 6 omgevingen | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -81,6 +82,7 @@
 | Fase 9A Admin Portal Enhancement | EUR 0 | EUR 0 | ✅ |
 | Fase 9A-FIX Admin Login Fix | EUR 0 | EUR 0 | ✅ |
 | Fase 9B Admin Portal Bug Fix & UX Hardening | EUR 0 | EUR 0 | ✅ |
+| Fase 9C Admin Portal Live Verificatie & Reparatie | EUR 0 | EUR 0 | ✅ |
 | **Totaal** | **EUR 95** | **EUR 74,41** | **78,3% van budget** |
 
 ### 1.3 Openstaande Componenten
@@ -953,6 +955,15 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - Pageview tracking: GDPR compliant = geen PII (geen IP, geen user agent) — fire-and-forget met rate limiting
 - Role name consistency: standaardiseer naar Engels in ALLE i18n bestanden voor platform-wide consistency
 
+### Fase 9C (22/02) - Admin Portal Live Verificatie & Reparatie
+- KRITIEK: "PASS" zonder live frontend verificatie is WAARDELOOS — altijd browser-level testen na deploy
+- KRITIEK: npm run build + rsync naar ALLE omgevingen is verplichte stap, niet optioneel
+- KRITIEK: Customer-portal backend queries MOETEN image ordering respecteren — admin-only fix is halve fix
+- Agent profiel: VOLLEDIGE metadata in AGENT_TASKS map = single source of truth voor display + functionaliteit
+- Redis cache: ALTIJD flushen na data-wijzigingen die door zowel admin als customer-portal gelezen worden
+- Logo upload: multer met diskStorage + destination-aware filename voorkomt overwrite tussen destinations
+- Subcategory editing: controleer altijd eerst of kolom (sub_subcategory) daadwerkelijk bestaat in DB schema
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -1023,6 +1034,10 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 22-02 | Enterprise password policy (9B) | 12+ chars, uppercase, lowercase, digit, special — standaard enterprise security requirement | Frank |
 | 22-02 | Pageview tracking GDPR compliant (9B) | Geen IP, geen user agent, fire-and-forget — privacy-first analytics | Claude Code |
 | 22-02 | Role names in Engels (9B) | POI Owner / Content Editor / Content Reviewer — consistent in alle 4 talen | Frank |
+| 22-02 | Enterprise agent popup 4-tab design (9C) | Profiel/Status/Configuratie/Warnings — alle agent info in 1 popup i.p.v. verspreid | Claude Code |
+| 22-02 | multer diskStorage voor logo upload (9C) | Destination-aware filenames ({dest}_logo.ext), max 2MB, PNG/JPG/SVG only | Claude Code |
+| 22-02 | 2-level category editing (9C) | sub_subcategory kolom bestaat niet in DB — alleen category + subcategory wijzigbaar | Claude Code |
+| 22-02 | Branding uitbreiding met brand_name/payoff (9C) | MongoDB brand_configurations uitgebreid — GET/PUT endpoints teruggeven/accepteren | Claude Code |
 
 ---
 
@@ -1103,6 +1118,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.1** | **22-02-2026** | **Fase 9C Admin Portal Live Verificatie & Reparatie COMPLEET: Blok 1: 2 P0 fixes (user creation permissions kolom, image reorder display_order e2e). Blok 2A: Enterprise agent profiel popup (4 MUI tabs, AGENT_TASKS 18 agents, per-destination status, PM2 log copy). Blok 2B-2G: subcategory editing, logo upload (multer + POST endpoint + preview + i18n), 4 items reeds bevestigd. Blok 3: Deploy 6 omgevingen. 1 nieuw endpoint (38 totaal). adminPortal.js v3.2.0. Kosten: EUR 0. CLAUDE.md v3.34.0.** |
 | **7.0** | **22-02-2026** | **Fase 9B Admin Portal Bug Fix & UX Hardening COMPLEET: Blok 1: 6 P0 bugs (unicode emoji fix, agent status Unknown→actual, user creation 500→201, image reorder persistence, daily email severity prefix, audit log actor type). Blok 2: 13 UX fixes (reviews destination filter, agent warning details+actions, NL/EN agent descriptions, extended agent config popup 5-section, scheduled job descriptions, category chip colors, environment-aware frontend links, branding merknaam+payoff, is_active audit, role name consistency, real user names, enterprise password policy). Blok 3: Pageview tracking (page_views tabel, POST /track, GET /analytics/pageviews, AnalyticsPage section). 6 doc fixes (8E test count, 9A test count, MS version refs, 9A-FIX row, rate limiter). 2 nieuwe endpoints (37 totaal). adminPortal.js v3.1.0. 28/28 tests PASS. Kosten: EUR 0. CLAUDE.md v3.33.0.** |
 | **6.9.1** | **22-02-2026** | **Fase 9A-FIX Admin Login Fix: 3 bugs opgelost bij live testing. (1) authRateLimiter 5→15 req/15min. (2) Account lockout threshold 5→10 attempts, lock duration 15→5 min. (3) Sessions.user_id INT(11) vs admin_users CHAR(36) UUID mismatch → INSERT crash. Fix: non-blocking .catch(). Admin wachtwoord: HolidaiAdmin2026. CLAUDE.md v3.32.1.** |
 | **6.9** | **21-02-2026** | **Fase 9A Admin Portal Enhancement COMPLEET: 3 sub-fases. 9A-1: RBAC user management (CRUD, 4 rollen, soft-delete, password reset), audit log undo (reversible actions + MongoDB snapshot), agent config editing (displayName, emoji, description, active). 9A-2: Chatbot analytics (sessions, messages, avg response, fallback rate, language distribution), analytics trend API, analytics snapshot. 9A-3: POI category management (filter dropdown + autocomplete), image ranking (display_order, reorder UI), branding UI (color management per destination), dark mode (Zustand + MUI theme factory). 16 nieuwe endpoints (35 totaal). 4 nieuwe bestanden (userService.js, useUsers.js, UsersPage.jsx, themeStore.js). Kosten: EUR 0. CLAUDE.md v3.32.0.** |
