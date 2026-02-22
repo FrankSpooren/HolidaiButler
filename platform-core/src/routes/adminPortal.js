@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -40,9 +40,10 @@
  *   PUT  /users/:id            — Update admin user (platform_admin only)
  *   DELETE /users/:id          — Soft-delete admin user (platform_admin only)
  *   POST /users/:id/reset-password — Reset admin user password (platform_admin only)
+ *   GET  /analytics/pageviews  — Pageview analytics (page_views table, GDPR compliant)
  *
  * @module routes/adminPortal
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 import { Router } from 'express';
@@ -93,6 +94,26 @@ function resolveDestinationId(val) {
   if (codeMap[lower]) return codeMap[lower];
   const parsed = parseInt(val);
   return isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Enterprise password validation (Fase 9B).
+ * Returns array of validation error messages (empty = valid).
+ */
+function validatePassword(password, email, name) {
+  const errors = [];
+  if (!password || password.length < 12) errors.push('Minimaal 12 karakters');
+  if (!/[A-Z]/.test(password)) errors.push('Minimaal 1 hoofdletter');
+  if (!/[a-z]/.test(password)) errors.push('Minimaal 1 kleine letter');
+  if (!/[0-9]/.test(password)) errors.push('Minimaal 1 cijfer');
+  if (!/[!@#$%^&*()\-_+=.,;:?]/.test(password)) errors.push('Minimaal 1 speciaal teken');
+  if (email && password.toLowerCase().includes(email.split('@')[0].toLowerCase())) {
+    errors.push('Mag geen deel van email bevatten');
+  }
+  if (name && name.trim() && password.toLowerCase().includes(name.split(' ')[0].toLowerCase())) {
+    errors.push('Mag geen deel van naam bevatten');
+  }
+  return errors;
 }
 
 // ============================================================
@@ -238,10 +259,12 @@ async function saveUndoSnapshot({ auditLogId, action, entityType, entityId, prev
 /**
  * Save an audit log entry to MongoDB. Returns the _id.
  */
-async function saveAuditLog({ action, adminId, adminEmail, details, entityType, entityId, metadata }) {
+async function saveAuditLog({ action, adminId, adminEmail, details, entityType, entityId, metadata, actorType }) {
   try {
     if (mongoose.connection.readyState !== 1) return null;
     const db = mongoose.connection.db;
+    // actorType: 'admin' (manual by user), 'agent' (automated agent), 'system' (cron/scheduled)
+    const resolvedActorType = actorType || (adminId ? 'admin' : 'system');
     const result = await db.collection('audit_logs').insertOne({
       action,
       admin_id: adminId,
@@ -251,7 +274,7 @@ async function saveAuditLog({ action, adminId, adminEmail, details, entityType, 
       entity_id: entityId || null,
       metadata: metadata || {},
       timestamp: new Date(),
-      actor: { type: 'admin', name: 'admin-portal' }
+      actor: { type: resolvedActorType, name: resolvedActorType === 'admin' ? 'admin-portal' : (resolvedActorType === 'agent' ? (metadata?.agentName || 'unknown-agent') : 'system') }
     });
     return result.insertedId;
   } catch {
@@ -819,24 +842,161 @@ router.get('/health', adminAuth('reviewer'), async (req, res) => {
  * Kept in sync with agentRegistry.js entries.
  */
 const AGENT_METADATA = [
-  { id: 'maestro',        name: 'De Maestro',              englishName: 'Orchestrator',             category: 'core',        type: 'A', description: 'Orkestreert alle agents en scheduled jobs',   schedule: null,           actorNames: ['orchestrator'] },
-  { id: 'bode',           name: 'De Bode',                 englishName: 'Owner Interface Agent',    category: 'core',        type: 'A', description: 'Daily briefing en owner communicatie',        schedule: '0 8 * * *',   actorNames: ['orchestrator'] },
-  { id: 'dokter',         name: 'De Dokter',               englishName: 'Health Monitor Agent',     category: 'operations',  type: 'A', description: 'Systeem monitoring en health checks',         schedule: '0 * * * *',   actorNames: ['health-monitor'] },
-  { id: 'koerier',        name: 'De Koerier',              englishName: 'Data Sync Agent',          category: 'operations',  type: 'A', description: 'POI en review data synchronisatie',           schedule: '0 6 * * *',   actorNames: ['data-sync', 'reviews-manager'] },
-  { id: 'geheugen',       name: 'Het Geheugen',            englishName: 'HoliBot Sync Agent',       category: 'operations',  type: 'A', description: 'ChromaDB vectorisatie en QnA sync',           schedule: '0 4 * * *',   actorNames: ['holibot-sync'] },
-  { id: 'gastheer',       name: 'De Gastheer',             englishName: 'Communication Flow Agent', category: 'operations',  type: 'A', description: 'Gebruikerscommunicatie en journey processing', schedule: '0 */4 * * *', actorNames: ['communication-flow'] },
-  { id: 'poortwachter',   name: 'De Poortwachter',         englishName: 'GDPR Agent',               category: 'operations',  type: 'A', description: 'GDPR compliance en data bescherming',         schedule: '0 */4 * * *', actorNames: ['gdpr'] },
-  { id: 'stylist',        name: 'De Stylist',              englishName: 'UX/UI Agent',              category: 'development', type: 'B', description: 'UX/UI review en brand consistency',           schedule: '0 6 * * 1',   actorNames: ['dev-layer'] },
-  { id: 'corrector',      name: 'De Corrector',            englishName: 'Code Agent',               category: 'development', type: 'B', description: 'Code quality en best practices',              schedule: '0 6 * * 1',   actorNames: ['dev-layer'] },
-  { id: 'bewaker',        name: 'De Bewaker',              englishName: 'Security Agent',           category: 'development', type: 'B', description: 'Security scanning en vulnerability checks',    schedule: '0 2 * * *',   actorNames: ['dev-layer'] },
-  { id: 'inspecteur',     name: 'De Inspecteur',           englishName: 'Quality Agent',            category: 'development', type: 'A', description: 'Kwaliteitscontrole en rapportage',            schedule: '0 6 * * 1',   actorNames: ['dev-layer'] },
-  { id: 'architect',      name: 'De Architect',            englishName: 'Architecture Agent',       category: 'strategy',    type: 'B', description: 'Architectuur assessment en aanbevelingen',     schedule: '0 3 * * 0',   actorNames: ['strategy-layer'] },
-  { id: 'leermeester',    name: 'De Leermeester',          englishName: 'Learning Agent',           category: 'strategy',    type: 'A', description: 'Pattern learning en optimalisatie',            schedule: '30 5 * * 1',  actorNames: ['strategy-layer'] },
-  { id: 'thermostaat',    name: 'De Thermostaat',          englishName: 'Adaptive Config Agent',    category: 'strategy',    type: 'A', description: 'Configuratie evaluatie en alerting',           schedule: '0 */6 * * *', actorNames: ['strategy-layer'] },
-  { id: 'weermeester',    name: 'De Weermeester',          englishName: 'Prediction Agent',         category: 'strategy',    type: 'A', description: 'Voorspellingen en trend analyse',              schedule: '0 3 * * 0',   actorNames: ['strategy-layer'] },
-  { id: 'contentQuality', name: 'Content Quality Checker', englishName: 'Content Quality Checker',  category: 'monitoring',  type: 'A', description: 'POI content completeness en consistency',      schedule: '0 5 * * 1',   actorNames: ['data-sync'] },
-  { id: 'smokeTest',      name: 'Smoke Test Runner',       englishName: 'Smoke Test Runner',        category: 'monitoring',  type: 'A', description: 'E2E smoke tests per destination',              schedule: '45 7 * * *',  actorNames: ['health-monitor'] },
-  { id: 'backupHealth',   name: 'Backup Health Checker',   englishName: 'Backup Health Checker',    category: 'monitoring',  type: 'B', description: 'Backup recency en disk space monitoring',      schedule: '30 7 * * *',  actorNames: ['health-monitor'] }
+  { id: 'maestro', name: 'De Maestro', englishName: 'Orchestrator', category: 'core', type: 'A',
+    description: 'Orkestreert alle agents en scheduled jobs',
+    description_en: 'Orchestrates all agents and scheduled jobs',
+    tasks: ['Aansturing en coördinatie van alle 18 agents', 'Beheer van 40 scheduled jobs via BullMQ', 'Foutafhandeling en retry-logica bij gefaalde jobs', 'Prioritering van taken bij hoge systeembelasting'],
+    monitoring_scope: 'Alle agents, BullMQ queues, job statussen',
+    output_description: 'Job scheduling, error logging, agent lifecycle management',
+    schedule: null, actorNames: ['orchestrator'] },
+  { id: 'bode', name: 'De Bode', englishName: 'Owner Interface Agent', category: 'core', type: 'A',
+    description: 'Daily briefing en owner communicatie',
+    description_en: 'Daily briefing and owner communication',
+    tasks: ['Dagelijkse status briefing email genereren', 'Per-destination statistieken verzamelen', 'Smoke test en backup resultaten samenvatten', 'Budget en kostenrapportage', 'Prediction alerts aggregeren'],
+    monitoring_scope: 'Alle systeem KPIs, agent statussen, kosten',
+    output_description: 'Dagelijkse email via MailerLite met [OK]/[MEDIUM]/[HOOG]/[URGENT] prefix',
+    schedule: '0 8 * * *', actorNames: ['orchestrator'] },
+  { id: 'dokter', name: 'De Dokter', englishName: 'Health Monitor Agent', category: 'operations', type: 'A',
+    description: 'Systeem monitoring en health checks',
+    description_en: 'System monitoring and health checks',
+    tasks: ['Uptime monitoring van 7 portals', 'SSL certificaat expiry bewaking (5 domeinen)', 'API response time tracking', 'Database connectiviteit checks', 'Disk space monitoring'],
+    monitoring_scope: 'Alle portals, SSL certs, API endpoints, disk space',
+    output_description: 'Health alerts, SSL expiry waarschuwingen, uptime rapportage',
+    schedule: '0 * * * *', actorNames: ['health-monitor'] },
+  { id: 'koerier', name: 'De Koerier', englishName: 'Data Sync Agent', category: 'operations', type: 'A',
+    description: 'POI en review data synchronisatie',
+    description_en: 'POI and review data synchronization',
+    tasks: ['POI data synchronisatie vanuit externe bronnen', 'Review data import en verwerking', 'Content quality monitoring per destination', 'Database integriteit checks'],
+    monitoring_scope: 'POI tabel, reviews tabel, content kwaliteit',
+    output_description: 'Gesynchroniseerde POI/review data, content quality audits',
+    schedule: '0 6 * * *', actorNames: ['data-sync', 'reviews-manager'] },
+  { id: 'geheugen', name: 'Het Geheugen', englishName: 'HoliBot Sync Agent', category: 'operations', type: 'A',
+    description: 'ChromaDB vectorisatie en QnA sync',
+    description_en: 'ChromaDB vectorization and QnA sync',
+    tasks: ['POI content vectorisatie naar ChromaDB', 'QnA data synchronisatie', 'ChromaDB state snapshots (wekelijks)', 'Embedding kwaliteitscontrole'],
+    monitoring_scope: 'ChromaDB collecties (calpe_pois, texel_pois), vector counts',
+    output_description: 'Gevectoriseerde content in ChromaDB, state snapshots in MongoDB',
+    schedule: '0 4 * * *', actorNames: ['holibot-sync'] },
+  { id: 'gastheer', name: 'De Gastheer', englishName: 'Communication Flow Agent', category: 'operations', type: 'A',
+    description: 'Gebruikerscommunicatie en journey processing',
+    description_en: 'User communication and journey processing',
+    tasks: ['User journey tracking en analyse', 'Communicatie triggers verwerken', 'Engagement metrics berekenen', 'Notificatie flow management'],
+    monitoring_scope: 'User journeys, communicatie triggers, engagement',
+    output_description: 'Journey analytics, communicatie logs',
+    schedule: '0 */4 * * *', actorNames: ['communication-flow'] },
+  { id: 'poortwachter', name: 'De Poortwachter', englishName: 'GDPR Agent', category: 'operations', type: 'A',
+    description: 'GDPR compliance en data bescherming',
+    description_en: 'GDPR compliance and data protection',
+    tasks: ['Consent audit (wekelijks)', 'Data retention policy handhaving', 'Verwijderverzoeken verwerken', 'Privacy impact assessments'],
+    monitoring_scope: 'User consent records, data retention, verwijderverzoeken',
+    output_description: 'GDPR compliance rapportages, consent audit logs',
+    schedule: '0 */4 * * *', actorNames: ['gdpr'] },
+  { id: 'stylist', name: 'De Stylist', englishName: 'UX/UI Agent', category: 'development', type: 'B',
+    description: 'UX/UI review en brand consistency',
+    description_en: 'UX/UI review and brand consistency',
+    tasks: ['Brand kleur consistentie checks', 'Destination-specifieke styling verificatie', 'Accessibility compliance', 'UI component kwaliteit'],
+    monitoring_scope: 'Frontend componenten, brand kleuren, styling',
+    output_description: 'UX review rapporten, brand violation alerts',
+    schedule: '0 6 * * 1', actorNames: ['dev-layer'] },
+  { id: 'corrector', name: 'De Corrector', englishName: 'Code Agent', category: 'development', type: 'B',
+    description: 'Code quality en best practices',
+    description_en: 'Code quality and best practices',
+    tasks: ['Code kwaliteit analyse', 'Best practices verificatie', 'Dependency vulnerability checks', 'Performance bottleneck detectie'],
+    monitoring_scope: 'Codebase kwaliteit, dependencies, performance',
+    output_description: 'Code quality rapporten, vulnerability alerts',
+    schedule: '0 6 * * 1', actorNames: ['dev-layer'] },
+  { id: 'bewaker', name: 'De Bewaker', englishName: 'Security Agent', category: 'development', type: 'B',
+    description: 'Security scanning en vulnerability checks',
+    description_en: 'Security scanning and vulnerability checks',
+    tasks: ['Dependency vulnerability scanning', 'API security checks', 'Authentication flow verificatie', 'Rate limiting effectiviteit'],
+    monitoring_scope: 'Dependencies, API endpoints, auth flows',
+    output_description: 'Security scan rapporten, vulnerability alerts',
+    schedule: '0 2 * * *', actorNames: ['dev-layer'] },
+  { id: 'inspecteur', name: 'De Inspecteur', englishName: 'Quality Agent', category: 'development', type: 'A',
+    description: 'Kwaliteitscontrole en rapportage',
+    description_en: 'Quality control and reporting',
+    tasks: ['End-to-end kwaliteitscontrole', 'API response validatie', 'Data integriteit checks', 'Rapportage generatie'],
+    monitoring_scope: 'API responses, data integriteit, kwaliteitsmetrics',
+    output_description: 'Kwaliteitsrapporten, integriteit alerts',
+    schedule: '0 6 * * 1', actorNames: ['dev-layer'] },
+  { id: 'architect', name: 'De Architect', englishName: 'Architecture Agent', category: 'strategy', type: 'B',
+    description: 'Architectuur assessment en aanbevelingen',
+    description_en: 'Architecture assessment and recommendations',
+    tasks: ['Architectuur compliance checks', 'Schaalbaarheid analyse', 'Technische schuld detectie', 'Multi-destination architectuur review'],
+    monitoring_scope: 'Systeemarchitectuur, schaalbaarheid, tech debt',
+    output_description: 'Architectuur rapporten, aanbevelingen',
+    schedule: '0 3 * * 0', actorNames: ['strategy-layer'] },
+  { id: 'leermeester', name: 'De Leermeester', englishName: 'Learning Agent', category: 'strategy', type: 'A',
+    description: 'Pattern learning en optimalisatie',
+    description_en: 'Pattern learning and optimization',
+    tasks: ['Gebruikerspatronen herkennen', 'Optimalisatie suggesties genereren', 'A/B test resultaten analyseren', 'Learning patterns opslaan in MongoDB'],
+    monitoring_scope: 'Gebruikersgedrag, conversie patterns, optimalisatie kansen',
+    output_description: 'Optimalisatie suggesties, learning patterns in MongoDB',
+    schedule: '30 5 * * 1', actorNames: ['strategy-layer'] },
+  { id: 'thermostaat', name: 'De Thermostaat', englishName: 'Adaptive Config Agent', category: 'strategy', type: 'A',
+    description: 'Configuratie evaluatie en alerting',
+    description_en: 'Configuration evaluation and alerting',
+    tasks: ['Systeem configuratie evalueren', 'Performance threshold monitoring', 'Configuratie drift detectie', 'Alerting bij afwijkingen'],
+    monitoring_scope: 'Systeem configuratie, performance thresholds, Redis state',
+    output_description: 'Configuratie alerts, evaluatie resultaten in Redis',
+    schedule: '0 */6 * * *', actorNames: ['strategy-layer'] },
+  { id: 'weermeester', name: 'De Weermeester', englishName: 'Prediction Agent', category: 'strategy', type: 'A',
+    description: 'Voorspellingen en trend analyse',
+    description_en: 'Predictions and trend analysis',
+    tasks: ['Trend analyse op POI data', 'Seizoensgebonden voorspellingen', 'Capaciteitsplanning', 'Risico voorspellingen'],
+    monitoring_scope: 'POI trends, seizoenspatronen, capaciteit',
+    output_description: 'Prediction alerts, trend rapporten',
+    schedule: '0 3 * * 0', actorNames: ['strategy-layer'] },
+  { id: 'contentQuality', name: 'Content Quality Checker', englishName: 'Content Quality Checker', category: 'monitoring', type: 'A',
+    description: 'POI content completeness en consistency',
+    description_en: 'POI content completeness and consistency checks',
+    tasks: ['Content completeness check per destination', 'Taalconsistentie verificatie (EN/NL/DE/ES)', 'Lege of onvolledige beschrijvingen detecteren', 'Content kwaliteitsscore berekenen'],
+    monitoring_scope: 'POI beschrijvingen, vertalingen, content coverage',
+    output_description: 'Content quality audits in MongoDB, kwaliteitsscore per destination',
+    schedule: '0 5 * * 1', actorNames: ['data-sync'] },
+  { id: 'smokeTest', name: 'Smoke Test Runner', englishName: 'Smoke Test Runner', category: 'monitoring', type: 'A',
+    description: 'E2E smoke tests per destination',
+    description_en: 'End-to-end smoke tests per destination',
+    tasks: ['5 smoke tests per destination uitvoeren', '3 infrastructuur tests uitvoeren', 'Threema configuratie status checken', 'Test resultaten opslaan in MongoDB'],
+    monitoring_scope: 'API endpoints, frontend beschikbaarheid, Threema',
+    output_description: 'Smoke test resultaten in MongoDB, failure alerts',
+    schedule: '45 7 * * *', actorNames: ['health-monitor'] },
+  { id: 'backupHealth', name: 'Backup Health Checker', englishName: 'Backup Health Checker', category: 'monitoring', type: 'B',
+    description: 'Backup recency en disk space monitoring',
+    description_en: 'Backup recency and disk space monitoring',
+    tasks: ['MySQL backup recency controleren', 'MongoDB backup recency controleren', 'Disk space monitoring', 'CRITICAL alerts bij verouderde backups'],
+    monitoring_scope: '/root/backups/, disk space, backup timestamps',
+    output_description: 'Backup health checks in MongoDB, CRITICAL alerts',
+    schedule: '30 7 * * *', actorNames: ['health-monitor'] }
+];
+
+/**
+ * Scheduled jobs metadata for admin dashboard (Fase 9B)
+ */
+const SCHEDULED_JOBS_METADATA = [
+  { name: 'daily-briefing', agent: 'De Bode', cron: '0 8 * * *', description: 'Genereert dagelijkse status email voor eigenaar' },
+  { name: 'health-check', agent: 'De Dokter', cron: '0 * * * *', description: 'Systeem health checks (portals, SSL, API)' },
+  { name: 'data-sync', agent: 'De Koerier', cron: '0 6 * * *', description: 'POI en review data synchronisatie' },
+  { name: 'holibot-sync', agent: 'Het Geheugen', cron: '0 4 * * *', description: 'ChromaDB vectorisatie en QnA sync' },
+  { name: 'communication-flow', agent: 'De Gastheer', cron: '0 */4 * * *', description: 'User journey processing en communicatie' },
+  { name: 'gdpr-consent-audit', agent: 'De Poortwachter', cron: '0 */4 * * *', description: 'GDPR consent controle en data retention' },
+  { name: 'ux-review', agent: 'De Stylist', cron: '0 6 * * 1', description: 'Wekelijkse UX/UI en brand consistency review' },
+  { name: 'code-quality', agent: 'De Corrector', cron: '0 6 * * 1', description: 'Wekelijkse code quality analyse' },
+  { name: 'security-scan', agent: 'De Bewaker', cron: '0 2 * * *', description: 'Dagelijkse security en vulnerability scan' },
+  { name: 'quality-check', agent: 'De Inspecteur', cron: '0 6 * * 1', description: 'Wekelijkse kwaliteitscontrole' },
+  { name: 'architecture-review', agent: 'De Architect', cron: '0 3 * * 0', description: 'Wekelijkse architectuur assessment' },
+  { name: 'learning-cycle', agent: 'De Leermeester', cron: '30 5 * * 1', description: 'Wekelijkse pattern learning en optimalisatie' },
+  { name: 'config-evaluation', agent: 'De Thermostaat', cron: '0 */6 * * *', description: 'Configuratie evaluatie en drift detectie' },
+  { name: 'predictions', agent: 'De Weermeester', cron: '0 3 * * 0', description: 'Wekelijkse trend analyse en voorspellingen' },
+  { name: 'content-quality-audit', agent: 'Content Quality Checker', cron: '0 5 * * 1', description: 'Wekelijkse content completeness audit' },
+  { name: 'smoke-test', agent: 'Smoke Test Runner', cron: '45 7 * * *', description: 'Dagelijkse E2E smoke tests alle destinations' },
+  { name: 'backup-recency-check', agent: 'Backup Health Checker', cron: '30 7 * * *', description: 'Dagelijkse backup recency en disk check' },
+  { name: 'chromadb-state-snapshot', agent: 'Het Geheugen', cron: '0 3 * * 0', description: 'Wekelijkse ChromaDB vector count snapshot' },
+  { name: 'agent-success-rate', agent: 'De Maestro', cron: '30 5 * * 1', description: 'Wekelijkse agent success rate aggregatie' },
+  { name: 'tier-update', agent: 'De Koerier', cron: '0 5 * * *', description: 'Dagelijkse POI tier herberekening' },
+  { name: 'session-cleanup', agent: 'De Poortwachter', cron: '0 3 * * *', description: 'Dagelijkse verlopen sessies opruimen' },
+  { name: 'review-sentiment', agent: 'De Koerier', cron: '0 7 * * *', description: 'Review sentiment analyse en aggregatie' },
+  { name: 'cache-warmup', agent: 'De Maestro', cron: '0 5 * * *', description: 'Dagelijkse Redis cache opwarming' }
 ];
 
 /**
@@ -973,6 +1133,35 @@ router.get('/agents/status', adminAuth('reviewer'), async (req, res) => {
           }
         }
 
+        // Populate per-destination status for Cat A agents from audit_logs
+        const destIds = { 1: 'calpe', 2: 'texel' };
+        for (const agent of agents) {
+          if (agent.type !== 'A' || !agent.destinations) continue;
+          const meta = AGENT_METADATA.find(m => m.id === agent.id);
+          if (!meta) continue;
+          for (const [numId, destKey] of Object.entries(destIds)) {
+            const destRun = await auditLogs.findOne(
+              { 'actor.name': { $in: meta.actorNames }, 'metadata.destinationId': parseInt(numId), timestamp: { $gte: since } },
+              { sort: { timestamp: -1 } }
+            );
+            if (destRun) {
+              const destStatus = (destRun.status === 'completed' || destRun.status === 'success') ? 'success'
+                : (destRun.status === 'error' || destRun.status === 'failed') ? 'error'
+                : 'partial';
+              agent.destinations[destKey] = {
+                lastRun: destRun.timestamp,
+                status: destStatus
+              };
+            } else if (agent.lastRun) {
+              // If agent ran but no destination-specific log, inherit overall status
+              agent.destinations[destKey] = {
+                lastRun: agent.lastRun.timestamp,
+                status: agent.lastRun.status === 'success' ? 'success' : agent.lastRun.status === 'error' ? 'error' : 'partial'
+              };
+            }
+          }
+        }
+
         // Get recent activity (last 50 entries)
         const recentLogs = await auditLogs.find(
           { 'actor.type': 'agent', timestamp: { $gte: since } }
@@ -1084,6 +1273,44 @@ router.get('/agents/status', adminAuth('reviewer'), async (req, res) => {
       }
     }
 
+    // Populate warningDetail + recommendedAction for warning/error agents
+    for (const agent of agents) {
+      if (agent.status === 'warning' || agent.status === 'error') {
+        if (agent.lastRun?.error) {
+          agent.warningDetail = agent.lastRun.error;
+        } else if (agent.status === 'warning') {
+          agent.warningDetail = 'Agent draait niet volgens schema';
+        } else {
+          agent.warningDetail = 'Laatste run gefaald';
+        }
+        agent.recommendedAction = agent.status === 'error'
+          ? `Check logs: pm2 logs holidaibutler-api --lines 100 | grep "${agent.englishName || agent.name}"`
+          : 'Controleer scheduler status en agent configuratie';
+      }
+    }
+
+    // Populate recentActivity per agent (last 5 entries)
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const db = mongoose.connection.db;
+        const auditLogs = db.collection('audit_logs');
+        const since = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+        for (const agent of agents) {
+          const meta = AGENT_METADATA.find(m => m.id === agent.id);
+          if (!meta) continue;
+          const logs = await auditLogs.find(
+            { 'actor.name': { $in: meta.actorNames }, timestamp: { $gte: since } }
+          ).sort({ timestamp: -1 }).limit(5).toArray();
+          agent.recentRuns = logs.map(l => ({
+            timestamp: l.timestamp,
+            action: l.action || l.description || 'unknown',
+            status: (l.status === 'completed' || l.status === 'success') ? 'success' : l.status || 'unknown',
+            destination: l.metadata?.destinationId ? (l.metadata.destinationId === 1 ? 'calpe' : 'texel') : null
+          }));
+        }
+      } catch { /* non-critical */ }
+    }
+
     // Build summary
     const summary = {
       total: agents.length,
@@ -1110,7 +1337,8 @@ router.get('/agents/status', adminAuth('reviewer'), async (req, res) => {
           texel: { id: 2, activeAgents: agents.filter(a => a.type === 'A').length }
         },
         agents: filteredAgents,
-        recentActivity
+        recentActivity,
+        scheduledJobs: SCHEDULED_JOBS_METADATA
       }
     };
 
@@ -1873,7 +2101,18 @@ router.get('/reviews', adminAuth('reviewer'), async (req, res) => {
       created_at: r.created_at
     }));
 
-    // Summary (always unfiltered for overview)
+    // Summary (filtered by destination when selected)
+    const summaryWhere = [];
+    const summaryParams = [];
+    if (destination) {
+      const destId = resolveDestinationId(destination);
+      if (destId) {
+        summaryWhere.push('destination_id = ?');
+        summaryParams.push(destId);
+      }
+    }
+    const summaryWhereClause = summaryWhere.length > 0 ? 'WHERE ' + summaryWhere.join(' AND ') : '';
+
     const summaryResult = await mysqlSequelize.query(
       `SELECT
          COUNT(*) as totalReviews,
@@ -1887,8 +2126,8 @@ router.get('/reviews', adminAuth('reviewer'), async (req, res) => {
          SUM(CASE WHEN sentiment = 'neutral' THEN 1 ELSE 0 END) as neutral,
          SUM(CASE WHEN sentiment = 'negative' THEN 1 ELSE 0 END) as negative,
          SUM(CASE WHEN is_archived = 1 THEN 1 ELSE 0 END) as archived
-       FROM reviews`,
-      { type: QueryTypes.SELECT }
+       FROM reviews ${summaryWhereClause}`,
+      { replacements: summaryParams, type: QueryTypes.SELECT }
     );
 
     const s = summaryResult[0] || {};
@@ -2273,6 +2512,92 @@ router.get('/analytics/export', adminAuth('editor'), async (req, res) => {
     res.status(500).json({
       success: false,
       error: { code: 'SERVER_ERROR', message: 'An error occurred generating the export' }
+    });
+  }
+});
+
+// ============================================================
+// MODULE 9B: PAGEVIEW ANALYTICS
+// ============================================================
+
+/**
+ * GET /analytics/pageviews
+ * Pageview analytics from page_views table.
+ */
+router.get('/analytics/pageviews', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const { destination, period = 'month' } = req.query;
+    const destWhere = [];
+    const destParams = [];
+    if (destination) {
+      const destId = resolveDestinationId(destination);
+      if (destId) { destWhere.push('destination_id = ?'); destParams.push(destId); }
+    }
+    const whereClause = destWhere.length > 0 ? 'WHERE ' + destWhere.join(' AND ') : '';
+
+    // Total + today
+    const [totals] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total,
+              SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) as today
+       FROM page_views ${whereClause}`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    ).then(r => [r[0] || { total: 0, today: 0 }]);
+
+    // Trend (grouped by period)
+    let groupBy, dateFormat;
+    if (period === 'day') { groupBy = 'DATE(created_at)'; dateFormat = '%Y-%m-%d'; }
+    else if (period === 'week') { groupBy = "DATE(DATE_SUB(created_at, INTERVAL WEEKDAY(created_at) DAY))"; dateFormat = '%Y-%m-%d'; }
+    else { groupBy = "DATE_FORMAT(created_at, '%Y-%m-01')"; dateFormat = '%Y-%m'; }
+
+    const trend = await mysqlSequelize.query(
+      `SELECT DATE_FORMAT(${groupBy}, '${dateFormat}') as date, COUNT(*) as views
+       FROM page_views ${whereClause}
+       GROUP BY ${groupBy}
+       ORDER BY ${groupBy} DESC LIMIT 90`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    // By page type
+    const byPageType = await mysqlSequelize.query(
+      `SELECT page_type as type, COUNT(*) as count
+       FROM page_views ${whereClause}
+       GROUP BY page_type ORDER BY count DESC`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    // Top POIs (by views)
+    const topPois = await mysqlSequelize.query(
+      `SELECT pv.poi_id, p.name, COUNT(*) as views
+       FROM page_views pv
+       LEFT JOIN POI p ON pv.poi_id = p.id
+       WHERE pv.poi_id IS NOT NULL ${destWhere.length > 0 ? 'AND pv.' + destWhere[0] : ''}
+       GROUP BY pv.poi_id, p.name
+       ORDER BY views DESC LIMIT 10`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    );
+
+    // First record date
+    const [first] = await mysqlSequelize.query(
+      `SELECT MIN(created_at) as first_date FROM page_views ${whereClause}`,
+      { replacements: destParams, type: QueryTypes.SELECT }
+    ).then(r => [r[0] || { first_date: null }]);
+
+    res.json({
+      success: true,
+      data: {
+        total: parseInt(totals.total) || 0,
+        today: parseInt(totals.today) || 0,
+        trend: trend.reverse(),
+        by_page_type: byPageType,
+        top_pois: topPois,
+        first_date: first.first_date
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Pageview analytics error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching pageview analytics' }
     });
   }
 });
@@ -2770,7 +3095,7 @@ router.get('/settings/audit-log', adminAuth('reviewer'), async (req, res) => {
     const db = mongoose.connection.db;
     const collection = db.collection('audit_logs');
 
-    const filter = { 'actor.type': 'admin' };
+    const filter = {};
     if (action) filter.action = action;
 
     const total = await collection.countDocuments(filter);
@@ -2780,15 +3105,21 @@ router.get('/settings/audit-log', adminAuth('reviewer'), async (req, res) => {
       .limit(limitNum)
       .toArray();
 
-    const entryList = entries.map(e => ({
-      _id: e._id,
-      timestamp: e.timestamp,
-      action: e.action,
-      actor: { email: e.admin_email || e.actor?.name || 'system', type: 'admin' },
-      detail: buildAuditDetail(e),
-      destination: e.destination_id === 1 ? 'calpe' : e.destination_id === 2 ? 'texel' : null,
-      changes: e.changes || null
-    }));
+    const entryList = entries.map(e => {
+      const actorType = e.actor?.type || (e.admin_email ? 'admin' : 'system');
+      return {
+        _id: e._id,
+        timestamp: e.timestamp,
+        action: e.action,
+        actor: {
+          email: e.admin_email || e.actor?.name || 'system',
+          type: actorType
+        },
+        detail: buildAuditDetail(e),
+        destination: e.destination_id === 1 ? 'calpe' : e.destination_id === 2 ? 'texel' : null,
+        changes: e.changes || null
+      };
+    });
 
     res.json({
       success: true,
@@ -3248,10 +3579,10 @@ router.post('/users', adminAuth('platform_admin'), async (req, res) => {
     const { email, firstName, lastName, password, role, allowed_destinations } = req.body;
 
     // Validate required fields
-    if (!email || !firstName || !password || !role) {
+    if (!email || !firstName || !lastName || !password || !role) {
       return res.status(400).json({
         success: false,
-        error: { code: 'MISSING_FIELDS', message: 'email, firstName, password, and role are required.' }
+        error: { code: 'MISSING_FIELDS', message: 'email, firstName, lastName, password, and role are required.' }
       });
     }
 
@@ -3263,11 +3594,21 @@ router.post('/users', adminAuth('platform_admin'), async (req, res) => {
       });
     }
 
-    // Validate password strength
-    if (password.length < 12 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
-      return res.status(400).json({
+    // Validate name: not a role name, at least 2 chars
+    const roleNames = ['platform admin', 'poi owner', 'content editor', 'content reviewer', 'editor', 'reviewer', 'admin'];
+    if (roleNames.some(rn => firstName.toLowerCase() === rn || (lastName && `${firstName} ${lastName}`.toLowerCase() === rn))) {
+      return res.status(422).json({
         success: false,
-        error: { code: 'WEAK_PASSWORD', message: 'Password must be at least 12 characters with 1 uppercase and 1 digit.' }
+        error: { code: 'INVALID_NAME', message: 'Name cannot be a role name. Use a real first and last name.' }
+      });
+    }
+
+    // Validate enterprise password policy
+    const pwErrors = validatePassword(password, email, `${firstName} ${lastName || ''}`);
+    if (pwErrors.length > 0) {
+      return res.status(422).json({
+        success: false,
+        error: { code: 'WEAK_PASSWORD', message: pwErrors.join('; '), details: pwErrors }
       });
     }
 
@@ -3578,11 +3919,14 @@ router.post('/users/:id/reset-password', adminAuth('platform_admin'), async (req
       });
     }
 
-    // Generate temporary password (16 chars, mixed case + digits)
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    const tempPassword = Array.from(crypto.randomBytes(16))
-      .map(b => chars[b % chars.length])
-      .join('');
+    // Generate temporary password (16 chars, meets enterprise policy)
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*-_+=';
+    let tempPassword;
+    do {
+      tempPassword = Array.from(crypto.randomBytes(16))
+        .map(b => chars[b % chars.length])
+        .join('');
+    } while (validatePassword(tempPassword, '', '').length > 0);
 
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
     await mysqlSequelize.query(

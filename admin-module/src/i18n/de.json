@@ -267,6 +267,17 @@
     "trend": {
       "title": "Trend",
       "noData": "Keine Daten für den ausgewählten Zeitraum"
+    },
+    "pageviews": {
+      "title": "Seitenaufrufe",
+      "totalViews": "Gesamte Aufrufe",
+      "today": "Heute",
+      "trend": "Aufrufe pro Monat",
+      "byType": "Nach Seitentyp",
+      "topPois": "Meistbesuchte POIs",
+      "views": "Aufrufe",
+      "noData": "Noch keine Seitenaufruf-Daten verfügbar",
+      "dataAvailableSince": "Daten verfügbar seit"
     }
   },
   "settings": {
@@ -366,9 +377,9 @@
     "resetPasswordNote": "Das aktuelle Passwort wird ung\u00fcltig",
     "roles": {
       "platform_admin": "Plattform-Admin",
-      "poi_owner": "POI-Eigent\u00fcmer",
-      "editor": "Redakteur",
-      "reviewer": "Reviewer"
+      "poi_owner": "POI Owner",
+      "editor": "Content Editor",
+      "reviewer": "Content Reviewer"
     },
     "statuses": {
       "active": "Aktiv",
@@ -400,7 +411,20 @@
     },
     "errors": {
       "required": "Dieses Feld ist erforderlich",
-      "passwordWeak": "Mind. 12 Zeichen, 1 Gro\u00dfbuchstabe, 1 Ziffer"
+      "passwordWeak": "Passwort erfüllt nicht alle Anforderungen",
+      "lastNameRequired": "Nachname ist erforderlich"
+    },
+    "password": {
+      "minLength": "Mindestens 12 Zeichen",
+      "uppercase": "Mindestens 1 Großbuchstabe (A-Z)",
+      "lowercase": "Mindestens 1 Kleinbuchstabe (a-z)",
+      "digit": "Mindestens 1 Ziffer (0-9)",
+      "special": "Mindestens 1 Sonderzeichen (!@#$%&*)",
+      "notEmail": "Enthält keinen Teil der E-Mail",
+      "notName": "Enthält keinen Teil des Namens",
+      "weak": "Schwach",
+      "medium": "Mittel",
+      "strong": "Stark"
     }
   },
   "common": {

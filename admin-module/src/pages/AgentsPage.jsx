@@ -31,6 +31,7 @@ export default function AgentsPage() {
   const [sortDir, setSortDir] = useState('asc');
   const [activityExpanded, setActivityExpanded] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState(null);
+  const [jobsDialogOpen, setJobsDialogOpen] = useState(false);
 
   const { data, isLoading, error, refetch, isFetching } = useAgentStatus({});
 
@@ -124,15 +125,24 @@ export default function AgentsPage() {
             </Typography>
           )}
         </Box>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<RefreshIcon />}
-          onClick={handleRefresh}
-          disabled={isFetching}
-        >
-          {t('agents.refresh')}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setJobsDialogOpen(true)}
+          >
+            {t('agents.scheduledJobs')} ({data?.scheduledJobs?.length || 0})
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<RefreshIcon />}
+            onClick={handleRefresh}
+            disabled={isFetching}
+          >
+            {t('agents.refresh')}
+          </Button>
+        </Box>
       </Box>
 
       {/* Error / Partial warning */}
@@ -188,8 +198,8 @@ export default function AgentsPage() {
           sx={{ ml: 'auto', minWidth: 130 }}
         >
           <MenuItem value="all">{t('agents.filter.destination')}: {t('agents.filter.all')}</MenuItem>
-          <MenuItem value="calpe">\uD83C\uDDEA\uD83C\uDDF8 Calpe</MenuItem>
-          <MenuItem value="texel">\uD83C\uDDF3\uD83C\uDDF1 Texel</MenuItem>
+          <MenuItem value="calpe">{'🇪🇸'} Calpe</MenuItem>
+          <MenuItem value="texel">{'🇳🇱'} Texel</MenuItem>
         </Select>
       </Box>
 
@@ -220,8 +230,8 @@ export default function AgentsPage() {
                   </TableCell>
                 )}
                 <TableCell>{t('agents.table.schedule')}</TableCell>
-                <TableCell>\uD83C\uDDEA\uD83C\uDDF8 Calpe</TableCell>
-                <TableCell>\uD83C\uDDF3\uD83C\uDDF1 Texel</TableCell>
+                <TableCell>{'🇪🇸'} Calpe</TableCell>
+                <TableCell>{'🇳🇱'} Texel</TableCell>
                 <TableCell>
                   <TableSortLabel active={sortBy === 'status'} direction={sortBy === 'status' ? sortDir : 'asc'} onClick={() => handleSort('status')}>
                     {t('agents.table.status')}
@@ -301,6 +311,42 @@ export default function AgentsPage() {
         <AgentDetailDialog agent={selectedAgent} onClose={() => setSelectedAgent(null)} />
       )}
 
+      {/* Scheduled Jobs Dialog */}
+      {jobsDialogOpen && (
+        <Dialog open maxWidth="md" fullWidth onClose={() => setJobsDialogOpen(false)}>
+          <DialogTitle>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('agents.scheduledJobs')}</Typography>
+          </DialogTitle>
+          <DialogContent>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableCell sx={{ fontWeight: 600 }}>Job</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Agent</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{t('agents.table.schedule')}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{t('agents.detail.description')}</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {(data?.scheduledJobs || []).map((job, i) => (
+                    <TableRow key={i} sx={{ '&:hover': { bgcolor: 'grey.50' } }}>
+                      <TableCell><Typography variant="body2" sx={{ fontWeight: 500 }}>{job.name}</Typography></TableCell>
+                      <TableCell><Typography variant="body2">{job.agent}</Typography></TableCell>
+                      <TableCell><Typography variant="body2" sx={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{job.cron}</Typography></TableCell>
+                      <TableCell><Typography variant="body2" color="text.secondary">{job.description}</Typography></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setJobsDialogOpen(false)}>{t('agents.close')}</Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
       {/* ROW 5: Recent Activity */}
       <Paper sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -354,7 +400,7 @@ export default function AgentsPage() {
   );
 }
 
-/* ===== Agent Detail Dialog (Uitgebreid - Fase 8E + 9A-1 Config) ===== */
+/* ===== Agent Detail Dialog (Fase 9B — 5-sectie profiel) ===== */
 function AgentDetailDialog({ agent, onClose }) {
   const { t } = useTranslation();
   const currentUser = useAuthStore(s => s.user);
@@ -364,20 +410,27 @@ function AgentDetailDialog({ agent, onClose }) {
   const [configOpen, setConfigOpen] = useState(false);
   const [snack, setSnack] = useState({ open: false, message: '' });
 
+  const destStatusColor = (status) =>
+    status === 'success' ? STATUS_COLORS.healthy
+    : status === 'partial' ? STATUS_COLORS.warning
+    : status === 'error' ? STATUS_COLORS.error
+    : STATUS_COLORS.unknown;
+
   return (
     <>
-    <Dialog open maxWidth="sm" fullWidth onClose={onClose}>
+    <Dialog open maxWidth="md" fullWidth onClose={onClose}>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <span style={{ fontSize: '1.6rem' }}>{getAgentIcon(agent.name)}</span>
           <Box sx={{ flex: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>{agent.name}</Typography>
               <Chip
                 label={t(`agents.filter.${agent.category}`)}
                 size="small"
                 sx={{ bgcolor: CATEGORY_COLORS[agent.category] || '#607d8b', color: '#fff', fontSize: '0.7rem', height: 20 }}
               />
+              <Chip label={agent.type === 'A' ? 'Type A' : 'Type B'} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
             </Box>
             <Typography variant="body2" color="text.secondary">
               {descriptionNL || agent.description}
@@ -386,8 +439,29 @@ function AgentDetailDialog({ agent, onClose }) {
         </Box>
       </DialogTitle>
       <DialogContent dividers>
-        {/* Status + Type + Schema */}
-        <Grid container spacing={2} sx={{ mb: 2 }}>
+        {/* SECTIE 5: Warning/Error Details (alleen bij problemen — altijd bovenaan) */}
+        {(agent.status === 'warning' || agent.status === 'error') && (
+          <Alert
+            severity={agent.status === 'error' ? 'error' : 'warning'}
+            icon={agent.status === 'error' ? <ErrorOutlineIcon /> : <WarningAmberIcon />}
+            sx={{ mb: 2 }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+              {agent.status === 'error' ? t('agents.detail.errorTitle') : t('agents.detail.warningTitle')}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              {agent.warningDetail || agent.lastRun?.error || t('agents.detail.checkLogs')}
+            </Typography>
+            {agent.recommendedAction && (
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {t('agents.detail.recommendedAction')}: {agent.recommendedAction}
+              </Typography>
+            )}
+          </Alert>
+        )}
+
+        {/* SECTIE 1: Identiteit */}
+        <Grid container spacing={2} sx={{ mb: 1.5 }}>
           <Grid item xs={4}>
             <Typography variant="caption" color="text.secondary">{t('agents.table.type')}</Typography>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -409,25 +483,27 @@ function AgentDetailDialog({ agent, onClose }) {
           </Grid>
         </Grid>
 
-        {/* Warning / Error Details */}
-        {(agent.status === 'warning' || agent.status === 'error') && (
-          <Alert
-            severity={agent.status === 'error' ? 'error' : 'warning'}
-            icon={agent.status === 'error' ? <ErrorOutlineIcon /> : <WarningAmberIcon />}
-            sx={{ mb: 2 }}
-          >
-            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-              {agent.status === 'error' ? t('agents.detail.errorTitle') : t('agents.detail.warningTitle')}
-            </Typography>
-            <Typography variant="body2">
-              {agent.lastRun?.error || agent.statusMessage || t('agents.detail.checkLogs')}
-            </Typography>
-          </Alert>
+        {/* Monitoring scope + Output */}
+        {(agent.monitoring_scope || agent.output_description) && (
+          <Grid container spacing={2} sx={{ mb: 1.5 }}>
+            {agent.monitoring_scope && (
+              <Grid item xs={6}>
+                <Typography variant="caption" color="text.secondary">{t('agents.detail.monitoringScope')}</Typography>
+                <Typography variant="body2">{agent.monitoring_scope}</Typography>
+              </Grid>
+            )}
+            {agent.output_description && (
+              <Grid item xs={6}>
+                <Typography variant="caption" color="text.secondary">{t('agents.detail.output')}</Typography>
+                <Typography variant="body2">{agent.output_description}</Typography>
+              </Grid>
+            )}
+          </Grid>
         )}
 
         <Divider sx={{ my: 1.5 }} />
 
-        {/* Takenpakket */}
+        {/* SECTIE 2: Takenpakket (volledig) */}
         {tasks.length > 0 && (
           <>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
@@ -436,11 +512,11 @@ function AgentDetailDialog({ agent, onClose }) {
                 {t('agents.detail.tasks')}
               </Typography>
             </Box>
-            <List dense disablePadding sx={{ mb: 2 }}>
+            <List dense disablePadding sx={{ mb: 1.5 }}>
               {tasks.map((task, i) => (
-                <ListItem key={i} sx={{ py: 0.25, pl: 2 }}>
+                <ListItem key={i} sx={{ py: 0.15, pl: 2 }}>
                   <ListItemText
-                    primary={<Typography variant="body2">\u2022 {task}</Typography>}
+                    primary={<Typography variant="body2">{'•'} {task}</Typography>}
                   />
                 </ListItem>
               ))}
@@ -448,32 +524,28 @@ function AgentDetailDialog({ agent, onClose }) {
           </>
         )}
 
+        <Divider sx={{ my: 1.5 }} />
+
+        {/* SECTIE 3: Schema & Status */}
         {/* Destination Status (Cat A agents) */}
         {agent.type === 'A' && (
           <>
-            <Divider sx={{ my: 1.5 }} />
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
               {t('agents.detail.destinationStatus')}
             </Typography>
-            <Grid container spacing={2}>
+            <Grid container spacing={2} sx={{ mb: 1.5 }}>
               {['calpe', 'texel'].map(dest => {
                 const d = agent.destinations?.[dest];
                 return (
                   <Grid item xs={6} key={dest}>
                     <Card variant="outlined" sx={{ p: 1.5 }}>
                       <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        {dest === 'calpe' ? '\uD83C\uDDEA\uD83C\uDDF8 Calpe' : '\uD83C\uDDF3\uD83C\uDDF1 Texel'}
+                        {dest === 'calpe' ? '🇪🇸 Calpe' : '🇳🇱 Texel'}
                       </Typography>
                       {d ? (
                         <>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Box sx={{
-                              width: 8, height: 8, borderRadius: '50%',
-                              bgcolor: d.status === 'success' ? STATUS_COLORS.healthy
-                                : d.status === 'partial' ? STATUS_COLORS.warning
-                                : d.status === 'error' ? STATUS_COLORS.error
-                                : STATUS_COLORS.unknown
-                            }} />
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: destStatusColor(d.status) }} />
                             <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>{d.status || 'unknown'}</Typography>
                           </Box>
                           {d.lastRun && (
@@ -483,7 +555,7 @@ function AgentDetailDialog({ agent, onClose }) {
                           )}
                         </>
                       ) : (
-                        <Typography variant="body2" color="text.secondary">\u2014</Typography>
+                        <Typography variant="body2" color="text.secondary">{'\u2014'}</Typography>
                       )}
                     </Card>
                   </Grid>
@@ -493,22 +565,60 @@ function AgentDetailDialog({ agent, onClose }) {
           </>
         )}
 
-        {/* Laatste run info */}
-        <Divider sx={{ my: 1.5 }} />
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
+        {/* Laatste run + Recente activiteit */}
+        <Grid container spacing={2} sx={{ mb: 1.5 }}>
+          <Grid item xs={4}>
             <Typography variant="caption" color="text.secondary">{t('agents.lastUpdated')}</Typography>
             <Typography variant="body2">
               {agent.lastRun?.timestamp ? new Date(agent.lastRun.timestamp).toLocaleString('nl-NL') : '\u2014'}
             </Typography>
           </Grid>
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <Typography variant="caption" color="text.secondary">{t('agents.detail.duration')}</Typography>
             <Typography variant="body2">
               {agent.lastRun?.duration ? `${agent.lastRun.duration}ms` : '\u2014'}
             </Typography>
           </Grid>
+          <Grid item xs={4}>
+            <Typography variant="caption" color="text.secondary">{t('agents.detail.lastStatus')}</Typography>
+            <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+              {agent.lastRun?.status || '\u2014'}
+            </Typography>
+          </Grid>
         </Grid>
+
+        {/* Recente activiteit (laatste 5) */}
+        {agent.recentRuns?.length > 0 && (
+          <>
+            <Divider sx={{ my: 1.5 }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+              {t('agents.detail.recentActivity')}
+            </Typography>
+            <List dense disablePadding>
+              {agent.recentRuns.map((run, i) => (
+                <ListItem key={i} sx={{ py: 0.25, px: 1 }} divider={i < agent.recentRuns.length - 1}>
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 80 }}>
+                          {formatTimestamp(run.timestamp)}
+                        </Typography>
+                        <Box sx={{
+                          width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                          bgcolor: run.status === 'success' ? STATUS_COLORS.healthy : run.status === 'error' ? STATUS_COLORS.error : STATUS_COLORS.unknown
+                        }} />
+                        <Typography variant="body2">{run.action}</Typography>
+                        {run.destination && (
+                          <Chip label={run.destination} size="small" sx={{ height: 16, fontSize: '0.6rem' }} />
+                        )}
+                      </Box>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </>
+        )}
       </DialogContent>
       <DialogActions>
         {isPlatformAdmin && (

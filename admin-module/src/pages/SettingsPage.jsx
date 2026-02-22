@@ -267,7 +267,7 @@ function BrandingSection() {
   const [snack, setSnack] = useState(null);
 
   const branding = data?.data?.branding || {};
-  const DEST_FLAGS = { calpe: '\uD83C\uDDEA\uD83C\uDDF8', texel: '\uD83C\uDDF3\uD83C\uDDF1' };
+  const DEST_FLAGS = { calpe: '🇪🇸', texel: '🇳🇱' };
 
   const startEdit = (dest) => {
     setForm({ ...branding[dest] });
@@ -331,6 +331,22 @@ function BrandingSection() {
                   </Box>
                 </Grid>
               </Grid>
+              {(brand.brand_name || brand.payoff) && (
+                <Grid container spacing={1} sx={{ mt: 0.5 }}>
+                  {brand.brand_name && (
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="text.secondary">{t('settings.branding.brandName')}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{brand.brand_name}</Typography>
+                    </Grid>
+                  )}
+                  {brand.payoff && (
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="text.secondary">{t('settings.branding.payoff')}</Typography>
+                      <Typography variant="body2" sx={{ fontStyle: 'italic' }}>{brand.payoff}</Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              )}
               <Box sx={{ mt: 1 }}>
                 <Typography variant="body2" color="text.secondary">
                   {t('settings.branding.chatbot')}: <b>{brand.chatbotName}</b> | {brand.domain}
@@ -375,6 +391,27 @@ function BrandingSection() {
                 <TextField
                   fullWidth size="small" label={t('settings.branding.chatbot')}
                   value={form.chatbotName || ''} onChange={(e) => setForm(f => ({ ...f, chatbotName: e.target.value }))}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth size="small" label={t('settings.branding.brandName')}
+                  value={form.brand_name || ''} onChange={(e) => setForm(f => ({ ...f, brand_name: e.target.value }))}
+                  placeholder="TexelMaps"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth size="small" label={t('settings.branding.logoUrl')}
+                  value={form.logo_url || ''} onChange={(e) => setForm(f => ({ ...f, logo_url: e.target.value }))}
+                  placeholder="/images/branding/logo.svg"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth size="small" label={t('settings.branding.payoff')}
+                  value={form.payoff || ''} onChange={(e) => setForm(f => ({ ...f, payoff: e.target.value }))}
+                  placeholder="Ontdek Texel"
                 />
               </Grid>
             </Grid>
@@ -482,7 +519,14 @@ function AuditLogTable({ page, setPage, action, setAction }) {
                     <Chip size="small" label={entry.action} variant="outlined" sx={{ fontSize: '0.7rem' }} />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">{entry.actor?.email || '—'}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Tooltip title={entry.actor?.type === 'agent' ? 'Agent' : entry.actor?.type === 'system' ? 'System' : 'Admin'}>
+                        <Typography component="span" sx={{ fontSize: '1rem' }}>
+                          {entry.actor?.type === 'agent' ? '🤖' : entry.actor?.type === 'system' ? '⚙️' : '👤'}
+                        </Typography>
+                      </Tooltip>
+                      <Typography variant="body2">{entry.actor?.email || entry.actor?.name || '—'}</Typography>
+                    </Box>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

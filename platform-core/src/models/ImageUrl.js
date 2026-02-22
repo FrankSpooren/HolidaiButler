@@ -5,7 +5,7 @@
  * Supports both external URLs and locally stored images.
  * Local images (local_path) are preferred as they're 100% reliable.
  */
-import { DataTypes } from 'sequelize';
+import { DataTypes, literal } from 'sequelize';
 import { mysqlSequelize } from '../config/database.js';
 
 // Base URL for locally stored images
@@ -129,9 +129,9 @@ export async function getImagesForPOI(poiId, limit = 10) {
   try {
     const images = await ImageUrl.findAll({
       where: { poi_id: poiId },
-      order: [['image_id', 'ASC']],
+      order: [[literal('COALESCE(display_order, 999)'), 'ASC'], ['image_id', 'ASC']],
       limit: limit + 5,
-      attributes: ['image_url', 'local_path']
+      attributes: ['image_url', 'local_path', 'display_order']
     });
 
     return images
@@ -172,8 +172,8 @@ export async function getImagesForPOIs(poiIds, limitPerPoi = 3) {
 
     const images = await ImageUrl.findAll({
       where: { poi_id: numericPoiIds },
-      order: [['poi_id', 'ASC'], ['image_id', 'ASC']],
-      attributes: ['poi_id', 'image_url', 'local_path']
+      order: [['poi_id', 'ASC'], [literal('COALESCE(display_order, 999)'), 'ASC'], ['image_id', 'ASC']],
+      attributes: ['poi_id', 'image_url', 'local_path', 'display_order']
     });
 
     // Group by POI - use Number() for consistent Map keys

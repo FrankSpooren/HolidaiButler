@@ -295,13 +295,26 @@ async function sendDailyBriefing() {
   const briefing = await generateDailyBriefing();
 
   const dateStr = new Date().toLocaleDateString("nl-NL");
-  const hasCritical = briefing.summary.alerts > 0 || briefing.summary.errors > 0 || briefing.summary.predictionAlerts > 0;
   const hasCriticalAgents = (briefing.fields.backup_summary || '').includes('CRITICAL') ||
     (briefing.fields.smoke_test_summary || '').includes('FAILURES');
-  const subject = (hasCritical || hasCriticalAgents)
-    ? `[URGENT] Daily Briefing - ${dateStr}`
-    : `Daily Briefing - ${dateStr}`;
-  const priority = (hasCritical || hasCriticalAgents) ? "high" : "normal";
+  const errorCount = briefing.summary.errors || 0;
+  const alertCount = briefing.summary.alerts || 0;
+  const totalIssues = errorCount + alertCount + (briefing.summary.predictionAlerts || 0);
+
+  // Severity prefix based on error/alert count
+  let prefix;
+  if (hasCriticalAgents || totalIssues >= 6) {
+    prefix = '[URGENT]';
+  } else if (totalIssues >= 3) {
+    prefix = '[HOOG]';
+  } else if (totalIssues >= 1) {
+    prefix = '[MEDIUM]';
+  } else {
+    prefix = '[OK]';
+  }
+
+  const subject = `${prefix} Daily Briefing - ${dateStr}`;
+  const priority = (prefix === '[URGENT]' || prefix === '[HOOG]') ? "high" : "normal";
 
   console.log(`[De Bode] Subject: ${subject}`);
   console.log(`[De Bode] Fields:`, JSON.stringify(briefing.fields, null, 2));

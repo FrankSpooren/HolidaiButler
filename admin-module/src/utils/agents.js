@@ -25,10 +25,10 @@ export const AGENT_ICONS = {
 };
 
 export const CATEGORY_COLORS = {
-  core: '#1976d2',
+  core: '#1565c0',
   operations: '#2e7d32',
-  development: '#5d4037',
-  strategy: '#7b1fa2',
+  development: '#6d4c41',
+  strategy: '#6a1b9a',
   monitoring: '#e65100'
 };
 

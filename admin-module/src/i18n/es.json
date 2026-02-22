@@ -266,12 +266,23 @@
     },
     "trend": {
       "title": "Tendencia",
-      "noData": "Sin datos para el per\u00edodo seleccionado"
+      "noData": "Sin datos para el período seleccionado"
+    },
+    "pageviews": {
+      "title": "Visitas de página",
+      "totalViews": "Visitas totales",
+      "today": "Hoy",
+      "trend": "Visitas por mes",
+      "byType": "Por tipo de página",
+      "topPois": "POIs más visitados",
+      "views": "Visitas",
+      "noData": "Aún no hay datos de visitas disponibles",
+      "dataAvailableSince": "Datos disponibles desde"
     }
   },
   "settings": {
-    "title": "Configuraci\u00f3n",
-    "subtitle": "Configuraci\u00f3n del sistema y gesti\u00f3n",
+    "title": "Configuración",
+    "subtitle": "Configuración del sistema y gestión",
     "cancel": "Cancelar",
     "system": {
       "title": "Informaci\u00f3n del sistema",
@@ -366,9 +377,9 @@
     "resetPasswordNote": "La contrase\u00f1a actual ser\u00e1 invalidada",
     "roles": {
       "platform_admin": "Admin de plataforma",
-      "poi_owner": "Propietario de POI",
-      "editor": "Editor",
-      "reviewer": "Revisor"
+      "poi_owner": "POI Owner",
+      "editor": "Content Editor",
+      "reviewer": "Content Reviewer"
     },
     "statuses": {
       "active": "Activo",
@@ -400,7 +411,20 @@
     },
     "errors": {
       "required": "Este campo es obligatorio",
-      "passwordWeak": "M\u00edn. 12 caracteres, 1 may\u00fascula, 1 d\u00edgito"
+      "passwordWeak": "La contraseña no cumple todos los requisitos",
+      "lastNameRequired": "El apellido es obligatorio"
+    },
+    "password": {
+      "minLength": "Mínimo 12 caracteres",
+      "uppercase": "Mínimo 1 mayúscula (A-Z)",
+      "lowercase": "Mínimo 1 minúscula (a-z)",
+      "digit": "Mínimo 1 dígito (0-9)",
+      "special": "Mínimo 1 carácter especial (!@#$%&*)",
+      "notEmail": "No contiene parte del email",
+      "notName": "No contiene parte del nombre",
+      "weak": "Débil",
+      "medium": "Medio",
+      "strong": "Fuerte"
     }
   },
   "common": {

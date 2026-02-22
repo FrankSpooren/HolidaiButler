@@ -33,3 +33,11 @@ export function useAnalyticsSnapshot(destination) {
     staleTime: 5 * 60 * 1000
   });
 }
+
+export function usePageviewAnalytics(destination, period = 'month') {
+  return useQuery({
+    queryKey: ['analytics-pageviews', destination, period],
+    queryFn: () => analyticsService.getPageviews(destination, period),
+    staleTime: 5 * 60 * 1000
+  });
+}
