@@ -320,7 +320,7 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
       if (!passwordValid) {
         // Increment login_attempts
         const attempts = (au.login_attempts || 0) + 1;
-        const lockUntil = attempts >= 5 ? 'DATE_ADD(NOW(), INTERVAL 15 MINUTE)' : 'NULL';
+        const lockUntil = attempts >= 10 ? 'DATE_ADD(NOW(), INTERVAL 5 MINUTE)' : 'NULL';
         await mysqlSequelize.query(
           `UPDATE admin_users SET login_attempts = ?, lock_until = ${lockUntil} WHERE id = ?`,
           { replacements: [attempts, au.id] }

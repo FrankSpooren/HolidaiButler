@@ -591,7 +591,7 @@ export function generateAdminToken(payload, expiresIn = '8h') {
  */
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requests per window
+  max: 15, // 15 requests per window
   message: {
     success: false,
     error: {
