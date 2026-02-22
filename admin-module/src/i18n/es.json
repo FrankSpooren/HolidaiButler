@@ -35,6 +35,7 @@
       "category": "Categor\u00eda",
       "job": "Agente",
       "schedule": "Frecuencia",
+      "description": "Descripci\u00f3n",
       "close": "Cerrar"
     },
     "systemHealth": "Estado del sistema",

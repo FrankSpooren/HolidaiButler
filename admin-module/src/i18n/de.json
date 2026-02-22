@@ -35,6 +35,7 @@
       "category": "Kategorie",
       "job": "Agent",
       "schedule": "H\u00e4ufigkeit",
+      "description": "Beschreibung",
       "close": "Schlie\u00dfen"
     },
     "systemHealth": "Systemstatus",

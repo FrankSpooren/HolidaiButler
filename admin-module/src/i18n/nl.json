@@ -35,6 +35,7 @@
       "category": "Categorie",
       "job": "Agent",
       "schedule": "Frequentie",
+      "description": "Beschrijving",
       "close": "Sluiten"
     },
     "systemHealth": "Systeem Status",

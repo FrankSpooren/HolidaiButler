@@ -881,8 +881,8 @@ function AgentDetailDialog({ agent, onClose }) {
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
                   {t('agents.detail.recommendedAction')}
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1.5, bgcolor: 'grey.100', borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace', flex: 1, wordBreak: 'break-all' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1.5, bgcolor: 'action.hover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 500, flex: 1 }}>
                     {agent.recommendedAction}
                   </Typography>
                   <Tooltip title={t('agents.detail.copyCommand')}>

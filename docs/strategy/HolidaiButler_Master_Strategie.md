@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 22 februari 2026
-**Versie**: 7.2
+**Versie**: 7.3
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 9D COMPLEET - Admin Portal Zero-Tolerance Reparatie. 8 persistente bugs uit 9C audit (38% score). UsersPage crash null-safety, category chip kleuren 5x uniek, MongoDB $set/$setOnInsert conflict, POI update + review archive undo snapshots, buildAuditDetail backward-compat, display_order in image response. 28/28 live tests PASS. adminPortal.js v3.3.0. Kosten: EUR 0.
+**Status**: FASE 9E COMPLEET - Persistent Failures Definitief. 6 persistent failures uit audit (5 herhaaldelijk gefaald 3-5 cycli + 1 nieuw). P1: Unicode ES/NL definitief → vlag-emoji alle bestanden. P2: Scheduled jobs 40x beschrijving 3-kolom popup. P3: Agent warnings threshold fix + leesbare tekst. P4: Agent config MongoDB 3-laags persist. P5: Image reorder e2e verified. P6: Welcome email MailerSend. adminPortal.js v3.4.0. Kosten: EUR 0.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.34.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.36.0) in repo root + Hetzner
 
 ---
 
@@ -60,6 +60,7 @@
 | **Fase 9B** | Admin Portal Bug Fix & UX Hardening (6 P0 bugs, 13 UX fixes, pageview tracking, enterprise password policy — 2 nieuwe endpoints, 37 totaal) | ✅ COMPLEET | 22-02-2026 | 28/28 tests PASS | EUR 0 |
 | **Fase 9C** | Admin Portal Live Verificatie & Reparatie (user creation fix, image reorder e2e, enterprise agent profiel popup 4-tab, subcategory editing, logo upload — 1 nieuw endpoint, 38 totaal) | ✅ COMPLEET | 22-02-2026 | Deploy 6 omgevingen | EUR 0 |
 | **Fase 9D** | Admin Portal Zero-Tolerance Reparatie (8 persistente bugs, UsersPage null-safety, category kleuren, MongoDB conflict, undo snapshots POI/review, buildAuditDetail, display_order — 28/28 tests) | ✅ COMPLEET | 22-02-2026 | 28/28 PASS | EUR 0 |
+| **Fase 9E** | Persistent Failures Definitief (6 items: Unicode emoji, scheduled jobs popup, agent warnings threshold, agent config persist, image reorder e2e, welcome email — adminPortal.js v3.4.0) | ✅ COMPLEET | 22-02-2026 | 20/20 PASS | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -85,6 +86,7 @@
 | Fase 9B Admin Portal Bug Fix & UX Hardening | EUR 0 | EUR 0 | ✅ |
 | Fase 9C Admin Portal Live Verificatie & Reparatie | EUR 0 | EUR 0 | ✅ |
 | Fase 9D Admin Portal Zero-Tolerance Reparatie | EUR 0 | EUR 0 | ✅ |
+| Fase 9E Persistent Failures Definitief | EUR 0 | EUR 0 | ✅ |
 | **Totaal** | **EUR 95** | **EUR 74,41** | **78,3% van budget** |
 
 ### 1.3 Openstaande Componenten
@@ -966,6 +968,18 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - Logo upload: multer met diskStorage + destination-aware filename voorkomt overwrite tussen destinations
 - Subcategory editing: controleer altijd eerst of kolom (sub_subcategory) daadwerkelijk bestaat in DB schema
 
+### Fase 9D (22/02) - Admin Portal Zero-Tolerance Reparatie
+- "Reeds geïmplementeerd" claims = escapisme — 4/4 keer vals gebleken bij live verificatie, altijd browser-level bewijzen
+- Backend-plumbing fixes zonder user-facing resultaat tellen NIET als "bug fixes" — alleen zichtbaar resultaat telt
+- Cherry-picking makkelijke items i.p.v. de daadwerkelijk gemelde bugs = structureel probleem dat leidt tot herhaaldelijke cycli
+
+### Fase 9E (22/02) - Persistent Failures Definitief
+- Unicode: ALTIJD zoeken in ALLE bronbestanden (i18n JSON, backend AGENT_METADATA, frontend JSX) + build output verifiëren — partial fixes leiden tot herhaalde cycli
+- Agent status berekening: `calculateAgentStatus()` moet rekening houden met individueel agent schedule (wekelijks/maandelijks ≠ dagelijks) — stale threshold verschilt per schedule
+- Agent config persist: 3 lagen (backend PUT endpoint, backend GET merge met AGENT_METADATA, frontend save handler) moeten ALLE 3 correct werken — partial implementatie = niet-werkend
+- Image ordering: `COALESCE(display_order, 999)` in SQL + ORDER BY voldoende — Sequelize include order werkt niet standaard, gebruik `separate: true` of raw SQL
+- Welcome email: non-blocking pattern (`.then()/.catch()`) — user IS aangemaakt, email falen mag NOOIT een 500 veroorzaken
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -1040,6 +1054,12 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 22-02 | multer diskStorage voor logo upload (9C) | Destination-aware filenames ({dest}_logo.ext), max 2MB, PNG/JPG/SVG only | Claude Code |
 | 22-02 | 2-level category editing (9C) | sub_subcategory kolom bestaat niet in DB — alleen category + subcategory wijzigbaar | Claude Code |
 | 22-02 | Branding uitbreiding met brand_name/payoff (9C) | MongoDB brand_configurations uitgebreid — GET/PUT endpoints teruggeven/accepteren | Claude Code |
+| 22-02 | saveAuditLog + saveUndoSnapshot refactor (9D) | POI update + review archive handlers moeten BEIDE functies aanroepen — directe MongoDB insert mist undo capability | Claude Code |
+| 22-02 | buildAuditDetail backward-compat (9D) | Oude action names (poi_update, review_archive) + nieuwe (poi_content_updated, review_archived) beide ondersteunen voor bestaande audit log entries | Claude Code |
+| 22-02 | Unicode all-files sweep (9E) | Escaped sequences in ALLE bronbestanden (i18n, AGENT_METADATA, JSX) vervangen — niet alleen frontend | Claude Code |
+| 22-02 | calculateAgentStatus cron-aware (9E) | Wekelijkse/maandelijkse agents krijgen ruimere stale threshold (7d/31d) i.p.v. default 25h | Claude Code |
+| 22-02 | Agent config 3-layer persist (9E) | PUT endpoint → MongoDB, GET /agents/status BRON 1b merge, frontend save handler — alle 3 lagen vereist | Claude Code |
+| 22-02 | Welcome email non-blocking (9E) | MailerSend via emailService.sendEmail() met .then()/.catch() — user creation mag niet falen bij email error | Claude Code |
 
 ---
 
@@ -1062,6 +1082,7 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | Threema Gateway niet geconfigureerd | Medium | Open — env vars niet gezet, dagelijkse smoke test alert |
 | Agent registry circular imports | Medium | ✅ Gemitigeerd (metadata-only registry, geen agent imports) |
 | Windows line endings in deploy scripts | Laag | ✅ Gemitigeerd (sed strip protocol) |
+| Agent status threshold berekening | Medium | ✅ Gemitigeerd (cron-aware thresholds: dagelijks 25h, wekelijks 7d, maandelijks 31d) |
 
 ---
 
@@ -1120,6 +1141,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.3** | **22-02-2026** | **Fase 9E Persistent Failures Definitief COMPLEET: 6 persistent failures uit audit (5 herhaaldelijk gefaald in 3-5 cycli + 1 nieuw). P1: Unicode ES/NL definitief → vlag-emoji in alle bestanden (i18n, backend AGENT_METADATA, frontend). P2: Scheduled jobs 40x met beschrijving kolom in 3-kolom popup. P3: Agent warnings threshold fix (calculateAgentStatus cron-aware voor weekly/monthly schedules) + leesbare tekst (body1 i.p.v. monospace). P4: Agent config MongoDB 3-laags persist (PUT endpoint + GET /agents/status BRON 1b merge + frontend save handler). P5: Image reorder e2e verified (display_order in MySQL, public API, admin API, geen Redis cache). P6: Welcome email via MailerSend (enterprise HTML template, non-blocking, login URL + credentials + rol). adminPortal.js v3.4.0. Kosten: EUR 0. CLAUDE.md v3.36.0.** |
 | **7.2** | **22-02-2026** | **Fase 9D Admin Portal Zero-Tolerance Reparatie COMPLEET: 8 persistente bugs uit 9C audit (38% score). Blok 1: UsersPage crash null-safety (isSelf bij editUser=null, MUI Dialog eager eval). Category chip kleuren 5x maximaal onderscheidend. MongoDB $set/$setOnInsert conflict fix. Blok 2: POI update + review archive handlers met saveAuditLog + saveUndoSnapshot. buildAuditDetail backward-compatible (oude + nieuwe action names). display_order in POI detail image response. 28/28 live tests PASS. adminPortal.js v3.3.0. Kosten: EUR 0. CLAUDE.md v3.35.0.** |
 | **7.1** | **22-02-2026** | **Fase 9C Admin Portal Live Verificatie & Reparatie COMPLEET: Blok 1: 2 P0 fixes (user creation permissions kolom, image reorder display_order e2e). Blok 2A: Enterprise agent profiel popup (4 MUI tabs, AGENT_TASKS 18 agents, per-destination status, PM2 log copy). Blok 2B-2G: subcategory editing, logo upload (multer + POST endpoint + preview + i18n), 4 items reeds bevestigd. Blok 3: Deploy 6 omgevingen. 1 nieuw endpoint (38 totaal). adminPortal.js v3.2.0. Kosten: EUR 0. CLAUDE.md v3.34.0.** |
 | **7.0** | **22-02-2026** | **Fase 9B Admin Portal Bug Fix & UX Hardening COMPLEET: Blok 1: 6 P0 bugs (unicode emoji fix, agent status Unknown→actual, user creation 500→201, image reorder persistence, daily email severity prefix, audit log actor type). Blok 2: 13 UX fixes (reviews destination filter, agent warning details+actions, NL/EN agent descriptions, extended agent config popup 5-section, scheduled job descriptions, category chip colors, environment-aware frontend links, branding merknaam+payoff, is_active audit, role name consistency, real user names, enterprise password policy). Blok 3: Pageview tracking (page_views tabel, POST /track, GET /analytics/pageviews, AnalyticsPage section). 6 doc fixes (8E test count, 9A test count, MS version refs, 9A-FIX row, rate limiter). 2 nieuwe endpoints (37 totaal). adminPortal.js v3.1.0. 28/28 tests PASS. Kosten: EUR 0. CLAUDE.md v3.33.0.** |
@@ -1146,5 +1168,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 22 februari 2026 - Fase 9A-FIX COMPLEET (Admin Login Fix), Master Document v6.9.1*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→8E + 9A COMPLEET. Admin Portal: 35 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode.*
+*Laatst bijgewerkt: 22 februari 2026 - Fase 9E COMPLEET (Persistent Failures Definitief), Master Document v7.3*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→9E COMPLEET. Admin Portal: 38 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode. adminPortal.js v3.4.0.*

@@ -35,6 +35,7 @@
       "category": "Category",
       "job": "Agent",
       "schedule": "Schedule",
+      "description": "Description",
       "close": "Close"
     },
     "systemHealth": "System Health",

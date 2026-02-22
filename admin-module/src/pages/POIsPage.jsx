@@ -275,7 +275,7 @@ export default function POIsPage() {
                   <TableCell>
                     <Chip
                       size="small"
-                      label={poi.destination_id === 2 ? '\uD83C\uDDF3\uD83C\uDDF1 Texel' : '\uD83C\uDDEA\uD83C\uDDF8 Calpe'}
+                      label={poi.destination_id === 2 ? '🇳🇱 Texel' : '🇪🇸 Calpe'}
                       sx={{ bgcolor: getDestinationColor(poi.destination_id === 2 ? 'texel' : 'calpe') + '22', fontWeight: 600, fontSize: '0.75rem' }}
                     />
                   </TableCell>
