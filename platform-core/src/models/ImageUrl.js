@@ -44,6 +44,11 @@ const ImageUrl = mysqlSequelize.define('ImageUrl', {
   downloaded_at: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  display_order: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: null
   }
 }, {
   tableName: 'imageurls',

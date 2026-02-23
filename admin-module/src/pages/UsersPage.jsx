@@ -9,13 +9,15 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import PauseCircleIcon from '@mui/icons-material/PauseCircle';
+import PlayCircleIcon from '@mui/icons-material/PlayCircle';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PersonIcon from '@mui/icons-material/Person';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useTranslation } from 'react-i18next';
-import { useUserList, useUserCreate, useUserUpdate, useUserDelete, useUserResetPassword } from '../hooks/useUsers.js';
+import { useUserList, useUserCreate, useUserUpdate, useUserDeactivate, useUserDelete, useUserResetPassword } from '../hooks/useUsers.js';
 import useAuthStore from '../stores/authStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 
@@ -28,8 +30,8 @@ const ROLE_COLORS = {
 
 const STATUS_COLORS = {
   active: 'success',
-  suspended: 'error',
-  pending: 'warning'
+  suspended: 'warning',
+  pending: 'info'
 };
 
 const ROLES = ['platform_admin', 'poi_owner', 'editor', 'reviewer'];
@@ -66,6 +68,7 @@ export default function UsersPage() {
   const { data, isLoading, error, refetch } = useUserList(filters);
   const createMut = useUserCreate();
   const updateMut = useUserUpdate();
+  const deactivateMut = useUserDeactivate();
   const deleteMut = useUserDelete();
   const resetPwMut = useUserResetPassword();
 
@@ -75,6 +78,7 @@ export default function UsersPage() {
   // Dialogs
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState(null);
+  const [deactivateUser, setDeactivateUser] = useState(null);
   const [deleteUser, setDeleteUser] = useState(null);
   const [resetPwUser, setResetPwUser] = useState(null);
   const [tempPassword, setTempPassword] = useState('');
@@ -154,12 +158,24 @@ export default function UsersPage() {
     }
   };
 
+  // --- DEACTIVATE ---
+  const handleDeactivate = async () => {
+    try {
+      const result = await deactivateMut.mutateAsync(deactivateUser.id);
+      const newStatus = result?.data?.status;
+      setDeactivateUser(null);
+      setSnack({ open: true, message: newStatus === 'active' ? t('users.reactivated') : t('users.deactivated') });
+    } catch (err) {
+      setSnack({ open: true, message: err.response?.data?.error?.message || t('common.error') });
+    }
+  };
+
   // --- DELETE ---
   const handleDelete = async () => {
     try {
       await deleteMut.mutateAsync(deleteUser.id);
       setDeleteUser(null);
-      setSnack({ open: true, message: t('users.deleted') });
+      setSnack({ open: true, message: t('users.permanentlyDeleted') });
     } catch (err) {
       setSnack({ open: true, message: err.response?.data?.error?.message || t('common.error') });
     }
@@ -313,10 +329,19 @@ export default function UsersPage() {
                           <VpnKeyIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title={t('users.delete')}>
-                        <IconButton size="small" onClick={() => setDeleteUser(user)} disabled={isSelf(user)} color="error">
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                      <Tooltip title={user.status === 'active' ? t('users.deactivate') : t('users.reactivate')}>
+                        <span>
+                          <IconButton size="small" onClick={() => setDeactivateUser(user)} disabled={isSelf(user)} color="warning">
+                            {user.status === 'active' ? <PauseCircleIcon fontSize="small" /> : <PlayCircleIcon fontSize="small" />}
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title={t('users.permanentDelete')}>
+                        <span>
+                          <IconButton size="small" onClick={() => setDeleteUser(user)} disabled={isSelf(user)} color="error">
+                            <DeleteForeverIcon fontSize="small" />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                     </TableCell>
                   </TableRow>
@@ -463,19 +488,44 @@ export default function UsersPage() {
         </DialogActions>
       </Dialog>
 
-      {/* DELETE DIALOG */}
-      <Dialog open={!!deleteUser} onClose={() => setDeleteUser(null)}>
-        <DialogTitle>{t('users.deleteTitle')}</DialogTitle>
+      {/* DEACTIVATE DIALOG */}
+      <Dialog open={!!deactivateUser} onClose={() => setDeactivateUser(null)}>
+        <DialogTitle>
+          {deactivateUser?.status === 'active' ? t('users.deactivateTitle') : t('users.reactivateTitle')}
+        </DialogTitle>
         <DialogContent>
           <Typography>
-            {t('users.deleteConfirm', { name: `${deleteUser?.first_name} ${deleteUser?.last_name}`, email: deleteUser?.email })}
+            {deactivateUser?.status === 'active'
+              ? t('users.deactivateConfirm', { name: `${deactivateUser?.first_name} ${deactivateUser?.last_name}`, email: deactivateUser?.email })
+              : t('users.reactivateConfirm', { name: `${deactivateUser?.first_name} ${deactivateUser?.last_name}`, email: deactivateUser?.email })}
           </Typography>
-          <Alert severity="warning" sx={{ mt: 2 }}>{t('users.deleteSoftNote')}</Alert>
+          <Alert severity="info" sx={{ mt: 2 }}>
+            {deactivateUser?.status === 'active' ? t('users.deactivateNote') : t('users.reactivateNote')}
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeactivateUser(null)}>{t('users.cancel')}</Button>
+          <Button color="warning" variant="contained" onClick={handleDeactivate} disabled={deactivateMut.isLoading}>
+            {deactivateMut.isLoading
+              ? t('users.processing')
+              : deactivateUser?.status === 'active' ? t('users.confirmDeactivate') : t('users.confirmReactivate')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* DELETE DIALOG (permanent) */}
+      <Dialog open={!!deleteUser} onClose={() => setDeleteUser(null)}>
+        <DialogTitle>{t('users.permanentDeleteTitle')}</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {t('users.permanentDeleteConfirm', { name: `${deleteUser?.first_name} ${deleteUser?.last_name}`, email: deleteUser?.email })}
+          </Typography>
+          <Alert severity="error" sx={{ mt: 2 }}>{t('users.permanentDeleteWarning')}</Alert>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteUser(null)}>{t('users.cancel')}</Button>
           <Button color="error" variant="contained" onClick={handleDelete} disabled={deleteMut.isLoading}>
-            {deleteMut.isLoading ? t('users.deleting') : t('users.confirmDelete')}
+            {deleteMut.isLoading ? t('users.deleting') : t('users.confirmPermanentDelete')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -44,7 +44,7 @@
  *   GET  /analytics/pageviews  — Pageview analytics (page_views table, GDPR compliant)
  *
  * @module routes/adminPortal
- * @version 3.5.0
+ * @version 3.6.0
  */
 
 import { Router } from 'express';
@@ -4491,12 +4491,97 @@ router.put('/users/:id', adminAuth('platform_admin'), async (req, res) => {
 });
 
 /**
+ * PUT /users/:id/deactivate
+ * Toggle admin user active/inactive status. Platform_admin only.
+ * Inactive users cannot log in but their account data is preserved.
+ */
+router.put('/users/:id/deactivate', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent self-deactivation
+    if (id === req.adminUser.id) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'SELF_DEACTIVATE', message: 'You cannot deactivate your own account.' }
+      });
+    }
+
+    const current = await mysqlSequelize.query(
+      `SELECT id, email, first_name, last_name, role, status FROM admin_users WHERE id = ?`,
+      { replacements: [id], type: QueryTypes.SELECT }
+    );
+    if (current.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'Admin user not found.' }
+      });
+    }
+
+    // Toggle: active → suspended, anything else → active
+    const newStatus = current[0].status === 'active' ? 'suspended' : 'active';
+
+    await mysqlSequelize.query(
+      `UPDATE admin_users SET status = ?, updated_at = NOW() WHERE id = ?`,
+      { replacements: [newStatus, id] }
+    );
+
+    // Invalidate sessions when deactivating
+    if (newStatus === 'suspended') {
+      await mysqlSequelize.query(
+        `DELETE FROM Sessions WHERE user_id = ?`,
+        { replacements: [id] }
+      ).catch(() => {});
+    }
+
+    // Audit log + undo snapshot
+    const auditId = await saveAuditLog({
+      action: 'user_deactivated',
+      adminId: req.adminUser.id,
+      adminEmail: req.adminUser.email,
+      details: `User ${current[0].email} status changed: ${current[0].status} → ${newStatus}`,
+      entityType: 'user',
+      entityId: id
+    });
+    if (auditId) {
+      await saveUndoSnapshot({
+        auditLogId: auditId,
+        action: 'user_deactivated',
+        entityType: 'user',
+        entityId: id,
+        previousState: current[0],
+        newState: { status: newStatus },
+        createdBy: req.adminUser.email
+      });
+    }
+
+    logger.info(`[AdminPortal] User ${newStatus === 'suspended' ? 'deactivated' : 'reactivated'}: ${current[0].email} by ${req.adminUser.email}`);
+    res.json({ success: true, data: { id, status: newStatus } });
+  } catch (error) {
+    logger.error('[AdminPortal] Deactivate user error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred changing user status.' }
+    });
+  }
+});
+
+/**
  * DELETE /users/:id
- * Soft-delete admin user (set status = suspended). Platform_admin only.
+ * Permanently delete admin user (hard delete). Platform_admin only.
+ * Requires { confirm: true } in request body for safety.
  */
 router.delete('/users/:id', adminAuth('platform_admin'), async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Require explicit confirmation
+    if (!req.body?.confirm) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'CONFIRM_REQUIRED', message: 'Confirmation required. Send { confirm: true } in body.' }
+      });
+    }
 
     // Prevent self-deletion
     if (id === req.adminUser.id) {
@@ -4517,40 +4602,30 @@ router.delete('/users/:id', adminAuth('platform_admin'), async (req, res) => {
       });
     }
 
-    await mysqlSequelize.query(
-      `UPDATE admin_users SET status = 'suspended', updated_at = NOW() WHERE id = ?`,
-      { replacements: [id] }
-    );
-
-    // Invalidate sessions
+    // Invalidate sessions first
     await mysqlSequelize.query(
       `DELETE FROM Sessions WHERE user_id = ?`,
       { replacements: [id] }
     ).catch(() => {});
 
-    // Audit log + undo snapshot
-    const auditId = await saveAuditLog({
-      action: 'user_deleted',
+    // Hard delete the user
+    await mysqlSequelize.query(
+      `DELETE FROM admin_users WHERE id = ?`,
+      { replacements: [id] }
+    );
+
+    // Audit log (no undo for hard delete — data is gone)
+    await saveAuditLog({
+      action: 'user_permanently_deleted',
       adminId: req.adminUser.id,
       adminEmail: req.adminUser.email,
-      details: `Soft-deleted admin user: ${current[0].email}`,
+      details: `Permanently deleted admin user: ${current[0].email} (role: ${current[0].role})`,
       entityType: 'user',
       entityId: id
     });
-    if (auditId) {
-      await saveUndoSnapshot({
-        auditLogId: auditId,
-        action: 'user_deleted',
-        entityType: 'user',
-        entityId: id,
-        previousState: current[0],
-        newState: { status: 'suspended' },
-        createdBy: req.adminUser.email
-      });
-    }
 
-    logger.info(`[AdminPortal] User deleted (soft): ${current[0].email} by ${req.adminUser.email}`);
-    res.json({ success: true, data: { id, deleted: true } });
+    logger.info(`[AdminPortal] User permanently deleted: ${current[0].email} by ${req.adminUser.email}`);
+    res.json({ success: true, data: { id, permanentlyDeleted: true } });
   } catch (error) {
     logger.error('[AdminPortal] Delete user error:', error);
     res.status(500).json({
