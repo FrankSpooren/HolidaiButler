@@ -586,8 +586,28 @@ export function generateAdminToken(payload, expiresIn = '8h') {
 // ============================================================================
 
 /**
+ * Parse trusted admin IPs from env var (comma-separated).
+ * Example: ADMIN_RATE_LIMIT_EXEMPT_IPS=91.98.71.87,127.0.0.1,::1
+ */
+const trustedAdminIPs = (process.env.ADMIN_RATE_LIMIT_EXEMPT_IPS || '')
+  .split(',')
+  .map(ip => ip.trim())
+  .filter(Boolean);
+
+/**
+ * Check if request IP is in the trusted admin IP whitelist.
+ */
+function isExemptAdminIP(req) {
+  const ip = req.ip || req.connection?.remoteAddress || '';
+  // Normalize IPv6-mapped IPv4 (::ffff:127.0.0.1 → 127.0.0.1)
+  const normalizedIP = ip.replace(/^::ffff:/, '');
+  return trustedAdminIPs.includes(normalizedIP) || trustedAdminIPs.includes(ip);
+}
+
+/**
  * Rate Limiting for Authentication Endpoints
- * Prevents brute force attacks on login/signup
+ * Prevents brute force attacks on login/signup.
+ * Exempt: development env, trusted admin IPs.
  */
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -602,8 +622,9 @@ export const authRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // Skip rate limiting in development
-    return process.env.NODE_ENV === 'development';
+    if (process.env.NODE_ENV === 'development') return true;
+    if (isExemptAdminIP(req)) return true;
+    return false;
   }
 });
 
@@ -623,7 +644,41 @@ export const apiRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    return process.env.NODE_ENV === 'development';
+    if (process.env.NODE_ENV === 'development') return true;
+    if (isExemptAdminIP(req)) return true;
+    return false;
+  }
+});
+
+/**
+ * Admin Portal API Rate Limiter (Fase 9F — B3).
+ * Higher limit (300/15min) for admin portal endpoints.
+ * Exempt: development env, trusted admin IPs, valid admin JWT (platform_admin role).
+ */
+export const adminApiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300, // 300 requests per window (admins do bulk operations)
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many admin API requests. Please try again later.'
+    }
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    if (process.env.NODE_ENV === 'development') return true;
+    if (isExemptAdminIP(req)) return true;
+    // Peek at JWT to check platform_admin role (lightweight, no DB call)
+    try {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ')) {
+        const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET || 'your-secret-key');
+        if (decoded.role === 'platform_admin') return true;
+      }
+    } catch { /* invalid/expired token — do not skip */ }
+    return false;
   }
 });
 
