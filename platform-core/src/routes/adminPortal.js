@@ -44,7 +44,7 @@
  *   GET  /analytics/pageviews  — Pageview analytics (page_views table, GDPR compliant)
  *
  * @module routes/adminPortal
- * @version 3.4.0
+ * @version 3.5.0
  */
 
 import { Router } from 'express';
@@ -62,12 +62,17 @@ import { QueryTypes } from 'sequelize';
 import {
   verifyAdminToken,
   generateAdminToken,
-  authRateLimiter
+  authRateLimiter,
+  adminApiRateLimiter
 } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
 import emailService from '../services/emailService.js';
 
 const router = Router();
+
+// Admin API rate limiter — applied to all admin endpoints (Fase 9F — B3)
+// 300 req/15min, platform_admin + trusted IPs exempt
+router.use(adminApiRateLimiter);
 
 // Redis client for dashboard caching
 let redisClient = null;
@@ -166,7 +171,7 @@ function adminAuth(requiredRole = 'reviewer') {
       // 2. Verify user still exists and is active in admin_users
       const userId = decoded.userId || decoded.id;
       const adminUsers = await mysqlSequelize.query(
-        `SELECT id, email, first_name, last_name, role, allowed_destinations, permissions, status
+        `SELECT id, email, first_name, last_name, role, allowed_destinations, owned_pois, permissions, status
          FROM admin_users WHERE id = ? AND status = 'active'`,
         { replacements: [userId], type: QueryTypes.SELECT }
       );
@@ -210,6 +215,14 @@ function adminAuth(requiredRole = 'reviewer') {
       let parsedPerms = {};
       try { parsedPerms = JSON.parse(user.permissions || '{}'); } catch { /* empty */ }
 
+      // Parse owned POIs
+      let ownedPois = [];
+      try { ownedPois = JSON.parse(user.owned_pois || '[]'); } catch { ownedPois = []; }
+
+      // Resolve destination codes to IDs for query scoping
+      const destCodeToId = { calpe: 1, texel: 2, alicante: 3 };
+      const allowedDestIds = allowedDests.map(code => destCodeToId[code]).filter(Boolean);
+
       req.adminUser = {
         id: user.id,
         email: user.email,
@@ -218,6 +231,8 @@ function adminAuth(requiredRole = 'reviewer') {
         lastName: user.last_name,
         role: user.role,
         allowed_destinations: allowedDests,
+        allowed_destination_ids: allowedDestIds,
+        owned_pois: ownedPois,
         permissions: parsedPerms,
         ...decoded
       };
@@ -230,6 +245,59 @@ function adminAuth(requiredRole = 'reviewer') {
         error: { code: 'AUTH_ERROR', message: 'Server error during authentication.' }
       });
     }
+  };
+}
+
+/**
+ * Destination scope middleware — automatically filters data by user's allowed destinations.
+ * Platform Admins bypass scoping. POI Owners are scoped to their owned POIs.
+ * Must run AFTER adminAuth().
+ */
+function destinationScope(req, res, next) {
+  const user = req.adminUser;
+  if (!user) return next(); // adminAuth not run yet
+
+  // Platform Admin: no restriction
+  if (user.role === 'platform_admin') {
+    req.destScope = null;
+    req.poiScope = null;
+    return next();
+  }
+
+  // POI Owner: scoped to specific POIs (across any destination)
+  if (user.role === 'poi_owner' && user.owned_pois && user.owned_pois.length > 0) {
+    req.poiScope = user.owned_pois.map(id => parseInt(id)).filter(Boolean);
+    req.destScope = null; // POI scope overrides destination scope
+    return next();
+  }
+
+  // Editor/Reviewer: scoped to allowed destination IDs
+  if (user.allowed_destination_ids && user.allowed_destination_ids.length > 0) {
+    req.destScope = user.allowed_destination_ids;
+  } else {
+    req.destScope = null; // no restrictions if empty (backward compat)
+  }
+  req.poiScope = null;
+  next();
+}
+
+/**
+ * Write access middleware — blocks write operations for roles without permission.
+ * @param {string[]} allowedRoles - Roles that can perform this write operation.
+ */
+function writeAccess(allowedRoles) {
+  return (req, res, next) => {
+    if (!req.adminUser) return next();
+    if (!allowedRoles.includes(req.adminUser.role)) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'WRITE_FORBIDDEN',
+          message: `Role '${req.adminUser.role}' does not have write access for this operation.`
+        }
+      });
+    }
+    next();
   };
 }
 
@@ -294,7 +362,7 @@ async function saveAuditLog({ action, adminId, adminEmail, details, entityType, 
 
 /**
  * POST /auth/login
- * Admin login with email/password. Rate limited: 5 per 15 min.
+ * Admin login with email/password. Rate limited: 15 per 15 min (trusted IPs exempt).
  * Queries admin_users table first, falls back to Users table for backward compatibility.
  */
 router.post('/auth/login', authRateLimiter, async (req, res) => {
@@ -616,6 +684,7 @@ router.get('/auth/me', adminAuth('reviewer'), async (req, res) => {
         lastName: req.adminUser.lastName,
         role: req.adminUser.role,
         allowed_destinations: req.adminUser.allowed_destinations,
+        owned_pois: req.adminUser.owned_pois,
         permissions: req.adminUser.permissions
       }
     });
@@ -707,15 +776,17 @@ router.get('/dashboard', adminAuth('reviewer'), async (req, res) => {
     if (!result.data.destinations.calpe.reviews) result.data.destinations.calpe.reviews = 0;
     if (!result.data.destinations.texel.reviews) result.data.destinations.texel.reviews = 0;
 
-    // 3. User count
+    // 3. Admin user count (from admin_users, not customer Users table)
     try {
       const userCount = await mysqlSequelize.query(
-        `SELECT COUNT(*) as total FROM Users`,
+        `SELECT COUNT(*) as total, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active FROM admin_users`,
         { type: QueryTypes.SELECT }
       );
       result.data.platform.totalUsers = parseInt(userCount[0]?.total || 0);
+      result.data.platform.activeUsers = parseInt(userCount[0]?.active || 0);
     } catch {
       result.data.platform.totalUsers = 0;
+      result.data.platform.activeUsers = 0;
     }
 
     // 4. Chatbot sessions (last 7 days)
@@ -1508,7 +1579,7 @@ router.get('/agents/status', adminAuth('reviewer'), async (req, res) => {
  * GET /pois
  * POI list with pagination, search, and filters.
  */
-router.get('/pois', adminAuth('reviewer'), async (req, res) => {
+router.get('/pois', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const {
       destination, category, search, hasContent, isActive,
@@ -1522,6 +1593,17 @@ router.get('/pois', adminAuth('reviewer'), async (req, res) => {
     // Build WHERE clauses
     const where = [];
     const params = [];
+
+    // RBAC: POI scope (poi_owner sees only their POIs)
+    if (req.poiScope) {
+      where.push(`p.id IN (${req.poiScope.map(() => '?').join(',')})`);
+      params.push(...req.poiScope);
+    }
+    // RBAC: Destination scope (editor/reviewer sees only their destinations)
+    else if (req.destScope) {
+      where.push(`p.destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      params.push(...req.destScope);
+    }
 
     if (destination) {
       const destId = resolveDestinationId(destination);
@@ -1643,10 +1725,11 @@ router.get('/pois', adminAuth('reviewer'), async (req, res) => {
  * GET /pois/stats
  * POI statistics per destination. Redis cached 5 minutes.
  */
-router.get('/pois/stats', adminAuth('reviewer'), async (req, res) => {
+router.get('/pois/stats', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const { destination } = req.query;
-    const cacheKey = destination ? `admin:pois:stats:${destination}` : 'admin:pois:stats';
+    const scopeKey = req.poiScope ? `poi:${req.poiScope.join(',')}` : req.destScope ? `dest:${req.destScope.join(',')}` : 'all';
+    const cacheKey = destination ? `admin:pois:stats:${destination}:${scopeKey}` : `admin:pois:stats:${scopeKey}`;
     const redis = getRedis();
 
     if (redis) {
@@ -1657,8 +1740,22 @@ router.get('/pois/stats', adminAuth('reviewer'), async (req, res) => {
     }
 
     const destId = resolveDestinationId(destination);
-    const destFilter = destId ? 'WHERE p.destination_id = ?' : '';
-    const destParams = destId ? [destId] : [];
+    // Build base filter combining RBAC scope + destination filter
+    const baseWhere = [];
+    const baseParams = [];
+    if (req.poiScope) {
+      baseWhere.push(`p.id IN (${req.poiScope.map(() => '?').join(',')})`);
+      baseParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      baseWhere.push(`p.destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      baseParams.push(...req.destScope);
+    }
+    if (destId) {
+      baseWhere.push('p.destination_id = ?');
+      baseParams.push(destId);
+    }
+    const destFilter = baseWhere.length > 0 ? 'WHERE ' + baseWhere.join(' AND ') : '';
+    const destParams = baseParams;
 
     // Basic counts
     const counts = await mysqlSequelize.query(
@@ -1681,12 +1778,22 @@ router.get('/pois/stats', adminAuth('reviewer'), async (req, res) => {
       { replacements: destParams, type: QueryTypes.SELECT }
     );
 
-    // By destination
+    // By destination (respects RBAC scope)
+    const byDestWhere = [];
+    const byDestParams = [];
+    if (req.poiScope) {
+      byDestWhere.push(`id IN (${req.poiScope.map(() => '?').join(',')})`);
+      byDestParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      byDestWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      byDestParams.push(...req.destScope);
+    }
+    const byDestWhereClause = byDestWhere.length > 0 ? 'WHERE ' + byDestWhere.join(' AND ') : '';
     const byDest = await mysqlSequelize.query(
       `SELECT destination_id, COUNT(*) as total,
               SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active
-       FROM POI GROUP BY destination_id`,
-      { type: QueryTypes.SELECT }
+       FROM POI ${byDestWhereClause} GROUP BY destination_id`,
+      { replacements: byDestParams, type: QueryTypes.SELECT }
     );
 
     const byDestMap = {};
@@ -1696,11 +1803,25 @@ router.get('/pois/stats', adminAuth('reviewer'), async (req, res) => {
     }
 
     // By category
+    // byCat respects the same RBAC base filter
+    const byCatWhere = ['is_active = 1'];
+    const byCatParams = [];
+    if (req.poiScope) {
+      byCatWhere.push(`id IN (${req.poiScope.map(() => '?').join(',')})`);
+      byCatParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      byCatWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      byCatParams.push(...req.destScope);
+    }
+    if (destId) {
+      byCatWhere.push('destination_id = ?');
+      byCatParams.push(destId);
+    }
     const byCat = await mysqlSequelize.query(
       `SELECT category, COUNT(*) as cnt FROM POI p
-       WHERE is_active = 1 ${destId ? 'AND destination_id = ?' : ''}
+       WHERE ${byCatWhere.join(' AND ')}
        GROUP BY category ORDER BY cnt DESC`,
-      { replacements: destId ? [destId] : [], type: QueryTypes.SELECT }
+      { replacements: byCatParams, type: QueryTypes.SELECT }
     );
 
     const totalActive = parseInt(counts[0]?.active || 0);
@@ -1710,31 +1831,73 @@ router.get('/pois/stats', adminAuth('reviewer'), async (req, res) => {
       pct: totalActive > 0 ? parseFloat(((parseInt(c.cnt) / totalActive) * 100).toFixed(1)) : 0
     }));
 
-    // Image stats
+    // Image stats (respects RBAC scope)
+    const imgWhere = [];
+    const imgParams = [];
+    if (req.poiScope) {
+      imgWhere.push(`i.poi_id IN (${req.poiScope.map(() => '?').join(',')})`);
+      imgParams.push(...req.poiScope);
+    } else if (req.destScope || destId) {
+      // Need JOIN to POI table for destination filter
+      imgWhere.push('1=1'); // placeholder, join handles filtering
+    }
+    const imgJoin = (req.destScope || destId) ? 'INNER JOIN POI p ON i.poi_id = p.id' : '';
+    if (req.destScope && !req.poiScope) {
+      imgWhere.push(`p.destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      imgParams.push(...req.destScope);
+    }
+    if (destId) {
+      imgWhere.push('p.destination_id = ?');
+      imgParams.push(destId);
+    }
+    const imgWhereClause = imgWhere.length > 0 ? 'WHERE ' + imgWhere.join(' AND ') : '';
     const imgStats = await mysqlSequelize.query(
       `SELECT COUNT(*) as totalImages,
               COUNT(DISTINCT i.poi_id) as poisWithImages
-       FROM imageurls i
-       ${destId ? 'INNER JOIN POI p ON i.poi_id = p.id WHERE p.destination_id = ?' : ''}`,
-      { replacements: destId ? [destId] : [], type: QueryTypes.SELECT }
+       FROM imageurls i ${imgJoin} ${imgWhereClause}`,
+      { replacements: imgParams, type: QueryTypes.SELECT }
     );
 
-    // Review stats
+    // Review stats (respects RBAC scope)
+    const revWhere = [];
+    const revParams = [];
+    if (req.poiScope) {
+      revWhere.push(`poi_id IN (${req.poiScope.map(() => '?').join(',')})`);
+      revParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      revWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      revParams.push(...req.destScope);
+    }
+    if (destId) {
+      revWhere.push('destination_id = ?');
+      revParams.push(destId);
+    }
+    const revWhereClause = revWhere.length > 0 ? 'WHERE ' + revWhere.join(' AND ') : '';
     const revStats = await mysqlSequelize.query(
       `SELECT COUNT(*) as totalReviews,
               COUNT(DISTINCT poi_id) as poisWithReviews,
               ROUND(AVG(rating), 1) as avgRating
-       FROM reviews ${destId ? 'WHERE destination_id = ?' : ''}`,
-      { replacements: destId ? [destId] : [], type: QueryTypes.SELECT }
+       FROM reviews ${revWhereClause}`,
+      { replacements: revParams, type: QueryTypes.SELECT }
     );
 
-    // Per-destination content coverage
+    // Per-destination content coverage (respects RBAC scope)
+    const destCovWhere = [];
+    const destCovParams = [];
+    if (req.poiScope) {
+      destCovWhere.push(`id IN (${req.poiScope.map(() => '?').join(',')})`);
+      destCovParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      destCovWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      destCovParams.push(...req.destScope);
+    }
+    const destCovWhereClause = destCovWhere.length > 0 ? 'WHERE ' + destCovWhere.join(' AND ') : '';
     const destContentCoverage = await mysqlSequelize.query(
       `SELECT destination_id,
               COUNT(*) as total,
               SUM(CASE WHEN enriched_detail_description IS NOT NULL AND enriched_detail_description != '' THEN 1 ELSE 0 END) as withContent
-       FROM POI GROUP BY destination_id`,
-      { type: QueryTypes.SELECT }
+       FROM POI ${destCovWhereClause} GROUP BY destination_id`,
+      { replacements: destCovParams, type: QueryTypes.SELECT }
     );
     const destCoverageMap = {};
     for (const dc of destContentCoverage) {
@@ -1742,10 +1905,20 @@ router.get('/pois/stats', adminAuth('reviewer'), async (req, res) => {
       destCoverageMap[dc.destination_id] = parseFloat(((parseInt(dc.withContent) || 0) / total * 100).toFixed(1));
     }
 
-    // Per-destination avg rating from reviews
+    // Per-destination avg rating from reviews (respects RBAC scope)
+    const destRatWhere = [];
+    const destRatParams = [];
+    if (req.poiScope) {
+      destRatWhere.push(`poi_id IN (${req.poiScope.map(() => '?').join(',')})`);
+      destRatParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      destRatWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      destRatParams.push(...req.destScope);
+    }
+    const destRatWhereClause = destRatWhere.length > 0 ? 'WHERE ' + destRatWhere.join(' AND ') : '';
     const destAvgRating = await mysqlSequelize.query(
-      `SELECT destination_id, ROUND(AVG(rating), 1) as avgRating FROM reviews GROUP BY destination_id`,
-      { type: QueryTypes.SELECT }
+      `SELECT destination_id, ROUND(AVG(rating), 1) as avgRating FROM reviews ${destRatWhereClause} GROUP BY destination_id`,
+      { replacements: destRatParams, type: QueryTypes.SELECT }
     );
     const destRatingMap = {};
     for (const dr of destAvgRating) {
@@ -1810,28 +1983,55 @@ router.get('/pois/stats', adminAuth('reviewer'), async (req, res) => {
  * GET /pois/categories
  * Distinct categories from POI table for filter dropdowns.
  */
-router.get('/pois/categories', adminAuth('reviewer'), async (req, res) => {
+router.get('/pois/categories', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const { destination } = req.query;
     const destId = resolveDestinationId(destination);
 
+    // Build RBAC + destination filter
+    const catWhere = ["category IS NOT NULL AND category != ''"];
+    const catParams = [];
+    if (req.poiScope) {
+      catWhere.push(`id IN (${req.poiScope.map(() => '?').join(',')})`);
+      catParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      catWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      catParams.push(...req.destScope);
+    }
+    if (destId) {
+      catWhere.push('destination_id = ?');
+      catParams.push(destId);
+    }
+
     const categories = await mysqlSequelize.query(
       `SELECT category, COUNT(*) as count
        FROM POI
-       WHERE category IS NOT NULL AND category != ''
-       ${destId ? 'AND destination_id = ?' : ''}
+       WHERE ${catWhere.join(' AND ')}
        GROUP BY category ORDER BY count DESC`,
-      { replacements: destId ? [destId] : [], type: QueryTypes.SELECT }
+      { replacements: catParams, type: QueryTypes.SELECT }
     );
 
     // Also fetch subcategories grouped by category
+    const subWhere = ["subcategory IS NOT NULL AND subcategory != ''"];
+    const subParams = [];
+    if (req.poiScope) {
+      subWhere.push(`id IN (${req.poiScope.map(() => '?').join(',')})`);
+      subParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      subWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      subParams.push(...req.destScope);
+    }
+    if (destId) {
+      subWhere.push('destination_id = ?');
+      subParams.push(destId);
+    }
+
     const subcategories = await mysqlSequelize.query(
       `SELECT category, subcategory, COUNT(*) as count
        FROM POI
-       WHERE subcategory IS NOT NULL AND subcategory != ''
-       ${destId ? 'AND destination_id = ?' : ''}
+       WHERE ${subWhere.join(' AND ')}
        GROUP BY category, subcategory ORDER BY category, count DESC`,
-      { replacements: destId ? [destId] : [], type: QueryTypes.SELECT }
+      { replacements: subParams, type: QueryTypes.SELECT }
     );
 
     // Build subcategory map: { "Food & Drinks": ["Restaurant", "Bar", ...] }
@@ -1861,7 +2061,7 @@ router.get('/pois/categories', adminAuth('reviewer'), async (req, res) => {
  * GET /pois/:id
  * POI detail with content, images, and reviews summary.
  */
-router.get('/pois/:id', adminAuth('reviewer'), async (req, res) => {
+router.get('/pois/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const poiId = parseInt(req.params.id);
     if (!poiId || isNaN(poiId)) {
@@ -1878,6 +2078,14 @@ router.get('/pois/:id', adminAuth('reviewer'), async (req, res) => {
     }
 
     const poi = pois[0];
+
+    // RBAC: check user has access to this POI
+    if (req.poiScope && !req.poiScope.includes(poi.id)) {
+      return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'You do not have access to this POI.' } });
+    }
+    if (req.destScope && !req.destScope.includes(poi.destination_id)) {
+      return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'You do not have access to this destination.' } });
+    }
 
     // Images
     const images = await mysqlSequelize.query(
@@ -1963,7 +2171,7 @@ router.get('/pois/:id', adminAuth('reviewer'), async (req, res) => {
  * PUT /pois/:id
  * Update POI content and/or is_active. Audit logged.
  */
-router.put('/pois/:id', adminAuth('editor'), async (req, res) => {
+router.put('/pois/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner', 'editor']), async (req, res) => {
   try {
     const poiId = parseInt(req.params.id);
     if (!poiId || isNaN(poiId)) {
@@ -1988,6 +2196,14 @@ router.put('/pois/:id', adminAuth('editor'), async (req, res) => {
     }
 
     const old = existing[0];
+
+    // RBAC: check user has write access to this POI
+    if (req.poiScope && !req.poiScope.includes(old.id)) {
+      return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'You do not have write access to this POI.' } });
+    }
+    if (req.destScope && !req.destScope.includes(old.destination_id)) {
+      return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'You do not have write access to this destination.' } });
+    }
     const sets = [];
     const vals = [];
     const changes = {};
@@ -2102,11 +2318,28 @@ router.put('/pois/:id', adminAuth('editor'), async (req, res) => {
  * Reorder POI images. Accepts ordered array of image IDs.
  * Requires display_order column in imageurls table.
  */
-router.put('/pois/:id/images', adminAuth('editor'), async (req, res) => {
+router.put('/pois/:id/images', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner', 'editor']), async (req, res) => {
   try {
     const poiId = parseInt(req.params.id);
     if (!poiId || isNaN(poiId)) {
       return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid POI ID' } });
+    }
+
+    // RBAC: check user has access to this POI's destination
+    if (req.poiScope || req.destScope) {
+      const poiCheck = await mysqlSequelize.query(
+        `SELECT id, destination_id FROM POI WHERE id = ?`,
+        { replacements: [poiId], type: QueryTypes.SELECT }
+      );
+      if (poiCheck.length === 0) {
+        return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'POI not found' } });
+      }
+      if (req.poiScope && !req.poiScope.includes(poiCheck[0].id)) {
+        return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'You do not have access to this POI.' } });
+      }
+      if (req.destScope && !req.destScope.includes(poiCheck[0].destination_id)) {
+        return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'You do not have access to this destination.' } });
+      }
     }
 
     const { imageIds } = req.body;
@@ -2174,7 +2407,7 @@ router.put('/pois/:id/images', adminAuth('editor'), async (req, res) => {
  * GET /reviews
  * Review list with pagination, filters, and summary stats.
  */
-router.get('/reviews', adminAuth('reviewer'), async (req, res) => {
+router.get('/reviews', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const {
       destination, rating, sentiment, archived = 'false', search, poi_id,
@@ -2187,6 +2420,15 @@ router.get('/reviews', adminAuth('reviewer'), async (req, res) => {
 
     const where = [];
     const params = [];
+
+    // RBAC: scope reviews to user's allowed destinations/POIs
+    if (req.poiScope) {
+      where.push(`r.poi_id IN (${req.poiScope.map(() => '?').join(',')})`);
+      params.push(...req.poiScope);
+    } else if (req.destScope) {
+      where.push(`r.destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      params.push(...req.destScope);
+    }
 
     if (destination) {
       const destId = resolveDestinationId(destination);
@@ -2271,9 +2513,17 @@ router.get('/reviews', adminAuth('reviewer'), async (req, res) => {
       created_at: r.created_at
     }));
 
-    // Summary (filtered by destination when selected)
+    // Summary (filtered by RBAC scope + destination)
     const summaryWhere = [];
     const summaryParams = [];
+    // RBAC scope for summary
+    if (req.poiScope) {
+      summaryWhere.push(`poi_id IN (${req.poiScope.map(() => '?').join(',')})`);
+      summaryParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      summaryWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      summaryParams.push(...req.destScope);
+    }
     if (destination) {
       const destId = resolveDestinationId(destination);
       if (destId) {
@@ -2302,11 +2552,21 @@ router.get('/reviews', adminAuth('reviewer'), async (req, res) => {
 
     const s = summaryResult[0] || {};
 
-    // Per destination
+    // Per destination (respects RBAC scope)
+    const destSumWhere = [];
+    const destSumParams = [];
+    if (req.poiScope) {
+      destSumWhere.push(`poi_id IN (${req.poiScope.map(() => '?').join(',')})`);
+      destSumParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      destSumWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      destSumParams.push(...req.destScope);
+    }
+    const destSumWhereClause = destSumWhere.length > 0 ? 'WHERE ' + destSumWhere.join(' AND ') : '';
     const destSummary = await mysqlSequelize.query(
       `SELECT destination_id, COUNT(*) as total, ROUND(AVG(rating), 1) as avgRating
-       FROM reviews GROUP BY destination_id`,
-      { type: QueryTypes.SELECT }
+       FROM reviews ${destSumWhereClause} GROUP BY destination_id`,
+      { replacements: destSumParams, type: QueryTypes.SELECT }
     );
 
     const byDest = {};
@@ -2348,7 +2608,7 @@ router.get('/reviews', adminAuth('reviewer'), async (req, res) => {
  * GET /reviews/:id
  * Single review detail with POI context.
  */
-router.get('/reviews/:id', adminAuth('reviewer'), async (req, res) => {
+router.get('/reviews/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const reviewId = parseInt(req.params.id);
     if (!reviewId || isNaN(reviewId)) {
@@ -2368,6 +2628,14 @@ router.get('/reviews/:id', adminAuth('reviewer'), async (req, res) => {
     }
 
     const r = reviews[0];
+
+    // RBAC: check user has access to this review's destination
+    if (req.poiScope && !req.poiScope.includes(r.poi_id)) {
+      return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'You do not have access to this review.' } });
+    }
+    if (req.destScope && !req.destScope.includes(r.destination_id)) {
+      return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'You do not have access to this destination.' } });
+    }
     res.json({
       success: true,
       data: {
@@ -2392,7 +2660,7 @@ router.get('/reviews/:id', adminAuth('reviewer'), async (req, res) => {
  * PUT /reviews/:id
  * Archive or unarchive a review. Audit logged.
  */
-router.put('/reviews/:id', adminAuth('editor'), async (req, res) => {
+router.put('/reviews/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner', 'editor']), async (req, res) => {
   try {
     const reviewId = parseInt(req.params.id);
     if (!reviewId || isNaN(reviewId)) {
@@ -2416,6 +2684,14 @@ router.put('/reviews/:id', adminAuth('editor'), async (req, res) => {
     }
 
     const old = existing[0];
+
+    // RBAC: check user has write access to this review's destination
+    if (req.poiScope && !req.poiScope.includes(old.poi_id)) {
+      return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'You do not have write access to this review.' } });
+    }
+    if (req.destScope && !req.destScope.includes(old.destination_id)) {
+      return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'You do not have write access to this destination.' } });
+    }
     const archivedVal = is_archived ? 1 : 0;
     const archivedAt = is_archived ? 'NOW()' : 'NULL';
 
@@ -2468,10 +2744,11 @@ router.put('/reviews/:id', adminAuth('editor'), async (req, res) => {
  * GET /analytics
  * Analytics overview data. Redis cached 10 minutes.
  */
-router.get('/analytics', adminAuth('reviewer'), async (req, res) => {
+router.get('/analytics', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const { destination } = req.query;
-    const cacheKey = destination ? `admin:analytics:${destination}` : 'admin:analytics';
+    const scopeKey = req.poiScope ? `poi:${req.poiScope.join(',')}` : req.destScope ? `dest:${req.destScope.join(',')}` : 'all';
+    const cacheKey = destination ? `admin:analytics:${destination}:${scopeKey}` : `admin:analytics:${scopeKey}`;
     const redis = getRedis();
 
     if (redis) {
@@ -2481,9 +2758,23 @@ router.get('/analytics', adminAuth('reviewer'), async (req, res) => {
       } catch { /* cache miss */ }
     }
 
-    const destFilter = destination ? 'WHERE destination_id = ?' : '';
-    const destFilterAnd = destination ? 'AND destination_id = ?' : '';
-    const destParams = destination ? [resolveDestinationId(destination)] : [];
+    // Build RBAC + destination filter for POI table
+    const poiWhere = [];
+    const poiParams = [];
+    if (req.poiScope) {
+      poiWhere.push(`destination_id IN (SELECT destination_id FROM POI WHERE id IN (${req.poiScope.map(() => '?').join(',')}))`);
+      poiParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      poiWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      poiParams.push(...req.destScope);
+    }
+    if (destination) {
+      poiWhere.push('destination_id = ?');
+      poiParams.push(resolveDestinationId(destination));
+    }
+    const destFilter = poiWhere.length > 0 ? 'WHERE ' + poiWhere.join(' AND ') : '';
+    const destFilterAnd = poiWhere.length > 0 ? 'AND ' + poiWhere.join(' AND ') : '';
+    const destParams = poiParams;
 
     // Overview
     const poiOverview = await mysqlSequelize.query(
@@ -2609,7 +2900,7 @@ router.get('/analytics', adminAuth('reviewer'), async (req, res) => {
  * GET /analytics/export
  * CSV export for POIs, reviews, or summary.
  */
-router.get('/analytics/export', adminAuth('editor'), async (req, res) => {
+router.get('/analytics/export', adminAuth('editor'), destinationScope, async (req, res) => {
   try {
     const { type = 'summary', destination, format = 'csv' } = req.query;
 
@@ -2617,8 +2908,22 @@ router.get('/analytics/export', adminAuth('editor'), async (req, res) => {
       return res.status(400).json({ success: false, error: { code: 'INVALID_FORMAT', message: 'Only CSV format is supported' } });
     }
 
-    const destFilter = destination ? 'WHERE destination_id = ?' : '';
-    const destParams = destination ? [resolveDestinationId(destination)] : [];
+    // Build RBAC + destination filter
+    const exportWhere = [];
+    const exportParams = [];
+    if (req.poiScope) {
+      exportWhere.push(`destination_id IN (SELECT destination_id FROM POI WHERE id IN (${req.poiScope.map(() => '?').join(',')}))`);
+      exportParams.push(...req.poiScope);
+    } else if (req.destScope) {
+      exportWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      exportParams.push(...req.destScope);
+    }
+    if (destination) {
+      exportWhere.push('destination_id = ?');
+      exportParams.push(resolveDestinationId(destination));
+    }
+    const destFilter = exportWhere.length > 0 ? 'WHERE ' + exportWhere.join(' AND ') : '';
+    const destParams = exportParams;
     let csvContent = '';
 
     if (type === 'pois') {
@@ -2656,13 +2961,33 @@ router.get('/analytics/export', adminAuth('editor'), async (req, res) => {
         csvContent += `${r.id},"${(r.poi_name || '').replace(/"/g, '""')}",${dest},"${(r.user_name || '').replace(/"/g, '""')}",${r.rating},${r.sentiment || ''},"${text}",${r.created_at || ''}\n`;
       }
     } else {
-      // Summary export
+      // Summary export (respects RBAC scope)
+      const sumExpWhere = [];
+      const sumExpParams = [];
+      if (req.poiScope) {
+        sumExpWhere.push(`id IN (${req.poiScope.map(() => '?').join(',')})`);
+        sumExpParams.push(...req.poiScope);
+      } else if (req.destScope) {
+        sumExpWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+        sumExpParams.push(...req.destScope);
+      }
+      const sumExpFilter = sumExpWhere.length > 0 ? 'WHERE ' + sumExpWhere.join(' AND ') : '';
       const stats = await mysqlSequelize.query(
         `SELECT destination_id, COUNT(*) as pois, SUM(is_active) as active
-         FROM POI GROUP BY destination_id`, { type: QueryTypes.SELECT });
+         FROM POI ${sumExpFilter} GROUP BY destination_id`, { replacements: sumExpParams, type: QueryTypes.SELECT });
+      const revExpWhere = [];
+      const revExpParams = [];
+      if (req.poiScope) {
+        revExpWhere.push(`poi_id IN (${req.poiScope.map(() => '?').join(',')})`);
+        revExpParams.push(...req.poiScope);
+      } else if (req.destScope) {
+        revExpWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+        revExpParams.push(...req.destScope);
+      }
+      const revExpFilter = revExpWhere.length > 0 ? 'WHERE ' + revExpWhere.join(' AND ') : '';
       const revStats = await mysqlSequelize.query(
         `SELECT destination_id, COUNT(*) as reviews, ROUND(AVG(rating),1) as avg_rating
-         FROM reviews GROUP BY destination_id`, { type: QueryTypes.SELECT });
+         FROM reviews ${revExpFilter} GROUP BY destination_id`, { replacements: revExpParams, type: QueryTypes.SELECT });
 
       csvContent = 'metric,calpe,texel,total\n';
       const calpe = stats.find(s => s.destination_id === 1) || {};
