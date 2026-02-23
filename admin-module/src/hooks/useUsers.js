@@ -40,6 +40,16 @@ export function useUserUpdate() {
   });
 }
 
+export function useUserDeactivate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => userService.deactivate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+  });
+}
+
 export function useUserDelete() {
   const queryClient = useQueryClient();
   return useMutation({

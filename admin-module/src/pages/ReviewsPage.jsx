@@ -17,6 +17,7 @@ import SentimentDissatisfiedIcon from '@mui/icons-material/SentimentDissatisfied
 import { useTranslation } from 'react-i18next';
 import { useReviewList, useReviewDetail, useReviewUpdate } from '../hooks/useReviews.js';
 import useDestinationStore from '../stores/destinationStore.js';
+import useAuthStore from '../stores/authStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatDate, formatNumber } from '../utils/formatters.js';
 import { DESTINATIONS, getDestinationColor } from '../utils/destinations.js';
@@ -30,6 +31,8 @@ const SENTIMENT_CONFIG = {
 export default function ReviewsPage() {
   const { t } = useTranslation();
   const globalDestination = useDestinationStore(s => s.selectedDestination);
+  const user = useAuthStore(s => s.user);
+  const canModerate = user?.role !== 'reviewer'; // reviewers can only view, not archive/unarchive
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [search, setSearch] = useState('');
@@ -317,11 +320,13 @@ export default function ReviewsPage() {
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
+                      {canModerate && (
                       <Tooltip title={review.is_archived ? t('reviews.unarchive') : t('reviews.archive')}>
                         <IconButton size="small" onClick={(e) => handleArchiveToggle(review, e)}>
                           {review.is_archived ? <UnarchiveIcon fontSize="small" /> : <ArchiveIcon fontSize="small" />}
                         </IconButton>
                       </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

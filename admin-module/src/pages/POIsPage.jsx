@@ -20,6 +20,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { useTranslation } from 'react-i18next';
 import { usePOIList, usePOIStats, usePOIDetail, usePOIUpdate, usePOICategories, usePOIImageReorder } from '../hooks/usePOIs.js';
 import useDestinationStore from '../stores/destinationStore.js';
+import useAuthStore from '../stores/authStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatNumber } from '../utils/formatters.js';
 import { DESTINATIONS, getDestinationColor } from '../utils/destinations.js';
@@ -37,6 +38,8 @@ const SORTABLE_COLUMNS = [
 export default function POIsPage() {
   const { t } = useTranslation();
   const globalDestination = useDestinationStore(s => s.selectedDestination);
+  const user = useAuthStore(s => s.user);
+  const canEdit = user?.role !== 'reviewer'; // reviewers can only view, not edit
 
   // Filters
   const [page, setPage] = useState(0);
@@ -315,11 +318,13 @@ export default function POIsPage() {
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    {canEdit && (
                     <Tooltip title={t('pois.edit')}>
                       <IconButton size="small" onClick={() => setEditId(poi.id)}>
                         <EditIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

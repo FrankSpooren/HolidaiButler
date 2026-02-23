@@ -438,8 +438,11 @@ function AgentDetailDialog({ agent, onClose }) {
       is_active: agentConfig.is_active !== false
     });
   }
-  if (!editTasks && tasks.length > 0) {
-    setEditTasks([...tasks]);
+  if (!editTasks && !configLoading) {
+    // Prefer MongoDB-persisted tasks over static AGENT_TASKS fallback
+    const savedTasks = agentConfig.tasks || agent.tasks || [];
+    const initialTasks = savedTasks.length > 0 ? savedTasks : tasks;
+    setEditTasks([...initialTasks]);
   }
 
   const handleConfigSave = async () => {
