@@ -65,7 +65,7 @@ class SmokeTestRunner {
 
     // Test 1: API Health
     const healthResult = await this._runTest('API Health', async () => {
-      const res = await axios.get(`${API_BASE}/api/v1/health`, {
+      const res = await axios.get(`${API_BASE}/api/v1/holibot/health`, {
         timeout: 5000,
         headers: { 'X-Destination-ID': destConfig.code }
       });
