@@ -48,6 +48,7 @@
     "multer": "^2.0.2",
     "mysql2": "^3.6.5",
     "node-cron": "^3.0.3",
+    "nodemailer": "^8.0.1",
     "openai": "^4.77.0",
     "ping": "^0.4.4",
     "prom-client": "^15.1.0",
