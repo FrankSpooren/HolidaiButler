@@ -46,7 +46,11 @@
     "healthy": "Gesund",
     "degraded": "Beeintr\u00e4chtigt",
     "unhealthy": "Nicht verf\u00fcgbar",
-    "uptime": "API-Betriebszeit"
+    "uptime": "API-Betriebszeit",
+    "agentHealth": "Agent-Aktivit\u00e4t (24h)",
+    "errors24h": "Fehler",
+    "alerts24h": "Warnungen",
+    "jobs24h": "Ausgef\u00fchrte Jobs"
   },
   "agents": {
     "title": "Agent Dashboard",

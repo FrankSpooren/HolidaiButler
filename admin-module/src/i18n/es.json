@@ -46,7 +46,11 @@
     "healthy": "Saludable",
     "degraded": "Degradado",
     "unhealthy": "No disponible",
-    "uptime": "Disponibilidad API"
+    "uptime": "Disponibilidad API",
+    "agentHealth": "Actividad de agentes (24h)",
+    "errors24h": "Errores",
+    "alerts24h": "Alertas",
+    "jobs24h": "Trabajos completados"
   },
   "agents": {
     "title": "Panel de Agentes",

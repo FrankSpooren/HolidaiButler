@@ -810,6 +810,14 @@ router.get('/dashboard', adminAuth('reviewer'), async (req, res) => {
     // 7. System uptime
     result.data.platform.uptimeHours = parseFloat((process.uptime() / 3600).toFixed(1));
 
+    // 8. Agent health summary (shared with daily briefing — B5 consistency fix)
+    try {
+      const { getSystemHealthSummary } = await import('../services/orchestrator/auditTrail/index.js');
+      result.data.platform.healthSummary = await getSystemHealthSummary(24);
+    } catch {
+      result.data.platform.healthSummary = { jobs: 0, alerts: 0, errors: 0 };
+    }
+
     // Cache result
     if (redis) {
       try {
