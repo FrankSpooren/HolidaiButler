@@ -112,7 +112,9 @@
       "recommendedAction": "Empfohlene Aktion",
       "recentErrors": "Letzte Fehler",
       "copied": "In Zwischenablage kopiert",
-      "copyCommand": "Befehl kopieren"
+      "copyCommand": "Befehl kopieren",
+      "instructions": "Anweisungen",
+      "instructionsDefault": "Überprüfen Sie die PM2-Logs für Details zu dieser Meldung. Kontaktieren Sie den Plattform-Admin, wenn das Problem weiterhin besteht."
     },
     "config": {
       "title": "Agent-Konfiguration",

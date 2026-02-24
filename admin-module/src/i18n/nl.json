@@ -112,7 +112,9 @@
       "recommendedAction": "Aanbevolen Actie",
       "recentErrors": "Recente Fouten",
       "copied": "Gekopieerd naar klembord",
-      "copyCommand": "Kopieer commando"
+      "copyCommand": "Kopieer commando",
+      "instructions": "Instructies",
+      "instructionsDefault": "Controleer de PM2 logs voor details over deze melding. Neem contact op met de Platform Admin als het probleem aanhoudt."
     },
     "config": {
       "title": "Agent configuratie",

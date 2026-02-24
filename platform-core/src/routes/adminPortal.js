@@ -933,126 +933,230 @@ const AGENT_METADATA = [
     tasks: ['Aansturing en coördinatie van alle 18 agents', 'Beheer van 40 scheduled jobs via BullMQ', 'Foutafhandeling en retry-logica bij gefaalde jobs', 'Prioritering van taken bij hoge systeembelasting'],
     monitoring_scope: 'Alle agents, BullMQ queues, job statussen',
     output_description: 'Job scheduling, error logging, agent lifecycle management',
-    schedule: null, actorNames: ['orchestrator'] },
+    schedule: null, actorNames: ['orchestrator'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Orchestrator"
+2. Controleer BullMQ queues: redis-cli LLEN bull:scheduled-tasks:wait
+3. Bij queue overflow: controleer of workers actief zijn (pm2 status)
+4. Herstart API: pm2 restart holidaibutler-api
+5. Verifieer scheduled jobs: node -e "..." (zie Quick Health Check in CLAUDE.md)
+6. Wacht op volgende run cyclus en verifieer status` } },
   { id: 'bode', name: 'De Bode', englishName: 'Owner Interface Agent', category: 'core', type: 'A',
     description: 'Daily briefing en owner communicatie',
     description_en: 'Daily briefing and owner communication',
     tasks: ['Dagelijkse status briefing email genereren', 'Per-destination statistieken verzamelen', 'Smoke test en backup resultaten samenvatten', 'Budget en kostenrapportage', 'Prediction alerts aggregeren'],
     monitoring_scope: 'Alle systeem KPIs, agent statussen, kosten',
     output_description: 'Dagelijkse email via MailerLite met [OK]/[MEDIUM]/[HOOG]/[URGENT] prefix',
-    schedule: '0 8 * * *', actorNames: ['orchestrator'] },
+    schedule: '0 8 * * *', actorNames: ['orchestrator'],
+    errorInstructions: { default: `1. Controleer SMTP configuratie in .env (SMTP_HOST, SMTP_PORT, SMTP_USER)
+2. Test email verbinding: node -e "require('./src/services/emailService').testConnection()"
+3. Controleer MailerLite API key in .env
+4. Bekijk verzonden emails in audit log (MongoDB audit_logs)
+5. Herstart API: pm2 restart holidaibutler-api
+6. Verifieer volgende ochtend (08:00 UTC) of briefing email aankomt` } },
   { id: 'dokter', name: 'De Dokter', englishName: 'Health Monitor Agent', category: 'operations', type: 'A',
     description: 'Systeem monitoring en health checks',
     description_en: 'System monitoring and health checks',
     tasks: ['Uptime monitoring van 7 portals', 'SSL certificaat expiry bewaking (5 domeinen)', 'API response time tracking', 'Database connectiviteit checks', 'Disk space monitoring'],
     monitoring_scope: 'Alle portals, SSL certs, API endpoints, disk space',
     output_description: 'Health alerts, SSL expiry waarschuwingen, uptime rapportage',
-    schedule: '0 * * * *', actorNames: ['health-monitor'] },
+    schedule: '0 * * * *', actorNames: ['health-monitor'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Health Monitor"
+2. Controleer health endpoint: curl -s https://api.holidaibutler.com/health
+3. Bij 404: controleer route configuratie in adminPortal.js
+4. Bij timeout: controleer database connecties (MySQL + MongoDB + Redis)
+5. Controleer SSL certificaten: openssl s_client -connect api.holidaibutler.com:443
+6. Herstart API: pm2 restart holidaibutler-api
+7. Wacht op volgende scheduled run (elk uur) en verifieer status` } },
   { id: 'koerier', name: 'De Koerier', englishName: 'Data Sync Agent', category: 'operations', type: 'A',
     description: 'POI en review data synchronisatie',
     description_en: 'POI and review data synchronization',
     tasks: ['POI data synchronisatie vanuit externe bronnen', 'Review data import en verwerking', 'Content quality monitoring per destination', 'Database integriteit checks'],
     monitoring_scope: 'POI tabel, reviews tabel, content kwaliteit',
     output_description: 'Gesynchroniseerde POI/review data, content quality audits',
-    schedule: '0 6 * * *', actorNames: ['data-sync', 'reviews-manager'] },
+    schedule: '0 6 * * *', actorNames: ['data-sync', 'reviews-manager'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Data Sync"
+2. Controleer MySQL connectie: mysql -u pxoziy_1 -h jotx.your-database.de pxoziy_db1 -e "SELECT 1"
+3. Bij "no POIs": controleer destination configuratie in config/destinations/
+4. Controleer review import: SELECT COUNT(*) FROM reviews WHERE created_at > NOW() - INTERVAL 1 DAY
+5. Herstart API: pm2 restart holidaibutler-api
+6. Wacht op volgende run (dagelijks 06:00 UTC) en verifieer status` } },
   { id: 'geheugen', name: 'Het Geheugen', englishName: 'HoliBot Sync Agent', category: 'operations', type: 'A',
     description: 'ChromaDB vectorisatie en QnA sync',
     description_en: 'ChromaDB vectorization and QnA sync',
     tasks: ['POI content vectorisatie naar ChromaDB', 'QnA data synchronisatie', 'ChromaDB state snapshots (wekelijks)', 'Embedding kwaliteitscontrole'],
     monitoring_scope: 'ChromaDB collecties (calpe_pois, texel_pois), vector counts',
     output_description: 'Gevectoriseerde content in ChromaDB, state snapshots in MongoDB',
-    schedule: '0 4 * * *', actorNames: ['holibot-sync'] },
+    schedule: '0 4 * * *', actorNames: ['holibot-sync'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "HoliBot Sync"
+2. Controleer ChromaDB connectie: curl -s https://api.trychroma.com/api/v1/heartbeat
+3. Bij embedding errors: controleer Mistral API key in .env
+4. Controleer vectoren: node -e "..." (ChromaDB state snapshot)
+5. Herstart API: pm2 restart holidaibutler-api
+6. Wacht op volgende run (dagelijks 04:00 UTC) en verifieer vector counts` } },
   { id: 'gastheer', name: 'De Gastheer', englishName: 'Communication Flow Agent', category: 'operations', type: 'A',
     description: 'Gebruikerscommunicatie en journey processing',
     description_en: 'User communication and journey processing',
     tasks: ['User journey tracking en analyse', 'Communicatie triggers verwerken', 'Engagement metrics berekenen', 'Notificatie flow management'],
     monitoring_scope: 'User journeys, communicatie triggers, engagement',
     output_description: 'Journey analytics, communicatie logs',
-    schedule: '0 */4 * * *', actorNames: ['communication-flow'] },
+    schedule: '0 */4 * * *', actorNames: ['communication-flow'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Communication Flow"
+2. Controleer user_journeys tabel: SELECT COUNT(*) FROM user_journeys WHERE updated_at > NOW() - INTERVAL 1 DAY
+3. Bij Redis errors: redis-cli ping
+4. Herstart API: pm2 restart holidaibutler-api
+5. Wacht op volgende run (elke 4 uur) en verifieer status` } },
   { id: 'poortwachter', name: 'De Poortwachter', englishName: 'GDPR Agent', category: 'operations', type: 'A',
     description: 'GDPR compliance en data bescherming',
     description_en: 'GDPR compliance and data protection',
     tasks: ['Consent audit (wekelijks)', 'Data retention policy handhaving', 'Verwijderverzoeken verwerken', 'Privacy impact assessments'],
     monitoring_scope: 'User consent records, data retention, verwijderverzoeken',
     output_description: 'GDPR compliance rapportages, consent audit logs',
-    schedule: '0 */4 * * *', actorNames: ['gdpr'] },
+    schedule: '0 */4 * * *', actorNames: ['gdpr'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "GDPR"
+2. Controleer consent records: SELECT COUNT(*) FROM Users WHERE consent_given IS NOT NULL
+3. Bij data retention errors: controleer MySQL connectie
+4. Controleer verwijderverzoeken in audit log
+5. Herstart API: pm2 restart holidaibutler-api
+6. Wacht op volgende run (elke 4 uur) en verifieer status` } },
   { id: 'stylist', name: 'De Stylist', englishName: 'UX/UI Agent', category: 'development', type: 'B',
     description: 'UX/UI review en brand consistency',
     description_en: 'UX/UI review and brand consistency',
     tasks: ['Brand kleur consistentie checks', 'Destination-specifieke styling verificatie', 'Accessibility compliance', 'UI component kwaliteit'],
     monitoring_scope: 'Frontend componenten, brand kleuren, styling',
     output_description: 'UX review rapporten, brand violation alerts',
-    schedule: '0 6 * * 1', actorNames: ['dev-layer'] },
+    schedule: '0 6 * * 1', actorNames: ['dev-layer'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "UX"
+2. Controleer brand configuratie per destination in config/destinations/
+3. Bij accessibility fouten: controleer frontend build output
+4. Herstart API: pm2 restart holidaibutler-api
+5. Agent draait wekelijks (maandag 06:00 UTC) — wacht op volgende run` } },
   { id: 'corrector', name: 'De Corrector', englishName: 'Code Agent', category: 'development', type: 'B',
     description: 'Code quality en best practices',
     description_en: 'Code quality and best practices',
     tasks: ['Code kwaliteit analyse', 'Best practices verificatie', 'Dependency vulnerability checks', 'Performance bottleneck detectie'],
     monitoring_scope: 'Codebase kwaliteit, dependencies, performance',
     output_description: 'Code quality rapporten, vulnerability alerts',
-    schedule: '0 6 * * 1', actorNames: ['dev-layer'] },
+    schedule: '0 6 * * 1', actorNames: ['dev-layer'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Code"
+2. Bij dependency vulnerabilities: npm audit --production
+3. Controleer ESLint config en linting output
+4. Herstart API: pm2 restart holidaibutler-api
+5. Agent draait wekelijks (maandag 06:00 UTC) — wacht op volgende run` } },
   { id: 'bewaker', name: 'De Bewaker', englishName: 'Security Agent', category: 'development', type: 'B',
     description: 'Security scanning en vulnerability checks',
     description_en: 'Security scanning and vulnerability checks',
     tasks: ['Dependency vulnerability scanning', 'API security checks', 'Authentication flow verificatie', 'Rate limiting effectiviteit'],
     monitoring_scope: 'Dependencies, API endpoints, auth flows',
     output_description: 'Security scan rapporten, vulnerability alerts',
-    schedule: '0 2 * * *', actorNames: ['dev-layer'] },
+    schedule: '0 2 * * *', actorNames: ['dev-layer'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Security"
+2. Bij dependency vulnerabilities: npm audit --production
+3. Controleer rate limiting: redis-cli keys "ratelimit:*" | head -20
+4. Controleer auth flows: curl -s https://api.holidaibutler.com/api/v1/health
+5. Herstart API: pm2 restart holidaibutler-api
+6. Agent draait dagelijks (02:00 UTC) — wacht op volgende run` } },
   { id: 'inspecteur', name: 'De Inspecteur', englishName: 'Quality Agent', category: 'development', type: 'A',
     description: 'Kwaliteitscontrole en rapportage',
     description_en: 'Quality control and reporting',
     tasks: ['End-to-end kwaliteitscontrole', 'API response validatie', 'Data integriteit checks', 'Rapportage generatie'],
     monitoring_scope: 'API responses, data integriteit, kwaliteitsmetrics',
     output_description: 'Kwaliteitsrapporten, integriteit alerts',
-    schedule: '0 6 * * 1', actorNames: ['dev-layer'] },
+    schedule: '0 6 * * 1', actorNames: ['dev-layer'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Quality"
+2. Controleer API response validatie: curl -s https://api.holidaibutler.com/api/v1/pois?destination_id=1&limit=5
+3. Bij data integriteit errors: controleer MySQL connectie en POI counts
+4. Herstart API: pm2 restart holidaibutler-api
+5. Agent draait wekelijks (maandag 06:00 UTC) — wacht op volgende run` } },
   { id: 'architect', name: 'De Architect', englishName: 'Architecture Agent', category: 'strategy', type: 'B',
     description: 'Architectuur assessment en aanbevelingen',
     description_en: 'Architecture assessment and recommendations',
     tasks: ['Architectuur compliance checks', 'Schaalbaarheid analyse', 'Technische schuld detectie', 'Multi-destination architectuur review'],
     monitoring_scope: 'Systeemarchitectuur, schaalbaarheid, tech debt',
     output_description: 'Architectuur rapporten, aanbevelingen',
-    schedule: '0 3 * * 0', actorNames: ['strategy-layer'] },
+    schedule: '0 3 * * 0', actorNames: ['strategy-layer'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Architecture"
+2. Controleer tech debt metrics in de codebase
+3. Bij schaalbaarheid issues: controleer server resources (htop, df -h)
+4. Herstart API: pm2 restart holidaibutler-api
+5. Agent draait wekelijks (zondag 03:00 UTC) — wacht op volgende run` } },
   { id: 'leermeester', name: 'De Leermeester', englishName: 'Learning Agent', category: 'strategy', type: 'A',
     description: 'Pattern learning en optimalisatie',
     description_en: 'Pattern learning and optimization',
     tasks: ['Gebruikerspatronen herkennen', 'Optimalisatie suggesties genereren', 'A/B test resultaten analyseren', 'Learning patterns opslaan in MongoDB'],
     monitoring_scope: 'Gebruikersgedrag, conversie patterns, optimalisatie kansen',
     output_description: 'Optimalisatie suggesties, learning patterns in MongoDB',
-    schedule: '30 5 * * 1', actorNames: ['strategy-layer'] },
+    schedule: '30 5 * * 1', actorNames: ['strategy-layer'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Learning"
+2. Controleer MongoDB collectie: mongosh --eval "db.agent_learning_patterns.countDocuments()"
+3. Bij pattern recognition errors: controleer input data kwaliteit
+4. Herstart API: pm2 restart holidaibutler-api
+5. Agent draait wekelijks (maandag 05:30 UTC) — wacht op volgende run` } },
   { id: 'thermostaat', name: 'De Thermostaat', englishName: 'Adaptive Config Agent', category: 'strategy', type: 'A',
     description: 'Configuratie evaluatie en alerting',
     description_en: 'Configuration evaluation and alerting',
     tasks: ['Systeem configuratie evalueren', 'Performance threshold monitoring', 'Configuratie drift detectie', 'Alerting bij afwijkingen'],
     monitoring_scope: 'Systeem configuratie, performance thresholds, Redis state',
     output_description: 'Configuratie alerts, evaluatie resultaten in Redis',
-    schedule: '0 */6 * * *', actorNames: ['strategy-layer'] },
+    schedule: '0 */6 * * *', actorNames: ['strategy-layer'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Thermostaat"
+2. Controleer Redis state: redis-cli get "thermostaat:last_evaluation"
+3. Controleer Redis history: redis-cli lrange "thermostaat:history" 0 5
+4. Bij configuratie drift: vergelijk actuele .env met verwachte waarden
+5. Herstart API: pm2 restart holidaibutler-api
+6. Agent draait elke 6 uur — wacht op volgende run` } },
   { id: 'weermeester', name: 'De Weermeester', englishName: 'Prediction Agent', category: 'strategy', type: 'A',
     description: 'Voorspellingen en trend analyse',
     description_en: 'Predictions and trend analysis',
     tasks: ['Trend analyse op POI data', 'Seizoensgebonden voorspellingen', 'Capaciteitsplanning', 'Risico voorspellingen'],
     monitoring_scope: 'POI trends, seizoenspatronen, capaciteit',
     output_description: 'Prediction alerts, trend rapporten',
-    schedule: '0 3 * * 0', actorNames: ['strategy-layer'] },
+    schedule: '0 3 * * 0', actorNames: ['strategy-layer'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Prediction"
+2. Controleer trend data: SELECT COUNT(*) FROM POI WHERE last_updated > NOW() - INTERVAL 7 DAY
+3. Bij seizoensvoorspelling errors: controleer agenda tabel data
+4. Herstart API: pm2 restart holidaibutler-api
+5. Agent draait wekelijks (zondag 03:00 UTC) — wacht op volgende run` } },
   { id: 'contentQuality', name: 'Content Quality Checker', englishName: 'Content Quality Checker', category: 'monitoring', type: 'A',
     description: 'POI content completeness en consistency',
     description_en: 'POI content completeness and consistency checks',
     tasks: ['Content completeness check per destination', 'Taalconsistentie verificatie (EN/NL/DE/ES)', 'Lege of onvolledige beschrijvingen detecteren', 'Content kwaliteitsscore berekenen'],
     monitoring_scope: 'POI beschrijvingen, vertalingen, content coverage',
     output_description: 'Content quality audits in MongoDB, kwaliteitsscore per destination',
-    schedule: '0 5 * * 1', actorNames: ['data-sync'] },
+    schedule: '0 5 * * 1', actorNames: ['data-sync'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Content Quality"
+2. Controleer POI content coverage: SELECT destination_id, COUNT(*) FROM POI WHERE enriched_detail_description IS NOT NULL GROUP BY destination_id
+3. Controleer vertalingen: SELECT destination_id, COUNT(*) FROM POI WHERE enriched_detail_description_nl IS NULL AND is_active=1 GROUP BY destination_id
+4. Controleer MongoDB audits: mongosh --eval "db.content_quality_audits.find().sort({timestamp:-1}).limit(1).pretty()"
+5. Herstart API: pm2 restart holidaibutler-api
+6. Agent draait wekelijks (maandag 05:00 UTC) — wacht op volgende run` } },
   { id: 'smokeTest', name: 'Smoke Test Runner', englishName: 'Smoke Test Runner', category: 'monitoring', type: 'A',
     description: 'E2E smoke tests per destination',
     description_en: 'End-to-end smoke tests per destination',
     tasks: ['5 smoke tests per destination uitvoeren', '3 infrastructuur tests uitvoeren', 'Threema configuratie status checken', 'Test resultaten opslaan in MongoDB'],
     monitoring_scope: 'API endpoints, frontend beschikbaarheid, Threema',
     output_description: 'Smoke test resultaten in MongoDB, failure alerts',
-    schedule: '45 7 * * *', actorNames: ['health-monitor'] },
+    schedule: '45 7 * * *', actorNames: ['health-monitor'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Smoke Test"
+2. Test API handmatig: curl -s https://api.holidaibutler.com/api/v1/health
+3. Test frontend: curl -sI https://texelmaps.nl | head -5
+4. Test frontend: curl -sI https://holidaibutler.com | head -5
+5. Controleer MongoDB resultaten: mongosh --eval "db.smoke_test_results.find().sort({timestamp:-1}).limit(1).pretty()"
+6. Herstart API: pm2 restart holidaibutler-api
+7. Agent draait dagelijks (07:45 UTC) — wacht op volgende run` } },
   { id: 'backupHealth', name: 'Backup Health Checker', englishName: 'Backup Health Checker', category: 'monitoring', type: 'B',
     description: 'Backup recency en disk space monitoring',
     description_en: 'Backup recency and disk space monitoring',
     tasks: ['MySQL backup recency controleren', 'MongoDB backup recency controleren', 'Disk space monitoring', 'CRITICAL alerts bij verouderde backups'],
     monitoring_scope: '/root/backups/, disk space, backup timestamps',
     output_description: 'Backup health checks in MongoDB, CRITICAL alerts',
-    schedule: '30 7 * * *', actorNames: ['health-monitor'] }
+    schedule: '30 7 * * *', actorNames: ['health-monitor'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Backup"
+2. Controleer backup bestanden: ls -la /root/backups/
+3. Controleer disk space: df -h /
+4. Handmatige MySQL backup: mysqldump --no-defaults -u pxoziy_1 -h jotx.your-database.de pxoziy_db1 | gzip > /root/backups/manual_backup.sql.gz
+5. Controleer MongoDB backups: mongosh --eval "db.backup_health_checks.find().sort({timestamp:-1}).limit(1).pretty()"
+6. Herstart API: pm2 restart holidaibutler-api
+7. Agent draait dagelijks (07:30 UTC) — wacht op volgende run` } }
 ];
 
 /**
@@ -1237,10 +1341,11 @@ function calculateAgentStatus(lastRun, schedule) {
  * Agent dashboard data. Redis cached for 60 seconds.
  * Sources: static metadata + MongoDB audit_logs + Redis state + monitoring collections
  */
-router.get('/agents/status', adminAuth('reviewer'), async (req, res) => {
+router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const { category, destination, refresh } = req.query;
-    const cacheKey = 'admin:agents:status';
+    const scopeSuffix = req.destScope ? `:scope:${req.destScope.join(',')}` : '';
+    const cacheKey = `admin:agents:status${scopeSuffix}`;
     const redis = getRedis();
 
     // Check cache (unless force refresh)
@@ -1275,6 +1380,7 @@ router.get('/agents/status', adminAuth('reviewer'), async (req, res) => {
         })),
         schedule: meta.schedule,
         scheduleHuman: cronToHuman(meta.schedule),
+        errorInstructions: meta.errorInstructions || null,
         destinationAware: meta.type === 'A',
         status: 'unknown',
         lastRun: null,
@@ -1540,11 +1646,40 @@ router.get('/agents/status', adminAuth('reviewer'), async (req, res) => {
       unknown: agents.filter(a => a.status === 'unknown').length
     };
 
+    // ── RBAC: filter Cat A agent destination data + recentActivity by destScope ──
+    const idToCode = { 1: 'calpe', 2: 'texel', 3: 'alicante' };
+    if (req.destScope) {
+      const allowedCodes = req.destScope.map(id => idToCode[id]).filter(Boolean);
+      for (const agent of agents) {
+        if (agent.destinations) {
+          const filtered = {};
+          for (const code of allowedCodes) {
+            if (agent.destinations[code]) filtered[code] = agent.destinations[code];
+          }
+          agent.destinations = Object.keys(filtered).length > 0 ? filtered : null;
+        }
+      }
+    }
+
     // Apply server-side filters (client can also filter)
     let filteredAgents = agents;
     if (category && category !== 'all') {
       filteredAgents = agents.filter(a => a.category === category);
     }
+
+    // Build destinations overview (only allowed destinations)
+    const destOverview = {};
+    const destEntries = req.destScope
+      ? req.destScope.map(id => [idToCode[id], id]).filter(([code]) => code)
+      : [['calpe', 1], ['texel', 2]];
+    for (const [code, id] of destEntries) {
+      destOverview[code] = { id, activeAgents: agents.filter(a => a.type === 'A').length };
+    }
+
+    // Filter recentActivity by destScope
+    const scopedActivity = req.destScope
+      ? recentActivity.filter(a => a.destination === 'all' || req.destScope.includes(a.destination === 'calpe' ? 1 : a.destination === 'texel' ? 2 : 0))
+      : recentActivity;
 
     const result = {
       success: true,
@@ -1552,12 +1687,9 @@ router.get('/agents/status', adminAuth('reviewer'), async (req, res) => {
         timestamp: new Date().toISOString(),
         partial,
         summary,
-        destinations: {
-          calpe: { id: 1, activeAgents: agents.filter(a => a.type === 'A').length },
-          texel: { id: 2, activeAgents: agents.filter(a => a.type === 'A').length }
-        },
+        destinations: destOverview,
         agents: filteredAgents,
-        recentActivity,
+        recentActivity: scopedActivity,
         scheduledJobs: SCHEDULED_JOBS_METADATA
       }
     };
@@ -3113,8 +3245,21 @@ router.get('/analytics/export', adminAuth('editor'), destinationScope, async (re
  * GET /analytics/pageviews
  * Pageview analytics from page_views table.
  */
-router.get('/analytics/pageviews', adminAuth('reviewer'), async (req, res) => {
+router.get('/analytics/pageviews', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
+    // ── RBAC: enforce destination scope ──
+    if (req.destScope) {
+      const reqDestCode = req.query.destination;
+      if (reqDestCode) {
+        const reqDestId = resolveDestinationId(reqDestCode);
+        if (reqDestId && !req.destScope.includes(reqDestId)) {
+          return res.status(403).json({ success: false, error: { code: 'DESTINATION_FORBIDDEN', message: 'You do not have access to this destination.' } });
+        }
+      } else if (req.destScope.length === 1) {
+        const idToCode = { 1: 'calpe', 2: 'texel', 3: 'alicante' };
+        req.query.destination = idToCode[req.destScope[0]];
+      }
+    }
     const { destination, period = 'month' } = req.query;
     const destWhere = [];
     const destParams = [];
@@ -3199,8 +3344,21 @@ router.get('/analytics/pageviews', adminAuth('reviewer'), async (req, res) => {
  * GET /analytics/chatbot
  * Chatbot usage analytics: sessions, languages, fallbacks, engagement, popular POIs.
  */
-router.get('/analytics/chatbot', adminAuth('reviewer'), async (req, res) => {
+router.get('/analytics/chatbot', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
+    // ── RBAC: enforce destination scope ──
+    if (req.destScope) {
+      const reqDestCode = req.query.destination;
+      if (reqDestCode) {
+        const reqDestId = resolveDestinationId(reqDestCode);
+        if (reqDestId && !req.destScope.includes(reqDestId)) {
+          return res.status(403).json({ success: false, error: { code: 'DESTINATION_FORBIDDEN', message: 'You do not have access to this destination.' } });
+        }
+      } else if (req.destScope.length === 1) {
+        const idToCode = { 1: 'calpe', 2: 'texel', 3: 'alicante' };
+        req.query.destination = idToCode[req.destScope[0]];
+      }
+    }
     const { destination, period = '30' } = req.query;
     const days = Math.min(parseInt(period) || 30, 365);
     const cacheKey = `admin:analytics:chatbot:${destination || 'all'}:${days}`;
@@ -3361,9 +3519,22 @@ router.get('/analytics/chatbot', adminAuth('reviewer'), async (req, res) => {
  * Drill-down trend data for a specific metric over time.
  * Supported metrics: sessions, reviews, pois, messages
  */
-router.get('/analytics/trend/:metric', adminAuth('reviewer'), async (req, res) => {
+router.get('/analytics/trend/:metric', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const { metric } = req.params;
+    // ── RBAC: enforce destination scope ──
+    if (req.destScope) {
+      const reqDestCode = req.query.destination;
+      if (reqDestCode) {
+        const reqDestId = resolveDestinationId(reqDestCode);
+        if (reqDestId && !req.destScope.includes(reqDestId)) {
+          return res.status(403).json({ success: false, error: { code: 'DESTINATION_FORBIDDEN', message: 'You do not have access to this destination.' } });
+        }
+      } else if (req.destScope.length === 1) {
+        const idToCode = { 1: 'calpe', 2: 'texel', 3: 'alicante' };
+        req.query.destination = idToCode[req.destScope[0]];
+      }
+    }
     const { destination, period = '30' } = req.query;
     const days = Math.min(parseInt(period) || 30, 365);
 
@@ -3450,8 +3621,21 @@ router.get('/analytics/trend/:metric', adminAuth('reviewer'), async (req, res) =
  * Daily snapshot for delta badges (today vs yesterday, vs last week).
  * Uses live MySQL queries — no separate snapshot table needed.
  */
-router.get('/analytics/snapshot', adminAuth('reviewer'), async (req, res) => {
+router.get('/analytics/snapshot', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
+    // ── RBAC: enforce destination scope ──
+    if (req.destScope) {
+      const reqDestCode = req.query.destination;
+      if (reqDestCode) {
+        const reqDestId = resolveDestinationId(reqDestCode);
+        if (reqDestId && !req.destScope.includes(reqDestId)) {
+          return res.status(403).json({ success: false, error: { code: 'DESTINATION_FORBIDDEN', message: 'You do not have access to this destination.' } });
+        }
+      } else if (req.destScope.length === 1) {
+        const idToCode = { 1: 'calpe', 2: 'texel', 3: 'alicante' };
+        req.query.destination = idToCode[req.destScope[0]];
+      }
+    }
     const { destination } = req.query;
     const cacheKey = `admin:analytics:snapshot:${destination || 'all'}`;
     const redis = getRedis();
@@ -4803,7 +4987,7 @@ router.post('/users/:id/reset-password', adminAuth('platform_admin'), async (req
  * GET /agents/config
  * Get all agent configurations from MongoDB (fallback to AGENT_METADATA).
  */
-router.get('/agents/config', adminAuth('editor'), async (req, res) => {
+router.get('/agents/config', adminAuth('editor'), destinationScope, async (req, res) => {
   try {
     let dbConfigs = [];
 
