@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 24 februari 2026
-**Versie**: 7.5
+**Versie**: 7.6
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 9G COMPLEET - Agent Fixes + RBAC Verificatie. 6 items: P1=agent config tasks max 10, P2=De Dokter stale→inactive, P3=per-agent errorInstructions, P4=RBAC live verified 4 rollen, P5=rate limiter trusted IP exempt account lockout, P6=documentatie. adminPortal.js v3.7.0. Kosten: EUR 0.
+**Status**: FASE 9H COMPLEET - Audit & Command. 4 items: P1=agent config tasks frontend race condition fix (6e cyclus, diagnose-first), P2=De Dokter JOB_ACTOR_MAP fix (5e cyclus, diagnose-first), P3=509 Accommodation POIs→inactive, P4=pageviews dag/week/maand granulatie. adminPortal.js v3.8.0. 10/10 tests PASS. Kosten: EUR 0.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.38.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.39.0) in repo root + Hetzner
 
 ---
 
@@ -63,6 +63,7 @@
 | **Fase 9E** | Persistent Failures Definitief (6 items: Unicode emoji, scheduled jobs popup, agent warnings threshold, agent config persist, image reorder e2e, welcome email — adminPortal.js v3.4.0) | ✅ COMPLEET | 22-02-2026 | 20/20 PASS | EUR 0 |
 | **Fase 9F** | Admin Portal Definitief + RBAC (4 blokken: A=reparaties, B=functies, C=images, D=documentatie — adminPortal.js v3.6.0) | ✅ COMPLEET | 24-02-2026 | Live getest | EUR 0 |
 | **Fase 9G** | Agent Fixes + RBAC Verificatie (P1: agent config tasks max 10, P2: De Dokter stale→inactive, P3: errorInstructions, P4: RBAC live verified, P5: rate limiter exempt, P6: documentatie — adminPortal.js v3.7.0) | ✅ COMPLEET | 24-02-2026 | 25/25 rate limiter PASS | EUR 0 |
+| **Fase 9H** | Audit & Command (P1: agent config tasks frontend race condition fix 6e cyclus, P2: De Dokter JOB_ACTOR_MAP fix 5e cyclus, P3: 509 Accommodation POIs→inactive, P4: pageviews dag/week/maand granulatie — adminPortal.js v3.8.0) | ✅ COMPLEET | 24-02-2026 | 10/10 tests PASS | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -91,6 +92,7 @@
 | Fase 9E Persistent Failures Definitief | EUR 0 | EUR 0 | ✅ |
 | Fase 9F Admin Portal Definitief + RBAC | EUR 0 | EUR 0 | ✅ |
 | Fase 9G Agent Fixes + RBAC Verificatie | EUR 0 | EUR 0 | ✅ |
+| Fase 9H Audit & Command | EUR 0 | EUR 0 | ✅ |
 | **Totaal** | **EUR 95** | **EUR 74,41** | **78,3% van budget** |
 
 ### 1.3 Openstaande Componenten
