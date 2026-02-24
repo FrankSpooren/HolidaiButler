@@ -112,7 +112,9 @@
       "recommendedAction": "Recommended Action",
       "recentErrors": "Recent Errors",
       "copied": "Copied to clipboard",
-      "copyCommand": "Copy command"
+      "copyCommand": "Copy command",
+      "instructions": "Instructions",
+      "instructionsDefault": "Check PM2 logs for details about this alert. Contact the Platform Admin if the problem persists."
     },
     "config": {
       "title": "Agent configuration",

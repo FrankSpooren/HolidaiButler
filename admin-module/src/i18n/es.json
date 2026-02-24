@@ -112,7 +112,9 @@
       "recommendedAction": "Acción recomendada",
       "recentErrors": "Errores recientes",
       "copied": "Copiado al portapapeles",
-      "copyCommand": "Copiar comando"
+      "copyCommand": "Copiar comando",
+      "instructions": "Instrucciones",
+      "instructionsDefault": "Consulte los registros PM2 para obtener detalles sobre esta alerta. Contacte al administrador de la plataforma si el problema persiste."
     },
     "config": {
       "title": "Configuración del agente",

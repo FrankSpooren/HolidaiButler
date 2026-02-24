@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 24 februari 2026
-**Versie**: 7.4
+**Versie**: 7.5
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 9F COMPLEET - Admin Portal Definitief + RBAC. 4 blokken: A=6 reparaties (unicode/reorder/config/dokter/ratelimiter/RBAC), B=5 functies (deactivate+delete/review-dest/subcategory/i18n/health-email), C=2 image features (delete+nummering), D=2 documentatie (resultaten+versies). adminPortal.js v3.6.0. Kosten: EUR 0.
+**Status**: FASE 9G COMPLEET - Agent Fixes + RBAC Verificatie. 6 items: P1=agent config tasks max 10, P2=De Dokter stale→inactive, P3=per-agent errorInstructions, P4=RBAC live verified 4 rollen, P5=rate limiter trusted IP exempt account lockout, P6=documentatie. adminPortal.js v3.7.0. Kosten: EUR 0.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.37.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.38.0) in repo root + Hetzner
 
 ---
 
@@ -62,6 +62,7 @@
 | **Fase 9D** | Admin Portal Zero-Tolerance Reparatie (8 persistente bugs, UsersPage null-safety, category kleuren, MongoDB conflict, undo snapshots POI/review, buildAuditDetail, display_order — 28/28 tests) | ✅ COMPLEET | 22-02-2026 | 28/28 PASS | EUR 0 |
 | **Fase 9E** | Persistent Failures Definitief (6 items: Unicode emoji, scheduled jobs popup, agent warnings threshold, agent config persist, image reorder e2e, welcome email — adminPortal.js v3.4.0) | ✅ COMPLEET | 22-02-2026 | 20/20 PASS | EUR 0 |
 | **Fase 9F** | Admin Portal Definitief + RBAC (4 blokken: A=reparaties, B=functies, C=images, D=documentatie — adminPortal.js v3.6.0) | ✅ COMPLEET | 24-02-2026 | Live getest | EUR 0 |
+| **Fase 9G** | Agent Fixes + RBAC Verificatie (P1: agent config tasks max 10, P2: De Dokter stale→inactive, P3: errorInstructions, P4: RBAC live verified, P5: rate limiter exempt, P6: documentatie — adminPortal.js v3.7.0) | ✅ COMPLEET | 24-02-2026 | 25/25 rate limiter PASS | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -89,6 +90,7 @@
 | Fase 9D Admin Portal Zero-Tolerance Reparatie | EUR 0 | EUR 0 | ✅ |
 | Fase 9E Persistent Failures Definitief | EUR 0 | EUR 0 | ✅ |
 | Fase 9F Admin Portal Definitief + RBAC | EUR 0 | EUR 0 | ✅ |
+| Fase 9G Agent Fixes + RBAC Verificatie | EUR 0 | EUR 0 | ✅ |
 | **Totaal** | **EUR 95** | **EUR 74,41** | **78,3% van budget** |
 
 ### 1.3 Openstaande Componenten
@@ -990,6 +992,13 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - Shared health summary: getSystemHealthSummary() als single source of truth — dashboard en daily email MOETEN dezelfde data tonen
 - User deactivate vs delete: aparte acties met aparte confirmatie — voorkomt onbedoeld permanent verlies
 
+### Fase 9G (24/02) - Agent Fixes + RBAC Verificatie
+- Agent config tasks: MongoDB `$set` MOET de VOLLEDIGE tasks array opslaan. Static AGENT_TASKS in GET merge NOOIT boven MongoDB prefereren als MongoDB tasks array bestaan (length > 0). Root cause van "max 4 limiet" was GET merge die static fallback pakte.
+- Account lockout vs rate limiter: TWEE aparte blokkademechanismen — IP-based `authRateLimiter` (15/15min) EN per-account lockout (10 attempts → 5 min lock). Beide retourneren HTTP 429. Trusted IP exempt moet BEIDE mechanismen overslaan.
+- `isExemptAdminIP()` moet geëxporteerd worden als het in meerdere modules nodig is — private functions in middleware zijn niet herbruikbaar
+- Per-agent `errorInstructions` in AGENT_METADATA: voorkomt dat admins zelf moeten zoeken hoe een error op te lossen — concrete genummerde stappen per agent
+- Stale agent error entries: na 48+ uur zonder nieuwe run → status "inactive" tonen, niet "error" — voorkomt valse alarmen in admin dashboard
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -1076,6 +1085,10 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 24-02 | Image nummering display_order 1-N, Primair = 1 (9F) | 1-based i.p.v. 0-based — frontend toont Primary badge voor positie 1, genummerd 2-N | Claude Code |
 | 24-02 | Shared getSystemHealthSummary() (9F) | Enkele functie in auditTrail/index.js voor dashboard + daily email — voorkomt data discrepanties | Claude Code |
 | 24-02 | EmailService Nodemailer SMTP relay (9F) | MailerSend SDK vervangen door Nodemailer met SMTP relay (port 587) — robuuster, minder dependencies | Claude Code |
+| 24-02 | MongoDB tasks ALTIJD boven static AGENT_TASKS (9G) | GET /agents/status merge: als MongoDB tasks array.length > 0 → gebruik MongoDB, anders static fallback. Voorkomt "max 4 limiet" bug | Claude Code |
+| 24-02 | Account lockout trusted IP exempt (9G) | `isExemptAdminIP(req)` check VOOR lockout check EN attempts increment — server-side testing mag account niet locken | Claude Code |
+| 24-02 | Per-agent errorInstructions (9G) | Concrete troubleshooting stappen per agent in AGENT_METADATA — admin hoeft niet zelf te zoeken in PM2 logs | Claude Code |
+| 24-02 | Stale agent → inactive (9G) | Agents zonder runs in 48+ uur krijgen status "inactive" i.p.v. "error" — voorkomt valse alarmen | Claude Code |
 
 ---
 
@@ -1157,6 +1170,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.5** | **24-02-2026** | **Fase 9G Agent Fixes + RBAC Verificatie COMPLEET: 6 gefocuste items uit 9F audit. P1: Agent config tasks max 10 (MongoDB tasks ALTIJD prefereren boven static AGENT_TASKS in GET merge). P2: De Dokter stale error → inactive status (48h threshold). P3: Per-agent errorInstructions in AGENT_METADATA (18 agents, concrete troubleshooting stappen, frontend Instructies sectie). P4: RBAC live verified (4 rollen, destinationScope + writeAccess middleware actief). P5: Rate limiter account lockout trusted IP exempt (isExemptAdminIP geëxporteerd, isTrustedIP check lockout + attempts, 25 pogingen PASS). P6: Versie cross-refs + 9G documentatie. adminPortal.js v3.7.0. Kosten: EUR 0. CLAUDE.md v3.38.0.** |
 | **7.4** | **24-02-2026** | **Fase 9F Admin Portal Definitief + RBAC COMPLEET: 4 blokken (15 items). Blok A: 6 reparaties (unicode emoji definitief, image reorder publicPOI.js ORDER BY, agent config tasks MongoDB persist, De Dokter smoke test URL fix, platform_admin rate limiter exemption met IP whitelist + JWT bypass + IPv6, RBAC scoping met destinationScope + writeAccess middleware). Blok B: 5 functies (user deactivate vs permanent delete, review destination vlag-emoji, subcategory in POI tabel, agent config + scheduled jobs i18n 4 talen, daily email shared getSystemHealthSummary). Blok C: 2 image features (permanent delete + auto-renumber, nummering 1-based + Primary badge). Blok D: 2 documentatie (9D/9E/9F Resultaten secties CLAUDE.md + versie sync). EmailService: MailerSend→Nodemailer SMTP relay. 3 nieuwe endpoints. adminPortal.js v3.6.0. Kosten: EUR 0. CLAUDE.md v3.37.0.** |
 | **7.3** | **22-02-2026** | **Fase 9E Persistent Failures Definitief COMPLEET: 6 persistent failures uit audit (5 herhaaldelijk gefaald in 3-5 cycli + 1 nieuw). P1: Unicode ES/NL definitief → vlag-emoji in alle bestanden (i18n, backend AGENT_METADATA, frontend). P2: Scheduled jobs 40x met beschrijving kolom in 3-kolom popup. P3: Agent warnings threshold fix (calculateAgentStatus cron-aware voor weekly/monthly schedules) + leesbare tekst (body1 i.p.v. monospace). P4: Agent config MongoDB 3-laags persist (PUT endpoint + GET /agents/status BRON 1b merge + frontend save handler). P5: Image reorder e2e verified (display_order in MySQL, public API, admin API, geen Redis cache). P6: Welcome email via MailerSend (enterprise HTML template, non-blocking, login URL + credentials + rol). adminPortal.js v3.4.0. Kosten: EUR 0. CLAUDE.md v3.36.0.** |
 | **7.2** | **22-02-2026** | **Fase 9D Admin Portal Zero-Tolerance Reparatie COMPLEET: 8 persistente bugs uit 9C audit (38% score). Blok 1: UsersPage crash null-safety (isSelf bij editUser=null, MUI Dialog eager eval). Category chip kleuren 5x maximaal onderscheidend. MongoDB $set/$setOnInsert conflict fix. Blok 2: POI update + review archive handlers met saveAuditLog + saveUndoSnapshot. buildAuditDetail backward-compatible (oude + nieuwe action names). display_order in POI detail image response. 28/28 live tests PASS. adminPortal.js v3.3.0. Kosten: EUR 0. CLAUDE.md v3.35.0.** |
@@ -1185,5 +1199,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 24 februari 2026 - Fase 9F COMPLEET (Admin Portal Definitief + RBAC), Master Document v7.4*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→9F COMPLEET. Admin Portal: 41 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC. adminPortal.js v3.6.0.*
+*Laatst bijgewerkt: 24 februari 2026 - Fase 9G COMPLEET (Agent Fixes + RBAC Verificatie), Master Document v7.5*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→9G COMPLEET. Admin Portal: 41 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC. adminPortal.js v3.7.0.*

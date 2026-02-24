@@ -900,6 +900,34 @@ function AgentDetailDialog({ agent, onClose }) {
               </Box>
             )}
 
+            {/* Instructies bij warnings/errors */}
+            {(agent.status === 'error' || agent.status === 'warning' ||
+              agent.statusMessage?.includes('gefaald') ||
+              agent.statusMessage?.includes('warning')) && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {t('agents.detail.instructions', 'Instructies')}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.primary',
+                    whiteSpace: 'pre-line',
+                    bgcolor: 'grey.50',
+                    p: 1.5,
+                    borderRadius: 1,
+                    fontFamily: 'inherit'
+                  }}
+                >
+                  {agent.errorInstructions?.default ||
+                   agent.errorInstructions?.[agent.status] ||
+                   t('agents.detail.instructionsDefault',
+                     'Controleer de PM2 logs voor details over deze melding. ' +
+                     'Neem contact op met de Platform Admin als het probleem aanhoudt.')}
+                </Typography>
+              </Box>
+            )}
+
             {/* Recent errors */}
             {agent.recentRuns?.filter(r => r.status === 'error').length > 0 && (
               <>
