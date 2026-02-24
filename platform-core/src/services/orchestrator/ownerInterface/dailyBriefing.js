@@ -29,7 +29,7 @@ async function generateDailyBriefing() {
     summary: { totalSpent: 0, totalBudget: 515, remaining: 515, percentageUsed: 0 },
     alerts: []
   };
-  let auditStats = [];
+  let healthSummary = { jobs: 0, alerts: 0, errors: 0 };
   let pendingApprovals = [];
 
   try {
@@ -40,8 +40,8 @@ async function generateDailyBriefing() {
   }
 
   try {
-    const { getStats, getPendingApprovals } = await import("../auditTrail/index.js");
-    auditStats = await getStats(24);
+    const { getSystemHealthSummary, getPendingApprovals } = await import("../auditTrail/index.js");
+    healthSummary = await getSystemHealthSummary(24);
     pendingApprovals = await getPendingApprovals();
   } catch (error) {
     console.log("[De Bode] Audit stats unavailable:", error.message);
@@ -186,16 +186,8 @@ async function generateDailyBriefing() {
     day: "numeric"
   });
 
-  // Calculate stats
-  const jobCount = auditStats
-    .filter(s => s._id?.category === "job")
-    .reduce((sum, s) => sum + s.count, 0);
-  const alertCount = auditStats
-    .filter(s => s._id?.category === "alert")
-    .reduce((sum, s) => sum + s.count, 0);
-  const errorCount = auditStats
-    .filter(s => s._id?.category === "error")
-    .reduce((sum, s) => sum + s.count, 0);
+  // Use shared health summary (B5: same source as dashboard)
+  const { jobs: jobCount, alerts: alertCount, errors: errorCount } = healthSummary;
 
   // Determine status (considers smoke test + backup failures too)
   let statusSummary = "Systeem OK";

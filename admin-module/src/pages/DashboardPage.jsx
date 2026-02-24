@@ -143,7 +143,7 @@ export default function DashboardPage() {
       <Grid container spacing={2}>
         <Grid item xs={12} md={6}>
           {healthLoading ? <Skeleton variant="rounded" height={200} /> : (
-            <SystemHealthCard health={health} />
+            <SystemHealthCard health={health} healthSummary={platform.healthSummary} />
           )}
         </Grid>
         <Grid item xs={12} md={6}>
