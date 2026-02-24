@@ -191,7 +191,12 @@
     },
     "images": "Im\u00e1genes",
     "primary": "Principal",
-    "imageReordered": "Orden de im\u00e1genes actualizado"
+    "imageReordered": "Orden de im\u00e1genes actualizado",
+    "imageDeleted": "Imagen eliminada permanentemente",
+    "deleteImageTitle": "\u00bfEliminar imagen?",
+    "deleteImageConfirm": "\u00bfEst\u00e1 seguro de que desea eliminar permanentemente esta imagen? Esta acci\u00f3n no se puede deshacer.",
+    "deleteImage": "Eliminar",
+    "deleting": "Eliminando..."
   },
   "reviews": {
     "title": "Moderaci\u00f3n de Rese\u00f1as",

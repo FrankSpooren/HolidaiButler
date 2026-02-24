@@ -191,7 +191,12 @@
     },
     "images": "Bilder",
     "primary": "Prim\u00e4r",
-    "imageReordered": "Bildreihenfolge aktualisiert"
+    "imageReordered": "Bildreihenfolge aktualisiert",
+    "imageDeleted": "Bild dauerhaft gel\u00f6scht",
+    "deleteImageTitle": "Bild l\u00f6schen?",
+    "deleteImageConfirm": "Sind Sie sicher, dass Sie dieses Bild dauerhaft l\u00f6schen m\u00f6chten? Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.",
+    "deleteImage": "L\u00f6schen",
+    "deleting": "L\u00f6schen..."
   },
   "reviews": {
     "title": "Bewertungen Moderation",

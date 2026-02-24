@@ -191,7 +191,12 @@
     },
     "images": "Images",
     "primary": "Primary",
-    "imageReordered": "Image order updated"
+    "imageReordered": "Image order updated",
+    "imageDeleted": "Image permanently deleted",
+    "deleteImageTitle": "Delete Image?",
+    "deleteImageConfirm": "Are you sure you want to permanently delete this image? This action cannot be undone.",
+    "deleteImage": "Delete",
+    "deleting": "Deleting..."
   },
   "reviews": {
     "title": "Reviews Moderation",

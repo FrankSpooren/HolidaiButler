@@ -2367,11 +2367,11 @@ router.put('/pois/:id/images', adminAuth('editor'), destinationScope, writeAcces
       return res.status(400).json({ success: false, error: { code: 'NO_VALID_IMAGES', message: 'No valid image IDs for this POI' } });
     }
 
-    // Update display_order for each image
+    // Update display_order for each image (1-based: 1, 2, 3, ... — C2 spec)
     for (let i = 0; i < validIds.length; i++) {
       await mysqlSequelize.query(
         `UPDATE imageurls SET display_order = ? WHERE id = ? AND poi_id = ?`,
-        { replacements: [i, parseInt(validIds[i]), poiId] }
+        { replacements: [i + 1, parseInt(validIds[i]), poiId] }
       );
     }
 
@@ -2403,6 +2403,90 @@ router.put('/pois/:id/images', adminAuth('editor'), destinationScope, writeAcces
     res.status(500).json({
       success: false,
       error: { code: 'SERVER_ERROR', message: 'An error occurred reordering images' }
+    });
+  }
+});
+
+/**
+ * DELETE /pois/:poiId/images/:imageId
+ * Permanently delete a POI image. Removes from DB, renumbers remaining images.
+ * C1: Fase 9F audit — image permanent verwijderen.
+ */
+router.delete('/pois/:poiId/images/:imageId', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner', 'editor']), async (req, res) => {
+  try {
+    const poiId = parseInt(req.params.poiId);
+    const imageId = parseInt(req.params.imageId);
+    if (!poiId || isNaN(poiId) || !imageId || isNaN(imageId)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid POI or image ID' } });
+    }
+
+    // RBAC: check destination access
+    if (req.destScope) {
+      const poiCheck = await mysqlSequelize.query(
+        `SELECT destination_id FROM POI WHERE id = ?`,
+        { replacements: [poiId], type: QueryTypes.SELECT }
+      );
+      if (poiCheck.length === 0) {
+        return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'POI not found' } });
+      }
+      if (!req.destScope.includes(poiCheck[0].destination_id)) {
+        return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'No access to this destination' } });
+      }
+    }
+
+    // Fetch image info before deleting (for audit)
+    const imageRows = await mysqlSequelize.query(
+      `SELECT id, image_url, local_path, source FROM imageurls WHERE id = ? AND poi_id = ?`,
+      { replacements: [imageId, poiId], type: QueryTypes.SELECT }
+    );
+    if (imageRows.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'IMAGE_NOT_FOUND', message: 'Image not found for this POI' } });
+    }
+
+    // Delete from DB
+    await mysqlSequelize.query(
+      `DELETE FROM imageurls WHERE id = ? AND poi_id = ?`,
+      { replacements: [imageId, poiId] }
+    );
+
+    // Renumber remaining images: 1, 2, 3, ... (no gaps)
+    const remaining = await mysqlSequelize.query(
+      `SELECT id FROM imageurls WHERE poi_id = ? ORDER BY COALESCE(display_order, 999), id`,
+      { replacements: [poiId], type: QueryTypes.SELECT }
+    );
+    for (let i = 0; i < remaining.length; i++) {
+      await mysqlSequelize.query(
+        `UPDATE imageurls SET display_order = ? WHERE id = ?`,
+        { replacements: [i + 1, remaining[i].id] }
+      );
+    }
+
+    // Audit log
+    await saveAuditLog({
+      action: 'image_deleted',
+      adminId: req.adminUser.id || req.adminUser.userId,
+      adminEmail: req.adminUser.email,
+      details: `Deleted image ${imageId} from POI ${poiId} (${imageRows[0].source || 'unknown source'})`,
+      entityType: 'poi',
+      entityId: poiId,
+      metadata: { imageId, imageUrl: imageRows[0].image_url || imageRows[0].local_path }
+    });
+
+    // Invalidate caches
+    const redis = getRedis();
+    if (redis) {
+      try {
+        await redis.del(`admin:poi:${poiId}`);
+        await redis.del(`admin:pois:stats`);
+      } catch { /* non-critical */ }
+    }
+
+    res.json({ success: true, data: { remaining: remaining.length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Image delete error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred deleting the image' }
     });
   }
 });

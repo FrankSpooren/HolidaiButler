@@ -191,7 +191,12 @@
     },
     "images": "Afbeeldingen",
     "primary": "Primair",
-    "imageReordered": "Afbeeldingvolgorde bijgewerkt"
+    "imageReordered": "Afbeeldingvolgorde bijgewerkt",
+    "imageDeleted": "Afbeelding permanent verwijderd",
+    "deleteImageTitle": "Afbeelding verwijderen?",
+    "deleteImageConfirm": "Weet je zeker dat je deze afbeelding permanent wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "deleteImage": "Verwijderen",
+    "deleting": "Verwijderen..."
   },
   "reviews": {
     "title": "Reviews Moderatie",

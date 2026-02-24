@@ -17,8 +17,9 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
-import { usePOIList, usePOIStats, usePOIDetail, usePOIUpdate, usePOICategories, usePOIImageReorder } from '../hooks/usePOIs.js';
+import { usePOIList, usePOIStats, usePOIDetail, usePOIUpdate, usePOICategories, usePOIImageReorder, usePOIImageDelete } from '../hooks/usePOIs.js';
 import useDestinationStore from '../stores/destinationStore.js';
 import useAuthStore from '../stores/authStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
@@ -372,7 +373,9 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
   const { data, isLoading, error, refetch } = usePOIDetail(poiId);
   const [langTab, setLangTab] = useState(0);
   const reorderMutation = usePOIImageReorder();
+  const deleteMutation = usePOIImageDelete();
   const [snack, setSnack] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // imageId to confirm
   const poi = data?.data?.poi || {};
 
   const getEnvPrefix = () => {
@@ -396,6 +399,18 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
       await reorderMutation.mutateAsync({ poiId: poi.id, imageIds });
       refetch();
       setSnack(t('pois.imageReordered'));
+    } catch {
+      setSnack(t('common.error'));
+    }
+  };
+
+  const handleDeleteImage = async () => {
+    if (!deleteConfirm) return;
+    try {
+      await deleteMutation.mutateAsync({ poiId: poi.id, imageId: deleteConfirm });
+      setDeleteConfirm(null);
+      refetch();
+      setSnack(t('pois.imageDeleted'));
     } catch {
       setSnack(t('common.error'));
     }
@@ -453,9 +468,21 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
                         sx={{ height: 80, width: 100, borderRadius: 1, objectFit: 'cover', border: i === 0 ? '2px solid #1976d2' : '1px solid #e2e8f0' }}
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
-                      {i === 0 && (
-                        <Chip label={t('pois.primary')} size="small" color="primary" sx={{ position: 'absolute', top: 2, left: 2, fontSize: '0.6rem', height: 18 }} />
-                      )}
+                      {/* C2: Image numbering — Primary badge or number */}
+                      <Chip
+                        label={i === 0 ? t('pois.primary') : String(i + 1)}
+                        size="small"
+                        color={i === 0 ? 'success' : 'default'}
+                        sx={{ position: 'absolute', top: 2, left: 2, fontSize: '0.6rem', height: 18, minWidth: 20 }}
+                      />
+                      {/* C1: Delete button */}
+                      <IconButton
+                        size="small"
+                        onClick={() => setDeleteConfirm(img.id)}
+                        sx={{ position: 'absolute', top: 1, right: 1, bgcolor: 'rgba(255,255,255,0.85)', p: 0.2, '&:hover': { bgcolor: 'rgba(255,200,200,0.95)' } }}
+                      >
+                        <CloseIcon sx={{ fontSize: 14, color: '#d32f2f' }} />
+                      </IconButton>
                       <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0 }}>
                         <IconButton
                           size="small" disabled={i === 0 || reorderMutation.isPending}
@@ -533,6 +560,25 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
       <DialogActions>
         <Button onClick={onClose}>{t('pois.close')}</Button>
       </DialogActions>
+      {/* C1: Delete confirmation dialog */}
+      <Dialog open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 700 }}>{t('pois.deleteImageTitle')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">{t('pois.deleteImageConfirm')}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirm(null)}>{t('pois.cancel')}</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDeleteImage}
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending ? t('pois.deleting') : t('pois.deleteImage')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={!!snack}
         autoHideDuration={3000}
