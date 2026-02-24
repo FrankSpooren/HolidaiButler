@@ -306,12 +306,15 @@
       "title": "Seitenaufrufe",
       "totalViews": "Gesamte Aufrufe",
       "today": "Heute",
-      "trend": "Aufrufe pro Monat",
+      "trend": "Aufrufe pro Zeitraum",
       "byType": "Nach Seitentyp",
       "topPois": "Meistbesuchte POIs",
       "views": "Aufrufe",
       "noData": "Noch keine Seitenaufruf-Daten verfügbar",
-      "dataAvailableSince": "Daten verfügbar seit"
+      "dataAvailableSince": "Daten verfügbar seit",
+      "day": "Tag",
+      "week": "Woche",
+      "month": "Monat"
     }
   },
   "settings": {

@@ -306,12 +306,15 @@
       "title": "Paginabezoek",
       "totalViews": "Totaal views",
       "today": "Vandaag",
-      "trend": "Views per maand",
+      "trend": "Views per periode",
       "byType": "Per paginatype",
       "topPois": "Meest bekeken POIs",
       "views": "Views",
       "noData": "Nog geen paginabezoek data beschikbaar",
-      "dataAvailableSince": "Data beschikbaar vanaf"
+      "dataAvailableSince": "Data beschikbaar vanaf",
+      "day": "Dag",
+      "week": "Week",
+      "month": "Maand"
     }
   },
   "settings": {

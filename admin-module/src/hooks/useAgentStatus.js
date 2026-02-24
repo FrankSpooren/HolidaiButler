@@ -16,7 +16,7 @@ export const useAgentConfigs = () => {
   return useQuery({
     queryKey: ['agent-configs'],
     queryFn: fetchAgentConfigs,
-    staleTime: 60 * 1000
+    staleTime: 5 * 1000
   });
 };
 
@@ -26,16 +26,23 @@ export const useUpdateAgentConfig = () => {
     mutationFn: ({ key, data }) => updateAgentConfig(key, data),
     onSuccess: (_response, { key, data }) => {
       // Optimistic cache update: immediately reflect saved data in cache
-      // This prevents stale data when dialog is closed and reopened before refetch completes
       queryClient.setQueryData(['agent-configs'], (old) => {
         if (!old?.data?.configs) return old;
-        const configs = old.data.configs.map(c =>
-          c.agent_key === key ? { ...c, ...data, source: 'mongodb' } : c
-        );
+        const exists = old.data.configs.some(c => c.agent_key === key);
+        let configs;
+        if (exists) {
+          configs = old.data.configs.map(c =>
+            c.agent_key === key ? { ...c, ...data, source: 'mongodb' } : c
+          );
+        } else {
+          // First-time save: add new entry to cache
+          configs = [...old.data.configs, { agent_key: key, ...data, source: 'mongodb' }];
+        }
         return { ...old, data: { ...old.data, configs } };
       });
-      queryClient.invalidateQueries({ queryKey: ['agent-configs'] });
-      queryClient.invalidateQueries({ queryKey: ['agent-status'] });
+      // Force immediate refetch to replace optimistic data with server truth
+      queryClient.invalidateQueries({ queryKey: ['agent-configs'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['agent-status'], refetchType: 'all' });
     }
   });
 };

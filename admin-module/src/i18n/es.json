@@ -306,12 +306,15 @@
       "title": "Visitas de página",
       "totalViews": "Visitas totales",
       "today": "Hoy",
-      "trend": "Visitas por mes",
+      "trend": "Visitas por periodo",
       "byType": "Por tipo de página",
       "topPois": "POIs más visitados",
       "views": "Visitas",
       "noData": "Aún no hay datos de visitas disponibles",
-      "dataAvailableSince": "Datos disponibles desde"
+      "dataAvailableSince": "Datos disponibles desde",
+      "day": "Día",
+      "week": "Semana",
+      "month": "Mes"
     }
   },
   "settings": {

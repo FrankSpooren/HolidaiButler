@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, Grid, Card, CardContent, Chip, Select, MenuItem,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
@@ -426,24 +426,29 @@ function AgentDetailDialog({ agent, onClose }) {
   const [editTasks, setEditTasks] = useState(null);
   const [newTask, setNewTask] = useState('');
 
-  // Initialize config form when data arrives
-  if (!configForm && !configLoading) {
-    setConfigForm({
-      display_name: agentConfig.display_name || agent.name,
-      emoji: agentConfig.emoji || '',
-      description_nl: agentConfig.description_nl || '',
-      description_en: agentConfig.description_en || '',
-      description_de: agentConfig.description_de || '',
-      description_es: agentConfig.description_es || '',
-      is_active: agentConfig.is_active !== false
-    });
-  }
-  if (!editTasks && !configLoading) {
-    // Prefer MongoDB-persisted tasks over static AGENT_TASKS fallback
-    const savedTasks = agentConfig.tasks || agent.tasks || [];
-    const initialTasks = savedTasks.length > 0 ? savedTasks : tasks;
-    setEditTasks([...initialTasks]);
-  }
+  // Initialize config form when data arrives (useEffect prevents render-body race conditions)
+  useEffect(() => {
+    if (!configLoading && configForm === null) {
+      setConfigForm({
+        display_name: agentConfig.display_name || agent.name,
+        emoji: agentConfig.emoji || '',
+        description_nl: agentConfig.description_nl || '',
+        description_en: agentConfig.description_en || '',
+        description_de: agentConfig.description_de || '',
+        description_es: agentConfig.description_es || '',
+        is_active: agentConfig.is_active !== false
+      });
+    }
+  }, [configLoading, agent.id]);
+
+  useEffect(() => {
+    if (!configLoading && editTasks === null) {
+      // Prefer MongoDB-persisted tasks over static AGENT_TASKS fallback
+      const savedTasks = agentConfig.tasks || agent.tasks || [];
+      const initialTasks = savedTasks.length > 0 ? savedTasks : tasks;
+      setEditTasks([...initialTasks]);
+    }
+  }, [configLoading, agent.id]);
 
   const handleConfigSave = async () => {
     try {

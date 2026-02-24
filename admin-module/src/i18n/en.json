@@ -306,12 +306,15 @@
       "title": "Page Views",
       "totalViews": "Total views",
       "today": "Today",
-      "trend": "Views per month",
+      "trend": "Views per period",
       "byType": "By page type",
       "topPois": "Most viewed POIs",
       "views": "Views",
       "noData": "No pageview data available yet",
-      "dataAvailableSince": "Data available since"
+      "dataAvailableSince": "Data available since",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
     }
   },
   "settings": {

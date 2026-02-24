@@ -1607,7 +1607,12 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
         } else if (agent.status === 'warning') {
           agent.warningDetail = 'Agent draait niet volgens schema';
         } else {
-          agent.warningDetail = 'Laatste run gefaald';
+          // Check if last run actually failed vs agent just being stale
+          if (agent.lastRun && (agent.lastRun.status === 'success' || agent.lastRun.status === 'completed')) {
+            agent.warningDetail = 'Agent draait niet meer (laatste run was succesvol, maar te lang geleden)';
+          } else {
+            agent.warningDetail = 'Laatste run gefaald';
+          }
         }
         agent.recommendedAction = agent.status === 'error'
           ? `Check logs: pm2 logs holidaibutler-api --lines 100 | grep "${agent.englishName || agent.name}"`

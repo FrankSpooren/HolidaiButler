@@ -118,7 +118,8 @@ function TrendDialog({ open, onClose, metric, destination, t }) {
 }
 
 function PageviewSection({ destination, t }) {
-  const { data, isLoading } = usePageviewAnalytics(destination);
+  const [pvPeriod, setPvPeriod] = useState('month');
+  const { data, isLoading } = usePageviewAnalytics(destination, pvPeriod);
   const pv = data?.data || {};
   const trend = pv.trend || [];
   const byType = pv.by_page_type || [];
@@ -126,9 +127,21 @@ function PageviewSection({ destination, t }) {
 
   return (
     <Card sx={{ p: 3, mt: 3 }}>
-      <Typography variant="h6" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <VisibilityIcon /> {t('analytics.pageviews.title')}
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+        <Typography variant="h6" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <VisibilityIcon /> {t('analytics.pageviews.title')}
+        </Typography>
+        <ToggleButtonGroup
+          value={pvPeriod}
+          exclusive
+          onChange={(_, v) => v && setPvPeriod(v)}
+          size="small"
+        >
+          <ToggleButton value="day">{t('analytics.pageviews.day')}</ToggleButton>
+          <ToggleButton value="week">{t('analytics.pageviews.week')}</ToggleButton>
+          <ToggleButton value="month">{t('analytics.pageviews.month')}</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
       {pv.first_date && (
         <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
           {t('analytics.pageviews.dataAvailableSince')} {new Date(pv.first_date).toLocaleDateString('nl-NL')}

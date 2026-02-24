@@ -617,7 +617,17 @@ export function startWorkers() {
           result = { type: job.name, status: "unknown" };
       }
 
-      await logAgent("orchestrator", "job_completed_" + job.name, {
+      // Map job names to their owning agent for accurate status tracking
+      const JOB_ACTOR_MAP = {
+        'health-check': 'health-monitor',
+        'smoke-test': 'health-monitor',
+        'backup-recency-check': 'health-monitor',
+        'content-quality-audit': 'data-sync',
+        'chromadb-state-snapshot': 'holibot-sync',
+        'agent-success-rate': 'strategy-layer'
+      };
+      const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
+      await logAgent(actorName, "job_completed_" + job.name, {
         description: "Completed job: " + job.name,
         duration: Date.now() - startTime,
         result: { success: true, data: result }
