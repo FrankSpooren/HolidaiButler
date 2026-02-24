@@ -29,5 +29,8 @@ export const poiService = {
     client.get('/pois/categories', { params: destination ? { destination } : {} }).then(r => r.data),
 
   reorderImages: (poiId, imageIds) =>
-    client.put(`/pois/${poiId}/images`, { imageIds }).then(r => r.data)
+    client.put(`/pois/${poiId}/images`, { imageIds }).then(r => r.data),
+
+  deleteImage: (poiId, imageId) =>
+    client.delete(`/pois/${poiId}/images/${imageId}`).then(r => r.data)
 };

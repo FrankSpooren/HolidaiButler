@@ -56,3 +56,14 @@ export function usePOIImageReorder() {
     }
   });
 }
+
+export function usePOIImageDelete() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ poiId, imageId }) => poiService.deleteImage(poiId, imageId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['poi-detail', variables.poiId] });
+      queryClient.invalidateQueries({ queryKey: ['poi-stats'] });
+    }
+  });
+}
