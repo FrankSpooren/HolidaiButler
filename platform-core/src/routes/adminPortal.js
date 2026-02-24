@@ -4805,16 +4805,34 @@ router.post('/users/:id/reset-password', adminAuth('platform_admin'), async (req
  */
 router.get('/agents/config', adminAuth('editor'), async (req, res) => {
   try {
-    let configs = [];
+    let dbConfigs = [];
 
     if (mongoose.connection.readyState === 1) {
       const db = mongoose.connection.db;
-      configs = await db.collection('agent_configurations').find({}).sort({ agent_key: 1 }).toArray();
+      dbConfigs = await db.collection('agent_configurations').find({}).sort({ agent_key: 1 }).toArray();
     }
 
-    // If MongoDB empty or unavailable, return static metadata
-    if (configs.length === 0) {
-      configs = AGENT_METADATA.map(m => ({
+    // Build configs for ALL 18 agents: MongoDB data merged with static fallback
+    const dbConfigMap = {};
+    for (const dc of dbConfigs) {
+      dbConfigMap[dc.agent_key] = dc;
+    }
+
+    const configs = AGENT_METADATA.map(m => {
+      const dbEntry = dbConfigMap[m.id];
+      if (dbEntry) {
+        // MongoDB entry exists — return it with static fallbacks for missing fields
+        return {
+          ...dbEntry,
+          english_name: dbEntry.english_name || m.englishName,
+          category: dbEntry.category || m.category,
+          type: dbEntry.type || m.type,
+          schedule: dbEntry.schedule || m.schedule,
+          source: 'mongodb'
+        };
+      }
+      // No MongoDB entry — return static metadata
+      return {
         agent_key: m.id,
         display_name: m.name,
         english_name: m.englishName,
@@ -4827,8 +4845,8 @@ router.get('/agents/config', adminAuth('editor'), async (req, res) => {
         schedule: m.schedule,
         is_active: true,
         source: 'static'
-      }));
-    }
+      };
+    });
 
     res.json({ success: true, data: { configs } });
   } catch (error) {
@@ -4870,7 +4888,17 @@ router.put('/agents/config/:key', adminAuth('platform_admin'), async (req, res) 
     // Get current state for undo snapshot
     const currentConfig = await collection.findOne({ agent_key: key });
 
-    // Build update from allowed fields
+    // Validate tasks array (max 10, must be array of strings)
+    if (req.body.tasks !== undefined) {
+      if (!Array.isArray(req.body.tasks)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_TASKS', message: 'tasks must be an array' } });
+      }
+      if (req.body.tasks.length > 10) {
+        return res.status(400).json({ success: false, error: { code: 'TOO_MANY_TASKS', message: 'Maximum 10 tasks allowed' } });
+      }
+    }
+
+    // Build update from allowed fields — NO truncation, full array saved
     const allowedFields = ['display_name', 'emoji', 'description_nl', 'description_en', 'description_de', 'description_es', 'tasks', 'monitoring_scope', 'schedule', 'is_active', 'custom_config'];
     const updateDoc = {};
     for (const field of allowedFields) {

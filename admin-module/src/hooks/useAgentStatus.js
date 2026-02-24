@@ -24,7 +24,16 @@ export const useUpdateAgentConfig = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ key, data }) => updateAgentConfig(key, data),
-    onSuccess: () => {
+    onSuccess: (_response, { key, data }) => {
+      // Optimistic cache update: immediately reflect saved data in cache
+      // This prevents stale data when dialog is closed and reopened before refetch completes
+      queryClient.setQueryData(['agent-configs'], (old) => {
+        if (!old?.data?.configs) return old;
+        const configs = old.data.configs.map(c =>
+          c.agent_key === key ? { ...c, ...data, source: 'mongodb' } : c
+        );
+        return { ...old, data: { ...old.data, configs } };
+      });
       queryClient.invalidateQueries({ queryKey: ['agent-configs'] });
       queryClient.invalidateQueries({ queryKey: ['agent-status'] });
     }
