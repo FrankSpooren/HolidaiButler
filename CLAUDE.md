@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.36.0
-> **Laatst bijgewerkt**: 22 februari 2026
+> **Versie**: 3.37.0
+> **Laatst bijgewerkt**: 24 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -453,6 +453,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 9C** | Admin Portal Live Verificatie & Reparatie (user creation fix, image reorder e2e, enterprise agent profiel popup 4-tab, subcategory editing, logo upload, deploy 6 omgevingen — 1 nieuw endpoint, 38 totaal) | ✅ COMPLEET | 22-02-2026 |
 | **Fase 9D** | Admin Portal Zero-Tolerance Reparatie (UsersPage crash null-safety, category chip kleuren 5x uniek, MongoDB $set/$setOnInsert conflict, POI update + review archive undo snapshots, buildAuditDetail backward-compat, display_order in image response — 28/28 tests PASS) | ✅ COMPLEET | 22-02-2026 |
 | **Fase 9E** | Persistent Failures Definitief (P1: Unicode ES/NL emoji, P2: Scheduled jobs 3-kolom popup, P3: Agent warnings threshold+leesbaar, P4: Agent config MongoDB 3-laags persist, P5: Image reorder e2e verified, P6: Welcome email MailerSend — adminPortal.js v3.4.0) | ✅ COMPLEET | 22-02-2026 |
+| **Fase 9F** | Admin Portal Definitief + RBAC (A: unicode/reorder/config/dokter/ratelimiter/RBAC, B: deactivate+delete/review-dest/subcategory/i18n/health-email, C: image-delete+nummering, D: documentatie — adminPortal.js v3.6.0) | ✅ COMPLEET | 24-02-2026 |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -1580,6 +1581,132 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 | MODIFIED | `admin-module/src/i18n/de.json` (+branding logo keys) |
 | MODIFIED | `admin-module/src/i18n/es.json` (+branding logo keys) |
 
+### Fase 9D Resultaten (Admin Portal Zero-Tolerance Reparatie — 22/02/2026)
+- **Status**: COMPLEET (22-02-2026)
+- **Kosten**: EUR 0 (pure code, geen LLM calls)
+- **Doel**: 8 persistente bugs uit 9C audit (38% score) definitief oplossen
+
+**Blok 1: Crash Fixes (3)**:
+
+| Bug | Fix | Bestand |
+|-----|-----|---------|
+| UsersPage crash bij edit=null | isSelf null-safety + MUI Dialog eager eval guard | UsersPage.jsx |
+| Category chip kleuren niet onderscheidend | 5x maximaal onderscheidend (bruin, dieppaars, petrolblauw, smaragdgroen, standaard) | POIsPage.jsx |
+| MongoDB $set/$setOnInsert conflict | display_name dubbel verwijderd in agent config PUT | adminPortal.js |
+
+**Blok 2: Audit & Data Fixes (5)**:
+
+| Fix | Beschrijving |
+|-----|-------------|
+| POI update audit trail | saveAuditLog + saveUndoSnapshot (was directe audit_logs insert) |
+| Review archive audit trail | saveAuditLog + saveUndoSnapshot (consistente pattern) |
+| buildAuditDetail backward-compat | Herkent oude (poi_update, review_archive) + nieuwe (poi_content_updated, review_archived) action names |
+| display_order in image response | POI detail endpoint retourneert display_order veld |
+| Image reorder 0-based→1-based | display_order begint bij 1 (was 0) |
+
+**Totalen**: 0 nieuwe endpoints, adminPortal.js v3.3.0
+
+**Bestanden**:
+
+| Actie | Bestand |
+|-------|---------|
+| MODIFIED | `platform-core/src/routes/adminPortal.js` (v3.3.0, audit trail + undo snapshots + MongoDB fix) |
+| MODIFIED | `admin-module/src/pages/UsersPage.jsx` (null-safety crash fix) |
+| MODIFIED | `admin-module/src/pages/POIsPage.jsx` (category chip kleuren) |
+
+**Test Resultaten**: 28/28 PASS
+
+### Fase 9E Resultaten (Persistent Failures Definitief — 22/02/2026)
+- **Status**: COMPLEET (22-02-2026)
+- **Kosten**: EUR 0 (pure code, geen LLM calls)
+- **Doel**: 6 persistent failures uit audit definitief oplossen (5 herhaaldelijk gefaald in 3-5 cycli + 1 nieuw)
+
+| # | Issue | Fix | Bestanden |
+|---|-------|-----|-----------|
+| P1 | Unicode ES/NL niet-emoji | Vlag-emoji (🇪🇸/🇳🇱) in ALLE bronbestanden (i18n JSON, backend AGENT_METADATA, frontend JSX) + build output verificatie | 6 i18n + adminPortal.js + AgentsPage.jsx |
+| P2 | Scheduled jobs popup incompleet | 40x beschrijving in 3-kolom popup (Categorie/Agent/Schema + beschrijving) | DashboardPage.jsx |
+| P3 | Agent warnings onleesbaar | calculateAgentStatus() cron-aware (weekly/monthly ≠ daily threshold) + body1 i.p.v. monospace | adminPortal.js + AgentsPage.jsx |
+| P4 | Agent config niet persistent | 3-laags: PUT endpoint persist + GET /agents/status BRON 1b merge met AGENT_METADATA + frontend save handler | adminPortal.js + AgentsPage.jsx |
+| P5 | Image reorder niet zichtbaar | display_order in MySQL + public API (publicPOI.js) + admin API, geen Redis cache invalidatie nodig | adminPortal.js + publicPOI.js + ImageUrl.js |
+| P6 | Welcome email mislukt | MailerSend enterprise HTML template, non-blocking (.then/.catch), login URL + credentials + rol | adminPortal.js + emailService.js |
+
+**Totalen**: 0 nieuwe endpoints, adminPortal.js v3.4.0
+
+**Test Resultaten**: 20/20 PASS
+
+### Fase 9F Resultaten (Admin Portal Definitief + RBAC — 24/02/2026)
+- **Status**: COMPLEET (24-02-2026)
+- **Kosten**: EUR 0 (pure code, geen LLM calls)
+- **Doel**: Alle openstaande audit items definitief oplossen (4 blokken: A=reparaties, B=functies, C=images, D=documentatie)
+
+**BLOK A: Reparaties (6)**:
+
+| # | Item | Fix |
+|---|------|-----|
+| A1 | Unicode ES/NL emoji | Definitief alle bestanden (i18n, AGENT_METADATA, frontend) |
+| A2 | Image reorder e2e | publicPOI.js ORDER BY COALESCE(display_order, 999) |
+| A3 | Agent config tasks persist | MongoDB tasks array persistent over static AGENT_TASKS fallback |
+| A4 | De Dokter error fix | Smoke test API Health endpoint URL correctie (404→200) |
+| A5 | Rate limiter platform_admin | IP whitelist (ADMIN_RATE_LIMIT_EXEMPT_IPS), adminApiRateLimiter 300/15min, platform_admin JWT bypass, IPv6-mapped IPv4 normalisatie |
+| A6 | RBAC destination/POI scoping | destinationScope middleware, writeAccess middleware, owned_pois parsing in adminAuth |
+
+**BLOK B: Functionaliteit (5)**:
+
+| # | Item | Fix |
+|---|------|-----|
+| B1 | User deactivate vs permanent delete | PUT /users/:id/deactivate (toggle active/suspended) + DELETE /users/:id met {confirm: true} body, self-action preventie |
+| B2 | Review detail destination label | Vlag-emoji (🇪🇸/🇳🇱) voor destination in review detail |
+| B3 | Subcategory display in POI tabel | Subcategory kolom zichtbaar in POI lijst |
+| B4 | Agent config + scheduled jobs i18n | NL/EN/DE/ES vertalingen (19 keys per taal) |
+| B5 | Daily email health summary | Gedeelde getSystemHealthSummary() functie (auditTrail/index.js) — single source of truth voor dashboard + daily briefing email |
+
+**BLOK C: Images (2)**:
+
+| # | Item | Fix |
+|---|------|-----|
+| C1 | Image permanent verwijderen | DELETE /pois/:poiId/images/:imageId met RBAC, audit logging, auto-renumbering 1-N |
+| C2 | Image nummering/labeling | display_order 1-based, Primary badge (groen) voor positie 1, genummerde badges 2-N |
+
+**BLOK D: Documentatie (2)**:
+
+| # | Item | Fix |
+|---|------|-----|
+| D1 | CLAUDE.md Resultaten secties | Fase 9D, 9E, 9F Resultaten secties toegevoegd |
+| D2 | Versie sync | CLAUDE.md v3.37.0, Master Strategie v7.4, changelog, cross-references |
+
+**Totalen**: 3 nieuwe endpoints (DELETE image, PUT deactivate, adminApiRateLimiter), adminPortal.js v3.6.0
+
+**Bestanden**:
+
+| Actie | Bestand |
+|-------|---------|
+| MODIFIED | `platform-core/src/routes/adminPortal.js` (v3.6.0, +deactivate, +delete image, +RBAC) |
+| MODIFIED | `platform-core/src/middleware/auth.js` (+IP whitelist, +adminApiRateLimiter, +IPv6 normalize) |
+| MODIFIED | `platform-core/src/services/emailService.js` (MailerSend→Nodemailer SMTP relay) |
+| MODIFIED | `platform-core/src/services/orchestrator/auditTrail/index.js` (+getSystemHealthSummary) |
+| MODIFIED | `platform-core/src/services/orchestrator/ownerInterface/dailyBriefing.js` (shared health summary) |
+| MODIFIED | `platform-core/src/models/ImageUrl.js` (+display_order ordering) |
+| MODIFIED | `platform-core/package.json` (+nodemailer) |
+| MODIFIED | `admin-module/src/api/poiService.js` (+deleteImage) |
+| MODIFIED | `admin-module/src/api/userService.js` (+deactivate, +permanentDelete) |
+| MODIFIED | `admin-module/src/hooks/usePOIs.js` (+usePOIImageDelete) |
+| MODIFIED | `admin-module/src/hooks/useUsers.js` (+useDeactivateUser, +usePermanentDeleteUser) |
+| MODIFIED | `admin-module/src/pages/AgentsPage.jsx` (MongoDB tasks persist, i18n) |
+| MODIFIED | `admin-module/src/pages/POIsPage.jsx` (+subcategory, +image delete, +numbering badges) |
+| MODIFIED | `admin-module/src/pages/ReviewsPage.jsx` (+destination vlag-emoji) |
+| MODIFIED | `admin-module/src/pages/UsersPage.jsx` (+deactivate/permanent delete dialogs) |
+| MODIFIED | `admin-module/src/components/layout/DestinationSelector.jsx` (RBAC filter) |
+| MODIFIED | `admin-module/src/components/dashboard/SystemHealthCard.jsx` (+CountBadge, +healthSummary) |
+| MODIFIED | `admin-module/src/pages/DashboardPage.jsx` (+healthSummary passthrough) |
+| MODIFIED | `admin-module/src/i18n/nl.json` (+deactivate/delete, +image, +health keys) |
+| MODIFIED | `admin-module/src/i18n/en.json` (+deactivate/delete, +image, +health keys) |
+| MODIFIED | `admin-module/src/i18n/de.json` (+deactivate/delete, +image, +health keys) |
+| MODIFIED | `admin-module/src/i18n/es.json` (+deactivate/delete, +image, +health keys) |
+| MODIFIED | `CLAUDE.md` (v3.37.0) |
+| MODIFIED | `docs/strategy/HolidaiButler_Master_Strategie.md` (v7.4) |
+
+**Test Resultaten**: Alle blokken live getest en gedeployed
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -1748,6 +1875,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.37.0** | **2026-02-24** | **Fase 9F Admin Portal Definitief + RBAC COMPLEET: 4 blokken (A: 6 reparaties, B: 5 functies, C: 2 image features, D: 2 documentatie). A1-A6: unicode emoji definitief, image reorder e2e (publicPOI.js ORDER BY), agent config tasks persist MongoDB, De Dokter smoke test URL fix, platform_admin rate limiter exemption (IP whitelist + JWT bypass + IPv6), RBAC scoping (destinationScope + writeAccess middleware). B1-B5: user deactivate vs permanent delete, review destination vlag-emoji, subcategory in POI tabel, agent config + scheduled jobs i18n 4 talen, daily email shared getSystemHealthSummary(). C1-C2: image permanent delete + auto-renumber, image nummering 1-based + Primary badge. D1-D2: 9D/9E/9F Resultaten secties + versie sync. 3 nieuwe endpoints. adminPortal.js v3.6.0. Kosten: EUR 0. CLAUDE.md v3.37.0, Master Strategie v7.4.** |
 | **3.36.0** | **2026-02-22** | **Fase 9E Persistent Failures Definitief COMPLEET: 6 persistent failures uit audit (5 herhaaldelijk gefaald in 3-5 cycli + 1 nieuw). P1: Unicode ES/NL definitief → vlag-emoji in alle bestanden (i18n, backend AGENT_METADATA, frontend). P2: Scheduled jobs 40x met beschrijving kolom in 3-kolom popup. P3: Agent warnings threshold fix (calculateAgentStatus cron-aware voor weekly/monthly schedules) + leesbare tekst (body1 i.p.v. monospace). P4: Agent config MongoDB 3-laags persist (PUT endpoint + GET /agents/status BRON 1b merge + frontend save handler). P5: Image reorder e2e verified (display_order in MySQL, public API, admin API, geen Redis cache). P6: Welcome email via MailerSend (enterprise HTML template, non-blocking, login URL + credentials + rol). adminPortal.js v3.4.0. Kosten: EUR 0. CLAUDE.md v3.36.0, Master Strategie v7.3.** |
 | **3.35.0** | **2026-02-22** | **Fase 9D Admin Portal Zero-Tolerance Reparatie COMPLEET: 8 persistente bugs uit audit (38% Fase 9C score). Blok 1: UsersPage crash null-safety (isSelf bij editUser=null, MUI Dialog eager eval). Category chip kleuren 5x maximaal onderscheidend (bruin, dieppaars, petrolblauw, smaragdgroen). MongoDB $set/$setOnInsert conflict fix (display_name dubbel in agent config PUT). Blok 2: POI update handler saveAuditLog + saveUndoSnapshot (was directe audit_logs insert). Review archive handler saveAuditLog + saveUndoSnapshot. buildAuditDetail backward-compatible (poi_update + poi_content_updated, review_archive + review_archived). display_order veld in POI detail image response. 28/28 live tests PASS. Kosten: EUR 0. adminPortal.js v3.3.0. CLAUDE.md v3.35.0.** |
 | **3.34.0** | **2026-02-22** | **Fase 9C Admin Portal Live Verificatie & Reparatie COMPLEET: Blok 1: 2 P0 bug fixes (POST /users permissions kolom fix, image reorder display_order persistence + ImageUrl.js ordering). Blok 2A: Enterprise agent profiel popup (4 MUI tabs: Profiel/Status/Configuratie/Warnings, AGENT_TASKS 18 agents met volledig takenpakket, per-destination status, PM2 log copy). Blok 2B-2G: UX fixes (subcategory editing 2-level, branding logo upload met multer + POST endpoint + preview + i18n 4 talen, 2B/2D/2E/2F reeds geïmplementeerd bevestigd). Blok 3: Deploy alle 6 omgevingen (3 admin + 2 customer-portal + API). 1 nieuw endpoint (38 totaal). adminPortal.js v3.2.0. Kosten: EUR 0. CLAUDE.md v3.34.0, Master Strategie v7.1.** |
