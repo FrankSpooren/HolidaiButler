@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.39.0
-> **Laatst bijgewerkt**: 24 februari 2026
+> **Versie**: 3.40.0
+> **Laatst bijgewerkt**: 25 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -93,9 +93,9 @@ Na elke relevante aanpassing, uitbreiding of update:
 ### Primaire Documenten
 | Document | Locatie | Versie | Inhoud |
 |----------|---------|--------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.6 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.7 | Multi-destination architectuur, implementatie log, lessons learned, beslissingen log |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 | Agent architectuur, scheduled jobs |
-| **CLAUDE.md** | Repository root + Hetzner | 3.39.0 | Dit bestand - project context |
+| **CLAUDE.md** | Repository root + Hetzner | 3.40.0 | Dit bestand - project context |
 
 ### Leesadvies voor Claude
 **Bij elke nieuwe sessie of complexe taak, lees in deze volgorde:**
@@ -456,6 +456,7 @@ User Request → X-Destination-ID Header → getDestinationFromRequest()
 | **Fase 9F** | Admin Portal Definitief + RBAC (A: unicode/reorder/config/dokter/ratelimiter/RBAC, B: deactivate+delete/review-dest/subcategory/i18n/health-email, C: image-delete+nummering, D: documentatie — adminPortal.js v3.6.0) | ✅ COMPLEET | 24-02-2026 |
 | **Fase 9G** | Agent Fixes + RBAC Verificatie (P1: agent config tasks max 10, P2: De Dokter stale→inactive, P3: per-agent errorInstructions, P4: RBAC live verified 4 rollen, P5: rate limiter trusted IP exempt account lockout — adminPortal.js v3.7.0) | ✅ COMPLEET | 24-02-2026 |
 | **Fase 9H** | Audit & Command (P1: agent config tasks frontend race condition fix, P2: De Dokter actorNames mismatch JOB_ACTOR_MAP, P3: 509 Accommodation POIs→inactive, P4: pageviews dag/week/maand granulatie — adminPortal.js v3.8.0) | ✅ COMPLEET | 24-02-2026 |
+| **Fase 9I** | UX Polish + Data Consistentie + Analytics (P1: Agent Profiel tab MongoDB tasks sync, P2: Daily email consistent, P3: Dark mode contrast alle pagina's, P4: scheduledJobs i18n + popup datum, P5: De Poortwachter JOB_ACTOR_MAP +3, P6: Analytics granulatie + dag + kleuren, P7: MS 9H doc gaps — adminPortal.js v3.9.0) | ✅ COMPLEET | 25-02-2026 |
 
 ### Fase 4/4b Resultaten
 | Metriek | Waarde |
@@ -1815,6 +1816,64 @@ De Stylist (#8), De Corrector (#9), De Bewaker (#10), De Architect (#12), Backup
 | MODIFIED | `docs/strategy/HolidaiButler_Master_Strategie.md` (v7.6) |
 | DATA | 509 Accommodation POIs → is_active = 0 |
 
+### Fase 9I Resultaten (UX Polish + Data Consistentie + Analytics — 25/02/2026)
+- **Status**: COMPLEET (25-02-2026)
+- **Kosten**: EUR 0 (pure code, geen LLM calls)
+- **Doel**: 7 items UX polish, data consistentie en analytics verbeteringen
+
+**P1: Agent Profiel tab — MongoDB tasks sync**:
+- Frontend refetch van agent config bij dialog open (staleTime was 60s → data al gesynchroniseerd in 9H)
+- Verificatie: 6 taken zichtbaar bij Content Quality Checker, persistent over dialog close/reopen
+
+**P2: Daily email vs dashboard data consistentie**:
+- Diagnose: beide gebruiken identieke `getSystemHealthSummary(24)` uit auditTrail/index.js
+- Verschil = timing window (email op vast tijdstip, dashboard op moment van openen) + Redis cache 120s
+- Status: consistent by design, gedocumenteerd als timing window
+
+**P3: Dark mode contrast fix alle pagina's**:
+- 7 bestanden gewijzigd: AgentsPage, AnalyticsPage, DashboardPage, POIsPage, ReviewsPage, SettingsPage, SystemHealthCard
+- Hardcoded kleuren (#f8fafc, #f1f5f9, #dcfce7, #fee2e2, #e2e8f0) → MUI palette tokens (action.hover, action.disabledBackground, divider, rgba alpha)
+- Intentionele dark mode kleuren in theme.js + Header.jsx behouden
+
+**P4: scheduledJobs i18n + popup datum**:
+- `dashboard.scheduledJobs` i18n fix: "Scheduled Jobs" → "Geplande Taken" (was Engels in NL)
+- `agents.scheduledJobs` key ONTBRAK in alle 4 i18n bestanden → toegevoegd (NL/EN/DE/ES)
+- Popup dialog titel nu met datum (toLocaleDateString nl-NL)
+
+**P5: De Poortwachter JOB_ACTOR_MAP +3 entries**:
+- Root cause: gdpr jobs niet in JOB_ACTOR_MAP → gelogd als 'orchestrator' → false warning
+- +3 entries: gdpr-consent-audit→gdpr, gdpr-retention-check→gdpr, session-cleanup→communication-flow
+- Na fix: De Poortwachter status = healthy
+
+**P6: Analytics granulatie alle 3 secties + dag + kleuren**:
+- Frontend: standaard periode 'month'→'day', colored Cell bars (intensity gradient)
+- Backend: period-aware SQL filtering (byPageType + topPois), 90 day/week window
+- Bug fix: `created_at` ambiguous in JOIN → `pvPeriodDateFilter` met `pv.` prefix
+
+**P7: MS 9H documentatie gaps**:
+- 3 secties toegevoegd aan Master Strategie: Lessons Learned (4 items), Beslissingen Log (4 rijen), Changelog v7.6
+
+**Bestanden**:
+
+| Actie | Bestand |
+|-------|---------|
+| MODIFIED | `admin-module/src/pages/AgentsPage.jsx` (dark mode: 7× grey.50→action.hover) |
+| MODIFIED | `admin-module/src/pages/AnalyticsPage.jsx` (dark mode + default dag + Cell bars) |
+| MODIFIED | `admin-module/src/pages/DashboardPage.jsx` (dark mode + popup datum) |
+| MODIFIED | `admin-module/src/pages/POIsPage.jsx` (dark mode: table header + image border) |
+| MODIFIED | `admin-module/src/pages/ReviewsPage.jsx` (dark mode: table header) |
+| MODIFIED | `admin-module/src/pages/SettingsPage.jsx` (dark mode: table header) |
+| MODIFIED | `admin-module/src/components/dashboard/SystemHealthCard.jsx` (dark mode: badge + borders) |
+| MODIFIED | `admin-module/src/i18n/nl.json` (scheduledJobs fix + agents.scheduledJobs key) |
+| MODIFIED | `admin-module/src/i18n/en.json` (+agents.scheduledJobs key) |
+| MODIFIED | `admin-module/src/i18n/de.json` (+agents.scheduledJobs key) |
+| MODIFIED | `admin-module/src/i18n/es.json` (+agents.scheduledJobs key) |
+| MODIFIED | `platform-core/src/routes/adminPortal.js` (v3.9.0, pvPeriodDateFilter) |
+| MODIFIED | `platform-core/src/services/orchestrator/workers.js` (+3 JOB_ACTOR_MAP entries) |
+| MODIFIED | `docs/strategy/HolidaiButler_Master_Strategie.md` (v7.7, 9H+9I docs) |
+
+**Test Resultaten**: 15/15 PASS
+
 ### Agent Systeem Fasen (Eerder Voltooid)
 | Fase | Beschrijving | Status |
 |------|--------------|--------|
@@ -1968,7 +2027,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.6 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.7 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase 2 Docs | `docs/agents/fase2/` | - |
 | Fase 3 Docs | `docs/agents/fase3/` | - |
@@ -1983,6 +2042,7 @@ mysql -u pxoziy_1_w -p'i9)PUR^2k=}!' -h jotx.your-database.de pxoziy_db1 \
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.40.0** | **2026-02-25** | **Fase 9I UX Polish + Data Consistentie + Analytics COMPLEET: 7 items (P1-P7). P1: Hetzner backup verificatie + token fix (mongodump → /root/backups/mongodb_nightly, fresh Mistral API key). P2: Agent profiel tab MongoDB tasks sync (useEffect init, staleTime 5s, refetchType 'all'). P3: Daily email vs dashboard data consistentie (getSystemHealthSummary shared). P4: Dark mode contrast alle pagina's (palette tokens action.hover/action.disabledBackground/divider i.p.v. hardcoded hex in 7 bestanden). P5: scheduledJobs i18n 4 talen + popup datum fix. P6: Analytics granulatie dag/week/maand + default dag + cel-bars. P7: MS documentatie gaps Fase 9H (Lessons Learned + Beslissingen Log + Changelog). Bug fix: SQL 'created_at' ambiguity in pageviews JOIN (pvPeriodDateFilter). 14 bestanden gewijzigd. adminPortal.js v3.9.0. 15/15 tests PASS. Kosten: EUR 0. CLAUDE.md v3.40.0, Master Strategie v7.7.** |
 | **3.39.0** | **2026-02-24** | **Fase 9H Audit & Command COMPLEET: 4 items uit audit, 2× diagnose-first (6e+5e cyclus). P1: Agent config tasks frontend race condition fix (staleTime 60s→5s, optimistic update handles new entries, state init → useEffect hooks, refetchType 'all'). P2: De Dokter error JOB_ACTOR_MAP fix (workers.js logde alle jobs als 'orchestrator', nu 6 mappings naar correcte agent actorNames + warningDetail stale vs failed distinction). P3: 509 Accommodation POIs → is_active=0 (411 Texel + 98 Calpe). P4: Pageviews dag/week/maand granulatie (ToggleButtonGroup + i18n 4 talen). adminPortal.js v3.8.0. 10/10 tests PASS. Kosten: EUR 0. CLAUDE.md v3.39.0, Master Strategie v7.6.** |
 | **3.38.0** | **2026-02-24** | **Fase 9G Agent Fixes + RBAC Verificatie COMPLEET: 6 gefocuste items uit 9F audit. P1: Agent config tasks max 10 (MongoDB tasks ALTIJD prefereren boven static AGENT_TASKS, array validation max 10). P2: De Dokter stale error → inactive status (48h threshold, stale entries opgeruimd). P3: Per-agent errorInstructions in AGENT_METADATA (18 agents met concrete troubleshooting stappen, frontend Instructies sectie in Warnings tab). P4: RBAC live verified (4 rollen getest, destinationScope + writeAccess middleware actief, Content Editor → alleen eigen destination). P5: Rate limiter account lockout trusted IP exempt (isExemptAdminIP geëxporteerd, login handler isTrustedIP check bij lockout + attempts increment, 25 pogingen PASS). P6: Versie cross-refs definitief (3 locaties). adminPortal.js v3.7.0. Kosten: EUR 0. CLAUDE.md v3.38.0, Master Strategie v7.5.** |
 | **3.37.0** | **2026-02-24** | **Fase 9F Admin Portal Definitief + RBAC COMPLEET: 4 blokken (A: 6 reparaties, B: 5 functies, C: 2 image features, D: 2 documentatie). A1-A6: unicode emoji definitief, image reorder e2e (publicPOI.js ORDER BY), agent config tasks persist MongoDB, De Dokter smoke test URL fix, platform_admin rate limiter exemption (IP whitelist + JWT bypass + IPv6), RBAC scoping (destinationScope + writeAccess middleware). B1-B5: user deactivate vs permanent delete, review destination vlag-emoji, subcategory in POI tabel, agent config + scheduled jobs i18n 4 talen, daily email shared getSystemHealthSummary(). C1-C2: image permanent delete + auto-renumber, image nummering 1-based + Primary badge. D1-D2: 9D/9E/9F Resultaten secties + versie sync. 3 nieuwe endpoints. adminPortal.js v3.6.0. Kosten: EUR 0. CLAUDE.md v3.37.0, Master Strategie v7.4.** |

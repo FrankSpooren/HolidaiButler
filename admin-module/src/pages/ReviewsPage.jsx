@@ -220,7 +220,7 @@ export default function ReviewsPage() {
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: '#f8fafc' } }}>
+            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
               <TableCell>
                 <TableSortLabel active={sort === 'poiName'} direction={sort === 'poiName' ? order.toLowerCase() : 'asc'} onClick={() => handleSort('poiName')}>
                   {t('reviews.table.poi')}

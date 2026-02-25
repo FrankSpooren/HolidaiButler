@@ -165,7 +165,7 @@ function ScheduledJobsDialog({ open, onClose }) {
   return (
     <Dialog open={open} maxWidth="md" fullWidth onClose={onClose}>
       <DialogTitle sx={{ fontWeight: 700 }}>
-        {t('dashboard.jobsDialog.title')} ({SCHEDULED_JOBS.length})
+        {t('dashboard.jobsDialog.title')} — {new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })} ({SCHEDULED_JOBS.length})
       </DialogTitle>
       <DialogContent dividers>
         {categories.map(cat => {
@@ -183,7 +183,7 @@ function ScheduledJobsDialog({ open, onClose }) {
               <TableContainer>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: '#f8fafc', fontSize: '0.8rem' } }}>
+                    <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover', fontSize: '0.8rem' } }}>
                       <TableCell>{t('dashboard.jobsDialog.job')}</TableCell>
                       <TableCell>{t('dashboard.jobsDialog.schedule')}</TableCell>
                       <TableCell>{t('dashboard.jobsDialog.description')}</TableCell>

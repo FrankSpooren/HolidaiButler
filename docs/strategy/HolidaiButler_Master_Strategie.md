@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 24 februari 2026
-**Versie**: 7.6
+**Datum**: 25 februari 2026
+**Versie**: 7.7
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 9H COMPLEET - Audit & Command. 4 items: P1=agent config tasks frontend race condition fix (6e cyclus, diagnose-first), P2=De Dokter JOB_ACTOR_MAP fix (5e cyclus, diagnose-first), P3=509 Accommodation POIs→inactive, P4=pageviews dag/week/maand granulatie. adminPortal.js v3.8.0. 10/10 tests PASS. Kosten: EUR 0.
+**Status**: FASE 9I COMPLEET - UX Polish + Data Consistentie + Analytics. 7 items: P1=backup+token Hetzner, P2=agent profiel MongoDB tasks sync, P3=daily email vs dashboard data consistentie, P4=dark mode contrast alle pagina's, P5=scheduledJobs i18n+popup, P6=analytics granulatie+dag+kleuren, P7=MS documentatie gaps 9H. Bug fix: SQL created_at ambiguity. adminPortal.js v3.9.0. 15/15 tests PASS. Kosten: EUR 0.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1001,6 +1001,18 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - Per-agent `errorInstructions` in AGENT_METADATA: voorkomt dat admins zelf moeten zoeken hoe een error op te lossen — concrete genummerde stappen per agent
 - Stale agent error entries: na 48+ uur zonder nieuwe run → status "inactive" tonen, niet "error" — voorkomt valse alarmen in admin dashboard
 
+### Fase 9H (24/02) - Audit & Command
+- Agent config tasks frontend race condition: React Query `staleTime: 60000` (60s) cache = root cause van "data niet persistent" illusie bij dialog reopen. Fix: staleTime 5s, `optimisticUpdate` handles new entries (`.map()` missed first-time saves), state init verplaatst naar `useEffect` hooks (was in render body → race condition met cache), `refetchType: 'all'` voor immediate refetch
+- JOB_ACTOR_MAP essentieel voor agent status: `workers.js` logde ALLE scheduled jobs als `actor.name = 'orchestrator'` → `calculateAgentStatus()` vond geen recente runs voor specifieke agents → valse "error" status. Map van BullMQ job-name → agent actorName (6→9 mappings) is verplicht voor correcte audit_log attributie
+- warningDetail stale vs failed: "Agent draait niet volgens schema" (stale, >48h) en "Laatste run mislukt" (failed status) zijn fundamenteel verschillende problemen — UI moet dit onderscheid tonen
+- Accommodation POIs bulk inactivatie: 509 POIs → is_active=0 als bewuste categorische beslissing. Altijd `COUNT(*)` verificatie na bulk-update
+
+### Fase 9I (25/02) - UX Polish + Data Consistentie + Analytics
+- MUI dark mode: NOOIT hardcoded hex colors (`#f8fafc`, `#e2e8f0`) — altijd palette tokens (`action.hover`, `action.disabledBackground`, `divider`). Hardcoded kleuren breken in dark mode. Uitzondering: theme.js zelf en intentionele dark mode palette definities
+- SQL column ambiguity in JOINs: `created_at` in WHERE is ambiguous als zowel `page_views` als `POI` tabel die kolom hebben. Oplossing: aparte filter strings — `periodDateFilter` (ongequalificeerd, single-table) en `pvPeriodDateFilter` (`pv.created_at`, JOINed queries)
+- MUI sx theme callback variabele shadowing: `(t) => ...` in sx prop conflicteert met `const { t } = useTranslation()` in dezelfde scope. Altijd `(theme) =>` gebruiken als parameternaam
+- Admin-module build workflow: React source NIET op Hetzner — build lokaal, deploy dist/ via tar pipe naar alle 3 admin vhosts. Backend bestanden wel individueel SCP'en
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -1091,6 +1103,13 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 24-02 | Account lockout trusted IP exempt (9G) | `isExemptAdminIP(req)` check VOOR lockout check EN attempts increment — server-side testing mag account niet locken | Claude Code |
 | 24-02 | Per-agent errorInstructions (9G) | Concrete troubleshooting stappen per agent in AGENT_METADATA — admin hoeft niet zelf te zoeken in PM2 logs | Claude Code |
 | 24-02 | Stale agent → inactive (9G) | Agents zonder runs in 48+ uur krijgen status "inactive" i.p.v. "error" — voorkomt valse alarmen | Claude Code |
+| 24-02 | React Query staleTime 60s→5s + optimistic update (9H) | 60s cache = root cause van "data niet persistent" illusie bij agent config dialog — 5s + useEffect init + refetchType 'all' | Claude Code |
+| 24-02 | JOB_ACTOR_MAP 6→9 entries (9H) | workers.js logde ALLE jobs als 'orchestrator' → valse agent errors. health-check→health-monitor, gdpr-consent-audit→gdpr, session-cleanup→communication-flow | Claude Code |
+| 24-02 | 509 Accommodation POIs → inactive (9H) | Accommodation bewust uitgesloten van content enrichment — POIs hoeven niet actief te zijn in frontend | Claude Code |
+| 24-02 | Pageviews dag/week/maand granulatie (9H) | ToggleButtonGroup default 'day' i.p.v. 'month' — fijnmaziger inzicht voor admin, backend period-aware SQL filtering | Claude Code |
+| 25-02 | MUI palette tokens verplicht (9I) | Hardcoded hex colors (#f8fafc, #e2e8f0) breken dark mode — action.hover/action.disabledBackground/divider zijn theme-aware | Claude Code |
+| 25-02 | pvPeriodDateFilter voor JOINed queries (9I) | SQL 'created_at' ambiguous in page_views + POI JOIN — aparte filter met pv. prefix voor topPois query | Claude Code |
+| 25-02 | Admin-module lokaal builden (9I) | React source niet op Hetzner — dist/ deployen via tar pipe naar 3 vhosts, backend via SCP + PM2 restart | Claude Code |
 
 ---
 
@@ -1172,6 +1191,8 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.7** | **25-02-2026** | **Fase 9I UX Polish + Data Consistentie + Analytics COMPLEET: 7 items. P1: Hetzner backup verificatie + Mistral token refresh. P2: Agent profiel tab MongoDB tasks sync (useEffect init, staleTime 5s). P3: Daily email vs dashboard data consistentie (shared getSystemHealthSummary). P4: Dark mode contrast alle pagina's (7 bestanden, palette tokens i.p.v. hardcoded hex). P5: scheduledJobs i18n 4 talen + popup datum fix. P6: Analytics granulatie dag/week/maand + default dag + cel-bars kleuren. P7: MS documentatie gaps 9H (Lessons Learned, Beslissingen Log, Changelog). Bug fix: SQL created_at ambiguity in pageviews JOIN → pvPeriodDateFilter. 14 bestanden gewijzigd. adminPortal.js v3.9.0. 15/15 tests PASS. Kosten: EUR 0. CLAUDE.md v3.40.0.** |
+| **7.6** | **24-02-2026** | **Fase 9H Audit & Command COMPLEET: 4 items uit audit, 2× diagnose-first (6e+5e cyclus). P1: Agent config tasks frontend race condition fix (staleTime 60s→5s, optimistic update handles new entries, state init → useEffect hooks, refetchType 'all'). P2: De Dokter error JOB_ACTOR_MAP fix (workers.js logde alle jobs als 'orchestrator', nu 9 mappings naar correcte agent actorNames + warningDetail stale vs failed distinction). P3: 509 Accommodation POIs → is_active=0 (411 Texel + 98 Calpe). P4: Pageviews dag/week/maand granulatie (ToggleButtonGroup + backend period-aware filtering + i18n 4 talen). adminPortal.js v3.8.0. Kosten: EUR 0. CLAUDE.md v3.39.0.** |
 | **7.5** | **24-02-2026** | **Fase 9G Agent Fixes + RBAC Verificatie COMPLEET: 6 gefocuste items uit 9F audit. P1: Agent config tasks max 10 (MongoDB tasks ALTIJD prefereren boven static AGENT_TASKS in GET merge). P2: De Dokter stale error → inactive status (48h threshold). P3: Per-agent errorInstructions in AGENT_METADATA (18 agents, concrete troubleshooting stappen, frontend Instructies sectie). P4: RBAC live verified (4 rollen, destinationScope + writeAccess middleware actief). P5: Rate limiter account lockout trusted IP exempt (isExemptAdminIP geëxporteerd, isTrustedIP check lockout + attempts, 25 pogingen PASS). P6: Versie cross-refs + 9G documentatie. adminPortal.js v3.7.0. Kosten: EUR 0. CLAUDE.md v3.38.0.** |
 | **7.4** | **24-02-2026** | **Fase 9F Admin Portal Definitief + RBAC COMPLEET: 4 blokken (15 items). Blok A: 6 reparaties (unicode emoji definitief, image reorder publicPOI.js ORDER BY, agent config tasks MongoDB persist, De Dokter smoke test URL fix, platform_admin rate limiter exemption met IP whitelist + JWT bypass + IPv6, RBAC scoping met destinationScope + writeAccess middleware). Blok B: 5 functies (user deactivate vs permanent delete, review destination vlag-emoji, subcategory in POI tabel, agent config + scheduled jobs i18n 4 talen, daily email shared getSystemHealthSummary). Blok C: 2 image features (permanent delete + auto-renumber, nummering 1-based + Primary badge). Blok D: 2 documentatie (9D/9E/9F Resultaten secties CLAUDE.md + versie sync). EmailService: MailerSend→Nodemailer SMTP relay. 3 nieuwe endpoints. adminPortal.js v3.6.0. Kosten: EUR 0. CLAUDE.md v3.37.0.** |
 | **7.3** | **22-02-2026** | **Fase 9E Persistent Failures Definitief COMPLEET: 6 persistent failures uit audit (5 herhaaldelijk gefaald in 3-5 cycli + 1 nieuw). P1: Unicode ES/NL definitief → vlag-emoji in alle bestanden (i18n, backend AGENT_METADATA, frontend). P2: Scheduled jobs 40x met beschrijving kolom in 3-kolom popup. P3: Agent warnings threshold fix (calculateAgentStatus cron-aware voor weekly/monthly schedules) + leesbare tekst (body1 i.p.v. monospace). P4: Agent config MongoDB 3-laags persist (PUT endpoint + GET /agents/status BRON 1b merge + frontend save handler). P5: Image reorder e2e verified (display_order in MySQL, public API, admin API, geen Redis cache). P6: Welcome email via MailerSend (enterprise HTML template, non-blocking, login URL + credentials + rol). adminPortal.js v3.4.0. Kosten: EUR 0. CLAUDE.md v3.36.0.** |

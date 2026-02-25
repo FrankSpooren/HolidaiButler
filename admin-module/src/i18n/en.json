@@ -131,6 +131,7 @@
     },
     "partial": "Some data sources are unavailable. Displayed data may be incomplete.",
     "noResults": "No agents found for the selected filters.",
+    "scheduledJobs": "Scheduled Jobs",
     "noActivity": "No recent activity",
     "close": "Close"
   },

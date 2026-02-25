@@ -43,7 +43,7 @@ function DeltaBadge({ value, suffix = '' }) {
         icon={<RemoveIcon sx={{ fontSize: 14 }} />}
         label={`0${suffix}`}
         size="small"
-        sx={{ height: 20, fontSize: 11, bgcolor: '#f1f5f9', color: '#64748b', '& .MuiChip-icon': { color: '#64748b' } }}
+        sx={{ height: 20, fontSize: 11, bgcolor: 'action.hover', color: 'text.secondary', '& .MuiChip-icon': { color: 'text.secondary' } }}
       />
     );
   }
@@ -55,9 +55,9 @@ function DeltaBadge({ value, suffix = '' }) {
       size="small"
       sx={{
         height: 20, fontSize: 11,
-        bgcolor: isPositive ? '#dcfce7' : '#fee2e2',
-        color: isPositive ? '#166534' : '#991b1b',
-        '& .MuiChip-icon': { color: isPositive ? '#166534' : '#991b1b' }
+        bgcolor: isPositive ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+        color: isPositive ? '#16a34a' : '#dc2626',
+        '& .MuiChip-icon': { color: isPositive ? '#16a34a' : '#dc2626' }
       }}
     />
   );
@@ -118,7 +118,7 @@ function TrendDialog({ open, onClose, metric, destination, t }) {
 }
 
 function PageviewSection({ destination, t }) {
-  const [pvPeriod, setPvPeriod] = useState('month');
+  const [pvPeriod, setPvPeriod] = useState('day');
   const { data, isLoading } = usePageviewAnalytics(destination, pvPeriod);
   const pv = data?.data || {};
   const trend = pv.trend || [];
@@ -172,7 +172,14 @@ function PageviewSection({ destination, t }) {
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={d => d?.slice(5)} />
                   <YAxis tick={{ fontSize: 12 }} />
                   <ReTooltip />
-                  <Bar dataKey="views" fill="#1976d2" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="views" radius={[4, 4, 0, 0]}>
+                    {trend.map((entry, i) => {
+                      const maxViews = Math.max(...trend.map(t => t.views || 0), 1);
+                      const ratio = (entry.views || 0) / maxViews;
+                      const color = ratio > 0.75 ? '#1565c0' : ratio > 0.5 ? '#1976d2' : ratio > 0.25 ? '#42a5f5' : '#90caf9';
+                      return <Cell key={i} fill={color} />;
+                    })}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </Box>
@@ -532,7 +539,7 @@ export default function AnalyticsPage() {
                     {lang} — {t('analytics.contentCoverage')}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ flexGrow: 1, bgcolor: '#e2e8f0', borderRadius: 1, height: 10 }}>
+                    <Box sx={{ flexGrow: 1, bgcolor: 'action.disabledBackground', borderRadius: 1, height: 10 }}>
                       <Box sx={{ width: `${pct}%`, bgcolor: pct > 90 ? '#22c55e' : pct > 70 ? '#f59e0b' : '#ef4444', borderRadius: 1, height: '100%' }} />
                     </Box>
                     <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 42 }}>{pct}%</Typography>
@@ -553,7 +560,7 @@ export default function AnalyticsPage() {
           <TableContainer>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: '#f8fafc' } }}>
+                <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
                   <TableCell>#</TableCell>
                   <TableCell>{t('analytics.table.name')}</TableCell>
                   <TableCell>{t('analytics.table.destination')}</TableCell>

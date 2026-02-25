@@ -29,7 +29,7 @@
     "totalUsers": "Totaal Gebruikers",
     "chatSessions": "Chatbot Sessies (7d)",
     "activeAgents": "Actieve Agents",
-    "scheduledJobs": "Scheduled Jobs",
+    "scheduledJobs": "Geplande Taken",
     "jobsDialog": {
       "title": "Geplande Taken",
       "category": "Categorie",
@@ -131,6 +131,7 @@
     },
     "partial": "Sommige databronnen zijn niet bereikbaar. Getoonde data kan onvolledig zijn.",
     "noResults": "Geen agents gevonden voor de geselecteerde filters.",
+    "scheduledJobs": "Geplande Taken",
     "noActivity": "Geen recente activiteit",
     "close": "Sluiten"
   },

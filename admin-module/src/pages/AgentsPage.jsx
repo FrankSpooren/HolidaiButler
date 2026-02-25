@@ -213,7 +213,7 @@ export default function AgentsPage() {
         <TableContainer component={Paper} sx={{ mb: 3 }}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ bgcolor: 'grey.50' }}>
+              <TableRow sx={{ bgcolor: 'action.hover' }}>
                 <TableCell sx={{ width: 40 }}>#</TableCell>
                 <TableCell>
                   <TableSortLabel active={sortBy === 'name'} direction={sortBy === 'name' ? sortDir : 'asc'} onClick={() => handleSort('name')}>
@@ -250,7 +250,7 @@ export default function AgentsPage() {
                   sx={{
                     cursor: 'pointer',
                     bgcolor: agent.status === 'error' ? 'rgba(244,67,54,0.04)' : undefined,
-                    '&:hover': { bgcolor: 'grey.50' }
+                    '&:hover': { bgcolor: 'action.hover' }
                   }}
                 >
                   <TableCell sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{idx + 1}</TableCell>
@@ -324,7 +324,7 @@ export default function AgentsPage() {
             <TableContainer>
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                  <TableRow sx={{ bgcolor: 'action.hover' }}>
                     <TableCell sx={{ fontWeight: 600 }}>Job</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Agent</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>{t('agents.table.schedule')}</TableCell>
@@ -333,7 +333,7 @@ export default function AgentsPage() {
                 </TableHead>
                 <TableBody>
                   {(data?.scheduledJobs || []).map((job, i) => (
-                    <TableRow key={i} sx={{ '&:hover': { bgcolor: 'grey.50' } }}>
+                    <TableRow key={i} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
                       <TableCell><Typography variant="body2" sx={{ fontWeight: 500 }}>{job.name}</Typography></TableCell>
                       <TableCell><Typography variant="body2">{job.agent}</Typography></TableCell>
                       <TableCell><Typography variant="body2" sx={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{job.cron}</Typography></TableCell>
@@ -370,7 +370,7 @@ export default function AgentsPage() {
                 sx={{
                   py: 0.5, px: 1, borderRadius: 1,
                   bgcolor: entry.status === 'error' || entry.status === 'failed' ? 'rgba(244,67,54,0.04)' : undefined,
-                  '&:hover': { bgcolor: 'grey.50' }
+                  '&:hover': { bgcolor: 'action.hover' }
                 }}
                 divider={i < visibleActivity.length - 1}
               >
@@ -553,17 +553,17 @@ function AgentDetailDialog({ agent, onClose }) {
 
             <Divider sx={{ my: 1.5 }} />
 
-            {/* Tasks */}
-            {tasks.length > 0 && (
+            {/* Tasks — use MongoDB-backed editTasks when available, fallback to static */}
+            {((editTasks && editTasks.length > 0 ? editTasks : tasks).length > 0) && (
               <>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                   <AssignmentIcon fontSize="small" color="action" />
                   <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                    {t('agents.detail.tasks')} ({tasks.length})
+                    {t('agents.detail.tasks')} ({(editTasks && editTasks.length > 0 ? editTasks : tasks).length})
                   </Typography>
                 </Box>
                 <List dense disablePadding sx={{ mb: 2 }}>
-                  {tasks.map((task, i) => (
+                  {(editTasks && editTasks.length > 0 ? editTasks : tasks).map((task, i) => (
                     <ListItem key={i} sx={{ py: 0.15, pl: 2 }}>
                       <ListItemText primary={<Typography variant="body2">• {task}</Typography>} />
                     </ListItem>
@@ -684,7 +684,7 @@ function AgentDetailDialog({ agent, onClose }) {
                 <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
                   <Table size="small">
                     <TableHead>
-                      <TableRow sx={{ bgcolor: 'grey.50' }}>
+                      <TableRow sx={{ bgcolor: 'action.hover' }}>
                         <TableCell sx={{ fontWeight: 600, py: 0.5 }}>Job</TableCell>
                         <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.table.schedule')}</TableCell>
                         <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.description')}</TableCell>
@@ -918,7 +918,7 @@ function AgentDetailDialog({ agent, onClose }) {
                   sx={{
                     color: 'text.primary',
                     whiteSpace: 'pre-line',
-                    bgcolor: 'grey.50',
+                    bgcolor: 'action.hover',
                     p: 1.5,
                     borderRadius: 1,
                     fontFamily: 'inherit'
