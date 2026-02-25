@@ -30,7 +30,7 @@ function CountBadge({ label, count, color }) {
       <Chip
         label={count}
         size="small"
-        sx={{ height: 22, fontSize: '0.75rem', fontWeight: 700, bgcolor: count > 0 ? color : '#e2e8f0', color: count > 0 ? '#fff' : 'text.secondary' }}
+        sx={{ height: 22, fontSize: '0.75rem', fontWeight: 700, bgcolor: count > 0 ? color : 'action.disabledBackground', color: count > 0 ? '#fff' : 'text.secondary' }}
       />
     </Box>
   );
@@ -54,7 +54,7 @@ export default function SystemHealthCard({ health, healthSummary }) {
         <StatusBadge label="BullMQ" status={checks.bullmq?.status || 'unhealthy'} />
 
         {/* Agent health summary (24h) — B5: same source as daily email */}
-        <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid #e2e8f0' }}>
+        <Box sx={{ mt: 1.5, pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
           <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
             {t('dashboard.agentHealth')}
           </Typography>
@@ -63,7 +63,7 @@ export default function SystemHealthCard({ health, healthSummary }) {
           <CountBadge label={t('dashboard.jobs24h')} count={summary.jobs ?? 0} color="#2e7d32" />
         </Box>
 
-        <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid #e2e8f0' }}>
+        <Box sx={{ mt: 1.5, pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
             <Typography variant="body2" color="text.secondary">{t('dashboard.uptime')}</Typography>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>

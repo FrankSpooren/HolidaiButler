@@ -131,6 +131,7 @@
     },
     "partial": "Einige Datenquellen sind nicht erreichbar. Angezeigte Daten k\u00f6nnen unvollst\u00e4ndig sein.",
     "noResults": "Keine Agents f\u00fcr die ausgew\u00e4hlten Filter gefunden.",
+    "scheduledJobs": "Geplante Aufgaben",
     "noActivity": "Keine aktuelle Aktivit\u00e4t",
     "close": "Schlie\u00dfen"
   },

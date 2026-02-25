@@ -538,7 +538,7 @@ function AuditLogTable({ page, setPage, action, setAction }) {
       <TableContainer>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: '#f8fafc' } }}>
+            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
               <TableCell>{t('settings.audit.date')}</TableCell>
               <TableCell>{t('settings.audit.action')}</TableCell>
               <TableCell>{t('settings.audit.user')}</TableCell>

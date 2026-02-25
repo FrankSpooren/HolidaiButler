@@ -131,6 +131,7 @@
     },
     "partial": "Algunas fuentes de datos no est\u00e1n disponibles. Los datos mostrados pueden estar incompletos.",
     "noResults": "No se encontraron agentes para los filtros seleccionados.",
+    "scheduledJobs": "Tareas programadas",
     "noActivity": "Sin actividad reciente",
     "close": "Cerrar"
   },

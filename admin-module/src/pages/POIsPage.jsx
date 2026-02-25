@@ -231,7 +231,7 @@ export default function POIsPage() {
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: '#f8fafc' } }}>
+            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
               {SORTABLE_COLUMNS.map(col => (
                 <TableCell key={col.id} align={col.align}>
                   <TableSortLabel
@@ -465,7 +465,7 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
                         component="img"
                         src={img.url}
                         alt={`${poi.name} ${i + 1}`}
-                        sx={{ height: 80, width: 100, borderRadius: 1, objectFit: 'cover', border: i === 0 ? '2px solid #1976d2' : '1px solid #e2e8f0' }}
+                        sx={{ height: 80, width: 100, borderRadius: 1, objectFit: 'cover', border: (theme) => i === 0 ? '2px solid #1976d2' : `1px solid ${theme.palette.divider}` }}
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                       {/* C2: Image numbering — Primary badge or number */}

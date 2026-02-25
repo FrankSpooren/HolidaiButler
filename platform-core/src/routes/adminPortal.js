@@ -44,7 +44,7 @@
  *   GET  /analytics/pageviews  — Pageview analytics (page_views table, GDPR compliant)
  *
  * @module routes/adminPortal
- * @version 3.6.0
+ * @version 3.9.0
  */
 
 import { Router } from 'express';
@@ -3296,23 +3296,39 @@ router.get('/analytics/pageviews', adminAuth('reviewer'), destinationScope, asyn
       { replacements: destParams, type: QueryTypes.SELECT }
     );
 
-    // By page type
+    // Date range filter based on period (shared by byPageType and topPois)
+    let periodDateFilter = '';
+    let pvPeriodDateFilter = ''; // For JOINed queries using pv alias
+    const periodParams = [...destParams];
+    if (period === 'day') {
+      periodDateFilter = ' AND created_at >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)';
+      pvPeriodDateFilter = ' AND pv.created_at >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)';
+    } else if (period === 'week') {
+      periodDateFilter = ' AND created_at >= DATE_SUB(CURDATE(), INTERVAL 90 WEEK)';
+      pvPeriodDateFilter = ' AND pv.created_at >= DATE_SUB(CURDATE(), INTERVAL 90 WEEK)';
+    }
+    // month = all time (no additional filter)
+
+    // By page type (filtered by period)
+    const byTypeWhere = destWhere.length > 0
+      ? `WHERE ${destWhere[0]}${periodDateFilter}`
+      : (periodDateFilter ? `WHERE 1=1${periodDateFilter}` : '');
     const byPageType = await mysqlSequelize.query(
       `SELECT page_type as type, COUNT(*) as count
-       FROM page_views ${whereClause}
+       FROM page_views ${byTypeWhere}
        GROUP BY page_type ORDER BY count DESC`,
-      { replacements: destParams, type: QueryTypes.SELECT }
+      { replacements: periodParams, type: QueryTypes.SELECT }
     );
 
-    // Top POIs (by views)
+    // Top POIs (by views, filtered by period)
     const topPois = await mysqlSequelize.query(
       `SELECT pv.poi_id, p.name, COUNT(*) as views
        FROM page_views pv
        LEFT JOIN POI p ON pv.poi_id = p.id
-       WHERE pv.poi_id IS NOT NULL ${destWhere.length > 0 ? 'AND pv.' + destWhere[0] : ''}
+       WHERE pv.poi_id IS NOT NULL ${destWhere.length > 0 ? 'AND pv.' + destWhere[0] : ''}${pvPeriodDateFilter}
        GROUP BY pv.poi_id, p.name
        ORDER BY views DESC LIMIT 10`,
-      { replacements: destParams, type: QueryTypes.SELECT }
+      { replacements: periodParams, type: QueryTypes.SELECT }
     );
 
     // First record date
