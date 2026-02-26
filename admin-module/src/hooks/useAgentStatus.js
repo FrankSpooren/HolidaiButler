@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchAgentStatus, fetchAgentConfigs, updateAgentConfig } from '../api/agentService';
+import { fetchAgentStatus, fetchAgentConfigs, updateAgentConfig, fetchAgentResults } from '../api/agentService';
 
 export const useAgentStatus = (filters = {}) => {
   return useQuery({
@@ -17,6 +17,17 @@ export const useAgentConfigs = () => {
     queryKey: ['agent-configs'],
     queryFn: fetchAgentConfigs,
     staleTime: 5 * 1000
+  });
+};
+
+export const useAgentResults = (agentKey) => {
+  return useQuery({
+    queryKey: ['agent-results', agentKey],
+    queryFn: () => fetchAgentResults(agentKey),
+    enabled: !!agentKey,
+    staleTime: 30 * 1000,
+    retry: 1,
+    select: (response) => response.data?.data || response.data
   });
 };
 

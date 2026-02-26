@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -11,7 +11,8 @@
  *   GET  /auth/me              — Current admin user info
  *   GET  /dashboard            — KPI data (Redis cached 120s)
  *   GET  /health               — System health checks
- *   GET  /agents/status        — Agent status dashboard (Redis cached 60s)
+ *   GET  /agents/status        — Agent status dashboard (Redis cached 60s, deactivated support)
+ *   GET  /agents/:key/results  — Agent run results (last 5 runs with output data)
  *   GET  /agents/config        — Agent configurations (MongoDB)
  *   PUT  /agents/config/:key   — Update agent configuration (admin audit)
  *   GET  /pois                 — POI list with pagination, search, filters
@@ -44,7 +45,7 @@
  *   GET  /analytics/pageviews  — Pageview analytics (page_views table, GDPR compliant)
  *
  * @module routes/adminPortal
- * @version 3.9.0
+ * @version 3.10.0
  */
 
 import { Router } from 'express';
@@ -1068,6 +1069,8 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (maandag 06:00 UTC) — wacht op volgende run` } },
   { id: 'architect', name: 'De Architect', englishName: 'Architecture Agent', category: 'strategy', type: 'B',
+    active: false, deactivatedReason: 'Onvoldoende waarde in huidige fase (★★☆☆☆). Reactiveren bij 3+ destinations.',
+    deactivatedDate: '2026-02-26',
     description: 'Architectuur assessment en aanbevelingen',
     description_en: 'Architecture assessment and recommendations',
     tasks: ['Architectuur compliance checks', 'Schaalbaarheid analyse', 'Technische schuld detectie', 'Multi-destination architectuur review'],
@@ -1080,6 +1083,8 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (zondag 03:00 UTC) — wacht op volgende run` } },
   { id: 'leermeester', name: 'De Leermeester', englishName: 'Learning Agent', category: 'strategy', type: 'A',
+    active: false, deactivatedReason: 'Onvoldoende waarde in huidige fase (★★☆☆☆). Reactiveren bij voldoende gebruikersdata.',
+    deactivatedDate: '2026-02-26',
     description: 'Pattern learning en optimalisatie',
     description_en: 'Pattern learning and optimization',
     tasks: ['Gebruikerspatronen herkennen', 'Optimalisatie suggesties genereren', 'A/B test resultaten analyseren', 'Learning patterns opslaan in MongoDB'],
@@ -1092,6 +1097,8 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (maandag 05:30 UTC) — wacht op volgende run` } },
   { id: 'thermostaat', name: 'De Thermostaat', englishName: 'Adaptive Config Agent', category: 'strategy', type: 'A',
+    active: false, deactivatedReason: 'Onvoldoende waarde in huidige fase (★★☆☆☆). Reactiveren bij complexere configuratie-eisen.',
+    deactivatedDate: '2026-02-26',
     description: 'Configuratie evaluatie en alerting',
     description_en: 'Configuration evaluation and alerting',
     tasks: ['Systeem configuratie evalueren', 'Performance threshold monitoring', 'Configuratie drift detectie', 'Alerting bij afwijkingen'],
@@ -1295,7 +1302,9 @@ function cronToHuman(cron) {
 /**
  * Calculate agent status based on last run and schedule
  */
-function calculateAgentStatus(lastRun, schedule) {
+function calculateAgentStatus(lastRun, schedule, meta) {
+  // Deactivated agents always return 'deactivated'
+  if (meta?.active === false) return 'deactivated';
   if (!lastRun) return 'unknown';
   if (lastRun.status === 'error' || lastRun.status === 'failed') return 'error';
 
@@ -1381,8 +1390,11 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
         schedule: meta.schedule,
         scheduleHuman: cronToHuman(meta.schedule),
         errorInstructions: meta.errorInstructions || null,
+        active: meta.active !== false,
+        deactivatedReason: meta.deactivatedReason || null,
+        deactivatedDate: meta.deactivatedDate || null,
         destinationAware: meta.type === 'A',
-        status: 'unknown',
+        status: meta.active === false ? 'deactivated' : 'unknown',
         lastRun: null,
         destinations: meta.type === 'A' ? { calpe: { lastRun: null, status: 'unknown' }, texel: { lastRun: null, status: 'unknown' } } : null
       };
@@ -1455,7 +1467,7 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
               status: latest.lastStatus === 'completed' ? 'success' : latest.lastStatus || 'unknown',
               error: latest.lastResult?.success === false ? (latest.lastResult?.error || latest.lastDescription) : null
             };
-            agent.status = calculateAgentStatus(agent.lastRun, meta.schedule);
+            agent.status = calculateAgentStatus(agent.lastRun, meta.schedule, meta);
           }
         }
 
@@ -1519,7 +1531,7 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
                 status: smokeResult.total_failed === 0 ? 'success' : 'partial',
                 error: smokeResult.total_failed > 0 ? `${smokeResult.total_failed}/${smokeResult.total_tests} tests failed` : null
               };
-              smokeAgent.status = calculateAgentStatus(smokeAgent.lastRun, AGENT_METADATA.find(m => m.id === 'smokeTest').schedule);
+              smokeAgent.status = calculateAgentStatus(smokeAgent.lastRun, AGENT_METADATA.find(m => m.id === 'smokeTest').schedule, AGENT_METADATA.find(m => m.id === 'smokeTest'));
               if (smokeAgent.destinations) {
                 if (smokeResult.destinations?.calpe) {
                   smokeAgent.destinations.calpe = {
@@ -1547,7 +1559,7 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
                 status: contentResult.overall_score >= 8 ? 'success' : 'partial',
                 error: contentResult.overall_score < 8 ? `Quality score: ${contentResult.overall_score}/10` : null
               };
-              contentAgent.status = calculateAgentStatus(contentAgent.lastRun, AGENT_METADATA.find(m => m.id === 'contentQuality').schedule);
+              contentAgent.status = calculateAgentStatus(contentAgent.lastRun, AGENT_METADATA.find(m => m.id === 'contentQuality').schedule, AGENT_METADATA.find(m => m.id === 'contentQuality'));
             }
           }
 
@@ -1590,7 +1602,7 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
                 status: 'success',
                 error: null
               };
-              thermoAgent.status = calculateAgentStatus(thermoAgent.lastRun, AGENT_METADATA.find(m => m.id === 'thermostaat').schedule);
+              thermoAgent.status = calculateAgentStatus(thermoAgent.lastRun, AGENT_METADATA.find(m => m.id === 'thermostaat').schedule, AGENT_METADATA.find(m => m.id === 'thermostaat'));
             }
           }
         }
@@ -1648,7 +1660,8 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
       healthy: agents.filter(a => a.status === 'healthy').length,
       warning: agents.filter(a => a.status === 'warning').length,
       error: agents.filter(a => a.status === 'error').length,
-      unknown: agents.filter(a => a.status === 'unknown').length
+      unknown: agents.filter(a => a.status === 'unknown').length,
+      deactivated: agents.filter(a => a.status === 'deactivated').length
     };
 
     // ── RBAC: filter Cat A agent destination data + recentActivity by destScope ──
@@ -1712,6 +1725,116 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
     res.status(500).json({
       success: false,
       error: { code: 'SERVER_ERROR', message: 'An error occurred fetching agent status' }
+    });
+  }
+});
+
+/**
+ * GET /agents/:key/results
+ * Agent run results: last 5 runs with output data from MongoDB audit_logs.
+ * Returns concrete run output for the Results tab in agent detail dialog.
+ */
+router.get('/agents/:key/results', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const { key } = req.params;
+    const meta = AGENT_METADATA.find(m => m.id === key);
+    if (!meta) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: `Agent '${key}' not found` }
+      });
+    }
+
+    const results = [];
+
+    if (mongoose.connection.readyState === 1) {
+      const db = mongoose.connection.db;
+      const auditLogs = db.collection('audit_logs');
+
+      // Get last 5 runs for this agent's actor names (last 30 days)
+      const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+      const logs = await auditLogs.find(
+        { 'actor.name': { $in: meta.actorNames }, timestamp: { $gte: since } }
+      ).sort({ timestamp: -1 }).limit(5).toArray();
+
+      for (const log of logs) {
+        results.push({
+          timestamp: log.timestamp,
+          action: log.action || log.description || 'unknown',
+          status: (log.status === 'completed' || log.status === 'success') ? 'success' : log.status || 'unknown',
+          duration: log.duration || null,
+          destination: log.metadata?.destinationId
+            ? (log.metadata.destinationId === 1 ? 'Calpe' : log.metadata.destinationId === 2 ? 'Texel' : 'All')
+            : 'All',
+          details: log.description || null,
+          result: log.result || null
+        });
+      }
+
+      // Supplement with monitoring collection data if applicable
+      if (key === 'smokeTest') {
+        const smokeResults = await db.collection('smoke_test_results').find({}).sort({ timestamp: -1 }).limit(5).toArray();
+        for (const sr of smokeResults) {
+          if (!results.find(r => Math.abs(new Date(r.timestamp) - new Date(sr.timestamp)) < 60000)) {
+            results.push({
+              timestamp: sr.timestamp,
+              action: 'smoke-test',
+              status: sr.total_failed === 0 ? 'success' : 'partial',
+              duration: null,
+              destination: 'All',
+              details: `${sr.total_passed}/${sr.total_tests} tests passed`,
+              result: { total_tests: sr.total_tests, total_passed: sr.total_passed, total_failed: sr.total_failed, destinations: sr.destinations }
+            });
+          }
+        }
+      } else if (key === 'contentQuality') {
+        const cqResults = await db.collection('content_quality_audits').find({}).sort({ timestamp: -1 }).limit(5).toArray();
+        for (const cq of cqResults) {
+          if (!results.find(r => Math.abs(new Date(r.timestamp) - new Date(cq.timestamp)) < 60000)) {
+            results.push({
+              timestamp: cq.timestamp,
+              action: 'content-quality-audit',
+              status: cq.overall_score >= 8 ? 'success' : 'partial',
+              duration: null,
+              destination: 'All',
+              details: `Quality score: ${cq.overall_score}/10`,
+              result: { overall_score: cq.overall_score, destinations: cq.destinations }
+            });
+          }
+        }
+      } else if (key === 'backupHealth') {
+        const bhResults = await db.collection('backup_health_checks').find({}).sort({ timestamp: -1 }).limit(5).toArray();
+        for (const bh of bhResults) {
+          if (!results.find(r => Math.abs(new Date(r.timestamp) - new Date(bh.timestamp)) < 60000)) {
+            results.push({
+              timestamp: bh.timestamp,
+              action: 'backup-health-check',
+              status: bh.overall === 'HEALTHY' ? 'success' : 'error',
+              duration: null,
+              destination: 'All',
+              details: `Backup status: ${bh.overall}`,
+              result: { overall: bh.overall, mysql: bh.mysql, mongodb: bh.mongodb, disk: bh.disk }
+            });
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp desc, limit to 5
+    results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    res.json({
+      success: true,
+      data: {
+        agent: { id: meta.id, name: meta.name, active: meta.active !== false },
+        results: results.slice(0, 5)
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Agent results error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching agent results' }
     });
   }
 });
