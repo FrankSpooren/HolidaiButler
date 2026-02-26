@@ -36,7 +36,8 @@ export const STATUS_COLORS = {
   healthy: '#4caf50',
   warning: '#ff9800',
   error: '#f44336',
-  unknown: '#9e9e9e'
+  unknown: '#9e9e9e',
+  deactivated: '#bdbdbd'
 };
 
 export const AGENT_DESCRIPTIONS_NL = {

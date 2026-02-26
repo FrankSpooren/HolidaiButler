@@ -15,3 +15,6 @@ export const fetchAgentConfigs = () =>
 
 export const updateAgentConfig = (key, data) =>
   client.put(`/agents/config/${key}`, data).then(r => r.data);
+
+export const fetchAgentResults = (key) =>
+  client.get(`/agents/${key}/results`);

@@ -62,6 +62,7 @@
     "warning": "Waarschuwing",
     "error": "Fout",
     "unknown": "Onbekend",
+    "deactivated": "Gedeactiveerd",
     "filter": {
       "all": "Alle",
       "core": "Core",
@@ -89,6 +90,7 @@
     "tabs": {
       "profile": "Profiel",
       "status": "Status",
+      "results": "Resultaten",
       "configuration": "Configuratie",
       "warnings": "Waarschuwingen"
     },
@@ -114,7 +116,17 @@
       "copied": "Gekopieerd naar klembord",
       "copyCommand": "Kopieer commando",
       "instructions": "Instructies",
-      "instructionsDefault": "Controleer de PM2 logs voor details over deze melding. Neem contact op met de Platform Admin als het probleem aanhoudt."
+      "instructionsDefault": "Controleer de PM2 logs voor details over deze melding. Neem contact op met de Platform Admin als het probleem aanhoudt.",
+      "deactivatedTitle": "Gedeactiveerd",
+      "deactivatedSince": "Gedeactiveerd sinds",
+      "deactivatedReason": "Reden",
+      "resultsTitle": "Laatste resultaten",
+      "noResults": "Geen resultaten gevonden voor deze agent.",
+      "resultAction": "Actie",
+      "resultStatus": "Status",
+      "resultDuration": "Duur",
+      "resultDestination": "Bestemming",
+      "resultDetails": "Details"
     },
     "config": {
       "title": "Agent configuratie",

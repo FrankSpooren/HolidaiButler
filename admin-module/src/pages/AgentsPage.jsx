@@ -18,7 +18,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from 'react-i18next';
-import { useAgentStatus, useAgentConfigs, useUpdateAgentConfig } from '../hooks/useAgentStatus';
+import { useAgentStatus, useAgentConfigs, useUpdateAgentConfig, useAgentResults } from '../hooks/useAgentStatus';
 import useAuthStore from '../stores/authStore.js';
 import { getAgentIcon, getAgentDescription, getAgentTasks, formatTimestamp, CATEGORY_COLORS, STATUS_COLORS } from '../utils/agents';
 
@@ -60,7 +60,7 @@ export default function AgentsPage() {
       else if (sortBy === 'category') cmp = a.category.localeCompare(b.category) || a.name.localeCompare(b.name);
       else if (sortBy === 'type') cmp = a.type.localeCompare(b.type);
       else if (sortBy === 'status') {
-        const order = { error: 0, warning: 1, unknown: 2, healthy: 3 };
+        const order = { error: 0, warning: 1, unknown: 2, healthy: 3, deactivated: 4 };
         cmp = (order[a.status] ?? 2) - (order[b.status] ?? 2);
       }
       return sortDir === 'asc' ? cmp : -cmp;
@@ -68,7 +68,7 @@ export default function AgentsPage() {
     return list;
   }, [data?.agents, categoryFilter, sortDir, sortBy]);
 
-  const summary = data?.summary || { total: 0, healthy: 0, warning: 0, error: 0, unknown: 0 };
+  const summary = data?.summary || { total: 0, healthy: 0, warning: 0, error: 0, unknown: 0, deactivated: 0 };
   const visibleActivity = activityExpanded ? (data?.recentActivity || []).slice(0, 50) : (data?.recentActivity || []).slice(0, 10);
 
   // Status dot component
@@ -164,7 +164,7 @@ export default function AgentsPage() {
           { key: 'healthy', value: summary.healthy, color: STATUS_COLORS.healthy },
           { key: 'warning', value: summary.warning, color: STATUS_COLORS.warning },
           { key: 'error', value: summary.error, color: STATUS_COLORS.error },
-          { key: 'unknown', value: summary.unknown, color: STATUS_COLORS.unknown }
+          { key: 'deactivated', value: summary.deactivated, color: STATUS_COLORS.deactivated }
         ].map(({ key, value, color }) => (
           <Grid item xs={6} md={3} key={key}>
             <Card sx={{ borderTop: `3px solid ${color}` }}>
@@ -249,7 +249,8 @@ export default function AgentsPage() {
                   onClick={() => setSelectedAgent(agent)}
                   sx={{
                     cursor: 'pointer',
-                    bgcolor: agent.status === 'error' ? 'rgba(244,67,54,0.04)' : undefined,
+                    bgcolor: agent.status === 'error' ? 'rgba(244,67,54,0.04)' : agent.status === 'deactivated' ? 'rgba(0,0,0,0.03)' : undefined,
+                    opacity: agent.status === 'deactivated' ? 0.6 : 1,
                     '&:hover': { bgcolor: 'action.hover' }
                   }}
                 >
@@ -411,6 +412,7 @@ function AgentDetailDialog({ agent, onClose }) {
   const descriptionNL = getAgentDescription(agent.name);
   const tasks = getAgentTasks(agent.name);
   const hasWarning = agent.status === 'warning' || agent.status === 'error';
+  const isDeactivated = agent.status === 'deactivated' || agent.active === false;
 
   const [tabValue, setTabValue] = useState(0);
   const [snack, setSnack] = useState({ open: false, message: '' });
@@ -478,10 +480,14 @@ function AgentDetailDialog({ agent, onClose }) {
     : status === 'error' ? STATUS_COLORS.error
     : STATUS_COLORS.unknown;
 
+  // Agent results hook
+  const { data: resultsData, isLoading: resultsLoading } = useAgentResults(agent.id);
+
   // Build tab list dynamically
   const tabDefs = [
     { key: 'profile', label: t('agents.tabs.profile') },
-    { key: 'status', label: t('agents.tabs.status') }
+    { key: 'status', label: t('agents.tabs.status') },
+    { key: 'results', label: t('agents.tabs.results') }
   ];
   if (isPlatformAdmin) tabDefs.push({ key: 'config', label: t('agents.tabs.configuration'), icon: <SettingsIcon sx={{ fontSize: 16 }} /> });
   if (hasWarning) tabDefs.push({
@@ -527,6 +533,25 @@ function AgentDetailDialog({ agent, onClose }) {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               {i18n.language === 'nl' ? (descriptionNL || agent.description) : (agent.description_en || agent.description)}
             </Typography>
+
+            {/* Deactivated info banner */}
+            {isDeactivated && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {t('agents.detail.deactivatedTitle')}
+                </Typography>
+                {agent.deactivatedDate && (
+                  <Typography variant="body2">
+                    {t('agents.detail.deactivatedSince')}: {agent.deactivatedDate}
+                  </Typography>
+                )}
+                {agent.deactivatedReason && (
+                  <Typography variant="body2">
+                    {t('agents.detail.deactivatedReason')}: {agent.deactivatedReason}
+                  </Typography>
+                )}
+              </Alert>
+            )}
 
             {/* Identity grid */}
             <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -761,7 +786,82 @@ function AgentDetailDialog({ agent, onClose }) {
           </Box>
         )}
 
-        {/* ═══ TAB 3 — CONFIGURATIE (platform_admin only) ═══ */}
+        {/* ═══ TAB 3 — RESULTATEN ═══ */}
+        {currentTab === 'results' && (
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
+              {t('agents.detail.resultsTitle')}
+            </Typography>
+            {resultsLoading ? (
+              <Box sx={{ py: 2 }}>
+                {[...Array(3)].map((_, i) => <Skeleton key={i} height={48} sx={{ mb: 1 }} />)}
+              </Box>
+            ) : (resultsData?.results?.length || 0) === 0 ? (
+              <Alert severity="info">{t('agents.detail.noResults')}</Alert>
+            ) : (
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: 'action.hover' }}>
+                      <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.lastUpdated')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.resultAction')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.resultStatus')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.resultDestination')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.resultDuration')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.resultDetails')}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {resultsData.results.map((run, i) => (
+                      <TableRow key={i} sx={{
+                        bgcolor: run.status === 'error' ? 'rgba(244,67,54,0.04)' : undefined,
+                        '&:hover': { bgcolor: 'action.hover' }
+                      }}>
+                        <TableCell sx={{ py: 0.5 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {run.timestamp ? new Date(run.timestamp).toLocaleString('nl-NL') : '\u2014'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 0.5 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>{run.action}</Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 0.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Box sx={{
+                              width: 8, height: 8, borderRadius: '50%',
+                              bgcolor: run.status === 'success' ? STATUS_COLORS.healthy
+                                : run.status === 'error' ? STATUS_COLORS.error
+                                : run.status === 'partial' ? STATUS_COLORS.warning
+                                : STATUS_COLORS.unknown
+                            }} />
+                            <Typography variant="body2" sx={{ textTransform: 'capitalize', fontSize: '0.8rem' }}>
+                              {run.status}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ py: 0.5 }}>
+                          <Chip label={run.destination || 'All'} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+                        </TableCell>
+                        <TableCell sx={{ py: 0.5 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {run.duration ? `${run.duration}ms` : '\u2014'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 0.5 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {run.details || (run.result ? JSON.stringify(run.result).substring(0, 80) : '\u2014')}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Box>
+        )}
+
+        {/* ═══ TAB 4 — CONFIGURATIE (platform_admin only) ═══ */}
         {currentTab === 'config' && isPlatformAdmin && (
           <Box>
             {configLoading || !configForm ? (
