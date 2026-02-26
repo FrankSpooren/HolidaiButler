@@ -1020,11 +1020,12 @@ const AGENT_METADATA = [
 5. Herstart API: pm2 restart holidaibutler-api
 6. Wacht op volgende run (elke 4 uur) en verifieer status` } },
   { id: 'stylist', name: 'De Stylist', englishName: 'UX/UI Agent', category: 'development', type: 'B',
-    description: 'UX/UI review en brand consistency',
-    description_en: 'UX/UI review and brand consistency',
-    tasks: ['Brand kleur consistentie checks', 'Destination-specifieke styling verificatie', 'Accessibility compliance', 'UI component kwaliteit'],
-    monitoring_scope: 'Frontend componenten, brand kleuren, styling',
-    output_description: 'UX review rapporten, brand violation alerts',
+    description: 'Minimaal: brand kleur check per destination (geen Playwright/Lighthouse)',
+    description_en: 'Minimal: brand color check per destination (no Playwright/Lighthouse)',
+    tasks: ['Brand kleur consistentie check via DESTINATION_BRAND_COLORS'],
+    monitoring_scope: 'Brand kleuren per destination',
+    output_description: 'Geen directe rapporten — output via dev-layer wrapper',
+    functionalityLevel: 'minimal',
     schedule: '0 6 * * 1', actorNames: ['dev-layer'],
     errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "UX"
 2. Controleer brand configuratie per destination in config/destinations/
@@ -1032,11 +1033,12 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (maandag 06:00 UTC) — wacht op volgende run` } },
   { id: 'corrector', name: 'De Corrector', englishName: 'Code Agent', category: 'development', type: 'B',
-    description: 'Code quality en best practices',
-    description_en: 'Code quality and best practices',
-    tasks: ['Code kwaliteit analyse', 'Best practices verificatie', 'Dependency vulnerability checks', 'Performance bottleneck detectie'],
-    monitoring_scope: 'Codebase kwaliteit, dependencies, performance',
-    output_description: 'Code quality rapporten, vulnerability alerts',
+    description: 'Minimaal: geen actieve code analyse (geen ESLint/Lighthouse integratie)',
+    description_en: 'Minimal: no active code analysis (no ESLint/Lighthouse integration)',
+    tasks: ['Gepland: code kwaliteit analyse (niet geïmplementeerd)'],
+    monitoring_scope: 'Codebase kwaliteit (aspirationeel)',
+    output_description: 'Geen rapporten — functionaliteit niet geïmplementeerd',
+    functionalityLevel: 'minimal',
     schedule: '0 6 * * 1', actorNames: ['dev-layer'],
     errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Code"
 2. Bij dependency vulnerabilities: npm audit --production
@@ -1044,11 +1046,12 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (maandag 06:00 UTC) — wacht op volgende run` } },
   { id: 'bewaker', name: 'De Bewaker', englishName: 'Security Agent', category: 'development', type: 'B',
-    description: 'Security scanning en vulnerability checks',
-    description_en: 'Security scanning and vulnerability checks',
-    tasks: ['Dependency vulnerability scanning', 'API security checks', 'Authentication flow verificatie', 'Rate limiting effectiviteit'],
-    monitoring_scope: 'Dependencies, API endpoints, auth flows',
-    output_description: 'Security scan rapporten, vulnerability alerts',
+    description: 'Minimaal: geen actieve security scans (geen OWASP/ZAP integratie)',
+    description_en: 'Minimal: no active security scans (no OWASP/ZAP integration)',
+    tasks: ['Gepland: security scanning (niet geïmplementeerd)'],
+    monitoring_scope: 'Security (aspirationeel)',
+    output_description: 'Geen rapporten — 0 security scans uitgevoerd',
+    functionalityLevel: 'minimal',
     schedule: '0 2 * * *', actorNames: ['dev-layer'],
     errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Security"
 2. Bij dependency vulnerabilities: npm audit --production

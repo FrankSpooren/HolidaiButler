@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 26 februari 2026
-**Versie**: 7.9
+**Versie**: 7.10
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 10A-RESTANT + 10B COMPLEET. 10A-R: Agent config datacorruptie fix (0 placeholders), Threema CONFIGURED geverifieerd, CLAUDE.md versie-fix. 10B: npm audit (17→2 vuln), security headers audit, secrets scan, De Bewaker status. adminPortal.js v3.10.0 (42 endpoints). Kosten: EUR 0.
+**Status**: FASE 10C COMPLEET. Apache security headers (5 domeinen, ServerTokens Prod), live verificatie 10A (10/10 PASS), aspirationele agents eerlijk gelabeld, Sessions.user_id VARCHAR(36). adminPortal.js v3.10.0 (42 endpoints). CLAUDE.md v3.44.0. Kosten: EUR 0.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.43.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.44.0) in repo root + Hetzner
 
 ---
 
@@ -68,6 +68,7 @@
 | **Fase 10A** | Agent Ecosysteem Optimalisatie (Apify Scenario A, Threema CONFIGURED, 3 agents gedeactiveerd, dashboard eerlijkheid 4 statussen, resultaten tab — adminPortal.js v3.10.0, 42 endpoints) | ✅ COMPLEET | 26-02-2026 | 9 bestanden, +309/-23 | EUR 0 |
 | **Fase 10A-R** | Restant: Agent config datacorruptie fix (backend validatie + frontend filter + MongoDB restore), Threema CONFIGURED geverifieerd, CLAUDE.md versie-fix | ✅ COMPLEET | 26-02-2026 | 0 placeholders | EUR 0 |
 | **Fase 10B** | Security Hardening: npm audit fix (17→2 vuln), hardcoded secrets scan, security headers audit, De Bewaker status — rapport op Hetzner | ✅ COMPLEET | 26-02-2026 | 0C/0H vulnerabilities | EUR 0 |
+| **Fase 10C** | Apache Hardening (5 domeinen headers + ServerTokens) + Live Verificatie 10A (10/10 PASS) + Aspirationele agents eerlijk gelabeld + Sessions.user_id VARCHAR(36) | ✅ COMPLEET | 26-02-2026 | 5 domeinen beveiligd | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -101,6 +102,7 @@
 | Fase 10A Agent Ecosysteem Optimalisatie | EUR 0 | EUR 0 | ✅ |
 | Fase 10A-R Restant (config fix, Threema, versie) | EUR 0 | EUR 0 | ✅ |
 | Fase 10B Security Hardening | EUR 0 | EUR 0 | ✅ |
+| Fase 10C Apache Hardening + Agent Eerlijkheid + Sessions Fix | EUR 0 | EUR 0 | ✅ |
 | **Totaal** | **EUR 95** | **EUR 74,41** | **78,3% van budget** |
 
 ### 1.3 Openstaande Componenten
@@ -1042,6 +1044,13 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - De Bewaker agent (security-reviewer) heeft 0 security scans uitgevoerd — aspirationele agents zijn een structureel patroon dat bij volgende fase moet worden geadresseerd
 - `Server: Apache/2.4.58` header exposed op alle domeinen — `ServerTokens Prod` in apache2.conf verbergt versienummer
 
+### Fase 10C (26/02) - Apache Hardening + Agent Eerlijkheid + Live Verificatie
+- `sites-enabled` bestanden kunnen reguliere bestanden zijn i.p.v. symlinks — altijd verifiëren na wijziging in `sites-available`
+- CSP header bewust NIET toevoegen in eerste fase — kan inline scripts/fonts/CDN breken, vereist uitgebreide testing
+- FK constraints blokkeren ALTER TABLE — altijd foreign keys checken vóór schema wijzigingen
+- Aspirationele agents: eerlijk labelen is beter dan deactiveren als de eigenaar ze wil behouden — `functionalityLevel` veld biedt gradueel onderscheid
+- Live verificatie via API is een betrouwbare proxy voor browser tests bij goed gestructureerde endpoints
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -1149,6 +1158,11 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 26-02 | npm audit fix zonder --force (10B) | 17→2 vulnerabilities (2 dev-only moderate). --force vermijden om breaking changes te voorkomen | Claude Code |
 | 26-02 | Frontend security headers = Apache (10B) | Express/Helmet dekt API. Apache vhosts missen X-Frame-Options, CSP, X-Content-Type — P1 aanbeveling voor hardening | Claude Code |
 | 26-02 | De Bewaker aspirationeel (10B) | 0 security scan entries in audit_logs — agent naam belooft meer dan functionaliteit, bewust gedocumenteerd | Claude Code |
+| 26-02 | Apache security headers 4x (10C) | X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy — CSP bewust overgeslagen (complex) | Claude Code |
+| 26-02 | ServerTokens Prod (10C) | Apache versienummer verbergen op alle domeinen — voorkomt version fingerprinting | Claude Code |
+| 26-02 | Aspirationele agents labelen (10C) | Frank kiest "alleen labelen, niet deactiveren" — eerlijke beschrijvingen + functionalityLevel: minimal | Owner + Claude Code |
+| 26-02 | Sessions.user_id VARCHAR(36) (10C) | FK fk_session_user gedropped + ALTER TABLE — permanente fix voor UUID/INT mismatch | Claude Code |
+| 26-02 | texelmaps.nl sites-enabled symlink (10C) | Regulier bestand vervangen door symlink naar sites-available — voorkomt config drift | Claude Code |
 
 ---
 
@@ -1165,13 +1179,15 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 337 Texel Accommodation zonder EN | Laag | Geaccepteerd (is_hidden_category) |
 | Opening repetitie ("The scent of" 162x) | Laag | Open |
 | PL/SV kolommen ongebruikt | Laag | Open — kandidaten voor opschonen |
-| Sessions.user_id INT vs admin UUID | Medium | ⚠️ Workaround (non-blocking INSERT). Permanente fix: ALTER TABLE Sessions MODIFY user_id VARCHAR(36) |
+| Sessions.user_id INT vs admin UUID | Medium | ✅ Gemitigeerd — ALTER TABLE MODIFY VARCHAR(36), FK dropped, backward compatible |
 | SSL cert vervalt 2026-05-11 | Medium | ✅ Gemitigeerd (De Dokter SSL monitoring) |
 | Config structure mismatch (c.id vs c.destination.id) | Hoog | ✅ Gemitigeerd (config mapping fix in BaseAgent + destinationRunner) |
 | Threema Gateway configuratie | Medium | ✅ Gemitigeerd — env vars gezet (*HOL1791 / V9VUJ8K6), smoke test: CONFIGURED |
 | Agent registry circular imports | Medium | ✅ Gemitigeerd (metadata-only registry, geen agent imports) |
 | Windows line endings in deploy scripts | Laag | ✅ Gemitigeerd (sed strip protocol) |
 | Agent status threshold berekening | Medium | ✅ Gemitigeerd (cron-aware thresholds: dagelijks 25h, wekelijks 7d, maandelijks 31d) |
+| Frontend security headers ontbreken | Hoog | ✅ Gemitigeerd (10C) — 4 headers + ServerTokens Prod op alle 5 frontend/admin domeinen |
+| Aspirationele agents (Stylist/Corrector/Bewaker) | Laag | ✅ Gemitigeerd (10C) — eerlijk gelabeld met functionalityLevel: minimal |
 
 ---
 
@@ -1230,6 +1246,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.10** | **26-02-2026** | **Fase 10C Apache Hardening + Agent Eerlijkheid + Live Verificatie COMPLEET. (A) Apache security headers op 5 domeinen (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) + ServerTokens Prod + ServerSignature Off. texelmaps.nl sites-enabled symlink fix. (B) Live verificatie 10A: 10/10 PASS (summary cards, deactivated agents, results tab, calculateAgentStatus). (C) Aspirationele agents eerlijk gelabeld (Stylist/Corrector/Bewaker): description + tasks + output_description bijgewerkt naar actuele functionaliteit, functionalityLevel: minimal. Frank kiest: labelen, NIET deactiveren. (D) Sessions.user_id INT→VARCHAR(36): FK dropped, ALTER TABLE, login OK, 0 truncation errors. 5 Lessons Learned, 5 Beslissingen Log, 2 Risico Register entries. CLAUDE.md v3.44.0.** |
 | **7.9** | **26-02-2026** | **Fase 10A-Restant + 10B Security Hardening COMPLEET. 10A-R: Agent config datacorruptie fix (backend placeholder validatie + frontend filter + MongoDB restore contentQuality tasks), Threama CONFIGURED geverifieerd (smoke test), CLAUDE.md versie-fix. 10B: npm audit fix (17→2 vulnerabilities, 0 critical/high), hardcoded secrets scan (1 dev-only DEV_FALLBACK_USER, 0 productie), security headers audit (API OK via Helmet, frontend Apache vhosts missen headers → P1), De Bewaker 0 security scans (aspirationeel), `/root/fase_10b_security_rapport.md`. 7 Beslissingen Log entries. adminPortal.js v3.10.0. CLAUDE.md v3.43.0.** |
 | **7.8** | **26-02-2026** | **Fase 10A Agent Ecosysteem Optimalisatie COMPLEET: 5 items. (1) Apify Scenario A: bevestigd, geen integratie nodig. (2) Threema: CONFIGURED status in smoke tests. (3) Agent deactivering: De Architect, De Leermeester, De Thermostaat → active=false in AGENT_METADATA + calculateAgentStatus() meta parameter. (4) Dashboard eerlijkheid: 4 statussen (healthy/warning/error/deactivated), opacity 0.6 + info banner voor gedeactiveerde agents, i18n 4 talen. (5) Resultaten tab: GET /agents/:key/results (MongoDB audit_logs + monitoring collections, laatste 5 runs), frontend tabel met timestamp/action/status/destination/duration/details. 9 bestanden gewijzigd (+309/-23). adminPortal.js v3.10.0 (42 endpoints). Kosten: EUR 0. CLAUDE.md v3.42.0.** |
 | **7.7** | **25-02-2026** | **Fase 9I UX Polish + Data Consistentie + Analytics COMPLEET: 7 items. P1: Hetzner backup verificatie + Mistral token refresh. P2: Agent profiel tab MongoDB tasks sync (useEffect init, staleTime 5s). P3: Daily email vs dashboard data consistentie (shared getSystemHealthSummary). P4: Dark mode contrast alle pagina's (7 bestanden, palette tokens i.p.v. hardcoded hex). P5: scheduledJobs i18n 4 talen + popup datum fix. P6: Analytics granulatie dag/week/maand + default dag + cel-bars kleuren. P7: MS documentatie gaps 9H (Lessons Learned, Beslissingen Log, Changelog). Bug fix: SQL created_at ambiguity in pageviews JOIN → pvPeriodDateFilter. 14 bestanden gewijzigd. adminPortal.js v3.9.0. 15/15 tests PASS. Kosten: EUR 0. CLAUDE.md v3.40.0.** |
@@ -1263,5 +1280,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 26 februari 2026 - Fase 10A-R + 10B COMPLEET (Security Hardening), Master Document v7.9*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→10B COMPLEET. Admin Portal: 42 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC. adminPortal.js v3.10.0. Security: 0 critical/high vulnerabilities.*
+*Laatst bijgewerkt: 26 februari 2026 - Fase 10C COMPLEET (Apache Hardening + Agent Eerlijkheid + Sessions Fix), Master Document v7.10*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→10C COMPLEET. Admin Portal: 42 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC. adminPortal.js v3.10.0. Security: 0 critical/high vulnerabilities, 5 domeinen headers.*
