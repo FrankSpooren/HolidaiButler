@@ -14,8 +14,9 @@
 3. [Reviews Integratie (Fase 7)](#fase-7-resultaten)
 4. [Agent Fasen (8A, 8A+, 8B)](#agent-fasen)
 5. [Admin Portal Fasen (8C-0 t/m 9I)](#admin-portal-fasen)
-6. [LLM Content Generatie Details](#llm-content-generatie-details)
-7. [Volledige Changelog](#volledige-changelog)
+6. [Fase 10A: Agent Ecosysteem Optimalisatie](#fase-10a-agent-ecosysteem-optimalisatie-26-02-2026)
+7. [LLM Content Generatie Details](#llm-content-generatie-details)
+8. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -471,6 +472,62 @@ v3.9.0, **15/15 PASS**
 ├── markdown_fix_post_r6b.py, markdown_fix_backup_20260219.json, markdown_fix_log_20260219.json
 └── inventarisatie_119_pois.py, inventarisatie_pois_zonder_content.json
 ```
+
+---
+
+## Fase 10A: Agent Ecosysteem Optimalisatie (26-02-2026)
+
+### Context
+Gebaseerd op `Strategische_Agent_Ecosysteem_Analyse_v2_DEFINITIEF.md` — 5 items, waarvan items 1-2 al eerder geverifieerd:
+- Item 1 (Apify sync): Scenario A bevestigd — De Koerier ★★★★☆
+- Item 2 (Threema): CONFIGURED, alle 3 env vars aanwezig
+
+### Item 3: Agent Deactivering
+| Agent | ID | Reden | active |
+|-------|-----|-------|--------|
+| De Architect | architect | Onvoldoende waarde (★★☆☆☆). Reactiveren bij 3+ destinations. | `false` |
+| De Leermeester | leermeester | Onvoldoende waarde (★★☆☆☆). Reactiveren bij voldoende gebruikersdata. | `false` |
+| De Thermostaat | thermostaat | Onvoldoende waarde (★★☆☆☆). Reactiveren bij complexere configuratie-eisen. | `false` |
+
+- `AGENT_METADATA` entries: `active: false`, `deactivatedReason`, `deactivatedDate: '2026-02-26'`
+- `calculateAgentStatus()`: nieuwe `meta` parameter, returns `'deactivated'` voor inactive agents
+- Alle 4 call sites bijgewerkt (agent loop, smokeTest, contentQuality, thermostaat)
+
+### Item 4: Dashboard Eerlijkheid
+- Summary cards: Gezond / Waarschuwing / Fout / Gedeactiveerd (was: ...unknown)
+- `STATUS_COLORS.deactivated: '#bdbdbd'` in `utils/agents.js`
+- Sort order: `{ error: 0, warning: 1, unknown: 2, healthy: 3, deactivated: 4 }`
+- Deactivated rows: `opacity: 0.6`, lichte achtergrond
+- Agent profiel dialog: Alert banner met deactivatedSince + deactivatedReason
+- i18n: NL/EN/DE/ES — 'deactivated' + results tab keys
+
+### Item 5: Resultaten Tab
+- **Backend**: `GET /agents/:key/results` endpoint in adminPortal.js
+  - MongoDB audit_logs: last 5 runs per agent (30d window)
+  - Monitoring collection supplement: smoke_test_results, content_quality_audits, backup_health_checks
+  - Response: `{ agent: { id, name, active }, results: [{ timestamp, action, status, duration, destination, details, result }] }`
+- **Frontend**: Results tab in AgentDetailDialog (tab 3, between Status and Config)
+  - `useAgentResults(agentKey)` hook + `fetchAgentResults()` API call
+  - Table: Datum, Actie, Status (met kleur dot), Bestemming (chip), Duur, Details
+  - Skeleton loading, empty state alert
+
+### Bestanden Gewijzigd (9 bestanden, +309/-23 regels)
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/adminPortal.js` | v3.10.0: 3 agents deactivated, calculateAgentStatus meta param, summary.deactivated, GET /agents/:key/results |
+| `admin-module/src/pages/AgentsPage.jsx` | Summary cards deactivated, sort order, row opacity, deactivated banner, Results tab |
+| `admin-module/src/utils/agents.js` | STATUS_COLORS.deactivated |
+| `admin-module/src/hooks/useAgentStatus.js` | useAgentResults hook |
+| `admin-module/src/api/agentService.js` | fetchAgentResults |
+| `admin-module/src/i18n/nl.json` | deactivated, results tab, detail keys |
+| `admin-module/src/i18n/en.json` | deactivated, results tab, detail keys |
+| `admin-module/src/i18n/de.json` | deactivated, results tab, detail keys |
+| `admin-module/src/i18n/es.json` | deactivated, results tab, detail keys |
+
+### Deploy
+- Commit: bfef3a5, pushed dev→test→main
+- Hetzner: adminPortal.js via SCP, pm2 restart, admin frontend build+deploy
+- CLAUDE.md v3.42.0
 
 ---
 
