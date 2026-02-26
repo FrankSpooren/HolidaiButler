@@ -447,7 +447,9 @@ function AgentDetailDialog({ agent, onClose }) {
     if (!configLoading && editTasks === null) {
       // Prefer MongoDB-persisted tasks over static AGENT_TASKS fallback
       const savedTasks = agentConfig.tasks || agent.tasks || [];
-      const initialTasks = savedTasks.length > 0 ? savedTasks : tasks;
+      // Filter out placeholder patterns ("Task 1", "Task 2", etc.) and empty strings
+      const cleanTasks = savedTasks.filter(t => t && typeof t === 'string' && t.trim() !== '' && !/^Task \d+$/.test(t.trim()));
+      const initialTasks = cleanTasks.length > 0 ? cleanTasks : tasks;
       setEditTasks([...initialTasks]);
     }
   }, [configLoading, agent.id]);
@@ -455,7 +457,10 @@ function AgentDetailDialog({ agent, onClose }) {
   const handleConfigSave = async () => {
     try {
       const payload = { ...configForm };
-      if (editTasks) payload.tasks = editTasks;
+      if (editTasks) {
+        // Filter out placeholder patterns and empty strings before saving
+        payload.tasks = editTasks.filter(t => t && typeof t === 'string' && t.trim() !== '' && !/^Task \d+$/.test(t.trim()));
+      }
       await updateMut.mutateAsync({ key: agent.id, data: payload });
       setSnack({ open: true, message: t('agents.config.saved') });
     } catch (err) {

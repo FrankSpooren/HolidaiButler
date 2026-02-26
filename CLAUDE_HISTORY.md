@@ -531,4 +531,81 @@ Gebaseerd op `Strategische_Agent_Ecosysteem_Analyse_v2_DEFINITIEF.md` — 5 item
 
 ---
 
+## Fase 10A-Restant + 10B: Datacorruptie Fix + Security Hardening (26-02-2026)
+
+### Overzicht
+- **10A-Restant**: Agent config datacorruptie fix + Threema verificatie + CLAUDE.md versie-fix
+- **10B**: Security Hardening (npm audit, secrets scan, security headers, De Bewaker audit)
+- **Kosten**: EUR 0
+- **adminPortal.js**: v3.10.0 (placeholder validatie toegevoegd)
+
+### 10A-Restant Items
+
+**A. Agent Config Tasks Datacorruptie Fix (P0)**
+- **A1 Diagnose**: MongoDB `agent_configurations` collectie — 2 entries. `contentQuality` had gecorrumpeerde tasks: `["Grammatica...", "Task 2", "Task 3", "Task 4", "Task 5", "Task 6"]`. Overige 16 agents: geen MongoDB config (OK, static fallback).
+- **A2 Backend Fix**: Placeholder validatie op PUT `/agents/config/:key` — rejects `Task N` patterns, empty strings, non-string items. Console warning bij reject.
+- **A3 Frontend Fix**: Initialisatie filter (`/^Task \d+$/` + empty string removal) bij laden van MongoDB tasks + save handler bescherming.
+- **A4 Restore**: contentQuality tasks hersteld naar 4 correcte taken uit AGENT_TASKS static data. `updated_by: 'claude-restore-10a'`.
+
+**B. Live Verificatie 10A Items 3-5**
+- B1 Dashboard: API verificatie PASS — summary: 15 healthy, 0 warning, 0 error, 3 deactivated
+- B2 Resultaten Tab: maestro (5), dokter (5), contentQuality (5), architect (5, active=false) — alle PASS
+- B3 calculateAgentStatus(): 4 call sites, alle 3-parameter (met meta) — PASS
+
+**C. Threema Status Definitief**
+- Env vars ZIJN gezet op Hetzner: `THREEMA_GATEWAY_ID=*HOL1791`, `THREEMA_SECRET`, `OWNER_THREEMA_ID=V9VUJ8K6`
+- Smoke test confirmeert: `all_configured: true, status: CONFIGURED`
+- Risico Register geüpdatet: "Open" → "Gemitigeerd"
+
+**D. CLAUDE.md versie-fix**: adminPortal.js v3.9.0 → v3.10.0 in Admin Portal architectuur sectie
+
+### 10B Security Hardening Items
+
+**D1 npm audit (voor fix)**:
+| Project | Critical | High | Moderate | Totaal |
+|---------|----------|------|----------|--------|
+| platform-core | 1 | 4 | 2 | 7 |
+| admin-module | 0 | 2 | 2 | 4 |
+| customer-portal | 0 | 4 | 2 | 6 |
+
+**D2 npm audit fix (na fix)**:
+| Project | Vulnerabilities | Status |
+|---------|----------------|--------|
+| platform-core | **0** | Volledig opgelost |
+| admin-module | **2 moderate** (esbuild/vite dev-only) | Laag risico |
+| customer-portal | **0** | Volledig opgelost |
+
+**D3 Hardcoded Secrets**: `auth.js:29` DEV_FALLBACK_USER password (LAAG risico, dev-only). Geen productie-credentials in broncode.
+
+**D4 Security Headers**:
+- API (Express/Helmet): ALLE headers aanwezig (HSTS, CSP, X-Frame, X-Content-Type, Referrer-Policy)
+- Frontend vhosts (Apache): ALLE headers ONTBREKEN — aanbeveling P1
+- Server header exposed op alle domeinen
+
+**D5 De Bewaker**: 0 security scan audit_log entries. Aspirationele agent (★☆).
+
+**D6 Rapport**: `/root/fase_10b_security_rapport.md` op Hetzner
+
+### Bestanden Gewijzigd
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/adminPortal.js` | Placeholder validatie PUT /agents/config |
+| `admin-module/src/pages/AgentsPage.jsx` | Tasks init filter + save handler filter |
+| `docs/strategy/HolidaiButler_Master_Strategie.md` | v7.8→v7.9 (10A-R + 10B) |
+| `CLAUDE.md` | v3.42.0→v3.43.0 |
+| `CLAUDE_HISTORY.md` | 10A-R + 10B secties |
+| `platform-core/package-lock.json` | npm audit fix |
+| `customer-portal/frontend/package-lock.json` | npm audit fix |
+
+### Deploy
+- Backend: SCP adminPortal.js + PM2 restart
+- Frontend: admin-module build + tar deploy naar prod
+- npm audit fix: platform-core op Hetzner, customer-portal lokaal
+- MongoDB: contentQuality tasks restored
+- Security rapport: `/root/fase_10b_security_rapport.md`
+- CLAUDE.md v3.43.0, MS v7.9
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
