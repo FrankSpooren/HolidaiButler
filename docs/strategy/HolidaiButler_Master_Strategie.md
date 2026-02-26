@@ -1,19 +1,19 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 25 februari 2026
-**Versie**: 7.7
+**Datum**: 26 februari 2026
+**Versie**: 7.8
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 9I COMPLEET - UX Polish + Data Consistentie + Analytics. 7 items: P1=backup+token Hetzner, P2=agent profiel MongoDB tasks sync, P3=daily email vs dashboard data consistentie, P4=dark mode contrast alle pagina's, P5=scheduledJobs i18n+popup, P6=analytics granulatie+dag+kleuren, P7=MS documentatie gaps 9H. Bug fix: SQL created_at ambiguity. adminPortal.js v3.9.0. 15/15 tests PASS. Kosten: EUR 0.
+**Status**: FASE 10A COMPLEET - Agent Ecosysteem Optimalisatie. 5 items: Apify Scenario A (bevestigd), Threema CONFIGURED, 3 agents gedeactiveerd (Architect/Leermeester/Thermostaat), dashboard eerlijkheid (4 statussen), resultaten tab (GET /agents/:key/results). adminPortal.js v3.10.0 (42 endpoints). Kosten: EUR 0.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.39.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.42.0) in repo root + Hetzner
 
 ---
 
@@ -64,6 +64,8 @@
 | **Fase 9F** | Admin Portal Definitief + RBAC (4 blokken: A=reparaties, B=functies, C=images, D=documentatie — adminPortal.js v3.6.0) | ✅ COMPLEET | 24-02-2026 | Live getest | EUR 0 |
 | **Fase 9G** | Agent Fixes + RBAC Verificatie (P1: agent config tasks max 10, P2: De Dokter stale→inactive, P3: errorInstructions, P4: RBAC live verified, P5: rate limiter exempt, P6: documentatie — adminPortal.js v3.7.0) | ✅ COMPLEET | 24-02-2026 | 25/25 rate limiter PASS | EUR 0 |
 | **Fase 9H** | Audit & Command (P1: agent config tasks frontend race condition fix 6e cyclus, P2: De Dokter JOB_ACTOR_MAP fix 5e cyclus, P3: 509 Accommodation POIs→inactive, P4: pageviews dag/week/maand granulatie — adminPortal.js v3.8.0) | ✅ COMPLEET | 24-02-2026 | 10/10 tests PASS | EUR 0 |
+| **Fase 9I** | UX Polish + Data Consistentie + Analytics (7 items: backup+token, MongoDB tasks sync, shared health summary, dark mode contrast, scheduledJobs i18n, analytics granulatie, MS documentatie — adminPortal.js v3.9.0) | ✅ COMPLEET | 25-02-2026 | 15/15 tests PASS | EUR 0 |
+| **Fase 10A** | Agent Ecosysteem Optimalisatie (Apify Scenario A, Threema CONFIGURED, 3 agents gedeactiveerd, dashboard eerlijkheid 4 statussen, resultaten tab — adminPortal.js v3.10.0, 42 endpoints) | ✅ COMPLEET | 26-02-2026 | 9 bestanden, +309/-23 | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -93,6 +95,8 @@
 | Fase 9F Admin Portal Definitief + RBAC | EUR 0 | EUR 0 | ✅ |
 | Fase 9G Agent Fixes + RBAC Verificatie | EUR 0 | EUR 0 | ✅ |
 | Fase 9H Audit & Command | EUR 0 | EUR 0 | ✅ |
+| Fase 9I UX Polish + Analytics | EUR 0 | EUR 0 | ✅ |
+| Fase 10A Agent Ecosysteem Optimalisatie | EUR 0 | EUR 0 | ✅ |
 | **Totaal** | **EUR 95** | **EUR 74,41** | **78,3% van budget** |
 
 ### 1.3 Openstaande Componenten
@@ -571,9 +575,9 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 | 9 | Code | De Corrector | Development | ✅ Werkend | ✅ Cat B |
 | 10 | Security | De Bewaker | Development | ✅ Werkend | ✅ Cat B |
 | 11 | Quality | De Inspecteur | Development | ✅ Werkend | ✅ Cat A |
-| 12 | Architecture | De Architect | Strategy | ✅ Werkend | ✅ Cat B |
-| 13 | Learning | De Leermeester | Strategy | ✅ **8A: Gerepareerd** (MongoDB persistence) | ✅ Cat A |
-| 14 | Adaptive Config | De Thermostaat | Strategy | ✅ **8A: Herschreven** (alerting-only + Redis) | ✅ Cat A |
+| 12 | Architecture | De Architect | Strategy | ⛔ **10A: GEDEACTIVEERD** (onvoldoende waarde, reactiveren bij 3+ dest.) | ✅ Cat B |
+| 13 | Learning | De Leermeester | Strategy | ⛔ **10A: GEDEACTIVEERD** (geen meetbare output, reactiveren bij bewezen ROI) | ✅ Cat A |
+| 14 | Adaptive Config | De Thermostaat | Strategy | ⛔ **10A: GEDEACTIVEERD** (alerting-only overlap met De Dokter) | ✅ Cat A |
 | 15 | Prediction | De Weermeester | Strategy | ✅ Werkend | ✅ Cat A |
 
 **8A Wijzigingen per agent:**
@@ -1013,6 +1017,13 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - MUI sx theme callback variabele shadowing: `(t) => ...` in sx prop conflicteert met `const { t } = useTranslation()` in dezelfde scope. Altijd `(theme) =>` gebruiken als parameternaam
 - Admin-module build workflow: React source NIET op Hetzner — build lokaal, deploy dist/ via tar pipe naar alle 3 admin vhosts. Backend bestanden wel individueel SCP'en
 
+### Fase 10A (26/02) - Agent Ecosysteem Optimalisatie
+- Agent deactivering: `active: false` + `deactivatedReason` + `deactivatedDate` in AGENT_METADATA — `calculateAgentStatus()` retourneert 'deactivated' als eerste check (vóór lastRun/cron evaluatie)
+- calculateAgentStatus() meta parameter: functie-signatuur `(lastRun, schedule, meta)` — alle 4 call sites moeten meta doorgeven, anders wordt deactivated status gemist
+- Dashboard eerlijkheid: 4 statussen (healthy/warning/error/deactivated) i.p.v. 5 (unknown verwijderd) — gedeactiveerde agents krijgen opacity 0.6 + info banner met reden en datum
+- Resultaten tab: MongoDB audit_logs als primaire bron (last 30 days, limit 5 per agent) + monitoring collections als supplement voor smokeTest/contentQuality/backupHealth agents
+- Strategy-layer agents (Architect/Leermeester/Thermostaat) hebben GEEN dedicated BullMQ jobs — hun entries in SCHEDULED_JOBS_METADATA zijn metadata-only voor dashboard display
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -1110,6 +1121,10 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 25-02 | MUI palette tokens verplicht (9I) | Hardcoded hex colors (#f8fafc, #e2e8f0) breken dark mode — action.hover/action.disabledBackground/divider zijn theme-aware | Claude Code |
 | 25-02 | pvPeriodDateFilter voor JOINed queries (9I) | SQL 'created_at' ambiguous in page_views + POI JOIN — aparte filter met pv. prefix voor topPois query | Claude Code |
 | 25-02 | Admin-module lokaal builden (9I) | React source niet op Hetzner — dist/ deployen via tar pipe naar 3 vhosts, backend via SCP + PM2 restart | Claude Code |
+| 26-02 | 3 agents gedeactiveerd (10A) | De Architect (★★☆), De Leermeester (geen meetbare output), De Thermostaat (overlap De Dokter) — reactiveren bij bewezen ROI/3+ destinations | Claude Code |
+| 26-02 | Dashboard 4 statussen (10A) | healthy/warning/error/deactivated — 'unknown' verwijderd, gedeactiveerde agents visueel onderscheiden (opacity 0.6) | Claude Code |
+| 26-02 | Resultaten tab in agent popup (10A) | GET /agents/:key/results — MongoDB audit_logs + monitoring collections, laatste 5 runs per agent | Claude Code |
+| 26-02 | Apify Scenario A bevestigd (10A) | Geen Apify integratie nodig voor Fase 10A — bestaande Hetzner scraping voldoet, Apify optioneel voor toekomstige schaalvergroting | Claude Code |
 
 ---
 
@@ -1191,6 +1206,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.8** | **26-02-2026** | **Fase 10A Agent Ecosysteem Optimalisatie COMPLEET: 5 items. (1) Apify Scenario A: bevestigd, geen integratie nodig. (2) Threema: CONFIGURED status in smoke tests. (3) Agent deactivering: De Architect, De Leermeester, De Thermostaat → active=false in AGENT_METADATA + calculateAgentStatus() meta parameter. (4) Dashboard eerlijkheid: 4 statussen (healthy/warning/error/deactivated), opacity 0.6 + info banner voor gedeactiveerde agents, i18n 4 talen. (5) Resultaten tab: GET /agents/:key/results (MongoDB audit_logs + monitoring collections, laatste 5 runs), frontend tabel met timestamp/action/status/destination/duration/details. 9 bestanden gewijzigd (+309/-23). adminPortal.js v3.10.0 (42 endpoints). Kosten: EUR 0. CLAUDE.md v3.42.0.** |
 | **7.7** | **25-02-2026** | **Fase 9I UX Polish + Data Consistentie + Analytics COMPLEET: 7 items. P1: Hetzner backup verificatie + Mistral token refresh. P2: Agent profiel tab MongoDB tasks sync (useEffect init, staleTime 5s). P3: Daily email vs dashboard data consistentie (shared getSystemHealthSummary). P4: Dark mode contrast alle pagina's (7 bestanden, palette tokens i.p.v. hardcoded hex). P5: scheduledJobs i18n 4 talen + popup datum fix. P6: Analytics granulatie dag/week/maand + default dag + cel-bars kleuren. P7: MS documentatie gaps 9H (Lessons Learned, Beslissingen Log, Changelog). Bug fix: SQL created_at ambiguity in pageviews JOIN → pvPeriodDateFilter. 14 bestanden gewijzigd. adminPortal.js v3.9.0. 15/15 tests PASS. Kosten: EUR 0. CLAUDE.md v3.40.0.** |
 | **7.6** | **24-02-2026** | **Fase 9H Audit & Command COMPLEET: 4 items uit audit, 2× diagnose-first (6e+5e cyclus). P1: Agent config tasks frontend race condition fix (staleTime 60s→5s, optimistic update handles new entries, state init → useEffect hooks, refetchType 'all'). P2: De Dokter error JOB_ACTOR_MAP fix (workers.js logde alle jobs als 'orchestrator', nu 9 mappings naar correcte agent actorNames + warningDetail stale vs failed distinction). P3: 509 Accommodation POIs → is_active=0 (411 Texel + 98 Calpe). P4: Pageviews dag/week/maand granulatie (ToggleButtonGroup + backend period-aware filtering + i18n 4 talen). adminPortal.js v3.8.0. Kosten: EUR 0. CLAUDE.md v3.39.0.** |
 | **7.5** | **24-02-2026** | **Fase 9G Agent Fixes + RBAC Verificatie COMPLEET: 6 gefocuste items uit 9F audit. P1: Agent config tasks max 10 (MongoDB tasks ALTIJD prefereren boven static AGENT_TASKS in GET merge). P2: De Dokter stale error → inactive status (48h threshold). P3: Per-agent errorInstructions in AGENT_METADATA (18 agents, concrete troubleshooting stappen, frontend Instructies sectie). P4: RBAC live verified (4 rollen, destinationScope + writeAccess middleware actief). P5: Rate limiter account lockout trusted IP exempt (isExemptAdminIP geëxporteerd, isTrustedIP check lockout + attempts, 25 pogingen PASS). P6: Versie cross-refs + 9G documentatie. adminPortal.js v3.7.0. Kosten: EUR 0. CLAUDE.md v3.38.0.** |
@@ -1222,5 +1238,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 24 februari 2026 - Fase 9G COMPLEET (Agent Fixes + RBAC Verificatie), Master Document v7.5*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→9G COMPLEET. Admin Portal: 41 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC. adminPortal.js v3.7.0.*
+*Laatst bijgewerkt: 26 februari 2026 - Fase 10A COMPLEET (Agent Ecosysteem Optimalisatie), Master Document v7.8*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→10A COMPLEET. Admin Portal: 42 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC. adminPortal.js v3.10.0.*
