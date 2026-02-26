@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.42.0
+> **Versie**: 3.43.0
 > **Laatst bijgewerkt**: 26 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -48,9 +48,9 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.8 |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.9 |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
-| **CLAUDE.md** | Repository root + Hetzner | 3.42.0 |
+| **CLAUDE.md** | Repository root + Hetzner | 3.43.0 |
 | **CLAUDE_HISTORY.md** | Repository root | 1.0.0 |
 
 > **CLAUDE_HISTORY.md** bevat volledige fase-resultaten, changelogs en bestandslijsten per fase. Raadpleeg dit bestand ALLEEN wanneer historische details nodig zijn.
@@ -216,6 +216,8 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | 9H | Audit & Command (JOB_ACTOR_MAP) | 24-02 | v3.8.0 |
 | 9I | UX Polish + Analytics | 25-02 | v3.9.0 |
 | 10A | Agent Ecosysteem Optimalisatie (items 3-5) | 26-02 | v3.10.0 |
+| 10A-R | Restant: config datacorruptie fix, Threema verify | 26-02 | 0 placeholders |
+| 10B | Security Hardening (npm audit, headers, secrets) | 26-02 | 0C/0H vuln |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -256,12 +258,12 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - BullMQ queue: `scheduled-tasks`
 - Workers: `src/services/orchestrator/workers.js` (incl. JOB_ACTOR_MAP voor correct agent attribution)
 
-### Bekende Agent Issues (9I Audit)
-- **Agent config tasks**: Datacorruptie 7e cyclus — taaknamen overschreven met placeholders "Task 2-6"
-- **Dashboard eerlijkheid** (10A): 4 statussen: Actief, Waarschuwing, Fout, Gedeactiveerd (was: healthy/warning/error/unknown)
+### Bekende Agent Issues
+- **Agent config tasks**: ~~Datacorruptie 7e cyclus~~ → OPGELOST (10A-restant): backend placeholder validatie + frontend filter + MongoDB restore
+- **Dashboard eerlijkheid** (10A): 4 statussen: Actief, Waarschuwing, Fout, Gedeactiveerd
 - **Gedeactiveerde agents** (10A): De Architect, De Leermeester, De Thermostaat — `active: false` in AGENT_METADATA
-- **Aspirationele agents**: De Stylist (★☆), De Corrector (★☆) — naam belooft meer dan functionaliteit
-- **Geplande upgrades**: npm audit, OWASP ZAP, Puppeteer/Lighthouse, ESLint (Fase 10A-D)
+- **Aspirationele agents**: De Stylist (★☆), De Corrector (★☆), De Bewaker (★☆, 0 security scans) — naam belooft meer dan functionaliteit
+- **Security** (10B): npm audit 0 critical/high. Frontend vhosts missen security headers (Apache, aanbeveling P1)
 
 ---
 
@@ -269,7 +271,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.9.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.10.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
 - **Endpoints**: 42 admin endpoints
@@ -373,9 +375,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.42.0** | **2026-02-26** | **Fase 10A items 3-5**: Agent deactivering (Architect/Leermeester/Thermostaat → active=false), dashboard eerlijkheid (4 statussen), resultaten tab (GET /agents/:key/results). adminPortal.js v3.10.0 (42 endpoints). |
+| **3.43.0** | **2026-02-26** | **Fase 10A-restant + 10B**: Agent config datacorruptie fix (backend placeholder validatie + frontend filter + MongoDB restore), Threema CONFIGURED geverifieerd, CLAUDE.md versie-fix, npm audit (17→2 vulnerabilities), security headers audit, `/root/fase_10b_security_rapport.md`. MS v7.9. |
+| **3.42.0** | 2026-02-26 | Fase 10A items 3-5: Agent deactivering, dashboard 4 statussen, resultaten tab. adminPortal.js v3.10.0 (42 endpoints). |
 | **3.41.0** | 2026-02-26 | CLAUDE.md herstructurering: compact ~550 regels + CLAUDE_HISTORY.md archief. |
-| **3.40.0** | 2026-02-25 | Fase 9I: 7 items (dark mode contrast, analytics granulatie, agent profiel sync, scheduledJobs i18n, JOB_ACTOR_MAP +3). adminPortal.js v3.9.0. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -385,7 +387,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.8 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.9 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

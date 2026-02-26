@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 26 februari 2026
-**Versie**: 7.8
+**Versie**: 7.9
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 10A COMPLEET - Agent Ecosysteem Optimalisatie. 5 items: Apify Scenario A (bevestigd), Threema CONFIGURED, 3 agents gedeactiveerd (Architect/Leermeester/Thermostaat), dashboard eerlijkheid (4 statussen), resultaten tab (GET /agents/:key/results). adminPortal.js v3.10.0 (42 endpoints). Kosten: EUR 0.
+**Status**: FASE 10A-RESTANT + 10B COMPLEET. 10A-R: Agent config datacorruptie fix (0 placeholders), Threema CONFIGURED geverifieerd, CLAUDE.md versie-fix. 10B: npm audit (17→2 vuln), security headers audit, secrets scan, De Bewaker status. adminPortal.js v3.10.0 (42 endpoints). Kosten: EUR 0.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.42.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.43.0) in repo root + Hetzner
 
 ---
 
@@ -66,6 +66,8 @@
 | **Fase 9H** | Audit & Command (P1: agent config tasks frontend race condition fix 6e cyclus, P2: De Dokter JOB_ACTOR_MAP fix 5e cyclus, P3: 509 Accommodation POIs→inactive, P4: pageviews dag/week/maand granulatie — adminPortal.js v3.8.0) | ✅ COMPLEET | 24-02-2026 | 10/10 tests PASS | EUR 0 |
 | **Fase 9I** | UX Polish + Data Consistentie + Analytics (7 items: backup+token, MongoDB tasks sync, shared health summary, dark mode contrast, scheduledJobs i18n, analytics granulatie, MS documentatie — adminPortal.js v3.9.0) | ✅ COMPLEET | 25-02-2026 | 15/15 tests PASS | EUR 0 |
 | **Fase 10A** | Agent Ecosysteem Optimalisatie (Apify Scenario A, Threema CONFIGURED, 3 agents gedeactiveerd, dashboard eerlijkheid 4 statussen, resultaten tab — adminPortal.js v3.10.0, 42 endpoints) | ✅ COMPLEET | 26-02-2026 | 9 bestanden, +309/-23 | EUR 0 |
+| **Fase 10A-R** | Restant: Agent config datacorruptie fix (backend validatie + frontend filter + MongoDB restore), Threema CONFIGURED geverifieerd, CLAUDE.md versie-fix | ✅ COMPLEET | 26-02-2026 | 0 placeholders | EUR 0 |
+| **Fase 10B** | Security Hardening: npm audit fix (17→2 vuln), hardcoded secrets scan, security headers audit, De Bewaker status — rapport op Hetzner | ✅ COMPLEET | 26-02-2026 | 0C/0H vulnerabilities | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -97,6 +99,8 @@
 | Fase 9H Audit & Command | EUR 0 | EUR 0 | ✅ |
 | Fase 9I UX Polish + Analytics | EUR 0 | EUR 0 | ✅ |
 | Fase 10A Agent Ecosysteem Optimalisatie | EUR 0 | EUR 0 | ✅ |
+| Fase 10A-R Restant (config fix, Threema, versie) | EUR 0 | EUR 0 | ✅ |
+| Fase 10B Security Hardening | EUR 0 | EUR 0 | ✅ |
 | **Totaal** | **EUR 95** | **EUR 74,41** | **78,3% van budget** |
 
 ### 1.3 Openstaande Componenten
@@ -1024,6 +1028,20 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - Resultaten tab: MongoDB audit_logs als primaire bron (last 30 days, limit 5 per agent) + monitoring collections als supplement voor smokeTest/contentQuality/backupHealth agents
 - Strategy-layer agents (Architect/Leermeester/Thermostaat) hebben GEEN dedicated BullMQ jobs — hun entries in SCHEDULED_JOBS_METADATA zijn metadata-only voor dashboard display
 
+### Fase 10A-Restant (26/02) - Agent Config Datacorruptie Fix
+- Agent config MongoDB collectie: `agent_configurations` (NIET `agent_configs`) — altijd collectienaam verifiëren vóór queries
+- Placeholder patroon `/^Task \d+$/` is eenvoudig maar effectief als validatie — backend MOET inkomende data valideren, niet alleen structuur maar ook inhoud
+- Frontend moet MongoDB data NIET blind vertrouwen — client-side filter op laden voorkomt dat gecorrumpeerde data zichtbaar wordt
+- Dual-layer bescherming (backend reject + frontend filter) is essentieel voor data-integriteit — enkel backend of enkel frontend is onvoldoende
+- MongoDB restore: `updated_by` veld meegeven voor audit trail bij handmatige correcties
+
+### Fase 10B (26/02) - Security Hardening
+- `npm audit fix` (ZONDER --force) lost het merendeel op — force vermijden tenzij breaking changes geaccepteerd zijn
+- Express/Helmet dekt API security headers automatisch — Apache frontend vhosts hebben GEEN equivalent en vereisen handmatige Header directives
+- Dev-only dependencies (esbuild, vite) tellen mee in audit maar draaien NIET in productie — documenteer als geaccepteerd risico
+- De Bewaker agent (security-reviewer) heeft 0 security scans uitgevoerd — aspirationele agents zijn een structureel patroon dat bij volgende fase moet worden geadresseerd
+- `Server: Apache/2.4.58` header exposed op alle domeinen — `ServerTokens Prod` in apache2.conf verbergt versienummer
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -1125,6 +1143,12 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 26-02 | Dashboard 4 statussen (10A) | healthy/warning/error/deactivated — 'unknown' verwijderd, gedeactiveerde agents visueel onderscheiden (opacity 0.6) | Claude Code |
 | 26-02 | Resultaten tab in agent popup (10A) | GET /agents/:key/results — MongoDB audit_logs + monitoring collections, laatste 5 runs per agent | Claude Code |
 | 26-02 | Apify Scenario A bevestigd (10A) | Geen Apify integratie nodig voor Fase 10A — bestaande Hetzner scraping voldoet, Apify optioneel voor toekomstige schaalvergroting | Claude Code |
+| 26-02 | Dual-layer placeholder validatie (10A-R) | Backend rejects `Task N` pattern + frontend filtert bij load+save — voorkomt datacorruptie in MongoDB agent_configurations | Claude Code |
+| 26-02 | MongoDB collection = agent_configurations (10A-R) | NIET agent_configs — altijd `listCollections()` checken bij nieuwe MongoDB operaties | Claude Code |
+| 26-02 | Threama CONFIGURED geverifieerd (10A-R) | Env vars gezet (*HOL1791 / V9VUJ8K6), smoke test bevestigt `all_configured: true` — Risico Register bijgewerkt | Claude Code |
+| 26-02 | npm audit fix zonder --force (10B) | 17→2 vulnerabilities (2 dev-only moderate). --force vermijden om breaking changes te voorkomen | Claude Code |
+| 26-02 | Frontend security headers = Apache (10B) | Express/Helmet dekt API. Apache vhosts missen X-Frame-Options, CSP, X-Content-Type — P1 aanbeveling voor hardening | Claude Code |
+| 26-02 | De Bewaker aspirationeel (10B) | 0 security scan entries in audit_logs — agent naam belooft meer dan functionaliteit, bewust gedocumenteerd | Claude Code |
 
 ---
 
@@ -1144,7 +1168,7 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | Sessions.user_id INT vs admin UUID | Medium | ⚠️ Workaround (non-blocking INSERT). Permanente fix: ALTER TABLE Sessions MODIFY user_id VARCHAR(36) |
 | SSL cert vervalt 2026-05-11 | Medium | ✅ Gemitigeerd (De Dokter SSL monitoring) |
 | Config structure mismatch (c.id vs c.destination.id) | Hoog | ✅ Gemitigeerd (config mapping fix in BaseAgent + destinationRunner) |
-| Threema Gateway niet geconfigureerd | Medium | Open — env vars niet gezet, dagelijkse smoke test alert |
+| Threema Gateway configuratie | Medium | ✅ Gemitigeerd — env vars gezet (*HOL1791 / V9VUJ8K6), smoke test: CONFIGURED |
 | Agent registry circular imports | Medium | ✅ Gemitigeerd (metadata-only registry, geen agent imports) |
 | Windows line endings in deploy scripts | Laag | ✅ Gemitigeerd (sed strip protocol) |
 | Agent status threshold berekening | Medium | ✅ Gemitigeerd (cron-aware thresholds: dagelijks 25h, wekelijks 7d, maandelijks 31d) |
@@ -1206,6 +1230,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.9** | **26-02-2026** | **Fase 10A-Restant + 10B Security Hardening COMPLEET. 10A-R: Agent config datacorruptie fix (backend placeholder validatie + frontend filter + MongoDB restore contentQuality tasks), Threama CONFIGURED geverifieerd (smoke test), CLAUDE.md versie-fix. 10B: npm audit fix (17→2 vulnerabilities, 0 critical/high), hardcoded secrets scan (1 dev-only DEV_FALLBACK_USER, 0 productie), security headers audit (API OK via Helmet, frontend Apache vhosts missen headers → P1), De Bewaker 0 security scans (aspirationeel), `/root/fase_10b_security_rapport.md`. 7 Beslissingen Log entries. adminPortal.js v3.10.0. CLAUDE.md v3.43.0.** |
 | **7.8** | **26-02-2026** | **Fase 10A Agent Ecosysteem Optimalisatie COMPLEET: 5 items. (1) Apify Scenario A: bevestigd, geen integratie nodig. (2) Threema: CONFIGURED status in smoke tests. (3) Agent deactivering: De Architect, De Leermeester, De Thermostaat → active=false in AGENT_METADATA + calculateAgentStatus() meta parameter. (4) Dashboard eerlijkheid: 4 statussen (healthy/warning/error/deactivated), opacity 0.6 + info banner voor gedeactiveerde agents, i18n 4 talen. (5) Resultaten tab: GET /agents/:key/results (MongoDB audit_logs + monitoring collections, laatste 5 runs), frontend tabel met timestamp/action/status/destination/duration/details. 9 bestanden gewijzigd (+309/-23). adminPortal.js v3.10.0 (42 endpoints). Kosten: EUR 0. CLAUDE.md v3.42.0.** |
 | **7.7** | **25-02-2026** | **Fase 9I UX Polish + Data Consistentie + Analytics COMPLEET: 7 items. P1: Hetzner backup verificatie + Mistral token refresh. P2: Agent profiel tab MongoDB tasks sync (useEffect init, staleTime 5s). P3: Daily email vs dashboard data consistentie (shared getSystemHealthSummary). P4: Dark mode contrast alle pagina's (7 bestanden, palette tokens i.p.v. hardcoded hex). P5: scheduledJobs i18n 4 talen + popup datum fix. P6: Analytics granulatie dag/week/maand + default dag + cel-bars kleuren. P7: MS documentatie gaps 9H (Lessons Learned, Beslissingen Log, Changelog). Bug fix: SQL created_at ambiguity in pageviews JOIN → pvPeriodDateFilter. 14 bestanden gewijzigd. adminPortal.js v3.9.0. 15/15 tests PASS. Kosten: EUR 0. CLAUDE.md v3.40.0.** |
 | **7.6** | **24-02-2026** | **Fase 9H Audit & Command COMPLEET: 4 items uit audit, 2× diagnose-first (6e+5e cyclus). P1: Agent config tasks frontend race condition fix (staleTime 60s→5s, optimistic update handles new entries, state init → useEffect hooks, refetchType 'all'). P2: De Dokter error JOB_ACTOR_MAP fix (workers.js logde alle jobs als 'orchestrator', nu 9 mappings naar correcte agent actorNames + warningDetail stale vs failed distinction). P3: 509 Accommodation POIs → is_active=0 (411 Texel + 98 Calpe). P4: Pageviews dag/week/maand granulatie (ToggleButtonGroup + backend period-aware filtering + i18n 4 talen). adminPortal.js v3.8.0. Kosten: EUR 0. CLAUDE.md v3.39.0.** |
@@ -1238,5 +1263,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 26 februari 2026 - Fase 10A COMPLEET (Agent Ecosysteem Optimalisatie), Master Document v7.8*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→10A COMPLEET. Admin Portal: 42 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC. adminPortal.js v3.10.0.*
+*Laatst bijgewerkt: 26 februari 2026 - Fase 10A-R + 10B COMPLEET (Security Hardening), Master Document v7.9*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→10B COMPLEET. Admin Portal: 42 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC. adminPortal.js v3.10.0. Security: 0 critical/high vulnerabilities.*

@@ -5216,13 +5216,20 @@ router.put('/agents/config/:key', adminAuth('platform_admin'), async (req, res) 
     // Get current state for undo snapshot
     const currentConfig = await collection.findOne({ agent_key: key });
 
-    // Validate tasks array (max 10, must be array of strings)
+    // Validate tasks array (max 10, must be array of strings, no placeholders)
     if (req.body.tasks !== undefined) {
       if (!Array.isArray(req.body.tasks)) {
         return res.status(400).json({ success: false, error: { code: 'INVALID_TASKS', message: 'tasks must be an array' } });
       }
       if (req.body.tasks.length > 10) {
         return res.status(400).json({ success: false, error: { code: 'TOO_MANY_TASKS', message: 'Maximum 10 tasks allowed' } });
+      }
+      // Reject placeholder patterns ("Task 1", "Task 2", etc.) and empty strings
+      const placeholderPattern = /^Task \d+$/;
+      const hasPlaceholders = req.body.tasks.some(t => !t || typeof t !== 'string' || t.trim() === '' || placeholderPattern.test(t.trim()));
+      if (hasPlaceholders) {
+        console.warn(`[adminPortal] PUT /agents/config/${key}: REJECTED — placeholder tasks detected:`, req.body.tasks);
+        return res.status(400).json({ success: false, error: { code: 'PLACEHOLDER_TASKS', message: 'Tasks cannot contain placeholder values (e.g. "Task 1", "Task 2") or empty strings.' } });
       }
     }
 
