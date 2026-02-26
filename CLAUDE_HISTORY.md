@@ -608,4 +608,59 @@ Gebaseerd op `Strategische_Agent_Ecosysteem_Analyse_v2_DEFINITIEF.md` — 5 item
 
 ---
 
+## Fase 10C: Apache Hardening + Agent Eerlijkheid + Live Verificatie (26-02-2026)
+
+### Blok A: Apache Security Headers (P1)
+- **Inventarisatie**: 5 frontend/admin domeinen hadden 0 security headers, API had 6 (Helmet)
+- **ServerTokens**: `OS` → `Prod`, `ServerSignature Off` in `/etc/apache2/conf-enabled/security.conf`
+- **Headers toegevoegd** aan 5 VHost SSL configs: X-Frame-Options (SAMEORIGIN), X-Content-Type-Options (nosniff), Referrer-Policy (strict-origin-when-cross-origin), Permissions-Policy (camera/mic/geo denied)
+- **Bonus fix**: texelmaps.nl `sites-enabled` was regulier bestand (niet symlink) — gefixed
+- **Verificatie**: 5/5 domeinen tonen 4 headers + `Server: Apache` (geen versienummer), HTTP 200, API health OK
+- Backup: `/root/backups/apache_sites_20260226_204046`
+- CSP bewust NIET toegevoegd (complex, kan frontend breken — apart item)
+
+### Blok B: Live Verificatie 10A Dashboard (P1)
+- **B1 Summary cards**: 4 categorieën (healthy=14/15, warning=0/1, error=0, deactivated=3), 18 agents totaal, 0 "unknown"
+- **B2 Deactivated agents**: Architect/Leermeester/Thermostaat — status=deactivated, active=false, reason+date correct
+- **B3 Results tab**: 4 agents getest (maestro/dokter/architect/contentQuality), alle tonen 5 results met correcte kolommen (timestamp, action, status, destination, duration, details), data van vandaag, architect (deactivated) toont historische data zonder crash
+- **B4 calculateAgentStatus()**: 4 call sites (lijnen 1305, 1470, 1534, 1562, 1605), alle met 3 parameters (lastRun, schedule, meta)
+- **10/10 PASS**
+
+### Blok C: Aspirationele Agents Eerlijk Labelen (P2)
+- **Diagnose**: De Stylist 0 entries, De Corrector 0 entries, De Bewaker 0 entries (actor.name), 4 dev-layer scheduled jobs actief
+- **Frank's keuze**: Alleen labelen, NIET deactiveren
+- **Implementatie**: 3 agents in AGENT_METADATA bijgewerkt:
+  - Description: "Minimaal: [wat agent NIET doet]"
+  - Tasks: gereduceerd tot wat agent DAADWERKELIJK doet
+  - output_description: eerlijk over output (geen rapporten / via dev-layer wrapper)
+  - `functionalityLevel: 'minimal'` toegevoegd
+- Scheduled jobs behouden (4 dev-layer jobs)
+
+### Blok D: Sessions UUID Fix (P2)
+- **Backup**: `/root/backups/Sessions_backup_20260226_205851.sql`
+- **Schema**: user_id was INT(11), 55 rows
+- **FK constraint**: `fk_session_user` (Sessions.user_id → Users.id) moest eerst gedropped worden
+- **ALTER**: `Sessions MODIFY user_id VARCHAR(36) NOT NULL`
+- **Verificatie**: user_id = VARCHAR(36), 55 rows preserved, login OK, 0 "Data truncated" errors
+- **Risico Register**: "Workaround" → "Gemitigeerd"
+
+### Bestanden Gewijzigd
+| Bestand | Wijziging |
+|---------|-----------|
+| `/etc/apache2/conf-enabled/security.conf` | ServerTokens Prod, ServerSignature Off |
+| `/etc/apache2/sites-available/*-le-ssl.conf` (5x) | Security headers blok |
+| `platform-core/src/routes/adminPortal.js` | Honest labeling 3 agents |
+| `CLAUDE.md` | v3.44.0 |
+| `CLAUDE_HISTORY.md` | 10C sectie |
+| `docs/strategy/HolidaiButler_Master_Strategie.md` | v7.10 |
+| MySQL: `Sessions.user_id` | INT(11) → VARCHAR(36) |
+
+### Deploy
+- Apache: configtest + graceful reload (5 VHosts + security.conf)
+- Backend: SCP adminPortal.js + PM2 restart
+- MySQL: ALTER TABLE Sessions (met backup + FK drop)
+- CLAUDE.md v3.44.0, MS v7.10
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.43.0
+> **Versie**: 3.44.0
 > **Laatst bijgewerkt**: 26 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -48,9 +48,9 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.9 |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.10 |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
-| **CLAUDE.md** | Repository root + Hetzner | 3.43.0 |
+| **CLAUDE.md** | Repository root + Hetzner | 3.44.0 |
 | **CLAUDE_HISTORY.md** | Repository root | 1.0.0 |
 
 > **CLAUDE_HISTORY.md** bevat volledige fase-resultaten, changelogs en bestandslijsten per fase. Raadpleeg dit bestand ALLEEN wanneer historische details nodig zijn.
@@ -218,6 +218,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | 10A | Agent Ecosysteem Optimalisatie (items 3-5) | 26-02 | v3.10.0 |
 | 10A-R | Restant: config datacorruptie fix, Threema verify | 26-02 | 0 placeholders |
 | 10B | Security Hardening (npm audit, headers, secrets) | 26-02 | 0C/0H vuln |
+| 10C | Apache Hardening + Agent Eerlijkheid + Sessions Fix | 26-02 | 5 domeinen headers |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -262,8 +263,8 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - **Agent config tasks**: ~~Datacorruptie 7e cyclus~~ → OPGELOST (10A-restant): backend placeholder validatie + frontend filter + MongoDB restore
 - **Dashboard eerlijkheid** (10A): 4 statussen: Actief, Waarschuwing, Fout, Gedeactiveerd
 - **Gedeactiveerde agents** (10A): De Architect, De Leermeester, De Thermostaat — `active: false` in AGENT_METADATA
-- **Aspirationele agents**: De Stylist (★☆), De Corrector (★☆), De Bewaker (★☆, 0 security scans) — naam belooft meer dan functionaliteit
-- **Security** (10B): npm audit 0 critical/high. Frontend vhosts missen security headers (Apache, aanbeveling P1)
+- **Aspirationele agents** (10C): De Stylist, De Corrector, De Bewaker — eerlijk gelabeld met `functionalityLevel: 'minimal'`, taken bijgewerkt naar actuele output
+- **Security** (10C): ~~Frontend vhosts missen security headers~~ → OPGELOST: 5 domeinen X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. ServerTokens Prod. npm audit 0 critical/high.
 
 ---
 
@@ -375,9 +376,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.43.0** | **2026-02-26** | **Fase 10A-restant + 10B**: Agent config datacorruptie fix (backend placeholder validatie + frontend filter + MongoDB restore), Threema CONFIGURED geverifieerd, CLAUDE.md versie-fix, npm audit (17→2 vulnerabilities), security headers audit, `/root/fase_10b_security_rapport.md`. MS v7.9. |
-| **3.42.0** | 2026-02-26 | Fase 10A items 3-5: Agent deactivering, dashboard 4 statussen, resultaten tab. adminPortal.js v3.10.0 (42 endpoints). |
-| **3.41.0** | 2026-02-26 | CLAUDE.md herstructurering: compact ~550 regels + CLAUDE_HISTORY.md archief. |
+| **3.44.0** | **2026-02-26** | **Fase 10C**: Apache security headers (5 domeinen, 4 headers + ServerTokens Prod), live verificatie 10A (10/10 PASS), aspirationele agents eerlijk gelabeld (Stylist/Corrector/Bewaker), Sessions.user_id VARCHAR(36) fix. MS v7.10. |
+| **3.43.0** | 2026-02-26 | Fase 10A-restant + 10B: Agent config datacorruptie fix, npm audit (17→2), security rapport. MS v7.9. |
+| **3.42.0** | 2026-02-26 | Fase 10A items 3-5: Agent deactivering, dashboard 4 statussen, resultaten tab. adminPortal.js v3.10.0. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -387,7 +388,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.9 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.10 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
