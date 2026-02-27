@@ -1,3 +1,4 @@
+import { execSync } from 'child_process';
 import { logAgent, logError } from '../../../orchestrator/auditTrail/index.js';
 import { sendAlert } from '../../../orchestrator/ownerInterface/index.js';
 
@@ -341,6 +342,70 @@ class SecurityReviewer {
     } catch (error) {
       console.error('[SecurityReviewer] Failed to send alert:', error.message);
     }
+  }
+
+  /**
+   * Scheduled execution: runs npm audit on platform-core
+   * Called by dev-security-scan BullMQ job (daily 02:00)
+   */
+  async execute() {
+    const projectPath = '/var/www/api.holidaibutler.com/platform-core';
+    const results = {
+      timestamp: new Date().toISOString(),
+      vulnerabilities: {},
+      total: 0,
+      error: null
+    };
+
+    try {
+      const output = execSync('npm audit --json', {
+        cwd: projectPath,
+        timeout: 60000,
+        encoding: 'utf8'
+      });
+      const audit = JSON.parse(output);
+      results.vulnerabilities = audit.metadata?.vulnerabilities || {};
+      results.total = Object.values(results.vulnerabilities).reduce((a, b) => a + b, 0);
+    } catch (e) {
+      // npm audit returns exit code 1 when vulnerabilities found
+      if (e.stdout) {
+        try {
+          const audit = JSON.parse(e.stdout);
+          results.vulnerabilities = audit.metadata?.vulnerabilities || {};
+          results.total = Object.values(results.vulnerabilities).reduce((a, b) => a + b, 0);
+        } catch {
+          results.error = 'Failed to parse npm audit output';
+        }
+      } else {
+        results.error = e.message;
+      }
+    }
+
+    const severity = (results.vulnerabilities?.critical > 0 || results.vulnerabilities?.high > 0)
+      ? 'warning' : 'info';
+
+    try {
+      await logAgent('security', 'npm_audit_scan', {
+        description: `npm audit: ${results.total} vulnerabilities (${results.vulnerabilities?.critical || 0}C/${results.vulnerabilities?.high || 0}H/${results.vulnerabilities?.moderate || 0}M/${results.vulnerabilities?.low || 0}L)`,
+        status: results.error ? 'failed' : 'completed',
+        metadata: results
+      });
+
+      // Alert on critical/high vulnerabilities
+      if (results.vulnerabilities?.critical > 0) {
+        await sendAlert({
+          urgency: 4,
+          title: `SECURITY: ${results.vulnerabilities.critical} critical npm vulnerabilities`,
+          message: `npm audit found ${results.vulnerabilities.critical} critical vulnerabilities in platform-core. Review with: npm audit`,
+          metadata: results.vulnerabilities
+        });
+      }
+    } catch (logErr) {
+      console.error('[SecurityReviewer] Failed to log audit result:', logErr.message);
+    }
+
+    console.log(`[SecurityReviewer] npm audit: ${results.total} vulnerabilities (${results.vulnerabilities?.critical || 0}C/${results.vulnerabilities?.high || 0}H/${results.vulnerabilities?.moderate || 0}M/${results.vulnerabilities?.low || 0}L)`);
+    return results;
   }
 
   /**

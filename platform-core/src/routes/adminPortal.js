@@ -1020,12 +1020,12 @@ const AGENT_METADATA = [
 5. Herstart API: pm2 restart holidaibutler-api
 6. Wacht op volgende run (elke 4 uur) en verifieer status` } },
   { id: 'stylist', name: 'De Stylist', englishName: 'UX/UI Agent', category: 'development', type: 'B',
-    description: 'Minimaal: brand kleur check per destination (geen Playwright/Lighthouse)',
-    description_en: 'Minimal: brand color check per destination (no Playwright/Lighthouse)',
-    tasks: ['Brand kleur consistentie check via DESTINATION_BRAND_COLORS'],
-    monitoring_scope: 'Brand kleuren per destination',
-    output_description: 'Geen directe rapporten — output via dev-layer wrapper',
-    functionalityLevel: 'minimal',
+    description: 'HTTP performance check: TTFB, status codes, security headers per domein',
+    description_en: 'HTTP performance check: TTFB, status codes, security headers per domain',
+    tasks: ['TTFB meting per domein', 'HTTP status verificatie', 'Security headers controle', 'Brand kleur consistentie'],
+    monitoring_scope: 'Frontend performance, security headers, brand kleuren',
+    output_description: 'Wekelijks performance rapport: 4 domeinen, TTFB, headers',
+    functionalityLevel: 'active',
     schedule: '0 6 * * 1', actorNames: ['dev-layer'],
     errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "UX"
 2. Controleer brand configuratie per destination in config/destinations/
@@ -1033,12 +1033,12 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (maandag 06:00 UTC) — wacht op volgende run` } },
   { id: 'corrector', name: 'De Corrector', englishName: 'Code Agent', category: 'development', type: 'B',
-    description: 'Minimaal: geen actieve code analyse (geen ESLint/Lighthouse integratie)',
-    description_en: 'Minimal: no active code analysis (no ESLint/Lighthouse integration)',
-    tasks: ['Gepland: code kwaliteit analyse (niet geïmplementeerd)'],
-    monitoring_scope: 'Codebase kwaliteit (aspirationeel)',
-    output_description: 'Geen rapporten — functionaliteit niet geïmplementeerd',
-    functionalityLevel: 'minimal',
+    description: 'Grep-based code scan: console.log teller, secrets detectie, TODO/FIXME tracker',
+    description_en: 'Grep-based code scan: console.log count, secrets detection, TODO/FIXME tracker',
+    tasks: ['console.log detectie', 'Hardcoded secrets scan', 'TODO/FIXME/HACK teller', 'File/line count statistieken'],
+    monitoring_scope: 'Codebase kwaliteit, tech debt, secrets',
+    output_description: 'Wekelijks code scan rapport: files, lines, console.logs, TODOs',
+    functionalityLevel: 'active',
     schedule: '0 6 * * 1', actorNames: ['dev-layer'],
     errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Code"
 2. Bij dependency vulnerabilities: npm audit --production
@@ -1046,12 +1046,12 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (maandag 06:00 UTC) — wacht op volgende run` } },
   { id: 'bewaker', name: 'De Bewaker', englishName: 'Security Agent', category: 'development', type: 'B',
-    description: 'Minimaal: geen actieve security scans (geen OWASP/ZAP integratie)',
-    description_en: 'Minimal: no active security scans (no OWASP/ZAP integration)',
-    tasks: ['Gepland: security scanning (niet geïmplementeerd)'],
-    monitoring_scope: 'Security (aspirationeel)',
-    output_description: 'Geen rapporten — 0 security scans uitgevoerd',
-    functionalityLevel: 'minimal',
+    description: 'npm audit scan: vulnerability detectie (critical/high/moderate/low)',
+    description_en: 'npm audit scan: vulnerability detection (critical/high/moderate/low)',
+    tasks: ['npm audit --json scan', 'Vulnerability classificatie', 'Critical/high alerting via De Bode'],
+    monitoring_scope: 'npm dependencies, security vulnerabilities',
+    output_description: 'Dagelijks npm audit rapport: vulnerability counts per severity',
+    functionalityLevel: 'active',
     schedule: '0 2 * * *', actorNames: ['dev-layer'],
     errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Security"
 2. Bij dependency vulnerabilities: npm audit --production
