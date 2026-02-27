@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 27 februari 2026
-**Versie**: 7.12
+**Versie**: 7.13
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 11B COMPLEET. Agent Ecosysteem Enterprise Complete — Niveau 7 (Zelflerend). Individuele agent logging, week-over-week trending, De Bode escalatie, agent_issues + SLA tracking, Admin Portal Issues module, trending chips, baselines + anomaliedetectie, cross-agent correlatie. adminPortal.js v3.11.0 (47 endpoints). CLAUDE.md v3.46.0. Kosten: EUR 0.
+**Status**: FASE 12 COMPLEET. Verificatie, Consolidatie & Enterprise Hardening. 7 blokken: server verificatie (16/16), MS completeness audit (5 gaps), CLAUDE.md fixes, AuditLog status sanitizer, QA→QnA + Reviews table fix, 34 enterprise tests, runtime metrics. CLAUDE.md v3.47.0. MS v7.13. Kosten: EUR 0.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -71,6 +71,7 @@
 | **Fase 10C** | Apache Hardening (5 domeinen headers + ServerTokens) + Live Verificatie 10A (10/10 PASS) + Aspirationele agents eerlijk gelabeld + Sessions.user_id VARCHAR(36) | ✅ COMPLEET | 26-02-2026 | 5 domeinen beveiligd | EUR 0 |
 | **Fase 11A** | Agent Ecosysteem Audit + Activering (18 agents, 40 jobs, 18.320 entries/30d). 3 dev agents geactiveerd: De Bewaker (npm audit), De Corrector (code scan), De Stylist (TTFB+headers). AuditLog enum fix. | ✅ COMPLEET | 27-02-2026 | 3 agents geactiveerd | EUR 0 |
 | **Fase 11B** | Agent Ecosysteem Enterprise Complete — Niveau 7 (Zelflerend). 10 blokken: individuele logging, trending, escalatie, issues+SLA, Admin Issues module (5 endpoints), trending chips, baselines+anomaliedetectie (2σ), cross-agent correlatie. adminPortal.js v3.11.0 (47 endpoints). | ✅ COMPLEET | 27-02-2026 | 22 bestanden, 7 nieuw | EUR 0 |
+| **Fase 12** | Verificatie, Consolidatie & Enterprise Hardening. 7 blokken: A) server verificatie 16/16, B) MS v7.13 completeness (5 gaps), C) CLAUDE.md versie fix, D) AuditLog status sanitizer + QA→QnA + Reviews case fix, E) 34 enterprise tests (trendHelper, agentIssues, baselineService, correlationService), F) runtime metrics aggregatie, G) documentatie + deploy. | ✅ COMPLEET | 27-02-2026 | 7 bestanden gewijzigd, 1 nieuw | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -1066,6 +1067,17 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 - Oude `checkProject()` methode runde lint+tests+build+audit (alle 4) per dev job — vervangen door dedicated lightweight `execute()` methods per reviewer
 - npm audit exit code: npm retourneert exit code 1 als er vulnerabilities zijn (niet alleen bij fouten) — vang stdout ook bij non-zero exit
 
+### Fase 11B (27/02) - Agent Ecosysteem Enterprise Complete (Niveau 7)
+- Individuele `actorName` per reviewer (security-reviewer, code-reviewer, ux-ui-reviewer) in workers.js JOB_ACTOR_MAP vervangt dev-layer wrapper — maakt per-agent filtering en status berekening mogelijk
+- `trendHelper.js` berekent week-over-week deltas uit audit_log entries — geen externe dependencies, puur MongoDB aggregatie op `metadata` velden
+- `agentIssues.js` als aparte MongoDB collectie met CRUD + auto-assignment + SLA tracking — gescheiden van audit_logs (ander lifecycle: open/in_progress/resolved vs one-shot log entries)
+- `baselineService.js` gebruikt 2σ (standaarddeviatie) threshold voor anomaliedetectie — simpel maar effectief, initiële baselines uit 14 entries, kalibratie na 4+ weken data
+- `correlationService.js` zoekt cross-agent patronen in recente audit_log entries — wekelijks maandag, niet real-time (daily = ruis, monthly = te traag)
+- Admin Issues module: 5 endpoints in adminPortal.js — hergebruik bestaand JWT/RBAC middleware, frontend IssuesPage met status cards + sortable tabel
+- Trending chips hergebruiken bestaand `/agents/:key/results` endpoint → `metadata.trend` — geen apart API endpoint nodig
+- `npm audit fix` (zonder --force) loste 1C/4H/3M → 0 vulnerabilities op als eerste blok — clean security baseline vóór enterprise features
+- MongoDB Atlas (NIET localhost) als audit_log storage — connection URI via `MONGODB_URI` env var, belangrijk voor verificatiescripts op Hetzner
+
 ---
 
 ## Deel 6: Beslissingen Log
@@ -1183,6 +1195,14 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 27-02 | HTTPS-based TTFB check (11A) | Node.js native https module voor performance — geen Puppeteer/Lighthouse dependency nodig voor basismetrieken | Claude Code |
 | 27-02 | AuditLog status 'completed'/'failed' (11A) | Mongoose enum accepteert NIET 'success'/'error' — uniforme enum waarden across codebase | Claude Code |
 | 27-02 | functionalityLevel 'minimal'→'active' (11A) | 3 dev agents nu daadwerkelijk functioneel — AGENT_METADATA bijgewerkt naar werkelijke capabilities | Claude Code |
+| 27-02 | Individuele actorName per reviewer (11B) | `security-reviewer`, `code-reviewer`, `ux-ui-reviewer` in JOB_ACTOR_MAP — vervangt `dev-layer` wrapper voor precise audit trail attribution | Claude Code |
+| 27-02 | Trend data in metadata (11B) | `metadata.trend` per audit_log entry — queryable zonder aparte collection, trendHelper.js berekent week-over-week deltas | Claude Code |
+| 27-02 | De Bode dev insights (11B) | Development findings in daily briefing als `dev_insights` sectie — niet via Threema (te ruisig voor dev bevindingen) | Claude Code |
+| 27-02 | Aparte agent_issues collectie (11B) | Gescheiden van audit_logs — ander lifecycle (open/in_progress/resolved) met auto-assignment + SLA tracking | Claude Code |
+| 27-02 | 2σ anomaliedrempel (11B) | Standaarddeviatie-gebaseerde threshold in baselineService — simpel statistisch, geen ML nodig voor 3 metrieken met wekelijkse data | Claude Code |
+| 27-02 | Correlatierapport wekelijks maandag (11B) | Dagelijks = ruis, maandelijks = te traag — wekelijks biedt actionable insights zonder alert fatigue | Claude Code |
+| 27-02 | npm audit fix als eerste blok (11B) | Clean security baseline (1C/4H/3M→0) vóór enterprise features — audit fix zonder --force (geen breaking changes) | Claude Code |
+| 27-02 | Admin Issues module 5 endpoints (11B) | GET/POST/PUT list/create/update/assign/stats — hergebruik bestaand JWT/RBAC middleware, frontend met status cards | Claude Code |
 
 ---
 
@@ -1209,6 +1229,9 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | Frontend security headers ontbreken | Hoog | ✅ Gemitigeerd (10C) — 4 headers + ServerTokens Prod op alle 5 frontend/admin domeinen |
 | Aspirationele agents (Stylist/Corrector/Bewaker) | Laag | ✅ Opgelost (11A) — alle 3 geactiveerd met execute() methods, functionalityLevel: active |
 | AuditLog status enum mismatch | Medium | ✅ Gemitigeerd (11A) — 'success'/'error' vervangen door 'completed'/'failed' in alle 3 reviewer files |
+| Individuele logging = meer audit_log entries | Laag | ✅ Geaccepteerd (11B) — 22 entries/cyclus (10+6+6) vs 3 wrapper entries, MongoDB groei acceptabel, monitoring via baselines |
+| Baseline 2σ threshold kalibratie | Laag | Open (11B) — Initiële baselines uit 14 entries, mogelijke herkalibratie na 4+ weken data |
+| npm audit 0 vulnerabilities | Laag | ✅ Gemitigeerd (11B) — `npm audit fix` (geen --force): 1C/4H/3M → 0C/0H/0M/0L, 2 dev-only moderate resterend |
 
 ---
 
@@ -1267,6 +1290,7 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.12** | **27-02-2026** | **Fase 11B Agent Ecosysteem Enterprise Complete — Niveau 7 (Zelflerend) COMPLEET. 10 blokken: (A) npm audit fix 1C/4H/3M→0, (B) individuele actorName per reviewer in JOB_ACTOR_MAP, (C) De Bode escalatie dev_insights, (D) trendHelper.js week-over-week trending, (E) trending chips in admin resultaten tab, (F) agentIssues.js MongoDB CRUD + SLA tracking, (G) Admin Issues module 5 endpoints, (H) baselineService.js + anomaliedetectie 2σ, (I) correlationService.js cross-agent rapport, (J) deploy + documentatie. 22 bestanden (7 nieuw + 15 gewijzigd). adminPortal.js v3.11.0 (47 endpoints). 9 Lessons Learned, 8 Beslissingen Log entries, 3 Risico Register entries. CLAUDE.md v3.46.0.** |
 | **7.11** | **27-02-2026** | **Fase 11A Agent Ecosysteem Audit + Activering COMPLEET. (A) Ecosysteem audit: 18 agents, 40 BullMQ jobs, 18.320 MongoDB entries/30d (22.380 all-time), 7 agents met individuele logs + rest via wrapper actors (dev-layer, strategy-layer). (B) De Bewaker geactiveerd: npm audit scan, 1C/4H/3M/0L (16 total), dagelijks via dev-security-scan. (C) De Corrector geactiveerd: grep-based code scan, 182 files/61.622 lines/372 console.logs/10 TODOs, wekelijks via dev-quality-report. (D) De Stylist verrijkt: HTTPS TTFB+status+headers check op 4 domeinen, avg 42ms, wekelijks via dev-dependency-audit. AuditLog Mongoose enum fix: 'success'→'completed', 'error'→'failed' in alle 3 reviewer files. Workers.js: lightweight execute() i.p.v. heavy checkProject(). AGENT_METADATA: functionalityLevel 'minimal'→'active' voor 3 agents. 5 Lessons Learned, 6 Beslissingen Log, 2 Risico Register entries. CLAUDE.md v3.45.0.** |
 | **7.10** | **26-02-2026** | **Fase 10C Apache Hardening + Agent Eerlijkheid + Live Verificatie COMPLEET. (A) Apache security headers op 5 domeinen (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) + ServerTokens Prod + ServerSignature Off. texelmaps.nl sites-enabled symlink fix. (B) Live verificatie 10A: 10/10 PASS (summary cards, deactivated agents, results tab, calculateAgentStatus). (C) Aspirationele agents eerlijk gelabeld (Stylist/Corrector/Bewaker): description + tasks + output_description bijgewerkt naar actuele functionaliteit, functionalityLevel: minimal. Frank kiest: labelen, NIET deactiveren. (D) Sessions.user_id INT→VARCHAR(36): FK dropped, ALTER TABLE, login OK, 0 truncation errors. 5 Lessons Learned, 5 Beslissingen Log, 2 Risico Register entries. CLAUDE.md v3.44.0.** |
 | **7.9** | **26-02-2026** | **Fase 10A-Restant + 10B Security Hardening COMPLEET. 10A-R: Agent config datacorruptie fix (backend placeholder validatie + frontend filter + MongoDB restore contentQuality tasks), Threama CONFIGURED geverifieerd (smoke test), CLAUDE.md versie-fix. 10B: npm audit fix (17→2 vulnerabilities, 0 critical/high), hardcoded secrets scan (1 dev-only DEV_FALLBACK_USER, 0 productie), security headers audit (API OK via Helmet, frontend Apache vhosts missen headers → P1), De Bewaker 0 security scans (aspirationeel), `/root/fase_10b_security_rapport.md`. 7 Beslissingen Log entries. adminPortal.js v3.10.0. CLAUDE.md v3.43.0.** |
@@ -1302,5 +1326,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 27 februari 2026 - Fase 11A COMPLEET (Agent Ecosysteem Audit + Activering), Master Document v7.11*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→11A COMPLEET. Admin Portal: 42 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC. adminPortal.js v3.10.0. 3 dev agents geactiveerd: De Bewaker, De Corrector, De Stylist. CLAUDE.md v3.45.0.*
+*Laatst bijgewerkt: 27 februari 2026 - Fase 12 COMPLEET (Verificatie, Consolidatie & Enterprise Hardening), Master Document v7.13*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→12 COMPLEET. Admin Portal: 47 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC, Issues module. adminPortal.js v3.11.0. Agent Enterprise: individuele logging, trending, issues, anomaliedetectie, correlatie. CLAUDE.md v3.47.0.*

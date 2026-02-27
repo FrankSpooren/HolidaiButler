@@ -33,42 +33,27 @@ class QASyncService {
     console.log(`[QASyncService] Starting Q&A sync to ChromaDB collection "${collectionName}"...`);
 
     try {
-      // For QnA table (Texel uses destination_id, no status/priority)
-      // For QA table (Calpe uses status/priority/poi_id)
+      // QnA table for all destinations (destination_id differentiates)
       let query, replacements = [];
 
-      if (destinationId && destinationId !== 1) {
-        // Use QnA table for non-Calpe destinations
-        query = `
-          SELECT q.id, q.question, q.answer, q.language, q.google_placeid as poi_id,
-                 q.source, q.created_at as last_updated,
-                 p.name as poi_name, p.category, p.city AS destination
-          FROM QnA q
-          LEFT JOIN POI p ON q.google_placeid = p.google_place_id
-          WHERE q.destination_id = ?
-            AND q.question IS NOT NULL AND q.answer IS NOT NULL
-        `;
+      query = `
+        SELECT q.id, q.question, q.answer, q.language, q.google_placeid as poi_id,
+               q.source, q.created_at as last_updated,
+               p.name as poi_name, p.category, p.city AS destination
+        FROM QnA q
+        LEFT JOIN POI p ON q.google_placeid = p.google_place_id
+        WHERE q.question IS NOT NULL AND q.answer IS NOT NULL
+      `;
+
+      if (destinationId) {
+        query += ' AND q.destination_id = ?';
         replacements.push(destinationId);
-        if (since) {
-          query += ' AND q.created_at > ?';
-          replacements.push(since);
-        }
-        query += ' ORDER BY q.id DESC LIMIT 200';
-      } else {
-        // Use QA table for Calpe (original behavior)
-        query = `
-          SELECT qa.id, qa.question, qa.answer, qa.language, qa.poi_id,
-                 qa.priority, qa.last_updated, p.name as poi_name, p.category, p.city AS destination
-          FROM QA qa
-          LEFT JOIN POI p ON qa.poi_id = p.id
-          WHERE qa.status = 'approved'
-        `;
-        if (since) {
-          query += ' AND qa.last_updated > ?';
-          replacements.push(since);
-        }
-        query += ' ORDER BY qa.priority DESC, qa.last_updated DESC LIMIT 200';
       }
+      if (since) {
+        query += ' AND q.created_at > ?';
+        replacements.push(since);
+      }
+      query += ' ORDER BY q.id DESC LIMIT 200';
 
       const [qas] = await this.sequelize.query(query, { replacements });
 
@@ -116,35 +101,8 @@ class QASyncService {
   }
 
   async syncRejectedQAs() {
-    if (!this.sequelize) {
-      throw new Error('Sequelize not initialized');
-    }
-
-    try {
-      // Get recently rejected Q&As
-      const [rejectedQAs] = await this.sequelize.query(`
-        SELECT id FROM QA
-        WHERE status = 'rejected'
-        AND last_updated > DATE_SUB(NOW(), INTERVAL 24 HOUR)
-      `);
-
-      if (rejectedQAs.length === 0) {
-        return { deleted: 0 };
-      }
-
-      const ids = rejectedQAs.map(q => `qa_${q.id}`);
-      await chromaService.deleteDocuments(DEFAULT_COLLECTION, ids);
-
-      await logAgent('holibot-sync', 'rejected_qas_removed', {
-        description: `Removed ${ids.length} rejected Q&As from ChromaDB`,
-        metadata: { count: ids.length }
-      });
-
-      return { deleted: ids.length };
-    } catch (error) {
-      await logError('holibot-sync', error, { action: 'sync_rejected_qas' });
-      throw error;
-    }
+    // QnA table has no status column — rejection not applicable
+    return { deleted: 0 };
   }
 }
 

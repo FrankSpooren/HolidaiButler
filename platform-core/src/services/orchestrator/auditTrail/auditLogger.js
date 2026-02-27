@@ -59,13 +59,25 @@ class AuditLogger {
     }
   }
 
+  // Valid status values for AuditLog schema
+  static VALID_STATUSES = ["initiated", "completed", "failed", "pending_approval"];
+
+  // Strip invalid status from spread details to prevent Mongoose validation errors
+  _sanitizeDetails(details) {
+    if (details.status && !AuditLogger.VALID_STATUSES.includes(details.status)) {
+      const { status, ...safe } = details;
+      return safe;
+    }
+    return details;
+  }
+
   // Convenience methods
   async logAgentAction(agentName, action, details = {}) {
     return this.log({
       actor: { type: "agent", name: agentName },
       action,
       category: "job",
-      ...details
+      ...this._sanitizeDetails(details)
     });
   }
 
@@ -74,7 +86,7 @@ class AuditLogger {
       actor: { type: "system", name: "orchestrator" },
       action,
       category: "system",
-      ...details
+      ...this._sanitizeDetails(details)
     });
   }
 
@@ -84,7 +96,7 @@ class AuditLogger {
       action: "alert_" + level,
       category: "alert",
       description: message,
-      ...details
+      ...this._sanitizeDetails(details)
     });
   }
 

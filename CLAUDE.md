@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.46.0
+> **Versie**: 3.47.0
 > **Laatst bijgewerkt**: 27 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -221,6 +221,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | 10C | Apache Hardening + Agent Eerlijkheid + Sessions Fix | 26-02 | 5 domeinen headers |
 | 11A | Agent Ecosysteem Audit + Activering | 27-02 | 3 agents geactiveerd |
 | 11B | Agent Ecosysteem Enterprise Complete | 27-02 | Niveau 7: logging, trending, issues, anomaliedetectie, correlatie |
+| 12 | Verificatie, Consolidatie & Hardening | 27-02 | 3 bug fixes, 34 tests, runtime metrics, MS v7.13 |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -228,7 +229,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ## 🤖 Agent Systeem
 
-### 18 Agents (15 agents + 3 monitoring modules + Issues lifecycle + Baselines + Correlation)
+### 18 Agents (15 agents + 3 monitoring modules) + 3 Enterprise Services (Issues, Baselines, Correlation)
 | # | Agent | Naam | Categorie | Type | Schedule |
 |---|-------|------|-----------|------|----------|
 | 1 | Orchestrator | De Maestro | Core | A (dest) | Continuous |
@@ -274,7 +275,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.10.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.11.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
 - **Endpoints**: 47 admin endpoints
@@ -378,7 +379,8 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.46.0** | **2026-02-27** | **Fase 11B**: Agent Ecosysteem Enterprise Complete (Niveau 7). Individuele logging (B), trending week-over-week (D), De Bode escalatie (C), agent_issues MongoDB + SLA tracking (F), Admin Issues module 5 endpoints (G), trending chips resultaten tab (E), baselines + anomaliedetectie (H), cross-agent correlatie (I). adminPortal.js v3.11.0, 47 endpoints. MS v7.12. |
+| **3.47.0** | **2026-02-27** | **Fase 12**: Verificatie, Consolidatie & Enterprise Hardening. Blok A: 16/16 server verificatie. Blok B: MS v7.13 (5 gaps gefixed). Blok C: CLAUDE.md v3.11.0 fix. Blok D: AuditLog status sanitizer + QA→QnA table fix + Reviews case fix. Blok E: 34/34 enterprise tests. Blok F: runtime metrics aggregatie. |
+| 3.46.0 | 2026-02-27 | Fase 11B: Agent Ecosysteem Enterprise Complete (Niveau 7). Individuele logging (B), trending week-over-week (D), De Bode escalatie (C), agent_issues MongoDB + SLA tracking (F), Admin Issues module 5 endpoints (G), trending chips resultaten tab (E), baselines + anomaliedetectie (H), cross-agent correlatie (I). adminPortal.js v3.11.0, 47 endpoints. MS v7.12. |
 | 3.45.0 | 2026-02-27 | Fase 11A: Agent ecosysteem audit (18 agents, 40 jobs), 3 dev agents geactiveerd. AuditLog status enum fix. MS v7.11. |
 | 3.44.0 | 2026-02-26 | Fase 10C: Apache security headers, live verificatie 10A, aspirationele agents labeling, Sessions.user_id fix. MS v7.10. |
 
@@ -390,7 +392,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.12 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.13 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

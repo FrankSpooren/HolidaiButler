@@ -179,38 +179,38 @@ class SyncReporter {
    */
   async getReviewStats() {
     const [totalResult] = await this.sequelize.query(
-      "SELECT COUNT(*) as count FROM Reviews"
+      "SELECT COUNT(*) as count FROM reviews"
     );
 
     const [bySentiment] = await this.sequelize.query(`
       SELECT sentiment_label, COUNT(*) as count
-      FROM Reviews
+      FROM reviews
       WHERE spam_score < 0.5
       GROUP BY sentiment_label
     `);
 
     const [byLanguage] = await this.sequelize.query(`
       SELECT language, COUNT(*) as count
-      FROM Reviews
+      FROM reviews
       GROUP BY language
       ORDER BY count DESC
     `);
 
     const [recentReviews] = await this.sequelize.query(`
       SELECT COUNT(*) as count
-      FROM Reviews
+      FROM reviews
       WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
     `);
 
     const [avgRating] = await this.sequelize.query(`
       SELECT AVG(rating) as avg_rating
-      FROM Reviews
+      FROM reviews
       WHERE spam_score < 0.5
     `);
 
     const [spamCount] = await this.sequelize.query(`
       SELECT COUNT(*) as count
-      FROM Reviews
+      FROM reviews
       WHERE spam_score >= 0.5
     `);
 
@@ -230,39 +230,34 @@ class SyncReporter {
    */
   async getQAStats() {
     const [totalResult] = await this.sequelize.query(
-      "SELECT COUNT(*) as count FROM QA"
+      "SELECT COUNT(*) as count FROM QnA"
     );
-
-    const [byStatus] = await this.sequelize.query(`
-      SELECT status, COUNT(*) as count
-      FROM QA
-      GROUP BY status
-    `);
 
     const [byLanguage] = await this.sequelize.query(`
       SELECT language, COUNT(*) as count
-      FROM QA
+      FROM QnA
       GROUP BY language
     `);
 
     const [bySource] = await this.sequelize.query(`
       SELECT source, COUNT(*) as count
-      FROM QA
+      FROM QnA
       GROUP BY source
     `);
 
-    const [pendingApproval] = await this.sequelize.query(`
-      SELECT COUNT(*) as count
-      FROM QA
-      WHERE status = 'pending_approval'
+    const [byDestination] = await this.sequelize.query(`
+      SELECT destination_id, COUNT(*) as count
+      FROM QnA
+      GROUP BY destination_id
     `);
 
     return {
       total: totalResult[0]?.count || 0,
-      byStatus: byStatus,
+      byStatus: [],
       byLanguage: byLanguage,
       bySource: bySource,
-      pendingApproval: pendingApproval[0]?.count || 0
+      byDestination: byDestination,
+      pendingApproval: 0
     };
   }
 
