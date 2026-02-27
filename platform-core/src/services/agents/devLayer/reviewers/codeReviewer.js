@@ -1,3 +1,4 @@
+import { execSync } from 'child_process';
 import { logAgent, logError } from '../../../orchestrator/auditTrail/index.js';
 
 /**
@@ -483,6 +484,90 @@ class CodeReviewer {
     }
 
     return result;
+  }
+
+  /**
+   * Scheduled execution: lightweight grep-based code scan on platform-core
+   * Called by dev-quality-report BullMQ job (weekly Monday 06:00)
+   */
+  async execute() {
+    const srcPath = '/var/www/api.holidaibutler.com/platform-core/src';
+    const results = {
+      timestamp: new Date().toISOString(),
+      consoleLogs: 0,
+      hardcodedStrings: 0,
+      todos: 0,
+      fixmes: 0,
+      hacks: 0,
+      fileCount: 0,
+      lineCount: 0,
+      error: null
+    };
+
+    try {
+      // 1. Count console.log statements (excluding test files and node_modules)
+      try {
+        const clOutput = execSync(
+          `grep -rn "console\\.log" "${srcPath}" --include="*.js" --include="*.mjs" -c 2>/dev/null || echo "0"`,
+          { encoding: 'utf8', timeout: 30000 }
+        );
+        results.consoleLogs = clOutput.trim().split('\n')
+          .reduce((sum, line) => sum + (parseInt(line.split(':').pop()) || 0), 0);
+      } catch { results.consoleLogs = -1; }
+
+      // 2. Detect potential hardcoded secrets (password, apikey, secret with string values)
+      try {
+        const hsOutput = execSync(
+          `grep -rn "\\(password\\|apikey\\|api_key\\|secret\\).*[=:].*['\\"]\\.\\{8,\\}" "${srcPath}" --include="*.js" --include="*.mjs" -c 2>/dev/null || echo "0"`,
+          { encoding: 'utf8', timeout: 30000 }
+        );
+        results.hardcodedStrings = hsOutput.trim().split('\n')
+          .reduce((sum, line) => sum + (parseInt(line.split(':').pop()) || 0), 0);
+      } catch { results.hardcodedStrings = -1; }
+
+      // 3. Count TODO/FIXME/HACK comments
+      try {
+        const todoOutput = execSync(
+          `grep -rn "TODO\\|FIXME\\|HACK" "${srcPath}" --include="*.js" --include="*.mjs" 2>/dev/null | wc -l`,
+          { encoding: 'utf8', timeout: 30000 }
+        );
+        const totalTodos = parseInt(todoOutput.trim()) || 0;
+        results.todos = totalTodos;
+      } catch { results.todos = -1; }
+
+      // 4. File count + line count
+      try {
+        const fcOutput = execSync(
+          `find "${srcPath}" -name "*.js" -o -name "*.mjs" | wc -l`,
+          { encoding: 'utf8', timeout: 15000 }
+        );
+        results.fileCount = parseInt(fcOutput.trim()) || 0;
+      } catch { results.fileCount = -1; }
+
+      try {
+        const lcOutput = execSync(
+          `find "${srcPath}" \\( -name "*.js" -o -name "*.mjs" \\) -exec cat {} + | wc -l`,
+          { encoding: 'utf8', timeout: 30000 }
+        );
+        results.lineCount = parseInt(lcOutput.trim()) || 0;
+      } catch { results.lineCount = -1; }
+
+    } catch (e) {
+      results.error = e.message;
+    }
+
+    try {
+      await logAgent('code', 'code_quality_scan', {
+        description: `Code scan: ${results.fileCount} files, ${results.lineCount} lines, ${results.consoleLogs} console.logs, ${results.todos} TODOs`,
+        status: results.error ? 'failed' : 'completed',
+        metadata: results
+      });
+    } catch (logErr) {
+      console.error('[CodeReviewer] Failed to log scan result:', logErr.message);
+    }
+
+    console.log(`[CodeReviewer] Code scan: ${results.fileCount} files, ${results.lineCount} lines, ${results.consoleLogs} console.logs, ${results.todos} TODOs`);
+    return results;
   }
 }
 

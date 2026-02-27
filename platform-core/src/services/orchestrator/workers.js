@@ -408,12 +408,13 @@ export function startWorkers() {
         // === DEVELOPMENT LAYER AGENT JOBS ===
         case "dev-security-scan":
           try {
-            const devLayerSecurity = await import("../agents/devLayer/index.js");
-            const securityResults = {
-              "platform-core": await devLayerSecurity.default.checkProject("platform-core"),
-              timestamp: new Date().toISOString()
-            };
-            console.log("[Orchestrator] Security scan completed");
+            const securityReviewer = await import("../agents/devLayer/reviewers/securityReviewer.js");
+            const securityResults = await securityReviewer.default.execute();
+            console.log("[Orchestrator] Security scan completed:", JSON.stringify({
+              total: securityResults.total,
+              critical: securityResults.vulnerabilities?.critical || 0,
+              high: securityResults.vulnerabilities?.high || 0
+            }));
             result = securityResults;
           } catch (error) {
             console.error("[Orchestrator] Security scan failed:", error.message);
@@ -423,25 +424,29 @@ export function startWorkers() {
 
         case "dev-dependency-audit":
           try {
-            const devLayerAudit = await import("../agents/devLayer/index.js");
-            const auditResult = await devLayerAudit.default.checkProject("platform-core");
-            console.log("[Orchestrator] Dependency audit:", JSON.stringify({
-              critical: auditResult.dependencyAudit?.critical || 0,
-              high: auditResult.dependencyAudit?.high || 0
+            const uxReviewer = await import("../agents/devLayer/reviewers/uxReviewer.js");
+            const perfResult = await uxReviewer.default.execute();
+            const avgTtfb = Math.round(perfResult.checks.reduce((s, c) => s + (c.ttfb || 0), 0) / perfResult.checks.length);
+            console.log("[Orchestrator] Performance check:", JSON.stringify({
+              domains: perfResult.checks.length,
+              avgTtfb: avgTtfb + "ms",
+              allOk: perfResult.checks.every(c => c.status >= 200 && c.status < 400)
             }));
-            result = auditResult.dependencyAudit;
+            result = perfResult;
           } catch (error) {
-            console.error("[Orchestrator] Dependency audit failed:", error.message);
+            console.error("[Orchestrator] Performance check failed:", error.message);
             throw error;
           }
           break;
 
         case "dev-quality-report":
           try {
-            const devLayerReport = await import("../agents/devLayer/index.js");
-            const qualityReport = await devLayerReport.default.checkProject("platform-core");
+            const codeReviewer = await import("../agents/devLayer/reviewers/codeReviewer.js");
+            const qualityReport = await codeReviewer.default.execute();
             console.log("[Orchestrator] Quality report generated:", JSON.stringify({
-              status: qualityReport.overallStatus
+              files: qualityReport.fileCount,
+              consoleLogs: qualityReport.consoleLogs,
+              todos: qualityReport.todos
             }));
             result = qualityReport;
           } catch (error) {

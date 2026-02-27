@@ -1,3 +1,4 @@
+import https from 'https';
 import { logAgent, logError } from '../../../orchestrator/auditTrail/index.js';
 
 /**
@@ -472,6 +473,84 @@ class UXReviewer {
    */
   getWCAGChecks() {
     return WCAG_CHECKS;
+  }
+
+  /**
+   * Scheduled execution: HTTP-based performance check on all domains
+   * Called by dev-dependency-audit BullMQ job (weekly Sunday 03:00)
+   */
+  async execute() {
+    const domains = [
+      { name: 'Calpe Frontend', url: 'https://holidaibutler.com' },
+      { name: 'Texel Frontend', url: 'https://texelmaps.nl' },
+      { name: 'Admin Portal', url: 'https://admin.holidaibutler.com' },
+      { name: 'API Health', url: 'https://api.holidaibutler.com/health' }
+    ];
+
+    const results = {
+      timestamp: new Date().toISOString(),
+      checks: [],
+      error: null
+    };
+
+    for (const domain of domains) {
+      const start = Date.now();
+      try {
+        const res = await new Promise((resolve, reject) => {
+          const req = https.get(domain.url, { timeout: 10000 }, (response) => {
+            const ttfb = Date.now() - start;
+            let body = '';
+            response.on('data', chunk => { body += chunk; });
+            response.on('end', () => {
+              resolve({
+                name: domain.name,
+                url: domain.url,
+                status: response.statusCode,
+                ttfb: ttfb,
+                contentLength: parseInt(response.headers['content-length']) || body.length,
+                headers: {
+                  server: response.headers['server'] || 'hidden',
+                  xFrameOptions: response.headers['x-frame-options'] || 'MISSING',
+                  xContentTypeOptions: response.headers['x-content-type-options'] || 'MISSING',
+                  referrerPolicy: response.headers['referrer-policy'] || 'MISSING'
+                }
+              });
+            });
+          });
+          req.on('error', reject);
+          req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+        });
+        results.checks.push(res);
+      } catch (e) {
+        results.checks.push({
+          name: domain.name,
+          url: domain.url,
+          status: 0,
+          error: e.message,
+          ttfb: Date.now() - start
+        });
+      }
+    }
+
+    // Summary
+    const allOk = results.checks.every(c => c.status >= 200 && c.status < 400);
+    const avgTtfb = Math.round(results.checks.reduce((s, c) => s + (c.ttfb || 0), 0) / results.checks.length);
+    const missingHeaders = results.checks.filter(c =>
+      c.headers && (c.headers.xFrameOptions === 'MISSING' || c.headers.xContentTypeOptions === 'MISSING')
+    ).length;
+
+    try {
+      await logAgent('ux-ui', 'performance_check', {
+        description: `Performance check: ${results.checks.length} domains, avg TTFB ${avgTtfb}ms, ${missingHeaders} missing headers`,
+        status: allOk ? 'completed' : 'failed',
+        metadata: results
+      });
+    } catch (logErr) {
+      console.error('[UXReviewer] Failed to log performance check:', logErr.message);
+    }
+
+    console.log(`[UXReviewer] Performance check: ${results.checks.length} domains, avg TTFB ${avgTtfb}ms, all OK: ${allOk}`);
+    return results;
   }
 }
 

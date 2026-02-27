@@ -663,4 +663,58 @@ Gebaseerd op `Strategische_Agent_Ecosysteem_Analyse_v2_DEFINITIEF.md` — 5 item
 
 ---
 
+## Fase 11A — Agent Ecosysteem Audit + Activering (27-02-2026)
+
+**Doel**: Complete ecosysteem röntgenfoto + 3 aspirationele agents daadwerkelijk activeren
+
+### Blok A: Ecosysteem Audit (BASELINE)
+- 18.320 audit_log entries (30d), 22.380 all-time
+- Actor mapping: `actor.name` field (object), NOT `actorName` (flat string)
+- 7 PRODUCTIEF agents, 2 OPERATIONEEL, 4 MINIMAAL, 3 GEDEACTIVEERD
+- 40 BullMQ jobs confirmed (teller was correct)
+- Strategy-layer jobs (Leermeester/Thermostaat) still run despite deactivation
+- Dev-layer: 277 entries maar alleen `agent_initialized` (239) + `project_quality_check_completed` (38)
+
+### Blok B: De Bewaker — npm audit (GEACTIVEERD)
+- `securityReviewer.js`: execute() met `npm audit --json`, 60s timeout
+- Workers.js: `dev-security-scan` → securityReviewer.execute() (was: full checkProject)
+- Resultaat: 1C/4H/3M/0L (16 total), alert fired for critical
+- Schedule: dagelijks 02:00
+
+### Blok C: De Corrector — Code Scan (GEACTIVEERD)
+- `codeReviewer.js`: execute() met grep-based scan (console.log, secrets, TODO/FIXME)
+- Workers.js: `dev-quality-report` → codeReviewer.execute() (was: full checkProject)
+- Resultaat: 182 files, 61.622 lines, 372 console.logs, 10 TODOs
+- Schedule: wekelijks maandag 06:00
+
+### Blok D: De Stylist — Performance Check (GEACTIVEERD)
+- `uxReviewer.js`: execute() met HTTP TTFB + status + headers check op 4 domeinen
+- Workers.js: `dev-dependency-audit` → uxReviewer.execute() (was: full checkProject)
+- Resultaat: 4 domeinen, avg TTFB 42ms, all OK: true
+- Schedule: wekelijks zondag 03:00
+
+### Bug Fix: AuditLog Status Enum
+- Mongoose enum: `initiated`, `completed`, `failed`, `pending_approval`
+- Alle 3 agents gebruikten `status: 'success'` → gefixed naar `status: 'completed'`
+
+### Bestanden gewijzigd
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/services/agents/devLayer/reviewers/securityReviewer.js` | execute() + execSync import |
+| `platform-core/src/services/agents/devLayer/reviewers/codeReviewer.js` | execute() + execSync import |
+| `platform-core/src/services/agents/devLayer/reviewers/uxReviewer.js` | execute() + https import |
+| `platform-core/src/services/orchestrator/workers.js` | 3 job handlers → direct reviewer calls |
+| `platform-core/src/routes/adminPortal.js` | AGENT_METADATA: 3 agents functionalityLevel minimal→active |
+| `CLAUDE.md` | v3.45.0 |
+| `CLAUDE_HISTORY.md` | Fase 11A section |
+| `docs/strategy/HolidaiButler_Master_Strategie.md` | v7.11 |
+
+### Deploy
+- SCP: 5 bestanden naar Hetzner
+- PM2 restart: 3× (na elk blok B/C/D)
+- CLAUDE.md v3.45.0, MS v7.11
+- Git: commit + push dev→test→main
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
