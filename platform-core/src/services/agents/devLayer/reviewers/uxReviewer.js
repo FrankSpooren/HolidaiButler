@@ -1,5 +1,7 @@
 import https from 'https';
 import { logAgent, logError } from '../../../orchestrator/auditTrail/index.js';
+import { getPreviousScan, calculatePerformanceTrend } from './trendHelper.js';
+import { raiseIssue, autoCloseIssues } from '../../base/agentIssues.js';
 
 /**
  * UX/UI Reviewer Agent
@@ -539,9 +541,14 @@ class UXReviewer {
       c.headers && (c.headers.xFrameOptions === 'MISSING' || c.headers.xContentTypeOptions === 'MISSING')
     ).length;
 
+    // Trending: compare with previous scan
+    const prevScan = await getPreviousScan('ux-ui-reviewer', 'performance_check');
+    const trend = calculatePerformanceTrend(results.checks, prevScan?.checks);
+    results.trend = trend;
+
     try {
-      await logAgent('ux-ui', 'performance_check', {
-        description: `Performance check: ${results.checks.length} domains, avg TTFB ${avgTtfb}ms, ${missingHeaders} missing headers`,
+      await logAgent('ux-ui-reviewer', 'performance_check', {
+        description: `Performance check: ${results.checks.length} domains, avg TTFB ${avgTtfb}ms, ${missingHeaders} missing headers [${trend.direction}]`,
         status: allOk ? 'completed' : 'failed',
         metadata: results
       });
@@ -549,7 +556,39 @@ class UXReviewer {
       console.error('[UXReviewer] Failed to log performance check:', logErr.message);
     }
 
-    console.log(`[UXReviewer] Performance check: ${results.checks.length} domains, avg TTFB ${avgTtfb}ms, all OK: ${allOk}`);
+    // Fase 11B: Raise/auto-close issues
+    try {
+      const activeFingerprints = [];
+      for (const check of results.checks) {
+        const ttfb = parseInt(check.ttfb) || 0;
+        if (ttfb > 2000) {
+          const fp = 'perf-slow-' + check.name.toLowerCase().replace(/\s/g, '-');
+          activeFingerprints.push(fp);
+          await raiseIssue({
+            agentName: 'ux-ui-reviewer', agentLabel: 'De Stylist',
+            severity: ttfb > 5000 ? 'high' : 'medium', category: 'performance',
+            title: `${check.name} TTFB ${ttfb}ms (> 2s drempel)`,
+            description: 'Time To First Byte overschrijdt acceptabele drempel',
+            details: check, fingerprint: fp
+          });
+        }
+        if (check.headers?.xFrameOptions === 'MISSING') {
+          const fp = 'perf-header-missing-' + check.name.toLowerCase().replace(/\s/g, '-');
+          activeFingerprints.push(fp);
+          await raiseIssue({
+            agentName: 'ux-ui-reviewer', agentLabel: 'De Stylist',
+            severity: 'medium', category: 'performance',
+            title: `${check.name}: X-Frame-Options header ontbreekt`,
+            details: check, fingerprint: fp
+          });
+        }
+      }
+      await autoCloseIssues('ux-ui-reviewer', 'performance', activeFingerprints);
+    } catch (issueErr) {
+      console.error('[UXReviewer] Issue tracking error:', issueErr.message);
+    }
+
+    console.log(`[UXReviewer] Performance check: ${results.checks.length} domains, avg TTFB ${avgTtfb}ms, all OK: ${allOk} [${trend.direction}]`);
     return results;
   }
 }

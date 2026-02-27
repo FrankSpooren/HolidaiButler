@@ -1,6 +1,8 @@
 import { execSync } from 'child_process';
 import { logAgent, logError } from '../../../orchestrator/auditTrail/index.js';
 import { sendAlert } from '../../../orchestrator/ownerInterface/index.js';
+import { getPreviousScan, calculateSecurityTrend } from './trendHelper.js';
+import { raiseIssue, autoCloseIssues } from '../../base/agentIssues.js';
 
 /**
  * Security Reviewer Agent
@@ -384,9 +386,14 @@ class SecurityReviewer {
     const severity = (results.vulnerabilities?.critical > 0 || results.vulnerabilities?.high > 0)
       ? 'warning' : 'info';
 
+    // Trending: compare with previous scan
+    const prevScan = await getPreviousScan('security-reviewer', 'npm_audit_scan');
+    const trend = calculateSecurityTrend(results.vulnerabilities || {}, prevScan);
+    results.trend = trend;
+
     try {
-      await logAgent('security', 'npm_audit_scan', {
-        description: `npm audit: ${results.total} vulnerabilities (${results.vulnerabilities?.critical || 0}C/${results.vulnerabilities?.high || 0}H/${results.vulnerabilities?.moderate || 0}M/${results.vulnerabilities?.low || 0}L)`,
+      await logAgent('security-reviewer', 'npm_audit_scan', {
+        description: `npm audit: ${results.total} vulnerabilities (${results.vulnerabilities?.critical || 0}C/${results.vulnerabilities?.high || 0}H/${results.vulnerabilities?.moderate || 0}M/${results.vulnerabilities?.low || 0}L) [${trend.direction}]`,
         status: results.error ? 'failed' : 'completed',
         metadata: results
       });
@@ -402,6 +409,37 @@ class SecurityReviewer {
       }
     } catch (logErr) {
       console.error('[SecurityReviewer] Failed to log audit result:', logErr.message);
+    }
+
+    // Fase 11B: Raise/auto-close issues
+    try {
+      const vuln = results.vulnerabilities || {};
+      const activeFingerprints = [];
+      if (vuln.critical > 0) {
+        const fp = 'sec-npm-critical-' + vuln.critical;
+        activeFingerprints.push(fp);
+        await raiseIssue({
+          agentName: 'security-reviewer', agentLabel: 'De Bewaker',
+          severity: 'critical', category: 'security',
+          title: `${vuln.critical} critical npm ${vuln.critical === 1 ? 'vulnerability' : 'vulnerabilities'}`,
+          description: 'npm audit detecteerde critical vulnerabilities in platform-core dependencies',
+          details: vuln, fingerprint: fp
+        });
+      }
+      if (vuln.high > 0) {
+        const fp = 'sec-npm-high-' + vuln.high;
+        activeFingerprints.push(fp);
+        await raiseIssue({
+          agentName: 'security-reviewer', agentLabel: 'De Bewaker',
+          severity: 'high', category: 'security',
+          title: `${vuln.high} high npm ${vuln.high === 1 ? 'vulnerability' : 'vulnerabilities'}`,
+          description: 'npm audit detecteerde high-severity vulnerabilities',
+          details: vuln, fingerprint: fp
+        });
+      }
+      await autoCloseIssues('security-reviewer', 'security', activeFingerprints);
+    } catch (issueErr) {
+      console.error('[SecurityReviewer] Issue tracking error:', issueErr.message);
     }
 
     console.log(`[SecurityReviewer] npm audit: ${results.total} vulnerabilities (${results.vulnerabilities?.critical || 0}C/${results.vulnerabilities?.high || 0}H/${results.vulnerabilities?.moderate || 0}M/${results.vulnerabilities?.low || 0}L)`);

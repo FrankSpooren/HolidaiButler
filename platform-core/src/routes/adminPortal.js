@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B (v3.11.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -68,6 +68,7 @@ import {
 } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
 import emailService from '../services/emailService.js';
+import { AgentIssue } from '../services/agents/base/agentIssues.js';
 
 const router = Router();
 
@@ -1026,7 +1027,7 @@ const AGENT_METADATA = [
     monitoring_scope: 'Frontend performance, security headers, brand kleuren',
     output_description: 'Wekelijks performance rapport: 4 domeinen, TTFB, headers',
     functionalityLevel: 'active',
-    schedule: '0 6 * * 1', actorNames: ['dev-layer'],
+    schedule: '0 6 * * 1', actorNames: ['ux-ui-reviewer', 'dev-layer'],
     errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "UX"
 2. Controleer brand configuratie per destination in config/destinations/
 3. Bij accessibility fouten: controleer frontend build output
@@ -1039,7 +1040,7 @@ const AGENT_METADATA = [
     monitoring_scope: 'Codebase kwaliteit, tech debt, secrets',
     output_description: 'Wekelijks code scan rapport: files, lines, console.logs, TODOs',
     functionalityLevel: 'active',
-    schedule: '0 6 * * 1', actorNames: ['dev-layer'],
+    schedule: '0 6 * * 1', actorNames: ['code-reviewer', 'dev-layer'],
     errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Code"
 2. Bij dependency vulnerabilities: npm audit --production
 3. Controleer ESLint config en linting output
@@ -1052,7 +1053,7 @@ const AGENT_METADATA = [
     monitoring_scope: 'npm dependencies, security vulnerabilities',
     output_description: 'Dagelijks npm audit rapport: vulnerability counts per severity',
     functionalityLevel: 'active',
-    schedule: '0 2 * * *', actorNames: ['dev-layer'],
+    schedule: '0 2 * * *', actorNames: ['security-reviewer', 'dev-layer'],
     errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Security"
 2. Bij dependency vulnerabilities: npm audit --production
 3. Controleer rate limiting: redis-cli keys "ratelimit:*" | head -20
@@ -1770,7 +1771,7 @@ router.get('/agents/:key/results', adminAuth('reviewer'), async (req, res) => {
             ? (log.metadata.destinationId === 1 ? 'Calpe' : log.metadata.destinationId === 2 ? 'Texel' : 'All')
             : 'All',
           details: log.description || null,
-          result: log.result || null
+          result: { ...(log.result || {}), ...(log.metadata?.trend ? { trend: log.metadata.trend } : {}), ...(log.metadata?.vulnerabilities ? { vulnerabilities: log.metadata.vulnerabilities } : {}) }
         });
       }
 
@@ -5304,6 +5305,169 @@ router.put('/agents/config/:key', adminAuth('platform_admin'), async (req, res) 
       success: false,
       error: { code: 'SERVER_ERROR', message: 'An error occurred updating agent config.' }
     });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// INTELLIGENCE ENDPOINT — Fase 11B Blok I (Cross-agent correlation)
+// ═══════════════════════════════════════════════════════════════
+
+router.get('/intelligence/report', adminAuth('reviewer'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.json({ success: true, data: { correlations: [], insights: [], message: 'MongoDB niet verbonden' } });
+    }
+    const db = mongoose.connection.db;
+    const latest = await db.collection('audit_logs').findOne(
+      { 'actor.name': 'correlation-engine', action: 'weekly_correlation_report' },
+      { sort: { timestamp: -1 } }
+    );
+    res.json({
+      success: true,
+      data: latest?.metadata || { correlations: [], insights: [], message: 'Nog geen rapport beschikbaar' }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Intelligence report error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch intelligence report' } });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ISSUES ENDPOINTS — Fase 11B (Agent Issues lifecycle management)
+// ═══════════════════════════════════════════════════════════════
+
+// GET /issues/stats — Dashboard statistics (MUST be before :issueId)
+router.get('/issues/stats', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const [byStatus, bySeverity, byAgent, avgResTime, slaBreaches] = await Promise.all([
+      AgentIssue.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      AgentIssue.aggregate([
+        { $match: { status: { $in: ['open', 'acknowledged', 'in_progress'] } } },
+        { $group: { _id: '$severity', count: { $sum: 1 } } }
+      ]),
+      AgentIssue.aggregate([
+        { $match: { status: { $in: ['open', 'acknowledged', 'in_progress'] } } },
+        { $group: { _id: '$agentLabel', count: { $sum: 1 } } }
+      ]),
+      AgentIssue.aggregate([
+        { $match: { status: { $in: ['resolved', 'auto_closed'] }, resolvedAt: { $ne: null } } },
+        { $project: { resolutionTime: { $subtract: ['$resolvedAt', '$detectedAt'] } } },
+        { $group: { _id: null, avg: { $avg: '$resolutionTime' } } }
+      ]),
+      AgentIssue.countDocuments({
+        status: { $in: ['open', 'acknowledged', 'in_progress'] },
+        slaTarget: { $lt: new Date(), $ne: null }
+      })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        byStatus: Object.fromEntries(byStatus.map(s => [s._id, s.count])),
+        bySeverity: Object.fromEntries(bySeverity.map(s => [s._id, s.count])),
+        byAgent: Object.fromEntries(byAgent.map(s => [s._id, s.count])),
+        avgResolutionTimeHours: avgResTime[0]?.avg ? Math.round(avgResTime[0].avg / (1000 * 60 * 60)) : null,
+        slaBreaches,
+        totalOpen: bySeverity.reduce((s, i) => s + i.count, 0)
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Issues stats error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+// GET /issues — All issues with filtering + pagination
+router.get('/issues', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const { status, severity, agent, page = 1, limit = 20 } = req.query;
+    const query = {};
+    if (status) query.status = status;
+    if (severity) query.severity = severity;
+    if (agent) query.agentName = agent;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const lim = Math.min(parseInt(limit), 100);
+    const [issues, total] = await Promise.all([
+      AgentIssue.find(query).sort({ detectedAt: -1 }).skip(skip).limit(lim).lean(),
+      AgentIssue.countDocuments(query)
+    ]);
+
+    const summary = await AgentIssue.aggregate([
+      { $match: { status: { $in: ['open', 'acknowledged', 'in_progress'] } } },
+      { $group: { _id: '$severity', count: { $sum: 1 } } }
+    ]);
+    const slaBreaches = await AgentIssue.countDocuments({
+      status: { $in: ['open', 'acknowledged', 'in_progress'] },
+      slaTarget: { $lt: new Date(), $ne: null }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        issues,
+        total,
+        page: parseInt(page),
+        totalPages: Math.ceil(total / lim),
+        summary: Object.fromEntries(summary.map(s => [s._id, s.count])),
+        slaBreaches
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Issues list error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+// GET /issues/:issueId — Single issue detail
+router.get('/issues/:issueId', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const issue = await AgentIssue.findOne({ issueId: req.params.issueId }).lean();
+    if (!issue) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Issue niet gevonden' } });
+    res.json({ success: true, data: issue });
+  } catch (error) {
+    logger.error('[AdminPortal] Issue detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+// PUT /issues/:issueId/status — Update issue status
+router.put('/issues/:issueId/status', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'editor']), async (req, res) => {
+  try {
+    const { status, resolution } = req.body;
+    const validStatuses = ['acknowledged', 'in_progress', 'resolved', 'wont_fix'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: 'Ongeldige status: ' + status } });
+    }
+
+    const update = { status };
+    if (status === 'acknowledged') update.acknowledgedAt = new Date();
+    if (status === 'resolved' || status === 'wont_fix') {
+      update.resolvedAt = new Date();
+      update.resolvedBy = req.adminUser.email;
+      update.resolution = resolution || '';
+    }
+
+    const issue = await AgentIssue.findOneAndUpdate(
+      { issueId: req.params.issueId },
+      { $set: update },
+      { new: true }
+    );
+    if (!issue) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Issue niet gevonden' } });
+
+    await saveAuditLog({
+      action: 'issue_status_changed',
+      adminId: req.adminUser.id,
+      adminEmail: req.adminUser.email,
+      details: `Issue ${req.params.issueId} → ${status}${resolution ? ': ' + resolution : ''}`,
+      entityType: 'agent_issue',
+      entityId: req.params.issueId
+    });
+
+    res.json({ success: true, data: issue });
+  } catch (error) {
+    logger.error('[AdminPortal] Issue status update error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
   }
 });
 

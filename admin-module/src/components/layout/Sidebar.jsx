@@ -7,6 +7,7 @@ import StarIcon from '@mui/icons-material/Star';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PeopleIcon from '@mui/icons-material/People';
+import BugReportIcon from '@mui/icons-material/BugReport';
 import { useTranslation } from 'react-i18next';
 import { SIDEBAR_STYLES } from '../../theme.js';
 import useAuthStore from '../../stores/authStore.js';
@@ -18,6 +19,7 @@ const MENU_ITEMS = [
   { key: 'reviews', path: '/reviews', icon: StarIcon },
   { key: 'analytics', path: '/analytics', icon: BarChartIcon },
   { key: 'settings', path: '/settings', icon: SettingsIcon },
+  { key: 'issues', path: '/issues', icon: BugReportIcon },
   { key: 'users', path: '/users', icon: PeopleIcon, requiredRole: 'platform_admin' }
 ];
 

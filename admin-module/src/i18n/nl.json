@@ -10,7 +10,8 @@
     "reviews": "Reviews",
     "analytics": "Analytics",
     "settings": "Instellingen",
-    "users": "Gebruikers"
+    "users": "Gebruikers",
+    "issues": "Issues"
   },
   "auth": {
     "login": "Inloggen",
@@ -126,7 +127,16 @@
       "resultStatus": "Status",
       "resultDuration": "Duur",
       "resultDestination": "Bestemming",
-      "resultDetails": "Details"
+      "resultDetails": "Details",
+      "resultTrend": "Trend",
+      "trend": {
+        "WORSE": "Verslechterd",
+        "SLOWER": "Trager",
+        "BETTER": "Verbeterd",
+        "FASTER": "Sneller",
+        "STABLE": "Stabiel",
+        "FIRST_SCAN": "Eerste scan"
+      }
     },
     "config": {
       "title": "Agent configuratie",
@@ -510,6 +520,51 @@
     "error": "Er is een fout opgetreden",
     "retry": "Opnieuw proberen",
     "comingSoon": "Binnenkort beschikbaar",
-    "allDestinations": "Alle Bestemmingen"
+    "allDestinations": "Alle Bestemmingen",
+    "all": "Alle",
+    "close": "Sluiten",
+    "refresh": "Vernieuwen"
+  },
+  "issues": {
+    "title": "Agent Issues",
+    "openIssues": "Open Issues",
+    "criticalHigh": "Critical/High",
+    "slaBreaches": "SLA Overschrijdingen",
+    "avgResolution": "Gem. Oplostijd",
+    "noIssues": "Geen issues gevonden",
+    "statusUpdated": "Status bijgewerkt",
+    "updateError": "Fout bij bijwerken",
+    "occurrences": "Keren gezien",
+    "filter": {
+      "status": "Status",
+      "severity": "Ernst",
+      "agent": "Agent"
+    },
+    "table": {
+      "severity": "Ernst",
+      "agent": "Agent",
+      "title": "Titel",
+      "status": "Status",
+      "detected": "Gedetecteerd"
+    },
+    "status": {
+      "open": "Open",
+      "acknowledged": "Bevestigd",
+      "in_progress": "In behandeling",
+      "resolved": "Opgelost",
+      "auto_closed": "Auto gesloten",
+      "wont_fix": "Niet oplossen"
+    },
+    "detail": {
+      "title": "Issue Details",
+      "resolution": "Oplossing / toelichting",
+      "timeline": "Tijdlijn"
+    },
+    "actions": {
+      "acknowledge": "Bevestigen",
+      "startProgress": "In behandeling",
+      "resolve": "Oplossen",
+      "wontFix": "Niet oplossen"
+    }
   }
 }

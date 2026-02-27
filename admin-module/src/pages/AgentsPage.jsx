@@ -813,6 +813,7 @@ function AgentDetailDialog({ agent, onClose }) {
                       <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.resultStatus')}</TableCell>
                       <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.resultDestination')}</TableCell>
                       <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.resultDuration')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.resultTrend')}</TableCell>
                       <TableCell sx={{ fontWeight: 600, py: 0.5 }}>{t('agents.detail.resultDetails')}</TableCell>
                     </TableRow>
                   </TableHead>
@@ -851,6 +852,18 @@ function AgentDetailDialog({ agent, onClose }) {
                           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                             {run.duration ? `${run.duration}ms` : '\u2014'}
                           </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 0.5 }}>
+                          {run.result?.trend?.direction ? (
+                            <Chip size="small" sx={{ height: 20, fontSize: '0.7rem' }}
+                              label={t(`agents.detail.trend.${run.result.trend.direction}`)}
+                              color={
+                                ['WORSE', 'SLOWER'].includes(run.result.trend.direction) ? 'error' :
+                                ['BETTER', 'FASTER'].includes(run.result.trend.direction) ? 'success' :
+                                'default'
+                              }
+                            />
+                          ) : '\u2014'}
                         </TableCell>
                         <TableCell sx={{ py: 0.5 }}>
                           <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

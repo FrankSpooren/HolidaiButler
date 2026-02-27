@@ -1,5 +1,7 @@
 import { execSync } from 'child_process';
 import { logAgent, logError } from '../../../orchestrator/auditTrail/index.js';
+import { getPreviousScan, calculateCodeTrend } from './trendHelper.js';
+import { raiseIssue } from '../../base/agentIssues.js';
 
 /**
  * Code Reviewer Agent
@@ -556,9 +558,14 @@ class CodeReviewer {
       results.error = e.message;
     }
 
+    // Trending: compare with previous scan
+    const prevScan = await getPreviousScan('code-reviewer', 'code_quality_scan');
+    const trend = calculateCodeTrend(results, prevScan);
+    results.trend = trend;
+
     try {
-      await logAgent('code', 'code_quality_scan', {
-        description: `Code scan: ${results.fileCount} files, ${results.lineCount} lines, ${results.consoleLogs} console.logs, ${results.todos} TODOs`,
+      await logAgent('code-reviewer', 'code_quality_scan', {
+        description: `Code scan: ${results.fileCount} files, ${results.lineCount} lines, ${results.consoleLogs} console.logs, ${results.todos} TODOs [${trend.direction}]`,
         status: results.error ? 'failed' : 'completed',
         metadata: results
       });
@@ -566,7 +573,33 @@ class CodeReviewer {
       console.error('[CodeReviewer] Failed to log scan result:', logErr.message);
     }
 
-    console.log(`[CodeReviewer] Code scan: ${results.fileCount} files, ${results.lineCount} lines, ${results.consoleLogs} console.logs, ${results.todos} TODOs`);
+    // Fase 11B: Raise issues for findings
+    try {
+      if (results.hardcodedStrings > 0) {
+        await raiseIssue({
+          agentName: 'code-reviewer', agentLabel: 'De Corrector',
+          severity: 'high', category: 'code_quality',
+          title: `${results.hardcodedStrings} potential hardcoded secrets detected`,
+          description: 'Grep scan detecteerde mogelijke hardcoded credentials in de codebase',
+          details: results,
+          fingerprint: 'code-secrets-' + results.hardcodedStrings
+        });
+      }
+      if (results.consoleLogs > 400) {
+        await raiseIssue({
+          agentName: 'code-reviewer', agentLabel: 'De Corrector',
+          severity: 'medium', category: 'code_quality',
+          title: `${results.consoleLogs} console.log statements in productie code`,
+          description: 'Overmatig gebruik van console.log kan performance beinvloeden en logs vervuilen',
+          details: results,
+          fingerprint: 'code-consolelogs-high'
+        });
+      }
+    } catch (issueErr) {
+      console.error('[CodeReviewer] Issue tracking error:', issueErr.message);
+    }
+
+    console.log(`[CodeReviewer] Code scan: ${results.fileCount} files, ${results.lineCount} lines, ${results.consoleLogs} console.logs, ${results.todos} TODOs [${trend.direction}]`);
     return results;
   }
 }
