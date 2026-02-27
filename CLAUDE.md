@@ -50,7 +50,7 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 |----------|---------|--------|
 | **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.12 |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
-| **CLAUDE.md** | Repository root + Hetzner | 3.45.0 |
+| **CLAUDE.md** | Repository root + Hetzner | 3.46.0 |
 | **CLAUDE_HISTORY.md** | Repository root | 1.0.0 |
 
 > **CLAUDE_HISTORY.md** bevat volledige fase-resultaten, changelogs en bestandslijsten per fase. Raadpleeg dit bestand ALLEEN wanneer historische details nodig zijn.

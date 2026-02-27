@@ -15,8 +15,11 @@
 4. [Agent Fasen (8A, 8A+, 8B)](#agent-fasen)
 5. [Admin Portal Fasen (8C-0 t/m 9I)](#admin-portal-fasen)
 6. [Fase 10A: Agent Ecosysteem Optimalisatie](#fase-10a-agent-ecosysteem-optimalisatie-26-02-2026)
-7. [LLM Content Generatie Details](#llm-content-generatie-details)
-8. [Volledige Changelog](#volledige-changelog)
+7. [Fase 10A-R + 10B + 10C](#fase-10a-restant--10b--10c)
+8. [Fase 11A: Agent Ecosysteem Audit + Activering](#fase-11a--agent-ecosysteem-audit--activering-27-02-2026)
+9. [Fase 11B: Agent Ecosysteem Enterprise Complete](#fase-11b--agent-ecosysteem-enterprise-complete-27-02-2026)
+10. [LLM Content Generatie Details](#llm-content-generatie-details)
+11. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -413,6 +416,11 @@ v3.9.0, **15/15 PASS**
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.46.0** | **2026-02-27** | **Fase 11B**: Agent Ecosysteem Enterprise Complete (Niveau 7). 10 blokken: individuele logging (B), trending (D), escalatie (C), issues+SLA (F), Admin Issues module (G), trending chips (E), baselines+anomaliedetectie (H), cross-agent correlatie (I). 22 bestanden, 7 nieuw. adminPortal.js v3.11.0 (47 endpoints). |
+| **3.45.0** | **2026-02-27** | **Fase 11A**: Agent ecosysteem audit (18 agents, 40 jobs). 3 dev agents geactiveerd: De Bewaker (npm audit), De Corrector (code scan), De Stylist (TTFB+headers). AuditLog status enum fix. |
+| **3.44.0** | **2026-02-26** | **Fase 10C**: Apache security headers (5 domeinen), live verificatie 10A, aspirationele agents labeling, Sessions.user_id VARCHAR(36) fix. |
+| **3.43.0** | **2026-02-26** | **Fase 10A-R + 10B**: Agent config datacorruptie fix, Threema CONFIGURED, npm audit (17→2 vuln), security headers audit. |
+| **3.42.0** | **2026-02-26** | **Fase 10A**: Agent deactivering (3), dashboard eerlijkheid (4 statussen), resultaten tab. adminPortal.js v3.10.0 (42 endpoints). |
 | **3.41.0** | **2026-02-26** | **CLAUDE.md herstructurering**: Gesplitst in compact CLAUDE.md (~550 regels) + CLAUDE_HISTORY.md (archief). ~75% minder context. |
 | **3.40.0** | **2026-02-25** | **Fase 9I**: 7 items (P1-P7). Dark mode contrast, analytics granulatie, agent profiel sync, scheduledJobs i18n, JOB_ACTOR_MAP +3, pvPeriodDateFilter bug fix. adminPortal.js v3.9.0. 15/15 PASS. |
 | **3.39.0** | **2026-02-24** | **Fase 9H**: 4 items. Agent config race condition, De Dokter JOB_ACTOR_MAP, 509 Accommodation POIs inactive, pageviews granulatie. adminPortal.js v3.8.0. 10/10 PASS. |
@@ -714,6 +722,108 @@ Gebaseerd op `Strategische_Agent_Ecosysteem_Analyse_v2_DEFINITIEF.md` — 5 item
 - PM2 restart: 3× (na elk blok B/C/D)
 - CLAUDE.md v3.45.0, MS v7.11
 - Git: commit + push dev→test→main
+
+---
+
+## Fase 11B — Agent Ecosysteem Enterprise Complete (27-02-2026)
+
+**Doel**: Agent ecosysteem van Niveau 2-3 naar Niveau 7 (Zelflerend). 10 blokken (A→J), 22 bestanden, 1.944 insertions, EUR 0.
+
+### Blok A: Documentatie schuld 11A inlossen
+- CLAUDE_HISTORY.md bijgewerkt met 11A resultaten (was vergeten in vorige sessie)
+
+### Blok B: Individuele agent logging (FUNDAMENT)
+- 3 dev agents loggen nu individueel als `security-reviewer`, `code-reviewer`, `ux-ui-reviewer`
+- Voorheen alleen als `dev-layer` — nu traceerbaar per agent
+- `logAgent()` calls toegevoegd aan alle 3 reviewers na succesvolle execute()
+
+### Blok D: Trending week-over-week + trendHelper.js
+- `trendHelper.js`: `calculateTrend(agentName, action, metricPath)` — vergelijkt laatste 2 scans
+- Richting: BETTER/WORSE/FASTER/SLOWER/STABLE/FIRST_SCAN
+- Geïntegreerd in alle 3 dev agents (security vulns, code consoleLogs, perf avgTtfb)
+- Trend opgeslagen in audit_log metadata
+
+### Blok C: Escalatie via De Bode briefing
+- `dailyBriefing.js`: Nieuwe sectie "Agent Issues & Bevindingen"
+- Security: critical/high vulns → URGENT briefing
+- Code: >400 console.logs → waarschuwing
+- Performance: avg TTFB >500ms → waarschuwing
+- Alle trends getoond in briefing
+
+### Blok F: Agent Issues collectie (MongoDB + raiseIssue)
+- `agentIssues.js`: MongoDB `agent_issues` collectie
+- `raiseIssue()`: deduplicatie op issueKey, auto-increment occurrences
+- `resolveIssue()`, `getOpenIssues()`, `getIssueStats()`
+- SLA tracking: P1=24h, P2=72h, P3=168h, P4=336h
+- Status lifecycle: open → acknowledged → in_progress → resolved / wont_fix / auto_closed
+
+### Blok G: Admin Portal Issues module (backend + frontend)
+- 5 endpoints: GET /issues, GET /issues/stats, PUT /issues/:id/status, GET /issues/:id, GET /issues/:id/timeline
+- `IssuesPage.jsx`: Stats cards, filter bar (status/severity/agent), sortable tabel, detail drawer met timeline
+- `issueService.js` + `useIssues.js` hook
+- Sidebar nav + App.jsx route
+- i18n: NL/EN/DE/ES compleet (issues sectie + common keys)
+
+### Blok E: Dashboard trending chips + actorNames fix
+- AGENT_METADATA actorNames fix: dev agents nu `['security-reviewer', 'dev-layer']` etc.
+- Results endpoint: merge `metadata.trend` into result object (trend was in metadata, niet result)
+- Trend kolom in results tab: Chip met kleur (error=WORSE/SLOWER, success=BETTER/FASTER)
+- i18n: `agents.detail.resultTrend` + 6 trend richtingen in 4 talen
+
+### Blok H: Baselines & anomaliedetectie (Niveau 7A)
+- `baselineService.js`: Rolling average over 14 scans, 2σ threshold
+- `calculateBaseline()`: mean + stdDev + count
+- `detectAnomaly()`: returns isAnomaly + deviation + direction
+- `runAnomalyDetection()`: 4 metrics (total vulns, critical vulns, consoleLogs, avgTtfb)
+- Auto-creates issues via `raiseIssue()` bij detectie
+- Geïntegreerd in dailyBriefing.js (dagelijks)
+
+### Blok I: Cross-agent intelligence (Niveau 7B)
+- `correlationService.js`: 4 correlaties:
+  1. Security + Performance concurrent decline
+  2. Console.log growth >10% en >300
+  3. Persistent health issues (>3/7 dagen)
+  4. Issue backlog (>3 issues ouder dan 7 dagen)
+- Draait wekelijks (maandag) als onderdeel van De Bode briefing
+- Admin endpoint: GET /intelligence/report
+- Logged als `correlation-engine` in audit_logs
+
+### Blok J: Documentatie + Deploy
+- CLAUDE.md v3.46.0, MS v7.12, adminPortal.js v3.11.0
+- Deployed naar Hetzner + PM2 restart
+- Git commit 74adf6b, pushed dev→test→main
+
+### Bestanden gewijzigd (22 bestanden)
+
+**Nieuw (7)**:
+| Bestand | Beschrijving |
+|---------|-----------|
+| `platform-core/src/services/agents/devLayer/reviewers/trendHelper.js` | Week-over-week trending |
+| `platform-core/src/services/agents/base/agentIssues.js` | Agent issues MongoDB + SLA |
+| `platform-core/src/services/agents/base/baselineService.js` | Baselines + anomaliedetectie |
+| `platform-core/src/services/agents/base/correlationService.js` | Cross-agent correlatie |
+| `admin-module/src/pages/IssuesPage.jsx` | Issues admin pagina |
+| `admin-module/src/api/issueService.js` | Issues API service |
+| `admin-module/src/hooks/useIssues.js` | Issues React hook |
+
+**Gewijzigd (15)**:
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/adminPortal.js` | v3.11.0: 6 endpoints, actorNames fix, trend merge, intelligence |
+| `platform-core/src/services/agents/devLayer/reviewers/securityReviewer.js` | Individuele logging + trending |
+| `platform-core/src/services/agents/devLayer/reviewers/codeReviewer.js` | Individuele logging + trending |
+| `platform-core/src/services/agents/devLayer/reviewers/uxReviewer.js` | Individuele logging + trending |
+| `platform-core/src/services/orchestrator/ownerInterface/dailyBriefing.js` | Escalatie + anomalie + correlatie |
+| `platform-core/src/services/orchestrator/workers.js` | npm audit fix import |
+| `admin-module/src/App.jsx` | Issues route |
+| `admin-module/src/components/layout/Sidebar.jsx` | Issues nav item |
+| `admin-module/src/pages/AgentsPage.jsx` | Trend column in results tab |
+| `admin-module/src/i18n/nl.json` | Issues + trend keys |
+| `admin-module/src/i18n/en.json` | Issues + trend keys |
+| `admin-module/src/i18n/de.json` | Issues + trend keys + common keys |
+| `admin-module/src/i18n/es.json` | Issues + trend keys + common keys |
+| `CLAUDE.md` | v3.46.0 |
+| `docs/strategy/HolidaiButler_Master_Strategie.md` | v7.12 |
 
 ---
 
