@@ -10,7 +10,8 @@
     "reviews": "Rese\u00f1as",
     "analytics": "Anal\u00edticas",
     "settings": "Configuraci\u00f3n",
-    "users": "Usuarios"
+    "users": "Usuarios",
+    "issues": "Issues"
   },
   "auth": {
     "login": "Iniciar sesi\u00f3n",
@@ -126,7 +127,16 @@
       "resultStatus": "Estado",
       "resultDuration": "Duración",
       "resultDestination": "Destino",
-      "resultDetails": "Detalles"
+      "resultDetails": "Detalles",
+      "resultTrend": "Tendencia",
+      "trend": {
+        "WORSE": "Empeorado",
+        "SLOWER": "Más lento",
+        "BETTER": "Mejorado",
+        "FASTER": "Más rápido",
+        "STABLE": "Estable",
+        "FIRST_SCAN": "Primer escaneo"
+      }
     },
     "config": {
       "title": "Configuración del agente",
@@ -509,7 +519,52 @@
     "loading": "Cargando...",
     "error": "Ha ocurrido un error",
     "retry": "Reintentar",
-    "comingSoon": "Pr\u00f3ximamente",
-    "allDestinations": "Todos los destinos"
+    "comingSoon": "Próximamente",
+    "allDestinations": "Todos los destinos",
+    "all": "Todos",
+    "close": "Cerrar",
+    "refresh": "Actualizar"
+  },
+  "issues": {
+    "title": "Issues de Agentes",
+    "openIssues": "Issues Abiertos",
+    "criticalHigh": "Crítico/Alto",
+    "slaBreaches": "Incumplimientos SLA",
+    "avgResolution": "Resolución Prom.",
+    "noIssues": "No se encontraron issues",
+    "statusUpdated": "Estado actualizado",
+    "updateError": "Error al actualizar",
+    "occurrences": "Ocurrencias",
+    "filter": {
+      "status": "Estado",
+      "severity": "Severidad",
+      "agent": "Agente"
+    },
+    "table": {
+      "severity": "Severidad",
+      "agent": "Agente",
+      "title": "Título",
+      "status": "Estado",
+      "detected": "Detectado"
+    },
+    "status": {
+      "open": "Abierto",
+      "acknowledged": "Confirmado",
+      "in_progress": "En progreso",
+      "resolved": "Resuelto",
+      "auto_closed": "Auto cerrado",
+      "wont_fix": "No resolver"
+    },
+    "detail": {
+      "title": "Detalles del Issue",
+      "resolution": "Resolución / notas",
+      "timeline": "Cronología"
+    },
+    "actions": {
+      "acknowledge": "Confirmar",
+      "startProgress": "Iniciar progreso",
+      "resolve": "Resolver",
+      "wontFix": "No resolver"
+    }
   }
 }

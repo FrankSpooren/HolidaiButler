@@ -10,7 +10,8 @@
     "reviews": "Bewertungen",
     "analytics": "Analytik",
     "settings": "Einstellungen",
-    "users": "Benutzer"
+    "users": "Benutzer",
+    "issues": "Issues"
   },
   "auth": {
     "login": "Anmelden",
@@ -126,7 +127,16 @@
       "resultStatus": "Status",
       "resultDuration": "Dauer",
       "resultDestination": "Reiseziel",
-      "resultDetails": "Details"
+      "resultDetails": "Details",
+      "resultTrend": "Trend",
+      "trend": {
+        "WORSE": "Verschlechtert",
+        "SLOWER": "Langsamer",
+        "BETTER": "Verbessert",
+        "FASTER": "Schneller",
+        "STABLE": "Stabil",
+        "FIRST_SCAN": "Erster Scan"
+      }
     },
     "config": {
       "title": "Agent-Konfiguration",
@@ -509,7 +519,52 @@
     "loading": "Laden...",
     "error": "Ein Fehler ist aufgetreten",
     "retry": "Erneut versuchen",
-    "comingSoon": "Demn\u00e4chst verf\u00fcgbar",
-    "allDestinations": "Alle Reiseziele"
+    "comingSoon": "Demnächst verfügbar",
+    "allDestinations": "Alle Reiseziele",
+    "all": "Alle",
+    "close": "Schließen",
+    "refresh": "Aktualisieren"
+  },
+  "issues": {
+    "title": "Agent Issues",
+    "openIssues": "Offene Issues",
+    "criticalHigh": "Critical/High",
+    "slaBreaches": "SLA-Überschreitungen",
+    "avgResolution": "Durchschn. Lösung",
+    "noIssues": "Keine Issues gefunden",
+    "statusUpdated": "Status aktualisiert",
+    "updateError": "Aktualisierung fehlgeschlagen",
+    "occurrences": "Vorkommnisse",
+    "filter": {
+      "status": "Status",
+      "severity": "Schweregrad",
+      "agent": "Agent"
+    },
+    "table": {
+      "severity": "Schweregrad",
+      "agent": "Agent",
+      "title": "Titel",
+      "status": "Status",
+      "detected": "Erkannt"
+    },
+    "status": {
+      "open": "Offen",
+      "acknowledged": "Bestätigt",
+      "in_progress": "In Bearbeitung",
+      "resolved": "Gelöst",
+      "auto_closed": "Auto geschlossen",
+      "wont_fix": "Nicht beheben"
+    },
+    "detail": {
+      "title": "Issue-Details",
+      "resolution": "Lösung / Anmerkungen",
+      "timeline": "Zeitverlauf"
+    },
+    "actions": {
+      "acknowledge": "Bestätigen",
+      "startProgress": "In Bearbeitung",
+      "resolve": "Lösen",
+      "wontFix": "Nicht beheben"
+    }
   }
 }

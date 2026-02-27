@@ -10,7 +10,8 @@
     "reviews": "Reviews",
     "analytics": "Analytics",
     "settings": "Settings",
-    "users": "Users"
+    "users": "Users",
+    "issues": "Issues"
   },
   "auth": {
     "login": "Log in",
@@ -126,7 +127,16 @@
       "resultStatus": "Status",
       "resultDuration": "Duration",
       "resultDestination": "Destination",
-      "resultDetails": "Details"
+      "resultDetails": "Details",
+      "resultTrend": "Trend",
+      "trend": {
+        "WORSE": "Worsened",
+        "SLOWER": "Slower",
+        "BETTER": "Improved",
+        "FASTER": "Faster",
+        "STABLE": "Stable",
+        "FIRST_SCAN": "First scan"
+      }
     },
     "config": {
       "title": "Agent configuration",
@@ -510,6 +520,51 @@
     "error": "An error occurred",
     "retry": "Retry",
     "comingSoon": "Coming soon",
-    "allDestinations": "All Destinations"
+    "allDestinations": "All Destinations",
+    "all": "All",
+    "close": "Close",
+    "refresh": "Refresh"
+  },
+  "issues": {
+    "title": "Agent Issues",
+    "openIssues": "Open Issues",
+    "criticalHigh": "Critical/High",
+    "slaBreaches": "SLA Breaches",
+    "avgResolution": "Avg. Resolution",
+    "noIssues": "No issues found",
+    "statusUpdated": "Status updated",
+    "updateError": "Update failed",
+    "occurrences": "Occurrences",
+    "filter": {
+      "status": "Status",
+      "severity": "Severity",
+      "agent": "Agent"
+    },
+    "table": {
+      "severity": "Severity",
+      "agent": "Agent",
+      "title": "Title",
+      "status": "Status",
+      "detected": "Detected"
+    },
+    "status": {
+      "open": "Open",
+      "acknowledged": "Acknowledged",
+      "in_progress": "In Progress",
+      "resolved": "Resolved",
+      "auto_closed": "Auto Closed",
+      "wont_fix": "Won't Fix"
+    },
+    "detail": {
+      "title": "Issue Details",
+      "resolution": "Resolution / notes",
+      "timeline": "Timeline"
+    },
+    "actions": {
+      "acknowledge": "Acknowledge",
+      "startProgress": "Start Progress",
+      "resolve": "Resolve",
+      "wontFix": "Won't Fix"
+    }
   }
 }

@@ -632,7 +632,10 @@ export function startWorkers() {
         'agent-success-rate': 'strategy-layer',
         'gdpr-consent-audit': 'gdpr',
         'gdpr-retention-check': 'gdpr',
-        'session-cleanup': 'communication-flow'
+        'session-cleanup': 'communication-flow',
+        'dev-security-scan': 'security-reviewer',
+        'dev-quality-report': 'code-reviewer',
+        'dev-dependency-audit': 'ux-ui-reviewer'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {

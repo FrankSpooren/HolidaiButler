@@ -178,6 +178,56 @@ async function generateDailyBriefing() {
     console.log("[De Bode] Content quality data unavailable:", error.message);
   }
 
+  // === Fase 11B — Development Agent Insights ===
+  let devInsightsSummary = '';
+  try {
+    const mongoose = (await import('mongoose')).default;
+    const db = mongoose.connection.db;
+    if (db) {
+      const devAgents = [
+        { name: 'security-reviewer', action: 'npm_audit_scan', label: 'Security', key: 'security' },
+        { name: 'code-reviewer', action: 'code_quality_scan', label: 'Code', key: 'code' },
+        { name: 'ux-ui-reviewer', action: 'performance_check', label: 'Perf', key: 'performance' }
+      ];
+      const devParts = [];
+      for (const agent of devAgents) {
+        const latest = await db.collection('audit_logs').findOne(
+          { 'actor.name': agent.name, action: agent.action, status: 'completed' },
+          { sort: { timestamp: -1 } }
+        );
+        if (!latest?.metadata) continue;
+        const meta = latest.metadata;
+        const trend = meta.trend;
+        const trendStr = trend ? ` ${
+          trend.direction === 'WORSE' || trend.direction === 'SLOWER' ? '↗' :
+          trend.direction === 'BETTER' || trend.direction === 'FASTER' ? '↘' :
+          trend.direction === 'STABLE' ? '→' : '🆕'
+        }` : '';
+
+        if (agent.key === 'security') {
+          const v = meta.vulnerabilities || {};
+          const prefix = (v.critical > 0) ? '⚠️' : (v.high > 0) ? '📋' : '✅';
+          devParts.push(`${prefix} ${agent.label}: ${v.critical||0}C/${v.high||0}H/${v.moderate||0}M${trendStr}`);
+        } else if (agent.key === 'code') {
+          const logs = meta.consoleLogs || meta.consoleLogCount || 0;
+          const todos = meta.todos || meta.todoCount || 0;
+          devParts.push(`Code: ${logs} logs, ${todos} TODOs${trendStr}`);
+        } else if (agent.key === 'performance') {
+          const checks = meta.checks || [];
+          const avgTtfb = checks.length > 0
+            ? Math.round(checks.reduce((s, c) => s + (parseInt(c.ttfb) || 0), 0) / checks.length)
+            : '?';
+          devParts.push(`Perf: ${avgTtfb}ms TTFB${trendStr}`);
+        }
+      }
+      if (devParts.length > 0) {
+        devInsightsSummary = '[Dev] ' + devParts.join(' | ');
+      }
+    }
+  } catch (error) {
+    console.log('[De Bode] Dev insights unavailable:', error.message);
+  }
+
   // Format date in Dutch
   const today = new Date().toLocaleDateString("nl-NL", {
     weekday: "long",
@@ -222,6 +272,65 @@ async function generateDailyBriefing() {
   }
   if (errorCount > 5 || costReport.summary.percentageUsed > 90) {
     statusSummary = "Actie vereist - check dashboard";
+  }
+  // Fase 11B: Dev insights escalation to alert_items
+  if (devInsightsSummary) {
+    alertItems.push(devInsightsSummary);
+  }
+  // Fase 11B: Open issues + SLA breaches
+  let issuesSummary = '';
+  try {
+    const { getOpenIssues, getSLABreaches } = await import('../../agents/base/agentIssues.js');
+    const openIssues = await getOpenIssues();
+    const slaBreaches = await getSLABreaches();
+    if (openIssues.length > 0) {
+      const bySev = {};
+      openIssues.forEach(i => { bySev[i.severity] = (bySev[i.severity] || 0) + 1; });
+      const sevParts = Object.entries(bySev).map(([s, c]) => `${c}× ${s}`);
+      issuesSummary = `[Issues] ${openIssues.length} open (${sevParts.join(', ')})`;
+      if (slaBreaches.length > 0) {
+        issuesSummary += ` | ${slaBreaches.length} SLA overschrijding(en)!`;
+        alertItems.push(`SLA OVERSCHRIJDING: ${slaBreaches.length} issue(s) voorbij deadline`);
+      }
+      alertItems.push(issuesSummary);
+    }
+  } catch (error) {
+    console.log('[De Bode] Issues data unavailable:', error.message);
+  }
+
+  // Fase 11B Blok H: Anomaliedetectie (dagelijks)
+  let anomalySummary = '';
+  try {
+    const { runAnomalyDetection } = await import('../../agents/base/baselineService.js');
+    const anomalies = await runAnomalyDetection();
+    if (anomalies.length > 0) {
+      const parts = anomalies.map(a =>
+        `${a.label}: ${a.currentValue} (normaal: ${a.baseline.mean} ±${a.baseline.stdDev}, ${Math.abs(a.deviation)}σ ${a.deviation > 0 ? 'hoger' : 'lager'})`
+      );
+      anomalySummary = `[Anomalie] ${anomalies.length} afwijking(en): ${parts.join(' | ')}`;
+      alertItems.push(anomalySummary);
+    }
+  } catch (error) {
+    console.log('[De Bode] Anomaly detection unavailable:', error.message);
+  }
+
+  // Fase 11B Blok I: Cross-agent correlatie (alleen maandag)
+  let correlationSummary = '';
+  try {
+    const dayOfWeek = new Date().getDay(); // 0=zondag, 1=maandag
+    if (dayOfWeek === 1) {
+      const { generateCorrelationReport } = await import('../../agents/base/correlationService.js');
+      const report = await generateCorrelationReport();
+      if (report.correlations.length > 0 || report.insights.length > 0) {
+        const parts = [];
+        report.correlations.forEach(c => parts.push(`⚠️ ${c.description}`));
+        report.insights.forEach(i => parts.push(`💡 ${i.description}`));
+        correlationSummary = `[Intelligence] ${parts.join(' | ')}`;
+        alertItems.push(correlationSummary);
+      }
+    }
+  } catch (error) {
+    console.log('[De Bode] Correlation report unavailable:', error.message);
   }
 
   // Build fields for MailerLite template
@@ -278,6 +387,7 @@ async function generateDailyBriefing() {
       smokeTests: smokeTestSummary,
       backups: backupSummary,
       contentQuality: contentQualitySummary,
+      devInsights: devInsightsSummary,
       threemaStatus
     }
   };
@@ -288,7 +398,8 @@ async function sendDailyBriefing() {
 
   const dateStr = new Date().toLocaleDateString("nl-NL");
   const hasCriticalAgents = (briefing.fields.backup_summary || '').includes('CRITICAL') ||
-    (briefing.fields.smoke_test_summary || '').includes('FAILURES');
+    (briefing.fields.smoke_test_summary || '').includes('FAILURES') ||
+    (briefing.fields.alert_items || '').includes('⚠️');
   const errorCount = briefing.summary.errors || 0;
   const alertCount = briefing.summary.alerts || 0;
   const totalIssues = errorCount + alertCount + (briefing.summary.predictionAlerts || 0);
