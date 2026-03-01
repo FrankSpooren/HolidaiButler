@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A (v3.14.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B (v3.15.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -44,8 +44,32 @@
  *   POST /users/:id/reset-password — Reset admin user password (platform_admin only)
  *   GET  /analytics/pageviews  — Pageview analytics (page_views table, GDPR compliant)
  *
+ *   --- Payment endpoints (Fase III-A) ---
+ *   GET  /payments              — List payment transactions
+ *   GET  /payments/stats        — Payment statistics
+ *   GET  /payments/reconciliation — Reconciliation report
+ *   GET  /payments/:id          — Payment transaction detail
+ *   POST /payments/:id/refund   — Initiate refund
+ *
+ *   --- Ticketing endpoints (Fase III-B) ---
+ *   GET  /tickets               — List ticket definitions
+ *   POST /tickets               — Create ticket definition
+ *   PUT  /tickets/:id           — Update ticket definition
+ *   DELETE /tickets/:id         — Soft delete ticket (deactivate)
+ *   GET  /tickets/:id/inventory — Get inventory slots for ticket
+ *   POST /tickets/:id/inventory — Create inventory slots (bulk)
+ *   PUT  /tickets/inventory/:id — Update single inventory slot
+ *   GET  /tickets/orders        — List ticket orders
+ *   GET  /tickets/orders/:id    — Order detail with items
+ *   POST /tickets/orders/:id/cancel — Cancel order (admin)
+ *   POST /tickets/qr/validate   — Validate QR code (scanner)
+ *   GET  /tickets/stats         — Ticketing statistics
+ *   POST /vouchers              — Create voucher code
+ *   GET  /vouchers              — List vouchers
+ *   PUT  /vouchers/:id          — Update voucher
+ *
  * @module routes/adminPortal
- * @version 3.10.0
+ * @version 3.15.0
  */
 
 import { Router } from 'express';
@@ -6202,6 +6226,536 @@ router.post('/payments/:id/refund', adminAuth('editor'), destinationScope, write
       : error.message.includes('Cannot refund') ? 400
       : 500;
     res.status(statusCode).json({ success: false, error: { code: 'REFUND_ERROR', message: error.message } });
+  }
+});
+
+// =============================================================================
+// TICKETING ADMIN ENDPOINTS (Fase III — Blok B)
+// =============================================================================
+
+// --- GET /tickets — List ticket definitions ---
+router.get('/tickets', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || null;
+    const { page = 1, limit = 50, ticketType, isActive, poiId } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let sql = `SELECT t.*, p.name as poi_name FROM tickets t LEFT JOIN POI p ON p.id = t.poi_id WHERE 1=1`;
+    let countSql = `SELECT COUNT(*) as total FROM tickets t WHERE 1=1`;
+    const replacements = {};
+
+    if (destinationId) {
+      sql += ` AND t.destination_id = :destinationId`;
+      countSql += ` AND t.destination_id = :destinationId`;
+      replacements.destinationId = destinationId;
+    }
+    if (ticketType) {
+      sql += ` AND t.ticket_type = :ticketType`;
+      countSql += ` AND t.ticket_type = :ticketType`;
+      replacements.ticketType = ticketType;
+    }
+    if (isActive !== undefined) {
+      sql += ` AND t.is_active = :isActive`;
+      countSql += ` AND t.is_active = :isActive`;
+      replacements.isActive = isActive === 'true' ? 1 : 0;
+    }
+    if (poiId) {
+      sql += ` AND t.poi_id = :poiId`;
+      countSql += ` AND t.poi_id = :poiId`;
+      replacements.poiId = parseInt(poiId);
+    }
+
+    sql += ` ORDER BY t.created_at DESC LIMIT :limit OFFSET :offset`;
+    replacements.limit = parseInt(limit);
+    replacements.offset = offset;
+
+    const [tickets, [countResult]] = await Promise.all([
+      mysqlSequelize.query(sql, { replacements, type: QueryTypes.SELECT }),
+      mysqlSequelize.query(countSql, { replacements, type: QueryTypes.SELECT }),
+    ]);
+
+    res.json({ success: true, data: tickets, total: countResult.total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (error) {
+    logger.error('[AdminPortal] List tickets error:', error);
+    res.status(500).json({ success: false, error: { code: 'LIST_TICKETS_ERROR', message: error.message } });
+  }
+});
+
+// --- POST /tickets — Create ticket definition ---
+router.post('/tickets', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destination_id) || null;
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'Destination required (set destination_id in body or X-Destination-ID header)' } });
+
+    const { name, name_en, name_de, name_es, description, description_en, description_de, description_es,
+            ticket_type, base_price_cents, currency, pricing_tiers, dynamic_pricing_enabled, dynamic_pricing_config,
+            poi_id, event_id, max_per_order, validity_type, validity_days,
+            available_from, available_until, terms_conditions, cancellation_policy } = req.body;
+
+    if (!name || !ticket_type || !base_price_cents) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'name, ticket_type, base_price_cents required' } });
+    }
+
+    const [result] = await mysqlSequelize.query(
+      `INSERT INTO tickets
+       (destination_id, poi_id, event_id, name, name_en, name_de, name_es,
+        description, description_en, description_de, description_es,
+        ticket_type, base_price_cents, currency, pricing_tiers, dynamic_pricing_enabled, dynamic_pricing_config,
+        max_per_order, validity_type, validity_days, available_from, available_until,
+        terms_conditions, cancellation_policy, created_at)
+       VALUES
+       (:destinationId, :poi_id, :event_id, :name, :name_en, :name_de, :name_es,
+        :description, :description_en, :description_de, :description_es,
+        :ticket_type, :base_price_cents, :currency, :pricing_tiers, :dynamic_pricing_enabled, :dynamic_pricing_config,
+        :max_per_order, :validity_type, :validity_days, :available_from, :available_until,
+        :terms_conditions, :cancellation_policy, NOW())`,
+      {
+        replacements: {
+          destinationId, poi_id: poi_id || null, event_id: event_id || null,
+          name, name_en: name_en || null, name_de: name_de || null, name_es: name_es || null,
+          description: description || null, description_en: description_en || null,
+          description_de: description_de || null, description_es: description_es || null,
+          ticket_type, base_price_cents: parseInt(base_price_cents), currency: currency || 'EUR',
+          pricing_tiers: pricing_tiers ? JSON.stringify(pricing_tiers) : null,
+          dynamic_pricing_enabled: dynamic_pricing_enabled || false,
+          dynamic_pricing_config: dynamic_pricing_config ? JSON.stringify(dynamic_pricing_config) : null,
+          max_per_order: max_per_order || 10, validity_type: validity_type || 'fixed_date',
+          validity_days: validity_days || null, available_from: available_from || null,
+          available_until: available_until || null, terms_conditions: terms_conditions || null,
+          cancellation_policy: cancellation_policy || null,
+        },
+        type: QueryTypes.INSERT,
+      }
+    );
+
+    res.status(201).json({ success: true, data: { id: result, message: 'Ticket created' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Create ticket error:', error);
+    res.status(500).json({ success: false, error: { code: 'CREATE_TICKET_ERROR', message: error.message } });
+  }
+});
+
+// --- PUT /tickets/:id — Update ticket definition ---
+router.put('/tickets/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const ticketId = parseInt(req.params.id);
+    const destinationId = req.destScope?.[0] || null;
+
+    // Build dynamic SET clause
+    const allowedFields = ['name', 'name_en', 'name_de', 'name_es', 'description', 'description_en',
+      'description_de', 'description_es', 'ticket_type', 'base_price_cents', 'currency',
+      'pricing_tiers', 'dynamic_pricing_enabled', 'dynamic_pricing_config', 'is_active',
+      'poi_id', 'event_id', 'max_per_order', 'validity_type', 'validity_days',
+      'available_from', 'available_until', 'terms_conditions', 'cancellation_policy'];
+
+    const sets = [];
+    const replacements = { ticketId };
+    if (destinationId) replacements.destinationId = destinationId;
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        const val = req.body[field];
+        if (field === 'pricing_tiers' || field === 'dynamic_pricing_config') {
+          replacements[field] = val ? JSON.stringify(val) : null;
+        } else {
+          replacements[field] = val;
+        }
+        sets.push(`${field} = :${field}`);
+      }
+    }
+
+    if (sets.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_FIELDS', message: 'No fields to update' } });
+    }
+
+    sets.push('updated_at = NOW()');
+    let sql = `UPDATE tickets SET ${sets.join(', ')} WHERE id = :ticketId`;
+    if (destinationId) sql += ` AND destination_id = :destinationId`;
+
+    const [, affected] = await mysqlSequelize.query(sql, { replacements, type: QueryTypes.UPDATE });
+
+    if (affected === 0) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Ticket not found' } });
+    res.json({ success: true, data: { message: 'Ticket updated' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Update ticket error:', error);
+    res.status(500).json({ success: false, error: { code: 'UPDATE_TICKET_ERROR', message: error.message } });
+  }
+});
+
+// --- DELETE /tickets/:id — Soft delete ticket ---
+router.delete('/tickets/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const ticketId = parseInt(req.params.id);
+    const destinationId = req.destScope?.[0] || null;
+
+    let sql = `UPDATE tickets SET is_active = FALSE, updated_at = NOW() WHERE id = :ticketId`;
+    const replacements = { ticketId };
+    if (destinationId) { sql += ` AND destination_id = :destinationId`; replacements.destinationId = destinationId; }
+
+    await mysqlSequelize.query(sql, { replacements, type: QueryTypes.UPDATE });
+    res.json({ success: true, data: { message: 'Ticket deactivated' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Delete ticket error:', error);
+    res.status(500).json({ success: false, error: { code: 'DELETE_TICKET_ERROR', message: error.message } });
+  }
+});
+
+// --- GET /tickets/:id/inventory — Get inventory for ticket ---
+router.get('/tickets/:id/inventory', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const ticketId = parseInt(req.params.id);
+    const destinationId = req.destScope?.[0] || null;
+    const { startDate, endDate } = req.query;
+
+    let sql = `SELECT ti.*, (ti.total_capacity - ti.reserved_count - ti.sold_count) as available
+               FROM ticket_inventory ti WHERE ti.ticket_id = :ticketId`;
+    const replacements = { ticketId };
+    if (destinationId) { sql += ` AND ti.destination_id = :destinationId`; replacements.destinationId = destinationId; }
+    if (startDate) { sql += ` AND ti.slot_date >= :startDate`; replacements.startDate = startDate; }
+    if (endDate) { sql += ` AND ti.slot_date <= :endDate`; replacements.endDate = endDate; }
+    sql += ` ORDER BY ti.slot_date ASC, ti.slot_time_start ASC`;
+
+    const inventory = await mysqlSequelize.query(sql, { replacements, type: QueryTypes.SELECT });
+    res.json({ success: true, data: inventory, count: inventory.length });
+  } catch (error) {
+    logger.error('[AdminPortal] Get inventory error:', error);
+    res.status(500).json({ success: false, error: { code: 'GET_INVENTORY_ERROR', message: error.message } });
+  }
+});
+
+// --- POST /tickets/:id/inventory — Create inventory slots (bulk) ---
+router.post('/tickets/:id/inventory', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const ticketId = parseInt(req.params.id);
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destination_id) || null;
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'Destination required (set destination_id in body or X-Destination-ID header)' } });
+
+    const { slots } = req.body;
+    if (!slots || !Array.isArray(slots) || slots.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_SLOTS', message: 'slots array required' } });
+    }
+
+    let created = 0;
+    for (const slot of slots) {
+      try {
+        await mysqlSequelize.query(
+          `INSERT INTO ticket_inventory
+           (ticket_id, destination_id, slot_date, slot_time_start, slot_time_end, total_capacity, is_available, created_at)
+           VALUES (:ticketId, :destinationId, :slotDate, :slotTimeStart, :slotTimeEnd, :totalCapacity, :isAvailable, NOW())
+           ON DUPLICATE KEY UPDATE total_capacity = :totalCapacity, is_available = :isAvailable, updated_at = NOW()`,
+          {
+            replacements: {
+              ticketId, destinationId,
+              slotDate: slot.slotDate,
+              slotTimeStart: slot.slotTimeStart || null,
+              slotTimeEnd: slot.slotTimeEnd || null,
+              totalCapacity: parseInt(slot.totalCapacity),
+              isAvailable: slot.isAvailable !== false ? 1 : 0,
+            },
+            type: QueryTypes.INSERT,
+          }
+        );
+        created++;
+      } catch (err) {
+        logger.warn(`[AdminPortal] Inventory slot skip: ${err.message}`);
+      }
+    }
+
+    res.status(201).json({ success: true, data: { created, total: slots.length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Create inventory error:', error);
+    res.status(500).json({ success: false, error: { code: 'CREATE_INVENTORY_ERROR', message: error.message } });
+  }
+});
+
+// --- PUT /tickets/inventory/:id — Update single inventory slot ---
+router.put('/tickets/inventory/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const inventoryId = parseInt(req.params.id);
+    const destinationId = req.destScope?.[0] || null;
+    const { total_capacity, is_available } = req.body;
+
+    const sets = ['updated_at = NOW()'];
+    const replacements = { inventoryId };
+    if (destinationId) replacements.destinationId = destinationId;
+    if (total_capacity !== undefined) { sets.push('total_capacity = :total_capacity'); replacements.total_capacity = parseInt(total_capacity); }
+    if (is_available !== undefined) { sets.push('is_available = :is_available'); replacements.is_available = is_available ? 1 : 0; }
+
+    let sql = `UPDATE ticket_inventory SET ${sets.join(', ')} WHERE id = :inventoryId`;
+    if (destinationId) sql += ` AND destination_id = :destinationId`;
+
+    await mysqlSequelize.query(sql, { replacements, type: QueryTypes.UPDATE });
+    res.json({ success: true, data: { message: 'Inventory slot updated' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Update inventory error:', error);
+    res.status(500).json({ success: false, error: { code: 'UPDATE_INVENTORY_ERROR', message: error.message } });
+  }
+});
+
+// --- GET /tickets/orders — List ticket orders ---
+router.get('/tickets/orders', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || null;
+    const { page = 1, limit = 50, status, startDate, endDate } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let sql = `SELECT o.*, COUNT(oi.id) as item_count, SUM(oi.quantity) as total_tickets
+               FROM ticket_orders o
+               LEFT JOIN ticket_order_items oi ON oi.order_id = o.id
+               WHERE 1=1`;
+    let countSql = `SELECT COUNT(*) as total FROM ticket_orders o WHERE 1=1`;
+    const replacements = {};
+
+    if (destinationId) {
+      sql += ` AND o.destination_id = :destinationId`;
+      countSql += ` AND o.destination_id = :destinationId`;
+      replacements.destinationId = destinationId;
+    }
+    if (status) {
+      sql += ` AND o.status = :status`;
+      countSql += ` AND o.status = :status`;
+      replacements.status = status;
+    }
+    if (startDate) {
+      sql += ` AND o.created_at >= :startDate`;
+      countSql += ` AND o.created_at >= :startDate`;
+      replacements.startDate = startDate;
+    }
+    if (endDate) {
+      sql += ` AND o.created_at <= :endDate`;
+      countSql += ` AND o.created_at <= :endDate`;
+      replacements.endDate = endDate;
+    }
+
+    sql += ` GROUP BY o.id ORDER BY o.created_at DESC LIMIT :limit OFFSET :offset`;
+    replacements.limit = parseInt(limit);
+    replacements.offset = offset;
+
+    const [orders, [countResult]] = await Promise.all([
+      mysqlSequelize.query(sql, { replacements, type: QueryTypes.SELECT }),
+      mysqlSequelize.query(countSql, { replacements, type: QueryTypes.SELECT }),
+    ]);
+
+    res.json({ success: true, data: orders, total: countResult.total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (error) {
+    logger.error('[AdminPortal] List orders error:', error);
+    res.status(500).json({ success: false, error: { code: 'LIST_ORDERS_ERROR', message: error.message } });
+  }
+});
+
+// --- GET /tickets/orders/:id — Order detail ---
+router.get('/tickets/orders/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const destinationId = req.destScope?.[0] || null;
+
+    let sql = `SELECT o.* FROM ticket_orders o WHERE o.id = :orderId`;
+    const replacements = { orderId };
+    if (destinationId) { sql += ` AND o.destination_id = :destinationId`; replacements.destinationId = destinationId; }
+
+    const [order] = await mysqlSequelize.query(sql, { replacements, type: QueryTypes.SELECT });
+    if (!order) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } });
+
+    // Get items
+    const items = await mysqlSequelize.query(
+      `SELECT oi.*, t.name as ticket_name, t.ticket_type,
+              ti.slot_date, ti.slot_time_start, ti.slot_time_end
+       FROM ticket_order_items oi
+       JOIN tickets t ON t.id = oi.ticket_id
+       JOIN ticket_inventory ti ON ti.id = oi.inventory_id
+       WHERE oi.order_id = :orderId`,
+      { replacements: { orderId }, type: QueryTypes.SELECT }
+    );
+
+    order.items = items;
+    res.json({ success: true, data: order });
+  } catch (error) {
+    logger.error('[AdminPortal] Get order detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'GET_ORDER_ERROR', message: error.message } });
+  }
+});
+
+// --- POST /tickets/orders/:id/cancel — Cancel order (admin) ---
+router.post('/tickets/orders/:id/cancel', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const { reason } = req.body;
+
+    const { cancelOrder } = await import('../services/ticketing/ticketingService.js');
+    const result = await cancelOrder(orderId, reason || 'admin_cancelled');
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Cancel order error:', error);
+    const statusCode = error.message.includes('NOT_FOUND') ? 404 : error.message.includes('ALREADY_FINAL') ? 400 : 500;
+    res.status(statusCode).json({ success: false, error: { code: 'CANCEL_ORDER_ERROR', message: error.message } });
+  }
+});
+
+// --- POST /tickets/qr/validate — Validate QR code (scanner endpoint) ---
+router.post('/tickets/qr/validate', adminAuth('editor'), destinationScope, async (req, res) => {
+  try {
+    const { qrData, validatedBy } = req.body;
+    if (!qrData) return res.status(400).json({ success: false, error: { code: 'MISSING_QR', message: 'qrData required' } });
+
+    const { validateQR } = await import('../services/ticketing/ticketingService.js');
+    const result = await validateQR(qrData, validatedBy || req.user?.email || 'admin');
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Validate QR error:', error);
+    res.status(500).json({ success: false, error: { code: 'VALIDATE_QR_ERROR', message: error.message } });
+  }
+});
+
+// --- GET /tickets/stats — Ticketing statistics ---
+router.get('/tickets/stats', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || null;
+    const replacements = {};
+    const destFilter = destinationId ? 'AND destination_id = :destinationId' : '';
+    if (destinationId) replacements.destinationId = destinationId;
+
+    const [[ticketStats], [orderStats], [revenueStats]] = await Promise.all([
+      mysqlSequelize.query(
+        `SELECT COUNT(*) as total_tickets,
+                SUM(CASE WHEN is_active = TRUE THEN 1 ELSE 0 END) as active_tickets
+         FROM tickets WHERE 1=1 ${destFilter}`,
+        { replacements, type: QueryTypes.SELECT }
+      ),
+      mysqlSequelize.query(
+        `SELECT COUNT(*) as total_orders,
+                SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed_orders,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders,
+                SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END) as expired_orders,
+                SUM(CASE WHEN qr_code_validated = TRUE THEN 1 ELSE 0 END) as validated_orders
+         FROM ticket_orders WHERE 1=1 ${destFilter}`,
+        { replacements, type: QueryTypes.SELECT }
+      ),
+      mysqlSequelize.query(
+        `SELECT COALESCE(SUM(total_cents), 0) as total_revenue_cents,
+                COALESCE(SUM(discount_cents), 0) as total_discount_cents,
+                COALESCE(AVG(total_cents), 0) as avg_order_cents
+         FROM ticket_orders WHERE status IN ('confirmed', 'paid') ${destFilter}`,
+        { replacements, type: QueryTypes.SELECT }
+      ),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        tickets: ticketStats,
+        orders: orderStats,
+        revenue: revenueStats,
+      },
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Ticketing stats error:', error);
+    res.status(500).json({ success: false, error: { code: 'STATS_ERROR', message: error.message } });
+  }
+});
+
+// --- POST /vouchers — Create voucher code ---
+router.post('/vouchers', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destination_id) || null;
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'Destination required (set destination_id in body or X-Destination-ID header)' } });
+
+    const { code, discount_type, discount_value, min_order_cents, max_discount_cents,
+            max_uses, max_uses_per_user, valid_from, valid_until,
+            applicable_ticket_ids, applicable_ticket_types } = req.body;
+
+    if (!code || !discount_type || !discount_value) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'code, discount_type, discount_value required' } });
+    }
+
+    const [result] = await mysqlSequelize.query(
+      `INSERT INTO voucher_codes
+       (destination_id, code, discount_type, discount_value, min_order_cents, max_discount_cents,
+        max_uses, max_uses_per_user, valid_from, valid_until,
+        applicable_ticket_ids, applicable_ticket_types, created_at)
+       VALUES
+       (:destinationId, :code, :discount_type, :discount_value, :min_order_cents, :max_discount_cents,
+        :max_uses, :max_uses_per_user, :valid_from, :valid_until,
+        :applicable_ticket_ids, :applicable_ticket_types, NOW())`,
+      {
+        replacements: {
+          destinationId, code: code.toUpperCase(), discount_type, discount_value: parseInt(discount_value),
+          min_order_cents: min_order_cents || 0, max_discount_cents: max_discount_cents || null,
+          max_uses: max_uses || null, max_uses_per_user: max_uses_per_user || 1,
+          valid_from: valid_from || null, valid_until: valid_until || null,
+          applicable_ticket_ids: applicable_ticket_ids ? JSON.stringify(applicable_ticket_ids) : null,
+          applicable_ticket_types: applicable_ticket_types ? JSON.stringify(applicable_ticket_types) : null,
+        },
+        type: QueryTypes.INSERT,
+      }
+    );
+
+    res.status(201).json({ success: true, data: { id: result, code: code.toUpperCase(), message: 'Voucher created' } });
+  } catch (error) {
+    if (error.message.includes('Duplicate entry')) {
+      return res.status(409).json({ success: false, error: { code: 'DUPLICATE_CODE', message: 'Voucher code already exists' } });
+    }
+    logger.error('[AdminPortal] Create voucher error:', error);
+    res.status(500).json({ success: false, error: { code: 'CREATE_VOUCHER_ERROR', message: error.message } });
+  }
+});
+
+// --- GET /vouchers — List vouchers ---
+router.get('/vouchers', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || null;
+    let sql = `SELECT * FROM voucher_codes WHERE 1=1`;
+    const replacements = {};
+    if (destinationId) { sql += ` AND destination_id = :destinationId`; replacements.destinationId = destinationId; }
+    sql += ` ORDER BY created_at DESC`;
+
+    const vouchers = await mysqlSequelize.query(sql, { replacements, type: QueryTypes.SELECT });
+    res.json({ success: true, data: vouchers, count: vouchers.length });
+  } catch (error) {
+    logger.error('[AdminPortal] List vouchers error:', error);
+    res.status(500).json({ success: false, error: { code: 'LIST_VOUCHERS_ERROR', message: error.message } });
+  }
+});
+
+// --- PUT /vouchers/:id — Update voucher ---
+router.put('/vouchers/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const voucherId = parseInt(req.params.id);
+    const destinationId = req.destScope?.[0] || null;
+
+    const allowedFields = ['code', 'discount_type', 'discount_value', 'min_order_cents', 'max_discount_cents',
+      'max_uses', 'max_uses_per_user', 'valid_from', 'valid_until', 'is_active',
+      'applicable_ticket_ids', 'applicable_ticket_types'];
+
+    const sets = [];
+    const replacements = { voucherId };
+    if (destinationId) replacements.destinationId = destinationId;
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        const val = req.body[field];
+        if (field === 'applicable_ticket_ids' || field === 'applicable_ticket_types') {
+          replacements[field] = val ? JSON.stringify(val) : null;
+        } else if (field === 'code') {
+          replacements[field] = val.toUpperCase();
+        } else {
+          replacements[field] = val;
+        }
+        sets.push(`${field} = :${field}`);
+      }
+    }
+
+    if (sets.length === 0) return res.status(400).json({ success: false, error: { code: 'NO_FIELDS', message: 'No fields to update' } });
+
+    sets.push('updated_at = NOW()');
+    let sql = `UPDATE voucher_codes SET ${sets.join(', ')} WHERE id = :voucherId`;
+    if (destinationId) sql += ` AND destination_id = :destinationId`;
+
+    await mysqlSequelize.query(sql, { replacements, type: QueryTypes.UPDATE });
+    res.json({ success: true, data: { message: 'Voucher updated' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Update voucher error:', error);
+    res.status(500).json({ success: false, error: { code: 'UPDATE_VOUCHER_ERROR', message: error.message } });
   }
 });
 

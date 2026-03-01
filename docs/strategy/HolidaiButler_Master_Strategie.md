@@ -2,7 +2,7 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 28 februari 2026
-**Versie**: 7.19
+**Versie**: 7.20
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1321,7 +1321,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 |---|------|-----------|------|------------|--------|
 | I | Foundation Hardening | Agents Audit, Processen, Platform Core | 4-6 wkn | KRITIEK | ✅ COMPLEET |
 | II | Active Module Upgrade | Chatbot, POI, Agenda, Customer Portal | 6-8 wkn | HOOG | ✅ COMPLEET (Blok A+B+C+D) |
-| III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | 🟢 IN PROGRESS (Blok G+A) |
+| III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | 🟢 IN PROGRESS (Blok G+A+B) |
 | IV | Intermediair & Revenue | Intermediair module + Agent | 6-8 wkn | HOOG | GEPLAND |
 | V | UX Revolution + WarreWijzer | Mobiele UX redesign, WarreWijzer uitrol | 6-10 wkn | MIDDEL | GEPLAND |
 | VI | Polish, Scale & Launch | E2E testing, load testing, DR, go-live | 3-4 wkn | MIDDEL | GEPLAND |
@@ -1350,7 +1350,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 **Fase III — Commerce Foundation:**
 - **Legal (Blok G)**: ✅ COMPLEET — 6 juridische concept-templates (AV, verwerkersovereenkomst, partner agreement), Adyen setup docs
 - **Payment/Adyen (Blok A)**: ✅ COMPLEET — Adyen SDK v30, Sessions flow, PCI DSS SAQ-A, 2 DB tabellen, 3 customer + 5 admin endpoints, HMAC webhook verificatie, frontend PaymentPage + PaymentResultPage
-- **Ticketing (Blok B)**: GEPLAND — Redis-based inventory locking, dynamische pricing, QR-code tickets, vouchers
+- **Ticketing (Blok B)**: ✅ COMPLEET — 5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking + MySQL FOR UPDATE transactie, QR HMAC-SHA256, voucher systeem, BullMQ expired reservation job, 76 admin endpoints, 42 scheduled jobs
 - **Reservering (Blok C)**: GEPLAND — Tafel-gebaseerde beschikbaarheid, gastprofielen, borgbetalingen, no-show tracking
 - **Chatbot-to-Book (Blok D)**: GEPLAND — Booking sub-intents, conversational flow
 - **Admin Commerce (Blok E)**: GEPLAND — Revenue dashboard, financial reporting, CSV export
@@ -1554,6 +1554,8 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.20** | **01-03-2026** | **Fase III Blok B: Ticketing Module COMPLEET. 5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking + MySQL FOR UPDATE transactie, QR HMAC-SHA256, voucher systeem, BullMQ expired reservation job. 76 admin endpoints, 42 scheduled jobs. 18/18 E2E tests PASS. CLAUDE.md v3.54.0.** |
+| **7.19** | **01-03-2026** | **Fase III Blok G+A: Legal docs + Payment Engine COMPLEET. 6 juridische templates. Adyen SDK v30, Sessions flow, 2 DB tabellen, 3+5 endpoints. CLAUDE.md v3.53.0.** |
 | **7.18** | **01-03-2026** | **Fase II Blok D: Customer Portal UX Upgrade COMPLEET. usePageMeta hook (SEO/OG), Breadcrumbs (4 talen), skip-to-content (WCAG), PWA service worker. 10 bestanden. FASE II VOLLEDIG COMPLEET (Blok A+B+C+D). CLAUDE.md v3.52.0.** |
 | 7.17 | 01-03-2026 | Fase II Blok C: Agenda Module Upgrade COMPLEET. Multi-destination, auto-category, iCal feeds, admin CRUD. adminPortal.js v3.13.0. |
 | **7.16** | **01-03-2026** | **Fase II Blok B: POI Module Verbetering COMPLEET. Freshness, clustering, image proxy, admin tools. adminPortal.js v3.12.0. CLAUDE.md v3.50.0.** |
