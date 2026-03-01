@@ -125,11 +125,13 @@ export const API_CONFIG = {
   },
 
   // Payment Module - Adyen integration (PCI-DSS compliant)
+  // Integrated into Platform Core (port 3001) — Fase III
   payment: {
-    baseUrl: getApiUrl(import.meta.env.VITE_PAYMENT_API_URL, 3005),
+    baseUrl: getApiUrl(import.meta.env.VITE_PAYMENT_API_URL, 3001),
     endpoints: {
       payments: '/payments',
-      checkout: '/payments/checkout',
+      session: '/payments/session',
+      checkout: '/payments/session',
       webhook: '/payments/webhook',
       refund: '/payments/refund',
     }

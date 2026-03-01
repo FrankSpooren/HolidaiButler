@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C (v3.13.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A (v3.14.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -6078,6 +6078,130 @@ router.get('/agenda/stats', adminAuth('reviewer'), destinationScope, async (req,
   } catch (error) {
     logger.error('[AdminPortal] Agenda stats error:', error);
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================================
+// PAYMENT MANAGEMENT (Fase III — Blok A)
+// ============================================================================
+
+import {
+  listTransactions,
+  getTransactionDetail,
+  initiateRefund,
+  getPaymentStats,
+  getReconciliationReport,
+} from '../services/payment/paymentService.js';
+
+/**
+ * GET /payments — List payment transactions with filters.
+ */
+router.get('/payments', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const { status, date_from, date_to, page, limit } = req.query;
+    const destinationId = req.destScope?.[0] || 1;
+
+    const result = await listTransactions({
+      destinationId,
+      status: status || null,
+      dateFrom: date_from || null,
+      dateTo: date_to || null,
+      page: parseInt(page) || 1,
+      limit: Math.min(parseInt(limit) || 50, 200),
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] List payments error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /payments/stats — Payment statistics for dashboard.
+ */
+router.get('/payments/stats', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const { date_from, date_to } = req.query;
+    const destinationId = req.destScope?.[0] || 1;
+
+    const stats = await getPaymentStats(destinationId, date_from, date_to);
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    logger.error('[AdminPortal] Payment stats error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /payments/reconciliation — Reconciliation report for a specific date.
+ */
+router.get('/payments/reconciliation', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DATE', message: 'date query parameter required (YYYY-MM-DD)' } });
+    }
+    const destinationId = req.destScope?.[0] || 1;
+
+    const report = await getReconciliationReport(destinationId, date);
+    res.json({ success: true, data: report });
+  } catch (error) {
+    logger.error('[AdminPortal] Reconciliation error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /payments/:id — Get single transaction detail.
+ */
+router.get('/payments/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || 1;
+    const transaction = await getTransactionDetail(parseInt(req.params.id), destinationId);
+
+    if (!transaction) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Transaction not found' } });
+    }
+
+    res.json({ success: true, data: transaction });
+  } catch (error) {
+    logger.error('[AdminPortal] Get payment detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /payments/:id/refund — Initiate refund for a transaction.
+ */
+router.post('/payments/:id/refund', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const { amount_cents, reason, reason_note } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_REASON', message: 'reason is required' } });
+    }
+
+    const validReasons = ['customer_request', 'duplicate', 'fraud', 'no_show_policy', 'event_cancelled', 'other'];
+    if (!validReasons.includes(reason)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_REASON', message: `reason must be one of: ${validReasons.join(', ')}` } });
+    }
+
+    const result = await initiateRefund(
+      parseInt(req.params.id),
+      parseInt(amount_cents) || 0,
+      reason,
+      'admin',
+      req.user?.id || null,
+    );
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Refund error:', error);
+    const statusCode = error.message.includes('not found') ? 404
+      : error.message.includes('Cannot refund') ? 400
+      : 500;
+    res.status(statusCode).json({ success: false, error: { code: 'REFUND_ERROR', message: error.message } });
   }
 });
 

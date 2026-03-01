@@ -33,9 +33,10 @@ const TICKETING_API_URL =
   import.meta.env.VITE_TICKETING_API_URL ||
   (isProduction || isCloudEnvironment ? '/api/v1/ticketing' : 'http://localhost:3004/api/v1/ticketing');
 
+// Payment integrated into Platform Core (port 3001) — Fase III
 const PAYMENT_API_URL =
   import.meta.env.VITE_PAYMENT_API_URL ||
-  (isProduction || isCloudEnvironment ? '/api/v1/payments' : 'http://localhost:3005/api/v1');
+  (isProduction || isCloudEnvironment ? '/api/v1' : 'http://localhost:3001/api/v1');
 
 /**
  * Get authentication token from localStorage
