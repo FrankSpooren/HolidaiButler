@@ -995,4 +995,43 @@ Bug fix: bulk endpoints rapporteren nu `affectedRows` i.p.v. input count.
 
 ---
 
+## Fase II Blok C — Agenda Module Upgrade (01-03-2026)
+
+### C.1: Analyse
+Agenda module audit: 314 events (all Calpe), 4 read-only endpoints, hardcoded Calpe distance filter, no category support in backend, no admin CRUD, no iCal support.
+
+### C.2: Multi-Destination + Category Backend
+- `getDestinationId()`: X-Destination-ID header support (string + numeric)
+- `buildDestinationFilter()`: Replaces hardcoded `calpe_distance <= 25` with `destination_id = ?`
+- `detectCategory()`: 8 categories from keyword analysis (music, festivals, markets, active, nature, food, culture, creative)
+- `?category=music,festivals` filter now functional
+- Search expanded to include `title_en`
+
+### C.4: iCal Calendar Integration
+- `GET /agenda/events/:id/ical` - Download single event iCal (all upcoming dates)
+- `GET /agenda/feed.ics` - Subscription feed (Google/Apple Calendar compatible)
+- RFC 5545 compliant: VEVENT, UID, GEO, proper DTSTART/DTEND handling
+- 1h cache for subscription feeds, configurable `?weeks=` (default 8, max 26)
+
+### C.5: Admin Agenda Tools
+5 new endpoints in adminPortal.js v3.13.0 (56 endpoints total):
+
+| Endpoint | Method | Beschrijving |
+|----------|--------|--------------|
+| `/agenda/events` | GET | List events with filters (dateRange, search, destination) |
+| `/agenda/events/:id` | GET | Event detail with all dates |
+| `/agenda/events/:id` | PUT | Update event fields (14 allowed fields) |
+| `/agenda/events/:id` | DELETE | Delete event + dates (admin only) |
+| `/agenda/stats` | GET | Statistics per destination |
+
+### Blok C Bestanden (2)
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/agenda.js` | Complete rewrite: multi-destination, categories, iCal, 6 endpoints |
+| `platform-core/src/routes/adminPortal.js` | v3.12.0 → v3.13.0, +5 agenda admin endpoints |
+
+**Commit**: `ab2ab26`, pushed dev → test → main
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
