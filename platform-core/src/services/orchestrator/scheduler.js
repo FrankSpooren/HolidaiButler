@@ -144,6 +144,36 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: release-expired-ticket-reservations (every minute)');
 
+  // === Fase III-C Reservation Jobs ===
+
+  // Release Expired Deposit Reservations - every 5 minutes
+  await scheduledQueue.add('reservation-expired-cleanup', { type: 'reservation-cleanup' }, {
+    repeat: { cron: '*/5 * * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'reservation-expired-cleanup-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: reservation-expired-cleanup (every 5 min)');
+
+  // Reservation Reminder 24h - every hour
+  await scheduledQueue.add('reservation-reminder-24h', { type: 'reservation-reminder' }, {
+    repeat: { cron: '0 * * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'reservation-reminder-24h-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: reservation-reminder-24h (hourly)');
+
+  // Reservation Reminder 1h - every 15 minutes
+  await scheduledQueue.add('reservation-reminder-1h', { type: 'reservation-reminder' }, {
+    repeat: { cron: '*/15 * * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'reservation-reminder-1h-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: reservation-reminder-1h (every 15 min)');
+
+  // Guest Data Retention Cleanup (GDPR) - Sunday 03:00
+  await scheduledQueue.add('guest-data-retention-cleanup', { type: 'reservation-gdpr' }, {
+    repeat: { cron: '0 3 * * 0', tz: 'Europe/Amsterdam' },
+    jobId: 'guest-data-retention-cleanup-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: guest-data-retention-cleanup (Sunday 03:00)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);

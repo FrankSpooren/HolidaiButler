@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B (v3.15.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C (v3.16.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -68,8 +68,23 @@
  *   GET  /vouchers              — List vouchers
  *   PUT  /vouchers/:id          — Update voucher
  *
+ *   --- Reservation endpoints (Fase III-C) ---
+ *   GET  /reservations            — List reservations (paginated, filtered)
+ *   GET  /reservations/stats      — Reservation statistics
+ *   GET  /reservations/calendar/:poiId — Calendar overview (month view)
+ *   GET  /reservations/slots/:poiId — Slot list with availability
+ *   POST /reservations/slots/:poiId — Create reservation slots (bulk)
+ *   PUT  /reservations/slots/:id  — Update reservation slot
+ *   GET  /reservations/:id        — Reservation detail
+ *   PUT  /reservations/:id/status — Update reservation status
+ *   POST /reservations/:id/no-show — Mark no-show (auto-blacklist)
+ *   POST /reservations/:id/complete — Mark completed
+ *   GET  /guests                  — List guest profiles
+ *   GET  /guests/:id              — Guest profile detail + history
+ *   PUT  /guests/:id/blacklist    — Manual blacklist toggle
+ *
  * @module routes/adminPortal
- * @version 3.15.0
+ * @version 3.16.0
  */
 
 import { Router } from 'express';
@@ -6756,6 +6771,534 @@ router.put('/vouchers/:id', adminAuth('editor'), destinationScope, writeAccess([
   } catch (error) {
     logger.error('[AdminPortal] Update voucher error:', error);
     res.status(500).json({ success: false, error: { code: 'UPDATE_VOUCHER_ERROR', message: error.message } });
+  }
+});
+
+// =============================================================================
+// RESERVATION ENDPOINTS (Fase III-C) — 13 endpoints
+// =============================================================================
+
+// Import reservation service functions
+const reservationServiceModule = await import('../services/reservation/reservationService.js');
+
+// --- GET /reservations — List reservations (paginated, filtered) ---
+router.get('/reservations', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || null;
+    const { page = 1, limit = 50, status, poiId, dateFrom, dateTo } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let sql = `SELECT r.*, rs.slot_date, rs.slot_time_start, rs.slot_time_end,
+                      p.name as poi_name
+               FROM reservations r
+               JOIN reservation_slots rs ON rs.id = r.slot_id
+               JOIN POI p ON p.id = r.poi_id
+               WHERE 1=1`;
+    let countSql = `SELECT COUNT(*) as total FROM reservations r
+                    JOIN reservation_slots rs ON rs.id = r.slot_id
+                    WHERE 1=1`;
+    const replacements = {};
+
+    if (destinationId) {
+      sql += ` AND r.destination_id = :destinationId`;
+      countSql += ` AND r.destination_id = :destinationId`;
+      replacements.destinationId = destinationId;
+    }
+    if (status) {
+      sql += ` AND r.status = :status`;
+      countSql += ` AND r.status = :status`;
+      replacements.status = status;
+    }
+    if (poiId) {
+      sql += ` AND r.poi_id = :poiId`;
+      countSql += ` AND r.poi_id = :poiId`;
+      replacements.poiId = parseInt(poiId);
+    }
+    if (dateFrom) {
+      sql += ` AND rs.slot_date >= :dateFrom`;
+      countSql += ` AND rs.slot_date >= :dateFrom`;
+      replacements.dateFrom = dateFrom;
+    }
+    if (dateTo) {
+      sql += ` AND rs.slot_date <= :dateTo`;
+      countSql += ` AND rs.slot_date <= :dateTo`;
+      replacements.dateTo = dateTo;
+    }
+
+    sql += ` ORDER BY rs.slot_date DESC, rs.slot_time_start DESC LIMIT :limit OFFSET :offset`;
+    replacements.limit = parseInt(limit);
+    replacements.offset = offset;
+
+    const [reservations, [countResult]] = await Promise.all([
+      mysqlSequelize.query(sql, { replacements, type: QueryTypes.SELECT }),
+      mysqlSequelize.query(countSql, { replacements, type: QueryTypes.SELECT }),
+    ]);
+
+    res.json({ success: true, data: reservations, total: countResult.total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (error) {
+    logger.error('[AdminPortal] List reservations error:', error);
+    res.status(500).json({ success: false, error: { code: 'LIST_RESERVATIONS_ERROR', message: error.message } });
+  }
+});
+
+// --- GET /reservations/stats — Reservation statistics ---
+router.get('/reservations/stats', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || null;
+    const { period = 'month' } = req.query;
+
+    let dateFilter = '';
+    if (period === 'week') dateFilter = `AND r.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`;
+    else if (period === 'month') dateFilter = `AND r.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`;
+    else if (period === 'year') dateFilter = `AND r.created_at >= DATE_SUB(NOW(), INTERVAL 365 DAY)`;
+
+    const destFilter = destinationId ? `AND r.destination_id = :destinationId` : '';
+    const replacements = destinationId ? { destinationId } : {};
+
+    const [stats] = await mysqlSequelize.query(
+      `SELECT
+         COUNT(*) as total_reservations,
+         SUM(CASE WHEN r.status = 'completed' THEN 1 ELSE 0 END) as completed,
+         SUM(CASE WHEN r.status = 'no_show' THEN 1 ELSE 0 END) as no_shows,
+         SUM(CASE WHEN r.status LIKE 'cancelled%' THEN 1 ELSE 0 END) as cancelled,
+         SUM(CASE WHEN r.status = 'confirmed' THEN 1 ELSE 0 END) as confirmed,
+         ROUND(AVG(r.party_size), 1) as avg_party_size
+       FROM reservations r
+       WHERE 1=1 ${destFilter} ${dateFilter}`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const topPois = await mysqlSequelize.query(
+      `SELECT r.poi_id, p.name as poi_name, COUNT(*) as reservation_count
+       FROM reservations r
+       JOIN POI p ON p.id = r.poi_id
+       WHERE 1=1 ${destFilter} ${dateFilter}
+       GROUP BY r.poi_id, p.name
+       ORDER BY reservation_count DESC
+       LIMIT 10`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const [blacklisted] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM guest_profiles WHERE is_blacklisted = TRUE${destinationId ? ' AND destination_id = :destinationId' : ''}`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const total = stats.total_reservations || 0;
+    const noShowRate = total > 0 ? ((stats.no_shows || 0) / total * 100).toFixed(1) : '0.0';
+
+    res.json({
+      success: true,
+      data: {
+        ...stats,
+        no_show_rate: parseFloat(noShowRate),
+        top_pois: topPois,
+        blacklisted_guests_count: blacklisted.count || 0,
+        period,
+      },
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Reservation stats error:', error);
+    res.status(500).json({ success: false, error: { code: 'RESERVATION_STATS_ERROR', message: error.message } });
+  }
+});
+
+// --- GET /reservations/calendar/:poiId — Calendar overview (month view) ---
+router.get('/reservations/calendar/:poiId', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const poiId = parseInt(req.params.poiId);
+    const { month } = req.query; // format: 2026-03
+
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_MONTH', message: 'month query required (format: YYYY-MM)' } });
+    }
+
+    const slots = await mysqlSequelize.query(
+      `SELECT rs.*,
+              (rs.total_seats - rs.reserved_seats) as available_seats,
+              ROUND(rs.reserved_seats / GREATEST(rs.total_seats, 1) * 100) as occupancy_pct,
+              (SELECT COUNT(*) FROM reservations r WHERE r.slot_id = rs.id AND r.status NOT IN ('expired', 'cancelled_by_guest', 'cancelled_by_venue', 'cancelled_by_admin')) as active_reservations
+       FROM reservation_slots rs
+       WHERE rs.poi_id = :poiId
+         AND rs.slot_date >= :monthStart
+         AND rs.slot_date < DATE_ADD(:monthStart, INTERVAL 1 MONTH)
+       ORDER BY rs.slot_date, rs.slot_time_start`,
+      {
+        replacements: { poiId, monthStart: `${month}-01` },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    res.json({ success: true, data: { poiId, month, slots } });
+  } catch (error) {
+    logger.error('[AdminPortal] Reservation calendar error:', error);
+    res.status(500).json({ success: false, error: { code: 'CALENDAR_ERROR', message: error.message } });
+  }
+});
+
+// --- GET /reservations/slots/:poiId — Slot list with availability ---
+router.get('/reservations/slots/:poiId', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const poiId = parseInt(req.params.poiId);
+    const { dateFrom, dateTo } = req.query;
+
+    let sql = `SELECT rs.*,
+                      (rs.total_seats - rs.reserved_seats) as available_seats
+               FROM reservation_slots rs
+               WHERE rs.poi_id = :poiId`;
+    const replacements = { poiId };
+
+    if (dateFrom) { sql += ` AND rs.slot_date >= :dateFrom`; replacements.dateFrom = dateFrom; }
+    if (dateTo) { sql += ` AND rs.slot_date <= :dateTo`; replacements.dateTo = dateTo; }
+    sql += ` ORDER BY rs.slot_date, rs.slot_time_start`;
+
+    const slots = await mysqlSequelize.query(sql, { replacements, type: QueryTypes.SELECT });
+    res.json({ success: true, data: slots, count: slots.length });
+  } catch (error) {
+    logger.error('[AdminPortal] List reservation slots error:', error);
+    res.status(500).json({ success: false, error: { code: 'LIST_SLOTS_ERROR', message: error.message } });
+  }
+});
+
+// --- POST /reservations/slots/:poiId — Create reservation slots (bulk) ---
+router.post('/reservations/slots/:poiId', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const poiId = parseInt(req.params.poiId);
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destination_id) || null;
+    if (!destinationId) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'Destination required' } });
+    }
+
+    const { slots } = req.body;
+    if (!slots || !Array.isArray(slots) || slots.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_SLOTS', message: 'slots array required in body' } });
+    }
+
+    let created = 0;
+    const errors = [];
+
+    for (const slot of slots) {
+      const { date, time_start, time_end, total_seats, total_tables } = slot;
+      if (!date || !time_start || !time_end || !total_seats) {
+        errors.push({ slot, error: 'Missing required fields: date, time_start, time_end, total_seats' });
+        continue;
+      }
+
+      // Check overlap
+      const [existing] = await mysqlSequelize.query(
+        `SELECT id FROM reservation_slots
+         WHERE poi_id = :poiId AND slot_date = :date
+           AND slot_time_start < :timeEnd AND slot_time_end > :timeStart`,
+        { replacements: { poiId, date, timeStart: time_start, timeEnd: time_end }, type: QueryTypes.SELECT }
+      );
+
+      if (existing) {
+        errors.push({ slot, error: 'Overlaps with existing slot' });
+        continue;
+      }
+
+      await mysqlSequelize.query(
+        `INSERT INTO reservation_slots
+         (poi_id, destination_id, slot_date, slot_time_start, slot_time_end,
+          total_seats, total_tables, is_available, created_at)
+         VALUES
+         (:poiId, :destinationId, :date, :timeStart, :timeEnd,
+          :totalSeats, :totalTables, TRUE, NOW())`,
+        {
+          replacements: {
+            poiId, destinationId, date,
+            timeStart: time_start, timeEnd: time_end,
+            totalSeats: parseInt(total_seats),
+            totalTables: total_tables ? parseInt(total_tables) : null,
+          },
+          type: QueryTypes.INSERT,
+        }
+      );
+      created++;
+    }
+
+    logger.info(`[AdminPortal] Created ${created} reservation slots for POI ${poiId} by ${req.adminUser.email}`);
+    res.status(201).json({ success: true, data: { created, errors: errors.length, errorDetails: errors } });
+  } catch (error) {
+    logger.error('[AdminPortal] Create reservation slots error:', error);
+    res.status(500).json({ success: false, error: { code: 'CREATE_SLOTS_ERROR', message: error.message } });
+  }
+});
+
+// --- PUT /reservations/slots/:id — Update reservation slot ---
+router.put('/reservations/slots/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const slotId = parseInt(req.params.id);
+    const { total_seats, total_tables, is_available } = req.body;
+
+    // Check current state
+    const [slot] = await mysqlSequelize.query(
+      `SELECT * FROM reservation_slots WHERE id = :slotId`,
+      { replacements: { slotId }, type: QueryTypes.SELECT }
+    );
+
+    if (!slot) {
+      return res.status(404).json({ success: false, error: { code: 'SLOT_NOT_FOUND', message: 'Slot not found' } });
+    }
+
+    // Cannot lower seats below reserved
+    if (total_seats !== undefined && parseInt(total_seats) < slot.reserved_seats) {
+      return res.status(409).json({
+        success: false,
+        error: { code: 'SEATS_BELOW_RESERVED', message: `Cannot set total_seats (${total_seats}) below reserved_seats (${slot.reserved_seats})` },
+      });
+    }
+
+    const sets = [];
+    const replacements = { slotId };
+
+    if (total_seats !== undefined) { sets.push('total_seats = :totalSeats'); replacements.totalSeats = parseInt(total_seats); }
+    if (total_tables !== undefined) { sets.push('total_tables = :totalTables'); replacements.totalTables = parseInt(total_tables); }
+    if (is_available !== undefined) { sets.push('is_available = :isAvailable'); replacements.isAvailable = is_available ? 1 : 0; }
+
+    if (sets.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_FIELDS', message: 'No fields to update' } });
+    }
+
+    sets.push('updated_at = NOW()');
+    await mysqlSequelize.query(
+      `UPDATE reservation_slots SET ${sets.join(', ')} WHERE id = :slotId`,
+      { replacements, type: QueryTypes.UPDATE }
+    );
+
+    logger.info(`[AdminPortal] Updated reservation slot ${slotId} by ${req.adminUser.email}`);
+    res.json({ success: true, data: { message: 'Slot updated' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Update reservation slot error:', error);
+    res.status(500).json({ success: false, error: { code: 'UPDATE_SLOT_ERROR', message: error.message } });
+  }
+});
+
+// --- GET /reservations/:id — Reservation detail ---
+router.get('/reservations/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const reservationId = parseInt(req.params.id);
+    const destinationId = req.destScope?.[0] || null;
+
+    let sql = `SELECT r.*, rs.slot_date, rs.slot_time_start, rs.slot_time_end,
+                      p.name as poi_name, p.address as poi_address,
+                      gp.first_name as guest_first_name, gp.last_name as guest_last_name,
+                      gp.no_show_count, gp.total_reservations as guest_total_reservations,
+                      gp.is_blacklisted
+               FROM reservations r
+               JOIN reservation_slots rs ON rs.id = r.slot_id
+               JOIN POI p ON p.id = r.poi_id
+               LEFT JOIN guest_profiles gp ON gp.id = r.guest_profile_id
+               WHERE r.id = :reservationId`;
+    const replacements = { reservationId };
+
+    if (destinationId) { sql += ` AND r.destination_id = :destinationId`; replacements.destinationId = destinationId; }
+
+    const [reservation] = await mysqlSequelize.query(sql, { replacements, type: QueryTypes.SELECT });
+
+    if (!reservation) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Reservation not found' } });
+    }
+
+    res.json({ success: true, data: reservation });
+  } catch (error) {
+    logger.error('[AdminPortal] Reservation detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'RESERVATION_DETAIL_ERROR', message: error.message } });
+  }
+});
+
+// --- PUT /reservations/:id/status — Update reservation status ---
+router.put('/reservations/:id/status', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const reservationId = parseInt(req.params.id);
+    const { status } = req.body;
+
+    const allowedStatuses = ['confirmed', 'cancelled_by_venue'];
+    if (!status || !allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_STATUS', message: `status must be one of: ${allowedStatuses.join(', ')}` },
+      });
+    }
+
+    if (status === 'confirmed') {
+      const result = await reservationServiceModule.confirmReservation(reservationId);
+      logger.info(`[AdminPortal] Reservation ${reservationId} confirmed by ${req.adminUser.email}`);
+      res.json({ success: true, data: result });
+    } else if (status === 'cancelled_by_venue') {
+      const result = await reservationServiceModule.cancelReservation(reservationId, 'venue', req.body.reason || null);
+      logger.info(`[AdminPortal] Reservation ${reservationId} cancelled (venue) by ${req.adminUser.email}`);
+      res.json({ success: true, data: result });
+    }
+  } catch (error) {
+    if (error.message === 'RESERVATION_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Reservation not found' } });
+    }
+    logger.error('[AdminPortal] Update reservation status error:', error);
+    res.status(500).json({ success: false, error: { code: 'UPDATE_STATUS_ERROR', message: error.message } });
+  }
+});
+
+// --- POST /reservations/:id/no-show — Mark no-show ---
+router.post('/reservations/:id/no-show', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const reservationId = parseInt(req.params.id);
+    const result = await reservationServiceModule.markNoShow(reservationId);
+    logger.info(`[AdminPortal] Reservation ${reservationId} marked no-show by ${req.adminUser.email}, blacklisted=${result.blacklisted}`);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    if (error.message === 'RESERVATION_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Reservation not found' } });
+    }
+    logger.error('[AdminPortal] No-show error:', error);
+    res.status(500).json({ success: false, error: { code: 'NO_SHOW_ERROR', message: error.message } });
+  }
+});
+
+// --- POST /reservations/:id/complete — Mark completed ---
+router.post('/reservations/:id/complete', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const reservationId = parseInt(req.params.id);
+    const result = await reservationServiceModule.markCompleted(reservationId);
+    logger.info(`[AdminPortal] Reservation ${reservationId} completed by ${req.adminUser.email}`);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    if (error.message === 'RESERVATION_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Reservation not found' } });
+    }
+    logger.error('[AdminPortal] Complete reservation error:', error);
+    res.status(500).json({ success: false, error: { code: 'COMPLETE_ERROR', message: error.message } });
+  }
+});
+
+// --- GET /guests — List guest profiles ---
+router.get('/guests', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || null;
+    const { page = 1, limit = 50, search, isBlacklisted } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let sql = `SELECT * FROM guest_profiles WHERE 1=1`;
+    let countSql = `SELECT COUNT(*) as total FROM guest_profiles WHERE 1=1`;
+    const replacements = {};
+
+    if (destinationId) {
+      sql += ` AND destination_id = :destinationId`;
+      countSql += ` AND destination_id = :destinationId`;
+      replacements.destinationId = destinationId;
+    }
+    if (search) {
+      sql += ` AND (email LIKE :search OR first_name LIKE :search OR last_name LIKE :search)`;
+      countSql += ` AND (email LIKE :search OR first_name LIKE :search OR last_name LIKE :search)`;
+      replacements.search = `%${search}%`;
+    }
+    if (isBlacklisted !== undefined) {
+      sql += ` AND is_blacklisted = :isBlacklisted`;
+      countSql += ` AND is_blacklisted = :isBlacklisted`;
+      replacements.isBlacklisted = isBlacklisted === 'true' ? 1 : 0;
+    }
+
+    sql += ` ORDER BY created_at DESC LIMIT :limit OFFSET :offset`;
+    replacements.limit = parseInt(limit);
+    replacements.offset = offset;
+
+    const [guests, [countResult]] = await Promise.all([
+      mysqlSequelize.query(sql, { replacements, type: QueryTypes.SELECT }),
+      mysqlSequelize.query(countSql, { replacements, type: QueryTypes.SELECT }),
+    ]);
+
+    res.json({ success: true, data: guests, total: countResult.total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (error) {
+    logger.error('[AdminPortal] List guests error:', error);
+    res.status(500).json({ success: false, error: { code: 'LIST_GUESTS_ERROR', message: error.message } });
+  }
+});
+
+// --- GET /guests/:id — Guest profile detail + reservation history ---
+router.get('/guests/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const guestId = parseInt(req.params.id);
+    const destinationId = req.destScope?.[0] || null;
+
+    let sql = `SELECT * FROM guest_profiles WHERE id = :guestId`;
+    const replacements = { guestId };
+    if (destinationId) { sql += ` AND destination_id = :destinationId`; replacements.destinationId = destinationId; }
+
+    const [profile] = await mysqlSequelize.query(sql, { replacements, type: QueryTypes.SELECT });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Guest profile not found' } });
+    }
+
+    // Parse JSON fields
+    if (typeof profile.dietary_preferences === 'string') {
+      try { profile.dietary_preferences = JSON.parse(profile.dietary_preferences); } catch { /* keep */ }
+    }
+    if (typeof profile.allergies === 'string') {
+      try { profile.allergies = JSON.parse(profile.allergies); } catch { /* keep */ }
+    }
+
+    // Get reservation history
+    const history = await mysqlSequelize.query(
+      `SELECT r.id, r.reservation_number, r.status, r.party_size, r.created_at,
+              rs.slot_date, rs.slot_time_start,
+              p.name as poi_name
+       FROM reservations r
+       JOIN reservation_slots rs ON rs.id = r.slot_id
+       JOIN POI p ON p.id = r.poi_id
+       WHERE r.guest_profile_id = :guestId
+       ORDER BY r.created_at DESC
+       LIMIT 20`,
+      { replacements: { guestId }, type: QueryTypes.SELECT }
+    );
+
+    res.json({ success: true, data: { ...profile, reservations: history } });
+  } catch (error) {
+    logger.error('[AdminPortal] Guest detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'GUEST_DETAIL_ERROR', message: error.message } });
+  }
+});
+
+// --- PUT /guests/:id/blacklist — Manual blacklist toggle ---
+router.put('/guests/:id/blacklist', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+  try {
+    const guestId = parseInt(req.params.id);
+    const { is_blacklisted, reason } = req.body;
+
+    if (is_blacklisted === undefined) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'is_blacklisted required' } });
+    }
+
+    const [existing] = await mysqlSequelize.query(
+      `SELECT id, email FROM guest_profiles WHERE id = :guestId`,
+      { replacements: { guestId }, type: QueryTypes.SELECT }
+    );
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Guest profile not found' } });
+    }
+
+    await mysqlSequelize.query(
+      `UPDATE guest_profiles
+       SET is_blacklisted = :isBlacklisted,
+           blacklist_reason = :reason,
+           updated_at = NOW()
+       WHERE id = :guestId`,
+      {
+        replacements: {
+          guestId,
+          isBlacklisted: is_blacklisted ? 1 : 0,
+          reason: is_blacklisted ? (reason || `manual by ${req.adminUser.email}`) : null,
+        },
+        type: QueryTypes.UPDATE,
+      }
+    );
+
+    logger.info(`[AdminPortal] Guest ${existing.email} blacklist=${is_blacklisted} by ${req.adminUser.email}`);
+    res.json({ success: true, data: { message: is_blacklisted ? 'Guest blacklisted' : 'Guest unblacklisted' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Blacklist toggle error:', error);
+    res.status(500).json({ success: false, error: { code: 'BLACKLIST_ERROR', message: error.message } });
   }
 });
 

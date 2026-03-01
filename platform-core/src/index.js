@@ -53,6 +53,7 @@ import imageResizeRoutes from './routes/imageResize.js';
 import adminPortalRoutes from './routes/adminPortal.js';
 import paymentRoutes from './routes/payment.js';
 import ticketingRoutes from './routes/ticketing.js';
+import reservationRoutes from './routes/reservations.js';
 import User from './models/User.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -178,6 +179,7 @@ app.use('/api/v1/img', imageResizeRoutes); // Image resize proxy (Fase II-B.4)
 app.use('/api/v1/admin-portal', adminPortalRoutes); // Admin Portal (Fase 8C-0)
 app.use('/api/v1/payments', paymentRoutes); // Payment Engine (Fase III-A)
 app.use('/api/v1/tickets', ticketingRoutes); // Ticketing Module (Fase III-B)
+app.use('/api/v1/reservations', reservationRoutes); // Reservation Module (Fase III-C)
 
 // Static file serving for branding assets (logo uploads)
 const brandingDir = process.env.NODE_ENV === 'production'

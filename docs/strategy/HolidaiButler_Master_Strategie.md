@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 28 februari 2026
-**Versie**: 7.20
+**Versie**: 7.21
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE II COMPLEET — Blok A+B+C+D COMPLEET. Blok A: Chatbot Upgrade. Blok B: POI Module. Blok C: Agenda Module. Blok D: Customer Portal UX. CLAUDE.md v3.52.0. MS v7.18.
+**Status**: FASE III IN PROGRESS — Blok G+A+B+C COMPLEET. Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.55.0. MS v7.21.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1350,8 +1350,8 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 **Fase III — Commerce Foundation:**
 - **Legal (Blok G)**: ✅ COMPLEET — 6 juridische concept-templates (AV, verwerkersovereenkomst, partner agreement), Adyen setup docs
 - **Payment/Adyen (Blok A)**: ✅ COMPLEET — Adyen SDK v30, Sessions flow, PCI DSS SAQ-A, 2 DB tabellen, 3 customer + 5 admin endpoints, HMAC webhook verificatie, frontend PaymentPage + PaymentResultPage
-- **Ticketing (Blok B)**: ✅ COMPLEET — 5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking + MySQL FOR UPDATE transactie, QR HMAC-SHA256, voucher systeem, BullMQ expired reservation job, 76 admin endpoints, 42 scheduled jobs
-- **Reservering (Blok C)**: GEPLAND — Tafel-gebaseerde beschikbaarheid, gastprofielen, borgbetalingen, no-show tracking
+- **Ticketing (Blok B)**: ✅ COMPLEET — 5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking + MySQL FOR UPDATE transactie, QR HMAC-SHA256, voucher systeem, BullMQ expired reservation job
+- **Reservering (Blok C)**: ✅ COMPLEET — 3 DB tabellen + ALTER TABLE POI, 4 customer + 13 admin endpoints, Redis slot locking, QR HMAC-SHA256, auto-blacklist (3 no-shows), 4 BullMQ jobs (expired/reminders/GDPR), GDPR data retention 24 maanden, 89 admin endpoints, 46 scheduled jobs
 - **Chatbot-to-Book (Blok D)**: GEPLAND — Booking sub-intents, conversational flow
 - **Admin Commerce (Blok E)**: GEPLAND — Revenue dashboard, financial reporting, CSV export
 - **Testing/Compliance (Blok F)**: GEPLAND — PCI DSS docs, payment test matrix, GDPR checklist
@@ -1554,7 +1554,8 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **7.20** | **01-03-2026** | **Fase III Blok B: Ticketing Module COMPLEET. 5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking + MySQL FOR UPDATE transactie, QR HMAC-SHA256, voucher systeem, BullMQ expired reservation job. 76 admin endpoints, 42 scheduled jobs. 18/18 E2E tests PASS. CLAUDE.md v3.54.0.** |
+| **7.21** | **01-03-2026** | **Fase III Blok C: Reservation Module COMPLEET. 3 DB tabellen + ALTER TABLE POI, 4 customer + 13 admin endpoints, Redis slot locking, QR HMAC-SHA256, auto-blacklist, 4 BullMQ jobs, GDPR guest cleanup. 89 admin endpoints, 46 scheduled jobs. 20/20 E2E tests PASS. CLAUDE.md v3.55.0.** |
+| 7.20 | 01-03-2026 | Fase III Blok B: Ticketing Module COMPLEET. 76 admin endpoints, 42 scheduled jobs. 18/18 E2E tests PASS. CLAUDE.md v3.54.0. |
 | **7.19** | **01-03-2026** | **Fase III Blok G+A: Legal docs + Payment Engine COMPLEET. 6 juridische templates. Adyen SDK v30, Sessions flow, 2 DB tabellen, 3+5 endpoints. CLAUDE.md v3.53.0.** |
 | **7.18** | **01-03-2026** | **Fase II Blok D: Customer Portal UX Upgrade COMPLEET. usePageMeta hook (SEO/OG), Breadcrumbs (4 talen), skip-to-content (WCAG), PWA service worker. 10 bestanden. FASE II VOLLEDIG COMPLEET (Blok A+B+C+D). CLAUDE.md v3.52.0.** |
 | 7.17 | 01-03-2026 | Fase II Blok C: Agenda Module Upgrade COMPLEET. Multi-destination, auto-category, iCal feeds, admin CRUD. adminPortal.js v3.13.0. |
@@ -1598,5 +1599,5 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 1 maart 2026 - Fase II Customer Portal UX Upgrade COMPLEET, Fase II volledig COMPLEET. Master Document v7.18*
-*Fase I COMPLEET. Fase II COMPLEET: Blok A+B+C+D ✅ (Chatbot + POI + Agenda + Customer Portal). Admin Portal: 56 endpoints, adminPortal.js v3.13.0. Agent Enterprise Niveau 7. WarreWijzer (Deel 10). Strategische roadmap 6 fasen (Deel 9). CLAUDE.md v3.52.0.*
+*Laatst bijgewerkt: 1 maart 2026 - Fase III Blok C Reservering COMPLEET. Master Document v7.21*
+*Fase I COMPLEET. Fase II COMPLEET. Fase III IN PROGRESS: Blok G+A+B ✅ (Legal + Payment + Ticketing). Admin Portal: 76 endpoints, adminPortal.js v3.15.0. 42 scheduled jobs. CLAUDE.md v3.54.0.*
