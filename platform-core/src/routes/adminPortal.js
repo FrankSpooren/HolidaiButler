@@ -6099,7 +6099,7 @@ import {
 router.get('/payments', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const { status, date_from, date_to, page, limit } = req.query;
-    const destinationId = req.destScope?.[0] || 1;
+    const destinationId = req.destScope?.[0] || null;
 
     const result = await listTransactions({
       destinationId,
@@ -6123,7 +6123,7 @@ router.get('/payments', adminAuth('reviewer'), destinationScope, async (req, res
 router.get('/payments/stats', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const { date_from, date_to } = req.query;
-    const destinationId = req.destScope?.[0] || 1;
+    const destinationId = req.destScope?.[0] || null;
 
     const stats = await getPaymentStats(destinationId, date_from, date_to);
     res.json({ success: true, data: stats });
@@ -6142,7 +6142,7 @@ router.get('/payments/reconciliation', adminAuth('reviewer'), destinationScope, 
     if (!date) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_DATE', message: 'date query parameter required (YYYY-MM-DD)' } });
     }
-    const destinationId = req.destScope?.[0] || 1;
+    const destinationId = req.destScope?.[0] || null;
 
     const report = await getReconciliationReport(destinationId, date);
     res.json({ success: true, data: report });
@@ -6157,7 +6157,7 @@ router.get('/payments/reconciliation', adminAuth('reviewer'), destinationScope, 
  */
 router.get('/payments/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || 1;
+    const destinationId = req.destScope?.[0] || null;
     const transaction = await getTransactionDetail(parseInt(req.params.id), destinationId);
 
     if (!transaction) {

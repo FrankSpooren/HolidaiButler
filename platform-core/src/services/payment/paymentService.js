@@ -459,8 +459,13 @@ export async function getTransactionsByOrder(orderType, orderId) {
  * List transactions with filters (admin).
  */
 export async function listTransactions({ destinationId, status, dateFrom, dateTo, page = 1, limit = 50 }) {
-  let where = 'WHERE destination_id = :destinationId';
-  const replacements = { destinationId };
+  let where = 'WHERE 1=1';
+  const replacements = {};
+
+  if (destinationId) {
+    where += ' AND destination_id = :destinationId';
+    replacements.destinationId = destinationId;
+  }
 
   if (status) {
     where += ' AND status = :status';
@@ -505,13 +510,20 @@ export async function listTransactions({ destinationId, status, dateFrom, dateTo
  * Get single transaction detail (admin).
  */
 export async function getTransactionDetail(transactionId, destinationId) {
+  let destFilter = '';
+  const replacements = { id: transactionId };
+  if (destinationId) {
+    destFilter = 'AND pt.destination_id = :destinationId';
+    replacements.destinationId = destinationId;
+  }
+
   const [transaction] = await mysqlSequelize.query(
     `SELECT pt.*, GROUP_CONCAT(pr.refund_uuid) AS refund_uuids
      FROM payment_transactions pt
      LEFT JOIN payment_refunds pr ON pr.transaction_id = pt.id
-     WHERE pt.id = :id AND pt.destination_id = :destinationId
+     WHERE pt.id = :id ${destFilter}
      GROUP BY pt.id`,
-    { replacements: { id: transactionId, destinationId }, type: QueryTypes.SELECT },
+    { replacements, type: QueryTypes.SELECT },
   );
 
   if (!transaction) return null;
@@ -532,8 +544,18 @@ export async function getTransactionDetail(transactionId, destinationId) {
  * Get payment statistics (admin dashboard).
  */
 export async function getPaymentStats(destinationId, dateFrom, dateTo) {
-  const replacements = { destinationId };
+  const replacements = {};
+  let destFilter = '';
+  let refundDestFilter = '';
   let dateFilter = '';
+
+  if (destinationId) {
+    destFilter = 'AND destination_id = :destinationId';
+    refundDestFilter = 'WHERE destination_id = :destinationId AND status = \'processed\'';
+    replacements.destinationId = destinationId;
+  } else {
+    refundDestFilter = 'WHERE status = \'processed\'';
+  }
 
   if (dateFrom && dateTo) {
     dateFilter = 'AND created_at BETWEEN :dateFrom AND :dateTo';
@@ -550,9 +572,9 @@ export async function getPaymentStats(destinationId, dateFrom, dateTo) {
        SUM(CASE WHEN status = 'chargeback' THEN 1 ELSE 0 END) AS chargebacks,
        COALESCE(SUM(CASE WHEN status IN ('captured', 'authorized') THEN amount_cents ELSE 0 END), 0) AS total_revenue_cents,
        COALESCE(SUM(CASE WHEN status IN ('captured', 'authorized') THEN commission_cents ELSE 0 END), 0) AS total_commission_cents,
-       COALESCE((SELECT SUM(amount_cents) FROM payment_refunds WHERE destination_id = :destinationId AND status = 'processed'), 0) AS total_refunded_cents
+       COALESCE((SELECT SUM(amount_cents) FROM payment_refunds ${refundDestFilter}), 0) AS total_refunded_cents
      FROM payment_transactions
-     WHERE destination_id = :destinationId ${dateFilter}`,
+     WHERE 1=1 ${destFilter} ${dateFilter}`,
     { replacements, type: QueryTypes.SELECT },
   );
 
@@ -571,26 +593,40 @@ export async function getPaymentStats(destinationId, dateFrom, dateTo) {
  * Get reconciliation report (admin).
  */
 export async function getReconciliationReport(destinationId, date) {
+  let destFilter = '';
+  const replacements = { date };
+  if (destinationId) {
+    destFilter = 'AND destination_id = :destinationId';
+    replacements.destinationId = destinationId;
+  }
+
   const transactions = await mysqlSequelize.query(
     `SELECT id, transaction_uuid, adyen_psp_reference, adyen_merchant_reference,
             amount_cents, currency, commission_cents, partner_amount_cents,
             status, order_type, order_id, created_at, captured_at
      FROM payment_transactions
-     WHERE destination_id = :destinationId
-       AND DATE(created_at) = :date
+     WHERE DATE(created_at) = :date
+       ${destFilter}
        AND status IN ('captured', 'refunded', 'partially_refunded')
      ORDER BY created_at ASC`,
-    { replacements: { destinationId, date }, type: QueryTypes.SELECT },
+    { replacements, type: QueryTypes.SELECT },
   );
+
+  let refundDestFilter = '';
+  const refundReplacements = { date };
+  if (destinationId) {
+    refundDestFilter = 'AND pr.destination_id = :destinationId';
+    refundReplacements.destinationId = destinationId;
+  }
 
   const refunds = await mysqlSequelize.query(
     `SELECT pr.*, pt.adyen_merchant_reference
      FROM payment_refunds pr
      JOIN payment_transactions pt ON pt.id = pr.transaction_id
-     WHERE pr.destination_id = :destinationId
-       AND DATE(pr.created_at) = :date
+     WHERE DATE(pr.created_at) = :date
+       ${refundDestFilter}
        AND pr.status = 'processed'`,
-    { replacements: { destinationId, date }, type: QueryTypes.SELECT },
+    { replacements: refundReplacements, type: QueryTypes.SELECT },
   );
 
   const totalCaptured = transactions.reduce((sum, t) => sum + t.amount_cents, 0);
