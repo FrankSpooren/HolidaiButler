@@ -133,6 +133,32 @@ class IntentService {
         priority: 4
       },
 
+      // Fase II A.5: Booking intent detection (log only, no handling yet)
+      booking: {
+        keywords: {
+          nl: ['boeken', 'reserveren', 'reservering', 'boeking', 'tafel reserveren', 'tickets', 'kaartjes', 'beschikbaarheid'],
+          en: ['book', 'reserve', 'reservation', 'booking', 'tickets', 'availability', 'book a table'],
+          de: ['buchen', 'reservieren', 'reservierung', 'buchung', 'tickets', 'verfügbarkeit', 'tisch reservieren'],
+          es: ['reservar', 'reserva', 'entradas', 'disponibilidad', 'reservar mesa'],
+          sv: ['boka', 'reservera', 'bokning', 'biljetter'],
+          pl: ['zarezerwuj', 'rezerwacja', 'bilety', 'dostępność']
+        },
+        priority: 2
+      },
+
+      // Fase II A.6: Human escalation detection
+      human_escalation: {
+        keywords: {
+          nl: ['kan ik iemand spreken', 'echte persoon', 'medewerker', 'klacht', 'niet tevreden', 'werkt niet', 'menselijke hulp'],
+          en: ['speak to someone', 'real person', 'human', 'complaint', 'not satisfied', 'not working', 'human help', 'customer service'],
+          de: ['mit jemandem sprechen', 'echte person', 'mitarbeiter', 'beschwerde', 'nicht zufrieden', 'funktioniert nicht'],
+          es: ['hablar con alguien', 'persona real', 'queja', 'no funciona', 'no satisfecho', 'servicio al cliente'],
+          sv: ['prata med någon', 'riktig person', 'klagomål'],
+          pl: ['porozmawiać z kimś', 'prawdziwa osoba', 'reklamacja']
+        },
+        priority: 1
+      },
+
       // Thank you / goodbye
       closing: {
         keywords: {

@@ -54,7 +54,7 @@
  */
 
 import express from 'express';
-import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService, intentService, preferenceService, suggestionService } from '../services/holibot/index.js';
+import { ragService, syncService, chromaService, embeddingService, ttsService, spellService, conversationService, intentService, preferenceService, suggestionService, contextService } from '../services/holibot/index.js';
 import { getDestinationById } from '../../config/destinations/index.js';
 import { getImagesForPOI, getImagesForPOIs } from '../models/ImageUrl.js';
 import logger from '../utils/logger.js';
@@ -877,6 +877,106 @@ router.post('/chat', async (req, res) => {
     const intentAnalysis = intentService.analyzeQuery(processedMessage, language, conversationHistory, destinationId);
     logger.debug('Intent analysis', { intent: intentAnalysis.primaryIntent, entities: intentAnalysis.entities });
 
+    // Fase II A.5: Booking intent interception
+    if (intentAnalysis.primaryIntent === 'booking') {
+      logger.info('Booking intent detected', { sessionId: activeSessionId, query: processedMessage });
+      const bookingResponses = {
+      nl: {
+        booking: 'Reserveren via onze chatbot is binnenkort mogelijk! Op dit moment kun je rechtstreeks contact opnemen met de locatie via hun website of telefoonnummer. Kan ik je verder helpen met het vinden van de juiste plek?',
+        escalation_calpe: 'Ik begrijp dat je liever met iemand persoonlijk spreekt. Je kunt ons bereiken via info@holidaibutler.com. We helpen je graag verder!',
+        escalation_texel: 'Ik begrijp dat je liever met iemand persoonlijk spreekt. Je kunt ons bereiken via info@texelmaps.nl. We helpen je graag verder!'
+      },
+      en: {
+        booking: 'Booking through our chatbot will be available soon! For now, you can contact the venue directly via their website or phone number. Can I help you find the right place?',
+        escalation_calpe: 'I understand you would prefer to speak with someone directly. You can reach us at info@holidaibutler.com. We are happy to help!',
+        escalation_texel: 'I understand you would prefer to speak with someone directly. You can reach us at info@texelmaps.nl. We are happy to help!'
+      },
+      de: {
+        booking: 'Buchungen uber unseren Chatbot werden bald moglich sein! Im Moment konnen Sie den Veranstaltungsort direkt uber deren Website oder Telefonnummer kontaktieren. Kann ich Ihnen helfen, den richtigen Ort zu finden?',
+        escalation_calpe: 'Ich verstehe, dass Sie lieber mit jemandem personlich sprechen mochten. Sie konnen uns unter info@holidaibutler.com erreichen.',
+        escalation_texel: 'Ich verstehe, dass Sie lieber mit jemandem personlich sprechen mochten. Sie konnen uns unter info@texelmaps.nl erreichen.'
+      },
+      es: {
+        booking: 'Las reservas a traves de nuestro chatbot estaran disponibles pronto. Por ahora, puede contactar directamente con el lugar a traves de su sitio web o numero de telefono.',
+        escalation_calpe: 'Entiendo que prefiere hablar con alguien directamente. Puede contactarnos en info@holidaibutler.com.',
+        escalation_texel: 'Entiendo que prefiere hablar con alguien directamente. Puede contactarnos en info@texelmaps.nl.'
+      }
+    };
+      const langResp = bookingResponses[language] || bookingResponses.en;
+      const bookingMessage = langResp.booking;
+
+      // Log assistant message for analytics
+      conversationService.logAssistantMessage({
+        sessionId: activeSessionId,
+        message: bookingMessage,
+        source: 'booking-intent',
+        poiCount: 0,
+        hadFallback: false
+      }).catch(() => {});
+
+      return res.json({
+        success: true,
+        data: {
+          success: true,
+          message: bookingMessage,
+          pois: [],
+          source: 'booking-intent',
+          intent: { detected: 'booking' },
+          sessionId: activeSessionId
+        }
+      });
+    }
+
+    // Fase II A.6: Human escalation intent interception
+    if (intentAnalysis.primaryIntent === 'human_escalation') {
+      logger.info('Human escalation requested', { sessionId: activeSessionId, query: processedMessage });
+      const escResponses = {
+      nl: {
+        booking: 'Reserveren via onze chatbot is binnenkort mogelijk! Op dit moment kun je rechtstreeks contact opnemen met de locatie via hun website of telefoonnummer. Kan ik je verder helpen met het vinden van de juiste plek?',
+        escalation_calpe: 'Ik begrijp dat je liever met iemand persoonlijk spreekt. Je kunt ons bereiken via info@holidaibutler.com. We helpen je graag verder!',
+        escalation_texel: 'Ik begrijp dat je liever met iemand persoonlijk spreekt. Je kunt ons bereiken via info@texelmaps.nl. We helpen je graag verder!'
+      },
+      en: {
+        booking: 'Booking through our chatbot will be available soon! For now, you can contact the venue directly via their website or phone number. Can I help you find the right place?',
+        escalation_calpe: 'I understand you would prefer to speak with someone directly. You can reach us at info@holidaibutler.com. We are happy to help!',
+        escalation_texel: 'I understand you would prefer to speak with someone directly. You can reach us at info@texelmaps.nl. We are happy to help!'
+      },
+      de: {
+        booking: 'Buchungen uber unseren Chatbot werden bald moglich sein! Im Moment konnen Sie den Veranstaltungsort direkt uber deren Website oder Telefonnummer kontaktieren. Kann ich Ihnen helfen, den richtigen Ort zu finden?',
+        escalation_calpe: 'Ich verstehe, dass Sie lieber mit jemandem personlich sprechen mochten. Sie konnen uns unter info@holidaibutler.com erreichen.',
+        escalation_texel: 'Ich verstehe, dass Sie lieber mit jemandem personlich sprechen mochten. Sie konnen uns unter info@texelmaps.nl erreichen.'
+      },
+      es: {
+        booking: 'Las reservas a traves de nuestro chatbot estaran disponibles pronto. Por ahora, puede contactar directamente con el lugar a traves de su sitio web o numero de telefono.',
+        escalation_calpe: 'Entiendo que prefiere hablar con alguien directamente. Puede contactarnos en info@holidaibutler.com.',
+        escalation_texel: 'Entiendo que prefiere hablar con alguien directamente. Puede contactarnos en info@texelmaps.nl.'
+      }
+    };
+      const langResp = escResponses[language] || escResponses.en;
+      const destCode = destinationConfig?.destination?.code || 'calpe';
+      const escalationMessage = destCode === 'texel' ? langResp.escalation_texel : langResp.escalation_calpe;
+
+      conversationService.logAssistantMessage({
+        sessionId: activeSessionId,
+        message: escalationMessage,
+        source: 'human-escalation',
+        poiCount: 0,
+        hadFallback: false
+      }).catch(() => {});
+
+      return res.json({
+        success: true,
+        data: {
+          success: true,
+          message: escalationMessage,
+          pois: [],
+          source: 'human-escalation',
+          intent: { detected: 'human_escalation' },
+          sessionId: activeSessionId
+        }
+      });
+    }
+
     // Step 3: RAG chat with corrected message and intent context
     const response = await ragService.chat(processedMessage, language, {
       userPreferences,
@@ -884,6 +984,7 @@ router.post('/chat', async (req, res) => {
       originalQuery: message,  // Pass original for entity extraction
       collectionName,
       destinationConfig,
+      sessionId: activeSessionId,  // Fase II A.2: pass sessionId for context awareness
       intentContext: {
         primaryIntent: intentAnalysis.primaryIntent,
         categories: intentAnalysis.entities.categories,
@@ -894,9 +995,13 @@ router.post('/chat', async (req, res) => {
     // Step 4: Multi-fallback system
     const enhancedResponse = await applyMultiFallback(response, message, language, spellSuggestions);
     
+    // Fase II A.2: Track mentioned POIs for session context awareness
+    const poiNames = enhancedResponse.pois?.map(p => p.name).filter(Boolean) || [];
+    const poiCategories = enhancedResponse.pois?.map(p => p.category).filter(Boolean) || [];
+    contextService.trackMentionedPois(activeSessionId, poiNames, poiCategories);
+
     // Clean AI text: fix spacing around POI names and prepositions
     if (enhancedResponse.message) {
-      const poiNames = enhancedResponse.pois?.map(p => p.name).filter(Boolean) || [];
       enhancedResponse.message = cleanAIText(enhancedResponse.message, poiNames);
     }
 
@@ -1111,7 +1216,7 @@ router.post('/chat/stream', async (req, res) => {
     res.flushHeaders();
 
     // Get streaming response from RAG service
-    const streamResult = await ragService.chatStream(message, language, { userPreferences, conversationHistory, collectionName, destinationConfig });
+    const streamResult = await ragService.chatStream(message, language, { userPreferences, conversationHistory, collectionName, destinationConfig, sessionId: req.body?.sessionId || null });
 
     if (!streamResult.success) {
       res.write(`event: error\ndata: ${JSON.stringify({ error: streamResult.error })}\n\n`);
@@ -1141,6 +1246,10 @@ router.post('/chat/stream', async (req, res) => {
     // Clean AI text: fix spacing around POI names and prepositions
     const streamPoiNames = streamResult.pois?.map(p => p.name).filter(Boolean) || [];
     const cleanedMessage = cleanAIText(fullMessage, streamPoiNames);
+
+    // Fase II A.3: Track mentioned POIs for session context awareness (streaming)
+    const streamPoiCategories = streamResult.pois?.map(p => p.category).filter(Boolean) || [];
+    contextService.trackMentionedPois(req.body?.sessionId || null, streamPoiNames, streamPoiCategories);
 
     // Send completion event with cleaned message
     res.write(`event: done\ndata: ${JSON.stringify({ fullMessage: cleanedMessage, totalLength: cleanedMessage.length })}\n\n`);

@@ -1,5 +1,5 @@
 /**
- * RAG Service v2.4 - Anti-Hallucination Layer
+ * RAG Service v2.5 - Anti-Hallucination Layer + Context Awareness
  * 
  * Key improvements:
  * 1. Entity existence validation before responding
@@ -11,6 +11,7 @@
 import { chromaService } from "./chromaService.js";
 import { embeddingService } from "./embeddingService.js";
 import logger from "../../utils/logger.js";
+import { contextService } from "./contextService.js";
 
 class RAGService {
   constructor() {
@@ -1181,7 +1182,7 @@ class RAGService {
     return fixed;
   }
 
-  async generateResponse(query, context, lang = "nl", prefs = {}, history = [], unknownEntity = null, destinationConfig = null) {
+  async generateResponse(query, context, lang = "nl", prefs = {}, history = [], unknownEntity = null, destinationConfig = null, contextData = null) {
     try {
       const hasResults = context && context.length > 0;
       const ctxStr = this.buildContextString(context, lang);
@@ -1190,7 +1191,7 @@ class RAGService {
       const enhanced = sysPrompt + "\n\n" + ctxInstr.useContext + "\n\n" + ctxStr + "\n\n" + ctxInstr.baseOnContext;
       const msgs = [{role: "system", content: enhanced}];
       if (history && Array.isArray(history)) {
-        for (const m of history.slice(-6)) {
+        for (const m of history.slice(-10)) {
           if (m && (m.role === "user" || m.role === "assistant") && (m.content || m.message)) {
             msgs.push({role: m.role, content: (m.content || m.message).trim()});
           }
@@ -1205,7 +1206,7 @@ class RAGService {
     }
   }
 
-  async *generateStreamingResponse(query, context, lang = "nl", prefs = {}, history = [], unknownEntity = null, destinationConfig = null) {
+  async *generateStreamingResponse(query, context, lang = "nl", prefs = {}, history = [], unknownEntity = null, destinationConfig = null, contextData = null) {
     try {
       const hasResults = context && context.length > 0;
       const ctxStr = this.buildContextString(context, lang);
@@ -1214,7 +1215,7 @@ class RAGService {
       const enhanced = sysPrompt + "\n\n" + ctxInstr.useContext + "\n\n" + ctxStr + "\n\n" + ctxInstr.baseOnContext;
       const msgs = [{role: "system", content: enhanced}];
       if (history && Array.isArray(history)) {
-        for (const m of history.slice(-6)) {
+        for (const m of history.slice(-10)) {
           if (m && (m.role === "user" || m.role === "assistant") && (m.content || m.message)) {
             msgs.push({role: m.role, content: (m.content || m.message).trim()});
           }
@@ -1255,13 +1256,49 @@ class RAGService {
 
   hasPronounReference(query) {
     const lq = query.toLowerCase();
-    return [/\b(dat|die|deze|dit)\s+(restaurant|plek|strand)\b/, /\b(daar|erover|hierover)\b/, /\bmeer\s+(over|info)\b/, /\bopeningstijden\b/, /\b(that|this)\s+(restaurant|place|beach)\b/, /\bmore\s+(about|info)\b/].some(p => p.test(lq));
+    // Fase II A.3: Extended follow-up detection patterns (NL + EN + DE + ES)
+    return [
+      // Dutch pronouns + nouns
+      /\b(dat|die|deze|dit)\s+(restaurant|plek|strand|tent|cafe|winkel|museum|hotel|bar)\b/,
+      /\b(daar|erover|hierover|daarover|daarheen|ernaartoe)\b/,
+      /\bmeer\s+(over|info|informatie|details|opties)\b/,
+      /\b(openingstijden|adres|telefoonnummer|website|routebeschrijving)\b/,
+      /\b(de eerste|de tweede|de derde|de laatste|het eerste|nummer\s*\d)\b/,
+      /\b(die strandtent|die zaak|dat restaurant|dat cafe|die plek)\b/,
+      /\b(iets anders|nog een|andere optie|ander alternatief|nog meer)\b/,
+      /\b(en die|en dat|en deze|hoe laat|waar is|hoe kom ik)\b/,
+      // English
+      /\b(that|this|the)\s+(restaurant|place|beach|cafe|shop|museum|hotel|bar)\b/,
+      /\bmore\s+(about|info|information|details|options|like)\b/,
+      /\b(the first|the second|the third|the last|number\s*\d)\b/,
+      /\b(something else|another option|any other|anything else)\b/,
+      /\b(what about|how about|tell me more|and that)\b/,
+      // German
+      /\b(das|dieses|jenes)\s+(Restaurant|Strand|Museum|Cafe)\b/i,
+      /\bmehr\s+(uber|info|details)\b/i,
+      // Spanish
+      /\b(ese|este|aquel)\s+(restaurante|playa|museo|bar)\b/i,
+      /\bmas\s+(sobre|info|detalles)\b/i
+    ].some(p => p.test(lq));
   }
 
   async buildEnhancedSearchQuery(query, history, ctx = {}) {
     if (!history?.length) return query;
     if (!ctx.isFollowUp && !this.hasPronounReference(query)) return query;
-    const names = this.extractPOINamesFromHistory(history.slice(-6));
+
+    // Fase II A.3: Try to resolve ordinal references ("the first one", "de eerste")
+    const ordinalMatch = query.match(/\b(first|eerste|second|tweede|third|derde|last|laatste)\b/i);
+    if (ordinalMatch && ctx.lastPois && ctx.lastPois.length > 0) {
+      const ordinalMap = { first: 0, eerste: 0, second: 1, tweede: 1, third: 2, derde: 2, last: -1, laatste: -1 };
+      const idx = ordinalMap[ordinalMatch[1].toLowerCase()];
+      const poi = idx === -1 ? ctx.lastPois[ctx.lastPois.length - 1] : ctx.lastPois[idx];
+      if (poi) {
+        logger.info("Ordinal POI reference resolved", { ordinal: ordinalMatch[1], poi });
+        return query + " " + poi;
+      }
+    }
+
+    const names = this.extractPOINamesFromHistory(history.slice(-10));
     for (const n of names) {
       if (await this.validatePOIName(n)) {
         logger.info("Enhanced query", {original: query, added: n});
@@ -1320,7 +1357,7 @@ class RAGService {
       const isEvent = this.isEventQuery(base);
       let events = [];
       if (isEvent) events = await this.searchEvents(base, 5);
-      const sq = await this.buildEnhancedSearchQuery(base, history, opts.intentContext || {});
+      const sq = await this.buildEnhancedSearchQuery(base, history, { ...(opts.intentContext || {}), lastPois: contextService._getSessionContext(opts.sessionId || null).mentionedPois?.slice(-5) || [] });
       const sr = await this.search(sq, {limit: 20, collectionName: opts.collectionName || null}); // Increased limit for better filtering
       let filteredResults = this.filterRelevantResults(sr.results, query, namedEntities);
 
@@ -1340,11 +1377,14 @@ class RAGService {
           }
         }
       }
+      // Build temporal/location context for context-aware responses (Fase II A.2)
+      const contextData = opts.destinationConfig ? contextService.buildContext(opts.sessionId || null, opts.destinationConfig?.destination?.id || 1, opts.destinationConfig, lang) : null;
+
       return {
         success: true, searchTimeMs: Date.now()-start, pois: this.extractPOICards(combined),
         source: isEvent ? "rag-events-stream" : "rag-stream", hasEvents: events.length > 0,
         fuzzyCorrection: fuzzy.wasCorrection ? fuzzy.suggestionMessage : null, unknownEntity,
-        stream: this.generateStreamingResponse(base, combined, lang, opts.userPreferences || {}, history, unknownEntity, opts.destinationConfig || null)
+        stream: this.generateStreamingResponse(base, combined, lang, opts.userPreferences || {}, history, unknownEntity, opts.destinationConfig || null, contextData)
       };
     } catch (e) {
       logger.error("chatStream error:", e);
@@ -1401,7 +1441,7 @@ class RAGService {
       const isEvent = this.isEventQuery(base);
       let events = [];
       if (isEvent) events = await this.searchEvents(base, 5);
-      const sq = await this.buildEnhancedSearchQuery(base, history, opts.intentContext || {});
+      const sq = await this.buildEnhancedSearchQuery(base, history, { ...(opts.intentContext || {}), lastPois: contextService._getSessionContext(opts.sessionId || null).mentionedPois?.slice(-5) || [] });
       const sr = await this.search(sq, {limit: 20, collectionName: opts.collectionName || null}); // Increased limit for better cuisine filtering
       let filteredResults = this.filterRelevantResults(sr.results, query, namedEntities);
 
@@ -1431,7 +1471,9 @@ class RAGService {
           if (queryForLLM !== base) break;
         }
       }
-      const response = await this.generateResponse(queryForLLM, combined, lang, opts.userPreferences || {}, history, unknownEntity, opts.destinationConfig || null);
+      // Build temporal/location context for context-aware responses (Fase II A.2)
+      const contextData = opts.destinationConfig ? contextService.buildContext(opts.sessionId || null, opts.destinationConfig?.destination?.id || 1, opts.destinationConfig, lang) : null;
+      const response = await this.generateResponse(queryForLLM, combined, lang, opts.userPreferences || {}, history, unknownEntity, opts.destinationConfig || null, contextData);
       return {
         success: true, message: response, pois: this.extractPOICards(combined),
         source: isEvent ? "rag-events" : "rag", hasEvents: events.length > 0, searchTimeMs: Date.now()-start,
