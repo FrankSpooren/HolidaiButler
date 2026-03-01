@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B (v3.11.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B (v3.12.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -2392,6 +2392,239 @@ router.post('/pois/freshness/recalculate', adminAuth('platform_admin'), async (r
       success: false,
       error: { code: 'SERVER_ERROR', message: 'An error occurred recalculating freshness' }
     });
+  }
+});
+
+/**
+ * POST /pois/bulk-status (Fase II-B.5)
+ * Bulk update is_active status for multiple POIs.
+ * Body: { poiIds: number[], is_active: boolean }
+ */
+router.post('/pois/bulk-status', adminAuth('editor'), destinationScope, async (req, res) => {
+  try {
+    const { poiIds, is_active } = req.body;
+
+    if (!Array.isArray(poiIds) || poiIds.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_INPUT', message: 'poiIds array is required' } });
+    }
+    if (typeof is_active !== 'boolean' && ![0, 1].includes(is_active)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_INPUT', message: 'is_active must be boolean or 0/1' } });
+    }
+    if (poiIds.length > 500) {
+      return res.status(400).json({ success: false, error: { code: 'LIMIT_EXCEEDED', message: 'Maximum 500 POIs per bulk action' } });
+    }
+
+    // RBAC check: filter to allowed POIs
+    let allowedIds = poiIds;
+    if (req.poiScope) {
+      allowedIds = poiIds.filter(id => req.poiScope.includes(id));
+    } else if (req.destScope) {
+      const scopeCheck = await mysqlSequelize.query(
+        `SELECT id FROM POI WHERE id IN (${poiIds.map(() => '?').join(',')}) AND destination_id IN (${req.destScope.map(() => '?').join(',')})`,
+        { replacements: [...poiIds, ...req.destScope], type: QueryTypes.SELECT }
+      );
+      allowedIds = scopeCheck.map(r => r.id);
+    }
+
+    if (allowedIds.length === 0) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'No POIs in your scope' } });
+    }
+
+    const activeVal = is_active ? 1 : 0;
+    const [result] = await mysqlSequelize.query(
+      `UPDATE POI SET is_active = ? WHERE id IN (${allowedIds.map(() => '?').join(',')})`,
+      { replacements: [activeVal, ...allowedIds] }
+    );
+    const affectedRows = result?.affectedRows || 0;
+
+    logger.info(`[AdminPortal] Bulk status update: ${affectedRows}/${allowedIds.length} POIs → is_active=${activeVal} by ${req.adminUser?.email}`);
+    res.json({ success: true, data: { updated: affectedRows, is_active: activeVal } });
+  } catch (error) {
+    logger.error('[AdminPortal] Bulk status error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Bulk status update failed' } });
+  }
+});
+
+/**
+ * POST /pois/bulk-category (Fase II-B.5)
+ * Bulk update category for multiple POIs.
+ * Body: { poiIds: number[], category: string }
+ */
+router.post('/pois/bulk-category', adminAuth('editor'), destinationScope, async (req, res) => {
+  try {
+    const { poiIds, category } = req.body;
+
+    if (!Array.isArray(poiIds) || poiIds.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_INPUT', message: 'poiIds array is required' } });
+    }
+    if (!category || typeof category !== 'string') {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_INPUT', message: 'category string is required' } });
+    }
+    if (poiIds.length > 500) {
+      return res.status(400).json({ success: false, error: { code: 'LIMIT_EXCEEDED', message: 'Maximum 500 POIs per bulk action' } });
+    }
+
+    // RBAC check
+    let allowedIds = poiIds;
+    if (req.poiScope) {
+      allowedIds = poiIds.filter(id => req.poiScope.includes(id));
+    } else if (req.destScope) {
+      const scopeCheck = await mysqlSequelize.query(
+        `SELECT id FROM POI WHERE id IN (${poiIds.map(() => '?').join(',')}) AND destination_id IN (${req.destScope.map(() => '?').join(',')})`,
+        { replacements: [...poiIds, ...req.destScope], type: QueryTypes.SELECT }
+      );
+      allowedIds = scopeCheck.map(r => r.id);
+    }
+
+    if (allowedIds.length === 0) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'No POIs in your scope' } });
+    }
+
+    const [result] = await mysqlSequelize.query(
+      `UPDATE POI SET category = ? WHERE id IN (${allowedIds.map(() => '?').join(',')})`,
+      { replacements: [category, ...allowedIds] }
+    );
+    const affectedRows = result?.affectedRows || 0;
+
+    logger.info(`[AdminPortal] Bulk category update: ${affectedRows}/${allowedIds.length} POIs → category=${category} by ${req.adminUser?.email}`);
+    res.json({ success: true, data: { updated: affectedRows, category } });
+  } catch (error) {
+    logger.error('[AdminPortal] Bulk category error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Bulk category update failed' } });
+  }
+});
+
+/**
+ * PATCH /pois/:id/tile-description (Fase II-B.5)
+ * Quick edit: inline update of tile description.
+ * Body: { enriched_tile_description: string }
+ */
+router.patch('/pois/:id/tile-description', adminAuth('editor'), destinationScope, async (req, res) => {
+  try {
+    const poiId = parseInt(req.params.id);
+    const { enriched_tile_description } = req.body;
+
+    if (!enriched_tile_description || typeof enriched_tile_description !== 'string') {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_INPUT', message: 'enriched_tile_description string is required' } });
+    }
+    if (enriched_tile_description.length > 500) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_INPUT', message: 'Tile description max 500 characters' } });
+    }
+
+    // RBAC check
+    if (req.poiScope && !req.poiScope.includes(poiId)) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'POI not in your scope' } });
+    }
+    if (req.destScope) {
+      const [poi] = await mysqlSequelize.query(
+        'SELECT destination_id FROM POI WHERE id = ?',
+        { replacements: [poiId], type: QueryTypes.SELECT }
+      );
+      if (!poi || !req.destScope.includes(poi.destination_id)) {
+        return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'POI not in your destination scope' } });
+      }
+    }
+
+    await mysqlSequelize.query(
+      'UPDATE POI SET enriched_tile_description = ?, enriched_tile_description_en = ? WHERE id = ?',
+      { replacements: [enriched_tile_description, enriched_tile_description, poiId] }
+    );
+
+    logger.info(`[AdminPortal] Quick edit tile description: POI ${poiId} by ${req.adminUser?.email}`);
+    res.json({ success: true, data: { poiId, enriched_tile_description } });
+  } catch (error) {
+    logger.error('[AdminPortal] Quick edit error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Quick edit failed' } });
+  }
+});
+
+/**
+ * GET /pois/export (Fase II-B.5)
+ * CSV export of POI data with all current filters applied.
+ * Includes freshness data. Respects RBAC.
+ */
+router.get('/pois/export', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const { destination, category, freshness, is_active, q } = req.query;
+
+    const where = [];
+    const params = [];
+
+    // RBAC scope
+    if (req.poiScope) {
+      where.push(`p.id IN (${req.poiScope.map(() => '?').join(',')})`);
+      params.push(...req.poiScope);
+    } else if (req.destScope) {
+      where.push(`p.destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      params.push(...req.destScope);
+    }
+
+    // Destination filter
+    if (destination) {
+      const destId = resolveDestinationId(destination);
+      if (destId) {
+        where.push('p.destination_id = ?');
+        params.push(destId);
+      }
+    }
+
+    // Category filter
+    if (category) {
+      where.push('p.category = ?');
+      params.push(category);
+    }
+
+    // Freshness filter
+    if (freshness && ['fresh', 'aging', 'stale', 'unverified'].includes(freshness)) {
+      where.push('p.content_freshness_status = ?');
+      params.push(freshness);
+    }
+
+    // Active filter
+    if (is_active !== undefined) {
+      where.push('p.is_active = ?');
+      params.push(is_active === 'true' || is_active === '1' ? 1 : 0);
+    }
+
+    // Search filter
+    if (q) {
+      where.push('(p.name LIKE ? OR p.category LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`);
+    }
+
+    const whereClause = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
+
+    const pois = await mysqlSequelize.query(`
+      SELECT p.id, p.name, p.destination_id, p.category, p.subcategory,
+             p.is_active, p.rating, p.review_count, p.price_level,
+             p.content_freshness_score, p.content_freshness_status,
+             p.content_quality_score,
+             LEFT(p.enriched_tile_description, 100) as tile_desc_preview,
+             p.latitude, p.longitude, p.address, p.phone, p.website,
+             (SELECT COUNT(*) FROM imageurls WHERE poi_id = p.id) as image_count,
+             p.last_updated
+      FROM POI p
+      ${whereClause}
+      ORDER BY p.destination_id, p.name
+    `, { replacements: params, type: QueryTypes.SELECT });
+
+    // Build CSV
+    const headers = 'id,name,destination,category,subcategory,is_active,rating,review_count,price_level,freshness_score,freshness_status,quality_score,tile_description,latitude,longitude,address,phone,website,image_count,last_updated';
+    const rows = pois.map(p => {
+      const dest = p.destination_id === 1 ? 'Calpe' : p.destination_id === 2 ? 'Texel' : `dest-${p.destination_id}`;
+      const desc = (p.tile_desc_preview || '').replace(/"/g, '""').replace(/\n/g, ' ');
+      const addr = (p.address || '').replace(/"/g, '""');
+      return `${p.id},"${(p.name || '').replace(/"/g, '""')}",${dest},"${(p.category || '').replace(/"/g, '""')}","${(p.subcategory || '').replace(/"/g, '""')}",${p.is_active},${p.rating || ''},${p.review_count || ''},${p.price_level || ''},${p.content_freshness_score || ''},${p.content_freshness_status || ''},${p.content_quality_score || ''},"${desc}",${p.latitude || ''},${p.longitude || ''},"${addr}","${p.phone || ''}","${(p.website || '').replace(/"/g, '""')}",${p.image_count || 0},${p.last_updated || ''}`;
+    });
+
+    const csv = headers + '\n' + rows.join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="poi_export_${new Date().toISOString().slice(0,10)}.csv"`);
+    res.send(csv);
+  } catch (error) {
+    logger.error('[AdminPortal] POI export error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Export failed' } });
   }
 });
 
