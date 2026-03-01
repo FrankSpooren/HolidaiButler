@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useDestination } from '../shared/contexts/DestinationContext';
+import { usePageMeta } from '../shared/hooks/usePageMeta';
 import { Footer } from '../shared/components/Footer';
 import './Homepage.css';
 
@@ -17,6 +18,12 @@ import './Homepage.css';
 export function Homepage() {
   const { t, language } = useLanguage();
   const destination = useDestination();
+
+  usePageMeta({
+    title: destination.tagline,
+    description: destination.description,
+    path: '/',
+  });
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 

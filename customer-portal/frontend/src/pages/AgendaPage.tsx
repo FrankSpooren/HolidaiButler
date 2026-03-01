@@ -16,6 +16,7 @@ import { AgendaComparisonBar } from '@/features/agenda/components/AgendaComparis
 import { AgendaComparisonModal } from '@/features/agenda/components/AgendaComparisonModal';
 import { agendaService, type AgendaEvent } from '@/features/agenda/services/agendaService';
 import { getUserLocation, getDistanceFromUser, type Coordinates } from '@/shared/utils/distance';
+import { usePageMeta } from '@/shared/hooks/usePageMeta';
 import './AgendaPage.css';
 
 /**
@@ -171,6 +172,12 @@ const defaultFilters: AgendaFilters = { interests: [], distance: 50, company: []
 
 export function AgendaPage() {
   const { t, language } = useLanguage();
+
+  usePageMeta({
+    title: t.agenda?.title || 'Events & Activities',
+    description: t.agenda?.subtitle || 'Discover events and activities near you',
+    path: '/agenda',
+  });
   const { isAgendaFavorite, toggleAgendaFavorite } = useAgendaFavorites();
   const { isInComparison, toggleComparison, canAddMore, comparisonEvents } = useAgendaComparison();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
