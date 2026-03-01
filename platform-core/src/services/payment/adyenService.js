@@ -100,7 +100,7 @@ class AdyenService {
       captureDelayHours: 0,
     };
 
-    const response = await this.checkout.sessions(sessionRequest);
+    const response = await this.checkout.PaymentsApi.sessions(sessionRequest);
 
     logger.info('Payment session created', { sessionId: response.id, reference });
 
@@ -124,7 +124,7 @@ class AdyenService {
 
     logger.info('Capturing payment', { pspReference, amountCents, currency });
 
-    const response = await this.checkout.paymentsCapture(pspReference, {
+    const response = await this.checkout.ModificationsApi.captureAuthorisedPayment(pspReference, {
       merchantAccount: this.merchantAccount,
       amount: { value: amountCents, currency },
       reference: `capture-${pspReference}`,
@@ -152,7 +152,7 @@ class AdyenService {
 
     logger.info('Initiating refund', { pspReference, amountCents, currency });
 
-    const response = await this.checkout.paymentsRefund(pspReference, {
+    const response = await this.checkout.ModificationsApi.refundCapturedPayment(pspReference, {
       merchantAccount: this.merchantAccount,
       amount: { value: amountCents, currency },
       reference: reference || `refund-${pspReference}-${Date.now()}`,
@@ -177,7 +177,7 @@ class AdyenService {
 
     logger.info('Cancelling payment', { pspReference });
 
-    const response = await this.checkout.paymentsCancel(pspReference, {
+    const response = await this.checkout.ModificationsApi.cancelAuthorisedPaymentByPspReference(pspReference, {
       merchantAccount: this.merchantAccount,
       reference: `cancel-${pspReference}`,
     });
@@ -266,7 +266,7 @@ class AdyenService {
     try {
       this._ensureInitialized();
       // Attempt a lightweight API call
-      await this.checkout.paymentMethods({
+      await this.checkout.PaymentsApi.paymentMethods({
         merchantAccount: this.merchantAccount,
         countryCode: 'NL',
         amount: { value: 1000, currency: 'EUR' },
