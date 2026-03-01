@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 28 februari 2026
-**Versie**: 7.15
+**Versie**: 7.17
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE II ACTIEF — Blok A+B COMPLEET. Blok A: Chatbot Upgrade (context, memory, booking, escalation). Blok B: POI Module (freshness, clustering, images, admin tools). Blok C volgende. CLAUDE.md v3.50.0. MS v7.16.
+**Status**: FASE II ACTIEF — Blok A+B+C COMPLEET. Blok A: Chatbot Upgrade. Blok B: POI Module. Blok C: Agenda Module. Blok D volgende. CLAUDE.md v3.51.0. MS v7.17.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1317,7 +1317,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 | # | Fase | Projecten | Duur | Prioriteit | Status |
 |---|------|-----------|------|------------|--------|
 | I | Foundation Hardening | Agents Audit, Processen, Platform Core | 4-6 wkn | KRITIEK | ✅ COMPLEET |
-| II | Active Module Upgrade | Chatbot, POI, Agenda, Customer Portal | 6-8 wkn | HOOG | 🔄 ACTIEF (Blok A+B ✅) |
+| II | Active Module Upgrade | Chatbot, POI, Agenda, Customer Portal | 6-8 wkn | HOOG | 🔄 ACTIEF (Blok A+B+C ✅) |
 | III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | GEPLAND |
 | IV | Intermediair & Revenue | Intermediair module + Agent | 6-8 wkn | HOOG | GEPLAND |
 | V | UX Revolution + WarreWijzer | Mobiele UX redesign, WarreWijzer uitrol | 6-10 wkn | MIDDEL | GEPLAND |
@@ -1341,6 +1341,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 **Fase II — Active Module Upgrade:**
 - **Chatbot**: ✅ Blok A COMPLEET — contextService.js (temporeel/locatie/sessie), ragService v2.5, 12 intents (booking + escalation)
 - **POI Module**: ✅ Blok B COMPLEET — Content Freshness Score, leaflet.markercluster (200 POIs), multi-select categories + URL params, Sharp image resize proxy (98.6% reductie), sticky CTAs, 4 admin endpoints (bulk-status, bulk-category, tile-edit, CSV export)
+- **Agenda Module**: ✅ Blok C COMPLEET — Multi-destination (X-Destination-ID, geen hardcoded Calpe), auto-category detectie (8 categorieën), iCal feed (single + subscription RFC 5545), admin CRUD (list/get/update/delete/stats), agenda.js complete rewrite
 - **POI Module**: Content Freshness Score, A/B testing beschrijvingen, multi-modal (image captioning, TTS audio guides)
 - **Agenda**: Event scraping automatisering, push notificaties, agenda-sync (Outlook/Google/Apple)
 - **Customer Portal**: Bottom-tab navigatie (Explore/Agenda/Chat/Bookings/Profiel), onboarding 3-4 stappen, progressive disclosure
@@ -1548,7 +1549,8 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **7.16** | **01-03-2026** | **Fase II Blok B: POI Module Verbetering COMPLEET. B.2 Content Freshness Score (freshnessService.js, BullMQ job #41). B.3 Browse UX (leaflet.markercluster 200 POIs, multi-select categories met URL persistence, sticky CTAs). B.4 Image Optimalisatie (Sharp resize proxy /api/v1/img/, srcSet/lazy loading, 98.6% thumbnail reductie). B.5 Admin Tools (+4 endpoints → 51 totaal: bulk-status, bulk-category, tile-edit, CSV export, affectedRows fix). 3 commits, 15 bestanden. adminPortal.js v3.12.0. CLAUDE.md v3.50.0.** |
+| **7.17** | **01-03-2026** | **Fase II Blok C: Agenda Module Upgrade COMPLEET. Multi-destination (X-Destination-ID), auto-category detectie (8 categorieën), iCal feeds (single + subscription RFC 5545), admin CRUD (5 endpoints). agenda.js complete rewrite, adminPortal.js v3.13.0 (56 endpoints). CLAUDE.md v3.51.0.** |
+| **7.16** | **01-03-2026** | **Fase II Blok B: POI Module Verbetering COMPLEET. Freshness, clustering, image proxy, admin tools. adminPortal.js v3.12.0. CLAUDE.md v3.50.0.** |
 | **7.15** | **28-02-2026** | **Fase II Blok A: Chatbot Upgrade COMPLEET. contextService.js, ragService v2.5, 12 intents, booking/escalation. CLAUDE.md v3.49.0.** |
 | **7.14** | **01-03-2026** | **Strategic Roadmap Advisory v2.0 geïntegreerd. WarreWijzer destination_id 4. Nieuwe Delen 9/10/11. CLAUDE.md v3.48.0.** |
 | **7.13** | **27-02-2026** | **Fase 12: Verificatie, Consolidatie & Enterprise Hardening COMPLEET. 7 blokken: (A) server verificatie 16/16, (B) MS v7.13 completeness audit (5 gaps gefixed), (C) CLAUDE.md versie fix, (D) AuditLog status sanitizer + QA→QnA + Reviews case fix, (E) 34/34 enterprise tests (trendHelper, agentIssues, baselineService, correlationService), (F) runtime metrics aggregatie, (G) documentatie + deploy. 7 bestanden gewijzigd, 1 nieuw. CLAUDE.md v3.47.0.** |
@@ -1588,5 +1590,5 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 1 maart 2026 - Fase II Blok B POI Module Verbetering COMPLEET, Master Document v7.16*
-*Fase I COMPLEET. Fase II ACTIEF: Blok A+B ✅ (Chatbot + POI). Admin Portal: 51 endpoints, adminPortal.js v3.12.0. Agent Enterprise Niveau 7. WarreWijzer (Deel 10). Strategische roadmap 6 fasen (Deel 9). CLAUDE.md v3.50.0.*
+*Laatst bijgewerkt: 1 maart 2026 - Fase II Blok C Agenda Module Upgrade COMPLEET, Master Document v7.17*
+*Fase I COMPLEET. Fase II ACTIEF: Blok A+B+C ✅ (Chatbot + POI + Agenda). Admin Portal: 56 endpoints, adminPortal.js v3.13.0. Agent Enterprise Niveau 7. WarreWijzer (Deel 10). Strategische roadmap 6 fasen (Deel 9). CLAUDE.md v3.51.0.*
