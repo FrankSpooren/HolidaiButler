@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.47.0
-> **Laatst bijgewerkt**: 27 februari 2026
+> **Versie**: 3.48.0
+> **Laatst bijgewerkt**: 1 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -17,6 +17,7 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 | **Calpe** | ✅ LIVE | holidaibutler.com | 1 |
 | **Texel** | ✅ LIVE | texelmaps.nl | 2 |
 | **Alicante** | 🟡 GEPLAND | alicante.holidaibutler.com | 3 |
+| **WarreWijzer** | 🟡 GEPLAND | warrewijzer.be | 4 |
 
 ---
 
@@ -48,12 +49,13 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.13 |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.14 |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
-| **CLAUDE.md** | Repository root + Hetzner | 3.47.0 |
+| **CLAUDE.md** | Repository root + Hetzner | 3.48.0 |
 | **CLAUDE_HISTORY.md** | Repository root | 1.0.0 |
 
 > **CLAUDE_HISTORY.md** bevat volledige fase-resultaten, changelogs en bestandslijsten per fase. Raadpleeg dit bestand ALLEEN wanneer historische details nodig zijn.
+> **Strategic Roadmap Advisory v2.0** (28-02-2026) is volledig geïntegreerd in CLAUDE.md en Master Strategie. Dat document hoeft niet meer geraadpleegd te worden.
 
 ---
 
@@ -95,6 +97,7 @@ HolidaiButler/
 | Calpe | 1 | holidaibutler.com | #7FA594 / #5E8B7E |
 | Texel | 2 | texelmaps.nl | #30c59b / #3572de / #ecde3c |
 | Alicante | 3 | alicante.holidaibutler.com | TBD |
+| WarreWijzer | 4 | warrewijzer.be | Conform warredal.be |
 
 ### Database Multi-Tenancy
 Alle tabellen met destination-specifieke data hebben `destination_id` kolom: POI, QnA, agenda, Users, user_journeys, holibot_sessions, poi_content_staging, reviews.
@@ -103,7 +106,7 @@ Alle tabellen met destination-specifieke data hebben `destination_id` kolom: POI
 ```
 Request → Apache VHost → X-Destination-ID Header → getDestinationFromRequest() → destination_id voor queries
 ```
-`getDestinationFromRequest()` accepteert string ("texel") en numeric (2) IDs.
+`getDestinationFromRequest()` accepteert string ("texel", "warrewijzer") en numeric (2, 4) IDs.
 
 ---
 
@@ -159,6 +162,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 |-------------|------|------------|----------|-----------|
 | Calpe | HoliBot | calpe_pois | 43.086 | mistral-embed (1024d) |
 | Texel | Tessa | texel_pois | 101.364 | mistral-embed (1024d) |
+| WarreWijzer | Wijze Warre | warrewijzer_pois | TBD (~15.000) | mistral-embed (1024d) |
 
 ### Key Files
 - Backend: `holibot.js`, `chromaService.js`, `embeddingService.js`, `ragService.js`, `conversationService.js`, `intentService.js`, `suggestionService.js`
@@ -169,6 +173,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 |-------------|-------|
 | Texel EN/NL/DE | "on/op/auf Texel" (NIET "in Texel") |
 | Calpe EN/ES/DE/NL | "in Calpe" |
+| WarreWijzer BENL/NL/FR/DE/EN | "bij WarreWijzer" of "op het domein" (NIET "in WarreWijzer"). LET OP: Vlaams profiel ≠ Nederlands |
 
 ---
 
@@ -335,6 +340,80 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 
 ---
 
+## 🚀 Strategische Roadmap
+
+> **Geïntegreerd vanuit**: Strategic Roadmap Advisory v2.0 (28-02-2026). Dat document is hiermee overbodig.
+
+### Fasering
+
+| # | Fase | Status | Doorlooptijd |
+|---|------|--------|--------------|
+| I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
+| II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | VOLGENDE | 6-8 wkn |
+| III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | GEPLAND | 8-12 wkn |
+| IV | Intermediair & Revenue (Intermediair module + Agent) | GEPLAND | 6-8 wkn |
+| V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
+| VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
+
+### State-of-the-Art Vervolgstappen (na Fase 12)
+
+**A. Predictive Intelligence Layer (Agent Niveau 8)**
+- De Weermeester → real-time predictive analytics met ML-modellen
+- Seizoensgebonden POI-aanbevelingen op basis van historische pageview- en chatbot-data
+- Recommendation Engine (gebruikersgedrag × weer × tijd × locatie)
+- Gedeactiveerde strategy-agents reactiveren met bewezen nuttige taken
+
+**B. Autonomous Self-Healing & Observability**
+- Grafana/Prometheus stack voor real-time metrics
+- Self-healing: agents detecteren en herstellen automatisch foutpatronen
+- Distributed tracing (OpenTelemetry) end-to-end
+- Canary deployments met automatische rollback (2σ baselines al aanwezig)
+
+**C. Advanced Content Intelligence**
+- A/B testing framework POI-beschrijvingen
+- Content Freshness Score (scheduled scraping detectie verouderde POI-info)
+- Multi-modal: image captioning, video thumbnail extractie, TTS audio guides
+- RAG 2.0: hybride search (keyword + semantic + geo)
+
+**D. Platform Resilience & Schaalbaarheid**
+- Load testing (k6/Artillery) 10.000 concurrent users
+- Database read replica voor analytics
+- CDN (Cloudflare/BunnyCDN) voor 12.4 GB POI-images
+- Disaster recovery RTO < 4h, RPO < 1h
+- Redis Cluster voor high-availability
+
+**E. Regulatory & Compliance Excellence**
+- EU AI Act Transparency Dashboard (model versies, decision logs, bias monitoring)
+- GDPR DSAR automation (export binnen 24h)
+- Content-Security-Policy headers alle domeinen
+- Jaarlijkse penetration test + vulnerability disclosure policy
+
+**F. Developer Experience & CI/CD**
+- Feature flags per destination
+- E2E test suite (Playwright/Cypress)
+- Staging smoke tests per PR
+- API versioning (v1/v2) backward compatibility
+
+### WarreWijzer Kernconfiguratie
+
+| Aspect | Detail |
+|--------|--------|
+| **Type** | Recreatiedomein (NIET toeristische gemeente) |
+| **Locatie** | Ketelstraat 77, 3680 Maaseik, België |
+| **destination_id** | 4 |
+| **Domein** | warrewijzer.be (dev/test/main + admin subdomains) |
+| **Chatbot** | Wijze Warre (BENL/NL), WarreXplore (EN), FR/DE nader te bepalen |
+| **Talen** | 5: BENL (primair), NL (primair), FR (secundair), DE (secundair), EN (tertiair) |
+| **POIs** | ~300, rating 4.5+, radius 15km (+uniek 25-30km) |
+| **Categoriemix** | Actief 25%, Cultuur 25%, Gastronomie 20%, Natuur 30% |
+| **USPs** | Back to basic, slow living, reconnect to nature, offline, bewust |
+| **Doelgroep** | Gezinnen (t/m 14j), actieve senioren (55-75), BE/NL-zuid/DE-grens |
+| **Branding** | Conform warredal.be (lettertype, kleuren, sprookjesfiguren) |
+
+> **Volledige WarreWijzer-briefing**: zie Master Strategie Deel 10
+
+---
+
 ## 🖥️ Server Informatie
 
 ### SSH: `ssh root@91.98.71.87`
@@ -349,6 +428,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | `/var/www/admin.holidaibutler.com/` | Admin portal (prod) |
 | `/var/www/admin.test.holidaibutler.com/` | Admin portal (test) |
 | `/var/www/admin.dev.holidaibutler.com/` | Admin portal (dev) |
+| `/var/www/warrewijzer.be/` | WarreWijzer frontend (TBD) |
 | `/root/backups/` | Database backups |
 | `/root/fase*` | Fase output bestanden |
 
@@ -379,7 +459,8 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.47.0** | **2026-02-27** | **Fase 12**: Verificatie, Consolidatie & Enterprise Hardening. Blok A: 16/16 server verificatie. Blok B: MS v7.13 (5 gaps gefixed). Blok C: CLAUDE.md v3.11.0 fix. Blok D: AuditLog status sanitizer + QA→QnA table fix + Reviews case fix. Blok E: 34/34 enterprise tests. Blok F: runtime metrics aggregatie. |
+| **3.48.0** | **2026-03-01** | **Strategic Roadmap v2.0 integratie**: WarreWijzer destination_id 4 toegevoegd (warrewijzer.be, Wijze Warre chatbot, 5 talen BENL/NL/FR/DE/EN, ~300 POIs). Nieuwe sectie Strategische Roadmap (6 fasen, Fase I COMPLEET). State-of-the-art vervolgstappen A-F (Predictive Intelligence, Self-Healing, Content Intelligence, Platform Resilience, Regulatory Excellence, DevEx). Roadmap v2.0 document overbodig. MS v7.14. |
+| 3.47.0 | 2026-02-27 | **Fase 12**: Verificatie, Consolidatie & Enterprise Hardening. Blok A: 16/16 server verificatie. Blok B: MS v7.13 (5 gaps gefixed). Blok C: CLAUDE.md v3.11.0 fix. Blok D: AuditLog status sanitizer + QA→QnA table fix + Reviews case fix. Blok E: 34/34 enterprise tests. Blok F: runtime metrics aggregatie. |
 | 3.46.0 | 2026-02-27 | Fase 11B: Agent Ecosysteem Enterprise Complete (Niveau 7). Individuele logging (B), trending week-over-week (D), De Bode escalatie (C), agent_issues MongoDB + SLA tracking (F), Admin Issues module 5 endpoints (G), trending chips resultaten tab (E), baselines + anomaliedetectie (H), cross-agent correlatie (I). adminPortal.js v3.11.0, 47 endpoints. MS v7.12. |
 | 3.45.0 | 2026-02-27 | Fase 11A: Agent ecosysteem audit (18 agents, 40 jobs), 3 dev agents geactiveerd. AuditLog status enum fix. MS v7.11. |
 | 3.44.0 | 2026-02-26 | Fase 10C: Apache security headers, live verificatie 10A, aspirationele agents labeling, Sessions.user_id fix. MS v7.10. |
@@ -392,7 +473,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.13 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.14 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
