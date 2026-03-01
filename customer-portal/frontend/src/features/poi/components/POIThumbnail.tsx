@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { POI } from '../types/poi.types';
+import { getResizedImageUrl, IMAGE_SIZES } from '../../../shared/utils/imageUrl';
 
 interface POIThumbnailProps {
   poi: POI;
@@ -91,9 +92,11 @@ export function POIThumbnail({
   if (imageSrc && imageState !== 'error') {
     return (
       <img
-        src={imageSrc}
+        src={getResizedImageUrl(imageSrc, IMAGE_SIZES.thumbnail)}
         alt={poi.name}
         className={`poi-thumbnail ${className}`}
+        loading="lazy"
+        decoding="async"
         onLoad={handleImageLoad}
         onError={handleImageError}
         style={{

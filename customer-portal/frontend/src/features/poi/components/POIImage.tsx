@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { POI } from '../types/poi.types';
+import { getResizedImageUrl, getImageSrcSet, IMAGE_SIZES_ATTR, IMAGE_SIZES } from '../../../shared/utils/imageUrl';
 
 interface POIImageProps {
   poi: POI;
@@ -126,9 +127,12 @@ export function POIImage({
         {/* Actual image loading in background */}
         <img
           key={imgKey}
-          src={imageSrc}
+          src={getResizedImageUrl(imageSrc, IMAGE_SIZES.medium)}
+          srcSet={getImageSrcSet(imageSrc, [IMAGE_SIZES.small, IMAGE_SIZES.medium, IMAGE_SIZES.large])}
+          sizes={IMAGE_SIZES_ATTR.tile}
           alt={poi.name}
           loading="lazy"
+          decoding="async"
           onLoad={handleImageLoad}
           onError={handleImageError}
           style={{

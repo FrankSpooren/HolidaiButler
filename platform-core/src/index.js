@@ -49,6 +49,7 @@ import onboardingRoutes from './routes/onboarding.js';
 import agendaRoutes from './routes/agenda.js';
 import consentRoutes from './routes/consent.js';
 import imageRefreshRoutes from './routes/imageRefresh.js';
+import imageResizeRoutes from './routes/imageResize.js';
 import adminPortalRoutes from './routes/adminPortal.js';
 import User from './models/User.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -167,6 +168,7 @@ app.use('/api/v1/agenda', agendaRoutes); // Agenda - Events & Calendar
 app.use('/api/v1/consent', consentRoutes); // User Privacy Consent Management
 app.use('/api/consent', consentRoutes); // Legacy route (no v1)
 app.use('/api/admin/images/refresh', imageRefreshRoutes); // POI Image Refresh (Admin)
+app.use('/api/v1/img', imageResizeRoutes); // Image resize proxy (Fase II-B.4)
 app.use('/api/v1/admin-portal', adminPortalRoutes); // Admin Portal (Fase 8C-0)
 
 // Static file serving for branding assets (logo uploads)
