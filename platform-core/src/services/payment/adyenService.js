@@ -8,7 +8,8 @@
  * All amounts in CENTS (integers, never floats).
  */
 
-import { Client, CheckoutAPI } from '@adyen/api-library';
+import pkg from '@adyen/api-library';
+const { Client, CheckoutAPI } = pkg;
 import crypto from 'crypto';
 import logger from '../../utils/logger.js';
 
