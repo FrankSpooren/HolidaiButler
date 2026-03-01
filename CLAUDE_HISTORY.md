@@ -907,4 +907,92 @@ Alle 3 sites bereikbaar (200 OK). PM2 restart succesvol.
 
 ---
 
+## Fase II Blok B — POI Module Verbetering (28-02 / 01-03-2026)
+
+### B.1: Analyse huidige POI module
+Analyse van POI module architectuur, filtering, images, admin tools. Identified 5 verbeterpunten.
+
+### B.2: Content Freshness Score
+- `freshnessService.js`: Berekent freshness score 0-100 op basis van data-leeftijd, reviews, images, contact info completeness
+- BullMQ job #41: `freshness-weekly-check` (wekelijks zondag 05:00)
+- Freshness data beschikbaar in admin CSV export
+
+### B.3: POI Browse UX verbetering
+
+**3 sub-features**:
+
+1. **Kaart-clustering**: `MarkerClusterGroup.tsx` wrapper voor leaflet.markercluster (react-leaflet v5 compatible via `createPathComponent`). Custom colored clusters (groen/oranje/rood per grootte). 200 POIs, `disableClusteringAtZoom={17}`.
+
+2. **Smart Filters (Multi-select categorieën)**: `selectedCategory: string` → `selectedCategories: string[]`. URL parameter persistence via `useSearchParams` (categories, q, view, openNow, rating, minReviews, price, distance, access).
+
+3. **Sticky CTAs**: POIDetailModal krijgt sticky bottom bar met Directions/Website/Call knoppen. Responsive (icon-only op <380px).
+
+**Bestanden (7)**:
+| Bestand | Type | Wijziging |
+|---------|------|-----------|
+| `customer-portal/frontend/src/features/poi/components/MarkerClusterGroup.tsx` | NEW | Leaflet cluster wrapper |
+| `customer-portal/frontend/src/features/poi/components/MapView.tsx` | MOD | Clustering support, 200 POIs |
+| `customer-portal/frontend/src/features/poi/components/MapView.css` | MOD | Cluster icon styling |
+| `customer-portal/frontend/src/pages/POILandingPage.tsx` | MOD | Multi-select categories, URL params |
+| `customer-portal/frontend/src/features/poi/components/POIDetailModal.tsx` | MOD | Sticky CTA bar |
+| `customer-portal/frontend/src/features/poi/components/POIDetailModal.css` | MOD | Sticky CTA styling |
+| `customer-portal/frontend/package.json` | MOD | +leaflet.markercluster |
+
+**Commit**: `f69f589`, pushed dev → test → main
+
+### B.4: POI Image Optimalisatie
+
+**Backend**: Image resize proxy met Sharp (`imageResize.js`)
+- Endpoint: `/api/v1/img/<path>?w=<width>&q=<quality>&f=<format>`
+- Allowed widths: [200, 400, 600, 800, 1200] (snapped to nearest)
+- Formats: jpg (mozjpeg), webp, avif
+- Disk cache: `/storage/poi-images-cache/` met 30-dag browser cache headers
+- Security: path traversal preventie, extension validation
+
+**Frontend**: `imageUrl.ts` utility + 4 componenten updated
+- `getResizedImageUrl()`, `getImageSrcSet()`, `IMAGE_SIZES_ATTR`
+- srcSet, sizes, loading="lazy", decoding="async" op alle POI images
+- Performance: 200px thumbnail = 7KB (98.6% reductie van 497KB origineel)
+
+**Bestanden (7)**:
+| Bestand | Type | Wijziging |
+|---------|------|-----------|
+| `platform-core/src/routes/imageResize.js` | NEW | Sharp image resize proxy |
+| `platform-core/src/index.js` | MOD | Mount /api/v1/img route |
+| `customer-portal/frontend/src/shared/utils/imageUrl.ts` | NEW | srcSet utility |
+| `customer-portal/frontend/src/features/poi/components/POITileCarousel.tsx` | MOD | srcSet, sizes, lazy |
+| `customer-portal/frontend/src/features/poi/components/POIAirbnbGallery.tsx` | MOD | srcSet, sizes, lazy |
+| `customer-portal/frontend/src/features/poi/components/POIImage.tsx` | MOD | srcSet, sizes |
+| `customer-portal/frontend/src/features/poi/components/POIThumbnail.tsx` | MOD | lazy loading, resize |
+
+**Commit**: `822bb11`, pushed dev → test → main
+
+### B.5: Admin POI Tools Uitbreiding
+
+4 nieuwe endpoints in `adminPortal.js` v3.12.0 (51 endpoints totaal):
+
+| Endpoint | Methode | Beschrijving |
+|----------|---------|--------------|
+| `/pois/bulk-status` | POST | Bulk activate/deactivate (max 500, RBAC) |
+| `/pois/bulk-category` | POST | Bulk category change (max 500, RBAC) |
+| `/pois/:id/tile-description` | PATCH | Quick inline edit (max 500 chars) |
+| `/pois/export` | GET | CSV export met filters (destination, category, freshness, active, search) |
+
+Bug fix: bulk endpoints rapporteren nu `affectedRows` i.p.v. input count.
+
+**Bestanden (1)**:
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/adminPortal.js` | v3.11.0 → v3.12.0, +4 endpoints, affectedRows fix |
+
+**Commit**: `7466eba`, pushed dev → test → main
+
+### Blok B Samenvatting
+- **5 sub-blokken**: B.1 Analyse, B.2 Freshness, B.3 Browse UX, B.4 Images, B.5 Admin Tools
+- **15 bestanden gewijzigd/nieuw**, 3 commits
+- **Key metrics**: 98.6% image size reductie, 200 POI clustering, multi-select filters met URL persistence, 51 admin endpoints
+- **Kosten**: EUR 0 (geen externe API calls)
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
