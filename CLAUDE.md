@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.53.0
+> **Versie**: 3.54.0
 > **Laatst bijgewerkt**: 1 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -77,9 +77,10 @@ HolidaiButler/
 │   └── src/ (api, components, hooks, pages, stores, i18n, utils)
 ├── platform-core/               # Node.js/Express backend
 │   └── src/
-│       ├── routes/ (holibot.js, adminPortal.js v3.13.0)
+│       ├── routes/ (holibot.js, ticketing.js, adminPortal.js v3.15.0)
 │       ├── services/
 │       │   ├── holibot/         # HoliBot 2.0 (RAG Chatbot)
+│       │   ├── ticketing/       # Ticketing Module (inventoryService.js, ticketingService.js)
 │       │   ├── orchestrator/    # BullMQ scheduler, workers, costController, auditTrail, ownerInterface
 │       │   └── agents/          # 18 agents (base/, healthMonitor/, dataSync/, holibotSync/, etc.)
 │       ├── middleware/ (auth.js met RBAC, rate limiting, IP whitelist)
@@ -245,6 +246,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | II-D | Customer Portal UX Upgrade (SEO, breadcrumbs, a11y, PWA) | 01-03 | usePageMeta, Breadcrumbs 4 talen, skip-to-content, service worker |
 | **III-G** | **Juridische Documentatie (AV, verwerkersovereenkomst, partner)** | **01-03** | **6 concept-templates in docs/legal/** |
 | **III-A** | **Payment Engine / Adyen Integratie** | **01-03** | **Adyen SDK v30, sessions flow, 3 customer + 5 admin endpoints, 2 DB tabellen** |
+| **III-B** | **Ticketing Module (Inventory, Orders, QR, Vouchers)** | **01-03** | **5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking, QR HMAC, BullMQ expired reservation job** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -281,7 +283,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - `destinationRunner.js`: Mixin helper voor bestaande agent singletons
 - `agentRegistry.js`: Centrale registratie 18 entries
 
-### Scheduled Jobs: 40 totaal
+### Scheduled Jobs: 42 totaal
 - BullMQ queue: `scheduled-tasks`
 - Workers: `src/services/orchestrator/workers.js` (incl. JOB_ACTOR_MAP voor correct agent attribution)
 
@@ -298,10 +300,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.14.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.15.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 61 admin endpoints
+- **Endpoints**: 76 admin endpoints (incl. 15 ticketing/voucher endpoints)
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -368,7 +370,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 |---|------|--------|--------------|
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
-| III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | 🟢 IN PROGRESS (Blok G+A COMPLEET) | 8-12 wkn |
+| III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | 🟢 IN PROGRESS (Blok G+A+B COMPLEET) | 8-12 wkn |
 | IV | Intermediair & Revenue (Intermediair module + Agent) | GEPLAND | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
 | VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
@@ -477,10 +479,10 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.53.0** | **2026-03-01** | **Fase III Blok G+A: Legal docs + Payment Engine COMPLEET**. Adyen SDK v30 integratie, Sessions flow, 2 DB tabellen (payment_transactions, payment_refunds), 3 customer + 5 admin endpoints, frontend PaymentPage + PaymentResultPage. 6 juridische concept-templates. 22 bestanden, commits 50d2c0a→f52d83c. **Fase III gestart.** |
+| **3.54.0** | **2026-03-01** | **Fase III Blok B: Ticketing Module COMPLEET**. 5 DB tabellen (tickets, ticket_inventory, ticket_orders, ticket_order_items, voucher_codes). 6 customer endpoints (browse, detail, order, pay, order details, voucher validate). 15 admin endpoints (CRUD tickets/inventory/vouchers, orders, QR validation, stats). Redis inventory locking met MySQL FOR UPDATE transactie. QR HMAC-SHA256. BullMQ expired reservation job (every minute). 76 admin endpoints, 42 scheduled jobs. |
+| 3.53.0 | 2026-03-01 | Fase III Blok G+A: Legal docs + Payment Engine COMPLEET. |
 | 3.52.0 | 2026-03-01 | Fase II Blok D: Customer Portal UX Upgrade COMPLEET. Fase II volledig COMPLEET. |
 | 3.51.0 | 2026-03-01 | Fase II Blok C: Agenda Module Upgrade COMPLEET. 56 endpoints. |
-| 3.50.0 | 2026-03-01 | Fase II Blok B: POI Module Verbetering COMPLEET. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 

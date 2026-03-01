@@ -135,6 +135,15 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: agent-success-rate (Monday 05:30)');
 
+  // === Fase III-B Ticketing Jobs ===
+
+  // Release Expired Ticket Reservations - every minute
+  await scheduledQueue.add('release-expired-ticket-reservations', { type: 'ticketing-cleanup' }, {
+    repeat: { cron: '* * * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'release-expired-ticket-reservations-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: release-expired-ticket-reservations (every minute)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);

@@ -633,6 +633,24 @@ export function startWorkers() {
           }
           break;
 
+        // === TICKETING CLEANUP (Fase III-B) ===
+        case "release-expired-ticket-reservations":
+          try {
+            const { releaseExpiredReservations } = await import("../ticketing/inventoryService.js");
+            const ticketCleanup = await releaseExpiredReservations();
+            if (ticketCleanup.releasedCount > 0) {
+              console.log("[Orchestrator] Ticket reservation cleanup:", JSON.stringify({
+                released: ticketCleanup.releasedCount,
+                errors: ticketCleanup.errors.length
+              }));
+            }
+            result = ticketCleanup;
+          } catch (error) {
+            console.error("[Orchestrator] Ticket reservation cleanup failed:", error.message);
+            result = { type: "ticketing-cleanup", status: "error", error: error.message };
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -652,7 +670,8 @@ export function startWorkers() {
         'session-cleanup': 'communication-flow',
         'dev-security-scan': 'security-reviewer',
         'dev-quality-report': 'code-reviewer',
-        'dev-dependency-audit': 'ux-ui-reviewer'
+        'dev-dependency-audit': 'ux-ui-reviewer',
+        'release-expired-ticket-reservations': 'orchestrator'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {

@@ -1183,4 +1183,67 @@ Adyen setup documentatie:
 
 ---
 
+### Fase III — Blok B: Ticketing Module (01-03-2026)
+
+**CLAUDE.md**: v3.53.0 → v3.54.0
+
+#### Database (5 tabellen)
+1. `tickets` — Ticket definities (name, type, pricing, validity, translations)
+2. `ticket_inventory` — Beschikbaarheid per datum/tijdslot (capacity tracking)
+3. `ticket_orders` — Bestellingen (order_uuid, order_number HB-T-YYMMDD-XXXX, QR data)
+4. `ticket_order_items` — Order line items (ticket, inventory, quantity, pricing)
+5. `voucher_codes` — Kortingscodes (percentage/fixed, max uses, date range, scope)
+
+Legacy tabellen (`tickets` old, `bookings`, `availability`) gedropped (0 rows).
+
+#### Nieuwe Bestanden (3)
+| Bestand | Beschrijving |
+|---------|-------------|
+| `platform-core/src/services/ticketing/inventoryService.js` | Redis inventory locking + MySQL FOR UPDATE transactie + reservation lifecycle |
+| `platform-core/src/services/ticketing/ticketingService.js` | 10 functies: getAvailableTickets, createOrder, processPayment, confirmOrder, cancelOrder, validateQR, applyVoucher, getOrderDetails, validateVoucher, getTicketDetail |
+| `platform-core/src/routes/ticketing.js` | 6 customer endpoints + health |
+
+#### Gewijzigde Bestanden (4)
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/index.js` | Mount ticketing routes |
+| `platform-core/src/routes/adminPortal.js` | 15 admin endpoints, header v3.15.0 |
+| `platform-core/src/services/orchestrator/scheduler.js` | `release-expired-ticket-reservations` (every minute) |
+| `platform-core/src/services/orchestrator/workers.js` | New case + JOB_ACTOR_MAP entry |
+
+#### Customer Endpoints (6)
+| Method | Path | Functie |
+|--------|------|---------|
+| GET | `/api/v1/tickets/health` | Health check |
+| GET | `/api/v1/tickets/:destinationId` | Browse tickets met availability |
+| GET | `/api/v1/tickets/:destinationId/:ticketId` | Ticket detail |
+| POST | `/api/v1/tickets/order` | Create order + reserve inventory |
+| POST | `/api/v1/tickets/order/:orderId/pay` | Create Adyen payment session |
+| GET | `/api/v1/tickets/order/:orderUuid` | Order details + QR image |
+| POST | `/api/v1/tickets/voucher/validate` | Preview voucher discount |
+
+#### Admin Endpoints (15)
+Tickets CRUD, inventory management, orders list/detail/cancel, QR validation, stats, vouchers CRUD.
+Totaal admin endpoints: 61 + 15 = **76**.
+
+#### Key Architectuurbeslissingen
+1. **MySQL FOR UPDATE + explicit transaction**: `mysqlSequelize.transaction()` wraps SELECT FOR UPDATE + UPDATE voor atomiciteit
+2. **Redis als optioneel**: Safe wrappers — werkt ook zonder Redis, maar mist dan distributed locking
+3. **QR format**: `HB:{order_uuid}:{hmac_8chars}` — HMAC-SHA256 met QR_SECRET_KEY, timing-safe vergelijking
+4. **Route ordering**: Specifieke routes (order/*, voucher/*, health) MOETEN voor `/:destinationId` wildcard
+5. **Admin destScope**: platform_admin krijgt `null` scope → POST/create endpoints accepteren `destination_id` uit request body
+6. **15-min checkout window**: Orders krijgen `expires_at`, BullMQ job released inventory + markeert als expired
+
+#### Bugs Gevonden & Opgelost
+1. Express route capture: `/:destinationId` matched "health", "order", "voucher" → route ordering fix
+2. reserved_count = 0: SELECT FOR UPDATE zonder expliciete transactie → `mysqlSequelize.transaction()` fix
+3. Admin POST MISSING_DESTINATION: platform_admin destScope=null → fallback naar `req.body.destination_id`
+
+#### E2E Verificatie (18/18 PASS)
+Health, browse, detail, order+reserve, order details, payment session, cancel, voucher create+validate, order+voucher, QR validation, admin orders/vouchers/tickets/stats/detail, double-scan rejection, invalid QR rejection, multi-destination isolation.
+
+**Scheduled Jobs**: 42 totaal (was 40)
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
