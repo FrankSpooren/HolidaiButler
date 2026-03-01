@@ -18,8 +18,10 @@
 7. [Fase 10A-R + 10B + 10C](#fase-10a-restant--10b--10c)
 8. [Fase 11A: Agent Ecosysteem Audit + Activering](#fase-11a--agent-ecosysteem-audit--activering-27-02-2026)
 9. [Fase 11B: Agent Ecosysteem Enterprise Complete](#fase-11b--agent-ecosysteem-enterprise-complete-27-02-2026)
-10. [LLM Content Generatie Details](#llm-content-generatie-details)
-11. [Volledige Changelog](#volledige-changelog)
+10. [Fase 12: Verificatie, Consolidatie & Hardening](#fase-12--verificatie-consolidatie--hardening-27-02-2026)
+11. [Fase II Blok A: Chatbot Upgrade](#fase-ii-blok-a--chatbot-upgrade-28-02-2026)
+12. [LLM Content Generatie Details](#llm-content-generatie-details)
+13. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -824,6 +826,84 @@ Gebaseerd op `Strategische_Agent_Ecosysteem_Analyse_v2_DEFINITIEF.md` — 5 item
 | `admin-module/src/i18n/es.json` | Issues + trend keys + common keys |
 | `CLAUDE.md` | v3.46.0 |
 | `docs/strategy/HolidaiButler_Master_Strategie.md` | v7.12 |
+
+## Fase II Blok A — Chatbot Upgrade (28-02-2026)
+
+**Doel**: Chatbot upgraden naar enterprise-level met contextueel bewustzijn, multi-turn geheugen, booking intent detectie, en menselijke fallback. Eerste blok van Fase II (Active Module Upgrade).
+
+**Stap 0**: Codebase verificatie op Hetzner. Bevinding: 9 npm vulnerabilities (was 0 na Fase 12). Opgelost met `npm audit fix` → 0 vulnerabilities. POI counts lager dan verwacht (1439 Calpe, 1257 Texel actief vs 1538/1660 in docs). 0 Texel agenda events (gap voor Blok C).
+
+### A.1: Architectuur Analyse
+- **RAG pipeline**: Zero temporal awareness, geen seizoen/weer/tijd context
+- **Conversation memory**: Frontend-only, 6 berichten max (history.slice(-6))
+- **Intent classificatie**: 10 intents, keyword-based, geen booking/escalation
+- **Suggesties**: suggestionService al goed, maar geen context-integratie
+- **preferenceService.rerankPois**: Gedefinieerd maar nooit aangeroepen
+
+### A.2: Context Awareness (contextService.js — NIEUW)
+- **Nieuw bestand**: `platform-core/src/services/holibot/contextService.js` (~310 regels)
+- **Temporeel bewustzijn**: Dag, datum, tijdstip (ochtend/middag/avond/nacht), seizoen, weekend detectie
+- **Locatiebewustzijn**: Per-destination context (eiland vs kuststad), timezone-aware
+- **Sessie-context**: In-memory Map met 24h TTL, trackt besproken POIs/categorieën
+- **Prompt-injectie**: `buildPromptContext()` genereert meertalig contextblok (NL/EN/DE/ES)
+- **Aanbevelingshinten**: Per tijdstip × seizoen combinatie (strand, terras, musea, etc.)
+- **GDPR-compliant**: Geen persoonlijke data, alleen sessie-gebaseerd, in-memory met auto-cleanup
+- **Integratie**: ragService importeert contextService, injecteert context tussen system prompt en RAG instructies
+
+### A.3: Multi-turn Memory Verbetering
+- **History window**: `slice(-6)` → `slice(-10)` (3 occurrences in ragService.js)
+- **Follow-up detectie**: `hasPronounReference()` uitgebreid met 17+ patronen:
+  - NL: "die eerste", "de tweede", "iets anders", "meer opties", "en die andere"
+  - EN: "the first one", "something else", "more options", "what about"
+  - DE: "der erste", "etwas anderes", "mehr optionen"
+  - ES: "el primero", "algo diferente", "más opciones"
+- **Ordinal reference resolution**: "de eerste" → matcht tegen eerste POI uit sessie-context
+- **lastPois tracking**: contextService session data meegegeven aan `buildEnhancedSearchQuery()`
+- **POI tracking in streaming**: Na chatbot response worden genoemde POIs/categorieën getrackt
+
+### A.4: Proactieve Suggesties
+- Bestaande suggestionService was al goed geïmplementeerd
+- Context-integratie gerealiseerd via contextService prompt-injectie (tijdstip/seizoen hints)
+- Geen additionele code nodig — bestaande logica voldoet
+
+### A.5: Chat-to-Book Voorbereiding
+- **Booking intent** toegevoegd aan intentService.js (priority 2)
+- Keywords in 6 talen: 'boeken', 'reserveren', 'book', 'reserve', 'tickets', 'buchen', 'reservieren', 'reservar', 'boka', 'zarezerwować'
+- **Interceptie in holibot.js**: Vóór RAG-call, friendly fallback in 4 talen
+- **Logging**: Gelogd als `booking-intent` source in holibot_sessions
+
+### A.6: Menselijke Fallback
+- **Human escalation intent** toegevoegd aan intentService.js (priority 1)
+- Keywords: 'kan ik iemand spreken', 'complaint', 'medewerker', 'customer service', 'klacht', 'Beschwerde', 'queja'
+- **Destination-specifiek contact**: Texel → info@texelmaps.nl, Calpe → info@holidaibutler.com
+- **Interceptie in holibot.js**: Vóór RAG-call, vriendelijke doorverwijzing
+
+### A.7: Testing & Deployment
+4 test scenarios uitgevoerd:
+1. **Texel NL**: "Wat kan ik vandaag doen op Texel?" → Context-aware antwoord ✅
+2. **Calpe EN**: "What are good restaurants in Calpe?" → POI-based antwoord ✅
+3. **Booking DE**: "Kann ich einen Tisch reservieren?" → Booking intent fallback ✅
+4. **Escalation EN**: "I need to speak to someone" → Contact info getoond ✅
+
+Alle 3 sites bereikbaar (200 OK). PM2 restart succesvol.
+
+### Bestanden gewijzigd (5 bestanden)
+
+**Nieuw (1)**:
+| Bestand | Beschrijving |
+|---------|-----------|
+| `platform-core/src/services/holibot/contextService.js` | Temporeel/locatie/sessie context service |
+
+**Gewijzigd (4)**:
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/services/holibot/ragService.js` | v2.5: context-injectie, 10-bericht window, follow-up detectie, ordinal refs |
+| `platform-core/src/routes/holibot.js` | v2.9: booking/escalation interceptie, POI tracking, sessionId passing |
+| `platform-core/src/services/holibot/intentService.js` | +2 intents (booking, human_escalation) in 6 talen |
+| `platform-core/src/services/holibot/index.js` | contextService export |
+
+**Commit**: `09a373b`, pushed dev → test → main
+**Kosten**: EUR 0
 
 ---
 
