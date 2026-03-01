@@ -1034,4 +1034,70 @@ Agenda module audit: 314 events (all Calpe), 4 read-only endpoints, hardcoded Ca
 
 ---
 
+## Fase II Blok D — Customer Portal UX Upgrade (01-03-2026)
+
+### D.1: Analyse
+Comprehensive UX audit van customer-portal: 21 routes, good code splitting, React 19 + React Router 7. Gevonden gaps: geen SEO meta tags (document.title altijd default), geen breadcrumbs, geen skip-to-content (WCAG), geen service worker (PWA), WCAG modal reeds aanwezig.
+
+### D.2: usePageMeta Hook (SEO)
+Nieuwe shared hook `usePageMeta.ts` voor dynamische SEO meta tags:
+- Sets `document.title` als `{title} | {siteName}`
+- Creates/updates OG meta tags: og:title, og:site_name, og:type, og:description, og:url, og:image
+- Separate `setMeta()` (property-based) en `setNameMeta()` (name-based) helpers
+- Cleanup: restores default title on unmount
+- Multi-destination aware via `useDestination()` (domain, name)
+- Applied to Homepage, POILandingPage, AgendaPage
+
+### D.3: Breadcrumbs Component
+Nieuwe shared component `Breadcrumbs.tsx` + `Breadcrumbs.css`:
+- Multi-language route labels (EN, NL, DE, ES) voor 13 routes
+- `ChevronRight` separators + `Home` icon (lucide-react)
+- `currentLabel` prop override voor dynamische pagina's (bijv. POI naam)
+- Hidden on homepage, skip numeric ID segments tenzij currentLabel
+- Responsive: kleinere font + max-width op mobile (<640px)
+
+### D.4: Accessibility (WCAG)
+- Skip-to-content link in `RootLayout.tsx` (`<a href="#main-content">`)
+- `id="main-content"` op `<main>` element
+- `role="main"` attribuut
+- CSS: `.skip-to-content` hidden until keyboard focus (position absolute, top -40px → top 0 on :focus)
+
+### D.5: PWA Service Worker
+- `public/sw.js`: 3 cache strategieën
+  - **Cache-first**: Static assets (CSS, JS, images, fonts)
+  - **Network-first**: API calls (`/api/`)
+  - **Network-first + offline fallback**: Navigation requests
+- Cache versioning (`v1`), cleanup oude caches
+- Registration in `main.tsx` (production-only):
+  ```typescript
+  if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+  ```
+
+### Blok D Bestanden (8)
+| Bestand | Type | Wijziging |
+|---------|------|-----------|
+| `customer-portal/frontend/src/shared/hooks/usePageMeta.ts` | NEW | Dynamic SEO meta hook |
+| `customer-portal/frontend/src/shared/components/Breadcrumbs.tsx` | NEW | Multi-language breadcrumbs |
+| `customer-portal/frontend/src/shared/components/Breadcrumbs.css` | NEW | Breadcrumb styling |
+| `customer-portal/frontend/src/layouts/RootLayout.tsx` | MOD | Skip-to-content, Breadcrumbs, main id/role |
+| `customer-portal/frontend/src/index.css` | MOD | .skip-to-content styles |
+| `customer-portal/frontend/public/sw.js` | NEW | Service worker (3 strategies) |
+| `customer-portal/frontend/src/main.tsx` | MOD | SW registration (production) |
+| `customer-portal/frontend/src/pages/Homepage.tsx` | MOD | usePageMeta() |
+| `customer-portal/frontend/src/pages/POILandingPage.tsx` | MOD | usePageMeta() |
+| `customer-portal/frontend/src/pages/AgendaPage.tsx` | MOD | usePageMeta() |
+
+**Commit**: `529fd7b`, pushed dev → test → main
+**Deploy**: Calpe (holidaibutler.com) + Texel (texelmaps.nl), both Vite build OK
+
+### Blok D Samenvatting
+- **5 sub-blokken**: D.1 Analyse, D.2 SEO Meta, D.3 Breadcrumbs, D.4 Accessibility, D.5 PWA
+- **10 bestanden gewijzigd/nieuw**, 1 commit
+- **Key deliverables**: Dynamic SEO (OG tags per page), multi-language breadcrumbs (4 talen), WCAG skip-to-content, service worker (offline-capable PWA)
+- **Kosten**: EUR 0 (geen externe API calls)
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

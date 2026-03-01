@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.51.0
+> **Versie**: 3.52.0
 > **Laatst bijgewerkt**: 1 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -49,9 +49,9 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.15 |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.18 |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
-| **CLAUDE.md** | Repository root + Hetzner | 3.49.0 |
+| **CLAUDE.md** | Repository root + Hetzner | 3.52.0 |
 | **CLAUDE_HISTORY.md** | Repository root | 1.0.0 |
 
 > **CLAUDE_HISTORY.md** bevat volledige fase-resultaten, changelogs en bestandslijsten per fase. Raadpleeg dit bestand ALLEEN wanneer historische details nodig zijn.
@@ -241,7 +241,8 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | 12 | Verificatie, Consolidatie & Hardening | 27-02 | 3 bug fixes, 34 tests, runtime metrics, MS v7.13 |
 | II-A | Chatbot Upgrade (context, memory, booking, escalation) | 28-02 | contextService.js, ragService v2.5, 12 intents |
 | II-B | POI Module Verbetering (freshness, UX, images, admin) | 01-03 | Clustering, multi-select, image proxy, 51 endpoints |
-| **II-C** | **Agenda Module Upgrade (multi-dest, categories, iCal, admin)** | **01-03** | **6 public + 5 admin endpoints, iCal feed, category detection** |
+| II-C | Agenda Module Upgrade (multi-dest, categories, iCal, admin) | 01-03 | 6 public + 5 admin endpoints, iCal feed, category detection |
+| **II-D** | **Customer Portal UX Upgrade (SEO, breadcrumbs, a11y, PWA)** | **01-03** | **usePageMeta, Breadcrumbs 4 talen, skip-to-content, service worker** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -364,7 +365,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | # | Fase | Status | Doorlooptijd |
 |---|------|--------|--------------|
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
-| II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | 🔄 ACTIEF (Blok A+B+C ✅) | 6-8 wkn |
+| II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | GEPLAND | 8-12 wkn |
 | IV | Intermediair & Revenue (Intermediair module + Agent) | GEPLAND | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
@@ -474,12 +475,10 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.51.0** | **2026-03-01** | **Fase II Blok C: Agenda Module Upgrade COMPLEET**. Multi-destination (X-Destination-ID, geen hardcoded Calpe), auto-category detectie (8 categorieën), iCal feeds (single event + subscription), admin CRUD (5 endpoints). agenda.js complete rewrite, adminPortal.js v3.13.0 (56 endpoints). Commit ab2ab26. |
-| 3.50.0 | 2026-03-01 | Fase II Blok B: POI Module Verbetering COMPLEET. Freshness, clustering, image proxy, admin tools. 3 commits, 15 bestanden. |
-| 3.49.0 | 2026-02-28 | Fase II Blok A: Chatbot Upgrade COMPLEET. contextService.js, ragService v2.5, 12 intents, booking/escalation. |
-| 3.48.0 | 2026-03-01 | Strategic Roadmap v2.0 integratie: WarreWijzer, 6-fasen roadmap, state-of-the-art A-F. MS v7.14. |
-| 3.47.0 | 2026-02-27 | Fase 12: Verificatie, Consolidatie & Enterprise Hardening. 7 blokken, 34 tests, MS v7.13. |
-| 3.46.0 | 2026-02-27 | Fase 11B: Agent Ecosysteem Enterprise Complete (Niveau 7). adminPortal.js v3.13.0, 47 endpoints. MS v7.12. |
+| **3.52.0** | **2026-03-01** | **Fase II Blok D: Customer Portal UX Upgrade COMPLEET**. usePageMeta hook (dynamic SEO/OG tags), Breadcrumbs (4 talen, 13 routes), skip-to-content (WCAG), PWA service worker (3 cache strategies). 10 bestanden, commit 529fd7b. **Fase II volledig COMPLEET (Blok A+B+C+D)**. |
+| 3.51.0 | 2026-03-01 | Fase II Blok C: Agenda Module Upgrade COMPLEET. Multi-destination, auto-category, iCal feeds, admin CRUD. 56 endpoints. |
+| 3.50.0 | 2026-03-01 | Fase II Blok B: POI Module Verbetering COMPLEET. Freshness, clustering, image proxy, admin tools. |
+| 3.49.0 | 2026-02-28 | Fase II Blok A: Chatbot Upgrade COMPLEET. contextService.js, ragService v2.5, 12 intents. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -489,7 +488,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.15 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.18 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
