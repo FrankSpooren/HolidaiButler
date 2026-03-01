@@ -1246,4 +1246,99 @@ Health, browse, detail, order+reserve, order details, payment session, cancel, v
 
 ---
 
+### Fase III — Blok C: Reservation Module (01-03-2026)
+
+**CLAUDE.md**: v3.54.0 → v3.55.0
+
+#### Database (3 tabellen + 1 ALTER TABLE)
+- `reservation_slots` (13 kolommen): poi_id, destination_id, slot_date, slot_time_start/end, slot_duration_minutes, total_tables, total_seats, reserved_seats, is_available
+- `guest_profiles` (20 kolommen): destination_id, email, phone, first_name, last_name, dietary_preferences (JSON), allergies (JSON), no_show_count, is_blacklisted, blacklist_reason, consent_data_storage, consent_marketing, data_retention_until
+- `reservations` (26 kolommen): destination_id, reservation_uuid, reservation_number (HB-R-YYMMDD-XXXX), slot_id, poi_id, guest_profile_id, party_size, deposit_required/cents/status, status (6 statuses), qr_code_data, reminder flags, cancellation fields
+- `ALTER TABLE POI ADD COLUMN has_reservations BOOLEAN DEFAULT FALSE`
+
+#### Nieuwe bestanden (2)
+| Bestand | Beschrijving |
+|---------|--------------|
+| `platform-core/src/services/reservation/reservationService.js` | 7 core functies + QR validatie + guest profiles + 4 BullMQ job functies (810 regels) |
+| `platform-core/src/routes/reservations.js` | 4 customer-facing endpoints + health check + rate limiting |
+
+#### Gewijzigde bestanden (4)
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/index.js` | Import + mount reservation routes |
+| `platform-core/src/routes/adminPortal.js` | v3.15.0 → v3.16.0: 13 admin endpoints (reservations CRUD, slots CRUD, guests, stats, calendar) |
+| `platform-core/src/services/orchestrator/scheduler.js` | 4 nieuwe BullMQ jobs (expired cleanup, 24h+1h reminders, GDPR guest cleanup) |
+| `platform-core/src/services/orchestrator/workers.js` | 4 case handlers + JOB_ACTOR_MAP entries |
+
+#### Customer Endpoints (4)
+| Method | Path | Functie |
+|--------|------|---------|
+| GET | `/api/v1/reservations/slots/:poiId` | Browse beschikbare slots |
+| POST | `/api/v1/reservations` | Maak reservering (+ QR + guest profile) |
+| GET | `/api/v1/reservations/:uuid` | Reserveringsdetails (public) |
+| PUT | `/api/v1/reservations/:uuid/cancel` | Annuleer reservering (guest) |
+
+#### Admin Endpoints (13)
+| Method | Path | Functie |
+|--------|------|---------|
+| GET | `/reservations` | Lijst reserveringen (paginated, filtered) |
+| GET | `/reservations/stats` | Statistieken (no-show rate, top POIs, etc.) |
+| GET | `/reservations/calendar/:poiId` | Kalenderoverzicht (maand) |
+| GET | `/reservations/slots/:poiId` | Slot lijst met beschikbaarheid |
+| POST | `/reservations/slots/:poiId` | Slots aanmaken (bulk) |
+| PUT | `/reservations/slots/:id` | Slot wijzigen (seats validation) |
+| GET | `/reservations/:id` | Reservering detail (+ guest profiel) |
+| PUT | `/reservations/:id/status` | Status wijzigen (confirm/cancel) |
+| POST | `/reservations/:id/no-show` | No-show markeren (auto-blacklist) |
+| POST | `/reservations/:id/complete` | Reservering voltooien |
+| GET | `/guests` | Lijst gastprofielen |
+| GET | `/guests/:id` | Gastprofiel + geschiedenis |
+| PUT | `/guests/:id/blacklist` | Blacklist toggle (manual override) |
+
+#### BullMQ Jobs (4 nieuwe → 46 totaal)
+| Job | Schedule | Functie |
+|-----|----------|---------|
+| `reservation-expired-cleanup` | */5 * * * * | Release expired deposit_pending (30 min) |
+| `reservation-reminder-24h` | 0 * * * * | 24h reminder voor confirmed reserveringen |
+| `reservation-reminder-1h` | */15 * * * * | 1h reminder voor confirmed reserveringen |
+| `guest-data-retention-cleanup` | 0 3 * * 0 | GDPR guest profile cleanup (24 maanden) |
+
+#### Architectuur Beslissingen
+- **QR format**: `HB-R:{uuid}:{hmac8}` (prefix `HB-R` vs `HB` voor tickets — aparte secret)
+- **Reservation number**: `HB-R-YYMMDD-XXXX` (auto-increment per dag)
+- **Guest profile**: Upsert op email+destination_id, GDPR consent tracking
+- **Auto-blacklist**: 3 no-shows → is_blacklisted=TRUE, blacklist_reason="auto: 3 no-shows"
+- **Deposit flow**: deposit_pending → pay → confirmed; no-show = forfait (geen refund)
+- **Redis + MySQL dual lock**: Zelfde pattern als ticketing (SETNX + FOR UPDATE)
+- **Seat validation**: Cannot lower total_seats below current reserved_seats
+
+#### Bugs Fixed
+- `google_formatted_address` → `address` (POI tabel kolom naam)
+- Legacy `reservations` + `guests` + `restaurants` tabellen gedropped (FK orphan op `transactions`)
+- `has_reservations` kolom toegevoegd aan POI tabel
+
+#### E2E Test Resultaten (20/20 PASS)
+1. Browse available slots ✅
+2. Create reservation (confirmed + QR) ✅
+3. Get reservation details by UUID ✅
+4. Admin: List reservations ✅
+5. Admin: Reservation stats ✅
+6. Admin: Calendar view ✅
+7. Admin: Guest profiles ✅
+8. Verify reserved_seats updated ✅
+9. Admin: Mark no-show ✅
+10. Verify no-show effects (seats released, count incremented) ✅
+11. Auto-blacklist after 3 no-shows ✅
+12. Blacklisted guest blocked from booking ✅
+13. Admin: Manual unblacklist ✅
+14. Unblacklisted guest can rebook ✅
+15. Customer cancel ✅
+16. Verify cancel effects (seats released, status updated) ✅
+17. Race condition (2 concurrent, 1 success + 1 INSUFFICIENT_SEATS) ✅
+18. Slot update validation (seats below reserved blocked) ✅
+19. Slot update (valid) ✅
+20. Admin: Venue cancel ✅
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

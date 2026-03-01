@@ -651,6 +651,63 @@ export function startWorkers() {
           }
           break;
 
+        // === RESERVATION JOBS (Fase III-C) ===
+        case "reservation-expired-cleanup":
+          try {
+            const { releaseExpiredDeposits } = await import("../reservation/reservationService.js");
+            const resCleanup = await releaseExpiredDeposits();
+            if (resCleanup.releasedCount > 0) {
+              console.log("[Orchestrator] Reservation deposit cleanup:", JSON.stringify({ released: resCleanup.releasedCount }));
+            }
+            result = resCleanup;
+          } catch (error) {
+            console.error("[Orchestrator] Reservation deposit cleanup failed:", error.message);
+            result = { type: "reservation-cleanup", status: "error", error: error.message };
+          }
+          break;
+
+        case "reservation-reminder-24h":
+          try {
+            const { sendReminders24h } = await import("../reservation/reservationService.js");
+            const reminder24 = await sendReminders24h();
+            if (reminder24.sentCount > 0) {
+              console.log("[Orchestrator] Reservation 24h reminders:", JSON.stringify({ sent: reminder24.sentCount }));
+            }
+            result = reminder24;
+          } catch (error) {
+            console.error("[Orchestrator] Reservation 24h reminder failed:", error.message);
+            result = { type: "reservation-reminder-24h", status: "error", error: error.message };
+          }
+          break;
+
+        case "reservation-reminder-1h":
+          try {
+            const { sendReminders1h } = await import("../reservation/reservationService.js");
+            const reminder1h = await sendReminders1h();
+            if (reminder1h.sentCount > 0) {
+              console.log("[Orchestrator] Reservation 1h reminders:", JSON.stringify({ sent: reminder1h.sentCount }));
+            }
+            result = reminder1h;
+          } catch (error) {
+            console.error("[Orchestrator] Reservation 1h reminder failed:", error.message);
+            result = { type: "reservation-reminder-1h", status: "error", error: error.message };
+          }
+          break;
+
+        case "guest-data-retention-cleanup":
+          try {
+            const { cleanupGuestData } = await import("../reservation/reservationService.js");
+            const gdprCleanup = await cleanupGuestData();
+            if (gdprCleanup.deletedCount > 0) {
+              console.log("[Orchestrator] Guest GDPR cleanup:", JSON.stringify({ deleted: gdprCleanup.deletedCount }));
+            }
+            result = gdprCleanup;
+          } catch (error) {
+            console.error("[Orchestrator] Guest GDPR cleanup failed:", error.message);
+            result = { type: "reservation-gdpr", status: "error", error: error.message };
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -671,7 +728,11 @@ export function startWorkers() {
         'dev-security-scan': 'security-reviewer',
         'dev-quality-report': 'code-reviewer',
         'dev-dependency-audit': 'ux-ui-reviewer',
-        'release-expired-ticket-reservations': 'orchestrator'
+        'release-expired-ticket-reservations': 'orchestrator',
+        'reservation-expired-cleanup': 'orchestrator',
+        'reservation-reminder-24h': 'communication-flow',
+        'reservation-reminder-1h': 'communication-flow',
+        'guest-data-retention-cleanup': 'gdpr'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {
