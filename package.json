@@ -1,91 +1,74 @@
 {
-  "name": "holidaibutler-platform",
-  "version": "1.0.0",
-  "description": "HolidaiButler Platform - Monorepo root package",
-  "private": true,
+  "name": "@holidaibutler/platform-core",
+  "version": "2.1.1",
+  "description": "HolidaiButler Platform Core with Enterprise-Grade POI Image Enhancement",
+  "type": "module",
+  "main": "src/index.js",
   "scripts": {
-    "install:all": "npm run install:core && npm run install:customer && npm run install:admin && npm run install:ticketing && npm run install:reservations && npm run install:payment",
-    "install:core": "cd platform-core && npm install",
-    "install:customer": "cd customer-portal/frontend && npm install",
-    "install:admin": "cd admin-module/backend && npm install && cd ../frontend && npm install",
-    "install:ticketing": "cd ticketing-module/backend && npm install && cd ../frontend && npm install",
-    "install:reservations": "cd reservations-module/backend && npm install",
-    "install:payment": "cd payment-module/backend && npm install",
-    "install:agenda": "cd agenda-module/backend && npm install && cd ../frontend && npm install",
-    "install:sales": "cd sales-pipeline-module/backend && npm install && cd ../frontend && npm install",
-
-    "dev": "concurrently -n \"core,customer,admin-api,admin-ui\" -c \"blue,green,yellow,magenta\" \"npm run dev:core\" \"npm run dev:customer\" \"npm run dev:admin-backend\" \"npm run dev:admin-frontend\"",
-    "dev:core": "cd platform-core && npm run dev",
-    "dev:customer": "cd customer-portal/frontend && npm run dev",
-    "dev:admin": "concurrently -n \"api,ui\" \"npm run dev:admin-backend\" \"npm run dev:admin-frontend\"",
-    "dev:admin-backend": "cd admin-module/backend && npm run dev",
-    "dev:admin-frontend": "cd admin-module/frontend && npm run dev",
-    "dev:ticketing": "concurrently -n \"api,ui\" \"cd ticketing-module/backend && npm run dev\" \"cd ticketing-module/frontend && npm run dev\"",
-    "dev:reservations": "cd reservations-module/backend && npm run dev",
-    "dev:payment": "cd payment-module/backend && npm run dev",
-    "dev:full": "concurrently -n \"core,customer,admin-api,admin-ui,ticket-api,reserv-api\" -c \"blue,green,yellow,magenta,cyan,red\" \"npm run dev:core\" \"npm run dev:customer\" \"npm run dev:admin-backend\" \"npm run dev:admin-frontend\" \"cd ticketing-module/backend && npm run dev\" \"npm run dev:reservations\"",
-
-    "build": "npm run build:customer && npm run build:admin",
-    "build:customer": "cd customer-portal/frontend && npm run build",
-    "build:admin": "cd admin-module/frontend && npm run build",
-    "build:ticketing": "cd ticketing-module/frontend && npm run build",
-
-    "start": "concurrently -n \"core,admin\" \"npm run start:core\" \"npm run start:admin\"",
-    "start:core": "cd platform-core && npm start",
-    "start:admin": "cd admin-module/backend && npm start",
-    "start:ticketing": "cd ticketing-module/backend && npm start",
-    "start:reservations": "cd reservations-module/backend && npm start",
-    "start:payment": "cd payment-module/backend && npm start",
-
-    "migrate": "cd platform-core && npm run migrate",
-    "migrate:admin": "cd admin-module/backend && npm run migrate",
-    "migrate:ticketing": "cd ticketing-module/backend && npm run migrate",
-    "migrate:reservations": "cd reservations-module/backend && npm run migrate",
-    "migrate:all": "npm run migrate && npm run migrate:admin && npm run migrate:ticketing && npm run migrate:reservations",
-
-    "seed": "cd admin-module/backend && npm run seed",
-    "seed:all": "npm run seed",
-
-    "test": "cd customer-portal/frontend && npm test",
-    "test:e2e": "cd customer-portal/frontend && npx playwright test",
-    "test:e2e:ui": "cd customer-portal/frontend && npx playwright test --ui",
-    "test:e2e:headed": "cd customer-portal/frontend && npx playwright test --headed",
-
-    "lint": "npm run lint:customer && npm run lint:admin",
-    "lint:customer": "cd customer-portal/frontend && npm run lint",
-    "lint:admin": "cd admin-module/frontend && npm run lint",
-
-    "clean": "npm run clean:customer && npm run clean:admin",
-    "clean:customer": "cd customer-portal/frontend && rm -rf node_modules dist",
-    "clean:admin": "cd admin-module/frontend && rm -rf node_modules dist && cd ../backend && rm -rf node_modules",
-    "clean:all": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'dist' -type d -prune -exec rm -rf '{}' +",
-
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
-    "docker:build": "docker-compose build",
-
-    "setup": "npm run install:all && npm run migrate:all && npm run seed",
-    "setup:dev": "npm run install:all && echo 'Ready! Run: npm run dev'"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/FrankSpooren/HolidaiButler.git"
+    "start": "node src/index.js",
+    "dev": "npx nodemon src/index.js",
+    "workers": "node src/workers.js",
+    "health-check": "node -e \"import('./src/services/agents/healthMonitor/index.js').then(m => m.default.runFullHealthCheck().then(r => console.log(r.summary)))\"",
+    "test": "jest",
+    "lint": "eslint src/**/*.js"
   },
   "keywords": [
-    "holidaibutler",
-    "tourism",
-    "costa-blanca",
-    "booking",
-    "platform"
+    "integration",
+    "api-gateway",
+    "event-bus",
+    "automation"
   ],
-  "author": "HolidaiButler Team",
-  "license": "UNLICENSED"
+  "author": "HolidaiButler",
+  "license": "MIT",
+  "dependencies": {
+    "@chroma-core/default-embed": "^0.1.9",
+    "@google-cloud/text-to-speech": "^5.5.0",
+    "@mailerlite/mailerlite-nodejs": "^1.2.0",
+    "@mistralai/mistralai": "^1.11.0",
+    "@sentry/node": "^7.91.0",
+    "apify-client": "^2.8.0",
+    "archiver": "^6.0.1",
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
+    "bull": "^4.12.0",
+    "bullmq": "^5.66.5",
+    "chromadb": "^3.1.8",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "http-proxy-middleware": "^2.0.6",
+    "ioredis": "^5.3.2",
+    "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.6.3",
+    "multer": "^2.0.2",
+    "mysql2": "^3.6.5",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^8.0.1",
+    "openai": "^4.77.0",
+    "ping": "^0.4.4",
+    "prom-client": "^15.1.0",
+    "rate-limit-redis": "^4.2.0",
+    "redis": "^4.6.11",
+    "sanitize-html": "^2.11.0",
+    "sequelize": "^6.35.0",
+    "sharp": "^0.33.1",
+    "uuid": "^9.0.1",
+    "validator": "^13.11.0",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.55.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
