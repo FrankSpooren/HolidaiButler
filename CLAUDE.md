@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.49.0
-> **Laatst bijgewerkt**: 28 februari 2026
+> **Versie**: 3.50.0
+> **Laatst bijgewerkt**: 1 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -77,7 +77,7 @@ HolidaiButler/
 │   └── src/ (api, components, hooks, pages, stores, i18n, utils)
 ├── platform-core/               # Node.js/Express backend
 │   └── src/
-│       ├── routes/ (holibot.js, adminPortal.js v3.11.0)
+│       ├── routes/ (holibot.js, adminPortal.js v3.12.0)
 │       ├── services/
 │       │   ├── holibot/         # HoliBot 2.0 (RAG Chatbot)
 │       │   ├── orchestrator/    # BullMQ scheduler, workers, costController, auditTrail, ownerInterface
@@ -139,6 +139,10 @@ Host: jotx.your-database.de | DB: pxoziy_db1 | User: pxoziy_1 | Password: j8,Drt
 - Texel: 11.506 imageurls, 4.1 GB, pad: `/poi-images/texel/{google_placeid}/image_N.jpg`
 - `IMAGE_BASE_URL` in `.env`: `https://test.holidaibutler.com`
 - `getBestUrl()` in `ImageUrl.js`: prefereert `local_path`, fallback `image_url`
+- **Image Resize Proxy** (Fase II-B.4): `/api/v1/img/<path>?w=<width>&q=<quality>&f=<format>`
+  - Sharp processing, mozjpeg, disk cache in `/storage/poi-images-cache/`
+  - Widths: [200, 400, 600, 800, 1200], formats: jpg/webp/avif
+  - Frontend `imageUrl.ts`: srcSet + lazy loading op alle POI componenten
 
 ### Content Staging Schema
 | Kolom | Type | Beschrijving |
@@ -235,7 +239,8 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | 11A | Agent Ecosysteem Audit + Activering | 27-02 | 3 agents geactiveerd |
 | 11B | Agent Ecosysteem Enterprise Complete | 27-02 | Niveau 7: logging, trending, issues, anomaliedetectie, correlatie |
 | 12 | Verificatie, Consolidatie & Hardening | 27-02 | 3 bug fixes, 34 tests, runtime metrics, MS v7.13 |
-| **II-A** | **Chatbot Upgrade (context, memory, booking, escalation)** | **28-02** | **contextService.js, ragService v2.5, 12 intents** |
+| II-A | Chatbot Upgrade (context, memory, booking, escalation) | 28-02 | contextService.js, ragService v2.5, 12 intents |
+| **II-B** | **POI Module Verbetering (freshness, UX, images, admin)** | **01-03** | **Clustering, multi-select, image proxy, 51 endpoints** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -292,7 +297,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.11.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 47 admin endpoints
+- **Endpoints**: 51 admin endpoints
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -358,7 +363,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | # | Fase | Status | Doorlooptijd |
 |---|------|--------|--------------|
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
-| II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | 🔄 ACTIEF (Blok A ✅) | 6-8 wkn |
+| II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | 🔄 ACTIEF (Blok A+B ✅) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | GEPLAND | 8-12 wkn |
 | IV | Intermediair & Revenue (Intermediair module + Agent) | GEPLAND | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
@@ -468,11 +473,11 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.49.0** | **2026-02-28** | **Fase II Blok A: Chatbot Upgrade COMPLEET**. contextService.js (temporeel/locatie/sessie context), ragService v2.5 (10-msg window, follow-up detectie NL/EN/DE/ES, ordinal refs), intentService +2 intents (booking 6 talen, human_escalation 4 talen), holibot.js booking/escalation interceptie. 5 bestanden, commit 09a373b. Fase II status: Blok A ✅, Blok B volgende. MS v7.15. |
-| 3.48.0 | 2026-03-01 | Strategic Roadmap v2.0 integratie: WarreWijzer destination_id 4, 6-fasen roadmap, state-of-the-art A-F. MS v7.14. |
-| 3.47.0 | 2026-02-27 | **Fase 12**: Verificatie, Consolidatie & Enterprise Hardening. Blok A: 16/16 server verificatie. Blok B: MS v7.13 (5 gaps gefixed). Blok C: CLAUDE.md v3.11.0 fix. Blok D: AuditLog status sanitizer + QA→QnA table fix + Reviews case fix. Blok E: 34/34 enterprise tests. Blok F: runtime metrics aggregatie. |
+| **3.50.0** | **2026-03-01** | **Fase II Blok B: POI Module Verbetering COMPLEET**. B.2 Content Freshness Score. B.3 Browse UX (clustering, multi-select, URL params, sticky CTAs). B.4 Image Optimalisatie (Sharp resize proxy, srcSet, 98.6% reductie). B.5 Admin Tools (+4 endpoints → 51 totaal). 3 commits, 15 bestanden. |
+| 3.49.0 | 2026-02-28 | Fase II Blok A: Chatbot Upgrade COMPLEET. contextService.js, ragService v2.5, 12 intents, booking/escalation. |
+| 3.48.0 | 2026-03-01 | Strategic Roadmap v2.0 integratie: WarreWijzer, 6-fasen roadmap, state-of-the-art A-F. MS v7.14. |
 | 3.47.0 | 2026-02-27 | Fase 12: Verificatie, Consolidatie & Enterprise Hardening. 7 blokken, 34 tests, MS v7.13. |
-| 3.46.0 | 2026-02-27 | Fase 11B: Agent Ecosysteem Enterprise Complete (Niveau 7). adminPortal.js v3.11.0, 47 endpoints. MS v7.12. |
+| 3.46.0 | 2026-02-27 | Fase 11B: Agent Ecosysteem Enterprise Complete (Niveau 7). adminPortal.js v3.12.0, 47 endpoints. MS v7.12. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
