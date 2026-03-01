@@ -1,19 +1,19 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 27 februari 2026
-**Versie**: 7.13
+**Datum**: 1 maart 2026
+**Versie**: 7.14
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 12 COMPLEET. Verificatie, Consolidatie & Enterprise Hardening. 7 blokken: server verificatie (16/16), MS completeness audit (5 gaps), CLAUDE.md fixes, AuditLog status sanitizer, QA→QnA + Reviews table fix, 34 enterprise tests, runtime metrics. CLAUDE.md v3.47.0. MS v7.13. Kosten: EUR 0.
+**Status**: FASE 12 COMPLEET. Strategic Roadmap Advisory v2.0 geïntegreerd. WarreWijzer briefing opgenomen. 6-fasen strategische roadmap, state-of-the-art vervolgstappen, UX-Features Agenda correcties. CLAUDE.md v3.48.0. MS v7.14.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.46.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.48.0) in repo root + Hetzner
 
 ---
 
@@ -118,9 +118,11 @@
 | ~~C~~ | ~~AI Agents Multi-Destination~~ | ~~Fase 8B~~ | ~~P1~~ | ~~Operationeel~~ | ✅ **COMPLEET** (20-02-2026) — BaseAgent pattern, 18 agents, Threema |
 | ~~D~~ | ~~Agent Dashboard (Admin Portal)~~ | ~~Fase 8C~~ | ~~P1~~ | ~~Operationeel~~ | ✅ **COMPLEET** (20-02-2026) — Agent Dashboard + 4 feature modules |
 | E | Alicante Launch Prep | TBD | P1 | NEE (Calpe/Texel live) | Config, DNS, SSL, data, branding, chatbot |
+| E2 | WarreWijzer Launch Prep | Fase V | P1 | NEE | destination_id 4, 5 talen, ~300 POIs, Wijze Warre chatbot. Zie Deel 10 |
 | F | Content-Security-Policy Headers | TBD | P2 | NEE | CSP op alle 5 domeinen na uitgebreide testing |
 | ~~G~~ | ~~Agent Ecosysteem Enterprise Complete~~ | ~~11B~~ | ~~P1~~ | ~~NEE~~ | ✅ **COMPLEET** (27-02-2026) — Niveau 7: logging, trending, issues, anomaliedetectie, correlatie |
 | H | De Weermeester Audit | TBD | P3 | NEE | Verificatie output, strategy-layer evaluatie |
+| I | Gedeactiveerde agents evaluatie | TBD | P3 | NEE | De Architect, De Leermeester, De Thermostaat — reactiveren bij bewezen ROI |
 
 ---
 
@@ -790,10 +792,10 @@ Frontend (VITE_DESTINATION_ID="texel")
   → API request met X-Destination-ID header
     → getDestinationFromRequest(req) {
         // Accepteert string ("texel") EN numeric (2) IDs
-        const codeToId = { calpe: 1, texel: 2, alicante: 3 };
+        const codeToId = { calpe: 1, texel: 2, alicante: 3, warrewijzer: 4 };
         // Returns { destinationId, destinationConfig, collectionName }
       }
-      → ChromaDB collection routing (calpe_pois / texel_pois)
+      → ChromaDB collection routing (calpe_pois / texel_pois / warrewijzer_pois)
       → Config-driven persona (name, prompts, welcome messages)
 ```
 
@@ -1203,6 +1205,11 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 27-02 | Correlatierapport wekelijks maandag (11B) | Dagelijks = ruis, maandelijks = te traag — wekelijks biedt actionable insights zonder alert fatigue | Claude Code |
 | 27-02 | npm audit fix als eerste blok (11B) | Clean security baseline (1C/4H/3M→0) vóór enterprise features — audit fix zonder --force (geen breaking changes) | Claude Code |
 | 27-02 | Admin Issues module 5 endpoints (11B) | GET/POST/PUT list/create/update/assign/stats — hergebruik bestaand JWT/RBAC middleware, frontend met status cards | Claude Code |
+| 01-03 | Roadmap v2.0 integreren in CLAUDE.md + MS | Eén strategisch advies-document naast bestaande CLAUDE.md + MS is verwarrend — integratie maakt Roadmap overbodig | Owner |
+| 01-03 | WarreWijzer = destination_id 4 | Alicante behoudt destination_id 3, WarreWijzer krijgt 4 — voorkomt breaking changes in config | Strategic Advisory |
+| 01-03 | Fundament-eerst fasering (I-VI) als leidend | 6-fasen strategische roadmap: Foundation → Active Modules → Commerce → Intermediair → UX+WarreWijzer → Polish | Strategic Advisory |
+| 01-03 | Vlaams profiel (BENL) ≠ Nederlands (NL) | WarreWijzer vereist aparte Vlaams-Nederlandse taalversie — tone-of-voice, uitdrukkingen, spelling fundamenteel anders | Owner |
+| 01-03 | UX-Features Agenda 3 correcties | Kolom C→"Waarom werkt het", Kolom F→"Bron URL", Feature 2→"Kaart-clustering" | Owner |
 
 ---
 
@@ -1232,6 +1239,11 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | Individuele logging = meer audit_log entries | Laag | ✅ Geaccepteerd (11B) — 22 entries/cyclus (10+6+6) vs 3 wrapper entries, MongoDB groei acceptabel, monitoring via baselines |
 | Baseline 2σ threshold kalibratie | Laag | Open (11B) — Initiële baselines uit 14 entries, mogelijke herkalibratie na 4+ weken data |
 | npm audit 0 vulnerabilities | Laag | ✅ Gemitigeerd (11B) — `npm audit fix` (geen --force): 1C/4H/3M → 0C/0H/0M/0L, 2 dev-only moderate resterend |
+| WarreWijzer Vlaams vs NL taalversie | Middel | Open — Native Vlaams review nodig, apart BENL profiel vereist |
+| WarreWijzer data-kwaliteit (~300 POIs) | Middel | Open — POI Tier validatie in Fase V, 4.5+ rating filter |
+| Adyen compliance vertraging | Hoog | Open — Vroeg starten KYC-proces, administratief proces blokkeert geen development |
+| Intermediair juridisch complex | Hoog | Open — Juridisch advies nodig voor commissie/intermediairmodel vóór Fase IV |
+| UX redesign scope creep | Middel | Open — Wireframes eerst goedkeuren, progressive disclosure |
 
 ---
 
@@ -1245,7 +1257,7 @@ function getDestinationFromRequest(req) {
   const headerValue = req.headers['x-destination-id'];
   const numericId = parseInt(headerValue);
   if (!isNaN(numericId) && numericId > 0) return numericId;
-  const codeToId = { calpe: 1, texel: 2, alicante: 3 };
+  const codeToId = { calpe: 1, texel: 2, alicante: 3, warrewijzer: 4 };
   return codeToId[headerValue?.toLowerCase()] || 1;
 }
 
@@ -1286,10 +1298,251 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 
 ---
 
+## Deel 9: Strategische Roadmap
+
+> **Bron**: Strategic Roadmap Advisory v2.0 (28-02-2026), volledig geïntegreerd. Dat document is hiermee overbodig.
+
+### 9.1 Kernadvies: Fundament-Eerst Strategie
+
+Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voordat er modules op gebouwd worden. Met Fase 12 (27-02-2026) is dit fundament gerealiseerd: Agent Ecosysteem Niveau 7 (Zelflerend), Admin Portal 47 endpoints, 0 vulnerabilities, volledige RBAC. De focus verschuift nu naar commerce-modules en nieuwe bestemmingen.
+
+### 9.2 Aanbevolen Implementatievolgorde
+
+| # | Fase | Projecten | Duur | Prioriteit | Status |
+|---|------|-----------|------|------------|--------|
+| I | Foundation Hardening | Agents Audit, Processen, Platform Core | 4-6 wkn | KRITIEK | ✅ COMPLEET |
+| II | Active Module Upgrade | Chatbot, POI, Agenda, Customer Portal | 6-8 wkn | HOOG | VOLGENDE |
+| III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | GEPLAND |
+| IV | Intermediair & Revenue | Intermediair module + Agent | 6-8 wkn | HOOG | GEPLAND |
+| V | UX Revolution + WarreWijzer | Mobiele UX redesign, WarreWijzer uitrol | 6-10 wkn | MIDDEL | GEPLAND |
+| VI | Polish, Scale & Launch | E2E testing, load testing, DR, go-live | 3-4 wkn | MIDDEL | GEPLAND |
+
+### 9.3 Afhankelijkheden & Integratiekaart
+
+| Bron | → | Afhankelijk project | Type |
+|------|---|---------------------|------|
+| Agents v5.0 | → | Alle modules | Hard |
+| Platform Core | → | Alle modules | Hard |
+| Payment Engine | → | Ticketing, Reservering | Hard |
+| Ticketing + Reservering | → | Intermediair Module | Hard |
+| Alle modules gedefinieerd | → | Mobiele UX Redesign | Sterk |
+| Multi-dest framework valid | → | WarreWijzer uitrol | Sterk |
+| Chatbot upgrade | → | Intermediair (chat-to-book) | Medium |
+| POI module upgrade | → | Ticketing (POI-linked) | Medium |
+
+### 9.4 Per Module: Enterprise-Level Advies
+
+**Fase II — Active Module Upgrade:**
+- **Chatbot**: Contextueel bewust, proactieve suggesties (weer/tijd/locatie), chat-to-book, multi-turn memory, fallback menselijke hulp
+- **POI Module**: Content Freshness Score, A/B testing beschrijvingen, multi-modal (image captioning, TTS audio guides)
+- **Agenda**: Event scraping automatisering, push notificaties, agenda-sync (Outlook/Google/Apple)
+- **Customer Portal**: Bottom-tab navigatie (Explore/Agenda/Chat/Bookings/Profiel), onboarding 3-4 stappen, progressive disclosure
+
+**Fase III — Commerce Foundation:**
+- **Payment/Adyen**: PCI DSS compliance dag 1, Drop-in componenten, idempotency keys, testomgeving eerst, reconciliatie monitoring
+- **Ticketing**: Redis-based inventory locking, dynamische pricing, QR-code tickets, Apple Wallet/Google Pay, vouchers
+- **Reservering**: Tafel-gebaseerde beschikbaarheid, gastprofielen, borgbetalingen, allergieregistratie, no-show tracking
+
+**Fase IV — Intermediair Module:**
+- Commercieel hart van HolidaiButler. State machine (voorstel → toestemming → bevestiging → delen → reminder → review)
+- ACID-compliant financieel proces, juridische/fiscale compliance commissie-inhouding, QR-codes offline valideerbaar
+
+**Fase V — UX + WarreWijzer:**
+- Mobiele UX: benchmark Google Maps, TripAdvisor, GetYourGuide, Booking.com
+- UX-principes (platform-breed): Miller's Law, Jakob's Law, Proximity Principle, Hick's Law, Fitts' Law, WCAG, trust building
+- WarreWijzer: volledige uitrol per Deel 10
+
+### 9.5 State-of-the-Art Vervolgstappen
+
+Met het enterprise-fundament op orde zijn deze vervolgstappen nodig voor state-of-the-art niveau:
+
+**A. Predictive Intelligence Layer (Agent Niveau 8)**
+- De Weermeester → real-time predictive analytics met ML-modellen
+- Seizoensgebonden POI-aanbevelingen op basis van historische pageview- en chatbot-data
+- Recommendation Engine (gebruikersgedrag × weer × tijd × locatie)
+- Gedeactiveerde strategy-agents reactiveren met gereviseerde, bewezen nuttige taken
+
+**B. Autonomous Self-Healing & Observability**
+- Grafana/Prometheus stack voor real-time metrics (response times, error rates, throughput)
+- Self-healing: agents detecteren en herstellen automatisch foutpatronen
+- Distributed tracing (OpenTelemetry) end-to-end
+- Canary deployments met automatische rollback (2σ baselines al aanwezig)
+
+**C. Advanced Content Intelligence**
+- A/B testing framework POI-beschrijvingen (engagement meting)
+- Content Freshness Score: automatische detectie verouderde POI-info via scheduled scraping
+- Multi-modal content: image captioning, video thumbnail extractie, TTS audio guides
+- RAG 2.0: hybride search (keyword + semantic + geo) voor chatbot
+
+**D. Platform Resilience & Schaalbaarheid**
+- Load testing (k6/Artillery) 10.000 concurrent users
+- Database read replica voor analytics zonder productie-impact
+- CDN (Cloudflare/BunnyCDN) voor POI-images (huidige 12.4 GB single server)
+- Disaster recovery RTO < 4h, RPO < 1h (backups al dagelijks)
+- Redis Cluster high-availability (huidige single-node)
+
+**E. Regulatory & Compliance Excellence**
+- EU AI Act Transparency Dashboard (model versies, decision logs, bias monitoring)
+- GDPR DSAR automation (export binnen 24h, nu handmatig)
+- Content-Security-Policy headers alle domeinen
+- Jaarlijkse penetration test + vulnerability disclosure policy
+
+**F. Developer Experience & CI/CD Excellence**
+- Feature flags per destination
+- E2E test suite (Playwright/Cypress) alle kritieke user flows
+- Staging smoke tests per PR
+- API versioning (v1/v2) backward compatibility
+
+### 9.6 Tijdlijn & Budgetindicatie
+
+| Fase | Effort (uren) | Doorlooptijd | API kosten | Overig |
+|------|--------------|--------------|------------|--------|
+| I: Foundation Hardening | 80-120 | 4-6 weken | ~20-40 EUR | ✅ COMPLEET (EUR 74,41) |
+| II: Active Module Upgrade | 100-140 | 6-8 weken | ~30-50 EUR | — |
+| III: Commerce Foundation | 160-240 | 8-12 weken | ~10-20 EUR | Adyen setup |
+| IV: Intermediair Module | 120-160 | 6-8 weken | ~10-20 EUR | Juridisch advies |
+| V: UX + WarreWijzer | 120-180 | 6-10 weken | ~40-80 EUR | Design tools |
+| VI: Polish & Launch | 60-80 | 3-4 weken | ~20-30 EUR | Load testing |
+| **TOTAAL** | **640-920** | **33-48 weken** | **~130-240 EUR** | **+ externe kosten** |
+
+### 9.7 Directe Vervolgstappen
+
+1. **Start Fase II**: Active Module Upgrade — focus Chatbot upgrade en POI-module verbetering
+2. **UX-Features Agenda** (Deel 11) integreren in Fase II Customer Portal planning
+3. **Adyen account setup + KYC-proces** nu starten (administratief, blokkeert geen development)
+4. **Juridisch advies** commissie/intermediairmodel inwinnen vóór Fase IV
+5. **WarreWijzer POI Discovery** (Apify + OpenStreetMap) alvast parallel starten
+6. **State-of-the-art vervolgstappen** (9.5) geleidelijk integreren in reguliere fasen
+
+---
+
+## Deel 10: WarreWijzer Briefing
+
+> **Bron**: WarreWijzer_starting_points.docx (28-02-2026), volledig geïntegreerd.
+
+### 10.1 Concept & Positionering
+
+- **Type**: Recreatiedomein (NIET toeristische gemeente) — vereist aangepaste POI-categorisatie
+- **Website**: www.warrewijzer.be
+- **destination_id**: 4 (Alicante behoudt 3)
+- **Locatie**: Ketelstraat 77, 3680 Maaseik, België
+- **USPs**: Back to basic, slow living, reconnect to nature, offline, bewust
+
+### 10.2 Doelgroep
+
+- **Primair**: Gezinnen met kinderen (t/m 14 jaar), actieve senioren (55-75 jaar)
+- **Herkomst**: België, Zuid-Nederland, Duitse grensstreek
+- **Profiel**: Hoger opgeleid, 1.5-2.5× modaal inkomen
+- **Interesses**: Actief, natuur, cultuur, gastronomie
+
+### 10.3 Taalversies (5 talen)
+
+| Taal | Code | Chatbot-naam | Prioriteit |
+|------|------|-------------|------------|
+| Vlaams-Nederlands | BENL | Wijze Warre | Primair |
+| Nederlands | NL | Wijze Warre | Primair |
+| Frans | FR | Nader te bepalen | Secundair |
+| Duits | DE | Nader te bepalen | Secundair |
+| Engels | EN | WarreXplore | Tertiair |
+
+**LET OP**: Vlaams profiel ≠ Nederlands profiel. Verschillende tone-of-voice, uitdrukkingen, spelling (bv. "ge" vs "je"). Grootste doelgroep is Vlaanderen.
+
+### 10.4 Technische Architectuur
+
+**Omgevingen:**
+- Dev: dev.warrewijzer.be | Admin: admin.dev.warrewijzer.be
+- Test: test.warrewijzer.be | Admin: admin.test.warrewijzer.be
+- Main: www.warrewijzer.be | Admin: admin.warrewijzer.be
+
+**Database**: pxoziy_db1 op Hetzner, destination_id = 4
+**Tabellen**: POI, reviews, QnA, agenda, agenda_dates, admin_users, page_views, destinations
+**DNS**: Hetzner nameservers (hydrogen, oxygen, helium)
+**GitHub**: Dev/Test/Main branches conform multi-destinatie strategie
+
+### 10.5 POI-strategie
+
+- **Aantal**: circa 300 POIs
+- **Selectiecriteria**: Gemiddelde reviewscore 4.5+, aantal reviews, toeristische/thematische relevantie
+- **Actieradius**: circa 15 km + selectie unieke POIs binnen 25-30 km
+- **Categoriemix**: Actief (25%), Cultuur (25%), Gastronomie (20%), Natuur (30%)
+- **Maps-template**: Max 25 POIs initieel, dynamische aanpassing bij zoom/filter
+- **POI Tier 1-4**: Conform Calpe/Texel configuratie
+
+**Databronnen:**
+- Apify (compass/crawler-google-places) met directe image download naar Hetzner `/var/www/api.holidaibutler.com/storage/poi-images/`
+- OpenStreetMap (postcodegebied 3680)
+- Visit Maaseik (cultuur, wandelen, fietsen, musea, eten & drinken)
+- Wandelen in Limburg, TripAdvisor, AllTrails
+- Natuurgebieden: Tosch-Langeren, Wateringen, Rubensgoed, Bergerven
+- Golfbanen regio Maaseik
+
+### 10.6 Chatbot: Wijze Warre
+
+- **Configuratie**: Conform Calpe/Texel (timeOfDayTypes, POI-deduplicatie, SpellService Levenshtein fuzzy, anti-hallucinatie MistralAI)
+- **Quick Actions (4x)**: Programma samenstellen, tip van de dag, routebeschrijving, zoeken op rubriek
+- **Spraak**: Google Cloud TTS | Chirp3-HD (vrouw), GDPR/AI Act getoetst
+- **Q&A vectorisatie**: 50 per POI per taalversie in ChromaDB
+- **Tone-of-voice**: Vriendelijk, betrouwbaar, respectvol. Vlaams profiel als primaire doelgroep
+
+### 10.7 Agenda-bronnen
+
+- Visit Maaseik evenementen
+- Uit in Vlaanderen (Maaseik)
+- Wattedoen.be (Maaseik)
+- ALLEvents.in (Maaseik)
+- Cultuurcentrum Achterolmen
+- Mazine magazine
+- Bibliotheek Maaseik
+- Maaseik.be (plechtigheden, kermissen)
+- Cultuur Smakers Maaseik
+
+### 10.8 Security & Compliance
+
+Volledig conform Calpe/Texel: SSL/TLS, HTTPS, rate limiting (10 req/s + burst), DDoS bescherming, beveiligde DB verbindingen, CORS, request validatie, audit logging. 100% GDPR en EU AI Act compliant.
+
+### 10.9 Look & Feel
+
+Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile-first principe altijd leidend. Design thinking gecombineerd met evidence-based design.
+
+---
+
+## Deel 11: UX-Features Agenda
+
+> **Bron**: UX-features_design_agenda_HolidaiButler.xlsx + Strategic Roadmap Advisory v2.0 correcties.
+
+### 11.1 Correcties (v2.0)
+
+| Locatie | Was | Wordt | Reden |
+|---------|-----|-------|-------|
+| Kolom C titel | Waarom moet het er? | Waarom werkt het | Betere afspiegeling: beschrijft waarom een feature effectief is |
+| Kolom F titel | Demo URL | Bron URL | De kolom bevat referentie-/bronlinks, geen demo's |
+| Feature #2 naam | Kaart-visualisering | Kaart-clustering | Specificer: betreft clustering-functionaliteit |
+
+### 11.2 Top 10 Features (highlights)
+
+| # | Feature | Waarom werkt het | Proof-of-work | Status |
+|---|---------|------------------|---------------|--------|
+| 1 | Gepersonaliseerde zoekresultaten | Persoonlijke relevantie, hogere conversie | Airbnb, Google, GetYourGuide | Concept |
+| 2 | Kaart-clustering & kaart-fixed discovery | Ruimtelijk inzicht, snellere navigatie | Google Maps, Citymapper | Concept |
+| 3 | Smart/advanced Filters | Minder keuzestress, snellere resultaten | Airbnb, Booking, GetYourGuide | Concept |
+| 4 | Sticky CTA's/affiliate banners | Makkelijker mobiel gebruik | Booking.com, GetYourGuide | Concept |
+| 5 | Agenda-synchronisatie | Verlaagd frictie, grotere conversie | Triplt, Outlook, Fantastical | Concept |
+| 6 | Gedeelde/aanpasbare agenda's | Vermindert coördinatie-overhead | TimeTrees, Google Kalender | Concept |
+| 7 | Chatbot: Wijze Warre / Tessa / HoliBot | Persoonlijke 24/7 AI-gids per bestemming | MistralAI, ChromaDB RAG | Live |
+| 11 | Micro-interacties, motion, affordances | Snelle waardering, minder cognitieve belasting | Duolingo, Google Material | Concept |
+| 12 | Toegankelijkheid & multi-language | Bereik & wettelijke plicht, inclusie | Booking.com, WSC, Apple | Deels live |
+| 18 | Natural Language Input | Verlaagde drempel | Fantastical, Google Calendar | Deels live |
+
+> Volledige 25 features met alle kolommen: zie Excel-bronbestand UX-features_design_agenda_HolidaiButler.xlsx.
+
+---
+
 ## Document Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.14** | **01-03-2026** | **Strategic Roadmap Advisory v2.0 volledig geïntegreerd in CLAUDE.md (v3.48.0) + Master Strategie (v7.14). WarreWijzer als destination_id 4 toegevoegd. Nieuwe Delen: 9 (Strategische Roadmap 6 fasen, state-of-the-art A-F, afhankelijkheden, tijdlijn/budget), 10 (WarreWijzer briefing 9 subsecties), 11 (UX-Features Agenda met 3 correcties + Top 10). Openstaande Componenten uitgebreid (E2 WarreWijzer, I Gedeactiveerde agents). 6 Beslissingen Log entries, 5 Risico Register entries. Roadmap v2.0 document is hiermee overbodig.** |
+| **7.13** | **27-02-2026** | **Fase 12: Verificatie, Consolidatie & Enterprise Hardening COMPLEET. 7 blokken: (A) server verificatie 16/16, (B) MS v7.13 completeness audit (5 gaps gefixed), (C) CLAUDE.md versie fix, (D) AuditLog status sanitizer + QA→QnA + Reviews case fix, (E) 34/34 enterprise tests (trendHelper, agentIssues, baselineService, correlationService), (F) runtime metrics aggregatie, (G) documentatie + deploy. 7 bestanden gewijzigd, 1 nieuw. CLAUDE.md v3.47.0.** |
 | **7.12** | **27-02-2026** | **Fase 11B Agent Ecosysteem Enterprise Complete — Niveau 7 (Zelflerend) COMPLEET. 10 blokken: (A) npm audit fix 1C/4H/3M→0, (B) individuele actorName per reviewer in JOB_ACTOR_MAP, (C) De Bode escalatie dev_insights, (D) trendHelper.js week-over-week trending, (E) trending chips in admin resultaten tab, (F) agentIssues.js MongoDB CRUD + SLA tracking, (G) Admin Issues module 5 endpoints, (H) baselineService.js + anomaliedetectie 2σ, (I) correlationService.js cross-agent rapport, (J) deploy + documentatie. 22 bestanden (7 nieuw + 15 gewijzigd). adminPortal.js v3.11.0 (47 endpoints). 9 Lessons Learned, 8 Beslissingen Log entries, 3 Risico Register entries. CLAUDE.md v3.46.0.** |
 | **7.11** | **27-02-2026** | **Fase 11A Agent Ecosysteem Audit + Activering COMPLEET. (A) Ecosysteem audit: 18 agents, 40 BullMQ jobs, 18.320 MongoDB entries/30d (22.380 all-time), 7 agents met individuele logs + rest via wrapper actors (dev-layer, strategy-layer). (B) De Bewaker geactiveerd: npm audit scan, 1C/4H/3M/0L (16 total), dagelijks via dev-security-scan. (C) De Corrector geactiveerd: grep-based code scan, 182 files/61.622 lines/372 console.logs/10 TODOs, wekelijks via dev-quality-report. (D) De Stylist verrijkt: HTTPS TTFB+status+headers check op 4 domeinen, avg 42ms, wekelijks via dev-dependency-audit. AuditLog Mongoose enum fix: 'success'→'completed', 'error'→'failed' in alle 3 reviewer files. Workers.js: lightweight execute() i.p.v. heavy checkProject(). AGENT_METADATA: functionalityLevel 'minimal'→'active' voor 3 agents. 5 Lessons Learned, 6 Beslissingen Log, 2 Risico Register entries. CLAUDE.md v3.45.0.** |
 | **7.10** | **26-02-2026** | **Fase 10C Apache Hardening + Agent Eerlijkheid + Live Verificatie COMPLEET. (A) Apache security headers op 5 domeinen (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) + ServerTokens Prod + ServerSignature Off. texelmaps.nl sites-enabled symlink fix. (B) Live verificatie 10A: 10/10 PASS (summary cards, deactivated agents, results tab, calculateAgentStatus). (C) Aspirationele agents eerlijk gelabeld (Stylist/Corrector/Bewaker): description + tasks + output_description bijgewerkt naar actuele functionaliteit, functionalityLevel: minimal. Frank kiest: labelen, NIET deactiveren. (D) Sessions.user_id INT→VARCHAR(36): FK dropped, ALTER TABLE, login OK, 0 truncation errors. 5 Lessons Learned, 5 Beslissingen Log, 2 Risico Register entries. CLAUDE.md v3.44.0.** |
@@ -1326,5 +1579,5 @@ ssh root@91.98.71.87 "mysqldump --no-defaults -u pxoziy_1 -p'j8,DrtshJSm$' pxozi
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 27 februari 2026 - Fase 12 COMPLEET (Verificatie, Consolidatie & Enterprise Hardening), Master Document v7.13*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→12 COMPLEET. Admin Portal: 47 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC, Issues module. adminPortal.js v3.11.0. Agent Enterprise: individuele logging, trending, issues, anomaliedetectie, correlatie. CLAUDE.md v3.47.0.*
+*Laatst bijgewerkt: 1 maart 2026 - Strategic Roadmap v2.0 geïntegreerd, Master Document v7.14*
+*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→12 COMPLEET. Admin Portal: 47 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC, Issues module. adminPortal.js v3.11.0. Agent Enterprise: individuele logging, trending, issues, anomaliedetectie, correlatie. WarreWijzer briefing geïntegreerd (Deel 10). Strategische roadmap 6 fasen (Deel 9). UX-Features Agenda (Deel 11). CLAUDE.md v3.48.0.*
