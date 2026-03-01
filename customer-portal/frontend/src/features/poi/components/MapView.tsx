@@ -2,16 +2,19 @@
  * MapView - Interactive Leaflet Map for POI Display
  *
  * Features:
- * - Renders POIs as markers on interactive map
+ * - Renders POIs as clustered markers on interactive map (Fase II-B.3)
+ * - Leaflet.markercluster for automatic grouping at zoom levels
  * - Category-colored markers
  * - Click handler to open POI detail modal (via onMarkerClick callback)
  * - Integrates with search/filter params
  * - Multi-destination aware (uses DestinationContext for coordinates)
+ * - Dynamic loading: higher POI limits when clustering is active
  */
 
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import MarkerClusterGroup from './MarkerClusterGroup';
 import { useDestination } from '@/shared/contexts/DestinationContext';
 import { poiService } from '../services/poiService';
 import type { POISearchParams } from '../types/poi.types';
@@ -36,10 +39,11 @@ interface MapViewProps {
   height?: string;
   onMarkerClick?: (poiId: number) => void;
   perCategory?: number; // Limit POIs per category for cleaner display
-  disableAutoBounds?: boolean; // Keep map centered on Calpe instead of auto-fitting
+  disableAutoBounds?: boolean; // Keep map centered on destination instead of auto-fitting
   maxPOIs?: number; // Maximum total POIs to display
   minRating?: number; // Quality filter: minimum rating
   categories?: string[]; // Allowed categories (presentation categories)
+  enableClustering?: boolean; // Enable marker clustering (default: true)
 }
 
 interface POIFeature {
@@ -118,7 +122,8 @@ export function MapView({
   disableAutoBounds = true, // Default: keep centered on destination
   maxPOIs = 50, // Default: max 50 POIs for cleaner map
   minRating = 4, // Default: quality filter rating >= 4
-  categories // Allowed categories (presentation categories)
+  categories, // Allowed categories (presentation categories)
+  enableClustering = true, // Default: clustering enabled (Fase II-B.3)
 }: MapViewProps) {
   const [geoData, setGeoData] = useState<GeoJSONResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -133,6 +138,10 @@ export function MapView({
   // - Calpe is a compact city, zoom 14 is appropriate
   const DEFAULT_ZOOM = destination.id === 'texel' ? 10 : 14;
 
+  // When clustering is enabled, request more POIs (clustering handles density)
+  const effectiveMaxPOIs = enableClustering ? Math.max(maxPOIs, 200) : maxPOIs;
+  const effectivePerCategory = enableClustering ? 25 : perCategory;
+
   useEffect(() => {
     const fetchGeoJSON = async () => {
       setLoading(true);
@@ -142,8 +151,8 @@ export function MapView({
         // Build params with quality filters and limits
         const params: Record<string, any> = {
           ...searchParams,
-          per_category: perCategory,
-          limit: maxPOIs,
+          per_category: effectivePerCategory,
+          limit: effectiveMaxPOIs,
           min_rating: minRating
         };
 
@@ -176,7 +185,7 @@ export function MapView({
     };
 
     fetchGeoJSON();
-  }, [searchParams, perCategory, disableAutoBounds, maxPOIs, minRating, categories]);
+  }, [searchParams, effectivePerCategory, disableAutoBounds, effectiveMaxPOIs, minRating, categories]);
 
   const handleMarkerClick = (poiId: number) => {
     // Open POI detail modal (if callback provided)
@@ -209,6 +218,50 @@ export function MapView({
     );
   }
 
+  // Render markers (used inside both clustered and non-clustered modes)
+  const markers = geoData.features.map((feature: POIFeature) => {
+    const { coordinates } = feature.geometry;
+    const { id, name, category, rating, price_level } = feature.properties;
+    const color = getCategoryColor(category);
+    const markerIcon = createColoredIcon(color);
+
+    return (
+      <Marker
+        key={id}
+        position={[coordinates[1], coordinates[0]]} // [lat, lng]
+        icon={markerIcon}
+        eventHandlers={{
+          click: () => handleMarkerClick(id),
+        }}
+      >
+        <Popup>
+          <div className="poi-popup">
+            <h3 className="popup-title">{name}</h3>
+            <div className="popup-category">{category}</div>
+            {rating && (
+              <div className="popup-rating">
+                ⭐ {typeof rating === 'number' ? rating.toFixed(1) : parseFloat(String(rating)).toFixed(1)}
+              </div>
+            )}
+            {price_level && (
+              <div className="popup-price">
+                {'€'.repeat(price_level)}
+              </div>
+            )}
+            {onMarkerClick && (
+              <button
+                className="popup-button"
+                onClick={() => handleMarkerClick(id)}
+              >
+                View Details →
+              </button>
+            )}
+          </div>
+        </Popup>
+      </Marker>
+    );
+  });
+
   return (
     <div className="map-container" style={{ height }}>
       <MapContainer
@@ -224,48 +277,37 @@ export function MapView({
 
         <MapUpdater bounds={bounds} />
 
-        {geoData.features.map((feature: POIFeature) => {
-          const { coordinates } = feature.geometry;
-          const { id, name, category, rating, price_level } = feature.properties;
-          const color = getCategoryColor(category);
-          const icon = createColoredIcon(color);
-
-          return (
-            <Marker
-              key={id}
-              position={[coordinates[1], coordinates[0]]} // [lat, lng]
-              icon={icon}
-              eventHandlers={{
-                click: () => handleMarkerClick(id),
-              }}
-            >
-              <Popup>
-                <div className="poi-popup">
-                  <h3 className="popup-title">{name}</h3>
-                  <div className="popup-category">{category}</div>
-                  {rating && (
-                    <div className="popup-rating">
-                      ⭐ {typeof rating === 'number' ? rating.toFixed(1) : parseFloat(String(rating)).toFixed(1)}
-                    </div>
-                  )}
-                  {price_level && (
-                    <div className="popup-price">
-                      {'€'.repeat(price_level)}
-                    </div>
-                  )}
-                  {onMarkerClick && (
-                    <button
-                      className="popup-button"
-                      onClick={() => handleMarkerClick(id)}
-                    >
-                      View Details →
-                    </button>
-                  )}
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+        {enableClustering ? (
+          <MarkerClusterGroup
+            chunkedLoading
+            maxClusterRadius={60}
+            spiderfyOnMaxZoom
+            showCoverageOnHover={false}
+            zoomToBoundsOnClick
+            disableClusteringAtZoom={17}
+            iconCreateFunction={(cluster: L.MarkerCluster) => {
+              const count = cluster.getChildCount();
+              let size = 'small';
+              let diameter = 36;
+              if (count >= 50) {
+                size = 'large';
+                diameter = 52;
+              } else if (count >= 10) {
+                size = 'medium';
+                diameter = 44;
+              }
+              return L.divIcon({
+                html: `<div class="cluster-icon cluster-${size}"><span>${count}</span></div>`,
+                className: 'custom-cluster-icon',
+                iconSize: L.point(diameter, diameter),
+              });
+            }}
+          >
+            {markers}
+          </MarkerClusterGroup>
+        ) : (
+          markers
+        )}
       </MapContainer>
 
       <div className="map-info">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { usePOIs } from '../features/poi/hooks/usePOIs';
 import { poiService } from '../features/poi/services/poiService';
@@ -71,13 +71,23 @@ interface Category {
 
 export function POILandingPage() {
   const navigate = useNavigate();
+  const [urlParams, setUrlParams] = useSearchParams();
   const { t } = useLanguage();
   const destination = useDestination();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { isInComparison, toggleComparison, canAddMore, comparisonPOIs } = useComparison();
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Initialize state from URL parameters (persistent filter state - Fase II-B.3)
+  const [viewMode, setViewMode] = useState<ViewMode>(() =>
+    (urlParams.get('view') as ViewMode) || 'grid'
+  );
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
+    const cats = urlParams.get('categories');
+    return cats ? cats.split(',').filter(Boolean) : [];
+  });
+  const [searchQuery, setSearchQuery] = useState<string>(() =>
+    urlParams.get('q') || ''
+  );
   // Display control: how many POIs to show (virtualization renders only visible)
   const [loadedCount, setLoadedCount] = useState<number>(24);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
@@ -138,20 +148,57 @@ export function POILandingPage() {
   const autocompleteRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter modal state
+  // Filter modal state (initialized from URL params for persistence)
   const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
-  const [distance, setDistance] = useState<number>(25); // Default 25km = no filtering
-  const [minReviews, setMinReviews] = useState<number>(0);
-  const [minRating, setMinRating] = useState<number>(0);
-  const [priceLevel, setPriceLevel] = useState<number[]>([]);
-  const [openNow, setOpenNow] = useState<boolean>(false);
-  const [accessibility, setAccessibility] = useState<string[]>([]);
+  const [distance, setDistance] = useState<number>(() => {
+    const d = urlParams.get('distance');
+    return d ? Number(d) : 25;
+  });
+  const [minReviews, setMinReviews] = useState<number>(() => {
+    const r = urlParams.get('minReviews');
+    return r ? Number(r) : 0;
+  });
+  const [minRating, setMinRating] = useState<number>(() => {
+    const r = urlParams.get('rating');
+    return r ? Number(r) : 0;
+  });
+  const [priceLevel, setPriceLevel] = useState<number[]>(() => {
+    const p = urlParams.get('price');
+    return p ? p.split(',').map(Number).filter(n => !isNaN(n)) : [];
+  });
+  const [openNow, setOpenNow] = useState<boolean>(() =>
+    urlParams.get('openNow') === '1'
+  );
+  const [accessibility, setAccessibility] = useState<string[]>(() => {
+    const a = urlParams.get('access');
+    return a ? a.split(',').filter(Boolean) : [];
+  });
+
+  // Sync filter state to URL parameters (Fase II-B.3)
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (searchQuery) params.set('q', searchQuery);
+    if (selectedCategories.length > 0) params.set('categories', selectedCategories.join(','));
+    if (viewMode !== 'grid') params.set('view', viewMode);
+    if (openNow) params.set('openNow', '1');
+    if (minRating > 0) params.set('rating', String(minRating));
+    if (minReviews > 0) params.set('minReviews', String(minReviews));
+    if (priceLevel.length > 0) params.set('price', priceLevel.join(','));
+    if (distance < 25) params.set('distance', String(distance));
+    if (accessibility.length > 0) params.set('access', accessibility.join(','));
+
+    setUrlParams(params, { replace: true });
+  }, [searchQuery, selectedCategories, viewMode, openNow, minRating, minReviews, priceLevel, distance, accessibility]);
 
   // Get category name for backend (database expects "Active", "Food & Drinks", etc.)
   const getCategoryName = (categoryId: string): string => {
     const cat = categories.find((c) => c.id === categoryId);
     return cat?.name || categoryId;
   };
+
+  // Get selected category names for API (multi-select support - Fase II-B.3)
+  const selectedCategoryNames = selectedCategories.map(getCategoryName);
 
   // Fetch POIs with filters
   // Fetch more upfront - virtualization only renders visible items
@@ -160,11 +207,12 @@ export function POILandingPage() {
 
   const { data, isLoading, error } = usePOIs({
     q: searchQuery || undefined,
-    category: selectedCategory ? getCategoryName(selectedCategory) : undefined,
+    // Multi-select: send first category to API (client-side filters the rest)
+    category: selectedCategoryNames.length === 1 ? selectedCategoryNames[0] : undefined,
     limit: fetchLimit,
     // Use alphabetical sorting for default view to get varied ratings
     // (default popularity sort returns first 260 POIs all with 5.0 rating)
-    sort: (!searchQuery && !selectedCategory) ? 'name:asc' : undefined,
+    sort: (!searchQuery && selectedCategories.length === 0) ? 'name:asc' : undefined,
     // Apply filters from filter modal
     min_rating: minRating > 0 ? minRating : undefined,
     open_now: openNow || undefined,
@@ -195,8 +243,13 @@ export function POILandingPage() {
       const lowerName = poi.name.toLowerCase();
       if (accomKeywords.some(keyword => lowerName.includes(keyword))) return false;
 
+      // Multi-select category filter (Fase II-B.3)
+      if (selectedCategories.length > 1) {
+        if (!selectedCategoryNames.includes(poi.category)) return false;
+      }
+
       // DEFAULT BROWSE VIEW: Apply presentation category filter (no search, no category)
-      if (!searchQuery && !selectedCategory) {
+      if (!searchQuery && selectedCategories.length === 0) {
         // Only show presentation-worthy categories
         if (!presentationCategories.includes(poi.category)) {
           return false;
@@ -224,7 +277,7 @@ export function POILandingPage() {
       }
 
       // CATEGORY VIEW: Apply quality filters but allow category-specific browsing
-      if (selectedCategory && !searchQuery) {
+      if (selectedCategories.length > 0 && !searchQuery) {
         // Quality filters for category view
         if (!poi.rating || poi.rating < 4) return false;
         if (!poi.review_count || poi.review_count < 3) return false;
@@ -309,7 +362,7 @@ export function POILandingPage() {
     });
 
     // Apply category mix for DEFAULT BROWSE VIEW only (no search, no category selected)
-    if (!searchQuery && !selectedCategory && destination.id === 'texel') {
+    if (!searchQuery && selectedCategories.length === 0 && destination.id === 'texel') {
       // Category mix percentages as per spec
       const categoryMix: Record<string, number> = {
         'Actief': 0.20,
@@ -346,7 +399,7 @@ export function POILandingPage() {
 
     // Return all filtered POIs - loadedCount controls display
     return filtered;
-  }, [data?.data, searchQuery, selectedCategory, minReviews, distance, userLocation, accessibility, destination.categories.presentation, destination.id]);
+  }, [data?.data, searchQuery, selectedCategories, selectedCategoryNames, minReviews, distance, userLocation, accessibility, destination.categories.presentation, destination.id]);
 
   // Display only loadedCount items (virtualization renders only visible)
   const pois = useMemo(() => {
@@ -484,9 +537,17 @@ export function POILandingPage() {
     }, 50);
   };
 
-  // Category selection
+  // Category selection (multi-select with Fase II-B.3)
   const handleCategoryClick = (categoryId: string) => {
-    setSelectedCategory((prev) => (prev === categoryId ? '' : categoryId));
+    setSelectedCategories((prev) => {
+      if (prev.includes(categoryId)) {
+        // Deselect: remove from array
+        return prev.filter(c => c !== categoryId);
+      } else {
+        // Select: add to array
+        return [...prev, categoryId];
+      }
+    });
     setLoadedCount(24); // Reset display count when category changes
   };
 
@@ -564,6 +625,7 @@ export function POILandingPage() {
     setPriceLevel([]);
     setOpenNow(false);
     setAccessibility([]);
+    setSelectedCategories([]);
   };
 
   const applyFilters = () => {
@@ -649,7 +711,7 @@ export function POILandingPage() {
           {categories.map((category) => (
             <div
               key={category.id}
-              className={`category-chip ${selectedCategory === category.id ? 'active' : ''}`}
+              className={`category-chip ${selectedCategories.includes(category.id) ? 'active' : ''}`}
               style={{ background: category.color }}
               onClick={() => handleCategoryClick(category.id)}
             >
@@ -935,14 +997,15 @@ export function POILandingPage() {
           <MapView
             searchParams={{
               q: searchQuery || undefined,
-              category: selectedCategory ? getCategoryName(selectedCategory) : undefined,
+              category: selectedCategoryNames.length === 1 ? selectedCategoryNames[0] : undefined,
             }}
             height="600px"
             onMarkerClick={handlePOIClick}
             perCategory={7}
-            maxPOIs={50}
+            maxPOIs={200}
             minRating={4}
-            categories={destination.categories.presentation}
+            categories={selectedCategoryNames.length > 0 ? selectedCategoryNames : destination.categories.presentation}
+            enableClustering={true}
           />
         </div>
       )}

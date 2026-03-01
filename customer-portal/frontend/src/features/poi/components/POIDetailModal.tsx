@@ -306,6 +306,12 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
     setDescriptionExpanded(prev => !prev);
   };
 
+  // Check if POI has actionable contact info (for sticky CTA bar)
+  const hasDirections = !!(poi?.latitude && poi?.longitude);
+  const hasWebsite = !!poi?.website;
+  const hasPhone = !!poi?.phone;
+  const showStickyBar = poi && (hasDirections || hasWebsite || hasPhone);
+
   const modalContent = (
     <div
       className="poi-detail-modal-overlay"
@@ -652,6 +658,30 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
             </>
           )}
         </div>
+
+        {/* Sticky CTA Bar (Fase II-B.3) */}
+        {showStickyBar && (
+          <div className="poi-sticky-cta-bar">
+            {hasDirections && (
+              <button className="poi-sticky-cta poi-sticky-cta-primary" onClick={openDirections}>
+                <Navigation size={18} />
+                <span>{t.poi.directions || 'Directions'}</span>
+              </button>
+            )}
+            {hasWebsite && (
+              <button className="poi-sticky-cta poi-sticky-cta-secondary" onClick={() => window.open(poi.website, '_blank')}>
+                <ExternalLink size={18} />
+                <span>{t.poi.visitWebsite || 'Website'}</span>
+              </button>
+            )}
+            {hasPhone && (
+              <button className="poi-sticky-cta poi-sticky-cta-secondary" onClick={callPhone}>
+                <Phone size={18} />
+                <span>{t.poi.call || 'Call'}</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
