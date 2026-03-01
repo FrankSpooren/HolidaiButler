@@ -21,7 +21,8 @@
 10. [Fase 12: Verificatie, Consolidatie & Hardening](#fase-12--verificatie-consolidatie--hardening-27-02-2026)
 11. [Fase II Blok A: Chatbot Upgrade](#fase-ii-blok-a--chatbot-upgrade-28-02-2026)
 12. [LLM Content Generatie Details](#llm-content-generatie-details)
-13. [Volledige Changelog](#volledige-changelog)
+13. [Fase III Blok G+A: Commerce Foundation Start](#fase-iii-blok-ga--commerce-foundation-start-01-03-2026)
+14. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -1097,6 +1098,88 @@ Nieuwe shared component `Breadcrumbs.tsx` + `Breadcrumbs.css`:
 - **10 bestanden gewijzigd/nieuw**, 1 commit
 - **Key deliverables**: Dynamic SEO (OG tags per page), multi-language breadcrumbs (4 talen), WCAG skip-to-content, service worker (offline-capable PWA)
 - **Kosten**: EUR 0 (geen externe API calls)
+
+---
+
+## Fase III Blok G+A — Commerce Foundation Start (01-03-2026)
+
+### Blok G: Juridische Documentatie
+6 concept-templates gegenereerd in `docs/legal/`:
+- `juridisch-advies-checklist.md` — 7 core juridische vragen voor commerce
+- `concept-algemene-voorwaarden-nl.md` — Concept AV (NL)
+- `concept-verwerkersovereenkomst-nl.md` — Concept verwerkersovereenkomst
+- `concept-partner-agreement-nl.md` — Concept partner overeenkomst
+
+Adyen setup documentatie:
+- `docs/adyen-setup-checklist.md` — Stap-voor-stap Adyen configuratie
+- `docs/adyen-env-template.md` — Environment variabelen template
+
+### Blok A: Payment Engine / Adyen Integratie
+
+#### Database
+2 nieuwe tabellen via SSH SQL migratie:
+- `payment_transactions` — 22 kolommen incl. UUID, Adyen PSP reference, idempotency key, bedragen in centen, status lifecycle
+- `payment_refunds` — 15 kolommen incl. refund UUID, reason, admin user tracking
+- Backup: `/root/backups/pre_fase3_blokA_20260301_180119.sql` (114MB)
+
+#### Backend Services (ESM)
+| Bestand | Type | Beschrijving |
+|---------|------|--------------|
+| `platform-core/src/services/payment/adyenService.js` | NEW | Adyen SDK v30 wrapper (sessions, capture, refund, cancel, HMAC verify) |
+| `platform-core/src/services/payment/paymentService.js` | NEW | Business logic (5 core + 5 admin functies, DB queries) |
+| `platform-core/src/routes/payment.js` | NEW | 3 customer + 1 health endpoint |
+| `platform-core/src/index.js` | MOD | Payment routes mount, webhook raw body bypass |
+| `platform-core/src/routes/adminPortal.js` | MOD | v3.14.0, +5 admin payment endpoints |
+
+#### API Endpoints
+**Customer-facing (3):**
+- `POST /api/v1/payments/session` — Create Adyen payment session
+- `POST /api/v1/payments/webhook` — Adyen webhook handler (HMAC verified)
+- `GET /api/v1/payments/:uuid/status` — Transaction status lookup
+- `GET /api/v1/payments/health` — Adyen connection test
+
+**Admin (5):**
+- `GET /api/v1/admin-portal/payments` — List transactions (filtered by destination)
+- `GET /api/v1/admin-portal/payments/stats` — Payment statistics dashboard
+- `GET /api/v1/admin-portal/payments/reconciliation?date=YYYY-MM-DD` — Reconciliation report
+- `GET /api/v1/admin-portal/payments/:id` — Transaction detail + refunds
+- `POST /api/v1/admin-portal/payments/:id/refund` — Initiate refund
+
+#### Frontend
+| Bestand | Type | Beschrijving |
+|---------|------|--------------|
+| `customer-portal/frontend/src/pages/payment/PaymentPage.tsx` | NEW | Checkout page, mounts AdyenCheckoutComponent |
+| `customer-portal/frontend/src/pages/payment/PaymentResultPage.tsx` | NEW | Success/pending/failed result page |
+| `customer-portal/frontend/src/routes/router.tsx` | MOD | +2 routes: /checkout/:orderType/:orderId, /payment/result/:transactionUuid? |
+| `customer-portal/frontend/src/shared/config/apiConfig.ts` | MOD | Payment port 3005→3001 |
+| `customer-portal/frontend/src/shared/services/payment.api.ts` | MOD | AdyenSessionData interface, createPaymentSession(), getTransactionStatus() |
+| `customer-portal/frontend/src/lib/api/index.ts` | MOD | Payment URL→platform-core 3001 |
+
+#### Key Technische Details
+- **Adyen SDK v30**: CheckoutAPI met sub-API pattern (`checkout.PaymentsApi.sessions()`, `checkout.ModificationsApi.captureAuthorisedPayment()`)
+- **PCI DSS SAQ-A**: Adyen Drop-in iframe, geen kaartdata op onze servers
+- **HMAC webhook verificatie**: `crypto.createHmac('sha256', hmacKey hex)` + `timingSafeEqual()`
+- **Idempotency**: SHA256(order_type + order_id + timestamp) als key
+- **Merchant reference**: `HB-{dest_id}-{order_type}-{order_id}-{timestamp}`
+- **Single-port**: Alle commerce via platform-core (3001), NIET aparte microservices
+
+#### Bugs gefixed
+1. `SyntaxError: Named export 'CheckoutAPI' not found` — @adyen/api-library is CommonJS → `import pkg; const { Client, CheckoutAPI } = pkg;`
+2. `ERR_MODULE_NOT_FOUND` — @adyen/api-library niet in package.json → `npm install @adyen/api-library qrcode`
+3. `this.checkout.sessions is not a function` — SDK v30 gebruikt sub-API's → `checkout.PaymentsApi.sessions()`
+4. Admin payments empty voor platform_admin — `destScope null` fallback naar `1` → fixed naar `null` (alle destinations)
+
+#### Verificatie Resultaten
+- Health: `adyen: "connected"`, `environment: "TEST"`
+- Session: Adyen sessie succesvol (CS1868DF5A02941FDFC0C72A4)
+- DB: Transaction UUID correct opgeslagen, destination_id=2
+- Admin list: Platform admin ziet alle transacties
+- Admin stats: Statistieken correct
+- Admin detail: Transactie + refunds data
+- PM2: Stabiel, geen crashes
+
+**Commits**: `50d2c0a`, `db589ab`, `313646a`, `e901e81`, `f52d83c`
+**Deploy**: Hetzner (SCP + PM2 restart), alle branches (dev/test/main)
 
 ---
 

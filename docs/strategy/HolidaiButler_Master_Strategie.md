@@ -2,7 +2,7 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 28 februari 2026
-**Versie**: 7.18
+**Versie**: 7.19
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1321,7 +1321,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 |---|------|-----------|------|------------|--------|
 | I | Foundation Hardening | Agents Audit, Processen, Platform Core | 4-6 wkn | KRITIEK | ✅ COMPLEET |
 | II | Active Module Upgrade | Chatbot, POI, Agenda, Customer Portal | 6-8 wkn | HOOG | ✅ COMPLEET (Blok A+B+C+D) |
-| III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | GEPLAND |
+| III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | 🟢 IN PROGRESS (Blok G+A) |
 | IV | Intermediair & Revenue | Intermediair module + Agent | 6-8 wkn | HOOG | GEPLAND |
 | V | UX Revolution + WarreWijzer | Mobiele UX redesign, WarreWijzer uitrol | 6-10 wkn | MIDDEL | GEPLAND |
 | VI | Polish, Scale & Launch | E2E testing, load testing, DR, go-live | 3-4 wkn | MIDDEL | GEPLAND |
@@ -1348,9 +1348,13 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 - **Customer Portal**: ✅ Blok D COMPLEET — usePageMeta hook (dynamic document.title + OG tags per page), Breadcrumbs component (4 talen, 13 routes, currentLabel override), WCAG skip-to-content link, PWA service worker (cache-first static, network-first API, offline fallback navigation)
 
 **Fase III — Commerce Foundation:**
-- **Payment/Adyen**: PCI DSS compliance dag 1, Drop-in componenten, idempotency keys, testomgeving eerst, reconciliatie monitoring
-- **Ticketing**: Redis-based inventory locking, dynamische pricing, QR-code tickets, Apple Wallet/Google Pay, vouchers
-- **Reservering**: Tafel-gebaseerde beschikbaarheid, gastprofielen, borgbetalingen, allergieregistratie, no-show tracking
+- **Legal (Blok G)**: ✅ COMPLEET — 6 juridische concept-templates (AV, verwerkersovereenkomst, partner agreement), Adyen setup docs
+- **Payment/Adyen (Blok A)**: ✅ COMPLEET — Adyen SDK v30, Sessions flow, PCI DSS SAQ-A, 2 DB tabellen, 3 customer + 5 admin endpoints, HMAC webhook verificatie, frontend PaymentPage + PaymentResultPage
+- **Ticketing (Blok B)**: GEPLAND — Redis-based inventory locking, dynamische pricing, QR-code tickets, vouchers
+- **Reservering (Blok C)**: GEPLAND — Tafel-gebaseerde beschikbaarheid, gastprofielen, borgbetalingen, no-show tracking
+- **Chatbot-to-Book (Blok D)**: GEPLAND — Booking sub-intents, conversational flow
+- **Admin Commerce (Blok E)**: GEPLAND — Revenue dashboard, financial reporting, CSV export
+- **Testing/Compliance (Blok F)**: GEPLAND — PCI DSS docs, payment test matrix, GDPR checklist
 
 **Fase IV — Intermediair Module:**
 - Commercieel hart van HolidaiButler. State machine (voorstel → toestemming → bevestiging → delen → reminder → review)
