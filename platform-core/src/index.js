@@ -51,6 +51,7 @@ import consentRoutes from './routes/consent.js';
 import imageRefreshRoutes from './routes/imageRefresh.js';
 import imageResizeRoutes from './routes/imageResize.js';
 import adminPortalRoutes from './routes/adminPortal.js';
+import paymentRoutes from './routes/payment.js';
 import User from './models/User.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -142,7 +143,11 @@ app.use(compression({
   }
 }));
 
-app.use(express.json({ limit: '10mb' }));
+// Skip JSON parsing for payment webhook (needs raw body for HMAC verification)
+app.use((req, res, next) => {
+  if (req.path === '/api/v1/payments/webhook') return next();
+  express.json({ limit: '10mb' })(req, res, next);
+});
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(requestLogger);
 app.use(prometheusMiddleware()); // ENTERPRISE: Prometheus metrics collection
@@ -170,6 +175,7 @@ app.use('/api/consent', consentRoutes); // Legacy route (no v1)
 app.use('/api/admin/images/refresh', imageRefreshRoutes); // POI Image Refresh (Admin)
 app.use('/api/v1/img', imageResizeRoutes); // Image resize proxy (Fase II-B.4)
 app.use('/api/v1/admin-portal', adminPortalRoutes); // Admin Portal (Fase 8C-0)
+app.use('/api/v1/payments', paymentRoutes); // Payment Engine (Fase III-A)
 
 // Static file serving for branding assets (logo uploads)
 const brandingDir = process.env.NODE_ENV === 'production'

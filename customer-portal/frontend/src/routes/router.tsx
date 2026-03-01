@@ -23,6 +23,8 @@ const NotFoundPage = lazy(() => import('../pages/NotFoundPage').then(m => ({ def
 const TicketsPage = lazy(() => import('../pages/TicketsPage').then(m => ({ default: m.TicketsPage })));
 const ReservationsPage = lazy(() => import('../pages/ReservationsPage').then(m => ({ default: m.ReservationsPage })));
 const BookingFlow = lazy(() => import('../pages/BookingFlow'));
+const PaymentPage = lazy(() => import('../pages/payment/PaymentPage').then(m => ({ default: m.PaymentPage })));
+const PaymentResultPage = lazy(() => import('../pages/payment/PaymentResultPage').then(m => ({ default: m.PaymentResultPage })));
 
 // Static Pages - lazy loaded
 const AboutPage = lazy(() => import('../pages/static/AboutPage').then(m => ({ default: m.AboutPage })));
@@ -114,6 +116,16 @@ export const router = createBrowserRouter([
         // Booking Flow - Complete booking process
         path: '/booking',
         element: <LazyWrapper><BookingFlow /></LazyWrapper>,
+      },
+      {
+        // Payment Checkout (Fase III-A) — Adyen Drop-in
+        path: '/checkout/:orderType/:orderId',
+        element: <LazyWrapper><PaymentPage /></LazyWrapper>,
+      },
+      {
+        // Payment Result (Fase III-A) — Success/Pending/Failed
+        path: '/payment/result/:transactionUuid?',
+        element: <LazyWrapper><PaymentResultPage /></LazyWrapper>,
       },
       {
         // Account Dashboard (Protected Route)
