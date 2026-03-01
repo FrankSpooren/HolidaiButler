@@ -17,6 +17,7 @@ import { ComparisonBar } from '../shared/components/ComparisonBar';
 import { getDistanceFromUser, getUserLocation, type Coordinates } from '../shared/utils/distance';
 import { CATEGORIES_ARRAY, getCategoryIcon, getCategoryColor } from '../shared/config/categoryConfig';
 import { useDestination } from '../shared/contexts/DestinationContext';
+import { usePageMeta } from '../shared/hooks/usePageMeta';
 import './POILandingPage.css';
 
 // Hook to get responsive column count
@@ -74,6 +75,12 @@ export function POILandingPage() {
   const [urlParams, setUrlParams] = useSearchParams();
   const { t } = useLanguage();
   const destination = useDestination();
+
+  usePageMeta({
+    title: t.poi?.explorePlaces || 'Explore',
+    description: `Discover the best places and activities in ${destination.name}`,
+    path: '/pois',
+  });
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { isInComparison, toggleComparison, canAddMore, comparisonPOIs } = useComparison();
 

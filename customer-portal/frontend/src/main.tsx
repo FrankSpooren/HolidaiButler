@@ -34,4 +34,10 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
-// Rebuild trigger: 1769709246
+
+// Register Service Worker for PWA (Fase II-D.5)
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
