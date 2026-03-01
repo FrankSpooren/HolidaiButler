@@ -11,6 +11,7 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { getImageSrcSet, IMAGE_SIZES_ATTR, getResizedImageUrl, IMAGE_SIZES } from '../../../shared/utils/imageUrl';
 import './POITileCarousel.css';
 
 interface POITileCarouselProps {
@@ -143,10 +144,13 @@ export function POITileCarousel({
               </div>
             ) : (
               <img
-                src={displayImages[currentIndex]}
+                src={getResizedImageUrl(displayImages[currentIndex], IMAGE_SIZES.small)}
+                srcSet={getImageSrcSet(displayImages[currentIndex], [IMAGE_SIZES.thumbnail, IMAGE_SIZES.small, IMAGE_SIZES.medium])}
+                sizes={IMAGE_SIZES_ATTR.tile}
                 alt={`${poiName} - Image ${currentIndex + 1}`}
                 className="poi-tile-carousel-image"
                 loading="lazy"
+                decoding="async"
                 onError={() => handleImageError(currentIndex)}
                 draggable={false}
               />

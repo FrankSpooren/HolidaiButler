@@ -6,6 +6,7 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { Images } from "lucide-react";
+import { getImageSrcSet, IMAGE_SIZES_ATTR, getResizedImageUrl, IMAGE_SIZES } from "../../../shared/utils/imageUrl";
 import "./POIAirbnbGallery.css";
 
 interface POIAirbnbGalleryProps {
@@ -100,9 +101,12 @@ export function POIAirbnbGallery({
             onClick={() => onImageClick?.(idx)}
           >
             <img
-              src={img}
+              src={getResizedImageUrl(img, idx === 0 ? IMAGE_SIZES.large : IMAGE_SIZES.medium)}
+              srcSet={getImageSrcSet(img, [IMAGE_SIZES.small, IMAGE_SIZES.medium, IMAGE_SIZES.large])}
+              sizes={IMAGE_SIZES_ATTR.detail}
               alt={poiName + " - Photo " + (idx + 1)}
               loading={idx === 0 ? "eager" : "lazy"}
+              decoding="async"
               onError={() => handleImageError(realImages.indexOf(img))}
             />
           </div>
@@ -130,9 +134,12 @@ export function POIAirbnbGallery({
               onClick={() => onImageClick?.(mobileIndex)}
             >
               <img
-                src={displayImages[mobileIndex]}
+                src={getResizedImageUrl(displayImages[mobileIndex], IMAGE_SIZES.medium)}
+                srcSet={getImageSrcSet(displayImages[mobileIndex], [IMAGE_SIZES.small, IMAGE_SIZES.medium, IMAGE_SIZES.large])}
+                sizes="100vw"
                 alt={poiName}
                 loading="lazy"
+                decoding="async"
                 onError={() => handleImageError(realImages.indexOf(displayImages[mobileIndex]))}
                 draggable={false}
               />
