@@ -1,19 +1,19 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 1 maart 2026
-**Versie**: 7.14
+**Datum**: 28 februari 2026
+**Versie**: 7.15
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE 12 COMPLEET. Strategic Roadmap Advisory v2.0 geïntegreerd. WarreWijzer briefing opgenomen. 6-fasen strategische roadmap, state-of-the-art vervolgstappen, UX-Features Agenda correcties. CLAUDE.md v3.48.0. MS v7.14.
+**Status**: FASE II ACTIEF — Blok A (Chatbot Upgrade) COMPLEET. Contextueel bewustzijn, multi-turn memory, booking intent, human escalation. CLAUDE.md v3.49.0. MS v7.15.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.48.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.49.0) in repo root + Hetzner
 
 ---
 
@@ -72,6 +72,7 @@
 | **Fase 11A** | Agent Ecosysteem Audit + Activering (18 agents, 40 jobs, 18.320 entries/30d). 3 dev agents geactiveerd: De Bewaker (npm audit), De Corrector (code scan), De Stylist (TTFB+headers). AuditLog enum fix. | ✅ COMPLEET | 27-02-2026 | 3 agents geactiveerd | EUR 0 |
 | **Fase 11B** | Agent Ecosysteem Enterprise Complete — Niveau 7 (Zelflerend). 10 blokken: individuele logging, trending, escalatie, issues+SLA, Admin Issues module (5 endpoints), trending chips, baselines+anomaliedetectie (2σ), cross-agent correlatie. adminPortal.js v3.11.0 (47 endpoints). | ✅ COMPLEET | 27-02-2026 | 22 bestanden, 7 nieuw | EUR 0 |
 | **Fase 12** | Verificatie, Consolidatie & Enterprise Hardening. 7 blokken: A) server verificatie 16/16, B) MS v7.13 completeness (5 gaps), C) CLAUDE.md versie fix, D) AuditLog status sanitizer + QA→QnA + Reviews case fix, E) 34 enterprise tests (trendHelper, agentIssues, baselineService, correlationService), F) runtime metrics aggregatie, G) documentatie + deploy. | ✅ COMPLEET | 27-02-2026 | 7 bestanden gewijzigd, 1 nieuw | EUR 0 |
+| **Fase II-A** | Chatbot Upgrade — Contextueel bewustzijn (contextService.js), multi-turn memory (10 msg, follow-up NL/EN/DE/ES, ordinal refs), booking intent (6 talen), human escalation (destination-specifiek contact), ragService v2.5 | ✅ COMPLEET | 28-02-2026 | 5 bestanden, 4 tests PASS | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -108,6 +109,7 @@
 | Fase 10C Apache Hardening + Agent Eerlijkheid + Sessions Fix | EUR 0 | EUR 0 | ✅ |
 | Fase 11A Agent Ecosysteem Audit + Activering | EUR 0 | EUR 0 | ✅ |
 | Fase 11B Agent Ecosysteem Enterprise Complete | EUR 0 | EUR 0 | ✅ |
+| Fase II-A Chatbot Upgrade | EUR 0 | EUR 0 | ✅ |
 | **Totaal** | **EUR 95** | **EUR 74,41** | **78,3% van budget** |
 
 ### 1.3 Openstaande Componenten
@@ -1210,6 +1212,10 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 | 01-03 | Fundament-eerst fasering (I-VI) als leidend | 6-fasen strategische roadmap: Foundation → Active Modules → Commerce → Intermediair → UX+WarreWijzer → Polish | Strategic Advisory |
 | 01-03 | Vlaams profiel (BENL) ≠ Nederlands (NL) | WarreWijzer vereist aparte Vlaams-Nederlandse taalversie — tone-of-voice, uitdrukkingen, spelling fundamenteel anders | Owner |
 | 01-03 | UX-Features Agenda 3 correcties | Kolom C→"Waarom werkt het", Kolom F→"Bron URL", Feature 2→"Kaart-clustering" | Owner |
+| 28-02 | contextService.js als losse service (II-A) | Eigen service i.p.v. ragService vermenging — separation of concerns, testbaar, herbruikbaar voor WarreWijzer | Claude Code |
+| 28-02 | In-memory sessie tracking (II-A) | Map met TTL i.p.v. Redis/DB — GDPR-compliant (geen persistente persoonsdata), eenvoudig, voldoende voor huidige schaal | Claude Code |
+| 28-02 | 10-bericht sliding window (II-A) | Was 6, nu 10 — balans tussen context kwaliteit en token kosten. Summary injection (>10) uitgesteld (complexity vs value) | Claude Code |
+| 28-02 | Booking intent = friendly fallback (II-A) | Classificeren + loggen, NIET afhandelen — Fase III/IV voorbereiding. Gebruiker krijgt vriendelijke doorverwijzing | Claude Code |
 
 ---
 
@@ -1311,7 +1317,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 | # | Fase | Projecten | Duur | Prioriteit | Status |
 |---|------|-----------|------|------------|--------|
 | I | Foundation Hardening | Agents Audit, Processen, Platform Core | 4-6 wkn | KRITIEK | ✅ COMPLEET |
-| II | Active Module Upgrade | Chatbot, POI, Agenda, Customer Portal | 6-8 wkn | HOOG | VOLGENDE |
+| II | Active Module Upgrade | Chatbot, POI, Agenda, Customer Portal | 6-8 wkn | HOOG | 🔄 ACTIEF (Blok A ✅) |
 | III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | GEPLAND |
 | IV | Intermediair & Revenue | Intermediair module + Agent | 6-8 wkn | HOOG | GEPLAND |
 | V | UX Revolution + WarreWijzer | Mobiele UX redesign, WarreWijzer uitrol | 6-10 wkn | MIDDEL | GEPLAND |
@@ -1333,7 +1339,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 ### 9.4 Per Module: Enterprise-Level Advies
 
 **Fase II — Active Module Upgrade:**
-- **Chatbot**: Contextueel bewust, proactieve suggesties (weer/tijd/locatie), chat-to-book, multi-turn memory, fallback menselijke hulp
+- **Chatbot**: ✅ Blok A COMPLEET — contextService.js (temporeel/locatie/sessie), ragService v2.5 (10-msg window, follow-up NL/EN/DE/ES), 12 intents (booking + escalation), destination-specifieke contactinfo
 - **POI Module**: Content Freshness Score, A/B testing beschrijvingen, multi-modal (image captioning, TTS audio guides)
 - **Agenda**: Event scraping automatisering, push notificaties, agenda-sync (Outlook/Google/Apple)
 - **Customer Portal**: Bottom-tab navigatie (Explore/Agenda/Chat/Bookings/Profiel), onboarding 3-4 stappen, progressive disclosure
@@ -1541,7 +1547,8 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **7.14** | **01-03-2026** | **Strategic Roadmap Advisory v2.0 volledig geïntegreerd in CLAUDE.md (v3.48.0) + Master Strategie (v7.14). WarreWijzer als destination_id 4 toegevoegd. Nieuwe Delen: 9 (Strategische Roadmap 6 fasen, state-of-the-art A-F, afhankelijkheden, tijdlijn/budget), 10 (WarreWijzer briefing 9 subsecties), 11 (UX-Features Agenda met 3 correcties + Top 10). Openstaande Componenten uitgebreid (E2 WarreWijzer, I Gedeactiveerde agents). 6 Beslissingen Log entries, 5 Risico Register entries. Roadmap v2.0 document is hiermee overbodig.** |
+| **7.15** | **28-02-2026** | **Fase II Blok A: Chatbot Upgrade COMPLEET. contextService.js (temporeel/locatie/sessie bewustzijn), ragService v2.5 (10-msg window, follow-up detectie NL/EN/DE/ES, ordinal refs), intentService 12 intents (+booking 6 talen, +human_escalation 4 talen), holibot.js booking fallback + escalation interceptie. 5 bestanden, 4 test scenarios PASS. Fase II status: Blok A ✅, Blok B volgende. 4 Beslissingen Log entries. CLAUDE.md v3.49.0.** |
+| **7.14** | **01-03-2026** | **Strategic Roadmap Advisory v2.0 geïntegreerd. WarreWijzer destination_id 4. Nieuwe Delen 9/10/11. CLAUDE.md v3.48.0.** |
 | **7.13** | **27-02-2026** | **Fase 12: Verificatie, Consolidatie & Enterprise Hardening COMPLEET. 7 blokken: (A) server verificatie 16/16, (B) MS v7.13 completeness audit (5 gaps gefixed), (C) CLAUDE.md versie fix, (D) AuditLog status sanitizer + QA→QnA + Reviews case fix, (E) 34/34 enterprise tests (trendHelper, agentIssues, baselineService, correlationService), (F) runtime metrics aggregatie, (G) documentatie + deploy. 7 bestanden gewijzigd, 1 nieuw. CLAUDE.md v3.47.0.** |
 | **7.12** | **27-02-2026** | **Fase 11B Agent Ecosysteem Enterprise Complete — Niveau 7 (Zelflerend) COMPLEET. 10 blokken: (A) npm audit fix 1C/4H/3M→0, (B) individuele actorName per reviewer in JOB_ACTOR_MAP, (C) De Bode escalatie dev_insights, (D) trendHelper.js week-over-week trending, (E) trending chips in admin resultaten tab, (F) agentIssues.js MongoDB CRUD + SLA tracking, (G) Admin Issues module 5 endpoints, (H) baselineService.js + anomaliedetectie 2σ, (I) correlationService.js cross-agent rapport, (J) deploy + documentatie. 22 bestanden (7 nieuw + 15 gewijzigd). adminPortal.js v3.11.0 (47 endpoints). 9 Lessons Learned, 8 Beslissingen Log entries, 3 Risico Register entries. CLAUDE.md v3.46.0.** |
 | **7.11** | **27-02-2026** | **Fase 11A Agent Ecosysteem Audit + Activering COMPLEET. (A) Ecosysteem audit: 18 agents, 40 BullMQ jobs, 18.320 MongoDB entries/30d (22.380 all-time), 7 agents met individuele logs + rest via wrapper actors (dev-layer, strategy-layer). (B) De Bewaker geactiveerd: npm audit scan, 1C/4H/3M/0L (16 total), dagelijks via dev-security-scan. (C) De Corrector geactiveerd: grep-based code scan, 182 files/61.622 lines/372 console.logs/10 TODOs, wekelijks via dev-quality-report. (D) De Stylist verrijkt: HTTPS TTFB+status+headers check op 4 domeinen, avg 42ms, wekelijks via dev-dependency-audit. AuditLog Mongoose enum fix: 'success'→'completed', 'error'→'failed' in alle 3 reviewer files. Workers.js: lightweight execute() i.p.v. heavy checkProject(). AGENT_METADATA: functionalityLevel 'minimal'→'active' voor 3 agents. 5 Lessons Learned, 6 Beslissingen Log, 2 Risico Register entries. CLAUDE.md v3.45.0.** |
@@ -1579,5 +1586,5 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 1 maart 2026 - Strategic Roadmap v2.0 geïntegreerd, Master Document v7.14*
-*Content Repair Pipeline R1-R6d COMPLEET. Reviews Integratie COMPLEET. Fase 8A→12 COMPLEET. Admin Portal: 47 endpoints, 7 pagina's, 4 talen (NL/EN/DE/ES), dark mode, RBAC, Issues module. adminPortal.js v3.11.0. Agent Enterprise: individuele logging, trending, issues, anomaliedetectie, correlatie. WarreWijzer briefing geïntegreerd (Deel 10). Strategische roadmap 6 fasen (Deel 9). UX-Features Agenda (Deel 11). CLAUDE.md v3.48.0.*
+*Laatst bijgewerkt: 28 februari 2026 - Fase II Blok A Chatbot Upgrade COMPLEET, Master Document v7.15*
+*Fase I COMPLEET. Fase II ACTIEF: Blok A ✅ (Chatbot Upgrade). Admin Portal: 47 endpoints, adminPortal.js v3.11.0. Agent Enterprise Niveau 7. WarreWijzer (Deel 10). Strategische roadmap 6 fasen (Deel 9). CLAUDE.md v3.49.0.*

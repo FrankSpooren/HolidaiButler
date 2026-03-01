@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.48.0
-> **Laatst bijgewerkt**: 1 maart 2026
+> **Versie**: 3.49.0
+> **Laatst bijgewerkt**: 28 februari 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -49,9 +49,9 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.14 |
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.15 |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
-| **CLAUDE.md** | Repository root + Hetzner | 3.48.0 |
+| **CLAUDE.md** | Repository root + Hetzner | 3.49.0 |
 | **CLAUDE_HISTORY.md** | Repository root | 1.0.0 |
 
 > **CLAUDE_HISTORY.md** bevat volledige fase-resultaten, changelogs en bestandslijsten per fase. Raadpleeg dit bestand ALLEEN wanneer historische details nodig zijn.
@@ -165,8 +165,16 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | WarreWijzer | Wijze Warre | warrewijzer_pois | TBD (~15.000) | mistral-embed (1024d) |
 
 ### Key Files
-- Backend: `holibot.js`, `chromaService.js`, `embeddingService.js`, `ragService.js`, `conversationService.js`, `intentService.js`, `suggestionService.js`
+- Backend: `holibot.js`, `chromaService.js`, `embeddingService.js`, `ragService.js` (v2.5), `conversationService.js`, `intentService.js` (12 intents), `suggestionService.js`, `contextService.js` (Fase II-A)
 - Frontend: `vite.config.ts` (holibot config), `DestinationContext.tsx`, `WelcomeMessage.tsx`, `ChatHeader.tsx`, `ChatMessage.tsx`
+
+### Chatbot Capabilities (Fase II-A)
+- **Context awareness**: Temporeel (dag/datum/seizoen/weekend), locatie (per-destination), sessie (besproken POIs/categorieën)
+- **Multi-turn memory**: 10-bericht sliding window, follow-up detectie NL/EN/DE/ES, ordinal reference resolution
+- **Intent classificatie**: 12 intents incl. booking (6 talen) + human_escalation (4 talen)
+- **Booking intent**: Friendly fallback met doorverwijzing (Fase III/IV voorbereiding)
+- **Human escalation**: Destination-specifiek contact (Texel: info@texelmaps.nl, Calpe: info@holidaibutler.com)
+- **contextService.js**: In-memory sessie tracking (24h TTL), GDPR-compliant, geen persoonlijke data
 
 ### Taalregels
 | Destination | Regel |
@@ -227,6 +235,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | 11A | Agent Ecosysteem Audit + Activering | 27-02 | 3 agents geactiveerd |
 | 11B | Agent Ecosysteem Enterprise Complete | 27-02 | Niveau 7: logging, trending, issues, anomaliedetectie, correlatie |
 | 12 | Verificatie, Consolidatie & Hardening | 27-02 | 3 bug fixes, 34 tests, runtime metrics, MS v7.13 |
+| **II-A** | **Chatbot Upgrade (context, memory, booking, escalation)** | **28-02** | **contextService.js, ragService v2.5, 12 intents** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -349,7 +358,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | # | Fase | Status | Doorlooptijd |
 |---|------|--------|--------------|
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
-| II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | VOLGENDE | 6-8 wkn |
+| II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | 🔄 ACTIEF (Blok A ✅) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | GEPLAND | 8-12 wkn |
 | IV | Intermediair & Revenue (Intermediair module + Agent) | GEPLAND | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
@@ -459,11 +468,11 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.48.0** | **2026-03-01** | **Strategic Roadmap v2.0 integratie**: WarreWijzer destination_id 4 toegevoegd (warrewijzer.be, Wijze Warre chatbot, 5 talen BENL/NL/FR/DE/EN, ~300 POIs). Nieuwe sectie Strategische Roadmap (6 fasen, Fase I COMPLEET). State-of-the-art vervolgstappen A-F (Predictive Intelligence, Self-Healing, Content Intelligence, Platform Resilience, Regulatory Excellence, DevEx). Roadmap v2.0 document overbodig. MS v7.14. |
+| **3.49.0** | **2026-02-28** | **Fase II Blok A: Chatbot Upgrade COMPLEET**. contextService.js (temporeel/locatie/sessie context), ragService v2.5 (10-msg window, follow-up detectie NL/EN/DE/ES, ordinal refs), intentService +2 intents (booking 6 talen, human_escalation 4 talen), holibot.js booking/escalation interceptie. 5 bestanden, commit 09a373b. Fase II status: Blok A ✅, Blok B volgende. MS v7.15. |
+| 3.48.0 | 2026-03-01 | Strategic Roadmap v2.0 integratie: WarreWijzer destination_id 4, 6-fasen roadmap, state-of-the-art A-F. MS v7.14. |
 | 3.47.0 | 2026-02-27 | **Fase 12**: Verificatie, Consolidatie & Enterprise Hardening. Blok A: 16/16 server verificatie. Blok B: MS v7.13 (5 gaps gefixed). Blok C: CLAUDE.md v3.11.0 fix. Blok D: AuditLog status sanitizer + QA→QnA table fix + Reviews case fix. Blok E: 34/34 enterprise tests. Blok F: runtime metrics aggregatie. |
-| 3.46.0 | 2026-02-27 | Fase 11B: Agent Ecosysteem Enterprise Complete (Niveau 7). Individuele logging (B), trending week-over-week (D), De Bode escalatie (C), agent_issues MongoDB + SLA tracking (F), Admin Issues module 5 endpoints (G), trending chips resultaten tab (E), baselines + anomaliedetectie (H), cross-agent correlatie (I). adminPortal.js v3.11.0, 47 endpoints. MS v7.12. |
-| 3.45.0 | 2026-02-27 | Fase 11A: Agent ecosysteem audit (18 agents, 40 jobs), 3 dev agents geactiveerd. AuditLog status enum fix. MS v7.11. |
-| 3.44.0 | 2026-02-26 | Fase 10C: Apache security headers, live verificatie 10A, aspirationele agents labeling, Sessions.user_id fix. MS v7.10. |
+| 3.47.0 | 2026-02-27 | Fase 12: Verificatie, Consolidatie & Enterprise Hardening. 7 blokken, 34 tests, MS v7.13. |
+| 3.46.0 | 2026-02-27 | Fase 11B: Agent Ecosysteem Enterprise Complete (Niveau 7). adminPortal.js v3.11.0, 47 endpoints. MS v7.12. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -473,7 +482,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.14 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.15 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
