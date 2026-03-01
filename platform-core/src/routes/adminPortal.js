@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B (v3.12.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C (v3.13.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -5844,6 +5844,239 @@ router.put('/issues/:issueId/status', adminAuth('editor'), writeAccess(['platfor
     res.json({ success: true, data: issue });
   } catch (error) {
     logger.error('[AdminPortal] Issue status update error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================================
+// AGENDA MANAGEMENT (Fase II-C.5)
+// ============================================================================
+
+/**
+ * GET /agenda/events (Fase II-C.5)
+ * List agenda events for admin with filtering.
+ */
+router.get('/agenda/events', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search, dateRange, destination } = req.query;
+    const pageNum = parseInt(page);
+    const limitNum = Math.min(parseInt(limit), 200);
+    const offset = (pageNum - 1) * limitNum;
+
+    const conditions = ['1=1'];
+    const params = [];
+
+    // RBAC destination filter
+    if (destination) {
+      const destId = resolveDestinationId(destination);
+      if (destId) { conditions.push('a.destination_id = ?'); params.push(destId); }
+    } else if (req.destScope) {
+      conditions.push(`a.destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      params.push(...req.destScope);
+    }
+
+    // Date filter
+    if (dateRange === 'upcoming') {
+      conditions.push('EXISTS (SELECT 1 FROM agenda_dates d WHERE d.provider_event_hash = a.provider_event_hash AND d.event_date >= CURDATE())');
+    } else if (dateRange === 'past') {
+      conditions.push('NOT EXISTS (SELECT 1 FROM agenda_dates d WHERE d.provider_event_hash = a.provider_event_hash AND d.event_date >= CURDATE())');
+    }
+
+    // Search
+    if (search) {
+      conditions.push('(a.title LIKE ? OR a.title_en LIKE ? OR a.location_name LIKE ?)');
+      const s = `%${search}%`;
+      params.push(s, s, s);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    const [countResult] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total FROM agenda a WHERE ${whereClause}`,
+      { replacements: params, type: QueryTypes.SELECT }
+    );
+
+    const events = await mysqlSequelize.query(`
+      SELECT a.*,
+        (SELECT COUNT(*) FROM agenda_dates d WHERE d.provider_event_hash = a.provider_event_hash) as date_count,
+        (SELECT MIN(d2.event_date) FROM agenda_dates d2 WHERE d2.provider_event_hash = a.provider_event_hash AND d2.event_date >= CURDATE()) as next_date
+      FROM agenda a
+      WHERE ${whereClause}
+      ORDER BY a.updated_at DESC
+      LIMIT ? OFFSET ?
+    `, { replacements: [...params, limitNum, offset], type: QueryTypes.SELECT });
+
+    res.json({
+      success: true,
+      data: events.map(e => ({
+        id: e.id,
+        title: e.title,
+        title_en: e.title_en,
+        title_es: e.title_es,
+        location_name: e.location_name,
+        destination_id: e.destination_id,
+        image: e.image,
+        url: e.url,
+        date_count: e.date_count,
+        next_date: e.next_date,
+        created_at: e.created_at,
+        updated_at: e.updated_at
+      })),
+      pagination: { page: pageNum, limit: limitNum, total: countResult?.total || 0 }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Agenda list error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to list events' } });
+  }
+});
+
+/**
+ * GET /agenda/events/:id (Fase II-C.5)
+ * Get single event with all dates for admin editing.
+ */
+router.get('/agenda/events/:id', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const events = await mysqlSequelize.query(
+      'SELECT * FROM agenda WHERE id = ?',
+      { replacements: [req.params.id], type: QueryTypes.SELECT }
+    );
+    if (events.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Event not found' } });
+    }
+
+    const dates = await mysqlSequelize.query(
+      'SELECT * FROM agenda_dates WHERE provider_event_hash = ? ORDER BY event_date ASC',
+      { replacements: [events[0].provider_event_hash], type: QueryTypes.SELECT }
+    );
+
+    res.json({ success: true, data: { ...events[0], dates } });
+  } catch (error) {
+    logger.error('[AdminPortal] Agenda get error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /agenda/events/:id (Fase II-C.5)
+ * Update event fields (title, description, location, image, url).
+ */
+router.put('/agenda/events/:id', adminAuth('editor'), destinationScope, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const allowedFields = [
+      'title', 'title_en', 'title_es',
+      'short_description', 'short_description_en', 'short_description_es',
+      'long_description', 'long_description_en', 'long_description_es',
+      'location_name', 'location_address', 'location_lat', 'location_lon',
+      'image', 'url'
+    ];
+
+    const updates = [];
+    const params = [];
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates.push(`${field} = ?`);
+        params.push(req.body[field]);
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_INPUT', message: 'No valid fields to update' } });
+    }
+
+    // RBAC check
+    const [event] = await mysqlSequelize.query(
+      'SELECT destination_id FROM agenda WHERE id = ?',
+      { replacements: [eventId], type: QueryTypes.SELECT }
+    );
+    if (!event) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Event not found' } });
+    }
+    if (req.destScope && !req.destScope.includes(event.destination_id)) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Event not in your destination scope' } });
+    }
+
+    params.push(eventId);
+    await mysqlSequelize.query(
+      `UPDATE agenda SET ${updates.join(', ')} WHERE id = ?`,
+      { replacements: params }
+    );
+
+    logger.info(`[AdminPortal] Agenda event ${eventId} updated by ${req.adminUser?.email}`);
+    res.json({ success: true, data: { id: eventId, updated: updates.length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Agenda update error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /agenda/events/:id (Fase II-C.5)
+ * Delete event and its dates.
+ */
+router.delete('/agenda/events/:id', adminAuth('admin'), destinationScope, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+
+    const [event] = await mysqlSequelize.query(
+      'SELECT provider_event_hash, destination_id FROM agenda WHERE id = ?',
+      { replacements: [eventId], type: QueryTypes.SELECT }
+    );
+    if (!event) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Event not found' } });
+    }
+    if (req.destScope && !req.destScope.includes(event.destination_id)) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Event not in your destination scope' } });
+    }
+
+    // Delete dates first, then event
+    await mysqlSequelize.query(
+      'DELETE FROM agenda_dates WHERE provider_event_hash = ?',
+      { replacements: [event.provider_event_hash] }
+    );
+    await mysqlSequelize.query(
+      'DELETE FROM agenda WHERE id = ?',
+      { replacements: [eventId] }
+    );
+
+    logger.info(`[AdminPortal] Agenda event ${eventId} deleted by ${req.adminUser?.email}`);
+    res.json({ success: true, data: { id: eventId, deleted: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Agenda delete error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /agenda/stats (Fase II-C.5)
+ * Agenda statistics for admin dashboard.
+ */
+router.get('/agenda/stats', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const conditions = ['1=1'];
+    const params = [];
+    if (req.destScope) {
+      conditions.push(`a.destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      params.push(...req.destScope);
+    }
+    const where = conditions.join(' AND ');
+
+    const [stats] = await mysqlSequelize.query(`
+      SELECT
+        COUNT(DISTINCT a.id) as total_events,
+        SUM(CASE WHEN a.destination_id = 1 THEN 1 ELSE 0 END) as calpe_events,
+        SUM(CASE WHEN a.destination_id = 2 THEN 1 ELSE 0 END) as texel_events,
+        (SELECT COUNT(DISTINCT a2.id) FROM agenda a2
+         INNER JOIN agenda_dates d2 ON a2.provider_event_hash = d2.provider_event_hash
+         WHERE d2.event_date >= CURDATE() AND ${where.replace(/a\./g, 'a2.')}) as upcoming,
+        SUM(CASE WHEN a.image IS NOT NULL AND a.image != '' THEN 1 ELSE 0 END) as with_images
+      FROM agenda a
+      WHERE ${where}
+    `, { replacements: [...params, ...params], type: QueryTypes.SELECT });
+
+    res.json({ success: true, data: stats || {} });
+  } catch (error) {
+    logger.error('[AdminPortal] Agenda stats error:', error);
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
   }
 });
