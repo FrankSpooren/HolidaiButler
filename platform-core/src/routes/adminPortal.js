@@ -1854,7 +1854,7 @@ router.get('/agents/:key/results', adminAuth('reviewer'), async (req, res) => {
 router.get('/pois', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const {
-      destination, category, search, hasContent, isActive,
+      destination, category, search, hasContent, isActive, freshness,
       page = 1, limit = 25, sort = 'name', order = 'asc'
     } = req.query;
 
@@ -1902,13 +1902,18 @@ router.get('/pois', adminAuth('reviewer'), destinationScope, async (req, res) =>
     } else if (isActive === 'false') {
       where.push('p.is_active = 0');
     }
+    if (freshness && ['fresh', 'aging', 'stale', 'unverified'].includes(freshness)) {
+      where.push('p.content_freshness_status = ?');
+      params.push(freshness);
+    }
 
     const whereClause = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
 
     // Sort mapping
     const sortMap = {
       name: 'p.name', category: 'p.category', rating: 'p.rating',
-      updated: 'p.last_updated', destination: 'p.destination_id'
+      updated: 'p.last_updated', destination: 'p.destination_id',
+      freshness: 'p.content_freshness_score'
     };
     const sortCol = sortMap[sort] || 'p.name';
     const sortDir = order === 'desc' ? 'DESC' : 'ASC';
@@ -1924,6 +1929,7 @@ router.get('/pois', adminAuth('reviewer'), destinationScope, async (req, res) =>
     const pois = await mysqlSequelize.query(
       `SELECT p.id, p.name, p.destination_id, p.category, p.subcategory,
               p.is_active, p.rating, p.last_updated,
+              p.content_freshness_score, p.content_freshness_status,
               p.enriched_detail_description,
               p.enriched_detail_description_nl,
               p.enriched_detail_description_de,
@@ -1956,6 +1962,10 @@ router.get('/pois', adminAuth('reviewer'), destinationScope, async (req, res) =>
       imageCount: parseInt(p.imageCount) || 0,
       reviewCount: parseInt(p.reviewCount) || 0,
       avgRating: p.avgRating ? parseFloat(p.avgRating) : null,
+      freshness: {
+        score: p.content_freshness_score != null ? parseInt(p.content_freshness_score) : null,
+        status: p.content_freshness_status || 'unverified'
+      },
       last_updated: p.last_updated
     }));
 
@@ -2233,7 +2243,38 @@ router.get('/pois/stats', adminAuth('reviewer'), destinationScope, async (req, r
           totalReviews: parseInt(revStats[0]?.totalReviews || 0),
           poisWithReviews: parseInt(revStats[0]?.poisWithReviews || 0),
           avgRating: revStats[0]?.avgRating ? parseFloat(revStats[0].avgRating) : null
-        }
+        },
+        freshness: await (async () => {
+          try {
+            const fWhere = ['is_active = 1'];
+            const fParams = [];
+            if (req.poiScope) {
+              fWhere.push(`id IN (${req.poiScope.map(() => '?').join(',')})`);
+              fParams.push(...req.poiScope);
+            } else if (req.destScope) {
+              fWhere.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+              fParams.push(...req.destScope);
+            }
+            if (destId) { fWhere.push('destination_id = ?'); fParams.push(destId); }
+            const fRows = await mysqlSequelize.query(
+              `SELECT content_freshness_status as status, COUNT(*) as cnt,
+                      ROUND(AVG(content_freshness_score), 1) as avg_score
+               FROM POI WHERE ${fWhere.join(' AND ')}
+               GROUP BY content_freshness_status
+               ORDER BY FIELD(content_freshness_status, 'fresh', 'aging', 'stale', 'unverified')`,
+              { replacements: fParams, type: QueryTypes.SELECT }
+            );
+            const f = { fresh: 0, aging: 0, stale: 0, unverified: 0, avgScore: 0 };
+            let totalScore = 0, totalCount = 0;
+            for (const r of fRows) {
+              f[r.status] = parseInt(r.cnt);
+              totalScore += parseFloat(r.avg_score || 0) * parseInt(r.cnt);
+              totalCount += parseInt(r.cnt);
+            }
+            f.avgScore = totalCount > 0 ? Math.round(totalScore / totalCount * 10) / 10 : 0;
+            return f;
+          } catch { return null; }
+        })()
       }
     };
 
@@ -2247,6 +2288,109 @@ router.get('/pois/stats', adminAuth('reviewer'), destinationScope, async (req, r
     res.status(500).json({
       success: false,
       error: { code: 'SERVER_ERROR', message: 'An error occurred fetching POI stats' }
+    });
+  }
+});
+
+/**
+ * GET /pois/freshness
+ * Content freshness dashboard — per-destination breakdown.
+ * Fase II Blok B.
+ */
+router.get('/pois/freshness', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const { destination } = req.query;
+    const destId = resolveDestinationId(destination);
+
+    const where = ['is_active = 1'];
+    const params = [];
+    if (req.poiScope) {
+      where.push(`id IN (${req.poiScope.map(() => '?').join(',')})`);
+      params.push(...req.poiScope);
+    } else if (req.destScope) {
+      where.push(`destination_id IN (${req.destScope.map(() => '?').join(',')})`);
+      params.push(...req.destScope);
+    }
+    if (destId) { where.push('destination_id = ?'); params.push(destId); }
+
+    const rows = await mysqlSequelize.query(
+      `SELECT destination_id, content_freshness_status as status,
+              COUNT(*) as count, ROUND(AVG(content_freshness_score), 1) as avg_score,
+              MIN(content_freshness_score) as min_score, MAX(content_freshness_score) as max_score
+       FROM POI WHERE ${where.join(' AND ')}
+       GROUP BY destination_id, content_freshness_status
+       ORDER BY destination_id, FIELD(content_freshness_status, 'fresh', 'aging', 'stale', 'unverified')`,
+      { replacements: params, type: QueryTypes.SELECT }
+    );
+
+    const byDestination = {};
+    for (const r of rows) {
+      const dest = r.destination_id === 1 ? 'calpe' : r.destination_id === 2 ? 'texel' : `dest_${r.destination_id}`;
+      if (!byDestination[dest]) byDestination[dest] = { fresh: 0, aging: 0, stale: 0, unverified: 0, total: 0, avgScore: 0 };
+      byDestination[dest][r.status] = parseInt(r.count);
+      byDestination[dest].total += parseInt(r.count);
+    }
+
+    // Calculate avg score per destination
+    for (const dest of Object.keys(byDestination)) {
+      const destIdNum = dest === 'calpe' ? 1 : dest === 'texel' ? 2 : null;
+      if (destIdNum) {
+        const avg = await mysqlSequelize.query(
+          `SELECT ROUND(AVG(content_freshness_score), 1) as avg FROM POI
+           WHERE destination_id = ? AND is_active = 1 AND content_freshness_score IS NOT NULL`,
+          { replacements: [destIdNum], type: QueryTypes.SELECT }
+        );
+        byDestination[dest].avgScore = avg[0]?.avg ? parseFloat(avg[0].avg) : 0;
+      }
+    }
+
+    // Top stale POIs (for quick action)
+    const staleWhere = [...where, "content_freshness_status IN ('stale', 'unverified')"];
+    const stalePois = await mysqlSequelize.query(
+      `SELECT id, name, destination_id, category, content_freshness_score, content_freshness_status, last_updated
+       FROM POI WHERE ${staleWhere.join(' AND ')}
+       ORDER BY content_freshness_score ASC LIMIT 20`,
+      { replacements: params, type: QueryTypes.SELECT }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        byDestination,
+        stalePois: stalePois.map(p => ({
+          id: p.id, name: p.name,
+          destination: p.destination_id === 1 ? 'Calpe' : 'Texel',
+          category: p.category,
+          score: p.content_freshness_score,
+          status: p.content_freshness_status,
+          lastUpdated: p.last_updated
+        }))
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Freshness dashboard error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching freshness data' }
+    });
+  }
+});
+
+/**
+ * POST /pois/freshness/recalculate
+ * Recalculate freshness scores for all active POIs. Admin only.
+ * Fase II Blok B.
+ */
+router.post('/pois/freshness/recalculate', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const { recalculateAll } = await import('../services/agents/dataSync/freshnessService.js');
+    const results = await recalculateAll();
+    res.json({ success: true, data: { message: 'Freshness scores recalculated', results } });
+  } catch (error) {
+    logger.error('[AdminPortal] Freshness recalculate error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'An error occurred recalculating freshness' }
     });
   }
 });

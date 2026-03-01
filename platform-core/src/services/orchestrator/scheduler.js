@@ -100,6 +100,13 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: content-quality-audit (Monday 05:00)');
 
+  // Content Freshness Check - weekly Wednesday at 05:30 (Fase II Blok B)
+  await scheduledQueue.add('content-freshness-check', { type: 'content-freshness' }, {
+    repeat: { cron: '30 5 * * 3', tz: 'Europe/Amsterdam' },
+    jobId: 'content-freshness-check-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-freshness-check (Wednesday 05:30)');
+
   // Backup Recency Check - daily at 07:30 (before daily briefing)
   await scheduledQueue.add('backup-recency-check', { type: 'backup-health' }, {
     repeat: { cron: '30 7 * * *', tz: 'Europe/Amsterdam' },

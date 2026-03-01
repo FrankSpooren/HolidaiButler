@@ -185,6 +185,65 @@
   border-radius: 4px;
 }
 
+/* Cluster Styles (Fase II-B.3) */
+.custom-cluster-icon {
+  background: transparent;
+  border: none;
+}
+
+.cluster-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: white;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.cluster-icon:hover {
+  transform: scale(1.1);
+}
+
+.cluster-small {
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+  background: linear-gradient(135deg, #30c59b, #28a884);
+  border: 3px solid white;
+}
+
+.cluster-medium {
+  width: 44px;
+  height: 44px;
+  font-size: 14px;
+  background: linear-gradient(135deg, #F7931E, #e6850f);
+  border: 3px solid white;
+}
+
+.cluster-large {
+  width: 52px;
+  height: 52px;
+  font-size: 16px;
+  background: linear-gradient(135deg, #FF6B35, #e55a28);
+  border: 3px solid white;
+}
+
+/* Override default markercluster styles */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background: transparent !important;
+}
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background: transparent !important;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .map-info {

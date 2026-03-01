@@ -517,6 +517,22 @@ export function startWorkers() {
           }
           break;
 
+        case "content-freshness-check":
+          try {
+            const freshnessService = await import("../agents/dataSync/freshnessService.js");
+            const calpeResult = await freshnessService.runFreshnessCheck(1);
+            const texelResult = await freshnessService.runFreshnessCheck(2);
+            console.log("[Orchestrator] Content freshness check:", JSON.stringify({
+              calpe: `${calpeResult.stats?.fresh || 0} fresh, ${calpeResult.stats?.stale || 0} stale`,
+              texel: `${texelResult.stats?.fresh || 0} fresh, ${texelResult.stats?.stale || 0} stale`
+            }));
+            result = { calpe: calpeResult, texel: texelResult };
+          } catch (error) {
+            console.error("[Orchestrator] Content freshness check failed:", error.message);
+            throw error;
+          }
+          break;
+
         case "backup-recency-check":
           try {
             const backupChecker = await import("../agents/healthMonitor/backupHealthChecker.js");
@@ -628,6 +644,7 @@ export function startWorkers() {
         'smoke-test': 'health-monitor',
         'backup-recency-check': 'health-monitor',
         'content-quality-audit': 'data-sync',
+        'content-freshness-check': 'data-sync',
         'chromadb-state-snapshot': 'holibot-sync',
         'agent-success-rate': 'strategy-layer',
         'gdpr-consent-audit': 'gdpr',
