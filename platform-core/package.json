@@ -21,6 +21,7 @@
   "author": "HolidaiButler",
   "license": "MIT",
   "dependencies": {
+    "@adyen/api-library": "^30.1.0",
     "@chroma-core/default-embed": "^0.1.9",
     "@google-cloud/text-to-speech": "^5.5.0",
     "@mailerlite/mailerlite-nodejs": "^1.2.0",
@@ -52,6 +53,7 @@
     "openai": "^4.77.0",
     "ping": "^0.4.4",
     "prom-client": "^15.1.0",
+    "qrcode": "^1.5.4",
     "rate-limit-redis": "^4.2.0",
     "redis": "^4.6.11",
     "sanitize-html": "^2.11.0",
