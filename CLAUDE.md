@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.56.0
+> **Versie**: 3.57.0
 > **Laatst bijgewerkt**: 2 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -31,6 +31,7 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 4. **Context Verificatie**: CLAUDE.md + Master Strategie lezen, actuele status verifiëren in codebase, geen aannames.
 5. **Geen Workarounds**: Problemen oplossen bij de root cause.
 6. **Staging-First Workflow**: Content wijzigingen eerst naar `poi_content_staging`, review door Frank, dan pas naar POI tabel.
+7. **Versie-Sync Controle**: Na elke fase/blok controleer: CLAUDE.md header versie, MS header versie + datum + status, Gerelateerde Documentatie versies, Admin Portal versie + endpoint count, BullMQ/Scheduled Jobs getal, MS Roadmap tabel + Fase detail + Changelog + Footer.
 
 ---
 
@@ -47,13 +48,14 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 
 ## 📋 Strategische Documentatie
 
-| Document | Locatie | Versie |
-|----------|---------|--------|
-| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.21 |
-| **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
-| **CLAUDE.md** | Repository root + Hetzner | 3.56.0 |
-| **CLAUDE_HISTORY.md** | Repository root | 1.0.0 |
+| Document | Locatie |
+|----------|---------|
+| **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` |
+| **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` |
+| **CLAUDE.md** | Repository root + Hetzner |
+| **CLAUDE_HISTORY.md** | Repository root |
 
+> Actuele versienummers: zie **Gerelateerde Documentatie** (onderaan dit document).
 > **CLAUDE_HISTORY.md** bevat volledige fase-resultaten, changelogs en bestandslijsten per fase. Raadpleeg dit bestand ALLEEN wanneer historische details nodig zijn.
 > **Strategic Roadmap Advisory v2.0** (28-02-2026) is volledig geïntegreerd in CLAUDE.md en Master Strategie. Dat document hoeft niet meer geraadpleegd te worden.
 
@@ -77,11 +79,12 @@ HolidaiButler/
 │   └── src/ (api, components, hooks, pages, stores, i18n, utils)
 ├── platform-core/               # Node.js/Express backend
 │   └── src/
-│       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.16.0)
+│       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.17.0)
 │       ├── services/
 │       │   ├── holibot/         # HoliBot 2.0 (RAG Chatbot)
 │       │   ├── ticketing/       # Ticketing Module (inventoryService.js, ticketingService.js)
 │       │   ├── reservation/     # Reservation Module (reservationService.js)
+│       │   ├── commerce/        # Commerce Dashboard aggregation (commerceService.js)
 │       │   ├── orchestrator/    # BullMQ scheduler, workers, costController, auditTrail, ownerInterface
 │       │   └── agents/          # 18 agents (base/, healthMonitor/, dataSync/, holibotSync/, etc.)
 │       ├── middleware/ (auth.js met RBAC, rate limiting, IP whitelist)
@@ -253,6 +256,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **III-B** | **Ticketing Module (Inventory, Orders, QR, Vouchers)** | **01-03** | **5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking, QR HMAC, BullMQ expired reservation job** |
 | **III-C** | **Reservation Module (Slots, Bookings, QR, Guests, GDPR)** | **01-03** | **3 DB tabellen + ALTER TABLE POI, 4 customer + 13 admin endpoints, Redis slot locking, QR HMAC, auto-blacklist, 4 BullMQ jobs, GDPR guest cleanup** |
 | **III-D** | **Chatbot-to-Book Voorbereiding** | **02-03** | **4 booking sub-intents (5 talen), conversational booking flow, booking context tracking, 7 feature flags, ragService v2.6, holibot v3.0, bookingMessages.js + bookingParser.js** |
+| **III-E** | **Admin Commerce Dashboard** | **02-03** | **commerceService.js (READ-ONLY aggregation), 10 admin API endpoints (99 totaal), CommercePage.jsx (4 tabs: Dashboard/Reports/Alerts/Export), Recharts grafieken, CSV export met BOM, 6 fraud alert types, i18n 4 talen, RBAC platform_admin+poi_owner** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -306,10 +310,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.16.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.17.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 89 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest endpoints)
+- **Endpoints**: 99 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce endpoints)
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -376,7 +380,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 |---|------|--------|--------------|
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
-| III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | 🟢 IN PROGRESS (Blok G+A+B+C+D COMPLEET) | 8-12 wkn |
+| III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | 🟢 IN PROGRESS (Blok G+A+B+C+D+E COMPLEET) | 8-12 wkn |
 | IV | Intermediair & Revenue (Intermediair module + Agent) | GEPLAND | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
 | VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
@@ -485,12 +489,10 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.56.0** | **2026-03-02** | **Fase III Blok D: Chatbot-to-Book Voorbereiding COMPLEET**. 4 booking sub-intents (booking_ticket, booking_reservation, booking_activity, booking_status) in 5 talen (NL/EN/DE/ES/FR). Conversational booking flow in ragService v2.6. Booking context tracking in contextService v1.1 (15 min timeout, GDPR). 7 commerce feature flags per destination (alle false). bookingMessages.js (meertalige templates) + bookingParser.js (NL date/time/number parsing). holibot.js v3.0 routing integratie. 12/12 E2E tests PASS. 89 admin endpoints, 46 scheduled jobs. |
-| 3.55.0 | 2026-03-01 | Fase III Blok C: Reservation Module COMPLEET. 3 DB tabellen (reservation_slots, guest_profiles, reservations) + ALTER TABLE POI (has_reservations). 4 customer endpoints (browse slots, create reservation, get details, cancel). 13 admin endpoints (CRUD reservations/slots/guests, no-show, complete, blacklist, stats, calendar). Redis slot locking met MySQL FOR UPDATE. QR HMAC-SHA256 (HB-R: prefix). Auto-blacklist (3 no-shows). 4 BullMQ jobs (expired cleanup, 24h+1h reminders, GDPR guest cleanup). GDPR data retention 24 months. 89 admin endpoints, 46 scheduled jobs. |
-| 3.54.0 | 2026-03-01 | Fase III Blok B: Ticketing Module COMPLEET. 5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking, QR HMAC, BullMQ expired reservation job. 76 admin endpoints, 42 scheduled jobs. |
-| 3.53.0 | 2026-03-01 | Fase III Blok G+A: Legal docs + Payment Engine COMPLEET. |
-| 3.52.0 | 2026-03-01 | Fase II Blok D: Customer Portal UX Upgrade COMPLEET. Fase II volledig COMPLEET. |
-| 3.51.0 | 2026-03-01 | Fase II Blok C: Agenda Module Upgrade COMPLEET. 56 endpoints. |
+| **3.57.0** | **2026-03-02** | **Fase III Blok E: Admin Commerce Dashboard COMPLEET**. commerceService.js (READ-ONLY aggregatie over payment, ticketing, reservation tabellen). 10 nieuwe admin endpoints (99 totaal): dashboard, daily/weekly/monthly reports, reconciliation, 3 CSV exports, alerts (6 fraud types), top POIs. CommercePage.jsx (4 tabs: Dashboard KPIs + Recharts, Reports + reconciliatie, Alerts, Export CSV). currencyFormat.js utility. i18n 4 talen (~50 keys). RBAC: platform_admin + poi_owner. adminPortal.js v3.17.0. |
+| 3.56.0 | 2026-03-02 | Fase III Blok D: Chatbot-to-Book Voorbereiding COMPLEET. 4 booking sub-intents, ragService v2.6, 7 feature flags, bookingMessages.js + bookingParser.js. 89 admin endpoints, 46 scheduled jobs. |
+| 3.55.0 | 2026-03-01 | Fase III Blok C: Reservation Module COMPLEET. 3 DB tabellen, 4 customer + 13 admin endpoints. 89 admin endpoints, 46 scheduled jobs. |
+| 3.54.0 | 2026-03-01 | Fase III Blok B: Ticketing Module COMPLEET. 5 DB tabellen, 6 customer + 15 admin endpoints. 76 admin endpoints, 42 scheduled jobs. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -500,7 +502,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.22 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.23 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
