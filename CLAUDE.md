@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.57.0
+> **Versie**: 3.58.0
 > **Laatst bijgewerkt**: 2 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -31,7 +31,7 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 4. **Context Verificatie**: CLAUDE.md + Master Strategie lezen, actuele status verifiëren in codebase, geen aannames.
 5. **Geen Workarounds**: Problemen oplossen bij de root cause.
 6. **Staging-First Workflow**: Content wijzigingen eerst naar `poi_content_staging`, review door Frank, dan pas naar POI tabel.
-7. **Versie-Sync Controle**: Na elke fase/blok controleer: CLAUDE.md header versie, MS header versie + datum + status, Gerelateerde Documentatie versies, Admin Portal versie + endpoint count, BullMQ/Scheduled Jobs getal, MS Roadmap tabel + Fase detail + Changelog + Footer.
+7. **Versie-Sync Controle**: Na elke fase/blok controleer: CLAUDE.md header versie, MS header versie + datum + status, Gerelateerde Documentatie versies, Admin Portal versie + endpoint count, BullMQ/Scheduled Jobs getal, MS Roadmap tabel + Fase detail + Changelog + MS Footer (GECONSOLIDEERDE regel: datum, fase status, blokken, endpoints, admin versie, jobs, CLAUDE.md versie, MS versie).
 
 ---
 
@@ -73,10 +73,26 @@ HolidaiButler/
 │   └── deploy-admin-module.yml  # CI/CD admin portal
 ├── docs/strategy/
 │   └── HolidaiButler_Master_Strategie.md
+├── docs/compliance/             # Fase III Blok F compliance documenten
+│   ├── pci-dss-saq-a.md        # PCI DSS SAQ-A checklist + verificatie
+│   ├── payment-test-results.md  # 17 payment test scenarios
+│   ├── ticketing-race-condition-tests.md  # 5 concurrent access tests
+│   ├── reservation-double-booking-tests.md # 5 slot locking tests
+│   ├── gdpr-compliance-checklist.md  # 31-item GDPR audit
+│   ├── security-audit.md        # 8-item security audit
+│   └── fase3-test-summary.md    # Consolidatie samenvatting
 ├── customer-portal/frontend/    # React 19 + Tailwind
-│   └── src/ (components, pages, hooks, utils)
+│   └── src/
+│       ├── features/ticketing/  # AvailabilityChecker, BookingFlow, AdyenCheckout, MyTickets, TicketCard, TicketDetail
+│       ├── pages/               # TicketsPage, ReservationsPage, BookingFlow, payment/PaymentPage, payment/PaymentResultPage
+│       ├── shared/services/     # ticketing.api.ts, payment.api.ts, reservations.api.ts
+│       └── components/, hooks/, utils/
 ├── admin-module/                # React 18 + MUI 5 (admin.holidaibutler.com)
-│   └── src/ (api, components, hooks, pages, stores, i18n, utils)
+│   └── src/
+│       ├── pages/               # CommercePage (4 tabs), DashboardPage, AgentsPage, POIsPage, etc.
+│       ├── api/                 # commerceService.js, client.js
+│       ├── utils/               # currencyFormat.js
+│       └── components/, hooks/, stores/, i18n/
 ├── platform-core/               # Node.js/Express backend
 │   └── src/
 │       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.17.0)
@@ -257,6 +273,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **III-C** | **Reservation Module (Slots, Bookings, QR, Guests, GDPR)** | **01-03** | **3 DB tabellen + ALTER TABLE POI, 4 customer + 13 admin endpoints, Redis slot locking, QR HMAC, auto-blacklist, 4 BullMQ jobs, GDPR guest cleanup** |
 | **III-D** | **Chatbot-to-Book Voorbereiding** | **02-03** | **4 booking sub-intents (5 talen), conversational booking flow, booking context tracking, 7 feature flags, ragService v2.6, holibot v3.0, bookingMessages.js + bookingParser.js** |
 | **III-E** | **Admin Commerce Dashboard** | **02-03** | **commerceService.js (READ-ONLY aggregation), 10 admin API endpoints (99 totaal), CommercePage.jsx (4 tabs: Dashboard/Reports/Alerts/Export), Recharts grafieken, CSV export met BOM, 6 fraud alert types, i18n 4 talen, RBAC platform_admin+poi_owner** |
+| **III-F** | **Testing & Compliance (FASE III COMPLEET)** | **02-03** | **PCI DSS SAQ-A checklist (14/17 PASS), 17 payment test scenarios (7 verified/10 blocked), 5 ticketing race condition tests, 5 reservation double-booking tests, 31-item GDPR audit (27 PASS), 8-item security audit (7 PASS + 1 fixed). 7 compliance documenten in docs/compliance/. .env chmod 600 fix. FASE III VOLLEDIG COMPLEET.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -380,7 +397,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 |---|------|--------|--------------|
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
-| III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | 🟢 IN PROGRESS (Blok G+A+B+C+D+E COMPLEET) | 8-12 wkn |
+| III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
 | IV | Intermediair & Revenue (Intermediair module + Agent) | GEPLAND | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
 | VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
@@ -489,10 +506,10 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.57.0** | **2026-03-02** | **Fase III Blok E: Admin Commerce Dashboard COMPLEET**. commerceService.js (READ-ONLY aggregatie over payment, ticketing, reservation tabellen). 10 nieuwe admin endpoints (99 totaal): dashboard, daily/weekly/monthly reports, reconciliation, 3 CSV exports, alerts (6 fraud types), top POIs. CommercePage.jsx (4 tabs: Dashboard KPIs + Recharts, Reports + reconciliatie, Alerts, Export CSV). currencyFormat.js utility. i18n 4 talen (~50 keys). RBAC: platform_admin + poi_owner. adminPortal.js v3.17.0. |
-| 3.56.0 | 2026-03-02 | Fase III Blok D: Chatbot-to-Book Voorbereiding COMPLEET. 4 booking sub-intents, ragService v2.6, 7 feature flags, bookingMessages.js + bookingParser.js. 89 admin endpoints, 46 scheduled jobs. |
-| 3.55.0 | 2026-03-01 | Fase III Blok C: Reservation Module COMPLEET. 3 DB tabellen, 4 customer + 13 admin endpoints. 89 admin endpoints, 46 scheduled jobs. |
-| 3.54.0 | 2026-03-01 | Fase III Blok B: Ticketing Module COMPLEET. 5 DB tabellen, 6 customer + 15 admin endpoints. 76 admin endpoints, 42 scheduled jobs. |
+| **3.58.0** | **2026-03-02** | **Fase III Blok F: Testing & Compliance — FASE III VOLLEDIG COMPLEET**. PCI DSS SAQ-A checklist (14/17 auto-verified PASS). 17 payment test scenarios (7 code-verified, 10 blocked — Adyen frontend). 5 ticketing race condition tests (code-verified). 5 reservation double-booking tests (code-verified). 31-item GDPR compliance audit (27 PASS). 8-item security audit (7 PASS + 1 finding fixed: .env 644→600). 7 compliance documenten in docs/compliance/. Fase III Commerce Foundation COMPLEET: Blok G+A+B+C+D+E+F. |
+| 3.57.0 | 2026-03-02 | Fase III Blok E: Admin Commerce Dashboard COMPLEET. commerceService.js, 10 endpoints (99 totaal), CommercePage.jsx (4 tabs), CSV export, 6 fraud alerts, i18n 4 talen. |
+| 3.56.0 | 2026-03-02 | Fase III Blok D: Chatbot-to-Book Voorbereiding COMPLEET. 4 booking sub-intents, ragService v2.6, 7 feature flags. |
+| 3.55.0 | 2026-03-01 | Fase III Blok C: Reservation Module COMPLEET. 3 DB tabellen, 17 endpoints, slot locking, GDPR. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -502,7 +519,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.23 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.24 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
