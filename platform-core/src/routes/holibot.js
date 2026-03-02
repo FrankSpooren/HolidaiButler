@@ -1,5 +1,5 @@
 /**
- * HoliBot Routes v2.9
+ * HoliBot Routes v3.0
  * API endpoints for HoliBot AI Assistant Widget
  *
  * Features:
@@ -58,6 +58,7 @@ import { ragService, syncService, chromaService, embeddingService, ttsService, s
 import { getDestinationById } from '../../config/destinations/index.js';
 import { getImagesForPOI, getImagesForPOIs } from '../models/ImageUrl.js';
 import logger from '../utils/logger.js';
+import { BOOKING_MESSAGES, getBookingMessage } from '../services/holibot/bookingMessages.js';
 
 
 // ============================================================================
@@ -877,53 +878,74 @@ router.post('/chat', async (req, res) => {
     const intentAnalysis = intentService.analyzeQuery(processedMessage, language, conversationHistory, destinationId);
     logger.debug('Intent analysis', { intent: intentAnalysis.primaryIntent, entities: intentAnalysis.entities });
 
-    // Fase II A.5: Booking intent interception
-    if (intentAnalysis.primaryIntent === 'booking') {
-      logger.info('Booking intent detected', { sessionId: activeSessionId, query: processedMessage });
-      const bookingResponses = {
-      nl: {
-        booking: 'Reserveren via onze chatbot is binnenkort mogelijk! Op dit moment kun je rechtstreeks contact opnemen met de locatie via hun website of telefoonnummer. Kan ik je verder helpen met het vinden van de juiste plek?',
-        escalation_calpe: 'Ik begrijp dat je liever met iemand persoonlijk spreekt. Je kunt ons bereiken via info@holidaibutler.com. We helpen je graag verder!',
-        escalation_texel: 'Ik begrijp dat je liever met iemand persoonlijk spreekt. Je kunt ons bereiken via info@texelmaps.nl. We helpen je graag verder!'
-      },
-      en: {
-        booking: 'Booking through our chatbot will be available soon! For now, you can contact the venue directly via their website or phone number. Can I help you find the right place?',
-        escalation_calpe: 'I understand you would prefer to speak with someone directly. You can reach us at info@holidaibutler.com. We are happy to help!',
-        escalation_texel: 'I understand you would prefer to speak with someone directly. You can reach us at info@texelmaps.nl. We are happy to help!'
-      },
-      de: {
-        booking: 'Buchungen uber unseren Chatbot werden bald moglich sein! Im Moment konnen Sie den Veranstaltungsort direkt uber deren Website oder Telefonnummer kontaktieren. Kann ich Ihnen helfen, den richtigen Ort zu finden?',
-        escalation_calpe: 'Ich verstehe, dass Sie lieber mit jemandem personlich sprechen mochten. Sie konnen uns unter info@holidaibutler.com erreichen.',
-        escalation_texel: 'Ich verstehe, dass Sie lieber mit jemandem personlich sprechen mochten. Sie konnen uns unter info@texelmaps.nl erreichen.'
-      },
-      es: {
-        booking: 'Las reservas a traves de nuestro chatbot estaran disponibles pronto. Por ahora, puede contactar directamente con el lugar a traves de su sitio web o numero de telefono.',
-        escalation_calpe: 'Entiendo que prefiere hablar con alguien directamente. Puede contactarnos en info@holidaibutler.com.',
-        escalation_texel: 'Entiendo que prefiere hablar con alguien directamente. Puede contactarnos en info@texelmaps.nl.'
-      }
-    };
-      const langResp = bookingResponses[language] || bookingResponses.en;
-      const bookingMessage = langResp.booking;
+    // Fase III Blok D: Booking flow — check for active booking context or booking sub-intent
+    const hasActiveBookingCtx = contextService.getBookingContext(activeSessionId)?.active;
+    const bookingSubIntent = intentService.classifyBookingSubIntent(processedMessage, language);
 
-      // Log assistant message for analytics
+    // Cancel keywords during active booking flow
+    if (hasActiveBookingCtx) {
+      const cancelKeywords = {
+        nl: ['stop', 'annuleer', 'vergeet maar', 'laat maar'],
+        en: ['stop', 'cancel', 'never mind', 'forget it'],
+        de: ['stop', 'abbrechen', 'vergiss es'],
+        es: ['parar', 'cancelar', 'olvídalo', 'olvidalo'],
+        fr: ['arrêter', 'annuler', 'oubliez']
+      };
+      const langCancel = cancelKeywords[language] || cancelKeywords.en;
+      const normalizedMsg = processedMessage.toLowerCase().trim();
+      if (langCancel.some(kw => normalizedMsg.includes(kw))) {
+        contextService.cancelBookingContext(activeSessionId);
+        const cancelMsg = getBookingMessage('cancel_booking_flow', language);
+        conversationService.logAssistantMessage({
+          sessionId: activeSessionId, message: cancelMsg,
+          source: 'booking-cancelled', poiCount: 0, hadFallback: false
+        }).catch(() => {});
+        return res.json({
+          success: true,
+          data: { success: true, message: cancelMsg, pois: [], source: 'booking-cancelled',
+            type: 'booking_cancelled', intent: { detected: 'booking_cancel' }, sessionId: activeSessionId }
+        });
+      }
+    }
+
+    // Route to booking flow if sub-intent detected or active booking context
+    if (bookingSubIntent || hasActiveBookingCtx) {
+      logger.info('Booking flow routing', {
+        sessionId: activeSessionId, subIntent: bookingSubIntent?.intent || null,
+        activeCtx: hasActiveBookingCtx, query: processedMessage.substring(0, 50)
+      });
+
+      const bookingResponse = await ragService.handleBookingFlow(
+        activeSessionId, processedMessage, language, destinationId, destinationConfig
+      );
+
       conversationService.logAssistantMessage({
-        sessionId: activeSessionId,
-        message: bookingMessage,
-        source: 'booking-intent',
-        poiCount: 0,
-        hadFallback: false
+        sessionId: activeSessionId, message: bookingResponse,
+        source: 'booking-flow', poiCount: 0, hadFallback: false
       }).catch(() => {});
 
       return res.json({
         success: true,
-        data: {
-          success: true,
-          message: bookingMessage,
-          pois: [],
-          source: 'booking-intent',
-          intent: { detected: 'booking' },
-          sessionId: activeSessionId
-        }
+        data: { success: true, message: bookingResponse, pois: [], source: 'booking-flow',
+          type: 'booking', intent: { detected: bookingSubIntent?.intent || 'booking_active' },
+          sessionId: activeSessionId }
+      });
+    }
+
+    // Fase II A.5: Generic booking intent fallback (no sub-intent match, no active context)
+    if (intentAnalysis.primaryIntent === 'booking') {
+      logger.info('Generic booking intent — friendly fallback', { sessionId: activeSessionId });
+      const bookingFallback = await ragService.handleBookingFlow(
+        activeSessionId, processedMessage, language, destinationId, destinationConfig
+      );
+      conversationService.logAssistantMessage({
+        sessionId: activeSessionId, message: bookingFallback,
+        source: 'booking-intent', poiCount: 0, hadFallback: false
+      }).catch(() => {});
+      return res.json({
+        success: true,
+        data: { success: true, message: bookingFallback, pois: [], source: 'booking-intent',
+          intent: { detected: 'booking' }, sessionId: activeSessionId }
       });
     }
 
@@ -1207,6 +1229,28 @@ router.post('/chat/stream', async (req, res) => {
     const { destinationId, destinationConfig, collectionName } = getDestinationFromRequest(req);
 
     logger.info('HoliBot streaming chat request', { message: message.substring(0, 100), language, destinationId });
+
+    // Fase III Blok D: Booking flow interception for streaming (returns plain JSON, not SSE)
+    const streamSessionId = req.body?.sessionId || null;
+    const streamBookingCtx = contextService.getBookingContext(streamSessionId)?.active;
+    const streamSubIntent = intentService.classifyBookingSubIntent(message, language);
+
+    if (streamBookingCtx || streamSubIntent) {
+      const bookingResp = await ragService.handleBookingFlow(
+        streamSessionId, message, language, destinationId, destinationConfig
+      );
+      // Return as SSE-compatible response (non-streaming, immediate completion)
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.flushHeaders();
+      res.write(`event: metadata\ndata: ${JSON.stringify({ pois: [], searchTimeMs: 0, source: 'booking-flow' })}\n\n`);
+      res.write(`event: chunk\ndata: ${JSON.stringify({ text: bookingResp })}\n\n`);
+      res.write(`event: done\ndata: ${JSON.stringify({ fullMessage: bookingResp, totalLength: bookingResp.length })}\n\n`);
+      res.end();
+      return;
+    }
 
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');

@@ -1,7 +1,7 @@
 /**
- * Context Service v1.0 — Fase II Blok A.2
+ * Context Service v1.1 — Fase II Blok A.2 + Fase III Blok D
  *
- * Provides temporal, location, and session context for the chatbot.
+ * Provides temporal, location, session, and booking context for the chatbot.
  * Injected into the RAG system prompt before Mistral LLM calls.
  *
  * Features:
@@ -11,9 +11,18 @@
  * - Weekend detection
  * - Location context per destination
  * - Session history tracking (POIs discussed, categories shown)
- * - GDPR-compliant (no personal data stored)
+ * - Booking context tracking (Fase III Blok D): multi-step booking flow state
+ * - GDPR-compliant (no personal data stored — booking context has NO PII)
  */
 import logger from "../../utils/logger.js";
+
+// === BOOKING FLOW STEPS (Fase III Blok D) ===
+const BOOKING_STEPS = {
+  ticket: ['poi_select', 'date_select', 'tier_select', 'quantity', 'confirm', 'payment'],
+  reservation: ['poi_select', 'date_select', 'time_select', 'party_size', 'details', 'confirm'],
+  activity: ['poi_select', 'date_select', 'tier_select', 'quantity', 'confirm', 'payment'],
+  status: ['lookup']
+};
 
 class ContextService {
   constructor() {
@@ -155,6 +164,140 @@ class ContextService {
     const ctx = this._getOrCreateSessionContext(sessionId);
     ctx.topic = topic;
     ctx.lastAccess = Date.now();
+  }
+
+  // === BOOKING CONTEXT (Fase III Blok D) ===
+
+  /**
+   * Start a new booking context for a session.
+   * Resets any previous booking context.
+   * @param {string} sessionId
+   * @param {string} type - 'ticket' | 'reservation' | 'activity' | 'status'
+   * @param {number|null} poiId - Pre-detected POI id
+   * @param {string|null} poiName - Pre-detected POI name
+   */
+  startBookingContext(sessionId, type, poiId = null, poiName = null) {
+    const ctx = this._getOrCreateSessionContext(sessionId);
+    ctx.bookingContext = {
+      active: true,
+      type,
+      step: null,
+      poi_id: poiId,
+      poi_name: poiName,
+      date: null,
+      time: null,
+      party_size: null,
+      tier_selection: null,
+      quantity: null,
+      special_requests: null,
+      total_cents: null,
+      order_id: null,
+      reservation_uuid: null,
+      started_at: Date.now(),
+      timeout_minutes: 15
+    };
+    logger.debug('[ContextService] Booking context started', { sessionId, type, poiId });
+  }
+
+  /**
+   * Update a field in the booking context and advance the step.
+   * @param {string} sessionId
+   * @param {string} field - Field name to update (e.g. 'date', 'time', 'poi_id')
+   * @param {*} value - The value to set
+   */
+  updateBookingStep(sessionId, field, value) {
+    const ctx = this._getOrCreateSessionContext(sessionId);
+    if (!ctx.bookingContext?.active) return;
+    ctx.bookingContext[field] = value;
+    ctx.lastAccess = Date.now();
+    logger.debug('[ContextService] Booking step updated', { sessionId, field });
+  }
+
+  /**
+   * Get the current booking context for a session.
+   * @param {string} sessionId
+   * @returns {object|null} Booking context or null
+   */
+  getBookingContext(sessionId) {
+    if (!sessionId || !this.sessionContexts.has(sessionId)) return null;
+    const ctx = this.sessionContexts.get(sessionId);
+    return ctx.bookingContext?.active ? ctx.bookingContext : null;
+  }
+
+  /**
+   * Cancel and reset the booking context for a session.
+   * @param {string} sessionId
+   */
+  cancelBookingContext(sessionId) {
+    if (!sessionId || !this.sessionContexts.has(sessionId)) return;
+    const ctx = this.sessionContexts.get(sessionId);
+    if (ctx.bookingContext) {
+      ctx.bookingContext.active = false;
+      logger.debug('[ContextService] Booking context cancelled', { sessionId });
+    }
+  }
+
+  /**
+   * Check if the booking context has timed out (15 min default).
+   * Auto-cancels if expired.
+   * @param {string} sessionId
+   * @returns {boolean} true if timed out
+   */
+  isBookingTimeout(sessionId) {
+    const booking = this.getBookingContext(sessionId);
+    if (!booking) return false;
+    const elapsed = (Date.now() - booking.started_at) / (1000 * 60);
+    if (elapsed > booking.timeout_minutes) {
+      this.cancelBookingContext(sessionId);
+      logger.debug('[ContextService] Booking context timed out', { sessionId, elapsed });
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Determine the next step in the booking flow based on type and filled fields.
+   * @param {string} sessionId
+   * @returns {object} { step, index } — next step to present to user
+   */
+  getNextBookingStep(sessionId) {
+    const booking = this.getBookingContext(sessionId);
+    if (!booking) return { step: null, index: -1 };
+
+    const steps = BOOKING_STEPS[booking.type];
+    if (!steps) return { step: null, index: -1 };
+
+    // Map step names to the booking context field that satisfies them
+    const stepFieldMap = {
+      poi_select: 'poi_id',
+      date_select: 'date',
+      time_select: 'time',
+      party_size: 'party_size',
+      tier_select: 'tier_selection',
+      quantity: 'quantity',
+      details: 'special_requests',
+      confirm: 'total_cents',
+      payment: 'order_id',
+      lookup: null
+    };
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      const field = stepFieldMap[step];
+      // Special handling: 'details' step is satisfied by any value including empty string ""
+      if (step === 'details' && booking.special_requests !== null) continue;
+      // For other fields: null means not yet filled
+      if (field && booking[field] === null) {
+        return { step, index: i };
+      }
+      if (field === null) {
+        return { step, index: i };
+      }
+    }
+
+    // All steps completed — return final action step
+    if (booking.type === 'reservation') return { step: 'reservation_created', index: steps.length };
+    return { step: 'completed', index: steps.length };
   }
 
   // --- Private: Time helpers ---
@@ -357,4 +500,5 @@ class ContextService {
 }
 
 export const contextService = new ContextService();
+export { BOOKING_STEPS };
 export default contextService;

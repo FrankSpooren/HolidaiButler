@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.55.0
-> **Laatst bijgewerkt**: 1 maart 2026
+> **Versie**: 3.56.0
+> **Laatst bijgewerkt**: 2 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -51,7 +51,7 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 |----------|---------|--------|
 | **Master Strategie** | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.21 |
 | **Agent Masterplan** | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
-| **CLAUDE.md** | Repository root + Hetzner | 3.55.0 |
+| **CLAUDE.md** | Repository root + Hetzner | 3.56.0 |
 | **CLAUDE_HISTORY.md** | Repository root | 1.0.0 |
 
 > **CLAUDE_HISTORY.md** bevat volledige fase-resultaten, changelogs en bestandslijsten per fase. Raadpleeg dit bestand ALLEEN wanneer historische details nodig zijn.
@@ -85,7 +85,7 @@ HolidaiButler/
 │       │   ├── orchestrator/    # BullMQ scheduler, workers, costController, auditTrail, ownerInterface
 │       │   └── agents/          # 18 agents (base/, healthMonitor/, dataSync/, holibotSync/, etc.)
 │       ├── middleware/ (auth.js met RBAC, rate limiting, IP whitelist)
-│       └── config/destinations/  # calpe.config.js, texel.config.js, alicante.config.js
+│       └── config/destinations/  # calpe.config.js, texel.config.js, alicante.config.js (+ commerce feature flags)
 └── infrastructure/ (apache vhosts, docker)
 ```
 
@@ -102,7 +102,7 @@ HolidaiButler/
 | WarreWijzer | 4 | warrewijzer.be | Conform warredal.be |
 
 ### Database Multi-Tenancy
-Alle tabellen met destination-specifieke data hebben `destination_id` kolom: POI, QnA, agenda, Users, user_journeys, holibot_sessions, poi_content_staging, reviews.
+Alle tabellen met destination-specifieke data hebben `destination_id` kolom: POI, QnA, agenda, Users, user_journeys, holibot_sessions, poi_content_staging, reviews, payment_transactions, payment_refunds, tickets, ticket_inventory, ticket_orders, ticket_order_items, voucher_codes, reservation_slots, guest_profiles, reservations.
 
 ### Routing
 ```
@@ -171,16 +171,19 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | WarreWijzer | Wijze Warre | warrewijzer_pois | TBD (~15.000) | mistral-embed (1024d) |
 
 ### Key Files
-- Backend: `holibot.js`, `chromaService.js`, `embeddingService.js`, `ragService.js` (v2.5), `conversationService.js`, `intentService.js` (12 intents), `suggestionService.js`, `contextService.js` (Fase II-A)
+- Backend: `holibot.js` (v3.0), `chromaService.js`, `embeddingService.js`, `ragService.js` (v2.6), `conversationService.js`, `intentService.js` (12 intents + 4 booking sub-intents), `suggestionService.js`, `contextService.js` (v1.1), `bookingMessages.js`, `bookingParser.js`
 - Frontend: `vite.config.ts` (holibot config), `DestinationContext.tsx`, `WelcomeMessage.tsx`, `ChatHeader.tsx`, `ChatMessage.tsx`
 
-### Chatbot Capabilities (Fase II-A)
+### Chatbot Capabilities (Fase II-A + III-D)
 - **Context awareness**: Temporeel (dag/datum/seizoen/weekend), locatie (per-destination), sessie (besproken POIs/categorieën)
 - **Multi-turn memory**: 10-bericht sliding window, follow-up detectie NL/EN/DE/ES, ordinal reference resolution
-- **Intent classificatie**: 12 intents incl. booking (6 talen) + human_escalation (4 talen)
-- **Booking intent**: Friendly fallback met doorverwijzing (Fase III/IV voorbereiding)
+- **Intent classificatie**: 12 intents + 4 booking sub-intents (5 talen incl. FR) + human_escalation (4 talen)
+- **Booking sub-intents**: booking_ticket, booking_reservation, booking_activity, booking_status — feature-flag gated per destination
+- **Conversational booking flow**: Multi-step POI→datum→details→confirm→checkout/form redirect (ragService v2.6)
+- **Feature flags**: 7 commerce flags per destination (hasBooking, hasTicketing, hasReservations, hasChatToBook, hasGuestCheckout, hasDeposits, hasDynamicPricing) — alle false tot live testing
+- **Booking context**: In-memory tracking (15 min timeout), GDPR-compliant (geen PII in context)
 - **Human escalation**: Destination-specifiek contact (Texel: info@texelmaps.nl, Calpe: info@holidaibutler.com)
-- **contextService.js**: In-memory sessie tracking (24h TTL), GDPR-compliant, geen persoonlijke data
+- **contextService.js** (v1.1): Sessie tracking (24h TTL) + booking context tracking, GDPR-compliant
 
 ### Taalregels
 | Destination | Regel |
@@ -249,6 +252,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **III-A** | **Payment Engine / Adyen Integratie** | **01-03** | **Adyen SDK v30, sessions flow, 3 customer + 5 admin endpoints, 2 DB tabellen** |
 | **III-B** | **Ticketing Module (Inventory, Orders, QR, Vouchers)** | **01-03** | **5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking, QR HMAC, BullMQ expired reservation job** |
 | **III-C** | **Reservation Module (Slots, Bookings, QR, Guests, GDPR)** | **01-03** | **3 DB tabellen + ALTER TABLE POI, 4 customer + 13 admin endpoints, Redis slot locking, QR HMAC, auto-blacklist, 4 BullMQ jobs, GDPR guest cleanup** |
+| **III-D** | **Chatbot-to-Book Voorbereiding** | **02-03** | **4 booking sub-intents (5 talen), conversational booking flow, booking context tracking, 7 feature flags, ragService v2.6, holibot v3.0, bookingMessages.js + bookingParser.js** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -302,7 +306,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.15.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.16.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
 - **Endpoints**: 89 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest endpoints)
@@ -372,7 +376,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 |---|------|--------|--------------|
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
-| III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | 🟢 IN PROGRESS (Blok G+A+B+C COMPLEET) | 8-12 wkn |
+| III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | 🟢 IN PROGRESS (Blok G+A+B+C+D COMPLEET) | 8-12 wkn |
 | IV | Intermediair & Revenue (Intermediair module + Agent) | GEPLAND | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
 | VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
@@ -458,7 +462,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 ```bash
 pm2 status                    # PM2 processes
 redis-cli ping                # Redis
-# BullMQ jobs (verwacht: 40)
+# BullMQ jobs (verwacht: 46)
 cd /var/www/api.holidaibutler.com/platform-core
 node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); async function c() { const conn = new Redis(); const q = new Queue('scheduled-tasks', { connection: conn }); const jobs = await q.getRepeatableJobs(); console.log('Jobs:', jobs.length); await q.close(); await conn.quit(); } c();"
 ```
@@ -481,7 +485,8 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.55.0** | **2026-03-01** | **Fase III Blok C: Reservation Module COMPLEET**. 3 DB tabellen (reservation_slots, guest_profiles, reservations) + ALTER TABLE POI (has_reservations). 4 customer endpoints (browse slots, create reservation, get details, cancel). 13 admin endpoints (CRUD reservations/slots/guests, no-show, complete, blacklist, stats, calendar). Redis slot locking met MySQL FOR UPDATE. QR HMAC-SHA256 (HB-R: prefix). Auto-blacklist (3 no-shows). 4 BullMQ jobs (expired cleanup, 24h+1h reminders, GDPR guest cleanup). GDPR data retention 24 months. 89 admin endpoints, 46 scheduled jobs. |
+| **3.56.0** | **2026-03-02** | **Fase III Blok D: Chatbot-to-Book Voorbereiding COMPLEET**. 4 booking sub-intents (booking_ticket, booking_reservation, booking_activity, booking_status) in 5 talen (NL/EN/DE/ES/FR). Conversational booking flow in ragService v2.6. Booking context tracking in contextService v1.1 (15 min timeout, GDPR). 7 commerce feature flags per destination (alle false). bookingMessages.js (meertalige templates) + bookingParser.js (NL date/time/number parsing). holibot.js v3.0 routing integratie. 12/12 E2E tests PASS. 89 admin endpoints, 46 scheduled jobs. |
+| 3.55.0 | 2026-03-01 | Fase III Blok C: Reservation Module COMPLEET. 3 DB tabellen (reservation_slots, guest_profiles, reservations) + ALTER TABLE POI (has_reservations). 4 customer endpoints (browse slots, create reservation, get details, cancel). 13 admin endpoints (CRUD reservations/slots/guests, no-show, complete, blacklist, stats, calendar). Redis slot locking met MySQL FOR UPDATE. QR HMAC-SHA256 (HB-R: prefix). Auto-blacklist (3 no-shows). 4 BullMQ jobs (expired cleanup, 24h+1h reminders, GDPR guest cleanup). GDPR data retention 24 months. 89 admin endpoints, 46 scheduled jobs. |
 | 3.54.0 | 2026-03-01 | Fase III Blok B: Ticketing Module COMPLEET. 5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking, QR HMAC, BullMQ expired reservation job. 76 admin endpoints, 42 scheduled jobs. |
 | 3.53.0 | 2026-03-01 | Fase III Blok G+A: Legal docs + Payment Engine COMPLEET. |
 | 3.52.0 | 2026-03-01 | Fase II Blok D: Customer Portal UX Upgrade COMPLEET. Fase II volledig COMPLEET. |
@@ -495,7 +500,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.20 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.22 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
