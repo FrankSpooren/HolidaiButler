@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 2 maart 2026
-**Versie**: 7.22
+**Versie**: 7.23
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE III IN PROGRESS — Blok G+A+B+C+D COMPLEET. Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.56.0. MS v7.22.
+**Status**: FASE III IN PROGRESS — Blok G+A+B+C+D+E COMPLEET. Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.57.0. MS v7.23.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1353,7 +1353,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 - **Ticketing (Blok B)**: ✅ COMPLEET — 5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking + MySQL FOR UPDATE transactie, QR HMAC-SHA256, voucher systeem, BullMQ expired reservation job
 - **Reservering (Blok C)**: ✅ COMPLEET — 3 DB tabellen + ALTER TABLE POI, 4 customer + 13 admin endpoints, Redis slot locking, QR HMAC-SHA256, auto-blacklist (3 no-shows), 4 BullMQ jobs (expired/reminders/GDPR), GDPR data retention 24 maanden, 89 admin endpoints, 46 scheduled jobs
 - **Chatbot-to-Book (Blok D)**: ✅ COMPLEET — 4 booking sub-intents (5 talen incl. FR), conversational booking flow (ragService v2.6), booking context tracking (contextService v1.1), 7 commerce feature flags per destination, bookingMessages.js + bookingParser.js, holibot.js v3.0, 12/12 E2E tests
-- **Admin Commerce (Blok E)**: GEPLAND — Revenue dashboard, financial reporting, CSV export
+- **Admin Commerce (Blok E)**: ✅ COMPLEET — commerceService.js (READ-ONLY aggregatie), 10 admin endpoints (99 totaal), CommercePage.jsx (4 tabs: Dashboard KPIs + Recharts, Reports + reconciliatie, Alerts 6 fraud types, Export CSV BOM), currencyFormat.js, i18n 4 talen (~50 keys), RBAC platform_admin + poi_owner, adminPortal.js v3.17.0
 - **Testing/Compliance (Blok F)**: GEPLAND — PCI DSS docs, payment test matrix, GDPR checklist
 
 **Fase IV — Intermediair Module:**
@@ -1554,6 +1554,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.23** | **02-03-2026** | **Fase III Blok E: Admin Commerce Dashboard COMPLEET. commerceService.js (READ-ONLY aggregatie: getDashboard, daily/weekly/monthly reports, reconciliation, CSV exports, alerts 6 fraud types, top POIs). 10 admin endpoints (99 totaal). CommercePage.jsx 4 tabs (Dashboard KPIs + Recharts BarChart/LineChart, Reports + reconciliatie, Alerts severity-coded, Export CSV BOM). currencyFormat.js utility. i18n 4 talen (~50 keys). RBAC: platform_admin + poi_owner. adminPortal.js v3.17.0. 11 bestanden (3 nieuw + 8 gewijzigd). CLAUDE.md v3.57.0.** |
 | **7.22** | **02-03-2026** | **Fase III Blok D: Chatbot-to-Book Voorbereiding COMPLEET. 4 booking sub-intents (ticket/reservation/activity/status) in 5 talen (NL/EN/DE/ES/FR). Conversational booking flow in ragService v2.6 (~300 regels). Booking context tracking (contextService v1.1, 15-min timeout). bookingMessages.js (16 templates, 5 talen, destination preposities). bookingParser.js (datum/tijd/getal/bevestiging parsing). 7 commerce feature flags (3 destinations). holibot.js v3.0. 12/12 E2E tests PASS. Bug fix: FR "réserver une table" patroon. CLAUDE.md v3.56.0.** |
 | **7.21** | **01-03-2026** | **Fase III Blok C: Reservation Module COMPLEET. 3 DB tabellen + ALTER TABLE POI, 4 customer + 13 admin endpoints, Redis slot locking, QR HMAC-SHA256, auto-blacklist, 4 BullMQ jobs, GDPR guest cleanup. 89 admin endpoints, 46 scheduled jobs. 20/20 E2E tests PASS. CLAUDE.md v3.55.0.** |
 | 7.20 | 01-03-2026 | Fase III Blok B: Ticketing Module COMPLEET. 76 admin endpoints, 42 scheduled jobs. 18/18 E2E tests PASS. CLAUDE.md v3.54.0. |
@@ -1600,5 +1601,5 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 2 maart 2026 - Fase III Blok D Chatbot-to-Book COMPLEET. Master Document v7.22*
+*Laatst bijgewerkt: 2 maart 2026 - Fase III Blok E Admin Commerce Dashboard COMPLEET. Master Document v7.23*
 *Fase I COMPLEET. Fase II COMPLEET. Fase III IN PROGRESS: Blok G+A+B+C+D ✅ (Legal + Payment + Ticketing + Reservering + Chatbot-to-Book). Admin Portal: 89 endpoints, adminPortal.js v3.16.0. 46 scheduled jobs. CLAUDE.md v3.56.0.*

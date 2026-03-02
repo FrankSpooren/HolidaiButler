@@ -25,7 +25,8 @@
 14. [Fase III Blok B: Ticketing Module](#fase-iii--blok-b-ticketing-module-01-03-2026)
 15. [Fase III Blok C: Reservation Module](#fase-iii--blok-c-reservation-module-01-03-2026)
 16. [Fase III Blok D: Chatbot-to-Book Voorbereiding](#fase-iii--blok-d-chatbot-to-book-voorbereiding-02-03-2026)
-17. [Volledige Changelog](#volledige-changelog)
+17. [Fase III Blok E: Admin Commerce Dashboard](#fase-iii--blok-e-admin-commerce-dashboard-02-03-2026)
+18. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -415,6 +416,87 @@ v3.9.0, **15/15 PASS**
 | poi_website | 276 | ✅ Variabel |
 | calpe_es | 18 | ✅ Goed |
 | R2 fact sheets | 3.079 | ✅ 47% rich, 8% moderate |
+
+---
+
+### Fase III — Blok E: Admin Commerce Dashboard (02-03-2026)
+
+**Doel**: Enterprise-level Commerce Dashboard in de admin portal met real-time revenue monitoring, financial reporting, fraud alerting en CSV exports. READ-ONLY aggregatie over bestaande payment, ticketing en reservation tabellen — geen nieuwe DB tabellen.
+
+**Afhankelijkheid**: Blok A (Payments), B (Ticketing), C (Reservations), D (Chatbot-to-Book) — alle COMPLEET.
+
+**Resultaat**: CLAUDE.md v3.56.0 → v3.57.0, MS v7.22 → v7.23, adminPortal.js v3.16.0 → v3.17.0, 89 → 99 admin endpoints.
+
+#### Backend: commerceService.js (READ-ONLY Aggregatie)
+- `getDashboard()`: 5 parallel queries — revenue (net/refunds/ticket/deposit), transaction stats (total/success/failed/refunded + success_rate), ticket stats (sold/validated/cancelled + validation_rate), reservation stats (created/completed/no_shows/cancelled + no_show_rate + avg_party_size + occupancy_rate)
+- `getDailyReport()`: GROUP BY DATE — transactions, revenue breakdown, net
+- `getWeeklyReport()`: GROUP BY YEARWEEK — week start/end dates
+- `getMonthlyReport(year)`: 12 maanden met i18n month_names (NL/EN/DE/ES)
+- `getReconciliationReport(date)`: Alle transacties + refunds voor 1 datum, summary totals
+- `exportTransactionsCSV()`: UTF-8 BOM, max 10.000 rijen, Content-Disposition header
+- `exportReservationsCSV()`: Idem voor reserveringen
+- `exportTicketOrdersCSV()`: Idem voor ticket orders
+- `getAlerts()`: 6 rule-based fraud/anomaly detection types:
+  - `chargeback` — enig chargeback status
+  - `low_success_rate` — < 70% in afgelopen 7 dagen
+  - `unusual_amount` — > €500 individuele transactie
+  - `multiple_refunds` — > 2 refunds per order
+  - `rapid_transactions` — > 10 transacties/uur
+  - `noshow_spike` — > 30% no-show rate recent
+- `getTopPOIs()`: 4 metrics (revenue, tickets_sold, reservations, occupancy), configurable limit
+
+#### Admin API Endpoints (10 nieuw, 99 totaal)
+- `commerceAuth` middleware: alleen `platform_admin` + `poi_owner` (NIET content_editor/reviewer)
+- `getCommerceDestinationId()`: platform_admin ziet alle/specifieke, poi_owner alleen eigen destination
+- `getDefaultDateRange()`: eerste dag huidige maand → vandaag
+- GET `/commerce/dashboard` — KPI overview
+- GET `/commerce/reports/daily` — dagelijks rapport (max 90 dagen)
+- GET `/commerce/reports/weekly` — wekelijks rapport (max 1 jaar)
+- GET `/commerce/reports/monthly` — maandelijks rapport (per jaar)
+- GET `/commerce/reports/reconciliation` — reconciliatie (1 datum)
+- GET `/commerce/export/transactions` — CSV download
+- GET `/commerce/export/reservations` — CSV download
+- GET `/commerce/export/tickets` — CSV download
+- GET `/commerce/alerts` — fraud/anomalie meldingen
+- GET `/commerce/top-pois` — top POIs per metric
+
+#### Frontend: CommercePage.jsx (4 Tabs)
+- **Dashboard Tab**: 4 KPI cards (revenue/transactions/tickets/reservations), Recharts BarChart (stacked ticket+deposit revenue), ticket stats box, reservation stats box, top POIs table
+- **Reports Tab**: daily/weekly/monthly toggle, LineChart (net revenue), financial data table, reconciliation section met date picker
+- **Alerts Tab**: severity-coded alert cards (critical=red, warning=orange, info=blue), empty state met check icon
+- **Export Tab**: 3 CSV export cards (transactions, reservations, tickets), blob download flow
+
+#### Supporting Files
+- `admin-module/src/api/commerceService.js` — API client (10 endpoints)
+- `admin-module/src/utils/currencyFormat.js` — `formatCents(amountCents, locale)` + `formatPercentage(value)`
+- `admin-module/src/App.jsx` — Route: `/commerce` → CommercePage
+- `admin-module/src/components/layout/Sidebar.jsx` — Commerce menu item (ShoppingCartIcon, allowedRoles: platform_admin + poi_owner)
+- i18n: ~50 commerce keys in NL/EN/DE/ES + nav.commerce + common.load/name/category
+
+#### Bestanden Overzicht
+| Bestand | Status | Beschrijving |
+|---------|--------|--------------|
+| `platform-core/src/services/commerce/commerceService.js` | NIEUW | READ-ONLY aggregatie service (~450 regels) |
+| `platform-core/src/routes/adminPortal.js` | GEWIJZIGD | v3.16.0→v3.17.0, 10 commerce endpoints |
+| `admin-module/src/api/commerceService.js` | NIEUW | Frontend API client |
+| `admin-module/src/utils/currencyFormat.js` | NIEUW | Euro formatting utility |
+| `admin-module/src/pages/CommercePage.jsx` | NIEUW | 4-tab commerce dashboard (~505 regels) |
+| `admin-module/src/App.jsx` | GEWIJZIGD | Route toevoeging |
+| `admin-module/src/components/layout/Sidebar.jsx` | GEWIJZIGD | Menu item + RBAC |
+| `admin-module/src/i18n/nl.json` | GEWIJZIGD | ~50 commerce keys |
+| `admin-module/src/i18n/en.json` | GEWIJZIGD | ~50 commerce keys |
+| `admin-module/src/i18n/de.json` | GEWIJZIGD | ~50 commerce keys |
+| `admin-module/src/i18n/es.json` | GEWIJZIGD | ~50 commerce keys |
+
+**Totaal**: 11 bestanden (4 nieuw + 7 gewijzigd), 0 DB wijzigingen, 10 nieuwe endpoints.
+
+#### Verificatie
+- Backend: 10/10 endpoints getest via curl met JWT auth
+- Dashboard: real data (2 transacties, 7 tickets, 5 reserveringen)
+- Monthly report: i18n month_names correct (NL/EN/DE/ES)
+- CSV export: UTF-8 BOM, proper headers, Content-Disposition
+- RBAC: platform_admin 200 OK, unauthenticated 401
+- Frontend: build succesvol (Vite 4, 1.4MB bundle), deployed dev/test/prod
 
 ---
 

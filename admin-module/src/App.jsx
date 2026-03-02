@@ -10,6 +10,7 @@ import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import UsersPage from './pages/UsersPage.jsx';
 import IssuesPage from './pages/IssuesPage.jsx';
+import CommercePage from './pages/CommercePage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import useAuthStore from './stores/authStore.js';
 
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/issues" element={<IssuesPage />} />
+            <Route path="/commerce" element={<CommercePage />} />
           </Route>
         </Route>
 

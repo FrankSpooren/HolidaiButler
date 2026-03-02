@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C (v3.16.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E (v3.17.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -83,8 +83,20 @@
  *   GET  /guests/:id              — Guest profile detail + history
  *   PUT  /guests/:id/blacklist    — Manual blacklist toggle
  *
+ *   --- Commerce Dashboard endpoints (Fase III-E) ---
+ *   GET  /commerce/dashboard          — Revenue/ticket/reservation KPI dashboard
+ *   GET  /commerce/reports/daily      — Daily financial report
+ *   GET  /commerce/reports/weekly     — Weekly financial report
+ *   GET  /commerce/reports/monthly    — Monthly financial report (by year)
+ *   GET  /commerce/reports/reconciliation — Reconciliation report (single date)
+ *   GET  /commerce/export/transactions — CSV export transactions
+ *   GET  /commerce/export/reservations — CSV export reservations
+ *   GET  /commerce/export/tickets     — CSV export ticket orders
+ *   GET  /commerce/alerts             — Fraud/anomaly alerts
+ *   GET  /commerce/top-pois           — Top performing POIs by metric
+ *
  * @module routes/adminPortal
- * @version 3.16.0
+ * @version 3.17.0
  */
 
 import { Router } from 'express';
@@ -108,6 +120,7 @@ import {
 import logger from '../utils/logger.js';
 import emailService from '../services/emailService.js';
 import { AgentIssue } from '../services/agents/base/agentIssues.js';
+import commerceService from '../services/commerce/commerceService.js';
 
 const router = Router();
 
@@ -7299,6 +7312,213 @@ router.put('/guests/:id/blacklist', adminAuth('editor'), destinationScope, write
   } catch (error) {
     logger.error('[AdminPortal] Blacklist toggle error:', error);
     res.status(500).json({ success: false, error: { code: 'BLACKLIST_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================================
+// COMMERCE DASHBOARD ENDPOINTS (Fase III-E) — 10 routes
+// RBAC: platform_admin = alle destinations, poi_owner = eigen destination
+// content_editor + content_reviewer = GEEN toegang
+// ============================================================================
+
+function commerceAuth(req, res, next) {
+  const role = req.adminUser?.role;
+  if (!role || !['platform_admin', 'poi_owner'].includes(role)) {
+    return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Commerce access requires platform_admin or poi_owner role' } });
+  }
+  next();
+}
+
+function getCommerceDestinationId(req) {
+  const destScope = req.destScope;
+  const queryDest = req.query.destinationId || req.query.destination_id;
+  if (req.adminUser?.role === 'platform_admin') {
+    return queryDest ? Number(queryDest) : null;
+  }
+  if (destScope && destScope.length > 0) {
+    const requested = queryDest ? Number(queryDest) : destScope[0];
+    return destScope.includes(requested) ? requested : destScope[0];
+  }
+  return queryDest ? Number(queryDest) : null;
+}
+
+function getDefaultDateRange() {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const to = now.toISOString().split('T')[0];
+  return { from, to };
+}
+
+// E.1 — Revenue Dashboard
+router.get('/commerce/dashboard', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req);
+    if (!destinationId) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    }
+    const defaults = getDefaultDateRange();
+    const from = req.query.from || defaults.from;
+    const to = req.query.to || defaults.to;
+    const data = await commerceService.getDashboard(destinationId, from, `${to} 23:59:59`);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Commerce dashboard error:', error);
+    res.status(500).json({ success: false, error: { code: 'DASHBOARD_ERROR', message: error.message } });
+  }
+});
+
+// E.2a — Daily Financial Report
+router.get('/commerce/reports/daily', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req);
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    const { from, to } = req.query;
+    if (!from || !to) return res.status(400).json({ success: false, error: { code: 'MISSING_DATES', message: 'from and to are required' } });
+    const daysDiff = (new Date(to) - new Date(from)) / (1000 * 60 * 60 * 24);
+    if (daysDiff > 90) return res.status(400).json({ success: false, error: { code: 'RANGE_TOO_LARGE', message: 'Max range is 90 days' } });
+    const data = await commerceService.getDailyReport(destinationId, from, `${to} 23:59:59`);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Commerce daily report error:', error);
+    res.status(500).json({ success: false, error: { code: 'REPORT_ERROR', message: error.message } });
+  }
+});
+
+// E.2b — Weekly Financial Report
+router.get('/commerce/reports/weekly', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req);
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    const { from, to } = req.query;
+    if (!from || !to) return res.status(400).json({ success: false, error: { code: 'MISSING_DATES', message: 'from and to are required' } });
+    const daysDiff = (new Date(to) - new Date(from)) / (1000 * 60 * 60 * 24);
+    if (daysDiff > 365) return res.status(400).json({ success: false, error: { code: 'RANGE_TOO_LARGE', message: 'Max range is 1 year' } });
+    const data = await commerceService.getWeeklyReport(destinationId, from, `${to} 23:59:59`);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Commerce weekly report error:', error);
+    res.status(500).json({ success: false, error: { code: 'REPORT_ERROR', message: error.message } });
+  }
+});
+
+// E.2c — Monthly Financial Report
+router.get('/commerce/reports/monthly', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req);
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    const year = Number(req.query.year) || new Date().getFullYear();
+    if (year < 2020 || year > 2100) return res.status(400).json({ success: false, error: { code: 'INVALID_YEAR', message: 'Year must be between 2020-2100' } });
+    const data = await commerceService.getMonthlyReport(destinationId, year);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Commerce monthly report error:', error);
+    res.status(500).json({ success: false, error: { code: 'REPORT_ERROR', message: error.message } });
+  }
+});
+
+// E.3 — Reconciliation Report
+router.get('/commerce/reports/reconciliation', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req);
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    const { date } = req.query;
+    if (!date) return res.status(400).json({ success: false, error: { code: 'MISSING_DATE', message: 'date is required' } });
+    const data = await commerceService.getReconciliationReport(destinationId, date);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Commerce reconciliation error:', error);
+    res.status(500).json({ success: false, error: { code: 'RECONCILIATION_ERROR', message: error.message } });
+  }
+});
+
+// E.4a — CSV Export Transactions
+router.get('/commerce/export/transactions', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req);
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    const defaults = getDefaultDateRange();
+    const from = req.query.from || defaults.from;
+    const to = req.query.to || defaults.to;
+    const { csv, filename, row_count } = await commerceService.exportTransactionsCSV(destinationId, from, `${to} 23:59:59`);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('X-Row-Count', row_count);
+    res.send(csv);
+  } catch (error) {
+    logger.error('[AdminPortal] Commerce export transactions error:', error);
+    res.status(500).json({ success: false, error: { code: 'EXPORT_ERROR', message: error.message } });
+  }
+});
+
+// E.4b — CSV Export Reservations
+router.get('/commerce/export/reservations', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req);
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    const defaults = getDefaultDateRange();
+    const from = req.query.from || defaults.from;
+    const to = req.query.to || defaults.to;
+    const { csv, filename, row_count } = await commerceService.exportReservationsCSV(destinationId, from, `${to} 23:59:59`);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('X-Row-Count', row_count);
+    res.send(csv);
+  } catch (error) {
+    logger.error('[AdminPortal] Commerce export reservations error:', error);
+    res.status(500).json({ success: false, error: { code: 'EXPORT_ERROR', message: error.message } });
+  }
+});
+
+// E.4c — CSV Export Ticket Orders
+router.get('/commerce/export/tickets', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req);
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    const defaults = getDefaultDateRange();
+    const from = req.query.from || defaults.from;
+    const to = req.query.to || defaults.to;
+    const { csv, filename, row_count } = await commerceService.exportTicketOrdersCSV(destinationId, from, `${to} 23:59:59`);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('X-Row-Count', row_count);
+    res.send(csv);
+  } catch (error) {
+    logger.error('[AdminPortal] Commerce export tickets error:', error);
+    res.status(500).json({ success: false, error: { code: 'EXPORT_ERROR', message: error.message } });
+  }
+});
+
+// E.5 — Fraud / Anomaly Alerts
+router.get('/commerce/alerts', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req);
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    const data = await commerceService.getAlerts(destinationId);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Commerce alerts error:', error);
+    res.status(500).json({ success: false, error: { code: 'ALERTS_ERROR', message: error.message } });
+  }
+});
+
+// E.6 — Top Performing POIs
+router.get('/commerce/top-pois', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req);
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    const defaults = getDefaultDateRange();
+    const from = req.query.from || defaults.from;
+    const to = req.query.to || defaults.to;
+    const metric = req.query.metric || 'revenue';
+    const limit = Math.min(Number(req.query.limit) || 10, 50);
+    if (!['revenue', 'tickets_sold', 'reservations', 'occupancy'].includes(metric)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_METRIC', message: 'metric must be revenue, tickets_sold, reservations, or occupancy' } });
+    }
+    const data = await commerceService.getTopPOIs(destinationId, from, `${to} 23:59:59`, metric, limit);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Commerce top POIs error:', error);
+    res.status(500).json({ success: false, error: { code: 'TOP_POIS_ERROR', message: error.message } });
   }
 });
 
