@@ -22,7 +22,10 @@
 11. [Fase II Blok A: Chatbot Upgrade](#fase-ii-blok-a--chatbot-upgrade-28-02-2026)
 12. [LLM Content Generatie Details](#llm-content-generatie-details)
 13. [Fase III Blok G+A: Commerce Foundation Start](#fase-iii-blok-ga--commerce-foundation-start-01-03-2026)
-14. [Volledige Changelog](#volledige-changelog)
+14. [Fase III Blok B: Ticketing Module](#fase-iii--blok-b-ticketing-module-01-03-2026)
+15. [Fase III Blok C: Reservation Module](#fase-iii--blok-c-reservation-module-01-03-2026)
+16. [Fase III Blok D: Chatbot-to-Book Voorbereiding](#fase-iii--blok-d-chatbot-to-book-voorbereiding-02-03-2026)
+17. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -1338,6 +1341,72 @@ Health, browse, detail, order+reserve, order details, payment session, cancel, v
 18. Slot update validation (seats below reserved blocked) ✅
 19. Slot update (valid) ✅
 20. Admin: Venue cancel ✅
+
+---
+
+### Fase III — Blok D: Chatbot-to-Book Voorbereiding (02-03-2026)
+
+**CLAUDE.md**: v3.55.0 → v3.56.0
+
+**Doel**: Chatbot voorbereiden op commerce-integratie. Booking sub-intent classificatie, conversational booking flow, booking context tracking, multilingual response templates, en feature flag gating. Chatbot verzamelt selectiedata (POI, datum, details) maar redirect naar payment/form pagina's voor PII — GDPR design beslissing.
+
+#### Nieuwe bestanden (2)
+| Bestand | Beschrijving |
+|---------|-------------|
+| `platform-core/src/services/holibot/bookingMessages.js` | 16 message templates in 5 talen (NL/EN/DE/ES/FR), DESTINATION_PREPOSITIONS ("op Texel"/"in Calpe"), MODULE_NAMES, DESTINATION_CONTACTS, getBookingMessage() helper (~230 regels) |
+| `platform-core/src/services/holibot/bookingParser.js` | parseDate (ISO/EU/relatief/maandnamen), parseTime (HH:MM/AM-PM/"half zeven"), parseNumber (5 talen woord-naar-getal), parseConfirmation, parseOrderNumber (HB-[TR]-YYMMDD-XXXX), parseBookingInput, parseSpecialRequests (~260 regels) |
+
+#### Gewijzigde bestanden (7)
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/services/holibot/intentService.js` | +BOOKING_SUBINTENTS (4 sub-intents, 5 talen elk), +classifyBookingSubIntent() methode, FR bug fix ("réserver une table") |
+| `platform-core/src/services/holibot/contextService.js` | v1.0→v1.1: +BOOKING_STEPS constant, +6 methoden (startBookingContext, updateBookingStep, getBookingContext, cancelBookingContext, isBookingTimeout, getNextBookingStep) |
+| `platform-core/src/services/holibot/ragService.js` | v2.5→v2.6: +handleBookingFlow(), +7 helper methoden (_generateBookingStepResponse, _extractPoiFromMessage, _generateFriendlyBookingFallback, _generateModuleNotAvailable, _generateInvalidInputMessage, _buildCheckoutUrl, _buildReservationUrl) ~300 regels |
+| `platform-core/src/routes/holibot.js` | v2.9→v3.0: booking flow routing (active context check, cancel detection, sub-intent → handleBookingFlow), streaming endpoint booking interceptie |
+| `platform-core/config/destinations/calpe.config.js` | +7 commerce feature flags (all false) |
+| `platform-core/config/destinations/texel.config.js` | +7 commerce feature flags (all false) |
+| `platform-core/config/destinations/alicante.config.js` | +7 commerce feature flags (all false) |
+
+#### Booking Sub-Intents (4)
+| Sub-Intent | Vereist Module | Feature Flag | Voorbeeld |
+|------------|---------------|--------------|-----------|
+| `booking_ticket` | ticketing | hasTicketing | "Ik wil kaartjes kopen" |
+| `booking_reservation` | reservation | hasReservations | "Tafel reserveren bij..." |
+| `booking_activity` | ticketing | hasTicketing | "Duiktrip boeken" |
+| `booking_status` | null | — | "Status van mijn bestelling" |
+
+#### Commerce Feature Flags (7 per destination)
+`hasBooking`, `hasTicketing`, `hasReservations`, `hasChatToBook`, `hasGuestCheckout`, `hasDeposits`, `hasDynamicPricing` — alle `false` tot live testing per destination.
+
+#### Conversational Flow Architectuur
+1. User stuurt bericht → intentService classificeert als `booking` intent
+2. classifyBookingSubIntent() bepaalt sub-intent (ticket/reservation/activity/status)
+3. ragService.handleBookingFlow() checkt feature flags → start booking context
+4. Context trackt: type, stap (BOOKING_STEPS), geselecteerde POI, datum, aantallen
+5. Elke stap: parser extraheert data → volgende stap of checkout redirect
+6. 15-min timeout op booking context (GDPR: geen PII in-memory)
+7. Cancel keywords ("stop", "annuleer", "cancel") beëindigen flow
+
+#### Bug Fix
+- **FR patroon matching**: "Je veux réserver une table" → `general_search` i.p.v. `booking_reservation`
+- **Oorzaak**: `String.includes("réserver table")` matcht niet met "une" ertussen
+- **Fix**: Expliciete patronen "réserver une table", "acheter des billets", "réserver une activité" toegevoegd
+
+#### E2E Verificatie (12/12 PASS)
+1. NL ticket intent ("Ik wil kaartjes kopen voor Ecomare") ✅
+2. EN reservation intent ("I'd like to book a table") ✅
+3. DE activity intent ("Ich möchte eine Bootstour buchen") ✅
+4. ES ticket intent ("Quiero comprar entradas") ✅
+5. FR reservation intent ("Je veux réserver une table") ✅ (na bug fix)
+6. NL status intent ("Wat is de status van mijn bestelling?") ✅
+7. Destination preposition "op Texel" ✅
+8. Destination preposition "in Calpe" ✅
+9. Correct contact email per destination ✅
+10. Non-booking query still routes to RAG ✅
+11. Feature flag gating (hasChatToBook=false → friendly fallback) ✅
+12. Streaming endpoint returns JSON (niet SSE) voor booking ✅
+
+**Kosten**: EUR 0 (geen externe API calls)
 
 ---
 

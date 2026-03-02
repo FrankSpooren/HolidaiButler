@@ -7,9 +7,64 @@
  * - Entity extraction (POI names, categories, time, location)
  * - Context awareness from conversation history
  * - Follow-up suggestion generation
+ * - Booking sub-intent classification (Fase III Blok D): 4 sub-intents, 5 languages
  */
 
 import logger from '../../utils/logger.js';
+
+// === BOOKING SUB-INTENTS (Fase III Blok D) ===
+// Refines the generic 'booking' intent into 4 specific sub-intents
+// 5 languages: NL/EN/DE/ES/FR (FR for WarreWijzer preparation)
+const BOOKING_SUBINTENTS = {
+  booking_ticket: {
+    patterns: {
+      nl: ['ticket kopen', 'kaartje bestellen', 'entree', 'toegang', 'boeken voor', 'kaartjes', 'toegangskaart', 'dagkaart'],
+      en: ['buy ticket', 'book tickets', 'admission', 'entrance fee', 'get tickets', 'entry ticket', 'day pass'],
+      de: ['ticket kaufen', 'eintrittskarte', 'buchen für', 'karten kaufen', 'tageskarte', 'eintritt'],
+      es: ['comprar entrada', 'reservar entradas', 'boleto', 'comprar boletos', 'entrada'],
+      fr: ['acheter billet', 'acheter des billets', 'réserver billets', 'réserver des billets', 'entrée', 'ticket']
+    },
+    description: 'User wants to buy tickets/admission',
+    requiredModule: 'ticketing',
+    featureFlag: 'hasTicketing'
+  },
+  booking_reservation: {
+    patterns: {
+      nl: ['tafel reserveren', 'reservering maken', 'tafeltje boeken', 'eetplek', 'restaurant boeken', 'reserveren bij', 'plek reserveren'],
+      en: ['book a table', 'make reservation', 'reserve a table', 'dinner reservation', 'book restaurant', 'reserve a spot'],
+      de: ['tisch reservieren', 'reservierung machen', 'restaurant buchen', 'platz reservieren'],
+      es: ['reservar mesa', 'hacer reserva', 'reservar restaurante', 'reservar lugar'],
+      fr: ['réserver table', 'réserver une table', 'faire réservation', 'réserver restaurant', 'réserver']
+    },
+    description: 'User wants to reserve a table/spot',
+    requiredModule: 'reservation',
+    featureFlag: 'hasReservations'
+  },
+  booking_activity: {
+    patterns: {
+      nl: ['activiteit boeken', 'rondleiding boeken', 'excursie', 'tour boeken', 'meedoen aan', 'workshop boeken', 'fietstour'],
+      en: ['book activity', 'book tour', 'excursion', 'guided tour', 'join activity', 'book workshop', 'bike tour'],
+      de: ['aktivität buchen', 'tour buchen', 'ausflug', 'führung buchen', 'radtour buchen'],
+      es: ['reservar actividad', 'excursión', 'tour guiado', 'actividad', 'reservar tour'],
+      fr: ['réserver activité', 'réserver une activité', 'excursion', 'visite guidée', 'tour guidé', 'tour']
+    },
+    description: 'User wants to book an activity/tour/excursion',
+    requiredModule: 'ticketing',
+    featureFlag: 'hasTicketing'
+  },
+  booking_status: {
+    patterns: {
+      nl: ['mijn boeking', 'status bestelling', 'waar is mijn ticket', 'mijn reservering', 'boeking opzoeken', 'status reservering'],
+      en: ['my booking', 'order status', 'where is my ticket', 'my reservation', 'booking status', 'check reservation'],
+      de: ['meine buchung', 'bestellstatus', 'mein ticket', 'meine reservierung', 'buchungsstatus'],
+      es: ['mi reserva', 'estado del pedido', 'mi entrada', 'mi reservación', 'estado de reserva'],
+      fr: ['ma réservation', 'statut commande', 'mon billet']
+    },
+    description: 'User asks about booking/order status',
+    requiredModule: null,
+    featureFlag: 'hasBooking'
+  }
+};
 
 class IntentService {
   constructor() {
@@ -420,6 +475,46 @@ class IntentService {
   }
 
   /**
+   * Classify a booking sub-intent from user message (Fase III Blok D)
+   * @param {string} message - User message
+   * @param {string} language - Language code
+   * @returns {Object|null} { intent, confidence, config } or null if no match
+   */
+  classifyBookingSubIntent(message, language) {
+    const normalized = message.toLowerCase().replace(/[.,!?]/g, '');
+
+    const scores = {};
+    for (const [intent, config] of Object.entries(BOOKING_SUBINTENTS)) {
+      const patterns = config.patterns[language] || config.patterns.en || [];
+      let score = 0;
+      for (const pattern of patterns) {
+        if (normalized.includes(pattern.toLowerCase())) {
+          score += 1;
+        }
+      }
+      if (score > 0) {
+        scores[intent] = score / patterns.length;
+      }
+    }
+
+    const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    if (sorted.length > 0 && sorted[0][1] >= 0.1) {
+      logger.debug('[IntentService] Booking sub-intent detected', {
+        intent: sorted[0][0],
+        confidence: sorted[0][1],
+        message: message.substring(0, 50)
+      });
+      return {
+        intent: sorted[0][0],
+        confidence: sorted[0][1],
+        config: BOOKING_SUBINTENTS[sorted[0][0]]
+      };
+    }
+
+    return null;
+  }
+
+  /**
    * Build enhanced prompt with intent context
    */
   buildEnhancedPrompt(analysis, originalPrompt, language) {
@@ -454,4 +549,5 @@ class IntentService {
 }
 
 export const intentService = new IntentService();
+export { BOOKING_SUBINTENTS };
 export default intentService;

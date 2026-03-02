@@ -1,17 +1,24 @@
 /**
- * RAG Service v2.5 - Anti-Hallucination Layer + Context Awareness
- * 
+ * RAG Service v2.6 - Anti-Hallucination Layer + Context Awareness + Booking Flow
+ *
  * Key improvements:
  * 1. Entity existence validation before responding
  * 2. Higher similarity threshold for Q&A entries (0.55 vs 0.45)
  * 3. Filter out irrelevant Q&A that dont mention queried entity
  * 4. Explicit LLM instructions to deny unknown entities
  * 5. Named entity extraction and validation
+ * 6. Conversational booking flow (Fase III Blok D): ticket/reservation/activity/status
  */
 import { chromaService } from "./chromaService.js";
 import { embeddingService } from "./embeddingService.js";
 import logger from "../../utils/logger.js";
 import { contextService } from "./contextService.js";
+import { intentService } from "./intentService.js";
+import {
+  BOOKING_MESSAGES, DESTINATION_PREPOSITIONS, MODULE_NAMES,
+  DESTINATION_CONTACTS, getBookingMessage
+} from "./bookingMessages.js";
+import { parseBookingInput } from "./bookingParser.js";
 
 class RAGService {
   constructor() {
@@ -1560,15 +1567,385 @@ class RAGService {
   }
 
   isReady() { return this.isInitialized && chromaService.isReady() && embeddingService.isReady(); }
-  
+
   async getStats() {
     return {
       isInitialized: this.isInitialized,
-      version: "2.4",
+      version: "2.6",
       antiHallucination: true,
+      bookingFlow: true,
       chromaDb: await chromaService.getStats(),
       mistral: {isConfigured: embeddingService.isReady()}
     };
+  }
+
+  // ============================================================================
+  // BOOKING FLOW (Fase III Blok D)
+  // ============================================================================
+
+  /**
+   * Handle the conversational booking flow.
+   * Called when a booking sub-intent is detected or an active booking context exists.
+   * @param {string} sessionId
+   * @param {string} message - User message
+   * @param {string} language
+   * @param {number} destinationId
+   * @param {object} destinationConfig - Full destination config
+   * @returns {string} Response message for the user
+   */
+  async handleBookingFlow(sessionId, message, language, destinationId, destinationConfig) {
+    try {
+      const config = destinationConfig || {};
+      const features = config.features || {};
+      const bookingCtx = contextService.getBookingContext(sessionId);
+
+      // Check master toggle
+      if (!features.hasBooking) {
+        return this._generateFriendlyBookingFallback(language, destinationId, config);
+      }
+
+      // Timeout check
+      if (bookingCtx?.active && contextService.isBookingTimeout(sessionId)) {
+        return getBookingMessage('booking_timeout', language);
+      }
+
+      // No active flow — start new one based on sub-intent
+      if (!bookingCtx?.active) {
+        const subIntent = intentService.classifyBookingSubIntent(message, language);
+        if (!subIntent) {
+          return this._generateFriendlyBookingFallback(language, destinationId, config);
+        }
+
+        // Check specific module flag
+        const featureFlag = subIntent.config.featureFlag;
+        if (!features[featureFlag]) {
+          return this._generateModuleNotAvailable(language, destinationId, subIntent.config.requiredModule, config);
+        }
+
+        // Try to extract POI from message
+        const detectedPoi = await this._extractPoiFromMessage(message, destinationId, subIntent.intent);
+
+        // Start booking context
+        const bookingType = subIntent.intent.replace('booking_', '');
+        contextService.startBookingContext(sessionId, bookingType, detectedPoi?.id || null, detectedPoi?.name || null);
+
+        logger.info('[RAGService] Booking flow started', {
+          sessionId, type: bookingType, destinationId, poiDetected: !!detectedPoi
+        });
+
+        return await this._generateBookingStepResponse(sessionId, language, destinationId, config);
+      }
+
+      // Active flow — process user input for current step
+      const currentStep = contextService.getNextBookingStep(sessionId);
+
+      // Special handling for POI select: try to find the POI by name
+      if (currentStep.step === 'poi_select') {
+        const detectedPoi = await this._extractPoiFromMessage(message, destinationId, `booking_${bookingCtx.type}`);
+        if (detectedPoi) {
+          contextService.updateBookingStep(sessionId, 'poi_id', detectedPoi.id);
+          contextService.updateBookingStep(sessionId, 'poi_name', detectedPoi.name);
+          return await this._generateBookingStepResponse(sessionId, language, destinationId, config);
+        }
+        // No POI found — ask again
+        return getBookingMessage('invalid_input', language, {
+          hint: language === 'nl' ? 'Kun je de naam van de locatie herhalen?' :
+                language === 'de' ? 'Können Sie den Namen des Ortes wiederholen?' :
+                language === 'es' ? '¿Puedes repetir el nombre del lugar?' :
+                language === 'fr' ? 'Pouvez-vous répéter le nom du lieu ?' :
+                'Could you repeat the location name?'
+        });
+      }
+
+      // Parse input for current step
+      const parsedInput = parseBookingInput(message, currentStep.step, language);
+
+      if (parsedInput.valid) {
+        // For confirm step: check if user said yes or no
+        if (currentStep.step === 'confirm') {
+          if (parsedInput.value === false) {
+            contextService.cancelBookingContext(sessionId);
+            return getBookingMessage('cancel_booking_flow', language);
+          }
+          // Confirmed — set total_cents to mark confirm as complete
+          contextService.updateBookingStep(sessionId, 'total_cents', 0);
+        } else {
+          // Map step to field name
+          const stepFieldMap = {
+            date_select: 'date',
+            time_select: 'time',
+            party_size: 'party_size',
+            tier_select: 'tier_selection',
+            quantity: 'quantity',
+            details: 'special_requests'
+          };
+          const field = stepFieldMap[currentStep.step];
+          if (field) {
+            contextService.updateBookingStep(sessionId, field, parsedInput.value);
+          }
+        }
+
+        return await this._generateBookingStepResponse(sessionId, language, destinationId, config);
+      }
+
+      // Invalid input — generate hint
+      return this._generateInvalidInputMessage(language, currentStep.step);
+
+    } catch (err) {
+      logger.error('[RAGService] Booking flow error', { sessionId, error: err.message });
+      return this._generateFriendlyBookingFallback(language, destinationId, destinationConfig);
+    }
+  }
+
+  /**
+   * Generate the response for the next booking step.
+   */
+  async _generateBookingStepResponse(sessionId, language, destinationId, config) {
+    const ctx = contextService.getBookingContext(sessionId);
+    if (!ctx) return this._generateFriendlyBookingFallback(language, destinationId, config);
+
+    const nextStep = contextService.getNextBookingStep(sessionId);
+
+    switch (nextStep.step) {
+      case 'poi_select':
+        if (ctx.type === 'reservation') {
+          return getBookingMessage('reservation_poi_select', language);
+        }
+        return getBookingMessage('ticket_poi_select', language);
+
+      case 'date_select':
+        if (ctx.type === 'reservation') {
+          return getBookingMessage('reservation_date_select', language, { poi_name: ctx.poi_name || '?' });
+        }
+        return getBookingMessage('ticket_date_select', language, {
+          poi_name: ctx.poi_name || '?',
+          ticket_list: ''
+        });
+
+      case 'time_select':
+        return getBookingMessage('reservation_time_select', language, {
+          date: ctx.date || '?',
+          slot_list: ''
+        });
+
+      case 'party_size':
+        return getBookingMessage('reservation_party_size', language);
+
+      case 'tier_select':
+        return getBookingMessage('ticket_tier_select', language, { tier_list: '' });
+
+      case 'quantity':
+        return getBookingMessage('ticket_quantity', language, {
+          tier_name: ctx.tier_selection || ''
+        });
+
+      case 'details':
+        return getBookingMessage('reservation_details', language);
+
+      case 'confirm': {
+        if (ctx.type === 'reservation') {
+          const specialReqs = ctx.special_requests
+            ? (language === 'nl' ? `📝 Wensen: ${ctx.special_requests}` :
+               language === 'de' ? `📝 Wünsche: ${ctx.special_requests}` :
+               `📝 Requests: ${ctx.special_requests}`)
+            : '';
+          return getBookingMessage('reservation_confirm', language, {
+            poi_name: ctx.poi_name || '?',
+            date: ctx.date || '?',
+            time: ctx.time || '?',
+            party_size: String(ctx.party_size || '?'),
+            special_requests: specialReqs
+          });
+        }
+        const totalEuros = ctx.total_cents ? (ctx.total_cents / 100).toFixed(2) : '0.00';
+        return getBookingMessage('ticket_confirm', language, {
+          date: ctx.date || '?',
+          items: `${ctx.quantity || '?'}x ${ctx.tier_selection || 'ticket'}`,
+          total: totalEuros
+        });
+      }
+
+      case 'payment':
+        // Ticket flow: redirect to checkout page
+        return getBookingMessage('ticket_payment_link', language, {
+          link_text: language === 'nl' ? 'Ga naar betaling' :
+                     language === 'de' ? 'Zur Zahlung' :
+                     language === 'es' ? 'Ir al pago' :
+                     language === 'fr' ? 'Aller au paiement' :
+                     'Go to payment',
+          checkout_url: this._buildCheckoutUrl(ctx, destinationId, config)
+        });
+
+      case 'reservation_created':
+        // Reservation flow: redirect to reservation form
+        return getBookingMessage('reservation_link', language, {
+          link_text: language === 'nl' ? 'Reservering voltooien' :
+                     language === 'de' ? 'Reservierung abschließen' :
+                     language === 'es' ? 'Completar reserva' :
+                     language === 'fr' ? 'Compléter la réservation' :
+                     'Complete reservation',
+          reservation_url: this._buildReservationUrl(ctx, destinationId, config)
+        });
+
+      case 'lookup':
+        return getBookingMessage('booking_status_ask', language);
+
+      default:
+        return this._generateFriendlyBookingFallback(language, destinationId, config);
+    }
+  }
+
+  /**
+   * Extract POI from user message using DB lookup and ChromaDB similarity.
+   */
+  async _extractPoiFromMessage(message, destinationId, bookingType) {
+    try {
+      const normalized = message.toLowerCase().trim();
+
+      // Method 1: Check if any known POI name appears in the message
+      // Use ChromaDB similarity search with the message as query
+      if (chromaService.isReady()) {
+        const embeddings = await embeddingService.getEmbeddings([normalized]);
+        if (embeddings && embeddings[0]) {
+          const results = await chromaService.query(
+            embeddings[0],
+            5,
+            { destination_id: String(destinationId) }
+          );
+          if (results && results.length > 0) {
+            // Find a match where the POI name appears in the message or has high similarity
+            for (const result of results) {
+              const poiName = (result.name || '').toLowerCase();
+              if (poiName && normalized.includes(poiName)) {
+                return { id: parseInt(result.poiId || result.id), name: result.name, type: 'exact' };
+              }
+            }
+            // If no exact match, take highest similarity if above threshold
+            if (results[0].similarity >= 0.7) {
+              return {
+                id: parseInt(results[0].poiId || results[0].id),
+                name: results[0].name,
+                type: 'fuzzy'
+              };
+            }
+          }
+        }
+      }
+
+      return null;
+    } catch (err) {
+      logger.error('[RAGService] POI extraction error', { error: err.message });
+      return null;
+    }
+  }
+
+  /**
+   * Generate friendly fallback when booking is not available.
+   */
+  _generateFriendlyBookingFallback(language, destinationId, config) {
+    const destName = config?.destination?.name || 'this destination';
+    const prep = DESTINATION_PREPOSITIONS[destinationId]?.[language] || 'in';
+    const email = DESTINATION_CONTACTS[destinationId] || 'info@holidaibutler.com';
+
+    return getBookingMessage('booking_not_available', language, {
+      destination_preposition: prep,
+      destination_name: destName,
+      contact_email: email
+    });
+  }
+
+  /**
+   * Generate message when a specific module is not available.
+   */
+  _generateModuleNotAvailable(language, destinationId, moduleName, config) {
+    const destName = config?.destination?.name || 'this destination';
+    const prep = DESTINATION_PREPOSITIONS[destinationId]?.[language] || 'in';
+    const email = DESTINATION_CONTACTS[destinationId] || 'info@holidaibutler.com';
+    const modName = MODULE_NAMES[moduleName]?.[language] || moduleName;
+
+    return getBookingMessage('module_not_available', language, {
+      module_name: modName,
+      destination_preposition: prep,
+      destination_name: destName,
+      contact_email: email
+    });
+  }
+
+  /**
+   * Generate invalid input message with a step-specific hint.
+   */
+  _generateInvalidInputMessage(language, step) {
+    const hints = {
+      date_select: {
+        nl: 'Probeer een datum zoals "morgen", "15 maart" of "2026-03-15".',
+        en: 'Try a date like "tomorrow", "March 15" or "2026-03-15".',
+        de: 'Versuchen Sie ein Datum wie "morgen", "15. März" oder "2026-03-15".',
+        es: 'Prueba una fecha como "mañana", "15 de marzo" o "2026-03-15".',
+        fr: 'Essayez une date comme "demain", "15 mars" ou "2026-03-15".'
+      },
+      time_select: {
+        nl: 'Probeer een tijd zoals "18:00", "zes uur" of "half zeven".',
+        en: 'Try a time like "6 PM", "18:00" or "6:30".',
+        de: 'Versuchen Sie eine Zeit wie "18:00", "18 Uhr" oder "halb sieben".',
+        es: 'Prueba una hora como "18:00" o "6 PM".',
+        fr: 'Essayez une heure comme "18h", "18:00" ou "18h30".'
+      },
+      party_size: {
+        nl: 'Hoeveel personen? Bijvoorbeeld "2", "vier" of "6 personen".',
+        en: 'How many people? For example "2", "four" or "6 people".',
+        de: 'Wie viele Personen? Zum Beispiel "2", "vier" oder "6 Personen".',
+        es: '¿Cuántas personas? Por ejemplo "2", "cuatro" o "6 personas".',
+        fr: 'Combien de personnes ? Par exemple "2", "quatre" ou "6 personnes".'
+      },
+      quantity: {
+        nl: 'Hoeveel tickets? Geef een getal op, bijvoorbeeld "2" of "drie".',
+        en: 'How many tickets? Enter a number, e.g. "2" or "three".',
+        de: 'Wie viele Tickets? Geben Sie eine Zahl ein, z.B. "2" oder "drei".',
+        es: '¿Cuántas entradas? Ingresa un número, por ejemplo "2" o "tres".',
+        fr: 'Combien de billets ? Entrez un nombre, par ex. "2" ou "trois".'
+      },
+      confirm: {
+        nl: 'Zeg "ja" om te bevestigen of "nee" om te annuleren.',
+        en: 'Say "yes" to confirm or "no" to cancel.',
+        de: 'Sagen Sie "ja" zum Bestätigen oder "nein" zum Abbrechen.',
+        es: 'Di "sí" para confirmar o "no" para cancelar.',
+        fr: 'Dites "oui" pour confirmer ou "non" pour annuler.'
+      }
+    };
+
+    const hint = hints[step]?.[language] || hints[step]?.en || '';
+    return getBookingMessage('invalid_input', language, { hint });
+  }
+
+  /**
+   * Build checkout URL for ticket booking flow.
+   */
+  _buildCheckoutUrl(ctx, destinationId, config) {
+    const baseDomain = config?.domains?.production?.customer || 'holidaibutler.com';
+    const params = new URLSearchParams({
+      poi: ctx.poi_id || '',
+      date: ctx.date || '',
+      tier: ctx.tier_selection || '',
+      qty: ctx.quantity || '',
+      src: 'chatbot'
+    });
+    return `https://${baseDomain}/tickets/checkout?${params.toString()}`;
+  }
+
+  /**
+   * Build reservation form URL.
+   */
+  _buildReservationUrl(ctx, destinationId, config) {
+    const baseDomain = config?.domains?.production?.customer || 'holidaibutler.com';
+    const params = new URLSearchParams({
+      poi: ctx.poi_id || '',
+      date: ctx.date || '',
+      time: ctx.time || '',
+      party: ctx.party_size || '',
+      requests: ctx.special_requests || '',
+      src: 'chatbot'
+    });
+    return `https://${baseDomain}/reservations/book?${params.toString()}`;
   }
 }
 

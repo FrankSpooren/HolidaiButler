@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 28 februari 2026
-**Versie**: 7.21
+**Datum**: 2 maart 2026
+**Versie**: 7.22
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE III IN PROGRESS — Blok G+A+B+C COMPLEET. Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.55.0. MS v7.21.
+**Status**: FASE III IN PROGRESS — Blok G+A+B+C+D COMPLEET. Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.56.0. MS v7.22.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1321,7 +1321,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 |---|------|-----------|------|------------|--------|
 | I | Foundation Hardening | Agents Audit, Processen, Platform Core | 4-6 wkn | KRITIEK | ✅ COMPLEET |
 | II | Active Module Upgrade | Chatbot, POI, Agenda, Customer Portal | 6-8 wkn | HOOG | ✅ COMPLEET (Blok A+B+C+D) |
-| III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | 🟢 IN PROGRESS (Blok G+A+B) |
+| III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | 🟢 IN PROGRESS (Blok G+A+B+C+D COMPLEET) |
 | IV | Intermediair & Revenue | Intermediair module + Agent | 6-8 wkn | HOOG | GEPLAND |
 | V | UX Revolution + WarreWijzer | Mobiele UX redesign, WarreWijzer uitrol | 6-10 wkn | MIDDEL | GEPLAND |
 | VI | Polish, Scale & Launch | E2E testing, load testing, DR, go-live | 3-4 wkn | MIDDEL | GEPLAND |
@@ -1352,7 +1352,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 - **Payment/Adyen (Blok A)**: ✅ COMPLEET — Adyen SDK v30, Sessions flow, PCI DSS SAQ-A, 2 DB tabellen, 3 customer + 5 admin endpoints, HMAC webhook verificatie, frontend PaymentPage + PaymentResultPage
 - **Ticketing (Blok B)**: ✅ COMPLEET — 5 DB tabellen, 6 customer + 15 admin endpoints, Redis inventory locking + MySQL FOR UPDATE transactie, QR HMAC-SHA256, voucher systeem, BullMQ expired reservation job
 - **Reservering (Blok C)**: ✅ COMPLEET — 3 DB tabellen + ALTER TABLE POI, 4 customer + 13 admin endpoints, Redis slot locking, QR HMAC-SHA256, auto-blacklist (3 no-shows), 4 BullMQ jobs (expired/reminders/GDPR), GDPR data retention 24 maanden, 89 admin endpoints, 46 scheduled jobs
-- **Chatbot-to-Book (Blok D)**: GEPLAND — Booking sub-intents, conversational flow
+- **Chatbot-to-Book (Blok D)**: ✅ COMPLEET — 4 booking sub-intents (5 talen incl. FR), conversational booking flow (ragService v2.6), booking context tracking (contextService v1.1), 7 commerce feature flags per destination, bookingMessages.js + bookingParser.js, holibot.js v3.0, 12/12 E2E tests
 - **Admin Commerce (Blok E)**: GEPLAND — Revenue dashboard, financial reporting, CSV export
 - **Testing/Compliance (Blok F)**: GEPLAND — PCI DSS docs, payment test matrix, GDPR checklist
 
@@ -1554,6 +1554,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.22** | **02-03-2026** | **Fase III Blok D: Chatbot-to-Book Voorbereiding COMPLEET. 4 booking sub-intents (ticket/reservation/activity/status) in 5 talen (NL/EN/DE/ES/FR). Conversational booking flow in ragService v2.6 (~300 regels). Booking context tracking (contextService v1.1, 15-min timeout). bookingMessages.js (16 templates, 5 talen, destination preposities). bookingParser.js (datum/tijd/getal/bevestiging parsing). 7 commerce feature flags (3 destinations). holibot.js v3.0. 12/12 E2E tests PASS. Bug fix: FR "réserver une table" patroon. CLAUDE.md v3.56.0.** |
 | **7.21** | **01-03-2026** | **Fase III Blok C: Reservation Module COMPLEET. 3 DB tabellen + ALTER TABLE POI, 4 customer + 13 admin endpoints, Redis slot locking, QR HMAC-SHA256, auto-blacklist, 4 BullMQ jobs, GDPR guest cleanup. 89 admin endpoints, 46 scheduled jobs. 20/20 E2E tests PASS. CLAUDE.md v3.55.0.** |
 | 7.20 | 01-03-2026 | Fase III Blok B: Ticketing Module COMPLEET. 76 admin endpoints, 42 scheduled jobs. 18/18 E2E tests PASS. CLAUDE.md v3.54.0. |
 | **7.19** | **01-03-2026** | **Fase III Blok G+A: Legal docs + Payment Engine COMPLEET. 6 juridische templates. Adyen SDK v30, Sessions flow, 2 DB tabellen, 3+5 endpoints. CLAUDE.md v3.53.0.** |
@@ -1599,5 +1600,5 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 1 maart 2026 - Fase III Blok C Reservering COMPLEET. Master Document v7.21*
-*Fase I COMPLEET. Fase II COMPLEET. Fase III IN PROGRESS: Blok G+A+B ✅ (Legal + Payment + Ticketing). Admin Portal: 76 endpoints, adminPortal.js v3.15.0. 42 scheduled jobs. CLAUDE.md v3.54.0.*
+*Laatst bijgewerkt: 2 maart 2026 - Fase III Blok D Chatbot-to-Book COMPLEET. Master Document v7.22*
+*Fase I COMPLEET. Fase II COMPLEET. Fase III IN PROGRESS: Blok G+A+B+C+D ✅ (Legal + Payment + Ticketing + Reservering + Chatbot-to-Book). Admin Portal: 89 endpoints, adminPortal.js v3.16.0. 46 scheduled jobs. CLAUDE.md v3.56.0.*
