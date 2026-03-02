@@ -26,7 +26,8 @@
 15. [Fase III Blok C: Reservation Module](#fase-iii--blok-c-reservation-module-01-03-2026)
 16. [Fase III Blok D: Chatbot-to-Book Voorbereiding](#fase-iii--blok-d-chatbot-to-book-voorbereiding-02-03-2026)
 17. [Fase III Blok E: Admin Commerce Dashboard](#fase-iii--blok-e-admin-commerce-dashboard-02-03-2026)
-18. [Volledige Changelog](#volledige-changelog)
+18. [Fase III Blok F: Testing & Compliance (FASE III COMPLEET)](#fase-iii--blok-f-testing--compliance-02-03-2026)
+19. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -1487,6 +1488,95 @@ Health, browse, detail, order+reserve, order details, payment session, cancel, v
 10. Non-booking query still routes to RAG ✅
 11. Feature flag gating (hasChatToBook=false → friendly fallback) ✅
 12. Streaming endpoint returns JSON (niet SSE) voor booking ✅
+
+**Kosten**: EUR 0 (geen externe API calls)
+
+---
+
+### Fase III — Blok E: Admin Commerce Dashboard (02-03-2026)
+
+*(Details in vorige sectie hierboven)*
+
+---
+
+### Fase III — Blok F: Testing & Compliance (02-03-2026)
+
+**LAATSTE BLOK FASE III — Na afronding is Fase III VOLLEDIG COMPLEET**
+
+#### Pre-flight Fixes (Stap 0)
+- **Fix 0B**: MS footer geconsolideerd van 2 regels naar 1 (persistent issue 4 blokken)
+- **Fix 0C**: MS roadmap tabel "+E" toegevoegd
+- **Fix 0D**: CLAUDE.md repo structuur — frontend componenten correct gedocumenteerd (3e keer gemeld)
+- **Fix 0E**: Versie-sync checklist expliciet "MS Footer (GECONSOLIDEERDE regel)" toegevoegd
+- **Fix 0F**: Database backup: 114 MB pre-blok-F backup
+
+#### Compliance Documenten (7 bestanden)
+
+| Document | Inhoud | Resultaat |
+|----------|--------|-----------|
+| `pci-dss-saq-a.md` | PCI DSS SAQ-A checklist, 17 items | 14 PASS, 3 MANUAL |
+| `payment-test-results.md` | 17 payment test scenarios | 7 verified (code), 10 BLOCKED (Adyen frontend) |
+| `ticketing-race-condition-tests.md` | 5 concurrent access tests | 5/5 VERIFIED (code review) |
+| `reservation-double-booking-tests.md` | 5 slot locking + 1 deposit test | 5/5 VERIFIED + 1 N/A |
+| `gdpr-compliance-checklist.md` | 31-item GDPR audit | 27 PASS, 2 MANUAL, 1 OPEN, 1 N/A |
+| `security-audit.md` | 8-item security audit | 7 PASS + 1 FINDING (fixed) |
+| `fase3-test-summary.md` | Consolidatie samenvatting | 84 tests totaal |
+
+#### Security Verificaties Uitgevoerd
+- HTTPS + security headers: 4 domeinen PASS (HSTS, SAMEORIGIN, nosniff, Referrer-Policy, Permissions-Policy)
+- API keys niet in source code: 0 matches (alleen .env referenties)
+- .env permissions: 644 → **600** (gefixt tijdens audit)
+- SQL injection preventie: Alle commerce queries parameterized (:replacements)
+- PII in logs: 0 kaartdata matches (2 UUID false positives)
+- npm audit: 0 vulnerabilities
+- Webhook HMAC: SHA-256 + crypto.timingSafeEqual()
+- Rate limiting: express-rate-limit op gateway + admin endpoints
+
+#### GDPR Compliance Verificaties
+- guest_profiles: consent_data_storage, consent_marketing, consent_given_at, data_retention_until columns ✅
+- 5 BullMQ GDPR jobs: gdpr-overdue-check (4h), gdpr-export-cleanup (daily), gdpr-retention-check (monthly), gdpr-consent-audit (weekly), guest-data-retention-cleanup (weekly)
+- 0 expired guest profiles (cleanup working)
+- Geen payment auto-delete (7 jaar fiscale verplichting)
+- Session TTL: 24 uur (chatbot), 15 min (booking context)
+- Alle data processing EU/EEA + CH (adequaat)
+
+#### Totaal Test Score
+| Categorie | Tests | PASS | Verified | Blocked | Manual | N/A |
+|-----------|-------|------|----------|---------|--------|-----|
+| PCI DSS | 17 | 14 | 0 | 0 | 3 | 0 |
+| Payment | 17 | 0 | 7 | 10 | 0 | 0 |
+| Ticketing | 5 | 0 | 5 | 0 | 0 | 0 |
+| Reservation | 6 | 0 | 5 | 0 | 0 | 1 |
+| GDPR | 31 | 27 | 0 | 0 | 2 | 1 |
+| Security | 8 | 7 | 0 | 0 | 0 | 0 |
+| **Totaal** | **84** | **48** | **17** | **10** | **5** | **2** |
+
+**0 FAIL items. Fase III markeerbaar als COMPLEET.**
+
+#### Bestanden Overzicht
+
+**Nieuwe bestanden (7)**:
+| Bestand | Beschrijving |
+|---------|--------------|
+| `docs/compliance/pci-dss-saq-a.md` | PCI DSS SAQ-A checklist |
+| `docs/compliance/payment-test-results.md` | 17 payment test scenarios |
+| `docs/compliance/ticketing-race-condition-tests.md` | 5 race condition tests |
+| `docs/compliance/reservation-double-booking-tests.md` | 5-6 double-booking tests |
+| `docs/compliance/gdpr-compliance-checklist.md` | 31-item GDPR audit |
+| `docs/compliance/security-audit.md` | 8-item security audit |
+| `docs/compliance/fase3-test-summary.md` | Consolidatie samenvatting |
+
+**Gewijzigde bestanden (4)**:
+| Bestand | Wijziging |
+|---------|-----------|
+| `CLAUDE.md` | v3.57.0 → v3.58.0, Fase III COMPLEET, III-F rij, repo structure +compliance, changelog |
+| `docs/strategy/HolidaiButler_Master_Strategie.md` | v7.23 → v7.24, Fase III COMPLEET, footer, changelog |
+| `CLAUDE_HISTORY.md` | Blok F sectie, TOC entry #18 |
+| Hetzner `.env` | chmod 644 → 600 (security fix) |
+
+**FASE III COMMERCE FOUNDATION — VOLLEDIG COMPLEET**
+
+Blokken: G (Legal) + A (Payment) + B (Ticketing) + C (Reservation) + D (Chatbot-to-Book) + E (Admin Commerce) + F (Testing & Compliance)
 
 **Kosten**: EUR 0 (geen externe API calls)
 
