@@ -213,7 +213,12 @@
       "reviews": "Reviews",
       "totalReviews": "Total reviews",
       "avgRating": "Avg. rating",
-      "distribution": "Distribution"
+      "distribution": "Distribution",
+      "syncInfo": "Sync & Metadata",
+      "lastApifySync": "Last Apify Sync",
+      "tierScore": "Tier Score",
+      "googleRating": "Google Rating",
+      "freshness": "Freshness"
     },
     "images": "Images",
     "primary": "Primary",

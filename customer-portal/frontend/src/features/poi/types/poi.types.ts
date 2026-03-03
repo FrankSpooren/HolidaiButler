@@ -27,6 +27,11 @@ export interface POI {
   enriched_tile_description: string | null;
   enriched_detail_description: string | null;
   content_quality_score: number | null;
+  // Apify-enriched data
+  popular_times: any | null;
+  parking: any[] | null;
+  service_options: any[] | null;
+  reviews_distribution: any | null;
   created_at: string;
   updated_at: string;
   // Language info from API

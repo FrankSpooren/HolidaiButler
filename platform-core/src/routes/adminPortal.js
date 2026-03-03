@@ -2808,6 +2808,19 @@ router.get('/pois/:id', adminAuth('reviewer'), destinationScope, async (req, res
 
     const rs = reviewSummary[0] || {};
 
+    // Last Apify scrape from Bronze layer
+    const lastScrape = await mysqlSequelize.query(
+      `SELECT scraped_at, permanently_closed, temporarily_closed,
+              images_count, validation_status, validation_notes
+       FROM poi_apify_raw WHERE poi_id = ? ORDER BY scraped_at DESC LIMIT 1`,
+      { replacements: [poiId], type: QueryTypes.SELECT }
+    );
+
+    const scrapeCount = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total FROM poi_apify_raw WHERE poi_id = ?`,
+      { replacements: [poiId], type: QueryTypes.SELECT }
+    );
+
     res.json({
       success: true,
       data: {
@@ -2855,7 +2868,24 @@ router.get('/pois/:id', adminAuth('reviewer'), destinationScope, async (req, res
             }))
           },
           created_at: poi.created_at,
-          last_updated: poi.last_updated
+          last_updated: poi.last_updated,
+          content_updated_at: poi.content_updated_at,
+          last_apify_sync: poi.last_apify_sync,
+          tier_score: poi.tier_score ? parseFloat(poi.tier_score) : null,
+          google_rating: poi.google_rating ? parseFloat(poi.google_rating) : null,
+          google_review_count: poi.google_review_count,
+          content_freshness_score: poi.content_freshness_score,
+          content_freshness_status: poi.content_freshness_status,
+          reviews_distribution: poi.reviews_distribution ? JSON.parse(poi.reviews_distribution) : null,
+          lastApifyScrape: lastScrape[0] ? {
+            scrapedAt: lastScrape[0].scraped_at,
+            permanentlyClosed: !!lastScrape[0].permanently_closed,
+            temporarilyClosed: !!lastScrape[0].temporarily_closed,
+            imagesCount: lastScrape[0].images_count,
+            validationStatus: lastScrape[0].validation_status,
+            validationNotes: lastScrape[0].validation_notes
+          } : null,
+          totalScrapes: parseInt(scrapeCount[0]?.total) || 0
         }
       }
     });

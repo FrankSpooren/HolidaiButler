@@ -1,6 +1,7 @@
 /**
  * POI Sync Service
  * Handles synchronization of POI data using Apify
+ * Bronze → Silver → Gold pipeline with quality checkpoints
  *
  * @module agents/dataSync/poiSyncService
  */
@@ -17,6 +18,244 @@ class POISyncService {
   setSequelize(sequelize) {
     this.sequelize = sequelize;
   }
+
+  // ═══════════════════════════════════════════════════════
+  // QUALITY CHECKPOINT 1: Data Validation
+  // ═══════════════════════════════════════════════════════
+
+  validateRawData(data) {
+    const warnings = [];
+    if (data.permanentlyClosed) warnings.push('PERMANENT_CLOSED');
+    if (data.temporarilyClosed) warnings.push('TEMPORARILY_CLOSED');
+    if (!data.totalScore && !data.reviewsCount) warnings.push('NO_RATING_DATA');
+    if (data.totalScore && (data.totalScore < 0 || data.totalScore > 5)) warnings.push('INVALID_RATING');
+    if (data.reviewsCount && data.reviewsCount < 0) warnings.push('INVALID_REVIEW_COUNT');
+
+    return {
+      status: warnings.some(w => w.startsWith('PERMANENT') || w.startsWith('INVALID'))
+        ? 'error' : warnings.length > 0 ? 'warning' : 'valid',
+      notes: warnings.length > 0 ? warnings.join(', ') : null
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // QUALITY CHECKPOINT 2: Significant Change Detection
+  // ═══════════════════════════════════════════════════════
+
+  async detectSignificantChanges(poiId, apifyData) {
+    const [current] = await this.sequelize.query(
+      'SELECT rating, review_count, is_active FROM POI WHERE id = ?',
+      { replacements: [poiId] }
+    );
+    if (!current.length) return [];
+
+    const poi = current[0];
+    const changes = [];
+
+    if (poi.rating && apifyData.totalScore &&
+        Math.abs(parseFloat(poi.rating) - apifyData.totalScore) >= 0.5) {
+      changes.push(`RATING_CHANGE: ${poi.rating} → ${apifyData.totalScore}`);
+    }
+    if (apifyData.permanentlyClosed && poi.is_active) {
+      changes.push('NOW_PERMANENTLY_CLOSED');
+    }
+    if (apifyData.temporarilyClosed) {
+      changes.push('NOW_TEMPORARILY_CLOSED');
+    }
+
+    return changes;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // BRONZE LAYER: Raw Data Storage
+  // ═══════════════════════════════════════════════════════
+
+  async saveRawData(poiId, googlePlaceid, destinationId, apifyData) {
+    const scrapedAt = apifyData.scrapedAt ? new Date(apifyData.scrapedAt) : new Date();
+    const { status, notes } = this.validateRawData(apifyData);
+
+    await this.sequelize.query(`
+      INSERT INTO poi_apify_raw
+        (poi_id, google_placeid, destination_id,
+         raw_json, google_rating, google_review_count,
+         permanently_closed, temporarily_closed, images_count,
+         validation_status, validation_notes, scraped_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, {
+      replacements: [
+        poiId, googlePlaceid, destinationId,
+        JSON.stringify(apifyData),
+        apifyData.totalScore || null,
+        apifyData.reviewsCount || null,
+        apifyData.permanentlyClosed ? 1 : 0,
+        apifyData.temporarilyClosed ? 1 : 0,
+        apifyData.imagesCount || null,
+        status, notes, scrapedAt
+      ]
+    });
+
+    return { status, notes, scrapedAt };
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // SILVER LAYER: Review Extraction
+  // ═══════════════════════════════════════════════════════
+
+  async extractReviews(poiId, destinationId, apifyReviews) {
+    if (!apifyReviews || apifyReviews.length === 0) return 0;
+
+    let inserted = 0;
+    for (const review of apifyReviews) {
+      if (!review.reviewId) continue;
+
+      const [existing] = await this.sequelize.query(
+        'SELECT id FROM reviews WHERE google_review_id = ?',
+        { replacements: [review.reviewId] }
+      );
+
+      if (existing.length === 0) {
+        await this.sequelize.query(`
+          INSERT INTO reviews (poi_id, destination_id, user_name, rating,
+            review_text, google_review_id, source, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, 'apify', ?)
+        `, {
+          replacements: [
+            poiId, destinationId || 1,
+            review.name || 'Anonymous',
+            review.stars || review.rating || null,
+            review.text || review.textTranslated || null,
+            review.reviewId,
+            review.publishedAtDate ? new Date(review.publishedAtDate) : new Date()
+          ]
+        });
+        inserted++;
+      }
+    }
+    return inserted;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // QUALITY CHECKPOINT 3: Freshness Score Update
+  // ═══════════════════════════════════════════════════════
+
+  async updateFreshnessScore(poiId) {
+    await this.sequelize.query(`
+      UPDATE POI SET
+        content_freshness_score = 100,
+        content_freshness_status = 'fresh'
+      WHERE id = ?
+    `, { replacements: [poiId] });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // SILVER LAYER: Full POI Update (Bronze + Silver)
+  // ═══════════════════════════════════════════════════════
+
+  async updatePOI(poiId, apifyData, destinationId) {
+    const transformed = apifyIntegration.transformToHolidaiButlerFormat(apifyData);
+
+    // ── Bronze: save complete raw JSON ──
+    const rawResult = await this.saveRawData(
+      poiId,
+      transformed.google_placeid || apifyData.placeId || '',
+      destinationId || 1,
+      apifyData
+    );
+
+    // ── Checkpoint 2: detect significant changes ──
+    const changes = await this.detectSignificantChanges(poiId, apifyData);
+    if (changes.length > 0) {
+      console.log(`[POISyncService] ⚠️ POI ${poiId} significant changes: ${changes.join(', ')}`);
+      await logAgent('data-sync', 'significant_change_detected', {
+        description: `POI ${poiId}: ${changes.join(', ')}`,
+        metadata: { poiId, changes }
+      });
+    }
+
+    // ── Silver: extract structured data ──
+    const additionalInfo = apifyData.additionalInfo || {};
+    const amenitiesJson = JSON.stringify(additionalInfo.Amenities || additionalInfo.amenities || []);
+    const accessibilityJson = JSON.stringify(additionalInfo.Accessibility || additionalInfo.accessibility || []);
+    const parkingJson = JSON.stringify(additionalInfo.Parking || additionalInfo.parking || []);
+    const serviceOptionsJson = JSON.stringify(additionalInfo['Service options'] || []);
+    const reviewsDistJson = apifyData.reviewsDistribution ? JSON.stringify(apifyData.reviewsDistribution) : null;
+    const reviewTagsJson = apifyData.reviewsTags && apifyData.reviewsTags.length > 0 ? JSON.stringify(apifyData.reviewsTags) : null;
+    const popularTimesJson = apifyData.popularTimesHistogram ? JSON.stringify(apifyData.popularTimesHistogram) : null;
+    const peopleAlsoSearch = (apifyData.peopleAlsoSearch || [])
+      .map(p => ({ title: p.title, score: p.totalScore, reviews: p.reviewsCount }));
+    const peopleAlsoJson = peopleAlsoSearch.length > 0 ? JSON.stringify(peopleAlsoSearch) : null;
+
+    // Social media extraction
+    const instagram = (apifyData.instagrams || [])[0] || null;
+    const facebook = (apifyData.facebooks || [])[0] || null;
+    const email = (apifyData.emails || [])[0] || null;
+
+    // is_active: deactivate if permanently closed
+    const isActive = apifyData.permanentlyClosed ? 0 : (transformed.is_active ? 1 : 0);
+
+    await this.sequelize.query(`
+      UPDATE POI SET
+        address = COALESCE(?, address),
+        phone = COALESCE(?, phone),
+        website = COALESCE(?, website),
+        email = COALESCE(?, email),
+        rating = COALESCE(?, rating),
+        review_count = COALESCE(?, review_count),
+        google_rating = COALESCE(?, google_rating),
+        google_review_count = COALESCE(?, google_review_count),
+        opening_hours = COALESCE(?, opening_hours),
+        opening_hours_json = COALESCE(?, opening_hours_json),
+        amenities = COALESCE(?, amenities),
+        accessibility_features = COALESCE(?, accessibility_features),
+        parking_info = ?,
+        service_options = ?,
+        reviews_distribution = ?,
+        review_tags = ?,
+        popular_times_json = ?,
+        people_also_search = ?,
+        instagram_url = COALESCE(?, instagram_url),
+        facebook_url = COALESCE(?, facebook_url),
+        is_active = ?,
+        last_updated = NOW(),
+        content_updated_at = NOW(),
+        last_apify_sync = NOW()
+      WHERE id = ?
+    `, {
+      replacements: [
+        transformed.address, transformed.phone, transformed.website, email,
+        transformed.rating, transformed.review_count,
+        apifyData.totalScore || null, apifyData.reviewsCount || null,
+        transformed.opening_hours,
+        apifyData.openingHours ? JSON.stringify(apifyData.openingHours) : null,
+        amenitiesJson !== '[]' ? amenitiesJson : null,
+        accessibilityJson !== '[]' ? accessibilityJson : null,
+        parkingJson !== '[]' ? parkingJson : null,
+        serviceOptionsJson !== '[]' ? serviceOptionsJson : null,
+        reviewsDistJson, reviewTagsJson, popularTimesJson, peopleAlsoJson,
+        instagram, facebook,
+        isActive,
+        poiId
+      ]
+    });
+
+    // ── Silver: extract reviews ──
+    const newReviews = await this.extractReviews(poiId, destinationId, apifyData.reviews || []);
+
+    // ── Mark raw record as processed ──
+    await this.sequelize.query(
+      `UPDATE poi_apify_raw SET processed_at = NOW() WHERE poi_id = ? ORDER BY id DESC LIMIT 1`,
+      { replacements: [poiId] }
+    );
+
+    // ── Checkpoint 3: update freshness score ──
+    await this.updateFreshnessScore(poiId);
+
+    console.log(`[POISyncService] Updated POI ${poiId}: ${transformed.name} (bronze+silver, ${rawResult.status}${newReviews > 0 ? `, +${newReviews} reviews` : ''})`);
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // TIER-BASED SYNC ORCHESTRATION
+  // ═══════════════════════════════════════════════════════
 
   async syncPOIsByTier(tier, destination = "Calpe, Spain") {
     if (!this.sequelize) {
@@ -46,7 +285,7 @@ class POISyncService {
             if (poi.google_placeid) {
               const details = await apifyIntegration.getPlaceDetails(poi.google_placeid);
               if (details) {
-                await this.updatePOI(poi.id, details);
+                await this.updatePOI(poi.id, details, poi.destination_id);
                 totalUpdated++;
               }
             }
@@ -90,35 +329,9 @@ class POISyncService {
     }
   }
 
-  async updatePOI(poiId, apifyData) {
-    const transformed = apifyIntegration.transformToHolidaiButlerFormat(apifyData);
-
-    await this.sequelize.query(`
-      UPDATE POI SET
-        address = COALESCE(?, address),
-        phone = COALESCE(?, phone),
-        website = COALESCE(?, website),
-        rating = COALESCE(?, rating),
-        review_count = COALESCE(?, review_count),
-        opening_hours = COALESCE(?, opening_hours),
-        is_active = ?,
-        last_updated = NOW()
-      WHERE id = ?
-    `, {
-      replacements: [
-        transformed.address,
-        transformed.phone,
-        transformed.website,
-        transformed.rating,
-        transformed.review_count,
-        transformed.opening_hours,
-        transformed.is_active ? 1 : 0,
-        poiId
-      ]
-    });
-
-    console.log(`[POISyncService] Updated POI ${poiId}: ${transformed.name}`);
-  }
+  // ═══════════════════════════════════════════════════════
+  // POI DISCOVERY
+  // ═══════════════════════════════════════════════════════
 
   async discoverNewPOIs(destination, categories) {
     if (!this.sequelize) {

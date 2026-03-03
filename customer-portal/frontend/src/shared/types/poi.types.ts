@@ -21,6 +21,11 @@ export interface POI {
   amenities?: string[];
   images?: string[];
   opening_hours?: Record<string, any>;
+  accessibility_features?: any[];
+  popular_times?: any;
+  parking?: any[];
+  service_options?: any[];
+  reviews_distribution?: any;
   created_at: string;
   updated_at: string;
 }

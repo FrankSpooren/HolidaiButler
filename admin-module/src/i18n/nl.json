@@ -213,7 +213,12 @@
       "reviews": "Reviews",
       "totalReviews": "Totaal reviews",
       "avgRating": "Gem. rating",
-      "distribution": "Verdeling"
+      "distribution": "Verdeling",
+      "syncInfo": "Sync & Metadata",
+      "lastApifySync": "Laatste Apify Sync",
+      "tierScore": "Tier Score",
+      "googleRating": "Google Rating",
+      "freshness": "Versheid"
     },
     "images": "Afbeeldingen",
     "primary": "Primair",

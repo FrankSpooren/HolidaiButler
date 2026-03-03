@@ -249,7 +249,7 @@ class POITierManager {
     if (tier === 1) {
       // For Tier 1, use the balanced selection
       const [pois] = await sequelize.query(`
-        SELECT id, name, google_placeid, category, rating, review_count
+        SELECT id, name, google_placeid, category, rating, review_count, destination_id
         FROM POI
         WHERE (is_active = 1 OR is_active IS NULL)
         ORDER BY last_updated ASC
@@ -271,7 +271,7 @@ class POITierManager {
     if (tier === 2) {
       // Tier 2: Score 7.0-8.0 + critical practical
       const [pois] = await sequelize.query(`
-        SELECT id, name, google_placeid, category, rating, review_count
+        SELECT id, name, google_placeid, category, rating, review_count, destination_id
         FROM POI
         WHERE (is_active = 1 OR is_active IS NULL)
         ORDER BY last_updated ASC
@@ -296,7 +296,7 @@ class POITierManager {
     const maxScore = tier === 3 ? 7.0 : 5.0;
 
     const [pois] = await sequelize.query(`
-      SELECT id, name, google_placeid, category, rating, review_count
+      SELECT id, name, google_placeid, category, rating, review_count, destination_id
       FROM POI
       WHERE (is_active = 1 OR is_active IS NULL)
       ORDER BY last_updated ASC

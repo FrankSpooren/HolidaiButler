@@ -235,6 +235,11 @@ const formatPOIForPublic = (poi, lang = "en", images = null) => {
     enriched_detail_description: getTranslatedField(data, 'enriched_detail_description', lang),
     enriched_highlights: safeJSONParse(data.enriched_highlights, []),
     enriched_target_audience: data.enriched_target_audience,
+    // Apify-enriched data
+    popular_times: safeJSONParse(data.popular_times_json, null),
+    parking: safeJSONParse(data.parking_info, null),
+    service_options: safeJSONParse(data.service_options, null),
+    reviews_distribution: safeJSONParse(data.reviews_distribution, null),
     // Include language info in response
     _language: lang,
     created_at: data.created_at || data.last_updated || new Date().toISOString(),

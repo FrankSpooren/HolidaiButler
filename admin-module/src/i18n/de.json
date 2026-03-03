@@ -213,7 +213,12 @@
       "reviews": "Bewertungen",
       "totalReviews": "Bewertungen gesamt",
       "avgRating": "Durchschn. Bewertung",
-      "distribution": "Verteilung"
+      "distribution": "Verteilung",
+      "syncInfo": "Sync & Metadaten",
+      "lastApifySync": "Letzte Apify-Synchronisation",
+      "tierScore": "Tier-Score",
+      "googleRating": "Google-Bewertung",
+      "freshness": "Aktualität"
     },
     "images": "Bilder",
     "primary": "Prim\u00e4r",
