@@ -29,7 +29,8 @@
 18. [Fase III Blok F: Testing & Compliance (FASE III COMPLEET)](#fase-iii--blok-f-testing--compliance-02-03-2026)
 19. [Fase IV-A: Apify Data Pipeline — Medallion Architecture](#fase-iv-a--apify-data-pipeline--medallion-architecture-03-03-2026)
 20. [Fase IV-B: POI Tier Import + Owner-Managed Tiers](#fase-iv-b--poi-tier-import--owner-managed-tiers-03-03-2026)
-21. [Volledige Changelog](#volledige-changelog)
+21. [Fase IV-0: Pre-flight & Adyen Activatie](#fase-iv-0--pre-flight--adyen-activatie-03-03-2026)
+22. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -593,11 +594,57 @@ Verwijderd:
 
 ---
 
+## Fase IV-0 — Pre-flight & Adyen Activatie (03-03-2026)
+
+### Probleem
+Fase III Commerce Foundation (Payment/Ticketing/Reservation/Chatbot-to-Book) was volledig gebouwd maar nooit end-to-end getest. Alle 7 commerce feature flags stonden op `false`. PCI DSS en GDPR hadden openstaande handmatige items.
+
+### Oplossing — Blok 0 Pre-flight
+
+**Stap 0.1: Adyen E2E Test**
+- Session creation: `POST /api/v1/payments/session` → Session ID `CS7F78812ACD01D0B4BE3C20D`
+- Environment: `TEST`, Merchant: `HolidaiButler378ECOM`
+- Transaction status endpoint: werkend (status=pending, correct voor nieuwe sessie)
+- Client Key: `test_GTHKLMCCOV...` (correct test prefix)
+- .env permissions: `600` (PCI DSS vereiste, bevestigd)
+
+**Stap 0.2: Feature Flag Activatie (Calpe)**
+- `hasBooking`: false → **true**
+- `hasTicketing`: false → **true**
+- `hasReservations`: false → **true**
+- `hasChatToBook`: false → **true**
+- `hasGuestCheckout`: was al true
+- `hasDeposits`: false (bewust — toekomstig)
+- `hasDynamicPricing`: false (bewust — toekomstig)
+- Texel: nog niet geactiveerd (later)
+
+**Stap 0.3: PCI DSS + GDPR Review**
+- PCI DSS SAQ-A: 14/17 PASS, 3 handmatige items voor Frank (Bugsink check, Adyen 2FA, API key scope)
+- GDPR: 27/31 PASS, 2 handmatige items voor Frank (Mistral AI DPA, Bugsink DPA)
+- .env permissions: 600 (bevestigd, was al gecorrigeerd in Fase 10C)
+- Compliance docs geüpdatet met Blok 0 review secties en GDPR readiness voor Intermediair module
+
+**Bijkomende Fix: Legacy PM2 Process**
+- `holidaibutler-reservations` (PM2 #4): ERRORED met 16+ restarts
+- Root cause: legacy `reservations-module/` met corrupte node_modules (missing lodash)
+- Dit is NIET de Fase III reservationService (die draait in platform-core)
+- Actie: Process gestopt om crash loop te voorkomen
+
+### Bestanden Gewijzigd
+| # | Bestand | Wijziging |
+|---|---------|-----------|
+| 1 | `platform-core/config/destinations/calpe.config.js` | Feature flags hasBooking/hasTicketing/hasReservations/hasChatToBook → true |
+| 2 | `docs/compliance/pci-dss-saq-a.md` | Blok 0 review sectie, Adyen E2E test resultaat, .env 600 bevestiging |
+| 3 | `docs/compliance/gdpr-compliance-checklist.md` | Blok 0 review sectie, GDPR readiness Intermediair module |
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **3.60.0** | **2026-03-03** | **Fase IV-B**: POI Tier Import + Owner-Managed Tiers. 2.695 POI tier-assignments uit Excel. poiTierManager.js v2.0: query op stored tier kolom. Admin Portal tier display. |
+| **3.61.0** | **2026-03-03** | **Fase IV-0**: Pre-flight & Adyen Activatie. Adyen E2E test PASS. Feature flags Calpe geactiveerd. PCI DSS + GDPR Blok 0 review. Compliance docs geüpdatet. |
+| 3.60.0 | 2026-03-03 | **Fase IV-B**: POI Tier Import + Owner-Managed Tiers. 2.695 POI tier-assignments uit Excel. poiTierManager.js v2.0: query op stored tier kolom. Admin Portal tier display. |
 | **3.59.0** | **2026-03-03** | **Fase IV-A**: Apify Data Pipeline — Medallion Architecture (Bronze/Silver/Gold). poi_apify_raw tabel, poiSyncService.js rewrite, Apify backfill 1.023 POIs, 9.363 reviews, Admin Sync & Metadata card, Customer Portal dynamic amenities. Review sentiment fix. i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen). |
 | **3.58.0** | **2026-03-02** | **Fase III Blok F**: Testing & Compliance — FASE III VOLLEDIG COMPLEET. PCI DSS SAQ-A, 17 payment tests, GDPR audit, security audit. 7 compliance documenten. |
 | **3.57.0** | **2026-03-02** | **Fase III Blok E**: Admin Commerce Dashboard. commerceService.js, 10 endpoints (99 totaal), CommercePage.jsx 4 tabs, CSV export, i18n 4 talen. |
