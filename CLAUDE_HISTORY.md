@@ -28,7 +28,8 @@
 17. [Fase III Blok E: Admin Commerce Dashboard](#fase-iii--blok-e-admin-commerce-dashboard-02-03-2026)
 18. [Fase III Blok F: Testing & Compliance (FASE III COMPLEET)](#fase-iii--blok-f-testing--compliance-02-03-2026)
 19. [Fase IV-A: Apify Data Pipeline — Medallion Architecture](#fase-iv-a--apify-data-pipeline--medallion-architecture-03-03-2026)
-20. [Volledige Changelog](#volledige-changelog)
+20. [Fase IV-B: POI Tier Import + Owner-Managed Tiers](#fase-iv-b--poi-tier-import--owner-managed-tiers-03-03-2026)
+21. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -502,10 +503,101 @@ v3.9.0, **15/15 PASS**
 
 ---
 
+## Fase IV-B — POI Tier Import + Owner-Managed Tiers (03-03-2026)
+
+**Doel**: Frank's manuele POI tier-indeling importeren in de database en De Koerier agent configureren om deze indeling te respecteren voor Apify-powered sync scheduling.
+
+### Probleem
+
+De Koerier's `getPOIsForUpdate()` berekende tiers **dynamisch** op basis van `tier_score` (runtime berekening). Frank's manuele tier-indeling uit Excel werd genegeerd. De `tier` kolom (TINYINT DEFAULT 4) bestond wel in de migratie maar was niet aangemaakt op productie en werd niet gebruikt door de sync pipeline.
+
+### Oplossing
+
+#### Database: Tier Kolom + Import (2.695 POIs)
+
+```sql
+ALTER TABLE POI ADD COLUMN tier TINYINT DEFAULT 4 COMMENT 'Manual tier assignment (1-4) by owner';
+ALTER TABLE POI ADD INDEX idx_poi_tier (tier);
+-- 2.695 UPDATE statements uit Excel
+```
+
+Tier distributie na import:
+| Destination | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Totaal |
+|------------|--------|--------|--------|--------|--------|
+| Calpe | 2 | 116 | 691 | 784 | 1.593 |
+| Texel | 18 | 39 | 255 | 1.427 | 1.739 |
+| **Totaal** | **20** | **155** | **946** | **2.211** | **3.332** |
+
+Tier 4 is hoger dan Excel (Calpe +154, Texel +483) omdat POIs niet in het Excel bestand default tier 4 kregen.
+
+#### poiTierManager.js v2.0 — Owner-Managed Tiers
+
+Kernwijziging: `getPOIsForUpdate()` query nu op stored `tier` kolom:
+
+```js
+// VOOR (v1.0): Alle POIs ophalen → scores berekenen → in-memory filteren
+const [pois] = await sequelize.query('SELECT ... FROM POI ORDER BY last_updated ASC');
+return pois.filter(poi => calculateTierScore(poi) >= minScore && ...);
+
+// NA (v2.0): Directe query op stored tier kolom
+const [pois] = await sequelize.query(
+  'SELECT ... FROM POI WHERE tier = ? AND (is_active = 1 OR is_active IS NULL)',
+  { replacements: [tier] }
+);
+```
+
+`classifyAllPOIs()` (poi-tier-recalc job, zondag 03:00) herberekent alleen `tier_score` (informatief), wijzigt `tier` kolom NIET.
+
+Verwijderd:
+- Balanced Tier 1 category selection (7 nature, 8 food, 5 culture, 5 active)
+- Practical critical override (ziekenhuizen, apotheken → forced Tier 2)
+- `TIER1_CATEGORY_TARGETS`, `PRACTICAL_CRITICAL_TERMS` constants
+- `selectBalancedTier1()`, `getTier1CategoryTargets()`, `determineTier()`, `isPracticalCritical()`, `isAccommodation()` methoden
+
+#### De Koerier index.js — Cleanup
+
+- `getTier1CategoryTargets()` methode verwijderd
+- `tier1CategoryTargets` uit `getStatus()` response verwijderd
+- `getPOIsForTiers()` aangepast: query nu op `tier IN (?)` i.p.v. `tier_score` ranges
+
+#### Admin Portal — Tier Display
+
+- Backend: `tier` kolom toegevoegd aan GET /pois (lijst) + GET /pois/:id (detail) response
+- Frontend: Sync & Metadata Card toont "Tier X (score: Y.YY)" i.p.v. alleen tier_score
+
+### BullMQ Cron Schedules (ongewijzigd — stonden al correct)
+
+| Tier | Job | Cron | Frequentie |
+|------|-----|------|-----------|
+| 1 | poi-sync-tier1 | `0 6 * * *` | Dagelijks 06:00 |
+| 2 | poi-sync-tier2 | `0 6 * * 1` | Wekelijks maandag 06:00 |
+| 3 | poi-sync-tier3 | `0 6 1 * *` | Maandelijks 1e 06:00 |
+| 4 | poi-sync-tier4 | `0 6 1 1,4,7,10 *` | Kwartaal 06:00 |
+| — | poi-tier-recalc | `0 3 * * 0` | Zondag 03:00 (alleen tier_score) |
+
+### Bestanden Gewijzigd
+
+| # | Bestand | Wijziging |
+|---|---------|-----------|
+| 1 | `platform-core/src/services/agents/dataSync/poiTierManager.js` | v2.0 rewrite: query op tier kolom, score-only recalc |
+| 2 | `platform-core/src/services/agents/dataSync/index.js` | Verwijderd: getTier1CategoryTargets(), getPOIsForTiers() tier_score→tier |
+| 3 | `platform-core/src/routes/adminPortal.js` | tier kolom in GET /pois + GET /pois/:id |
+| 4 | `admin-module/src/pages/POIsPage.jsx` | Sync card: "Tier X (score)" display |
+| 5 | `scripts/tier_updates.sql` | 2.695 UPDATE statements uit Excel |
+
+### Commit
+
+- **Commit**: `e2dabce` — `feat: Fase IV-B — POI Tier Import + De Koerier Owner-Managed Tiers`
+- **Pushed**: dev → test → main
+- **CI/CD**: Deployed op Hetzner, PM2 herstart
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.60.0** | **2026-03-03** | **Fase IV-B**: POI Tier Import + Owner-Managed Tiers. 2.695 POI tier-assignments uit Excel. poiTierManager.js v2.0: query op stored tier kolom. Admin Portal tier display. |
 | **3.59.0** | **2026-03-03** | **Fase IV-A**: Apify Data Pipeline — Medallion Architecture (Bronze/Silver/Gold). poi_apify_raw tabel, poiSyncService.js rewrite, Apify backfill 1.023 POIs, 9.363 reviews, Admin Sync & Metadata card, Customer Portal dynamic amenities. Review sentiment fix. i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen). |
 | **3.58.0** | **2026-03-02** | **Fase III Blok F**: Testing & Compliance — FASE III VOLLEDIG COMPLEET. PCI DSS SAQ-A, 17 payment tests, GDPR audit, security audit. 7 compliance documenten. |
 | **3.57.0** | **2026-03-02** | **Fase III Blok E**: Admin Commerce Dashboard. commerceService.js, 10 endpoints (99 totaal), CommercePage.jsx 4 tabs, CSV export, i18n 4 talen. |
