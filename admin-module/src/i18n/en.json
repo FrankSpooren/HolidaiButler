@@ -12,7 +12,8 @@
     "settings": "Settings",
     "users": "Users",
     "issues": "Issues",
-    "commerce": "Commerce"
+    "commerce": "Commerce",
+    "partners": "Partners"
   },
   "auth": {
     "login": "Log in",
@@ -530,6 +531,13 @@
     "all": "All",
     "close": "Close",
     "refresh": "Refresh",
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "edit": "Edit",
+    "yes": "Yes",
+    "no": "No",
     "load": "Load",
     "name": "Name",
     "category": "Category"
@@ -633,5 +641,98 @@
     "this_week": "This week",
     "this_month": "This month",
     "this_year": "This year"
+  },
+  "partners": {
+    "title": "Partner Management",
+    "add_button": "Add Partner",
+    "create_title": "Create New Partner",
+    "create_button": "Create Partner",
+    "created": "Partner created successfully",
+    "status_updated": "Partner status updated",
+    "search_placeholder": "Search by company, contact, email...",
+    "filter_status": "Contract Status",
+    "no_data": "No partners found",
+    "no_pois": "No POIs linked to this partner yet",
+    "default_commission": "Default",
+    "transactions_placeholder": "Transaction history will be available when the intermediary module is activated (Blok B)",
+    "status_actions": "Status Actions",
+    "completed_by": "Completed by",
+    "stats": {
+      "total": "Total Partners",
+      "active": "Active",
+      "linked_pois": "Linked POIs",
+      "avg_commission": "Avg. Commission"
+    },
+    "table": {
+      "company": "Company",
+      "destination": "Destination",
+      "status": "Status",
+      "commission": "Commission",
+      "pois": "POIs",
+      "contact": "Contact"
+    },
+    "fields": {
+      "destination": "Destination",
+      "company_name": "Company Name",
+      "contact_name": "Contact Person",
+      "contact_email": "Email",
+      "contact_phone": "Phone",
+      "iban": "IBAN",
+      "kvk_number": "Chamber of Commerce (KvK)",
+      "vat_number": "VAT Number",
+      "commission_rate": "Commission Rate",
+      "commission_type": "Commission Type",
+      "contract_start": "Contract Start",
+      "contract_end": "Contract End",
+      "notes": "Notes"
+    },
+    "status": {
+      "draft": "Draft",
+      "pending": "Pending",
+      "active": "Active",
+      "suspended": "Suspended",
+      "terminated": "Terminated"
+    },
+    "commission_types": {
+      "percentage": "Percentage",
+      "fixed": "Fixed Amount"
+    },
+    "wizard": {
+      "step1": "Company Details",
+      "step2": "Financial Details",
+      "step3": "Commission & Notes"
+    },
+    "tabs": {
+      "profile": "Profile",
+      "pois": "POIs",
+      "onboarding": "Onboarding",
+      "transactions": "Transactions"
+    },
+    "poi_table": {
+      "name": "POI Name",
+      "category": "Category",
+      "rating": "Rating",
+      "commission": "Commission",
+      "active": "Active"
+    },
+    "onboarding_steps": {
+      "company_info": "Company Information",
+      "poi_linking": "POI Linking",
+      "commission_setup": "Commission Setup",
+      "contract_review": "Contract Review",
+      "activation": "Activation"
+    },
+    "step_status": {
+      "pending": "Pending",
+      "completed": "Completed",
+      "skipped": "Skipped"
+    },
+    "actions": {
+      "submit": "Submit for Review",
+      "activate": "Activate",
+      "suspend": "Suspend",
+      "reactivate": "Reactivate",
+      "terminate": "Terminate"
+    }
   }
 }

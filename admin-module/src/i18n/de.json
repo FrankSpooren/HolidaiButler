@@ -12,7 +12,8 @@
     "settings": "Einstellungen",
     "users": "Benutzer",
     "issues": "Issues",
-    "commerce": "Commerce"
+    "commerce": "Commerce",
+    "partners": "Partner"
   },
   "auth": {
     "login": "Anmelden",
@@ -530,6 +531,13 @@
     "all": "Alle",
     "close": "Schließen",
     "refresh": "Aktualisieren",
+    "cancel": "Abbrechen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "search": "Suchen",
+    "edit": "Bearbeiten",
+    "yes": "Ja",
+    "no": "Nein",
     "load": "Laden",
     "name": "Name",
     "category": "Kategorie"
@@ -633,5 +641,98 @@
     "this_week": "Diese Woche",
     "this_month": "Dieser Monat",
     "this_year": "Dieses Jahr"
+  },
+  "partners": {
+    "title": "Partnerverwaltung",
+    "add_button": "Partner hinzufügen",
+    "create_title": "Neuen Partner erstellen",
+    "create_button": "Partner erstellen",
+    "created": "Partner erfolgreich erstellt",
+    "status_updated": "Partnerstatus aktualisiert",
+    "search_placeholder": "Suche nach Firma, Kontakt, E-Mail...",
+    "filter_status": "Vertragsstatus",
+    "no_data": "Keine Partner gefunden",
+    "no_pois": "Noch keine POIs mit diesem Partner verknüpft",
+    "default_commission": "Standard",
+    "transactions_placeholder": "Transaktionsverlauf wird verfügbar, wenn das Intermediärmodul aktiviert ist (Block B)",
+    "status_actions": "Statusaktionen",
+    "completed_by": "Abgeschlossen von",
+    "stats": {
+      "total": "Partner gesamt",
+      "active": "Aktiv",
+      "linked_pois": "Verknüpfte POIs",
+      "avg_commission": "Ø Provision"
+    },
+    "table": {
+      "company": "Unternehmen",
+      "destination": "Reiseziel",
+      "status": "Status",
+      "commission": "Provision",
+      "pois": "POIs",
+      "contact": "Kontakt"
+    },
+    "fields": {
+      "destination": "Reiseziel",
+      "company_name": "Firmenname",
+      "contact_name": "Ansprechpartner",
+      "contact_email": "E-Mail",
+      "contact_phone": "Telefon",
+      "iban": "IBAN",
+      "kvk_number": "Handelsregister (KvK)",
+      "vat_number": "USt-IdNr.",
+      "commission_rate": "Provisionssatz",
+      "commission_type": "Provisionsart",
+      "contract_start": "Vertragsbeginn",
+      "contract_end": "Vertragsende",
+      "notes": "Notizen"
+    },
+    "status": {
+      "draft": "Entwurf",
+      "pending": "Ausstehend",
+      "active": "Aktiv",
+      "suspended": "Ausgesetzt",
+      "terminated": "Beendet"
+    },
+    "commission_types": {
+      "percentage": "Prozentsatz",
+      "fixed": "Festbetrag"
+    },
+    "wizard": {
+      "step1": "Firmendaten",
+      "step2": "Finanzdaten",
+      "step3": "Provision & Notizen"
+    },
+    "tabs": {
+      "profile": "Profil",
+      "pois": "POIs",
+      "onboarding": "Onboarding",
+      "transactions": "Transaktionen"
+    },
+    "poi_table": {
+      "name": "POI-Name",
+      "category": "Kategorie",
+      "rating": "Bewertung",
+      "commission": "Provision",
+      "active": "Aktiv"
+    },
+    "onboarding_steps": {
+      "company_info": "Firmeninformationen",
+      "poi_linking": "POI-Verknüpfung",
+      "commission_setup": "Provisionseinrichtung",
+      "contract_review": "Vertragsüberprüfung",
+      "activation": "Aktivierung"
+    },
+    "step_status": {
+      "pending": "Ausstehend",
+      "completed": "Abgeschlossen",
+      "skipped": "Übersprungen"
+    },
+    "actions": {
+      "submit": "Zur Prüfung einreichen",
+      "activate": "Aktivieren",
+      "suspend": "Aussetzen",
+      "reactivate": "Reaktivieren",
+      "terminate": "Beenden"
+    }
   }
 }

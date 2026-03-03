@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.61.0
+> **Versie**: 3.62.0
 > **Laatst bijgewerkt**: 3 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -97,7 +97,7 @@ HolidaiButler/
 │   └── apify_backfill.py        # Apify historische data backfill (Bronze→Silver)
 ├── platform-core/               # Node.js/Express backend
 │   └── src/
-│       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.17.0)
+│       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.18.0)
 │       ├── services/
 │       │   ├── holibot/         # HoliBot 2.0 (RAG Chatbot)
 │       │   ├── ticketing/       # Ticketing Module (inventoryService.js, ticketingService.js)
@@ -292,6 +292,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **IV-A** | **Apify Data Pipeline — Medallion Architecture (Bronze/Silver/Gold)** | **03-03** | **`poi_apify_raw` tabel (Bronze), poiSyncService.js rewrite (6 methoden, 3 quality checkpoints), 9.363 reviews geïmporteerd, Apify backfill 1.023 POIs (3.167 runs), Admin Sync & Metadata card, Customer Portal dynamic amenities/parking. Review sentiment fix (9.363 reviews). i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen, 39 feature names per taal).** |
 | **IV-B** | **POI Tier Import + Owner-Managed Tiers** | **03-03** | **2.695 POI tier-assignments geïmporteerd uit Excel (Frank's manuele review). `POI.tier` kolom (TINYINT) nu primair. poiTierManager.js v2.0: `getPOIsForUpdate()` query op stored tier kolom i.p.v. runtime score berekening. `classifyAllPOIs()` herberekent alleen tier_score (informatief). BullMQ crons: T1 dagelijks, T2 wekelijks, T3 maandelijks, T4 kwartaal. Admin Portal: tier in lijst + detail.** |
 | **IV-0** | **Pre-flight & Adyen Activatie (Blok 0)** | **03-03** | **Adyen E2E test PASS: session creation (CS7F78812ACD), transaction status, HMAC webhook. Environment=TEST, Merchant=HolidaiButler378ECOM. Feature flags Calpe geactiveerd: hasBooking/hasTicketing/hasReservations/hasChatToBook=true. PCI DSS Blok 0 review (14/17 PASS, 3 manual Frank). GDPR Blok 0 review (27/31 PASS, 2 manual Frank). .env permissions 600 bevestigd. Legacy reservations-module (PM2 #4) gestopt (crash loop, niet Fase III service). Compliance docs geüpdatet met Blok 0 review secties.** |
+| **IV-A (Blok A)** | **Partner Management Module** | **03-03** | **3 DB tabellen (partners, partner_pois, partner_onboarding). partnerService.js: CRUD, onboarding workflow, IBAN/BTW validatie, contract status transitions, KPIs. 7 admin endpoints (106 totaal). PartnersPage.jsx: stats cards, tabel, detail dialog (4 tabs), 3-stappen create wizard, status management. i18n 4 talen (~40 keys). Forward-compatible met multi-tenant configuratielaag (Fase V+).** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -348,7 +349,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.17.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 99 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce endpoints)
+- **Endpoints**: 106 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner endpoints)
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -420,7 +421,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
-| IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | IN PROGRESS (IV-A+B+0 COMPLEET) | 6-8 wkn |
+| IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | IN PROGRESS (IV-A+B+0+Blok A COMPLEET) | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
 | VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
 
@@ -528,6 +529,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **3.62.0** | **2026-03-03** | **Fase IV Blok A: Partner Management Module COMPLEET**. 3 DB tabellen (partners, partner_pois, partner_onboarding). partnerService.js (CRUD, onboarding, validatie, stats). 7 admin endpoints (106 totaal), adminPortal.js v3.18.0. PartnersPage.jsx (stats, tabel, detail 4 tabs, 3-step wizard). i18n 4 talen. Forward-compatible multi-tenant analyse (Directus+Unleash = Fase V+). |
 | **3.61.0** | **2026-03-03** | **Fase IV-0: Pre-flight & Adyen Activatie COMPLEET**. Adyen E2E test PASS (session creation, transaction status, HMAC webhook). Feature flags Calpe geactiveerd (hasBooking/hasTicketing/hasReservations/hasChatToBook=true). PCI DSS Blok 0 review + GDPR Blok 0 review. .env permissions 600 bevestigd. Legacy PM2 reservations-module gestopt. Compliance docs geüpdatet. |
 | 3.60.0 | 2026-03-03 | Fase IV-B: POI Tier Import + Owner-Managed Tiers COMPLEET. 2.695 POI tier-assignments, poiTierManager.js v2.0, Admin Portal tier display. |
 | 3.59.0 | 2026-03-03 | Fase IV-A: Apify Data Pipeline — Medallion Architecture COMPLEET. Bronze/Silver/Gold pipeline, Apify backfill 1.023 POIs. |
@@ -540,7 +542,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.27 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.28 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
