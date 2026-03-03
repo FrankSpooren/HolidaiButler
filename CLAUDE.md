@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.59.0
+> **Versie**: 3.60.0
 > **Laatst bijgewerkt**: 3 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -290,6 +290,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **III-E** | **Admin Commerce Dashboard** | **02-03** | **commerceService.js (READ-ONLY aggregation), 10 admin API endpoints (99 totaal), CommercePage.jsx (4 tabs: Dashboard/Reports/Alerts/Export), Recharts grafieken, CSV export met BOM, 6 fraud alert types, i18n 4 talen, RBAC platform_admin+poi_owner** |
 | **III-F** | **Testing & Compliance (FASE III COMPLEET)** | **02-03** | **PCI DSS SAQ-A checklist (14/17 PASS), 17 payment test scenarios (7 verified/10 blocked), 5 ticketing race condition tests, 5 reservation double-booking tests, 31-item GDPR audit (27 PASS), 8-item security audit (7 PASS + 1 fixed). 7 compliance documenten in docs/compliance/. .env chmod 600 fix. FASE III VOLLEDIG COMPLEET.** |
 | **IV-A** | **Apify Data Pipeline — Medallion Architecture (Bronze/Silver/Gold)** | **03-03** | **`poi_apify_raw` tabel (Bronze), poiSyncService.js rewrite (6 methoden, 3 quality checkpoints), 9.363 reviews geïmporteerd, Apify backfill 1.023 POIs (3.167 runs), Admin Sync & Metadata card, Customer Portal dynamic amenities/parking. Review sentiment fix (9.363 reviews). i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen, 39 feature names per taal).** |
+| **IV-B** | **POI Tier Import + Owner-Managed Tiers** | **03-03** | **2.695 POI tier-assignments geïmporteerd uit Excel (Frank's manuele review). `POI.tier` kolom (TINYINT) nu primair. poiTierManager.js v2.0: `getPOIsForUpdate()` query op stored tier kolom i.p.v. runtime score berekening. `classifyAllPOIs()` herberekent alleen tier_score (informatief). BullMQ crons: T1 dagelijks, T2 wekelijks, T3 maandelijks, T4 kwartaal. Admin Portal: tier in lijst + detail.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -372,14 +373,18 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ## 📈 POI Tier Strategie
 
-### Score: `(review_count × 0.30) + (avg_rating × 0.20) + (tourist_relevance × 0.30) + (booking_frequency × 0.20)`
+### Owner-Managed Tiers (v2.0 — Fase IV-B)
 
-| Tier | Score | Frequentie | Max POIs |
-|------|-------|-----------|----------|
-| 1 | ≥ 8.0 | Dagelijks 06:00 | 25 |
-| 2 | ≥ 7.0 | Wekelijks | 250 |
-| 3 | ≥ 5.0 | Maandelijks | 1.000 |
-| 4 | < 5.0 | Kwartaal | Onbeperkt |
+Tier-indeling wordt **manueel bepaald door de eigenaar** (opgeslagen in `POI.tier` kolom). De `tier_score` wordt informatief berekend maar bepaalt NIET de tier-indeling.
+
+| Tier | Frequentie | Calpe | Texel | Totaal |
+|------|-----------|-------|-------|--------|
+| 1 | Dagelijks 06:00 | 2 | 18 | 20 |
+| 2 | Wekelijks ma 06:00 | 116 | 39 | 155 |
+| 3 | Maandelijks 1e 06:00 | 691 | 255 | 946 |
+| 4 | Kwartaal 06:00 | 784 | 1.427 | 2.211 |
+
+### tier_score (informatief): `(review_count × 0.30) + (avg_rating × 0.20) + (tourist_relevance × 0.30) + (booking_frequency × 0.20)`
 
 ### Browse View Filters
 Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusies: laadpunten/begraafplaatsen/accommodatie.
@@ -414,7 +419,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
-| IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | IN PROGRESS (IV-A COMPLEET) | 6-8 wkn |
+| IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | IN PROGRESS (IV-A+B COMPLEET) | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
 | VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
 
@@ -522,10 +527,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.59.0** | **2026-03-03** | **Fase IV-A: Apify Data Pipeline — Medallion Architecture COMPLEET**. Bronze: `poi_apify_raw` tabel (raw JSON opslag + validatie). Silver: poiSyncService.js rewrite (6 methoden, 3 quality checkpoints — data validatie, change detection, freshness). Apify backfill 1.023 POIs (3.167 historische runs hergebruikt). 9.363 reviews geïmporteerd. 7 nieuwe POI kolommen (popular_times, parking, service_options, reviews_distribution, review_tags, people_also_search, last_apify_sync). Admin Portal: Sync & Metadata card met quality alerts. Customer Portal: dynamic amenities/parking/accessibility uit Apify. Review sentiment fix (9.363 reviews: rating≥4→positive, 3→neutral, ≤2→negative). i18n hardcoded strings fix (10 bestanden, 95+ vertaalsleutels, 6 talen NL/EN/DE/ES/SV/PL, 39 feature name vertalingen per taal). |
-| 3.58.0 | 2026-03-02 | Fase III Blok F: Testing & Compliance — FASE III VOLLEDIG COMPLEET. PCI DSS SAQ-A checklist (14/17 auto-verified PASS). 17 payment test scenarios. 31-item GDPR audit. 7 compliance documenten. |
-| 3.57.0 | 2026-03-02 | Fase III Blok E: Admin Commerce Dashboard COMPLEET. commerceService.js, 10 endpoints (99 totaal), CommercePage.jsx (4 tabs), CSV export, 6 fraud alerts, i18n 4 talen. |
-| 3.56.0 | 2026-03-02 | Fase III Blok D: Chatbot-to-Book Voorbereiding COMPLEET. 4 booking sub-intents, ragService v2.6, 7 feature flags. |
+| **3.60.0** | **2026-03-03** | **Fase IV-B: POI Tier Import + Owner-Managed Tiers COMPLEET**. 2.695 POI tier-assignments geïmporteerd uit Excel (Frank's manuele review). `POI.tier` kolom (TINYINT DEFAULT 4) nu primair voor sync scheduling. poiTierManager.js v2.0: `getPOIsForUpdate()` query op stored tier kolom i.p.v. runtime score berekening. `classifyAllPOIs()` herberekent alleen tier_score (informatief). BullMQ crons correct: T1 dagelijks 06:00, T2 wekelijks ma, T3 maandelijks 1e, T4 kwartaal. Admin Portal: tier in lijst + detail endpoints. Distributie: Calpe T1=2/T2=116/T3=691/T4=784, Texel T1=18/T2=39/T3=255/T4=1427. |
+| 3.59.0 | 2026-03-03 | Fase IV-A: Apify Data Pipeline — Medallion Architecture COMPLEET. Bronze/Silver/Gold pipeline, Apify backfill 1.023 POIs, 9.363 reviews, i18n fix 10 bestanden. |
+| 3.58.0 | 2026-03-02 | Fase III Blok F: Testing & Compliance — FASE III VOLLEDIG COMPLEET. PCI DSS SAQ-A, GDPR audit, 7 compliance documenten. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -535,7 +539,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.25 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.26 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
