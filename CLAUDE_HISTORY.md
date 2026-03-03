@@ -30,7 +30,8 @@
 19. [Fase IV-A: Apify Data Pipeline — Medallion Architecture](#fase-iv-a--apify-data-pipeline--medallion-architecture-03-03-2026)
 20. [Fase IV-B: POI Tier Import + Owner-Managed Tiers](#fase-iv-b--poi-tier-import--owner-managed-tiers-03-03-2026)
 21. [Fase IV-0: Pre-flight & Adyen Activatie](#fase-iv-0--pre-flight--adyen-activatie-03-03-2026)
-22. [Volledige Changelog](#volledige-changelog)
+22. [Fase IV Blok A: Partner Management Module](#fase-iv-blok-a--partner-management-module-03-03-2026)
+23. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -639,10 +640,52 @@ Fase III Commerce Foundation (Payment/Ticketing/Reservation/Chatbot-to-Book) was
 
 ---
 
+## Fase IV Blok A — Partner Management Module (03-03-2026)
+
+### Doel
+POI-eigenaars (restaurants, attracties, activiteiten) als partners registreren met commissie-afspraken. Basis voor de Intermediair-module (Blok B+).
+
+### Multi-Tenant Configuratielaag Analyse
+Architectuuradvies (Directus + Unleash, 3 maart 2026) geanalyseerd. Conclusie: Blok A is forward-compatible by design (`destination_id` FK's, REST API's, `destinationScope` middleware). Het advies is een Fase V+ item (trigger: eerste B2B-klant), NIET een blocker voor Fase IV. Feitelijke correctie: advies vermeldt PostgreSQL, platform gebruikt MySQL 8.0.
+
+### Resultaten
+- **Database**: 3 tabellen (`partners`, `partner_pois`, `partner_onboarding`) op Hetzner
+- **Backend**: `partnerService.js` — CRUD, onboarding workflow (5 stappen), IBAN/BTW validatie (NL/BE/ES), contract status transitions (draft→pending→active→suspended/terminated), dashboard KPIs, partner-POI koppelingen
+- **Admin API**: 7 endpoints in adminPortal.js v3.18.0 (99→106 totaal)
+  - GET /partners (list + pagination + search + status filter)
+  - GET /partners/stats (dashboard KPIs)
+  - GET /partners/:id (detail + POIs + onboarding)
+  - POST /partners (create + auto onboarding steps)
+  - PUT /partners/:id (update)
+  - PUT /partners/:id/status (contract transition + audit)
+  - GET /partners/:id/transactions (placeholder Blok B)
+- **Frontend**: PartnersPage.jsx — stats cards, partners tabel, detail dialog (4 tabs: Profiel/POIs/Onboarding/Transacties), 3-stappen create wizard (MUI Stepper), contract status management
+- **i18n**: 4 talen (EN/NL/DE/ES), ~40 keys per taal
+- **Sidebar**: Partners menu item (HandshakeIcon, platform_admin only)
+
+### Bestanden
+| # | Bestand | Actie |
+|---|---------|-------|
+| 1 | `platform-core/database/migrations/011_partner_tables.sql` | NEW |
+| 2 | `platform-core/src/services/partner/partnerService.js` | NEW |
+| 3 | `platform-core/src/routes/adminPortal.js` | EDIT (+7 endpoints, v3.18.0) |
+| 4 | `admin-module/src/api/partnerService.js` | NEW |
+| 5 | `admin-module/src/hooks/usePartners.js` | NEW |
+| 6 | `admin-module/src/pages/PartnersPage.jsx` | NEW |
+| 7 | `admin-module/src/App.jsx` | EDIT (+route) |
+| 8 | `admin-module/src/components/layout/Sidebar.jsx` | EDIT (+menu item) |
+| 9-12 | `admin-module/src/i18n/{en,nl,de,es}.json` | EDIT (+~40 keys) |
+| 13 | `CLAUDE.md` | EDIT (v3.62.0) |
+| 14 | `docs/strategy/HolidaiButler_Master_Strategie.md` | EDIT (v7.28) |
+| 15 | `CLAUDE_HISTORY.md` | EDIT (+Blok A sectie) |
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.62.0** | **2026-03-03** | **Fase IV Blok A**: Partner Management Module. 3 DB tabellen, partnerService.js, 7 admin endpoints (106 totaal), PartnersPage.jsx, i18n 4 talen. Multi-tenant analyse. |
 | **3.61.0** | **2026-03-03** | **Fase IV-0**: Pre-flight & Adyen Activatie. Adyen E2E test PASS. Feature flags Calpe geactiveerd. PCI DSS + GDPR Blok 0 review. Compliance docs geüpdatet. |
 | 3.60.0 | 2026-03-03 | **Fase IV-B**: POI Tier Import + Owner-Managed Tiers. 2.695 POI tier-assignments uit Excel. poiTierManager.js v2.0: query op stored tier kolom. Admin Portal tier display. |
 | **3.59.0** | **2026-03-03** | **Fase IV-A**: Apify Data Pipeline — Medallion Architecture (Bronze/Silver/Gold). poi_apify_raw tabel, poiSyncService.js rewrite, Apify backfill 1.023 POIs, 9.363 reviews, Admin Sync & Metadata card, Customer Portal dynamic amenities. Review sentiment fix. i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen). |

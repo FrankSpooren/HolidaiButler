@@ -12,7 +12,8 @@
     "settings": "Instellingen",
     "users": "Gebruikers",
     "issues": "Issues",
-    "commerce": "Commerce"
+    "commerce": "Commerce",
+    "partners": "Partners"
   },
   "auth": {
     "login": "Inloggen",
@@ -530,6 +531,13 @@
     "all": "Alle",
     "close": "Sluiten",
     "refresh": "Vernieuwen",
+    "cancel": "Annuleren",
+    "back": "Vorige",
+    "next": "Volgende",
+    "search": "Zoeken",
+    "edit": "Bewerken",
+    "yes": "Ja",
+    "no": "Nee",
     "load": "Laden",
     "name": "Naam",
     "category": "Categorie"
@@ -633,5 +641,98 @@
     "this_week": "Deze week",
     "this_month": "Deze maand",
     "this_year": "Dit jaar"
+  },
+  "partners": {
+    "title": "Partnerbeheer",
+    "add_button": "Partner toevoegen",
+    "create_title": "Nieuwe partner aanmaken",
+    "create_button": "Partner aanmaken",
+    "created": "Partner succesvol aangemaakt",
+    "status_updated": "Partnerstatus bijgewerkt",
+    "search_placeholder": "Zoek op bedrijf, contact, email...",
+    "filter_status": "Contractstatus",
+    "no_data": "Geen partners gevonden",
+    "no_pois": "Nog geen POIs gekoppeld aan deze partner",
+    "default_commission": "Standaard",
+    "transactions_placeholder": "Transactiegeschiedenis wordt beschikbaar wanneer de intermediairmodule is geactiveerd (Blok B)",
+    "status_actions": "Statusacties",
+    "completed_by": "Afgerond door",
+    "stats": {
+      "total": "Totaal Partners",
+      "active": "Actief",
+      "linked_pois": "Gekoppelde POIs",
+      "avg_commission": "Gem. Commissie"
+    },
+    "table": {
+      "company": "Bedrijf",
+      "destination": "Bestemming",
+      "status": "Status",
+      "commission": "Commissie",
+      "pois": "POIs",
+      "contact": "Contact"
+    },
+    "fields": {
+      "destination": "Bestemming",
+      "company_name": "Bedrijfsnaam",
+      "contact_name": "Contactpersoon",
+      "contact_email": "E-mailadres",
+      "contact_phone": "Telefoon",
+      "iban": "IBAN",
+      "kvk_number": "KvK-nummer",
+      "vat_number": "BTW-nummer",
+      "commission_rate": "Commissiepercentage",
+      "commission_type": "Commissietype",
+      "contract_start": "Contract startdatum",
+      "contract_end": "Contract einddatum",
+      "notes": "Notities"
+    },
+    "status": {
+      "draft": "Concept",
+      "pending": "In afwachting",
+      "active": "Actief",
+      "suspended": "Opgeschort",
+      "terminated": "Beëindigd"
+    },
+    "commission_types": {
+      "percentage": "Percentage",
+      "fixed": "Vast bedrag"
+    },
+    "wizard": {
+      "step1": "Bedrijfsgegevens",
+      "step2": "Financiële gegevens",
+      "step3": "Commissie & Notities"
+    },
+    "tabs": {
+      "profile": "Profiel",
+      "pois": "POIs",
+      "onboarding": "Onboarding",
+      "transactions": "Transacties"
+    },
+    "poi_table": {
+      "name": "POI Naam",
+      "category": "Categorie",
+      "rating": "Beoordeling",
+      "commission": "Commissie",
+      "active": "Actief"
+    },
+    "onboarding_steps": {
+      "company_info": "Bedrijfsinformatie",
+      "poi_linking": "POI-koppeling",
+      "commission_setup": "Commissie-instellingen",
+      "contract_review": "Contractreview",
+      "activation": "Activering"
+    },
+    "step_status": {
+      "pending": "In afwachting",
+      "completed": "Afgerond",
+      "skipped": "Overgeslagen"
+    },
+    "actions": {
+      "submit": "Indienen ter review",
+      "activate": "Activeren",
+      "suspend": "Opschorten",
+      "reactivate": "Heractiveren",
+      "terminate": "Beëindigen"
+    }
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E (v3.17.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A (v3.18.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -95,8 +95,17 @@
  *   GET  /commerce/alerts             — Fraud/anomaly alerts
  *   GET  /commerce/top-pois           — Top performing POIs by metric
  *
+ *   --- Partner Management endpoints (Fase IV-A) ---
+ *   GET  /partners                   — List partners (paginated, filtered)
+ *   GET  /partners/stats             — Partner dashboard KPIs
+ *   GET  /partners/:id               — Partner detail with POIs + onboarding
+ *   POST /partners                   — Create partner + onboarding steps
+ *   PUT  /partners/:id               — Update partner details
+ *   PUT  /partners/:id/status        — Change contract status
+ *   GET  /partners/:id/transactions  — Partner transaction history (placeholder)
+ *
  * @module routes/adminPortal
- * @version 3.17.0
+ * @version 3.18.0
  */
 
 import { Router } from 'express';
@@ -121,6 +130,7 @@ import logger from '../utils/logger.js';
 import emailService from '../services/emailService.js';
 import { AgentIssue } from '../services/agents/base/agentIssues.js';
 import commerceService from '../services/commerce/commerceService.js';
+import partnerService from '../services/partner/partnerService.js';
 
 const router = Router();
 
@@ -7552,6 +7562,186 @@ router.get('/commerce/top-pois', adminAuth('reviewer'), destinationScope, commer
   } catch (error) {
     logger.error('[AdminPortal] Commerce top POIs error:', error);
     res.status(500).json({ success: false, error: { code: 'TOP_POIS_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// PARTNER MANAGEMENT ENDPOINTS (Fase IV — Blok A) — 7 routes
+// ============================================================
+
+/**
+ * GET /partners — List partners with pagination, search, status filter
+ */
+router.get('/partners', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    if (!destinationId) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    }
+    const result = await partnerService.getPartners(destinationId, {
+      status: req.query.status,
+      search: req.query.search,
+      page: parseInt(req.query.page) || 1,
+      limit: Math.min(parseInt(req.query.limit) || 25, 100)
+    });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Partners list error:', error);
+    res.status(500).json({ success: false, error: { code: 'PARTNERS_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /partners/stats — Partner dashboard KPIs
+ */
+router.get('/partners/stats', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const stats = await partnerService.getPartnerStats(destinationId);
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    logger.error('[AdminPortal] Partner stats error:', error);
+    res.status(500).json({ success: false, error: { code: 'PARTNER_STATS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /partners/:id — Partner detail with POIs + onboarding
+ */
+router.get('/partners/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    if (!destinationId) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    }
+    const partner = await partnerService.getPartnerById(parseInt(req.params.id), destinationId);
+    if (!partner) {
+      return res.status(404).json({ success: false, error: { code: 'PARTNER_NOT_FOUND', message: 'Partner not found' } });
+    }
+    res.json({ success: true, data: partner });
+  } catch (error) {
+    logger.error('[AdminPortal] Partner detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'PARTNER_DETAIL_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /partners — Create new partner + onboarding steps
+ */
+router.post('/partners', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
+  try {
+    const { destinationId, companyName, contactName, contactEmail, contactPhone,
+            iban, kvkNumber, vatNumber, commissionRate, commissionType, poiId, notes } = req.body;
+
+    if (!destinationId || !companyName || !contactName || !contactEmail) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destinationId, companyName, contactName, contactEmail are required' } });
+    }
+
+    const partner = await partnerService.createPartner({
+      destinationId, companyName, contactName, contactEmail, contactPhone,
+      iban, kvkNumber, vatNumber, commissionRate, commissionType, poiId, notes
+    });
+
+    await saveAuditLog({
+      action: 'partner_created',
+      adminId: req.adminUser?.id,
+      adminEmail: req.adminUser?.email,
+      details: `Created partner: ${companyName} (destination ${destinationId})`,
+      entityType: 'partner',
+      entityId: partner.id
+    });
+
+    res.status(201).json({ success: true, data: partner });
+  } catch (error) {
+    logger.error('[AdminPortal] Partner create error:', error);
+    const status = error.message.includes('Invalid') ? 400 : 500;
+    res.status(status).json({ success: false, error: { code: 'PARTNER_CREATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /partners/:id — Update partner details
+ */
+router.put('/partners/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || null;
+    if (!destinationId) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    }
+
+    const partner = await partnerService.updatePartner(parseInt(req.params.id), destinationId, req.body);
+    if (!partner) {
+      return res.status(404).json({ success: false, error: { code: 'PARTNER_NOT_FOUND', message: 'Partner not found' } });
+    }
+
+    await saveAuditLog({
+      action: 'partner_updated',
+      adminId: req.adminUser?.id,
+      adminEmail: req.adminUser?.email,
+      details: `Updated partner: ${partner.company_name} (ID ${req.params.id})`,
+      entityType: 'partner',
+      entityId: parseInt(req.params.id)
+    });
+
+    res.json({ success: true, data: partner });
+  } catch (error) {
+    logger.error('[AdminPortal] Partner update error:', error);
+    const status = error.message.includes('Invalid') || error.message.includes('No fields') ? 400 : 500;
+    res.status(status).json({ success: false, error: { code: 'PARTNER_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /partners/:id/status — Change contract status with transition validation
+ */
+router.put('/partners/:id/status', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
+  try {
+    const { status: newStatus, destinationId: bodyDestId } = req.body;
+    const destinationId = req.destScope?.[0] || parseInt(bodyDestId) || null;
+
+    if (!destinationId || !newStatus) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destinationId and status are required' } });
+    }
+
+    const partner = await partnerService.updateContractStatus(
+      parseInt(req.params.id),
+      destinationId,
+      newStatus,
+      req.adminUser?.email
+    );
+
+    await saveAuditLog({
+      action: 'partner_status_changed',
+      adminId: req.adminUser?.id,
+      adminEmail: req.adminUser?.email,
+      details: `Partner ${partner.company_name}: status → ${newStatus}`,
+      entityType: 'partner',
+      entityId: parseInt(req.params.id),
+      metadata: { newStatus }
+    });
+
+    res.json({ success: true, data: partner });
+  } catch (error) {
+    logger.error('[AdminPortal] Partner status change error:', error);
+    const status = error.message.includes('Invalid transition') || error.message.includes('not found') ? 400 : 500;
+    res.status(status).json({ success: false, error: { code: 'PARTNER_STATUS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /partners/:id/transactions — Partner transaction history (placeholder for Blok B)
+ */
+router.get('/partners/:id/transactions', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const result = await partnerService.getPartnerTransactions(parseInt(req.params.id), destinationId, {
+      page: parseInt(req.query.page) || 1,
+      limit: Math.min(parseInt(req.query.limit) || 25, 100)
+    });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Partner transactions error:', error);
+    res.status(500).json({ success: false, error: { code: 'PARTNER_TRANSACTIONS_ERROR', message: error.message } });
   }
 });
 

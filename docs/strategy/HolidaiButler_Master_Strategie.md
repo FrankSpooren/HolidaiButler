@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 3 maart 2026
-**Versie**: 7.27
+**Versie**: 7.28
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV-A+B+0 Apify Data Pipeline + Owner-Managed Tiers + Pre-flight COMPLEET ✅. Fase III COMPLEET (Blok G+A+B+C+D+E+F). Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.61.0. MS v7.27.
+**Status**: FASE IV-A+B+0+Blok A Apify Data Pipeline + Owner-Managed Tiers + Pre-flight + Partner Management COMPLEET ✅. Fase III COMPLEET (Blok G+A+B+C+D+E+F). Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.62.0. MS v7.28.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -79,6 +79,7 @@
 | **Fase IV-A** | Apify Data Pipeline — Medallion Architecture (Bronze/Silver/Gold). `poi_apify_raw` tabel, poiSyncService.js rewrite (6 methoden, 3 quality checkpoints), Apify backfill (1.023 POIs, 3.167 runs), 9.363 reviews import, Admin Sync & Metadata card, Customer Portal dynamic amenities/parking. Review sentiment fix (9.363 reviews). i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen). | ✅ COMPLEET | 03-03-2026 | 12 bestanden, Bronze+Silver+Gold | EUR 0 |
 | **Fase IV-B** | POI Tier Import + Owner-Managed Tiers. 2.695 POI tier-assignments uit Excel. `POI.tier` kolom primair. poiTierManager.js v2.0: query op stored tier. BullMQ crons: T1 dagelijks, T2 wekelijks, T3 maandelijks, T4 kwartaal. Admin Portal tier display. | ✅ COMPLEET | 03-03-2026 | 4 bestanden, 2.695 POIs | EUR 0 |
 | **Fase IV-0** | Pre-flight & Adyen Activatie (Blok 0). Adyen E2E test PASS (session creation, transaction status, HMAC webhook). Feature flags Calpe geactiveerd (hasBooking/hasTicketing/hasReservations/hasChatToBook=true). PCI DSS Blok 0 review + GDPR Blok 0 review. .env 600. Compliance docs geüpdatet. | ✅ COMPLEET | 03-03-2026 | 3 bestanden, compliance docs | EUR 0 |
+| **Fase IV Blok A** | Partner Management Module. 3 DB tabellen (partners, partner_pois, partner_onboarding). partnerService.js (CRUD, onboarding, IBAN/BTW validatie, contract transitions). 7 admin endpoints (106 totaal), adminPortal.js v3.18.0. PartnersPage.jsx (stats, tabel, detail 4 tabs, 3-step wizard). i18n 4 talen. Forward-compatible multi-tenant analyse. | ✅ COMPLEET | 03-03-2026 | 15 bestanden | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -1558,6 +1559,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.28** | **03-03-2026** | **Fase IV Blok A: Partner Management Module COMPLEET. 3 DB tabellen, partnerService.js, 7 admin endpoints (106 totaal), PartnersPage.jsx, i18n 4 talen. Forward-compatible multi-tenant analyse (Directus+Unleash = Fase V+). CLAUDE.md v3.62.0.** |
 | **7.27** | **03-03-2026** | **Fase IV-0: Pre-flight & Adyen Activatie COMPLEET. Adyen E2E test PASS (session creation, transaction status, HMAC webhook). Feature flags Calpe geactiveerd (hasBooking/hasTicketing/hasReservations/hasChatToBook=true). PCI DSS + GDPR Blok 0 review. Compliance docs geüpdatet. .env permissions 600. Legacy PM2 reservations-module gestopt. CLAUDE.md v3.61.0.** |
 | 7.26 | 03-03-2026 | Fase IV-B: POI Tier Import + Owner-Managed Tiers COMPLEET. 2.695 POI tier-assignments, poiTierManager.js v2.0, Admin Portal tier display. CLAUDE.md v3.60.0. |
 | 7.25 | 03-03-2026 | Fase IV-A: Apify Data Pipeline — Medallion Architecture COMPLEET. Bronze/Silver/Gold pipeline, Apify backfill 1.023 POIs, 9.363 reviews, i18n fix 10 bestanden. CLAUDE.md v3.59.0. |
@@ -1609,4 +1611,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 3 maart 2026 — Fase IV-A+B+0 Apify Data Pipeline + Owner-Managed Tiers + Pre-flight COMPLEET ✅. Fase III COMPLEET (Blok G+A+B+C+D+E+F). Admin Portal: 99 endpoints, adminPortal.js v3.17.0. 46 scheduled jobs. CLAUDE.md v3.61.0. MS v7.27.*
+*Laatst bijgewerkt: 3 maart 2026 — Fase IV-A+B+0+Blok A Apify Data Pipeline + Owner-Managed Tiers + Pre-flight + Partner Management COMPLEET ✅. Fase III COMPLEET (Blok G+A+B+C+D+E+F). Admin Portal: 106 endpoints, adminPortal.js v3.18.0. 46 scheduled jobs. CLAUDE.md v3.62.0. MS v7.28.*
