@@ -544,8 +544,11 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
                   </Typography>
                 </Grid>
                 <Grid item xs={3}>
-                  <Typography variant="caption" color="text.secondary">{t('pois.detail.tierScore')}</Typography>
-                  <Typography variant="body2">{poi.tier_score ?? '\u2014'}</Typography>
+                  <Typography variant="caption" color="text.secondary">Tier</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {poi.tier ? `Tier ${poi.tier}` : '\u2014'}
+                    {poi.tier_score != null && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>({poi.tier_score})</Typography>}
+                  </Typography>
                 </Grid>
                 <Grid item xs={3}>
                   <Typography variant="caption" color="text.secondary">{t('pois.detail.googleRating')}</Typography>

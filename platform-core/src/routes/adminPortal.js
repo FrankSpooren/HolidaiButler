@@ -1980,7 +1980,7 @@ router.get('/pois', adminAuth('reviewer'), destinationScope, async (req, res) =>
     // Data query with aggregated counts
     const pois = await mysqlSequelize.query(
       `SELECT p.id, p.name, p.destination_id, p.category, p.subcategory,
-              p.is_active, p.rating, p.last_updated,
+              p.is_active, p.rating, p.tier, p.tier_score, p.last_updated,
               p.content_freshness_score, p.content_freshness_status,
               p.enriched_detail_description,
               p.enriched_detail_description_nl,
@@ -2014,6 +2014,8 @@ router.get('/pois', adminAuth('reviewer'), destinationScope, async (req, res) =>
       imageCount: parseInt(p.imageCount) || 0,
       reviewCount: parseInt(p.reviewCount) || 0,
       avgRating: p.avgRating ? parseFloat(p.avgRating) : null,
+      tier: p.tier || 4,
+      tier_score: p.tier_score ? parseFloat(p.tier_score) : null,
       freshness: {
         score: p.content_freshness_score != null ? parseInt(p.content_freshness_score) : null,
         status: p.content_freshness_status || 'unverified'
@@ -2871,6 +2873,7 @@ router.get('/pois/:id', adminAuth('reviewer'), destinationScope, async (req, res
           last_updated: poi.last_updated,
           content_updated_at: poi.content_updated_at,
           last_apify_sync: poi.last_apify_sync,
+          tier: poi.tier || 4,
           tier_score: poi.tier_score ? parseFloat(poi.tier_score) : null,
           google_rating: poi.google_rating ? parseFloat(poi.google_rating) : null,
           google_review_count: poi.google_review_count,
