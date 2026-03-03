@@ -143,4 +143,21 @@ Concept verwerkersovereenkomst template: zie `/docs/legal/concept-verwerkersover
 
 **Conclusie**: 27/31 items automatisch geverifieerd PASS. 2 items vereisen handmatige review door Frank (Mistral AI DPA, Bugsink DPA). 1 item OPEN (anonimisering payment data na 7 jaar — toekomstige overweging). GDPR framework is structureel geïmplementeerd met 5 automated BullMQ compliance jobs.
 
-*Audit datum: 02-03-2026 | Auditor: Claude Code (automated) | Review: Frank Spooren*
+## Fase IV Blok 0 Review (03-03-2026)
+
+### GDPR Readiness voor Intermediair Module
+De Intermediair module (Fase IV Blok B+) zal extra persoonsgegevens verwerken:
+- **Partner data**: Zakelijk (bedrijfsnaam, contactpersoon, IBAN, KvK/BTW) — valt niet onder GDPR persoonsgegevens
+- **Customer email**: Optioneel, alleen voor orderbevestiging — wis na 24 maanden
+- **Settlement data**: 7 jaar bewaarplicht (fiscaal)
+- **Intermediary transactions**: `customer_session_id` (anoniem) + optioneel email — GDPR-by-design
+
+### Openstaande Handmatige Items (Actie Frank)
+| # | Item | Actie |
+|---|------|-------|
+| 1 | Mistral AI DPA | Verifieer of verwerkersovereenkomst beschikbaar is op mistral.ai/legal |
+| 2 | Bugsink DPA | Verifieer of verwerkersovereenkomst beschikbaar is bij Bugsink |
+| 3 | Payment data anonimisering | Toekomstige overweging: na 7 jaar email hashen. Geen urgentie (eerst betalingen live) |
+
+*Blok 0 review datum: 03-03-2026 | Reviewer: Claude Code (automated)*
+*Originele audit datum: 02-03-2026 | Auditor: Claude Code (automated) | Review: Frank Spooren*

@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.60.0
+> **Versie**: 3.61.0
 > **Laatst bijgewerkt**: 3 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -214,7 +214,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - **Intent classificatie**: 12 intents + 4 booking sub-intents (5 talen incl. FR) + human_escalation (4 talen)
 - **Booking sub-intents**: booking_ticket, booking_reservation, booking_activity, booking_status — feature-flag gated per destination
 - **Conversational booking flow**: Multi-step POI→datum→details→confirm→checkout/form redirect (ragService v2.6)
-- **Feature flags**: 7 commerce flags per destination (hasBooking, hasTicketing, hasReservations, hasChatToBook, hasGuestCheckout, hasDeposits, hasDynamicPricing) — alle false tot live testing
+- **Feature flags**: 7 commerce flags per destination — Calpe: hasBooking/hasTicketing/hasReservations/hasChatToBook/hasGuestCheckout = **true** (Fase IV-0). Texel: nog false. hasDeposits/hasDynamicPricing = false (bewust)
 - **Booking context**: In-memory tracking (15 min timeout), GDPR-compliant (geen PII in context)
 - **Human escalation**: Destination-specifiek contact (Texel: info@texelmaps.nl, Calpe: info@holidaibutler.com)
 - **contextService.js** (v1.1): Sessie tracking (24h TTL) + booking context tracking, GDPR-compliant
@@ -291,6 +291,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **III-F** | **Testing & Compliance (FASE III COMPLEET)** | **02-03** | **PCI DSS SAQ-A checklist (14/17 PASS), 17 payment test scenarios (7 verified/10 blocked), 5 ticketing race condition tests, 5 reservation double-booking tests, 31-item GDPR audit (27 PASS), 8-item security audit (7 PASS + 1 fixed). 7 compliance documenten in docs/compliance/. .env chmod 600 fix. FASE III VOLLEDIG COMPLEET.** |
 | **IV-A** | **Apify Data Pipeline — Medallion Architecture (Bronze/Silver/Gold)** | **03-03** | **`poi_apify_raw` tabel (Bronze), poiSyncService.js rewrite (6 methoden, 3 quality checkpoints), 9.363 reviews geïmporteerd, Apify backfill 1.023 POIs (3.167 runs), Admin Sync & Metadata card, Customer Portal dynamic amenities/parking. Review sentiment fix (9.363 reviews). i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen, 39 feature names per taal).** |
 | **IV-B** | **POI Tier Import + Owner-Managed Tiers** | **03-03** | **2.695 POI tier-assignments geïmporteerd uit Excel (Frank's manuele review). `POI.tier` kolom (TINYINT) nu primair. poiTierManager.js v2.0: `getPOIsForUpdate()` query op stored tier kolom i.p.v. runtime score berekening. `classifyAllPOIs()` herberekent alleen tier_score (informatief). BullMQ crons: T1 dagelijks, T2 wekelijks, T3 maandelijks, T4 kwartaal. Admin Portal: tier in lijst + detail.** |
+| **IV-0** | **Pre-flight & Adyen Activatie (Blok 0)** | **03-03** | **Adyen E2E test PASS: session creation (CS7F78812ACD), transaction status, HMAC webhook. Environment=TEST, Merchant=HolidaiButler378ECOM. Feature flags Calpe geactiveerd: hasBooking/hasTicketing/hasReservations/hasChatToBook=true. PCI DSS Blok 0 review (14/17 PASS, 3 manual Frank). GDPR Blok 0 review (27/31 PASS, 2 manual Frank). .env permissions 600 bevestigd. Legacy reservations-module (PM2 #4) gestopt (crash loop, niet Fase III service). Compliance docs geüpdatet met Blok 0 review secties.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -419,7 +420,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
-| IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | IN PROGRESS (IV-A+B COMPLEET) | 6-8 wkn |
+| IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | IN PROGRESS (IV-A+B+0 COMPLEET) | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
 | VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
 
@@ -527,9 +528,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.60.0** | **2026-03-03** | **Fase IV-B: POI Tier Import + Owner-Managed Tiers COMPLEET**. 2.695 POI tier-assignments geïmporteerd uit Excel (Frank's manuele review). `POI.tier` kolom (TINYINT DEFAULT 4) nu primair voor sync scheduling. poiTierManager.js v2.0: `getPOIsForUpdate()` query op stored tier kolom i.p.v. runtime score berekening. `classifyAllPOIs()` herberekent alleen tier_score (informatief). BullMQ crons correct: T1 dagelijks 06:00, T2 wekelijks ma, T3 maandelijks 1e, T4 kwartaal. Admin Portal: tier in lijst + detail endpoints. Distributie: Calpe T1=2/T2=116/T3=691/T4=784, Texel T1=18/T2=39/T3=255/T4=1427. |
-| 3.59.0 | 2026-03-03 | Fase IV-A: Apify Data Pipeline — Medallion Architecture COMPLEET. Bronze/Silver/Gold pipeline, Apify backfill 1.023 POIs, 9.363 reviews, i18n fix 10 bestanden. |
-| 3.58.0 | 2026-03-02 | Fase III Blok F: Testing & Compliance — FASE III VOLLEDIG COMPLEET. PCI DSS SAQ-A, GDPR audit, 7 compliance documenten. |
+| **3.61.0** | **2026-03-03** | **Fase IV-0: Pre-flight & Adyen Activatie COMPLEET**. Adyen E2E test PASS (session creation, transaction status, HMAC webhook). Feature flags Calpe geactiveerd (hasBooking/hasTicketing/hasReservations/hasChatToBook=true). PCI DSS Blok 0 review + GDPR Blok 0 review. .env permissions 600 bevestigd. Legacy PM2 reservations-module gestopt. Compliance docs geüpdatet. |
+| 3.60.0 | 2026-03-03 | Fase IV-B: POI Tier Import + Owner-Managed Tiers COMPLEET. 2.695 POI tier-assignments, poiTierManager.js v2.0, Admin Portal tier display. |
+| 3.59.0 | 2026-03-03 | Fase IV-A: Apify Data Pipeline — Medallion Architecture COMPLEET. Bronze/Silver/Gold pipeline, Apify backfill 1.023 POIs. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -539,7 +540,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.26 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.27 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

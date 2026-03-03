@@ -111,6 +111,22 @@ Dit betekent dat de SAQ-A (Self-Assessment Questionnaire A) van toepassing is.
 
 **Conclusie**: 14/17 items automatisch geverifieerd PASS. 3 items vereisen handmatige review door Frank (Bugsink check, Adyen 2FA, Adyen API key scope). Geen FAIL items.
 
-**Aanbeveling**: `chmod 600 /var/www/api.holidaibutler.com/platform-core/.env` (momenteel 644).
+**Aanbeveling**: `chmod 600 /var/www/api.holidaibutler.com/platform-core/.env` ~~(momenteel 644)~~ → **OPGELOST** (chmod 600 uitgevoerd in Fase 10C, bevestigd 03-03-2026).
 
-*Audit datum: 02-03-2026 | Auditor: Claude Code (automated) | Review: Frank Spooren*
+## 5. Fase IV Blok 0 Review (03-03-2026)
+
+### Adyen E2E Test — PASS
+- Session creation: `POST /api/v1/payments/session` → Session ID CS7F78812ACD01D0B4BE3C20D
+- Environment: TEST, Merchant: HolidaiButler378ECOM
+- Transaction status endpoint: werkend (status=pending, correct)
+- .env permissions: 600 (correct)
+
+### Openstaande Handmatige Items (Actie Frank)
+| # | Item | Categorie | Actie |
+|---|------|-----------|-------|
+| 1 | Bugsink kaartdata check | 2.2 Geen kaartdata | Controleer Bugsink dashboard: zoek op "card", "4111", "cvv" |
+| 2 | Adyen Portal 2FA | 2.5 Toegangscontrole | Verifieer dat 2FA is ingeschakeld op Adyen Merchant Portal |
+| 3 | Adyen API key scope | 2.5 Toegangscontrole | Verifieer dat API key alleen benodigde rechten heeft (sessions, refunds) |
+
+*Blok 0 review datum: 03-03-2026 | Reviewer: Claude Code (automated)*
+*Originele audit datum: 02-03-2026 | Auditor: Claude Code (automated) | Review: Frank Spooren*

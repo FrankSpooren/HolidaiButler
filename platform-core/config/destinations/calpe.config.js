@@ -50,11 +50,11 @@ export default {
     holibot: true,
     ticketing: true,
     reservations: true,
-    // Commerce feature flags (Fase III Blok D) — activated per destination after live testing
-    hasBooking: false,
-    hasTicketing: false,
-    hasReservations: false,
-    hasChatToBook: false,
+    // Commerce feature flags (Fase III Blok D) — activated Calpe: Fase IV Blok 0 (03-03-2026)
+    hasBooking: true,
+    hasTicketing: true,
+    hasReservations: true,
+    hasChatToBook: true,
     hasGuestCheckout: true,
     hasDeposits: false,
     hasDynamicPricing: false,
