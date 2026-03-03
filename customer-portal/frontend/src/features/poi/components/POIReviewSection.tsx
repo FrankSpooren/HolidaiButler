@@ -13,6 +13,7 @@
 
 import { useState, useEffect } from 'react';
 import { Edit } from 'lucide-react';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import { POIReviewCard } from './POIReviewCard';
 import { POIReviewFilters } from './POIReviewFilters';
 import { WriteReviewModal } from './WriteReviewModal';
@@ -42,6 +43,8 @@ export function POIReviewSection({
   poiName = 'This Place',
   initialTravelParty = 'all'
 }: POIReviewSectionProps) {
+  const { t } = useLanguage();
+
   // State for reviews and summary
   const [reviews, setReviews] = useState<Review[]>([]);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
@@ -81,7 +84,7 @@ export function POIReviewSection({
       setHasMore(response.data.length === filters.limit!);
     } catch (err) {
       console.error('Error fetching reviews:', err);
-      setError('Failed to load reviews. Please try again.');
+      setError(t.reviews.failedToLoad);
     } finally {
       setIsLoading(false);
     }
@@ -134,8 +137,8 @@ export function POIReviewSection({
     return (
       <div className="poi-review-section">
         <div className="poi-review-section__loading">
-          <div className="poi-review-section__spinner" aria-label="Loading reviews"></div>
-          <p>Loading reviews...</p>
+          <div className="poi-review-section__spinner" aria-label={t.reviews.loadingReviews}></div>
+          <p>{t.reviews.loadingReviews}</p>
         </div>
       </div>
     );
@@ -148,7 +151,7 @@ export function POIReviewSection({
         <div className="poi-review-section__error" role="alert">
           <p>{error}</p>
           <button onClick={fetchReviews} className="poi-review-section__retry-btn">
-            Try Again
+            {t.reviews.tryAgain}
           </button>
         </div>
       </div>
@@ -166,8 +169,8 @@ export function POIReviewSection({
       <div className="poi-review-section">
         <div className="poi-review-section__empty">
           <span className="poi-review-section__empty-icon" aria-hidden="true">📝</span>
-          <h3>No reviews yet</h3>
-          <p>Be the first to share your experience!</p>
+          <h3>{t.reviews.noReviews}</h3>
+          <p>{t.reviews.beFirstToShare}</p>
         </div>
       </div>
     );
@@ -182,7 +185,7 @@ export function POIReviewSection({
           onClick={() => setWriteReviewModalOpen(true)}
         >
           <Edit size={18} />
-          <span>Write a Review</span>
+          <span>{t.reviews.writeReview}</span>
         </button>
       </div>
 
@@ -199,7 +202,7 @@ export function POIReviewSection({
                   ★★★★★
                 </span>
                 <span className="poi-review-section__total-count">
-                  {summary.total_count} {summary.total_count === 1 ? 'review' : 'reviews'}
+                  {summary.total_count} {summary.total_count === 1 ? t.reviews.review : t.reviews.reviewCount}
                 </span>
               </div>
             </div>
@@ -209,7 +212,7 @@ export function POIReviewSection({
               <div className="poi-review-section__breakdown-item">
                 <span className="poi-review-section__breakdown-label">
                   <span className="poi-review-section__sentiment-dot poi-review-section__sentiment-dot--positive"></span>
-                  Positive
+                  {t.reviews.sentiment.positive}
                 </span>
                 <div className="poi-review-section__breakdown-bar">
                   <div
@@ -224,7 +227,7 @@ export function POIReviewSection({
               <div className="poi-review-section__breakdown-item">
                 <span className="poi-review-section__breakdown-label">
                   <span className="poi-review-section__sentiment-dot poi-review-section__sentiment-dot--neutral"></span>
-                  Neutral
+                  {t.reviews.sentiment.neutral}
                 </span>
                 <div className="poi-review-section__breakdown-bar">
                   <div
@@ -239,7 +242,7 @@ export function POIReviewSection({
               <div className="poi-review-section__breakdown-item">
                 <span className="poi-review-section__breakdown-label">
                   <span className="poi-review-section__sentiment-dot poi-review-section__sentiment-dot--negative"></span>
-                  Negative
+                  {t.reviews.sentiment.negative}
                 </span>
                 <div className="poi-review-section__breakdown-bar">
                   <div
@@ -280,8 +283,8 @@ export function POIReviewSection({
         ) : (
           <div className="poi-review-section__no-filter-results">
             <span className="poi-review-section__no-filter-icon" aria-hidden="true">🔍</span>
-            <h4>No reviews match your filters</h4>
-            <p>Try adjusting your filter settings to see more reviews.</p>
+            <h4>{t.reviews.noMatchFilters}</h4>
+            <p>{t.reviews.adjustFilters}</p>
           </div>
         )}
       </div>
@@ -294,7 +297,7 @@ export function POIReviewSection({
             disabled={isLoading}
             className="poi-review-section__load-more-btn"
           >
-            {isLoading ? 'Loading...' : 'Load More Reviews'}
+            {isLoading ? t.reviews.loadingReviews : t.reviews.loadMoreReviews}
           </button>
         </div>
       )}

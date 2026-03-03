@@ -6,6 +6,7 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { Images } from "lucide-react";
+import { useLanguage } from "../../../i18n/LanguageContext";
 import { getImageSrcSet, IMAGE_SIZES_ATTR, getResizedImageUrl, IMAGE_SIZES } from "../../../shared/utils/imageUrl";
 import "./POIAirbnbGallery.css";
 
@@ -28,6 +29,8 @@ export function POIAirbnbGallery({
   onShowAll,
   onImageClick
 }: POIAirbnbGalleryProps) {
+  const { t } = useLanguage();
+
   // Only use real images, no fallbacks
   const realImages = images && images.length > 0 ? images : thumbnailUrl ? [thumbnailUrl] : [];
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
@@ -66,7 +69,7 @@ export function POIAirbnbGallery({
       <div className="poi-gallery-fallback" style={{ background: categoryColor }}>
         <div className="poi-gallery-fallback-overlay" />
         <img src={categoryIcon} alt={poiName} className="poi-gallery-fallback-icon" />
-        <span className="poi-gallery-fallback-text">No photos available</span>
+        <span className="poi-gallery-fallback-text">{t.poi.gallery.noPhotos}</span>
       </div>
     );
   }
@@ -85,7 +88,7 @@ export function POIAirbnbGallery({
     return (
       <button className="poi-gallery-show-all" onClick={onShowAll}>
         <Images size={16} />
-        <span>{"Show all photos (" + totalImages + ")"}</span>
+        <span>{t.poi.gallery.showAllPhotos + " (" + totalImages + ")"}</span>
       </button>
     );
   };
@@ -166,7 +169,7 @@ export function POIAirbnbGallery({
         {onShowAll && totalImages > 1 && (
           <button className="poi-gallery-mobile-show-all" onClick={onShowAll}>
             <Images size={14} />
-            <span>{"All (" + totalImages + ")"}</span>
+            <span>{t.poi.gallery.allPhotos + " (" + totalImages + ")"}</span>
           </button>
         )}
       </div>

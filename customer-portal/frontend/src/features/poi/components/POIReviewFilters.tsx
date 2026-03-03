@@ -10,6 +10,7 @@
  */
 
 import type { TravelPartyType, SentimentType, ReviewSortType } from '../types/review.types';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import { getTravelPartyBadge, getSentimentBadge } from '../utils/sentimentAnalysis';
 import './POIReviewFilters.css';
 
@@ -44,13 +45,6 @@ const SENTIMENT_OPTIONS: Array<SentimentType | 'all'> = [
   'negative'
 ];
 
-const SORT_OPTIONS: Array<{ value: ReviewSortType; label: string }> = [
-  { value: 'helpful', label: 'Most Helpful' },
-  { value: 'recent', label: 'Most Recent' },
-  { value: 'highRating', label: 'Highest Rating' },
-  { value: 'lowRating', label: 'Lowest Rating' }
-];
-
 export function POIReviewFilters({
   travelParty,
   sentiment,
@@ -59,11 +53,20 @@ export function POIReviewFilters({
   onSentimentChange,
   onSortChange
 }: POIReviewFiltersProps) {
+  const { t } = useLanguage();
+
+  const SORT_OPTIONS: Array<{ value: ReviewSortType; label: string }> = [
+    { value: 'helpful', label: t.reviews.sort.helpful },
+    { value: 'recent', label: t.reviews.sort.recent },
+    { value: 'highRating', label: t.reviews.sort.highRating },
+    { value: 'lowRating', label: t.reviews.sort.lowRating }
+  ];
+
   return (
     <div className="poi-review-filters" role="group" aria-label="Review filters">
       {/* Travel Party Filters */}
       <div className="poi-review-filters__section">
-        <h3 className="poi-review-filters__label">Filter by Traveler Type</h3>
+        <h3 className="poi-review-filters__label">{t.reviews.filterByTraveler}</h3>
         <div
           className="poi-review-filters__buttons"
           role="group"
@@ -75,11 +78,11 @@ export function POIReviewFilters({
             let label;
 
             if (party === 'all') {
-              label = 'All Travelers';
+              label = t.reviews.travelParty.all;
               badge = null;
             } else {
               badge = getTravelPartyBadge(party);
-              label = badge.label;
+              label = t.reviews.travelParty[party as keyof typeof t.reviews.travelParty] || badge.label;
             }
 
             return (
@@ -113,7 +116,7 @@ export function POIReviewFilters({
       <div className="poi-review-filters__bottom">
         {/* Sentiment Filters */}
         <div className="poi-review-filters__section">
-          <h3 className="poi-review-filters__label">Filter by Sentiment</h3>
+          <h3 className="poi-review-filters__label">{t.reviews.filterBySentiment}</h3>
           <div
             className="poi-review-filters__buttons"
             role="group"
@@ -125,11 +128,11 @@ export function POIReviewFilters({
               let label;
 
               if (sentimentOption === 'all') {
-                label = 'All Reviews';
+                label = t.reviews.allReviews;
                 badge = null;
               } else {
                 badge = getSentimentBadge(sentimentOption);
-                label = badge.label;
+                label = t.reviews.sentiment[sentimentOption as keyof typeof t.reviews.sentiment] || badge.label;
               }
 
               return (
@@ -162,7 +165,7 @@ export function POIReviewFilters({
         {/* Sort Dropdown */}
         <div className="poi-review-filters__section poi-review-filters__section--sort">
           <label htmlFor="review-sort" className="poi-review-filters__label">
-            Sort By
+            {t.reviews.sortBy}
           </label>
           <select
             id="review-sort"

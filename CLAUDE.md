@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.58.0
-> **Laatst bijgewerkt**: 2 maart 2026
+> **Versie**: 3.59.0
+> **Laatst bijgewerkt**: 3 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -93,6 +93,8 @@ HolidaiButler/
 │       ├── api/                 # commerceService.js, client.js
 │       ├── utils/               # currencyFormat.js
 │       └── components/, hooks/, stores/, i18n/
+├── scripts/                     # Utility scripts (Python)
+│   └── apify_backfill.py        # Apify historische data backfill (Bronze→Silver)
 ├── platform-core/               # Node.js/Express backend
 │   └── src/
 │       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.17.0)
@@ -121,7 +123,7 @@ HolidaiButler/
 | WarreWijzer | 4 | warrewijzer.be | Conform warredal.be |
 
 ### Database Multi-Tenancy
-Alle tabellen met destination-specifieke data hebben `destination_id` kolom: POI, QnA, agenda, Users, user_journeys, holibot_sessions, poi_content_staging, reviews, payment_transactions, payment_refunds, tickets, ticket_inventory, ticket_orders, ticket_order_items, voucher_codes, reservation_slots, guest_profiles, reservations.
+Alle tabellen met destination-specifieke data hebben `destination_id` kolom: POI, QnA, agenda, Users, user_journeys, holibot_sessions, poi_content_staging, reviews, payment_transactions, payment_refunds, tickets, ticket_inventory, ticket_orders, ticket_order_items, voucher_codes, reservation_slots, guest_profiles, reservations, poi_apify_raw.
 
 ### Routing
 ```
@@ -147,6 +149,19 @@ Host: jotx.your-database.de | DB: pxoziy_db1 | User: pxoziy_1 | Password: j8,Drt
 | enriched_detail_description_en | EN backup (niet door backend gelezen) |
 | enriched_detail_description_es/de/nl | Vertalingen |
 | enriched_highlights | Key highlights |
+
+### Apify Data Pipeline (Medallion Architecture — Fase IV-A)
+```
+Bronze: poi_apify_raw (raw JSON per scrape, validatie status, key fields geëxtraheerd)
+Silver: POI tabel (80+ velden uit Apify: rating, reviews, amenities, accessibility, parking, popular_times, social media)
+Gold:   Customer Portal + Admin Portal (dynamic rendering)
+```
+- **Nieuwe tabel**: `poi_apify_raw` (id, poi_id, google_placeid, destination_id, raw_json LONGTEXT, validation_status, scraped_at, processed_at)
+- **Nieuwe POI kolommen**: popular_times_json, parking_info, service_options, reviews_distribution, review_tags, people_also_search, last_apify_sync
+- **Bestaande kolommen nu gevuld**: amenities, accessibility_features, opening_hours_json, facebook_url, instagram_url, google_rating, google_review_count
+- **Quality checkpoints**: Data validatie (valid/warning/error), change detection (rating ≥0.5 drop, sluiting), freshness scoring
+- **poiSyncService.js**: saveRawData(), validateRawData(), detectSignificantChanges(), updatePOI() (herschreven), extractReviews(), updateFreshnessScore()
+- **Backfill**: `scripts/apify_backfill.py` — 3.167 historische runs → 1.023 unieke POIs, dedup op placeId
 
 ### POI Coverage
 | Destination | Actief | EN/NL/DE/ES | Coverage |
@@ -274,6 +289,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **III-D** | **Chatbot-to-Book Voorbereiding** | **02-03** | **4 booking sub-intents (5 talen), conversational booking flow, booking context tracking, 7 feature flags, ragService v2.6, holibot v3.0, bookingMessages.js + bookingParser.js** |
 | **III-E** | **Admin Commerce Dashboard** | **02-03** | **commerceService.js (READ-ONLY aggregation), 10 admin API endpoints (99 totaal), CommercePage.jsx (4 tabs: Dashboard/Reports/Alerts/Export), Recharts grafieken, CSV export met BOM, 6 fraud alert types, i18n 4 talen, RBAC platform_admin+poi_owner** |
 | **III-F** | **Testing & Compliance (FASE III COMPLEET)** | **02-03** | **PCI DSS SAQ-A checklist (14/17 PASS), 17 payment test scenarios (7 verified/10 blocked), 5 ticketing race condition tests, 5 reservation double-booking tests, 31-item GDPR audit (27 PASS), 8-item security audit (7 PASS + 1 fixed). 7 compliance documenten in docs/compliance/. .env chmod 600 fix. FASE III VOLLEDIG COMPLEET.** |
+| **IV-A** | **Apify Data Pipeline — Medallion Architecture (Bronze/Silver/Gold)** | **03-03** | **`poi_apify_raw` tabel (Bronze), poiSyncService.js rewrite (6 methoden, 3 quality checkpoints), 9.363 reviews geïmporteerd, Apify backfill 1.023 POIs (3.167 runs), Admin Sync & Metadata card, Customer Portal dynamic amenities/parking. Review sentiment fix (9.363 reviews). i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen, 39 feature names per taal).** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -398,7 +414,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
-| IV | Intermediair & Revenue (Intermediair module + Agent) | GEPLAND | 6-8 wkn |
+| IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | IN PROGRESS (IV-A COMPLEET) | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
 | VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
 
@@ -506,10 +522,10 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.58.0** | **2026-03-02** | **Fase III Blok F: Testing & Compliance — FASE III VOLLEDIG COMPLEET**. PCI DSS SAQ-A checklist (14/17 auto-verified PASS). 17 payment test scenarios (7 code-verified, 10 blocked — Adyen frontend). 5 ticketing race condition tests (code-verified). 5 reservation double-booking tests (code-verified). 31-item GDPR compliance audit (27 PASS). 8-item security audit (7 PASS + 1 finding fixed: .env 644→600). 7 compliance documenten in docs/compliance/. Fase III Commerce Foundation COMPLEET: Blok G+A+B+C+D+E+F. |
+| **3.59.0** | **2026-03-03** | **Fase IV-A: Apify Data Pipeline — Medallion Architecture COMPLEET**. Bronze: `poi_apify_raw` tabel (raw JSON opslag + validatie). Silver: poiSyncService.js rewrite (6 methoden, 3 quality checkpoints — data validatie, change detection, freshness). Apify backfill 1.023 POIs (3.167 historische runs hergebruikt). 9.363 reviews geïmporteerd. 7 nieuwe POI kolommen (popular_times, parking, service_options, reviews_distribution, review_tags, people_also_search, last_apify_sync). Admin Portal: Sync & Metadata card met quality alerts. Customer Portal: dynamic amenities/parking/accessibility uit Apify. Review sentiment fix (9.363 reviews: rating≥4→positive, 3→neutral, ≤2→negative). i18n hardcoded strings fix (10 bestanden, 95+ vertaalsleutels, 6 talen NL/EN/DE/ES/SV/PL, 39 feature name vertalingen per taal). |
+| 3.58.0 | 2026-03-02 | Fase III Blok F: Testing & Compliance — FASE III VOLLEDIG COMPLEET. PCI DSS SAQ-A checklist (14/17 auto-verified PASS). 17 payment test scenarios. 31-item GDPR audit. 7 compliance documenten. |
 | 3.57.0 | 2026-03-02 | Fase III Blok E: Admin Commerce Dashboard COMPLEET. commerceService.js, 10 endpoints (99 totaal), CommercePage.jsx (4 tabs), CSV export, 6 fraud alerts, i18n 4 talen. |
 | 3.56.0 | 2026-03-02 | Fase III Blok D: Chatbot-to-Book Voorbereiding COMPLEET. 4 booking sub-intents, ragService v2.6, 7 feature flags. |
-| 3.55.0 | 2026-03-01 | Fase III Blok C: Reservation Module COMPLEET. 3 DB tabellen, 17 endpoints, slot locking, GDPR. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -519,7 +535,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.24 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.25 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

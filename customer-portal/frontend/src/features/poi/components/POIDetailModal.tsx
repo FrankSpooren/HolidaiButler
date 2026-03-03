@@ -607,19 +607,19 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                             {accessEntries.map((f, i) => (
                               <div className="contact-item" key={`acc-${i}`}>
                                 <span className="contact-icon">♿</span>
-                                <span className="contact-text">{f.name}</span>
+                                <span className="contact-text">{t.poi.amenities.featureNames[f.name] || f.name}</span>
                               </div>
                             ))}
                             {amenityEntries.map((f, i) => (
                               <div className="contact-item" key={`am-${i}`}>
                                 <span className="contact-icon">✅</span>
-                                <span className="contact-text">{f.name}</span>
+                                <span className="contact-text">{t.poi.amenities.featureNames[f.name] || f.name}</span>
                               </div>
                             ))}
                             {parkingEntries.map((f, i) => (
                               <div className="contact-item" key={`pk-${i}`}>
                                 <span className="contact-icon">🅿️</span>
-                                <span className="contact-text">{f.name}</span>
+                                <span className="contact-text">{t.poi.amenities.featureNames[f.name] || f.name}</span>
                               </div>
                             ))}
                             {poi.price_level && (

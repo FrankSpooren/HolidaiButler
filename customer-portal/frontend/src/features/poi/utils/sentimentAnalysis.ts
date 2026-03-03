@@ -137,39 +137,66 @@ export function detectSentiment(text: string): SentimentType {
   }
 }
 
-/**
- * Format date for display (e.g., "Visited Oct 2024")
- */
-export function formatVisitDate(dateString: string): string {
-  const date = new Date(dateString);
-  const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short' };
-  return `Visited ${date.toLocaleDateString('en-US', options)}`;
+/** Locale mapping for date formatting */
+const localeMap: Record<string, string> = {
+  nl: 'nl-NL', en: 'en-US', de: 'de-DE', es: 'es-ES', sv: 'sv-SE', pl: 'pl-PL'
+};
+
+/** Relative time translation strings */
+export interface RelativeTimeStrings {
+  today: string;
+  yesterday: string;
+  daysAgo: string;
+  weeksAgo: string;
+  weekAgo: string;
+  monthsAgo: string;
+  monthAgo: string;
+  yearsAgo: string;
+  yearAgo: string;
 }
 
 /**
- * Format relative time (e.g., "2 weeks ago")
+ * Format date for display (e.g., "Bezocht okt. 2024")
  */
-export function formatRelativeTime(dateString: string): string {
+export function formatVisitDate(dateString: string, visitedLabel?: string, language?: string): string {
+  const date = new Date(dateString);
+  const locale = localeMap[language || 'en'] || 'en-US';
+  const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short' };
+  const prefix = visitedLabel || 'Visited';
+  return `${prefix} ${date.toLocaleDateString(locale, options)}`;
+}
+
+/**
+ * Format relative time (e.g., "2 weken geleden")
+ */
+export function formatRelativeTime(dateString: string, timeStrings?: RelativeTimeStrings): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
+  const t = timeStrings || {
+    today: 'Today', yesterday: 'Yesterday', daysAgo: '{n} days ago',
+    weeksAgo: '{n} weeks ago', weekAgo: '1 week ago',
+    monthsAgo: '{n} months ago', monthAgo: '1 month ago',
+    yearsAgo: '{n} years ago', yearAgo: '1 year ago',
+  };
+
   if (diffDays === 0) {
-    return 'Today';
+    return t.today;
   } else if (diffDays === 1) {
-    return 'Yesterday';
+    return t.yesterday;
   } else if (diffDays < 7) {
-    return `${diffDays} days ago`;
+    return t.daysAgo.replace('{n}', String(diffDays));
   } else if (diffDays < 30) {
     const weeks = Math.floor(diffDays / 7);
-    return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+    return weeks === 1 ? t.weekAgo : t.weeksAgo.replace('{n}', String(weeks));
   } else if (diffDays < 365) {
     const months = Math.floor(diffDays / 30);
-    return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+    return months === 1 ? t.monthAgo : t.monthsAgo.replace('{n}', String(months));
   } else {
     const years = Math.floor(diffDays / 365);
-    return `${years} ${years === 1 ? 'year' : 'years'} ago`;
+    return years === 1 ? t.yearAgo : t.yearsAgo.replace('{n}', String(years));
   }
 }
 
