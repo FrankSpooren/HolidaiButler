@@ -228,10 +228,6 @@ class DataSyncAgent {
     return poiTierManager.getTierConfig();
   }
 
-  getTier1CategoryTargets() {
-    return poiTierManager.getTier1CategoryTargets();
-  }
-
   getScheduledJobs() {
     return syncScheduler.getJobs();
   }
@@ -268,7 +264,6 @@ class DataSyncAgent {
         remaining: budgetStatus.remaining
       },
       tierConfig: this.getTierConfig(),
-      tier1CategoryTargets: this.getTier1CategoryTargets(),
       timestamp: new Date().toISOString()
     };
   }
@@ -382,6 +377,7 @@ class DataSyncAgent {
 
   /**
    * Get POIs for specified tiers (with google_placeid)
+   * Uses the stored tier column (owner's manual assignments)
    * @param {Array} tiers - Tier numbers
    * @returns {Array} POIs
    */
@@ -390,27 +386,17 @@ class DataSyncAgent {
       return [];
     }
 
-    const tierConfig = this.getTierConfig();
-    const conditions = tiers.map(tier => {
-      const config = tierConfig[tier];
-      if (tier === 1) {
-        return `tier_score >= ${config.minScore}`;
-      } else if (tier === 4) {
-        return `tier_score < ${tierConfig[3].minScore}`;
-      } else {
-        const nextTierConfig = tierConfig[tier - 1];
-        return `tier_score >= ${config.minScore} AND tier_score < ${nextTierConfig.minScore}`;
-      }
-    });
+    const placeholders = tiers.map(() => "?").join(", ");
 
     const [pois] = await poiSyncService.sequelize.query(`
       SELECT id, google_placeid, destination_id
       FROM POI
       WHERE (is_active = 1 OR is_active IS NULL)
         AND google_placeid IS NOT NULL
-        AND (${conditions.join(" OR ")})
-      LIMIT 100
-    `);
+        AND google_placeid != ''
+        AND tier IN (${placeholders})
+      LIMIT 500
+    `, { replacements: tiers });
 
     return pois;
   }
