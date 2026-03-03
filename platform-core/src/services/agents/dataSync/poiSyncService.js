@@ -114,16 +114,27 @@ class POISyncService {
       );
 
       if (existing.length === 0) {
+        let ratingVal = review.stars || review.rating || null;
+        // Handle "5/5" format ratings
+        if (ratingVal && typeof ratingVal === 'string' && ratingVal.includes('/')) {
+          const [num, denom] = ratingVal.split('/');
+          ratingVal = Math.round((parseFloat(num) / parseFloat(denom)) * 5) || 3;
+        }
+        if (ratingVal) ratingVal = Math.max(1, Math.min(5, Math.round(parseFloat(ratingVal))));
+        const sentiment = ratingVal >= 4 ? 'positive' : (ratingVal <= 2 ? 'negative' : 'neutral');
+
         await this.sequelize.query(`
-          INSERT INTO reviews (poi_id, destination_id, user_name, rating,
-            review_text, google_review_id, source, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, 'apify', ?)
+          INSERT INTO reviews (poi_id, destination_id, user_name, rating, sentiment,
+            travel_party_type, review_text, visit_date, google_review_id, source, created_at)
+          VALUES (?, ?, ?, ?, ?, 'solo', ?, ?, ?, 'apify', ?)
         `, {
           replacements: [
             poiId, destinationId || 1,
             review.name || 'Anonymous',
-            review.stars || review.rating || null,
-            review.text || review.textTranslated || null,
+            ratingVal || 3,
+            sentiment,
+            review.text || review.textTranslated || '',
+            review.publishedAtDate ? new Date(review.publishedAtDate) : new Date(),
             review.reviewId,
             review.publishedAtDate ? new Date(review.publishedAtDate) : new Date()
           ]

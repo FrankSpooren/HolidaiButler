@@ -26,6 +26,7 @@ import { POIBadge } from '../features/poi/components/POIBadge';
 import { POIReviewSection } from '../features/poi/components/POIReviewSection';
 import { POIActionButtons } from '../features/poi/components/POIActionButtons';
 import { useVisited } from '../shared/contexts/VisitedContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import './POIDetailPage.css';
 
 export function POIDetailPage() {
@@ -33,6 +34,7 @@ export function POIDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { markPOIVisited } = useVisited();
+  const { t } = useLanguage();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
@@ -76,12 +78,12 @@ export function POIDetailPage() {
     return (
       <div className="poi-error">
         <div className="poi-error-icon">⚠️</div>
-        <h2 className="poi-error-title">POI Not Found</h2>
+        <h2 className="poi-error-title">{t.poi.loadingStates.notFound}</h2>
         <p className="poi-error-message">
-          {error instanceof Error ? error.message : 'The POI you are looking for does not exist.'}
+          {error instanceof Error ? error.message : t.poi.loadingStates.notFoundDescription}
         </p>
         <Link to="/pois" className="poi-action-btn poi-action-btn-primary" style={{ display: 'inline-flex' }}>
-          ← Back to POIs
+          ← {t.common.back}
         </Link>
       </div>
     );
@@ -197,44 +199,41 @@ export function POIDetailPage() {
     return [];
   };
 
-  // Generate highlights based on category
-  const getHighlights = (category: string): string[] => {
-    const highlightMap: Record<string, string[]> = {
-      'Active': ['Outdoor activities', 'Adventure sports', 'Physical fitness'],
-      'Beaches & Nature': ['Scenic views', 'Relaxation', 'Natural beauty'],
-      'Culture & History': ['Historical significance', 'Cultural heritage', 'Educational'],
-      'Recreation': ['Entertainment', 'Family-friendly', 'Fun activities'],
-      'Food & Drinks': ['Local cuisine', 'Dining experience', 'Taste & flavor'],
-      'Health & Wellbeing': ['Wellness', 'Self-care', 'Health services'],
-      'Shopping': ['Shopping experience', 'Local products', 'Retail therapy'],
-      'Practical': ['Essential services', 'Convenience', 'Practical needs'],
+  // Map database category name to translation key
+  const getCategoryKey = (category: string): 'active' | 'beaches' | 'culture' | 'recreation' | 'food' | 'health' | 'shopping' | 'practical' | 'default' => {
+    const categoryMap: Record<string, 'active' | 'beaches' | 'culture' | 'recreation' | 'food' | 'health' | 'shopping' | 'practical'> = {
+      'Active': 'active',
+      'Beaches & Nature': 'beaches',
+      'Culture & History': 'culture',
+      'Recreation': 'recreation',
+      'Food & Drinks': 'food',
+      'Health & Wellbeing': 'health',
+      'Shopping': 'shopping',
+      'Practical': 'practical',
     };
-    return highlightMap[category] || ['Great experience', 'Worth visiting', 'Popular choice'];
+    return categoryMap[category] || 'default';
   };
 
-  // Generate "Perfect for" based on category
+  // Generate highlights based on category (translated)
+  const getHighlights = (category: string): string[] => {
+    const categoryKey = getCategoryKey(category);
+    return [...t.poi.categoryHighlights[categoryKey]];
+  };
+
+  // Generate "Perfect for" based on category (translated)
   const getPerfectFor = (category: string): string[] => {
-    const perfectForMap: Record<string, string[]> = {
-      'Active': ['Sports enthusiasts', 'Adventure seekers', 'Fitness lovers'],
-      'Beaches & Nature': ['Beach lovers', 'Nature enthusiasts', 'Photographers'],
-      'Culture & History': ['History buffs', 'Culture lovers', 'Educational trips'],
-      'Recreation': ['Families', 'Groups', 'Entertainment seekers'],
-      'Food & Drinks': ['Foodies', 'Culinary explorers', 'Social dining'],
-      'Health & Wellbeing': ['Wellness seekers', 'Spa lovers', 'Health conscious'],
-      'Shopping': ['Shoppers', 'Souvenir hunters', 'Fashion lovers'],
-      'Practical': ['Travelers', 'Local residents', 'Anyone needing services'],
-    };
-    return perfectForMap[category] || ['All visitors', 'Travelers', 'Local explorers'];
+    const categoryKey = getCategoryKey(category);
+    return [...t.poi.categoryPerfectFor[categoryKey]];
   };
 
   // Get budget label from price level
   const getBudgetLabel = (priceLevel: number | null): string | null => {
     if (!priceLevel) return null;
     const budgetMap: Record<number, string> = {
-      1: 'Budget-friendly',
-      2: 'Mid-range',
-      3: 'Upscale',
-      4: 'Luxury',
+      1: t.poi.budgetLabels.budget,
+      2: t.poi.budgetLabels.midRange,
+      3: t.poi.budgetLabels.upscale,
+      4: t.poi.budgetLabels.luxury,
     };
     return budgetMap[priceLevel] || null;
   };
@@ -256,7 +255,7 @@ export function POIDetailPage() {
 
     const todayHours = openingHours[currentDay];
     if (!todayHours) {
-      return { status: 'closed', message: 'Closed today', color: '#DC2626' };
+      return { status: 'closed', message: t.poi.openingStatus.closedToday, color: '#DC2626' };
     }
 
     // Parse hours (assume format like "10:00-19:00" or array of objects)
@@ -272,11 +271,11 @@ export function POIDetailPage() {
         // Check if closing soon (within 1 hour)
         if (close - currentTime <= 60) {
           const closeTime = `${Math.floor(close / 60)}:${String(close % 60).padStart(2, '0')}`;
-          return { status: 'closing_soon', message: `Closes at ${closeTime}`, color: '#F59E0B' };
+          return { status: 'closing_soon', message: `${t.poi.openingStatus.closesAt} ${closeTime}`, color: '#F59E0B' };
         }
-        return { status: 'open', message: 'Open now', color: '#10B981' };
+        return { status: 'open', message: t.poi.openingStatus.open, color: '#10B981' };
       }
-      return { status: 'closed', message: 'Closed', color: '#DC2626' };
+      return { status: 'closed', message: t.poi.openingStatus.closed, color: '#DC2626' };
     }
 
     return { status: 'unknown', message: '', color: '#9CA3AF' };
@@ -398,7 +397,7 @@ export function POIDetailPage() {
             {/* About Section - Enhanced with Highlights and Perfect For */}
             {poi.description && (
             <div className="poi-section">
-              <h2 className="poi-section-title">About</h2>
+              <h2 className="poi-section-title">{t.poi.about}</h2>
 
               {/* Description with Read More */}
               <div className="poi-description-container">
@@ -413,14 +412,14 @@ export function POIDetailPage() {
                     onClick={() => setDescriptionExpanded(!descriptionExpanded)}
                     aria-expanded={descriptionExpanded}
                   >
-                    {descriptionExpanded ? 'Read less' : 'Read more'}
+                    {descriptionExpanded ? t.poi.readLess : t.poi.readMore}
                   </button>
                 )}
               </div>
 
               {/* Highlights */}
               <div className="poi-highlights" style={{ marginTop: '20px' }}>
-                <h3 className="poi-subsection-title">Highlights</h3>
+                <h3 className="poi-subsection-title">{t.poi.highlights}</h3>
                 <ul className="poi-highlights-list">
                   {getHighlights(poi.category).map((highlight, index) => (
                     <li key={index} className="poi-highlight-item">
@@ -433,7 +432,7 @@ export function POIDetailPage() {
 
               {/* Perfect For */}
               <div className="poi-perfect-for" style={{ marginTop: '20px' }}>
-                <h3 className="poi-subsection-title">Perfect for</h3>
+                <h3 className="poi-subsection-title">{t.poi.perfectFor}</h3>
                 <div className="poi-perfect-for-tags">
                   {getPerfectFor(poi.category).map((tag, index) => (
                     <span key={index} className="poi-perfect-for-tag">
@@ -453,7 +452,7 @@ export function POIDetailPage() {
             return parsedHours && Object.keys(parsedHours).length > 0 ? (
               <div className="poi-section">
                 <div className="poi-section-header">
-                  <h2 className="poi-section-title">Opening Hours</h2>
+                  <h2 className="poi-section-title">{t.poi.openingHours}</h2>
                   {openingStatus.message && (
                     <span
                       className="poi-opening-status"
@@ -497,7 +496,7 @@ export function POIDetailPage() {
           <div className="poi-column-right">
             {/* Contact Information */}
             <div className="poi-section">
-            <h2 className="poi-section-title">Contact</h2>
+            <h2 className="poi-section-title">{t.poi.contact}</h2>
             <div className="contact-info">
               {poi.address && (
                 <div className="contact-item">
@@ -562,38 +561,38 @@ export function POIDetailPage() {
 
             return (
               <div className="poi-section">
-                <h2 className="poi-section-title">Details</h2>
+                <h2 className="poi-section-title">{t.poi.details}</h2>
                 <div className="contact-info">
                   {accessEntries.map((f, i) => (
                     <div className="contact-item" key={`acc-${i}`}>
                       <span className="contact-icon">♿</span>
-                      <span className="contact-text">{f.name}</span>
+                      <span className="contact-text">{t.poi.amenities.featureNames[f.name] || f.name}</span>
                     </div>
                   ))}
                   {amenityEntries.map((f, i) => (
                     <div className="contact-item" key={`am-${i}`}>
                       <span className="contact-icon">✅</span>
-                      <span className="contact-text">{f.name}</span>
+                      <span className="contact-text">{t.poi.amenities.featureNames[f.name] || f.name}</span>
                     </div>
                   ))}
                   {parkingEntries.map((f, i) => (
                     <div className="contact-item" key={`pk-${i}`}>
                       <span className="contact-icon">🅿️</span>
-                      <span className="contact-text">{f.name}</span>
+                      <span className="contact-text">{t.poi.amenities.featureNames[f.name] || f.name}</span>
                     </div>
                   ))}
                   {poi.price_level && (
                     <div className="contact-item">
                       <span className="contact-icon">💰</span>
                       <span className="contact-text">
-                        {getBudgetLabel(poi.price_level) || 'Price Level'}: {'€'.repeat(poi.price_level)}
+                        {getBudgetLabel(poi.price_level) || t.poi.budgetLabels.priceLevel}: {'€'.repeat(poi.price_level)}
                       </span>
                     </div>
                   )}
                   {!hasDetails && (
                     <div className="contact-item">
                       <span className="contact-icon">ℹ️</span>
-                      <span className="contact-text">No additional details available</span>
+                      <span className="contact-text">{t.poi.amenities.noDetails}</span>
                     </div>
                   )}
                 </div>
@@ -605,7 +604,7 @@ export function POIDetailPage() {
 
         {/* Reviews Section - Full Width Below Columns (Sprint 7.6) */}
         <div className="poi-section poi-reviews-section">
-          <h2 className="poi-section-title">Reviews</h2>
+          <h2 className="poi-section-title">{t.reviews.title}</h2>
           <POIReviewSection poiId={poi.id} poiName={poi.name} />
         </div>
       </div>

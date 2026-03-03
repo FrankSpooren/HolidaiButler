@@ -46,11 +46,11 @@ export function WriteReviewModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const travelPartyOptions: { value: TravelParty; label: string; emoji: string }[] = [
-    { value: 'solo', label: 'Solo', emoji: '🧍' },
-    { value: 'couple', label: 'Couple', emoji: '💑' },
-    { value: 'family', label: 'Family', emoji: '👨‍👩‍👧‍👦' },
-    { value: 'friends', label: 'Friends', emoji: '👥' },
-    { value: 'business', label: 'Business', emoji: '💼' },
+    { value: 'solo', label: t.reviews.writeReviewModal.solo, emoji: '🧍' },
+    { value: 'couple', label: t.reviews.writeReviewModal.couple, emoji: '💑' },
+    { value: 'family', label: t.reviews.writeReviewModal.family, emoji: '👨‍👩‍👧‍👦' },
+    { value: 'friends', label: t.reviews.writeReviewModal.friends, emoji: '👥' },
+    { value: 'business', label: t.reviews.writeReviewModal.business, emoji: '💼' },
   ];
 
   // Validate form
@@ -58,15 +58,15 @@ export function WriteReviewModal({
     const newErrors: Record<string, string> = {};
 
     if (rating === 0) {
-      newErrors.rating = 'Please select a rating';
+      newErrors.rating = t.reviews.writeReviewModal.selectRating;
     }
 
     if (!travelParty) {
-      newErrors.travelParty = 'Please select your travel party';
+      newErrors.travelParty = t.reviews.writeReviewModal.selectTravelParty;
     }
 
     if (reviewText.trim().length < 50) {
-      newErrors.reviewText = 'Review must be at least 50 characters';
+      newErrors.reviewText = t.reviews.writeReviewModal.minChars;
     }
 
     setErrors(newErrors);
@@ -79,13 +79,13 @@ export function WriteReviewModal({
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        setErrors({ ...errors, photo: 'Please upload an image file' });
+        setErrors({ ...errors, photo: t.reviews.writeReviewModal.uploadImageOnly });
         return;
       }
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        setErrors({ ...errors, photo: 'Image must be less than 5MB' });
+        setErrors({ ...errors, photo: t.reviews.writeReviewModal.imageTooLarge });
         return;
       }
 
@@ -134,14 +134,14 @@ export function WriteReviewModal({
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      setSuccessMessage('Review submitted successfully!');
+      setSuccessMessage(t.reviews.writeReviewModal.success);
       setTimeout(() => {
         onClose();
         onSubmitSuccess?.();
       }, 2000);
     } catch (error) {
       setErrors({
-        submit: 'Failed to submit review. Please try again.',
+        submit: t.reviews.writeReviewModal.error,
       });
     } finally {
       setIsSubmitting(false);
@@ -170,11 +170,11 @@ export function WriteReviewModal({
       >
         {/* Header */}
         <div className="write-review-header">
-          <h2 className="write-review-title">Write a Review</h2>
+          <h2 className="write-review-title">{t.reviews.writeReviewModal.title}</h2>
           <button
             className="write-review-close"
             onClick={handleClose}
-            aria-label="Close"
+            aria-label={t.reviews.writeReviewModal.close}
           >
             <X size={24} />
           </button>
@@ -196,7 +196,7 @@ export function WriteReviewModal({
           {/* Rating */}
           <div className="write-review-field">
             <label className="write-review-label">
-              Your Rating <span className="required">*</span>
+              {t.reviews.writeReviewModal.yourRating} <span className="required">*</span>
             </label>
             <div className="write-review-stars">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -227,7 +227,7 @@ export function WriteReviewModal({
           {/* Travel Party */}
           <div className="write-review-field">
             <label className="write-review-label">
-              Travel Party <span className="required">*</span>
+              {t.reviews.writeReviewModal.travelPartyLabel} <span className="required">*</span>
             </label>
             <div className="write-review-travel-party">
               {travelPartyOptions.map((option) => (
@@ -252,22 +252,22 @@ export function WriteReviewModal({
           {/* Review Text */}
           <div className="write-review-field">
             <label className="write-review-label">
-              Your Review <span className="required">*</span>
+              {t.reviews.writeReviewModal.yourReview} <span className="required">*</span>
             </label>
             <textarea
               className="write-review-textarea"
               value={reviewText}
               onChange={(e) => setReviewText(e.target.value)}
-              placeholder="Share your experience at this place... (minimum 50 characters)"
+              placeholder={t.reviews.writeReviewModal.placeholder}
               rows={6}
               maxLength={1000}
             />
             <div className="write-review-char-count">
-              {reviewText.length} / 1000 characters
+              {reviewText.length} / 1000 {t.reviews.writeReviewModal.characters}
               {reviewText.length < 50 && (
                 <span className="char-count-min">
                   {' '}
-                  (minimum 50)
+                  ({t.reviews.writeReviewModal.minimum})
                 </span>
               )}
             </div>
@@ -278,7 +278,7 @@ export function WriteReviewModal({
 
           {/* Photo Upload */}
           <div className="write-review-field">
-            <label className="write-review-label">Add a Photo (Optional)</label>
+            <label className="write-review-label">{t.reviews.writeReviewModal.addPhoto}</label>
             <input
               ref={fileInputRef}
               type="file"
@@ -293,7 +293,7 @@ export function WriteReviewModal({
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload size={24} />
-                <span>Upload Photo</span>
+                <span>{t.reviews.writeReviewModal.uploadPhoto}</span>
               </button>
             ) : (
               <div className="write-review-photo-preview">
@@ -326,7 +326,7 @@ export function WriteReviewModal({
             onClick={handleSubmit}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Review'}
+            {isSubmitting ? t.reviews.writeReviewModal.submitting : t.reviews.writeReviewModal.submitReview}
           </button>
         </div>
       </div>

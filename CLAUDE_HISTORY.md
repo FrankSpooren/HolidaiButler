@@ -27,7 +27,8 @@
 16. [Fase III Blok D: Chatbot-to-Book Voorbereiding](#fase-iii--blok-d-chatbot-to-book-voorbereiding-02-03-2026)
 17. [Fase III Blok E: Admin Commerce Dashboard](#fase-iii--blok-e-admin-commerce-dashboard-02-03-2026)
 18. [Fase III Blok F: Testing & Compliance (FASE III COMPLEET)](#fase-iii--blok-f-testing--compliance-02-03-2026)
-19. [Volledige Changelog](#volledige-changelog)
+19. [Fase IV-A: Apify Data Pipeline — Medallion Architecture](#fase-iv-a--apify-data-pipeline--medallion-architecture-03-03-2026)
+20. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -505,6 +506,19 @@ v3.9.0, **15/15 PASS**
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.59.0** | **2026-03-03** | **Fase IV-A**: Apify Data Pipeline — Medallion Architecture (Bronze/Silver/Gold). poi_apify_raw tabel, poiSyncService.js rewrite, Apify backfill 1.023 POIs, 9.363 reviews, Admin Sync & Metadata card, Customer Portal dynamic amenities. Review sentiment fix. i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen). |
+| **3.58.0** | **2026-03-02** | **Fase III Blok F**: Testing & Compliance — FASE III VOLLEDIG COMPLEET. PCI DSS SAQ-A, 17 payment tests, GDPR audit, security audit. 7 compliance documenten. |
+| **3.57.0** | **2026-03-02** | **Fase III Blok E**: Admin Commerce Dashboard. commerceService.js, 10 endpoints (99 totaal), CommercePage.jsx 4 tabs, CSV export, i18n 4 talen. |
+| **3.56.0** | **2026-03-02** | **Fase III Blok D**: Chatbot-to-Book Voorbereiding. 4 booking sub-intents, ragService v2.6, 7 feature flags. |
+| **3.55.0** | **2026-03-01** | **Fase III Blok C**: Reservation Module. 3 DB tabellen, 17 endpoints, slot locking, GDPR. |
+| **3.54.0** | **2026-03-01** | **Fase III Blok B**: Ticketing Module. 5 DB tabellen, 21 endpoints, Redis inventory locking, QR HMAC, BullMQ. |
+| **3.53.0** | **2026-03-01** | **Fase III Blok G+A**: Legal docs + Payment Engine. 6 juridische templates. Adyen SDK v30. |
+| **3.52.0** | **2026-03-01** | **Fase II Blok D**: Customer Portal UX Upgrade. usePageMeta, Breadcrumbs 4 talen, PWA service worker. FASE II COMPLEET. |
+| **3.51.0** | **2026-03-01** | **Fase II Blok C**: Agenda Module Upgrade. Multi-destination, iCal feeds, admin CRUD. adminPortal.js v3.13.0. |
+| **3.50.0** | **2026-03-01** | **Fase II Blok B**: POI Module Verbetering. Freshness, clustering, image proxy. adminPortal.js v3.12.0. |
+| **3.49.0** | **2026-02-28** | **Fase II Blok A**: Chatbot Upgrade. contextService.js, ragService v2.5, 12 intents, booking/escalation. |
+| **3.48.0** | **2026-02-28** | Strategic Roadmap Advisory v2.0 geïntegreerd in CLAUDE.md + MS. WarreWijzer destination_id 4. |
+| **3.47.0** | **2026-02-27** | **Fase 12**: Verificatie, Consolidatie & Enterprise Hardening. 7 blokken, 34 tests, runtime metrics. MS v7.13. |
 | **3.46.0** | **2026-02-27** | **Fase 11B**: Agent Ecosysteem Enterprise Complete (Niveau 7). 10 blokken: individuele logging (B), trending (D), escalatie (C), issues+SLA (F), Admin Issues module (G), trending chips (E), baselines+anomaliedetectie (H), cross-agent correlatie (I). 22 bestanden, 7 nieuw. adminPortal.js v3.11.0 (47 endpoints). |
 | **3.45.0** | **2026-02-27** | **Fase 11A**: Agent ecosysteem audit (18 agents, 40 jobs). 3 dev agents geactiveerd: De Bewaker (npm audit), De Corrector (code scan), De Stylist (TTFB+headers). AuditLog status enum fix. |
 | **3.44.0** | **2026-02-26** | **Fase 10C**: Apache security headers (5 domeinen), live verificatie 10A, aspirationele agents labeling, Sessions.user_id VARCHAR(36) fix. |
@@ -1579,6 +1593,176 @@ Health, browse, detail, order+reserve, order details, payment session, cancel, v
 Blokken: G (Legal) + A (Payment) + B (Ticketing) + C (Reservation) + D (Chatbot-to-Book) + E (Admin Commerce) + F (Testing & Compliance)
 
 **Kosten**: EUR 0 (geen externe API calls)
+
+---
+
+## Fase IV-A — Apify Data Pipeline — Medallion Architecture (03-03-2026)
+
+**Doel**: Volledige Apify data pipeline implementeren met Medallion Architecture (Bronze → Silver → Gold). Van de ~80 velden die Apify Google Maps Scraper levert, werden er slechts 7 opgeslagen. Kostbare data (reviewsDistribution, popularTimes, accessibility, amenities, parking, social media, reviews) ging verloren.
+
+### Database Schema (Bronze Layer)
+
+**Nieuwe tabel**: `poi_apify_raw`
+```sql
+CREATE TABLE poi_apify_raw (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  poi_id INT NOT NULL,
+  google_placeid VARCHAR(255) NOT NULL,
+  destination_id INT NOT NULL DEFAULT 1,
+  apify_run_id VARCHAR(100),
+  apify_dataset_id VARCHAR(100),
+  raw_json LONGTEXT NOT NULL,
+  google_rating DECIMAL(2,1),
+  google_review_count INT,
+  permanently_closed TINYINT(1) DEFAULT 0,
+  temporarily_closed TINYINT(1) DEFAULT 0,
+  images_count INT,
+  validation_status ENUM('valid','warning','error') DEFAULT 'valid',
+  validation_notes TEXT,
+  scraped_at DATETIME NOT NULL,
+  processed_at DATETIME DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (poi_id) REFERENCES POI(id) ON DELETE CASCADE
+);
+```
+
+**Nieuwe POI kolommen** (ALTER TABLE POI):
+- `popular_times_json` LONGTEXT — Apify popularTimesHistogram (7 dagen × 18 uur)
+- `parking_info` JSON — Apify parking data
+- `service_options` JSON — Apify service options
+- `reviews_distribution` JSON — Apify {oneStar..fiveStar}
+- `review_tags` JSON — Apify reviewsTags [{title, count}]
+- `people_also_search` JSON — Apify related places
+- `last_apify_sync` DATETIME — Timestamp laatste sync
+
+**Bestaande kolommen nu gevuld**: amenities, accessibility_features, opening_hours_json, facebook_url, instagram_url, google_rating, google_review_count
+
+### Backend Pipeline — poiSyncService.js (Silver Layer)
+
+Volledige herschrijving van `updatePOI()` + 5 nieuwe methoden:
+
+| Methode | Beschrijving |
+|---------|--------------|
+| `saveRawData()` | Bronze opslag: complete Apify JSON → poi_apify_raw + validatie checkpoint |
+| `validateRawData()` | **Checkpoint 1**: Data validatie (permanent closed, invalid rating, missing data) → valid/warning/error |
+| `detectSignificantChanges()` | **Checkpoint 2**: Change detection (rating ≥0.5 drop, permanent sluiting) → AuditLog warning |
+| `updatePOI()` | Silver extractie: 80+ velden uit Apify → POI tabel (COALESCE voor bestaande data) |
+| `extractReviews()` | Reviews uit Apify → reviews tabel (upsert op google_review_id, sentiment classificatie) |
+| `updateFreshnessScore()` | **Checkpoint 3**: Freshness scoring (100 = fresh na succesvolle sync) |
+
+**Review sentiment classificatie**: rating ≥ 4 → positive, rating = 3 → neutral, rating ≤ 2 → negative
+
+### Apify Backfill Script
+
+**Bestand**: `scripts/apify_backfill.py`
+
+| Metriek | Waarde |
+|---------|--------|
+| Apify historische runs | 3.167 |
+| Unieke POIs (na dedup op placeId) | 1.023 |
+| Reviews geïmporteerd | 9.363 |
+| Errors | 0 |
+| Dedup strategie | Laatste run per placeId wint |
+
+Het script hergebruikt historische Apify datasets via de Apify API, parsed de resultaten, en voert ze door de Bronze → Silver pipeline.
+
+### Review Sentiment Fix
+
+**Probleem**: 9.363 reviews hadden allemaal sentiment 'neutral' (default waarde). 5-sterren reviews werden als "neutraal" gelabeld.
+
+**Fix (3-laags)**:
+1. **Database UPDATE**: `UPDATE reviews SET sentiment = CASE WHEN rating >= 4 THEN 'positive' WHEN rating = 3 THEN 'neutral' ELSE 'negative' END WHERE sentiment = 'neutral' AND rating IS NOT NULL`
+2. **Backfill script**: `apify_backfill.py` sentiment classificatie bij import
+3. **Live pipeline**: `extractReviews()` in poiSyncService.js classificeert nieuwe reviews automatisch
+
+### Customer Portal i18n Fix (Hardcoded Strings)
+
+**Probleem**: 50+ Engelse strings waren hardcoded in React componenten, zichtbaar in NL/DE/ES/SV/PL taalversies. Multi-destinatie error.
+
+**Omvang**:
+- 10 bestanden gewijzigd
+- 95+ nieuwe vertaalsleutels toegevoegd
+- 6 talen: NL, EN, DE, ES, SV, PL
+- 39 Google Maps feature name vertalingen per taal (bijv. "Wheelchair accessible entrance" → "Rolstoeltoegankelijke ingang")
+
+**Gewijzigde componenten**:
+
+| Bestand | Wijzigingen |
+|---------|-------------|
+| `translations.ts` | +95 keys: reviews sectie (14), writeReviewModal (21), gallery (3), featureNames (39×6 talen), sort/filter labels |
+| `sentimentAnalysis.ts` | `formatVisitDate()` + `formatRelativeTime()` refactored met optionele i18n parameters + locale mapping |
+| `POIReviewSection.tsx` | 14 hardcoded strings → `t.reviews.*` |
+| `POIReviewCard.tsx` | Sentiment labels, travel party labels, date formatting, "Read more"/"Helpful" → i18n |
+| `POIReviewFilters.tsx` | SORT_OPTIONS verplaatst naar component body, alle filter/sort labels → i18n |
+| `WriteReviewModal.tsx` | 18+ strings → `t.reviews.writeReviewModal.*` (was al useLanguage maar gebruikte het niet) |
+| `POIAirbnbGallery.tsx` | 3 gallery strings → `t.poi.gallery.*` |
+| `POIDetailPage.tsx` | Section titles ("About", "Opening Hours", "Contact", "Details", "Reviews"), budget labels, opening status, error states, highlights/perfectFor, feature names → i18n |
+| `POIDetailModal.tsx` | Feature name vertalingen: `t.poi.amenities.featureNames[f.name] || f.name` |
+
+**Feature name vertaalstrategie**: Record<string, string> lookup dictionary per taal. Apify levert Engelse Google Maps labels, lookup vertaalt naar lokale taal. Fallback naar origineel Engels als key niet in dictionary.
+
+**Verificatie**: TypeScript 0 errors (`npx tsc --noEmit`), Vite production build OK (`npx vite build`).
+
+### Admin Portal — Sync & Metadata Card (Gold Layer)
+
+**Backend uitbreiding**: GET `/pois/:id` nu inclusief:
+- `lastApifyScrape` (scrapedAt, permanentlyClosed, temporarilyClosed, imagesCount, validationStatus, validationNotes)
+- `totalScrapes` count
+- `google_rating`, `google_review_count`, `tier_score`, `content_freshness_score/status`, `reviews_distribution`
+
+**Frontend**: Sync & Metadata Card in POI detail met:
+- Laatste Apify Sync datum
+- Tier Score
+- Google Rating (met review count)
+- Freshness chip (fresh/aging/unverified)
+- Quality alerts (error/warning uit validatie)
+
+### Customer Portal — Nieuwe Data (Gold Layer)
+
+**Public API uitgebreid** (`formatPOIForPublic()`):
+- `popular_times`, `parking`, `service_options`, `reviews_distribution`
+
+**Frontend**: Dynamic amenities/parking/accessibility uit Apify data (i.p.v. hardcoded checks).
+
+### Quality Checkpoint Overzicht
+
+| # | Checkpoint | Waar | Trigger | Actie |
+|---|-----------|------|---------|-------|
+| 1 | Data Validatie | `validateRawData()` | Elke scrape | Markeert valid/warning/error in poi_apify_raw |
+| 2 | Change Detection | `detectSignificantChanges()` | Elke POI update | Logt waarschuwing bij rating drop ≥0.5, sluiting |
+| 3 | Freshness Update | `updateFreshnessScore()` | Na succesvolle sync | Zet freshness op 'fresh' (100) |
+| 4 | Business Status | In `updatePOI()` | Elke scrape | Deactiveert POI als permanentlyClosed |
+| 5 | Review Dedup | In `extractReviews()` | Elke scrape | Skip bestaande reviews (op google_review_id) |
+
+### Bestanden Overzicht
+
+**Gewijzigd (12)**:
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/services/agents/dataSync/poiSyncService.js` | Volledige herschrijving updatePOI() + 5 nieuwe methoden |
+| `platform-core/src/services/agents/dataSync/poiTierManager.js` | destination_id in SELECT queries |
+| `platform-core/src/routes/adminPortal.js` | GET /pois/:id uitgebreid (sync metadata + last scrape) |
+| `platform-core/src/routes/publicPOI.js` | formatPOIForPublic() uitgebreid |
+| `admin-module/src/pages/POIsPage.jsx` | +Sync & Metadata Card |
+| `admin-module/src/i18n/nl.json` + en/de/es | +vertaalsleutels syncInfo |
+| `customer-portal/frontend/src/i18n/translations.ts` | +95 keys, 6 talen, 39 feature names per taal |
+| `customer-portal/frontend/src/features/poi/utils/sentimentAnalysis.ts` | i18n refactoring |
+| `customer-portal/frontend/src/features/poi/components/POIReviewSection.tsx` | i18n 14 strings |
+| `customer-portal/frontend/src/features/poi/components/POIReviewCard.tsx` | i18n labels/dates |
+| `customer-portal/frontend/src/features/poi/components/POIReviewFilters.tsx` | i18n filters/sort |
+| `customer-portal/frontend/src/features/poi/components/WriteReviewModal.tsx` | i18n 18+ strings |
+| `customer-portal/frontend/src/features/poi/components/POIAirbnbGallery.tsx` | i18n gallery strings |
+| `customer-portal/frontend/src/pages/POIDetailPage.tsx` | i18n section titles/features/budget |
+| `customer-portal/frontend/src/features/poi/components/POIDetailModal.tsx` | i18n feature names |
+
+**Nieuw (1)**:
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `scripts/apify_backfill.py` | Apify historische data backfill (Bronze→Silver pipeline) |
+
+**Kosten**: EUR 0
 
 ---
 

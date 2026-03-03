@@ -1,19 +1,19 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 2 maart 2026
-**Versie**: 7.24
+**Datum**: 3 maart 2026
+**Versie**: 7.25
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE III COMPLEET — Blok G+A+B+C+D+E+F ✅. Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.58.0. MS v7.24.
+**Status**: FASE IV-A Apify Data Pipeline COMPLEET ✅. Fase III COMPLEET (Blok G+A+B+C+D+E+F). Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.59.0. MS v7.25.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.52.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.59.0) in repo root + Hetzner
 
 ---
 
@@ -76,6 +76,7 @@
 | **Fase II-B** | POI Module Verbetering — Freshness Score, leaflet.markercluster, multi-select categories + URL params, Sharp image resize proxy (98.6% reductie), sticky CTAs, 4 admin endpoints | ✅ COMPLEET | 01-03-2026 | 15 bestanden, 3 commits | EUR 0 |
 | **Fase II-C** | Agenda Module Upgrade — Multi-destination (X-Destination-ID), auto-category detectie (8 categorieën), iCal feeds (RFC 5545), admin CRUD (5 endpoints), agenda.js rewrite | ✅ COMPLEET | 01-03-2026 | 2 bestanden, 11 endpoints | EUR 0 |
 | **Fase II-D** | Customer Portal UX Upgrade — usePageMeta hook (SEO/OG), Breadcrumbs (4 talen, 13 routes), skip-to-content (WCAG), PWA service worker (3 cache strategies) | ✅ COMPLEET | 01-03-2026 | 10 bestanden, 1 commit | EUR 0 |
+| **Fase IV-A** | Apify Data Pipeline — Medallion Architecture (Bronze/Silver/Gold). `poi_apify_raw` tabel, poiSyncService.js rewrite (6 methoden, 3 quality checkpoints), Apify backfill (1.023 POIs, 3.167 runs), 9.363 reviews import, Admin Sync & Metadata card, Customer Portal dynamic amenities/parking. Review sentiment fix (9.363 reviews). i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen). | ✅ COMPLEET | 03-03-2026 | 12 bestanden, Bronze+Silver+Gold | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -1322,7 +1323,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 | I | Foundation Hardening | Agents Audit, Processen, Platform Core | 4-6 wkn | KRITIEK | ✅ COMPLEET |
 | II | Active Module Upgrade | Chatbot, POI, Agenda, Customer Portal | 6-8 wkn | HOOG | ✅ COMPLEET (Blok A+B+C+D) |
 | III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | ✅ COMPLEET (Blok G+A+B+C+D+E+F) |
-| IV | Intermediair & Revenue | Intermediair module + Agent | 6-8 wkn | HOOG | GEPLAND |
+| IV | Intermediair & Revenue | Data Pipeline + Intermediair module + Agent | 6-8 wkn | HOOG | IN PROGRESS (IV-A COMPLEET) |
 | V | UX Revolution + WarreWijzer | Mobiele UX redesign, WarreWijzer uitrol | 6-10 wkn | MIDDEL | GEPLAND |
 | VI | Polish, Scale & Launch | E2E testing, load testing, DR, go-live | 3-4 wkn | MIDDEL | GEPLAND |
 
@@ -1356,9 +1357,9 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 - **Admin Commerce (Blok E)**: ✅ COMPLEET — commerceService.js (READ-ONLY aggregatie), 10 admin endpoints (99 totaal), CommercePage.jsx (4 tabs: Dashboard KPIs + Recharts, Reports + reconciliatie, Alerts 6 fraud types, Export CSV BOM), currencyFormat.js, i18n 4 talen (~50 keys), RBAC platform_admin + poi_owner, adminPortal.js v3.17.0
 - **Testing/Compliance (Blok F)**: ✅ COMPLEET — PCI DSS SAQ-A checklist (14/17 auto-verified), 17 payment tests (7 verified + 10 blocked Adyen frontend), 5 ticketing race condition tests, 5 reservation double-booking tests, 31-item GDPR audit (27 PASS), 8-item security audit (7 PASS + .env fix), 7 compliance documenten in docs/compliance/. **FASE III VOLLEDIG COMPLEET.**
 
-**Fase IV — Intermediair Module:**
-- Commercieel hart van HolidaiButler. State machine (voorstel → toestemming → bevestiging → delen → reminder → review)
-- ACID-compliant financieel proces, juridische/fiscale compliance commissie-inhouding, QR-codes offline valideerbaar
+**Fase IV — Data Pipeline & Intermediair Module:**
+- **Blok A: Apify Data Pipeline — Medallion Architecture** ✅ COMPLEET (03-03-2026): Bronze (`poi_apify_raw` tabel, raw JSON opslag, validatie checkpoints), Silver (POI tabel 80+ velden, reviews extractie), Gold (Customer Portal + Admin Portal). poiSyncService.js rewrite (6 methoden, 3 quality checkpoints). Apify backfill 1.023 POIs (3.167 historische runs). 9.363 reviews geïmporteerd. Admin Sync & Metadata card. Customer Portal dynamic amenities/parking/accessibility. Review sentiment fix. i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen).
+- **Blok B: Intermediair Module** (GEPLAND): Commercieel hart van HolidaiButler. State machine (voorstel → toestemming → bevestiging → delen → reminder → review). ACID-compliant financieel proces, juridische/fiscale compliance commissie-inhouding, QR-codes offline valideerbaar
 
 **Fase V — UX + WarreWijzer:**
 - Mobiele UX: benchmark Google Maps, TripAdvisor, GetYourGuide, Booking.com
@@ -1554,7 +1555,8 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **7.24** | **02-03-2026** | **Fase III Blok F: Testing & Compliance — FASE III VOLLEDIG COMPLEET. PCI DSS SAQ-A checklist (14/17 auto-verified PASS, 3 manual). 17 payment test scenarios (7 code-verified, 10 blocked Adyen frontend). 5 ticketing race condition tests (code-verified). 5 reservation double-booking tests (code-verified). 31-item GDPR compliance audit (27 PASS, 2 manual). 8-item security audit (7 PASS + 1 finding fixed: .env 644→600). 7 compliance documenten in docs/compliance/. Fase III Commerce Foundation COMPLEET: Blok G+A+B+C+D+E+F. CLAUDE.md v3.58.0.** |
+| **7.25** | **03-03-2026** | **Fase IV-A: Apify Data Pipeline — Medallion Architecture COMPLEET. Bronze: `poi_apify_raw` tabel (raw JSON opslag, validatie checkpoints valid/warning/error). Silver: poiSyncService.js rewrite (6 methoden: saveRawData, validateRawData, detectSignificantChanges, updatePOI, extractReviews, updateFreshnessScore). 3 quality checkpoints (data validatie, change detection rating≥0.5/sluiting, freshness scoring). 7 nieuwe POI kolommen (popular_times_json, parking_info, service_options, reviews_distribution, review_tags, people_also_search, last_apify_sync). Apify backfill: `scripts/apify_backfill.py` — 3.167 historische runs → 1.023 unieke POIs, dedup op placeId. 9.363 reviews geïmporteerd. Admin Portal: Sync & Metadata card (scrape datum, tier score, Google rating, freshness chip, quality alerts). Customer Portal: dynamic amenities/parking/accessibility uit Apify data. Public API uitgebreid (popular_times, parking, service_options, reviews_distribution). Review sentiment fix: DB UPDATE 9.363 reviews (rating≥4→positive, 3→neutral, ≤2→negative) + backfill + live pipeline. i18n hardcoded strings fix: 10 bestanden, 95+ vertaalsleutels, 6 talen (NL/EN/DE/ES/SV/PL), 39 Google Maps feature name vertalingen per taal, sentimentAnalysis.ts refactored voor i18n. TypeScript 0 errors, Vite build OK. 12 bestanden gewijzigd. CLAUDE.md v3.59.0.** |
+| 7.24 | 02-03-2026 | Fase III Blok F: Testing & Compliance — FASE III VOLLEDIG COMPLEET. PCI DSS SAQ-A checklist (14/17 auto-verified PASS, 3 manual). 17 payment test scenarios. 31-item GDPR audit. 7 compliance documenten. CLAUDE.md v3.58.0. |
 | 7.23 | 02-03-2026 | Fase III Blok E: Admin Commerce Dashboard COMPLEET. commerceService.js, 10 admin endpoints (99 totaal), CommercePage.jsx 4 tabs, CSV export BOM, i18n 4 talen, RBAC. adminPortal.js v3.17.0. CLAUDE.md v3.57.0. |
 | **7.22** | **02-03-2026** | **Fase III Blok D: Chatbot-to-Book Voorbereiding COMPLEET. 4 booking sub-intents (ticket/reservation/activity/status) in 5 talen (NL/EN/DE/ES/FR). Conversational booking flow in ragService v2.6 (~300 regels). Booking context tracking (contextService v1.1, 15-min timeout). bookingMessages.js (16 templates, 5 talen, destination preposities). bookingParser.js (datum/tijd/getal/bevestiging parsing). 7 commerce feature flags (3 destinations). holibot.js v3.0. 12/12 E2E tests PASS. Bug fix: FR "réserver une table" patroon. CLAUDE.md v3.56.0.** |
 | **7.21** | **01-03-2026** | **Fase III Blok C: Reservation Module COMPLEET. 3 DB tabellen + ALTER TABLE POI, 4 customer + 13 admin endpoints, Redis slot locking, QR HMAC-SHA256, auto-blacklist, 4 BullMQ jobs, GDPR guest cleanup. 89 admin endpoints, 46 scheduled jobs. 20/20 E2E tests PASS. CLAUDE.md v3.55.0.** |
@@ -1602,4 +1604,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 2 maart 2026 — Fase III COMPLEET. Blok G+A+B+C+D+E+F ✅. Admin Portal: 99 endpoints, adminPortal.js v3.17.0. 46 scheduled jobs. CLAUDE.md v3.58.0. MS v7.24.*
+*Laatst bijgewerkt: 3 maart 2026 — Fase IV-A Apify Data Pipeline COMPLEET ✅. Fase III COMPLEET (Blok G+A+B+C+D+E+F). Admin Portal: 99 endpoints, adminPortal.js v3.17.0. 46 scheduled jobs. CLAUDE.md v3.59.0. MS v7.25.*

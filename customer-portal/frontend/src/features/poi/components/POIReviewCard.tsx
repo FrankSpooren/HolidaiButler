@@ -14,6 +14,7 @@
 
 import { useState } from 'react';
 import type { Review } from '../types/review.types';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import {
   getSentimentBadge,
   getTravelPartyBadge,
@@ -35,11 +36,14 @@ export function POIReviewCard({
   onMarkHelpful,
   isMarkingHelpful = false
 }: POIReviewCardProps) {
+  const { t, language } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasMarkedHelpful, setHasMarkedHelpful] = useState(false);
 
   const sentimentBadge = getSentimentBadge(review.sentiment);
   const partyBadge = getTravelPartyBadge(review.travel_party_type);
+  const sentimentLabel = t.reviews.sentiment[review.sentiment as keyof typeof t.reviews.sentiment] || sentimentBadge.label;
+  const partyLabel = t.reviews.travelParty[review.travel_party_type as keyof typeof t.reviews.travelParty] || partyBadge.label;
   const stars = getStarRating(review.rating);
   const { truncated, isTruncated } = truncateReviewText(review.review_text, 200);
 
@@ -65,23 +69,23 @@ export function POIReviewCard({
               className="poi-review-card__party-badge"
               style={{ backgroundColor: partyBadge.color }}
               role="status"
-              aria-label={`Travel party: ${partyBadge.label}`}
+              aria-label={`${partyLabel}`}
             >
               <span className="poi-review-card__party-icon" aria-hidden="true">
                 {partyBadge.icon}
               </span>
-              {partyBadge.label}
+              {partyLabel}
             </span>
             <span
               className="poi-review-card__sentiment-badge"
               style={{ color: sentimentBadge.color }}
               role="status"
-              aria-label={`Sentiment: ${sentimentBadge.label}`}
+              aria-label={`${sentimentLabel}`}
             >
               <span className="poi-review-card__sentiment-icon" aria-hidden="true">
                 {sentimentBadge.icon}
               </span>
-              {sentimentBadge.label}
+              {sentimentLabel}
             </span>
           </div>
         </div>
@@ -111,7 +115,7 @@ export function POIReviewCard({
             onClick={() => setIsExpanded(!isExpanded)}
             aria-expanded={isExpanded}
           >
-            {isExpanded ? 'Show less' : 'Read more'}
+            {isExpanded ? t.reviews.showLess : t.reviews.readMore}
           </button>
         )}
       </div>
@@ -120,10 +124,10 @@ export function POIReviewCard({
       <div className="poi-review-card__footer">
         <div className="poi-review-card__dates">
           <span className="poi-review-card__visit-date">
-            {formatVisitDate(review.visit_date)}
+            {formatVisitDate(review.visit_date, t.reviews.visited, language)}
           </span>
-          <span className="poi-review-card__posted-date" aria-label={`Posted ${formatRelativeTime(review.created_at)}`}>
-            · {formatRelativeTime(review.created_at)}
+          <span className="poi-review-card__posted-date" aria-label={formatRelativeTime(review.created_at, t.reviews)}>
+            · {formatRelativeTime(review.created_at, t.reviews)}
           </span>
         </div>
 
@@ -136,7 +140,7 @@ export function POIReviewCard({
           <span className="poi-review-card__helpful-icon" aria-hidden="true">
             👍
           </span>
-          <span className="poi-review-card__helpful-text">Helpful</span>
+          <span className="poi-review-card__helpful-text">{t.reviews.helpful}</span>
           <span className="poi-review-card__helpful-count">
             ({hasMarkedHelpful ? review.helpful_count + 1 : review.helpful_count})
           </span>
