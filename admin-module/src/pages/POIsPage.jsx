@@ -18,6 +18,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import CloseIcon from '@mui/icons-material/Close';
+import SyncIcon from '@mui/icons-material/Sync';
 import { useTranslation } from 'react-i18next';
 import { usePOIList, usePOIStats, usePOIDetail, usePOIUpdate, usePOICategories, usePOIImageReorder, usePOIImageDelete } from '../hooks/usePOIs.js';
 import useDestinationStore from '../stores/destinationStore.js';
@@ -525,6 +526,52 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
                   </Typography>
                   <Typography variant="body2">{poi.content[CONTENT_LANGS[langTab]].tile}</Typography>
                 </>
+              )}
+            </Card>
+
+            {/* Sync & Metadata Info */}
+            <Card variant="outlined" sx={{ p: 2, mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <SyncIcon fontSize="small" /> {t('pois.detail.syncInfo')}
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={3}>
+                  <Typography variant="caption" color="text.secondary">{t('pois.detail.lastApifySync')}</Typography>
+                  <Typography variant="body2">
+                    {poi.lastApifyScrape?.scrapedAt
+                      ? new Date(poi.lastApifyScrape.scrapedAt).toLocaleDateString('nl-NL')
+                      : '\u2014'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={3}>
+                  <Typography variant="caption" color="text.secondary">{t('pois.detail.tierScore')}</Typography>
+                  <Typography variant="body2">{poi.tier_score ?? '\u2014'}</Typography>
+                </Grid>
+                <Grid item xs={3}>
+                  <Typography variant="caption" color="text.secondary">{t('pois.detail.googleRating')}</Typography>
+                  <Typography variant="body2">
+                    {poi.google_rating ? `${poi.google_rating} (${poi.google_review_count || 0})` : '\u2014'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={3}>
+                  <Typography variant="caption" color="text.secondary">{t('pois.detail.freshness')}</Typography>
+                  <Box>
+                    <Chip size="small"
+                      label={poi.content_freshness_status || 'unverified'}
+                      color={poi.content_freshness_status === 'fresh' ? 'success' :
+                             poi.content_freshness_status === 'aging' ? 'warning' : 'default'} />
+                  </Box>
+                </Grid>
+              </Grid>
+              {poi.lastApifyScrape?.validationStatus === 'error' && (
+                <Alert severity="error" sx={{ mt: 1 }} variant="outlined">
+                  {poi.lastApifyScrape.validationNotes}
+                </Alert>
+              )}
+              {poi.lastApifyScrape?.validationStatus === 'warning' && (
+                <Alert severity="warning" sx={{ mt: 1 }} variant="outlined">
+                  {poi.lastApifyScrape.validationNotes}
+                </Alert>
               )}
             </Card>
 

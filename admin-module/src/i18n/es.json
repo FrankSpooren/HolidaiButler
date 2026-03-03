@@ -213,7 +213,12 @@
       "reviews": "Rese\u00f1as",
       "totalReviews": "Rese\u00f1as totales",
       "avgRating": "Valoraci\u00f3n media",
-      "distribution": "Distribuci\u00f3n"
+      "distribution": "Distribuci\u00f3n",
+      "syncInfo": "Sync y Metadatos",
+      "lastApifySync": "\u00daltima sincronizaci\u00f3n Apify",
+      "tierScore": "Puntuaci\u00f3n de nivel",
+      "googleRating": "Valoraci\u00f3n Google",
+      "freshness": "Frescura"
     },
     "images": "Im\u00e1genes",
     "primary": "Principal",

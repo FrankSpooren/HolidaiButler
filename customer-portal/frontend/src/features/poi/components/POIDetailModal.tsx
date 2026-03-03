@@ -579,30 +579,49 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                     {(() => {
                       const accessibilityFeatures = parseArrayField(poi.accessibility_features);
                       const amenities = parseArrayField(poi.amenities);
-                      const hasDetails = accessibilityFeatures.length > 0 || amenities.length > 0 || poi.price_level;
+                      const parking = Array.isArray(poi.parking) ? poi.parking : [];
+                      const hasDetails = accessibilityFeatures.length > 0 || amenities.length > 0 || parking.length > 0 || poi.price_level;
+
+                      const getFeatureEntries = (arr: any[]) => {
+                        const entries: { name: string; available: boolean }[] = [];
+                        for (const item of arr) {
+                          if (typeof item === 'string') {
+                            entries.push({ name: item, available: true });
+                          } else if (typeof item === 'object' && item !== null) {
+                            for (const [key, val] of Object.entries(item)) {
+                              if (val) entries.push({ name: key, available: true });
+                            }
+                          }
+                        }
+                        return entries;
+                      };
+
+                      const accessEntries = getFeatureEntries(accessibilityFeatures);
+                      const amenityEntries = getFeatureEntries(amenities);
+                      const parkingEntries = getFeatureEntries(parking);
 
                       return (
                         <div className="poi-section">
                           <h2 className="poi-section-title">{t.poi.details || 'Details'}</h2>
                           <div className="contact-info">
-                            {accessibilityFeatures.includes('wheelchair_accessible') && (
-                              <div className="contact-item">
+                            {accessEntries.map((f, i) => (
+                              <div className="contact-item" key={`acc-${i}`}>
                                 <span className="contact-icon">♿</span>
-                                <span className="contact-text">{t.poi.amenities.wheelchairAccessible}</span>
+                                <span className="contact-text">{f.name}</span>
                               </div>
-                            )}
-                            {amenities.includes('wifi') && (
-                              <div className="contact-item">
-                                <span className="contact-icon">📶</span>
-                                <span className="contact-text">{t.poi.amenities.freeWifi}</span>
+                            ))}
+                            {amenityEntries.map((f, i) => (
+                              <div className="contact-item" key={`am-${i}`}>
+                                <span className="contact-icon">✅</span>
+                                <span className="contact-text">{f.name}</span>
                               </div>
-                            )}
-                            {amenities.includes('credit_cards') && (
-                              <div className="contact-item">
-                                <span className="contact-icon">💳</span>
-                                <span className="contact-text">{t.poi.amenities.creditCards}</span>
+                            ))}
+                            {parkingEntries.map((f, i) => (
+                              <div className="contact-item" key={`pk-${i}`}>
+                                <span className="contact-icon">🅿️</span>
+                                <span className="contact-text">{f.name}</span>
                               </div>
-                            )}
+                            ))}
                             {poi.price_level && (
                               <div className="contact-item">
                                 <span className="contact-icon">💰</span>
