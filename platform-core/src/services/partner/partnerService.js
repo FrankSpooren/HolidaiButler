@@ -340,17 +340,9 @@ async function updateContractStatus(id, destinationId, newStatus, actor) {
 // ============================================================================
 
 async function getPartnerTransactions(partnerId, destinationId, filters = {}) {
-  const { page = 1, limit = 25 } = filters;
-  // Placeholder: intermediary_transactions table will be created in Blok B
-  return {
-    items: [],
-    pagination: {
-      page,
-      limit,
-      total: 0,
-      totalPages: 0
-    }
-  };
+  // Delegates to intermediaryService (Blok B)
+  const intermediaryService = (await import('../intermediary/intermediaryService.js')).default;
+  return intermediaryService.getPartnerTransactions(partnerId, destinationId, filters);
 }
 
 // ============================================================================

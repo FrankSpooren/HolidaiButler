@@ -708,6 +708,34 @@ export function startWorkers() {
           }
           break;
 
+        case "intermediary-reminder":
+          try {
+            const intermediaryRem = (await import("../intermediary/intermediaryService.js")).default;
+            const iReminder = await intermediaryRem.sendReminders();
+            if (iReminder.sentCount > 0) {
+              console.log("[Orchestrator] Intermediary reminders:", JSON.stringify({ sent: iReminder.sentCount }));
+            }
+            result = iReminder;
+          } catch (error) {
+            console.error("[Orchestrator] Intermediary reminder failed:", error.message);
+            result = { type: "intermediary-reminder", status: "error", error: error.message };
+          }
+          break;
+
+        case "intermediary-review-request":
+          try {
+            const intermediaryRev = (await import("../intermediary/intermediaryService.js")).default;
+            const iReview = await intermediaryRev.requestReviews();
+            if (iReview.sentCount > 0) {
+              console.log("[Orchestrator] Intermediary review requests:", JSON.stringify({ sent: iReview.sentCount }));
+            }
+            result = iReview;
+          } catch (error) {
+            console.error("[Orchestrator] Intermediary review request failed:", error.message);
+            result = { type: "intermediary-review-request", status: "error", error: error.message };
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -732,7 +760,9 @@ export function startWorkers() {
         'reservation-expired-cleanup': 'orchestrator',
         'reservation-reminder-24h': 'communication-flow',
         'reservation-reminder-1h': 'communication-flow',
-        'guest-data-retention-cleanup': 'gdpr'
+        'guest-data-retention-cleanup': 'gdpr',
+        'intermediary-reminder': 'communication-flow',
+        'intermediary-review-request': 'communication-flow'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {

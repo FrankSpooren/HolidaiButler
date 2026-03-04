@@ -734,5 +734,57 @@
       "reactivate": "Reaktivieren",
       "terminate": "Beenden"
     }
+  },
+  "intermediary": {
+    "title": "Vermittler-Transaktionen",
+    "no_data": "Keine Vermittler-Transaktionen gefunden",
+    "created": "Transaktion erstellt",
+    "consent_recorded": "Zustimmung erfasst",
+    "confirmed": "Transaktion bestätigt",
+    "voucher_shared": "Gutschein geteilt",
+    "cancelled": "Transaktion storniert",
+    "status": {
+      "voorstel": "Vorschlag",
+      "toestemming": "Zustimmung",
+      "bevestiging": "Bestätigt",
+      "delen": "Geteilt",
+      "reminder": "Erinnerung gesendet",
+      "review": "Bewertung angefragt",
+      "cancelled": "Storniert",
+      "expired": "Abgelaufen"
+    },
+    "fields": {
+      "transaction_number": "Transaktion #",
+      "partner": "Partner",
+      "poi": "POI",
+      "service_type": "Dienstleistungsart",
+      "service_description": "Beschreibung",
+      "activity_date": "Aktivitätsdatum",
+      "activity_time": "Aktivitätszeit",
+      "amount": "Betrag",
+      "commission": "Provision",
+      "commission_rate": "Provisionssatz",
+      "partner_amount": "Partnerauszahlung",
+      "guest_name": "Gastname",
+      "guest_email": "Gast-E-Mail",
+      "guest_phone": "Gast-Telefon",
+      "qr_code": "QR-Code",
+      "notes": "Notizen"
+    },
+    "stats": {
+      "total_transactions": "Transaktionen gesamt",
+      "total_revenue": "Gesamtumsatz",
+      "total_commission": "Provision verdient",
+      "conversion_rate": "Konversionsrate",
+      "active_proposals": "Aktive Vorschläge",
+      "unique_partners": "Eindeutige Partner"
+    },
+    "actions": {
+      "record_consent": "Zustimmung erfassen",
+      "confirm_payment": "Zahlung bestätigen",
+      "share_voucher": "Gutschein teilen",
+      "cancel": "Transaktion stornieren",
+      "view_qr": "QR-Code anzeigen"
+    }
   }
 }

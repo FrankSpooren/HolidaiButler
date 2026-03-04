@@ -31,7 +31,8 @@
 20. [Fase IV-B: POI Tier Import + Owner-Managed Tiers](#fase-iv-b--poi-tier-import--owner-managed-tiers-03-03-2026)
 21. [Fase IV-0: Pre-flight & Adyen Activatie](#fase-iv-0--pre-flight--adyen-activatie-03-03-2026)
 22. [Fase IV Blok A: Partner Management Module](#fase-iv-blok-a--partner-management-module-03-03-2026)
-23. [Volledige Changelog](#volledige-changelog)
+23. [Fase IV Blok B: Intermediair State Machine](#fase-iv-blok-b--intermediair-state-machine-04-03-2026)
+24. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -681,10 +682,52 @@ Architectuuradvies (Directus + Unleash, 3 maart 2026) geanalyseerd. Conclusie: B
 
 ---
 
+## Fase IV Blok B — Intermediair State Machine (04-03-2026)
+
+**Het commerciële hart van HolidaiButler**: Intermediary Transaction Module met 6-stappen state machine.
+
+### State Machine
+`voorstel → toestemming → bevestiging → delen → reminder → review` (+ cancelled/expired)
+
+### Resultaten
+- **1 DB tabel**: `intermediary_transactions` (38 kolommen, state machine ENUM, financial CENTS, QR data, transition timestamps)
+- **ALTER TABLE**: `payment_transactions.order_type` uitgebreid met 'intermediary'
+- **intermediaryService.js**: 13 functies — state machine transitions, ACID commissieberekening, QR HMAC-SHA256 (`HB-I:{uuid}:{hmac8}`), payout report
+- **9 admin endpoints** (106→115): list, stats, detail, create, consent, confirm, share, cancel, QR
+- **2 BullMQ jobs** (46→48): intermediary-reminder (hourly), intermediary-review-request (6h)
+- **Feature flag**: `hasIntermediary: false` op alle 3 destinations (activering later)
+- **Frontend**: PartnersPage transactions tab met echte transactietabel, intermediaryService.js API client, useIntermediary.js hooks
+- **i18n**: 4 talen (~35 keys elk — status labels, velden, acties, stats)
+- **CLAUDE.md** v3.63.0, **MS** v7.29, adminPortal.js v3.19.0
+
+### Bestanden
+
+| # | Bestand | Actie |
+|---|---------|-------|
+| 1 | `platform-core/database/migrations/012_intermediary_tables.sql` | NEW |
+| 2 | `platform-core/src/services/intermediary/intermediaryService.js` | NEW |
+| 3 | `platform-core/src/routes/adminPortal.js` | EDIT (+9 endpoints) |
+| 4 | `platform-core/src/services/partner/partnerService.js` | EDIT (placeholder→delegate) |
+| 5 | `platform-core/src/services/orchestrator/scheduler.js` | EDIT (+2 jobs) |
+| 6 | `platform-core/src/services/orchestrator/workers.js` | EDIT (+2 cases, JOB_ACTOR_MAP) |
+| 7 | `platform-core/config/destinations/calpe.config.js` | EDIT (+hasIntermediary) |
+| 8 | `platform-core/config/destinations/texel.config.js` | EDIT (+hasIntermediary) |
+| 9 | `platform-core/config/destinations/alicante.config.js` | EDIT (+hasIntermediary) |
+| 10 | `admin-module/src/api/intermediaryService.js` | NEW |
+| 11 | `admin-module/src/hooks/useIntermediary.js` | NEW |
+| 12 | `admin-module/src/pages/PartnersPage.jsx` | EDIT (transactions tab) |
+| 13-16 | `admin-module/src/i18n/{en,nl,de,es}.json` | EDIT (+intermediary keys) |
+| 17 | `CLAUDE.md` | EDIT (v3.63.0) |
+| 18 | `docs/strategy/HolidaiButler_Master_Strategie.md` | EDIT (v7.29) |
+| 19 | `CLAUDE_HISTORY.md` | EDIT (+Blok B sectie) |
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.63.0** | **2026-03-04** | **Fase IV Blok B**: Intermediair State Machine. intermediary_transactions tabel, intermediaryService.js (13 functies, state machine, ACID commissie, QR HMAC), 9 admin endpoints (115 totaal), 2 BullMQ jobs (48 totaal), hasIntermediary flag, PartnersPage transactions tab, i18n 4 talen. adminPortal.js v3.19.0. |
 | **3.62.0** | **2026-03-03** | **Fase IV Blok A**: Partner Management Module. 3 DB tabellen, partnerService.js, 7 admin endpoints (106 totaal), PartnersPage.jsx, i18n 4 talen. Multi-tenant analyse. |
 | **3.61.0** | **2026-03-03** | **Fase IV-0**: Pre-flight & Adyen Activatie. Adyen E2E test PASS. Feature flags Calpe geactiveerd. PCI DSS + GDPR Blok 0 review. Compliance docs geüpdatet. |
 | 3.60.0 | 2026-03-03 | **Fase IV-B**: POI Tier Import + Owner-Managed Tiers. 2.695 POI tier-assignments uit Excel. poiTierManager.js v2.0: query op stored tier kolom. Admin Portal tier display. |

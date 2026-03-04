@@ -734,5 +734,57 @@
       "reactivate": "Reactivate",
       "terminate": "Terminate"
     }
+  },
+  "intermediary": {
+    "title": "Intermediary Transactions",
+    "no_data": "No intermediary transactions found",
+    "created": "Transaction created",
+    "consent_recorded": "Consent recorded",
+    "confirmed": "Transaction confirmed",
+    "voucher_shared": "Voucher shared",
+    "cancelled": "Transaction cancelled",
+    "status": {
+      "voorstel": "Proposal",
+      "toestemming": "Consent",
+      "bevestiging": "Confirmed",
+      "delen": "Shared",
+      "reminder": "Reminder Sent",
+      "review": "Review Requested",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
+    },
+    "fields": {
+      "transaction_number": "Transaction #",
+      "partner": "Partner",
+      "poi": "POI",
+      "service_type": "Service Type",
+      "service_description": "Description",
+      "activity_date": "Activity Date",
+      "activity_time": "Activity Time",
+      "amount": "Amount",
+      "commission": "Commission",
+      "commission_rate": "Commission Rate",
+      "partner_amount": "Partner Payout",
+      "guest_name": "Guest Name",
+      "guest_email": "Guest Email",
+      "guest_phone": "Guest Phone",
+      "qr_code": "QR Code",
+      "notes": "Notes"
+    },
+    "stats": {
+      "total_transactions": "Total Transactions",
+      "total_revenue": "Total Revenue",
+      "total_commission": "Commission Earned",
+      "conversion_rate": "Conversion Rate",
+      "active_proposals": "Active Proposals",
+      "unique_partners": "Unique Partners"
+    },
+    "actions": {
+      "record_consent": "Record Consent",
+      "confirm_payment": "Confirm Payment",
+      "share_voucher": "Share Voucher",
+      "cancel": "Cancel Transaction",
+      "view_qr": "View QR Code"
+    }
   }
 }
