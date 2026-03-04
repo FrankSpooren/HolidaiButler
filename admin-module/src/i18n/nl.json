@@ -14,7 +14,8 @@
     "issues": "Issues",
     "commerce": "Commerce",
     "partners": "Partners",
-    "financial": "Financieel"
+    "financial": "Financieel",
+    "intermediary": "Intermediair"
   },
   "auth": {
     "login": "Inloggen",
@@ -786,7 +787,34 @@
       "share_voucher": "Voucher delen",
       "cancel": "Transactie annuleren",
       "view_qr": "QR-code bekijken"
-    }
+    },
+    "tab_dashboard": "Dashboard",
+    "tab_transactions": "Transacties",
+    "tab_settlements": "Afrekeningen",
+    "tab_export": "Export",
+    "avg_commission": "Gem. Commissie",
+    "funnel_title": "Conversie Funnel",
+    "funnel_voorstel": "Voorstel",
+    "funnel_toestemming": "Toestemming",
+    "funnel_bevestiging": "Bevestiging",
+    "funnel_delen": "Gedeeld",
+    "funnel_review": "Review",
+    "search_placeholder": "Zoek op gastnaam, email of transactienummer...",
+    "filter_status": "Status filter",
+    "filter_all": "Alle statussen",
+    "detail_title": "Transactiedetails",
+    "state_timeline": "Voortgang",
+    "timeline_current": "Huidige status",
+    "created_at": "Aangemaakt op",
+    "cancel_reason": "Reden voor annulering",
+    "settlements_info": "Afrekeningen worden beheerd via het Financieel Proces",
+    "go_to_financial": "Ga naar Financieel",
+    "unsettled_count": "Onafgerekende transacties",
+    "export_transactions": "Transacties exporteren",
+    "export_success": "CSV export gedownload",
+    "download_csv": "Download CSV",
+    "period_from": "Van",
+    "period_to": "Tot"
   },
   "financial": {
     "title": "Financieel Proces",

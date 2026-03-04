@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.65.0
+> **Versie**: 3.66.0
 > **Laatst bijgewerkt**: 4 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -97,7 +97,7 @@ HolidaiButler/
 │   └── apify_backfill.py        # Apify historische data backfill (Bronze→Silver)
 ├── platform-core/               # Node.js/Express backend
 │   └── src/
-│       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.21.0)
+│       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.22.0)
 │       ├── services/
 │       │   ├── holibot/         # HoliBot 2.0 (RAG Chatbot)
 │       │   ├── ticketing/       # Ticketing Module (inventoryService.js, ticketingService.js)
@@ -295,9 +295,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **IV-B** | **POI Tier Import + Owner-Managed Tiers** | **03-03** | **2.695 POI tier-assignments geïmporteerd uit Excel (Frank's manuele review). `POI.tier` kolom (TINYINT) nu primair. poiTierManager.js v2.0: `getPOIsForUpdate()` query op stored tier kolom i.p.v. runtime score berekening. `classifyAllPOIs()` herberekent alleen tier_score (informatief). BullMQ crons: T1 dagelijks, T2 wekelijks, T3 maandelijks, T4 kwartaal. Admin Portal: tier in lijst + detail.** |
 | **IV-0** | **Pre-flight & Adyen Activatie (Blok 0)** | **03-03** | **Adyen E2E test PASS: session creation (CS7F78812ACD), transaction status, HMAC webhook. Environment=TEST, Merchant=HolidaiButler378ECOM. Feature flags Calpe geactiveerd: hasBooking/hasTicketing/hasReservations/hasChatToBook=true. PCI DSS Blok 0 review (14/17 PASS, 3 manual Frank). GDPR Blok 0 review (27/31 PASS, 2 manual Frank). .env permissions 600 bevestigd. Legacy reservations-module (PM2 #4) gestopt (crash loop, niet Fase III service). Compliance docs geüpdatet met Blok 0 review secties.** |
 | **IV-A (Blok A)** | **Partner Management Module** | **03-03** | **3 DB tabellen (partners, partner_pois, partner_onboarding). partnerService.js: CRUD, onboarding workflow, IBAN/BTW validatie, contract status transitions, KPIs. 7 admin endpoints (106 totaal). PartnersPage.jsx: stats cards, tabel, detail dialog (4 tabs), 3-stappen create wizard, status management. i18n 4 talen (~40 keys). Forward-compatible met multi-tenant configuratielaag (Fase V+).** |
-| **IV-B (Blok B)** | **Intermediair State Machine** | **04-03** | **1 DB tabel (intermediary_transactions) + ALTER TABLE payment_transactions. intermediaryService.js: 6-stappen state machine (voorstel→toestemming→bevestiging→delen→reminder→review), ACID commissieberekening, QR HMAC-SHA256 (HB-I:{uuid}:{hmac8}), payout report. 9 admin endpoints (115 totaal). 2 BullMQ jobs (48 totaal). Feature flag hasIntermediary. PartnersPage transactions tab. i18n 4 talen (~35 keys). adminPortal.js v3.21.0.** |
-| **IV-C (Blok C)** | **Financieel Proces** | **04-03** | **4 DB tabellen (settlement_batches, partner_payouts, credit_notes, financial_audit_log) + ALTER TABLE intermediary_transactions. financialService.js: 25 functies (3 state machines, ACID settlement creation, partner data snapshotting, BTW berekening 21%, auto-complete batch, 4 CSV exports met BOM). 20 admin endpoints (135 totaal), adminPortal.js v3.21.0. 2 BullMQ jobs (50 totaal: financial-auto-settlement 1e v/d maand 04:00, financial-unsettled-alert ma 08:30). Feature flag hasFinancial. FinancialPage.jsx (5 tabs: Dashboard, Settlements, Payouts, Credit Notes, Export). i18n 4 talen (~65 keys).** |
-| **IV-D (Blok D)** | **Agent Ecosysteem v5.1** | **04-03** | **3 nieuwe agents: De Makelaar (intermediary monitor, Type A, elke 15 min: stuck txns, partner escalaties, conversie metrics), De Kassier (financial monitor, Type B, dagelijks 06:30: reconciliatie, anomaliedetectie 2σ, settlement alerts, fraude-indicatoren), De Magazijnier (inventory sync, Type A, elke 30 min: Redis↔MySQL sync, stale reserveringen, low inventory). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, SCHEDULED_JOBS_METADATA, AGENT_EXTENDED_DATA bijgewerkt. Daily briefing 3 nieuwe secties. adminPortal.js v3.21.0.** |
+| **IV-B (Blok B)** | **Intermediair State Machine** | **04-03** | **1 DB tabel (intermediary_transactions) + ALTER TABLE payment_transactions. intermediaryService.js: 6-stappen state machine (voorstel→toestemming→bevestiging→delen→reminder→review), ACID commissieberekening, QR HMAC-SHA256 (HB-I:{uuid}:{hmac8}), payout report. 9 admin endpoints (115 totaal). 2 BullMQ jobs (48 totaal). Feature flag hasIntermediary. PartnersPage transactions tab. i18n 4 talen (~35 keys). adminPortal.js v3.22.0.** |
+| **IV-C (Blok C)** | **Financieel Proces** | **04-03** | **4 DB tabellen (settlement_batches, partner_payouts, credit_notes, financial_audit_log) + ALTER TABLE intermediary_transactions. financialService.js: 25 functies (3 state machines, ACID settlement creation, partner data snapshotting, BTW berekening 21%, auto-complete batch, 4 CSV exports met BOM). 20 admin endpoints (135 totaal), adminPortal.js v3.22.0. 2 BullMQ jobs (50 totaal: financial-auto-settlement 1e v/d maand 04:00, financial-unsettled-alert ma 08:30). Feature flag hasFinancial. FinancialPage.jsx (5 tabs: Dashboard, Settlements, Payouts, Credit Notes, Export). i18n 4 talen (~65 keys).** |
+| **IV-D (Blok D)** | **Agent Ecosysteem v5.1** | **04-03** | **3 nieuwe agents: De Makelaar (intermediary monitor, Type A, elke 15 min: stuck txns, partner escalaties, conversie metrics), De Kassier (financial monitor, Type B, dagelijks 06:30: reconciliatie, anomaliedetectie 2σ, settlement alerts, fraude-indicatoren), De Magazijnier (inventory sync, Type A, elke 30 min: Redis↔MySQL sync, stale reserveringen, low inventory). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, SCHEDULED_JOBS_METADATA, AGENT_EXTENDED_DATA bijgewerkt. Daily briefing 3 nieuwe secties. adminPortal.js v3.22.0.** |
+| **IV-E (Blok E)** | **Admin Intermediair Dashboard** | **04-03** | **IntermediaryPage.jsx (4 tabs: Dashboard met KPI cards + conversie funnel Recharts, Transacties met filters + detail dialog + state timeline + actie buttons, Afrekeningen link naar Financial, Export CSV). 2 nieuwe admin endpoints (funnel + CSV export, 137 totaal). Frontend: intermediaryService.js +2 methods, useIntermediary.js +1 hook, App.jsx route, Sidebar.jsx nav item. i18n 4 talen (~25 nieuwe keys). adminPortal.js v3.22.0. RBAC: platform_admin + poi_owner.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -357,7 +358,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.19.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 135 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 9 intermediary + 20 financial endpoints)
+- **Endpoints**: 137 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial endpoints)
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -429,7 +430,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
-| IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | IN PROGRESS (IV-A+B+0+Blok A+B+C+D COMPLEET) | 6-8 wkn |
+| IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | IN PROGRESS (IV-A+B+0+Blok A+B+C+D+E COMPLEET) | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
 | VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
 
@@ -537,9 +538,10 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.65.0** | **2026-03-04** | **Fase IV Blok D: Agent Ecosysteem v5.1 COMPLEET**. 3 nieuwe agents: De Makelaar (intermediary monitor, elke 15 min), De Kassier (financial monitor, dagelijks 06:30), De Magazijnier (inventory sync, elke 30 min). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, workers.js, scheduler.js, dailyBriefing.js bijgewerkt. adminPortal.js v3.21.0. |
-| 3.64.0 | 2026-03-04 | Fase IV Blok C: Financieel Proces COMPLEET. 4 DB tabellen + ALTER TABLE. financialService.js (25 functies, 3 state machines, ACID settlements, BTW 21%, CSV exports). 20 admin endpoints (135 totaal), adminPortal.js v3.21.0. 2 BullMQ jobs (50 totaal). Feature flag hasFinancial. FinancialPage.jsx (5 tabs). i18n 4 talen (~65 keys). |
-| 3.63.0 | 2026-03-04 | Fase IV Blok B: Intermediair State Machine COMPLEET. 1 DB tabel (intermediary_transactions) + ALTER TABLE payment_transactions (order_type). intermediaryService.js (13 functies: state machine, ACID commissie, QR HMAC, payout report). 9 admin endpoints (115 totaal), adminPortal.js v3.21.0. 2 BullMQ jobs (48 totaal). Feature flag hasIntermediary. PartnersPage transactions tab. i18n 4 talen. |
+| **3.66.0** | **2026-03-04** | **Fase IV Blok E: Admin Intermediair Dashboard COMPLEET**. IntermediaryPage.jsx (4 tabs: Dashboard KPIs + conversie funnel, Transacties tabel + detail dialog + state timeline, Afrekeningen link, Export CSV). 2 nieuwe admin endpoints (funnel + CSV export, 137 totaal). i18n 4 talen (~25 keys). adminPortal.js v3.22.0. |
+| 3.65.0 | 2026-03-04 | Fase IV Blok D: Agent Ecosysteem v5.1 COMPLEET. 3 nieuwe agents: De Makelaar (intermediary monitor, elke 15 min), De Kassier (financial monitor, dagelijks 06:30), De Magazijnier (inventory sync, elke 30 min). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, workers.js, scheduler.js, dailyBriefing.js bijgewerkt. adminPortal.js v3.22.0. |
+| 3.64.0 | 2026-03-04 | Fase IV Blok C: Financieel Proces COMPLEET. 4 DB tabellen + ALTER TABLE. financialService.js (25 functies, 3 state machines, ACID settlements, BTW 21%, CSV exports). 20 admin endpoints (135 totaal), adminPortal.js v3.22.0. 2 BullMQ jobs (50 totaal). Feature flag hasFinancial. FinancialPage.jsx (5 tabs). i18n 4 talen (~65 keys). |
+| 3.63.0 | 2026-03-04 | Fase IV Blok B: Intermediair State Machine COMPLEET. 1 DB tabel (intermediary_transactions) + ALTER TABLE payment_transactions (order_type). intermediaryService.js (13 functies: state machine, ACID commissie, QR HMAC, payout report). 9 admin endpoints (115 totaal), adminPortal.js v3.22.0. 2 BullMQ jobs (48 totaal). Feature flag hasIntermediary. PartnersPage transactions tab. i18n 4 talen. |
 | 3.62.0 | 2026-03-03 | Fase IV Blok A: Partner Management Module COMPLEET. 3 DB tabellen, partnerService.js, 7 admin endpoints (106 totaal), adminPortal.js v3.18.0. PartnersPage.jsx. i18n 4 talen. Forward-compatible multi-tenant analyse. |
 | **3.61.0** | **2026-03-03** | **Fase IV-0: Pre-flight & Adyen Activatie COMPLEET**. Adyen E2E test PASS (session creation, transaction status, HMAC webhook). Feature flags Calpe geactiveerd (hasBooking/hasTicketing/hasReservations/hasChatToBook=true). PCI DSS Blok 0 review + GDPR Blok 0 review. .env permissions 600 bevestigd. Legacy PM2 reservations-module gestopt. Compliance docs geüpdatet. |
 | 3.60.0 | 2026-03-03 | Fase IV-B: POI Tier Import + Owner-Managed Tiers COMPLEET. 2.695 POI tier-assignments, poiTierManager.js v2.0, Admin Portal tier display. |
@@ -553,7 +555,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.31 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.32 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

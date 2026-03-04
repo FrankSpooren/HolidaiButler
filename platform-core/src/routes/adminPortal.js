@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C (v3.21.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E (v3.22.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -7899,6 +7899,73 @@ router.get('/intermediary/stats', adminAuth('reviewer'), destinationScope, async
   } catch (error) {
     logger.error('[AdminPortal] Intermediary stats error:', error);
     res.status(500).json({ success: false, error: { code: 'INTERMEDIARY_STATS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /intermediary/funnel — Conversion funnel data (cumulative stage counts)
+ */
+router.get('/intermediary/funnel', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
+    const stats = await intermediaryService.getTransactionStats(
+      destinationId, req.query.dateFrom, req.query.dateTo
+    );
+    const total = stats.total_transactions || 0;
+    const cancelled = (stats.cancelled || 0) + (stats.expired || 0);
+    const reviewed = stats.reviewed || 0;
+    const reminded = (stats.reminded || 0) + reviewed;
+    const shared = (stats.shared || 0) + reminded;
+    const confirmed = (stats.confirmed || 0) + shared;
+    const consented = (stats.consented || 0) + confirmed;
+
+    const funnel = [
+      { stage: 'voorstel', count: total, label: 'Voorstel' },
+      { stage: 'toestemming', count: consented, label: 'Toestemming' },
+      { stage: 'bevestiging', count: confirmed, label: 'Bevestiging' },
+      { stage: 'delen', count: shared, label: 'Gedeeld' },
+      { stage: 'review', count: reviewed, label: 'Review' }
+    ];
+    res.json({ success: true, data: { funnel, conversion_rate: stats.conversion_rate, total, cancelled } });
+  } catch (error) {
+    logger.error('[AdminPortal] Intermediary funnel error:', error);
+    res.status(500).json({ success: false, error: { code: 'INTERMEDIARY_FUNNEL_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /intermediary/export/transactions — CSV export of intermediary transactions
+ */
+router.get('/intermediary/export/transactions', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
+    const result = await intermediaryService.getTransactions(destinationId, {
+      status: req.query.status || undefined,
+      dateFrom: req.query.dateFrom || undefined,
+      dateTo: req.query.dateTo || undefined,
+      page: 1,
+      limit: 10000
+    });
+    const headers = ['Transactie #', 'Status', 'Partner', 'POI', 'Diensttype', 'Gastnaam', 'Bedrag', 'Commissie', 'Partner uitbetaling', 'Activiteitdatum', 'Aangemaakt'];
+    const rows = (result.items || []).map(t => [
+      t.transaction_number || '', t.status || '', t.partner_name || '', t.poi_name || '',
+      t.service_type || '', t.guest_name || '',
+      ((t.amount_cents || 0) / 100).toFixed(2),
+      ((t.commission_cents || 0) / 100).toFixed(2),
+      ((t.partner_amount_cents || 0) / 100).toFixed(2),
+      t.activity_date || '', t.created_at || ''
+    ]);
+    const bom = '\uFEFF';
+    const csv = bom + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+    const dateFrom = req.query.dateFrom || 'all';
+    const dateTo = req.query.dateTo || 'all';
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="intermediary_transactions_${dateFrom}_${dateTo}.csv"`);
+    res.setHeader('X-Row-Count', String(rows.length));
+    res.send(csv);
+  } catch (error) {
+    logger.error('[AdminPortal] Intermediary export error:', error);
+    res.status(500).json({ success: false, error: { code: 'EXPORT_ERROR', message: error.message } });
   }
 });
 

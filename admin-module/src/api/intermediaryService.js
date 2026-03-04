@@ -34,5 +34,16 @@ export const intermediaryService = {
   getStats: (destinationId, params = {}) =>
     client.get('/intermediary/stats', {
       params: { destinationId, ...params }
-    }).then(r => r.data)
+    }).then(r => r.data),
+
+  getFunnel: (destinationId, params = {}) =>
+    client.get('/intermediary/funnel', {
+      params: { destinationId, ...params }
+    }).then(r => r.data),
+
+  exportTransactions: (destinationId, params = {}) =>
+    client.get('/intermediary/export/transactions', {
+      params: { destinationId, ...params },
+      responseType: 'blob'
+    })
 };

@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 4 maart 2026
-**Versie**: 7.31
+**Versie**: 7.32
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV-A+B+0+Blok A+B+C+D COMPLEET ✅. Fase III COMPLEET (Blok G+A+B+C+D+E+F). Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.65.0. MS v7.31.
+**Status**: FASE IV-A+B+0+Blok A+B+C+D+E COMPLEET ✅. Fase III COMPLEET (Blok G+A+B+C+D+E+F). Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.66.0. MS v7.32.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1368,6 +1368,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 - **Blok B: Intermediair State Machine** ✅ COMPLEET (04-03-2026): 1 DB tabel (intermediary_transactions) + ALTER TABLE payment_transactions (order_type). intermediaryService.js (13 functies: 6-stappen state machine, ACID commissieberekening, QR HMAC-SHA256, payout report). 9 admin endpoints (115 totaal). 2 BullMQ jobs (48 totaal). Feature flag hasIntermediary. PartnersPage transactions tab. i18n 4 talen.
 - **Blok C: Financieel Proces** ✅ COMPLEET (04-03-2026): 4 DB tabellen (settlement_batches, partner_payouts, credit_notes, financial_audit_log). financialService.js (25 functies, 3 state machines, ACID settlements, BTW 21%, CSV exports). 20 admin endpoints (135 totaal). 2 BullMQ jobs (50 totaal). Feature flag hasFinancial. FinancialPage.jsx (5 tabs). i18n 4 talen.
 - **Blok D: Agent Ecosysteem v5.1** ✅ COMPLEET (04-03-2026): 3 nieuwe agents: De Makelaar (intermediary monitor, Type A, elke 15 min), De Kassier (financial monitor, Type B, dagelijks 06:30), De Magazijnier (inventory sync, Type A, elke 30 min). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, workers.js, scheduler.js, dailyBriefing.js bijgewerkt. adminPortal.js v3.21.0.
+- **Blok E: Admin Intermediair Dashboard** ✅ COMPLEET (04-03-2026): IntermediaryPage.jsx (4 tabs: Dashboard KPIs + conversie funnel Recharts, Transacties tabel + detail dialog + state timeline + actie buttons, Afrekeningen link naar Financial, Export CSV). 2 nieuwe admin endpoints (funnel + CSV export, 137 totaal). i18n 4 talen (~25 nieuwe keys). adminPortal.js v3.22.0.
 
 **Fase V — UX + WarreWijzer:**
 - Mobiele UX: benchmark Google Maps, TripAdvisor, GetYourGuide, Booking.com
@@ -1563,7 +1564,8 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **7.31** | **04-03-2026** | **Fase IV Blok D: Agent Ecosysteem v5.1 COMPLEET. 3 nieuwe agents: De Makelaar (intermediary monitor, elke 15 min), De Kassier (financial monitor, dagelijks 06:30), De Magazijnier (inventory sync, elke 30 min). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, workers.js, scheduler.js, dailyBriefing.js bijgewerkt. adminPortal.js v3.21.0. CLAUDE.md v3.65.0.** |
+| **7.32** | **04-03-2026** | **Fase IV Blok E: Admin Intermediair Dashboard COMPLEET. IntermediaryPage.jsx (4 tabs: Dashboard + conversie funnel, Transacties + detail dialog, Afrekeningen link, Export CSV). 2 nieuwe admin endpoints (137 totaal). i18n 4 talen. adminPortal.js v3.22.0. CLAUDE.md v3.66.0.** |
+| 7.31 | 04-03-2026 | Fase IV Blok D: Agent Ecosysteem v5.1 COMPLEET. 3 nieuwe agents: De Makelaar (intermediary monitor, elke 15 min), De Kassier (financial monitor, dagelijks 06:30), De Magazijnier (inventory sync, elke 30 min). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, workers.js, scheduler.js, dailyBriefing.js bijgewerkt. adminPortal.js v3.21.0. CLAUDE.md v3.65.0. |
 | **7.30** | **04-03-2026** | **Fase IV Blok C: Financieel Proces COMPLEET. 4 DB tabellen (settlement_batches, partner_payouts, credit_notes, financial_audit_log). financialService.js (25 functies, 3 state machines). 20 admin endpoints (135 totaal). 2 BullMQ jobs (50 totaal). Feature flag hasFinancial. FinancialPage.jsx (5 tabs). adminPortal.js v3.21.0. CLAUDE.md v3.64.0.** |
 | 7.29 | 04-03-2026 | Fase IV Blok B: Intermediair State Machine COMPLEET. intermediary_transactions tabel, intermediaryService.js (13 functies, 6-stappen state machine, ACID commissie, QR HMAC), 9 admin endpoints (115 totaal), 2 BullMQ jobs (48 totaal), hasIntermediary feature flag, PartnersPage transactions tab, i18n 4 talen. adminPortal.js v3.19.0. CLAUDE.md v3.63.0. |
 | **7.28** | **03-03-2026** | **Fase IV Blok A: Partner Management Module COMPLEET. 3 DB tabellen, partnerService.js, 7 admin endpoints (106 totaal), PartnersPage.jsx, i18n 4 talen. Forward-compatible multi-tenant analyse (Directus+Unleash = Fase V+). CLAUDE.md v3.62.0.** |
