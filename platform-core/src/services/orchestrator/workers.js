@@ -792,6 +792,75 @@ export function startWorkers() {
           }
           break;
 
+        // === FASE IV-D: COMMERCE MONITORING AGENTS ===
+        case "intermediary-monitor":
+          try {
+            const intermediaryMon = (await import("../agents/intermediaryMonitor/index.js")).default;
+            const destIds = [1, 2]; // calpe, texel
+            const imResults = {};
+            for (const dId of destIds) {
+              try {
+                imResults[dId] = await intermediaryMon.runForDestination(dId);
+              } catch (e) {
+                imResults[dId] = { error: e.message };
+              }
+            }
+            const totalStuck = Object.values(imResults).reduce((s, r) => s + (r.stuck_transactions?.total || 0), 0);
+            const totalEscalations = Object.values(imResults).reduce((s, r) => s + (r.escalations?.length || 0), 0);
+            if (totalStuck > 0 || totalEscalations > 0) {
+              console.log("[Orchestrator] Intermediary monitor:", JSON.stringify({
+                stuck: totalStuck, escalations: totalEscalations
+              }));
+            }
+            result = { type: "intermediary-monitor", results: imResults };
+          } catch (error) {
+            console.error("[Orchestrator] Intermediary monitor failed:", error.message);
+            result = { type: "intermediary-monitor", status: "error", error: error.message };
+          }
+          break;
+
+        case "financial-monitor":
+          try {
+            const financialMon = (await import("../agents/financialMonitor/index.js")).default;
+            const fmResult = await financialMon.execute();
+            console.log("[Orchestrator] Financial monitor:", JSON.stringify({
+              reconciled: fmResult.reconciliation?.all_reconciled,
+              anomalies: fmResult.anomalies?.length || 0,
+              fraud_indicators: fmResult.fraud_indicators?.length || 0
+            }));
+            result = fmResult;
+          } catch (error) {
+            console.error("[Orchestrator] Financial monitor failed:", error.message);
+            result = { type: "financial-monitor", status: "error", error: error.message };
+          }
+          break;
+
+        case "inventory-sync":
+          try {
+            const inventorySync = (await import("../agents/inventorySync/index.js")).default;
+            const destIds = [1, 2]; // calpe, texel
+            const isResults = {};
+            for (const dId of destIds) {
+              try {
+                isResults[dId] = await inventorySync.runForDestination(dId);
+              } catch (e) {
+                isResults[dId] = { error: e.message };
+              }
+            }
+            const totalMismatches = Object.values(isResults).reduce((s, r) => s + (r.ticket_inventory_sync?.mismatch_count || 0), 0);
+            const totalStaleInv = Object.values(isResults).reduce((s, r) => s + (r.stale_reservations?.total || 0), 0);
+            if (totalMismatches > 0 || totalStaleInv > 0) {
+              console.log("[Orchestrator] Inventory sync:", JSON.stringify({
+                mismatches: totalMismatches, stale: totalStaleInv
+              }));
+            }
+            result = { type: "inventory-sync", results: isResults };
+          } catch (error) {
+            console.error("[Orchestrator] Inventory sync failed:", error.message);
+            result = { type: "inventory-sync", status: "error", error: error.message };
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -820,7 +889,10 @@ export function startWorkers() {
         'intermediary-reminder': 'communication-flow',
         'intermediary-review-request': 'communication-flow',
         'financial-auto-settlement': 'orchestrator',
-        'financial-unsettled-alert': 'orchestrator'
+        'financial-unsettled-alert': 'orchestrator',
+        'intermediary-monitor': 'intermediary-monitor',
+        'financial-monitor': 'financial-monitor',
+        'inventory-sync': 'inventory-sync'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {
@@ -937,6 +1009,9 @@ export function startWorkers() {
   console.log("[Orchestrator] - GDPR Agent: active");
   console.log("[Orchestrator] - Development Layer Agent: active");
   console.log("[Orchestrator] - Strategy Layer Agent: active");
+  console.log("[Orchestrator] - Intermediary Monitor Agent (De Makelaar): active");
+  console.log("[Orchestrator] - Financial Monitor Agent (De Kassier): active");
+  console.log("[Orchestrator] - Inventory Sync Agent (De Magazijnier): active");
 }
 
 export async function stopWorkers() {

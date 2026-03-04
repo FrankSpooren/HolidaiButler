@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C (v3.20.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C (v3.21.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -1264,7 +1264,65 @@ const AGENT_METADATA = [
 4. Handmatige MySQL backup: mysqldump --no-defaults -u pxoziy_1 -h jotx.your-database.de pxoziy_db1 | gzip > /root/backups/manual_backup.sql.gz
 5. Controleer MongoDB backups: mongosh --eval "db.backup_health_checks.find().sort({timestamp:-1}).limit(1).pretty()"
 6. Herstart API: pm2 restart holidaibutler-api
-7. Agent draait dagelijks (07:30 UTC) — wacht op volgende run` } }
+7. Agent draait dagelijks (07:30 UTC) — wacht op volgende run` } },
+  // === Fase IV-D: Commerce Monitoring Agents (3 new) ===
+  { id: 'makelaar', name: 'De Makelaar', englishName: 'Intermediary Monitor Agent', category: 'operations', type: 'A',
+    description: 'Bewaakt intermediaire transacties: vastgelopen deals, partner responstijden, conversie-afwijkingen',
+    description_en: 'Monitors intermediary transactions: stuck deals, partner response times, conversion anomalies',
+    tasks: [
+      'Detectie van vastgelopen transacties (voorstel >12u, toestemming >6u)',
+      'Partner responstijd monitoring en ranking',
+      'Escalatie bij 3+ weigeringen per partner in 24u',
+      'Conversie ratio tracking per partner per destination',
+      'Automatische alerts bij afwijkende patronen'
+    ],
+    monitoring_scope: 'intermediary_transactions, partner responstijden, conversie metrics',
+    output_description: 'Escalatie alerts, stuck transaction reminders, conversie rapporten',
+    schedule: '*/15 * * * *', actorNames: ['intermediary-monitor'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Makelaar"
+2. Controleer intermediary_transactions tabel: SELECT status, COUNT(*) FROM intermediary_transactions GROUP BY status
+3. Controleer vastgelopen transacties: SELECT * FROM intermediary_transactions WHERE status='voorstel' AND created_at < DATE_SUB(NOW(), INTERVAL 12 HOUR)
+4. Controleer MongoDB resultaten: mongosh --eval "db.intermediary_monitor_results.find().sort({timestamp:-1}).limit(1).pretty()"
+5. Herstart API: pm2 restart holidaibutler-api
+6. Agent draait elke 15 minuten — wacht op volgende run en verifieer status` } },
+  { id: 'kassier', name: 'De Kassier', englishName: 'Financial Monitor Agent', category: 'operations', type: 'B',
+    description: 'Dagelijkse financiële reconciliatie, anomaliedetectie, settlement bewaking en fraude-indicatoren',
+    description_en: 'Daily financial reconciliation, anomaly detection, settlement monitoring and fraud indicators',
+    tasks: [
+      'Dagelijkse reconciliatie: settlement berekeningen vs werkelijke transacties',
+      'Anomaliedetectie: onverwacht hoge/lage bedragen (2σ baseline)',
+      'Settlement alerts: openstaand >7 dagen',
+      'Fraude-indicatoren: zelfde klant × zelfde POI × kort tijdsvenster',
+      'Rapportage naar De Bode (dagelijkse briefing sectie)'
+    ],
+    monitoring_scope: 'settlement_batches, partner_payouts, intermediary_transactions, financial_audit_log',
+    output_description: 'Reconciliatie rapporten, anomalie alerts, fraude-indicatoren',
+    schedule: '30 6 * * *', actorNames: ['financial-monitor'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Kassier"
+2. Controleer settlement_batches: SELECT status, COUNT(*) FROM settlement_batches GROUP BY status
+3. Controleer financiële audit log: SELECT event_type, COUNT(*) FROM financial_audit_log WHERE created_at > DATE_SUB(NOW(), INTERVAL 1 DAY) GROUP BY event_type
+4. Controleer MongoDB resultaten: mongosh --eval "db.financial_monitor_results.find().sort({timestamp:-1}).limit(1).pretty()"
+5. Herstart API: pm2 restart holidaibutler-api
+6. Agent draait dagelijks 06:30 — wacht op volgende run en verifieer status` } },
+  { id: 'magazijnier', name: 'De Magazijnier', englishName: 'Inventory Sync Agent', category: 'operations', type: 'A',
+    description: 'Voorraad synchronisatie: Redis vs MySQL, verouderde reserveringen, lage voorraad alerts',
+    description_en: 'Inventory sync: Redis vs MySQL, stale reservations, low inventory alerts',
+    tasks: [
+      'Redis ticket reserves vs MySQL ticket_inventory synchronisatie controle',
+      'Reserveringsslots beschikbaarheid verificatie per POI per dag',
+      'Detectie van verouderde reserveringen (>2u niet bevestigd)',
+      'Alert bij voorraad <10% resterend voor populaire items',
+      'Inventaris consistentie rapportage per destination'
+    ],
+    monitoring_scope: 'ticket_inventory, reservation_slots, Redis reserves, ticket_orders, reservations',
+    output_description: 'Sync rapporten, stale reservation alerts, lage voorraad waarschuwingen',
+    schedule: '*/30 * * * *', actorNames: ['inventory-sync'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Magazijnier"
+2. Controleer Redis ticket reserves: redis-cli keys "ticket:reserve:*"
+3. Controleer ticket_inventory: SELECT id, total_capacity, reserved_count, sold_count FROM ticket_inventory WHERE is_available=TRUE LIMIT 10
+4. Controleer MongoDB resultaten: mongosh --eval "db.inventory_sync_results.find().sort({timestamp:-1}).limit(1).pretty()"
+5. Herstart API: pm2 restart holidaibutler-api
+6. Agent draait elke 30 minuten — wacht op volgende run en verifieer status` } }
 ];
 
 /**
@@ -1293,7 +1351,11 @@ const SCHEDULED_JOBS_METADATA = [
   { name: 'tier-update', agent: 'De Koerier', cron: '0 5 * * *', description: 'Dagelijkse POI tier herberekening' },
   { name: 'session-cleanup', agent: 'De Poortwachter', cron: '0 3 * * *', description: 'Dagelijkse verlopen sessies opruimen' },
   { name: 'review-sentiment', agent: 'De Koerier', cron: '0 7 * * *', description: 'Review sentiment analyse en aggregatie' },
-  { name: 'cache-warmup', agent: 'De Maestro', cron: '0 5 * * *', description: 'Dagelijkse Redis cache opwarming' }
+  { name: 'cache-warmup', agent: 'De Maestro', cron: '0 5 * * *', description: 'Dagelijkse Redis cache opwarming' },
+  // Fase IV-D: Commerce Monitoring Agents
+  { name: 'intermediary-monitor', agent: 'De Makelaar', cron: '*/15 * * * *', description: 'Intermediaire transactie monitoring en escalatie' },
+  { name: 'financial-monitor', agent: 'De Kassier', cron: '30 6 * * *', description: 'Dagelijkse financiële reconciliatie en anomaliedetectie' },
+  { name: 'inventory-sync', agent: 'De Magazijnier', cron: '*/30 * * * *', description: 'Voorraad synchronisatie Redis vs MySQL' }
 ];
 
 /**
@@ -1371,6 +1433,19 @@ const AGENT_EXTENDED_DATA = {
   backupHealth: {
     dependencies: ['/root/backups/ directory', 'Disk space (df)', 'MongoDB backup_health_checks'],
     output: { type: 'Backup Health', frequency: 'Dagelijks 07:30', recipients: 'MongoDB + De Bode', description: 'Backup recency checks, disk space monitoring, CRITICAL alerts' }
+  },
+  // Fase IV-D: Commerce Monitoring Agents
+  makelaar: {
+    dependencies: ['MySQL intermediary_transactions', 'MySQL partners', 'MongoDB intermediary_monitor_results'],
+    output: { type: 'Intermediary Monitoring', frequency: 'Elke 15 min', recipients: 'MongoDB + De Bode', description: 'Vastgelopen transactie alerts, partner responstijden, conversie metrics' }
+  },
+  kassier: {
+    dependencies: ['MySQL settlement_batches/partner_payouts', 'MySQL intermediary_transactions', 'MongoDB financial_monitor_results'],
+    output: { type: 'Financial Reconciliation', frequency: 'Dagelijks 06:30', recipients: 'MongoDB + De Bode', description: 'Reconciliatie rapporten, anomalie alerts, fraude-indicatoren' }
+  },
+  magazijnier: {
+    dependencies: ['MySQL ticket_inventory/reservation_slots', 'Redis ticket:reserve:*', 'MongoDB inventory_sync_results'],
+    output: { type: 'Inventory Sync', frequency: 'Elke 30 min', recipients: 'MongoDB + De Bode', description: 'Sync checks, verouderde reservering alerts, lage voorraad waarschuwingen' }
   }
 };
 
