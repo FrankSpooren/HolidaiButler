@@ -736,6 +736,62 @@ export function startWorkers() {
           }
           break;
 
+        case "financial-auto-settlement":
+          try {
+            const finSvc = (await import("../financial/financialService.js")).default;
+            // Auto-create settlement batch for previous month for all active destinations
+            const now = new Date();
+            const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const periodStart = prevMonth.toISOString().split('T')[0];
+            const periodEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+            const destIds = [1, 2]; // calpe, texel
+            const results = [];
+            for (const destId of destIds) {
+              try {
+                const batch = await finSvc.createSettlementBatch(destId, periodStart, periodEnd, 'system@cron');
+                results.push({ destId, batchNumber: batch.batch_number, partners: batch.total_partner_count });
+              } catch (e) {
+                results.push({ destId, skipped: true, reason: e.message });
+              }
+            }
+            console.log("[Orchestrator] Financial auto-settlement:", JSON.stringify(results));
+            result = { type: "financial-auto-settlement", results };
+          } catch (error) {
+            console.error("[Orchestrator] Financial auto-settlement failed:", error.message);
+            result = { type: "financial-auto-settlement", status: "error", error: error.message };
+          }
+          break;
+
+        case "financial-unsettled-alert":
+          try {
+            const finSvc2 = (await import("../financial/financialService.js")).default;
+            const { QueryTypes: QT } = (await import("sequelize")).default;
+            const { mysqlSequelize: db } = await import("../../config/database.js");
+            // Check for transactions unsettled >30 days across all destinations
+            const unsettled = await db.query(
+              `SELECT destination_id, COUNT(*) as cnt, SUM(partner_amount_cents) as total_cents
+               FROM intermediary_transactions
+               WHERE status IN ('bevestiging','delen','reminder','review')
+                 AND confirmed_at IS NOT NULL
+                 AND confirmed_at < DATE_SUB(NOW(), INTERVAL 30 DAY)
+                 AND settlement_batch_id IS NULL
+               GROUP BY destination_id`,
+              { type: QT.SELECT }
+            );
+            if (unsettled.length > 0) {
+              await finSvc2.logFinancialEvent(null, 'unsettled_alert', 'system', 0, {
+                actorType: 'cron',
+                details: { unsettled }
+              });
+              console.log("[Orchestrator] Financial unsettled alert:", JSON.stringify(unsettled));
+            }
+            result = { type: "financial-unsettled-alert", destinations: unsettled.length, alerts: unsettled };
+          } catch (error) {
+            console.error("[Orchestrator] Financial unsettled alert failed:", error.message);
+            result = { type: "financial-unsettled-alert", status: "error", error: error.message };
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -762,7 +818,9 @@ export function startWorkers() {
         'reservation-reminder-1h': 'communication-flow',
         'guest-data-retention-cleanup': 'gdpr',
         'intermediary-reminder': 'communication-flow',
-        'intermediary-review-request': 'communication-flow'
+        'intermediary-review-request': 'communication-flow',
+        'financial-auto-settlement': 'orchestrator',
+        'financial-unsettled-alert': 'orchestrator'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {

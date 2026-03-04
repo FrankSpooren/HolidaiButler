@@ -10,6 +10,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import HandshakeIcon from '@mui/icons-material/Handshake';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import { useTranslation } from 'react-i18next';
 import { SIDEBAR_STYLES } from '../../theme.js';
 import useAuthStore from '../../stores/authStore.js';
@@ -23,6 +24,7 @@ const MENU_ITEMS = [
   { key: 'settings', path: '/settings', icon: SettingsIcon },
   { key: 'commerce', path: '/commerce', icon: ShoppingCartIcon, allowedRoles: ['platform_admin', 'poi_owner'] },
   { key: 'partners', path: '/partners', icon: HandshakeIcon, requiredRole: 'platform_admin' },
+  { key: 'financial', path: '/financial', icon: AccountBalanceIcon, allowedRoles: ['platform_admin', 'poi_owner'] },
   { key: 'issues', path: '/issues', icon: BugReportIcon },
   { key: 'users', path: '/users', icon: PeopleIcon, requiredRole: 'platform_admin' }
 ];
