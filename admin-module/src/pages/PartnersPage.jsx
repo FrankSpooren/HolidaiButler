@@ -22,10 +22,22 @@ import PendingIcon from '@mui/icons-material/Pending';
 import { useTranslation } from 'react-i18next';
 import {
   usePartnerList, usePartnerDetail, usePartnerStats,
-  usePartnerCreate, usePartnerUpdate, usePartnerUpdateStatus
+  usePartnerCreate, usePartnerUpdate, usePartnerUpdateStatus,
+  usePartnerTransactions
 } from '../hooks/usePartners.js';
 import useDestinationStore from '../stores/destinationStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
+
+const INTERMEDIARY_STATUS_COLORS = {
+  voorstel: 'default',
+  toestemming: 'info',
+  bevestiging: 'primary',
+  delen: 'success',
+  reminder: 'secondary',
+  review: 'success',
+  cancelled: 'error',
+  expired: 'warning'
+};
 
 const STATUS_COLORS = {
   draft: 'default',
@@ -54,6 +66,82 @@ const EMPTY_FORM = {
   commissionType: 'percentage',
   notes: ''
 };
+
+function TransactionsTab({ partnerId, destinationId, t }) {
+  const [txPage, setTxPage] = useState(0);
+  const { data: txData, isLoading: txLoading } = usePartnerTransactions(partnerId, destinationId, {
+    page: txPage + 1, limit: 10
+  });
+  const transactions = txData?.data?.items || [];
+  const txPagination = txData?.data?.pagination || { total: 0 };
+
+  if (txLoading) return <Skeleton variant="rectangular" height={200} />;
+
+  if (transactions.length === 0) {
+    return (
+      <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
+        {t('intermediary.no_data')}
+      </Typography>
+    );
+  }
+
+  return (
+    <Box>
+      <TableContainer component={Paper} variant="outlined">
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>{t('intermediary.fields.transaction_number')}</TableCell>
+              <TableCell>{t('common.status')}</TableCell>
+              <TableCell>{t('intermediary.fields.service_type')}</TableCell>
+              <TableCell>{t('intermediary.fields.poi')}</TableCell>
+              <TableCell align="right">{t('intermediary.fields.amount')}</TableCell>
+              <TableCell align="right">{t('intermediary.fields.commission')}</TableCell>
+              <TableCell>{t('intermediary.fields.activity_date')}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {transactions.map(tx => (
+              <TableRow key={tx.id} hover>
+                <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                  {tx.transaction_number}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={t(`intermediary.status.${tx.status}`)}
+                    color={INTERMEDIARY_STATUS_COLORS[tx.status] || 'default'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>{tx.service_type || '-'}</TableCell>
+                <TableCell>{tx.poi_name || '-'}</TableCell>
+                <TableCell align="right">
+                  {tx.amount_cents > 0 ? `€${(tx.amount_cents / 100).toFixed(2)}` : '-'}
+                </TableCell>
+                <TableCell align="right">
+                  {tx.commission_cents > 0 ? `€${(tx.commission_cents / 100).toFixed(2)}` : '-'}
+                </TableCell>
+                <TableCell>
+                  {tx.activity_date ? new Date(tx.activity_date).toLocaleDateString() : '-'}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      {txPagination.total > 10 && (
+        <TablePagination
+          component="div"
+          count={txPagination.total}
+          page={txPage}
+          onPageChange={(_, p) => setTxPage(p)}
+          rowsPerPage={10}
+          rowsPerPageOptions={[10]}
+        />
+      )}
+    </Box>
+  );
+}
 
 export default function PartnersPage() {
   const { t } = useTranslation();
@@ -375,9 +463,7 @@ export default function PartnersPage() {
               )}
 
               {tab === 3 && (
-                <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
-                  {t('partners.transactions_placeholder')}
-                </Typography>
+                <TransactionsTab partnerId={partner.id} destinationId={partner.destination_id} t={t} />
               )}
             </>
           )}

@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 3 maart 2026
-**Versie**: 7.28
+**Datum**: 4 maart 2026
+**Versie**: 7.29
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -80,6 +80,7 @@
 | **Fase IV-B** | POI Tier Import + Owner-Managed Tiers. 2.695 POI tier-assignments uit Excel. `POI.tier` kolom primair. poiTierManager.js v2.0: query op stored tier. BullMQ crons: T1 dagelijks, T2 wekelijks, T3 maandelijks, T4 kwartaal. Admin Portal tier display. | ✅ COMPLEET | 03-03-2026 | 4 bestanden, 2.695 POIs | EUR 0 |
 | **Fase IV-0** | Pre-flight & Adyen Activatie (Blok 0). Adyen E2E test PASS (session creation, transaction status, HMAC webhook). Feature flags Calpe geactiveerd (hasBooking/hasTicketing/hasReservations/hasChatToBook=true). PCI DSS Blok 0 review + GDPR Blok 0 review. .env 600. Compliance docs geüpdatet. | ✅ COMPLEET | 03-03-2026 | 3 bestanden, compliance docs | EUR 0 |
 | **Fase IV Blok A** | Partner Management Module. 3 DB tabellen (partners, partner_pois, partner_onboarding). partnerService.js (CRUD, onboarding, IBAN/BTW validatie, contract transitions). 7 admin endpoints (106 totaal), adminPortal.js v3.18.0. PartnersPage.jsx (stats, tabel, detail 4 tabs, 3-step wizard). i18n 4 talen. Forward-compatible multi-tenant analyse. | ✅ COMPLEET | 03-03-2026 | 15 bestanden | EUR 0 |
+| **Fase IV Blok B** | Intermediair State Machine. 1 DB tabel (intermediary_transactions) + ALTER TABLE payment_transactions. intermediaryService.js (13 functies, 6-stappen state machine, ACID commissie, QR HMAC-SHA256, payout report). 9 admin endpoints (115 totaal), adminPortal.js v3.19.0. 2 BullMQ jobs (48 totaal). hasIntermediary feature flag. PartnersPage transactions tab. i18n 4 talen. | ✅ COMPLEET | 04-03-2026 | 19 bestanden | EUR 0 |
 
 ### 1.2 Budget Overzicht
 
@@ -1363,7 +1364,9 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 **Fase IV — Data Pipeline & Intermediair Module:**
 - **Blok A: Apify Data Pipeline — Medallion Architecture** ✅ COMPLEET (03-03-2026): Bronze (`poi_apify_raw` tabel, raw JSON opslag, validatie checkpoints), Silver (POI tabel 80+ velden, reviews extractie), Gold (Customer Portal + Admin Portal). poiSyncService.js rewrite (6 methoden, 3 quality checkpoints). Apify backfill 1.023 POIs (3.167 historische runs). 9.363 reviews geïmporteerd. Admin Sync & Metadata card. Customer Portal dynamic amenities/parking/accessibility. Review sentiment fix. i18n hardcoded strings fix (10 bestanden, 95+ keys, 6 talen).
 - **Blok B: POI Tier Import + Owner-Managed Tiers** ✅ COMPLEET (03-03-2026): 2.695 POI tier-assignments uit Excel (Frank's manuele review). `POI.tier` kolom (TINYINT DEFAULT 4) nu primair voor sync scheduling. poiTierManager.js v2.0: `getPOIsForUpdate()` query op stored tier kolom i.p.v. runtime score berekening. `classifyAllPOIs()` herberekent alleen tier_score (informatief). BullMQ crons: T1 dagelijks 06:00, T2 wekelijks ma, T3 maandelijks 1e, T4 kwartaal. Distributie: Calpe T1=2/T2=116/T3=691/T4=784, Texel T1=18/T2=39/T3=255/T4=1427.
-- **Blok C: Intermediair Module** (GEPLAND): Commercieel hart van HolidaiButler. State machine (voorstel → toestemming → bevestiging → delen → reminder → review). ACID-compliant financieel proces, juridische/fiscale compliance commissie-inhouding, QR-codes offline valideerbaar
+- **Blok A: Partner Management Module** ✅ COMPLEET (03-03-2026): 3 DB tabellen (partners, partner_pois, partner_onboarding). partnerService.js (CRUD, onboarding, IBAN/BTW validatie, contract status transitions, KPIs). 7 admin endpoints (106 totaal). PartnersPage.jsx (stats, tabel, detail 4 tabs, 3-step wizard). i18n 4 talen. Forward-compatible multi-tenant analyse.
+- **Blok B: Intermediair State Machine** ✅ COMPLEET (04-03-2026): 1 DB tabel (intermediary_transactions) + ALTER TABLE payment_transactions (order_type). intermediaryService.js (13 functies: 6-stappen state machine, ACID commissieberekening, QR HMAC-SHA256, payout report). 9 admin endpoints (115 totaal). 2 BullMQ jobs (48 totaal). Feature flag hasIntermediary. PartnersPage transactions tab. i18n 4 talen.
+- **Blok C: Financieel Proces** (GEPLAND): Juridische/fiscale compliance commissie-inhouding, payout-cycli, rapportages, boekhouding-integratie
 
 **Fase V — UX + WarreWijzer:**
 - Mobiele UX: benchmark Google Maps, TripAdvisor, GetYourGuide, Booking.com
@@ -1559,6 +1562,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.29** | **04-03-2026** | **Fase IV Blok B: Intermediair State Machine COMPLEET. intermediary_transactions tabel, intermediaryService.js (13 functies, 6-stappen state machine, ACID commissie, QR HMAC), 9 admin endpoints (115 totaal), 2 BullMQ jobs (48 totaal), hasIntermediary feature flag, PartnersPage transactions tab, i18n 4 talen. adminPortal.js v3.19.0. CLAUDE.md v3.63.0.** |
 | **7.28** | **03-03-2026** | **Fase IV Blok A: Partner Management Module COMPLEET. 3 DB tabellen, partnerService.js, 7 admin endpoints (106 totaal), PartnersPage.jsx, i18n 4 talen. Forward-compatible multi-tenant analyse (Directus+Unleash = Fase V+). CLAUDE.md v3.62.0.** |
 | **7.27** | **03-03-2026** | **Fase IV-0: Pre-flight & Adyen Activatie COMPLEET. Adyen E2E test PASS (session creation, transaction status, HMAC webhook). Feature flags Calpe geactiveerd (hasBooking/hasTicketing/hasReservations/hasChatToBook=true). PCI DSS + GDPR Blok 0 review. Compliance docs geüpdatet. .env permissions 600. Legacy PM2 reservations-module gestopt. CLAUDE.md v3.61.0.** |
 | 7.26 | 03-03-2026 | Fase IV-B: POI Tier Import + Owner-Managed Tiers COMPLEET. 2.695 POI tier-assignments, poiTierManager.js v2.0, Admin Portal tier display. CLAUDE.md v3.60.0. |

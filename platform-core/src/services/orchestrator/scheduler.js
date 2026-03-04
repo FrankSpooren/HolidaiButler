@@ -174,6 +174,22 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: guest-data-retention-cleanup (Sunday 03:00)');
 
+  // === Fase IV-B Intermediary Jobs ===
+
+  // Intermediary Reminder - hourly (send 24h before activity_date)
+  await scheduledQueue.add('intermediary-reminder', { type: 'intermediary-reminder' }, {
+    repeat: { cron: '0 * * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'intermediary-reminder-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: intermediary-reminder (hourly)');
+
+  // Intermediary Review Request - every 6 hours (send 24h after activity_date)
+  await scheduledQueue.add('intermediary-review-request', { type: 'intermediary-review' }, {
+    repeat: { cron: '0 */6 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'intermediary-review-request-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: intermediary-review-request (every 6 hours)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);

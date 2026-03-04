@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A (v3.18.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B (v3.19.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -131,6 +131,7 @@ import emailService from '../services/emailService.js';
 import { AgentIssue } from '../services/agents/base/agentIssues.js';
 import commerceService from '../services/commerce/commerceService.js';
 import partnerService from '../services/partner/partnerService.js';
+import intermediaryService from '../services/intermediary/intermediaryService.js';
 
 const router = Router();
 
@@ -7729,12 +7730,16 @@ router.put('/partners/:id/status', adminAuth('editor'), destinationScope, writeA
 });
 
 /**
- * GET /partners/:id/transactions — Partner transaction history (placeholder for Blok B)
+ * GET /partners/:id/transactions — Partner transaction history (delegates to intermediaryService)
  */
 router.get('/partners/:id/transactions', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
-    const result = await partnerService.getPartnerTransactions(parseInt(req.params.id), destinationId, {
+    const result = await intermediaryService.getPartnerTransactions(parseInt(req.params.id), destinationId, {
+      status: req.query.status,
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+      search: req.query.search,
       page: parseInt(req.query.page) || 1,
       limit: Math.min(parseInt(req.query.limit) || 25, 100)
     });
@@ -7742,6 +7747,188 @@ router.get('/partners/:id/transactions', adminAuth('reviewer'), destinationScope
   } catch (error) {
     logger.error('[AdminPortal] Partner transactions error:', error);
     res.status(500).json({ success: false, error: { code: 'PARTNER_TRANSACTIONS_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================================
+// INTERMEDIARY ENDPOINTS (Fase IV Blok B)
+// ============================================================================
+
+/**
+ * GET /intermediary — List intermediary transactions (paginated, filtered)
+ */
+router.get('/intermediary', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const result = await intermediaryService.getTransactions(destinationId, {
+      status: req.query.status,
+      partnerId: req.query.partnerId ? parseInt(req.query.partnerId) : undefined,
+      poiId: req.query.poiId ? parseInt(req.query.poiId) : undefined,
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+      search: req.query.search,
+      page: parseInt(req.query.page) || 1,
+      limit: Math.min(parseInt(req.query.limit) || 25, 100)
+    });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Intermediary list error:', error);
+    res.status(500).json({ success: false, error: { code: 'INTERMEDIARY_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /intermediary/stats — Intermediary KPI dashboard
+ */
+router.get('/intermediary/stats', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const stats = await intermediaryService.getTransactionStats(
+      destinationId, req.query.dateFrom, req.query.dateTo
+    );
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    logger.error('[AdminPortal] Intermediary stats error:', error);
+    res.status(500).json({ success: false, error: { code: 'INTERMEDIARY_STATS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /intermediary/:id — Intermediary transaction detail
+ */
+router.get('/intermediary/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const tx = await intermediaryService.getTransactionById(parseInt(req.params.id), destinationId);
+    if (!tx) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Transaction not found' } });
+    }
+    res.json({ success: true, data: tx });
+  } catch (error) {
+    logger.error('[AdminPortal] Intermediary detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'INTERMEDIARY_DETAIL_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /intermediary — Create intermediary transaction (voorstel)
+ */
+router.post('/intermediary', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
+  try {
+    const tx = await intermediaryService.createTransaction(req.body);
+    await saveAuditLog(req, 'intermediary_created', {
+      entity_type: 'intermediary_transaction',
+      entity_id: tx.id,
+      transaction_number: tx.transaction_number,
+      partner_id: tx.partner_id,
+      amount_cents: tx.amount_cents
+    });
+    res.json({ success: true, data: tx });
+  } catch (error) {
+    logger.error('[AdminPortal] Intermediary create error:', error);
+    res.status(400).json({ success: false, error: { code: 'INTERMEDIARY_CREATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /intermediary/:id/consent — Record tourist consent (toestemming)
+ */
+router.put('/intermediary/:id/consent', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.query.destinationId) || null;
+    const tx = await intermediaryService.giveConsent(parseInt(req.params.id), destinationId);
+    await saveAuditLog(req, 'intermediary_consented', {
+      entity_type: 'intermediary_transaction',
+      entity_id: tx.id,
+      transaction_number: tx.transaction_number
+    });
+    res.json({ success: true, data: tx });
+  } catch (error) {
+    logger.error('[AdminPortal] Intermediary consent error:', error);
+    res.status(400).json({ success: false, error: { code: 'INTERMEDIARY_CONSENT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /intermediary/:id/confirm — Confirm transaction + payment (bevestiging)
+ */
+router.put('/intermediary/:id/confirm', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.query.destinationId) || null;
+    const tx = await intermediaryService.confirmTransaction(
+      parseInt(req.params.id), destinationId, req.body.paymentTransactionId || null
+    );
+    await saveAuditLog(req, 'intermediary_confirmed', {
+      entity_type: 'intermediary_transaction',
+      entity_id: tx.id,
+      transaction_number: tx.transaction_number,
+      payment_transaction_id: req.body.paymentTransactionId
+    });
+    res.json({ success: true, data: tx });
+  } catch (error) {
+    logger.error('[AdminPortal] Intermediary confirm error:', error);
+    res.status(400).json({ success: false, error: { code: 'INTERMEDIARY_CONFIRM_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /intermediary/:id/share — Share voucher + generate QR (delen)
+ */
+router.put('/intermediary/:id/share', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.query.destinationId) || null;
+    const tx = await intermediaryService.shareVoucher(parseInt(req.params.id), destinationId);
+    await saveAuditLog(req, 'intermediary_shared', {
+      entity_type: 'intermediary_transaction',
+      entity_id: tx.id,
+      transaction_number: tx.transaction_number
+    });
+    res.json({ success: true, data: tx });
+  } catch (error) {
+    logger.error('[AdminPortal] Intermediary share error:', error);
+    res.status(400).json({ success: false, error: { code: 'INTERMEDIARY_SHARE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /intermediary/:id/cancel — Cancel transaction
+ */
+router.put('/intermediary/:id/cancel', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.query.destinationId) || null;
+    const tx = await intermediaryService.cancelTransaction(
+      parseInt(req.params.id), destinationId, req.body.reason
+    );
+    await saveAuditLog(req, 'intermediary_cancelled', {
+      entity_type: 'intermediary_transaction',
+      entity_id: tx.id,
+      transaction_number: tx.transaction_number,
+      reason: req.body.reason
+    });
+    res.json({ success: true, data: tx });
+  } catch (error) {
+    logger.error('[AdminPortal] Intermediary cancel error:', error);
+    res.status(400).json({ success: false, error: { code: 'INTERMEDIARY_CANCEL_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /intermediary/:id/qr — Get QR code image for transaction
+ */
+router.get('/intermediary/:id/qr', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const tx = await intermediaryService.getTransactionById(parseInt(req.params.id), destinationId);
+    if (!tx) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Transaction not found' } });
+    }
+    if (!tx.qr_code_data) {
+      return res.status(400).json({ success: false, error: { code: 'NO_QR', message: 'QR code not yet generated (share voucher first)' } });
+    }
+    res.json({ success: true, data: { qrCodeData: tx.qr_code_data, qrCodeImage: tx.qr_code_image } });
+  } catch (error) {
+    logger.error('[AdminPortal] Intermediary QR error:', error);
+    res.status(500).json({ success: false, error: { code: 'INTERMEDIARY_QR_ERROR', message: error.message } });
   }
 });
 

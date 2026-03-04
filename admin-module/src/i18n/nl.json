@@ -734,5 +734,57 @@
       "reactivate": "Heractiveren",
       "terminate": "Beëindigen"
     }
+  },
+  "intermediary": {
+    "title": "Intermediair Transacties",
+    "no_data": "Geen intermediair transacties gevonden",
+    "created": "Transactie aangemaakt",
+    "consent_recorded": "Toestemming geregistreerd",
+    "confirmed": "Transactie bevestigd",
+    "voucher_shared": "Voucher gedeeld",
+    "cancelled": "Transactie geannuleerd",
+    "status": {
+      "voorstel": "Voorstel",
+      "toestemming": "Toestemming",
+      "bevestiging": "Bevestigd",
+      "delen": "Gedeeld",
+      "reminder": "Herinnering verstuurd",
+      "review": "Review gevraagd",
+      "cancelled": "Geannuleerd",
+      "expired": "Verlopen"
+    },
+    "fields": {
+      "transaction_number": "Transactie #",
+      "partner": "Partner",
+      "poi": "POI",
+      "service_type": "Diensttype",
+      "service_description": "Beschrijving",
+      "activity_date": "Activiteitdatum",
+      "activity_time": "Activiteittijd",
+      "amount": "Bedrag",
+      "commission": "Commissie",
+      "commission_rate": "Commissie%",
+      "partner_amount": "Uitbetaling partner",
+      "guest_name": "Gastnaam",
+      "guest_email": "Gast e-mail",
+      "guest_phone": "Gast telefoon",
+      "qr_code": "QR-code",
+      "notes": "Notities"
+    },
+    "stats": {
+      "total_transactions": "Totaal transacties",
+      "total_revenue": "Totale omzet",
+      "total_commission": "Commissie verdiend",
+      "conversion_rate": "Conversieratio",
+      "active_proposals": "Actieve voorstellen",
+      "unique_partners": "Unieke partners"
+    },
+    "actions": {
+      "record_consent": "Toestemming registreren",
+      "confirm_payment": "Betaling bevestigen",
+      "share_voucher": "Voucher delen",
+      "cancel": "Transactie annuleren",
+      "view_qr": "QR-code bekijken"
+    }
   }
 }

@@ -734,5 +734,57 @@
       "reactivate": "Reactivar",
       "terminate": "Terminar"
     }
+  },
+  "intermediary": {
+    "title": "Transacciones Intermediarias",
+    "no_data": "No se encontraron transacciones intermediarias",
+    "created": "Transacción creada",
+    "consent_recorded": "Consentimiento registrado",
+    "confirmed": "Transacción confirmada",
+    "voucher_shared": "Voucher compartido",
+    "cancelled": "Transacción cancelada",
+    "status": {
+      "voorstel": "Propuesta",
+      "toestemming": "Consentimiento",
+      "bevestiging": "Confirmada",
+      "delen": "Compartida",
+      "reminder": "Recordatorio enviado",
+      "review": "Reseña solicitada",
+      "cancelled": "Cancelada",
+      "expired": "Expirada"
+    },
+    "fields": {
+      "transaction_number": "Transacción #",
+      "partner": "Socio",
+      "poi": "POI",
+      "service_type": "Tipo de servicio",
+      "service_description": "Descripción",
+      "activity_date": "Fecha de actividad",
+      "activity_time": "Hora de actividad",
+      "amount": "Importe",
+      "commission": "Comisión",
+      "commission_rate": "Tasa de comisión",
+      "partner_amount": "Pago al socio",
+      "guest_name": "Nombre del huésped",
+      "guest_email": "Email del huésped",
+      "guest_phone": "Teléfono del huésped",
+      "qr_code": "Código QR",
+      "notes": "Notas"
+    },
+    "stats": {
+      "total_transactions": "Total transacciones",
+      "total_revenue": "Ingresos totales",
+      "total_commission": "Comisión ganada",
+      "conversion_rate": "Tasa de conversión",
+      "active_proposals": "Propuestas activas",
+      "unique_partners": "Socios únicos"
+    },
+    "actions": {
+      "record_consent": "Registrar consentimiento",
+      "confirm_payment": "Confirmar pago",
+      "share_voucher": "Compartir voucher",
+      "cancel": "Cancelar transacción",
+      "view_qr": "Ver código QR"
+    }
   }
 }

@@ -58,6 +58,7 @@ export default {
     hasGuestCheckout: true,
     hasDeposits: false,
     hasDynamicPricing: false,
+    hasIntermediary: false,
     restaurants: true,
     beaches: true,
     hiking: true,
