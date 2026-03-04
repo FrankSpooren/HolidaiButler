@@ -32,7 +32,10 @@
 21. [Fase IV-0: Pre-flight & Adyen Activatie](#fase-iv-0--pre-flight--adyen-activatie-03-03-2026)
 22. [Fase IV Blok A: Partner Management Module](#fase-iv-blok-a--partner-management-module-03-03-2026)
 23. [Fase IV Blok B: Intermediair State Machine](#fase-iv-blok-b--intermediair-state-machine-04-03-2026)
-24. [Volledige Changelog](#volledige-changelog)
+24. [Fase IV Blok C: Financieel Proces](#fase-iv-blok-c--financieel-proces-04-03-2026)
+25. [Fase IV Blok D: Agent Ecosysteem v5.1](#fase-iv-blok-d--agent-ecosysteem-v51-04-03-2026)
+26. [Fase IV Blok E: Admin Intermediair Dashboard](#fase-iv-blok-e--admin-intermediair-dashboard-04-03-2026)
+27. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -723,10 +726,275 @@ Architectuuradvies (Directus + Unleash, 3 maart 2026) geanalyseerd. Conclusie: B
 
 ---
 
+## Fase IV Blok C — Financieel Proces (04-03-2026)
+
+**Het complete financiële afwikkelingsproces**: settlements, partner uitbetalingen, credit notes en audit trail.
+
+### Resultaten
+
+| Metriek | Waarde |
+|---------|--------|
+| Nieuwe DB tabellen | 4 (settlement_batches, partner_payouts, credit_notes, financial_audit_log) |
+| ALTER TABLE | intermediary_transactions (+settlement_batch_id, +partner_payout_id) |
+| financialService.js | 1.139 regels, 25 functies, 3 state machines |
+| Admin endpoints | 20 (115→135 totaal) |
+| BullMQ jobs | 2 nieuw (48→50 totaal) |
+| Frontend | FinancialPage.jsx (603 regels, 5 tabs) |
+| i18n | ~65 keys per taal (NL/EN/DE/ES) |
+| Feature flag | hasFinancial (per destination) |
+| CLAUDE.md | v3.64.0, adminPortal.js v3.20.0 |
+| MS | v7.30 |
+| Commit | 6ab7e0a |
+
+### Database Schema (4 tabellen)
+
+**settlement_batches** — Settlement batch per afrekenperiode
+- State machine: `draft → calculated → approved → processing → completed | cancelled`
+- Kolommen: batch_number, period_start/end, status, total_transaction_count, total_gross_cents, total_commission_cents, total_payout_cents, total_partner_count, approved_at/by, processing_at, completed_at, cancelled_at/reason
+
+**partner_payouts** — Eén rij per partner per settlement batch
+- State machine: `pending → approved → processing → paid | failed → processing | cancelled`
+- Kolommen: payout_number, settlement_batch_id, partner_id, status, transaction_count, gross_cents, commission_cents, payout_cents, partner_iban, partner_company_name, partner_vat_number, paid_at/reference, failed_at/reason
+
+**credit_notes** — HolidaiButler commissiefacturen naar partners
+- State machine: `draft → final | voided`
+- Kolommen: credit_note_number, partner_payout_id, period_start/end, subtotal_cents, vat_rate (21%), vat_cents, total_cents, partner_company_name/vat/kvk, finalized_at, voided_at/reason
+
+**financial_audit_log** — Immutable trail voor alle financiële state changes
+- Kolommen: event_type, entity_type, entity_id, actor_type (system/admin), actor_email, old_status, new_status, amount_cents, details (JSON)
+
+### financialService.js (25 functies)
+
+**Settlement Machine (5)**: createSettlementBatch, approveSettlementBatch, startSettlementProcessing, completeSettlementBatch, cancelSettlementBatch
+
+**Payout Machine (6)**: approvePartnerPayout, startPayoutProcessing, markPayoutPaid, markPayoutFailed, retryPayoutProcessing, cancelPartnerPayout
+
+**Credit Note Machine (3)**: createCreditNote, finalizeCreditNote, voidCreditNote
+
+**Dashboard/Reporting (6)**: getFinancialDashboard, getMonthlyReport, getSettlementBatches, getSettlementBatchById, getPayouts, getPayoutById, getCreditNotes, getCreditNoteById
+
+**CSV Exports (3)**: exportPayoutsCSV, exportCreditNotesCSV, exportTaxSummaryCSV
+
+**Helpers (2)**: generateBatchNumber, generatePayoutNumber, generateCreditNoteNumber, validateTransition, buildCSV
+
+**Key features**: ACID transactie-integriteit voor commissieberekening, BTW 21% berekening, partner data snapshotting (IBAN/bedrijfsnaam/BTW-nr bevroren bij payout creatie).
+
+### Admin Endpoints (20)
+
+```
+GET    /financial/dashboard                    — KPI dashboard
+GET    /financial/reports/monthly              — Maandelijks rapport
+GET    /financial/settlements                  — List batches (paginated, status filter)
+GET    /financial/settlements/:id              — Batch detail
+POST   /financial/settlements                  — Create batch (periodStart, periodEnd)
+PUT    /financial/settlements/:id/approve      — Goedkeuren
+PUT    /financial/settlements/:id/process      — Start verwerking
+PUT    /financial/settlements/:id/cancel       — Annuleren
+GET    /financial/payouts                      — List payouts (partnerId, status, date)
+GET    /financial/payouts/:id                  — Payout detail + linked transacties
+PUT    /financial/payouts/:id/paid             — Markeer betaald (paidReference)
+PUT    /financial/payouts/:id/failed           — Markeer gefaald (failureReason)
+GET    /financial/credit-notes                 — List credit notes
+GET    /financial/credit-notes/:id             — Credit note detail
+POST   /financial/credit-notes                 — Create credit note (payoutId, vatRate)
+PUT    /financial/credit-notes/:id/finalize    — Finaliseren (immutable)
+GET    /financial/export/payouts               — CSV export uitbetalingen
+GET    /financial/export/credit-notes          — CSV export credit notes
+GET    /financial/export/tax-summary           — CSV export BTW-samenvatting per partner
+```
+
+### Frontend: FinancialPage.jsx (5 tabs)
+
+| Tab | Inhoud |
+|-----|--------|
+| Dashboard | 4 KPI cards (totale afrekeningen, totale uitbetaling, commissie, unsettled) + bar chart maandelijkse distributie |
+| Settlements | Tabel met statusfilter, detail dialog met state timeline, action buttons (goedkeuren/processing/annuleren) |
+| Payouts | Tabel per partner, "Mark Paid" / "Mark Failed" buttons |
+| Credit Notes | Tabel, detail dialog, create dialog, finalize button |
+| Export | CSV downloads (payouts, credit notes, tax summary) met datum range + filters |
+
+### BullMQ Jobs (+2 = 50 totaal)
+1. **financial-auto-settlement** — 1e van de maand 04:00 (Type B, platform-breed)
+2. **financial-unsettled-alert** — Maandag 08:30 (Type B, platform-breed)
+
+### Bestanden
+
+**Gewijzigd (8)**:
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/adminPortal.js` | +20 financial endpoints (+388 regels) |
+| `platform-core/src/services/orchestrator/scheduler.js` | +2 cron jobs |
+| `platform-core/src/services/orchestrator/workers.js` | +2 job handlers + JOB_ACTOR_MAP |
+| `platform-core/config/destinations/calpe.config.js` | +hasFinancial flag |
+| `platform-core/config/destinations/texel.config.js` | +hasFinancial flag |
+| `platform-core/config/destinations/alicante.config.js` | +hasFinancial flag |
+| `admin-module/src/i18n/{nl,en,de,es}.json` | +~65 financial keys per taal |
+| `CLAUDE.md` | v3.64.0 |
+
+**Nieuw (5)**:
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `platform-core/database/migrations/013_financial_process.sql` | 4 tabellen (170 regels) |
+| `platform-core/src/services/financial/financialService.js` | 1.139 regels, 25 functies |
+| `admin-module/src/pages/FinancialPage.jsx` | 603 regels, 5 tabs |
+| `admin-module/src/api/financialService.js` | API client methods |
+| `admin-module/src/hooks/useFinancial.js` | React Query hooks |
+
+---
+
+## Fase IV Blok D — Agent Ecosysteem v5.1 (04-03-2026)
+
+**3 nieuwe monitoring agents** voor het intermediair- en financieel proces.
+
+### Resultaten
+
+| Metriek | Waarde |
+|---------|--------|
+| Nieuwe agents | 3 (De Makelaar, De Kassier, De Magazijnier) |
+| Totaal agents | 18→21 |
+| BullMQ jobs | 3 nieuw (50→53 totaal) |
+| CLAUDE.md | v3.65.0 |
+| MS | v7.31 |
+| Commit | 16b8461 |
+
+### Nieuwe Agents
+
+| # | Agent | Naam | Type | Schedule | Functie |
+|---|-------|------|------|----------|---------|
+| 19 | Intermediary Monitor | De Makelaar | A (dest-aware) | Elke 15 min | Monitort intermediary_transactions: stuck transacties (>7d in voorstel), partner escalaties (conversion_rate <30%), conversie metrics |
+| 20 | Financial Monitor | De Kassier | B (platform-breed) | Dagelijks 06:30 | Reconciliatie settlement_batches↔partner_payouts, anomaliedetectie (2σ), unsettled alerts, fraude-indicatoren |
+| 21 | Inventory Sync | De Magazijnier | A (dest-aware) | Elke 30 min | Redis↔MySQL sync ticket inventory, stale reserveringen (>2h TTL), low inventory alerts (<10), expired ticket cleanup |
+
+### BullMQ Jobs (+3 = 53 totaal)
+1. **intermediary-monitor** — Elke 15 minuten (Type A)
+2. **financial-monitor** — Dagelijks 06:30 (Type B)
+3. **inventory-sync** — Elke 30 minuten (Type A)
+
+### Bestanden
+
+**Gewijzigd (5)**:
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/services/agents/base/agentRegistry.js` | +3 AGENT_METADATA entries |
+| `platform-core/src/services/orchestrator/scheduler.js` | +3 cron patterns |
+| `platform-core/src/services/orchestrator/workers.js` | +3 job handlers + JOB_ACTOR_MAP |
+| `CLAUDE.md` | v3.65.0 |
+| `docs/strategy/HolidaiButler_Master_Strategie.md` | v7.31 |
+
+**Nieuw (3)**:
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `platform-core/src/services/agents/intermediaryMonitor/index.js` | De Makelaar — intermediary monitoring |
+| `platform-core/src/services/agents/financialMonitor/index.js` | De Kassier — financial monitoring |
+| `platform-core/src/services/agents/inventorySync/index.js` | De Magazijnier — inventory sync |
+
+---
+
+## Fase IV Blok E — Admin Intermediair Dashboard (04-03-2026)
+
+**IntermediaryPage.jsx**: 4-tab admin dashboard voor het intermediair proces met conversie-funnel, transactietabel, detail dialog en CSV export.
+
+### Resultaten
+
+| Metriek | Waarde |
+|---------|--------|
+| Nieuwe admin endpoints | 2 (funnel + CSV export, 135→137 totaal) |
+| Frontend | IntermediaryPage.jsx (534 regels, 4 tabs) |
+| i18n | ~25 keys per taal (NL/EN/DE/ES) |
+| API methods | +2 (getFunnel, exportTransactions) |
+| Hooks | +1 (useIntermediaryFunnel) |
+| CLAUDE.md | v3.66.0, adminPortal.js v3.22.0 |
+| MS | v7.32 |
+| Commit | 4208d13 |
+
+### Nieuwe Admin Endpoints (+2 = 137 totaal)
+
+```
+GET /intermediary/funnel              — Conversie-funnel data (cumulatieve stage counts)
+GET /intermediary/export/transactions — CSV export transacties (BOM + ; delimiter)
+```
+
+**Funnel endpoint**: Reshapes `getTransactionStats()` naar cumulatieve funnel stages:
+- voorstel (totaal) → toestemming → bevestiging → delen → review (kleinste)
+- Returns: `{ funnel: [{stage, count, label}], conversion_rate }`
+
+**CSV Export endpoint**: Limit 10.000 rijen, BOM UTF-8, `;` delimiter (Dutch Excel).
+- Headers: transaction_number, status, partner, POI, service_type, guest, amount, commission, partner_payout, activity_date, created_at
+
+### Frontend: IntermediaryPage.jsx (4 tabs)
+
+| Tab | Inhoud |
+|-----|--------|
+| **Dashboard** | 4 KPI cards (totaal transacties, conversieratio, totale omzet, totale commissie) + Recharts BarChart horizontale conversie-funnel (voorstel→toestemming→bevestiging→delen→review) |
+| **Transacties** | Filtertabel (status dropdown, zoekbalk, datum range) + MUI Table (nr, status chip, partner, POI, bedrag, commissie, datum) + pagination. Klik op rij → TransactionDetailDialog |
+| **Afrekeningen** | Info card "Afrekeningen via Financieel Proces" + unsettled count + "Ga naar Financieel" button (navigeert naar /financial) |
+| **Export** | Datum range selectors + status filter + Download CSV button (blob download patroon) |
+
+### TransactionDetailDialog
+
+- **Grid layout**: Links transactiegegevens (nummer, status, partner, POI, dienst, bedragen, gast, datums), rechts QR code + state timeline
+- **MUI Stepper**: Horizontaal 5-stappen (voorstel→toestemming→bevestiging→delen→review), error state bij cancelled/expired
+- **Conditionele action buttons**:
+  - voorstel: "Toestemming registreren" + "Annuleren"
+  - toestemming: "Betaling bevestigen" + "Annuleren"
+  - bevestiging: "Voucher delen" + "Annuleren"
+  - delen/reminder/review/cancelled/expired: alleen lezen
+- **Cancel dialog**: Reden input verplicht
+
+### StatusChip kleuren
+| Status | Kleur |
+|--------|-------|
+| voorstel | default (grijs) |
+| toestemming | info (blauw) |
+| bevestiging | primary (paars) |
+| delen | success (groen) |
+| reminder | secondary |
+| review | success (groen) |
+| cancelled | error (rood) |
+| expired | warning (oranje) |
+
+### Navigatie
+- **Route**: `/intermediary` → IntermediaryPage (App.jsx)
+- **Sidebar**: "Intermediair" met SwapHorizIcon, na "Financieel"
+- **RBAC**: `platform_admin` + `poi_owner`
+
+### Bestanden
+
+**Gewijzigd (11)**:
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/adminPortal.js` | +2 endpoints (funnel + export), v3.22.0 |
+| `admin-module/src/App.jsx` | +import + route /intermediary |
+| `admin-module/src/components/layout/Sidebar.jsx` | +SwapHorizIcon + nav item |
+| `admin-module/src/api/intermediaryService.js` | +getFunnel, +exportTransactions |
+| `admin-module/src/hooks/useIntermediary.js` | +useIntermediaryFunnel hook |
+| `admin-module/src/i18n/nl.json` | +nav key + ~25 page keys |
+| `admin-module/src/i18n/en.json` | +nav key + ~25 page keys |
+| `admin-module/src/i18n/de.json` | +nav key + ~25 page keys |
+| `admin-module/src/i18n/es.json` | +nav key + ~25 page keys |
+| `CLAUDE.md` | v3.66.0 |
+| `docs/strategy/HolidaiButler_Master_Strategie.md` | v7.32 |
+
+**Nieuw (1)**:
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `admin-module/src/pages/IntermediaryPage.jsx` | 534 regels, 4 tabs, detail dialog, funnel chart |
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.66.0** | **2026-03-04** | **Fase IV Blok E**: Admin Intermediair Dashboard. IntermediaryPage.jsx (534 regels, 4 tabs: Dashboard/Transacties/Afrekeningen/Export), conversie-funnel BarChart, TransactionDetailDialog met Stepper timeline. 2 nieuwe endpoints (funnel + CSV export, 137 totaal), adminPortal.js v3.22.0. i18n 4 talen (~25 keys). |
+| **3.65.0** | **2026-03-04** | **Fase IV Blok D**: Agent Ecosysteem v5.1. 3 nieuwe monitoring agents: De Makelaar (intermediary, 15min), De Kassier (financial, dagelijks), De Magazijnier (inventory sync, 30min). 21 agents totaal, 53 BullMQ jobs. |
+| **3.64.0** | **2026-03-04** | **Fase IV Blok C**: Financieel Proces. 4 DB tabellen (settlement_batches, partner_payouts, credit_notes, financial_audit_log). financialService.js (1.139 regels, 25 functies, 3 state machines, ACID, BTW 21%). 20 admin endpoints (135 totaal). FinancialPage.jsx (5 tabs). 2 BullMQ jobs (50 totaal). i18n 4 talen (~65 keys). |
 | **3.63.0** | **2026-03-04** | **Fase IV Blok B**: Intermediair State Machine. intermediary_transactions tabel, intermediaryService.js (13 functies, state machine, ACID commissie, QR HMAC), 9 admin endpoints (115 totaal), 2 BullMQ jobs (48 totaal), hasIntermediary flag, PartnersPage transactions tab, i18n 4 talen. adminPortal.js v3.19.0. |
 | **3.62.0** | **2026-03-03** | **Fase IV Blok A**: Partner Management Module. 3 DB tabellen, partnerService.js, 7 admin endpoints (106 totaal), PartnersPage.jsx, i18n 4 talen. Multi-tenant analyse. |
 | **3.61.0** | **2026-03-03** | **Fase IV-0**: Pre-flight & Adyen Activatie. Adyen E2E test PASS. Feature flags Calpe geactiveerd. PCI DSS + GDPR Blok 0 review. Compliance docs geüpdatet. |
