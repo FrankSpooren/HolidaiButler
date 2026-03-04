@@ -29,6 +29,15 @@ export function useIntermediaryStats(destinationId, dateFilters = {}) {
   });
 }
 
+export function useIntermediaryFunnel(destinationId, dateFilters = {}) {
+  return useQuery({
+    queryKey: ['intermediary-funnel', destinationId, dateFilters],
+    queryFn: () => intermediaryService.getFunnel(destinationId, dateFilters),
+    enabled: !!destinationId,
+    staleTime: 60 * 1000
+  });
+}
+
 export function useIntermediaryCreate() {
   const queryClient = useQueryClient();
   return useMutation({

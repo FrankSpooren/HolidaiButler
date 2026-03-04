@@ -14,7 +14,8 @@
     "issues": "Issues",
     "commerce": "Commerce",
     "partners": "Partner",
-    "financial": "Finanzen"
+    "financial": "Finanzen",
+    "intermediary": "Vermittlung"
   },
   "auth": {
     "login": "Anmelden",
@@ -786,7 +787,34 @@
       "share_voucher": "Gutschein teilen",
       "cancel": "Transaktion stornieren",
       "view_qr": "QR-Code anzeigen"
-    }
+    },
+    "tab_dashboard": "Dashboard",
+    "tab_transactions": "Transaktionen",
+    "tab_settlements": "Abrechnungen",
+    "tab_export": "Export",
+    "avg_commission": "Durchschn. Provision",
+    "funnel_title": "Konversionstrichter",
+    "funnel_voorstel": "Vorschlag",
+    "funnel_toestemming": "Zustimmung",
+    "funnel_bevestiging": "Bestätigung",
+    "funnel_delen": "Geteilt",
+    "funnel_review": "Bewertung",
+    "search_placeholder": "Suche nach Gastname, E-Mail oder Transaktionsnummer...",
+    "filter_status": "Statusfilter",
+    "filter_all": "Alle Status",
+    "detail_title": "Transaktionsdetails",
+    "state_timeline": "Fortschritt",
+    "timeline_current": "Aktueller Status",
+    "created_at": "Erstellt am",
+    "cancel_reason": "Stornierungsgrund",
+    "settlements_info": "Abrechnungen werden über den Finanzprozess verwaltet",
+    "go_to_financial": "Zu Finanzen",
+    "unsettled_count": "Nicht abgerechnete Transaktionen",
+    "export_transactions": "Transaktionen exportieren",
+    "export_success": "CSV-Export heruntergeladen",
+    "download_csv": "CSV herunterladen",
+    "period_from": "Von",
+    "period_to": "Bis"
   },
   "financial": {
     "title": "Finanzprozess",

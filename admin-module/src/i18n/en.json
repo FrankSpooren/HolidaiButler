@@ -14,7 +14,8 @@
     "issues": "Issues",
     "commerce": "Commerce",
     "partners": "Partners",
-    "financial": "Financial"
+    "financial": "Financial",
+    "intermediary": "Intermediary"
   },
   "auth": {
     "login": "Log in",
@@ -786,7 +787,34 @@
       "share_voucher": "Share Voucher",
       "cancel": "Cancel Transaction",
       "view_qr": "View QR Code"
-    }
+    },
+    "tab_dashboard": "Dashboard",
+    "tab_transactions": "Transactions",
+    "tab_settlements": "Settlements",
+    "tab_export": "Export",
+    "avg_commission": "Avg Commission",
+    "funnel_title": "Conversion Funnel",
+    "funnel_voorstel": "Proposal",
+    "funnel_toestemming": "Consent",
+    "funnel_bevestiging": "Confirmation",
+    "funnel_delen": "Shared",
+    "funnel_review": "Review",
+    "search_placeholder": "Search by guest name, email or transaction number...",
+    "filter_status": "Status filter",
+    "filter_all": "All statuses",
+    "detail_title": "Transaction Details",
+    "state_timeline": "Progress",
+    "timeline_current": "Current status",
+    "created_at": "Created at",
+    "cancel_reason": "Reason for cancellation",
+    "settlements_info": "Settlements are managed via the Financial Process",
+    "go_to_financial": "Go to Financial",
+    "unsettled_count": "Unsettled transactions",
+    "export_transactions": "Export transactions",
+    "export_success": "CSV export downloaded",
+    "download_csv": "Download CSV",
+    "period_from": "From",
+    "period_to": "To"
   },
   "financial": {
     "title": "Financial Process",

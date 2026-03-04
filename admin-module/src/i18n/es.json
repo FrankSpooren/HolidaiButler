@@ -14,7 +14,8 @@
     "issues": "Issues",
     "commerce": "Comercio",
     "partners": "Socios",
-    "financial": "Finanzas"
+    "financial": "Finanzas",
+    "intermediary": "Intermediario"
   },
   "auth": {
     "login": "Iniciar sesi\u00f3n",
@@ -786,7 +787,34 @@
       "share_voucher": "Compartir voucher",
       "cancel": "Cancelar transacción",
       "view_qr": "Ver código QR"
-    }
+    },
+    "tab_dashboard": "Panel",
+    "tab_transactions": "Transacciones",
+    "tab_settlements": "Liquidaciones",
+    "tab_export": "Exportar",
+    "avg_commission": "Comisión promedio",
+    "funnel_title": "Embudo de conversión",
+    "funnel_voorstel": "Propuesta",
+    "funnel_toestemming": "Consentimiento",
+    "funnel_bevestiging": "Confirmación",
+    "funnel_delen": "Compartido",
+    "funnel_review": "Reseña",
+    "search_placeholder": "Buscar por nombre de huésped, email o número de transacción...",
+    "filter_status": "Filtro de estado",
+    "filter_all": "Todos los estados",
+    "detail_title": "Detalles de la transacción",
+    "state_timeline": "Progreso",
+    "timeline_current": "Estado actual",
+    "created_at": "Creado el",
+    "cancel_reason": "Motivo de la cancelación",
+    "settlements_info": "Las liquidaciones se gestionan a través del Proceso Financiero",
+    "go_to_financial": "Ir a Finanzas",
+    "unsettled_count": "Transacciones no liquidadas",
+    "export_transactions": "Exportar transacciones",
+    "export_success": "Exportación CSV descargada",
+    "download_csv": "Descargar CSV",
+    "period_from": "Desde",
+    "period_to": "Hasta"
   },
   "financial": {
     "title": "Proceso Financiero",
