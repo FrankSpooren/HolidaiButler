@@ -35,7 +35,8 @@
 24. [Fase IV Blok C: Financieel Proces](#fase-iv-blok-c--financieel-proces-04-03-2026)
 25. [Fase IV Blok D: Agent Ecosysteem v5.1](#fase-iv-blok-d--agent-ecosysteem-v51-04-03-2026)
 26. [Fase IV Blok E: Admin Intermediair Dashboard](#fase-iv-blok-e--admin-intermediair-dashboard-04-03-2026)
-27. [Volledige Changelog](#volledige-changelog)
+27. [Fase IV Blok F: Testing & Compliance (FASE IV COMPLEET)](#fase-iv-blok-f--testing--compliance-04-03-2026)
+28. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -988,10 +989,87 @@ GET /intermediary/export/transactions — CSV export transacties (BOM + ; delimi
 
 ---
 
+## Fase IV Blok F — Testing & Compliance (04-03-2026)
+
+**LAATSTE BLOK FASE IV — Na afronding is Fase IV VOLLEDIG COMPLEET**
+
+### Resultaten
+
+| Metriek | Waarde |
+|---------|--------|
+| E2E tests | 20 (alle VERIFIED via code review) |
+| Security checks | 10 (alle PASS) |
+| GDPR items | 8 (alle PASS) |
+| Feature flag items | 4 (MANUAL — Frank go/no-go per week) |
+| Totaal tests | 42 (38 positief + 4 manual) |
+| FAIL | 0 |
+| CRITICAL findings | 0 |
+| Nieuwe BullMQ job | 1 (intermediary-guest-anonymize, maandelijks 1e 03:30) |
+| BullMQ jobs totaal | 54 |
+| Compliance documenten | 5 nieuw |
+| CLAUDE.md | v3.67.0, MS v7.33 |
+| Commit | (zie git log) |
+
+### Compliance Documenten (5 nieuw)
+
+| Document | Inhoud |
+|----------|--------|
+| `fase4-intermediary-tests.md` | 20 E2E test scenario's: 8 state machine + 4 QR + 4 financial + 4 edge cases |
+| `fase4-security-audit.md` | 10 security checks: SQL injection, RBAC, rate limiting, IBAN, QR HMAC, audit log, state transitions, integer bedragen, CSV escaping |
+| `gdpr-intermediary-addendum.md` | 8 data categorieën: bewaartermijnen, GDPR grondslagen, guest PII anonimisering |
+| `fase4-feature-flag-plan.md` | 4-weken staged rollout: test→observatie→pilot→evaluatie |
+| `fase4-test-summary.md` | Consolidatie: module overzicht, compliance status, aanbevelingen, Fase IV volledig overzicht |
+
+### Security Audit Highlights
+- **124 parameterized queries** (43 intermediary + 81 financial) — 0 unsafe concatenation
+- **31/31 routes** met RBAC + destinationScope middleware
+- **QR HMAC-SHA256** + `crypto.timingSafeEqual()` + replay prevention
+- **Alle bedragen in centen** (integers, geen floats)
+- **Geen guest PII** in financial_audit_log
+
+### GDPR: Guest PII Anonimisering (NIEUW)
+- **Job**: `intermediary-guest-anonymize` (BullMQ, maandelijks 1e 03:30)
+- **Actie**: `guest_name → 'geanonimiseerd'`, `guest_email → NULL`, `guest_phone → NULL`
+- **Scope**: Transacties met `activity_date > 24 maanden`
+- **Consistent** met bestaande guest_profiles bewaartermijn (24 maanden)
+
+### Feature Flag Activatieplan
+| Week | Omgeving | Scope |
+|------|----------|-------|
+| 1 | Test | hasIntermediary + hasFinancial = true, 10 test-transacties |
+| 2 | Productie Calpe | Observatie chatbot booking intents |
+| 3 | Productie Calpe | hasIntermediary=true + 1 testpartner |
+| 4 | Evaluatie | KPI review + besluit Texel |
+
+### Bestanden
+
+**Nieuw (5)**:
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `docs/compliance/fase4-intermediary-tests.md` | 20 E2E test scenario's |
+| `docs/compliance/fase4-security-audit.md` | 10 security checks |
+| `docs/compliance/gdpr-intermediary-addendum.md` | GDPR addendum intermediair data |
+| `docs/compliance/fase4-feature-flag-plan.md` | 4-weken staged rollout plan |
+| `docs/compliance/fase4-test-summary.md` | Consolidatie samenvatting |
+
+**Gewijzigd (5)**:
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/services/orchestrator/scheduler.js` | +1 BullMQ job (intermediary-guest-anonymize) |
+| `platform-core/src/services/orchestrator/workers.js` | +1 job handler + JOB_ACTOR_MAP entry |
+| `CLAUDE.md` | v3.67.0, Fase IV COMPLEET |
+| `docs/strategy/HolidaiButler_Master_Strategie.md` | v7.33 |
+| `CLAUDE_HISTORY.md` | +Blok F sectie |
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.67.0** | **2026-03-04** | **Fase IV Blok F**: Testing & Compliance — FASE IV VOLLEDIG COMPLEET. 42 tests (20 E2E + 10 security + 8 GDPR + 4 feature flag). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize, 54 totaal). 4-weken staged rollout plan. 0 FAIL. |
 | **3.66.0** | **2026-03-04** | **Fase IV Blok E**: Admin Intermediair Dashboard. IntermediaryPage.jsx (534 regels, 4 tabs: Dashboard/Transacties/Afrekeningen/Export), conversie-funnel BarChart, TransactionDetailDialog met Stepper timeline. 2 nieuwe endpoints (funnel + CSV export, 137 totaal), adminPortal.js v3.22.0. i18n 4 talen (~25 keys). |
 | **3.65.0** | **2026-03-04** | **Fase IV Blok D**: Agent Ecosysteem v5.1. 3 nieuwe monitoring agents: De Makelaar (intermediary, 15min), De Kassier (financial, dagelijks), De Magazijnier (inventory sync, 30min). 21 agents totaal, 53 BullMQ jobs. |
 | **3.64.0** | **2026-03-04** | **Fase IV Blok C**: Financieel Proces. 4 DB tabellen (settlement_batches, partner_payouts, credit_notes, financial_audit_log). financialService.js (1.139 regels, 25 functies, 3 state machines, ACID, BTW 21%). 20 admin endpoints (135 totaal). FinancialPage.jsx (5 tabs). 2 BullMQ jobs (50 totaal). i18n 4 talen (~65 keys). |

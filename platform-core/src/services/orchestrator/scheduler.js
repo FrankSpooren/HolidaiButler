@@ -227,6 +227,15 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: inventory-sync (every 30 min)');
 
+  // === Fase IV-F: GDPR Guest Anonymization ===
+
+  // Intermediary Guest Anonymize - 1st of month at 03:30 (anonymize guest PII >24 months)
+  await scheduledQueue.add('intermediary-guest-anonymize', { type: 'intermediary-guest-anonymize' }, {
+    repeat: { cron: '30 3 1 * *', tz: 'Europe/Amsterdam' },
+    jobId: 'intermediary-guest-anonymize-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: intermediary-guest-anonymize (1st of month 03:30)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);

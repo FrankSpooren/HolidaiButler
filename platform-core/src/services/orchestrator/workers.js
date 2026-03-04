@@ -835,6 +835,24 @@ export function startWorkers() {
           }
           break;
 
+        case "intermediary-guest-anonymize":
+          try {
+            const { mysqlSequelize: anonDb } = await import("../../config/database.js");
+            const [anonymizeResult] = await anonDb.query(
+              `UPDATE intermediary_transactions
+               SET guest_name = 'geanonimiseerd', guest_email = NULL, guest_phone = NULL
+               WHERE activity_date < DATE_SUB(NOW(), INTERVAL 24 MONTH)
+                 AND guest_name IS NOT NULL AND guest_name != 'geanonimiseerd'`
+            );
+            const anonymized = anonymizeResult?.affectedRows || 0;
+            console.log(`[Orchestrator] Intermediary guest anonymize: ${anonymized} records`);
+            result = { type: "intermediary-guest-anonymize", anonymized };
+          } catch (error) {
+            console.error("[Orchestrator] Guest anonymize failed:", error.message);
+            result = { type: "intermediary-guest-anonymize", status: "error", error: error.message };
+          }
+          break;
+
         case "inventory-sync":
           try {
             const inventorySync = (await import("../agents/inventorySync/index.js")).default;
@@ -892,7 +910,8 @@ export function startWorkers() {
         'financial-unsettled-alert': 'orchestrator',
         'intermediary-monitor': 'intermediary-monitor',
         'financial-monitor': 'financial-monitor',
-        'inventory-sync': 'inventory-sync'
+        'inventory-sync': 'inventory-sync',
+        'intermediary-guest-anonymize': 'gdpr'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {
