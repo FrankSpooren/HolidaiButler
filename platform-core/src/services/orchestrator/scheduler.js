@@ -204,6 +204,29 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: financial-unsettled-alert (Monday 08:30)');
 
+  // === Fase IV-D: Commerce Monitoring Agent Jobs ===
+
+  // Intermediary Monitor (De Makelaar) - every 15 minutes
+  await scheduledQueue.add('intermediary-monitor', { type: 'intermediary-monitor' }, {
+    repeat: { cron: '*/15 * * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'intermediary-monitor-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: intermediary-monitor (every 15 min)');
+
+  // Financial Monitor (De Kassier) - daily at 06:30
+  await scheduledQueue.add('financial-monitor', { type: 'financial-monitor' }, {
+    repeat: { cron: '30 6 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'financial-monitor-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: financial-monitor (daily 06:30)');
+
+  // Inventory Sync (De Magazijnier) - every 30 minutes
+  await scheduledQueue.add('inventory-sync', { type: 'inventory-sync' }, {
+    repeat: { cron: '*/30 * * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'inventory-sync-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: inventory-sync (every 30 min)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);

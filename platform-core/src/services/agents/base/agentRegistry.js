@@ -1,5 +1,5 @@
 /**
- * Agent Registry - Central registration of all 15 agents with BaseAgent pattern
+ * Agent Registry - Central registration of all 18 agents with BaseAgent pattern
  *
  * This module imports all agents, adds runForDestination()/execute() where needed,
  * and wraps them with destination-awareness via wrapWithDestinationAwareness().
@@ -28,6 +28,11 @@ import devLayer from '../devLayer/index.js';
 import contentQualityChecker from '../dataSync/contentQualityChecker.js';
 import backupHealthChecker from '../healthMonitor/backupHealthChecker.js';
 import smokeTestRunner from '../healthMonitor/smokeTestRunner.js';
+
+// Fase IV-D: Commerce Monitoring Agents
+import intermediaryMonitor from '../intermediaryMonitor/index.js';
+import financialMonitor from '../financialMonitor/index.js';
+import inventorySyncAgent from '../inventorySync/index.js';
 
 // ============================================================
 // CATEGORY A: DESTINATION-AWARE (11 agents)
@@ -334,6 +339,34 @@ if (!backupHealthChecker.execute) {
 }
 
 // ============================================================
+// FASE IV-D: COMMERCE MONITORING AGENTS (3 new agents)
+// ============================================================
+
+// #19 De Makelaar (Intermediary Monitor) - Per-destination transaction monitoring
+wrapWithDestinationAwareness(intermediaryMonitor, {
+  name: 'De Makelaar',
+  category: 'Operations',
+  version: '1.0.0',
+  destinationAware: true
+});
+
+// #20 De Kassier (Financial Monitor) - Platform-wide financial reconciliation
+wrapWithDestinationAwareness(financialMonitor, {
+  name: 'De Kassier',
+  category: 'Operations',
+  version: '1.0.0',
+  destinationAware: false
+});
+
+// #21 De Magazijnier (Inventory Sync) - Per-destination inventory monitoring
+wrapWithDestinationAwareness(inventorySyncAgent, {
+  name: 'De Magazijnier',
+  category: 'Operations',
+  version: '1.0.0',
+  destinationAware: true
+});
+
+// ============================================================
 // REGISTRY EXPORT
 // ============================================================
 
@@ -360,7 +393,12 @@ const AGENT_REGISTRY = {
   // Monitoring modules (8A+)
   contentQuality: contentQualityChecker,
   smokeTest: smokeTestRunner,
-  backupHealth: backupHealthChecker
+  backupHealth: backupHealthChecker,
+
+  // Fase IV-D: Commerce Monitoring Agents
+  makelaar: intermediaryMonitor,       // #19
+  kassier: financialMonitor,           // #20
+  magazijnier: inventorySyncAgent      // #21
 };
 
 /**

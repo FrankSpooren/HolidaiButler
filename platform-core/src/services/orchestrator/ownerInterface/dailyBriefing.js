@@ -333,8 +333,74 @@ async function generateDailyBriefing() {
     console.log('[De Bode] Correlation report unavailable:', error.message);
   }
 
+  // === Fase IV-D: Intermediary Monitor (De Makelaar) ===
+  let intermediaryMonitorSummary = 'Geen recente check';
+  try {
+    const intermediaryMon = (await import('../../agents/intermediaryMonitor/index.js')).default;
+    const calpeIM = await intermediaryMon.getLatestResult(1);
+    const texelIM = await intermediaryMon.getLatestResult(2);
+    const imParts = [];
+    for (const [label, r] of [['Calpe', calpeIM], ['Texel', texelIM]]) {
+      if (r && (Date.now() - new Date(r.timestamp).getTime()) < 25 * 60 * 60 * 1000) {
+        const stuck = r.stuck_transactions?.total || 0;
+        const conv = r.conversion_stats?.conversion_rate ?? '?';
+        imParts.push(`${label}: ${stuck} stuck, ${conv}% conversie`);
+        if (r.escalations?.length > 0) {
+          alertItems.push(`[Makelaar] ${label}: ${r.escalations.length} partner escalatie(s)`);
+        }
+      }
+    }
+    if (imParts.length > 0) intermediaryMonitorSummary = imParts.join(' | ');
+  } catch (error) {
+    console.log('[De Bode] Intermediary monitor data unavailable:', error.message);
+  }
+
+  // === Fase IV-D: Financial Monitor (De Kassier) ===
+  let financialMonitorSummary = 'Geen recente check';
+  try {
+    const financialMon = (await import('../../agents/financialMonitor/index.js')).default;
+    const fResult = await financialMon.getLatestResult();
+    if (fResult && (Date.now() - new Date(fResult.timestamp).getTime()) < 25 * 60 * 60 * 1000) {
+      const reconciled = fResult.reconciliation?.all_reconciled ? 'OK' : 'MISMATCH';
+      const anomalyCount = fResult.anomalies?.length || 0;
+      const fraud = fResult.fraud_indicators?.length || 0;
+      financialMonitorSummary = `Reconciliatie: ${reconciled} | ${anomalyCount} anomalie(en) | ${fraud} fraude-indicator(en)`;
+      if (reconciled === 'MISMATCH') {
+        alertItems.push('[Kassier] Settlement reconciliatie MISMATCH');
+      }
+      if (fraud > 0) {
+        alertItems.push(`[Kassier] ${fraud} fraude-indicator(en) gedetecteerd`);
+      }
+    }
+  } catch (error) {
+    console.log('[De Bode] Financial monitor data unavailable:', error.message);
+  }
+
+  // === Fase IV-D: Inventory Sync (De Magazijnier) ===
+  let inventorySyncSummary = 'Geen recente check';
+  try {
+    const inventorySync = (await import('../../agents/inventorySync/index.js')).default;
+    const calpeInv = await inventorySync.getLatestResult(1);
+    const texelInv = await inventorySync.getLatestResult(2);
+    const invParts = [];
+    for (const [label, r] of [['Calpe', calpeInv], ['Texel', texelInv]]) {
+      if (r && (Date.now() - new Date(r.timestamp).getTime()) < 2 * 60 * 60 * 1000) {
+        const mismatches = r.ticket_inventory_sync?.mismatch_count || 0;
+        const stale = r.stale_reservations?.total || 0;
+        const lowAlerts = r.low_inventory_alerts?.length || 0;
+        invParts.push(`${label}: ${mismatches} sync, ${stale} stale, ${lowAlerts} low-inv`);
+        if (mismatches > 0) {
+          alertItems.push(`[Magazijnier] ${label}: ${mismatches} Redis/MySQL sync mismatch(es)`);
+        }
+      }
+    }
+    if (invParts.length > 0) inventorySyncSummary = invParts.join(' | ');
+  } catch (error) {
+    console.log('[De Bode] Inventory sync data unavailable:', error.message);
+  }
+
   // Build fields for MailerLite template
-  // Section ordering (Fase 8B): alerts → smoke → backups → destinations → content → predictions → agents → budget
+  // Section ordering (Fase 8B): alerts → smoke → backups → destinations → content → predictions → agents → budget → commerce monitoring
   const fields = {
     briefing_date: today,
     // Status (top)
@@ -370,7 +436,11 @@ async function generateDailyBriefing() {
     budget_spent: `${costReport.summary.totalSpent.toFixed(2)}`,
     budget_percentage: `${costReport.summary.percentageUsed.toFixed(1)}%`,
     budget_total: `${costReport.summary.totalBudget}`,
-    budget_remaining: `${costReport.summary.remaining.toFixed(2)}`
+    budget_remaining: `${costReport.summary.remaining.toFixed(2)}`,
+    // Fase IV-D: Commerce Monitoring
+    intermediary_monitor_summary: intermediaryMonitorSummary,
+    financial_monitor_summary: financialMonitorSummary,
+    inventory_sync_summary: inventorySyncSummary
   };
 
   return {
@@ -388,7 +458,10 @@ async function generateDailyBriefing() {
       backups: backupSummary,
       contentQuality: contentQualitySummary,
       devInsights: devInsightsSummary,
-      threemaStatus
+      threemaStatus,
+      intermediaryMonitor: intermediaryMonitorSummary,
+      financialMonitor: financialMonitorSummary,
+      inventorySync: inventorySyncSummary
     }
   };
 }

@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 4 maart 2026
-**Versie**: 7.29
+**Versie**: 7.31
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV-A+B+0+Blok A Apify Data Pipeline + Owner-Managed Tiers + Pre-flight + Partner Management COMPLEET ✅. Fase III COMPLEET (Blok G+A+B+C+D+E+F). Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.62.0. MS v7.28.
+**Status**: FASE IV-A+B+0+Blok A+B+C+D COMPLEET ✅. Fase III COMPLEET (Blok G+A+B+C+D+E+F). Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.65.0. MS v7.31.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1366,7 +1366,8 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 - **Blok B: POI Tier Import + Owner-Managed Tiers** ✅ COMPLEET (03-03-2026): 2.695 POI tier-assignments uit Excel (Frank's manuele review). `POI.tier` kolom (TINYINT DEFAULT 4) nu primair voor sync scheduling. poiTierManager.js v2.0: `getPOIsForUpdate()` query op stored tier kolom i.p.v. runtime score berekening. `classifyAllPOIs()` herberekent alleen tier_score (informatief). BullMQ crons: T1 dagelijks 06:00, T2 wekelijks ma, T3 maandelijks 1e, T4 kwartaal. Distributie: Calpe T1=2/T2=116/T3=691/T4=784, Texel T1=18/T2=39/T3=255/T4=1427.
 - **Blok A: Partner Management Module** ✅ COMPLEET (03-03-2026): 3 DB tabellen (partners, partner_pois, partner_onboarding). partnerService.js (CRUD, onboarding, IBAN/BTW validatie, contract status transitions, KPIs). 7 admin endpoints (106 totaal). PartnersPage.jsx (stats, tabel, detail 4 tabs, 3-step wizard). i18n 4 talen. Forward-compatible multi-tenant analyse.
 - **Blok B: Intermediair State Machine** ✅ COMPLEET (04-03-2026): 1 DB tabel (intermediary_transactions) + ALTER TABLE payment_transactions (order_type). intermediaryService.js (13 functies: 6-stappen state machine, ACID commissieberekening, QR HMAC-SHA256, payout report). 9 admin endpoints (115 totaal). 2 BullMQ jobs (48 totaal). Feature flag hasIntermediary. PartnersPage transactions tab. i18n 4 talen.
-- **Blok C: Financieel Proces** (GEPLAND): Juridische/fiscale compliance commissie-inhouding, payout-cycli, rapportages, boekhouding-integratie
+- **Blok C: Financieel Proces** ✅ COMPLEET (04-03-2026): 4 DB tabellen (settlement_batches, partner_payouts, credit_notes, financial_audit_log). financialService.js (25 functies, 3 state machines, ACID settlements, BTW 21%, CSV exports). 20 admin endpoints (135 totaal). 2 BullMQ jobs (50 totaal). Feature flag hasFinancial. FinancialPage.jsx (5 tabs). i18n 4 talen.
+- **Blok D: Agent Ecosysteem v5.1** ✅ COMPLEET (04-03-2026): 3 nieuwe agents: De Makelaar (intermediary monitor, Type A, elke 15 min), De Kassier (financial monitor, Type B, dagelijks 06:30), De Magazijnier (inventory sync, Type A, elke 30 min). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, workers.js, scheduler.js, dailyBriefing.js bijgewerkt. adminPortal.js v3.21.0.
 
 **Fase V — UX + WarreWijzer:**
 - Mobiele UX: benchmark Google Maps, TripAdvisor, GetYourGuide, Booking.com
@@ -1562,7 +1563,9 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **7.29** | **04-03-2026** | **Fase IV Blok B: Intermediair State Machine COMPLEET. intermediary_transactions tabel, intermediaryService.js (13 functies, 6-stappen state machine, ACID commissie, QR HMAC), 9 admin endpoints (115 totaal), 2 BullMQ jobs (48 totaal), hasIntermediary feature flag, PartnersPage transactions tab, i18n 4 talen. adminPortal.js v3.19.0. CLAUDE.md v3.63.0.** |
+| **7.31** | **04-03-2026** | **Fase IV Blok D: Agent Ecosysteem v5.1 COMPLEET. 3 nieuwe agents: De Makelaar (intermediary monitor, elke 15 min), De Kassier (financial monitor, dagelijks 06:30), De Magazijnier (inventory sync, elke 30 min). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, workers.js, scheduler.js, dailyBriefing.js bijgewerkt. adminPortal.js v3.21.0. CLAUDE.md v3.65.0.** |
+| **7.30** | **04-03-2026** | **Fase IV Blok C: Financieel Proces COMPLEET. 4 DB tabellen (settlement_batches, partner_payouts, credit_notes, financial_audit_log). financialService.js (25 functies, 3 state machines). 20 admin endpoints (135 totaal). 2 BullMQ jobs (50 totaal). Feature flag hasFinancial. FinancialPage.jsx (5 tabs). adminPortal.js v3.21.0. CLAUDE.md v3.64.0.** |
+| 7.29 | 04-03-2026 | Fase IV Blok B: Intermediair State Machine COMPLEET. intermediary_transactions tabel, intermediaryService.js (13 functies, 6-stappen state machine, ACID commissie, QR HMAC), 9 admin endpoints (115 totaal), 2 BullMQ jobs (48 totaal), hasIntermediary feature flag, PartnersPage transactions tab, i18n 4 talen. adminPortal.js v3.19.0. CLAUDE.md v3.63.0. |
 | **7.28** | **03-03-2026** | **Fase IV Blok A: Partner Management Module COMPLEET. 3 DB tabellen, partnerService.js, 7 admin endpoints (106 totaal), PartnersPage.jsx, i18n 4 talen. Forward-compatible multi-tenant analyse (Directus+Unleash = Fase V+). CLAUDE.md v3.62.0.** |
 | **7.27** | **03-03-2026** | **Fase IV-0: Pre-flight & Adyen Activatie COMPLEET. Adyen E2E test PASS (session creation, transaction status, HMAC webhook). Feature flags Calpe geactiveerd (hasBooking/hasTicketing/hasReservations/hasChatToBook=true). PCI DSS + GDPR Blok 0 review. Compliance docs geüpdatet. .env permissions 600. Legacy PM2 reservations-module gestopt. CLAUDE.md v3.61.0.** |
 | 7.26 | 03-03-2026 | Fase IV-B: POI Tier Import + Owner-Managed Tiers COMPLEET. 2.695 POI tier-assignments, poiTierManager.js v2.0, Admin Portal tier display. CLAUDE.md v3.60.0. |
