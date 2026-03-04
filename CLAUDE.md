@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.66.0
+> **Versie**: 3.67.0
 > **Laatst bijgewerkt**: 4 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -73,14 +73,19 @@ HolidaiButler/
 │   └── deploy-admin-module.yml  # CI/CD admin portal
 ├── docs/strategy/
 │   └── HolidaiButler_Master_Strategie.md
-├── docs/compliance/             # Fase III Blok F compliance documenten
+├── docs/compliance/             # Fase III + IV compliance documenten (12 totaal)
 │   ├── pci-dss-saq-a.md        # PCI DSS SAQ-A checklist + verificatie
 │   ├── payment-test-results.md  # 17 payment test scenarios
 │   ├── ticketing-race-condition-tests.md  # 5 concurrent access tests
 │   ├── reservation-double-booking-tests.md # 5 slot locking tests
 │   ├── gdpr-compliance-checklist.md  # 31-item GDPR audit
 │   ├── security-audit.md        # 8-item security audit
-│   └── fase3-test-summary.md    # Consolidatie samenvatting
+│   ├── fase3-test-summary.md    # Fase III consolidatie samenvatting
+│   ├── fase4-intermediary-tests.md  # 20 E2E test scenario's intermediair+financieel
+│   ├── fase4-security-audit.md  # 10-item security audit Fase IV
+│   ├── gdpr-intermediary-addendum.md  # GDPR addendum intermediair data
+│   ├── fase4-feature-flag-plan.md  # 4-weken staged rollout plan
+│   └── fase4-test-summary.md    # Fase IV consolidatie samenvatting
 ├── customer-portal/frontend/    # React 19 + Tailwind
 │   └── src/
 │       ├── features/ticketing/  # AvailabilityChecker, BookingFlow, AdyenCheckout, MyTickets, TicketCard, TicketDetail
@@ -299,6 +304,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **IV-C (Blok C)** | **Financieel Proces** | **04-03** | **4 DB tabellen (settlement_batches, partner_payouts, credit_notes, financial_audit_log) + ALTER TABLE intermediary_transactions. financialService.js: 25 functies (3 state machines, ACID settlement creation, partner data snapshotting, BTW berekening 21%, auto-complete batch, 4 CSV exports met BOM). 20 admin endpoints (135 totaal), adminPortal.js v3.22.0. 2 BullMQ jobs (50 totaal: financial-auto-settlement 1e v/d maand 04:00, financial-unsettled-alert ma 08:30). Feature flag hasFinancial. FinancialPage.jsx (5 tabs: Dashboard, Settlements, Payouts, Credit Notes, Export). i18n 4 talen (~65 keys).** |
 | **IV-D (Blok D)** | **Agent Ecosysteem v5.1** | **04-03** | **3 nieuwe agents: De Makelaar (intermediary monitor, Type A, elke 15 min: stuck txns, partner escalaties, conversie metrics), De Kassier (financial monitor, Type B, dagelijks 06:30: reconciliatie, anomaliedetectie 2σ, settlement alerts, fraude-indicatoren), De Magazijnier (inventory sync, Type A, elke 30 min: Redis↔MySQL sync, stale reserveringen, low inventory). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, SCHEDULED_JOBS_METADATA, AGENT_EXTENDED_DATA bijgewerkt. Daily briefing 3 nieuwe secties. adminPortal.js v3.22.0.** |
 | **IV-E (Blok E)** | **Admin Intermediair Dashboard** | **04-03** | **IntermediaryPage.jsx (4 tabs: Dashboard met KPI cards + conversie funnel Recharts, Transacties met filters + detail dialog + state timeline + actie buttons, Afrekeningen link naar Financial, Export CSV). 2 nieuwe admin endpoints (funnel + CSV export, 137 totaal). Frontend: intermediaryService.js +2 methods, useIntermediary.js +1 hook, App.jsx route, Sidebar.jsx nav item. i18n 4 talen (~25 nieuwe keys). adminPortal.js v3.22.0. RBAC: platform_admin + poi_owner.** |
+| **IV-F (Blok F)** | **Testing & Compliance (FASE IV COMPLEET)** | **04-03** | **42 tests (20 E2E VERIFIED + 10 security PASS + 8 GDPR PASS + 4 feature flag MANUAL). 5 compliance documenten: fase4-intermediary-tests.md, fase4-security-audit.md, gdpr-intermediary-addendum.md, fase4-feature-flag-plan.md, fase4-test-summary.md. 1 BullMQ job (intermediary-guest-anonymize, GDPR 24 maanden). 4-weken staged rollout plan. 0 FAIL, 0 CRITICAL findings. FASE IV VOLLEDIG COMPLEET.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -338,7 +344,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - `destinationRunner.js`: Mixin helper voor bestaande agent singletons
 - `agentRegistry.js`: Centrale registratie 21 entries
 
-### Scheduled Jobs: 53 totaal
+### Scheduled Jobs: 54 totaal
 - BullMQ queue: `scheduled-tasks`
 - Workers: `src/services/orchestrator/workers.js` (incl. JOB_ACTOR_MAP voor correct agent attribution)
 
@@ -430,7 +436,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | I | Foundation Hardening (Agents, Platform Core, Admin Portal) | ✅ COMPLEET (Fase 12) | — |
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
-| IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | IN PROGRESS (IV-A+B+0+Blok A+B+C+D+E COMPLEET) | 6-8 wkn |
+| IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | ✅ COMPLEET (Blok A+B+C+D+E+F) | 6-8 wkn |
 | V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
 | VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
 
@@ -538,7 +544,8 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.66.0** | **2026-03-04** | **Fase IV Blok E: Admin Intermediair Dashboard COMPLEET**. IntermediaryPage.jsx (4 tabs: Dashboard KPIs + conversie funnel, Transacties tabel + detail dialog + state timeline, Afrekeningen link, Export CSV). 2 nieuwe admin endpoints (funnel + CSV export, 137 totaal). i18n 4 talen (~25 keys). adminPortal.js v3.22.0. |
+| **3.67.0** | **2026-03-04** | **Fase IV Blok F: Testing & Compliance — FASE IV VOLLEDIG COMPLEET**. 42 tests (20 E2E + 10 security + 8 GDPR + 4 feature flag). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize, GDPR 24 maanden). 54 BullMQ jobs totaal. 4-weken staged rollout plan. 0 FAIL, 0 CRITICAL. |
+| 3.66.0 | 2026-03-04 | Fase IV Blok E: Admin Intermediair Dashboard COMPLEET. IntermediaryPage.jsx (4 tabs: Dashboard KPIs + conversie funnel, Transacties tabel + detail dialog + state timeline, Afrekeningen link, Export CSV). 2 nieuwe admin endpoints (funnel + CSV export, 137 totaal). i18n 4 talen (~25 keys). adminPortal.js v3.22.0. |
 | 3.65.0 | 2026-03-04 | Fase IV Blok D: Agent Ecosysteem v5.1 COMPLEET. 3 nieuwe agents: De Makelaar (intermediary monitor, elke 15 min), De Kassier (financial monitor, dagelijks 06:30), De Magazijnier (inventory sync, elke 30 min). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, workers.js, scheduler.js, dailyBriefing.js bijgewerkt. adminPortal.js v3.22.0. |
 | 3.64.0 | 2026-03-04 | Fase IV Blok C: Financieel Proces COMPLEET. 4 DB tabellen + ALTER TABLE. financialService.js (25 functies, 3 state machines, ACID settlements, BTW 21%, CSV exports). 20 admin endpoints (135 totaal), adminPortal.js v3.22.0. 2 BullMQ jobs (50 totaal). Feature flag hasFinancial. FinancialPage.jsx (5 tabs). i18n 4 talen (~65 keys). |
 | 3.63.0 | 2026-03-04 | Fase IV Blok B: Intermediair State Machine COMPLEET. 1 DB tabel (intermediary_transactions) + ALTER TABLE payment_transactions (order_type). intermediaryService.js (13 functies: state machine, ACID commissie, QR HMAC, payout report). 9 admin endpoints (115 totaal), adminPortal.js v3.22.0. 2 BullMQ jobs (48 totaal). Feature flag hasIntermediary. PartnersPage transactions tab. i18n 4 talen. |
@@ -555,7 +562,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.32 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.33 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
