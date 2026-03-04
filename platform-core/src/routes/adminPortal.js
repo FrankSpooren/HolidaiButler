@@ -7575,7 +7575,7 @@ router.get('/commerce/top-pois', adminAuth('reviewer'), destinationScope, commer
  */
 router.get('/partners', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     if (!destinationId) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
     }
@@ -7597,7 +7597,7 @@ router.get('/partners', adminAuth('reviewer'), destinationScope, async (req, res
  */
 router.get('/partners/stats', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     const stats = await partnerService.getPartnerStats(destinationId);
     res.json({ success: true, data: stats });
   } catch (error) {
@@ -7611,7 +7611,7 @@ router.get('/partners/stats', adminAuth('reviewer'), destinationScope, async (re
  */
 router.get('/partners/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     if (!destinationId) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
     }
@@ -7734,7 +7734,7 @@ router.put('/partners/:id/status', adminAuth('editor'), destinationScope, writeA
  */
 router.get('/partners/:id/transactions', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     const result = await intermediaryService.getPartnerTransactions(parseInt(req.params.id), destinationId, {
       status: req.query.status,
       dateFrom: req.query.dateFrom,
@@ -7759,7 +7759,7 @@ router.get('/partners/:id/transactions', adminAuth('reviewer'), destinationScope
  */
 router.get('/intermediary', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     const result = await intermediaryService.getTransactions(destinationId, {
       status: req.query.status,
       partnerId: req.query.partnerId ? parseInt(req.query.partnerId) : undefined,
@@ -7782,7 +7782,7 @@ router.get('/intermediary', adminAuth('reviewer'), destinationScope, async (req,
  */
 router.get('/intermediary/stats', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     const stats = await intermediaryService.getTransactionStats(
       destinationId, req.query.dateFrom, req.query.dateTo
     );
@@ -7798,7 +7798,7 @@ router.get('/intermediary/stats', adminAuth('reviewer'), destinationScope, async
  */
 router.get('/intermediary/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     const tx = await intermediaryService.getTransactionById(parseInt(req.params.id), destinationId);
     if (!tx) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Transaction not found' } });
@@ -7815,7 +7815,9 @@ router.get('/intermediary/:id', adminAuth('reviewer'), destinationScope, async (
  */
 router.post('/intermediary', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
   try {
-    const tx = await intermediaryService.createTransaction(req.body);
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
+    if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'Destination required (set destinationId in body or X-Destination-ID header)' } });
+    const tx = await intermediaryService.createTransaction({ ...req.body, destinationId });
     await saveAuditLog(req, 'intermediary_created', {
       entity_type: 'intermediary_transaction',
       entity_id: tx.id,
@@ -7835,7 +7837,7 @@ router.post('/intermediary', adminAuth('editor'), destinationScope, writeAccess(
  */
 router.put('/intermediary/:id/consent', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     const tx = await intermediaryService.giveConsent(parseInt(req.params.id), destinationId);
     await saveAuditLog(req, 'intermediary_consented', {
       entity_type: 'intermediary_transaction',
@@ -7854,7 +7856,7 @@ router.put('/intermediary/:id/consent', adminAuth('editor'), destinationScope, w
  */
 router.put('/intermediary/:id/confirm', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     const tx = await intermediaryService.confirmTransaction(
       parseInt(req.params.id), destinationId, req.body.paymentTransactionId || null
     );
@@ -7876,7 +7878,7 @@ router.put('/intermediary/:id/confirm', adminAuth('editor'), destinationScope, w
  */
 router.put('/intermediary/:id/share', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     const tx = await intermediaryService.shareVoucher(parseInt(req.params.id), destinationId);
     await saveAuditLog(req, 'intermediary_shared', {
       entity_type: 'intermediary_transaction',
@@ -7895,7 +7897,7 @@ router.put('/intermediary/:id/share', adminAuth('editor'), destinationScope, wri
  */
 router.put('/intermediary/:id/cancel', adminAuth('editor'), destinationScope, writeAccess(['platform_admin']), async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     const tx = await intermediaryService.cancelTransaction(
       parseInt(req.params.id), destinationId, req.body.reason
     );
@@ -7917,7 +7919,7 @@ router.put('/intermediary/:id/cancel', adminAuth('editor'), destinationScope, wr
  */
 router.get('/intermediary/:id/qr', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const destinationId = req.destScope?.[0] || parseInt(req.query.destinationId) || null;
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || parseInt(req.query.destinationId) || null;
     const tx = await intermediaryService.getTransactionById(parseInt(req.params.id), destinationId);
     if (!tx) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Transaction not found' } });
