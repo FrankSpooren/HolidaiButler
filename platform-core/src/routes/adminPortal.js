@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B (v3.19.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C (v3.20.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -104,8 +104,41 @@
  *   PUT  /partners/:id/status        — Change contract status
  *   GET  /partners/:id/transactions  — Partner transaction history (placeholder)
  *
+ *   --- Intermediary endpoints (Fase IV-B) ---
+ *   POST /intermediary               — Create intermediary transaction
+ *   GET  /intermediary                — List intermediary transactions
+ *   GET  /intermediary/stats          — Intermediary statistics
+ *   GET  /intermediary/:id            — Transaction detail
+ *   PUT  /intermediary/:id/consent    — Consent (toestemming)
+ *   PUT  /intermediary/:id/confirm    — Confirm (bevestiging)
+ *   PUT  /intermediary/:id/share      — Share voucher (delen + QR)
+ *   PUT  /intermediary/:id/cancel     — Cancel transaction
+ *   GET  /intermediary/:id/qr         — Get QR code image
+ *
+ *   --- Financial Process endpoints (Fase IV-C) ---
+ *   GET  /financial/dashboard          — Financial KPI dashboard
+ *   GET  /financial/reports/monthly    — Monthly financial report (by year)
+ *   GET  /financial/settlements        — List settlement batches
+ *   GET  /financial/settlements/:id    — Settlement batch detail
+ *   POST /financial/settlements        — Create settlement batch
+ *   PUT  /financial/settlements/:id/approve  — Approve settlement
+ *   PUT  /financial/settlements/:id/process  — Start processing settlement
+ *   PUT  /financial/settlements/:id/cancel   — Cancel settlement
+ *   GET  /financial/payouts            — List partner payouts
+ *   GET  /financial/payouts/:id        — Payout detail with transactions
+ *   PUT  /financial/payouts/:id/paid   — Mark payout as paid
+ *   PUT  /financial/payouts/:id/failed — Mark payout as failed
+ *   GET  /financial/credit-notes       — List credit notes
+ *   GET  /financial/credit-notes/:id   — Credit note detail
+ *   POST /financial/credit-notes       — Create credit note
+ *   PUT  /financial/credit-notes/:id/finalize — Finalize credit note
+ *   GET  /financial/export/payouts     — CSV export payouts
+ *   GET  /financial/export/credit-notes — CSV export credit notes
+ *   GET  /financial/export/tax-summary — CSV export tax summary (yearly)
+ *   GET  /financial/audit-log          — Financial audit log
+ *
  * @module routes/adminPortal
- * @version 3.18.0
+ * @version 3.20.0
  */
 
 import { Router } from 'express';
@@ -132,6 +165,7 @@ import { AgentIssue } from '../services/agents/base/agentIssues.js';
 import commerceService from '../services/commerce/commerceService.js';
 import partnerService from '../services/partner/partnerService.js';
 import intermediaryService from '../services/intermediary/intermediaryService.js';
+import financialService from '../services/financial/financialService.js';
 
 const router = Router();
 
@@ -7931,6 +7965,406 @@ router.get('/intermediary/:id/qr', adminAuth('reviewer'), destinationScope, asyn
   } catch (error) {
     logger.error('[AdminPortal] Intermediary QR error:', error);
     res.status(500).json({ success: false, error: { code: 'INTERMEDIARY_QR_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================================
+// FINANCIAL PROCESS ENDPOINTS (Fase IV — Blok C) — 20 routes
+// RBAC: platform_admin = alle destinations, poi_owner = eigen destination
+// content_editor + content_reviewer = GEEN toegang (commerceAuth)
+// ============================================================================
+
+/**
+ * GET /financial/dashboard — Financial KPI dashboard
+ */
+router.get('/financial/dashboard', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    const { from, to } = { ...getDefaultDateRange(), ...req.query };
+    const data = await financialService.getFinancialDashboard(destinationId, from, to);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial dashboard error:', error);
+    res.status(500).json({ success: false, error: { code: 'FINANCIAL_DASHBOARD_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /financial/reports/monthly — Monthly financial report
+ */
+router.get('/financial/reports/monthly', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    const year = req.query.year || new Date().getFullYear();
+    const data = await financialService.getMonthlyReport(destinationId, year);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial monthly report error:', error);
+    res.status(500).json({ success: false, error: { code: 'MONTHLY_REPORT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /financial/settlements — List settlement batches
+ */
+router.get('/financial/settlements', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    const data = await financialService.getSettlementBatches(destinationId, {
+      status: req.query.status,
+      dateFrom: req.query.from || req.query.dateFrom,
+      dateTo: req.query.to || req.query.dateTo,
+      page: parseInt(req.query.page) || 1,
+      limit: Math.min(parseInt(req.query.limit) || 25, 100)
+    });
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial settlements list error:', error);
+    res.status(500).json({ success: false, error: { code: 'SETTLEMENTS_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /financial/settlements/:id — Settlement batch detail
+ */
+router.get('/financial/settlements/:id', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    const batch = await financialService.getSettlementBatchById(parseInt(req.params.id), destinationId);
+    if (!batch) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Settlement batch not found' } });
+    }
+    res.json({ success: true, data: batch });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial settlement detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'SETTLEMENT_DETAIL_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /financial/settlements — Create settlement batch
+ */
+router.post('/financial/settlements', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.headers['x-destination-id']) || null;
+    if (!destinationId) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    }
+    const { periodStart, periodEnd } = req.body;
+    if (!periodStart || !periodEnd) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_PERIOD', message: 'periodStart and periodEnd are required' } });
+    }
+    const batch = await financialService.createSettlementBatch(destinationId, periodStart, periodEnd, req.adminUser.email);
+    await saveAuditLog(req, 'settlement_created', {
+      entity_type: 'settlement_batch',
+      entity_id: batch.id,
+      batch_number: batch.batch_number,
+      period: `${periodStart} — ${periodEnd}`
+    });
+    res.status(201).json({ success: true, data: batch });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial create settlement error:', error);
+    res.status(400).json({ success: false, error: { code: 'CREATE_SETTLEMENT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /financial/settlements/:id/approve — Approve settlement batch
+ */
+router.put('/financial/settlements/:id/approve', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
+    const batch = await financialService.approveSettlementBatch(parseInt(req.params.id), destinationId, req.adminUser.email);
+    await saveAuditLog(req, 'settlement_approved', {
+      entity_type: 'settlement_batch',
+      entity_id: batch.id,
+      batch_number: batch.batch_number
+    });
+    res.json({ success: true, data: batch });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial approve settlement error:', error);
+    res.status(400).json({ success: false, error: { code: 'APPROVE_SETTLEMENT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /financial/settlements/:id/process — Start processing settlement
+ */
+router.put('/financial/settlements/:id/process', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
+    const batch = await financialService.startSettlementProcessing(parseInt(req.params.id), destinationId);
+    await saveAuditLog(req, 'settlement_processing', {
+      entity_type: 'settlement_batch',
+      entity_id: batch.id,
+      batch_number: batch.batch_number
+    });
+    res.json({ success: true, data: batch });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial process settlement error:', error);
+    res.status(400).json({ success: false, error: { code: 'PROCESS_SETTLEMENT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /financial/settlements/:id/cancel — Cancel settlement batch
+ */
+router.put('/financial/settlements/:id/cancel', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
+    const batch = await financialService.cancelSettlementBatch(parseInt(req.params.id), destinationId, req.body.reason);
+    await saveAuditLog(req, 'settlement_cancelled', {
+      entity_type: 'settlement_batch',
+      entity_id: batch.id,
+      batch_number: batch.batch_number,
+      reason: req.body.reason
+    });
+    res.json({ success: true, data: batch });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial cancel settlement error:', error);
+    res.status(400).json({ success: false, error: { code: 'CANCEL_SETTLEMENT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /financial/payouts — List partner payouts
+ */
+router.get('/financial/payouts', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    const data = await financialService.getPayouts(destinationId, {
+      partnerId: req.query.partnerId ? parseInt(req.query.partnerId) : undefined,
+      status: req.query.status,
+      dateFrom: req.query.from || req.query.dateFrom,
+      dateTo: req.query.to || req.query.dateTo,
+      page: parseInt(req.query.page) || 1,
+      limit: Math.min(parseInt(req.query.limit) || 25, 100)
+    });
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial payouts list error:', error);
+    res.status(500).json({ success: false, error: { code: 'PAYOUTS_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /financial/payouts/:id — Payout detail with linked transactions
+ */
+router.get('/financial/payouts/:id', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    const payout = await financialService.getPayoutById(parseInt(req.params.id), destinationId);
+    if (!payout) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Payout not found' } });
+    }
+    res.json({ success: true, data: payout });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial payout detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'PAYOUT_DETAIL_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /financial/payouts/:id/paid — Mark payout as paid
+ */
+router.put('/financial/payouts/:id/paid', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
+    const payout = await financialService.markPayoutPaid(parseInt(req.params.id), destinationId, req.body.paidReference);
+    await saveAuditLog(req, 'payout_paid', {
+      entity_type: 'partner_payout',
+      entity_id: payout.id,
+      payout_number: payout.payout_number,
+      paid_reference: req.body.paidReference
+    });
+    res.json({ success: true, data: payout });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial payout paid error:', error);
+    res.status(400).json({ success: false, error: { code: 'PAYOUT_PAID_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /financial/payouts/:id/failed — Mark payout as failed
+ */
+router.put('/financial/payouts/:id/failed', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
+    const payout = await financialService.markPayoutFailed(parseInt(req.params.id), destinationId, req.body.failureReason);
+    await saveAuditLog(req, 'payout_failed', {
+      entity_type: 'partner_payout',
+      entity_id: payout.id,
+      payout_number: payout.payout_number,
+      failure_reason: req.body.failureReason
+    });
+    res.json({ success: true, data: payout });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial payout failed error:', error);
+    res.status(400).json({ success: false, error: { code: 'PAYOUT_FAILED_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /financial/credit-notes — List credit notes
+ */
+router.get('/financial/credit-notes', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    const data = await financialService.getCreditNotes(destinationId, {
+      partnerId: req.query.partnerId ? parseInt(req.query.partnerId) : undefined,
+      status: req.query.status,
+      dateFrom: req.query.from || req.query.dateFrom,
+      dateTo: req.query.to || req.query.dateTo,
+      page: parseInt(req.query.page) || 1,
+      limit: Math.min(parseInt(req.query.limit) || 25, 100)
+    });
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial credit notes list error:', error);
+    res.status(500).json({ success: false, error: { code: 'CREDIT_NOTES_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /financial/credit-notes/:id — Credit note detail
+ */
+router.get('/financial/credit-notes/:id', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    const note = await financialService.getCreditNoteById(parseInt(req.params.id), destinationId);
+    if (!note) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Credit note not found' } });
+    }
+    res.json({ success: true, data: note });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial credit note detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'CREDIT_NOTE_DETAIL_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /financial/credit-notes — Create credit note for a payout
+ */
+router.post('/financial/credit-notes', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.headers['x-destination-id']) || null;
+    if (!destinationId) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    }
+    const { payoutId, vatRate } = req.body;
+    if (!payoutId) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_PAYOUT', message: 'payoutId is required' } });
+    }
+    const note = await financialService.createCreditNote(parseInt(payoutId), destinationId, vatRate ? parseFloat(vatRate) : undefined);
+    await saveAuditLog(req, 'credit_note_created', {
+      entity_type: 'credit_note',
+      entity_id: note.id,
+      credit_note_number: note.credit_note_number,
+      total_cents: note.total_cents
+    });
+    res.status(201).json({ success: true, data: note });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial create credit note error:', error);
+    res.status(400).json({ success: false, error: { code: 'CREATE_CREDIT_NOTE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /financial/credit-notes/:id/finalize — Finalize credit note (immutable)
+ */
+router.put('/financial/credit-notes/:id/finalize', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+  try {
+    const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
+    const note = await financialService.finalizeCreditNote(parseInt(req.params.id), destinationId);
+    await saveAuditLog(req, 'credit_note_finalized', {
+      entity_type: 'credit_note',
+      entity_id: note.id,
+      credit_note_number: note.credit_note_number
+    });
+    res.json({ success: true, data: note });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial finalize credit note error:', error);
+    res.status(400).json({ success: false, error: { code: 'FINALIZE_CREDIT_NOTE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /financial/export/payouts — CSV export payouts
+ */
+router.get('/financial/export/payouts', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    if (!destinationId) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    }
+    const { from, to } = { ...getDefaultDateRange(), ...req.query };
+    const result = await financialService.exportPayoutsCSV(destinationId, from, `${to} 23:59:59`);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.csv);
+  } catch (error) {
+    logger.error('[AdminPortal] Financial export payouts error:', error);
+    res.status(500).json({ success: false, error: { code: 'EXPORT_PAYOUTS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /financial/export/credit-notes — CSV export credit notes
+ */
+router.get('/financial/export/credit-notes', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    if (!destinationId) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    }
+    const { from, to } = { ...getDefaultDateRange(), ...req.query };
+    const result = await financialService.exportCreditNotesCSV(destinationId, from, `${to} 23:59:59`);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.csv);
+  } catch (error) {
+    logger.error('[AdminPortal] Financial export credit notes error:', error);
+    res.status(500).json({ success: false, error: { code: 'EXPORT_CREDIT_NOTES_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /financial/export/tax-summary — CSV export per-partner tax summary (yearly)
+ */
+router.get('/financial/export/tax-summary', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    if (!destinationId) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId is required' } });
+    }
+    const year = req.query.year || new Date().getFullYear();
+    const result = await financialService.exportTaxSummaryCSV(destinationId, year);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.csv);
+  } catch (error) {
+    logger.error('[AdminPortal] Financial export tax summary error:', error);
+    res.status(500).json({ success: false, error: { code: 'EXPORT_TAX_SUMMARY_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /financial/audit-log — Financial audit log (paginated)
+ */
+router.get('/financial/audit-log', adminAuth('reviewer'), destinationScope, commerceAuth, async (req, res) => {
+  try {
+    const destinationId = getCommerceDestinationId(req) || parseInt(req.headers['x-destination-id']) || null;
+    const data = await financialService.getAuditLog(destinationId, {
+      entityType: req.query.entityType,
+      entityId: req.query.entityId ? parseInt(req.query.entityId) : undefined,
+      eventType: req.query.eventType,
+      page: parseInt(req.query.page) || 1,
+      limit: Math.min(parseInt(req.query.limit) || 50, 200)
+    });
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Financial audit log error:', error);
+    res.status(500).json({ success: false, error: { code: 'AUDIT_LOG_ERROR', message: error.message } });
   }
 });
 

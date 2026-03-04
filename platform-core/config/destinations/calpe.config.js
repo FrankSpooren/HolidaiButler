@@ -59,6 +59,7 @@ export default {
     hasDeposits: false,
     hasDynamicPricing: false,
     hasIntermediary: false,
+    hasFinancial: false,
     restaurants: true,
     beaches: true,
     hiking: true,

@@ -190,6 +190,20 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: intermediary-review-request (every 6 hours)');
 
+  // Financial Auto-Settlement - 1st of month at 04:00 (auto-create batch for previous month)
+  await scheduledQueue.add('financial-auto-settlement', { type: 'financial-auto-settlement' }, {
+    repeat: { cron: '0 4 1 * *', tz: 'Europe/Amsterdam' },
+    jobId: 'financial-auto-settlement-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: financial-auto-settlement (1st of month 04:00)');
+
+  // Financial Unsettled Alert - Monday 08:30 (warn about >30d unsettled transactions)
+  await scheduledQueue.add('financial-unsettled-alert', { type: 'financial-unsettled-alert' }, {
+    repeat: { cron: '30 8 * * 1', tz: 'Europe/Amsterdam' },
+    jobId: 'financial-unsettled-alert-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: financial-unsettled-alert (Monday 08:30)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);
