@@ -1,0 +1,123 @@
+import type { TenantConfig } from '@/types/tenant';
+import type { PageData } from '@/types/blocks';
+import type { POI, Category, AgendaEvent, Review } from '@/types/poi';
+import type { ApiResponse } from '@/types/api';
+
+const HB_API_URL = process.env.HB_API_URL ?? 'http://localhost:3001';
+
+// Destination code → numeric ID mapping (matches DB)
+const DESTINATION_IDS: Record<string, number> = {
+  calpe: 1,
+  texel: 2,
+  alicante: 3,
+  warrewijzer: 4,
+};
+
+async function hbFetch<T>(
+  path: string,
+  tenantSlug: string,
+  opts?: { revalidate?: number; locale?: string; params?: Record<string, string> }
+): Promise<T> {
+  const url = new URL(path, HB_API_URL);
+  if (opts?.params) {
+    Object.entries(opts.params).forEach(([k, v]) => url.searchParams.set(k, v));
+  }
+
+  const destinationId = DESTINATION_IDS[tenantSlug] ?? 1;
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      'X-Destination-ID': String(destinationId),
+      'Accept-Language': opts?.locale ?? 'en',
+    },
+    next: { revalidate: opts?.revalidate ?? 300 },
+  });
+
+  if (!res.ok) {
+    console.error(`HB API error: ${res.status} ${res.statusText} for ${url.toString()}`);
+    return null as unknown as T;
+  }
+
+  return res.json();
+}
+
+export async function fetchTenantConfig(slug: string): Promise<TenantConfig | null> {
+  const res = await hbFetch<ApiResponse<TenantConfig>>(
+    `/api/v1/pages/destinations/${slug}`,
+    slug,
+    { revalidate: 3600 }
+  );
+  return res?.data ?? null;
+}
+
+export async function fetchPage(
+  tenantSlug: string,
+  pageSlug: string,
+  locale?: string
+): Promise<PageData | null> {
+  const params: Record<string, string> = {};
+  if (locale) params.locale = locale;
+
+  const res = await hbFetch<ApiResponse<PageData>>(
+    `/api/v1/pages/${tenantSlug}/${pageSlug}`,
+    tenantSlug,
+    { revalidate: 300, locale, params }
+  );
+  return res?.data ?? null;
+}
+
+export async function fetchPois(
+  tenantSlug: string,
+  opts?: { categories?: string; limit?: number; locale?: string }
+): Promise<POI[]> {
+  const params: Record<string, string> = {};
+  if (opts?.categories) params.categories = opts.categories;
+  if (opts?.limit) params.limit = String(opts.limit);
+
+  const res = await hbFetch<ApiResponse<POI[]>>(
+    '/api/v1/pois',
+    tenantSlug,
+    { revalidate: 300, locale: opts?.locale, params }
+  );
+  return res?.data ?? [];
+}
+
+export async function fetchEvents(
+  tenantSlug: string,
+  locale?: string,
+  limit?: number
+): Promise<AgendaEvent[]> {
+  const params: Record<string, string> = {};
+  if (limit) params.limit = String(limit);
+
+  const res = await hbFetch<ApiResponse<AgendaEvent[]>>(
+    '/api/v1/agenda/events',
+    tenantSlug,
+    { revalidate: 300, locale, params }
+  );
+  return res?.data ?? [];
+}
+
+export async function fetchCategories(tenantSlug: string): Promise<Category[]> {
+  const res = await hbFetch<ApiResponse<Category[]>>(
+    '/api/v1/categories',
+    tenantSlug,
+    { revalidate: 3600 }
+  );
+  return res?.data ?? [];
+}
+
+export async function fetchReviews(
+  tenantSlug: string,
+  poiId?: number
+): Promise<Review[]> {
+  const params: Record<string, string> = {};
+  if (poiId) params.poi_id = String(poiId);
+
+  const res = await hbFetch<ApiResponse<Review[]>>(
+    '/api/v1/reviews',
+    tenantSlug,
+    { revalidate: 300, params }
+  );
+  return res?.data ?? [];
+}
