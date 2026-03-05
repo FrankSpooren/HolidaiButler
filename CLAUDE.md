@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.70.0
+> **Versie**: 3.71.0
 > **Laatst bijgewerkt**: 5 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -343,6 +343,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **IV-D (Blok D)** | **Agent Ecosysteem v5.1** | **04-03** | **3 nieuwe agents: De Makelaar (intermediary monitor, Type A, elke 15 min: stuck txns, partner escalaties, conversie metrics), De Kassier (financial monitor, Type B, dagelijks 06:30: reconciliatie, anomaliedetectie 2σ, settlement alerts, fraude-indicatoren), De Magazijnier (inventory sync, Type A, elke 30 min: Redis↔MySQL sync, stale reserveringen, low inventory). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, SCHEDULED_JOBS_METADATA, AGENT_EXTENDED_DATA bijgewerkt. Daily briefing 3 nieuwe secties. adminPortal.js v3.22.0.** |
 | **IV-E (Blok E)** | **Admin Intermediair Dashboard** | **04-03** | **IntermediaryPage.jsx (4 tabs: Dashboard met KPI cards + conversie funnel Recharts, Transacties met filters + detail dialog + state timeline + actie buttons, Afrekeningen link naar Financial, Export CSV). 2 nieuwe admin endpoints (funnel + CSV export, 137 totaal). Frontend: intermediaryService.js +2 methods, useIntermediary.js +1 hook, App.jsx route, Sidebar.jsx nav item. i18n 4 talen (~25 nieuwe keys). adminPortal.js v3.22.0. RBAC: platform_admin + poi_owner.** |
 | **IV-F (Blok F)** | **Testing & Compliance (FASE IV COMPLEET)** | **04-03** | **42 tests (20 E2E VERIFIED + 10 security PASS + 8 GDPR PASS + 4 feature flag MANUAL). 5 compliance documenten: fase4-intermediary-tests.md, fase4-security-audit.md, gdpr-intermediary-addendum.md, fase4-feature-flag-plan.md, fase4-test-summary.md. 1 BullMQ job (intermediary-guest-anonymize, GDPR 24 maanden). 4-weken staged rollout plan. 0 FAIL, 0 CRITICAL findings. FASE IV VOLLEDIG COMPLEET.** |
+| **V Start** | **Multi-Tenant Configuratielaag — Architectuurbeslissing** | **05-03** | **Next.js 15 + React 19 + Tailwind CSS 4. Geen extern CMS. Block-based page builder. DB: destinations.branding JSON + pages tabel.** |
+| **V.0+V.1+V.2** | **Foundation + Component Library + Calpe Pilot** | **05-03** | **Next.js 15 live op dev.holidaibutler.com. 7 blocks, ChatbotWidget SSE streaming, 6 Calpe pagina's, POI detail route.** |
+| **V.3** | **Texel als Tweede Tenant** | **05-03** | **Texel live op dev.texelmaps.nl. Eigen branding, 6 pagina's, 1.660 POIs, Tessa chatbot. Multi-tenant 100% data-driven gevalideerd.** |
+| **V.4** | **Admin Portal Editors (Branding, Pages, Navigation)** | **05-03** | **8 nieuwe admin endpoints (145 totaal). BrandingPage, PagesPage, NavigationPage. Dynamic navigation in Header.tsx. adminPortal.js v3.23.0. 20 bestanden (+2.150 regels). 15/15 tests PASS.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -399,10 +403,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.19.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.23.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 137 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial endpoints)
+- **Endpoints**: 145 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial + 8 branding/pages/navigation endpoints)
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -475,7 +479,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
 | IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | ✅ COMPLEET (Blok A+B+C+D+E+F) | 6-8 wkn |
-| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS | 12 wkn |
+| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.4 COMPLEET) | 12 wkn |
 | VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | GEPLAND | 6-8 wkn |
 | VII | Polish, Scale & Launch (E2E testing, load testing, DR, go-live multi-tenant) | GEPLAND | 3-4 wkn |
 
@@ -584,6 +588,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **3.71.0** | **2026-03-05** | **Fase V.4: Admin Portal Editors (Branding, Pages, Navigation)**. 8 nieuwe admin endpoints in adminPortal.js v3.23.0 (145 totaal): Pages CRUD (5), Destinations/Branding sync (2), Navigation (1). 3 nieuwe Admin Portal pagina's: BrandingPage.jsx (7 kleuren, fonts, logo, payoff, stijl, live preview), PagesPage.jsx (CRUD, block editor, 7 block types, templates, status toggle), NavigationPage.jsx (items per destination, reordering, preview). 3 API services + 3 React Query hooks. i18n 4 talen (~90 keys). Dynamic navigation in Next.js Header.tsx (data-driven met hardcoded fallback). Fix: pages.js route was niet geregistreerd in index.js. 20 bestanden (9 nieuw + 11 gewijzigd), +2.150 regels. 15/15 deploy tests PASS. |
 | **3.70.0** | **2026-03-05** | **Fase V.3: Texel als tweede tenant**. Texel live op dev.texelmaps.nl met eigen branding (#30c59b groen, Montserrat/Open Sans), 6 pagina's (home, explore, events, restaurants, about, contact), Tessa chatbot, POI detail. Middleware + Apache VHost. Geen hb-websites code-wijzigingen nodig — 100% data-driven multi-tenancy bewezen. pages.js gesynct naar repo. |
 | **3.69.0** | **2026-03-05** | **Fase V.1+V.2: ChatbotWidget + Calpe Pilot versterking**. ChatbotWidget ('use client', SSE streaming, floating bubble, HoliBot/Tessa/Wijze Warre). Testimonials block (Server Component, reviews grid). POI detail pagina (/poi/[id], afbeeldingen + reviews + map + SEO). 5 extra Calpe pagina's (explore 24 POIs, events, restaurants Food & Drinks, about + testimonials, contact). Header + Footer navigatie (5 links). API: +fetchPoi(), +fetchPoiReviews(). 7 blocks totaal in registry. 7 pagina's live op dev.holidaibutler.com. |
 | 3.68.0 | 2026-03-05 | Fase V Start: Multi-Tenant Configuratielaag — Architectuurbeslissing DEFINITIEF. Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API. Geen extern CMS. Block-based page builder (15 blocks). Tenant-theming via CSS Custom Properties. DB uitbreiding: destinations.branding JSON + pages tabel. Technische blauwdruk v3.0 definitief. |
@@ -605,7 +610,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.36 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.37 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
