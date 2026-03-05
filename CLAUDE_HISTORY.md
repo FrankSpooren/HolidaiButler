@@ -37,7 +37,8 @@
 26. [Fase IV Blok E: Admin Intermediair Dashboard](#fase-iv-blok-e--admin-intermediair-dashboard-04-03-2026)
 27. [Fase IV Blok F: Testing & Compliance (FASE IV COMPLEET)](#fase-iv-blok-f--testing--compliance-04-03-2026)
 28. [Fase V Start: Multi-Tenant Configuratielaag — Architectuurbeslissing](#fase-v-start--multi-tenant-configuratielaag-05-03-2026)
-29. [Volledige Changelog](#volledige-changelog)
+29. [Fase V.0: Foundation + V.1+V.2: ChatbotWidget + Calpe Pilot](#fase-v0-foundation--v1v2-chatbotwidget--calpe-pilot-05-03-2026)
+30. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -1120,10 +1121,115 @@ Na evaluatie van drie opties voor de multi-tenant configuratielaag:
 
 ---
 
+## Fase V.0 Foundation + V.1+V.2: ChatbotWidget + Calpe Pilot (05-03-2026)
+
+### V.0 Foundation (COMPLEET)
+
+Volledige Next.js 15 project opgezet en gedeployed:
+
+| Component | Detail |
+|-----------|--------|
+| Next.js 15 project | `hb-websites/` met App Router, React 19, Tailwind CSS 4 |
+| Middleware | Domain → tenant slug resolutie, locale detectie |
+| API client | `src/lib/api.ts` met hbFetch(), X-Destination-ID headers |
+| Tenant systeem | `src/lib/tenant.ts` met 60s caching, CSS Custom Properties theming |
+| Block registry | 7 blocks: Hero, PoiGrid, EventCalendar, RichText, CardGroup, Map, ChatbotWidget |
+| Layout | Header (5 nav items, feature flag filtering), Footer, responsive design |
+| DB uitbreiding | `destinations.branding` JSON kolom, `pages` tabel |
+| Apache VHost | `dev.holidaibutler.com` → reverse proxy localhost:3002 |
+| PM2 | `hb-websites` (id: 5) op port 3002 |
+| Calpe homepage | 5 blocks: Hero + PoiGrid + EventCalendar + RichText + MapWrapper |
+
+### V.1 ChatbotWidget (COMPLEET)
+
+Floating chatbot bubble met SSE streaming, geïntegreerd in layout.
+
+| Aspect | Detail |
+|--------|--------|
+| Component | `ChatbotWidget.tsx` — 302 regels, 'use client' |
+| API | `POST /api/v1/holibot/chat/stream` met SSE (metadata → chunk* → done) |
+| Features | Floating bubble rechtsonder, expandable panel 380×520px, streaming dots indicator |
+| Chatbot namen | HoliBot (Calpe), Tessa (Texel), Wijze Warre (WarreWijzer) |
+| Quick actions | 3 chips per taal (NL/EN) bij lege conversatie |
+| Conversation | Laatste 10 berichten als context, abort controller support |
+| Feature flag | `tenant.featureFlags.holibot` conditioneel in layout.tsx |
+
+### V.2 Calpe Pilot Versterking (COMPLEET)
+
+5 extra pagina's, POI detail route, Testimonials block, navigatie updates.
+
+**Nieuwe pagina's** (DB inserts `pages` tabel, destination_id=1):
+
+| Slug | Blocks |
+|------|--------|
+| `explore` | Hero + PoiGrid (limit: 24) + Map |
+| `events` | Hero + EventCalendar (limit: 12) |
+| `restaurants` | Hero + PoiGrid (categoryFilter: Food & Drinks, limit: 18) |
+| `about` | Hero + RichText + Testimonials (limit: 3) |
+| `contact` | Hero + RichText |
+
+**POI Detail Route**: `src/app/poi/[id]/page.tsx` — dynamische route met parallel data fetching (POI + reviews), image gallery, description, rating, address, reviews sectie, MapWrapper sidebar, `generateMetadata()` voor SEO.
+
+**Testimonials Block**: `src/blocks/Testimonials.tsx` — Server Component, fetcht reviews via `fetchPoiReviews()`, filtert op `minRating` (default 4), grid van review cards met Rating component.
+
+**Navigatie**: Header 5 items (Explore, Restaurants, Events, About, Contact), Footer uitgebreid met extra links.
+
+### Bugs Opgelost Tijdens Deployment
+
+| Bug | Oorzaak | Fix |
+|-----|---------|-----|
+| HTTP 500 i18n objects als React children | Event titles = `{nl: "...", en: "..."}` objects | `getLocalizedString()` helper in EventCalendar |
+| "Invalid Date" | API: `startDate` (camelCase), type: `start_date` | Types + component bijgewerkt |
+| Event location als [object Object] | API: `{name, address, coordinates}` object | `getLocationName()` helper |
+| POI images type mismatch | API: `string[]`, types: `POIImage[]` | Types herschreven, PoiGrid bijgewerkt |
+| POI rating velden | API: `rating`/`reviewCount`, types: `google_rating`/`google_review_count` | Types + PoiGrid bijgewerkt |
+| Reviews endpoint 404 | `/api/v1/reviews` bestaat niet | `fetchPoiReviews()` → `/api/v1/pois/:id/reviews` |
+
+### Bestanden Overzicht
+
+**Nieuw (3)**:
+
+| Bestand | Beschrijving |
+|---------|-------------|
+| `hb-websites/src/components/modules/ChatbotWidget.tsx` | Floating chatbot met SSE streaming |
+| `hb-websites/src/blocks/Testimonials.tsx` | Review cards block (Server Component) |
+| `hb-websites/src/app/poi/[id]/page.tsx` | POI detail route met reviews |
+
+**Gewijzigd (6)**:
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/lib/api.ts` | +fetchPoi(), +fetchPoiReviews() |
+| `hb-websites/src/blocks/index.ts` | +testimonials mapping in block registry |
+| `hb-websites/src/types/blocks.ts` | +TestimonialsProps interface |
+| `hb-websites/src/app/layout.tsx` | +ChatbotWidget conditioneel op featureFlags.holibot |
+| `hb-websites/src/components/layout/Header.tsx` | 5 nav items met feature flag filtering |
+| `hb-websites/src/components/layout/Footer.tsx` | +Restaurants, About, Contact links |
+
+### Verificatie
+
+| # | Check | Resultaat |
+|---|-------|-----------|
+| 1 | `npm run build` | 0 errors |
+| 2 | 7 routes HTTP 200 | /, /explore, /events, /restaurants, /about, /contact, /poi/623 |
+| 3 | Explore page | 24 POIs gerenderd |
+| 4 | Restaurants page | 18 POIs gerenderd |
+| 5 | POI detail | Data + reviews + map |
+| 6 | ChatbotWidget | Bubble zichtbaar in HTML |
+| 7 | Navigation | 5 links in header |
+
+### Referentie
+- Git commits: `14e8778` (V.0), `2b00296` (V.1+V.2)
+- CLAUDE.md: v3.68.0 → v3.69.0
+- Master Strategie: v7.34 → v7.35
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.69.0** | **2026-03-05** | **Fase V.0+V.1+V.2**: Foundation + ChatbotWidget + Calpe Pilot. Next.js 15 live op dev.holidaibutler.com. 7 blocks, ChatbotWidget SSE streaming, POI detail route, Testimonials block, 6 Calpe pagina's, navigatie. 9 bestanden (3 nieuw + 6 gewijzigd). |
 | **3.68.0** | **2026-03-05** | **Fase V Start**: Multi-Tenant Configuratielaag — Architectuurbeslissing DEFINITIEF. Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API. Geen extern CMS. Block-based page builder (15 blocks). DB: destinations.branding JSON + pages tabel. Technische blauwdruk v3.0 definitief. |
 | **3.67.0** | **2026-03-04** | **Fase IV Blok F**: Testing & Compliance — FASE IV VOLLEDIG COMPLEET. 42 tests (20 E2E + 10 security + 8 GDPR + 4 feature flag). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize, 54 totaal). 4-weken staged rollout plan. 0 FAIL. |
 | **3.66.0** | **2026-03-04** | **Fase IV Blok E**: Admin Intermediair Dashboard. IntermediaryPage.jsx (534 regels, 4 tabs: Dashboard/Transacties/Afrekeningen/Export), conversie-funnel BarChart, TransactionDetailDialog met Stepper timeline. 2 nieuwe endpoints (funnel + CSV export, 137 totaal), adminPortal.js v3.22.0. i18n 4 talen (~25 keys). |
