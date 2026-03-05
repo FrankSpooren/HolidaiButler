@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E (v3.22.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 (v3.23.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -137,8 +137,18 @@
  *   GET  /financial/export/tax-summary — CSV export tax summary (yearly)
  *   GET  /financial/audit-log          — Financial audit log
  *
+ *   --- Pages, Branding & Navigation endpoints (Fase V.4) ---
+ *   GET  /pages                         — List pages (per destination)
+ *   GET  /pages/:id                     — Page detail with layout JSON
+ *   POST /pages                         — Create new page
+ *   PUT  /pages/:id                     — Update page (title, SEO, layout, status)
+ *   DELETE /pages/:id                   — Delete page (hard delete)
+ *   GET  /destinations                  — List destinations with branding + feature_flags
+ *   PUT  /destinations/:id/branding     — Update destinations.branding JSON (MySQL + MongoDB sync)
+ *   PUT  /destinations/:id/navigation   — Update nav_items in destinations.config JSON
+ *
  * @module routes/adminPortal
- * @version 3.20.0
+ * @version 3.23.0
  */
 
 import { Router } from 'express';
@@ -8507,6 +8517,411 @@ router.get('/financial/audit-log', adminAuth('reviewer'), destinationScope, comm
   } catch (error) {
     logger.error('[AdminPortal] Financial audit log error:', error);
     res.status(500).json({ success: false, error: { code: 'AUDIT_LOG_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// PAGES, BRANDING & NAVIGATION (Fase V.4) — 8 endpoints → 145 totaal
+// ============================================================
+
+/**
+ * GET /pages — List pages per destination
+ */
+router.get('/pages', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = resolveDestinationId(req.query.destination || req.headers['x-destination-id']);
+    const where = destinationId ? 'WHERE p.destination_id = :destId' : '';
+    const replacements = destinationId ? { destId: destinationId } : {};
+
+    const pages = await mysqlSequelize.query(
+      `SELECT p.id, p.destination_id, p.slug, p.title_en, p.title_nl, p.status, p.sort_order,
+              p.created_at, p.updated_at, d.code AS destination_code, d.display_name AS destination_name,
+              JSON_LENGTH(JSON_EXTRACT(p.layout, '$.blocks')) AS block_count
+       FROM pages p
+       JOIN destinations d ON d.id = p.destination_id
+       ${where}
+       ORDER BY p.destination_id, p.sort_order`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    res.json({ success: true, data: { pages } });
+  } catch (error) {
+    logger.error('[AdminPortal] Pages list error:', error);
+    res.status(500).json({ success: false, error: { code: 'PAGES_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /pages/:id — Page detail with layout JSON
+ */
+router.get('/pages/:id', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const [page] = await mysqlSequelize.query(
+      `SELECT p.*, d.code AS destination_code, d.display_name AS destination_name
+       FROM pages p
+       JOIN destinations d ON d.id = p.destination_id
+       WHERE p.id = :id`,
+      { replacements: { id: parseInt(req.params.id) }, type: QueryTypes.SELECT }
+    );
+
+    if (!page) {
+      return res.status(404).json({ success: false, error: { code: 'PAGE_NOT_FOUND', message: 'Page not found' } });
+    }
+
+    let layout = { blocks: [] };
+    try { layout = typeof page.layout === 'string' ? JSON.parse(page.layout) : (page.layout || { blocks: [] }); } catch { /* empty */ }
+
+    res.json({
+      success: true,
+      data: {
+        ...page,
+        layout,
+        destination_code: page.destination_code,
+        destination_name: page.destination_name
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Page detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'PAGE_DETAIL_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /pages — Create new page
+ */
+router.post('/pages', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const { destination_id, slug, title_nl, title_en, title_de, title_es, status, layout } = req.body;
+
+    if (!destination_id || !slug || !title_en) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destination_id, slug and title_en are required' } });
+    }
+
+    // Check uniqueness
+    const [existing] = await mysqlSequelize.query(
+      'SELECT id FROM pages WHERE destination_id = :destId AND slug = :slug',
+      { replacements: { destId: destination_id, slug }, type: QueryTypes.SELECT }
+    );
+    if (existing) {
+      return res.status(409).json({ success: false, error: { code: 'DUPLICATE_SLUG', message: 'A page with this slug already exists for this destination' } });
+    }
+
+    // Get max sort_order
+    const [maxSort] = await mysqlSequelize.query(
+      'SELECT COALESCE(MAX(sort_order), -1) AS max_sort FROM pages WHERE destination_id = :destId',
+      { replacements: { destId: destination_id }, type: QueryTypes.SELECT }
+    );
+
+    const layoutJson = layout ? JSON.stringify(layout) : JSON.stringify({ blocks: [] });
+
+    await mysqlSequelize.query(
+      `INSERT INTO pages (destination_id, slug, title_nl, title_en, title_de, title_es, status, layout, sort_order)
+       VALUES (:destId, :slug, :titleNl, :titleEn, :titleDe, :titleEs, :status, :layout, :sortOrder)`,
+      {
+        replacements: {
+          destId: destination_id,
+          slug: slug.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+          titleNl: title_nl || null,
+          titleEn: title_en,
+          titleDe: title_de || null,
+          titleEs: title_es || null,
+          status: status || 'draft',
+          layout: layoutJson,
+          sortOrder: (maxSort?.max_sort ?? -1) + 1
+        },
+        type: QueryTypes.INSERT
+      }
+    );
+
+    const [newPage] = await mysqlSequelize.query(
+      'SELECT * FROM pages WHERE destination_id = :destId AND slug = :slug',
+      { replacements: { destId: destination_id, slug: slug.toLowerCase().replace(/[^a-z0-9-]/g, '') }, type: QueryTypes.SELECT }
+    );
+
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'page_created', entity_type: 'page', entity_id: newPage?.id,
+          admin_email: req.adminUser.email, changes: { slug, title_en, destination_id },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    res.status(201).json({ success: true, data: newPage });
+  } catch (error) {
+    logger.error('[AdminPortal] Page create error:', error);
+    res.status(500).json({ success: false, error: { code: 'PAGE_CREATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /pages/:id — Update page (title, SEO, layout, status)
+ */
+router.put('/pages/:id', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const pageId = parseInt(req.params.id);
+    const [existing] = await mysqlSequelize.query(
+      'SELECT id FROM pages WHERE id = :id',
+      { replacements: { id: pageId }, type: QueryTypes.SELECT }
+    );
+    if (!existing) {
+      return res.status(404).json({ success: false, error: { code: 'PAGE_NOT_FOUND', message: 'Page not found' } });
+    }
+
+    const allowedFields = [
+      'slug', 'title_nl', 'title_en', 'title_de', 'title_es',
+      'seo_title_nl', 'seo_title_en', 'seo_title_de', 'seo_title_es',
+      'seo_description_nl', 'seo_description_en', 'seo_description_de', 'seo_description_es',
+      'og_image_url', 'status', 'sort_order'
+    ];
+
+    const sets = [];
+    const replacements = { id: pageId };
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        sets.push(`${field} = :${field}`);
+        replacements[field] = req.body[field];
+      }
+    }
+
+    // Handle layout separately (JSON)
+    if (req.body.layout !== undefined) {
+      sets.push('layout = :layout');
+      replacements.layout = typeof req.body.layout === 'string' ? req.body.layout : JSON.stringify(req.body.layout);
+    }
+
+    if (sets.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_CHANGES', message: 'No fields to update' } });
+    }
+
+    await mysqlSequelize.query(
+      `UPDATE pages SET ${sets.join(', ')}, updated_at = NOW() WHERE id = :id`,
+      { replacements, type: QueryTypes.UPDATE }
+    );
+
+    const [updated] = await mysqlSequelize.query('SELECT * FROM pages WHERE id = :id', { replacements: { id: pageId }, type: QueryTypes.SELECT });
+
+    // Parse layout for response
+    let layout = { blocks: [] };
+    try { layout = typeof updated.layout === 'string' ? JSON.parse(updated.layout) : (updated.layout || { blocks: [] }); } catch { /* empty */ }
+
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'page_updated', entity_type: 'page', entity_id: pageId,
+          admin_email: req.adminUser.email, changes: Object.keys(req.body),
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    res.json({ success: true, data: { ...updated, layout } });
+  } catch (error) {
+    logger.error('[AdminPortal] Page update error:', error);
+    res.status(500).json({ success: false, error: { code: 'PAGE_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /pages/:id — Hard delete page
+ */
+router.delete('/pages/:id', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const pageId = parseInt(req.params.id);
+    const [existing] = await mysqlSequelize.query(
+      'SELECT id, slug, destination_id FROM pages WHERE id = :id',
+      { replacements: { id: pageId }, type: QueryTypes.SELECT }
+    );
+    if (!existing) {
+      return res.status(404).json({ success: false, error: { code: 'PAGE_NOT_FOUND', message: 'Page not found' } });
+    }
+
+    await mysqlSequelize.query('DELETE FROM pages WHERE id = :id', { replacements: { id: pageId }, type: QueryTypes.DELETE });
+
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'page_deleted', entity_type: 'page', entity_id: pageId,
+          admin_email: req.adminUser.email, changes: { slug: existing.slug, destination_id: existing.destination_id },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    res.json({ success: true, data: { message: 'Page deleted', id: pageId } });
+  } catch (error) {
+    logger.error('[AdminPortal] Page delete error:', error);
+    res.status(500).json({ success: false, error: { code: 'PAGE_DELETE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /destinations — List all destinations with branding + feature_flags
+ */
+router.get('/destinations', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const destinations = await mysqlSequelize.query(
+      `SELECT id, code, name, display_name, domain, country, region, timezone,
+              currency, default_language, supported_languages, feature_flags,
+              branding, config, is_active, created_at, updated_at
+       FROM destinations
+       ORDER BY id`,
+      { type: QueryTypes.SELECT }
+    );
+
+    const parsed = destinations.map(d => {
+      let featureFlags = {};
+      let branding = {};
+      let config = {};
+      let supportedLanguages = [];
+      try { featureFlags = typeof d.feature_flags === 'string' ? JSON.parse(d.feature_flags) : (d.feature_flags || {}); } catch { /* empty */ }
+      try { branding = typeof d.branding === 'string' ? JSON.parse(d.branding) : (d.branding || {}); } catch { /* empty */ }
+      try { config = typeof d.config === 'string' ? JSON.parse(d.config) : (d.config || {}); } catch { /* empty */ }
+      try { supportedLanguages = typeof d.supported_languages === 'string' ? JSON.parse(d.supported_languages) : (d.supported_languages || []); } catch { /* empty */ }
+      return {
+        id: d.id,
+        code: d.code,
+        name: d.name,
+        displayName: d.display_name,
+        domain: d.domain,
+        country: d.country,
+        region: d.region,
+        timezone: d.timezone,
+        currency: d.currency,
+        defaultLanguage: d.default_language,
+        supportedLanguages,
+        featureFlags,
+        branding,
+        config,
+        isActive: !!d.is_active
+      };
+    });
+
+    res.json({ success: true, data: { destinations: parsed } });
+  } catch (error) {
+    logger.error('[AdminPortal] Destinations list error:', error);
+    res.status(500).json({ success: false, error: { code: 'DESTINATIONS_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /destinations/:id/branding — Update destinations.branding JSON in MySQL (+ MongoDB sync)
+ */
+router.put('/destinations/:id/branding', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const destId = parseInt(req.params.id);
+    const [dest] = await mysqlSequelize.query(
+      'SELECT id, code FROM destinations WHERE id = :id',
+      { replacements: { id: destId }, type: QueryTypes.SELECT }
+    );
+    if (!dest) {
+      return res.status(404).json({ success: false, error: { code: 'DESTINATION_NOT_FOUND', message: 'Destination not found' } });
+    }
+
+    const brandingData = req.body;
+    const brandingJson = JSON.stringify(brandingData);
+
+    // Write to MySQL destinations.branding (primary store for Next.js)
+    await mysqlSequelize.query(
+      'UPDATE destinations SET branding = :branding, updated_at = NOW() WHERE id = :id',
+      { replacements: { branding: brandingJson, id: destId }, type: QueryTypes.UPDATE }
+    );
+
+    // Sync to MongoDB brand_configurations (backwards compat for admin portal settings)
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const db = mongoose.connection.db;
+        await db.collection('brand_configurations').updateOne(
+          { destination: dest.code },
+          {
+            $set: {
+              destination: dest.code,
+              primary: brandingData.colors?.primary || brandingData.primary,
+              secondary: brandingData.colors?.secondary || brandingData.secondary,
+              accent: brandingData.colors?.accent || brandingData.accent,
+              chatbotName: brandingData.chatbotName,
+              brand_name: brandingData.brandName,
+              payoff: brandingData.payoff,
+              logo: brandingData.logo,
+              logo_url: brandingData.logoUrl,
+              updated_at: new Date(),
+              updated_by: req.adminUser.email
+            }
+          },
+          { upsert: true }
+        );
+      }
+    } catch (mongoErr) {
+      logger.warn('[AdminPortal] MongoDB branding sync failed (non-critical):', mongoErr.message);
+    }
+
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'destination_branding_updated', entity_type: 'destination', entity_id: destId,
+          admin_email: req.adminUser.email, changes: Object.keys(brandingData),
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    res.json({ success: true, data: { message: `Branding updated for ${dest.code}`, destinationId: destId, branding: brandingData } });
+  } catch (error) {
+    logger.error('[AdminPortal] Destination branding update error:', error);
+    res.status(500).json({ success: false, error: { code: 'BRANDING_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /destinations/:id/navigation — Update nav_items in destinations.config JSON
+ */
+router.put('/destinations/:id/navigation', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const destId = parseInt(req.params.id);
+    const [dest] = await mysqlSequelize.query(
+      'SELECT id, code, config FROM destinations WHERE id = :id',
+      { replacements: { id: destId }, type: QueryTypes.SELECT }
+    );
+    if (!dest) {
+      return res.status(404).json({ success: false, error: { code: 'DESTINATION_NOT_FOUND', message: 'Destination not found' } });
+    }
+
+    const { nav_items } = req.body;
+    if (!Array.isArray(nav_items)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_NAV_ITEMS', message: 'nav_items must be an array' } });
+    }
+
+    // Merge into existing config
+    let config = {};
+    try { config = typeof dest.config === 'string' ? JSON.parse(dest.config) : (dest.config || {}); } catch { /* empty */ }
+    config.nav_items = nav_items;
+
+    await mysqlSequelize.query(
+      'UPDATE destinations SET config = :config, updated_at = NOW() WHERE id = :id',
+      { replacements: { config: JSON.stringify(config), id: destId }, type: QueryTypes.UPDATE }
+    );
+
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'destination_navigation_updated', entity_type: 'destination', entity_id: destId,
+          admin_email: req.adminUser.email, changes: { nav_items_count: nav_items.length },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    res.json({ success: true, data: { message: `Navigation updated for ${dest.code}`, destinationId: destId, nav_items } });
+  } catch (error) {
+    logger.error('[AdminPortal] Navigation update error:', error);
+    res.status(500).json({ success: false, error: { code: 'NAVIGATION_UPDATE_ERROR', message: error.message } });
   }
 });
 

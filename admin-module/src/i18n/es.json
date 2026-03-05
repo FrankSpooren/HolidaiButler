@@ -15,7 +15,10 @@
     "commerce": "Comercio",
     "partners": "Socios",
     "financial": "Finanzas",
-    "intermediary": "Intermediario"
+    "intermediary": "Intermediario",
+    "branding": "Branding",
+    "pages": "Páginas",
+    "navigation": "Navegación"
   },
   "auth": {
     "login": "Iniciar sesi\u00f3n",
@@ -876,5 +879,123 @@
     "jan": "Ene", "feb": "Feb", "mar": "Mar", "apr": "Abr",
     "may": "May", "jun": "Jun", "jul": "Jul", "aug": "Ago",
     "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Dic"
+  },
+  "branding": {
+    "title": "Branding",
+    "subtitle": "Gestionar identidad de marca por destino",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "saved": "Branding guardado con éxito",
+    "colorsSection": "Colores",
+    "fontsSection": "Fuentes",
+    "styleSection": "Estilo",
+    "logoSection": "Logo y Marca",
+    "payoffSection": "Payoff / Eslogan",
+    "preview": "Vista previa",
+    "previewHeading": "Bienvenido a tu destino",
+    "previewBody": "Descubre las mejores experiencias locales, restaurantes y atracciones.",
+    "previewButton": "Empezar a explorar",
+    "headingFont": "Fuente de título",
+    "bodyFont": "Fuente de texto",
+    "borderRadius": "Radio de borde",
+    "buttonStyle": "Estilo de botón",
+    "brandName": "Nombre de marca",
+    "chatbotName": "Nombre del chatbot",
+    "uploadLogo": "Subir logo",
+    "uploading": "Subiendo...",
+    "logoUploaded": "Logo subido",
+    "logoTooLarge": "Archivo demasiado grande (máx. 2MB)",
+    "colors": {
+      "primary": "Primario",
+      "secondary": "Secundario",
+      "accent": "Acento",
+      "background": "Fondo",
+      "surface": "Superficie",
+      "text": "Texto",
+      "textMuted": "Texto atenuado"
+    }
+  },
+  "pages": {
+    "title": "Gestión de páginas",
+    "subtitle": "Gestionar páginas y diseños por destino",
+    "destination": "Destino",
+    "create": "Crear página",
+    "createTitle": "Nueva página",
+    "creating": "Creando...",
+    "created": "Página creada",
+    "editTitle": "Editar página",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "saved": "Página guardada",
+    "delete": "Eliminar",
+    "deleting": "Eliminando...",
+    "deleted": "Página eliminada",
+    "deleteTitle": "¿Eliminar página?",
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar '{{slug}}'? Esta acción no se puede deshacer.",
+    "statusUpdated": "Estado actualizado",
+    "noResults": "No se encontraron páginas",
+    "addBlock": "Añadir bloque",
+    "blockProps": "Propiedades del bloque (JSON)",
+    "table": {
+      "slug": "Slug",
+      "titleEn": "Título (EN)",
+      "destination": "Destino",
+      "blocks": "Bloques",
+      "sortOrder": "Orden",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "tabs": {
+      "basics": "Básico",
+      "blocks": "Bloques",
+      "preview": "Vista previa"
+    },
+    "fields": {
+      "slug": "Slug",
+      "titleEn": "Título (EN)",
+      "titleNl": "Título (NL)",
+      "titleDe": "Título (DE)",
+      "titleEs": "Título (ES)",
+      "seoTitleEn": "Título SEO (EN)",
+      "seoDescriptionEn": "Descripción SEO (EN)",
+      "ogImageUrl": "URL de imagen OG",
+      "status": "Estado",
+      "template": "Plantilla"
+    },
+    "status": {
+      "draft": "Borrador",
+      "published": "Publicado"
+    },
+    "templates": {
+      "empty": "Vacío",
+      "homepage": "Página de inicio",
+      "content": "Página de contenido"
+    }
+  },
+  "navigation": {
+    "title": "Navegación",
+    "subtitle": "Gestionar elementos de navegación por destino",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "saved": "Navegación guardada",
+    "addItem": "Añadir elemento",
+    "addTitle": "Añadir elemento de navegación",
+    "editTitle": "Editar elemento de navegación",
+    "removeItem": "Eliminar",
+    "noItems": "No hay elementos de navegación configurados",
+    "preview": "Vista previa",
+    "labelsPerLang": "Etiquetas por idioma",
+    "table": {
+      "labelEn": "Etiqueta (EN)",
+      "labelNl": "Etiqueta (NL)",
+      "href": "URL",
+      "featureFlag": "Feature flag",
+      "active": "Activo",
+      "actions": "Acciones"
+    },
+    "fields": {
+      "href": "Ruta URL",
+      "featureFlag": "Feature flag (opcional)"
+    }
   }
 }

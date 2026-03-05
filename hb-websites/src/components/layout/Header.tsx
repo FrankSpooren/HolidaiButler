@@ -13,7 +13,16 @@ interface NavItem {
   featureFlag?: string;
 }
 
-function getNavItems(locale: string): NavItem[] {
+interface ConfigNavItem {
+  label: Record<string, string> | string;
+  href: string;
+  featureFlag?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+/** Hardcoded fallback when no nav_items are configured in Admin Portal */
+function getDefaultNavItems(locale: string): NavItem[] {
   const nl = locale === 'nl';
   return [
     { label: nl ? 'Ontdekken' : 'Explore', href: '/explore' },
@@ -24,9 +33,29 @@ function getNavItems(locale: string): NavItem[] {
   ];
 }
 
+/** Resolve nav items: prefer config.nav_items from Admin Portal, fallback to hardcoded */
+function resolveNavItems(tenant: TenantConfig, locale: string): NavItem[] {
+  const configItems: ConfigNavItem[] | undefined = tenant.config?.nav_items as ConfigNavItem[] | undefined;
+
+  if (!Array.isArray(configItems) || configItems.length === 0) {
+    return getDefaultNavItems(locale);
+  }
+
+  return configItems
+    .filter(item => item.isActive !== false)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map(item => ({
+      label: typeof item.label === 'object'
+        ? (item.label[locale] || item.label.en || item.label.nl || '')
+        : String(item.label),
+      href: item.href,
+      featureFlag: item.featureFlag || undefined,
+    }));
+}
+
 export default function Header({ tenant, locale }: HeaderProps) {
   const payoff = tenant.branding.payoff?.[locale] ?? tenant.branding.payoff?.en ?? '';
-  const navItems = getNavItems(locale).filter(
+  const navItems = resolveNavItems(tenant, locale).filter(
     item => !item.featureFlag || tenant.featureFlags[item.featureFlag] === true
   );
 

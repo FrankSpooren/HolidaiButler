@@ -24,7 +24,7 @@ router.get('/destinations/:code', async (req, res) => {
     const [destination] = await mysqlSequelize.query(
       `SELECT id, code, name, display_name, domain, country, region, timezone,
               currency, default_language, supported_languages, feature_flags,
-              branding, is_active
+              branding, config, is_active
        FROM destinations
        WHERE code = :code AND is_active = 1`,
       {
@@ -45,6 +45,10 @@ router.get('/destinations/:code', async (req, res) => {
     try { branding = typeof destination.branding === 'string' ? JSON.parse(destination.branding) : (destination.branding || {}); } catch (e) { /* empty */ }
     try { supportedLanguages = typeof destination.supported_languages === 'string' ? JSON.parse(destination.supported_languages) : (destination.supported_languages || []); } catch (e) { /* empty */ }
 
+    // Parse config JSON (includes nav_items if configured via Admin Portal)
+    let config = {};
+    try { config = typeof destination.config === 'string' ? JSON.parse(destination.config) : (destination.config || {}); } catch (e) { /* empty */ }
+
     res.json({
       success: true,
       data: {
@@ -61,6 +65,7 @@ router.get('/destinations/:code', async (req, res) => {
         supportedLanguages,
         featureFlags,
         branding,
+        config,
         isActive: !!destination.is_active,
       },
     });
