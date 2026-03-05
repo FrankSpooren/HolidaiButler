@@ -14,6 +14,9 @@ import CommercePage from './pages/CommercePage.jsx';
 import PartnersPage from './pages/PartnersPage.jsx';
 import FinancialPage from './pages/FinancialPage.jsx';
 import IntermediaryPage from './pages/IntermediaryPage.jsx';
+import BrandingPage from './pages/BrandingPage.jsx';
+import PagesPage from './pages/PagesPage.jsx';
+import NavigationPage from './pages/NavigationPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import useAuthStore from './stores/authStore.js';
 
@@ -41,6 +44,9 @@ export default function App() {
             <Route path="/partners" element={<PartnersPage />} />
             <Route path="/financial" element={<FinancialPage />} />
             <Route path="/intermediary" element={<IntermediaryPage />} />
+            <Route path="/branding" element={<BrandingPage />} />
+            <Route path="/pages" element={<PagesPage />} />
+            <Route path="/navigation" element={<NavigationPage />} />
           </Route>
         </Route>
 

@@ -53,6 +53,16 @@ export interface TenantConfig {
   supportedLanguages: string[];
   featureFlags: FeatureFlags;
   branding: TenantBranding;
+  config?: {
+    nav_items?: Array<{
+      label: Record<string, string> | string;
+      href: string;
+      featureFlag?: string;
+      sortOrder?: number;
+      isActive?: boolean;
+    }>;
+    [key: string]: unknown;
+  };
   isActive: boolean;
 }
 

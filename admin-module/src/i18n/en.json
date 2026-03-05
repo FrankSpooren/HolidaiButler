@@ -15,7 +15,10 @@
     "commerce": "Commerce",
     "partners": "Partners",
     "financial": "Financial",
-    "intermediary": "Intermediary"
+    "intermediary": "Intermediary",
+    "branding": "Branding",
+    "pages": "Pages",
+    "navigation": "Navigation"
   },
   "auth": {
     "login": "Log in",
@@ -876,5 +879,123 @@
     "jan": "Jan", "feb": "Feb", "mar": "Mar", "apr": "Apr",
     "may": "May", "jun": "Jun", "jul": "Jul", "aug": "Aug",
     "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Dec"
+  },
+  "branding": {
+    "title": "Branding",
+    "subtitle": "Manage brand identity per destination",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Branding saved successfully",
+    "colorsSection": "Colors",
+    "fontsSection": "Fonts",
+    "styleSection": "Style",
+    "logoSection": "Logo & Brand",
+    "payoffSection": "Payoff / Tagline",
+    "preview": "Preview",
+    "previewHeading": "Welcome to your destination",
+    "previewBody": "Discover the best local experiences, restaurants, and attractions.",
+    "previewButton": "Start exploring",
+    "headingFont": "Heading font",
+    "bodyFont": "Body font",
+    "borderRadius": "Border radius",
+    "buttonStyle": "Button style",
+    "brandName": "Brand name",
+    "chatbotName": "Chatbot name",
+    "uploadLogo": "Upload logo",
+    "uploading": "Uploading...",
+    "logoUploaded": "Logo uploaded",
+    "logoTooLarge": "File too large (max 2MB)",
+    "colors": {
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "accent": "Accent",
+      "background": "Background",
+      "surface": "Surface",
+      "text": "Text",
+      "textMuted": "Text muted"
+    }
+  },
+  "pages": {
+    "title": "Page Management",
+    "subtitle": "Manage pages and layouts per destination",
+    "destination": "Destination",
+    "create": "Create Page",
+    "createTitle": "New Page",
+    "creating": "Creating...",
+    "created": "Page created",
+    "editTitle": "Edit Page",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Page saved",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "deleted": "Page deleted",
+    "deleteTitle": "Delete Page?",
+    "deleteConfirm": "Are you sure you want to delete '{{slug}}'? This cannot be undone.",
+    "statusUpdated": "Status updated",
+    "noResults": "No pages found",
+    "addBlock": "Add block",
+    "blockProps": "Block props (JSON)",
+    "table": {
+      "slug": "Slug",
+      "titleEn": "Title (EN)",
+      "destination": "Destination",
+      "blocks": "Blocks",
+      "sortOrder": "Order",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "tabs": {
+      "basics": "Basics",
+      "blocks": "Blocks",
+      "preview": "Preview"
+    },
+    "fields": {
+      "slug": "Slug",
+      "titleEn": "Title (EN)",
+      "titleNl": "Title (NL)",
+      "titleDe": "Title (DE)",
+      "titleEs": "Title (ES)",
+      "seoTitleEn": "SEO Title (EN)",
+      "seoDescriptionEn": "SEO Description (EN)",
+      "ogImageUrl": "OG Image URL",
+      "status": "Status",
+      "template": "Template"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published"
+    },
+    "templates": {
+      "empty": "Empty",
+      "homepage": "Homepage",
+      "content": "Content page"
+    }
+  },
+  "navigation": {
+    "title": "Navigation",
+    "subtitle": "Manage navigation items per destination",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Navigation saved",
+    "addItem": "Add item",
+    "addTitle": "Add Navigation Item",
+    "editTitle": "Edit Navigation Item",
+    "removeItem": "Remove",
+    "noItems": "No navigation items configured",
+    "preview": "Preview",
+    "labelsPerLang": "Labels per language",
+    "table": {
+      "labelEn": "Label (EN)",
+      "labelNl": "Label (NL)",
+      "href": "URL",
+      "featureFlag": "Feature flag",
+      "active": "Active",
+      "actions": "Actions"
+    },
+    "fields": {
+      "href": "URL path",
+      "featureFlag": "Feature flag (optional)"
+    }
   }
 }
