@@ -121,3 +121,28 @@ export async function fetchReviews(
   );
   return res?.data ?? [];
 }
+
+export async function fetchPoi(
+  tenantSlug: string,
+  poiId: number,
+  locale?: string
+): Promise<POI | null> {
+  const res = await hbFetch<ApiResponse<POI>>(
+    `/api/v1/pois/${poiId}`,
+    tenantSlug,
+    { revalidate: 300, locale }
+  );
+  return res?.data ?? null;
+}
+
+export async function fetchPoiReviews(
+  tenantSlug: string,
+  poiId: number
+): Promise<Review[]> {
+  const res = await hbFetch<ApiResponse<Review[]>>(
+    `/api/v1/pois/${poiId}/reviews`,
+    tenantSlug,
+    { revalidate: 300 }
+  );
+  return res?.data ?? [];
+}

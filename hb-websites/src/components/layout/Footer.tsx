@@ -31,9 +31,12 @@ export default function Footer({ tenant, locale }: FooterProps) {
             <ul className="space-y-2 text-sm opacity-80">
               <li><Link href="/" className="hover:opacity-100 transition-opacity">Home</Link></li>
               <li><Link href="/explore" className="hover:opacity-100 transition-opacity">{locale === 'nl' ? 'Ontdekken' : 'Explore'}</Link></li>
+              <li><Link href="/restaurants" className="hover:opacity-100 transition-opacity">Restaurants</Link></li>
               {tenant.featureFlags.agenda && (
                 <li><Link href="/events" className="hover:opacity-100 transition-opacity">{locale === 'nl' ? 'Evenementen' : 'Events'}</Link></li>
               )}
+              <li><Link href="/about" className="hover:opacity-100 transition-opacity">{locale === 'nl' ? 'Over ons' : 'About'}</Link></li>
+              <li><Link href="/contact" className="hover:opacity-100 transition-opacity">Contact</Link></li>
             </ul>
           </div>
 

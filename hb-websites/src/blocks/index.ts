@@ -6,6 +6,7 @@ import EventCalendar from './EventCalendar';
 import RichText from './RichText';
 import CardGroup from './CardGroup';
 import MapWrapper from './MapWrapper';
+import Testimonials from './Testimonials';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = ComponentType<any>;
@@ -17,6 +18,7 @@ export const blockRegistry: Record<string, AnyComponent> = {
   rich_text: RichText,
   card_group: CardGroup,
   map: MapWrapper,
+  testimonials: Testimonials,
 };
 
 export function getBlock(type: BlockType): AnyComponent | null {
