@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.69.0
+> **Versie**: 3.70.0
 > **Laatst bijgewerkt**: 5 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -584,6 +584,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **3.70.0** | **2026-03-05** | **Fase V.3: Texel als tweede tenant**. Texel live op dev.texelmaps.nl met eigen branding (#30c59b groen, Montserrat/Open Sans), 6 pagina's (home, explore, events, restaurants, about, contact), Tessa chatbot, POI detail. Middleware + Apache VHost. Geen hb-websites code-wijzigingen nodig — 100% data-driven multi-tenancy bewezen. pages.js gesynct naar repo. |
 | **3.69.0** | **2026-03-05** | **Fase V.1+V.2: ChatbotWidget + Calpe Pilot versterking**. ChatbotWidget ('use client', SSE streaming, floating bubble, HoliBot/Tessa/Wijze Warre). Testimonials block (Server Component, reviews grid). POI detail pagina (/poi/[id], afbeeldingen + reviews + map + SEO). 5 extra Calpe pagina's (explore 24 POIs, events, restaurants Food & Drinks, about + testimonials, contact). Header + Footer navigatie (5 links). API: +fetchPoi(), +fetchPoiReviews(). 7 blocks totaal in registry. 7 pagina's live op dev.holidaibutler.com. |
 | 3.68.0 | 2026-03-05 | Fase V Start: Multi-Tenant Configuratielaag — Architectuurbeslissing DEFINITIEF. Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API. Geen extern CMS. Block-based page builder (15 blocks). Tenant-theming via CSS Custom Properties. DB uitbreiding: destinations.branding JSON + pages tabel. Technische blauwdruk v3.0 definitief. |
 | 3.67.0 | 2026-03-04 | Fase IV Blok F: Testing & Compliance — FASE IV VOLLEDIG COMPLEET. 42 tests (20 E2E + 10 security + 8 GDPR + 4 feature flag). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize, GDPR 24 maanden). 54 BullMQ jobs totaal. 4-weken staged rollout plan. 0 FAIL, 0 CRITICAL. |
@@ -604,7 +605,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.34 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.36 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
