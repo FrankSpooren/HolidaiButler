@@ -15,7 +15,10 @@
     "commerce": "Commerce",
     "partners": "Partners",
     "financial": "Financieel",
-    "intermediary": "Intermediair"
+    "intermediary": "Intermediair",
+    "branding": "Branding",
+    "pages": "Pagina's",
+    "navigation": "Navigatie"
   },
   "auth": {
     "login": "Inloggen",
@@ -876,5 +879,123 @@
     "jan": "Jan", "feb": "Feb", "mar": "Mrt", "apr": "Apr",
     "may": "Mei", "jun": "Jun", "jul": "Jul", "aug": "Aug",
     "sep": "Sep", "oct": "Okt", "nov": "Nov", "dec": "Dec"
+  },
+  "branding": {
+    "title": "Branding",
+    "subtitle": "Beheer merkidentiteit per bestemming",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
+    "saved": "Branding succesvol opgeslagen",
+    "colorsSection": "Kleuren",
+    "fontsSection": "Lettertypen",
+    "styleSection": "Stijl",
+    "logoSection": "Logo & Merk",
+    "payoffSection": "Payoff / Tagline",
+    "preview": "Voorbeeld",
+    "previewHeading": "Welkom bij je bestemming",
+    "previewBody": "Ontdek de beste lokale ervaringen, restaurants en attracties.",
+    "previewButton": "Start met ontdekken",
+    "headingFont": "Koptekst lettertype",
+    "bodyFont": "Broodtekst lettertype",
+    "borderRadius": "Hoekafronding",
+    "buttonStyle": "Knopstijl",
+    "brandName": "Merknaam",
+    "chatbotName": "Chatbot naam",
+    "uploadLogo": "Logo uploaden",
+    "uploading": "Uploaden...",
+    "logoUploaded": "Logo geüpload",
+    "logoTooLarge": "Bestand te groot (max 2MB)",
+    "colors": {
+      "primary": "Primair",
+      "secondary": "Secundair",
+      "accent": "Accent",
+      "background": "Achtergrond",
+      "surface": "Oppervlak",
+      "text": "Tekst",
+      "textMuted": "Tekst gedempt"
+    }
+  },
+  "pages": {
+    "title": "Paginabeheer",
+    "subtitle": "Beheer pagina's en layouts per bestemming",
+    "destination": "Bestemming",
+    "create": "Pagina aanmaken",
+    "createTitle": "Nieuwe pagina",
+    "creating": "Aanmaken...",
+    "created": "Pagina aangemaakt",
+    "editTitle": "Pagina bewerken",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
+    "saved": "Pagina opgeslagen",
+    "delete": "Verwijderen",
+    "deleting": "Verwijderen...",
+    "deleted": "Pagina verwijderd",
+    "deleteTitle": "Pagina verwijderen?",
+    "deleteConfirm": "Weet je zeker dat je '{{slug}}' wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "statusUpdated": "Status bijgewerkt",
+    "noResults": "Geen pagina's gevonden",
+    "addBlock": "Block toevoegen",
+    "blockProps": "Block eigenschappen (JSON)",
+    "table": {
+      "slug": "Slug",
+      "titleEn": "Titel (EN)",
+      "destination": "Bestemming",
+      "blocks": "Blocks",
+      "sortOrder": "Volgorde",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "tabs": {
+      "basics": "Basis",
+      "blocks": "Blocks",
+      "preview": "Voorbeeld"
+    },
+    "fields": {
+      "slug": "Slug",
+      "titleEn": "Titel (EN)",
+      "titleNl": "Titel (NL)",
+      "titleDe": "Titel (DE)",
+      "titleEs": "Titel (ES)",
+      "seoTitleEn": "SEO Titel (EN)",
+      "seoDescriptionEn": "SEO Beschrijving (EN)",
+      "ogImageUrl": "OG Afbeelding URL",
+      "status": "Status",
+      "template": "Template"
+    },
+    "status": {
+      "draft": "Concept",
+      "published": "Gepubliceerd"
+    },
+    "templates": {
+      "empty": "Leeg",
+      "homepage": "Homepagina",
+      "content": "Contentpagina"
+    }
+  },
+  "navigation": {
+    "title": "Navigatie",
+    "subtitle": "Beheer navigatie-items per bestemming",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
+    "saved": "Navigatie opgeslagen",
+    "addItem": "Item toevoegen",
+    "addTitle": "Navigatie-item toevoegen",
+    "editTitle": "Navigatie-item bewerken",
+    "removeItem": "Verwijderen",
+    "noItems": "Geen navigatie-items geconfigureerd",
+    "preview": "Voorbeeld",
+    "labelsPerLang": "Labels per taal",
+    "table": {
+      "labelEn": "Label (EN)",
+      "labelNl": "Label (NL)",
+      "href": "URL",
+      "featureFlag": "Feature flag",
+      "active": "Actief",
+      "actions": "Acties"
+    },
+    "fields": {
+      "href": "URL pad",
+      "featureFlag": "Feature flag (optioneel)"
+    }
   }
 }
