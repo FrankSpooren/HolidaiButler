@@ -39,7 +39,8 @@
 28. [Fase V Start: Multi-Tenant Configuratielaag — Architectuurbeslissing](#fase-v-start--multi-tenant-configuratielaag-05-03-2026)
 29. [Fase V.0: Foundation + V.1+V.2: ChatbotWidget + Calpe Pilot](#fase-v0-foundation--v1v2-chatbotwidget--calpe-pilot-05-03-2026)
 30. [Fase V.3: Texel als Tweede Tenant](#fase-v3-texel-als-tweede-tenant-05-03-2026)
-31. [Volledige Changelog](#volledige-changelog)
+31. [Fase V.4: Admin Portal Editors (Branding, Pages, Navigation)](#fase-v4-admin-portal-editors-05-03-2026)
+32. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -1282,10 +1283,108 @@ Het multi-tenant model is **volledig data-driven**:
 
 ---
 
+## Fase V.4: Admin Portal Editors (05-03-2026)
+
+### Resultaat
+
+3 volwaardige editors in de Admin Portal zodat Frank (niet-developer) branding, pagina's en navigatie per destination kan beheren. Wijzigingen zijn direct zichtbaar op de Next.js websites.
+
+| Aspect | Detail |
+|--------|--------|
+| Admin endpoints | 8 nieuw (145 totaal), adminPortal.js v3.23.0 |
+| Frontend pagina's | BrandingPage, PagesPage, NavigationPage |
+| API services | brandingService.js, pageService.js, navigationService.js |
+| React Query hooks | useBrandingEditor.js, usePages.js, useNavigation.js |
+| i18n | ~90 nieuwe keys in 4 talen (nl, en, de, es) |
+| Dynamic nav | Header.tsx data-driven met hardcoded fallback |
+| Bestanden | 20 (9 nieuw + 11 gewijzigd), +2.150 regels |
+| Deploy tests | 15/15 PASS |
+
+### Wat er gedaan is
+
+**Backend — 8 endpoints in adminPortal.js:**
+1. `GET /pages` — Lijst pagina's per destination
+2. `GET /pages/:id` — Pagina detail met layout JSON
+3. `POST /pages` — Nieuwe pagina aanmaken
+4. `PUT /pages/:id` — Pagina updaten (titel, SEO, layout, status)
+5. `DELETE /pages/:id` — Pagina verwijderen
+6. `GET /destinations` — Lijst destinations met branding + feature_flags
+7. `PUT /destinations/:id/branding` — Update branding in MySQL + MongoDB sync
+8. `PUT /destinations/:id/navigation` — Update nav_items in destinations.config JSON
+
+**Frontend — 3 Admin Portal pagina's:**
+- **BrandingPage.jsx** (~374 regels): Destination tabs, 7 kleurvelden met color picker, fonts dropdown (12 Google Fonts), logo upload + preview, payoff per taal (nl/en/de/es), stijl (borderRadius, buttonStyle), live preview panel
+- **PagesPage.jsx** (~404 regels): Pagina tabel met filters, create dialog met templates (leeg/homepage/content), edit dialog met 3 tabs (Basis/Blocks/Preview), block editor (7 types: hero, poi_grid, event_calendar, rich_text, card_group, map, testimonials), status toggle draft↔published
+- **NavigationPage.jsx** (~257 regels): Nav items per destination, create/edit dialog met labels per taal, href, featureFlag, reordering met up/down, preview sectie
+
+**Routing & Sidebar:**
+- App.jsx: 3 nieuwe routes (/branding, /pages, /navigation)
+- Sidebar.jsx: 3 menu items (PaletteIcon, ArticleIcon, MenuOpenIcon), requiredRole: platform_admin
+
+**Dynamic Navigation (Next.js):**
+- pages.js: config kolom toegevoegd aan GET /destinations/:code response
+- Header.tsx: `resolveNavItems()` leest `tenant.config.nav_items`, fallback naar hardcoded `getDefaultNavItems()`
+- tenant.ts: config type uitgebreid met nav_items array
+
+**Bug fix:** pages.js route was nooit geregistreerd in platform-core/src/index.js (V.0 oversight) — opgelost met import + app.use().
+
+### Bestanden
+
+| # | Bestand | Actie |
+|---|---------|-------|
+| 1 | `platform-core/src/routes/adminPortal.js` | EDIT (+8 endpoints, v3.23.0) |
+| 2 | `platform-core/src/routes/pages.js` | EDIT (+config kolom in destination query) |
+| 3 | `platform-core/src/index.js` | EDIT (+pages route registratie) |
+| 4 | `admin-module/src/pages/BrandingPage.jsx` | NEW (~374 regels) |
+| 5 | `admin-module/src/pages/PagesPage.jsx` | NEW (~404 regels) |
+| 6 | `admin-module/src/pages/NavigationPage.jsx` | NEW (~257 regels) |
+| 7 | `admin-module/src/api/brandingService.js` | NEW |
+| 8 | `admin-module/src/api/pageService.js` | NEW |
+| 9 | `admin-module/src/api/navigationService.js` | NEW |
+| 10 | `admin-module/src/hooks/useBrandingEditor.js` | NEW |
+| 11 | `admin-module/src/hooks/usePages.js` | NEW |
+| 12 | `admin-module/src/hooks/useNavigation.js` | NEW |
+| 13 | `admin-module/src/App.jsx` | EDIT (+3 routes) |
+| 14 | `admin-module/src/components/layout/Sidebar.jsx` | EDIT (+3 menu items) |
+| 15 | `admin-module/src/i18n/nl.json` | EDIT (+~90 keys) |
+| 16 | `admin-module/src/i18n/en.json` | EDIT (+~90 keys) |
+| 17 | `admin-module/src/i18n/de.json` | EDIT (+~90 keys) |
+| 18 | `admin-module/src/i18n/es.json` | EDIT (+~90 keys) |
+| 19 | `hb-websites/src/components/layout/Header.tsx` | EDIT (dynamic nav) |
+| 20 | `hb-websites/src/types/tenant.ts` | EDIT (+config type) |
+
+### Verificatie
+
+| # | Check | Resultaat |
+|---|-------|-----------|
+| 1 | GET /admin-portal/pages?destinationId=1 | 6 Calpe pagina's |
+| 2 | GET /admin-portal/pages?destinationId=2 | 6 Texel pagina's |
+| 3 | POST /admin-portal/pages | Nieuwe pagina aangemaakt |
+| 4 | PUT /admin-portal/pages/:id | Pagina geüpdatet |
+| 5 | DELETE /admin-portal/pages/:id | Pagina verwijderd |
+| 6 | GET /admin-portal/destinations | 2 destinations met branding |
+| 7 | PUT /admin-portal/destinations/:id/branding | Branding opgeslagen |
+| 8 | PUT /admin-portal/destinations/:id/navigation | Nav items opgeslagen |
+| 9 | RBAC (geen token) | 401 Unauthorized |
+| 10 | GET /pages/destinations/calpe | Config met nav_items |
+| 11 | GET /pages/destinations/texel | Config met nav_items |
+| 12 | dev.holidaibutler.com | Calpe navigatie intact |
+| 13 | dev.texelmaps.nl | Texel navigatie intact |
+| 14 | Admin Portal bundle | Nieuwe JS bundle geladen |
+| 15 | admin-module build | 0 errors |
+
+### Referentie
+- CLAUDE.md: v3.70.0 → v3.71.0
+- Master Strategie: v7.36 → v7.37
+- Git commit: 2168ea4
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.71.0** | **2026-03-05** | **Fase V.4**: Admin Portal Editors (Branding, Pages, Navigation). 8 nieuwe admin endpoints (145 totaal), adminPortal.js v3.23.0. BrandingPage, PagesPage, NavigationPage. 3 API services + 3 hooks. i18n 4 talen (~90 keys). Dynamic navigation Header.tsx. 20 bestanden (+2.150 regels). 15/15 deploy tests. |
 | **3.70.0** | **2026-03-05** | **Fase V.3**: Texel als tweede tenant. dev.texelmaps.nl live met eigen branding, 6 pagina's, Tessa chatbot, 1.660 POIs. Middleware domain mapping fix. pages.js gesynct naar repo. Multi-tenant model 100% data-driven gevalideerd. |
 | **3.69.0** | **2026-03-05** | **Fase V.0+V.1+V.2**: Foundation + ChatbotWidget + Calpe Pilot. Next.js 15 live op dev.holidaibutler.com. 7 blocks, ChatbotWidget SSE streaming, POI detail route, Testimonials block, 6 Calpe pagina's, navigatie. 9 bestanden (3 nieuw + 6 gewijzigd). |
 | **3.68.0** | **2026-03-05** | **Fase V Start**: Multi-Tenant Configuratielaag — Architectuurbeslissing DEFINITIEF. Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API. Geen extern CMS. Block-based page builder (15 blocks). DB: destinations.branding JSON + pages tabel. Technische blauwdruk v3.0 definitief. |
