@@ -6,7 +6,7 @@
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (Multi-Tenant Configuratielaag). CLAUDE.md v3.68.0. MS v7.34.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0+V.1+V.2 COMPLEET, V.3-V.6 TODO). CLAUDE.md v3.69.0. MS v7.35.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1376,9 +1376,9 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 
 *Architectuurbeslissing (5 maart 2026)*: Na evaluatie van Directus, Payload CMS 3.0, en architectuuraudit is besloten: GEEN extern CMS. Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API.
 
-- **V.0 Foundation** (week 1): Next.js project init, middleware tenant-resolutie, HB API client, Docker setup, Apache vhost. DB uitbreiding: destinations.branding JSON + pages tabel.
-- **V.1 Component Library MVP** (week 2-3): 6 MVP blocks (Hero, PoiGrid, EventCalendar, RichText, Map, ChatbotWidget). Layout componenten (Header, Footer, Nav). UI componenten (Button, Card, Rating, Badge). Theme systeem (CSS Custom Properties + Tailwind config).
-- **V.2 Calpe Pilot** (week 4-5): Calpe als eerste bestemming op Next.js. Branding config, page layouts, smoke tests. Vergelijking met huidige Vite SPA. Lighthouse audit > 90. Playwright E2E tests.
+- **V.0 Foundation** ✅ COMPLEET (05-03-2026): Next.js 15 project, middleware tenant-resolutie, HB API client, Apache vhost dev.holidaibutler.com, PM2 (port 3002). DB: destinations.branding JSON + pages tabel. Calpe homepage live (5 blocks).
+- **V.1 Component Library MVP** ✅ COMPLEET (05-03-2026): 7 blocks (Hero, PoiGrid, EventCalendar, RichText, CardGroup, Map, ChatbotWidget). Layout (Header 5 nav items, Footer, Nav). UI (Button, Card, Rating, Badge). Theme systeem (CSS Custom Properties). ChatbotWidget: SSE streaming, floating bubble, 3 chatbot namen.
+- **V.2 Calpe Pilot** ✅ COMPLEET (05-03-2026): 6 Calpe pagina's live (home, explore, events, restaurants, about, contact). POI detail route (/poi/:id). Testimonials block. Navigatie updates. 7 routes HTTP 200.
 - **V.3 Texel** (week 5-6): Tweede bestemming. Andere branding, zelfde blocks. Validatie multi-tenant model.
 - **V.4 Admin Portal Uitbreidingen** (week 7-8): Branding Editor (kleurenpicker, font-selectie, logo upload). Page Layout Editor (block selectie, drag & drop, templates). Navigation Editor (menu-items, module-koppeling).
 - **V.5 P1 Blocks + Schaling** (week 9-10): Cta, Gallery, Testimonials, Faq, TicketShop, ReservationWidget. Wildcard DNS voor schaling.
@@ -1592,6 +1592,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.35** | **05-03-2026** | **Fase V.0+V.1+V.2 COMPLEET. Next.js 15 live op dev.holidaibutler.com. 7 blocks, ChatbotWidget SSE streaming, POI detail route, Testimonials block, 6 Calpe pagina's, navigatie. CLAUDE.md v3.69.0.** |
 | **7.34** | **05-03-2026** | **Fase V Start: Multi-Tenant Configuratielaag — Architectuurbeslissing DEFINITIEF. Next.js 15 + bestaande HB API (geen extern CMS). Roadmap herschreven: Fase V = Multi-Tenant (12 wkn), Fase VI = UX+WarreWijzer (6-8 wkn), Fase VII = Polish+Launch (3-4 wkn). Technische blauwdruk v3.0. CLAUDE.md v3.68.0.** |
 | **7.33** | **04-03-2026** | **Fase IV Blok F: Testing & Compliance — FASE IV VOLLEDIG COMPLEET. 42 tests (20 E2E + 10 security + 8 GDPR + 4 feature flag). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize). 54 BullMQ jobs totaal. 4-weken staged rollout plan. 0 FAIL. CLAUDE.md v3.67.0.** |
 | 7.32 | 04-03-2026 | Fase IV Blok E: Admin Intermediair Dashboard COMPLEET. IntermediaryPage.jsx (4 tabs: Dashboard + conversie funnel, Transacties + detail dialog, Afrekeningen link, Export CSV). 2 nieuwe admin endpoints (137 totaal). i18n 4 talen. adminPortal.js v3.22.0. CLAUDE.md v3.66.0. |
@@ -1650,4 +1651,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 5 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (Multi-Tenant Configuratielaag). Admin Portal: 137 endpoints, adminPortal.js v3.22.0. 54 scheduled jobs. CLAUDE.md v3.68.0. MS v7.34.*
+*Laatst bijgewerkt: 5 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0+V.1+V.2 COMPLEET, V.3-V.6 TODO). Admin Portal: 137 endpoints, adminPortal.js v3.22.0. 54 scheduled jobs. CLAUDE.md v3.69.0. MS v7.35.*

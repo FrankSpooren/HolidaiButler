@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.68.0
+> **Versie**: 3.69.0
 > **Laatst bijgewerkt**: 5 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -584,7 +584,8 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.68.0** | **2026-03-05** | **Fase V Start: Multi-Tenant Configuratielaag — Architectuurbeslissing DEFINITIEF**. Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API. Geen extern CMS (Directus/Payload geëvalueerd en afgewezen na architectuuraudit). Block-based page builder (15 blocks). Tenant-theming via CSS Custom Properties. DB uitbreiding: destinations.branding JSON + pages tabel. Technische blauwdruk v3.0 definitief. |
+| **3.69.0** | **2026-03-05** | **Fase V.1+V.2: ChatbotWidget + Calpe Pilot versterking**. ChatbotWidget ('use client', SSE streaming, floating bubble, HoliBot/Tessa/Wijze Warre). Testimonials block (Server Component, reviews grid). POI detail pagina (/poi/[id], afbeeldingen + reviews + map + SEO). 5 extra Calpe pagina's (explore 24 POIs, events, restaurants Food & Drinks, about + testimonials, contact). Header + Footer navigatie (5 links). API: +fetchPoi(), +fetchPoiReviews(). 7 blocks totaal in registry. 7 pagina's live op dev.holidaibutler.com. |
+| 3.68.0 | 2026-03-05 | Fase V Start: Multi-Tenant Configuratielaag — Architectuurbeslissing DEFINITIEF. Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API. Geen extern CMS. Block-based page builder (15 blocks). Tenant-theming via CSS Custom Properties. DB uitbreiding: destinations.branding JSON + pages tabel. Technische blauwdruk v3.0 definitief. |
 | 3.67.0 | 2026-03-04 | Fase IV Blok F: Testing & Compliance — FASE IV VOLLEDIG COMPLEET. 42 tests (20 E2E + 10 security + 8 GDPR + 4 feature flag). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize, GDPR 24 maanden). 54 BullMQ jobs totaal. 4-weken staged rollout plan. 0 FAIL, 0 CRITICAL. |
 | 3.66.0 | 2026-03-04 | Fase IV Blok E: Admin Intermediair Dashboard COMPLEET. IntermediaryPage.jsx (4 tabs: Dashboard KPIs + conversie funnel, Transacties tabel + detail dialog + state timeline, Afrekeningen link, Export CSV). 2 nieuwe admin endpoints (funnel + CSV export, 137 totaal). i18n 4 talen (~25 keys). adminPortal.js v3.22.0. |
 | 3.65.0 | 2026-03-04 | Fase IV Blok D: Agent Ecosysteem v5.1 COMPLEET. 3 nieuwe agents: De Makelaar (intermediary monitor, elke 15 min), De Kassier (financial monitor, dagelijks 06:30), De Magazijnier (inventory sync, elke 30 min). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, workers.js, scheduler.js, dailyBriefing.js bijgewerkt. adminPortal.js v3.22.0. |
