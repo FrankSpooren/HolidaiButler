@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/* Tenant theme CSS Custom Properties — fallback values for development */
+:root {
+  --hb-primary: #7FA594;
+  --hb-primary-light: #d4e5dd;
+  --hb-primary-dark: #5E8B7E;
+  --hb-on-primary: #FFFFFF;
+  --hb-secondary: #5E8B7E;
+  --hb-accent: #E76F51;
+  --hb-background: #FAFAF9;
+  --hb-surface: #FFFFFF;
+  --hb-text: #1C1917;
+  --hb-text-muted: #78716C;
+  --hb-font-heading: 'Playfair Display', serif;
+  --hb-font-body: 'Inter', sans-serif;
+  --hb-radius: 0.75rem;
+}
+
+/* Tailwind 4 theme extension with CSS custom properties */
+@theme {
+  --color-primary: var(--hb-primary);
+  --color-primary-light: var(--hb-primary-light);
+  --color-primary-dark: var(--hb-primary-dark);
+  --color-on-primary: var(--hb-on-primary);
+  --color-secondary: var(--hb-secondary);
+  --color-accent: var(--hb-accent);
+  --color-background: var(--hb-background);
+  --color-surface: var(--hb-surface);
+  --color-foreground: var(--hb-text);
+  --color-muted: var(--hb-text-muted);
+  --font-family-heading: var(--hb-font-heading);
+  --font-family-body: var(--hb-font-body);
+  --radius-tenant: var(--hb-radius);
+}
+
+body {
+  font-family: var(--hb-font-body);
+  color: var(--hb-text);
+  background-color: var(--hb-background);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--hb-font-heading);
+}
