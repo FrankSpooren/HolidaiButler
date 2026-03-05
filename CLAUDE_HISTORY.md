@@ -38,7 +38,8 @@
 27. [Fase IV Blok F: Testing & Compliance (FASE IV COMPLEET)](#fase-iv-blok-f--testing--compliance-04-03-2026)
 28. [Fase V Start: Multi-Tenant Configuratielaag — Architectuurbeslissing](#fase-v-start--multi-tenant-configuratielaag-05-03-2026)
 29. [Fase V.0: Foundation + V.1+V.2: ChatbotWidget + Calpe Pilot](#fase-v0-foundation--v1v2-chatbotwidget--calpe-pilot-05-03-2026)
-30. [Volledige Changelog](#volledige-changelog)
+30. [Fase V.3: Texel als Tweede Tenant](#fase-v3-texel-als-tweede-tenant-05-03-2026)
+31. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -1225,10 +1226,67 @@ Floating chatbot bubble met SSE streaming, geïntegreerd in layout.
 
 ---
 
+## Fase V.3: Texel als Tweede Tenant (05-03-2026)
+
+### Resultaat
+
+Texel live als tweede bestemming op dezelfde Next.js instance. Multi-tenant model 100% gevalideerd: **geen hb-websites code-wijzigingen nodig** (behalve middleware domain mapping).
+
+| Aspect | Detail |
+|--------|--------|
+| URL | https://dev.texelmaps.nl/ |
+| Branding | #30c59b (Texel groen), Montserrat/Open Sans, "Ontdek Texel" payoff |
+| Pagina's | 6: home, explore, events, restaurants, about, contact |
+| POI data | 1.660 actieve POIs, Nederlandse categorieën (Eten & Drinken, Natuur, etc.) |
+| Chatbot | Tessa (automatisch via tenantSlug === 'texel') |
+| POI Detail | /poi/:id met Texel POI data + reviews |
+
+### Wat er gedaan is
+
+1. **Middleware.ts**: `dev.texelmaps.nl` + `test.texelmaps.nl` + `dev.holidaibutler.com` toegevoegd aan DOMAIN_MAP
+2. **6 Texel pages**: INSERT in `pages` tabel (destination_id=2) met Texel-specifieke content en Nederlandse categorieën
+3. **Apache VHost**: dev.texelmaps.nl omgezet van Vite SPA naar reverse proxy → Next.js port 3002
+4. **pages.js gesynct**: Backend route `platform-core/src/routes/pages.js` (bestond op Hetzner, nooit gecommit) → lokale repo
+
+### Key Insight
+
+Het multi-tenant model is **volledig data-driven**:
+- `destinations` tabel → branding + feature_flags (JSON)
+- `pages` tabel → page layouts met blocks (JSON)
+- Middleware → domain → tenant slug mapping
+- Alles vervolgens automatisch: CSS Custom Properties, API scoping, chatbot naam, navigatie
+
+### Bestanden
+
+| Bestand | Actie |
+|---------|-------|
+| `hb-websites/src/middleware.ts` | EDIT (+3 dev/test domain entries) |
+| `platform-core/src/routes/pages.js` | SYNC (Hetzner → repo) |
+| `scripts/texel_pages.sql` | NEW (6 INSERT statements) |
+| Apache VHost dev.texelmaps.nl | EDIT (→ reverse proxy) |
+
+### Verificatie
+
+| # | Check | Resultaat |
+|---|-------|-----------|
+| 1 | 6 Texel routes HTTP 200 | /, /explore, /events, /restaurants, /about, /contact |
+| 2 | Texel branding | --hb-primary:#30c59b, Montserrat, "Ontdek Texel" |
+| 3 | POI data | Texel restaurants ('t Hanenhuus, 't Zoute Schaap, etc.) |
+| 4 | POI detail | /poi/2048 → Strandpaviljoen Paal 17 Aan Zee |
+| 5 | Chatbot | Tessa header + SSE streaming |
+| 6 | Calpe regressie | dev.holidaibutler.com → #7FA594, ongewijzigd |
+
+### Referentie
+- CLAUDE.md: v3.69.0 → v3.70.0
+- Master Strategie: v7.35 → v7.36
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.70.0** | **2026-03-05** | **Fase V.3**: Texel als tweede tenant. dev.texelmaps.nl live met eigen branding, 6 pagina's, Tessa chatbot, 1.660 POIs. Middleware domain mapping fix. pages.js gesynct naar repo. Multi-tenant model 100% data-driven gevalideerd. |
 | **3.69.0** | **2026-03-05** | **Fase V.0+V.1+V.2**: Foundation + ChatbotWidget + Calpe Pilot. Next.js 15 live op dev.holidaibutler.com. 7 blocks, ChatbotWidget SSE streaming, POI detail route, Testimonials block, 6 Calpe pagina's, navigatie. 9 bestanden (3 nieuw + 6 gewijzigd). |
 | **3.68.0** | **2026-03-05** | **Fase V Start**: Multi-Tenant Configuratielaag — Architectuurbeslissing DEFINITIEF. Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API. Geen extern CMS. Block-based page builder (15 blocks). DB: destinations.branding JSON + pages tabel. Technische blauwdruk v3.0 definitief. |
 | **3.67.0** | **2026-03-04** | **Fase IV Blok F**: Testing & Compliance — FASE IV VOLLEDIG COMPLEET. 42 tests (20 E2E + 10 security + 8 GDPR + 4 feature flag). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize, 54 totaal). 4-weken staged rollout plan. 0 FAIL. |
