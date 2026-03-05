@@ -36,7 +36,8 @@
 25. [Fase IV Blok D: Agent Ecosysteem v5.1](#fase-iv-blok-d--agent-ecosysteem-v51-04-03-2026)
 26. [Fase IV Blok E: Admin Intermediair Dashboard](#fase-iv-blok-e--admin-intermediair-dashboard-04-03-2026)
 27. [Fase IV Blok F: Testing & Compliance (FASE IV COMPLEET)](#fase-iv-blok-f--testing--compliance-04-03-2026)
-28. [Volledige Changelog](#volledige-changelog)
+28. [Fase V Start: Multi-Tenant Configuratielaag — Architectuurbeslissing](#fase-v-start--multi-tenant-configuratielaag-05-03-2026)
+29. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -1065,10 +1066,65 @@ GET /intermediary/export/transactions — CSV export transacties (BOM + ; delimi
 
 ---
 
+## Fase V Start: Multi-Tenant Configuratielaag (05-03-2026)
+
+### Architectuurbeslissing
+
+Na evaluatie van drie opties voor de multi-tenant configuratielaag:
+- **Optie A: Directus + Unleash + Nuxt 3** — Open-source CMS als configuratielaag, database-first
+- **Optie B: Payload CMS 3.0 + Next.js** — Next.js-native CMS, alles-in-één
+- **Optie C: Admin Portal doorontwikkelen + Next.js frontend** — Geen extern CMS
+
+**Gekozen: Optie C** op basis van architectuuraudit (Claude Code, 5 maart 2026):
+
+| Bevinding | Detail |
+|-----------|--------|
+| Database | MySQL/MariaDB (NIET PostgreSQL), 67 tabellen, 27 met destination_id |
+| Admin Portal | 137 endpoints, 22.850 LOC, RBAC 4 rollen, enterprise-grade |
+| Agents | 21 agents, 54 BullMQ jobs, ALLE volledig ontkoppeld (GROEN) |
+| Directus compatibiliteit | 42% van must-have features vereist custom development |
+| Multi-tenancy fundament | AL AANWEZIG: destination_id op 27 tabellen, feature_flags JSON |
+
+### Beslissing
+- **Geen extern CMS** — disproportionele complexiteit vs. wat het oplost
+- **Next.js 15 + React 19** — SSR publieke websites, aansluitend op bestaande React codebase
+- **Bestaande HB API** — geen nieuwe backend, geen database-migratie
+- **CSS Custom Properties** — tenant-theming, zero JS overhead
+- **Admin Portal uitbreiden** — Branding Editor, Page Layout Editor, Navigation Editor
+
+### Database Uitbreidingen
+| Wijziging | Type |
+|-----------|------|
+| `ALTER TABLE destinations ADD COLUMN branding JSON DEFAULT '{}'` | Kolom toevoeging |
+| `CREATE TABLE pages (...)` | Nieuwe tabel |
+
+### Nieuwe Bestanden
+| Bestand | Beschrijving |
+|---------|-------------|
+| `hb-websites/` | Nieuw Next.js 15 project (apart van bestaande codebase) |
+| `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx` | Definitieve technische blauwdruk (14 hoofdstukken) |
+| `HolidaiButler_Architecture_Audit_Report.md` | Architectuuraudit door Claude Code |
+
+### Documenten Geproduceerd
+1. Architectuuradvies Multi-Tenant Configuratielaag (v1.0 — Directus+Unleash aanbeveling)
+2. Technische Blauwdruk v1.0 — Directus+Unleash+Nuxt 3
+3. Technische Blauwdruk v2.0 — Dual-Optie (Directus vs Payload)
+4. Architectuuraudit Briefing voor Claude Code
+5. Architectuuraudit Rapport (Claude Code)
+6. **Technische Blauwdruk v3.0 — Definitief: Next.js + HB API** (14 hoofdstukken)
+7. Claude Code Implementatie Command (Fase V)
+
+### Referentie
+- CLAUDE.md: v3.67.0 → v3.68.0
+- Master Strategie: v7.33 → v7.34
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.68.0** | **2026-03-05** | **Fase V Start**: Multi-Tenant Configuratielaag — Architectuurbeslissing DEFINITIEF. Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API. Geen extern CMS. Block-based page builder (15 blocks). DB: destinations.branding JSON + pages tabel. Technische blauwdruk v3.0 definitief. |
 | **3.67.0** | **2026-03-04** | **Fase IV Blok F**: Testing & Compliance — FASE IV VOLLEDIG COMPLEET. 42 tests (20 E2E + 10 security + 8 GDPR + 4 feature flag). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize, 54 totaal). 4-weken staged rollout plan. 0 FAIL. |
 | **3.66.0** | **2026-03-04** | **Fase IV Blok E**: Admin Intermediair Dashboard. IntermediaryPage.jsx (534 regels, 4 tabs: Dashboard/Transacties/Afrekeningen/Export), conversie-funnel BarChart, TransactionDetailDialog met Stepper timeline. 2 nieuwe endpoints (funnel + CSV export, 137 totaal), adminPortal.js v3.22.0. i18n 4 talen (~25 keys). |
 | **3.65.0** | **2026-03-04** | **Fase IV Blok D**: Agent Ecosysteem v5.1. 3 nieuwe monitoring agents: De Makelaar (intermediary, 15min), De Kassier (financial, dagelijks), De Magazijnier (inventory sync, 30min). 21 agents totaal, 53 BullMQ jobs. |

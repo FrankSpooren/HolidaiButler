@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.67.0
-> **Laatst bijgewerkt**: 4 maart 2026
+> **Versie**: 3.68.0
+> **Laatst bijgewerkt**: 5 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -114,6 +114,14 @@ HolidaiButler/
 │       │   └── agents/          # 21 agents (base/, healthMonitor/, dataSync/, holibotSync/, intermediaryMonitor/, financialMonitor/, inventorySync/, etc.)
 │       ├── middleware/ (auth.js met RBAC, rate limiting, IP whitelist)
 │       └── config/destinations/  # calpe.config.js, texel.config.js, alicante.config.js (+ commerce feature flags)
+├── hb-websites/                 # Next.js 15 publieke websites (Fase V)
+│   └── src/
+│       ├── app/                 # App Router (tenant-themed SSR)
+│       ├── blocks/              # Page builder blocks (Hero, PoiGrid, EventCalendar, etc.)
+│       ├── components/          # Layout (Header/Footer) + UI (Button/Card) + Modules (Chatbot)
+│       ├── lib/                 # API client, theme engine, block registry
+│       ├── types/               # TypeScript type definities
+│       └── middleware.ts        # Tenant-resolutie (domein → tenant slug)
 └── infrastructure/ (apache vhosts, docker)
 ```
 
@@ -137,6 +145,30 @@ Alle tabellen met destination-specifieke data hebben `destination_id` kolom: POI
 Request → Apache VHost → X-Destination-ID Header → getDestinationFromRequest() → destination_id voor queries
 ```
 `getDestinationFromRequest()` accepteert string ("texel", "warrewijzer") en numeric (2, 4) IDs.
+
+### Frontend Architectuur (Fase V — 5 maart 2026)
+
+**Architectuurbeslissing**: Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API. Geen extern CMS.
+
+Na evaluatie van Directus (database-first CMS), Payload CMS 3.0 (Next.js-native CMS), en architectuuraudit (67 tabellen, 137 endpoints, 21 agents, 54 jobs) is besloten:
+- **Geen extern CMS**: 42% van must-have features vereist custom development in elk CMS
+- **Next.js 15**: SSR voor SEO + tenant-theming via CSS Custom Properties + aansluiting op bestaande React codebase
+- **Bestaande HB API**: dezelfde /api/v1/* endpoints, X-Destination-ID header scoping
+- **Admin Portal uitbreiden**: Branding Editor, Page Layout Editor, Navigation Editor
+- **Block-based page builder**: 15 gestandaardiseerde blocks, configureerbare layouts per pagina per tenant
+- **Geautomatiseerde tenant onboarding**: nieuwe bestemming = configuratie in Admin Portal, geen development
+
+| Component | Technologie | Rol |
+|-----------|------------|-----|
+| Publieke websites | Next.js 15 (React 19) | SSR, App Router, Server Components |
+| Styling | Tailwind CSS 4 | CSS Custom Properties voor tenant-theming |
+| Data-bron | Bestaande HB API | /api/v1/*, X-Destination-ID scoping |
+| Tenant-resolutie | Next.js middleware | Domein → tenant slug → x-tenant-slug header |
+| Module-activatie | destinations.feature_flags | Bestaand JSON veld, server-side evaluatie |
+| Page layouts | pages tabel (NIEUW) | JSON block-configuraties per pagina per tenant |
+| Branding | destinations.branding (NIEUW) | JSON: kleuren, fonts, logo, stijl per tenant |
+
+**Technische blauwdruk**: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
 
 ---
 
@@ -195,6 +227,12 @@ Gold:   Customer Portal + Admin Portal (dynamic rendering)
 | content_source | VARCHAR | 'mistral_medium_fase4', 'vvv_texel', 'poi_website', 'calpe_es' |
 | status | ENUM | 'pending', 'approved', 'rejected', 'applied', 'review_required' |
 | comparison_recommendation | ENUM | 'USE_NEW', 'KEEP_OLD', 'MANUAL_REVIEW' |
+
+### Fase V Database Uitbreidingen
+| Tabel/Kolom | Type | Beschrijving |
+|-------------|------|-------------|
+| `destinations.branding` | JSON | Tenant branding: kleuren, fonts, logo, stijl |
+| `pages` | Nieuwe tabel | Page layouts per destination: slug, title (meertalig), seo, layout JSON, status |
 
 ---
 
@@ -437,8 +475,9 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
 | IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | ✅ COMPLEET (Blok A+B+C+D+E+F) | 6-8 wkn |
-| V | UX Revolution + WarreWijzer (Mobiele UX redesign, WarreWijzer uitrol) | GEPLAND | 6-10 wkn |
-| VI | Polish, Scale & Launch (E2E testing, load testing, DR, go-live) | GEPLAND | 3-4 wkn |
+| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS | 12 wkn |
+| VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | GEPLAND | 6-8 wkn |
+| VII | Polish, Scale & Launch (E2E testing, load testing, DR, go-live multi-tenant) | GEPLAND | 3-4 wkn |
 
 ### State-of-the-Art Vervolgstappen (na Fase 12)
 
@@ -514,6 +553,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | `/var/www/admin.test.holidaibutler.com/` | Admin portal (test) |
 | `/var/www/admin.dev.holidaibutler.com/` | Admin portal (dev) |
 | `/var/www/warrewijzer.be/` | WarreWijzer frontend (TBD) |
+| `/var/www/api.holidaibutler.com/hb-websites/` | Next.js publieke websites (Fase V) |
 | `/root/backups/` | Database backups |
 | `/root/fase*` | Fase output bestanden |
 
@@ -544,7 +584,8 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.67.0** | **2026-03-04** | **Fase IV Blok F: Testing & Compliance — FASE IV VOLLEDIG COMPLEET**. 42 tests (20 E2E + 10 security + 8 GDPR + 4 feature flag). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize, GDPR 24 maanden). 54 BullMQ jobs totaal. 4-weken staged rollout plan. 0 FAIL, 0 CRITICAL. |
+| **3.68.0** | **2026-03-05** | **Fase V Start: Multi-Tenant Configuratielaag — Architectuurbeslissing DEFINITIEF**. Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API. Geen extern CMS (Directus/Payload geëvalueerd en afgewezen na architectuuraudit). Block-based page builder (15 blocks). Tenant-theming via CSS Custom Properties. DB uitbreiding: destinations.branding JSON + pages tabel. Technische blauwdruk v3.0 definitief. |
+| 3.67.0 | 2026-03-04 | Fase IV Blok F: Testing & Compliance — FASE IV VOLLEDIG COMPLEET. 42 tests (20 E2E + 10 security + 8 GDPR + 4 feature flag). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize, GDPR 24 maanden). 54 BullMQ jobs totaal. 4-weken staged rollout plan. 0 FAIL, 0 CRITICAL. |
 | 3.66.0 | 2026-03-04 | Fase IV Blok E: Admin Intermediair Dashboard COMPLEET. IntermediaryPage.jsx (4 tabs: Dashboard KPIs + conversie funnel, Transacties tabel + detail dialog + state timeline, Afrekeningen link, Export CSV). 2 nieuwe admin endpoints (funnel + CSV export, 137 totaal). i18n 4 talen (~25 keys). adminPortal.js v3.22.0. |
 | 3.65.0 | 2026-03-04 | Fase IV Blok D: Agent Ecosysteem v5.1 COMPLEET. 3 nieuwe agents: De Makelaar (intermediary monitor, elke 15 min), De Kassier (financial monitor, dagelijks 06:30), De Magazijnier (inventory sync, elke 30 min). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, workers.js, scheduler.js, dailyBriefing.js bijgewerkt. adminPortal.js v3.22.0. |
 | 3.64.0 | 2026-03-04 | Fase IV Blok C: Financieel Proces COMPLEET. 4 DB tabellen + ALTER TABLE. financialService.js (25 functies, 3 state machines, ACID settlements, BTW 21%, CSV exports). 20 admin endpoints (135 totaal), adminPortal.js v3.22.0. 2 BullMQ jobs (50 totaal). Feature flag hasFinancial. FinancialPage.jsx (5 tabs). i18n 4 talen (~65 keys). |
@@ -562,7 +603,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.33 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.34 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

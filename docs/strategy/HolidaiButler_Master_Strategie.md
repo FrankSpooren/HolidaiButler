@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 4 maart 2026
-**Versie**: 7.33
+**Datum**: 5 maart 2026
+**Versie**: 7.34
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase III COMPLEET (Blok G+A+B+C+D+E+F). Fase II COMPLEET (Blok A+B+C+D). CLAUDE.md v3.67.0. MS v7.33.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (Multi-Tenant Configuratielaag). CLAUDE.md v3.68.0. MS v7.34.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1327,9 +1327,10 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 | I | Foundation Hardening | Agents Audit, Processen, Platform Core | 4-6 wkn | KRITIEK | ✅ COMPLEET |
 | II | Active Module Upgrade | Chatbot, POI, Agenda, Customer Portal | 6-8 wkn | HOOG | ✅ COMPLEET (Blok A+B+C+D) |
 | III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | ✅ COMPLEET (Blok G+A+B+C+D+E+F) |
-| IV | Intermediair & Revenue | Data Pipeline + Intermediair module + Agent | 6-8 wkn | HOOG | IN PROGRESS (IV-A+B COMPLEET) |
-| V | UX Revolution + WarreWijzer | Mobiele UX redesign, WarreWijzer uitrol | 6-10 wkn | MIDDEL | GEPLAND |
-| VI | Polish, Scale & Launch | E2E testing, load testing, DR, go-live | 3-4 wkn | MIDDEL | GEPLAND |
+| IV | Intermediair & Revenue | Data Pipeline + Intermediair module + Agent | 6-8 wkn | HOOG | ✅ COMPLEET (Blok A+B+C+D+E+F) |
+| **V** | **Multi-Tenant Configuratielaag** | **Next.js SSR + Component Library + Tenant-Theming + Page Builder** | **12 wkn** | **HOOG** | **🟡 IN PROGRESS** |
+| VI | UX Revolution + WarreWijzer | Mobiele UX polish op Next.js + WarreWijzer uitrol als 3e tenant | 6-8 wkn | MIDDEL | GEPLAND |
+| VII | Polish, Scale & Launch | E2E testing, load testing, DR, go-live multi-tenant platform | 3-4 wkn | MIDDEL | GEPLAND |
 
 ### 9.3 Afhankelijkheden & Integratiekaart
 
@@ -1371,10 +1372,35 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 - **Blok E: Admin Intermediair Dashboard** ✅ COMPLEET (04-03-2026): IntermediaryPage.jsx (4 tabs: Dashboard KPIs + conversie funnel Recharts, Transacties tabel + detail dialog + state timeline + actie buttons, Afrekeningen link naar Financial, Export CSV). 2 nieuwe admin endpoints (funnel + CSV export, 137 totaal). i18n 4 talen (~25 nieuwe keys). adminPortal.js v3.22.0.
 - **Blok F: Testing & Compliance — FASE IV COMPLEET** ✅ COMPLEET (04-03-2026): 42 tests (20 E2E VERIFIED + 10 security PASS + 8 GDPR PASS + 4 feature flag MANUAL). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize, GDPR 24 maanden, 54 totaal). 4-weken staged rollout plan. 0 FAIL, 0 CRITICAL findings.
 
-**Fase V — UX + WarreWijzer:**
-- Mobiele UX: benchmark Google Maps, TripAdvisor, GetYourGuide, Booking.com
-- UX-principes (platform-breed): Miller's Law, Jakob's Law, Proximity Principle, Hick's Law, Fitts' Law, WCAG, trust building
-- WarreWijzer: volledige uitrol per Deel 10
+**Fase V — Multi-Tenant Configuratielaag (12 weken):**
+
+*Architectuurbeslissing (5 maart 2026)*: Na evaluatie van Directus, Payload CMS 3.0, en architectuuraudit is besloten: GEEN extern CMS. Next.js 15 + React 19 + Tailwind CSS 4 + bestaande HB API.
+
+- **V.0 Foundation** (week 1): Next.js project init, middleware tenant-resolutie, HB API client, Docker setup, Apache vhost. DB uitbreiding: destinations.branding JSON + pages tabel.
+- **V.1 Component Library MVP** (week 2-3): 6 MVP blocks (Hero, PoiGrid, EventCalendar, RichText, Map, ChatbotWidget). Layout componenten (Header, Footer, Nav). UI componenten (Button, Card, Rating, Badge). Theme systeem (CSS Custom Properties + Tailwind config).
+- **V.2 Calpe Pilot** (week 4-5): Calpe als eerste bestemming op Next.js. Branding config, page layouts, smoke tests. Vergelijking met huidige Vite SPA. Lighthouse audit > 90. Playwright E2E tests.
+- **V.3 Texel** (week 5-6): Tweede bestemming. Andere branding, zelfde blocks. Validatie multi-tenant model.
+- **V.4 Admin Portal Uitbreidingen** (week 7-8): Branding Editor (kleurenpicker, font-selectie, logo upload). Page Layout Editor (block selectie, drag & drop, templates). Navigation Editor (menu-items, module-koppeling).
+- **V.5 P1 Blocks + Schaling** (week 9-10): Cta, Gallery, Testimonials, Faq, TicketShop, ReservationWidget. Wildcard DNS voor schaling.
+- **V.6 3e+4e Tenant + Onboarding** (week 11-12): WarreWijzer + Alicante als tenant 3+4. Onboarding wizard in Admin Portal. Test suite uitbreiden. Documentatie.
+
+Technische blauwdruk: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
+
+**Fase VI — UX Revolution + WarreWijzer (6-8 weken):**
+
+Nu de Next.js frontend en component library er staan (Fase V), focust Fase VI op:
+- **Mobiele UX polish**: Benchmark Google Maps, TripAdvisor, GetYourGuide. Miller's Law, Jakob's Law, Hick's Law toepassen op de Next.js blocks. Touch-optimalisatie, gesture support, skeleton loading.
+- **WarreWijzer content**: ~300 POIs importeren (Apify + OpenStreetMap), Wijze Warre chatbot configureren (5 talen: BENL/NL/FR/DE/EN), agenda-bronnen koppelen, branding conform warredal.be.
+- **UX-features uit Deel 11**: Geïntegreerd in de Next.js block library (filter patterns, navigation patterns, card interactions).
+- **A11y audit**: WCAG AA op alle blocks, keyboard navigatie, screen reader testing.
+
+**Fase VII — Polish, Scale & Launch (3-4 weken):**
+- **E2E test suite**: Playwright tests voor alle blocks × alle tenants × alle locales.
+- **Load testing**: k6/Artillery 10.000 concurrent users op Next.js + API.
+- **CDN**: Cloudflare/BunnyCDN voor POI-images (12.4 GB) en Next.js static assets.
+- **Disaster recovery**: RTO < 4h, RPO < 1h. Database read replica voor analytics.
+- **Go-live**: Migratie van Vite SPA naar Next.js SSR per bestemming (geleidelijk, met 301 redirects).
+- **Monitoring**: Lighthouse CI in pipeline, Core Web Vitals tracking, Sentry voor Next.js.
 
 ### 9.5 State-of-the-Art Vervolgstappen
 
@@ -1422,12 +1448,13 @@ Met het enterprise-fundament op orde zijn deze vervolgstappen nodig voor state-o
 | Fase | Effort (uren) | Doorlooptijd | API kosten | Overig |
 |------|--------------|--------------|------------|--------|
 | I: Foundation Hardening | 80-120 | 4-6 weken | ~20-40 EUR | ✅ COMPLEET (EUR 74,41) |
-| II: Active Module Upgrade | 100-140 | 6-8 weken | ~30-50 EUR | — |
-| III: Commerce Foundation | 160-240 | 8-12 weken | ~10-20 EUR | Adyen setup |
-| IV: Intermediair Module | 120-160 | 6-8 weken | ~10-20 EUR | Juridisch advies |
-| V: UX + WarreWijzer | 120-180 | 6-10 weken | ~40-80 EUR | Design tools |
-| VI: Polish & Launch | 60-80 | 3-4 weken | ~20-30 EUR | Load testing |
-| **TOTAAL** | **640-920** | **33-48 weken** | **~130-240 EUR** | **+ externe kosten** |
+| II: Active Module Upgrade | 100-140 | 6-8 weken | ~30-50 EUR | ✅ COMPLEET |
+| III: Commerce Foundation | 160-240 | 8-12 weken | ~10-20 EUR | ✅ COMPLEET |
+| IV: Intermediair Module | 120-160 | 6-8 weken | ~10-20 EUR | ✅ COMPLEET |
+| **V: Multi-Tenant Configuratielaag** | **200-280** | **12 weken** | **~0 EUR** | **Next.js + blocks** |
+| VI: UX + WarreWijzer | 120-180 | 6-8 weken | ~40-80 EUR | WarreWijzer POIs |
+| VII: Polish & Launch | 60-80 | 3-4 weken | ~20-30 EUR | Load testing |
+| **TOTAAL** | **840-1.200** | **42-56 weken** | **~130-240 EUR** | **+ externe kosten** |
 
 ### 9.7 Directe Vervolgstappen
 
@@ -1565,6 +1592,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.34** | **05-03-2026** | **Fase V Start: Multi-Tenant Configuratielaag — Architectuurbeslissing DEFINITIEF. Next.js 15 + bestaande HB API (geen extern CMS). Roadmap herschreven: Fase V = Multi-Tenant (12 wkn), Fase VI = UX+WarreWijzer (6-8 wkn), Fase VII = Polish+Launch (3-4 wkn). Technische blauwdruk v3.0. CLAUDE.md v3.68.0.** |
 | **7.33** | **04-03-2026** | **Fase IV Blok F: Testing & Compliance — FASE IV VOLLEDIG COMPLEET. 42 tests (20 E2E + 10 security + 8 GDPR + 4 feature flag). 5 compliance documenten. 1 BullMQ job (intermediary-guest-anonymize). 54 BullMQ jobs totaal. 4-weken staged rollout plan. 0 FAIL. CLAUDE.md v3.67.0.** |
 | 7.32 | 04-03-2026 | Fase IV Blok E: Admin Intermediair Dashboard COMPLEET. IntermediaryPage.jsx (4 tabs: Dashboard + conversie funnel, Transacties + detail dialog, Afrekeningen link, Export CSV). 2 nieuwe admin endpoints (137 totaal). i18n 4 talen. adminPortal.js v3.22.0. CLAUDE.md v3.66.0. |
 | 7.31 | 04-03-2026 | Fase IV Blok D: Agent Ecosysteem v5.1 COMPLEET. 3 nieuwe agents: De Makelaar (intermediary monitor, elke 15 min), De Kassier (financial monitor, dagelijks 06:30), De Magazijnier (inventory sync, elke 30 min). 21 agents totaal (+3). 53 BullMQ jobs (+3). agentRegistry.js, AGENT_METADATA, workers.js, scheduler.js, dailyBriefing.js bijgewerkt. adminPortal.js v3.21.0. CLAUDE.md v3.65.0. |
@@ -1622,4 +1650,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 3 maart 2026 — Fase IV-A+B+0+Blok A Apify Data Pipeline + Owner-Managed Tiers + Pre-flight + Partner Management COMPLEET ✅. Fase III COMPLEET (Blok G+A+B+C+D+E+F). Admin Portal: 106 endpoints, adminPortal.js v3.18.0. 46 scheduled jobs. CLAUDE.md v3.62.0. MS v7.28.*
+*Laatst bijgewerkt: 5 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (Multi-Tenant Configuratielaag). Admin Portal: 137 endpoints, adminPortal.js v3.22.0. 54 scheduled jobs. CLAUDE.md v3.68.0. MS v7.34.*
