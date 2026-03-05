@@ -7,8 +7,28 @@ interface HeaderProps {
   locale: string;
 }
 
+interface NavItem {
+  label: string;
+  href: string;
+  featureFlag?: string;
+}
+
+function getNavItems(locale: string): NavItem[] {
+  const nl = locale === 'nl';
+  return [
+    { label: nl ? 'Ontdekken' : 'Explore', href: '/explore' },
+    { label: nl ? 'Restaurants' : 'Restaurants', href: '/restaurants' },
+    { label: nl ? 'Evenementen' : 'Events', href: '/events', featureFlag: 'agenda' },
+    { label: nl ? 'Over ons' : 'About', href: '/about' },
+    { label: 'Contact', href: '/contact' },
+  ];
+}
+
 export default function Header({ tenant, locale }: HeaderProps) {
   const payoff = tenant.branding.payoff?.[locale] ?? tenant.branding.payoff?.en ?? '';
+  const navItems = getNavItems(locale).filter(
+    item => !item.featureFlag || tenant.featureFlags[item.featureFlag] === true
+  );
 
   return (
     <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-sm border-b border-gray-100">
@@ -36,7 +56,7 @@ export default function Header({ tenant, locale }: HeaderProps) {
           </Link>
 
           {/* Navigation */}
-          <Nav items={[]} featureFlags={tenant.featureFlags} locale={locale} />
+          <Nav items={navItems} featureFlags={tenant.featureFlags} locale={locale} />
         </div>
       </div>
     </header>

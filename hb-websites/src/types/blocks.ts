@@ -59,6 +59,11 @@ export interface MapProps {
   categoryFilter?: string[];
 }
 
+export interface TestimonialsProps {
+  limit?: number;
+  minRating?: number;
+}
+
 export interface PageLayout {
   blocks: BlockConfig[];
 }

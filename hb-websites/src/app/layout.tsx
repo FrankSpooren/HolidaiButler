@@ -4,6 +4,7 @@ import { fetchTenantConfig } from '@/lib/api';
 import { brandingToCssVars } from '@/lib/theme';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import ChatbotWidget from '@/components/modules/ChatbotWidget';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -47,6 +48,13 @@ export default async function RootLayout({
         {tenant && <Header tenant={tenant} locale={locale} />}
         <main className="flex-1">{children}</main>
         {tenant && <Footer tenant={tenant} locale={locale} />}
+        {tenant?.featureFlags.holibot && (
+          <ChatbotWidget
+            tenantSlug={tenantSlug}
+            locale={locale}
+            apiUrl={process.env.HB_API_URL ?? 'http://localhost:3001'}
+          />
+        )}
       </body>
     </html>
   );
