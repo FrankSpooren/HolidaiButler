@@ -970,6 +970,20 @@
       "empty": "Empty",
       "homepage": "Homepage",
       "content": "Content page"
+    },
+    "blockTypes": {
+      "hero": "Hero",
+      "poi_grid": "POI Grid",
+      "event_calendar": "Event Calendar",
+      "rich_text": "Rich Text",
+      "card_group": "Card Group",
+      "map": "Map",
+      "testimonials": "Testimonials",
+      "cta": "Call to Action",
+      "gallery": "Gallery",
+      "faq": "FAQ",
+      "ticket_shop": "Ticket Shop",
+      "reservation_widget": "Reservation Widget"
     }
   },
   "navigation": {

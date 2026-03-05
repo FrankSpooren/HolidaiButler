@@ -58,3 +58,27 @@ export interface AgendaEvent {
   pricing?: { isFree?: boolean };
   status?: string;
 }
+
+export interface Ticket {
+  id: number;
+  name: string;
+  description: string;
+  price_cents: number;
+  currency: string;
+  category: string;
+  available_quantity: number;
+  max_per_order: number;
+  image_url: string;
+  valid_from?: string;
+  valid_until?: string;
+}
+
+export interface ReservationSlot {
+  id: number;
+  time: string;
+  duration_minutes: number;
+  available_seats: number;
+  max_seats: number;
+  price_cents: number | null;
+  special_notes: string | null;
+}

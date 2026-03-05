@@ -970,6 +970,20 @@
       "empty": "Leeg",
       "homepage": "Homepagina",
       "content": "Contentpagina"
+    },
+    "blockTypes": {
+      "hero": "Hero",
+      "poi_grid": "POI Raster",
+      "event_calendar": "Evenementenkalender",
+      "rich_text": "Tekst",
+      "card_group": "Kaartengroep",
+      "map": "Kaart",
+      "testimonials": "Recensies",
+      "cta": "Call to Action",
+      "gallery": "Galerij",
+      "faq": "Veelgestelde vragen",
+      "ticket_shop": "Ticketshop",
+      "reservation_widget": "Reserveringswidget"
     }
   },
   "navigation": {

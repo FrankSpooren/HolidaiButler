@@ -18,9 +18,30 @@ const DOMAIN_MAP: Record<string, TenantMapping> = {
 
 const DEFAULT_TENANT: TenantMapping = { slug: 'calpe', defaultLocale: 'nl' };
 
+// Known subdomains that should NOT be treated as tenant slugs
+const RESERVED_SUBDOMAINS = new Set(['www', 'dev', 'test', 'api', 'admin', 'mail', 'staging']);
+
+function resolveTenant(hostname: string): TenantMapping {
+  // 1. Exact match in domain map (highest priority)
+  const exact = DOMAIN_MAP[hostname];
+  if (exact) return exact;
+
+  // 2. Wildcard subdomain detection for *.holidaibutler.com
+  if (hostname.endsWith('.holidaibutler.com')) {
+    const subdomain = hostname.replace('.holidaibutler.com', '');
+    if (subdomain && !RESERVED_SUBDOMAINS.has(subdomain)) {
+      // Subdomain = tenant slug (e.g., "newtenant.holidaibutler.com" → slug "newtenant")
+      return { slug: subdomain, defaultLocale: 'nl' };
+    }
+  }
+
+  // 3. Fallback
+  return DEFAULT_TENANT;
+}
+
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host')?.replace(/:\d+$/, '') ?? '';
-  const tenant = DOMAIN_MAP[hostname] ?? DEFAULT_TENANT;
+  const tenant = resolveTenant(hostname);
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-tenant-slug', tenant.slug);
@@ -33,6 +54,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)).*)',
   ],
 };
