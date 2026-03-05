@@ -15,7 +15,10 @@
     "commerce": "Commerce",
     "partners": "Partner",
     "financial": "Finanzen",
-    "intermediary": "Vermittlung"
+    "intermediary": "Vermittlung",
+    "branding": "Branding",
+    "pages": "Seiten",
+    "navigation": "Navigation"
   },
   "auth": {
     "login": "Anmelden",
@@ -876,5 +879,123 @@
     "jan": "Jan", "feb": "Feb", "mar": "Mär", "apr": "Apr",
     "may": "Mai", "jun": "Jun", "jul": "Jul", "aug": "Aug",
     "sep": "Sep", "oct": "Okt", "nov": "Nov", "dec": "Dez"
+  },
+  "branding": {
+    "title": "Branding",
+    "subtitle": "Markenidentität pro Reiseziel verwalten",
+    "save": "Speichern",
+    "saving": "Speichern...",
+    "saved": "Branding erfolgreich gespeichert",
+    "colorsSection": "Farben",
+    "fontsSection": "Schriftarten",
+    "styleSection": "Stil",
+    "logoSection": "Logo & Marke",
+    "payoffSection": "Payoff / Tagline",
+    "preview": "Vorschau",
+    "previewHeading": "Willkommen an Ihrem Reiseziel",
+    "previewBody": "Entdecken Sie die besten lokalen Erlebnisse, Restaurants und Sehenswürdigkeiten.",
+    "previewButton": "Entdecken starten",
+    "headingFont": "Überschrift-Schriftart",
+    "bodyFont": "Text-Schriftart",
+    "borderRadius": "Eckenradius",
+    "buttonStyle": "Schaltflächenstil",
+    "brandName": "Markenname",
+    "chatbotName": "Chatbot-Name",
+    "uploadLogo": "Logo hochladen",
+    "uploading": "Hochladen...",
+    "logoUploaded": "Logo hochgeladen",
+    "logoTooLarge": "Datei zu groß (max. 2MB)",
+    "colors": {
+      "primary": "Primär",
+      "secondary": "Sekundär",
+      "accent": "Akzent",
+      "background": "Hintergrund",
+      "surface": "Oberfläche",
+      "text": "Text",
+      "textMuted": "Text gedämpft"
+    }
+  },
+  "pages": {
+    "title": "Seitenverwaltung",
+    "subtitle": "Seiten und Layouts pro Reiseziel verwalten",
+    "destination": "Reiseziel",
+    "create": "Seite erstellen",
+    "createTitle": "Neue Seite",
+    "creating": "Erstellen...",
+    "created": "Seite erstellt",
+    "editTitle": "Seite bearbeiten",
+    "save": "Speichern",
+    "saving": "Speichern...",
+    "saved": "Seite gespeichert",
+    "delete": "Löschen",
+    "deleting": "Löschen...",
+    "deleted": "Seite gelöscht",
+    "deleteTitle": "Seite löschen?",
+    "deleteConfirm": "Sind Sie sicher, dass Sie '{{slug}}' löschen möchten? Dies kann nicht rückgängig gemacht werden.",
+    "statusUpdated": "Status aktualisiert",
+    "noResults": "Keine Seiten gefunden",
+    "addBlock": "Block hinzufügen",
+    "blockProps": "Block-Eigenschaften (JSON)",
+    "table": {
+      "slug": "Slug",
+      "titleEn": "Titel (EN)",
+      "destination": "Reiseziel",
+      "blocks": "Blöcke",
+      "sortOrder": "Reihenfolge",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "tabs": {
+      "basics": "Basis",
+      "blocks": "Blöcke",
+      "preview": "Vorschau"
+    },
+    "fields": {
+      "slug": "Slug",
+      "titleEn": "Titel (EN)",
+      "titleNl": "Titel (NL)",
+      "titleDe": "Titel (DE)",
+      "titleEs": "Titel (ES)",
+      "seoTitleEn": "SEO-Titel (EN)",
+      "seoDescriptionEn": "SEO-Beschreibung (EN)",
+      "ogImageUrl": "OG-Bild-URL",
+      "status": "Status",
+      "template": "Vorlage"
+    },
+    "status": {
+      "draft": "Entwurf",
+      "published": "Veröffentlicht"
+    },
+    "templates": {
+      "empty": "Leer",
+      "homepage": "Startseite",
+      "content": "Inhaltsseite"
+    }
+  },
+  "navigation": {
+    "title": "Navigation",
+    "subtitle": "Navigationselemente pro Reiseziel verwalten",
+    "save": "Speichern",
+    "saving": "Speichern...",
+    "saved": "Navigation gespeichert",
+    "addItem": "Element hinzufügen",
+    "addTitle": "Navigationselement hinzufügen",
+    "editTitle": "Navigationselement bearbeiten",
+    "removeItem": "Entfernen",
+    "noItems": "Keine Navigationselemente konfiguriert",
+    "preview": "Vorschau",
+    "labelsPerLang": "Labels pro Sprache",
+    "table": {
+      "labelEn": "Label (EN)",
+      "labelNl": "Label (NL)",
+      "href": "URL",
+      "featureFlag": "Feature-Flag",
+      "active": "Aktiv",
+      "actions": "Aktionen"
+    },
+    "fields": {
+      "href": "URL-Pfad",
+      "featureFlag": "Feature-Flag (optional)"
+    }
   }
 }
