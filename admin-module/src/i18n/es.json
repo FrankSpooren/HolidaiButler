@@ -970,6 +970,20 @@
       "empty": "Vacío",
       "homepage": "Página de inicio",
       "content": "Página de contenido"
+    },
+    "blockTypes": {
+      "hero": "Hero",
+      "poi_grid": "Cuadrícula de POI",
+      "event_calendar": "Calendario de eventos",
+      "rich_text": "Texto enriquecido",
+      "card_group": "Grupo de tarjetas",
+      "map": "Mapa",
+      "testimonials": "Testimonios",
+      "cta": "Llamada a la acción",
+      "gallery": "Galería",
+      "faq": "Preguntas frecuentes",
+      "ticket_shop": "Tienda de entradas",
+      "reservation_widget": "Widget de reservas"
     }
   },
   "navigation": {

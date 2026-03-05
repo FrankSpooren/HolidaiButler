@@ -64,6 +64,35 @@ export interface TestimonialsProps {
   minRating?: number;
 }
 
+export interface CtaProps {
+  headline: string;
+  description?: string;
+  backgroundStyle?: 'primary' | 'accent' | 'gradient';
+  buttons?: Array<{ label: string; href: string; variant?: 'primary' | 'secondary' | 'outline' }>;
+}
+
+export interface GalleryProps {
+  images: Array<{ src: string; alt?: string; caption?: string }>;
+  columns?: 2 | 3 | 4;
+  layout?: 'grid' | 'masonry';
+}
+
+export interface FaqProps {
+  items: Array<{ question: string; answer: string }>;
+  title?: string;
+}
+
+export interface TicketShopProps {
+  limit?: number;
+  layout?: 'grid' | 'list';
+  showPrices?: boolean;
+}
+
+export interface ReservationWidgetProps {
+  defaultPoiId?: number;
+  showSearch?: boolean;
+}
+
 export interface PageLayout {
   blocks: BlockConfig[];
 }

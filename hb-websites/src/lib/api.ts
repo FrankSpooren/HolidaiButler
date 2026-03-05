@@ -1,6 +1,6 @@
 import type { TenantConfig } from '@/types/tenant';
 import type { PageData } from '@/types/blocks';
-import type { POI, Category, AgendaEvent, Review } from '@/types/poi';
+import type { POI, Category, AgendaEvent, Review, Ticket, ReservationSlot } from '@/types/poi';
 import type { ApiResponse } from '@/types/api';
 
 const HB_API_URL = process.env.HB_API_URL ?? 'http://localhost:3001';
@@ -143,6 +143,50 @@ export async function fetchPoiReviews(
     `/api/v1/pois/${poiId}/reviews`,
     tenantSlug,
     { revalidate: 300 }
+  );
+  return res?.data ?? [];
+}
+
+export async function fetchTickets(
+  tenantSlug: string,
+  limit?: number
+): Promise<Ticket[]> {
+  const destId = DESTINATION_IDS[tenantSlug] ?? 1;
+  const params: Record<string, string> = {};
+  if (limit) params.limit = String(limit);
+
+  const res = await hbFetch<ApiResponse<Ticket[]>>(
+    `/api/v1/tickets/${destId}`,
+    tenantSlug,
+    { revalidate: 300, params }
+  );
+  return res?.data ?? [];
+}
+
+export async function fetchReservablePois(
+  tenantSlug: string
+): Promise<POI[]> {
+  const res = await hbFetch<ApiResponse<POI[]>>(
+    '/api/v1/pois',
+    tenantSlug,
+    { revalidate: 300, params: { reservable: 'true' } }
+  );
+  return res?.data ?? [];
+}
+
+export async function fetchAvailableSlots(
+  tenantSlug: string,
+  poiId: number,
+  date: string,
+  partySize?: number
+): Promise<ReservationSlot[]> {
+  const params: Record<string, string> = { date };
+  if (partySize) params.partySize = String(partySize);
+
+  const res = await hbFetch<ApiResponse<ReservationSlot[]>>(
+    `/api/v1/reservations/slots/${poiId}`,
+    tenantSlug,
+    { revalidate: 60, params }
   );
   return res?.data ?? [];
 }

@@ -970,6 +970,20 @@
       "empty": "Leer",
       "homepage": "Startseite",
       "content": "Inhaltsseite"
+    },
+    "blockTypes": {
+      "hero": "Hero",
+      "poi_grid": "POI-Raster",
+      "event_calendar": "Veranstaltungskalender",
+      "rich_text": "Text",
+      "card_group": "Kartengruppe",
+      "map": "Karte",
+      "testimonials": "Bewertungen",
+      "cta": "Handlungsaufruf",
+      "gallery": "Galerie",
+      "faq": "Häufige Fragen",
+      "ticket_shop": "Ticketshop",
+      "reservation_widget": "Reservierungs-Widget"
     }
   },
   "navigation": {

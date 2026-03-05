@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { usePages, usePageCreate, usePageUpdate, usePageDelete } from '../hooks/usePages.js';
 import { useBrandingDestinations } from '../hooks/useBrandingEditor.js';
 
-const BLOCK_TYPES = ['hero', 'poi_grid', 'event_calendar', 'rich_text', 'card_group', 'map', 'testimonials'];
+const BLOCK_TYPES = ['hero', 'poi_grid', 'event_calendar', 'rich_text', 'card_group', 'map', 'testimonials', 'cta', 'gallery', 'faq', 'ticket_shop', 'reservation_widget'];
 
 const TEMPLATES = {
   empty: { blocks: [] },
@@ -339,7 +339,7 @@ export default function PagesPage() {
                         onChange={e => updateBlock(idx, 'type', e.target.value)}
                         size="small"
                       >
-                        {BLOCK_TYPES.map(bt => <MenuItem key={bt} value={bt}>{bt.replace('_', ' ')}</MenuItem>)}
+                        {BLOCK_TYPES.map(bt => <MenuItem key={bt} value={bt}>{t(`pages.blockTypes.${bt}`, bt.replace('_', ' '))}</MenuItem>)}
                       </Select>
                     </FormControl>
                     <Box sx={{ flex: 1 }} />
