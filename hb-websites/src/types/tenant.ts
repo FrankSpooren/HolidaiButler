@@ -63,6 +63,9 @@ export interface TenantConfig {
     }>;
     [key: string]: unknown;
   };
+  socialLinks?: Record<string, string>;
+  latitude?: number;
+  longitude?: number;
   isActive: boolean;
 }
 

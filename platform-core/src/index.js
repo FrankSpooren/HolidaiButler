@@ -55,6 +55,8 @@ import paymentRoutes from './routes/payment.js';
 import ticketingRoutes from './routes/ticketing.js';
 import reservationRoutes from './routes/reservations.js';
 import pagesRoutes from './routes/pages.js';
+import contactRoutes from './routes/contact.js';
+import newsletterRoutes from './routes/newsletter.js';
 import User from './models/User.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -182,6 +184,8 @@ app.use('/api/v1/payments', paymentRoutes); // Payment Engine (Fase III-A)
 app.use('/api/v1/tickets', ticketingRoutes); // Ticketing Module (Fase III-B)
 app.use('/api/v1/reservations', reservationRoutes); // Reservation Module (Fase III-C)
 app.use('/api/v1/pages', pagesRoutes); // Pages & Destinations (Fase V)
+app.use('/api/v1/contact', contactRoutes); // Contact Form (Fase V.6)
+app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V.6)
 
 // Static file serving for branding assets (logo uploads)
 const brandingDir = process.env.NODE_ENV === 'production'

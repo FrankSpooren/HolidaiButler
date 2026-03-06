@@ -6,8 +6,10 @@ import {
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
+import TranslateIcon from '@mui/icons-material/Translate';
 import { useTranslation } from 'react-i18next';
 import { useBrandingDestinations, useUpdateDestinationBranding, useUploadBrandingLogo } from '../hooks/useBrandingEditor.js';
+import { translateTexts } from '../api/translationService.js';
 
 const COLOR_FIELDS = [
   { key: 'primary', label: 'branding.colors.primary' },
@@ -64,6 +66,7 @@ export default function BrandingPage() {
   const [activeTab, setActiveTab] = useState(0);
   const [form, setForm] = useState({});
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
+  const [translating, setTranslating] = useState(false);
 
   const destinations = data?.data?.destinations?.filter(d => d.isActive) || [];
   const activeDest = destinations[activeTab];
@@ -94,6 +97,9 @@ export default function BrandingPage() {
         style: {
           borderRadius: b.style?.borderRadius || '8px',
           buttonStyle: b.style?.buttonStyle || 'rounded'
+        },
+        socialLinks: b.socialLinks || activeDest.socialLinks || {
+          instagram: '', facebook: '', tiktok: '', youtube: '', twitter: '', linkedin: ''
         }
       });
     }
@@ -130,6 +136,33 @@ export default function BrandingPage() {
 
   const updatePayoff = (lang, val) => {
     setForm(prev => ({ ...prev, payoff: { ...prev.payoff, [lang]: val } }));
+  };
+
+  const updateSocialLink = (platform, val) => {
+    setForm(prev => ({ ...prev, socialLinks: { ...prev.socialLinks, [platform]: val } }));
+  };
+
+  const handleTranslatePayoff = async () => {
+    const source = form.payoff?.en || form.payoff?.nl;
+    if (!source) return;
+    setTranslating(true);
+    const sourceLang = form.payoff?.en ? 'en' : 'nl';
+    const targetLangs = ['nl', 'en', 'de', 'es'].filter(l => l !== sourceLang);
+    try {
+      const translations = await translateTexts([{ key: 'payoff', value: source }], sourceLang, targetLangs);
+      setForm(prev => ({
+        ...prev,
+        payoff: {
+          ...prev.payoff,
+          ...Object.fromEntries(targetLangs.map(l => [l, translations.payoff?.[l] || prev.payoff?.[l] || '']))
+        }
+      }));
+      setSnack({ open: true, message: t('translate.success'), severity: 'success' });
+    } catch {
+      setSnack({ open: true, message: t('translate.error'), severity: 'error' });
+    } finally {
+      setTranslating(false);
+    }
   };
 
   if (isLoading) {
@@ -305,6 +338,37 @@ export default function BrandingPage() {
                     onChange={e => updatePayoff(lang, e.target.value)}
                   />
                 ))}
+                <Button
+                  size="small" variant="outlined" startIcon={<TranslateIcon />}
+                  onClick={handleTranslatePayoff}
+                  disabled={translating || (!form.payoff?.en && !form.payoff?.nl)}
+                >
+                  {translating ? t('translate.translating') : t('translate.autoTranslate')}
+                </Button>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Social Links (V.6.9) */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle2" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+                  {t('branding.socialLinksSection')}
+                </Typography>
+                <Grid container spacing={2}>
+                  {['instagram', 'facebook', 'tiktok', 'youtube', 'twitter', 'linkedin'].map(platform => (
+                    <Grid item xs={12} sm={6} key={platform}>
+                      <TextField
+                        fullWidth size="small"
+                        label={platform.charAt(0).toUpperCase() + platform.slice(1)}
+                        value={form.socialLinks?.[platform] || ''}
+                        onChange={e => updateSocialLink(platform, e.target.value)}
+                        placeholder={`https://${platform}.com/...`}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
               </CardContent>
             </Card>
           </Grid>

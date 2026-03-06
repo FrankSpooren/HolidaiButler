@@ -891,6 +891,7 @@
     "styleSection": "Estilo",
     "logoSection": "Logo y Marca",
     "payoffSection": "Payoff / Eslogan",
+    "socialLinksSection": "Enlaces de Redes Sociales",
     "preview": "Vista previa",
     "previewHeading": "Bienvenido a tu destino",
     "previewBody": "Descubre las mejores experiencias locales, restaurantes y atracciones.",
@@ -983,7 +984,15 @@
       "gallery": "Galería",
       "faq": "Preguntas frecuentes",
       "ticket_shop": "Tienda de entradas",
-      "reservation_widget": "Widget de reservas"
+      "reservation_widget": "Widget de reservas",
+      "video": "V\u00eddeo",
+      "social_feed": "Feed de Redes Sociales",
+      "contact_form": "Formulario de Contacto",
+      "newsletter": "Bolet\u00edn",
+      "weather_widget": "Widget de Clima",
+      "banner": "Banner",
+      "partners": "Socios",
+      "downloads": "Descargas"
     }
   },
   "navigation": {
@@ -1011,5 +1020,11 @@
       "href": "Ruta URL",
       "featureFlag": "Feature flag (opcional)"
     }
+  },
+  "translate": {
+    "autoTranslate": "Auto-traducir",
+    "translating": "Traduciendo...",
+    "success": "Traducciones completadas autom\u00e1ticamente",
+    "error": "Traducci\u00f3n fallida. Int\u00e9ntalo de nuevo."
   }
 }

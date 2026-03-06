@@ -10,8 +10,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import SaveIcon from '@mui/icons-material/Save';
+import TranslateIcon from '@mui/icons-material/Translate';
 import { useTranslation } from 'react-i18next';
 import { useNavigationDestinations, useNavigationUpdate } from '../hooks/useNavigation.js';
+import { translateTexts } from '../api/translationService.js';
 
 const EMPTY_ITEM = { label: { nl: '', en: '', de: '', es: '' }, href: '', featureFlag: '', sortOrder: 0, isActive: true };
 
@@ -25,6 +27,7 @@ export default function NavigationPage() {
   const [editIdx, setEditIdx] = useState(-1);
   const [editForm, setEditForm] = useState(EMPTY_ITEM);
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
+  const [translating, setTranslating] = useState(false);
 
   const destinations = data?.data?.destinations?.filter(d => d.isActive) || [];
   const activeDest = destinations[activeTab];
@@ -96,6 +99,28 @@ export default function NavigationPage() {
     const updated = [...navItems];
     updated[idx] = { ...updated[idx], isActive: !updated[idx].isActive };
     setNavItems(updated);
+  };
+
+  const handleTranslateLabel = async () => {
+    if (!editForm.label?.en) return;
+    setTranslating(true);
+    try {
+      const translations = await translateTexts([{ key: 'label', value: editForm.label.en }], 'en', ['nl', 'de', 'es']);
+      setEditForm(f => ({
+        ...f,
+        label: {
+          ...f.label,
+          nl: translations.label?.nl || f.label.nl,
+          de: translations.label?.de || f.label.de,
+          es: translations.label?.es || f.label.es,
+        }
+      }));
+      setSnack({ open: true, message: t('translate.success'), severity: 'success' });
+    } catch {
+      setSnack({ open: true, message: t('translate.error'), severity: 'error' });
+    } finally {
+      setTranslating(false);
+    }
   };
 
   if (isLoading) {
@@ -226,6 +251,12 @@ export default function NavigationPage() {
             <TextField size="small" label="DE" value={editForm.label?.de || ''} onChange={e => setEditForm(f => ({ ...f, label: { ...f.label, de: e.target.value } }))} sx={{ flex: 1 }} />
             <TextField size="small" label="ES" value={editForm.label?.es || ''} onChange={e => setEditForm(f => ({ ...f, label: { ...f.label, es: e.target.value } }))} sx={{ flex: 1 }} />
           </Box>
+          <Button
+            size="small" variant="outlined" startIcon={<TranslateIcon />}
+            onClick={handleTranslateLabel} disabled={translating || !editForm.label?.en}
+          >
+            {translating ? t('translate.translating') : t('translate.autoTranslate')}
+          </Button>
           <TextField
             size="small"
             label={t('navigation.fields.href')}
