@@ -41,7 +41,8 @@
 30. [Fase V.3: Texel als Tweede Tenant](#fase-v3-texel-als-tweede-tenant-05-03-2026)
 31. [Fase V.4: Admin Portal Editors (Branding, Pages, Navigation)](#fase-v4-admin-portal-editors-05-03-2026)
 32. [Fase V.5: P1 Blocks + Wildcard DNS Schaling](#fase-v5-p1-blocks--wildcard-dns-schaling-06-03-2026)
-33. [Volledige Changelog](#volledige-changelog)
+33. [Fase V.6: Ontbrekende Blocks + Block Upgrades](#fase-v6-ontbrekende-blocks--block-upgrades-06-03-2026)
+34. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -1509,10 +1510,122 @@ Het multi-tenant model is **volledig data-driven**:
 
 ---
 
+## Fase V.6: Ontbrekende Blocks + Block Upgrades (06-03-2026)
+
+### Resultaat
+
+8 nieuwe blocks, 2 block upgrades, block registry 12→20, auto-translate via Mistral AI, social media config per tenant, contact + newsletter endpoints. Na deployment: bugfix ronde voor 6 issues.
+
+| Aspect | Detail |
+|--------|--------|
+| Nieuwe blocks | 8: Video, SocialFeed, ContactForm, Newsletter, WeatherWidget, Banner, Partners, Downloads |
+| Block upgrades | 2: Hero (+video background), Gallery (+mixed media GalleryItem) |
+| Block registry | 12 → 20 blocks |
+| Admin endpoints | +3 (148 totaal): social-links GET/PUT, translate POST |
+| Public endpoints | +2: contact POST, newsletter/subscribe POST |
+| API proxy routes | +2: contact, newsletter |
+| DB ALTERs | destinations.latitude/longitude/social_links |
+| Admin features | Auto-translate (Mistral AI), Social Media Links in BrandingPage |
+| i18n | 4 talen × ~30 nieuwe keys |
+| Bestanden | ~36 (19 nieuw + 17 gewijzigd) |
+
+### Nieuwe Block Components
+
+1. **Video.tsx** — Server Component. YouTube-nocookie/Vimeo/self-hosted. 3 layouts: full-width, contained (max-w-4xl), side-by-side (60/40). VideoPlayer.tsx `'use client'` voor HTML5 play/pause.
+2. **SocialFeed.tsx** — `'use client'`. Privacy-first: placeholder tot consent/klik. 4 platforms (Instagram/Facebook/TikTok/YouTube). SocialFeedWrapper.tsx Pattern D (dynamic import, ssr:false).
+3. **ContactForm.tsx** — `'use client'`. Honeypot hidden field `_hp`, GDPR consent checkbox. Configureerbare velden. Proxy via `/api/contact`.
+4. **Newsletter.tsx** — `'use client'`. MailerLite subscriber API. Email + naam + GDPR consent. Proxy via `/api/newsletter`.
+5. **WeatherWidget.tsx** — Server Component (async). Open-Meteo API. ISR revalidation 30 min. Compact (huidige temp) of detailed (5-daagse forecast). Inline weer-iconen SVG.
+6. **Banner.tsx** — `'use client'`. 4 types (info/warning/success/promo). Dismissible via localStorage.
+7. **Partners.tsx** — Server Component. Logo grid, grayscale hover effect, 3-6 kolommen.
+8. **Downloads.tsx** — Server Component. File type iconen (PDF/DOC/GPX) via inline SVG.
+
+### Block Upgrades
+
+- **Hero.tsx**: +`backgroundType`, `videoUrl`, `videoPosterImage`. Video: autoplay muted loop. Mobile: fallback naar poster image. `prefers-reduced-motion`: stop autoplay. HeroVideo.tsx `'use client'`.
+- **Gallery.tsx**: +`items?: GalleryItem[]` (type: 'image'|'video'). Backward compatible (`images` prop werkt nog). Play-icoon overlay op video thumbnails.
+
+### Backend
+
+- **translationService.js** (NIEUW): Mistral `mistral-small-latest`, tourism-context system prompt, batch support.
+- **contact.js** (NIEUW): POST met honeypot spam check, email forward. X-Destination-ID header voor destination-specifiek email.
+- **newsletter.js** (NIEUW): POST naar MailerLite subscriber API.
+- **adminPortal.js**: +3 endpoints — social-links GET/PUT, translate POST.
+- **pages.js**: social_links + latitude + longitude meesturen in response.
+- **index.js**: contact + newsletter routes geregistreerd. Helmet CORP `cross-origin` policy fix.
+
+### Bugfix Ronde (4 commits)
+
+| Bug | Root Cause | Fix |
+|-----|-----------|-----|
+| Blocks leeg in Admin Portal | Pages LIST endpoint retourneert geen `layout` veld; `openEdit()` gebruikte onvolledige lijst-data | `openEdit()` fetcht nu individueel via `GET /pages/:id` |
+| Vertalingen niet opgeslagen | Zelfde oorzaak — LIST mist `title_de`, `title_es`, `seo_*` velden | Zelfde fix als hierboven |
+| SettingsPage React Error #31 | `payoff` is i18n object `{en, nl}`, direct rendered als React child | Type check + taal extractie |
+| Social-links/translate 503 timeout | `adminAuth`/`writeAccess` zijn factory functions — aangeroepen zonder `()` | `adminAuth()`, `writeAccess(['platform_admin'])` |
+| Admin logo ERR_BLOCKED_BY_RESPONSE | Helmet default `same-origin` CORP header | `crossOriginResourcePolicy: { policy: "cross-origin" }` |
+| SocialFeedWrapper build error | `ssr: false` niet toegestaan in Server Components | `'use client'` directive toegevoegd |
+| HeroProps TypeScript error | `backgroundType`/`videoUrl`/`videoPosterImage` niet in interface | Props toegevoegd aan HeroProps |
+| VideoProps interface mismatch | Interface had `url`/`type`/`poster`, component gebruikt `youtubeUrl`/`vimeoUrl`/`videoFile` | Interface herschreven naar actuele props |
+| React 19 ESLint errors | `setState` in `useEffect` (Banner + SocialFeed) | Lazy `useState` initializers |
+| Calpe homepage blocks leeg | Accidenteel gewist door test PUT | SQL UPDATE met 5 blocks hersteld |
+
+### Bestanden Overzicht
+
+**Nieuw (19)**:
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `hb-websites/src/blocks/Video.tsx` | Video block (YouTube/Vimeo/self-hosted) |
+| `hb-websites/src/blocks/VideoPlayer.tsx` | HTML5 video player client component |
+| `hb-websites/src/blocks/HeroVideo.tsx` | Hero video background client component |
+| `hb-websites/src/blocks/SocialFeed.tsx` | Social media feed (4 platforms) |
+| `hb-websites/src/blocks/SocialFeedWrapper.tsx` | SSR-safe wrapper Pattern D |
+| `hb-websites/src/blocks/ContactForm.tsx` | Contact formulier met honeypot |
+| `hb-websites/src/blocks/Newsletter.tsx` | Newsletter subscribe block |
+| `hb-websites/src/blocks/WeatherWidget.tsx` | Weer widget (Open-Meteo API) |
+| `hb-websites/src/blocks/Banner.tsx` | Banner block (4 types) |
+| `hb-websites/src/blocks/Partners.tsx` | Partners logo grid |
+| `hb-websites/src/blocks/Downloads.tsx` | Downloads met file type iconen |
+| `hb-websites/src/lib/weather.ts` | Open-Meteo API client + WMO mapping |
+| `hb-websites/src/app/api/contact/route.ts` | Next.js API proxy voor contact |
+| `hb-websites/src/app/api/newsletter/route.ts` | Next.js API proxy voor newsletter |
+| `platform-core/src/services/translationService.js` | Mistral AI vertaalservice |
+| `platform-core/src/routes/contact.js` | Contact form endpoint |
+| `platform-core/src/routes/newsletter.js` | Newsletter subscribe endpoint |
+| `admin-module/src/api/translationService.js` | Translate API client |
+
+**Gewijzigd (17)**:
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/blocks/Hero.tsx` | +video background support |
+| `hb-websites/src/blocks/Gallery.tsx` | +mixed media GalleryItem support |
+| `hb-websites/src/blocks/index.ts` | Block registry 12→20 |
+| `hb-websites/src/types/blocks.ts` | +8 BlockType union + 10 interfaces |
+| `hb-websites/src/types/tenant.ts` | +socialLinks, latitude, longitude |
+| `hb-websites/src/components/layout/Footer.tsx` | Social media iconen uit tenant config |
+| `platform-core/src/routes/adminPortal.js` | +3 endpoints (social-links, translate) + adminAuth() fix |
+| `platform-core/src/routes/pages.js` | +social_links/lat/lon in response |
+| `platform-core/src/index.js` | +contact/newsletter routes, Helmet CORP fix |
+| `admin-module/src/pages/PagesPage.jsx` | BLOCK_TYPES 12→20, openEdit fetch fix, auto-translate |
+| `admin-module/src/pages/BrandingPage.jsx` | Social Media Links sectie, auto-translate |
+| `admin-module/src/pages/NavigationPage.jsx` | Auto-translate knop |
+| `admin-module/src/pages/SettingsPage.jsx` | Payoff i18n object rendering fix |
+| `admin-module/src/i18n/en.json` | +30 keys (blocks, translate, social) |
+| `admin-module/src/i18n/nl.json` | +30 keys |
+| `admin-module/src/i18n/de.json` | +30 keys |
+| `admin-module/src/i18n/es.json` | +30 keys |
+
+**Kosten**: EUR 0
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.74.0** | **2026-03-06** | **Fase V.6 Bugfix Ronde**: openEdit fetch fix (blocks + vertalingen), Helmet CORP, SettingsPage payoff, adminAuth() invocatie, React 19 ESLint fixes, Calpe homepage restore. 4 commits. |
+| **3.73.0** | **2026-03-06** | **Fase V.6**: Ontbrekende Blocks + Block Upgrades. 8 nieuwe blocks, 2 upgrades, registry 12→20, 3 admin + 2 public endpoints, auto-translate, social media config. ~35 bestanden. |
 | **3.72.0** | **2026-03-06** | **Fase V.5**: P1 Blocks + Wildcard DNS Schaling. 5 nieuwe blocks (Cta, Gallery, Faq, TicketShop, ReservationWidget). Block registry 7→12. 3 API proxy routes. Admin block editor 12 types + i18n 4 talen. Middleware wildcard `*.holidaibutler.com`. Apache wildcard VHost. 20 bestanden (+783 regels). Calpe 6/6 + Texel 6/6 PASS. |
 | **3.71.0** | **2026-03-05** | **Fase V.4**: Admin Portal Editors (Branding, Pages, Navigation). 8 nieuwe admin endpoints (145 totaal), adminPortal.js v3.23.0. BrandingPage, PagesPage, NavigationPage. 3 API services + 3 hooks. i18n 4 talen (~90 keys). Dynamic navigation Header.tsx. 20 bestanden (+2.150 regels). 15/15 deploy tests. |
 | **3.70.0** | **2026-03-05** | **Fase V.3**: Texel als tweede tenant. dev.texelmaps.nl live met eigen branding, 6 pagina's, Tessa chatbot, 1.660 POIs. Middleware domain mapping fix. pages.js gesynct naar repo. Multi-tenant model 100% data-driven gevalideerd. |

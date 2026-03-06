@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 6 maart 2026
-**Versie**: 7.39
+**Versie**: 7.40
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 COMPLEET). CLAUDE.md v3.73.0. MS v7.39.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 COMPLEET). CLAUDE.md v3.74.0. MS v7.40.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1592,6 +1592,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.40** | **06-03-2026** | **Fase V.6 Bugfix Ronde. Root cause openEdit fix: pages LIST endpoint miste layout/title_de/title_es/seo_* velden → blocks leeg + vertalingen verloren. Fix: openEdit fetcht nu GET /pages/:id. Overige fixes: Helmet CORP cross-origin, SettingsPage payoff i18n rendering, adminAuth()/writeAccess() factory invocatie, React 19 ESLint fixes, HeroProps/VideoProps interface alignment. Calpe homepage blocks hersteld. 4 commits. CLAUDE.md v3.74.0.** |
 | **7.39** | **06-03-2026** | **Fase V.6: Ontbrekende Blocks + Block Upgrades COMPLEET. 8 nieuwe blocks (Video, SocialFeed, ContactForm, Newsletter, WeatherWidget, Banner, Partners, Downloads). 2 block upgrades (Hero +video bg, Gallery +mixed media). Block registry 12→20. 3 nieuwe admin endpoints (148 totaal). 2 public endpoints + 2 API proxy routes. Auto-translate frontend (Mistral AI) op 3 admin pagina's. Social Media Links in BrandingPage. DB ALTERs lat/lon/social_links. adminPortal.js v3.24.0. ~35 bestanden. Calpe 6/6 + Texel 6/6 PASS. CLAUDE.md v3.73.0.** |
 | **7.38** | **06-03-2026** | **Fase V.5: P1 Blocks + Wildcard DNS Schaling COMPLEET. 5 nieuwe blocks (Cta, Gallery, Faq, TicketShop, ReservationWidget). Block registry 7→12. 3 API proxy routes. Admin block editor 12 types + i18n 4 talen. Middleware wildcard `*.holidaibutler.com`. Apache wildcard VHost. 20 bestanden (+783 regels). Calpe 6/6 + Texel 6/6 PASS. CLAUDE.md v3.72.0.** |
 | **7.37** | **05-03-2026** | **Fase V.4: Admin Portal Editors (Branding, Pages, Navigation) COMPLEET. 8 nieuwe admin endpoints (145 totaal), adminPortal.js v3.23.0. BrandingPage, PagesPage, NavigationPage. 3 API services + 3 hooks. i18n 4 talen. Dynamic navigation Header.tsx. 20 bestanden (+2.150 regels). 15/15 tests PASS. CLAUDE.md v3.71.0.** |
@@ -1655,4 +1656,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 6 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 COMPLEET). Admin Portal: 148 endpoints, adminPortal.js v3.24.0. 54 scheduled jobs. CLAUDE.md v3.73.0. MS v7.39.*
+*Laatst bijgewerkt: 6 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 COMPLEET). Admin Portal: 148 endpoints, adminPortal.js v3.24.0. 54 scheduled jobs. CLAUDE.md v3.74.0. MS v7.40.*
