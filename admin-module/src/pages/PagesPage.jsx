@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { translateTexts } from '../api/translationService.js';
 import { usePages, usePageCreate, usePageUpdate, usePageDelete } from '../hooks/usePages.js';
 import { useBrandingDestinations } from '../hooks/useBrandingEditor.js';
+import { pageService } from '../api/pageService.js';
 
 const BLOCK_TYPES = ['hero', 'poi_grid', 'event_calendar', 'rich_text', 'card_group', 'map', 'testimonials', 'cta', 'gallery', 'faq', 'ticket_shop', 'reservation_widget', 'video', 'social_feed', 'contact_form', 'newsletter', 'weather_widget', 'banner', 'partners', 'downloads'];
 
@@ -75,14 +76,25 @@ export default function PagesPage() {
     }
   };
 
-  const openEdit = (page) => {
-    let layout = page.layout;
-    if (typeof layout === 'string') {
-      try { layout = JSON.parse(layout); } catch { layout = { blocks: [] }; }
+  const [editLoading, setEditLoading] = useState(false);
+
+  const openEdit = async (page) => {
+    setEditLoading(true);
+    try {
+      const res = await pageService.get(page.id);
+      const fullPage = res.data;
+      let layout = fullPage.layout;
+      if (typeof layout === 'string') {
+        try { layout = JSON.parse(layout); } catch { layout = { blocks: [] }; }
+      }
+      setEditPage({ ...fullPage, layout: layout || { blocks: [] } });
+      setEditTab(0);
+      setEditOpen(true);
+    } catch (err) {
+      setSnack({ open: true, message: err.response?.data?.error?.message || err.message, severity: 'error' });
+    } finally {
+      setEditLoading(false);
     }
-    setEditPage({ ...page, layout: layout || { blocks: [] } });
-    setEditTab(0);
-    setEditOpen(true);
   };
 
   const handleEditSave = async () => {
@@ -267,7 +279,7 @@ export default function PagesPage() {
                     </TableCell>
                     <TableCell align="right">
                       <Tooltip title={t('common.edit')}>
-                        <IconButton size="small" onClick={() => openEdit(page)}><EditIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" onClick={() => openEdit(page)} disabled={editLoading}><EditIcon fontSize="small" /></IconButton>
                       </Tooltip>
                       <Tooltip title={t('pages.delete')}>
                         <IconButton size="small" color="error" onClick={() => setDeleteOpen(page)}><DeleteIcon fontSize="small" /></IconButton>
