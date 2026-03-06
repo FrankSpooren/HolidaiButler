@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 5 maart 2026
-**Versie**: 7.37
+**Datum**: 6 maart 2026
+**Versie**: 7.38
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.4 COMPLEET, V.5-V.6 TODO). CLAUDE.md v3.71.0. MS v7.37.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.5 COMPLEET, V.6 TODO). CLAUDE.md v3.72.0. MS v7.38.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1381,7 +1381,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 - **V.2 Calpe Pilot** ✅ COMPLEET (05-03-2026): 6 Calpe pagina's live (home, explore, events, restaurants, about, contact). POI detail route (/poi/:id). Testimonials block. Navigatie updates. 7 routes HTTP 200.
 - **V.3 Texel** ✅ COMPLEET (05-03-2026): Texel live op dev.texelmaps.nl. Eigen branding (#30c59b groen, Montserrat/Open Sans). 6 pagina's, 1.660 POIs, Tessa chatbot. Apache VHost reverse proxy. Multi-tenant model 100% data-driven gevalideerd — geen frontend code-wijzigingen nodig.
 - **V.4 Admin Portal Editors** ✅ COMPLEET (05-03-2026): 8 nieuwe admin endpoints (145 totaal), adminPortal.js v3.23.0. BrandingPage.jsx (7 kleurvelden, Google Fonts, logo upload, payoff per taal, stijl, live preview). PagesPage.jsx (CRUD, block editor 7 types, templates, status toggle). NavigationPage.jsx (nav items per destination, reordering, preview). 3 API services + 3 React Query hooks. i18n 4 talen (~90 keys). Dynamic navigation in Next.js Header.tsx (data-driven, hardcoded fallback). pages.js route fix in index.js. 20 bestanden (+2.150 regels). 15/15 deploy tests PASS.
-- **V.5 P1 Blocks + Schaling** (week 9-10): Cta, Gallery, Testimonials, Faq, TicketShop, ReservationWidget. Wildcard DNS voor schaling.
+- **V.5 P1 Blocks + Wildcard DNS Schaling** ✅ COMPLEET (06-03-2026): 5 nieuwe blocks: Cta (pure presentational, 3 bg styles), Gallery ('use client', lightbox met keyboard nav), Faq ('use client', accordion met aria-expanded), TicketShop ('use client', feature-gated ticketing, grid/list layout, prijs formatting), ReservationWidget ('use client', feature-gated reservations, zoekformulier + tijdslots). 2 SSR-safe wrappers (TicketShopWrapper, ReservationWidgetWrapper). Block registry 7→12. 3 Next.js API proxy routes (tickets, reservable-pois, reservation-slots/[poiId]). 7 nieuwe TypeScript interfaces. 3 nieuwe API functies (fetchTickets, fetchReservablePois, fetchAvailableSlots). Admin Portal PagesPage.jsx: BLOCK_TYPES 7→12, dropdown met i18n labels (4 talen). Middleware wildcard subdomain detection `*.holidaibutler.com` → slug = subdomain (met RESERVED_SUBDOMAINS safeguard). Apache wildcard VHost (HTTP). certbot-dns-hetzner geïnstalleerd (wildcard SSL cert pending DNS token). Pages route fix op Hetzner. 20 bestanden (+783 regels). Calpe 6/6 + Texel 6/6 regressie PASS.
 - **V.6 3e+4e Tenant + Onboarding** (week 11-12): WarreWijzer + Alicante als tenant 3+4. Onboarding wizard in Admin Portal. Test suite uitbreiden. Documentatie.
 
 Technische blauwdruk: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
@@ -1592,6 +1592,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.38** | **06-03-2026** | **Fase V.5: P1 Blocks + Wildcard DNS Schaling COMPLEET. 5 nieuwe blocks (Cta, Gallery, Faq, TicketShop, ReservationWidget). Block registry 7→12. 3 API proxy routes. Admin block editor 12 types + i18n 4 talen. Middleware wildcard `*.holidaibutler.com`. Apache wildcard VHost. 20 bestanden (+783 regels). Calpe 6/6 + Texel 6/6 PASS. CLAUDE.md v3.72.0.** |
 | **7.37** | **05-03-2026** | **Fase V.4: Admin Portal Editors (Branding, Pages, Navigation) COMPLEET. 8 nieuwe admin endpoints (145 totaal), adminPortal.js v3.23.0. BrandingPage, PagesPage, NavigationPage. 3 API services + 3 hooks. i18n 4 talen. Dynamic navigation Header.tsx. 20 bestanden (+2.150 regels). 15/15 tests PASS. CLAUDE.md v3.71.0.** |
 | **7.36** | **05-03-2026** | **Fase V.3: Texel als tweede tenant COMPLEET. dev.texelmaps.nl live met eigen branding, 6 pagina's, 1.660 POIs, Tessa chatbot. Multi-tenant 100% data-driven gevalideerd. CLAUDE.md v3.70.0.** |
 | **7.35** | **05-03-2026** | **Fase V.0+V.1+V.2 COMPLEET. Next.js 15 live op dev.holidaibutler.com. 7 blocks, ChatbotWidget SSE streaming, POI detail route, Testimonials block, 6 Calpe pagina's, navigatie. CLAUDE.md v3.69.0.** |
@@ -1653,4 +1654,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 5 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.4 COMPLEET, V.5-V.6 TODO). Admin Portal: 145 endpoints, adminPortal.js v3.23.0. 54 scheduled jobs. CLAUDE.md v3.71.0. MS v7.37.*
+*Laatst bijgewerkt: 6 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.5 COMPLEET, V.6 TODO). Admin Portal: 145 endpoints, adminPortal.js v3.23.0. 54 scheduled jobs. CLAUDE.md v3.72.0. MS v7.38.*

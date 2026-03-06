@@ -40,7 +40,8 @@
 29. [Fase V.0: Foundation + V.1+V.2: ChatbotWidget + Calpe Pilot](#fase-v0-foundation--v1v2-chatbotwidget--calpe-pilot-05-03-2026)
 30. [Fase V.3: Texel als Tweede Tenant](#fase-v3-texel-als-tweede-tenant-05-03-2026)
 31. [Fase V.4: Admin Portal Editors (Branding, Pages, Navigation)](#fase-v4-admin-portal-editors-05-03-2026)
-32. [Volledige Changelog](#volledige-changelog)
+32. [Fase V.5: P1 Blocks + Wildcard DNS Schaling](#fase-v5-p1-blocks--wildcard-dns-schaling-06-03-2026)
+33. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -1380,10 +1381,139 @@ Het multi-tenant model is **volledig data-driven**:
 
 ---
 
+## Fase V.5: P1 Blocks + Wildcard DNS Schaling (06-03-2026)
+
+### Resultaat
+
+5 resterende P1 blocks gebouwd, block registry van 7 naar 12, wildcard DNS schaling voor automatische tenant onboarding via `*.holidaibutler.com` subdomains.
+
+| Aspect | Detail |
+|--------|--------|
+| Nieuwe blocks | 5: Cta, Gallery, Faq, TicketShop, ReservationWidget |
+| SSR-safe wrappers | 2: TicketShopWrapper, ReservationWidgetWrapper |
+| Block registry | 7 → 12 blocks |
+| API proxy routes | 3: tickets, reservable-pois, reservation-slots/[poiId] |
+| TypeScript interfaces | 7 nieuw: CtaProps, GalleryProps, FaqProps, TicketShopProps, ReservationWidgetProps, Ticket, ReservationSlot |
+| API functies | 3 nieuw: fetchTickets, fetchReservablePois, fetchAvailableSlots |
+| Admin Portal | BLOCK_TYPES 7→12, i18n `pages.blockTypes` in 4 talen |
+| Middleware | Wildcard subdomain detection `*.holidaibutler.com` |
+| Apache | Wildcard VHost (HTTP), certbot-dns-hetzner geïnstalleerd |
+| Bestanden | 20 (10 nieuw + 8 gewijzigd + 2 server fixes), +783 regels |
+| Regressie | Calpe 6/6 + Texel 6/6 PASS |
+
+### Wat er gedaan is
+
+**5 Nieuwe Block Components:**
+
+1. **Cta.tsx** (~40 regels) — Pure presentational server component. Full-width sectie met `bg-primary`/`bg-accent`/gradient achtergronden. Centered text + buttons (hergebruikt Button component). Responsive: verticale layout op mobile, horizontale buttons op desktop.
+
+2. **Gallery.tsx** (~119 regels) — Client component ('use client'). Afbeeldingengalerij met lightbox. useState voor lightbox index, useCallback voor navigatie. Keyboard support (Escape, ArrowLeft, ArrowRight). Body overflow hidden bij open lightbox. Responsive grid met configureerbare columns (2/3/4). Lazy loading op alle images.
+
+3. **Faq.tsx** (~60 regels) — Client component ('use client'). Accordion FAQ block. useState voor open/closed state per item. CSS transition via `max-h-[2000px]`/`max-h-0` met `transition-all duration-200`. `dangerouslySetInnerHTML` voor answer HTML (zelfde patroon als RichText). Accessibility: `aria-expanded` op button, `role="region"` op content div.
+
+4. **TicketShop.tsx** (~141 regels) — Client component, feature-gated (ticketing flag). Client-side fetch naar `/api/tickets` (interne Next.js API route). Loading skeleton animatie. Grid en list layout varianten. Prijs formatting via `Intl.NumberFormat('nl-NL', { style: 'currency' })`. Low availability warning ("Nog X beschikbaar"). Links naar `/tickets/:ticketId` (bestaande Customer Portal flow).
+
+5. **ReservationWidget.tsx** (~175 regels) — Client component, feature-gated (reservations flag). Zoekformulier: POI dropdown, datum (default morgen), aantal personen (1-12). Client-side fetch naar `/api/reservable-pois` en `/api/reservation-slots/[poiId]`. Slot cards met tijd, duur, beschikbare plaatsen, prijs. Links naar `/reservations/book?poiId=X&slotId=Y&date=Z&partySize=N`. Optionele `defaultPoiId` prop om POI selectie te skippen.
+
+**SSR-Safe Wrappers:**
+- `TicketShopWrapper.tsx` — `dynamic(() => import('./TicketShop'), { ssr: false })`
+- `ReservationWidgetWrapper.tsx` — `dynamic(() => import('./ReservationWidget'), { ssr: false })`
+
+**3 Next.js API Proxy Routes (voor client-side fetches):**
+- `app/api/tickets/route.ts` — Proxy naar fetchTickets()
+- `app/api/reservable-pois/route.ts` — Proxy naar fetchReservablePois()
+- `app/api/reservation-slots/[poiId]/route.ts` — Proxy naar fetchAvailableSlots(), Next.js 15 async params
+
+**TypeScript Types (types/blocks.ts + types/poi.ts):**
+- CtaProps, GalleryProps, FaqProps, TicketShopProps, ReservationWidgetProps (blocks.ts — al gedefinieerd, nu gebruikt)
+- Ticket interface (id, name, description, price_cents, currency, category, available_quantity, max_per_order, image_url, valid_from?, valid_until?)
+- ReservationSlot interface (id, time, duration_minutes, available_seats, max_seats, price_cents, special_notes)
+
+**API Functies (lib/api.ts):**
+- `fetchTickets(tenantSlug, limit?)` — GET /api/v1/tickets/:destinationId
+- `fetchReservablePois(tenantSlug)` — GET /api/v1/pois met reservable=true param
+- `fetchAvailableSlots(tenantSlug, poiId, date, partySize?)` — GET /api/v1/reservations/slots/:poiId, revalidate: 60
+
+**Block Registry (blocks/index.ts):**
+- 5 nieuwe imports + registry entries: cta→Cta, gallery→Gallery, faq→Faq, ticket_shop→TicketShopWrapper, reservation_widget→ReservationWidgetWrapper
+
+**Admin Portal Updates:**
+- PagesPage.jsx: BLOCK_TYPES array uitgebreid met 'cta', 'gallery', 'faq', 'ticket_shop', 'reservation_widget'
+- Dropdown labels nu via `t('pages.blockTypes.${bt}')` i.p.v. raw type string
+- i18n: `pages.blockTypes` object met 12 block type namen in nl.json, en.json, de.json, es.json
+
+**Middleware Wildcard Subdomain Detection (middleware.ts):**
+- `RESERVED_SUBDOMAINS` set: www, dev, test, api, admin, mail, staging
+- `resolveTenant()` functie met 3 prioriteiten: exact match → wildcard subdomain → fallback
+- `*.holidaibutler.com` → subdomain = tenant slug (automatische tenant onboarding)
+
+**Apache Wildcard VHost:**
+- `/etc/apache2/sites-available/wildcard.holidaibutler.com.conf`
+- ServerAlias `*.holidaibutler.com`, HTTP-only (port 80), ProxyPass naar Next.js port 3002
+- Wildcard SSL cert pending (certbot-dns-hetzner plugin geïnstalleerd, DNS token issues)
+
+**Server Fix:**
+- Pages route (`/api/v1/pages`) was niet geregistreerd in platform-core/src/index.js op Hetzner — opgelost met import + app.use() + full file sync via SCP
+
+### Bestanden
+
+| # | Bestand | Actie |
+|---|---------|-------|
+| 1 | `hb-websites/src/blocks/Cta.tsx` | NEW (~40 regels) |
+| 2 | `hb-websites/src/blocks/Gallery.tsx` | NEW (~119 regels) |
+| 3 | `hb-websites/src/blocks/Faq.tsx` | NEW (~60 regels) |
+| 4 | `hb-websites/src/blocks/TicketShop.tsx` | NEW (~141 regels) |
+| 5 | `hb-websites/src/blocks/TicketShopWrapper.tsx` | NEW (~10 regels) |
+| 6 | `hb-websites/src/blocks/ReservationWidget.tsx` | NEW (~175 regels) |
+| 7 | `hb-websites/src/blocks/ReservationWidgetWrapper.tsx` | NEW (~10 regels) |
+| 8 | `hb-websites/src/app/api/tickets/route.ts` | NEW |
+| 9 | `hb-websites/src/app/api/reservable-pois/route.ts` | NEW |
+| 10 | `hb-websites/src/app/api/reservation-slots/[poiId]/route.ts` | NEW |
+| 11 | `hb-websites/src/blocks/index.ts` | EDIT (5 imports + registry entries) |
+| 12 | `hb-websites/src/types/blocks.ts` | EDIT (+5 prop interfaces) |
+| 13 | `hb-websites/src/types/poi.ts` | EDIT (+Ticket, ReservationSlot) |
+| 14 | `hb-websites/src/lib/api.ts` | EDIT (+3 fetch functies) |
+| 15 | `hb-websites/src/middleware.ts` | EDIT (wildcard subdomain detection) |
+| 16 | `admin-module/src/pages/PagesPage.jsx` | EDIT (+5 BLOCK_TYPES, i18n labels) |
+| 17 | `admin-module/src/i18n/nl.json` | EDIT (+pages.blockTypes 12 keys) |
+| 18 | `admin-module/src/i18n/en.json` | EDIT (+pages.blockTypes 12 keys) |
+| 19 | `admin-module/src/i18n/de.json` | EDIT (+pages.blockTypes 12 keys) |
+| 20 | `admin-module/src/i18n/es.json` | EDIT (+pages.blockTypes 12 keys) |
+
+### Verificatie
+
+| # | Check | Resultaat |
+|---|-------|-----------|
+| 1 | Calpe home pagina | 200 OK |
+| 2 | Calpe explore pagina | 200 OK |
+| 3 | Calpe events pagina | 200 OK |
+| 4 | Calpe restaurants pagina | 200 OK |
+| 5 | Calpe about pagina | 200 OK |
+| 6 | Calpe contact pagina | 200 OK |
+| 7 | Texel home pagina | 200 OK |
+| 8 | Texel explore pagina | 200 OK |
+| 9 | Texel events pagina | 200 OK |
+| 10 | Texel restaurants pagina | 200 OK |
+| 11 | Texel about pagina | 200 OK |
+| 12 | Texel contact pagina | 200 OK |
+| 13 | Admin Portal | 200 OK |
+| 14 | Pages API | 200 OK |
+| 15 | Wildcard subdomain (test.holidaibutler.com) | Correct proxied naar Next.js |
+| 16 | hb-websites build (Hetzner) | 0 errors, Next.js 15.5.12 |
+| 17 | admin-module build | 0 errors |
+
+### Referentie
+- CLAUDE.md: v3.71.0 → v3.72.0
+- Master Strategie: v7.37 → v7.38
+- Git commit: b1819c4
+
+---
+
 ## Volledige Changelog
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **3.72.0** | **2026-03-06** | **Fase V.5**: P1 Blocks + Wildcard DNS Schaling. 5 nieuwe blocks (Cta, Gallery, Faq, TicketShop, ReservationWidget). Block registry 7→12. 3 API proxy routes. Admin block editor 12 types + i18n 4 talen. Middleware wildcard `*.holidaibutler.com`. Apache wildcard VHost. 20 bestanden (+783 regels). Calpe 6/6 + Texel 6/6 PASS. |
 | **3.71.0** | **2026-03-05** | **Fase V.4**: Admin Portal Editors (Branding, Pages, Navigation). 8 nieuwe admin endpoints (145 totaal), adminPortal.js v3.23.0. BrandingPage, PagesPage, NavigationPage. 3 API services + 3 hooks. i18n 4 talen (~90 keys). Dynamic navigation Header.tsx. 20 bestanden (+2.150 regels). 15/15 deploy tests. |
 | **3.70.0** | **2026-03-05** | **Fase V.3**: Texel als tweede tenant. dev.texelmaps.nl live met eigen branding, 6 pagina's, Tessa chatbot, 1.660 POIs. Middleware domain mapping fix. pages.js gesynct naar repo. Multi-tenant model 100% data-driven gevalideerd. |
 | **3.69.0** | **2026-03-05** | **Fase V.0+V.1+V.2**: Foundation + ChatbotWidget + Calpe Pilot. Next.js 15 live op dev.holidaibutler.com. 7 blocks, ChatbotWidget SSE streaming, POI detail route, Testimonials block, 6 Calpe pagina's, navigatie. 9 bestanden (3 nieuw + 6 gewijzigd). |
