@@ -131,7 +131,7 @@ async function initializePlatform() {
 // ENTERPRISE: Correlation ID must be first for distributed tracing
 app.use(correlationIdMiddleware());
 
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({
   origin: process.env.CORS_ORIGIN?.split(',') || '*',
   credentials: true
