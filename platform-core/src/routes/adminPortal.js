@@ -8933,7 +8933,7 @@ router.put('/destinations/:id/navigation', adminAuth('platform_admin'), async (r
  * GET /admin-portal/destinations/:id/social-links
  * Get social media links for a destination
  */
-router.get('/destinations/:id/social-links', adminAuth, async (req, res) => {
+router.get('/destinations/:id/social-links', adminAuth(), async (req, res) => {
   try {
     const destId = parseInt(req.params.id);
     const [dest] = await mysqlSequelize.query(
@@ -8956,7 +8956,7 @@ router.get('/destinations/:id/social-links', adminAuth, async (req, res) => {
  * PUT /admin-portal/destinations/:id/social-links
  * Update social media links for a destination
  */
-router.put('/destinations/:id/social-links', adminAuth, writeAccess, async (req, res) => {
+router.put('/destinations/:id/social-links', adminAuth(), writeAccess(['platform_admin']), async (req, res) => {
   try {
     const destId = parseInt(req.params.id);
     const [dest] = await mysqlSequelize.query(
@@ -8996,7 +8996,7 @@ router.put('/destinations/:id/social-links', adminAuth, writeAccess, async (req,
  * Auto-translate texts using Mistral AI
  * Body: { texts: [{key, value}], sourceLang, targetLangs }
  */
-router.post('/translate', adminAuth, writeAccess, async (req, res) => {
+router.post('/translate', adminAuth(), writeAccess(['platform_admin']), async (req, res) => {
   try {
     const { texts, sourceLang, targetLangs } = req.body;
     if (!Array.isArray(texts) || !texts.length) {
