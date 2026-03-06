@@ -260,7 +260,7 @@ function LanguageSelector() {
 
 /* ===== Branding Section ===== */
 function BrandingSection() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data, isLoading } = useBranding();
   const updateMut = useUpdateBranding();
   const uploadMut = useUploadLogo();
@@ -345,7 +345,9 @@ function BrandingSection() {
                   {brand.payoff && (
                     <Grid item xs={6}>
                       <Typography variant="caption" color="text.secondary">{t('settings.branding.payoff')}</Typography>
-                      <Typography variant="body2" sx={{ fontStyle: 'italic' }}>{brand.payoff}</Typography>
+                      <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                        {typeof brand.payoff === 'object' ? (brand.payoff[i18n.language] || brand.payoff.en || Object.values(brand.payoff)[0] || '') : brand.payoff}
+                      </Typography>
                     </Grid>
                   )}
                 </Grid>
@@ -462,7 +464,14 @@ function BrandingSection() {
               <Grid item xs={12}>
                 <TextField
                   fullWidth size="small" label={t('settings.branding.payoff')}
-                  value={form.payoff || ''} onChange={(e) => setForm(f => ({ ...f, payoff: e.target.value }))}
+                  value={typeof form.payoff === 'object' ? (form.payoff[i18n.language] || form.payoff.en || '') : (form.payoff || '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setForm(f => ({
+                      ...f,
+                      payoff: typeof f.payoff === 'object' ? { ...f.payoff, [i18n.language]: val } : val
+                    }));
+                  }}
                   placeholder="Ontdek Texel"
                 />
               </Grid>
