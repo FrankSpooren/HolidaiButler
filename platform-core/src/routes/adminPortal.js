@@ -209,7 +209,7 @@ function getRedis() {
 /** Resolve destination filter value to numeric ID. Accepts 'calpe', 'texel', 1, 2, '1', '2'. */
 function resolveDestinationId(val) {
   if (!val) return null;
-  const codeMap = { calpe: 1, texel: 2 };
+  const codeMap = { calpe: 1, texel: 2, alicante: 3, warrewijzer: 4 };
   const lower = String(val).toLowerCase();
   if (codeMap[lower]) return codeMap[lower];
   const parsed = parseInt(val);
@@ -8529,7 +8529,7 @@ router.get('/financial/audit-log', adminAuth('reviewer'), destinationScope, comm
  */
 router.get('/pages', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const destinationId = resolveDestinationId(req.query.destination || req.headers['x-destination-id']);
+    const destinationId = resolveDestinationId(req.query.destinationId || req.query.destination || req.headers['x-destination-id']);
     const where = destinationId ? 'WHERE p.destination_id = :destId' : '';
     const replacements = destinationId ? { destId: destinationId } : {};
 
