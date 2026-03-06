@@ -891,6 +891,7 @@
     "styleSection": "Style",
     "logoSection": "Logo & Brand",
     "payoffSection": "Payoff / Tagline",
+    "socialLinksSection": "Social Media Links",
     "preview": "Preview",
     "previewHeading": "Welcome to your destination",
     "previewBody": "Discover the best local experiences, restaurants, and attractions.",
@@ -983,7 +984,15 @@
       "gallery": "Gallery",
       "faq": "FAQ",
       "ticket_shop": "Ticket Shop",
-      "reservation_widget": "Reservation Widget"
+      "reservation_widget": "Reservation Widget",
+      "video": "Video",
+      "social_feed": "Social Media Feed",
+      "contact_form": "Contact Form",
+      "newsletter": "Newsletter",
+      "weather_widget": "Weather Widget",
+      "banner": "Banner",
+      "partners": "Partners",
+      "downloads": "Downloads"
     }
   },
   "navigation": {
@@ -1011,5 +1020,11 @@
       "href": "URL path",
       "featureFlag": "Feature flag (optional)"
     }
+  },
+  "translate": {
+    "autoTranslate": "Auto-translate",
+    "translating": "Translating...",
+    "success": "Translations filled automatically",
+    "error": "Translation failed. Please try again."
   }
 }

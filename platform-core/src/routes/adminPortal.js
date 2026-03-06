@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 (v3.23.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 (v3.24.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -8922,6 +8922,96 @@ router.put('/destinations/:id/navigation', adminAuth('platform_admin'), async (r
   } catch (error) {
     logger.error('[AdminPortal] Navigation update error:', error);
     res.status(500).json({ success: false, error: { code: 'NAVIGATION_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+// ==========================================
+// V.6 — Social Links + Translation Endpoints
+// ==========================================
+
+/**
+ * GET /admin-portal/destinations/:id/social-links
+ * Get social media links for a destination
+ */
+router.get('/destinations/:id/social-links', adminAuth, async (req, res) => {
+  try {
+    const destId = parseInt(req.params.id);
+    const [dest] = await mysqlSequelize.query(
+      'SELECT id, code, social_links FROM destinations WHERE id = :id',
+      { replacements: { id: destId }, type: QueryTypes.SELECT }
+    );
+    if (!dest) {
+      return res.status(404).json({ success: false, error: { code: 'DESTINATION_NOT_FOUND', message: 'Destination not found' } });
+    }
+    let socialLinks = {};
+    try { socialLinks = typeof dest.social_links === 'string' ? JSON.parse(dest.social_links) : (dest.social_links || {}); } catch { /* empty */ }
+    res.json({ success: true, data: { destinationId: destId, code: dest.code, socialLinks } });
+  } catch (error) {
+    logger.error('[AdminPortal] Social links fetch error:', error);
+    res.status(500).json({ success: false, error: { code: 'SOCIAL_LINKS_FETCH_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /admin-portal/destinations/:id/social-links
+ * Update social media links for a destination
+ */
+router.put('/destinations/:id/social-links', adminAuth, writeAccess, async (req, res) => {
+  try {
+    const destId = parseInt(req.params.id);
+    const [dest] = await mysqlSequelize.query(
+      'SELECT id, code FROM destinations WHERE id = :id',
+      { replacements: { id: destId }, type: QueryTypes.SELECT }
+    );
+    if (!dest) {
+      return res.status(404).json({ success: false, error: { code: 'DESTINATION_NOT_FOUND', message: 'Destination not found' } });
+    }
+    const { socialLinks } = req.body;
+    if (!socialLinks || typeof socialLinks !== 'object') {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_SOCIAL_LINKS', message: 'socialLinks must be an object' } });
+    }
+    await mysqlSequelize.query(
+      'UPDATE destinations SET social_links = :socialLinks, updated_at = NOW() WHERE id = :id',
+      { replacements: { socialLinks: JSON.stringify(socialLinks), id: destId }, type: QueryTypes.UPDATE }
+    );
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'destination_social_links_updated', entity_type: 'destination', entity_id: destId,
+          admin_email: req.adminUser.email, changes: { platforms: Object.keys(socialLinks) },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+    res.json({ success: true, data: { message: `Social links updated for ${dest.code}`, destinationId: destId, socialLinks } });
+  } catch (error) {
+    logger.error('[AdminPortal] Social links update error:', error);
+    res.status(500).json({ success: false, error: { code: 'SOCIAL_LINKS_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /admin-portal/translate
+ * Auto-translate texts using Mistral AI
+ * Body: { texts: [{key, value}], sourceLang, targetLangs }
+ */
+router.post('/translate', adminAuth, writeAccess, async (req, res) => {
+  try {
+    const { texts, sourceLang, targetLangs } = req.body;
+    if (!Array.isArray(texts) || !texts.length) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_TEXTS', message: 'texts must be a non-empty array of {key, value}' } });
+    }
+    if (!sourceLang || !Array.isArray(targetLangs) || !targetLangs.length) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_LANGS', message: 'sourceLang and targetLangs are required' } });
+    }
+    // Dynamic import to avoid loading Mistral SDK at startup
+    const { translateTexts } = await import('../services/translationService.js');
+    const translations = await translateTexts(texts, sourceLang, targetLangs);
+    res.json({ success: true, data: { translations } });
+  } catch (error) {
+    logger.error('[AdminPortal] Translation error:', error);
+    res.status(500).json({ success: false, error: { code: 'TRANSLATION_ERROR', message: error.message } });
   }
 });
 

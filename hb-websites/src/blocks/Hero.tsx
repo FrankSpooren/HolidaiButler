@@ -1,10 +1,42 @@
 import type { HeroProps } from '@/types/blocks';
 import Button from '@/components/ui/Button';
+import HeroVideo from './HeroVideo';
 
-export default function Hero({ headline, description, image, tagline, buttons }: HeroProps) {
+export default function Hero({
+  headline,
+  description,
+  image,
+  tagline,
+  buttons,
+  backgroundType = 'image',
+  videoUrl,
+  videoPosterImage,
+}: HeroProps) {
+  const showVideo = backgroundType === 'video' && videoUrl;
+
   return (
     <section className="relative bg-primary text-on-primary overflow-hidden">
-      {image && (
+      {/* Background: image, video, or solid color */}
+      {showVideo ? (
+        <>
+          <div className="absolute inset-0 hidden md:block">
+            <HeroVideo videoUrl={videoUrl} posterImage={videoPosterImage} />
+          </div>
+          {/* Mobile fallback: poster image */}
+          {videoPosterImage && (
+            <div className="absolute inset-0 md:hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={videoPosterImage}
+                alt=""
+                className="w-full h-full object-cover opacity-40"
+                loading="eager"
+              />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-primary/60" />
+        </>
+      ) : image && backgroundType !== 'color' ? (
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -15,7 +47,8 @@ export default function Hero({ headline, description, image, tagline, buttons }:
           />
           <div className="absolute inset-0 bg-primary/60" />
         </div>
-      )}
+      ) : null}
+
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36">
         {tagline && (
           <p className="text-sm font-medium uppercase tracking-wider opacity-80 mb-4">

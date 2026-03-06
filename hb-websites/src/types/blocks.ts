@@ -11,7 +11,15 @@ export type BlockType =
   | 'faq'
   | 'ticket_shop'
   | 'reservation_widget'
-  | 'chatbot_widget';
+  | 'chatbot_widget'
+  | 'video'
+  | 'social_feed'
+  | 'contact_form'
+  | 'newsletter'
+  | 'weather_widget'
+  | 'banner'
+  | 'partners'
+  | 'downloads';
 
 export interface BlockConfig {
   id: string;
@@ -26,6 +34,9 @@ export interface HeroProps {
   image?: string;
   tagline?: string;
   buttons?: Array<{ label: string; href: string; variant?: 'primary' | 'secondary' | 'outline' }>;
+  backgroundType?: 'image' | 'video' | 'color';
+  videoUrl?: string;
+  videoPosterImage?: string;
 }
 
 export interface PoiGridProps {
@@ -73,6 +84,7 @@ export interface CtaProps {
 
 export interface GalleryProps {
   images: Array<{ src: string; alt?: string; caption?: string }>;
+  items?: GalleryItem[];
   columns?: 2 | 3 | 4;
   layout?: 'grid' | 'masonry';
 }
@@ -91,6 +103,84 @@ export interface TicketShopProps {
 export interface ReservationWidgetProps {
   defaultPoiId?: number;
   showSearch?: boolean;
+}
+
+export interface VideoProps {
+  youtubeUrl?: string;
+  vimeoUrl?: string;
+  videoFile?: string;
+  headline?: string;
+  description?: string;
+  posterImage?: string;
+  layout?: 'full-width' | 'contained' | 'side-by-side';
+  autoplay?: boolean;
+  muted?: boolean;
+  backgroundColor?: 'transparent' | 'primary' | 'surface';
+}
+
+export interface SocialFeedProps {
+  platform: 'instagram' | 'facebook' | 'tiktok' | 'youtube';
+  headline?: string;
+  showFollowButton?: boolean;
+}
+
+export interface ContactFormProps {
+  headline?: string;
+  description?: string;
+  fields?: Array<{
+    name: string;
+    type: 'text' | 'email' | 'tel' | 'textarea' | 'select';
+    label: string;
+    required?: boolean;
+    placeholder?: string;
+    options?: string[];
+  }>;
+  layout?: 'default' | 'side-by-side';
+}
+
+export interface NewsletterProps {
+  headline?: string;
+  description?: string;
+  backgroundColor?: 'primary' | 'secondary' | 'surface';
+  layout?: 'stacked' | 'inline';
+  mailerliteGroupId?: string;
+}
+
+export interface WeatherWidgetProps {
+  layout?: 'compact' | 'detailed';
+  showForecast?: boolean;
+}
+
+export interface BannerProps {
+  message: string;
+  type?: 'info' | 'warning' | 'success' | 'promo';
+  dismissible?: boolean;
+  link?: { label: string; href: string };
+}
+
+export interface PartnersProps {
+  headline?: string;
+  logos: Array<{ src: string; alt: string; href?: string }>;
+  columns?: 3 | 4 | 5 | 6;
+}
+
+export interface DownloadsProps {
+  headline?: string;
+  files: Array<{
+    name: string;
+    url: string;
+    description?: string;
+    fileType?: string;
+    fileSize?: string;
+  }>;
+}
+
+export interface GalleryItem {
+  type: 'image' | 'video';
+  url: string;
+  thumbnailUrl?: string;
+  alt?: string;
+  caption?: string;
 }
 
 export interface PageLayout {

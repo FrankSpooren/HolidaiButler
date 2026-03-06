@@ -24,7 +24,7 @@ router.get('/destinations/:code', async (req, res) => {
     const [destination] = await mysqlSequelize.query(
       `SELECT id, code, name, display_name, domain, country, region, timezone,
               currency, default_language, supported_languages, feature_flags,
-              branding, config, is_active
+              branding, config, is_active, latitude, longitude, social_links
        FROM destinations
        WHERE code = :code AND is_active = 1`,
       {
@@ -49,6 +49,10 @@ router.get('/destinations/:code', async (req, res) => {
     let config = {};
     try { config = typeof destination.config === 'string' ? JSON.parse(destination.config) : (destination.config || {}); } catch (e) { /* empty */ }
 
+    // Parse social_links JSON (V.6)
+    let socialLinks = {};
+    try { socialLinks = typeof destination.social_links === 'string' ? JSON.parse(destination.social_links) : (destination.social_links || {}); } catch (e) { /* empty */ }
+
     res.json({
       success: true,
       data: {
@@ -66,6 +70,9 @@ router.get('/destinations/:code', async (req, res) => {
         featureFlags,
         branding,
         config,
+        socialLinks,
+        latitude: destination.latitude ? parseFloat(destination.latitude) : null,
+        longitude: destination.longitude ? parseFloat(destination.longitude) : null,
         isActive: !!destination.is_active,
       },
     });

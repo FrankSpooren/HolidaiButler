@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.72.0
+> **Versie**: 3.73.0
 > **Laatst bijgewerkt**: 6 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -117,7 +117,7 @@ HolidaiButler/
 ├── hb-websites/                 # Next.js 15 publieke websites (Fase V)
 │   └── src/
 │       ├── app/                 # App Router (tenant-themed SSR)
-│       ├── blocks/              # Page builder blocks (12: Hero, PoiGrid, EventCalendar, RichText, CardGroup, Map, Testimonials, Cta, Gallery, Faq, TicketShop, ReservationWidget)
+│       ├── blocks/              # Page builder blocks (20: Hero, PoiGrid, EventCalendar, RichText, CardGroup, Map, Testimonials, Cta, Gallery, Faq, TicketShop, ReservationWidget, Video, SocialFeed, ContactForm, Newsletter, WeatherWidget, Banner, Partners, Downloads)
 │       ├── components/          # Layout (Header/Footer) + UI (Button/Card) + Modules (Chatbot)
 │       ├── lib/                 # API client, theme engine, block registry
 │       ├── types/               # TypeScript type definities
@@ -347,8 +347,9 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **V Start** | **Multi-Tenant Configuratielaag — Architectuurbeslissing** | **05-03** | **Next.js 15 + React 19 + Tailwind CSS 4. Geen extern CMS. Block-based page builder. DB: destinations.branding JSON + pages tabel.** |
 | **V.0+V.1+V.2** | **Foundation + Component Library + Calpe Pilot** | **05-03** | **Next.js 15 live op dev.holidaibutler.com. 7 blocks, ChatbotWidget SSE streaming, 6 Calpe pagina's, POI detail route.** |
 | **V.3** | **Texel als Tweede Tenant** | **05-03** | **Texel live op dev.texelmaps.nl. Eigen branding, 6 pagina's, 1.660 POIs, Tessa chatbot. Multi-tenant 100% data-driven gevalideerd.** |
-| **V.4** | **Admin Portal Editors (Branding, Pages, Navigation)** | **05-03** | **8 nieuwe admin endpoints (145 totaal). BrandingPage, PagesPage, NavigationPage. Dynamic navigation in Header.tsx. adminPortal.js v3.23.0. 20 bestanden (+2.150 regels). 15/15 tests PASS.** |
+| **V.4** | **Admin Portal Editors (Branding, Pages, Navigation)** | **05-03** | **8 nieuwe admin endpoints (145 totaal). BrandingPage, PagesPage, NavigationPage. Dynamic navigation in Header.tsx. adminPortal.js v3.24.0. 20 bestanden (+2.150 regels). 15/15 tests PASS.** |
 | **V.5** | **P1 Blocks + Wildcard DNS Schaling** | **06-03** | **5 nieuwe blocks: Cta (presentational), Gallery (lightbox), Faq (accordion), TicketShop (feature-gated), ReservationWidget (feature-gated). Block registry 7→12. 3 Next.js API proxy routes. Admin Portal block editor 12 types + i18n 4 talen. Middleware wildcard subdomain detection `*.holidaibutler.com`. Apache wildcard VHost (HTTP). Pages route fix op Hetzner. 20 bestanden (+783 regels). Calpe 6/6 + Texel 6/6 regressie PASS.** |
+| **V.6** | **Ontbrekende Blocks + Block Upgrades** | **06-03** | **8 nieuwe blocks: Video (YouTube/Vimeo/self-hosted, 3 layouts), SocialFeed (privacy-first consent, 4 platforms), ContactForm (honeypot spam, GDPR consent), Newsletter (MailerLite subscribe), WeatherWidget (Open-Meteo API, ISR 30min, compact/detailed), Banner (4 types, dismissible localStorage), Partners (logo grid, grayscale hover), Downloads (file type icons). 2 block upgrades: Hero (+video background, mobile fallback, prefers-reduced-motion), Gallery (+mixed media items, GalleryItem type). Block registry 12→20. 3 nieuwe admin endpoints (148 totaal): social-links GET/PUT + translate POST. 2 nieuwe public endpoints: contact POST + newsletter/subscribe POST. 2 Next.js API proxy routes. Auto-translate frontend (Mistral AI) op PagesPage, BrandingPage, NavigationPage. Social Media Links sectie in BrandingPage. DB ALTERs: destinations.latitude/longitude/social_links. i18n 4 talen (8 block types + translate + social links). adminPortal.js v3.24.0. ~35 bestanden (19 nieuw + 16 gewijzigd). Calpe 6/6 + Texel 6/6 regressie PASS.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -408,7 +409,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.23.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 145 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial + 8 branding/pages/navigation endpoints)
+- **Endpoints**: 148 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial + 8 branding/pages/navigation + 3 V.6 endpoints)
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -590,8 +591,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **3.73.0** | **2026-03-06** | **Fase V.6: Ontbrekende Blocks + Block Upgrades**. 8 nieuwe blocks: Video (YouTube-nocookie/Vimeo/self-hosted, 3 layouts, VideoPlayer client component), SocialFeed (privacy-first consent placeholder, 4 platforms, SocialFeedWrapper Pattern D), ContactForm (honeypot + GDPR consent, configureerbare velden, 2 layouts), Newsletter (MailerLite subscriber API, success/error states), WeatherWidget (Open-Meteo API, ISR 30 min, compact/detailed, inline weer-iconen), Banner (info/warning/success/promo, dismissible localStorage), Partners (logo grid, grayscale hover, 3-6 kolommen), Downloads (file type iconen PDF/DOC/GPX, bestandsgrootte). 2 block upgrades: Hero (+video background autoplay muted loop, mobile poster fallback, prefers-reduced-motion), Gallery (+mixed media GalleryItem type, backward compatible). Block registry 12→20. 3 nieuwe admin endpoints (148 totaal): social-links GET/PUT, translate POST (Mistral AI). 2 nieuwe public endpoints + 2 Next.js API proxy routes: contact POST, newsletter/subscribe POST. Auto-translate frontend: translateTexts API client, TranslateIcon buttons op PagesPage/BrandingPage/NavigationPage. Social Media Links sectie in BrandingPage (6 platforms). DB ALTERs: destinations.latitude/longitude/social_links. 10 nieuwe TypeScript interfaces. i18n 4 talen (~30 nieuwe keys: 8 block types + translate + social links). adminPortal.js v3.24.0. ~35 bestanden (19 nieuw + 16 gewijzigd). Calpe 6/6 + Texel 6/6 + POI detail regressie PASS. |
 | **3.72.0** | **2026-03-06** | **Fase V.5: P1 Blocks + Wildcard DNS Schaling**. 5 nieuwe blocks: Cta (pure presentational, 3 bg styles), Gallery ('use client', lightbox met keyboard nav), Faq ('use client', accordion met aria-expanded), TicketShop ('use client', feature-gated, grid/list layout, prijs formatting), ReservationWidget ('use client', feature-gated, zoekformulier + tijdslots). 2 SSR-safe wrappers (TicketShopWrapper, ReservationWidgetWrapper). Block registry 7→12. 3 Next.js API proxy routes (tickets, reservable-pois, reservation-slots/[poiId]). 5 nieuwe TypeScript interfaces (CtaProps, GalleryProps, FaqProps, TicketShopProps, ReservationWidgetProps, Ticket, ReservationSlot). 3 nieuwe API functies (fetchTickets, fetchReservablePois, fetchAvailableSlots). Admin Portal PagesPage.jsx: BLOCK_TYPES 7→12, dropdown met i18n labels. i18n `pages.blockTypes` in 4 talen (12 block type namen). Middleware wildcard subdomain detection: `*.holidaibutler.com` → slug = subdomain (met RESERVED_SUBDOMAINS safeguard). Apache wildcard VHost (HTTP). certbot-dns-hetzner geïnstalleerd (wildcard SSL cert pending DNS token). Pages route fix op Hetzner (index.js miste `app.use('/api/v1/pages', pagesRoutes)` registratie). 20 bestanden (10 nieuw + 8 gewijzigd + 2 server fixes), +783 regels. Calpe 6/6 + Texel 6/6 regressie PASS. |
-| **3.71.0** | **2026-03-05** | **Fase V.4: Admin Portal Editors (Branding, Pages, Navigation)**. 8 nieuwe admin endpoints in adminPortal.js v3.23.0 (145 totaal): Pages CRUD (5), Destinations/Branding sync (2), Navigation (1). 3 nieuwe Admin Portal pagina's: BrandingPage.jsx (7 kleuren, fonts, logo, payoff, stijl, live preview), PagesPage.jsx (CRUD, block editor, 7 block types, templates, status toggle), NavigationPage.jsx (items per destination, reordering, preview). 3 API services + 3 React Query hooks. i18n 4 talen (~90 keys). Dynamic navigation in Next.js Header.tsx (data-driven met hardcoded fallback). Fix: pages.js route was niet geregistreerd in index.js. 20 bestanden (9 nieuw + 11 gewijzigd), +2.150 regels. 15/15 deploy tests PASS. |
+| **3.71.0** | **2026-03-05** | **Fase V.4: Admin Portal Editors (Branding, Pages, Navigation)**. 8 nieuwe admin endpoints in adminPortal.js v3.24.0 (145 totaal): Pages CRUD (5), Destinations/Branding sync (2), Navigation (1). 3 nieuwe Admin Portal pagina's: BrandingPage.jsx (7 kleuren, fonts, logo, payoff, stijl, live preview), PagesPage.jsx (CRUD, block editor, 7 block types, templates, status toggle), NavigationPage.jsx (items per destination, reordering, preview). 3 API services + 3 React Query hooks. i18n 4 talen (~90 keys). Dynamic navigation in Next.js Header.tsx (data-driven met hardcoded fallback). Fix: pages.js route was niet geregistreerd in index.js. 20 bestanden (9 nieuw + 11 gewijzigd), +2.150 regels. 15/15 deploy tests PASS. |
 | **3.70.0** | **2026-03-05** | **Fase V.3: Texel als tweede tenant**. Texel live op dev.texelmaps.nl met eigen branding (#30c59b groen, Montserrat/Open Sans), 6 pagina's (home, explore, events, restaurants, about, contact), Tessa chatbot, POI detail. Middleware + Apache VHost. Geen hb-websites code-wijzigingen nodig — 100% data-driven multi-tenancy bewezen. pages.js gesynct naar repo. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
@@ -602,7 +604,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.38 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.39 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

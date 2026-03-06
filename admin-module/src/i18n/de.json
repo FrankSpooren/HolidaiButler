@@ -891,6 +891,7 @@
     "styleSection": "Stil",
     "logoSection": "Logo & Marke",
     "payoffSection": "Payoff / Tagline",
+    "socialLinksSection": "Social-Media-Links",
     "preview": "Vorschau",
     "previewHeading": "Willkommen an Ihrem Reiseziel",
     "previewBody": "Entdecken Sie die besten lokalen Erlebnisse, Restaurants und Sehenswürdigkeiten.",
@@ -983,7 +984,15 @@
       "gallery": "Galerie",
       "faq": "Häufige Fragen",
       "ticket_shop": "Ticketshop",
-      "reservation_widget": "Reservierungs-Widget"
+      "reservation_widget": "Reservierungs-Widget",
+      "video": "Video",
+      "social_feed": "Social Media Feed",
+      "contact_form": "Kontaktformular",
+      "newsletter": "Newsletter",
+      "weather_widget": "Wetter-Widget",
+      "banner": "Banner",
+      "partners": "Partner",
+      "downloads": "Downloads"
     }
   },
   "navigation": {
@@ -1011,5 +1020,11 @@
       "href": "URL-Pfad",
       "featureFlag": "Feature-Flag (optional)"
     }
+  },
+  "translate": {
+    "autoTranslate": "Auto-\u00fcbersetzen",
+    "translating": "\u00dcbersetzen...",
+    "success": "\u00dcbersetzungen automatisch ausgef\u00fcllt",
+    "error": "\u00dcbersetzung fehlgeschlagen. Bitte erneut versuchen."
   }
 }

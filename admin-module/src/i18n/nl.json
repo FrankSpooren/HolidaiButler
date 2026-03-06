@@ -891,6 +891,7 @@
     "styleSection": "Stijl",
     "logoSection": "Logo & Merk",
     "payoffSection": "Payoff / Tagline",
+    "socialLinksSection": "Social Media Links",
     "preview": "Voorbeeld",
     "previewHeading": "Welkom bij je bestemming",
     "previewBody": "Ontdek de beste lokale ervaringen, restaurants en attracties.",
@@ -983,7 +984,15 @@
       "gallery": "Galerij",
       "faq": "Veelgestelde vragen",
       "ticket_shop": "Ticketshop",
-      "reservation_widget": "Reserveringswidget"
+      "reservation_widget": "Reserveringswidget",
+      "video": "Video",
+      "social_feed": "Social Media Feed",
+      "contact_form": "Contactformulier",
+      "newsletter": "Nieuwsbrief",
+      "weather_widget": "Weer Widget",
+      "banner": "Banner",
+      "partners": "Partners",
+      "downloads": "Downloads"
     }
   },
   "navigation": {
@@ -1011,5 +1020,11 @@
       "href": "URL pad",
       "featureFlag": "Feature flag (optioneel)"
     }
+  },
+  "translate": {
+    "autoTranslate": "Auto-vertalen",
+    "translating": "Vertalen...",
+    "success": "Vertalingen automatisch ingevuld",
+    "error": "Vertaling mislukt. Probeer het opnieuw."
   }
 }

@@ -9,11 +9,13 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import TranslateIcon from '@mui/icons-material/Translate';
 import { useTranslation } from 'react-i18next';
+import { translateTexts } from '../api/translationService.js';
 import { usePages, usePageCreate, usePageUpdate, usePageDelete } from '../hooks/usePages.js';
 import { useBrandingDestinations } from '../hooks/useBrandingEditor.js';
 
-const BLOCK_TYPES = ['hero', 'poi_grid', 'event_calendar', 'rich_text', 'card_group', 'map', 'testimonials', 'cta', 'gallery', 'faq', 'ticket_shop', 'reservation_widget'];
+const BLOCK_TYPES = ['hero', 'poi_grid', 'event_calendar', 'rich_text', 'card_group', 'map', 'testimonials', 'cta', 'gallery', 'faq', 'ticket_shop', 'reservation_widget', 'video', 'social_feed', 'contact_form', 'newsletter', 'weather_widget', 'banner', 'partners', 'downloads'];
 
 const TEMPLATES = {
   empty: { blocks: [] },
@@ -52,6 +54,7 @@ export default function PagesPage() {
   const [editTab, setEditTab] = useState(0);
   const [createForm, setCreateForm] = useState({ slug: '', title_en: '', title_nl: '', status: 'draft', template: 'empty', destination_id: '' });
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
+  const [translating, setTranslating] = useState(false);
 
   const handleCreate = async () => {
     try {
@@ -125,6 +128,30 @@ export default function PagesPage() {
       setSnack({ open: true, message: t('pages.statusUpdated'), severity: 'success' });
     } catch (err) {
       setSnack({ open: true, message: err.message, severity: 'error' });
+    }
+  };
+
+  const handleAutoTranslate = async () => {
+    if (!editPage?.title_en) return;
+    setTranslating(true);
+    try {
+      const texts = [{ key: 'title', value: editPage.title_en }];
+      if (editPage.seo_title_en) texts.push({ key: 'seoTitle', value: editPage.seo_title_en });
+      if (editPage.seo_description_en) texts.push({ key: 'seoDescription', value: editPage.seo_description_en });
+      const translations = await translateTexts(texts, 'en', ['nl', 'de', 'es']);
+      setEditPage(p => ({
+        ...p,
+        title_nl: translations.title?.nl || p.title_nl,
+        title_de: translations.title?.de || p.title_de,
+        title_es: translations.title?.es || p.title_es,
+        seo_title_nl: translations.seoTitle?.nl || p.seo_title_nl,
+        seo_description_nl: translations.seoDescription?.nl || p.seo_description_nl,
+      }));
+      setSnack({ open: true, message: t('translate.success'), severity: 'success' });
+    } catch (err) {
+      setSnack({ open: true, message: t('translate.error'), severity: 'error' });
+    } finally {
+      setTranslating(false);
     }
   };
 
@@ -314,6 +341,13 @@ export default function PagesPage() {
                 <TextField size="small" label={t('pages.fields.titleDe')} value={editPage.title_de || ''} onChange={e => setEditPage(p => ({ ...p, title_de: e.target.value }))} sx={{ flex: 1 }} />
                 <TextField size="small" label={t('pages.fields.titleEs')} value={editPage.title_es || ''} onChange={e => setEditPage(p => ({ ...p, title_es: e.target.value }))} sx={{ flex: 1 }} />
               </Box>
+              <Button
+                size="small" variant="outlined" startIcon={<TranslateIcon />}
+                onClick={handleAutoTranslate} disabled={translating || !editPage.title_en}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                {translating ? t('translate.translating') : t('translate.autoTranslate')}
+              </Button>
               <TextField size="small" label={t('pages.fields.seoTitleEn')} value={editPage.seo_title_en || ''} onChange={e => setEditPage(p => ({ ...p, seo_title_en: e.target.value }))} />
               <TextField size="small" label={t('pages.fields.seoDescriptionEn')} value={editPage.seo_description_en || ''} onChange={e => setEditPage(p => ({ ...p, seo_description_en: e.target.value }))} multiline rows={2} />
               <TextField size="small" label={t('pages.fields.ogImageUrl')} value={editPage.og_image_url || ''} onChange={e => setEditPage(p => ({ ...p, og_image_url: e.target.value }))} />
