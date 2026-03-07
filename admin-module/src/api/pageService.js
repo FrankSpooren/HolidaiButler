@@ -16,5 +16,14 @@ export const pageService = {
     client.put(`/pages/${id}`, data).then(r => r.data),
 
   delete: (id) =>
-    client.delete(`/pages/${id}`).then(r => r.data)
+    client.delete(`/pages/${id}`).then(r => r.data),
+
+  duplicate: (id) =>
+    client.post(`/pages/${id}/duplicate`).then(r => r.data),
+
+  revisions: (id) =>
+    client.get(`/pages/${id}/revisions`).then(r => r.data),
+
+  restoreRevision: (pageId, revId) =>
+    client.post(`/pages/${pageId}/revisions/${revId}/restore`).then(r => r.data)
 };

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { SocialFeedProps } from '@/types/blocks';
+import { hasConsent } from '@/components/modules/CookieBanner';
 
 const platformLabels: Record<string, string> = {
   instagram: 'Instagram',
@@ -24,10 +25,25 @@ export default function SocialFeed({
 }: SocialFeedProps) {
   const [consented, setConsented] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return localStorage.getItem('hb-social-consent') === 'true';
+    // Check global GDPR consent (marketing level) or legacy per-component consent
+    return hasConsent('marketing') || localStorage.getItem('hb-social-consent') === 'true';
   });
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Listen for global consent updates from CookieBanner
+  const handleConsentUpdate = useCallback((e: Event) => {
+    const detail = (e as CustomEvent).detail;
+    if (detail?.marketing) {
+      setConsented(true);
+      setLoading(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('hb-consent-update', handleConsentUpdate);
+    return () => window.removeEventListener('hb-consent-update', handleConsentUpdate);
+  }, [handleConsentUpdate]);
 
   const handleConsent = () => {
     localStorage.setItem('hb-social-consent', 'true');

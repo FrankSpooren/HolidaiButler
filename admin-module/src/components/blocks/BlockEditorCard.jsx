@@ -9,8 +9,9 @@ import * as MuiIcons from '@mui/icons-material';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { getBlockMeta } from './blockEditorRegistry.js';
+import BlockStyleEditor from './BlockStyleEditor.jsx';
 
-export default function BlockEditorCard({ block, index, onUpdate, onRemove, onDuplicate }) {
+export default function BlockEditorCard({ block, index, onUpdate, onRemove, onDuplicate, onStyleChange }) {
   const [expanded, setExpanded] = useState(false);
   const meta = getBlockMeta(block.type);
   const IconComponent = meta ? (MuiIcons[meta.icon] || MuiIcons.Extension) : MuiIcons.Extension;
@@ -68,6 +69,10 @@ export default function BlockEditorCard({ block, index, onUpdate, onRemove, onDu
           ) : (
             <Typography variant="body2" color="text.secondary">No editor available for block type "{block.type}"</Typography>
           )}
+          <BlockStyleEditor
+            style={block.style || {}}
+            onChange={newStyle => onStyleChange?.(newStyle)}
+          />
         </Box>
       </Collapse>
     </Card>

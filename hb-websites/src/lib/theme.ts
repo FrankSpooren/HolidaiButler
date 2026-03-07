@@ -79,5 +79,23 @@ export function brandingToCssVars(branding: TenantBranding): CSSProperties {
     '--hb-small-size': typo?.small?.fontSize || '0.875rem',
     '--hb-small-weight': typo?.small?.fontWeight || '400',
     '--hb-small-height': typo?.small?.lineHeight || '1.5',
+    // Button styles (Wave 2)
+    '--hb-btn-primary-bg': branding.buttons?.primary?.bg || colors.primary,
+    '--hb-btn-primary-text': branding.buttons?.primary?.text || contrastColor(colors.primary),
+    '--hb-btn-primary-radius': branding.buttons?.primary?.borderRadius || radius,
+    '--hb-btn-primary-hover': branding.buttons?.primary?.hoverBg || darken(colors.primary, 0.1),
+    '--hb-btn-secondary-bg': branding.buttons?.secondary?.bg || colors.secondary,
+    '--hb-btn-secondary-text': branding.buttons?.secondary?.text || contrastColor(colors.secondary),
+    '--hb-btn-secondary-radius': branding.buttons?.secondary?.borderRadius || radius,
+    '--hb-btn-secondary-hover': branding.buttons?.secondary?.hoverBg || darken(colors.secondary, 0.1),
+    '--hb-btn-outline-text': branding.buttons?.outline?.text || colors.primary,
+    '--hb-btn-outline-border': branding.buttons?.outline?.borderColor || colors.primary,
+    '--hb-btn-outline-radius': branding.buttons?.outline?.borderRadius || radius,
+    '--hb-btn-outline-hover': branding.buttons?.outline?.hoverBg || lighten(colors.primary, 0.4),
+    '--hb-btn-ghost-text': branding.buttons?.ghost?.text || colors.primary,
+    '--hb-btn-ghost-radius': branding.buttons?.ghost?.borderRadius || radius,
+    '--hb-btn-ghost-hover': branding.buttons?.ghost?.hoverBg || lighten(colors.primary, 0.4),
+    '--hb-btn-link-text': branding.buttons?.link?.text || colors.primary,
+    '--hb-btn-link-hover': branding.buttons?.link?.hoverText || darken(colors.primary, 0.15),
   } as CSSProperties;
 }

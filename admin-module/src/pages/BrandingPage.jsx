@@ -7,6 +7,8 @@ import {
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import TranslateIcon from '@mui/icons-material/Translate';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import { useTranslation } from 'react-i18next';
 import { useBrandingDestinations, useUpdateDestinationBranding, useUploadBrandingLogo } from '../hooks/useBrandingEditor.js';
 import { translateTexts } from '../api/translationService.js';
@@ -28,6 +30,16 @@ const FONT_OPTIONS = [
 
 const BORDER_RADIUS_OPTIONS = ['0px', '4px', '8px', '12px', '16px', '24px'];
 const BUTTON_STYLE_OPTIONS = ['rounded', 'pill', 'square'];
+
+const BUTTON_VARIANTS = [
+  { key: 'primary', label: 'Primary' },
+  { key: 'secondary', label: 'Secondary' },
+  { key: 'outline', label: 'Outline' },
+  { key: 'ghost', label: 'Ghost' },
+  { key: 'link', label: 'Link' }
+];
+
+const FOOTER_COLUMN_TYPES = ['brand', 'navigation', 'contact', 'social', 'newsletter', 'custom'];
 
 function ColorField({ label, value, onChange }) {
   return (
@@ -101,7 +113,28 @@ export default function BrandingPage() {
         },
         socialLinks: b.socialLinks || activeDest.socialLinks || {
           instagram: '', facebook: '', tiktok: '', youtube: '', twitter: '', linkedin: ''
-        }
+        },
+        favicon: b.favicon || '',
+        navicon: b.navicon || '',
+        buttons: b.buttons || {
+          primary: { bg: '', text: '#ffffff', borderRadius: '8px', hoverBg: '' },
+          secondary: { bg: '', text: '#ffffff', borderRadius: '8px', hoverBg: '' },
+          outline: { bg: 'transparent', text: '', borderColor: '', borderRadius: '8px', hoverBg: '' },
+          ghost: { bg: 'transparent', text: '', borderRadius: '8px', hoverBg: '' },
+          link: { text: '', hoverText: '' }
+        },
+        footer: b.footer || {
+          columns: [
+            { type: 'brand', title: '' },
+            { type: 'navigation', title: 'Navigation' },
+            { type: 'contact', title: 'Contact' }
+          ],
+          copyright: `\u00A9 ${new Date().getFullYear()} ${activeDest.displayName}`,
+          showNewsletter: false,
+          showSocial: true
+        },
+        privacyPolicyUrl: b.privacyPolicyUrl || '',
+        brandVisuals: b.brandVisuals || []
       });
     }
   }, [activeDest?.id]);
@@ -164,6 +197,36 @@ export default function BrandingPage() {
     } finally {
       setTranslating(false);
     }
+  };
+
+  const handleIconUpload = async (e, field) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1 * 1024 * 1024) {
+      setSnack({ open: true, message: `${field} too large (max 1MB)`, severity: 'warning' });
+      return;
+    }
+    try {
+      const result = await uploadMut.mutateAsync({ destination: activeDest.code, file, field });
+      setForm(prev => ({ ...prev, [field]: result.data?.logo_url || prev[field] }));
+      setSnack({ open: true, message: `${field} uploaded`, severity: 'success' });
+    } catch (err) {
+      setSnack({ open: true, message: err.message, severity: 'error' });
+    }
+  };
+
+  const updateButtonVariant = (variant, prop, val) => {
+    setForm(prev => ({
+      ...prev,
+      buttons: {
+        ...prev.buttons,
+        [variant]: { ...prev.buttons?.[variant], [prop]: val }
+      }
+    }));
+  };
+
+  const updateFooter = (key, val) => {
+    setForm(prev => ({ ...prev, footer: { ...prev.footer, [key]: val } }));
   };
 
   if (isLoading) {
@@ -369,6 +432,267 @@ export default function BrandingPage() {
                       />
                     </Grid>
                   ))}
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Favicon & Navicon (Wave 2 — W2.3) */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle2" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+                  Favicon & Navigation Icon
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 3, mb: 2 }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>Favicon (32x32 PNG/ICO)</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {form.favicon && (
+                        <Box component="img" src={form.favicon.startsWith('http') ? form.favicon : `${import.meta.env.VITE_API_URL || ''}${form.favicon}`}
+                          alt="Favicon" sx={{ width: 32, height: 32, border: '1px solid #e5e7eb', borderRadius: 0.5 }} />
+                      )}
+                      <Button variant="outlined" component="label" size="small" startIcon={<UploadIcon />} disabled={uploadMut.isPending}>
+                        Upload
+                        <input type="file" hidden accept="image/png,image/x-icon,image/svg+xml" onChange={e => handleIconUpload(e, 'favicon')} />
+                      </Button>
+                    </Box>
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>Navigation Icon (180x180 PNG)</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {form.navicon && (
+                        <Box component="img" src={form.navicon.startsWith('http') ? form.navicon : `${import.meta.env.VITE_API_URL || ''}${form.navicon}`}
+                          alt="Navicon" sx={{ width: 40, height: 40, border: '1px solid #e5e7eb', borderRadius: 1 }} />
+                      )}
+                      <Button variant="outlined" component="label" size="small" startIcon={<UploadIcon />} disabled={uploadMut.isPending}>
+                        Upload
+                        <input type="file" hidden accept="image/png" onChange={e => handleIconUpload(e, 'navicon')} />
+                      </Button>
+                    </Box>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Privacy URL */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle2" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+                  Privacy
+                </Typography>
+                <TextField
+                  fullWidth size="small" label="Privacy Policy URL"
+                  value={form.privacyPolicyUrl || ''}
+                  onChange={e => setForm(prev => ({ ...prev, privacyPolicyUrl: e.target.value }))}
+                  placeholder="https://example.com/privacy"
+                />
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Brand Visuals (Wave 3 — W3.3) */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle2" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+                  Brand Visuals (Hero Images)
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Upload 3-5 hero images for quick use in Hero blocks. Recommended: 1920x800px or larger.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                  {(form.brandVisuals || []).map((img, i) => (
+                    <Box key={i} sx={{ position: 'relative', width: 200, height: 100, borderRadius: 1, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                      <Box component="img" src={img.startsWith('http') ? img : `${import.meta.env.VITE_API_URL || ''}${img}`}
+                        alt={`Visual ${i + 1}`} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <IconButton
+                        size="small"
+                        sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}
+                        onClick={() => setForm(prev => ({ ...prev, brandVisuals: prev.brandVisuals.filter((_, j) => j !== i) }))}
+                      >
+                        <DeleteIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Box>
+                  ))}
+                  {(form.brandVisuals || []).length < 5 && (
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      sx={{ width: 200, height: 100, borderStyle: 'dashed' }}
+                      startIcon={<AddPhotoAlternateIcon />}
+                      disabled={uploadMut.isPending}
+                    >
+                      Add Visual
+                      <input type="file" hidden accept="image/png,image/jpeg,image/webp" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const formData = new FormData();
+                          formData.append('image', file);
+                          const apiUrl = import.meta.env.VITE_API_URL || '';
+                          const token = localStorage.getItem('admin_token');
+                          const resp = await fetch(`${apiUrl}/api/v1/admin-portal/blocks/upload-image`, {
+                            method: 'POST', body: formData,
+                            headers: { 'Authorization': `Bearer ${token}` }
+                          });
+                          const data = await resp.json();
+                          if (data.success) {
+                            setForm(prev => ({ ...prev, brandVisuals: [...(prev.brandVisuals || []), data.data.url] }));
+                            setSnack({ open: true, message: 'Visual uploaded', severity: 'success' });
+                          }
+                        } catch (err) {
+                          setSnack({ open: true, message: err.message, severity: 'error' });
+                        }
+                        e.target.value = '';
+                      }} />
+                    </Button>
+                  )}
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Button Styles (Wave 2 — W2.7) */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle2" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+                  Button Styles
+                </Typography>
+                <Grid container spacing={2}>
+                  {BUTTON_VARIANTS.map(({ key, label }) => {
+                    const btn = form.buttons?.[key] || {};
+                    return (
+                      <Grid item xs={12} sm={6} md={4} key={key}>
+                        <Box sx={{ p: 1.5, bgcolor: '#fafafa', borderRadius: 1 }}>
+                          <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>{label}</Typography>
+                          {key !== 'link' ? (
+                            <>
+                              <ColorField label="Background" value={btn.bg} onChange={val => updateButtonVariant(key, 'bg', val)} />
+                              <ColorField label="Text" value={btn.text} onChange={val => updateButtonVariant(key, 'text', val)} />
+                              {key === 'outline' && (
+                                <ColorField label="Border" value={btn.borderColor} onChange={val => updateButtonVariant(key, 'borderColor', val)} />
+                              )}
+                              <ColorField label="Hover BG" value={btn.hoverBg} onChange={val => updateButtonVariant(key, 'hoverBg', val)} />
+                              <FormControl size="small" fullWidth sx={{ mt: 1 }}>
+                                <InputLabel>Border Radius</InputLabel>
+                                <Select value={btn.borderRadius || '8px'} label="Border Radius" onChange={e => updateButtonVariant(key, 'borderRadius', e.target.value)}>
+                                  {BORDER_RADIUS_OPTIONS.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
+                                  <MenuItem value="999px">Pill</MenuItem>
+                                </Select>
+                              </FormControl>
+                            </>
+                          ) : (
+                            <>
+                              <ColorField label="Text Color" value={btn.text} onChange={val => updateButtonVariant(key, 'text', val)} />
+                              <ColorField label="Hover Color" value={btn.hoverText} onChange={val => updateButtonVariant(key, 'hoverText', val)} />
+                            </>
+                          )}
+                          {/* Live preview */}
+                          <Box sx={{ mt: 1.5, textAlign: 'center' }}>
+                            <Box
+                              component="span"
+                              sx={{
+                                display: 'inline-block', px: 2, py: 0.75, fontSize: '0.8rem', fontWeight: 600,
+                                borderRadius: btn.borderRadius || '8px',
+                                bgcolor: key === 'link' || key === 'ghost' ? 'transparent' : (btn.bg || form.colors?.primary || '#3b82f6'),
+                                color: btn.text || (key === 'outline' || key === 'ghost' || key === 'link' ? (form.colors?.primary || '#3b82f6') : '#fff'),
+                                border: key === 'outline' ? `2px solid ${btn.borderColor || form.colors?.primary || '#3b82f6'}` : 'none',
+                                textDecoration: key === 'link' ? 'underline' : 'none',
+                                cursor: 'default'
+                              }}
+                            >
+                              Button Preview
+                            </Box>
+                          </Box>
+                        </Box>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Footer Config (Wave 2 — W2.8) */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle2" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+                  Footer Configuration
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth size="small" label="Copyright Text"
+                      value={form.footer?.copyright || ''}
+                      onChange={e => updateFooter('copyright', e.target.value)}
+                      placeholder={`\u00A9 ${new Date().getFullYear()} Your Brand`}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <FormControl size="small" fullWidth>
+                      <InputLabel>Show Newsletter</InputLabel>
+                      <Select
+                        value={form.footer?.showNewsletter ? 'yes' : 'no'}
+                        label="Show Newsletter"
+                        onChange={e => updateFooter('showNewsletter', e.target.value === 'yes')}
+                      >
+                        <MenuItem value="yes">Yes</MenuItem>
+                        <MenuItem value="no">No</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <FormControl size="small" fullWidth>
+                      <InputLabel>Show Social</InputLabel>
+                      <Select
+                        value={form.footer?.showSocial !== false ? 'yes' : 'no'}
+                        label="Show Social"
+                        onChange={e => updateFooter('showSocial', e.target.value === 'yes')}
+                      >
+                        <MenuItem value="yes">Yes</MenuItem>
+                        <MenuItem value="no">No</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Footer Columns</Typography>
+                    <Grid container spacing={1}>
+                      {(form.footer?.columns || []).map((col, i) => (
+                        <Grid item xs={12} sm={4} key={i}>
+                          <Box sx={{ p: 1, bgcolor: '#fafafa', borderRadius: 1 }}>
+                            <FormControl size="small" fullWidth sx={{ mb: 1 }}>
+                              <InputLabel>Type</InputLabel>
+                              <Select
+                                value={col.type || 'custom'}
+                                label="Type"
+                                onChange={e => {
+                                  const cols = [...(form.footer?.columns || [])];
+                                  cols[i] = { ...cols[i], type: e.target.value };
+                                  updateFooter('columns', cols);
+                                }}
+                              >
+                                {FOOTER_COLUMN_TYPES.map(t => <MenuItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</MenuItem>)}
+                              </Select>
+                            </FormControl>
+                            <TextField
+                              size="small" fullWidth label="Title"
+                              value={col.title || ''}
+                              onChange={e => {
+                                const cols = [...(form.footer?.columns || [])];
+                                cols[i] = { ...cols[i], title: e.target.value };
+                                updateFooter('columns', cols);
+                              }}
+                            />
+                          </Box>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Grid>
                 </Grid>
               </CardContent>
             </Card>
