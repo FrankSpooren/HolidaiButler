@@ -193,6 +193,18 @@ const brandingDir = process.env.NODE_ENV === 'production'
   : path.resolve(__dirname, '../public/branding');
 app.use('/branding', express.static(brandingDir));
 
+// Static file serving for media library uploads (Repair v6.0)
+const mediaDir = process.env.NODE_ENV === 'production'
+  ? '/var/www/api.holidaibutler.com/platform-core/storage/media'
+  : path.resolve(__dirname, '../storage/media');
+app.use('/media-files', express.static(mediaDir));
+
+// Static file serving for block image uploads (Repair v6.0)
+const blockImagesDir = process.env.NODE_ENV === 'production'
+  ? '/var/www/api.holidaibutler.com/platform-core/storage/block-images'
+  : path.resolve(__dirname, '../storage/block-images');
+app.use('/block-images', express.static(blockImagesDir));
+
 // Pageview tracking — public, fire-and-forget (Fase 9B)
 const trackRateLimit = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: false, legacyHeaders: false });
 app.post('/api/v1/track', trackRateLimit, (req, res) => {
