@@ -269,6 +269,14 @@ export default function PagesPage() {
 
   const viewportWidths = { desktop: '100%', tablet: '768px', mobile: '375px' };
 
+  // Map destination to preview domain
+  const PREVIEW_DOMAINS = { 1: 'https://dev.holidaibutler.com', 2: 'https://dev.texelmaps.nl' };
+  const getPreviewUrl = () => {
+    const baseDomain = PREVIEW_DOMAINS[editPage?.destination_id] || PREVIEW_DOMAINS[destId] || 'https://dev.holidaibutler.com';
+    const slug = editPage?.slug === 'home' ? '' : (editPage?.slug || '');
+    return `${baseDomain}/${slug}`;
+  };
+
   if (isLoading) {
     return (
       <Box sx={{ p: 3 }}>
@@ -569,7 +577,7 @@ export default function PagesPage() {
                 <Box sx={{ width: viewportWidths[previewViewport], maxWidth: '100%', transition: 'width 0.3s', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', bgcolor: '#f5f5f5' }}>
                   <iframe
                     ref={previewRef}
-                    src={`https://dev.holidaibutler.com/preview`}
+                    src={getPreviewUrl()}
                     style={{ width: '100%', height: 600, border: 'none' }}
                     title="Page Preview"
                   />
