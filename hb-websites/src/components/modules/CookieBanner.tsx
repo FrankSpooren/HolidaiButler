@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export type ConsentLevel = 'essential' | 'analytics' | 'marketing';
 
@@ -117,16 +117,12 @@ interface CookieBannerProps {
 }
 
 export default function CookieBanner({ locale = 'en', primaryColor, privacyPolicyUrl }: CookieBannerProps) {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(() => {
+    if (typeof document === 'undefined') return false;
+    return !getCookieConsent();
+  });
   const [analytics, setAnalytics] = useState(true);
   const [marketing, setMarketing] = useState(true);
-
-  useEffect(() => {
-    const existing = getCookieConsent();
-    if (!existing) {
-      setVisible(true);
-    }
-  }, []);
 
   const t = translations[locale] || translations.en;
   const btnColor = primaryColor || 'var(--hb-primary, #3b82f6)';
