@@ -60,6 +60,20 @@ const SCHEDULED_JOBS = [
   { agent: 'De Poortwachter', schedule: 'Consent audit: maandag 03:00', category: 'operations', description: 'GDPR consent audit: toestemmingen verificatie en rapportage' },
   { agent: 'De Bewaker', schedule: 'Vuln scan: maandag 04:00', category: 'development', description: 'Vulnerability scan: CVE database check, outdated packages' },
   { agent: 'De Corrector', schedule: 'Dep updates: maandag 05:30', category: 'development', description: 'Dependency update check: npm audit, beschikbare updates' },
+  { agent: 'De Makelaar', schedule: 'Elke 15 min', category: 'operations', description: 'Intermediair monitor: stuck transacties, partner escalaties, conversie metrics' },
+  { agent: 'De Makelaar', schedule: 'Review request: elke 6 uur', category: 'operations', description: 'Automatische review-verzoeken na afgeronde intermediaire transacties' },
+  { agent: 'De Makelaar', schedule: 'Reminder: elk uur', category: 'operations', description: 'Herinneringen voor openstaande intermediaire transacties' },
+  { agent: 'De Kassier', schedule: 'Dagelijks 06:30', category: 'operations', description: 'Financiële monitor: reconciliatie, anomaliedetectie 2σ, settlement alerts' },
+  { agent: 'De Kassier', schedule: 'Auto-settlement: 1e van de maand 04:00', category: 'operations', description: 'Automatische settlement batch creatie en partner payout berekening' },
+  { agent: 'De Kassier', schedule: 'Unsettled alert: maandag 08:30', category: 'operations', description: 'Alert voor niet-afgerekende transacties ouder dan 30 dagen' },
+  { agent: 'De Magazijnier', schedule: 'Elke 30 min', category: 'operations', description: 'Inventory sync: Redis↔MySQL synchronisatie, stale reserveringen, low inventory alerts' },
+  { agent: 'Reservation Cleanup', schedule: 'Elke 5 min', category: 'operations', description: 'Verlopen reserveringen vrijgeven en slots beschikbaar maken' },
+  { agent: 'Reservation Reminders', schedule: 'Elk uur + elke 15 min', category: 'operations', description: 'Reserveringsherinneringen 24u en 1u voor aanvang' },
+  { agent: 'Ticket Reservations', schedule: 'Elke minuut', category: 'operations', description: 'Verlopen ticket-reserveringen vrijgeven (Redis inventory lock)' },
+  { agent: 'POI Tier Manager', schedule: 'Zondag 03:00', category: 'monitoring', description: 'Wekelijkse tier_score herberekening voor alle POIs' },
+  { agent: 'Cost Controller', schedule: 'Elke 6 uur + maandag 09:00', category: 'monitoring', description: 'Kosten monitoring: API usage, storage, LLM kosten + weekrapport' },
+  { agent: 'De Poortwachter', schedule: 'GDPR overdue: elke 4 uur', category: 'operations', description: 'Controle op verlopen GDPR verwijderingsverzoeken' },
+  { agent: 'De Poortwachter', schedule: 'GDPR export cleanup: dagelijks 03:00', category: 'operations', description: 'Opruimen verlopen GDPR data exports' },
 ];
 
 export default function DashboardPage() {

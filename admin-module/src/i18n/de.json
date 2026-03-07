@@ -19,7 +19,12 @@
     "branding": "Branding",
     "pages": "Seiten",
     "navigation": "Navigation",
-    "media": "Medienbibliothek"
+    "media": "Medienbibliothek",
+    "section_overview": "Übersicht",
+    "section_content": "Inhalt & Daten",
+    "section_commerce": "Commerce",
+    "section_platform": "Plattform",
+    "section_system": "System"
   },
   "auth": {
     "login": "Anmelden",
@@ -59,7 +64,17 @@
     "agentHealth": "Agent-Aktivit\u00e4t (24h)",
     "errors24h": "Fehler",
     "alerts24h": "Warnungen",
-    "jobs24h": "Ausgef\u00fchrte Jobs"
+    "jobs24h": "Ausgef\u00fchrte Jobs",
+    "links": {
+      "agents": "Agents Dashboard",
+      "pois": "POI-Verwaltung",
+      "reviews": "Bewertungen Moderation",
+      "media": "Medienbibliothek",
+      "branding": "Branding & Stil",
+      "pages": "Seitenverwaltung",
+      "analytics": "Analysen",
+      "settings": "Einstellungen"
+    }
   },
   "agents": {
     "title": "Agent Dashboard",
@@ -542,6 +557,8 @@
     "next": "Weiter",
     "search": "Suchen",
     "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "save": "Speichern",
     "yes": "Ja",
     "no": "Nein",
     "load": "Laden",
@@ -915,6 +932,16 @@
       "surface": "Oberfläche",
       "text": "Text",
       "textMuted": "Text gedämpft"
+    },
+    "footer": {
+      "title": "Footer",
+      "showNewsletter": "Newsletter anzeigen",
+      "showSocial": "Social anzeigen",
+      "columns": "Footer-Spalten"
+    },
+    "brandVisuals": {
+      "addVisual": "Visual hinzufügen",
+      "uploaded": "Visual hochgeladen"
     }
   },
   "pages": {
@@ -937,6 +964,9 @@
     "statusUpdated": "Status aktualisiert",
     "noResults": "Keine Seiten gefunden",
     "addBlock": "Block hinzufügen",
+    "noBlocksInCategory": "Keine Blocks in dieser Kategorie",
+    "uploadOgImage": "OG-Bild hochladen",
+    "ogImageUploaded": "OG-Bild hochgeladen",
     "blockProps": "Block-Eigenschaften (JSON)",
     "table": {
       "slug": "Slug",

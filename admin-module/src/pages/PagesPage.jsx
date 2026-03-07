@@ -22,6 +22,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useTranslation } from 'react-i18next';
 import { translateTexts } from '../api/translationService.js';
+import client from '../api/client.js';
 import { usePages, usePageCreate, usePageUpdate, usePageDelete } from '../hooks/usePages.js';
 import { useBrandingDestinations } from '../hooks/useBrandingEditor.js';
 import { pageService } from '../api/pageService.js';
@@ -488,23 +489,19 @@ export default function PagesPage() {
                     <Box component="img" src={editPage.og_image_path || editPage.og_image_url} alt="OG" sx={{ height: 60, maxWidth: 120, borderRadius: 1, border: '1px solid #e5e7eb' }} />
                   )}
                   <Button variant="outlined" component="label" size="small" startIcon={<UploadIcon />}>
-                    Upload OG Image
+                    {t('pages.uploadOgImage', 'Upload OG Image')}
                     <input type="file" hidden accept="image/png,image/jpeg,image/webp" onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
                       const formData = new FormData();
                       formData.append('image', file);
                       try {
-                        const apiUrl = import.meta.env.VITE_API_URL || '';
-                        const token = localStorage.getItem('admin_token');
-                        const resp = await fetch(`${apiUrl}/api/v1/admin-portal/blocks/upload-image`, {
-                          method: 'POST', body: formData,
-                          headers: { 'Authorization': `Bearer ${token}` }
+                        const { data } = await client.post('/blocks/upload-image', formData, {
+                          headers: { 'Content-Type': 'multipart/form-data' }
                         });
-                        const data = await resp.json();
                         if (data.success) {
                           setEditPage(p => ({ ...p, og_image_path: data.data.url }));
-                          setSnack({ open: true, message: 'OG image uploaded', severity: 'success' });
+                          setSnack({ open: true, message: t('pages.ogImageUploaded'), severity: 'success' });
                         }
                       } catch (err) {
                         setSnack({ open: true, message: err.message, severity: 'error' });

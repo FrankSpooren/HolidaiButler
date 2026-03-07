@@ -74,7 +74,7 @@ export default function BlockSelectorDialog({ open, onClose, onSelect }) {
         </Grid>
         {blocks.length === 0 && (
           <Box sx={{ py: 4, textAlign: 'center' }}>
-            <Typography color="text.secondary">No blocks in this category</Typography>
+            <Typography color="text.secondary">{t('pages.noBlocksInCategory')}</Typography>
           </Box>
         )}
       </DialogContent>
