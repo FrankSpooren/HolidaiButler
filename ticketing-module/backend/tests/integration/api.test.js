@@ -7,8 +7,47 @@ const { mockBooking, mockTicket, mockAvailability } = require('../__mocks__/mode
 
 // Mock dependencies before requiring app
 jest.mock('../../models', () => require('../__mocks__/models'));
-jest.mock('ioredis', () => require('../__mocks__/ioredis'));
+jest.mock('ioredis', () => {
+  const mockRedisData = new Map();
+  return jest.fn().mockImplementation(() => ({
+    get: jest.fn((key) => Promise.resolve(mockRedisData.get(key) || null)),
+    set: jest.fn((key, value) => { mockRedisData.set(key, value); return Promise.resolve('OK'); }),
+    setex: jest.fn((key, _ttl, value) => { mockRedisData.set(key, value); return Promise.resolve('OK'); }),
+    del: jest.fn((key) => { mockRedisData.delete(key); return Promise.resolve(1); }),
+    keys: jest.fn(() => Promise.resolve([])),
+    quit: jest.fn(() => Promise.resolve('OK')),
+    ping: jest.fn(() => Promise.resolve('PONG')),
+  }));
+});
 jest.mock('axios');
+
+// Mock bull queue (used by ReminderService at module-load time)
+jest.mock('bull', () => {
+  return jest.fn().mockImplementation(() => ({
+    process: jest.fn(),
+    add: jest.fn().mockResolvedValue({ id: 'mock-job-1' }),
+    on: jest.fn(),
+    close: jest.fn().mockResolvedValue(true),
+  }));
+});
+
+// Mock services that establish external connections at import time
+jest.mock('../../services/ReminderService', () => ({
+  scheduleReminder: jest.fn(),
+  cancelReminder: jest.fn(),
+}));
+
+jest.mock('../../services/NotificationService', () => ({
+  sendNotification: jest.fn(),
+  sendBookingConfirmation: jest.fn(),
+  sendCancellationNotification: jest.fn(),
+}));
+
+jest.mock('../../services/TransferService', () => ({
+  transferTicket: jest.fn(),
+  acceptTransfer: jest.fn(),
+  cancelTransfer: jest.fn(),
+}));
 
 // Mock services
 jest.mock('../../services/BookingService', () => ({
