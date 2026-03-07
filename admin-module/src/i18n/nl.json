@@ -64,7 +64,17 @@
     "agentHealth": "Agent activiteit (24u)",
     "errors24h": "Errors",
     "alerts24h": "Alerts",
-    "jobs24h": "Jobs uitgevoerd"
+    "jobs24h": "Jobs uitgevoerd",
+    "links": {
+      "agents": "Agents Dashboard",
+      "pois": "POI Beheer",
+      "reviews": "Reviews Moderatie",
+      "media": "Mediabibliotheek",
+      "branding": "Branding & Stijl",
+      "pages": "Pagina Beheer",
+      "analytics": "Analytics",
+      "settings": "Instellingen"
+    }
   },
   "agents": {
     "title": "Agent Dashboard",

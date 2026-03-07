@@ -64,7 +64,17 @@
     "agentHealth": "Agent activity (24h)",
     "errors24h": "Errors",
     "alerts24h": "Alerts",
-    "jobs24h": "Jobs completed"
+    "jobs24h": "Jobs completed",
+    "links": {
+      "agents": "Agents Dashboard",
+      "pois": "POI Management",
+      "reviews": "Reviews Moderation",
+      "media": "Media Library",
+      "branding": "Branding & Style",
+      "pages": "Page Management",
+      "analytics": "Analytics",
+      "settings": "Settings"
+    }
   },
   "agents": {
     "title": "Agent Dashboard",

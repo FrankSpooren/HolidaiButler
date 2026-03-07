@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.81.0
+> **Versie**: 3.83.0
 > **Laatst bijgewerkt**: 7 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -358,6 +358,9 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **Wave 2+3** | **Professionele Features + Excellence** | **07-03** | **Wave 2 (8 features): Pagina-hiërarchie (parent_id, tree-view UI met expand/collapse), Media Library (4 CRUD endpoints + MediaPage.jsx grid/upload/filter/detail), 8 page templates (PageTemplateDialog), favicon/navicon upload, OG image upload, 5 button style varianten (15 CSS vars), footer config (data-driven Footer.tsx), block-level styling (BlockStyleEditor: bg/border/padding/fullWidth + hb-websites wrapper). Wave 3 (3 features): Brand Visuals (upload 3-5 hero images + BrandVisualPicker in HeroEditor), revisie-geschiedenis UI (PageRevisionsDialog, auto-snapshot bij save, max 20 per pagina, restore), GDPR Cookie Consent Banner (CookieBanner.tsx: 3 niveaus essential/analytics/marketing, 5 talen NL/EN/DE/ES/FR, tenant-aware kleuren, SocialFeed marketing consent gating). 2 nieuwe DB tabellen (media, page_revisions) + 2 ALTER TABLE (pages.parent_id, pages.og_image_path). 8 nieuwe admin endpoints (157 totaal). 7 nieuwe + 22 gewijzigde bestanden (~2.300 LOC). Admin-module + hb-websites build 0 errors.** |
 | **Cmd v5.0 Stap 1** | **Bugfix + Stabilisatie (4 kritieke bugs)** | **07-03** | **BUG-1: BlockErrorBoundary per block (crashende blocks tonen fallback). BUG-2: media.uploaded_by INT→VARCHAR(36) (UUID mismatch). BUG-3: resolveAssetUrl() helper voor logo/favicon/navicon (HB_ASSET_URL voor browser-facing URLs). BUG-4: Map.tsx herschreven met POI markers (Leaflet fetch + popup + auto-fit bounds + icon fix). Nieuwe /api/pois proxy route. 3 nieuwe + 4 gewijzigde bestanden. DB migration + deploy op Hetzner. Build 0 errors.** |
 | **Cmd v5.0 Stap 2** | **Falende API test fix** | **07-03** | **ticketing-module/backend/tests/integration/api.test.js: recursieve ioredis require loop (Maximum call stack size exceeded) + bull queue mock + service mocks (ReminderService, NotificationService, TransferService). 5/5 suites, 88/88 tests PASS (was 4/5, 70/70). Wave 1 nu 8/8 API tests PASS.** |
+| **Cmd v5.0 Stap 3+4** | **Wave 2/3 verificatie + deploy** | **07-03** | **Code review Wave 2/3: alle features PASS. API endpoint tests: Media, Pages, Page duplicate, Branding, Revisions — alle OK. Bugfix: pages SEO kolommen (seo_title_de/es, seo_description_de/es) ontbraken → migration 003. hb-websites frontend: 7/8 checks PASS (CookieBanner client-side). Texel tenant correct (#30c59b). Admin build + deploy.** |
+| **Cmd v5.0 Stap 5** | **Sidebar herstructurering** | **07-03** | **Flat 16-item MENU_ITEMS → 5 gegroepeerde MENU_SECTIONS (Overzicht, Content & Data, Commerce, Platform, Systeem). Typography overline sectiehoofdingen + Divider scheiding. Secties auto-hidden als geen zichtbare items voor user role. i18n 4 talen (5 section labels). Sidebar versie v3.25.0.** |
+| **Cmd v5.0 Stap 6** | **Dashboard improvements** | **07-03** | **QuickLinks: hardcoded labels → i18n + 3 nieuwe links (Media, Branding, Pages) met RBAC. SCHEDULED_JOBS: 40→54 entries (sync met BullMQ: +De Makelaar/Kassier/Magazijnier + reservation/ticket cleanup + GDPR + cost controller + POI tier). Build + deploy 0 errors.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -599,9 +602,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.81.0** | **2026-03-07** | **Command v5.0 Stap 2: API test fix + Stap 3 Wave 2/3 verificatie**. Ticketing integration test fix: recursieve ioredis mock + bull/service mocks. 5/5 suites, 88/88 tests PASS. Wave 2/3 browser verificatie gestart. |
-| **3.79.0** | **2026-03-07** | **Command v5.0 Stap 1: Bugfix + Stabilisatie**. 4 kritieke bugfixes: BUG-1 BlockErrorBoundary per block, BUG-2 media.uploaded_by INT→VARCHAR(36), BUG-3 resolveAssetUrl() + HB_ASSET_URL voor logo/favicon/navicon, BUG-4 Map.tsx herschreven met POI markers + /api/pois proxy. 1 DB migration. 3 nieuwe + 4 gewijzigde bestanden. Deploy + build 0 errors. |
-| **3.77.0** | **2026-03-07** | **Wave 2+3: Professionele Features + Excellence**. Wave 2: pagina-hiërarchie, media library, templates, button styles, footer config, block styling. Wave 3: brand visuals, revisie-geschiedenis, GDPR cookie consent. 8 endpoints (157 totaal). ~2.300 LOC. |
+| **3.83.0** | **2026-03-07** | **Command v5.0 Stap 3-6: Verificatie + Sidebar + Dashboard**. Stap 3+4: Wave 2/3 code review + API tests PASS, SEO kolommen bugfix (migration 003). Stap 5: Sidebar 5 gegroepeerde secties + i18n. Stap 6: QuickLinks i18n + 3 nieuwe links (Media/Branding/Pages), SCHEDULED_JOBS 40→54 (BullMQ sync). |
+| **3.81.0** | **2026-03-07** | **Command v5.0 Stap 2: API test fix**. Ticketing integration test fix: recursieve ioredis mock + bull/service mocks. 5/5 suites, 88/88 tests PASS. |
+| **3.79.0** | **2026-03-07** | **Command v5.0 Stap 1: Bugfix + Stabilisatie**. 4 kritieke bugfixes: BUG-1 BlockErrorBoundary, BUG-2 media.uploaded_by, BUG-3 resolveAssetUrl(), BUG-4 Map.tsx POI markers. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
