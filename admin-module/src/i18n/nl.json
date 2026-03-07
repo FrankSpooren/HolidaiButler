@@ -19,7 +19,12 @@
     "branding": "Branding",
     "pages": "Pagina's",
     "navigation": "Navigatie",
-    "media": "Mediabibliotheek"
+    "media": "Mediabibliotheek",
+    "section_overview": "Overzicht",
+    "section_content": "Content & Data",
+    "section_commerce": "Commerce",
+    "section_platform": "Platform",
+    "section_system": "Systeem"
   },
   "auth": {
     "login": "Inloggen",
@@ -59,7 +64,17 @@
     "agentHealth": "Agent activiteit (24u)",
     "errors24h": "Errors",
     "alerts24h": "Alerts",
-    "jobs24h": "Jobs uitgevoerd"
+    "jobs24h": "Jobs uitgevoerd",
+    "links": {
+      "agents": "Agents Dashboard",
+      "pois": "POI Beheer",
+      "reviews": "Reviews Moderatie",
+      "media": "Mediabibliotheek",
+      "branding": "Branding & Stijl",
+      "pages": "Pagina Beheer",
+      "analytics": "Analytics",
+      "settings": "Instellingen"
+    }
   },
   "agents": {
     "title": "Agent Dashboard",
@@ -542,6 +557,8 @@
     "next": "Volgende",
     "search": "Zoeken",
     "edit": "Bewerken",
+    "delete": "Verwijderen",
+    "save": "Opslaan",
     "yes": "Ja",
     "no": "Nee",
     "load": "Laden",
@@ -915,6 +932,16 @@
       "surface": "Oppervlak",
       "text": "Tekst",
       "textMuted": "Tekst gedempt"
+    },
+    "footer": {
+      "title": "Footer",
+      "showNewsletter": "Nieuwsbrief tonen",
+      "showSocial": "Social tonen",
+      "columns": "Footer kolommen"
+    },
+    "brandVisuals": {
+      "addVisual": "Visual toevoegen",
+      "uploaded": "Visual geüpload"
     }
   },
   "pages": {
@@ -937,6 +964,9 @@
     "statusUpdated": "Status bijgewerkt",
     "noResults": "Geen pagina's gevonden",
     "addBlock": "Block toevoegen",
+    "noBlocksInCategory": "Geen blocks in deze categorie",
+    "uploadOgImage": "OG afbeelding uploaden",
+    "ogImageUploaded": "OG afbeelding geüpload",
     "blockProps": "Block eigenschappen (JSON)",
     "table": {
       "slug": "Slug",

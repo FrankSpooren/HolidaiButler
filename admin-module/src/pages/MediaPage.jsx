@@ -182,9 +182,9 @@ export default function MediaPage() {
         )}
         <DialogActions>
           <Button color="error" startIcon={<DeleteIcon />} onClick={() => deleteMut.mutate(detailOpen?.id)} disabled={deleteMut.isPending}>
-            Delete
+            {t('common.delete', 'Delete')}
           </Button>
-          <Button onClick={() => setDetailOpen(null)}>Close</Button>
+          <Button onClick={() => setDetailOpen(null)}>{t('common.close')}</Button>
         </DialogActions>
       </Dialog>
 

@@ -12,6 +12,7 @@ import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import { useTranslation } from 'react-i18next';
 import { useBrandingDestinations, useUpdateDestinationBranding, useUploadBrandingLogo } from '../hooks/useBrandingEditor.js';
 import { translateTexts } from '../api/translationService.js';
+import client from '../api/client.js';
 
 const COLOR_FIELDS = [
   { key: 'primary', label: 'branding.colors.primary' },
@@ -525,23 +526,19 @@ export default function BrandingPage() {
                       startIcon={<AddPhotoAlternateIcon />}
                       disabled={uploadMut.isPending}
                     >
-                      Add Visual
+                      {t('branding.brandVisuals.addVisual')}
                       <input type="file" hidden accept="image/png,image/jpeg,image/webp" onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         try {
                           const formData = new FormData();
                           formData.append('image', file);
-                          const apiUrl = import.meta.env.VITE_API_URL || '';
-                          const token = localStorage.getItem('admin_token');
-                          const resp = await fetch(`${apiUrl}/api/v1/admin-portal/blocks/upload-image`, {
-                            method: 'POST', body: formData,
-                            headers: { 'Authorization': `Bearer ${token}` }
+                          const { data } = await client.post('/blocks/upload-image', formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
                           });
-                          const data = await resp.json();
                           if (data.success) {
                             setForm(prev => ({ ...prev, brandVisuals: [...(prev.brandVisuals || []), data.data.url] }));
-                            setSnack({ open: true, message: 'Visual uploaded', severity: 'success' });
+                            setSnack({ open: true, message: t('branding.brandVisuals.uploaded'), severity: 'success' });
                           }
                         } catch (err) {
                           setSnack({ open: true, message: err.message, severity: 'error' });
@@ -635,32 +632,32 @@ export default function BrandingPage() {
                   </Grid>
                   <Grid item xs={12} sm={3}>
                     <FormControl size="small" fullWidth>
-                      <InputLabel>Show Newsletter</InputLabel>
+                      <InputLabel>{t('branding.footer.showNewsletter')}</InputLabel>
                       <Select
                         value={form.footer?.showNewsletter ? 'yes' : 'no'}
-                        label="Show Newsletter"
+                        label={t('branding.footer.showNewsletter')}
                         onChange={e => updateFooter('showNewsletter', e.target.value === 'yes')}
                       >
-                        <MenuItem value="yes">Yes</MenuItem>
-                        <MenuItem value="no">No</MenuItem>
+                        <MenuItem value="yes">{t('common.yes')}</MenuItem>
+                        <MenuItem value="no">{t('common.no')}</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
                   <Grid item xs={12} sm={3}>
                     <FormControl size="small" fullWidth>
-                      <InputLabel>Show Social</InputLabel>
+                      <InputLabel>{t('branding.footer.showSocial')}</InputLabel>
                       <Select
                         value={form.footer?.showSocial !== false ? 'yes' : 'no'}
-                        label="Show Social"
+                        label={t('branding.footer.showSocial')}
                         onChange={e => updateFooter('showSocial', e.target.value === 'yes')}
                       >
-                        <MenuItem value="yes">Yes</MenuItem>
-                        <MenuItem value="no">No</MenuItem>
+                        <MenuItem value="yes">{t('common.yes')}</MenuItem>
+                        <MenuItem value="no">{t('common.no')}</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
                   <Grid item xs={12}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Footer Columns</Typography>
+                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>{t('branding.footer.columns')}</Typography>
                     <Grid container spacing={1}>
                       {(form.footer?.columns || []).map((col, i) => (
                         <Grid item xs={12} sm={4} key={i}>

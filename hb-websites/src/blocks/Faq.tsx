@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { FaqProps } from '@/types/blocks';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 export default function Faq({ items, title }: FaqProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -48,7 +49,7 @@ export default function Faq({ items, title }: FaqProps) {
               >
                 <div
                   className="prose prose-sm max-w-none text-muted"
-                  dangerouslySetInnerHTML={{ __html: item.answer }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.answer) }}
                 />
               </div>
             </div>

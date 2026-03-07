@@ -91,7 +91,7 @@ export default async function Page({ params }: PageProps) {
 
         const BlockComponent = getBlock(block.type);
         if (!BlockComponent) {
-          console.warn(`Unknown block type: ${block.type}`);
+          if (process.env.NODE_ENV === 'development') console.warn(`Unknown block type: ${block.type}`);
           return null;
         }
 
