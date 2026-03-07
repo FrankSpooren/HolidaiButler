@@ -4854,46 +4854,54 @@ router.put('/settings/branding/:destination', adminAuth('poi_owner'), async (req
 });
 
 /**
- * POST /settings/branding/:destination/logo
- * Upload a brand logo for a destination. Accepts PNG, JPG, SVG (max 2MB).
- * Stores file in public/branding/ and updates MongoDB logo_url.
+ * POST /settings/branding/:destination/:type
+ * Upload a brand asset (logo, favicon, navicon) for a destination.
+ * Accepts PNG, JPG, SVG, ICO (max 2MB). Type: logo, favicon, navicon.
+ * Stores file in public/branding/ and updates MongoDB + MySQL branding JSON.
  */
 const BRANDING_DIR = process.env.NODE_ENV === 'production'
   ? '/var/www/api.holidaibutler.com/platform-core/public/branding'
   : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public/branding');
 
-const logoStorage = multer.diskStorage({
+const VALID_BRANDING_TYPES = ['logo', 'favicon', 'navicon'];
+
+const brandingAssetStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     fs.mkdirSync(BRANDING_DIR, { recursive: true });
     cb(null, BRANDING_DIR);
   },
   filename: (req, file, cb) => {
     const dest = req.params.destination.toLowerCase();
+    const type = VALID_BRANDING_TYPES.includes(req.params.type) ? req.params.type : 'logo';
     const ext = path.extname(file.originalname).toLowerCase() || '.png';
-    cb(null, `${dest}_logo${ext}`);
+    cb(null, `${dest}_${type}${ext}`);
   }
 });
 
-const logoUpload = multer({
-  storage: logoStorage,
+const brandingAssetUpload = multer({
+  storage: brandingAssetStorage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
   fileFilter: (_req, file, cb) => {
-    const allowed = ['image/png', 'image/jpeg', 'image/svg+xml'];
+    const allowed = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon'];
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only PNG, JPG, and SVG files are allowed'));
+      cb(new Error('Only PNG, JPG, SVG, and ICO files are allowed'));
     }
   }
 });
 
-router.post('/settings/branding/:destination/logo', adminAuth('poi_owner'), (req, res) => {
+router.post('/settings/branding/:destination/:type', adminAuth('poi_owner'), (req, res) => {
   const dest = req.params.destination.toLowerCase();
+  const type = req.params.type;
   if (!DEFAULT_BRAND_CONFIG[dest]) {
     return res.status(400).json({ success: false, error: { code: 'INVALID_DESTINATION', message: 'Unknown destination' } });
   }
+  if (!VALID_BRANDING_TYPES.includes(type)) {
+    return res.status(400).json({ success: false, error: { code: 'INVALID_TYPE', message: `Type must be one of: ${VALID_BRANDING_TYPES.join(', ')}` } });
+  }
 
-  logoUpload.single('logo')(req, res, async (err) => {
+  brandingAssetUpload.single('logo')(req, res, async (err) => {
     if (err) {
       const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 2MB)' : err.message;
       return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
@@ -4904,32 +4912,53 @@ router.post('/settings/branding/:destination/logo', adminAuth('poi_owner'), (req
     }
 
     try {
-      const logoUrl = `/branding/${req.file.filename}`;
+      const assetUrl = `/branding/${req.file.filename}`;
+
+      // Update MySQL destinations.branding JSON (set the specific field)
+      try {
+        const [dest_row] = await mysqlSequelize.query(
+          'SELECT branding FROM destinations WHERE code = :code',
+          { replacements: { code: dest }, type: QueryTypes.SELECT }
+        );
+        if (dest_row) {
+          const branding = typeof dest_row.branding === 'string' ? JSON.parse(dest_row.branding) : (dest_row.branding || {});
+          branding[type] = assetUrl;
+          await mysqlSequelize.query(
+            'UPDATE destinations SET branding = :branding, updated_at = NOW() WHERE code = :code',
+            { replacements: { branding: JSON.stringify(branding), code: dest }, type: QueryTypes.UPDATE }
+          );
+        }
+      } catch (mysqlErr) {
+        logger.warn('[AdminPortal] Branding MySQL sync failed:', mysqlErr.message);
+      }
 
       // Update MongoDB
       if (mongoose.connection.readyState === 1) {
         const db = mongoose.connection.db;
+        const mongoUpdate = type === 'logo' ? { logo_url: assetUrl } : { [`${type}_url`]: assetUrl };
+        mongoUpdate.updated_at = new Date();
+        mongoUpdate.updated_by = req.adminUser.email;
         await db.collection('brand_configurations').updateOne(
           { destination: dest },
-          { $set: { logo_url: logoUrl, updated_at: new Date(), updated_by: req.adminUser.email } },
+          { $set: mongoUpdate },
           { upsert: true }
         );
 
         // Audit log
         try {
           await db.collection('audit_logs').insertOne({
-            action: 'branding_logo_uploaded',
+            action: `branding_${type}_uploaded`,
             destination: dest,
             admin_id: req.adminUser.id || req.adminUser.userId,
             admin_email: req.adminUser.email,
-            changes: { logo_url: logoUrl, filename: req.file.filename, size: req.file.size },
+            changes: { [`${type}_url`]: assetUrl, filename: req.file.filename, size: req.file.size },
             timestamp: new Date(),
             actor: { type: 'admin', name: 'admin-portal' }
           });
         } catch { /* non-critical */ }
       }
 
-      res.json({ success: true, data: { logo_url: logoUrl } });
+      res.json({ success: true, data: { logo_url: assetUrl } });
     } catch (error) {
       logger.error('[AdminPortal] Logo upload error:', error);
       res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'An error occurred' } });
