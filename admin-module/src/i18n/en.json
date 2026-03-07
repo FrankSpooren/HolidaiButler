@@ -19,7 +19,12 @@
     "branding": "Branding",
     "pages": "Pages",
     "navigation": "Navigation",
-    "media": "Media Library"
+    "media": "Media Library",
+    "section_overview": "Overview",
+    "section_content": "Content & Data",
+    "section_commerce": "Commerce",
+    "section_platform": "Platform",
+    "section_system": "System"
   },
   "auth": {
     "login": "Log in",
