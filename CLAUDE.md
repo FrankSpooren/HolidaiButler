@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.83.0
+> **Versie**: 3.85.0
 > **Laatst bijgewerkt**: 7 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -361,6 +361,8 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **Cmd v5.0 Stap 3+4** | **Wave 2/3 verificatie + deploy** | **07-03** | **Code review Wave 2/3: alle features PASS. API endpoint tests: Media, Pages, Page duplicate, Branding, Revisions — alle OK. Bugfix: pages SEO kolommen (seo_title_de/es, seo_description_de/es) ontbraken → migration 003. hb-websites frontend: 7/8 checks PASS (CookieBanner client-side). Texel tenant correct (#30c59b). Admin build + deploy.** |
 | **Cmd v5.0 Stap 5** | **Sidebar herstructurering** | **07-03** | **Flat 16-item MENU_ITEMS → 5 gegroepeerde MENU_SECTIONS (Overzicht, Content & Data, Commerce, Platform, Systeem). Typography overline sectiehoofdingen + Divider scheiding. Secties auto-hidden als geen zichtbare items voor user role. i18n 4 talen (5 section labels). Sidebar versie v3.25.0.** |
 | **Cmd v5.0 Stap 6** | **Dashboard improvements** | **07-03** | **QuickLinks: hardcoded labels → i18n + 3 nieuwe links (Media, Branding, Pages) met RBAC. SCHEDULED_JOBS: 40→54 entries (sync met BullMQ: +De Makelaar/Kassier/Magazijnier + reservation/ticket cleanup + GDPR + cost controller + POI tier). Build + deploy 0 errors.** |
+| **Cmd v5.0 Stap 7** | **Admin Portal Hardening** | **07-03** | **CRITICAL: BrandingPage + PagesPage auth token fix (`admin_token` → axios client met auto-auth). Bare fetch() → client.post(). 8 hardcoded UI strings → i18n t() calls. 17 nieuwe i18n keys (4 talen): branding.footer.*, branding.brandVisuals.*, pages.uploadOgImage/ogImageUploaded/noBlocksInCategory, common.delete/save. 8 bestanden gewijzigd.** |
+| **Cmd v5.0 Stap 8** | **hb-websites Frontend Hardening** | **07-03** | **XSS preventie: sanitizeHtml() utility (server-safe, geen DOM dependency) op RichText + FAQ blocks. Error handling: try/catch op alle 6 API proxy routes (502 met safe error). Security: console.log → dev-only (4x), postMessage origin validatie (trusted domains). API error log sanitized (pathname only). 14 bestanden, 1 nieuw. Build + deploy 0 errors.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -602,9 +604,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.83.0** | **2026-03-07** | **Command v5.0 Stap 3-6: Verificatie + Sidebar + Dashboard**. Stap 3+4: Wave 2/3 code review + API tests PASS, SEO kolommen bugfix (migration 003). Stap 5: Sidebar 5 gegroepeerde secties + i18n. Stap 6: QuickLinks i18n + 3 nieuwe links (Media/Branding/Pages), SCHEDULED_JOBS 40→54 (BullMQ sync). |
-| **3.81.0** | **2026-03-07** | **Command v5.0 Stap 2: API test fix**. Ticketing integration test fix: recursieve ioredis mock + bull/service mocks. 5/5 suites, 88/88 tests PASS. |
-| **3.79.0** | **2026-03-07** | **Command v5.0 Stap 1: Bugfix + Stabilisatie**. 4 kritieke bugfixes: BUG-1 BlockErrorBoundary, BUG-2 media.uploaded_by, BUG-3 resolveAssetUrl(), BUG-4 Map.tsx POI markers. |
+| **3.85.0** | **2026-03-07** | **Command v5.0 Stap 7+8: Enterprise Hardening**. Stap 7: Admin Portal auth token fix + i18n cleanup (8 hardcoded strings, 17 keys). Stap 8: hb-websites XSS preventie (sanitizeHtml), 6 API route try/catch, console.log dev-only, postMessage origin validation. |
+| **3.83.0** | **2026-03-07** | **Command v5.0 Stap 3-6: Verificatie + Sidebar + Dashboard**. Wave 2/3 verificatie, SEO bugfix, sidebar herstructurering, QuickLinks i18n, SCHEDULED_JOBS 40→54. |
+| **3.81.0** | **2026-03-07** | **Command v5.0 Stap 1+2: Bugfix + API test fix**. 4 kritieke bugfixes + ticketing test fix (88/88 PASS). |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
