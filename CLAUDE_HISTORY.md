@@ -3111,4 +3111,60 @@ CREATE TABLE page_revisions (
 
 ---
 
+## Command v5.0 Stap 1 — Bugfix + Stabilisatie (07-03-2026)
+
+**CLAUDE.md**: v3.77.0 → v3.79.0
+**Master Strategie**: v7.43 → v7.45
+**Trigger**: Handmatige browser-test door Frank ontdekte 4 kritieke bugs
+
+### Resultaat
+
+4 kritieke bugfixes opgelost en gedeployed naar Hetzner:
+
+| Bug | Root Cause | Fix |
+|-----|-----------|-----|
+| BUG-1: Blocks niet zichtbaar | Crashende blocks braken hele pagina (geen error boundary) | `BlockErrorBoundary` (React Error Boundary class component) + `BlockRenderer` wrapper per block in page.tsx |
+| BUG-2: Media upload "Data truncated" | `media.uploaded_by` is INT maar `admin_users.id` is UUID VARCHAR(36) | `ALTER TABLE media MODIFY COLUMN uploaded_by VARCHAR(36)` |
+| BUG-3: Logo broken op frontend | `HB_API_URL=http://localhost:3001` niet bereikbaar vanuit browser | `resolveAssetUrl()` helper in Header.tsx + layout.tsx, nieuw `HB_ASSET_URL=https://api.holidaibutler.com` env var |
+| BUG-4: Map toont geen POI markers | Map.tsx had alleen Leaflet tileLayer, geen markers | Map.tsx herschreven: fetchPois, L.marker met popup (naam/categorie/rating/link), auto-fit bounds, Leaflet icon fix. Nieuwe `/api/pois` proxy route |
+
+### Diagnose op Hetzner
+
+- **DB data geverifieerd**: Calpe home 5 blocks met gevulde props (hero 4 keys, poi_grid 2 keys, event_calendar 3 keys, partners 1 key, rich_text 1 key)
+- **HB_API_URL**: `http://localhost:3001` — werkt server-to-server maar niet voor browser-facing assets
+- **Branding paths**: `/branding/calpe_logo.png` en `/branding/texel_logo.png` in DB — bestanden nog niet geüpload (directory aangemaakt)
+- **Next.js logs**: Geen kritieke errors, alleen 404s voor apple-touch-icon auto-discovery
+- **POI proxy**: `/api/pois?limit=3` retourneert correcte data met lat/lon
+
+### Nieuwe Bestanden
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `hb-websites/src/components/ui/BlockErrorBoundary.tsx` | React Error Boundary class component, logt error + toont fallback |
+| `hb-websites/src/components/ui/BlockRenderer.tsx` | Client wrapper die BlockErrorBoundary rond children wraps |
+| `hb-websites/src/app/api/pois/route.ts` | Next.js API proxy route naar backend /api/v1/pois (GET, forwardt X-Destination-ID) |
+| `platform-core/migrations/002_fix_media_uploaded_by.sql` | ALTER TABLE media MODIFY COLUMN uploaded_by VARCHAR(36) |
+
+### Gewijzigde Bestanden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/blocks/Map.tsx` | Volledig herschreven: +POI fetch, +L.marker met popup, +auto-fit bounds, +Leaflet icon fix, +error state, +cleanup |
+| `hb-websites/src/components/layout/Header.tsx` | +resolveAssetUrl() helper (http check + HB_ASSET_URL/HB_API_URL fallback), logo src via resolveAssetUrl() |
+| `hb-websites/src/app/layout.tsx` | +resolveAssetUrl() helper, favicon + navicon href via resolveAssetUrl() |
+| `hb-websites/src/app/[[...slug]]/page.tsx` | +BlockRenderer import, elke block gewrapt in BlockRenderer (Error Boundary) |
+| `hb-websites/.env.example` | +HB_ASSET_URL=https://api.holidaibutler.com |
+
+### Deployment
+
+- DB migration: `ALTER TABLE media MODIFY COLUMN uploaded_by VARCHAR(36)` via SSH mysql
+- hb-websites: SCP 7 bestanden → Hetzner + `npm run build` (0 errors) + `pm2 restart hb-websites`
+- Nieuwe env var: `HB_ASSET_URL=https://api.holidaibutler.com` in `.env.local` op Hetzner
+- Branding directory aangemaakt: `/var/www/api.holidaibutler.com/platform-core/public/branding/`
+- Geverifieerd: Calpe logo → `https://api.holidaibutler.com/branding/calpe_logo.png`, Texel logo → `.../texel_logo.png`
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
