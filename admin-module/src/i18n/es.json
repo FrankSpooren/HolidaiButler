@@ -64,7 +64,17 @@
     "agentHealth": "Actividad de agentes (24h)",
     "errors24h": "Errores",
     "alerts24h": "Alertas",
-    "jobs24h": "Trabajos completados"
+    "jobs24h": "Trabajos completados",
+    "links": {
+      "agents": "Panel de Agentes",
+      "pois": "Gestión de POIs",
+      "reviews": "Moderación de Reseñas",
+      "media": "Mediateca",
+      "branding": "Marca y Estilo",
+      "pages": "Gestión de Páginas",
+      "analytics": "Analíticas",
+      "settings": "Configuración"
+    }
   },
   "agents": {
     "title": "Panel de Agentes",
