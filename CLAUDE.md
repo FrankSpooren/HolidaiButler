@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.85.0
+> **Versie**: 3.86.0
 > **Laatst bijgewerkt**: 7 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -363,6 +363,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **Cmd v5.0 Stap 6** | **Dashboard improvements** | **07-03** | **QuickLinks: hardcoded labels → i18n + 3 nieuwe links (Media, Branding, Pages) met RBAC. SCHEDULED_JOBS: 40→54 entries (sync met BullMQ: +De Makelaar/Kassier/Magazijnier + reservation/ticket cleanup + GDPR + cost controller + POI tier). Build + deploy 0 errors.** |
 | **Cmd v5.0 Stap 7** | **Admin Portal Hardening** | **07-03** | **CRITICAL: BrandingPage + PagesPage auth token fix (`admin_token` → axios client met auto-auth). Bare fetch() → client.post(). 8 hardcoded UI strings → i18n t() calls. 17 nieuwe i18n keys (4 talen): branding.footer.*, branding.brandVisuals.*, pages.uploadOgImage/ogImageUploaded/noBlocksInCategory, common.delete/save. 8 bestanden gewijzigd.** |
 | **Cmd v5.0 Stap 8** | **hb-websites Frontend Hardening** | **07-03** | **XSS preventie: sanitizeHtml() utility (server-safe, geen DOM dependency) op RichText + FAQ blocks. Error handling: try/catch op alle 6 API proxy routes (502 met safe error). Security: console.log → dev-only (4x), postMessage origin validatie (trusted domains). API error log sanitized (pathname only). 14 bestanden, 1 nieuw. Build + deploy 0 errors.** |
+| **Repair Cmd v6.0** | **Browser-Verified Fixes (6 blokken)** | **07-03** | **Pre-flight diagnostiek op Hetzner (PM2, Redis, DB, media, env). BLOK A (Media thumbnails): express.static ontbrak voor `/media-files/` + `/block-images/` → 2 routes toegevoegd in index.js + 7 media files hersteld uit backup. BLOK B (Preview): iframe laadde wireframe → PagesPage.jsx PREVIEW_DOMAINS mapping + getPreviewUrl() voor actuele website render. BLOK C (Map): Calpe homepage heeft geen map block — content issue, geen code bug. BLOK D (Sidebar): MENU_SECTIONS in build bevestigd — browser cache. BLOK E (Logo): branding dir leeg → calpe + texel logos gekopieerd uit customer-portal. BLOK F (Frontend): Hero + POI grid + Events + Partners + Footer bevestigd via curl. 2 bestanden gewijzigd. Commit f591b49.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -495,7 +496,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
 | IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | ✅ COMPLEET (Blok A+B+C+D+E+F) | 6-8 wkn |
-| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0 COMPLEET) | 12 wkn |
+| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0 + Repair v6.0 COMPLEET) | 12 wkn |
 | VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | GEPLAND | 6-8 wkn |
 | VII | Polish, Scale & Launch (E2E testing, load testing, DR, go-live multi-tenant) | GEPLAND | 3-4 wkn |
 
@@ -604,9 +605,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **3.86.0** | **2026-03-07** | **Repair Command v6.0: Browser-Verified Fixes**. 6 blokken gediagnosticeerd. BLOK A: express.static media + block-images. BLOK B: preview iframe website render. BLOK E: logo branding files restored. BLOK F: frontend bevestigd. BLOK C/D: content issue + browser cache. MS v7.48. |
 | **3.85.0** | **2026-03-07** | **Command v5.0 Stap 7+8: Enterprise Hardening**. Stap 7: Admin Portal auth token fix + i18n cleanup (8 hardcoded strings, 17 keys). Stap 8: hb-websites XSS preventie (sanitizeHtml), 6 API route try/catch, console.log dev-only, postMessage origin validation. |
 | **3.83.0** | **2026-03-07** | **Command v5.0 Stap 3-6: Verificatie + Sidebar + Dashboard**. Wave 2/3 verificatie, SEO bugfix, sidebar herstructurering, QuickLinks i18n, SCHEDULED_JOBS 40→54. |
-| **3.81.0** | **2026-03-07** | **Command v5.0 Stap 1+2: Bugfix + API test fix**. 4 kritieke bugfixes + ticketing test fix (88/88 PASS). |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -616,7 +617,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.47 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.48 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

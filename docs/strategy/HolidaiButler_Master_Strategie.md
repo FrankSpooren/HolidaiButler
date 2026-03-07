@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 7 maart 2026
-**Versie**: 7.47
+**Versie**: 7.48
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0 Stap 1-8 COMPLEET). CLAUDE.md v3.85.0. MS v7.47.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0 Stap 1-8 + Repair Cmd v6.0 COMPLEET). CLAUDE.md v3.86.0. MS v7.48.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1402,6 +1402,8 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 
 - **Command v5.0 Stap 8 — hb-websites Frontend Hardening** ✅ COMPLEET (07-03-2026): XSS preventie: sanitizeHtml() server-safe utility op RichText + FAQ blocks. Error handling: try/catch op alle 6 API proxy routes (502 fallback). Security: console.log → dev-only (4x), postMessage origin validation (trusted domains whitelist), API error log sanitized (pathname only). 14 bestanden (1 nieuw). Build + deploy 0 errors.
 
+- **Repair Command v6.0 — Browser-Verified Fixes** ✅ COMPLEET (07-03-2026): 6 blokken gediagnosticeerd op Hetzner (pre-flight: PM2, Redis, DB, media, env). **BLOK A** (Media thumbnails): Root cause: express.static ontbrak voor `/media-files/` en `/block-images/`. Fix: 2 express.static routes toegevoegd in index.js + 7 media files hersteld uit backup. **BLOK B** (Preview): Root cause: iframe laadde wireframe `/preview` pagina. Fix: PagesPage.jsx PREVIEW_DOMAINS mapping (Calpe→dev.holidaibutler.com, Texel→dev.texelmaps.nl) + getPreviewUrl() voor actuele pagina render. **BLOK C** (Map): Diagnose: Calpe homepage heeft geen map block in layout — content issue, geen code bug. Map.tsx + POI proxy werken correct. **BLOK D** (Sidebar): Diagnose: MENU_SECTIONS in deployed build bevestigd — browser cache issue (Ctrl+Shift+R). **BLOK E** (Logo): Root cause: branding directory leeg, logo files nooit geüpload. Fix: calpe-turismo-logo.png + texelmaps-logo-transparent.png gekopieerd naar `/public/branding/`. Geverifieerd: HTTP 200 op beide URLs. **BLOK F** (Frontend): Bevestigd werkend via curl: Header + Hero + POI grid + Events + Partners + RichText + Footer. 2 bestanden gewijzigd. Commit f591b49.
+
 Technische blauwdruk: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
 
 **Fase VI — UX Revolution + WarreWijzer (6-8 weken):**
@@ -1610,6 +1612,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.48** | **07-03-2026** | **Repair Command v6.0: Browser-Verified Fixes**. 6 blokken gediagnosticeerd + 4 fixes: BLOK A express.static media/block-images, BLOK B preview iframe website render, BLOK E logo branding files restored, BLOK F frontend bevestigd. BLOK C = content issue, BLOK D = browser cache. CLAUDE.md v3.86.0. |
 | **7.47** | **07-03-2026** | **Command v5.0 Stap 2-8 COMPLEET. Stap 2: API test fix (88/88 PASS). Stap 3+4: Wave 2/3 verificatie + SEO migration 003. Stap 5: Sidebar herstructurering (5 secties). Stap 6: Dashboard QuickLinks i18n + SCHEDULED_JOBS 40→54. Stap 7: Admin auth token CRITICAL fix (bare fetch→axios client) + 17 i18n keys. Stap 8: XSS sanitizer, 6 API route try/catch, postMessage origin validation, console.log dev-only. CLAUDE.md v3.85.0.** |
 | **7.45** | **07-03-2026** | **Command v5.0 Stap 1: Bugfix + Stabilisatie COMPLEET. 4 kritieke bugfixes: BUG-1 BlockErrorBoundary per block, BUG-2 media.uploaded_by INT→VARCHAR(36), BUG-3 resolveAssetUrl() + HB_ASSET_URL, BUG-4 Map.tsx POI markers + /api/pois proxy. 1 DB migration. 3 nieuwe + 4 gewijzigde bestanden. Deploy + build 0 errors. CLAUDE.md v3.79.0.** |
 | **7.43** | **07-03-2026** | **Wave 2+3: Professionele Features + Excellence COMPLEET. Wave 2: pagina-hiërarchie (parent_id + tree-view), media library (4 CRUD endpoints + MediaPage), 8 page templates, favicon/navicon upload, OG image upload, 5 button style varianten (15 CSS vars), footer config (data-driven), block-level styling (BlockStyleEditor + hb-websites wrapper). Wave 3: brand visuals (upload + HeroEditor quick-pick), revisie-geschiedenis UI (PageRevisionsDialog), GDPR cookie consent banner (3 niveaus, 5 talen, tenant-aware). 2 nieuwe DB tabellen + 2 ALTER TABLE. 8 nieuwe endpoints (157 totaal). ~2.300 LOC. CLAUDE.md v3.77.0.** |
@@ -1678,4 +1681,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 7 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0 Stap 1-8 COMPLEET). Admin Portal: 157 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.85.0. MS v7.47.*
+*Laatst bijgewerkt: 7 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0 Stap 1-8 + Repair Cmd v6.0 COMPLEET). Admin Portal: 157 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.86.0. MS v7.48.*
