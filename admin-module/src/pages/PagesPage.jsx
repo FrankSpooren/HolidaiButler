@@ -1,39 +1,35 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Box, Typography, Card, Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
   Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert,
-  Snackbar, Chip, Tabs, Tab, Select, MenuItem, FormControl, InputLabel, Skeleton, Tooltip
+  Snackbar, Chip, Tabs, Tab, Select, MenuItem, FormControl, InputLabel, Skeleton, Tooltip,
+  ToggleButtonGroup, ToggleButton
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import HistoryIcon from '@mui/icons-material/History';
 import TranslateIcon from '@mui/icons-material/Translate';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
+import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
+import TabletIcon from '@mui/icons-material/Tablet';
+import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
+import UploadIcon from '@mui/icons-material/Upload';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useTranslation } from 'react-i18next';
 import { translateTexts } from '../api/translationService.js';
 import { usePages, usePageCreate, usePageUpdate, usePageDelete } from '../hooks/usePages.js';
 import { useBrandingDestinations } from '../hooks/useBrandingEditor.js';
 import { pageService } from '../api/pageService.js';
-
-const BLOCK_TYPES = ['hero', 'poi_grid', 'event_calendar', 'rich_text', 'card_group', 'map', 'testimonials', 'cta', 'gallery', 'faq', 'ticket_shop', 'reservation_widget', 'video', 'social_feed', 'contact_form', 'newsletter', 'weather_widget', 'banner', 'partners', 'downloads'];
-
-const TEMPLATES = {
-  empty: { blocks: [] },
-  homepage: {
-    blocks: [
-      { id: 'hero-1', type: 'hero', props: { headline: '', description: '', buttons: [] } },
-      { id: 'poi-grid-1', type: 'poi_grid', props: { limit: 6, columns: 3 } },
-      { id: 'event-cal-1', type: 'event_calendar', props: { limit: 4, layout: 'grid' } }
-    ]
-  },
-  content: {
-    blocks: [
-      { id: 'hero-1', type: 'hero', props: { headline: '', description: '' } },
-      { id: 'rich-text-1', type: 'rich_text', props: { content: '' } }
-    ]
-  }
-};
+import BlockEditorCard from '../components/blocks/BlockEditorCard.jsx';
+import BlockSelectorDialog from '../components/blocks/BlockSelectorDialog.jsx';
+import PageTemplateDialog from '../components/PageTemplateDialog.jsx';
+import PageRevisionsDialog from '../components/PageRevisionsDialog.jsx';
+import debounce from 'lodash.debounce';
 
 export default function PagesPage() {
   const { t } = useTranslation();
@@ -49,28 +45,64 @@ export default function PagesPage() {
   const pages = data?.data?.pages || [];
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(null);
   const [editPage, setEditPage] = useState(null);
   const [editTab, setEditTab] = useState(0);
-  const [createForm, setCreateForm] = useState({ slug: '', title_en: '', title_nl: '', status: 'draft', template: 'empty', destination_id: '' });
+  const [createForm, setCreateForm] = useState({ slug: '', title_en: '', title_nl: '', status: 'draft', destination_id: '', parent_id: '' });
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
   const [translating, setTranslating] = useState(false);
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [previewViewport, setPreviewViewport] = useState('desktop');
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [expandedParents, setExpandedParents] = useState({});
+  const [revisionsPage, setRevisionsPage] = useState(null);
+  const previewRef = useRef(null);
+
+  // Build tree: group children under their parent
+  const parentPages = pages.filter(p => !p.parent_id);
+  const childrenByParent = {};
+  pages.filter(p => p.parent_id).forEach(p => {
+    if (!childrenByParent[p.parent_id]) childrenByParent[p.parent_id] = [];
+    childrenByParent[p.parent_id].push(p);
+  });
+
+  const toggleParentExpand = (parentId) => {
+    setExpandedParents(prev => ({ ...prev, [parentId]: !prev[parentId] }));
+  };
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const handleCreate = async () => {
     try {
-      const layout = TEMPLATES[createForm.template] || TEMPLATES.empty;
+      const layout = selectedTemplate?.layout || { blocks: [] };
       await createMut.mutateAsync({
         destination_id: createForm.destination_id || destId,
         slug: createForm.slug,
         title_en: createForm.title_en,
         title_nl: createForm.title_nl || null,
         status: createForm.status,
+        parent_id: createForm.parent_id || null,
         layout
       });
       setCreateOpen(false);
-      setCreateForm({ slug: '', title_en: '', title_nl: '', status: 'draft', template: 'empty', destination_id: '' });
+      setSelectedTemplate(null);
+      setCreateForm({ slug: '', title_en: '', title_nl: '', status: 'draft', destination_id: '', parent_id: '' });
       setSnack({ open: true, message: t('pages.created'), severity: 'success' });
+    } catch (err) {
+      setSnack({ open: true, message: err.response?.data?.error?.message || err.message, severity: 'error' });
+    }
+  };
+
+  const handleDuplicate = async (page) => {
+    try {
+      await pageService.duplicate(page.id);
+      refetch();
+      setSnack({ open: true, message: t('pages.duplicated', 'Page duplicated'), severity: 'success' });
     } catch (err) {
       setSnack({ open: true, message: err.response?.data?.error?.message || err.message, severity: 'error' });
     }
@@ -111,6 +143,8 @@ export default function PagesPage() {
         seo_description_en: editPage.seo_description_en,
         seo_description_nl: editPage.seo_description_nl,
         og_image_url: editPage.og_image_url,
+        og_image_path: editPage.og_image_path,
+        parent_id: editPage.parent_id || null,
         status: editPage.status,
         layout: editPage.layout
       };
@@ -160,7 +194,7 @@ export default function PagesPage() {
         seo_description_nl: translations.seoDescription?.nl || p.seo_description_nl,
       }));
       setSnack({ open: true, message: t('translate.success'), severity: 'success' });
-    } catch (err) {
+    } catch {
       setSnack({ open: true, message: t('translate.error'), severity: 'error' });
     } finally {
       setTranslating(false);
@@ -168,11 +202,11 @@ export default function PagesPage() {
   };
 
   // Block editing helpers
-  const addBlock = () => {
+  const addBlockOfType = (type) => {
     if (!editPage) return;
     const blocks = [...(editPage.layout?.blocks || [])];
     const id = `block-${Date.now()}`;
-    blocks.push({ id, type: 'rich_text', props: {} });
+    blocks.push({ id, type, props: {} });
     setEditPage({ ...editPage, layout: { ...editPage.layout, blocks } });
   };
 
@@ -182,27 +216,57 @@ export default function PagesPage() {
     setEditPage({ ...editPage, layout: { ...editPage.layout, blocks } });
   };
 
-  const moveBlock = (idx, dir) => {
+  const duplicateBlock = (idx) => {
     if (!editPage) return;
     const blocks = [...editPage.layout.blocks];
-    const target = idx + dir;
-    if (target < 0 || target >= blocks.length) return;
-    [blocks[idx], blocks[target]] = [blocks[target], blocks[idx]];
+    const source = blocks[idx];
+    const copy = { ...source, id: `block-${Date.now()}`, props: { ...source.props } };
+    blocks.splice(idx + 1, 0, copy);
     setEditPage({ ...editPage, layout: { ...editPage.layout, blocks } });
   };
 
-  const updateBlock = (idx, field, value) => {
+  const updateBlockProps = (idx, newProps) => {
     if (!editPage) return;
     const blocks = [...editPage.layout.blocks];
-    if (field === 'type') {
-      blocks[idx] = { ...blocks[idx], type: value };
-    } else if (field === 'props') {
-      try {
-        blocks[idx] = { ...blocks[idx], props: JSON.parse(value) };
-      } catch { /* invalid JSON, ignore */ }
-    }
+    blocks[idx] = { ...blocks[idx], props: newProps };
     setEditPage({ ...editPage, layout: { ...editPage.layout, blocks } });
   };
+
+  const updateBlockStyle = (idx, newStyle) => {
+    if (!editPage) return;
+    const blocks = [...editPage.layout.blocks];
+    blocks[idx] = { ...blocks[idx], style: newStyle };
+    setEditPage({ ...editPage, layout: { ...editPage.layout, blocks } });
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !editPage) return;
+    const blocks = editPage.layout.blocks;
+    const oldIndex = blocks.findIndex(b => b.id === active.id);
+    const newIndex = blocks.findIndex(b => b.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(blocks, oldIndex, newIndex);
+    setEditPage({ ...editPage, layout: { ...editPage.layout, blocks: reordered } });
+  };
+
+  // Live preview: send layout updates to iframe
+  const sendPreviewUpdate = useCallback(
+    debounce((layout) => {
+      if (previewRef.current?.contentWindow) {
+        previewRef.current.contentWindow.postMessage({ type: 'layout-update', layout }, '*');
+      }
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    if (editTab === 2 && editPage?.layout) {
+      sendPreviewUpdate(editPage.layout);
+    }
+  }, [editPage?.layout, editTab, sendPreviewUpdate]);
+
+  const viewportWidths = { desktop: '100%', tablet: '768px', mobile: '375px' };
 
   if (isLoading) {
     return (
@@ -227,7 +291,7 @@ export default function PagesPage() {
               {destinations.map(d => <MenuItem key={d.id} value={d.id}>{d.displayName}</MenuItem>)}
             </Select>
           </FormControl>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setCreateForm(f => ({ ...f, destination_id: destId })); setCreateOpen(true); }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setCreateForm(f => ({ ...f, destination_id: destId })); setTemplateOpen(true); }}>
             {t('pages.create')}
           </Button>
         </Box>
@@ -261,41 +325,90 @@ export default function PagesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                pages.map(page => (
-                  <TableRow key={page.id} hover>
-                    <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>/{page.slug}</TableCell>
-                    <TableCell>{page.title_en || '—'}</TableCell>
-                    <TableCell>{page.destination_name || page.destination_code}</TableCell>
-                    <TableCell align="center">{page.block_count ?? '—'}</TableCell>
-                    <TableCell align="center">{page.sort_order}</TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        size="small"
-                        label={page.status}
-                        color={page.status === 'published' ? 'success' : 'default'}
-                        onClick={() => toggleStatus(page)}
-                        sx={{ cursor: 'pointer' }}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title={t('common.edit')}>
-                        <IconButton size="small" onClick={() => openEdit(page)} disabled={editLoading}><EditIcon fontSize="small" /></IconButton>
-                      </Tooltip>
-                      <Tooltip title={t('pages.delete')}>
-                        <IconButton size="small" color="error" onClick={() => setDeleteOpen(page)}><DeleteIcon fontSize="small" /></IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))
+                parentPages.map(page => {
+                  const children = childrenByParent[page.id] || [];
+                  const hasChildren = children.length > 0;
+                  const isExpanded = expandedParents[page.id];
+
+                  const renderRow = (p, isChild = false) => (
+                    <TableRow key={p.id} hover sx={isChild ? { bgcolor: 'action.hover' } : undefined}>
+                      <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          {isChild ? (
+                            <SubdirectoryArrowRightIcon sx={{ fontSize: 16, color: 'text.disabled', ml: 1 }} />
+                          ) : hasChildren ? (
+                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleParentExpand(p.id); }} sx={{ p: 0.25 }}>
+                              {isExpanded ? <ExpandMoreIcon sx={{ fontSize: 18 }} /> : <ChevronRightIcon sx={{ fontSize: 18 }} />}
+                            </IconButton>
+                          ) : (
+                            <Box sx={{ width: 22 }} />
+                          )}
+                          /{p.slug}
+                          {hasChildren && !isChild && (
+                            <Chip size="small" label={children.length} sx={{ height: 18, fontSize: '0.65rem', ml: 0.5 }} />
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>{p.title_en || '\u2014'}</TableCell>
+                      <TableCell>{p.destination_name || p.destination_code}</TableCell>
+                      <TableCell align="center">{p.block_count ?? '\u2014'}</TableCell>
+                      <TableCell align="center">{p.sort_order}</TableCell>
+                      <TableCell align="center">
+                        <Chip
+                          size="small"
+                          label={p.status}
+                          color={p.status === 'published' ? 'success' : 'default'}
+                          onClick={() => toggleStatus(p)}
+                          sx={{ cursor: 'pointer' }}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Tooltip title={t('common.edit')}>
+                          <IconButton size="small" onClick={() => openEdit(p)} disabled={editLoading}><EditIcon fontSize="small" /></IconButton>
+                        </Tooltip>
+                        <Tooltip title={t('pages.duplicate', 'Duplicate')}>
+                          <IconButton size="small" onClick={() => handleDuplicate(p)}><ContentCopyIcon fontSize="small" /></IconButton>
+                        </Tooltip>
+                        <Tooltip title="Revision History">
+                          <IconButton size="small" onClick={() => setRevisionsPage(p)}><HistoryIcon fontSize="small" /></IconButton>
+                        </Tooltip>
+                        <Tooltip title={t('pages.delete')}>
+                          <IconButton size="small" color="error" onClick={() => setDeleteOpen(p)}><DeleteIcon fontSize="small" /></IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  );
+
+                  return [
+                    renderRow(page),
+                    ...(hasChildren && isExpanded ? children.map(child => renderRow(child, true)) : [])
+                  ];
+                }).flat()
               )}
             </TableBody>
           </Table>
         </TableContainer>
       </Card>
 
+      {/* Template Selector Dialog */}
+      <PageTemplateDialog
+        open={templateOpen}
+        onClose={() => setTemplateOpen(false)}
+        onSelect={(tmpl) => {
+          setSelectedTemplate(tmpl);
+          setTemplateOpen(false);
+          setCreateOpen(true);
+        }}
+      />
+
       {/* Create dialog */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{t('pages.createTitle')}</DialogTitle>
+        <DialogTitle>
+          {t('pages.createTitle')}
+          {selectedTemplate && (
+            <Chip size="small" label={selectedTemplate.label} sx={{ ml: 1 }} />
+          )}
+        </DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
           <FormControl size="small" fullWidth>
             <InputLabel>{t('pages.destination')}</InputLabel>
@@ -307,11 +420,16 @@ export default function PagesPage() {
           <TextField size="small" label={t('pages.fields.titleEn')} value={createForm.title_en} onChange={e => setCreateForm(f => ({ ...f, title_en: e.target.value }))} />
           <TextField size="small" label={t('pages.fields.titleNl')} value={createForm.title_nl} onChange={e => setCreateForm(f => ({ ...f, title_nl: e.target.value }))} />
           <FormControl size="small" fullWidth>
-            <InputLabel>{t('pages.fields.template')}</InputLabel>
-            <Select value={createForm.template} label={t('pages.fields.template')} onChange={e => setCreateForm(f => ({ ...f, template: e.target.value }))}>
-              <MenuItem value="empty">{t('pages.templates.empty')}</MenuItem>
-              <MenuItem value="homepage">{t('pages.templates.homepage')}</MenuItem>
-              <MenuItem value="content">{t('pages.templates.content')}</MenuItem>
+            <InputLabel>{t('pages.parentPage', 'Parent Page')}</InputLabel>
+            <Select
+              value={createForm.parent_id || ''}
+              label={t('pages.parentPage', 'Parent Page')}
+              onChange={e => setCreateForm(f => ({ ...f, parent_id: e.target.value }))}
+            >
+              <MenuItem value="">{t('pages.noParent', 'None (top-level)')}</MenuItem>
+              {pages.filter(p => !p.parent_id).map(p => (
+                <MenuItem key={p.id} value={p.id}>/{p.slug} — {p.title_en}</MenuItem>
+              ))}
             </Select>
           </FormControl>
           <FormControl size="small" fullWidth>
@@ -323,7 +441,7 @@ export default function PagesPage() {
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCreateOpen(false)}>{t('common.cancel')}</Button>
+          <Button onClick={() => { setCreateOpen(false); setSelectedTemplate(null); }}>{t('common.cancel')}</Button>
           <Button variant="contained" onClick={handleCreate} disabled={!createForm.slug || !createForm.title_en || createMut.isPending}>
             {createMut.isPending ? t('pages.creating') : t('pages.create')}
           </Button>
@@ -362,7 +480,52 @@ export default function PagesPage() {
               </Button>
               <TextField size="small" label={t('pages.fields.seoTitleEn')} value={editPage.seo_title_en || ''} onChange={e => setEditPage(p => ({ ...p, seo_title_en: e.target.value }))} />
               <TextField size="small" label={t('pages.fields.seoDescriptionEn')} value={editPage.seo_description_en || ''} onChange={e => setEditPage(p => ({ ...p, seo_description_en: e.target.value }))} multiline rows={2} />
-              <TextField size="small" label={t('pages.fields.ogImageUrl')} value={editPage.og_image_url || ''} onChange={e => setEditPage(p => ({ ...p, og_image_url: e.target.value }))} />
+              <TextField size="small" label={t('pages.fields.ogImageUrl')} value={editPage.og_image_url || ''} onChange={e => setEditPage(p => ({ ...p, og_image_url: e.target.value }))} placeholder="URL or upload below" />
+              <Box>
+                <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary' }}>OG Image Upload</Typography>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  {(editPage.og_image_path || editPage.og_image_url) && (
+                    <Box component="img" src={editPage.og_image_path || editPage.og_image_url} alt="OG" sx={{ height: 60, maxWidth: 120, borderRadius: 1, border: '1px solid #e5e7eb' }} />
+                  )}
+                  <Button variant="outlined" component="label" size="small" startIcon={<UploadIcon />}>
+                    Upload OG Image
+                    <input type="file" hidden accept="image/png,image/jpeg,image/webp" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const formData = new FormData();
+                      formData.append('image', file);
+                      try {
+                        const apiUrl = import.meta.env.VITE_API_URL || '';
+                        const token = localStorage.getItem('admin_token');
+                        const resp = await fetch(`${apiUrl}/api/v1/admin-portal/blocks/upload-image`, {
+                          method: 'POST', body: formData,
+                          headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await resp.json();
+                        if (data.success) {
+                          setEditPage(p => ({ ...p, og_image_path: data.data.url }));
+                          setSnack({ open: true, message: 'OG image uploaded', severity: 'success' });
+                        }
+                      } catch (err) {
+                        setSnack({ open: true, message: err.message, severity: 'error' });
+                      }
+                    }} />
+                  </Button>
+                </Box>
+              </Box>
+              <FormControl size="small">
+                <InputLabel>{t('pages.parentPage', 'Parent Page')}</InputLabel>
+                <Select
+                  value={editPage.parent_id || ''}
+                  label={t('pages.parentPage', 'Parent Page')}
+                  onChange={e => setEditPage(p => ({ ...p, parent_id: e.target.value || null }))}
+                >
+                  <MenuItem value="">{t('pages.noParent', 'None (top-level)')}</MenuItem>
+                  {pages.filter(p => p.id !== editPage.id && !p.parent_id).map(p => (
+                    <MenuItem key={p.id} value={p.id}>/{p.slug} — {p.title_en}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <FormControl size="small">
                 <InputLabel>{t('pages.fields.status')}</InputLabel>
                 <Select value={editPage.status || 'draft'} label={t('pages.fields.status')} onChange={e => setEditPage(p => ({ ...p, status: e.target.value }))}>
@@ -375,48 +538,46 @@ export default function PagesPage() {
 
           {editTab === 1 && editPage && (
             <Box>
-              {(editPage.layout?.blocks || []).map((block, idx) => (
-                <Card key={block.id || idx} sx={{ p: 2, mb: 1.5, bgcolor: '#fafafa' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Chip label={`#${idx + 1}`} size="small" />
-                    <FormControl size="small" sx={{ minWidth: 160 }}>
-                      <Select
-                        value={block.type}
-                        onChange={e => updateBlock(idx, 'type', e.target.value)}
-                        size="small"
-                      >
-                        {BLOCK_TYPES.map(bt => <MenuItem key={bt} value={bt}>{t(`pages.blockTypes.${bt}`, bt.replace('_', ' '))}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                    <Box sx={{ flex: 1 }} />
-                    <IconButton size="small" onClick={() => moveBlock(idx, -1)} disabled={idx === 0}>
-                      <ArrowUpwardIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => moveBlock(idx, 1)} disabled={idx === editPage.layout.blocks.length - 1}>
-                      <ArrowDownwardIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" color="error" onClick={() => removeBlock(idx)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                  <TextField
-                    fullWidth size="small" multiline rows={3}
-                    label={t('pages.blockProps')}
-                    value={JSON.stringify(block.props || {}, null, 2)}
-                    onChange={e => updateBlock(idx, 'props', e.target.value)}
-                    sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
-                  />
-                </Card>
-              ))}
-              <Button variant="outlined" startIcon={<AddIcon />} onClick={addBlock} sx={{ mt: 1 }}>
-                {t('pages.addBlock')}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={(editPage.layout?.blocks || []).map(b => b.id)} strategy={verticalListSortingStrategy}>
+                  {(editPage.layout?.blocks || []).map((block, idx) => (
+                    <BlockEditorCard
+                      key={block.id}
+                      block={block}
+                      index={idx}
+                      onUpdate={newProps => updateBlockProps(idx, newProps)}
+                      onStyleChange={newStyle => updateBlockStyle(idx, newStyle)}
+                      onRemove={() => removeBlock(idx)}
+                      onDuplicate={() => duplicateBlock(idx)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+              <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setSelectorOpen(true)} sx={{ mt: 1 }}>
+                {t('pages.addBlock', 'Add Block')}
               </Button>
             </Box>
           )}
 
           {editTab === 2 && editPage && (
-            <Box sx={{ fontFamily: 'monospace', fontSize: '0.8rem', whiteSpace: 'pre-wrap', bgcolor: '#f5f5f5', p: 2, borderRadius: 1, maxHeight: 500, overflow: 'auto' }}>
-              {JSON.stringify(editPage.layout, null, 2)}
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                <ToggleButtonGroup value={previewViewport} exclusive onChange={(_, v) => v && setPreviewViewport(v)} size="small">
+                  <ToggleButton value="desktop"><DesktopWindowsIcon fontSize="small" sx={{ mr: 0.5 }} /> Desktop</ToggleButton>
+                  <ToggleButton value="tablet"><TabletIcon fontSize="small" sx={{ mr: 0.5 }} /> Tablet</ToggleButton>
+                  <ToggleButton value="mobile"><PhoneIphoneIcon fontSize="small" sx={{ mr: 0.5 }} /> Mobile</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ width: viewportWidths[previewViewport], maxWidth: '100%', transition: 'width 0.3s', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', bgcolor: '#f5f5f5' }}>
+                  <iframe
+                    ref={previewRef}
+                    src={`https://dev.holidaibutler.com/preview`}
+                    style={{ width: '100%', height: 600, border: 'none' }}
+                    title="Page Preview"
+                  />
+                </Box>
+              </Box>
             </Box>
           )}
         </DialogContent>
@@ -427,6 +588,13 @@ export default function PagesPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Block Selector Dialog */}
+      <BlockSelectorDialog
+        open={selectorOpen}
+        onClose={() => setSelectorOpen(false)}
+        onSelect={addBlockOfType}
+      />
 
       {/* Delete confirm dialog */}
       <Dialog open={!!deleteOpen} onClose={() => setDeleteOpen(null)}>
@@ -441,6 +609,18 @@ export default function PagesPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Revision History Dialog */}
+      <PageRevisionsDialog
+        open={!!revisionsPage}
+        onClose={() => setRevisionsPage(null)}
+        pageId={revisionsPage?.id}
+        pageSlug={revisionsPage?.slug}
+        onRestored={() => {
+          refetch();
+          setSnack({ open: true, message: 'Revision restored', severity: 'success' });
+        }}
+      />
 
       <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack(s => ({ ...s, open: false }))}>
         <Alert severity={snack.severity} onClose={() => setSnack(s => ({ ...s, open: false }))}>{snack.message}</Alert>
