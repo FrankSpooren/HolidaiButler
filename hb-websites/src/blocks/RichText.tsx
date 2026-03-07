@@ -1,4 +1,5 @@
 import type { RichTextProps } from '@/types/blocks';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 export default function RichText({ content }: RichTextProps) {
   return (
@@ -8,7 +9,7 @@ export default function RichText({ content }: RichTextProps) {
           prose-headings:font-heading prose-headings:text-foreground
           prose-p:text-foreground/80 prose-a:text-primary hover:prose-a:text-primary-dark
           prose-strong:text-foreground"
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
       />
     </section>
   );

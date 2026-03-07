@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 7 maart 2026
-**Versie**: 7.43
+**Versie**: 7.47
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 COMPLEET). CLAUDE.md v3.77.0. MS v7.43.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0 Stap 1-8 COMPLEET). CLAUDE.md v3.85.0. MS v7.47.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1328,7 +1328,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 | II | Active Module Upgrade | Chatbot, POI, Agenda, Customer Portal | 6-8 wkn | HOOG | ✅ COMPLEET (Blok A+B+C+D) |
 | III | Commerce Foundation | Payment/Adyen, Ticketing, Reservering | 8-12 wkn | HOOG | ✅ COMPLEET (Blok G+A+B+C+D+E+F) |
 | IV | Intermediair & Revenue | Data Pipeline + Intermediair module + Agent | 6-8 wkn | HOOG | ✅ COMPLEET (Blok A+B+C+D+E+F) |
-| **V** | **Multi-Tenant Configuratielaag** | **Next.js SSR + Component Library + Tenant-Theming + Page Builder** | **12 wkn** | **HOOG** | **🟡 IN PROGRESS** |
+| **V** | **Multi-Tenant Configuratielaag** | **Next.js SSR + Component Library + Tenant-Theming + Page Builder + Stabilisatie** | **12 wkn** | **HOOG** | **🟡 IN PROGRESS** |
 | VI | UX Revolution + WarreWijzer | Mobiele UX polish op Next.js + WarreWijzer uitrol als 3e tenant | 6-8 wkn | MIDDEL | GEPLAND |
 | VII | Polish, Scale & Launch | E2E testing, load testing, DR, go-live multi-tenant platform | 3-4 wkn | MIDDEL | GEPLAND |
 
@@ -1387,6 +1387,20 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 - **Wave 1 Enterprise Admin Portal — Visuele Block Editor** ✅ COMPLEET (07-03-2026): JSON textarea vervangen door dedicated form editors per block type. 12 herbruikbare field components (TextField, NumberField, SelectField, SwitchField, ColorField, ImageUploadField, TranslatableField met 4 talen + auto-vertaal Mistral, ButtonListField, ItemListField, RichTextField TipTap WYSIWYG, CategoryFilterField). 20 block editors (React.lazy code-split). Block selector dialog (5 categorieën: Content/Media/Data/Interactie/Commerce, MUI Dialog, 3-kolom card grid). @dnd-kit drag-and-drop block reordering. Live preview iframe (postMessage protocol, responsive toggles Desktop/Tablet/Mobile). Typography hierarchy (6 levels: H1-H4/Body/Small, 18 CSS custom properties, live preview per level in BrandingPage). Block image upload endpoint (multer, 5MB, PNG/JPG/WebP/SVG). Apache CSP frame-ancestors fix voor preview iframe. 10 npm packages. 1 nieuw admin endpoint (149 totaal). adminPortal.js v3.25.0. ~38 nieuwe + ~8 gewijzigde bestanden (~3.200 LOC). 7/8 API tests PASS.
 
 - **Wave 2+3 Professionele Features + Excellence** ✅ COMPLEET (07-03-2026): Wave 2 (8 features): Pagina-hiërarchie (parent_id FK + tree-view UI met expand/collapse), Media Library (4 CRUD endpoints + MediaPage.jsx grid/upload/filter/detail), 8 page templates (PageTemplateDialog), favicon/navicon upload, OG image upload, 5 button style varianten (15 CSS vars), footer config (data-driven Footer.tsx kolommen/copyright/social/newsletter), block-level styling (BlockStyleEditor: bg/border/padding/fullWidth + hb-websites wrapper). Wave 3 (3 features): Brand Visuals (upload 3-5 hero images + BrandVisualPicker quick-pick in HeroEditor), revisie-geschiedenis UI (PageRevisionsDialog, auto-snapshot bij save, max 20 per pagina, restore functie), GDPR Cookie Consent Banner (CookieBanner.tsx: 3 niveaus essential/analytics/marketing, 5 talen NL/EN/DE/ES/FR, tenant-aware kleuren, SocialFeed marketing consent gating via CustomEvent). 2 nieuwe DB tabellen (media, page_revisions) + 2 ALTER TABLE (pages.parent_id, pages.og_image_path). 8 nieuwe admin endpoints (157 totaal). 7 nieuwe + 22 gewijzigde bestanden (~2.300 LOC). Admin-module + hb-websites build 0 errors.
+
+- **Command v5.0 Stap 1 — Bugfix + Stabilisatie** ✅ COMPLEET (07-03-2026): 4 kritieke bugfixes na handmatige browser-test. BUG-1: BlockErrorBoundary per block (React Error Boundary, crashende blocks tonen fallback i.p.v. hele pagina breken). BUG-2: media.uploaded_by type mismatch (INT→VARCHAR(36), admin_users.id is UUID). BUG-3: Logo/favicon/navicon broken (resolveAssetUrl() helper + HB_ASSET_URL env var voor browser-facing URLs, HB_API_URL=localhost niet zichtbaar voor browser). BUG-4: Map.tsx herschreven met POI markers (Leaflet markers met popup naam/categorie/rating/link, auto-fit bounds, Leaflet icon fix, /api/pois Next.js proxy route). DB data geverifieerd: 5 blocks met gevulde props op Calpe home. 1 DB migration (ALTER TABLE media). 3 nieuwe bestanden (BlockErrorBoundary.tsx, BlockRenderer.tsx, /api/pois/route.ts) + 4 gewijzigde bestanden (Map.tsx, Header.tsx, layout.tsx, page.tsx) + 1 migration. Deploy + build 0 errors.
+
+- **Command v5.0 Stap 2 — Falende API Test Fix** ✅ COMPLEET (07-03-2026): ticketing-module test suite fix (recursieve ioredis require loop, bull queue mock, service mocks). 5/5 suites, 88/88 tests PASS (was 4/5, 70/70). Wave 1 8/8 API tests PASS.
+
+- **Command v5.0 Stap 3+4 — Wave 2/3 Verificatie + Deploy** ✅ COMPLEET (07-03-2026): Code review Wave 2/3 alle features PASS. API endpoint tests (Media, Pages, Branding, Revisions) OK. Bugfix: pages SEO kolommen (`seo_title_de/es`, `seo_description_de/es`) ontbraken → migration 003. hb-websites 7/8 checks PASS. Admin build + deploy.
+
+- **Command v5.0 Stap 5 — Sidebar Herstructurering** ✅ COMPLEET (07-03-2026): Flat 16-item MENU_ITEMS → 5 gegroepeerde MENU_SECTIONS (Overzicht, Content & Data, Commerce, Platform, Systeem). Typography overline sectiehoofdingen + Divider. Secties auto-hidden per RBAC role. i18n 4 talen.
+
+- **Command v5.0 Stap 6 — Dashboard Improvements** ✅ COMPLEET (07-03-2026): QuickLinks hardcoded labels → i18n + 3 nieuwe links (Media, Branding, Pages) met RBAC. SCHEDULED_JOBS 40→54 entries (sync met BullMQ: +De Makelaar/Kassier/Magazijnier, reservation/ticket cleanup, GDPR, cost controller, POI tier).
+
+- **Command v5.0 Stap 7 — Admin Portal Hardening** ✅ COMPLEET (07-03-2026): CRITICAL auth token fix: BrandingPage + PagesPage gebruikten `localStorage.getItem('admin_token')` (FOUT) → bare fetch() vervangen door axios client met auto-auth interceptor. 8 hardcoded UI strings → i18n. 17 nieuwe i18n keys (4 talen). 8 bestanden gewijzigd.
+
+- **Command v5.0 Stap 8 — hb-websites Frontend Hardening** ✅ COMPLEET (07-03-2026): XSS preventie: sanitizeHtml() server-safe utility op RichText + FAQ blocks. Error handling: try/catch op alle 6 API proxy routes (502 fallback). Security: console.log → dev-only (4x), postMessage origin validation (trusted domains whitelist), API error log sanitized (pathname only). 14 bestanden (1 nieuw). Build + deploy 0 errors.
 
 Technische blauwdruk: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
 
@@ -1596,6 +1610,8 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.47** | **07-03-2026** | **Command v5.0 Stap 2-8 COMPLEET. Stap 2: API test fix (88/88 PASS). Stap 3+4: Wave 2/3 verificatie + SEO migration 003. Stap 5: Sidebar herstructurering (5 secties). Stap 6: Dashboard QuickLinks i18n + SCHEDULED_JOBS 40→54. Stap 7: Admin auth token CRITICAL fix (bare fetch→axios client) + 17 i18n keys. Stap 8: XSS sanitizer, 6 API route try/catch, postMessage origin validation, console.log dev-only. CLAUDE.md v3.85.0.** |
+| **7.45** | **07-03-2026** | **Command v5.0 Stap 1: Bugfix + Stabilisatie COMPLEET. 4 kritieke bugfixes: BUG-1 BlockErrorBoundary per block, BUG-2 media.uploaded_by INT→VARCHAR(36), BUG-3 resolveAssetUrl() + HB_ASSET_URL, BUG-4 Map.tsx POI markers + /api/pois proxy. 1 DB migration. 3 nieuwe + 4 gewijzigde bestanden. Deploy + build 0 errors. CLAUDE.md v3.79.0.** |
 | **7.43** | **07-03-2026** | **Wave 2+3: Professionele Features + Excellence COMPLEET. Wave 2: pagina-hiërarchie (parent_id + tree-view), media library (4 CRUD endpoints + MediaPage), 8 page templates, favicon/navicon upload, OG image upload, 5 button style varianten (15 CSS vars), footer config (data-driven), block-level styling (BlockStyleEditor + hb-websites wrapper). Wave 3: brand visuals (upload + HeroEditor quick-pick), revisie-geschiedenis UI (PageRevisionsDialog), GDPR cookie consent banner (3 niveaus, 5 talen, tenant-aware). 2 nieuwe DB tabellen + 2 ALTER TABLE. 8 nieuwe endpoints (157 totaal). ~2.300 LOC. CLAUDE.md v3.77.0.** |
 | **7.41** | **07-03-2026** | **Wave 1: Enterprise Admin Portal — Visuele Block Editor COMPLEET. 12 field components, 20 block editors (React.lazy), block selector dialog (5 categorieën), @dnd-kit drag-and-drop, TipTap WYSIWYG, live preview iframe, typography hierarchy (18 CSS vars). 1 nieuw endpoint (149 totaal). adminPortal.js v3.25.0. ~3.200 LOC. CLAUDE.md v3.75.0.** |
 | **7.40** | **06-03-2026** | **Fase V.6 Bugfix Ronde. Root cause openEdit fix: pages LIST endpoint miste layout/title_de/title_es/seo_* velden → blocks leeg + vertalingen verloren. Fix: openEdit fetcht nu GET /pages/:id. Overige fixes: Helmet CORP cross-origin, SettingsPage payoff i18n rendering, adminAuth()/writeAccess() factory invocatie, React 19 ESLint fixes, HeroProps/VideoProps interface alignment. Calpe homepage blocks hersteld. 4 commits. CLAUDE.md v3.74.0.** |
@@ -1662,4 +1678,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 7 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 COMPLEET). Admin Portal: 157 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.77.0. MS v7.43.*
+*Laatst bijgewerkt: 7 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0 Stap 1-8 COMPLEET). Admin Portal: 157 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.85.0. MS v7.47.*

@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.77.0
+> **Versie**: 3.85.0
 > **Laatst bijgewerkt**: 7 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -236,7 +236,7 @@ Gold:   Customer Portal + Admin Portal (dynamic rendering)
 | `pages` | Nieuwe tabel | Page layouts per destination: slug, title (meertalig), seo, layout JSON, status |
 | `pages.parent_id` | INT NULL | FK naar pages(id) ON DELETE SET NULL — pagina-hiërarchie |
 | `pages.og_image_path` | VARCHAR(500) | Open Graph afbeelding pad (upload) |
-| `media` | Nieuwe tabel | Media library: filename, mime_type, size, width/height, category ENUM, alt_text |
+| `media` | Nieuwe tabel | Media library: filename, mime_type, size, width/height, category ENUM, alt_text, uploaded_by VARCHAR(36) |
 | `page_revisions` | Nieuwe tabel | Revisie-geschiedenis: page_id, layout JSON, changed_by, change_summary |
 
 ---
@@ -354,8 +354,15 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **V.4** | **Admin Portal Editors (Branding, Pages, Navigation)** | **05-03** | **8 nieuwe admin endpoints (145 totaal). BrandingPage, PagesPage, NavigationPage. Dynamic navigation in Header.tsx. adminPortal.js v3.24.0. 20 bestanden (+2.150 regels). 15/15 tests PASS.** |
 | **V.5** | **P1 Blocks + Wildcard DNS Schaling** | **06-03** | **5 nieuwe blocks: Cta (presentational), Gallery (lightbox), Faq (accordion), TicketShop (feature-gated), ReservationWidget (feature-gated). Block registry 7→12. 3 Next.js API proxy routes. Admin Portal block editor 12 types + i18n 4 talen. Middleware wildcard subdomain detection `*.holidaibutler.com`. Apache wildcard VHost (HTTP). Pages route fix op Hetzner. 20 bestanden (+783 regels). Calpe 6/6 + Texel 6/6 regressie PASS.** |
 | **V.6** | **Ontbrekende Blocks + Block Upgrades** | **06-03** | **8 nieuwe blocks: Video (YouTube/Vimeo/self-hosted, 3 layouts), SocialFeed (privacy-first consent, 4 platforms), ContactForm (honeypot spam, GDPR consent), Newsletter (MailerLite subscribe), WeatherWidget (Open-Meteo API, ISR 30min, compact/detailed), Banner (4 types, dismissible localStorage), Partners (logo grid, grayscale hover), Downloads (file type icons). 2 block upgrades: Hero (+video background, mobile fallback, prefers-reduced-motion), Gallery (+mixed media items, GalleryItem type). Block registry 12→20. 3 nieuwe admin endpoints (148 totaal): social-links GET/PUT + translate POST. 2 nieuwe public endpoints: contact POST + newsletter/subscribe POST. 2 Next.js API proxy routes. Auto-translate frontend (Mistral AI) op PagesPage, BrandingPage, NavigationPage. Social Media Links sectie in BrandingPage. DB ALTERs: destinations.latitude/longitude/social_links. i18n 4 talen (8 block types + translate + social links). adminPortal.js v3.24.0. ~36 bestanden (19 nieuw + 17 gewijzigd). Bugfix ronde: PagesPage openEdit fetcht nu individuele pagina (GET /pages/:id) i.p.v. onvolledige lijst-data — fix voor lege blocks + verloren vertalingen. Helmet CORP cross-origin fix. SettingsPage payoff i18n object rendering. adminAuth()/writeAccess() factory invocatie fix op 3 endpoints. Calpe homepage blocks hersteld. Calpe 6/6 + Texel 6/6 regressie PASS.** |
-| **Wave 1** | **Enterprise Admin Portal — Visuele Block Editor** | **07-03** | **JSON textarea vervangen door dedicated form editors per block type. 12 herbruikbare field components (TextField, NumberField, SelectField, SwitchField, ColorField, ImageUploadField, TranslatableField, ButtonListField, ItemListField, RichTextField TipTap WYSIWYG, CategoryFilterField). 20 block editors (React.lazy code-split). Block selector dialog (5 categorieën: Content/Media/Data/Interactie/Commerce). @dnd-kit drag-and-drop block reordering. Live preview iframe (postMessage protocol, responsive toggles Desktop/Tablet/Mobile). Typography hierarchy (6 levels: H1-H4/Body/Small, 18 CSS custom properties). Block image upload endpoint (multer, 5MB). Apache CSP frame-ancestors fix voor preview iframe. 10 npm packages (@tiptap/\*, @dnd-kit/\*, lodash.debounce). 1 nieuw admin endpoint (149 totaal). adminPortal.js v3.25.0. ~38 nieuwe + ~8 gewijzigde bestanden (~3.200 LOC). 7/8 API tests PASS.** |
+| **Wave 1** | **Enterprise Admin Portal — Visuele Block Editor** | **07-03** | **JSON textarea vervangen door dedicated form editors per block type. 12 herbruikbare field components (TextField, NumberField, SelectField, SwitchField, ColorField, ImageUploadField, TranslatableField, ButtonListField, ItemListField, RichTextField TipTap WYSIWYG, CategoryFilterField). 20 block editors (React.lazy code-split). Block selector dialog (5 categorieën: Content/Media/Data/Interactie/Commerce). @dnd-kit drag-and-drop block reordering. Live preview iframe (postMessage protocol, responsive toggles Desktop/Tablet/Mobile). Typography hierarchy (6 levels: H1-H4/Body/Small, 18 CSS custom properties). Block image upload endpoint (multer, 5MB). Apache CSP frame-ancestors fix voor preview iframe. 10 npm packages (@tiptap/\*, @dnd-kit/\*, lodash.debounce). 1 nieuw admin endpoint (149 totaal). adminPortal.js v3.25.0. ~38 nieuwe + ~8 gewijzigde bestanden (~3.200 LOC). 8/8 API tests PASS.** |
 | **Wave 2+3** | **Professionele Features + Excellence** | **07-03** | **Wave 2 (8 features): Pagina-hiërarchie (parent_id, tree-view UI met expand/collapse), Media Library (4 CRUD endpoints + MediaPage.jsx grid/upload/filter/detail), 8 page templates (PageTemplateDialog), favicon/navicon upload, OG image upload, 5 button style varianten (15 CSS vars), footer config (data-driven Footer.tsx), block-level styling (BlockStyleEditor: bg/border/padding/fullWidth + hb-websites wrapper). Wave 3 (3 features): Brand Visuals (upload 3-5 hero images + BrandVisualPicker in HeroEditor), revisie-geschiedenis UI (PageRevisionsDialog, auto-snapshot bij save, max 20 per pagina, restore), GDPR Cookie Consent Banner (CookieBanner.tsx: 3 niveaus essential/analytics/marketing, 5 talen NL/EN/DE/ES/FR, tenant-aware kleuren, SocialFeed marketing consent gating). 2 nieuwe DB tabellen (media, page_revisions) + 2 ALTER TABLE (pages.parent_id, pages.og_image_path). 8 nieuwe admin endpoints (157 totaal). 7 nieuwe + 22 gewijzigde bestanden (~2.300 LOC). Admin-module + hb-websites build 0 errors.** |
+| **Cmd v5.0 Stap 1** | **Bugfix + Stabilisatie (4 kritieke bugs)** | **07-03** | **BUG-1: BlockErrorBoundary per block (crashende blocks tonen fallback). BUG-2: media.uploaded_by INT→VARCHAR(36) (UUID mismatch). BUG-3: resolveAssetUrl() helper voor logo/favicon/navicon (HB_ASSET_URL voor browser-facing URLs). BUG-4: Map.tsx herschreven met POI markers (Leaflet fetch + popup + auto-fit bounds + icon fix). Nieuwe /api/pois proxy route. 3 nieuwe + 4 gewijzigde bestanden. DB migration + deploy op Hetzner. Build 0 errors.** |
+| **Cmd v5.0 Stap 2** | **Falende API test fix** | **07-03** | **ticketing-module/backend/tests/integration/api.test.js: recursieve ioredis require loop (Maximum call stack size exceeded) + bull queue mock + service mocks (ReminderService, NotificationService, TransferService). 5/5 suites, 88/88 tests PASS (was 4/5, 70/70). Wave 1 nu 8/8 API tests PASS.** |
+| **Cmd v5.0 Stap 3+4** | **Wave 2/3 verificatie + deploy** | **07-03** | **Code review Wave 2/3: alle features PASS. API endpoint tests: Media, Pages, Page duplicate, Branding, Revisions — alle OK. Bugfix: pages SEO kolommen (seo_title_de/es, seo_description_de/es) ontbraken → migration 003. hb-websites frontend: 7/8 checks PASS (CookieBanner client-side). Texel tenant correct (#30c59b). Admin build + deploy.** |
+| **Cmd v5.0 Stap 5** | **Sidebar herstructurering** | **07-03** | **Flat 16-item MENU_ITEMS → 5 gegroepeerde MENU_SECTIONS (Overzicht, Content & Data, Commerce, Platform, Systeem). Typography overline sectiehoofdingen + Divider scheiding. Secties auto-hidden als geen zichtbare items voor user role. i18n 4 talen (5 section labels). Sidebar versie v3.25.0.** |
+| **Cmd v5.0 Stap 6** | **Dashboard improvements** | **07-03** | **QuickLinks: hardcoded labels → i18n + 3 nieuwe links (Media, Branding, Pages) met RBAC. SCHEDULED_JOBS: 40→54 entries (sync met BullMQ: +De Makelaar/Kassier/Magazijnier + reservation/ticket cleanup + GDPR + cost controller + POI tier). Build + deploy 0 errors.** |
+| **Cmd v5.0 Stap 7** | **Admin Portal Hardening** | **07-03** | **CRITICAL: BrandingPage + PagesPage auth token fix (`admin_token` → axios client met auto-auth). Bare fetch() → client.post(). 8 hardcoded UI strings → i18n t() calls. 17 nieuwe i18n keys (4 talen): branding.footer.*, branding.brandVisuals.*, pages.uploadOgImage/ogImageUploaded/noBlocksInCategory, common.delete/save. 8 bestanden gewijzigd.** |
+| **Cmd v5.0 Stap 8** | **hb-websites Frontend Hardening** | **07-03** | **XSS preventie: sanitizeHtml() utility (server-safe, geen DOM dependency) op RichText + FAQ blocks. Error handling: try/catch op alle 6 API proxy routes (502 met safe error). Security: console.log → dev-only (4x), postMessage origin validatie (trusted domains). API error log sanitized (pathname only). 14 bestanden, 1 nieuw. Build + deploy 0 errors.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -488,7 +495,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
 | IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | ✅ COMPLEET (Blok A+B+C+D+E+F) | 6-8 wkn |
-| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1 COMPLEET) | 12 wkn |
+| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0 COMPLEET) | 12 wkn |
 | VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | GEPLAND | 6-8 wkn |
 | VII | Polish, Scale & Launch (E2E testing, load testing, DR, go-live multi-tenant) | GEPLAND | 3-4 wkn |
 
@@ -597,9 +604,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.77.0** | **2026-03-07** | **Wave 2+3: Professionele Features + Excellence**. Wave 2: pagina-hiërarchie (parent_id + tree-view), media library (4 CRUD endpoints + MediaPage), 8 page templates, favicon/navicon upload, OG image upload, 5 button style varianten (15 CSS vars), footer config (data-driven), block-level styling (BlockStyleEditor + hb-websites wrapper). Wave 3: brand visuals (upload + HeroEditor quick-pick), revisie-geschiedenis UI (PageRevisionsDialog), GDPR cookie consent banner (3 niveaus, 5 talen, tenant-aware). 2 nieuwe DB tabellen + 2 ALTER TABLE. 8 nieuwe endpoints (157 totaal). 7 nieuwe + 22 gewijzigde bestanden (~2.300 LOC). |
-| **3.75.0** | **2026-03-07** | **Wave 1: Enterprise Admin Portal — Visuele Block Editor**. 12 field components, 20 block editors (React.lazy), block selector (5 categorieën), @dnd-kit drag-and-drop, live preview iframe, typography hierarchy (18 CSS vars). 1 nieuw endpoint (149 totaal). adminPortal.js v3.25.0. ~3.200 LOC. |
-| **3.74.0** | **2026-03-06** | **Fase V.6 Bugfix Ronde**. openEdit fetcht nu GET /pages/:id. Helmet CORP, SettingsPage payoff i18n, adminAuth factory fix. |
+| **3.85.0** | **2026-03-07** | **Command v5.0 Stap 7+8: Enterprise Hardening**. Stap 7: Admin Portal auth token fix + i18n cleanup (8 hardcoded strings, 17 keys). Stap 8: hb-websites XSS preventie (sanitizeHtml), 6 API route try/catch, console.log dev-only, postMessage origin validation. |
+| **3.83.0** | **2026-03-07** | **Command v5.0 Stap 3-6: Verificatie + Sidebar + Dashboard**. Wave 2/3 verificatie, SEO bugfix, sidebar herstructurering, QuickLinks i18n, SCHEDULED_JOBS 40→54. |
+| **3.81.0** | **2026-03-07** | **Command v5.0 Stap 1+2: Bugfix + API test fix**. 4 kritieke bugfixes + ticketing test fix (88/88 PASS). |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -609,7 +616,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.43 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.47 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
