@@ -33,6 +33,12 @@ const socialIcons: Record<string, { label: string; svg: string }> = {
   },
 };
 
+interface FooterColumn {
+  type: string;
+  title?: string;
+  content?: string;
+}
+
 export default function Footer({ tenant, locale }: FooterProps) {
   const year = new Date().getFullYear();
   const socialLinks = tenant.socialLinks ?? {};
@@ -40,19 +46,28 @@ export default function Footer({ tenant, locale }: FooterProps) {
     ([platform, url]) => url && socialIcons[platform]
   );
 
-  return (
-    <footer className="bg-foreground text-on-primary mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Brand */}
-          <div>
+  const footerConfig = tenant.branding.footer;
+  const columns: FooterColumn[] = footerConfig?.columns ?? [
+    { type: 'brand', title: '' },
+    { type: 'navigation', title: locale === 'nl' ? 'Navigatie' : 'Navigation' },
+    { type: 'contact', title: 'Contact' }
+  ];
+  const copyright = footerConfig?.copyright ?? `\u00A9 ${year} ${tenant.displayName}. Powered by HolidaiButler.`;
+  const showSocial = footerConfig?.showSocial !== false;
+  const showNewsletter = footerConfig?.showNewsletter ?? false;
+
+  const renderColumn = (col: FooterColumn) => {
+    switch (col.type) {
+      case 'brand':
+        return (
+          <>
             <h3 className="text-lg font-heading font-bold mb-2">
               {tenant.displayName}
             </h3>
             <p className="text-sm opacity-70">
               {tenant.branding.payoff?.[locale] ?? tenant.branding.payoff?.en ?? ''}
             </p>
-            {activeSocials.length > 0 && (
+            {showSocial && activeSocials.length > 0 && (
               <div className="flex gap-3 mt-4">
                 {activeSocials.map(([platform, url]) => {
                   const icon = socialIcons[platform];
@@ -76,12 +91,14 @@ export default function Footer({ tenant, locale }: FooterProps) {
                 })}
               </div>
             )}
-          </div>
+          </>
+        );
 
-          {/* Links */}
-          <div>
+      case 'navigation':
+        return (
+          <>
             <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
-              {locale === 'nl' ? 'Navigatie' : 'Navigation'}
+              {col.title || (locale === 'nl' ? 'Navigatie' : 'Navigation')}
             </h4>
             <ul className="space-y-2 text-sm opacity-80">
               <li><Link href="/" className="hover:opacity-100 transition-opacity">Home</Link></li>
@@ -93,19 +110,87 @@ export default function Footer({ tenant, locale }: FooterProps) {
               <li><Link href="/about" className="hover:opacity-100 transition-opacity">{locale === 'nl' ? 'Over ons' : 'About'}</Link></li>
               <li><Link href="/contact" className="hover:opacity-100 transition-opacity">Contact</Link></li>
             </ul>
-          </div>
+          </>
+        );
 
-          {/* Contact */}
-          <div>
+      case 'contact':
+        return (
+          <>
             <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
-              Contact
+              {col.title || 'Contact'}
             </h4>
-            <p className="text-sm opacity-80">info@holidaibutler.com</p>
-          </div>
+            <p className="text-sm opacity-80">{tenant.branding.contactEmail || 'info@holidaibutler.com'}</p>
+          </>
+        );
+
+      case 'social':
+        return (
+          <>
+            <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
+              {col.title || 'Social'}
+            </h4>
+            {activeSocials.length > 0 && (
+              <div className="flex flex-wrap gap-3">
+                {activeSocials.map(([platform, url]) => {
+                  const icon = socialIcons[platform];
+                  return (
+                    <a
+                      key={platform}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={icon.label}
+                      className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" dangerouslySetInnerHTML={{ __html: icon.svg }} />
+                    </a>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        );
+
+      case 'newsletter':
+        return (
+          <>
+            <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
+              {col.title || 'Newsletter'}
+            </h4>
+            <p className="text-sm opacity-80 mb-2">
+              {locale === 'nl' ? 'Blijf op de hoogte' : 'Stay updated'}
+            </p>
+          </>
+        );
+
+      case 'custom':
+      default:
+        return (
+          <>
+            {col.title && (
+              <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
+                {col.title}
+              </h4>
+            )}
+            {col.content && <p className="text-sm opacity-80">{col.content}</p>}
+          </>
+        );
+    }
+  };
+
+  const gridCols = columns.length <= 2 ? 'md:grid-cols-2' : columns.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-4';
+
+  return (
+    <footer className="bg-foreground text-on-primary mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className={`grid grid-cols-1 ${gridCols} gap-8`}>
+          {columns.map((col, i) => (
+            <div key={i}>{renderColumn(col)}</div>
+          ))}
         </div>
 
         <div className="border-t border-white/10 mt-8 pt-6 text-center text-sm opacity-60">
-          &copy; {year} {tenant.displayName}. Powered by HolidaiButler.
+          {copyright}
         </div>
       </div>
     </footer>

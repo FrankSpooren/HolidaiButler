@@ -36,15 +36,36 @@ export default function BlockSelectorDialog({ open, onClose, onSelect }) {
           ))}
         </Tabs>
         <Grid container spacing={2}>
-          {blocks.map(({ type, icon, label, description }) => {
+          {blocks.map(({ type, icon, label, description, thumbnail }) => {
             const IconComponent = MuiIcons[icon] || MuiIcons.Extension;
             return (
               <Grid item xs={12} sm={6} md={4} key={type}>
-                <Card variant="outlined" sx={{ height: '100%' }}>
-                  <CardActionArea onClick={() => handleSelect(type)} sx={{ height: '100%', p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                    <IconComponent sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
-                    <Typography variant="subtitle1" fontWeight={600}>{label}</Typography>
-                    <Typography variant="caption" color="text.secondary">{description}</Typography>
+                <Card variant="outlined" sx={{ height: '100%', '&:hover': { borderColor: 'primary.main', boxShadow: 2 }, transition: 'all 0.2s' }}>
+                  <CardActionArea onClick={() => handleSelect(type)} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+                    {thumbnail ? (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: 120,
+                          p: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          bgcolor: 'grey.50',
+                          borderBottom: 1,
+                          borderColor: 'divider'
+                        }}
+                        dangerouslySetInnerHTML={{ __html: thumbnail }}
+                      />
+                    ) : (
+                      <Box sx={{ width: '100%', height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.50', borderBottom: 1, borderColor: 'divider' }}>
+                        <IconComponent sx={{ fontSize: 48, color: 'primary.main' }} />
+                      </Box>
+                    )}
+                    <Box sx={{ p: 1.5, textAlign: 'center' }}>
+                      <Typography variant="subtitle2" fontWeight={600}>{label}</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>{description}</Typography>
+                    </Box>
                   </CardActionArea>
                 </Card>
               </Grid>

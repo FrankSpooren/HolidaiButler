@@ -21,10 +21,19 @@ export type BlockType =
   | 'partners'
   | 'downloads';
 
+export interface BlockStyle {
+  backgroundColor?: string;
+  backgroundImage?: string;
+  borderColor?: string;
+  paddingY?: 'none' | 'small' | 'medium' | 'large' | 'xlarge';
+  fullWidth?: boolean;
+}
+
 export interface BlockConfig {
   id: string;
   type: BlockType;
   props: Record<string, unknown>;
+  style?: BlockStyle;
   featureFlag?: string;
 }
 

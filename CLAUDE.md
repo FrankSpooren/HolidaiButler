@@ -155,7 +155,7 @@ Na evaluatie van Directus (database-first CMS), Payload CMS 3.0 (Next.js-native 
 - **Next.js 15**: SSR voor SEO + tenant-theming via CSS Custom Properties + aansluiting op bestaande React codebase
 - **Bestaande HB API**: dezelfde /api/v1/* endpoints, X-Destination-ID header scoping
 - **Admin Portal uitbreiden**: Branding Editor, Page Layout Editor, Navigation Editor
-- **Block-based page builder**: 12 blocks live (van 15 gepland), configureerbare layouts per pagina per tenant
+- **Block-based page builder**: 20 blocks live, configureerbare layouts per pagina per tenant
 - **Geautomatiseerde tenant onboarding**: nieuwe bestemming = configuratie in Admin Portal, geen development
 - **Wildcard DNS**: `*.holidaibutler.com` → automatische subdomain-based tenant detectie via middleware
 
