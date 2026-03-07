@@ -91,7 +91,7 @@ export default function Map({ center, zoom = 14, categoryFilter }: MapProps) {
           map.fitBounds(group.getBounds().pad(0.1));
         }
       } catch (err) {
-        console.error('Map: failed to load POIs', err);
+        if (process.env.NODE_ENV === 'development') console.error('Map: failed to load POIs', err);
         if (!cancelled) setError('Could not load map markers');
       }
     };

@@ -34,7 +34,7 @@ async function hbFetch<T>(
   });
 
   if (!res.ok) {
-    console.error(`HB API error: ${res.status} ${res.statusText} for ${url.toString()}`);
+    console.error(`HB API error: ${res.status} ${res.statusText} for ${url.pathname}`);
     return null as unknown as T;
   }
 
