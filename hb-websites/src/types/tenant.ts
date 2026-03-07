@@ -1,3 +1,10 @@
+export interface TypographyLevel {
+  fontSize?: string;
+  fontWeight?: string;
+  letterSpacing?: string;
+  lineHeight?: string;
+}
+
 export interface TenantBranding {
   logo: string;
   logoDark?: string;
@@ -17,6 +24,14 @@ export interface TenantBranding {
     body: string;
     headingUrl?: string;
     bodyUrl?: string;
+    typography?: {
+      h1?: TypographyLevel;
+      h2?: TypographyLevel;
+      h3?: TypographyLevel;
+      h4?: TypographyLevel;
+      body?: TypographyLevel;
+      small?: TypographyLevel;
+    };
   };
   style: {
     borderRadius: string;

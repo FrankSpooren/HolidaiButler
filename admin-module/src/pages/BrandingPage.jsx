@@ -87,7 +87,8 @@ export default function BrandingPage() {
         },
         fonts: {
           heading: b.fonts?.heading || 'Inter',
-          body: b.fonts?.body || 'Inter'
+          body: b.fonts?.body || 'Inter',
+          typography: b.fonts?.typography || {}
         },
         logo: b.logo || '',
         logoUrl: b.logoUrl || '',
@@ -369,6 +370,68 @@ export default function BrandingPage() {
                     </Grid>
                   ))}
                 </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Typography Hierarchy (Wave 1) */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle2" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+                  {t('branding.typographySection', 'Typography Hierarchy')}
+                </Typography>
+                {[
+                  { key: 'h1', label: 'Heading 1 (H1)', defaults: { fontSize: '3rem', fontWeight: '700', letterSpacing: '-0.02em', lineHeight: '1.1' } },
+                  { key: 'h2', label: 'Heading 2 (H2)', defaults: { fontSize: '2.25rem', fontWeight: '700', letterSpacing: '-0.01em', lineHeight: '1.2' } },
+                  { key: 'h3', label: 'Heading 3 (H3)', defaults: { fontSize: '1.75rem', fontWeight: '600', letterSpacing: '0', lineHeight: '1.3' } },
+                  { key: 'h4', label: 'Heading 4 (H4)', defaults: { fontSize: '1.25rem', fontWeight: '600', letterSpacing: '0', lineHeight: '1.4' } },
+                  { key: 'body', label: 'Body', defaults: { fontSize: '1rem', fontWeight: '400', letterSpacing: '0', lineHeight: '1.6' } },
+                  { key: 'small', label: 'Small', defaults: { fontSize: '0.875rem', fontWeight: '400', letterSpacing: '0', lineHeight: '1.5' } }
+                ].map(({ key, label, defaults }) => {
+                  const typo = form.fonts?.typography || {};
+                  const level = typo[key] || {};
+                  const updateTypo = (prop, val) => {
+                    setForm(prev => ({
+                      ...prev,
+                      fonts: {
+                        ...prev.fonts,
+                        typography: {
+                          ...prev.fonts?.typography,
+                          [key]: { ...prev.fonts?.typography?.[key], [prop]: val || undefined }
+                        }
+                      }
+                    }));
+                  };
+                  return (
+                    <Box key={key} sx={{ mb: 2, p: 1.5, bgcolor: '#fafafa', borderRadius: 1 }}>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>{label}</Typography>
+                      <Box sx={{ mb: 1, fontFamily: key.startsWith('h') ? (form.fonts?.heading || 'Inter') : (form.fonts?.body || 'Inter'), fontSize: level.fontSize || defaults.fontSize, fontWeight: level.fontWeight || defaults.fontWeight, letterSpacing: level.letterSpacing || defaults.letterSpacing, lineHeight: level.lineHeight || defaults.lineHeight, color: form.colors?.text }}>
+                        {key.startsWith('h') ? 'The quick brown fox' : 'The quick brown fox jumps over the lazy dog.'}
+                      </Box>
+                      <Grid container spacing={1}>
+                        <Grid item xs={3}>
+                          <TextField size="small" fullWidth label="Font Size" value={level.fontSize || ''} onChange={e => updateTypo('fontSize', e.target.value)} placeholder={defaults.fontSize} />
+                        </Grid>
+                        <Grid item xs={3}>
+                          <FormControl size="small" fullWidth>
+                            <InputLabel>Weight</InputLabel>
+                            <Select value={level.fontWeight || ''} label="Weight" onChange={e => updateTypo('fontWeight', e.target.value)} displayEmpty>
+                              <MenuItem value=""><em>{defaults.fontWeight}</em></MenuItem>
+                              {['300', '400', '500', '600', '700', '800', '900'].map(w => <MenuItem key={w} value={w}>{w}</MenuItem>)}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={3}>
+                          <TextField size="small" fullWidth label="Letter Spacing" value={level.letterSpacing || ''} onChange={e => updateTypo('letterSpacing', e.target.value)} placeholder={defaults.letterSpacing} />
+                        </Grid>
+                        <Grid item xs={3}>
+                          <TextField size="small" fullWidth label="Line Height" value={level.lineHeight || ''} onChange={e => updateTypo('lineHeight', e.target.value)} placeholder={defaults.lineHeight} />
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  );
+                })}
               </CardContent>
             </Card>
           </Grid>

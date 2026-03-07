@@ -4938,6 +4938,52 @@ router.post('/settings/branding/:destination/logo', adminAuth('poi_owner'), (req
 });
 
 // ============================================================
+// BLOCK IMAGE UPLOAD (Wave 1 — Enterprise Admin Portal)
+// ============================================================
+
+const BLOCK_IMAGES_DIR = process.env.NODE_ENV === 'production'
+  ? '/var/www/api.holidaibutler.com/platform-core/storage/block-images'
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../storage/block-images');
+
+const blockImageStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    fs.mkdirSync(BLOCK_IMAGES_DIR, { recursive: true });
+    cb(null, BLOCK_IMAGES_DIR);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, `${Date.now()}_${crypto.randomBytes(4).toString('hex')}${ext}`);
+  }
+});
+
+const blockImageUpload = multer({
+  storage: blockImageStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PNG, JPG, WebP, and SVG files are allowed'));
+    }
+  }
+});
+
+router.post('/blocks/upload-image', adminAuth('content_editor'), (req, res) => {
+  blockImageUpload.single('image')(req, res, (err) => {
+    if (err) {
+      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 5MB)' : err.message;
+      return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: { code: 'NO_FILE', message: 'No file uploaded' } });
+    }
+    const url = `/block-images/${req.file.filename}`;
+    res.json({ success: true, data: { url } });
+  });
+});
+
+// ============================================================
 // UNDO ENDPOINT (Fase 9A-1B)
 // ============================================================
 

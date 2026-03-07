@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.74.0
-> **Laatst bijgewerkt**: 6 maart 2026
+> **Versie**: 3.75.0
+> **Laatst bijgewerkt**: 7 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -350,6 +350,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **V.4** | **Admin Portal Editors (Branding, Pages, Navigation)** | **05-03** | **8 nieuwe admin endpoints (145 totaal). BrandingPage, PagesPage, NavigationPage. Dynamic navigation in Header.tsx. adminPortal.js v3.24.0. 20 bestanden (+2.150 regels). 15/15 tests PASS.** |
 | **V.5** | **P1 Blocks + Wildcard DNS Schaling** | **06-03** | **5 nieuwe blocks: Cta (presentational), Gallery (lightbox), Faq (accordion), TicketShop (feature-gated), ReservationWidget (feature-gated). Block registry 7→12. 3 Next.js API proxy routes. Admin Portal block editor 12 types + i18n 4 talen. Middleware wildcard subdomain detection `*.holidaibutler.com`. Apache wildcard VHost (HTTP). Pages route fix op Hetzner. 20 bestanden (+783 regels). Calpe 6/6 + Texel 6/6 regressie PASS.** |
 | **V.6** | **Ontbrekende Blocks + Block Upgrades** | **06-03** | **8 nieuwe blocks: Video (YouTube/Vimeo/self-hosted, 3 layouts), SocialFeed (privacy-first consent, 4 platforms), ContactForm (honeypot spam, GDPR consent), Newsletter (MailerLite subscribe), WeatherWidget (Open-Meteo API, ISR 30min, compact/detailed), Banner (4 types, dismissible localStorage), Partners (logo grid, grayscale hover), Downloads (file type icons). 2 block upgrades: Hero (+video background, mobile fallback, prefers-reduced-motion), Gallery (+mixed media items, GalleryItem type). Block registry 12→20. 3 nieuwe admin endpoints (148 totaal): social-links GET/PUT + translate POST. 2 nieuwe public endpoints: contact POST + newsletter/subscribe POST. 2 Next.js API proxy routes. Auto-translate frontend (Mistral AI) op PagesPage, BrandingPage, NavigationPage. Social Media Links sectie in BrandingPage. DB ALTERs: destinations.latitude/longitude/social_links. i18n 4 talen (8 block types + translate + social links). adminPortal.js v3.24.0. ~36 bestanden (19 nieuw + 17 gewijzigd). Bugfix ronde: PagesPage openEdit fetcht nu individuele pagina (GET /pages/:id) i.p.v. onvolledige lijst-data — fix voor lege blocks + verloren vertalingen. Helmet CORP cross-origin fix. SettingsPage payoff i18n object rendering. adminAuth()/writeAccess() factory invocatie fix op 3 endpoints. Calpe homepage blocks hersteld. Calpe 6/6 + Texel 6/6 regressie PASS.** |
+| **Wave 1** | **Enterprise Admin Portal — Visuele Block Editor** | **07-03** | **JSON textarea vervangen door dedicated form editors per block type. 12 herbruikbare field components (TextField, NumberField, SelectField, SwitchField, ColorField, ImageUploadField, TranslatableField, ButtonListField, ItemListField, RichTextField TipTap WYSIWYG, CategoryFilterField). 20 block editors (React.lazy code-split). Block selector dialog (5 categorieën: Content/Media/Data/Interactie/Commerce). @dnd-kit drag-and-drop block reordering. Live preview iframe (postMessage protocol, responsive toggles Desktop/Tablet/Mobile). Typography hierarchy (6 levels: H1-H4/Body/Small, 18 CSS custom properties). Block image upload endpoint (multer, 5MB). Apache CSP frame-ancestors fix voor preview iframe. 10 npm packages (@tiptap/\*, @dnd-kit/\*, lodash.debounce). 1 nieuw admin endpoint (149 totaal). adminPortal.js v3.25.0. ~38 nieuwe + ~8 gewijzigde bestanden (~3.200 LOC). 7/8 API tests PASS.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -409,7 +410,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.24.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 148 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial + 8 branding/pages/navigation + 3 V.6 endpoints)
+- **Endpoints**: 149 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial + 8 branding/pages/navigation + 3 V.6 endpoints + 1 Wave 1 block image upload)
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -482,7 +483,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
 | IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | ✅ COMPLEET (Blok A+B+C+D+E+F) | 6-8 wkn |
-| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.5 COMPLEET) | 12 wkn |
+| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1 COMPLEET) | 12 wkn |
 | VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | GEPLAND | 6-8 wkn |
 | VII | Polish, Scale & Launch (E2E testing, load testing, DR, go-live multi-tenant) | GEPLAND | 3-4 wkn |
 
@@ -591,9 +592,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **3.74.0** | **2026-03-06** | **Fase V.6 Bugfix Ronde**. Root cause: pages LIST endpoint retourneerde geen `layout`/`title_de`/`title_es`/`seo_*` velden — `openEdit()` gebruikte deze onvolledige data waardoor blocks leeg leken en vertalingen verloren gingen bij opslaan. Fix: `openEdit()` fetcht nu individueel via `GET /pages/:id`. Overige fixes: Helmet CORP `cross-origin` policy (admin logo loading), SettingsPage payoff i18n object rendering (React Error #31), `adminAuth()`/`writeAccess()` factory function invocatie op 3 V.6 endpoints, SocialFeedWrapper `'use client'` directive, HeroProps video velden, VideoProps interface alignment, React 19 ESLint `setState` in `useEffect` fixes (Banner + SocialFeed). Calpe homepage blocks hersteld in DB. 4 commits (69956d4, 854be24, 74c710f, 585cfb4). |
-| **3.73.0** | **2026-03-06** | **Fase V.6: Ontbrekende Blocks + Block Upgrades**. 8 nieuwe blocks (Video, SocialFeed, ContactForm, Newsletter, WeatherWidget, Banner, Partners, Downloads). 2 block upgrades (Hero +video bg, Gallery +mixed media). Block registry 12→20. 3 nieuwe admin endpoints (148 totaal). 2 public endpoints + 2 API proxy routes. Auto-translate frontend (Mistral AI). adminPortal.js v3.24.0. ~35 bestanden. |
-| **3.72.0** | **2026-03-06** | **Fase V.5: P1 Blocks + Wildcard DNS Schaling**. 5 nieuwe blocks (Cta, Gallery, Faq, TicketShop, ReservationWidget). Block registry 7→12. 3 API proxy routes. Admin block editor 12 types + i18n 4 talen. Middleware wildcard `*.holidaibutler.com`. 20 bestanden (+783 regels). |
+| **3.75.0** | **2026-03-07** | **Wave 1: Enterprise Admin Portal — Visuele Block Editor**. JSON textarea vervangen door dedicated form editors. 12 field components (TextField, NumberField, SelectField, SwitchField, ColorField, ImageUploadField, TranslatableField, ButtonListField, ItemListField, RichTextField TipTap, CategoryFilterField). 20 block editors (React.lazy code-split). Block selector dialog (5 categorieën). @dnd-kit drag-and-drop. Live preview iframe (postMessage, responsive toggles). Typography hierarchy (H1-H4/Body/Small, 18 CSS vars). Block image upload endpoint. Apache CSP frame-ancestors fix. 10 npm packages. 1 nieuw endpoint (149 totaal). adminPortal.js v3.25.0. ~38 nieuwe + ~8 gewijzigde bestanden (~3.200 LOC). 7/8 API tests PASS. |
+| **3.74.0** | **2026-03-06** | **Fase V.6 Bugfix Ronde**. Root cause: pages LIST endpoint retourneerde geen `layout`/`title_de`/`title_es`/`seo_*` velden — `openEdit()` gebruikte deze onvolledige data waardoor blocks leeg leken en vertalingen verloren gingen bij opslaan. Fix: `openEdit()` fetcht nu individueel via `GET /pages/:id`. Overige fixes: Helmet CORP `cross-origin` policy, SettingsPage payoff i18n, adminAuth()/writeAccess() factory fix, React 19 ESLint fixes. 4 commits. |
+| **3.73.0** | **2026-03-06** | **Fase V.6: Ontbrekende Blocks + Block Upgrades**. 8 nieuwe blocks, 2 block upgrades, block registry 12→20. 3 admin endpoints (148 totaal). Auto-translate frontend. adminPortal.js v3.24.0. ~35 bestanden. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -603,7 +604,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.40 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.41 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
