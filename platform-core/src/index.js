@@ -187,23 +187,11 @@ app.use('/api/v1/pages', pagesRoutes); // Pages & Destinations (Fase V)
 app.use('/api/v1/contact', contactRoutes); // Contact Form (Fase V.6)
 app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V.6)
 
-// Static file serving for branding assets (logo uploads)
-const brandingDir = process.env.NODE_ENV === 'production'
-  ? '/var/www/api.holidaibutler.com/platform-core/public/branding'
-  : path.resolve(__dirname, '../public/branding');
-app.use('/branding', express.static(brandingDir));
-
-// Static file serving for media library uploads (Repair v6.0)
-const mediaDir = process.env.NODE_ENV === 'production'
-  ? '/var/www/api.holidaibutler.com/platform-core/storage/media'
-  : path.resolve(__dirname, '../storage/media');
-app.use('/media-files', express.static(mediaDir));
-
-// Static file serving for block image uploads (Repair v6.0)
-const blockImagesDir = process.env.NODE_ENV === 'production'
-  ? '/var/www/api.holidaibutler.com/platform-core/storage/block-images'
-  : path.resolve(__dirname, '../storage/block-images');
-app.use('/block-images', express.static(blockImagesDir));
+// Static file serving — OUTSIDE platform-core/ to survive CI/CD deployments
+const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
+app.use('/branding', express.static(path.join(STORAGE_ROOT, 'branding')));
+app.use('/media-files', express.static(path.join(STORAGE_ROOT, 'media')));
+app.use('/block-images', express.static(path.join(STORAGE_ROOT, 'block-images')));
 
 // Pageview tracking — public, fire-and-forget (Fase 9B)
 const trackRateLimit = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: false, legacyHeaders: false });
