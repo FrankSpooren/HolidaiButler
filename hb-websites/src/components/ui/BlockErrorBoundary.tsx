@@ -23,7 +23,9 @@ export default class BlockErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`[BlockErrorBoundary] Block "${this.props.blockType}" crashed:`, error, errorInfo);
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`[BlockErrorBoundary] Block "${this.props.blockType}" crashed:`, error, errorInfo);
+    }
   }
 
   render() {

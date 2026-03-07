@@ -3111,4 +3111,230 @@ CREATE TABLE page_revisions (
 
 ---
 
+## Command v5.0 Stap 1 — Bugfix + Stabilisatie (07-03-2026)
+
+**CLAUDE.md**: v3.77.0 → v3.79.0
+**Master Strategie**: v7.43 → v7.45
+**Trigger**: Handmatige browser-test door Frank ontdekte 4 kritieke bugs
+
+### Resultaat
+
+4 kritieke bugfixes opgelost en gedeployed naar Hetzner:
+
+| Bug | Root Cause | Fix |
+|-----|-----------|-----|
+| BUG-1: Blocks niet zichtbaar | Crashende blocks braken hele pagina (geen error boundary) | `BlockErrorBoundary` (React Error Boundary class component) + `BlockRenderer` wrapper per block in page.tsx |
+| BUG-2: Media upload "Data truncated" | `media.uploaded_by` is INT maar `admin_users.id` is UUID VARCHAR(36) | `ALTER TABLE media MODIFY COLUMN uploaded_by VARCHAR(36)` |
+| BUG-3: Logo broken op frontend | `HB_API_URL=http://localhost:3001` niet bereikbaar vanuit browser | `resolveAssetUrl()` helper in Header.tsx + layout.tsx, nieuw `HB_ASSET_URL=https://api.holidaibutler.com` env var |
+| BUG-4: Map toont geen POI markers | Map.tsx had alleen Leaflet tileLayer, geen markers | Map.tsx herschreven: fetchPois, L.marker met popup (naam/categorie/rating/link), auto-fit bounds, Leaflet icon fix. Nieuwe `/api/pois` proxy route |
+
+### Diagnose op Hetzner
+
+- **DB data geverifieerd**: Calpe home 5 blocks met gevulde props (hero 4 keys, poi_grid 2 keys, event_calendar 3 keys, partners 1 key, rich_text 1 key)
+- **HB_API_URL**: `http://localhost:3001` — werkt server-to-server maar niet voor browser-facing assets
+- **Branding paths**: `/branding/calpe_logo.png` en `/branding/texel_logo.png` in DB — bestanden nog niet geüpload (directory aangemaakt)
+- **Next.js logs**: Geen kritieke errors, alleen 404s voor apple-touch-icon auto-discovery
+- **POI proxy**: `/api/pois?limit=3` retourneert correcte data met lat/lon
+
+### Nieuwe Bestanden
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `hb-websites/src/components/ui/BlockErrorBoundary.tsx` | React Error Boundary class component, logt error + toont fallback |
+| `hb-websites/src/components/ui/BlockRenderer.tsx` | Client wrapper die BlockErrorBoundary rond children wraps |
+| `hb-websites/src/app/api/pois/route.ts` | Next.js API proxy route naar backend /api/v1/pois (GET, forwardt X-Destination-ID) |
+| `platform-core/migrations/002_fix_media_uploaded_by.sql` | ALTER TABLE media MODIFY COLUMN uploaded_by VARCHAR(36) |
+
+### Gewijzigde Bestanden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/blocks/Map.tsx` | Volledig herschreven: +POI fetch, +L.marker met popup, +auto-fit bounds, +Leaflet icon fix, +error state, +cleanup |
+| `hb-websites/src/components/layout/Header.tsx` | +resolveAssetUrl() helper (http check + HB_ASSET_URL/HB_API_URL fallback), logo src via resolveAssetUrl() |
+| `hb-websites/src/app/layout.tsx` | +resolveAssetUrl() helper, favicon + navicon href via resolveAssetUrl() |
+| `hb-websites/src/app/[[...slug]]/page.tsx` | +BlockRenderer import, elke block gewrapt in BlockRenderer (Error Boundary) |
+| `hb-websites/.env.example` | +HB_ASSET_URL=https://api.holidaibutler.com |
+
+### Deployment
+
+- DB migration: `ALTER TABLE media MODIFY COLUMN uploaded_by VARCHAR(36)` via SSH mysql
+- hb-websites: SCP 7 bestanden → Hetzner + `npm run build` (0 errors) + `pm2 restart hb-websites`
+- Nieuwe env var: `HB_ASSET_URL=https://api.holidaibutler.com` in `.env.local` op Hetzner
+- Branding directory aangemaakt: `/var/www/api.holidaibutler.com/platform-core/public/branding/`
+- Geverifieerd: Calpe logo → `https://api.holidaibutler.com/branding/calpe_logo.png`, Texel logo → `.../texel_logo.png`
+
+**Kosten**: EUR 0
+
+---
+
+## Command v5.0 — Stap 2: Falende API Test Fix (07-03-2026)
+
+**Opdracht**: Fix falende test suite (7/8 PASS → 8/8).
+**Status**: ✅ COMPLEET
+
+### Resultaat
+
+- **ticketing-module/backend/tests/integration/api.test.js**: Recursieve `ioredis` require loop (Maximum call stack size exceeded) + bull queue mock + service mocks (ReminderService, NotificationService, TransferService).
+- **5/5 suites, 88/88 tests PASS** (was 4/5, 70/70).
+- Wave 1 nu 8/8 API tests PASS.
+
+**Kosten**: EUR 0
+
+---
+
+## Command v5.0 — Stap 3+4: Wave 2/3 Verificatie + Deploy (07-03-2026)
+
+**Opdracht**: Code review Wave 2/3 features, API endpoint tests, bugfixes, deploy.
+**Status**: ✅ COMPLEET
+
+### Resultaat
+
+- Code review Wave 2/3: alle features PASS.
+- API endpoint tests: Media, Pages, Page duplicate, Branding, Revisions — alle OK.
+- **Bugfix**: pages SEO kolommen (`seo_title_de/es`, `seo_description_de/es`) ontbraken → migration 003 aangemaakt en uitgevoerd.
+- hb-websites frontend: 7/8 checks PASS (CookieBanner client-side OK).
+- Texel tenant correct (#30c59b branding).
+- Admin build + deploy naar admin.dev.
+
+**Kosten**: EUR 0
+
+---
+
+## Command v5.0 — Stap 5: Sidebar Herstructurering (07-03-2026)
+
+**Opdracht**: Admin Portal sidebar herstructureren van flat lijst naar gegroepeerde secties.
+**Status**: ✅ COMPLEET
+
+### Resultaat
+
+- Flat 16-item `MENU_ITEMS` → 5 gegroepeerde `MENU_SECTIONS`:
+  - **Overzicht**: Dashboard
+  - **Content & Data**: POIs, Reviews, Media, Analytics
+  - **Commerce**: Commerce, Partners, Financial, Intermediary
+  - **Platform**: Branding, Pages, Navigation, Agents
+  - **Systeem**: Users, Settings
+- Typography overline sectiehoofdingen + Divider scheiding.
+- Secties auto-hidden als geen zichtbare items voor user role (RBAC).
+- i18n 4 talen (5 section labels).
+- Sidebar versie v3.25.0.
+
+### Gewijzigde Bestanden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/components/Sidebar.jsx` | MENU_ITEMS → MENU_SECTIONS met groepering, overline headers, auto-hide |
+| `admin-module/src/i18n/nl.json` | +5 sidebar section keys |
+| `admin-module/src/i18n/en.json` | +5 sidebar section keys |
+| `admin-module/src/i18n/de.json` | +5 sidebar section keys |
+| `admin-module/src/i18n/es.json` | +5 sidebar section keys |
+
+**Kosten**: EUR 0
+
+---
+
+## Command v5.0 — Stap 6: Dashboard Improvements (07-03-2026)
+
+**Opdracht**: QuickLinks i18n + RBAC, SCHEDULED_JOBS sync met BullMQ.
+**Status**: ✅ COMPLEET
+**Commit**: `e7a85e1`
+
+### Resultaat
+
+- **QuickLinks**: Hardcoded English labels → i18n `t()` calls. 3 nieuwe links (Media, Branding, Pages) met `requiredRole` RBAC filtering.
+- **SCHEDULED_JOBS**: 40 → 54 entries (sync met BullMQ repeatable jobs op Hetzner):
+  - +De Makelaar (3 jobs: every 15min, review request 6h, reminder hourly)
+  - +De Kassier (3 jobs: daily 06:30, auto-settlement monthly, unsettled alert weekly)
+  - +De Magazijnier (1 job: every 30min)
+  - +Reservation Cleanup (5min), Reservation Reminders (hourly+15min)
+  - +Ticket Reservations (every minute)
+  - +POI Tier Manager (Sunday 03:00)
+  - +Cost Controller (6h+weekly), GDPR overdue (4h), GDPR export cleanup (daily 03:00)
+
+### Gewijzigde Bestanden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/components/dashboard/QuickLinks.jsx` | Herschreven: i18n + RBAC + 3 nieuwe links |
+| `admin-module/src/pages/DashboardPage.jsx` | SCHEDULED_JOBS 40→54 entries |
+| `admin-module/src/i18n/nl.json` | +8 dashboard.links keys |
+| `admin-module/src/i18n/en.json` | +8 dashboard.links keys |
+| `admin-module/src/i18n/de.json` | +8 dashboard.links keys |
+| `admin-module/src/i18n/es.json` | +8 dashboard.links keys |
+
+**Kosten**: EUR 0
+
+---
+
+## Command v5.0 — Stap 7: Admin Portal Hardening (07-03-2026)
+
+**Opdracht**: Scan admin portal voor security issues, auth token bugs, hardcoded strings.
+**Status**: ✅ COMPLEET
+**Commit**: `ab54065`
+
+### Resultaat
+
+- **CRITICAL FIX**: BrandingPage.jsx + PagesPage.jsx gebruikten `localStorage.getItem('admin_token')` (FOUT) i.p.v. Zustand authStore `hb-admin-auth` key. File uploads (brand visuals, OG images) werkten niet doordat geen auth token werd meegestuurd.
+  - **Fix**: Bare `fetch()` vervangen door `client.post()` (axios met auto-auth interceptor).
+- **8 hardcoded UI strings → i18n**: Show Newsletter, Show Social, Footer Columns, Yes/No, Add Visual, Visual uploaded, Upload OG Image, OG image uploaded, No blocks in category, Delete, Save.
+- **17 nieuwe i18n keys** in 4 talen.
+
+### Gewijzigde Bestanden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/BrandingPage.jsx` | +import client, bare fetch→client.post, 6 strings→i18n |
+| `admin-module/src/pages/PagesPage.jsx` | +import client, bare fetch→client.post, 2 strings→i18n |
+| `admin-module/src/pages/MediaPage.jsx` | 2 strings→i18n (Delete, Close) |
+| `admin-module/src/components/blocks/BlockSelectorDialog.jsx` | 1 string→i18n |
+| `admin-module/src/i18n/nl.json` | +17 keys (branding.footer.*, branding.brandVisuals.*, pages.*, common.*) |
+| `admin-module/src/i18n/en.json` | +17 keys |
+| `admin-module/src/i18n/de.json` | +17 keys |
+| `admin-module/src/i18n/es.json` | +17 keys |
+
+**Kosten**: EUR 0
+
+---
+
+## Command v5.0 — Stap 8: hb-websites Frontend Hardening (07-03-2026)
+
+**Opdracht**: XSS preventie, error handling, security hardening op Next.js frontend.
+**Status**: ✅ COMPLEET
+**Commit**: `2aeb804`
+
+### Resultaat
+
+- **XSS preventie**: `sanitizeHtml()` utility (server-safe, geen DOM dependency) — strips script tags, dangerous elements (iframe/object/embed/form/base/meta/link), event handlers (on*), javascript: URLs, data: URLs. Toegepast op RichText.tsx en Faq.tsx (beide `dangerouslySetInnerHTML`).
+- **Error handling**: try/catch op alle 6 API proxy routes (pois, contact, newsletter, reservable-pois, reservation-slots, tickets) — retourneert 502 met safe error message.
+- **Console.log → dev-only**: 4 locaties (page.tsx, Map.tsx, BlockErrorBoundary.tsx, api.ts).
+- **postMessage origin validatie**: Trusted domains whitelist (holidaibutler.com, texelmaps.nl, localhost) op preview/page.tsx.
+- **API error log sanitized**: `url.toString()` → `url.pathname` (voorkomt full URL leak).
+
+### Nieuwe Bestanden
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `hb-websites/src/lib/sanitize.ts` | Server-safe HTML sanitizer (regex-based, geen DOM dependency) |
+
+### Gewijzigde Bestanden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/blocks/RichText.tsx` | +sanitizeHtml() op dangerouslySetInnerHTML |
+| `hb-websites/src/blocks/Faq.tsx` | +sanitizeHtml() op dangerouslySetInnerHTML |
+| `hb-websites/src/app/api/pois/route.ts` | +try/catch, 502 fallback |
+| `hb-websites/src/app/api/contact/route.ts` | +try/catch, 502 fallback |
+| `hb-websites/src/app/api/newsletter/route.ts` | +try/catch, 502 fallback |
+| `hb-websites/src/app/api/reservable-pois/route.ts` | +try/catch, 502 fallback |
+| `hb-websites/src/app/api/reservation-slots/[poiId]/route.ts` | +try/catch, 502 fallback |
+| `hb-websites/src/app/api/tickets/route.ts` | +try/catch, 502 fallback |
+| `hb-websites/src/app/[[...slug]]/page.tsx` | console.warn → dev-only |
+| `hb-websites/src/blocks/Map.tsx` | console.error → dev-only |
+| `hb-websites/src/components/ui/BlockErrorBoundary.tsx` | console.error → dev-only |
+| `hb-websites/src/lib/api.ts` | url.toString() → url.pathname in error log |
+| `hb-websites/src/app/preview/page.tsx` | +postMessage origin validation (trusted domains) |
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

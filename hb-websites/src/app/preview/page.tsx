@@ -143,7 +143,11 @@ export default function PreviewPage() {
   const [layout, setLayout] = useState<PageLayout | null>(null);
 
   useEffect(() => {
+    const trustedDomains = ['holidaibutler.com', 'texelmaps.nl', 'localhost'];
     const handler = (event: MessageEvent) => {
+      // Only accept messages from trusted admin portal origins
+      const isTrusted = trustedDomains.some(d => event.origin.includes(d));
+      if (!isTrusted) return;
       if (event.data?.type === 'layout-update' && event.data.layout) {
         setLayout(event.data.layout);
       }

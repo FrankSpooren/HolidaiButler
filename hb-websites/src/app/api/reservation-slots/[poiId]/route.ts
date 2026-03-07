@@ -6,15 +6,23 @@ export async function GET(
   { params }: { params: Promise<{ poiId: string }> }
 ) {
   const tenantSlug = request.headers.get('x-tenant-slug') ?? 'calpe';
-  const { poiId } = await params;
-  const date = request.nextUrl.searchParams.get('date') ?? '';
-  const partySize = request.nextUrl.searchParams.get('partySize');
 
-  const slots = await fetchAvailableSlots(
-    tenantSlug,
-    Number(poiId),
-    date,
-    partySize ? Number(partySize) : undefined
-  );
-  return NextResponse.json({ data: slots });
+  try {
+    const { poiId } = await params;
+    const date = request.nextUrl.searchParams.get('date') ?? '';
+    const partySize = request.nextUrl.searchParams.get('partySize');
+
+    const slots = await fetchAvailableSlots(
+      tenantSlug,
+      Number(poiId),
+      date,
+      partySize ? Number(partySize) : undefined
+    );
+    return NextResponse.json({ data: slots });
+  } catch {
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch available slots' },
+      { status: 502 }
+    );
+  }
 }

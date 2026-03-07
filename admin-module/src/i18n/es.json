@@ -19,7 +19,12 @@
     "branding": "Branding",
     "pages": "Páginas",
     "navigation": "Navegación",
-    "media": "Mediateca"
+    "media": "Mediateca",
+    "section_overview": "Resumen",
+    "section_content": "Contenido y Datos",
+    "section_commerce": "Comercio",
+    "section_platform": "Plataforma",
+    "section_system": "Sistema"
   },
   "auth": {
     "login": "Iniciar sesi\u00f3n",
@@ -59,7 +64,17 @@
     "agentHealth": "Actividad de agentes (24h)",
     "errors24h": "Errores",
     "alerts24h": "Alertas",
-    "jobs24h": "Trabajos completados"
+    "jobs24h": "Trabajos completados",
+    "links": {
+      "agents": "Panel de Agentes",
+      "pois": "Gestión de POIs",
+      "reviews": "Moderación de Reseñas",
+      "media": "Mediateca",
+      "branding": "Marca y Estilo",
+      "pages": "Gestión de Páginas",
+      "analytics": "Analíticas",
+      "settings": "Configuración"
+    }
   },
   "agents": {
     "title": "Panel de Agentes",
@@ -542,6 +557,8 @@
     "next": "Siguiente",
     "search": "Buscar",
     "edit": "Editar",
+    "delete": "Eliminar",
+    "save": "Guardar",
     "yes": "Sí",
     "no": "No",
     "load": "Cargar",
@@ -915,6 +932,16 @@
       "surface": "Superficie",
       "text": "Texto",
       "textMuted": "Texto atenuado"
+    },
+    "footer": {
+      "title": "Pie de página",
+      "showNewsletter": "Mostrar boletín",
+      "showSocial": "Mostrar social",
+      "columns": "Columnas del pie"
+    },
+    "brandVisuals": {
+      "addVisual": "Añadir visual",
+      "uploaded": "Visual subido"
     }
   },
   "pages": {
@@ -937,6 +964,9 @@
     "statusUpdated": "Estado actualizado",
     "noResults": "No se encontraron páginas",
     "addBlock": "Añadir bloque",
+    "noBlocksInCategory": "No hay bloques en esta categoría",
+    "uploadOgImage": "Subir imagen OG",
+    "ogImageUploaded": "Imagen OG subida",
     "blockProps": "Propiedades del bloque (JSON)",
     "table": {
       "slug": "Slug",
