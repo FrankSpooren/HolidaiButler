@@ -7,10 +7,10 @@ export const brandingService = {
   updateBranding: (destinationId, data) =>
     client.put(`/destinations/${destinationId}/branding`, data).then(r => r.data),
 
-  uploadLogo: (destination, file) => {
+  uploadLogo: (destination, file, type = 'logo') => {
     const formData = new FormData();
     formData.append('logo', file);
-    return client.post(`/settings/branding/${destination}/logo`, formData, {
+    return client.post(`/settings/branding/${destination}/${type}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(r => r.data);
   }

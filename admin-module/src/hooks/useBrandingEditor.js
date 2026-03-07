@@ -23,7 +23,7 @@ export function useUpdateDestinationBranding() {
 export function useUploadBrandingLogo() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ destination, file }) => brandingService.uploadLogo(destination, file),
+    mutationFn: ({ destination, file, field }) => brandingService.uploadLogo(destination, file, field || 'logo'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['branding-destinations'] });
       queryClient.invalidateQueries({ queryKey: ['branding'] });
