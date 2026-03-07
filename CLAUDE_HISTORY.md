@@ -3337,4 +3337,80 @@ CREATE TABLE page_revisions (
 
 ---
 
+## Repair Command v6.0 — Browser-Verified Fixes (07-03-2026)
+
+**Opdracht**: Repair Command v6.0 — 6 features die als "COMPLEET" werden gerapporteerd maar NIET werkten in de browser. Kritiek: investor presentatie maandag 9 maart 2026.
+**Status**: ✅ COMPLEET
+**Commit**: `f591b49`
+
+### Pre-flight Diagnostiek (Hetzner)
+
+- PM2: alle services online (hb-websites, holidaibutler-api, ticketing, agenda)
+- Redis: PONG
+- DB: 14 pagina's (6 Calpe + 6 Texel + usp + footer), 7 media records
+- `uploaded_by` kolom: VARCHAR(36) (correct gemigreerd)
+- NODE_ENV: NIET gezet in PM2 environment
+- HB_API_URL: `http://localhost:3001`, HB_ASSET_URL: `https://api.holidaibutler.com`
+
+### BLOK A — Media Library Thumbnails (FIXED)
+
+**Root cause**: Express had `express.static` voor `/branding/` maar NIET voor `/media-files/` en `/block-images/`. Multer sloeg files correct op, maar ze werden nooit via HTTP geserveerd.
+**Fix**: 2 express.static routes toegevoegd in `platform-core/src/index.js` (mediaDir + blockImagesDir). 7 media files hersteld uit backup (`/var/www/backups/platform-core/backup-20260307-174828/storage/media/1/`).
+**Verificatie**: `curl https://api.holidaibutler.com/media-files/1/1772904946016_4465770c.png` → HTTP 200.
+
+### BLOK B — Preview Iframe (FIXED)
+
+**Root cause**: PagesPage.jsx iframe `src` was hardcoded naar `https://dev.holidaibutler.com/preview` — dit laadde de wireframe BlockPreview pagina met type labels in plaats van de echte website.
+**Fix**: `PREVIEW_DOMAINS` mapping (1→dev.holidaibutler.com, 2→dev.texelmaps.nl) + `getPreviewUrl()` die actuele pagina URL bouwt op basis van destination_id + slug.
+**Verificatie**: Admin-module gebouwd (0 errors) en gedeployed naar admin.holidaibutler.com + admin.dev.holidaibutler.com.
+
+### BLOK C — Map zonder POI Markers (CONTENT ISSUE)
+
+**Diagnose**: Map.tsx code + POI proxy route zijn CORRECT. Root cause: Calpe homepage heeft GEEN map block in layout — blocks zijn: hero, poi_grid, event_calendar, partners, rich_text. Dit is een content issue dat via de Admin Portal opgelost moet worden (map block toevoegen aan pagina).
+**Geen code wijziging nodig**.
+
+### BLOK D — Sidebar Flat List (BROWSER CACHE)
+
+**Diagnose**: MENU_SECTIONS en "Overzicht" zijn bevestigd aanwezig in de gedeployde build (`index-2d70955a.js`). Beide admin portals gedeployed op 7 maart. Browser cache issue — Ctrl+Shift+R (hard refresh) nodig.
+**Geen code wijziging nodig**.
+
+### BLOK E — Logo Broken (FIXED)
+
+**Root cause**: DB `destinations.branding` bevat paden `/branding/calpe_logo.png` en `/branding/texel_logo.png`, maar de bestanden bestonden niet in de branding directory op de server. Ze waren nooit geüpload.
+**Fix**: Logo files gevonden in oude customer-portal directories en gekopieerd:
+- `calpe-turismo-logo.png` → `/public/branding/calpe_logo.png` (7 KB)
+- `texelmaps-logo-transparent.png` → `/public/branding/texel_logo.png` (411 KB)
+**Verificatie**: `curl https://api.holidaibutler.com/branding/calpe_logo.png` → HTTP 200. Frontend: `<img src="https://api.holidaibutler.com/branding/calpe_logo.png">` correct gerenderd.
+
+### BLOK F — Frontend Website (BEVESTIGD WERKEND)
+
+**Diagnose**: Frontend IS correct aan het renderen. curl output bevestigt:
+- Header (sticky, logo, navigatie)
+- Hero section (primary bg, text)
+- POI grid (kaartjes met ratings)
+- Event calendar section
+- Partners section
+- RichText section
+- Footer (bg-foreground)
+**Geen code wijziging nodig**.
+
+### Gewijzigde Bestanden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/index.js` | +express.static voor `/media-files/` en `/block-images/` (12 regels) |
+| `admin-module/src/pages/PagesPage.jsx` | +PREVIEW_DOMAINS mapping + getPreviewUrl() → iframe toont echte website |
+
+### Server Acties (niet in code)
+
+| Actie | Beschrijving |
+|-------|--------------|
+| Media restore | 7 bestanden gekopieerd van backup naar `/storage/media/1/` |
+| Branding restore | 2 logo bestanden gekopieerd naar `/public/branding/` |
+| PM2 restart | holidaibutler-api + hb-websites herstart |
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
