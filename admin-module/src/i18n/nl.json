@@ -19,7 +19,12 @@
     "branding": "Branding",
     "pages": "Pagina's",
     "navigation": "Navigatie",
-    "media": "Mediabibliotheek"
+    "media": "Mediabibliotheek",
+    "section_overview": "Overzicht",
+    "section_content": "Content & Data",
+    "section_commerce": "Commerce",
+    "section_platform": "Platform",
+    "section_system": "Systeem"
   },
   "auth": {
     "login": "Inloggen",

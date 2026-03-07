@@ -19,7 +19,12 @@
     "branding": "Branding",
     "pages": "Páginas",
     "navigation": "Navegación",
-    "media": "Mediateca"
+    "media": "Mediateca",
+    "section_overview": "Resumen",
+    "section_content": "Contenido y Datos",
+    "section_commerce": "Comercio",
+    "section_platform": "Plataforma",
+    "section_system": "Sistema"
   },
   "auth": {
     "login": "Iniciar sesi\u00f3n",
