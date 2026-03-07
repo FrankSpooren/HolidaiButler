@@ -557,6 +557,8 @@
     "next": "Volgende",
     "search": "Zoeken",
     "edit": "Bewerken",
+    "delete": "Verwijderen",
+    "save": "Opslaan",
     "yes": "Ja",
     "no": "Nee",
     "load": "Laden",
@@ -930,6 +932,16 @@
       "surface": "Oppervlak",
       "text": "Tekst",
       "textMuted": "Tekst gedempt"
+    },
+    "footer": {
+      "title": "Footer",
+      "showNewsletter": "Nieuwsbrief tonen",
+      "showSocial": "Social tonen",
+      "columns": "Footer kolommen"
+    },
+    "brandVisuals": {
+      "addVisual": "Visual toevoegen",
+      "uploaded": "Visual geüpload"
     }
   },
   "pages": {
@@ -952,6 +964,9 @@
     "statusUpdated": "Status bijgewerkt",
     "noResults": "Geen pagina's gevonden",
     "addBlock": "Block toevoegen",
+    "noBlocksInCategory": "Geen blocks in deze categorie",
+    "uploadOgImage": "OG afbeelding uploaden",
+    "ogImageUploaded": "OG afbeelding geüpload",
     "blockProps": "Block eigenschappen (JSON)",
     "table": {
       "slug": "Slug",

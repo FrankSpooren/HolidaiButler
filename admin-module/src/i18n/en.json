@@ -557,6 +557,8 @@
     "next": "Next",
     "search": "Search",
     "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
     "yes": "Yes",
     "no": "No",
     "load": "Load",
@@ -930,6 +932,16 @@
       "surface": "Surface",
       "text": "Text",
       "textMuted": "Text muted"
+    },
+    "footer": {
+      "title": "Footer",
+      "showNewsletter": "Show Newsletter",
+      "showSocial": "Show Social",
+      "columns": "Footer Columns"
+    },
+    "brandVisuals": {
+      "addVisual": "Add Visual",
+      "uploaded": "Visual uploaded"
     }
   },
   "pages": {
@@ -952,6 +964,9 @@
     "statusUpdated": "Status updated",
     "noResults": "No pages found",
     "addBlock": "Add block",
+    "noBlocksInCategory": "No blocks in this category",
+    "uploadOgImage": "Upload OG Image",
+    "ogImageUploaded": "OG image uploaded",
     "blockProps": "Block props (JSON)",
     "table": {
       "slug": "Slug",

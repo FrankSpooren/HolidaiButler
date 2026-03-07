@@ -557,6 +557,8 @@
     "next": "Weiter",
     "search": "Suchen",
     "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "save": "Speichern",
     "yes": "Ja",
     "no": "Nein",
     "load": "Laden",
@@ -930,6 +932,16 @@
       "surface": "Oberfläche",
       "text": "Text",
       "textMuted": "Text gedämpft"
+    },
+    "footer": {
+      "title": "Footer",
+      "showNewsletter": "Newsletter anzeigen",
+      "showSocial": "Social anzeigen",
+      "columns": "Footer-Spalten"
+    },
+    "brandVisuals": {
+      "addVisual": "Visual hinzufügen",
+      "uploaded": "Visual hochgeladen"
     }
   },
   "pages": {
@@ -952,6 +964,9 @@
     "statusUpdated": "Status aktualisiert",
     "noResults": "Keine Seiten gefunden",
     "addBlock": "Block hinzufügen",
+    "noBlocksInCategory": "Keine Blocks in dieser Kategorie",
+    "uploadOgImage": "OG-Bild hochladen",
+    "ogImageUploaded": "OG-Bild hochgeladen",
     "blockProps": "Block-Eigenschaften (JSON)",
     "table": {
       "slug": "Slug",
