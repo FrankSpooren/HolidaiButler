@@ -54,7 +54,6 @@ export default function Footer({ tenant, locale }: FooterProps) {
   ];
   const copyright = footerConfig?.copyright ?? `\u00A9 ${year} ${tenant.displayName}. Powered by HolidaiButler.`;
   const showSocial = footerConfig?.showSocial !== false;
-  const showNewsletter = footerConfig?.showNewsletter ?? false;
 
   const renderColumn = (col: FooterColumn) => {
     switch (col.type) {
