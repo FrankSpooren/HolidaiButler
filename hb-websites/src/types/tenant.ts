@@ -1,8 +1,40 @@
+export interface TypographyLevel {
+  fontSize?: string;
+  fontWeight?: string;
+  letterSpacing?: string;
+  lineHeight?: string;
+}
+
+export interface ButtonVariant {
+  bg?: string;
+  text?: string;
+  borderColor?: string;
+  borderRadius?: string;
+  hoverBg?: string;
+  hoverText?: string;
+}
+
+export interface FooterColumn {
+  type: string;
+  title?: string;
+  content?: string;
+}
+
+export interface FooterConfig {
+  columns?: FooterColumn[];
+  copyright?: string;
+  showNewsletter?: boolean;
+  showSocial?: boolean;
+}
+
 export interface TenantBranding {
   logo: string;
   logoDark?: string;
   favicon?: string;
+  navicon?: string;
   payoff: Record<string, string>;
+  contactEmail?: string;
+  privacyPolicyUrl?: string;
   colors: {
     primary: string;
     secondary: string;
@@ -17,11 +49,28 @@ export interface TenantBranding {
     body: string;
     headingUrl?: string;
     bodyUrl?: string;
+    typography?: {
+      h1?: TypographyLevel;
+      h2?: TypographyLevel;
+      h3?: TypographyLevel;
+      h4?: TypographyLevel;
+      body?: TypographyLevel;
+      small?: TypographyLevel;
+    };
   };
   style: {
     borderRadius: string;
     buttonStyle: string;
   };
+  buttons?: {
+    primary?: ButtonVariant;
+    secondary?: ButtonVariant;
+    outline?: ButtonVariant;
+    ghost?: ButtonVariant;
+    link?: ButtonVariant;
+  };
+  footer?: FooterConfig;
+  brandVisuals?: string[];
 }
 
 export interface FeatureFlags {

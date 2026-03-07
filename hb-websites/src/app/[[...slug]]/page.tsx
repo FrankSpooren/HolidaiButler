@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { fetchTenantConfig, fetchPage } from '@/lib/api';
 import { generatePageMetadata } from '@/lib/seo';
 import { getBlock } from '@/blocks/index';
-import type { BlockConfig } from '@/types/blocks';
+import type { BlockConfig, BlockStyle } from '@/types/blocks';
 import type { FeatureFlags } from '@/types/tenant';
 
 interface PageProps {
@@ -35,6 +35,36 @@ function shouldRenderBlock(block: BlockConfig, featureFlags: FeatureFlags): bool
   return featureFlags[block.featureFlag] === true;
 }
 
+const paddingMap: Record<string, string> = {
+  none: '0',
+  small: '1rem',
+  medium: '2rem',
+  large: '3rem',
+  xlarge: '5rem',
+};
+
+function getBlockWrapperStyle(style?: BlockStyle): React.CSSProperties | undefined {
+  if (!style) return undefined;
+  const css: React.CSSProperties = {};
+  if (style.backgroundColor) css.backgroundColor = style.backgroundColor;
+  if (style.backgroundImage) {
+    css.backgroundImage = `url(${style.backgroundImage})`;
+    css.backgroundSize = 'cover';
+    css.backgroundPosition = 'center';
+  }
+  if (style.borderColor) {
+    css.borderTop = `2px solid ${style.borderColor}`;
+    css.borderBottom = `2px solid ${style.borderColor}`;
+  }
+  if (style.paddingY && style.paddingY !== 'none') {
+    const py = paddingMap[style.paddingY] || '2rem';
+    css.paddingTop = py;
+    css.paddingBottom = py;
+  }
+  if (Object.keys(css).length === 0) return undefined;
+  return css;
+}
+
 export default async function Page({ params }: PageProps) {
   const { slug } = await params;
   const headersList = await headers();
@@ -62,6 +92,17 @@ export default async function Page({ params }: PageProps) {
         if (!BlockComponent) {
           console.warn(`Unknown block type: ${block.type}`);
           return null;
+        }
+
+        const wrapperStyle = getBlockWrapperStyle(block.style);
+        const wrapperClass = block.style?.fullWidth ? 'w-full' : '';
+
+        if (wrapperStyle || wrapperClass) {
+          return (
+            <div key={block.id} className={wrapperClass || undefined} style={wrapperStyle}>
+              <BlockComponent {...block.props} />
+            </div>
+          );
         }
 
         return <BlockComponent key={block.id} {...block.props} />;

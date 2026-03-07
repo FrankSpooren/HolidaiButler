@@ -5,6 +5,7 @@ import { brandingToCssVars } from '@/lib/theme';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ChatbotWidget from '@/components/modules/ChatbotWidget';
+import CookieBanner from '@/components/modules/CookieBanner';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -43,6 +44,12 @@ export default async function RootLayout({
         {tenant?.branding?.favicon && (
           <link rel="icon" href={`${process.env.HB_API_URL ?? ''}${tenant.branding.favicon}`} />
         )}
+        {tenant?.branding?.navicon && (
+          <link rel="apple-touch-icon" href={`${process.env.HB_API_URL ?? ''}${tenant.branding.navicon}`} />
+        )}
+        {tenant?.branding?.colors?.primary && (
+          <meta name="theme-color" content={tenant.branding.colors.primary} />
+        )}
       </head>
       <body className="min-h-screen flex flex-col bg-background text-foreground font-body antialiased">
         {tenant && <Header tenant={tenant} locale={locale} />}
@@ -55,6 +62,11 @@ export default async function RootLayout({
             apiUrl={process.env.HB_API_URL ?? 'http://localhost:3001'}
           />
         )}
+        <CookieBanner
+          locale={locale}
+          primaryColor={tenant?.branding?.colors?.primary}
+          privacyPolicyUrl={tenant?.branding?.privacyPolicyUrl}
+        />
       </body>
     </html>
   );
