@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 7 maart 2026
-**Versie**: 7.41
+**Versie**: 7.43
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1 COMPLEET). CLAUDE.md v3.75.0. MS v7.41.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 COMPLEET). CLAUDE.md v3.77.0. MS v7.43.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1386,6 +1386,8 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 
 - **Wave 1 Enterprise Admin Portal — Visuele Block Editor** ✅ COMPLEET (07-03-2026): JSON textarea vervangen door dedicated form editors per block type. 12 herbruikbare field components (TextField, NumberField, SelectField, SwitchField, ColorField, ImageUploadField, TranslatableField met 4 talen + auto-vertaal Mistral, ButtonListField, ItemListField, RichTextField TipTap WYSIWYG, CategoryFilterField). 20 block editors (React.lazy code-split). Block selector dialog (5 categorieën: Content/Media/Data/Interactie/Commerce, MUI Dialog, 3-kolom card grid). @dnd-kit drag-and-drop block reordering. Live preview iframe (postMessage protocol, responsive toggles Desktop/Tablet/Mobile). Typography hierarchy (6 levels: H1-H4/Body/Small, 18 CSS custom properties, live preview per level in BrandingPage). Block image upload endpoint (multer, 5MB, PNG/JPG/WebP/SVG). Apache CSP frame-ancestors fix voor preview iframe. 10 npm packages. 1 nieuw admin endpoint (149 totaal). adminPortal.js v3.25.0. ~38 nieuwe + ~8 gewijzigde bestanden (~3.200 LOC). 7/8 API tests PASS.
 
+- **Wave 2+3 Professionele Features + Excellence** ✅ COMPLEET (07-03-2026): Wave 2 (8 features): Pagina-hiërarchie (parent_id FK + tree-view UI met expand/collapse), Media Library (4 CRUD endpoints + MediaPage.jsx grid/upload/filter/detail), 8 page templates (PageTemplateDialog), favicon/navicon upload, OG image upload, 5 button style varianten (15 CSS vars), footer config (data-driven Footer.tsx kolommen/copyright/social/newsletter), block-level styling (BlockStyleEditor: bg/border/padding/fullWidth + hb-websites wrapper). Wave 3 (3 features): Brand Visuals (upload 3-5 hero images + BrandVisualPicker quick-pick in HeroEditor), revisie-geschiedenis UI (PageRevisionsDialog, auto-snapshot bij save, max 20 per pagina, restore functie), GDPR Cookie Consent Banner (CookieBanner.tsx: 3 niveaus essential/analytics/marketing, 5 talen NL/EN/DE/ES/FR, tenant-aware kleuren, SocialFeed marketing consent gating via CustomEvent). 2 nieuwe DB tabellen (media, page_revisions) + 2 ALTER TABLE (pages.parent_id, pages.og_image_path). 8 nieuwe admin endpoints (157 totaal). 7 nieuwe + 22 gewijzigde bestanden (~2.300 LOC). Admin-module + hb-websites build 0 errors.
+
 Technische blauwdruk: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
 
 **Fase VI — UX Revolution + WarreWijzer (6-8 weken):**
@@ -1594,7 +1596,8 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **7.41** | **07-03-2026** | **Wave 1: Enterprise Admin Portal — Visuele Block Editor COMPLEET. JSON textarea → dedicated form editors. 12 field components, 20 block editors (React.lazy code-split), block selector dialog (5 categorieën), @dnd-kit drag-and-drop, TipTap WYSIWYG, live preview iframe (postMessage), typography hierarchy (H1-H4/Body/Small, 18 CSS vars). Block image upload endpoint. Apache CSP fix. 10 npm packages. 1 nieuw endpoint (149 totaal). adminPortal.js v3.25.0. ~3.200 LOC. 7/8 tests PASS. CLAUDE.md v3.75.0.** |
+| **7.43** | **07-03-2026** | **Wave 2+3: Professionele Features + Excellence COMPLEET. Wave 2: pagina-hiërarchie (parent_id + tree-view), media library (4 CRUD endpoints + MediaPage), 8 page templates, favicon/navicon upload, OG image upload, 5 button style varianten (15 CSS vars), footer config (data-driven), block-level styling (BlockStyleEditor + hb-websites wrapper). Wave 3: brand visuals (upload + HeroEditor quick-pick), revisie-geschiedenis UI (PageRevisionsDialog), GDPR cookie consent banner (3 niveaus, 5 talen, tenant-aware). 2 nieuwe DB tabellen + 2 ALTER TABLE. 8 nieuwe endpoints (157 totaal). ~2.300 LOC. CLAUDE.md v3.77.0.** |
+| **7.41** | **07-03-2026** | **Wave 1: Enterprise Admin Portal — Visuele Block Editor COMPLEET. 12 field components, 20 block editors (React.lazy), block selector dialog (5 categorieën), @dnd-kit drag-and-drop, TipTap WYSIWYG, live preview iframe, typography hierarchy (18 CSS vars). 1 nieuw endpoint (149 totaal). adminPortal.js v3.25.0. ~3.200 LOC. CLAUDE.md v3.75.0.** |
 | **7.40** | **06-03-2026** | **Fase V.6 Bugfix Ronde. Root cause openEdit fix: pages LIST endpoint miste layout/title_de/title_es/seo_* velden → blocks leeg + vertalingen verloren. Fix: openEdit fetcht nu GET /pages/:id. Overige fixes: Helmet CORP cross-origin, SettingsPage payoff i18n rendering, adminAuth()/writeAccess() factory invocatie, React 19 ESLint fixes, HeroProps/VideoProps interface alignment. Calpe homepage blocks hersteld. 4 commits. CLAUDE.md v3.74.0.** |
 | **7.39** | **06-03-2026** | **Fase V.6: Ontbrekende Blocks + Block Upgrades COMPLEET. 8 nieuwe blocks (Video, SocialFeed, ContactForm, Newsletter, WeatherWidget, Banner, Partners, Downloads). 2 block upgrades (Hero +video bg, Gallery +mixed media). Block registry 12→20. 3 nieuwe admin endpoints (148 totaal). 2 public endpoints + 2 API proxy routes. Auto-translate frontend (Mistral AI) op 3 admin pagina's. Social Media Links in BrandingPage. DB ALTERs lat/lon/social_links. adminPortal.js v3.24.0. ~35 bestanden. Calpe 6/6 + Texel 6/6 PASS. CLAUDE.md v3.73.0.** |
 | **7.38** | **06-03-2026** | **Fase V.5: P1 Blocks + Wildcard DNS Schaling COMPLEET. 5 nieuwe blocks (Cta, Gallery, Faq, TicketShop, ReservationWidget). Block registry 7→12. 3 API proxy routes. Admin block editor 12 types + i18n 4 talen. Middleware wildcard `*.holidaibutler.com`. Apache wildcard VHost. 20 bestanden (+783 regels). Calpe 6/6 + Texel 6/6 PASS. CLAUDE.md v3.72.0.** |
@@ -1659,4 +1662,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 7 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1 COMPLEET). Admin Portal: 149 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.75.0. MS v7.41.*
+*Laatst bijgewerkt: 7 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 COMPLEET). Admin Portal: 157 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.77.0. MS v7.43.*
