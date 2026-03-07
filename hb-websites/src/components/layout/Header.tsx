@@ -53,10 +53,11 @@ function resolveNavItems(tenant: TenantConfig, locale: string): NavItem[] {
     }));
 }
 
-/** Resolve asset URL: if path is already absolute (http/https), use directly; else prefix with HB_API_URL */
+/** Resolve asset URL: if path is already absolute (http/https), use directly; else prefix with public asset URL */
 function resolveAssetUrl(path: string): string {
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  return `${process.env.HB_API_URL ?? ''}${path}`;
+  const baseUrl = process.env.HB_ASSET_URL ?? process.env.HB_API_URL ?? '';
+  return `${baseUrl}${path}`;
 }
 
 export default function Header({ tenant, locale }: HeaderProps) {
