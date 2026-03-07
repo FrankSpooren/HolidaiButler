@@ -4859,9 +4859,8 @@ router.put('/settings/branding/:destination', adminAuth('poi_owner'), async (req
  * Accepts PNG, JPG, SVG, ICO (max 2MB). Type: logo, favicon, navicon.
  * Stores file in public/branding/ and updates MongoDB + MySQL branding JSON.
  */
-const BRANDING_DIR = process.env.NODE_ENV === 'production'
-  ? '/var/www/api.holidaibutler.com/platform-core/public/branding'
-  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public/branding');
+const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
+const BRANDING_DIR = path.join(STORAGE_ROOT, 'branding');
 
 const VALID_BRANDING_TYPES = ['logo', 'favicon', 'navicon'];
 
@@ -4970,9 +4969,7 @@ router.post('/settings/branding/:destination/:type', adminAuth('poi_owner'), (re
 // BLOCK IMAGE UPLOAD (Wave 1 — Enterprise Admin Portal)
 // ============================================================
 
-const BLOCK_IMAGES_DIR = process.env.NODE_ENV === 'production'
-  ? '/var/www/api.holidaibutler.com/platform-core/storage/block-images'
-  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../storage/block-images');
+const BLOCK_IMAGES_DIR = path.join(STORAGE_ROOT, 'block-images');
 
 const blockImageStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -9104,9 +9101,7 @@ router.put('/destinations/:id/social-links', adminAuth(), writeAccess(['platform
 // MEDIA LIBRARY (Wave 2 — W2.5) — 4 endpoints
 // ============================================================
 
-const MEDIA_DIR = process.env.NODE_ENV === 'production'
-  ? '/var/www/api.holidaibutler.com/platform-core/storage/media'
-  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../storage/media');
+const MEDIA_DIR = path.join(STORAGE_ROOT, 'media');
 
 const mediaStorage = multer.diskStorage({
   destination: (req, _file, cb) => {
