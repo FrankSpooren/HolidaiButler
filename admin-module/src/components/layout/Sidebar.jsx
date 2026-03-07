@@ -15,6 +15,7 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import PaletteIcon from '@mui/icons-material/Palette';
 import ArticleIcon from '@mui/icons-material/Article';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
+import PermMediaIcon from '@mui/icons-material/PermMedia';
 import { useTranslation } from 'react-i18next';
 import { SIDEBAR_STYLES } from '../../theme.js';
 import useAuthStore from '../../stores/authStore.js';
@@ -33,6 +34,7 @@ const MENU_ITEMS = [
   { key: 'branding', path: '/branding', icon: PaletteIcon, requiredRole: 'platform_admin' },
   { key: 'pages', path: '/pages', icon: ArticleIcon, requiredRole: 'platform_admin' },
   { key: 'navigation', path: '/navigation', icon: MenuOpenIcon, requiredRole: 'platform_admin' },
+  { key: 'media', path: '/media', icon: PermMediaIcon, requiredRole: 'platform_admin' },
   { key: 'issues', path: '/issues', icon: BugReportIcon },
   { key: 'users', path: '/users', icon: PeopleIcon, requiredRole: 'platform_admin' }
 ];

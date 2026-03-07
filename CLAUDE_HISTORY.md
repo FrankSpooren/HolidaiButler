@@ -2899,4 +2899,104 @@ Het script hergebruikt historische Apify datasets via de Apify API, parsed de re
 
 ---
 
+## Wave 1: Enterprise Admin Portal — Visuele Block Editor (07-03-2026)
+
+### Resultaat
+
+JSON textarea vervangen door dedicated visuele form editors per block type. Admin Portal getransformeerd van developer-tool naar marketeer-friendly visuele editor. 12 herbruikbare field components, 20 block editors (code-split), visuele block selector, drag-and-drop reordering, live preview iframe, en typography hierarchy.
+
+| Aspect | Detail |
+|--------|--------|
+| Field components | 12: TextField, NumberField, SelectField, SwitchField, ColorField, ImageUploadField, TranslatableField (4 talen + auto-vertaal), ButtonListField, ItemListField, RichTextField (TipTap WYSIWYG), CategoryFilterField |
+| Block editors | 20: HeroEditor, RichTextEditor, CtaEditor, BannerEditor, FaqEditor, PartnersEditor, DownloadsEditor, PoiGridEditor, EventCalendarEditor, MapEditor, CardGroupEditor, GalleryEditor, VideoEditor, ContactFormEditor, NewsletterEditor, WeatherWidgetEditor, SocialFeedEditor, TicketShopEditor, ReservationWidgetEditor, ChatbotWidgetEditor |
+| Block selector | BlockSelectorDialog: 5 categorieën (Content/Media/Data/Interactie/Commerce), MUI Dialog, 3-kolom card grid |
+| Drag-and-drop | @dnd-kit/core + @dnd-kit/sortable + @dnd-kit/utilities |
+| WYSIWYG editor | TipTap: @tiptap/react + starter-kit + extensions (link, image, text-align, underline, placeholder) |
+| Live preview | iframe naar /preview, postMessage protocol, responsive toggles (Desktop/Tablet/Mobile) |
+| Typography | 6 levels (H1-H4, Body, Small), 18 CSS custom properties, live preview per level |
+| Code splitting | React.lazy() op alle 20 editors via blockEditorRegistry.js |
+| Admin endpoints | +1 (149 totaal): POST /blocks/upload-image (multer, 5MB, PNG/JPG/WebP/SVG) |
+| npm packages | +10: @tiptap/react, @tiptap/starter-kit, @tiptap/extension-link, @tiptap/extension-image, @tiptap/extension-text-align, @tiptap/extension-underline, @tiptap/extension-placeholder, @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities, lodash.debounce |
+| Apache fix | X-Frame-Options → CSP frame-ancestors voor /preview route (admin portals whitelisted) |
+| Bestanden | ~38 nieuw + ~8 gewijzigd (~3.200 LOC) |
+| Tests | 7/8 API tests PASS |
+
+### Nieuwe Bestanden
+
+**Field Components** (`admin-module/src/components/blocks/fields/`):
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `TextField.jsx` | MUI TextField wrapper met label, helperText, multiline |
+| `NumberField.jsx` | MUI TextField type="number" met min/max/step |
+| `SelectField.jsx` | MUI Select met options array [{value, label}] |
+| `SwitchField.jsx` | MUI Switch met label |
+| `ColorField.jsx` | Color picker (swatch + hex input), hergebruikt BrandingPage pattern |
+| `ImageUploadField.jsx` | FormData upload naar /blocks/upload-image + URL fallback + preview |
+| `TranslatableField.jsx` | 4 tabs (EN/NL/DE/ES), TextField per taal, auto-vertaal via Mistral |
+| `ButtonListField.jsx` | Dynamische lijst van {label, url, variant} met add/remove |
+| `ItemListField.jsx` | Generieke herhalende items met custom renderItem |
+| `RichTextField.jsx` | TipTap WYSIWYG met MenuBar (bold/italic/underline/link/heading/list/image/align) |
+| `CategoryFilterField.jsx` | MUI Autocomplete multi-select met freeSolo |
+| `index.js` | Barrel export van alle 11 field components |
+
+**Block Editors** (`admin-module/src/components/blocks/editors/`):
+
+| Bestand | Block Type | Bijzonderheden |
+|---------|------------|----------------|
+| `HeroEditor.jsx` | hero | Translatable headline/description, ImageUpload, ButtonList, backgroundType Select |
+| `RichTextEditor.jsx` | rich_text | TipTap WYSIWYG wrapper |
+| `CtaEditor.jsx` | cta | Translatable headline/description, ButtonList, backgroundStyle |
+| `BannerEditor.jsx` | banner | Translatable message, type Select, dismissible Switch |
+| `FaqEditor.jsx` | faq | Translatable title, ItemList van question+answer (both Translatable) |
+| `PartnersEditor.jsx` | partners | Translatable headline, Number columns, ItemList logos |
+| `DownloadsEditor.jsx` | downloads | Translatable headline, ItemList files met fileType Select |
+| `PoiGridEditor.jsx` | poi_grid | CategoryFilter, limit Number, columns Select |
+| `EventCalendarEditor.jsx` | event_calendar | Translatable title, maxEvents, layout, showPastEvents |
+| `MapEditor.jsx` | map | lat/lon Numbers, zoom, height, showClusters, CategoryFilter |
+| `CardGroupEditor.jsx` | card_group | Translatable headline, columns/layout, ItemList cards |
+| `GalleryEditor.jsx` | gallery | columns/layout, ItemList items (image/video), backward compatible |
+| `VideoEditor.jsx` | video | YouTube/Vimeo/file URLs, poster ImageUpload, layout/background, autoplay/muted |
+| `ContactFormEditor.jsx` | contact_form | Translatable headline/description, layout, ItemList form fields |
+| `NewsletterEditor.jsx` | newsletter | Translatable headline/description, layout/backgroundColor |
+| `WeatherWidgetEditor.jsx` | weather_widget | layout Select (compact/detailed), showForecast Switch |
+| `SocialFeedEditor.jsx` | social_feed | platform Select, Translatable headline, maxItems, columns |
+| `TicketShopEditor.jsx` | ticket_shop | Translatable headline/description, limit, layout, showPrices |
+| `ReservationWidgetEditor.jsx` | reservation_widget | Translatable headline/description, defaultPoiId, showSearch |
+| `ChatbotWidgetEditor.jsx` | chatbot_widget | chatbotName TextField, position Select |
+
+**Infrastructure**:
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `admin-module/src/components/blocks/blockEditorRegistry.js` | Registry: 20 block types → lazy editors + icons + labels + categories |
+| `admin-module/src/components/blocks/BlockSelectorDialog.jsx` | MUI Dialog, 5 category tabs, 3-kolom card grid |
+| `admin-module/src/components/blocks/BlockEditorCard.jsx` | Sortable wrapper: drag handle, expand/collapse, duplicate/delete |
+| `hb-websites/src/app/preview/page.tsx` | Client component, postMessage listener, block placeholder cards |
+
+### Gewijzigde Bestanden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/PagesPage.jsx` | Major refactor: JSON textarea → BlockEditorCard + DndContext + SortableContext + BlockSelectorDialog + preview iframe tab |
+| `admin-module/src/pages/BrandingPage.jsx` | +Typography Hierarchy sectie (H1-H4, Body, Small) met live preview |
+| `admin-module/package.json` | +10 npm dependencies |
+| `platform-core/src/routes/adminPortal.js` | +1 endpoint: POST /blocks/upload-image (multer, 5MB) |
+| `hb-websites/src/lib/theme.ts` | +18 typography CSS vars (h1-h4/body/small size/weight/spacing/height) |
+| `hb-websites/src/types/tenant.ts` | +TypographyLevel interface, +typography field in fonts |
+| `hb-websites/src/app/globals.css` | +h1-h4 CSS rules met typography vars |
+| `dev.holidaibutler.com-le-ssl.conf` | +Location /preview: CSP frame-ancestors (admin portals whitelisted) |
+
+### Deployment
+
+- adminPortal.js → Hetzner + PM2 restart
+- block-images storage dir + Apache alias
+- admin-module dist → 3 instances (prod/dev/test)
+- hb-websites: preview page + theme.ts + tenant.ts + globals.css → build + PM2 restart
+- Apache reload met CSP frame-ancestors fix
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 (v3.24.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 (v3.25.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -148,7 +148,7 @@
  *   PUT  /destinations/:id/navigation   — Update nav_items in destinations.config JSON
  *
  * @module routes/adminPortal
- * @version 3.23.0
+ * @version 3.25.0
  */
 
 import { Router } from 'express';
@@ -4938,6 +4938,52 @@ router.post('/settings/branding/:destination/logo', adminAuth('poi_owner'), (req
 });
 
 // ============================================================
+// BLOCK IMAGE UPLOAD (Wave 1 — Enterprise Admin Portal)
+// ============================================================
+
+const BLOCK_IMAGES_DIR = process.env.NODE_ENV === 'production'
+  ? '/var/www/api.holidaibutler.com/platform-core/storage/block-images'
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../storage/block-images');
+
+const blockImageStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    fs.mkdirSync(BLOCK_IMAGES_DIR, { recursive: true });
+    cb(null, BLOCK_IMAGES_DIR);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, `${Date.now()}_${crypto.randomBytes(4).toString('hex')}${ext}`);
+  }
+});
+
+const blockImageUpload = multer({
+  storage: blockImageStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PNG, JPG, WebP, and SVG files are allowed'));
+    }
+  }
+});
+
+router.post('/blocks/upload-image', adminAuth('content_editor'), (req, res) => {
+  blockImageUpload.single('image')(req, res, (err) => {
+    if (err) {
+      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 5MB)' : err.message;
+      return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: { code: 'NO_FILE', message: 'No file uploaded' } });
+    }
+    const url = `/block-images/${req.file.filename}`;
+    res.json({ success: true, data: { url } });
+  });
+});
+
+// ============================================================
 // UNDO ENDPOINT (Fase 9A-1B)
 // ============================================================
 
@@ -8521,7 +8567,7 @@ router.get('/financial/audit-log', adminAuth('reviewer'), destinationScope, comm
 });
 
 // ============================================================
-// PAGES, BRANDING & NAVIGATION (Fase V.4) — 8 endpoints → 145 totaal
+// PAGES, BRANDING & NAVIGATION (Fase V.4 + Wave 2/3) — 8 endpoints → 145 totaal (+8 Wave 2/3 = 157)
 // ============================================================
 
 /**
@@ -8535,12 +8581,14 @@ router.get('/pages', adminAuth('reviewer'), destinationScope, async (req, res) =
 
     const pages = await mysqlSequelize.query(
       `SELECT p.id, p.destination_id, p.slug, p.title_en, p.title_nl, p.status, p.sort_order,
+              p.parent_id, p.og_image_path,
               p.created_at, p.updated_at, d.code AS destination_code, d.display_name AS destination_name,
-              JSON_LENGTH(JSON_EXTRACT(p.layout, '$.blocks')) AS block_count
+              JSON_LENGTH(JSON_EXTRACT(p.layout, '$.blocks')) AS block_count,
+              (SELECT COUNT(*) FROM pages c WHERE c.parent_id = p.id) AS children_count
        FROM pages p
        JOIN destinations d ON d.id = p.destination_id
        ${where}
-       ORDER BY p.destination_id, p.sort_order`,
+       ORDER BY p.destination_id, COALESCE(p.parent_id, p.id), p.parent_id IS NOT NULL, p.sort_order`,
       { replacements, type: QueryTypes.SELECT }
     );
 
@@ -8591,7 +8639,7 @@ router.get('/pages/:id', adminAuth('reviewer'), destinationScope, async (req, re
  */
 router.post('/pages', adminAuth('platform_admin'), async (req, res) => {
   try {
-    const { destination_id, slug, title_nl, title_en, title_de, title_es, status, layout } = req.body;
+    const { destination_id, slug, title_nl, title_en, title_de, title_es, status, layout, parent_id } = req.body;
 
     if (!destination_id || !slug || !title_en) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destination_id, slug and title_en are required' } });
@@ -8615,8 +8663,8 @@ router.post('/pages', adminAuth('platform_admin'), async (req, res) => {
     const layoutJson = layout ? JSON.stringify(layout) : JSON.stringify({ blocks: [] });
 
     await mysqlSequelize.query(
-      `INSERT INTO pages (destination_id, slug, title_nl, title_en, title_de, title_es, status, layout, sort_order)
-       VALUES (:destId, :slug, :titleNl, :titleEn, :titleDe, :titleEs, :status, :layout, :sortOrder)`,
+      `INSERT INTO pages (destination_id, slug, title_nl, title_en, title_de, title_es, status, layout, sort_order, parent_id)
+       VALUES (:destId, :slug, :titleNl, :titleEn, :titleDe, :titleEs, :status, :layout, :sortOrder, :parentId)`,
       {
         replacements: {
           destId: destination_id,
@@ -8627,7 +8675,8 @@ router.post('/pages', adminAuth('platform_admin'), async (req, res) => {
           titleEs: title_es || null,
           status: status || 'draft',
           layout: layoutJson,
-          sortOrder: (maxSort?.max_sort ?? -1) + 1
+          sortOrder: (maxSort?.max_sort ?? -1) + 1,
+          parentId: parent_id ? parseInt(parent_id) : null
         },
         type: QueryTypes.INSERT
       }
@@ -8674,7 +8723,7 @@ router.put('/pages/:id', adminAuth('platform_admin'), async (req, res) => {
       'slug', 'title_nl', 'title_en', 'title_de', 'title_es',
       'seo_title_nl', 'seo_title_en', 'seo_title_de', 'seo_title_es',
       'seo_description_nl', 'seo_description_en', 'seo_description_de', 'seo_description_es',
-      'og_image_url', 'status', 'sort_order'
+      'og_image_url', 'og_image_path', 'parent_id', 'status', 'sort_order'
     ];
 
     const sets = [];
@@ -8695,6 +8744,37 @@ router.put('/pages/:id', adminAuth('platform_admin'), async (req, res) => {
 
     if (sets.length === 0) {
       return res.status(400).json({ success: false, error: { code: 'NO_CHANGES', message: 'No fields to update' } });
+    }
+
+    // Auto-snapshot: save current state to page_revisions before updating
+    try {
+      const [beforeUpdate] = await mysqlSequelize.query('SELECT * FROM pages WHERE id = :id', { replacements: { id: pageId }, type: QueryTypes.SELECT });
+      if (beforeUpdate && req.body.layout !== undefined) {
+        const snapshotLayout = typeof beforeUpdate.layout === 'string' ? beforeUpdate.layout : JSON.stringify(beforeUpdate.layout || { blocks: [] });
+        await mysqlSequelize.query(
+          `INSERT INTO page_revisions (page_id, layout, title_nl, changed_by, change_summary)
+           VALUES (:pageId, :layout, :titleNl, :changedBy, :summary)`,
+          {
+            replacements: {
+              pageId,
+              layout: snapshotLayout,
+              titleNl: beforeUpdate.title_nl,
+              changedBy: req.adminUser?.id || null,
+              summary: 'Auto-snapshot before save'
+            },
+            type: QueryTypes.INSERT
+          }
+        );
+        // Prune old revisions (keep max 20 per page)
+        await mysqlSequelize.query(
+          `DELETE FROM page_revisions WHERE page_id = :pageId AND id NOT IN (
+             SELECT id FROM (SELECT id FROM page_revisions WHERE page_id = :pageId ORDER BY created_at DESC LIMIT 20) AS keep
+           )`,
+          { replacements: { pageId }, type: QueryTypes.DELETE }
+        );
+      }
+    } catch (revErr) {
+      logger.warn('[AdminPortal] Page revision snapshot failed (non-critical):', revErr.message);
     }
 
     await mysqlSequelize.query(
@@ -8988,6 +9068,463 @@ router.put('/destinations/:id/social-links', adminAuth(), writeAccess(['platform
   } catch (error) {
     logger.error('[AdminPortal] Social links update error:', error);
     res.status(500).json({ success: false, error: { code: 'SOCIAL_LINKS_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// MEDIA LIBRARY (Wave 2 — W2.5) — 4 endpoints
+// ============================================================
+
+const MEDIA_DIR = process.env.NODE_ENV === 'production'
+  ? '/var/www/api.holidaibutler.com/platform-core/storage/media'
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../storage/media');
+
+const mediaStorage = multer.diskStorage({
+  destination: (req, _file, cb) => {
+    const destId = req.body.destination_id || req.headers['x-destination-id'] || '0';
+    const dir = path.join(MEDIA_DIR, String(destId));
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, `${Date.now()}_${crypto.randomBytes(4).toString('hex')}${ext}`);
+  }
+});
+
+const mediaUpload = multer({
+  storage: mediaStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = [
+      'image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif',
+      'video/mp4', 'video/webm',
+      'application/pdf', 'application/gpx+xml', 'application/octet-stream'
+    ];
+    if (allowed.includes(file.mimetype) || file.originalname.endsWith('.gpx')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Unsupported file type'));
+    }
+  }
+});
+
+/**
+ * POST /media/upload — Upload files to media library (multi-file, max 10)
+ */
+router.post('/media/upload', adminAuth('content_editor'), (req, res) => {
+  mediaUpload.array('files', 10)(req, res, async (err) => {
+    if (err) {
+      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 10MB)' : err.message;
+      return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
+    }
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_FILES', message: 'No files uploaded' } });
+    }
+
+    try {
+      const destinationId = parseInt(req.body.destination_id || req.headers['x-destination-id']);
+      const category = req.body.category || 'other';
+      const results = [];
+
+      for (const file of req.files) {
+        const isImage = file.mimetype.startsWith('image/');
+        let width = null, height = null;
+
+        // Try to get image dimensions (basic, no sharp dependency)
+        if (isImage && file.mimetype === 'image/png') {
+          try {
+            const buf = fs.readFileSync(file.path);
+            width = buf.readUInt32BE(16);
+            height = buf.readUInt32BE(20);
+          } catch { /* ignore */ }
+        }
+
+        await mysqlSequelize.query(
+          `INSERT INTO media (destination_id, filename, original_name, mime_type, size_bytes, width, height, category, uploaded_by)
+           VALUES (:destId, :filename, :originalName, :mimeType, :sizeBytes, :width, :height, :category, :uploadedBy)`,
+          {
+            replacements: {
+              destId: destinationId,
+              filename: file.filename,
+              originalName: file.originalname,
+              mimeType: file.mimetype,
+              sizeBytes: file.size,
+              width,
+              height,
+              category,
+              uploadedBy: req.adminUser?.id || null
+            },
+            type: QueryTypes.INSERT
+          }
+        );
+
+        const [mediaItem] = await mysqlSequelize.query(
+          'SELECT * FROM media WHERE filename = :filename ORDER BY id DESC LIMIT 1',
+          { replacements: { filename: file.filename }, type: QueryTypes.SELECT }
+        );
+
+        results.push({
+          ...mediaItem,
+          url: `/media-files/${destinationId}/${file.filename}`
+        });
+      }
+
+      res.status(201).json({ success: true, data: { files: results } });
+    } catch (error) {
+      logger.error('[AdminPortal] Media upload error:', error);
+      res.status(500).json({ success: false, error: { code: 'MEDIA_UPLOAD_ERROR', message: error.message } });
+    }
+  });
+});
+
+/**
+ * GET /media — List media files per destination (filterable by category)
+ */
+router.get('/media', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destinationId = resolveDestinationId(req.query.destinationId || req.query.destination || req.headers['x-destination-id']);
+    const category = req.query.category;
+    const search = req.query.search;
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const offset = (page - 1) * limit;
+
+    let where = 'WHERE m.destination_id = :destId';
+    const replacements = { destId: destinationId, limit, offset };
+
+    if (category && category !== 'all') {
+      where += ' AND m.category = :category';
+      replacements.category = category;
+    }
+    if (search) {
+      where += ' AND (m.original_name LIKE :search OR m.alt_text LIKE :search)';
+      replacements.search = `%${search}%`;
+    }
+
+    const [countResult] = await mysqlSequelize.query(
+      `SELECT COUNT(*) AS total FROM media m ${where}`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const items = await mysqlSequelize.query(
+      `SELECT m.* FROM media m ${where} ORDER BY m.created_at DESC LIMIT :limit OFFSET :offset`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    // Add URL to each item
+    const filesWithUrl = items.map(item => ({
+      ...item,
+      url: `/media-files/${item.destination_id}/${item.filename}`
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        files: filesWithUrl,
+        pagination: { page, limit, total: countResult.total, totalPages: Math.ceil(countResult.total / limit) }
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Media list error:', error);
+    res.status(500).json({ success: false, error: { code: 'MEDIA_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /media/:id — Update media metadata (alt_text, category)
+ */
+router.put('/media/:id', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const mediaId = parseInt(req.params.id);
+    const [existing] = await mysqlSequelize.query('SELECT * FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.SELECT });
+    if (!existing) {
+      return res.status(404).json({ success: false, error: { code: 'MEDIA_NOT_FOUND', message: 'Media item not found' } });
+    }
+
+    const sets = [];
+    const replacements = { id: mediaId };
+    if (req.body.alt_text !== undefined) { sets.push('alt_text = :altText'); replacements.altText = req.body.alt_text; }
+    if (req.body.category !== undefined) { sets.push('category = :category'); replacements.category = req.body.category; }
+
+    if (sets.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_CHANGES', message: 'No fields to update' } });
+    }
+
+    await mysqlSequelize.query(`UPDATE media SET ${sets.join(', ')} WHERE id = :id`, { replacements, type: QueryTypes.UPDATE });
+    const [updated] = await mysqlSequelize.query('SELECT * FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.SELECT });
+    updated.url = `/media-files/${updated.destination_id}/${updated.filename}`;
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    logger.error('[AdminPortal] Media update error:', error);
+    res.status(500).json({ success: false, error: { code: 'MEDIA_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /media/:id — Delete media file + DB record
+ */
+router.delete('/media/:id', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const mediaId = parseInt(req.params.id);
+    const [existing] = await mysqlSequelize.query('SELECT * FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.SELECT });
+    if (!existing) {
+      return res.status(404).json({ success: false, error: { code: 'MEDIA_NOT_FOUND', message: 'Media item not found' } });
+    }
+
+    // Delete physical file
+    const filePath = path.join(MEDIA_DIR, String(existing.destination_id), existing.filename);
+    try { fs.unlinkSync(filePath); } catch { /* file may already be gone */ }
+
+    await mysqlSequelize.query('DELETE FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.DELETE });
+
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'media_deleted', entity_type: 'media', entity_id: mediaId,
+          admin_email: req.adminUser.email, changes: { filename: existing.original_name, category: existing.category },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    res.json({ success: true, data: { message: 'Media deleted', id: mediaId } });
+  } catch (error) {
+    logger.error('[AdminPortal] Media delete error:', error);
+    res.status(500).json({ success: false, error: { code: 'MEDIA_DELETE_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// PAGE DUPLICATE (Wave 3 — W3.1) — 1 endpoint
+// ============================================================
+
+/**
+ * POST /pages/:id/duplicate — Duplicate a page (blocks + data + SEO, slug=slug-kopie, status=draft)
+ */
+router.post('/pages/:id/duplicate', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const pageId = parseInt(req.params.id);
+    const [source] = await mysqlSequelize.query('SELECT * FROM pages WHERE id = :id', { replacements: { id: pageId }, type: QueryTypes.SELECT });
+    if (!source) {
+      return res.status(404).json({ success: false, error: { code: 'PAGE_NOT_FOUND', message: 'Source page not found' } });
+    }
+
+    // Generate unique slug
+    let newSlug = `${source.slug}-kopie`;
+    let slugCounter = 1;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const [dup] = await mysqlSequelize.query(
+        'SELECT id FROM pages WHERE destination_id = :destId AND slug = :slug',
+        { replacements: { destId: source.destination_id, slug: newSlug }, type: QueryTypes.SELECT }
+      );
+      if (!dup) break;
+      slugCounter++;
+      newSlug = `${source.slug}-kopie-${slugCounter}`;
+    }
+
+    // Get max sort_order
+    const [maxSort] = await mysqlSequelize.query(
+      'SELECT COALESCE(MAX(sort_order), -1) AS max_sort FROM pages WHERE destination_id = :destId',
+      { replacements: { destId: source.destination_id }, type: QueryTypes.SELECT }
+    );
+
+    const layoutStr = typeof source.layout === 'string' ? source.layout : JSON.stringify(source.layout || { blocks: [] });
+
+    await mysqlSequelize.query(
+      `INSERT INTO pages (destination_id, slug, title_nl, title_en, title_de, title_es,
+       seo_title_nl, seo_title_en, seo_title_de, seo_title_es,
+       seo_description_nl, seo_description_en, seo_description_de, seo_description_es,
+       og_image_url, og_image_path, parent_id, layout, status, sort_order)
+       VALUES (:destId, :slug, :titleNl, :titleEn, :titleDe, :titleEs,
+       :seoTitleNl, :seoTitleEn, :seoTitleDe, :seoTitleEs,
+       :seoDescNl, :seoDescEn, :seoDescDe, :seoDescEs,
+       :ogImageUrl, :ogImagePath, :parentId, :layout, 'draft', :sortOrder)`,
+      {
+        replacements: {
+          destId: source.destination_id,
+          slug: newSlug,
+          titleNl: source.title_nl ? `${source.title_nl} (kopie)` : null,
+          titleEn: `${source.title_en} (copy)`,
+          titleDe: source.title_de ? `${source.title_de} (Kopie)` : null,
+          titleEs: source.title_es ? `${source.title_es} (copia)` : null,
+          seoTitleNl: source.seo_title_nl || null,
+          seoTitleEn: source.seo_title_en || null,
+          seoTitleDe: source.seo_title_de || null,
+          seoTitleEs: source.seo_title_es || null,
+          seoDescNl: source.seo_description_nl || null,
+          seoDescEn: source.seo_description_en || null,
+          seoDescDe: source.seo_description_de || null,
+          seoDescEs: source.seo_description_es || null,
+          ogImageUrl: source.og_image_url || null,
+          ogImagePath: source.og_image_path || null,
+          parentId: source.parent_id || null,
+          layout: layoutStr,
+          sortOrder: (maxSort?.max_sort ?? -1) + 1
+        },
+        type: QueryTypes.INSERT
+      }
+    );
+
+    const [newPage] = await mysqlSequelize.query(
+      'SELECT * FROM pages WHERE destination_id = :destId AND slug = :slug',
+      { replacements: { destId: source.destination_id, slug: newSlug }, type: QueryTypes.SELECT }
+    );
+
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'page_duplicated', entity_type: 'page', entity_id: newPage?.id,
+          admin_email: req.adminUser.email, changes: { source_id: pageId, source_slug: source.slug, new_slug: newSlug },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    let layout = { blocks: [] };
+    try { layout = typeof newPage.layout === 'string' ? JSON.parse(newPage.layout) : (newPage.layout || { blocks: [] }); } catch { /* empty */ }
+
+    res.status(201).json({ success: true, data: { ...newPage, layout } });
+  } catch (error) {
+    logger.error('[AdminPortal] Page duplicate error:', error);
+    res.status(500).json({ success: false, error: { code: 'PAGE_DUPLICATE_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// PAGE REVISIONS (Wave 3 — W3.2) — 3 endpoints
+// ============================================================
+
+/**
+ * GET /pages/:id/revisions — List revisions for a page (newest first, max 20)
+ */
+router.get('/pages/:id/revisions', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const pageId = parseInt(req.params.id);
+    const [page] = await mysqlSequelize.query('SELECT id FROM pages WHERE id = :id', { replacements: { id: pageId }, type: QueryTypes.SELECT });
+    if (!page) {
+      return res.status(404).json({ success: false, error: { code: 'PAGE_NOT_FOUND', message: 'Page not found' } });
+    }
+
+    const revisions = await mysqlSequelize.query(
+      `SELECT r.id, r.page_id, r.title_nl, r.changed_by, r.change_summary, r.created_at,
+              a.email AS changed_by_email
+       FROM page_revisions r
+       LEFT JOIN admin_users a ON a.id = r.changed_by
+       WHERE r.page_id = :pageId
+       ORDER BY r.created_at DESC
+       LIMIT 20`,
+      { replacements: { pageId }, type: QueryTypes.SELECT }
+    );
+
+    res.json({ success: true, data: { revisions } });
+  } catch (error) {
+    logger.error('[AdminPortal] Page revisions list error:', error);
+    res.status(500).json({ success: false, error: { code: 'REVISIONS_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /pages/:id/revisions/:revId — Get a specific revision with full layout
+ */
+router.get('/pages/:id/revisions/:revId', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const [revision] = await mysqlSequelize.query(
+      `SELECT r.*, a.email AS changed_by_email
+       FROM page_revisions r
+       LEFT JOIN admin_users a ON a.id = r.changed_by
+       WHERE r.id = :revId AND r.page_id = :pageId`,
+      { replacements: { revId: parseInt(req.params.revId), pageId: parseInt(req.params.id) }, type: QueryTypes.SELECT }
+    );
+
+    if (!revision) {
+      return res.status(404).json({ success: false, error: { code: 'REVISION_NOT_FOUND', message: 'Revision not found' } });
+    }
+
+    let layout = { blocks: [] };
+    try { layout = typeof revision.layout === 'string' ? JSON.parse(revision.layout) : (revision.layout || { blocks: [] }); } catch { /* empty */ }
+
+    res.json({ success: true, data: { ...revision, layout } });
+  } catch (error) {
+    logger.error('[AdminPortal] Revision detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'REVISION_DETAIL_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /pages/:id/revisions/:revId/restore — Restore a previous revision
+ */
+router.post('/pages/:id/revisions/:revId/restore', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const pageId = parseInt(req.params.id);
+    const revId = parseInt(req.params.revId);
+
+    const [revision] = await mysqlSequelize.query(
+      'SELECT * FROM page_revisions WHERE id = :revId AND page_id = :pageId',
+      { replacements: { revId, pageId }, type: QueryTypes.SELECT }
+    );
+    if (!revision) {
+      return res.status(404).json({ success: false, error: { code: 'REVISION_NOT_FOUND', message: 'Revision not found' } });
+    }
+
+    // Snapshot current state before restoring
+    const [currentPage] = await mysqlSequelize.query('SELECT * FROM pages WHERE id = :id', { replacements: { id: pageId }, type: QueryTypes.SELECT });
+    if (currentPage) {
+      const currentLayout = typeof currentPage.layout === 'string' ? currentPage.layout : JSON.stringify(currentPage.layout || { blocks: [] });
+      await mysqlSequelize.query(
+        `INSERT INTO page_revisions (page_id, layout, title_nl, changed_by, change_summary)
+         VALUES (:pageId, :layout, :titleNl, :changedBy, :summary)`,
+        {
+          replacements: {
+            pageId,
+            layout: currentLayout,
+            titleNl: currentPage.title_nl,
+            changedBy: req.adminUser?.id || null,
+            summary: `Auto-snapshot before restore from revision #${revId}`
+          },
+          type: QueryTypes.INSERT
+        }
+      );
+
+      // Prune old revisions (keep max 20)
+      await mysqlSequelize.query(
+        `DELETE FROM page_revisions WHERE page_id = :pageId AND id NOT IN (
+           SELECT id FROM (SELECT id FROM page_revisions WHERE page_id = :pageId ORDER BY created_at DESC LIMIT 20) AS keep
+         )`,
+        { replacements: { pageId }, type: QueryTypes.DELETE }
+      );
+    }
+
+    // Restore the revision to the current page
+    const revLayout = typeof revision.layout === 'string' ? revision.layout : JSON.stringify(revision.layout);
+    await mysqlSequelize.query(
+      `UPDATE pages SET layout = :layout, title_nl = COALESCE(:titleNl, title_nl), updated_at = NOW() WHERE id = :id`,
+      { replacements: { layout: revLayout, titleNl: revision.title_nl, id: pageId }, type: QueryTypes.UPDATE }
+    );
+
+    const [restored] = await mysqlSequelize.query('SELECT * FROM pages WHERE id = :id', { replacements: { id: pageId }, type: QueryTypes.SELECT });
+    let layout = { blocks: [] };
+    try { layout = typeof restored.layout === 'string' ? JSON.parse(restored.layout) : (restored.layout || { blocks: [] }); } catch { /* empty */ }
+
+    // Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'page_revision_restored', entity_type: 'page', entity_id: pageId,
+          admin_email: req.adminUser.email, changes: { revision_id: revId, change_summary: revision.change_summary },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    res.json({ success: true, data: { ...restored, layout } });
+  } catch (error) {
+    logger.error('[AdminPortal] Revision restore error:', error);
+    res.status(500).json({ success: false, error: { code: 'REVISION_RESTORE_ERROR', message: error.message } });
   }
 });
 

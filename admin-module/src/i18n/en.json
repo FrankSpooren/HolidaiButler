@@ -18,7 +18,8 @@
     "intermediary": "Intermediary",
     "branding": "Branding",
     "pages": "Pages",
-    "navigation": "Navigation"
+    "navigation": "Navigation",
+    "media": "Media Library"
   },
   "auth": {
     "login": "Log in",
