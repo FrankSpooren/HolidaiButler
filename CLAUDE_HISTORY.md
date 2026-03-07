@@ -2999,4 +2999,116 @@ JSON textarea vervangen door dedicated visuele form editors per block type. Admi
 
 ---
 
+## Wave 2+3: Professionele Features + Excellence (07-03-2026)
+
+**CLAUDE.md**: v3.75.0 → v3.77.0 | **MS**: v7.41 → v7.43 | **adminPortal.js**: v3.25.0 | **Endpoints**: 149 → 157
+
+### Samenvatting
+
+Wave 2 implementeert 8 professionele features en Wave 3 voegt 3 excellence features toe. Samen vormen ze de volwassenheidslaag bovenop de Wave 1 visuele block editor.
+
+**Wave 2 Features**:
+1. Pagina-hiërarchie (parent_id + tree-view UI)
+2. Media Library (4 CRUD endpoints + MediaPage)
+3. 8 Page Templates (PageTemplateDialog)
+4. Favicon + Navicon upload
+5. OG Image upload
+6. 5 Button style varianten (15 CSS vars)
+7. Footer config (data-driven kolommen/copyright/social/newsletter)
+8. Block-level styling (BlockStyleEditor + hb-websites wrapper)
+
+**Wave 3 Features**:
+1. Brand Visuals (upload 3-5 hero images + BrandVisualPicker in HeroEditor)
+2. Revisie-geschiedenis UI (PageRevisionsDialog, auto-snapshot, max 20, restore)
+3. GDPR Cookie Consent Banner (CookieBanner.tsx, 3 niveaus, 5 talen, tenant-aware)
+
+### Database Migraties
+
+```sql
+ALTER TABLE pages ADD COLUMN parent_id INT DEFAULT NULL;
+ALTER TABLE pages ADD FOREIGN KEY (parent_id) REFERENCES pages(id) ON DELETE SET NULL;
+ALTER TABLE pages ADD COLUMN og_image_path VARCHAR(500) DEFAULT NULL;
+
+CREATE TABLE media (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  destination_id INT NOT NULL,
+  filename VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255),
+  mime_type VARCHAR(100),
+  size_bytes INT,
+  width INT, height INT,
+  category ENUM('branding','pages','pois','video','documents','other') DEFAULT 'other',
+  alt_text VARCHAR(500),
+  uploaded_by INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (destination_id) REFERENCES destinations(id),
+  INDEX idx_dest_cat (destination_id, category)
+);
+
+CREATE TABLE page_revisions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  page_id INT NOT NULL,
+  layout JSON NOT NULL,
+  title_nl VARCHAR(255),
+  changed_by INT,
+  change_summary VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE,
+  INDEX idx_page_date (page_id, created_at DESC)
+);
+```
+
+### Nieuwe Bestanden
+
+| Bestand | Beschrijving |
+|---------|--------------|
+| `admin-module/src/data/pageTemplates.js` | 8 page template definities (Home, About, Contact, Explore, Events, Restaurant Guide, Blank, Landing) |
+| `admin-module/src/components/PageTemplateDialog.jsx` | MUI Dialog met 8 visuele template kaarten |
+| `admin-module/src/components/blocks/editors/BlockStyleEditor.jsx` | Shared component: backgroundColor, backgroundImage, borderColor, paddingY, fullWidth |
+| `admin-module/src/pages/MediaPage.jsx` | Media Library: grid thumbnails, upload zone, filter (category/mime), detail dialog |
+| `admin-module/src/components/MediaPickerDialog.jsx` | Herbruikbaar in alle ImageUploadField instances |
+| `admin-module/src/components/PageRevisionsDialog.jsx` | Revisie-lijst, restore knop, formatDate |
+| `hb-websites/src/components/modules/CookieBanner.tsx` | GDPR cookie consent: 3 niveaus, 5 talen (EN/NL/DE/ES/FR), tenant-aware kleuren |
+
+### Gewijzigde Bestanden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/PagesPage.jsx` | +parent/child tree-view (expand/collapse, SubdirectoryArrowRight, child count badge), +HistoryIcon → PageRevisionsDialog, +PageTemplateDialog bij create, +OG image upload |
+| `admin-module/src/pages/BrandingPage.jsx` | +Brand Visuals sectie (upload 3-5 images, delete), +Button Styles sectie (5 varianten, 15 CSS vars), +Footer Config sectie (kolommen, copyright, newsletter), +Favicon/Navicon upload, +Privacy Policy URL |
+| `admin-module/src/components/blocks/editors/HeroEditor.jsx` | +BrandVisualPicker component (fetch branding, clickable thumbnails 120x60) |
+| `admin-module/src/components/ImageUploadField.jsx` | +"Kies uit Media Library" knop |
+| `admin-module/src/App.jsx` | +MediaPage route (/media) |
+| `admin-module/src/components/Sidebar.jsx` | +Media Library nav item |
+| `admin-module/src/i18n/en.json` | +"media": "Media Library" |
+| `admin-module/src/i18n/nl.json` | +"media": "Mediabibliotheek" |
+| `admin-module/src/i18n/de.json` | +"media": "Medienbibliothek" |
+| `admin-module/src/i18n/es.json` | +"media": "Mediateca" |
+| `platform-core/src/routes/adminPortal.js` | +8 endpoints: media CRUD (upload/list/detail/delete), page duplicate, page revisions (list/restore), parent_id in pages CRUD |
+| `hb-websites/src/types/blocks.ts` | +BlockStyle interface, +style field in BlockConfig |
+| `hb-websites/src/app/[[...slug]]/page.tsx` | +getBlockWrapperStyle(), block style wrapper div (bg/border/padding/fullWidth) |
+| `hb-websites/src/app/layout.tsx` | +CookieBanner component na ChatbotWidget |
+| `hb-websites/src/blocks/SocialFeed.tsx` | +hasConsent('marketing') check, +hb-consent-update event listener |
+| `hb-websites/src/components/layout/Footer.tsx` | Data-driven footer config (columns/copyright/showSocial uit branding), removed unused showNewsletter |
+| `hb-websites/src/lib/theme.ts` | +button style CSS vars (15 properties), +footer config vars |
+| `hb-websites/src/types/tenant.ts` | +ButtonStyleConfig, +FooterConfig, +privacyPolicyUrl, +brandVisuals |
+
+### Bugfixes tijdens deployment
+
+1. **CookieBanner setState-in-effect**: React 19 lint rule rejects `setVisible()` inside `useEffect`. Fix: lazy `useState` initialization `useState(() => !getCookieConsent())`
+2. **Footer unused variable**: `showNewsletter` assigned but never used. Fix: removed declaration.
+3. **SCP bracket escaping**: `[[...slug]]` in remote path needs single-quoted wrapping.
+
+### Deployment
+
+- SQL migration via SCP → mysql -h jotx.your-database.de (remote DB host, NOT localhost)
+- Media storage directory: `/var/www/api.holidaibutler.com/storage/media/`
+- platform-core: SCP adminPortal.js → Hetzner + PM2 restart
+- admin-module: SCP dist/* → /var/www/admin.holidaibutler.com/
+- hb-websites: SCP individual files (no git remote) → npm build + PM2 restart
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

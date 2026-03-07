@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { fetchTenantConfig, fetchPage } from '@/lib/api';
 import { generatePageMetadata } from '@/lib/seo';
 import { getBlock } from '@/blocks/index';
+import BlockRenderer from '@/components/ui/BlockRenderer';
 import type { BlockConfig, BlockStyle } from '@/types/blocks';
 import type { FeatureFlags } from '@/types/tenant';
 
@@ -99,13 +100,19 @@ export default async function Page({ params }: PageProps) {
 
         if (wrapperStyle || wrapperClass) {
           return (
-            <div key={block.id} className={wrapperClass || undefined} style={wrapperStyle}>
-              <BlockComponent {...block.props} />
-            </div>
+            <BlockRenderer key={block.id} blockType={block.type}>
+              <div className={wrapperClass || undefined} style={wrapperStyle}>
+                <BlockComponent {...block.props} />
+              </div>
+            </BlockRenderer>
           );
         }
 
-        return <BlockComponent key={block.id} {...block.props} />;
+        return (
+          <BlockRenderer key={block.id} blockType={block.type}>
+            <BlockComponent {...block.props} />
+          </BlockRenderer>
+        );
       })}
     </>
   );
