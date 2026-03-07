@@ -53,6 +53,12 @@ function resolveNavItems(tenant: TenantConfig, locale: string): NavItem[] {
     }));
 }
 
+/** Resolve asset URL: if path is already absolute (http/https), use directly; else prefix with HB_API_URL */
+function resolveAssetUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${process.env.HB_API_URL ?? ''}${path}`;
+}
+
 export default function Header({ tenant, locale }: HeaderProps) {
   const payoff = tenant.branding.payoff?.[locale] ?? tenant.branding.payoff?.en ?? '';
   const navItems = resolveNavItems(tenant, locale).filter(
@@ -68,7 +74,7 @@ export default function Header({ tenant, locale }: HeaderProps) {
             {tenant.branding.logo ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
-                src={`${process.env.HB_API_URL ?? ''}${tenant.branding.logo}`}
+                src={resolveAssetUrl(tenant.branding.logo)}
                 alt={tenant.displayName}
                 className="h-8 w-auto"
               />

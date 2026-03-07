@@ -13,6 +13,12 @@ export const metadata: Metadata = {
   description: 'Your AI Travel Companion',
 };
 
+/** Resolve asset URL: if path is already absolute (http/https), use directly; else prefix with HB_API_URL */
+function resolveAssetUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${process.env.HB_API_URL ?? ''}${path}`;
+}
+
 export default async function RootLayout({
   children,
 }: {
@@ -42,10 +48,10 @@ export default async function RootLayout({
           <link key={url} rel="stylesheet" href={url!} />
         ))}
         {tenant?.branding?.favicon && (
-          <link rel="icon" href={`${process.env.HB_API_URL ?? ''}${tenant.branding.favicon}`} />
+          <link rel="icon" href={resolveAssetUrl(tenant.branding.favicon)} />
         )}
         {tenant?.branding?.navicon && (
-          <link rel="apple-touch-icon" href={`${process.env.HB_API_URL ?? ''}${tenant.branding.navicon}`} />
+          <link rel="apple-touch-icon" href={resolveAssetUrl(tenant.branding.navicon)} />
         )}
         {tenant?.branding?.colors?.primary && (
           <meta name="theme-color" content={tenant.branding.colors.primary} />
