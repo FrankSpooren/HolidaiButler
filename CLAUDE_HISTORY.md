@@ -48,6 +48,7 @@
 37. [Repair Command v6.0: Browser-Verified Fixes](#repair-command-v60-browser-verified-fixes-07-08-03-2026)
 38. [Command v7.0: Fase V Voltooiing](#command-v70-fase-v-voltooiing-08-03-2026)
 39. [Command v7.1: Frank's Feedback Fixes](#command-v71-franks-feedback-fixes-08-03-2026)
+40. [Command v8.0: Fase V Final — Customer Portal Kwaliteit](#command-v80-fase-v-final--customer-portal-kwaliteit-08-03-2026)
 40. [Volledige Changelog](#volledige-changelog)
 
 ---
@@ -3654,6 +3655,81 @@ Frank testte de dev-omgeving na Command v7.0 en vond dat 95% van de wijzigingen 
 ### Documentatie
 
 CLAUDE.md v3.88.0 → v3.89.0. MS v7.50 → v7.51. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
+## Command v8.0: Fase V Final — Customer Portal Kwaliteit (08-03-2026)
+
+> **Doel**: hb-websites naar minimaal hetzelfde niveau als de Customer Portal (holidaibutler.com)
+> **Commits**: 3c325cc (code), 6d425fc (Testimonials fix)
+> **CLAUDE.md**: v3.89.0 → v3.90.0 | **MS**: v7.51 → v7.52
+
+### Overzicht
+
+| Stap | Onderwerp | Actie |
+|------|-----------|-------|
+| 1 | Chatbot SSE Proxy | NIEUW: Next.js API route proxy |
+| 2 | POI Categorie Filtering | FIX: categories (meervoud) support |
+| 3 | POI Detail Pagina | MAJOR rebuild: Customer Portal kwaliteit |
+| 4 | Reviews Volledige Weergave | FIX: veldnamen alignment |
+| 5 | Button Color Preview | FIX: deriveButtonDefaults() fallbacks |
+| 6 | Quick Action Buttons | DEPLOY: code correct, deployment nodig |
+| 7 | Design Templates | DEPLOY: code correct, deployment nodig |
+| 8 | Map Gekleurde Markers | DEPLOY: code correct, deployment nodig |
+
+### STAP 1 — Chatbot SSE Proxy (ERR_CONNECTION_REFUSED fix)
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/app/api/holibot/chat/stream/route.ts` | **NIEUW**. POST handler die request forwardt naar `localhost:3001/api/v1/holibot/chat/stream`. Stuurt `X-Destination-ID` header mee. Streamt SSE response terug via `new Response(res.body)`. |
+| `hb-websites/src/components/modules/ChatbotWidget.tsx` | Verwijderd: `apiUrl` prop. URL gewijzigd van `${apiUrl}/api/v1/holibot/chat/stream` naar `/api/holibot/chat/stream`. |
+| `hb-websites/src/app/layout.tsx` | Verwijderd: `apiUrl={...}` prop van `<ChatbotWidget>`. |
+
+### STAP 2 — POI Categorie Filtering
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/publicPOI.js` | `categories` (meervoud) support: `Op.in` met comma-split. `min_reviews` filter: `review_count >= parseInt(min_reviews)`. |
+| `hb-websites/src/lib/api.ts` | `fetchPois()` uitgebreid: `min_rating`, `min_reviews`, `sort` params. |
+| `hb-websites/src/blocks/PoiGrid.tsx` | Kwaliteitsfilters: `min_rating: 3.5, min_reviews: 1, sort: 'rating:desc'`. |
+
+### STAP 3 — POI Detail Pagina (MAJOR rebuild)
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/components/poi/OpeningHours.tsx` | **NIEUW**. Ondersteunt Calpe object `{monday: [{open, close}]}` EN Texel array `[{day, hours}]` formaat. Highlight vandaag. Dutch day name mapping. |
+| `hb-websites/src/components/poi/FeatureList.tsx` | **NIEUW**. Generiek badge-list component voor amenities en accessibility_features. |
+| `hb-websites/src/app/poi/[id]/page.tsx` | **HERSCHREVEN**. 2-kolom layout (content + sidebar). Toevoegingen: highlights, enriched_detail_description, amenities, accessibility, service options, parking, reviews distribution chart, contact sidebar (phone/email/website/Google Maps), opening hours in sidebar. |
+
+### STAP 4 — Reviews Veldnamen Fix
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/types/poi.ts` | POI interface: 19 → 42 velden (matching `formatPOIForPublic()` output). Review interface: `author_name`→`user_name`, `text`→`review_text`, `publish_date`→`visit_date`. Nieuw: `sentiment`, `helpful_count`, `travel_party_type`, `created_at`. |
+| `hb-websites/src/app/poi/[id]/page.tsx` | Reviews sectie: correct veldnamen (`review.user_name`, `review.review_text`, `review.visit_date`). "Showing 5 of X reviews" truncatie. |
+| `hb-websites/src/blocks/Testimonials.tsx` | Fix: `r.text`→`r.review_text`, `review.author_name`→`review.user_name`, `review.publish_date`→`review.visit_date`. |
+
+### STAP 5 — Button Color Preview Fix
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/BrandingPage.jsx` | `deriveButtonDefaults()`: `bg: primary \|\| ''` (lege string → WIT) → `const p = primary \|\| '#3b82f6'` (fallback blauw). Idem secondary: `'#6b7280'` (fallback grijs). |
+
+### STAP 6-8 — Deployment
+
+Quick Action Buttons (STAP 6), Design Templates (STAP 7), Map Gekleurde Markers (STAP 8): code was correct maar niet gedeployed naar Hetzner. Opgelost door volledige deployment van hb-websites (build + PM2 restart) en admin-module (dist naar 3 environments).
+
+### Build Fix
+
+| Issue | Fix |
+|-------|-----|
+| `Testimonials.tsx`: oude Review veldnamen na types update | `r.text`→`r.review_text`, `review.author_name`→`review.user_name`, `review.publish_date`→`review.visit_date` |
+
+### Documentatie
+
+CLAUDE.md v3.89.0 → v3.90.0. MS v7.51 → v7.52. CLAUDE_HISTORY.md bijgewerkt.
 
 **Kosten**: EUR 0
 
