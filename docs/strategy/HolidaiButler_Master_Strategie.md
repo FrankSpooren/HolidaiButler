@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 8 maart 2026
-**Versie**: 7.50
+**Versie**: 7.51
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v7.0 COMPLEET). CLAUDE.md v3.88.0. MS v7.50.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v7.1 COMPLEET). CLAUDE.md v3.89.0. MS v7.51.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.88.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.89.0) in repo root + Hetzner
 
 ---
 
@@ -1406,6 +1406,8 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 
 - **Command v7.0 — Fase V Voltooiing (8 stappen)** ✅ COMPLEET (08-03-2026): **STAP 1A**: Dark mode leesbaarheid — 9 bestanden hardcoded kleuren (`#fafafa`, `#e2e8f0`, `#1e293b`, `#fff`) → MUI theme tokens (`action.hover`, `divider`, `text.primary`, `background.paper`). Bestanden: Header.jsx, MediaPage.jsx, PagesPage.jsx, NavigationPage.jsx, BlockStyleEditor.jsx, BlockEditorCard.jsx, LoginPage.jsx. **STAP 1B**: BrandingPage 12 flat Cards → 9 MUI Accordions (default expanded: Colors + Logo & Brand). SafeImage component (broken image handler met error state). Footer wireframe preview (dashed-border boxes). Global footer info Alert. **STAP 1C**: Media Library bulk select — Checkbox overlay per item, Select All/Deselect All toggle, bulk delete met bevestigingsdialog (`Promise.allSettled`). **STAP 2B**: Chatbot 4 quick actions in 4 talen (NL/EN/DE/ES): Programma samenstellen, Zoeken op Rubriek, Routebeschrijving, Tip van de Dag. **STAP 2C**: Hero block crash fix — null-guard op image prop (`hasImage` check), `onError` handler op img tags. **STAP 2D+2E**: POI category filters — DB page blocks gecorrigeerd: Calpe explore `["restaurant","museum"]` → correcte categorieën (`Food & Drinks`, `Culture & History`, etc.), Texel explore geen filter → Nederlandse categorieën (`Eten & Drinken`, `Natuur`, etc.). Restaurants pagina's waren al correct. **STAP 3A**: 6 design templates (Modern/Klassiek/Elegant/Kleurrijk/Zakelijk/Minimaal) — frontend-only presets die BrandingPage formulier vullen. Template selector dialog met kleur-preview cards. `brandingTemplates.js` nieuw bestand. **STAP 3B**: 5 geavanceerde stijlopties (spacingScale, shadowIntensity, imageStyle, headingTextTransform) + 4 CSS custom properties (`--hb-spacing-scale`, `--hb-shadow`, `--hb-image-radius`, `--hb-heading-transform`) in theme.ts. **STAP 4**: SEO hardening — `sitemap.ts` (dynamisch per tenant, pagina's + top 100 POIs, ISR 1h), `robots.ts` (allow `/`, disallow `/api/`, `/_next/`, `/preview/`), `seo.ts` uitgebreid met 5 JSON-LD schemas (WebSite, BreadcrumbList, FAQPage, Event, LocalBusiness) + canonical URL + hreflang alternates + Twitter Cards (`summary_large_image`). `page.tsx` injecteert JSON-LD scripts. **STAP 6**: Playwright E2E — `playwright.config.ts` (3 projecten: calpe-desktop, texel-desktop, calpe-mobile) + 15 test bestanden (93 tests): homepage, navigation, explore, restaurants, events, contact, poi-detail, chatbot, seo, responsive, cookie-banner, theme, blocks, performance, accessibility. **STAP 7**: Dashboard uitgebreid met 3 nieuwe cards: WebsiteStatsCard (pagina's/blocks/media), CommerceOverviewCard (transacties/tickets/reserveringen), ChatbotPerformanceCard (sessions/berichten/avg responstijd). 1 nieuw bestand, 3 SEO bestanden, 15 test bestanden, ~16 gewijzigde bestanden. Admin-module build 0 errors.
 
+- **Command v7.1 — Frank's Feedback Fixes (7 stappen)** ✅ COMPLEET (08-03-2026): **STAP 1**: Block i18n resolution — `resolveLocalizedProps()` recursieve utility in `i18n.ts`. Root cause fix Hero crash: TranslatableField slaat i18n-objecten op (`{en:"...",nl:"..."}`), block components verwachtten strings → React crashte op "Objects are not valid as a React child". Nieuwe utility detecteert i18n-objecten (keys subset van supported locales) en resolvet naar locale-specifieke strings. `page.tsx` roept `resolveLocalizedProps(block.props, locale)` aan vóór block rendering. **STAP 2**: Hero height prop — 4 opties (compact/default/tall/fullscreen) met Tailwind mapping. `resolveAssetUrl()` voor images. HeroEditor.jsx SelectField "Height". **STAP 3**: Map gekleurde markers per categorie — `CATEGORY_COLORS` mapping (8 kleur-groepen voor EN Calpe + NL Texel categorieën). `L.divIcon` met gekleurde cirkel (24px, witte border, schaduw). Legenda onder kaart (alleen gebruikte kleuren). `.hb-marker` CSS override. **STAP 4**: Quick action chatbot buttons — CustomEvent patroon `hb:chatbot:open`. `chatbot-actions.ts` (shared QUICK_ACTIONS 4 talen + `openChatbotWithMessage()` dispatcher). `ChatbotButton.tsx` ('use client' wrapper). ChatbotWidget.tsx event listener. Hero.tsx + Cta.tsx: `btn.variant === 'chatbot'` → ChatbotButton rendering. ButtonListField.jsx: 'Chatbot Action' variant + action dropdown. **STAP 5**: Button style defaults — `hexToRgb/rgbToHex/darkenHex/contrastColor/deriveButtonDefaults` helpers in BrandingPage.jsx. Lege button kleuren auto-derived van primary/secondary bij form init. **STAP 6**: Footer i18n — `resolveTitle()` helper in Footer.tsx voor `string | Record<string,string>` backward-compatible. Admin: copyright + column title TextField → TranslatableField. **STAP 7**: Branding uitbreiding — Chatbot Config accordion (naam, welkomstbericht TranslatableField). Header Style accordion (solid/transparent variant, sticky toggle). Header.tsx: transparent/sticky support. layout.tsx: chatbotName doorgeven. 18 bestanden (1 nieuw: ChatbotButton.tsx + 17 gewijzigd). Build 0 errors. Deploy Hetzner + admin 3 omgevingen. Commit 5daab9e.
+
 Technische blauwdruk: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
 
 **Fase VI — UX Revolution + WarreWijzer (6-8 weken):**
@@ -1614,6 +1616,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.51** | **08-03-2026** | **Command v7.1: Frank's Feedback Fixes COMPLEET (7 stappen)**. Block i18n resolution (resolveLocalizedProps, Hero crash fix). Hero height + image URL. Map gekleurde markers (8 categorieën, L.divIcon, legenda). Quick action chatbot buttons (CustomEvent hb:chatbot:open, ChatbotButton.tsx). Button style defaults (auto-derive). Footer i18n (resolveTitle). Branding chatbot config + header style. 18 bestanden. Commit 5daab9e. CLAUDE.md v3.89.0. |
 | **7.50** | **08-03-2026** | **Command v7.0: Fase V Voltooiing COMPLEET (8 stappen)**. STAP 1A: dark mode 9 bestanden → MUI tokens. STAP 1B: BrandingPage Accordions + SafeImage + footer wireframe. STAP 1C: Media bulk select/delete. STAP 2B: chatbot 4 quick actions (4 talen). STAP 2C: Hero crash fix. STAP 2D+2E: POI category filters DB fix (explore + restaurants). STAP 3A: 6 design templates. STAP 3B: 5 geavanceerde stijlopties + CSS vars. STAP 4: SEO sitemap + robots + JSON-LD + canonical + hreflang + Twitter Cards. STAP 6: Playwright 15 tests (93 specs). STAP 7: Dashboard +3 cards. CLAUDE.md v3.88.0. |
 | **7.49** | **08-03-2026** | **Repair Command v6.0 COMPLEET (3 rondes)**. Ronde 2: favicon/navicon upload endpoint + CSP frame-ancestors. Ronde 3: STORAGE_ROOT extern storage (CI/CD-proof) + Apache API routing fix (Next.js port 3002). 21 media + 2 logos hersteld. CLAUDE.md v3.87.0. |
 | **7.48** | **07-03-2026** | **Repair Command v6.0 Ronde 1: Browser-Verified Fixes**. 6 blokken gediagnosticeerd + 4 fixes: BLOK A express.static media/block-images, BLOK B preview iframe website render, BLOK E logo branding files restored, BLOK F frontend bevestigd. BLOK C = content issue, BLOK D = browser cache. CLAUDE.md v3.86.0. |
@@ -1685,4 +1688,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 8 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v7.0 COMPLEET). Admin Portal: 157 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.88.0. MS v7.50.*
+*Laatst bijgewerkt: 8 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v7.1 COMPLEET). Admin Portal: 157 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.89.0. MS v7.51.*
