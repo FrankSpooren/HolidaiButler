@@ -18,6 +18,7 @@ import { useBrandingDestinations, useUpdateDestinationBranding, useUploadBrandin
 import { translateTexts } from '../api/translationService.js';
 import client from '../api/client.js';
 import { BRANDING_TEMPLATES } from '../utils/brandingTemplates.js';
+import TranslatableField from '../components/blocks/fields/TranslatableField.jsx';
 
 const COLOR_FIELDS = [
   { key: 'primary', label: 'branding.colors.primary' },
@@ -46,6 +47,32 @@ const BUTTON_VARIANTS = [
 ];
 
 const FOOTER_COLUMN_TYPES = ['brand', 'navigation', 'contact', 'social', 'newsletter', 'custom'];
+
+// Color utility helpers for auto-deriving button defaults
+function hexToRgb(hex) {
+  const h = hex?.replace('#', '') || '000000';
+  return { r: parseInt(h.slice(0, 2), 16) || 0, g: parseInt(h.slice(2, 4), 16) || 0, b: parseInt(h.slice(4, 6), 16) || 0 };
+}
+function rgbToHex({ r, g, b }) {
+  return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+}
+function darkenHex(hex, amount = 0.15) {
+  const { r, g, b } = hexToRgb(hex);
+  return rgbToHex({ r: r * (1 - amount), g: g * (1 - amount), b: b * (1 - amount) });
+}
+function contrastColor(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  return (r * 0.299 + g * 0.587 + b * 0.114) > 150 ? '#1a1a1a' : '#ffffff';
+}
+function deriveButtonDefaults(primary, secondary) {
+  return {
+    primary: { bg: primary || '', text: contrastColor(primary || '#3b82f6'), borderRadius: '8px', hoverBg: darkenHex(primary || '#3b82f6') },
+    secondary: { bg: secondary || '', text: contrastColor(secondary || '#6b7280'), borderRadius: '8px', hoverBg: darkenHex(secondary || '#6b7280') },
+    outline: { bg: 'transparent', text: primary || '', borderColor: primary || '', borderRadius: '8px', hoverBg: primary || '' },
+    ghost: { bg: 'transparent', text: primary || '', borderRadius: '8px', hoverBg: '' },
+    link: { text: primary || '', hoverText: darkenHex(primary || '#3b82f6') }
+  };
+}
 
 // Sections that should be expanded by default
 const DEFAULT_EXPANDED = ['colors', 'logo'];
@@ -152,13 +179,12 @@ export default function BrandingPage() {
         },
         favicon: b.favicon || '',
         navicon: b.navicon || '',
-        buttons: b.buttons || {
-          primary: { bg: '', text: '#ffffff', borderRadius: '8px', hoverBg: '' },
-          secondary: { bg: '', text: '#ffffff', borderRadius: '8px', hoverBg: '' },
-          outline: { bg: 'transparent', text: '', borderColor: '', borderRadius: '8px', hoverBg: '' },
-          ghost: { bg: 'transparent', text: '', borderRadius: '8px', hoverBg: '' },
-          link: { text: '', hoverText: '' }
-        },
+        buttons: b.buttons && Object.keys(b.buttons).length > 0
+          ? b.buttons
+          : deriveButtonDefaults(
+              b.colors?.primary || b.primary || '',
+              b.colors?.secondary || b.secondary || ''
+            ),
         footer: b.footer || {
           columns: [
             { type: 'brand', title: '' },
@@ -170,7 +196,16 @@ export default function BrandingPage() {
           showSocial: true
         },
         privacyPolicyUrl: b.privacyPolicyUrl || '',
-        brandVisuals: b.brandVisuals || []
+        brandVisuals: b.brandVisuals || [],
+        chatbotConfig: b.chatbotConfig || {
+          name: b.chatbotName || '',
+          welcomeMessage: { en: '', nl: '', de: '', es: '' },
+          quickActions: []
+        },
+        headerStyle: b.headerStyle || {
+          variant: 'solid',
+          sticky: true
+        }
       });
     }
   }, [activeDest?.id]);
@@ -249,6 +284,14 @@ export default function BrandingPage() {
     } catch (err) {
       setSnack({ open: true, message: err.message, severity: 'error' });
     }
+  };
+
+  const updateChatbotConfig = (key, val) => {
+    setForm(prev => ({ ...prev, chatbotConfig: { ...prev.chatbotConfig, [key]: val } }));
+  };
+
+  const updateHeaderStyle = (key, val) => {
+    setForm(prev => ({ ...prev, headerStyle: { ...prev.headerStyle, [key]: val } }));
   };
 
   const updateButtonVariant = (variant, prop, val) => {
@@ -675,11 +718,10 @@ export default function BrandingPage() {
             </Alert>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth size="small" label="Copyright Text"
+                <TranslatableField
+                  label="Copyright Text"
                   value={form.footer?.copyright || ''}
-                  onChange={e => updateFooter('copyright', e.target.value)}
-                  placeholder={`\u00A9 ${new Date().getFullYear()} Your Brand`}
+                  onChange={val => updateFooter('copyright', val)}
                 />
               </Grid>
               <Grid item xs={12} sm={3}>
@@ -728,12 +770,12 @@ export default function BrandingPage() {
                             {FOOTER_COLUMN_TYPES.map(ft => <MenuItem key={ft} value={ft}>{ft.charAt(0).toUpperCase() + ft.slice(1)}</MenuItem>)}
                           </Select>
                         </FormControl>
-                        <TextField
-                          size="small" fullWidth label="Title"
+                        <TranslatableField
+                          label="Title"
                           value={col.title || ''}
-                          onChange={e => {
+                          onChange={val => {
                             const cols = [...(form.footer?.columns || [])];
-                            cols[i] = { ...cols[i], title: e.target.value };
+                            cols[i] = { ...cols[i], title: val };
                             updateFooter('columns', cols);
                           }}
                         />
@@ -773,6 +815,69 @@ export default function BrandingPage() {
                     </Typography>
                   </Box>
                 </Box>
+              </Grid>
+            </Grid>
+          </BrandingAccordion>
+
+          {/* === CHATBOT CONFIG === */}
+          <BrandingAccordion
+            id="chatbotConfig"
+            title={t('branding.chatbotConfig', 'Chatbot Configuration')}
+            subtitle={t('branding.chatbotConfigSubtitle', 'Customize chatbot name, welcome message and quick actions')}
+          >
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth size="small" label={t('branding.chatbotName', 'Chatbot Name')}
+                  value={form.chatbotConfig?.name || ''}
+                  onChange={e => updateChatbotConfig('name', e.target.value)}
+                  placeholder="HoliBot"
+                  helperText={t('branding.chatbotNameHelper', 'e.g. Tessa, HoliBot, Wijze Warre')}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TranslatableField
+                  label={t('branding.chatbotWelcome', 'Welcome Message')}
+                  value={form.chatbotConfig?.welcomeMessage || { en: '', nl: '', de: '', es: '' }}
+                  onChange={val => updateChatbotConfig('welcomeMessage', val)}
+                  multiline rows={2}
+                />
+              </Grid>
+            </Grid>
+          </BrandingAccordion>
+
+          {/* === HEADER STYLE === */}
+          <BrandingAccordion
+            id="headerStyle"
+            title={t('branding.headerStyle', 'Header Style')}
+            subtitle={t('branding.headerStyleSubtitle', 'Header appearance and behavior')}
+          >
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>{t('branding.headerVariant', 'Header Style')}</InputLabel>
+                  <Select
+                    value={form.headerStyle?.variant || 'solid'}
+                    label={t('branding.headerVariant', 'Header Style')}
+                    onChange={e => updateHeaderStyle('variant', e.target.value)}
+                  >
+                    <MenuItem value="solid">{t('branding.headerSolid', 'Solid (default)')}</MenuItem>
+                    <MenuItem value="transparent">{t('branding.headerTransparent', 'Transparent (on hero)')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>{t('branding.stickyHeader', 'Sticky Header')}</InputLabel>
+                  <Select
+                    value={form.headerStyle?.sticky !== false ? 'yes' : 'no'}
+                    label={t('branding.stickyHeader', 'Sticky Header')}
+                    onChange={e => updateHeaderStyle('sticky', e.target.value === 'yes')}
+                  >
+                    <MenuItem value="yes">{t('common.yes', 'Yes')}</MenuItem>
+                    <MenuItem value="no">{t('common.no', 'No')}</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
             </Grid>
           </BrandingAccordion>

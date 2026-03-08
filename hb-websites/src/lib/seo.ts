@@ -70,8 +70,8 @@ export function generateLocalBusinessJsonLd(tenant: TenantConfig, baseUrl: strin
     name: tenant.displayName,
     url: baseUrl,
     ...(tenant.branding?.logo && { logo: tenant.branding.logo }),
-    ...(tenant.branding?.socialLinks?.instagram && {
-      sameAs: Object.values(tenant.branding.socialLinks).filter(Boolean),
+    ...(tenant.socialLinks?.instagram && {
+      sameAs: Object.values(tenant.socialLinks).filter(Boolean),
     }),
   };
 }

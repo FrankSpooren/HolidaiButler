@@ -37,15 +37,23 @@ export interface BlockConfig {
   featureFlag?: string;
 }
 
+export interface HeroButton {
+  label: string;
+  href?: string;
+  variant?: 'primary' | 'secondary' | 'outline' | 'chatbot';
+  chatbotAction?: string;
+}
+
 export interface HeroProps {
   headline: string;
   description?: string;
   image?: string;
   tagline?: string;
-  buttons?: Array<{ label: string; href: string; variant?: 'primary' | 'secondary' | 'outline' }>;
+  buttons?: HeroButton[];
   backgroundType?: 'image' | 'video' | 'color';
   videoUrl?: string;
   videoPosterImage?: string;
+  height?: 'compact' | 'default' | 'tall' | 'fullscreen';
 }
 
 export interface PoiGridProps {
@@ -88,7 +96,7 @@ export interface CtaProps {
   headline: string;
   description?: string;
   backgroundStyle?: 'primary' | 'accent' | 'gradient';
-  buttons?: Array<{ label: string; href: string; variant?: 'primary' | 'secondary' | 'outline' }>;
+  buttons?: HeroButton[];
 }
 
 export interface GalleryProps {
