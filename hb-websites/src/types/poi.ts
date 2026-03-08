@@ -5,28 +5,56 @@ export interface POI {
   description?: string;
   category: string;
   subcategory?: string;
+  level3_type?: string;
+  city?: string;
+  region?: string;
+  country?: string;
+  address?: string;
+  postal_code?: string;
   rating?: number;
   reviewCount?: number;
   review_count?: number;
+  price_level?: string;
   latitude?: number;
   longitude?: number;
-  address?: string;
   phone?: string;
   website?: string;
+  email?: string;
   tier?: number;
   images?: string[];
   thumbnail_url?: string;
-  opening_hours_json?: string;
+  amenities?: string[];
+  accessibility_features?: string[];
+  opening_hours?: Record<string, Array<{ open: string; close: string }>> | Array<{ day: string; hours: string }> | null;
+  enriched_tile_description?: string;
+  enriched_detail_description?: string;
+  enriched_highlights?: string[];
+  enriched_target_audience?: string;
+  popular_times?: Record<string, number[]> | null;
+  parking?: Record<string, unknown> | string | null;
+  service_options?: Record<string, boolean> | null;
+  reviews_distribution?: Record<string, number> | null;
+  google_placeid?: string;
+  verified?: boolean;
+  featured?: boolean;
+  popularity_score?: number;
+  status?: string;
+  _language?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Review {
   id: number;
   poi_id: number;
-  author_name: string;
+  user_name: string;
+  travel_party_type?: string;
   rating: number;
-  text?: string;
-  publish_date?: string;
+  review_text?: string;
   sentiment?: 'positive' | 'neutral' | 'negative';
+  helpful_count?: number;
+  visit_date?: string;
+  created_at?: string;
 }
 
 export interface Category {

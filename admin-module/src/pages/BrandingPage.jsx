@@ -65,12 +65,14 @@ function contrastColor(hex) {
   return (r * 0.299 + g * 0.587 + b * 0.114) > 150 ? '#1a1a1a' : '#ffffff';
 }
 function deriveButtonDefaults(primary, secondary) {
+  const p = primary || '#3b82f6';
+  const s = secondary || '#6b7280';
   return {
-    primary: { bg: primary || '', text: contrastColor(primary || '#3b82f6'), borderRadius: '8px', hoverBg: darkenHex(primary || '#3b82f6') },
-    secondary: { bg: secondary || '', text: contrastColor(secondary || '#6b7280'), borderRadius: '8px', hoverBg: darkenHex(secondary || '#6b7280') },
-    outline: { bg: 'transparent', text: primary || '', borderColor: primary || '', borderRadius: '8px', hoverBg: primary || '' },
-    ghost: { bg: 'transparent', text: primary || '', borderRadius: '8px', hoverBg: '' },
-    link: { text: primary || '', hoverText: darkenHex(primary || '#3b82f6') }
+    primary: { bg: p, text: contrastColor(p), borderRadius: '8px', hoverBg: darkenHex(p) },
+    secondary: { bg: s, text: contrastColor(s), borderRadius: '8px', hoverBg: darkenHex(s) },
+    outline: { bg: 'transparent', text: p, borderColor: p, borderRadius: '8px', hoverBg: p },
+    ghost: { bg: 'transparent', text: p, borderRadius: '8px', hoverBg: '' },
+    link: { text: p, hoverText: darkenHex(p) }
   };
 }
 
