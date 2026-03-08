@@ -13,6 +13,7 @@ export default function Hero({
   videoPosterImage,
 }: HeroProps) {
   const showVideo = backgroundType === 'video' && videoUrl;
+  const hasImage = typeof image === 'string' && image.trim().length > 0;
 
   return (
     <section className="relative bg-primary text-on-primary overflow-hidden">
@@ -31,12 +32,13 @@ export default function Hero({
                 alt=""
                 className="w-full h-full object-cover opacity-40"
                 loading="eager"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             </div>
           )}
           <div className="absolute inset-0 bg-primary/60" />
         </>
-      ) : image && backgroundType !== 'color' ? (
+      ) : hasImage && backgroundType !== 'color' ? (
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -44,6 +46,7 @@ export default function Hero({
             alt=""
             className="w-full h-full object-cover opacity-30"
             loading="eager"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
           <div className="absolute inset-0 bg-primary/60" />
         </div>
