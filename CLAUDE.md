@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.89.0
+> **Versie**: 3.90.0
 > **Laatst bijgewerkt**: 8 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -366,6 +366,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **Repair Cmd v6.0** | **Browser-Verified Fixes (3 rondes)** | **07-08-03** | **Ronde 1: Pre-flight diagnostiek op Hetzner. BLOK A express.static media/block-images. BLOK B preview iframe website render. BLOK C map = content issue. BLOK D sidebar = browser cache. BLOK E logo restored. BLOK F frontend bevestigd. Ronde 2: Favicon/navicon upload endpoint (/:destination/:type, auto-save MySQL branding JSON). X-Frame-Options → CSP frame-ancestors voor preview iframe. Ronde 3: STORAGE_ROOT patroon — alle upload dirs (branding, media, block-images) verplaatst BUITEN platform-core naar `/var/www/.../storage/` om CI/CD wipes te overleven. Apache routing fix: alleen /api/v1+/api/auth+/api/consent naar backend (3001), Next.js API routes naar port 3002. 21 media files + 2 logos hersteld. 4 bestanden gewijzigd. Commits f591b49, 482435e, cfea86f.** |
 | **Cmd v7.0** | **Fase V Voltooiing (8 stappen)** | **08-03** | **STAP 1A: Dark mode leesbaarheid — 9 bestanden hardcoded kleuren → MUI theme tokens (Header, MediaPage, PagesPage, NavigationPage, BlockStyleEditor, BlockEditorCard, LoginPage). STAP 1B: BrandingPage 12 flat Cards → 9 MUI Accordions (default expanded: Colors + Logo), footer wireframe preview, SafeImage component (broken image handler), global footer info Alert. STAP 1C: Media Library bulk select (Checkbox overlay, Select All/Deselect, bulk delete met bevestigingsdialog). STAP 2B: Chatbot 4 quick actions (Programma samenstellen, Zoeken op Rubriek, Routebeschrijving, Tip van de Dag) in 4 talen (NL/EN/DE/ES). STAP 2C: Hero block crash fix (null-guard image prop, onError handler). STAP 3A: 6 design templates (Modern/Klassiek/Elegant/Kleurrijk/Zakelijk/Minimaal) met template selector dialog in BrandingPage. STAP 3B: 5 geavanceerde stijlopties (spacingScale, shadowIntensity, imageStyle, headingTextTransform + bijbehorende CSS custom properties in theme.ts). STAP 4: SEO hardening (sitemap.ts dynamisch per tenant, robots.ts, seo.ts uitgebreid met JSON-LD schemas: WebSite, BreadcrumbList, FAQPage, Event, LocalBusiness + canonical + hreflang + Twitter Cards). STAP 6: Playwright E2E config + 15 test bestanden. STAP 7: Dashboard uitgebreid met WebsiteStatsCard, CommerceOverviewCard, ChatbotPerformanceCard. 1 nieuw bestand (brandingTemplates.js), 3 nieuwe SEO bestanden, 15 test bestanden, ~16 gewijzigde bestanden.** |
 | **Cmd v7.1** | **Frank's Feedback Fixes (7 stappen)** | **08-03** | **STAP 1: Block i18n resolution — resolveLocalizedProps() recursieve utility in i18n.ts, Hero crash fix (TranslatableField i18n objecten → strings). STAP 2: Hero height prop (4 opties: compact/default/tall/fullscreen) + resolveAssetUrl voor images. STAP 3: Map gekleurde markers per categorie (8 kleuren, L.divIcon, legenda). STAP 4: Quick action chatbot buttons (CustomEvent hb:chatbot:open, ChatbotButton.tsx, Hero+Cta chatbot variant). STAP 5: Button style defaults (auto-derive van primary/secondary kleuren). STAP 6: Footer i18n (resolveTitle helper, TranslatableField in admin). STAP 7: Branding uitbreiding (chatbot config accordion, header style transparent/sticky). 18 bestanden (1 nieuw + 17 gewijzigd). Commit 5daab9e.** |
+| **Cmd v8.0** | **Fase V Final — Customer Portal Kwaliteit** | **08-03** | **STAP 1: Chatbot SSE proxy route (/api/holibot/chat/stream) — geen localhost:3001 meer, browser-safe via Next.js proxy. STAP 2: POI categorie filtering fix — backend categories (meervoud) support + min_reviews + quality sort. STAP 3: POI detail pagina volledig uitgebouwd (openingstijden dual-format Calpe/Texel, amenities, accessibility, parking, highlights, enriched description, reviews distribution, social links, Google Maps link, 2-kolom layout). STAP 4: Reviews veldnamen fix (user_name, review_text, visit_date) + Testimonials.tsx. STAP 5: Button color preview fix (deriveButtonDefaults lege string → fallback kleuren). POI type: 19→42 velden. 3 nieuwe + 9 gewijzigde bestanden. Commits 3c325cc + 6d425fc.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -498,7 +499,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
 | IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | ✅ COMPLEET (Blok A+B+C+D+E+F) | 6-8 wkn |
-| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v7.1 COMPLEET) | 12 wkn |
+| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 COMPLEET) | 12 wkn |
 | VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | GEPLAND | 6-8 wkn |
 | VII | Polish, Scale & Launch (E2E testing, load testing, DR, go-live multi-tenant) | GEPLAND | 3-4 wkn |
 
@@ -608,9 +609,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **3.90.0** | **2026-03-08** | **Command v8.0: Fase V Final — Customer Portal Kwaliteit**. Chatbot SSE proxy (localhost:3001 → Next.js API route). POI categorie filtering (categories plural + min_reviews). POI detail uitgebouwd (openingstijden, amenities, accessibility, parking, highlights, reviews distribution, 2-kolom layout). Reviews veldnamen fix (user_name, review_text, visit_date). Button color preview fix (deriveButtonDefaults fallback). POI type 19→42 velden. 3 nieuwe + 9 gewijzigde bestanden. MS v7.52. |
 | **3.89.0** | **2026-03-08** | **Command v7.1: Frank's Feedback Fixes (7 stappen)**. Block i18n resolution (resolveLocalizedProps). Hero height + image URL. Map gekleurde markers (8 categorieën). Quick action chatbot buttons (CustomEvent). Button style defaults. Footer i18n. Branding chatbot config + header style. 18 bestanden. MS v7.51. |
 | **3.88.0** | **2026-03-08** | **Command v7.0: Fase V Voltooiing (8 stappen)**. Dark mode fixes (9 bestanden). BrandingPage Accordions + SafeImage + footer wireframe. Media Library bulk select. Chatbot 4 quick actions (4 talen). Hero crash fix. 6 design templates. 5 geavanceerde stijlopties + CSS vars. SEO: sitemap + robots + JSON-LD + canonical + hreflang + Twitter Cards. Playwright E2E (15 tests). Dashboard 3 nieuwe cards. MS v7.50. |
-| **3.87.0** | **2026-03-08** | **Repair Command v6.0 COMPLEET (3 rondes)**. Ronde 2: favicon/navicon upload endpoint + CSP frame-ancestors. Ronde 3: STORAGE_ROOT extern storage patroon (CI/CD-proof) + Apache API routing fix (Next.js port 3002). 21 media + 2 logos hersteld. MS v7.49. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -620,7 +621,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.51 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.52 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
