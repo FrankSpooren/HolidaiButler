@@ -16,7 +16,7 @@ export default async function Testimonials({ limit = 6, minRating = 4 }: Testimo
   if (!reviews || reviews.length === 0) return null;
 
   const filtered = reviews
-    .filter(r => r.rating >= minRating && r.text)
+    .filter(r => r.rating >= minRating && r.review_text)
     .slice(0, limit);
 
   if (filtered.length === 0) return null;
@@ -34,17 +34,17 @@ export default async function Testimonials({ limit = 6, minRating = 4 }: Testimo
           >
             <div className="flex items-center justify-between mb-3">
               <Rating value={review.rating} size="sm" />
-              {review.publish_date && (
+              {review.visit_date && (
                 <span className="text-xs text-muted">
-                  {new Date(review.publish_date).toLocaleDateString()}
+                  {new Date(review.visit_date).toLocaleDateString()}
                 </span>
               )}
             </div>
             <p className="text-sm text-foreground/80 line-clamp-4 mb-3">
-              &ldquo;{review.text}&rdquo;
+              &ldquo;{review.review_text}&rdquo;
             </p>
             <p className="text-sm font-medium text-foreground">
-              {review.author_name}
+              {review.user_name || 'Anonymous'}
             </p>
           </div>
         ))}
