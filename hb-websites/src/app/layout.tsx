@@ -70,7 +70,6 @@ export default async function RootLayout({
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (tenant.branding as any)?.chatbotConfig?.name || undefined
             }
-            apiUrl={process.env.HB_API_URL ?? 'http://localhost:3001'}
           />
         )}
         <CookieBanner

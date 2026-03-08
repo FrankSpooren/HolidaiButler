@@ -271,6 +271,7 @@ router.get('/', async (req, res) => {
     const {
       q,
       category,
+      categories,
       city,
       search,
       sort = 'name:asc',
@@ -278,6 +279,7 @@ router.get('/', async (req, res) => {
       limit = 20,
       offset,
       min_rating,
+      min_reviews,
       require_images
     } = req.query;
 
@@ -293,7 +295,11 @@ router.get('/', async (req, res) => {
     // Build where clause - filter by destination and active status
     // In search mode, hidden POIs (is_searchable_only, is_hidden_category) are included
     const where = await buildPublicWhereClause(destinationId, isSearchMode);
-    if (category) where.category = category;
+    if (categories) {
+      where.category = { [Op.in]: categories.split(',').map(c => c.trim()) };
+    } else if (category) {
+      where.category = category;
+    }
     if (city) where.city = { [Op.like]: `%${city}%` };
 
     // Add search term conditions if searching
@@ -307,6 +313,10 @@ router.get('/', async (req, res) => {
 
     if (min_rating) {
       where.rating = { [Op.gte]: parseFloat(min_rating) };
+    }
+
+    if (min_reviews) {
+      where.review_count = { [Op.gte]: parseInt(min_reviews) };
     }
 
     // Parse sort parameter

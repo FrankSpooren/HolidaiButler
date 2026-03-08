@@ -68,11 +68,14 @@ export async function fetchPage(
 
 export async function fetchPois(
   tenantSlug: string,
-  opts?: { categories?: string; limit?: number; locale?: string }
+  opts?: { categories?: string; limit?: number; locale?: string; min_rating?: number; min_reviews?: number; sort?: string }
 ): Promise<POI[]> {
   const params: Record<string, string> = {};
   if (opts?.categories) params.categories = opts.categories;
   if (opts?.limit) params.limit = String(opts.limit);
+  if (opts?.min_rating) params.min_rating = String(opts.min_rating);
+  if (opts?.min_reviews) params.min_reviews = String(opts.min_reviews);
+  if (opts?.sort) params.sort = opts.sort;
 
   const res = await hbFetch<ApiResponse<POI[]>>(
     '/api/v1/pois',
