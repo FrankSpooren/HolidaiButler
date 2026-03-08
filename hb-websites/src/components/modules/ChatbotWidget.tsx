@@ -183,6 +183,19 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, apiUrl 
     }
   }, [messages, isStreaming, apiUrl, tenantSlug, locale]);
 
+  // Listen for external chatbot open events (from ChatbotButton in blocks)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setIsOpen(true);
+      if (detail?.message) {
+        setTimeout(() => sendMessage(detail.message), 100);
+      }
+    };
+    window.addEventListener('hb:chatbot:open', handler);
+    return () => window.removeEventListener('hb:chatbot:open', handler);
+  }, [sendMessage]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sendMessage(input);

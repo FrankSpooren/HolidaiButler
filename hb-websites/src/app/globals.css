@@ -72,3 +72,9 @@ h4 {
   letter-spacing: var(--hb-h4-spacing, 0);
   line-height: var(--hb-h4-height, 1.4);
 }
+
+/* Leaflet colored marker override — remove default icon styling */
+.hb-marker {
+  background: none !important;
+  border: none !important;
+}

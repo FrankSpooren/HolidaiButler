@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { fetchTenantConfig, fetchPage } from '@/lib/api';
 import { generatePageMetadata, generateWebSiteJsonLd, generateBreadcrumbJsonLd } from '@/lib/seo';
+import { resolveLocalizedProps } from '@/lib/i18n';
 import { getBlock } from '@/blocks/index';
 import BlockRenderer from '@/components/ui/BlockRenderer';
 import type { BlockConfig, BlockStyle } from '@/types/blocks';
@@ -118,6 +119,7 @@ export default async function Page({ params }: PageProps) {
           return null;
         }
 
+        const resolvedProps = resolveLocalizedProps(block.props, locale);
         const wrapperStyle = getBlockWrapperStyle(block.style);
         const wrapperClass = block.style?.fullWidth ? 'w-full' : '';
 
@@ -125,7 +127,7 @@ export default async function Page({ params }: PageProps) {
           return (
             <BlockRenderer key={block.id} blockType={block.type}>
               <div className={wrapperClass || undefined} style={wrapperStyle}>
-                <BlockComponent {...block.props} />
+                <BlockComponent {...resolvedProps} />
               </div>
             </BlockRenderer>
           );
@@ -133,7 +135,7 @@ export default async function Page({ params }: PageProps) {
 
         return (
           <BlockRenderer key={block.id} blockType={block.type}>
-            <BlockComponent {...block.props} />
+            <BlockComponent {...resolvedProps} />
           </BlockRenderer>
         );
       })}
