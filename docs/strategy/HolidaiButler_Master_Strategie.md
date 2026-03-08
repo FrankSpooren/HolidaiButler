@@ -2,18 +2,18 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 8 maart 2026
-**Versie**: 7.49
+**Versie**: 7.50
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0 Stap 1-8 + Repair Cmd v6.0 COMPLEET). CLAUDE.md v3.87.0. MS v7.49.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v7.0 COMPLEET). CLAUDE.md v3.88.0. MS v7.50.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
 > - `HolidaiButler_Strategic_Status_Actieplan.md` (v1.0)
 > - `Claude_Code_Texel_100_Percent_Fase6_7_8.md` (v3.0)
 >
-> **Source of truth voor project context**: `CLAUDE.md` (v3.60.0) in repo root + Hetzner
+> **Source of truth voor project context**: `CLAUDE.md` (v3.88.0) in repo root + Hetzner
 
 ---
 
@@ -1404,6 +1404,8 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 
 - **Repair Command v6.0 — Browser-Verified Fixes (3 rondes)** ✅ COMPLEET (07-08-03-2026): **Ronde 1** (07-03): 6 blokken gediagnosticeerd op Hetzner. BLOK A: express.static media/block-images. BLOK B: preview iframe PREVIEW_DOMAINS mapping. BLOK C: map = content issue. BLOK D: sidebar = browser cache. BLOK E: logo restored. BLOK F: frontend bevestigd. **Ronde 2** (08-03): Favicon/navicon upload endpoint `/:destination/:type` met VALID_BRANDING_TYPES + auto-save MySQL branding JSON. Apache X-Frame-Options → CSP frame-ancestors voor preview iframe embedding. **Ronde 3** (08-03): STORAGE_ROOT architectuurwijziging — alle upload directories (branding, media, block-images) verplaatst BUITEN platform-core naar `/var/www/.../storage/` om CI/CD wipes te overleven. Apache routing fix: alleen `/api/v1`, `/api/auth`, `/api/consent` naar backend (3001), Next.js API routes (`/api/pois` etc.) naar port 3002. 21 media files + 2 logos hersteld. 4 bestanden gewijzigd. Commits f591b49, 482435e, cfea86f.
 
+- **Command v7.0 — Fase V Voltooiing (8 stappen)** ✅ COMPLEET (08-03-2026): **STAP 1A**: Dark mode leesbaarheid — 9 bestanden hardcoded kleuren (`#fafafa`, `#e2e8f0`, `#1e293b`, `#fff`) → MUI theme tokens (`action.hover`, `divider`, `text.primary`, `background.paper`). Bestanden: Header.jsx, MediaPage.jsx, PagesPage.jsx, NavigationPage.jsx, BlockStyleEditor.jsx, BlockEditorCard.jsx, LoginPage.jsx. **STAP 1B**: BrandingPage 12 flat Cards → 9 MUI Accordions (default expanded: Colors + Logo & Brand). SafeImage component (broken image handler met error state). Footer wireframe preview (dashed-border boxes). Global footer info Alert. **STAP 1C**: Media Library bulk select — Checkbox overlay per item, Select All/Deselect All toggle, bulk delete met bevestigingsdialog (`Promise.allSettled`). **STAP 2B**: Chatbot 4 quick actions in 4 talen (NL/EN/DE/ES): Programma samenstellen, Zoeken op Rubriek, Routebeschrijving, Tip van de Dag. **STAP 2C**: Hero block crash fix — null-guard op image prop (`hasImage` check), `onError` handler op img tags. **STAP 2D+2E**: POI category filters — DB page blocks gecorrigeerd: Calpe explore `["restaurant","museum"]` → correcte categorieën (`Food & Drinks`, `Culture & History`, etc.), Texel explore geen filter → Nederlandse categorieën (`Eten & Drinken`, `Natuur`, etc.). Restaurants pagina's waren al correct. **STAP 3A**: 6 design templates (Modern/Klassiek/Elegant/Kleurrijk/Zakelijk/Minimaal) — frontend-only presets die BrandingPage formulier vullen. Template selector dialog met kleur-preview cards. `brandingTemplates.js` nieuw bestand. **STAP 3B**: 5 geavanceerde stijlopties (spacingScale, shadowIntensity, imageStyle, headingTextTransform) + 4 CSS custom properties (`--hb-spacing-scale`, `--hb-shadow`, `--hb-image-radius`, `--hb-heading-transform`) in theme.ts. **STAP 4**: SEO hardening — `sitemap.ts` (dynamisch per tenant, pagina's + top 100 POIs, ISR 1h), `robots.ts` (allow `/`, disallow `/api/`, `/_next/`, `/preview/`), `seo.ts` uitgebreid met 5 JSON-LD schemas (WebSite, BreadcrumbList, FAQPage, Event, LocalBusiness) + canonical URL + hreflang alternates + Twitter Cards (`summary_large_image`). `page.tsx` injecteert JSON-LD scripts. **STAP 6**: Playwright E2E — `playwright.config.ts` (3 projecten: calpe-desktop, texel-desktop, calpe-mobile) + 15 test bestanden (93 tests): homepage, navigation, explore, restaurants, events, contact, poi-detail, chatbot, seo, responsive, cookie-banner, theme, blocks, performance, accessibility. **STAP 7**: Dashboard uitgebreid met 3 nieuwe cards: WebsiteStatsCard (pagina's/blocks/media), CommerceOverviewCard (transacties/tickets/reserveringen), ChatbotPerformanceCard (sessions/berichten/avg responstijd). 1 nieuw bestand, 3 SEO bestanden, 15 test bestanden, ~16 gewijzigde bestanden. Admin-module build 0 errors.
+
 Technische blauwdruk: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
 
 **Fase VI — UX Revolution + WarreWijzer (6-8 weken):**
@@ -1612,6 +1614,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.50** | **08-03-2026** | **Command v7.0: Fase V Voltooiing COMPLEET (8 stappen)**. STAP 1A: dark mode 9 bestanden → MUI tokens. STAP 1B: BrandingPage Accordions + SafeImage + footer wireframe. STAP 1C: Media bulk select/delete. STAP 2B: chatbot 4 quick actions (4 talen). STAP 2C: Hero crash fix. STAP 2D+2E: POI category filters DB fix (explore + restaurants). STAP 3A: 6 design templates. STAP 3B: 5 geavanceerde stijlopties + CSS vars. STAP 4: SEO sitemap + robots + JSON-LD + canonical + hreflang + Twitter Cards. STAP 6: Playwright 15 tests (93 specs). STAP 7: Dashboard +3 cards. CLAUDE.md v3.88.0. |
 | **7.49** | **08-03-2026** | **Repair Command v6.0 COMPLEET (3 rondes)**. Ronde 2: favicon/navicon upload endpoint + CSP frame-ancestors. Ronde 3: STORAGE_ROOT extern storage (CI/CD-proof) + Apache API routing fix (Next.js port 3002). 21 media + 2 logos hersteld. CLAUDE.md v3.87.0. |
 | **7.48** | **07-03-2026** | **Repair Command v6.0 Ronde 1: Browser-Verified Fixes**. 6 blokken gediagnosticeerd + 4 fixes: BLOK A express.static media/block-images, BLOK B preview iframe website render, BLOK E logo branding files restored, BLOK F frontend bevestigd. BLOK C = content issue, BLOK D = browser cache. CLAUDE.md v3.86.0. |
 | **7.47** | **07-03-2026** | **Command v5.0 Stap 2-8 COMPLEET. Stap 2: API test fix (88/88 PASS). Stap 3+4: Wave 2/3 verificatie + SEO migration 003. Stap 5: Sidebar herstructurering (5 secties). Stap 6: Dashboard QuickLinks i18n + SCHEDULED_JOBS 40→54. Stap 7: Admin auth token CRITICAL fix (bare fetch→axios client) + 17 i18n keys. Stap 8: XSS sanitizer, 6 API route try/catch, postMessage origin validation, console.log dev-only. CLAUDE.md v3.85.0.** |
@@ -1682,4 +1685,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 8 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0 Stap 1-8 + Repair Cmd v6.0 COMPLEET). Admin Portal: 157 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.87.0. MS v7.49.*
+*Laatst bijgewerkt: 8 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v7.0 COMPLEET). Admin Portal: 157 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.88.0. MS v7.50.*
