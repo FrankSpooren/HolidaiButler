@@ -494,7 +494,7 @@ export default function PagesPage() {
                 <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary' }}>OG Image Upload</Typography>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                   {(editPage.og_image_path || editPage.og_image_url) && (
-                    <Box component="img" src={editPage.og_image_path || editPage.og_image_url} alt="OG" sx={{ height: 60, maxWidth: 120, borderRadius: 1, border: '1px solid #e5e7eb' }} />
+                    <Box component="img" src={editPage.og_image_path || editPage.og_image_url} alt="OG" sx={{ height: 60, maxWidth: 120, borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
                   )}
                   <Button variant="outlined" component="label" size="small" startIcon={<UploadIcon />}>
                     {t('pages.uploadOgImage', 'Upload OG Image')}
@@ -574,7 +574,7 @@ export default function PagesPage() {
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <Box sx={{ width: viewportWidths[previewViewport], maxWidth: '100%', transition: 'width 0.3s', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', bgcolor: '#f5f5f5' }}>
+                <Box sx={{ width: viewportWidths[previewViewport], maxWidth: '100%', transition: 'width 0.3s', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', bgcolor: 'action.hover' }}>
                   <iframe
                     ref={previewRef}
                     src={getPreviewUrl()}

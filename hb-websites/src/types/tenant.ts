@@ -16,13 +16,13 @@ export interface ButtonVariant {
 
 export interface FooterColumn {
   type: string;
-  title?: string;
-  content?: string;
+  title?: string | Record<string, string>;
+  content?: string | Record<string, string>;
 }
 
 export interface FooterConfig {
   columns?: FooterColumn[];
-  copyright?: string;
+  copyright?: string | Record<string, string>;
   showNewsletter?: boolean;
   showSocial?: boolean;
 }
@@ -61,6 +61,10 @@ export interface TenantBranding {
   style: {
     borderRadius: string;
     buttonStyle: string;
+    spacingScale?: string;
+    shadowIntensity?: string;
+    imageStyle?: string;
+    headingTextTransform?: string;
   };
   buttons?: {
     primary?: ButtonVariant;

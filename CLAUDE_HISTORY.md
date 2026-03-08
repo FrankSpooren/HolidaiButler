@@ -42,7 +42,12 @@
 31. [Fase V.4: Admin Portal Editors (Branding, Pages, Navigation)](#fase-v4-admin-portal-editors-05-03-2026)
 32. [Fase V.5: P1 Blocks + Wildcard DNS Schaling](#fase-v5-p1-blocks--wildcard-dns-schaling-06-03-2026)
 33. [Fase V.6: Ontbrekende Blocks + Block Upgrades](#fase-v6-ontbrekende-blocks--block-upgrades-06-03-2026)
-34. [Volledige Changelog](#volledige-changelog)
+34. [Wave 1: Enterprise Admin Portal — Visuele Block Editor](#wave-1-enterprise-admin-portal--visuele-block-editor-07-03-2026)
+35. [Wave 2+3: Professionele Features + Excellence](#wave-23-professionele-features--excellence-07-03-2026)
+36. [Command v5.0: Bugfix + Stabilisatie + Hardening](#command-v50-bugfix--stabilisatie--hardening-07-03-2026)
+37. [Repair Command v6.0: Browser-Verified Fixes](#repair-command-v60-browser-verified-fixes-07-08-03-2026)
+38. [Command v7.0: Fase V Voltooiing](#command-v70-fase-v-voltooiing-08-03-2026)
+39. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -3467,6 +3472,106 @@ Na ronde 2 push naar main → CI/CD deployment wipet opnieuw alle bestanden. Roo
 | Apache CSP | X-Frame-Options → frame-ancestors op beide dev sites |
 
 **Commit**: `cfea86f`
+
+**Kosten**: EUR 0
+
+---
+
+## Command v7.0 — Fase V Voltooiing (08-03-2026)
+
+Command v7.0 bevat 8 stappen en 20 acceptatiecriteria voor UX-polish, SEO, quick actions, design templates en tests. Doel: investor presentatie maandag 9 maart.
+
+### STAP 1A — Dark Mode Leesbaarheid
+
+9 bestanden met hardcoded kleuren → MUI theme tokens:
+- `bgcolor: '#fafafa'` → `'action.hover'`
+- `color: '#1e293b'` → `'text.primary'`
+- `bgcolor: '#fff'` → `'background.paper'`
+- `border: '1px solid #e2e8f0'` → `borderColor: 'divider'`
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/components/layout/Header.jsx` | bgcolor, color, border → theme tokens |
+| `admin-module/src/pages/MediaPage.jsx` | borders → divider, bg → action.hover |
+| `admin-module/src/pages/PagesPage.jsx` | OG image border, preview bg |
+| `admin-module/src/pages/NavigationPage.jsx` | preview bg, text colors |
+| `admin-module/src/components/blocks/BlockStyleEditor.jsx` | bg, borders, color picker |
+| `admin-module/src/components/blocks/BlockEditorCard.jsx` | collapsed bg |
+| `admin-module/src/pages/LoginPage.jsx` | title color |
+
+### STAP 1B — BrandingPage Accordions + Previews
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/BrandingPage.jsx` | 12 flat Cards → 9 MUI Accordions. BrandingAccordion helper component. SafeImage component (useState error state + onError handler). Footer wireframe preview (dashed-border Box layout). Global footer info Alert. Default expanded: Colors + Logo & Brand. |
+
+### STAP 1C — Media Library Bulk Select
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/MediaPage.jsx` | Checkbox overlay per ImageListItem. Select All/Deselect All toggle button. Bulk delete met bevestigingsdialog. `bulkDeleteMut` met `Promise.allSettled`. `selected` state (Set). |
+
+### STAP 2B — Chatbot Quick Actions (4 meertalige acties)
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/components/modules/ChatbotWidget.tsx` | 3 hardcoded acties (NL/EN) → 4 nieuwe acties in 4 talen (NL/EN/DE/ES): Programma samenstellen, Zoeken op Rubriek, Routebeschrijving, Tip van de Dag. |
+
+### STAP 2C — Hero Block Crash Fix
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/blocks/Hero.tsx` | `hasImage` null-guard (empty string check). `onError` handler op beide img tags (display: none). |
+
+### STAP 2D+2E — POI Category Filters (DB fix)
+
+| Pagina | Was | Nu |
+|--------|-----|-----|
+| Calpe explore (id=2) PoiGrid | `["restaurant", "museum", "nature", "actief", "beach"]` | `["Food & Drinks", "Culture & History", "Beaches & Nature", "Active", "Recreation", "Shopping"]` |
+| Calpe explore (id=2) Map | `["beach", "nature", "winkels"]` | Zelfde 6 categorieën |
+| Texel explore (id=8) PoiGrid | Geen filter | `["Eten & Drinken", "Cultuur & Historie", "Natuur", "Actief", "Recreatief", "Winkelen"]` |
+| Calpe restaurants (id=4) | `["Food & Drinks"]` | Ongewijzigd (correct) |
+| Texel restaurants (id=10) | `["Eten & Drinken"]` | Ongewijzigd (correct) |
+
+### STAP 3A — Design Templates (6 stijlen)
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/utils/brandingTemplates.js` | **NIEUW**. 6 presets: Modern (Inter, blauw), Klassiek (Playfair Display, navy), Elegant (Playfair Display, zwart/goud), Kleurrijk (Poppins/Nunito, rood/paars), Zakelijk (Montserrat/Open Sans, teal), Minimaal (DM Sans, grijs). Elk preset: naam 4 talen, beschrijving 4 talen, preview kleuren, values (colors/fonts/style). |
+| `admin-module/src/pages/BrandingPage.jsx` | Template selector dialog met 6 cards. `applyTemplate()` functie mergt template values in formulier. |
+
+### STAP 3B — Geavanceerde Stijlopties
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/BrandingPage.jsx` | 5 nieuwe velden: spacingScale (compact/default/relaxed/spacious), shadowIntensity (none/subtle/medium/strong), imageStyle (square/rounded/circle), headingTextTransform (none/uppercase/capitalize). |
+| `hb-websites/src/lib/theme.ts` | 3 nieuwe maps (SPACING_MAP, SHADOW_MAP, IMAGE_RADIUS_MAP). 4 nieuwe CSS custom properties: `--hb-spacing-scale`, `--hb-shadow`, `--hb-image-radius`, `--hb-heading-transform`. |
+
+### STAP 4 — SEO Hardening
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/app/sitemap.ts` | **NIEUW**. Dynamische sitemap per tenant (pagina's + top 100 POIs). ISR revalidate 1h. X-Destination-ID header. |
+| `hb-websites/src/app/robots.ts` | **NIEUW**. Allow `/`, disallow `/api/`, `/_next/`, `/preview/`. |
+| `hb-websites/src/lib/seo.ts` | Uitgebreid: `generatePageMetadata()` nu met canonical URL, hreflang alternates, Twitter Cards. 5 nieuwe functies: `generateWebSiteJsonLd()`, `generateLocalBusinessJsonLd()`, `generateBreadcrumbJsonLd()`, `generateFaqJsonLd()`, `generateEventJsonLd()`. |
+| `hb-websites/src/app/[[...slug]]/page.tsx` | JSON-LD script injection. WebSite schema op homepage, BreadcrumbList op alle pagina's. |
+
+### STAP 6 — Playwright E2E Tests
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/playwright.config.ts` | **NIEUW**. 3 projecten: calpe-desktop (dev.holidaibutler.com), texel-desktop (dev.texelmaps.nl), calpe-mobile (iPhone 14). |
+| `hb-websites/tests/e2e/*.spec.ts` | **15 NIEUWE bestanden** (93 tests totaal): homepage (3), navigation (5), explore (6), restaurants (6), events (5), contact (6), poi-detail (7), chatbot (5), seo (9), responsive (6), cookie-banner (5), theme (7), blocks (9), performance (7), accessibility (10). |
+
+### STAP 7 — Dashboard Uitbreiding
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/DashboardPage.jsx` | 3 nieuwe cards: WebsiteStatsCard (pagina's/block types/media count), CommerceOverviewCard (transacties/tickets/reserveringen, null als commerce niet actief), ChatbotPerformanceCard (sessions/berichten/avg responstijd). |
+
+### STAP 8 — Documentatie
+
+CLAUDE.md v3.87.0 → v3.88.0. MS v7.49 → v7.50. CLAUDE_HISTORY.md + MEMORY.md bijgewerkt.
 
 **Kosten**: EUR 0
 

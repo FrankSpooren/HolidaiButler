@@ -35,8 +35,15 @@ const socialIcons: Record<string, { label: string; svg: string }> = {
 
 interface FooterColumn {
   type: string;
-  title?: string;
-  content?: string;
+  title?: string | Record<string, string>;
+  content?: string | Record<string, string>;
+}
+
+/** Resolve title: supports both plain string and i18n object {en: "...", nl: "..."} */
+function resolveTitle(value: string | Record<string, string> | undefined, locale: string): string {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value[locale] ?? value.en ?? value.nl ?? Object.values(value)[0] ?? '';
 }
 
 export default function Footer({ tenant, locale }: FooterProps) {
@@ -52,7 +59,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
     { type: 'navigation', title: locale === 'nl' ? 'Navigatie' : 'Navigation' },
     { type: 'contact', title: 'Contact' }
   ];
-  const copyright = footerConfig?.copyright ?? `\u00A9 ${year} ${tenant.displayName}. Powered by HolidaiButler.`;
+  const copyright = resolveTitle(footerConfig?.copyright, locale) || `\u00A9 ${year} ${tenant.displayName}. Powered by HolidaiButler.`;
   const showSocial = footerConfig?.showSocial !== false;
 
   const renderColumn = (col: FooterColumn) => {
@@ -97,7 +104,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
         return (
           <>
             <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
-              {col.title || (locale === 'nl' ? 'Navigatie' : 'Navigation')}
+              {resolveTitle(col.title, locale) || (locale === 'nl' ? 'Navigatie' : 'Navigation')}
             </h4>
             <ul className="space-y-2 text-sm opacity-80">
               <li><Link href="/" className="hover:opacity-100 transition-opacity">Home</Link></li>
@@ -116,7 +123,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
         return (
           <>
             <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
-              {col.title || 'Contact'}
+              {resolveTitle(col.title, locale) || 'Contact'}
             </h4>
             <p className="text-sm opacity-80">{tenant.branding.contactEmail || 'info@holidaibutler.com'}</p>
           </>
@@ -126,7 +133,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
         return (
           <>
             <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
-              {col.title || 'Social'}
+              {resolveTitle(col.title, locale) || 'Social'}
             </h4>
             {activeSocials.length > 0 && (
               <div className="flex flex-wrap gap-3">
@@ -154,7 +161,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
         return (
           <>
             <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
-              {col.title || 'Newsletter'}
+              {resolveTitle(col.title, locale) || 'Newsletter'}
             </h4>
             <p className="text-sm opacity-80 mb-2">
               {locale === 'nl' ? 'Blijf op de hoogte' : 'Stay updated'}
@@ -163,17 +170,20 @@ export default function Footer({ tenant, locale }: FooterProps) {
         );
 
       case 'custom':
-      default:
+      default: {
+        const resolvedCustomTitle = resolveTitle(col.title, locale);
+        const resolvedCustomContent = resolveTitle(col.content, locale);
         return (
           <>
-            {col.title && (
+            {resolvedCustomTitle && (
               <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
-                {col.title}
+                {resolvedCustomTitle}
               </h4>
             )}
-            {col.content && <p className="text-sm opacity-80">{col.content}</p>}
+            {resolvedCustomContent && <p className="text-sm opacity-80">{resolvedCustomContent}</p>}
           </>
         );
+      }
     }
   };
 

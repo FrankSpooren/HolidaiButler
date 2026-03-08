@@ -23,9 +23,10 @@ export default function Header({ onMenuToggle }) {
       sx={{
         ml: { md: `${SIDEBAR_STYLES.width}px` },
         width: { md: `calc(100% - ${SIDEBAR_STYLES.width}px)` },
-        bgcolor: mode === 'dark' ? '#1e293b' : '#fff',
-        color: mode === 'dark' ? '#e2e8f0' : '#1e293b',
-        borderBottom: `1px solid ${mode === 'dark' ? '#334155' : '#e2e8f0'}`
+        bgcolor: 'background.paper',
+        color: 'text.primary',
+        borderBottom: '1px solid',
+        borderColor: 'divider'
       }}
     >
       <Toolbar sx={{ gap: 2 }}>
