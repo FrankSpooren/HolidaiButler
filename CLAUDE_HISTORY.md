@@ -3337,11 +3337,11 @@ CREATE TABLE page_revisions (
 
 ---
 
-## Repair Command v6.0 — Browser-Verified Fixes (07-03-2026)
+## Repair Command v6.0 — Browser-Verified Fixes (07-08-03-2026)
 
 **Opdracht**: Repair Command v6.0 — 6 features die als "COMPLEET" werden gerapporteerd maar NIET werkten in de browser. Kritiek: investor presentatie maandag 9 maart 2026.
-**Status**: ✅ COMPLEET
-**Commit**: `f591b49`
+**Status**: ✅ COMPLEET (3 rondes)
+**Commits**: `f591b49`, `482435e`, `cfea86f`
 
 ### Pre-flight Diagnostiek (Hetzner)
 
@@ -3394,20 +3394,79 @@ CREATE TABLE page_revisions (
 - Footer (bg-foreground)
 **Geen code wijziging nodig**.
 
-### Gewijzigde Bestanden
+### Ronde 1 — Gewijzigde Bestanden
 
 | Bestand | Wijziging |
 |---------|-----------|
 | `platform-core/src/index.js` | +express.static voor `/media-files/` en `/block-images/` (12 regels) |
 | `admin-module/src/pages/PagesPage.jsx` | +PREVIEW_DOMAINS mapping + getPreviewUrl() → iframe toont echte website |
 
-### Server Acties (niet in code)
+### Ronde 1 — Server Acties (niet in code)
 
 | Actie | Beschrijving |
 |-------|--------------|
 | Media restore | 7 bestanden gekopieerd van backup naar `/storage/media/1/` |
 | Branding restore | 2 logo bestanden gekopieerd naar `/public/branding/` |
 | PM2 restart | holidaibutler-api + hb-websites herstart |
+
+**Commit**: `f591b49`
+
+---
+
+### Ronde 2 — Favicon/Navicon Upload + Preview Iframe + Logo (08-03-2026)
+
+Na handmatig testen door Frank bleken 4 issues:
+1. **Favicon & Navigation Icon upload**: Werd opgeslagen maar niet bewaard — endpoint was altijd `/:destination/logo`, geen type onderscheid.
+2. **Logo nog altijd broken**: CI/CD deployment (push naar main) wipet platform-core directory → `public/branding/` verdwenen.
+3. **Media Library images broken**: Zelfde CI/CD issue — `storage/media/` verdwenen.
+4. **Preview iframe refused to connect**: `X-Frame-Options: SAMEORIGIN` blokkeerde embedding vanuit admin portal.
+
+**Fixes**:
+- **Favicon/navicon endpoint**: `/:destination/logo` → `/:destination/:type` met VALID_BRANDING_TYPES (logo/favicon/navicon). Aparte bestandsnamen (`${dest}_${type}${ext}`). Auto-save naar MySQL `destinations.branding` JSON.
+- **Logo restore**: Bestanden opnieuw gekopieerd naar `public/branding/`.
+- **Preview iframe**: Apache X-Frame-Options → CSP `frame-ancestors 'self' https://admin.holidaibutler.com https://admin.dev.holidaibutler.com https://admin.test.holidaibutler.com` op dev.holidaibutler.com en dev.texelmaps.nl.
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/adminPortal.js` | Branding upload endpoint `/:destination/:type`, VALID_BRANDING_TYPES, auto-save MySQL |
+| `admin-module/src/api/brandingService.js` | uploadLogo() accepteert type parameter |
+| `admin-module/src/hooks/useBrandingEditor.js` | field parameter doorgeven aan service |
+
+**Commit**: `482435e`
+
+---
+
+### Ronde 3 — STORAGE_ROOT + Apache API Routing (08-03-2026)
+
+Na ronde 2 push naar main → CI/CD deployment wipet opnieuw alle bestanden. Root cause definitief geïdentificeerd:
+
+**ROOT CAUSE**: GitHub Actions `deploy-platform-core.yml` vervangt de HELE `platform-core/` directory op push naar main. Directories die niet in git staan (`storage/`, `public/branding/`) worden gewist. Dit is een structureel probleem dat elke push naar main veroorzaakt.
+
+**STORAGE_ROOT Fix**: Alle upload directories verplaatst BUITEN platform-core naar `/var/www/api.holidaibutler.com/storage/` (STORAGE_ROOT env var).
+- `storage/branding/` — logo, favicon, navicon bestanden
+- `storage/media/` — media library uploads
+- `storage/block-images/` — block image uploads
+
+**Apache Routing Fix**: Map POI markers werkten niet ("Could not load map markers"). Root cause: Apache `ProxyPass /api` catch-all proxyde ALLE `/api/*` requests naar backend (port 3001), maar Next.js API routes (`/api/pois`, `/api/contact` etc.) draaien op port 3002. Fix: Apache proxyt nu alleen `/api/v1`, `/api/auth`, `/api/consent` naar backend. Overige `/api/*` requests vallen door naar Next.js.
+
+**21 media files hersteld** uit backup + 2 logo bestanden naar nieuwe STORAGE_ROOT locatie.
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/index.js` | STORAGE_ROOT env var, express.static paden naar externe storage |
+| `platform-core/src/routes/adminPortal.js` | BRANDING_DIR, BLOCK_IMAGES_DIR, MEDIA_DIR → STORAGE_ROOT |
+
+**Server Acties (niet in code)**:
+| Actie | Beschrijving |
+|-------|--------------|
+| External storage dirs | `/var/www/api.holidaibutler.com/storage/{branding,media,block-images}` aangemaakt |
+| Media restore | 21 bestanden hersteld uit backup naar nieuwe storage locatie |
+| Branding restore | 2 logos gekopieerd naar `storage/branding/` |
+| Apache dev.holidaibutler.com | ProxyPass `/api` catch-all → specifieke routes only |
+| Apache dev.texelmaps.nl | Idem |
+| Apache CSP | X-Frame-Options → frame-ancestors op beide dev sites |
+
+**Commit**: `cfea86f`
 
 **Kosten**: EUR 0
 
