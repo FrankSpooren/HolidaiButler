@@ -13,7 +13,7 @@ export default function BlockStyleEditor({ style = {}, onChange }) {
   };
 
   return (
-    <Box sx={{ mt: 2, p: 2, bgcolor: '#f8fafc', borderRadius: 1, border: '1px solid #e2e8f0' }}>
+    <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
       <Typography variant="caption" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary', mb: 1.5, display: 'block' }}>
         Block Style
       </Typography>
@@ -21,7 +21,7 @@ export default function BlockStyleEditor({ style = {}, onChange }) {
         <Grid item xs={6} sm={3}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box
-              sx={{ width: 28, height: 28, borderRadius: 0.5, border: '1px solid #ccc', bgcolor: style.backgroundColor || '#ffffff', cursor: 'pointer', flexShrink: 0 }}
+              sx={{ width: 28, height: 28, borderRadius: 0.5, border: '1px solid', borderColor: 'divider', bgcolor: style.backgroundColor || 'background.paper', cursor: 'pointer', flexShrink: 0 }}
               component="label"
             >
               <input
@@ -50,7 +50,7 @@ export default function BlockStyleEditor({ style = {}, onChange }) {
         <Grid item xs={6} sm={3}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box
-              sx={{ width: 28, height: 28, borderRadius: 0.5, border: '1px solid #ccc', bgcolor: style.borderColor || 'transparent', cursor: 'pointer', flexShrink: 0 }}
+              sx={{ width: 28, height: 28, borderRadius: 0.5, border: '1px solid', borderColor: 'divider', bgcolor: style.borderColor || 'transparent', cursor: 'pointer', flexShrink: 0 }}
               component="label"
             >
               <input
