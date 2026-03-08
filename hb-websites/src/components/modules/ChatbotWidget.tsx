@@ -13,7 +13,6 @@ interface ChatbotWidgetProps {
   tenantSlug: string;
   locale: string;
   chatbotName?: string;
-  apiUrl: string;
 }
 
 const QUICK_ACTIONS: Record<string, Array<{ label: string; message: string }>> = {
@@ -50,7 +49,7 @@ const DESTINATION_IDS: Record<string, number> = {
   warrewijzer: 4,
 };
 
-export default function ChatbotWidget({ tenantSlug, locale, chatbotName, apiUrl }: ChatbotWidgetProps) {
+export default function ChatbotWidget({ tenantSlug, locale, chatbotName }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -101,7 +100,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, apiUrl 
     try {
       abortRef.current = new AbortController();
 
-      const res = await fetch(`${apiUrl}/api/v1/holibot/chat/stream`, {
+      const res = await fetch('/api/holibot/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -181,7 +180,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, apiUrl 
       setIsStreaming(false);
       abortRef.current = null;
     }
-  }, [messages, isStreaming, apiUrl, tenantSlug, locale]);
+  }, [messages, isStreaming, tenantSlug, locale]);
 
   // Listen for external chatbot open events (from ChatbotButton in blocks)
   useEffect(() => {
