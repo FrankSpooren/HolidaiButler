@@ -14,6 +14,9 @@ export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3 }
     categories: categoryFilter?.join(','),
     limit,
     locale,
+    min_rating: 3.5,
+    min_reviews: 1,
+    sort: 'rating:desc',
   });
 
   if (!pois || pois.length === 0) return null;
