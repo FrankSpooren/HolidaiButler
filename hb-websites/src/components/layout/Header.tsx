@@ -66,8 +66,19 @@ export default function Header({ tenant, locale }: HeaderProps) {
     item => !item.featureFlag || tenant.featureFlags[item.featureFlag] === true
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const headerStyle = (tenant.branding as any)?.headerStyle;
+  const isTransparent = headerStyle?.variant === 'transparent';
+  const isSticky = headerStyle?.sticky !== false;
+
+  const headerClasses = [
+    isSticky ? 'sticky top-0' : '',
+    'z-40',
+    isTransparent ? 'absolute top-0 left-0 right-0 bg-transparent' : 'bg-surface/95 backdrop-blur-sm border-b border-gray-100',
+  ].filter(Boolean).join(' ');
+
   return (
-    <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-sm border-b border-gray-100">
+    <header className={headerClasses}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 relative">
           {/* Logo + payoff */}

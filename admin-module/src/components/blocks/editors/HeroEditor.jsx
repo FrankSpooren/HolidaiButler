@@ -9,6 +9,13 @@ const BG_TYPE_OPTIONS = [
   { value: 'color', label: 'Solid Color' }
 ];
 
+const HEIGHT_OPTIONS = [
+  { value: 'compact', label: 'Compact' },
+  { value: 'default', label: 'Default' },
+  { value: 'tall', label: 'Tall' },
+  { value: 'fullscreen', label: 'Fullscreen' }
+];
+
 function BrandVisualPicker({ onSelect }) {
   const { data } = useBrandingDestinations();
   const destinations = data?.data?.destinations?.filter(d => d.isActive) || [];
@@ -57,6 +64,7 @@ export default function HeroEditor({ block, onChange }) {
       <TranslatableField label="Description" value={props.description} onChange={v => update('description', v)} multiline rows={3} />
       <TextField label="Tagline" value={props.tagline} onChange={v => update('tagline', v)} />
       <SelectField label="Background Type" value={props.backgroundType || 'image'} onChange={v => update('backgroundType', v)} options={BG_TYPE_OPTIONS} />
+      <SelectField label="Height" value={props.height || 'default'} onChange={v => update('height', v)} options={HEIGHT_OPTIONS} />
       {(props.backgroundType || 'image') === 'image' && (
         <>
           <BrandVisualPicker onSelect={(url) => update('image', url)} />
