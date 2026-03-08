@@ -38,7 +38,7 @@ export default function BlockEditorCard({ block, index, onUpdate, onRemove, onDu
       ref={setNodeRef}
       style={style}
       variant="outlined"
-      sx={{ mb: 1.5, bgcolor: expanded ? 'background.paper' : '#fafafa' }}
+      sx={{ mb: 1.5, bgcolor: expanded ? 'background.paper' : 'action.hover' }}
     >
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, cursor: 'pointer' }} onClick={() => setExpanded(!expanded)}>

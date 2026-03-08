@@ -1,15 +1,21 @@
 import { useState } from 'react';
 import {
   Grid, Typography, Box, Skeleton, Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip
+  Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Paper,
+  Card, CardContent
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import ChatIcon from '@mui/icons-material/Chat';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import ScheduleIcon from '@mui/icons-material/Schedule';
+import WebIcon from '@mui/icons-material/Web';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import InsightsIcon from '@mui/icons-material/Insights';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { useDashboardKPIs, useSystemHealth } from '../hooks/useDashboard.js';
 import useAuthStore from '../stores/authStore.js';
+import client from '../api/client.js';
 import KpiCard from '../components/dashboard/KpiCard.jsx';
 import DestinationCard from '../components/dashboard/DestinationCard.jsx';
 import SystemHealthCard from '../components/dashboard/SystemHealthCard.jsx';
@@ -75,6 +81,124 @@ const SCHEDULED_JOBS = [
   { agent: 'De Poortwachter', schedule: 'GDPR overdue: elke 4 uur', category: 'operations', description: 'Controle op verlopen GDPR verwijderingsverzoeken' },
   { agent: 'De Poortwachter', schedule: 'GDPR export cleanup: dagelijks 03:00', category: 'operations', description: 'Opruimen verlopen GDPR data exports' },
 ];
+
+/* ===== Extended Dashboard Cards ===== */
+function WebsiteStatsCard() {
+  const { t } = useTranslation();
+  const { data, isLoading } = useQuery({
+    queryKey: ['dashboard-website-stats'],
+    queryFn: async () => {
+      const [pages, media] = await Promise.all([
+        client.get('/pages', { params: { limit: 999 } }).then(r => r.data).catch(() => null),
+        client.get('/media', { params: { limit: 1 } }).then(r => r.data).catch(() => null)
+      ]);
+      return {
+        pages: pages?.data?.pages?.length || pages?.data?.total || 0,
+        media: media?.data?.total || media?.data?.files?.length || 0,
+        blocks: 20
+      };
+    },
+    staleTime: 5 * 60 * 1000
+  });
+
+  if (isLoading) return <Skeleton variant="rounded" height={140} />;
+
+  const stats = data || { pages: 0, media: 0, blocks: 20 };
+  return (
+    <Paper sx={{ p: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+        <WebIcon sx={{ color: '#0ea5e9' }} />
+        <Typography variant="subtitle2" fontWeight={700}>{t('dashboard.websiteStats', 'Website Stats')}</Typography>
+      </Box>
+      <Grid container spacing={1}>
+        <Grid item xs={4}>
+          <Typography variant="h5" fontWeight={700} color="primary">{stats.pages}</Typography>
+          <Typography variant="caption" color="text.secondary">{t('dashboard.pages', 'Pages')}</Typography>
+        </Grid>
+        <Grid item xs={4}>
+          <Typography variant="h5" fontWeight={700} sx={{ color: '#7c3aed' }}>{stats.blocks}</Typography>
+          <Typography variant="caption" color="text.secondary">{t('dashboard.blockTypes', 'Block Types')}</Typography>
+        </Grid>
+        <Grid item xs={4}>
+          <Typography variant="h5" fontWeight={700} sx={{ color: '#059669' }}>{stats.media}</Typography>
+          <Typography variant="caption" color="text.secondary">{t('dashboard.mediaFiles', 'Media Files')}</Typography>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+}
+
+function CommerceOverviewCard() {
+  const { t } = useTranslation();
+  const { data, isLoading } = useQuery({
+    queryKey: ['dashboard-commerce'],
+    queryFn: () => client.get('/commerce/dashboard').then(r => r.data).catch(() => null),
+    staleTime: 5 * 60 * 1000
+  });
+
+  if (isLoading) return <Skeleton variant="rounded" height={140} />;
+  if (!data?.data) return null; // Commerce not active
+
+  const commerce = data.data;
+  return (
+    <Paper sx={{ p: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+        <ShoppingCartIcon sx={{ color: '#d97706' }} />
+        <Typography variant="subtitle2" fontWeight={700}>{t('dashboard.commerce', 'Commerce')}</Typography>
+      </Box>
+      <Grid container spacing={1}>
+        <Grid item xs={4}>
+          <Typography variant="h5" fontWeight={700} sx={{ color: '#d97706' }}>{commerce.totalTransactions || 0}</Typography>
+          <Typography variant="caption" color="text.secondary">{t('dashboard.transactions', 'Transactions')}</Typography>
+        </Grid>
+        <Grid item xs={4}>
+          <Typography variant="h5" fontWeight={700} color="primary">{commerce.totalTicketsSold || 0}</Typography>
+          <Typography variant="caption" color="text.secondary">{t('dashboard.ticketsSold', 'Tickets')}</Typography>
+        </Grid>
+        <Grid item xs={4}>
+          <Typography variant="h5" fontWeight={700} sx={{ color: '#059669' }}>{commerce.totalReservations || 0}</Typography>
+          <Typography variant="caption" color="text.secondary">{t('dashboard.reservations', 'Reservations')}</Typography>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+}
+
+function ChatbotPerformanceCard() {
+  const { t } = useTranslation();
+  const { data, isLoading } = useQuery({
+    queryKey: ['dashboard-chatbot'],
+    queryFn: () => client.get('/holibot/analytics').then(r => r.data).catch(() => null),
+    staleTime: 5 * 60 * 1000
+  });
+
+  if (isLoading) return <Skeleton variant="rounded" height={140} />;
+  if (!data?.data) return null;
+
+  const stats = data.data;
+  return (
+    <Paper sx={{ p: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+        <InsightsIcon sx={{ color: '#7c3aed' }} />
+        <Typography variant="subtitle2" fontWeight={700}>{t('dashboard.chatbotPerformance', 'Chatbot Performance')}</Typography>
+      </Box>
+      <Grid container spacing={1}>
+        <Grid item xs={4}>
+          <Typography variant="h5" fontWeight={700} sx={{ color: '#7c3aed' }}>{stats.totalSessions || stats.sessions7d || 0}</Typography>
+          <Typography variant="caption" color="text.secondary">{t('dashboard.sessions', 'Sessions')}</Typography>
+        </Grid>
+        <Grid item xs={4}>
+          <Typography variant="h5" fontWeight={700} color="primary">{stats.totalMessages || stats.messages7d || 0}</Typography>
+          <Typography variant="caption" color="text.secondary">{t('dashboard.messages', 'Messages')}</Typography>
+        </Grid>
+        <Grid item xs={4}>
+          <Typography variant="h5" fontWeight={700} sx={{ color: '#059669' }}>{stats.avgResponseTime ? `${stats.avgResponseTime}s` : '-'}</Typography>
+          <Typography variant="caption" color="text.secondary">{t('dashboard.avgResponse', 'Avg Response')}</Typography>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+}
 
 export default function DashboardPage() {
   const { t } = useTranslation();
@@ -154,7 +278,7 @@ export default function DashboardPage() {
       </Grid>
 
       {/* System Health + Quick Links */}
-      <Grid container spacing={2}>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} md={6}>
           {healthLoading ? <Skeleton variant="rounded" height={200} /> : (
             <SystemHealthCard health={health} healthSummary={platform.healthSummary} />
@@ -162,6 +286,22 @@ export default function DashboardPage() {
         </Grid>
         <Grid item xs={12} md={6}>
           <QuickLinks />
+        </Grid>
+      </Grid>
+
+      {/* Extended Stats: Website + Commerce + Chatbot */}
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>
+        {t('dashboard.extendedStats', 'Platform Insights')}
+      </Typography>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={4}>
+          <WebsiteStatsCard />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <CommerceOverviewCard />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <ChatbotPerformanceCard />
         </Grid>
       </Grid>
 
