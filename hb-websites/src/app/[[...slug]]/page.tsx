@@ -2,7 +2,8 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { fetchTenantConfig, fetchPage } from '@/lib/api';
-import { generatePageMetadata } from '@/lib/seo';
+import { generatePageMetadata, generateWebSiteJsonLd, generateBreadcrumbJsonLd } from '@/lib/seo';
+import { resolveLocalizedProps } from '@/lib/i18n';
 import { getBlock } from '@/blocks/index';
 import BlockRenderer from '@/components/ui/BlockRenderer';
 import type { BlockConfig, BlockStyle } from '@/types/blocks';
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       fetchPage(tenantSlug, pageSlug, locale),
     ]);
     if (!tenant || !page) return { title: 'HolidaiButler' };
-    return generatePageMetadata(page, tenant);
+    return generatePageMetadata(page, tenant, { locale });
   } catch {
     return { title: 'HolidaiButler' };
   }
@@ -83,9 +84,32 @@ export default async function Page({ params }: PageProps) {
   }
 
   const blocks = page.layout?.blocks ?? [];
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://holidaibutler.com';
+
+  // JSON-LD structured data
+  const jsonLdItems: object[] = [];
+
+  // WebSite schema on homepage
+  if (pageSlug === 'home') {
+    jsonLdItems.push(generateWebSiteJsonLd(tenant, baseUrl));
+  }
+
+  // Breadcrumb
+  const breadcrumbs = [{ name: tenant.displayName, url: baseUrl }];
+  if (pageSlug !== 'home') {
+    breadcrumbs.push({ name: page.title ?? pageSlug, url: `${baseUrl}/${pageSlug}` });
+  }
+  jsonLdItems.push(generateBreadcrumbJsonLd(breadcrumbs));
 
   return (
     <>
+      {jsonLdItems.map((jsonLd, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      ))}
       {blocks.map((block: BlockConfig) => {
         if (!shouldRenderBlock(block, tenant.featureFlags)) return null;
 
@@ -95,6 +119,7 @@ export default async function Page({ params }: PageProps) {
           return null;
         }
 
+        const resolvedProps = resolveLocalizedProps(block.props, locale);
         const wrapperStyle = getBlockWrapperStyle(block.style);
         const wrapperClass = block.style?.fullWidth ? 'w-full' : '';
 
@@ -102,7 +127,7 @@ export default async function Page({ params }: PageProps) {
           return (
             <BlockRenderer key={block.id} blockType={block.type}>
               <div className={wrapperClass || undefined} style={wrapperStyle}>
-                <BlockComponent {...block.props} />
+                <BlockComponent {...resolvedProps} />
               </div>
             </BlockRenderer>
           );
@@ -110,7 +135,7 @@ export default async function Page({ params }: PageProps) {
 
         return (
           <BlockRenderer key={block.id} blockType={block.type}>
-            <BlockComponent {...block.props} />
+            <BlockComponent {...resolvedProps} />
           </BlockRenderer>
         );
       })}

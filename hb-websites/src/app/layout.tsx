@@ -66,6 +66,10 @@ export default async function RootLayout({
           <ChatbotWidget
             tenantSlug={tenantSlug}
             locale={locale}
+            chatbotName={
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (tenant.branding as any)?.chatbotConfig?.name || undefined
+            }
             apiUrl={process.env.HB_API_URL ?? 'http://localhost:3001'}
           />
         )}

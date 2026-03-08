@@ -1,5 +1,6 @@
 import type { CtaProps } from '@/types/blocks';
 import Button from '@/components/ui/Button';
+import ChatbotButton from '@/components/ui/ChatbotButton';
 
 const bgStyles = {
   primary: 'bg-primary text-on-primary',
@@ -21,17 +22,30 @@ export default function Cta({ headline, description, backgroundStyle = 'primary'
         )}
         {buttons && buttons.length > 0 && (
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            {buttons.map((btn, i) => (
-              <Button
-                key={i}
-                href={btn.href}
-                variant={btn.variant ?? (i === 0 ? 'primary' : 'outline')}
-                size="lg"
-                className={i === 0 ? 'bg-on-primary text-primary hover:bg-on-primary/90' : 'border-on-primary text-on-primary hover:bg-on-primary/10'}
-              >
-                {btn.label}
-              </Button>
-            ))}
+            {buttons.map((btn, i) => {
+              if (btn.variant === 'chatbot') {
+                return (
+                  <ChatbotButton
+                    key={i}
+                    label={btn.label}
+                    message={btn.chatbotAction}
+                    className={i === 0 ? 'bg-on-primary text-primary hover:bg-on-primary/90' : 'border-on-primary text-on-primary hover:bg-on-primary/10'}
+                    size="lg"
+                  />
+                );
+              }
+              return (
+                <Button
+                  key={i}
+                  href={btn.href}
+                  variant={btn.variant ?? (i === 0 ? 'primary' : 'outline')}
+                  size="lg"
+                  className={i === 0 ? 'bg-on-primary text-primary hover:bg-on-primary/90' : 'border-on-primary text-on-primary hover:bg-on-primary/10'}
+                >
+                  {btn.label}
+                </Button>
+              );
+            })}
           </div>
         )}
       </div>
