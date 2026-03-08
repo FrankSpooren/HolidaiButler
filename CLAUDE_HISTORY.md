@@ -47,7 +47,8 @@
 36. [Command v5.0: Bugfix + Stabilisatie + Hardening](#command-v50-bugfix--stabilisatie--hardening-07-03-2026)
 37. [Repair Command v6.0: Browser-Verified Fixes](#repair-command-v60-browser-verified-fixes-07-08-03-2026)
 38. [Command v7.0: Fase V Voltooiing](#command-v70-fase-v-voltooiing-08-03-2026)
-39. [Volledige Changelog](#volledige-changelog)
+39. [Command v7.1: Frank's Feedback Fixes](#command-v71-franks-feedback-fixes-08-03-2026)
+40. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -3572,6 +3573,87 @@ Command v7.0 bevat 8 stappen en 20 acceptatiecriteria voor UX-polish, SEO, quick
 ### STAP 8 — Documentatie
 
 CLAUDE.md v3.87.0 → v3.88.0. MS v7.49 → v7.50. CLAUDE_HISTORY.md + MEMORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
+## Command v7.1: Frank's Feedback Fixes (08-03-2026)
+
+### Overzicht
+
+Frank testte de dev-omgeving na Command v7.0 en vond dat 95% van de wijzigingen niet zichtbaar was. Twee oorzaken: (1) hb-websites was niet gedeployed naar Hetzner (opgelost door deploy v7.0), (2) echte bugs en ontbrekende features.
+
+**Root cause Hero crash**: TranslatableField in admin slaat i18n-objecten op (`{en: "...", nl: "..."}`), maar `pages.js` backend retourneert de layout JSON ongewijzigd. Block components verwachten strings → React crasht op "Objects are not valid as a React child" → BlockErrorBoundary toont "This section could not be loaded."
+
+### STAP 1 — Block i18n Resolution (Hero crash fix)
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/lib/i18n.ts` | Nieuwe functies: `isI18nObject()` (detecteert objecten waarvan keys subset zijn van supported locales), `resolveLocalizedProps()` (recursief door props, arrays en nested objects), `resolveValue()` (locale fallback: locale → en → nl → eerste waarde). |
+| `hb-websites/src/app/[[...slug]]/page.tsx` | Import `resolveLocalizedProps`. Vóór block rendering: `const resolvedProps = resolveLocalizedProps(block.props, locale)`. |
+
+### STAP 2 — Hero Image URL + Height Prop
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/blocks/Hero.tsx` | Complete rewrite. `resolveAssetUrl()` voor images (relatieve paden → absolute via HB_ASSET_URL). `heightClasses` mapping: compact (`py-12 sm:py-16 lg:py-20`), default (`py-20 sm:py-28 lg:py-36`), tall (`py-28 sm:py-36 lg:py-48`), fullscreen (`min-h-screen flex items-center`). ChatbotButton support: `btn.variant === 'chatbot'` → `<ChatbotButton>`. Verwijderd: `onError` handlers (Server Component restriction in Next.js 15). |
+| `hb-websites/src/types/blocks.ts` | `HeroProps.height?: 'compact' \| 'default' \| 'tall' \| 'fullscreen'`. `HeroButton` type met `variant?: ... \| 'chatbot'` en `chatbotAction?: string`. |
+| `admin-module/src/components/blocks/editors/HeroEditor.jsx` | SelectField "Height" (4 opties). |
+
+### STAP 3 — Map Gekleurde Markers per Categorie
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/blocks/Map.tsx` | `CATEGORY_COLORS` mapping: Food & Drinks/Eten & Drinken → #E53935 (rood), Beaches & Nature/Natuur → #43A047 (groen), Culture & History/Cultuur & Historie → #1565C0 (blauw), Active/Actief → #FF6F00 (oranje), Shopping/Winkelen → #AB47BC (paars), Recreation/Recreatief → #26C6DA (cyaan), Health & Wellbeing/Gezondheid & Verzorging → #66BB6A (lichtgroen), Practical/Praktisch → #78909C (grijs). `L.divIcon` met gekleurde cirkel (24px, witte border, schaduw). Legenda onder kaart (alleen gebruikte categorie-kleuren). |
+| `hb-websites/src/app/globals.css` | `.hb-marker { background: none !important; border: none !important; }` |
+
+### STAP 4 — Quick Action Chatbot Buttons
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/lib/chatbot-actions.ts` | **NIEUW**. `QUICK_ACTIONS` constant (NL/EN/DE/ES, 4 acties per taal). `openChatbotWithMessage(msg)` dispatcher via `CustomEvent('hb:chatbot:open')`. |
+| `hb-websites/src/components/ui/ChatbotButton.tsx` | **NIEUW**. `'use client'` component. Roept `openChatbotWithMessage()` aan bij click. Responsive sizes (sm/md/lg). |
+| `hb-websites/src/components/modules/ChatbotWidget.tsx` | `useEffect` event listener voor `hb:chatbot:open`. Opent chatbot en stuurt pre-filled bericht via `sendMessage()`. |
+| `hb-websites/src/blocks/Hero.tsx` | Als `btn.variant === 'chatbot'` → render `<ChatbotButton>` i.p.v. `<Button>`. |
+| `hb-websites/src/blocks/Cta.tsx` | Zelfde chatbot button logica als Hero.tsx. |
+| `admin-module/src/components/blocks/fields/ButtonListField.jsx` | 'Chatbot Action' variant + action dropdown (4 voorgedefinieerde acties). |
+
+### STAP 5 — Button Style Defaults
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/BrandingPage.jsx` | Helpers: `hexToRgb()`, `rgbToHex()`, `darkenHex()`, `contrastColor()`, `deriveButtonDefaults()`. Bij form init: lege button kleuren auto-derived van `colors.primary` / `colors.secondary`. |
+
+### STAP 6 — Footer Vertaalfunctie
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/components/layout/Footer.tsx` | `resolveTitle(value, locale)` helper: handelt `string \| Record<string,string>` af (backward-compatible). Alle column titles + copyright gebruiken `resolveTitle()`. |
+| `hb-websites/src/types/tenant.ts` | `FooterColumn.title/content: string \| Record<string, string>`. `FooterConfig.copyright: string \| Record<string, string>`. Stijl-interface uitgebreid met spacingScale, shadowIntensity, imageStyle, headingTextTransform. |
+| `admin-module/src/pages/BrandingPage.jsx` | Footer copyright: TextField → TranslatableField. Footer column title: TextField → TranslatableField. |
+
+### STAP 7 — Branding Uitbreiding
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/BrandingPage.jsx` | Chatbot Config accordion: chatbotnaam (TextField), welkomstbericht (TranslatableField). Header Style accordion: variant (solid/transparent SelectField), sticky toggle (SwitchField). `updateChatbotConfig()` en `updateHeaderStyle()` functies. |
+| `hb-websites/src/components/layout/Header.tsx` | Branding-driven stijl: `headerStyle.variant === 'transparent'` → absolute positioning, transparante achtergrond. `headerStyle.sticky !== false` → sticky top-0. |
+| `hb-websites/src/app/layout.tsx` | `chatbotName` doorgeven van `tenant.branding.chatbotConfig.name` naar ChatbotWidget. |
+
+### Build Fixes
+
+| Issue | Fix |
+|-------|-----|
+| `seo.ts`: socialLinks op TenantBranding i.p.v. TenantConfig | `tenant.branding?.socialLinks` → `tenant.socialLinks` |
+| `layout.tsx`: TypeScript cast error Record<string, unknown> | `(tenant.branding as any)?.chatbotConfig?.name` |
+| `ChatbotWidget.tsx`: block-scoped variable before declaration | `useEffect` voor `hb:chatbot:open` verplaatst NA `sendMessage` useCallback |
+| `Hero.tsx`: Server Component event handler restriction | `onError` handlers verwijderd (achtergrondkleur overlay als fallback) |
+| `tenant.ts`: ontbrekende stijl properties | `spacingScale`, `shadowIntensity`, `imageStyle`, `headingTextTransform` toegevoegd |
+
+### Documentatie
+
+CLAUDE.md v3.88.0 → v3.89.0. MS v7.50 → v7.51. CLAUDE_HISTORY.md bijgewerkt.
 
 **Kosten**: EUR 0
 
