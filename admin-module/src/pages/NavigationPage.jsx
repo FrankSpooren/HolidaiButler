@@ -226,12 +226,12 @@ export default function NavigationPage() {
         <Typography variant="subtitle2" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
           {t('navigation.preview')}
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, p: 2, bgcolor: '#fafafa', borderRadius: 1 }}>
-          <Typography sx={{ fontWeight: 700, color: activeDest?.branding?.colors?.primary || '#333' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+          <Typography sx={{ fontWeight: 700, color: activeDest?.branding?.colors?.primary || 'text.primary' }}>
             {activeDest?.displayName}
           </Typography>
           {navItems.filter(i => i.isActive).map((item, idx) => (
-            <Typography key={idx} sx={{ fontSize: '0.875rem', color: '#555', cursor: 'pointer', '&:hover': { color: '#000' } }}>
+            <Typography key={idx} sx={{ fontSize: '0.875rem', color: 'text.secondary', cursor: 'pointer', '&:hover': { color: 'text.primary' } }}>
               {item.label?.en || item.label?.nl || item.href}
             </Typography>
           ))}

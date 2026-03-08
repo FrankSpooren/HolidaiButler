@@ -52,7 +52,7 @@ export default function LoginPage() {
     }}>
       <Paper elevation={8} sx={{ p: 5, maxWidth: 420, width: '100%', borderRadius: 3 }}>
         <Box sx={{ textAlign: 'center', mb: 4 }}>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: '#1e293b' }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
             HolidaiButler
           </Typography>
           <Typography variant="subtitle1" color="text.secondary">

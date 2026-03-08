@@ -3,12 +3,14 @@ import {
   Box, Typography, Card, Grid, Button, TextField, Chip, Dialog, DialogTitle,
   DialogContent, DialogActions, Alert, Snackbar, Skeleton, IconButton,
   FormControl, InputLabel, Select, MenuItem, Tooltip, ImageList, ImageListItem,
-  ImageListItemBar
+  ImageListItemBar, Checkbox
 } from '@mui/material';
 import UploadIcon from '@mui/icons-material/Upload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import SelectAllIcon from '@mui/icons-material/SelectAll';
+import DeselectIcon from '@mui/icons-material/Deselect';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../api/client.js';
@@ -27,6 +29,8 @@ export default function MediaPage() {
   const [search, setSearch] = useState('');
   const [detailOpen, setDetailOpen] = useState(null);
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
+  const [selected, setSelected] = useState(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['media', destId, category, search],
@@ -60,6 +64,37 @@ export default function MediaPage() {
       setSnack({ open: true, message: 'File deleted', severity: 'success' });
     }
   });
+
+  const bulkDeleteMut = useMutation({
+    mutationFn: async (ids) => {
+      const results = await Promise.allSettled(ids.map(id => client.delete(`/media/${id}`)));
+      const deleted = results.filter(r => r.status === 'fulfilled').length;
+      return deleted;
+    },
+    onSuccess: (deleted) => {
+      queryClient.invalidateQueries({ queryKey: ['media'] });
+      setSelected(new Set());
+      setBulkDeleteOpen(false);
+      setSnack({ open: true, message: `${deleted} file(s) deleted`, severity: 'success' });
+    }
+  });
+
+  const toggleSelect = (id, e) => {
+    e.stopPropagation();
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === files.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(files.map(f => f.id)));
+    }
+  };
 
   const updateMut = useMutation({
     mutationFn: ({ id, data: updateData }) => client.put(`/media/${id}`, updateData).then(r => r.data),
@@ -118,6 +153,36 @@ export default function MediaPage() {
         </Box>
       </Box>
 
+      {/* Bulk actions bar */}
+      {files.length > 0 && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <Tooltip title={selected.size === files.length ? t('media.deselectAll', 'Deselect all') : t('media.selectAll', 'Select all')}>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={selected.size === files.length ? <DeselectIcon /> : <SelectAllIcon />}
+              onClick={toggleSelectAll}
+            >
+              {selected.size === files.length ? t('media.deselectAll', 'Deselect all') : t('media.selectAll', 'Select all')}
+            </Button>
+          </Tooltip>
+          {selected.size > 0 && (
+            <>
+              <Chip label={`${selected.size} ${t('media.selected', 'selected')}`} size="small" color="primary" />
+              <Button
+                size="small"
+                variant="contained"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                {t('media.deleteSelected', 'Delete selected')}
+              </Button>
+            </>
+          )}
+        </Box>
+      )}
+
       {files.length === 0 ? (
         <Card sx={{ p: 4, textAlign: 'center' }}>
           <Typography color="text.secondary">No media files yet. Upload your first file.</Typography>
@@ -125,11 +190,30 @@ export default function MediaPage() {
       ) : (
         <ImageList cols={6} gap={8} sx={{ m: 0 }}>
           {files.map(file => (
-            <ImageListItem key={file.id} sx={{ cursor: 'pointer', borderRadius: 1, overflow: 'hidden', border: '1px solid #e2e8f0' }} onClick={() => setDetailOpen(file)}>
+            <ImageListItem
+              key={file.id}
+              sx={{
+                cursor: 'pointer', borderRadius: 1, overflow: 'hidden',
+                border: selected.has(file.id) ? '2px solid' : '1px solid',
+                borderColor: selected.has(file.id) ? 'primary.main' : 'divider',
+                position: 'relative'
+              }}
+              onClick={() => setDetailOpen(file)}
+            >
+              <Checkbox
+                checked={selected.has(file.id)}
+                onClick={(e) => toggleSelect(file.id, e)}
+                size="small"
+                sx={{
+                  position: 'absolute', top: 2, left: 2, zIndex: 2,
+                  bgcolor: 'rgba(255,255,255,0.8)', borderRadius: 0.5,
+                  p: 0.25, '&:hover': { bgcolor: 'rgba(255,255,255,0.95)' }
+                }}
+              />
               {isImage(file) ? (
                 <img src={getUrl(file)} alt={file.alt_text || file.original_name} loading="lazy" style={{ height: 150, objectFit: 'cover' }} />
               ) : (
-                <Box sx={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f1f5f9' }}>
+                <Box sx={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover' }}>
                   <Typography variant="h6" color="text.secondary">{file.mime_type?.split('/')[1]?.toUpperCase() || 'FILE'}</Typography>
                 </Box>
               )}
@@ -149,7 +233,7 @@ export default function MediaPage() {
         {detailOpen && (
           <DialogContent>
             {isImage(detailOpen) && (
-              <Box component="img" src={getUrl(detailOpen)} alt={detailOpen.alt_text} sx={{ width: '100%', maxHeight: 300, objectFit: 'contain', mb: 2, borderRadius: 1, bgcolor: '#f8fafc' }} />
+              <Box component="img" src={getUrl(detailOpen)} alt={detailOpen.alt_text} sx={{ width: '100%', maxHeight: 300, objectFit: 'contain', mb: 2, borderRadius: 1, bgcolor: 'action.hover' }} />
             )}
             <Typography variant="body2"><strong>Filename:</strong> {detailOpen.original_name}</Typography>
             <Typography variant="body2"><strong>Type:</strong> {detailOpen.mime_type}</Typography>
@@ -185,6 +269,27 @@ export default function MediaPage() {
             {t('common.delete', 'Delete')}
           </Button>
           <Button onClick={() => setDetailOpen(null)}>{t('common.close')}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk delete confirmation */}
+      <Dialog open={bulkDeleteOpen} onClose={() => setBulkDeleteOpen(false)}>
+        <DialogTitle>{t('media.confirmBulkDelete', 'Confirm Bulk Delete')}</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {t('media.bulkDeleteMessage', `Are you sure you want to delete ${selected.size} file(s)? This cannot be undone.`)}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkDeleteOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => bulkDeleteMut.mutate([...selected])}
+            disabled={bulkDeleteMut.isPending}
+          >
+            {bulkDeleteMut.isPending ? t('common.deleting', 'Deleting...') : t('common.delete', 'Delete')}
+          </Button>
         </DialogActions>
       </Dialog>
 
