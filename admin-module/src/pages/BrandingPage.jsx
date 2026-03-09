@@ -108,6 +108,14 @@ function ColorField({ label, value, onChange }) {
   );
 }
 
+/** Safely render an i18n value — if object {en,nl,...}, show the first non-empty value; if string, return as-is */
+function resolveI18nDisplay(val) {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') return val.en || val.nl || Object.values(val).find(v => v) || '';
+  return String(val);
+}
+
 function BrandingAccordion({ id, title, subtitle, children, defaultExpanded }) {
   return (
     <Accordion defaultExpanded={defaultExpanded} sx={{ '&:before': { display: 'none' }, mb: 1 }}>
@@ -181,7 +189,7 @@ export default function BrandingPage() {
         },
         favicon: b.favicon || '',
         navicon: b.navicon || '',
-        buttons: b.buttons && Object.keys(b.buttons).length > 0
+        buttons: b.buttons && Object.keys(b.buttons).length > 0 && b.buttons.primary?.bg
           ? b.buttons
           : deriveButtonDefaults(
               b.colors?.primary || b.primary || '',
@@ -795,7 +803,7 @@ export default function BrandingPage() {
                       <Grid item xs={12} sm={4} key={i}>
                         <Box sx={{ border: '1px dashed', borderColor: 'text.disabled', borderRadius: 1, p: 1.5, minHeight: 80, textAlign: 'center' }}>
                           <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-                            {col.title || col.type}
+                            {resolveI18nDisplay(col.title) || col.type}
                           </Typography>
                           <Typography variant="caption" display="block" color="text.disabled" sx={{ mt: 0.5 }}>
                             {col.type === 'brand' && 'Logo + payoff'}
@@ -811,7 +819,7 @@ export default function BrandingPage() {
                   </Grid>
                   <Box sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: 'text.disabled', textAlign: 'center' }}>
                     <Typography variant="caption" color="text.disabled">
-                      {form.footer?.copyright || `\u00A9 ${new Date().getFullYear()}`}
+                      {resolveI18nDisplay(form.footer?.copyright) || `\u00A9 ${new Date().getFullYear()}`}
                       {form.footer?.showSocial !== false && ' | Social Icons'}
                       {form.footer?.showNewsletter && ' | Newsletter'}
                     </Typography>
