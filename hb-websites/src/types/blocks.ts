@@ -1,7 +1,9 @@
 export type BlockType =
   | 'hero'
   | 'poi_grid'
+  | 'poi_grid_filtered'
   | 'event_calendar'
+  | 'event_calendar_filtered'
   | 'rich_text'
   | 'card_group'
   | 'map'

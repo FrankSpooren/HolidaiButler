@@ -17,12 +17,12 @@ const CHATBOT_ACTIONS = [
   { value: 'tip_of_day', label: 'Tip of the Day' },
 ];
 
-// Map action keys to actual messages per locale
+// Map action keys to messages dispatched via CustomEvent to ChatbotWidget
 const ACTION_MESSAGES = {
-  plan_day: 'Create a day program for me based on my interests and today\'s weather.',
-  browse_categories: 'What categories are available? Let me browse by category.',
-  route_planner: 'I want a route description. Which attractions can I combine in a route?',
-  tip_of_day: 'What\'s your tip of the day? Surprise me with something fun!',
+  plan_day: 'Stel een dagprogramma voor me samen op basis van mijn interesses en het weer van vandaag.',
+  browse_categories: 'Welke categorieën zijn er? Laat me zoeken op rubriek.',
+  route_planner: 'Ik wil een routebeschrijving. Welke bezienswaardigheden kan ik combineren in een route?',
+  tip_of_day: '__TIP_VAN_DE_DAG__',
 };
 
 export default function ButtonListField({ label, value, onChange, disabled, sx }) {

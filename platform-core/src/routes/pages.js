@@ -49,9 +49,13 @@ router.get('/destinations/:code', async (req, res) => {
     let config = {};
     try { config = typeof destination.config === 'string' ? JSON.parse(destination.config) : (destination.config || {}); } catch (e) { /* empty */ }
 
-    // Parse social_links JSON (V.6)
+    // Parse social_links JSON (V.6) — fallback to branding.socialLinks if column is empty
     let socialLinks = {};
     try { socialLinks = typeof destination.social_links === 'string' ? JSON.parse(destination.social_links) : (destination.social_links || {}); } catch (e) { /* empty */ }
+    if (!socialLinks || Object.keys(socialLinks).length === 0) {
+      // Admin Portal saves social links inside branding JSON — use as fallback
+      socialLinks = branding.socialLinks || {};
+    }
 
     res.json({
       success: true,

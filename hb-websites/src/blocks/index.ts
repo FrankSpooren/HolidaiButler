@@ -20,6 +20,8 @@ import WeatherWidget from './WeatherWidget';
 import Banner from './Banner';
 import Partners from './Partners';
 import Downloads from './Downloads';
+import PoiGridFiltered from './PoiGridFiltered';
+import EventCalendarFiltered from './EventCalendarFiltered';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = ComponentType<any>;
@@ -27,7 +29,9 @@ type AnyComponent = ComponentType<any>;
 export const blockRegistry: Record<string, AnyComponent> = {
   hero: Hero,
   poi_grid: PoiGrid,
+  poi_grid_filtered: PoiGridFiltered,
   event_calendar: EventCalendar,
+  event_calendar_filtered: EventCalendarFiltered,
   rich_text: RichText,
   card_group: CardGroup,
   map: MapWrapper,
