@@ -101,6 +101,19 @@ export async function fetchEvents(
   return res?.data ?? [];
 }
 
+export async function fetchEvent(
+  tenantSlug: string,
+  eventId: number,
+  locale?: string
+): Promise<AgendaEvent | null> {
+  const res = await hbFetch<ApiResponse<AgendaEvent>>(
+    `/api/v1/agenda/events/${eventId}`,
+    tenantSlug,
+    { revalidate: 300, locale }
+  );
+  return res?.data ?? null;
+}
+
 export async function fetchCategories(tenantSlug: string): Promise<Category[]> {
   const res = await hbFetch<ApiResponse<Category[]>>(
     '/api/v1/categories',
