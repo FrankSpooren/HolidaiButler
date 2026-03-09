@@ -13,32 +13,31 @@ interface MapPOI {
   rating?: number;
 }
 
-// Category color mapping: EN (Calpe) + NL (Texel) names
+// Category color mapping — from Customer Portal categoryConfig.ts gradient primary colors
 const CATEGORY_COLORS: Record<string, string> = {
-  // Food & Drinks (rood)
-  'food & drinks': '#E53935', 'eten & drinken': '#E53935', 'restaurants': '#E53935',
-  'restaurant': '#E53935', 'cafe': '#E53935', 'bar': '#E53935',
-  // Beaches & Nature (groen)
-  'beaches & nature': '#43A047', 'natuur': '#43A047', 'strand': '#43A047',
-  'nature': '#43A047', 'beaches': '#43A047', 'park': '#43A047',
-  // Culture & History (blauw)
-  'culture & history': '#1565C0', 'cultuur & historie': '#1565C0', 'cultuur': '#1565C0',
-  'culture': '#1565C0', 'museum': '#1565C0', 'musea': '#1565C0',
-  // Active (oranje)
-  'active': '#FF6F00', 'actief': '#FF6F00', 'sport': '#FF6F00', 'sports & recreation': '#FF6F00',
-  // Shopping (paars)
-  'shopping': '#AB47BC', 'winkelen': '#AB47BC', 'shops': '#AB47BC',
-  // Recreation (cyaan)
-  'recreation': '#26C6DA', 'recreatief': '#26C6DA', 'entertainment': '#26C6DA',
-  'leisure': '#26C6DA', 'amusement': '#26C6DA',
-  // Health & Wellbeing (lichtgroen)
-  'health & wellbeing': '#66BB6A', 'gezondheid & verzorging': '#66BB6A',
-  'health': '#66BB6A', 'wellness': '#66BB6A',
-  // Practical (grijs)
-  'practical': '#78909C', 'praktisch': '#78909C', 'services': '#78909C',
+  // Calpe (EN) — Customer Portal gradient primaries
+  'food & drinks': '#4f766b', 'restaurants': '#4f766b', 'restaurant': '#4f766b',
+  'cafe': '#4f766b', 'bar': '#4f766b',
+  'beaches & nature': '#b4942e', 'beaches': '#b4942e',
+  'culture & history': '#253444', 'culture': '#253444', 'museum': '#253444',
+  'recreation': '#354f48', 'entertainment': '#354f48', 'leisure': '#354f48',
+  'active': '#016193', 'sports & recreation': '#016193',
+  'shopping': '#b4892e', 'shops': '#b4892e',
+  'health & wellbeing': '#004568', 'health': '#004568', 'wellness': '#004568',
+  'practical': '#016193', 'services': '#016193',
+  'nightlife': '#7B2D8E',
+  // Texel (NL) — Customer Portal gradient primaries
+  'eten & drinken': '#E53935',
+  'natuur': '#7CB342', 'nature': '#7CB342', 'strand': '#7CB342', 'park': '#7CB342',
+  'cultuur & historie': '#004B87', 'cultuur': '#004B87', 'musea': '#004B87',
+  'actief': '#FF6B00', 'sport': '#FF6B00',
+  'winkelen': '#AB47BC',
+  'recreatief': '#354f48', 'amusement': '#354f48',
+  'gezondheid & verzorging': '#43A047',
+  'praktisch': '#607D8B',
 };
 
-const DEFAULT_COLOR = '#5C6BC0';
+const DEFAULT_COLOR = '#30c59b';
 
 function getCategoryColor(category?: string): string {
   if (!category) return DEFAULT_COLOR;
@@ -47,18 +46,18 @@ function getCategoryColor(category?: string): string {
 
 // Legend: deduplicate to show one entry per color
 const LEGEND_ITEMS = [
-  { label: 'Food & Drinks', color: '#E53935' },
-  { label: 'Nature', color: '#43A047' },
-  { label: 'Culture', color: '#1565C0' },
-  { label: 'Active', color: '#FF6F00' },
-  { label: 'Shopping', color: '#AB47BC' },
-  { label: 'Recreation', color: '#26C6DA' },
-  { label: 'Health', color: '#66BB6A' },
-  { label: 'Practical', color: '#78909C' },
+  { label: 'Food & Drinks', color: '#4f766b' },
+  { label: 'Nature', color: '#7CB342' },
+  { label: 'Culture', color: '#253444' },
+  { label: 'Active', color: '#016193' },
+  { label: 'Shopping', color: '#b4892e' },
+  { label: 'Recreation', color: '#354f48' },
+  { label: 'Health', color: '#004568' },
+  { label: 'Practical', color: '#607D8B' },
   { label: 'Other', color: DEFAULT_COLOR },
 ];
 
-export default function Map({ center, zoom = 14, categoryFilter }: MapProps) {
+export default function Map({ center, zoom = 14, categoryFilter, markers: staticMarkers }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
@@ -97,7 +96,36 @@ export default function Map({ center, zoom = 14, categoryFilter }: MapProps) {
         maxZoom: 19,
       }).addTo(map);
 
-      // Fetch POIs
+      // If static markers provided (e.g. POI detail page), render only those — skip fetch
+      if (staticMarkers && staticMarkers.length > 0) {
+        const colors = new Set<string>();
+        for (const m of staticMarkers) {
+          if (!m.lat || !m.lng) continue;
+          const color = getCategoryColor(m.category);
+          colors.add(color);
+          const icon = L.divIcon({
+            className: 'hb-marker',
+            html: `<div style="width:24px;height:24px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+            popupAnchor: [0, -14],
+          });
+          L.marker([m.lat, m.lng], { icon })
+            .bindPopup(
+              `<div style="min-width:150px">` +
+              `<strong>${m.name}</strong>` +
+              (m.category ? `<br><span style="color:#64748b;font-size:12px">${m.category}</span>` : '') +
+              (m.rating ? `<br><span style="color:#f59e0b">\u2605</span> ${m.rating}` : '') +
+              (m.id ? `<br><a href="/poi/${m.id}" style="color:#3b82f6;font-size:12px">Details \u2192</a>` : '') +
+              `</div>`
+            )
+            .addTo(map);
+        }
+        if (!cancelled) setUsedColors(colors);
+        return; // Done — no fetch needed
+      }
+
+      // Fetch ALL POIs (for standalone Map block on explore/overview pages)
       try {
         const params = new URLSearchParams();
         if (categoryFilter?.length) {

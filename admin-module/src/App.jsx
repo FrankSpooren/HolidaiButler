@@ -18,6 +18,7 @@ import BrandingPage from './pages/BrandingPage.jsx';
 import PagesPage from './pages/PagesPage.jsx';
 import NavigationPage from './pages/NavigationPage.jsx';
 import MediaPage from './pages/MediaPage.jsx';
+import OnboardingPage from './pages/OnboardingPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import useAuthStore from './stores/authStore.js';
 
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="/pages" element={<PagesPage />} />
             <Route path="/navigation" element={<NavigationPage />} />
             <Route path="/media" element={<MediaPage />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
           </Route>
         </Route>
 
