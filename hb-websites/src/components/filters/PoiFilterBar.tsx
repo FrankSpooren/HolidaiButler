@@ -16,23 +16,31 @@ interface POI {
   review_count?: number;
 }
 
+/** Category color mapping — derived from Customer Portal categoryConfig.ts gradient primary colors */
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
-  'food & drinks': { bg: '#FEE2E2', text: '#991B1B' },
-  'eten & drinken': { bg: '#FEE2E2', text: '#991B1B' },
-  'restaurants': { bg: '#FEE2E2', text: '#991B1B' },
-  'beaches & nature': { bg: '#DCFCE7', text: '#166534' },
-  'natuur': { bg: '#DCFCE7', text: '#166534' },
-  'nature': { bg: '#DCFCE7', text: '#166534' },
-  'culture & history': { bg: '#DBEAFE', text: '#1E40AF' },
-  'cultuur & historie': { bg: '#DBEAFE', text: '#1E40AF' },
-  'cultuur': { bg: '#DBEAFE', text: '#1E40AF' },
-  'active': { bg: '#FFEDD5', text: '#9A3412' },
-  'actief': { bg: '#FFEDD5', text: '#9A3412' },
-  'shopping': { bg: '#F3E8FF', text: '#6B21A8' },
-  'winkelen': { bg: '#F3E8FF', text: '#6B21A8' },
-  'recreation': { bg: '#CFFAFE', text: '#155E75' },
-  'recreatief': { bg: '#CFFAFE', text: '#155E75' },
-  'nightlife': { bg: '#FDE68A', text: '#92400E' },
+  // Calpe (EN)
+  'food & drinks': { bg: '#e0ecea', text: '#4f766b' },
+  'restaurants': { bg: '#e0ecea', text: '#4f766b' },
+  'beaches & nature': { bg: '#f0e8d4', text: '#b4942e' },
+  'culture & history': { bg: '#d8dce0', text: '#253444' },
+  'recreation': { bg: '#dae2e0', text: '#354f48' },
+  'active': { bg: '#cce0ec', text: '#016193' },
+  'shopping': { bg: '#f0e7d4', text: '#b4892e' },
+  'health & wellbeing': { bg: '#ccdde8', text: '#004568' },
+  'practical': { bg: '#cce0ec', text: '#016193' },
+  'nightlife': { bg: '#e8d9ed', text: '#7B2D8E' },
+  // Texel (NL)
+  'eten & drinken': { bg: '#fcdcdb', text: '#E53935' },
+  'natuur': { bg: '#e8f0da', text: '#7CB342' },
+  'nature': { bg: '#e8f0da', text: '#7CB342' },
+  'cultuur & historie': { bg: '#ccdce8', text: '#004B87' },
+  'cultuur': { bg: '#ccdce8', text: '#004B87' },
+  'actief': { bg: '#ffe3cc', text: '#FF6B00' },
+  'winkelen': { bg: '#f0ddf3', text: '#AB47BC' },
+  'recreatief': { bg: '#dcf0e8', text: '#354f48' },
+  'gezondheid & verzorging': { bg: '#dceede', text: '#43A047' },
+  'praktisch': { bg: '#dfe4e7', text: '#607D8B' },
+  'strand': { bg: '#e8f0da', text: '#7CB342' },
 };
 
 function getCategoryStyle(category: string): { bg: string; text: string } {

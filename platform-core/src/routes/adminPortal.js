@@ -9576,4 +9576,138 @@ router.post('/translate', adminAuth(), writeAccess(['platform_admin']), async (r
   }
 });
 
+// ==========================================
+// Onboarding — New Destination Wizard (Cmd v12)
+// ==========================================
+
+/**
+ * POST /admin-portal/onboarding/create
+ * Create a new destination with branding, feature flags, pages, and navigation.
+ * RBAC: platform_admin only
+ * Body: { name, slug, domains, language, timezone, branding, featureFlags, navigation, pages }
+ */
+router.post('/onboarding/create', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const { name, slug, domains, language, timezone, branding, featureFlags, navigation, pages } = req.body;
+
+    // Validation
+    if (!name || !slug) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'name and slug are required' } });
+    }
+
+    const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
+
+    // Check slug uniqueness
+    const [existing] = await mysqlSequelize.query(
+      'SELECT id FROM destinations WHERE code = :code',
+      { replacements: { code: cleanSlug }, type: QueryTypes.SELECT }
+    );
+    if (existing) {
+      return res.status(409).json({ success: false, error: { code: 'DUPLICATE_SLUG', message: `Destination with code "${cleanSlug}" already exists` } });
+    }
+
+    // Build JSON fields
+    const brandingJson = JSON.stringify(branding || {});
+    const featureFlagsJson = JSON.stringify(featureFlags || {});
+    const supportedLanguages = JSON.stringify([language || 'en']);
+    const configJson = JSON.stringify({ nav_items: navigation || [] });
+
+    // 1. INSERT destination
+    const [insertResult] = await mysqlSequelize.query(
+      `INSERT INTO destinations (code, name, display_name, domain, country, region, timezone, currency, default_language, supported_languages, feature_flags, branding, config, is_active)
+       VALUES (:code, :name, :displayName, :domain, '', '', :timezone, 'EUR', :language, :supportedLanguages, :featureFlags, :branding, :config, 1)`,
+      {
+        replacements: {
+          code: cleanSlug,
+          name: name,
+          displayName: name,
+          domain: Array.isArray(domains) && domains.length > 0 ? domains[0] : `${cleanSlug}.holidaibutler.com`,
+          timezone: timezone || 'Europe/Amsterdam',
+          language: language || 'en',
+          supportedLanguages,
+          featureFlags: featureFlagsJson,
+          branding: brandingJson,
+          config: configJson
+        },
+        type: QueryTypes.INSERT
+      }
+    );
+
+    const destinationId = insertResult;
+
+    // 2. INSERT pages from selected templates
+    const pageTemplates = {
+      home:        { slug: 'home',        title_en: 'Home',        title_nl: 'Home',         title_de: 'Startseite',   title_es: 'Inicio',       layout: { blocks: [{ type: 'Hero', props: { title: { en: `Welcome to ${name}`, nl: `Welkom bij ${name}`, de: `Willkommen bei ${name}`, es: `Bienvenido a ${name}` }, height: 'default' } }, { type: 'PoiGridFiltered', props: {} }] } },
+      explore:     { slug: 'explore',     title_en: 'Explore',     title_nl: 'Ontdekken',    title_de: 'Entdecken',    title_es: 'Explorar',     layout: { blocks: [{ type: 'PoiGridFiltered', props: {} }] } },
+      restaurants: { slug: 'restaurants', title_en: 'Restaurants', title_nl: 'Restaurants',  title_de: 'Restaurants',  title_es: 'Restaurantes', layout: { blocks: [{ type: 'PoiGridFiltered', props: { categoryFilter: ['Food & Drinks'] } }] } },
+      events:      { slug: 'events',      title_en: 'Events',      title_nl: 'Evenementen',  title_de: 'Veranstaltungen', title_es: 'Eventos',  layout: { blocks: [{ type: 'EventCalendarFiltered', props: {} }] } },
+      contact:     { slug: 'contact',     title_en: 'Contact',     title_nl: 'Contact',      title_de: 'Kontakt',     title_es: 'Contacto',     layout: { blocks: [{ type: 'ContactForm', props: {} }] } },
+      about:       { slug: 'about',       title_en: 'About Us',    title_nl: 'Over ons',     title_de: 'Über uns',    title_es: 'Sobre nosotros', layout: { blocks: [{ type: 'RichText', props: { content: { en: `About ${name}`, nl: `Over ${name}`, de: `Über ${name}`, es: `Sobre ${name}` } } }] } }
+    };
+
+    const selectedPages = Array.isArray(pages) ? pages : ['home', 'explore', 'restaurants', 'events', 'contact', 'about'];
+    let sortOrder = 0;
+
+    for (const pageKey of selectedPages) {
+      const tmpl = pageTemplates[pageKey];
+      if (!tmpl) continue;
+
+      await mysqlSequelize.query(
+        `INSERT INTO pages (destination_id, slug, title_nl, title_en, title_de, title_es, status, layout, sort_order)
+         VALUES (:destId, :slug, :titleNl, :titleEn, :titleDe, :titleEs, 'published', :layout, :sortOrder)`,
+        {
+          replacements: {
+            destId: destinationId,
+            slug: tmpl.slug,
+            titleNl: tmpl.title_nl,
+            titleEn: tmpl.title_en,
+            titleDe: tmpl.title_de,
+            titleEs: tmpl.title_es,
+            layout: JSON.stringify(tmpl.layout),
+            sortOrder: sortOrder++
+          },
+          type: QueryTypes.INSERT
+        }
+      );
+    }
+
+    // 3. Audit log
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'destination_onboarded', entity_type: 'destination', entity_id: destinationId,
+          admin_email: req.adminUser.email,
+          changes: { name, slug: cleanSlug, pages: selectedPages, featureFlags, navigation_count: (navigation || []).length },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    // 4. Build DNS/Apache instructions
+    const domain = Array.isArray(domains) && domains.length > 0 ? domains[0] : `${cleanSlug}.holidaibutler.com`;
+    const dnsInstructions = [
+      `1. DNS: Stel een A-record in voor ${domain} → 91.98.71.87`,
+      `2. Apache: Maak VirtualHost voor ${domain} met proxy naar Next.js (port 3002) en X-Destination-ID: ${cleanSlug}`,
+      `3. SSL: Voer "certbot --apache -d ${domain}" uit op de server`
+    ];
+
+    logger.info(`[AdminPortal] Destination onboarded: ${name} (${cleanSlug}), id=${destinationId}, pages=${selectedPages.length}`);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        destinationId,
+        name,
+        code: cleanSlug,
+        domain,
+        pagesCreated: selectedPages.length,
+        dnsInstructions
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Onboarding error:', error);
+    res.status(500).json({ success: false, error: { code: 'ONBOARDING_ERROR', message: error.message } });
+  }
+});
+
 export default router;

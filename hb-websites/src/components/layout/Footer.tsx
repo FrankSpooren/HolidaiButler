@@ -57,7 +57,8 @@ export default function Footer({ tenant, locale }: FooterProps) {
   const columns: FooterColumn[] = footerConfig?.columns ?? [
     { type: 'brand', title: '' },
     { type: 'navigation', title: locale === 'nl' ? 'Navigatie' : 'Navigation' },
-    { type: 'contact', title: 'Contact' }
+    { type: 'contact', title: 'Contact' },
+    { type: 'social', title: 'Social' }
   ];
   const copyright = resolveTitle(footerConfig?.copyright, locale) || `\u00A9 ${year} ${tenant.displayName}. Powered by HolidaiButler.`;
   const showSocial = footerConfig?.showSocial !== false;
@@ -73,30 +74,6 @@ export default function Footer({ tenant, locale }: FooterProps) {
             <p className="text-sm opacity-70">
               {tenant.branding.payoff?.[locale] ?? tenant.branding.payoff?.en ?? ''}
             </p>
-            {showSocial && activeSocials.length > 0 && (
-              <div className="flex gap-3 mt-4">
-                {activeSocials.map(([platform, url]) => {
-                  const icon = socialIcons[platform];
-                  return (
-                    <a
-                      key={platform}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={icon.label}
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-                    >
-                      <svg
-                        className="w-4 h-4 fill-current"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                        dangerouslySetInnerHTML={{ __html: icon.svg }}
-                      />
-                    </a>
-                  );
-                })}
-              </div>
-            )}
           </>
         );
 
