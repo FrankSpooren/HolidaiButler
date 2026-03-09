@@ -50,13 +50,14 @@ export default async function PoiDetailPage({ params }: PageProps) {
   if (!poi) notFound();
 
   const images = poi.images ?? [];
+  const tileDescription = poi.enriched_tile_description || '';
   const detailDescription = poi.enriched_detail_description || poi.description;
   const highlights = poi.enriched_highlights ?? [];
 
   return (
     <article className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero Image Gallery */}
-      {images.length > 0 && (
+      {images.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-8 rounded-tenant overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -79,6 +80,13 @@ export default async function PoiDetailPage({ params }: PageProps) {
               ))}
             </div>
           )}
+        </div>
+      ) : (
+        <div className="mb-8 rounded-tenant overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 h-48 flex items-center justify-center">
+          <div className="text-center px-8">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-primary/40 mx-auto mb-2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <p className="text-sm text-muted">{poi.category}</p>
+          </div>
         </div>
       )}
 
@@ -127,6 +135,13 @@ export default async function PoiDetailPage({ params }: PageProps) {
                 ))}
               </ul>
             </div>
+          )}
+
+          {/* Short Summary */}
+          {tileDescription && tileDescription !== detailDescription && (
+            <p className="text-lg text-foreground/70 mb-6 italic">
+              {tileDescription}
+            </p>
           )}
 
           {/* Description */}
