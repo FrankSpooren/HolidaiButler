@@ -3735,4 +3735,108 @@ CLAUDE.md v3.89.0 → v3.90.0. MS v7.51 → v7.52. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Repair Command v9.0 — Chirurgisch Repair dev.holidaibutler.com (09-03-2026)
+
+**Doel**: dev.holidaibutler.com op Customer Portal kwaliteitsniveau brengen. 9 fixes na browser-diagnose.
+
+### FIX 1 — Chatbot Destination (KRITIEK)
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/components/modules/ChatbotWidget.tsx` | `sessionIdRef = useRef(crypto.randomUUID())` toegevoegd. `sessionId: sessionIdRef.current` meegestuurd in POST body. |
+| `hb-websites/src/app/api/holibot/chat/stream/route.ts` | Eigen `DESTINATION_IDS` mapping (calpe→1, texel→2, alicante→3, warrewijzer→4). Altijd numeriek ID via `String(DESTINATION_IDS[tenantSlug] ?? 1)`. Browser's `x-destination-id` header genegeerd. |
+
+**Root cause**: Chatbot miste `sessionId` in request body → backend kon geen conversatie-sessie tracken. SSE proxy viel terug op string "calpe" i.p.v. numeriek ID 1.
+
+### FIX 2 — Homepage Verdwenen Blocks (KRITIEK)
+
+| Actie | Detail |
+|-------|--------|
+| SQL UPDATE pages id=1 | PoiGrid block: `categoryFilter: ["restaurant","museum","beach","nature","actief"]` → verwijderd (GEEN match met DB categorieën `Food & Drinks`, `Culture & History`, etc.). Partners block verwijderd (geen `logos` array → component returns null). |
+
+**Root cause A**: DB categorieën zijn Engels (`Food & Drinks`), block props hadden generieke namen (`restaurant`, `museum`). Query retourneerde 0 resultaten → component returns null.
+**Root cause B**: Partners block had `headline` maar geen `logos` array → `if (!logos || logos.length === 0) return null`.
+
+### FIX 3 — Footer Onzichtbare Tekst
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/components/layout/Footer.tsx` | `text-on-primary` → `text-white` op `<footer>` element. |
+
+**Root cause**: `--color-on-primary` = `contrastColor(#7FA594)` = `#1C1917` (donker). Footer `bg-foreground` = `#1a1a1a` (donker). Donkere tekst op donkere achtergrond = onzichtbaar.
+
+### FIX 4 — POI Detail Image Fallback
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/app/poi/[id]/page.tsx` | Fallback gradient placeholder met locatie-icoon als geen images. `enriched_tile_description` als korte italic samenvatting boven detail description. |
+
+### FIX 5 — Restaurants Filtering
+
+| Actie | Detail |
+|-------|--------|
+| SQL UPDATE pages id=4 | Restaurants PoiGrid: `categoryFilter: ["Food & Drinks","restaurant","eetcafe"]` → `["Food & Drinks"]` (alleen geldige DB categorie). |
+| `hb-websites/src/blocks/PoiGrid.tsx` | `min_rating: 3.5` en `min_reviews: 1` alleen toegepast met `categoryFilter` (niet op explore/homepage). |
+
+### FIX 6 — Button Kleurvakjes
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/BrandingPage.jsx` | Check `b.buttons.primary?.bg` (non-empty) i.p.v. alleen `Object.keys(b.buttons).length > 0` (lege strings tellen als keys). |
+
+**Root cause**: DB had lege strings voor button bg. `Object.keys({primary: {bg: ""}}).length > 0` = TRUE → `deriveButtonDefaults()` werd nooit aangeroepen.
+
+### FIX 7 — Events Afbeeldingen Fallback
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/blocks/EventCalendar.tsx` | `DateBlock` component: parseDateParts() extraheert dag+maand, rendert gradient blok met grote datum als visueel element. Grid view: `imageUrl ? <CardImage> : <DateBlock>`. |
+
+**Build fix**: JSX inside try/catch → ESLint error `react-hooks/error-boundaries`. Opgelost door parsing in aparte `parseDateParts()` functie.
+
+### FIX 8 — Explore Categorie Mix
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/blocks/PoiGrid.tsx` | `roundRobinMix()` functie: groepeert POIs per categorie in buckets, interleaved round-robin. Zonder categoryFilter: haalt `limit * 2` op, mixt, trimt naar `limit`. |
+
+**Root cause**: `sort: rating:desc` → zelfde categorie clustert bovenaan (alle top-rated restaurants samen).
+
+### FIX 9 — BrandingPage i18n Crash
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `admin-module/src/pages/BrandingPage.jsx` | `resolveI18nDisplay()` helper: detecteert i18n objecten `{en, nl, de, es}`, retourneert eerste non-empty string. Toegepast op footer wireframe preview: `col.title` (regel 798) + `form.footer?.copyright` (regel 814). |
+
+**Root cause**: TranslatableField slaat i18n objecten op. Footer wireframe preview renderde deze objecten direct als React children → React error #31 "Objects are not valid as a React child (found: object with keys {en, nl, de, es})".
+
+### Gewijzigde Bestanden Overzicht
+
+| Bestand | Fix |
+|---------|-----|
+| `hb-websites/src/components/modules/ChatbotWidget.tsx` | 1 |
+| `hb-websites/src/app/api/holibot/chat/stream/route.ts` | 1 |
+| `hb-websites/src/components/layout/Footer.tsx` | 3 |
+| `hb-websites/src/app/poi/[id]/page.tsx` | 4 |
+| `hb-websites/src/blocks/PoiGrid.tsx` | 5, 8 |
+| `hb-websites/src/blocks/EventCalendar.tsx` | 7 |
+| `admin-module/src/pages/BrandingPage.jsx` | 6, 9 |
+| SQL pages id=1 (homepage) | 2 |
+| SQL pages id=4 (restaurants) | 5 |
+
+### Deploy
+
+- hb-websites: SCP 6 bestanden → `npm run build` (0 errors) → PM2 restart id=5
+- admin-module: lokaal build → SCP dist → 3 environments
+- SQL: 2 UPDATE statements op Hetzner DB
+- Verificatie: curl tests homepage API + chatbot SSE streaming OK
+
+### Documentatie
+
+CLAUDE.md v3.90.0 → v3.91.0. MS v7.52 → v7.53. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
