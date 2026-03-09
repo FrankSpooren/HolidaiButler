@@ -190,7 +190,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
   const gridCols = columns.length <= 2 ? 'md:grid-cols-2' : columns.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-4';
 
   return (
-    <footer className="bg-foreground text-on-primary mt-auto">
+    <footer className="bg-foreground text-white mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className={`grid grid-cols-1 ${gridCols} gap-8`}>
           {columns.map((col, i) => (
