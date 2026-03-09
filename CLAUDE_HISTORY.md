@@ -3900,4 +3900,72 @@ CLAUDE.md v3.91.0 → v3.92.0. MS v7.53 → v7.54. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Repair v11.0 — Chirurgisch Command (9 maart 2026)
+
+### Samenvatting
+10 fixes met 12 acceptatiecriteria. Protocol: VOOR/NA code + curl/browser bewijs. Frank's correcties op initial plan verwerkt (4 corrections: daily-tip endpoint, events intern, quick action buttons, social links data flow).
+
+### Fixes
+
+| Fix | Omschrijving | Resultaat |
+|-----|-------------|-----------|
+| **1+6** | Tip van de Dag — dedicated `/daily-tip` proxy route + ChatbotWidget TipCard (POI/Event card, localStorage excludes, refresh) | PASS |
+| **2** | Homepage POI grid | REEDS WERKEND (v10) |
+| **3** | POI detail image layout — responsive per image count (1/2-3/4+), geen wit gat | PASS |
+| **4** | Events intern — `/event/:id` detail pagina + interne links (was songkick.com) | PASS |
+| **5** | Global style live preview — alle 5 button variants + shadow/spacing/image style in BrandingPage | PASS |
+| **7** | Quick action buttons in blocks — ButtonListField 4 chatbot actions + `__TIP_VAN_DE_DAG__` sentinel → Hero/Cta → ChatbotButton → ChatbotWidget | PASS |
+| **8** | Filter chips — PoiFilterBar (categorie) + EventFilterBar (datum) + PoiGridFiltered/EventCalendarFiltered blocks (22 block registry) | PASS |
+| **9** | Footer social icons — backend fallback `branding.socialLinks` in pages.js (social_links kolom was NULL) | PASS |
+| **10** | quickActionFilter prop doorgewired via layout.tsx → ChatbotWidget | PASS |
+
+**12/12 acceptatiecriteria PASS.**
+
+### Nieuwe Bestanden
+
+| Bestand | Fix |
+|---------|-----|
+| `hb-websites/src/app/event/[id]/page.tsx` | 4 — Event detail pagina |
+| `hb-websites/src/app/api/holibot/daily-tip/route.ts` | 1+6 — Daily-tip proxy |
+| `hb-websites/src/components/filters/PoiFilterBar.tsx` | 8 — POI categorie filter chips |
+| `hb-websites/src/components/filters/EventFilterBar.tsx` | 8 — Event datum filter chips |
+| `hb-websites/src/blocks/PoiGridFiltered.tsx` | 8 — Filtered POI grid block |
+| `hb-websites/src/blocks/EventCalendarFiltered.tsx` | 8 — Filtered event calendar block |
+
+### Gewijzigde Bestanden
+
+| Bestand | Fix |
+|---------|-----|
+| `hb-websites/src/app/poi/[id]/page.tsx` | 3 — Responsive image layout |
+| `platform-core/src/routes/pages.js` | 9 — socialLinks fallback |
+| `hb-websites/src/lib/api.ts` | 4 — fetchEvent() |
+| `hb-websites/src/blocks/EventCalendar.tsx` | 4 — Internal event links |
+| `hb-websites/src/app/layout.tsx` | 10 — quickActionFilter prop |
+| `hb-websites/src/components/modules/ChatbotWidget.tsx` | 1+6+10 — TipCard, daily-tip, filter |
+| `admin-module/src/components/blocks/fields/ButtonListField.jsx` | 7 — Chatbot action dropdown |
+| `admin-module/src/pages/BrandingPage.jsx` | 5 — Enhanced preview panel |
+| `hb-websites/src/blocks/index.ts` | 8 — Block registry 20→22 |
+| `hb-websites/src/types/blocks.ts` | 8 — New block types |
+
+### Deploy
+- hb-websites: SCP 16 bestanden → build op Hetzner → PM2 restart
+- admin-module: lokaal build → SCP dist → Hetzner
+- platform-core: SCP pages.js → PM2 restart holidaibutler-api
+
+### Verificatie (curl bewijs)
+```
+daily-tip: {"itemType":"poi","poi":{"name":"El xiringuito",...}} ✓
+event/90: HTTP 200 ✓
+event links: href="/event/90", href="/event/91", href="/event/92" ✓
+social icons: href="https://instagram.com/holidaibutler" ✓
+```
+
+### Documentatie
+
+CLAUDE.md v3.92.0 → v3.93.0. MS v7.54 → v7.55. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
