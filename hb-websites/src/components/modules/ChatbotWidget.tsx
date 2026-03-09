@@ -7,39 +7,57 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   isStreaming?: boolean;
+  tipData?: DailyTipData | null;
+}
+
+interface DailyTipData {
+  itemType: 'poi' | 'event' | 'message';
+  poi?: { id: number; name: string; category?: string; address?: string; rating?: number; review_count?: number; images?: string[]; thumbnail_url?: string };
+  event?: { id: number; name: string; category?: string; address?: string; event_date?: string; thumbnailUrl?: string };
+  tipDescription?: string;
+  tipId?: number | null;
+  exhausted?: boolean;
 }
 
 interface ChatbotWidgetProps {
   tenantSlug: string;
   locale: string;
   chatbotName?: string;
+  quickActionFilter?: string[];
 }
 
-const QUICK_ACTIONS: Record<string, Array<{ label: string; message: string }>> = {
+const QUICK_ACTIONS: Record<string, Array<{ id: string; label: string; message: string }>> = {
   nl: [
-    { label: 'Programma samenstellen', message: 'Stel een dagprogramma voor me samen op basis van mijn interesses en het weer van vandaag.' },
-    { label: 'Zoeken op Rubriek', message: 'Welke categorieën zijn er? Laat me zoeken op rubriek.' },
-    { label: 'Routebeschrijving', message: 'Ik wil een routebeschrijving. Welke bezienswaardigheden kan ik combineren in een route?' },
-    { label: 'Tip van de Dag', message: 'Wat is jouw tip van de dag? Verras me met iets leuks!' },
+    { id: 'program', label: 'Programma samenstellen', message: 'Stel een dagprogramma voor me samen op basis van mijn interesses en het weer van vandaag.' },
+    { id: 'category', label: 'Zoeken op Rubriek', message: 'Welke categorieën zijn er? Laat me zoeken op rubriek.' },
+    { id: 'directions', label: 'Routebeschrijving', message: 'Ik wil een routebeschrijving. Welke bezienswaardigheden kan ik combineren in een route?' },
+    { id: 'tip', label: 'Tip van de Dag', message: '__TIP_VAN_DE_DAG__' },
   ],
   en: [
-    { label: 'Plan my day', message: 'Create a day program for me based on my interests and today\'s weather.' },
-    { label: 'Browse categories', message: 'What categories are available? Let me browse by category.' },
-    { label: 'Route planner', message: 'I want a route description. Which attractions can I combine in a route?' },
-    { label: 'Tip of the Day', message: 'What\'s your tip of the day? Surprise me with something fun!' },
+    { id: 'program', label: 'Plan my day', message: 'Create a day program for me based on my interests and today\'s weather.' },
+    { id: 'category', label: 'Browse categories', message: 'What categories are available? Let me browse by category.' },
+    { id: 'directions', label: 'Route planner', message: 'I want a route description. Which attractions can I combine in a route?' },
+    { id: 'tip', label: 'Tip of the Day', message: '__TIP_VAN_DE_DAG__' },
   ],
   de: [
-    { label: 'Tagesprogramm', message: 'Erstelle ein Tagesprogramm für mich basierend auf meinen Interessen und dem heutigen Wetter.' },
-    { label: 'Nach Kategorie', message: 'Welche Kategorien gibt es? Lass mich nach Kategorie suchen.' },
-    { label: 'Routenplaner', message: 'Ich möchte eine Routenbeschreibung. Welche Sehenswürdigkeiten kann ich in einer Route kombinieren?' },
-    { label: 'Tipp des Tages', message: 'Was ist dein Tipp des Tages? Überrasche mich mit etwas Schönem!' },
+    { id: 'program', label: 'Tagesprogramm', message: 'Erstelle ein Tagesprogramm für mich basierend auf meinen Interessen und dem heutigen Wetter.' },
+    { id: 'category', label: 'Nach Kategorie', message: 'Welche Kategorien gibt es? Lass mich nach Kategorie suchen.' },
+    { id: 'directions', label: 'Routenplaner', message: 'Ich möchte eine Routenbeschreibung. Welche Sehenswürdigkeiten kann ich in einer Route kombinieren?' },
+    { id: 'tip', label: 'Tipp des Tages', message: '__TIP_VAN_DE_DAG__' },
   ],
   es: [
-    { label: 'Planificar el día', message: 'Crea un programa diario para mí basado en mis intereses y el clima de hoy.' },
-    { label: 'Buscar por categoría', message: '¿Qué categorías hay disponibles? Déjame buscar por categoría.' },
-    { label: 'Planificador de rutas', message: 'Quiero una descripción de ruta. ¿Qué atracciones puedo combinar en una ruta?' },
-    { label: 'Consejo del día', message: '¡Cuál es tu consejo del día? ¡Sorpréndeme con algo divertido!' },
+    { id: 'program', label: 'Planificar el día', message: 'Crea un programa diario para mí basado en mis intereses y el clima de hoy.' },
+    { id: 'category', label: 'Buscar por categoría', message: '¿Qué categorías hay disponibles? Déjame buscar por categoría.' },
+    { id: 'directions', label: 'Planificador de rutas', message: 'Quiero una descripción de ruta. ¿Qué atracciones puedo combinar en una ruta?' },
+    { id: 'tip', label: 'Consejo del día', message: '__TIP_VAN_DE_DAG__' },
   ],
+};
+
+const TIP_LABELS: Record<string, string> = {
+  nl: 'Tip van de Dag',
+  en: 'Tip of the Day',
+  de: 'Tipp des Tages',
+  es: 'Consejo del día',
 };
 
 const DESTINATION_IDS: Record<string, number> = {
@@ -49,7 +67,90 @@ const DESTINATION_IDS: Record<string, number> = {
   warrewijzer: 4,
 };
 
-export default function ChatbotWidget({ tenantSlug, locale, chatbotName }: ChatbotWidgetProps) {
+/** localStorage key for tip session excludes */
+const TIP_HISTORY_KEY = 'holibot_tip_history';
+
+function getTipExcludes(): string[] {
+  try {
+    const raw = localStorage.getItem(TIP_HISTORY_KEY);
+    if (!raw) return [];
+    const history = JSON.parse(raw) as Record<string, { tipId: string; type: string }>;
+    return Object.values(history).map(h => h.tipId);
+  } catch { return []; }
+}
+
+function recordTip(tipId: number | string, type: string) {
+  try {
+    const raw = localStorage.getItem(TIP_HISTORY_KEY);
+    const history = raw ? JSON.parse(raw) : {};
+    const key = `${type}-${tipId}`;
+    history[key] = { tipId: String(tipId), type, timestamp: Date.now() };
+    localStorage.setItem(TIP_HISTORY_KEY, JSON.stringify(history));
+  } catch { /* ignore */ }
+}
+
+/** Render a POI/Event card inside the chat */
+function TipCard({ tip, locale, onRefresh }: { tip: DailyTipData; locale: string; onRefresh: () => void }) {
+  if (tip.itemType === 'message') {
+    return (
+      <div className="text-sm text-foreground/70 italic">
+        {tip.tipDescription || (locale === 'nl' ? 'Je hebt alle tips gezien! Probeer het later opnieuw.' : 'You\'ve seen all tips! Try again later.')}
+      </div>
+    );
+  }
+
+  const item = tip.poi || tip.event;
+  if (!item) return null;
+
+  const imageUrl = tip.poi?.images?.[0] || tip.poi?.thumbnail_url || tip.event?.thumbnailUrl;
+  const href = tip.poi ? `/poi/${item.id}` : `/event/${item.id}`;
+
+  return (
+    <div className="border border-primary/20 rounded-xl overflow-hidden bg-white">
+      {imageUrl && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={imageUrl} alt={item.name} className="w-full h-32 object-cover" />
+      )}
+      <div className="p-3">
+        {item.category && (
+          <span className="text-xs font-medium text-primary">{item.category}</span>
+        )}
+        <a href={href} className="block mt-1 font-semibold text-sm text-foreground hover:text-primary transition-colors">
+          {item.name}
+        </a>
+        {tip.poi?.rating && (
+          <div className="flex items-center gap-1 mt-1 text-xs text-muted">
+            <span className="text-amber-500">&#9733;</span>
+            {tip.poi.rating.toFixed(1)}
+            {tip.poi.review_count ? ` (${tip.poi.review_count})` : ''}
+          </div>
+        )}
+        {item.address && (
+          <p className="text-xs text-muted mt-1 truncate">{item.address}</p>
+        )}
+        {tip.event?.event_date && (
+          <p className="text-xs text-muted mt-1">
+            {new Date(tip.event.event_date).toLocaleDateString(locale === 'nl' ? 'nl-NL' : 'en-US', { day: 'numeric', month: 'long' })}
+          </p>
+        )}
+      </div>
+      <div className="px-3 pb-2 flex justify-between items-center">
+        <a href={href} className="text-xs text-primary hover:underline">
+          {locale === 'nl' ? 'Bekijk details' : 'View details'}
+        </a>
+        <button
+          onClick={onRefresh}
+          className="text-xs text-muted hover:text-primary transition-colors flex items-center gap-1"
+          title={locale === 'nl' ? 'Volgende tip' : 'Next tip'}
+        >
+          &#x1f504; {locale === 'nl' ? 'Volgende' : 'Next'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickActionFilter }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -60,7 +161,12 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName }: Chatb
   const sessionIdRef = useRef<string>(crypto.randomUUID());
 
   const name = chatbotName ?? (tenantSlug === 'texel' ? 'Tessa' : tenantSlug === 'warrewijzer' ? 'Wijze Warre' : 'HoliBot');
-  const quickActions = QUICK_ACTIONS[locale] ?? QUICK_ACTIONS.en;
+
+  // Filter quick actions based on admin config
+  const allActions = QUICK_ACTIONS[locale] ?? QUICK_ACTIONS.en;
+  const quickActions = quickActionFilter && quickActionFilter.length > 0
+    ? allActions.filter(qa => quickActionFilter.includes(qa.id))
+    : allActions;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -72,8 +178,72 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName }: Chatb
     }
   }, [isOpen]);
 
+  /** Fetch daily tip from dedicated endpoint */
+  const fetchDailyTip = useCallback(async () => {
+    const tipLabel = TIP_LABELS[locale] || TIP_LABELS.en;
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: tipLabel,
+    };
+
+    const assistantId = `assistant-${Date.now()}`;
+    const assistantMsg: ChatMessage = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      isStreaming: true,
+    };
+
+    setMessages(prev => [...prev, userMsg, assistantMsg]);
+    setInput('');
+    setIsStreaming(true);
+
+    try {
+      const excludes = getTipExcludes();
+      const params = new URLSearchParams({ language: locale });
+      if (excludes.length > 0) params.set('excludeIds', excludes.join(','));
+
+      const res = await fetch(`/api/holibot/daily-tip?${params.toString()}`);
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+
+      const json = await res.json();
+      const tipData: DailyTipData = json.data;
+
+      // Record shown tip for session excludes
+      if (tipData.tipId) {
+        recordTip(tipData.tipId, tipData.itemType);
+      }
+
+      const itemName = tipData.poi?.name || tipData.event?.name || '';
+      const contentText = tipData.itemType === 'message'
+        ? (tipData.tipDescription || '')
+        : `${tipLabel}: ${itemName}`;
+
+      setMessages(prev => prev.map(m =>
+        m.id === assistantId
+          ? { ...m, content: contentText, isStreaming: false, tipData }
+          : m
+      ));
+    } catch {
+      setMessages(prev => prev.map(m =>
+        m.id === assistantId
+          ? { ...m, content: locale === 'nl' ? 'Sorry, er ging iets mis met de tip.' : 'Sorry, something went wrong with the tip.', isStreaming: false }
+          : m
+      ));
+    } finally {
+      setIsStreaming(false);
+    }
+  }, [locale]);
+
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
+
+    // Intercept daily tip action
+    if (text === '__TIP_VAN_DE_DAG__') {
+      fetchDailyTip();
+      return;
+    }
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -182,7 +352,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName }: Chatb
       setIsStreaming(false);
       abortRef.current = null;
     }
-  }, [messages, isStreaming, tenantSlug, locale]);
+  }, [messages, isStreaming, tenantSlug, locale, fetchDailyTip]);
 
   // Listen for external chatbot open events (from ChatbotButton in blocks)
   useEffect(() => {
@@ -263,7 +433,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName }: Chatb
                 <div className="flex flex-wrap gap-2 justify-center">
                   {quickActions.map((qa) => (
                     <button
-                      key={qa.label}
+                      key={qa.id}
                       onClick={() => sendMessage(qa.message)}
                       className="px-3 py-1.5 text-xs rounded-full border border-primary text-primary hover:bg-primary hover:text-on-primary transition-colors"
                     >
@@ -280,19 +450,25 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName }: Chatb
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap ${
+                  className={`max-w-[85%] ${msg.tipData ? '' : 'px-3 py-2 rounded-2xl'} text-sm whitespace-pre-wrap ${
                     msg.role === 'user'
-                      ? 'bg-primary text-on-primary rounded-br-sm'
-                      : 'bg-gray-100 text-foreground rounded-bl-sm'
+                      ? 'bg-primary text-on-primary rounded-br-sm px-3 py-2 rounded-2xl'
+                      : msg.tipData
+                        ? ''
+                        : 'bg-gray-100 text-foreground rounded-bl-sm'
                   }`}
                 >
-                  {msg.content || (msg.isStreaming && (
+                  {msg.tipData ? (
+                    <TipCard tip={msg.tipData} locale={locale} onRefresh={fetchDailyTip} />
+                  ) : msg.content ? (
+                    msg.content
+                  ) : msg.isStreaming ? (
                     <span className="inline-flex gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: '0ms' }} />
                       <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: '150ms' }} />
                       <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: '300ms' }} />
                     </span>
-                  ))}
+                  ) : null}
                 </div>
               </div>
             ))}

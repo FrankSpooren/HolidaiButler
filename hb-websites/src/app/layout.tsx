@@ -70,6 +70,10 @@ export default async function RootLayout({
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (tenant.branding as any)?.chatbotConfig?.name || undefined
             }
+            quickActionFilter={
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (tenant.branding as any)?.chatbotConfig?.quickActions || undefined
+            }
           />
         )}
         <CookieBanner

@@ -102,7 +102,7 @@ export default async function EventCalendar({ limit = 6, layout = 'grid' }: Even
           const imageUrl = event.images?.[0]?.url;
           const title = getLocalizedString(event.title, locale);
           return (
-            <Card key={event.id} href={event.url ?? undefined}>
+            <Card key={event.id} href={`/event/${event.id}`}>
               {imageUrl ? <CardImage src={imageUrl} alt={title} /> : <DateBlock dateStr={event.startDate} />}
               <CardContent>
                 <p className="text-sm font-medium text-primary mb-1">
