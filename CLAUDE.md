@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.91.0
+> **Versie**: 3.92.0
 > **Laatst bijgewerkt**: 9 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -368,6 +368,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **Cmd v7.1** | **Frank's Feedback Fixes (7 stappen)** | **08-03** | **STAP 1: Block i18n resolution — resolveLocalizedProps() recursieve utility in i18n.ts, Hero crash fix (TranslatableField i18n objecten → strings). STAP 2: Hero height prop (4 opties: compact/default/tall/fullscreen) + resolveAssetUrl voor images. STAP 3: Map gekleurde markers per categorie (8 kleuren, L.divIcon, legenda). STAP 4: Quick action chatbot buttons (CustomEvent hb:chatbot:open, ChatbotButton.tsx, Hero+Cta chatbot variant). STAP 5: Button style defaults (auto-derive van primary/secondary kleuren). STAP 6: Footer i18n (resolveTitle helper, TranslatableField in admin). STAP 7: Branding uitbreiding (chatbot config accordion, header style transparent/sticky). 18 bestanden (1 nieuw + 17 gewijzigd). Commit 5daab9e.** |
 | **Cmd v8.0** | **Fase V Final — Customer Portal Kwaliteit** | **08-03** | **STAP 1: Chatbot SSE proxy route (/api/holibot/chat/stream) — geen localhost:3001 meer, browser-safe via Next.js proxy. STAP 2: POI categorie filtering fix — backend categories (meervoud) support + min_reviews + quality sort. STAP 3: POI detail pagina volledig uitgebouwd (openingstijden dual-format Calpe/Texel, amenities, accessibility, parking, highlights, enriched description, reviews distribution, social links, Google Maps link, 2-kolom layout). STAP 4: Reviews veldnamen fix (user_name, review_text, visit_date) + Testimonials.tsx. STAP 5: Button color preview fix (deriveButtonDefaults lege string → fallback kleuren). POI type: 19→42 velden. 3 nieuwe + 9 gewijzigde bestanden. Commits 3c325cc + 6d425fc.** |
 | **Repair v9.0** | **Chirurgisch Repair — dev.holidaibutler.com Kwaliteit** | **09-03** | **9 fixes: FIX 1 chatbot sessionId (useRef UUID) + SSE proxy numeric destination ID mapping. FIX 2 homepage PoiGrid categoryFilter verwijderd (geen match DB categorieën) + Partners block verwijderd (geen logos). FIX 3 footer text-on-primary→text-white (donker-op-donker). FIX 4 POI detail image fallback (gradient placeholder + tile description samenvatting). FIX 5 restaurants categoryFilter→["Food & Drinks"] + min_rating/min_reviews alleen met categoryFilter. FIX 6 BrandingPage button empty string check. FIX 7 events DateBlock fallback (datum als visueel element). FIX 8 PoiGrid round-robin categorie mix. FIX 9 BrandingPage i18n crash — resolveI18nDisplay() voor footer wireframe preview (col.title + copyright). 8 bestanden + 2 SQL updates.** |
+| **Repair v10.0** | **Diagnostic-First Repair — 8 browser-verified fixes** | **09-03** | **v10 protocol: DIAGNOSE→FIX→BEWIJS. FIX 1: Chatbot Calpe→calpe_pois ChromaDB (was holidaibutler_pois=Texel data, 5e keer gerapporteerd). FIX 2: POI detail crash — FeatureList normalizeItem() voor {key:bool} objecten (HTTP 500→200). FIX 3: Homepage 0 POIs — TOURIST_CATEGORIES whitelist naar API i.p.v. post-fetch EXCLUDED_CATEGORIES (API retourneerde alleen Shopping bij rating:desc). FIX 4: Button color swatches — IIFE merge DB values met deriveButtonDefaults (lege strings fallback). FIX 5+6: Footer + Restaurants reeds werkend (v9). FIX 7: POI category badges — CATEGORY_COLORS mapping (8 kleuren EN+NL, inline styles). FIX 8: Chatbot config — ColorField, position Select, 4 quick action Checkboxes. 3 bestanden gewijzigd. Commit 75566b1.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -610,9 +611,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **3.92.0** | **2026-03-09** | **Diagnostic Repair v10.0: 8 browser-verified fixes**. Chatbot ChromaDB calpe_pois fix. FeatureList normalizeItem() crash fix. Homepage TOURIST_CATEGORIES whitelist (was 0 POIs). Button merge met deriveButtonDefaults. Category color badges (8 kleuren). Chatbot config uitbreiding (color/position/quick actions). 3 bestanden. MS v7.54. |
 | **3.91.0** | **2026-03-09** | **Repair Command v9.0: Chirurgisch Repair — dev.holidaibutler.com Kwaliteit**. 9 fixes: chatbot sessionId + numeric dest ID, homepage PoiGrid/Partners fix, footer text color, POI detail image fallback + tile description, restaurants categoryFilter, BrandingPage button empty string check, events DateBlock fallback, PoiGrid round-robin mix, BrandingPage i18n crash fix (resolveI18nDisplay). 8 bestanden + 2 SQL updates. MS v7.53. |
 | **3.90.0** | **2026-03-08** | **Command v8.0: Fase V Final — Customer Portal Kwaliteit**. Chatbot SSE proxy (localhost:3001 → Next.js API route). POI categorie filtering (categories plural + min_reviews). POI detail uitgebouwd (openingstijden, amenities, accessibility, parking, highlights, reviews distribution, 2-kolom layout). Reviews veldnamen fix (user_name, review_text, visit_date). Button color preview fix (deriveButtonDefaults fallback). POI type 19→42 velden. 3 nieuwe + 9 gewijzigde bestanden. MS v7.52. |
-| **3.89.0** | **2026-03-08** | **Command v7.1: Frank's Feedback Fixes (7 stappen)**. Block i18n resolution (resolveLocalizedProps). Hero height + image URL. Map gekleurde markers (8 categorieën). Quick action chatbot buttons (CustomEvent). Button style defaults. Footer i18n. Branding chatbot config + header style. 18 bestanden. MS v7.51. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -622,7 +623,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.52 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.54 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
