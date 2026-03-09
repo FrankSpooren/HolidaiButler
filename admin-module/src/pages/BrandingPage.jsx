@@ -3,7 +3,8 @@ import {
   Box, Typography, Grid, TextField, Button, Alert, Snackbar,
   Tabs, Tab, Skeleton, MenuItem, Select, FormControl, InputLabel,
   IconButton, Chip, Accordion, AccordionSummary, AccordionDetails,
-  Dialog, DialogTitle, DialogContent, DialogActions
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  Checkbox, FormControlLabel
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
@@ -189,12 +190,24 @@ export default function BrandingPage() {
         },
         favicon: b.favicon || '',
         navicon: b.navicon || '',
-        buttons: b.buttons && Object.keys(b.buttons).length > 0 && b.buttons.primary?.bg
-          ? b.buttons
-          : deriveButtonDefaults(
-              b.colors?.primary || b.primary || '',
-              b.colors?.secondary || b.secondary || ''
-            ),
+        buttons: (() => {
+          const derived = deriveButtonDefaults(
+            b.colors?.primary || b.primary || '',
+            b.colors?.secondary || b.secondary || ''
+          );
+          if (!b.buttons || Object.keys(b.buttons).length === 0) return derived;
+          // Merge: use DB values where non-empty, fall back to derived defaults
+          const merged = {};
+          for (const vk of Object.keys(derived)) {
+            merged[vk] = {};
+            const dbBtn = b.buttons[vk] || {};
+            const defBtn = derived[vk] || {};
+            for (const pk of Object.keys(defBtn)) {
+              merged[vk][pk] = dbBtn[pk] || defBtn[pk];
+            }
+          }
+          return merged;
+        })(),
         footer: b.footer || {
           columns: [
             { type: 'brand', title: '' },
@@ -845,6 +858,26 @@ export default function BrandingPage() {
                   helperText={t('branding.chatbotNameHelper', 'e.g. Tessa, HoliBot, Wijze Warre')}
                 />
               </Grid>
+              <Grid item xs={12} sm={3}>
+                <ColorField
+                  label={t('branding.chatbotColor', 'Chatbot Color')}
+                  value={form.chatbotConfig?.color || form.colors?.primary || '#7FA594'}
+                  onChange={val => updateChatbotConfig('color', val)}
+                />
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>{t('branding.chatbotPosition', 'Position')}</InputLabel>
+                  <Select
+                    value={form.chatbotConfig?.position || 'bottom-right'}
+                    label={t('branding.chatbotPosition', 'Position')}
+                    onChange={e => updateChatbotConfig('position', e.target.value)}
+                  >
+                    <MenuItem value="bottom-right">{t('branding.bottomRight', 'Bottom Right')}</MenuItem>
+                    <MenuItem value="bottom-left">{t('branding.bottomLeft', 'Bottom Left')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
               <Grid item xs={12}>
                 <TranslatableField
                   label={t('branding.chatbotWelcome', 'Welcome Message')}
@@ -852,6 +885,37 @@ export default function BrandingPage() {
                   onChange={val => updateChatbotConfig('welcomeMessage', val)}
                   multiline rows={2}
                 />
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>{t('branding.quickActions', 'Quick Actions')}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                  {t('branding.quickActionsHelper', 'Select which quick action buttons appear in the chatbot')}
+                </Typography>
+                {[
+                  { id: 'program', label: t('branding.qaProgram', 'Plan my day / Programma samenstellen') },
+                  { id: 'category', label: t('branding.qaCategory', 'Browse categories / Zoeken op Rubriek') },
+                  { id: 'directions', label: t('branding.qaDirections', 'Route planner / Routebeschrijving') },
+                  { id: 'tip', label: t('branding.qaTip', 'Tip of the Day / Tip van de Dag') },
+                ].map(qa => (
+                  <FormControlLabel
+                    key={qa.id}
+                    control={
+                      <Checkbox
+                        checked={(form.chatbotConfig?.quickActions || ['program', 'category', 'directions', 'tip']).includes(qa.id)}
+                        onChange={e => {
+                          const current = form.chatbotConfig?.quickActions || ['program', 'category', 'directions', 'tip'];
+                          const updated = e.target.checked
+                            ? [...current, qa.id]
+                            : current.filter(id => id !== qa.id);
+                          updateChatbotConfig('quickActions', updated);
+                        }}
+                        size="small"
+                      />
+                    }
+                    label={qa.label}
+                    sx={{ display: 'block' }}
+                  />
+                ))}
               </Grid>
             </Grid>
           </BrandingAccordion>
