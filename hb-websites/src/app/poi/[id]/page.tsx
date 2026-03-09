@@ -284,7 +284,11 @@ export default async function PoiDetailPage({ params }: PageProps) {
           {/* Map */}
           {poi.latitude && poi.longitude && (
             <div className="rounded-tenant overflow-hidden h-64">
-              <MapWrapper center={[poi.latitude, poi.longitude]} zoom={15} />
+              <MapWrapper
+                center={[poi.latitude, poi.longitude]}
+                zoom={15}
+                markers={[{ lat: poi.latitude, lng: poi.longitude, name: poi.name, category: poi.category, rating: poi.rating, id: poi.id }]}
+              />
             </div>
           )}
 

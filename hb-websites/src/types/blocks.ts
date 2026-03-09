@@ -83,10 +83,20 @@ export interface CardGroupProps {
   columns?: 2 | 3 | 4;
 }
 
+export interface MapMarker {
+  lat: number;
+  lng: number;
+  name: string;
+  category?: string;
+  rating?: number;
+  id?: number;
+}
+
 export interface MapProps {
   center?: [number, number];
   zoom?: number;
   categoryFilter?: string[];
+  markers?: MapMarker[];
 }
 
 export interface TestimonialsProps {
