@@ -3839,4 +3839,65 @@ CLAUDE.md v3.90.0 → v3.91.0. MS v7.52 → v7.53. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Diagnostic Repair v10.0 — 8 Browser-Verified Fixes (09-03-2026)
+
+Nieuw protocol: DIAGNOSE→FIX→BEWIJS. Diagnostische output VOOR en NA elke wijziging. Geen giswerk.
+
+### FIX 1: Chatbot Calpe → Texel Data (ROOT CAUSE DEFINITIEF)
+- **Diagnose**: PM2 logs toonden `ChromaDB search returned 20 results from "holidaibutler_pois"` voor Calpe queries
+- **Root cause**: `calpe.config.js` line 141 had `chromaCollection: 'holidaibutler_pois'` (OUD naam, bevat Texel data) i.p.v. `calpe_pois`
+- **Fix**: `sed -i` op Hetzner: `holidaibutler_pois` → `calpe_pois`
+- **Bewijs**: curl retourneert Calpe restaurants (El Bodegón, Indian Curry Original — Calpe adressen)
+
+### FIX 2: POI Detail Crash (HTTP 500 → 200)
+- **Diagnose**: Server logs: `Objects are not valid as a React child (found: object with keys {Wheelchair accessible entrance})`
+- **Root cause**: `FeatureList.tsx` verwachtte `string[]` maar ontving `[{key: boolean}]` objecten van API's `accessibility_features` en `amenities` velden
+- **Fix**: `normalizeItem()` functie extraheert key names uit objecten, skipt features met `val === false`
+- **Bewijs**: POI 403 retourneert HTTP 200
+
+### FIX 3: Homepage 0 POIs (KRITIEK)
+- **Diagnose**: v9's `EXCLUDED_CATEGORIES` post-fetch filter verwijderde ALLE POIs. API `sort=rating:desc&limit=18` retourneerde alleen Shopping (5.0 rating)
+- **Root cause**: Post-fetch filtering werkt niet als API alleen uitgesloten categorieën retourneert
+- **Fix**: `TOURIST_CATEGORIES` whitelist (Food & Drinks, Beaches & Nature, Culture & History, Active, Recreation, Nightlife + NL equivalenten) direct als `categories` param naar API
+- **Bewijs**: Homepage toont 6 POIs (5 Food & Drinks + 1 Active), round-robin gemixed
+
+### FIX 4: Button Color Swatches Wit
+- **Diagnose**: DB `buttons.primary.bg: ""` (lege string). Code `Object.keys(b.buttons).length > 0` = TRUE (lege strings tellen als keys)
+- **Fix**: IIFE merge pattern — ALTIJD `deriveButtonDefaults()` aanroepen, DB values waar non-empty, derived defaults als fallback
+- **Bewijs**: Admin build deployed met merge logica
+
+### FIX 5+6: Footer + Restaurants
+- Reeds werkend van v9 (bewezen met curl)
+
+### FIX 7: POI Category Badges Dezelfde Kleur
+- **Diagnose**: Alle badges gebruikten `bg-primary-light text-primary-dark`
+- **Fix**: `CATEGORY_COLORS` mapping (8 kleur-groepen voor EN+NL categorieën), inline styles
+- **Bewijs**: Homepage badges: `#FEE2E2` (Food & Drinks) + `#FFEDD5` (Active) — distinct kleuren
+
+### FIX 8: Chatbot Config Te Beperkt
+- **Fix**: ColorField voor chatbot kleur, Select voor positie (bottom-right/left), 4 quick action Checkboxes (program, category, directions, tip) met FormControlLabel
+- **Bewijs**: Admin build deployed
+
+### Gewijzigde Bestanden
+
+| Bestand | Fix |
+|---------|-----|
+| `hb-websites/src/blocks/PoiGrid.tsx` | 3, 7 |
+| `hb-websites/src/components/poi/FeatureList.tsx` | 2 |
+| `admin-module/src/pages/BrandingPage.jsx` | 4, 8 |
+| `platform-core/config/destinations/calpe.config.js` | 1 (direct op Hetzner) |
+
+### Deploy
+- hb-websites: SCP → build op Hetzner → PM2 restart
+- admin-module: lokaal build → SCP dist → Hetzner
+- calpe.config.js: sed direct op Hetzner + PM2 restart
+
+### Documentatie
+
+CLAUDE.md v3.91.0 → v3.92.0. MS v7.53 → v7.54. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

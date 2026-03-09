@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 9 maart 2026
-**Versie**: 7.53
+**Versie**: 7.54
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + Repair v9.0 COMPLEET). CLAUDE.md v3.91.0. MS v7.53.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + Repair v9.0-v10.0 COMPLEET). CLAUDE.md v3.92.0. MS v7.54.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1412,6 +1412,8 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 
 - **Repair Command v9.0 — Chirurgisch Repair dev.holidaibutler.com** ✅ COMPLEET (09-03-2026): 9 fixes na browser-diagnose. **FIX 1**: Chatbot sessionId (useRef UUID) + SSE proxy numeric destination ID mapping (eigen DESTINATION_IDS, niet browser header). **FIX 2**: Homepage PoiGrid categoryFilter verwijderd (geen match met DB categorieën: "restaurant"≠"Food & Drinks") + Partners block verwijderd (geen logos data). **FIX 3**: Footer text-on-primary→text-white (donkere tekst op donkere bg). **FIX 4**: POI detail image fallback (gradient placeholder met locatie-icoon + enriched_tile_description als samenvatting). **FIX 5**: Restaurants categoryFilter→alleen `["Food & Drinks"]` + min_rating/min_reviews alleen met categoryFilter. **FIX 6**: BrandingPage button empty string check (b.buttons.primary?.bg i.p.v. Object.keys().length). **FIX 7**: Events DateBlock fallback (datum als visueel element zonder image). **FIX 8**: PoiGrid round-robin categorie mix (interleave per categorie voor visuele variatie). **FIX 9**: BrandingPage i18n crash fix — resolveI18nDisplay() helper voor footer wireframe preview (col.title + copyright objecten). 8 bestanden gewijzigd + 2 SQL updates (pages id=1, id=4).
 
+- **Diagnostic Repair v10.0 — 8 Browser-Verified Fixes** ✅ COMPLEET (09-03-2026): Nieuw protocol: DIAGNOSE→FIX→BEWIJS (diagnostische output VOOR en NA elke wijziging). **FIX 1**: Chatbot Calpe retourneerde Texel data — root cause: `calpe.config.js` chromaCollection was `holidaibutler_pois` (oud, bevat Texel data) i.p.v. `calpe_pois`. Bewijs: curl retourneert nu Calpe restaurants. **FIX 2**: POI detail crash (HTTP 500→200) — FeatureList.tsx `normalizeItem()` functie normaliseert `[{key: boolean}]` objecten naar strings, skipt `false` features. **FIX 3**: Homepage 0 POIs — v9's `EXCLUDED_CATEGORIES` post-fetch filter faalde omdat API met `sort=rating:desc` alleen Shopping retourneerde. Fix: `TOURIST_CATEGORIES` whitelist direct naar API als `categories` param (Food & Drinks, Beaches & Nature, Culture & History, Active, Recreation, Nightlife + NL equivalenten). Nu 6 POIs zichtbaar met round-robin mix. **FIX 4**: Button color swatches wit — IIFE merge pattern: DB values + `deriveButtonDefaults()`, lege strings vallen terug op derived kleuren. **FIX 5+6**: Footer + Restaurants reeds werkend (v9 bewezen). **FIX 7**: POI category badges — `CATEGORY_COLORS` mapping (8 kleur-groepen voor EN+NL categorieën, inline styles). Bewijs: `#FEE2E2` (Food) + `#FFEDD5` (Active) distinct. **FIX 8**: Chatbot config uitbreiding — ColorField, position Select (bottom-right/left), 4 quick action Checkboxes met FormControlLabel. 3 bestanden gewijzigd. Commit 75566b1.
+
 Technische blauwdruk: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
 
 **Fase VI — UX Revolution + WarreWijzer (6-8 weken):**
@@ -1682,6 +1684,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 | **6.2** | **20-02-2026** | **Fase 8A+ Agent Monitoring & Briefing Expansion COMPLEET: 3 nieuwe monitoring modules (contentQualityChecker, backupHealthChecker, smokeTestRunner). 5 nieuwe scheduled jobs (totaal 35→40). Daily briefing uitgebreid met smoke test/backup/content quality sections + 3 nieuwe MailerLite fields. ChromaDB state snapshot via Het Geheugen. 16/16 tests PASS. Kosten: EUR 0.** |
 | **6.1** | **20-02-2026** | **Fase 8A Agent Reparatie & Versterking COMPLEET: 7 agents gerepareerd/versterkt. De Koerier: column mapping fix (9 kolommen). De Leermeester: MongoDB persistence (agent_learning_patterns). De Thermostaat: herschreven naar alerting-only + Redis. De Bode: destination stats + predictions (7 MailerLite fields). De Stylist: Texel brand colors (DESTINATION_BRAND_COLORS map). De Dokter: 3 nieuwe portals + SSL monitoring (5 domains). Legacy workers.js deprecated. Kosten: EUR 0.** |
 | **6.0** | **19-02-2026** | **Fase 7 Reviews Integratie COMPLEET: 8.964 reviews (3.869 Texel, 5.095 Calpe) live op beide frontends. API werkte al correct (Outcome A). Backend: rating_distribution toegevoegd. Frontend: poiName fix + mock data DEV-only. 7/7 API tests PASS. Reviews verwijderd uit Openstaande Componenten. Kosten: EUR 0.** |
+| **7.54** | **09-03-2026** | **Diagnostic Repair v10.0: 8 browser-verified fixes (DIAGNOSE→FIX→BEWIJS protocol). Chatbot ChromaDB calpe_pois (root cause 5e keer), FeatureList crash fix, Homepage TOURIST_CATEGORIES whitelist, Button merge deriveButtonDefaults, Category color badges, Chatbot config uitbreiding. CLAUDE.md v3.92.0.** |
 | **5.9** | **19-02-2026** | **Fase R6d Openstaande Acties COMPLEET: (1) Markdown fix: 388 POIs gerepareerd (1.535 velden, 0 resterend). (2) 119 POIs inventarisatie: alle Accommodation (bewust excluded). (3) Social media bronnen: geaccepteerd als technische beperking (Meta anti-bot). Content Repair Pipeline R1-R6d COMPLEET.** |
 | **5.8** | **19-02-2026** | **Fase R6c Calpe Re-vectorisatie COMPLEET: calpe_pois collectie ge-revectoriseerd met R6b content. 5.932 vectoren (1.483 POIs × 4 talen), 1 error (gefixed), 25,7 min, EUR 2,37. Texel ongewijzigd (PASS). 5/5 test queries passed. Beide chatbots (Tessa + HoliBot) serveren nu R6b claim-stripped content. Totaal R6c: 12.316 vectoren, EUR 4,92.** |
 | **5.7** | **19-02-2026** | **Fase R6c ChromaDB Re-vectorisatie Texel + Steekproef Fix COMPLEET: texel_pois collectie ge-revectoriseerd met R6b content. 6.384 vectoren (1.596 POIs × 4 talen), 0 errors, 27,6 min, EUR 2,55. 2 POI-correcties (Vuurtoren Texel + Terra Mítica). 5/5 test queries passed. Tessa serveert nu feitelijk correcte content.** |
@@ -1694,4 +1697,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 9 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + Repair v9.0 COMPLEET). Admin Portal: 157 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.91.0. MS v7.53.*
+*Laatst bijgewerkt: 9 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + Repair v9.0-v10.0 COMPLEET). Admin Portal: 157 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.92.0. MS v7.54.*
