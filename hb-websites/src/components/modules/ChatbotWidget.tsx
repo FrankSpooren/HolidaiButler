@@ -57,6 +57,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName }: Chatb
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const sessionIdRef = useRef<string>(crypto.randomUUID());
 
   const name = chatbotName ?? (tenantSlug === 'texel' ? 'Tessa' : tenantSlug === 'warrewijzer' ? 'Wijze Warre' : 'HoliBot');
   const quickActions = QUICK_ACTIONS[locale] ?? QUICK_ACTIONS.en;
@@ -111,6 +112,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName }: Chatb
           message: text.trim(),
           conversationHistory,
           language: locale,
+          sessionId: sessionIdRef.current,
         }),
         signal: abortRef.current.signal,
       });

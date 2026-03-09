@@ -2,8 +2,16 @@ import { NextRequest } from 'next/server';
 
 const HB_API_URL = process.env.HB_API_URL ?? 'http://localhost:3001';
 
+const DESTINATION_IDS: Record<string, number> = {
+  calpe: 1,
+  texel: 2,
+  alicante: 3,
+  warrewijzer: 4,
+};
+
 export async function POST(request: NextRequest) {
   const tenantSlug = request.headers.get('x-tenant-slug') ?? 'calpe';
+  const destinationId = String(DESTINATION_IDS[tenantSlug] ?? 1);
 
   try {
     const body = await request.json();
@@ -12,7 +20,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Destination-ID': request.headers.get('x-destination-id') ?? tenantSlug,
+        'X-Destination-ID': destinationId,
         'Accept': 'text/event-stream',
       },
       body: JSON.stringify(body),

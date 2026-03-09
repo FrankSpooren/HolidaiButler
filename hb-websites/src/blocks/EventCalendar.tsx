@@ -31,6 +31,28 @@ function formatDate(dateStr: string, locale: string): string {
   }
 }
 
+function parseDateParts(dateStr: string): { day: number; month: string } | null {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return null;
+  return {
+    day: date.getDate(),
+    month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+  };
+}
+
+function DateBlock({ dateStr }: { dateStr: string }) {
+  const parts = parseDateParts(dateStr);
+  if (!parts) return null;
+  return (
+    <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+      <div className="text-center">
+        <div className="text-4xl font-bold text-primary">{parts.day}</div>
+        <div className="text-sm font-semibold text-primary/70 uppercase tracking-wider">{parts.month}</div>
+      </div>
+    </div>
+  );
+}
+
 export default async function EventCalendar({ limit = 6, layout = 'grid' }: EventCalendarProps) {
   const headersList = await headers();
   const tenantSlug = headersList.get('x-tenant-slug') ?? 'calpe';
@@ -81,7 +103,7 @@ export default async function EventCalendar({ limit = 6, layout = 'grid' }: Even
           const title = getLocalizedString(event.title, locale);
           return (
             <Card key={event.id} href={event.url ?? undefined}>
-              {imageUrl && <CardImage src={imageUrl} alt={title} />}
+              {imageUrl ? <CardImage src={imageUrl} alt={title} /> : <DateBlock dateStr={event.startDate} />}
               <CardContent>
                 <p className="text-sm font-medium text-primary mb-1">
                   {formatDate(event.startDate, locale)}
