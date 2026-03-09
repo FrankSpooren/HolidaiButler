@@ -3968,4 +3968,88 @@ CLAUDE.md v3.92.0 → v3.93.0. MS v7.54 → v7.55. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Command v12.0 — 8 Fixes + Onboarding Wizard (9 maart 2026)
+
+### Samenvatting
+
+8 fixes (5 code/data, 3 verificatie) + onboarding wizard feature. 11 acceptatiecriteria. Protocol: VOOR/NA code, curl/browser bewijs, vergelijk met Customer Portal.
+
+### Fixes
+
+**FIX 1: Hero chatbot button 404 — DATA FIX**
+- Root cause: Hero button in pages DB had `variant: "secondary"` + `href: "/chatbot"` → Link naar /chatbot (404)
+- Fix: SQL UPDATE variant → `"chatbot"`, chatbotAction → `"general"`, href verwijderd
+- Result: Hero.tsx rendert nu `<ChatbotButton>` (CustomEvent) i.p.v. `<Link>`
+
+**FIX 2B: POI detail map — single marker**
+- Root cause: Map.tsx fetchte altijd `/api/pois?limit=500` → 500 markers op detail pagina
+- Fix: `staticMarkers` prop in Map.tsx — als markers meegegeven, skip fetch-all
+- `MapMarker` interface in blocks.ts, `poi/[id]/page.tsx` geeft 1 marker mee
+- Backward compatible: standalone Map blocks op explore pagina's fetchen nog steeds alle POIs
+
+**FIX 4: Categorie kleuren — Customer Portal match**
+- Bron: `customer-portal/frontend/src/shared/config/categoryConfig.ts` gradient primaries
+- Update in 3 bestanden: PoiGrid.tsx, PoiFilterBar.tsx, Map.tsx
+- Calpe EN: Food=#4f766b, Beaches=#b4942e, Culture=#253444, Active=#016193, Shopping=#b4892e, Health=#004568
+- Texel NL: Eten=#E53935, Natuur=#7CB342, Cultuur=#004B87, Actief=#FF6B00, Winkelen=#AB47BC, Praktisch=#607D8B
+
+**FIX 6: Footer brand kolom — social icons verwijderd**
+- Root cause: `case 'brand'` in Footer.tsx renderde social icons (hoort in `case 'social'`)
+- Fix: Social rendering verwijderd uit brand case. `{ type: 'social', title: 'Social' }` toegevoegd aan default columns
+
+**FIX 8: Onboarding wizard — nieuw feature**
+- Frontend: OnboardingPage.jsx (5-stappen MUI Stepper: Basis/Branding/Modules/Navigatie/Pagina's)
+- Backend: `POST /api/v1/admin-portal/onboarding/create` (INSERT destinations + INSERT pages + nav_items)
+- 6 page templates: home, explore, restaurants, events, contact, about
+- DNS/Apache instructies dialog na succes
+- Sidebar menu-item (AddCircleOutlineIcon, requiredRole: platform_admin)
+- i18n 4 talen (nl/en/de/es)
+- Route in App.jsx
+
+**FIX 2A/3/5/7**: Verificatie reeds werkend (v11). Events uit DB ✓, Filter chips ✓, Quick actions ✓.
+
+### Gewijzigde bestanden
+
+| Actie | Bestand | Fix |
+|-------|---------|-----|
+| WIJZIG | `hb-websites/src/types/blocks.ts` | 2B (MapMarker interface + markers prop) |
+| WIJZIG | `hb-websites/src/blocks/Map.tsx` | 2B+4 (staticMarkers + kleuren) |
+| WIJZIG | `hb-websites/src/app/poi/[id]/page.tsx` | 2B (markers prop) |
+| WIJZIG | `hb-websites/src/blocks/PoiGrid.tsx` | 4 (CATEGORY_COLORS) |
+| WIJZIG | `hb-websites/src/components/filters/PoiFilterBar.tsx` | 4 (CATEGORY_COLORS) |
+| WIJZIG | `hb-websites/src/components/layout/Footer.tsx` | 6 (brand case cleanup) |
+| NIEUW | `admin-module/src/pages/OnboardingPage.jsx` | 8 (~330 LOC) |
+| WIJZIG | `admin-module/src/App.jsx` | 8 (route) |
+| WIJZIG | `admin-module/src/components/layout/Sidebar.jsx` | 8 (menu-item) |
+| WIJZIG | `admin-module/src/i18n/nl.json` | 8 (onboarding keys) |
+| WIJZIG | `admin-module/src/i18n/en.json` | 8 (onboarding keys) |
+| WIJZIG | `admin-module/src/i18n/de.json` | 8 (onboarding keys) |
+| WIJZIG | `admin-module/src/i18n/es.json` | 8 (onboarding keys) |
+| WIJZIG | `platform-core/src/routes/adminPortal.js` | 8 (POST /onboarding/create) |
+| DB UPDATE | `pages WHERE destination_id=1 AND slug='home'` | 1 (Hero button variant) |
+
+### Acceptatiecriteria
+
+| # | Test | Status |
+|---|------|--------|
+| 1 | Hero "Chat with CalpeBot" → chatbot opent | PASS |
+| 2 | POI detail map: alleen betreffende POI | PASS |
+| 3 | Events uit Hetzner DB | PASS |
+| 4 | Event klik → interne detail pagina | PASS |
+| 5 | Categorie labels: Customer Portal kleuren | PASS |
+| 6 | Filter chips Restaurants | PASS |
+| 7 | Filter chips Events | PASS |
+| 8 | Footer Brand: logo + payoff (geen social) | PASS |
+| 9 | Quick action buttons in editor | PASS |
+| 10 | Onboarding wizard | PASS |
+| 11 | Texel: alles correct | PASS |
+
+### Documentatie
+
+CLAUDE.md v3.93.0 → v3.94.0. MS v7.55 → v7.56. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
