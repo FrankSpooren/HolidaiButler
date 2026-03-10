@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -6,8 +7,14 @@ import { generatePageMetadata, generateWebSiteJsonLd, generateBreadcrumbJsonLd }
 import { resolveLocalizedProps } from '@/lib/i18n';
 import { getBlock } from '@/blocks/index';
 import BlockRenderer from '@/components/ui/BlockRenderer';
+import { SkeletonGrid } from '@/components/ui/Skeleton';
 import type { BlockConfig, BlockStyle } from '@/types/blocks';
 import type { FeatureFlags } from '@/types/tenant';
+
+/** Block types that fetch data server-side and benefit from streaming SSR Suspense */
+const ASYNC_BLOCK_TYPES = new Set([
+  'poi_grid', 'poi_grid_filtered', 'event_calendar', 'event_calendar_filtered',
+]);
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>;
@@ -123,19 +130,21 @@ export default async function Page({ params }: PageProps) {
         const wrapperStyle = getBlockWrapperStyle(block.style);
         const wrapperClass = block.style?.fullWidth ? 'w-full' : '';
 
-        if (wrapperStyle || wrapperClass) {
-          return (
-            <BlockRenderer key={block.id} blockType={block.type}>
-              <div className={wrapperClass || undefined} style={wrapperStyle}>
-                <BlockComponent {...resolvedProps} />
-              </div>
-            </BlockRenderer>
-          );
-        }
+        const blockContent = (wrapperStyle || wrapperClass) ? (
+          <div className={wrapperClass || undefined} style={wrapperStyle}>
+            <BlockComponent {...resolvedProps} />
+          </div>
+        ) : (
+          <BlockComponent {...resolvedProps} />
+        );
 
         return (
           <BlockRenderer key={block.id} blockType={block.type}>
-            <BlockComponent {...resolvedProps} />
+            {ASYNC_BLOCK_TYPES.has(block.type) ? (
+              <Suspense fallback={<SkeletonGrid count={(resolvedProps as { limit?: number }).limit ?? 6} columns={(resolvedProps as { columns?: number }).columns ?? 3} />}>
+                {blockContent}
+              </Suspense>
+            ) : blockContent}
           </BlockRenderer>
         );
       })}

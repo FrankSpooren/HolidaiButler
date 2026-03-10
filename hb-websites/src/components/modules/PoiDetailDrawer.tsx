@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { POI, Review } from '@/types/poi';
 import OpeningHours from '@/components/poi/OpeningHours';
 import FeatureList from '@/components/poi/FeatureList';
+import { SkeletonDrawer } from '@/components/ui/Skeleton';
 
 interface PoiDetailDrawerProps {
   locale: string;
@@ -100,9 +101,7 @@ export default function PoiDetailDrawer({ locale }: PoiDetailDrawerProps) {
         </button>
 
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-          </div>
+          <SkeletonDrawer />
         ) : !poi ? (
           <div className="flex items-center justify-center h-64 text-muted">
             POI not found
