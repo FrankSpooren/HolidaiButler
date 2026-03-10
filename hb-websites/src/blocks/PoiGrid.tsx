@@ -26,35 +26,35 @@ const TOURIST_CATEGORIES = [
   'Nightlife',
 ];
 
-/** Category color mapping — derived from Customer Portal categoryConfig.ts gradient primary colors */
+/** Category color mapping — exact Customer Portal categoryConfig.ts gradient primary colors as bg, white text */
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
-  // Calpe (EN) — from Customer Portal CATEGORY_CONFIG
-  'food & drinks': { bg: '#e0ecea', text: '#4f766b' },
-  'restaurants': { bg: '#e0ecea', text: '#4f766b' },
-  'beaches & nature': { bg: '#f0e8d4', text: '#b4942e' },
-  'culture & history': { bg: '#d8dce0', text: '#253444' },
-  'recreation': { bg: '#dae2e0', text: '#354f48' },
-  'active': { bg: '#cce0ec', text: '#016193' },
-  'shopping': { bg: '#f0e7d4', text: '#b4892e' },
-  'health & wellbeing': { bg: '#ccdde8', text: '#004568' },
-  'practical': { bg: '#cce0ec', text: '#016193' },
-  'nightlife': { bg: '#e8d9ed', text: '#7B2D8E' },
-  // Texel (NL) — from Customer Portal CATEGORY_CONFIG
-  'eten & drinken': { bg: '#fcdcdb', text: '#E53935' },
-  'natuur': { bg: '#e8f0da', text: '#7CB342' },
-  'nature': { bg: '#e8f0da', text: '#7CB342' },
-  'cultuur & historie': { bg: '#ccdce8', text: '#004B87' },
-  'cultuur': { bg: '#ccdce8', text: '#004B87' },
-  'actief': { bg: '#ffe3cc', text: '#FF6B00' },
-  'winkelen': { bg: '#f0ddf3', text: '#AB47BC' },
-  'recreatief': { bg: '#dcf0e8', text: '#354f48' },
-  'gezondheid & verzorging': { bg: '#dceede', text: '#43A047' },
-  'praktisch': { bg: '#dfe4e7', text: '#607D8B' },
-  'strand': { bg: '#e8f0da', text: '#7CB342' },
+  // Calpe (EN) — exact hex from Customer Portal linear-gradient first stop
+  'food & drinks': { bg: '#4f766b', text: '#FFFFFF' },
+  'restaurants': { bg: '#4f766b', text: '#FFFFFF' },
+  'beaches & nature': { bg: '#b4942e', text: '#FFFFFF' },
+  'culture & history': { bg: '#253444', text: '#FFFFFF' },
+  'recreation': { bg: '#354f48', text: '#FFFFFF' },
+  'active': { bg: '#016193', text: '#FFFFFF' },
+  'shopping': { bg: '#b4892e', text: '#FFFFFF' },
+  'health & wellbeing': { bg: '#004568', text: '#FFFFFF' },
+  'practical': { bg: '#016193', text: '#FFFFFF' },
+  'nightlife': { bg: '#7B2D8E', text: '#FFFFFF' },
+  // Texel (NL) — exact hex from Customer Portal linear-gradient first stop
+  'eten & drinken': { bg: '#E53935', text: '#FFFFFF' },
+  'natuur': { bg: '#7CB342', text: '#FFFFFF' },
+  'nature': { bg: '#7CB342', text: '#FFFFFF' },
+  'cultuur & historie': { bg: '#004B87', text: '#FFFFFF' },
+  'cultuur': { bg: '#004B87', text: '#FFFFFF' },
+  'actief': { bg: '#FF6B00', text: '#FFFFFF' },
+  'winkelen': { bg: '#AB47BC', text: '#FFFFFF' },
+  'recreatief': { bg: '#354f48', text: '#FFFFFF' },
+  'gezondheid & verzorging': { bg: '#43A047', text: '#FFFFFF' },
+  'praktisch': { bg: '#607D8B', text: '#FFFFFF' },
+  'strand': { bg: '#7CB342', text: '#FFFFFF' },
 };
 
 function getCategoryStyle(category: string): { bg: string; text: string } {
-  return CATEGORY_COLORS[category.toLowerCase()] ?? { bg: '#F3F4F6', text: '#374151' };
+  return CATEGORY_COLORS[category.toLowerCase()] ?? { bg: '#30c59b', text: '#FFFFFF' };
 }
 
 /** Round-robin mix: interleave POIs from different categories for visual variety */

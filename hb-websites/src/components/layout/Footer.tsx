@@ -46,6 +46,12 @@ function resolveTitle(value: string | Record<string, string> | undefined, locale
   return value[locale] ?? value.en ?? value.nl ?? Object.values(value)[0] ?? '';
 }
 
+function resolveAssetUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const baseUrl = process.env.HB_ASSET_URL ?? process.env.HB_API_URL ?? '';
+  return `${baseUrl}${path}`;
+}
+
 export default function Footer({ tenant, locale }: FooterProps) {
   const year = new Date().getFullYear();
   const socialLinks = tenant.socialLinks ?? {};
@@ -65,9 +71,14 @@ export default function Footer({ tenant, locale }: FooterProps) {
 
   const renderColumn = (col: FooterColumn) => {
     switch (col.type) {
-      case 'brand':
+      case 'brand': {
+        const logoUrl = tenant.branding.logo ? resolveAssetUrl(tenant.branding.logo) : null;
         return (
           <>
+            {logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt={tenant.displayName} className="h-10 w-auto mb-3" />
+            )}
             <h3 className="text-lg font-heading font-bold mb-2">
               {tenant.displayName}
             </h3>
@@ -76,6 +87,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
             </p>
           </>
         );
+      }
 
       case 'navigation':
         return (

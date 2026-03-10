@@ -3968,6 +3968,46 @@ CLAUDE.md v3.92.0 → v3.93.0. MS v7.54 → v7.55. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Command v13.0 DEEL A — 5 Resterende Bugs BLOKKEREND (10 maart 2026)
+
+### Samenvatting
+
+5 resterende bugs uit DEEL A van Command v13 opgelost. Alle 5 blokkeerden Fase VI voortgang.
+
+### Fixes
+
+| Bug | Probleem | Root Cause | Fix |
+|-----|----------|-----------|-----|
+| 1 | Chatbot retourneert gemixte Calpe+Texel data | `calpe.config.js` had `chromaCollection: 'holidaibutler_pois'` (verkeerde collectie) | → `'calpe_pois'` |
+| 2 | Chatbot kleur blijft groen, negeert admin instelling | layout.tsx gaf `chatbotConfig.color` niet door aan ChatbotWidget | → `chatbotColor` prop toegevoegd + doorgestuurd |
+| 3 | Categorie labels: pastel bg + donkere tekst i.p.v. Customer Portal stijl | CATEGORY_COLORS had lichte pastel achtergrond | → gradient-primary bg + witte tekst (exact Customer Portal match) |
+| 4 | Filter bars niet zichtbaar op explore/restaurants/events | DB pages gebruikten `poi_grid` / `event_calendar` block types i.p.v. `_filtered` varianten | → SQL UPDATE 6 rijen (Calpe + Texel × 3 pagina's) |
+| 5 | Footer brand kolom mist logo | Brand case had geen `<img>` tag | → `resolveAssetUrl` helper + `<img>` tag met `branding.logo` |
+
+### Gewijzigde bestanden
+
+| Bestand | Bug | Wijziging |
+|---------|-----|----------|
+| `hb-websites/src/components/layout/Footer.tsx` | 5 | resolveAssetUrl + img tag in brand case |
+| `hb-websites/src/components/modules/ChatbotWidget.tsx` | 2 | chatbotColor prop + inline style override op bubble + header |
+| `hb-websites/src/app/layout.tsx` | 2 | chatbotColor prop doorsturen van chatbotConfig.color |
+| `hb-websites/src/blocks/PoiGrid.tsx` | 3 | CATEGORY_COLORS: gradient-primary bg + witte tekst |
+| `hb-websites/src/components/filters/PoiFilterBar.tsx` | 3 | CATEGORY_COLORS + filter button styling (inactive: lichte bg met border) |
+| `platform-core/config/destinations/calpe.config.js` | 1 | chromaCollection: 'holidaibutler_pois' → 'calpe_pois' |
+| DB pages tabel | 4 | 6 rijen: poi_grid→poi_grid_filtered, event_calendar→event_calendar_filtered |
+
+### Acceptatiecriteria
+
+| # | Test | Status |
+|---|------|--------|
+| 1 | Chatbot Calpe → Calpe restaurants (NIET Texel) | PASS |
+| 2 | Chatbot kleur = branding kleur (geel #ecde3c) | PASS |
+| 3 | Categorie labels: gradient-primary bg + witte tekst | PASS |
+| 4 | Filter chips op Restaurants + Events + Explore | PASS |
+| 5 | Footer Brand: logo + naam + payoff | PASS |
+
+---
+
 ## Command v12.0 — 8 Fixes + Onboarding Wizard (9 maart 2026)
 
 ### Samenvatting
