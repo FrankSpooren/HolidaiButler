@@ -4263,4 +4263,61 @@ CLAUDE.md v3.96.0 → v3.97.0. MS v7.58 → v7.59. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Command v15.0 — UX Polish (Fase VI-A) (10-03-2026)
+
+**Doel**: Visuele afwerking, mobiele UX, animaties en performance — het verschil tussen "werkt" en "voelt professioneel".
+
+### Resultaat
+
+7 fixes geïmplementeerd:
+
+| # | Fix | Beschrijving |
+|---|-----|-------------|
+| 1 | ChatbotWidget mobile responsive | `w-[calc(100vw-1.5rem)] sm:w-[380px]`, `max-h-[80vh]`, repositioned boven floating button op mobiel |
+| 2 | Loading skeletons | Skeleton.tsx (SkeletonCard/SkeletonGrid/SkeletonDrawer), Suspense SSR streaming in page.tsx, PoiDetailDrawer skeleton |
+| 3 | Animaties | fadeInUp, staggered grid (12 items), Card hover lift (-translate-y-1), image fade-in (animate-image-load), `prefers-reduced-motion` respect |
+| 4 | Hero + DateBlock responsive tekst | Hero: text-3xl sm:text-4xl lg:text-6xl (was text-4xl), description: text-base sm:text-lg lg:text-xl. DateBlock: h-36 sm:h-48, text-3xl sm:text-4xl |
+| 5 | Map responsive hoogte | h-[300px] sm:h-[400px] lg:h-[500px] (was h-[400px] sm:h-[500px]), legend overflow-x-auto |
+| 6 | Scroll-to-top button | ScrollToTop.tsx: verschijnt na 400px scroll, fixed bottom-6 right-20 (links van chatbot), fade-in animatie |
+| 7 | Font preloading + image fade-in | `<link rel="preload" as="style">` voor font URLs, CardImage `animate-image-load` CSS class |
+
+### Bestandswijzigingen
+
+| Actie | Bestand | Fix |
+|-------|---------|-----|
+| WIJZIG | `hb-websites/src/components/modules/ChatbotWidget.tsx` | 1 |
+| NIEUW | `hb-websites/src/components/ui/Skeleton.tsx` | 2 |
+| WIJZIG | `hb-websites/src/app/[[...slug]]/page.tsx` | 2 (Suspense + SkeletonGrid) |
+| WIJZIG | `hb-websites/src/components/modules/PoiDetailDrawer.tsx` | 2 (SkeletonDrawer) |
+| WIJZIG | `hb-websites/src/app/globals.css` | 3 (CSS animaties + prefers-reduced-motion) |
+| WIJZIG | `hb-websites/src/components/ui/Card.tsx` | 3+7 (hover lift + image fade-in) |
+| WIJZIG | `hb-websites/src/blocks/PoiGrid.tsx` | 3 (animate-stagger) |
+| WIJZIG | `hb-websites/src/blocks/EventCalendar.tsx` | 3+4 (animate-stagger + DateBlock responsive) |
+| WIJZIG | `hb-websites/src/blocks/Hero.tsx` | 4 (responsive text sizes) |
+| WIJZIG | `hb-websites/src/blocks/Map.tsx` | 5 (responsive height + legend overflow) |
+| NIEUW | `hb-websites/src/components/ui/ScrollToTop.tsx` | 6 |
+| WIJZIG | `hb-websites/src/app/layout.tsx` | 6+7 (ScrollToTop mount + font preload) |
+
+### Verificatie
+
+| # | Test | Status |
+|---|------|--------|
+| 1 | ChatbotWidget calc(100vw-1.5rem) in source | PASS |
+| 2 | Skeleton.tsx 69 LOC deployed | PASS |
+| 3 | CSS animaties (18 rules) in globals.css | PASS |
+| 4 | Hero text-3xl sm:text-4xl in source | PASS |
+| 5 | Map h-[300px] sm:h-[400px] lg:h-[500px] | PASS |
+| 6 | ScrollToTop.tsx 27 LOC deployed | PASS |
+| 7 | Font preload link in layout.tsx | PASS |
+| 8 | Calpe homepage 200 | PASS |
+| 9 | Texel homepage 200 | PASS |
+
+### Documentatie
+
+CLAUDE.md v3.97.0 → v3.98.0. MS v7.59 → v7.60. MEMORY.md bijgewerkt. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
