@@ -113,7 +113,7 @@ export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3 }
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className={`grid grid-cols-1 ${gridCols} gap-6`}>
+      <div className={`grid grid-cols-1 ${gridCols} gap-6 animate-stagger`}>
         {displayPois.map((poi) => {
           const imageUrl = poi.images?.[0] ?? poi.thumbnail_url ?? '';
           const catStyle = getCategoryStyle(poi.category ?? '');

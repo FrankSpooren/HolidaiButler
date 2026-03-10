@@ -7,6 +7,7 @@ import Footer from '@/components/layout/Footer';
 import ChatbotWidget from '@/components/modules/ChatbotWidget';
 import CookieBanner from '@/components/modules/CookieBanner';
 import PoiDetailDrawer from '@/components/modules/PoiDetailDrawer';
+import ScrollToTop from '@/components/ui/ScrollToTop';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -47,6 +48,9 @@ export default async function RootLayout({
     <html lang={locale} style={cssVars}>
       <head>
         {fontLinks.map((url) => (
+          <link key={`preload-${url}`} rel="preload" as="style" href={url!} />
+        ))}
+        {fontLinks.map((url) => (
           <link key={url} rel="stylesheet" href={url!} />
         ))}
         {tenant?.branding?.favicon && (
@@ -82,6 +86,7 @@ export default async function RootLayout({
           />
         )}
         <PoiDetailDrawer locale={locale} />
+        <ScrollToTop />
         <CookieBanner
           locale={locale}
           primaryColor={tenant?.branding?.colors?.primary}
