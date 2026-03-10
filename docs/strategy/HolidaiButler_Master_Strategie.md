@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 10 maart 2026
-**Versie**: 7.58
+**Versie**: 7.59
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + Repair v9.0-v11.0 + Cmd v12.0-v14.0 DEEL A COMPLEET). CLAUDE.md v3.96.0. MS v7.58.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + Repair v9.0-v11.0 + Cmd v12.0-v14.0 DEEL A+B COMPLEET). CLAUDE.md v3.97.0. MS v7.59.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1688,6 +1688,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 | **6.2** | **20-02-2026** | **Fase 8A+ Agent Monitoring & Briefing Expansion COMPLEET: 3 nieuwe monitoring modules (contentQualityChecker, backupHealthChecker, smokeTestRunner). 5 nieuwe scheduled jobs (totaal 35→40). Daily briefing uitgebreid met smoke test/backup/content quality sections + 3 nieuwe MailerLite fields. ChromaDB state snapshot via Het Geheugen. 16/16 tests PASS. Kosten: EUR 0.** |
 | **6.1** | **20-02-2026** | **Fase 8A Agent Reparatie & Versterking COMPLEET: 7 agents gerepareerd/versterkt. De Koerier: column mapping fix (9 kolommen). De Leermeester: MongoDB persistence (agent_learning_patterns). De Thermostaat: herschreven naar alerting-only + Redis. De Bode: destination stats + predictions (7 MailerLite fields). De Stylist: Texel brand colors (DESTINATION_BRAND_COLORS map). De Dokter: 3 nieuwe portals + SSL monitoring (5 domains). Legacy workers.js deprecated. Kosten: EUR 0.** |
 | **6.0** | **19-02-2026** | **Fase 7 Reviews Integratie COMPLEET: 8.964 reviews (3.869 Texel, 5.095 Calpe) live op beide frontends. API werkte al correct (Outcome A). Backend: rating_distribution toegevoegd. Frontend: poiName fix + mock data DEV-only. 7/7 API tests PASS. Reviews verwijderd uit Openstaande Componenten. Kosten: EUR 0.** |
+| **7.59** | **10-03-2026** | **Command v14.0 DEEL B: Browser-Verificatie + CI/CD Workflow. POI detail HTTP 500 fix (PoiImageGallery.tsx 'use client' — React 19 Server Component event handler beperking). deploy-hb-websites.yml CI/CD workflow aangemaakt + fixed (rsync --delete wiped server-only files → verwijderd, config files aan Git). tsconfig.json exclude playwright/tests. Server hersteld (214 PM2 restarts). Workflow dev+main SUCCESS. CLAUDE.md v3.97.0.** |
 | **7.58** | **10-03-2026** | **Command v14.0 DEEL A: 5 Resterende Fixes — Customer Portal Kwaliteit. FIX 1: Footer navigation data-driven (tenant.config.nav_items) + custom HTML. FIX 2: ButtonRenderer generiek component (Hero/Cta refactored, CardGroup+Banner chatbot variant). FIX 3: POI detail image layout (4 varianten, vaste verhoudingen). FIX 4: POI detail slide-in drawer (PoiDetailDrawer+PoiCard CustomEvent, API proxy). FIX 5: Filter modals POI+Event (categorie/rating/reviews/sort/datum, slide-in, i18n). 7 nieuwe + 11 gewijzigde bestanden. 10/10 Hetzner PASS. CLAUDE.md v3.96.0.** |
 | **7.57** | **10-03-2026** | **Command v13.0 DEEL A: 5 Resterende Bugs BLOKKEREND. BUG 1: Chatbot destination mixing fix (calpe.config.js chromaCollection holidaibutler_pois→calpe_pois). BUG 2: Chatbot kleur chatbotColor prop (layout.tsx→ChatbotWidget). BUG 3: Categorie kleuren Customer Portal exact match (gradient-primary bg + witte tekst). BUG 4: Filter bars DB block types fix (poi_grid→poi_grid_filtered, 6 rijen). BUG 5: Footer brand logo (resolveAssetUrl + img). 5 code + 1 config + 6 DB. 5/5 PASS. CLAUDE.md v3.95.0.** |
 | **7.56** | **09-03-2026** | **Command v12.0: 8 fixes + Onboarding Wizard, 11 acceptatiecriteria PASS. Hero chatbot button DATA fix (variant→chatbot). POI detail map single marker (staticMarkers prop). Categorie kleuren Customer Portal match (3 bestanden). Footer brand social icons verwijderd. Onboarding wizard 5-stappen (OnboardingPage.jsx + POST /onboarding/create, 158 endpoints). 1+11 bestanden + 1 DB update. CLAUDE.md v3.94.0.** |
@@ -1705,4 +1706,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 10 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + Repair v9.0-v11.0 + Cmd v12.0-v14.0 DEEL A COMPLEET). Admin Portal: 158 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.96.0. MS v7.58.*
+*Laatst bijgewerkt: 10 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + Repair v9.0-v11.0 + Cmd v12.0-v14.0 DEEL A+B COMPLEET). Admin Portal: 158 endpoints, adminPortal.js v3.25.0. 54 scheduled jobs. CLAUDE.md v3.97.0. MS v7.59.*
