@@ -3,7 +3,7 @@
 # =============================================================================
 # Architecture: Next.js 15 SSR app (React 19, Tailwind CSS 4)
 # Runs as PM2 process on port 3002, Apache reverse proxy
-# Build happens ON SERVER (needs .env with HB_API_URL, HB_ASSET_URL)
+# Build happens ON SERVER (needs .env.local with HB_API_URL, HB_ASSET_URL)
 # =============================================================================
 name: "Deploy: hb-websites"
 
@@ -76,6 +76,8 @@ jobs:
               cp -r ${{ env.DEPLOY_PATH }}/src \$BACKUP_DIR/
               cp -r ${{ env.DEPLOY_PATH }}/public \$BACKUP_DIR/ 2>/dev/null || true
               cp ${{ env.DEPLOY_PATH }}/package.json \$BACKUP_DIR/
+              cp ${{ env.DEPLOY_PATH }}/tsconfig.json \$BACKUP_DIR/ 2>/dev/null || true
+              cp ${{ env.DEPLOY_PATH }}/postcss.config.mjs \$BACKUP_DIR/ 2>/dev/null || true
               cp ${{ env.DEPLOY_PATH }}/next.config.ts \$BACKUP_DIR/ 2>/dev/null || true
               echo 'Backup created at '\$BACKUP_DIR
             fi
@@ -85,74 +87,46 @@ jobs:
 
       - name: Deploy source files
         run: |
-          rsync -avz --delete \
+          rsync -avz \
             --exclude 'node_modules' \
             --exclude '.next' \
             --exclude '.env' \
             --exclude '.env.local' \
             --exclude '.git' \
+            --exclude 'package-lock.json' \
+            --exclude 'tests' \
+            --exclude 'playwright.config.ts' \
             hb-websites/ \
             root@91.98.71.87:${{ env.DEPLOY_PATH }}/
 
-      - name: Install dependencies and build
+      - name: Install dependencies
+        run: ssh root@91.98.71.87 'cd /var/www/api.holidaibutler.com/hb-websites && npm ci 2>&1 | tail -5'
+
+      - name: Build Next.js
+        run: ssh root@91.98.71.87 'cd /var/www/api.holidaibutler.com/hb-websites && npx next build 2>&1 | tail -30'
+
+      - name: Restart PM2
         run: |
-          ssh root@91.98.71.87 "
-            cd ${{ env.DEPLOY_PATH }}
+          ssh root@91.98.71.87 'pm2 restart hb-websites --update-env 2>/dev/null || pm2 start /var/www/api.holidaibutler.com/hb-websites/node_modules/.bin/next --name hb-websites --cwd /var/www/api.holidaibutler.com/hb-websites -- start -p 3002'
+          ssh root@91.98.71.87 'pm2 save'
+          sleep 5
 
-            # Install dependencies
-            echo '=== Installing dependencies ==='
-            npm ci 2>&1 | tail -5
-
-            # Build Next.js (uses server-side .env for HB_API_URL etc.)
-            echo '=== Building Next.js ==='
-            npx next build 2>&1 | tail -20
-
-            if [ \$? -ne 0 ]; then
-              echo '::error::Next.js build failed'
-              exit 1
-            fi
-
-            echo '=== Build successful ==='
-          "
-
-      - name: Restart PM2 and health check
+      - name: Health check
         run: |
-          ssh root@91.98.71.87 "
-            # Restart PM2 process
-            pm2 restart ${{ env.PM2_PROCESS_NAME }} --update-env 2>/dev/null || \
-              pm2 start ${{ env.DEPLOY_PATH }}/node_modules/.bin/next \
-                --name ${{ env.PM2_PROCESS_NAME }} \
-                --cwd ${{ env.DEPLOY_PATH }} \
-                -- start -p 3002
-            pm2 save
-
-            # Wait for startup
-            sleep 5
-
-            # Health check
-            STATUS=\$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3002/)
-            echo \"Health check: \$STATUS\"
-            if [ \"\$STATUS\" != '200' ]; then
-              echo '::error::Health check failed — rolling back'
-              # Rollback: restore latest backup
-              LATEST=\$(ls -1d /var/www/backups/hb-websites/backup-* 2>/dev/null | sort | tail -1)
-              if [ -n \"\$LATEST\" ]; then
-                cp -r \$LATEST/src ${{ env.DEPLOY_PATH }}/
-                cp \$LATEST/package.json ${{ env.DEPLOY_PATH }}/
-                cd ${{ env.DEPLOY_PATH }} && npm ci && npx next build
-                pm2 restart ${{ env.PM2_PROCESS_NAME }}
-                echo 'Rollback completed'
-              fi
-              exit 1
-            fi
-          "
+          STATUS=$(ssh root@91.98.71.87 'curl -s -o /dev/null -w "%{http_code}" http://localhost:3002/')
+          echo "Health check: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Health check failed with status $STATUS — rolling back"
+            ssh root@91.98.71.87 'LATEST=$(ls -1d /var/www/backups/hb-websites/backup-* 2>/dev/null | sort | tail -1); if [ -n "$LATEST" ]; then cp -r $LATEST/src /var/www/api.holidaibutler.com/hb-websites/ && cp $LATEST/package.json /var/www/api.holidaibutler.com/hb-websites/ && cd /var/www/api.holidaibutler.com/hb-websites && npm ci && npx next build && pm2 restart hb-websites; echo "Rollback completed"; fi'
+            exit 1
+          fi
 
       - name: Verify public sites
         run: |
           sleep 2
           for URL in "https://dev.holidaibutler.com" "https://dev.texelmaps.nl"; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
-            echo "$URL → $STATUS"
+            echo "$URL: $STATUS"
             if [ "$STATUS" != "200" ]; then
               echo "::warning::$URL returned $STATUS"
             fi
