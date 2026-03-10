@@ -3,7 +3,7 @@
 # =============================================================================
 # Architecture: Next.js 15 SSR app (React 19, Tailwind CSS 4)
 # Runs as PM2 process on port 3002, Apache reverse proxy
-# Build happens ON SERVER (needs .env with HB_API_URL, HB_ASSET_URL)
+# Build happens ON SERVER (needs .env.local with HB_API_URL, HB_ASSET_URL)
 # =============================================================================
 name: "Deploy: hb-websites"
 
@@ -76,6 +76,8 @@ jobs:
               cp -r ${{ env.DEPLOY_PATH }}/src \$BACKUP_DIR/
               cp -r ${{ env.DEPLOY_PATH }}/public \$BACKUP_DIR/ 2>/dev/null || true
               cp ${{ env.DEPLOY_PATH }}/package.json \$BACKUP_DIR/
+              cp ${{ env.DEPLOY_PATH }}/tsconfig.json \$BACKUP_DIR/ 2>/dev/null || true
+              cp ${{ env.DEPLOY_PATH }}/postcss.config.mjs \$BACKUP_DIR/ 2>/dev/null || true
               cp ${{ env.DEPLOY_PATH }}/next.config.ts \$BACKUP_DIR/ 2>/dev/null || true
               echo 'Backup created at '\$BACKUP_DIR
             fi
@@ -85,12 +87,15 @@ jobs:
 
       - name: Deploy source files
         run: |
-          rsync -avz --delete \
+          rsync -avz \
             --exclude 'node_modules' \
             --exclude '.next' \
             --exclude '.env' \
             --exclude '.env.local' \
             --exclude '.git' \
+            --exclude 'package-lock.json' \
+            --exclude 'tests' \
+            --exclude 'playwright.config.ts' \
             hb-websites/ \
             root@91.98.71.87:${{ env.DEPLOY_PATH }}/
 
