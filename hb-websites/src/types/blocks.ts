@@ -79,6 +79,7 @@ export interface CardGroupProps {
     description?: string;
     image?: string;
     href?: string;
+    buttons?: HeroButton[];
   }>;
   columns?: 2 | 3 | 4;
 }
@@ -184,7 +185,7 @@ export interface BannerProps {
   message: string;
   type?: 'info' | 'warning' | 'success' | 'promo';
   dismissible?: boolean;
-  link?: { label: string; href: string };
+  link?: { label: string; href: string; variant?: 'chatbot'; chatbotAction?: string };
 }
 
 export interface PartnersProps {
