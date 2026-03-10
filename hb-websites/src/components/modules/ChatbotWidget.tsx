@@ -398,7 +398,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-[380px] h-[520px] bg-surface rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
+        <div className="fixed bottom-20 right-3 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[380px] max-h-[80vh] h-[520px] bg-surface rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
           {/* Header */}
           <div className="bg-primary text-on-primary px-4 py-3 flex items-center justify-between flex-shrink-0" style={chatbotColor ? { backgroundColor: chatbotColor } : undefined}>
             <div className="flex items-center gap-2">
@@ -432,7 +432,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
                     ? `Hallo! Ik ben ${name}. Hoe kan ik je helpen?`
                     : `Hi! I'm ${name}. How can I help you?`}
                 </p>
-                <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex flex-wrap gap-2 justify-center max-w-full">
                   {quickActions.map((qa) => (
                     <button
                       key={qa.id}

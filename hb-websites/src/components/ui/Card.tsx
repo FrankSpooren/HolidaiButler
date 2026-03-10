@@ -7,7 +7,7 @@ interface CardProps {
 }
 
 export default function Card({ children, href, className = '' }: CardProps) {
-  const classes = `bg-surface rounded-tenant overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 ${className}`;
+  const classes = `bg-surface rounded-tenant overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200 ${className}`;
 
   if (href) {
     return (
@@ -34,7 +34,7 @@ export function CardImage({ src, alt, className = '' }: CardImageProps) {
         src={src}
         alt={alt}
         loading="lazy"
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover animate-image-load"
       />
     </div>
   );

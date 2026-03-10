@@ -52,8 +52,8 @@ export default function Hero({
 
       <div className={`relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${paddingClass} ${isFullscreen ? 'w-full' : ''}`}>
         {tagline && <p className="text-sm font-medium uppercase tracking-wider opacity-80 mb-4">{tagline}</p>}
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-heading font-bold max-w-3xl">{headline}</h1>
-        {description && <p className="mt-6 text-lg sm:text-xl max-w-2xl opacity-90">{description}</p>}
+        <h1 className="text-3xl sm:text-4xl lg:text-6xl font-heading font-bold max-w-3xl">{headline}</h1>
+        {description && <p className="mt-6 text-base sm:text-lg lg:text-xl max-w-2xl opacity-90">{description}</p>}
         {buttons && buttons.length > 0 && (
           <HeroButtons buttons={buttons} />
         )}
