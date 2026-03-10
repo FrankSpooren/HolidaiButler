@@ -1,7 +1,6 @@
 import type { HeroProps } from '@/types/blocks';
-import Button from '@/components/ui/Button';
-import ChatbotButton from '@/components/ui/ChatbotButton';
 import HeroVideo from './HeroVideo';
+import HeroButtons from './HeroButtons';
 
 function resolveAssetUrl(path: string): string {
   if (!path) return '';
@@ -56,33 +55,7 @@ export default function Hero({
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-heading font-bold max-w-3xl">{headline}</h1>
         {description && <p className="mt-6 text-lg sm:text-xl max-w-2xl opacity-90">{description}</p>}
         {buttons && buttons.length > 0 && (
-          <div className="mt-8 flex flex-wrap gap-4">
-            {buttons.map((btn, i) => {
-              if (btn.variant === 'chatbot') {
-                return (
-                  <ChatbotButton
-                    key={i}
-                    label={btn.label}
-                    message={btn.chatbotAction}
-                    className={i === 0
-                      ? 'bg-on-primary text-primary hover:bg-on-primary/90'
-                      : 'border-on-primary text-on-primary hover:bg-on-primary/10'}
-                    size="lg"
-                  />
-                );
-              }
-              return (
-                <Button key={i} href={btn.href}
-                  variant={btn.variant ?? (i === 0 ? 'primary' : 'outline')}
-                  size="lg"
-                  className={i === 0
-                    ? 'bg-on-primary text-primary hover:bg-on-primary/90'
-                    : 'border-on-primary text-on-primary hover:bg-on-primary/10'}>
-                  {btn.label}
-                </Button>
-              );
-            })}
-          </div>
+          <HeroButtons buttons={buttons} />
         )}
       </div>
     </section>

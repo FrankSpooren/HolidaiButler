@@ -1,7 +1,8 @@
 import { headers } from 'next/headers';
 import { fetchPois } from '@/lib/api';
 import type { PoiGridProps } from '@/types/blocks';
-import Card, { CardImage, CardContent } from '@/components/ui/Card';
+import { CardImage, CardContent } from '@/components/ui/Card';
+import PoiCard from '@/components/ui/PoiCard';
 import Rating from '@/components/ui/Rating';
 
 interface POI {
@@ -117,7 +118,7 @@ export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3 }
           const imageUrl = poi.images?.[0] ?? poi.thumbnail_url ?? '';
           const catStyle = getCategoryStyle(poi.category ?? '');
           return (
-            <Card key={poi.id} href={`/poi/${poi.id}`}>
+            <PoiCard key={poi.id} poiId={poi.id} href={`/poi/${poi.id}`}>
               {imageUrl && (
                 <CardImage src={imageUrl} alt={poi.name} />
               )}
@@ -142,7 +143,7 @@ export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3 }
                   </div>
                 )}
               </CardContent>
-            </Card>
+            </PoiCard>
           );
         })}
       </div>
