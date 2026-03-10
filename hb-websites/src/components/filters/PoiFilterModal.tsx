@@ -112,11 +112,16 @@ export default function PoiFilterModal({
   open, onClose, onApply, currentFilters, availableCategories, locale,
 }: PoiFilterModalProps) {
   const [filters, setFilters] = useState<PoiFilters>(currentFilters);
+  const [prevOpen, setPrevOpen] = useState(open);
   const t = LABELS[locale] || LABELS.en;
 
-  useEffect(() => {
-    if (open) setFilters(currentFilters);
-  }, [open, currentFilters]);
+  // Reset filters when modal opens (no useEffect setState)
+  if (open && !prevOpen) {
+    setFilters(currentFilters);
+  }
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+  }
 
   // ESC key
   useEffect(() => {

@@ -77,11 +77,16 @@ export default function EventFilterModal({
   open, onClose, onApply, currentFilters, availableCategories, locale,
 }: EventFilterModalProps) {
   const [filters, setFilters] = useState<EventFilters>(currentFilters);
+  const [prevOpen, setPrevOpen] = useState(open);
   const t = LABELS[locale] || LABELS.en;
 
-  useEffect(() => {
-    if (open) setFilters(currentFilters);
-  }, [open, currentFilters]);
+  // Reset filters when modal opens (no useEffect setState)
+  if (open && !prevOpen) {
+    setFilters(currentFilters);
+  }
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+  }
 
   useEffect(() => {
     if (!open) return;

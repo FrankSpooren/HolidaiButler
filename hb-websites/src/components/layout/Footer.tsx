@@ -67,7 +67,6 @@ export default function Footer({ tenant, locale }: FooterProps) {
     { type: 'social', title: 'Social' }
   ];
   const copyright = resolveTitle(footerConfig?.copyright, locale) || `\u00A9 ${year} ${tenant.displayName}. Powered by HolidaiButler.`;
-  const showSocial = footerConfig?.showSocial !== false;
 
   const renderColumn = (col: FooterColumn) => {
     switch (col.type) {
