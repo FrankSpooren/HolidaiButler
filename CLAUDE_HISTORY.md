@@ -49,7 +49,9 @@
 38. [Command v7.0: Fase V Voltooiing](#command-v70-fase-v-voltooiing-08-03-2026)
 39. [Command v7.1: Frank's Feedback Fixes](#command-v71-franks-feedback-fixes-08-03-2026)
 40. [Command v8.0: Fase V Final — Customer Portal Kwaliteit](#command-v80-fase-v-final--customer-portal-kwaliteit-08-03-2026)
-40. [Volledige Changelog](#volledige-changelog)
+41. [Repair v9.0-v11.0 + Command v12.0-v13.0](#command-v130-deel-a--5-resterende-bugs-blokkerend-10-maart-2026)
+42. [Command v14.0 DEEL A — 5 Resterende Fixes Customer Portal Kwaliteit](#command-v140-deel-a--5-resterende-fixes-customer-portal-kwaliteit-10-maart-2026)
+43. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -3963,6 +3965,121 @@ social icons: href="https://instagram.com/holidaibutler" ✓
 ### Documentatie
 
 CLAUDE.md v3.92.0 → v3.93.0. MS v7.54 → v7.55. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
+## Command v14.0 DEEL A — 5 Resterende Fixes Customer Portal Kwaliteit (10 maart 2026)
+
+### Samenvatting
+
+5 fixes voor hb-websites Customer Portal kwaliteit: Footer navigation data-driven, ButtonRenderer generiek component, POI detail image layout, POI detail als drawer, Filter modals POI+Event. 7 nieuwe + 11 gewijzigde bestanden. Deployed op Hetzner, 10/10 verificatie PASS.
+
+### Fixes
+
+**FIX 1: Footer Navigation + Custom HTML**
+- Root cause: Footer.tsx `navigation` case had hardcoded links, terwijl Header.tsx al `tenant.config.nav_items` gebruikt
+- Fix: Navigation case leest nu `tenant.config?.nav_items` (zelfde als Header), met feature flag check, i18n label resolution, sortOrder. Fallback naar hardcoded defaults als leeg
+- Custom case: `dangerouslySetInnerHTML` support als content HTML bevat (check op `<` karakter)
+
+**FIX 2: ButtonRenderer voor alle blocks**
+- Nieuw `ButtonRenderer.tsx` — generiek client component dat HeroButton[] rendert met chatbot variant support
+- Nieuw `HeroButtons.tsx` — client wrapper voor server component Hero.tsx
+- Hero.tsx en Cta.tsx refactored: inline button logic → ButtonRenderer
+- CardGroup.tsx: optioneel `buttons?: HeroButton[]` per card → ButtonRenderer onder description
+- Banner.tsx: `link.variant === 'chatbot'` → ChatbotButton i.p.v. reguliere `<a>` tag
+- types/blocks.ts: CardGroupProps.cards.buttons + BannerProps.link.variant/chatbotAction
+
+**FIX 3: POI Detail Image Layout**
+- Image gallery in `/poi/[id]/page.tsx` herschreven met 4 varianten:
+  - 0 images: gradient placeholder met POI naam + categorie
+  - 1 image: full-width `aspect-[16/9]`, object-cover
+  - 2-3 images: hoofd 70% + thumbnails 30% rechts, vaste hoogte 360px
+  - 4+ images: hoofd 60% + 2×2 grid rechts, vaste hoogte 400px
+- Alle images: `onError` handler om broken images te verbergen
+
+**FIX 4: POI Detail als Popup/Drawer**
+- Nieuw `PoiDetailDrawer.tsx` — client component, right-side slide-in panel (100% mobile, 600px desktop)
+  - Luistert naar CustomEvent `hb:poi:open` met `{ poiId }`
+  - Client-side fetch via `/api/pois/${poiId}` proxy
+  - Content: image gallery, category badge, rating, beschrijving, highlights, contact, opening hours, amenities, reviews (max 3), Google Maps link, full page link
+  - Close: X knop, ESC key, backdrop click, body scroll lock
+- Nieuw `PoiCard.tsx` — client component, onClick dispatcht `hb:poi:open` CustomEvent
+  - Preserveert `href="/poi/${id}"` voor SEO maar `preventDefault` op click
+- Nieuw API proxy `/api/pois/[id]/route.ts` — forwardt naar backend, returns `{ poi, reviews }`
+- PoiGrid.tsx + PoiFilterBar.tsx: `<Card>` → `<PoiCard>` voor drawer integratie
+- layout.tsx: `<PoiDetailDrawer locale={locale} />` gemount
+
+**FIX 5: Filter Modals (POI + Event)**
+- Nieuw `PoiFilterModal.tsx` — slide-in filter modal:
+  - Categorie: multi-select colored chips (dynamisch per destination)
+  - Rating: radio (Alle / ≥3.0 / ≥4.0 / ≥4.5)
+  - Min reviews: radio (Alle / ≥3 / ≥10 / ≥25)
+  - Sortering: select (rating:desc / name:asc / review_count:desc)
+  - Disabled "Binnenkort beschikbaar" filters (price_level, open_now, accessibility, distance)
+  - i18n NL/EN/DE/ES
+- Nieuw `EventFilterModal.tsx` — slide-in filter modal:
+  - Categorie: multi-select chips
+  - Datum: radio (Alles/Vandaag/Morgen/Dit weekend/Deze week/Deze maand)
+  - i18n NL/EN/DE/ES
+- PoiFilterBar.tsx herschreven: filter button + modal + client-side API refetch via `/api/pois?params`
+- EventFilterBar.tsx herschreven: filter button + modal, quick date chips blijven werken
+
+### Build Fix: React 19 State Sync
+
+Eerste build mislukte door React 19 lint error: `Calling setState synchronously within an effect can trigger cascading renders` in PoiFilterModal.tsx en EventFilterModal.tsx.
+
+**Root cause**: `useEffect(() => { if (open) setFilters(currentFilters); }, [open, currentFilters])` — React 19 verbiedt setState in useEffect.
+
+**Fix**: Render-time state sync pattern met `prevOpen` state variable:
+```tsx
+const [prevOpen, setPrevOpen] = useState(open);
+if (open && !prevOpen) { setFilters(currentFilters); }
+if (open !== prevOpen) { setPrevOpen(open); }
+```
+
+### Gewijzigde bestanden
+
+| Actie | Bestand | Fix |
+|-------|---------|-----|
+| WIJZIG | `hb-websites/src/components/layout/Footer.tsx` | 1 |
+| NIEUW | `hb-websites/src/components/ui/ButtonRenderer.tsx` | 2 |
+| NIEUW | `hb-websites/src/blocks/HeroButtons.tsx` | 2 |
+| WIJZIG | `hb-websites/src/blocks/Hero.tsx` | 2 |
+| WIJZIG | `hb-websites/src/blocks/Cta.tsx` | 2 |
+| WIJZIG | `hb-websites/src/blocks/CardGroup.tsx` | 2 |
+| WIJZIG | `hb-websites/src/blocks/Banner.tsx` | 2 |
+| WIJZIG | `hb-websites/src/types/blocks.ts` | 2 |
+| WIJZIG | `hb-websites/src/app/poi/[id]/page.tsx` | 3 |
+| NIEUW | `hb-websites/src/components/modules/PoiDetailDrawer.tsx` | 4 |
+| NIEUW | `hb-websites/src/app/api/pois/[id]/route.ts` | 4 |
+| NIEUW | `hb-websites/src/components/ui/PoiCard.tsx` | 4 |
+| WIJZIG | `hb-websites/src/components/filters/PoiFilterBar.tsx` | 4+5 |
+| WIJZIG | `hb-websites/src/blocks/PoiGrid.tsx` | 4 |
+| WIJZIG | `hb-websites/src/app/layout.tsx` | 4 |
+| NIEUW | `hb-websites/src/components/filters/PoiFilterModal.tsx` | 5 |
+| NIEUW | `hb-websites/src/components/filters/EventFilterModal.tsx` | 5 |
+| WIJZIG | `hb-websites/src/app/globals.css` | 5 (slideInRight animatie) |
+
+### Hetzner Verificatie (10/10 PASS)
+
+| # | Test | Status |
+|---|------|--------|
+| 1 | Homepage laadt | PASS |
+| 2 | Explore pagina filter chips | PASS |
+| 3 | POI detail drawer opent | PASS |
+| 4 | POI detail image layout | PASS |
+| 5 | Filter modal POI | PASS |
+| 6 | Filter modal Event | PASS |
+| 7 | Footer navigation data-driven | PASS |
+| 8 | ButtonRenderer in Cta | PASS |
+| 9 | CardGroup chatbot buttons | PASS |
+| 10 | Banner chatbot variant | PASS |
+
+### Commits
+- `ef979c8` — Command v14 DEEL A: 5 fixes (initial)
+- `cc18055` — Fix React 19 setState-in-effect + unused var (build fix)
 
 **Kosten**: EUR 0
 
