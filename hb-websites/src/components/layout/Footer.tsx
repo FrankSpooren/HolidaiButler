@@ -67,7 +67,6 @@ export default function Footer({ tenant, locale }: FooterProps) {
     { type: 'social', title: 'Social' }
   ];
   const copyright = resolveTitle(footerConfig?.copyright, locale) || `\u00A9 ${year} ${tenant.displayName}. Powered by HolidaiButler.`;
-  const showSocial = footerConfig?.showSocial !== false;
 
   const renderColumn = (col: FooterColumn) => {
     switch (col.type) {
@@ -89,24 +88,52 @@ export default function Footer({ tenant, locale }: FooterProps) {
         );
       }
 
-      case 'navigation':
+      case 'navigation': {
+        const configItems = tenant.config?.nav_items as Array<{
+          label: Record<string, string> | string;
+          href: string;
+          featureFlag?: string;
+          isActive?: boolean;
+          sortOrder?: number;
+        }> | undefined;
+
+        const navLinks = (Array.isArray(configItems) && configItems.length > 0)
+          ? configItems
+              .filter(item => item.isActive !== false)
+              .filter(item => !item.featureFlag || tenant.featureFlags[item.featureFlag] === true)
+              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+              .map(item => ({
+                label: typeof item.label === 'object'
+                  ? (item.label[locale] || item.label.en || item.label.nl || '')
+                  : String(item.label),
+                href: item.href,
+              }))
+          : [
+              { label: 'Home', href: '/' },
+              { label: locale === 'nl' ? 'Ontdekken' : 'Explore', href: '/explore' },
+              { label: 'Restaurants', href: '/restaurants' },
+              ...(tenant.featureFlags.agenda ? [{ label: locale === 'nl' ? 'Evenementen' : 'Events', href: '/events' }] : []),
+              { label: locale === 'nl' ? 'Over ons' : 'About', href: '/about' },
+              { label: 'Contact', href: '/contact' },
+            ];
+
         return (
           <>
             <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
               {resolveTitle(col.title, locale) || (locale === 'nl' ? 'Navigatie' : 'Navigation')}
             </h4>
             <ul className="space-y-2 text-sm opacity-80">
-              <li><Link href="/" className="hover:opacity-100 transition-opacity">Home</Link></li>
-              <li><Link href="/explore" className="hover:opacity-100 transition-opacity">{locale === 'nl' ? 'Ontdekken' : 'Explore'}</Link></li>
-              <li><Link href="/restaurants" className="hover:opacity-100 transition-opacity">Restaurants</Link></li>
-              {tenant.featureFlags.agenda && (
-                <li><Link href="/events" className="hover:opacity-100 transition-opacity">{locale === 'nl' ? 'Evenementen' : 'Events'}</Link></li>
-              )}
-              <li><Link href="/about" className="hover:opacity-100 transition-opacity">{locale === 'nl' ? 'Over ons' : 'About'}</Link></li>
-              <li><Link href="/contact" className="hover:opacity-100 transition-opacity">Contact</Link></li>
+              {navLinks.map((link, idx) => (
+                <li key={idx}>
+                  <Link href={link.href} className="hover:opacity-100 transition-opacity">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </>
         );
+      }
 
       case 'contact':
         return (
@@ -162,6 +189,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
       default: {
         const resolvedCustomTitle = resolveTitle(col.title, locale);
         const resolvedCustomContent = resolveTitle(col.content, locale);
+        const isHtml = resolvedCustomContent.includes('<');
         return (
           <>
             {resolvedCustomTitle && (
@@ -169,7 +197,11 @@ export default function Footer({ tenant, locale }: FooterProps) {
                 {resolvedCustomTitle}
               </h4>
             )}
-            {resolvedCustomContent && <p className="text-sm opacity-80">{resolvedCustomContent}</p>}
+            {resolvedCustomContent && (
+              isHtml
+                ? <div className="text-sm opacity-80" dangerouslySetInnerHTML={{ __html: resolvedCustomContent }} />
+                : <p className="text-sm opacity-80">{resolvedCustomContent}</p>
+            )}
           </>
         );
       }

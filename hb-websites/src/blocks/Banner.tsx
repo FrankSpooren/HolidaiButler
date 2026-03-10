@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { BannerProps } from '@/types/blocks';
+import ChatbotButton from '@/components/ui/ChatbotButton';
 
 const typeStyles = {
   info: 'bg-blue-50 text-blue-800 border-blue-200',
@@ -33,9 +34,18 @@ export default function Banner({ message, type = 'info', dismissible = false, li
         <p className="text-sm font-medium flex-1">
           {message}
           {link && (
-            <a href={link.href} className="ml-2 underline hover:no-underline font-semibold">
-              {link.label}
-            </a>
+            link.variant === 'chatbot' ? (
+              <ChatbotButton
+                label={link.label}
+                message={link.chatbotAction}
+                className="ml-2 underline hover:no-underline font-semibold text-current"
+                size="sm"
+              />
+            ) : (
+              <a href={link.href} className="ml-2 underline hover:no-underline font-semibold">
+                {link.label}
+              </a>
+            )
           )}
         </p>
         {dismissible && (

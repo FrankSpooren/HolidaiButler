@@ -6,6 +6,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ChatbotWidget from '@/components/modules/ChatbotWidget';
 import CookieBanner from '@/components/modules/CookieBanner';
+import PoiDetailDrawer from '@/components/modules/PoiDetailDrawer';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -80,6 +81,7 @@ export default async function RootLayout({
             }
           />
         )}
+        <PoiDetailDrawer locale={locale} />
         <CookieBanner
           locale={locale}
           primaryColor={tenant?.branding?.colors?.primary}
