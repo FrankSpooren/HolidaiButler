@@ -4209,4 +4209,58 @@ CLAUDE.md v3.93.0 → v3.94.0. MS v7.55 → v7.56. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Command v14.0 DEEL B — Browser-Verificatie + CI/CD Workflow (10 maart 2026)
+
+### Context
+Na DEEL A deployment: browser-verificatie, POI detail fix, en CI/CD workflow voor hb-websites.
+
+### Wijzigingen
+
+**POI Detail HTTP 500 Fix**:
+- Root cause: `onError` event handlers in Server Component — React 19 forbids passing event handlers to Server Component props
+- Fix: Created `PoiImageGallery.tsx` als `'use client'` component — extracted alle image gallery logica uit `poi/[id]/page.tsx`
+- 4 image count varianten (0/1/2-3/4+) met `onError={handleError}` fallback
+- Deployed via SCP + rebuild op Hetzner
+- Commit bba8c66
+
+**CI/CD Workflow (`deploy-hb-websites.yml`)**:
+- Aangemaakt: rsync → npm ci → next build → PM2 restart → health check → rollback bij falen
+- Eerste run FAILED: shell quoting issues met `$variables` en `%{http_code}` in SSH heredocs — fix: split naar simple single-quoted SSH calls
+- Tweede run FAILED: `rsync --delete` verwijderde server-only files (package.json, package-lock.json, tsconfig.json, postcss.config.mjs) — PM2 crashed naar "errored" state met 214 restarts
+- Next.js build failed: `Cannot find module '@playwright/test'` van `playwright.config.ts` — `@playwright/test` is geen productie dependency
+- Server restored: tsconfig.json `exclude` met `playwright.config.ts` + `tests/`, rebuild, PM2 restart
+- Workflow fix: `--delete` verwijderd uit rsync, excludes voor tests/playwright/package-lock, config files aan Git toegevoegd
+- Final run: dev SUCCESS, main SUCCESS (test gecancelled door concurrency group)
+- Commit 3eec40a
+
+### Bestanden
+
+| Actie | Bestand | Beschrijving |
+|-------|---------|-------------|
+| NIEUW | `hb-websites/src/components/poi/PoiImageGallery.tsx` | 'use client' image gallery (React 19 fix) |
+| NIEUW | `hb-websites/package.json` | Nu in Git (was server-only) |
+| NIEUW | `hb-websites/tsconfig.json` | Nu in Git, excludes playwright+tests |
+| NIEUW | `hb-websites/postcss.config.mjs` | Nu in Git (was server-only) |
+| WIJZIG | `hb-websites/src/app/poi/[id]/page.tsx` | Verwijst naar PoiImageGallery component |
+| WIJZIG | `.github/workflows/deploy-hb-websites.yml` | rsync zonder --delete, extra excludes |
+
+### Verificatie
+
+| # | Test | Status |
+|---|------|--------|
+| 1 | POI detail page /poi/1046 | PASS (was HTTP 500) |
+| 2 | dev.holidaibutler.com homepage | PASS (200) |
+| 3 | dev.texelmaps.nl homepage | PASS (200) |
+| 4 | PM2 hb-websites status | PASS (online) |
+| 5 | Workflow run dev branch | PASS (success) |
+| 6 | Workflow run main branch | PASS (success) |
+
+### Documentatie
+
+CLAUDE.md v3.96.0 → v3.97.0. MS v7.58 → v7.59. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
