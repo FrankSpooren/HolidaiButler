@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.94.0
-> **Laatst bijgewerkt**: 9 maart 2026
+> **Versie**: 3.95.0
+> **Laatst bijgewerkt**: 10 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -371,6 +371,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **Repair v10.0** | **Diagnostic-First Repair — 8 browser-verified fixes** | **09-03** | **v10 protocol: DIAGNOSE→FIX→BEWIJS. FIX 1: Chatbot Calpe→calpe_pois ChromaDB (was holidaibutler_pois=Texel data, 5e keer gerapporteerd). FIX 2: POI detail crash — FeatureList normalizeItem() voor {key:bool} objecten (HTTP 500→200). FIX 3: Homepage 0 POIs — TOURIST_CATEGORIES whitelist naar API i.p.v. post-fetch EXCLUDED_CATEGORIES (API retourneerde alleen Shopping bij rating:desc). FIX 4: Button color swatches — IIFE merge DB values met deriveButtonDefaults (lege strings fallback). FIX 5+6: Footer + Restaurants reeds werkend (v9). FIX 7: POI category badges — CATEGORY_COLORS mapping (8 kleuren EN+NL, inline styles). FIX 8: Chatbot config — ColorField, position Select, 4 quick action Checkboxes. 3 bestanden gewijzigd. Commit 75566b1.** |
 | **Repair v11.0** | **Chirurgisch Command — 10 fixes, 12 acceptatiecriteria** | **09-03** | **FIX 1+6: Tip van de Dag — dedicated `/daily-tip` proxy route + ChatbotWidget TipCard (POI/Event card, localStorage excludes, refresh knop). FIX 3: POI detail image layout responsive per image count (1/2-3/4+). FIX 4: Event detail pagina (`/event/:id`) + interne links (was songkick.com extern). FIX 5: BrandingPage preview panel uitgebreid (alle 5 button variants, shadow/spacing/image style). FIX 7: Quick action buttons in blocks — ButtonListField 4 chatbot actions + `__TIP_VAN_DE_DAG__` sentinel → ChatbotButton → ChatbotWidget chain. FIX 8: Filter chips — PoiFilterBar (categorie) + EventFilterBar (datum) + PoiGridFiltered/EventCalendarFiltered blocks. FIX 9: Footer social icons — backend fallback `branding.socialLinks` in pages.js (was NULL in social_links kolom). FIX 10: quickActionFilter prop doorgewired via layout.tsx. 6 nieuwe + 10 gewijzigde bestanden. 12/12 acceptatiecriteria PASS.** |
 | **Command v12.0** | **8 fixes + Onboarding Wizard — 11 acceptatiecriteria** | **09-03** | **FIX 1: Hero chatbot button DATA fix (variant secondary→chatbot, href verwijderd). FIX 2B: POI detail map single marker (Map.tsx staticMarkers prop, skip fetch-all). FIX 4: Categorie kleuren Customer Portal match (CATEGORY_COLORS in PoiGrid/PoiFilterBar/Map, gradient-derived). FIX 6: Footer brand kolom social icons verwijderd + social default kolom. FIX 8: Onboarding wizard (OnboardingPage.jsx 5-stappen MUI Stepper, POST /onboarding/create endpoint, sidebar + i18n 4 talen). FIX 2A/3/5/7: verificatie reeds werkend (v11). 1 nieuw + 11 gewijzigde bestanden + 1 DB update. 158 endpoints. 11/11 PASS.** |
+| **Command v13.0** | **5 Resterende Bugs — DEEL A BLOKKEREND** | **10-03** | **BUG 1: Chatbot destination mixing — calpe.config.js chromaCollection 'holidaibutler_pois'→'calpe_pois' (root cause sinds v10). BUG 2: Chatbot kleur niet overgenomen — chatbotColor prop toegevoegd aan ChatbotWidget + layout.tsx doorsturen van chatbotConfig.color. BUG 3: Categorie label kleuren — pastel bg/dark text → gradient-primary bg/witte tekst (Customer Portal exact match, 3 bestanden). BUG 4: Filter bars ontbreken — DB pages block types poi_grid→poi_grid_filtered + event_calendar→event_calendar_filtered (6 rijen Calpe+Texel). BUG 5: Footer brand logo ontbreekt — resolveAssetUrl + img tag in brand case. 5 code + 1 config gewijzigd + 6 DB rijen. 5/5 PASS.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -503,7 +504,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | II | Active Module Upgrade (Chatbot, POI, Agenda, Customer Portal) | ✅ COMPLEET (Blok A+B+C+D) | 6-8 wkn |
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
 | IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | ✅ COMPLEET (Blok A+B+C+D+E+F) | 6-8 wkn |
-| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + v12.0 COMPLEET) | 12 wkn |
+| V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + v13.0 COMPLEET) | 12 wkn |
 | VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | GEPLAND | 6-8 wkn |
 | VII | Polish, Scale & Launch (E2E testing, load testing, DR, go-live multi-tenant) | GEPLAND | 3-4 wkn |
 
@@ -613,6 +614,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **3.95.0** | **2026-03-10** | **Command v13.0 DEEL A: 5 Resterende Bugs**. BUG 1: Chatbot destination mixing fix (calpe.config.js chromaCollection holidaibutler_pois→calpe_pois). BUG 2: Chatbot kleur chatbotColor prop (layout.tsx→ChatbotWidget doorsturen). BUG 3: Categorie kleuren Customer Portal exact match (gradient-primary bg + witte tekst, 3 bestanden). BUG 4: Filter bars DB block types fix (poi_grid→poi_grid_filtered, event_calendar→event_calendar_filtered, 6 rijen). BUG 5: Footer brand logo (resolveAssetUrl + img tag). 5 code + 1 config + 6 DB rijen. 5/5 PASS. MS v7.57. |
 | **3.94.0** | **2026-03-09** | **Command v12.0: 8 fixes + Onboarding Wizard, 11 acceptatiecriteria**. Hero chatbot button DATA fix (variant→chatbot). POI detail map single marker (staticMarkers prop). Categorie kleuren Customer Portal match (3 bestanden). Footer brand kolom social icons verwijderd. Onboarding wizard 5-stappen (OnboardingPage.jsx + POST /onboarding/create). 1 nieuw + 11 gewijzigd + 1 DB update. 158 endpoints. 11/11 PASS. MS v7.56. |
 | **3.93.0** | **2026-03-09** | **Chirurgisch Command v11.0: 10 fixes, 12 acceptatiecriteria**. Tip van de Dag dedicated `/daily-tip` endpoint + TipCard. Event detail pagina intern (`/event/:id`). POI image layout responsive. BrandingPage preview 5 button variants + shadow/spacing. Quick action buttons in blocks (4 chatbot actions). Filter chips PoiFilterBar + EventFilterBar. Footer social icons backend fallback. quickActionFilter doorwiring. 6 nieuwe + 10 gewijzigde bestanden. 12/12 PASS. MS v7.55. |
 | **3.92.0** | **2026-03-09** | **Diagnostic Repair v10.0: 8 browser-verified fixes**. Chatbot ChromaDB calpe_pois fix. FeatureList normalizeItem() crash fix. Homepage TOURIST_CATEGORIES whitelist (was 0 POIs). Button merge met deriveButtonDefaults. Category color badges (8 kleuren). Chatbot config uitbreiding (color/position/quick actions). 3 bestanden. MS v7.54. |
@@ -626,7 +628,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.56 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.57 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

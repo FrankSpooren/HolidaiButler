@@ -24,6 +24,7 @@ interface ChatbotWidgetProps {
   locale: string;
   chatbotName?: string;
   quickActionFilter?: string[];
+  chatbotColor?: string;
 }
 
 const QUICK_ACTIONS: Record<string, Array<{ id: string; label: string; message: string }>> = {
@@ -150,7 +151,7 @@ function TipCard({ tip, locale, onRefresh }: { tip: DailyTipData; locale: string
   );
 }
 
-export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickActionFilter }: ChatbotWidgetProps) {
+export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickActionFilter, chatbotColor }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -387,6 +388,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
           onClick={() => setIsOpen(true)}
           className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-on-primary shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-105"
           aria-label={`Open ${name}`}
+          style={chatbotColor ? { backgroundColor: chatbotColor } : undefined}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -398,7 +400,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50 w-[380px] h-[520px] bg-surface rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
           {/* Header */}
-          <div className="bg-primary text-on-primary px-4 py-3 flex items-center justify-between flex-shrink-0">
+          <div className="bg-primary text-on-primary px-4 py-3 flex items-center justify-between flex-shrink-0" style={chatbotColor ? { backgroundColor: chatbotColor } : undefined}>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-on-primary/20 flex items-center justify-center text-sm font-bold">
                 {name.charAt(0)}
