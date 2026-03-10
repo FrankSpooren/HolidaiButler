@@ -138,7 +138,7 @@ export default {
     },
     personality: 'friendly_local_expert',
     maxContextMessages: 10,
-    chromaCollection: 'holidaibutler_pois',
+    chromaCollection: 'calpe_pois',
     quickActionCategories: {
       allowed: ['Beaches & Nature', 'Food & Drinks', 'Shopping', 'Culture & History',
                 'Recreation', 'Active', 'Nightlife'],
