@@ -1,0 +1,160 @@
+# =============================================================================
+# hb-websites Deployment Pipeline - Multi-Environment
+# =============================================================================
+# Architecture: Next.js 15 SSR app (React 19, Tailwind CSS 4)
+# Runs as PM2 process on port 3002, Apache reverse proxy
+# Build happens ON SERVER (needs .env with HB_API_URL, HB_ASSET_URL)
+# =============================================================================
+name: "Deploy: hb-websites"
+
+concurrency:
+  group: deploy-hb-websites-${{ github.repository }}
+  cancel-in-progress: false
+
+on:
+  push:
+    branches: [dev, test, main]
+    paths:
+      - 'hb-websites/**'
+      - '.github/workflows/deploy-hb-websites.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options: [dev, test, production]
+
+env:
+  NODE_VERSION: '20'
+  PM2_PROCESS_NAME: 'hb-websites'
+  DEPLOY_PATH: '/var/www/api.holidaibutler.com/hb-websites'
+
+jobs:
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+    steps:
+      - name: Determine environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          else
+            case "${{ github.ref_name }}" in
+              dev) ENV="dev" ;; test) ENV="test" ;; main) ENV="production" ;; *) ENV="dev" ;;
+            esac
+          fi
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy hb-websites
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+
+      - name: Backup current deployment
+        run: |
+          ssh root@91.98.71.87 "
+            mkdir -p /var/www/backups/hb-websites
+            if [ -d '${{ env.DEPLOY_PATH }}/src' ]; then
+              BACKUP_DIR=/var/www/backups/hb-websites/backup-\$(date +%Y%m%d-%H%M%S)
+              mkdir -p \$BACKUP_DIR
+              cp -r ${{ env.DEPLOY_PATH }}/src \$BACKUP_DIR/
+              cp -r ${{ env.DEPLOY_PATH }}/public \$BACKUP_DIR/ 2>/dev/null || true
+              cp ${{ env.DEPLOY_PATH }}/package.json \$BACKUP_DIR/
+              cp ${{ env.DEPLOY_PATH }}/next.config.ts \$BACKUP_DIR/ 2>/dev/null || true
+              echo 'Backup created at '\$BACKUP_DIR
+            fi
+            # Keep only last 5 backups
+            cd /var/www/backups/hb-websites && ls -1d backup-* 2>/dev/null | sort | head -n -5 | xargs -r rm -rf
+          "
+
+      - name: Deploy source files
+        run: |
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.next' \
+            --exclude '.env' \
+            --exclude '.env.local' \
+            --exclude '.git' \
+            hb-websites/ \
+            root@91.98.71.87:${{ env.DEPLOY_PATH }}/
+
+      - name: Install dependencies and build
+        run: |
+          ssh root@91.98.71.87 "
+            cd ${{ env.DEPLOY_PATH }}
+
+            # Install dependencies
+            echo '=== Installing dependencies ==='
+            npm ci 2>&1 | tail -5
+
+            # Build Next.js (uses server-side .env for HB_API_URL etc.)
+            echo '=== Building Next.js ==='
+            npx next build 2>&1 | tail -20
+
+            if [ \$? -ne 0 ]; then
+              echo '::error::Next.js build failed'
+              exit 1
+            fi
+
+            echo '=== Build successful ==='
+          "
+
+      - name: Restart PM2 and health check
+        run: |
+          ssh root@91.98.71.87 "
+            # Restart PM2 process
+            pm2 restart ${{ env.PM2_PROCESS_NAME }} --update-env 2>/dev/null || \
+              pm2 start ${{ env.DEPLOY_PATH }}/node_modules/.bin/next \
+                --name ${{ env.PM2_PROCESS_NAME }} \
+                --cwd ${{ env.DEPLOY_PATH }} \
+                -- start -p 3002
+            pm2 save
+
+            # Wait for startup
+            sleep 5
+
+            # Health check
+            STATUS=\$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3002/)
+            echo \"Health check: \$STATUS\"
+            if [ \"\$STATUS\" != '200' ]; then
+              echo '::error::Health check failed — rolling back'
+              # Rollback: restore latest backup
+              LATEST=\$(ls -1d /var/www/backups/hb-websites/backup-* 2>/dev/null | sort | tail -1)
+              if [ -n \"\$LATEST\" ]; then
+                cp -r \$LATEST/src ${{ env.DEPLOY_PATH }}/
+                cp \$LATEST/package.json ${{ env.DEPLOY_PATH }}/
+                cd ${{ env.DEPLOY_PATH }} && npm ci && npx next build
+                pm2 restart ${{ env.PM2_PROCESS_NAME }}
+                echo 'Rollback completed'
+              fi
+              exit 1
+            fi
+          "
+
+      - name: Verify public sites
+        run: |
+          sleep 2
+          for URL in "https://dev.holidaibutler.com" "https://dev.texelmaps.nl"; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "$URL → $STATUS"
+            if [ "$STATUS" != "200" ]; then
+              echo "::warning::$URL returned $STATUS"
+            fi
+          done
+          echo "hb-websites deployed to ${{ needs.setup.outputs.environment }}"
