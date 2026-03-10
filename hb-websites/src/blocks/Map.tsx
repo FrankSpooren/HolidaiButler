@@ -201,14 +201,14 @@ export default function Map({ center, zoom = 14, categoryFilter, markers: static
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div
         ref={mapRef}
-        className="w-full h-[400px] sm:h-[500px] rounded-tenant overflow-hidden shadow-sm"
+        className="w-full h-[300px] sm:h-[400px] lg:h-[500px] rounded-tenant overflow-hidden shadow-sm"
         aria-label="Interactive map"
       />
       {error && (
         <p className="text-sm text-red-500 mt-2 text-center">{error}</p>
       )}
       {visibleLegend.length > 0 && (
-        <div className="flex flex-wrap gap-3 mt-3 justify-center">
+        <div className="flex flex-wrap gap-3 mt-3 justify-center overflow-x-auto">
           {visibleLegend.map(item => (
             <div key={item.color} className="flex items-center gap-1.5 text-xs text-muted">
               <span

@@ -44,9 +44,9 @@ function DateBlock({ dateStr }: { dateStr: string }) {
   const parts = parseDateParts(dateStr);
   if (!parts) return null;
   return (
-    <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+    <div className="w-full h-36 sm:h-48 bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
       <div className="text-center">
-        <div className="text-4xl font-bold text-primary">{parts.day}</div>
+        <div className="text-3xl sm:text-4xl font-bold text-primary">{parts.day}</div>
         <div className="text-sm font-semibold text-primary/70 uppercase tracking-wider">{parts.month}</div>
       </div>
     </div>
@@ -97,7 +97,7 @@ export default async function EventCalendar({ limit = 6, layout = 'grid' }: Even
       <h2 className="text-2xl font-heading font-bold text-foreground mb-6">
         {locale === 'nl' ? 'Evenementen' : 'Events'}
       </h2>
-      <div className={`grid grid-cols-1 ${layout === 'compact' ? 'sm:grid-cols-3 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3'} gap-6`}>
+      <div className={`grid grid-cols-1 ${layout === 'compact' ? 'sm:grid-cols-3 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3'} gap-6 animate-stagger`}>
         {events.map((event) => {
           const imageUrl = event.images?.[0]?.url;
           const title = getLocalizedString(event.title, locale);
