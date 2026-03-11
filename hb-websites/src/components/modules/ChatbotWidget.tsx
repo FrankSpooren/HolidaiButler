@@ -2,12 +2,29 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 
+interface ItineraryStop {
+  time: string;
+  type: 'activity' | 'lunch' | 'dinner' | 'event';
+  poi?: { id: number; name: string; category?: string; address?: string; rating?: number; images?: string[]; thumbnail_url?: string };
+  event?: { id: number; title: string; description?: string; address?: string; event_date?: string };
+  label?: string;
+}
+
+interface ItineraryData {
+  date: string;
+  duration: string;
+  description: string;
+  itinerary: ItineraryStop[];
+  totalStops: number;
+}
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   isStreaming?: boolean;
   tipData?: DailyTipData | null;
+  itineraryData?: ItineraryData | null;
 }
 
 interface DailyTipData {
@@ -29,25 +46,25 @@ interface ChatbotWidgetProps {
 
 const QUICK_ACTIONS: Record<string, Array<{ id: string; label: string; message: string }>> = {
   nl: [
-    { id: 'program', label: 'Programma samenstellen', message: 'Stel een dagprogramma voor me samen op basis van mijn interesses en het weer van vandaag.' },
+    { id: 'program', label: 'Programma samenstellen', message: '__ITINERARY__' },
     { id: 'category', label: 'Zoeken op Rubriek', message: 'Welke categorieën zijn er? Laat me zoeken op rubriek.' },
     { id: 'directions', label: 'Routebeschrijving', message: 'Ik wil een routebeschrijving. Welke bezienswaardigheden kan ik combineren in een route?' },
     { id: 'tip', label: 'Tip van de Dag', message: '__TIP_VAN_DE_DAG__' },
   ],
   en: [
-    { id: 'program', label: 'Plan my day', message: 'Create a day program for me based on my interests and today\'s weather.' },
+    { id: 'program', label: 'Plan my day', message: '__ITINERARY__' },
     { id: 'category', label: 'Browse categories', message: 'What categories are available? Let me browse by category.' },
     { id: 'directions', label: 'Route planner', message: 'I want a route description. Which attractions can I combine in a route?' },
     { id: 'tip', label: 'Tip of the Day', message: '__TIP_VAN_DE_DAG__' },
   ],
   de: [
-    { id: 'program', label: 'Tagesprogramm', message: 'Erstelle ein Tagesprogramm für mich basierend auf meinen Interessen und dem heutigen Wetter.' },
+    { id: 'program', label: 'Tagesprogramm', message: '__ITINERARY__' },
     { id: 'category', label: 'Nach Kategorie', message: 'Welche Kategorien gibt es? Lass mich nach Kategorie suchen.' },
     { id: 'directions', label: 'Routenplaner', message: 'Ich möchte eine Routenbeschreibung. Welche Sehenswürdigkeiten kann ich in einer Route kombinieren?' },
     { id: 'tip', label: 'Tipp des Tages', message: '__TIP_VAN_DE_DAG__' },
   ],
   es: [
-    { id: 'program', label: 'Planificar el día', message: 'Crea un programa diario para mí basado en mis intereses y el clima de hoy.' },
+    { id: 'program', label: 'Planificar el día', message: '__ITINERARY__' },
     { id: 'category', label: 'Buscar por categoría', message: '¿Qué categorías hay disponibles? Déjame buscar por categoría.' },
     { id: 'directions', label: 'Planificador de rutas', message: 'Quiero una descripción de ruta. ¿Qué atracciones puedo combinar en una ruta?' },
     { id: 'tip', label: 'Consejo del día', message: '__TIP_VAN_DE_DAG__' },
@@ -151,12 +168,220 @@ function TipCard({ tip, locale, onRefresh }: { tip: DailyTipData; locale: string
   );
 }
 
+/* ─── Itinerary Builder (3-step wizard) ─── */
+
+const ITINERARY_LABELS: Record<string, Record<string, string>> = {
+  nl: {
+    title: 'Programma samenstellen', step1: 'Kies een dagdeel', step2: 'Selecteer je interesses',
+    step3: 'Maaltijden', morning: 'Ochtend', afternoon: 'Middag', evening: 'Avond', 'full-day': 'Hele dag',
+    'Beaches & Nature': 'Strand & Natuur', 'Culture & History': 'Cultuur & Geschiedenis',
+    'Active': 'Actief & Sport', 'Food & Drinks': 'Eten & Drinken', 'Shopping': 'Winkelen',
+    includeMeals: 'Restaurant suggesties toevoegen', next: 'Volgende', back: 'Terug',
+    generate: 'Programma maken', cancel: 'Annuleren', loading: 'Programma wordt samengesteld...',
+  },
+  en: {
+    title: 'Plan my day', step1: 'Choose time of day', step2: 'Select your interests',
+    step3: 'Meals', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', 'full-day': 'Full day',
+    'Beaches & Nature': 'Beaches & Nature', 'Culture & History': 'Culture & History',
+    'Active': 'Active & Sports', 'Food & Drinks': 'Food & Drinks', 'Shopping': 'Shopping',
+    includeMeals: 'Include restaurant suggestions', next: 'Next', back: 'Back',
+    generate: 'Create itinerary', cancel: 'Cancel', loading: 'Building your itinerary...',
+  },
+  de: {
+    title: 'Tagesprogramm', step1: 'Tageszeit wählen', step2: 'Interessen auswählen',
+    step3: 'Mahlzeiten', morning: 'Morgen', afternoon: 'Nachmittag', evening: 'Abend', 'full-day': 'Ganzer Tag',
+    'Beaches & Nature': 'Strand & Natur', 'Culture & History': 'Kultur & Geschichte',
+    'Active': 'Aktiv & Sport', 'Food & Drinks': 'Essen & Trinken', 'Shopping': 'Einkaufen',
+    includeMeals: 'Restaurant-Vorschläge hinzufügen', next: 'Weiter', back: 'Zurück',
+    generate: 'Programm erstellen', cancel: 'Abbrechen', loading: 'Programm wird erstellt...',
+  },
+  es: {
+    title: 'Planificar el día', step1: 'Elige momento del día', step2: 'Selecciona tus intereses',
+    step3: 'Comidas', morning: 'Mañana', afternoon: 'Tarde', evening: 'Noche', 'full-day': 'Día completo',
+    'Beaches & Nature': 'Playas y Naturaleza', 'Culture & History': 'Cultura e Historia',
+    'Active': 'Activo y Deportes', 'Food & Drinks': 'Comida y Bebidas', 'Shopping': 'Compras',
+    includeMeals: 'Incluir sugerencias de restaurantes', next: 'Siguiente', back: 'Atrás',
+    generate: 'Crear itinerario', cancel: 'Cancelar', loading: 'Creando tu itinerario...',
+  },
+};
+
+const DURATION_OPTIONS = [
+  { id: 'morning' as const, icon: '\u{1F305}', hours: '09:00 - 12:00' },
+  { id: 'afternoon' as const, icon: '\u{2600}\u{FE0F}', hours: '13:00 - 17:00' },
+  { id: 'evening' as const, icon: '\u{1F319}', hours: '18:00 - 22:00' },
+  { id: 'full-day' as const, icon: '\u{1F4C5}', hours: '09:00 - 22:00' },
+];
+
+const INTEREST_OPTIONS = ['Beaches & Nature', 'Culture & History', 'Active', 'Food & Drinks', 'Shopping'];
+
+type Duration = 'morning' | 'afternoon' | 'evening' | 'full-day';
+
+function ItineraryWizard({ locale, onSubmit, onCancel }: {
+  locale: string;
+  onSubmit: (opts: { duration: Duration; interests: string[]; includeMeals: boolean }) => void;
+  onCancel: () => void;
+}) {
+  const t = ITINERARY_LABELS[locale] || ITINERARY_LABELS.en;
+  const [step, setStep] = useState(1);
+  const [duration, setDuration] = useState<Duration>('full-day');
+  const [interests, setInterests] = useState<string[]>([]);
+  const [includeMeals, setIncludeMeals] = useState(true);
+
+  const toggleInterest = (id: string) => {
+    setInterests(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  return (
+    <div className="border border-primary/30 rounded-xl overflow-hidden bg-white">
+      {/* Header */}
+      <div className="bg-primary/10 px-3 py-2 flex items-center justify-between">
+        <span className="font-semibold text-sm text-foreground">{t.title}</span>
+        <div className="flex gap-1">
+          {[1, 2, 3].map(s => (
+            <span key={s} className={`w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold ${step >= s ? 'bg-primary text-on-primary' : 'bg-gray-200 text-muted'}`}>{s}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-3 py-3">
+        {step === 1 && (
+          <div>
+            <p className="text-xs text-muted mb-2">{t.step1}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {DURATION_OPTIONS.map(opt => (
+                <button key={opt.id} onClick={() => setDuration(opt.id)}
+                  className={`flex flex-col items-center p-2 rounded-lg border text-xs transition-all ${duration === opt.id ? 'border-primary bg-primary/10 font-semibold' : 'border-gray-200 hover:border-primary/50'}`}>
+                  <span className="text-lg">{opt.icon}</span>
+                  <span className="text-foreground">{t[opt.id]}</span>
+                  <span className="text-muted text-[10px]">{opt.hours}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div>
+            <p className="text-xs text-muted mb-2">{t.step2}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {INTEREST_OPTIONS.map(id => (
+                <button key={id} onClick={() => toggleInterest(id)}
+                  className={`px-2.5 py-1.5 rounded-full text-xs border transition-all ${interests.includes(id) ? 'border-primary bg-primary text-on-primary' : 'border-gray-200 text-foreground hover:border-primary/50'}`}>
+                  {t[id]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <p className="text-xs text-muted mb-2">{t.step3}</p>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={includeMeals} onChange={e => setIncludeMeals(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary" />
+              <span className="text-xs text-foreground">{t.includeMeals}</span>
+            </label>
+            <div className="mt-3 p-2 bg-gray-50 rounded-lg text-xs text-muted">
+              <p className="font-medium text-foreground">{t[duration]}</p>
+              {interests.length > 0 && <p>{interests.map(i => t[i]).join(', ')}</p>}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="px-3 pb-3 flex justify-between">
+        {step > 1 ? (
+          <button onClick={() => setStep(step - 1)} className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-muted hover:text-foreground">{t.back}</button>
+        ) : (
+          <button onClick={onCancel} className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-muted hover:text-foreground">{t.cancel}</button>
+        )}
+        {step < 3 ? (
+          <button onClick={() => setStep(step + 1)} className="px-3 py-1.5 text-xs rounded-full bg-primary text-on-primary hover:opacity-90">{t.next}</button>
+        ) : (
+          <button onClick={() => onSubmit({ duration, interests, includeMeals })} className="px-3 py-1.5 text-xs rounded-full bg-primary text-on-primary hover:opacity-90">{t.generate}</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Itinerary Result Card ─── */
+
+function ItineraryCard({ data, locale }: { data: ItineraryData; locale: string }) {
+  return (
+    <div className="border border-primary/20 rounded-xl overflow-hidden bg-white">
+      {/* AI description */}
+      {data.description && (
+        <div className="px-3 py-2 bg-primary/5 text-xs text-foreground italic">
+          {data.description}
+        </div>
+      )}
+      {/* Timeline */}
+      <div className="px-3 py-2 space-y-2">
+        {data.itinerary.map((stop, i) => {
+          const item = stop.poi || stop.event;
+          const name = stop.poi?.name || stop.event?.title || stop.label || '';
+          const isMeal = stop.type === 'lunch' || stop.type === 'dinner';
+          const imageUrl = stop.poi?.images?.[0] || stop.poi?.thumbnail_url;
+
+          return (
+            <div key={i} className="flex gap-2 items-start">
+              {/* Time badge */}
+              <div className="flex-shrink-0 w-12 text-center">
+                <span className={`text-xs font-bold ${isMeal ? 'text-amber-600' : 'text-primary'}`}>{stop.time}</span>
+              </div>
+              {/* Connector dot */}
+              <div className="flex-shrink-0 mt-1">
+                <div className={`w-2.5 h-2.5 rounded-full ${isMeal ? 'bg-amber-500' : stop.type === 'event' ? 'bg-purple-500' : 'bg-primary'}`} />
+              </div>
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                {item && item.id ? (
+                  <a href={stop.poi ? `/poi/${item.id}` : `/event/${item.id}`}
+                    className="text-xs font-semibold text-foreground hover:text-primary transition-colors line-clamp-1">
+                    {isMeal && <span className="mr-1">{stop.type === 'lunch' ? '\u{1F37D}\u{FE0F}' : '\u{1F374}'}</span>}
+                    {name}
+                  </a>
+                ) : (
+                  <span className="text-xs font-semibold text-foreground line-clamp-1">
+                    {isMeal && <span className="mr-1">{stop.type === 'lunch' ? '\u{1F37D}\u{FE0F}' : '\u{1F374}'}</span>}
+                    {name}
+                  </span>
+                )}
+                {stop.poi?.category && (
+                  <span className="text-[10px] text-muted">{stop.poi.category}</span>
+                )}
+                {stop.poi?.rating && (
+                  <span className="text-[10px] text-amber-500 ml-1">{'\u2733'} {stop.poi.rating.toFixed(1)}</span>
+                )}
+              </div>
+              {/* Thumbnail */}
+              {imageUrl && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={imageUrl} alt={name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {/* Footer */}
+      <div className="px-3 py-2 border-t border-gray-100 text-[10px] text-muted">
+        {data.totalStops} {locale === 'nl' ? 'stops' : locale === 'de' ? 'Stopps' : locale === 'es' ? 'paradas' : 'stops'}
+      </div>
+    </div>
+  );
+}
+
 export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickActionFilter, chatbotColor }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [showItineraryWizard, setShowItineraryWizard] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -239,12 +464,62 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
     }
   }, [locale]);
 
+  const fetchItinerary = useCallback(async (opts: { duration: Duration; interests: string[]; includeMeals: boolean }) => {
+    setShowItineraryWizard(false);
+
+    const itLabel = (ITINERARY_LABELS[locale] || ITINERARY_LABELS.en).title;
+    const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: itLabel };
+    const assistantId = `assistant-${Date.now()}`;
+    const assistantMsg: ChatMessage = { id: assistantId, role: 'assistant', content: '', isStreaming: true };
+
+    setMessages(prev => [...prev, userMsg, assistantMsg]);
+    setIsStreaming(true);
+
+    try {
+      const res = await fetch('/api/holibot/itinerary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: new Date().toISOString().split('T')[0],
+          duration: opts.duration,
+          interests: opts.interests,
+          includeMeals: opts.includeMeals,
+          language: locale,
+          sessionId: sessionIdRef.current,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (json.success && json.data) {
+        const itData: ItineraryData = json.data;
+        setMessages(prev => prev.map(m =>
+          m.id === assistantId ? { ...m, content: itData.description || itLabel, isStreaming: false, itineraryData: itData } : m
+        ));
+      } else {
+        throw new Error(json.error || 'API error');
+      }
+    } catch {
+      setMessages(prev => prev.map(m =>
+        m.id === assistantId ? { ...m, content: locale === 'nl' ? 'Sorry, er ging iets mis met het samenstellen van je programma.' : 'Sorry, something went wrong building your itinerary.', isStreaming: false } : m
+      ));
+    } finally {
+      setIsStreaming(false);
+    }
+  }, [locale]);
+
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
 
     // Intercept daily tip action
     if (text === '__TIP_VAN_DE_DAG__') {
       fetchDailyTip();
+      return;
+    }
+
+    // Intercept itinerary action — show wizard
+    if (text === '__ITINERARY__') {
+      setShowItineraryWizard(true);
       return;
     }
 
@@ -355,7 +630,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       setIsStreaming(false);
       abortRef.current = null;
     }
-  }, [messages, isStreaming, tenantSlug, locale, fetchDailyTip]);
+  }, [messages, isStreaming, tenantSlug, locale, fetchDailyTip, fetchItinerary]);
 
   const startListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -501,15 +776,17 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] ${msg.tipData ? '' : 'px-3 py-2 rounded-2xl'} text-sm whitespace-pre-wrap ${
+                  className={`max-w-[85%] ${msg.tipData || msg.itineraryData ? '' : 'px-3 py-2 rounded-2xl'} text-sm whitespace-pre-wrap ${
                     msg.role === 'user'
                       ? 'bg-primary text-on-primary rounded-br-sm px-3 py-2 rounded-2xl'
-                      : msg.tipData
+                      : msg.tipData || msg.itineraryData
                         ? ''
                         : 'bg-gray-100 text-foreground rounded-bl-sm'
                   }`}
                 >
-                  {msg.tipData ? (
+                  {msg.itineraryData ? (
+                    <ItineraryCard data={msg.itineraryData} locale={locale} />
+                  ) : msg.tipData ? (
                     <TipCard tip={msg.tipData} locale={locale} onRefresh={fetchDailyTip} />
                   ) : msg.content ? (
                     msg.content
@@ -523,6 +800,17 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
                 </div>
               </div>
             ))}
+            {showItineraryWizard && (
+              <div className="flex justify-start">
+                <div className="max-w-[90%]">
+                  <ItineraryWizard
+                    locale={locale}
+                    onSubmit={fetchItinerary}
+                    onCancel={() => setShowItineraryWizard(false)}
+                  />
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
