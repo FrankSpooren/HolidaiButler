@@ -81,7 +81,7 @@ function roundRobinMix(pois: POI[]): POI[] {
   return result;
 }
 
-export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3 }: PoiGridProps) {
+export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3, layout = 'grid' }: PoiGridProps) {
   const headersList = await headers();
   const tenantSlug = headersList.get('x-tenant-slug') ?? 'calpe';
   const locale = headersList.get('x-tenant-locale') ?? 'en';
@@ -109,7 +109,49 @@ export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3 }
 
   if (displayPois.length === 0) return null;
 
-  const gridCols = columns === 2 ? 'sm:grid-cols-2' : columns === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3';
+  if (layout === 'list') {
+    return (
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="space-y-3 animate-stagger">
+          {displayPois.map((poi) => {
+            const imageUrl = poi.images?.[0] ?? poi.thumbnail_url ?? '';
+            const catStyle = getCategoryStyle(poi.category ?? '');
+            return (
+              <PoiCard key={poi.id} poiId={poi.id} href={`/poi/${poi.id}`}>
+                <div className="flex gap-4 items-center p-3">
+                  {imageUrl && (
+                    <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={imageUrl} alt={poi.name} className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <span
+                      className="inline-block px-2 py-0.5 text-xs font-medium rounded-full mb-1"
+                      style={{ backgroundColor: catStyle.bg, color: catStyle.text }}
+                    >
+                      {poi.category}
+                    </span>
+                    <h3 className="text-base font-heading font-semibold text-foreground truncate">{poi.name}</h3>
+                    {poi.description && <p className="text-sm text-muted line-clamp-1">{poi.description}</p>}
+                  </div>
+                  {poi.rating && (
+                    <div className="flex-shrink-0">
+                      <Rating value={poi.rating} count={poi.reviewCount ?? poi.review_count} size="sm" />
+                    </div>
+                  )}
+                </div>
+              </PoiCard>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
+
+  const gridCols = layout === 'compact'
+    ? 'sm:grid-cols-3 lg:grid-cols-4'
+    : columns === 2 ? 'sm:grid-cols-2' : columns === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3';
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

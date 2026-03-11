@@ -55,6 +55,7 @@ interface PoiFilterBarProps {
   pois: POI[];
   columns?: number;
   locale: string;
+  layout?: 'grid' | 'list' | 'compact';
 }
 
 const DEFAULT_FILTERS: PoiFilters = {
@@ -64,7 +65,7 @@ const DEFAULT_FILTERS: PoiFilters = {
   sort: 'rating:desc',
 };
 
-export default function PoiFilterBar({ pois: initialPois, columns = 3, locale }: PoiFilterBarProps) {
+export default function PoiFilterBar({ pois: initialPois, columns = 3, locale, layout = 'grid' }: PoiFilterBarProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [filters, setFilters] = useState<PoiFilters>(DEFAULT_FILTERS);
@@ -91,7 +92,9 @@ export default function PoiFilterBar({ pois: initialPois, columns = 3, locale }:
 
   const allLabel = locale === 'nl' ? 'Alles' : locale === 'de' ? 'Alle' : locale === 'es' ? 'Todos' : 'All';
 
-  const gridCols = columns === 2 ? 'sm:grid-cols-2' : columns === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3';
+  const gridCols = layout === 'compact'
+    ? 'sm:grid-cols-3 lg:grid-cols-4'
+    : columns === 2 ? 'sm:grid-cols-2' : columns === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3';
 
   const activeFilterCount = (
     filters.categories.length +
@@ -187,6 +190,40 @@ export default function PoiFilterBar({ pois: initialPois, columns = 3, locale }:
         <p className="text-center text-muted py-8">
           {locale === 'nl' ? 'Geen resultaten gevonden' : locale === 'de' ? 'Keine Ergebnisse gefunden' : locale === 'es' ? 'No se encontraron resultados' : 'No results found'}
         </p>
+      ) : layout === 'list' ? (
+        <div className="space-y-3 animate-stagger">
+          {displayed.map((poi) => {
+            const imageUrl = poi.images?.[0] ?? poi.thumbnail_url ?? '';
+            const catStyle = getCategoryStyle(poi.category ?? '');
+            return (
+              <PoiCard key={poi.id} poiId={poi.id} href={`/poi/${poi.id}`}>
+                <div className="flex gap-4 items-center p-3">
+                  {imageUrl && (
+                    <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={imageUrl} alt={poi.name} className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <span
+                      className="inline-block px-2 py-0.5 text-xs font-medium rounded-full mb-1"
+                      style={{ backgroundColor: catStyle.bg, color: catStyle.text }}
+                    >
+                      {poi.category}
+                    </span>
+                    <h3 className="text-base font-heading font-semibold text-foreground truncate">{poi.name}</h3>
+                    {poi.description && <p className="text-sm text-muted line-clamp-1">{poi.description}</p>}
+                  </div>
+                  {poi.rating && (
+                    <div className="flex-shrink-0">
+                      <Rating value={poi.rating} count={poi.reviewCount ?? poi.review_count} size="sm" />
+                    </div>
+                  )}
+                </div>
+              </PoiCard>
+            );
+          })}
+        </div>
       ) : (
         <div className={`grid grid-cols-1 ${gridCols} gap-6`}>
           {displayed.map((poi) => {
