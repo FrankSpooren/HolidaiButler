@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Card, { CardImage, CardContent } from '@/components/ui/Card';
+import { CardImage, CardContent } from '@/components/ui/Card';
+import EventCard from '@/components/ui/EventCard';
 import Badge from '@/components/ui/Badge';
 import type { I18nString } from '@/types/poi';
 import EventFilterModal, { type EventFilters } from './EventFilterModal';
@@ -194,7 +195,7 @@ export default function EventFilterBar({ events, locale, layout = 'grid' }: Even
             const title = getLocalizedString(event.title, locale);
             const parts = parseDateParts(event.startDate);
             return (
-              <Card key={event.id} href={`/event/${event.id}`}>
+              <EventCard key={event.id} eventId={event.id}>
                 {imageUrl ? (
                   <CardImage src={imageUrl} alt={title} />
                 ) : parts ? (
@@ -215,7 +216,7 @@ export default function EventFilterBar({ events, locale, layout = 'grid' }: Even
                     <div className="mt-2"><Badge>{event.primaryCategory}</Badge></div>
                   )}
                 </CardContent>
-              </Card>
+              </EventCard>
             );
           })}
         </div>

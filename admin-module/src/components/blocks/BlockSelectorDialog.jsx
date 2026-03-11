@@ -51,14 +51,14 @@ export default function BlockSelectorDialog({ open, onClose, onSelect }) {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          bgcolor: 'grey.50',
+                          bgcolor: 'action.hover',
                           borderBottom: 1,
                           borderColor: 'divider'
                         }}
                         dangerouslySetInnerHTML={{ __html: thumbnail }}
                       />
                     ) : (
-                      <Box sx={{ width: '100%', height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.50', borderBottom: 1, borderColor: 'divider' }}>
+                      <Box sx={{ width: '100%', height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
                         <IconComponent sx={{ fontSize: 48, color: 'primary.main' }} />
                       </Box>
                     )}

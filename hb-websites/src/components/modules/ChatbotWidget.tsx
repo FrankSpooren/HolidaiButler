@@ -156,9 +156,11 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const recognitionRef = useRef<any>(null);
   const sessionIdRef = useRef<string>(crypto.randomUUID());
 
   const name = chatbotName ?? (tenantSlug === 'texel' ? 'Tessa' : tenantSlug === 'warrewijzer' ? 'Wijze Warre' : 'HoliBot');
@@ -355,12 +357,37 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
     }
   }, [messages, isStreaming, tenantSlug, locale, fetchDailyTip]);
 
+  const startListening = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = locale === 'nl' ? 'nl-NL' : locale === 'de' ? 'de-DE' : locale === 'es' ? 'es-ES' : 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event: any) => {
+      const text = event.results[0][0].transcript;
+      if (text.trim()) {
+        sendMessage(text.trim());
+      }
+      setIsListening(false);
+    };
+
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }, [locale, sendMessage]);
+
   // Listen for external chatbot open events (from ChatbotButton in blocks)
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       setIsOpen(true);
-      if (detail?.message) {
+      if (detail?.message && detail.message !== 'general') {
         setTimeout(() => sendMessage(detail.message), 100);
       }
     };
@@ -412,15 +439,37 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 hover:bg-on-primary/10 rounded transition-colors"
-              aria-label="Minimize chat"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  const msg = locale === 'nl' ? 'Gesprek opnieuw starten?' : 'Restart conversation?';
+                  if (window.confirm(msg)) {
+                    setMessages([]);
+                    sessionIdRef.current = crypto.randomUUID();
+                    setInput('');
+                    setIsStreaming(false);
+                    if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
+                  }
+                }}
+                className="p-1 hover:bg-on-primary/10 rounded transition-colors"
+                aria-label="Restart chat"
+                title={locale === 'nl' ? 'Opnieuw starten' : 'Restart'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 hover:bg-on-primary/10 rounded transition-colors"
+                aria-label="Minimize chat"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -489,6 +538,27 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
               rows={1}
               disabled={isStreaming}
             />
+            <button
+              type="button"
+              onClick={() => {
+                if (isListening && recognitionRef.current) {
+                  recognitionRef.current.stop();
+                  setIsListening(false);
+                } else {
+                  startListening();
+                }
+              }}
+              className={`p-2 rounded-full transition-colors flex-shrink-0 ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-muted hover:text-primary'}`}
+              aria-label={isListening ? 'Stop listening' : 'Voice input'}
+              disabled={isStreaming}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+            </button>
             <button
               type="submit"
               disabled={!input.trim() || isStreaming}

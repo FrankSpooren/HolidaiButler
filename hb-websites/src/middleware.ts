@@ -43,9 +43,16 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host')?.replace(/:\d+$/, '') ?? '';
   const tenant = resolveTenant(hostname);
 
+  // Check for locale override cookie
+  const localeCookie = request.cookies.get('hb_locale')?.value;
+  const validLocales = ['nl', 'en', 'de', 'es', 'fr'];
+  const locale = localeCookie && validLocales.includes(localeCookie)
+    ? localeCookie
+    : tenant.defaultLocale;
+
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-tenant-slug', tenant.slug);
-  requestHeaders.set('x-tenant-locale', tenant.defaultLocale);
+  requestHeaders.set('x-tenant-locale', locale);
 
   return NextResponse.next({
     request: { headers: requestHeaders },
