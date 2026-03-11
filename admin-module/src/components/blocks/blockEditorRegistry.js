@@ -131,7 +131,15 @@ const blockEditorRegistry = {
     editor: PoiGridEditor,
     icon: 'GridView',
     label: 'POI Grid',
-    description: 'Grid of points of interest with filters',
+    description: 'Grid of points of interest',
+    category: 'Data',
+    thumbnail: THUMBNAILS.poi_grid
+  },
+  poi_grid_filtered: {
+    editor: PoiGridEditor,
+    icon: 'FilterList',
+    label: 'POI Grid (Filtered)',
+    description: 'Grid of POIs with category/rating filter bar',
     category: 'Data',
     thumbnail: THUMBNAILS.poi_grid
   },
@@ -140,6 +148,14 @@ const blockEditorRegistry = {
     icon: 'Event',
     label: 'Events',
     description: 'Event listing from agenda',
+    category: 'Data',
+    thumbnail: THUMBNAILS.event_calendar
+  },
+  event_calendar_filtered: {
+    editor: EventCalendarEditor,
+    icon: 'EventNote',
+    label: 'Events (Filtered)',
+    description: 'Event listing with date/category filter bar',
     category: 'Data',
     thumbnail: THUMBNAILS.event_calendar
   },

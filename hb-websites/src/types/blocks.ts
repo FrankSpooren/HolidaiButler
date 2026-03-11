@@ -62,6 +62,7 @@ export interface PoiGridProps {
   categoryFilter?: string[];
   limit?: number;
   columns?: 2 | 3 | 4;
+  layout?: 'grid' | 'list' | 'compact';
 }
 
 export interface EventCalendarProps {
