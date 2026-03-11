@@ -1,13 +1,7 @@
 import type { HeroProps } from '@/types/blocks';
+import { resolveAssetUrl } from '@/lib/assets';
 import HeroVideo from './HeroVideo';
 import HeroButtons from './HeroButtons';
-
-function resolveAssetUrl(path: string): string {
-  if (!path) return '';
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  const baseUrl = process.env.HB_ASSET_URL ?? process.env.HB_API_URL ?? '';
-  return `${baseUrl}${path}`;
-}
 
 const heightClasses: Record<string, string> = {
   compact: 'py-12 sm:py-16 lg:py-20',
