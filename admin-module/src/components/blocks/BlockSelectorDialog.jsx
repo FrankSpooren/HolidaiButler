@@ -51,7 +51,7 @@ export default function BlockSelectorDialog({ open, onClose, onSelect }) {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          bgcolor: 'action.hover',
+                          bgcolor: '#f8fafc',
                           borderBottom: 1,
                           borderColor: 'divider'
                         }}
@@ -62,8 +62,8 @@ export default function BlockSelectorDialog({ open, onClose, onSelect }) {
                         <IconComponent sx={{ fontSize: 48, color: 'primary.main' }} />
                       </Box>
                     )}
-                    <Box sx={{ p: 1.5, textAlign: 'center' }}>
-                      <Typography variant="subtitle2" fontWeight={600}>{label}</Typography>
+                    <Box sx={{ p: 1.5, textAlign: 'center', bgcolor: 'background.paper' }}>
+                      <Typography variant="subtitle2" fontWeight={600} color="text.primary">{label}</Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>{description}</Typography>
                     </Box>
                   </CardActionArea>
