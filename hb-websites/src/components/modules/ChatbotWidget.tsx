@@ -632,9 +632,18 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
     }
   }, [messages, isStreaming, tenantSlug, locale, fetchDailyTip, fetchItinerary]);
 
+  // Check if Web Speech API is available
+  const [hasSpeechAPI, setHasSpeechAPI] = useState(false);
+  useEffect(() => {
+    setHasSpeechAPI(!!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition);
+  }, []);
+
   const startListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      alert(locale === 'nl' ? 'Spraakherkenning wordt niet ondersteund in deze browser. Gebruik Chrome of Edge.' : 'Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
 
     const recognition = new SpeechRecognition();
     recognition.lang = locale === 'nl' ? 'nl-NL' : locale === 'de' ? 'de-DE' : locale === 'es' ? 'es-ES' : 'en-US';
@@ -649,7 +658,12 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       setIsListening(false);
     };
 
-    recognition.onerror = () => setIsListening(false);
+    recognition.onerror = (event: any) => {
+      setIsListening(false);
+      if (event.error === 'not-allowed') {
+        alert(locale === 'nl' ? 'Microfoontoegang is geblokkeerd. Sta microfoontoegang toe in je browserinstellingen.' : 'Microphone access is blocked. Allow microphone access in your browser settings.');
+      }
+    };
     recognition.onend = () => setIsListening(false);
 
     recognitionRef.current = recognition;
