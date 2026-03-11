@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { TenantConfig } from '@/types/tenant';
+import { resolveAssetUrl } from '@/lib/assets';
 import Nav from './Nav';
 
 interface HeaderProps {
@@ -51,13 +52,6 @@ function resolveNavItems(tenant: TenantConfig, locale: string): NavItem[] {
       href: item.href,
       featureFlag: item.featureFlag || undefined,
     }));
-}
-
-/** Resolve asset URL: if path is already absolute (http/https), use directly; else prefix with public asset URL */
-function resolveAssetUrl(path: string): string {
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  const baseUrl = process.env.HB_ASSET_URL ?? process.env.HB_API_URL ?? '';
-  return `${baseUrl}${path}`;
 }
 
 export default function Header({ tenant, locale }: HeaderProps) {
