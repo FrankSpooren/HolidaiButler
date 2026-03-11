@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.98.0
-> **Laatst bijgewerkt**: 10 maart 2026
+> **Versie**: 3.99.0
+> **Laatst bijgewerkt**: 11 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -376,6 +376,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **Command v14.0 DEEL A** | **5 Resterende Fixes — Customer Portal Kwaliteit** | **10-03** | **FIX 1: Footer navigation data-driven (tenant.config.nav_items, zelfde als Header) + custom HTML content (dangerouslySetInnerHTML). FIX 2: ButtonRenderer generiek component (ButtonRenderer.tsx + HeroButtons.tsx client wrapper) — Hero/Cta refactored, CardGroup + Banner chatbot variant support. FIX 3: POI detail image layout herschreven (4 varianten: 0/1/2-3/4+ images, vaste verhoudingen, onError fallback). FIX 4: POI detail als slide-in drawer (PoiDetailDrawer.tsx + PoiCard.tsx CustomEvent, API proxy /api/pois/[id], body scroll lock). FIX 5: Filter modals (PoiFilterModal + EventFilterModal, categorie/rating/reviews/sort/datum, slide-in panels, i18n 4 talen). 7 nieuwe + 11 gewijzigde bestanden. React 19 render-time state sync pattern. 10/10 Hetzner verificatie PASS.** |
 | **Command v14.0 DEEL B** | **Browser-Verificatie + CI/CD Workflow** | **10-03** | **POI detail HTTP 500 fix: PoiImageGallery.tsx extracted als 'use client' component (React 19 Server Components kunnen geen event handlers bevatten). deploy-hb-websites.yml CI/CD workflow aangemaakt: rsync → npm ci → next build → PM2 restart → health check → rollback bij falen. Workflow fix: rsync --delete verwijderde server-only files (package.json, tsconfig.json, postcss.config.mjs) — opgelost door --delete te verwijderen + config files aan Git toe te voegen. tsconfig.json exclude playwright.config.ts + tests/ (build failure fix). Server hersteld van errored state (214 PM2 restarts). Workflow verification: dev SUCCESS, main SUCCESS. 1 nieuw component + 3 config files + 1 workflow. Commits bba8c66 + 3eec40a.** |
 | **Command v15.0** | **UX Polish (Fase VI-A) — 7 fixes** | **10-03** | **FIX 1: ChatbotWidget mobile responsive (w-[calc(100vw-1.5rem)] sm:w-[380px], max-h-[80vh]). FIX 2: Loading skeletons (Skeleton.tsx: SkeletonCard/SkeletonGrid/SkeletonDrawer + Suspense SSR streaming in page.tsx + PoiDetailDrawer skeleton). FIX 3: Animaties (fadeInUp, staggered grid, image fade-in, Card hover lift -translate-y-1, prefers-reduced-motion respect). FIX 4: Hero text responsive (text-3xl sm:text-4xl lg:text-6xl) + DateBlock responsive (h-36 sm:h-48). FIX 5: Map responsive hoogte (h-[300px] sm:h-[400px] lg:h-[500px]) + legend overflow-x-auto. FIX 6: ScrollToTop.tsx (verschijnt na 400px scroll, positioned links van chatbot). FIX 7: Font preloading (link rel=preload) + CardImage animate-image-load. 2 nieuwe + 10 gewijzigde bestanden. Commit 64cf2a4.** |
+| **Command v15.1** | **Fase VI-B Features + Admin Fixes** | **11-03** | **DEEL A: Hero chatbot "general" message filter, events als slide-in drawer (EventDetailDrawer.tsx + EventCard.tsx + /api/events/[id] proxy), block selector dark mode fix (action.hover). DEEL B: SearchBar in header (debounced 300ms autocomplete, POI drawer integratie), LanguageSwitcher (cookie hb_locale, 4 talen, middleware support), chatbot speech-to-text (Web Speech API, mic button), chatbot refresh/reset button. ADMIN: OnboardingPage React Error #31 fix (object-as-child), design templates in Onboarding step 2, POI module + AI Content in Onboarding step 3. 5 nieuwe + 8 gewijzigde bestanden (724 LOC). Commit 06f648e.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -509,7 +510,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
 | IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | ✅ COMPLEET (Blok A+B+C+D+E+F) | 6-8 wkn |
 | V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + v13.0-v15.0 COMPLEET) | 12 wkn |
-| VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | 🟡 IN PROGRESS (VI-A UX Polish COMPLEET) | 6-8 wkn |
+| VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | 🟡 IN PROGRESS (VI-A UX Polish + VI-B Features COMPLEET) | 6-8 wkn |
 | VII | Polish, Scale & Launch (E2E testing, load testing, DR, go-live multi-tenant) | GEPLAND | 3-4 wkn |
 
 ### State-of-the-Art Vervolgstappen (na Fase 12)
@@ -618,12 +619,10 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **3.99.0** | **2026-03-11** | **Command v15.1 — Fase VI-B Features + Admin Fixes**. DEEL A: Hero chatbot "general" filter, events slide-in drawer (EventDetailDrawer + EventCard + API proxy), block selector dark mode. DEEL B: SearchBar (debounced autocomplete), LanguageSwitcher (cookie locale override), chatbot speech-to-text (Web Speech API), chatbot refresh button. Admin: OnboardingPage React Error #31 fix, design templates → Onboarding, POI module + AI Content in modules. 5 nieuwe + 8 gewijzigde bestanden (724 LOC). MS v7.61. |
 | **3.98.0** | **2026-03-10** | **Command v15.0 — UX Polish (Fase VI-A)**. 7 fixes: ChatbotWidget mobile responsive, loading skeletons (Suspense SSR streaming), fade-in/hover/stagger animaties, Hero/DateBlock responsive tekst, Map responsive hoogte, scroll-to-top button, font preloading + image fade-in. 2 nieuwe + 10 gewijzigde bestanden. prefers-reduced-motion respect. MS v7.60. |
 | **3.97.0** | **2026-03-10** | **Command v14.0 DEEL B: Browser-Verificatie + CI/CD Workflow**. POI detail HTTP 500 fix: PoiImageGallery.tsx 'use client' component (React 19 Server Component event handler beperking). deploy-hb-websites.yml CI/CD workflow aangemaakt + fixed (rsync --delete verwijderde server-only files → --delete verwijderd, config files aan Git). tsconfig.json exclude playwright.config.ts + tests/. Server hersteld van 214 PM2 restarts. Workflow: dev+main SUCCESS. 1 component + 3 config files + 1 workflow. MS v7.59. |
-| **3.96.0** | **2026-03-10** | **Command v14.0 DEEL A: 5 Resterende Fixes — Customer Portal Kwaliteit**. FIX 1: Footer navigation data-driven (tenant.config.nav_items) + custom HTML content. FIX 2: ButtonRenderer generiek component + HeroButtons client wrapper — Hero/Cta refactored, CardGroup+Banner chatbot variant. FIX 3: POI detail image layout (4 varianten 0/1/2-3/4+ images, vaste verhoudingen). FIX 4: POI detail slide-in drawer (PoiDetailDrawer + PoiCard CustomEvent + API proxy). FIX 5: Filter modals POI+Event (categorie/rating/reviews/sort/datum, slide-in, i18n 4 talen). 7 nieuwe + 11 gewijzigde bestanden. React 19 state sync fix. 10/10 Hetzner PASS. MS v7.58. |
-| **3.95.0** | **2026-03-10** | **Command v13.0 DEEL A: 5 Resterende Bugs**. BUG 1: Chatbot destination mixing fix (calpe.config.js chromaCollection holidaibutler_pois→calpe_pois). BUG 2: Chatbot kleur chatbotColor prop (layout.tsx→ChatbotWidget doorsturen). BUG 3: Categorie kleuren Customer Portal exact match (gradient-primary bg + witte tekst, 3 bestanden). BUG 4: Filter bars DB block types fix (poi_grid→poi_grid_filtered, event_calendar→event_calendar_filtered, 6 rijen). BUG 5: Footer brand logo (resolveAssetUrl + img tag). 5 code + 1 config + 6 DB rijen. 5/5 PASS. MS v7.57. |
-| **3.94.0** | **2026-03-09** | **Command v12.0: 8 fixes + Onboarding Wizard, 11 acceptatiecriteria**. Hero chatbot button DATA fix (variant→chatbot). POI detail map single marker (staticMarkers prop). Categorie kleuren Customer Portal match (3 bestanden). Footer brand kolom social icons verwijderd. Onboarding wizard 5-stappen (OnboardingPage.jsx + POST /onboarding/create). 1 nieuw + 11 gewijzigd + 1 DB update. 158 endpoints. 11/11 PASS. MS v7.56. |
-| **3.93.0** | **2026-03-09** | **Chirurgisch Command v11.0: 10 fixes, 12 acceptatiecriteria**. Tip van de Dag dedicated `/daily-tip` endpoint + TipCard. Event detail pagina intern (`/event/:id`). POI image layout responsive. BrandingPage preview 5 button variants + shadow/spacing. Quick action buttons in blocks (4 chatbot actions). Filter chips PoiFilterBar + EventFilterBar. Footer social icons backend fallback. quickActionFilter doorwiring. 6 nieuwe + 10 gewijzigde bestanden. 12/12 PASS. MS v7.55. |
+| **3.96.0** | **2026-03-10** | **Command v14.0 DEEL A: 5 Resterende Fixes — Customer Portal Kwaliteit**. Footer navigation data-driven + ButtonRenderer + POI detail image layout + slide-in drawer + filter modals. 7 nieuwe + 11 gewijzigde bestanden. 10/10 Hetzner PASS. MS v7.58. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -633,7 +632,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.60 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.61 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
