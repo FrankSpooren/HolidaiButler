@@ -396,7 +396,7 @@ export default function BrandingPage() {
 
       {activeDest && form.colors && (
         <Box>
-          {/* === COLORS (default expanded) === */}
+          {/* === COLORS + LIVE PREVIEW (side by side, default expanded) === */}
           <BrandingAccordion
             id="colors"
             title={t('branding.colorsSection')}
@@ -404,7 +404,7 @@ export default function BrandingPage() {
             defaultExpanded
           >
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={5}>
                 {COLOR_FIELDS.map(cf => (
                   <ColorField
                     key={cf.key}
@@ -414,18 +414,76 @@ export default function BrandingPage() {
                   />
                 ))}
               </Grid>
-              <Grid item xs={12} md={6}>
-                {/* Live color preview */}
-                <Box sx={{ p: 2, border: '1px dashed', borderColor: 'divider', borderRadius: 1 }}>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {COLOR_FIELDS.map(cf => (
-                      <Box key={cf.key} sx={{ textAlign: 'center' }}>
-                        <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: form.colors[cf.key] || '#ccc', border: '1px solid', borderColor: 'divider' }} />
-                        <Typography variant="caption" sx={{ fontSize: '0.6rem' }}>{cf.key}</Typography>
+              <Grid item xs={12} md={7}>
+                {/* Live preview — rendered inline next to colors */}
+                {(() => {
+                  const btnRadius = form.style?.buttonStyle === 'pill' ? '999px' : form.style?.buttonStyle === 'square' ? '0px' : (form.style?.borderRadius || '8px');
+                  const imgRadius = form.style?.imageStyle === 'square' ? '0px' : form.style?.imageStyle === 'circle' ? '50%' : (form.style?.borderRadius || '8px');
+                  const shadowMap = { none: 'none', subtle: '0 1px 3px rgba(0,0,0,0.08)', medium: '0 4px 12px rgba(0,0,0,0.12)', strong: '0 8px 24px rgba(0,0,0,0.18)' };
+                  const shadow = shadowMap[form.style?.shadowIntensity] || shadowMap.medium;
+                  const spacingMap = { compact: 1.5, default: 2, relaxed: 3, spacious: 4 };
+                  const spacing = spacingMap[form.style?.spacingScale] || 2;
+                  const headingTransform = form.style?.headingTextTransform || 'none';
+                  return (
+                    <Box sx={{ p: 2, borderRadius: form.style?.borderRadius || '8px', bgcolor: form.colors?.background || '#fff', border: '1px solid', borderColor: 'divider', position: 'sticky', top: 16 }}>
+                      {/* Header bar */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: spacing, pb: spacing, borderBottom: '1px solid', borderColor: 'divider' }}>
+                        <SafeImage src={form.logo} alt="Logo" apiUrl={apiUrl} sx={{ height: 28, maxWidth: 80 }} />
+                        <Typography sx={{ fontFamily: form.fonts?.heading, fontWeight: 700, fontSize: '1rem', color: form.colors?.primary }}>
+                          {form.brandName || activeDest.displayName}
+                        </Typography>
+                        <Typography sx={{ fontFamily: form.fonts?.body, fontSize: '0.75rem', color: form.colors?.textMuted }}>
+                          {resolveI18nDisplay(form.payoff)}
+                        </Typography>
                       </Box>
-                    ))}
-                  </Box>
-                </Box>
+                      {/* Nav chips */}
+                      <Box sx={{ display: 'flex', gap: 0.75, mb: spacing }}>
+                        <Chip size="small" label="Explore" sx={{ bgcolor: form.colors?.primary, color: '#fff', fontFamily: form.fonts?.body, fontSize: '0.7rem' }} />
+                        <Chip size="small" label="Events" variant="outlined" sx={{ borderColor: form.colors?.secondary, color: form.colors?.secondary, fontSize: '0.7rem' }} />
+                        <Chip size="small" label="Contact" variant="outlined" sx={{ borderColor: form.colors?.text, color: form.colors?.text, fontSize: '0.7rem' }} />
+                      </Box>
+                      {/* Sample card */}
+                      <Box sx={{ display: 'flex', gap: 1.5, mb: spacing }}>
+                        <Box sx={{ width: 56, height: 56, flexShrink: 0, borderRadius: imgRadius, overflow: 'hidden', bgcolor: form.colors?.secondary || '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: shadow }}>
+                          <Typography sx={{ fontSize: '1.5rem', opacity: 0.4 }}>🏖️</Typography>
+                        </Box>
+                        <Box>
+                          <Typography sx={{ fontFamily: form.fonts?.heading, fontWeight: 700, color: form.colors?.text, textTransform: headingTransform, fontSize: '0.85rem', mb: 0.25 }}>
+                            {t('branding.previewHeading')}
+                          </Typography>
+                          <Typography sx={{ fontFamily: form.fonts?.body, color: form.colors?.textMuted, fontSize: '0.75rem' }}>
+                            {t('branding.previewBody')}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      {/* Button variants */}
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: spacing }}>
+                        {BUTTON_VARIANTS.map(({ key, label }) => {
+                          const btn = form.buttons?.[key] || {};
+                          const isTransparent = key === 'ghost' || key === 'link';
+                          return (
+                            <Box key={key} component="span" sx={{
+                              display: 'inline-block', px: 1.5, py: 0.5, fontSize: '0.7rem', fontWeight: 600,
+                              borderRadius: btn.borderRadius || btnRadius,
+                              bgcolor: isTransparent ? 'transparent' : (btn.bg || form.colors?.primary || '#3b82f6'),
+                              color: btn.text || (key === 'outline' || isTransparent ? (form.colors?.primary || '#3b82f6') : '#fff'),
+                              border: key === 'outline' ? `2px solid ${btn.borderColor || form.colors?.primary || '#3b82f6'}` : 'none',
+                              textDecoration: key === 'link' ? 'underline' : 'none',
+                              boxShadow: isTransparent ? 'none' : shadow,
+                              cursor: 'default',
+                            }}>
+                              {label}
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                      {/* Style info */}
+                      <Typography variant="caption" sx={{ color: form.colors?.textMuted, fontSize: '0.65rem' }}>
+                        Shadow: {form.style?.shadowIntensity || 'medium'} · Spacing: {form.style?.spacingScale || 'default'} · Image: {form.style?.imageStyle || 'rounded'}
+                      </Typography>
+                    </Box>
+                  );
+                })()}
               </Grid>
             </Grid>
           </BrandingAccordion>
@@ -1051,84 +1109,7 @@ export default function BrandingPage() {
             />
           </BrandingAccordion>
 
-          {/* === PREVIEW PANEL (always visible) === */}
-          <BrandingAccordion
-            id="preview"
-            title={t('branding.preview')}
-            subtitle={t('branding.previewSubtitle', 'Live preview of your branding choices')}
-            defaultExpanded
-          >
-            {(() => {
-              const btnRadius = form.style?.buttonStyle === 'pill' ? '999px' : form.style?.buttonStyle === 'square' ? '0px' : (form.style?.borderRadius || '8px');
-              const imgRadius = form.style?.imageStyle === 'square' ? '0px' : form.style?.imageStyle === 'circle' ? '50%' : (form.style?.borderRadius || '8px');
-              const shadowMap = { none: 'none', subtle: '0 1px 3px rgba(0,0,0,0.08)', medium: '0 4px 12px rgba(0,0,0,0.12)', strong: '0 8px 24px rgba(0,0,0,0.18)' };
-              const shadow = shadowMap[form.style?.shadowIntensity] || shadowMap.medium;
-              const spacingMap = { compact: 1.5, default: 2, relaxed: 3, spacious: 4 };
-              const spacing = spacingMap[form.style?.spacingScale] || 2;
-              const headingTransform = form.style?.headingTextTransform || 'none';
-              return (
-                <Box sx={{ p: 3, borderRadius: form.style?.borderRadius || '8px', bgcolor: form.colors?.background || '#fff', border: '1px solid', borderColor: 'divider' }}>
-                  {/* Header bar */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: spacing, pb: spacing, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Typography sx={{ fontFamily: form.fonts?.heading, fontWeight: 700, fontSize: '1.25rem', color: form.colors?.primary }}>
-                      {form.brandName || activeDest.displayName}
-                    </Typography>
-                    <Typography sx={{ fontFamily: form.fonts?.body, fontSize: '0.875rem', color: form.colors?.textMuted }}>
-                      {form.payoff?.en || ''}
-                    </Typography>
-                  </Box>
-                  {/* Nav chips */}
-                  <Box sx={{ display: 'flex', gap: 1, mb: spacing }}>
-                    <Chip label="Explore" sx={{ bgcolor: form.colors?.primary, color: '#fff', fontFamily: form.fonts?.body }} />
-                    <Chip label="Events" variant="outlined" sx={{ borderColor: form.colors?.secondary, color: form.colors?.secondary }} />
-                    <Chip label="Contact" variant="outlined" sx={{ borderColor: form.colors?.text, color: form.colors?.text }} />
-                  </Box>
-                  {/* Sample card with shadow + image style */}
-                  <Box sx={{ display: 'flex', gap: 2, mb: spacing }}>
-                    <Box sx={{ width: 80, height: 80, flexShrink: 0, borderRadius: imgRadius, overflow: 'hidden', bgcolor: form.colors?.secondary || '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: shadow }}>
-                      <Typography sx={{ fontSize: '2rem', opacity: 0.4 }}>🏖️</Typography>
-                    </Box>
-                    <Box>
-                      <Typography sx={{ fontFamily: form.fonts?.heading, fontWeight: 700, color: form.colors?.text, textTransform: headingTransform, mb: 0.5 }}>
-                        {t('branding.previewHeading')}
-                      </Typography>
-                      <Typography sx={{ fontFamily: form.fonts?.body, color: form.colors?.textMuted, fontSize: '0.875rem' }}>
-                        {t('branding.previewBody')}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  {/* All 5 button variants */}
-                  <Typography variant="caption" sx={{ color: form.colors?.textMuted, mb: 1, display: 'block' }}>Button variants</Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: spacing }}>
-                    {BUTTON_VARIANTS.map(({ key, label }) => {
-                      const btn = form.buttons?.[key] || {};
-                      const isTransparent = key === 'ghost' || key === 'link';
-                      return (
-                        <Box key={key} component="span" sx={{
-                          display: 'inline-block', px: 2, py: 0.75, fontSize: '0.8rem', fontWeight: 600,
-                          borderRadius: btn.borderRadius || btnRadius,
-                          bgcolor: isTransparent ? 'transparent' : (btn.bg || form.colors?.primary || '#3b82f6'),
-                          color: btn.text || (key === 'outline' || isTransparent ? (form.colors?.primary || '#3b82f6') : '#fff'),
-                          border: key === 'outline' ? `2px solid ${btn.borderColor || form.colors?.primary || '#3b82f6'}` : 'none',
-                          textDecoration: key === 'link' ? 'underline' : 'none',
-                          boxShadow: isTransparent ? 'none' : shadow,
-                          cursor: 'default',
-                        }}>
-                          {label}
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                  {/* Shadow card preview */}
-                  <Box sx={{ p: 2, borderRadius: form.style?.borderRadius || '8px', bgcolor: form.colors?.surface || form.colors?.background || '#fff', boxShadow: shadow, mb: spacing }}>
-                    <Typography variant="caption" sx={{ color: form.colors?.textMuted }}>
-                      Shadow: {form.style?.shadowIntensity || 'medium'} · Spacing: {form.style?.spacingScale || 'default'} · Image: {form.style?.imageStyle || 'rounded'}
-                    </Typography>
-                  </Box>
-                </Box>
-              );
-            })()}
-          </BrandingAccordion>
+          {/* Preview panel moved to Colors section (side-by-side) */}
         </Box>
       )}
 
