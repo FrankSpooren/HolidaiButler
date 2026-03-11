@@ -4320,4 +4320,67 @@ CLAUDE.md v3.97.0 → v3.98.0. MS v7.59 → v7.60. MEMORY.md bijgewerkt. CLAUDE_
 
 ---
 
+## Command v15.1 — Fase VI-B Features + Admin Fixes (11-03-2026)
+
+### Overzicht
+
+Command v15.1 implementeert Fase VI-B: frontend features + admin portal fixes uit het `HolidaiButler_Fixes_FaseVIB_v15.md` command document.
+
+### DEEL A — Fixes
+
+| # | Fix | Status | Detail |
+|---|-----|--------|--------|
+| 1 | Hero chatbot "general" message | DONE | DB chatbotAction cleared to "" + ChatbotWidget filtert "general" in hb:chatbot:open handler |
+| 2 | Plan my Day RAG | BACKEND | intentService mist "dagprogramma" intent — apart backend project |
+| 3 | Events als slide-in drawer | DONE | EventDetailDrawer.tsx (242 LOC) + EventCard.tsx (30 LOC) + /api/events/[id]/route.ts proxy |
+| 4 | Block selector dark mode | DONE | BlockSelectorDialog.jsx: `bgcolor: 'grey.50'` → `bgcolor: 'action.hover'` (2 plekken) |
+| 5 | Filter modal admin config | NOT DONE | Complex per-destination filter_config — apart project |
+| 6 | Footer navigation + custom | ALREADY DONE | v14A |
+| 7 | Homepage crash | ALREADY DONE | Resolved by latest build |
+
+### DEEL B — Features
+
+| # | Feature | Status | Detail |
+|---|---------|--------|--------|
+| 1 | Search in header | DONE | SearchBar.tsx (166 LOC): expandable, debounced 300ms, /api/pois?search= autocomplete, PoiDetailDrawer integratie |
+| 2 | Language switcher | DONE | LanguageSwitcher.tsx (71 LOC): dropdown 4 talen, cookie hb_locale (1 jaar), middleware leest cookie |
+| 3 | Chatbot speech-to-text | DONE | Web Speech API, isListening state, mic button met rode pulsanimatie, locale-aware taal |
+| 4 | Chatbot refresh button | DONE | Circulaire pijl in header, confirmation dialog, reset messages/sessionId/input |
+| 5 | Skeleton loading | ALREADY DONE | v15.0 |
+| 6 | Wildcard SSL | ALREADY DONE | Werkend op dev.holidaibutler.com |
+
+### Admin Portal Fixes
+
+| # | Fix | Detail |
+|---|-----|--------|
+| 1 | React Error #31 crash | OnboardingPage.jsx: API error object → string extractie (.message of JSON.stringify) |
+| 2 | Design templates → Onboarding | Stap 2 (Branding): horizontale template selector met kleurvoorvertoning, auto-fill primary/secondary |
+| 3 | POI module in Onboarding | MODULE_FLAGS: +pois (default true), +aiContent (default false). 7 modules totaal |
+
+### Bestandswijzigingen
+
+| Actie | Bestand | Onderdeel |
+|-------|---------|-----------|
+| NIEUW | `hb-websites/src/components/modules/EventDetailDrawer.tsx` | DEEL A FIX 3 |
+| NIEUW | `hb-websites/src/components/ui/EventCard.tsx` | DEEL A FIX 3 |
+| NIEUW | `hb-websites/src/app/api/events/[id]/route.ts` | DEEL A FIX 3 |
+| NIEUW | `hb-websites/src/components/layout/SearchBar.tsx` | DEEL B FIX 1 |
+| NIEUW | `hb-websites/src/components/layout/LanguageSwitcher.tsx` | DEEL B FIX 2 |
+| WIJZIG | `hb-websites/src/components/modules/ChatbotWidget.tsx` | DEEL A FIX 1 + DEEL B FIX 3+4 |
+| WIJZIG | `hb-websites/src/blocks/EventCalendar.tsx` | DEEL A FIX 3 (Card → EventCard) |
+| WIJZIG | `hb-websites/src/components/filters/EventFilterBar.tsx` | DEEL A FIX 3 (Card → EventCard) |
+| WIJZIG | `hb-websites/src/components/layout/Nav.tsx` | DEEL B FIX 1+2 (SearchBar + LanguageSwitcher) |
+| WIJZIG | `hb-websites/src/app/layout.tsx` | EventDetailDrawer mount |
+| WIJZIG | `hb-websites/src/middleware.ts` | Cookie hb_locale override + FR locale |
+| WIJZIG | `admin-module/src/pages/OnboardingPage.jsx` | Admin FIX 1+2+3 |
+| WIJZIG | `admin-module/src/components/blocks/BlockSelectorDialog.jsx` | DEEL A FIX 4 |
+
+### Documentatie
+
+CLAUDE.md v3.98.0 → v3.99.0. MS v7.60 → v7.61. MEMORY.md bijgewerkt. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
