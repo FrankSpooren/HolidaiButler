@@ -7,6 +7,7 @@ import Footer from '@/components/layout/Footer';
 import ChatbotWidget from '@/components/modules/ChatbotWidget';
 import CookieBanner from '@/components/modules/CookieBanner';
 import PoiDetailDrawer from '@/components/modules/PoiDetailDrawer';
+import EventDetailDrawer from '@/components/modules/EventDetailDrawer';
 import ScrollToTop from '@/components/ui/ScrollToTop';
 import './globals.css';
 
@@ -86,6 +87,7 @@ export default async function RootLayout({
           />
         )}
         <PoiDetailDrawer locale={locale} />
+        <EventDetailDrawer locale={locale} />
         <ScrollToTop />
         <CookieBanner
           locale={locale}

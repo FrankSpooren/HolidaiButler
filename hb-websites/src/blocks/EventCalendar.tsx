@@ -1,7 +1,8 @@
 import { headers } from 'next/headers';
 import { fetchEvents } from '@/lib/api';
 import type { EventCalendarProps } from '@/types/blocks';
-import Card, { CardImage, CardContent } from '@/components/ui/Card';
+import { CardImage, CardContent } from '@/components/ui/Card';
+import EventCard from '@/components/ui/EventCard';
 import Badge from '@/components/ui/Badge';
 import type { AgendaEvent, I18nString } from '@/types/poi';
 
@@ -70,7 +71,7 @@ export default async function EventCalendar({ limit = 6, layout = 'grid' }: Even
         </h2>
         <div className="space-y-4">
           {events.map((event) => (
-            <div key={event.id} className="flex gap-4 items-start p-4 bg-surface rounded-tenant shadow-sm">
+            <EventCard key={event.id} eventId={event.id} className="flex gap-4 items-start p-4 !rounded-tenant !shadow-sm">
               <div className="flex-shrink-0 w-16 text-center">
                 <div className="text-sm font-medium text-primary">
                   {formatDate(event.startDate, locale)}
@@ -85,7 +86,7 @@ export default async function EventCalendar({ limit = 6, layout = 'grid' }: Even
                 )}
               </div>
               {event.primaryCategory && <Badge>{event.primaryCategory}</Badge>}
-            </div>
+            </EventCard>
           ))}
         </div>
       </section>
@@ -102,7 +103,7 @@ export default async function EventCalendar({ limit = 6, layout = 'grid' }: Even
           const imageUrl = event.images?.[0]?.url;
           const title = getLocalizedString(event.title, locale);
           return (
-            <Card key={event.id} href={`/event/${event.id}`}>
+            <EventCard key={event.id} eventId={event.id}>
               {imageUrl ? <CardImage src={imageUrl} alt={title} /> : <DateBlock dateStr={event.startDate} />}
               <CardContent>
                 <p className="text-sm font-medium text-primary mb-1">
@@ -120,7 +121,7 @@ export default async function EventCalendar({ limit = 6, layout = 'grid' }: Even
                   <div className="mt-2"><Badge>{event.primaryCategory}</Badge></div>
                 )}
               </CardContent>
-            </Card>
+            </EventCard>
           );
         })}
       </div>

@@ -13,6 +13,7 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useTranslation } from 'react-i18next';
 import client from '../api/client.js';
+import { BRANDING_TEMPLATES } from '../utils/brandingTemplates.js';
 
 const STEPS_NL = ['Basis', 'Branding', 'Modules', 'Navigatie', 'Pagina\'s'];
 const STEPS_EN = ['Basics', 'Branding', 'Modules', 'Navigation', 'Pages'];
@@ -53,11 +54,13 @@ const PAGE_TEMPLATES = [
 ];
 
 const MODULE_FLAGS = [
+  { key: 'pois', label: 'POI Database', description: 'Points of Interest (Food & Drinks, Cultuur & Historie, Actief, Natuur, etc.)' },
   { key: 'chatbot', label: 'AI Chatbot', description: 'RAG-powered chatbot voor bezoekers' },
   { key: 'agenda', label: 'Agenda / Events', description: 'Evenementenkalender uit agenda tabel' },
   { key: 'ticketing', label: 'Ticketing', description: 'Ticket verkoop via Adyen' },
   { key: 'reservations', label: 'Reserveringen', description: 'Reserveringssysteem voor POIs' },
   { key: 'commerce', label: 'Commerce Dashboard', description: 'Omzet en transactie dashboard' },
+  { key: 'aiContent', label: 'AI Content Generatie', description: 'Automatische content generatie met Mistral AI' },
 ];
 
 const INITIAL_FORM = {
@@ -73,11 +76,13 @@ const INITIAL_FORM = {
   payoff: '',
   // Step 3: Modules
   featureFlags: {
+    pois: true,
     chatbot: true,
     agenda: true,
     ticketing: false,
     reservations: false,
     commerce: false,
+    aiContent: false,
   },
   // Step 4: Navigation
   navItems: [...DEFAULT_NAV_ITEMS],
@@ -96,6 +101,7 @@ export default function OnboardingPage() {
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
   const [snackbar, setSnackbar] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const updateField = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -129,7 +135,8 @@ export default function OnboardingPage() {
       const { data } = await client.post('/onboarding/create', payload);
       setResult(data);
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Onboarding mislukt');
+      const errMsg = err.response?.data?.error;
+      setError(typeof errMsg === 'object' ? (errMsg.message || JSON.stringify(errMsg)) : (errMsg || err.message || 'Onboarding mislukt'));
     } finally {
       setLoading(false);
     }
@@ -233,6 +240,36 @@ export default function OnboardingPage() {
   // Step 2: Branding
   const renderBranding = () => (
     <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>Design Template</Typography>
+        <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 1 }}>
+          {BRANDING_TEMPLATES.map(tpl => (
+            <Box
+              key={tpl.id}
+              onClick={() => {
+                setSelectedTemplate(tpl.id);
+                updateField('primaryColor', tpl.values.colors.primary);
+                updateField('secondaryColor', tpl.values.colors.secondary);
+              }}
+              sx={{
+                p: 1.5, minWidth: 140, borderRadius: 1, cursor: 'pointer', flexShrink: 0,
+                border: selectedTemplate === tpl.id ? '2px solid' : '1px solid',
+                borderColor: selectedTemplate === tpl.id ? 'primary.main' : 'divider',
+                '&:hover': { borderColor: 'primary.main' },
+                transition: 'border-color 0.2s',
+                bgcolor: 'background.paper'
+              }}
+            >
+              <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
+                {Object.values(tpl.preview).map((color, i) => (
+                  <Box key={i} sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: color }} />
+                ))}
+              </Box>
+              <Typography variant="caption" fontWeight={600}>{tpl.name.en || Object.values(tpl.name)[0]}</Typography>
+            </Box>
+          ))}
+        </Box>
+      </Grid>
       <Grid item xs={12} md={6}>
         <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('onboarding.primaryColor')}</Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -383,7 +420,7 @@ export default function OnboardingPage() {
         <Alert severity="success" sx={{ mb: 3 }}>
           <Typography variant="h6">{t('onboarding.success')}</Typography>
           <Typography variant="body2">
-            Destination <strong>{form.name}</strong> (ID: {result.destination_id}) {t('onboarding.created')}
+            Destination <strong>{form.name}</strong> (ID: {result.data?.destinationId || result.destinationId || '?'}) {t('onboarding.created')}
           </Typography>
         </Alert>
 
