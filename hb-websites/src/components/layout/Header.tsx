@@ -8,10 +8,19 @@ interface HeaderProps {
   locale: string;
 }
 
+interface NavItemStyle {
+  color?: string;
+  fontSize?: string;
+  fontWeight?: string;
+  borderRadius?: string;
+  backgroundColor?: string;
+}
+
 interface NavItem {
   label: string;
   href: string;
   featureFlag?: string;
+  style?: NavItemStyle;
 }
 
 interface ConfigNavItem {
@@ -20,6 +29,7 @@ interface ConfigNavItem {
   featureFlag?: string;
   isActive?: boolean;
   sortOrder?: number;
+  style?: NavItemStyle;
 }
 
 /** Hardcoded fallback when no nav_items are configured in Admin Portal */
@@ -51,6 +61,7 @@ function resolveNavItems(tenant: TenantConfig, locale: string): NavItem[] {
         : String(item.label),
       href: item.href,
       featureFlag: item.featureFlag || undefined,
+      style: item.style || undefined,
     }));
 }
 

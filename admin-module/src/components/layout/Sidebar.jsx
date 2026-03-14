@@ -17,6 +17,7 @@ import ArticleIcon from '@mui/icons-material/Article';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import PermMediaIcon from '@mui/icons-material/PermMedia';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useTranslation } from 'react-i18next';
 import { SIDEBAR_STYLES } from '../../theme.js';
 import useAuthStore from '../../stores/authStore.js';
@@ -36,6 +37,7 @@ const MENU_SECTIONS = [
       { key: 'pois', path: '/pois', icon: PlaceIcon },
       { key: 'reviews', path: '/reviews', icon: StarIcon },
       { key: 'media', path: '/media', icon: PermMediaIcon, requiredRole: 'platform_admin' },
+      { key: 'contentStudio', path: '/content-studio', icon: AutoAwesomeIcon, requiredRole: 'platform_admin' },
     ]
   },
   {

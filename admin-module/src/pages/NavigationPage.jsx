@@ -15,7 +15,31 @@ import { useTranslation } from 'react-i18next';
 import { useNavigationDestinations, useNavigationUpdate } from '../hooks/useNavigation.js';
 import { translateTexts } from '../api/translationService.js';
 
-const EMPTY_ITEM = { label: { nl: '', en: '', de: '', es: '' }, href: '', featureFlag: '', sortOrder: 0, isActive: true };
+const EMPTY_STYLE = { color: '', fontSize: '', fontWeight: '', borderRadius: '', backgroundColor: '' };
+const EMPTY_ITEM = { label: { nl: '', en: '', de: '', es: '' }, href: '', featureFlag: '', sortOrder: 0, isActive: true, style: { ...EMPTY_STYLE } };
+
+const FONT_SIZE_OPTIONS = [
+  { value: '', label: 'Default' },
+  { value: 'small', label: 'Small (0.75rem)' },
+  { value: 'medium', label: 'Medium (0.875rem)' },
+  { value: 'large', label: 'Large (1rem)' },
+  { value: 'xlarge', label: 'Extra Large (1.125rem)' }
+];
+
+const FONT_WEIGHT_OPTIONS = [
+  { value: '', label: 'Default' },
+  { value: 'normal', label: 'Normal (400)' },
+  { value: 'medium', label: 'Medium (500)' },
+  { value: 'semibold', label: 'Semi-Bold (600)' },
+  { value: 'bold', label: 'Bold (700)' }
+];
+
+const BORDER_RADIUS_OPTIONS = [
+  { value: '', label: 'None' },
+  { value: 'sm', label: 'Small (4px)' },
+  { value: 'md', label: 'Medium (8px)' },
+  { value: 'full', label: 'Pill' }
+];
 
 export default function NavigationPage() {
   const { t } = useTranslation();
@@ -42,7 +66,8 @@ export default function NavigationPage() {
         href: item.href || '',
         featureFlag: item.featureFlag || '',
         sortOrder: item.sortOrder ?? i,
-        isActive: item.isActive !== false
+        isActive: item.isActive !== false,
+        style: item.style || { ...EMPTY_STYLE }
       })));
     }
   }, [activeDest?.id]);
@@ -66,7 +91,7 @@ export default function NavigationPage() {
 
   const openEditDialog = (idx) => {
     setEditIdx(idx);
-    setEditForm({ ...navItems[idx], label: { ...navItems[idx].label } });
+    setEditForm({ ...navItems[idx], label: { ...navItems[idx].label }, style: { ...EMPTY_STYLE, ...navItems[idx].style } });
     setEditOpen(true);
   };
 
@@ -230,11 +255,30 @@ export default function NavigationPage() {
           <Typography sx={{ fontWeight: 700, color: activeDest?.branding?.colors?.primary || 'text.primary' }}>
             {activeDest?.displayName}
           </Typography>
-          {navItems.filter(i => i.isActive).map((item, idx) => (
-            <Typography key={idx} sx={{ fontSize: '0.875rem', color: 'text.secondary', cursor: 'pointer', '&:hover': { color: 'text.primary' } }}>
-              {item.label?.en || item.label?.nl || item.href}
-            </Typography>
-          ))}
+          {navItems.filter(i => i.isActive).map((item, idx) => {
+            const s = item.style || {};
+            const fontSizeMap = { small: '0.75rem', medium: '0.875rem', large: '1rem', xlarge: '1.125rem' };
+            const fontWeightMap = { normal: 400, medium: 500, semibold: 600, bold: 700 };
+            const radiusMap = { sm: '4px', md: '8px', full: '9999px' };
+            return (
+              <Typography
+                key={idx}
+                sx={{
+                  fontSize: fontSizeMap[s.fontSize] || '0.875rem',
+                  fontWeight: fontWeightMap[s.fontWeight] || 400,
+                  color: s.color || 'text.secondary',
+                  backgroundColor: s.backgroundColor || 'transparent',
+                  borderRadius: radiusMap[s.borderRadius] || 0,
+                  px: s.backgroundColor ? 1.5 : 0,
+                  py: s.backgroundColor ? 0.5 : 0,
+                  cursor: 'pointer',
+                  '&:hover': { color: s.color || 'text.primary' }
+                }}
+              >
+                {item.label?.en || item.label?.nl || item.href}
+              </Typography>
+            );
+          })}
         </Box>
       </Card>
 
@@ -271,6 +315,57 @@ export default function NavigationPage() {
             onChange={e => setEditForm(f => ({ ...f, featureFlag: e.target.value }))}
             placeholder="agenda, ticketing (optional)"
           />
+
+          {/* Styling section */}
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2, mb: 0.5, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
+            Styling
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="caption" color="text.secondary">Text Color</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box
+                  sx={{ width: 28, height: 28, borderRadius: 0.5, border: '1px solid', borderColor: 'divider', bgcolor: editForm.style?.color || '#333', cursor: 'pointer', flexShrink: 0 }}
+                  component="label"
+                >
+                  <input type="color" value={editForm.style?.color || '#333333'} onChange={e => setEditForm(f => ({ ...f, style: { ...f.style, color: e.target.value } }))} style={{ opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
+                </Box>
+                <TextField size="small" value={editForm.style?.color || ''} onChange={e => setEditForm(f => ({ ...f, style: { ...f.style, color: e.target.value } }))} placeholder="Default" sx={{ flex: 1 }} />
+              </Box>
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="caption" color="text.secondary">Background</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box
+                  sx={{ width: 28, height: 28, borderRadius: 0.5, border: '1px solid', borderColor: 'divider', bgcolor: editForm.style?.backgroundColor || 'transparent', cursor: 'pointer', flexShrink: 0 }}
+                  component="label"
+                >
+                  <input type="color" value={editForm.style?.backgroundColor || '#ffffff'} onChange={e => setEditForm(f => ({ ...f, style: { ...f.style, backgroundColor: e.target.value } }))} style={{ opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
+                </Box>
+                <TextField size="small" value={editForm.style?.backgroundColor || ''} onChange={e => setEditForm(f => ({ ...f, style: { ...f.style, backgroundColor: e.target.value } }))} placeholder="None" sx={{ flex: 1 }} />
+              </Box>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <FormControl size="small" sx={{ flex: 1 }}>
+              <InputLabel>Font Size</InputLabel>
+              <Select label="Font Size" value={editForm.style?.fontSize || ''} onChange={e => setEditForm(f => ({ ...f, style: { ...f.style, fontSize: e.target.value } }))}>
+                {FONT_SIZE_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ flex: 1 }}>
+              <InputLabel>Font Weight</InputLabel>
+              <Select label="Font Weight" value={editForm.style?.fontWeight || ''} onChange={e => setEditForm(f => ({ ...f, style: { ...f.style, fontWeight: e.target.value } }))}>
+                {FONT_WEIGHT_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Box>
+          <FormControl size="small">
+            <InputLabel>Border Radius</InputLabel>
+            <Select label="Border Radius" value={editForm.style?.borderRadius || ''} onChange={e => setEditForm(f => ({ ...f, style: { ...f.style, borderRadius: e.target.value } }))}>
+              {BORDER_RADIUS_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditOpen(false)}>{t('common.cancel')}</Button>
