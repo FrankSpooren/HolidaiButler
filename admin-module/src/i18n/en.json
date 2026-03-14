@@ -21,6 +21,7 @@
     "navigation": "Navigation",
     "media": "Media Library",
     "onboarding": "New Destination",
+    "contentStudio": "Content Studio",
     "section_overview": "Overview",
     "section_content": "Content & Data",
     "section_commerce": "Commerce",
@@ -1085,5 +1086,14 @@
     "dnsStep1": "Step 1: Create DNS A records",
     "dnsStep2": "Step 2: Request SSL certificate",
     "dnsStep3": "Step 3: Configure Apache VHost"
+  },
+  "contentStudio": {
+    "title": "Content Studio",
+    "tabs": {
+      "trending": "Trending Monitor",
+      "suggestions": "Suggestions",
+      "content": "Content Items",
+      "performance": "Performance"
+    }
   }
 }

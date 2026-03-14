@@ -21,6 +21,7 @@
     "navigation": "Navigation",
     "media": "Medienbibliothek",
     "onboarding": "Neues Reiseziel",
+    "contentStudio": "Content Studio",
     "section_overview": "Übersicht",
     "section_content": "Inhalt & Daten",
     "section_commerce": "Commerce",
@@ -1085,5 +1086,14 @@
     "dnsStep1": "Schritt 1: DNS A-Records erstellen",
     "dnsStep2": "Schritt 2: SSL-Zertifikat anfordern",
     "dnsStep3": "Schritt 3: Apache VHost konfigurieren"
+  },
+  "contentStudio": {
+    "title": "Content Studio",
+    "tabs": {
+      "trending": "Trending Monitor",
+      "suggestions": "Vorschläge",
+      "content": "Content-Elemente",
+      "performance": "Performance"
+    }
   }
 }

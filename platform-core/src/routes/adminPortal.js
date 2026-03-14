@@ -1332,7 +1332,27 @@ const AGENT_METADATA = [
 3. Controleer ticket_inventory: SELECT id, total_capacity, reserved_count, sold_count FROM ticket_inventory WHERE is_available=TRUE LIMIT 10
 4. Controleer MongoDB resultaten: mongosh --eval "db.inventory_sync_results.find().sort({timestamp:-1}).limit(1).pretty()"
 5. Herstart API: pm2 restart holidaibutler-api
-6. Agent draait elke 30 minuten — wacht op volgende run en verifieer status` } }
+6. Agent draait elke 30 minuten — wacht op volgende run en verifieer status` } },
+  // === Content Module: Trendspotter Agent ===
+  { id: 'trendspotter', name: 'De Trendspotter', englishName: 'Trendspotter Agent', category: 'content', type: 'A',
+    description: 'Verzamelt en analyseert trending keywords per destination via Google Trends (Apify)',
+    description_en: 'Collects and analyzes trending keywords per destination via Google Trends (Apify)',
+    tasks: [
+      'Google Trends data collectie via Apify per destination',
+      'Keyword deduplicatie en relevance scoring (volume 40%, direction 30%, seizoen 30%)',
+      'Seizoensgebonden boost per destination (Calpe zomer, Texel lente/zomer)',
+      'Trend richting classificatie (breakout/rising/stable/declining)',
+      'Aggregatie en opslag in trending_data tabel'
+    ],
+    monitoring_scope: 'trending_data tabel, Google Trends API via Apify, seizoensdata',
+    output_description: 'Trending keywords met relevance scores, richting, markt en zoekvolume',
+    schedule: '30 3 * * 0', actorNames: ['trendspotter'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Trendspotter"
+2. Controleer APIFY_API_TOKEN in .env
+3. Controleer trending_data: SELECT destination_id, COUNT(*) FROM trending_data GROUP BY destination_id
+4. Controleer recente trends: SELECT keyword, relevance_score, trend_direction FROM trending_data ORDER BY created_at DESC LIMIT 10
+5. Herstart API: pm2 restart holidaibutler-api
+6. Agent draait wekelijks (zondag 03:30) — wacht op volgende run en verifieer status` } }
 ];
 
 /**
@@ -1365,7 +1385,9 @@ const SCHEDULED_JOBS_METADATA = [
   // Fase IV-D: Commerce Monitoring Agents
   { name: 'intermediary-monitor', agent: 'De Makelaar', cron: '*/15 * * * *', description: 'Intermediaire transactie monitoring en escalatie' },
   { name: 'financial-monitor', agent: 'De Kassier', cron: '30 6 * * *', description: 'Dagelijkse financiële reconciliatie en anomaliedetectie' },
-  { name: 'inventory-sync', agent: 'De Magazijnier', cron: '*/30 * * * *', description: 'Voorraad synchronisatie Redis vs MySQL' }
+  { name: 'inventory-sync', agent: 'De Magazijnier', cron: '*/30 * * * *', description: 'Voorraad synchronisatie Redis vs MySQL' },
+  // Content Module
+  { name: 'content-trending-scan', agent: 'De Trendspotter', cron: '30 3 * * 0', description: 'Wekelijkse trending keyword collectie en analyse via Google Trends' }
 ];
 
 /**
@@ -1456,6 +1478,11 @@ const AGENT_EXTENDED_DATA = {
   magazijnier: {
     dependencies: ['MySQL ticket_inventory/reservation_slots', 'Redis ticket:reserve:*', 'MongoDB inventory_sync_results'],
     output: { type: 'Inventory Sync', frequency: 'Elke 30 min', recipients: 'MongoDB + De Bode', description: 'Sync checks, verouderde reservering alerts, lage voorraad waarschuwingen' }
+  },
+  // Content Module
+  trendspotter: {
+    dependencies: ['Apify Google Trends Scraper', 'MySQL trending_data', 'APIFY_API_TOKEN'],
+    output: { type: 'Trending Keywords', frequency: 'Wekelijks (zondag 03:30)', recipients: 'MySQL trending_data', description: 'Trending keywords met relevance scores, seizoensboost, marktdata' }
   }
 };
 
@@ -9707,6 +9734,88 @@ router.post('/onboarding/create', adminAuth('platform_admin'), async (req, res) 
   } catch (error) {
     logger.error('[AdminPortal] Onboarding error:', error);
     res.status(500).json({ success: false, error: { code: 'ONBOARDING_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// CONTENT STUDIO — Trending Monitor (Fase A Content Module)
+// ============================================================
+
+/**
+ * GET /content/trending — List trending keywords with filters
+ * Query: destination_id (required), period (7d|30d|90d), market, language, limit, offset
+ */
+router.get('/content/trending', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const { destination_id, period, market, language, limit, offset } = req.query;
+    if (!destination_id) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destination_id is required' } });
+    }
+
+    const trendVisualizer = (await import('../services/agents/trendspotter/trendVisualizer.js')).default;
+    const result = await trendVisualizer.getTrends(Number(destination_id), {
+      period: period || '30d',
+      market: market || undefined,
+      language: language || undefined,
+      limit: limit ? Number(limit) : 50,
+      offset: offset ? Number(offset) : 0,
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Content trending error:', error);
+    res.status(500).json({ success: false, error: { code: 'TRENDING_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/trending/summary — Aggregated trend summary (charts, word cloud)
+ * Query: destination_id (required), period (7d|30d|90d)
+ */
+router.get('/content/trending/summary', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const { destination_id, period } = req.query;
+    if (!destination_id) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destination_id is required' } });
+    }
+
+    const trendVisualizer = (await import('../services/agents/trendspotter/trendVisualizer.js')).default;
+    const result = await trendVisualizer.getSummary(Number(destination_id), {
+      period: period || '30d',
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Content trending summary error:', error);
+    res.status(500).json({ success: false, error: { code: 'TRENDING_SUMMARY_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/trending/manual — Manually add a trending keyword
+ * Body: destination_id, keyword, language, source, search_volume, trend_direction, market
+ */
+router.post('/content/trending/manual', writeAccess(), async (req, res) => {
+  try {
+    const { destination_id, keyword, language, source, search_volume, trend_direction, market } = req.body;
+    if (!destination_id || !keyword) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destination_id and keyword are required' } });
+    }
+
+    const trendAggregator = (await import('../services/agents/trendspotter/trendAggregator.js')).default;
+    const result = await trendAggregator.aggregate(Number(destination_id), [{
+      keyword,
+      language: language || 'en',
+      source: source || 'manual',
+      search_volume: search_volume ? Number(search_volume) : null,
+      trend_direction: trend_direction || 'stable',
+      market: market || null,
+    }]);
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Manual trending add error:', error);
+    res.status(500).json({ success: false, error: { code: 'MANUAL_TRENDING_ERROR', message: error.message } });
   }
 });
 
