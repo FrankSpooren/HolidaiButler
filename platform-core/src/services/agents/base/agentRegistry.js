@@ -37,6 +37,10 @@ import inventorySyncAgent from '../inventorySync/index.js';
 // Content Module: Trendspotter Agent
 import trendspotterAgent from '../trendspotter/index.js';
 
+// Content Module: De Redacteur & De SEO Meester
+import contentRedacteurAgent from '../contentRedacteur/index.js';
+import seoMeesterAgent from '../seoMeester/index.js';
+
 // ============================================================
 // CATEGORY A: DESTINATION-AWARE (11 agents)
 // ============================================================
@@ -377,6 +381,22 @@ wrapWithDestinationAwareness(trendspotterAgent, {
   destinationAware: true
 });
 
+// #23 De Redacteur (Content Generation) - Per-destination content creation (on-demand)
+wrapWithDestinationAwareness(contentRedacteurAgent, {
+  name: 'De Redacteur',
+  category: 'Content',
+  version: '1.0.0',
+  destinationAware: true
+});
+
+// #24 De SEO Meester (SEO Analysis) - Platform-wide SEO auditing
+wrapWithDestinationAwareness(seoMeesterAgent, {
+  name: 'De SEO Meester',
+  category: 'Content',
+  version: '1.0.0',
+  destinationAware: false
+});
+
 // ============================================================
 // REGISTRY EXPORT
 // ============================================================
@@ -411,8 +431,10 @@ const AGENT_REGISTRY = {
   kassier: financialMonitor,           // #20
   magazijnier: inventorySyncAgent,     // #21
 
-  // Content Module Agent
-  trendspotter: trendspotterAgent      // #22
+  // Content Module Agents
+  trendspotter: trendspotterAgent,     // #22
+  redacteur: contentRedacteurAgent,    // #23
+  seoMeester: seoMeesterAgent         // #24
 };
 
 /**

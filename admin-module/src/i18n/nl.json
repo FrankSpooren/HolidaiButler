@@ -1094,6 +1094,17 @@
       "suggestions": "Suggesties",
       "content": "Content Items",
       "performance": "Performance"
-    }
+    },
+    "generateSuggestions": "Genereer Suggesties",
+    "suggestionsFound": "suggesties",
+    "itemsFound": "content items",
+    "noSuggestions": "Geen suggesties. Klik op \"Genereer Suggesties\" om AI suggesties te maken.",
+    "noItems": "Geen content items. Genereer content vanuit goedgekeurde suggesties.",
+    "approve": "Goedkeuren",
+    "reject": "Afwijzen",
+    "generateContent": "Genereer Content",
+    "seoScore": "SEO Score",
+    "translateTo": "Vertaal naar",
+    "reanalyze": "Heranalyse"
   }
 }

@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 3.99.0
-> **Laatst bijgewerkt**: 11 maart 2026
+> **Versie**: 4.0.0
+> **Laatst bijgewerkt**: 14 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -377,6 +377,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **Command v14.0 DEEL B** | **Browser-Verificatie + CI/CD Workflow** | **10-03** | **POI detail HTTP 500 fix: PoiImageGallery.tsx extracted als 'use client' component (React 19 Server Components kunnen geen event handlers bevatten). deploy-hb-websites.yml CI/CD workflow aangemaakt: rsync → npm ci → next build → PM2 restart → health check → rollback bij falen. Workflow fix: rsync --delete verwijderde server-only files (package.json, tsconfig.json, postcss.config.mjs) — opgelost door --delete te verwijderen + config files aan Git toe te voegen. tsconfig.json exclude playwright.config.ts + tests/ (build failure fix). Server hersteld van errored state (214 PM2 restarts). Workflow verification: dev SUCCESS, main SUCCESS. 1 nieuw component + 3 config files + 1 workflow. Commits bba8c66 + 3eec40a.** |
 | **Command v15.0** | **UX Polish (Fase VI-A) — 7 fixes** | **10-03** | **FIX 1: ChatbotWidget mobile responsive (w-[calc(100vw-1.5rem)] sm:w-[380px], max-h-[80vh]). FIX 2: Loading skeletons (Skeleton.tsx: SkeletonCard/SkeletonGrid/SkeletonDrawer + Suspense SSR streaming in page.tsx + PoiDetailDrawer skeleton). FIX 3: Animaties (fadeInUp, staggered grid, image fade-in, Card hover lift -translate-y-1, prefers-reduced-motion respect). FIX 4: Hero text responsive (text-3xl sm:text-4xl lg:text-6xl) + DateBlock responsive (h-36 sm:h-48). FIX 5: Map responsive hoogte (h-[300px] sm:h-[400px] lg:h-[500px]) + legend overflow-x-auto. FIX 6: ScrollToTop.tsx (verschijnt na 400px scroll, positioned links van chatbot). FIX 7: Font preloading (link rel=preload) + CardImage animate-image-load. 2 nieuwe + 10 gewijzigde bestanden. Commit 64cf2a4.** |
 | **Command v15.1** | **Fase VI-B Features + Admin Fixes** | **11-03** | **DEEL A: Hero chatbot "general" message filter, events als slide-in drawer (EventDetailDrawer.tsx + EventCard.tsx + /api/events/[id] proxy), block selector dark mode fix (action.hover). DEEL B: SearchBar in header (debounced 300ms autocomplete, POI drawer integratie), LanguageSwitcher (cookie hb_locale, 4 talen, middleware support), chatbot speech-to-text (Web Speech API, mic button), chatbot refresh/reset button. ADMIN: OnboardingPage React Error #31 fix (object-as-child), design templates in Onboarding step 2, POI module + AI Content in Onboarding step 3. 5 nieuwe + 8 gewijzigde bestanden (724 LOC). Commit 06f648e.** |
+| **Fase B** | **Content Engine — AI Content Generatie Motor** | **14-03** | **BLOK B.0: De Redacteur Agent (#23) — Mistral AI content generatie, tone-of-voice per destination (Calpe warm/Texel adventurous/WarreWijzer slow-living), meertalige vertaling, platform-specifieke formatting. 4 nieuwe bestanden. BLOK B.1: De SEO Meester Agent (#24) — SEO analyse (readability Flesch-Kincaid per taal, keyword density, heading structuur, interne link suggesties), SISTRIX integratie (visibility index, keyword rankings). 5 nieuwe bestanden. BLOK B.2: Content Suggestie Engine — 3 API endpoints (suggesties lijst, AI generatie, approve/reject). BLOK B.3: Content Generator UI — 7 API endpoints, ContentStudioPage 3 tabs actief (Trending + Suggesties + Content Items), ContentItemDialog met taaltabs + SEO sidebar, GenerateContentDialog. 1 nieuw + 7 gewijzigde bestanden. 24 agents (+2), 56 jobs (+1), 168 endpoints (+10). adminPortal.js v3.26.0. i18n 4 talen. Admin build 0 errors.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -384,7 +385,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ## 🤖 Agent Systeem
 
-### 21 Agents (15 agents + 3 monitoring modules + 3 commerce monitoring agents) + 3 Enterprise Services (Issues, Baselines, Correlation)
+### 24 Agents (15 agents + 3 monitoring modules + 3 commerce monitoring + 3 content agents) + 3 Enterprise Services (Issues, Baselines, Correlation)
 | # | Agent | Naam | Categorie | Type | Schedule |
 |---|-------|------|-----------|------|----------|
 | 1 | Orchestrator | De Maestro | Core | A (dest) | Continuous |
@@ -408,15 +409,18 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | 19 | Intermediary Monitor | De Makelaar | Operations | A | Every 15 min |
 | 20 | Financial Monitor | De Kassier | Operations | B | Daily 06:30 |
 | 21 | Inventory Sync | De Magazijnier | Operations | A | Every 30 min |
+| 22 | Trendspotter | De Trendspotter | Content | A | Sunday 03:30 |
+| 23 | Content Redacteur | De Redacteur | Content | A | On-demand |
+| 24 | SEO Master | De SEO Meester | Content | B | Monday 04:00 |
 
 **Type A** = destination-aware (`runForDestination(id)`), **Type B** = shared/platform-breed (`execute()`)
 
 ### BaseAgent Pattern
 - `BaseAgent.js`: Foundation class met `run('all')` / `run(destinationId)` / `aggregateResults()`
 - `destinationRunner.js`: Mixin helper voor bestaande agent singletons
-- `agentRegistry.js`: Centrale registratie 21 entries
+- `agentRegistry.js`: Centrale registratie 24 entries
 
-### Scheduled Jobs: 54 totaal
+### Scheduled Jobs: 56 totaal
 - BullMQ queue: `scheduled-tasks`
 - Workers: `src/services/orchestrator/workers.js` (incl. JOB_ACTOR_MAP voor correct agent attribution)
 
@@ -433,10 +437,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.25.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.26.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 158 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial + 8 branding/pages/navigation + 3 V.6 endpoints + 1 Wave 1 block image upload + 4 media CRUD + 1 page duplicate + 3 page revisions + 1 onboarding)
+- **Endpoints**: 168 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial + 8 branding/pages/navigation + 3 V.6 endpoints + 1 Wave 1 block image upload + 4 media CRUD + 1 page duplicate + 3 page revisions + 1 onboarding + 3 content trending + 3 content suggestions + 7 content items)
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -619,6 +623,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.0.0** | **2026-03-14** | **Fase B: Content Engine — AI Content Generatie Motor**. BLOK B.0: De Redacteur Agent (#23) — Mistral AI content generatie, tone-of-voice per destination, meertalige vertaling, platform formatting (4 bestanden). BLOK B.1: De SEO Meester Agent (#24) — SEO analyse (Flesch-Kincaid per taal, keyword density, heading structuur, interne links), SISTRIX integratie (5 bestanden). BLOK B.2: Content Suggestie Engine — 3 API endpoints. BLOK B.3: Content Generator UI — 7 API endpoints, ContentStudioPage 3 tabs actief, TipTap editor, SEO sidebar. 10 nieuwe + 7 gewijzigde bestanden. 24 agents (+2), 56 jobs (+1), 168 endpoints (+10). adminPortal.js v3.26.0. MS v7.62. |
 | **3.99.0** | **2026-03-11** | **Command v15.1 — Fase VI-B Features + Admin Fixes**. DEEL A: Hero chatbot "general" filter, events slide-in drawer (EventDetailDrawer + EventCard + API proxy), block selector dark mode. DEEL B: SearchBar (debounced autocomplete), LanguageSwitcher (cookie locale override), chatbot speech-to-text (Web Speech API), chatbot refresh button. Admin: OnboardingPage React Error #31 fix, design templates → Onboarding, POI module + AI Content in modules. 5 nieuwe + 8 gewijzigde bestanden (724 LOC). MS v7.61. |
 | **3.98.0** | **2026-03-10** | **Command v15.0 — UX Polish (Fase VI-A)**. 7 fixes: ChatbotWidget mobile responsive, loading skeletons (Suspense SSR streaming), fade-in/hover/stagger animaties, Hero/DateBlock responsive tekst, Map responsive hoogte, scroll-to-top button, font preloading + image fade-in. 2 nieuwe + 10 gewijzigde bestanden. prefers-reduced-motion respect. MS v7.60. |
 | **3.97.0** | **2026-03-10** | **Command v14.0 DEEL B: Browser-Verificatie + CI/CD Workflow**. POI detail HTTP 500 fix: PoiImageGallery.tsx 'use client' component (React 19 Server Component event handler beperking). deploy-hb-websites.yml CI/CD workflow aangemaakt + fixed (rsync --delete verwijderde server-only files → --delete verwijderd, config files aan Git). tsconfig.json exclude playwright.config.ts + tests/. Server hersteld van 214 PM2 restarts. Workflow: dev+main SUCCESS. 1 component + 3 config files + 1 workflow. MS v7.59. |
@@ -632,7 +637,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.61 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.62 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

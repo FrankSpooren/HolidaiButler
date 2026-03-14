@@ -4383,4 +4383,89 @@ CLAUDE.md v3.98.0 → v3.99.0. MS v7.60 → v7.61. MEMORY.md bijgewerkt. CLAUDE_
 
 ---
 
+## Fase B: Content Engine — AI Content Generatie Motor (14 maart 2026)
+
+**Status**: COMPLEET ✅
+**CLAUDE.md**: v3.99.0 → v4.0.0
+**MS**: v7.61 → v7.62
+**Agents**: 22 → 24 (+2)
+**Jobs**: 55 → 56 (+1)
+**Endpoints**: 158 → 168 (+10)
+**adminPortal.js**: v3.25.0 → v3.26.0
+
+### Samenvatting
+
+Fase B bouwt de AI Content Generatie Motor: 2 nieuwe agents (De Redacteur #23 + De SEO Meester #24), Mistral AI integratie voor content creatie, suggestie-engine vanuit trending data, en Content Generator UI in het Admin Portal.
+
+### BLOK B.0: De Redacteur Agent (#23)
+
+- **Categorie**: Content, Type A (destination-aware), on-demand (geen cron)
+- **Mistral AI content generatie**: blog (800-1500 woorden), social_post (platform-specifiek), video_script (storyboard)
+- **Tone-of-voice per destination**: Calpe (warm/Mediterranean), Texel (adventurous/nature), WarreWijzer (slow-living)
+- **Platform formatting**: Instagram 2.200, Facebook 63.206, LinkedIn 3.000, X 280 chars
+- **Meertalige vertaling**: hergebruikt bestaand translationService.js
+- **EU AI Act**: ai_model + ai_generated velden automatisch gezet
+
+### BLOK B.1: De SEO Meester Agent (#24)
+
+- **Categorie**: Content, Type B (shared), wekelijks maandag 04:00
+- **7 SEO checks**: title length, meta description, heading structure, keyword density, readability, content length, internal links
+- **Readability**: Flesch-Kincaid aangepast per taal (EN, NL Douma, DE Amstad, ES, FR)
+- **SISTRIX integratie**: API key D2bX5yPqbAIG9q3z8dwdbLvH9ZeQgWFq, visibility index, keyword rankings, competitors
+- **Interne links**: POI namen matchen in content tekst
+- **Score**: 0-100 met grade (A+ to F)
+
+### BLOK B.2: Content Suggestie Engine
+
+3 API endpoints:
+- GET /content/suggestions — lijst suggesties (destination_id, status filter, paginatie)
+- POST /content/suggestions/generate — AI suggestie-generatie vanuit trending data
+- PATCH /content/suggestions/:id — approve/reject suggestie
+
+### BLOK B.3: Content Generator UI + API
+
+7 API endpoints:
+- POST /content/items/generate — genereer content via Mistral AI
+- GET /content/items — lijst content items
+- GET /content/items/:id — detail + alle taalversies
+- PATCH /content/items/:id — update body/approve/reject
+- DELETE /content/items/:id — soft delete
+- POST /content/items/:id/translate — vertaal naar extra taal
+- GET /content/items/:id/seo — SEO analyse via De SEO Meester
+
+**ContentStudioPage.jsx** herschreven: 3 tabs actief (Trending Monitor + Suggesties + Content Items). GenerateContentDialog + ContentItemDialog met taaltabs + SEO sidebar.
+
+### Bestandslijst
+
+| Actie | Bestand | Blok |
+|-------|---------|------|
+| NIEUW | `platform-core/src/services/agents/contentRedacteur/index.js` | B.0 |
+| NIEUW | `platform-core/src/services/agents/contentRedacteur/contentGenerator.js` | B.0 |
+| NIEUW | `platform-core/src/services/agents/contentRedacteur/toneOfVoice.js` | B.0 |
+| NIEUW | `platform-core/src/services/agents/contentRedacteur/contentFormatter.js` | B.0 |
+| NIEUW | `platform-core/src/services/agents/seoMeester/index.js` | B.1 |
+| NIEUW | `platform-core/src/services/agents/seoMeester/seoAnalyzer.js` | B.1 |
+| NIEUW | `platform-core/src/services/agents/seoMeester/readabilityScore.js` | B.1 |
+| NIEUW | `platform-core/src/services/agents/seoMeester/internalLinker.js` | B.1 |
+| NIEUW | `platform-core/src/services/agents/seoMeester/sistrixClient.js` | B.1 |
+| NIEUW | `admin-module/src/hooks/useContent.js` | B.3 |
+| WIJZIG | `platform-core/src/services/agents/base/agentRegistry.js` | B.0+B.1 |
+| WIJZIG | `platform-core/src/services/orchestrator/workers.js` | B.0+B.1 |
+| WIJZIG | `platform-core/src/services/orchestrator/scheduler.js` | B.1 |
+| WIJZIG | `platform-core/src/routes/adminPortal.js` | B.2+B.3 |
+| WIJZIG | `admin-module/src/api/contentService.js` | B.2+B.3 |
+| WIJZIG | `admin-module/src/pages/ContentStudioPage.jsx` | B.3 |
+| WIJZIG | `admin-module/src/i18n/en.json` | B.3 |
+| WIJZIG | `admin-module/src/i18n/nl.json` | B.3 |
+| WIJZIG | `admin-module/src/i18n/de.json` | B.3 |
+| WIJZIG | `admin-module/src/i18n/es.json` | B.3 |
+
+### Documentatie
+
+CLAUDE.md v3.99.0 → v4.0.0. MS v7.61 → v7.62. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
