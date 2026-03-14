@@ -10,6 +10,7 @@ import PoiDetailDrawer from '@/components/modules/PoiDetailDrawer';
 import EventDetailDrawer from '@/components/modules/EventDetailDrawer';
 import ScrollToTop from '@/components/ui/ScrollToTop';
 import { resolveAssetUrl } from '@/lib/assets';
+import Script from 'next/script';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -87,6 +88,10 @@ export default async function RootLayout({
           locale={locale}
           primaryColor={tenant?.branding?.colors?.primary}
           privacyPolicyUrl={tenant?.branding?.privacyPolicyUrl}
+        />
+        <Script
+          src="https://scripts.simpleanalyticscdn.com/latest.js"
+          strategy="afterInteractive"
         />
       </body>
     </html>
