@@ -89,10 +89,15 @@ export default async function RootLayout({
           primaryColor={tenant?.branding?.colors?.primary}
           privacyPolicyUrl={tenant?.branding?.privacyPolicyUrl}
         />
+        {/* 100% privacy-first analytics */}
         <Script
           src="https://scripts.simpleanalyticscdn.com/latest.js"
           strategy="afterInteractive"
         />
+        <noscript>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="https://queue.simpleanalyticscdn.com/noscript.gif" alt="" referrerPolicy="no-referrer-when-downgrade" />
+        </noscript>
       </body>
     </html>
   );
