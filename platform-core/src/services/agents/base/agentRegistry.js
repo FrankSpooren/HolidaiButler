@@ -34,6 +34,9 @@ import intermediaryMonitor from '../intermediaryMonitor/index.js';
 import financialMonitor from '../financialMonitor/index.js';
 import inventorySyncAgent from '../inventorySync/index.js';
 
+// Content Module: Trendspotter Agent
+import trendspotterAgent from '../trendspotter/index.js';
+
 // ============================================================
 // CATEGORY A: DESTINATION-AWARE (11 agents)
 // ============================================================
@@ -366,6 +369,14 @@ wrapWithDestinationAwareness(inventorySyncAgent, {
   destinationAware: true
 });
 
+// #22 De Trendspotter (Content Trending) - Per-destination trend collection
+wrapWithDestinationAwareness(trendspotterAgent, {
+  name: 'De Trendspotter',
+  category: 'Content',
+  version: '1.0.0',
+  destinationAware: true
+});
+
 // ============================================================
 // REGISTRY EXPORT
 // ============================================================
@@ -398,7 +409,10 @@ const AGENT_REGISTRY = {
   // Fase IV-D: Commerce Monitoring Agents
   makelaar: intermediaryMonitor,       // #19
   kassier: financialMonitor,           // #20
-  magazijnier: inventorySyncAgent      // #21
+  magazijnier: inventorySyncAgent,     // #21
+
+  // Content Module Agent
+  trendspotter: trendspotterAgent      // #22
 };
 
 /**

@@ -9,19 +9,13 @@ import CookieBanner from '@/components/modules/CookieBanner';
 import PoiDetailDrawer from '@/components/modules/PoiDetailDrawer';
 import EventDetailDrawer from '@/components/modules/EventDetailDrawer';
 import ScrollToTop from '@/components/ui/ScrollToTop';
+import { resolveAssetUrl } from '@/lib/assets';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'HolidaiButler',
   description: 'Your AI Travel Companion',
 };
-
-/** Resolve asset URL: if path is already absolute (http/https), use directly; else prefix with public asset URL */
-function resolveAssetUrl(path: string): string {
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  const baseUrl = process.env.HB_ASSET_URL ?? process.env.HB_API_URL ?? '';
-  return `${baseUrl}${path}`;
-}
 
 export default async function RootLayout({
   children,

@@ -879,6 +879,28 @@ export function startWorkers() {
           }
           break;
 
+        case "content-trending-scan":
+          try {
+            const trendspotter = (await import("../agents/trendspotter/index.js")).default;
+            const destIds = [1, 2, 4]; // calpe, texel, warrewijzer
+            const trendResults = {};
+            for (const dId of destIds) {
+              try {
+                trendResults[dId] = await trendspotter.runForDestination(dId);
+              } catch (e) {
+                trendResults[dId] = { error: e.message };
+              }
+            }
+            const totalCollected = Object.values(trendResults).reduce((s, r) => s + (r.collected || 0), 0);
+            const totalAggregated = Object.values(trendResults).reduce((s, r) => s + (r.aggregated || 0), 0);
+            console.log(`[Orchestrator] Content trending scan: collected=${totalCollected}, aggregated=${totalAggregated}`);
+            result = { type: "content-trending-scan", results: trendResults };
+          } catch (error) {
+            console.error("[Orchestrator] Content trending scan failed:", error.message);
+            result = { type: "content-trending-scan", status: "error", error: error.message };
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -911,7 +933,8 @@ export function startWorkers() {
         'intermediary-monitor': 'intermediary-monitor',
         'financial-monitor': 'financial-monitor',
         'inventory-sync': 'inventory-sync',
-        'intermediary-guest-anonymize': 'gdpr'
+        'intermediary-guest-anonymize': 'gdpr',
+        'content-trending-scan': 'trendspotter'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Box, Typography, Chip } from '@mui/material';
-import { TranslatableField, ImageUploadField, ButtonListField, SelectField, TextField } from '../fields/index.js';
+import { Box, Typography, Chip, Divider, Slider } from '@mui/material';
+import { TranslatableField, ImageUploadField, ButtonListField, SelectField, TextField, ColorField, SwitchField } from '../fields/index.js';
 import { useBrandingDestinations } from '../../../hooks/useBrandingEditor.js';
 
 const BG_TYPE_OPTIONS = [
@@ -14,6 +14,19 @@ const HEIGHT_OPTIONS = [
   { value: 'default', label: 'Default' },
   { value: 'tall', label: 'Tall' },
   { value: 'fullscreen', label: 'Fullscreen' }
+];
+
+const TEXT_ALIGN_OPTIONS = [
+  { value: 'left', label: 'Left' },
+  { value: 'center', label: 'Center' },
+  { value: 'right', label: 'Right' }
+];
+
+const HEADLINE_SIZE_OPTIONS = [
+  { value: 'small', label: 'Small' },
+  { value: 'default', label: 'Default' },
+  { value: 'large', label: 'Large' },
+  { value: 'xlarge', label: 'Extra Large' }
 ];
 
 function BrandVisualPicker({ onSelect }) {
@@ -56,13 +69,22 @@ function BrandVisualPicker({ onSelect }) {
 
 export default function HeroEditor({ block, onChange }) {
   const props = block.props || {};
+  const textStyle = props.textStyle || {};
   const update = (key, val) => onChange({ ...props, [key]: val });
+  const updateTextStyle = (key, val) => update('textStyle', { ...textStyle, [key]: val });
 
   return (
     <>
+      {/* Content */}
       <TranslatableField label="Headline" value={props.headline} onChange={v => update('headline', v)} required />
       <TranslatableField label="Description" value={props.description} onChange={v => update('description', v)} multiline rows={3} />
       <TextField label="Tagline" value={props.tagline} onChange={v => update('tagline', v)} />
+
+      {/* Background */}
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
+        Background
+      </Typography>
       <SelectField label="Background Type" value={props.backgroundType || 'image'} onChange={v => update('backgroundType', v)} options={BG_TYPE_OPTIONS} />
       <SelectField label="Height" value={props.height || 'default'} onChange={v => update('height', v)} options={HEIGHT_OPTIONS} />
       {(props.backgroundType || 'image') === 'image' && (
@@ -77,6 +99,35 @@ export default function HeroEditor({ block, onChange }) {
           <ImageUploadField label="Video Poster Image" value={props.videoPosterImage} onChange={v => update('videoPosterImage', v)} />
         </>
       )}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontSize: '0.8rem' }}>
+          Overlay Opacity: {textStyle.overlayOpacity ?? 60}%
+        </Typography>
+        <Slider
+          value={textStyle.overlayOpacity ?? 60}
+          onChange={(_, v) => updateTextStyle('overlayOpacity', v)}
+          min={0} max={100} step={5}
+          valueLabelDisplay="auto"
+          size="small"
+        />
+      </Box>
+
+      {/* Text Styling */}
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
+        Text Styling
+      </Typography>
+      <SelectField label="Text Alignment" value={textStyle.textAlign || 'left'} onChange={v => updateTextStyle('textAlign', v)} options={TEXT_ALIGN_OPTIONS} />
+      <SelectField label="Headline Size" value={textStyle.headlineSize || 'default'} onChange={v => updateTextStyle('headlineSize', v)} options={HEADLINE_SIZE_OPTIONS} />
+      <ColorField label="Headline Color" value={textStyle.headlineColor || ''} onChange={v => updateTextStyle('headlineColor', v)} />
+      <ColorField label="Description Color" value={textStyle.descriptionColor || ''} onChange={v => updateTextStyle('descriptionColor', v)} />
+      <SwitchField label="Text Shadow (improves readability)" value={textStyle.textShadow ?? false} onChange={v => updateTextStyle('textShadow', v)} />
+
+      {/* Buttons */}
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
+        Buttons
+      </Typography>
       <ButtonListField label="Buttons" value={props.buttons} onChange={v => update('buttons', v)} />
     </>
   );
