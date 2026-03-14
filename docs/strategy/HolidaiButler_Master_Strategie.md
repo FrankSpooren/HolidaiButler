@@ -1331,6 +1331,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 | **V** | **Multi-Tenant Configuratielaag** | **Next.js SSR + Component Library + Tenant-Theming + Page Builder + Stabilisatie** | **12 wkn** | **HOOG** | **🟡 IN PROGRESS** |
 | **VI** | **UX Revolution + WarreWijzer** | **Mobiele UX polish op Next.js + WarreWijzer uitrol als 3e tenant** | **6-8 wkn** | **MIDDEL** | **🟡 IN PROGRESS (VI-A COMPLEET)** |
 | VII | Polish, Scale & Launch | E2E testing, load testing, DR, go-live multi-tenant platform | 3-4 wkn | MIDDEL | GEPLAND |
+| CM | AI Content Generatie Module (Trending, Content Engine, Publishing, Analytics) | 🟡 IN PROGRESS (Fase A+B COMPLEET) | 12 wkn |
 
 ### 9.3 Afhankelijkheden & Integratiekaart
 

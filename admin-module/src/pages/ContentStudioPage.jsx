@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Paper, Tabs, Tab, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Chip, TextField, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, MenuItem, Select, FormControl, InputLabel, IconButton, Tooltip,
   Card, CardContent, Grid, CircularProgress, Alert, TablePagination, LinearProgress,
+  ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -18,7 +19,11 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TranslateIcon from '@mui/icons-material/Translate';
 import SearchIcon from '@mui/icons-material/Search';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import CloudIcon from '@mui/icons-material/Cloud';
 import { useTranslation } from 'react-i18next';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, Legend } from 'recharts';
 import useAuthStore from '../stores/authStore.js';
 import contentService from '../api/contentService.js';
 
@@ -103,6 +108,119 @@ function SummaryCards({ summary, loading }) {
         </Grid>
       ))}
     </Grid>
+  );
+}
+
+const TREND_COLORS = ['#7FA594', '#5E8B7E', '#3572de', '#ecde3c', '#e65100', '#8e24aa', '#00838f', '#c62828'];
+const MARKET_OPTIONS = ['ALL', 'NL', 'DE', 'UK', 'ES', 'FR', 'BE'];
+const LANG_OPTIONS = ['ALL', 'en', 'nl', 'de', 'es', 'fr'];
+
+function TrendChart({ trends }) {
+  const chartData = useMemo(() => {
+    if (!trends || trends.length === 0) return { data: [], keywords: [] };
+    // Group by week, show top 5 keywords by relevance_score
+    const keywordScores = {};
+    trends.forEach(t => {
+      const kw = t.keyword;
+      keywordScores[kw] = (keywordScores[kw] || 0) + (t.relevance_score || 0);
+    });
+    const topKeywords = Object.entries(keywordScores)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([kw]) => kw);
+
+    // Group by week
+    const weekMap = {};
+    trends.filter(t => topKeywords.includes(t.keyword)).forEach(t => {
+      const week = t.week_number ? `W${t.week_number}` : t.created_at?.substring(0, 10) || 'W?';
+      if (!weekMap[week]) weekMap[week] = { week };
+      weekMap[week][t.keyword] = t.relevance_score || 0;
+    });
+
+    return {
+      data: Object.values(weekMap).sort((a, b) => a.week.localeCompare(b.week)),
+      keywords: topKeywords,
+    };
+  }, [trends]);
+
+  if (chartData.data.length === 0) return null;
+
+  return (
+    <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+        Top 5 Keywords — Relevantie Score over Tijd
+      </Typography>
+      <ResponsiveContainer width="100%" height={260}>
+        <LineChart data={chartData.data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="week" fontSize={12} />
+          <YAxis domain={[0, 10]} fontSize={12} />
+          <RTooltip />
+          <Legend />
+          {chartData.keywords.map((kw, i) => (
+            <Line key={kw} type="monotone" dataKey={kw} stroke={TREND_COLORS[i % TREND_COLORS.length]} strokeWidth={2} dot={{ r: 3 }} />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </Paper>
+  );
+}
+
+function WordCloud({ trends }) {
+  const words = useMemo(() => {
+    if (!trends || trends.length === 0) return [];
+    const keywordScores = {};
+    trends.forEach(t => {
+      const kw = t.keyword;
+      if (!keywordScores[kw]) keywordScores[kw] = { keyword: kw, score: 0, direction: t.trend_direction, count: 0 };
+      keywordScores[kw].score += (t.relevance_score || 0);
+      keywordScores[kw].count++;
+    });
+    return Object.values(keywordScores)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 30);
+  }, [trends]);
+
+  if (words.length === 0) return null;
+
+  const maxScore = Math.max(...words.map(w => w.score), 1);
+  const dirColors = { breakout: '#d32f2f', rising: '#2e7d32', stable: '#1565c0', declining: '#ef6c00' };
+
+  return (
+    <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+        Keyword Cloud — grootte op relevantie, kleur op trend-richting
+      </Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', justifyContent: 'center', minHeight: 120 }}>
+        {words.map((w) => {
+          const ratio = w.score / maxScore;
+          const fontSize = 12 + ratio * 26;
+          const color = dirColors[w.direction] || '#666';
+          return (
+            <Tooltip key={w.keyword} title={`Score: ${w.score.toFixed(1)} | ${w.direction} | ${w.count}x`}>
+              <Typography
+                component="span"
+                sx={{
+                  fontSize, fontWeight: ratio > 0.6 ? 700 : ratio > 0.3 ? 500 : 400,
+                  color, cursor: 'default', px: 0.5, lineHeight: 1.3,
+                  '&:hover': { opacity: 0.7 },
+                }}
+              >
+                {w.keyword}
+              </Typography>
+            </Tooltip>
+          );
+        })}
+      </Box>
+      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 1 }}>
+        {Object.entries(dirColors).map(([dir, col]) => (
+          <Box key={dir} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: col }} />
+            <Typography variant="caption">{dir}</Typography>
+          </Box>
+        ))}
+      </Box>
+    </Paper>
   );
 }
 
@@ -445,6 +563,9 @@ export default function ContentStudioPage() {
   const [trendPage, setTrendPage] = useState(0);
   const [trendRowsPerPage, setTrendRowsPerPage] = useState(25);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [trendView, setTrendView] = useState('table');
+  const [marketFilter, setMarketFilter] = useState('ALL');
+  const [langFilter, setLangFilter] = useState('ALL');
 
   // Suggestions state
   const [suggestions, setSuggestions] = useState([]);
@@ -468,9 +589,10 @@ export default function ContentStudioPage() {
     setTrendLoading(true);
     setTrendError(null);
     try {
-      const result = await contentService.getTrending(destinationId, {
-        period, limit: trendRowsPerPage, offset: trendPage * trendRowsPerPage,
-      });
+      const opts = { period, limit: trendRowsPerPage, offset: trendPage * trendRowsPerPage };
+      if (marketFilter !== 'ALL') opts.market = marketFilter;
+      if (langFilter !== 'ALL') opts.language = langFilter;
+      const result = await contentService.getTrending(destinationId, opts);
       setTrends(result.data?.trends || []);
       setTrendTotal(result.data?.total || 0);
     } catch (err) {
@@ -478,7 +600,7 @@ export default function ContentStudioPage() {
     } finally {
       setTrendLoading(false);
     }
-  }, [destinationId, period, trendPage, trendRowsPerPage]);
+  }, [destinationId, period, trendPage, trendRowsPerPage, marketFilter, langFilter]);
 
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -613,8 +735,35 @@ export default function ContentStudioPage() {
       {tab === 0 && (
         <>
           <SummaryCards summary={summary} loading={summaryLoading} />
+
+          {/* Filters row */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>Markt:</Typography>
+            <ToggleButtonGroup size="small" value={marketFilter} exclusive onChange={(_, v) => { if (v) { setMarketFilter(v); setTrendPage(0); } }}>
+              {MARKET_OPTIONS.map(m => <ToggleButton key={m} value={m} sx={{ py: 0.3, px: 1, fontSize: 11 }}>{m}</ToggleButton>)}
+            </ToggleButtonGroup>
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 1, mr: 0.5 }}>Taal:</Typography>
+            <ToggleButtonGroup size="small" value={langFilter} exclusive onChange={(_, v) => { if (v) { setLangFilter(v); setTrendPage(0); } }}>
+              {LANG_OPTIONS.map(l => <ToggleButton key={l} value={l} sx={{ py: 0.3, px: 1, fontSize: 11 }}>{l === 'ALL' ? 'ALL' : l.toUpperCase()}</ToggleButton>)}
+            </ToggleButtonGroup>
+            <Box sx={{ flex: 1 }} />
+            <ToggleButtonGroup size="small" value={trendView} exclusive onChange={(_, v) => { if (v) setTrendView(v); }}>
+              <ToggleButton value="table"><Tooltip title="Tabel"><TableChartIcon fontSize="small" /></Tooltip></ToggleButton>
+              <ToggleButton value="chart"><Tooltip title="Trendgrafiek"><BarChartIcon fontSize="small" /></Tooltip></ToggleButton>
+              <ToggleButton value="cloud"><Tooltip title="Word Cloud"><CloudIcon fontSize="small" /></Tooltip></ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
           {trendError && <Alert severity="error" sx={{ mb: 2 }}>{trendError}</Alert>}
-          <Paper variant="outlined">
+
+          {/* TrendChart view */}
+          {trendView === 'chart' && <TrendChart trends={trends} />}
+
+          {/* Word Cloud view */}
+          {trendView === 'cloud' && <WordCloud trends={trends} />}
+
+          {/* Table view (always shown, collapsed in other views) */}
+          <Paper variant="outlined" sx={{ display: trendView === 'table' ? 'block' : 'none' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 {trendTotal} keywords gevonden

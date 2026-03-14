@@ -9982,23 +9982,17 @@ router.patch('/content/suggestions/:id', writeAccess(), async (req, res) => {
       return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: 'status must be "approved" or "rejected"' } });
     }
 
-    const updateFields = { status, updated_at: new Date() };
     if (status === 'approved') {
-      updateFields.approved_by = req.adminUser?.id || null;
-      updateFields.approved_at = new Date();
+      await mysqlSequelize.query(
+        `UPDATE content_suggestions SET status = :status, approved_by = :approvedBy, approved_at = NOW(), updated_at = NOW() WHERE id = :id`,
+        { replacements: { status, approvedBy: req.adminUser?.id || null, id: Number(id) } }
+      );
+    } else {
+      await mysqlSequelize.query(
+        `UPDATE content_suggestions SET status = :status, updated_at = NOW() WHERE id = :id`,
+        { replacements: { status, id: Number(id) } }
+      );
     }
-
-    await mysqlSequelize.query(
-      `UPDATE content_suggestions SET status = :status, approved_by = :approvedBy, approved_at = :approvedAt, updated_at = NOW() WHERE id = :id`,
-      {
-        replacements: {
-          status,
-          approvedBy: updateFields.approved_by,
-          approvedAt: updateFields.approved_at || null,
-          id: Number(id),
-        },
-      }
-    );
 
     res.json({ success: true, data: { id: Number(id), status } });
   } catch (error) {
@@ -10093,7 +10087,7 @@ router.get('/content/items', adminAuth('content_editor'), async (req, res) => {
       return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destination_id is required' } });
     }
 
-    let where = 'WHERE ci.destination_id = :destId';
+    let where = "WHERE ci.destination_id = :destId AND ci.approval_status != 'deleted'";
     const replacements = { destId: Number(destination_id), limit: Number(limit), offset: Number(offset) };
     if (status) {
       where += ' AND ci.approval_status = :status';
@@ -10214,7 +10208,7 @@ router.patch('/content/items/:id', writeAccess(), async (req, res) => {
 router.delete('/content/items/:id', writeAccess(), async (req, res) => {
   try {
     await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'rejected', updated_at = NOW() WHERE id = :id`,
+      `UPDATE content_items SET approval_status = 'deleted', updated_at = NOW() WHERE id = :id`,
       { replacements: { id: Number(req.params.id) } }
     );
     res.json({ success: true, data: { id: Number(req.params.id), deleted: true } });
@@ -10258,7 +10252,9 @@ router.post('/content/items/:id/translate', writeAccess(), async (req, res) => {
       );
     }
 
-    res.json({ success: true, data: { id: item.id, target_lang, translated: !!translatedBody } });
+    const responseData = { id: item.id, target_lang, translated: !!translatedBody };
+    if (translatedBody) responseData[`body_${target_lang}`] = translatedBody;
+    res.json({ success: true, data: responseData });
   } catch (error) {
     logger.error('[AdminPortal] Content translation error:', error);
     res.status(500).json({ success: false, error: { code: 'TRANSLATION_ERROR', message: error.message } });
