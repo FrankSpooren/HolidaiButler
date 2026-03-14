@@ -3,10 +3,10 @@
 import { useState, useRef, useEffect } from 'react';
 
 const LANGUAGES = [
-  { code: 'nl', label: 'Nederlands' },
-  { code: 'en', label: 'English' },
-  { code: 'de', label: 'Deutsch' },
-  { code: 'es', label: 'Espanol' },
+  { code: 'nl', label: 'Nederlands', flag: '\u{1F1F3}\u{1F1F1}' },
+  { code: 'en', label: 'English', flag: '\u{1F1EC}\u{1F1E7}' },
+  { code: 'de', label: 'Deutsch', flag: '\u{1F1E9}\u{1F1EA}' },
+  { code: 'es', label: 'Espa\u00F1ol', flag: '\u{1F1EA}\u{1F1F8}' },
 ];
 
 interface LanguageSwitcherProps {
@@ -42,7 +42,7 @@ export default function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
         className="flex items-center gap-1 px-2 py-1.5 text-sm font-medium text-foreground/70 hover:text-primary transition-colors rounded"
         aria-label="Switch language"
       >
-        <span>{locale.toUpperCase()}</span>
+        <span className="text-base leading-none">{LANGUAGES.find(l => l.code === locale)?.flag ?? '\u{1F310}'}</span>
         <svg className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
@@ -54,14 +54,14 @@ export default function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
             <button
               key={lang.code}
               onClick={() => handleSelect(lang.code)}
-              className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+              className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
                 lang.code === locale
                   ? 'bg-primary/10 text-primary font-medium'
                   : 'text-foreground hover:bg-gray-50'
               }`}
             >
-              <span className="font-medium mr-2">{lang.code.toUpperCase()}</span>
-              <span className="text-muted">{lang.label}</span>
+              <span className="text-base leading-none">{lang.flag}</span>
+              <span>{lang.label}</span>
             </button>
           ))}
         </div>

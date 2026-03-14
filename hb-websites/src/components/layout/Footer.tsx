@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { TenantConfig } from '@/types/tenant';
+import { resolveAssetUrl } from '@/lib/assets';
 
 interface FooterProps {
   tenant: TenantConfig;
@@ -44,12 +45,6 @@ function resolveTitle(value: string | Record<string, string> | undefined, locale
   if (!value) return '';
   if (typeof value === 'string') return value;
   return value[locale] ?? value.en ?? value.nl ?? Object.values(value)[0] ?? '';
-}
-
-function resolveAssetUrl(path: string): string {
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  const baseUrl = process.env.HB_ASSET_URL ?? process.env.HB_API_URL ?? '';
-  return `${baseUrl}${path}`;
 }
 
 export default function Footer({ tenant, locale }: FooterProps) {

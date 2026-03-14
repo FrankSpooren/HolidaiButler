@@ -183,10 +183,10 @@ class SyncReporter {
     );
 
     const [bySentiment] = await this.sequelize.query(`
-      SELECT sentiment_label, COUNT(*) as count
+      SELECT sentiment, COUNT(*) as count
       FROM reviews
       WHERE spam_score < 0.5
-      GROUP BY sentiment_label
+      GROUP BY sentiment
     `);
 
     const [byLanguage] = await this.sequelize.query(`
