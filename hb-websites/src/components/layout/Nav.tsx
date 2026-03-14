@@ -9,10 +9,50 @@ import LanguageSwitcher from './LanguageSwitcher';
 
 const AccessibilityModal = dynamic(() => import('./AccessibilityModal'), { ssr: false });
 
+interface NavItemStyle {
+  color?: string;
+  fontSize?: string;
+  fontWeight?: string;
+  borderRadius?: string;
+  backgroundColor?: string;
+}
+
 interface NavItem {
   label: string;
   href: string;
   featureFlag?: string;
+  style?: NavItemStyle;
+}
+
+const FONT_SIZE_MAP: Record<string, string> = {
+  small: '0.75rem',
+  medium: '0.875rem',
+  large: '1rem',
+  xlarge: '1.125rem',
+};
+
+const FONT_WEIGHT_MAP: Record<string, number> = {
+  normal: 400,
+  medium: 500,
+  semibold: 600,
+  bold: 700,
+};
+
+const BORDER_RADIUS_MAP: Record<string, string> = {
+  sm: '4px',
+  md: '8px',
+  full: '9999px',
+};
+
+function navItemStyle(s?: NavItemStyle): React.CSSProperties {
+  if (!s) return {};
+  const style: React.CSSProperties = {};
+  if (s.color) style.color = s.color;
+  if (s.fontSize && FONT_SIZE_MAP[s.fontSize]) style.fontSize = FONT_SIZE_MAP[s.fontSize];
+  if (s.fontWeight && FONT_WEIGHT_MAP[s.fontWeight]) style.fontWeight = FONT_WEIGHT_MAP[s.fontWeight];
+  if (s.backgroundColor) { style.backgroundColor = s.backgroundColor; style.padding = '4px 12px'; }
+  if (s.borderRadius && BORDER_RADIUS_MAP[s.borderRadius]) style.borderRadius = BORDER_RADIUS_MAP[s.borderRadius];
+  return style;
 }
 
 interface NavProps {
@@ -45,6 +85,7 @@ export default function Nav({ items, featureFlags, locale }: NavProps) {
               <Link
                 href={item.href}
                 className="text-foreground/80 hover:text-primary transition-colors font-medium"
+                style={navItemStyle(item.style)}
               >
                 {item.label}
               </Link>
@@ -114,6 +155,7 @@ export default function Nav({ items, featureFlags, locale }: NavProps) {
                 <Link
                   href={item.href}
                   className="block px-6 py-3 text-foreground hover:bg-primary-light transition-colors"
+                  style={navItemStyle(item.style)}
                   onClick={() => setIsOpen(false)}
                 >
                   {item.label}

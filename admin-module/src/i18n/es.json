@@ -21,6 +21,7 @@
     "navigation": "Navegación",
     "media": "Mediateca",
     "onboarding": "Nuevo Destino",
+    "contentStudio": "Estudio de Contenido",
     "section_overview": "Resumen",
     "section_content": "Contenido y Datos",
     "section_commerce": "Comercio",
@@ -1085,5 +1086,14 @@
     "dnsStep1": "Paso 1: Crear registros DNS A",
     "dnsStep2": "Paso 2: Solicitar certificado SSL",
     "dnsStep3": "Paso 3: Configurar Apache VHost"
+  },
+  "contentStudio": {
+    "title": "Estudio de Contenido",
+    "tabs": {
+      "trending": "Monitor de Tendencias",
+      "suggestions": "Sugerencias",
+      "content": "Elementos de Contenido",
+      "performance": "Rendimiento"
+    }
   }
 }

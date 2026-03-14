@@ -236,6 +236,15 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: intermediary-guest-anonymize (1st of month 03:30)');
 
+  // === Content Module: Trendspotter Agent ===
+
+  // Content Trending Scan (De Trendspotter) - weekly Sunday at 03:30
+  await scheduledQueue.add('content-trending-scan', { type: 'content-trending' }, {
+    repeat: { cron: '30 3 * * 0', tz: 'Europe/Amsterdam' },
+    jobId: 'content-trending-scan-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-trending-scan (Sunday 03:30)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);
