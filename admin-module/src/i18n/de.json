@@ -1094,6 +1094,17 @@
       "suggestions": "Vorschläge",
       "content": "Content-Elemente",
       "performance": "Performance"
-    }
+    },
+    "generateSuggestions": "Vorschläge generieren",
+    "suggestionsFound": "Vorschläge",
+    "itemsFound": "Content-Elemente",
+    "noSuggestions": "Keine Vorschläge. Klicken Sie auf \"Vorschläge generieren\" um KI-Vorschläge zu erstellen.",
+    "noItems": "Keine Content-Elemente. Generieren Sie Content aus genehmigten Vorschlägen.",
+    "approve": "Genehmigen",
+    "reject": "Ablehnen",
+    "generateContent": "Content generieren",
+    "seoScore": "SEO-Bewertung",
+    "translateTo": "Übersetzen nach",
+    "reanalyze": "Neu analysieren"
   }
 }

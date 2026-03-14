@@ -245,6 +245,13 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: content-trending-scan (Sunday 03:30)');
 
+  // Content SEO Audit (De SEO Meester) - weekly Monday at 04:00
+  await scheduledQueue.add('content-seo-audit', { type: 'content-seo-audit' }, {
+    repeat: { cron: '0 4 * * 1', tz: 'Europe/Amsterdam' },
+    jobId: 'content-seo-audit-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-seo-audit (Monday 04:00)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);

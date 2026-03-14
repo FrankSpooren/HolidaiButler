@@ -1094,6 +1094,17 @@
       "suggestions": "Sugerencias",
       "content": "Elementos de Contenido",
       "performance": "Rendimiento"
-    }
+    },
+    "generateSuggestions": "Generar Sugerencias",
+    "suggestionsFound": "sugerencias",
+    "itemsFound": "elementos de contenido",
+    "noSuggestions": "Sin sugerencias. Haz clic en \"Generar Sugerencias\" para crear sugerencias con IA.",
+    "noItems": "Sin elementos de contenido. Genera contenido a partir de sugerencias aprobadas.",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "generateContent": "Generar Contenido",
+    "seoScore": "Puntuación SEO",
+    "translateTo": "Traducir a",
+    "reanalyze": "Re-analizar"
   }
 }

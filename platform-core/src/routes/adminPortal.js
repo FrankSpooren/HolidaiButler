@@ -1352,7 +1352,46 @@ const AGENT_METADATA = [
 3. Controleer trending_data: SELECT destination_id, COUNT(*) FROM trending_data GROUP BY destination_id
 4. Controleer recente trends: SELECT keyword, relevance_score, trend_direction FROM trending_data ORDER BY created_at DESC LIMIT 10
 5. Herstart API: pm2 restart holidaibutler-api
-6. Agent draait wekelijks (zondag 03:30) — wacht op volgende run en verifieer status` } }
+6. Agent draait wekelijks (zondag 03:30) — wacht op volgende run en verifieer status` } },
+  // === Content Module: De Redacteur & De SEO Meester ===
+  { id: 'redacteur', name: 'De Redacteur', englishName: 'Content Redacteur Agent', category: 'content', type: 'A',
+    description: 'AI content generatie via Mistral AI: blog posts, social posts, video scripts met tone-of-voice per destination',
+    description_en: 'AI content generation via Mistral AI: blog posts, social posts, video scripts with per-destination tone of voice',
+    tasks: [
+      'Content suggesties genereren op basis van trending data',
+      'Blog/social post/video script generatie via Mistral AI',
+      'Per-destination tone-of-voice (Calpe warm, Texel adventurous, WarreWijzer slow-living)',
+      'Meertalige vertaling (EN/NL/DE/ES/FR)',
+      'Platform-specifieke formatting (Instagram 2200, Facebook 63206, LinkedIn 3000 chars)'
+    ],
+    monitoring_scope: 'content_suggestions, content_items, Mistral API',
+    output_description: 'AI-gegenereerde content items met vertalingen en SEO metadata',
+    schedule: null, actorNames: ['redacteur'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Redacteur"
+2. Controleer MISTRAL_API_KEY in .env
+3. Controleer content_suggestions: SELECT COUNT(*), status FROM content_suggestions GROUP BY status
+4. Controleer content_items: SELECT COUNT(*), approval_status FROM content_items GROUP BY approval_status
+5. Herstart API: pm2 restart holidaibutler-api
+6. Agent draait on-demand — trigger via Admin Portal Content Studio` } },
+  { id: 'seoMeester', name: 'De SEO Meester', englishName: 'SEO Master Agent', category: 'content', type: 'B',
+    description: 'SEO analyse: readability score, keyword density, heading structuur, interne links, SISTRIX visibility',
+    description_en: 'SEO analysis: readability score, keyword density, heading structure, internal links, SISTRIX visibility',
+    tasks: [
+      'Meta title/description lengte checks (50-60 / 150-160 chars)',
+      'Keyword density analyse (0.5-3% optimaal)',
+      'Heading structuur controle (H1→H2→H3 hiërarchie)',
+      'Readability score (Flesch-Kincaid per taal: NL/EN/DE/ES)',
+      'Interne link suggesties (POI namen matchen in content)',
+      'SISTRIX visibility index + keyword rankings per domein'
+    ],
+    monitoring_scope: 'content_items seo_data, SISTRIX API, POI tabel',
+    output_description: 'SEO scores per content item, SISTRIX visibility rapportage',
+    schedule: '0 4 * * 1', actorNames: ['seo-meester'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "SEO"
+2. Controleer SISTRIX_API_KEY in .env
+3. Controleer content_items: SELECT id, JSON_EXTRACT(seo_data, '$.overallScore') FROM content_items LIMIT 10
+4. Herstart API: pm2 restart holidaibutler-api
+5. Agent draait wekelijks (maandag 04:00) — wacht op volgende run en verifieer status` } }
 ];
 
 /**
@@ -1387,7 +1426,8 @@ const SCHEDULED_JOBS_METADATA = [
   { name: 'financial-monitor', agent: 'De Kassier', cron: '30 6 * * *', description: 'Dagelijkse financiële reconciliatie en anomaliedetectie' },
   { name: 'inventory-sync', agent: 'De Magazijnier', cron: '*/30 * * * *', description: 'Voorraad synchronisatie Redis vs MySQL' },
   // Content Module
-  { name: 'content-trending-scan', agent: 'De Trendspotter', cron: '30 3 * * 0', description: 'Wekelijkse trending keyword collectie en analyse via Google Trends' }
+  { name: 'content-trending-scan', agent: 'De Trendspotter', cron: '30 3 * * 0', description: 'Wekelijkse trending keyword collectie en analyse via Google Trends' },
+  { name: 'content-seo-audit', agent: 'De SEO Meester', cron: '0 4 * * 1', description: 'Wekelijkse SEO audit: readability, keyword density, SISTRIX visibility' }
 ];
 
 /**
@@ -1483,6 +1523,14 @@ const AGENT_EXTENDED_DATA = {
   trendspotter: {
     dependencies: ['Apify Google Trends Scraper', 'MySQL trending_data', 'APIFY_API_TOKEN'],
     output: { type: 'Trending Keywords', frequency: 'Wekelijks (zondag 03:30)', recipients: 'MySQL trending_data', description: 'Trending keywords met relevance scores, seizoensboost, marktdata' }
+  },
+  redacteur: {
+    dependencies: ['Mistral AI API', 'MySQL content_suggestions/content_items', 'translationService'],
+    output: { type: 'Content Generation', frequency: 'On-demand', recipients: 'MySQL content_items', description: 'AI-gegenereerde blog/social/video content met vertalingen' }
+  },
+  seoMeester: {
+    dependencies: ['MySQL content_items', 'MySQL POI (internal links)', 'SISTRIX API'],
+    output: { type: 'SEO Analysis', frequency: 'Wekelijks (maandag 04:00)', recipients: 'MySQL content_items.seo_data', description: 'SEO scores, readability, keyword density, SISTRIX visibility' }
   }
 };
 
@@ -9816,6 +9864,445 @@ router.post('/content/trending/manual', writeAccess(), async (req, res) => {
   } catch (error) {
     logger.error('[AdminPortal] Manual trending add error:', error);
     res.status(500).json({ success: false, error: { code: 'MANUAL_TRENDING_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// CONTENT MODULE: SUGGESTIONS (Fase B — Blok B.2)
+// ============================================================
+
+/**
+ * GET /content/suggestions — List content suggestions
+ * Query: destination_id (required), status, limit, offset
+ */
+router.get('/content/suggestions', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const { destination_id, status, limit = 50, offset = 0 } = req.query;
+    if (!destination_id) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destination_id is required' } });
+    }
+
+    let where = 'WHERE cs.destination_id = :destId';
+    const replacements = { destId: Number(destination_id), limit: Number(limit), offset: Number(offset) };
+    if (status) {
+      where += ' AND cs.status = :status';
+      replacements.status = status;
+    }
+
+    const [suggestions] = await mysqlSequelize.query(
+      `SELECT cs.* FROM content_suggestions cs ${where} ORDER BY cs.engagement_score DESC, cs.created_at DESC LIMIT :limit OFFSET :offset`,
+      { replacements }
+    );
+    const [[{ total }]] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total FROM content_suggestions cs ${where}`,
+      { replacements }
+    );
+
+    // Parse JSON fields
+    for (const s of suggestions) {
+      if (typeof s.suggested_channels === 'string') s.suggested_channels = JSON.parse(s.suggested_channels);
+      if (typeof s.keyword_cluster === 'string') s.keyword_cluster = JSON.parse(s.keyword_cluster);
+      if (typeof s.trending_source_ids === 'string') s.trending_source_ids = JSON.parse(s.trending_source_ids);
+    }
+
+    res.json({ success: true, data: { suggestions, total } });
+  } catch (error) {
+    logger.error('[AdminPortal] Content suggestions list error:', error);
+    res.status(500).json({ success: false, error: { code: 'SUGGESTIONS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/suggestions/generate — AI suggestie-generatie vanuit trending data
+ * Body: destination_id (required)
+ */
+router.post('/content/suggestions/generate', writeAccess(), async (req, res) => {
+  try {
+    const { destination_id } = req.body;
+    if (!destination_id) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destination_id is required' } });
+    }
+
+    // Get top trending keywords (last 30d, relevance DESC)
+    const [trendingKeywords] = await mysqlSequelize.query(
+      `SELECT keyword, relevance_score, trend_direction, search_volume, language
+       FROM trending_data
+       WHERE destination_id = :destId AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+       ORDER BY relevance_score DESC
+       LIMIT 10`,
+      { replacements: { destId: Number(destination_id) } }
+    );
+
+    if (trendingKeywords.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_TRENDS', message: 'No trending keywords found for this destination in the last 30 days' } });
+    }
+
+    // Generate suggestions via De Redacteur
+    const redacteur = (await import('../services/agents/contentRedacteur/index.js')).default;
+    const suggestions = await redacteur.generateSuggestionsForDestination(Number(destination_id), trendingKeywords);
+
+    // Save to database
+    const saved = [];
+    for (const s of suggestions) {
+      const [result] = await mysqlSequelize.query(
+        `INSERT INTO content_suggestions (destination_id, title, summary, content_type, suggested_channels, keyword_cluster, engagement_score, status, created_at, updated_at)
+         VALUES (:destId, :title, :summary, :contentType, :channels, :keywords, :score, 'pending', NOW(), NOW())`,
+        {
+          replacements: {
+            destId: Number(destination_id),
+            title: s.title,
+            summary: s.summary,
+            contentType: s.content_type,
+            channels: JSON.stringify(s.suggested_channels),
+            keywords: JSON.stringify(s.keyword_cluster),
+            score: s.engagement_score,
+          },
+        }
+      );
+      saved.push({ ...s, id: result });
+    }
+
+    res.json({ success: true, data: { generated: saved.length, suggestions: saved } });
+  } catch (error) {
+    logger.error('[AdminPortal] Suggestion generation error:', error);
+    res.status(500).json({ success: false, error: { code: 'SUGGESTION_GENERATION_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PATCH /content/suggestions/:id — Approve/reject suggestie
+ * Body: status ('approved' | 'rejected')
+ */
+router.patch('/content/suggestions/:id', writeAccess(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: 'status must be "approved" or "rejected"' } });
+    }
+
+    const updateFields = { status, updated_at: new Date() };
+    if (status === 'approved') {
+      updateFields.approved_by = req.adminUser?.id || null;
+      updateFields.approved_at = new Date();
+    }
+
+    await mysqlSequelize.query(
+      `UPDATE content_suggestions SET status = :status, approved_by = :approvedBy, approved_at = :approvedAt, updated_at = NOW() WHERE id = :id`,
+      {
+        replacements: {
+          status,
+          approvedBy: updateFields.approved_by,
+          approvedAt: updateFields.approved_at || null,
+          id: Number(id),
+        },
+      }
+    );
+
+    res.json({ success: true, data: { id: Number(id), status } });
+  } catch (error) {
+    logger.error('[AdminPortal] Suggestion status update error:', error);
+    res.status(500).json({ success: false, error: { code: 'SUGGESTION_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// CONTENT MODULE: CONTENT ITEMS (Fase B — Blok B.3)
+// ============================================================
+
+/**
+ * POST /content/items/generate — Generate content via Mistral AI
+ * Body: suggestion_id, content_type, platform, languages[]
+ */
+router.post('/content/items/generate', writeAccess(), async (req, res) => {
+  try {
+    const { suggestion_id, content_type, platform = 'website', languages = [] } = req.body;
+    if (!suggestion_id) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_SUGGESTION', message: 'suggestion_id is required' } });
+    }
+
+    // Get the suggestion
+    const [[suggestion]] = await mysqlSequelize.query(
+      'SELECT * FROM content_suggestions WHERE id = :id',
+      { replacements: { id: Number(suggestion_id) } }
+    );
+    if (!suggestion) {
+      return res.status(404).json({ success: false, error: { code: 'SUGGESTION_NOT_FOUND', message: 'Suggestion not found' } });
+    }
+
+    // Parse JSON fields
+    if (typeof suggestion.keyword_cluster === 'string') suggestion.keyword_cluster = JSON.parse(suggestion.keyword_cluster);
+    if (typeof suggestion.suggested_channels === 'string') suggestion.suggested_channels = JSON.parse(suggestion.suggested_channels);
+
+    // Generate content
+    const redacteur = (await import('../services/agents/contentRedacteur/index.js')).default;
+    const generated = await redacteur.generateContentItem(suggestion, {
+      destinationId: suggestion.destination_id,
+      contentType: content_type || suggestion.content_type,
+      platform,
+      languages,
+    });
+
+    // Save to content_items
+    const [insertResult] = await mysqlSequelize.query(
+      `INSERT INTO content_items
+       (destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+        seo_data, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+       VALUES (:destId, :sugId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
+        :seoData, :platform, 'draft', :aiModel, true, NOW(), NOW())`,
+      {
+        replacements: {
+          destId: suggestion.destination_id,
+          sugId: suggestion.id,
+          contentType: generated.content_type,
+          title: generated.title,
+          bodyEn: generated.body_en || null,
+          bodyNl: generated.body_nl || null,
+          bodyDe: generated.body_de || null,
+          bodyEs: generated.body_es || null,
+          bodyFr: generated.body_fr || null,
+          seoData: JSON.stringify({ meta_description: generated.meta_description, hashtags: generated.hashtags }),
+          platform: generated.target_platform,
+          aiModel: generated.ai_model,
+        },
+      }
+    );
+
+    // Update suggestion status to 'generated'
+    await mysqlSequelize.query(
+      `UPDATE content_suggestions SET status = 'generated', updated_at = NOW() WHERE id = :id`,
+      { replacements: { id: suggestion.id } }
+    );
+
+    res.json({ success: true, data: { id: insertResult, ...generated } });
+  } catch (error) {
+    logger.error('[AdminPortal] Content generation error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONTENT_GENERATION_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/items — List content items
+ * Query: destination_id (required), status, limit, offset
+ */
+router.get('/content/items', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const { destination_id, status, limit = 50, offset = 0 } = req.query;
+    if (!destination_id) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destination_id is required' } });
+    }
+
+    let where = 'WHERE ci.destination_id = :destId';
+    const replacements = { destId: Number(destination_id), limit: Number(limit), offset: Number(offset) };
+    if (status) {
+      where += ' AND ci.approval_status = :status';
+      replacements.status = status;
+    }
+
+    const [items] = await mysqlSequelize.query(
+      `SELECT ci.*, cs.keyword_cluster, cs.engagement_score
+       FROM content_items ci
+       LEFT JOIN content_suggestions cs ON ci.suggestion_id = cs.id
+       ${where} ORDER BY ci.updated_at DESC LIMIT :limit OFFSET :offset`,
+      { replacements }
+    );
+    const [[{ total }]] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total FROM content_items ci ${where}`,
+      { replacements }
+    );
+
+    // Parse JSON fields
+    for (const item of items) {
+      if (typeof item.seo_data === 'string') item.seo_data = JSON.parse(item.seo_data);
+      if (typeof item.social_metadata === 'string') item.social_metadata = JSON.parse(item.social_metadata);
+      if (typeof item.media_ids === 'string') item.media_ids = JSON.parse(item.media_ids);
+      if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
+    }
+
+    res.json({ success: true, data: { items, total } });
+  } catch (error) {
+    logger.error('[AdminPortal] Content items list error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONTENT_ITEMS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/items/:id — Content item detail + all language versions
+ */
+router.get('/content/items/:id', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const [[item]] = await mysqlSequelize.query(
+      `SELECT ci.*, cs.keyword_cluster, cs.engagement_score, cs.title as suggestion_title
+       FROM content_items ci
+       LEFT JOIN content_suggestions cs ON ci.suggestion_id = cs.id
+       WHERE ci.id = :id`,
+      { replacements: { id: Number(req.params.id) } }
+    );
+
+    if (!item) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    }
+
+    // Parse JSON fields
+    if (typeof item.seo_data === 'string') item.seo_data = JSON.parse(item.seo_data);
+    if (typeof item.social_metadata === 'string') item.social_metadata = JSON.parse(item.social_metadata);
+    if (typeof item.media_ids === 'string') item.media_ids = JSON.parse(item.media_ids);
+    if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
+
+    // Compile language versions
+    item.languages = {};
+    for (const lang of ['en', 'nl', 'de', 'es', 'fr']) {
+      if (item[`body_${lang}`]) {
+        item.languages[lang] = item[`body_${lang}`];
+      }
+    }
+
+    res.json({ success: true, data: item });
+  } catch (error) {
+    logger.error('[AdminPortal] Content item detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONTENT_ITEM_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PATCH /content/items/:id — Update body/approve/reject
+ * Body: title, body_en, body_nl, body_de, body_es, body_fr, approval_status, seo_data
+ */
+router.patch('/content/items/:id', writeAccess(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const allowedFields = ['title', 'body_en', 'body_nl', 'body_de', 'body_es', 'body_fr', 'approval_status', 'seo_data', 'social_metadata', 'target_platform'];
+
+    const updates = [];
+    const replacements = { id: Number(id) };
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        const val = typeof req.body[field] === 'object' ? JSON.stringify(req.body[field]) : req.body[field];
+        updates.push(`${field} = :${field}`);
+        replacements[field] = val;
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_UPDATES', message: 'No valid fields to update' } });
+    }
+
+    // Handle approval
+    if (req.body.approval_status === 'approved') {
+      updates.push('approved_by = :approvedBy');
+      replacements.approvedBy = req.adminUser?.id || null;
+    }
+
+    updates.push('updated_at = NOW()');
+    await mysqlSequelize.query(
+      `UPDATE content_items SET ${updates.join(', ')} WHERE id = :id`,
+      { replacements }
+    );
+
+    res.json({ success: true, data: { id: Number(id), updated: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Content item update error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONTENT_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /content/items/:id — Soft delete (approval_status → 'rejected')
+ */
+router.delete('/content/items/:id', writeAccess(), async (req, res) => {
+  try {
+    await mysqlSequelize.query(
+      `UPDATE content_items SET approval_status = 'rejected', updated_at = NOW() WHERE id = :id`,
+      { replacements: { id: Number(req.params.id) } }
+    );
+    res.json({ success: true, data: { id: Number(req.params.id), deleted: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Content item delete error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONTENT_DELETE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/translate — Translate to additional language
+ * Body: target_lang (e.g., 'de', 'es', 'fr')
+ */
+router.post('/content/items/:id/translate', writeAccess(), async (req, res) => {
+  try {
+    const { target_lang } = req.body;
+    if (!target_lang || !['nl', 'de', 'es', 'fr'].includes(target_lang)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_LANG', message: 'target_lang must be nl, de, es, or fr' } });
+    }
+
+    const [[item]] = await mysqlSequelize.query(
+      'SELECT id, title, body_en FROM content_items WHERE id = :id',
+      { replacements: { id: Number(req.params.id) } }
+    );
+    if (!item || !item.body_en) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found or has no English body' } });
+    }
+
+    const { translateTexts } = await import('../services/translationService.js');
+    const translations = await translateTexts(
+      [{ key: 'body', value: item.body_en }],
+      'en',
+      [target_lang]
+    );
+
+    const translatedBody = translations.body?.[target_lang] || '';
+    if (translatedBody) {
+      await mysqlSequelize.query(
+        `UPDATE content_items SET body_${target_lang} = :body, updated_at = NOW() WHERE id = :id`,
+        { replacements: { body: translatedBody, id: item.id } }
+      );
+    }
+
+    res.json({ success: true, data: { id: item.id, target_lang, translated: !!translatedBody } });
+  } catch (error) {
+    logger.error('[AdminPortal] Content translation error:', error);
+    res.status(500).json({ success: false, error: { code: 'TRANSLATION_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/items/:id/seo — SEO analysis via De SEO Meester
+ */
+router.get('/content/items/:id/seo', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const [[item]] = await mysqlSequelize.query(
+      `SELECT ci.*, cs.keyword_cluster
+       FROM content_items ci
+       LEFT JOIN content_suggestions cs ON ci.suggestion_id = cs.id
+       WHERE ci.id = :id`,
+      { replacements: { id: Number(req.params.id) } }
+    );
+
+    if (!item) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    }
+
+    if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
+    if (typeof item.seo_data === 'string') item.seo_data = JSON.parse(item.seo_data);
+
+    const seoMeester = (await import('../services/agents/seoMeester/index.js')).default;
+    const analysis = await seoMeester.analyzeItem(item, item.destination_id);
+
+    // Save updated SEO data
+    await mysqlSequelize.query(
+      `UPDATE content_items SET seo_data = :seoData, updated_at = NOW() WHERE id = :id`,
+      {
+        replacements: {
+          seoData: JSON.stringify({ ...analysis, lastAudit: new Date().toISOString() }),
+          id: item.id,
+        },
+      }
+    );
+
+    res.json({ success: true, data: analysis });
+  } catch (error) {
+    logger.error('[AdminPortal] SEO analysis error:', error);
+    res.status(500).json({ success: false, error: { code: 'SEO_ANALYSIS_ERROR', message: error.message } });
   }
 });
 

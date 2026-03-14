@@ -1094,6 +1094,17 @@
       "suggestions": "Suggestions",
       "content": "Content Items",
       "performance": "Performance"
-    }
+    },
+    "generateSuggestions": "Generate Suggestions",
+    "suggestionsFound": "suggestions",
+    "itemsFound": "content items",
+    "noSuggestions": "No suggestions. Click \"Generate Suggestions\" to create AI suggestions.",
+    "noItems": "No content items. Generate content from approved suggestions.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "generateContent": "Generate Content",
+    "seoScore": "SEO Score",
+    "translateTo": "Translate to",
+    "reanalyze": "Re-analyze"
   }
 }

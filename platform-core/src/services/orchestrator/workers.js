@@ -901,6 +901,18 @@ export function startWorkers() {
           }
           break;
 
+        case "content-seo-audit":
+          try {
+            const seoMeester = (await import("../agents/seoMeester/index.js")).default;
+            const seoResult = await seoMeester.execute();
+            console.log(`[Orchestrator] Content SEO audit: audited=${seoResult.audited}, avgScore=${seoResult.avgScore}`);
+            result = { type: "content-seo-audit", ...seoResult };
+          } catch (error) {
+            console.error("[Orchestrator] Content SEO audit failed:", error.message);
+            result = { type: "content-seo-audit", status: "error", error: error.message };
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -934,7 +946,8 @@ export function startWorkers() {
         'financial-monitor': 'financial-monitor',
         'inventory-sync': 'inventory-sync',
         'intermediary-guest-anonymize': 'gdpr',
-        'content-trending-scan': 'trendspotter'
+        'content-trending-scan': 'trendspotter',
+        'content-seo-audit': 'seo-meester'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {
