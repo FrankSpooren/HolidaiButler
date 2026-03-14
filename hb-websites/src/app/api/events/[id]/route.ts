@@ -16,7 +16,7 @@ export async function GET(
   const locale = request.headers.get('accept-language') ?? 'en';
 
   try {
-    const eventRes = await fetch(`${HB_API_URL}/api/v1/agenda/${id}`, {
+    const eventRes = await fetch(`${HB_API_URL}/api/v1/agenda/events/${id}`, {
       headers: { 'X-Destination-ID': String(destId), 'Accept-Language': locale },
     });
 

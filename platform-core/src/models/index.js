@@ -18,6 +18,14 @@ import Permission from './Permission.js';
 import UserConsent from './UserConsent.js';
 import ConsentHistory from './ConsentHistory.js';
 
+// Content Module models (Fase A)
+import TrendingData from './TrendingData.js';
+import ContentSuggestion from './ContentSuggestion.js';
+import ContentItem from './ContentItem.js';
+import ContentPerformance from './ContentPerformance.js';
+import SeasonalConfig from './SeasonalConfig.js';
+import SocialAccount from './SocialAccount.js';
+
 // ============================================================================
 // Define Associations (with guard to prevent duplicate registration)
 // ============================================================================
@@ -72,6 +80,13 @@ if (!associationsInitialized) {
   // User-ConsentHistory Association
   User.hasMany(ConsentHistory, { foreignKey: 'user_id', as: 'consentHistory' });
   ConsentHistory.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+  // Content Module Associations
+  ContentSuggestion.hasMany(ContentItem, { foreignKey: 'suggestion_id', as: 'contentItems' });
+  ContentItem.belongsTo(ContentSuggestion, { foreignKey: 'suggestion_id', as: 'suggestion' });
+
+  ContentItem.hasMany(ContentPerformance, { foreignKey: 'content_item_id', as: 'performance' });
+  ContentPerformance.belongsTo(ContentItem, { foreignKey: 'content_item_id', as: 'contentItem' });
 }
 
 // ============================================================================
@@ -91,6 +106,12 @@ export {
   Permission,
   UserConsent,
   ConsentHistory,
+  TrendingData,
+  ContentSuggestion,
+  ContentItem,
+  ContentPerformance,
+  SeasonalConfig,
+  SocialAccount,
 };
 
 export default {
@@ -106,4 +127,10 @@ export default {
   Permission,
   UserConsent,
   ConsentHistory,
+  TrendingData,
+  ContentSuggestion,
+  ContentItem,
+  ContentPerformance,
+  SeasonalConfig,
+  SocialAccount,
 };

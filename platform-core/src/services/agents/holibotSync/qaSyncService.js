@@ -41,7 +41,7 @@ class QASyncService {
                q.source, q.created_at as last_updated,
                p.name as poi_name, p.category, p.city AS destination
         FROM QnA q
-        LEFT JOIN POI p ON q.google_placeid = p.google_place_id
+        LEFT JOIN POI p ON q.google_placeid = p.google_placeid
         WHERE q.question IS NOT NULL AND q.answer IS NOT NULL
       `;
 

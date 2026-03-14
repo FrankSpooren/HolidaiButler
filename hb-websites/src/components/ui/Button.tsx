@@ -26,20 +26,21 @@ export default function Button({
   children,
   href,
   className = '',
+  style,
   ...props
 }: ButtonProps) {
   const classes = `inline-flex items-center justify-center font-medium transition-colors duration-200 rounded-tenant ${variants[variant]} ${sizes[size]} ${className}`;
 
   if (href) {
     return (
-      <a href={href} className={classes}>
+      <a href={href} className={classes} style={style}>
         {children}
       </a>
     );
   }
 
   return (
-    <button className={classes} {...props}>
+    <button className={classes} style={style} {...props}>
       {children}
     </button>
   );

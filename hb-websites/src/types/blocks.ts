@@ -39,11 +39,29 @@ export interface BlockConfig {
   featureFlag?: string;
 }
 
+export interface ButtonStyle {
+  bgColor?: string;
+  textColor?: string;
+  borderColor?: string;
+  borderRadius?: 'default' | 'none' | 'sm' | 'md' | 'lg' | 'full';
+  size?: 'sm' | 'md' | 'lg';
+}
+
 export interface HeroButton {
   label: string;
   href?: string;
   variant?: 'primary' | 'secondary' | 'outline' | 'chatbot';
   chatbotAction?: string;
+  buttonStyle?: ButtonStyle;
+}
+
+export interface HeroTextStyle {
+  headlineColor?: string;
+  descriptionColor?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  overlayOpacity?: number;
+  textShadow?: boolean;
+  headlineSize?: 'small' | 'default' | 'large' | 'xlarge';
 }
 
 export interface HeroProps {
@@ -56,6 +74,7 @@ export interface HeroProps {
   videoUrl?: string;
   videoPosterImage?: string;
   height?: 'compact' | 'default' | 'tall' | 'fullscreen';
+  textStyle?: HeroTextStyle;
 }
 
 export interface PoiGridProps {

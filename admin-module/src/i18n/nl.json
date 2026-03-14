@@ -21,6 +21,7 @@
     "navigation": "Navigatie",
     "media": "Mediabibliotheek",
     "onboarding": "Nieuwe Bestemming",
+    "contentStudio": "Content Studio",
     "section_overview": "Overzicht",
     "section_content": "Content & Data",
     "section_commerce": "Commerce",
@@ -1085,5 +1086,14 @@
     "dnsStep1": "Stap 1: DNS A-records aanmaken",
     "dnsStep2": "Stap 2: SSL certificaat aanvragen",
     "dnsStep3": "Stap 3: Apache VHost configureren"
+  },
+  "contentStudio": {
+    "title": "Content Studio",
+    "tabs": {
+      "trending": "Trending Monitor",
+      "suggestions": "Suggesties",
+      "content": "Content Items",
+      "performance": "Performance"
+    }
   }
 }
