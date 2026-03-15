@@ -4634,4 +4634,100 @@ CLAUDE.md v4.1.0 → v4.3.0. MS v7.63 → v7.65. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Enterprise SEO v2.0 + Tone of Voice + Agent Fixes (15 maart 2026)
+
+### Resultaat
+
+Drie verbeteringen in één sessie: (1) Enterprise SEO scoring met content-type-aware checks en auto-improve loop, (2) data-driven Tone of Voice in BrandingPage + content generatie, (3) 5 agent runtime errors opgelost.
+
+### Enterprise SEO Scoring v2.0
+
+**seoAnalyzer.js** compleet herschreven:
+- **Content-type-aware scoring**: 3 aparte metric-sets (blog, social_post, video_script), elk 7 checks × 10 punten
+- **Blog checks**: meta title, meta description, heading structuur, keyword density, interne links, readability, content length
+- **Social checks**: caption length, hashtags (3-15), call-to-action, emoji usage, keyword presence, opening hook, platform formatting
+- **Video checks**: video hook (eerste 5 sec), script structuur (scènes), visuele cues, keyword presence, tijdsindicaties, CTA, script length
+- **normalizeAccents()**: Unicode NFD normalisatie voor accent-safe keyword matching ("Penón" matched "penon")
+- **Opening hook fix**: emoji-prefixed lines correct herkend (strips leading emojis before pattern matching)
+
+**contentGenerator.js** v2.0:
+- **SEO_MINIMUM_SCORE = 80** (enterprise level norm)
+- **buildSeoGuidance()**: embed exact 7 scoring criteria met puntenwaarden in Mistral prompt per content type
+- **Auto-improve loop**: genereer → SEO check → als <80 → improveContent() → re-check (max 1 round)
+- **improveExistingContent()**: standalone export voor API endpoint, stuurt failing + passing checks naar Mistral
+- **buildToneInstruction()**: 3x gewijzigd naar `await` (async voor DB access)
+
+**API + Frontend**:
+- `POST /content/items/:id/improve` endpoint (189 totaal)
+- "AI Verbeter" button in ContentStudioPage (variant=contained, color=warning, toont wanneer score <80)
+- `contentService.improveItem(id)` + `useImproveItem()` mutation hook
+
+### Tone of Voice (Data-Driven)
+
+**toneOfVoice.js** v2.0 (complete rewrite):
+- Data-driven: leest `destinations.branding.toneOfVoice` JSON kolom uit MySQL
+- 5-minuten cache (`toneCache` Map met TTL)
+- Hardcoded `FALLBACK_TONES` als backup (Calpe warm/Mediterranean, Texel adventurous/nature, WarreWijzer slow-living)
+- Nieuwe velden: `brandValues`, `coreKeywords`, `formalAddress` (je/u/mixed)
+- `getTone(destinationId)` async — query DB, merge met fallback
+- `buildToneInstruction(destinationId)` async — includeert brand values, core keywords, address style
+- `clearToneCache()` export voor cache invalidatie
+
+**BrandingPage.jsx**:
+- Nieuw Tone of Voice MUI Accordion (tussen Logo en Typography)
+- 8 formuliervelden in 2-kolom Grid: personality, audience, brandValues, coreKeywords, adjectives, avoidWords, formalAddress (Select met 3 opties), samplePhrases (multiline)
+- Alert info box met uitleg
+- i18n 4 talen (NL/EN/DE/ES) met 15 keys
+
+**adminPortal.js**:
+- Cache invalidatie: `if (brandingData.toneOfVoice) { clearToneCache(); }` in PUT /destinations/:id/branding
+
+### Agent Runtime Fixes (5 issues)
+
+| # | Agent | Issue | Root Cause | Fix |
+|---|-------|-------|-----------|-----|
+| 1 | De Kassier (financialMonitor) | `Unknown column 'customer_email'` | intermediary_transactions heeft `guest_email`, niet `customer_email` | Kolom hernoemd in fraud detection query |
+| 2 | De Koerier (syncReporter) | `Unknown column 'spam_score'` | reviews tabel heeft geen spam_score kolom | Queries verwijderd, spamDetected hardcoded 0 |
+| 3 | Trendspotter (trendAggregator) | `Data truncated for 'trend_direction'` | Ongevalideerde waarde in ENUM(rising,stable,declining,breakout) | Validatie tegen 4 geldige ENUM waarden vóór save |
+| 4 | Trendspotter (googleTrendsCollector) | `Apify HTTP 400: Bad Request` | `timeRange: 'past7Days'` is ongeldig voor Apify actor | Gecorrigeerd naar `'now 7-d'` |
+| 5 | Het Geheugen (holibotSync) | `chromaService.getCollection is not a function` | Methode bestaat niet in holibotSync chromaService | `getCollection` → `getOrCreateCollection` + error catch op getStatus |
+
+### Bestanden
+
+| Actie | Bestand | Rol |
+|-------|---------|-----|
+| WIJZIG | `platform-core/src/services/agents/seoMeester/seoAnalyzer.js` | v2.0: content-type-aware scoring (3 metric sets) |
+| WIJZIG | `platform-core/src/services/agents/contentRedacteur/contentGenerator.js` | v2.0: SEO-aware prompts, auto-improve, improveExistingContent |
+| WIJZIG | `platform-core/src/services/agents/contentRedacteur/toneOfVoice.js` | v2.0: data-driven (DB + cache + fallback) |
+| WIJZIG | `platform-core/src/services/agents/contentRedacteur/index.js` | improveContentItem() method |
+| WIJZIG | `platform-core/src/routes/adminPortal.js` | +1 endpoint (improve), tone cache clear |
+| WIJZIG | `platform-core/src/services/agents/financialMonitor/index.js` | customer_email → guest_email |
+| WIJZIG | `platform-core/src/services/agents/dataSync/syncReporter.js` | spam_score queries verwijderd |
+| WIJZIG | `platform-core/src/services/agents/trendspotter/trendAggregator.js` | trend_direction ENUM validatie |
+| WIJZIG | `platform-core/src/services/agents/trendspotter/googleTrendsCollector.js` | timeRange fix |
+| WIJZIG | `platform-core/src/services/agents/holibotSync/index.js` | getOrCreateCollection + error catch |
+| WIJZIG | `admin-module/src/pages/BrandingPage.jsx` | Tone of Voice accordion (8 velden) |
+| WIJZIG | `admin-module/src/pages/ContentStudioPage.jsx` | AI Verbeter button + improve state |
+| WIJZIG | `admin-module/src/api/contentService.js` | +improveItem method |
+| WIJZIG | `admin-module/src/hooks/useContent.js` | +useImproveItem hook |
+| WIJZIG | `admin-module/src/i18n/nl.json` | +15 toneOfVoice keys |
+| WIJZIG | `admin-module/src/i18n/en.json` | +15 toneOfVoice keys |
+| WIJZIG | `admin-module/src/i18n/de.json` | +15 toneOfVoice keys |
+| WIJZIG | `admin-module/src/i18n/es.json` | +15 toneOfVoice keys |
+
+### Statistieken
+
+- **25 agents** (ongewijzigd)
+- **60 BullMQ jobs** (ongewijzigd)
+- **189 admin endpoints** (+1: content improve)
+- **adminPortal.js v3.28.0**
+
+### Documentatie
+
+CLAUDE.md v4.3.0 → v4.6.0. MS v7.65 → v7.66. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
