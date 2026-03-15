@@ -976,6 +976,58 @@ export function startWorkers() {
           }
           break;
 
+        case "content-weekly-report":
+          try {
+            const { mysqlSequelize: db } = await import("../../config/database.js");
+            const destIds = [1, 2, 4];
+            const reportResults = {};
+            for (const destId of destIds) {
+              const [published] = await db.query(
+                `SELECT COUNT(*) as cnt FROM content_items
+                 WHERE destination_id = :destId AND approval_status = 'published'
+                   AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`,
+                { replacements: { destId } }
+              );
+              const [perf] = await db.query(
+                `SELECT SUM(views) as total_views, SUM(engagement) as total_engagement,
+                        SUM(reach) as total_reach, SUM(clicks) as total_clicks
+                 FROM content_performance
+                 WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`,
+                { replacements: { destId } }
+              );
+              const [topItem] = await db.query(
+                `SELECT ci.title, SUM(cp.engagement) as eng
+                 FROM content_performance cp
+                 JOIN content_items ci ON ci.id = cp.content_item_id
+                 WHERE cp.destination_id = :destId AND cp.date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                 GROUP BY ci.id, ci.title ORDER BY eng DESC LIMIT 1`,
+                { replacements: { destId } }
+              );
+              reportResults[destId] = {
+                published: published[0]?.cnt || 0,
+                totalViews: perf[0]?.total_views || 0,
+                totalEngagement: perf[0]?.total_engagement || 0,
+                totalReach: perf[0]?.total_reach || 0,
+                topPerformer: topItem[0]?.title || 'N/A',
+              };
+            }
+            // Send via De Bode (owner interface)
+            try {
+              const { sendWeeklyContentReport } = await import("./ownerInterface/index.js");
+              if (typeof sendWeeklyContentReport === 'function') {
+                await sendWeeklyContentReport(reportResults);
+              }
+            } catch (bodeErr) {
+              console.log("[Orchestrator] Weekly report email skipped:", bodeErr.message);
+            }
+            console.log("[Orchestrator] Content weekly report generated:", JSON.stringify(reportResults));
+            result = { type: "content-weekly-report", reports: reportResults };
+          } catch (error) {
+            console.error("[Orchestrator] Content weekly report failed:", error.message);
+            result = { type: "content-weekly-report", status: "error", error: error.message };
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -1014,7 +1066,8 @@ export function startWorkers() {
         'content-publish-scheduled': 'publisher',
         'content-analytics-collect': 'publisher',
         'content-feedback-loop': 'trendspotter',
-        'seasonal-check': 'orchestrator'
+        'seasonal-check': 'orchestrator',
+        'content-weekly-report': 'owner-interface'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {

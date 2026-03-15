@@ -3,17 +3,80 @@
  * Generates blog posts, social posts, and video scripts using Mistral AI.
  * Reuses embeddingService.generateChatCompletion() for LLM calls.
  *
- * @version 2.0.0 — Auto-improve: SEO check → AI rewrite → re-check until ≥65/100
+ * @version 3.0.0 — Clean output prompts + content sanitizer safety net
  */
 
 import embeddingService from '../../holibot/embeddingService.js';
 import { buildToneInstruction, getLanguages } from './toneOfVoice.js';
 import { buildFormatInstruction, formatForPlatform, generateHashtags, getContentSpec } from './contentFormatter.js';
+import { sanitizeContent } from './contentSanitizer.js';
 import { translateTexts } from '../../translationService.js';
 import { analyzeContent } from '../seoMeester/seoAnalyzer.js';
 import logger from '../../../utils/logger.js';
 
 const SEO_MINIMUM_SCORE = 80;
+
+/**
+ * Platform-specific prompt rules for social content generation
+ */
+const PROMPT_PLATFORM_RULES = {
+  facebook: {
+    maxChars: 500,
+    rules: 'Optimal length 100-250 characters. Can be longer. Conversational, engaging.',
+    emojiCount: '2-4',
+    hashtagPosition: 'end',
+    maxHashtags: 5,
+  },
+  instagram: {
+    maxChars: 2200,
+    rules: 'First sentence is the hook (visible before "more"). Storytelling style. Separate hashtags with blank line at end.',
+    emojiCount: '3-6',
+    hashtagPosition: 'end_separated',
+    maxHashtags: 15,
+  },
+  linkedin: {
+    maxChars: 3000,
+    rules: 'Professional tone. Insightful, value-driven. No emoji overload. Hashtags at end, max 5.',
+    emojiCount: '0-2',
+    hashtagPosition: 'end',
+    maxHashtags: 5,
+  },
+  x: {
+    maxChars: 280,
+    rules: 'Ultra-concise. Punchy. Weave 1-2 hashtags into text, not at end.',
+    emojiCount: '0-1',
+    hashtagPosition: 'inline',
+    maxHashtags: 2,
+  },
+  tiktok: {
+    maxChars: 150,
+    rules: 'Youth-oriented, trendy. Super short caption. Hashtags at end.',
+    emojiCount: '1-3',
+    hashtagPosition: 'end',
+    maxHashtags: 5,
+  },
+  youtube: {
+    maxChars: 5000,
+    rules: 'Description with timestamps if relevant. Include links. SEO-rich.',
+    emojiCount: '1-3',
+    hashtagPosition: 'end',
+    maxHashtags: 15,
+  },
+  pinterest: {
+    maxChars: 500,
+    rules: 'Descriptive, aspirational. Include relevant keywords naturally for Pinterest search.',
+    emojiCount: '0-2',
+    hashtagPosition: 'end',
+    maxHashtags: 5,
+  },
+  snapchat: {
+    maxChars: 80,
+    rules: 'Ultra-short. No hashtags. Casual.',
+    emojiCount: '1-2',
+    hashtagPosition: 'none',
+    maxHashtags: 0,
+  },
+};
 
 /**
  * Generate content from a suggestion using Mistral AI
@@ -43,27 +106,9 @@ export async function generateContent(suggestion, options = {}) {
   const keywords = suggestion.keyword_cluster || [];
   const modelName = embeddingService.chatModel || 'mistral-small-latest';
 
-  // Build the generation prompt with SEO scoring criteria embedded
-  const seoGuidance = buildSeoGuidance(contentType, keywords);
-
-  const systemPrompt = `You are an enterprise-grade content writer for a premium tourism platform.
-You write high-performing, SEO-optimized content that scores ≥80/100 on quality audits.
-
-${toneInstruction}
-
-${formatInstruction}
-
-${seoGuidance}
-
-RULES:
-- Write original, high-quality content — NO plagiarism
-- MUST include ALL target keywords at least once, naturally woven into the text
-- Facts must be accurate — do NOT hallucinate attractions, events, or statistics
-- Preserve proper nouns (POI names, street names, local terms)
-- EU AI Act compliance: this is AI-generated content for a tourism platform
-- Language: write in English first (translations handled separately)`;
-
-  const userPrompt = buildUserPrompt(suggestion, contentType, keywords);
+  // Build the generation prompt — clean output, no markdown
+  const systemPrompt = buildSystemPrompt(contentType, platform, toneInstruction, keywords);
+  const userPrompt = buildUserPrompt(suggestion, contentType, platform, keywords);
 
   try {
     // Generate primary content (English)
@@ -81,8 +126,11 @@ RULES:
     // Extract title and body from generated content
     const { title, body, metaDescription } = parseGeneratedContent(content, suggestion.title);
 
+    // Sanitize — safety net strips any remaining markdown artifacts
+    const sanitizedBody = sanitizeContent(body, contentType, platform);
+
     // Format for target platform
-    const formattedBody = formatForPlatform(body, platform);
+    const formattedBody = formatForPlatform(sanitizedBody, platform);
 
     // Generate hashtags for social platforms
     const hashtags = platform !== 'website' ? generateHashtags(keywords, platform) : [];
@@ -213,125 +261,129 @@ Generate 3-6 suggestions, mixing content types. Focus on the strongest trends.`;
 }
 
 /**
- * Build SEO guidance section — tells Mistral exactly what the quality audit scores
- * This is the key innovation: the generation prompt mirrors the scoring criteria
+ * Build system prompt — clean output, platform-aware, no markdown
  */
-function buildSeoGuidance(contentType, keywords) {
+function buildSystemPrompt(contentType, platform, toneInstruction, keywords) {
   const keywordsStr = keywords.length > 0
     ? `Target keywords (MUST appear in text): ${keywords.map(k => `"${k}"`).join(', ')}`
     : '';
 
-  if (contentType === 'social_post') {
-    return `QUALITY SCORING CRITERIA (your content will be scored on these 7 metrics — aim for 10/10 on each):
+  const base = `You are an enterprise-grade content writer for a premium tourism platform.
 
-1. CAPTION LENGTH (10pts): Total post must be 80-300 characters. Sweet spot: ~150-250 chars.
-2. HASHTAGS (10pts): Include exactly 3-8 hashtags at the end. Use targeted, specific tags.
-3. CALL-TO-ACTION (10pts): Include 2+ CTA elements (verbs like "discover", "explore", "book", "visit", "tag", "share" + directional emojis like 👉 ⬇️ ➡️).
-4. EMOJI USAGE (10pts): Include 1-5 emojis naturally in the text. Not more than 1 per 10 words.
-5. KEYWORD PRESENCE (10pts): At least 50% of target keywords MUST appear in the text.
-   ${keywordsStr}
-6. READABILITY (10pts): Use short sentences (avg <15 words). Easy to scan. Conversational tone.
-7. OPENING HOOK (10pts): First line must be a question, number, bold claim, or attention-grabber. Start with "Did you know", "Ever wondered", "Top 3", a surprising fact, or an emoji.`;
+${toneInstruction}
+
+ABSOLUTE RULES:
+- Write original, high-quality content — NO plagiarism
+- Facts must be accurate — do NOT hallucinate attractions, events, or statistics
+- Preserve proper nouns (POI names, street names, local terms)
+- EU AI Act compliance: this is AI-generated content for a tourism platform
+- Language: write in English first (translations handled separately)`;
+
+  if (contentType === 'social_post') {
+    const platformRules = PROMPT_PLATFORM_RULES[platform] || PROMPT_PLATFORM_RULES.facebook;
+    return `${base}
+
+CRITICAL FORMATTING RULES:
+- Write as PLAIN TEXT ready to paste directly into ${platform}
+- NEVER use markdown: no **, no ##, no ---, no \`, no []()
+- NEVER include labels like CAPTION:, POST:, HOOK:, CTA:, TITLE:
+- ${platformRules.rules}
+- Include ${platformRules.emojiCount} relevant emoji naturally in the text
+- End with a call-to-action
+${keywordsStr}
+
+Return ONLY the post text. Nothing else. No quotes around it.`;
   }
 
   if (contentType === 'video_script') {
-    return `QUALITY SCORING CRITERIA (your content will be scored on these 7 metrics — aim for 10/10 on each):
+    return `${base}
 
-1. VIDEO HOOK (10pts): First line must be attention-grabbing (question, "Imagine...", bold statement). You have 3 seconds.
-2. SCRIPT STRUCTURE (10pts): Include 3+ scene markers ("[Scene 1]", "Intro:", "B-roll:") AND timing cues ("0:00-0:05", "10s", "15 seconds").
-3. CALL-TO-ACTION (10pts): Include 2+ CTA elements ("subscribe", "visit", "book", "check out", "link in description").
-4. SCRIPT LENGTH (10pts): 200-800 words total.
-5. KEYWORD PRESENCE (10pts): At least 50% of target keywords MUST appear in the text.
-   ${keywordsStr}
-6. READABILITY (10pts): Conversational, spoken-word tone. Short sentences. Easy to narrate.
-7. VISUAL CUES (10pts): Include 4+ visual directions ("Show:", "Cut to:", "Close-up:", "Wide shot:", "B-roll:", "Zoom:", "Overlay:", "Text on screen:").`;
+CRITICAL FORMATTING RULES:
+- Write as natural spoken narration
+- Use [SCENE: description] markers for visual cues (these are the ONLY allowed brackets)
+- NEVER use markdown: no **, no ##, no ---
+- NEVER include labels like TITLE:, INTRO:
+- Target: 150-225 words (60-90 seconds spoken)
+${keywordsStr}
+
+Return ONLY the script. Scene markers and narration text. Nothing else.`;
   }
 
   // Blog
-  return `QUALITY SCORING CRITERIA (your content will be scored on these 7 metrics — aim for 10/10 on each):
+  return `${base}
 
-1. TITLE LENGTH (10pts): 50-60 characters (optimal for search engines).
-2. META DESCRIPTION (10pts): 150-160 characters, compelling, includes primary keyword.
-3. HEADING STRUCTURE (10pts): Use H2 headings (min 2), H3 headings (min 1). Only 1 H1 (the title). Proper hierarchy.
-4. KEYWORD DENSITY (10pts): Average keyword density 0.5-3%. Use each keyword 2-4 times naturally.
-   ${keywordsStr}
-5. READABILITY (10pts): Flesch-Kincaid score ≥50. Use varied sentence lengths, avg <20 words. Break paragraphs every 3-4 sentences.
-6. CONTENT LENGTH (10pts): 800-1500 words.
-7. INTERNAL LINKS (10pts): Include 2+ markdown links to related content (e.g., [Peñón de Ifach](/poi/123), [local restaurants](/explore/restaurants)).`;
+CRITICAL FORMATTING RULES:
+- Write in clean, flowing prose paragraphs ONLY
+- NEVER use markdown: no **, no ##, no ---, no \`, no [](), no >
+- NEVER include labels like TITLE:, META:, INTRODUCTION:, CONCLUSION:, HOOK:
+- Start directly with the first paragraph. No headers.
+- Use natural paragraph breaks (blank line) between sections
+- Do NOT use bullet points or numbered lists with special characters
+- Target: 800-1500 words
+- Include factual details: opening hours, prices, locations where relevant
+- End with a natural call-to-action paragraph
+${keywordsStr}
+
+Return ONLY the article text. Nothing before it. Nothing after it.`;
 }
 
 /**
- * Build the user prompt based on content type — SEO-aware
+ * Build the user prompt — clean output, no labels, no markdown
  */
-function buildUserPrompt(suggestion, contentType, keywords) {
-  const keywordsStr = keywords.length > 0 ? `Target keywords that MUST appear: ${keywords.join(', ')}` : '';
+function buildUserPrompt(suggestion, contentType, platform, keywords) {
+  const keywordsStr = keywords.length > 0 ? `\nKeywords to incorporate naturally: ${keywords.join(', ')}` : '';
+  const context = suggestion.summary ? `\nContext: ${suggestion.summary}` : '';
 
   switch (contentType) {
     case 'blog':
-      return `Write a blog post about: "${suggestion.title}"
-${suggestion.summary ? `Context: ${suggestion.summary}` : ''}
-${keywordsStr}
+      return `Write a tourism blog article about "${suggestion.title}".${context}${keywordsStr}
 
-Write the full blog post with:
-1. An engaging title of 50-60 characters (prefix with "TITLE: ")
-2. A meta description of exactly 150-160 characters (prefix with "META: ")
-3. The full body (800-1500 words) with H2/H3 headings, each keyword used 2-4 times
-4. Include 2+ internal links as markdown [text](/path)`;
+Start directly with the first paragraph. Write 800-1500 words of flowing prose.
+End with a natural call-to-action paragraph.
+Do NOT include a title, meta description, or any labels. Just the article body.`;
 
     case 'social_post':
-      return `Write a social media post about: "${suggestion.title}"
-${suggestion.summary ? `Context: ${suggestion.summary}` : ''}
-${keywordsStr}
+      return `Write a ${platform} post about "${suggestion.title}".${context}${keywordsStr}
 
-STRICT REQUIREMENTS — your post will be scored on each:
-1. First line: a scroll-stopping hook (question/number/bold claim + emoji). Prefix with "TITLE: "
-2. Post body: 80-300 characters total (this is CRITICAL — count carefully)
-3. Include 2-4 emojis naturally woven into the text
-4. Include 2+ call-to-action words (discover, explore, book, visit, tag, share) + use 👉 or ➡️
-5. End with exactly 5 relevant hashtags (e.g., #Calpe #CostaBlanca #Mediterranean #Travel #Spain)
-6. Each target keyword must appear at least once in the text
-7. Use short, punchy sentences (max 12 words each)`;
+Start with a scroll-stopping opening line. Keep it conversational.
+Do NOT prefix with any label. Just the post text, ready to copy-paste.`;
 
     case 'video_script':
-      return `Write a video script about: "${suggestion.title}"
-${suggestion.summary ? `Context: ${suggestion.summary}` : ''}
-${keywordsStr}
+      return `Write a 60-90 second video script about "${suggestion.title}".${context}${keywordsStr}
 
-STRICT REQUIREMENTS — your script will be scored on each:
-1. Opening hook (first line): attention-grabbing question or bold statement. Prefix with "TITLE: "
-2. Structure with 3-5 scenes using markers: [Scene 1: Description] (0:00-0:10)
-3. Each scene: narration text + "Visual:" direction (show/cut to/close-up/B-roll/zoom)
-4. Include timing for each scene (e.g., "0:00-0:05", "10 seconds")
-5. End with CTA scene: "subscribe", "visit", "book now", "link in description"
-6. Total: 200-800 words
-7. Each target keyword must appear at least once`;
+Use [SCENE: description] markers for visual cues. Write natural spoken narration between them.
+Do NOT include a title or any labels. Just scene markers and narration.`;
 
     default:
-      return `Write content about: "${suggestion.title}"\n${keywordsStr}`;
+      return `Write content about: "${suggestion.title}"${keywordsStr}`;
   }
 }
 
 /**
- * Parse generated content to extract title, body, and meta description
+ * Parse generated content to extract title, body, and meta description.
+ * Handles both old-style (TITLE:/META: labels) and new clean output.
  */
 function parseGeneratedContent(content, fallbackTitle) {
   let title = fallbackTitle;
   let body = content;
   let metaDescription = '';
 
-  // Extract TITLE:
+  // Extract TITLE: if Mistral still includes it (backward compat)
   const titleMatch = content.match(/^TITLE:\s*(.+)$/m);
   if (titleMatch) {
     title = titleMatch[1].trim().replace(/^["']|["']$/g, '');
     body = content.replace(titleMatch[0], '').trim();
   }
 
-  // Extract META:
+  // Extract META: if present
   const metaMatch = body.match(/^META:\s*(.+)$/m);
   if (metaMatch) {
     metaDescription = metaMatch[1].trim();
     body = body.replace(metaMatch[0], '').trim();
   }
+
+  // Strip any remaining label prefixes the sanitizer will also catch
+  body = body.replace(/^(INTRODUCTION|CONCLUSION|BODY|OPENING|CLOSING|SUMMARY)\s*[:：]\s*/gim, '');
 
   return { title, body, metaDescription };
 }
@@ -394,18 +446,16 @@ async function improveContent(content, seoResult, options = {}) {
       .join('\n');
 
     const toneInstruction = await buildToneInstruction(destinationId);
-    const seoGuidance = buildSeoGuidance(contentType, keywords);
 
     const systemPrompt = `You are a surgical content optimizer. You fix ONLY what's broken — preserve everything that scores 10/10.
 
 ${toneInstruction}
 
-${seoGuidance}
-
-CRITICAL RULES:
+CRITICAL FORMATTING RULES:
+- NEVER use markdown: no **, no ##, no ---, no \`, no []()
+- NEVER include labels like TITLE:, META:, INTRODUCTION: — just the clean text
+- Write clean, flowing prose only
 - Return the COMPLETE improved content (not just the changes)
-- Prefix title with "TITLE: " on its own line
-- Prefix meta description with "META: " on its own line (for blog only)
 - DO NOT change aspects that already score 10/10 — only fix failing metrics
 - Do NOT add disclaimers or explanations — return ONLY the improved content`;
 
@@ -437,7 +487,7 @@ Rewrite to fix ALL failing metrics while keeping perfect scores intact.`;
 
       const parsed = parseGeneratedContent(improved, currentTitle);
       currentTitle = parsed.title;
-      currentBody = parsed.body;
+      currentBody = sanitizeContent(parsed.body, contentType, 'website');
       if (parsed.metaDescription) currentMeta = parsed.metaDescription;
 
       // Re-score
@@ -548,4 +598,127 @@ export async function improveExistingContent(contentItem) {
   };
 }
 
-export default { generateContent, generateSuggestions, improveExistingContent };
+/**
+ * Generate content directly from a POI — KILLER FEATURE
+ * Uses actual POI data (name, rating, category, opening hours, highlights) as context.
+ *
+ * @param {number} poiId - POI database ID
+ * @param {number} destinationId
+ * @param {string[]} platforms - Target platforms (default: blog + instagram + facebook)
+ * @returns {Array} Generated content items per platform
+ */
+export async function generateFromPOI(poiId, destinationId, platforms = ['instagram', 'facebook', 'linkedin']) {
+  const { mysqlSequelize } = await import('../../../config/database.js');
+
+  // Fetch POI data
+  const [[poi]] = await mysqlSequelize.query(
+    `SELECT id, name, category, google_rating, google_review_count,
+            enriched_detail_description, enriched_highlights,
+            opening_hours_json, address, amenities, destination_id
+     FROM POI WHERE id = :id`,
+    { replacements: { id: poiId } }
+  );
+  if (!poi) throw new Error(`POI ${poiId} not found`);
+
+  // Build POI context for the prompt
+  const poiContext = buildPOIContext(poi);
+
+  const results = [];
+
+  // Blog
+  const blogSuggestion = {
+    title: `${poi.name} — ${poi.category || 'Local Gem'}`,
+    summary: poiContext,
+    keyword_cluster: [poi.name, poi.category, 'travel', 'tourism'].filter(Boolean),
+    content_type: 'blog',
+    poi_id: poiId,
+  };
+  const blog = await generateContent(blogSuggestion, {
+    destinationId: destinationId || poi.destination_id,
+    contentType: 'blog',
+    platform: 'website',
+  });
+  blog.poi_id = poiId;
+  results.push(blog);
+
+  // Social posts per platform
+  for (const platform of platforms) {
+    const socialSuggestion = {
+      title: poi.name,
+      summary: poiContext,
+      keyword_cluster: [poi.name, poi.category].filter(Boolean),
+      content_type: 'social_post',
+      poi_id: poiId,
+    };
+    const post = await generateContent(socialSuggestion, {
+      destinationId: destinationId || poi.destination_id,
+      contentType: 'social_post',
+      platform,
+    });
+    post.poi_id = poiId;
+    results.push(post);
+  }
+
+  return results;
+}
+
+/**
+ * Build a POI context string with factual data for the prompt
+ */
+function buildPOIContext(poi) {
+  const parts = [`Name: ${poi.name}`];
+  if (poi.category) parts.push(`Category: ${poi.category}`);
+  if (poi.google_rating) parts.push(`Rating: ${poi.google_rating}/5 (${poi.google_review_count || 0} reviews)`);
+  if (poi.address) parts.push(`Address: ${poi.address}`);
+  if (poi.enriched_highlights) parts.push(`Highlights: ${poi.enriched_highlights}`);
+  if (poi.amenities) parts.push(`Amenities: ${poi.amenities}`);
+  if (poi.opening_hours_json) {
+    try {
+      const hours = typeof poi.opening_hours_json === 'string' ? JSON.parse(poi.opening_hours_json) : poi.opening_hours_json;
+      if (Array.isArray(hours)) {
+        parts.push(`Opening hours: ${hours.map(h => `${h.day || h.dayOfWeek}: ${h.hours || h.open + '-' + h.close}`).join(', ')}`);
+      }
+    } catch { /* skip unparseable hours */ }
+  }
+  if (poi.enriched_detail_description) {
+    const desc = poi.enriched_detail_description.substring(0, 500);
+    parts.push(`Description: ${desc}`);
+  }
+  return parts.join('. ');
+}
+
+/**
+ * Repurpose content — adapt existing content for different platforms
+ * @param {Object} sourceItem - Source content item from DB
+ * @param {string[]} targetPlatforms - Target platforms
+ * @param {number} destinationId
+ * @returns {Array} Repurposed content items
+ */
+export async function repurposeContent(sourceItem, targetPlatforms, destinationId) {
+  const results = [];
+
+  for (const platform of targetPlatforms) {
+    const suggestion = {
+      title: sourceItem.title,
+      summary: `Adapt this content for ${platform}: ${(sourceItem.body_en || '').substring(0, 500)}`,
+      keyword_cluster: typeof sourceItem.keyword_cluster === 'string'
+        ? JSON.parse(sourceItem.keyword_cluster)
+        : (sourceItem.keyword_cluster || []),
+      content_type: 'social_post',
+      poi_id: sourceItem.poi_id,
+    };
+
+    const post = await generateContent(suggestion, {
+      destinationId: destinationId || sourceItem.destination_id,
+      contentType: 'social_post',
+      platform,
+    });
+    post.source_content_id = sourceItem.id;
+    post.poi_id = sourceItem.poi_id;
+    results.push(post);
+  }
+
+  return results;
+}
+
+export default { generateContent, generateSuggestions, improveExistingContent, generateFromPOI, repurposeContent };
