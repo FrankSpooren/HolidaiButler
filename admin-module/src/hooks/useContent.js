@@ -95,6 +95,18 @@ export function useItemSeo(id) {
   });
 }
 
+export function useImproveItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => contentService.improveItem(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ['content-items'] });
+      qc.invalidateQueries({ queryKey: ['content-item', id] });
+      qc.invalidateQueries({ queryKey: ['content-item-seo', id] });
+    },
+  });
+}
+
 // === Calendar & Scheduling (Fase C) ===
 
 export function useContentCalendar(destinationId, { month, year } = {}) {

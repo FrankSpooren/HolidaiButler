@@ -7,7 +7,7 @@
  */
 
 import BaseAgent from '../base/BaseAgent.js';
-import { generateContent, generateSuggestions } from './contentGenerator.js';
+import { generateContent, generateSuggestions, improveExistingContent } from './contentGenerator.js';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 import logger from '../../../utils/logger.js';
 
@@ -66,6 +66,30 @@ class ContentRedacteurAgent extends BaseAgent {
       return content;
     } catch (error) {
       await logError('redacteur', destinationId, 'content-generation', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Improve an existing content item — SEO check → AI rewrite → re-check until ≥65/100
+   * @param {Object} contentItem - DB content item row
+   * @returns {Object} { improved, original_score, final_score, title, body_en, ... }
+   */
+  async improveContentItem(contentItem) {
+    const destinationId = contentItem.destination_id;
+    try {
+      const result = await improveExistingContent(contentItem);
+
+      await logAgent('redacteur', destinationId, 'content-improved', {
+        itemId: contentItem.id,
+        improved: result.improved,
+        originalScore: result.original_score,
+        finalScore: result.final_score || result.seo_score,
+      });
+
+      return result;
+    } catch (error) {
+      await logError('redacteur', destinationId, 'content-improvement', error);
       throw error;
     }
   }

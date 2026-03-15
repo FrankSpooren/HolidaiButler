@@ -356,6 +356,8 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
   const [loading, setLoading] = useState(false);
   const [seoData, setSeoData] = useState(null);
   const [seoLoading, setSeoLoading] = useState(false);
+  const [improving, setImproving] = useState(false);
+  const [improveResult, setImproveResult] = useState(null);
   const [langTab, setLangTab] = useState('en');
   const [editBody, setEditBody] = useState('');
   const [saving, setSaving] = useState(false);
@@ -415,6 +417,29 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
       if (onTranslate) onTranslate();
     } finally {
       setTranslating(false);
+    }
+  };
+
+  const handleImprove = async () => {
+    if (!itemId) return;
+    setImproving(true);
+    setImproveResult(null);
+    try {
+      const r = await contentService.improveItem(itemId);
+      const data = r.data;
+      setImproveResult(data);
+      if (data.improved) {
+        // Reload item with improved content
+        const refreshed = await contentService.getItem(itemId);
+        setItem(refreshed.data);
+        setEditBody(refreshed.data[`body_${langTab}`] || refreshed.data.body_en || '');
+        await loadSeo();
+        if (onUpdate) onUpdate();
+      }
+    } catch (err) {
+      setImproveResult({ improved: false, reason: err.message });
+    } finally {
+      setImproving(false);
     }
   };
 
@@ -510,7 +535,28 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                         <LinearProgress variant="determinate" value={(check.score / check.maxScore) * 100} sx={{ height: 4, borderRadius: 2 }} />
                       </Box>
                     ))}
-                    <Button size="small" onClick={loadSeo} startIcon={<RefreshIcon />} sx={{ mt: 1 }}>Heranalyse</Button>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                      <Button size="small" onClick={loadSeo} startIcon={<RefreshIcon />}>Heranalyse</Button>
+                      {seoData.overallScore < 65 && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="warning"
+                          onClick={handleImprove}
+                          disabled={improving}
+                          startIcon={improving ? <CircularProgress size={14} /> : <AutoAwesomeIcon />}
+                        >
+                          {improving ? 'Verbeteren...' : 'AI Verbeter'}
+                        </Button>
+                      )}
+                    </Box>
+                    {improveResult && (
+                      <Alert severity={improveResult.improved ? 'success' : 'info'} sx={{ mt: 1, py: 0 }}>
+                        {improveResult.improved
+                          ? `Verbeterd: ${improveResult.original_score} → ${improveResult.final_score}/100 (${improveResult.improvement_details?.rounds || 0} rondes)`
+                          : (improveResult.reason || 'Geen verbetering mogelijk')}
+                      </Alert>
+                    )}
                   </>
                 ) : <Typography variant="body2" color="text.secondary">Laden...</Typography>}
               </Paper>

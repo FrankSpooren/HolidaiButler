@@ -3,14 +3,17 @@
  * Generates blog posts, social posts, and video scripts using Mistral AI.
  * Reuses embeddingService.generateChatCompletion() for LLM calls.
  *
- * @version 1.0.0
+ * @version 2.0.0 — Auto-improve: SEO check → AI rewrite → re-check until ≥65/100
  */
 
 import embeddingService from '../../holibot/embeddingService.js';
 import { buildToneInstruction, getLanguages } from './toneOfVoice.js';
 import { buildFormatInstruction, formatForPlatform, generateHashtags, getContentSpec } from './contentFormatter.js';
 import { translateTexts } from '../../translationService.js';
+import { analyzeContent } from '../seoMeester/seoAnalyzer.js';
 import logger from '../../../utils/logger.js';
+
+const SEO_MINIMUM_SCORE = 65;
 
 /**
  * Generate content from a suggestion using Mistral AI
@@ -81,7 +84,7 @@ RULES:
     const hashtags = platform !== 'website' ? generateHashtags(keywords, platform) : [];
 
     // Build result object
-    const result = {
+    let result = {
       title,
       body_en: formattedBody,
       meta_description: metaDescription,
@@ -93,12 +96,34 @@ RULES:
       keyword_cluster: keywords,
     };
 
+    // === AUTO-IMPROVE LOOP: SEO check → AI rewrite until ≥65/100 ===
+    const seoResult = await analyzeContent(
+      { title: result.title, body_en: result.body_en, seo_data: { meta_description: metaDescription }, content_type: contentType, keyword_cluster: keywords },
+      destinationId
+    );
+    result.seo_score = seoResult.overallScore;
+    result.seo_grade = seoResult.grade;
+
+    if (seoResult.overallScore < SEO_MINIMUM_SCORE) {
+      logger.info(`[ContentGenerator] SEO score ${seoResult.overallScore}/100 < ${SEO_MINIMUM_SCORE} — auto-improving...`);
+      const improved = await improveContent(result, seoResult, { destinationId, contentType, keywords });
+      if (improved) {
+        result.title = improved.title || result.title;
+        result.body_en = improved.body_en || result.body_en;
+        result.meta_description = improved.meta_description || result.meta_description;
+        result.seo_score = improved.seo_score;
+        result.seo_grade = improved.seo_grade;
+        result.auto_improved = true;
+        result.improvement_details = improved.improvement_details;
+      }
+    }
+
     // Translate to requested languages
     const targetLangs = (languages.length > 0 ? languages : getLanguages(destinationId))
       .filter(l => l !== 'en');
 
     if (targetLangs.length > 0) {
-      const translations = await translateContent(title, formattedBody, targetLangs);
+      const translations = await translateContent(result.title, result.body_en, targetLangs);
       for (const lang of targetLangs) {
         if (translations.title?.[lang]) result[`title_${lang}`] = translations.title[lang];
         if (translations.body?.[lang]) result[`body_${lang}`] = translations.body[lang];
@@ -267,4 +292,188 @@ async function translateContent(title, body, targetLangs) {
   }
 }
 
-export default { generateContent, generateSuggestions };
+/**
+ * Auto-improve content based on SEO analysis feedback
+ * Sends failing checks to Mistral AI with specific instructions to fix each issue.
+ * Runs up to 2 improvement rounds to reach the 65/100 minimum.
+ *
+ * @param {Object} content - { title, body_en, meta_description, content_type, keyword_cluster }
+ * @param {Object} seoResult - analyzeContent() result with checks and scores
+ * @param {Object} options - { destinationId, contentType, keywords }
+ * @returns {Object|null} Improved content or null if no improvement possible
+ */
+async function improveContent(content, seoResult, options = {}) {
+  const { destinationId, contentType, keywords = [] } = options;
+  const MAX_ROUNDS = 2;
+  const modelName = embeddingService.chatModel || 'mistral-small-latest';
+
+  if (!embeddingService.isConfigured) {
+    embeddingService.initialize();
+  }
+
+  let currentTitle = content.title;
+  let currentBody = content.body_en;
+  let currentMeta = content.meta_description || '';
+  let currentSeo = seoResult;
+  let round = 0;
+
+  while (currentSeo.overallScore < SEO_MINIMUM_SCORE && round < MAX_ROUNDS) {
+    round++;
+
+    const failingChecks = currentSeo.checks
+      .filter(c => c.status !== 'pass')
+      .map(c => `- ${c.name} (${c.score}/${c.maxScore}): ${c.details}`)
+      .join('\n');
+
+    const toneInstruction = buildToneInstruction(destinationId);
+
+    const systemPrompt = `You are a professional content optimizer for a premium tourism platform.
+You receive content that scored below the quality threshold on specific metrics.
+Your job: rewrite the content to FIX every failing metric while preserving the original message and style.
+
+${toneInstruction}
+
+CRITICAL RULES:
+- Return the COMPLETE improved content (not just the changes)
+- Prefix title with "TITLE: " on its own line
+- Prefix meta description with "META: " on its own line (for blog only)
+- Keep the same topic and message — only improve quality
+- Do NOT add disclaimers or explanations — return ONLY the improved content`;
+
+    const userPrompt = `The following ${contentType} content scored ${currentSeo.overallScore}/100 (minimum required: ${SEO_MINIMUM_SCORE}/100).
+
+CURRENT TITLE: ${currentTitle}
+
+CURRENT CONTENT:
+${currentBody}
+
+FAILING QUALITY CHECKS:
+${failingChecks}
+
+TARGET KEYWORDS: ${keywords.join(', ') || 'none specified'}
+
+Rewrite this content to fix ALL failing checks. Return the complete improved version.`;
+
+    try {
+      const improved = await embeddingService.generateChatCompletion(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        { temperature: 0.6, maxTokens: contentType === 'blog' ? 3000 : 1500 }
+      );
+
+      const parsed = parseGeneratedContent(improved, currentTitle);
+      currentTitle = parsed.title;
+      currentBody = parsed.body;
+      if (parsed.metaDescription) currentMeta = parsed.metaDescription;
+
+      // Re-score
+      currentSeo = await analyzeContent(
+        { title: currentTitle, body_en: currentBody, seo_data: { meta_description: currentMeta }, content_type: contentType, keyword_cluster: keywords },
+        destinationId
+      );
+
+      logger.info(`[ContentGenerator] Auto-improve round ${round}: ${seoResult.overallScore} → ${currentSeo.overallScore}/100 (${currentSeo.grade})`);
+    } catch (err) {
+      logger.error(`[ContentGenerator] Auto-improve round ${round} failed:`, err.message);
+      break;
+    }
+  }
+
+  // Only return if we actually improved
+  if (currentSeo.overallScore > seoResult.overallScore) {
+    return {
+      title: currentTitle,
+      body_en: currentBody,
+      meta_description: currentMeta,
+      seo_score: currentSeo.overallScore,
+      seo_grade: currentSeo.grade,
+      seo_checks: currentSeo.checks,
+      ai_model: modelName,
+      improvement_details: {
+        original_score: seoResult.overallScore,
+        final_score: currentSeo.overallScore,
+        rounds: round,
+        improved_checks: currentSeo.checks
+          .filter((c, i) => c.score > seoResult.checks[i]?.score)
+          .map(c => c.name),
+      },
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Improve an existing content item — standalone function for the API endpoint.
+ * Runs SEO analysis → auto-improve loop → returns improved content.
+ *
+ * @param {Object} contentItem - DB content item row { id, title, body_en, seo_data, content_type, keyword_cluster, destination_id }
+ * @returns {Object} { improved: boolean, original_score, final_score, title, body_en, ... }
+ */
+export async function improveExistingContent(contentItem) {
+  if (!embeddingService.isConfigured) {
+    embeddingService.initialize();
+  }
+
+  const keywords = typeof contentItem.keyword_cluster === 'string'
+    ? JSON.parse(contentItem.keyword_cluster)
+    : (contentItem.keyword_cluster || []);
+  const seoData = typeof contentItem.seo_data === 'string'
+    ? JSON.parse(contentItem.seo_data)
+    : (contentItem.seo_data || {});
+  const contentType = contentItem.content_type || 'blog';
+  const destinationId = contentItem.destination_id;
+
+  // Run current SEO analysis
+  const currentSeo = await analyzeContent(
+    { title: contentItem.title, body_en: contentItem.body_en, seo_data: seoData, content_type: contentType, keyword_cluster: keywords },
+    destinationId
+  );
+
+  if (currentSeo.overallScore >= SEO_MINIMUM_SCORE) {
+    return {
+      improved: false,
+      reason: `Score already at ${currentSeo.overallScore}/100 (≥${SEO_MINIMUM_SCORE})`,
+      seo_score: currentSeo.overallScore,
+      seo_grade: currentSeo.grade,
+      checks: currentSeo.checks,
+    };
+  }
+
+  const content = {
+    title: contentItem.title,
+    body_en: contentItem.body_en,
+    meta_description: seoData.meta_description || '',
+    content_type: contentType,
+    keyword_cluster: keywords,
+  };
+
+  const improved = await improveContent(content, currentSeo, { destinationId, contentType, keywords });
+
+  if (improved) {
+    return {
+      improved: true,
+      original_score: currentSeo.overallScore,
+      final_score: improved.seo_score,
+      title: improved.title,
+      body_en: improved.body_en,
+      meta_description: improved.meta_description,
+      seo_score: improved.seo_score,
+      seo_grade: improved.seo_grade,
+      seo_checks: improved.seo_checks,
+      improvement_details: improved.improvement_details,
+    };
+  }
+
+  return {
+    improved: false,
+    reason: 'AI could not improve the score — manual editing recommended',
+    seo_score: currentSeo.overallScore,
+    seo_grade: currentSeo.grade,
+    checks: currentSeo.checks,
+  };
+}
+
+export default { generateContent, generateSuggestions, improveExistingContent };
