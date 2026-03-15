@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 + Content B+C (v3.27.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 + Content B+C+D (v3.28.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -1450,7 +1450,9 @@ const SCHEDULED_JOBS_METADATA = [
   // Fase C: Publisher Agent
   { name: 'content-publish-scheduled', agent: 'De Uitgever', cron: '*/15 * * * *', description: 'Verwerk scheduled publicaties naar Facebook/Instagram/LinkedIn' },
   { name: 'content-analytics-collect', agent: 'De Uitgever', cron: '0 9 * * *', description: 'Dagelijkse engagement metrics ophalen per platform' },
-  { name: 'seasonal-check', agent: 'De Maestro', cron: '15 0 * * *', description: 'Dagelijkse seizoenswisseling check + homepage override' }
+  { name: 'seasonal-check', agent: 'De Maestro', cron: '15 0 * * *', description: 'Dagelijkse seizoenswisseling check + homepage override' },
+  // Fase D: Feedback Loop
+  { name: 'content-feedback-loop', agent: 'De Trendspotter', cron: '0 4 * * 0', description: 'Wekelijkse feedback loop: correleer trending keywords met content performance' }
 ];
 
 /**
@@ -10482,6 +10484,237 @@ router.get('/content/performance/:id', adminAuth('content_editor'), async (req, 
   } catch (error) {
     logger.error('[AdminPortal] Performance detail error:', error);
     res.status(500).json({ success: false, error: { code: 'PERFORMANCE_ERROR', message: error.message } });
+  }
+});
+
+// --- Content Analytics (Fase D) ---
+
+/**
+ * GET /content/analytics/overview — Dashboard aggregations: KPIs, growth, time-series, content type breakdown
+ */
+router.get('/content/analytics/overview', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const days = Math.min(Number(req.query.days) || 30, 365);
+    const dId = Number(destId);
+
+    // KPI totals + growth comparison
+    const [totals] = await mysqlSequelize.query(
+      `SELECT SUM(views) as total_views, SUM(clicks) as total_clicks,
+              SUM(engagement) as total_engagement, SUM(reach) as total_reach,
+              COUNT(DISTINCT content_item_id) as items_tracked
+       FROM content_performance
+       WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)`,
+      { replacements: { destId: dId, days } }
+    );
+
+    const [prevTotals] = await mysqlSequelize.query(
+      `SELECT SUM(views) as total_views, SUM(clicks) as total_clicks,
+              SUM(engagement) as total_engagement, SUM(reach) as total_reach
+       FROM content_performance
+       WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL :days2 DAY) AND date < DATE_SUB(CURDATE(), INTERVAL :days DAY)`,
+      { replacements: { destId: dId, days, days2: days * 2 } }
+    );
+
+    // Growth percentages
+    const cur = totals[0] || {};
+    const prev = prevTotals[0] || {};
+    const growth = (curVal, prevVal) => {
+      const c = Number(curVal) || 0;
+      const p = Number(prevVal) || 0;
+      if (p === 0) return c > 0 ? 100 : 0;
+      return Math.round(((c - p) / p) * 100);
+    };
+
+    // Time-series (daily aggregates)
+    const [timeSeries] = await mysqlSequelize.query(
+      `SELECT date, SUM(views) as views, SUM(clicks) as clicks,
+              SUM(engagement) as engagement, SUM(reach) as reach
+       FROM content_performance
+       WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       GROUP BY date ORDER BY date ASC`,
+      { replacements: { destId: dId, days } }
+    );
+
+    // By platform
+    const [byPlatform] = await mysqlSequelize.query(
+      `SELECT platform, SUM(views) as total_views, SUM(clicks) as total_clicks,
+              SUM(engagement) as total_engagement, SUM(reach) as total_reach,
+              COUNT(DISTINCT content_item_id) as items_tracked
+       FROM content_performance
+       WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       GROUP BY platform`,
+      { replacements: { destId: dId, days } }
+    );
+
+    // By content type
+    const [byType] = await mysqlSequelize.query(
+      `SELECT ci.content_type, SUM(cp.views) as total_views, SUM(cp.clicks) as total_clicks,
+              SUM(cp.engagement) as total_engagement, SUM(cp.reach) as total_reach,
+              COUNT(DISTINCT cp.content_item_id) as items_count
+       FROM content_performance cp
+       JOIN content_items ci ON ci.id = cp.content_item_id
+       WHERE cp.destination_id = :destId AND cp.date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       GROUP BY ci.content_type`,
+      { replacements: { destId: dId, days } }
+    );
+
+    // Top performing (top 10 by engagement)
+    const [topContent] = await mysqlSequelize.query(
+      `SELECT ci.id, ci.title, ci.content_type, cp.platform,
+              SUM(cp.views) as views, SUM(cp.clicks) as clicks,
+              SUM(cp.engagement) as engagement, SUM(cp.reach) as reach
+       FROM content_performance cp
+       JOIN content_items ci ON ci.id = cp.content_item_id
+       WHERE cp.destination_id = :destId AND cp.date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       GROUP BY ci.id, ci.title, ci.content_type, cp.platform
+       ORDER BY engagement DESC LIMIT 10`,
+      { replacements: { destId: dId, days } }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          total_views: Number(cur.total_views) || 0,
+          total_clicks: Number(cur.total_clicks) || 0,
+          total_engagement: Number(cur.total_engagement) || 0,
+          total_reach: Number(cur.total_reach) || 0,
+          items_tracked: Number(cur.items_tracked) || 0,
+          growth_views: growth(cur.total_views, prev.total_views),
+          growth_clicks: growth(cur.total_clicks, prev.total_clicks),
+          growth_engagement: growth(cur.total_engagement, prev.total_engagement),
+          growth_reach: growth(cur.total_reach, prev.total_reach),
+        },
+        time_series: timeSeries || [],
+        by_platform: byPlatform || [],
+        by_type: byType || [],
+        top_content: topContent || [],
+      },
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Analytics overview error:', error);
+    res.status(500).json({ success: false, error: { code: 'ANALYTICS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/analytics/items — Per-item performance with sort, filter, pagination
+ */
+router.get('/content/analytics/items', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const days = Math.min(Number(req.query.days) || 30, 365);
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const offset = Number(req.query.offset) || 0;
+    const sortBy = ['views', 'clicks', 'engagement', 'reach'].includes(req.query.sort_by) ? req.query.sort_by : 'engagement';
+    const contentType = req.query.content_type || null;
+    const dId = Number(destId);
+
+    let typeFilter = '';
+    const replacements = { destId: dId, days, limit, offset };
+    if (contentType) {
+      typeFilter = 'AND ci.content_type = :contentType';
+      replacements.contentType = contentType;
+    }
+
+    const [items] = await mysqlSequelize.query(
+      `SELECT ci.id, ci.title, ci.content_type, ci.approval_status,
+              ci.created_at as item_created,
+              SUM(cp.views) as views, SUM(cp.clicks) as clicks,
+              SUM(cp.engagement) as engagement, SUM(cp.reach) as reach,
+              GROUP_CONCAT(DISTINCT cp.platform) as platforms,
+              COUNT(DISTINCT cp.date) as days_tracked
+       FROM content_items ci
+       LEFT JOIN content_performance cp ON cp.content_item_id = ci.id
+         AND cp.date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       WHERE ci.destination_id = :destId ${typeFilter}
+       GROUP BY ci.id, ci.title, ci.content_type, ci.approval_status, ci.created_at
+       ORDER BY ${sortBy} DESC
+       LIMIT :limit OFFSET :offset`,
+      { replacements }
+    );
+
+    const [countResult] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total FROM content_items WHERE destination_id = :destId ${contentType ? 'AND content_type = :contentType' : ''}`,
+      { replacements: { destId: dId, ...(contentType ? { contentType } : {}) } }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        items: (items || []).map(it => ({
+          ...it,
+          views: Number(it.views) || 0,
+          clicks: Number(it.clicks) || 0,
+          engagement: Number(it.engagement) || 0,
+          reach: Number(it.reach) || 0,
+          platforms: it.platforms ? it.platforms.split(',') : [],
+        })),
+        total: countResult[0]?.total || 0,
+        limit,
+        offset,
+      },
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Analytics items error:', error);
+    res.status(500).json({ success: false, error: { code: 'ANALYTICS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/analytics/platforms — Platform comparison with engagement rates
+ */
+router.get('/content/analytics/platforms', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const days = Math.min(Number(req.query.days) || 30, 365);
+    const dId = Number(destId);
+
+    const [platforms] = await mysqlSequelize.query(
+      `SELECT cp.platform,
+              SUM(cp.views) as total_views,
+              SUM(cp.clicks) as total_clicks,
+              SUM(cp.engagement) as total_engagement,
+              SUM(cp.reach) as total_reach,
+              COUNT(DISTINCT cp.content_item_id) as items_count,
+              COUNT(DISTINCT cp.date) as active_days,
+              ROUND(CASE WHEN SUM(cp.views) > 0 THEN SUM(cp.clicks) / SUM(cp.views) * 100 ELSE 0 END, 2) as ctr,
+              ROUND(CASE WHEN SUM(cp.reach) > 0 THEN SUM(cp.engagement) / SUM(cp.reach) * 100 ELSE 0 END, 2) as engagement_rate
+       FROM content_performance cp
+       WHERE cp.destination_id = :destId AND cp.date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       GROUP BY cp.platform
+       ORDER BY total_engagement DESC`,
+      { replacements: { destId: dId, days } }
+    );
+
+    // Per-platform time-series for comparison chart
+    const [platformTimeSeries] = await mysqlSequelize.query(
+      `SELECT platform, date, SUM(views) as views, SUM(engagement) as engagement
+       FROM content_performance
+       WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       GROUP BY platform, date ORDER BY date ASC`,
+      { replacements: { destId: dId, days } }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        platforms: (platforms || []).map(p => ({
+          ...p,
+          total_views: Number(p.total_views) || 0,
+          total_clicks: Number(p.total_clicks) || 0,
+          total_engagement: Number(p.total_engagement) || 0,
+          total_reach: Number(p.total_reach) || 0,
+          ctr: Number(p.ctr) || 0,
+          engagement_rate: Number(p.engagement_rate) || 0,
+        })),
+        time_series: platformTimeSeries || [],
+      },
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Analytics platforms error:', error);
+    res.status(500).json({ success: false, error: { code: 'ANALYTICS_ERROR', message: error.message } });
   }
 });
 
