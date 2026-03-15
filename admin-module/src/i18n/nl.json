@@ -1093,7 +1093,9 @@
       "trending": "Trending Monitor",
       "suggestions": "Suggesties",
       "content": "Content Items",
-      "performance": "Performance"
+      "calendar": "Kalender",
+      "performance": "Performance",
+      "seasons": "Seizoenen"
     },
     "generateSuggestions": "Genereer Suggesties",
     "suggestionsFound": "suggesties",
@@ -1105,6 +1107,50 @@
     "generateContent": "Genereer Content",
     "seoScore": "SEO Score",
     "translateTo": "Vertaal naar",
-    "reanalyze": "Heranalyse"
+    "reanalyze": "Heranalyse",
+    "calendar": {
+      "season": "Seizoen",
+      "more": "meer",
+      "connectedAccounts": "Gekoppelde accounts",
+      "noItems": "Geen gepubliceerde of geplande content op deze dag.",
+      "schedule": "Inplannen",
+      "publishNow": "Nu publiceren",
+      "cancelSchedule": "Annuleren",
+      "scheduleTitle": "Content inplannen",
+      "dateTime": "Datum & tijd",
+      "account": "Account"
+    },
+    "performance": {
+      "days": "dagen",
+      "views": "Weergaven",
+      "clicks": "Klikken",
+      "engagement": "Engagement",
+      "reach": "Bereik",
+      "byPlatform": "Per platform",
+      "distribution": "Verdeling weergaven",
+      "noData": "Nog geen performance data beschikbaar.",
+      "topContent": "Best presterende content",
+      "title": "Titel",
+      "platform": "Platform"
+    },
+    "seasons": {
+      "title": "Seizoensconfiguratie",
+      "add": "Seizoen toevoegen",
+      "edit": "Seizoen bewerken",
+      "active": "Actief seizoen",
+      "inactive": "Inactief",
+      "activate": "Activeren",
+      "empty": "Nog geen seizoenen geconfigureerd.",
+      "name": "Naam",
+      "period": "Periode",
+      "status": "Status",
+      "themes": "Thema's",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "heroImage": "Hero afbeelding pad",
+      "featuredPois": "Featured POI IDs (JSON array)",
+      "deleteTitle": "Seizoen verwijderen",
+      "deleteConfirm": "Weet je zeker dat je dit seizoen wilt verwijderen?"
+    }
   }
 }

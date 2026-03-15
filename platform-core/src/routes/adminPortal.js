@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 (v3.25.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 + Content B+C (v3.27.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -1391,7 +1391,26 @@ const AGENT_METADATA = [
 2. Controleer SISTRIX_API_KEY in .env
 3. Controleer content_items: SELECT id, JSON_EXTRACT(seo_data, '$.overallScore') FROM content_items LIMIT 10
 4. Herstart API: pm2 restart holidaibutler-api
-5. Agent draait wekelijks (maandag 04:00) — wacht op volgende run en verifieer status` } }
+5. Agent draait wekelijks (maandag 04:00) — wacht op volgende run en verifieer status` } },
+  // === Content Module: De Uitgever (Publisher) ===
+  { id: 'uitgever', name: 'De Uitgever', englishName: 'Publisher Agent', category: 'content', type: 'A',
+    description: 'Content publicatie naar Facebook, Instagram en LinkedIn. Scheduled publishing, analytics collectie',
+    description_en: 'Content publishing to Facebook, Instagram and LinkedIn. Scheduled publishing, analytics collection',
+    tasks: [
+      'Goedgekeurde content publiceren naar social media platforms',
+      'Scheduled posts verwerken (elke 15 minuten)',
+      'Post-publish engagement metrics ophalen (dagelijks)',
+      'Publicatie-status synchroniseren met content_items tabel',
+      'Token geldigheid monitoren voor social accounts'
+    ],
+    monitoring_scope: 'content_items publishing, social_accounts tokens, content_performance metrics',
+    output_description: 'Publicatie confirmaties met post URLs, engagement metrics per platform',
+    schedule: '*/15 * * * *', actorNames: ['publisher'],
+    errorInstructions: { default: `1. Controleer PM2 logs: pm2 logs holidaibutler-api --lines 100 | grep "Uitgever\\|publisher"
+2. Controleer META/LINKEDIN env vars: grep "META_\\|LINKEDIN_" .env | sed 's/=.*/=***/'
+3. Controleer social_accounts: SELECT platform, status, token_expires_at FROM social_accounts
+4. Test Meta API: curl -s "https://graph.facebook.com/v25.0/me?access_token=$META_PAGE_ACCESS_TOKEN"
+5. Herstart API: pm2 restart holidaibutler-api` } }
 ];
 
 /**
@@ -1427,7 +1446,11 @@ const SCHEDULED_JOBS_METADATA = [
   { name: 'inventory-sync', agent: 'De Magazijnier', cron: '*/30 * * * *', description: 'Voorraad synchronisatie Redis vs MySQL' },
   // Content Module
   { name: 'content-trending-scan', agent: 'De Trendspotter', cron: '30 3 * * 0', description: 'Wekelijkse trending keyword collectie en analyse via Google Trends' },
-  { name: 'content-seo-audit', agent: 'De SEO Meester', cron: '0 4 * * 1', description: 'Wekelijkse SEO audit: readability, keyword density, SISTRIX visibility' }
+  { name: 'content-seo-audit', agent: 'De SEO Meester', cron: '0 4 * * 1', description: 'Wekelijkse SEO audit: readability, keyword density, SISTRIX visibility' },
+  // Fase C: Publisher Agent
+  { name: 'content-publish-scheduled', agent: 'De Uitgever', cron: '*/15 * * * *', description: 'Verwerk scheduled publicaties naar Facebook/Instagram/LinkedIn' },
+  { name: 'content-analytics-collect', agent: 'De Uitgever', cron: '0 9 * * *', description: 'Dagelijkse engagement metrics ophalen per platform' },
+  { name: 'seasonal-check', agent: 'De Maestro', cron: '15 0 * * *', description: 'Dagelijkse seizoenswisseling check + homepage override' }
 ];
 
 /**
@@ -10299,6 +10322,387 @@ router.get('/content/items/:id/seo', adminAuth('content_editor'), async (req, re
   } catch (error) {
     logger.error('[AdminPortal] SEO analysis error:', error);
     res.status(500).json({ success: false, error: { code: 'SEO_ANALYSIS_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================================
+// FASE C: PUBLISHING — Calendar, Publish, Schedule, Social Accounts, Seasonal
+// ============================================================================
+
+/**
+ * GET /content/calendar — Calendar data (month/week view)
+ * Returns content items with scheduled_at or published_at for date range
+ */
+router.get('/content/calendar', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const { start, end, view } = req.query;
+    const startDate = start || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+    const endDate = end || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+
+    const [items] = await mysqlSequelize.query(
+      `SELECT id, title, content_type, target_platform, approval_status, scheduled_at, published_at, publish_url
+       FROM content_items
+       WHERE destination_id = :destId AND approval_status != 'deleted'
+         AND (
+           (scheduled_at BETWEEN :start AND :end)
+           OR (published_at BETWEEN :start AND :end)
+           OR (approval_status IN ('approved', 'draft') AND created_at BETWEEN :start AND :end)
+         )
+       ORDER BY COALESCE(scheduled_at, published_at, created_at) ASC`,
+      { replacements: { destId: Number(destId), start: startDate, end: endDate + ' 23:59:59' } }
+    );
+
+    // Also fetch seasonal periods for overlay
+    const [seasons] = await mysqlSequelize.query(
+      `SELECT id, season_name, start_date, end_date, is_active, hero_image_path
+       FROM seasonal_config
+       WHERE destination_id = :destId AND (
+         (start_date BETWEEN :start AND :end) OR (end_date BETWEEN :start AND :end)
+         OR (start_date <= :start AND end_date >= :end)
+       )`,
+      { replacements: { destId: Number(destId), start: startDate, end: endDate } }
+    );
+
+    res.json({ success: true, data: { items: items || [], seasons: seasons || [], view: view || 'month' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Calendar error:', error);
+    res.status(500).json({ success: false, error: { code: 'CALENDAR_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/schedule — Schedule content for publishing
+ */
+router.post('/content/items/:id/schedule', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { scheduled_at, platforms } = req.body;
+
+    if (!scheduled_at) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
+    }
+
+    await mysqlSequelize.query(
+      `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW() WHERE id = :id`,
+      { replacements: { scheduledAt: scheduled_at, id: Number(id) } }
+    );
+
+    res.json({ success: true, data: { id: Number(id), approval_status: 'scheduled', scheduled_at } });
+  } catch (error) {
+    logger.error('[AdminPortal] Schedule error:', error);
+    res.status(500).json({ success: false, error: { code: 'SCHEDULE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/publish-now — Immediately publish content
+ */
+router.post('/content/items/:id/publish-now', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const publisher = (await import('../services/agents/publisher/index.js')).default;
+    const result = await publisher.publishItem(Number(id));
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Publish-now error:', error);
+    res.status(500).json({ success: false, error: { code: 'PUBLISH_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /content/items/:id/schedule — Cancel scheduled publish
+ */
+router.delete('/content/items/:id/schedule', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    await mysqlSequelize.query(
+      `UPDATE content_items SET approval_status = 'approved', scheduled_at = NULL, updated_at = NOW() WHERE id = :id AND approval_status = 'scheduled'`,
+      { replacements: { id: Number(id) } }
+    );
+    res.json({ success: true, data: { id: Number(id), approval_status: 'approved' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Cancel schedule error:', error);
+    res.status(500).json({ success: false, error: { code: 'CANCEL_SCHEDULE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PATCH /content/items/:id/reschedule — Move scheduled post to new datetime
+ */
+router.patch('/content/items/:id/reschedule', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { scheduled_at } = req.body;
+    if (!scheduled_at) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
+    }
+    await mysqlSequelize.query(
+      `UPDATE content_items SET scheduled_at = :scheduledAt, updated_at = NOW() WHERE id = :id AND approval_status = 'scheduled'`,
+      { replacements: { scheduledAt: scheduled_at, id: Number(id) } }
+    );
+    res.json({ success: true, data: { id: Number(id), scheduled_at } });
+  } catch (error) {
+    logger.error('[AdminPortal] Reschedule error:', error);
+    res.status(500).json({ success: false, error: { code: 'RESCHEDULE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/performance/summary — Aggregate performance metrics
+ */
+router.get('/content/performance/summary', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const [summary] = await mysqlSequelize.query(
+      `SELECT platform, SUM(views) as total_views, SUM(clicks) as total_clicks,
+              SUM(engagement) as total_engagement, SUM(reach) as total_reach,
+              COUNT(DISTINCT content_item_id) as items_tracked
+       FROM content_performance WHERE destination_id = :destId
+       GROUP BY platform`,
+      { replacements: { destId: Number(destId) } }
+    );
+    res.json({ success: true, data: summary || [] });
+  } catch (error) {
+    logger.error('[AdminPortal] Performance summary error:', error);
+    res.status(500).json({ success: false, error: { code: 'PERFORMANCE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/performance/:id — Detailed performance for a content item
+ */
+router.get('/content/performance/:id', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const [metrics] = await mysqlSequelize.query(
+      `SELECT * FROM content_performance WHERE content_item_id = :id ORDER BY date DESC LIMIT 30`,
+      { replacements: { id: Number(req.params.id) } }
+    );
+    res.json({ success: true, data: metrics || [] });
+  } catch (error) {
+    logger.error('[AdminPortal] Performance detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'PERFORMANCE_ERROR', message: error.message } });
+  }
+});
+
+// --- Social Accounts ---
+
+/**
+ * GET /content/social-accounts — List connected accounts per destination
+ */
+router.get('/content/social-accounts', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const [accounts] = await mysqlSequelize.query(
+      `SELECT id, destination_id, platform, account_name, account_id, status, token_expires_at, last_sync_at, metadata, created_at
+       FROM social_accounts WHERE destination_id = :destId ORDER BY platform`,
+      { replacements: { destId: Number(destId) } }
+    );
+    res.json({ success: true, data: accounts || [] });
+  } catch (error) {
+    logger.error('[AdminPortal] Social accounts error:', error);
+    res.status(500).json({ success: false, error: { code: 'SOCIAL_ACCOUNTS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/social-accounts/connect/linkedin — Start LinkedIn OAuth flow
+ */
+router.post('/content/social-accounts/connect/linkedin', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const LinkedInClient = (await import('../services/agents/publisher/clients/linkedinClient.js')).default;
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/linkedin/callback`;
+    const state = require('crypto').randomBytes(16).toString('hex');
+    const authUrl = LinkedInClient.getAuthorizationUrl(redirectUri, state);
+    res.json({ success: true, data: { authorizationUrl: authUrl, state } });
+  } catch (error) {
+    logger.error('[AdminPortal] LinkedIn connect error:', error);
+    res.status(500).json({ success: false, error: { code: 'LINKEDIN_CONNECT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /content/social-accounts/:id — Disconnect account
+ */
+router.delete('/content/social-accounts/:id', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    await mysqlSequelize.query(
+      `UPDATE social_accounts SET status = 'disconnected', access_token_encrypted = NULL, refresh_token_encrypted = NULL, updated_at = NOW() WHERE id = :id`,
+      { replacements: { id: Number(req.params.id) } }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Disconnect account error:', error);
+    res.status(500).json({ success: false, error: { code: 'DISCONNECT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/social-accounts/:id/refresh — Refresh token
+ */
+router.post('/content/social-accounts/:id/refresh', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const [[account]] = await mysqlSequelize.query(
+      `SELECT * FROM social_accounts WHERE id = :id`, { replacements: { id: Number(req.params.id) } }
+    );
+    if (!account) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND' } });
+
+    if (account.platform === 'linkedin' && account.refresh_token_encrypted) {
+      const SocialAccount = (await import('../models/SocialAccount.js')).default;
+      const LinkedInClient = (await import('../services/agents/publisher/clients/linkedinClient.js')).default;
+      const refreshToken = SocialAccount.decryptToken(account.refresh_token_encrypted);
+      const newTokens = await LinkedInClient.refreshAccessToken(refreshToken);
+
+      await mysqlSequelize.query(
+        `UPDATE social_accounts SET access_token_encrypted = :token, token_expires_at = DATE_ADD(NOW(), INTERVAL :expires SECOND), status = 'active', updated_at = NOW() WHERE id = :id`,
+        { replacements: { token: SocialAccount.encryptToken(newTokens.access_token), expires: newTokens.expires_in || 5184000, id: account.id } }
+      );
+      return res.json({ success: true, data: { status: 'active', expires_in: newTokens.expires_in } });
+    }
+
+    res.json({ success: true, data: { status: account.status, message: 'Meta tokens are long-lived and do not need refresh' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Token refresh error:', error);
+    res.status(500).json({ success: false, error: { code: 'REFRESH_ERROR', message: error.message } });
+  }
+});
+
+// --- Seasonal Config ---
+
+/**
+ * GET /content/seasons — List all seasonal configurations per destination
+ */
+router.get('/content/seasons', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const [seasons] = await mysqlSequelize.query(
+      `SELECT * FROM seasonal_config WHERE destination_id = :destId ORDER BY start_date ASC`,
+      { replacements: { destId: Number(destId) } }
+    );
+    res.json({ success: true, data: seasons || [] });
+  } catch (error) {
+    logger.error('[AdminPortal] Seasons list error:', error);
+    res.status(500).json({ success: false, error: { code: 'SEASONS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/seasons — Create a season
+ */
+router.post('/content/seasons', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.body.destination_id || 1;
+    const { season_name, start_date, end_date, hero_image_path, featured_poi_ids, strategic_themes, cta_config, homepage_blocks } = req.body;
+
+    if (!season_name || !start_date || !end_date) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'season_name, start_date, end_date required' } });
+    }
+
+    const [result] = await mysqlSequelize.query(
+      `INSERT INTO seasonal_config (destination_id, season_name, start_date, end_date, hero_image_path, featured_poi_ids, strategic_themes, cta_config, homepage_blocks, is_active, created_at, updated_at)
+       VALUES (:destId, :name, :start, :end, :hero, :pois, :themes, :cta, :blocks, 0, NOW(), NOW())`,
+      {
+        replacements: {
+          destId: Number(destId), name: season_name, start: start_date, end: end_date,
+          hero: hero_image_path || null, pois: JSON.stringify(featured_poi_ids || []),
+          themes: JSON.stringify(strategic_themes || []), cta: JSON.stringify(cta_config || {}),
+          blocks: JSON.stringify(homepage_blocks || null),
+        },
+      }
+    );
+
+    res.json({ success: true, data: { id: result, season_name, start_date, end_date } });
+  } catch (error) {
+    logger.error('[AdminPortal] Create season error:', error);
+    res.status(500).json({ success: false, error: { code: 'CREATE_SEASON_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PATCH /content/seasons/:id — Update a season
+ */
+router.patch('/content/seasons/:id', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fields = req.body;
+    const updates = [];
+    const replacements = { id: Number(id) };
+
+    for (const [key, value] of Object.entries(fields)) {
+      if (['season_name', 'start_date', 'end_date', 'hero_image_path'].includes(key)) {
+        updates.push(`${key} = :${key}`);
+        replacements[key] = value;
+      } else if (['featured_poi_ids', 'strategic_themes', 'cta_config', 'homepage_blocks'].includes(key)) {
+        updates.push(`${key} = :${key}`);
+        replacements[key] = JSON.stringify(value);
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_FIELDS', message: 'No valid fields to update' } });
+    }
+
+    updates.push('updated_at = NOW()');
+    await mysqlSequelize.query(`UPDATE seasonal_config SET ${updates.join(', ')} WHERE id = :id`, { replacements });
+    res.json({ success: true, data: { id: Number(id), updated: Object.keys(fields) } });
+  } catch (error) {
+    logger.error('[AdminPortal] Update season error:', error);
+    res.status(500).json({ success: false, error: { code: 'UPDATE_SEASON_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /content/seasons/:id — Delete a season
+ */
+router.delete('/content/seasons/:id', adminAuth('content_editor'), async (req, res) => {
+  try {
+    await mysqlSequelize.query(`DELETE FROM seasonal_config WHERE id = :id`, { replacements: { id: Number(req.params.id) } });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Delete season error:', error);
+    res.status(500).json({ success: false, error: { code: 'DELETE_SEASON_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/seasons/:id/activate — Force-activate a season
+ */
+router.post('/content/seasons/:id/activate', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [[season]] = await mysqlSequelize.query(`SELECT * FROM seasonal_config WHERE id = :id`, { replacements: { id: Number(id) } });
+    if (!season) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND' } });
+
+    // Deactivate all other seasons for this destination
+    await mysqlSequelize.query(
+      `UPDATE seasonal_config SET is_active = 0, updated_at = NOW() WHERE destination_id = :destId`,
+      { replacements: { destId: season.destination_id } }
+    );
+    // Activate this one
+    await mysqlSequelize.query(
+      `UPDATE seasonal_config SET is_active = 1, updated_at = NOW() WHERE id = :id`,
+      { replacements: { id: Number(id) } }
+    );
+
+    res.json({ success: true, data: { id: Number(id), season_name: season.season_name, is_active: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Activate season error:', error);
+    res.status(500).json({ success: false, error: { code: 'ACTIVATE_SEASON_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/seasons/current — Get current active season for destination
+ */
+router.get('/content/seasons/current', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const { getCurrentSeason } = await import('../services/content/seasonalEngine.js');
+    const season = await getCurrentSeason(Number(destId));
+    res.json({ success: true, data: season });
+  } catch (error) {
+    logger.error('[AdminPortal] Current season error:', error);
+    res.status(500).json({ success: false, error: { code: 'CURRENT_SEASON_ERROR', message: error.message } });
   }
 });
 

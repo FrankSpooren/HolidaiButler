@@ -4468,4 +4468,94 @@ CLAUDE.md v3.99.0 → v4.0.0. MS v7.61 → v7.62. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Fase C: Content Publishing — De Uitgever Agent + Social Media + Calendar (15 maart 2026)
+
+### Resultaat
+
+Publisher Agent (#25 "De Uitgever") gebouwd met Meta Graph API v25.0 en LinkedIn Marketing API integratie. Content Calendar, Performance en Seasonal Config tabs in Admin Portal. Social media accounts management met AES-256-CBC token encryptie.
+
+### Backend
+
+- **Publisher Agent** (`platform-core/src/services/agents/publisher/index.js`): BaseAgent #25 "De Uitgever", destinationAware Type A. Methoden: publishItem (load content_item + social_account, call platform client, update status), processScheduledPublications (scheduled_at <= NOW()), collectAnalytics (fetch metrics, write content_performance)
+- **Platform Client Factory** (`publisher/clients/platformClientFactory.js`): Factory pattern, getClient(platform) returns MetaClient of LinkedInClient
+- **Meta Client** (`publisher/clients/metaClient.js`): Facebook POST /{page-id}/feed|photos, Instagram two-step container (POST /{ig-user-id}/media → POST /{ig-user-id}/media_publish), Insights API analytics
+- **LinkedIn Client** (`publisher/clients/linkedinClient.js`): POST /rest/posts, OAuth2 flow (getAuthorizationUrl, exchangeCodeForToken, refreshAccessToken), organizationalEntityShareStatistics analytics
+- **Seasonal Engine** (`platform-core/src/services/content/seasonalEngine.js`): getCurrentSeason(), checkSeasonTransitions() (daily), applySeasonalOverrides() (hero image + featured POIs, page_revisions backup)
+- **LinkedIn OAuth Callback** (`platform-core/src/index.js`): GET /api/v1/oauth/linkedin/callback — token exchange + social_accounts upsert
+- **17 API endpoints** in adminPortal.js v3.27.0:
+  - Calendar: GET /content/calendar
+  - Scheduling: POST /content/items/:id/schedule, POST /content/items/:id/publish-now, DELETE /content/items/:id/schedule, PATCH /content/items/:id/reschedule
+  - Performance: GET /content/performance/summary, GET /content/performance/:id
+  - Social Accounts: GET /content/social-accounts, POST /content/social-accounts/connect/linkedin, DELETE /content/social-accounts/:id, POST /content/social-accounts/:id/refresh
+  - Seasons: GET /content/seasons, POST /content/seasons, PATCH /content/seasons/:id, DELETE /content/seasons/:id, POST /content/seasons/:id/activate, GET /content/seasons/current
+- **3 BullMQ jobs**: content-publish-scheduled (*/15 * * * *), content-analytics-collect (0 9 * * *), seasonal-check (15 0 * * *)
+- **Agent registratie**: agentRegistry.js #25, workers.js 3 cases, scheduler.js 3 jobs
+- **AGENT_METADATA + SCHEDULED_JOBS_METADATA** bijgewerkt in adminPortal.js
+
+### Frontend
+
+- **ContentCalendarTab.jsx** (NIEUW): Maandkalender grid, seizoensoverlay (groene achtergrond), dag-detail dialog met inplannen/publiceren/annuleren, platform icons (Facebook/Instagram/LinkedIn), ScheduleDialog met datetime picker + account selector, gekoppelde accounts overzicht
+- **ContentPerformanceTab.jsx** (NIEUW): 4 KPI cards (views/clicks/engagement/reach), Recharts BarChart per platform, PieChart verdeling, top content tabel, periode selector (7/30/90 dagen)
+- **SeasonalConfigTab.jsx** (NIEUW): CRUD tabel met status chips, create/edit dialog (naam, periode, hero image, featured POIs, thema's), activeren/deactiveren, delete bevestiging
+- **ContentStudioPage.jsx** (WIJZIG): 4 → 6 tabs (+ Kalender, Performance, Seizoenen), scrollable tabs
+- **contentService.js** (WIJZIG): +17 API methods (calendar, scheduling, performance, social accounts, seasons)
+- **useContent.js** (WIJZIG): +16 React Query hooks
+- **i18n** (WIJZIG): 4 talen (NL/EN/DE/ES), ~50 nieuwe keys (calendar, performance, seasons secties)
+
+### Database Migratie
+
+- `ALTER TABLE content_items ADD COLUMN scheduled_at TIMESTAMP NULL`
+- `ALTER TABLE content_items ADD COLUMN platform_post_id VARCHAR(500) NULL`
+- `ALTER TABLE content_items ADD COLUMN publish_error TEXT NULL`
+- `ALTER TABLE content_items MODIFY approval_status ENUM('draft','pending_review','approved','scheduled','publishing','published','failed','rejected','deleted')`
+- `ALTER TABLE content_items ADD INDEX idx_scheduled_at`
+- 2 social_accounts geseeded: Facebook (page 1062544483598930) + Instagram (17841474707552387) met encrypted tokens
+
+### Bugfix
+
+- `ContentStudioPage.jsx`: `relevance_score.toFixed(1)` → `Number(relevance_score).toFixed(1)` (DB returns string)
+- `POIsPage.jsx`: `ds.avgRating.toFixed(1)` → `Number(ds.avgRating).toFixed(1)` (zelfde issue)
+- Admin build gedeployed naar alle 3 portals (prod + test + dev waren out of sync)
+
+### Bestanden
+
+| Actie | Bestand | Beschrijving |
+|-------|---------|-------------|
+| NIEUW | `platform-core/src/services/agents/publisher/index.js` | Publisher Agent #25 |
+| NIEUW | `platform-core/src/services/agents/publisher/clients/platformClientFactory.js` | Platform client factory |
+| NIEUW | `platform-core/src/services/agents/publisher/clients/metaClient.js` | Meta Graph API client |
+| NIEUW | `platform-core/src/services/agents/publisher/clients/linkedinClient.js` | LinkedIn Marketing API client |
+| NIEUW | `platform-core/src/services/content/seasonalEngine.js` | Seasonal transition engine |
+| NIEUW | `admin-module/src/pages/ContentCalendarTab.jsx` | Calendar tab component |
+| NIEUW | `admin-module/src/pages/ContentPerformanceTab.jsx` | Performance tab component |
+| NIEUW | `admin-module/src/pages/SeasonalConfigTab.jsx` | Seasonal config tab component |
+| WIJZIG | `platform-core/src/services/agents/base/agentRegistry.js` | +#25 De Uitgever |
+| WIJZIG | `platform-core/src/services/orchestrator/workers.js` | +3 job cases |
+| WIJZIG | `platform-core/src/services/orchestrator/scheduler.js` | +3 scheduled jobs |
+| WIJZIG | `platform-core/src/routes/adminPortal.js` | +17 endpoints, v3.27.0 |
+| WIJZIG | `platform-core/src/index.js` | +LinkedIn OAuth callback |
+| WIJZIG | `admin-module/src/api/contentService.js` | +17 API methods |
+| WIJZIG | `admin-module/src/hooks/useContent.js` | +16 React Query hooks |
+| WIJZIG | `admin-module/src/pages/ContentStudioPage.jsx` | +3 tabs, toFixed fix |
+| WIJZIG | `admin-module/src/pages/POIsPage.jsx` | toFixed fix |
+| WIJZIG | `admin-module/src/i18n/nl.json` | +~50 keys |
+| WIJZIG | `admin-module/src/i18n/en.json` | +~50 keys |
+| WIJZIG | `admin-module/src/i18n/de.json` | +~50 keys |
+| WIJZIG | `admin-module/src/i18n/es.json` | +~50 keys |
+
+### Statistieken
+
+- **25 agents** (+1: De Uitgever)
+- **59 BullMQ jobs** (+3)
+- **185 admin endpoints** (+17)
+- **adminPortal.js v3.27.0**
+
+### Documentatie
+
+CLAUDE.md v4.0.0 → v4.1.0. MS v7.62 → v7.63. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

@@ -22,10 +22,14 @@ import SearchIcon from '@mui/icons-material/Search';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import CloudIcon from '@mui/icons-material/Cloud';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { useTranslation } from 'react-i18next';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, Legend } from 'recharts';
 import useAuthStore from '../stores/authStore.js';
 import contentService from '../api/contentService.js';
+import ContentCalendarTab from './ContentCalendarTab.jsx';
+import SeasonalConfigTab from './SeasonalConfigTab.jsx';
+import ContentPerformanceTab from './ContentPerformanceTab.jsx';
 
 const DIRECTION_CONFIG = {
   breakout: { icon: WhatshotIcon, color: 'error', label: 'Breakout' },
@@ -197,7 +201,7 @@ function WordCloud({ trends }) {
           const fontSize = 12 + ratio * 26;
           const color = dirColors[w.direction] || '#666';
           return (
-            <Tooltip key={w.keyword} title={`Score: ${w.score.toFixed(1)} | ${w.direction} | ${w.count}x`}>
+            <Tooltip key={w.keyword} title={`Score: ${Number(w.score || 0).toFixed(1)} | ${w.direction} | ${w.count}x`}>
               <Typography
                 component="span"
                 sx={{
@@ -724,11 +728,13 @@ export default function ContentStudioPage() {
         </Box>
       </Box>
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }} variant="scrollable" scrollButtons="auto">
         <Tab label={t('contentStudio.tabs.trending', 'Trending Monitor')} />
         <Tab label={t('contentStudio.tabs.suggestions', 'Suggesties')} />
         <Tab label={t('contentStudio.tabs.content', 'Content Items')} />
-        <Tab label={t('contentStudio.tabs.performance', 'Performance')} disabled />
+        <Tab label={t('contentStudio.tabs.calendar', 'Kalender')} icon={<CalendarMonthIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
+        <Tab label={t('contentStudio.tabs.performance', 'Performance')} />
+        <Tab label={t('contentStudio.tabs.seasons', 'Seizoenen')} />
       </Tabs>
 
       {/* === TAB 0: Trending Monitor === */}
@@ -808,7 +814,7 @@ export default function ContentStudioPage() {
                     <TableRow key={trend.id || idx} hover>
                       <TableCell sx={{ fontWeight: 500 }}>{trend.keyword}</TableCell>
                       <TableCell>
-                        <Chip label={trend.relevance_score?.toFixed(1) || '—'} size="small" color={trend.relevance_score >= 7 ? 'success' : trend.relevance_score >= 4 ? 'info' : 'default'} />
+                        <Chip label={trend.relevance_score != null ? Number(trend.relevance_score).toFixed(1) : '—'} size="small" color={Number(trend.relevance_score) >= 7 ? 'success' : Number(trend.relevance_score) >= 4 ? 'info' : 'default'} />
                       </TableCell>
                       <TableCell><DirectionChip direction={trend.trend_direction} /></TableCell>
                       <TableCell>{trend.search_volume?.toLocaleString() || '—'}</TableCell>
@@ -1053,6 +1059,15 @@ export default function ContentStudioPage() {
           </Paper>
         </>
       )}
+
+      {/* === TAB 3: Calendar === */}
+      {tab === 3 && <ContentCalendarTab destinationId={destinationId} />}
+
+      {/* === TAB 4: Performance === */}
+      {tab === 4 && <ContentPerformanceTab destinationId={destinationId} />}
+
+      {/* === TAB 5: Seasonal Config === */}
+      {tab === 5 && <SeasonalConfigTab destinationId={destinationId} />}
 
       {/* === Dialogs === */}
       <AddKeywordDialog
