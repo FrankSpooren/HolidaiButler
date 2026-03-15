@@ -4,7 +4,7 @@ import {
   TableHead, TableRow, Chip, TextField, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, MenuItem, Select, FormControl, InputLabel, IconButton, Tooltip,
   Card, CardContent, Grid, CircularProgress, Alert, TablePagination, LinearProgress,
-  ToggleButton, ToggleButtonGroup,
+  ToggleButton, ToggleButtonGroup, Checkbox,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -30,6 +30,7 @@ import contentService from '../api/contentService.js';
 import ContentCalendarTab from './ContentCalendarTab.jsx';
 import SeasonalConfigTab from './SeasonalConfigTab.jsx';
 import ContentAnalyseTab from './ContentAnalyseTab.jsx';
+import PlatformPreview from '../components/content/PlatformPreview.jsx';
 
 const DIRECTION_CONFIG = {
   breakout: { icon: WhatshotIcon, color: 'error', label: 'Breakout' },
@@ -362,6 +363,12 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
   const [editBody, setEditBody] = useState('');
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState(false);
+  const [rightPanel, setRightPanel] = useState('seo'); // 'seo' | 'preview' | 'comments' | 'history'
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [revisions, setRevisions] = useState([]);
+  const [revisionLoading, setRevisionLoading] = useState(false);
 
   useEffect(() => {
     if (!itemId || !open) return;
@@ -449,6 +456,44 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
     if (onUpdate) onUpdate();
   };
 
+  const loadComments = async () => {
+    if (!itemId) return;
+    setCommentLoading(true);
+    try {
+      const r = await contentService.getComments(itemId);
+      setComments(r.data || []);
+    } finally { setCommentLoading(false); }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !itemId) return;
+    try {
+      await contentService.addComment(itemId, newComment.trim());
+      setNewComment('');
+      await loadComments();
+    } catch { /* ignore */ }
+  };
+
+  const loadRevisions = async () => {
+    if (!itemId) return;
+    setRevisionLoading(true);
+    try {
+      const r = await contentService.getRevisions(itemId);
+      setRevisions(r.data || []);
+    } finally { setRevisionLoading(false); }
+  };
+
+  const handleRestore = async (revId) => {
+    try {
+      await contentService.restoreRevision(itemId, revId);
+      const refreshed = await contentService.getItem(itemId);
+      setItem(refreshed.data);
+      setEditBody(refreshed.data[`body_${langTab}`] || '');
+      await loadRevisions();
+      if (onUpdate) onUpdate();
+    } catch { /* ignore */ }
+  };
+
   if (!open) return null;
 
   const LANGS = ['en', 'nl', 'de', 'es', 'fr'];
@@ -487,8 +532,22 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                 value={editBody}
                 onChange={e => setEditBody(e.target.value)}
                 variant="outlined"
-                sx={{ fontFamily: 'monospace', mb: 1 }}
+                sx={{ fontFamily: 'monospace', mb: 0.5 }}
               />
+              {/* Character counter with platform limit */}
+              {(() => {
+                const platformLimits = { facebook: 500, instagram: 2200, linkedin: 3000, x: 280, tiktok: 150, youtube: 5000, pinterest: 500, website: 50000 };
+                const limit = platformLimits[item?.target_platform] || 50000;
+                const count = editBody.length;
+                const pct = (count / limit) * 100;
+                const color = pct > 95 ? 'error' : pct > 80 ? 'warning' : 'success';
+                return (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <LinearProgress variant="determinate" value={Math.min(100, pct)} color={color} sx={{ flex: 1, height: 4, borderRadius: 2 }} />
+                    <Typography variant="caption" color={`${color}.main`} fontWeight={600}>{count}/{limit}</Typography>
+                  </Box>
+                );
+              })()}
 
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Button size="small" variant="contained" onClick={handleSave} disabled={saving}>
@@ -514,8 +573,22 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
               </Box>
             </Grid>
 
-            {/* Right: SEO + Meta */}
+            {/* Right: Panel switcher */}
             <Grid item xs={12} md={4}>
+              <Tabs value={rightPanel} onChange={(_, v) => {
+                setRightPanel(v);
+                if (v === 'comments' && comments.length === 0) loadComments();
+                if (v === 'history' && revisions.length === 0) loadRevisions();
+              }} sx={{ mb: 1, minHeight: 32 }} variant="scrollable" scrollButtons="auto">
+                <Tab value="seo" label="SEO" sx={{ minHeight: 32, py: 0, fontSize: 12 }} />
+                <Tab value="preview" label="Preview" sx={{ minHeight: 32, py: 0, fontSize: 12 }} />
+                <Tab value="comments" label={`Comments${comments.length ? ` (${comments.length})` : ''}`} sx={{ minHeight: 32, py: 0, fontSize: 12 }} />
+                <Tab value="history" label="Versies" sx={{ minHeight: 32, py: 0, fontSize: 12 }} />
+              </Tabs>
+
+              {/* SEO Panel */}
+              {rightPanel === 'seo' && (
+              <>
               <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
                 <Typography variant="subtitle2" gutterBottom>SEO Score</Typography>
                 {seoLoading ? <CircularProgress size={20} /> : seoData ? (
@@ -575,6 +648,73 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                   </Box>
                 )}
               </Paper>
+              </>
+              )}
+
+              {/* Preview Panel */}
+              {rightPanel === 'preview' && (
+                <PlatformPreview content={item} targetPlatform={item?.target_platform} selectedLanguage={langTab} />
+              )}
+
+              {/* Comments Panel */}
+              {rightPanel === 'comments' && (
+                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>Team Comments</Typography>
+                  {commentLoading ? <CircularProgress size={20} /> : (
+                    <>
+                      {comments.length === 0 && <Typography variant="body2" color="text.secondary">Geen comments.</Typography>}
+                      {comments.map(c => (
+                        <Box key={c.id} sx={{ mb: 1.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
+                            <Typography variant="caption" fontWeight={600}>{c.first_name || c.user_email || 'System'}</Typography>
+                            <Typography variant="caption" color="text.secondary">{new Date(c.created_at).toLocaleString('nl-NL')}</Typography>
+                          </Box>
+                          <Typography variant="body2">{c.comment}</Typography>
+                        </Box>
+                      ))}
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                        <TextField
+                          size="small"
+                          fullWidth
+                          placeholder="Schrijf een comment..."
+                          value={newComment}
+                          onChange={e => setNewComment(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
+                        />
+                        <Button size="small" variant="contained" onClick={handleAddComment} disabled={!newComment.trim()}>
+                          Post
+                        </Button>
+                      </Box>
+                    </>
+                  )}
+                </Paper>
+              )}
+
+              {/* History / Revisions Panel */}
+              {rightPanel === 'history' && (
+                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>Versiegeschiedenis</Typography>
+                  {revisionLoading ? <CircularProgress size={20} /> : (
+                    <>
+                      {revisions.length === 0 && <Typography variant="body2" color="text.secondary">Geen eerdere versies.</Typography>}
+                      {revisions.map(rev => (
+                        <Box key={rev.id} sx={{ mb: 1, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="caption" fontWeight={600}>v{rev.revision_number}</Typography>
+                            <Typography variant="caption" color="text.secondary">{new Date(rev.created_at).toLocaleString('nl-NL')}</Typography>
+                          </Box>
+                          <Typography variant="caption" color="text.secondary">{rev.change_summary || '—'}</Typography>
+                          <Box sx={{ mt: 0.5 }}>
+                            <Button size="small" variant="outlined" onClick={() => handleRestore(rev.id)} sx={{ fontSize: 11 }}>
+                              Herstel
+                            </Button>
+                          </Box>
+                        </Box>
+                      ))}
+                    </>
+                  )}
+                </Paper>
+              )}
 
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button size="small" variant="contained" color="success" onClick={() => handleStatusUpdate('approved')} startIcon={<CheckIcon />} disabled={item.approval_status === 'approved'}>
@@ -633,6 +773,8 @@ export default function ContentStudioPage() {
   const [itemError, setItemError] = useState(null);
   const [itemPage, setItemPage] = useState(0);
   const [selectedItemId, setSelectedItemId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   // === Trending loaders ===
   const loadTrends = useCallback(async () => {
@@ -750,6 +892,33 @@ export default function ContentStudioPage() {
     }
   };
 
+  // Bulk operations
+  const toggleSelectItem = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleSelectAll = () => {
+    if (selectedIds.length === items.length) setSelectedIds([]);
+    else setSelectedIds(items.map(i => i.id));
+  };
+  const handleBulkAction = async (action) => {
+    if (selectedIds.length === 0) return;
+    setBulkLoading(true);
+    try {
+      if (action === 'approve') await contentService.bulkApprove(selectedIds);
+      else if (action === 'reject') await contentService.bulkReject(selectedIds);
+      else if (action === 'delete') {
+        if (!window.confirm(`${selectedIds.length} items verwijderen?`)) { setBulkLoading(false); return; }
+        await contentService.bulkDelete(selectedIds);
+      }
+      setSelectedIds([]);
+      loadItems();
+    } catch (err) {
+      setItemError(err.message);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -848,11 +1017,11 @@ export default function ContentStudioPage() {
                 <TableBody>
                   {trendLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 4 }}><CircularProgress size={28} /></TableCell>
+                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}><CircularProgress size={28} /></TableCell>
                     </TableRow>
                   ) : trends.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary">Geen trending keywords gevonden voor deze periode.</Typography>
                       </TableCell>
                     </TableRow>
@@ -1020,14 +1189,27 @@ export default function ContentStudioPage() {
               <Typography variant="subtitle2" color="text.secondary">
                 {itemTotal} {t('contentStudio.itemsFound', 'content items')}
               </Typography>
-              <Tooltip title="Vernieuwen">
-                <IconButton size="small" onClick={loadItems}><RefreshIcon fontSize="small" /></IconButton>
-              </Tooltip>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                {selectedIds.length > 0 && (
+                  <>
+                    <Chip label={`${selectedIds.length} geselecteerd`} size="small" color="primary" />
+                    <Button size="small" variant="contained" color="success" onClick={() => handleBulkAction('approve')} disabled={bulkLoading}>Approve</Button>
+                    <Button size="small" variant="outlined" color="error" onClick={() => handleBulkAction('reject')} disabled={bulkLoading}>Reject</Button>
+                    <Button size="small" variant="outlined" color="error" onClick={() => handleBulkAction('delete')} disabled={bulkLoading}>Delete</Button>
+                  </>
+                )}
+                <Tooltip title="Vernieuwen">
+                  <IconButton size="small" onClick={loadItems}><RefreshIcon fontSize="small" /></IconButton>
+                </Tooltip>
+              </Box>
             </Box>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
+                    <TableCell padding="checkbox">
+                      <Checkbox size="small" checked={items.length > 0 && selectedIds.length === items.length} indeterminate={selectedIds.length > 0 && selectedIds.length < items.length} onChange={toggleSelectAll} />
+                    </TableCell>
                     <TableCell>Titel</TableCell>
                     <TableCell>Type</TableCell>
                     <TableCell>Platform</TableCell>
@@ -1041,11 +1223,11 @@ export default function ContentStudioPage() {
                 <TableBody>
                   {itemLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 4 }}><CircularProgress size={28} /></TableCell>
+                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}><CircularProgress size={28} /></TableCell>
                     </TableRow>
                   ) : items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary">Geen content items. Genereer content vanuit goedgekeurde suggesties.</Typography>
                       </TableCell>
                     </TableRow>
@@ -1054,6 +1236,9 @@ export default function ContentStudioPage() {
                     const seoScore = item.seo_data?.overallScore;
                     return (
                       <TableRow key={item.id} hover sx={{ cursor: 'pointer' }} onClick={() => setSelectedItemId(item.id)}>
+                        <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
+                          <Checkbox size="small" checked={selectedIds.includes(item.id)} onChange={() => toggleSelectItem(item.id)} />
+                        </TableCell>
                         <TableCell>
                           <Typography variant="body2" sx={{ fontWeight: 500, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {item.title}
