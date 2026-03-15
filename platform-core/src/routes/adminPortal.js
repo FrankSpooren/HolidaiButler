@@ -9077,6 +9077,14 @@ router.put('/destinations/:id/branding', adminAuth('platform_admin'), async (req
       }
     } catch { /* non-critical */ }
 
+    // Clear tone-of-voice cache if toneOfVoice was updated
+    if (brandingData.toneOfVoice) {
+      try {
+        const { clearToneCache } = await import('../services/agents/contentRedacteur/toneOfVoice.js');
+        clearToneCache();
+      } catch { /* non-critical */ }
+    }
+
     res.json({ success: true, data: { message: `Branding updated for ${dest.code}`, destinationId: destId, branding: brandingData } });
   } catch (error) {
     logger.error('[AdminPortal] Destination branding update error:', error);

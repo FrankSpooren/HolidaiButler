@@ -411,7 +411,30 @@
       "uploading": "Hochladen...",
       "logoUploaded": "Logo erfolgreich hochgeladen",
       "logoTooLarge": "Datei zu groß (max 2MB)",
-      "logoUrl": "Logo URL"
+      "logoUrl": "Logo URL",
+      "toneOfVoice": {
+        "title": "Tone of Voice",
+        "subtitle": "KI-Inhaltstil: Persönlichkeit, Zielgruppe, Markenwerte",
+        "info": "Diese Einstellungen steuern die KI-Inhaltsgenerierung. Alle generierten Inhalte spiegeln diesen Ton wider.",
+        "personality": "Persönlichkeit / Ton",
+        "personalityHelp": "Wie soll die KI klingen? Z.B. \"warm, freundlich, abenteuerlich\"",
+        "audience": "Zielgruppe",
+        "audienceHelp": "Für wen sind die Inhalte? Alter, Interessen, Herkunft.",
+        "brandValues": "Markenwerte",
+        "brandValuesHelp": "Kernwerte der Marke, kommagetrennt.",
+        "coreKeywords": "Kernbegriffe",
+        "coreKeywordsHelp": "Schlüsselwörter, die immer berücksichtigt werden sollten.",
+        "adjectives": "Bevorzugte Adjektive",
+        "adjectivesHelp": "Häufig zu verwendende Wörter, kommagetrennt.",
+        "avoidWords": "Zu vermeidende Wörter",
+        "avoidWordsHelp": "Wörter, die die KI niemals verwenden darf, kommagetrennt.",
+        "formalAddress": "Anredeform",
+        "informal": "Informell (je/jij)",
+        "formal": "Formell (u/Sie)",
+        "mixed": "Gemischt (kontextabhängig)",
+        "samplePhrases": "Beispielsätze",
+        "samplePhrasesHelp": "Inspirationssätze, die die KI nachahmen soll."
+      }
     },
     "cache": {
       "title": "Cache-Verwaltung",

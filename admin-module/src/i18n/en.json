@@ -421,7 +421,30 @@
       "uploading": "Uploading...",
       "logoUploaded": "Logo uploaded successfully",
       "logoTooLarge": "File too large (max 2MB)",
-      "logoUrl": "Logo URL"
+      "logoUrl": "Logo URL",
+      "toneOfVoice": {
+        "title": "Tone of Voice",
+        "subtitle": "AI content style: personality, target audience, brand values",
+        "info": "These settings guide AI content generation. All generated content will reflect this tone.",
+        "personality": "Personality / Tone",
+        "personalityHelp": "How should the AI sound? E.g. \"warm, friendly, adventurous\"",
+        "audience": "Target Audience",
+        "audienceHelp": "Who is the content for? Age, interests, origin.",
+        "brandValues": "Brand Values",
+        "brandValuesHelp": "Core brand values, comma-separated.",
+        "coreKeywords": "Core Keywords",
+        "coreKeywordsHelp": "Keywords that should always be considered for content.",
+        "adjectives": "Preferred Adjectives",
+        "adjectivesHelp": "Words to use frequently, comma-separated.",
+        "avoidWords": "Words to Avoid",
+        "avoidWordsHelp": "Words the AI should never use, comma-separated.",
+        "formalAddress": "Form of Address",
+        "informal": "Informal (je/jij)",
+        "formal": "Formal (u/Sie)",
+        "mixed": "Mixed (context-dependent)",
+        "samplePhrases": "Example Phrases",
+        "samplePhrasesHelp": "Inspirational phrases the AI should emulate."
+      }
     },
     "audit": {
       "title": "Admin Audit Log",
