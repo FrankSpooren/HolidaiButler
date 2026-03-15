@@ -170,6 +170,35 @@ export function usePerformanceDetail(id) {
   });
 }
 
+// === Analytics (Fase D) ===
+
+export function useAnalyticsOverview(destinationId, { days = 30 } = {}) {
+  return useQuery({
+    queryKey: ['content-analytics-overview', destinationId, days],
+    queryFn: () => contentService.getAnalyticsOverview(destinationId, { days }),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!destinationId,
+  });
+}
+
+export function useAnalyticsItems(destinationId, opts = {}) {
+  return useQuery({
+    queryKey: ['content-analytics-items', destinationId, opts],
+    queryFn: () => contentService.getAnalyticsItems(destinationId, opts),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!destinationId,
+  });
+}
+
+export function useAnalyticsPlatforms(destinationId, { days = 30 } = {}) {
+  return useQuery({
+    queryKey: ['content-analytics-platforms', destinationId, days],
+    queryFn: () => contentService.getAnalyticsPlatforms(destinationId, { days }),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!destinationId,
+  });
+}
+
 // === Social Accounts (Fase C) ===
 
 export function useSocialAccounts(destinationId) {

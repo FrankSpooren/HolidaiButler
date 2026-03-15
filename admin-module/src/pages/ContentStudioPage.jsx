@@ -29,7 +29,7 @@ import useAuthStore from '../stores/authStore.js';
 import contentService from '../api/contentService.js';
 import ContentCalendarTab from './ContentCalendarTab.jsx';
 import SeasonalConfigTab from './SeasonalConfigTab.jsx';
-import ContentPerformanceTab from './ContentPerformanceTab.jsx';
+import ContentAnalyseTab from './ContentAnalyseTab.jsx';
 
 const DIRECTION_CONFIG = {
   breakout: { icon: WhatshotIcon, color: 'error', label: 'Breakout' },
@@ -733,7 +733,7 @@ export default function ContentStudioPage() {
         <Tab label={t('contentStudio.tabs.suggestions', 'Suggesties')} />
         <Tab label={t('contentStudio.tabs.content', 'Content Items')} />
         <Tab label={t('contentStudio.tabs.calendar', 'Kalender')} icon={<CalendarMonthIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-        <Tab label={t('contentStudio.tabs.performance', 'Performance')} />
+        <Tab label={t('contentStudio.tabs.analyse', 'Analyse')} />
         <Tab label={t('contentStudio.tabs.seasons', 'Seizoenen')} />
       </Tabs>
 
@@ -1063,8 +1063,8 @@ export default function ContentStudioPage() {
       {/* === TAB 3: Calendar === */}
       {tab === 3 && <ContentCalendarTab destinationId={destinationId} />}
 
-      {/* === TAB 4: Performance === */}
-      {tab === 4 && <ContentPerformanceTab destinationId={destinationId} />}
+      {/* === TAB 4: Content Analyse === */}
+      {tab === 4 && <ContentAnalyseTab destinationId={destinationId} />}
 
       {/* === TAB 5: Seasonal Config === */}
       {tab === 5 && <SeasonalConfigTab destinationId={destinationId} />}

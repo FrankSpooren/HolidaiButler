@@ -944,6 +944,26 @@ export function startWorkers() {
           }
           break;
 
+        case "content-feedback-loop":
+          try {
+            const feedbackLoop = (await import("../agents/trendspotter/feedbackLoop.js")).default;
+            const feedbackResults = {};
+            for (const dId of [1, 2]) {
+              try {
+                feedbackResults[dId] = await feedbackLoop.run(dId);
+              } catch (e) {
+                feedbackResults[dId] = { error: e.message };
+              }
+            }
+            const totalUpdated = Object.values(feedbackResults).reduce((s, r) => s + (r.updated || 0), 0);
+            console.log(`[Orchestrator] Content feedback loop: ${totalUpdated} keywords updated`);
+            result = { type: "content-feedback-loop", results: feedbackResults };
+          } catch (error) {
+            console.error("[Orchestrator] Content feedback loop failed:", error.message);
+            result = { type: "content-feedback-loop", status: "error", error: error.message };
+          }
+          break;
+
         case "seasonal-check":
           try {
             const { checkSeasonTransitions } = await import("../content/seasonalEngine.js");
@@ -993,6 +1013,7 @@ export function startWorkers() {
         'content-seo-audit': 'seo-meester',
         'content-publish-scheduled': 'publisher',
         'content-analytics-collect': 'publisher',
+        'content-feedback-loop': 'trendspotter',
         'seasonal-check': 'orchestrator'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
