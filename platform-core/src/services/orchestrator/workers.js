@@ -976,6 +976,40 @@ export function startWorkers() {
           }
           break;
 
+        case "content-publish-retry":
+          try {
+            const { mysqlSequelize: dbRetry } = await import("../../config/database.js");
+            // Find failed items that haven't exceeded max retries (3)
+            const [failedItems] = await dbRetry.query(
+              `SELECT ci.id, ci.title, ci.target_platform, ci.destination_id, ci.publish_error,
+                      (SELECT COUNT(*) FROM content_approval_log WHERE content_item_id = ci.id AND comment LIKE '%retry%') as retry_count
+               FROM content_items ci
+               WHERE ci.approval_status = 'failed'
+                 AND ci.updated_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+               HAVING retry_count < 3
+               LIMIT 5`
+            );
+            if (failedItems.length > 0) {
+              for (const item of failedItems) {
+                await dbRetry.query(
+                  `UPDATE content_items SET approval_status = 'scheduled', publish_error = NULL, scheduled_at = NOW(), updated_at = NOW() WHERE id = :id`,
+                  { replacements: { id: item.id } }
+                );
+                await dbRetry.query(
+                  `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
+                   VALUES (:id, 'failed', 'scheduled', 'system', :comment)`,
+                  { replacements: { id: item.id, comment: `Auto-retry #${(item.retry_count || 0) + 1}. Previous: ${item.publish_error || 'unknown'}` } }
+                );
+              }
+              console.log(`[Orchestrator] Content publish retry: ${failedItems.length} items re-scheduled`);
+            }
+            result = { type: "content-publish-retry", retried: failedItems.length };
+          } catch (error) {
+            console.error("[Orchestrator] Content publish retry failed:", error.message);
+            result = { type: "content-publish-retry", status: "error", error: error.message };
+          }
+          break;
+
         case "content-weekly-report":
           try {
             const { mysqlSequelize: db } = await import("../../config/database.js");
@@ -1067,7 +1101,8 @@ export function startWorkers() {
         'content-analytics-collect': 'publisher',
         'content-feedback-loop': 'trendspotter',
         'seasonal-check': 'orchestrator',
-        'content-weekly-report': 'owner-interface'
+        'content-weekly-report': 'owner-interface',
+        'content-publish-retry': 'publisher'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {

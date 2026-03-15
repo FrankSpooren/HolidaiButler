@@ -211,6 +211,20 @@ const contentService = {
     return client.post('/content/bulk/delete', { ids }).then(r => r.data);
   },
 
+  // === Wave 6: Platform Completion ===
+
+  getTemplates(destinationId) {
+    return client.get('/content/templates', { params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  retryPublish(itemId) {
+    return client.post(`/content/items/${itemId}/retry-publish`).then(r => r.data);
+  },
+
+  getBrandScore(itemId) {
+    return client.get(`/content/items/${itemId}/brand-score`).then(r => r.data);
+  },
+
   // === Seasonal Config (Fase C) ===
 
   getSeasons(destinationId) {

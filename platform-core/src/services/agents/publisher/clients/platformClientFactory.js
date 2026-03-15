@@ -5,11 +5,15 @@
 
 import MetaClient from './metaClient.js';
 import LinkedInClient from './linkedinClient.js';
+import XClient from './xClient.js';
+import PinterestClient from './pinterestClient.js';
 
 const clients = {
   facebook: new MetaClient('facebook'),
   instagram: new MetaClient('instagram'),
   linkedin: new LinkedInClient(),
+  x: new XClient(),
+  pinterest: new PinterestClient(),
 };
 
 /**
