@@ -206,9 +206,11 @@ ${suggestion.summary ? `Context: ${suggestion.summary}` : ''}
 ${keywordsStr}
 
 Write an engaging social post with:
-1. A hook in the first line (prefix with "TITLE: ")
-2. The main post body (engaging, personal tone)
-Include a call-to-action at the end.`;
+1. A scroll-stopping hook in the first line (prefix with "TITLE: ")
+2. The main post body (engaging, personal tone, 80-300 chars ideal)
+3. Include 1-3 relevant emojis naturally in the text
+4. End with a clear call-to-action (e.g., "Discover more...", "Book now", "Tag someone who...")
+5. Add 3-8 relevant hashtags at the end (e.g., #Calpe #CostaBlanca #TravelSpain)`;
 
     case 'video_script':
       return `Write a video script about: "${suggestion.title}"
