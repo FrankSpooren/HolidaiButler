@@ -143,6 +143,74 @@ const contentService = {
     return client.get('/content/analytics/platforms', { params: { destination_id: destinationId, days } }).then(r => r.data);
   },
 
+  // === Wave 5: Enterprise Workflow & Intelligence ===
+
+  getComments(itemId) {
+    return client.get(`/content/items/${itemId}/comments`).then(r => r.data);
+  },
+
+  addComment(itemId, comment) {
+    return client.post(`/content/items/${itemId}/comments`, { comment }).then(r => r.data);
+  },
+
+  getRevisions(itemId) {
+    return client.get(`/content/items/${itemId}/revisions`).then(r => r.data);
+  },
+
+  restoreRevision(itemId, revisionId) {
+    return client.post(`/content/items/${itemId}/revisions/${revisionId}/restore`).then(r => r.data);
+  },
+
+  getApprovalLog(itemId) {
+    return client.get(`/content/items/${itemId}/approval-log`).then(r => r.data);
+  },
+
+  getPillars(destinationId) {
+    return client.get('/content/pillars', { params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  createPillar(data) {
+    return client.post('/content/pillars', data).then(r => r.data);
+  },
+
+  updatePillar(id, data) {
+    return client.patch(`/content/pillars/${id}`, data).then(r => r.data);
+  },
+
+  deletePillar(id) {
+    return client.delete(`/content/pillars/${id}`).then(r => r.data);
+  },
+
+  getPillarBalance(destinationId) {
+    return client.get('/content/pillars/balance', { params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  getBestTimes(destinationId, platform, market) {
+    const params = { destination_id: destinationId, platform };
+    if (market) params.market = market;
+    return client.get('/content/best-times', { params }).then(r => r.data);
+  },
+
+  generateHashtags(itemId, category) {
+    return client.post(`/content/items/${itemId}/hashtags`, { category }).then(r => r.data);
+  },
+
+  bulkApprove(ids) {
+    return client.post('/content/bulk/approve', { ids }).then(r => r.data);
+  },
+
+  bulkReject(ids, reason) {
+    return client.post('/content/bulk/reject', { ids, reason }).then(r => r.data);
+  },
+
+  bulkSchedule(ids, scheduled_at) {
+    return client.post('/content/bulk/schedule', { ids, scheduled_at }).then(r => r.data);
+  },
+
+  bulkDelete(ids) {
+    return client.post('/content/bulk/delete', { ids }).then(r => r.data);
+  },
+
   // === Seasonal Config (Fase C) ===
 
   getSeasons(destinationId) {
