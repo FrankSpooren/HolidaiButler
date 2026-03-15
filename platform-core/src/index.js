@@ -187,6 +187,31 @@ app.use('/api/v1/pages', pagesRoutes); // Pages & Destinations (Fase V)
 app.use('/api/v1/contact', contactRoutes); // Contact Form (Fase V.6)
 app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V.6)
 
+// LinkedIn OAuth Callback (Fase C — Content Publishing)
+app.get('/api/v1/oauth/linkedin/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query;
+    if (!code) return res.status(400).send('Missing authorization code');
+    const LinkedInClient = (await import('./services/agents/publisher/clients/linkedinClient.js')).default;
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/linkedin/callback`;
+    const tokenData = await LinkedInClient.exchangeCodeForToken(code, redirectUri);
+    // Store token in social_accounts
+    const { SocialAccount } = await import('./models/SocialAccount.js');
+    const encrypted = SocialAccount.encryptToken(tokenData.access_token);
+    // Upsert social account for LinkedIn
+    await mysqlSequelize.query(
+      `INSERT INTO social_accounts (destination_id, platform, account_id, account_name, access_token_encrypted, token_expires_at, status, created_at, updated_at)
+       VALUES (1, 'linkedin', :accountId, 'LinkedIn', :token, :expires, 'active', NOW(), NOW())
+       ON DUPLICATE KEY UPDATE access_token_encrypted = :token, token_expires_at = :expires, status = 'active', updated_at = NOW()`,
+      { replacements: { accountId: state || 'default', token: encrypted, expires: tokenData.expires_at || null } }
+    );
+    res.send('<html><body><h2>LinkedIn gekoppeld!</h2><p>Je kunt dit venster sluiten.</p><script>window.close();</script></body></html>');
+  } catch (error) {
+    logger.error('[OAuth] LinkedIn callback error:', error);
+    res.status(500).send('LinkedIn koppeling mislukt: ' + error.message);
+  }
+});
+
 // Static file serving — OUTSIDE platform-core/ to survive CI/CD deployments
 const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
 app.use('/branding', express.static(path.join(STORAGE_ROOT, 'branding')));

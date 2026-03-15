@@ -68,6 +68,86 @@ const contentService = {
   getItemSeo(id) {
     return client.get(`/content/items/${id}/seo`).then(r => r.data);
   },
+
+  // === Calendar & Scheduling (Fase C) ===
+
+  getCalendar(destinationId, { month, year } = {}) {
+    const params = { destination_id: destinationId };
+    if (month) params.month = month;
+    if (year) params.year = year;
+    return client.get('/content/calendar', { params }).then(r => r.data);
+  },
+
+  scheduleItem(id, data) {
+    return client.post(`/content/items/${id}/schedule`, data).then(r => r.data);
+  },
+
+  publishNow(id, data) {
+    return client.post(`/content/items/${id}/publish-now`, data).then(r => r.data);
+  },
+
+  cancelSchedule(id) {
+    return client.delete(`/content/items/${id}/schedule`).then(r => r.data);
+  },
+
+  rescheduleItem(id, data) {
+    return client.patch(`/content/items/${id}/reschedule`, data).then(r => r.data);
+  },
+
+  // === Performance (Fase C) ===
+
+  getPerformanceSummary(destinationId, { days = 30 } = {}) {
+    const params = { destination_id: destinationId, days };
+    return client.get('/content/performance/summary', { params }).then(r => r.data);
+  },
+
+  getPerformanceDetail(id) {
+    return client.get(`/content/performance/${id}`).then(r => r.data);
+  },
+
+  // === Social Accounts (Fase C) ===
+
+  getSocialAccounts(destinationId) {
+    return client.get('/content/social-accounts', { params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  connectLinkedIn(data) {
+    return client.post('/content/social-accounts/connect/linkedin', data).then(r => r.data);
+  },
+
+  disconnectAccount(id) {
+    return client.delete(`/content/social-accounts/${id}`).then(r => r.data);
+  },
+
+  refreshAccountToken(id) {
+    return client.post(`/content/social-accounts/${id}/refresh`).then(r => r.data);
+  },
+
+  // === Seasonal Config (Fase C) ===
+
+  getSeasons(destinationId) {
+    return client.get('/content/seasons', { params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  getCurrentSeason(destinationId) {
+    return client.get('/content/seasons/current', { params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  createSeason(data) {
+    return client.post('/content/seasons', data).then(r => r.data);
+  },
+
+  updateSeason(id, data) {
+    return client.patch(`/content/seasons/${id}`, data).then(r => r.data);
+  },
+
+  deleteSeason(id) {
+    return client.delete(`/content/seasons/${id}`).then(r => r.data);
+  },
+
+  activateSeason(id) {
+    return client.post(`/content/seasons/${id}/activate`).then(r => r.data);
+  },
 };
 
 export default contentService;
