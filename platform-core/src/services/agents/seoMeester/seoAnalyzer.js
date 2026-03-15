@@ -278,10 +278,11 @@ function analyzeKeywordDensity(body, keywords) {
     return { name: 'Keyword Density', score: 0, maxScore: 10, status: 'fail', details: 'No content to analyze.' };
   }
 
-  const bodyLower = body.toLowerCase();
+  const bodyNorm = normalizeAccents(body);
   const densities = keywords.map(kw => {
-    const regex = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-    const matches = bodyLower.match(regex);
+    const kwNorm = normalizeAccents(kw);
+    const regex = new RegExp(kwNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    const matches = bodyNorm.match(regex);
     const count = matches ? matches.length : 0;
     const density = Math.round((count / wordCount) * 100 * 10) / 10;
     return { keyword: kw, count, density };
@@ -384,6 +385,10 @@ function analyzeEmojiUsage(body) {
   };
 }
 
+function normalizeAccents(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 function analyzeKeywordPresence(body, keywords) {
   if (!keywords || keywords.length === 0) {
     return {
@@ -395,8 +400,8 @@ function analyzeKeywordPresence(body, keywords) {
     };
   }
 
-  const bodyLower = body.toLowerCase();
-  const found = keywords.filter(kw => bodyLower.includes(kw.toLowerCase()));
+  const bodyNorm = normalizeAccents(body);
+  const found = keywords.filter(kw => bodyNorm.includes(normalizeAccents(kw)));
   const coverage = found.length / keywords.length;
 
   return {
@@ -406,28 +411,32 @@ function analyzeKeywordPresence(body, keywords) {
     status: coverage >= 0.5 ? 'pass' : coverage > 0 ? 'warning' : 'fail',
     details: `${found.length}/${keywords.length} keywords present. ${coverage >= 0.5 ? 'Good keyword coverage!' : coverage > 0 ? 'Include more target keywords naturally.' : 'None of the target keywords found in content.'}`,
     found,
-    missing: keywords.filter(kw => !bodyLower.includes(kw.toLowerCase())),
+    missing: keywords.filter(kw => !bodyNorm.includes(normalizeAccents(kw))),
   };
 }
 
 function analyzeOpeningHook(body) {
   const firstLine = body.split(/[.\n!?]/)[0] || '';
-  const hookPatterns = [
-    /^(did you know|have you|imagine|picture this|what if|here's|discover|ever wonder|ready to|looking for|tired of|want to|the secret|top \d|best \d|\d+ )/i,
-    /^(wist je|stel je voor|ontdek|ken je|klaar voor|op zoek naar|de beste|top \d|\d+ )/i,
-    /[?!]$/,
-    /[\u{1F300}-\u{1F9FF}]/u,
-  ];
+  // Strip leading emojis/symbols to check word patterns
+  const textOnly = firstLine.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}]+/gu, '').trim();
 
-  const hasHook = hookPatterns.some(p => p.test(firstLine));
+  const hasEmoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(firstLine);
+  const hookWordPatterns = [
+    /^(did you know|have you|imagine|picture this|what if|here's|discover|ever wonder|ready to|looking for|tired of|want to|the secret|top \d|best \d|\d+ |dive into|step into|get ready)/i,
+    /^(wist je|stel je voor|ontdek|ken je|klaar voor|op zoek naar|de beste|top \d|\d+ |duik in|stap in)/i,
+  ];
+  const hasHookWords = hookWordPatterns.some(p => p.test(textOnly));
+  const endsWithPunctuation = /[?!]$/.test(firstLine.trim());
+  const hasHook = hasEmoji || hasHookWords || endsWithPunctuation;
+  const hasStrongHook = (hasEmoji && hasHookWords) || (hasHookWords && endsWithPunctuation) || (hasEmoji && endsWithPunctuation);
   const isShort = firstLine.length <= 100;
 
   return {
     name: 'Opening Hook',
-    score: hasHook && isShort ? 10 : hasHook || isShort ? 7 : 3,
+    score: hasStrongHook && isShort ? 10 : hasHook && isShort ? 8 : hasHook ? 7 : 3,
     maxScore: 10,
-    status: hasHook && isShort ? 'pass' : hasHook || isShort ? 'warning' : 'fail',
-    details: `Opening: "${firstLine.substring(0, 60)}${firstLine.length > 60 ? '...' : ''}". ${hasHook ? 'Strong hook!' : 'Start with a question, number, or attention-grabber to stop the scroll.'}`,
+    status: hasStrongHook && isShort ? 'pass' : hasHook && isShort ? 'pass' : hasHook ? 'warning' : 'fail',
+    details: `Opening: "${firstLine.substring(0, 60)}${firstLine.length > 60 ? '...' : ''}". ${hasStrongHook ? 'Excellent hook!' : hasHook ? 'Good hook.' : 'Start with a question, number, or attention-grabber to stop the scroll.'}`,
   };
 }
 

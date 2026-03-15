@@ -537,7 +537,7 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                     ))}
                     <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
                       <Button size="small" onClick={loadSeo} startIcon={<RefreshIcon />}>Heranalyse</Button>
-                      {seoData.overallScore < 65 && (
+                      {seoData.overallScore < 80 && (
                         <Button
                           size="small"
                           variant="contained"
