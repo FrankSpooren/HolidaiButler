@@ -91,7 +91,7 @@ class GoogleTrendsCollector {
       body: JSON.stringify({
         searchTerms: [keyword],
         geo,
-        timeRange: 'past7Days',
+        timeRange: 'now 7-d',
         maxItems: 10,
       }),
       signal: AbortSignal.timeout(60000), // 60s timeout

@@ -185,7 +185,6 @@ class SyncReporter {
     const [bySentiment] = await this.sequelize.query(`
       SELECT sentiment, COUNT(*) as count
       FROM reviews
-      WHERE spam_score < 0.5
       GROUP BY sentiment
     `);
 
@@ -205,13 +204,6 @@ class SyncReporter {
     const [avgRating] = await this.sequelize.query(`
       SELECT AVG(rating) as avg_rating
       FROM reviews
-      WHERE spam_score < 0.5
-    `);
-
-    const [spamCount] = await this.sequelize.query(`
-      SELECT COUNT(*) as count
-      FROM reviews
-      WHERE spam_score >= 0.5
     `);
 
     return {
@@ -220,7 +212,7 @@ class SyncReporter {
       byLanguage: byLanguage,
       addedLast7Days: recentReviews[0]?.count || 0,
       averageRating: Math.round((avgRating[0]?.avg_rating || 0) * 10) / 10,
-      spamDetected: spamCount[0]?.count || 0
+      spamDetected: 0
     };
   }
 
