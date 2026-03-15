@@ -217,14 +217,14 @@ class FinancialMonitor {
    */
   async detectFraudIndicators() {
     const indicators = await mysqlSequelize.query(
-      `SELECT customer_email, poi_id, COUNT(*) as tx_count,
+      `SELECT guest_email, poi_id, COUNT(*) as tx_count,
               MIN(created_at) as first_at, MAX(created_at) as last_at,
               TIMESTAMPDIFF(MINUTE, MIN(created_at), MAX(created_at)) as window_minutes
        FROM intermediary_transactions
        WHERE created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
-         AND customer_email IS NOT NULL
-         AND customer_email != ''
-       GROUP BY customer_email, poi_id
+         AND guest_email IS NOT NULL
+         AND guest_email != ''
+       GROUP BY guest_email, poi_id
        HAVING tx_count >= 2 AND window_minutes < 60`,
       { type: QueryTypes.SELECT }
     );
@@ -237,7 +237,7 @@ class FinancialMonitor {
     }
 
     return indicators.map(i => ({
-      customer_email: i.customer_email ? i.customer_email.replace(/(.{2}).*(@.*)/, '$1***$2') : 'unknown',
+      guest_email: i.guest_email ? i.guest_email.replace(/(.{2}).*(@.*)/, '$1***$2') : 'unknown',
       poi_id: i.poi_id,
       tx_count: i.tx_count,
       window_minutes: i.window_minutes

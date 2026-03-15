@@ -146,7 +146,7 @@ class HolibotSyncAgent {
 
       for (const name of collectionNames) {
         try {
-          const collection = await chromaService.getCollection(name);
+          const collection = await chromaService.getOrCreateCollection(name);
           const count = await collection.count();
           collections[name] = count;
           console.log(`[Het Geheugen] ${name}: ${count} vectors`);
@@ -178,8 +178,8 @@ class HolibotSyncAgent {
   }
 
   async getStatus() {
-    const poiStats = await chromaService.getCollectionStats('holidaibutler_pois');
-    const qaStats = await chromaService.getCollectionStats('holidaibutler_qas');
+    const poiStats = await chromaService.getCollectionStats('calpe_pois').catch(() => ({ error: 'unavailable' }));
+    const qaStats = await chromaService.getCollectionStats('holidaibutler_qas').catch(() => ({ error: 'unavailable' }));
     const jobs = syncScheduler.getJobs();
 
     return {

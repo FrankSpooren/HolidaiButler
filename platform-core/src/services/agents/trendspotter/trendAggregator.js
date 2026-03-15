@@ -60,7 +60,7 @@ class TrendAggregator {
           language: trend.language || 'en',
           source: trend.source || 'google_trends',
           search_volume: trend.search_volume || null,
-          trend_direction: trend.trend_direction || 'stable',
+          trend_direction: ['rising', 'stable', 'declining', 'breakout'].includes(trend.trend_direction) ? trend.trend_direction : 'stable',
           relevance_score: relevanceScore,
           week_number: weekNumber,
           year,
