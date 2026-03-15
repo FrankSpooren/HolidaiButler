@@ -13,7 +13,7 @@ import { translateTexts } from '../../translationService.js';
 import { analyzeContent } from '../seoMeester/seoAnalyzer.js';
 import logger from '../../../utils/logger.js';
 
-const SEO_MINIMUM_SCORE = 65;
+const SEO_MINIMUM_SCORE = 80;
 
 /**
  * Generate content from a suggestion using Mistral AI
@@ -43,17 +43,21 @@ export async function generateContent(suggestion, options = {}) {
   const keywords = suggestion.keyword_cluster || [];
   const modelName = embeddingService.chatModel || 'mistral-small-latest';
 
-  // Build the generation prompt
-  const systemPrompt = `You are a professional content writer for a premium tourism platform.
-You write engaging, SEO-optimized content that inspires travelers.
+  // Build the generation prompt with SEO scoring criteria embedded
+  const seoGuidance = buildSeoGuidance(contentType, keywords);
+
+  const systemPrompt = `You are an enterprise-grade content writer for a premium tourism platform.
+You write high-performing, SEO-optimized content that scores ≥80/100 on quality audits.
 
 ${toneInstruction}
 
 ${formatInstruction}
 
+${seoGuidance}
+
 RULES:
 - Write original, high-quality content — NO plagiarism
-- Use target keywords naturally (do NOT keyword-stuff)
+- MUST include ALL target keywords at least once, naturally woven into the text
 - Facts must be accurate — do NOT hallucinate attractions, events, or statistics
 - Preserve proper nouns (POI names, street names, local terms)
 - EU AI Act compliance: this is AI-generated content for a tourism platform
@@ -209,10 +213,58 @@ Generate 3-6 suggestions, mixing content types. Focus on the strongest trends.`;
 }
 
 /**
- * Build the user prompt based on content type
+ * Build SEO guidance section — tells Mistral exactly what the quality audit scores
+ * This is the key innovation: the generation prompt mirrors the scoring criteria
+ */
+function buildSeoGuidance(contentType, keywords) {
+  const keywordsStr = keywords.length > 0
+    ? `Target keywords (MUST appear in text): ${keywords.map(k => `"${k}"`).join(', ')}`
+    : '';
+
+  if (contentType === 'social_post') {
+    return `QUALITY SCORING CRITERIA (your content will be scored on these 7 metrics — aim for 10/10 on each):
+
+1. CAPTION LENGTH (10pts): Total post must be 80-300 characters. Sweet spot: ~150-250 chars.
+2. HASHTAGS (10pts): Include exactly 3-8 hashtags at the end. Use targeted, specific tags.
+3. CALL-TO-ACTION (10pts): Include 2+ CTA elements (verbs like "discover", "explore", "book", "visit", "tag", "share" + directional emojis like 👉 ⬇️ ➡️).
+4. EMOJI USAGE (10pts): Include 1-5 emojis naturally in the text. Not more than 1 per 10 words.
+5. KEYWORD PRESENCE (10pts): At least 50% of target keywords MUST appear in the text.
+   ${keywordsStr}
+6. READABILITY (10pts): Use short sentences (avg <15 words). Easy to scan. Conversational tone.
+7. OPENING HOOK (10pts): First line must be a question, number, bold claim, or attention-grabber. Start with "Did you know", "Ever wondered", "Top 3", a surprising fact, or an emoji.`;
+  }
+
+  if (contentType === 'video_script') {
+    return `QUALITY SCORING CRITERIA (your content will be scored on these 7 metrics — aim for 10/10 on each):
+
+1. VIDEO HOOK (10pts): First line must be attention-grabbing (question, "Imagine...", bold statement). You have 3 seconds.
+2. SCRIPT STRUCTURE (10pts): Include 3+ scene markers ("[Scene 1]", "Intro:", "B-roll:") AND timing cues ("0:00-0:05", "10s", "15 seconds").
+3. CALL-TO-ACTION (10pts): Include 2+ CTA elements ("subscribe", "visit", "book", "check out", "link in description").
+4. SCRIPT LENGTH (10pts): 200-800 words total.
+5. KEYWORD PRESENCE (10pts): At least 50% of target keywords MUST appear in the text.
+   ${keywordsStr}
+6. READABILITY (10pts): Conversational, spoken-word tone. Short sentences. Easy to narrate.
+7. VISUAL CUES (10pts): Include 4+ visual directions ("Show:", "Cut to:", "Close-up:", "Wide shot:", "B-roll:", "Zoom:", "Overlay:", "Text on screen:").`;
+  }
+
+  // Blog
+  return `QUALITY SCORING CRITERIA (your content will be scored on these 7 metrics — aim for 10/10 on each):
+
+1. TITLE LENGTH (10pts): 50-60 characters (optimal for search engines).
+2. META DESCRIPTION (10pts): 150-160 characters, compelling, includes primary keyword.
+3. HEADING STRUCTURE (10pts): Use H2 headings (min 2), H3 headings (min 1). Only 1 H1 (the title). Proper hierarchy.
+4. KEYWORD DENSITY (10pts): Average keyword density 0.5-3%. Use each keyword 2-4 times naturally.
+   ${keywordsStr}
+5. READABILITY (10pts): Flesch-Kincaid score ≥50. Use varied sentence lengths, avg <20 words. Break paragraphs every 3-4 sentences.
+6. CONTENT LENGTH (10pts): 800-1500 words.
+7. INTERNAL LINKS (10pts): Include 2+ markdown links to related content (e.g., [Peñón de Ifach](/poi/123), [local restaurants](/explore/restaurants)).`;
+}
+
+/**
+ * Build the user prompt based on content type — SEO-aware
  */
 function buildUserPrompt(suggestion, contentType, keywords) {
-  const keywordsStr = keywords.length > 0 ? `Target keywords: ${keywords.join(', ')}` : '';
+  const keywordsStr = keywords.length > 0 ? `Target keywords that MUST appear: ${keywords.join(', ')}` : '';
 
   switch (contentType) {
     case 'blog':
@@ -221,30 +273,38 @@ ${suggestion.summary ? `Context: ${suggestion.summary}` : ''}
 ${keywordsStr}
 
 Write the full blog post with:
-1. An engaging title (prefix with "TITLE: ")
-2. A meta description (prefix with "META: ", 150-160 chars)
-3. The full body with H2/H3 headings`;
+1. An engaging title of 50-60 characters (prefix with "TITLE: ")
+2. A meta description of exactly 150-160 characters (prefix with "META: ")
+3. The full body (800-1500 words) with H2/H3 headings, each keyword used 2-4 times
+4. Include 2+ internal links as markdown [text](/path)`;
 
     case 'social_post':
       return `Write a social media post about: "${suggestion.title}"
 ${suggestion.summary ? `Context: ${suggestion.summary}` : ''}
 ${keywordsStr}
 
-Write an engaging social post with:
-1. A scroll-stopping hook in the first line (prefix with "TITLE: ")
-2. The main post body (engaging, personal tone, 80-300 chars ideal)
-3. Include 1-3 relevant emojis naturally in the text
-4. End with a clear call-to-action (e.g., "Discover more...", "Book now", "Tag someone who...")
-5. Add 3-8 relevant hashtags at the end (e.g., #Calpe #CostaBlanca #TravelSpain)`;
+STRICT REQUIREMENTS — your post will be scored on each:
+1. First line: a scroll-stopping hook (question/number/bold claim + emoji). Prefix with "TITLE: "
+2. Post body: 80-300 characters total (this is CRITICAL — count carefully)
+3. Include 2-4 emojis naturally woven into the text
+4. Include 2+ call-to-action words (discover, explore, book, visit, tag, share) + use 👉 or ➡️
+5. End with exactly 5 relevant hashtags (e.g., #Calpe #CostaBlanca #Mediterranean #Travel #Spain)
+6. Each target keyword must appear at least once in the text
+7. Use short, punchy sentences (max 12 words each)`;
 
     case 'video_script':
       return `Write a video script about: "${suggestion.title}"
 ${suggestion.summary ? `Context: ${suggestion.summary}` : ''}
 ${keywordsStr}
 
-Write a storyboard-style script with:
-1. A title (prefix with "TITLE: ")
-2. 3-5 scenes, each with: [Scene N] description, narration text, visual notes, and estimated duration`;
+STRICT REQUIREMENTS — your script will be scored on each:
+1. Opening hook (first line): attention-grabbing question or bold statement. Prefix with "TITLE: "
+2. Structure with 3-5 scenes using markers: [Scene 1: Description] (0:00-0:10)
+3. Each scene: narration text + "Visual:" direction (show/cut to/close-up/B-roll/zoom)
+4. Include timing for each scene (e.g., "0:00-0:05", "10 seconds")
+5. End with CTA scene: "subscribe", "visit", "book now", "link in description"
+6. Total: 200-800 words
+7. Each target keyword must appear at least once`;
 
     default:
       return `Write content about: "${suggestion.title}"\n${keywordsStr}`;
@@ -304,7 +364,7 @@ async function translateContent(title, body, targetLangs) {
  */
 async function improveContent(content, seoResult, options = {}) {
   const { destinationId, contentType, keywords = [] } = options;
-  const MAX_ROUNDS = 2;
+  const MAX_ROUNDS = 1; // Single surgical round — first generation should already score high
   const modelName = embeddingService.chatModel || 'mistral-small-latest';
 
   if (!embeddingService.isConfigured) {
@@ -321,38 +381,50 @@ async function improveContent(content, seoResult, options = {}) {
     round++;
 
     const failingChecks = currentSeo.checks
-      .filter(c => c.status !== 'pass')
-      .map(c => `- ${c.name} (${c.score}/${c.maxScore}): ${c.details}`)
+      .filter(c => c.score < c.maxScore)
+      .map(c => {
+        const deficit = c.maxScore - c.score;
+        return `- ${c.name}: ${c.score}/${c.maxScore} (need +${deficit}pts) → ${c.details}`;
+      })
+      .join('\n');
+
+    const passingChecks = currentSeo.checks
+      .filter(c => c.score === c.maxScore)
+      .map(c => `- ${c.name}: PERFECT ✓ — do NOT change this aspect`)
       .join('\n');
 
     const toneInstruction = buildToneInstruction(destinationId);
+    const seoGuidance = buildSeoGuidance(contentType, keywords);
 
-    const systemPrompt = `You are a professional content optimizer for a premium tourism platform.
-You receive content that scored below the quality threshold on specific metrics.
-Your job: rewrite the content to FIX every failing metric while preserving the original message and style.
+    const systemPrompt = `You are a surgical content optimizer. You fix ONLY what's broken — preserve everything that scores 10/10.
 
 ${toneInstruction}
+
+${seoGuidance}
 
 CRITICAL RULES:
 - Return the COMPLETE improved content (not just the changes)
 - Prefix title with "TITLE: " on its own line
 - Prefix meta description with "META: " on its own line (for blog only)
-- Keep the same topic and message — only improve quality
+- DO NOT change aspects that already score 10/10 — only fix failing metrics
 - Do NOT add disclaimers or explanations — return ONLY the improved content`;
 
-    const userPrompt = `The following ${contentType} content scored ${currentSeo.overallScore}/100 (minimum required: ${SEO_MINIMUM_SCORE}/100).
+    const userPrompt = `Content scored ${currentSeo.overallScore}/100 (need ≥${SEO_MINIMUM_SCORE}/100). Fix the failing metrics.
 
-CURRENT TITLE: ${currentTitle}
+TITLE: ${currentTitle}
 
-CURRENT CONTENT:
+CONTENT:
 ${currentBody}
 
-FAILING QUALITY CHECKS:
+ALREADY PERFECT (do NOT change):
+${passingChecks || '(none)'}
+
+NEEDS FIXING:
 ${failingChecks}
 
-TARGET KEYWORDS: ${keywords.join(', ') || 'none specified'}
+TARGET KEYWORDS: ${keywords.map(k => `"${k}"`).join(', ') || 'none specified'}
 
-Rewrite this content to fix ALL failing checks. Return the complete improved version.`;
+Rewrite to fix ALL failing metrics while keeping perfect scores intact.`;
 
     try {
       const improved = await embeddingService.generateChatCompletion(
