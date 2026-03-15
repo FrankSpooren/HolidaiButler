@@ -145,7 +145,7 @@ export default function POIsPage() {
                     <Grid item xs={3}>
                       <Typography variant="caption" color="text.secondary">{t('pois.stats.avgRating')}</Typography>
                       <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                        {ds.avgRating != null ? ds.avgRating.toFixed(1) : '—'}
+                        {ds.avgRating != null ? Number(ds.avgRating).toFixed(1) : '—'}
                       </Typography>
                     </Grid>
                   </Grid>

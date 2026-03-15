@@ -1093,7 +1093,9 @@
       "trending": "Trending Monitor",
       "suggestions": "Vorschläge",
       "content": "Content-Elemente",
-      "performance": "Performance"
+      "calendar": "Kalender",
+      "performance": "Performance",
+      "seasons": "Jahreszeiten"
     },
     "generateSuggestions": "Vorschläge generieren",
     "suggestionsFound": "Vorschläge",
@@ -1105,6 +1107,50 @@
     "generateContent": "Content generieren",
     "seoScore": "SEO-Bewertung",
     "translateTo": "Übersetzen nach",
-    "reanalyze": "Neu analysieren"
+    "reanalyze": "Neu analysieren",
+    "calendar": {
+      "season": "Saison",
+      "more": "mehr",
+      "connectedAccounts": "Verbundene Konten",
+      "noItems": "Keine veröffentlichten oder geplanten Inhalte an diesem Tag.",
+      "schedule": "Planen",
+      "publishNow": "Jetzt veröffentlichen",
+      "cancelSchedule": "Abbrechen",
+      "scheduleTitle": "Inhalt planen",
+      "dateTime": "Datum & Uhrzeit",
+      "account": "Konto"
+    },
+    "performance": {
+      "days": "Tage",
+      "views": "Aufrufe",
+      "clicks": "Klicks",
+      "engagement": "Engagement",
+      "reach": "Reichweite",
+      "byPlatform": "Nach Plattform",
+      "distribution": "Aufrufe-Verteilung",
+      "noData": "Noch keine Performance-Daten verfügbar.",
+      "topContent": "Bestperformender Inhalt",
+      "title": "Titel",
+      "platform": "Plattform"
+    },
+    "seasons": {
+      "title": "Saisonkonfiguration",
+      "add": "Saison hinzufügen",
+      "edit": "Saison bearbeiten",
+      "active": "Aktive Saison",
+      "inactive": "Inaktiv",
+      "activate": "Aktivieren",
+      "empty": "Noch keine Saisons konfiguriert.",
+      "name": "Name",
+      "period": "Zeitraum",
+      "status": "Status",
+      "themes": "Themen",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "heroImage": "Hero-Bildpfad",
+      "featuredPois": "Featured POI IDs (JSON-Array)",
+      "deleteTitle": "Saison löschen",
+      "deleteConfirm": "Möchten Sie diese Saison wirklich löschen?"
+    }
   }
 }

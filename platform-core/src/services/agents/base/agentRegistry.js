@@ -41,6 +41,9 @@ import trendspotterAgent from '../trendspotter/index.js';
 import contentRedacteurAgent from '../contentRedacteur/index.js';
 import seoMeesterAgent from '../seoMeester/index.js';
 
+// Content Module: De Uitgever (Publisher)
+import publisherAgent from '../publisher/index.js';
+
 // ============================================================
 // CATEGORY A: DESTINATION-AWARE (11 agents)
 // ============================================================
@@ -397,6 +400,14 @@ wrapWithDestinationAwareness(seoMeesterAgent, {
   destinationAware: false
 });
 
+// #25 De Uitgever (Publisher) - Per-destination content publishing + analytics
+wrapWithDestinationAwareness(publisherAgent, {
+  name: 'De Uitgever',
+  category: 'Content',
+  version: '1.0.0',
+  destinationAware: true
+});
+
 // ============================================================
 // REGISTRY EXPORT
 // ============================================================
@@ -434,7 +445,8 @@ const AGENT_REGISTRY = {
   // Content Module Agents
   trendspotter: trendspotterAgent,     // #22
   redacteur: contentRedacteurAgent,    // #23
-  seoMeester: seoMeesterAgent         // #24
+  seoMeester: seoMeesterAgent,        // #24
+  uitgever: publisherAgent,            // #25
 };
 
 /**

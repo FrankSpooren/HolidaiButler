@@ -913,6 +913,49 @@ export function startWorkers() {
           }
           break;
 
+        case "content-publish-scheduled":
+          try {
+            const publisher = (await import("../agents/publisher/index.js")).default;
+            const publishResults = await publisher.processScheduledPublications();
+            console.log(`[Orchestrator] Scheduled publications processed: ${publishResults.length}`);
+            result = { type: "content-publish-scheduled", published: publishResults.length, results: publishResults };
+          } catch (error) {
+            console.error("[Orchestrator] Scheduled publish failed:", error.message);
+            result = { type: "content-publish-scheduled", status: "error", error: error.message };
+          }
+          break;
+
+        case "content-analytics-collect":
+          try {
+            const publisherAnalytics = (await import("../agents/publisher/index.js")).default;
+            const analyticsResults = {};
+            for (const dId of [1, 2]) {
+              try {
+                analyticsResults[dId] = await publisherAnalytics.collectAnalytics(dId);
+              } catch (e) {
+                analyticsResults[dId] = { error: e.message };
+              }
+            }
+            console.log(`[Orchestrator] Content analytics collected for ${Object.keys(analyticsResults).length} destinations`);
+            result = { type: "content-analytics-collect", results: analyticsResults };
+          } catch (error) {
+            console.error("[Orchestrator] Content analytics collection failed:", error.message);
+            result = { type: "content-analytics-collect", status: "error", error: error.message };
+          }
+          break;
+
+        case "seasonal-check":
+          try {
+            const { checkSeasonTransitions } = await import("../content/seasonalEngine.js");
+            const transitions = await checkSeasonTransitions();
+            console.log(`[Orchestrator] Seasonal check: ${transitions.length} transitions detected`);
+            result = { type: "seasonal-check", transitions };
+          } catch (error) {
+            console.error("[Orchestrator] Seasonal check failed:", error.message);
+            result = { type: "seasonal-check", status: "error", error: error.message };
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -947,7 +990,10 @@ export function startWorkers() {
         'inventory-sync': 'inventory-sync',
         'intermediary-guest-anonymize': 'gdpr',
         'content-trending-scan': 'trendspotter',
-        'content-seo-audit': 'seo-meester'
+        'content-seo-audit': 'seo-meester',
+        'content-publish-scheduled': 'publisher',
+        'content-analytics-collect': 'publisher',
+        'seasonal-check': 'orchestrator'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {

@@ -252,6 +252,29 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: content-seo-audit (Monday 04:00)');
 
+  // === Content Module: Publisher Agent ===
+
+  // Content Scheduled Publish (De Uitgever) - every 15 minutes: process scheduled posts
+  await scheduledQueue.add('content-publish-scheduled', { type: 'content-publish-scheduled' }, {
+    repeat: { cron: '*/15 * * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'content-publish-scheduled-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-publish-scheduled (every 15 min)');
+
+  // Content Analytics Collection (De Uitgever) - daily at 09:00
+  await scheduledQueue.add('content-analytics-collect', { type: 'content-analytics-collect' }, {
+    repeat: { cron: '0 9 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'content-analytics-collect-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-analytics-collect (daily 09:00)');
+
+  // Seasonal Check - daily at 00:15
+  await scheduledQueue.add('seasonal-check', { type: 'seasonal-check' }, {
+    repeat: { cron: '15 0 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'seasonal-check-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: seasonal-check (daily 00:15)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);

@@ -1093,7 +1093,9 @@
       "trending": "Monitor de Tendencias",
       "suggestions": "Sugerencias",
       "content": "Elementos de Contenido",
-      "performance": "Rendimiento"
+      "calendar": "Calendario",
+      "performance": "Rendimiento",
+      "seasons": "Temporadas"
     },
     "generateSuggestions": "Generar Sugerencias",
     "suggestionsFound": "sugerencias",
@@ -1105,6 +1107,50 @@
     "generateContent": "Generar Contenido",
     "seoScore": "Puntuación SEO",
     "translateTo": "Traducir a",
-    "reanalyze": "Re-analizar"
+    "reanalyze": "Re-analizar",
+    "calendar": {
+      "season": "Temporada",
+      "more": "más",
+      "connectedAccounts": "Cuentas conectadas",
+      "noItems": "Sin contenido publicado o programado en este día.",
+      "schedule": "Programar",
+      "publishNow": "Publicar ahora",
+      "cancelSchedule": "Cancelar",
+      "scheduleTitle": "Programar contenido",
+      "dateTime": "Fecha y hora",
+      "account": "Cuenta"
+    },
+    "performance": {
+      "days": "días",
+      "views": "Vistas",
+      "clicks": "Clics",
+      "engagement": "Engagement",
+      "reach": "Alcance",
+      "byPlatform": "Por plataforma",
+      "distribution": "Distribución de vistas",
+      "noData": "Aún no hay datos de rendimiento disponibles.",
+      "topContent": "Contenido con mejor rendimiento",
+      "title": "Título",
+      "platform": "Plataforma"
+    },
+    "seasons": {
+      "title": "Configuración de temporadas",
+      "add": "Añadir temporada",
+      "edit": "Editar temporada",
+      "active": "Temporada activa",
+      "inactive": "Inactiva",
+      "activate": "Activar",
+      "empty": "Aún no hay temporadas configuradas.",
+      "name": "Nombre",
+      "period": "Período",
+      "status": "Estado",
+      "themes": "Temas",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "heroImage": "Ruta de imagen hero",
+      "featuredPois": "IDs de POIs destacados (array JSON)",
+      "deleteTitle": "Eliminar temporada",
+      "deleteConfirm": "¿Estás seguro de que quieres eliminar esta temporada?"
+    }
   }
 }
