@@ -245,6 +245,13 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: content-trending-scan (Sunday 03:30)');
 
+  // Content Feedback Loop (De Trendspotter) - weekly Sunday at 04:00 (after trending scan)
+  await scheduledQueue.add('content-feedback-loop', { type: 'content-feedback' }, {
+    repeat: { cron: '0 4 * * 0', tz: 'Europe/Amsterdam' },
+    jobId: 'content-feedback-loop-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-feedback-loop (Sunday 04:00)');
+
   // Content SEO Audit (De SEO Meester) - weekly Monday at 04:00
   await scheduledQueue.add('content-seo-audit', { type: 'content-seo-audit' }, {
     repeat: { cron: '0 4 * * 1', tz: 'Europe/Amsterdam' },

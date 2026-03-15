@@ -123,6 +123,22 @@ const contentService = {
     return client.post(`/content/social-accounts/${id}/refresh`).then(r => r.data);
   },
 
+  // === Analytics (Fase D) ===
+
+  getAnalyticsOverview(destinationId, { days = 30 } = {}) {
+    return client.get('/content/analytics/overview', { params: { destination_id: destinationId, days } }).then(r => r.data);
+  },
+
+  getAnalyticsItems(destinationId, { days = 30, limit = 50, offset = 0, sort_by = 'engagement', content_type } = {}) {
+    const params = { destination_id: destinationId, days, limit, offset, sort_by };
+    if (content_type) params.content_type = content_type;
+    return client.get('/content/analytics/items', { params }).then(r => r.data);
+  },
+
+  getAnalyticsPlatforms(destinationId, { days = 30 } = {}) {
+    return client.get('/content/analytics/platforms', { params: { destination_id: destinationId, days } }).then(r => r.data);
+  },
+
   // === Seasonal Config (Fase C) ===
 
   getSeasons(destinationId) {

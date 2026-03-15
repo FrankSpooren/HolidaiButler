@@ -4558,4 +4558,80 @@ CLAUDE.md v4.0.0 → v4.1.0. MS v7.62 → v7.63. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Fase D: Content Intelligence — Analytics Dashboard + Feedback Loop + Swat.io (15 maart 2026)
+
+### Resultaat
+
+Content Module Fase D (Intelligence) compleet: uitgebreid analytics dashboard met groeipercentages en tijdreeksen, wekelijkse feedback loop die trending keyword scores aanpast op basis van bewezen content performance, en Swat.io evaluatierapport met aanbeveling om nu NIET te switchen.
+
+### Blok D.0: Content Analyse Dashboard
+
+**Backend** (3 nieuwe endpoints):
+- `GET /content/analytics/overview` — KPI totalen + groei% (t.o.v. vorige periode), dagelijkse tijdreeks, per-platform breakdown, per-content-type analyse, top 10 content
+- `GET /content/analytics/items` — Per-item performance lijst met sort (views/clicks/engagement/reach), content type filter, paginatie
+- `GET /content/analytics/platforms` — Platform vergelijking met CTR en engagement rate, per-platform tijdreeks
+
+**Frontend**:
+- ContentAnalyseTab.jsx (nieuw, vervangt ContentPerformanceTab.jsx)
+- 3 sub-tabs: Overzicht, Per Item, Platformen
+- KPI cards met groei-chips (groen/rood percentage)
+- Recharts LineChart (engagement over tijd), BarChart (per platform + CTR vergelijking), PieChart (content type)
+- Per-item tabel met sort/filter/paginatie
+- Platform comparison tabel met CTR en engagement rate
+
+### Blok D.1: Feedback Loop (Optie B — Standalone in Trendspotter)
+
+- `feedbackLoop.js` (nieuw): wekelijks correleer trending_data keywords met content_performance
+- Keyword-performance correlatie: match trending keywords met content titels en SEO data
+- Engagement score berekening: 40% engagement rate + 30% CTR + 30% volume (log scale)
+- Relevance score aanpassing: +2.0 (excellent), +1.0 (goed), +0.5 (matig), -0.5 (slecht)
+- BullMQ job `content-feedback-loop` (zondag 04:00, na trending scan 03:30)
+- JOB_ACTOR_MAP: `content-feedback-loop` → `trendspotter`
+
+### Blok D.2: Swat.io Evaluatie Rapport
+
+Geschreven rapport in `docs/strategy/swatio-evaluatie.md`:
+- **Aanbeveling**: Nu NIET switchen naar Swat.io
+- Geen publieke API beschikbaar (alleen Webhook API voor enterprise)
+- Kosten ~EUR 3.600-6.000/jaar niet gerechtvaardigd (2 actieve bestemmingen)
+- Eigen Content Module (Fase A-D) biedt superieure geïntegreerde oplossing
+- Heroverweging triggers: team groei naar 3+ content managers, 5+ platforms, publieke API launch
+
+### Blok D.3: Documentatie
+
+CLAUDE.md v4.1.0 → v4.3.0. MS v7.63 → v7.65. CLAUDE_HISTORY.md bijgewerkt.
+
+### Bestanden
+
+| Actie | Bestand | Rol |
+|-------|---------|-----|
+| NIEUW | `admin-module/src/pages/ContentAnalyseTab.jsx` | Analytics dashboard (3 sub-tabs) |
+| NIEUW | `platform-core/src/services/agents/trendspotter/feedbackLoop.js` | Wekelijkse feedback loop |
+| NIEUW | `docs/strategy/swatio-evaluatie.md` | Swat.io evaluatierapport |
+| WIJZIG | `platform-core/src/routes/adminPortal.js` | +3 analytics endpoints, v3.28.0 |
+| WIJZIG | `platform-core/src/services/orchestrator/workers.js` | +content-feedback-loop case |
+| WIJZIG | `platform-core/src/services/orchestrator/scheduler.js` | +content-feedback-loop job |
+| WIJZIG | `admin-module/src/api/contentService.js` | +3 analytics methods |
+| WIJZIG | `admin-module/src/hooks/useContent.js` | +3 analytics hooks |
+| WIJZIG | `admin-module/src/pages/ContentStudioPage.jsx` | Performance→Analyse tab |
+| WIJZIG | `admin-module/src/i18n/nl.json` | +~25 analyse keys |
+| WIJZIG | `admin-module/src/i18n/en.json` | +~25 analyse keys |
+| WIJZIG | `admin-module/src/i18n/de.json` | +~25 analyse keys |
+| WIJZIG | `admin-module/src/i18n/es.json` | +~25 analyse keys |
+
+### Statistieken
+
+- **25 agents** (ongewijzigd)
+- **60 BullMQ jobs** (+1: content-feedback-loop)
+- **188 admin endpoints** (+3: analytics overview/items/platforms)
+- **adminPortal.js v3.28.0**
+
+### Documentatie
+
+CLAUDE.md v4.1.0 → v4.3.0. MS v7.63 → v7.65. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
