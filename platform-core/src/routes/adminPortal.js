@@ -10327,6 +10327,91 @@ router.get('/content/items/:id/seo', adminAuth('content_editor'), async (req, re
   }
 });
 
+/**
+ * POST /content/items/:id/improve — Auto-improve content via AI to reach SEO minimum (65/100)
+ * Analyzes current SEO score → if below 65, rewrites content via Mistral AI → saves improved version
+ */
+router.post('/content/items/:id/improve', writeAccess(), async (req, res) => {
+  try {
+    const [[item]] = await mysqlSequelize.query(
+      `SELECT ci.*, cs.keyword_cluster
+       FROM content_items ci
+       LEFT JOIN content_suggestions cs ON ci.suggestion_id = cs.id
+       WHERE ci.id = :id`,
+      { replacements: { id: Number(req.params.id) } }
+    );
+
+    if (!item) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    }
+
+    if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
+    if (typeof item.seo_data === 'string') item.seo_data = JSON.parse(item.seo_data);
+
+    const redacteur = (await import('../services/agents/contentRedacteur/index.js')).default;
+    const result = await redacteur.improveContentItem(item);
+
+    if (result.improved) {
+      // Save improved content back to DB
+      await mysqlSequelize.query(
+        `UPDATE content_items
+         SET title = :title, body_en = :bodyEn,
+             seo_data = :seoData, updated_at = NOW()
+         WHERE id = :id`,
+        {
+          replacements: {
+            title: result.title,
+            bodyEn: result.body_en,
+            seoData: JSON.stringify({
+              meta_description: result.meta_description,
+              overallScore: result.seo_score,
+              grade: result.seo_grade,
+              checks: result.seo_checks,
+              lastImproved: new Date().toISOString(),
+              improvement_details: result.improvement_details,
+            }),
+            id: item.id,
+          },
+        }
+      );
+
+      // Re-translate improved content
+      try {
+        const { translateTexts } = await import('../services/translationService.js');
+        const bodyLangs = ['nl', 'de', 'es'].filter(l => item[`body_${l}`]);
+        if (bodyLangs.length > 0) {
+          const texts = [
+            { key: 'title', value: result.title },
+            { key: 'body', value: result.body_en },
+          ];
+          const translations = await translateTexts(texts, 'en', bodyLangs);
+          const updateParts = [];
+          const repl = { id: item.id };
+          for (const lang of bodyLangs) {
+            if (translations.body?.[lang]) {
+              updateParts.push(`body_${lang} = :body_${lang}`);
+              repl[`body_${lang}`] = translations.body[lang];
+            }
+          }
+          if (updateParts.length > 0) {
+            await mysqlSequelize.query(
+              `UPDATE content_items SET ${updateParts.join(', ')}, updated_at = NOW() WHERE id = :id`,
+              { replacements: repl }
+            );
+          }
+        }
+      } catch (transErr) {
+        logger.warn('[AdminPortal] Auto-translate after improve failed:', transErr.message);
+      }
+    }
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Content improvement error:', error);
+    res.status(500).json({ success: false, error: { code: 'IMPROVEMENT_ERROR', message: error.message } });
+  }
+});
+
 // ============================================================================
 // FASE C: PUBLISHING — Calendar, Publish, Schedule, Social Accounts, Seasonal
 // ============================================================================

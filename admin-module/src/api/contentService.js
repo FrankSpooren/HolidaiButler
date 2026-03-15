@@ -69,6 +69,10 @@ const contentService = {
     return client.get(`/content/items/${id}/seo`).then(r => r.data);
   },
 
+  improveItem(id) {
+    return client.post(`/content/items/${id}/improve`).then(r => r.data);
+  },
+
   // === Calendar & Scheduling (Fase C) ===
 
   getCalendar(destinationId, { month, year } = {}) {
