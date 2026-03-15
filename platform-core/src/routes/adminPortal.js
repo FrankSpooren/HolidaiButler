@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 + Content B+C+D (v3.28.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 + Content B+C+D + Wave 5 (v3.29.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -10199,7 +10199,23 @@ router.get('/content/items/:id', adminAuth('content_editor'), async (req, res) =
 router.patch('/content/items/:id', writeAccess(), async (req, res) => {
   try {
     const { id } = req.params;
-    const allowedFields = ['title', 'body_en', 'body_nl', 'body_de', 'body_es', 'body_fr', 'approval_status', 'seo_data', 'social_metadata', 'target_platform'];
+    const allowedFields = ['title', 'body_en', 'body_nl', 'body_de', 'body_es', 'body_fr', 'approval_status', 'seo_data', 'social_metadata', 'target_platform', 'pillar_id'];
+
+    // Sanitize body fields before saving (safety net — strips markdown artifacts)
+    const bodyFields = ['body_en', 'body_nl', 'body_de', 'body_es', 'body_fr'];
+    const hasBodyUpdate = bodyFields.some(f => req.body[f] !== undefined);
+    if (hasBodyUpdate) {
+      const { sanitizeContent } = await import('../services/agents/contentRedacteur/contentSanitizer.js');
+      // Get content_type and platform from existing item or request
+      const [[item]] = await mysqlSequelize.query('SELECT content_type, target_platform FROM content_items WHERE id = :id', { replacements: { id: Number(id) } });
+      const contentType = item?.content_type || 'blog';
+      const platform = req.body.target_platform || item?.target_platform || 'website';
+      for (const f of bodyFields) {
+        if (typeof req.body[f] === 'string' && req.body[f].length > 0) {
+          req.body[f] = sanitizeContent(req.body[f], contentType, platform);
+        }
+      }
+    }
 
     const updates = [];
     const replacements = { id: Number(id) };
@@ -10216,10 +10232,57 @@ router.patch('/content/items/:id', writeAccess(), async (req, res) => {
       return res.status(400).json({ success: false, error: { code: 'NO_UPDATES', message: 'No valid fields to update' } });
     }
 
-    // Handle approval
-    if (req.body.approval_status === 'approved') {
-      updates.push('approved_by = :approvedBy');
-      replacements.approvedBy = req.adminUser?.id || null;
+    // Handle approval status change — log to approval trail
+    if (req.body.approval_status) {
+      const [[currentItem]] = await mysqlSequelize.query(
+        'SELECT approval_status FROM content_items WHERE id = :id', { replacements: { id: Number(id) } }
+      );
+      if (currentItem && currentItem.approval_status !== req.body.approval_status) {
+        await mysqlSequelize.query(
+          `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
+           VALUES (:itemId, :fromStatus, :toStatus, :changedBy, :comment)`,
+          { replacements: {
+            itemId: Number(id),
+            fromStatus: currentItem.approval_status,
+            toStatus: req.body.approval_status,
+            changedBy: req.adminUser?.id || 'system',
+            comment: req.body.approval_comment || null,
+          }}
+        );
+      }
+      if (req.body.approval_status === 'approved') {
+        updates.push('approved_by = :approvedBy');
+        replacements.approvedBy = req.adminUser?.id || null;
+      }
+    }
+
+    // Auto-snapshot revision before save (version control)
+    try {
+      const [[current]] = await mysqlSequelize.query(
+        'SELECT title, body_en, body_nl, body_de, body_es, body_fr FROM content_items WHERE id = :id',
+        { replacements: { id: Number(id) } }
+      );
+      if (current) {
+        const [[maxRev]] = await mysqlSequelize.query(
+          'SELECT COALESCE(MAX(revision_number), 0) as max_rev FROM content_item_revisions WHERE content_item_id = :id',
+          { replacements: { id: Number(id) } }
+        );
+        await mysqlSequelize.query(
+          `INSERT INTO content_item_revisions (content_item_id, revision_number, title, body_en, body_nl, body_de, body_es, body_fr, changed_by, change_summary)
+           VALUES (:itemId, :revNum, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr, :changedBy, :summary)`,
+          { replacements: {
+            itemId: Number(id),
+            revNum: (maxRev?.max_rev || 0) + 1,
+            title: current.title,
+            bodyEn: current.body_en, bodyNl: current.body_nl, bodyDe: current.body_de,
+            bodyEs: current.body_es, bodyFr: current.body_fr,
+            changedBy: req.adminUser?.id || 'system',
+            summary: req.body.change_summary || 'Auto-snapshot before update',
+          }}
+        );
+      }
+    } catch (revErr) {
+      logger.debug('[AdminPortal] Revision snapshot failed (non-blocking):', revErr.message);
     }
 
     updates.push('updated_at = NOW()');
@@ -10417,6 +10480,252 @@ router.post('/content/items/:id/improve', writeAccess(), async (req, res) => {
   } catch (error) {
     logger.error('[AdminPortal] Content improvement error:', error);
     res.status(500).json({ success: false, error: { code: 'IMPROVEMENT_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================================
+// WAVE 4: POI-TO-CONTENT, REPURPOSE, MULTI-DESTINATION
+// ============================================================================
+
+/**
+ * POST /content/generate-from-poi — Generate content directly from a POI (KILLER FEATURE)
+ * Body: { poi_id, platforms[] }
+ */
+router.post('/content/generate-from-poi', writeAccess(), async (req, res) => {
+  try {
+    const { poi_id, platforms = ['instagram', 'facebook', 'linkedin'] } = req.body;
+    if (!poi_id) return res.status(400).json({ success: false, error: { code: 'MISSING_POI', message: 'poi_id is required' } });
+
+    const destId = req.adminUser?.destination_id || req.body.destination_id || 1;
+    const { generateFromPOI } = await import('../services/agents/contentRedacteur/contentGenerator.js');
+    const results = await generateFromPOI(Number(poi_id), destId, platforms);
+
+    // Save each result as a content_item
+    const savedIds = [];
+    for (const item of results) {
+      const [insertResult] = await mysqlSequelize.query(
+        `INSERT INTO content_items
+         (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+          seo_data, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
+         VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
+          :seoData, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
+        {
+          replacements: {
+            destId,
+            contentType: item.content_type,
+            title: item.title,
+            bodyEn: item.body_en || null,
+            bodyNl: item.body_nl || null,
+            bodyDe: item.body_de || null,
+            bodyEs: item.body_es || null,
+            bodyFr: item.body_fr || null,
+            seoData: JSON.stringify({ meta_description: item.meta_description, hashtags: item.hashtags }),
+            platform: item.target_platform,
+            aiModel: item.ai_model,
+            poiId: poi_id,
+          },
+        }
+      );
+      savedIds.push(insertResult);
+    }
+
+    res.json({ success: true, data: { generated: results.length, ids: savedIds, items: results } });
+  } catch (error) {
+    logger.error('[AdminPortal] POI content generation error:', error);
+    res.status(500).json({ success: false, error: { code: 'POI_GENERATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/repurpose — Repurpose content for other platforms
+ * Body: { target_platforms[] }
+ */
+router.post('/content/items/:id/repurpose', writeAccess(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { target_platforms = ['instagram', 'facebook', 'linkedin'] } = req.body;
+
+    const [[sourceItem]] = await mysqlSequelize.query(
+      'SELECT * FROM content_items WHERE id = :id',
+      { replacements: { id: Number(id) } }
+    );
+    if (!sourceItem) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+
+    const { repurposeContent } = await import('../services/agents/contentRedacteur/contentGenerator.js');
+    const results = await repurposeContent(sourceItem, target_platforms, sourceItem.destination_id);
+
+    // Save each repurposed item
+    const savedIds = [];
+    for (const item of results) {
+      const [insertResult] = await mysqlSequelize.query(
+        `INSERT INTO content_items
+         (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+          seo_data, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
+         VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
+          :seoData, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
+        {
+          replacements: {
+            destId: sourceItem.destination_id,
+            contentType: item.content_type,
+            title: item.title,
+            bodyEn: item.body_en || null,
+            bodyNl: item.body_nl || null,
+            bodyDe: item.body_de || null,
+            bodyEs: item.body_es || null,
+            bodyFr: item.body_fr || null,
+            seoData: JSON.stringify({ meta_description: item.meta_description, hashtags: item.hashtags }),
+            platform: item.target_platform,
+            aiModel: item.ai_model,
+            poiId: item.poi_id || null,
+          },
+        }
+      );
+      savedIds.push(insertResult);
+    }
+
+    res.json({ success: true, data: { repurposed: results.length, source_id: Number(id), ids: savedIds, items: results } });
+  } catch (error) {
+    logger.error('[AdminPortal] Content repurpose error:', error);
+    res.status(500).json({ success: false, error: { code: 'REPURPOSE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/share-to-destination — Share content to another destination
+ * Body: { destination_id }
+ */
+router.post('/content/items/:id/share-to-destination', writeAccess(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { destination_id } = req.body;
+    if (!destination_id) return res.status(400).json({ success: false, error: { code: 'MISSING_DEST', message: 'destination_id is required' } });
+
+    const [[sourceItem]] = await mysqlSequelize.query(
+      'SELECT * FROM content_items WHERE id = :id',
+      { replacements: { id: Number(id) } }
+    );
+    if (!sourceItem) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+
+    // Re-generate with new destination's tone
+    const { generateContent } = await import('../services/agents/contentRedacteur/contentGenerator.js');
+    const suggestion = {
+      title: sourceItem.title,
+      summary: `Adapt this content for a different destination: ${(sourceItem.body_en || '').substring(0, 500)}`,
+      keyword_cluster: typeof sourceItem.keyword_cluster === 'string' ? JSON.parse(sourceItem.keyword_cluster || '[]') : (sourceItem.keyword_cluster || []),
+      content_type: sourceItem.content_type,
+    };
+
+    const result = await generateContent(suggestion, {
+      destinationId: Number(destination_id),
+      contentType: sourceItem.content_type,
+      platform: sourceItem.target_platform,
+    });
+
+    // Save as new item in target destination
+    const [insertResult] = await mysqlSequelize.query(
+      `INSERT INTO content_items
+       (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+        seo_data, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+       VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
+        :seoData, :platform, 'draft', :aiModel, true, NOW(), NOW())`,
+      {
+        replacements: {
+          destId: Number(destination_id),
+          contentType: result.content_type,
+          title: result.title,
+          bodyEn: result.body_en || null,
+          bodyNl: result.body_nl || null,
+          bodyDe: result.body_de || null,
+          bodyEs: result.body_es || null,
+          bodyFr: result.body_fr || null,
+          seoData: JSON.stringify({ meta_description: result.meta_description, hashtags: result.hashtags }),
+          platform: result.target_platform,
+          aiModel: result.ai_model,
+        },
+      }
+    );
+
+    res.json({ success: true, data: { id: insertResult, source_id: Number(id), destination_id: Number(destination_id), ...result } });
+  } catch (error) {
+    logger.error('[AdminPortal] Content share error:', error);
+    res.status(500).json({ success: false, error: { code: 'SHARE_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================================
+// WAVE 2: VISUELE CONTENT — Image Selection, Unsplash Search, Image Format
+// ============================================================================
+
+/**
+ * POST /content/images/suggest — AI image suggestions for content item
+ * Body: content_item_id OR { title, body_en, poi_id, destination_id }
+ */
+router.post('/content/images/suggest', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const { content_item_id, title, body_en, poi_id } = req.body;
+    const destId = req.adminUser?.destination_id || req.body.destination_id || 1;
+
+    let contentItem = { title, body_en, poi_id, destination_id: destId };
+
+    if (content_item_id) {
+      const [[item]] = await mysqlSequelize.query(
+        'SELECT id, title, body_en, poi_id, destination_id, content_type, target_platform FROM content_items WHERE id = :id',
+        { replacements: { id: Number(content_item_id) } }
+      );
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+      contentItem = item;
+    }
+
+    const { selectImages } = await import('../services/agents/contentRedacteur/imageSelector.js');
+    const images = await selectImages(contentItem, contentItem.destination_id || destId);
+
+    res.json({ success: true, data: images });
+  } catch (error) {
+    logger.error('[AdminPortal] Image suggestion error:', error);
+    res.status(500).json({ success: false, error: { code: 'IMAGE_SUGGEST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/images/unsplash — Search Unsplash for stock images
+ * Body: { query, per_page }
+ */
+router.post('/content/images/unsplash', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const { query, per_page = 6 } = req.body;
+    if (!query) return res.status(400).json({ success: false, error: { code: 'MISSING_QUERY', message: 'query is required' } });
+
+    const { searchUnsplash } = await import('../services/agents/contentRedacteur/unsplashClient.js');
+    const results = await searchUnsplash(query, Math.min(per_page, 12));
+
+    res.json({ success: true, data: results });
+  } catch (error) {
+    logger.error('[AdminPortal] Unsplash search error:', error);
+    res.status(500).json({ success: false, error: { code: 'UNSPLASH_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/images/format — Resize image for platform specs
+ * Body: { image_path, platform, format }
+ */
+router.post('/content/images/format', writeAccess(), async (req, res) => {
+  try {
+    const { image_path, platform, format = 'post' } = req.body;
+    if (!image_path || !platform) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_PARAMS', message: 'image_path and platform are required' } });
+    }
+
+    const { formatImage } = await import('../services/agents/contentRedacteur/imageFormatter.js');
+    const storageRoot = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
+    const fullPath = image_path.startsWith('/') ? image_path : `${storageRoot}/${image_path}`;
+
+    const result = await formatImage(fullPath, platform, format);
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Image format error:', error);
+    res.status(500).json({ success: false, error: { code: 'IMAGE_FORMAT_ERROR', message: error.message } });
   }
 });
 
@@ -11029,6 +11338,420 @@ router.get('/content/seasons/current', adminAuth('content_editor'), async (req, 
   } catch (error) {
     logger.error('[AdminPortal] Current season error:', error);
     res.status(500).json({ success: false, error: { code: 'CURRENT_SEASON_ERROR', message: error.message } });
+  }
+});
+
+// === Wave 5: Enterprise Workflow & Intelligence ===
+
+/**
+ * GET /content/items/:id/comments — List comments for a content item
+ */
+router.get('/content/items/:id/comments', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const [comments] = await mysqlSequelize.query(
+      `SELECT c.*, au.email as user_email, au.first_name, au.last_name
+       FROM content_comments c
+       LEFT JOIN admin_users au ON au.id = c.user_id
+       WHERE c.content_item_id = :itemId
+       ORDER BY c.created_at ASC`,
+      { replacements: { itemId: Number(req.params.id) } }
+    );
+    res.json({ success: true, data: comments || [] });
+  } catch (error) {
+    logger.error('[AdminPortal] Comments list error:', error);
+    res.status(500).json({ success: false, error: { code: 'COMMENTS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/comments — Add a comment to a content item
+ * Body: { comment }
+ */
+router.post('/content/items/:id/comments', writeAccess(), async (req, res) => {
+  try {
+    const { comment } = req.body;
+    if (!comment || !comment.trim()) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_COMMENT', message: 'comment is required' } });
+    }
+    const [result] = await mysqlSequelize.query(
+      `INSERT INTO content_comments (content_item_id, user_id, comment) VALUES (:itemId, :userId, :comment)`,
+      { replacements: { itemId: Number(req.params.id), userId: req.adminUser?.id || 'system', comment: comment.trim() } }
+    );
+    res.json({ success: true, data: { id: result, content_item_id: Number(req.params.id), comment: comment.trim() } });
+  } catch (error) {
+    logger.error('[AdminPortal] Comment add error:', error);
+    res.status(500).json({ success: false, error: { code: 'COMMENT_ADD_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/items/:id/revisions — List revision history for a content item
+ */
+router.get('/content/items/:id/revisions', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const [revisions] = await mysqlSequelize.query(
+      `SELECT r.*, au.email as changed_by_email, au.first_name, au.last_name
+       FROM content_item_revisions r
+       LEFT JOIN admin_users au ON au.id = r.changed_by
+       WHERE r.content_item_id = :itemId
+       ORDER BY r.revision_number DESC
+       LIMIT 20`,
+      { replacements: { itemId: Number(req.params.id) } }
+    );
+    res.json({ success: true, data: revisions || [] });
+  } catch (error) {
+    logger.error('[AdminPortal] Revisions list error:', error);
+    res.status(500).json({ success: false, error: { code: 'REVISIONS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/revisions/:revisionId/restore — Restore a previous revision
+ */
+router.post('/content/items/:id/revisions/:revisionId/restore', writeAccess(), async (req, res) => {
+  try {
+    const { id, revisionId } = req.params;
+    const [[revision]] = await mysqlSequelize.query(
+      'SELECT * FROM content_item_revisions WHERE id = :revId AND content_item_id = :itemId',
+      { replacements: { revId: Number(revisionId), itemId: Number(id) } }
+    );
+    if (!revision) {
+      return res.status(404).json({ success: false, error: { code: 'REVISION_NOT_FOUND', message: 'Revision not found' } });
+    }
+    // Snapshot current state before restore
+    const [[current]] = await mysqlSequelize.query(
+      'SELECT title, body_en, body_nl, body_de, body_es, body_fr FROM content_items WHERE id = :id',
+      { replacements: { id: Number(id) } }
+    );
+    const [[maxRev]] = await mysqlSequelize.query(
+      'SELECT COALESCE(MAX(revision_number), 0) as max_rev FROM content_item_revisions WHERE content_item_id = :id',
+      { replacements: { id: Number(id) } }
+    );
+    await mysqlSequelize.query(
+      `INSERT INTO content_item_revisions (content_item_id, revision_number, title, body_en, body_nl, body_de, body_es, body_fr, changed_by, change_summary)
+       VALUES (:itemId, :revNum, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr, :changedBy, :summary)`,
+      { replacements: {
+        itemId: Number(id), revNum: (maxRev?.max_rev || 0) + 1,
+        title: current?.title, bodyEn: current?.body_en, bodyNl: current?.body_nl,
+        bodyDe: current?.body_de, bodyEs: current?.body_es, bodyFr: current?.body_fr,
+        changedBy: req.adminUser?.id || 'system', summary: `Snapshot before restore to revision #${revision.revision_number}`,
+      }}
+    );
+    // Restore
+    await mysqlSequelize.query(
+      `UPDATE content_items SET title = :title, body_en = :bodyEn, body_nl = :bodyNl, body_de = :bodyDe,
+       body_es = :bodyEs, body_fr = :bodyFr, updated_at = NOW() WHERE id = :id`,
+      { replacements: {
+        id: Number(id), title: revision.title, bodyEn: revision.body_en, bodyNl: revision.body_nl,
+        bodyDe: revision.body_de, bodyEs: revision.body_es, bodyFr: revision.body_fr,
+      }}
+    );
+    res.json({ success: true, data: { id: Number(id), restoredToRevision: revision.revision_number } });
+  } catch (error) {
+    logger.error('[AdminPortal] Revision restore error:', error);
+    res.status(500).json({ success: false, error: { code: 'REVISION_RESTORE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/items/:id/approval-log — Approval trail for a content item
+ */
+router.get('/content/items/:id/approval-log', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const [logs] = await mysqlSequelize.query(
+      `SELECT l.*, au.email as changed_by_email, au.first_name, au.last_name
+       FROM content_approval_log l
+       LEFT JOIN admin_users au ON au.id = l.changed_by
+       WHERE l.content_item_id = :itemId
+       ORDER BY l.created_at DESC`,
+      { replacements: { itemId: Number(req.params.id) } }
+    );
+    res.json({ success: true, data: logs || [] });
+  } catch (error) {
+    logger.error('[AdminPortal] Approval log error:', error);
+    res.status(500).json({ success: false, error: { code: 'APPROVAL_LOG_ERROR', message: error.message } });
+  }
+});
+
+// --- Content Pillars CRUD ---
+
+/**
+ * GET /content/pillars — List content pillars for a destination
+ */
+router.get('/content/pillars', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const [pillars] = await mysqlSequelize.query(
+      `SELECT p.*, (SELECT COUNT(*) FROM content_items ci WHERE ci.pillar_id = p.id) as item_count
+       FROM content_pillars p
+       WHERE p.destination_id = :destId AND p.is_active = TRUE
+       ORDER BY p.name ASC`,
+      { replacements: { destId: Number(destId) } }
+    );
+    res.json({ success: true, data: pillars || [] });
+  } catch (error) {
+    logger.error('[AdminPortal] Pillars list error:', error);
+    res.status(500).json({ success: false, error: { code: 'PILLARS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/pillars — Create a content pillar
+ * Body: { name, target_percentage, color }
+ */
+router.post('/content/pillars', writeAccess(), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.body.destination_id || 1;
+    const { name, target_percentage = 25, color = '#7FA594' } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_NAME', message: 'name is required' } });
+    }
+    const [result] = await mysqlSequelize.query(
+      `INSERT INTO content_pillars (destination_id, name, target_percentage, color) VALUES (:destId, :name, :pct, :color)`,
+      { replacements: { destId: Number(destId), name: name.trim(), pct: Number(target_percentage), color } }
+    );
+    res.json({ success: true, data: { id: result, name: name.trim(), target_percentage: Number(target_percentage), color } });
+  } catch (error) {
+    logger.error('[AdminPortal] Pillar create error:', error);
+    res.status(500).json({ success: false, error: { code: 'PILLAR_CREATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PATCH /content/pillars/:id — Update a content pillar
+ * Body: { name, target_percentage, color, is_active }
+ */
+router.patch('/content/pillars/:id', writeAccess(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const allowedFields = ['name', 'target_percentage', 'color', 'is_active'];
+    const updates = [];
+    const replacements = { id: Number(id) };
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates.push(`${field} = :${field}`);
+        replacements[field] = req.body[field];
+      }
+    }
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_UPDATES', message: 'No valid fields to update' } });
+    }
+    await mysqlSequelize.query(`UPDATE content_pillars SET ${updates.join(', ')} WHERE id = :id`, { replacements });
+    res.json({ success: true, data: { id: Number(id), updated: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Pillar update error:', error);
+    res.status(500).json({ success: false, error: { code: 'PILLAR_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /content/pillars/:id — Soft-delete a content pillar (deactivate)
+ */
+router.delete('/content/pillars/:id', writeAccess(), async (req, res) => {
+  try {
+    await mysqlSequelize.query('UPDATE content_pillars SET is_active = FALSE WHERE id = :id', { replacements: { id: Number(req.params.id) } });
+    // Unlink content items from this pillar
+    await mysqlSequelize.query('UPDATE content_items SET pillar_id = NULL WHERE pillar_id = :id', { replacements: { id: Number(req.params.id) } });
+    res.json({ success: true, data: { id: Number(req.params.id), deactivated: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Pillar delete error:', error);
+    res.status(500).json({ success: false, error: { code: 'PILLAR_DELETE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/pillars/balance — Pillar balance visualization data (actual vs target)
+ */
+router.get('/content/pillars/balance', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const [pillars] = await mysqlSequelize.query(
+      `SELECT p.id, p.name, p.target_percentage, p.color,
+              COUNT(ci.id) as actual_count
+       FROM content_pillars p
+       LEFT JOIN content_items ci ON ci.pillar_id = p.id AND ci.approval_status NOT IN ('deleted', 'rejected')
+       WHERE p.destination_id = :destId AND p.is_active = TRUE
+       GROUP BY p.id, p.name, p.target_percentage, p.color`,
+      { replacements: { destId: Number(destId) } }
+    );
+    const totalItems = pillars.reduce((sum, p) => sum + Number(p.actual_count), 0);
+    const balance = pillars.map(p => ({
+      ...p,
+      actual_percentage: totalItems > 0 ? Math.round((Number(p.actual_count) / totalItems) * 100) : 0,
+      target_percentage: Number(p.target_percentage),
+    }));
+    // Count unassigned items
+    const [[unassigned]] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as cnt FROM content_items WHERE destination_id = :destId AND pillar_id IS NULL AND approval_status NOT IN ('deleted', 'rejected')`,
+      { replacements: { destId: Number(destId) } }
+    );
+    res.json({ success: true, data: { pillars: balance, totalItems, unassignedCount: Number(unassigned?.cnt || 0) } });
+  } catch (error) {
+    logger.error('[AdminPortal] Pillar balance error:', error);
+    res.status(500).json({ success: false, error: { code: 'PILLAR_BALANCE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/best-times — Get recommended posting times for a platform
+ * Query: platform, market (optional)
+ */
+router.get('/content/best-times', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const { platform = 'instagram', market } = req.query;
+    const { getBestTimes } = await import('../services/agents/publisher/bestTimeCalculator.js');
+    const result = await getBestTimes({ destinationId: Number(destId), platform, market });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Best times error:', error);
+    res.status(500).json({ success: false, error: { code: 'BEST_TIMES_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/hashtags — Generate hashtags for a content item
+ */
+router.post('/content/items/:id/hashtags', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const [[item]] = await mysqlSequelize.query(
+      'SELECT content_type, target_platform, destination_id, title, body_en FROM content_items WHERE id = :id',
+      { replacements: { id: Number(req.params.id) } }
+    );
+    if (!item) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    }
+    const { generateHashtags } = await import('../services/agents/contentRedacteur/hashtagEngine.js');
+    // Extract keywords from title + body
+    const text = `${item.title || ''} ${item.body_en || ''}`;
+    const keywords = text.split(/\s+/).filter(w => w.length > 3).slice(0, 10);
+    const result = await generateHashtags({
+      destinationId: item.destination_id,
+      category: req.body.category,
+      keywords,
+      platform: item.target_platform || 'instagram',
+    });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Hashtag generation error:', error);
+    res.status(500).json({ success: false, error: { code: 'HASHTAG_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/bulk/approve — Bulk approve content items
+ * Body: { ids: [1, 2, 3] }
+ */
+router.post('/content/bulk/approve', writeAccess(), async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_IDS', message: 'ids array is required' } });
+    }
+    const numericIds = ids.map(Number).filter(n => !isNaN(n));
+    // Log approval trail for each
+    for (const itemId of numericIds) {
+      await mysqlSequelize.query(
+        `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
+         SELECT id, approval_status, 'approved', :userId, 'Bulk approval'
+         FROM content_items WHERE id = :itemId AND approval_status != 'approved'`,
+        { replacements: { itemId, userId: req.adminUser?.id || 'system' } }
+      );
+    }
+    await mysqlSequelize.query(
+      `UPDATE content_items SET approval_status = 'approved', approved_by = :userId, updated_at = NOW()
+       WHERE id IN (:ids) AND approval_status NOT IN ('published', 'deleted')`,
+      { replacements: { ids: numericIds, userId: req.adminUser?.id || null } }
+    );
+    res.json({ success: true, data: { approved: numericIds.length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Bulk approve error:', error);
+    res.status(500).json({ success: false, error: { code: 'BULK_APPROVE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/bulk/reject — Bulk reject content items
+ * Body: { ids: [1, 2, 3], reason }
+ */
+router.post('/content/bulk/reject', writeAccess(), async (req, res) => {
+  try {
+    const { ids, reason } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_IDS', message: 'ids array is required' } });
+    }
+    const numericIds = ids.map(Number).filter(n => !isNaN(n));
+    for (const itemId of numericIds) {
+      await mysqlSequelize.query(
+        `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
+         SELECT id, approval_status, 'rejected', :userId, :reason
+         FROM content_items WHERE id = :itemId AND approval_status != 'rejected'`,
+        { replacements: { itemId, userId: req.adminUser?.id || 'system', reason: reason || 'Bulk rejection' } }
+      );
+    }
+    await mysqlSequelize.query(
+      `UPDATE content_items SET approval_status = 'rejected', updated_at = NOW()
+       WHERE id IN (:ids) AND approval_status NOT IN ('published', 'deleted')`,
+      { replacements: { ids: numericIds } }
+    );
+    res.json({ success: true, data: { rejected: numericIds.length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Bulk reject error:', error);
+    res.status(500).json({ success: false, error: { code: 'BULK_REJECT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/bulk/schedule — Bulk schedule content items
+ * Body: { ids: [1, 2, 3], scheduled_at }
+ */
+router.post('/content/bulk/schedule', writeAccess(), async (req, res) => {
+  try {
+    const { ids, scheduled_at } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !scheduled_at) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'ids and scheduled_at are required' } });
+    }
+    const numericIds = ids.map(Number).filter(n => !isNaN(n));
+    for (const itemId of numericIds) {
+      await mysqlSequelize.query(
+        `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
+         SELECT id, approval_status, 'scheduled', :userId, :comment
+         FROM content_items WHERE id = :itemId`,
+        { replacements: { itemId, userId: req.adminUser?.id || 'system', comment: `Bulk scheduled for ${scheduled_at}` } }
+      );
+    }
+    await mysqlSequelize.query(
+      `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW()
+       WHERE id IN (:ids) AND approval_status IN ('approved', 'draft', 'pending_review')`,
+      { replacements: { ids: numericIds, scheduledAt: scheduled_at } }
+    );
+    res.json({ success: true, data: { scheduled: numericIds.length, scheduled_at } });
+  } catch (error) {
+    logger.error('[AdminPortal] Bulk schedule error:', error);
+    res.status(500).json({ success: false, error: { code: 'BULK_SCHEDULE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/bulk/delete — Bulk soft-delete content items
+ * Body: { ids: [1, 2, 3] }
+ */
+router.post('/content/bulk/delete', writeAccess(), async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_IDS', message: 'ids array is required' } });
+    }
+    const numericIds = ids.map(Number).filter(n => !isNaN(n));
+    await mysqlSequelize.query(
+      `UPDATE content_items SET approval_status = 'deleted', updated_at = NOW()
+       WHERE id IN (:ids) AND approval_status != 'published'`,
+      { replacements: { ids: numericIds } }
+    );
+    res.json({ success: true, data: { deleted: numericIds.length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Bulk delete error:', error);
+    res.status(500).json({ success: false, error: { code: 'BULK_DELETE_ERROR', message: error.message } });
   }
 });
 

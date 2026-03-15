@@ -8,6 +8,7 @@
 
 import BaseAgent from '../base/BaseAgent.js';
 import { getClient } from './clients/platformClientFactory.js';
+import { sanitizeContent } from '../contentRedacteur/contentSanitizer.js';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 import logger from '../../../utils/logger.js';
 import { mysqlSequelize } from '../../../config/database.js';
@@ -54,6 +55,15 @@ class PublisherAgent extends BaseAgent {
     );
 
     try {
+      // Sanitize content one final time before publishing (safety net)
+      const lang = contentItem.language || 'en';
+      const bodyField = `body_${lang}`;
+      if (contentItem[bodyField]) {
+        contentItem[bodyField] = sanitizeContent(contentItem[bodyField], contentItem.content_type, contentItem.target_platform);
+      } else if (contentItem.body_en) {
+        contentItem.body_en = sanitizeContent(contentItem.body_en, contentItem.content_type, contentItem.target_platform);
+      }
+
       const client = getClient(contentItem.target_platform);
       const result = await client.publish(contentItem);
 

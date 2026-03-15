@@ -282,6 +282,13 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: seasonal-check (daily 00:15)');
 
+  // Content Weekly Report (De Bode) - Monday at 08:00 (sends performance summary via MailerLite)
+  await scheduledQueue.add('content-weekly-report', { type: 'content-weekly-report' }, {
+    repeat: { cron: '0 8 * * 1', tz: 'Europe/Amsterdam' },
+    jobId: 'content-weekly-report-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-weekly-report (Monday 08:00)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);
