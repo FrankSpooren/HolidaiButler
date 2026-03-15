@@ -282,6 +282,13 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: seasonal-check (daily 00:15)');
 
+  // Content Publish Retry (De Uitgever) - every 15 minutes: retry failed publications (max 3 attempts)
+  await scheduledQueue.add('content-publish-retry', { type: 'content-publish-retry' }, {
+    repeat: { cron: '7,22,37,52 * * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'content-publish-retry-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-publish-retry (every 15 min, offset)');
+
   // Content Weekly Report (De Bode) - Monday at 08:00 (sends performance summary via MailerLite)
   await scheduledQueue.add('content-weekly-report', { type: 'content-weekly-report' }, {
     repeat: { cron: '0 8 * * 1', tz: 'Europe/Amsterdam' },

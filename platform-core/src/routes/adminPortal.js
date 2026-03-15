@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 + Content B+C+D + Wave 5 (v3.29.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 + Content B+C+D + Wave 5 + Wave 6 (v3.30.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -11752,6 +11752,120 @@ router.post('/content/bulk/delete', writeAccess(), async (req, res) => {
   } catch (error) {
     logger.error('[AdminPortal] Bulk delete error:', error);
     res.status(500).json({ success: false, error: { code: 'BULK_DELETE_ERROR', message: error.message } });
+  }
+});
+
+// === Wave 6: Social Media Platform Completion & Polish ===
+
+/**
+ * GET /content/templates — Get content templates for a destination
+ * Query: destination_id
+ */
+router.get('/content/templates', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const { getTemplates } = await import('../services/agents/contentRedacteur/contentTemplates.js');
+    const templates = getTemplates(Number(destId));
+    res.json({ success: true, data: templates });
+  } catch (error) {
+    logger.error('[AdminPortal] Templates error:', error);
+    res.status(500).json({ success: false, error: { code: 'TEMPLATES_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/retry-publish — Retry a failed publish
+ */
+router.post('/content/items/:id/retry-publish', writeAccess(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [[item]] = await mysqlSequelize.query(
+      'SELECT id, approval_status, publish_error, target_platform, destination_id FROM content_items WHERE id = :id',
+      { replacements: { id: Number(id) } }
+    );
+    if (!item) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    }
+    if (item.approval_status !== 'failed') {
+      return res.status(400).json({ success: false, error: { code: 'NOT_FAILED', message: 'Item is not in failed state' } });
+    }
+    // Reset to scheduled for re-publish
+    await mysqlSequelize.query(
+      `UPDATE content_items SET approval_status = 'scheduled', publish_error = NULL, scheduled_at = NOW(), updated_at = NOW() WHERE id = :id`,
+      { replacements: { id: Number(id) } }
+    );
+    // Log the retry
+    await mysqlSequelize.query(
+      `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
+       VALUES (:itemId, 'failed', 'scheduled', :userId, :comment)`,
+      { replacements: { itemId: Number(id), userId: req.adminUser?.id || 'system', comment: `Manual retry. Previous error: ${item.publish_error || 'unknown'}` } }
+    );
+    res.json({ success: true, data: { id: Number(id), retried: true, previousError: item.publish_error } });
+  } catch (error) {
+    logger.error('[AdminPortal] Retry publish error:', error);
+    res.status(500).json({ success: false, error: { code: 'RETRY_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/items/:id/brand-score — Check brand voice consistency
+ */
+router.get('/content/items/:id/brand-score', adminAuth('content_editor'), async (req, res) => {
+  try {
+    const [[item]] = await mysqlSequelize.query(
+      'SELECT body_en, body_nl, destination_id, content_type FROM content_items WHERE id = :id',
+      { replacements: { id: Number(req.params.id) } }
+    );
+    if (!item) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    }
+    const body = item.body_en || item.body_nl || '';
+    if (!body) {
+      return res.json({ success: true, data: { score: 0, grade: 'N/A', feedback: 'No content to analyze' } });
+    }
+    // Use toneOfVoice to check brand alignment
+    const { getToneConfig } = await import('../services/agents/contentRedacteur/toneOfVoice.js');
+    const tone = await getToneConfig(item.destination_id);
+
+    let score = 70; // Base score
+    const feedback = [];
+
+    // Check for personality keywords
+    if (tone.personality) {
+      const personalityWords = tone.personality.toLowerCase().split(/[,;\s]+/).filter(w => w.length > 3);
+      const bodyLower = body.toLowerCase();
+      const matchCount = personalityWords.filter(w => bodyLower.includes(w)).length;
+      const matchPct = personalityWords.length > 0 ? matchCount / personalityWords.length : 0;
+      score += Math.round(matchPct * 10);
+      if (matchPct < 0.3) feedback.push('Content wijkt af van brand personality — voeg meer merkkarakteristieke woorden toe');
+    }
+
+    // Check for core keywords
+    if (tone.coreKeywords) {
+      const keywords = (Array.isArray(tone.coreKeywords) ? tone.coreKeywords : tone.coreKeywords.split(/[,;]+/)).map(k => k.trim().toLowerCase());
+      const bodyLower = body.toLowerCase();
+      const found = keywords.filter(k => bodyLower.includes(k));
+      score += Math.min(10, found.length * 3);
+      if (found.length === 0 && keywords.length > 0) feedback.push('Geen core brand keywords gevonden in content');
+    }
+
+    // Check for avoid words
+    if (tone.avoidWords) {
+      const avoidList = (Array.isArray(tone.avoidWords) ? tone.avoidWords : tone.avoidWords.split(/[,;]+/)).map(w => w.trim().toLowerCase());
+      const bodyLower = body.toLowerCase();
+      const violations = avoidList.filter(w => bodyLower.includes(w));
+      score -= violations.length * 5;
+      if (violations.length > 0) feedback.push(`Vermijd woorden gevonden: ${violations.join(', ')}`);
+    }
+
+    // Clamp score
+    score = Math.max(0, Math.min(100, score));
+    const grade = score >= 80 ? 'Excellent' : score >= 60 ? 'Goed' : score >= 40 ? 'Matig' : 'Zwak';
+
+    res.json({ success: true, data: { score, grade, feedback, personality: tone.personality || '', brandValues: tone.brandValues || '' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Brand score error:', error);
+    res.status(500).json({ success: false, error: { code: 'BRAND_SCORE_ERROR', message: error.message } });
   }
 });
 
