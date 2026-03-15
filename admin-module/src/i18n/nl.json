@@ -421,7 +421,30 @@
       "uploading": "Uploaden...",
       "logoUploaded": "Logo succesvol geüpload",
       "logoTooLarge": "Bestand te groot (max 2MB)",
-      "logoUrl": "Logo URL"
+      "logoUrl": "Logo URL",
+      "toneOfVoice": {
+        "title": "Tone of Voice",
+        "subtitle": "AI-contentstijl: persoonlijkheid, doelgroep, merkwaarden",
+        "info": "Deze instellingen sturen de AI-contentgeneratie. Alle gegenereerde content weerspiegelt deze tone.",
+        "personality": "Persoonlijkheid / Tone",
+        "personalityHelp": "Hoe moet de AI klinken? Bijv. \"warm, vriendelijk, avontuurlijk\"",
+        "audience": "Doelgroep",
+        "audienceHelp": "Voor wie is de content? Leeftijd, interesses, herkomst.",
+        "brandValues": "Merkwaarden",
+        "brandValuesHelp": "Kernwaarden van het merk, komma-gescheiden.",
+        "coreKeywords": "Kernwoorden",
+        "coreKeywordsHelp": "Sleutelwoorden die altijd meegenomen moeten worden.",
+        "adjectives": "Gewenste Bijvoeglijke Naamwoorden",
+        "adjectivesHelp": "Woorden om vaak te gebruiken, komma-gescheiden.",
+        "avoidWords": "Te Vermijden Woorden",
+        "avoidWordsHelp": "Woorden die de AI nooit mag gebruiken, komma-gescheiden.",
+        "formalAddress": "Aanspreekvorm",
+        "informal": "Informeel (je/jij)",
+        "formal": "Formeel (u)",
+        "mixed": "Gemengd (contextafhankelijk)",
+        "samplePhrases": "Voorbeeldzinnen",
+        "samplePhrasesHelp": "Inspiratiezinnen die de AI moet navolgen. Eén per regel of komma-gescheiden."
+      }
     },
     "audit": {
       "title": "Admin Audit Log",

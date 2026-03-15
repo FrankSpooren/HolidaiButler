@@ -37,7 +37,7 @@ export async function generateContent(suggestion, options = {}) {
     throw new Error('Mistral AI client not configured — check MISTRAL_API_KEY');
   }
 
-  const toneInstruction = buildToneInstruction(destinationId);
+  const toneInstruction = await buildToneInstruction(destinationId);
   const formatInstruction = buildFormatInstruction(contentType, platform);
   const spec = getContentSpec(contentType);
   const keywords = suggestion.keyword_cluster || [];
@@ -155,7 +155,7 @@ export async function generateSuggestions(trendingKeywords, destinationId) {
     throw new Error('Mistral AI client not configured');
   }
 
-  const toneInstruction = buildToneInstruction(destinationId);
+  const toneInstruction = await buildToneInstruction(destinationId);
 
   const systemPrompt = `You are a content strategist for a premium tourism platform.
 Analyze trending keywords and suggest content ideas.
@@ -393,7 +393,7 @@ async function improveContent(content, seoResult, options = {}) {
       .map(c => `- ${c.name}: PERFECT ✓ — do NOT change this aspect`)
       .join('\n');
 
-    const toneInstruction = buildToneInstruction(destinationId);
+    const toneInstruction = await buildToneInstruction(destinationId);
     const seoGuidance = buildSeoGuidance(contentType, keywords);
 
     const systemPrompt = `You are a surgical content optimizer. You fix ONLY what's broken — preserve everything that scores 10/10.

@@ -228,6 +228,16 @@ export default function BrandingPage() {
         headerStyle: b.headerStyle || {
           variant: 'solid',
           sticky: true
+        },
+        toneOfVoice: b.toneOfVoice || {
+          personality: '',
+          audience: '',
+          adjectives: '',
+          avoidWords: '',
+          samplePhrases: '',
+          formalAddress: 'je',
+          brandValues: '',
+          coreKeywords: '',
         }
       });
     }
@@ -533,6 +543,104 @@ export default function BrandingPage() {
                 >
                   {translating ? t('translate.translating') : t('translate.autoTranslate')}
                 </Button>
+              </Grid>
+            </Grid>
+          </BrandingAccordion>
+
+          {/* === TONE OF VOICE === */}
+          <BrandingAccordion
+            id="toneOfVoice"
+            title={t('branding.toneOfVoice.title', 'Tone of Voice')}
+            subtitle={t('branding.toneOfVoice.subtitle', 'AI content style: personality, target audience, brand values')}
+          >
+            <Alert severity="info" sx={{ mb: 2, py: 0.5 }}>
+              {t('branding.toneOfVoice.info', 'These settings guide AI content generation. All generated content will reflect this tone.')}
+            </Alert>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label={t('branding.toneOfVoice.personality', 'Personality / Tone')}
+                  fullWidth size="small"
+                  placeholder="e.g. warm, Mediterranean, sun-kissed"
+                  value={form.toneOfVoice?.personality || ''}
+                  onChange={e => setForm(prev => ({ ...prev, toneOfVoice: { ...prev.toneOfVoice, personality: e.target.value } }))}
+                  helperText={t('branding.toneOfVoice.personalityHelp', 'How should the AI sound? E.g. "warm, friendly, adventurous"')}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label={t('branding.toneOfVoice.audience', 'Target Audience')}
+                  fullWidth size="small"
+                  placeholder="e.g. European tourists (30-70) seeking coastal charm"
+                  value={form.toneOfVoice?.audience || ''}
+                  onChange={e => setForm(prev => ({ ...prev, toneOfVoice: { ...prev.toneOfVoice, audience: e.target.value } }))}
+                  helperText={t('branding.toneOfVoice.audienceHelp', 'Who is the content for? Age, interests, origin.')}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label={t('branding.toneOfVoice.brandValues', 'Brand Values')}
+                  fullWidth size="small"
+                  placeholder="e.g. authenticity, quality, sustainability, hospitality"
+                  value={form.toneOfVoice?.brandValues || ''}
+                  onChange={e => setForm(prev => ({ ...prev, toneOfVoice: { ...prev.toneOfVoice, brandValues: e.target.value } }))}
+                  helperText={t('branding.toneOfVoice.brandValuesHelp', 'Core brand values, comma-separated.')}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label={t('branding.toneOfVoice.coreKeywords', 'Core Keywords')}
+                  fullWidth size="small"
+                  placeholder="e.g. Mediterranean, Costa Blanca, gastronomy, hidden gems"
+                  value={form.toneOfVoice?.coreKeywords || ''}
+                  onChange={e => setForm(prev => ({ ...prev, toneOfVoice: { ...prev.toneOfVoice, coreKeywords: e.target.value } }))}
+                  helperText={t('branding.toneOfVoice.coreKeywordsHelp', 'Keywords that should always be considered for content.')}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label={t('branding.toneOfVoice.adjectives', 'Preferred Adjectives')}
+                  fullWidth size="small"
+                  placeholder="e.g. charming, vibrant, authentic, picturesque"
+                  value={form.toneOfVoice?.adjectives || ''}
+                  onChange={e => setForm(prev => ({ ...prev, toneOfVoice: { ...prev.toneOfVoice, adjectives: e.target.value } }))}
+                  helperText={t('branding.toneOfVoice.adjectivesHelp', 'Words to use frequently, comma-separated.')}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label={t('branding.toneOfVoice.avoidWords', 'Words to Avoid')}
+                  fullWidth size="small"
+                  placeholder="e.g. cheap, touristy, overcrowded, basic"
+                  value={form.toneOfVoice?.avoidWords || ''}
+                  onChange={e => setForm(prev => ({ ...prev, toneOfVoice: { ...prev.toneOfVoice, avoidWords: e.target.value } }))}
+                  helperText={t('branding.toneOfVoice.avoidWordsHelp', 'Words the AI should never use, comma-separated.')}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('branding.toneOfVoice.formalAddress', 'Form of Address')}</InputLabel>
+                  <Select
+                    value={form.toneOfVoice?.formalAddress || 'je'}
+                    label={t('branding.toneOfVoice.formalAddress', 'Form of Address')}
+                    onChange={e => setForm(prev => ({ ...prev, toneOfVoice: { ...prev.toneOfVoice, formalAddress: e.target.value } }))}
+                  >
+                    <MenuItem value="je">{t('branding.toneOfVoice.informal', 'Informal (je/jij)')}</MenuItem>
+                    <MenuItem value="u">{t('branding.toneOfVoice.formal', 'Formal (u)')}</MenuItem>
+                    <MenuItem value="mixed">{t('branding.toneOfVoice.mixed', 'Mixed (context-dependent)')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label={t('branding.toneOfVoice.samplePhrases', 'Example Phrases')}
+                  fullWidth size="small"
+                  placeholder="e.g. Nestled along the Costa Blanca coastline..."
+                  value={form.toneOfVoice?.samplePhrases || ''}
+                  onChange={e => setForm(prev => ({ ...prev, toneOfVoice: { ...prev.toneOfVoice, samplePhrases: e.target.value } }))}
+                  helperText={t('branding.toneOfVoice.samplePhrasesHelp', 'Inspirational phrases the AI should emulate. One per line or comma-separated.')}
+                  multiline rows={2}
+                />
               </Grid>
             </Grid>
           </BrandingAccordion>

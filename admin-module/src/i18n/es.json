@@ -411,7 +411,30 @@
       "uploading": "Subiendo...",
       "logoUploaded": "Logo subido exitosamente",
       "logoTooLarge": "Archivo demasiado grande (máx 2MB)",
-      "logoUrl": "URL del logo"
+      "logoUrl": "URL del logo",
+      "toneOfVoice": {
+        "title": "Tono de Voz",
+        "subtitle": "Estilo de contenido IA: personalidad, público objetivo, valores de marca",
+        "info": "Estos ajustes guían la generación de contenido IA. Todo el contenido generado reflejará este tono.",
+        "personality": "Personalidad / Tono",
+        "personalityHelp": "¿Cómo debe sonar la IA? Ej. \"cálido, amigable, aventurero\"",
+        "audience": "Público Objetivo",
+        "audienceHelp": "¿Para quién es el contenido? Edad, intereses, origen.",
+        "brandValues": "Valores de Marca",
+        "brandValuesHelp": "Valores fundamentales de la marca, separados por comas.",
+        "coreKeywords": "Palabras Clave",
+        "coreKeywordsHelp": "Palabras clave que siempre deben considerarse.",
+        "adjectives": "Adjetivos Preferidos",
+        "adjectivesHelp": "Palabras de uso frecuente, separadas por comas.",
+        "avoidWords": "Palabras a Evitar",
+        "avoidWordsHelp": "Palabras que la IA nunca debe usar, separadas por comas.",
+        "formalAddress": "Forma de Tratamiento",
+        "informal": "Informal (tú)",
+        "formal": "Formal (usted)",
+        "mixed": "Mixto (según contexto)",
+        "samplePhrases": "Frases de Ejemplo",
+        "samplePhrasesHelp": "Frases inspiradoras que la IA debe emular."
+      }
     },
     "cache": {
       "title": "Gesti\u00f3n de cach\u00e9",
