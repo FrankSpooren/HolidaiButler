@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 + Content B+C+D + Wave 5 + Wave 6 (v3.30.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 + Content B+C+D + Wave 5 + Wave 6 + CS v5.0 (v3.31.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -10726,6 +10726,74 @@ router.post('/content/images/format', writeAccess(), async (req, res) => {
   } catch (error) {
     logger.error('[AdminPortal] Image format error:', error);
     res.status(500).json({ success: false, error: { code: 'IMAGE_FORMAT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/images — Attach image(s) to content item
+ * Body: { media_ids: [1,2,3] }  — array of media IDs or image URLs to link
+ */
+router.post('/content/items/:id/images', writeAccess(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { media_ids = [] } = req.body;
+    if (!Array.isArray(media_ids) || media_ids.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_MEDIA', message: 'media_ids array is required' } });
+    }
+
+    // Get current media_ids
+    const [[item]] = await mysqlSequelize.query(
+      'SELECT id, media_ids FROM content_items WHERE id = :id',
+      { replacements: { id: Number(id) } }
+    );
+    if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+
+    let current = [];
+    try { current = item.media_ids ? (typeof item.media_ids === 'string' ? JSON.parse(item.media_ids) : item.media_ids) : []; } catch { current = []; }
+
+    // Merge new media_ids, deduplicate
+    const merged = [...new Set([...current, ...media_ids])];
+
+    await mysqlSequelize.query(
+      'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
+      { replacements: { mediaIds: JSON.stringify(merged), id: Number(id) } }
+    );
+
+    res.json({ success: true, data: { media_ids: merged } });
+  } catch (error) {
+    logger.error('[AdminPortal] Image attach error:', error);
+    res.status(500).json({ success: false, error: { code: 'IMAGE_ATTACH_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /content/items/:id/images/:mediaId — Remove image from content item
+ */
+router.delete('/content/items/:id/images/:mediaId', writeAccess(), async (req, res) => {
+  try {
+    const { id, mediaId } = req.params;
+
+    const [[item]] = await mysqlSequelize.query(
+      'SELECT id, media_ids FROM content_items WHERE id = :id',
+      { replacements: { id: Number(id) } }
+    );
+    if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+
+    let current = [];
+    try { current = item.media_ids ? (typeof item.media_ids === 'string' ? JSON.parse(item.media_ids) : item.media_ids) : []; } catch { current = []; }
+
+    // Remove the mediaId (can be numeric or string)
+    const filtered = current.filter(m => String(m) !== String(mediaId));
+
+    await mysqlSequelize.query(
+      'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
+      { replacements: { mediaIds: JSON.stringify(filtered), id: Number(id) } }
+    );
+
+    res.json({ success: true, data: { media_ids: filtered } });
+  } catch (error) {
+    logger.error('[AdminPortal] Image detach error:', error);
+    res.status(500).json({ success: false, error: { code: 'IMAGE_DETACH_ERROR', message: error.message } });
   }
 });
 

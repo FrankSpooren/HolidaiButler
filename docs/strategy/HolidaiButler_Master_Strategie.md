@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 15 maart 2026
-**Versie**: 7.67
+**Datum**: 16 maart 2026
+**Versie**: 7.68
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v15.1 + Fase B+C+D + Enterprise SEO + Agent Fixes + Wave 5+6 COMPLEET). FASE VI IN PROGRESS (VI-A UX Polish + VI-B Features COMPLEET). CLAUDE.md v4.7.0. MS v7.67.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v15.1 + Fase B+C+D + Enterprise SEO + Agent Fixes + Wave 5+6 + CS v5.0 Remediatie COMPLEET). FASE VI IN PROGRESS (VI-A UX Polish + VI-B Features COMPLEET). CLAUDE.md v4.8.0. MS v7.68.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1627,6 +1627,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.68** | **16-03-2026** | **Content Studio v5.0 Remediatie — 8 Blokken COMPLEET. P0: BLOK 3 repurposeContent() AI platform-specifiek (niet copy-paste), BLOK 4 publish workflow (Nu Publiceren/Inplannen + best time), BLOK 2 image management (attach/detach + suggesties). P1: BLOK 1 SEO v2.0 bevestigd, BLOK 8 mistral-medium-latest + DeepL translator ready, BLOK 5 Social Accounts tab, BLOK 6 BestTimeToPost UI. P2: BLOK 7 ApprovalTimeline. 2 endpoints (210 totaal). adminPortal.js v3.31.0. CLAUDE.md v4.8.0.** |
 | **7.53** | **09-03-2026** | **Repair Command v9.0: Chirurgisch Repair — dev.holidaibutler.com Kwaliteit COMPLEET. 9 fixes: chatbot sessionId + SSE proxy numeric dest ID, homepage PoiGrid categoryFilter + Partners block verwijderd, footer text-white, POI detail image fallback + tile description, restaurants categoryFilter, BrandingPage button empty string check, events DateBlock fallback, PoiGrid round-robin mix, BrandingPage i18n crash fix (resolveI18nDisplay). 8 bestanden + 2 SQL updates. CLAUDE.md v3.91.0.** |
 | **7.52** | **08-03-2026** | **Command v8.0: Fase V Final — Customer Portal Kwaliteit COMPLEET. Chatbot SSE proxy route. POI categorie filtering (categories meervoud + min_reviews). POI detail pagina (openingstijden, amenities, accessibility, parking, highlights, reviews distribution, 2-kolom layout, 42 velden). Reviews veldnamen fix. Button color preview fix. 3 nieuwe + 9 gewijzigde bestanden. CLAUDE.md v3.90.0.** |
 | **7.51** | **08-03-2026** | **Command v7.1: Frank's Feedback Fixes COMPLEET (7 stappen)**. Block i18n resolution (resolveLocalizedProps, Hero crash fix). Hero height + image URL. Map gekleurde markers (8 categorieën, L.divIcon, legenda). Quick action chatbot buttons (CustomEvent hb:chatbot:open, ChatbotButton.tsx). Button style defaults (auto-derive). Footer i18n (resolveTitle). Branding chatbot config + header style. 18 bestanden. Commit 5daab9e. CLAUDE.md v3.89.0. |
@@ -1714,4 +1715,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 15 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v15.1 + Fase B+C+D + Wave 5+6 COMPLEET). Fase VI IN PROGRESS (VI-A UX Polish + VI-B Features COMPLEET). Admin Portal: 208 endpoints, adminPortal.js v3.30.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.7.0. MS v7.67.*
+*Laatst bijgewerkt: 16 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v15.1 + Fase B+C+D + Wave 5+6 + CS v5.0 Remediatie COMPLEET). Fase VI IN PROGRESS (VI-A UX Polish + VI-B Features COMPLEET). Admin Portal: 210 endpoints, adminPortal.js v3.31.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.8.0. MS v7.68.*

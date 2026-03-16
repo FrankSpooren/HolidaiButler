@@ -225,6 +225,32 @@ const contentService = {
     return client.get(`/content/items/${itemId}/brand-score`).then(r => r.data);
   },
 
+  repurposeItem(id, targetPlatforms) {
+    return client.post(`/content/items/${id}/repurpose`, { target_platforms: targetPlatforms }).then(r => r.data);
+  },
+
+  // === Image Management (Blok 2) ===
+
+  attachImages(itemId, mediaIds) {
+    return client.post(`/content/items/${itemId}/images`, { media_ids: mediaIds }).then(r => r.data);
+  },
+
+  detachImage(itemId, mediaId) {
+    return client.delete(`/content/items/${itemId}/images/${mediaId}`).then(r => r.data);
+  },
+
+  suggestImages(data) {
+    return client.post('/content/images/suggest', data).then(r => r.data);
+  },
+
+  searchUnsplash(query, perPage = 6) {
+    return client.post('/content/images/unsplash', { query, per_page: perPage }).then(r => r.data);
+  },
+
+  formatImage(imagePath, platform, format = 'post') {
+    return client.post('/content/images/format', { image_path: imagePath, platform, format }).then(r => r.data);
+  },
+
   // === Seasonal Config (Fase C) ===
 
   getSeasons(destinationId) {
