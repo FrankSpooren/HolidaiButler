@@ -49,7 +49,7 @@ class ContentFeedbackLoop {
          FROM content_items ci
          JOIN content_performance cp ON cp.content_item_id = ci.id
          WHERE ci.destination_id = :destId
-           AND cp.date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+           AND cp.measured_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
            AND ci.approval_status = 'published'
          GROUP BY ci.id, ci.title, ci.content_type, ci.seo_data`,
         { replacements: { destId: destinationId } }

@@ -115,9 +115,9 @@ class PublisherAgent extends BaseAgent {
           const metrics = await client.getAnalytics(item);
           if (metrics) {
             await mysqlSequelize.query(
-              `INSERT INTO content_performance (content_item_id, destination_id, platform, date, views, clicks, engagement, reach, conversions, raw_data, created_at)
+              `INSERT INTO content_performance (content_item_id, destination_id, platform, measured_at, views, clicks, engagement, reach, conversions, raw_metrics, created_at)
                VALUES (:itemId, :destId, :platform, CURDATE(), :views, :clicks, :engagement, :reach, :conversions, :rawData, NOW())
-               ON DUPLICATE KEY UPDATE views = :views, clicks = :clicks, engagement = :engagement, reach = :reach, conversions = :conversions, raw_data = :rawData`,
+               ON DUPLICATE KEY UPDATE views = :views, clicks = :clicks, engagement = :engagement, reach = :reach, conversions = :conversions, raw_metrics = :rawData`,
               {
                 replacements: {
                   itemId: item.id, destId: destinationId, platform: item.target_platform,

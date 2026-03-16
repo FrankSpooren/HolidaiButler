@@ -1026,14 +1026,14 @@ export function startWorkers() {
                 `SELECT SUM(views) as total_views, SUM(engagement) as total_engagement,
                         SUM(reach) as total_reach, SUM(clicks) as total_clicks
                  FROM content_performance
-                 WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`,
+                 WHERE destination_id = :destId AND measured_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`,
                 { replacements: { destId } }
               );
               const [topItem] = await db.query(
                 `SELECT ci.title, SUM(cp.engagement) as eng
                  FROM content_performance cp
                  JOIN content_items ci ON ci.id = cp.content_item_id
-                 WHERE cp.destination_id = :destId AND cp.date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                 WHERE cp.destination_id = :destId AND cp.measured_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
                  GROUP BY ci.id, ci.title ORDER BY eng DESC LIMIT 1`,
                 { replacements: { destId } }
               );
