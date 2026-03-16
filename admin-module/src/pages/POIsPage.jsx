@@ -19,6 +19,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import CloseIcon from '@mui/icons-material/Close';
 import SyncIcon from '@mui/icons-material/Sync';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useTranslation } from 'react-i18next';
 import { usePOIList, usePOIStats, usePOIDetail, usePOIUpdate, usePOICategories, usePOIImageReorder, usePOIImageDelete } from '../hooks/usePOIs.js';
 import useDestinationStore from '../stores/destinationStore.js';
@@ -377,7 +378,27 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
   const deleteMutation = usePOIImageDelete();
   const [snack, setSnack] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // imageId to confirm
+  const [generatingContent, setGeneratingContent] = useState(false);
   const poi = data?.data?.poi || {};
+
+  // 9.6: Generate content from POI
+  const handleGenerateFromPOI = async () => {
+    if (!poi.id) return;
+    setGeneratingContent(true);
+    try {
+      const contentService = (await import('../api/contentService.js')).default;
+      await contentService.generateFromPOI(poi.id, {
+        destination_id: poi.destination_id,
+        content_type: 'blog',
+        platforms: ['website'],
+      });
+      setSnack('Content gegenereerd! Bekijk in Content Studio.');
+    } catch (err) {
+      setSnack(err.message || 'Content generatie mislukt');
+    } finally {
+      setGeneratingContent(false);
+    }
+  };
 
   const getEnvPrefix = () => {
     const hostname = window.location.hostname;
@@ -445,6 +466,11 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
           <Button variant="outlined" size="small" startIcon={<EditIcon />} onClick={onEdit}>
             {t('pois.edit')}
           </Button>
+          <Tooltip title="Genereer AI content op basis van deze POI">
+            <Button variant="outlined" size="small" color="secondary" startIcon={generatingContent ? <SyncIcon sx={{ animation: 'spin 1s linear infinite', '@keyframes spin': { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } } }} /> : <AutoAwesomeIcon />} onClick={handleGenerateFromPOI} disabled={generatingContent}>
+              {generatingContent ? 'Genereren...' : 'Genereer Content'}
+            </Button>
+          </Tooltip>
         </Box>
       </DialogTitle>
       <DialogContent dividers>

@@ -30,7 +30,7 @@ const contentService = {
   },
 
   generateSuggestions(destinationId) {
-    return client.post('/content/suggestions/generate', { destination_id: destinationId }).then(r => r.data);
+    return client.post('/content/suggestions/generate', { destination_id: destinationId }, { timeout: 120000 }).then(r => r.data);
   },
 
   updateSuggestion(id, data) {
@@ -50,7 +50,7 @@ const contentService = {
   },
 
   generateItem(data) {
-    return client.post('/content/items/generate', data).then(r => r.data);
+    return client.post('/content/items/generate', data, { timeout: 120000 }).then(r => r.data);
   },
 
   updateItem(id, data) {
@@ -70,7 +70,7 @@ const contentService = {
   },
 
   improveItem(id) {
-    return client.post(`/content/items/${id}/improve`).then(r => r.data);
+    return client.post(`/content/items/${id}/improve`, {}, { timeout: 120000 }).then(r => r.data);
   },
 
   // === Calendar & Scheduling (Fase C) ===
@@ -117,6 +117,14 @@ const contentService = {
 
   connectLinkedIn(data) {
     return client.post('/content/social-accounts/connect/linkedin', data).then(r => r.data);
+  },
+
+  connectPinterest(data) {
+    return client.post('/content/social-accounts/connect/pinterest', data).then(r => r.data);
+  },
+
+  connectYouTube(data) {
+    return client.post('/content/social-accounts/connect/youtube', data).then(r => r.data);
   },
 
   disconnectAccount(id) {
@@ -226,7 +234,15 @@ const contentService = {
   },
 
   repurposeItem(id, targetPlatforms) {
-    return client.post(`/content/items/${id}/repurpose`, { target_platforms: targetPlatforms }).then(r => r.data);
+    return client.post(`/content/items/${id}/repurpose`, { target_platforms: targetPlatforms }, { timeout: 120000 }).then(r => r.data);
+  },
+
+  shareToDestination(itemId, targetDestinationId) {
+    return client.post(`/content/items/${itemId}/share-to-destination`, { destination_id: targetDestinationId }, { timeout: 120000 }).then(r => r.data);
+  },
+
+  generateFromPOI(poiId, data) {
+    return client.post('/content/generate-from-poi', { poi_id: poiId, ...data }, { timeout: 120000 }).then(r => r.data);
   },
 
   // === Image Management (Blok 2) ===

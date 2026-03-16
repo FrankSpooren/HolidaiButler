@@ -75,7 +75,7 @@ export default function ContentCalendarTab({ destinationId }) {
   const itemsByDay = useMemo(() => {
     const map = {};
     for (const item of items) {
-      const date = item.scheduled_at || item.published_at;
+      const date = item.scheduled_at || item.published_at || item.created_at;
       if (!date) continue;
       const d = new Date(date);
       if (d.getFullYear() === year && d.getMonth() === month) {
@@ -185,34 +185,60 @@ export default function ContentCalendarTab({ destinationId }) {
                     minHeight: 90,
                     p: 0.5,
                     bgcolor: day === null ? 'action.disabledBackground' :
-                      isToday(day) ? 'primary.50' :
-                      isInSeason(day) ? 'success.50' : 'background.paper',
-                    borderColor: isToday(day) ? 'primary.main' : undefined,
+                      isToday(day) ? '#E3F2FD' :
+                      isInSeason(day) ? '#F1F8E9' : 'background.paper',
+                    border: isToday(day) ? '2px solid #1976d2' : '1px solid',
+                    borderColor: isToday(day) ? '#1976d2' : 'divider',
                     cursor: day ? 'pointer' : 'default',
+                    position: 'relative',
                     '&:hover': day ? { bgcolor: 'action.hover' } : {},
                   }}
                   onClick={() => day && setSelectedDay(day)}
                 >
                   {day && (
                     <>
-                      <Typography variant="caption" fontWeight={isToday(day) ? 700 : 400} color={isToday(day) ? 'primary.main' : 'text.secondary'}>
+                      {/* Today badge */}
+                      {isToday(day) && (
+                        <Box sx={{ position: 'absolute', top: 2, right: 4 }}>
+                          <Chip label="Vandaag" size="small" color="primary" sx={{ height: 16, fontSize: 9, fontWeight: 700 }} />
+                        </Box>
+                      )}
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontWeight: isToday(day) ? 700 : 400,
+                          color: isToday(day) ? '#1976d2' : 'text.secondary',
+                          bgcolor: isToday(day) ? '#1976d2' : 'transparent',
+                          color: isToday(day) ? '#fff' : 'text.secondary',
+                          borderRadius: isToday(day) ? '50%' : 0,
+                          width: isToday(day) ? 22 : 'auto',
+                          height: isToday(day) ? 22 : 'auto',
+                          display: isToday(day) ? 'inline-flex' : 'inline',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 11,
+                        }}
+                      >
                         {day}
                       </Typography>
                       <Box sx={{ mt: 0.3 }}>
                         {(itemsByDay[day] || []).slice(0, 3).map(item => {
                           const PlatformIcon = PLATFORM_ICONS[item.target_platform] || LanguageIcon;
+                          const statusColor = STATUS_COLORS[item.approval_status] || '#ccc';
                           return (
                             <Box
                               key={item.id}
                               sx={{
                                 display: 'flex', alignItems: 'center', gap: 0.3, mb: 0.3,
-                                borderLeft: `3px solid ${STATUS_COLORS[item.approval_status] || '#ccc'}`,
-                                pl: 0.5, borderRadius: 0.5, bgcolor: 'action.selected',
+                                border: `1.5px solid ${statusColor}`,
+                                borderLeft: `4px solid ${statusColor}`,
+                                bgcolor: `${statusColor}15`,
+                                pl: 0.5, borderRadius: 0.5,
                                 fontSize: 10, lineHeight: 1.2, py: 0.2,
                               }}
                             >
-                              <PlatformIcon sx={{ fontSize: 12 }} />
-                              <Typography variant="caption" noWrap sx={{ fontSize: 10, flex: 1 }}>
+                              <PlatformIcon sx={{ fontSize: 12, color: statusColor }} />
+                              <Typography variant="caption" noWrap sx={{ fontSize: 10, flex: 1, fontWeight: 500 }}>
                                 {item.title || item.content_type}
                               </Typography>
                             </Box>
@@ -231,29 +257,47 @@ export default function ContentCalendarTab({ destinationId }) {
             ))}
           </Grid>
 
-          {/* Connected accounts summary */}
-          {accounts.length > 0 && (
-            <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                {t('contentStudio.calendar.connectedAccounts', 'Gekoppelde accounts')}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {accounts.map(acc => {
-                  const Icon = PLATFORM_ICONS[acc.platform] || LanguageIcon;
+          {/* Status legend */}
+          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 1.5, mb: 1 }}>
+            {Object.entries(STATUS_COLORS).map(([status, color]) => {
+              const labels = { draft: 'Concept', pending_review: 'Ter Review', approved: 'Goedgekeurd', scheduled: 'Ingepland', publishing: 'Publiceren', published: 'Gepubliceerd', failed: 'Mislukt', rejected: 'Afgekeurd' };
+              return (
+                <Box key={status} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: color, border: `1px solid ${color}` }} />
+                  <Typography variant="caption" sx={{ fontSize: 10 }}>{labels[status] || status}</Typography>
+                </Box>
+              );
+            })}
+          </Box>
+
+          {/* Connected accounts summary — show all platforms */}
+          <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              {t('contentStudio.calendar.connectedAccounts', 'Gekoppelde accounts')}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {(() => {
+                const allPlatforms = ['facebook', 'instagram', 'linkedin', 'x', 'tiktok', 'youtube', 'pinterest', 'snapchat'];
+                const connectedPlatforms = accounts.map(a => a.platform);
+                return allPlatforms.map(p => {
+                  const acc = accounts.find(a => a.platform === p);
+                  const Icon = PLATFORM_ICONS[p] || LanguageIcon;
+                  const isConnected = !!acc;
                   return (
                     <Chip
-                      key={acc.id}
+                      key={p}
                       icon={<Icon sx={{ fontSize: 16 }} />}
-                      label={`${acc.account_name || acc.platform} (${acc.status})`}
+                      label={isConnected ? `${acc.account_name || p} (${acc.status})` : `${p} (niet gekoppeld)`}
                       size="small"
-                      color={acc.status === 'active' ? 'success' : 'default'}
+                      color={isConnected && acc.status === 'active' ? 'success' : 'default'}
                       variant="outlined"
+                      sx={!isConnected ? { opacity: 0.5, borderStyle: 'dashed' } : {}}
                     />
                   );
-                })}
-              </Box>
-            </Paper>
-          )}
+                });
+              })()}
+            </Box>
+          </Paper>
         </>
       )}
 
