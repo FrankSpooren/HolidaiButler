@@ -81,7 +81,7 @@ export async function selectImages(contentItem, destinationId) {
     // 3. Media Library: search uploaded content images
     if (candidates.length < 5) {
       const [mediaMatches] = await mysqlSequelize.query(
-        `SELECT id, filename, file_path, alt_text, mime_type FROM media
+        `SELECT id, filename, alt_text, mime_type FROM media
          WHERE destination_id = :destId AND mime_type LIKE 'image%'
          ORDER BY created_at DESC LIMIT 5`,
         { replacements: { destId: destinationId } }
@@ -89,7 +89,7 @@ export async function selectImages(contentItem, destinationId) {
       candidates.push(...mediaMatches.map(m => ({
         source: 'media_library',
         id: m.id,
-        url: `/storage/media/${m.file_path || m.filename}`,
+        url: `/storage/media/${m.filename}`,
         alt_text: m.alt_text,
         relevance: 0.5,
       })));

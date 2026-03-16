@@ -195,20 +195,88 @@ app.get('/api/v1/oauth/linkedin/callback', async (req, res) => {
     const LinkedInClient = (await import('./services/agents/publisher/clients/linkedinClient.js')).default;
     const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/linkedin/callback`;
     const tokenData = await LinkedInClient.exchangeCodeForToken(code, redirectUri);
-    // Store token in social_accounts
-    const { SocialAccount } = await import('./models/SocialAccount.js');
+    const SocialAccount = (await import('./models/SocialAccount.js')).default;
     const encrypted = SocialAccount.encryptToken(tokenData.access_token);
-    // Upsert social account for LinkedIn
+    const refreshEncrypted = tokenData.refresh_token ? SocialAccount.encryptToken(tokenData.refresh_token) : null;
     await mysqlSequelize.query(
-      `INSERT INTO social_accounts (destination_id, platform, account_id, account_name, access_token_encrypted, token_expires_at, status, created_at, updated_at)
-       VALUES (1, 'linkedin', :accountId, 'LinkedIn', :token, :expires, 'active', NOW(), NOW())
-       ON DUPLICATE KEY UPDATE access_token_encrypted = :token, token_expires_at = :expires, status = 'active', updated_at = NOW()`,
-      { replacements: { accountId: state || 'default', token: encrypted, expires: tokenData.expires_at || null } }
+      `UPDATE social_accounts SET access_token_encrypted = :token, refresh_token_encrypted = :refresh, token_expires_at = :expires, status = 'active', updated_at = NOW()
+       WHERE platform = 'linkedin' AND destination_id = 1`,
+      { replacements: { token: encrypted, refresh: refreshEncrypted, expires: tokenData.expires_at || null } }
     );
     res.send('<html><body><h2>LinkedIn gekoppeld!</h2><p>Je kunt dit venster sluiten.</p><script>window.close();</script></body></html>');
   } catch (error) {
     logger.error('[OAuth] LinkedIn callback error:', error);
     res.status(500).send('LinkedIn koppeling mislukt: ' + error.message);
+  }
+});
+
+// Pinterest OAuth Callback (Fase C — Content Publishing)
+app.get('/api/v1/oauth/pinterest/callback', async (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) return res.status(400).send('Missing authorization code');
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/pinterest/callback`;
+    // Exchange code for token
+    const response = await fetch('https://api.pinterest.com/v5/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${Buffer.from(`${process.env.PINTEREST_APP_ID}:${process.env.PINTEREST_APP_SECRET}`).toString('base64')}`,
+      },
+      body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: redirectUri }),
+    });
+    const data = await response.json();
+    if (!response.ok || data.error) {
+      throw new Error(`Pinterest token exchange failed: ${data.message || data.error || response.statusText}`);
+    }
+    const SocialAccount = (await import('./models/SocialAccount.js')).default;
+    const encrypted = SocialAccount.encryptToken(data.access_token);
+    const refreshEncrypted = data.refresh_token ? SocialAccount.encryptToken(data.refresh_token) : null;
+    const expiresAt = data.expires_in ? new Date(Date.now() + data.expires_in * 1000).toISOString().slice(0, 19).replace('T', ' ') : null;
+    await mysqlSequelize.query(
+      `UPDATE social_accounts SET access_token_encrypted = :token, refresh_token_encrypted = :refresh, token_expires_at = :expires, status = 'active', updated_at = NOW()
+       WHERE platform = 'pinterest' AND destination_id = 1`,
+      { replacements: { token: encrypted, refresh: refreshEncrypted, expires: expiresAt } }
+    );
+    res.send('<html><body><h2>Pinterest gekoppeld!</h2><p>Je kunt dit venster sluiten.</p><script>window.close();</script></body></html>');
+  } catch (error) {
+    logger.error('[OAuth] Pinterest callback error:', error);
+    res.status(500).send('Pinterest koppeling mislukt: ' + error.message);
+  }
+});
+
+// YouTube/Google OAuth Callback (Fase C — Content Publishing)
+app.get('/api/v1/oauth/youtube/callback', async (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) return res.status(400).send('Missing authorization code');
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/youtube/callback`;
+    // Exchange code for token via Google OAuth2
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code', code, redirect_uri: redirectUri,
+        client_id: process.env.YOUTUBE_CLIENT_ID, client_secret: process.env.YOUTUBE_CLIENT_SECRET,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok || data.error) {
+      throw new Error(`YouTube token exchange failed: ${data.error_description || data.error || response.statusText}`);
+    }
+    const SocialAccount = (await import('./models/SocialAccount.js')).default;
+    const encrypted = SocialAccount.encryptToken(data.access_token);
+    const refreshEncrypted = data.refresh_token ? SocialAccount.encryptToken(data.refresh_token) : null;
+    const expiresAt = data.expires_in ? new Date(Date.now() + data.expires_in * 1000).toISOString().slice(0, 19).replace('T', ' ') : null;
+    await mysqlSequelize.query(
+      `UPDATE social_accounts SET access_token_encrypted = :token, refresh_token_encrypted = :refresh, token_expires_at = :expires, status = 'active', updated_at = NOW()
+       WHERE platform = 'youtube' AND destination_id = 1`,
+      { replacements: { token: encrypted, refresh: refreshEncrypted, expires: expiresAt } }
+    );
+    res.send('<html><body><h2>YouTube gekoppeld!</h2><p>Je kunt dit venster sluiten.</p><script>window.close();</script></body></html>');
+  } catch (error) {
+    logger.error('[OAuth] YouTube callback error:', error);
+    res.status(500).send('YouTube koppeling mislukt: ' + error.message);
   }
 });
 
