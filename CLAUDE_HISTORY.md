@@ -51,7 +51,8 @@
 40. [Command v8.0: Fase V Final — Customer Portal Kwaliteit](#command-v80-fase-v-final--customer-portal-kwaliteit-08-03-2026)
 41. [Repair v9.0-v11.0 + Command v12.0-v13.0](#command-v130-deel-a--5-resterende-bugs-blokkerend-10-maart-2026)
 42. [Command v14.0 DEEL A — 5 Resterende Fixes Customer Portal Kwaliteit](#command-v140-deel-a--5-resterende-fixes-customer-portal-kwaliteit-10-maart-2026)
-43. [Volledige Changelog](#volledige-changelog)
+43. [Content Module Waves 5+6: Enterprise Workflow + Platform Completion](#content-module-waves-56-enterprise-workflow--platform-completion-15-03-2026)
+44. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -4725,6 +4726,89 @@ Drie verbeteringen in één sessie: (1) Enterprise SEO scoring met content-type-
 ### Documentatie
 
 CLAUDE.md v4.3.0 → v4.6.0. MS v7.65 → v7.66. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
+## Content Module Waves 5+6: Enterprise Workflow + Platform Completion (15-03-2026)
+
+### Wave 5: Enterprise Workflow & Intelligence
+
+**Nieuwe bestanden:**
+| Actie | Bestand | Beschrijving |
+|-------|---------|-------------|
+| NIEUW | `platform-core/src/services/agents/publisher/bestTimeCalculator.js` | Best-time-to-post analyse (90-day performance data, platform defaults, market adjustments) |
+| NIEUW | `platform-core/src/services/agents/publisher/utmBuilder.js` | UTM tracking auto-apply (buildUtmUrl, applyUtmToContent) |
+| NIEUW | `platform-core/src/services/agents/publisher/hashtagEngine.js` | Hashtag generatie (trending + niche + branded tags) |
+| NIEUW | `admin-module/src/components/content/PlatformPreview.jsx` | Multi-platform content preview mockups (7 platforms, real-time validation) |
+
+**DB Migration (wave5_migration.cjs):**
+- `content_approval_log`: item_id, action, old_status, new_status, changed_by, comment
+- `content_comments`: item_id, user_id, comment, timestamps
+- `content_item_revisions`: item_id, version, snapshot JSON, changed_by, change_summary
+- `content_pillars`: destination_id, name, description, color, target_percentage
+- `content_items` +pillar_id kolom
+- `content_items.approval_status` ENUM uitgebreid naar 13 waarden
+
+**16 Wave 5 API endpoints:**
+1. GET /content/items/:id/comments — lijst comments
+2. POST /content/items/:id/comments — add comment
+3. GET /content/items/:id/revisions — lijst revisions
+4. POST /content/items/:id/revisions/:revId/restore — herstel revisie
+5. GET /content/items/:id/approval-log — goedkeuringshistorie
+6. GET /content/pillars — lijst pillars
+7. POST /content/pillars — maak pillar
+8. PATCH /content/pillars/:id — update pillar
+9. DELETE /content/pillars/:id — verwijder pillar
+10. GET /content/pillars/balance — pillar balans check
+11. GET /content/best-times — optimale posttijden
+12. POST /content/items/:id/hashtags — genereer hashtags
+13. POST /content/bulk/approve — bulk goedkeuren
+14. POST /content/bulk/reject — bulk afwijzen
+15. POST /content/bulk/schedule — bulk inplannen
+16. POST /content/bulk/delete — bulk verwijderen
+
+**ContentStudioPage enhancements:**
+- Right sidebar panels: SEO | Preview | Comments | History
+- Character counter met LinearProgress (platform-specific limits)
+- Comments panel: lijst + text input + Enter-to-submit
+- History panel: revision list + "Herstel" restore buttons
+- Bulk operations: checkbox column, select all, bulk toolbar (Approve/Reject/Delete)
+
+**BullMQ job:** content-weekly-report (Monday 08:00 Amsterdam) — wekelijkse performance samenvatting per destination via MailerLite
+
+**Seed data:** 4 Calpe content pillars: Beach & Coast (30%), Food & Wine (25%), Culture & History (20%), Activities & Sports (25%)
+
+### Wave 6: Social Media Platform Completion
+
+**Nieuwe bestanden:**
+| Actie | Bestand | Beschrijving |
+|-------|---------|-------------|
+| NIEUW | `platform-core/src/services/agents/publisher/clients/xClient.js` | X API v2 (OAuth 2.0, POST /2/tweets, public_metrics) |
+| NIEUW | `platform-core/src/services/agents/publisher/clients/pinterestClient.js` | Pinterest API v5 (pin creation, analytics: impression/click/save) |
+| NIEUW | `platform-core/src/services/agents/contentRedacteur/contentTemplates.js` | 14 templates: 6 Calpe, 5 Texel, 2 WarreWijzer, 1 shared |
+| NIEUW | `admin-module/src/components/content/SocialAccountsCards.jsx` | Card-based layout 6 platforms, token expiry countdown, connect/disconnect/reconnect |
+
+**3 Wave 6 API endpoints:**
+1. GET /content/templates — lijst content templates per destination
+2. POST /content/items/:id/retry-publish — hertry publicatie (max 3 attempts)
+3. GET /content/items/:id/brand-score — brand voice consistentie score
+
+**platformClientFactory.js** uitgebreid: +XClient, +PinterestClient
+
+**BullMQ job:** content-publish-retry (every 15 min, offset 7,22,37,52) — retry failed publications (<3 attempts, <24h old)
+
+### Statistieken
+
+- **25 agents** (ongewijzigd)
+- **62 BullMQ jobs** (+2: content-weekly-report, content-publish-retry)
+- **208 admin endpoints** (+19: 16 Wave 5 + 3 Wave 6)
+- **adminPortal.js v3.30.0**
+
+### Documentatie
+
+CLAUDE.md v4.6.0 → v4.7.0. MS v7.66 → v7.67. CLAUDE_HISTORY.md bijgewerkt.
 
 **Kosten**: EUR 0
 
