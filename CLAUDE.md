@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.6.0
+> **Versie**: 4.7.0
 > **Laatst bijgewerkt**: 15 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -103,7 +103,7 @@ HolidaiButler/
 │   └── apify_backfill.py        # Apify historische data backfill (Bronze→Silver)
 ├── platform-core/               # Node.js/Express backend
 │   └── src/
-│       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.25.0)
+│       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.30.0)
 │       ├── services/
 │       │   ├── holibot/         # HoliBot 2.0 (RAG Chatbot)
 │       │   ├── ticketing/       # Ticketing Module (inventoryService.js, ticketingService.js)
@@ -112,7 +112,7 @@ HolidaiButler/
 │       │   ├── intermediary/    # Intermediary State Machine (intermediaryService.js)
 │       │   ├── financial/       # Financial Process (financialService.js)
 │       │   ├── orchestrator/    # BullMQ scheduler, workers, costController, auditTrail, ownerInterface
-│       │   └── agents/          # 21 agents (base/, healthMonitor/, dataSync/, holibotSync/, intermediaryMonitor/, financialMonitor/, inventorySync/, etc.)
+│       │   └── agents/          # 25 agents (base/, healthMonitor/, dataSync/, holibotSync/, intermediaryMonitor/, financialMonitor/, inventorySync/, contentRedacteur/, seoMeester/, publisher/, etc.)
 │       ├── middleware/ (auth.js met RBAC, rate limiting, IP whitelist)
 │       └── config/destinations/  # calpe.config.js, texel.config.js, alicante.config.js (+ commerce feature flags)
 ├── hb-websites/                 # Next.js 15 publieke websites (Fase V)
@@ -249,6 +249,10 @@ Gold:   Customer Portal + Admin Portal (dynamic rendering)
 | `content_performance` | Nieuwe tabel | Performance metrics: views, clicks, engagement, reach, conversions per content item per platform |
 | `seasonal_config` | Nieuwe tabel | Seizoensconfiguratie per destination: season_name, perioden, hero_image, featured_pois, strategic_themes |
 | `social_accounts` | Nieuwe tabel | Social media accounts per destination: platform, account_id, encrypted tokens (AES-256), status |
+| `content_approval_log` | Nieuwe tabel (Wave 5) | Approval audit trail: item_id, action, old/new status, changed_by, comment, timestamp |
+| `content_comments` | Nieuwe tabel (Wave 5) | Team comments per content item: item_id, user_id, comment, timestamp |
+| `content_item_revisions` | Nieuwe tabel (Wave 5) | Version control: item_id, version, snapshot JSON, changed_by, change_summary |
+| `content_pillars` | Nieuwe tabel (Wave 5) | Content pillars per destination: name, description, color, target_percentage |
 
 ---
 
@@ -390,6 +394,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **Fase D** | **Content Intelligence — Analytics Dashboard + Feedback Loop + Swat.io** | **15-03** | **BLOK D.0: Content Analyse Dashboard — 3 nieuwe analytics endpoints (overview met KPI+groei+tijdreeks, per-item met sort/filter/paginatie, platform vergelijking met CTR+engagement rate). ContentAnalyseTab.jsx (3 sub-tabs: Overzicht/Per Item/Platformen, LineChart tijdreeks, PieChart content type, BarChart CTR vergelijking, groeipercentage chips). Performance tab vervangen door Analyse tab. BLOK D.1: Feedback Loop (Optie B — standalone in Trendspotter). feedbackLoop.js: wekelijks correleer trending keywords met content_performance, boost/penalize relevance_score op basis van bewezen engagement. BullMQ job content-feedback-loop (zondag 04:00). BLOK D.2: Swat.io Evaluatie Rapport — aanbeveling: nu NIET switchen (geen publieke API, kosten niet gerechtvaardigd, workflow duplicatie). BLOK D.3: Documentatie finaal. 3 API endpoints (188 totaal). 1 BullMQ job (60 totaal). 25 agents. 1 nieuw frontend tab + 3 API methods + 3 hooks. i18n 4 talen (~25 nieuwe keys). adminPortal.js v3.28.0. Admin build 0 errors.** |
 | **Enterprise SEO** | **SEO Scoring v2.0 + Auto-Improve + Tone of Voice** | **15-03** | **seoAnalyzer.js v2.0: content-type-aware scoring (blog 7 checks, social_post 7 checks, video_script 7 checks). SEO-aware prompt engineering: scoring criteria embedded in Mistral AI prompts. SEO_MINIMUM_SCORE=80. Auto-improve loop: genereer→SEO check→AI rewrite→re-check. normalizeAccents() Unicode NFD voor accent-safe keyword matching. improveExistingContent() standalone export + API endpoint POST /content/items/:id/improve. "AI Verbeter" button in ContentStudioPage. Tone of Voice: toneOfVoice.js v2.0 data-driven (DB branding JSON + 5-min cache + hardcoded fallback). BrandingPage Tone of Voice accordion (8 velden: personality, audience, brandValues, coreKeywords, adjectives, avoidWords, formalAddress, samplePhrases). buildToneInstruction() async, includes brand values + core keywords + address style. Cache invalidation on branding update. 1 nieuw endpoint (189 totaal). 8 gewijzigde bestanden. i18n 4 talen (~15 nieuwe keys). adminPortal.js v3.28.0.** |
 | **Agent Fixes** | **5 Agent Runtime Errors Opgelost** | **15-03** | **FIX 1: financialMonitor customer_email→guest_email (correct kolom intermediary_transactions). FIX 2: syncReporter spam_score queries verwijderd (kolom bestaat niet in reviews). FIX 3: trendAggregator trend_direction ENUM validatie vóór save. FIX 4: googleTrendsCollector timeRange 'past7Days'→'now 7-d' (Apify actor schema). FIX 5: holibotSync getCollection→getOrCreateCollection + error catch op getStatus. 5 bestanden gewijzigd. Commit f04e358.** |
+| **Wave 5+6** | **Enterprise Workflow + Platform Completion** | **15-03** | **Wave 5: Approval logging, versie-beheer (revisions), team comments, content pillars (4 Calpe geseeded), best-time-to-post analyse, UTM tracking, hashtag engine, bulk operations (approve/reject/schedule/delete). Wave 6: X API v2 client, Pinterest API v5 client, content templates (14 templates, 3 destinations), publish retry met auto-retry, brand score checking, SocialAccountsCards UI. 4 DB tabellen (content_approval_log, content_comments, content_item_revisions, content_pillars). 19 nieuwe API endpoints (208 totaal). 2 BullMQ jobs (62 totaal). adminPortal.js v3.30.0. 8 nieuwe + 6 gewijzigde bestanden.** |
 | **Fase C** | **Content Publishing — De Uitgever Agent + Social Media + Calendar** | **15-03** | **Publisher Agent (#25 De Uitgever): Meta Graph API v25.0 (Facebook + Instagram), LinkedIn Marketing API, platform client factory pattern. Content Calendar tab (maandweergave, seizoensoverlay, dag-detail, inplannen/publiceren/annuleren). Performance tab (KPI cards, per-platform BarChart + PieChart, top content tabel, Recharts). Seasonal Config tab (CRUD, activeren/deactiveren, thema's, hero image override). Social Accounts management (connect/disconnect, token refresh, encrypted storage AES-256-CBC). LinkedIn OAuth callback route. 17 nieuwe API endpoints (185 totaal). 3 BullMQ jobs (content-publish-scheduled elke 15 min, content-analytics-collect dagelijks 09:00, seasonal-check dagelijks 00:15). 59 jobs totaal (+3). 25 agents (+1). DB migration: content_items +3 kolommen (scheduled_at, platform_post_id, publish_error) + approval_status ENUM uitgebreid. 2 social_accounts geseeded (Facebook + Instagram). 3 nieuwe frontend tabs, 17 API methods, 16 React Query hooks. i18n 4 talen (~50 nieuwe keys). adminPortal.js v3.27.0. Admin build 0 errors.** |
 | **Fase B** | **Content Engine — AI Content Generatie Motor** | **14-03** | **BLOK B.0: De Redacteur Agent (#23) — Mistral AI content generatie, tone-of-voice per destination (Calpe warm/Texel adventurous/WarreWijzer slow-living), meertalige vertaling, platform-specifieke formatting. 4 nieuwe bestanden. BLOK B.1: De SEO Meester Agent (#24) — SEO analyse (readability Flesch-Kincaid per taal, keyword density, heading structuur, interne link suggesties), SISTRIX integratie (visibility index, keyword rankings). 5 nieuwe bestanden. BLOK B.2: Content Suggestie Engine — 3 API endpoints (suggesties lijst, AI generatie, approve/reject). BLOK B.3: Content Generator UI — 7 API endpoints, ContentStudioPage 3 tabs actief (Trending + Suggesties + Content Items), ContentItemDialog met taaltabs + SEO sidebar, GenerateContentDialog. 1 nieuw + 7 gewijzigde bestanden. 24 agents (+2), 56 jobs (+1), 168 endpoints (+10). adminPortal.js v3.26.0. i18n 4 talen. Admin build 0 errors.** |
 
@@ -435,7 +440,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - `destinationRunner.js`: Mixin helper voor bestaande agent singletons
 - `agentRegistry.js`: Centrale registratie 25 entries
 
-### Scheduled Jobs: 60 totaal
+### Scheduled Jobs: 62 totaal
 - BullMQ queue: `scheduled-tasks`
 - Workers: `src/services/orchestrator/workers.js` (incl. JOB_ACTOR_MAP voor correct agent attribution)
 
@@ -452,10 +457,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.28.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.30.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 189 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial + 8 branding/pages/navigation + 3 V.6 endpoints + 1 Wave 1 block image upload + 4 media CRUD + 1 page duplicate + 3 page revisions + 1 onboarding + 3 content trending + 3 content suggestions + 7 content items + 1 content improve + 17 content publishing/calendar/social/seasons + 3 content analytics)
+- **Endpoints**: 208 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial + 8 branding/pages/navigation + 3 V.6 endpoints + 1 Wave 1 block image upload + 4 media CRUD + 1 page duplicate + 3 page revisions + 1 onboarding + 3 content trending + 3 content suggestions + 7 content items + 1 content improve + 17 content publishing/calendar/social/seasons + 3 content analytics + 16 content workflow/pillars/bulk + 3 content templates/retry/brand-score)
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -616,7 +621,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 ```bash
 pm2 status                    # PM2 processes
 redis-cli ping                # Redis
-# BullMQ jobs (verwacht: 46)
+# BullMQ jobs (verwacht: 62)
 cd /var/www/api.holidaibutler.com/platform-core
 node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); async function c() { const conn = new Redis(); const q = new Queue('scheduled-tasks', { connection: conn }); const jobs = await q.getRepeatableJobs(); console.log('Jobs:', jobs.length); await q.close(); await conn.quit(); } c();"
 ```
@@ -639,6 +644,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.7.0** | **2026-03-15** | **Content Module Waves 5+6: Enterprise Workflow + Platform Completion**. Wave 5: approval logging, revisions (auto-snapshot), team comments, content pillars, best-time-to-post, UTM tracking, hashtag engine, bulk operations. Wave 6: X API v2 + Pinterest API v5 clients, 14 content templates, publish retry, brand score, SocialAccountsCards UI. 4 DB tabellen. 19 endpoints (208 totaal). 2 jobs (62 totaal). adminPortal.js v3.30.0. MS v7.67. |
 | **4.6.0** | **2026-03-15** | **Enterprise SEO + Tone of Voice + Agent Fixes**. seoAnalyzer.js v2.0: content-type-aware scoring (blog/social/video elk 7 checks). SEO-aware Mistral prompts. SEO_MINIMUM_SCORE=80. Auto-improve loop + "AI Verbeter" button. toneOfVoice.js v2.0: data-driven (DB + cache + fallback). BrandingPage Tone of Voice accordion (8 velden). 5 agent runtime fixes (customer_email, spam_score, trend_direction ENUM, Apify timeRange, chromaService method). 1 endpoint (189 totaal). adminPortal.js v3.28.0. MS v7.66. |
 | **4.3.0** | **2026-03-15** | **Fase D: Content Intelligence — Analytics Dashboard + Feedback Loop + Swat.io**. 3 analytics endpoints, ContentAnalyseTab.jsx, feedbackLoop.js, Swat.io rapport. 188 endpoints. 60 jobs. MS v7.65. |
 | **4.1.0** | **2026-03-15** | **Fase C: Content Publishing — De Uitgever Agent + Social Media + Calendar**. Publisher Agent (#25), Calendar tab, Performance tab, Seasonal Config, Social Accounts. 17 endpoints (185 totaal). 3 jobs (59 totaal). 25 agents. MS v7.63. |
@@ -652,7 +658,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.66 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.67 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
