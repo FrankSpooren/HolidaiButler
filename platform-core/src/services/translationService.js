@@ -1,6 +1,7 @@
 /**
- * Translation Service (Fase V.6)
- * Mistral AI-powered translation for multi-language content
+ * Translation Service (v2.0 — DeepL + Mistral fallback)
+ * Prefers DeepL API (EU, Cologne DE) for superior European language quality.
+ * Falls back to Mistral AI when DeepL is not configured.
  */
 
 import logger from '../utils/logger.js';
@@ -8,13 +9,56 @@ import logger from '../utils/logger.js';
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 
 /**
- * Translate texts using Mistral AI
+ * Translate texts — DeepL preferred, Mistral fallback
  * @param {Array<{key: string, value: string}>} texts - Texts to translate
  * @param {string} sourceLang - Source language code (en, nl, de, es)
  * @param {string[]} targetLangs - Target language codes
+ * @param {Object} options - { destinationId }
  * @returns {Object} translations keyed by text key, then by target language
  */
-export async function translateTexts(texts, sourceLang, targetLangs) {
+export async function translateTexts(texts, sourceLang, targetLangs, options = {}) {
+  // Try DeepL first if configured
+  if (process.env.DEEPL_API_KEY) {
+    try {
+      return await translateWithDeepL(texts, sourceLang, targetLangs, options);
+    } catch (err) {
+      logger.warn(`[TranslationService] DeepL failed, falling back to Mistral: ${err.message}`);
+    }
+  }
+
+  // Fallback: Mistral AI
+  return translateWithMistral(texts, sourceLang, targetLangs);
+}
+
+/**
+ * Translate via DeepL API
+ */
+async function translateWithDeepL(texts, sourceLang, targetLangs, options = {}) {
+  const { translateWithDeepL: deepl } = await import('./agents/contentRedacteur/deeplTranslator.js');
+  const translations = {};
+
+  for (const targetLang of targetLangs) {
+    if (targetLang === sourceLang) continue;
+
+    for (const t of texts) {
+      if (!translations[t.key]) translations[t.key] = {};
+      const translated = await deepl(t.value, targetLang, {
+        sourceLang,
+        destinationId: options.destinationId,
+      });
+      translations[t.key][targetLang] = translated;
+    }
+
+    logger.info(`[TranslationService] DeepL: ${texts.length} texts ${sourceLang}→${targetLang}`);
+  }
+
+  return translations;
+}
+
+/**
+ * Translate via Mistral AI (original implementation)
+ */
+async function translateWithMistral(texts, sourceLang, targetLangs) {
   const apiKey = process.env.MISTRAL_API_KEY;
   if (!apiKey) {
     throw new Error('MISTRAL_API_KEY not configured');
@@ -45,7 +89,7 @@ export async function translateTexts(texts, sourceLang, targetLangs) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'mistral-small-latest',
+        model: process.env.MISTRAL_MODEL || 'mistral-medium-latest',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: textsBlock },
@@ -78,7 +122,7 @@ export async function translateTexts(texts, sourceLang, targetLangs) {
       translations[t.key][targetLang] = parsed[t.key] || '';
     }
 
-    logger.info(`[TranslationService] Translated ${texts.length} texts ${sourceLang}→${targetLang}`);
+    logger.info(`[TranslationService] Mistral: ${texts.length} texts ${sourceLang}→${targetLang}`);
   }
 
   return translations;

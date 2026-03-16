@@ -688,34 +688,131 @@ function buildPOIContext(poi) {
 }
 
 /**
- * Repurpose content — adapt existing content for different platforms
+ * Repurpose content — ADAPT existing content for different platforms.
+ * Unlike generateContent(), this passes the ORIGINAL text to the AI with
+ * explicit per-platform rewriting instructions and strict character limits.
+ *
  * @param {Object} sourceItem - Source content item from DB
  * @param {string[]} targetPlatforms - Target platforms
  * @param {number} destinationId
  * @returns {Array} Repurposed content items
  */
 export async function repurposeContent(sourceItem, targetPlatforms, destinationId) {
+  if (!embeddingService.isConfigured) {
+    embeddingService.initialize();
+  }
+  if (!embeddingService.isConfigured) {
+    throw new Error('Mistral AI client not configured — check MISTRAL_API_KEY');
+  }
+
+  const destId = destinationId || sourceItem.destination_id;
+  const toneInstruction = await buildToneInstruction(destId);
+  const modelName = embeddingService.chatModel || 'mistral-small-latest';
+  const keywords = (() => {
+    try {
+      return typeof sourceItem.keyword_cluster === 'string'
+        ? JSON.parse(sourceItem.keyword_cluster)
+        : (sourceItem.keyword_cluster || []);
+    } catch { return []; }
+  })();
+
+  // Get the full original content text
+  const originalBody = sourceItem.body_en || sourceItem.body_nl || sourceItem.body_de || sourceItem.body_es || '';
+  if (!originalBody) {
+    throw new Error('Source content item has no body text to repurpose');
+  }
+
   const results = [];
 
   for (const platform of targetPlatforms) {
-    const suggestion = {
-      title: sourceItem.title,
-      summary: `Adapt this content for ${platform}: ${(sourceItem.body_en || '').substring(0, 500)}`,
-      keyword_cluster: typeof sourceItem.keyword_cluster === 'string'
-        ? JSON.parse(sourceItem.keyword_cluster)
-        : (sourceItem.keyword_cluster || []),
-      content_type: 'social_post',
-      poi_id: sourceItem.poi_id,
-    };
+    const platformRules = PROMPT_PLATFORM_RULES[platform] || PROMPT_PLATFORM_RULES.facebook;
 
-    const post = await generateContent(suggestion, {
-      destinationId: destinationId || sourceItem.destination_id,
-      contentType: 'social_post',
-      platform,
-    });
-    post.source_content_id = sourceItem.id;
-    post.poi_id = sourceItem.poi_id;
-    results.push(post);
+    const systemPrompt = `You are an expert social media content writer for a premium tourism platform.
+
+${toneInstruction}
+
+YOUR TASK: Adapt the given source content into a ${platform} post.
+Do NOT just truncate or copy — write a NEW, platform-optimized version that:
+- Captures the essence and key message of the original
+- Is written specifically for ${platform}'s audience and style
+- Follows the platform rules below EXACTLY
+
+PLATFORM RULES FOR ${platform.toUpperCase()}:
+- Maximum ${platformRules.maxChars} characters (STRICT — content MUST be under this limit)
+- ${platformRules.rules}
+- Emoji count: ${platformRules.emojiCount} (natural placement)
+- Hashtags: ${platformRules.maxHashtags > 0 ? `${platformRules.maxHashtags} max, position: ${platformRules.hashtagPosition}` : 'none'}
+
+ABSOLUTE RULES:
+- Write as PLAIN TEXT ready to paste directly into ${platform}
+- NEVER use markdown: no **, no ##, no ---, no \`, no []()
+- NEVER include labels like CAPTION:, POST:, HOOK:, CTA:, TITLE:
+- Facts must remain accurate — do NOT add attractions/events not in the original
+- EU AI Act compliance: this is AI-generated content
+${keywords.length > 0 ? `- Incorporate these keywords naturally: ${keywords.join(', ')}` : ''}
+
+Return ONLY the post text. Nothing else. No quotes around it.`;
+
+    const userPrompt = `Adapt the following content for ${platform}.
+
+ORIGINAL TITLE: ${sourceItem.title || 'Untitled'}
+
+ORIGINAL CONTENT:
+${originalBody}
+
+Write a ${platform}-optimized version. Maximum ${platformRules.maxChars} characters. Start directly with the post text.`;
+
+    try {
+      let content = await embeddingService.generateChatCompletion(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        {
+          temperature: 0.7,
+          maxTokens: 1500,
+        }
+      );
+
+      // Sanitize output
+      content = sanitizeContent(content, 'social_post', platform);
+      content = formatForPlatform(content, platform);
+
+      // Strict character limit enforcement — retry once if over limit
+      if (platformRules.maxChars && content.length > platformRules.maxChars) {
+        logger.info(`[Repurpose] ${platform} output ${content.length}/${platformRules.maxChars} chars — retrying with stricter prompt`);
+        const retryContent = await embeddingService.generateChatCompletion(
+          [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `${userPrompt}\n\nCRITICAL: Your previous attempt was ${content.length} characters, which exceeds the ${platformRules.maxChars} limit. Write a SHORTER version. Count your characters carefully.` },
+          ],
+          { temperature: 0.5, maxTokens: 1000 }
+        );
+        const sanitizedRetry = sanitizeContent(retryContent, 'social_post', platform);
+        content = formatForPlatform(sanitizedRetry, platform);
+      }
+
+      // Generate platform-appropriate hashtags
+      const hashtags = platformRules.maxHashtags > 0 ? generateHashtags(keywords, platform) : [];
+
+      const result = {
+        title: sourceItem.title,
+        body_en: content,
+        content_type: 'social_post',
+        target_platform: platform,
+        ai_model: modelName,
+        ai_generated: true,
+        keyword_cluster: keywords,
+        hashtags,
+        source_content_id: sourceItem.id,
+        poi_id: sourceItem.poi_id,
+      };
+
+      results.push(result);
+    } catch (error) {
+      logger.error(`[Repurpose] Failed for ${platform}:`, error);
+      throw error;
+    }
   }
 
   return results;

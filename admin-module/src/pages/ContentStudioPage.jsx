@@ -23,12 +23,16 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import CloudIcon from '@mui/icons-material/Cloud';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import PublishIcon from '@mui/icons-material/Publish';
+import ScheduleIcon from '@mui/icons-material/Schedule';
 import { useTranslation } from 'react-i18next';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, Legend } from 'recharts';
 import useAuthStore from '../stores/authStore.js';
 import contentService from '../api/contentService.js';
 import ContentCalendarTab from './ContentCalendarTab.jsx';
 import SeasonalConfigTab from './SeasonalConfigTab.jsx';
+import SocialAccountsCards from '../components/content/SocialAccountsCards.jsx';
 import ContentAnalyseTab from './ContentAnalyseTab.jsx';
 import PlatformPreview from '../components/content/PlatformPreview.jsx';
 
@@ -351,6 +355,304 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate }) {
   );
 }
 
+// ============================================================
+// SOCIAL ACCOUNTS TAB (BLOK 5)
+// ============================================================
+function SocialAccountsTab({ destinationId }) {
+  return (
+    <Box>
+      <Typography variant="h6" sx={{ mb: 2 }}>Gekoppelde Social Media Accounts</Typography>
+      <SocialAccountsCards destinationId={destinationId} />
+      <Alert severity="info" sx={{ mt: 2 }}>
+        Om een nieuw platform te koppelen, heb je een developer app nodig voor dat platform.
+        Neem contact op met je admin voor LinkedIn, X (Twitter), Pinterest of TikTok koppelingen.
+      </Alert>
+    </Box>
+  );
+}
+
+// ============================================================
+// BEST TIME TO POST (BLOK 6)
+// ============================================================
+const BEST_TIME_DEFAULTS = {
+  instagram: { best: 'Dinsdag 11:00', alt: ['Donderdag 14:00', 'Zaterdag 10:00'] },
+  facebook:  { best: 'Woensdag 11:00', alt: ['Vrijdag 13:00', 'Zaterdag 12:00'] },
+  linkedin:  { best: 'Dinsdag 10:00', alt: ['Woensdag 12:00', 'Donderdag 09:00'] },
+  x:         { best: 'Maandag 09:00', alt: ['Woensdag 12:00', 'Vrijdag 15:00'] },
+  tiktok:    { best: 'Dinsdag 19:00', alt: ['Donderdag 20:00', 'Zaterdag 11:00'] },
+  youtube:   { best: 'Zaterdag 10:00', alt: ['Woensdag 17:00', 'Vrijdag 14:00'] },
+  pinterest: { best: 'Zaterdag 14:00', alt: ['Zondag 11:00', 'Vrijdag 15:00'] },
+};
+
+function BestTimeToPost({ platform, destinationId }) {
+  const [bestTimes, setBestTimes] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!platform || platform === 'website') return;
+    setLoading(true);
+    contentService.getBestTimes(destinationId, platform)
+      .then(r => setBestTimes(r.data))
+      .catch(() => setBestTimes(null))
+      .finally(() => setLoading(false));
+  }, [platform, destinationId]);
+
+  if (!platform || platform === 'website') return null;
+
+  const defaults = BEST_TIME_DEFAULTS[platform] || BEST_TIME_DEFAULTS.instagram;
+  const displayBest = bestTimes?.best_time || defaults.best;
+  const displayAlt = bestTimes?.alt_times || defaults.alt;
+
+  return (
+    <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
+      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Beste moment om te posten</Typography>
+      {loading ? <CircularProgress size={16} /> : (
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          <Chip label={displayBest} color="success" size="small" variant="filled" />
+          {displayAlt.map((t, i) => (
+            <Chip key={i} label={t} size="small" variant="outlined" />
+          ))}
+        </Box>
+      )}
+      {!bestTimes && !loading && (
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+          Op basis van algemene aanbevelingen (nog geen eigen data)
+        </Typography>
+      )}
+    </Paper>
+  );
+}
+
+// ============================================================
+// APPROVAL TIMELINE (BLOK 7)
+// ============================================================
+const APPROVAL_STEPS = ['draft', 'in_review', 'reviewed', 'approved', 'scheduled', 'published'];
+const APPROVAL_LABELS = {
+  draft: 'Concept', in_review: 'Ter Review', reviewed: 'Beoordeeld',
+  approved: 'Goedgekeurd', scheduled: 'Ingepland', published: 'Gepubliceerd',
+  rejected: 'Afgekeurd', failed: 'Mislukt', publishing: 'Bezig...',
+};
+
+function ApprovalTimeline({ itemId, currentStatus }) {
+  const [log, setLog] = useState([]);
+
+  useEffect(() => {
+    if (!itemId) return;
+    contentService.getApprovalLog(itemId)
+      .then(r => setLog(r.data || []))
+      .catch(() => setLog([]));
+  }, [itemId, currentStatus]);
+
+  const currentIdx = APPROVAL_STEPS.indexOf(currentStatus);
+
+  return (
+    <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>Workflow Status</Typography>
+      {/* Step indicator */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
+        {APPROVAL_STEPS.slice(0, 4).map((step, idx) => {
+          const isActive = currentStatus === step;
+          const isPast = currentIdx > idx || (currentStatus === 'published' || currentStatus === 'scheduled');
+          return (
+            <Box key={step} sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+              <Box sx={{
+                width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                bgcolor: isPast ? 'success.main' : isActive ? 'primary.main' : 'action.disabledBackground',
+                color: (isPast || isActive) ? 'white' : 'text.disabled', fontSize: 11,
+              }}>
+                {isPast ? <CheckIcon sx={{ fontSize: 14 }} /> : idx + 1}
+              </Box>
+              <Typography variant="caption" sx={{ fontWeight: isActive ? 700 : 400, color: isActive ? 'primary.main' : 'text.secondary' }}>
+                {APPROVAL_LABELS[step]}
+              </Typography>
+              {idx < 3 && <Box sx={{ width: 16, height: 2, bgcolor: isPast ? 'success.main' : 'divider' }} />}
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* Log entries */}
+      {log.length > 0 && (
+        <Box sx={{ maxHeight: 100, overflowY: 'auto' }}>
+          {log.slice(0, 5).map((entry, i) => (
+            <Typography key={i} variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 0.3 }}>
+              {APPROVAL_LABELS[entry.new_status] || entry.new_status} — {entry.first_name || 'Systeem'} — {new Date(entry.created_at).toLocaleString('nl-NL')}
+              {entry.comment ? ` — "${entry.comment}"` : ''}
+            </Typography>
+          ))}
+        </Box>
+      )}
+    </Paper>
+  );
+}
+
+// ============================================================
+// CONTENT IMAGE SECTION (BLOK 2)
+// ============================================================
+function ContentImageSection({ itemId, item, onUpdate }) {
+  const [images, setImages] = useState([]);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [unsplashQuery, setUnsplashQuery] = useState('');
+  const [unsplashResults, setUnsplashResults] = useState([]);
+  const [unsplashLoading, setUnsplashLoading] = useState(false);
+  const [suggestTab, setSuggestTab] = useState(0); // 0=suggestions, 1=media, 2=unsplash
+
+  useEffect(() => {
+    if (!item) return;
+    try {
+      const mediaIds = item.media_ids
+        ? (typeof item.media_ids === 'string' ? JSON.parse(item.media_ids) : item.media_ids)
+        : [];
+      setImages(mediaIds);
+    } catch { setImages([]); }
+  }, [item?.media_ids]);
+
+  const handleRemoveImage = async (mediaId) => {
+    try {
+      await contentService.detachImage(itemId, mediaId);
+      setImages(prev => prev.filter(m => String(m) !== String(mediaId)));
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      console.error('Image detach failed:', err);
+    }
+  };
+
+  const handleAttachImage = async (mediaId) => {
+    try {
+      const r = await contentService.attachImages(itemId, [mediaId]);
+      setImages(r.data?.media_ids || [...images, mediaId]);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      console.error('Image attach failed:', err);
+    }
+  };
+
+  const loadSuggestions = async () => {
+    setSuggestLoading(true);
+    try {
+      const r = await contentService.suggestImages({ content_item_id: itemId });
+      setSuggestions(r.data || []);
+    } catch (err) {
+      console.error('Image suggest failed:', err);
+    } finally {
+      setSuggestLoading(false);
+    }
+  };
+
+  const handleUnsplashSearch = async () => {
+    if (!unsplashQuery.trim()) return;
+    setUnsplashLoading(true);
+    try {
+      const r = await contentService.searchUnsplash(unsplashQuery);
+      setUnsplashResults(r.data || []);
+    } catch (err) {
+      console.error('Unsplash search failed:', err);
+    } finally {
+      setUnsplashLoading(false);
+    }
+  };
+
+  const handleOpenSuggest = () => {
+    setSuggestOpen(true);
+    loadSuggestions();
+  };
+
+  return (
+    <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="subtitle2">Afbeeldingen</Typography>
+        <Button size="small" variant="outlined" onClick={handleOpenSuggest} startIcon={<AddIcon />}>
+          Voeg afbeelding toe
+        </Button>
+      </Box>
+
+      {images.length > 0 ? (
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {images.map((imgId, idx) => (
+            <Box key={idx} sx={{ position: 'relative', width: 80, height: 80, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+              <Box component="img" src={typeof imgId === 'object' ? (imgId.url || imgId.thumbnail) : `/api/v1/img/media/${imgId}?w=80`}
+                alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={e => { e.target.style.display = 'none'; }}
+              />
+              <IconButton size="small" onClick={() => handleRemoveImage(typeof imgId === 'object' ? imgId.id : imgId)}
+                sx={{ position: 'absolute', top: 0, right: 0, bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }, p: 0.3 }}>
+                <CloseIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Box>
+          ))}
+        </Box>
+      ) : (
+        <Typography variant="caption" color="text.secondary">Geen afbeeldingen gekoppeld</Typography>
+      )}
+
+      {/* Image Suggestion Dialog */}
+      <Dialog open={suggestOpen} onClose={() => setSuggestOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Afbeelding toevoegen</DialogTitle>
+        <DialogContent>
+          <Tabs value={suggestTab} onChange={(_, v) => setSuggestTab(v)} sx={{ mb: 2 }}>
+            <Tab label="Suggesties" />
+            <Tab label="Unsplash" />
+          </Tabs>
+
+          {suggestTab === 0 && (
+            <>
+              {suggestLoading ? (
+                <Box sx={{ textAlign: 'center', py: 3 }}><CircularProgress size={24} /></Box>
+              ) : suggestions.length > 0 ? (
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {suggestions.map((img, idx) => (
+                    <Box key={idx} sx={{ cursor: 'pointer', width: 120, textAlign: 'center' }}
+                      onClick={() => { handleAttachImage(img.id || img.url); setSuggestOpen(false); }}>
+                      <Box component="img" src={img.url || img.thumbnail}
+                        alt={img.poi_name || img.alt_text || ''} sx={{ width: 120, height: 90, objectFit: 'cover', borderRadius: 1, border: '2px solid transparent', '&:hover': { borderColor: 'primary.main' } }}
+                        onError={e => { e.target.style.display = 'none'; }}
+                      />
+                      <Typography variant="caption" noWrap>{img.poi_name || img.source || '—'}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">Geen suggesties gevonden</Typography>
+              )}
+              <Button size="small" onClick={loadSuggestions} sx={{ mt: 1 }} startIcon={<RefreshIcon />}>Opnieuw laden</Button>
+            </>
+          )}
+
+          {suggestTab === 1 && (
+            <>
+              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                <TextField size="small" fullWidth placeholder="Zoek stock foto's..." value={unsplashQuery}
+                  onChange={e => setUnsplashQuery(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleUnsplashSearch()} />
+                <Button variant="contained" onClick={handleUnsplashSearch} disabled={unsplashLoading}>
+                  {unsplashLoading ? <CircularProgress size={20} /> : <SearchIcon />}
+                </Button>
+              </Box>
+              {unsplashResults.length > 0 && (
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {unsplashResults.map((img, idx) => (
+                    <Box key={idx} sx={{ cursor: 'pointer', width: 120, textAlign: 'center' }}
+                      onClick={() => { handleAttachImage(img.urls?.regular || img.id); setSuggestOpen(false); }}>
+                      <Box component="img" src={img.urls?.thumb || img.urls?.small}
+                        alt={img.alt_description || ''} sx={{ width: 120, height: 90, objectFit: 'cover', borderRadius: 1, border: '2px solid transparent', '&:hover': { borderColor: 'primary.main' } }} />
+                      <Typography variant="caption" noWrap>{img.user?.name || 'Unsplash'}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSuggestOpen(false)}>Sluiten</Button>
+        </DialogActions>
+      </Dialog>
+    </Paper>
+  );
+}
+
 function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
   const { t } = useTranslation();
   const [item, setItem] = useState(null);
@@ -369,6 +671,15 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
   const [commentLoading, setCommentLoading] = useState(false);
   const [revisions, setRevisions] = useState([]);
   const [revisionLoading, setRevisionLoading] = useState(false);
+  // Repurpose state
+  const [repurposeOpen, setRepurposeOpen] = useState(false);
+  const [repurposePlatforms, setRepurposePlatforms] = useState(['instagram', 'facebook', 'linkedin']);
+  const [repurposing, setRepurposing] = useState(false);
+  const [repurposeResult, setRepurposeResult] = useState(null);
+  // Publish workflow state
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [scheduleDatetime, setScheduleDatetime] = useState('');
 
   useEffect(() => {
     if (!itemId || !open) return;
@@ -456,6 +767,59 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
     if (onUpdate) onUpdate();
   };
 
+  const handleRepurpose = async () => {
+    if (repurposePlatforms.length === 0) return;
+    setRepurposing(true);
+    setRepurposeResult(null);
+    try {
+      const r = await contentService.repurposeItem(itemId, repurposePlatforms);
+      setRepurposeResult(r.data || r);
+      setRepurposeOpen(false);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      setRepurposeResult({ error: err.message || 'Repurpose failed' });
+    } finally {
+      setRepurposing(false);
+    }
+  };
+
+  const toggleRepurposePlatform = (platform) => {
+    setRepurposePlatforms(prev =>
+      prev.includes(platform)
+        ? prev.filter(p => p !== platform)
+        : [...prev, platform]
+    );
+  };
+
+  const handlePublishNow = async () => {
+    setPublishing(true);
+    try {
+      await contentService.publishNow(itemId, { platform: item?.target_platform });
+      if (item) setItem({ ...item, approval_status: 'publishing' });
+      setPublishDialogOpen(false);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      alert(err.message || 'Publish failed');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleSchedule = async () => {
+    if (!scheduleDatetime) return;
+    setPublishing(true);
+    try {
+      await contentService.scheduleItem(itemId, { scheduled_at: scheduleDatetime, platform: item?.target_platform });
+      if (item) setItem({ ...item, approval_status: 'scheduled', scheduled_at: scheduleDatetime });
+      setPublishDialogOpen(false);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      alert(err.message || 'Schedule failed');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const loadComments = async () => {
     if (!itemId) return;
     setCommentLoading(true);
@@ -514,6 +878,9 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
           <Grid container spacing={2}>
             {/* Left: Editor */}
             <Grid item xs={12} md={8}>
+              {/* Image Section (BLOK 2) */}
+              <ContentImageSection itemId={itemId} item={item} onUpdate={onUpdate} />
+
               <Tabs value={langTab} onChange={(_, v) => handleLangChange(v)} sx={{ mb: 1 }}>
                 {LANGS.map(lang => (
                   <Tab key={lang} value={lang} label={
@@ -648,6 +1015,12 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                   </Box>
                 )}
               </Paper>
+
+              {/* Best Time to Post (BLOK 6) */}
+              <BestTimeToPost platform={item.target_platform} destinationId={item.destination_id} />
+
+              {/* Approval Timeline (BLOK 7) */}
+              <ApprovalTimeline itemId={itemId} currentStatus={item.approval_status} />
               </>
               )}
 
@@ -716,14 +1089,91 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                 </Paper>
               )}
 
-              <Box sx={{ display: 'flex', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Button size="small" variant="contained" color="success" onClick={() => handleStatusUpdate('approved')} startIcon={<CheckIcon />} disabled={item.approval_status === 'approved'}>
                   Approve
                 </Button>
                 <Button size="small" variant="outlined" color="error" onClick={() => handleStatusUpdate('rejected')} startIcon={<CloseIcon />} disabled={item.approval_status === 'rejected'}>
                   Reject
                 </Button>
+                <Button size="small" variant="outlined" color="primary" onClick={() => setRepurposeOpen(true)} startIcon={<ContentCopyIcon />} disabled={repurposing}>
+                  {repurposing ? 'Repurposing...' : 'Repurpose'}
+                </Button>
+                {item.approval_status === 'approved' && (
+                  <Button size="small" variant="contained" color="primary" onClick={() => setPublishDialogOpen(true)} startIcon={<PublishIcon />}>
+                    Publiceren
+                  </Button>
+                )}
               </Box>
+
+              {repurposeResult && !repurposeResult.error && (
+                <Alert severity="success" sx={{ mt: 1 }} onClose={() => setRepurposeResult(null)}>
+                  {repurposeResult.repurposed || repurposeResult.items?.length || 0} platform-versie(s) aangemaakt
+                </Alert>
+              )}
+              {repurposeResult?.error && (
+                <Alert severity="error" sx={{ mt: 1 }} onClose={() => setRepurposeResult(null)}>
+                  {repurposeResult.error}
+                </Alert>
+              )}
+
+              {/* Repurpose Dialog */}
+              <Dialog open={repurposeOpen} onClose={() => setRepurposeOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle>Content Repurpose</DialogTitle>
+                <DialogContent>
+                  <Typography variant="body2" sx={{ mb: 2 }}>
+                    Selecteer platformen waarvoor een aangepaste versie gegenereerd wordt. De AI schrijft een NIEUWE versie per platform, geen copy-paste.
+                  </Typography>
+                  {['instagram', 'facebook', 'linkedin', 'x', 'tiktok', 'youtube', 'pinterest'].map(p => (
+                    <Box key={p} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Checkbox checked={repurposePlatforms.includes(p)} onChange={() => toggleRepurposePlatform(p)} disabled={p === item?.target_platform} />
+                      <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>{p}{p === item?.target_platform ? ' (bron)' : ''}</Typography>
+                    </Box>
+                  ))}
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setRepurposeOpen(false)}>Annuleren</Button>
+                  <Button variant="contained" onClick={handleRepurpose} disabled={repurposing || repurposePlatforms.length === 0} startIcon={repurposing ? <CircularProgress size={16} /> : <ContentCopyIcon />}>
+                    {repurposing ? 'Bezig...' : `Repurpose (${repurposePlatforms.length})`}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              {/* Publish Dialog (BLOK 4) */}
+              <Dialog open={publishDialogOpen} onClose={() => setPublishDialogOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle>Publiceren</DialogTitle>
+                <DialogContent>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Kies hoe je dit content item wilt publiceren naar {item?.target_platform || 'het platform'}.
+                  </Typography>
+                  {/* Best Time to Post suggestion in publish dialog */}
+                  {item?.target_platform && item.target_platform !== 'website' && (() => {
+                    const defaults = BEST_TIME_DEFAULTS[item.target_platform] || BEST_TIME_DEFAULTS.instagram;
+                    return (
+                      <Box sx={{ mb: 2, p: 1, bgcolor: 'success.50', borderRadius: 1, border: '1px solid', borderColor: 'success.200' }}>
+                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, mb: 0.5 }}>Aanbevolen tijden voor {item.target_platform}:</Typography>
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                          <Chip label={defaults.best} color="success" size="small" />
+                          {defaults.alt.map((t, i) => <Chip key={i} label={t} size="small" variant="outlined" />)}
+                        </Box>
+                      </Box>
+                    );
+                  })()}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                    <Button variant="contained" color="success" onClick={handlePublishNow} disabled={publishing} startIcon={publishing ? <CircularProgress size={16} /> : <PublishIcon />} fullWidth>
+                      Nu Publiceren
+                    </Button>
+                    <Typography variant="overline" sx={{ textAlign: 'center' }}>OF</Typography>
+                    <TextField type="datetime-local" label="Inplannen op" value={scheduleDatetime} onChange={e => setScheduleDatetime(e.target.value)} InputLabelProps={{ shrink: true }} fullWidth size="small" />
+                    <Button variant="outlined" onClick={handleSchedule} disabled={publishing || !scheduleDatetime} startIcon={<ScheduleIcon />} fullWidth>
+                      Inplannen
+                    </Button>
+                  </Box>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setPublishDialogOpen(false)}>Later</Button>
+                </DialogActions>
+              </Dialog>
             </Grid>
           </Grid>
         ) : null}
@@ -950,6 +1400,7 @@ export default function ContentStudioPage() {
         <Tab label={t('contentStudio.tabs.calendar', 'Kalender')} icon={<CalendarMonthIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
         <Tab label={t('contentStudio.tabs.analyse', 'Analyse')} />
         <Tab label={t('contentStudio.tabs.seasons', 'Seizoenen')} />
+        <Tab label={t('contentStudio.tabs.socialAccounts', 'Social Accounts')} />
       </Tabs>
 
       {/* === TAB 0: Trending Monitor === */}
@@ -1299,6 +1750,9 @@ export default function ContentStudioPage() {
 
       {/* === TAB 5: Seasonal Config === */}
       {tab === 5 && <SeasonalConfigTab destinationId={destinationId} />}
+
+      {/* === TAB 6: Social Accounts (BLOK 5) === */}
+      {tab === 6 && <SocialAccountsTab destinationId={destinationId} />}
 
       {/* === Dialogs === */}
       <AddKeywordDialog

@@ -11,7 +11,7 @@ class EmbeddingService {
     this.client = null;
     this.isConfigured = false;
     this.embeddingModel = 'mistral-embed';
-    this.chatModel = process.env.MISTRAL_MODEL || 'mistral-small-latest';
+    this.chatModel = process.env.MISTRAL_MODEL || 'mistral-medium-latest';
   }
 
   initialize() {
