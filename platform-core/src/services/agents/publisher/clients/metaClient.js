@@ -34,8 +34,9 @@ class MetaClient {
   /**
    * Publish to Facebook Page
    */
-  async _publishToFacebook(contentItem, accessToken) {
+  async _publishToFacebook(contentItem, systemToken) {
     const pageId = process.env.META_PAGE_ID;
+    const accessToken = await this._getPageAccessToken(systemToken, pageId);
     const message = this._getPostBody(contentItem);
     const metadata = contentItem.social_metadata ? JSON.parse(contentItem.social_metadata) : {};
 
@@ -128,36 +129,51 @@ class MetaClient {
    * Get post analytics from Meta Insights API
    */
   async getAnalytics(contentItem) {
-    const accessToken = this._getAccessToken(contentItem);
+    const systemToken = this._getAccessToken(contentItem);
     const postId = contentItem.platform_post_id;
+    const pageId = process.env.META_PAGE_ID;
 
     try {
-      const metrics = this.subPlatform === 'instagram'
-        ? 'impressions,reach,engagement'
-        : 'post_impressions,post_engaged_users,post_clicks';
+      // Exchange System User token for Page token (required for page-level reads)
+      const accessToken = await this._getPageAccessToken(systemToken, pageId);
 
+      if (this.subPlatform === 'instagram') {
+        const response = await fetch(
+          `${META_API_BASE}/${postId}/insights?metric=impressions,reach,engagement&access_token=${accessToken}`
+        );
+        const data = await response.json();
+        if (data.error) {
+          logger.warn(`[MetaClient] Instagram analytics error for ${postId}: ${data.error.message}`);
+          return null;
+        }
+        const values = {};
+        for (const metric of (data.data || [])) {
+          values[metric.name] = metric.values?.[0]?.value || 0;
+        }
+        return { views: values.impressions || 0, reach: values.reach || 0, engagement: values.engagement || 0, clicks: 0, conversions: 0, raw: values };
+      }
+
+      // Facebook: use basic post fields (works for all post types)
       const response = await fetch(
-        `${META_API_BASE}/${postId}/insights?metric=${metrics}&access_token=${accessToken}`
+        `${META_API_BASE}/${postId}?fields=shares,likes.summary(true),comments.summary(true)&access_token=${accessToken}`
       );
       const data = await response.json();
-
       if (data.error) {
-        logger.warn(`[MetaClient] Analytics error for ${postId}: ${data.error.message}`);
+        logger.warn(`[MetaClient] Facebook analytics error for ${postId}: ${data.error.message}`);
         return null;
       }
 
-      const values = {};
-      for (const metric of (data.data || [])) {
-        values[metric.name] = metric.values?.[0]?.value || 0;
-      }
+      const likes = data.likes?.summary?.total_count || 0;
+      const comments = data.comments?.summary?.total_count || 0;
+      const shares = data.shares?.count || 0;
 
       return {
-        views: values.post_impressions || values.impressions || 0,
-        reach: values.post_engaged_users || values.reach || 0,
-        engagement: values.engagement || 0,
-        clicks: values.post_clicks || 0,
+        views: 0,
+        reach: 0,
+        engagement: likes + comments + shares,
+        clicks: 0,
         conversions: 0,
-        raw: values,
+        raw: { likes, comments, shares },
       };
     } catch (err) {
       logger.warn(`[MetaClient] Analytics fetch failed: ${err.message}`);
@@ -174,7 +190,7 @@ class MetaClient {
   }
 
   /**
-   * Get access token — use Page Access Token from env (System User approach)
+   * Get access token — System User token → exchange for Page token
    */
   _getAccessToken(contentItem) {
     // Prefer encrypted token from social_accounts, fallback to env
@@ -186,6 +202,29 @@ class MetaClient {
       }
     }
     return process.env.META_PAGE_ACCESS_TOKEN;
+  }
+
+  /**
+   * Exchange System User token for Page Access Token (required for page-level API calls)
+   */
+  async _getPageAccessToken(systemUserToken, pageId) {
+    if (!this._pageTokenCache) this._pageTokenCache = {};
+    if (this._pageTokenCache[pageId] && this._pageTokenCache[pageId].expires > Date.now()) {
+      return this._pageTokenCache[pageId].token;
+    }
+    try {
+      const response = await fetch(`${META_API_BASE}/me/accounts?access_token=${systemUserToken}`);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+      const page = (data.data || []).find(p => p.id === pageId);
+      if (page?.access_token) {
+        this._pageTokenCache[pageId] = { token: page.access_token, expires: Date.now() + 3600000 };
+        return page.access_token;
+      }
+    } catch (e) {
+      logger.warn(`[MetaClient] Page token exchange failed: ${e.message}`);
+    }
+    return systemUserToken; // fallback
   }
 }
 

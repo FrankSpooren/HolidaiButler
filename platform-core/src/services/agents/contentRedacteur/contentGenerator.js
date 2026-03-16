@@ -416,7 +416,7 @@ async function translateContent(title, body, targetLangs) {
  */
 async function improveContent(content, seoResult, options = {}) {
   const { destinationId, contentType, keywords = [] } = options;
-  const MAX_ROUNDS = 1; // Single surgical round — first generation should already score high
+  const MAX_ROUNDS = 3; // Up to 3 rounds to reach SEO ≥ 80
   const modelName = embeddingService.chatModel || 'mistral-small-latest';
 
   if (!embeddingService.isConfigured) {

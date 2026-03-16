@@ -149,7 +149,36 @@ function ValidationItem({ label, value, status, detail }) {
   );
 }
 
-function PlatformMockup({ platform, content, rules, isTargetPlatform }) {
+function PlatformMockup({ platform, content, rules, isTargetPlatform, contentType }) {
+  // For blogs on social platforms: show "use Repurpose" message instead of truncated preview
+  const isBlogOnSocial = contentType === 'blog' && platform !== 'website' && rules.maxChars < 50000;
+  const isOverLimit = rules.maxChars && content.length > rules.maxChars;
+
+  if (isBlogOnSocial && isOverLimit) {
+    return (
+      <Box>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2" fontWeight={600} gutterBottom>
+            Dit blog ({content.length} tekens) is te lang voor {platform} (max {rules.maxChars}).
+          </Typography>
+          <Typography variant="body2">
+            Klik &quot;Repurpose&quot; om een {platform}-versie te genereren met de juiste lengte, stijl en tone-of-voice.
+          </Typography>
+        </Alert>
+        <Paper variant="outlined" sx={{ p: 2, maxHeight: 120, overflow: 'hidden', opacity: 0.5 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12 }}>
+            {content.substring(0, 200)}...
+          </Typography>
+        </Paper>
+        <Paper variant="outlined" sx={{ p: 1.5, mt: 1.5 }}>
+          <Typography variant="subtitle2" gutterBottom>Validatie</Typography>
+          <ValidationItem label="Tekens" value={`${content.length}/${rules.maxChars}`} status="error" detail="te lang — repurpose nodig" />
+          <LinearProgress variant="determinate" value={100} color="error" sx={{ height: 4, borderRadius: 2 }} />
+        </Paper>
+      </Box>
+    );
+  }
+
   const { adapted, changes } = useMemo(
     () => adaptContentForPlatform(content, platform, rules),
     [content, platform, rules]
@@ -159,7 +188,6 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform }) {
   const emojiCount = countEmoji(adapted);
   const hashtagCount = countHashtags(adapted);
   const hasUtm = hasUtmParams(adapted);
-  const isOverLimit = rules.maxChars && content.length > rules.maxChars;
   const isInOptimalRange = rules.optimalRange
     ? charCount >= rules.optimalRange[0] && charCount <= rules.optimalRange[1]
     : null;
@@ -185,7 +213,7 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform }) {
         </Alert>
       )}
 
-      {/* Over-limit warning */}
+      {/* Over-limit warning for non-blog content */}
       {isOverLimit && (
         <Alert severity="warning" sx={{ mb: 1.5, py: 0, '& .MuiAlert-message': { py: 0.5 } }}>
           <Typography variant="caption">
@@ -395,6 +423,7 @@ export default function PlatformPreview({ content, targetPlatform, selectedLangu
         content={bodyText}
         rules={rules}
         isTargetPlatform={activePlatform === targetPlatform}
+        contentType={content?.content_type}
       />
     </Box>
   );

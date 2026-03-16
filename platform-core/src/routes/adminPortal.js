@@ -10094,13 +10094,13 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
       languages,
     });
 
-    // Save to content_items
+    // Save to content_items (with seo_score)
     const [insertResult] = await mysqlSequelize.query(
       `INSERT INTO content_items
        (destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-        seo_data, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+        seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
        VALUES (:destId, :sugId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-        :seoData, :platform, 'draft', :aiModel, true, NOW(), NOW())`,
+        :seoData, :seoScore, :platform, 'draft', :aiModel, true, NOW(), NOW())`,
       {
         replacements: {
           destId: suggestion.destination_id,
@@ -10113,6 +10113,7 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
           bodyEs: generated.body_es || null,
           bodyFr: generated.body_fr || null,
           seoData: JSON.stringify({ meta_description: generated.meta_description, hashtags: generated.hashtags }),
+          seoScore: generated.seo_score || null,
           platform: generated.target_platform,
           aiModel: generated.ai_model,
         },
@@ -10148,12 +10149,12 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
 
           // Also search POI images if destination has relevant POIs
           const [poiImages] = await mysqlSequelize.query(
-            `SELECT DISTINCT iu.id FROM ImageUrl iu
+            `SELECT DISTINCT iu.id FROM imageurls iu
              INNER JOIN POI p ON iu.poi_id = p.id
              WHERE p.destination_id = :destId
              AND iu.local_path IS NOT NULL
              AND (p.name REGEXP :pattern OR p.category REGEXP :pattern)
-             ORDER BY p.google_rating DESC, iu.priority ASC
+             ORDER BY p.google_rating DESC, iu.display_order ASC
              LIMIT 5`,
             { replacements: { destId: suggestion.destination_id, pattern: keywordPattern } }
           );
@@ -10606,15 +10607,15 @@ router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['pla
     const { generateFromPOI } = await import('../services/agents/contentRedacteur/contentGenerator.js');
     const results = await generateFromPOI(Number(poi_id), destId, platforms);
 
-    // Save each result as a content_item
+    // Save each result as a content_item (with seo_score + auto-attach images)
     const savedIds = [];
     for (const item of results) {
       const [insertResult] = await mysqlSequelize.query(
         `INSERT INTO content_items
          (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-          seo_data, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
+          seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
          VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-          :seoData, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
+          :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
         {
           replacements: {
             destId,
@@ -10626,13 +10627,32 @@ router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['pla
             bodyEs: item.body_es || null,
             bodyFr: item.body_fr || null,
             seoData: JSON.stringify({ meta_description: item.meta_description, hashtags: item.hashtags }),
+            seoScore: item.seo_score || null,
             platform: item.target_platform,
             aiModel: item.ai_model,
             poiId: poi_id,
           },
         }
       );
-      savedIds.push(insertResult);
+      const contentItemId = insertResult;
+      savedIds.push(contentItemId);
+
+      // AUTO-ATTACH IMAGES: POI images first, then keyword match
+      try {
+        const { selectImages } = await import('../services/agents/contentRedacteur/imageSelector.js');
+        const contentObj = { title: item.title, body_en: item.body_en, poi_id: Number(poi_id), destination_id: destId, content_type: item.content_type, target_platform: item.target_platform };
+        const images = await selectImages(contentObj, destId);
+        if (images.length > 0) {
+          const mediaIds = images.slice(0, 3).map(img => img.source === 'poi' ? `poi:${img.id}` : img.id);
+          await mysqlSequelize.query(
+            'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
+            { replacements: { mediaIds: JSON.stringify(mediaIds), id: contentItemId } }
+          );
+          logger.info(`[POIGenerate] Auto-attached ${mediaIds.length} images to item ${contentItemId}`);
+        }
+      } catch (imgErr) {
+        logger.warn('[POIGenerate] Auto-attach images failed (non-blocking):', imgErr.message);
+      }
     }
 
     res.json({ success: true, data: { generated: results.length, ids: savedIds, items: results } });
@@ -10674,9 +10694,9 @@ router.post('/content/items/:id/repurpose', adminAuth('editor'), writeAccess(['p
       const [insertResult] = await mysqlSequelize.query(
         `INSERT INTO content_items
          (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-          seo_data, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
+          seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
          VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-          :seoData, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
+          :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
         {
           replacements: {
             destId: sourceItem.destination_id,
@@ -10688,13 +10708,25 @@ router.post('/content/items/:id/repurpose', adminAuth('editor'), writeAccess(['p
             bodyEs: item.body_es || null,
             bodyFr: item.body_fr || null,
             seoData: JSON.stringify(seoData),
+            seoScore: item.seo_score || null,
             platform: item.target_platform,
             aiModel: item.ai_model,
             poiId: item.poi_id || null,
           },
         }
       );
-      savedIds.push(insertResult);
+      const repurposedItemId = insertResult;
+      savedIds.push(repurposedItemId);
+
+      // Copy images from source if available
+      if (sourceItem.media_ids && sourceItem.media_ids !== 'null' && sourceItem.media_ids !== '[]') {
+        try {
+          await mysqlSequelize.query(
+            'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
+            { replacements: { mediaIds: typeof sourceItem.media_ids === 'string' ? sourceItem.media_ids : JSON.stringify(sourceItem.media_ids), id: repurposedItemId } }
+          );
+        } catch { /* non-blocking */ }
+      }
     }
 
     res.json({ success: true, data: { repurposed: results.length, source_id: Number(id), ids: savedIds, items: results } });
