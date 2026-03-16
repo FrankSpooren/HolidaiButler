@@ -10879,7 +10879,7 @@ router.get('/content/performance/summary', adminAuth('content_editor'), async (r
 router.get('/content/performance/:id', adminAuth('content_editor'), async (req, res) => {
   try {
     const [metrics] = await mysqlSequelize.query(
-      `SELECT * FROM content_performance WHERE content_item_id = :id ORDER BY date DESC LIMIT 30`,
+      `SELECT * FROM content_performance WHERE content_item_id = :id ORDER BY measured_at DESC LIMIT 30`,
       { replacements: { id: Number(req.params.id) } }
     );
     res.json({ success: true, data: metrics || [] });
@@ -10956,7 +10956,7 @@ router.get('/content/analytics/overview', adminAuth('content_editor'), async (re
               COUNT(DISTINCT cp.content_item_id) as items_count
        FROM content_performance cp
        JOIN content_items ci ON ci.id = cp.content_item_id
-       WHERE cp.destination_id = :destId AND cp.date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       WHERE cp.destination_id = :destId AND cp.measured_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
        GROUP BY ci.content_type`,
       { replacements: { destId: dId, days } }
     );
@@ -10968,7 +10968,7 @@ router.get('/content/analytics/overview', adminAuth('content_editor'), async (re
               SUM(cp.engagement) as engagement, SUM(cp.reach) as reach
        FROM content_performance cp
        JOIN content_items ci ON ci.id = cp.content_item_id
-       WHERE cp.destination_id = :destId AND cp.date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       WHERE cp.destination_id = :destId AND cp.measured_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
        GROUP BY ci.id, ci.title, ci.content_type, cp.platform
        ORDER BY engagement DESC LIMIT 10`,
       { replacements: { destId: dId, days } }
@@ -11026,10 +11026,10 @@ router.get('/content/analytics/items', adminAuth('content_editor'), async (req, 
               SUM(cp.views) as views, SUM(cp.clicks) as clicks,
               SUM(cp.engagement) as engagement, SUM(cp.reach) as reach,
               GROUP_CONCAT(DISTINCT cp.platform) as platforms,
-              COUNT(DISTINCT cp.date) as days_tracked
+              COUNT(DISTINCT cp.measured_at) as days_tracked
        FROM content_items ci
        LEFT JOIN content_performance cp ON cp.content_item_id = ci.id
-         AND cp.date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+         AND cp.measured_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
        WHERE ci.destination_id = :destId ${typeFilter}
        GROUP BY ci.id, ci.title, ci.content_type, ci.approval_status, ci.created_at
        ORDER BY ${sortBy} DESC
@@ -11080,11 +11080,11 @@ router.get('/content/analytics/platforms', adminAuth('content_editor'), async (r
               SUM(cp.engagement) as total_engagement,
               SUM(cp.reach) as total_reach,
               COUNT(DISTINCT cp.content_item_id) as items_count,
-              COUNT(DISTINCT cp.date) as active_days,
+              COUNT(DISTINCT cp.measured_at) as active_days,
               ROUND(CASE WHEN SUM(cp.views) > 0 THEN SUM(cp.clicks) / SUM(cp.views) * 100 ELSE 0 END, 2) as ctr,
               ROUND(CASE WHEN SUM(cp.reach) > 0 THEN SUM(cp.engagement) / SUM(cp.reach) * 100 ELSE 0 END, 2) as engagement_rate
        FROM content_performance cp
-       WHERE cp.destination_id = :destId AND cp.date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       WHERE cp.destination_id = :destId AND cp.measured_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
        GROUP BY cp.platform
        ORDER BY total_engagement DESC`,
       { replacements: { destId: dId, days } }
