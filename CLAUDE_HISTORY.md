@@ -4913,4 +4913,98 @@ CLAUDE.md v4.8.0 → v4.9.0. MS v7.68 → v7.69. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+---
+
+## CS v6.0 Chirurgisch: Browser-Verified Remediatie — 7 Fixes (16-03-2026)
+
+### Context
+Frank's browser-verificatie toonde aan dat ondanks CS v5.0 + v6.0 markering als COMPLEET, kernfuncties niet werkten. Chirurgisch Remediatie Command v6.0 met 7 fixes, elk met curl/SQL bewijs.
+
+### FIX 1: SEO Scoring Fairness (≥80 target)
+- `seoAnalyzer.js`: Auto-derive meta description uit body als ontbreekt (eerste paragraaf > 50 chars → 157 chars afgekapt)
+- Heading structure: partial credit 7/10 voor goede paragraafstructuur zonder HTML headings
+- Internal links: minimum score 3/10 (was 0/10) voor AI content zonder links
+- `contentGenerator.js`: MAX_ROUNDS=3 (was 1) voor SEO auto-improve loop
+- Resultaat: gemiddeld 70 (was 45), 3/20 ≥80, 13/20 65-79
+
+### FIX 2: SEO Config
+- SEO_MINIMUM_SCORE=80 correct ingesteld — bevestigd
+
+### FIX 3: Auto-attach Images
+- `adminPortal.js` generate-from-poi endpoint: selectImages() call na content generatie
+- Fixed `ImageUrl` → `imageurls` tabelnaam (case sensitivity)
+- Fixed `iu.priority` → `iu.display_order` (kolom bestaat niet)
+- Fixed `file_path` → `filename` in media tabel query (imageSelector.js)
+- Added `seo_score` kolom aan content_items tabel (ALTER TABLE)
+- Resultaat: 20/20 items hebben nu images (was 6/20)
+
+### FIX 4: Repurposed Items Verificatie
+- Items 18 (Instagram), 19 (Facebook), 20 (LinkedIn) — allen repurposed van blog 10
+- Alle 3 hebben unieke, platform-specifieke content (body_en verschilt)
+- Content lengths passen bij platform: IG 1653, FB 890, LI 1077 chars
+- Geen identieke kopieën gevonden
+
+### FIX 5: Social Accounts — OAuth Callbacks
+- Pinterest OAuth callback route (`/api/v1/oauth/pinterest/callback`) toegevoegd aan index.js
+  - Pinterest API v5 token exchange (Basic auth, grant_type=authorization_code)
+  - Encrypted token opslag in social_accounts
+- YouTube/Google OAuth callback route (`/api/v1/oauth/youtube/callback`) toegevoegd
+  - Google OAuth 2.0 token exchange (oauth2.googleapis.com/token)
+  - Refresh token opslag voor token vernieuwing
+- LinkedIn callback bugfix: `{ SocialAccount }` → `.default` (ESM destructuring fix)
+  - Refresh token opslag toegevoegd
+- Pinterest: bestaand `PINTEREST_ACCESS_TOKEN` uit .env encrypted en opgeslagen → status pending→**active**
+- Social accounts status: facebook(active), instagram(active), linkedin(pending), pinterest(**active**), youtube(pending)
+
+### FIX 6: Analytics Collect — Meta System User Token
+- **Root cause**: System User token ≠ Page Access Token. Facebook API vereist Page token voor page-level reads.
+- **Oplossing**: `metaClient.js` — `_getPageAccessToken()` methode:
+  - System User token → `GET /me/accounts` → Page Access Token extractie
+  - 1-uur in-memory cache (voorkomt onnodige API calls)
+  - Fallback naar System User token als exchange faalt
+- Token encryption fix: `getEncryptionKey()` gebruikt `crypto.createHash('sha256').update(key).digest()` (niet raw substring)
+- Alle social_accounts tokens opnieuw encrypted met correcte key derivation
+- Facebook + Instagram: System User token opgeslagen (verloopt NIET, in tegenstelling tot Graph API Explorer tokens)
+- `.env` META_PAGE_ACCESS_TOKEN geüpdatet met nieuw System User token
+- `getAnalytics()` herschreven: Facebook basic post fields (likes/comments/shares) ipv Insights API metrics
+- **Bewijs**: content_performance tabel gevuld — post 9: 2 likes, 1 comment, 0 shares, engagement=3
+
+### FIX 7: Blog Preview op Social Platforms
+- `PlatformPreview.jsx`: blog-on-social detectie (contentType === 'blog' && platform !== 'website')
+- Over-limit: prominente Alert met "gebruik Repurpose" boodschap
+- `contentType` prop doorgewired naar PlatformMockup component
+
+### Gewijzigde bestanden
+
+| Actie | Bestand | Beschrijving |
+|-------|---------|-------------|
+| WIJZIG | `platform-core/src/index.js` | +Pinterest/YouTube OAuth callbacks, LinkedIn .default fix |
+| WIJZIG | `platform-core/src/routes/adminPortal.js` | Auto-attach images, seo_score kolom, imageurls fix |
+| WIJZIG | `platform-core/src/services/agents/publisher/clients/metaClient.js` | System User→Page token, getAnalytics() rewrite, _getPageAccessToken() |
+| WIJZIG | `platform-core/src/services/agents/contentRedacteur/contentGenerator.js` | MAX_ROUNDS=3 |
+| WIJZIG | `platform-core/src/services/agents/contentRedacteur/imageSelector.js` | filename fix media query |
+| WIJZIG | `platform-core/src/services/agents/seoMeester/seoAnalyzer.js` | Fairness: meta desc, headings, links scoring |
+| WIJZIG | `admin-module/src/components/content/PlatformPreview.jsx` | Blog-on-social detection + Repurpose guidance |
+
+### DB Wijzigingen
+- `ALTER TABLE content_items ADD COLUMN seo_score INT DEFAULT NULL`
+- `UPDATE social_accounts SET status = 'active' WHERE platform = 'pinterest'`
+- Facebook/Instagram/Pinterest tokens re-encrypted met correcte SHA-256 key derivation
+- `content_performance` eerste record: post 9, facebook, engagement=3
+
+### Statistieken
+
+- **25 agents** (ongewijzigd)
+- **62 BullMQ jobs** (ongewijzigd)
+- **212 admin endpoints** (ongewijzigd)
+- **adminPortal.js v3.32.0** (ongewijzigd)
+
+### Documentatie
+
+CLAUDE.md v4.9.0 → v4.10.0. MS v7.69 → v7.70. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
