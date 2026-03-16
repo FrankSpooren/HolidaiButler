@@ -26,6 +26,13 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PublishIcon from '@mui/icons-material/Publish';
 import ScheduleIcon from '@mui/icons-material/Schedule';
+import ShareIcon from '@mui/icons-material/Share';
+import ReplayIcon from '@mui/icons-material/Replay';
+import RestoreIcon from '@mui/icons-material/Restore';
+import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
+import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import { useTranslation } from 'react-i18next';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, Legend } from 'recharts';
 import useAuthStore from '../stores/authStore.js';
@@ -50,13 +57,30 @@ const PERIOD_OPTIONS = [
 ];
 
 const STATUS_COLORS = {
-  pending: 'warning',
-  approved: 'success',
-  rejected: 'error',
-  generated: 'info',
-  draft: 'default',
-  pending_review: 'warning',
-  published: 'success',
+  pending: 'warning',       // oranje
+  approved: 'success',      // groen
+  rejected: 'error',        // rood
+  generated: 'primary',     // paars/blauw
+  draft: 'warning',         // geel/oranje
+  pending_review: 'secondary', // paars
+  scheduled: 'info',        // blauw
+  publishing: 'primary',    // blauw donker
+  published: 'success',     // groen
+  failed: 'error',          // rood
+};
+
+// Custom status styling with distinct colors for each status
+const STATUS_SX = {
+  draft: { bgcolor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D' },
+  pending: { bgcolor: '#FFF8E1', color: '#F57F17', border: '1px solid #FFD54F' },
+  pending_review: { bgcolor: '#F3E5F5', color: '#7B1FA2', border: '1px solid #CE93D8' },
+  approved: { bgcolor: '#E8F5E9', color: '#2E7D32', border: '1px solid #81C784' },
+  scheduled: { bgcolor: '#E3F2FD', color: '#1565C0', border: '1px solid #64B5F6' },
+  publishing: { bgcolor: '#E8EAF6', color: '#283593', border: '1px solid #7986CB' },
+  published: { bgcolor: '#C8E6C9', color: '#1B5E20', border: '1px solid #4CAF50' },
+  rejected: { bgcolor: '#FFEBEE', color: '#C62828', border: '1px solid #EF9A9A' },
+  failed: { bgcolor: '#FFCDD2', color: '#B71C1C', border: '1px solid #E57373' },
+  generated: { bgcolor: '#E0F7FA', color: '#00838F', border: '1px solid #4DD0E1' },
 };
 
 const CONTENT_TYPE_LABELS = {
@@ -74,6 +98,24 @@ const PLATFORM_LABELS = {
   tiktok: 'TikTok',
   youtube: 'YouTube',
 };
+
+const STATUS_LABELS = {
+  draft: 'Concept', pending: 'In Afwachting', pending_review: 'Ter Review',
+  approved: 'Goedgekeurd', scheduled: 'Ingepland', publishing: 'Publiceren...',
+  published: 'Gepubliceerd', rejected: 'Afgekeurd', failed: 'Mislukt',
+  generated: 'Gegenereerd', deleted: 'Verwijderd',
+};
+
+function StatusChip({ status, size = 'small', sx: extraSx = {} }) {
+  const customSx = STATUS_SX[status] || {};
+  return (
+    <Chip
+      label={STATUS_LABELS[status] || status}
+      size={size}
+      sx={{ fontWeight: 600, fontSize: 11, ...customSx, ...extraSx }}
+    />
+  );
+}
 
 function DirectionChip({ direction }) {
   const config = DIRECTION_CONFIG[direction] || DIRECTION_CONFIG.stable;
@@ -299,19 +341,54 @@ function AddKeywordDialog({ open, onClose, onSubmit, destinationId }) {
   );
 }
 
-function GenerateContentDialog({ open, onClose, suggestion, onGenerate }) {
+function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinationId }) {
   const [contentType, setContentType] = useState(suggestion?.content_type || 'blog');
   const [platform, setPlatform] = useState('website');
+  const [pillarId, setPillarId] = useState('');
+  const [templateId, setTemplateId] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [pillars, setPillars] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [loadingMeta, setLoadingMeta] = useState(false);
+
+  // Load pillars + templates when dialog opens
+  useEffect(() => {
+    if (!open || !destinationId) return;
+    setLoadingMeta(true);
+    Promise.all([
+      contentService.getPillars(destinationId).catch(() => ({ data: [] })),
+      contentService.getTemplates(destinationId).catch(() => ({ data: [] })),
+    ]).then(([pillarsRes, templatesRes]) => {
+      setPillars(pillarsRes.data || []);
+      setTemplates(templatesRes.data || []);
+    }).finally(() => setLoadingMeta(false));
+  }, [open, destinationId]);
+
+  // Reset state when suggestion changes
+  useEffect(() => {
+    if (suggestion) {
+      setContentType(suggestion.content_type || 'blog');
+      setPillarId('');
+      setTemplateId('');
+    }
+  }, [suggestion]);
+
+  // Filter templates by selected content type
+  const filteredTemplates = useMemo(() => {
+    return templates.filter(t => !t.content_type || t.content_type === contentType);
+  }, [templates, contentType]);
 
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      await onGenerate({
+      const data = {
         suggestion_id: suggestion.id,
         content_type: contentType,
         platform,
-      });
+      };
+      if (pillarId) data.pillar_id = pillarId;
+      if (templateId) data.template_id = templateId;
+      await onGenerate(data);
       onClose();
     } finally {
       setGenerating(false);
@@ -344,11 +421,219 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate }) {
             ))}
           </Select>
         </FormControl>
+
+        {/* 9.3: Content Pillar selector */}
+        <FormControl fullWidth>
+          <InputLabel>Content Pillar</InputLabel>
+          <Select value={pillarId} onChange={e => setPillarId(e.target.value)} label="Content Pillar" displayEmpty>
+            <MenuItem value="">— Geen pillar —</MenuItem>
+            {loadingMeta ? <MenuItem disabled>Laden...</MenuItem> : pillars.map(p => (
+              <MenuItem key={p.id} value={p.id}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {p.color && <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: p.color, flexShrink: 0 }} />}
+                  {p.name}
+                  {p.target_percentage && <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>({p.target_percentage}%)</Typography>}
+                </Box>
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* 9.9: Template selector */}
+        <FormControl fullWidth>
+          <InputLabel>Template</InputLabel>
+          <Select value={templateId} onChange={e => setTemplateId(e.target.value)} label="Template" displayEmpty>
+            <MenuItem value="">— Geen template —</MenuItem>
+            {loadingMeta ? <MenuItem disabled>Laden...</MenuItem> : filteredTemplates.map(t => (
+              <MenuItem key={t.id} value={t.id}>
+                <Box>
+                  <Typography variant="body2">{t.name}</Typography>
+                  {t.description && <Typography variant="caption" color="text.secondary">{t.description}</Typography>}
+                </Box>
+              </MenuItem>
+            ))}
+          </Select>
+          {filteredTemplates.length === 0 && templates.length > 0 && !loadingMeta && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              Geen templates beschikbaar voor {CONTENT_TYPE_LABELS[contentType] || contentType}
+            </Typography>
+          )}
+        </FormControl>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Annuleren</Button>
         <Button onClick={handleGenerate} variant="contained" disabled={generating} startIcon={generating ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}>
           {generating ? 'Genereren...' : 'Genereer Content'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ============================================================
+// SUGGESTION DETAIL DIALOG (TO DO 3a)
+// ============================================================
+function SuggestionDetailDialog({ open, onClose, suggestion, onAction, onGenerate }) {
+  if (!open || !suggestion) return null;
+
+  const keywords = Array.isArray(suggestion.keyword_cluster) ? suggestion.keyword_cluster : [];
+  const channels = Array.isArray(suggestion.suggested_channels) ? suggestion.suggested_channels : [];
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ flex: 1, mr: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>{suggestion.title}</Typography>
+          <Chip label={STATUS_LABELS[suggestion.status] || suggestion.status} color={STATUS_COLORS[suggestion.status] || 'default'} size="small" sx={{ mt: 0.5 }} />
+        </Box>
+        <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body1" sx={{ mb: 2 }}>{suggestion.summary}</Typography>
+
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <Typography variant="caption" color="text.secondary">Content Type</Typography>
+            <Typography variant="body2" fontWeight={500}>{CONTENT_TYPE_LABELS[suggestion.content_type] || suggestion.content_type}</Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="caption" color="text.secondary">Engagement Score</Typography>
+            <Typography variant="body2" fontWeight={500}>
+              <Chip label={Number(suggestion.engagement_score || 0).toFixed(1)} size="small" color={suggestion.engagement_score >= 7 ? 'success' : suggestion.engagement_score >= 4 ? 'info' : 'default'} />
+            </Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">Keywords</Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+              {keywords.map((kw, i) => <Chip key={i} label={kw} size="small" variant="outlined" />)}
+              {keywords.length === 0 && <Typography variant="body2" color="text.secondary">Geen keywords</Typography>}
+            </Box>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">Aanbevolen Kanalen</Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+              {channels.map((ch, i) => <Chip key={i} label={PLATFORM_LABELS[ch] || ch} size="small" variant="outlined" />)}
+            </Box>
+          </Grid>
+          {suggestion.created_at && (
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary">Aangemaakt</Typography>
+              <Typography variant="body2">{new Date(suggestion.created_at).toLocaleString('nl-NL')}</Typography>
+            </Grid>
+          )}
+        </Grid>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
+        <Box>
+          {suggestion.status === 'rejected' && (
+            <>
+              <Tooltip title="Herstel naar pending">
+                <Button size="small" startIcon={<RestoreIcon />} onClick={() => { onAction(suggestion.id, 'pending'); onClose(); }}>
+                  Herstel
+                </Button>
+              </Tooltip>
+              <Tooltip title="Definitief verwijderen">
+                <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => { onAction(suggestion.id, 'deleted'); onClose(); }}>
+                  Verwijder
+                </Button>
+              </Tooltip>
+            </>
+          )}
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {suggestion.status === 'pending' && (
+            <>
+              <Button variant="outlined" color="error" onClick={() => { onAction(suggestion.id, 'rejected'); onClose(); }} startIcon={<CloseIcon />}>
+                Afwijzen
+              </Button>
+              <Button variant="contained" color="success" onClick={() => { onAction(suggestion.id, 'approved'); onClose(); }} startIcon={<CheckIcon />}>
+                Goedkeuren
+              </Button>
+            </>
+          )}
+          {suggestion.status === 'approved' && (
+            <Button variant="contained" onClick={() => { onGenerate(suggestion); onClose(); }} startIcon={<AutoAwesomeIcon />}>
+              Content Genereren
+            </Button>
+          )}
+          <Button onClick={onClose}>Sluiten</Button>
+        </Box>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ============================================================
+// MANUAL CONTENT ITEM DIALOG (TO DO 4g)
+// ============================================================
+function ManualContentDialog({ open, onClose, destinationId, onCreated }) {
+  const [title, setTitle] = useState('');
+  const [contentType, setContentType] = useState('blog');
+  const [platform, setPlatform] = useState('website');
+  const [body, setBody] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleCreate = async () => {
+    if (!title.trim()) return;
+    setSaving(true);
+    try {
+      await contentService.generateItem({
+        destination_id: destinationId,
+        content_type: contentType,
+        platform,
+        title: title.trim(),
+        body_en: body,
+        manual: true,
+      });
+      setTitle('');
+      setBody('');
+      onClose();
+      if (onCreated) onCreated();
+    } catch (err) {
+      alert(err.message || 'Aanmaken mislukt');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Nieuw Content Item Aanmaken</DialogTitle>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
+        <Alert severity="info" sx={{ py: 0 }}>
+          Maak handmatig een content item aan zonder AI-generatie. Je kunt het later bewerken, verbeteren met AI, en publiceren.
+        </Alert>
+        <TextField label="Titel" value={title} onChange={e => setTitle(e.target.value)} required fullWidth />
+        <FormControl fullWidth>
+          <InputLabel>Content Type</InputLabel>
+          <Select value={contentType} onChange={e => setContentType(e.target.value)} label="Content Type">
+            <MenuItem value="blog">Blog Post</MenuItem>
+            <MenuItem value="social_post">Social Post</MenuItem>
+            <MenuItem value="video_script">Video Script</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl fullWidth>
+          <InputLabel>Platform</InputLabel>
+          <Select value={platform} onChange={e => setPlatform(e.target.value)} label="Platform">
+            {Object.entries(PLATFORM_LABELS).map(([val, lbl]) => (
+              <MenuItem key={val} value={val}>{lbl}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField
+          label="Inhoud (optioneel — kan later worden ingevuld)"
+          multiline
+          rows={8}
+          value={body}
+          onChange={e => setBody(e.target.value)}
+          fullWidth
+          placeholder="Schrijf je content hier, of laat leeg en gebruik later de AI Verbeter functie..."
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Annuleren</Button>
+        <Button onClick={handleCreate} variant="contained" disabled={!title.trim() || saving} startIcon={saving ? <CircularProgress size={16} /> : <NoteAddIcon />}>
+          {saving ? 'Aanmaken...' : 'Aanmaken'}
         </Button>
       </DialogActions>
     </Dialog>
@@ -384,7 +669,7 @@ const BEST_TIME_DEFAULTS = {
   pinterest: { best: 'Zaterdag 14:00', alt: ['Zondag 11:00', 'Vrijdag 15:00'] },
 };
 
-function BestTimeToPost({ platform, destinationId }) {
+function BestTimeToPost({ platform, destinationId, onSelect, selected }) {
   const [bestTimes, setBestTimes] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -402,15 +687,23 @@ function BestTimeToPost({ platform, destinationId }) {
   const defaults = BEST_TIME_DEFAULTS[platform] || BEST_TIME_DEFAULTS.instagram;
   const displayBest = bestTimes?.best_time || defaults.best;
   const displayAlt = bestTimes?.alt_times || defaults.alt;
+  const allTimes = [displayBest, ...displayAlt];
 
   return (
     <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
       <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Beste moment om te posten</Typography>
       {loading ? <CircularProgress size={16} /> : (
         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-          <Chip label={displayBest} color="success" size="small" variant="filled" />
-          {displayAlt.map((t, i) => (
-            <Chip key={i} label={t} size="small" variant="outlined" />
+          {allTimes.map((t, i) => (
+            <Chip
+              key={i}
+              label={t}
+              color={i === 0 ? 'success' : (selected === t ? 'primary' : 'default')}
+              size="small"
+              variant={selected === t ? 'filled' : (i === 0 ? 'filled' : 'outlined')}
+              onClick={onSelect ? () => onSelect(t) : undefined}
+              sx={onSelect ? { cursor: 'pointer' } : {}}
+            />
           ))}
         </Box>
       )}
@@ -572,9 +865,9 @@ function ContentImageSection({ itemId, item, onUpdate }) {
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           {images.map((imgId, idx) => (
             <Box key={idx} sx={{ position: 'relative', width: 80, height: 80, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
-              <Box component="img" src={typeof imgId === 'object' ? (imgId.url || imgId.thumbnail) : `/api/v1/img/media/${imgId}?w=80`}
+              <Box component="img" src={typeof imgId === 'object' ? (imgId.url || imgId.thumbnail) : `${import.meta.env.VITE_API_URL || ''}/api/v1/img/media/${imgId}?w=80`}
                 alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={e => { e.target.style.display = 'none'; }}
+                onError={e => { e.target.src = ''; e.target.alt = 'Afbeelding'; e.target.style.background = '#e0e0e0'; }}
               />
               <IconButton size="small" onClick={() => handleRemoveImage(typeof imgId === 'object' ? imgId.id : imgId)}
                 sx={{ position: 'absolute', top: 0, right: 0, bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }, p: 0.3 }}>
@@ -680,6 +973,18 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [scheduleDatetime, setScheduleDatetime] = useState('');
+  // Brand score state (9.10)
+  const [brandScore, setBrandScore] = useState(null);
+  const [brandScoreLoading, setBrandScoreLoading] = useState(false);
+  // Share to destination state (9.12)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareDestId, setShareDestId] = useState('');
+  const [sharing, setSharing] = useState(false);
+  const [shareResult, setShareResult] = useState(null);
+  // Retry publish state (9.13)
+  const [retrying, setRetrying] = useState(false);
+  // Emoji picker state (9.11)
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
   useEffect(() => {
     if (!itemId || !open) return;
@@ -858,6 +1163,64 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
     } catch { /* ignore */ }
   };
 
+  // Brand score loader (9.10)
+  const loadBrandScore = async () => {
+    if (!itemId) return;
+    setBrandScoreLoading(true);
+    try {
+      const r = await contentService.getBrandScore(itemId);
+      setBrandScore(r.data);
+    } catch {
+      setBrandScore(null);
+    } finally {
+      setBrandScoreLoading(false);
+    }
+  };
+
+  // Retry publish handler (9.13)
+  const handleRetryPublish = async () => {
+    if (!itemId) return;
+    setRetrying(true);
+    try {
+      await contentService.retryPublish(itemId);
+      const refreshed = await contentService.getItem(itemId);
+      setItem(refreshed.data);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      alert(err.message || 'Retry failed');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  // Share to destination handler (9.12)
+  const handleShare = async () => {
+    if (!shareDestId || !itemId) return;
+    setSharing(true);
+    setShareResult(null);
+    try {
+      const r = await contentService.shareToDestination(itemId, Number(shareDestId));
+      setShareResult({ success: true, data: r.data });
+      setShareDialogOpen(false);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      setShareResult({ success: false, error: err.message || 'Delen mislukt' });
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  // Emoji insert helper (9.11)
+  const COMMON_EMOJIS = [
+    '😀', '😍', '🔥', '✨', '🎉', '💪', '👍', '❤️', '🌊', '🏖️',
+    '☀️', '🌅', '🍽️', '🏔️', '🚴', '🎭', '📸', '🗺️', '🎶', '💡',
+    '⭐', '🏆', '🎯', '📍', '🌿', '🍷', '🛥️', '🏛️', '🎨', '🐚',
+  ];
+  const insertEmoji = (emoji) => {
+    setEditBody(prev => prev + emoji);
+    setEmojiPickerOpen(false);
+  };
+
   if (!open) return null;
 
   const LANGS = ['en', 'nl', 'de', 'es', 'fr'];
@@ -867,7 +1230,7 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
           {item?.title || 'Content Item'}
-          {item && <Chip label={item.approval_status} color={STATUS_COLORS[item.approval_status] || 'default'} size="small" sx={{ ml: 1 }} />}
+          {item && <StatusChip status={item.approval_status} sx={{ ml: 1 }} />}
         </Box>
         <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
       </DialogTitle>
@@ -916,10 +1279,27 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                 );
               })()}
 
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
                 <Button size="small" variant="contained" onClick={handleSave} disabled={saving}>
                   {saving ? <CircularProgress size={16} /> : t('common.save', 'Opslaan')}
                 </Button>
+                {/* 9.11: Emoji Picker */}
+                <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                  <Tooltip title="Emoji invoegen">
+                    <IconButton size="small" onClick={() => setEmojiPickerOpen(p => !p)} color={emojiPickerOpen ? 'primary' : 'default'}>
+                      <InsertEmoticonIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  {emojiPickerOpen && (
+                    <Paper elevation={4} sx={{ position: 'absolute', bottom: '100%', left: 0, mb: 0.5, p: 1, zIndex: 10, width: 260, display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
+                      {COMMON_EMOJIS.map((emoji, i) => (
+                        <Box key={i} onClick={() => insertEmoji(emoji)} sx={{ cursor: 'pointer', fontSize: 20, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}>
+                          {emoji}
+                        </Box>
+                      ))}
+                    </Paper>
+                  )}
+                </Box>
                 {langTab !== 'en' && !item[`body_${langTab}`] && (
                   <Button size="small" variant="outlined" startIcon={translating ? <CircularProgress size={14} /> : <TranslateIcon />} onClick={() => handleTranslate(langTab)} disabled={translating}>
                     Vertaal naar {langTab.toUpperCase()}
@@ -946,8 +1326,10 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                 setRightPanel(v);
                 if (v === 'comments' && comments.length === 0) loadComments();
                 if (v === 'history' && revisions.length === 0) loadRevisions();
+                if (v === 'brand' && !brandScore) loadBrandScore();
               }} sx={{ mb: 1, minHeight: 32 }} variant="scrollable" scrollButtons="auto">
                 <Tab value="seo" label="SEO" sx={{ minHeight: 32, py: 0, fontSize: 12 }} />
+                <Tab value="brand" label="Brand" sx={{ minHeight: 32, py: 0, fontSize: 12 }} />
                 <Tab value="preview" label="Preview" sx={{ minHeight: 32, py: 0, fontSize: 12 }} />
                 <Tab value="comments" label={`Comments${comments.length ? ` (${comments.length})` : ''}`} sx={{ minHeight: 32, py: 0, fontSize: 12 }} />
                 <Tab value="history" label="Versies" sx={{ minHeight: 32, py: 0, fontSize: 12 }} />
@@ -957,14 +1339,33 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
               {rightPanel === 'seo' && (
               <>
               <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>SEO Score</Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                  <Typography variant="subtitle2">
+                    {item?.content_type === 'social_post' ? 'Engagement Score' : item?.content_type === 'video_script' ? 'Script Score' : 'SEO Score'}
+                  </Typography>
+                  {item?.content_type && item.content_type !== 'blog' && (
+                    <Chip label={CONTENT_TYPE_LABELS[item.content_type] || item.content_type} size="small" variant="outlined" sx={{ fontSize: 10 }} />
+                  )}
+                </Box>
+                {item?.content_type === 'social_post' && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                    Meet hashtags, CTA, emoji, openingshook en leesbaarheid (niet SEO-metrics zoals meta description).
+                  </Typography>
+                )}
                 {seoLoading ? <CircularProgress size={20} /> : seoData ? (
                   <>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <Typography variant="h4" fontWeight={700} color={seoData.overallScore >= 70 ? 'success.main' : seoData.overallScore >= 50 ? 'warning.main' : 'error.main'}>
+                      <Typography variant="h4" fontWeight={700} color={seoData.overallScore >= 80 ? 'success.main' : seoData.overallScore >= 60 ? 'warning.main' : 'error.main'}>
                         {seoData.overallScore}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">/ 100 ({seoData.grade})</Typography>
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">/ 100 ({seoData.grade})</Typography>
+                        {seoData.overallScore < 80 && (
+                          <Typography variant="caption" color="error.main" sx={{ display: 'block', fontWeight: 600 }}>
+                            Minimum 80 vereist voor goedkeuring
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
                     {(seoData.checks || []).map((check, i) => (
                       <Box key={i} sx={{ mb: 1 }}>
@@ -1022,6 +1423,76 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
               {/* Approval Timeline (BLOK 7) */}
               <ApprovalTimeline itemId={itemId} currentStatus={item.approval_status} />
               </>
+              )}
+
+              {/* 9.10: Brand Score Panel */}
+              {rightPanel === 'brand' && (
+                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>Brand Voice Score</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                    Meet hoe goed je content aansluit bij de ingestelde brand identity van deze bestemming.
+                    De score is gebaseerd op tone-of-voice, woordkeuze, kernwaarden en doelgroep-aansluiting.
+                  </Typography>
+                  {brandScoreLoading ? <CircularProgress size={20} /> : brandScore ? (
+                    <>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                        <Typography variant="h4" fontWeight={700} color={brandScore.score >= 70 ? 'success.main' : brandScore.score >= 50 ? 'warning.main' : 'error.main'}>
+                          {brandScore.score || 0}
+                        </Typography>
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">/ 100</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {brandScore.score >= 80 ? 'Uitstekend — past perfect bij je merk' :
+                             brandScore.score >= 60 ? 'Goed — kleine aanpassingen mogelijk' :
+                             brandScore.score >= 40 ? 'Matig — tone-of-voice wijkt af' :
+                             'Onvoldoende — content past niet bij je merkidentiteit'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      {brandScore.tone_match !== undefined && (
+                        <Box sx={{ mb: 1 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="caption">Tone Match</Typography>
+                            <Typography variant="caption" color="text.secondary">{Math.round(brandScore.tone_match)}%</Typography>
+                          </Box>
+                          <LinearProgress variant="determinate" value={brandScore.tone_match || 0} color={brandScore.tone_match >= 70 ? 'success' : 'warning'} sx={{ height: 6, borderRadius: 3 }} />
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
+                            Komt de schrijfstijl overeen met je gedefinieerde personality en audience?
+                          </Typography>
+                        </Box>
+                      )}
+                      {brandScore.vocabulary_match !== undefined && (
+                        <Box sx={{ mb: 1 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="caption">Woordenschat</Typography>
+                            <Typography variant="caption" color="text.secondary">{Math.round(brandScore.vocabulary_match)}%</Typography>
+                          </Box>
+                          <LinearProgress variant="determinate" value={brandScore.vocabulary_match || 0} color={brandScore.vocabulary_match >= 70 ? 'success' : 'warning'} sx={{ height: 6, borderRadius: 3 }} />
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
+                            Worden je kernwoorden en gewenste bijvoeglijke naamwoorden gebruikt?
+                          </Typography>
+                        </Box>
+                      )}
+                      {brandScore.suggestions && brandScore.suggestions.length > 0 && (
+                        <Box sx={{ mt: 1.5, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                          <Typography variant="caption" fontWeight={600}>Verbeterpunten:</Typography>
+                          {brandScore.suggestions.map((s, i) => (
+                            <Typography key={i} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3 }}>• {s}</Typography>
+                          ))}
+                        </Box>
+                      )}
+                      <Button size="small" onClick={loadBrandScore} startIcon={<RefreshIcon />} sx={{ mt: 1 }}>
+                        Heranalyse
+                      </Button>
+                    </>
+                  ) : (
+                    <Box>
+                      <Button size="small" variant="outlined" onClick={loadBrandScore} disabled={brandScoreLoading}>
+                        Brand Score Laden
+                      </Button>
+                    </Box>
+                  )}
+                </Paper>
               )}
 
               {/* Preview Panel */}
@@ -1089,10 +1560,23 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                 </Paper>
               )}
 
+              {/* SEO gate warning (TO DO 4a) */}
+              {seoData && seoData.overallScore < 80 && item.approval_status !== 'approved' && item.approval_status !== 'scheduled' && item.approval_status !== 'published' && (
+                <Alert severity="warning" sx={{ mb: 1, py: 0 }}>
+                  <Typography variant="caption">
+                    <strong>SEO-score te laag ({seoData.overallScore}/100)</strong> — Minimum is 80. Gebruik "AI Verbeter" om de score te verhogen voordat je kunt goedkeuren.
+                  </Typography>
+                </Alert>
+              )}
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button size="small" variant="contained" color="success" onClick={() => handleStatusUpdate('approved')} startIcon={<CheckIcon />} disabled={item.approval_status === 'approved'}>
-                  Approve
-                </Button>
+                <Tooltip title={seoData && seoData.overallScore < 80 ? `SEO-score ${seoData.overallScore}/100 is onder minimum (80). Verbeter eerst de content.` : ''}>
+                  <span>
+                    <Button size="small" variant="contained" color="success" onClick={() => handleStatusUpdate('approved')} startIcon={<CheckIcon />}
+                      disabled={item.approval_status === 'approved' || (seoData && seoData.overallScore < 80)}>
+                      Approve
+                    </Button>
+                  </span>
+                </Tooltip>
                 <Button size="small" variant="outlined" color="error" onClick={() => handleStatusUpdate('rejected')} startIcon={<CloseIcon />} disabled={item.approval_status === 'rejected'}>
                   Reject
                 </Button>
@@ -1104,7 +1588,24 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                     Publiceren
                   </Button>
                 )}
+                {/* 9.13: Retry Publish for failed items */}
+                {item.approval_status === 'failed' && (
+                  <Button size="small" variant="contained" color="warning" onClick={handleRetryPublish} disabled={retrying} startIcon={retrying ? <CircularProgress size={14} /> : <ReplayIcon />}>
+                    {retrying ? 'Opnieuw...' : 'Opnieuw Proberen'}
+                  </Button>
+                )}
+                {/* 9.12: Share to other destination */}
+                <Button size="small" variant="outlined" onClick={() => setShareDialogOpen(true)} startIcon={<ShareIcon />} disabled={sharing}>
+                  Deel
+                </Button>
               </Box>
+
+              {/* Failed publish error info */}
+              {item.approval_status === 'failed' && item.publish_error && (
+                <Alert severity="error" sx={{ mt: 1, py: 0 }}>
+                  <Typography variant="caption"><strong>Publicatie mislukt:</strong> {item.publish_error}</Typography>
+                </Alert>
+              )}
 
               {repurposeResult && !repurposeResult.error && (
                 <Alert severity="success" sx={{ mt: 1 }} onClose={() => setRepurposeResult(null)}>
@@ -1114,6 +1615,11 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
               {repurposeResult?.error && (
                 <Alert severity="error" sx={{ mt: 1 }} onClose={() => setRepurposeResult(null)}>
                   {repurposeResult.error}
+                </Alert>
+              )}
+              {shareResult && (
+                <Alert severity={shareResult.success ? 'success' : 'error'} sx={{ mt: 1 }} onClose={() => setShareResult(null)}>
+                  {shareResult.success ? 'Content succesvol gedeeld naar andere bestemming' : shareResult.error}
                 </Alert>
               )}
 
@@ -1146,15 +1652,35 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     Kies hoe je dit content item wilt publiceren naar {item?.target_platform || 'het platform'}.
                   </Typography>
-                  {/* Best Time to Post suggestion in publish dialog */}
+                  {/* Best Time to Post suggestion in publish dialog — clickable chips */}
                   {item?.target_platform && item.target_platform !== 'website' && (() => {
+                    const dayMap = { maandag: 1, dinsdag: 2, woensdag: 3, donderdag: 4, vrijdag: 5, zaterdag: 6, zondag: 0 };
+                    const selectBestTime = (label) => {
+                      const parts = label.toLowerCase().split(' ');
+                      if (parts.length < 2) return;
+                      const targetDay = dayMap[parts[0]];
+                      const [hh, mm] = (parts[1] || '12:00').split(':');
+                      if (targetDay === undefined) return;
+                      const now = new Date();
+                      const currentDay = now.getDay();
+                      let daysAhead = targetDay - currentDay;
+                      if (daysAhead <= 0) daysAhead += 7;
+                      const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysAhead, Number(hh), Number(mm || 0));
+                      const pad = n => String(n).padStart(2, '0');
+                      setScheduleDatetime(`${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}`);
+                    };
                     const defaults = BEST_TIME_DEFAULTS[item.target_platform] || BEST_TIME_DEFAULTS.instagram;
+                    const allTimes = [defaults.best, ...defaults.alt];
                     return (
                       <Box sx={{ mb: 2, p: 1, bgcolor: 'success.50', borderRadius: 1, border: '1px solid', borderColor: 'success.200' }}>
-                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, mb: 0.5 }}>Aanbevolen tijden voor {item.target_platform}:</Typography>
+                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, mb: 0.5 }}>Klik om in te plannen op aanbevolen tijdstip:</Typography>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                          <Chip label={defaults.best} color="success" size="small" />
-                          {defaults.alt.map((t, i) => <Chip key={i} label={t} size="small" variant="outlined" />)}
+                          {allTimes.map((t, i) => (
+                            <Chip key={i} label={t} color={i === 0 ? 'success' : 'default'} size="small"
+                              variant={i === 0 ? 'filled' : 'outlined'}
+                              onClick={() => selectBestTime(t)} sx={{ cursor: 'pointer' }}
+                            />
+                          ))}
                         </Box>
                       </Box>
                     );
@@ -1172,6 +1698,30 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                 </DialogContent>
                 <DialogActions>
                   <Button onClick={() => setPublishDialogOpen(false)}>Later</Button>
+                </DialogActions>
+              </Dialog>
+
+              {/* 9.12: Share to Destination Dialog */}
+              <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle>Deel naar andere bestemming</DialogTitle>
+                <DialogContent>
+                  <Typography variant="body2" sx={{ mb: 2 }}>
+                    Kopieer dit content item naar een andere bestemming. De content wordt als nieuw concept aangemaakt.
+                  </Typography>
+                  <FormControl fullWidth>
+                    <InputLabel>Bestemming</InputLabel>
+                    <Select value={shareDestId} onChange={e => setShareDestId(e.target.value)} label="Bestemming">
+                      {[{ id: 1, name: 'Calpe' }, { id: 2, name: 'Texel' }, { id: 4, name: 'WarreWijzer' }]
+                        .filter(d => d.id !== item?.destination_id)
+                        .map(d => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setShareDialogOpen(false)}>Annuleren</Button>
+                  <Button variant="contained" onClick={handleShare} disabled={!shareDestId || sharing} startIcon={sharing ? <CircularProgress size={16} /> : <ShareIcon />}>
+                    {sharing ? 'Delen...' : 'Deel'}
+                  </Button>
                 </DialogActions>
               </Dialog>
             </Grid>
@@ -1215,6 +1765,7 @@ export default function ContentStudioPage() {
   const [sugError, setSugError] = useState(null);
   const [sugPage, setSugPage] = useState(0);
   const [generateDialogSuggestion, setGenerateDialogSuggestion] = useState(null);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(null);
 
   // Content Items state
   const [items, setItems] = useState([]);
@@ -1225,6 +1776,7 @@ export default function ContentStudioPage() {
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
 
   // === Trending loaders ===
   const loadTrends = useCallback(async () => {
@@ -1556,7 +2108,7 @@ export default function ContentStudioPage() {
                       </TableCell>
                     </TableRow>
                   ) : suggestions.map((sug) => (
-                    <TableRow key={sug.id} hover>
+                    <TableRow key={sug.id} hover sx={{ cursor: 'pointer' }} onClick={() => setSelectedSuggestion(sug)}>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 500, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {sug.title}
@@ -1586,9 +2138,9 @@ export default function ContentStudioPage() {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Chip label={sug.status} color={STATUS_COLORS[sug.status] || 'default'} size="small" />
+                        <StatusChip status={sug.status} />
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" onClick={e => e.stopPropagation()}>
                         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
                           {sug.status === 'pending' && (
                             <>
@@ -1611,6 +2163,25 @@ export default function ContentStudioPage() {
                               </IconButton>
                             </Tooltip>
                           )}
+                          {sug.status === 'rejected' && (
+                            <>
+                              <Tooltip title="Herstel naar pending">
+                                <IconButton size="small" color="info" onClick={() => handleSuggestionAction(sug.id, 'pending')}>
+                                  <RestoreIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Definitief verwijderen">
+                                <IconButton size="small" color="error" onClick={() => handleSuggestionAction(sug.id, 'deleted')}>
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                          <Tooltip title="Details bekijken">
+                            <IconButton size="small" onClick={() => setSelectedSuggestion(sug)}>
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1652,6 +2223,9 @@ export default function ContentStudioPage() {
                 <Tooltip title="Vernieuwen">
                   <IconButton size="small" onClick={loadItems}><RefreshIcon fontSize="small" /></IconButton>
                 </Tooltip>
+                <Button size="small" variant="contained" startIcon={<NoteAddIcon />} onClick={() => setManualDialogOpen(true)}>
+                  Nieuw Item
+                </Button>
               </Box>
             </Box>
             <TableContainer>
@@ -1704,11 +2278,11 @@ export default function ContentStudioPage() {
                         </TableCell>
                         <TableCell>
                           {seoScore !== undefined ? (
-                            <Chip label={seoScore} size="small" color={seoScore >= 70 ? 'success' : seoScore >= 50 ? 'warning' : 'error'} />
+                            <Chip label={seoScore} size="small" color={seoScore >= 80 ? 'success' : seoScore >= 60 ? 'warning' : 'error'} />
                           ) : '—'}
                         </TableCell>
                         <TableCell>
-                          <Chip label={item.approval_status} color={STATUS_COLORS[item.approval_status] || 'default'} size="small" />
+                          <StatusChip status={item.approval_status} />
                         </TableCell>
                         <TableCell>
                           <Typography variant="caption">{new Date(item.created_at).toLocaleDateString('nl-NL')}</Typography>
@@ -1767,6 +2341,7 @@ export default function ContentStudioPage() {
         onClose={() => setGenerateDialogSuggestion(null)}
         suggestion={generateDialogSuggestion}
         onGenerate={handleGenerateContent}
+        destinationId={destinationId}
       />
 
       <ContentItemDialog
@@ -1775,6 +2350,21 @@ export default function ContentStudioPage() {
         itemId={selectedItemId}
         onUpdate={loadItems}
         onTranslate={loadItems}
+      />
+
+      <SuggestionDetailDialog
+        open={!!selectedSuggestion}
+        onClose={() => setSelectedSuggestion(null)}
+        suggestion={selectedSuggestion}
+        onAction={(id, status) => { handleSuggestionAction(id, status); }}
+        onGenerate={(sug) => setGenerateDialogSuggestion(sug)}
+      />
+
+      <ManualContentDialog
+        open={manualDialogOpen}
+        onClose={() => setManualDialogOpen(false)}
+        destinationId={destinationId}
+        onCreated={loadItems}
       />
     </Box>
   );

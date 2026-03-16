@@ -1,5 +1,5 @@
 /**
- * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 + Content B+C+D + Wave 5 + Wave 6 + CS v5.0 (v3.31.0)
+ * Admin Portal Routes — Fase 8C-0 + 8C-1 + 8D + 9A + 9B + 10A + 11B + II-B + II-C + III-A + III-B + III-C + III-E + IV-A + IV-B + IV-C + IV-E + V.4 + V.6 + Wave 1 + Content B+C+D + Wave 5 + Wave 6 + CS v5.0 + BLOK 10 RBAC (v3.32.0)
  * ===================================================
  * Unified admin API endpoints in platform-core (port 3001).
  * Path prefix: /api/v1/admin-portal
@@ -243,6 +243,7 @@ function validatePassword(password, email, name) {
 const ROLE_HIERARCHY = {
   platform_admin: 100,
   poi_owner: 70,
+  content_manager: 60,
   editor: 50,
   reviewer: 30
 };
@@ -5095,7 +5096,7 @@ const blockImageUpload = multer({
   }
 });
 
-router.post('/blocks/upload-image', adminAuth('content_editor'), (req, res) => {
+router.post('/blocks/upload-image', adminAuth('editor'), (req, res) => {
   blockImageUpload.single('image')(req, res, (err) => {
     if (err) {
       const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 5MB)' : err.message;
@@ -5443,7 +5444,7 @@ router.post('/users', adminAuth('platform_admin'), async (req, res) => {
     logger.info(`[AdminPortal] User created: ${email} by ${req.adminUser.email}`);
 
     // Send welcome email (non-blocking — user IS created, email failure is not critical)
-    const roleLabels = { platform_admin: 'Platform Admin', poi_owner: 'POI Owner', editor: 'Content Editor', reviewer: 'Content Reviewer' };
+    const roleLabels = { platform_admin: 'Platform Admin', poi_owner: 'POI Owner', content_manager: 'Content Manager', editor: 'Content Editor', reviewer: 'Content Reviewer' };
     const welcomeHtml = `
 <!DOCTYPE html>
 <html>
@@ -9244,7 +9245,7 @@ const mediaUpload = multer({
 /**
  * POST /media/upload — Upload files to media library (multi-file, max 10)
  */
-router.post('/media/upload', adminAuth('content_editor'), (req, res) => {
+router.post('/media/upload', adminAuth('editor'), (req, res) => {
   mediaUpload.array('files', 10)(req, res, async (err) => {
     if (err) {
       const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 10MB)' : err.message;
@@ -9366,7 +9367,7 @@ router.get('/media', adminAuth('reviewer'), destinationScope, async (req, res) =
 /**
  * PUT /media/:id — Update media metadata (alt_text, category)
  */
-router.put('/media/:id', adminAuth('content_editor'), async (req, res) => {
+router.put('/media/:id', adminAuth('editor'), async (req, res) => {
   try {
     const mediaId = parseInt(req.params.id);
     const [existing] = await mysqlSequelize.query('SELECT * FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.SELECT });
@@ -9826,7 +9827,7 @@ router.post('/onboarding/create', adminAuth('platform_admin'), async (req, res) 
  * GET /content/trending — List trending keywords with filters
  * Query: destination_id (required), period (7d|30d|90d), market, language, limit, offset
  */
-router.get('/content/trending', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/trending', adminAuth('editor'), async (req, res) => {
   try {
     const { destination_id, period, market, language, limit, offset } = req.query;
     if (!destination_id) {
@@ -9853,7 +9854,7 @@ router.get('/content/trending', adminAuth('content_editor'), async (req, res) =>
  * GET /content/trending/summary — Aggregated trend summary (charts, word cloud)
  * Query: destination_id (required), period (7d|30d|90d)
  */
-router.get('/content/trending/summary', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/trending/summary', adminAuth('editor'), async (req, res) => {
   try {
     const { destination_id, period } = req.query;
     if (!destination_id) {
@@ -9876,7 +9877,7 @@ router.get('/content/trending/summary', adminAuth('content_editor'), async (req,
  * POST /content/trending/manual — Manually add a trending keyword
  * Body: destination_id, keyword, language, source, search_volume, trend_direction, market
  */
-router.post('/content/trending/manual', writeAccess(), async (req, res) => {
+router.post('/content/trending/manual', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { destination_id, keyword, language, source, search_volume, trend_direction, market } = req.body;
     if (!destination_id || !keyword) {
@@ -9908,14 +9909,14 @@ router.post('/content/trending/manual', writeAccess(), async (req, res) => {
  * GET /content/suggestions — List content suggestions
  * Query: destination_id (required), status, limit, offset
  */
-router.get('/content/suggestions', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/suggestions', adminAuth('editor'), async (req, res) => {
   try {
     const { destination_id, status, limit = 50, offset = 0 } = req.query;
     if (!destination_id) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destination_id is required' } });
     }
 
-    let where = 'WHERE cs.destination_id = :destId';
+    let where = "WHERE cs.destination_id = :destId AND cs.status != 'deleted'";
     const replacements = { destId: Number(destination_id), limit: Number(limit), offset: Number(offset) };
     if (status) {
       where += ' AND cs.status = :status';
@@ -9949,7 +9950,7 @@ router.get('/content/suggestions', adminAuth('content_editor'), async (req, res)
  * POST /content/suggestions/generate — AI suggestie-generatie vanuit trending data
  * Body: destination_id (required)
  */
-router.post('/content/suggestions/generate', writeAccess(), async (req, res) => {
+router.post('/content/suggestions/generate', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { destination_id } = req.body;
     if (!destination_id) {
@@ -10003,16 +10004,16 @@ router.post('/content/suggestions/generate', writeAccess(), async (req, res) => 
 });
 
 /**
- * PATCH /content/suggestions/:id — Approve/reject suggestie
- * Body: status ('approved' | 'rejected')
+ * PATCH /content/suggestions/:id — Update suggestion status
+ * Body: status ('approved' | 'rejected' | 'pending' | 'deleted')
  */
-router.patch('/content/suggestions/:id', writeAccess(), async (req, res) => {
+router.patch('/content/suggestions/:id', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: 'status must be "approved" or "rejected"' } });
+    if (!['approved', 'rejected', 'pending', 'deleted'].includes(status)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: 'status must be "approved", "rejected", "pending", or "deleted"' } });
     }
 
     if (status === 'approved') {
@@ -10042,11 +10043,33 @@ router.patch('/content/suggestions/:id', writeAccess(), async (req, res) => {
  * POST /content/items/generate — Generate content via Mistral AI
  * Body: suggestion_id, content_type, platform, languages[]
  */
-router.post('/content/items/generate', writeAccess(), async (req, res) => {
+router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
-    const { suggestion_id, content_type, platform = 'website', languages = [] } = req.body;
+    const { suggestion_id, content_type, platform = 'website', languages = [], manual, title, body_en, destination_id } = req.body;
+
+    // === Manual content creation (TO DO 4g) — no AI generation ===
+    if (manual && title) {
+      const destId = Number(destination_id) || Number(req.query.destination_id) || 1;
+      const [insertResult] = await mysqlSequelize.query(
+        `INSERT INTO content_items
+         (destination_id, content_type, title, body_en, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+         VALUES (:destId, :contentType, :title, :bodyEn, :platform, 'draft', NULL, false, NOW(), NOW())`,
+        {
+          replacements: {
+            destId,
+            contentType: content_type || 'blog',
+            title: title.trim(),
+            bodyEn: body_en || '',
+            platform,
+          },
+        }
+      );
+      return res.json({ success: true, data: { id: insertResult, title, manual: true } });
+    }
+
+    // === AI-generated content from suggestion ===
     if (!suggestion_id) {
-      return res.status(400).json({ success: false, error: { code: 'MISSING_SUGGESTION', message: 'suggestion_id is required' } });
+      return res.status(400).json({ success: false, error: { code: 'MISSING_SUGGESTION', message: 'suggestion_id is required (or set manual=true with title)' } });
     }
 
     // Get the suggestion
@@ -10102,7 +10125,59 @@ router.post('/content/items/generate', writeAccess(), async (req, res) => {
       { replacements: { id: suggestion.id } }
     );
 
-    res.json({ success: true, data: { id: insertResult, ...generated } });
+    // === AUTO-ATTACH IMAGES based on keywords (TO DO 4c) ===
+    const contentItemId = insertResult;
+    let attachedImages = [];
+    try {
+      const kws = generated.keyword_cluster || suggestion.keyword_cluster || [];
+      if (kws.length > 0) {
+        // Build regex pattern from keywords for media search
+        const keywordPattern = kws
+          .map(k => k.replace(/[.*+?^${}()|[\]\\%_]/g, ''))
+          .filter(k => k.length > 2)
+          .join('|');
+
+        if (keywordPattern) {
+          // Search media table by keyword match (alt_text, filename)
+          const [mediaMatches] = await mysqlSequelize.query(
+            `SELECT id FROM media
+             WHERE (alt_text REGEXP :pattern OR filename REGEXP :pattern)
+             ORDER BY created_at DESC LIMIT 5`,
+            { replacements: { pattern: keywordPattern } }
+          );
+
+          // Also search POI images if destination has relevant POIs
+          const [poiImages] = await mysqlSequelize.query(
+            `SELECT DISTINCT iu.id FROM ImageUrl iu
+             INNER JOIN POI p ON iu.poi_id = p.id
+             WHERE p.destination_id = :destId
+             AND iu.local_path IS NOT NULL
+             AND (p.name REGEXP :pattern OR p.category REGEXP :pattern)
+             ORDER BY p.google_rating DESC, iu.priority ASC
+             LIMIT 5`,
+            { replacements: { destId: suggestion.destination_id, pattern: keywordPattern } }
+          );
+
+          // Combine: media library IDs first (preferred), then POI image IDs (prefixed with 'poi:')
+          const mediaIds = mediaMatches.map(m => m.id).slice(0, 3);
+          const poiImgIds = poiImages.map(p => `poi:${p.id}`).slice(0, 3 - mediaIds.length);
+          const allIds = [...mediaIds, ...poiImgIds];
+
+          if (allIds.length > 0) {
+            await mysqlSequelize.query(
+              'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
+              { replacements: { mediaIds: JSON.stringify(allIds), id: contentItemId } }
+            );
+            attachedImages = allIds;
+            logger.info(`[ContentGenerate] Auto-attached ${allIds.length} images to item ${contentItemId} (keywords: ${kws.join(', ')})`);
+          }
+        }
+      }
+    } catch (imgErr) {
+      logger.warn('[ContentGenerate] Auto-attach images failed (non-blocking):', imgErr.message);
+    }
+
+    res.json({ success: true, data: { id: contentItemId, ...generated, attached_images: attachedImages } });
   } catch (error) {
     logger.error('[AdminPortal] Content generation error:', error);
     res.status(500).json({ success: false, error: { code: 'CONTENT_GENERATION_ERROR', message: error.message } });
@@ -10113,7 +10188,7 @@ router.post('/content/items/generate', writeAccess(), async (req, res) => {
  * GET /content/items — List content items
  * Query: destination_id (required), status, limit, offset
  */
-router.get('/content/items', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/items', adminAuth('editor'), async (req, res) => {
   try {
     const { destination_id, status, limit = 50, offset = 0 } = req.query;
     if (!destination_id) {
@@ -10157,7 +10232,7 @@ router.get('/content/items', adminAuth('content_editor'), async (req, res) => {
 /**
  * GET /content/items/:id — Content item detail + all language versions
  */
-router.get('/content/items/:id', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/items/:id', adminAuth('editor'), async (req, res) => {
   try {
     const [[item]] = await mysqlSequelize.query(
       `SELECT ci.*, cs.keyword_cluster, cs.engagement_score, cs.title as suggestion_title
@@ -10196,7 +10271,7 @@ router.get('/content/items/:id', adminAuth('content_editor'), async (req, res) =
  * PATCH /content/items/:id — Update body/approve/reject
  * Body: title, body_en, body_nl, body_de, body_es, body_fr, approval_status, seo_data
  */
-router.patch('/content/items/:id', writeAccess(), async (req, res) => {
+router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const allowedFields = ['title', 'body_en', 'body_nl', 'body_de', 'body_es', 'body_fr', 'approval_status', 'seo_data', 'social_metadata', 'target_platform', 'pillar_id'];
@@ -10234,6 +10309,37 @@ router.patch('/content/items/:id', writeAccess(), async (req, res) => {
 
     // Handle approval status change — log to approval trail
     if (req.body.approval_status) {
+      // TO DO 4a: Block approve/schedule for items with SEO < 80
+      if (['approved', 'scheduled'].includes(req.body.approval_status)) {
+        const [[seoItem]] = await mysqlSequelize.query(
+          'SELECT seo_data, body_en, title, content_type FROM content_items WHERE id = :id', { replacements: { id: Number(id) } }
+        );
+        if (seoItem) {
+          let seoScore = 0;
+          try {
+            const seoData = typeof seoItem.seo_data === 'string' ? JSON.parse(seoItem.seo_data) : seoItem.seo_data;
+            seoScore = seoData?.overallScore || 0;
+          } catch { /* parse error */ }
+          // If we don't have a stored score, compute it live
+          if (!seoScore && seoItem.body_en) {
+            try {
+              const { analyzeContent } = await import('../services/agents/seoMeester/seoAnalyzer.js');
+              const seoResult = await analyzeContent(seoItem, Number(req.query.destination_id) || 1);
+              seoScore = seoResult.overallScore || 0;
+            } catch { /* analysis error */ }
+          }
+          if (seoScore > 0 && seoScore < 80) {
+            return res.status(400).json({
+              success: false,
+              error: {
+                code: 'SEO_SCORE_TOO_LOW',
+                message: `SEO-score ${seoScore}/100 is onder het minimum van 80. Verbeter de content met "AI Verbeter" voordat je goedkeurt.`
+              }
+            });
+          }
+        }
+      }
+
       const [[currentItem]] = await mysqlSequelize.query(
         'SELECT approval_status FROM content_items WHERE id = :id', { replacements: { id: Number(id) } }
       );
@@ -10301,7 +10407,7 @@ router.patch('/content/items/:id', writeAccess(), async (req, res) => {
 /**
  * DELETE /content/items/:id — Soft delete (approval_status → 'rejected')
  */
-router.delete('/content/items/:id', writeAccess(), async (req, res) => {
+router.delete('/content/items/:id', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     await mysqlSequelize.query(
       `UPDATE content_items SET approval_status = 'deleted', updated_at = NOW() WHERE id = :id`,
@@ -10318,7 +10424,7 @@ router.delete('/content/items/:id', writeAccess(), async (req, res) => {
  * POST /content/items/:id/translate — Translate to additional language
  * Body: target_lang (e.g., 'de', 'es', 'fr')
  */
-router.post('/content/items/:id/translate', writeAccess(), async (req, res) => {
+router.post('/content/items/:id/translate', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { target_lang } = req.body;
     if (!target_lang || !['nl', 'de', 'es', 'fr'].includes(target_lang)) {
@@ -10360,7 +10466,7 @@ router.post('/content/items/:id/translate', writeAccess(), async (req, res) => {
 /**
  * GET /content/items/:id/seo — SEO analysis via De SEO Meester
  */
-router.get('/content/items/:id/seo', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/items/:id/seo', adminAuth('editor'), async (req, res) => {
   try {
     const [[item]] = await mysqlSequelize.query(
       `SELECT ci.*, cs.keyword_cluster
@@ -10402,7 +10508,7 @@ router.get('/content/items/:id/seo', adminAuth('content_editor'), async (req, re
  * POST /content/items/:id/improve — Auto-improve content via AI to reach SEO minimum (65/100)
  * Analyzes current SEO score → if below 65, rewrites content via Mistral AI → saves improved version
  */
-router.post('/content/items/:id/improve', writeAccess(), async (req, res) => {
+router.post('/content/items/:id/improve', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const [[item]] = await mysqlSequelize.query(
       `SELECT ci.*, cs.keyword_cluster
@@ -10491,7 +10597,7 @@ router.post('/content/items/:id/improve', writeAccess(), async (req, res) => {
  * POST /content/generate-from-poi — Generate content directly from a POI (KILLER FEATURE)
  * Body: { poi_id, platforms[] }
  */
-router.post('/content/generate-from-poi', writeAccess(), async (req, res) => {
+router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { poi_id, platforms = ['instagram', 'facebook', 'linkedin'] } = req.body;
     if (!poi_id) return res.status(400).json({ success: false, error: { code: 'MISSING_POI', message: 'poi_id is required' } });
@@ -10540,7 +10646,7 @@ router.post('/content/generate-from-poi', writeAccess(), async (req, res) => {
  * POST /content/items/:id/repurpose — Repurpose content for other platforms
  * Body: { target_platforms[] }
  */
-router.post('/content/items/:id/repurpose', writeAccess(), async (req, res) => {
+router.post('/content/items/:id/repurpose', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const { target_platforms = ['instagram', 'facebook', 'linkedin'] } = req.body;
@@ -10554,9 +10660,17 @@ router.post('/content/items/:id/repurpose', writeAccess(), async (req, res) => {
     const { repurposeContent } = await import('../services/agents/contentRedacteur/contentGenerator.js');
     const results = await repurposeContent(sourceItem, target_platforms, sourceItem.destination_id);
 
-    // Save each repurposed item
+    // Save each repurposed item with SEO score and char count metadata
     const savedIds = [];
     for (const item of results) {
+      const seoData = {
+        meta_description: item.meta_description,
+        hashtags: item.hashtags,
+        seo_score: item.seo_score,
+        char_count: item.char_count,
+        char_limit: item.char_limit,
+        source_content_id: item.source_content_id,
+      };
       const [insertResult] = await mysqlSequelize.query(
         `INSERT INTO content_items
          (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
@@ -10573,7 +10687,7 @@ router.post('/content/items/:id/repurpose', writeAccess(), async (req, res) => {
             bodyDe: item.body_de || null,
             bodyEs: item.body_es || null,
             bodyFr: item.body_fr || null,
-            seoData: JSON.stringify({ meta_description: item.meta_description, hashtags: item.hashtags }),
+            seoData: JSON.stringify(seoData),
             platform: item.target_platform,
             aiModel: item.ai_model,
             poiId: item.poi_id || null,
@@ -10594,7 +10708,7 @@ router.post('/content/items/:id/repurpose', writeAccess(), async (req, res) => {
  * POST /content/items/:id/share-to-destination — Share content to another destination
  * Body: { destination_id }
  */
-router.post('/content/items/:id/share-to-destination', writeAccess(), async (req, res) => {
+router.post('/content/items/:id/share-to-destination', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const { destination_id } = req.body;
@@ -10660,7 +10774,7 @@ router.post('/content/items/:id/share-to-destination', writeAccess(), async (req
  * POST /content/images/suggest — AI image suggestions for content item
  * Body: content_item_id OR { title, body_en, poi_id, destination_id }
  */
-router.post('/content/images/suggest', adminAuth('content_editor'), async (req, res) => {
+router.post('/content/images/suggest', adminAuth('editor'), async (req, res) => {
   try {
     const { content_item_id, title, body_en, poi_id } = req.body;
     const destId = req.adminUser?.destination_id || req.body.destination_id || 1;
@@ -10690,7 +10804,7 @@ router.post('/content/images/suggest', adminAuth('content_editor'), async (req, 
  * POST /content/images/unsplash — Search Unsplash for stock images
  * Body: { query, per_page }
  */
-router.post('/content/images/unsplash', adminAuth('content_editor'), async (req, res) => {
+router.post('/content/images/unsplash', adminAuth('editor'), async (req, res) => {
   try {
     const { query, per_page = 6 } = req.body;
     if (!query) return res.status(400).json({ success: false, error: { code: 'MISSING_QUERY', message: 'query is required' } });
@@ -10709,7 +10823,7 @@ router.post('/content/images/unsplash', adminAuth('content_editor'), async (req,
  * POST /content/images/format — Resize image for platform specs
  * Body: { image_path, platform, format }
  */
-router.post('/content/images/format', writeAccess(), async (req, res) => {
+router.post('/content/images/format', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { image_path, platform, format = 'post' } = req.body;
     if (!image_path || !platform) {
@@ -10733,7 +10847,7 @@ router.post('/content/images/format', writeAccess(), async (req, res) => {
  * POST /content/items/:id/images — Attach image(s) to content item
  * Body: { media_ids: [1,2,3] }  — array of media IDs or image URLs to link
  */
-router.post('/content/items/:id/images', writeAccess(), async (req, res) => {
+router.post('/content/items/:id/images', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const { media_ids = [] } = req.body;
@@ -10769,7 +10883,7 @@ router.post('/content/items/:id/images', writeAccess(), async (req, res) => {
 /**
  * DELETE /content/items/:id/images/:mediaId — Remove image from content item
  */
-router.delete('/content/items/:id/images/:mediaId', writeAccess(), async (req, res) => {
+router.delete('/content/items/:id/images/:mediaId', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id, mediaId } = req.params;
 
@@ -10805,38 +10919,57 @@ router.delete('/content/items/:id/images/:mediaId', writeAccess(), async (req, r
  * GET /content/calendar — Calendar data (month/week view)
  * Returns content items with scheduled_at or published_at for date range
  */
-router.get('/content/calendar', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
-    const { start, end, view } = req.query;
-    const startDate = start || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-    const endDate = end || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+    const { start, end, view, month, year: qYear } = req.query;
+    // Support both start/end and month/year params (frontend sends month/year)
+    let startDate, endDate;
+    if (start && end) {
+      startDate = start;
+      endDate = end;
+    } else if (month && qYear) {
+      const m = Number(month) - 1; // JS months are 0-based
+      const y = Number(qYear);
+      startDate = new Date(y, m, 1).toISOString().split('T')[0];
+      endDate = new Date(y, m + 1, 0).toISOString().split('T')[0];
+    } else {
+      startDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+      endDate = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+    }
 
     const [items] = await mysqlSequelize.query(
-      `SELECT id, title, content_type, target_platform, approval_status, scheduled_at, published_at, publish_url
+      `SELECT id, title, content_type, target_platform, approval_status, scheduled_at, published_at, publish_url, created_at
        FROM content_items
-       WHERE destination_id = :destId AND approval_status != 'deleted'
+       WHERE destination_id = :destId AND approval_status NOT IN ('deleted')
          AND (
            (scheduled_at BETWEEN :start AND :end)
            OR (published_at BETWEEN :start AND :end)
-           OR (approval_status IN ('approved', 'draft') AND created_at BETWEEN :start AND :end)
+           OR (approval_status IN ('approved', 'draft', 'scheduled', 'publishing') AND created_at BETWEEN :start AND :end)
          )
        ORDER BY COALESCE(scheduled_at, published_at, created_at) ASC`,
       { replacements: { destId: Number(destId), start: startDate, end: endDate + ' 23:59:59' } }
     );
 
-    // Also fetch seasonal periods for overlay
+    // Also fetch seasonal periods for overlay (table uses start_month/start_day, not start_date)
+    const queryYear = qYear ? Number(qYear) : new Date().getFullYear();
+    const queryMonth = month ? Number(month) : (new Date().getMonth() + 1);
     const [seasons] = await mysqlSequelize.query(
-      `SELECT id, season_name, start_date, end_date, is_active, hero_image_path
+      `SELECT id, season_name, start_month, start_day, end_month, end_day, is_active, hero_image_path
        FROM seasonal_config
-       WHERE destination_id = :destId AND (
-         (start_date BETWEEN :start AND :end) OR (end_date BETWEEN :start AND :end)
-         OR (start_date <= :start AND end_date >= :end)
-       )`,
-      { replacements: { destId: Number(destId), start: startDate, end: endDate } }
+       WHERE destination_id = :destId AND is_active = 1
+         AND ((start_month <= :qMonth AND end_month >= :qMonth)
+           OR (start_month > end_month AND (start_month <= :qMonth OR end_month >= :qMonth)))`,
+      { replacements: { destId: Number(destId), qMonth: queryMonth } }
     );
+    // Convert month/day to ISO date strings for frontend compatibility
+    const seasonsFormatted = (seasons || []).map(s => ({
+      ...s,
+      start_date: `${queryYear}-${String(s.start_month).padStart(2, '0')}-${String(s.start_day).padStart(2, '0')}`,
+      end_date: `${queryYear}-${String(s.end_month).padStart(2, '0')}-${String(s.end_day).padStart(2, '0')}`,
+    }));
 
-    res.json({ success: true, data: { items: items || [], seasons: seasons || [], view: view || 'month' } });
+    res.json({ success: true, data: { items: items || [], seasons: seasonsFormatted, view: view || 'month' } });
   } catch (error) {
     logger.error('[AdminPortal] Calendar error:', error);
     res.status(500).json({ success: false, error: { code: 'CALENDAR_ERROR', message: error.message } });
@@ -10846,7 +10979,7 @@ router.get('/content/calendar', adminAuth('content_editor'), async (req, res) =>
 /**
  * POST /content/items/:id/schedule — Schedule content for publishing
  */
-router.post('/content/items/:id/schedule', adminAuth('content_editor'), async (req, res) => {
+router.post('/content/items/:id/schedule', adminAuth('editor'), async (req, res) => {
   try {
     const { id } = req.params;
     const { scheduled_at, platforms } = req.body;
@@ -10870,7 +11003,7 @@ router.post('/content/items/:id/schedule', adminAuth('content_editor'), async (r
 /**
  * POST /content/items/:id/publish-now — Immediately publish content
  */
-router.post('/content/items/:id/publish-now', adminAuth('content_editor'), async (req, res) => {
+router.post('/content/items/:id/publish-now', adminAuth('editor'), async (req, res) => {
   try {
     const { id } = req.params;
     const publisher = (await import('../services/agents/publisher/index.js')).default;
@@ -10885,7 +11018,7 @@ router.post('/content/items/:id/publish-now', adminAuth('content_editor'), async
 /**
  * DELETE /content/items/:id/schedule — Cancel scheduled publish
  */
-router.delete('/content/items/:id/schedule', adminAuth('content_editor'), async (req, res) => {
+router.delete('/content/items/:id/schedule', adminAuth('editor'), async (req, res) => {
   try {
     const { id } = req.params;
     await mysqlSequelize.query(
@@ -10902,7 +11035,7 @@ router.delete('/content/items/:id/schedule', adminAuth('content_editor'), async 
 /**
  * PATCH /content/items/:id/reschedule — Move scheduled post to new datetime
  */
-router.patch('/content/items/:id/reschedule', adminAuth('content_editor'), async (req, res) => {
+router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, res) => {
   try {
     const { id } = req.params;
     const { scheduled_at } = req.body;
@@ -10923,7 +11056,7 @@ router.patch('/content/items/:id/reschedule', adminAuth('content_editor'), async
 /**
  * GET /content/performance/summary — Aggregate performance metrics
  */
-router.get('/content/performance/summary', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/performance/summary', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const [summary] = await mysqlSequelize.query(
@@ -10944,7 +11077,7 @@ router.get('/content/performance/summary', adminAuth('content_editor'), async (r
 /**
  * GET /content/performance/:id — Detailed performance for a content item
  */
-router.get('/content/performance/:id', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/performance/:id', adminAuth('editor'), async (req, res) => {
   try {
     const [metrics] = await mysqlSequelize.query(
       `SELECT * FROM content_performance WHERE content_item_id = :id ORDER BY measured_at DESC LIMIT 30`,
@@ -10962,7 +11095,7 @@ router.get('/content/performance/:id', adminAuth('content_editor'), async (req, 
 /**
  * GET /content/analytics/overview — Dashboard aggregations: KPIs, growth, time-series, content type breakdown
  */
-router.get('/content/analytics/overview', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/analytics/overview', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const days = Math.min(Number(req.query.days) || 30, 365);
@@ -11071,7 +11204,7 @@ router.get('/content/analytics/overview', adminAuth('content_editor'), async (re
 /**
  * GET /content/analytics/items — Per-item performance with sort, filter, pagination
  */
-router.get('/content/analytics/items', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/analytics/items', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const days = Math.min(Number(req.query.days) || 30, 365);
@@ -11135,7 +11268,7 @@ router.get('/content/analytics/items', adminAuth('content_editor'), async (req, 
 /**
  * GET /content/analytics/platforms — Platform comparison with engagement rates
  */
-router.get('/content/analytics/platforms', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/analytics/platforms', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const days = Math.min(Number(req.query.days) || 30, 365);
@@ -11193,7 +11326,7 @@ router.get('/content/analytics/platforms', adminAuth('content_editor'), async (r
 /**
  * GET /content/social-accounts — List connected accounts per destination
  */
-router.get('/content/social-accounts', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/social-accounts', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const [accounts] = await mysqlSequelize.query(
@@ -11221,6 +11354,46 @@ router.post('/content/social-accounts/connect/linkedin', adminAuth('platform_adm
   } catch (error) {
     logger.error('[AdminPortal] LinkedIn connect error:', error);
     res.status(500).json({ success: false, error: { code: 'LINKEDIN_CONNECT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/social-accounts/connect/pinterest — Start Pinterest OAuth flow
+ */
+router.post('/content/social-accounts/connect/pinterest', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const clientId = process.env.PINTEREST_APP_ID;
+    if (!clientId) {
+      return res.status(400).json({ success: false, error: { code: 'NOT_CONFIGURED', message: 'Pinterest API credentials not configured. Set PINTEREST_APP_ID and PINTEREST_APP_SECRET in .env' } });
+    }
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/pinterest/callback`;
+    const state = require('crypto').randomBytes(16).toString('hex');
+    const scope = 'boards:read,pins:read,pins:write,boards:write';
+    const authUrl = `https://www.pinterest.com/oauth/?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${state}`;
+    res.json({ success: true, data: { authorizationUrl: authUrl, state } });
+  } catch (error) {
+    logger.error('[AdminPortal] Pinterest connect error:', error);
+    res.status(500).json({ success: false, error: { code: 'PINTEREST_CONNECT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/social-accounts/connect/youtube — Start YouTube/Google OAuth flow
+ */
+router.post('/content/social-accounts/connect/youtube', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const clientId = process.env.YOUTUBE_CLIENT_ID;
+    if (!clientId) {
+      return res.status(400).json({ success: false, error: { code: 'NOT_CONFIGURED', message: 'YouTube/Google API credentials not configured. Set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET in .env' } });
+    }
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/youtube/callback`;
+    const state = require('crypto').randomBytes(16).toString('hex');
+    const scope = 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly';
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${state}&access_type=offline&prompt=consent`;
+    res.json({ success: true, data: { authorizationUrl: authUrl, state } });
+  } catch (error) {
+    logger.error('[AdminPortal] YouTube connect error:', error);
+    res.status(500).json({ success: false, error: { code: 'YOUTUBE_CONNECT_ERROR', message: error.message } });
   }
 });
 
@@ -11275,7 +11448,7 @@ router.post('/content/social-accounts/:id/refresh', adminAuth('platform_admin'),
 /**
  * GET /content/seasons — List all seasonal configurations per destination
  */
-router.get('/content/seasons', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/seasons', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const [seasons] = await mysqlSequelize.query(
@@ -11292,7 +11465,7 @@ router.get('/content/seasons', adminAuth('content_editor'), async (req, res) => 
 /**
  * POST /content/seasons — Create a season
  */
-router.post('/content/seasons', adminAuth('content_editor'), async (req, res) => {
+router.post('/content/seasons', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.body.destination_id || 1;
     const { season_name, start_date, end_date, hero_image_path, featured_poi_ids, strategic_themes, cta_config, homepage_blocks } = req.body;
@@ -11324,7 +11497,7 @@ router.post('/content/seasons', adminAuth('content_editor'), async (req, res) =>
 /**
  * PATCH /content/seasons/:id — Update a season
  */
-router.patch('/content/seasons/:id', adminAuth('content_editor'), async (req, res) => {
+router.patch('/content/seasons/:id', adminAuth('editor'), async (req, res) => {
   try {
     const { id } = req.params;
     const fields = req.body;
@@ -11357,7 +11530,7 @@ router.patch('/content/seasons/:id', adminAuth('content_editor'), async (req, re
 /**
  * DELETE /content/seasons/:id — Delete a season
  */
-router.delete('/content/seasons/:id', adminAuth('content_editor'), async (req, res) => {
+router.delete('/content/seasons/:id', adminAuth('editor'), async (req, res) => {
   try {
     await mysqlSequelize.query(`DELETE FROM seasonal_config WHERE id = :id`, { replacements: { id: Number(req.params.id) } });
     res.json({ success: true });
@@ -11397,7 +11570,7 @@ router.post('/content/seasons/:id/activate', adminAuth('platform_admin'), async 
 /**
  * GET /content/seasons/current — Get current active season for destination
  */
-router.get('/content/seasons/current', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/seasons/current', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const { getCurrentSeason } = await import('../services/content/seasonalEngine.js');
@@ -11414,7 +11587,7 @@ router.get('/content/seasons/current', adminAuth('content_editor'), async (req, 
 /**
  * GET /content/items/:id/comments — List comments for a content item
  */
-router.get('/content/items/:id/comments', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/items/:id/comments', adminAuth('editor'), async (req, res) => {
   try {
     const [comments] = await mysqlSequelize.query(
       `SELECT c.*, au.email as user_email, au.first_name, au.last_name
@@ -11435,17 +11608,19 @@ router.get('/content/items/:id/comments', adminAuth('content_editor'), async (re
  * POST /content/items/:id/comments — Add a comment to a content item
  * Body: { comment }
  */
-router.post('/content/items/:id/comments', writeAccess(), async (req, res) => {
+router.post('/content/items/:id/comments', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { comment } = req.body;
     if (!comment || !comment.trim()) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_COMMENT', message: 'comment is required' } });
     }
+    const userId = req.adminUser?.id;
+    const userName = req.adminUser?.name || req.adminUser?.email || 'System';
     const [result] = await mysqlSequelize.query(
       `INSERT INTO content_comments (content_item_id, user_id, comment) VALUES (:itemId, :userId, :comment)`,
-      { replacements: { itemId: Number(req.params.id), userId: req.adminUser?.id || 'system', comment: comment.trim() } }
+      { replacements: { itemId: Number(req.params.id), userId, comment: comment.trim() } }
     );
-    res.json({ success: true, data: { id: result, content_item_id: Number(req.params.id), comment: comment.trim() } });
+    res.json({ success: true, data: { id: result, content_item_id: Number(req.params.id), comment: comment.trim(), first_name: req.adminUser?.firstName, user_email: req.adminUser?.email } });
   } catch (error) {
     logger.error('[AdminPortal] Comment add error:', error);
     res.status(500).json({ success: false, error: { code: 'COMMENT_ADD_ERROR', message: error.message } });
@@ -11455,7 +11630,7 @@ router.post('/content/items/:id/comments', writeAccess(), async (req, res) => {
 /**
  * GET /content/items/:id/revisions — List revision history for a content item
  */
-router.get('/content/items/:id/revisions', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/items/:id/revisions', adminAuth('editor'), async (req, res) => {
   try {
     const [revisions] = await mysqlSequelize.query(
       `SELECT r.*, au.email as changed_by_email, au.first_name, au.last_name
@@ -11476,7 +11651,7 @@ router.get('/content/items/:id/revisions', adminAuth('content_editor'), async (r
 /**
  * POST /content/items/:id/revisions/:revisionId/restore — Restore a previous revision
  */
-router.post('/content/items/:id/revisions/:revisionId/restore', writeAccess(), async (req, res) => {
+router.post('/content/items/:id/revisions/:revisionId/restore', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id, revisionId } = req.params;
     const [[revision]] = await mysqlSequelize.query(
@@ -11524,7 +11699,7 @@ router.post('/content/items/:id/revisions/:revisionId/restore', writeAccess(), a
 /**
  * GET /content/items/:id/approval-log — Approval trail for a content item
  */
-router.get('/content/items/:id/approval-log', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/items/:id/approval-log', adminAuth('editor'), async (req, res) => {
   try {
     const [logs] = await mysqlSequelize.query(
       `SELECT l.*, au.email as changed_by_email, au.first_name, au.last_name
@@ -11546,7 +11721,7 @@ router.get('/content/items/:id/approval-log', adminAuth('content_editor'), async
 /**
  * GET /content/pillars — List content pillars for a destination
  */
-router.get('/content/pillars', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/pillars', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const [pillars] = await mysqlSequelize.query(
@@ -11567,7 +11742,7 @@ router.get('/content/pillars', adminAuth('content_editor'), async (req, res) => 
  * POST /content/pillars — Create a content pillar
  * Body: { name, target_percentage, color }
  */
-router.post('/content/pillars', writeAccess(), async (req, res) => {
+router.post('/content/pillars', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.body.destination_id || 1;
     const { name, target_percentage = 25, color = '#7FA594' } = req.body;
@@ -11589,7 +11764,7 @@ router.post('/content/pillars', writeAccess(), async (req, res) => {
  * PATCH /content/pillars/:id — Update a content pillar
  * Body: { name, target_percentage, color, is_active }
  */
-router.patch('/content/pillars/:id', writeAccess(), async (req, res) => {
+router.patch('/content/pillars/:id', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const allowedFields = ['name', 'target_percentage', 'color', 'is_active'];
@@ -11615,7 +11790,7 @@ router.patch('/content/pillars/:id', writeAccess(), async (req, res) => {
 /**
  * DELETE /content/pillars/:id — Soft-delete a content pillar (deactivate)
  */
-router.delete('/content/pillars/:id', writeAccess(), async (req, res) => {
+router.delete('/content/pillars/:id', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     await mysqlSequelize.query('UPDATE content_pillars SET is_active = FALSE WHERE id = :id', { replacements: { id: Number(req.params.id) } });
     // Unlink content items from this pillar
@@ -11630,7 +11805,7 @@ router.delete('/content/pillars/:id', writeAccess(), async (req, res) => {
 /**
  * GET /content/pillars/balance — Pillar balance visualization data (actual vs target)
  */
-router.get('/content/pillars/balance', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/pillars/balance', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const [pillars] = await mysqlSequelize.query(
@@ -11664,7 +11839,7 @@ router.get('/content/pillars/balance', adminAuth('content_editor'), async (req, 
  * GET /content/best-times — Get recommended posting times for a platform
  * Query: platform, market (optional)
  */
-router.get('/content/best-times', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/best-times', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const { platform = 'instagram', market } = req.query;
@@ -11680,7 +11855,7 @@ router.get('/content/best-times', adminAuth('content_editor'), async (req, res) 
 /**
  * POST /content/items/:id/hashtags — Generate hashtags for a content item
  */
-router.post('/content/items/:id/hashtags', adminAuth('content_editor'), async (req, res) => {
+router.post('/content/items/:id/hashtags', adminAuth('editor'), async (req, res) => {
   try {
     const [[item]] = await mysqlSequelize.query(
       'SELECT content_type, target_platform, destination_id, title, body_en FROM content_items WHERE id = :id',
@@ -11710,7 +11885,7 @@ router.post('/content/items/:id/hashtags', adminAuth('content_editor'), async (r
  * POST /content/bulk/approve — Bulk approve content items
  * Body: { ids: [1, 2, 3] }
  */
-router.post('/content/bulk/approve', writeAccess(), async (req, res) => {
+router.post('/content/bulk/approve', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -11742,7 +11917,7 @@ router.post('/content/bulk/approve', writeAccess(), async (req, res) => {
  * POST /content/bulk/reject — Bulk reject content items
  * Body: { ids: [1, 2, 3], reason }
  */
-router.post('/content/bulk/reject', writeAccess(), async (req, res) => {
+router.post('/content/bulk/reject', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { ids, reason } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -11773,7 +11948,7 @@ router.post('/content/bulk/reject', writeAccess(), async (req, res) => {
  * POST /content/bulk/schedule — Bulk schedule content items
  * Body: { ids: [1, 2, 3], scheduled_at }
  */
-router.post('/content/bulk/schedule', writeAccess(), async (req, res) => {
+router.post('/content/bulk/schedule', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { ids, scheduled_at } = req.body;
     if (!Array.isArray(ids) || ids.length === 0 || !scheduled_at) {
@@ -11804,7 +11979,7 @@ router.post('/content/bulk/schedule', writeAccess(), async (req, res) => {
  * POST /content/bulk/delete — Bulk soft-delete content items
  * Body: { ids: [1, 2, 3] }
  */
-router.post('/content/bulk/delete', writeAccess(), async (req, res) => {
+router.post('/content/bulk/delete', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -11829,7 +12004,7 @@ router.post('/content/bulk/delete', writeAccess(), async (req, res) => {
  * GET /content/templates — Get content templates for a destination
  * Query: destination_id
  */
-router.get('/content/templates', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/templates', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const { getTemplates } = await import('../services/agents/contentRedacteur/contentTemplates.js');
@@ -11844,7 +12019,7 @@ router.get('/content/templates', adminAuth('content_editor'), async (req, res) =
 /**
  * POST /content/items/:id/retry-publish — Retry a failed publish
  */
-router.post('/content/items/:id/retry-publish', writeAccess(), async (req, res) => {
+router.post('/content/items/:id/retry-publish', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const [[item]] = await mysqlSequelize.query(
@@ -11878,7 +12053,7 @@ router.post('/content/items/:id/retry-publish', writeAccess(), async (req, res) 
 /**
  * GET /content/items/:id/brand-score — Check brand voice consistency
  */
-router.get('/content/items/:id/brand-score', adminAuth('content_editor'), async (req, res) => {
+router.get('/content/items/:id/brand-score', adminAuth('editor'), async (req, res) => {
   try {
     const [[item]] = await mysqlSequelize.query(
       'SELECT body_en, body_nl, destination_id, content_type FROM content_items WHERE id = :id',
@@ -11892,8 +12067,8 @@ router.get('/content/items/:id/brand-score', adminAuth('content_editor'), async 
       return res.json({ success: true, data: { score: 0, grade: 'N/A', feedback: 'No content to analyze' } });
     }
     // Use toneOfVoice to check brand alignment
-    const { getToneConfig } = await import('../services/agents/contentRedacteur/toneOfVoice.js');
-    const tone = await getToneConfig(item.destination_id);
+    const { getTone } = await import('../services/agents/contentRedacteur/toneOfVoice.js');
+    const tone = await getTone(item.destination_id);
 
     let score = 70; // Base score
     const feedback = [];

@@ -8,7 +8,8 @@
 
 import logger from '../../../utils/logger.js';
 
-const DEEPL_API_URL = 'https://api-free.deepl.com/v2'; // Use api.deepl.com for Pro
+// API URL is auto-detected per API key suffix in translateWithDeepL()
+// Key ending with :fx → api-free.deepl.com, else → api.deepl.com (Pro)
 
 /**
  * DeepL language codes differ from our internal codes

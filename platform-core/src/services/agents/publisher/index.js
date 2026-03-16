@@ -9,6 +9,7 @@
 import BaseAgent from '../base/BaseAgent.js';
 import { getClient } from './clients/platformClientFactory.js';
 import { sanitizeContent } from '../contentRedacteur/contentSanitizer.js';
+import { applyUtmToContent } from './utmBuilder.js';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 import logger from '../../../utils/logger.js';
 import { mysqlSequelize } from '../../../config/database.js';
@@ -60,8 +61,63 @@ class PublisherAgent extends BaseAgent {
       const bodyField = `body_${lang}`;
       if (contentItem[bodyField]) {
         contentItem[bodyField] = sanitizeContent(contentItem[bodyField], contentItem.content_type, contentItem.target_platform);
+        // Apply UTM tracking to all URLs in the content
+        contentItem[bodyField] = applyUtmToContent(contentItem[bodyField], contentItem, contentItem.target_platform);
       } else if (contentItem.body_en) {
         contentItem.body_en = sanitizeContent(contentItem.body_en, contentItem.content_type, contentItem.target_platform);
+        contentItem.body_en = applyUtmToContent(contentItem.body_en, contentItem, contentItem.target_platform);
+      }
+
+      // Also add UTM-tagged destination URL to social_metadata if no link present
+      if (contentItem.target_platform !== 'website') {
+        try {
+          const [[dest]] = await mysqlSequelize.query(
+            'SELECT custom_domain FROM destinations WHERE id = :id',
+            { replacements: { id: contentItem.destination_id } }
+          );
+          if (dest?.custom_domain) {
+            const baseUrl = `https://${dest.custom_domain}`;
+            const trackedUrl = applyUtmToContent(baseUrl, contentItem, contentItem.target_platform);
+            // Ensure social_metadata has the tracked link
+            let meta = {};
+            try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch { /* */ }
+            if (!meta.link) {
+              meta.link = trackedUrl;
+              contentItem.social_metadata = JSON.stringify(meta);
+            }
+          }
+        } catch { /* non-blocking — UTM link is nice-to-have */ }
+      }
+
+      // Auto-crop attached images to platform-conformant dimensions (TO DO 4b+4d)
+      if (contentItem.media_ids && contentItem.target_platform !== 'website') {
+        try {
+          const { formatImage } = await import('../contentRedacteur/imageFormatter.js');
+          let mediaIds = typeof contentItem.media_ids === 'string' ? JSON.parse(contentItem.media_ids) : (contentItem.media_ids || []);
+          if (mediaIds.length > 0) {
+            const firstMediaId = mediaIds[0];
+            // Only process numeric media IDs (from media table)
+            if (typeof firstMediaId === 'number' || (typeof firstMediaId === 'string' && !firstMediaId.startsWith('poi:'))) {
+              const [[media]] = await mysqlSequelize.query(
+                'SELECT id, filename, filepath FROM media WHERE id = :id',
+                { replacements: { id: Number(firstMediaId) } }
+              );
+              if (media?.filepath) {
+                const storageRoot = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
+                const fullPath = media.filepath.startsWith('/') ? media.filepath : `${storageRoot}/${media.filepath}`;
+                const formatted = await formatImage(fullPath, contentItem.target_platform, 'post');
+                // Update social_metadata with the formatted image URL
+                let meta = {};
+                try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch { /* */ }
+                meta.image_url = `${process.env.HB_ASSET_URL || 'https://api.holidaibutler.com'}/api/v1/img/${formatted.relativePath}`;
+                contentItem.social_metadata = JSON.stringify(meta);
+                logger.info(`[Publisher] Auto-cropped image to ${formatted.width}x${formatted.height} for ${contentItem.target_platform}`);
+              }
+            }
+          }
+        } catch (cropErr) {
+          logger.warn(`[Publisher] Auto-crop failed (non-blocking):`, cropErr.message);
+        }
       }
 
       const client = getClient(contentItem.target_platform);

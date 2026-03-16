@@ -144,13 +144,99 @@ const TEMPLATES = {
   ],
 };
 
+// Global templates — available for ALL destinations
+const GLOBAL_TEMPLATES = [
+  {
+    id: 'global-hidden-gems',
+    name: 'Verborgen Pareltjes',
+    content_type: 'blog',
+    platform: 'website',
+    description: 'Ontdek verborgen schatten die alleen locals kennen',
+    prompt_template: 'Write a blog post about hidden gems and local secrets in {destination}. Focus on lesser-known places that tourists usually miss. Include practical tips.',
+    tone: 'warm, conversational, insider',
+    suggested_keywords: ['hidden gems', 'local tips', 'off the beaten path'],
+  },
+  {
+    id: 'global-seasonal-guide',
+    name: 'Seizoensgids',
+    content_type: 'blog',
+    platform: 'website',
+    description: 'Wat te doen dit seizoen — activiteiten, events en tips',
+    prompt_template: 'Write a seasonal guide covering the current season. Include best activities, local events, weather expectations, and practical tips for visitors.',
+    tone: 'informative, enthusiastic, helpful',
+    suggested_keywords: ['season', 'what to do', 'activities', 'weather'],
+  },
+  {
+    id: 'global-top-10',
+    name: 'Top 10 Lijst',
+    content_type: 'blog',
+    platform: 'website',
+    description: 'Top 10 lijst van de beste bezienswaardigheden of activiteiten',
+    prompt_template: 'Write a top 10 list blog post about the best things to see or do. Make each entry descriptive with practical info and insider tips.',
+    tone: 'authoritative, engaging, practical',
+    suggested_keywords: ['top 10', 'best', 'must visit', 'highlights'],
+  },
+  {
+    id: 'global-poi-spotlight',
+    name: 'POI Spotlight',
+    content_type: 'social_post',
+    platform: 'instagram',
+    description: 'Spotlight op een bijzondere locatie',
+    prompt_template: 'Create an Instagram post highlighting a special place. Start with a captivating hook, describe what makes it unique, and end with a call-to-action.',
+    tone: 'inspiring, visual, engaging',
+    suggested_keywords: ['discover', 'visit', 'travel', 'explore'],
+  },
+  {
+    id: 'global-event-promo',
+    name: 'Event Promotie',
+    content_type: 'social_post',
+    platform: 'facebook',
+    description: 'Promoot een aankomend event',
+    prompt_template: 'Create a Facebook post promoting an upcoming event. Include date, location, what to expect, and why people should attend.',
+    tone: 'enthusiastic, inviting, FOMO-inducing',
+    suggested_keywords: ['event', 'join us', 'this weekend', 'dont miss'],
+  },
+  {
+    id: 'global-daily-tip',
+    name: 'Tip van de Dag',
+    content_type: 'social_post',
+    platform: 'instagram',
+    description: 'Korte, krachtige tip voor bezoekers',
+    prompt_template: 'Write a short daily tip for visitors. Keep it under 150 words. Include one practical piece of advice.',
+    tone: 'friendly, concise, practical',
+    suggested_keywords: ['tip', 'travel tip', 'insider', 'local advice'],
+  },
+  {
+    id: 'global-restaurant-highlight',
+    name: 'Restaurant Highlight',
+    content_type: 'social_post',
+    platform: 'instagram',
+    description: 'Feature een restaurant of culinaire ervaring',
+    prompt_template: 'Create a food-focused Instagram post highlighting a restaurant or culinary experience. Describe ambiance, signature dishes, and what makes it special.',
+    tone: 'appetizing, descriptive, visual',
+    suggested_keywords: ['foodie', 'dining', 'restaurant', 'gastronomy'],
+  },
+  {
+    id: 'global-video-intro',
+    name: 'Video Introductie',
+    content_type: 'video_script',
+    platform: 'youtube',
+    description: 'Video script voor een introductievideo van de bestemming',
+    prompt_template: 'Write a video script introducing the destination. Include hook (first 5 seconds), main content with 3-4 highlight scenes, and strong call-to-action ending.',
+    tone: 'energetic, visual, storytelling',
+    suggested_keywords: ['travel video', 'destination guide', 'explore'],
+  },
+];
+
 /**
  * Get templates for a destination
+ * Returns destination-specific templates + global templates (always available)
  * @param {number} destinationId
  * @returns {Array} Template list
  */
 export function getTemplates(destinationId) {
-  return TEMPLATES[destinationId] || TEMPLATES[1]; // fallback to Calpe
+  const destTemplates = TEMPLATES[destinationId] || [];
+  return [...destTemplates, ...GLOBAL_TEMPLATES];
 }
 
 /**

@@ -4814,4 +4814,103 @@ CLAUDE.md v4.6.0 → v4.7.0. MS v7.66 → v7.67. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+---
+
+## CS v6.0: Content Studio TO DO — P0+P1 Enterprise Quality (16-03-2026)
+
+### Context
+Frank's TO DO lijst voor AI Content Generatie bevatte 17 items, waarvan 7 eerder afgevinkt (CS v5.0). De resterende 10 items zijn nu geïmplementeerd als P0 (kritiek) en P1 (functioneel).
+
+### P0 — Kritiek
+
+**4h+4i: PlatformPreview auto-adapt + Repurposing enterprise quality**
+
+PlatformPreview.jsx volledig herschreven:
+- `adaptContentForPlatform()` — smart truncation bij zins-grenzen, hashtag trim/herpositionering, platform-specifieke formatting
+- Per platform health indicator (rood/oranje/groen) direct zichtbaar op tabs
+- Auto-adaptation waarschuwingen ("Ingekort van 2500 naar 500 tekens", "Hashtags verplaatst naar einde")
+- Over-limit waarschuwing met tip om Repurpose te gebruiken
+- Platform-specifieke tips per platform (Instagram hook, LinkedIn thought leadership, X ultra-beknopt)
+- UTM tracking validatie (waarschuwing als ontbreekt bij social platforms)
+- Aspect ratio informatie per platform in image placeholder
+- LinkedIn engagement icons, X character counter
+
+repurposeContent() in contentGenerator.js enterprise rewrite:
+- PLATFORM_EXAMPLES: 7 echte voorbeeldposts die Mistral AI als stijlreferentie krijgt
+- Per platform unieke instructies met specifieke kenmerken (Instagram=storytelling, LinkedIn=data-driven, X=punchy, TikTok=Gen-Z, Pinterest=aspirerend)
+- Hogere temperature (0.8) voor creatieve differentiatie — geen copy-paste meer
+- Key facts extractie uit origineel voor fact-checking (hallucination prevention)
+- Tot 2 retries bij char limit overschrijding (was 1), met progressief striktere prompts
+- SEO scoring per repurposed content item
+- Hard truncation safety net als AI alsnog over limiet gaat
+- Logging per platform: chars, SEO score
+
+**4c: Auto-attach images bij content generatie**
+- Na AI content generatie in POST /content/items/generate: automatisch keyword-based image search
+- Media tabel: zoekt in `alt_text` en `filename` met REGEXP op keyword cluster
+- POI images: zoekt POIs met matchende `name` of `category`, gesorteerd op google_rating DESC
+- Resultaat opgeslagen in `content_items.media_ids` JSON array (max 3 media + 3 POI images)
+- Non-blocking: image attach falen blokkeert content generatie niet
+
+**7: Social Accounts — Pinterest + YouTube connect**
+- `POST /content/social-accounts/connect/pinterest` — Pinterest OAuth v5 flow (boards:read, pins:read/write)
+- `POST /content/social-accounts/connect/youtube` — Google/YouTube OAuth 2.0 flow (youtube.upload, youtube.readonly)
+- Retourneert `NOT_CONFIGURED` als API keys ontbreken (PINTEREST_APP_ID/SECRET, YOUTUBE_CLIENT_ID/SECRET)
+- SocialAccountsCards.jsx volledig herschreven:
+  - YouTube toegevoegd als 7e platform
+  - "Koppelen" button met platform-kleur voor LinkedIn/Pinterest/YouTube
+  - "Autorisatie afronden" voor pending accounts
+  - "Token vernieuwen" + "Opnieuw koppelen" voor expired/fix accounts
+  - Tooltip met uitleg voor platforms zonder connect (Facebook/Instagram via Meta Business Suite, X API keys vereist, TikTok binnenkort)
+  - connectPinterest() en connectYouTube() in contentService.js
+
+### P1 — Functioneel
+
+**4e: DeepL vertalingen geactiveerd**
+- `DEEPL_API_KEY=aa7b4a7b-5e86-48b8-aedc-3680b628ef09` was al in .env op Hetzner
+- DeepL Pro API (api.deepl.com, niet api-free) actief bevestigd via ESM import check
+- translationService.js v2.0 gebruikt DeepL-first + Mistral AI fallback
+- deeplTranslator.js comment opgeruimd (hardcoded URL verwijderd, auto-detect behouden)
+
+**4b+4d: Auto-crop images per platform bij publicatie**
+- Publisher Agent (#25) formatteert nu automatisch attached images voor het doelplatform
+- Sharp resizing met `fit: cover` + `position: centre` naar platform-specifieke dimensies
+- Platform specs: Instagram 1080x1080, Facebook 1200x630, LinkedIn 1200x627, Pinterest 1000x1500, YouTube 1280x720, TikTok 1080x1920, X 1200x675
+- Geformatteerde image URL meegestuurd in `social_metadata.image_url`
+- Non-blocking: crop falen blokkeert publicatie niet
+
+**6: UTM parameters werkend**
+- `applyUtmToContent()` geïmporteerd en geïntegreerd in Publisher publish flow
+- Alle URLs in content body krijgen automatisch UTM params: `utm_source={platform}&utm_medium=social&utm_campaign=content_{id}&utm_content={type}&utm_term={title_slug}`
+- Destination URL (custom_domain) met UTM tracking automatisch toegevoegd aan `social_metadata.link` als er geen link aanwezig is
+- Bestaande URLs met UTM params worden overgeslagen (geen dubbele params)
+- Image URLs (.jpg, .png, etc.) worden overgeslagen
+
+### Gewijzigde bestanden
+
+| Actie | Bestand | Beschrijving |
+|-------|---------|-------------|
+| HERSCHREVEN | `admin-module/src/components/content/PlatformPreview.jsx` | Auto-adapt, health indicators, tips, adaptation warnings |
+| HERSCHREVEN | `admin-module/src/components/content/SocialAccountsCards.jsx` | 7 platforms, connect/pending/refresh, tooltips |
+| WIJZIG | `admin-module/src/api/contentService.js` | +connectPinterest(), +connectYouTube() |
+| WIJZIG | `platform-core/src/routes/adminPortal.js` | +2 connect endpoints, auto-attach images bij generatie |
+| WIJZIG | `platform-core/src/services/agents/contentRedacteur/contentGenerator.js` | repurposeContent() enterprise rewrite + PLATFORM_EXAMPLES |
+| WIJZIG | `platform-core/src/services/agents/contentRedacteur/deeplTranslator.js` | Comment fix (hardcoded URL verwijderd) |
+| WIJZIG | `platform-core/src/services/agents/publisher/index.js` | +UTM applyUtmToContent(), +auto-crop formatImage() |
+
+### Statistieken
+
+- **25 agents** (ongewijzigd)
+- **62 BullMQ jobs** (ongewijzigd)
+- **212 admin endpoints** (+2: Pinterest connect, YouTube connect)
+- **adminPortal.js v3.32.0**
+
+### Documentatie
+
+CLAUDE.md v4.8.0 → v4.9.0. MS v7.68 → v7.69. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

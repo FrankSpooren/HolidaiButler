@@ -518,6 +518,7 @@
     "roles": {
       "platform_admin": "Platform Admin",
       "poi_owner": "POI Owner",
+      "content_manager": "Content Manager",
       "editor": "Content Editor",
       "reviewer": "Content Reviewer"
     },

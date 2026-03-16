@@ -688,9 +688,64 @@ function buildPOIContext(poi) {
 }
 
 /**
- * Repurpose content — ADAPT existing content for different platforms.
- * Unlike generateContent(), this passes the ORIGINAL text to the AI with
- * explicit per-platform rewriting instructions and strict character limits.
+ * Platform-specific example outputs — show Mistral AI what GREAT content looks like per platform.
+ * These examples are critical for differentiation quality.
+ */
+const PLATFORM_EXAMPLES = {
+  instagram: `EXAMPLE Instagram post (travel/tourism):
+Stepping into the golden light of the Mediterranean, where every corner tells a story worth sharing.
+
+We wandered through narrow cobblestone streets, found a hidden courtyard cafe, and tasted the best local wine of the season. The kind of moment you want to bottle up forever.
+
+Have you ever discovered a place that instantly felt like home? Tell us your favorite hidden gem below.
+
+Save this for your next trip planning session.
+
+#MediterraneanTravel #HiddenGems #TravelInspiration #LocalFlavors #CoastalVibes`,
+
+  facebook: `EXAMPLE Facebook post (travel/tourism):
+Ever walked into a restaurant and instantly known you found THE spot? That happened to us last week in the old town.
+
+Family-run since 1987, incredible seafood, and a terrace view that made us forget time exists. Link in bio for the full guide.
+
+Who else loves finding these local treasures? Tag your travel buddy!`,
+
+  linkedin: `EXAMPLE LinkedIn post (travel/tourism):
+The tourism industry is shifting. Travelers no longer want cookie-cutter experiences.
+
+After analyzing visitor data from 50+ destinations, one pattern stands out: authentic local experiences drive 3x more engagement than generic tourist attractions.
+
+Our approach: partner directly with local businesses to curate genuine recommendations that match each traveler's interests.
+
+The result? Higher satisfaction scores, longer stays, and visitors who actually return.
+
+What trends are you seeing in the travel space?`,
+
+  x: `EXAMPLE X post:
+Just discovered the most incredible hidden beach on the Costa Blanca. Crystal water, zero crowds, local chiringuito with fresh paella. This is why we explore. #CostaBlanca #HiddenBeach`,
+
+  tiktok: `EXAMPLE TikTok caption:
+POV: you found the secret local spot everyone keeps gatekeeping #TravelTok #HiddenGem #FoodieTravel`,
+
+  youtube: `EXAMPLE YouTube description:
+Discover the hidden gems of the Costa Blanca that most tourists completely miss. In this guide, we explore 5 incredible spots recommended by locals.
+
+Timestamps:
+0:00 - Introduction
+1:30 - Hidden Beach Cala del Moraig
+3:45 - Best Local Market
+6:00 - Mountain Village Walk
+
+Subscribe for weekly travel guides and local tips!`,
+
+  pinterest: `EXAMPLE Pinterest description:
+Dreaming of Mediterranean sunsets and charming coastal villages? This complete travel guide covers the best beaches, authentic restaurants, and hidden viewpoints along the Costa Blanca. Save this pin for your next European getaway.`,
+};
+
+/**
+ * Repurpose content — GENUINELY REWRITE existing content for different platforms.
+ * Each platform gets a completely different version optimized for its audience,
+ * format, and engagement patterns. NOT a copy-paste with slight modifications.
  *
  * @param {Object} sourceItem - Source content item from DB
  * @param {string[]} targetPlatforms - Target platforms
@@ -722,45 +777,95 @@ export async function repurposeContent(sourceItem, targetPlatforms, destinationI
     throw new Error('Source content item has no body text to repurpose');
   }
 
+  // Extract key facts from the original for fact-checking
+  const keyFacts = originalBody.substring(0, 800);
+
   const results = [];
 
   for (const platform of targetPlatforms) {
     const platformRules = PROMPT_PLATFORM_RULES[platform] || PROMPT_PLATFORM_RULES.facebook;
+    const example = PLATFORM_EXAMPLES[platform] || '';
 
-    const systemPrompt = `You are an expert social media content writer for a premium tourism platform.
+    const systemPrompt = `You are a top-tier ${platform} content specialist for a premium tourism platform.
+You REWRITE content from scratch for ${platform} — you do NOT summarize, truncate, or slightly edit the original.
 
 ${toneInstruction}
 
-YOUR TASK: Adapt the given source content into a ${platform} post.
-Do NOT just truncate or copy — write a NEW, platform-optimized version that:
-- Captures the essence and key message of the original
-- Is written specifically for ${platform}'s audience and style
-- Follows the platform rules below EXACTLY
+YOUR MISSION: Create a COMPLETELY NEW ${platform} post inspired by the source content.
+The output must feel native to ${platform} — as if a ${platform} specialist wrote it from scratch.
 
-PLATFORM RULES FOR ${platform.toUpperCase()}:
-- Maximum ${platformRules.maxChars} characters (STRICT — content MUST be under this limit)
-- ${platformRules.rules}
-- Emoji count: ${platformRules.emojiCount} (natural placement)
-- Hashtags: ${platformRules.maxHashtags > 0 ? `${platformRules.maxHashtags} max, position: ${platformRules.hashtagPosition}` : 'none'}
+WHAT MAKES ${platform} CONTENT UNIQUE:
+${platform === 'instagram' ? `- Opens with a powerful HOOK line (visible before "more" button) — emotional, evocative, or surprising
+- Storytelling narrative — take the reader on a journey, use sensory language
+- Personal tone ("we discovered", "you'll love")
+- Emoji woven naturally into the narrative (not clustered)
+- Hashtags on a SEPARATE line at the end with blank line before them
+- Optimal length: 800-1500 characters for maximum engagement` :
+platform === 'facebook' ? `- Conversational, like talking to a friend over coffee
+- Opens with a question or relatable statement to drive comments
+- Short paragraphs (2-3 sentences max)
+- Includes a clear call-to-action (tag someone, share your experience)
+- Moderate emoji use, natural placement
+- Optimal length: 100-250 characters for posts, up to 500 with engagement` :
+platform === 'linkedin' ? `- Professional, insightful, value-driven thought leadership
+- Opens with a bold statement or industry insight
+- Data-driven when possible — mention numbers, percentages, trends
+- Short paragraphs with line breaks for readability
+- Minimal emoji (0-2 max), professional tone
+- Ends with a question to encourage professional discussion
+- Hashtags at the very end (3-5 relevant industry hashtags)` :
+platform === 'x' ? `- Ultra-concise, every word counts — 280 char HARD limit
+- Punchy, witty, or provocative opening
+- One core message only — no fluff
+- Hashtags woven INTO the text (1-2 max), not appended
+- No emoji overload — 0-1 max
+- Think headline + hook, not article` :
+platform === 'tiktok' ? `- Gen-Z friendly, trendy slang OK
+- "POV:" or "When you..." format works well
+- Ultra-short: 100-150 chars max
+- Trending hashtags are essential
+- Casual, fun, spontaneous vibe` :
+platform === 'youtube' ? `- SEO-rich description with keywords in first 2 lines
+- Timestamp format if applicable
+- Include relevant links and subscribe CTA
+- Longer, detailed, informative
+- Hashtags at the end (up to 15)` :
+platform === 'pinterest' ? `- Aspirational, dreamy, inspirational language
+- Keyword-rich for Pinterest search discovery
+- Descriptive: paint a picture the reader wants to save
+- Actionable: "Save for later", "Add to your travel board"
+- No excessive emoji — clean, elegant` :
+`- Write naturally for ${platform}'s audience`}
+
+${example ? `\nHERE IS AN EXAMPLE of excellent ${platform} content (DO NOT copy this — use it as style reference only):\n---\n${example}\n---\n` : ''}
+
+STRICT PLATFORM RULES:
+- Maximum ${platformRules.maxChars} characters (ABSOLUTE LIMIT — count carefully)
+- Emoji: ${platformRules.emojiCount} (natural placement, not forced)
+- Hashtags: ${platformRules.maxHashtags > 0 ? `max ${platformRules.maxHashtags}, position: ${platformRules.hashtagPosition}` : 'none'}
 
 ABSOLUTE RULES:
 - Write as PLAIN TEXT ready to paste directly into ${platform}
 - NEVER use markdown: no **, no ##, no ---, no \`, no []()
 - NEVER include labels like CAPTION:, POST:, HOOK:, CTA:, TITLE:
-- Facts must remain accurate — do NOT add attractions/events not in the original
-- EU AI Act compliance: this is AI-generated content
-${keywords.length > 0 ? `- Incorporate these keywords naturally: ${keywords.join(', ')}` : ''}
+- ALL facts must come from the original content — do NOT invent new information
+- EU AI Act: this is AI-generated content for a tourism platform
+${keywords.length > 0 ? `- Weave these keywords naturally: ${keywords.join(', ')}` : ''}
 
 Return ONLY the post text. Nothing else. No quotes around it.`;
 
-    const userPrompt = `Adapt the following content for ${platform}.
+    const userPrompt = `REWRITE this content as a native ${platform} post.
+Do NOT summarize or truncate. Create something NEW that a ${platform} expert would write.
 
-ORIGINAL TITLE: ${sourceItem.title || 'Untitled'}
+SOURCE TITLE: ${sourceItem.title || 'Untitled'}
 
-ORIGINAL CONTENT:
-${originalBody}
+KEY FACTS FROM SOURCE (must remain accurate):
+${keyFacts}
 
-Write a ${platform}-optimized version. Maximum ${platformRules.maxChars} characters. Start directly with the post text.`;
+FULL SOURCE:
+${originalBody.substring(0, 3000)}
+
+Write your ${platform} post now. Maximum ${platformRules.maxChars} characters. Start directly.`;
 
     try {
       let content = await embeddingService.generateChatCompletion(
@@ -769,7 +874,7 @@ Write a ${platform}-optimized version. Maximum ${platformRules.maxChars} charact
           { role: 'user', content: userPrompt },
         ],
         {
-          temperature: 0.7,
+          temperature: 0.8, // Higher temp for more creative differentiation
           maxTokens: 1500,
         }
       );
@@ -778,22 +883,52 @@ Write a ${platform}-optimized version. Maximum ${platformRules.maxChars} charact
       content = sanitizeContent(content, 'social_post', platform);
       content = formatForPlatform(content, platform);
 
-      // Strict character limit enforcement — retry once if over limit
-      if (platformRules.maxChars && content.length > platformRules.maxChars) {
-        logger.info(`[Repurpose] ${platform} output ${content.length}/${platformRules.maxChars} chars — retrying with stricter prompt`);
+      // Strict character limit enforcement — retry up to 2 times
+      let retryCount = 0;
+      while (platformRules.maxChars && content.length > platformRules.maxChars && retryCount < 2) {
+        retryCount++;
+        logger.info(`[Repurpose] ${platform} output ${content.length}/${platformRules.maxChars} chars — retry ${retryCount}`);
         const retryContent = await embeddingService.generateChatCompletion(
           [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `${userPrompt}\n\nCRITICAL: Your previous attempt was ${content.length} characters, which exceeds the ${platformRules.maxChars} limit. Write a SHORTER version. Count your characters carefully.` },
+            { role: 'user', content: `REWRITE for ${platform}. CRITICAL: You MUST stay under ${platformRules.maxChars} characters. Your previous attempt was ${content.length} characters — TOO LONG.
+
+Key message from source: ${sourceItem.title}
+Key facts: ${keyFacts.substring(0, 500)}
+
+Write a SHORTER, punchier ${platform} post. ${platformRules.maxChars} chars MAX. Start directly.` },
           ],
-          { temperature: 0.5, maxTokens: 1000 }
+          { temperature: 0.5, maxTokens: 800 }
         );
-        const sanitizedRetry = sanitizeContent(retryContent, 'social_post', platform);
-        content = formatForPlatform(sanitizedRetry, platform);
+        content = sanitizeContent(retryContent, 'social_post', platform);
+        content = formatForPlatform(content, platform);
       }
 
-      // Generate platform-appropriate hashtags
-      const hashtags = platformRules.maxHashtags > 0 ? generateHashtags(keywords, platform) : [];
+      // Final hard truncation safety net (should rarely trigger after retries)
+      if (platformRules.maxChars && content.length > platformRules.maxChars) {
+        logger.warn(`[Repurpose] ${platform} still over limit after retries (${content.length}/${platformRules.maxChars}) — hard truncating`);
+        const truncAt = content.lastIndexOf(' ', platformRules.maxChars - 4);
+        content = content.substring(0, truncAt > platformRules.maxChars * 0.7 ? truncAt : platformRules.maxChars - 4) + '...';
+      }
+
+      // Generate platform-appropriate hashtags if not already included
+      let hashtags = [];
+      if (platformRules.maxHashtags > 0) {
+        const existingHashtags = (content.match(/#[a-zA-Z0-9\u00C0-\u024F]+/g) || []).length;
+        if (existingHashtags === 0) {
+          hashtags = generateHashtags(keywords, platform);
+        }
+      }
+
+      // SEO analysis for the repurposed content
+      let seoScore = null;
+      try {
+        const seoResult = await analyzeContent(
+          { title: sourceItem.title, body_en: content, seo_data: {}, content_type: 'social_post', keyword_cluster: keywords },
+          destId
+        );
+        seoScore = seoResult.overallScore;
+      } catch { /* SEO analysis is optional for repurposed content */ }
 
       const result = {
         title: sourceItem.title,
@@ -806,9 +941,13 @@ Write a ${platform}-optimized version. Maximum ${platformRules.maxChars} charact
         hashtags,
         source_content_id: sourceItem.id,
         poi_id: sourceItem.poi_id,
+        seo_score: seoScore,
+        char_count: content.length,
+        char_limit: platformRules.maxChars,
       };
 
       results.push(result);
+      logger.info(`[Repurpose] ${platform}: ${content.length}/${platformRules.maxChars} chars, SEO: ${seoScore || 'N/A'}`);
     } catch (error) {
       logger.error(`[Repurpose] Failed for ${platform}:`, error);
       throw error;
