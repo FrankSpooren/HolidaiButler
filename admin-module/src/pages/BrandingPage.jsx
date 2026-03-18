@@ -4,7 +4,7 @@ import {
   Tabs, Tab, Skeleton, MenuItem, Select, FormControl, InputLabel,
   IconButton, Chip, Accordion, AccordionSummary, AccordionDetails,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Checkbox, FormControlLabel
+  Checkbox, FormControlLabel, Switch
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
@@ -238,6 +238,17 @@ export default function BrandingPage() {
           formalAddress: 'je',
           brandValues: '',
           coreKeywords: '',
+        },
+        mobileHomepage: b.mobileHomepage || {
+          brandName: activeDest.displayName?.toUpperCase() || '',
+          greeting: '¡Bienvenido!',
+          greetingEmoji: '👋',
+          subtitle: { nl: '', en: '', de: '', es: '' },
+          mapLabel: { nl: '', en: '', de: '', es: '' },
+          showOnboarding: true,
+          programSize: 4,
+          mapPoiLimit: 8,
+          mapEventLimit: 2,
         }
       });
     }
@@ -1213,6 +1224,111 @@ export default function BrandingPage() {
           </BrandingAccordion>
 
           {/* === PRIVACY === */}
+          <BrandingAccordion
+            id="mobile-homepage"
+            title={t('branding.mobileHomepage', 'Mobiele Homepage')}
+            subtitle={t('branding.mobileHomepageSubtitle', 'Mobile homepage configuration (brand, greeting, map, onboarding)')}
+          >
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth size="small"
+                  label={t('branding.mobile.brandName', 'Brand naam (header)')}
+                  value={form.mobileHomepage?.brandName || ''}
+                  onChange={e => setForm(prev => ({ ...prev, mobileHomepage: { ...prev.mobileHomepage, brandName: e.target.value } }))}
+                  placeholder="CALPETRIP"
+                  helperText={t('branding.mobile.brandNameHelp', 'Uppercase, shown in mobile header')}
+                />
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <TextField
+                  fullWidth size="small"
+                  label={t('branding.mobile.greeting', 'Begroeting')}
+                  value={form.mobileHomepage?.greeting || ''}
+                  onChange={e => setForm(prev => ({ ...prev, mobileHomepage: { ...prev.mobileHomepage, greeting: e.target.value } }))}
+                  placeholder="¡Bienvenido!"
+                />
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <TextField
+                  fullWidth size="small"
+                  label={t('branding.mobile.greetingEmoji', 'Emoji')}
+                  value={form.mobileHomepage?.greetingEmoji || ''}
+                  onChange={e => setForm(prev => ({ ...prev, mobileHomepage: { ...prev.mobileHomepage, greetingEmoji: e.target.value } }))}
+                  placeholder="👋"
+                />
+              </Grid>
+              {['nl', 'en', 'de', 'es'].map(lang => (
+                <Grid item xs={12} sm={6} key={`sub-${lang}`}>
+                  <TextField
+                    fullWidth size="small"
+                    label={`${t('branding.mobile.subtitle', 'Ondertitel')} (${lang.toUpperCase()})`}
+                    value={form.mobileHomepage?.subtitle?.[lang] || ''}
+                    onChange={e => setForm(prev => ({
+                      ...prev,
+                      mobileHomepage: {
+                        ...prev.mobileHomepage,
+                        subtitle: { ...prev.mobileHomepage?.subtitle, [lang]: e.target.value }
+                      }
+                    }))}
+                  />
+                </Grid>
+              ))}
+              {['nl', 'en', 'de', 'es'].map(lang => (
+                <Grid item xs={12} sm={6} key={`map-${lang}`}>
+                  <TextField
+                    fullWidth size="small"
+                    label={`${t('branding.mobile.mapLabel', 'Kaart-label')} (${lang.toUpperCase()})`}
+                    value={form.mobileHomepage?.mapLabel?.[lang] || ''}
+                    onChange={e => setForm(prev => ({
+                      ...prev,
+                      mobileHomepage: {
+                        ...prev.mobileHomepage,
+                        mapLabel: { ...prev.mobileHomepage?.mapLabel, [lang]: e.target.value }
+                      }
+                    }))}
+                  />
+                </Grid>
+              ))}
+              <Grid item xs={6} sm={3}>
+                <TextField
+                  fullWidth size="small" type="number"
+                  label={t('branding.mobile.programSize', 'Programma items')}
+                  value={form.mobileHomepage?.programSize || 4}
+                  onChange={e => setForm(prev => ({ ...prev, mobileHomepage: { ...prev.mobileHomepage, programSize: parseInt(e.target.value) || 4 } }))}
+                  inputProps={{ min: 2, max: 8 }}
+                />
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <TextField
+                  fullWidth size="small" type="number"
+                  label={t('branding.mobile.mapPoiLimit', 'Kaart POI-pins')}
+                  value={form.mobileHomepage?.mapPoiLimit || 8}
+                  onChange={e => setForm(prev => ({ ...prev, mobileHomepage: { ...prev.mobileHomepage, mapPoiLimit: parseInt(e.target.value) || 8 } }))}
+                  inputProps={{ min: 4, max: 20 }}
+                />
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <TextField
+                  fullWidth size="small" type="number"
+                  label={t('branding.mobile.mapEventLimit', 'Kaart Event-pins')}
+                  value={form.mobileHomepage?.mapEventLimit || 2}
+                  onChange={e => setForm(prev => ({ ...prev, mobileHomepage: { ...prev.mobileHomepage, mapEventLimit: parseInt(e.target.value) || 2 } }))}
+                  inputProps={{ min: 0, max: 10 }}
+                />
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, height: '100%' }}>
+                  <Switch
+                    checked={form.mobileHomepage?.showOnboarding !== false}
+                    onChange={e => setForm(prev => ({ ...prev, mobileHomepage: { ...prev.mobileHomepage, showOnboarding: e.target.checked } }))}
+                  />
+                  <Typography variant="body2">{t('branding.mobile.showOnboarding', 'Onboarding aan')}</Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </BrandingAccordion>
+
           <BrandingAccordion
             id="privacy"
             title={t('branding.privacySection', 'Privacy')}
