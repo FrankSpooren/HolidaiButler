@@ -187,21 +187,38 @@ app.use('/api/v1/pages', pagesRoutes); // Pages & Destinations (Fase V)
 app.use('/api/v1/contact', contactRoutes); // Contact Form (Fase V.6)
 app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V.6)
 
+// OAuth helper — public base URL for callbacks (behind Apache reverse proxy req.get('host') returns localhost)
+function getOAuthBaseUrl() {
+  return process.env.OAUTH_BASE_URL || 'https://api.holidaibutler.com';
+}
+
+// Extract destination_id from OAuth state (format: hex16_destId)
+function parseOAuthState(state) {
+  if (!state) return { nonce: state, destinationId: 1 };
+  const parts = state.split('_');
+  if (parts.length === 2 && !isNaN(parts[1])) {
+    return { nonce: parts[0], destinationId: Number(parts[1]) };
+  }
+  return { nonce: state, destinationId: 1 };
+}
+
 // LinkedIn OAuth Callback (Fase C — Content Publishing)
 app.get('/api/v1/oauth/linkedin/callback', async (req, res) => {
   try {
-    const { code, state } = req.query;
-    if (!code) return res.status(400).send('Missing authorization code');
+    const { code, state, error, error_description } = req.query;
+    if (error) return res.status(400).send(`LinkedIn OAuth error: ${error} — ${error_description || 'Geen details'}`);
+    if (!code) return res.status(400).send(`Missing authorization code. Query params: ${JSON.stringify(req.query)}`);
+    const { destinationId } = parseOAuthState(state);
     const LinkedInClient = (await import('./services/agents/publisher/clients/linkedinClient.js')).default;
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/linkedin/callback`;
+    const redirectUri = `${getOAuthBaseUrl()}/api/v1/oauth/linkedin/callback`;
     const tokenData = await LinkedInClient.exchangeCodeForToken(code, redirectUri);
     const SocialAccount = (await import('./models/SocialAccount.js')).default;
     const encrypted = SocialAccount.encryptToken(tokenData.access_token);
     const refreshEncrypted = tokenData.refresh_token ? SocialAccount.encryptToken(tokenData.refresh_token) : null;
     await mysqlSequelize.query(
       `UPDATE social_accounts SET access_token_encrypted = :token, refresh_token_encrypted = :refresh, token_expires_at = :expires, status = 'active', updated_at = NOW()
-       WHERE platform = 'linkedin' AND destination_id = 1`,
-      { replacements: { token: encrypted, refresh: refreshEncrypted, expires: tokenData.expires_at || null } }
+       WHERE platform = 'linkedin' AND destination_id = :destId`,
+      { replacements: { token: encrypted, refresh: refreshEncrypted, expires: tokenData.expires_at || null, destId: destinationId } }
     );
     res.send('<html><body><h2>LinkedIn gekoppeld!</h2><p>Je kunt dit venster sluiten.</p><script>window.close();</script></body></html>');
   } catch (error) {
@@ -213,10 +230,10 @@ app.get('/api/v1/oauth/linkedin/callback', async (req, res) => {
 // Pinterest OAuth Callback (Fase C — Content Publishing)
 app.get('/api/v1/oauth/pinterest/callback', async (req, res) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
     if (!code) return res.status(400).send('Missing authorization code');
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/pinterest/callback`;
-    // Exchange code for token
+    const { destinationId } = parseOAuthState(state);
+    const redirectUri = `${getOAuthBaseUrl()}/api/v1/oauth/pinterest/callback`;
     const response = await fetch('https://api.pinterest.com/v5/oauth/token', {
       method: 'POST',
       headers: {
@@ -235,8 +252,8 @@ app.get('/api/v1/oauth/pinterest/callback', async (req, res) => {
     const expiresAt = data.expires_in ? new Date(Date.now() + data.expires_in * 1000).toISOString().slice(0, 19).replace('T', ' ') : null;
     await mysqlSequelize.query(
       `UPDATE social_accounts SET access_token_encrypted = :token, refresh_token_encrypted = :refresh, token_expires_at = :expires, status = 'active', updated_at = NOW()
-       WHERE platform = 'pinterest' AND destination_id = 1`,
-      { replacements: { token: encrypted, refresh: refreshEncrypted, expires: expiresAt } }
+       WHERE platform = 'pinterest' AND destination_id = :destId`,
+      { replacements: { token: encrypted, refresh: refreshEncrypted, expires: expiresAt, destId: destinationId } }
     );
     res.send('<html><body><h2>Pinterest gekoppeld!</h2><p>Je kunt dit venster sluiten.</p><script>window.close();</script></body></html>');
   } catch (error) {
@@ -248,10 +265,10 @@ app.get('/api/v1/oauth/pinterest/callback', async (req, res) => {
 // YouTube/Google OAuth Callback (Fase C — Content Publishing)
 app.get('/api/v1/oauth/youtube/callback', async (req, res) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
     if (!code) return res.status(400).send('Missing authorization code');
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/youtube/callback`;
-    // Exchange code for token via Google OAuth2
+    const { destinationId } = parseOAuthState(state);
+    const redirectUri = `${getOAuthBaseUrl()}/api/v1/oauth/youtube/callback`;
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -270,8 +287,8 @@ app.get('/api/v1/oauth/youtube/callback', async (req, res) => {
     const expiresAt = data.expires_in ? new Date(Date.now() + data.expires_in * 1000).toISOString().slice(0, 19).replace('T', ' ') : null;
     await mysqlSequelize.query(
       `UPDATE social_accounts SET access_token_encrypted = :token, refresh_token_encrypted = :refresh, token_expires_at = :expires, status = 'active', updated_at = NOW()
-       WHERE platform = 'youtube' AND destination_id = 1`,
-      { replacements: { token: encrypted, refresh: refreshEncrypted, expires: expiresAt } }
+       WHERE platform = 'youtube' AND destination_id = :destId`,
+      { replacements: { token: encrypted, refresh: refreshEncrypted, expires: expiresAt, destId: destinationId } }
     );
     res.send('<html><body><h2>YouTube gekoppeld!</h2><p>Je kunt dit venster sluiten.</p><script>window.close();</script></body></html>');
   } catch (error) {

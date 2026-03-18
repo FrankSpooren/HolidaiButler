@@ -242,10 +242,40 @@ function validatePassword(password, email, name) {
 
 const ROLE_HIERARCHY = {
   platform_admin: 100,
+  destination_admin: 90,
   poi_owner: 70,
   content_manager: 60,
   editor: 50,
   reviewer: 30
+};
+
+// Permission matrix per role — used by frontend (GET /auth/permissions) and route guards
+const ROLE_PERMISSIONS = {
+  platform_admin: {
+    allDestinations: true, settings: true, userManagement: true,
+    contentStudio: { generate: true, edit: true, approve: true, publish: true, socialConnect: true },
+  },
+  destination_admin: {
+    allDestinations: false, settings: false, userManagement: false,
+    contentStudio: { generate: true, edit: true, approve: true, publish: true, socialConnect: true },
+  },
+  poi_owner: {
+    allDestinations: false, settings: false, userManagement: false,
+    contentStudio: { generate: false, edit: false, approve: false, publish: false, socialConnect: false },
+    poiScope: 'own_pois_only',
+  },
+  content_manager: {
+    allDestinations: false, settings: false, userManagement: false,
+    contentStudio: { generate: true, edit: true, approve: false, publish: false, socialConnect: false },
+  },
+  editor: {
+    allDestinations: false, settings: false, userManagement: false,
+    contentStudio: { generate: true, edit: true, approve: false, publish: false, socialConnect: false },
+  },
+  reviewer: {
+    allDestinations: false, settings: false, userManagement: false,
+    contentStudio: { generate: false, edit: false, approve: false, publish: false, socialConnect: false },
+  },
 };
 
 /**
@@ -311,7 +341,7 @@ function adminAuth(requiredRole = 'reviewer') {
 
       // 5. Check destination access (if destination filter applied)
       const destFilter = req.query.destination || req.headers['x-admin-destination'] || null;
-      if (destFilter && user.role !== 'platform_admin' && allowedDests.length > 0) {
+      if (destFilter && !['platform_admin'].includes(user.role) && allowedDests.length > 0) {
         const destCode = String(destFilter).toLowerCase();
         if (!allowedDests.includes(destCode)) {
           return res.status(403).json({
@@ -330,7 +360,7 @@ function adminAuth(requiredRole = 'reviewer') {
       try { ownedPois = JSON.parse(user.owned_pois || '[]'); } catch { ownedPois = []; }
 
       // Resolve destination codes to IDs for query scoping
-      const destCodeToId = { calpe: 1, texel: 2, alicante: 3 };
+      const destCodeToId = { calpe: 1, texel: 2, alicante: 3, warrewijzer: 4 };
       const allowedDestIds = allowedDests.map(code => destCodeToId[code]).filter(Boolean);
 
       req.adminUser = {
@@ -381,7 +411,7 @@ function destinationScope(req, res, next) {
     return next();
   }
 
-  // Editor/Reviewer: scoped to allowed destination IDs
+  // Destination Admin / Editor / Reviewer: scoped to allowed destination IDs
   if (user.allowed_destination_ids && user.allowed_destination_ids.length > 0) {
     req.destScope = user.allowed_destination_ids;
   } else {
@@ -640,7 +670,8 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
           email: user.email,
           name: user.name,
           role: user.role,
-          allowed_destinations: user.allowed_destinations
+          allowed_destinations: user.allowed_destinations,
+          permissions: ROLE_PERMISSIONS[user.role] || ROLE_PERMISSIONS.reviewer
         },
         accessToken,
         refreshToken
@@ -653,6 +684,15 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
       error: { code: 'SERVER_ERROR', message: 'An error occurred during login' }
     });
   }
+});
+
+/**
+ * GET /auth/permissions
+ * Returns the RBAC permissions for the current user's role.
+ */
+router.get('/auth/permissions', adminAuth('reviewer'), (req, res) => {
+  const perms = ROLE_PERMISSIONS[req.adminUser.role] || ROLE_PERMISSIONS.reviewer;
+  res.json({ success: true, data: { role: req.adminUser.role, permissions: perms } });
 });
 
 /**
@@ -1447,13 +1487,15 @@ const SCHEDULED_JOBS_METADATA = [
   { name: 'inventory-sync', agent: 'De Magazijnier', cron: '*/30 * * * *', description: 'Voorraad synchronisatie Redis vs MySQL' },
   // Content Module
   { name: 'content-trending-scan', agent: 'De Trendspotter', cron: '30 3 * * 0', description: 'Wekelijkse trending keyword collectie en analyse via Google Trends' },
+  { name: 'content-website-traffic', agent: 'De Trendspotter', cron: '45 3 * * 0', description: 'Wekelijkse website traffic analyse uit Apache access logs' },
   { name: 'content-seo-audit', agent: 'De SEO Meester', cron: '0 4 * * 1', description: 'Wekelijkse SEO audit: readability, keyword density, SISTRIX visibility' },
   // Fase C: Publisher Agent
   { name: 'content-publish-scheduled', agent: 'De Uitgever', cron: '*/15 * * * *', description: 'Verwerk scheduled publicaties naar Facebook/Instagram/LinkedIn' },
   { name: 'content-analytics-collect', agent: 'De Uitgever', cron: '0 9 * * *', description: 'Dagelijkse engagement metrics ophalen per platform' },
   { name: 'seasonal-check', agent: 'De Maestro', cron: '15 0 * * *', description: 'Dagelijkse seizoenswisseling check + homepage override' },
   // Fase D: Feedback Loop
-  { name: 'content-feedback-loop', agent: 'De Trendspotter', cron: '0 4 * * 0', description: 'Wekelijkse feedback loop: correleer trending keywords met content performance' }
+  { name: 'content-feedback-loop', agent: 'De Trendspotter', cron: '0 4 * * 0', description: 'Wekelijkse feedback loop: correleer trending keywords met content performance' },
+  { name: 'content-score-calibration', agent: 'De SEO Meester', cron: '0 5 * * 0', description: 'Wekelijkse score calibratie: vergelijk voorspelde Social Score met werkelijke engagement' }
 ];
 
 /**
@@ -3136,7 +3178,7 @@ router.get('/pois/:id', adminAuth('reviewer'), destinationScope, async (req, res
  * PUT /pois/:id
  * Update POI content and/or is_active. Audit logged.
  */
-router.put('/pois/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner', 'editor']), async (req, res) => {
+router.put('/pois/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'editor']), async (req, res) => {
   try {
     const poiId = parseInt(req.params.id);
     if (!poiId || isNaN(poiId)) {
@@ -3283,7 +3325,7 @@ router.put('/pois/:id', adminAuth('editor'), destinationScope, writeAccess(['pla
  * Reorder POI images. Accepts ordered array of image IDs.
  * Requires display_order column in imageurls table.
  */
-router.put('/pois/:id/images', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner', 'editor']), async (req, res) => {
+router.put('/pois/:id/images', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'editor']), async (req, res) => {
   try {
     const poiId = parseInt(req.params.id);
     if (!poiId || isNaN(poiId)) {
@@ -3369,7 +3411,7 @@ router.put('/pois/:id/images', adminAuth('editor'), destinationScope, writeAcces
  * Permanently delete a POI image. Removes from DB, renumbers remaining images.
  * C1: Fase 9F audit — image permanent verwijderen.
  */
-router.delete('/pois/:poiId/images/:imageId', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner', 'editor']), async (req, res) => {
+router.delete('/pois/:poiId/images/:imageId', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'editor']), async (req, res) => {
   try {
     const poiId = parseInt(req.params.poiId);
     const imageId = parseInt(req.params.imageId);
@@ -3709,7 +3751,7 @@ router.get('/reviews/:id', adminAuth('reviewer'), destinationScope, async (req, 
  * PUT /reviews/:id
  * Archive or unarchive a review. Audit logged.
  */
-router.put('/reviews/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner', 'editor']), async (req, res) => {
+router.put('/reviews/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'editor']), async (req, res) => {
   try {
     const reviewId = parseInt(req.params.id);
     if (!reviewId || isNaN(reviewId)) {
@@ -4583,7 +4625,7 @@ router.get('/analytics/snapshot', adminAuth('reviewer'), destinationScope, async
  * GET /settings
  * System info, destinations, admin info, feature flags.
  */
-router.get('/settings', adminAuth('reviewer'), async (req, res) => {
+router.get('/settings', adminAuth('platform_admin'), async (req, res) => {
   try {
     // System info
     const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
@@ -4692,7 +4734,7 @@ function formatUptime(seconds) {
  * GET /settings/audit-log
  * Admin audit log from MongoDB.
  */
-router.get('/settings/audit-log', adminAuth('reviewer'), async (req, res) => {
+router.get('/settings/audit-log', adminAuth('platform_admin'), async (req, res) => {
   try {
     const { page = 1, limit = 25, action } = req.query;
     const pageNum = Math.max(1, parseInt(page) || 1);
@@ -6197,7 +6239,7 @@ router.get('/issues/:issueId', adminAuth('reviewer'), async (req, res) => {
 });
 
 // PUT /issues/:issueId/status — Update issue status
-router.put('/issues/:issueId/status', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'editor']), async (req, res) => {
+router.put('/issues/:issueId/status', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'editor']), async (req, res) => {
   try {
     const { status, resolution } = req.body;
     const validStatuses = ['acknowledged', 'in_progress', 'resolved', 'wont_fix'];
@@ -6562,7 +6604,7 @@ router.get('/payments/:id', adminAuth('reviewer'), destinationScope, async (req,
 /**
  * POST /payments/:id/refund — Initiate refund for a transaction.
  */
-router.post('/payments/:id/refund', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.post('/payments/:id/refund', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const { amount_cents, reason, reason_note } = req.body;
 
@@ -6646,7 +6688,7 @@ router.get('/tickets', adminAuth('reviewer'), destinationScope, async (req, res)
 });
 
 // --- POST /tickets — Create ticket definition ---
-router.post('/tickets', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.post('/tickets', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const destinationId = req.destScope?.[0] || parseInt(req.body.destination_id) || null;
     if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'Destination required (set destination_id in body or X-Destination-ID header)' } });
@@ -6700,7 +6742,7 @@ router.post('/tickets', adminAuth('editor'), destinationScope, writeAccess(['pla
 });
 
 // --- PUT /tickets/:id — Update ticket definition ---
-router.put('/tickets/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.put('/tickets/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const ticketId = parseInt(req.params.id);
     const destinationId = req.destScope?.[0] || null;
@@ -6747,7 +6789,7 @@ router.put('/tickets/:id', adminAuth('editor'), destinationScope, writeAccess(['
 });
 
 // --- DELETE /tickets/:id — Soft delete ticket ---
-router.delete('/tickets/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.delete('/tickets/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const ticketId = parseInt(req.params.id);
     const destinationId = req.destScope?.[0] || null;
@@ -6788,7 +6830,7 @@ router.get('/tickets/:id/inventory', adminAuth('reviewer'), destinationScope, as
 });
 
 // --- POST /tickets/:id/inventory — Create inventory slots (bulk) ---
-router.post('/tickets/:id/inventory', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.post('/tickets/:id/inventory', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const ticketId = parseInt(req.params.id);
     const destinationId = req.destScope?.[0] || parseInt(req.body.destination_id) || null;
@@ -6833,7 +6875,7 @@ router.post('/tickets/:id/inventory', adminAuth('editor'), destinationScope, wri
 });
 
 // --- PUT /tickets/inventory/:id — Update single inventory slot ---
-router.put('/tickets/inventory/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.put('/tickets/inventory/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const inventoryId = parseInt(req.params.id);
     const destinationId = req.destScope?.[0] || null;
@@ -6940,7 +6982,7 @@ router.get('/tickets/orders/:id', adminAuth('reviewer'), destinationScope, async
 });
 
 // --- POST /tickets/orders/:id/cancel — Cancel order (admin) ---
-router.post('/tickets/orders/:id/cancel', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.post('/tickets/orders/:id/cancel', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const orderId = parseInt(req.params.id);
     const { reason } = req.body;
@@ -7019,7 +7061,7 @@ router.get('/tickets/stats', adminAuth('reviewer'), destinationScope, async (req
 });
 
 // --- POST /vouchers — Create voucher code ---
-router.post('/vouchers', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.post('/vouchers', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const destinationId = req.destScope?.[0] || parseInt(req.body.destination_id) || null;
     if (!destinationId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'Destination required (set destination_id in body or X-Destination-ID header)' } });
@@ -7082,7 +7124,7 @@ router.get('/vouchers', adminAuth('reviewer'), destinationScope, async (req, res
 });
 
 // --- PUT /vouchers/:id — Update voucher ---
-router.put('/vouchers/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.put('/vouchers/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const voucherId = parseInt(req.params.id);
     const destinationId = req.destScope?.[0] || null;
@@ -7310,7 +7352,7 @@ router.get('/reservations/slots/:poiId', adminAuth('reviewer'), destinationScope
 });
 
 // --- POST /reservations/slots/:poiId — Create reservation slots (bulk) ---
-router.post('/reservations/slots/:poiId', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.post('/reservations/slots/:poiId', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const poiId = parseInt(req.params.poiId);
     const destinationId = req.destScope?.[0] || parseInt(req.body.destination_id) || null;
@@ -7375,7 +7417,7 @@ router.post('/reservations/slots/:poiId', adminAuth('editor'), destinationScope,
 });
 
 // --- PUT /reservations/slots/:id — Update reservation slot ---
-router.put('/reservations/slots/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.put('/reservations/slots/:id', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const slotId = parseInt(req.params.id);
     const { total_seats, total_tables, is_available } = req.body;
@@ -7457,7 +7499,7 @@ router.get('/reservations/:id', adminAuth('reviewer'), destinationScope, async (
 });
 
 // --- PUT /reservations/:id/status — Update reservation status ---
-router.put('/reservations/:id/status', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.put('/reservations/:id/status', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const reservationId = parseInt(req.params.id);
     const { status } = req.body;
@@ -7489,7 +7531,7 @@ router.put('/reservations/:id/status', adminAuth('editor'), destinationScope, wr
 });
 
 // --- POST /reservations/:id/no-show — Mark no-show ---
-router.post('/reservations/:id/no-show', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.post('/reservations/:id/no-show', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const reservationId = parseInt(req.params.id);
     const result = await reservationServiceModule.markNoShow(reservationId);
@@ -7505,7 +7547,7 @@ router.post('/reservations/:id/no-show', adminAuth('editor'), destinationScope, 
 });
 
 // --- POST /reservations/:id/complete — Mark completed ---
-router.post('/reservations/:id/complete', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.post('/reservations/:id/complete', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const reservationId = parseInt(req.params.id);
     const result = await reservationServiceModule.markCompleted(reservationId);
@@ -7609,7 +7651,7 @@ router.get('/guests/:id', adminAuth('reviewer'), destinationScope, async (req, r
 });
 
 // --- PUT /guests/:id/blacklist — Manual blacklist toggle ---
-router.put('/guests/:id/blacklist', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), async (req, res) => {
+router.put('/guests/:id/blacklist', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), async (req, res) => {
   try {
     const guestId = parseInt(req.params.id);
     const { is_blacklisted, reason } = req.body;
@@ -8369,7 +8411,7 @@ router.get('/financial/settlements/:id', adminAuth('reviewer'), destinationScope
 /**
  * POST /financial/settlements — Create settlement batch
  */
-router.post('/financial/settlements', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+router.post('/financial/settlements', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), commerceAuth, async (req, res) => {
   try {
     const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.headers['x-destination-id']) || null;
     if (!destinationId) {
@@ -8396,7 +8438,7 @@ router.post('/financial/settlements', adminAuth('editor'), destinationScope, wri
 /**
  * PUT /financial/settlements/:id/approve — Approve settlement batch
  */
-router.put('/financial/settlements/:id/approve', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+router.put('/financial/settlements/:id/approve', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), commerceAuth, async (req, res) => {
   try {
     const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
     const batch = await financialService.approveSettlementBatch(parseInt(req.params.id), destinationId, req.adminUser.email);
@@ -8415,7 +8457,7 @@ router.put('/financial/settlements/:id/approve', adminAuth('editor'), destinatio
 /**
  * PUT /financial/settlements/:id/process — Start processing settlement
  */
-router.put('/financial/settlements/:id/process', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+router.put('/financial/settlements/:id/process', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), commerceAuth, async (req, res) => {
   try {
     const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
     const batch = await financialService.startSettlementProcessing(parseInt(req.params.id), destinationId);
@@ -8434,7 +8476,7 @@ router.put('/financial/settlements/:id/process', adminAuth('editor'), destinatio
 /**
  * PUT /financial/settlements/:id/cancel — Cancel settlement batch
  */
-router.put('/financial/settlements/:id/cancel', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+router.put('/financial/settlements/:id/cancel', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), commerceAuth, async (req, res) => {
   try {
     const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
     const batch = await financialService.cancelSettlementBatch(parseInt(req.params.id), destinationId, req.body.reason);
@@ -8492,7 +8534,7 @@ router.get('/financial/payouts/:id', adminAuth('reviewer'), destinationScope, co
 /**
  * PUT /financial/payouts/:id/paid — Mark payout as paid
  */
-router.put('/financial/payouts/:id/paid', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+router.put('/financial/payouts/:id/paid', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), commerceAuth, async (req, res) => {
   try {
     const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
     const payout = await financialService.markPayoutPaid(parseInt(req.params.id), destinationId, req.body.paidReference);
@@ -8512,7 +8554,7 @@ router.put('/financial/payouts/:id/paid', adminAuth('editor'), destinationScope,
 /**
  * PUT /financial/payouts/:id/failed — Mark payout as failed
  */
-router.put('/financial/payouts/:id/failed', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+router.put('/financial/payouts/:id/failed', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), commerceAuth, async (req, res) => {
   try {
     const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
     const payout = await financialService.markPayoutFailed(parseInt(req.params.id), destinationId, req.body.failureReason);
@@ -8570,7 +8612,7 @@ router.get('/financial/credit-notes/:id', adminAuth('reviewer'), destinationScop
 /**
  * POST /financial/credit-notes — Create credit note for a payout
  */
-router.post('/financial/credit-notes', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+router.post('/financial/credit-notes', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), commerceAuth, async (req, res) => {
   try {
     const destinationId = req.destScope?.[0] || parseInt(req.body.destinationId) || parseInt(req.headers['x-destination-id']) || null;
     if (!destinationId) {
@@ -8597,7 +8639,7 @@ router.post('/financial/credit-notes', adminAuth('editor'), destinationScope, wr
 /**
  * PUT /financial/credit-notes/:id/finalize — Finalize credit note (immutable)
  */
-router.put('/financial/credit-notes/:id/finalize', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'poi_owner']), commerceAuth, async (req, res) => {
+router.put('/financial/credit-notes/:id/finalize', adminAuth('editor'), destinationScope, writeAccess(['platform_admin', 'destination_admin', 'poi_owner']), commerceAuth, async (req, res) => {
   try {
     const destinationId = req.destScope?.[0] || parseInt(req.headers['x-destination-id']) || null;
     const note = await financialService.finalizeCreditNote(parseInt(req.params.id), destinationId);
@@ -9877,9 +9919,9 @@ router.get('/content/trending/summary', adminAuth('editor'), async (req, res) =>
  * POST /content/trending/manual — Manually add a trending keyword
  * Body: destination_id, keyword, language, source, search_volume, trend_direction, market
  */
-router.post('/content/trending/manual', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/trending/manual', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
-    const { destination_id, keyword, language, source, search_volume, trend_direction, market } = req.body;
+    const { destination_id, keyword, language, source, search_volume, trend_direction, market, source_url } = req.body;
     if (!destination_id || !keyword) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destination_id and keyword are required' } });
     }
@@ -9888,10 +9930,11 @@ router.post('/content/trending/manual', adminAuth('editor'), writeAccess(['platf
     const result = await trendAggregator.aggregate(Number(destination_id), [{
       keyword,
       language: language || 'en',
-      source: source || 'manual',
+      source: source_url ? 'external_url' : (source || 'manual'),
       search_volume: search_volume ? Number(search_volume) : null,
       trend_direction: trend_direction || 'stable',
       market: market || null,
+      source_url: source_url || null,
     }]);
 
     res.json({ success: true, data: result });
@@ -9950,7 +9993,7 @@ router.get('/content/suggestions', adminAuth('editor'), async (req, res) => {
  * POST /content/suggestions/generate — AI suggestie-generatie vanuit trending data
  * Body: destination_id (required)
  */
-router.post('/content/suggestions/generate', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/suggestions/generate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { destination_id } = req.body;
     if (!destination_id) {
@@ -10007,7 +10050,7 @@ router.post('/content/suggestions/generate', adminAuth('editor'), writeAccess(['
  * PATCH /content/suggestions/:id — Update suggestion status
  * Body: status ('approved' | 'rejected' | 'pending' | 'deleted')
  */
-router.patch('/content/suggestions/:id', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.patch('/content/suggestions/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -10043,7 +10086,7 @@ router.patch('/content/suggestions/:id', adminAuth('editor'), writeAccess(['plat
  * POST /content/items/generate — Generate content via Mistral AI
  * Body: suggestion_id, content_type, platform, languages[]
  */
-router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { suggestion_id, content_type, platform = 'website', languages = [], manual, title, body_en, destination_id } = req.body;
 
@@ -10094,13 +10137,34 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
       languages,
     });
 
-    // Save to content_items (with seo_score)
+    // Auto-detect POI from title — match against POI names in this destination
+    let detectedPoiId = null;
+    try {
+      const titleWords = generated.title.replace(/[^\w\s]/g, '').split(/\s+/).filter(w => w.length > 3);
+      if (titleWords.length > 0) {
+        const likePattern = titleWords.slice(0, 5).map((_, i) => `p.name LIKE :tw${i}`).join(' OR ');
+        const twReplacements = { destId: suggestion.destination_id };
+        titleWords.slice(0, 5).forEach((w, i) => { twReplacements[`tw${i}`] = `%${w}%`; });
+        const [[matchedPoi]] = await mysqlSequelize.query(
+          `SELECT p.id, p.name FROM POI p WHERE p.destination_id = :destId AND p.is_active = 1 AND (${likePattern}) ORDER BY p.google_rating DESC LIMIT 1`,
+          { replacements: twReplacements }
+        );
+        if (matchedPoi) {
+          detectedPoiId = matchedPoi.id;
+          logger.info(`[ContentGenerate] Auto-detected POI: "${matchedPoi.name}" (id=${matchedPoi.id}) for title "${generated.title}"`);
+        }
+      }
+    } catch (poiErr) {
+      logger.warn('[ContentGenerate] POI auto-detect failed (non-blocking):', poiErr.message);
+    }
+
+    // Save to content_items (with seo_score + poi_id)
     const [insertResult] = await mysqlSequelize.query(
       `INSERT INTO content_items
        (destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-        seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+        seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
        VALUES (:destId, :sugId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-        :seoData, :seoScore, :platform, 'draft', :aiModel, true, NOW(), NOW())`,
+        :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
       {
         replacements: {
           destId: suggestion.destination_id,
@@ -10116,6 +10180,7 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
           seoScore: generated.seo_score || null,
           platform: generated.target_platform,
           aiModel: generated.ai_model,
+          poiId: detectedPoiId,
         },
       }
     );
@@ -10126,28 +10191,31 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
       { replacements: { id: suggestion.id } }
     );
 
-    // === AUTO-ATTACH IMAGES based on keywords (TO DO 4c) ===
+    // === AUTO-ATTACH IMAGES based on keywords — with diversity filter ===
     const contentItemId = insertResult;
+    const maxImgs = contentType === 'social_post' ? 1 : contentType === 'video_script' ? 1 : 3;
     let attachedImages = [];
     try {
       const kws = generated.keyword_cluster || suggestion.keyword_cluster || [];
       if (kws.length > 0) {
-        // Build regex pattern from keywords for media search
         const keywordPattern = kws
           .map(k => k.replace(/[.*+?^${}()|[\]\\%_]/g, ''))
           .filter(k => k.length > 2)
           .join('|');
 
         if (keywordPattern) {
-          // Search media table by keyword match (alt_text, filename)
-          const [mediaMatches] = await mysqlSequelize.query(
-            `SELECT id FROM media
-             WHERE (alt_text REGEXP :pattern OR filename REGEXP :pattern)
-             ORDER BY created_at DESC LIMIT 5`,
-            { replacements: { pattern: keywordPattern } }
+          // Collect already-used image IDs to avoid duplicates across content items
+          const [usedRows] = await mysqlSequelize.query(
+            `SELECT media_ids FROM content_items WHERE destination_id = :destId AND media_ids IS NOT NULL AND media_ids != '[]' AND media_ids != 'null' AND id != :selfId`,
+            { replacements: { destId: suggestion.destination_id, selfId: contentItemId } }
           );
+          const usedIds = new Set();
+          for (const row of usedRows) {
+            const ids = typeof row.media_ids === 'string' ? JSON.parse(row.media_ids) : row.media_ids;
+            if (Array.isArray(ids)) ids.forEach(id => usedIds.add(Number(String(id).replace('poi:', ''))));
+          }
 
-          // Also search POI images if destination has relevant POIs
+          // Search POI images (primary source — more relevant than media library)
           const [poiImages] = await mysqlSequelize.query(
             `SELECT DISTINCT iu.id FROM imageurls iu
              INNER JOIN POI p ON iu.poi_id = p.id
@@ -10155,14 +10223,14 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
              AND iu.local_path IS NOT NULL
              AND (p.name REGEXP :pattern OR p.category REGEXP :pattern)
              ORDER BY p.google_rating DESC, iu.display_order ASC
-             LIMIT 5`,
+             LIMIT 15`,
             { replacements: { destId: suggestion.destination_id, pattern: keywordPattern } }
           );
 
-          // Combine: media library IDs first (preferred), then POI image IDs (prefixed with 'poi:')
-          const mediaIds = mediaMatches.map(m => m.id).slice(0, 3);
-          const poiImgIds = poiImages.map(p => `poi:${p.id}`).slice(0, 3 - mediaIds.length);
-          const allIds = [...mediaIds, ...poiImgIds];
+          // Prefer unused images, fall back to used ones if needed
+          const unusedPoiIds = poiImages.map(p => p.id).filter(id => !usedIds.has(id));
+          const usedPoiIds = poiImages.map(p => p.id).filter(id => usedIds.has(id));
+          const allIds = [...unusedPoiIds, ...usedPoiIds].slice(0, maxImgs);
 
           if (allIds.length > 0) {
             await mysqlSequelize.query(
@@ -10170,7 +10238,7 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
               { replacements: { mediaIds: JSON.stringify(allIds), id: contentItemId } }
             );
             attachedImages = allIds;
-            logger.info(`[ContentGenerate] Auto-attached ${allIds.length} images to item ${contentItemId} (keywords: ${kws.join(', ')})`);
+            logger.info(`[ContentGenerate] Auto-attached ${allIds.length} images (${unusedPoiIds.length} new, ${Math.max(0, allIds.length - unusedPoiIds.length)} reused) to item ${contentItemId}`);
           }
         }
       }
@@ -10215,12 +10283,37 @@ router.get('/content/items', adminAuth('editor'), async (req, res) => {
       { replacements }
     );
 
-    // Parse JSON fields
+    // Parse JSON fields + resolve images
+    const imageBase = process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com';
     for (const item of items) {
       if (typeof item.seo_data === 'string') item.seo_data = JSON.parse(item.seo_data);
       if (typeof item.social_metadata === 'string') item.social_metadata = JSON.parse(item.social_metadata);
       if (typeof item.media_ids === 'string') item.media_ids = JSON.parse(item.media_ids);
       if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
+
+      // Resolve media_ids to image URLs — strip "poi:" prefix for numeric lookup
+      item.resolved_images = [];
+      const rawIds = Array.isArray(item.media_ids) ? item.media_ids : [];
+      const ids = rawIds.map(id => typeof id === 'string' && id.startsWith('poi:') ? Number(id.replace('poi:', '')) : Number(id)).filter(id => !isNaN(id) && id > 0);
+      if (ids.length > 0) {
+        const [images] = await mysqlSequelize.query(
+          `SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)`,
+          { replacements: { ids } }
+        );
+        item.resolved_images = images.map(img => {
+          const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
+          return {
+            id: img.id,
+            url: imgPath
+              ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp`
+              : img.image_url,
+            thumbnail: imgPath
+              ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp`
+              : img.image_url,
+            alt: img.local_path ? img.local_path.split('/').pop().replace(/\.\w+$/, '') : 'Content image',
+          };
+        });
+      }
     }
 
     res.json({ success: true, data: { items, total } });
@@ -10253,6 +10346,31 @@ router.get('/content/items/:id', adminAuth('editor'), async (req, res) => {
     if (typeof item.media_ids === 'string') item.media_ids = JSON.parse(item.media_ids);
     if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
 
+    // Resolve media_ids to image URLs — strip "poi:" prefix for numeric lookup
+    const imageBase = process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com';
+    item.resolved_images = [];
+    const rawIds = Array.isArray(item.media_ids) ? item.media_ids : [];
+    const ids = rawIds.map(id => typeof id === 'string' && id.startsWith('poi:') ? Number(id.replace('poi:', '')) : Number(id)).filter(id => !isNaN(id) && id > 0);
+    if (ids.length > 0) {
+      const [images] = await mysqlSequelize.query(
+        `SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)`,
+        { replacements: { ids } }
+      );
+      item.resolved_images = images.map(img => {
+        const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
+        return {
+          id: img.id,
+          url: imgPath
+            ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp`
+            : img.image_url,
+          thumbnail: imgPath
+            ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp`
+            : img.image_url,
+          alt: img.local_path ? img.local_path.split('/').pop().replace(/\.\w+$/, '') : 'Content image',
+        };
+      });
+    }
+
     // Compile language versions
     item.languages = {};
     for (const lang of ['en', 'nl', 'de', 'es', 'fr']) {
@@ -10272,7 +10390,7 @@ router.get('/content/items/:id', adminAuth('editor'), async (req, res) => {
  * PATCH /content/items/:id — Update body/approve/reject
  * Body: title, body_en, body_nl, body_de, body_es, body_fr, approval_status, seo_data
  */
-router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const allowedFields = ['title', 'body_en', 'body_nl', 'body_de', 'body_es', 'body_fr', 'approval_status', 'seo_data', 'social_metadata', 'target_platform', 'pillar_id'];
@@ -10408,7 +10526,7 @@ router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_a
 /**
  * DELETE /content/items/:id — Soft delete (approval_status → 'rejected')
  */
-router.delete('/content/items/:id', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.delete('/content/items/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     await mysqlSequelize.query(
       `UPDATE content_items SET approval_status = 'deleted', updated_at = NOW() WHERE id = :id`,
@@ -10425,7 +10543,7 @@ router.delete('/content/items/:id', adminAuth('editor'), writeAccess(['platform_
  * POST /content/items/:id/translate — Translate to additional language
  * Body: target_lang (e.g., 'de', 'es', 'fr')
  */
-router.post('/content/items/:id/translate', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/items/:id/translate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { target_lang } = req.body;
     if (!target_lang || !['nl', 'de', 'es', 'fr'].includes(target_lang)) {
@@ -10465,7 +10583,9 @@ router.post('/content/items/:id/translate', adminAuth('editor'), writeAccess(['p
 });
 
 /**
- * GET /content/items/:id/seo — SEO analysis via De SEO Meester
+ * GET /content/items/:id/seo — Score analysis via De SEO Meester
+ * Query: ?platform=instagram (social_post items: platform-specific scoring)
+ * Returns: blog → { type:'seo', seoSuggestions }, social → { type:'social', platform }, video → { type:'video' }
  */
 router.get('/content/items/:id/seo', adminAuth('editor'), async (req, res) => {
   try {
@@ -10484,8 +10604,9 @@ router.get('/content/items/:id/seo', adminAuth('editor'), async (req, res) => {
     if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
     if (typeof item.seo_data === 'string') item.seo_data = JSON.parse(item.seo_data);
 
+    const platform = req.query.platform || item.target_platform || null;
     const seoMeester = (await import('../services/agents/seoMeester/index.js')).default;
-    const analysis = await seoMeester.analyzeItem(item, item.destination_id);
+    const analysis = await seoMeester.analyzeItem(item, item.destination_id, platform);
 
     // Save updated SEO data
     await mysqlSequelize.query(
@@ -10509,7 +10630,7 @@ router.get('/content/items/:id/seo', adminAuth('editor'), async (req, res) => {
  * POST /content/items/:id/improve — Auto-improve content via AI to reach SEO minimum (65/100)
  * Analyzes current SEO score → if below 65, rewrites content via Mistral AI → saves improved version
  */
-router.post('/content/items/:id/improve', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/items/:id/improve', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const [[item]] = await mysqlSequelize.query(
       `SELECT ci.*, cs.keyword_cluster
@@ -10598,7 +10719,7 @@ router.post('/content/items/:id/improve', adminAuth('editor'), writeAccess(['pla
  * POST /content/generate-from-poi — Generate content directly from a POI (KILLER FEATURE)
  * Body: { poi_id, platforms[] }
  */
-router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { poi_id, platforms = ['instagram', 'facebook', 'linkedin'] } = req.body;
     if (!poi_id) return res.status(400).json({ success: false, error: { code: 'MISSING_POI', message: 'poi_id is required' } });
@@ -10666,7 +10787,7 @@ router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['pla
  * POST /content/items/:id/repurpose — Repurpose content for other platforms
  * Body: { target_platforms[] }
  */
-router.post('/content/items/:id/repurpose', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/items/:id/repurpose', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const { target_platforms = ['instagram', 'facebook', 'linkedin'] } = req.body;
@@ -10740,7 +10861,7 @@ router.post('/content/items/:id/repurpose', adminAuth('editor'), writeAccess(['p
  * POST /content/items/:id/share-to-destination — Share content to another destination
  * Body: { destination_id }
  */
-router.post('/content/items/:id/share-to-destination', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/items/:id/share-to-destination', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const { destination_id } = req.body;
@@ -10823,7 +10944,7 @@ router.post('/content/images/suggest', adminAuth('editor'), async (req, res) => 
     }
 
     const { selectImages } = await import('../services/agents/contentRedacteur/imageSelector.js');
-    const images = await selectImages(contentItem, contentItem.destination_id || destId);
+    const images = await selectImages(contentItem, contentItem.destination_id || destId, { forSuggestion: true });
 
     res.json({ success: true, data: images });
   } catch (error) {
@@ -10855,7 +10976,7 @@ router.post('/content/images/unsplash', adminAuth('editor'), async (req, res) =>
  * POST /content/images/format — Resize image for platform specs
  * Body: { image_path, platform, format }
  */
-router.post('/content/images/format', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/images/format', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { image_path, platform, format = 'post' } = req.body;
     if (!image_path || !platform) {
@@ -10879,7 +11000,7 @@ router.post('/content/images/format', adminAuth('editor'), writeAccess(['platfor
  * POST /content/items/:id/images — Attach image(s) to content item
  * Body: { media_ids: [1,2,3] }  — array of media IDs or image URLs to link
  */
-router.post('/content/items/:id/images', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/items/:id/images', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const { media_ids = [] } = req.body;
@@ -10915,7 +11036,7 @@ router.post('/content/items/:id/images', adminAuth('editor'), writeAccess(['plat
 /**
  * DELETE /content/items/:id/images/:mediaId — Remove image from content item
  */
-router.delete('/content/items/:id/images/:mediaId', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.delete('/content/items/:id/images/:mediaId', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id, mediaId } = req.params;
 
@@ -11139,7 +11260,7 @@ router.get('/content/analytics/overview', adminAuth('editor'), async (req, res) 
               SUM(engagement) as total_engagement, SUM(reach) as total_reach,
               COUNT(DISTINCT content_item_id) as items_tracked
        FROM content_performance
-       WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)`,
+       WHERE destination_id = :destId AND measured_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)`,
       { replacements: { destId: dId, days } }
     );
 
@@ -11147,7 +11268,7 @@ router.get('/content/analytics/overview', adminAuth('editor'), async (req, res) 
       `SELECT SUM(views) as total_views, SUM(clicks) as total_clicks,
               SUM(engagement) as total_engagement, SUM(reach) as total_reach
        FROM content_performance
-       WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL :days2 DAY) AND date < DATE_SUB(CURDATE(), INTERVAL :days DAY)`,
+       WHERE destination_id = :destId AND measured_at >= DATE_SUB(CURDATE(), INTERVAL :days2 DAY) AND measured_at < DATE_SUB(CURDATE(), INTERVAL :days DAY)`,
       { replacements: { destId: dId, days, days2: days * 2 } }
     );
 
@@ -11163,11 +11284,11 @@ router.get('/content/analytics/overview', adminAuth('editor'), async (req, res) 
 
     // Time-series (daily aggregates)
     const [timeSeries] = await mysqlSequelize.query(
-      `SELECT date, SUM(views) as views, SUM(clicks) as clicks,
+      `SELECT measured_at as date, SUM(views) as views, SUM(clicks) as clicks,
               SUM(engagement) as engagement, SUM(reach) as reach
        FROM content_performance
-       WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
-       GROUP BY date ORDER BY date ASC`,
+       WHERE destination_id = :destId AND measured_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       GROUP BY measured_at ORDER BY measured_at ASC`,
       { replacements: { destId: dId, days } }
     );
 
@@ -11177,7 +11298,7 @@ router.get('/content/analytics/overview', adminAuth('editor'), async (req, res) 
               SUM(engagement) as total_engagement, SUM(reach) as total_reach,
               COUNT(DISTINCT content_item_id) as items_tracked
        FROM content_performance
-       WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       WHERE destination_id = :destId AND measured_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
        GROUP BY platform`,
       { replacements: { destId: dId, days } }
     );
@@ -11325,10 +11446,10 @@ router.get('/content/analytics/platforms', adminAuth('editor'), async (req, res)
 
     // Per-platform time-series for comparison chart
     const [platformTimeSeries] = await mysqlSequelize.query(
-      `SELECT platform, date, SUM(views) as views, SUM(engagement) as engagement
+      `SELECT platform, measured_at as date, SUM(views) as views, SUM(engagement) as engagement
        FROM content_performance
-       WHERE destination_id = :destId AND date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
-       GROUP BY platform, date ORDER BY date ASC`,
+       WHERE destination_id = :destId AND measured_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       GROUP BY platform, measured_at ORDER BY measured_at ASC`,
       { replacements: { destId: dId, days } }
     );
 
@@ -11362,7 +11483,7 @@ router.get('/content/social-accounts', adminAuth('editor'), async (req, res) => 
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const [accounts] = await mysqlSequelize.query(
-      `SELECT id, destination_id, platform, account_name, account_id, status, token_expires_at, last_sync_at, metadata, created_at
+      `SELECT id, destination_id, platform, account_name, account_id, status, token_expires_at, last_sync_at, metadata, target_language, created_at
        FROM social_accounts WHERE destination_id = :destId ORDER BY platform`,
       { replacements: { destId: Number(destId) } }
     );
@@ -11376,11 +11497,13 @@ router.get('/content/social-accounts', adminAuth('editor'), async (req, res) => 
 /**
  * POST /content/social-accounts/connect/linkedin — Start LinkedIn OAuth flow
  */
-router.post('/content/social-accounts/connect/linkedin', adminAuth('platform_admin'), async (req, res) => {
+router.post('/content/social-accounts/connect/linkedin', adminAuth('destination_admin'), async (req, res) => {
   try {
     const LinkedInClient = (await import('../services/agents/publisher/clients/linkedinClient.js')).default;
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/linkedin/callback`;
-    const state = require('crypto').randomBytes(16).toString('hex');
+    const oauthBase = process.env.OAUTH_BASE_URL || 'https://api.holidaibutler.com';
+    const redirectUri = `${oauthBase}/api/v1/oauth/linkedin/callback`;
+    const destId = req.body.destination_id || req.adminUser?.destination_id || 1;
+    const state = `${crypto.randomBytes(16).toString('hex')}_${destId}`;
     const authUrl = LinkedInClient.getAuthorizationUrl(redirectUri, state);
     res.json({ success: true, data: { authorizationUrl: authUrl, state } });
   } catch (error) {
@@ -11392,14 +11515,16 @@ router.post('/content/social-accounts/connect/linkedin', adminAuth('platform_adm
 /**
  * POST /content/social-accounts/connect/pinterest — Start Pinterest OAuth flow
  */
-router.post('/content/social-accounts/connect/pinterest', adminAuth('platform_admin'), async (req, res) => {
+router.post('/content/social-accounts/connect/pinterest', adminAuth('destination_admin'), async (req, res) => {
   try {
     const clientId = process.env.PINTEREST_APP_ID;
     if (!clientId) {
       return res.status(400).json({ success: false, error: { code: 'NOT_CONFIGURED', message: 'Pinterest API credentials not configured. Set PINTEREST_APP_ID and PINTEREST_APP_SECRET in .env' } });
     }
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/pinterest/callback`;
-    const state = require('crypto').randomBytes(16).toString('hex');
+    const oauthBase = process.env.OAUTH_BASE_URL || 'https://api.holidaibutler.com';
+    const redirectUri = `${oauthBase}/api/v1/oauth/pinterest/callback`;
+    const destId = req.body.destination_id || req.adminUser?.destination_id || 1;
+    const state = `${crypto.randomBytes(16).toString('hex')}_${destId}`;
     const scope = 'boards:read,pins:read,pins:write,boards:write';
     const authUrl = `https://www.pinterest.com/oauth/?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${state}`;
     res.json({ success: true, data: { authorizationUrl: authUrl, state } });
@@ -11412,14 +11537,16 @@ router.post('/content/social-accounts/connect/pinterest', adminAuth('platform_ad
 /**
  * POST /content/social-accounts/connect/youtube — Start YouTube/Google OAuth flow
  */
-router.post('/content/social-accounts/connect/youtube', adminAuth('platform_admin'), async (req, res) => {
+router.post('/content/social-accounts/connect/youtube', adminAuth('destination_admin'), async (req, res) => {
   try {
     const clientId = process.env.YOUTUBE_CLIENT_ID;
     if (!clientId) {
       return res.status(400).json({ success: false, error: { code: 'NOT_CONFIGURED', message: 'YouTube/Google API credentials not configured. Set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET in .env' } });
     }
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/oauth/youtube/callback`;
-    const state = require('crypto').randomBytes(16).toString('hex');
+    const oauthBase = process.env.OAUTH_BASE_URL || 'https://api.holidaibutler.com';
+    const redirectUri = `${oauthBase}/api/v1/oauth/youtube/callback`;
+    const destId = req.body.destination_id || req.adminUser?.destination_id || 1;
+    const state = `${crypto.randomBytes(16).toString('hex')}_${destId}`;
     const scope = 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly';
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${state}&access_type=offline&prompt=consent`;
     res.json({ success: true, data: { authorizationUrl: authUrl, state } });
@@ -11432,7 +11559,7 @@ router.post('/content/social-accounts/connect/youtube', adminAuth('platform_admi
 /**
  * DELETE /content/social-accounts/:id — Disconnect account
  */
-router.delete('/content/social-accounts/:id', adminAuth('platform_admin'), async (req, res) => {
+router.delete('/content/social-accounts/:id', adminAuth('destination_admin'), async (req, res) => {
   try {
     await mysqlSequelize.query(
       `UPDATE social_accounts SET status = 'disconnected', access_token_encrypted = NULL, refresh_token_encrypted = NULL, updated_at = NOW() WHERE id = :id`,
@@ -11448,7 +11575,7 @@ router.delete('/content/social-accounts/:id', adminAuth('platform_admin'), async
 /**
  * POST /content/social-accounts/:id/refresh — Refresh token
  */
-router.post('/content/social-accounts/:id/refresh', adminAuth('platform_admin'), async (req, res) => {
+router.post('/content/social-accounts/:id/refresh', adminAuth('destination_admin'), async (req, res) => {
   try {
     const [[account]] = await mysqlSequelize.query(
       `SELECT * FROM social_accounts WHERE id = :id`, { replacements: { id: Number(req.params.id) } }
@@ -11472,6 +11599,47 @@ router.post('/content/social-accounts/:id/refresh', adminAuth('platform_admin'),
   } catch (error) {
     logger.error('[AdminPortal] Token refresh error:', error);
     res.status(500).json({ success: false, error: { code: 'REFRESH_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PATCH /content/social-accounts/:id — Update account settings (target_language)
+ */
+router.patch('/content/social-accounts/:id', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const { target_language } = req.body;
+    const validLangs = ['nl', 'en', 'de', 'es', 'fr'];
+    if (target_language && !validLangs.includes(target_language)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_LANGUAGE', message: `target_language must be one of: ${validLangs.join(', ')}` } });
+    }
+    await mysqlSequelize.query(
+      `UPDATE social_accounts SET target_language = :lang, updated_at = NOW() WHERE id = :id`,
+      { replacements: { lang: target_language || 'en', id: Number(req.params.id) } }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Update social account error:', error);
+    res.status(500).json({ success: false, error: { code: 'UPDATE_ACCOUNT_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/social-platforms — Get enabled social platforms for destination (from feature_flags)
+ */
+router.get('/content/social-platforms', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
+    const [[dest]] = await mysqlSequelize.query(
+      `SELECT feature_flags FROM destinations WHERE id = :destId`,
+      { replacements: { destId: Number(destId) } }
+    );
+    let flags = dest?.feature_flags;
+    if (typeof flags === 'string') { try { flags = JSON.parse(flags); } catch { flags = {}; } }
+    const socialPlatforms = flags?.social_platforms || {};
+    res.json({ success: true, data: socialPlatforms });
+  } catch (error) {
+    logger.error('[AdminPortal] Social platforms error:', error);
+    res.status(500).json({ success: false, error: { code: 'SOCIAL_PLATFORMS_ERROR', message: error.message } });
   }
 });
 
@@ -11575,7 +11743,7 @@ router.delete('/content/seasons/:id', adminAuth('editor'), async (req, res) => {
 /**
  * POST /content/seasons/:id/activate — Force-activate a season
  */
-router.post('/content/seasons/:id/activate', adminAuth('platform_admin'), async (req, res) => {
+router.post('/content/seasons/:id/activate', adminAuth('destination_admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const [[season]] = await mysqlSequelize.query(`SELECT * FROM seasonal_config WHERE id = :id`, { replacements: { id: Number(id) } });
@@ -11640,7 +11808,7 @@ router.get('/content/items/:id/comments', adminAuth('editor'), async (req, res) 
  * POST /content/items/:id/comments — Add a comment to a content item
  * Body: { comment }
  */
-router.post('/content/items/:id/comments', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/items/:id/comments', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { comment } = req.body;
     if (!comment || !comment.trim()) {
@@ -11683,7 +11851,7 @@ router.get('/content/items/:id/revisions', adminAuth('editor'), async (req, res)
 /**
  * POST /content/items/:id/revisions/:revisionId/restore — Restore a previous revision
  */
-router.post('/content/items/:id/revisions/:revisionId/restore', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/items/:id/revisions/:revisionId/restore', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id, revisionId } = req.params;
     const [[revision]] = await mysqlSequelize.query(
@@ -11774,7 +11942,7 @@ router.get('/content/pillars', adminAuth('editor'), async (req, res) => {
  * POST /content/pillars — Create a content pillar
  * Body: { name, target_percentage, color }
  */
-router.post('/content/pillars', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/pillars', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.body.destination_id || 1;
     const { name, target_percentage = 25, color = '#7FA594' } = req.body;
@@ -11796,7 +11964,7 @@ router.post('/content/pillars', adminAuth('editor'), writeAccess(['platform_admi
  * PATCH /content/pillars/:id — Update a content pillar
  * Body: { name, target_percentage, color, is_active }
  */
-router.patch('/content/pillars/:id', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.patch('/content/pillars/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const allowedFields = ['name', 'target_percentage', 'color', 'is_active'];
@@ -11822,7 +11990,7 @@ router.patch('/content/pillars/:id', adminAuth('editor'), writeAccess(['platform
 /**
  * DELETE /content/pillars/:id — Soft-delete a content pillar (deactivate)
  */
-router.delete('/content/pillars/:id', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.delete('/content/pillars/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     await mysqlSequelize.query('UPDATE content_pillars SET is_active = FALSE WHERE id = :id', { replacements: { id: Number(req.params.id) } });
     // Unlink content items from this pillar
@@ -11917,7 +12085,7 @@ router.post('/content/items/:id/hashtags', adminAuth('editor'), async (req, res)
  * POST /content/bulk/approve — Bulk approve content items
  * Body: { ids: [1, 2, 3] }
  */
-router.post('/content/bulk/approve', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/bulk/approve', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -11949,7 +12117,7 @@ router.post('/content/bulk/approve', adminAuth('editor'), writeAccess(['platform
  * POST /content/bulk/reject — Bulk reject content items
  * Body: { ids: [1, 2, 3], reason }
  */
-router.post('/content/bulk/reject', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/bulk/reject', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { ids, reason } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -11980,7 +12148,7 @@ router.post('/content/bulk/reject', adminAuth('editor'), writeAccess(['platform_
  * POST /content/bulk/schedule — Bulk schedule content items
  * Body: { ids: [1, 2, 3], scheduled_at }
  */
-router.post('/content/bulk/schedule', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/bulk/schedule', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { ids, scheduled_at } = req.body;
     if (!Array.isArray(ids) || ids.length === 0 || !scheduled_at) {
@@ -12011,7 +12179,7 @@ router.post('/content/bulk/schedule', adminAuth('editor'), writeAccess(['platfor
  * POST /content/bulk/delete — Bulk soft-delete content items
  * Body: { ids: [1, 2, 3] }
  */
-router.post('/content/bulk/delete', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/bulk/delete', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -12051,7 +12219,7 @@ router.get('/content/templates', adminAuth('editor'), async (req, res) => {
 /**
  * POST /content/items/:id/retry-publish — Retry a failed publish
  */
-router.post('/content/items/:id/retry-publish', adminAuth('editor'), writeAccess(['platform_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+router.post('/content/items/:id/retry-publish', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
     const [[item]] = await mysqlSequelize.query(

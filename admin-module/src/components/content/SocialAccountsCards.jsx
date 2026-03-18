@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Grid, Chip, Button, CircularProgress, Alert, Tooltip,
+  Select, MenuItem, FormControl, InputLabel,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -23,13 +24,21 @@ const PLATFORM_CONFIG = [
   { key: 'pinterest', name: 'Pinterest', icon: PinterestIcon, color: '#BD081C', connectMethod: 'connectPinterest' },
   { key: 'youtube', name: 'YouTube', icon: YouTubeIcon, color: '#FF0000', connectMethod: 'connectYouTube' },
   { key: 'tiktok', name: 'TikTok', icon: null, color: '#000', emoji: '🎵', connectMethod: null, note: 'Binnenkort beschikbaar' },
+  { key: 'snapchat', name: 'Snapchat', icon: null, color: '#FFFC00', emoji: '👻', connectMethod: null, note: 'Binnenkort beschikbaar' },
+];
+
+const LANGUAGES = [
+  { code: 'nl', label: 'Nederlands' },
+  { code: 'en', label: 'English' },
+  { code: 'de', label: 'Deutsch' },
+  { code: 'es', label: 'Español' },
+  { code: 'fr', label: 'Français' },
 ];
 
 function getStatus(account) {
   if (!account) return { status: 'disconnected', label: 'Niet gekoppeld', color: 'default', icon: CancelIcon };
   if (account.status === 'pending') return { status: 'pending', label: 'In afwachting', color: 'info', icon: WarningIcon };
   if (account.status !== 'active') return { status: 'fix', label: 'Fix nodig', color: 'warning', icon: WarningIcon };
-  // Check token expiry
   if (account.token_expires_at) {
     const daysLeft = Math.ceil((new Date(account.token_expires_at) - new Date()) / (1000 * 60 * 60 * 24));
     if (daysLeft < 0) return { status: 'expired', label: 'Token verlopen', color: 'error', icon: WarningIcon, daysLeft: 0 };
@@ -42,18 +51,28 @@ function getStatus(account) {
 export default function SocialAccountsCards({ destinationId }) {
   const { t } = useTranslation();
   const [accounts, setAccounts] = useState([]);
+  const [enabledPlatforms, setEnabledPlatforms] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [connecting, setConnecting] = useState(null);
 
-  const loadAccounts = () => {
+  const loadData = async () => {
     setLoading(true);
-    contentService.getSocialAccounts(destinationId).then(r => {
-      setAccounts(r.data || []);
-    }).catch(e => setError(e.message)).finally(() => setLoading(false));
+    try {
+      const [accountsRes, platformsRes] = await Promise.all([
+        contentService.getSocialAccounts(destinationId),
+        contentService.getSocialPlatforms(destinationId),
+      ]);
+      setAccounts(accountsRes.data || []);
+      setEnabledPlatforms(platformsRes.data || {});
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { loadAccounts(); }, [destinationId]);
+  useEffect(() => { loadData(); }, [destinationId]);
 
   const handleConnect = async (platform) => {
     if (!platform.connectMethod) return;
@@ -75,7 +94,7 @@ export default function SocialAccountsCards({ destinationId }) {
   const handleRefresh = async (account) => {
     try {
       await contentService.refreshAccountToken(account.id);
-      loadAccounts();
+      loadData();
     } catch (e) {
       setError(e.response?.data?.error?.message || e.message);
     }
@@ -90,7 +109,21 @@ export default function SocialAccountsCards({ destinationId }) {
     }
   };
 
+  const handleLanguageChange = async (account, newLang) => {
+    try {
+      await contentService.updateSocialAccount(account.id, { target_language: newLang });
+      setAccounts(prev => prev.map(a => a.id === account.id ? { ...a, target_language: newLang } : a));
+    } catch (e) {
+      setError(e.response?.data?.error?.message || e.message);
+    }
+  };
+
   if (loading) return <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress /></Box>;
+
+  // Filter platforms based on feature flags — only show enabled ones
+  const visiblePlatforms = enabledPlatforms
+    ? PLATFORM_CONFIG.filter(p => enabledPlatforms[p.key] === true)
+    : PLATFORM_CONFIG;
 
   return (
     <Box>
@@ -98,13 +131,19 @@ export default function SocialAccountsCards({ destinationId }) {
         {t('contentStudio.socialAccounts', 'Social Accounts')}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Koppel je social media accounts om content direct te publiceren vanuit het Content Studio.
+        {t('contentStudio.socialAccountsDesc', 'Koppel je social media accounts om content direct te publiceren vanuit het Content Studio. Alleen platformen die voor deze destination zijn ingeschakeld worden getoond.')}
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
 
+      {visiblePlatforms.length === 0 && (
+        <Alert severity="info">
+          {t('contentStudio.noPlatformsEnabled', 'Geen social media platformen ingeschakeld voor deze destination. Configureer dit in de feature flags.')}
+        </Alert>
+      )}
+
       <Grid container spacing={2}>
-        {PLATFORM_CONFIG.map(platform => {
+        {visiblePlatforms.map(platform => {
           const account = accounts.find(a => a.platform === platform.key);
           const statusInfo = getStatus(account);
           const StatusIcon = statusInfo.icon;
@@ -155,11 +194,29 @@ export default function SocialAccountsCards({ destinationId }) {
                     </Typography>
                   )}
 
+                  {/* Target language dropdown — only for connected accounts */}
+                  {account && statusInfo.status === 'connected' && (
+                    <FormControl size="small" sx={{ mt: 1.5, minWidth: 140 }}>
+                      <InputLabel id={`lang-${account.id}`}>{t('contentStudio.targetLanguage', 'Doeltaal')}</InputLabel>
+                      <Select
+                        labelId={`lang-${account.id}`}
+                        value={account.target_language || 'en'}
+                        label={t('contentStudio.targetLanguage', 'Doeltaal')}
+                        onChange={(e) => handleLanguageChange(account, e.target.value)}
+                        size="small"
+                      >
+                        {LANGUAGES.map(l => (
+                          <MenuItem key={l.code} value={l.code}>{l.label}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
+
                   {/* Action buttons */}
                   <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
                     {statusInfo.status === 'connected' && (
                       <Button size="small" variant="outlined" color="error" onClick={() => handleDisconnect(account)}>
-                        Ontkoppelen
+                        {t('contentStudio.disconnect', 'Ontkoppelen')}
                       </Button>
                     )}
                     {statusInfo.status === 'disconnected' && canConnect && (
@@ -171,14 +228,14 @@ export default function SocialAccountsCards({ destinationId }) {
                         onClick={() => handleConnect(platform)}
                         sx={{ bgcolor: platform.color, '&:hover': { bgcolor: platform.color, filter: 'brightness(0.85)' } }}
                       >
-                        Koppelen
+                        {t('contentStudio.connect', 'Koppelen')}
                       </Button>
                     )}
                     {statusInfo.status === 'disconnected' && !canConnect && (
                       <Tooltip title={platform.note || 'Niet beschikbaar'}>
                         <span>
                           <Button size="small" variant="outlined" disabled>
-                            {platform.note || 'Koppelen'}
+                            {platform.note || t('contentStudio.connect', 'Koppelen')}
                           </Button>
                         </span>
                       </Tooltip>
@@ -192,17 +249,17 @@ export default function SocialAccountsCards({ destinationId }) {
                         disabled={isConnecting}
                         onClick={() => handleConnect(platform)}
                       >
-                        Autorisatie afronden
+                        {t('contentStudio.finishAuth', 'Autorisatie afronden')}
                       </Button>
                     )}
                     {(statusInfo.status === 'fix' || statusInfo.status === 'expired' || statusInfo.status === 'expiring') && (
                       <Box sx={{ display: 'flex', gap: 0.5 }}>
                         <Button size="small" variant="contained" color="warning" onClick={() => handleRefresh(account)}>
-                          Token vernieuwen
+                          {t('contentStudio.refreshToken', 'Token vernieuwen')}
                         </Button>
                         {canConnect && (
                           <Button size="small" variant="outlined" color="warning" onClick={() => handleConnect(platform)}>
-                            Opnieuw koppelen
+                            {t('contentStudio.reconnect', 'Opnieuw koppelen')}
                           </Button>
                         )}
                       </Box>

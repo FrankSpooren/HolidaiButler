@@ -149,7 +149,7 @@ function ValidationItem({ label, value, status, detail }) {
   );
 }
 
-function PlatformMockup({ platform, content, rules, isTargetPlatform, contentType }) {
+function PlatformMockup({ platform, content, rules, isTargetPlatform, contentType, images }) {
   // For blogs on social platforms: show "use Repurpose" message instead of truncated preview
   const isBlogOnSocial = contentType === 'blog' && platform !== 'website' && rules.maxChars < 50000;
   const isOverLimit = rules.maxChars && content.length > rules.maxChars;
@@ -231,7 +231,7 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
           <Typography variant="body2" fontWeight={600}>destination_name</Typography>
         </Box>
 
-        {/* Image placeholder with correct aspect ratio */}
+        {/* Content image or placeholder with correct aspect ratio */}
         <Box sx={{
           width: '100%',
           paddingTop: platform === 'instagram' ? '100%' : platform === 'pinterest' ? '150%' : platform === 'tiktok' ? '177%' : '52.5%',
@@ -241,7 +241,27 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
           position: 'relative',
           overflow: 'hidden',
         }}>
-          <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+          {images && images.length > 0 ? (
+            <Box
+              component="img"
+              src={images[0].url || images[0].thumbnail}
+              alt={images[0].alt || 'Content image'}
+              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+              sx={{
+                position: 'absolute',
+                top: 0, left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+          ) : null}
+          <Box sx={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            display: images && images.length > 0 ? 'none' : 'flex',
+            flexDirection: 'column', alignItems: 'center',
+          }}>
             <Typography variant="caption" color="text.secondary" fontWeight={600}>{rules.imageSpec}</Typography>
             <Typography variant="caption" display="block" color="text.secondary">({rules.aspectRatio})</Typography>
           </Box>
@@ -354,7 +374,7 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
   );
 }
 
-export default function PlatformPreview({ content, targetPlatform, selectedLanguage = 'en' }) {
+export default function PlatformPreview({ content, targetPlatform, selectedLanguage = 'en', onPlatformChange }) {
   const { t } = useTranslation();
   const [activePlatform, setActivePlatform] = useState(targetPlatform || 'instagram');
 
@@ -390,7 +410,7 @@ export default function PlatformPreview({ content, targetPlatform, selectedLangu
 
       <Tabs
         value={activePlatform}
-        onChange={(_, v) => setActivePlatform(v)}
+        onChange={(_, v) => { setActivePlatform(v); if (onPlatformChange) onPlatformChange(v); }}
         variant="scrollable"
         scrollButtons="auto"
         sx={{ mb: 2, minHeight: 36 }}
@@ -424,6 +444,7 @@ export default function PlatformPreview({ content, targetPlatform, selectedLangu
         rules={rules}
         isTargetPlatform={activePlatform === targetPlatform}
         contentType={content?.content_type}
+        images={content?.resolved_images}
       />
     </Box>
   );

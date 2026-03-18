@@ -43,12 +43,15 @@ export async function findLinkSuggestions(text, destinationId, maxSuggestions = 
       // Check if POI name appears in the content (case-insensitive)
       const nameLower = poiName.toLowerCase();
       if (textLower.includes(nameLower)) {
+        // Determine base URL from destination
+        const domainMap = { 1: 'https://holidaibutler.com', 2: 'https://texelmaps.nl', 4: 'https://warrewijzer.be' };
+        const baseUrl = domainMap[destinationId] || 'https://holidaibutler.com';
         suggestions.push({
           poiId: poi.id,
           poiName: poiName,
           matchedTerm: poiName,
           category: poi.category,
-          url: `/poi/${poi.id}`,
+          url: `${baseUrl}/poi/${poi.id}`,
           description: poi.enriched_tile_description_en || '',
         });
       }

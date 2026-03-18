@@ -186,7 +186,7 @@ export default function BrandingPage() {
           headingTextTransform: b.style?.headingTextTransform || 'none'
         },
         socialLinks: b.socialLinks || activeDest.socialLinks || {
-          instagram: '', facebook: '', tiktok: '', youtube: '', twitter: '', linkedin: ''
+          instagram: '', facebook: '', x: '', tiktok: '', youtube: '', linkedin: '', pinterest: '', snapchat: ''
         },
         favicon: b.favicon || '',
         navicon: b.navicon || '',
@@ -882,14 +882,23 @@ export default function BrandingPage() {
             subtitle={t('branding.socialLinksSubtitle', 'Social media profile URLs')}
           >
             <Grid container spacing={2}>
-              {['instagram', 'facebook', 'tiktok', 'youtube', 'twitter', 'linkedin'].map(platform => (
-                <Grid item xs={12} sm={6} key={platform}>
+              {[
+                { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/...' },
+                { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/...' },
+                { key: 'x', label: 'X (Twitter)', placeholder: 'https://x.com/...' },
+                { key: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@...' },
+                { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@...' },
+                { key: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/company/...' },
+                { key: 'pinterest', label: 'Pinterest', placeholder: 'https://pinterest.com/...' },
+                { key: 'snapchat', label: 'Snapchat', placeholder: 'https://snapchat.com/add/...' },
+              ].map(platform => (
+                <Grid item xs={12} sm={6} key={platform.key}>
                   <TextField
                     fullWidth size="small"
-                    label={platform.charAt(0).toUpperCase() + platform.slice(1)}
-                    value={form.socialLinks?.[platform] || ''}
-                    onChange={e => updateSocialLink(platform, e.target.value)}
-                    placeholder={`https://${platform}.com/...`}
+                    label={platform.label}
+                    value={form.socialLinks?.[platform.key] || ''}
+                    onChange={e => updateSocialLink(platform.key, e.target.value)}
+                    placeholder={platform.placeholder}
                   />
                 </Grid>
               ))}

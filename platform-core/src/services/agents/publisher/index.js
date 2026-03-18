@@ -32,7 +32,7 @@ class PublisherAgent extends BaseAgent {
   async publishItem(contentItemId) {
     const [items] = await mysqlSequelize.query(
       `SELECT ci.*, sa.id as social_account_id, sa.access_token_encrypted, sa.account_id as platform_account_id,
-              sa.metadata as account_metadata, sa.status as account_status
+              sa.metadata as account_metadata, sa.status as account_status, sa.target_language as account_target_language
        FROM content_items ci
        LEFT JOIN social_accounts sa ON sa.destination_id = ci.destination_id AND sa.platform = ci.target_platform AND sa.status = 'active'
        WHERE ci.id = :id`,
@@ -57,7 +57,8 @@ class PublisherAgent extends BaseAgent {
 
     try {
       // Sanitize content one final time before publishing (safety net)
-      const lang = contentItem.language || 'en';
+      // Use social account's target_language (multi-tenant), fallback to content item language
+      const lang = contentItem.account_target_language || contentItem.language || 'en';
       const bodyField = `body_${lang}`;
       if (contentItem[bodyField]) {
         contentItem[bodyField] = sanitizeContent(contentItem[bodyField], contentItem.content_type, contentItem.target_platform);

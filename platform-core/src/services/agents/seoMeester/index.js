@@ -103,9 +103,10 @@ class SeoMeesterAgent extends BaseAgent {
 
   /**
    * On-demand: analyze a single content item (used by admin API)
+   * @param {string} platform - Optional social platform for platform-specific scoring
    */
-  async analyzeItem(contentItem, destinationId) {
-    return analyzeContent(contentItem, destinationId);
+  async analyzeItem(contentItem, destinationId, platform) {
+    return analyzeContent(contentItem, destinationId, platform);
   }
 }
 

@@ -52,7 +52,8 @@
 41. [Repair v9.0-v11.0 + Command v12.0-v13.0](#command-v130-deel-a--5-resterende-bugs-blokkerend-10-maart-2026)
 42. [Command v14.0 DEEL A — 5 Resterende Fixes Customer Portal Kwaliteit](#command-v140-deel-a--5-resterende-fixes-customer-portal-kwaliteit-10-maart-2026)
 43. [Content Module Waves 5+6: Enterprise Workflow + Platform Completion](#content-module-waves-56-enterprise-workflow--platform-completion-15-03-2026)
-44. [Volledige Changelog](#volledige-changelog)
+44. [OPDRACHT 7/7B: Content Studio Image Quality](#opdracht-77b-content-studio-image-quality-18-03-2026)
+45. [Volledige Changelog](#volledige-changelog)
 
 ---
 
@@ -5002,6 +5003,82 @@ Frank's browser-verificatie toonde aan dat ondanks CS v5.0 + v6.0 markering als 
 ### Documentatie
 
 CLAUDE.md v4.9.0 → v4.10.0. MS v7.69 → v7.70. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
+## OPDRACHT 7/7B: Content Studio Image Quality — Enterprise Image Selection (18-03-2026)
+
+### Context
+OPDRACHT 7 uit HB_Content_Studio_DEFINITIEF_v8.md: "Gebroken Images in Content Items". Na analyse bleek de basis resolve logica al werkend, maar met kritieke kwaliteitsproblemen: slechts 6 unieke images over 32 assignments, massive hergebruik, geen diversiteit, PlatformPreview toonde grey placeholder in plaats van echte images. OPDRACHT 7B uitgebreid met 5 enterprise-level fixes.
+
+### OPDRACHT 7: Media Resolve Logica
+- `adminPortal.js` list + detail endpoints: `poi:` prefix stripping voor media_ids (sommige IDs hadden `"poi:32637"` string format)
+- Image URL: `IMAGE_BASE_URL/api/v1/img/{path}?w=600&f=webp` (optimized webp)
+- Alt text: afgeleid uit `local_path` filename (was `img.filename` → kolom bestaat niet → crash)
+
+### OPDRACHT 7B FIX 1: POI Auto-detectie
+- Generate endpoint: match content title woorden tegen POI namen via `LIKE` queries
+- `detectedPoiId` opgeslagen in content_items voor betere image matching
+
+### OPDRACHT 7B FIX 2: Diversity Filter
+- Collect already-used image IDs across all content_items in destination (usedImageIds Set)
+- Prefer unused images, fall back to used ones
+- `imageSelector.js`: relevance 0.7 voor ongebruikte, 0.3 voor hergebruikte images
+
+### OPDRACHT 7B FIX 3: Content-Type Limieten
+- `blog`: max 3 images, `social_post`: max 1, `video_script`: max 1
+- `forSuggestion: true` optie: altijd 6 results voor UI image picker
+
+### OPDRACHT 7B FIX 4: PlatformPreview Images
+- `PlatformPreview.jsx`: was alleen grey placeholder boxes met dimensie-tekst
+- Toegevoegd: `<img>` element met eerste resolved_image, objectFit cover, onError fallback
+- `images` prop doorgewired naar PlatformMockup component
+
+### OPDRACHT 7B FIX 5: Frontend Fixes
+- **STATUS_LABELS crash**: `ReferenceError: STATUS_LABELS is not defined` bij klik op Suggesties tab
+  - Root cause: STATUS_LABELS constant verwijderd in eerdere refactor, maar referentie bleef in SuggestionDetailDialog
+  - Fix: `<Chip label={STATUS_LABELS[...]}` → `<StatusChip status={suggestion.status} />`
+- **ContentImageSection rewrite**: Complete herschrijving voor enterprise kwaliteit
+  - Geselecteerde image(s) met groene "Actief" badge en verwijder-knop (140×105px)
+  - Always-visible "Kies een alternatief" sectie met 3-6 ongeselecteerde suggesties
+  - Social posts: click-to-replace (detach all → attach selected)
+  - Blogs: click-to-add
+  - "Meer opties" dialog met POI Suggesties + Unsplash tabs
+  - "Nieuwe suggesties laden" refresh button
+  - Warning Alert wanneer geen image geselecteerd
+
+### Gewijzigde bestanden
+
+| Actie | Bestand | Beschrijving |
+|-------|---------|-------------|
+| WIJZIG | `platform-core/src/routes/adminPortal.js` | poi: prefix fix, diversity filter, POI auto-detect, forSuggestion:true |
+| WIJZIG | `platform-core/src/services/agents/contentRedacteur/imageSelector.js` | forSuggestion optie, diversity filter, content-type limits |
+| WIJZIG | `admin-module/src/pages/ContentStudioPage.jsx` | STATUS_LABELS fix, ContentImageSection rewrite |
+| WIJZIG | `admin-module/src/components/content/PlatformPreview.jsx` | Image rendering in preview (was grey placeholder) |
+| WIJZIG | `admin-module/src/api/contentService.js` | suggestImages() method update |
+
+### Verificatie Resultaten
+
+| Check | Resultaat |
+|-------|-----------|
+| Content items API resolved_images | 3 items, werkende URLs (test.holidaibutler.com/api/v1/img/...) |
+| Image suggest endpoint | 6 suggested images (was max 3) |
+| Diversity filter | keyword_match source met rel=0.7 (unused preferred) |
+| STATUS_LABELS crash | Opgelost (StatusChip i18n) |
+| PlatformPreview | Images zichtbaar in social media mockups |
+
+### Statistieken
+
+- **25 agents** (ongewijzigd)
+- **62 BullMQ jobs** (ongewijzigd)
+- **212 admin endpoints** (ongewijzigd)
+- **adminPortal.js v3.32.0** (ongewijzigd)
+
+### Documentatie
+
+CLAUDE.md v4.10.0 → v4.11.0. MS v7.70 → v7.71. CLAUDE_HISTORY.md bijgewerkt.
 
 **Kosten**: EUR 0
 

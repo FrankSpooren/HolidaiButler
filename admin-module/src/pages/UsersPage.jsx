@@ -23,6 +23,7 @@ import ErrorBanner from '../components/common/ErrorBanner.jsx';
 
 const ROLE_COLORS = {
   platform_admin: 'error',
+  destination_admin: 'warning',
   poi_owner: 'primary',
   content_manager: 'warning',
   editor: 'secondary',
@@ -35,7 +36,7 @@ const STATUS_COLORS = {
   pending: 'info'
 };
 
-const ROLES = ['platform_admin', 'poi_owner', 'content_manager', 'editor', 'reviewer'];
+const ROLES = ['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor', 'reviewer'];
 const DEST_OPTIONS = [
   { value: 'calpe', label: 'Calpe' },
   { value: 'texel', label: 'Texel' }
