@@ -702,7 +702,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-on-primary shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-105"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-on-primary shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-105 hidden md:flex"
           aria-label={`Open ${name}`}
           style={chatbotColor ? { backgroundColor: chatbotColor } : undefined}
         >
@@ -714,7 +714,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-20 right-3 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[380px] max-h-[80vh] h-[520px] bg-surface rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
+        <div className="fixed bottom-[86px] right-3 md:bottom-6 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[380px] max-h-[70vh] md:max-h-[80vh] h-[520px] bg-surface rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
           {/* Header */}
           <div className="bg-primary text-on-primary px-4 py-3 flex items-center justify-between flex-shrink-0" style={chatbotColor ? { backgroundColor: chatbotColor } : undefined}>
             <div className="flex items-center gap-2">

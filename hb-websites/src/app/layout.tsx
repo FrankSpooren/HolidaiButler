@@ -9,9 +9,60 @@ import CookieBanner from '@/components/modules/CookieBanner';
 import PoiDetailDrawer from '@/components/modules/PoiDetailDrawer';
 import EventDetailDrawer from '@/components/modules/EventDetailDrawer';
 import ScrollToTop from '@/components/ui/ScrollToTop';
+import MobileBottomNav from '@/components/MobileBottomNav';
+import MobileHeader from '@/components/MobileHeader';
+import OnboardingSheet from '@/components/OnboardingSheet';
+import MobileHomepage from '@/components/mobile/MobileHomepage';
 import { resolveAssetUrl } from '@/lib/assets';
 import Script from 'next/script';
 import './globals.css';
+
+/* ── Brand name mapping (destination-specific) ── */
+const BRAND_NAMES: Record<string, string> = {
+  calpe: 'CALPETRIP',
+  texel: 'TEXELMAPS',
+};
+
+function resolveBrandName(tenant: { code: string; displayName: string }): string {
+  return BRAND_NAMES[tenant.code] || tenant.displayName.toUpperCase();
+}
+
+interface ConfigNavItem {
+  label: Record<string, string> | string;
+  href: string;
+  featureFlag?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+function resolveNavItemsForMobile(
+  tenant: { config?: { nav_items?: ConfigNavItem[]; [key: string]: unknown }; featureFlags: Record<string, boolean | undefined> },
+  locale: string
+): { label: string; href: string }[] {
+  const items = tenant.config?.nav_items as ConfigNavItem[] | undefined;
+  const nl = locale === 'nl';
+
+  const defaults = [
+    { label: nl ? 'Ontdekken' : 'Explore', href: '/explore' },
+    { label: nl ? 'Restaurants' : 'Restaurants', href: '/restaurants' },
+    { label: nl ? 'Evenementen' : 'Events', href: '/events' },
+    { label: nl ? 'Over ons' : 'About', href: '/about' },
+    { label: 'Contact', href: '/contact' },
+  ];
+
+  if (!Array.isArray(items) || items.length === 0) return defaults;
+
+  return items
+    .filter(i => i.isActive !== false)
+    .filter(i => !i.featureFlag || tenant.featureFlags[i.featureFlag] === true)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map(i => ({
+      label: typeof i.label === 'object'
+        ? (i.label[locale] || i.label.en || i.label.nl || '')
+        : String(i.label),
+      href: i.href,
+    }));
+}
 
 export const metadata: Metadata = {
   title: 'HolidaiButler',
@@ -60,9 +111,44 @@ export default async function RootLayout({
         )}
       </head>
       <body className="min-h-screen flex flex-col bg-background text-foreground font-body antialiased">
-        {tenant && <Header tenant={tenant} locale={locale} />}
-        <main className="flex-1">{children}</main>
+        {/* Desktop header */}
+        {tenant && (
+          <div className="hidden md:block">
+            <Header tenant={tenant} locale={locale} />
+          </div>
+        )}
+        {/* Mobile header */}
+        {tenant && (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mh = (tenant.branding as any)?.mobileHomepage;
+          const greeting = mh?.greeting
+            ? `${mh.greeting} ${mh.greetingEmoji || ''}`.trim()
+            : undefined;
+          return (
+            <MobileHeader
+              brandName={mh?.brandName || resolveBrandName(tenant)}
+              locale={locale}
+              greeting={greeting}
+              primaryColor={tenant.branding?.colors?.primary}
+              secondaryColor={tenant.branding?.colors?.secondary}
+              navItems={resolveNavItemsForMobile(tenant, locale)}
+              subtitle={mh?.subtitle}
+            />
+          );
+        })()}
+        <main className="flex-1 pb-[78px] md:pb-0">{children}</main>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <MobileHomepage
+          locale={locale}
+          destinationName={tenant?.displayName || 'Calpe'}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          mobileConfig={(tenant?.branding as any)?.mobileHomepage}
+        />
         {tenant && <Footer tenant={tenant} locale={locale} />}
+        <MobileBottomNav
+          locale={locale}
+          primaryColor={tenant?.branding?.colors?.primary}
+        />
         {tenant?.featureFlags.holibot && (
           <ChatbotWidget
             tenantSlug={tenantSlug}
@@ -84,6 +170,10 @@ export default async function RootLayout({
         <PoiDetailDrawer locale={locale} />
         <EventDetailDrawer locale={locale} />
         <ScrollToTop />
+        <OnboardingSheet
+          locale={locale}
+          primaryColor={tenant?.branding?.colors?.primary}
+        />
         <CookieBanner
           locale={locale}
           primaryColor={tenant?.branding?.colors?.primary}
