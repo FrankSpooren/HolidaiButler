@@ -866,10 +866,12 @@ function ContentImageSection({ itemId, item, onUpdate }) {
     }
   };
 
-  const loadSuggestions = async () => {
+  const loadSuggestions = async (refresh = false) => {
     setSuggestLoading(true);
     try {
-      const r = await contentService.suggestImages({ content_item_id: itemId });
+      // On refresh: exclude currently shown suggestion IDs to get different images
+      const exclude_ids = refresh ? suggestions.map(s => s.id).filter(Boolean) : [];
+      const r = await contentService.suggestImages({ content_item_id: itemId, exclude_ids });
       setSuggestions(r.data || []);
     } catch (err) {
       console.error('Image suggest failed:', err);
@@ -963,7 +965,7 @@ function ContentImageSection({ itemId, item, onUpdate }) {
         </Typography>
       ) : null}
 
-      <Button size="small" onClick={loadSuggestions} sx={{ mt: 1 }} startIcon={<RefreshIcon />} disabled={suggestLoading}>
+      <Button size="small" onClick={() => loadSuggestions(true)} sx={{ mt: 1 }} startIcon={<RefreshIcon />} disabled={suggestLoading}>
         {t('contentStudio.images.refreshSuggestions', 'Nieuwe suggesties laden')}
       </Button>
 
