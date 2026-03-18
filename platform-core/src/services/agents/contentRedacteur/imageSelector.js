@@ -15,13 +15,32 @@ import logger from '../../../utils/logger.js';
  * @param {number} destinationId
  * @returns {Array} Ranked image candidates with source labels
  */
-export async function selectImages(contentItem, destinationId) {
+export async function selectImages(contentItem, destinationId, { forSuggestion = false } = {}) {
   const keywords = extractKeywords(
     (contentItem.title || '') + ' ' + (contentItem.body_en || '')
   );
   const candidates = [];
 
+  // For auto-attach: content-type limieten. For suggestion UI: always show 5+ options.
+  const maxImages = forSuggestion ? 6
+    : contentItem.content_type === 'social_post' ? 1
+    : contentItem.content_type === 'video_script' ? 1
+    : 3; // blog
+
   try {
+    // Load already-used image IDs across all content items in this destination to ensure diversity
+    const [usedRows] = await mysqlSequelize.query(
+      `SELECT media_ids FROM content_items WHERE destination_id = :destId AND media_ids IS NOT NULL AND media_ids != '[]' AND media_ids != 'null'`,
+      { replacements: { destId: destinationId } }
+    );
+    const usedImageIds = new Set();
+    for (const row of usedRows) {
+      const ids = typeof row.media_ids === 'string' ? JSON.parse(row.media_ids) : row.media_ids;
+      if (Array.isArray(ids)) {
+        ids.forEach(id => usedImageIds.add(typeof id === 'string' && id.startsWith('poi:') ? Number(id.replace('poi:', '')) : Number(id)));
+      }
+    }
+
     // 1. POI-based match: if content is about a specific POI
     if (contentItem.poi_id) {
       const [poiImages] = await mysqlSequelize.query(
@@ -42,7 +61,7 @@ export async function selectImages(contentItem, destinationId) {
     }
 
     // 2. Keyword match: find POIs matching content keywords
-    if (candidates.length < 5 && keywords.length > 0) {
+    if (candidates.length < maxImages && keywords.length > 0) {
       const keywordConditions = keywords.slice(0, 5).map(kw =>
         `(p.name LIKE :kw_${kw.replace(/[^a-z]/gi, '')} OR p.category LIKE :kw_${kw.replace(/[^a-z]/gi, '')})`
       ).join(' OR ');
@@ -63,23 +82,29 @@ export async function selectImages(contentItem, destinationId) {
         for (const poi of matchingPois) {
           if (candidates.some(c => c.poi_id === poi.id)) continue;
           const [imgs] = await mysqlSequelize.query(
-            `SELECT id, poi_id, image_url, local_path, display_order FROM imageurls WHERE poi_id = :poiId ORDER BY display_order ASC LIMIT 2`,
+            `SELECT id, poi_id, image_url, local_path, display_order FROM imageurls WHERE poi_id = :poiId ORDER BY display_order ASC LIMIT 4`,
             { replacements: { poiId: poi.id } }
           );
-          candidates.push(...imgs.map(img => ({
+          // Prefer unused images, deprioritize already-used ones
+          const sorted = imgs.sort((a, b) => {
+            const aUsed = usedImageIds.has(a.id) ? 1 : 0;
+            const bUsed = usedImageIds.has(b.id) ? 1 : 0;
+            return aUsed - bUsed || a.display_order - b.display_order;
+          });
+          candidates.push(...sorted.slice(0, 2).map(img => ({
             source: 'keyword_match',
             id: img.id,
             poi_id: img.poi_id,
             poi_name: poi.name,
             url: buildImageUrl(img),
-            relevance: 0.7,
+            relevance: usedImageIds.has(img.id) ? 0.3 : 0.7, // penalize reused images
           })));
         }
       }
     }
 
     // 3. Media Library: search uploaded content images
-    if (candidates.length < 5) {
+    if (candidates.length < maxImages) {
       const [mediaMatches] = await mysqlSequelize.query(
         `SELECT id, filename, alt_text, mime_type FROM media
          WHERE destination_id = :destId AND mime_type LIKE 'image%'
@@ -117,8 +142,8 @@ export async function selectImages(contentItem, destinationId) {
     logger.error('[ImageSelector] Image selection failed:', error);
   }
 
-  // Sort by relevance, return top 5
-  return candidates.sort((a, b) => b.relevance - a.relevance).slice(0, 5);
+  // Sort by relevance, prefer unused images, return content-type appropriate count
+  return candidates.sort((a, b) => b.relevance - a.relevance).slice(0, maxImages);
 }
 
 /**

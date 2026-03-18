@@ -65,6 +65,7 @@ class TrendAggregator {
           week_number: weekNumber,
           year,
           market: trend.market || null,
+          source_url: trend.source_url || null,
           raw_data: trend.raw_data || null,
         }, {
           // Upsert key: destination_id + keyword + week_number + year

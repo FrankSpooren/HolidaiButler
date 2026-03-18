@@ -26,7 +26,7 @@ const TrendingData = mysqlSequelize.define('TrendingData', {
     defaultValue: 'en',
   },
   source: {
-    type: DataTypes.ENUM('google_trends', 'website_analytics', 'manual', 'social_listening'),
+    type: DataTypes.ENUM('google_trends', 'website_analytics', 'manual', 'social_listening', 'external_url'),
     allowNull: false,
   },
   search_volume: {
@@ -51,6 +51,10 @@ const TrendingData = mysqlSequelize.define('TrendingData', {
   },
   market: {
     type: DataTypes.STRING(10),
+    allowNull: true,
+  },
+  source_url: {
+    type: DataTypes.STRING(2048),
     allowNull: true,
   },
   raw_data: {

@@ -118,8 +118,8 @@ class LinkedInClient {
    */
   static getAuthorizationUrl(redirectUri, state) {
     const clientId = process.env.LINKEDIN_CLIENT_ID;
-    const scopes = 'w_member_social+w_organization_social+r_organization_social';
-    return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&state=${state}`;
+    const scopes = 'profile w_member_social';
+    return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${state}`;
   }
 
   /**

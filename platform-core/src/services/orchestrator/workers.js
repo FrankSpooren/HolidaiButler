@@ -901,6 +901,31 @@ export function startWorkers() {
           }
           break;
 
+        case "content-website-traffic":
+          try {
+            const trafficCollector = (await import("../agents/trendspotter/websiteTrafficCollector.js")).default;
+            const trendAggregatorTraffic = (await import("../agents/trendspotter/trendAggregator.js")).default;
+            const trafficResults = {};
+            for (const dId of [1, 2]) {
+              try {
+                const trends = await trafficCollector.collect(dId);
+                if (trends.length > 0) {
+                  trafficResults[dId] = await trendAggregatorTraffic.aggregate(dId, trends);
+                } else {
+                  trafficResults[dId] = { saved: 0, total: 0 };
+                }
+              } catch (e) {
+                trafficResults[dId] = { error: e.message };
+              }
+            }
+            console.log(`[Orchestrator] Website traffic analysis complete`);
+            result = { type: "content-website-traffic", results: trafficResults };
+          } catch (error) {
+            console.error("[Orchestrator] Website traffic analysis failed:", error.message);
+            result = { type: "content-website-traffic", status: "error", error: error.message };
+          }
+          break;
+
         case "content-seo-audit":
           try {
             const seoMeester = (await import("../agents/seoMeester/index.js")).default;
@@ -961,6 +986,26 @@ export function startWorkers() {
           } catch (error) {
             console.error("[Orchestrator] Content feedback loop failed:", error.message);
             result = { type: "content-feedback-loop", status: "error", error: error.message };
+          }
+          break;
+
+        case "content-score-calibration":
+          try {
+            const { calibrateScoring } = await import("../agents/seoMeester/scoreCalibration.js");
+            const calibrationResults = {};
+            for (const dId of [1, 2]) {
+              try {
+                calibrationResults[dId] = await calibrateScoring(dId);
+              } catch (e) {
+                calibrationResults[dId] = { error: e.message };
+              }
+            }
+            const totalCalibrated = Object.values(calibrationResults).reduce((s, r) => s + (r.calibrated || 0), 0);
+            console.log(`[Orchestrator] Score calibration: ${totalCalibrated} items calibrated`);
+            result = { type: "content-score-calibration", results: calibrationResults };
+          } catch (error) {
+            console.error("[Orchestrator] Score calibration failed:", error.message);
+            result = { type: "content-score-calibration", status: "error", error: error.message };
           }
           break;
 
@@ -1096,10 +1141,12 @@ export function startWorkers() {
         'inventory-sync': 'inventory-sync',
         'intermediary-guest-anonymize': 'gdpr',
         'content-trending-scan': 'trendspotter',
+        'content-website-traffic': 'trendspotter',
         'content-seo-audit': 'seo-meester',
         'content-publish-scheduled': 'publisher',
         'content-analytics-collect': 'publisher',
         'content-feedback-loop': 'trendspotter',
+        'content-score-calibration': 'seo-meester',
         'seasonal-check': 'orchestrator',
         'content-weekly-report': 'owner-interface',
         'content-publish-retry': 'publisher'

@@ -65,8 +65,9 @@ const contentService = {
     return client.post(`/content/items/${id}/translate`, { target_lang: targetLang }).then(r => r.data);
   },
 
-  getItemSeo(id) {
-    return client.get(`/content/items/${id}/seo`).then(r => r.data);
+  getItemSeo(id, platform) {
+    const params = platform ? { platform } : {};
+    return client.get(`/content/items/${id}/seo`, { params }).then(r => r.data);
   },
 
   improveItem(id) {
@@ -133,6 +134,14 @@ const contentService = {
 
   refreshAccountToken(id) {
     return client.post(`/content/social-accounts/${id}/refresh`).then(r => r.data);
+  },
+
+  updateSocialAccount(id, data) {
+    return client.patch(`/content/social-accounts/${id}`, data).then(r => r.data);
+  },
+
+  getSocialPlatforms(destinationId) {
+    return client.get('/content/social-platforms', { params: { destination_id: destinationId } }).then(r => r.data);
   },
 
   // === Analytics (Fase D) ===

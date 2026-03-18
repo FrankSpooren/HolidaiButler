@@ -245,12 +245,26 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: content-trending-scan (Sunday 03:30)');
 
+  // Website Traffic Analysis (De Trendspotter) - weekly Sunday at 03:45
+  await scheduledQueue.add('content-website-traffic', { type: 'content-website-traffic' }, {
+    repeat: { cron: '45 3 * * 0', tz: 'Europe/Amsterdam' },
+    jobId: 'content-website-traffic-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-website-traffic (Sunday 03:45)');
+
   // Content Feedback Loop (De Trendspotter) - weekly Sunday at 04:00 (after trending scan)
   await scheduledQueue.add('content-feedback-loop', { type: 'content-feedback' }, {
     repeat: { cron: '0 4 * * 0', tz: 'Europe/Amsterdam' },
     jobId: 'content-feedback-loop-recurring'
   });
   console.log('[Orchestrator] Scheduled: content-feedback-loop (Sunday 04:00)');
+
+  // Score Calibration (De SEO Meester) - weekly Sunday at 05:00 (after feedback loop)
+  await scheduledQueue.add('content-score-calibration', { type: 'content-score-calibration' }, {
+    repeat: { cron: '0 5 * * 0', tz: 'Europe/Amsterdam' },
+    jobId: 'content-score-calibration-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-score-calibration (Sunday 05:00)');
 
   // Content SEO Audit (De SEO Meester) - weekly Monday at 04:00
   await scheduledQueue.add('content-seo-audit', { type: 'content-seo-audit' }, {

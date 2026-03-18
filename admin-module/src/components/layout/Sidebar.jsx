@@ -36,33 +36,33 @@ const MENU_SECTIONS = [
     items: [
       { key: 'pois', path: '/pois', icon: PlaceIcon },
       { key: 'reviews', path: '/reviews', icon: StarIcon },
-      { key: 'media', path: '/media', icon: PermMediaIcon, requiredRole: 'platform_admin' },
-      { key: 'contentStudio', path: '/content-studio', icon: AutoAwesomeIcon, requiredRole: 'platform_admin' },
+      { key: 'media', path: '/media', icon: PermMediaIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
+      { key: 'contentStudio', path: '/content-studio', icon: AutoAwesomeIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
     ]
   },
   {
     label: 'nav.section_commerce',
     items: [
-      { key: 'commerce', path: '/commerce', icon: ShoppingCartIcon, allowedRoles: ['platform_admin', 'poi_owner'] },
-      { key: 'partners', path: '/partners', icon: HandshakeIcon, requiredRole: 'platform_admin' },
-      { key: 'financial', path: '/financial', icon: AccountBalanceIcon, allowedRoles: ['platform_admin', 'poi_owner'] },
-      { key: 'intermediary', path: '/intermediary', icon: SwapHorizIcon, allowedRoles: ['platform_admin', 'poi_owner'] },
+      { key: 'commerce', path: '/commerce', icon: ShoppingCartIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'] },
+      { key: 'partners', path: '/partners', icon: HandshakeIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
+      { key: 'financial', path: '/financial', icon: AccountBalanceIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'] },
+      { key: 'intermediary', path: '/intermediary', icon: SwapHorizIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'] },
     ]
   },
   {
     label: 'nav.section_platform',
     items: [
-      { key: 'branding', path: '/branding', icon: PaletteIcon, requiredRole: 'platform_admin' },
-      { key: 'pages', path: '/pages', icon: ArticleIcon, requiredRole: 'platform_admin' },
-      { key: 'navigation', path: '/navigation', icon: MenuOpenIcon, requiredRole: 'platform_admin' },
-      { key: 'onboarding', path: '/onboarding', icon: AddCircleOutlineIcon, requiredRole: 'platform_admin' },
+      { key: 'branding', path: '/branding', icon: PaletteIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
+      { key: 'pages', path: '/pages', icon: ArticleIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
+      { key: 'navigation', path: '/navigation', icon: MenuOpenIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
+      { key: 'onboarding', path: '/onboarding', icon: AddCircleOutlineIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
     ]
   },
   {
     label: 'nav.section_system',
     items: [
       { key: 'analytics', path: '/analytics', icon: BarChartIcon },
-      { key: 'settings', path: '/settings', icon: SettingsIcon },
+      { key: 'settings', path: '/settings', icon: SettingsIcon, requiredRole: 'platform_admin' },
       { key: 'users', path: '/users', icon: PeopleIcon, requiredRole: 'platform_admin' },
     ]
   },
