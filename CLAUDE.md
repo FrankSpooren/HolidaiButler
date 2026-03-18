@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.12.0
+> **Versie**: 4.13.0
 > **Laatst bijgewerkt**: 18 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -119,7 +119,7 @@ HolidaiButler/
 │   └── src/
 │       ├── app/                 # App Router (tenant-themed SSR)
 │       ├── blocks/              # Page builder blocks (20: Hero, PoiGrid, EventCalendar, RichText, CardGroup, Map, Testimonials, Cta, Gallery, Faq, TicketShop, ReservationWidget, Video, SocialFeed, ContactForm, Newsletter, WeatherWidget, Banner, Partners, Downloads)
-│       ├── components/          # Layout (Header/Footer) + UI (Button/Card) + Modules (Chatbot)
+│       ├── components/          # Layout (Header/Footer) + UI (Button/Card) + Modules (Chatbot) + Mobile (MobileHeader/MobileBottomNav/OnboardingSheet/mobile/*)
 │       ├── lib/                 # API client, theme engine, block registry
 │       ├── types/               # TypeScript type definities
 │       └── middleware.ts        # Tenant-resolutie (domein → tenant slug)
@@ -403,6 +403,8 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | **Fase C** | **Content Publishing — De Uitgever Agent + Social Media + Calendar** | **15-03** | **Publisher Agent (#25 De Uitgever): Meta Graph API v25.0 (Facebook + Instagram), LinkedIn Marketing API, platform client factory pattern. Content Calendar tab (maandweergave, seizoensoverlay, dag-detail, inplannen/publiceren/annuleren). Performance tab (KPI cards, per-platform BarChart + PieChart, top content tabel, Recharts). Seasonal Config tab (CRUD, activeren/deactiveren, thema's, hero image override). Social Accounts management (connect/disconnect, token refresh, encrypted storage AES-256-CBC). LinkedIn OAuth callback route. 17 nieuwe API endpoints (185 totaal). 3 BullMQ jobs (content-publish-scheduled elke 15 min, content-analytics-collect dagelijks 09:00, seasonal-check dagelijks 00:15). 59 jobs totaal (+3). 25 agents (+1). DB migration: content_items +3 kolommen (scheduled_at, platform_post_id, publish_error) + approval_status ENUM uitgebreid. 2 social_accounts geseeded (Facebook + Instagram). 3 nieuwe frontend tabs, 17 API methods, 16 React Query hooks. i18n 4 talen (~50 nieuwe keys). adminPortal.js v3.27.0. Admin build 0 errors.** |
 | **Fase B** | **Content Engine — AI Content Generatie Motor** | **14-03** | **BLOK B.0: De Redacteur Agent (#23) — Mistral AI content generatie, tone-of-voice per destination (Calpe warm/Texel adventurous/WarreWijzer slow-living), meertalige vertaling, platform-specifieke formatting. 4 nieuwe bestanden. BLOK B.1: De SEO Meester Agent (#24) — SEO analyse (readability Flesch-Kincaid per taal, keyword density, heading structuur, interne link suggesties), SISTRIX integratie (visibility index, keyword rankings). 5 nieuwe bestanden. BLOK B.2: Content Suggestie Engine — 3 API endpoints (suggesties lijst, AI generatie, approve/reject). BLOK B.3: Content Generator UI — 7 API endpoints, ContentStudioPage 3 tabs actief (Trending + Suggesties + Content Items), ContentItemDialog met taaltabs + SEO sidebar, GenerateContentDialog. 1 nieuw + 7 gewijzigde bestanden. 24 agents (+2), 56 jobs (+1), 168 endpoints (+10). adminPortal.js v3.26.0. i18n 4 talen. Admin build 0 errors.** |
 
+| **Fase VI-B Mobile** | **Mobiele Homepage & Onboarding — 7 Blokken** | **18-03** | **BLOK A: MobileBottomNav (5 tabs: Home/Explore/Chatbot/Events/More, z-40, md:hidden, 44x44px touch targets). BLOK B: OnboardingSheet (4-stappen bottom-sheet: taal/interesses/meldingen/klaar, localStorage persistence, i18n NL/EN/DE/ES, CustomEvent hb:onboarding-update). BLOK C: MobileHeader (gradient primary→secondary, brand name uit config, SVG language flags, WCAG accessibility icon, hamburger menu, i18n subtitle). BLOK D: 4 homepage content blocks — ProgramCard (3 POIs + 1 event, time slots, connector lines, chatbot CTA), TipOfTheDay (yellow gradient, /api/holibot/daily-tip), TodayEvents (horizontal scroll, category emoji), MapPreview (Leaflet, category-colored markers, overlay label). BLOK E: Admin Portal integratie — BrandingPage "Mobiele Homepage" accordion (13 velden), GET+PUT /destinations/:id/mobile-homepage endpoints, mobileHomepage JSON in branding, config doorvoering naar alle components (programSize, mapPoiLimit, mapLabel, subtitle, brandName, greeting). BLOK F: Browser verificatie 9/9 PASS. Events list API proxy (/api/events). MobileHomepage wrapper (pathname='/' only, #F5F2EC bg). 9 nieuwe + 4 gewijzigde bestanden (1.712 LOC). Commit be8cc00.** |
+
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
 ---
@@ -540,7 +542,7 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | III | Commerce Foundation (Payment/Adyen, Ticketing, Reservering) | ✅ COMPLEET (Blok G+A+B+C+D+E+F) | 8-12 wkn |
 | IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | ✅ COMPLEET (Blok A+B+C+D+E+F) | 6-8 wkn |
 | V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + v13.0-v15.0 COMPLEET) | 12 wkn |
-| VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | 🟡 IN PROGRESS (VI-A UX Polish + VI-B Features COMPLEET) | 6-8 wkn |
+| VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | 🟡 IN PROGRESS (VI-A UX Polish + VI-B Features + VI-B Mobile Homepage COMPLEET) | 6-8 wkn |
 | VII | Polish, Scale & Launch (E2E testing, load testing, DR, go-live multi-tenant) | GEPLAND | 3-4 wkn |
 
 ### State-of-the-Art Vervolgstappen (na Fase 12)
@@ -649,9 +651,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.13.0** | **2026-03-18** | **Fase VI-B Mobile Homepage & Onboarding — 7 Blokken**. BLOK A: MobileBottomNav (5 tabs, z-40). BLOK B: OnboardingSheet (4-stappen, localStorage, i18n). BLOK C: MobileHeader (gradient, SVG flags, WCAG). BLOK D: ProgramCard + TipOfTheDay + TodayEvents + MapPreview. BLOK E: Admin BrandingPage accordion (13 velden) + 2 API endpoints + config doorvoering. BLOK F: 9/9 verificatie PASS. 9 nieuwe + 4 gewijzigde bestanden (1.712 LOC). Commit be8cc00. MS v7.73. |
 | **4.12.0** | **2026-03-18** | **Content Studio Completie — Alle 12 Opdrachten 100%**. FIX 1: `score_calibrations` DB tabel (OPDRACHT 4). FIX 3: Image refresh button fix — `excludeIds` + RAND() randomisatie in imageSelector.js, backend `exclude_ids` param, frontend exclude current IDs bij refresh. Geverifieerd: 100% andere images bij refresh. 1 DB tabel + 3 bestanden. MS v7.72. |
 | **4.11.0** | **2026-03-18** | **OPDRACHT 7/7B: Content Studio Image Quality — Enterprise Image Selection**. OPDRACHT 7: media_ids resolve (poi: prefix strip, w=600 webp, alt text). OPDRACHT 7B: POI auto-detectie, diversity filter, content-type limits, forSuggestion 6 results, PlatformPreview images. Frontend: STATUS_LABELS crash fix, ContentImageSection rewrite (3-6 alternatieven). 5 bestanden. MS v7.71. |
-| **4.10.0** | **2026-03-16** | **CS v6.0 Chirurgisch: Browser-Verified Remediatie — 7 Fixes**. FIX 1: SEO scoring fairness (auto-derive meta desc, paragraph credit, softer links, MAX_ROUNDS=3). FIX 3: Auto-attach images (selectImages() + imageurls/display_order/filename DB fixes). FIX 5: Pinterest+YouTube OAuth callbacks + LinkedIn .default fix + Pinterest activated. FIX 6: Meta System User→Page Token exchange (1h cache), analytics working (content_performance). Token encryption SHA-256 key fix. FIX 7: PlatformPreview blog-on-social. 7 bestanden. MS v7.70. |
 | **4.9.0** | **2026-03-16** | **Content Studio TO DO P0+P1 — Enterprise Quality**. P0: PlatformPreview auto-adapt (smart truncation, platform health indicators, tips). repurposeContent() enterprise rewrite (PLATFORM_EXAMPLES, creatieve instructies, 2 retries, SEO scoring). Auto-attach images bij generatie (keyword REGEXP). Pinterest OAuth + YouTube OAuth connect. SocialAccountsCards herschreven (7 platforms, koppelen/vernieuwen). P1: DeepL Pro actief. Auto-crop bij publicatie (Sharp). UTM parameters in Publisher flow. 2 endpoints (212 totaal). adminPortal.js v3.32.0. MS v7.69. |
 | **4.8.0** | **2026-03-16** | **Content Studio v5.0 Remediatie — 8 Blokken**. BLOK 3 (P0): repurposeContent() herschreven. BLOK 4 (P0): Publish workflow. BLOK 2 (P0): Image management. BLOK 1 (P1): SEO v2.0. BLOK 8 (P1): DeepL translator + mistral-medium. BLOK 5 (P1): Social Accounts tab. BLOK 6 (P1): BestTimeToPost. BLOK 7 (P2): ApprovalTimeline. 2 endpoints (210 totaal). adminPortal.js v3.31.0. MS v7.68. |
 | **4.7.0** | **2026-03-15** | **Content Module Waves 5+6: Enterprise Workflow + Platform Completion**. Wave 5: approval logging, revisions, comments, pillars, best-time, UTM, hashtags, bulk ops. Wave 6: X API v2 + Pinterest API v5, 14 templates, publish retry, brand score. 19 endpoints (210 totaal). 2 jobs (62 totaal). adminPortal.js v3.31.0. MS v7.67. |
@@ -664,7 +666,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.72 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.73 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
