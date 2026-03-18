@@ -10929,7 +10929,7 @@ router.post('/content/items/:id/share-to-destination', adminAuth('editor'), writ
  */
 router.post('/content/images/suggest', adminAuth('editor'), async (req, res) => {
   try {
-    const { content_item_id, title, body_en, poi_id } = req.body;
+    const { content_item_id, title, body_en, poi_id, exclude_ids } = req.body;
     const destId = req.adminUser?.destination_id || req.body.destination_id || 1;
 
     let contentItem = { title, body_en, poi_id, destination_id: destId };
@@ -10943,8 +10943,9 @@ router.post('/content/images/suggest', adminAuth('editor'), async (req, res) => 
       contentItem = item;
     }
 
+    const excludeIds = Array.isArray(exclude_ids) ? exclude_ids : [];
     const { selectImages } = await import('../services/agents/contentRedacteur/imageSelector.js');
-    const images = await selectImages(contentItem, contentItem.destination_id || destId, { forSuggestion: true });
+    const images = await selectImages(contentItem, contentItem.destination_id || destId, { forSuggestion: true, excludeIds });
 
     res.json({ success: true, data: images });
   } catch (error) {

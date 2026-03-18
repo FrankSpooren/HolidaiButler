@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 18 maart 2026
-**Versie**: 7.71
+**Versie**: 7.72
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v15.1 + Fase B+C+D + Enterprise SEO + Agent Fixes + Wave 5+6 + CS v5.0+v6.0+v6.0 Chirurgisch + OPDRACHT 7/7B COMPLEET). FASE VI IN PROGRESS (VI-A UX Polish + VI-B Features COMPLEET). CLAUDE.md v4.11.0. MS v7.71.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v15.1 + Fase B+C+D + Enterprise SEO + Agent Fixes + Wave 5+6 + CS v5.0+v6.0+v6.0 Chirurgisch + OPDRACHT 7/7B + Content Studio Completie COMPLEET). FASE VI IN PROGRESS (VI-A UX Polish + VI-B Features COMPLEET). CLAUDE.md v4.12.0. MS v7.72.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1627,6 +1627,8 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.72** | **18-03-2026** | **Content Studio Completie — Alle 12 Opdrachten 100% COMPLEET. FIX 1: `score_calibrations` DB tabel aangemaakt (OPDRACHT 4 completie). FIX 3: Image refresh button fix — `excludeIds` + RAND() randomisatie in imageSelector.js, frontend exclude current IDs bij refresh. Geverifieerd: 100% andere images bij refresh. 1 DB tabel + 3 bestanden. CLAUDE.md v4.12.0.** |
+| **7.71** | **18-03-2026** | **OPDRACHT 7/7B: Content Studio Image Quality — Enterprise Image Selection COMPLEET. media_ids resolve (poi: prefix strip, w=600 webp, alt text). POI auto-detectie, diversity filter, content-type limits, forSuggestion 6 results, PlatformPreview images. STATUS_LABELS crash fix, ContentImageSection rewrite. 5 bestanden. CLAUDE.md v4.11.0.** |
 | **7.70** | **16-03-2026** | **CS v6.0 Chirurgisch: Browser-Verified Remediatie — 7 Fixes COMPLEET. FIX 1: SEO scoring fairness (auto-derive meta desc, paragraph credit, softer links). FIX 3: Auto-attach images (selectImages() + DB fixes imageurls/display_order/filename). FIX 5: Pinterest+YouTube OAuth callbacks + LinkedIn .default fix + Pinterest activated. FIX 6: Meta System User→Page Token exchange (_getPageAccessToken 1h cache), analytics working (2 likes, 1 comment in content_performance). FIX 7: PlatformPreview blog-on-social detection. Token encryption SHA-256 key fix. 7 bestanden. CLAUDE.md v4.10.0.** |
 | **7.69** | **16-03-2026** | **Content Studio TO DO P0+P1 Enterprise Quality COMPLEET. P0: PlatformPreview auto-adapt (smart truncation, platform health indicators, tips). repurposeContent() enterprise rewrite (PLATFORM_EXAMPLES, creatieve instructies per platform, 2 retries, SEO scoring). Auto-attach images bij generatie (keyword REGEXP match media+POI). Pinterest OAuth v5 + YouTube OAuth 2.0 connect endpoints. SocialAccountsCards herschreven (7 platforms). P1: DeepL Pro actief. Auto-crop bij publicatie (Sharp). UTM parameters in Publisher flow. 2 endpoints (212 totaal). adminPortal.js v3.32.0. CLAUDE.md v4.9.0.** |
 | **7.68** | **16-03-2026** | **Content Studio v5.0 Remediatie — 8 Blokken COMPLEET. P0: BLOK 3 repurposeContent() AI platform-specifiek (niet copy-paste), BLOK 4 publish workflow (Nu Publiceren/Inplannen + best time), BLOK 2 image management (attach/detach + suggesties). P1: BLOK 1 SEO v2.0 bevestigd, BLOK 8 mistral-medium-latest + DeepL translator ready, BLOK 5 Social Accounts tab, BLOK 6 BestTimeToPost UI. P2: BLOK 7 ApprovalTimeline. 2 endpoints (210 totaal). adminPortal.js v3.31.0. CLAUDE.md v4.8.0.** |

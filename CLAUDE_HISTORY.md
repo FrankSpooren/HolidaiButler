@@ -5084,4 +5084,67 @@ CLAUDE.md v4.10.0 → v4.11.0. MS v7.70 → v7.71. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Content Studio Completie — Alle 12 Opdrachten 100% Compleet (18-03-2026)
+
+### Context
+Na OPDRACHT 7/7B bleven 3 items open: `score_calibrations` DB tabel (OPDRACHT 4), `source_url` TextField in AddKeywordDialog (OPDRACHT 11), en de niet-werkende "Nieuwe suggesties laden" refresh button. Analyse toonde dat OPDRACHT 11 al volledig was geïmplementeerd.
+
+### FIX 1: score_calibrations DB tabel (OPDRACHT 4)
+- `CREATE TABLE score_calibrations` op Hetzner MySQL met kolommen: destination_id, content_item_id, platform, predicted_score, actual_engagement_rate, delta, calibrated_at
+- UNIQUE KEY op (destination_id, content_item_id)
+- Gebruikt door `scoreCalibration.js` (BullMQ job `content-score-calibration`, zondag 05:00)
+- OPDRACHT 4 nu 100% compleet
+
+### FIX 2: source_url TextField (OPDRACHT 11) — AL COMPLEET
+- Verificatie: TextField op regel 342 aanwezig met state (regel 289), submit handler (regel 303-304), placeholder, helperText
+- Source field in submit: `source: sourceUrl ? 'external_url' : 'manual'`
+- OPDRACHT 11 was al 100% compleet
+
+### FIX 3: Image Refresh Button
+- **Root cause**: `loadSuggestions()` riep `selectImages()` aan met deterministische queries — identieke resultaten bij elke call
+- **Backend fix** (`imageSelector.js`): nieuw `excludeIds` parameter
+  - POI images: `AND i.id NOT IN (...)` exclude clause + LIMIT 8 (was 5)
+  - Keyword match POIs: `ORDER BY RAND()` wanneer excludeIds aanwezig
+  - Keyword match images: `AND id NOT IN (...)` + `ORDER BY RAND()`
+  - Media library: `AND id NOT IN (...)` + `ORDER BY RAND()`
+- **Backend fix** (`adminPortal.js`): `exclude_ids` body parameter doorgesluisd naar `selectImages()`
+- **Frontend fix** (`ContentStudioPage.jsx`): `loadSuggestions(refresh)` parameter
+  - Bij refresh=true: stuurt huidige suggestion IDs als `exclude_ids` mee
+  - Refresh button: `onClick={() => loadSuggestions(true)}`
+- **Verificatie**: Call 1 → [21362, 21363, 18586-18589], Refresh → [18590-18593, 13734, 13731] — 100% andere images
+
+### Gewijzigde bestanden
+
+| Actie | Bestand | Beschrijving |
+|-------|---------|-------------|
+| NIEUW | `score_calibrations` tabel | DB migratie op Hetzner MySQL |
+| WIJZIG | `platform-core/src/services/agents/contentRedacteur/imageSelector.js` | excludeIds param, RAND() randomisatie, exclude clauses |
+| WIJZIG | `platform-core/src/routes/adminPortal.js` | exclude_ids body param doorsturen |
+| WIJZIG | `admin-module/src/pages/ContentStudioPage.jsx` | loadSuggestions(refresh) + exclude_ids bij refresh |
+
+### Opdracht Status (HB_Content_Studio_DEFINITIEF_v8.md)
+
+| # | Opdracht | Status |
+|---|----------|--------|
+| 1 | Trending Data Integratie | ✅ 100% |
+| 2 | Content Suggestie Generator | ✅ 100% |
+| 3 | Content Generatie Motor | ✅ 100% |
+| 4 | Social Score + Calibratie | ✅ 100% (score_calibrations tabel aangemaakt) |
+| 5 | SEO Scoring + Auto-improve | ✅ 100% |
+| 6 | Content Publishing Pipeline | ✅ 100% |
+| 7 | Image Quality | ✅ 100% |
+| 8 | Content Repurposing | ✅ 100% |
+| 9 | Content Calendar | ✅ 100% |
+| 10 | Analytics Dashboard | ✅ 100% |
+| 11 | Handmatige Keyword Input | ✅ 100% (source_url bevestigd) |
+| 12 | Seasonal Config | ✅ 100% |
+
+### Documentatie
+
+CLAUDE.md v4.11.0 → v4.12.0. MS v7.71 → v7.72. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

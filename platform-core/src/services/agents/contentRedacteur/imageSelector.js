@@ -15,7 +15,7 @@ import logger from '../../../utils/logger.js';
  * @param {number} destinationId
  * @returns {Array} Ranked image candidates with source labels
  */
-export async function selectImages(contentItem, destinationId, { forSuggestion = false } = {}) {
+export async function selectImages(contentItem, destinationId, { forSuggestion = false, excludeIds = [] } = {}) {
   const keywords = extractKeywords(
     (contentItem.title || '') + ' ' + (contentItem.body_en || '')
   );
@@ -41,13 +41,17 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
       }
     }
 
+    // Build exclude set from passed IDs (for refresh functionality)
+    const excludeSet = new Set(excludeIds.map(Number).filter(n => !isNaN(n)));
+
     // 1. POI-based match: if content is about a specific POI
     if (contentItem.poi_id) {
+      const excludeClause = excludeSet.size > 0 ? `AND i.id NOT IN (${[...excludeSet].join(',')})` : '';
       const [poiImages] = await mysqlSequelize.query(
         `SELECT i.id, i.poi_id, i.image_url, i.local_path, i.display_order, p.name as poi_name
          FROM imageurls i JOIN POI p ON i.poi_id = p.id
-         WHERE i.poi_id = :poiId
-         ORDER BY i.display_order ASC LIMIT 5`,
+         WHERE i.poi_id = :poiId ${excludeClause}
+         ORDER BY i.display_order ASC LIMIT 8`,
         { replacements: { poiId: contentItem.poi_id } }
       );
       candidates.push(...poiImages.map(img => ({
@@ -72,17 +76,21 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
       });
 
       if (keywordConditions) {
+        // Use RAND() offset for refresh variety when excludeIds present
+        const orderClause = excludeSet.size > 0 ? 'ORDER BY RAND()' : 'ORDER BY p.id';
         const [matchingPois] = await mysqlSequelize.query(
           `SELECT DISTINCT p.id, p.name FROM POI p
            WHERE p.destination_id = :destId AND p.is_active = 1 AND (${keywordConditions})
-           LIMIT 10`,
+           ${orderClause} LIMIT 10`,
           { replacements }
         );
 
         for (const poi of matchingPois) {
           if (candidates.some(c => c.poi_id === poi.id)) continue;
+          const imgExcludeClause = excludeSet.size > 0 ? `AND id NOT IN (${[...excludeSet].join(',')})` : '';
+          const imgOrder = excludeSet.size > 0 ? 'ORDER BY RAND() LIMIT 4' : 'ORDER BY display_order ASC LIMIT 4';
           const [imgs] = await mysqlSequelize.query(
-            `SELECT id, poi_id, image_url, local_path, display_order FROM imageurls WHERE poi_id = :poiId ORDER BY display_order ASC LIMIT 4`,
+            `SELECT id, poi_id, image_url, local_path, display_order FROM imageurls WHERE poi_id = :poiId ${imgExcludeClause} ${imgOrder}`,
             { replacements: { poiId: poi.id } }
           );
           // Prefer unused images, deprioritize already-used ones
@@ -105,10 +113,12 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
 
     // 3. Media Library: search uploaded content images
     if (candidates.length < maxImages) {
+      const mediaExcludeClause = excludeSet.size > 0 ? `AND id NOT IN (${[...excludeSet].join(',')})` : '';
+      const mediaOrder = excludeSet.size > 0 ? 'ORDER BY RAND() LIMIT 5' : 'ORDER BY created_at DESC LIMIT 5';
       const [mediaMatches] = await mysqlSequelize.query(
         `SELECT id, filename, alt_text, mime_type FROM media
-         WHERE destination_id = :destId AND mime_type LIKE 'image%'
-         ORDER BY created_at DESC LIMIT 5`,
+         WHERE destination_id = :destId AND mime_type LIKE 'image%' ${mediaExcludeClause}
+         ${mediaOrder}`,
         { replacements: { destId: destinationId } }
       );
       candidates.push(...mediaMatches.map(m => ({
