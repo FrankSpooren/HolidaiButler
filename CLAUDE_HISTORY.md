@@ -5147,4 +5147,68 @@ CLAUDE.md v4.11.0 → v4.12.0. MS v7.71 → v7.72. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Fase VI-B: Mobiele Homepage & Onboarding (18-03-2026)
+
+### Overzicht
+
+Volledige mobiele homepage ervaring voor CalpeTrip (dev.holidaibutler.com). 7 blokken, 9 nieuwe + 4 gewijzigde bestanden, 1.712 LOC.
+
+### Blokken
+
+| Blok | Beschrijving | Status |
+|------|-------------|--------|
+| A | MobileBottomNav — 5 tabs (Home/Explore/Chatbot/Events/More), z-40, md:hidden, 44x44px touch targets, CustomEvent hb:chatbot:open voor chatbot tab | COMPLEET |
+| B | OnboardingSheet — 4-stappen bottom-sheet (taal/interesses/meldingen/klaar), localStorage persistence (hb_onboarding_complete), i18n NL/EN/DE/ES, CustomEvent hb:onboarding-update, z-[60]/z-[61] | COMPLEET |
+| C | MobileHeader — Gradient primary→secondary, brand name uit admin config ("CALPETRIP"), SVG language flags (geen emoji), WCAG accessibility icon + AccessibilityModal, hamburger menu, i18n subtitle, cookie hb_locale taalwissel | COMPLEET |
+| D | Homepage Content Blocks — 4 standalone components: ProgramCard (3 POIs + 1 event, time slots, connector lines, chatbot CTA), TipOfTheDay (yellow gradient, /api/holibot/daily-tip proxy), TodayEvents (horizontal scroll, category emoji mapping, /api/events proxy), MapPreview (Leaflet, category-colored markers, overlay label, tap→/explore) | COMPLEET |
+| E | Admin Portal Integratie — BrandingPage "Mobiele Homepage" accordion (13 velden: brandName, greeting, greetingEmoji, subtitle 4 talen, mapLabel 4 talen, programSize, mapPoiLimit, mapEventLimit, showOnboarding). GET+PUT /destinations/:id/mobile-homepage endpoints. mobileHomepage JSON in destinations.branding. Config doorvoering: layout.tsx leest config → MobileHeader + MobileHomepage → ProgramCard (programSize) + MapPreview (poiLimit, mapLabel) | COMPLEET |
+| F | Browser Verificatie — 9/9 checks PASS op dev.holidaibutler.com (HTTP 200, CALPETRIP, #F5F2EC, POI API, Admin Portal, Texel) | COMPLEET |
+| G | Documentatie — CLAUDE.md v4.13.0, MS v7.73 | COMPLEET |
+
+### Nieuwe bestanden
+
+| Bestand | LOC | Beschrijving |
+|---------|-----|-------------|
+| `hb-websites/src/components/MobileBottomNav.tsx` | ~120 | 5-tab bottom navigation |
+| `hb-websites/src/components/MobileHeader.tsx` | ~210 | Gradient header met brand, flags, WCAG |
+| `hb-websites/src/components/OnboardingSheet.tsx` | ~407 | 4-stappen onboarding wizard |
+| `hb-websites/src/components/mobile/MobileHomepage.tsx` | ~40 | Wrapper component, homepage-only |
+| `hb-websites/src/components/mobile/ProgramCard.tsx` | ~210 | Dagprogramma met POIs + events |
+| `hb-websites/src/components/mobile/TipOfTheDay.tsx` | ~100 | Tip van de dag banner |
+| `hb-websites/src/components/mobile/TodayEvents.tsx` | ~150 | Horizontale event cards |
+| `hb-websites/src/components/mobile/MapPreview.tsx` | ~150 | Leaflet mini-map preview |
+| `hb-websites/src/app/api/events/route.ts` | ~35 | Events list API proxy |
+
+### Gewijzigde bestanden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/app/layout.tsx` | +resolveBrandName(), +resolveNavItemsForMobile(), MobileHeader/MobileHomepage/OnboardingSheet integratie, desktop Header wrapped in md:block |
+| `hb-websites/src/components/modules/ChatbotWidget.tsx` | z-index aanpassing voor MobileBottomNav compatibiliteit |
+| `hb-websites/src/components/ui/ScrollToTop.tsx` | Positie aanpassing voor bottom nav |
+| `admin-module/src/pages/BrandingPage.jsx` | "Mobiele Homepage" BrandingAccordion met 13 velden, Switch import |
+
+### Backend wijzigingen (Hetzner — niet in Git)
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/adminPortal.js` | +GET /destinations/:id/mobile-homepage, +PUT /destinations/:id/mobile-homepage (via sed op Hetzner) |
+| Database: destinations.branding | mobileHomepage JSON seed voor Calpe (destination_id=1) via SQL |
+
+### Technische details
+
+- **Z-index layering**: MobileBottomNav z-40, MobileHeader z-40, ChatbotWidget z-50, OnboardingSheet z-[60]/z-[61]
+- **Responsive pattern**: `md:hidden` voor mobile-only, `hidden md:block` voor desktop-only
+- **CustomEvent systeem**: hb:chatbot:open, hb:poi:open, hb:event:open, hb:onboarding-update
+- **Client-side rendering**: Alle mobile components zijn `'use client'` met useEffect — niet zichtbaar in SSR/curl output
+- **Admin config flow**: destinations.branding.mobileHomepage → layout.tsx → MobileHeader props + MobileHomepage mobileConfig prop → ProgramCard/MapPreview props
+
+### Documentatie
+
+CLAUDE.md v4.12.0 → v4.13.0. MS v7.72 → v7.73. CLAUDE_HISTORY.md bijgewerkt.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
