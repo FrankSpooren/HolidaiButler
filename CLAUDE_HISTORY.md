@@ -5211,4 +5211,51 @@ CLAUDE.md v4.12.0 → v4.13.0. MS v7.72 → v7.73. CLAUDE_HISTORY.md bijgewerkt.
 
 ---
 
+## Fase VI-B Mobile: 7 Feedback Fixes (20 maart 2026)
+
+**Commit**: 5d3bb00 | **CLAUDE.md**: v4.14.0 | **MS**: v7.74
+
+### Samenvatting
+
+7 feedback punten van Frank op de mobiele homepage redesign (dev.holidaibutler.com), elk geïmplementeerd, getest en gedeployed.
+
+### Fixes
+
+| # | Fix | Component | Beschrijving |
+|---|-----|-----------|-------------|
+| 1 | Inter font fix | `ProgramCard.tsx` | `'DM Sans'` → `var(--hb-font-body)` — Inter nu overal consistent |
+| 2 | Tip van de Dag link | `TipOfTheDay.tsx` | Generic `/agenda` → specifiek `/agenda/:id` of `/pois/:id` — directe deep link naar POI/Event detail |
+| 3 | Language param | `MapPreview.tsx` | Map click link miste `?lang=` parameter voor NL/DE/ES locales |
+| 4 | WCAG icoon | — | Was AL aanwezig in zowel hb-websites (MobileHeader) als customer-portal (Header.tsx regel 111-120 met volledige WCAGModal) |
+| 5 | Hamburger menu | `MobileHeader.tsx` | Witte dropdown → slide-in panel van rechts, groene gradient, emoji icons, primair (🏠🖼️💬📅❤️) + secundair (👤ℹ️❓✉️) met separator |
+| 6 | CALPETRIP font size | `MobileHeader.tsx` | `text-lg` → `text-xl`, letter-spacing `1.8px` → `2px` |
+| 7 | Bottom nav icons | `MobileBottomNav.tsx` | Outline stroke SVGs → gekleurde filled SVGs (Home oranje, Agenda blauw, POIs roze, Profiel paars) |
+
+### Gewijzigde bestanden (6)
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `hb-websites/src/components/mobile/ProgramCard.tsx` | fontFamily DM Sans verwijderd |
+| `hb-websites/src/components/mobile/TipOfTheDay.tsx` | Deep link naar specifiek POI/Event + localized title/description resolution |
+| `hb-websites/src/components/mobile/MapPreview.tsx` | Language param in map click URL |
+| `hb-websites/src/components/MobileHeader.tsx` | Slide-in menu panel + brand font size increase |
+| `hb-websites/src/components/MobileBottomNav.tsx` | 5 colored SVG icon components (HomeIcon, AgendaIcon, ChatIcon, PoisIcon, ProfielIcon) |
+| `hb-websites/src/app/globals.css` | slideInRight keyframe animatie (duplicate verwijderd) |
+
+### Test/Productie analyse
+
+Alle 7 fixes zijn hb-websites (Next.js) specifiek. Customer-portal (holidaibutler.com) heeft:
+- WCAG: al aanwezig met volledige WCAGModal (font size, letter spacing, line height, contrast, grayscale, 4 talen)
+- Overige componenten (MobileHeader, MobileBottomNav, ProgramCard, TipOfTheDay, MapPreview): bestaan niet in customer-portal
+
+**Conclusie**: Geen deployment naar test/productie customer-portal nodig.
+
+### Documentatie
+
+CLAUDE.md v4.13.0 → v4.14.0. MS v7.73 → v7.74.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
