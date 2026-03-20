@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 /* Tenant theme CSS Custom Properties — fallback values for development */
 :root {
@@ -12,7 +13,7 @@
   --hb-surface: #FFFFFF;
   --hb-text: #1C1917;
   --hb-text-muted: #78716C;
-  --hb-font-heading: 'Playfair Display', serif;
+  --hb-font-heading: 'Inter', sans-serif;
   --hb-font-body: 'Inter', sans-serif;
   --hb-radius: 0.75rem;
 }
@@ -114,6 +115,12 @@ h4 {
 .animate-stagger > *:nth-child(10) { animation-delay: 0.50s; }
 .animate-stagger > *:nth-child(11) { animation-delay: 0.55s; }
 .animate-stagger > *:nth-child(12) { animation-delay: 0.60s; }
+
+/* Slide-in from right for mobile menu */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
 
 /* Image fade-in on load */
 @keyframes fadeIn {

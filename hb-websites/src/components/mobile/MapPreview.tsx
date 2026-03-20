@@ -13,7 +13,15 @@ const LABELS: Record<string, Record<string, string>> = {
   discover: { nl: 'Ontdek ruim', en: 'Discover over', de: 'Entdecke über', es: 'Descubre más de' },
   locations:{ nl: 'locaties', en: 'locations', de: 'Standorte', es: 'ubicaciones' },
   sub:      { nl: 'Restaurants · Stranden · Bezienswaardigheden · Winkels', en: 'Restaurants · Beaches · Attractions · Shops', de: 'Restaurants · Strände · Sehenswürdigkeiten · Geschäfte', es: 'Restaurantes · Playas · Atracciones · Tiendas' },
+  mapTitle: { nl: 'Ontdek jouw mooiste Calpe-plekjes', en: 'Discover your favorite Calpe spots', de: 'Entdecke deine schönsten Calpe-Orte', es: 'Descubre tus mejores lugares de Calpe' },
 };
+
+const MAP_CATEGORIES = [
+  { key: 'beach', nl: 'Stranden & Natuur', en: 'Beaches & Nature', de: 'Strände & Natur', es: 'Playas & Naturaleza', color: '#3498db', filter: 'Beach,Nature' },
+  { key: 'food', nl: 'Food & Drinks', en: 'Food & Drinks', de: 'Essen & Trinken', es: 'Comida & Bebidas', color: '#e74c3c', filter: 'Food & Drinks' },
+  { key: 'active', nl: 'Actief', en: 'Active', de: 'Aktiv', es: 'Activo', color: '#1abc9c', filter: 'Active' },
+  { key: 'shopping', nl: 'Winkelen', en: 'Shopping', de: 'Einkaufen', es: 'Compras', color: '#9b59b6', filter: 'Shopping' },
+];
 
 // Category color mapping matching the main Map.tsx
 const CATEGORY_COLORS: Record<string, string> = {
@@ -108,7 +116,8 @@ export default function MapPreview({ locale, poiCount = 1500, poiLimit = 8, mapL
       });
 
       if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 13 });
+        // Zoom in close enough that Calpe is clearly visible with POIs
+        map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
       }
 
       mapInstanceRef.current = map;
@@ -126,7 +135,7 @@ export default function MapPreview({ locale, poiCount = 1500, poiLimit = 8, mapL
   return (
     <div className="md:hidden mx-4">
       <button
-        onClick={() => { window.location.href = '/explore'; }}
+        onClick={() => { window.location.href = `https://holidaibutler.com/pois?view=map${locale !== 'en' ? `&lang=${locale}` : ''}`; }}
         className="relative w-full rounded-2xl overflow-hidden shadow-sm"
         style={{ height: 200 }}
       >
@@ -137,12 +146,34 @@ export default function MapPreview({ locale, poiCount = 1500, poiLimit = 8, mapL
         {/* Map container */}
         <div ref={mapRef} className="absolute inset-0" />
 
-        {/* Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 pt-10">
-          <p className="text-white font-bold text-sm">
-            🗺️ {mapLabel?.[locale] || mapLabel?.en || `${t('discover')} ${poiCount.toLocaleString()} ${t('locations')}`}
-          </p>
-          <p className="text-white/70 text-xs mt-0.5">{t('sub')}</p>
+        {/* White overlay label */}
+        <div
+          className="absolute z-[1000]"
+          style={{
+            bottom: 14, left: 14, right: 14,
+            background: 'rgba(255,255,255,0.95)',
+            borderRadius: 12,
+            padding: '12px 14px',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
+            🗺️ {t('mapTitle')}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {MAP_CATEGORIES.map(cat => (
+              <a
+                key={cat.key}
+                href={`https://holidaibutler.com/pois?categories=${encodeURIComponent(cat.filter)}${locale !== 'en' ? `&lang=${locale}` : ''}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-[11px] font-semibold rounded-md px-2.5 py-1 text-white transition-opacity active:opacity-80"
+                style={{ backgroundColor: cat.color }}
+              >
+                {cat[locale as keyof typeof cat] || cat.en}
+              </a>
+            ))}
+          </div>
         </div>
       </button>
     </div>

@@ -61,7 +61,7 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
         // Fetch top POIs + 1 event
         const poiLimit = Math.max(1, programSize - 1);
         const [poisRes, eventsRes] = await Promise.all([
-          fetch(`/api/pois?limit=${poiLimit}&sort=rating:desc&min_rating=4&min_reviews=3`),
+          fetch(`/api/pois?limit=${poiLimit}&sort=rating:desc&min_rating=4&min_reviews=10&categories=${encodeURIComponent('Food & Drinks,Active,Nature,Culture,Beach')}`),
           fetch('/api/events?limit=1'),
         ]);
 
@@ -112,16 +112,25 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
     load();
   }, [locale]);
 
-  const openChatbot = () => {
-    window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { message: 'programma_samenstellen' } }));
+  const langParam = locale !== 'en' ? `?lang=${locale}` : '';
+
+  // POI block click → generic production POIs page
+  const openPoisPage = () => {
+    window.location.href = `https://holidaibutler.com/pois${langParam}`;
   };
 
+  // CTA "Programma samenstellen" → open chatbot as popup
+  const openChatbot = () => {
+    window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { message: 'program' } }));
+  };
+
+  // Details button → production POI/Event detail page
   const openDetail = (e: React.MouseEvent, item: ProgramItem) => {
     e.stopPropagation();
     if (item.type === 'poi') {
-      window.dispatchEvent(new CustomEvent('hb:poi:open', { detail: { id: item.id } }));
+      window.location.href = `https://holidaibutler.com/pois/${item.id}${langParam}`;
     } else {
-      window.dispatchEvent(new CustomEvent('hb:event:open', { detail: { id: item.id } }));
+      window.location.href = `https://holidaibutler.com/agenda${langParam}`;
     }
   };
 
@@ -146,58 +155,72 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
 
   return (
     <div className="md:hidden">
-      <button
-        onClick={openChatbot}
+      <div
         className="bg-white rounded-2xl p-5 mx-4 shadow-sm w-[calc(100%-2rem)] text-left"
       >
-        <h3 className="text-sm font-bold text-gray-500 tracking-wider mb-4">
+        <h3
+          className="text-sm font-bold tracking-wider mb-4"
+          style={{ fontFamily: "var(--hb-font-body), sans-serif", color: '#5E8B7E', fontStyle: 'normal', textTransform: 'uppercase' }}
+        >
           📋 {t('title')}
         </h3>
 
-        <div className="relative">
+        <div className="relative flex flex-col items-stretch">
           {items.map((item, idx) => (
-            <div key={`${item.type}-${item.id}`} className="relative flex gap-3 mb-1">
-              {/* Connector line */}
-              {idx < items.length - 1 && (
-                <div
-                  className="absolute left-8 top-16 w-0.5 h-4"
-                  style={{ backgroundColor: '#d5e8df' }}
-                />
-              )}
+            <div key={`${item.type}-${item.id}`}>
+              {/* Card sub-block — bordered, conform template */}
+              <div
+                className="flex items-center gap-3 rounded-xl p-3 cursor-pointer transition-colors active:bg-gray-50"
+                style={{ border: '1px solid #E5E7EB', backgroundColor: '#fff' }}
+                onClick={openPoisPage}
+              >
+                {/* Thumbnail */}
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl overflow-hidden bg-gray-100">
+                  {item.image ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xl">
+                      {item.type === 'event' ? '📅' : '📍'}
+                    </div>
+                  )}
+                </div>
 
-              {/* Thumbnail */}
-              <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-gray-100">
-                {item.image ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl">
-                    {item.type === 'event' ? '📅' : '📍'}
-                  </div>
-                )}
-              </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-bold text-gray-900 truncate">{item.name}</p>
+                  <p className="text-[12px] font-semibold mt-0.5" style={{ color: '#5E8B7E' }}>🕓 {item.timeStart} – {item.timeEnd}</p>
+                </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0 py-0.5">
-                <p className="text-sm font-semibold text-gray-800 truncate">{item.name}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{item.timeStart} – {item.timeEnd}</p>
+                {/* Details button */}
                 <button
                   onClick={(e) => openDetail(e, item)}
-                  className="text-xs font-medium mt-1 transition-colors"
-                  style={{ color: 'var(--hb-primary)' }}
+                  className="flex-shrink-0 text-[13px] font-semibold rounded-lg whitespace-nowrap transition-colors active:bg-[#d5e8df]"
+                  style={{
+                    color: '#5E8B7E',
+                    backgroundColor: '#f0f7f4',
+                    border: '1px solid #d5e8df',
+                    padding: '6px 14px',
+                  }}
                 >
-                  {t('details')} →
+                  {t('details')}
                 </button>
               </div>
+              {/* Connector line between cards */}
+              {idx < items.length - 1 && (
+                <div className="flex justify-start" style={{ paddingLeft: 28 }}>
+                  <div style={{ width: 2, height: 20, backgroundColor: '#d5e8df' }} />
+                </div>
+              )}
             </div>
           ))}
         </div>
-      </button>
+      </div>
 
       {/* CTA */}
       <button
