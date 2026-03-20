@@ -124,28 +124,38 @@ export default function MobileHeader({
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           {/* Brand */}
           <span
-            className="text-white font-bold text-lg"
-            style={{ letterSpacing: '1.8px', textTransform: 'uppercase' }}
+            className="text-white font-bold text-xl"
+            style={{ letterSpacing: '2px', textTransform: 'uppercase' }}
           >
             {brandName}
           </span>
 
           {/* Controls */}
           <div className="flex items-center gap-1">
-            {/* WCAG icon */}
+            {/* WCAG icon — blue rounded square with white accessibility person (conform template) */}
             <button
               onClick={() => setWcagOpen(true)}
-              className="p-2 rounded transition-colors"
+              className="rounded transition-colors"
               aria-label="Accessibility settings"
-              style={{ minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{
+                minWidth: 44, minHeight: 44,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#90CAF9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <circle cx="12" cy="8" r="1.5" fill="#90CAF9" stroke="none" />
-                <path d="M12 11.5v5" />
-                <path d="M8 13l4-1.5 4 1.5" />
-                <path d="M10 21l2-4.5 2 4.5" />
-              </svg>
+              <div
+                style={{
+                  width: 26, height: 26,
+                  background: '#3B5EAB',
+                  borderRadius: 5,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="4.5" r="2.2" />
+                  <path d="M12 8.5c-3.8 0-6.5.7-6.5.7l.8 2.8s1.8-.5 3.7-.6v2.1l-2.5 6.8 2.7 1 2-5.4 2 5.4 2.7-1-2.5-6.8v-2.1c1.9.1 3.7.6 3.7.6l.8-2.8S15.8 8.5 12 8.5z" />
+                </svg>
+              </div>
             </button>
 
             {/* Language flag SVG */}
@@ -207,24 +217,104 @@ export default function MobileHeader({
           <p className="text-white/80 text-sm mt-1">{subtitle}</p>
         </div>
 
-        {/* Mobile menu dropdown */}
-        {menuOpen && (
-          <div className="bg-white/95 backdrop-blur-sm shadow-lg">
-            <ul className="flex flex-col py-2">
-              {navItems.map((item) => (
-                <li key={item.href}>
-                  <a
-                    href={item.href}
-                    className="block px-6 py-3 text-gray-800 hover:bg-gray-50 transition-colors text-base"
+        {/* Slide-in menu panel — matches production holidaibutler.com */}
+        {menuOpen && (() => {
+          const langParam = locale !== 'en' ? `?lang=${locale}` : '';
+          const primaryItems = [
+            { icon: '🏠', label: 'Home', href: '/' },
+            { icon: '🖼️', label: locale === 'nl' ? 'Ontdekken' : locale === 'de' ? 'Entdecken' : locale === 'es' ? 'Descubrir' : 'Explore', href: `https://holidaibutler.com/pois${langParam}` },
+            { icon: '💬', label: 'HoliBot', href: null, chatbot: true },
+            { icon: '📅', label: 'Agenda', href: `https://holidaibutler.com/agenda${langParam}` },
+            { icon: '❤️', label: locale === 'nl' ? 'Favorieten' : locale === 'de' ? 'Favoriten' : locale === 'es' ? 'Favoritos' : 'Favorites', href: `https://holidaibutler.com/favorites${langParam}` },
+          ];
+          const secondaryItems = [
+            { icon: '👤', label: 'Account', href: `https://holidaibutler.com/login?returnUrl=%2Faccount${locale !== 'en' ? `&lang=${locale}` : ''}` },
+            { icon: 'ℹ️', label: locale === 'nl' ? 'Over ons' : locale === 'de' ? 'Über uns' : locale === 'es' ? 'Sobre nosotros' : 'About', href: `https://holidaibutler.com/about${langParam}` },
+            { icon: '❓', label: 'FAQ', href: `https://holidaibutler.com/faq${langParam}` },
+            { icon: '✉️', label: 'Contact', href: `https://holidaibutler.com/contact${langParam}` },
+          ];
+          return (
+            <>
+              {/* Overlay */}
+              <div
+                className="fixed inset-0 z-40"
+                style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+                onClick={() => setMenuOpen(false)}
+              />
+              {/* Slide-in panel from right */}
+              <div
+                className="fixed top-0 right-0 z-50 h-full flex flex-col"
+                style={{
+                  width: '70%',
+                  maxWidth: 320,
+                  background: `linear-gradient(160deg, ${gradFrom}, ${gradTo})`,
+                  animation: 'slideInRight 250ms ease-out',
+                }}
+              >
+                {/* Close button */}
+                <div className="flex justify-end px-4 pt-4 pb-2">
+                  <button
                     onClick={() => setMenuOpen(false)}
+                    className="w-10 h-10 flex items-center justify-center rounded-full"
+                    style={{ background: 'rgba(255,255,255,0.15)' }}
+                    aria-label="Close menu"
                   >
-                    {item.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Primary items */}
+                <nav className="flex flex-col px-6 pt-2 gap-1">
+                  {primaryItems.map((item) => (
+                    item.chatbot ? (
+                      <button
+                        key={item.label}
+                        className="flex items-center gap-3 py-3 text-white text-base font-medium transition-opacity active:opacity-70 text-left"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { message: 'general' } }));
+                        }}
+                      >
+                        <span className="text-lg w-7 text-center">{item.icon}</span>
+                        {item.label}
+                      </button>
+                    ) : (
+                      <a
+                        key={item.label}
+                        href={item.href!}
+                        className="flex items-center gap-3 py-3 text-white text-base font-medium transition-opacity active:opacity-70"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <span className="text-lg w-7 text-center">{item.icon}</span>
+                        {item.label}
+                      </a>
+                    )
+                  ))}
+                </nav>
+
+                {/* Separator */}
+                <div className="mx-6 my-3 border-t border-white/30" />
+
+                {/* Secondary items */}
+                <nav className="flex flex-col px-6 gap-1">
+                  {secondaryItems.map((item) => (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      className="flex items-center gap-3 py-3 text-white/90 text-base transition-opacity active:opacity-70"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <span className="text-lg w-7 text-center">{item.icon}</span>
+                      {item.label}
+                    </a>
+                  ))}
+                </nav>
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       <AccessibilityModal isOpen={wcagOpen} onClose={() => setWcagOpen(false)} locale={locale} />
