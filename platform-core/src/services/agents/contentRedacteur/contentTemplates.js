@@ -2,8 +2,17 @@
  * Content Templates — Pre-defined templates per destination + content type
  * Used as first step in content generation.
  *
- * @version 1.0.0
+ * Tourism destinations: destination-specific + global + generic templates
+ * Content-only destinations: generic + global templates (no tourism-specific)
+ *
+ * @version 2.0.0
  */
+
+import { mysqlSequelize } from '../../../config/database.js';
+
+// ============================================================
+// DESTINATION-SPECIFIC TEMPLATES (tourism only)
+// ============================================================
 
 const TEMPLATES = {
   1: [ // Calpe
@@ -144,7 +153,10 @@ const TEMPLATES = {
   ],
 };
 
-// Global templates — available for ALL destinations
+// ============================================================
+// GLOBAL TEMPLATES — available for ALL destinations (tourism + content_only)
+// ============================================================
+
 const GLOBAL_TEMPLATES = [
   {
     id: 'global-hidden-gems',
@@ -228,15 +240,157 @@ const GLOBAL_TEMPLATES = [
   },
 ];
 
+// ============================================================
+// GENERIC TEMPLATES — for content_only + tourism destinations
+// Sector-agnostic: works for retail, horeca, cultuur, sport, etc.
+// ============================================================
+
+const GENERIC_TEMPLATES = [
+  // === Blogs ===
+  {
+    id: 'generic-how-to-guide',
+    name: 'How-To Gids',
+    content_type: 'blog',
+    platform: 'website',
+    description: 'Stap-voor-stap handleiding over een onderwerp',
+    prompt_template: 'Write a step-by-step guide about {topic}. Include practical tips, common mistakes to avoid, and actionable advice. Structure with numbered steps and clear headings.',
+    tone: 'helpful, clear, authoritative',
+    suggested_keywords: ['how to', 'guide', 'steps', 'tips'],
+  },
+  {
+    id: 'generic-listicle',
+    name: 'Lijstartikel',
+    content_type: 'blog',
+    platform: 'website',
+    description: 'X beste / X redenen — lijstartikel formaat',
+    prompt_template: 'Write a list article: "X best {topic}" with detailed descriptions per item. Each entry should have a clear benefit and practical info.',
+    tone: 'engaging, scannable, informative',
+    suggested_keywords: ['best', 'top', 'list', 'reasons'],
+  },
+  {
+    id: 'generic-thought-leadership',
+    name: 'Thought Leadership',
+    content_type: 'blog',
+    platform: 'website',
+    description: 'Autoriteitsartikel met branche-inzichten en een duidelijke visie',
+    prompt_template: 'Write an authoritative opinion piece about {topic}. Include industry insights, data points, and a clear perspective. Position the author as a knowledgeable expert.',
+    tone: 'authoritative, insightful, professional',
+    suggested_keywords: ['insight', 'trend', 'industry', 'perspective'],
+  },
+  {
+    id: 'generic-company-news',
+    name: 'Bedrijfsnieuws',
+    content_type: 'blog',
+    platform: 'website',
+    description: 'Professioneel nieuwsbericht over een bedrijfsontwikkeling',
+    prompt_template: 'Write a professional news announcement about {topic}. Include key facts, a quote from leadership, and the impact on customers or the market.',
+    tone: 'professional, factual, forward-looking',
+    suggested_keywords: ['announcement', 'launch', 'update', 'news'],
+  },
+  {
+    id: 'generic-case-study',
+    name: 'Case Study',
+    content_type: 'blog',
+    platform: 'website',
+    description: 'Klantcase met uitdaging, aanpak en resultaten',
+    prompt_template: 'Write a case study about {topic}. Structure: challenge the client faced, approach taken, concrete results achieved, and lessons learned.',
+    tone: 'evidence-based, storytelling, professional',
+    suggested_keywords: ['case study', 'results', 'success', 'solution'],
+  },
+
+  // === Social Posts ===
+  {
+    id: 'generic-product-highlight',
+    name: 'Product Highlight',
+    content_type: 'social_post',
+    platform: 'instagram',
+    description: 'Spotlight op een product of dienst — focus op voordelen',
+    prompt_template: 'Create a social post highlighting {topic}. Focus on benefits (not features), use vivid language, and end with a clear call-to-action.',
+    tone: 'enthusiastic, benefit-focused, visual',
+    suggested_keywords: ['new', 'discover', 'available', 'quality'],
+  },
+  {
+    id: 'generic-behind-scenes',
+    name: 'Behind the Scenes',
+    content_type: 'social_post',
+    platform: 'instagram',
+    description: 'Authentieke blik achter de schermen',
+    prompt_template: 'Create an authentic behind-the-scenes post about {topic}. Show the human side of the brand. Be genuine and relatable.',
+    tone: 'authentic, personal, relatable',
+    suggested_keywords: ['behind the scenes', 'team', 'process', 'real'],
+  },
+  {
+    id: 'generic-customer-story',
+    name: 'Klantverhaal',
+    content_type: 'social_post',
+    platform: 'facebook',
+    description: 'Deel een succesverhaal of review van een klant',
+    prompt_template: 'Create a post sharing a customer success story about {topic}. Include a brief quote, the transformation or result, and gratitude.',
+    tone: 'grateful, social-proof, inspiring',
+    suggested_keywords: ['review', 'customer', 'thank you', 'story'],
+  },
+  {
+    id: 'generic-tip-of-day',
+    name: 'Tip van de Dag',
+    content_type: 'social_post',
+    platform: 'instagram',
+    description: 'Korte, actiegerichte tip voor je doelgroep',
+    prompt_template: 'Create a quick, actionable tip post about {topic}. Keep it concise (under 100 words). One practical piece of advice the reader can apply immediately.',
+    tone: 'helpful, concise, actionable',
+    suggested_keywords: ['tip', 'advice', 'pro tip', 'did you know'],
+  },
+  {
+    id: 'generic-industry-insight',
+    name: 'Branche Inzicht',
+    content_type: 'social_post',
+    platform: 'linkedin',
+    description: 'Deel een branche-trend of inzicht op LinkedIn',
+    prompt_template: 'Create a LinkedIn post sharing an industry trend or insight about {topic}. Start with a hook, provide data or evidence, and end with a question to drive engagement.',
+    tone: 'professional, data-driven, thought-provoking',
+    suggested_keywords: ['trend', 'insight', 'data', 'industry'],
+  },
+];
+
+// ============================================================
+// EXPORTS
+// ============================================================
+
 /**
  * Get templates for a destination
- * Returns destination-specific templates + global templates (always available)
+ * - Tourism: destination-specific + global + generic templates
+ * - Content-only: generic + global templates (no tourism-specific)
  * @param {number} destinationId
  * @returns {Array} Template list
  */
-export function getTemplates(destinationId) {
+export async function getTemplates(destinationId) {
+  // Check destination type
+  let isContentOnly = false;
+  try {
+    const [[dest]] = await mysqlSequelize.query(
+      'SELECT destination_type FROM destinations WHERE id = :id',
+      { replacements: { id: Number(destinationId) } }
+    );
+    isContentOnly = dest?.destination_type === 'content_only';
+  } catch { /* default to tourism */ }
+
+  if (isContentOnly) {
+    // Content-only: generic templates first, then global (no destination-specific tourism templates)
+    return [...GENERIC_TEMPLATES, ...GLOBAL_TEMPLATES];
+  }
+
+  // Tourism: destination-specific + generic + global
   const destTemplates = TEMPLATES[destinationId] || [];
-  return [...destTemplates, ...GLOBAL_TEMPLATES];
+  return [...destTemplates, ...GENERIC_TEMPLATES, ...GLOBAL_TEMPLATES];
+}
+
+/**
+ * Synchronous version — for backward compatibility (uses fallback, no DB check)
+ * @param {number} destinationId
+ * @returns {Array}
+ */
+export function getTemplatesSync(destinationId) {
+  const destTemplates = TEMPLATES[destinationId] || [];
+  return [...destTemplates, ...GENERIC_TEMPLATES, ...GLOBAL_TEMPLATES];
 }
 
 /**
@@ -245,8 +399,8 @@ export function getTemplates(destinationId) {
  * @param {number} destinationId
  * @returns {Object|null}
  */
-export function getTemplate(templateId, destinationId) {
-  const templates = getTemplates(destinationId);
+export async function getTemplate(templateId, destinationId) {
+  const templates = await getTemplates(destinationId);
   return templates.find(t => t.id === templateId) || null;
 }
 
@@ -257,4 +411,4 @@ export function getAllTemplates() {
   return TEMPLATES;
 }
 
-export default { getTemplates, getTemplate, getAllTemplates };
+export default { getTemplates, getTemplatesSync, getTemplate, getAllTemplates };

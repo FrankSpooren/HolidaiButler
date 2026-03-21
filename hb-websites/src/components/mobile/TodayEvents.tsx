@@ -16,19 +16,31 @@ const LABELS: Record<string, Record<string, string>> = {
 const CATEGORY_EMOJI: Record<string, string> = {
   music: '🎵',
   muziek: '🎵',
-  sport: '⚽',
+  concert: '🎵',
+  sport: '🚴',
+  active: '🚴',
+  actief: '🚴',
   festival: '🎉',
   fiesta: '🎉',
+  nightlife: '🎉',
+  nachtleven: '🎉',
+  party: '🎉',
   market: '🛍️',
   markt: '🛍️',
   mercado: '🛍️',
-  culture: '🎭',
-  cultuur: '🎭',
-  cultura: '🎭',
+  culture: '🏛️',
+  cultuur: '🏛️',
+  cultura: '🏛️',
   food: '🍽️',
   eten: '🍽️',
+  drinks: '🍽️',
+  gastronomy: '🍽️',
+  gastronomie: '🍽️',
   nature: '🌿',
   natuur: '🌿',
+  outdoor: '🌿',
+  wellness: '🧘',
+  yoga: '🧘',
 };
 
 function getLocalizedString(val: unknown, locale: string): string {
@@ -49,10 +61,33 @@ function getCategoryEmoji(category?: string): string {
   return '📅';
 }
 
-function formatTime(dateStr?: string): string {
+const DATE_LABELS: Record<string, Record<string, string>> = {
+  days: {
+    nl: 'zo,ma,di,wo,do,vr,za',
+    en: 'Sun,Mon,Tue,Wed,Thu,Fri,Sat',
+    de: 'So,Mo,Di,Mi,Do,Fr,Sa',
+    es: 'dom,lun,mar,mié,jue,vie,sáb',
+  },
+  months: {
+    nl: 'jan,feb,mrt,apr,mei,jun,jul,aug,sep,okt,nov,dec',
+    en: 'Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec',
+    de: 'Jan,Feb,Mär,Apr,Mai,Jun,Jul,Aug,Sep,Okt,Nov,Dez',
+    es: 'ene,feb,mar,abr,may,jun,jul,ago,sep,oct,nov,dic',
+  },
+};
+
+function formatEventTime(dateStr: string | undefined, locale: string): string {
   if (!dateStr) return '';
   try {
     const d = new Date(dateStr);
+    const hours = d.getHours();
+    const minutes = d.getMinutes();
+    // If time is midnight (00:00), show formatted date instead
+    if (hours === 0 && minutes === 0) {
+      const dayNames = (DATE_LABELS.days[locale] || DATE_LABELS.days.en).split(',');
+      const monthNames = (DATE_LABELS.months[locale] || DATE_LABELS.months.en).split(',');
+      return `${dayNames[d.getDay()]} ${d.getDate()} ${monthNames[d.getMonth()]}`;
+    }
     return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   } catch {
     return '';
@@ -102,7 +137,7 @@ export default function TodayEvents({ locale, destinationName = 'Calpe' }: Today
           {t('title')} {destinationName}
         </h3>
         <a
-          href="/events"
+          href={`https://holidaibutler.com/agenda${locale !== 'en' ? `?lang=${locale}` : ''}`}
           className="text-sm font-medium transition-colors"
           style={{ color: 'var(--hb-primary)' }}
         >
@@ -117,13 +152,13 @@ export default function TodayEvents({ locale, destinationName = 'Calpe' }: Today
         <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide" style={{ scrollSnapType: 'x mandatory' }}>
           {events.map((event) => {
             const name = getLocalizedString(event.title, locale);
-            const time = formatTime(event.startDate || event.start_date);
-            const emoji = getCategoryEmoji(event.category);
+            const time = formatEventTime(event.startDate || event.start_date, locale);
+            const emoji = getCategoryEmoji(event.primaryCategory || event.category);
 
             return (
               <button
                 key={event.id}
-                onClick={() => window.dispatchEvent(new CustomEvent('hb:event:open', { detail: { id: event.id } }))}
+                onClick={() => window.dispatchEvent(new CustomEvent('hb:event:open', { detail: { eventId: event.id } }))}
                 className="flex-shrink-0 w-40 bg-white rounded-xl p-3 shadow-sm text-left transition-transform active:scale-[0.97]"
                 style={{ scrollSnapAlign: 'start' }}
               >

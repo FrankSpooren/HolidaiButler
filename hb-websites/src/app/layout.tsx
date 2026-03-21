@@ -5,7 +5,6 @@ import { brandingToCssVars } from '@/lib/theme';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ChatbotWidget from '@/components/modules/ChatbotWidget';
-import CookieBanner from '@/components/modules/CookieBanner';
 import PoiDetailDrawer from '@/components/modules/PoiDetailDrawer';
 import EventDetailDrawer from '@/components/modules/EventDetailDrawer';
 import ScrollToTop from '@/components/ui/ScrollToTop';
@@ -133,21 +132,32 @@ export default async function RootLayout({
               secondaryColor={tenant.branding?.colors?.secondary}
               navItems={resolveNavItemsForMobile(tenant, locale)}
               subtitle={mh?.subtitle}
+              chatbotName={(tenant.branding as any)?.chatbotConfig?.name || undefined}
             />
           );
         })()}
-        <main className="flex-1 pb-[78px] md:pb-0">{children}</main>
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <MobileHomepage
-          locale={locale}
-          destinationName={tenant?.displayName || 'Calpe'}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          mobileConfig={(tenant?.branding as any)?.mobileHomepage}
-        />
-        {tenant && <Footer tenant={tenant} locale={locale} />}
+        <main className="flex-1 pb-[78px] md:pb-0">
+          {children}
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <MobileHomepage
+            locale={locale}
+            destinationName={tenant?.displayName || 'Calpe'}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            mobileConfig={(tenant?.branding as any)?.mobileHomepage}
+          />
+        </main>
+        {tenant && (
+          <div className={(tenant.branding as any)?.mobileHomepage ? 'hidden md:block' : ''}>
+            <Footer tenant={tenant} locale={locale} />
+          </div>
+        )}
         <MobileBottomNav
           locale={locale}
           primaryColor={tenant?.branding?.colors?.primary}
+          chatbotColor={
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (tenant?.branding as any)?.chatbotConfig?.color || undefined
+          }
         />
         {tenant?.featureFlags.holibot && (
           <ChatbotWidget
@@ -165,6 +175,10 @@ export default async function RootLayout({
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (tenant.branding as any)?.chatbotConfig?.color || undefined
             }
+            welcomeMessage={
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (tenant.branding as any)?.chatbotConfig?.welcomeMessage || undefined
+            }
           />
         )}
         <PoiDetailDrawer locale={locale} />
@@ -174,11 +188,7 @@ export default async function RootLayout({
           locale={locale}
           primaryColor={tenant?.branding?.colors?.primary}
         />
-        <CookieBanner
-          locale={locale}
-          primaryColor={tenant?.branding?.colors?.primary}
-          privacyPolicyUrl={tenant?.branding?.privacyPolicyUrl}
-        />
+        {/* CookieBanner disabled for now */}
         {/* 100% privacy-first analytics */}
         <Script
           src="https://scripts.simpleanalyticscdn.com/latest.js"

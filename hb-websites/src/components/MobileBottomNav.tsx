@@ -52,11 +52,18 @@ export default function MobileBottomNav({ locale, primaryColor, chatbotColor }: 
     window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { message: 'general' } }));
   };
 
-  const openOnboarding = () => {
-    // Reset onboarding so it re-appears
-    localStorage.removeItem('hb_onboarding_complete');
-    localStorage.removeItem('hb_onboarding_dismissed');
-    window.dispatchEvent(new CustomEvent('hb:onboarding-open'));
+  const handleProfile = () => {
+    const complete = localStorage.getItem('hb_onboarding_complete');
+    if (complete === 'true') {
+      // Onboarding done → go to account/login page on customer-portal
+      const langParam = locale !== 'en' ? `?lang=${locale}` : '';
+      window.location.href = `https://holidaibutler.com/login${langParam}`;
+    } else {
+      // Onboarding not done → open onboarding sheet
+      localStorage.removeItem('hb_onboarding_complete');
+      sessionStorage.removeItem('hb_onboarding_dismissed');
+      window.dispatchEvent(new CustomEvent('hb:onboarding-open'));
+    }
   };
 
   const accentColor = primaryColor || 'var(--hb-primary)';
@@ -69,7 +76,7 @@ export default function MobileBottomNav({ locale, primaryColor, chatbotColor }: 
     { key: 'agenda', href: `https://holidaibutler.com/agenda${langParam}`, icon: AgendaIcon, external: true },
     { key: 'chat', href: null, icon: ChatIcon, raised: true },
     { key: 'pois', href: `https://holidaibutler.com/pois${langParam}`, icon: PoisIcon, external: true },
-    { key: 'profiel', href: null, icon: ProfielIcon, badge: showBadge, onboardingTrigger: true },
+    { key: 'profiel', href: null, icon: ProfielIcon, badge: showBadge, profileTrigger: true },
   ];
 
   return (
@@ -180,7 +187,7 @@ export default function MobileBottomNav({ locale, primaryColor, chatbotColor }: 
           return (
             <button
               key={tab.key}
-              onClick={(tab as any).onboardingTrigger ? openOnboarding : openChatbot}
+              onClick={(tab as any).profileTrigger ? handleProfile : openChatbot}
               className="flex flex-col items-center justify-center transition-opacity duration-150"
               style={{ minHeight: 44, minWidth: 44 }}
               aria-label={l(tab.key)}

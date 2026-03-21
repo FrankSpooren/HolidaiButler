@@ -18,8 +18,10 @@ import PaletteIcon from '@mui/icons-material/Palette';
 import { useBrandingDestinations, useUpdateDestinationBranding, useUploadBrandingLogo } from '../hooks/useBrandingEditor.js';
 import { translateTexts } from '../api/translationService.js';
 import client from '../api/client.js';
+import useAuthStore from '../stores/authStore.js';
 import { BRANDING_TEMPLATES } from '../utils/brandingTemplates.js';
 import TranslatableField from '../components/blocks/fields/TranslatableField.jsx';
+import MerkProfielSections from '../components/branding/MerkProfielSections.jsx';
 
 const COLOR_FIELDS = [
   { key: 'primary', label: 'branding.colors.primary' },
@@ -151,7 +153,13 @@ export default function BrandingPage() {
   const [pendingTemplate, setPendingTemplate] = useState(null);
 
   const apiUrl = import.meta.env.VITE_API_URL || '';
-  const destinations = data?.data?.destinations?.filter(d => d.isActive) || [];
+  const user = useAuthStore(s => s.user);
+  const isPlatformAdmin = user?.role === 'platform_admin';
+  const userAllowed = user?.allowed_destinations || [];
+  const allDests = data?.data?.destinations?.filter(d => d.isActive) || [];
+  const destinations = isPlatformAdmin
+    ? allDests
+    : allDests.filter(d => userAllowed.includes(d.code));
   const activeDest = destinations[activeTab];
 
   useEffect(() => {
@@ -415,8 +423,22 @@ export default function BrandingPage() {
         ))}
       </Tabs>
 
-      {activeDest && form.colors && (
+      {/* === MERK PROFIEL SECTIES (altijd zichtbaar) === */}
+      {activeDest && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+            {t('brandProfile.page_title', 'Merk Profiel')}
+          </Typography>
+          <MerkProfielSections destinationId={activeDest.id} destinationName={activeDest.displayName} />
+        </Box>
+      )}
+
+      {/* === VISUELE IDENTITEIT (verborgen voor content_only) === */}
+      {activeDest && form.colors && activeDest.destinationType !== 'content_only' && (
         <Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+            {t('branding.visualIdentity', 'Visuele Identiteit')}
+          </Typography>
           {/* === COLORS + LIVE PREVIEW (side by side, default expanded) === */}
           <BrandingAccordion
             id="colors"

@@ -20,7 +20,7 @@ const T: Record<string, Record<string, string>> = {
   step1_q:   { nl: 'Met wie reis je?', en: 'Who are you traveling with?', de: 'Mit wem reist du?', es: '¿Con quién viajas?' },
   step1_h:   { nl: 'We passen je aanbevelingen aan', en: "We'll personalize your recommendations", de: 'Wir passen deine Empfehlungen an', es: 'Personalizaremos tus recomendaciones' },
   step2_q:   { nl: 'Wat zijn je interesses?', en: 'What are your interests?', de: 'Was sind deine Interessen?', es: '¿Cuáles son tus intereses?' },
-  step2_h:   { nl: 'Kies er één of meer', en: 'Choose one or more', de: 'Wähle eine oder mehrere', es: 'Elige una o más' },
+  step2_h:   { nl: 'Selecteer één of meerdere opties (optioneel)', en: 'Select one or more options (optional)', de: 'Wähle eine oder mehrere Optionen (optional)', es: 'Selecciona una o más opciones (opcional)' },
   step3_q:   { nl: 'Omschrijf je bezoek', en: 'Describe your visit', de: 'Beschreibe deinen Besuch', es: 'Describe tu visita' },
   step3_h:   { nl: 'Twee korte vragen', en: 'Two quick questions', de: 'Zwei kurze Fragen', es: 'Dos preguntas rápidas' },
   step3_a:   { nl: 'Wat is het doel?', en: 'What is the purpose?', de: 'Was ist der Zweck?', es: '¿Cuál es el propósito?' },
@@ -62,7 +62,7 @@ const INTERESTS = [
   { key: 'beach', emoji: '🏖️' },
   { key: 'culture', emoji: '🏛️' },
   { key: 'nature', emoji: '🌿' },
-  { key: 'gastro', emoji: '🍷' },
+  { key: 'gastro', emoji: '🍽️' },
   { key: 'active', emoji: '🚴' },
   { key: 'nightlife', emoji: '🌙' },
 ];
@@ -81,7 +81,7 @@ const SPECIAL = [
   { key: 'wheelchair', emoji: '♿' },
   { key: 'vegetarian', emoji: '🥬' },
   { key: 'kids', emoji: '👶' },
-  { key: 'pets', emoji: '🐾' },
+  { key: 'pets', emoji: '🐕' },
 ];
 
 export default function OnboardingSheet({ locale, primaryColor }: OnboardingSheetProps) {
@@ -94,21 +94,51 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
   const t = (key: string) => T[key]?.[locale] || T[key]?.en || key;
 
   useEffect(() => {
+    // Allow reset via URL param: ?reset_onboarding=1
+    if (new URLSearchParams(window.location.search).get('reset_onboarding') === '1') {
+      localStorage.removeItem('hb_onboarding_complete');
+      sessionStorage.removeItem('hb_onboarding_dismissed');
+      // Clean URL without reload
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     const complete = localStorage.getItem('hb_onboarding_complete');
-    const dismissed = localStorage.getItem('hb_onboarding_dismissed');
+    const dismissed = sessionStorage.getItem('hb_onboarding_dismissed');
     if (complete !== 'true' && dismissed !== 'true') {
       // Small delay so homepage renders first
       const timer = setTimeout(() => setIsVisible(true), 600);
       return () => clearTimeout(timer);
     }
+
+    // Listen for external open trigger (e.g. Profiel tab in MobileBottomNav)
+    const onOpen = () => {
+      setStep(0);
+      setData({});
+      setIsVisible(true);
+    };
+    window.addEventListener('hb:onboarding-open', onOpen);
+    return () => window.removeEventListener('hb:onboarding-open', onOpen);
   }, []);
+
+  // Apply blur to page content when onboarding is visible
+  useEffect(() => {
+    const main = document.querySelector('main');
+    const header = document.querySelector('.md\\:hidden[style*="linear-gradient"]');
+    if (isVisible && !isMinimizing) {
+      main?.setAttribute('style', `${main.getAttribute('style') || ''};filter:blur(3px) brightness(0.85)`);
+      if (header) (header as HTMLElement).style.filter = 'blur(3px) brightness(0.85)';
+    } else {
+      main?.setAttribute('style', (main.getAttribute('style') || '').replace(/;?filter:blur\(3px\) brightness\(0\.85\)/g, ''));
+      if (header) (header as HTMLElement).style.filter = '';
+    }
+  }, [isVisible, isMinimizing]);
 
   const dismiss = useCallback(() => {
     setIsMinimizing(true);
     setTimeout(() => {
       setIsVisible(false);
       setIsMinimizing(false);
-      localStorage.setItem('hb_onboarding_dismissed', 'true');
+      sessionStorage.setItem('hb_onboarding_dismissed', 'true');
       window.dispatchEvent(new Event('hb:onboarding-update'));
     }, 500);
   }, []);
@@ -186,6 +216,7 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
       <div
         className="fixed bottom-0 left-0 right-0 z-[61] flex flex-col bg-white"
         style={{
+          fontFamily: "'Inter', var(--hb-font-body), sans-serif",
           maxHeight: '85vh',
           borderRadius: '24px 24px 0 0',
           transformOrigin: 'bottom right',
@@ -360,46 +391,39 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
           )}
         </div>
 
-        {/* ── Sticky Footer ── */}
-        <div className="flex-shrink-0 px-5 py-4 border-t border-gray-100 flex items-center safe-area-pb"
-          style={{ justifyContent: step === 0 ? 'center' : 'space-between' }}
-        >
-          {/* Skip / Back */}
-          {step === 0 ? (
+        {/* ── Sticky Footer — conform template: Overslaan | ← Terug | Volgende → ── */}
+        <div className="flex-shrink-0 px-5 py-4 border-t border-gray-100 flex items-center justify-between safe-area-pb ob-panel">
+          {/* Left: Overslaan (text link) */}
+          <button
+            onClick={dismiss}
+            className="text-base font-medium text-gray-600 hover:text-gray-800 py-2 px-1 underline underline-offset-4 decoration-gray-400"
+            style={{ minWidth: 72 }}
+          >
+            {t('skip')}
+          </button>
+
+          {/* Center: ← Terug (outlined button) */}
+          {step > 0 ? (
             <button
-              onClick={dismiss}
-              className="text-sm font-medium text-gray-500 hover:text-gray-700 py-2 px-4"
+              onClick={goBack}
+              className="text-base font-medium py-2.5 px-5 rounded-xl border transition-all duration-200"
+              style={{ borderColor: '#9CB5A7', color: '#5E8B7E' }}
             >
-              {t('skip')}
+              ← {t('back')}
             </button>
           ) : (
-            <div className="flex gap-3">
-              <button
-                onClick={dismiss}
-                className="text-sm font-medium text-gray-500 hover:text-gray-700 py-2 px-3"
-              >
-                {t('skip')}
-              </button>
-              <button
-                onClick={goBack}
-                className="text-sm font-medium text-gray-600 hover:text-gray-800 py-2 px-3"
-              >
-                {t('back')}
-              </button>
-            </div>
+            <div style={{ minWidth: 100 }} />
           )}
 
-          {/* Next / Done */}
-          {step > 0 && (
-            <button
-              onClick={goNext}
-              disabled={!canNext}
-              className="text-sm font-semibold py-2.5 px-6 rounded-full text-white transition-all duration-200 disabled:opacity-40"
-              style={{ backgroundColor: accent }}
-            >
-              {step === 3 ? t('done') : t('next')}
-            </button>
-          )}
+          {/* Right: Volgende → (filled button) */}
+          <button
+            onClick={goNext}
+            disabled={!canNext}
+            className="text-base font-semibold py-2.5 px-7 rounded-xl text-white transition-all duration-200"
+            style={{ backgroundColor: accent, opacity: canNext ? 1 : 0.45 }}
+          >
+            {step === 3 ? t('done') : `${t('next')} →`}
+          </button>
         </div>
       </div>
     </>

@@ -15,14 +15,21 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../api/client.js';
 import { useBrandingDestinations } from '../hooks/useBrandingEditor.js';
+import useAuthStore from '../stores/authStore.js';
 
 const CATEGORIES = ['all', 'branding', 'pages', 'pois', 'video', 'documents', 'other'];
 
 export default function MediaPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const user = useAuthStore(s => s.user);
+  const isPlatformAdmin = user?.role === 'platform_admin';
+  const userAllowed = user?.allowed_destinations || [];
   const { data: destData } = useBrandingDestinations();
-  const destinations = destData?.data?.destinations?.filter(d => d.isActive) || [];
+  const allDests = destData?.data?.destinations?.filter(d => d.isActive) || [];
+  const destinations = isPlatformAdmin
+    ? allDests
+    : allDests.filter(d => userAllowed.includes(d.code));
   const [destFilter, setDestFilter] = useState('');
   const destId = destFilter || (destinations[0]?.id) || '';
   const [category, setCategory] = useState('all');
@@ -43,7 +50,8 @@ export default function MediaPage() {
   const uploadMut = useMutation({
     mutationFn: async (formData) => {
       const res = await client.post('/media/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 300000, // 5 min for large batch uploads (up to 50 files)
       });
       return res.data;
     },

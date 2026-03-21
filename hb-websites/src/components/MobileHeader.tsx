@@ -16,6 +16,7 @@ interface MobileHeaderProps {
   secondaryColor?: string;
   navItems: { label: string; href: string }[];
   subtitle?: Record<string, string>;
+  chatbotName?: string;
 }
 
 /* ── i18n ── */
@@ -86,6 +87,7 @@ export default function MobileHeader({
   secondaryColor,
   navItems,
   subtitle: subtitleProp,
+  chatbotName,
 }: MobileHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -223,7 +225,7 @@ export default function MobileHeader({
           const primaryItems = [
             { icon: '🏠', label: 'Home', href: '/' },
             { icon: '🖼️', label: locale === 'nl' ? 'Ontdekken' : locale === 'de' ? 'Entdecken' : locale === 'es' ? 'Descubrir' : 'Explore', href: `https://holidaibutler.com/pois${langParam}` },
-            { icon: '💬', label: 'HoliBot', href: null, chatbot: true },
+            { icon: '💬', label: chatbotName || 'CalpeChat', href: null, chatbot: true },
             { icon: '📅', label: 'Agenda', href: `https://holidaibutler.com/agenda${langParam}` },
             { icon: '❤️', label: locale === 'nl' ? 'Favorieten' : locale === 'de' ? 'Favoriten' : locale === 'es' ? 'Favoritos' : 'Favorites', href: `https://holidaibutler.com/favorites${langParam}` },
           ];

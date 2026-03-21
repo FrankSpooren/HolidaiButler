@@ -21,21 +21,27 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useTranslation } from 'react-i18next';
 import { SIDEBAR_STYLES } from '../../theme.js';
 import useAuthStore from '../../stores/authStore.js';
+import useDestinationStore from '../../stores/destinationStore.js';
 
+/**
+ * Menu sections with feature flag visibility checks.
+ * visible(ff): function that checks featureFlags — returns true if item should be shown.
+ *   When no specific destination is selected ('all'), all items show (ff is empty → defaults to true).
+ */
 const MENU_SECTIONS = [
   {
     label: 'nav.section_overview',
     items: [
       { key: 'dashboard', path: '/dashboard', icon: DashboardIcon },
-      { key: 'agents', path: '/agents', icon: SmartToyIcon },
-      { key: 'issues', path: '/issues', icon: BugReportIcon },
+      { key: 'agents', path: '/agents', icon: SmartToyIcon, requiredRole: 'platform_admin' },
+      { key: 'issues', path: '/issues', icon: BugReportIcon, requiredRole: 'platform_admin' },
     ]
   },
   {
     label: 'nav.section_content',
     items: [
-      { key: 'pois', path: '/pois', icon: PlaceIcon },
-      { key: 'reviews', path: '/reviews', icon: StarIcon },
+      { key: 'pois', path: '/pois', icon: PlaceIcon, visible: (ff) => ff.hasPOI !== false },
+      { key: 'reviews', path: '/reviews', icon: StarIcon, visible: (ff) => ff.hasPOI !== false },
       { key: 'media', path: '/media', icon: PermMediaIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
       { key: 'contentStudio', path: '/content-studio', icon: AutoAwesomeIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
     ]
@@ -43,25 +49,25 @@ const MENU_SECTIONS = [
   {
     label: 'nav.section_commerce',
     items: [
-      { key: 'commerce', path: '/commerce', icon: ShoppingCartIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'] },
-      { key: 'partners', path: '/partners', icon: HandshakeIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
-      { key: 'financial', path: '/financial', icon: AccountBalanceIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'] },
-      { key: 'intermediary', path: '/intermediary', icon: SwapHorizIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'] },
+      { key: 'commerce', path: '/commerce', icon: ShoppingCartIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'], visible: (ff) => ff.hasCommerce === true || ff.hasTicketing === true },
+      { key: 'partners', path: '/partners', icon: HandshakeIcon, allowedRoles: ['platform_admin', 'destination_admin'], visible: (ff) => ff.hasPartners === true },
+      { key: 'financial', path: '/financial', icon: AccountBalanceIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'], visible: (ff) => ff.hasFinancial === true },
+      { key: 'intermediary', path: '/intermediary', icon: SwapHorizIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'], visible: (ff) => ff.hasIntermediary === true },
     ]
   },
   {
     label: 'nav.section_platform',
     items: [
-      { key: 'branding', path: '/branding', icon: PaletteIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
-      { key: 'pages', path: '/pages', icon: ArticleIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
-      { key: 'navigation', path: '/navigation', icon: MenuOpenIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
-      { key: 'onboarding', path: '/onboarding', icon: AddCircleOutlineIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
+      { key: 'merkProfiel', path: '/branding', icon: PaletteIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
+      { key: 'pages', path: '/pages', icon: ArticleIcon, allowedRoles: ['platform_admin', 'destination_admin'], visible: (ff) => ff.hasPages !== false },
+      { key: 'navigation', path: '/navigation', icon: MenuOpenIcon, allowedRoles: ['platform_admin', 'destination_admin'], visible: (ff) => ff.hasPages !== false },
+      { key: 'onboarding', path: '/onboarding', icon: AddCircleOutlineIcon, allowedRoles: ['platform_admin'] },
     ]
   },
   {
     label: 'nav.section_system',
     items: [
-      { key: 'analytics', path: '/analytics', icon: BarChartIcon },
+      { key: 'analytics', path: '/analytics', icon: BarChartIcon, visible: (ff) => ff.hasPOI !== false },
       { key: 'settings', path: '/settings', icon: SettingsIcon, requiredRole: 'platform_admin' },
       { key: 'users', path: '/users', icon: PeopleIcon, requiredRole: 'platform_admin' },
     ]
@@ -73,11 +79,32 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
+  const selectedFF = useDestinationStore(s => s.getSelectedFeatureFlags());
+  const allDestinations = useDestinationStore(s => s.destinations);
+
+  // Determine effective feature flags:
+  // 1. If a specific destination is selected in dropdown → use those flags
+  // 2. If user is NOT platform_admin and has allowed_destinations → use flags from their first destination
+  // 3. Otherwise (platform_admin with 'all') → no filtering
+  let featureFlags = selectedFF;
+  if (Object.keys(featureFlags).length === 0 && user?.role !== 'platform_admin' && user?.allowed_destinations?.length > 0) {
+    const userDest = allDestinations.find(d => user.allowed_destinations.includes(d.code));
+    if (userDest?.featureFlags) {
+      featureFlags = userDest.featureFlags;
+    }
+  }
 
   const isItemVisible = (item) => {
-    if (item.allowedRoles) return item.allowedRoles.includes(user?.role);
-    if (!item.requiredRole) return true;
-    return user?.role === item.requiredRole;
+    // RBAC check
+    if (item.allowedRoles && !item.allowedRoles.includes(user?.role)) return false;
+    if (item.requiredRole && user?.role !== item.requiredRole) return false;
+
+    // Feature flag check — active when flags are available
+    if (item.visible && Object.keys(featureFlags).length > 0) {
+      if (!item.visible(featureFlags)) return false;
+    }
+
+    return true;
   };
 
   return (
@@ -151,7 +178,7 @@ export default function Sidebar() {
 
       <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)' }}>
-          v3.25.0
+          v3.33.0
         </Typography>
       </Box>
     </Box>

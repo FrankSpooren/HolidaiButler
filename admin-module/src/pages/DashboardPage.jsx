@@ -22,6 +22,7 @@ import SystemHealthCard from '../components/dashboard/SystemHealthCard.jsx';
 import QuickLinks from '../components/dashboard/QuickLinks.jsx';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { DESTINATIONS } from '../utils/destinations.js';
+import useDestinationStore from '../stores/destinationStore.js';
 import { formatDate } from '../utils/formatters.js';
 import { CATEGORY_COLORS } from '../utils/agents.js';
 
@@ -207,8 +208,45 @@ export default function DashboardPage() {
   const { data: health, isLoading: healthLoading } = useSystemHealth();
   const [jobsOpen, setJobsOpen] = useState(false);
 
+  const isPlatformAdmin = user?.role === 'platform_admin';
+  const userAllowed = user?.allowed_destinations || [];
+  const allStoreDests = useDestinationStore(s => s.destinations);
+
+  // Determine user's destination info for scoped dashboard
+  const userDestInfo = !isPlatformAdmin && userAllowed.length > 0
+    ? allStoreDests.find(d => userAllowed.includes(d.code))
+    : null;
+  const isContentOnlyUser = userDestInfo?.destinationType === 'content_only';
+
   const destinations = kpis?.data?.destinations || {};
   const platform = kpis?.data?.platform || {};
+
+  // Content-only destination_admin: simplified dashboard
+  if (isContentOnlyUser) {
+    return (
+      <Box>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            {t('dashboard.welcome')}, {user?.name?.split(' ')[0] || 'Admin'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {userDestInfo?.name || userAllowed[0] || ''} — Content Studio
+          </Typography>
+        </Box>
+
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={6}>
+            <QuickLinks />
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  }
+
+  // Filter destination cards for non-platform-admin tourism users
+  const visibleDestCodes = isPlatformAdmin
+    ? DESTINATIONS
+    : DESTINATIONS.filter(d => userAllowed.includes(d.code));
 
   return (
     <Box>
@@ -229,7 +267,7 @@ export default function DashboardPage() {
         {t('dashboard.destinations')}
       </Typography>
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        {DESTINATIONS.map(d => (
+        {visibleDestCodes.map(d => (
           <Grid item xs={12} md={6} key={d.code}>
             {kpisLoading ? (
               <Skeleton variant="rounded" height={120} />
@@ -246,67 +284,75 @@ export default function DashboardPage() {
         ))}
       </Grid>
 
-      {/* Platform KPIs */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          {kpisLoading ? <Skeleton variant="rounded" height={90} /> : (
-            <KpiCard icon={PeopleIcon} label={t('dashboard.totalUsers')} value={platform.totalUsers} color="#1976d2" />
-          )}
+      {/* Platform KPIs — only for platform_admin */}
+      {isPlatformAdmin && (
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            {kpisLoading ? <Skeleton variant="rounded" height={90} /> : (
+              <KpiCard icon={PeopleIcon} label={t('dashboard.totalUsers')} value={platform.totalUsers} color="#1976d2" />
+            )}
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            {kpisLoading ? <Skeleton variant="rounded" height={90} /> : (
+              <KpiCard icon={ChatIcon} label={t('dashboard.chatSessions')} value={platform.chatbotSessions7d} color="#7c3aed" />
+            )}
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            {kpisLoading ? <Skeleton variant="rounded" height={90} /> : (
+              <KpiCard icon={SmartToyIcon} label={t('dashboard.activeAgents')} value={platform.totalAgents} color="#059669" />
+            )}
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            {kpisLoading ? <Skeleton variant="rounded" height={90} /> : (
+              <KpiCard
+                icon={ScheduleIcon}
+                label={t('dashboard.scheduledJobs')}
+                value={platform.scheduledJobs}
+                color="#d97706"
+                onClick={() => setJobsOpen(true)}
+                sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 }, transition: 'box-shadow 0.2s' }}
+              />
+            )}
+          </Grid>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          {kpisLoading ? <Skeleton variant="rounded" height={90} /> : (
-            <KpiCard icon={ChatIcon} label={t('dashboard.chatSessions')} value={platform.chatbotSessions7d} color="#7c3aed" />
-          )}
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          {kpisLoading ? <Skeleton variant="rounded" height={90} /> : (
-            <KpiCard icon={SmartToyIcon} label={t('dashboard.activeAgents')} value={platform.totalAgents} color="#059669" />
-          )}
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          {kpisLoading ? <Skeleton variant="rounded" height={90} /> : (
-            <KpiCard
-              icon={ScheduleIcon}
-              label={t('dashboard.scheduledJobs')}
-              value={platform.scheduledJobs}
-              color="#d97706"
-              onClick={() => setJobsOpen(true)}
-              sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 }, transition: 'box-shadow 0.2s' }}
-            />
-          )}
-        </Grid>
-      </Grid>
+      )}
 
-      {/* System Health + Quick Links */}
+      {/* System Health + Quick Links — health only for platform_admin */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
-          {healthLoading ? <Skeleton variant="rounded" height={200} /> : (
-            <SystemHealthCard health={health} healthSummary={platform.healthSummary} />
-          )}
-        </Grid>
-        <Grid item xs={12} md={6}>
+        {isPlatformAdmin && (
+          <Grid item xs={12} md={6}>
+            {healthLoading ? <Skeleton variant="rounded" height={200} /> : (
+              <SystemHealthCard health={health} healthSummary={platform.healthSummary} />
+            )}
+          </Grid>
+        )}
+        <Grid item xs={12} md={isPlatformAdmin ? 6 : 12}>
           <QuickLinks />
         </Grid>
       </Grid>
 
-      {/* Extended Stats: Website + Commerce + Chatbot */}
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>
-        {t('dashboard.extendedStats', 'Platform Insights')}
-      </Typography>
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
-          <WebsiteStatsCard />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <CommerceOverviewCard />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <ChatbotPerformanceCard />
-        </Grid>
-      </Grid>
+      {/* Extended Stats — only for platform_admin */}
+      {isPlatformAdmin && (
+        <>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>
+            {t('dashboard.extendedStats', 'Platform Insights')}
+          </Typography>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={12} md={4}>
+              <WebsiteStatsCard />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <CommerceOverviewCard />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <ChatbotPerformanceCard />
+            </Grid>
+          </Grid>
+        </>
+      )}
 
       {/* Scheduled Jobs Dialog */}
-      <ScheduledJobsDialog open={jobsOpen} onClose={() => setJobsOpen(false)} />
+      {isPlatformAdmin && <ScheduledJobsDialog open={jobsOpen} onClose={() => setJobsOpen(false)} />}
     </Box>
   );
 }

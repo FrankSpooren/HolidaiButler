@@ -24,6 +24,31 @@ const FALLBACK_TIPS: Record<string, TipData> = {
   es: { name: 'Peñón de Ifach', description: 'Sube al icónico peñón de Calpe para disfrutar de vistas impresionantes.' },
 };
 
+const TIP_CACHE_KEY = 'hb_tip_of_day';
+const TIP_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function getCachedTip(locale: string): TipData | null {
+  try {
+    const raw = localStorage.getItem(TIP_CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    // Check TTL and locale match
+    if (cached.locale !== locale) return null;
+    if (Date.now() - cached.timestamp > TIP_TTL_MS) return null;
+    return cached.tip as TipData;
+  } catch { return null; }
+}
+
+function cacheTip(tip: TipData, locale: string) {
+  try {
+    localStorage.setItem(TIP_CACHE_KEY, JSON.stringify({
+      tip,
+      locale,
+      timestamp: Date.now(),
+    }));
+  } catch { /* ignore */ }
+}
+
 function getLocalizedString(val: unknown, locale: string): string {
   if (typeof val === 'string') return val;
   if (val && typeof val === 'object') {
@@ -39,25 +64,33 @@ export default function TipOfTheDay({ locale }: TipOfTheDayProps) {
   const t = (key: string) => LABELS[key]?.[locale] || LABELS[key]?.en || key;
 
   useEffect(() => {
+    // Check cache first — only fetch new tip every 24h
+    const cached = getCachedTip(locale);
+    if (cached) {
+      setTip(cached);
+      setLoading(false);
+      return;
+    }
+
     async function load() {
       try {
         const res = await fetch(`/api/holibot/daily-tip?language=${locale}`);
         const data = await res.json();
-        // API returns { success, data: { itemType, poi: {...}, event: {...} } }
         const itemType = data?.data?.itemType || (data?.data?.poi ? 'poi' : 'event');
         const item = data?.data?.poi || data?.data?.event;
-        if (item) {
-          // Resolve localized name: try title_nl/title_es etc., then title object, then name
+        if (item && item.id) {
           const localizedTitle = item[`title_${locale}`] || item[`name_${locale}`];
           const name = localizedTitle || getLocalizedString(item.title, locale) || getLocalizedString(item.name, locale) || item.name || '';
           const localizedDesc = item[`description_${locale}`];
           const description = localizedDesc || getLocalizedString(item.description, locale) || item.description || '';
           if (name) {
-            setTip({ name, description, id: item.id, itemType });
+            const newTip: TipData = { name, description, id: item.id, itemType };
+            setTip(newTip);
+            cacheTip(newTip, locale);
             return;
           }
         }
-        // Fallback
+        // Fallback (not cached — will retry next visit)
         setTip(FALLBACK_TIPS[locale] || FALLBACK_TIPS.en);
       } catch (err) {
         console.error('TipOfTheDay load failed:', err);

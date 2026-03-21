@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { TenantConfig } from '@/types/tenant';
 import { resolveAssetUrl } from '@/lib/assets';
 import Nav from './Nav';
+import WcagButton from '@/components/ui/WcagButton';
 
 interface HeaderProps {
   tenant: TenantConfig;
@@ -107,8 +108,11 @@ export default function Header({ tenant, locale }: HeaderProps) {
             )}
           </Link>
 
-          {/* Navigation */}
-          <Nav items={navItems} featureFlags={tenant.featureFlags} locale={locale} />
+          {/* Navigation + WCAG */}
+          <div className="flex items-center gap-2">
+            <Nav items={navItems} featureFlags={tenant.featureFlags} locale={locale} />
+            <WcagButton locale={locale} />
+          </div>
         </div>
       </div>
     </header>

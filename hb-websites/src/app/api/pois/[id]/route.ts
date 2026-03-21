@@ -13,7 +13,7 @@ export async function GET(
   const { id } = await params;
   const tenantSlug = request.headers.get('x-tenant-slug') ?? 'calpe';
   const destId = DESTINATION_IDS[tenantSlug] ?? 1;
-  const locale = request.headers.get('accept-language') ?? 'en';
+  const locale = request.headers.get('x-tenant-locale') ?? 'en';
 
   try {
     const [poiRes, reviewsRes] = await Promise.all([

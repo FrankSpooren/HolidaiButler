@@ -27,6 +27,16 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
     : contentItem.content_type === 'video_script' ? 1
     : 3; // blog
 
+  // Check if this is a content_only destination (skip POI images entirely)
+  let isContentOnlyDest = false;
+  try {
+    const [[destRow]] = await mysqlSequelize.query(
+      'SELECT destination_type FROM destinations WHERE id = :id',
+      { replacements: { id: Number(destinationId) } }
+    );
+    isContentOnlyDest = destRow?.destination_type === 'content_only';
+  } catch { /* default to false */ }
+
   try {
     // Load already-used image IDs across all content items in this destination to ensure diversity
     const [usedRows] = await mysqlSequelize.query(
@@ -44,8 +54,8 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
     // Build exclude set from passed IDs (for refresh functionality)
     const excludeSet = new Set(excludeIds.map(Number).filter(n => !isNaN(n)));
 
-    // 1. POI-based match: if content is about a specific POI
-    if (contentItem.poi_id) {
+    // 1. POI-based match: if content is about a specific POI (SKIP for content_only)
+    if (contentItem.poi_id && !isContentOnlyDest) {
       const excludeClause = excludeSet.size > 0 ? `AND i.id NOT IN (${[...excludeSet].join(',')})` : '';
       const [poiImages] = await mysqlSequelize.query(
         `SELECT i.id, i.poi_id, i.image_url, i.local_path, i.display_order, p.name as poi_name
@@ -64,8 +74,8 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
       })));
     }
 
-    // 2. Keyword match: find POIs matching content keywords
-    if (candidates.length < maxImages && keywords.length > 0) {
+    // 2. Keyword match: find POIs matching content keywords (SKIP for content_only)
+    if (candidates.length < maxImages && keywords.length > 0 && !isContentOnlyDest) {
       const keywordConditions = keywords.slice(0, 5).map(kw =>
         `(p.name LIKE :kw_${kw.replace(/[^a-z]/gi, '')} OR p.category LIKE :kw_${kw.replace(/[^a-z]/gi, '')})`
       ).join(' OR ');
@@ -133,7 +143,7 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
     // 4. Unsplash fallback (if <3 candidates)
     if (candidates.length < 3) {
       try {
-        const query = keywords.slice(0, 3).join(' ') + ' tourism';
+        const query = keywords.slice(0, 3).join(' ') + (isContentOnlyDest ? '' : ' tourism');
         const unsplashResults = await searchUnsplash(query, 3);
         candidates.push(...unsplashResults.map(u => ({
           source: 'unsplash',

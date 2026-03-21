@@ -17,10 +17,10 @@ const LABELS: Record<string, Record<string, string>> = {
 };
 
 const MAP_CATEGORIES = [
-  { key: 'beach', nl: 'Stranden & Natuur', en: 'Beaches & Nature', de: 'Strände & Natur', es: 'Playas & Naturaleza', color: '#3498db', filter: 'Beach,Nature' },
-  { key: 'food', nl: 'Food & Drinks', en: 'Food & Drinks', de: 'Essen & Trinken', es: 'Comida & Bebidas', color: '#e74c3c', filter: 'Food & Drinks' },
-  { key: 'active', nl: 'Actief', en: 'Active', de: 'Aktiv', es: 'Activo', color: '#1abc9c', filter: 'Active' },
-  { key: 'shopping', nl: 'Winkelen', en: 'Shopping', de: 'Einkaufen', es: 'Compras', color: '#9b59b6', filter: 'Shopping' },
+  { key: 'beach', nl: 'Stranden & Natuur', en: 'Beaches & Nature', de: 'Strände & Natur', es: 'Playas & Naturaleza', color: '#3498db', filter: 'beaches' },
+  { key: 'food', nl: 'Food & Drinks', en: 'Food & Drinks', de: 'Essen & Trinken', es: 'Comida & Bebidas', color: '#e74c3c', filter: 'food' },
+  { key: 'active', nl: 'Actief', en: 'Active', de: 'Aktiv', es: 'Activo', color: '#1abc9c', filter: 'active' },
+  { key: 'shopping', nl: 'Winkelen', en: 'Shopping', de: 'Einkaufen', es: 'Compras', color: '#9b59b6', filter: 'shopping' },
 ];
 
 // Category color mapping matching the main Map.tsx

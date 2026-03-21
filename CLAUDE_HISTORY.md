@@ -5258,4 +5258,60 @@ CLAUDE.md v4.13.0 → v4.14.0. MS v7.73 → v7.74.
 
 ---
 
+## Command v16.0: Mobiele Homepage Quality — 14 Punten + Extra's (21-03-2026)
+
+### Context
+
+Sequentiële fix-lijst voor de mobiele homepage (hb-websites, dev.holidaibutler.com) en customer-portal. Enterprise-level kwaliteit vereist. Punten 1-9 afgerond in vorige sessie, punten 10-14 + extra's in deze sessie.
+
+### Uitgevoerde Fixes
+
+| # | Fix | Beschrijving |
+|---|-----|-------------|
+| **503 Fix** | adminPortal.js syntax error | Multi-line single-quoted string → backtick template literal (regel 10158). API crashte met 106 restarts. |
+| **Punt 10** | Onboarding buttons conform template | `rounded-full` → `rounded-xl`, `font-semibold` → `font-medium` (Overslaan), border kleur `#9CB5A7`, Inter font expliciet op OnboardingSheet. Subtitle stap 2: "Selecteer één of meerdere opties (optioneel)". |
+| **Punt 11** | Map "Stranden & Natuur" → No POIs | MapPreview category filters `Beach,Nature` → correcte customer-portal IDs (`beaches`, `food`, `active`, `shopping`). Root cause: POILandingPage verwacht category IDs, niet DB-namen. |
+| **Punt 12** | Profiel tab → login na onboarding | Profiel-button logica: onboarding niet compleet → onboarding sheet. Onboarding compleet → `holidaibutler.com/login`. |
+| **Punt 13** | Hamburger menu chatbot | Al correct geconfigureerd (chatbotName prop + CalpeChat fallback). Bevestigd werkend. |
+| **Punt 14** | CalpeChat naam | Al compleet in punt 6 (vorige sessie). |
+| **Extra: Map overlap** | Leaflet z-index fix | `isolation: isolate` op `.leaflet-container` in globals.css. Voorkomt dat Leaflet z-indices (400-700) boven drawers (z-50) komen. |
+| **Extra: ProgramCard dagdeel** | Dynamisch per time-of-day | Ochtend (voor 12:00): Active, Beaches & Nature, slots 09-13. Middag (12-17): Culture, Recreation, Shopping, slots 13-18. Avond (na 17): Food & Drinks, Nightlife, slots 18-23. Titel wisselt: OCHTENDPROGRAMMA/MIDDAGPROGRAMMA/AVONDPROGRAMMA. |
+| **ProgramCard 24h klok** | Tijden 25:30/27:30 fix | Tijdslots berekend binnen dagdeel-venster. Nooit boven 23:30. Dynamische slotduur op basis van beschikbare uren / aantal items. |
+| **Onboarding popup** | Dismissed → sessionStorage | `hb_onboarding_dismissed` verplaatst van localStorage naar sessionStorage. Eerste bezoek toont altijd onboarding. Tab sluiten → volgende bezoek toont het weer. |
+| **CTA Programma** | Itinerary wizard direct | "Zelf programma samenstellen" opent chatbot met Itinerary Wizard direct geactiveerd (`action: 'itinerary'`), niet alle 4 quick actions. ChatbotWidget handler uitgebreid voor `detail.action`. |
+
+### Gewijzigde Bestanden
+
+**platform-core** (1 bestand):
+- `src/routes/adminPortal.js` — syntax fix (single-quote → backtick multi-line string)
+
+**hb-websites** (8 bestanden):
+- `src/components/OnboardingSheet.tsx` — button styling, subtitle i18n, dismissed → sessionStorage, Inter font
+- `src/components/MobileBottomNav.tsx` — Profiel → login/onboarding logica, sessionStorage
+- `src/components/mobile/MapPreview.tsx` — category filter IDs fix
+- `src/components/mobile/ProgramCard.tsx` — time-of-day dynamisch, 24h klok fix, itinerary action
+- `src/components/modules/ChatbotWidget.tsx` — `action: 'itinerary'` handler
+- `src/app/globals.css` — Leaflet isolation: isolate
+
+### Verificatie
+
+| # | Test | Status |
+|---|------|--------|
+| 1 | POI pagina's laden (geen 503) | PASS |
+| 2 | Onboarding buttons conform template screenshot | PASS |
+| 3 | "Stranden & Natuur" toont POIs op customer-portal | PASS |
+| 4 | Profiel → login na onboarding compleet | PASS |
+| 5 | ProgramCard tijden binnen 24h klok | PASS |
+| 6 | Onboarding verschijnt bij eerste bezoek | PASS |
+| 7 | "Zelf programma samenstellen" → itinerary wizard | PASS |
+| 8 | Map niet boven drawers | PASS |
+
+### Documentatie
+
+CLAUDE.md v4.14.0 → v4.15.0. MS v7.74 → v7.75.
+
+**Kosten**: EUR 0
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

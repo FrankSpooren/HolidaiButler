@@ -38,6 +38,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTranslation } from 'react-i18next';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, Legend } from 'recharts';
 import useAuthStore from '../stores/authStore.js';
+import useDestinationStore from '../stores/destinationStore.js';
 import contentService from '../api/contentService.js';
 import ContentCalendarTab from './ContentCalendarTab.jsx';
 import SeasonalConfigTab from './SeasonalConfigTab.jsx';
@@ -356,21 +357,25 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
   const [platform, setPlatform] = useState('website');
   const [pillarId, setPillarId] = useState('');
   const [templateId, setTemplateId] = useState('');
+  const [personaId, setPersonaId] = useState('');
   const [generating, setGenerating] = useState(false);
   const [pillars, setPillars] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [personas, setPersonas] = useState([]);
   const [loadingMeta, setLoadingMeta] = useState(false);
 
-  // Load pillars + templates when dialog opens
+  // Load pillars + templates + personas when dialog opens
   useEffect(() => {
     if (!open || !destinationId) return;
     setLoadingMeta(true);
     Promise.all([
       contentService.getPillars(destinationId).catch(() => ({ data: [] })),
       contentService.getTemplates(destinationId).catch(() => ({ data: [] })),
-    ]).then(([pillarsRes, templatesRes]) => {
+      import('../api/brandProfileService.js').then(m => m.default.getPersonas(destinationId)).catch(() => ({ data: [] })),
+    ]).then(([pillarsRes, templatesRes, personasRes]) => {
       setPillars(pillarsRes.data || []);
       setTemplates(templatesRes.data || []);
+      setPersonas(personasRes.data || []);
     }).finally(() => setLoadingMeta(false));
   }, [open, destinationId]);
 
@@ -398,6 +403,7 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
       };
       if (pillarId) data.pillar_id = pillarId;
       if (templateId) data.template_id = templateId;
+      if (personaId) data.persona_id = personaId;
       await onGenerate(data);
       onClose();
     } finally {
@@ -470,6 +476,27 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
             </Typography>
           )}
         </FormControl>
+
+        {/* Doelgroep / Audience Persona selector */}
+        {personas.length > 0 && (
+          <FormControl fullWidth>
+            <InputLabel>{t('contentStudio.form.persona', 'Doelgroep')}</InputLabel>
+            <Select value={personaId} onChange={e => setPersonaId(e.target.value)} label={t('contentStudio.form.persona', 'Doelgroep')} displayEmpty>
+              <MenuItem value="">{t('contentStudio.form.noPersona', '— Geen specifieke doelgroep —')}</MenuItem>
+              {personas.map(p => (
+                <MenuItem key={p.id} value={p.id}>
+                  <Box>
+                    <Typography variant="body2">{p.is_primary ? '★ ' : ''}{p.name}</Typography>
+                    {p.age_range && <Typography variant="caption" color="text.secondary"> ({p.age_range}{p.location ? `, ${p.location}` : ''})</Typography>}
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              {t('contentStudio.form.personaHelper', 'Optioneel — beïnvloedt toon en inhoud van de gegenereerde content')}
+            </Typography>
+          </FormControl>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>{t('contentStudio.actions.cancel', 'Annuleren')}</Button>
@@ -974,7 +1001,7 @@ function ContentImageSection({ itemId, item, onUpdate }) {
         <DialogTitle>{t('contentStudio.dialogs.addImage', 'Meer afbeeldingen zoeken')}</DialogTitle>
         <DialogContent>
           <Tabs value={suggestTab} onChange={(_, v) => setSuggestTab(v)} sx={{ mb: 2 }}>
-            <Tab label={t('contentStudio.images.suggestions', 'POI Suggesties')} />
+            <Tab label={isContentOnlyDest ? t('contentStudio.images.mediaSuggestions', 'Media Suggesties') : t('contentStudio.images.suggestions', 'POI Suggesties')} />
             <Tab label={t('contentStudio.images.unsplash', 'Unsplash')} />
           </Tabs>
 
@@ -1555,10 +1582,10 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                   </Box>
                   {seoData.seoSuggestions.internal_links?.length > 0 && (
                     <Box>
-                      <Typography variant="caption" color="text.secondary" gutterBottom>{t('contentStudio.seoPanel.internalLinks', 'Interne linksuggesties')}</Typography>
+                      <Typography variant="caption" color="text.secondary" gutterBottom>{isContentOnlyDest ? t('contentStudio.seoPanel.relatedContent', 'Gerelateerde content') : t('contentStudio.seoPanel.internalLinks', 'Interne linksuggesties')}</Typography>
                       {seoData.seoSuggestions.internal_links.map((link, i) => (
                         <Box key={i} sx={{ mb: 0.5 }}>
-                          <Typography variant="body2" sx={{ fontSize: 12, fontWeight: 500 }}>{link.poiName || link.matchedTerm || link.text || `POI ${link.poiId}`}</Typography>
+                          <Typography variant="body2" sx={{ fontSize: 12, fontWeight: 500 }}>{link.poiName || link.matchedTerm || link.text || (link.poiId ? `POI ${link.poiId}` : link.description || '—')}</Typography>
                           <Typography variant="caption" sx={{ color: 'primary.main', userSelect: 'all', cursor: 'text', wordBreak: 'break-all' }}>{link.url}</Typography>
                         </Box>
                       ))}
@@ -1905,7 +1932,27 @@ export default function ContentStudioPage() {
   const { t } = useTranslation();
   const user = useAuthStore(s => s.user);
   const [tab, setTab] = useState(0);
-  const [destinationId, setDestinationId] = useState(user?.destination_id || 1);
+  const storeDestinations = useDestinationStore(s => s.destinations);
+  const userDestId = (() => {
+    if (user?.destination_id) return user.destination_id;
+    const allowed = user?.allowed_destinations || [];
+    if (allowed.length > 0) {
+      const match = storeDestinations.find(d => allowed.includes(d.code));
+      if (match) return match.id;
+    }
+    return 1;
+  })();
+  const [destinationId, setDestinationId] = useState(userDestId);
+
+  // Destination type awareness — load from store, scoped by user role
+  const allDestinations = useDestinationStore(s => s.destinations);
+  const isPlatformAdmin = user?.role === 'platform_admin';
+  const userAllowed = user?.allowed_destinations || [];
+  const visibleDestinations = isPlatformAdmin
+    ? allDestinations.filter(d => d.status === 'active')
+    : allDestinations.filter(d => d.status === 'active' && userAllowed.includes(d.code));
+  const currentDest = allDestinations.find(d => d.id === destinationId);
+  const isContentOnlyDest = currentDest?.destinationType === 'content_only';
   const [period, setPeriod] = useState('30d');
 
   // Trending state
@@ -2093,13 +2140,15 @@ export default function ContentStudioPage() {
           {t('contentStudio.title', 'Content Studio')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <FormControl size="small" sx={{ minWidth: 130 }}>
-            <Select value={destinationId} onChange={e => { setDestinationId(e.target.value); setTrendPage(0); setSugPage(0); setItemPage(0); }}>
-              <MenuItem value={1}>Calpe</MenuItem>
-              <MenuItem value={2}>Texel</MenuItem>
-              <MenuItem value={4}>WarreWijzer</MenuItem>
-            </Select>
-          </FormControl>
+          {visibleDestinations.length > 1 && (
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <Select value={destinationId} onChange={e => { setDestinationId(e.target.value); setTrendPage(0); setSugPage(0); setItemPage(0); }}>
+                {visibleDestinations.map(d => (
+                  <MenuItem key={d.id} value={d.id}>{d.name}{d.destinationType === 'content_only' ? ' (CS)' : ''}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
           {tab === 0 && (
             <FormControl size="small" sx={{ minWidth: 110 }}>
               <Select value={period} onChange={e => { setPeriod(e.target.value); setTrendPage(0); }}>
