@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.14.0
-> **Laatst bijgewerkt**: 20 maart 2026
+> **Versie**: 4.15.0
+> **Laatst bijgewerkt**: 21 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -405,6 +405,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 | **Fase VI-B Mobile** | **Mobiele Homepage & Onboarding — 7 Blokken** | **18-03** | **BLOK A: MobileBottomNav (5 tabs: Home/Explore/Chatbot/Events/More, z-40, md:hidden, 44x44px touch targets). BLOK B: OnboardingSheet (4-stappen bottom-sheet: taal/interesses/meldingen/klaar, localStorage persistence, i18n NL/EN/DE/ES, CustomEvent hb:onboarding-update). BLOK C: MobileHeader (gradient primary→secondary, brand name uit config, SVG language flags, WCAG accessibility icon, hamburger menu, i18n subtitle). BLOK D: 4 homepage content blocks — ProgramCard (3 POIs + 1 event, time slots, connector lines, chatbot CTA), TipOfTheDay (yellow gradient, /api/holibot/daily-tip), TodayEvents (horizontal scroll, category emoji), MapPreview (Leaflet, category-colored markers, overlay label). BLOK E: Admin Portal integratie — BrandingPage "Mobiele Homepage" accordion (13 velden), GET+PUT /destinations/:id/mobile-homepage endpoints, mobileHomepage JSON in branding, config doorvoering naar alle components (programSize, mapPoiLimit, mapLabel, subtitle, brandName, greeting). BLOK F: Browser verificatie 9/9 PASS. Events list API proxy (/api/events). MobileHomepage wrapper (pathname='/' only, #F5F2EC bg). 9 nieuwe + 4 gewijzigde bestanden (1.712 LOC). Commit be8cc00.** |
 | **Fase VI-B Feedback** | **7 Feedback Fixes — Mobiele Homepage Polish** | **20-03** | **FIX 1: Inter font (ProgramCard DM Sans→var(--hb-font-body)). FIX 2: Tip van de Dag deep link naar specifiek POI/Event (/pois/:id, /agenda/:id). FIX 3: Language param op alle productie-links (MapPreview). FIX 4: WCAG icoon al aanwezig (dev MobileHeader + prod customer-portal Header.tsx WCAGModal). FIX 5: Hamburger menu → slide-in panel rechts (groene gradient, emoji icons, primair+secundair met separator). FIX 6: CALPETRIP text-lg→text-xl, letter-spacing 2px. FIX 7: Bottom nav colored filled SVGs (Home oranje, Agenda blauw, POIs roze, Profiel paars). Geen customer-portal deployment nodig (alle 7 fixes zijn hb-websites specifiek). 6 bestanden. Commit 5d3bb00.** |
+| **Command v16.0** | **Mobiele Homepage Quality — 14 Punten + Extra's** | **21-03** | **503 API fix (adminPortal.js multi-line string syntax error). Punt 10: Onboarding buttons conform template (rounded-xl, Inter font, subtielere kleuren). Punt 11: Map category filter IDs fix (Beach,Nature → beaches). Punt 12: Profiel → login na onboarding compleet. Punt 13+14: bevestigd werkend. Extra: Leaflet z-index isolation (map overlap drawers fix). Extra: ProgramCard time-of-day dynamisch (ochtend/middag/avond categorieën + tijdslots). 24h klok fix (nooit boven 23:30). Onboarding dismissed → sessionStorage (verschijnt bij elk nieuw bezoek). CTA "Zelf programma samenstellen" → itinerary wizard direct geactiveerd. 1 platform-core + 6 hb-websites bestanden. 8/8 verificatie PASS.** |
 
 > **Volledige resultaatdetails per fase**: zie **CLAUDE_HISTORY.md**
 
@@ -652,13 +653,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **4.14.0** | **2026-03-20** | **Fase VI-B Feedback: 7 Fixes**. FIX 1: Inter font consistency (DM Sans→var(--hb-font-body)). FIX 2: Tip van de Dag deep links (/pois/:id, /agenda/:id). FIX 3: Language param alle productie-links. FIX 4: WCAG al aanwezig (dev+prod). FIX 5: Slide-in hamburger menu (groene gradient, emoji icons). FIX 6: CALPETRIP font vergroting. FIX 7: Gekleurde bottom nav SVG icons. 6 bestanden. Commit 5d3bb00. MS v7.74. |
-| **4.13.0** | **2026-03-18** | **Fase VI-B Mobile Homepage & Onboarding — 7 Blokken**. BLOK A: MobileBottomNav (5 tabs, z-40). BLOK B: OnboardingSheet (4-stappen, localStorage, i18n). BLOK C: MobileHeader (gradient, SVG flags, WCAG). BLOK D: ProgramCard + TipOfTheDay + TodayEvents + MapPreview. BLOK E: Admin BrandingPage accordion (13 velden) + 2 API endpoints + config doorvoering. BLOK F: 9/9 verificatie PASS. 9 nieuwe + 4 gewijzigde bestanden (1.712 LOC). Commit be8cc00. MS v7.73. |
-| **4.12.0** | **2026-03-18** | **Content Studio Completie — Alle 12 Opdrachten 100%**. FIX 1: `score_calibrations` DB tabel (OPDRACHT 4). FIX 3: Image refresh button fix — `excludeIds` + RAND() randomisatie in imageSelector.js, backend `exclude_ids` param, frontend exclude current IDs bij refresh. Geverifieerd: 100% andere images bij refresh. 1 DB tabel + 3 bestanden. MS v7.72. |
-| **4.11.0** | **2026-03-18** | **OPDRACHT 7/7B: Content Studio Image Quality — Enterprise Image Selection**. OPDRACHT 7: media_ids resolve (poi: prefix strip, w=600 webp, alt text). OPDRACHT 7B: POI auto-detectie, diversity filter, content-type limits, forSuggestion 6 results, PlatformPreview images. Frontend: STATUS_LABELS crash fix, ContentImageSection rewrite (3-6 alternatieven). 5 bestanden. MS v7.71. |
-| **4.9.0** | **2026-03-16** | **Content Studio TO DO P0+P1 — Enterprise Quality**. P0: PlatformPreview auto-adapt (smart truncation, platform health indicators, tips). repurposeContent() enterprise rewrite (PLATFORM_EXAMPLES, creatieve instructies, 2 retries, SEO scoring). Auto-attach images bij generatie (keyword REGEXP). Pinterest OAuth + YouTube OAuth connect. SocialAccountsCards herschreven (7 platforms, koppelen/vernieuwen). P1: DeepL Pro actief. Auto-crop bij publicatie (Sharp). UTM parameters in Publisher flow. 2 endpoints (212 totaal). adminPortal.js v3.32.0. MS v7.69. |
-| **4.8.0** | **2026-03-16** | **Content Studio v5.0 Remediatie — 8 Blokken**. BLOK 3 (P0): repurposeContent() herschreven. BLOK 4 (P0): Publish workflow. BLOK 2 (P0): Image management. BLOK 1 (P1): SEO v2.0. BLOK 8 (P1): DeepL translator + mistral-medium. BLOK 5 (P1): Social Accounts tab. BLOK 6 (P1): BestTimeToPost. BLOK 7 (P2): ApprovalTimeline. 2 endpoints (210 totaal). adminPortal.js v3.31.0. MS v7.68. |
-| **4.7.0** | **2026-03-15** | **Content Module Waves 5+6: Enterprise Workflow + Platform Completion**. Wave 5: approval logging, revisions, comments, pillars, best-time, UTM, hashtags, bulk ops. Wave 6: X API v2 + Pinterest API v5, 14 templates, publish retry, brand score. 19 endpoints (210 totaal). 2 jobs (62 totaal). adminPortal.js v3.31.0. MS v7.67. |
+| **4.15.0** | **2026-03-21** | **Command v16.0: Mobiele Homepage Quality — 14 Punten + Extra's**. 503 API fix (adminPortal.js syntax error). Onboarding buttons conform template (rounded-xl, Inter). Map category IDs fix. Profiel→login na onboarding. Leaflet z-index isolation. ProgramCard time-of-day (ochtend/middag/avond). 24h klok fix. Onboarding dismissed→sessionStorage. CTA→itinerary wizard direct. 1 platform-core + 6 hb-websites bestanden. MS v7.75. |
+| **4.14.0** | **2026-03-20** | **Fase VI-B Feedback: 7 Fixes**. Inter font, Tip deep links, language params, WCAG, hamburger menu, CALPETRIP font, bottom nav SVGs. 6 bestanden. Commit 5d3bb00. MS v7.74. |
+| **4.13.0** | **2026-03-18** | **Fase VI-B Mobile Homepage & Onboarding — 7 Blokken**. MobileBottomNav, OnboardingSheet, MobileHeader, ProgramCard, TipOfTheDay, TodayEvents, MapPreview. 9+4 bestanden (1.712 LOC). Commit be8cc00. MS v7.73. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -668,7 +665,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.74 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.75 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

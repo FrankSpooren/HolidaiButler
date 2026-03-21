@@ -22,20 +22,45 @@ const LABELS: Record<string, Record<string, string>> = {
   cta:     { nl: 'Zelf programma samenstellen', en: 'Build your own program', de: 'Eigenes Programm erstellen', es: 'Crea tu propio programa' },
 };
 
-function generateTimeSlots(count: number): { start: string; end: string }[] {
+type DayPart = 'morning' | 'afternoon' | 'evening';
+
+function getDayPart(): DayPart {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+}
+
+const DAY_PART_CONFIG: Record<DayPart, { startHour: number; categories: string }> = {
+  morning:   { startHour: 9,  categories: 'Active,Beaches & Nature,Nature,Natuur' },
+  afternoon: { startHour: 13, categories: 'Culture & History,Cultuur & Historie,Recreation,Shopping' },
+  evening:   { startHour: 18, categories: 'Food & Drinks,Eten & Drinken,Nightlife' },
+};
+
+const DAY_PART_LABELS: Record<DayPart, Record<string, string>> = {
+  morning:   { nl: 'OCHTENDPROGRAMMA', en: 'MORNING PROGRAM', de: 'MORGENPROGRAMM', es: 'PROGRAMA DE MAÑANA' },
+  afternoon: { nl: 'MIDDAGPROGRAMMA', en: 'AFTERNOON PROGRAM', de: 'NACHMITTAGSPROGRAMM', es: 'PROGRAMA DE TARDE' },
+  evening:   { nl: 'AVONDPROGRAMMA', en: 'EVENING PROGRAM', de: 'ABENDPROGRAMM', es: 'PROGRAMA DE ABEND' },
+};
+
+function generateTimeSlots(count: number, dayPart: DayPart): { start: string; end: string }[] {
   const slots = [];
-  let hour = 9;
+  const startHour = DAY_PART_CONFIG[dayPart].startHour;
+  // Calculate slot duration to fit within the day part window
+  // Morning: 09-13 (4h), Afternoon: 13-18 (5h), Evening: 18-23 (5h)
+  const maxHour = dayPart === 'morning' ? 13 : dayPart === 'afternoon' ? 18 : 23;
+  const totalHours = maxHour - startHour;
+  const slotDuration = Math.max(1, totalHours / count);
+
+  let hour = startHour;
   for (let i = 0; i < count; i++) {
-    const duration = i === count - 1 ? 2 : 2.5;
-    const startH = Math.floor(hour);
-    const startM = (hour % 1) * 60;
-    const endHour = hour + duration;
-    const endH = Math.floor(endHour);
-    const endM = (endHour % 1) * 60;
-    slots.push({
-      start: `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`,
-      end: `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`,
-    });
+    const endHour = Math.min(hour + slotDuration, 23.5); // Never exceed 23:30
+    const fmt = (h: number) => {
+      const hh = Math.floor(h);
+      const mm = Math.round((h % 1) * 60);
+      return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    };
+    slots.push({ start: fmt(hour), end: fmt(endHour) });
     hour = endHour;
   }
   return slots;
@@ -55,24 +80,31 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
   const [loading, setLoading] = useState(true);
   const t = (key: string) => LABELS[key]?.[locale] || LABELS[key]?.en || key;
 
+  const dayPart = getDayPart();
+
   useEffect(() => {
     async function load() {
       try {
-        // Fetch top POIs + 1 event
+        // Fetch POIs relevant to current time of day + 1 event
         const poiLimit = Math.max(1, programSize - 1);
+        const config = DAY_PART_CONFIG[dayPart];
         const [poisRes, eventsRes] = await Promise.all([
-          fetch(`/api/pois?limit=${poiLimit}&sort=rating:desc&min_rating=4&min_reviews=10&categories=${encodeURIComponent('Food & Drinks,Active,Nature,Culture,Beach')}`),
-          fetch('/api/events?limit=1'),
+          fetch(`/api/pois?limit=${poiLimit * 2}&sort=rating:desc&min_rating=4&min_reviews=3&categories=${encodeURIComponent(config.categories)}`),
+          fetch('/api/events?limit=3'),
         ]);
 
         const poisData = await poisRes.json();
         const eventsData = await eventsRes.json();
 
-        const pois = (poisData?.data || []).slice(0, poiLimit);
+        // Pick random subset to vary content
+        const allPois = poisData?.data || [];
+        const shuffled = allPois.sort(() => Math.random() - 0.5);
+        const pois = shuffled.slice(0, poiLimit);
+        // Pick first upcoming event (or random from available)
         const events = (eventsData?.data || []).slice(0, 1);
 
         const combined: ProgramItem[] = [];
-        const slots = generateTimeSlots(pois.length + events.length);
+        const slots = generateTimeSlots(pois.length + events.length, dayPart);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pois.forEach((p: any, i: number) => {
@@ -121,7 +153,7 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
 
   // CTA "Programma samenstellen" → open chatbot as popup
   const openChatbot = () => {
-    window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { message: 'program' } }));
+    window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { action: 'itinerary' } }));
   };
 
   // Details button → production POI/Event detail page
@@ -162,7 +194,7 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
           className="text-sm font-bold tracking-wider mb-4"
           style={{ fontFamily: "var(--hb-font-body), sans-serif", color: '#5E8B7E', fontStyle: 'normal', textTransform: 'uppercase' }}
         >
-          📋 {t('title')}
+          {dayPart === 'morning' ? '🌅' : dayPart === 'afternoon' ? '☀️' : '🌙'} {DAY_PART_LABELS[dayPart][locale] || DAY_PART_LABELS[dayPart].en}
         </h3>
 
         <div className="relative flex flex-col items-stretch">

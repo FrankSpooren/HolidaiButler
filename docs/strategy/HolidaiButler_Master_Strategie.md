@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 20 maart 2026
-**Versie**: 7.74
+**Datum**: 21 maart 2026
+**Versie**: 7.75
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1627,7 +1627,8 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **7.74** | **20-03-2026** | **Fase VI-B Feedback: 7 Fixes COMPLEET. FIX 1: Inter font (DM Sans→var(--hb-font-body)). FIX 2: Tip van de Dag deep links (/pois/:id, /agenda/:id). FIX 3: Language param alle productie-links. FIX 4: WCAG al aanwezig (dev+prod). FIX 5: Slide-in hamburger menu (groene gradient, emoji icons). FIX 6: CALPETRIP font vergroting. FIX 7: Gekleurde bottom nav SVG icons. Geen customer-portal deployment nodig. 6 bestanden. Commit 5d3bb00. CLAUDE.md v4.14.0.** |
+| **7.75** | **21-03-2026** | **Command v16.0: Mobiele Homepage Quality — 14 Punten + Extra's COMPLEET. 503 API fix (adminPortal.js syntax error). Onboarding buttons conform template (rounded-xl, Inter font). Map category IDs fix (Beach,Nature→beaches). Profiel→login na onboarding. Leaflet z-index isolation (map overlap fix). ProgramCard time-of-day dynamisch (ochtend/middag/avond). 24h klok fix (nooit boven 23:30). Onboarding dismissed→sessionStorage. CTA→itinerary wizard direct. 1 platform-core + 6 hb-websites bestanden. 8/8 verificatie PASS. CLAUDE.md v4.15.0.** |
+| **7.74** | **20-03-2026** | **Fase VI-B Feedback: 7 Fixes COMPLEET. Inter font, Tip deep links, language params, WCAG, hamburger menu, CALPETRIP font, bottom nav SVGs. 6 bestanden. Commit 5d3bb00. CLAUDE.md v4.14.0.** |
 | **7.73** | **18-03-2026** | **Fase VI-B Mobile Homepage & Onboarding — 7 Blokken COMPLEET. BLOK A: MobileBottomNav (5 tabs). BLOK B: OnboardingSheet (4-stappen bottom-sheet, i18n). BLOK C: MobileHeader (gradient, SVG flags, WCAG). BLOK D: ProgramCard + TipOfTheDay + TodayEvents + MapPreview. BLOK E: Admin BrandingPage "Mobiele Homepage" accordion + 2 API endpoints + config doorvoering. BLOK F: 9/9 verificatie PASS. 9 nieuwe + 4 gewijzigde bestanden (1.712 LOC). Commit be8cc00. CLAUDE.md v4.13.0.** |
 | **7.72** | **18-03-2026** | **Content Studio Completie — Alle 12 Opdrachten 100% COMPLEET. FIX 1: `score_calibrations` DB tabel aangemaakt (OPDRACHT 4 completie). FIX 3: Image refresh button fix — `excludeIds` + RAND() randomisatie in imageSelector.js, frontend exclude current IDs bij refresh. Geverifieerd: 100% andere images bij refresh. 1 DB tabel + 3 bestanden. CLAUDE.md v4.12.0.** |
 | **7.71** | **18-03-2026** | **OPDRACHT 7/7B: Content Studio Image Quality — Enterprise Image Selection COMPLEET. media_ids resolve (poi: prefix strip, w=600 webp, alt text). POI auto-detectie, diversity filter, content-type limits, forSuggestion 6 results, PlatformPreview images. STATUS_LABELS crash fix, ContentImageSection rewrite. 5 bestanden. CLAUDE.md v4.11.0.** |
@@ -1723,4 +1724,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 18 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v15.1 + Fase B+C+D + Wave 5+6 + CS v5.0+v6.0+v6.0 Chirurgisch + OPDRACHT 7/7B + Content Studio Completie COMPLEET). Fase VI IN PROGRESS (VI-A UX Polish + VI-B Features + VI-B Mobile Homepage COMPLEET). Admin Portal: 212 endpoints, adminPortal.js v3.32.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.13.0. MS v7.73.*
+*Laatst bijgewerkt: 21 maart 2026 — Fase IV COMPLEET ✅ (Blok A+B+C+D+E+F). Fase V IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v15.1 + Fase B+C+D + Wave 5+6 + CS v5.0+v6.0+v6.0 Chirurgisch + OPDRACHT 7/7B + Content Studio Completie COMPLEET). Fase VI IN PROGRESS (VI-A UX Polish + VI-B Features + VI-B Mobile Homepage + Cmd v16.0 COMPLEET). Admin Portal: 212 endpoints, adminPortal.js v3.32.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.15.0. MS v7.75.*

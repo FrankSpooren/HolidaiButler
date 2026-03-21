@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import './ChatbotWidget.css';
+
+/* ─── Types ─── */
 
 interface ItineraryStop {
   time: string;
@@ -22,6 +25,7 @@ interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  timestamp: Date;
   isStreaming?: boolean;
   tipData?: DailyTipData | null;
   itineraryData?: ItineraryData | null;
@@ -42,7 +46,10 @@ interface ChatbotWidgetProps {
   chatbotName?: string;
   quickActionFilter?: string[];
   chatbotColor?: string;
+  welcomeMessage?: Record<string, string>;
 }
+
+/* ─── Constants ─── */
 
 const QUICK_ACTIONS: Record<string, Array<{ id: string; label: string; message: string }>> = {
   nl: [
@@ -78,6 +85,36 @@ const TIP_LABELS: Record<string, string> = {
   es: 'Consejo del día',
 };
 
+const WELCOME_MESSAGES: Record<string, string[]> = {
+  nl: [
+    'Hola! Ik ben {name}, je persoonlijke reisassistent.',
+    'Waar kan ik je bij helpen?',
+    'Laat me enkele suggesties voor je doen, typ of spreek je vraag hieronder in:',
+  ],
+  en: [
+    'Hola! I\'m {name}, your personal travel assistant.',
+    'How can I help you?',
+    'Let me give you some suggestions, or type or speak your question below:',
+  ],
+  de: [
+    'Hola! Ich bin {name}, Ihr persönlicher Reiseassistent.',
+    'Wie kann ich Ihnen helfen?',
+    'Hier sind einige Vorschläge, oder geben Sie Ihre Frage unten ein:',
+  ],
+  es: [
+    'Hola! Soy {name}, tu asistente personal de viaje.',
+    '¿En qué puedo ayudarte?',
+    'Aquí tienes algunas sugerencias, o escribe tu pregunta abajo:',
+  ],
+};
+
+const PLACEHOLDER: Record<string, string> = {
+  nl: 'Vraag of spreek...',
+  en: 'Ask or speak...',
+  de: 'Frage oder spreche...',
+  es: 'Pregunta o habla...',
+};
+
 const DESTINATION_IDS: Record<string, number> = {
   calpe: 1,
   texel: 2,
@@ -85,7 +122,8 @@ const DESTINATION_IDS: Record<string, number> = {
   warrewijzer: 4,
 };
 
-/** localStorage key for tip session excludes */
+/* ─── Tip helpers ─── */
+
 const TIP_HISTORY_KEY = 'holibot_tip_history';
 
 function getTipExcludes(): string[] {
@@ -107,11 +145,12 @@ function recordTip(tipId: number | string, type: string) {
   } catch { /* ignore */ }
 }
 
-/** Render a POI/Event card inside the chat */
+/* ─── TipCard ─── */
+
 function TipCard({ tip, locale, onRefresh }: { tip: DailyTipData; locale: string; onRefresh: () => void }) {
   if (tip.itemType === 'message') {
     return (
-      <div className="text-sm text-foreground/70 italic">
+      <div style={{ fontSize: 14, color: '#5A6C7D', fontStyle: 'italic' }}>
         {tip.tipDescription || (locale === 'nl' ? 'Je hebt alle tips gezien! Probeer het later opnieuw.' : 'You\'ve seen all tips! Try again later.')}
       </div>
     );
@@ -124,41 +163,34 @@ function TipCard({ tip, locale, onRefresh }: { tip: DailyTipData; locale: string
   const href = tip.poi ? `/poi/${item.id}` : `/event/${item.id}`;
 
   return (
-    <div className="border border-primary/20 rounded-xl overflow-hidden bg-white">
+    <div style={{ border: '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden', background: 'white' }}>
       {imageUrl && (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={imageUrl} alt={item.name} className="w-full h-32 object-cover" />
+        <img src={imageUrl} alt={item.name} style={{ width: '100%', height: 128, objectFit: 'cover' }} />
       )}
-      <div className="p-3">
+      <div style={{ padding: 12 }}>
         {item.category && (
-          <span className="text-xs font-medium text-primary">{item.category}</span>
+          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--hb-primary, #30c59b)' }}>{item.category}</span>
         )}
-        <a href={href} className="block mt-1 font-semibold text-sm text-foreground hover:text-primary transition-colors">
+        <a href={href} style={{ display: 'block', marginTop: 4, fontWeight: 600, fontSize: 14, color: '#2C3E50', textDecoration: 'none' }}>
           {item.name}
         </a>
         {tip.poi?.rating && (
-          <div className="flex items-center gap-1 mt-1 text-xs text-muted">
-            <span className="text-amber-500">&#9733;</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 12, color: '#9CA3AF' }}>
+            <span style={{ color: '#F59E0B' }}>&#9733;</span>
             {tip.poi.rating.toFixed(1)}
             {tip.poi.review_count ? ` (${tip.poi.review_count})` : ''}
           </div>
         )}
-        {item.address && (
-          <p className="text-xs text-muted mt-1 truncate">{item.address}</p>
-        )}
-        {tip.event?.event_date && (
-          <p className="text-xs text-muted mt-1">
-            {new Date(tip.event.event_date).toLocaleDateString(locale === 'nl' ? 'nl-NL' : 'en-US', { day: 'numeric', month: 'long' })}
-          </p>
-        )}
+        {item.address && <p style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '4px 0 0' }}>{item.address}</p>}
       </div>
-      <div className="px-3 pb-2 flex justify-between items-center">
-        <a href={href} className="text-xs text-primary hover:underline">
+      <div style={{ padding: '0 12px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <a href={href} style={{ fontSize: 12, color: 'var(--hb-primary, #30c59b)', textDecoration: 'none' }}>
           {locale === 'nl' ? 'Bekijk details' : 'View details'}
         </a>
         <button
           onClick={onRefresh}
-          className="text-xs text-muted hover:text-primary transition-colors flex items-center gap-1"
+          style={{ fontSize: 12, color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
           title={locale === 'nl' ? 'Volgende tip' : 'Next tip'}
         >
           &#x1f504; {locale === 'nl' ? 'Volgende' : 'Next'}
@@ -232,76 +264,68 @@ function ItineraryWizard({ locale, onSubmit, onCancel }: {
   };
 
   return (
-    <div className="border border-primary/30 rounded-xl overflow-hidden bg-white">
-      {/* Header */}
-      <div className="bg-primary/10 px-3 py-2 flex items-center justify-between">
-        <span className="font-semibold text-sm text-foreground">{t.title}</span>
-        <div className="flex gap-1">
+    <div style={{ border: '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden', background: 'white' }}>
+      <div style={{ background: 'rgba(0,0,0,0.04)', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontWeight: 600, fontSize: 14, color: '#2C3E50' }}>{t.title}</span>
+        <div style={{ display: 'flex', gap: 4 }}>
           {[1, 2, 3].map(s => (
-            <span key={s} className={`w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold ${step >= s ? 'bg-primary text-on-primary' : 'bg-gray-200 text-muted'}`}>{s}</span>
+            <span key={s} style={{ width: 20, height: 20, borderRadius: '50%', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, background: step >= s ? 'var(--hb-primary, #30c59b)' : '#E5E7EB', color: step >= s ? 'white' : '#9CA3AF' }}>{s}</span>
           ))}
         </div>
       </div>
-
-      {/* Content */}
-      <div className="px-3 py-3">
+      <div style={{ padding: 12 }}>
         {step === 1 && (
           <div>
-            <p className="text-xs text-muted mb-2">{t.step1}</p>
-            <div className="grid grid-cols-2 gap-2">
+            <p style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>{t.step1}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {DURATION_OPTIONS.map(opt => (
                 <button key={opt.id} onClick={() => setDuration(opt.id)}
-                  className={`flex flex-col items-center p-2 rounded-lg border text-xs transition-all ${duration === opt.id ? 'border-primary bg-primary/10 font-semibold' : 'border-gray-200 hover:border-primary/50'}`}>
-                  <span className="text-lg">{opt.icon}</span>
-                  <span className="text-foreground">{t[opt.id]}</span>
-                  <span className="text-muted text-[10px]">{opt.hours}</span>
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 8, borderRadius: 8, border: duration === opt.id ? '2px solid var(--hb-primary, #30c59b)' : '1px solid #E5E7EB', background: duration === opt.id ? 'rgba(0,0,0,0.04)' : 'white', cursor: 'pointer', fontSize: 12, fontWeight: duration === opt.id ? 600 : 400 }}>
+                  <span style={{ fontSize: 18 }}>{opt.icon}</span>
+                  <span style={{ color: '#2C3E50' }}>{t[opt.id]}</span>
+                  <span style={{ color: '#9CA3AF', fontSize: 10 }}>{opt.hours}</span>
                 </button>
               ))}
             </div>
           </div>
         )}
-
         {step === 2 && (
           <div>
-            <p className="text-xs text-muted mb-2">{t.step2}</p>
-            <div className="flex flex-wrap gap-1.5">
+            <p style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>{t.step2}</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {INTEREST_OPTIONS.map(id => (
                 <button key={id} onClick={() => toggleInterest(id)}
-                  className={`px-2.5 py-1.5 rounded-full text-xs border transition-all ${interests.includes(id) ? 'border-primary bg-primary text-on-primary' : 'border-gray-200 text-foreground hover:border-primary/50'}`}>
+                  style={{ padding: '6px 10px', borderRadius: 20, fontSize: 12, border: '1px solid', borderColor: interests.includes(id) ? 'var(--hb-primary, #30c59b)' : '#E5E7EB', background: interests.includes(id) ? 'var(--hb-primary, #30c59b)' : 'white', color: interests.includes(id) ? 'white' : '#2C3E50', cursor: 'pointer' }}>
                   {t[id]}
                 </button>
               ))}
             </div>
           </div>
         )}
-
         {step === 3 && (
           <div>
-            <p className="text-xs text-muted mb-2">{t.step3}</p>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={includeMeals} onChange={e => setIncludeMeals(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary" />
-              <span className="text-xs text-foreground">{t.includeMeals}</span>
+            <p style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>{t.step3}</p>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={includeMeals} onChange={e => setIncludeMeals(e.target.checked)} style={{ width: 16, height: 16 }} />
+              <span style={{ fontSize: 12, color: '#2C3E50' }}>{t.includeMeals}</span>
             </label>
-            <div className="mt-3 p-2 bg-gray-50 rounded-lg text-xs text-muted">
-              <p className="font-medium text-foreground">{t[duration]}</p>
-              {interests.length > 0 && <p>{interests.map(i => t[i]).join(', ')}</p>}
+            <div style={{ marginTop: 12, padding: 8, background: '#F8F9FA', borderRadius: 8, fontSize: 12, color: '#9CA3AF' }}>
+              <p style={{ fontWeight: 500, color: '#2C3E50', margin: 0 }}>{t[duration]}</p>
+              {interests.length > 0 && <p style={{ margin: '4px 0 0' }}>{interests.map(i => t[i]).join(', ')}</p>}
             </div>
           </div>
         )}
       </div>
-
-      {/* Footer */}
-      <div className="px-3 pb-3 flex justify-between">
+      <div style={{ padding: '0 12px 12px', display: 'flex', justifyContent: 'space-between' }}>
         {step > 1 ? (
-          <button onClick={() => setStep(step - 1)} className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-muted hover:text-foreground">{t.back}</button>
+          <button onClick={() => setStep(step - 1)} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 20, border: '1px solid #E5E7EB', background: 'white', color: '#9CA3AF', cursor: 'pointer' }}>{t.back}</button>
         ) : (
-          <button onClick={onCancel} className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-muted hover:text-foreground">{t.cancel}</button>
+          <button onClick={onCancel} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 20, border: '1px solid #E5E7EB', background: 'white', color: '#9CA3AF', cursor: 'pointer' }}>{t.cancel}</button>
         )}
         {step < 3 ? (
-          <button onClick={() => setStep(step + 1)} className="px-3 py-1.5 text-xs rounded-full bg-primary text-on-primary hover:opacity-90">{t.next}</button>
+          <button onClick={() => setStep(step + 1)} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 20, border: 'none', background: 'var(--hb-primary, #30c59b)', color: 'white', cursor: 'pointer' }}>{t.next}</button>
         ) : (
-          <button onClick={() => onSubmit({ duration, interests, includeMeals })} className="px-3 py-1.5 text-xs rounded-full bg-primary text-on-primary hover:opacity-90">{t.generate}</button>
+          <button onClick={() => onSubmit({ duration, interests, includeMeals })} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 20, border: 'none', background: 'var(--hb-primary, #30c59b)', color: 'white', cursor: 'pointer' }}>{t.generate}</button>
         )}
       </div>
     </div>
@@ -312,15 +336,13 @@ function ItineraryWizard({ locale, onSubmit, onCancel }: {
 
 function ItineraryCard({ data, locale }: { data: ItineraryData; locale: string }) {
   return (
-    <div className="border border-primary/20 rounded-xl overflow-hidden bg-white">
-      {/* AI description */}
+    <div style={{ border: '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden', background: 'white' }}>
       {data.description && (
-        <div className="px-3 py-2 bg-primary/5 text-xs text-foreground italic">
+        <div style={{ padding: '8px 12px', background: 'rgba(0,0,0,0.02)', fontSize: 12, color: '#2C3E50', fontStyle: 'italic' }}>
           {data.description}
         </div>
       )}
-      {/* Timeline */}
-      <div className="px-3 py-2 space-y-2">
+      <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {data.itinerary.map((stop, i) => {
           const item = stop.poi || stop.event;
           const name = stop.poi?.name || stop.event?.title || stop.label || '';
@@ -328,60 +350,54 @@ function ItineraryCard({ data, locale }: { data: ItineraryData; locale: string }
           const imageUrl = stop.poi?.images?.[0] || stop.poi?.thumbnail_url;
 
           return (
-            <div key={i} className="flex gap-2 items-start">
-              {/* Time badge */}
-              <div className="flex-shrink-0 w-12 text-center">
-                <span className={`text-xs font-bold ${isMeal ? 'text-amber-600' : 'text-primary'}`}>{stop.time}</span>
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <div style={{ flexShrink: 0, width: 48, textAlign: 'center' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: isMeal ? '#D97706' : 'var(--hb-primary, #30c59b)' }}>{stop.time}</span>
               </div>
-              {/* Connector dot */}
-              <div className="flex-shrink-0 mt-1">
-                <div className={`w-2.5 h-2.5 rounded-full ${isMeal ? 'bg-amber-500' : stop.type === 'event' ? 'bg-purple-500' : 'bg-primary'}`} />
+              <div style={{ flexShrink: 0, marginTop: 4 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: isMeal ? '#F59E0B' : stop.type === 'event' ? '#8B5CF6' : 'var(--hb-primary, #30c59b)' }} />
               </div>
-              {/* Content */}
-              <div className="flex-1 min-w-0">
+              <div style={{ flex: 1, minWidth: 0 }}>
                 {item && item.id ? (
-                  <a href={stop.poi ? `/poi/${item.id}` : `/event/${item.id}`}
-                    className="text-xs font-semibold text-foreground hover:text-primary transition-colors line-clamp-1">
-                    {isMeal && <span className="mr-1">{stop.type === 'lunch' ? '\u{1F37D}\u{FE0F}' : '\u{1F374}'}</span>}
+                  <a href={stop.poi ? `/poi/${item.id}` : `/event/${item.id}`} style={{ fontSize: 12, fontWeight: 600, color: '#2C3E50', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {isMeal && <span style={{ marginRight: 4 }}>{stop.type === 'lunch' ? '\u{1F37D}\u{FE0F}' : '\u{1F374}'}</span>}
                     {name}
                   </a>
                 ) : (
-                  <span className="text-xs font-semibold text-foreground line-clamp-1">
-                    {isMeal && <span className="mr-1">{stop.type === 'lunch' ? '\u{1F37D}\u{FE0F}' : '\u{1F374}'}</span>}
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#2C3E50', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {isMeal && <span style={{ marginRight: 4 }}>{stop.type === 'lunch' ? '\u{1F37D}\u{FE0F}' : '\u{1F374}'}</span>}
                     {name}
                   </span>
                 )}
-                {stop.poi?.category && (
-                  <span className="text-[10px] text-muted">{stop.poi.category}</span>
-                )}
-                {stop.poi?.rating && (
-                  <span className="text-[10px] text-amber-500 ml-1">{'\u2733'} {stop.poi.rating.toFixed(1)}</span>
-                )}
+                {stop.poi?.category && <span style={{ fontSize: 10, color: '#9CA3AF' }}>{stop.poi.category}</span>}
+                {stop.poi?.rating && <span style={{ fontSize: 10, color: '#F59E0B', marginLeft: 4 }}>{'\u2733'} {stop.poi.rating.toFixed(1)}</span>}
               </div>
-              {/* Thumbnail */}
               {imageUrl && (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={imageUrl} alt={name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                <img src={imageUrl} alt={name} style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
               )}
             </div>
           );
         })}
       </div>
-      {/* Footer */}
-      <div className="px-3 py-2 border-t border-gray-100 text-[10px] text-muted">
+      <div style={{ padding: '8px 12px', borderTop: '1px solid #F3F4F6', fontSize: 10, color: '#9CA3AF' }}>
         {data.totalStops} {locale === 'nl' ? 'stops' : locale === 'de' ? 'Stopps' : locale === 'es' ? 'paradas' : 'stops'}
       </div>
     </div>
   );
 }
 
-export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickActionFilter, chatbotColor }: ChatbotWidgetProps) {
+/* ─── Main Component ─── */
+
+export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickActionFilter, chatbotColor, welcomeMessage }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [showItineraryWizard, setShowItineraryWizard] = useState(false);
+  const [welcomeStep, setWelcomeStep] = useState(0);
+  const [quickRepliesVisible, setQuickRepliesVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -389,12 +405,46 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
   const sessionIdRef = useRef<string>(crypto.randomUUID());
 
   const name = chatbotName ?? (tenantSlug === 'texel' ? 'Tessa' : tenantSlug === 'warrewijzer' ? 'Wijze Warre' : 'HoliBot');
+  const accentColor = chatbotColor || '#D4AF37';
+  const accentDark = '#C49B2A';
+
+  // Welcome messages: use branding config or default, with {name} substitution
+  const getWelcomeMessages = (): string[] => {
+    if (welcomeMessage && welcomeMessage[locale]) {
+      // If branding has a single welcome message, wrap it
+      return [
+        `Hola! ${locale === 'nl' ? 'Ik ben' : locale === 'de' ? 'Ich bin' : locale === 'es' ? 'Soy' : "I'm"} ${name}.`,
+        welcomeMessage[locale],
+        WELCOME_MESSAGES[locale]?.[2] || WELCOME_MESSAGES.en[2],
+      ];
+    }
+    const msgs = WELCOME_MESSAGES[locale] || WELCOME_MESSAGES.en;
+    return msgs.map(m => m.replace('{name}', name));
+  };
 
   // Filter quick actions based on admin config
   const allActions = QUICK_ACTIONS[locale] ?? QUICK_ACTIONS.en;
   const quickActions = quickActionFilter && quickActionFilter.length > 0
     ? allActions.filter(qa => quickActionFilter.includes(qa.id))
     : allActions;
+
+  // Welcome message sequential animation
+  useEffect(() => {
+    if (!isOpen || messages.length > 0) return;
+
+    setWelcomeStep(1);
+    setQuickRepliesVisible(false);
+
+    const t2 = setTimeout(() => setWelcomeStep(2), 1500);
+    const t3 = setTimeout(() => setWelcomeStep(3), 3000);
+    const t4 = setTimeout(() => setQuickRepliesVisible(true), 3500);
+
+    return () => {
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
+  }, [isOpen, messages.length]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -406,22 +456,13 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
     }
   }, [isOpen]);
 
-  /** Fetch daily tip from dedicated endpoint */
+  /** Fetch daily tip */
   const fetchDailyTip = useCallback(async () => {
     const tipLabel = TIP_LABELS[locale] || TIP_LABELS.en;
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: tipLabel,
-    };
-
+    const now = new Date();
+    const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: tipLabel, timestamp: now };
     const assistantId = `assistant-${Date.now()}`;
-    const assistantMsg: ChatMessage = {
-      id: assistantId,
-      role: 'assistant',
-      content: '',
-      isStreaming: true,
-    };
+    const assistantMsg: ChatMessage = { id: assistantId, role: 'assistant', content: '', timestamp: now, isStreaming: true };
 
     setMessages(prev => [...prev, userMsg, assistantMsg]);
     setInput('');
@@ -438,26 +479,17 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       const json = await res.json();
       const tipData: DailyTipData = json.data;
 
-      // Record shown tip for session excludes
-      if (tipData.tipId) {
-        recordTip(tipData.tipId, tipData.itemType);
-      }
+      if (tipData.tipId) recordTip(tipData.tipId, tipData.itemType);
 
       const itemName = tipData.poi?.name || tipData.event?.name || '';
-      const contentText = tipData.itemType === 'message'
-        ? (tipData.tipDescription || '')
-        : `${tipLabel}: ${itemName}`;
+      const contentText = tipData.itemType === 'message' ? (tipData.tipDescription || '') : `${tipLabel}: ${itemName}`;
 
       setMessages(prev => prev.map(m =>
-        m.id === assistantId
-          ? { ...m, content: contentText, isStreaming: false, tipData }
-          : m
+        m.id === assistantId ? { ...m, content: contentText, isStreaming: false, tipData } : m
       ));
     } catch {
       setMessages(prev => prev.map(m =>
-        m.id === assistantId
-          ? { ...m, content: locale === 'nl' ? 'Sorry, er ging iets mis met de tip.' : 'Sorry, something went wrong with the tip.', isStreaming: false }
-          : m
+        m.id === assistantId ? { ...m, content: locale === 'nl' ? 'Sorry, er ging iets mis met de tip.' : 'Sorry, something went wrong with the tip.', isStreaming: false } : m
       ));
     } finally {
       setIsStreaming(false);
@@ -466,11 +498,11 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
 
   const fetchItinerary = useCallback(async (opts: { duration: Duration; interests: string[]; includeMeals: boolean }) => {
     setShowItineraryWizard(false);
-
     const itLabel = (ITINERARY_LABELS[locale] || ITINERARY_LABELS.en).title;
-    const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: itLabel };
+    const now = new Date();
+    const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: itLabel, timestamp: now };
     const assistantId = `assistant-${Date.now()}`;
-    const assistantMsg: ChatMessage = { id: assistantId, role: 'assistant', content: '', isStreaming: true };
+    const assistantMsg: ChatMessage = { id: assistantId, role: 'assistant', content: '', timestamp: now, isStreaming: true };
 
     setMessages(prev => [...prev, userMsg, assistantMsg]);
     setIsStreaming(true);
@@ -490,7 +522,6 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       });
 
       const json = await res.json();
-
       if (json.success && json.data) {
         const itData: ItineraryData = json.data;
         setMessages(prev => prev.map(m =>
@@ -511,31 +542,13 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
 
-    // Intercept daily tip action
-    if (text === '__TIP_VAN_DE_DAG__') {
-      fetchDailyTip();
-      return;
-    }
+    if (text === '__TIP_VAN_DE_DAG__') { fetchDailyTip(); return; }
+    if (text === '__ITINERARY__') { setShowItineraryWizard(true); return; }
 
-    // Intercept itinerary action — show wizard
-    if (text === '__ITINERARY__') {
-      setShowItineraryWizard(true);
-      return;
-    }
-
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: text.trim(),
-    };
-
+    const now = new Date();
+    const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: text.trim(), timestamp: now };
     const assistantId = `assistant-${Date.now()}`;
-    const assistantMsg: ChatMessage = {
-      id: assistantId,
-      role: 'assistant',
-      content: '',
-      isStreaming: true,
-    };
+    const assistantMsg: ChatMessage = { id: assistantId, role: 'assistant', content: '', timestamp: now, isStreaming: true };
 
     setMessages(prev => [...prev, userMsg, assistantMsg]);
     setInput('');
@@ -565,9 +578,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
         signal: abortRef.current.signal,
       });
 
-      if (!res.ok || !res.body) {
-        throw new Error(`API error: ${res.status}`);
-      }
+      if (!res.ok || !res.body) throw new Error(`API error: ${res.status}`);
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -589,7 +600,6 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
           } else if (line.startsWith('data: ') && currentEvent) {
             try {
               const data = JSON.parse(line.substring(6));
-
               if (currentEvent === 'chunk' && data.text) {
                 fullText += data.text;
                 setMessages(prev => prev.map(m =>
@@ -602,29 +612,22 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
                 ));
               } else if (currentEvent === 'error') {
                 setMessages(prev => prev.map(m =>
-                  m.id === assistantId
-                    ? { ...m, content: data.error ?? 'Er ging iets mis.', isStreaming: false }
-                    : m
+                  m.id === assistantId ? { ...m, content: data.error ?? 'Er ging iets mis.', isStreaming: false } : m
                 ));
               }
-            } catch {
-              // Skip unparseable lines
-            }
+            } catch { /* skip */ }
             currentEvent = '';
           }
         }
       }
 
-      // Ensure streaming flag is removed
       setMessages(prev => prev.map(m =>
         m.id === assistantId && m.isStreaming ? { ...m, isStreaming: false } : m
       ));
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
       setMessages(prev => prev.map(m =>
-        m.id === assistantId
-          ? { ...m, content: locale === 'nl' ? 'Sorry, er ging iets mis. Probeer het opnieuw.' : 'Sorry, something went wrong. Please try again.', isStreaming: false }
-          : m
+        m.id === assistantId ? { ...m, content: locale === 'nl' ? 'Sorry, er ging iets mis. Probeer het opnieuw.' : 'Sorry, something went wrong. Please try again.', isStreaming: false } : m
       ));
     } finally {
       setIsStreaming(false);
@@ -632,7 +635,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
     }
   }, [messages, isStreaming, tenantSlug, locale, fetchDailyTip, fetchItinerary]);
 
-  // Check if Web Speech API is available
+  // Voice input
   const [hasSpeechAPI, setHasSpeechAPI] = useState(false);
   useEffect(() => {
     setHasSpeechAPI(!!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition);
@@ -640,10 +643,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
 
   const startListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert(locale === 'nl' ? 'Spraakherkenning wordt niet ondersteund in deze browser. Gebruik Chrome of Edge.' : 'Speech recognition is not supported in this browser. Please use Chrome or Edge.');
-      return;
-    }
+    if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
     recognition.lang = locale === 'nl' ? 'nl-NL' : locale === 'de' ? 'de-DE' : locale === 'es' ? 'es-ES' : 'en-US';
@@ -652,18 +652,10 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
 
     recognition.onresult = (event: any) => {
       const text = event.results[0][0].transcript;
-      if (text.trim()) {
-        sendMessage(text.trim());
-      }
+      if (text.trim()) sendMessage(text.trim());
       setIsListening(false);
     };
-
-    recognition.onerror = (event: any) => {
-      setIsListening(false);
-      if (event.error === 'not-allowed') {
-        alert(locale === 'nl' ? 'Microfoontoegang is geblokkeerd. Sta microfoontoegang toe in je browserinstellingen.' : 'Microphone access is blocked. Allow microphone access in your browser settings.');
-      }
-    };
+    recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
 
     recognitionRef.current = recognition;
@@ -671,12 +663,29 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
     setIsListening(true);
   }, [locale, sendMessage]);
 
-  // Listen for external chatbot open events (from ChatbotButton in blocks)
+  // Apply blur to page content when chatbot opens on mobile (matching OnboardingSheet pattern)
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.innerWidth >= 768) return;
+    const main = document.querySelector('main');
+    const header = document.querySelector('.md\\:hidden[style*="linear-gradient"]');
+    if (isOpen) {
+      main?.setAttribute('style', `${main.getAttribute('style') || ''};filter:blur(3px) brightness(0.85)`);
+      if (header) (header as HTMLElement).style.filter = 'blur(3px) brightness(0.85)';
+    } else {
+      main?.setAttribute('style', (main.getAttribute('style') || '').replace(/;?filter:blur\(3px\) brightness\(0\.85\)/g, ''));
+      if (header) (header as HTMLElement).style.filter = '';
+    }
+  }, [isOpen]);
+
+  // Listen for external chatbot open events (MobileBottomNav Chat tab + ChatbotButton in blocks)
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       setIsOpen(true);
-      if (detail?.message && detail.message !== 'general') {
+      if (detail?.action === 'itinerary') {
+        // Directly open the itinerary wizard (e.g. from "Zelf programma samenstellen")
+        setTimeout(() => setShowItineraryWizard(true), 150);
+      } else if (detail?.message && detail.message !== 'general') {
         setTimeout(() => sendMessage(detail.message), 100);
       }
     };
@@ -696,184 +705,255 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
     }
   };
 
+  const handleReset = () => {
+    const msg = locale === 'nl' ? 'Gesprek opnieuw starten?' : 'Restart conversation?';
+    if (window.confirm(msg)) {
+      setMessages([]);
+      sessionIdRef.current = crypto.randomUUID();
+      setInput('');
+      setIsStreaming(false);
+      setShowItineraryWizard(false);
+      setWelcomeStep(0);
+      setQuickRepliesVisible(false);
+      if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
+    }
+  };
+
+  const welcomeMessages = getWelcomeMessages();
+
+  const formatTime = (d: Date) => d.toLocaleTimeString(locale === 'nl' ? 'nl-NL' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+
   return (
     <>
-      {/* Floating Bubble */}
+      {/* FAB — desktop only */}
       {!isOpen && (
         <button
+          className="holibot-fab"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-on-primary shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-105 hidden md:flex"
           aria-label={`Open ${name}`}
-          style={chatbotColor ? { backgroundColor: chatbotColor } : undefined}
+          aria-expanded={false}
+          aria-haspopup="dialog"
+          type="button"
+          style={{
+            background: `linear-gradient(135deg, ${accentColor} 0%, ${accentDark} 100%)`,
+            boxShadow: `0 10px 25px ${accentColor}4D`,
+          }}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
           </svg>
         </button>
       )}
 
-      {/* Chat Panel */}
+      {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-[86px] right-3 md:bottom-6 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[380px] max-h-[70vh] md:max-h-[80vh] h-[520px] bg-surface rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
-          {/* Header */}
-          <div className="bg-primary text-on-primary px-4 py-3 flex items-center justify-between flex-shrink-0" style={chatbotColor ? { backgroundColor: chatbotColor } : undefined}>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-on-primary/20 flex items-center justify-center text-sm font-bold">
-                {name.charAt(0)}
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm">{name}</h3>
-                <p className="text-xs opacity-75">
-                  {locale === 'nl' ? 'Online' : 'Online'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => {
-                  const msg = locale === 'nl' ? 'Gesprek opnieuw starten?' : 'Restart conversation?';
-                  if (window.confirm(msg)) {
-                    setMessages([]);
-                    sessionIdRef.current = crypto.randomUUID();
-                    setInput('');
-                    setIsStreaming(false);
-                    if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
-                  }
-                }}
-                className="p-1 hover:bg-on-primary/10 rounded transition-colors"
-                aria-label="Restart chat"
-                title={locale === 'nl' ? 'Opnieuw starten' : 'Restart'}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-on-primary/10 rounded transition-colors"
-                aria-label="Minimize chat"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-              </button>
-            </div>
-          </div>
+        <>
+          {/* Overlay backdrop (desktop only, hidden on mobile via CSS) */}
+          <div className="holibot-overlay" onClick={() => setIsOpen(false)} aria-hidden="true" />
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-            {messages.length === 0 && (
-              <div className="text-center py-6">
-                <p className="text-sm text-muted mb-4">
-                  {locale === 'nl'
-                    ? `Hallo! Ik ben ${name}. Hoe kan ik je helpen?`
-                    : `Hi! I'm ${name}. How can I help you?`}
-                </p>
-                <div className="flex flex-wrap gap-2 justify-center max-w-full">
-                  {quickActions.map((qa) => (
-                    <button
-                      key={qa.id}
-                      onClick={() => sendMessage(qa.message)}
-                      className="px-3 py-1.5 text-xs rounded-full border border-primary text-primary hover:bg-primary hover:text-on-primary transition-colors"
-                    >
-                      {qa.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[85%] ${msg.tipData || msg.itineraryData ? '' : 'px-3 py-2 rounded-2xl'} text-sm whitespace-pre-wrap ${
-                    msg.role === 'user'
-                      ? 'bg-primary text-on-primary rounded-br-sm px-3 py-2 rounded-2xl'
-                      : msg.tipData || msg.itineraryData
-                        ? ''
-                        : 'bg-gray-100 text-foreground rounded-bl-sm'
-                  }`}
-                >
-                  {msg.itineraryData ? (
-                    <ItineraryCard data={msg.itineraryData} locale={locale} />
-                  ) : msg.tipData ? (
-                    <TipCard tip={msg.tipData} locale={locale} onRefresh={fetchDailyTip} />
-                  ) : msg.content ? (
-                    msg.content
-                  ) : msg.isStreaming ? (
-                    <span className="inline-flex gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-            {showItineraryWizard && (
-              <div className="flex justify-start">
-                <div className="max-w-[90%]">
-                  <ItineraryWizard
-                    locale={locale}
-                    onSubmit={fetchItinerary}
-                    onCancel={() => setShowItineraryWizard(false)}
-                  />
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input */}
-          <form onSubmit={handleSubmit} className="border-t border-gray-200 px-3 py-2 flex gap-2 flex-shrink-0">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={locale === 'nl' ? 'Stel een vraag...' : 'Ask a question...'}
-              className="flex-1 resize-none border-0 bg-transparent text-sm focus:outline-none max-h-20 text-foreground placeholder:text-muted"
-              rows={1}
-              disabled={isStreaming}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                if (isListening && recognitionRef.current) {
-                  recognitionRef.current.stop();
-                  setIsListening(false);
-                } else {
-                  startListening();
-                }
+          <div className="holibot-window" role="dialog" aria-modal="true" aria-labelledby="holibot-title">
+            {/* Header */}
+            <div
+              className="holibot-chat-header relative"
+              style={{
+                background: `linear-gradient(135deg, ${accentColor} 0%, color-mix(in srgb, ${accentColor} 85%, black) 100%)`,
+                borderBottom: `2px solid ${accentColor}`,
               }}
-              className={`p-2 rounded-full transition-colors flex-shrink-0 ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-muted hover:text-primary'}`}
-              aria-label={isListening ? 'Stop listening' : 'Voice input'}
-              disabled={isStreaming}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
-              </svg>
-            </button>
-            <button
-              type="submit"
-              disabled={!input.trim() || isStreaming}
-              className="p-2 rounded-full bg-primary text-on-primary disabled:opacity-40 hover:bg-primary-dark transition-colors flex-shrink-0"
-              aria-label="Send"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-            </button>
-          </form>
-        </div>
+              {/* Handle bar — mobile only (bottom-sheet affordance) */}
+              <div className="md:hidden absolute top-2 left-1/2 -translate-x-1/2">
+                <div className="w-10 h-1 rounded-full bg-white/40" />
+              </div>
+
+              {/* Avatar */}
+              <div className="holibot-header-logo">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+
+              <h2 id="holibot-title" className="holibot-header-title">{name}</h2>
+              <div className="holibot-header-spacer" />
+
+              {/* Reset button */}
+              {messages.length > 0 && (
+                <button className="holibot-header-btn" onClick={handleReset} aria-label="Nieuwe chat" type="button" title={locale === 'nl' ? 'Nieuwe chat' : 'New chat'}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 12a8 8 0 018-8V0l4 4-4 4V4a6 6 0 100 12 6 6 0 006-6h2a8 8 0 01-16 0z" fill="white" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Close button */}
+              <button className="holibot-header-btn holibot-close-btn" onClick={() => setIsOpen(false)} aria-label="Sluit chat" type="button">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Message list */}
+            <div className="holibot-message-list">
+              {/* Welcome message (sequential animation) */}
+              {messages.length === 0 && (
+                <div className="holibot-welcome-container" role="article">
+                  {welcomeStep >= 1 && (
+                    <div className="holibot-welcome-message holibot-welcome-animate">
+                      <div className="holibot-message-avatar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
+                      </div>
+                      <p className="holibot-welcome-text">{welcomeMessages[0]}</p>
+                    </div>
+                  )}
+
+                  {welcomeStep >= 2 && (
+                    <div className="holibot-welcome-message holibot-welcome-animate holibot-welcome-secondary">
+                      <p className="holibot-welcome-text-secondary">{welcomeMessages[1]}</p>
+                    </div>
+                  )}
+
+                  {welcomeStep >= 3 && (
+                    <div className="holibot-welcome-message holibot-welcome-animate holibot-welcome-secondary">
+                      <p className="holibot-welcome-text-secondary">{welcomeMessages[2]}</p>
+                    </div>
+                  )}
+
+                  {/* Quick reply buttons with staggered animation */}
+                  <div className="holibot-quick-replies" role="group" aria-label="Snelle antwoorden">
+                    {quickActions.map((qa, index) => (
+                      <button
+                        key={qa.id}
+                        type="button"
+                        className={`holibot-quick-reply-button${quickRepliesVisible ? ' visible' : ''}`}
+                        onClick={() => sendMessage(qa.message)}
+                        aria-label={qa.label}
+                        style={{ animationDelay: quickRepliesVisible ? `${index * 150}ms` : undefined }}
+                      >
+                        {qa.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Chat messages */}
+              {messages.map((msg) => (
+                <div key={msg.id} className={`holibot-message holibot-message--${msg.role}`}>
+                  {/* Assistant avatar */}
+                  {msg.role === 'assistant' && (
+                    <div className="holibot-message-avatar">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </div>
+                  )}
+
+                  <div className="holibot-message-content">
+                    {(msg.tipData || msg.itineraryData) ? (
+                      /* Special cards render without bubble wrapper */
+                      msg.itineraryData ? (
+                        <ItineraryCard data={msg.itineraryData} locale={locale} />
+                      ) : msg.tipData ? (
+                        <TipCard tip={msg.tipData} locale={locale} onRefresh={fetchDailyTip} />
+                      ) : null
+                    ) : (
+                      <div className="holibot-message-bubble">
+                        {msg.content ? (
+                          <p className="holibot-message-text">
+                            {msg.content}
+                            {msg.isStreaming && <span className="holibot-cursor" />}
+                          </p>
+                        ) : msg.isStreaming ? (
+                          <div className="holibot-typing">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                    <div className="holibot-message-time">{formatTime(msg.timestamp)}</div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Itinerary wizard */}
+              {showItineraryWizard && (
+                <div className="holibot-message holibot-message--assistant">
+                  <div className="holibot-message-avatar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                  <div className="holibot-message-content" style={{ maxWidth: '90%' }}>
+                    <ItineraryWizard locale={locale} onSubmit={fetchItinerary} onCancel={() => setShowItineraryWizard(false)} />
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input area */}
+            <form className="holibot-input-area" onSubmit={handleSubmit}>
+              <textarea
+                ref={inputRef}
+                className="holibot-input-field"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={PLACEHOLDER[locale] || PLACEHOLDER.en}
+                aria-label={locale === 'nl' ? 'Typ je vraag of gebruik spraak' : 'Type your question or use voice'}
+                rows={1}
+                maxLength={500}
+                disabled={isStreaming}
+              />
+
+              {/* Voice button */}
+              {hasSpeechAPI && (
+                <button
+                  type="button"
+                  className={`holibot-voice-button${isListening ? ' listening' : ''}`}
+                  onClick={() => {
+                    if (isListening && recognitionRef.current) {
+                      recognitionRef.current.stop();
+                      setIsListening(false);
+                    } else {
+                      startListening();
+                    }
+                  }}
+                  aria-label={isListening ? 'Stop listening' : 'Voice input'}
+                  disabled={isStreaming}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Send button */}
+              <button
+                type="submit"
+                className="holibot-send-button"
+                disabled={!input.trim() || isStreaming}
+                aria-label={locale === 'nl' ? 'Verstuur bericht' : 'Send message'}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M2 12l20-10-10 20-2-10-8-0z" fill="currentColor" />
+                </svg>
+              </button>
+            </form>
+          </div>
+        </>
       )}
     </>
   );

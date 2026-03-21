@@ -1,20 +1,41 @@
-import { Select, MenuItem, FormControl } from '@mui/material';
+import { useEffect } from 'react';
+import { Select, MenuItem, FormControl, Chip } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { DESTINATIONS } from '../../utils/destinations.js';
+import { useQuery } from '@tanstack/react-query';
 import useAuthStore from '../../stores/authStore.js';
+import useDestinationStore from '../../stores/destinationStore.js';
+import client from '../../api/client.js';
+
+const FLAG_MAP = { 1: '🇪🇸', 2: '🇳🇱', 4: '🇧🇪', 5: '🇪🇸', 6: '🇪🇸', 7: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' };
 
 export default function DestinationSelector({ value, onChange }) {
   const { t } = useTranslation();
   const user = useAuthStore(s => s.user);
+  const setDestinations = useDestinationStore(s => s.setDestinations);
 
-  // Filter destinations by user's allowed_destinations (platform_admin sees all)
+  // Fetch destinations from API (includes featureFlags, destinationType, status)
+  const { data } = useQuery({
+    queryKey: ['destinations-list'],
+    queryFn: () => client.get('/destinations').then(r => r.data),
+    staleTime: 5 * 60 * 1000, // 5 min cache
+  });
+
+  const allDests = data?.data?.destinations || [];
+
+  // Sync to store whenever data changes
+  useEffect(() => {
+    if (allDests.length > 0) {
+      setDestinations(allDests);
+    }
+  }, [allDests, setDestinations]);
+
+  // Filter by user's allowed destinations
   const allowedDests = user?.allowed_destinations;
   const isPlatformAdmin = user?.role === 'platform_admin';
   const visibleDestinations = isPlatformAdmin || !allowedDests || allowedDests.length === 0
-    ? DESTINATIONS
-    : DESTINATIONS.filter(d => allowedDests.includes(d.code));
+    ? allDests
+    : allDests.filter(d => allowedDests.includes(d.code));
 
-  // If user can only see 1 destination, show "All" option disabled (auto-select that destination)
   const showAll = isPlatformAdmin || visibleDestinations.length > 1;
 
   return (
@@ -26,7 +47,12 @@ export default function DestinationSelector({ value, onChange }) {
       >
         {showAll && <MenuItem value="all">{t('common.allDestinations')}</MenuItem>}
         {visibleDestinations.map(d => (
-          <MenuItem key={d.code} value={d.code}>{d.flag} {d.name}</MenuItem>
+          <MenuItem key={d.code} value={d.code}>
+            {FLAG_MAP[d.id] || '🌍'} {d.name}
+            {d.destinationType === 'content_only' && (
+              <Chip label="CS" size="small" sx={{ ml: 1, height: 18, fontSize: '0.65rem' }} color="info" variant="outlined" />
+            )}
+          </MenuItem>
         ))}
       </Select>
     </FormControl>

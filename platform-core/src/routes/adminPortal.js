@@ -441,6 +441,72 @@ function writeAccess(allowedRoles) {
   };
 }
 
+// ============================================================================
+// DESTINATION TYPE HELPERS
+// ============================================================================
+
+/**
+ * Default feature flags for content_only destinations
+ */
+const CONTENT_ONLY_DEFAULT_FLAGS = {
+  hasContentStudio: true,
+  hasMediaLibrary: true,
+  hasBranding: true,
+  hasPOI: false,
+  hasEvents: false,
+  hasTicketing: false,
+  hasReservations: false,
+  hasChatbot: false,
+  hasCommerce: false,
+  hasPartners: false,
+  hasIntermediary: false,
+  hasFinancial: false,
+  hasPages: false,
+  social_platforms: {
+    facebook: true,
+    instagram: true,
+    linkedin: true,
+    x: false,
+    tiktok: false,
+    pinterest: false,
+    youtube: false
+  }
+};
+
+/**
+ * Check if a destination is content_only type
+ * @param {number} destinationId
+ * @returns {Promise<boolean>}
+ */
+async function isContentOnly(destinationId) {
+  try {
+    const [[dest]] = await mysqlSequelize.query(
+      'SELECT destination_type FROM destinations WHERE id = :id',
+      { replacements: { id: Number(destinationId) } }
+    );
+    return dest?.destination_type === 'content_only';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get destination type
+ * @param {number} destinationId
+ * @returns {Promise<string>} 'tourism' or 'content_only'
+ */
+async function getDestinationType(destinationId) {
+  try {
+    const [[dest]] = await mysqlSequelize.query(
+      'SELECT destination_type FROM destinations WHERE id = :id',
+      { replacements: { id: Number(destinationId) } }
+    );
+    return dest?.destination_type || 'tourism';
+  } catch {
+    return 'tourism';
+  }
+}
+
 /**
  * Save an undo snapshot to MongoDB admin_action_snapshots.
  * Returns the snapshot _id for linking to audit log.
@@ -4936,7 +5002,12 @@ router.get('/settings/branding', adminAuth('reviewer'), async (req, res) => {
 router.put('/settings/branding/:destination', adminAuth('poi_owner'), async (req, res) => {
   try {
     const dest = req.params.destination.toLowerCase();
-    if (!DEFAULT_BRAND_CONFIG[dest]) {
+    // Validate destination exists in DB or hardcoded config
+    const [destCheck] = await mysqlSequelize.query(
+      'SELECT id FROM destinations WHERE code = :code AND status != :deleted',
+      { replacements: { code: dest, deleted: 'deleted' }, type: QueryTypes.SELECT }
+    );
+    if (!destCheck && !DEFAULT_BRAND_CONFIG[dest]) {
       return res.status(400).json({ success: false, error: { code: 'INVALID_DESTINATION', message: 'Unknown destination' } });
     }
 
@@ -5033,10 +5104,16 @@ const brandingAssetUpload = multer({
   }
 });
 
-router.post('/settings/branding/:destination/:type', adminAuth('poi_owner'), (req, res) => {
+router.post('/settings/branding/:destination/:type', adminAuth('poi_owner'), async (req, res) => {
   const dest = req.params.destination.toLowerCase();
   const type = req.params.type;
-  if (!DEFAULT_BRAND_CONFIG[dest]) {
+
+  // Validate destination exists in DB (not just hardcoded config)
+  const [destRow] = await mysqlSequelize.query(
+    'SELECT id, code FROM destinations WHERE code = :code AND status != :deleted',
+    { replacements: { code: dest, deleted: 'deleted' }, type: QueryTypes.SELECT }
+  );
+  if (!destRow && !DEFAULT_BRAND_CONFIG[dest]) {
     return res.status(400).json({ success: false, error: { code: 'INVALID_DESTINATION', message: 'Unknown destination' } });
   }
   if (!VALID_BRANDING_TYPES.includes(type)) {
@@ -9017,8 +9094,10 @@ router.get('/destinations', adminAuth('reviewer'), async (req, res) => {
     const destinations = await mysqlSequelize.query(
       `SELECT id, code, name, display_name, domain, country, region, timezone,
               currency, default_language, supported_languages, feature_flags,
-              branding, config, is_active, created_at, updated_at
+              branding, config, is_active, destination_type, status, archived_at,
+              created_at, updated_at
        FROM destinations
+       WHERE status != 'deleted'
        ORDER BY id`,
       { type: QueryTypes.SELECT }
     );
@@ -9047,11 +9126,20 @@ router.get('/destinations', adminAuth('reviewer'), async (req, res) => {
         featureFlags,
         branding,
         config,
-        isActive: !!d.is_active
+        isActive: !!d.is_active,
+        destinationType: d.destination_type || 'tourism',
+        status: d.status || 'active',
+        archivedAt: d.archived_at
       };
     });
 
-    res.json({ success: true, data: { destinations: parsed } });
+    // Non-platform_admin users don't see archived destinations
+    const user = req.adminUser;
+    const filtered = user?.role === 'platform_admin'
+      ? parsed
+      : parsed.filter(d => d.status === 'active');
+
+    res.json({ success: true, data: { destinations: filtered } });
   } catch (error) {
     logger.error('[AdminPortal] Destinations list error:', error);
     res.status(500).json({ success: false, error: { code: 'DESTINATIONS_LIST_ERROR', message: error.message } });
@@ -9061,7 +9149,7 @@ router.get('/destinations', adminAuth('reviewer'), async (req, res) => {
 /**
  * PUT /destinations/:id/branding — Update destinations.branding JSON in MySQL (+ MongoDB sync)
  */
-router.put('/destinations/:id/branding', adminAuth('platform_admin'), async (req, res) => {
+router.put('/destinations/:id/branding', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
   try {
     const destId = parseInt(req.params.id);
     const [dest] = await mysqlSequelize.query(
@@ -9249,6 +9337,948 @@ router.put('/destinations/:id/social-links', adminAuth(), writeAccess(['platform
 });
 
 // ============================================================
+// DESTINATION LIFECYCLE: Archive / Restore / Hard-Delete (Opdracht 9)
+// ============================================================
+
+/**
+ * PUT /destinations/:id/archive — Soft-delete (set status=archived)
+ * Destination disappears from dropdown for non-platform_admin users.
+ */
+router.put('/destinations/:id/archive', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const destId = parseInt(req.params.id);
+    const [[dest]] = await mysqlSequelize.query('SELECT id, name, status FROM destinations WHERE id = :id', { replacements: { id: destId } });
+    if (!dest) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Destination not found' } });
+    if (dest.status === 'archived') return res.status(400).json({ success: false, error: { code: 'ALREADY_ARCHIVED', message: 'Destination is already archived' } });
+
+    await mysqlSequelize.query(
+      'UPDATE destinations SET status = :status, archived_at = NOW(), updated_at = NOW() WHERE id = :id',
+      { replacements: { status: 'archived', id: destId } }
+    );
+
+    // Count related data for summary
+    const counts = {};
+    const countTables = ['content_items','content_suggestions','trending_data','social_accounts','media','pages','partners','POI'];
+    for (const table of countTables) {
+      try {
+        const [[row]] = await mysqlSequelize.query(`SELECT COUNT(*) as cnt FROM \`${table}\` WHERE destination_id = :id`, { replacements: { id: destId } });
+        counts[table] = row?.cnt || 0;
+      } catch { counts[table] = 0; }
+    }
+
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'destination_archived', entity_type: 'destination', entity_id: destId,
+          admin_email: req.adminUser.email, changes: { name: dest.name, counts },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    logger.info(`[AdminPortal] Destination archived: ${dest.name} (ID: ${destId})`);
+    res.json({ success: true, data: { id: destId, name: dest.name, status: 'archived', dataCounts: counts } });
+  } catch (error) {
+    logger.error('[AdminPortal] Archive destination error:', error);
+    res.status(500).json({ success: false, error: { code: 'ARCHIVE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /destinations/:id/restore — Restore an archived destination
+ */
+router.put('/destinations/:id/restore', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const destId = parseInt(req.params.id);
+    const [[dest]] = await mysqlSequelize.query('SELECT id, name, status FROM destinations WHERE id = :id', { replacements: { id: destId } });
+    if (!dest) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Destination not found' } });
+    if (dest.status !== 'archived') return res.status(400).json({ success: false, error: { code: 'NOT_ARCHIVED', message: 'Destination is not archived' } });
+
+    await mysqlSequelize.query(
+      'UPDATE destinations SET status = :status, archived_at = NULL, updated_at = NOW() WHERE id = :id',
+      { replacements: { status: 'active', id: destId } }
+    );
+
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'destination_restored', entity_type: 'destination', entity_id: destId,
+          admin_email: req.adminUser.email, changes: { name: dest.name },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    logger.info(`[AdminPortal] Destination restored: ${dest.name} (ID: ${destId})`);
+    res.json({ success: true, data: { id: destId, name: dest.name, status: 'active' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Restore destination error:', error);
+    res.status(500).json({ success: false, error: { code: 'RESTORE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /destinations/:id/delete-preview — Preview what will be deleted (counts per table)
+ */
+router.get('/destinations/:id/delete-preview', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const destId = parseInt(req.params.id);
+    const [[dest]] = await mysqlSequelize.query('SELECT id, name, destination_type FROM destinations WHERE id = :id', { replacements: { id: destId } });
+    if (!dest) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Destination not found' } });
+
+    const willDelete = {};
+    const tables = [
+      'content_items','content_suggestions','content_performance','content_pillars',
+      'trending_data','seasonal_config','social_accounts','score_calibrations',
+      'media','pages','partners','POI','reviews','agenda',
+      'tickets','ticket_inventory','ticket_orders','voucher_codes',
+      'reservations','reservation_slots','guest_profiles',
+      'payment_transactions','payment_refunds',
+      'intermediary_transactions','settlement_batches','partner_payouts','credit_notes',
+      'holibot_sessions','user_journeys','Users'
+    ];
+
+    for (const table of tables) {
+      try {
+        const [[row]] = await mysqlSequelize.query(`SELECT COUNT(*) as cnt FROM \`${table}\` WHERE destination_id = :id`, { replacements: { id: destId } });
+        willDelete[table] = row?.cnt || 0;
+      } catch { willDelete[table] = 0; }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        destination: dest.name,
+        destinationType: dest.destination_type,
+        willDelete,
+        warning: 'Dit is ONOMKEERBAAR. Alle data wordt permanent verwijderd.'
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Delete preview error:', error);
+    res.status(500).json({ success: false, error: { code: 'DELETE_PREVIEW_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /destinations/:id — Hard-delete destination + ALL related data
+ * Requires: ?confirm=PERMANENT_DELETE_{destination_name}
+ * ONLY platform_admin. ONOMKEERBAAR.
+ */
+router.delete('/destinations/:id', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const destId = parseInt(req.params.id);
+    const [[dest]] = await mysqlSequelize.query('SELECT id, name, code, destination_type FROM destinations WHERE id = :id', { replacements: { id: destId } });
+    if (!dest) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Destination not found' } });
+
+    // Safety: protect core destinations
+    if ([1, 2].includes(destId)) {
+      return res.status(403).json({ success: false, error: { code: 'PROTECTED', message: 'Cannot delete core destinations (Calpe, Texel)' } });
+    }
+
+    // Confirm string check
+    const expectedConfirm = `PERMANENT_DELETE_${dest.name}`;
+    if (req.query.confirm !== expectedConfirm) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'CONFIRM_MISMATCH', message: `Confirmation required: ?confirm=${encodeURIComponent(expectedConfirm)}` }
+      });
+    }
+
+    logger.warn(`[AdminPortal] HARD DELETE initiated for destination: ${dest.name} (ID: ${destId}) by ${req.adminUser.email}`);
+
+    // Cascade delete in correct order (child tables first)
+    const deleteLog = {};
+
+    // 1. Content module child tables (via content_items FK)
+    for (const childTable of ['content_approval_log', 'content_comments', 'content_item_revisions', 'content_performance', 'score_calibrations']) {
+      try {
+        const [, meta] = await mysqlSequelize.query(
+          `DELETE ct FROM \`${childTable}\` ct INNER JOIN content_items ci ON ct.content_item_id = ci.id WHERE ci.destination_id = :id`,
+          { replacements: { id: destId } }
+        );
+        deleteLog[childTable] = meta?.affectedRows || 0;
+      } catch { deleteLog[childTable] = 'skipped'; }
+    }
+
+    // 2. Content module main tables
+    for (const table of ['content_items', 'content_suggestions', 'content_pillars', 'trending_data', 'seasonal_config', 'social_accounts']) {
+      try {
+        const [, meta] = await mysqlSequelize.query(`DELETE FROM \`${table}\` WHERE destination_id = :id`, { replacements: { id: destId } });
+        deleteLog[table] = meta?.affectedRows || 0;
+      } catch { deleteLog[table] = 'skipped'; }
+    }
+
+    // 3. Media (+ physical files)
+    try {
+      const [, meta] = await mysqlSequelize.query('DELETE FROM media WHERE destination_id = :id', { replacements: { id: destId } });
+      deleteLog.media = meta?.affectedRows || 0;
+    } catch { deleteLog.media = 'skipped'; }
+
+    // 4. Pages + revisions
+    try {
+      await mysqlSequelize.query(
+        'DELETE pr FROM page_revisions pr INNER JOIN pages p ON pr.page_id = p.id WHERE p.destination_id = :id',
+        { replacements: { id: destId } }
+      );
+      const [, meta] = await mysqlSequelize.query('DELETE FROM pages WHERE destination_id = :id', { replacements: { id: destId } });
+      deleteLog.pages = meta?.affectedRows || 0;
+    } catch { deleteLog.pages = 'skipped'; }
+
+    // 5. Commerce (if tourism)
+    if (dest.destination_type === 'tourism') {
+      // Financial child tables
+      for (const table of ['credit_notes', 'partner_payouts', 'settlement_batches']) {
+        try {
+          const [, meta] = await mysqlSequelize.query(`DELETE FROM \`${table}\` WHERE destination_id = :id`, { replacements: { id: destId } });
+          deleteLog[table] = meta?.affectedRows || 0;
+        } catch { deleteLog[table] = 'skipped'; }
+      }
+
+      // Intermediary
+      try {
+        const [, meta] = await mysqlSequelize.query('DELETE FROM intermediary_transactions WHERE destination_id = :id', { replacements: { id: destId } });
+        deleteLog.intermediary_transactions = meta?.affectedRows || 0;
+      } catch { deleteLog.intermediary_transactions = 'skipped'; }
+
+      // Ticketing chain
+      try {
+        await mysqlSequelize.query(
+          'DELETE toi FROM ticket_order_items toi INNER JOIN ticket_orders tord ON toi.order_id = tord.id WHERE tord.destination_id = :id',
+          { replacements: { id: destId } }
+        );
+        for (const table of ['ticket_orders', 'voucher_codes', 'ticket_inventory', 'tickets']) {
+          const [, meta] = await mysqlSequelize.query(`DELETE FROM \`${table}\` WHERE destination_id = :id`, { replacements: { id: destId } });
+          deleteLog[table] = meta?.affectedRows || 0;
+        }
+      } catch { deleteLog.ticketing = 'skipped'; }
+
+      // Reservations
+      for (const table of ['reservations', 'reservation_slots', 'guest_profiles']) {
+        try {
+          const [, meta] = await mysqlSequelize.query(`DELETE FROM \`${table}\` WHERE destination_id = :id`, { replacements: { id: destId } });
+          deleteLog[table] = meta?.affectedRows || 0;
+        } catch { deleteLog[table] = 'skipped'; }
+      }
+
+      // Partners chain
+      try {
+        await mysqlSequelize.query(
+          'DELETE po FROM partner_onboarding po INNER JOIN partners p ON po.partner_id = p.id WHERE p.destination_id = :id',
+          { replacements: { id: destId } }
+        );
+        await mysqlSequelize.query(
+          'DELETE pp FROM partner_pois pp INNER JOIN partners p ON pp.partner_id = p.id WHERE p.destination_id = :id',
+          { replacements: { id: destId } }
+        );
+        const [, meta] = await mysqlSequelize.query('DELETE FROM partners WHERE destination_id = :id', { replacements: { id: destId } });
+        deleteLog.partners = meta?.affectedRows || 0;
+      } catch { deleteLog.partners = 'skipped'; }
+
+      // POI chain
+      try {
+        await mysqlSequelize.query(
+          'DELETE iu FROM imageurls iu INNER JOIN POI p ON iu.poi_id = p.id WHERE p.destination_id = :id',
+          { replacements: { id: destId } }
+        );
+        await mysqlSequelize.query('DELETE FROM reviews WHERE destination_id = :id', { replacements: { id: destId } });
+        await mysqlSequelize.query(
+          'DELETE par FROM poi_apify_raw par INNER JOIN POI p ON par.poi_id = p.id WHERE p.destination_id = :id',
+          { replacements: { id: destId } }
+        );
+        const [, meta] = await mysqlSequelize.query('DELETE FROM POI WHERE destination_id = :id', { replacements: { id: destId } });
+        deleteLog.POI = meta?.affectedRows || 0;
+      } catch { deleteLog.POI = 'skipped'; }
+
+      // Chatbot sessions
+      try {
+        const [, meta] = await mysqlSequelize.query('DELETE FROM holibot_sessions WHERE destination_id = :id', { replacements: { id: destId } });
+        deleteLog.holibot_sessions = meta?.affectedRows || 0;
+      } catch { deleteLog.holibot_sessions = 'skipped'; }
+    }
+
+    // 6. Events
+    try {
+      const [, meta] = await mysqlSequelize.query('DELETE FROM agenda WHERE destination_id = :id', { replacements: { id: destId } });
+      deleteLog.agenda = meta?.affectedRows || 0;
+    } catch { deleteLog.agenda = 'skipped'; }
+
+    // 7. Payments
+    for (const table of ['payment_refunds', 'payment_transactions']) {
+      try {
+        const [, meta] = await mysqlSequelize.query(`DELETE FROM \`${table}\` WHERE destination_id = :id`, { replacements: { id: destId } });
+        deleteLog[table] = meta?.affectedRows || 0;
+      } catch { deleteLog[table] = 'skipped'; }
+    }
+
+    // 8. Users & journeys
+    for (const table of ['user_journeys', 'Users']) {
+      try {
+        const [, meta] = await mysqlSequelize.query(`DELETE FROM \`${table}\` WHERE destination_id = :id`, { replacements: { id: destId } });
+        deleteLog[table] = meta?.affectedRows || 0;
+      } catch { deleteLog[table] = 'skipped'; }
+    }
+
+    // 9. Categories
+    try {
+      await mysqlSequelize.query('DELETE FROM Categories WHERE destination_id = :id', { replacements: { id: destId } });
+    } catch { /* may not exist */ }
+
+    // 10. Financial audit log
+    try {
+      await mysqlSequelize.query('DELETE FROM financial_audit_log WHERE destination_id = :id', { replacements: { id: destId } });
+    } catch { /* may not have dest scope */ }
+
+    // FINAL: Delete destination itself
+    await mysqlSequelize.query('DELETE FROM destinations WHERE id = :id', { replacements: { id: destId } });
+
+    // Audit log (MongoDB — will persist after MySQL deletion)
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'destination_hard_deleted', entity_type: 'destination', entity_id: destId,
+          admin_email: req.adminUser.email,
+          changes: { name: dest.name, code: dest.code, type: dest.destination_type, deleteLog },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    logger.warn(`[AdminPortal] HARD DELETE completed: ${dest.name} (ID: ${destId}). Deleted: ${JSON.stringify(deleteLog)}`);
+    res.json({ success: true, data: { deleted: true, name: dest.name, id: destId, deleteLog } });
+  } catch (error) {
+    logger.error('[AdminPortal] Hard delete destination error:', error);
+    res.status(500).json({ success: false, error: { code: 'HARD_DELETE_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// PARTNER LIFECYCLE: Archive / Hard-Delete (Opdracht 9)
+// ============================================================
+
+/**
+ * PUT /partners/:id/archive — Soft-delete partner
+ */
+router.put('/partners/:id/archive', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const partnerId = parseInt(req.params.id);
+    const [[partner]] = await mysqlSequelize.query('SELECT id, name, status FROM partners WHERE id = :id', { replacements: { id: partnerId } });
+    if (!partner) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Partner not found' } });
+
+    await mysqlSequelize.query(
+      "UPDATE partners SET status = 'archived', updated_at = NOW() WHERE id = :id",
+      { replacements: { id: partnerId } }
+    );
+
+    logger.info(`[AdminPortal] Partner archived: ${partner.name} (ID: ${partnerId})`);
+    res.json({ success: true, data: { id: partnerId, name: partner.name, status: 'archived' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Archive partner error:', error);
+    res.status(500).json({ success: false, error: { code: 'ARCHIVE_PARTNER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /partners/:id — Hard-delete partner (only if no unsettled transactions)
+ */
+router.delete('/partners/:id', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const partnerId = parseInt(req.params.id);
+    const [[partner]] = await mysqlSequelize.query('SELECT id, name, destination_id FROM partners WHERE id = :id', { replacements: { id: partnerId } });
+    if (!partner) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Partner not found' } });
+
+    // Check for unsettled transactions
+    const [[unsettled]] = await mysqlSequelize.query(
+      "SELECT COUNT(*) as cnt FROM intermediary_transactions WHERE partner_id = :id AND status NOT IN ('settled', 'cancelled', 'reviewed')",
+      { replacements: { id: partnerId } }
+    );
+    if (unsettled?.cnt > 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'UNSETTLED_TRANSACTIONS', message: `Rond eerst ${unsettled.cnt} openstaande transactie(s) af voordat de partner verwijderd kan worden.` }
+      });
+    }
+
+    // Cascade delete
+    await mysqlSequelize.query('DELETE FROM partner_onboarding WHERE partner_id = :id', { replacements: { id: partnerId } });
+    await mysqlSequelize.query('DELETE FROM partner_pois WHERE partner_id = :id', { replacements: { id: partnerId } });
+    await mysqlSequelize.query('DELETE FROM partner_payouts WHERE partner_id = :id', { replacements: { id: partnerId } });
+    await mysqlSequelize.query('DELETE FROM credit_notes WHERE partner_id = :id', { replacements: { id: partnerId } });
+    // Set intermediary_transactions partner_id to NULL (historical records)
+    await mysqlSequelize.query('UPDATE intermediary_transactions SET partner_id = NULL WHERE partner_id = :id', { replacements: { id: partnerId } });
+    await mysqlSequelize.query('DELETE FROM partners WHERE id = :id', { replacements: { id: partnerId } });
+
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.collection('audit_logs').insertOne({
+          action: 'partner_hard_deleted', entity_type: 'partner', entity_id: partnerId,
+          admin_email: req.adminUser.email, changes: { name: partner.name },
+          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+        });
+      }
+    } catch { /* non-critical */ }
+
+    logger.info(`[AdminPortal] Partner hard-deleted: ${partner.name} (ID: ${partnerId})`);
+    res.json({ success: true, data: { deleted: true, name: partner.name, id: partnerId } });
+  } catch (error) {
+    logger.error('[AdminPortal] Hard delete partner error:', error);
+    res.status(500).json({ success: false, error: { code: 'HARD_DELETE_PARTNER_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// MERK PROFIEL / BRAND PROFILE — 14 endpoints
+// ============================================================
+
+/**
+ * Helper: get destination_id from header or query
+ */
+function getBrandDestId(req) {
+  const fromHeader = req.headers['x-destination-id'];
+  const fromQuery = req.query.destination_id;
+  if (fromQuery) return Number(fromQuery);
+  if (fromHeader) {
+    const num = parseInt(fromHeader);
+    if (!isNaN(num) && num > 0) return num;
+    // string code → lookup
+    const codeMap = { calpe: 1, texel: 2, alicante: 3, warrewijzer: 4 };
+    return codeMap[fromHeader.toLowerCase()] || 1;
+  }
+  return req.adminUser?.destination_id || 1;
+}
+
+/**
+ * GET /brand-profile — Get brand_profile JSON for a destination
+ */
+router.get('/brand-profile', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = getBrandDestId(req);
+    const [[dest]] = await mysqlSequelize.query(
+      'SELECT id, name, brand_profile, branding FROM destinations WHERE id = :id',
+      { replacements: { id: destId } }
+    );
+    if (!dest) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Destination not found' } });
+
+    let brandProfile = {};
+    try { brandProfile = typeof dest.brand_profile === 'string' ? JSON.parse(dest.brand_profile) : (dest.brand_profile || {}); } catch { /* empty */ }
+
+    // Also include toneOfVoice from branding JSON
+    let toneOfVoice = {};
+    try {
+      const branding = typeof dest.branding === 'string' ? JSON.parse(dest.branding) : (dest.branding || {});
+      toneOfVoice = branding.toneOfVoice || {};
+    } catch { /* empty */ }
+
+    res.json({ success: true, data: { ...brandProfile, toneOfVoice, destinationId: destId, destinationName: dest.name } });
+  } catch (error) {
+    logger.error('[AdminPortal] Get brand profile error:', error);
+    res.status(500).json({ success: false, error: { code: 'BRAND_PROFILE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /brand-profile — Update brand_profile JSON
+ */
+router.put('/brand-profile', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    const destId = getBrandDestId(req);
+    const { company_description, industry, country, active_markets, mission, vision, core_values, usps, seo_keywords, content_goals, company_name, website_url } = req.body;
+
+    // Merge with existing
+    const [[dest]] = await mysqlSequelize.query('SELECT brand_profile FROM destinations WHERE id = :id', { replacements: { id: destId } });
+    if (!dest) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Destination not found' } });
+
+    let existing = {};
+    try { existing = typeof dest.brand_profile === 'string' ? JSON.parse(dest.brand_profile) : (dest.brand_profile || {}); } catch { /* empty */ }
+
+    const updated = {
+      ...existing,
+      ...(company_name !== undefined && { company_name }),
+      ...(company_description !== undefined && { company_description }),
+      ...(industry !== undefined && { industry }),
+      ...(website_url !== undefined && { website_url }),
+      ...(country !== undefined && { country }),
+      ...(active_markets !== undefined && { active_markets }),
+      ...(mission !== undefined && { mission }),
+      ...(vision !== undefined && { vision }),
+      ...(core_values !== undefined && { core_values }),
+      ...(usps !== undefined && { usps }),
+      ...(seo_keywords !== undefined && { seo_keywords }),
+      ...(content_goals !== undefined && { content_goals }),
+    };
+
+    await mysqlSequelize.query(
+      'UPDATE destinations SET brand_profile = :bp, updated_at = NOW() WHERE id = :id',
+      { replacements: { bp: JSON.stringify(updated), id: destId } }
+    );
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    logger.error('[AdminPortal] Update brand profile error:', error);
+    res.status(500).json({ success: false, error: { code: 'BRAND_PROFILE_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+// --- AUDIENCE PERSONAS ---
+
+/**
+ * GET /brand-profile/personas — List personas for destination
+ */
+router.get('/brand-profile/personas', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = getBrandDestId(req);
+    const [personas] = await mysqlSequelize.query(
+      'SELECT * FROM audience_personas WHERE destination_id = :destId ORDER BY is_primary DESC, sort_order ASC',
+      { replacements: { destId } }
+    );
+    // Parse JSON fields
+    const parsed = personas.map(p => {
+      let preferred_channels = [];
+      try { preferred_channels = typeof p.preferred_channels === 'string' ? JSON.parse(p.preferred_channels) : (p.preferred_channels || []); } catch { /* empty */ }
+      return { ...p, preferred_channels };
+    });
+    res.json({ success: true, data: parsed });
+  } catch (error) {
+    logger.error('[AdminPortal] List personas error:', error);
+    res.status(500).json({ success: false, error: { code: 'PERSONAS_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /brand-profile/personas — Create persona
+ */
+router.post('/brand-profile/personas', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    const destId = getBrandDestId(req);
+    const { name, age_range, gender, location, language, interests, pain_points, preferred_channels, tone_notes, is_primary } = req.body;
+    if (!name) return res.status(400).json({ success: false, error: { code: 'MISSING_NAME', message: 'name is required' } });
+
+    const [result] = await mysqlSequelize.query(
+      `INSERT INTO audience_personas (destination_id, name, age_range, gender, location, language, interests, pain_points, preferred_channels, tone_notes, is_primary)
+       VALUES (:destId, :name, :ageRange, :gender, :location, :language, :interests, :painPoints, :channels, :toneNotes, :isPrimary)`,
+      { replacements: {
+        destId, name, ageRange: age_range || null, gender: gender || null,
+        location: location || null, language: language || null,
+        interests: interests || null, painPoints: pain_points || null,
+        channels: JSON.stringify(preferred_channels || []),
+        toneNotes: tone_notes || null, isPrimary: is_primary ? 1 : 0
+      }, type: QueryTypes.INSERT }
+    );
+
+    res.status(201).json({ success: true, data: { id: result, name, destination_id: destId } });
+  } catch (error) {
+    logger.error('[AdminPortal] Create persona error:', error);
+    res.status(500).json({ success: false, error: { code: 'PERSONA_CREATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /brand-profile/personas/:id — Update persona
+ */
+router.put('/brand-profile/personas/:id', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fields = ['name', 'age_range', 'gender', 'location', 'language', 'interests', 'pain_points', 'preferred_channels', 'tone_notes', 'is_primary', 'sort_order'];
+    const sets = [];
+    const replacements = { id: Number(id) };
+
+    for (const f of fields) {
+      if (req.body[f] !== undefined) {
+        const col = f;
+        if (f === 'preferred_channels') {
+          sets.push(`${col} = :${f}`);
+          replacements[f] = JSON.stringify(req.body[f]);
+        } else if (f === 'is_primary') {
+          sets.push(`${col} = :${f}`);
+          replacements[f] = req.body[f] ? 1 : 0;
+        } else {
+          sets.push(`${col} = :${f}`);
+          replacements[f] = req.body[f];
+        }
+      }
+    }
+    if (sets.length === 0) return res.status(400).json({ success: false, error: { code: 'NO_FIELDS', message: 'No fields to update' } });
+
+    await mysqlSequelize.query(
+      `UPDATE audience_personas SET ${sets.join(', ')}, updated_at = NOW() WHERE id = :id`,
+      { replacements }
+    );
+    res.json({ success: true, data: { id: Number(id), updated: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Update persona error:', error);
+    res.status(500).json({ success: false, error: { code: 'PERSONA_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /brand-profile/personas/:id — Delete persona
+ */
+router.delete('/brand-profile/personas/:id', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    await mysqlSequelize.query('DELETE FROM audience_personas WHERE id = :id', { replacements: { id: Number(req.params.id) } });
+    res.json({ success: true, data: { deleted: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Delete persona error:', error);
+    res.status(500).json({ success: false, error: { code: 'PERSONA_DELETE_ERROR', message: error.message } });
+  }
+});
+
+// --- KNOWLEDGE BASE ---
+
+/**
+ * GET /brand-profile/knowledge — List knowledge items
+ */
+router.get('/brand-profile/knowledge', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = getBrandDestId(req);
+    const [items] = await mysqlSequelize.query(
+      'SELECT id, destination_id, source_type, source_name, source_url, word_count, file_path, last_scanned_at, created_at FROM brand_knowledge WHERE destination_id = :destId ORDER BY created_at DESC',
+      { replacements: { destId } }
+    );
+    // Summary stats
+    const totalWords = items.reduce((s, i) => s + (i.word_count || 0), 0);
+    res.json({ success: true, data: { items, totalSources: items.length, totalWords } });
+  } catch (error) {
+    logger.error('[AdminPortal] List knowledge error:', error);
+    res.status(500).json({ success: false, error: { code: 'KNOWLEDGE_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /brand-profile/knowledge — Add knowledge item (text, URL, or document reference)
+ */
+router.post('/brand-profile/knowledge', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    const destId = getBrandDestId(req);
+    const { source_type, source_name, source_url, content_text } = req.body;
+
+    if (!source_type || !['document', 'url', 'text'].includes(source_type)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_TYPE', message: 'source_type must be document, url, or text' } });
+    }
+
+    let text = content_text || '';
+    let wordCount = 0;
+
+    // For URL: fetch and extract text
+    if (source_type === 'url' && source_url) {
+      try {
+        const response = await fetch(source_url, { headers: { 'User-Agent': 'HolidaiButler/1.0' }, signal: AbortSignal.timeout(10000) });
+        const html = await response.text();
+        // Strip HTML tags, scripts, styles
+        text = html
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .substring(0, 50000); // limit to ~50k chars
+      } catch (fetchErr) {
+        logger.warn('[BrandKnowledge] URL fetch failed:', fetchErr.message);
+        text = `[Could not fetch URL: ${fetchErr.message}]`;
+      }
+    }
+
+    wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+
+    const [result] = await mysqlSequelize.query(
+      `INSERT INTO brand_knowledge (destination_id, source_type, source_name, source_url, content_text, word_count, last_scanned_at)
+       VALUES (:destId, :sourceType, :sourceName, :sourceUrl, :contentText, :wordCount, NOW())`,
+      { replacements: {
+        destId, sourceType: source_type,
+        sourceName: source_name || source_url || 'Untitled',
+        sourceUrl: source_url || null,
+        contentText: text, wordCount
+      }, type: QueryTypes.INSERT }
+    );
+
+    res.status(201).json({ success: true, data: { id: result, source_type, source_name: source_name || source_url, word_count: wordCount } });
+  } catch (error) {
+    logger.error('[AdminPortal] Create knowledge error:', error);
+    res.status(500).json({ success: false, error: { code: 'KNOWLEDGE_CREATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /brand-profile/knowledge/upload — Upload document (PDF, DOCX, TXT) and parse to text
+ */
+const KNOWLEDGE_DIR = path.join(STORAGE_ROOT, 'knowledge');
+const knowledgeStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    fs.mkdirSync(KNOWLEDGE_DIR, { recursive: true });
+    cb(null, KNOWLEDGE_DIR);
+  },
+  filename: (req, file, cb) => {
+    const destId = getBrandDestId(req);
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${destId}_${Date.now()}${ext}`);
+  }
+});
+const knowledgeUpload = multer({
+  storage: knowledgeStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = [
+      'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain', 'text/csv', 'application/msword'
+    ];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(file.mimetype) || ['.pdf', '.docx', '.doc', '.txt', '.csv'].includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, DOCX, TXT, and CSV files are allowed'));
+    }
+  }
+});
+
+router.post('/brand-profile/knowledge/upload', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), (req, res) => {
+  knowledgeUpload.single('file')(req, res, async (err) => {
+    if (err) {
+      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 10MB)' : err.message;
+      return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: { code: 'NO_FILE', message: 'No file uploaded' } });
+    }
+
+    try {
+      const destId = getBrandDestId(req);
+      const filePath = req.file.path;
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      let text = '';
+
+      // Parse based on file type
+      if (ext === '.pdf') {
+        const pdfParse = (await import('pdf-parse')).default;
+        const pdfBuffer = fs.readFileSync(filePath);
+        const pdfData = await pdfParse(pdfBuffer);
+        text = pdfData.text || '';
+        logger.info(`[BrandKnowledge] Parsed PDF: ${pdfData.numpages} pages, ${text.length} chars`);
+      } else if (ext === '.docx' || ext === '.doc') {
+        const mammoth = await import('mammoth');
+        const result = await mammoth.extractRawText({ path: filePath });
+        text = result.value || '';
+        logger.info(`[BrandKnowledge] Parsed DOCX: ${text.length} chars`);
+      } else if (ext === '.txt' || ext === '.csv') {
+        text = fs.readFileSync(filePath, 'utf-8');
+        logger.info(`[BrandKnowledge] Read TXT/CSV: ${text.length} chars`);
+      }
+
+      // Trim to reasonable size (50k chars max for DB storage)
+      if (text.length > 50000) text = text.substring(0, 50000);
+      const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+
+      const [result] = await mysqlSequelize.query(
+        `INSERT INTO brand_knowledge (destination_id, source_type, source_name, content_text, word_count, file_path, last_scanned_at)
+         VALUES (:destId, 'document', :sourceName, :contentText, :wordCount, :filePath, NOW())`,
+        { replacements: {
+          destId,
+          sourceName: req.file.originalname,
+          contentText: text,
+          wordCount,
+          filePath: `/knowledge/${req.file.filename}`
+        }, type: QueryTypes.INSERT }
+      );
+
+      res.status(201).json({
+        success: true,
+        data: {
+          id: result,
+          source_type: 'document',
+          source_name: req.file.originalname,
+          word_count: wordCount,
+          file_size: req.file.size,
+          pages: ext === '.pdf' ? Math.ceil(text.length / 3000) : null
+        }
+      });
+    } catch (error) {
+      logger.error('[AdminPortal] Knowledge upload parse error:', error);
+      res.status(500).json({ success: false, error: { code: 'PARSE_ERROR', message: error.message } });
+    }
+  });
+});
+
+/**
+ * DELETE /brand-profile/knowledge/:id — Delete knowledge item
+ */
+router.delete('/brand-profile/knowledge/:id', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    await mysqlSequelize.query('DELETE FROM brand_knowledge WHERE id = :id', { replacements: { id: Number(req.params.id) } });
+    res.json({ success: true, data: { deleted: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Delete knowledge error:', error);
+    res.status(500).json({ success: false, error: { code: 'KNOWLEDGE_DELETE_ERROR', message: error.message } });
+  }
+});
+
+// --- COMPETITORS ---
+
+/**
+ * GET /brand-profile/competitors — List competitors
+ */
+router.get('/brand-profile/competitors', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = getBrandDestId(req);
+    const [items] = await mysqlSequelize.query(
+      'SELECT * FROM brand_competitors WHERE destination_id = :destId ORDER BY created_at DESC',
+      { replacements: { destId } }
+    );
+    res.json({ success: true, data: items });
+  } catch (error) {
+    logger.error('[AdminPortal] List competitors error:', error);
+    res.status(500).json({ success: false, error: { code: 'COMPETITORS_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /brand-profile/competitors — Add competitor
+ */
+router.post('/brand-profile/competitors', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    const destId = getBrandDestId(req);
+    const { name, website_url } = req.body;
+    if (!name) return res.status(400).json({ success: false, error: { code: 'MISSING_NAME', message: 'name is required' } });
+
+    const [result] = await mysqlSequelize.query(
+      'INSERT INTO brand_competitors (destination_id, name, website_url) VALUES (:destId, :name, :url)',
+      { replacements: { destId, name, url: website_url || null }, type: QueryTypes.INSERT }
+    );
+    res.status(201).json({ success: true, data: { id: result, name, website_url } });
+  } catch (error) {
+    logger.error('[AdminPortal] Create competitor error:', error);
+    res.status(500).json({ success: false, error: { code: 'COMPETITOR_CREATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /brand-profile/competitors/:id/analyze — Analyze competitor website
+ */
+router.post('/brand-profile/competitors/:id/analyze', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    const [[competitor]] = await mysqlSequelize.query(
+      `SELECT bc.id, bc.name, bc.website_url, bc.destination_id, d.default_language
+       FROM brand_competitors bc JOIN destinations d ON bc.destination_id = d.id
+       WHERE bc.id = :id`,
+      { replacements: { id: Number(req.params.id) } }
+    );
+    if (!competitor) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Competitor not found' } });
+    if (!competitor.website_url) return res.status(400).json({ success: false, error: { code: 'NO_URL', message: 'Competitor has no website URL' } });
+
+    const LANG_NAMES = { nl: 'Dutch', en: 'English', de: 'German', es: 'Spanish', fr: 'French' };
+    const langName = LANG_NAMES[competitor.default_language] || 'Dutch';
+
+    // Fetch website
+    let pageText = '';
+    try {
+      const response = await fetch(competitor.website_url, { headers: { 'User-Agent': 'HolidaiButler/1.0' }, signal: AbortSignal.timeout(10000) });
+      const html = await response.text();
+      pageText = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 5000);
+    } catch (fetchErr) {
+      return res.status(400).json({ success: false, error: { code: 'FETCH_FAILED', message: `Could not fetch website: ${fetchErr.message}` } });
+    }
+
+    // Analyze with Mistral AI
+    const embeddingService = (await import('../services/holibot/embeddingService.js')).default;
+    if (!embeddingService.isConfigured) embeddingService.initialize();
+
+    const aiResponse = await embeddingService.generateChatCompletion([
+      { role: 'system', content: `You are a competitive analysis expert. IMPORTANT: write ALL output in ${langName}. Analyze the website content and return a JSON object with: positioning (string in ${langName}), core_themes (string[] in ${langName}), content_frequency (string in ${langName}), channels (string[]), differentiation_opportunities (string[] in ${langName}).` },
+      { role: 'user', content: `Analyze this competitor website for "${competitor.name}":\n\n${pageText}\n\nReturn JSON only, all text in ${langName}.` }
+    ], { temperature: 0.3, maxTokens: 1000 });
+
+    let analysis = {};
+    try {
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) analysis = JSON.parse(jsonMatch[0]);
+    } catch { analysis = { raw: aiResponse }; }
+
+    const summary = JSON.stringify(analysis);
+    await mysqlSequelize.query(
+      'UPDATE brand_competitors SET analysis_summary = :summary, last_analyzed_at = NOW() WHERE id = :id',
+      { replacements: { summary, id: competitor.id } }
+    );
+
+    res.json({ success: true, data: { id: competitor.id, name: competitor.name, analysis } });
+  } catch (error) {
+    logger.error('[AdminPortal] Analyze competitor error:', error);
+    res.status(500).json({ success: false, error: { code: 'COMPETITOR_ANALYZE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /brand-profile/competitors/:id — Delete competitor
+ */
+router.delete('/brand-profile/competitors/:id', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    await mysqlSequelize.query('DELETE FROM brand_competitors WHERE id = :id', { replacements: { id: Number(req.params.id) } });
+    res.json({ success: true, data: { deleted: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Delete competitor error:', error);
+    res.status(500).json({ success: false, error: { code: 'COMPETITOR_DELETE_ERROR', message: error.message } });
+  }
+});
+
+// --- WEBSITE ANALYSIS ---
+
+/**
+ * POST /brand-profile/analyze-website — Scan URL for tone/style/themes
+ */
+router.post('/brand-profile/analyze-website', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ success: false, error: { code: 'MISSING_URL', message: 'url is required' } });
+
+    const destId = getBrandDestId(req);
+
+    // Get destination language for output
+    let destLang = 'nl';
+    try {
+      const [[destRow]] = await mysqlSequelize.query('SELECT default_language FROM destinations WHERE id = :id', { replacements: { id: destId } });
+      if (destRow?.default_language) destLang = destRow.default_language;
+    } catch { /* fallback nl */ }
+    const LANG_NAMES = { nl: 'Dutch', en: 'English', de: 'German', es: 'Spanish', fr: 'French' };
+    const langName = LANG_NAMES[destLang] || 'Dutch';
+
+    // Fetch
+    let pageText = '';
+    try {
+      const response = await fetch(url, { headers: { 'User-Agent': 'HolidaiButler/1.0' }, signal: AbortSignal.timeout(10000) });
+      const html = await response.text();
+      pageText = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 8000);
+    } catch (fetchErr) {
+      return res.status(400).json({ success: false, error: { code: 'FETCH_FAILED', message: `Could not fetch website: ${fetchErr.message}` } });
+    }
+
+    // Analyze with Mistral AI
+    const embeddingService = (await import('../services/holibot/embeddingService.js')).default;
+    if (!embeddingService.isConfigured) embeddingService.initialize();
+
+    const aiResponse = await embeddingService.generateChatCompletion([
+      { role: 'system', content: `Analyze this website and extract the following. IMPORTANT: write ALL output in ${langName}.
+
+1. Tone of voice (formeel/informeel, speels/zakelijk, etc.)
+2. Core themes and topics
+3. Target audience indicators
+4. Key USPs mentioned
+5. Writing style characteristics
+
+Return as JSON with fields: tone (string in ${langName}), themes (string[] in ${langName}), audience_indicators (string[] in ${langName}), usps (string[] in ${langName}), writing_style (string in ${langName})` },
+      { role: 'user', content: `Website URL: ${url}\n\nWebsite content:\n${pageText}` }
+    ], { temperature: 0.3, maxTokens: 1500 });
+
+    let analysis = {};
+    try {
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) analysis = JSON.parse(jsonMatch[0]);
+    } catch { analysis = { raw: aiResponse }; }
+
+    res.json({ success: true, data: { url, analysis } });
+  } catch (error) {
+    logger.error('[AdminPortal] Analyze website error:', error);
+    res.status(500).json({ success: false, error: { code: 'WEBSITE_ANALYZE_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
 // MEDIA LIBRARY (Wave 2 — W2.5) — 4 endpoints
 // ============================================================
 
@@ -9288,7 +10318,7 @@ const mediaUpload = multer({
  * POST /media/upload — Upload files to media library (multi-file, max 10)
  */
 router.post('/media/upload', adminAuth('editor'), (req, res) => {
-  mediaUpload.array('files', 10)(req, res, async (err) => {
+  mediaUpload.array('files', 50)(req, res, async (err) => {
     if (err) {
       const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 10MB)' : err.message;
       return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
@@ -9739,7 +10769,7 @@ router.post('/translate', adminAuth(), writeAccess(['platform_admin']), async (r
  */
 router.post('/onboarding/create', adminAuth('platform_admin'), async (req, res) => {
   try {
-    const { name, slug, domains, language, timezone, branding, featureFlags, navigation, pages } = req.body;
+    const { name, slug, domains, language, timezone, branding, featureFlags, navigation, pages, destinationType, contactPerson, contactEmail, targetLanguages } = req.body;
 
     // Validation
     if (!name || !slug) {
@@ -9747,6 +10777,7 @@ router.post('/onboarding/create', adminAuth('platform_admin'), async (req, res) 
     }
 
     const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    const destType = destinationType === 'content_only' ? 'content_only' : 'tourism';
 
     // Check slug uniqueness
     const [existing] = await mysqlSequelize.query(
@@ -9757,16 +10788,19 @@ router.post('/onboarding/create', adminAuth('platform_admin'), async (req, res) 
       return res.status(409).json({ success: false, error: { code: 'DUPLICATE_SLUG', message: `Destination with code "${cleanSlug}" already exists` } });
     }
 
-    // Build JSON fields
+    // Build JSON fields — content_only gets default flags
+    const effectiveFlags = destType === 'content_only'
+      ? { ...CONTENT_ONLY_DEFAULT_FLAGS, ...(featureFlags || {}) }
+      : (featureFlags || {});
     const brandingJson = JSON.stringify(branding || {});
-    const featureFlagsJson = JSON.stringify(featureFlags || {});
+    const featureFlagsJson = JSON.stringify(effectiveFlags);
     const supportedLanguages = JSON.stringify([language || 'en']);
     const configJson = JSON.stringify({ nav_items: navigation || [] });
 
     // 1. INSERT destination
     const [insertResult] = await mysqlSequelize.query(
-      `INSERT INTO destinations (code, name, display_name, domain, country, region, timezone, currency, default_language, supported_languages, feature_flags, branding, config, is_active)
-       VALUES (:code, :name, :displayName, :domain, '', '', :timezone, 'EUR', :language, :supportedLanguages, :featureFlags, :branding, :config, 1)`,
+      `INSERT INTO destinations (code, name, display_name, domain, country, region, timezone, currency, default_language, supported_languages, feature_flags, branding, config, is_active, destination_type)
+       VALUES (:code, :name, :displayName, :domain, '', '', :timezone, 'EUR', :language, :supportedLanguages, :featureFlags, :branding, :config, 1, :destType)`,
       {
         replacements: {
           code: cleanSlug,
@@ -9778,7 +10812,8 @@ router.post('/onboarding/create', adminAuth('platform_admin'), async (req, res) 
           supportedLanguages,
           featureFlags: featureFlagsJson,
           branding: brandingJson,
-          config: configJson
+          config: configJson,
+          destType
         },
         type: QueryTypes.INSERT
       }
@@ -9796,7 +10831,11 @@ router.post('/onboarding/create', adminAuth('platform_admin'), async (req, res) 
       about:       { slug: 'about',       title_en: 'About Us',    title_nl: 'Over ons',     title_de: 'Über uns',    title_es: 'Sobre nosotros', layout: { blocks: [{ type: 'RichText', props: { content: { en: `About ${name}`, nl: `Over ${name}`, de: `Über ${name}`, es: `Sobre ${name}` } } }] } }
     };
 
-    const selectedPages = Array.isArray(pages) ? pages : ['home', 'explore', 'restaurants', 'events', 'contact', 'about'];
+    // Content-only destinations: no tourism pages (no explore, restaurants, events)
+    const defaultPages = destType === 'content_only'
+      ? [] // content_only gets no website pages (no customer portal)
+      : ['home', 'explore', 'restaurants', 'events', 'contact', 'about'];
+    const selectedPages = Array.isArray(pages) ? pages : defaultPages;
     let sortOrder = 0;
 
     for (const pageKey of selectedPages) {
@@ -9822,7 +10861,51 @@ router.post('/onboarding/create', adminAuth('platform_admin'), async (req, res) 
       );
     }
 
-    // 3. Audit log
+    // 3. Seed brand_profile + audience_persona from onboarding data
+    try {
+      const tonePreset = branding?.toneOfVoice || {};
+      const brandProfile = {
+        company_name: name,
+        industry: '',
+        company_description: '',
+        contact_person: contactPerson || '',
+        contact_email: contactEmail || '',
+        target_languages: targetLanguages || [language || 'nl'],
+        content_goals: {},
+        usps: [],
+        core_values: [],
+        seo_keywords: [],
+      };
+
+      // Save brand_profile JSON
+      await mysqlSequelize.query(
+        'UPDATE destinations SET brand_profile = :bp WHERE id = :id',
+        { replacements: { bp: JSON.stringify(brandProfile), id: destinationId } }
+      );
+
+      // Create audience persona from tone preset data
+      if (tonePreset.audience) {
+        const addressLabel = tonePreset.formalAddress === 'u' ? 'Formeel (u)' : tonePreset.formalAddress === 'mixed' ? 'Gemengd' : 'Informeel (je)';
+        await mysqlSequelize.query(
+          `INSERT INTO audience_personas (destination_id, name, language, interests, tone_notes, is_primary)
+           VALUES (:destId, :name, :lang, :interests, :toneNotes, 1)`,
+          { replacements: {
+            destId: destinationId,
+            name: tonePreset.audience.substring(0, 255) || 'Primaire doelgroep',
+            lang: language || 'nl',
+            interests: tonePreset.brandValues || '',
+            toneNotes: `${tonePreset.personality || ''} — ${addressLabel}`,
+          }, type: QueryTypes.INSERT }
+        );
+        logger.info(`[AdminPortal] Auto-created audience persona for ${name}: "${tonePreset.audience}"`);
+      }
+
+      logger.info(`[AdminPortal] Brand profile seeded for ${name}: contact=${contactPerson || 'none'}, langs=${(targetLanguages || []).join(',')}, tone=${tonePreset.personality || 'none'}`);
+    } catch (seedErr) {
+      logger.warn('[AdminPortal] Brand profile seed failed (non-blocking):', seedErr.message);
+    }
+
+    // 4. Audit log
     try {
       if (mongoose.connection.readyState === 1) {
         await mongoose.connection.db.collection('audit_logs').insertOne({
@@ -9842,7 +10925,7 @@ router.post('/onboarding/create', adminAuth('platform_admin'), async (req, res) 
       `3. SSL: Voer "certbot --apache -d ${domain}" uit op de server`
     ];
 
-    logger.info(`[AdminPortal] Destination onboarded: ${name} (${cleanSlug}), id=${destinationId}, pages=${selectedPages.length}`);
+    logger.info(`[AdminPortal] Destination onboarded: ${name} (${cleanSlug}), type=${destType}, id=${destinationId}, pages=${selectedPages.length}`);
 
     res.status(201).json({
       success: true,
@@ -9851,8 +10934,11 @@ router.post('/onboarding/create', adminAuth('platform_admin'), async (req, res) 
         name,
         code: cleanSlug,
         domain,
+        destinationType: destType,
         pagesCreated: selectedPages.length,
-        dnsInstructions
+        dnsInstructions: destType === 'content_only'
+          ? ['Content Studio standalone — geen website/DNS configuratie nodig. Klant kan direct inloggen via admin.holidaibutler.com']
+          : dnsInstructions
       }
     });
   } catch (error) {
@@ -10088,7 +11174,7 @@ router.patch('/content/suggestions/:id', adminAuth('editor'), writeAccess(['plat
  */
 router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
-    const { suggestion_id, content_type, platform = 'website', languages = [], manual, title, body_en, destination_id } = req.body;
+    const { suggestion_id, content_type, platform = 'website', languages = [], manual, title, body_en, destination_id, persona_id } = req.body;
 
     // === Manual content creation (TO DO 4g) — no AI generation ===
     if (manual && title) {
@@ -10135,27 +11221,32 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
       contentType: content_type || suggestion.content_type,
       platform,
       languages,
+      personaId: persona_id ? Number(persona_id) : null,
     });
 
     // Auto-detect POI from title — match against POI names in this destination
+    // SKIP for content_only destinations (no POI module)
     let detectedPoiId = null;
-    try {
-      const titleWords = generated.title.replace(/[^\w\s]/g, '').split(/\s+/).filter(w => w.length > 3);
-      if (titleWords.length > 0) {
-        const likePattern = titleWords.slice(0, 5).map((_, i) => `p.name LIKE :tw${i}`).join(' OR ');
-        const twReplacements = { destId: suggestion.destination_id };
-        titleWords.slice(0, 5).forEach((w, i) => { twReplacements[`tw${i}`] = `%${w}%`; });
-        const [[matchedPoi]] = await mysqlSequelize.query(
-          `SELECT p.id, p.name FROM POI p WHERE p.destination_id = :destId AND p.is_active = 1 AND (${likePattern}) ORDER BY p.google_rating DESC LIMIT 1`,
-          { replacements: twReplacements }
-        );
-        if (matchedPoi) {
-          detectedPoiId = matchedPoi.id;
-          logger.info(`[ContentGenerate] Auto-detected POI: "${matchedPoi.name}" (id=${matchedPoi.id}) for title "${generated.title}"`);
+    const destIsContentOnly = await isContentOnly(suggestion.destination_id);
+    if (!destIsContentOnly) {
+      try {
+        const titleWords = generated.title.replace(/[^\w\s]/g, '').split(/\s+/).filter(w => w.length > 3);
+        if (titleWords.length > 0) {
+          const likePattern = titleWords.slice(0, 5).map((_, i) => `p.name LIKE :tw${i}`).join(' OR ');
+          const twReplacements = { destId: suggestion.destination_id };
+          titleWords.slice(0, 5).forEach((w, i) => { twReplacements[`tw${i}`] = `%${w}%`; });
+          const [[matchedPoi]] = await mysqlSequelize.query(
+            `SELECT p.id, p.name FROM POI p WHERE p.destination_id = :destId AND p.is_active = 1 AND (${likePattern}) ORDER BY p.google_rating DESC LIMIT 1`,
+            { replacements: twReplacements }
+          );
+          if (matchedPoi) {
+            detectedPoiId = matchedPoi.id;
+            logger.info(`[ContentGenerate] Auto-detected POI: "${matchedPoi.name}" (id=${matchedPoi.id}) for title "${generated.title}"`);
+          }
         }
+      } catch (poiErr) {
+        logger.warn('[ContentGenerate] POI auto-detect failed (non-blocking):', poiErr.message);
       }
-    } catch (poiErr) {
-      logger.warn('[ContentGenerate] POI auto-detect failed (non-blocking):', poiErr.message);
     }
 
     // Save to content_items (with seo_score + poi_id)
@@ -10192,53 +11283,73 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
     );
 
     // === AUTO-ATTACH IMAGES based on keywords — with diversity filter ===
+    // For content_only destinations: skip POI image search, use media library only
     const contentItemId = insertResult;
+    const contentType = content_type || suggestion.content_type;
     const maxImgs = contentType === 'social_post' ? 1 : contentType === 'video_script' ? 1 : 3;
     let attachedImages = [];
     try {
-      const kws = generated.keyword_cluster || suggestion.keyword_cluster || [];
-      if (kws.length > 0) {
-        const keywordPattern = kws
-          .map(k => k.replace(/[.*+?^${}()|[\]\\%_]/g, ''))
-          .filter(k => k.length > 2)
-          .join('|');
-
-        if (keywordPattern) {
-          // Collect already-used image IDs to avoid duplicates across content items
-          const [usedRows] = await mysqlSequelize.query(
-            `SELECT media_ids FROM content_items WHERE destination_id = :destId AND media_ids IS NOT NULL AND media_ids != '[]' AND media_ids != 'null' AND id != :selfId`,
-            { replacements: { destId: suggestion.destination_id, selfId: contentItemId } }
+      if (destIsContentOnly) {
+        // Content-only: only search media library uploads
+        const [mediaImages] = await mysqlSequelize.query(
+          `SELECT id FROM media WHERE destination_id = :destId AND mime_type LIKE 'image%' ORDER BY created_at DESC LIMIT :lim`,
+          { replacements: { destId: suggestion.destination_id, lim: maxImgs } }
+        );
+        if (mediaImages.length > 0) {
+          const mediaIds = mediaImages.map(m => m.id);
+          await mysqlSequelize.query(
+            'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
+            { replacements: { mediaIds: JSON.stringify(mediaIds), id: contentItemId } }
           );
-          const usedIds = new Set();
-          for (const row of usedRows) {
-            const ids = typeof row.media_ids === 'string' ? JSON.parse(row.media_ids) : row.media_ids;
-            if (Array.isArray(ids)) ids.forEach(id => usedIds.add(Number(String(id).replace('poi:', ''))));
-          }
+          attachedImages = mediaIds;
+          logger.info(`[ContentGenerate] Content-only: attached ${mediaIds.length} media library images to item ${contentItemId}`);
+        }
+      } else {
+        // Tourism: full POI image search + keyword matching
+        const kws = generated.keyword_cluster || suggestion.keyword_cluster || [];
+        if (kws.length > 0) {
+          const keywordPattern = kws
+            .map(k => k.replace(/[.*+?^${}()|[\]\\%_]/g, ''))
+            .filter(k => k.length > 2)
+            .join('|');
 
-          // Search POI images (primary source — more relevant than media library)
-          const [poiImages] = await mysqlSequelize.query(
-            `SELECT DISTINCT iu.id FROM imageurls iu
-             INNER JOIN POI p ON iu.poi_id = p.id
-             WHERE p.destination_id = :destId
-             AND iu.local_path IS NOT NULL
-             AND (p.name REGEXP :pattern OR p.category REGEXP :pattern)
-             ORDER BY p.google_rating DESC, iu.display_order ASC
-             LIMIT 15`,
-            { replacements: { destId: suggestion.destination_id, pattern: keywordPattern } }
-          );
-
-          // Prefer unused images, fall back to used ones if needed
-          const unusedPoiIds = poiImages.map(p => p.id).filter(id => !usedIds.has(id));
-          const usedPoiIds = poiImages.map(p => p.id).filter(id => usedIds.has(id));
-          const allIds = [...unusedPoiIds, ...usedPoiIds].slice(0, maxImgs);
-
-          if (allIds.length > 0) {
-            await mysqlSequelize.query(
-              'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
-              { replacements: { mediaIds: JSON.stringify(allIds), id: contentItemId } }
+          if (keywordPattern) {
+            // Collect already-used image IDs to avoid duplicates across content items
+            const [usedRows] = await mysqlSequelize.query(
+              `SELECT media_ids FROM content_items WHERE destination_id = :destId AND media_ids IS NOT NULL AND media_ids != '[]' AND media_ids != 'null' AND id != :selfId`,
+              { replacements: { destId: suggestion.destination_id, selfId: contentItemId } }
             );
-            attachedImages = allIds;
-            logger.info(`[ContentGenerate] Auto-attached ${allIds.length} images (${unusedPoiIds.length} new, ${Math.max(0, allIds.length - unusedPoiIds.length)} reused) to item ${contentItemId}`);
+            const usedIds = new Set();
+            for (const row of usedRows) {
+              const ids = typeof row.media_ids === 'string' ? JSON.parse(row.media_ids) : row.media_ids;
+              if (Array.isArray(ids)) ids.forEach(id => usedIds.add(Number(String(id).replace('poi:', ''))));
+            }
+
+            // Search POI images (primary source — more relevant than media library)
+            const [poiImages] = await mysqlSequelize.query(
+              `SELECT DISTINCT iu.id FROM imageurls iu
+               INNER JOIN POI p ON iu.poi_id = p.id
+               WHERE p.destination_id = :destId
+               AND iu.local_path IS NOT NULL
+               AND (p.name REGEXP :pattern OR p.category REGEXP :pattern)
+               ORDER BY p.google_rating DESC, iu.display_order ASC
+               LIMIT 15`,
+              { replacements: { destId: suggestion.destination_id, pattern: keywordPattern } }
+            );
+
+            // Prefer unused images, fall back to used ones if needed
+            const unusedPoiIds = poiImages.map(p => p.id).filter(id => !usedIds.has(id));
+            const usedPoiIds = poiImages.map(p => p.id).filter(id => usedIds.has(id));
+            const allIds = [...unusedPoiIds, ...usedPoiIds].slice(0, maxImgs);
+
+            if (allIds.length > 0) {
+              await mysqlSequelize.query(
+                'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
+                { replacements: { mediaIds: JSON.stringify(allIds), id: contentItemId } }
+              );
+              attachedImages = allIds;
+              logger.info(`[ContentGenerate] Auto-attached ${allIds.length} images (${unusedPoiIds.length} new, ${Math.max(0, allIds.length - unusedPoiIds.length)} reused) to item ${contentItemId}`);
+            }
           }
         }
       }
@@ -10725,6 +11836,11 @@ router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['pla
     if (!poi_id) return res.status(400).json({ success: false, error: { code: 'MISSING_POI', message: 'poi_id is required' } });
 
     const destId = req.adminUser?.destination_id || req.body.destination_id || 1;
+
+    // Block for content_only destinations (no POI module)
+    if (await isContentOnly(destId)) {
+      return res.status(400).json({ success: false, error: { code: 'NOT_AVAILABLE', message: 'POI content generation is not available for Content Studio standalone destinations' } });
+    }
     const { generateFromPOI } = await import('../services/agents/contentRedacteur/contentGenerator.js');
     const results = await generateFromPOI(Number(poi_id), destId, platforms);
 
@@ -12209,11 +13325,35 @@ router.get('/content/templates', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const { getTemplates } = await import('../services/agents/contentRedacteur/contentTemplates.js');
-    const templates = getTemplates(Number(destId));
+    const templates = await getTemplates(Number(destId));
     res.json({ success: true, data: templates });
   } catch (error) {
     logger.error('[AdminPortal] Templates error:', error);
     res.status(500).json({ success: false, error: { code: 'TEMPLATES_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/tone-presets — Get tone of voice presets
+ * Query: destination_id (determines which presets are shown)
+ * Tourism: tourism presets + generic presets
+ * Content-only: only generic presets
+ */
+router.get('/content/tone-presets', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = Number(req.query.destination_id) || 1;
+    const { TONE_PRESETS } = await import('../services/agents/contentRedacteur/toneOfVoice.js');
+    const destIsContentOnly = await isContentOnly(destId);
+
+    const presets = Object.values(TONE_PRESETS).filter(p => {
+      if (destIsContentOnly) return p.category === 'generic';
+      return true; // tourism sees all presets
+    });
+
+    res.json({ success: true, data: presets });
+  } catch (error) {
+    logger.error('[AdminPortal] Tone presets error:', error);
+    res.status(500).json({ success: false, error: { code: 'TONE_PRESETS_ERROR', message: error.message } });
   }
 });
 

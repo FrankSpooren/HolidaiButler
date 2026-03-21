@@ -80,6 +80,11 @@ h4 {
   border: none !important;
 }
 
+/* Ensure Leaflet map stays below drawer overlays (z-50) */
+.leaflet-container {
+  isolation: isolate;
+}
+
 /* Drawer slide-in animation (POI detail, filter modals) */
 @keyframes slideInRight {
   from { transform: translateX(100%); }

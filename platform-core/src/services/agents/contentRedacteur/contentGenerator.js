@@ -12,6 +12,8 @@ import { buildFormatInstruction, formatForPlatform, generateHashtags, getContent
 import { sanitizeContent } from './contentSanitizer.js';
 import { translateTexts } from '../../translationService.js';
 import { analyzeContent } from '../seoMeester/seoAnalyzer.js';
+import { mysqlSequelize } from '../../../config/database.js';
+import { buildBrandContext } from './brandContext.js';
 import logger from '../../../utils/logger.js';
 
 const SEO_MINIMUM_SCORE = 80;
@@ -90,6 +92,7 @@ export async function generateContent(suggestion, options = {}) {
     contentType = suggestion.content_type || 'blog',
     platform = 'website',
     languages = [],
+    personaId = null,
   } = options;
 
   // Ensure Mistral client is initialized
@@ -106,8 +109,11 @@ export async function generateContent(suggestion, options = {}) {
   const keywords = suggestion.keyword_cluster || [];
   const modelName = embeddingService.chatModel || 'mistral-small-latest';
 
+  // Build brand context (includes profile, persona, knowledge base)
+  const brandContext = await buildBrandContext(destinationId, personaId, keywords);
+
   // Build the generation prompt — clean output, no markdown
-  const systemPrompt = buildSystemPrompt(contentType, platform, toneInstruction, keywords);
+  const systemPrompt = buildSystemPrompt(contentType, platform, toneInstruction, keywords, brandContext);
   const userPrompt = buildUserPrompt(suggestion, contentType, platform, keywords);
 
   try {
@@ -203,22 +209,43 @@ export async function generateSuggestions(trendingKeywords, destinationId) {
     throw new Error('Mistral AI client not configured');
   }
 
-  const toneInstruction = await buildToneInstruction(destinationId);
+  // Build full brand context (profile, tone, knowledge base)
+  const brandContext = await buildBrandContext(destinationId, null, trendingKeywords.map(t => t.keyword));
 
-  const systemPrompt = `You are a content strategist for a premium tourism platform.
-Analyze trending keywords and suggest content ideas.
+  // Get destination's default language for suggestion output
+  let destLang = 'en';
+  try {
+    const [[destRow]] = await mysqlSequelize.query(
+      'SELECT default_language FROM destinations WHERE id = :id',
+      { replacements: { id: Number(destinationId) } }
+    );
+    if (destRow?.default_language) destLang = destRow.default_language;
+  } catch { /* fallback to en */ }
 
-${toneInstruction}
+  const LANG_NAMES = { nl: 'Dutch', en: 'English', de: 'German', es: 'Spanish', fr: 'French' };
+  const langName = LANG_NAMES[destLang] || 'English';
+
+  const systemPrompt = `You are a content strategist for a premium content platform.
+Analyze trending keywords and suggest content ideas that align with the brand profile below.
+
+${brandContext}
+
+IMPORTANT: Write ALL titles and summaries in ${langName} (language code: ${destLang}).
+IMPORTANT: Suggestions MUST be relevant to the brand's industry, USPs, mission, and target audience described above.
+IMPORTANT: Use facts from the REFERENCE MATERIAL if available — do not invent claims.
 
 Return a JSON array of content suggestions. Each suggestion must have:
-- "title": engaging content title (in English)
-- "summary": 2-3 sentence description of the proposed content
+- "title": engaging content title (in ${langName}) — directly relevant to the brand
+- "summary": 2-3 sentence description of the proposed content (in ${langName}) — explain WHY this content fits the brand
 - "content_type": "blog" | "social_post" | "video_script"
 - "suggested_channels": array of platforms (e.g. ["website", "instagram", "facebook"])
 - "keyword_cluster": array of related keywords from the input
 - "engagement_score": estimated score 1-10 based on trend strength
 
-Generate 3-6 suggestions, mixing content types. Focus on the strongest trends.`;
+CRITICAL: Respect the CONTENT GOALS from the brand profile above.
+- If blogs_per_month = 0: do NOT generate any "blog" suggestions. Only generate "social_post" suggestions.
+- Match the number of suggestions to the content goals (e.g. 3 posts/week = suggest ~3 social post ideas).
+- Focus on the strongest trends and the brand's USPs/themes.`;
 
   const keywordsBlock = trendingKeywords
     .map(t => `- "${t.keyword}" (score: ${t.relevance_score}, direction: ${t.trend_direction}, volume: ${t.search_volume || 'N/A'})`)
@@ -263,21 +290,23 @@ Generate 3-6 suggestions, mixing content types. Focus on the strongest trends.`;
 /**
  * Build system prompt — clean output, platform-aware, no markdown
  */
-function buildSystemPrompt(contentType, platform, toneInstruction, keywords) {
+function buildSystemPrompt(contentType, platform, toneInstruction, keywords, brandContext = '') {
   const keywordsStr = keywords.length > 0
     ? `Target keywords (MUST appear in text): ${keywords.map(k => `"${k}"`).join(', ')}`
     : '';
 
-  const base = `You are an enterprise-grade content writer for a premium tourism platform.
+  const brandBlock = brandContext ? `\n${brandContext}\n` : '';
 
+  const base = `You are an enterprise-grade content writer for a premium content platform.
+${brandBlock}
 ${toneInstruction}
 
 ABSOLUTE RULES:
 - Write original, high-quality content — NO plagiarism
-- Facts must be accurate — do NOT hallucinate attractions, events, or statistics
-- Preserve proper nouns (POI names, street names, local terms)
-- EU AI Act compliance: this is AI-generated content for a tourism platform
-- Language: write in English first (translations handled separately)`;
+- Facts must be accurate — do NOT hallucinate. If reference material is provided, use those facts.
+- Preserve proper nouns (names, street names, local terms)
+- EU AI Act compliance: this is AI-generated content
+- If a target audience is specified, tailor language, tone, and content to their interests and pain points`;
 
   if (contentType === 'social_post') {
     const platformRules = PROMPT_PLATFORM_RULES[platform] || PROMPT_PLATFORM_RULES.facebook;

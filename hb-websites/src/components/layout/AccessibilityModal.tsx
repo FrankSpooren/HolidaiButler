@@ -120,8 +120,8 @@ export default function AccessibilityModal({ isOpen, onClose, locale }: Accessib
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b-2 border-gray-200">
-          <h2 className="text-xl font-bold text-gray-800">{t.title}</h2>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b-2 border-gray-200 gap-3">
+          <h2 className="text-base sm:text-xl font-bold text-gray-800 break-words leading-tight">{t.title}</h2>
           <button
             onClick={onClose}
             className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all text-3xl leading-none"

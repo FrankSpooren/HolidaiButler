@@ -19,6 +19,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { useTranslation } from 'react-i18next';
 import { useUserList, useUserCreate, useUserUpdate, useUserDeactivate, useUserDelete, useUserResetPassword } from '../hooks/useUsers.js';
 import useAuthStore from '../stores/authStore.js';
+import useDestinationStore from '../stores/destinationStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 
 const ROLE_COLORS = {
@@ -37,19 +38,26 @@ const STATUS_COLORS = {
 };
 
 const ROLES = ['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor', 'reviewer'];
-const DEST_OPTIONS = [
-  { value: 'calpe', label: 'Calpe' },
-  { value: 'texel', label: 'Texel' }
-];
+const FLAG_MAP = { 1: '🇪🇸', 2: '🇳🇱', 4: '🇧🇪', 5: '🇪🇸', 6: '🇪🇸', 7: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' };
 
 const EMPTY_FORM = {
   email: '', firstName: '', lastName: '', password: '',
-  role: 'editor', allowed_destinations: ['calpe', 'texel']
+  role: 'editor', allowed_destinations: []
 };
 
 export default function UsersPage() {
   const { t } = useTranslation();
   const currentUser = useAuthStore(s => s.user);
+
+  // Dynamic destination options from store (loaded by DestinationSelector)
+  const allDestinations = useDestinationStore(s => s.destinations);
+  const DEST_OPTIONS = allDestinations
+    .filter(d => d.status === 'active')
+    .map(d => ({ value: d.code, label: `${FLAG_MAP[d.id] || '🌍'} ${d.name}` }));
+  // Fallback if store not yet loaded
+  if (DEST_OPTIONS.length === 0) {
+    DEST_OPTIONS.push({ value: 'calpe', label: '🇪🇸 Calpe' }, { value: 'texel', label: '🇳🇱 Texel' });
+  }
 
   // Filters
   const [page, setPage] = useState(0);
@@ -311,7 +319,7 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell>
                       {(user.allowed_destinations || []).map(d => (
-                        <Chip key={d} label={d === 'calpe' ? '🇪🇸 Calpe' : '🇳🇱 Texel'} size="small" variant="outlined" sx={{ mr: 0.5 }} />
+                        <Chip key={d} label={DEST_OPTIONS.find(o => o.value === d)?.label || d} size="small" variant="outlined" sx={{ mr: 0.5 }} />
                       ))}
                     </TableCell>
                     <TableCell>
@@ -419,7 +427,7 @@ export default function UsersPage() {
                 <InputLabel>{t('users.fields.destinations')}</InputLabel>
                 <Select multiple value={formData.allowed_destinations} label={t('users.fields.destinations')}
                   onChange={e => setFormData(d => ({ ...d, allowed_destinations: e.target.value }))}
-                  renderValue={sel => sel.map(v => v === 'calpe' ? '🇪🇸 Calpe' : '🇳🇱 Texel').join(', ')}>
+                  renderValue={sel => sel.map(v => DEST_OPTIONS.find(o => o.value === v)?.label || v).join(', ')}>
                   {DEST_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                 </Select>
               </FormControl>
@@ -475,7 +483,7 @@ export default function UsersPage() {
                 <InputLabel>{t('users.fields.destinations')}</InputLabel>
                 <Select multiple value={formData.allowed_destinations || []} label={t('users.fields.destinations')}
                   onChange={e => setFormData(d => ({ ...d, allowed_destinations: e.target.value }))}
-                  renderValue={sel => sel.map(v => v === 'calpe' ? '🇪🇸 Calpe' : '🇳🇱 Texel').join(', ')}>
+                  renderValue={sel => sel.map(v => DEST_OPTIONS.find(o => o.value === v)?.label || v).join(', ')}>
                   {DEST_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                 </Select>
               </FormControl>

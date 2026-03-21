@@ -6,7 +6,7 @@ import {
   IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
   DialogActions, Button, Alert, InputAdornment, Snackbar,
   Tabs, Tab, Stepper, Step, StepLabel, Divider, List, ListItem,
-  ListItemText, ListItemIcon, Checkbox
+  ListItemText, ListItemIcon, Checkbox, Menu, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -19,7 +19,11 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PendingIcon from '@mui/icons-material/Pending';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ArchiveIcon from '@mui/icons-material/Archive';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { useTranslation } from 'react-i18next';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   usePartnerList, usePartnerDetail, usePartnerStats,
   usePartnerCreate, usePartnerUpdate, usePartnerUpdateStatus,
@@ -27,6 +31,7 @@ import {
 } from '../hooks/usePartners.js';
 import useDestinationStore from '../stores/destinationStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
+import client from '../api/client.js';
 
 const INTERMEDIARY_STATUS_COLORS = {
   voorstel: 'default',
@@ -177,6 +182,22 @@ export default function PartnersPage() {
   const [detailId, setDetailId] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
+
+  // Partner action menu + archive/delete dialogs
+  const [partnerMenuAnchor, setPartnerMenuAnchor] = useState(null);
+  const [partnerMenuTarget, setPartnerMenuTarget] = useState(null);
+  const [archivePartnerDialog, setArchivePartnerDialog] = useState(null);
+  const [deletePartnerDialog, setDeletePartnerDialog] = useState(null);
+
+  const queryClient = useQueryClient();
+  const archivePartnerMut = useMutation({
+    mutationFn: (id) => client.put(`/partners/${id}/archive`).then(r => r.data),
+    onSuccess: () => { refetch(); },
+  });
+  const deletePartnerMut = useMutation({
+    mutationFn: (id) => client.delete(`/partners/${id}`).then(r => r.data),
+    onSuccess: () => { refetch(); },
+  });
 
   // Create form
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -561,11 +582,9 @@ export default function PartnersPage() {
                   <TableCell>{p.poi_count || 0}</TableCell>
                   <TableCell><Typography variant="body2" noWrap>{p.contact_name}</Typography></TableCell>
                   <TableCell>
-                    <Tooltip title={t('common.edit')}>
-                      <IconButton size="small" onClick={e => { e.stopPropagation(); setDetailId(p.id); setEditMode(true); }}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    <IconButton size="small" onClick={e => { e.stopPropagation(); setPartnerMenuAnchor(e.currentTarget); setPartnerMenuTarget(p); }}>
+                      <MoreVertIcon fontSize="small" />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))
@@ -582,6 +601,73 @@ export default function PartnersPage() {
           rowsPerPageOptions={[10, 25, 50]}
         />
       </TableContainer>
+
+      {/* Partner Action Menu */}
+      <Menu anchorEl={partnerMenuAnchor} open={!!partnerMenuAnchor} onClose={() => { setPartnerMenuAnchor(null); setPartnerMenuTarget(null); }}>
+        <MenuItem onClick={() => { setDetailId(partnerMenuTarget?.id); setEditMode(false); setPartnerMenuAnchor(null); }}>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>{t('common.edit')}</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { setArchivePartnerDialog(partnerMenuTarget); setPartnerMenuAnchor(null); }}>
+          <ListItemIcon><ArchiveIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Archiveren</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { setDeletePartnerDialog(partnerMenuTarget); setPartnerMenuAnchor(null); }} sx={{ color: 'error.main' }}>
+          <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
+          <ListItemText>Verwijderen</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Archive Partner Dialog */}
+      <Dialog open={!!archivePartnerDialog} onClose={() => setArchivePartnerDialog(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Partner archiveren?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            <strong>{archivePartnerDialog?.company_name}</strong> wordt gearchiveerd. Data blijft behouden.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setArchivePartnerDialog(null)}>Annuleren</Button>
+          <Button variant="contained" color="warning" onClick={async () => {
+            try {
+              await archivePartnerMut.mutateAsync(archivePartnerDialog.id);
+              setSnack({ open: true, message: `${archivePartnerDialog.company_name} gearchiveerd`, severity: 'success' });
+              setArchivePartnerDialog(null);
+            } catch (err) {
+              setSnack({ open: true, message: err.response?.data?.error?.message || 'Fout', severity: 'error' });
+            }
+          }} disabled={archivePartnerMut.isPending}
+            startIcon={archivePartnerMut.isPending ? <CircularProgress size={16} /> : <ArchiveIcon />}>
+            Archiveren
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Partner Dialog */}
+      <Dialog open={!!deletePartnerDialog} onClose={() => setDeletePartnerDialog(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ color: 'error.main' }}>Partner permanent verwijderen?</DialogTitle>
+        <DialogContent>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <strong>{deletePartnerDialog?.company_name}</strong> en alle gerelateerde data (POI-koppelingen, onboarding, payouts) worden permanent verwijderd.
+          </Alert>
+          <Typography variant="body2">Dit is onomkeerbaar.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeletePartnerDialog(null)}>Annuleren</Button>
+          <Button variant="contained" color="error" onClick={async () => {
+            try {
+              await deletePartnerMut.mutateAsync(deletePartnerDialog.id);
+              setSnack({ open: true, message: `${deletePartnerDialog.company_name} verwijderd`, severity: 'success' });
+              setDeletePartnerDialog(null);
+            } catch (err) {
+              setSnack({ open: true, message: err.response?.data?.error?.message || 'Fout', severity: 'error' });
+            }
+          }} disabled={deletePartnerMut.isPending}
+            startIcon={deletePartnerMut.isPending ? <CircularProgress size={16} /> : <DeleteForeverIcon />}>
+            Permanent Verwijderen
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <CreateDialog />
       <DetailDialog />

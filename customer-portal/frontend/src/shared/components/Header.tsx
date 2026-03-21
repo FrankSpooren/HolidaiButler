@@ -114,9 +114,20 @@ export function Header() {
             title="Accessibility Options"
             aria-label="Open accessibility settings"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-            </svg>
+            <div
+              style={{
+                width: 26, height: 26,
+                background: '#3B5EAB',
+                borderRadius: 5,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="4.5" r="2.2" />
+                <path d="M12 8.5c-3.8 0-6.5.7-6.5.7l.8 2.8s1.8-.5 3.7-.6v2.1l-2.5 6.8 2.7 1 2-5.4 2 5.4 2.7-1-2.5-6.8v-2.1c1.9.1 3.7.6 3.7.6l.8-2.8S15.8 8.5 12 8.5z" />
+              </svg>
+            </div>
           </button>
 
           <div ref={hamburgerRef} className={`hamburger ${menuOpen ? 'active' : ''}`} onClick={toggleMenu}>

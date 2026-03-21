@@ -15,8 +15,15 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export function LanguageProvider({ children }: { children: ReactNode }) {
   // Get initial language from localStorage or default to 'en'
   const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('language');
     const validLanguages: Language[] = ['nl', 'en', 'de', 'es', 'sv', 'pl'];
+    // 1. URL ?lang= parameter takes priority (incoming from hb-websites links)
+    const urlLang = new URLSearchParams(window.location.search).get('lang');
+    if (urlLang && validLanguages.includes(urlLang as Language)) {
+      localStorage.setItem('language', urlLang);
+      return urlLang as Language;
+    }
+    // 2. localStorage (returning user preference)
+    const saved = localStorage.getItem('language');
     if (saved && validLanguages.includes(saved as Language)) {
       return saved as Language;
     }

@@ -19,6 +19,30 @@ export async function findLinkSuggestions(text, destinationId, maxSuggestions = 
   if (!text || !destinationId) return [];
 
   try {
+    // Check if content_only destination — no POIs available, return related content instead
+    const [[destRow]] = await mysqlSequelize.query(
+      'SELECT destination_type FROM destinations WHERE id = :id',
+      { replacements: { id: Number(destinationId) } }
+    );
+    if (destRow?.destination_type === 'content_only') {
+      // For content_only: suggest links to previously published content
+      const [relatedContent] = await mysqlSequelize.query(
+        `SELECT id, title, seo_data FROM content_items
+         WHERE destination_id = :destId AND approval_status = 'published'
+         ORDER BY published_at DESC LIMIT :lim`,
+        { replacements: { destId: Number(destinationId), lim: maxSuggestions } }
+      );
+      return relatedContent.map(c => ({
+        poiId: null,
+        poiName: null,
+        matchedTerm: c.title,
+        category: 'published_content',
+        url: `#content-${c.id}`,
+        description: c.title,
+        source: 'related_content',
+      }));
+    }
+
     // Get active POIs for this destination with names
     const [pois] = await mysqlSequelize.query(
       `SELECT id, name, category, enriched_tile_description_en

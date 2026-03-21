@@ -28,7 +28,7 @@ export default function MobileHomepage({ locale, destinationName = 'Calpe', poiC
   if (pathname !== '/' && pathname !== '') return null;
 
   return (
-    <div className="md:hidden flex flex-col gap-5 py-5" style={{ backgroundColor: '#F5F2EC' }}>
+    <div className="md:hidden flex flex-col gap-5 pb-5" style={{ backgroundColor: '#F5F2EC' }}>
       <ProgramCard locale={locale} programSize={mobileConfig?.programSize} />
       <TipOfTheDay locale={locale} />
       <TodayEvents locale={locale} destinationName={destinationName} />

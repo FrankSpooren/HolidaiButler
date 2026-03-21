@@ -62,6 +62,114 @@ const DEFAULT_TONE = {
   name: 'Generic',
 };
 
+// ============================================================
+// TONE PRESETS — selectable in BrandingPage / Onboarding
+// Tourism presets: only visible for tourism destinations
+// Generic presets: visible for ALL destinations (content_only + tourism)
+// ============================================================
+
+export const TONE_PRESETS = {
+  // --- Tourism-specific presets ---
+  tourism_warm: {
+    id: 'tourism_warm',
+    label: { en: 'Warm & Welcoming', nl: 'Warm & Gastvrij', de: 'Warm & Einladend', es: 'Cálido & Acogedor' },
+    category: 'tourism',
+    personality: 'Warm, welcoming, and sun-kissed',
+    audience: 'European tourists (30-70) seeking relaxation and culture',
+    brandValues: 'authenticity, hospitality, local charm, gastronomy',
+    adjectives: 'charming, vibrant, picturesque, authentic, inviting',
+    avoidWords: 'cheap, touristy, overcrowded, basic',
+    samplePhrases: 'Where local flavors meet stunning views, Discover the authentic heart of this destination',
+    formalAddress: 'je',
+  },
+  tourism_adventurous: {
+    id: 'tourism_adventurous',
+    label: { en: 'Adventurous & Active', nl: 'Avontuurlijk & Actief', de: 'Abenteuerlich & Aktiv', es: 'Aventurero & Activo' },
+    category: 'tourism',
+    personality: 'Adventurous, nature-loving, and energetic',
+    audience: 'Active travelers seeking outdoor experiences and nature',
+    brandValues: 'nature, adventure, sustainability, authenticity',
+    adjectives: 'windswept, unspoiled, adventurous, authentic, rugged',
+    avoidWords: 'boring, remote, empty, cold',
+    samplePhrases: 'Where nature reigns supreme, Adventure awaits around every corner',
+    formalAddress: 'je',
+  },
+  tourism_slow_living: {
+    id: 'tourism_slow_living',
+    label: { en: 'Slow Living & Mindful', nl: 'Slow Living & Bewust', de: 'Slow Living & Achtsam', es: 'Slow Living & Consciente' },
+    category: 'tourism',
+    personality: 'Slow-living, reconnecting with nature, back to basics',
+    audience: 'Families and seniors seeking tranquility and mindfulness',
+    brandValues: 'slow living, nature, family, sustainability, tranquility',
+    adjectives: 'serene, mindful, enchanting, rustic, rejuvenating',
+    avoidWords: 'boring, isolated, primitive, old-fashioned',
+    samplePhrases: 'Find peace and space, Back to the essence surrounded by nature',
+    formalAddress: 'je',
+  },
+
+  // --- Generic presets (for ALL destination types) ---
+  professional: {
+    id: 'professional',
+    label: { en: 'Professional & Authoritative', nl: 'Professioneel & Autoriteit', de: 'Professionell & Kompetent', es: 'Profesional & Autoritario' },
+    category: 'generic',
+    personality: 'Professional, authoritative, and trustworthy',
+    audience: 'Business professionals and decision makers',
+    brandValues: 'expertise, trust, innovation, quality',
+    adjectives: 'insightful, reliable, forward-thinking, precise, strategic',
+    avoidWords: 'cheap, maybe, kind of, basically, sort of',
+    samplePhrases: 'Leading the industry with proven results, Your trusted partner in excellence',
+    formalAddress: 'u',
+  },
+  friendly: {
+    id: 'friendly',
+    label: { en: 'Friendly & Approachable', nl: 'Vriendelijk & Toegankelijk', de: 'Freundlich & Zugänglich', es: 'Amigable & Accesible' },
+    category: 'generic',
+    personality: 'Friendly, approachable, and community-focused',
+    audience: 'General consumers and community members',
+    brandValues: 'accessibility, warmth, community, helpfulness',
+    adjectives: 'helpful, genuine, enthusiastic, relatable, caring',
+    avoidWords: 'complicated, exclusive, elite, advanced',
+    samplePhrases: 'We are here for you, Together we make it happen',
+    formalAddress: 'je',
+  },
+  bold: {
+    id: 'bold',
+    label: { en: 'Bold & Confident', nl: 'Gedurfd & Zelfverzekerd', de: 'Mutig & Selbstbewusst', es: 'Audaz & Seguro' },
+    category: 'generic',
+    personality: 'Bold, confident, and trend-setting',
+    audience: 'Trendsetters, early adopters, and innovators',
+    brandValues: 'innovation, disruption, authenticity, courage',
+    adjectives: 'daring, original, impactful, cutting-edge, fearless',
+    avoidWords: 'traditional, safe, conventional, ordinary',
+    samplePhrases: 'Break the mold, Redefine what is possible',
+    formalAddress: 'je',
+  },
+  informative: {
+    id: 'informative',
+    label: { en: 'Informative & Educational', nl: 'Informatief & Educatief', de: 'Informativ & Lehrreich', es: 'Informativo & Educativo' },
+    category: 'generic',
+    personality: 'Informative, educational, and evidence-based',
+    audience: 'Knowledge seekers and professionals wanting to learn',
+    brandValues: 'clarity, depth, accuracy, accessibility',
+    adjectives: 'thorough, accessible, evidence-based, structured, insightful',
+    avoidWords: 'vague, probably, we think, guessing',
+    samplePhrases: 'The facts speak for themselves, Everything you need to know',
+    formalAddress: 'u',
+  },
+  custom: {
+    id: 'custom',
+    label: { en: 'Custom (fill in yourself)', nl: 'Aangepast (zelf invullen)', de: 'Benutzerdefiniert (selbst ausfüllen)', es: 'Personalizado (rellenar)' },
+    category: 'generic',
+    personality: '',
+    audience: '',
+    brandValues: '',
+    adjectives: '',
+    avoidWords: '',
+    samplePhrases: '',
+    formalAddress: 'je',
+  },
+};
+
 // In-memory cache (refreshed on getTone)
 let toneCache = {};
 let toneCacheExpiry = 0;

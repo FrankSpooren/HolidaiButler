@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const res = await fetch(url.toString(), {
       headers: {
         'X-Destination-ID': destinationId,
-        'Accept': 'application/json',
+        'Accept-Language': request.headers.get('x-tenant-locale') ?? 'en',
       },
       next: { revalidate: 300 },
     });

@@ -1,0 +1,652 @@
+/**
+ * ChatbotWidget Styles — Exact port from customer-portal HoliBot
+ * Source: customer-portal/frontend/src/shared/components/HoliBot/
+ */
+
+/* ─── Overlay backdrop ─── */
+.holibot-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(44, 62, 80, 0.4);
+  z-index: 999997;
+  animation: holibot-fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 640px) {
+  .holibot-overlay {
+    background: rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* ─── Chat window ─── */
+.holibot-window {
+  position: fixed;
+  bottom: 100px;
+  right: 16px;
+  width: min(420px, calc(100vw - 48px));
+  max-width: 420px;
+  max-height: min(600px, calc(100vh - 180px));
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(44, 62, 80, 0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 999998;
+  will-change: transform, opacity;
+  animation: holibot-slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 640px) {
+  .holibot-window {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: auto;
+    max-width: none;
+    max-height: 85vh;
+    border-radius: 24px 24px 0 0;
+    overflow-x: hidden;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+    animation: holibot-sheetUp 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* ─── Header ─── */
+.holibot-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px 16px 0 0;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .holibot-chat-header {
+    border-radius: 24px 24px 0 0;
+    padding: 20px 14px 14px;
+  }
+}
+
+.holibot-header-logo {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #2C3E50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.holibot-header-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: 0.3px;
+}
+
+@media (max-width: 480px) {
+  .holibot-header-title {
+    font-size: 20px;
+  }
+  .holibot-header-logo {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.holibot-header-spacer {
+  flex: 1;
+}
+
+.holibot-header-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  color: white;
+}
+
+.holibot-header-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.holibot-header-btn:active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.holibot-close-btn {
+  width: 40px;
+  height: 40px;
+}
+
+/* ─── Message list ─── */
+.holibot-message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  scroll-behavior: smooth;
+}
+
+/* ─── Chat message ─── */
+.holibot-message {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  animation: holibot-messageSlideIn 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.holibot-message--user {
+  flex-direction: row-reverse;
+}
+
+.holibot-message--user .holibot-message-content {
+  align-items: flex-end;
+}
+
+.holibot-message--assistant {
+  flex-direction: row;
+}
+
+.holibot-message--assistant .holibot-message-content {
+  align-items: flex-start;
+}
+
+.holibot-message-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #2C3E50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+@media (max-width: 480px) {
+  .holibot-message-avatar {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.holibot-message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 75%;
+}
+
+@media (max-width: 480px) {
+  .holibot-message-content {
+    max-width: 85%;
+  }
+}
+
+.holibot-message-bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 480px) {
+  .holibot-message-bubble {
+    padding: 8px 12px;
+  }
+}
+
+.holibot-message--user .holibot-message-bubble {
+  background: linear-gradient(135deg, #D4AF37 0%, #C49B2A 100%);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.holibot-message--assistant .holibot-message-bubble {
+  background: white;
+  color: #2C3E50;
+  border: 1px solid #E5E7EB;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.holibot-message-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 480px) {
+  .holibot-message-text {
+    font-size: 14px;
+  }
+}
+
+.holibot-message-time {
+  font-size: 12px;
+  color: #9CA3AF;
+  padding: 0 4px;
+}
+
+/* ─── Typing indicator ─── */
+.holibot-typing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.holibot-typing span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9CA3AF;
+  animation: holibot-typingBounce 1.4s ease-in-out infinite;
+}
+
+.holibot-typing span:nth-child(1) { animation-delay: 0s; }
+.holibot-typing span:nth-child(2) { animation-delay: 0.2s; }
+.holibot-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+/* ─── Streaming cursor ─── */
+.holibot-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background-color: var(--hb-primary, #30c59b);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: holibot-cursorBlink 0.8s ease-in-out infinite;
+}
+
+/* ─── Welcome message ─── */
+.holibot-welcome-container {
+  margin-bottom: 20px;
+}
+
+.holibot-welcome-message {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.holibot-welcome-secondary {
+  padding-left: 48px;
+}
+
+@media (max-width: 480px) {
+  .holibot-welcome-secondary {
+    padding-left: 44px;
+  }
+}
+
+.holibot-welcome-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2C3E50;
+  line-height: 1.4;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .holibot-welcome-text {
+    font-size: 16px;
+  }
+}
+
+.holibot-welcome-text-secondary {
+  font-size: 15px;
+  font-weight: 400;
+  color: #5A6C7D;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .holibot-welcome-text-secondary {
+    font-size: 14px;
+  }
+}
+
+.holibot-welcome-animate {
+  animation: holibot-welcomeFadeIn 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Quick replies ─── */
+.holibot-quick-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding-left: 44px;
+  scroll-behavior: smooth;
+}
+
+@media (max-width: 768px) {
+  .holibot-quick-replies {
+    gap: 6px;
+    padding-left: 0;
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+}
+
+.holibot-quick-reply-button {
+  width: 100%;
+  padding: 12px 16px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2C3E50;
+  background: white;
+  border: 1.5px solid #D4AF37;
+  border-radius: 20px;
+  cursor: pointer;
+  outline: none;
+  text-align: center;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+  user-select: none;
+  transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+@media (max-width: 768px) {
+  .holibot-quick-reply-button {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+}
+
+.holibot-quick-reply-button.visible {
+  animation: holibot-smoothFadeIn 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.holibot-quick-reply-button:nth-child(1).visible { animation-delay: 0ms; }
+.holibot-quick-reply-button:nth-child(2).visible { animation-delay: 150ms; }
+.holibot-quick-reply-button:nth-child(3).visible { animation-delay: 300ms; }
+.holibot-quick-reply-button:nth-child(4).visible { animation-delay: 450ms; }
+
+.holibot-quick-reply-button:hover {
+  background: #FFF8E7;
+  border-color: #C49B2A;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.25);
+}
+
+.holibot-quick-reply-button:active {
+  transform: scale(0.98) !important;
+  background: #D4AF37;
+  color: white;
+}
+
+.holibot-quick-reply-button:focus-visible {
+  outline: 3px solid #D4AF37;
+  outline-offset: 2px;
+}
+
+/* ─── Input area ─── */
+.holibot-input-area {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 16px;
+  background: white;
+  border-top: 1px solid #E8EAED;
+  border-radius: 0 0 16px 16px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .holibot-input-area {
+    padding: 12px;
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    border-radius: 0;
+  }
+}
+
+.holibot-input-field {
+  flex: 1;
+  min-height: 40px;
+  max-height: 120px;
+  padding: 10px 12px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #2C3E50;
+  background: #F8F9FA;
+  border: 2px solid var(--hb-primary, #30c59b);
+  border-radius: 8px;
+  resize: none;
+  outline: none;
+  transition: border-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.holibot-input-field:focus {
+  border-color: #6D8F7F;
+}
+
+.holibot-input-field::placeholder {
+  color: #9CA3AF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.holibot-send-button {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #D4AF37 0%, #C49B2A 100%);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  will-change: transform;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.holibot-send-button:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.holibot-send-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.holibot-send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.holibot-send-button:focus-visible {
+  outline: 3px solid #D4AF37;
+  outline-offset: 2px;
+}
+
+.holibot-voice-button {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #9CA3AF;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  transition: color 200ms ease, background-color 200ms ease;
+}
+
+.holibot-voice-button:hover {
+  color: var(--hb-primary, #30c59b);
+}
+
+.holibot-voice-button.listening {
+  background: #EF4444;
+  color: white;
+  animation: holibot-pulse 1.5s ease-in-out infinite;
+}
+
+.holibot-voice-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── FAB ─── */
+.holibot-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999999;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  will-change: transform;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  animation: holibot-fabFloat 3s ease-in-out infinite;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  color: white;
+}
+
+/* Only show FAB on desktop (md+) */
+@media (min-width: 769px) {
+  .holibot-fab {
+    display: flex;
+  }
+}
+
+.holibot-fab:hover {
+  animation-play-state: paused;
+  transform: scale(1.1);
+}
+
+.holibot-fab:active {
+  animation-play-state: paused;
+  transform: scale(0.95);
+}
+
+.holibot-fab:focus-visible {
+  outline: 3px solid var(--hb-primary, #30c59b);
+  outline-offset: 4px;
+}
+
+/* ─── Keyframes ─── */
+@keyframes holibot-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes holibot-slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes holibot-messageSlideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes holibot-typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-8px); }
+}
+
+@keyframes holibot-cursorBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@keyframes holibot-welcomeFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes holibot-smoothFadeIn {
+  0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+  60% { opacity: 1; transform: translateY(-2px) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes holibot-sheetUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes holibot-fabFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes holibot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .holibot-message,
+  .holibot-window,
+  .holibot-overlay,
+  .holibot-welcome-animate,
+  .holibot-quick-reply-button.visible,
+  .holibot-fab,
+  .holibot-sheetUp {
+    animation: none !important;
+  }
+  .holibot-quick-reply-button.visible {
+    opacity: 1;
+    transform: none;
+  }
+  .holibot-typing span {
+    animation: none;
+  }
+  .holibot-cursor {
+    animation: none;
+    opacity: 1;
+  }
+}

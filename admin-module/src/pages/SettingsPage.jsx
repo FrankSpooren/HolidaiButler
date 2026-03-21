@@ -4,7 +4,8 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   TablePagination, Dialog, DialogTitle, DialogContent, DialogActions,
   Alert, Select, MenuItem, FormControl, InputLabel, Snackbar,
-  IconButton, Tooltip, TextField
+  IconButton, Tooltip, TextField, Menu, ListItemIcon, ListItemText,
+  CircularProgress
 } from '@mui/material';
 import StorageIcon from '@mui/icons-material/Storage';
 import MemoryIcon from '@mui/icons-material/Memory';
@@ -18,10 +19,18 @@ import PaletteIcon from '@mui/icons-material/Palette';
 import UndoIcon from '@mui/icons-material/Undo';
 import SaveIcon from '@mui/icons-material/Save';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ArchiveIcon from '@mui/icons-material/Archive';
+import UnarchiveIcon from '@mui/icons-material/Unarchive';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import PublicIcon from '@mui/icons-material/Public';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSettings, useAuditLog, useClearCache, useUndoAction, useBranding, useUpdateBranding, useUploadLogo } from '../hooks/useSettings.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatDate } from '../utils/formatters.js';
+import client from '../api/client.js';
 
 const LANGUAGES = [
   { code: 'nl', flag: '🇳🇱' },
@@ -101,39 +110,8 @@ export default function SettingsPage() {
         </Grid>
       </Grid>
 
-      {/* Destination Data */}
-      {!isLoading && destinations && (
-        <>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
-            {t('settings.destinations.title')}
-          </Typography>
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            {Object.entries(destinations).map(([code, dest]) => (
-              <Grid item xs={12} md={6} key={code}>
-                <Card sx={{ p: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                    {code === 'texel' ? '🇳🇱 Texel' : '🇪🇸 Calpe'}
-                  </Typography>
-                  <Grid container spacing={1}>
-                    <Grid item xs={4}>
-                      <Typography variant="caption" color="text.secondary">POIs</Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 700 }}>{dest.poiCount}</Typography>
-                    </Grid>
-                    <Grid item xs={4}>
-                      <Typography variant="caption" color="text.secondary">Reviews</Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 700 }}>{dest.reviewCount}</Typography>
-                    </Grid>
-                    <Grid item xs={4}>
-                      <Typography variant="caption" color="text.secondary">ChromaDB</Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 700 }}>{dest.chromaCollection || '—'}</Typography>
-                    </Grid>
-                  </Grid>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </>
-      )}
+      {/* Destination Management */}
+      <DestinationManagement />
 
       {/* Branding */}
       <BrandingSection />
@@ -492,6 +470,232 @@ function BrandingSection() {
         onClose={() => setSnack(null)}
         message={snack}
       />
+    </>
+  );
+}
+
+/* ===== Destination Management ===== */
+function DestinationManagement() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [menuDest, setMenuDest] = useState(null);
+  const [archiveDialog, setArchiveDialog] = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState(null);
+  const [deletePreview, setDeletePreview] = useState(null);
+  const [confirmName, setConfirmName] = useState('');
+  const [snack, setSnack] = useState(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['destinations-manage'],
+    queryFn: () => client.get('/destinations').then(r => r.data),
+    staleTime: 30 * 1000,
+  });
+  const destinations = data?.data?.destinations || [];
+
+  const archiveMut = useMutation({
+    mutationFn: (id) => client.put(`/destinations/${id}/archive`).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['destinations-manage'] }); queryClient.invalidateQueries({ queryKey: ['destinations-list'] }); },
+  });
+  const restoreMut = useMutation({
+    mutationFn: (id) => client.put(`/destinations/${id}/restore`).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['destinations-manage'] }); queryClient.invalidateQueries({ queryKey: ['destinations-list'] }); },
+  });
+  const deleteMut = useMutation({
+    mutationFn: ({ id, name }) => client.delete(`/destinations/${id}?confirm=${encodeURIComponent(`PERMANENT_DELETE_${name}`)}`).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['destinations-manage'] }); queryClient.invalidateQueries({ queryKey: ['destinations-list'] }); },
+  });
+
+  const handleOpenMenu = (e, dest) => { e.stopPropagation(); setMenuAnchor(e.currentTarget); setMenuDest(dest); };
+  const handleCloseMenu = () => { setMenuAnchor(null); setMenuDest(null); };
+
+  const handleArchive = async () => {
+    try {
+      await archiveMut.mutateAsync(archiveDialog.id);
+      setSnack(`${archiveDialog.name} gearchiveerd`);
+      setArchiveDialog(null);
+    } catch (err) { setSnack(err.response?.data?.error?.message || 'Fout bij archiveren'); }
+  };
+
+  const handleRestore = async (dest) => {
+    try {
+      await restoreMut.mutateAsync(dest.id);
+      setSnack(`${dest.name} hersteld`);
+    } catch (err) { setSnack(err.response?.data?.error?.message || 'Fout bij herstellen'); }
+  };
+
+  const openDeleteDialog = async (dest) => {
+    setDeleteDialog(dest);
+    setConfirmName('');
+    try {
+      const { data: preview } = await client.get(`/destinations/${dest.id}/delete-preview`);
+      setDeletePreview(preview.data);
+    } catch { setDeletePreview(null); }
+  };
+
+  const handleHardDelete = async () => {
+    try {
+      await deleteMut.mutateAsync({ id: deleteDialog.id, name: deleteDialog.name });
+      setSnack(`${deleteDialog.name} permanent verwijderd`);
+      setDeleteDialog(null);
+      setDeletePreview(null);
+    } catch (err) { setSnack(err.response?.data?.error?.message || 'Fout bij verwijderen'); }
+  };
+
+  const FLAG_MAP = { 1: '🇪🇸', 2: '🇳🇱', 4: '🇧🇪', 5: '🇪🇸', 6: '🇪🇸', 7: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' };
+
+  return (
+    <>
+      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
+        <PublicIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'text-bottom' }} />
+        Destinations Beheer
+      </Typography>
+
+      <TableContainer component={Paper} sx={{ mb: 3 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
+              <TableCell>ID</TableCell>
+              <TableCell>Naam</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Code</TableCell>
+              <TableCell>Domein</TableCell>
+              <TableCell width={50}></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {isLoading ? Array.from({ length: 3 }).map((_, i) => (
+              <TableRow key={i}>{Array.from({ length: 7 }).map((_, j) => <TableCell key={j}><Skeleton /></TableCell>)}</TableRow>
+            )) : destinations.map(d => (
+              <TableRow key={d.id} hover sx={{ opacity: d.status === 'archived' ? 0.55 : 1 }}>
+                <TableCell>{d.id}</TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography variant="body2">{FLAG_MAP[d.id] || '🌍'}</Typography>
+                    <Typography variant="body2" fontWeight={600}>{d.name}</Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    size="small"
+                    label={d.destinationType === 'content_only' ? 'Content Studio' : 'Tourism'}
+                    color={d.destinationType === 'content_only' ? 'info' : 'default'}
+                    icon={d.destinationType === 'content_only' ? <AutoAwesomeIcon /> : <PublicIcon />}
+                    variant="outlined"
+                    sx={{ '& .MuiChip-icon': { fontSize: 14 } }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Chip size="small"
+                    label={d.status === 'archived' ? 'Gearchiveerd' : 'Actief'}
+                    color={d.status === 'archived' ? 'warning' : 'success'}
+                  />
+                </TableCell>
+                <TableCell><Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 12 }}>{d.code}</Typography></TableCell>
+                <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>{d.domain || '—'}</Typography></TableCell>
+                <TableCell>
+                  <IconButton size="small" onClick={e => handleOpenMenu(e, d)}>
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Action Menu */}
+      <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={handleCloseMenu}>
+        {menuDest?.status === 'active' && (
+          <MenuItem onClick={() => { setArchiveDialog(menuDest); handleCloseMenu(); }}>
+            <ListItemIcon><ArchiveIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Archiveren</ListItemText>
+          </MenuItem>
+        )}
+        {menuDest?.status === 'archived' && (
+          <MenuItem onClick={() => { handleRestore(menuDest); handleCloseMenu(); }}>
+            <ListItemIcon><UnarchiveIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText>Herstellen</ListItemText>
+          </MenuItem>
+        )}
+        {menuDest && ![1, 2].includes(menuDest.id) && (
+          <MenuItem onClick={() => { openDeleteDialog(menuDest); handleCloseMenu(); }} sx={{ color: 'error.main' }}>
+            <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
+            <ListItemText>Permanent verwijderen</ListItemText>
+          </MenuItem>
+        )}
+        {menuDest && [1, 2].includes(menuDest.id) && (
+          <MenuItem disabled>
+            <ListItemText sx={{ color: 'text.disabled' }}>Beschermd (kern-bestemming)</ListItemText>
+          </MenuItem>
+        )}
+      </Menu>
+
+      {/* Archive Confirmation */}
+      <Dialog open={!!archiveDialog} onClose={() => setArchiveDialog(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Destination archiveren?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            <strong>{archiveDialog?.name}</strong> wordt gearchiveerd. De destination verdwijnt uit de dropdown voor alle gebruikers (behalve platform admins). Alle data blijft behouden en kan later hersteld worden.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setArchiveDialog(null)}>Annuleren</Button>
+          <Button variant="contained" color="warning" onClick={handleArchive} disabled={archiveMut.isPending}
+            startIcon={archiveMut.isPending ? <CircularProgress size={16} /> : <ArchiveIcon />}>
+            Archiveren
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Hard Delete — Two-step confirmation */}
+      <Dialog open={!!deleteDialog} onClose={() => { setDeleteDialog(null); setDeletePreview(null); }} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ color: 'error.main' }}>Permanent verwijderen</DialogTitle>
+        <DialogContent>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            Dit is <strong>ONOMKEERBAAR</strong>. Alle data van <strong>{deleteDialog?.name}</strong> wordt permanent verwijderd.
+          </Alert>
+
+          {deletePreview && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Wat wordt verwijderd:</Typography>
+              <Grid container spacing={1}>
+                {Object.entries(deletePreview.willDelete || {}).filter(([, v]) => v > 0).map(([table, count]) => (
+                  <Grid item xs={6} key={table}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, py: 0.5, bgcolor: 'action.hover', borderRadius: 1 }}>
+                      <Typography variant="body2">{table}</Typography>
+                      <Typography variant="body2" fontWeight={600} color="error">{count}</Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+              {Object.values(deletePreview.willDelete || {}).every(v => v === 0) && (
+                <Typography variant="body2" color="text.secondary">Geen gerelateerde data gevonden.</Typography>
+              )}
+            </Box>
+          )}
+
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            Typ <strong>{deleteDialog?.name}</strong> om te bevestigen:
+          </Typography>
+          <TextField
+            fullWidth size="small" value={confirmName} onChange={e => setConfirmName(e.target.value)}
+            placeholder={deleteDialog?.name} autoFocus
+            error={confirmName.length > 0 && confirmName !== deleteDialog?.name}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setDeleteDialog(null); setDeletePreview(null); }}>Annuleren</Button>
+          <Button variant="contained" color="error" onClick={handleHardDelete}
+            disabled={confirmName !== deleteDialog?.name || deleteMut.isPending}
+            startIcon={deleteMut.isPending ? <CircularProgress size={16} /> : <DeleteForeverIcon />}>
+            Permanent Verwijderen
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={!!snack} autoHideDuration={4000} onClose={() => setSnack(null)} message={snack} />
     </>
   );
 }

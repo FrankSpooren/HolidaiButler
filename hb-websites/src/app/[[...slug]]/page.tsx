@@ -28,6 +28,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const pageSlug = slug?.join('/') || 'home';
 
   try {
+    // Homepage: return basic metadata without fetching page (page may not exist in DB)
+    if (pageSlug === 'home') {
+      const tenant = await fetchTenantConfig(tenantSlug);
+      if (!tenant) return { title: 'HolidaiButler' };
+      return {
+        title: tenant.displayName,
+        description: tenant.branding?.payoff?.[locale] ?? tenant.branding?.payoff?.en ?? '',
+      };
+    }
     const [tenant, page] = await Promise.all([
       fetchTenantConfig(tenantSlug),
       fetchPage(tenantSlug, pageSlug, locale),
@@ -81,6 +90,21 @@ export default async function Page({ params }: PageProps) {
   const locale = headersList.get('x-tenant-locale') ?? 'en';
   const pageSlug = slug?.join('/') || 'home';
 
+  // Homepage: skip page-builder blocks — content handled by MobileHomepage in layout.tsx
+  if (pageSlug === 'home') {
+    const tenant = await fetchTenantConfig(tenantSlug);
+    if (!tenant) notFound();
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://holidaibutler.com';
+    const jsonLd = generateWebSiteJsonLd(tenant, baseUrl);
+    const breadcrumbLd = generateBreadcrumbJsonLd([{ name: tenant.displayName, url: baseUrl }]);
+    return (
+      <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      </>
+    );
+  }
+
   const [tenant, page] = await Promise.all([
     fetchTenantConfig(tenantSlug),
     fetchPage(tenantSlug, pageSlug, locale),
@@ -90,22 +114,16 @@ export default async function Page({ params }: PageProps) {
     notFound();
   }
 
-  const blocks = page.layout?.blocks ?? [];
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://holidaibutler.com';
+
+  const blocks = page.layout?.blocks ?? [];
 
   // JSON-LD structured data
   const jsonLdItems: object[] = [];
 
-  // WebSite schema on homepage
-  if (pageSlug === 'home') {
-    jsonLdItems.push(generateWebSiteJsonLd(tenant, baseUrl));
-  }
-
   // Breadcrumb
   const breadcrumbs = [{ name: tenant.displayName, url: baseUrl }];
-  if (pageSlug !== 'home') {
-    breadcrumbs.push({ name: page.title ?? pageSlug, url: `${baseUrl}/${pageSlug}` });
-  }
+  breadcrumbs.push({ name: page.title ?? pageSlug, url: `${baseUrl}/${pageSlug}` });
   jsonLdItems.push(generateBreadcrumbJsonLd(breadcrumbs));
 
   return (

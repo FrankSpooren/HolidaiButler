@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function ScrollToTop() {
   const [visible, setVisible] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 400);
@@ -11,6 +13,8 @@ export default function ScrollToTop() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Hide on homepage (conflicts with bottom nav + chatbot)
+  if (pathname === '/' || pathname === '') return null;
   if (!visible) return null;
 
   return (
