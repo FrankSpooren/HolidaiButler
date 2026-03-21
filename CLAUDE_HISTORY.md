@@ -5314,4 +5314,57 @@ CLAUDE.md v4.14.0 → v4.15.0. MS v7.74 → v7.75.
 
 ---
 
+---
+
+### v4.16.0 — Standalone Content Studio + Merk Profiel & Knowledge Base (21 maart 2026)
+
+**Twee commands geïmplementeerd in één sessie:**
+
+#### Command 1: Standalone Content Studio Module (9 opdrachten)
+- **Opdracht 1**: `destination_type` ENUM (tourism/content_only) + `status` ENUM (active/archived/deleted) + `archived_at`/`deleted_at` kolommen op destinations tabel
+- **Opdracht 2**: `CONTENT_ONLY_DEFAULT_FLAGS`, `isContentOnly()` helper, generate-from-poi blokkade, POI auto-detect skip, image auto-attach alleen Media Library, onboarding content_only flow
+- **Opdracht 3**: Sidebar feature flag-based visibility (hasPOI, hasEvents, hasCommerce, etc.), DestinationSelector dynamisch uit API, destinationStore uitgebreid met destinations array + getSelectedFeatureFlags()
+- **Opdracht 4**: imageSelector.js skip POI images voor content_only, ContentStudioPage dynamische destination selector, "Media Suggesties" label, "Gerelateerde content" SEO label
+- **Opdracht 5**: internalLinker.js graceful fallback (related content i.p.v. POI links), SEO analyse werkt zonder POIs
+- **Opdracht 6**: 10 generieke content templates (5 blog + 5 social), contentTemplates.js v2.0 async met destination_type check
+- **Opdracht 7**: 8 tone of voice presets (3 tourism + 5 generic), GET /content/tone-presets endpoint
+- **Opdracht 8**: OnboardingPage.jsx volledig herschreven (destination type keuze, 4-stappen content_only flow, Content Configuratie stap, Bevestiging stap)
+- **Opdracht 9**: 7 destination lifecycle endpoints (archive/restore/delete-preview/hard-delete) + 2 partner lifecycle endpoints, SettingsPage DestinationManagement UI, PartnersPage actiemenu
+
+#### Command 2: Merk Profiel & Knowledge Base (opdrachten 1-5+)
+- **Opdracht 1**: 3 DB tabellen (audience_personas, brand_knowledge, brand_competitors) + destinations.brand_profile JSON kolom
+- **Opdracht 2**: 14 brand-profile API endpoints (profiel CRUD, personas CRUD, knowledge CRUD, competitors CRUD+analyze, website analyze)
+- **Opdracht 3**: Document upload endpoint (PDF via pdf-parse, DOCX via mammoth, TXT/CSV), brandContext.js (profiel+tone+persona+knowledge assembler), contentGenerator.js integratie met buildBrandContext + persona_id
+- **Opdracht 4**: MerkProfielSections.jsx (7 MUI accordions), brandProfileService.js (13 API methods), BrandingPage integratie (Merk Profiel boven visuele identiteit, content_only verbergt visuele secties)
+- **Opdracht 5**: Doelgroep-selector in GenerateContentDialog (persona_id doorgestuurd naar AI)
+
+#### Additionele fixes:
+- UsersPage: dynamische destination dropdown (was hardcoded Calpe/Texel)
+- Sidebar: destination_admin feature flag enforcement (niet alleen bij dropdown selectie)
+- Dashboard: content_only user ziet alleen QuickLinks, platform KPIs/health/agents verborgen
+- ContentStudio/Media/Branding: gescopet op user's allowed_destinations
+- QuickLinks: feature flag + RBAC filtering
+- Branding RBAC: destination_admin mag opslaan (was platform_admin only)
+- Content suggesties: in destination's default_language (was hardcoded Engels)
+- Content suggesties: buildBrandContext() geïntegreerd (profiel+knowledge+goals als AI context)
+- Content goals: blogs_per_month=0 → geen blog suggesties, posts_per_week meenemen
+- Website-analyse: output in destination-taal, "Overnemen in profiel" knop (USPs→profiel, toon→toneOfVoice, thema's→SEO keywords)
+- Tone of Voice: 8 inline velden in Merk Profiel (was pointer naar visuele identiteit)
+- Onboarding → Merk Profiel: tone preset, doelgroep, aanspreekstijl, contactpersoon automatisch doorgezet
+- Media upload: 10→50 bestanden, timeout 15s→5min
+- content_suggestions.status ENUM: 'deleted' waarde toegevoegd
+- Logo upload: DB lookup i.p.v. hardcoded DEFAULT_BRAND_CONFIG check
+
+**Bestanden gewijzigd/nieuw**:
+- platform-core: adminPortal.js, contentGenerator.js, contentTemplates.js, imageSelector.js, internalLinker.js, toneOfVoice.js, brandContext.js (nieuw)
+- admin-module: OnboardingPage.jsx, BrandingPage.jsx, Sidebar.jsx, DestinationSelector.jsx, DashboardPage.jsx, ContentStudioPage.jsx, MediaPage.jsx, UsersPage.jsx, PartnersPage.jsx, SettingsPage.jsx, QuickLinks.jsx, destinationStore.js, MerkProfielSections.jsx (nieuw), brandProfileService.js (nieuw), + i18n 4 talen
+
+**Database**: 3 nieuwe tabellen + 4 ALTER TABLE destinations (destination_type, status, archived_at, deleted_at, brand_profile). npm packages: pdf-parse, mammoth.
+
+**Endpoints**: 212 → 234 (+22). adminPortal.js v3.35.0.
+
+CLAUDE.md v4.15.0 → v4.16.0. MS v7.75 → v7.76.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
