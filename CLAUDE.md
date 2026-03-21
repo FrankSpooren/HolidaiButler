@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.15.0
+> **Versie**: 4.16.0
 > **Laatst bijgewerkt**: 21 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -139,7 +139,23 @@ HolidaiButler/
 | WarreWijzer | 4 | warrewijzer.be | Conform warredal.be |
 
 ### Database Multi-Tenancy
-Alle tabellen met destination-specifieke data hebben `destination_id` kolom: POI, QnA, agenda, Users, user_journeys, holibot_sessions, poi_content_staging, reviews, payment_transactions, payment_refunds, tickets, ticket_inventory, ticket_orders, ticket_order_items, voucher_codes, reservation_slots, guest_profiles, reservations, poi_apify_raw, intermediary_transactions, settlement_batches, partner_payouts, credit_notes, financial_audit_log, media, trending_data, content_suggestions, content_items, content_performance, seasonal_config, social_accounts.
+Alle tabellen met destination-specifieke data hebben `destination_id` kolom: POI, QnA, agenda, Users, user_journeys, holibot_sessions, poi_content_staging, reviews, payment_transactions, payment_refunds, tickets, ticket_inventory, ticket_orders, ticket_order_items, voucher_codes, reservation_slots, guest_profiles, reservations, poi_apify_raw, intermediary_transactions, settlement_batches, partner_payouts, credit_notes, financial_audit_log, media, trending_data, content_suggestions, content_items, content_performance, seasonal_config, social_accounts, audience_personas, brand_knowledge, brand_competitors.
+
+### Standalone Content Studio Module
+- **destination_type**: ENUM `tourism` | `content_only` op destinations tabel
+- **destination status**: ENUM `active` | `archived` | `deleted` + soft-delete/restore/hard-delete endpoints
+- **content_only** destinations: alleen Content Studio + Media Library + Branding (geen POI, Events, Commerce, Chatbot, Pages)
+- **Sidebar**: feature flag-based filtering (hasPOI, hasEvents, hasCommerce, etc.)
+- **Dashboard/Media/Branding/ContentStudio**: gescopet op user's allowed_destinations
+
+### Merk Profiel & Knowledge Base
+- **brand_profile** JSON kolom op destinations: company info, missie, visie, USPs, kernwaarden, SEO keywords, content goals
+- **audience_personas** tabel: doelgroepprofielen met leeftijd, locatie, interesses, pijnpunten, toon-notities
+- **brand_knowledge** tabel: Knowledge Base documenten (PDF/DOCX/TXT/URL parsing), tekst-chunks voor AI context
+- **brand_competitors** tabel: concurrent-analyse met Mistral AI website scan
+- **brandContext.js**: assembleert volledige merk context (profiel + tone + persona + knowledge) voor elke AI content generatie
+- **Website-analyse**: scan URL → toon/thema's/USPs/schrijfstijl → "Overnemen in profiel" knop → auto-seed Merk Profiel + Tone of Voice
+- **Onboarding → Merk Profiel**: tone preset, doelgroep, aanspreekstijl, contactpersoon automatisch doorgezet
 
 ### Routing
 ```
@@ -466,10 +482,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.30.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.35.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 212 admin endpoints (incl. 15 ticketing/voucher + 13 reservation/guest + 10 commerce + 7 partner + 11 intermediary + 20 financial + 8 branding/pages/navigation + 3 V.6 endpoints + 1 Wave 1 block image upload + 4 media CRUD + 1 page duplicate + 3 page revisions + 1 onboarding + 3 content trending + 3 content suggestions + 7 content items + 1 content improve + 17 content publishing/calendar/social/seasons + 3 content analytics + 16 content workflow/pillars/bulk + 3 content templates/retry/brand-score + 2 content image attach/detach)
+- **Endpoints**: 234 admin endpoints (+22: 7 destination lifecycle, 2 partner lifecycle, 1 tone-presets, 14 brand-profile CRUD, 1 knowledge upload, -3 overlap)
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -653,9 +669,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **4.15.0** | **2026-03-21** | **Command v16.0: Mobiele Homepage Quality — 14 Punten + Extra's**. 503 API fix (adminPortal.js syntax error). Onboarding buttons conform template (rounded-xl, Inter). Map category IDs fix. Profiel→login na onboarding. Leaflet z-index isolation. ProgramCard time-of-day (ochtend/middag/avond). 24h klok fix. Onboarding dismissed→sessionStorage. CTA→itinerary wizard direct. 1 platform-core + 6 hb-websites bestanden. MS v7.75. |
+| **4.16.0** | **2026-03-21** | **Standalone Content Studio + Merk Profiel & Knowledge Base**. Twee commands geïmplementeerd: (1) Standalone Content Studio Module (9 opdrachten): destination_type ENUM, content_only feature flags, sidebar module-zichtbaarheid, image selector fallback, SEO graceful fallback, 10 generieke templates, 8 tone presets, onboarding content_only pad (4 stappen), destination/partner archive+delete lifecycle (7 endpoints). (2) Merk Profiel & Knowledge Base (opdrachten 1-5+): 3 DB tabellen (audience_personas, brand_knowledge, brand_competitors), 15 API endpoints, MerkProfielSections component (7 accordions: Bedrijfsprofiel, Missie/Visie/Waarden, Doelgroepen CRUD, Tone of Voice 8 velden, Knowledge Base upload+URL, Concurrenten+analyse, Content Strategie), brandContext.js (assembleert profiel+tone+persona+knowledge voor AI), website-analyse met "Overnemen in profiel" knop, doelgroep-selector in GenerateContentDialog, content_goals (blogs/posts) in suggestie-prompt. Fixes: destination scoping (Dashboard/Media/Branding/ContentStudio gescopet op user), sidebar feature flags voor destination_admin, QuickLinks RBAC, UsersPage dynamische destinations, branding RBAC destination_admin, suggesties in destination-taal, media upload 50 bestanden/5min timeout. 234 endpoints (+22). adminPortal.js v3.35.0. MS v7.76. |
+| **4.15.0** | **2026-03-21** | **Command v16.0: Mobiele Homepage Quality — 14 Punten + Extra's**. 503 API fix, onboarding buttons, map category IDs, profiel→login, Leaflet z-index, ProgramCard time-of-day, 24h klok, sessionStorage, CTA→wizard. MS v7.75. |
 | **4.14.0** | **2026-03-20** | **Fase VI-B Feedback: 7 Fixes**. Inter font, Tip deep links, language params, WCAG, hamburger menu, CALPETRIP font, bottom nav SVGs. 6 bestanden. Commit 5d3bb00. MS v7.74. |
-| **4.13.0** | **2026-03-18** | **Fase VI-B Mobile Homepage & Onboarding — 7 Blokken**. MobileBottomNav, OnboardingSheet, MobileHeader, ProgramCard, TipOfTheDay, TodayEvents, MapPreview. 9+4 bestanden (1.712 LOC). Commit be8cc00. MS v7.73. |
 
 > **Volledige changelog (v3.0.0 - v3.38.0)**: zie CLAUDE_HISTORY.md
 
@@ -665,7 +681,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.75 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.76 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
