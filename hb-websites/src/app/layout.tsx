@@ -142,12 +142,13 @@ export default async function RootLayout({
           <MobileHomepage
             locale={locale}
             destinationName={tenant?.displayName || 'Calpe'}
+            destinationSlug={tenantSlug}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             mobileConfig={(tenant?.branding as any)?.mobileHomepage}
           />
         </main>
         {tenant && (
-          <div className={(tenant.branding as any)?.mobileHomepage ? 'hidden md:block' : ''}>
+          <div className="hidden md:block">
             <Footer tenant={tenant} locale={locale} />
           </div>
         )}

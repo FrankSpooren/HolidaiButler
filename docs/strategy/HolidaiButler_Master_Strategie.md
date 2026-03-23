@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 23 maart 2026
-**Versie**: 7.78
+**Versie**: 7.79
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Content Studio Kwaliteitsaudit COMPLEET** (12 opdrachten: RBAC 6 rollen, Social Score 7 modellen, score calibratie, 3 differentiator features). **3 USP Features LIVE**: AI Kalender Auto-Fill, One-Click Campagne (volledige pipeline), Slimme Publicatie-Wachtrij — features die geen concurrent biedt. Image pipeline gefixed (media library + POI dual-resolve). SEO scoring NL/DE/ES verbeterd (75→97 A+). 240 endpoints. CLAUDE.md v4.18.0. MS v7.78.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Mobiele Homepage Quality + Social Login + CalpeTrip Branding COMPLEET**. Google Sign-In + Facebook Login live (OAuth token verificatie, account linking). CalpeTrip branding consistent op alle pagina's. Chatbot→CalpeChat (bottom-sheet, user-icoon). Onboarding personalisatie (ProgramCard + TipOfTheDay + ItineraryWizard). ForgotPasswordPage + password toggle + email suggesties. 240 endpoints. CLAUDE.md v4.19.0. MS v7.79.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1724,4 +1724,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 23 maart 2026 — Content Studio Kwaliteitsaudit COMPLEET (12 opdrachten). 3 USP features: AI Kalender Auto-Fill, One-Click Campagne, Slimme Publicatie-Wachtrij. Image pipeline fix. SEO scoring NL/DE/ES verbeterd. Admin Portal: 240 endpoints, adminPortal.js v3.37.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.18.0. MS v7.78.*
+*Laatst bijgewerkt: 23 maart 2026 — Mobiele Homepage Quality + Social Login + CalpeTrip Branding. Google Sign-In + Facebook Login live. CalpeChat chatbot rebranding. Onboarding personalisatie. ForgotPasswordPage. DB: oauth_provider kolommen. Admin Portal: 240 endpoints, adminPortal.js v3.37.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.19.0. MS v7.79.*

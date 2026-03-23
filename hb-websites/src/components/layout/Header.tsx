@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { TenantConfig } from '@/types/tenant';
-import { resolveAssetUrl } from '@/lib/assets';
+
 import Nav from './Nav';
 import WcagButton from '@/components/ui/WcagButton';
 
@@ -32,6 +32,12 @@ interface ConfigNavItem {
   sortOrder?: number;
   style?: NavItemStyle;
 }
+
+/* ── Brand name mapping (destination-specific, matches MobileHeader) ── */
+const BRAND_NAMES: Record<string, string> = {
+  calpe: 'CALPETRIP',
+  texel: 'TEXELMAPS',
+};
 
 /** Hardcoded fallback when no nav_items are configured in Admin Portal */
 function getDefaultNavItems(locale: string): NavItem[] {
@@ -87,20 +93,14 @@ export default function Header({ tenant, locale }: HeaderProps) {
     <header className={headerClasses}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 relative">
-          {/* Logo + payoff */}
+          {/* Brand name + payoff */}
           <Link href="/" className="flex items-center gap-3">
-            {tenant.branding.logo ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={resolveAssetUrl(tenant.branding.logo)}
-                alt={tenant.displayName}
-                className="h-8 w-auto"
-              />
-            ) : (
-              <span className="text-xl font-heading font-bold text-primary">
-                {tenant.displayName}
-              </span>
-            )}
+            <span
+              className="text-lg sm:text-xl font-bold tracking-widest uppercase"
+              style={{ color: tenant.branding.colors?.primary || 'var(--hb-primary)', fontFamily: 'var(--hb-font-heading), sans-serif' }}
+            >
+              {BRAND_NAMES[tenant.code] || tenant.displayName}
+            </span>
             {payoff && (
               <span className="hidden sm:inline text-sm text-muted">
                 {payoff}

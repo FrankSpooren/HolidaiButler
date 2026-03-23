@@ -51,7 +51,6 @@ const defaultWelcomeMessages: Record<string, string[]> = {
 
 export function WelcomeMessage({ language = 'nl', onComplete, skipAnimation = false }: WelcomeMessageProps) {
   const destination = useDestination();
-  const botAvatar = destination.icon || defaultAvatar;
   const destMessages = destination.holibot?.welcomeMessages;
   const messages = destMessages?.[language] || destMessages?.['nl'] || defaultWelcomeMessages[language] || defaultWelcomeMessages.nl;
   const [visibleMessages, setVisibleMessages] = useState<number>(skipAnimation ? 3 : 0);
@@ -82,12 +81,11 @@ export function WelcomeMessage({ language = 'nl', onComplete, skipAnimation = fa
     <div className="holibot-welcome-container" role="article">
       {visibleMessages >= 1 && (
         <div className="holibot-welcome-message holibot-welcome-animate">
-          <div className="holibot-welcome-avatar">
-            <img
-              src={botAvatar}
-              alt={destination.holibot?.name || 'HoliBot'}
-              className="holibot-welcome-avatar-img"
-            />
+          <div className="holibot-welcome-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white', border: '2px solid #2C3E50', borderRadius: '50%', width: 36, height: 36, flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
           </div>
           <p className="holibot-welcome-text">{messages[0]}</p>
         </div>

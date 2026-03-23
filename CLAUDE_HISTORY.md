@@ -5473,4 +5473,100 @@ CLAUDE.md v4.17.0 → v4.18.0. MS v7.77 → v7.78.
 
 ---
 
+## v4.19.0 — Mobiele Homepage Quality + Social Login + CalpeTrip Branding (23-03-2026)
+
+### Server-side Exception Fix
+- theme.ts `brandingToCssVars()` null guard op `style`, `colors`, `fonts` (TypeError: Cannot read 'borderRadius' of undefined)
+- PM2 process 5 (hb-websites) 381 restarts → 0 errors na fix
+
+### 7 Mobiele Homepage Fixes (dev.holidaibutler.com)
+- FIX 1: ProgramCard seeded shuffle per dagdeel+datum (deterministic, niet random bij elk bezoek)
+- FIX 2: Alleen toerisme-categorieën (Active, Beaches & Nature, Culture & History, Recreation, Food & Drinks)
+- FIX 3: Event link → `hb:event:open` CustomEvent (specifiek event drawer, niet generieke agenda)
+- FIX 4: CTA "Programma samenstellen" → direct itinerary wizard (geen welcome messages/quick actions)
+- FIX 5: Chatbot naam HoliBot → CalpeChat (default in ChatbotWidget)
+- FIX 6: Map z-index isolation (`isolation: 'isolate', zIndex: 0`) — event drawer niet meer overlapt
+- FIX 7: Footer `hidden md:block` onvoorwaardelijk (was conditioneel op mobileHomepage config)
+
+### Customer-Portal CALPETRIP Branding (holidaibutler.com)
+- Header.tsx: logo→CALPETRIP tekst op ALLE pagina's (incl. homepage), link naar dev.holidaibutler.com
+- BRAND_NAMES mapping (calpe→CALPETRIP, texel→TEXELMAPS)
+- MOBILE_HOME mapping (calpe→dev.holidaibutler.com, texel→dev.texelmaps.nl)
+- Hamburger menu Home → dev.holidaibutler.com (was `/` = customer-portal)
+- LoginPage: CALPETRIP tekst, password visibility toggle (oog-icoon), email domain suggesties (8 domeinen)
+- SignupPage: CALPETRIP tekst (alle 3 plekken: formulier + success state), password toggle, email suggesties
+- ForgotPasswordPage: NIEUW (4 talen NL/EN/DE/ES, success state, backend endpoint)
+- Auth pages "Terug naar home" → dev.holidaibutler.com
+
+### CalpeChat Chatbot Rebranding
+- vite.config.ts: chatbot naam CalpeChat + 4 talen welcome messages
+- translations.ts: alle HoliBot→CalpeChat (nav 6 talen, welcome 6 talen, descriptions 6 talen)
+- ChatHeader.tsx: butler-icoon → simpel user SVG icoon
+- WelcomeMessage.tsx: butler-icoon → simpel user SVG icoon
+- ChatWindow.css: mobiel fullscreen → bottom-sheet panel (max-height: 80vh, border-radius: 16px 16px 0 0)
+
+### Onboarding Data Personalisatie
+- ProgramCard: leest `hb_onboarding_data` uit localStorage, mapt interesses naar API categorieën
+- ChatbotWidget ItineraryWizard: pre-fills interesses uit onboarding data
+- TipOfTheDay: stuurt onboarding interesses mee als categories parameter
+
+### "Vandaag op Texel" Fix
+- TodayEvents.tsx: destination-aware voorzetsels (texel: op/on/auf, calpe: in)
+- destinationSlug prop doorgevoerd: layout.tsx → MobileHomepage → TodayEvents
+
+### CALPETRIP Pill Badge
+- MobileHeader.tsx: platte tekst → witte badge met afgeronde hoeken (padding 6px 16px, borderRadius 8px, groene tekst)
+
+### TipOfTheDay Drawer
+- Click opent nu PoiDetailDrawer/EventDetailDrawer (`hb:poi:open`/`hb:event:open`) i.p.v. volledige pagina navigatie
+
+### Google Sign-In (NIEUW)
+- DB: `oauth_provider` VARCHAR(20) + `oauth_provider_id` VARCHAR(255) + `password_hash` nullable + index
+- User.js model: oauthProvider/oauthProviderId velden, nullable passwordHash, beforeUpdate null-guard
+- auth.js: `findOrCreateOAuthUser()` helper (find by provider, link by email, create new)
+- `POST /auth/oauth/google`: Google tokeninfo verificatie, audience check, email_verified check
+- authService.ts: `loginWithGoogle(credential)` methode
+- LoginPage.tsx: Google Identity Services SDK loader + triggerGoogleLogin handler
+- .env.production: `VITE_GOOGLE_CLIENT_ID` + backend .env `GOOGLE_CLIENT_ID`
+
+### Facebook Login (NIEUW)
+- `POST /auth/oauth/facebook`: Graph API `/me` verificatie, email vereist, avatar sync
+- LoginPage.tsx: redirect-based OAuth flow (geen popup blokkering op mobiel)
+- Facebook OAuth dialog → redirect terug met access_token in URL hash → auto-login
+- .env.production: `VITE_FACEBOOK_APP_ID=1647465800016593`
+- Apple button verwijderd (wacht op Apple Developer Account)
+
+### Calpe Productie Herstel
+- Root cause: `.env.production` had `VITE_DESTINATION_ID=texel` → Texel build over Calpe gedeployd
+- Fix: `.env.production` gecorrigeerd naar `calpe`, Calpe build opnieuw gedeployd
+- Apache cache-busting: `no-cache, no-store, must-revalidate` op index.html (was 30-dagen cache)
+
+### Gewijzigde Bestanden (37 bestanden)
+**hb-websites (dev.holidaibutler.com):**
+- src/lib/theme.ts, src/app/layout.tsx
+- src/components/mobile/ProgramCard.tsx, TipOfTheDay.tsx, TodayEvents.tsx, MobileHomepage.tsx, MapPreview.tsx
+- src/components/modules/ChatbotWidget.tsx
+- src/components/layout/Header.tsx
+- src/components/MobileHeader.tsx
+
+**customer-portal (holidaibutler.com):**
+- src/shared/components/Header.tsx, src/shared/components/HoliBot/ChatWindow.css, ChatHeader.tsx, WelcomeMessage.tsx
+- src/pages/auth/LoginPage.tsx, SignupPage.tsx, ForgotPasswordPage.tsx (NIEUW)
+- src/features/auth/services/authService.ts
+- src/routes/router.tsx
+- src/i18n/translations.ts
+- vite.config.ts, .env, .env.production
+
+**platform-core (backend):**
+- src/models/User.js (OAuth velden)
+- src/routes/auth.js (Google + Facebook + forgot-password endpoints)
+
+**Infrastructure:**
+- Apache holidaibutler.com-le-ssl.conf (cache-busting headers)
+- Backend .env (GOOGLE_CLIENT_ID, VITE_FACEBOOK_APP_ID)
+
+CLAUDE.md v4.18.0 → v4.19.0. MS v7.78 → v7.79.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

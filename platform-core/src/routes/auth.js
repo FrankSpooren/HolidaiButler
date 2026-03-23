@@ -784,6 +784,231 @@ router.post('/logout', authenticate, (req, res) => {
 });
 
 // ==========================================
+// SOCIAL LOGIN (OAuth)
+// ==========================================
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+
+/**
+ * Helper: Find or create user by OAuth provider.
+ * - If user exists with same provider+providerId → return user (returning social login)
+ * - If user exists with same email → link social account to existing user
+ * - Otherwise → create new user (no password, email verified by provider)
+ */
+async function findOrCreateOAuthUser(provider, providerId, email, name) {
+  // 1. Find by provider + provider ID (returning social user)
+  let user = await User.findOne({
+    where: { oauthProvider: provider, oauthProviderId: providerId }
+  });
+  if (user) {
+    await user.update({ lastLogin: new Date() });
+    return user;
+  }
+
+  // 2. Find by email (link existing email account to social)
+  user = await User.findOne({ where: { email: email.toLowerCase() } });
+  if (user) {
+    await user.update({
+      oauthProvider: provider,
+      oauthProviderId: providerId,
+      emailVerified: true,
+      lastLogin: new Date(),
+    });
+    return user;
+  }
+
+  // 3. Create new social-only user
+  user = await User.create({
+    email: email.toLowerCase(),
+    passwordHash: null,
+    name: name || email.split('@')[0],
+    oauthProvider: provider,
+    oauthProviderId: providerId,
+    emailVerified: true,
+    isActive: true,
+  });
+
+  // Create consent record
+  try {
+    await UserConsent.create({
+      userId: user.id,
+      consentType: 'terms_privacy',
+      consentGiven: true,
+      ipAddress: '0.0.0.0',
+      userAgent: 'social-login',
+    });
+  } catch (e) { /* ignore consent errors */ }
+
+  return user;
+}
+
+/**
+ * @route   POST /api/auth/oauth/google
+ * @desc    Google Sign-In — verify ID token and login/create user
+ * @access  Public
+ */
+router.post('/oauth/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ success: false, message: 'Google credential is vereist' });
+    }
+
+    if (!GOOGLE_CLIENT_ID) {
+      return res.status(500).json({ success: false, message: 'Google OAuth niet geconfigureerd' });
+    }
+
+    // Verify the Google ID token using Google's tokeninfo endpoint
+    // This is simpler than google-auth-library and requires no npm package
+    const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+    if (!verifyRes.ok) {
+      return res.status(401).json({ success: false, message: 'Ongeldig Google token' });
+    }
+
+    const payload = await verifyRes.json();
+
+    // Verify audience matches our client ID
+    if (payload.aud !== GOOGLE_CLIENT_ID) {
+      return res.status(401).json({ success: false, message: 'Google token audience mismatch' });
+    }
+
+    // Verify email is verified by Google
+    if (payload.email_verified !== 'true' && payload.email_verified !== true) {
+      return res.status(401).json({ success: false, message: 'Google e-mail niet geverifieerd' });
+    }
+
+    const { sub: googleId, email, name } = payload;
+
+    // Find or create user
+    const user = await findOrCreateOAuthUser('google', googleId, email, name);
+
+    // Generate JWT tokens (same pattern as /login)
+    const tokenUserId = user.uuid || user.id;
+    const accessToken = jwt.sign(
+      { userId: tokenUserId, type: 'access' },
+      JWT_SECRET,
+      { expiresIn: ACCESS_TOKEN_EXPIRY }
+    );
+    const refreshToken = jwt.sign(
+      { userId: tokenUserId, type: 'refresh' },
+      JWT_REFRESH_SECRET,
+      { expiresIn: REFRESH_TOKEN_EXPIRY }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        accessToken,
+        refreshToken,
+        user: user.toSafeJSON(),
+      }
+    });
+  } catch (err) {
+    console.error('Google OAuth error:', err);
+    res.status(500).json({ success: false, message: 'Google login mislukt' });
+  }
+});
+
+/**
+ * @route   POST /api/auth/oauth/facebook
+ * @desc    Facebook Login — verify access token via Graph API and login/create user
+ * @access  Public
+ */
+router.post('/oauth/facebook', async (req, res) => {
+  try {
+    const { accessToken } = req.body;
+    if (!accessToken) {
+      return res.status(400).json({ success: false, message: 'Facebook access token is vereist' });
+    }
+
+    // Verify token + get user info from Facebook Graph API
+    const fbRes = await fetch(
+      `https://graph.facebook.com/me?fields=id,email,name,picture.type(large)&access_token=${encodeURIComponent(accessToken)}`
+    );
+
+    if (!fbRes.ok) {
+      return res.status(401).json({ success: false, message: 'Ongeldig Facebook token' });
+    }
+
+    const fbUser = await fbRes.json();
+
+    if (fbUser.error) {
+      return res.status(401).json({ success: false, message: 'Facebook verificatie mislukt' });
+    }
+
+    if (!fbUser.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'E-mail toestemming is vereist. Probeer opnieuw en sta e-mail toegang toe.'
+      });
+    }
+
+    // Find or create user
+    const user = await findOrCreateOAuthUser('facebook', fbUser.id, fbUser.email, fbUser.name);
+
+    // Update avatar if available and user has none
+    if (fbUser.picture?.data?.url && !user.avatarUrl) {
+      await user.update({ avatarUrl: fbUser.picture.data.url });
+    }
+
+    // Generate JWT tokens
+    const tokenUserId = user.uuid || user.id;
+    const accessTokenJwt = jwt.sign(
+      { userId: tokenUserId, type: 'access' },
+      JWT_SECRET,
+      { expiresIn: ACCESS_TOKEN_EXPIRY }
+    );
+    const refreshToken = jwt.sign(
+      { userId: tokenUserId, type: 'refresh' },
+      JWT_REFRESH_SECRET,
+      { expiresIn: REFRESH_TOKEN_EXPIRY }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: accessTokenJwt,
+        refreshToken,
+        user: user.toSafeJSON(),
+      }
+    });
+  } catch (err) {
+    console.error('Facebook OAuth error:', err);
+    res.status(500).json({ success: false, message: 'Facebook login mislukt' });
+  }
+});
+
+// ==========================================
+// PASSWORD RESET
+// ==========================================
+
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Request password reset email (always returns success to prevent email enumeration)
+ * @access  Public
+ */
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is vereist' });
+    }
+
+    // Always return success to prevent email enumeration
+    // TODO: Implement actual email sending with reset token when MailerLite/MailerSend is configured
+    // 1. Find user by email
+    // 2. Generate crypto.randomBytes(32) token, store hash + expiry (1h) in DB
+    // 3. Send email with reset link: https://holidaibutler.com/reset-password?token=xxx
+    // 4. Create /reset-password endpoint to validate token + update password
+
+    res.json({ success: true, message: 'Als dit e-mailadres bij ons bekend is, ontvang je een e-mail.' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.json({ success: true, message: 'Als dit e-mailadres bij ons bekend is, ontvang je een e-mail.' });
+  }
+});
+
+// ==========================================
 // TWO-FACTOR AUTHENTICATION ENDPOINTS
 // ==========================================
 

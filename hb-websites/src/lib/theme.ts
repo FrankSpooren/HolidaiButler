@@ -58,13 +58,14 @@ const IMAGE_RADIUS_MAP: Record<string, string> = {
 };
 
 export function brandingToCssVars(branding: TenantBranding): CSSProperties {
-  const { colors, fonts, style } = branding;
-  const radius = RADIUS_MAP[style.borderRadius] ?? '0.75rem';
-  const typo = fonts.typography;
-  const spacingScale = SPACING_MAP[style.spacingScale as string] ?? '1';
-  const shadow = SHADOW_MAP[style.shadowIntensity as string] ?? SHADOW_MAP.medium;
-  const imageRadius = IMAGE_RADIUS_MAP[style.imageStyle as string] ?? IMAGE_RADIUS_MAP.rounded;
-  const headingTransform = style.headingTextTransform as string || 'none';
+  const { colors, fonts, style = {} as TenantBranding['style'] } = branding;
+  if (!colors) return {} as CSSProperties;
+  const radius = RADIUS_MAP[style?.borderRadius] ?? '0.75rem';
+  const typo = fonts?.typography;
+  const spacingScale = SPACING_MAP[style?.spacingScale as string] ?? '1';
+  const shadow = SHADOW_MAP[style?.shadowIntensity as string] ?? SHADOW_MAP.medium;
+  const imageRadius = IMAGE_RADIUS_MAP[style?.imageStyle as string] ?? IMAGE_RADIUS_MAP.rounded;
+  const headingTransform = (style?.headingTextTransform as string) || 'none';
 
   return {
     '--hb-primary': colors.primary,

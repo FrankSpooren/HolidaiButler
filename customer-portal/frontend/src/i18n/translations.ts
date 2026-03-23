@@ -801,7 +801,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       home: 'Home',
       explore: 'Verkennen',
-      holibot: 'HoliBot',
+      holibot: 'CalpeChat',
       agenda: 'Agenda',
       reservations: 'Reserveren',
       tickets: 'Tickets',
@@ -912,7 +912,7 @@ export const translations: Record<Language, Translations> = {
       features: {
         aiAssistant: {
           title: 'AI-Aangedreven Assistent',
-          description: 'HoliBot begrijpt jouw voorkeuren en geeft gepersonaliseerde aanbevelingen voor restaurants, activiteiten en verborgen pareltjes.'
+          description: 'CalpeChat begrijpt jouw voorkeuren en geeft gepersonaliseerde aanbevelingen voor restaurants, activiteiten en verborgen pareltjes.'
         },
         localPois: {
           title: '1.600+ Lokale POI\'s',
@@ -1591,7 +1591,7 @@ export const translations: Record<Language, Translations> = {
       skipConfirm: 'Onboarding overslaan? Je kunt later voorkeuren instellen in je account.',
     },
     holibotChat: {
-      welcome: 'Hoi! Ik ben HoliBot 🌴',
+      welcome: 'Hoi! Ik ben CalpeChat 🌴',
       welcomeSubtitle: 'Jouw persoonlijke Calpe-gids. Hoe kan ik je helpen?',
       inputPlaceholder: 'Stel een vraag over Calpe...',
       quickActions: {
@@ -1621,7 +1621,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       home: 'Home',
       explore: 'Explore',
-      holibot: 'HoliBot',
+      holibot: 'CalpeChat',
       agenda: 'Agenda',
       reservations: 'Reservations',
       tickets: 'Tickets',
@@ -1732,7 +1732,7 @@ export const translations: Record<Language, Translations> = {
       features: {
         aiAssistant: {
           title: 'AI-Powered Assistant',
-          description: 'HoliBot understands your preferences and provides personalized recommendations for restaurants, activities, and hidden gems.'
+          description: 'CalpeChat understands your preferences and provides personalized recommendations for restaurants, activities, and hidden gems.'
         },
         localPois: {
           title: '1,600+ Local POIs',
@@ -2406,7 +2406,7 @@ export const translations: Record<Language, Translations> = {
       skipConfirm: 'Skip onboarding? You can set preferences later in your account.',
     },
     holibotChat: {
-      welcome: 'Hi! I\'m HoliBot 🌴',
+      welcome: 'Hi! I\'m CalpeChat 🌴',
       welcomeSubtitle: 'Your personal Calpe guide. How can I help you?',
       inputPlaceholder: 'Ask a question about Calpe...',
       quickActions: {
@@ -2436,7 +2436,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       home: 'Startseite',
       explore: 'Erkunden',
-      holibot: 'HoliBot',
+      holibot: 'CalpeChat',
       agenda: 'Terminkalender',
       reservations: 'Reservierungen',
       tickets: 'Tickets',
@@ -2547,7 +2547,7 @@ export const translations: Record<Language, Translations> = {
       features: {
         aiAssistant: {
           title: 'KI-gestützter Assistent',
-          description: 'HoliBot versteht Ihre Vorlieben und bietet personalisierte Empfehlungen für Restaurants, Aktivitäten und versteckte Perlen.'
+          description: 'CalpeChat versteht Ihre Vorlieben und bietet personalisierte Empfehlungen für Restaurants, Aktivitäten und versteckte Perlen.'
         },
         localPois: {
           title: '1.600+ lokale POIs',
@@ -3221,7 +3221,7 @@ export const translations: Record<Language, Translations> = {
       skipConfirm: 'Onboarding überspringen? Sie können später in Ihrem Konto Präferenzen festlegen.',
     },
     holibotChat: {
-      welcome: 'Hallo! Ich bin HoliBot 🌴',
+      welcome: 'Hallo! Ich bin CalpeChat 🌴',
       welcomeSubtitle: 'Dein persönlicher Calpe-Guide. Wie kann ich dir helfen?',
       inputPlaceholder: 'Stelle eine Frage über Calpe...',
       quickActions: {
@@ -3251,7 +3251,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       home: 'Inicio',
       explore: 'Explorar',
-      holibot: 'HoliBot',
+      holibot: 'CalpeChat',
       agenda: 'Agenda',
       reservations: 'Reservas',
       tickets: 'Entradas',
@@ -3362,7 +3362,7 @@ export const translations: Record<Language, Translations> = {
       features: {
         aiAssistant: {
           title: 'Asistente Impulsado por IA',
-          description: 'HoliBot comprende tus preferencias y proporciona recomendaciones personalizadas de restaurantes, actividades y joyas ocultas.'
+          description: 'CalpeChat comprende tus preferencias y proporciona recomendaciones personalizadas de restaurantes, actividades y joyas ocultas.'
         },
         localPois: {
           title: 'Más de 1.600 POIs locales',
@@ -4036,7 +4036,7 @@ export const translations: Record<Language, Translations> = {
       skipConfirm: '¿Omitir el onboarding? Puedes establecer preferencias más tarde en tu cuenta.',
     },
     holibotChat: {
-      welcome: '¡Hola! Soy HoliBot 🌴',
+      welcome: '¡Hola! Soy CalpeChat 🌴',
       welcomeSubtitle: 'Tu guía personal de Calpe. ¿Cómo puedo ayudarte?',
       inputPlaceholder: 'Haz una pregunta sobre Calpe...',
       quickActions: {
@@ -4066,7 +4066,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       home: 'Hem',
       explore: 'Utforska',
-      holibot: 'HoliBot',
+      holibot: 'CalpeChat',
       agenda: 'Agenda',
       reservations: 'Bokningar',
       tickets: 'Biljetter',
@@ -4177,7 +4177,7 @@ export const translations: Record<Language, Translations> = {
       features: {
         aiAssistant: {
           title: 'AI-driven Assistent',
-          description: 'HoliBot förstår dina preferenser och ger personliga rekommendationer för restauranger, aktiviteter och dolda pärlor.'
+          description: 'CalpeChat förstår dina preferenser och ger personliga rekommendationer för restauranger, aktiviteter och dolda pärlor.'
         },
         localPois: {
           title: '1 600+ lokala POI:er',
@@ -4851,7 +4851,7 @@ export const translations: Record<Language, Translations> = {
       skipConfirm: 'Hoppa över onboarding? Du kan ställa in preferenser senare i ditt konto.',
     },
     holibotChat: {
-      welcome: 'Hej! Jag är HoliBot 🌴',
+      welcome: 'Hej! Jag är CalpeChat 🌴',
       welcomeSubtitle: 'Din personliga Calpe-guide. Hur kan jag hjälpa dig?',
       inputPlaceholder: 'Ställ en fråga om Calpe...',
       quickActions: {
@@ -4881,7 +4881,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       home: 'Strona główna',
       explore: 'Odkryj',
-      holibot: 'HoliBot',
+      holibot: 'CalpeChat',
       agenda: 'Agenda',
       reservations: 'Rezerwacje',
       tickets: 'Bilety',
@@ -4992,7 +4992,7 @@ export const translations: Record<Language, Translations> = {
       features: {
         aiAssistant: {
           title: 'Asystent AI',
-          description: 'HoliBot rozumie Twoje preferencje i dostarcza spersonalizowane rekomendacje restauracji, atrakcji i ukrytych perełek.'
+          description: 'CalpeChat rozumie Twoje preferencje i dostarcza spersonalizowane rekomendacje restauracji, atrakcji i ukrytych perełek.'
         },
         localPois: {
           title: '1600+ lokalnych POI',
@@ -5666,7 +5666,7 @@ export const translations: Record<Language, Translations> = {
       skipConfirm: 'Pominąć onboarding? Możesz ustawić preferencje później w swoim koncie.',
     },
     holibotChat: {
-      welcome: 'Cześć! Jestem HoliBot 🌴',
+      welcome: 'Cześć! Jestem CalpeChat 🌴',
       welcomeSubtitle: 'Twój osobisty przewodnik po Calpe. Jak mogę Ci pomóc?',
       inputPlaceholder: 'Zadaj pytanie o Calpe...',
       quickActions: {

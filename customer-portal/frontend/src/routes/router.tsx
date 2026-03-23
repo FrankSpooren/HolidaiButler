@@ -18,6 +18,7 @@ const LoginPage = lazy(() => import('../pages/auth/LoginPage').then(m => ({ defa
 const SignupPage = lazy(() => import('../pages/auth/SignupPage').then(m => ({ default: m.SignupPage })));
 const VerifyEmailPage = lazy(() => import('../pages/auth/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })));
 const ResendVerificationPage = lazy(() => import('../pages/auth/ResendVerificationPage').then(m => ({ default: m.ResendVerificationPage })));
+const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
 const OnboardingFlow = lazy(() => import('../pages/onboarding/OnboardingFlow'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 const TicketsPage = lazy(() => import('../pages/TicketsPage').then(m => ({ default: m.TicketsPage })));
@@ -208,6 +209,11 @@ export const router = createBrowserRouter([
         // Resend Verification Email
         path: '/resend-verification',
         element: <LazyWrapper><ResendVerificationPage /></LazyWrapper>,
+      },
+      {
+        // Forgot Password
+        path: '/forgot-password',
+        element: <LazyWrapper><ForgotPasswordPage /></LazyWrapper>,
       },
     ],
   },
