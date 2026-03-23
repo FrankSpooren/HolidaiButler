@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 21 maart 2026
-**Versie**: 7.76
+**Datum**: 23 maart 2026
+**Versie**: 7.77
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Standalone Content Studio Module COMPLEET** (9 opdrachten: destination_type, content_only flow, sidebar scoping, generieke templates, tone presets, onboarding wizard, lifecycle management). **Merk Profiel & Knowledge Base COMPLEET** (5+ opdrachten: 3 DB tabellen, 15 API endpoints, MerkProfielSections UI, Knowledge Base document parsing, website-analyse, doelgroep-selector, brandContext.js AI integratie). **Content Studio as a Service** — nieuw business model: externe klanten gebruiken Content Studio standalone zonder toerisme-modules. 234 endpoints. CLAUDE.md v4.16.0. MS v7.76.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Standalone Content Studio Module COMPLEET** (9 opdrachten). **Merk Profiel & Knowledge Base COMPLEET** (10 opdrachten + extras: i18n, Meta social connect, destination module management, website-analyse "Overnemen", content goals in AI, destination scoping). **Content Studio as a Service** — eerste externe klant (BUTE) live met Facebook + Instagram gekoppeld. 237 endpoints. CLAUDE.md v4.17.0. MS v7.77.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1724,4 +1724,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 21 maart 2026 — Standalone Content Studio Module COMPLEET (9 opdrachten). Merk Profiel & Knowledge Base COMPLEET (5+ opdrachten). Content Studio as a Service: nieuw business model. Admin Portal: 234 endpoints, adminPortal.js v3.35.0. 62 scheduled jobs. 25 agents. 3 nieuwe DB tabellen (audience_personas, brand_knowledge, brand_competitors). CLAUDE.md v4.16.0. MS v7.76.*
+*Laatst bijgewerkt: 23 maart 2026 — Merk Profiel & Knowledge Base COMPLEET (10 opdrachten + extras). Meta Social Connect (Facebook/Instagram). Destination module management. Eerste externe klant BUTE live. Admin Portal: 237 endpoints, adminPortal.js v3.36.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.17.0. MS v7.77.*

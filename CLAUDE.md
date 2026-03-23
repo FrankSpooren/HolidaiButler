@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.16.0
-> **Laatst bijgewerkt**: 21 maart 2026
+> **Versie**: 4.17.0
+> **Laatst bijgewerkt**: 23 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -482,10 +482,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.35.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.36.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (4 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 234 admin endpoints (+22: 7 destination lifecycle, 2 partner lifecycle, 1 tone-presets, 14 brand-profile CRUD, 1 knowledge upload, -3 overlap)
+- **Endpoints**: 237 admin endpoints (+3: 1 feature-flags update, 1 meta social connect, 1 overlap fix)
 
 ### RBAC Rollen
 | Rol | Scope | Rechten |
@@ -669,6 +669,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.17.0** | **2026-03-23** | **Merk Profiel Completie + Social Accounts + Destination Management**. Opdrachten 7-10 Merk Profiel afgerond (i18n 4 talen, Knowledge Base context). Facebook/Instagram Meta connect endpoint (System User token, Graph API validatie, AES-256 encrypted storage, verificatielink). Social accounts kanaal-filtering (onboarding sync, "extra kanalen" toggle). Destination bewerken: modules & social kanalen wijzigen via Settings (PUT /destinations/:id/feature-flags). Fixes: branding RBAC destination_admin, content generatie hooks violation, suggesties in destination-taal + brand context, content_goals in AI prompt, media upload 50 bestanden/5min, social_accounts kolomnaam fix, website-analyse in destination-taal + "Overnemen in profiel", Tone of Voice inline velden, destination scoping alle pagina's. 237 endpoints. adminPortal.js v3.36.0. MS v7.77. |
 | **4.16.0** | **2026-03-21** | **Standalone Content Studio + Merk Profiel & Knowledge Base**. Twee commands geïmplementeerd: (1) Standalone Content Studio Module (9 opdrachten): destination_type ENUM, content_only feature flags, sidebar module-zichtbaarheid, image selector fallback, SEO graceful fallback, 10 generieke templates, 8 tone presets, onboarding content_only pad (4 stappen), destination/partner archive+delete lifecycle (7 endpoints). (2) Merk Profiel & Knowledge Base (opdrachten 1-5+): 3 DB tabellen (audience_personas, brand_knowledge, brand_competitors), 15 API endpoints, MerkProfielSections component (7 accordions: Bedrijfsprofiel, Missie/Visie/Waarden, Doelgroepen CRUD, Tone of Voice 8 velden, Knowledge Base upload+URL, Concurrenten+analyse, Content Strategie), brandContext.js (assembleert profiel+tone+persona+knowledge voor AI), website-analyse met "Overnemen in profiel" knop, doelgroep-selector in GenerateContentDialog, content_goals (blogs/posts) in suggestie-prompt. Fixes: destination scoping (Dashboard/Media/Branding/ContentStudio gescopet op user), sidebar feature flags voor destination_admin, QuickLinks RBAC, UsersPage dynamische destinations, branding RBAC destination_admin, suggesties in destination-taal, media upload 50 bestanden/5min timeout. 234 endpoints (+22). adminPortal.js v3.35.0. MS v7.76. |
 | **4.15.0** | **2026-03-21** | **Command v16.0: Mobiele Homepage Quality — 14 Punten + Extra's**. 503 API fix, onboarding buttons, map category IDs, profiel→login, Leaflet z-index, ProgramCard time-of-day, 24h klok, sessionStorage, CTA→wizard. MS v7.75. |
 | **4.14.0** | **2026-03-20** | **Fase VI-B Feedback: 7 Fixes**. Inter font, Tip deep links, language params, WCAG, hamburger menu, CALPETRIP font, bottom nav SVGs. 6 bestanden. Commit 5d3bb00. MS v7.74. |
@@ -681,7 +682,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.76 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.77 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
