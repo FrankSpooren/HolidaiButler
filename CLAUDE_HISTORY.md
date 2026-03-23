@@ -5367,4 +5367,60 @@ CLAUDE.md v4.15.0 → v4.16.0. MS v7.75 → v7.76.
 
 ---
 
+---
+
+### v4.17.0 — Merk Profiel Completie + Social Accounts + Destination Management (23 maart 2026)
+
+#### Merk Profiel Opdrachten 7-10 afgerond:
+- **Opdracht 7**: Social Accounts toegang destination_admin — reeds compleet
+- **Opdracht 8**: Branding secties verbergen content_only — reeds compleet
+- **Opdracht 9**: i18n Merk Profiel — 4 talen (NL/EN/DE/ES), ~40 keys per taal: brandProfile.sections.*, brandProfile.fields.*, brandProfile.tone.*. Alle hardcoded strings in MerkProfielSections.jsx vervangen door t() calls
+- **Opdracht 10**: Knowledge Base context in generator — reeds compleet (brandContext.js)
+
+#### Social Accounts — Meta Connect:
+- Nieuw endpoint: `POST /content/social-accounts/connect/meta` — Facebook/Instagram koppelen via System User Page Access Token
+- Graph API validatie: `/me/accounts` voor Page info + `/instagram_business_account` voor IG username
+- Token AES-256-CBC encrypted opgeslagen in `access_token_encrypted`
+- `metadata` JSON kolom: pageUrl + igAccountId opgeslagen voor verificatielinks
+- Frontend: Token-invoer dialoog (plak Page Access Token), "Controleer account →" verificatielink per platform
+- Kolomnaam fix: `access_token` → `access_token_encrypted` (schema mismatch)
+- destination_id nu VERPLICHT (geen fallback naar 1 — voorkwam Calpe-overschrijving bug)
+
+#### Destination Management — Modules & Kanalen bewerken:
+- Nieuw endpoint: `PUT /destinations/:id/feature-flags` — feature_flags JSON direct updaten
+- SettingsPage: "Modules & kanalen bewerken" dialog per destination (13 module checkboxes + 7 social kanaal checkboxes)
+- Content Studio Social Accounts: toont standaard alleen enabled kanalen + "extra kanalen" toggle knop
+- Bidirectionele sync: Settings modules → Content Studio kanalen
+
+#### Content Studio verbeteringen:
+- Suggesties: `buildBrandContext()` geïntegreerd (profiel+knowledge+goals als AI context)
+- Content goals: `blogs_per_month=0` → geen blog suggesties, `posts_per_week` meenemen
+- Website-analyse: output in destination-taal, "Overnemen in profiel" knop (USPs→profiel, toon→toneOfVoice, thema's→SEO keywords, lokale tone state direct bijgewerkt)
+- Tone of Voice: 8 inline bewerkbare velden in Merk Profiel (was pointer naar visuele identiteit)
+- GenerateContentDialog: hooks violation fix (useTranslation na conditional return)
+- SocialAccountsCards: hooks violation fix (useState na conditional return)
+
+#### Destination scoping (alle pagina's):
+- Sidebar: feature flags enforcement voor destination_admin (niet alleen bij dropdown)
+- Dashboard: content_only user ziet alleen QuickLinks, platform KPIs/health/agents verborgen
+- ContentStudio/Media/Branding: gefilterd op user.allowed_destinations
+- QuickLinks: feature flag + RBAC filtering
+- UsersPage: dynamische destination dropdown (was hardcoded Calpe/Texel)
+
+#### Overige fixes:
+- Branding RBAC: `PUT /destinations/:id/branding` nu ook voor destination_admin (was platform_admin only)
+- content_suggestions.status ENUM: 'deleted' waarde toegevoegd
+- Logo upload: DB lookup i.p.v. hardcoded DEFAULT_BRAND_CONFIG
+- Media upload: 10→50 bestanden, timeout 15s→5min
+- Onboarding → Merk Profiel: tone preset, doelgroep, aanspreekstijl, contactpersoon automatisch doorgezet
+- SettingsPage: missing imports fix (SettingsIcon, FormControlLabel, Checkbox)
+
+**Bestanden**: adminPortal.js, contentGenerator.js, brandContext.js, SocialAccountsCards.jsx, SettingsPage.jsx, ContentStudioPage.jsx, MerkProfielSections.jsx, OnboardingPage.jsx, DashboardPage.jsx, MediaPage.jsx, BrandingPage.jsx, UsersPage.jsx, QuickLinks.jsx, Sidebar.jsx, contentService.js, i18n nl/en/de/es.json
+
+**Endpoints**: 234 → 237 (+3). adminPortal.js v3.36.0.
+
+CLAUDE.md v4.16.0 → v4.17.0. MS v7.76 → v7.77.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
