@@ -124,10 +124,18 @@ export default function MobileHeader({
       <div className="md:hidden" style={{ background: `linear-gradient(160deg, ${gradFrom}, ${gradTo})` }}>
         {/* Top bar */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
-          {/* Brand */}
+          {/* Brand — pill badge matching customer-portal header */}
           <span
-            className="text-white font-bold text-xl"
-            style={{ letterSpacing: '2px', textTransform: 'uppercase' }}
+            className="font-bold text-lg"
+            style={{
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              color: '#5E8B7E',
+              backgroundColor: 'white',
+              padding: '6px 16px',
+              borderRadius: '8px',
+              display: 'inline-block',
+            }}
           >
             {brandName}
           </span>

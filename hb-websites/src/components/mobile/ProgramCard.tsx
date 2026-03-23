@@ -31,10 +31,43 @@ function getDayPart(): DayPart {
   return 'evening';
 }
 
-const DAY_PART_CONFIG: Record<DayPart, { startHour: number; categories: string }> = {
-  morning:   { startHour: 9,  categories: 'Active,Beaches & Nature,Nature,Natuur' },
-  afternoon: { startHour: 13, categories: 'Culture & History,Cultuur & Historie,Recreation,Shopping' },
-  evening:   { startHour: 18, categories: 'Food & Drinks,Eten & Drinken,Nightlife' },
+// Only tourism-relevant categories: Actief, Stranden & Natuur, Cultuur & Geschiedenis, Recreatie, Eten & Drinken
+const TOURISM_CATEGORIES = 'Active,Beaches & Nature,Culture & History,Recreation,Food & Drinks,Actief,Stranden & Natuur,Cultuur & Geschiedenis,Recreatie,Eten & Drinken';
+
+// Map onboarding interest keys to API category names
+const INTEREST_TO_CATEGORIES: Record<string, string[]> = {
+  beach:    ['Beaches & Nature', 'Stranden & Natuur'],
+  culture:  ['Culture & History', 'Cultuur & Geschiedenis'],
+  nature:   ['Beaches & Nature', 'Stranden & Natuur', 'Recreation', 'Recreatie'],
+  gastro:   ['Food & Drinks', 'Eten & Drinken'],
+  active:   ['Active', 'Actief', 'Recreation', 'Recreatie'],
+  nightlife:['Food & Drinks', 'Eten & Drinken'],
+};
+
+/** Read onboarding interests from localStorage and build a personalized category string */
+function getPersonalizedCategories(): string {
+  try {
+    const raw = localStorage.getItem('hb_onboarding_data');
+    if (!raw) return TOURISM_CATEGORIES;
+    const data = JSON.parse(raw);
+    const interests: string[] = data.interests;
+    if (!Array.isArray(interests) || interests.length === 0) return TOURISM_CATEGORIES;
+    // Build unique category set from user interests
+    const cats = new Set<string>();
+    for (const interest of interests) {
+      const mapped = INTEREST_TO_CATEGORIES[interest];
+      if (mapped) mapped.forEach(c => cats.add(c));
+    }
+    return cats.size > 0 ? Array.from(cats).join(',') : TOURISM_CATEGORIES;
+  } catch {
+    return TOURISM_CATEGORIES;
+  }
+}
+
+const DAY_PART_CONFIG: Record<DayPart, { startHour: number }> = {
+  morning:   { startHour: 9 },
+  afternoon: { startHour: 13 },
+  evening:   { startHour: 18 },
 };
 
 const DAY_PART_LABELS: Record<DayPart, Record<string, string>> = {
@@ -66,6 +99,27 @@ function generateTimeSlots(count: number, dayPart: DayPart): { start: string; en
   return slots;
 }
 
+/**
+ * Seeded pseudo-random shuffle so that the program stays stable per dayPart + date.
+ * Uses a simple hash → LCG to produce deterministic order.
+ */
+function seededShuffle<T>(arr: T[], seed: string): T[] {
+  const copy = [...arr];
+  // Simple hash from string
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = ((h << 5) - h + seed.charCodeAt(i)) | 0;
+  }
+  // LCG pseudo-random
+  let s = Math.abs(h) || 1;
+  const next = () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff; };
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 function getLocalizedString(val: unknown, locale: string): string {
   if (typeof val === 'string') return val;
   if (val && typeof val === 'object') {
@@ -85,20 +139,21 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
   useEffect(() => {
     async function load() {
       try {
-        // Fetch POIs relevant to current time of day + 1 event
+        // Fetch POIs using personalized categories from onboarding + 1 event
         const poiLimit = Math.max(1, programSize - 1);
-        const config = DAY_PART_CONFIG[dayPart];
+        const categories = getPersonalizedCategories();
         const [poisRes, eventsRes] = await Promise.all([
-          fetch(`/api/pois?limit=${poiLimit * 2}&sort=rating:desc&min_rating=4&min_reviews=3&categories=${encodeURIComponent(config.categories)}`),
+          fetch(`/api/pois?limit=${poiLimit * 2}&sort=rating:desc&min_rating=4&min_reviews=3&categories=${encodeURIComponent(categories)}`),
           fetch('/api/events?limit=3'),
         ]);
 
         const poisData = await poisRes.json();
         const eventsData = await eventsRes.json();
 
-        // Pick random subset to vary content
+        // Deterministic shuffle: same result within a dayPart on a given date
         const allPois = poisData?.data || [];
-        const shuffled = allPois.sort(() => Math.random() - 0.5);
+        const today = new Date().toISOString().split('T')[0]; // e.g. "2026-03-23"
+        const shuffled = seededShuffle(allPois, `${today}-${dayPart}`);
         const pois = shuffled.slice(0, poiLimit);
         // Pick first upcoming event (or random from available)
         const events = (eventsData?.data || []).slice(0, 1);
@@ -156,13 +211,13 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
     window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { action: 'itinerary' } }));
   };
 
-  // Details button → production POI/Event detail page
+  // Details button → open specific POI drawer or Event drawer
   const openDetail = (e: React.MouseEvent, item: ProgramItem) => {
     e.stopPropagation();
     if (item.type === 'poi') {
-      window.location.href = `https://holidaibutler.com/pois/${item.id}${langParam}`;
+      window.dispatchEvent(new CustomEvent('hb:poi:open', { detail: { poiId: item.id } }));
     } else {
-      window.location.href = `https://holidaibutler.com/agenda${langParam}`;
+      window.dispatchEvent(new CustomEvent('hb:event:open', { detail: { eventId: item.id } }));
     }
   };
 

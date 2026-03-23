@@ -49,6 +49,37 @@ function cacheTip(tip: TipData, locale: string) {
   } catch { /* ignore */ }
 }
 
+// Map onboarding interest keys to category keywords for tip filtering
+const INTEREST_CATEGORIES: Record<string, string[]> = {
+  beach: ['beach', 'strand', 'nature', 'natuur'],
+  culture: ['culture', 'cultuur', 'museum', 'history', 'historie'],
+  nature: ['nature', 'natuur', 'park', 'hiking'],
+  gastro: ['food', 'drinks', 'eten', 'drinken', 'restaurant'],
+  active: ['active', 'actief', 'sport', 'cycling', 'fietsen'],
+  nightlife: ['nightlife', 'nachtleven', 'bar'],
+};
+
+/** Check if a tip matches user's onboarding interests */
+function tipMatchesInterests(tip: TipData, interests: string[]): boolean {
+  if (interests.length === 0) return true; // No interests = accept all
+  const tipText = `${tip.name} ${tip.description}`.toLowerCase();
+  for (const interest of interests) {
+    const keywords = INTEREST_CATEGORIES[interest] || [];
+    if (keywords.some(kw => tipText.includes(kw))) return true;
+  }
+  return true; // Fallback: accept if no category match (don't block tips)
+}
+
+/** Read onboarding interests from localStorage */
+function getOnboardingInterests(): string[] {
+  try {
+    const raw = localStorage.getItem('hb_onboarding_data');
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    return Array.isArray(data.interests) ? data.interests : [];
+  } catch { return []; }
+}
+
 function getLocalizedString(val: unknown, locale: string): string {
   if (typeof val === 'string') return val;
   if (val && typeof val === 'object') {
@@ -74,7 +105,12 @@ export default function TipOfTheDay({ locale }: TipOfTheDayProps) {
 
     async function load() {
       try {
-        const res = await fetch(`/api/holibot/daily-tip?language=${locale}`);
+        // Include onboarding interests as preferred categories
+        const interests = getOnboardingInterests();
+        const categoriesParam = interests.length > 0
+          ? `&categories=${encodeURIComponent(interests.join(','))}`
+          : '';
+        const res = await fetch(`/api/holibot/daily-tip?language=${locale}${categoriesParam}`);
         const data = await res.json();
         const itemType = data?.data?.itemType || (data?.data?.poi ? 'poi' : 'event');
         const item = data?.data?.poi || data?.data?.event;
@@ -114,12 +150,11 @@ export default function TipOfTheDay({ locale }: TipOfTheDayProps) {
 
   if (!tip) return null;
 
-  const langParam = locale !== 'en' ? `?lang=${locale}` : '';
   const handleClick = () => {
     if (tip.id && tip.itemType === 'poi') {
-      window.location.href = `https://holidaibutler.com/pois/${tip.id}${langParam}`;
+      window.dispatchEvent(new CustomEvent('hb:poi:open', { detail: { poiId: tip.id } }));
     } else if (tip.id && tip.itemType === 'event') {
-      window.location.href = `https://holidaibutler.com/agenda/${tip.id}${langParam}`;
+      window.dispatchEvent(new CustomEvent('hb:event:open', { detail: { eventId: tip.id } }));
     }
   };
 

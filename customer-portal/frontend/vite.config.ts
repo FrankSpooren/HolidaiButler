@@ -40,25 +40,25 @@ const destinationConfigs = {
       description: 'Experience this Mediterranean gem with personalized recommendations',
     },
     holibot: {
-      name: 'HoliBot',
+      name: 'CalpeChat',
       welcomeMessages: {
         nl: [
-          'Hola! Ik ben HoliBot, je persoonlijke Calpe-Assistent.',
+          'Hola! Ik ben CalpeChat, je persoonlijke Calpe-Assistent.',
           'Waar kan ik je bij helpen?',
           'Laat me enkele suggesties voor je doen, typ of spreek je vraag hieronder in:'
         ],
         en: [
-          'Hola! I\'m HoliBot, your personal Calpe Assistant.',
+          'Hola! I\'m CalpeChat, your personal Calpe Assistant.',
           'How can I help you?',
           'Let me give you some suggestions, or type or speak your question below:'
         ],
         de: [
-          'Hola! Ich bin HoliBot, Ihr persönlicher Calpe-Assistent.',
+          'Hola! Ich bin CalpeChat, Ihr persönlicher Calpe-Assistent.',
           'Wie kann ich Ihnen helfen?',
           'Hier sind einige Vorschläge, oder geben Sie Ihre Frage unten ein:'
         ],
         es: [
-          'Hola! Soy HoliBot, tu asistente personal de Calpe.',
+          'Hola! Soy CalpeChat, tu asistente personal de Calpe.',
           '¿En qué puedo ayudarte?',
           'Aquí tienes algunas sugerencias, o escribe tu pregunta abajo:'
         ],

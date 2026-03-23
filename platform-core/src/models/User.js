@@ -65,6 +65,10 @@ class User extends Model {
     values.createdAt = values.createdAt || values.created_at;
     // Include avatar URL
     values.avatarUrl = values.avatarUrl || values.avatar_url || null;
+    // Include OAuth provider (for UI: "Connected with Google" etc.)
+    values.oauthProvider = values.oauthProvider || values.oauth_provider || null;
+    delete values.oauthProviderId;
+    delete values.oauth_provider_id;
 
     return values;
   }
@@ -98,7 +102,7 @@ User.init({
 
   passwordHash: {
     type: DataTypes.STRING(255),
-    allowNull: false,
+    allowNull: true,  // Nullable for social-only accounts
     field: 'password_hash'
   },
 
@@ -258,6 +262,19 @@ User.init({
     type: DataTypes.TEXT,
     allowNull: true,
     field: 'backup_codes'
+  },
+
+  // OAuth Social Login fields
+  oauthProvider: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    field: 'oauth_provider'
+  },
+
+  oauthProviderId: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'oauth_provider_id'
   }
 
 }, {
@@ -274,14 +291,14 @@ User.init({
       if (!user.uuid) {
         user.uuid = uuidv4();
       }
-      // Hash password if provided as plain text
+      // Hash password if provided as plain text (skip for social-only accounts)
       if (user.passwordHash && !user.passwordHash.startsWith('$2')) {
         const salt = await bcrypt.genSalt(12);
         user.passwordHash = await bcrypt.hash(user.passwordHash, salt);
       }
     },
     beforeUpdate: async (user) => {
-      if (user.changed('passwordHash') && !user.passwordHash.startsWith('$2')) {
+      if (user.changed('passwordHash') && user.passwordHash && !user.passwordHash.startsWith('$2')) {
         const salt = await bcrypt.genSalt(12);
         user.passwordHash = await bcrypt.hash(user.passwordHash, salt);
       }

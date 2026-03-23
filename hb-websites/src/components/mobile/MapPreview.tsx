@@ -137,7 +137,7 @@ export default function MapPreview({ locale, poiCount = 1500, poiLimit = 8, mapL
       <button
         onClick={() => { window.location.href = `https://holidaibutler.com/pois?view=map${locale !== 'en' ? `&lang=${locale}` : ''}`; }}
         className="relative w-full rounded-2xl overflow-hidden shadow-sm"
-        style={{ height: 200 }}
+        style={{ height: 200, isolation: 'isolate', zIndex: 0 }}
       >
         {/* Leaflet CSS */}
         {/* eslint-disable-next-line @next/next/no-css-tags */}

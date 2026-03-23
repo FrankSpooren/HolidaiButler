@@ -25,15 +25,12 @@ export function ChatHeader() {
 
   return (
     <div className="holibot-chat-header">
-      {/* Destination logo */}
-      <div className="holibot-header-logo">
-        <img
-          src={destination.icon}
-          alt={destination.name}
-          width="36"
-          height="36"
-          style={{ objectFit: 'contain' }}
-        />
+      {/* Simple user icon (consistent with dev.holidaibutler.com) */}
+      <div className="holibot-header-logo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
       </div>
 
       {/* Title - destination-aware chatbot name */}

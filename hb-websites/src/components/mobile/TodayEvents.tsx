@@ -5,10 +5,17 @@ import { useState, useEffect } from 'react';
 interface TodayEventsProps {
   locale: string;
   destinationName?: string;
+  destinationSlug?: string;
 }
 
+// Preposition per destination: Texel = "op" (island), Calpe = "in"
+const DESTINATION_PREP: Record<string, Record<string, string>> = {
+  texel: { nl: 'op', en: 'on', de: 'auf', es: 'en' },
+};
+const DEFAULT_PREP: Record<string, string> = { nl: 'in', en: 'in', de: 'in', es: 'en' };
+
 const LABELS: Record<string, Record<string, string>> = {
-  title: { nl: 'Vandaag in', en: 'Today in', de: 'Heute in', es: 'Hoy en' },
+  today: { nl: 'Vandaag', en: 'Today', de: 'Heute', es: 'Hoy' },
   more:  { nl: 'Meer', en: 'More', de: 'Mehr', es: 'Más' },
   none:  { nl: 'Geen evenementen vandaag', en: 'No events today', de: 'Keine Veranstaltungen heute', es: 'Sin eventos hoy' },
 };
@@ -94,11 +101,12 @@ function formatEventTime(dateStr: string | undefined, locale: string): string {
   }
 }
 
-export default function TodayEvents({ locale, destinationName = 'Calpe' }: TodayEventsProps) {
+export default function TodayEvents({ locale, destinationName = 'Calpe', destinationSlug }: TodayEventsProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const t = (key: string) => LABELS[key]?.[locale] || LABELS[key]?.en || key;
+  const prep = (DESTINATION_PREP[destinationSlug || ''] || DEFAULT_PREP)[locale] || DEFAULT_PREP.en;
 
   useEffect(() => {
     async function load() {
@@ -134,7 +142,7 @@ export default function TodayEvents({ locale, destinationName = 'Calpe' }: Today
       {/* Header */}
       <div className="flex items-center justify-between px-4 mb-3">
         <h3 className="text-base font-bold text-gray-800">
-          {t('title')} {destinationName}
+          {t('today')} {prep} {destinationName}
         </h3>
         <a
           href={`https://holidaibutler.com/agenda${locale !== 'en' ? `?lang=${locale}` : ''}`}

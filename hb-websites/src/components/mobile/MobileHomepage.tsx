@@ -17,11 +17,12 @@ interface MobileConfig {
 interface MobileHomepageProps {
   locale: string;
   destinationName?: string;
+  destinationSlug?: string;
   poiCount?: number;
   mobileConfig?: MobileConfig;
 }
 
-export default function MobileHomepage({ locale, destinationName = 'Calpe', poiCount, mobileConfig }: MobileHomepageProps) {
+export default function MobileHomepage({ locale, destinationName = 'Calpe', destinationSlug, poiCount, mobileConfig }: MobileHomepageProps) {
   const pathname = usePathname();
 
   // Only show on homepage
@@ -31,7 +32,7 @@ export default function MobileHomepage({ locale, destinationName = 'Calpe', poiC
     <div className="md:hidden flex flex-col gap-5 pb-5" style={{ backgroundColor: '#F5F2EC' }}>
       <ProgramCard locale={locale} programSize={mobileConfig?.programSize} />
       <TipOfTheDay locale={locale} />
-      <TodayEvents locale={locale} destinationName={destinationName} />
+      <TodayEvents locale={locale} destinationName={destinationName} destinationSlug={destinationSlug} />
       <MapPreview
         locale={locale}
         poiCount={poiCount}

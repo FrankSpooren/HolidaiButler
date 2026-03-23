@@ -132,11 +132,29 @@ export const authService = {
   },
 
   /**
+   * Google OAuth Login — receives Google ID token (credential) from Google Sign-In
+   */
+  async loginWithGoogle(credential: string): Promise<AuthResponse> {
+    const { data } = await apiClient.post<{ success: boolean; data: AuthResponse }>(
+      '/auth/oauth/google',
+      { credential }
+    );
+
+    if (!data.success) {
+      throw new Error('Google login failed');
+    }
+
+    localStorage.setItem('accessToken', data.data.accessToken);
+    localStorage.setItem('refreshToken', data.data.refreshToken);
+
+    const { setAuth } = useAuthStore.getState();
+    setAuth(data.data.user, data.data.accessToken, data.data.refreshToken);
+
+    return data.data;
+  },
+
+  /**
    * Facebook OAuth Login
-   *
-   * NOTE: Requires Facebook SDK integration
-   * Install: npm install react-facebook-login
-   * Docs: https://developers.facebook.com/docs/facebook-login/web
    */
   async loginWithFacebook(accessToken: string): Promise<AuthResponse> {
     const { data } = await apiClient.post<{ success: boolean; data: AuthResponse }>(

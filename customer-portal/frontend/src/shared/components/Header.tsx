@@ -5,6 +5,18 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useDestination } from '../contexts/DestinationContext';
 import './Header.css';
 
+/* ── Brand name mapping (destination-specific) ── */
+const BRAND_NAMES: Record<string, string> = {
+  calpe: 'CALPETRIP',
+  texel: 'TEXELMAPS',
+};
+
+/* ── Mobile homepage URL per destination ── */
+const MOBILE_HOME: Record<string, string> = {
+  calpe: 'https://dev.holidaibutler.com',
+  texel: 'https://dev.texelmaps.nl',
+};
+
 export function Header() {
   const location = useLocation();
   const destination = useDestination();
@@ -17,6 +29,9 @@ export function Header() {
 
   // Use icon-only logo for POI pages, full logo for homepage
   const isHomePage = location.pathname === '/';
+
+  const brandName = BRAND_NAMES[destination.id] || destination.name;
+  const mobileHomeUrl = MOBILE_HOME[destination.id] || '/';
 
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
@@ -72,16 +87,20 @@ export function Header() {
   return (
     <header className="header">
       <div className={`header-content ${isHomePage ? 'homepage-header' : ''}`}>
-        {!isHomePage && (
-          <Link to="/" className="logo-container">
-            {/* Brand Icon for non-homepage pages - destination aware */}
-            <img
-              src={destination.icon}
-              alt={destination.name}
-              className="header-logo-img"
-            />
-          </Link>
-        )}
+        <a href={mobileHomeUrl} className="logo-container" style={{ textDecoration: 'none' }}>
+          <span
+            className="header-brand-name"
+            style={{
+              fontSize: '18px',
+              fontWeight: 700,
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              color: 'var(--color-primary, #7FA594)',
+            }}
+          >
+            {brandName}
+          </span>
+        </a>
 
         <div className="header-icons">
           <div className="lang-dropdown">
@@ -139,7 +158,7 @@ export function Header() {
       </div>
 
       <nav ref={menuRef} className={`nav-menu ${menuOpen ? 'active' : ''}`}>
-        <Link to="/" className="nav-link" onClick={() => setMenuOpen(false)}>🏠 {t.nav.home}</Link>
+        <a href={mobileHomeUrl} className="nav-link" onClick={() => setMenuOpen(false)}>🏠 {t.nav.home}</a>
         <Link to="/pois" className="nav-link" onClick={() => setMenuOpen(false)}>🗺️ {t.nav.explore}</Link>
         <a
           href="#"

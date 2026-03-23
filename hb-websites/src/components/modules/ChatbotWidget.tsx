@@ -248,6 +248,31 @@ const INTEREST_OPTIONS = ['Beaches & Nature', 'Culture & History', 'Active', 'Fo
 
 type Duration = 'morning' | 'afternoon' | 'evening' | 'full-day';
 
+// Map onboarding interest keys → itinerary wizard interest names
+const ONBOARDING_TO_WIZARD: Record<string, string> = {
+  beach: 'Beaches & Nature',
+  nature: 'Beaches & Nature',
+  culture: 'Culture & History',
+  active: 'Active',
+  gastro: 'Food & Drinks',
+  nightlife: 'Food & Drinks',
+};
+
+function getOnboardingInterests(): string[] {
+  try {
+    const raw = localStorage.getItem('hb_onboarding_data');
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data.interests)) return [];
+    const mapped = new Set<string>();
+    for (const key of data.interests) {
+      const cat = ONBOARDING_TO_WIZARD[key];
+      if (cat) mapped.add(cat);
+    }
+    return Array.from(mapped);
+  } catch { return []; }
+}
+
 function ItineraryWizard({ locale, onSubmit, onCancel }: {
   locale: string;
   onSubmit: (opts: { duration: Duration; interests: string[]; includeMeals: boolean }) => void;
@@ -256,7 +281,8 @@ function ItineraryWizard({ locale, onSubmit, onCancel }: {
   const t = ITINERARY_LABELS[locale] || ITINERARY_LABELS.en;
   const [step, setStep] = useState(1);
   const [duration, setDuration] = useState<Duration>('full-day');
-  const [interests, setInterests] = useState<string[]>([]);
+  // Pre-fill interests from onboarding data if available
+  const [interests, setInterests] = useState<string[]>(() => getOnboardingInterests());
   const [includeMeals, setIncludeMeals] = useState(true);
 
   const toggleInterest = (id: string) => {
@@ -404,7 +430,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
   const recognitionRef = useRef<any>(null);
   const sessionIdRef = useRef<string>(crypto.randomUUID());
 
-  const name = chatbotName ?? (tenantSlug === 'texel' ? 'Tessa' : tenantSlug === 'warrewijzer' ? 'Wijze Warre' : 'HoliBot');
+  const name = chatbotName ?? (tenantSlug === 'texel' ? 'Tessa' : tenantSlug === 'warrewijzer' ? 'Wijze Warre' : 'CalpeChat');
   const accentColor = chatbotColor || '#D4AF37';
   const accentDark = '#C49B2A';
 
@@ -795,8 +821,8 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
 
             {/* Message list */}
             <div className="holibot-message-list">
-              {/* Welcome message (sequential animation) */}
-              {messages.length === 0 && (
+              {/* Welcome message (sequential animation) — hide when itinerary wizard is active */}
+              {messages.length === 0 && !showItineraryWizard && (
                 <div className="holibot-welcome-container" role="article">
                   {welcomeStep >= 1 && (
                     <div className="holibot-welcome-message holibot-welcome-animate">
