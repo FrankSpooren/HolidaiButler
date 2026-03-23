@@ -5423,4 +5423,54 @@ CLAUDE.md v4.16.0 → v4.17.0. MS v7.76 → v7.77.
 
 ---
 
+---
+
+### v4.18.0 — Kwaliteitsaudit + Differentiator Features + Image Pipeline Fix (23 maart 2026)
+
+#### Kwaliteitsaudit Opdrachten 1-11:
+- **1**: RBAC 6 rollen formeel gedocumenteerd (destination_admin level 90)
+- **2**: Social Score per-platform scoring geverifieerd (7 modellen: IG:97, X:56, LI:90)
+- **3**: Zelflerende score calibratie job actief (zondag 05:00, scoreCalibration.js)
+- **4**: Emoji cursorpositie + titel bewerkbaar geverifieerd
+- **5**: Analyse tab fix (deleted items uitgefilterd)
+- **6**: target_language per social account geverifieerd
+- **7**: Approval timeline + comments + bulk operaties UI geverifieerd
+- **8**: Weekly content performance rapport actief (maandag 08:00)
+
+#### 3 Differentiator Features (nieuw):
+- **9 AI Kalender Auto-Fill**: `POST /content/calendar/auto-fill` — AI genereert maandplan voor komende 4 weken, items direct als content_items met scheduled_at, per-platform optimale tijden (IG 10:00/13:00/17:00, FB 09:00/12:00/15:00, etc.), alleen actieve social kanalen uit feature_flags
+- **10 One-Click Campagne**: `POST /content/campaigns/generate` — volledige pipeline per item (generateContentItem→sanitize→format→translate→selectImages→SEO score), alleen actieve kanalen+talen per destination, 6→2 items voor BUTE (FB+IG)
+- **11 Slimme Publicatie-Wachtrij**: `POST /content/auto-schedule` — verdeelt goedgekeurde items over komende week op optimale tijden per platform
+
+#### Image Pipeline Fix (kritiek):
+- Media Library resolve: `imageurls` tabel (POI) vs `media` tabel (uploads) — split logica in resolved_images
+- Absolute URLs: `API_BASE_URL` env var gefixed (`https://test.holidaibutler.com/api` → `https://api.holidaibutler.com`)
+- Apache Alias `/media-files` → `/storage/media` toegevoegd
+- Calpe backfill: 30 items zonder images → selectImages() per item
+- imageSelector.js: media library URL pad met destination_id subfolder
+
+#### SEO Scoring Verbetering:
+- CTA detector: +16 NL woorden (kom, ga naar, geniet, ervaar, doe mee, etc.) + 11 DE + 11 ES
+- Hook detector: +12 NL patronen (zin in, mis het niet, heb je, kom, etc.) + 7 DE + 7 ES
+- Impact: NL content 75→97 (A+)
+
+#### Frontend Fixes:
+- ContentItemDialog: `defaultLanguage` prop (popup opent in primaire taal)
+- ContentImageSection: `isContentOnlyDest` prop (was undefined crash)
+- editBody laadt `body_{defaultLanguage}` (was hardcoded body_en)
+- viewedItems Set: groene markering verdwijnt na klikken
+- Campagne: prompt→Snackbar, response parsing robuuster, timeout 5 min
+- getLanguages(): async DB-first (supported_languages), voorkomt onnodige vertalingen
+
+#### Infrastructuur:
+- Admin portal Apache proxy: `admin.holidaibutler.com` → port 3001 (was 3003 legacy)
+- PM2 cwd fix: `/var/www/api.holidaibutler.com/platform-core` (was `/root`)
+- `.env` API_BASE_URL gecorrigeerd
+
+**Endpoints**: 237 → 240 (+3). adminPortal.js v3.37.0.
+
+CLAUDE.md v4.17.0 → v4.18.0. MS v7.77 → v7.78.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
