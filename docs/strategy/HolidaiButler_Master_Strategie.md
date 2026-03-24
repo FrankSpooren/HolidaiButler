@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 23 maart 2026
-**Versie**: 7.80
+**Datum**: 24 maart 2026
+**Versie**: 7.81
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **CalpeTrip Rebranding Compleet**. Alle HolidaiButler→CalpeTrip (6 talen, 14 bestanden). Taalparameter fix (language init script). Google Sign-In + Facebook Login live. CalpeChat chatbot. Onboarding personalisatie. 240 endpoints. CLAUDE.md v4.20.0. MS v7.80.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Content Studio UX Kwaliteitsronde COMPLEET**. Sorteer- en filterfuncties alle 3 tabs (Trending/Suggesties/Content Items). Campagne pipeline alleen actieve kanalen+talen. Kalender auto-fill per-platform optimale tijden. SEO scoring NL/DE/ES verbeterd. Image pipeline media library fix. 241 endpoints. CLAUDE.md v4.21.0. MS v7.81.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1724,4 +1724,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 24 maart 2026 — CalpeTrip Rebranding Compleet (alle HolidaiButler→CalpeTrip, 6 talen, 14 bestanden). Taalparameter fix (language init script). Google Sign-In + Facebook Login live. CalpeChat chatbot. Admin Portal: 240 endpoints, adminPortal.js v3.37.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.20.0. MS v7.80.*
+*Laatst bijgewerkt: 24 maart 2026 — Content Studio UX Kwaliteitsronde COMPLEET. Sorteer/filter alle tabs. Campagne alleen actieve kanalen. Kalender optimale tijden. SEO scoring NL/DE/ES. Admin Portal: 241 endpoints, adminPortal.js v3.38.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.21.0. MS v7.81.*
