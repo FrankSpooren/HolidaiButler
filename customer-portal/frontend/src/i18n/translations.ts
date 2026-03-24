@@ -1,5 +1,5 @@
 /**
- * Translations for HolidaiButler Platform
+ * Translations for CalpeTrip Platform
  * Supported languages: nl, en, de, es, sv, pl
  */
 
@@ -896,7 +896,7 @@ export const translations: Record<Language, Translations> = {
         subtitle: 'Ervaar deze mediterrane juweel volledig op jou afgestemd',
       },
       why: {
-        title: 'Waarom HolidaiButler?',
+        title: 'Waarom CalpeTrip?',
       },
       usps: {
         partner: { title: 'Official Partner', description: 'Official Partner Calpe Turismo' },
@@ -1176,7 +1176,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       login: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: 'Welkom terug! Log in op je account',
         emailLabel: 'E-mailadres',
         emailPlaceholder: 'jouw.email@voorbeeld.nl',
@@ -1193,7 +1193,7 @@ export const translations: Record<Language, Translations> = {
         errorGeneric: 'Inloggen mislukt. Probeer het later opnieuw.',
       },
       signup: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: 'Maak een account aan',
         nameLabel: 'Naam',
         namePlaceholder: 'Jouw naam',
@@ -1452,7 +1452,7 @@ export const translations: Record<Language, Translations> = {
         // Delete Account Modal
         deleteAccountTitle: 'Account verwijderen',
         deleteAccountWarningTitle: 'Dit kan niet ongedaan worden!',
-        deleteAccountWarningText: 'Je staat op het punt om je HolidaiButler account permanent te verwijderen.',
+        deleteAccountWarningText: 'Je staat op het punt om je CalpeTrip account permanent te verwijderen.',
         gracePeriodTitle: '30 dagen bedenktijd',
         gracePeriodText: 'Je hebt 30 dagen om je verwijdering te annuleren door opnieuw in te loggen.',
         scheduledDeletion: 'Geplande verwijdering',
@@ -1461,7 +1461,7 @@ export const translations: Record<Language, Translations> = {
         deleteAccountItem2: 'Al je voorkeuren en instellingen',
         deleteAccountItem3: 'Je favorieten en opgeslagen items',
         deleteAccountItem4: 'Je reviews en beoordelingen',
-        deleteAccountItem5: 'Toegang tot HolidaiButler',
+        deleteAccountItem5: 'Toegang tot CalpeTrip',
         canCancelDeletion: 'Je kunt de verwijdering annuleren door binnen 30 dagen in te loggen.',
         whyLeaving: 'Waarom verlaat je ons?',
         helpUsImprove: 'Optioneel: Help ons verbeteren door je reden te delen',
@@ -1497,7 +1497,7 @@ export const translations: Record<Language, Translations> = {
       privacy: 'Privacybeleid',
       terms: 'Voorwaarden',
       contact: 'Contact',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Made with love for travelers.',
+      copyright: '© 2025 CalpeTrip. Powered by AI. Made with love for travelers.',
       platformTitle: 'Platform',
       supportTitle: 'Support',
       legalTitle: 'Juridisch',
@@ -1716,7 +1716,7 @@ export const translations: Record<Language, Translations> = {
         subtitle: 'Experience this Mediterranean jewel fully tailored to you',
       },
       why: {
-        title: 'Why HolidaiButler?',
+        title: 'Why CalpeTrip?',
       },
       usps: {
         partner: { title: 'Official Partner', description: 'Official Partner Calpe Turismo' },
@@ -2181,7 +2181,7 @@ export const translations: Record<Language, Translations> = {
         deleteData: 'Delete Data',
         deleteAccountTitle: 'Delete Account',
         deleteAccountWarningTitle: 'This cannot be undone!',
-        deleteAccountWarningText: 'You are about to permanently delete your HolidaiButler account.',
+        deleteAccountWarningText: 'You are about to permanently delete your CalpeTrip account.',
         gracePeriodTitle: '30-day grace period',
         gracePeriodText: 'You have 30 days to cancel the deletion by logging in again.',
         scheduledDeletion: 'Scheduled deletion',
@@ -2190,7 +2190,7 @@ export const translations: Record<Language, Translations> = {
         deleteAccountItem2: 'All your preferences and settings',
         deleteAccountItem3: 'Your favorites and saved items',
         deleteAccountItem4: 'Your reviews and ratings',
-        deleteAccountItem5: 'Access to HolidaiButler',
+        deleteAccountItem5: 'Access to CalpeTrip',
         canCancelDeletion: 'You can cancel the deletion by logging in within 30 days.',
         whyLeaving: 'Why are you leaving?',
         helpUsImprove: 'Optional: Help us improve by sharing your reason',
@@ -2222,7 +2222,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       login: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: 'Welcome back! Log in to your account',
         emailLabel: 'Email address',
         emailPlaceholder: 'your.email@example.com',
@@ -2239,7 +2239,7 @@ export const translations: Record<Language, Translations> = {
         errorGeneric: 'Login failed. Please try again later.',
       },
       signup: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: 'Create your account',
         nameLabel: 'Full name',
         namePlaceholder: 'Your full name',
@@ -2312,7 +2312,7 @@ export const translations: Record<Language, Translations> = {
       privacy: 'Privacy Policy',
       terms: 'Terms of Service',
       contact: 'Contact',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Made with love for travelers.',
+      copyright: '© 2025 CalpeTrip. Powered by AI. Made with love for travelers.',
       platformTitle: 'Platform',
       supportTitle: 'Support',
       legalTitle: 'Legal',
@@ -2531,7 +2531,7 @@ export const translations: Record<Language, Translations> = {
         subtitle: 'Erleben Sie dieses mediterrane Juwel vollständig auf Sie zugeschnitten',
       },
       why: {
-        title: 'Warum HolidaiButler?',
+        title: 'Warum CalpeTrip?',
       },
       usps: {
         partner: { title: 'Offizieller Partner', description: 'Offizieller Partner Calpe Turismo' },
@@ -2996,7 +2996,7 @@ export const translations: Record<Language, Translations> = {
         deleteData: 'Daten löschen',
         deleteAccountTitle: 'Konto löschen',
         deleteAccountWarningTitle: 'Dies kann nicht rückgängig gemacht werden!',
-        deleteAccountWarningText: 'Sie sind dabei, Ihr HolidaiButler-Konto dauerhaft zu löschen.',
+        deleteAccountWarningText: 'Sie sind dabei, Ihr CalpeTrip-Konto dauerhaft zu löschen.',
         gracePeriodTitle: '30 Tage Bedenkzeit',
         gracePeriodText: 'Sie haben 30 Tage Zeit, die Löschung durch erneutes Anmelden abzubrechen.',
         scheduledDeletion: 'Geplante Löschung',
@@ -3005,7 +3005,7 @@ export const translations: Record<Language, Translations> = {
         deleteAccountItem2: 'Alle Ihre Präferenzen und Einstellungen',
         deleteAccountItem3: 'Ihre Favoriten und gespeicherten Elemente',
         deleteAccountItem4: 'Ihre Bewertungen',
-        deleteAccountItem5: 'Zugang zu HolidaiButler',
+        deleteAccountItem5: 'Zugang zu CalpeTrip',
         canCancelDeletion: 'Sie können die Löschung abbrechen, indem Sie sich innerhalb von 30 Tagen anmelden.',
         whyLeaving: 'Warum verlassen Sie uns?',
         helpUsImprove: 'Optional: Helfen Sie uns zu verbessern',
@@ -3037,7 +3037,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       login: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: 'Willkommen zurück! Melden Sie sich in Ihrem Konto an',
         emailLabel: 'E-Mail-Adresse',
         emailPlaceholder: 'ihre.email@beispiel.de',
@@ -3054,7 +3054,7 @@ export const translations: Record<Language, Translations> = {
         errorGeneric: 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es später erneut.',
       },
       signup: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: 'Erstellen Sie Ihr Konto',
         nameLabel: 'Vollständiger Name',
         namePlaceholder: 'Ihr vollständiger Name',
@@ -3127,7 +3127,7 @@ export const translations: Record<Language, Translations> = {
       privacy: 'Datenschutz',
       terms: 'Nutzungsbedingungen',
       contact: 'Kontakt',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Mit Liebe für Reisende gemacht.',
+      copyright: '© 2025 CalpeTrip. Powered by AI. Mit Liebe für Reisende gemacht.',
       platformTitle: 'Plattform',
       supportTitle: 'Hilfe',
       legalTitle: 'Rechtliches',
@@ -3346,7 +3346,7 @@ export const translations: Record<Language, Translations> = {
         subtitle: 'Experimenta esta joya mediterránea completamente adaptada a ti',
       },
       why: {
-        title: '¿Por qué HolidaiButler?',
+        title: '¿Por qué CalpeTrip?',
       },
       usps: {
         partner: { title: 'Socio Oficial', description: 'Socio Oficial Calpe Turismo' },
@@ -3811,7 +3811,7 @@ export const translations: Record<Language, Translations> = {
         deleteData: 'Eliminar Datos',
         deleteAccountTitle: 'Eliminar Cuenta',
         deleteAccountWarningTitle: '¡Esto no se puede deshacer!',
-        deleteAccountWarningText: 'Estás a punto de eliminar permanentemente tu cuenta de HolidaiButler.',
+        deleteAccountWarningText: 'Estás a punto de eliminar permanentemente tu cuenta de CalpeTrip.',
         gracePeriodTitle: '30 días de gracia',
         gracePeriodText: 'Tienes 30 días para cancelar la eliminación iniciando sesión de nuevo.',
         scheduledDeletion: 'Eliminación programada',
@@ -3820,7 +3820,7 @@ export const translations: Record<Language, Translations> = {
         deleteAccountItem2: 'Todas tus preferencias y configuraciones',
         deleteAccountItem3: 'Tus favoritos y elementos guardados',
         deleteAccountItem4: 'Tus reseñas y calificaciones',
-        deleteAccountItem5: 'Acceso a HolidaiButler',
+        deleteAccountItem5: 'Acceso a CalpeTrip',
         canCancelDeletion: 'Puedes cancelar la eliminación iniciando sesión dentro de 30 días.',
         whyLeaving: '¿Por qué nos dejas?',
         helpUsImprove: 'Opcional: Ayúdanos a mejorar',
@@ -3852,7 +3852,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       login: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: '¡Bienvenido de nuevo! Inicia sesión en tu cuenta',
         emailLabel: 'Correo electrónico',
         emailPlaceholder: 'tu.email@ejemplo.com',
@@ -3869,7 +3869,7 @@ export const translations: Record<Language, Translations> = {
         errorGeneric: 'Error al iniciar sesión. Inténtalo más tarde.',
       },
       signup: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: 'Crea tu cuenta',
         nameLabel: 'Nombre completo',
         namePlaceholder: 'Tu nombre completo',
@@ -3942,7 +3942,7 @@ export const translations: Record<Language, Translations> = {
       privacy: 'Privacidad',
       terms: 'Condiciones',
       contact: 'Contacto',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Hecho con amor para viajeros.',
+      copyright: '© 2025 CalpeTrip. Powered by AI. Hecho con amor para viajeros.',
       platformTitle: 'Plataforma',
       supportTitle: 'Soporte',
       legalTitle: 'Legal',
@@ -4161,7 +4161,7 @@ export const translations: Record<Language, Translations> = {
         subtitle: 'Upplev denna medelhavsjuvel helt anpassad till dig',
       },
       why: {
-        title: 'Varför HolidaiButler?',
+        title: 'Varför CalpeTrip?',
       },
       usps: {
         partner: { title: 'Officiell Partner', description: 'Officiell Partner Calpe Turismo' },
@@ -4626,7 +4626,7 @@ export const translations: Record<Language, Translations> = {
         deleteData: 'Radera Data',
         deleteAccountTitle: 'Radera Konto',
         deleteAccountWarningTitle: 'Detta kan inte ångras!',
-        deleteAccountWarningText: 'Du är på väg att permanent radera ditt HolidaiButler-konto.',
+        deleteAccountWarningText: 'Du är på väg att permanent radera ditt CalpeTrip-konto.',
         gracePeriodTitle: '30 dagars betänketid',
         gracePeriodText: 'Du har 30 dagar på dig att avbryta raderingen genom att logga in igen.',
         scheduledDeletion: 'Schemalagd radering',
@@ -4635,7 +4635,7 @@ export const translations: Record<Language, Translations> = {
         deleteAccountItem2: 'Alla dina preferenser och inställningar',
         deleteAccountItem3: 'Dina favoriter och sparade objekt',
         deleteAccountItem4: 'Dina recensioner och betyg',
-        deleteAccountItem5: 'Tillgång till HolidaiButler',
+        deleteAccountItem5: 'Tillgång till CalpeTrip',
         canCancelDeletion: 'Du kan avbryta raderingen genom att logga in inom 30 dagar.',
         whyLeaving: 'Varför lämnar du oss?',
         helpUsImprove: 'Valfritt: Hjälp oss att förbättra',
@@ -4667,7 +4667,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       login: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: 'Välkommen tillbaka! Logga in på ditt konto',
         emailLabel: 'E-postadress',
         emailPlaceholder: 'din.email@exempel.se',
@@ -4684,7 +4684,7 @@ export const translations: Record<Language, Translations> = {
         errorGeneric: 'Inloggning misslyckades. Försök igen senare.',
       },
       signup: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: 'Skapa ditt konto',
         nameLabel: 'Fullständigt namn',
         namePlaceholder: 'Ditt fullständiga namn',
@@ -4757,7 +4757,7 @@ export const translations: Record<Language, Translations> = {
       privacy: 'Integritetspolicy',
       terms: 'Villkor',
       contact: 'Kontakt',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Gjord med kärlek för resenärer.',
+      copyright: '© 2025 CalpeTrip. Powered by AI. Gjord med kärlek för resenärer.',
       platformTitle: 'Plattform',
       supportTitle: 'Support',
       legalTitle: 'Juridiskt',
@@ -4976,7 +4976,7 @@ export const translations: Record<Language, Translations> = {
         subtitle: 'Doświadcz tego śródziemnomorskiego klejnotu w pełni dostosowanego do Ciebie',
       },
       why: {
-        title: 'Dlaczego HolidaiButler?',
+        title: 'Dlaczego CalpeTrip?',
       },
       usps: {
         partner: { title: 'Oficjalny Partner', description: 'Oficjalny Partner Calpe Turismo' },
@@ -5441,7 +5441,7 @@ export const translations: Record<Language, Translations> = {
         deleteData: 'Usuń Dane',
         deleteAccountTitle: 'Usuń Konto',
         deleteAccountWarningTitle: 'Tego nie można cofnąć!',
-        deleteAccountWarningText: 'Zamierzasz trwale usunąć swoje konto HolidaiButler.',
+        deleteAccountWarningText: 'Zamierzasz trwale usunąć swoje konto CalpeTrip.',
         gracePeriodTitle: '30 dni na przemyślenie',
         gracePeriodText: 'Masz 30 dni na anulowanie usunięcia, logując się ponownie.',
         scheduledDeletion: 'Zaplanowane usunięcie',
@@ -5450,7 +5450,7 @@ export const translations: Record<Language, Translations> = {
         deleteAccountItem2: 'Wszystkie preferencje i ustawienia',
         deleteAccountItem3: 'Twoje ulubione i zapisane elementy',
         deleteAccountItem4: 'Twoje recenzje i oceny',
-        deleteAccountItem5: 'Dostęp do HolidaiButler',
+        deleteAccountItem5: 'Dostęp do CalpeTrip',
         canCancelDeletion: 'Możesz anulować usunięcie, logując się w ciągu 30 dni.',
         whyLeaving: 'Dlaczego nas opuszczasz?',
         helpUsImprove: 'Opcjonalnie: Pomóż nam się ulepszyć',
@@ -5482,7 +5482,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       login: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: 'Witaj ponownie! Zaloguj się na swoje konto',
         emailLabel: 'Adres e-mail',
         emailPlaceholder: 'twoj.email@example.pl',
@@ -5499,7 +5499,7 @@ export const translations: Record<Language, Translations> = {
         errorGeneric: 'Logowanie nie powiodło się. Spróbuj później.',
       },
       signup: {
-        title: 'HolidaiButler',
+        title: 'CalpeTrip',
         subtitle: 'Utwórz swoje konto',
         nameLabel: 'Pełne imię',
         namePlaceholder: 'Twoje pełne imię',
@@ -5572,7 +5572,7 @@ export const translations: Record<Language, Translations> = {
       privacy: 'Prywatność',
       terms: 'Regulamin',
       contact: 'Kontakt',
-      copyright: '© 2025 HolidaiButler. Powered by AI. Stworzone z miłością dla podróżników.',
+      copyright: '© 2025 CalpeTrip. Powered by AI. Stworzone z miłością dla podróżników.',
       platformTitle: 'Platforma',
       supportTitle: 'Wsparcie',
       legalTitle: 'Informacje Prawne',

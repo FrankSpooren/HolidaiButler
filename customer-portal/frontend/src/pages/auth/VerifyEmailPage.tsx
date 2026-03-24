@@ -63,7 +63,7 @@ export function VerifyEmailPage() {
           }}>
             <img
               src="/assets/images/hb-logo-homepage.png"
-              alt="HolidaiButler"
+              alt="CalpeTrip"
               style={{
                 maxWidth: '100%',
                 maxHeight: '100%',

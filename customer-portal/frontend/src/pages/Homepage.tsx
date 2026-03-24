@@ -134,7 +134,7 @@ export function Homepage() {
     payoff: t.homepage.hero.payoff,
     subtitle: t.homepage.hero.subtitle,
     logoSrc: '/assets/images/hb-logo-homepage.png',
-    logoAlt: 'HolidaiButler',
+    logoAlt: 'CalpeTrip',
   };
 
   return (

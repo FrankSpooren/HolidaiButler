@@ -673,7 +673,7 @@ export function AgendaPage() {
             <Link to="/terms" className="agenda-footer-link">Terms of Service</Link>
             <Link to="/contact" className="agenda-footer-link">Contact</Link>
           </div>
-          <p className="agenda-footer-copy">© 2025 HolidaiButler. Powered by AI. Made with ❤️ for travelers.</p>
+          <p className="agenda-footer-copy">© 2026 CalpeTrip. Powered by AI. Made with ❤️ for travelers.</p>
         </div>
       </footer>
     </>

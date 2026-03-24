@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 23 maart 2026
-**Versie**: 7.79
+**Versie**: 7.80
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Mobiele Homepage Quality + Social Login + CalpeTrip Branding COMPLEET**. Google Sign-In + Facebook Login live (OAuth token verificatie, account linking). CalpeTrip branding consistent op alle pagina's. Chatbot→CalpeChat (bottom-sheet, user-icoon). Onboarding personalisatie (ProgramCard + TipOfTheDay + ItineraryWizard). ForgotPasswordPage + password toggle + email suggesties. 240 endpoints. CLAUDE.md v4.19.0. MS v7.79.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **CalpeTrip Rebranding Compleet**. Alle HolidaiButler→CalpeTrip (6 talen, 14 bestanden). Taalparameter fix (language init script). Google Sign-In + Facebook Login live. CalpeChat chatbot. Onboarding personalisatie. 240 endpoints. CLAUDE.md v4.20.0. MS v7.80.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1724,4 +1724,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 23 maart 2026 — Mobiele Homepage Quality + Social Login + CalpeTrip Branding. Google Sign-In + Facebook Login live. CalpeChat chatbot rebranding. Onboarding personalisatie. ForgotPasswordPage. DB: oauth_provider kolommen. Admin Portal: 240 endpoints, adminPortal.js v3.37.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.19.0. MS v7.79.*
+*Laatst bijgewerkt: 24 maart 2026 — CalpeTrip Rebranding Compleet (alle HolidaiButler→CalpeTrip, 6 talen, 14 bestanden). Taalparameter fix (language init script). Google Sign-In + Facebook Login live. CalpeChat chatbot. Admin Portal: 240 endpoints, adminPortal.js v3.37.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.20.0. MS v7.80.*

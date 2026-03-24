@@ -7,7 +7,7 @@ const destinationConfigs = {
   calpe: {
     id: 'calpe',
     destinationId: 1,
-    name: 'HolidaiButler',
+    name: 'CalpeTrip',
     tagline: 'Costa Blanca Experiences',
     description: 'Jouw Persoonlijke Butler aan de Costa Blanca. Ontdek ervaringen, restaurants en activiteiten.',
     domain: 'holidaibutler.com',

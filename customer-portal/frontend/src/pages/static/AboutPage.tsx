@@ -3,7 +3,7 @@ import { useDestination } from '../../shared/contexts/DestinationContext';
 import './StaticPage.css';
 
 /**
- * AboutPage - About HolidaiButler / TexelMaps
+ * AboutPage - About CalpeTrip / TexelMaps
  * Route: /about
  * Multi-destination aware
  */
@@ -86,7 +86,7 @@ export function AboutPage() {
     <div className="static-page">
       <div className="static-page-hero">
         <div className="static-page-hero-content">
-          <h1>{getContent('title', 'Over HolidaiButler')}</h1>
+          <h1>{getContent('title', 'Over CalpeTrip')}</h1>
           <p>{getContent('subtitle', 'Jouw Persoonlijke Butler aan de Costa Blanca')}</p>
         </div>
       </div>
@@ -103,7 +103,7 @@ export function AboutPage() {
             {getContent('missionTitle', 'Onze Missie')}
           </h2>
           <p className="section-subheader">
-            {getContent('missionBold', 'HolidaiButler is jouw persoonlijke digitale butler voor de Costa Blanca.')}
+            {getContent('missionBold', 'CalpeTrip is jouw persoonlijke digitale butler voor de Costa Blanca.')}
           </p>
           <p>
             {getContent('missionText', 'Geen generieke tips of toeristische clichés, maar aanbevelingen die passen bij jou, je gezelschap en het moment. Gebaseerd op actuele omstandigheden, lokale expertise en jouw voorkeuren. Objectief, betrouwbaar en transparant — in dienst van jouw ervaring.')}
@@ -124,7 +124,7 @@ export function AboutPage() {
             {getContent('visionBold', 'Wij bouwen aan het meest persoonlijke en betrouwbare toerismeplatform van Europa.')}
           </p>
           <p>
-            {getContent('visionText', 'Door lokale partnerships, DMO-endorsement en AI-technologie bieden we hyperpersoonlijke en realtime informatie — afgestemd op jouw profiel, voorkeuren en omstandigheden. HolidaiButler is er voor reizigers die méér willen dan generieke tips: transparant, ethisch en met diepe lokale expertise. Jij bent in control. Wij zorgen dat je niets mist — en nergens over hoeft na te denken.')}
+            {getContent('visionText', 'Door lokale partnerships, DMO-endorsement en AI-technologie bieden we hyperpersoonlijke en realtime informatie — afgestemd op jouw profiel, voorkeuren en omstandigheden. CalpeTrip is er voor reizigers die méér willen dan generieke tips: transparant, ethisch en met diepe lokale expertise. Jij bent in control. Wij zorgen dat je niets mist — en nergens over hoeft na te denken.')}
           </p>
         </div>
 
