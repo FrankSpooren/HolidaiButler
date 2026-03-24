@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { getPortalUrl } from '@/lib/portal-url';
 
 interface MobileBottomNavProps {
   locale: string;
@@ -57,7 +58,7 @@ export default function MobileBottomNav({ locale, primaryColor, chatbotColor }: 
     if (complete === 'true') {
       // Onboarding done → go to account/login page on customer-portal
       const langParam = locale !== 'en' ? `?lang=${locale}` : '';
-      window.location.href = `https://holidaibutler.com/login${langParam}`;
+      window.location.href = `${getPortalUrl()}/login${langParam}`;
     } else {
       // Onboarding not done → open onboarding sheet
       localStorage.removeItem('hb_onboarding_complete');
@@ -68,14 +69,14 @@ export default function MobileBottomNav({ locale, primaryColor, chatbotColor }: 
 
   const accentColor = primaryColor || 'var(--hb-primary)';
 
-  // POIs + Agenda link to the production customer-portal (holidaibutler.com)
-  // The Next.js dev site is ONLY for the mobile homepage redesign
+  // POIs + Agenda link to the destination's customer-portal
   const langParam = locale !== 'en' ? `?lang=${locale}` : '';
+  const base = getPortalUrl();
   const tabs = [
     { key: 'home', href: '/', icon: HomeIcon },
-    { key: 'agenda', href: `https://holidaibutler.com/agenda${langParam}`, icon: AgendaIcon, external: true },
+    { key: 'agenda', href: `${base}/agenda${langParam}`, icon: AgendaIcon, external: true },
     { key: 'chat', href: null, icon: ChatIcon, raised: true },
-    { key: 'pois', href: `https://holidaibutler.com/pois${langParam}`, icon: PoisIcon, external: true },
+    { key: 'pois', href: `${base}/pois${langParam}`, icon: PoisIcon, external: true },
     { key: 'profiel', href: null, icon: ProfielIcon, badge: showBadge, profileTrigger: true },
   ];
 

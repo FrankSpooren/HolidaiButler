@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getPortalUrl } from '@/lib/portal-url';
 
 interface TodayEventsProps {
   locale: string;
@@ -145,7 +146,7 @@ export default function TodayEvents({ locale, destinationName = 'Calpe', destina
           {t('today')} {prep} {destinationName}
         </h3>
         <a
-          href={`https://holidaibutler.com/agenda${locale !== 'en' ? `?lang=${locale}` : ''}`}
+          href={`${getPortalUrl()}/agenda${locale !== 'en' ? `?lang=${locale}` : ''}`}
           className="text-sm font-medium transition-colors"
           style={{ color: 'var(--hb-primary)' }}
         >

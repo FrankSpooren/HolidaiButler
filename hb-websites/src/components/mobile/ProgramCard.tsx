@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getPortalUrl } from '@/lib/portal-url';
 
 interface ProgramItem {
   id: number;
@@ -203,7 +204,7 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
 
   // POI block click → generic production POIs page
   const openPoisPage = () => {
-    window.location.href = `https://holidaibutler.com/pois${langParam}`;
+    window.location.href = `${getPortalUrl()}/pois${langParam}`;
   };
 
   // CTA "Programma samenstellen" → open chatbot as popup

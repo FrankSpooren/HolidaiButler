@@ -5640,4 +5640,85 @@ CLAUDE.md v4.20.0 → v4.21.0. MS v7.80 → v7.81.
 
 ---
 
+## v4.22.0 — CalpeTrip.com Launch + Texel Mobiel + B2B Corporate (24-03-2026)
+
+### CalpeTrip.com Infrastructuur (Fase 1-3)
+- DNS: 4 A-records (calpetrip.com, www, dev, test) → 91.98.71.87
+- SSL: 3 Let's Encrypt certificaten (prod, dev, test) geldig tot 2026-06-22
+- Apache vhosts: 6 configs (HTTP redirect + HTTPS voor prod/dev/test)
+- Directory: `/var/www/calpetrip.com/` (prod) + `/var/www/test.calpetrip.com/` (test)
+- CORS: calpetrip.com + dev + test toegevoegd aan api.holidaibutler.com SetEnvIf + RewriteCond
+
+### Mobiele Detectie Integratie (Fase 4-6)
+- Apache User-Agent detectie: `SetEnvIf User-Agent "Mobile|Android|iPhone|iPad|..." IS_MOBILE=true`
+- Homepage (`/`) op mobiel → Next.js port 3002 (MobileHeader, ProgramCard, TipOfTheDay, TodayEvents, MapPreview)
+- Alle andere routes (`/pois`, `/agenda`, `/about`, etc.) → Vite SPA (customer-portal) ook op mobiel
+- API (`/api/*`) → altijd backend port 3001 (was split mobiel/desktop die 404 veroorzaakte)
+- `_next/*` assets → ProxyPassMatch naar port 3002
+- Next.js middleware: calpetrip.com + www.calpetrip.com toegevoegd aan DOMAIN_MAP
+
+### Destination-Aware Links
+- `portal-url.ts`: getPortalUrl() helper — bepaalt domein op basis van window.location.hostname
+- HOST_TO_PORTAL mapping: calpetrip.com, texelmaps.nl, warrewijzer.be
+- 7 componenten geüpdatet: MobileHeader, MobileBottomNav, ProgramCard, TodayEvents, MapPreview
+- Alle hardcoded holidaibutler.com links → dynamisch per tenant
+
+### Desktop CalpeTrip Branding
+- Header: CALPETRIP pill-badge linksboven (space-between layout), link naar `/`
+- Homepage hero: butler-logo verwijderd (alleen Texel behoudt logo)
+- Official Partner USP blok verwijderd (4 USPs i.p.v. 5)
+- USP grid: `repeat(auto-fit, minmax(220px, 1fr))` + `justify-items: center`
+- Footer: butler-logo → CALPETRIP pill-badge (rgba(255,255,255,0.15) achtergrond)
+- OG preview: "CalpeTrip - Costa Blanca Experiences" + calpetrip.com domein
+- .env.production: VITE_APP_NAME=CalpeTrip, domain=calpetrip.com
+
+### HolidaiButler.com → B2B/Corporate (Fase 7)
+- Statische HTML pagina (geen React SPA): professioneel, snel, schoon
+- Hero: "AI-Powered Tourism Platform. Mens geregisseerd." + 4 badges (EU-First, GDPR, EU AI Act, White Label)
+- Platform sectie: Hyper-gepersonaliseerd, Local2Local, Europese Compliance (RaaS)
+- 9 Modules: POI Management, Agenda & Events, Content Studio, Ticketing, Reserveringen, Payment (Adyen), AI Chatbot, Website Page Builder, Meertaligheid
+- 8 USPs: 45 jaar expertise, RaaS, Local2Local, Hyper-personalisatie, Vertrouwd & veilig, Sectorkennis, White label, Praktisch & transparant
+- CTA: "Klaar om uw bestemming te transformeren?" + mailto:info@holidaibutler.com
+- Footer: Live producten (CalpeTrip + TexelMaps), Contact, LinkedIn
+- Naam: HolidaiButler behouden (corporate brand)
+
+### Texelmaps.nl Mobiele Integratie
+- Zelfde Apache mobiele detectie patroon als calpetrip.com
+- X-Destination-ID: "2" (Texel) in Apache vhost
+- Next.js middleware herkent texelmaps.nl als tenant "texel"
+- portal-url.ts retourneert texelmaps.nl voor Texel hostname
+
+### API Routing Fix (kritiek)
+- Root cause: split mobiel/desktop API routing → mobiel `/api/*` ging naar Next.js (3002) i.p.v. backend (3001)
+- Customer-portal Vite SPA maakt `/api/v1/*` calls → Next.js kent die niet → 404
+- Fix: één regel `RewriteCond ^/api/ → 3001 [P,L]` voor ALLE requests
+- Texel extra: losstaande RewriteRule zonder RewriteCond stuurde alles naar 3002
+
+### Gewijzigde/Nieuwe Bestanden
+**hb-websites:**
+- src/lib/portal-url.ts (NIEUW), src/lib/destinations.ts (NIEUW)
+- src/middleware.ts (calpetrip.com mapping)
+- src/components/MobileHeader.tsx, MobileBottomNav.tsx
+- src/components/mobile/ProgramCard.tsx, TodayEvents.tsx, MapPreview.tsx
+
+**customer-portal:**
+- src/pages/Homepage.tsx (hero logo, USP grid)
+- src/pages/Homepage.css (auto-fit grid)
+- src/shared/components/Header.tsx (pill-badge links, link naar /)
+- src/shared/components/Header.css (space-between homepage)
+- src/shared/components/Footer/Footer.tsx (CALPETRIP badge)
+- vite.config.ts (domain calpetrip.com)
+- .env.production (VITE_APP_NAME=CalpeTrip)
+
+**Infrastructure:**
+- /etc/apache2/sites-available/calpetrip.com*.conf (6 configs)
+- /etc/apache2/sites-enabled/texelmaps.nl-le-ssl.conf (mobiele detectie)
+- /etc/apache2/sites-enabled/api.holidaibutler.com-le-ssl.conf (CORS)
+- /var/www/holidaibutler.com/index.html (B2B corporate)
+- infrastructure/b2b-corporate/index.html (NIEUW)
+
+CLAUDE.md v4.21.0 → v4.22.0. MS v7.81 → v7.82.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

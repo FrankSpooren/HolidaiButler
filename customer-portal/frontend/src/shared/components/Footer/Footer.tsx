@@ -54,14 +54,27 @@ export function Footer() {
         <div className="footer-container">
           {/* Brand Section */}
           <div className="footer-brand">
-            <Link to="/" className="footer-logo">
-              <img
-                src={destination.id === 'texel'
-                  ? '/assets/images/texel/texelmaps-logo-transparent.png'
-                  : destination.icon}
-                alt={destination.name}
-                className={`footer-logo-img ${destination.id === 'texel' ? 'texel-footer-logo' : ''}`}
-              />
+            <Link to="/" className="footer-logo" style={{ textDecoration: 'none' }}>
+              {destination.id === 'texel' ? (
+                <img
+                  src="/assets/images/texel/texelmaps-logo-transparent.png"
+                  alt="TexelMaps"
+                  className="footer-logo-img texel-footer-logo"
+                />
+              ) : (
+                <span style={{
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  letterSpacing: '2px',
+                  color: 'white',
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  display: 'inline-block',
+                }}>
+                  CALPETRIP
+                </span>
+              )}
             </Link>
             <p className="footer-tagline">
               {destination.id === 'texel'
