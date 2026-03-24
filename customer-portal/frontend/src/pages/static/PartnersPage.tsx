@@ -30,7 +30,7 @@ export function PartnersPage() {
             {sp?.propertyTitle || 'Voor Vastgoedeigenaren'}
           </h2>
           <p>
-            {sp?.propertyText || 'Bied je gasten een premium ervaring met HolidaiButler. Als partner krijg je toegang tot ons platform waar je gasten lokale tips, reserveringen en activiteiten kunnen ontdekken - allemaal afgestemd op hun voorkeuren.'}
+            {sp?.propertyText || 'Bied je gasten een premium ervaring met CalpeTrip. Als partner krijg je toegang tot ons platform waar je gasten lokale tips, reserveringen en activiteiten kunnen ontdekken - allemaal afgestemd op hun voorkeuren.'}
           </p>
           <h3>{sp?.propertyBenefitsTitle || 'Voordelen'}</h3>
           <ul>
@@ -51,7 +51,7 @@ export function PartnersPage() {
             {sp?.businessTitle || 'Voor Lokale Ondernemers'}
           </h2>
           <p>
-            {sp?.businessText || 'Bereik duizenden vakantiegangers die op zoek zijn naar authentieke lokale ervaringen. Of je nu een restaurant, excursiebedrijf, of winkel hebt, met HolidaiButler kom je in contact met je ideale klanten.'}
+            {sp?.businessText || 'Bereik duizenden vakantiegangers die op zoek zijn naar authentieke lokale ervaringen. Of je nu een restaurant, excursiebedrijf, of winkel hebt, met CalpeTrip kom je in contact met je ideale klanten.'}
           </p>
           <h3>{sp?.businessBenefitsTitle || 'Wat je krijgt'}</h3>
           <ul>

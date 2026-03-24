@@ -86,7 +86,7 @@ export function HelpCenterPage() {
       <div className="static-page-hero">
         <div className="static-page-hero-content">
           <h1>{sp?.title || 'Help Center'}</h1>
-          <p>{sp?.subtitle || 'Vind antwoorden en leer hoe je HolidaiButler optimaal gebruikt'}</p>
+          <p>{sp?.subtitle || 'Vind antwoorden en leer hoe je CalpeTrip optimaal gebruikt'}</p>
         </div>
       </div>
 

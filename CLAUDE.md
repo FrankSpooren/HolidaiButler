@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.19.0
-> **Laatst bijgewerkt**: 23 maart 2026
+> **Versie**: 4.20.0
+> **Laatst bijgewerkt**: 24 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -671,6 +671,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.20.0** | **2026-03-24** | **CalpeTrip Rebranding Compleet + Taalparameter Fix**. Alle HolidaiButler→CalpeTrip in customer-portal (translations.ts 6 talen, vite.config destinationName, 7 static pages, Homepage, AgendaPage, auth pages, destinationText.ts). Language init script in index.html (zet `?lang=` in localStorage vóór React laadt — fix voor NL-taal op DE/EN/ES pagina's vanuit mobiele homepage). Copyright 2025→2026. CLAUDE.md v4.20.0. MS v7.80. |
 | **4.19.0** | **2026-03-23** | **Mobiele Homepage Quality + Social Login + CalpeTrip Branding**. Server-side exception fix (theme.ts borderRadius null guard). 7 mobiele homepage fixes: ProgramCard seeded shuffle per dagdeel, toerisme-only categorieën, event→drawer links, CTA→direct itinerary wizard, CalpeChat naam, map z-index isolation, footer hidden. Customer-portal CALPETRIP branding: Header logo→tekst op alle pagina's, Login/Signup/ForgotPassword CALPETRIP, hamburger Home→dev.holidaibutler.com. ForgotPasswordPage aangemaakt (4 talen) + backend `/auth/forgot-password` endpoint. Password visibility toggle + email domain suggesties (8 domeinen). Onboarding data→ProgramCard categorie-personalisatie + itinerary wizard pre-fill. TipOfTheDay: onboarding-personalisatie + drawer open (niet full page). "Vandaag op Texel" voorzetsel fix (destination-aware). CalpeChat overal (translations 6 talen + vite.config). Chatbot bottom-sheet layout (niet fullscreen) + simpel user-icoon. CALPETRIP pill-badge op MobileHeader. **Google Sign-In**: backend `/auth/oauth/google` (tokeninfo verificatie), frontend Google Identity Services SDK, account linking by email. **Facebook Login**: backend `/auth/oauth/facebook` (Graph API verificatie), frontend redirect-based OAuth flow. DB: `oauth_provider` + `oauth_provider_id` kolommen, `password_hash` nullable. Apple button verwijderd (wacht op developer account). Calpe productie-site hersteld (was Texel door .env.production fout). Cache-busting headers (no-cache op index.html). 240 endpoints. CLAUDE.md v4.19.0. MS v7.79. |
 | **4.18.0** | **2026-03-23** | **Kwaliteitsaudit + 3 Differentiator Features + Image Pipeline Fix**. Opdrachten 1-11 Kwaliteitsaudit: RBAC 6 rollen formeel gedocumenteerd, Social Score 7 per-platform modellen geverifieerd (IG:97/X:56/LI:90), score calibratie job actief, emoji cursor+titel bewerkbaar geverifieerd, analyse tab fix (deleted items filter), target_language per account, approval+comments+bulk UI geverifieerd, weekly rapport actief. 3 Differentiator features: AI Kalender Auto-Fill (komende 4 weken, per-platform optimale tijden, actieve kanalen only), One-Click Campagne (volledige pipeline per item: sanitize+format+translate+images+SEO, alleen actieve kanalen+talen), Slimme Publicatie-Wachtrij (auto-schedule goedgekeurde items). Image pipeline fix: media library resolve (imageurls→media tabel split), absolute URLs (API_BASE_URL fix), Apache /media-files Alias, Calpe backfill 30 items. SEO scoring: +16 NL CTA woorden, +12 NL hook patronen, +DE/ES patronen (75→97 A+ voor NL content). Frontend: ContentItemDialog defaultLanguage prop, editBody in primaire taal, viewedItems markering, campagne Snackbar, isContentOnlyDest prop fix. Admin proxy: admin.holidaibutler.com→port 3001 (was 3003 legacy). 240 endpoints. adminPortal.js v3.37.0. MS v7.78. |
 | **4.17.0** | **2026-03-23** | **Merk Profiel Completie + Social Accounts + Destination Management**. Opdrachten 7-10 Merk Profiel afgerond (i18n 4 talen, Knowledge Base context). Facebook/Instagram Meta connect endpoint (System User token, Graph API validatie, AES-256 encrypted storage, verificatielink). Social accounts kanaal-filtering (onboarding sync, "extra kanalen" toggle). Destination bewerken: modules & social kanalen wijzigen via Settings (PUT /destinations/:id/feature-flags). Fixes: branding RBAC destination_admin, content generatie hooks violation, suggesties in destination-taal + brand context, content_goals in AI prompt, media upload 50 bestanden/5min, social_accounts kolomnaam fix, website-analyse in destination-taal + "Overnemen in profiel", Tone of Voice inline velden, destination scoping alle pagina's. 237 endpoints. adminPortal.js v3.36.0. MS v7.77. |
@@ -686,7 +687,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.79 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.80 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

@@ -5,7 +5,7 @@
  * in translations with actual values from the destination config.
  *
  * Placeholders:
- * - {{destinationName}} - e.g., "TexelMaps" or "HolidaiButler"
+ * - {{destinationName}} - e.g., "TexelMaps" or "CalpeTrip"
  * - {{destinationLocation}} - e.g., "Texel" or "Calpe"
  * - {{destinationRegion}} - e.g., "Waddeneilanden" or "Costa Blanca"
  * - {{destinationTagline}} - e.g., "Ontdek Texel" or "Costa Blanca Experiences"
@@ -25,7 +25,7 @@ const destinationContent: Record<string, {
   holibotPlaceholder: Record<string, string>;
 }> = {
   calpe: {
-    name: 'HolidaiButler',
+    name: 'CalpeTrip',
     location: 'Calpe',
     region: 'Costa Blanca',
     tagline: 'Costa Blanca Experiences',
@@ -123,7 +123,7 @@ export function replaceDestinationPlaceholders(text: string, destConfig?: Destin
     .replace(/\{\{destinationRegion\}\}/g, content.region)
     .replace(/\{\{destinationTagline\}\}/g, content.tagline)
     // Also replace hardcoded values for backwards compatibility
-    .replace(/HolidaiButler/g, content.name)
+    .replace(/CalpeTrip/g, content.name)
     .replace(/Calpe(?!\s*Turismo)/g, content.location) // Don't replace "Calpe Turismo"
     .replace(/Costa Blanca/g, content.region);
 }

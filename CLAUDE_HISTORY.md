@@ -5569,4 +5569,42 @@ CLAUDE.md v4.18.0 → v4.19.0. MS v7.78 → v7.79.
 
 ---
 
+## v4.20.0 — CalpeTrip Rebranding Compleet + Taalparameter Fix (24-03-2026)
+
+### Taalparameter Fix (FIX 1)
+- Root cause: Calpe index.html miste inline language init script dat Texel WEL had
+- Script `!function(){var l=new URLSearchParams(location.search).get("lang")...}()` toegevoegd aan index.html
+- Zet `?lang=de/es/nl` in localStorage VÓÓR React laadt — voorheen werd oude taalvoorkeur geladen
+- Texel had dit script al, Calpe niet (verschil ontstaan door gescheiden builds)
+
+### CalpeTrip Rebranding (FIX 2)
+- translations.ts: ALLE HolidaiButler→CalpeTrip (6 talen: NL, EN, DE, ES, SV, PL)
+- vite.config.ts: destination name 'HolidaiButler'→'CalpeTrip'
+- destinationText.ts: fallback name CalpeTrip
+- 7 static pages: AboutPage, FAQPage, ContactPage (via HelpCenterPage), HowItWorksPage, PartnersPage, PrivacyPage, TermsPage
+- Homepage.tsx: logoAlt CalpeTrip
+- AgendaPage.tsx: copyright © 2026 CalpeTrip
+- ResendVerificationPage.tsx + VerifyEmailPage.tsx: alt tekst CalpeTrip
+- Overgebleven technische HolidaiButler: alleen icon bestandsnaam (HolidaiButler_Icon_Web.png) + calendar PRODID
+
+### Gewijzigde Bestanden (14)
+- customer-portal/frontend/index.html (language init script)
+- customer-portal/frontend/src/i18n/translations.ts (6 talen CalpeTrip)
+- customer-portal/frontend/src/i18n/destinationText.ts
+- customer-portal/frontend/vite.config.ts (destination name)
+- customer-portal/frontend/src/pages/static/AboutPage.tsx
+- customer-portal/frontend/src/pages/static/FAQPage.tsx
+- customer-portal/frontend/src/pages/static/HelpCenterPage.tsx
+- customer-portal/frontend/src/pages/static/HowItWorksPage.tsx
+- customer-portal/frontend/src/pages/static/PartnersPage.tsx
+- customer-portal/frontend/src/pages/static/PrivacyPage.tsx
+- customer-portal/frontend/src/pages/static/TermsPage.tsx
+- customer-portal/frontend/src/pages/Homepage.tsx
+- customer-portal/frontend/src/pages/AgendaPage.tsx
+- customer-portal/frontend/src/pages/auth/ResendVerificationPage.tsx, VerifyEmailPage.tsx
+
+CLAUDE.md v4.19.0 → v4.20.0. MS v7.79 → v7.80.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

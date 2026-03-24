@@ -66,7 +66,7 @@ export function TermsPage() {
       <div className="static-page-hero">
         <div className="static-page-hero-content">
           <h1>{getContent('title', 'Algemene Voorwaarden')}</h1>
-          <p>{getContent('subtitle', destination.id === 'texel' ? 'De voorwaarden voor het gebruik van TexelMaps' : 'De voorwaarden voor het gebruik van HolidaiButler')}</p>
+          <p>{getContent('subtitle', destination.id === 'texel' ? 'De voorwaarden voor het gebruik van TexelMaps' : 'De voorwaarden voor het gebruik van CalpeTrip')}</p>
         </div>
       </div>
 
@@ -87,14 +87,14 @@ export function TermsPage() {
             <p>
               {sp?.section1Text || (destination.id === 'texel'
                 ? 'Door gebruik te maken van TexelMaps ga je akkoord met deze Algemene Voorwaarden. Als je niet akkoord gaat met deze voorwaarden, gebruik dan onze diensten niet.'
-                : 'Door gebruik te maken van HolidaiButler ga je akkoord met deze Algemene Voorwaarden. Als je niet akkoord gaat met deze voorwaarden, gebruik dan onze diensten niet.')}
+                : 'Door gebruik te maken van CalpeTrip ga je akkoord met deze Algemene Voorwaarden. Als je niet akkoord gaat met deze voorwaarden, gebruik dan onze diensten niet.')}
             </p>
 
             <h2>{sp?.section2Title || '2. Beschrijving van de Dienst'}</h2>
             <p>
               {getContent('section2Text', destination.id === 'texel'
                 ? 'TexelMaps is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten op Texel. Onze AI-assistent Tessa biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.'
-                : 'HolidaiButler is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten aan de Costa Blanca. Onze AI-assistent HoliBot biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.')}
+                : 'CalpeTrip is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten aan de Costa Blanca. Onze AI-assistent HoliBot biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.')}
             </p>
 
             <h2>{sp?.section3Title || '3. Gebruikersaccount'}</h2>
@@ -128,14 +128,14 @@ export function TermsPage() {
             <p>
               {getContent('section6Text', destination.id === 'texel'
                 ? 'Alle content op TexelMaps, inclusief teksten, afbeeldingen, logo\'s en software, is eigendom van TexelMaps of onze licentiegevers en wordt beschermd door auteursrecht en andere intellectuele eigendomsrechten.'
-                : 'Alle content op HolidaiButler, inclusief teksten, afbeeldingen, logo\'s en software, is eigendom van HolidaiButler of onze licentiegevers en wordt beschermd door auteursrecht en andere intellectuele eigendomsrechten.')}
+                : 'Alle content op CalpeTrip, inclusief teksten, afbeeldingen, logo\'s en software, is eigendom van CalpeTrip of onze licentiegevers en wordt beschermd door auteursrecht en andere intellectuele eigendomsrechten.')}
             </p>
 
             <h2>{sp?.section7Title || '7. Aansprakelijkheid'}</h2>
             <p>
               {getContent('section7Text', destination.id === 'texel'
                 ? 'TexelMaps fungeert als tussenpersoon tussen gebruikers en lokale partners. Wij zijn niet aansprakelijk voor de kwaliteit van diensten geleverd door partners. Onze aansprakelijkheid is beperkt tot het maximaal door jou betaalde bedrag voor de betreffende dienst.'
-                : 'HolidaiButler fungeert als tussenpersoon tussen gebruikers en lokale partners. Wij zijn niet aansprakelijk voor de kwaliteit van diensten geleverd door partners. Onze aansprakelijkheid is beperkt tot het maximaal door jou betaalde bedrag voor de betreffende dienst.')}
+                : 'CalpeTrip fungeert als tussenpersoon tussen gebruikers en lokale partners. Wij zijn niet aansprakelijk voor de kwaliteit van diensten geleverd door partners. Onze aansprakelijkheid is beperkt tot het maximaal door jou betaalde bedrag voor de betreffende dienst.')}
             </p>
 
             <h2>{sp?.section8Title || '8. Wijzigingen'}</h2>

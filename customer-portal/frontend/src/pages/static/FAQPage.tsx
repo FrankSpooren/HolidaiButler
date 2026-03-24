@@ -93,19 +93,19 @@ export function FAQPage() {
     { question: texel.q8, answer: texel.a8 },
   ] : [
     {
-      question: sp?.q1 || 'Wat is HolidaiButler?',
-      answer: sp?.a1 || 'HolidaiButler is je persoonlijke digitale butler voor de Costa Blanca. Onze AI-assistent HoliBot helpt je met het vinden van de beste restaurants, stranden, activiteiten en meer - allemaal afgestemd op jouw voorkeuren.'
+      question: sp?.q1 || 'Wat is CalpeTrip?',
+      answer: sp?.a1 || 'CalpeTrip is je persoonlijke digitale butler voor de Costa Blanca. Onze AI-assistent HoliBot helpt je met het vinden van de beste restaurants, stranden, activiteiten en meer - allemaal afgestemd op jouw voorkeuren.'
     },
     {
-      question: sp?.q2 || 'Is HolidaiButler gratis te gebruiken?',
-      answer: sp?.a2 || 'Ja, het gebruik van HolidaiButler en HoliBot is volledig gratis. Je betaalt alleen voor eventuele boekingen of tickets die je via het platform aanschaft.'
+      question: sp?.q2 || 'Is CalpeTrip gratis te gebruiken?',
+      answer: sp?.a2 || 'Ja, het gebruik van CalpeTrip en HoliBot is volledig gratis. Je betaalt alleen voor eventuele boekingen of tickets die je via het platform aanschaft.'
     },
     {
       question: sp?.q3 || 'In welke talen is HoliBot beschikbaar?',
       answer: sp?.a3 || 'HoliBot spreekt Nederlands, Engels, Duits, Spaans, Zweeds en Pools. Je kunt in je eigen taal communiceren en krijgt antwoord in dezelfde taal.'
     },
     {
-      question: sp?.q4 || 'Hoe werkt het boeken via HolidaiButler?',
+      question: sp?.q4 || 'Hoe werkt het boeken via CalpeTrip?',
       answer: sp?.a4 || 'Je kunt direct via de app reserveringen maken bij restaurants, tickets kopen voor evenementen en activiteiten boeken. De betaling verloopt veilig via ons betalingssysteem.'
     },
     {
@@ -113,8 +113,8 @@ export function FAQPage() {
       answer: sp?.a5 || 'Ja, je kunt locaties opslaan als favoriet zodat je ze later makkelijk terugvindt. Maak een gratis account aan om je favorieten op te slaan.'
     },
     {
-      question: sp?.q6 || 'Welk gebied dekt HolidaiButler?',
-      answer: sp?.a6 || 'HolidaiButler richt zich op de Costa Blanca regio in Spanje, van Denia in het noorden tot Torrevieja in het zuiden. We breiden ons aanbod continu uit.'
+      question: sp?.q6 || 'Welk gebied dekt CalpeTrip?',
+      answer: sp?.a6 || 'CalpeTrip richt zich op de Costa Blanca regio in Spanje, van Denia in het noorden tot Torrevieja in het zuiden. We breiden ons aanbod continu uit.'
     },
     {
       question: sp?.q7 || 'Hoe kan ik een reservering annuleren?',
@@ -131,7 +131,7 @@ export function FAQPage() {
       <div className="static-page-hero">
         <div className="static-page-hero-content">
           <h1>{destination.id === 'texel' ? texel.title : (sp?.title || 'Veelgestelde Vragen')}</h1>
-          <p>{destination.id === 'texel' ? texel.subtitle : (sp?.subtitle || 'Vind snel antwoord op je vragen over HolidaiButler')}</p>
+          <p>{destination.id === 'texel' ? texel.subtitle : (sp?.subtitle || 'Vind snel antwoord op je vragen over CalpeTrip')}</p>
         </div>
       </div>
 

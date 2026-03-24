@@ -91,7 +91,7 @@ export function PrivacyPage() {
             <p>
               {getContent('section1Text', destination.id === 'texel'
                 ? 'TexelMaps ("wij", "ons", "onze") respecteert je privacy en zet zich in voor de bescherming van je persoonlijke gegevens. Dit privacybeleid informeert je over hoe wij omgaan met je persoonlijke gegevens wanneer je onze website of app gebruikt.'
-                : 'HolidaiButler ("wij", "ons", "onze") respecteert je privacy en zet zich in voor de bescherming van je persoonlijke gegevens. Dit privacybeleid informeert je over hoe wij omgaan met je persoonlijke gegevens wanneer je onze website of app gebruikt.')}
+                : 'CalpeTrip ("wij", "ons", "onze") respecteert je privacy en zet zich in voor de bescherming van je persoonlijke gegevens. Dit privacybeleid informeert je over hoe wij omgaan met je persoonlijke gegevens wanneer je onze website of app gebruikt.')}
             </p>
 
             <h2>{sp?.section2Title || '2. Welke Gegevens Verzamelen Wij'}</h2>

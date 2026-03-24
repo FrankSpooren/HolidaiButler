@@ -4,7 +4,7 @@ import { useDestination } from '../../shared/contexts/DestinationContext';
 import './StaticPage.css';
 
 /**
- * HowItWorksPage - How HolidaiButler / TexelMaps works
+ * HowItWorksPage - How CalpeTrip / TexelMaps works
  * Route: /how-it-works
  * Multi-destination aware
  */
@@ -102,7 +102,7 @@ export function HowItWorksPage() {
             <div className="static-step">
               <div className="step-number">1</div>
               <div className="step-content">
-                <h3>{getContent('step1Title', 'Start met HolidaiButler')}</h3>
+                <h3>{getContent('step1Title', 'Start met CalpeTrip')}</h3>
                 <p>{getContent('step1Text', 'Open de app of website, check de complete en up-to-date agenda, bekijk locaties en start een gesprek met HoliBot, onze AI-assistent. Vertel in je eigen taal wat je zoekt - een romantisch restaurant, een familievriendelijk strand, of een avontuurlijke activiteit.')}</p>
               </div>
             </div>
@@ -116,7 +116,7 @@ export function HowItWorksPage() {
                   <Link to="/login" style={{ color: 'var(--color-primary, #30c59b)', fontWeight: 500 }}>
                     {getContent('step2AccountLink', 'Maak je een account aan')}
                   </Link>{' '}
-                  {getContent('step2Text', 'met behulp van enkele simpele vragen, dan worden alle HolidaiButler-aanbevelingen compleet afgestemd op je wensen en voorkeuren. En dat scheelt heel wat speurwerk en overbodige informatie. Of je nu zoekt naar een rustig terrasje, die ene unieke wandelroute, of een parel van een museum, wij vinden de perfecte match voor jou.')}
+                  {getContent('step2Text', 'met behulp van enkele simpele vragen, dan worden alle CalpeTrip-aanbevelingen compleet afgestemd op je wensen en voorkeuren. En dat scheelt heel wat speurwerk en overbodige informatie. Of je nu zoekt naar een rustig terrasje, die ene unieke wandelroute, of een parel van een museum, wij vinden de perfecte match voor jou.')}
                 </p>
               </div>
             </div>
@@ -147,7 +147,7 @@ export function HowItWorksPage() {
             <svg className="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
-            {getContent('featuresTitle', 'Waarom HolidaiButler?')}
+            {getContent('featuresTitle', 'Waarom CalpeTrip?')}
           </h2>
           <div className="feature-grid">
             <div className="feature-card">
