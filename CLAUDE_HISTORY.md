@@ -5607,4 +5607,37 @@ CLAUDE.md v4.19.0 → v4.20.0. MS v7.79 → v7.80.
 
 ---
 
+---
+
+### v4.21.0 — Content Studio UX Kwaliteitsronde (24 maart 2026)
+
+#### Sorteer- en filterfuncties (3 tabs):
+- **Trending Monitor**: klikbare kolomkoppen (Keyword/Score/Volume/Week ↑↓), Bron dropdown filter in kolomkop, delete knop per keyword rij, week-sortering
+- **Suggesties**: klikbare Titel/Score sortering, Type dropdown filter (Blog/Social/Video), Status dropdown filter (In afwachting/Goedgekeurd/Afgewezen/Gegenereerd)
+- **Content Items**: klikbare Titel/Score/Datum sortering, Type dropdown filter, Platform dropdown filter (alle platformen), Status dropdown filter (Concept/Goedgekeurd/Ingepland/Gepubliceerd/Mislukt)
+
+#### Backend fixes:
+- `DELETE /content/trending/:id` endpoint (241 totaal)
+- Trending summary: werkelijk gemiddelde score (was top keyword score)
+- Publish knop: zichtbaar voor draft/pending_review/approved/scheduled (was alleen approved)
+- Campagne pipeline: alleen actieve kanalen (feature_flags.social_platforms) + alleen supported talen
+- Kalender auto-fill: komende 4 weken vanaf vandaag, per-platform optimale tijden, actieve kanalen
+- Image pipeline: media library absolute URLs (`API_BASE_URL` fix), Apache `/media-files` Alias, Calpe backfill 30 items
+- SEO scoring: +16 NL CTA woorden +12 NL hook patronen +11 DE +11 ES (75→97 A+)
+
+#### Frontend fixes:
+- ContentItemDialog: `defaultLanguage` prop, editBody in primaire taal
+- ContentImageSection: `isContentOnlyDest` prop fix
+- viewedItems markering (groene achtergrond verdwijnt na klikken)
+- getLanguages() async DB-first (voorkomt onnodige vertalingen)
+- Consistente sort/filter stijl across alle 3 tabs
+
+**Bestanden**: ContentStudioPage.jsx, contentService.js, adminPortal.js, seoAnalyzer.js, imageSelector.js, toneOfVoice.js, contentGenerator.js
+
+**Endpoints**: 240 → 241 (+1). adminPortal.js v3.38.0.
+
+CLAUDE.md v4.20.0 → v4.21.0. MS v7.80 → v7.81.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
