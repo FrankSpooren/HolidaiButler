@@ -24,9 +24,9 @@
     min-height: 80px;
 }
 
-/* Homepage header - no logo, just icons on right */
+/* Homepage header - logo left, icons right (same as other pages) */
 .header-content.homepage-header {
-    justify-content: flex-end;
+    justify-content: space-between;
 }
 
 .logo-container {

@@ -57,11 +57,6 @@ export function Homepage() {
     ? (texelUsps[language as keyof typeof texelUsps] || texelUsps.nl)
     : [
     {
-      logoSrc: '/assets/images/calpe-turismo-logo.png',
-      title: t.homepage.usps.partner.title,
-      description: t.homepage.usps.partner.description,
-    },
-    {
       icon: '🤖',
       title: t.homepage.usps.ai.title,
       description: t.homepage.usps.ai.description,
@@ -139,14 +134,16 @@ export function Homepage() {
 
   return (
     <>
-      {/* Fixed Logo Block - Homepage Only - Destination aware */}
-      <Link to="/" className={`homepage-logo-container ${destination.id === 'texel' ? 'texel-logo' : ''}`}>
-        <img
-          src={heroContent.logoSrc}
-          alt={heroContent.logoAlt}
-          className="homepage-logo-img"
-        />
-      </Link>
+      {/* Fixed Logo Block - Homepage Only - Texel only (Calpe uses Header pill-badge) */}
+      {destination.id === 'texel' && (
+        <Link to="/" className="homepage-logo-container texel-logo">
+          <img
+            src={heroContent.logoSrc}
+            alt={heroContent.logoAlt}
+            className="homepage-logo-img"
+          />
+        </Link>
+      )}
 
       {/* Hero Section - Uses CSS variables from DestinationContext */}
       <section className="hero" style={{

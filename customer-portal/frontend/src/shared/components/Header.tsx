@@ -87,7 +87,7 @@ export function Header() {
   return (
     <header className="header">
       <div className={`header-content ${isHomePage ? 'homepage-header' : ''}`}>
-        <a href={mobileHomeUrl} className="logo-container" style={{ textDecoration: 'none' }}>
+        <a href="/" className="logo-container" style={{ textDecoration: 'none' }}>
           <span
             className="header-brand-name"
             style={{
@@ -95,7 +95,11 @@ export function Header() {
               fontWeight: 700,
               letterSpacing: '2px',
               textTransform: 'uppercase',
-              color: 'var(--color-primary, #7FA594)',
+              color: '#5E8B7E',
+              backgroundColor: 'white',
+              padding: '6px 16px',
+              borderRadius: '8px',
+              display: 'inline-block',
             }}
           >
             {brandName}

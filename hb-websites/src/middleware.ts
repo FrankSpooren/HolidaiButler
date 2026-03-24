@@ -4,6 +4,8 @@ import type { TenantMapping } from '@/types/tenant';
 const DOMAIN_MAP: Record<string, TenantMapping> = {
   'holidaibutler.com': { slug: 'calpe', defaultLocale: 'nl' },
   'www.holidaibutler.com': { slug: 'calpe', defaultLocale: 'nl' },
+  'calpetrip.com': { slug: 'calpe', defaultLocale: 'nl' },
+  'www.calpetrip.com': { slug: 'calpe', defaultLocale: 'nl' },
   'calpe.holidaibutler.com': { slug: 'calpe', defaultLocale: 'nl' },
   'dev.holidaibutler.com': { slug: 'calpe', defaultLocale: 'nl' },
   'texelmaps.nl': { slug: 'texel', defaultLocale: 'nl' },

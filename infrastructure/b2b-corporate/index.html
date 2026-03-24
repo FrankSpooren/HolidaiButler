@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HolidaiButler — AI-Powered Tourism Platform</title>
+  <meta name="description" content="Het volwaardige Europese platform voor hospitality, leisure en toerisme. AI-driven, mens geregisseerd, GDPR & EU AI Act compliant.">
+  <meta name="theme-color" content="#5E8B7E">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://holidaibutler.com/">
+  <meta property="og:title" content="HolidaiButler — AI-Powered Tourism Platform">
+  <meta property="og:description" content="Het volwaardige Europese platform voor hospitality, leisure en toerisme. AI-driven, mens geregisseerd, GDPR & EU AI Act compliant.">
+  <meta property="og:image" content="https://holidaibutler.com/assets/images/HolidaiButler_Icon_Web.png">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="HolidaiButler — AI-Powered Tourism Platform">
+  <meta name="twitter:description" content="Het volwaardige Europese platform voor hospitality, leisure en toerisme.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/assets/images/HolidaiButler_Icon_Web.png">
+
+  <!-- Analytics -->
+  <script async defer src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+  <noscript><img src="https://queue.simpleanalyticscdn.com/noscript.gif" alt="" referrerpolicy="no-referrer-when-downgrade"></noscript>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #7FA594;
+      --primary-dark: #5E8B7E;
+      --primary-darker: #4A7066;
+      --accent: #D4AF37;
+      --text: #1C1917;
+      --text-muted: #6B7280;
+      --bg: #FAFAF8;
+      --surface: #FFFFFF;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); color: var(--text); background: var(--bg); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    /* ── NAV ── */
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 72px; }
+    .nav-logo { font-size: 20px; font-weight: 800; letter-spacing: 1px; color: var(--primary-dark); text-decoration: none; }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-links a { text-decoration: none; color: var(--text-muted); font-size: 15px; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--primary-dark); }
+    .nav-cta { background: var(--primary-dark); color: white !important; padding: 10px 24px; border-radius: 8px; font-weight: 600; transition: background 0.2s; }
+    .nav-cta:hover { background: var(--primary-darker); }
+    @media (max-width: 768px) { .nav-links { display: none; } }
+
+    /* ── HERO ── */
+    .hero { padding: 160px 24px 100px; text-align: center; background: linear-gradient(160deg, var(--primary), var(--primary-dark)); color: white; }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; line-height: 1.15; margin-bottom: 20px; letter-spacing: -0.02em; }
+    .hero h1 span { color: var(--accent); }
+    .hero p { font-size: clamp(1rem, 2vw, 1.25rem); max-width: 680px; margin: 0 auto 40px; opacity: 0.9; line-height: 1.7; }
+    .hero-badges { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .hero-badge { background: rgba(255,255,255,0.15); padding: 8px 18px; border-radius: 24px; font-size: 14px; font-weight: 500; backdrop-filter: blur(8px); }
+
+    /* ── SECTIONS ── */
+    .section { padding: 100px 24px; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); margin-bottom: 12px; }
+    .section-title { font-size: clamp(1.75rem, 3.5vw, 2.5rem); font-weight: 800; margin-bottom: 16px; letter-spacing: -0.01em; line-height: 1.2; }
+    .section-subtitle { font-size: 1.1rem; color: var(--text-muted); max-width: 640px; margin-bottom: 48px; line-height: 1.7; }
+    .section-alt { background: white; }
+
+    /* ── MODULES GRID ── */
+    .modules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+    .module-card { background: var(--bg); border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 32px 28px; transition: transform 0.2s, box-shadow 0.2s; }
+    .module-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
+    .module-icon { font-size: 32px; margin-bottom: 16px; }
+    .module-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .module-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+    /* ── USP LIST ── */
+    .usp-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 32px; }
+    .usp-item { display: flex; gap: 16px; align-items: flex-start; }
+    .usp-icon { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+    .usp-item h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .usp-item p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+    /* ── ESSENCE BLOCK ── */
+    .essence { background: linear-gradient(160deg, var(--primary-dark), var(--primary-darker)); color: white; padding: 80px 24px; text-align: center; }
+    .essence h2 { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; margin-bottom: 16px; }
+    .essence p { font-size: 1.1rem; opacity: 0.9; max-width: 700px; margin: 0 auto 32px; line-height: 1.7; }
+    .essence-cta { display: inline-block; background: var(--accent); color: #1C1917; padding: 14px 36px; border-radius: 8px; font-weight: 700; font-size: 16px; text-decoration: none; transition: transform 0.2s; }
+    .essence-cta:hover { transform: translateY(-2px); }
+
+    /* ── FOOTER ── */
+    .footer { background: #1C1917; color: rgba(255,255,255,0.8); padding: 60px 24px 30px; }
+    .footer-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; }
+    .footer-brand h3 { color: white; font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+    .footer-brand p { font-size: 14px; line-height: 1.6; opacity: 0.7; }
+    .footer-col h4 { color: white; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+    .footer-col a { display: block; color: rgba(255,255,255,0.6); text-decoration: none; font-size: 14px; margin-bottom: 10px; transition: color 0.2s; }
+    .footer-col a:hover { color: white; }
+    .footer-bottom { max-width: 1100px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; font-size: 13px; opacity: 0.5; }
+    @media (max-width: 768px) {
+      .footer-inner { grid-template-columns: 1fr; }
+      .footer-bottom { flex-direction: column; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">HolidaiButler</a>
+    <div class="nav-links">
+      <a href="#platform">Platform</a>
+      <a href="#modules">Modules</a>
+      <a href="#usps">Waarom wij</a>
+      <a href="#contact" class="nav-cta">Contact</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <h1>AI-Powered Tourism Platform.<br><span>Mens geregisseerd.</span></h1>
+  <p>HolidaiButler is het volwaardige Europese antwoord op internationale platformen. Ethisch, compliant, transparant — gebouwd op 45 jaar strategische, commerciële en AI/UX-expertise.</p>
+  <div class="hero-badges">
+    <span class="hero-badge">🇪🇺 EU-First</span>
+    <span class="hero-badge">🔒 GDPR Compliant</span>
+    <span class="hero-badge">🤖 EU AI Act Ready</span>
+    <span class="hero-badge">🏷️ White Label</span>
+  </div>
+</section>
+
+<!-- PLATFORM ESSENCE -->
+<section class="section section-alt" id="platform">
+  <div class="section-inner">
+    <div class="section-label">Het Platform</div>
+    <h2 class="section-title">AI-driven. Mens gecontroleerd.</h2>
+    <p class="section-subtitle">HolidaiButler combineert kunstmatige intelligentie met menselijke expertise. Elke aanbeveling, elk stuk content en elke interactie wordt aangestuurd door AI — maar altijd gecontroleerd en gevalideerd door mensen. Geen black box, maar transparante technologie in dienst van de gebruiker.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+      <div style="padding: 28px; background: var(--bg); border-radius: 16px; border: 1px solid rgba(0,0,0,0.06);">
+        <div style="font-size: 28px; margin-bottom: 12px;">🎯</div>
+        <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 8px;">Hyper-gepersonaliseerd</h3>
+        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">Realtime aanbevelingen op basis van profiel, voorkeuren, locatie, weer en tijdstip. Geen generieke tips — altijd relevant, altijd persoonlijk.</p>
+      </div>
+      <div style="padding: 28px; background: var(--bg); border-radius: 16px; border: 1px solid rgba(0,0,0,0.06);">
+        <div style="font-size: 28px; margin-bottom: 12px;">🏘️</div>
+        <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 8px;">Local2Local</h3>
+        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">Lokale partnerships die de lokale economie en identiteit ondersteunen. Geen anoniem platform, maar een brug tussen bezoekers en de gemeenschap.</p>
+      </div>
+      <div style="padding: 28px; background: var(--bg); border-radius: 16px; border: 1px solid rgba(0,0,0,0.06);">
+        <div style="font-size: 28px; margin-bottom: 12px;">🛡️</div>
+        <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 8px;">Europese Compliance als Kracht</h3>
+        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">RaaS — Regulation as a Service. GDPR, EU AI Act, PCI DSS compliance ingebouwd in het platform. Vertrouwd en veilig van data tot betaling.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MODULES -->
+<section class="section" id="modules">
+  <div class="section-inner">
+    <div class="section-label">Modules</div>
+    <h2 class="section-title">Enterprise-grade. Modulair. Schaalbaar.</h2>
+    <p class="section-subtitle">Elk onderdeel is onafhankelijk inzetbaar en volledig geïntegreerd. Activeer alleen wat je nodig hebt.</p>
+
+    <div class="modules-grid">
+      <div class="module-card">
+        <div class="module-icon">📍</div>
+        <h3>POI Management</h3>
+        <p>3.200+ punten van interesse met 80+ datavelden per locatie. Geautomatiseerde kwaliteitscontrole, tier-management en meertalige content.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-icon">📅</div>
+        <h3>Agenda & Events</h3>
+        <p>Evenementen kalender met automatische categorisatie, meertalige weergave en integratie met lokale evenementenbronnen.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-icon">✍️</div>
+        <h3>Content Studio</h3>
+        <p>AI-gestuurde content generatie met tone-of-voice per merk, SEO-optimalisatie, multi-platform publicatie en performance tracking.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-icon">🎫</div>
+        <h3>Ticketing</h3>
+        <p>Volledig ticketing systeem met QR-codes, voorraadbeheer, vouchers en real-time beschikbaarheid. Redis-backed voor hoge concurrency.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-icon">🍽️</div>
+        <h3>Reserveringen</h3>
+        <p>Slot-gebaseerd reserveringssysteem voor restaurants en activiteiten. Dubbele-boeking preventie, gastprofielen en GDPR-compliant opschoning.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-icon">💳</div>
+        <h3>Payment (Adyen)</h3>
+        <p>PCI DSS-compliant betalingen via Adyen. Sessie-gebaseerde checkout, webhooks, refunds en volledige transactie-audit trail.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-icon">💬</div>
+        <h3>AI Chatbot</h3>
+        <p>RAG-powered conversatie-assistent met ChromaDB vectoren, Mistral LLM, meertalige intent-detectie en conversational booking flows.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-icon">🌐</div>
+        <h3>Website Page Builder</h3>
+        <p>20 configureerbare blokken, tenant-theming via CSS Custom Properties, SSR met Next.js 15 en data-driven navigatie per bestemming.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-icon">🌍</div>
+        <h3>Meertaligheid</h3>
+        <p>6 talen standaard (NL, EN, DE, ES, SV, PL). AI-vertalingen via DeepL Pro + Mistral. Per bestemming configureerbare taalset.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- USPs -->
+<section class="section section-alt" id="usps">
+  <div class="section-inner">
+    <div class="section-label">Waarom HolidaiButler</div>
+    <h2 class="section-title">Geen hocus pocus. Praktisch, doelgericht en transparant.</h2>
+    <p class="section-subtitle"></p>
+
+    <div class="usp-list">
+      <div class="usp-item">
+        <div class="usp-icon">🧠</div>
+        <div>
+          <h3>45 jaar expertise</h3>
+          <p>De founders combineren 45 jaar strategische, commerciële en UI/UX/AI-ervaring. Bewezen track record in leisure, toerisme, marketing en commercie.</p>
+        </div>
+      </div>
+      <div class="usp-item">
+        <div class="usp-icon">🇪🇺</div>
+        <div>
+          <h3>Regulation as a Service (RaaS)</h3>
+          <p>Europese compliance als concurrentievoordeel. GDPR, EU AI Act, PCI DSS — niet als last, maar als unique selling point richting eindgebruikers en partners.</p>
+        </div>
+      </div>
+      <div class="usp-item">
+        <div class="usp-icon">🏘️</div>
+        <div>
+          <h3>Local2Local</h3>
+          <p>Lokale partnerships om lokale economie en identiteit te ondersteunen. Geen extractief platform — een ecosysteem dat waarde teruggeeft aan de bestemming.</p>
+        </div>
+      </div>
+      <div class="usp-item">
+        <div class="usp-icon">🎯</div>
+        <div>
+          <h3>Hyper-gepersonaliseerde assistentie</h3>
+          <p>Realtime, accurate informatie afgestemd op profiel, voorkeuren en context. Geen generieke tips — altijd relevant, altijd persoonlijk.</p>
+        </div>
+      </div>
+      <div class="usp-item">
+        <div class="usp-icon">🔒</div>
+        <div>
+          <h3>Vertrouwd & veilig</h3>
+          <p>Van data tot betaling. End-to-end encryptie, EU-hosted infrastructuur (Hetzner DE), geen data-doorverkoop, volledige transparantie.</p>
+        </div>
+      </div>
+      <div class="usp-item">
+        <div class="usp-icon">📊</div>
+        <div>
+          <h3>Diepgaande sectorkennis</h3>
+          <p>Data en AI ingezet vanuit bewezen begrip van behoeften, processen en dynamiek in hospitality, leisure en toerisme. Zowel vanuit vraag- als aanbodzijde.</p>
+        </div>
+      </div>
+      <div class="usp-item">
+        <div class="usp-icon">🏷️</div>
+        <div>
+          <h3>White label-concept</h3>
+          <p>Toepasbaar op elke dienstverlenende organisatie in hospitality, leisure en toerisme. Eigen branding, eigen domein, eigen identiteit — powered by HolidaiButler.</p>
+        </div>
+      </div>
+      <div class="usp-item">
+        <div class="usp-icon">⚡</div>
+        <div>
+          <h3>Praktisch & transparant</h3>
+          <p>Geen hocus pocus. Doelgerichte technologie die direct waarde levert. Transparante AI-beslissingen, meetbare resultaten, eerlijke communicatie.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="essence" id="contact">
+  <h2>Klaar om uw bestemming te transformeren?</h2>
+  <p>HolidaiButler is beschikbaar als volledig white label platform voor toeristische bestemmingen, DMO's, recreatiedomeinen en hospitality-organisaties.</p>
+  <a href="mailto:info@holidaibutler.com" class="essence-cta">Neem contact op →</a>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <h3>HolidaiButler</h3>
+      <p>AI-Powered Tourism Platform. Gebouwd in Europa, voor de wereld. Ethisch, compliant en transparant.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Platform</h4>
+      <a href="#platform">Over het platform</a>
+      <a href="#modules">Modules</a>
+      <a href="#usps">Waarom wij</a>
+    </div>
+    <div class="footer-col">
+      <h4>Live Producten</h4>
+      <a href="https://calpetrip.com" target="_blank">CalpeTrip — Calpe</a>
+      <a href="https://texelmaps.nl" target="_blank">TexelMaps — Texel</a>
+    </div>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <a href="mailto:info@holidaibutler.com">info@holidaibutler.com</a>
+      <a href="https://www.linkedin.com/company/holidaibutler" target="_blank">LinkedIn</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; 2026 HolidaiButler. Alle rechten voorbehouden.</span>
+    <span>Gemaakt met ❤️ in Europa</span>
+  </div>
+</footer>
+
+</body>
+</html>

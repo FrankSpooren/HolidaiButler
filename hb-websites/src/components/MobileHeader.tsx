@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { getPortalUrl } from '@/lib/portal-url';
 
 const AccessibilityModal = dynamic(
   () => import('./layout/AccessibilityModal'),
@@ -227,21 +228,22 @@ export default function MobileHeader({
           <p className="text-white/80 text-sm mt-1">{subtitle}</p>
         </div>
 
-        {/* Slide-in menu panel — matches production holidaibutler.com */}
+        {/* Slide-in menu panel — destination-aware links */}
         {menuOpen && (() => {
+          const base = getPortalUrl();
           const langParam = locale !== 'en' ? `?lang=${locale}` : '';
           const primaryItems = [
             { icon: '🏠', label: 'Home', href: '/' },
-            { icon: '🖼️', label: locale === 'nl' ? 'Ontdekken' : locale === 'de' ? 'Entdecken' : locale === 'es' ? 'Descubrir' : 'Explore', href: `https://holidaibutler.com/pois${langParam}` },
+            { icon: '🖼️', label: locale === 'nl' ? 'Ontdekken' : locale === 'de' ? 'Entdecken' : locale === 'es' ? 'Descubrir' : 'Explore', href: `${base}/pois${langParam}` },
             { icon: '💬', label: chatbotName || 'CalpeChat', href: null, chatbot: true },
-            { icon: '📅', label: 'Agenda', href: `https://holidaibutler.com/agenda${langParam}` },
-            { icon: '❤️', label: locale === 'nl' ? 'Favorieten' : locale === 'de' ? 'Favoriten' : locale === 'es' ? 'Favoritos' : 'Favorites', href: `https://holidaibutler.com/favorites${langParam}` },
+            { icon: '📅', label: 'Agenda', href: `${base}/agenda${langParam}` },
+            { icon: '❤️', label: locale === 'nl' ? 'Favorieten' : locale === 'de' ? 'Favoriten' : locale === 'es' ? 'Favoritos' : 'Favorites', href: `${base}/favorites${langParam}` },
           ];
           const secondaryItems = [
-            { icon: '👤', label: 'Account', href: `https://holidaibutler.com/login?returnUrl=%2Faccount${locale !== 'en' ? `&lang=${locale}` : ''}` },
-            { icon: 'ℹ️', label: locale === 'nl' ? 'Over ons' : locale === 'de' ? 'Über uns' : locale === 'es' ? 'Sobre nosotros' : 'About', href: `https://holidaibutler.com/about${langParam}` },
-            { icon: '❓', label: 'FAQ', href: `https://holidaibutler.com/faq${langParam}` },
-            { icon: '✉️', label: 'Contact', href: `https://holidaibutler.com/contact${langParam}` },
+            { icon: '👤', label: 'Account', href: `${base}/login?returnUrl=%2Faccount${locale !== 'en' ? `&lang=${locale}` : ''}` },
+            { icon: 'ℹ️', label: locale === 'nl' ? 'Over ons' : locale === 'de' ? 'Über uns' : locale === 'es' ? 'Sobre nosotros' : 'About', href: `${base}/about${langParam}` },
+            { icon: '❓', label: 'FAQ', href: `${base}/faq${langParam}` },
+            { icon: '✉️', label: 'Contact', href: `${base}/contact${langParam}` },
           ];
           return (
             <>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { getPortalUrl } from '@/lib/portal-url';
 
 interface MapPreviewProps {
   locale: string;
@@ -135,7 +136,7 @@ export default function MapPreview({ locale, poiCount = 1500, poiLimit = 8, mapL
   return (
     <div className="md:hidden mx-4">
       <button
-        onClick={() => { window.location.href = `https://holidaibutler.com/pois?view=map${locale !== 'en' ? `&lang=${locale}` : ''}`; }}
+        onClick={() => { window.location.href = `${getPortalUrl()}/pois?view=map${locale !== 'en' ? `&lang=${locale}` : ''}`; }}
         className="relative w-full rounded-2xl overflow-hidden shadow-sm"
         style={{ height: 200, isolation: 'isolate', zIndex: 0 }}
       >
@@ -165,7 +166,7 @@ export default function MapPreview({ locale, poiCount = 1500, poiLimit = 8, mapL
             {MAP_CATEGORIES.map(cat => (
               <a
                 key={cat.key}
-                href={`https://holidaibutler.com/pois?categories=${encodeURIComponent(cat.filter)}${locale !== 'en' ? `&lang=${locale}` : ''}`}
+                href={`${getPortalUrl()}/pois?categories=${encodeURIComponent(cat.filter)}${locale !== 'en' ? `&lang=${locale}` : ''}`}
                 onClick={(e) => e.stopPropagation()}
                 className="text-[11px] font-semibold rounded-md px-2.5 py-1 text-white transition-opacity active:opacity-80"
                 style={{ backgroundColor: cat.color }}
