@@ -32,38 +32,303 @@ function getDayPart(): DayPart {
   return 'evening';
 }
 
-// Only tourism-relevant categories: Actief, Stranden & Natuur, Cultuur & Geschiedenis, Recreatie, Eten & Drinken
-const TOURISM_CATEGORIES = 'Active,Beaches & Nature,Culture & History,Recreation,Food & Drinks,Actief,Stranden & Natuur,Cultuur & Geschiedenis,Recreatie,Eten & Drinken';
+/* ─────────────────────────────────────────────
+ * DESTINATION-SPECIFIC DAYPART CONFIGURATION
+ * ───────────────────────────────────────────── */
 
-// Map onboarding interest keys to API category names
-const INTEREST_TO_CATEGORIES: Record<string, string[]> = {
-  beach:    ['Beaches & Nature', 'Stranden & Natuur'],
-  culture:  ['Culture & History', 'Cultuur & Geschiedenis'],
-  nature:   ['Beaches & Nature', 'Stranden & Natuur', 'Recreation', 'Recreatie'],
-  gastro:   ['Food & Drinks', 'Eten & Drinken'],
-  active:   ['Active', 'Actief', 'Recreation', 'Recreatie'],
-  nightlife:['Food & Drinks', 'Eten & Drinken'],
+interface DayPartRule {
+  /** API categories to fetch */
+  categories: string;
+  /** Allowed subcategory keywords (if set, ONLY these subcats pass) */
+  allowedSubcats?: string[];
+  /** Excluded subcategory/name keywords */
+  excludeSubcats?: string[];
+  /** Excluded specific POI names */
+  excludeNames?: string[];
+  /** Max food/drink POIs in this daypart */
+  maxFood: number;
+}
+
+interface DestinationConfig {
+  rules: Record<DayPart, DayPartRule>;
+  /** Highlight POI names — 1 is always included in morning/afternoon (not evening) */
+  highlights: string[];
+}
+
+/*
+ * CALPE — Exact subcategory whitelist per dagdeel
+ * DB subcategories: Active(Cycling,Golf,Hiking,Sports & Fitness,Water Sports),
+ * Beaches & Nature(Beaches,Parks & Gardens,Viewpoints & Nature),
+ * Shopping(Home & Lifestyle,Markets,Specialty Stores,Supermarkets & Food),
+ * Culture & History(Arts & Museums,Historical Sites,Religious Buildings,Squares & Public Spaces),
+ * Recreation(Entertainment,Playgrounds & Leisure Areas,RV Parks & Camping,Theaters),
+ * Food & Drinks(Bar Restaurants,Bars,Breakfast & Coffee,Fastfood,Restaurants)
+ */
+const CALPE_CONFIG: DestinationConfig = {
+  highlights: [
+    'Penyal d\'Ifac Natural Park', 'Peñón de Ifach', 'Penyal d\'Ifac',
+    'Old Town', 'Casco Antiguo',
+    'Mirador Morro de Toix',
+    'Mirador Paseo Maritimo', 'Mirador del Paseo Marítimo',
+    'Parc Natural de la Serra Gelada', 'Serra Gelada',
+    'Spanish Flag Steps', 'Escaleras de la Bandera',
+    'Platja de la Fossa', 'Playa de la Fossa',
+    'Far de l\'Albir', 'Faro del Albir',
+    'Cala el Racó', 'Cala del Racó',
+  ],
+  rules: {
+    morning: {
+      categories: 'Active,Beaches & Nature,Shopping,Culture & History,Recreation,Food & Drinks',
+      // STRICT whitelist: only these subcategories allowed
+      allowedSubcats: [
+        // Active (NOT Sports & Fitness)
+        'cycling', 'golf', 'hiking', 'water sports',
+        // Beaches & Nature (all)
+        'beaches', 'parks & gardens', 'viewpoints & nature',
+        // Shopping (Fashion & Clothing, Home & Lifestyle, Markets — NOT Specialty Stores, NOT Supermarkets)
+        'fashion', 'clothing', 'home & lifestyle', 'markets',
+        // Culture & History (all)
+        'arts & museums', 'historical sites', 'religious buildings', 'squares & public spaces',
+        // Recreation (Entertainment, Playgrounds & Leisure Areas — NOT RV Parks)
+        'entertainment', 'playgrounds & leisure areas',
+        // Food & Drinks (Breakfast & Coffee ONLY for morning)
+        'breakfast & coffee',
+      ],
+      excludeSubcats: [],
+      excludeNames: ['Zeeman Calpe', 'Zeeman'],
+      maxFood: 1,
+    },
+    afternoon: {
+      categories: 'Active,Beaches & Nature,Shopping,Culture & History,Recreation,Food & Drinks',
+      allowedSubcats: [
+        // Active (NOT Sports & Fitness)
+        'cycling', 'golf', 'hiking', 'water sports',
+        // Beaches & Nature (all)
+        'beaches', 'parks & gardens', 'viewpoints & nature',
+        // Shopping (Fashion & Clothing, Home & Lifestyle, Markets)
+        'fashion', 'clothing', 'home & lifestyle', 'markets',
+        // Culture & History (all)
+        'arts & museums', 'historical sites', 'religious buildings', 'squares & public spaces',
+        // Recreation (Entertainment, Playgrounds & Leisure Areas)
+        'entertainment', 'playgrounds & leisure areas',
+        // Food & Drinks (NOT Breakfast, NOT Restaurants — only light: Bars for afternoon drink)
+        'bars',
+      ],
+      excludeSubcats: [],
+      excludeNames: ['Zeeman Calpe', 'Zeeman'],
+      maxFood: 1,
+    },
+    evening: {
+      categories: 'Culture & History,Recreation,Food & Drinks',
+      allowedSubcats: [
+        // Culture & History (ONLY Squares & Public Spaces)
+        'squares & public spaces',
+        // Recreation (Theaters, Entertainment)
+        'theaters', 'entertainment',
+        // Food & Drinks (Restaurant, Bar Restaurants, Bars — NOT Fastfood, NOT Breakfast)
+        'restaurants', 'bar restaurants', 'bars',
+      ],
+      excludeSubcats: ['fastfood', 'breakfast'],
+      excludeNames: [],
+      maxFood: 1,
+    },
+  },
 };
 
-/** Read onboarding interests from localStorage and build a personalized category string */
-function getPersonalizedCategories(): string {
-  try {
-    const raw = localStorage.getItem('hb_onboarding_data');
-    if (!raw) return TOURISM_CATEGORIES;
-    const data = JSON.parse(raw);
-    const interests: string[] = data.interests;
-    if (!Array.isArray(interests) || interests.length === 0) return TOURISM_CATEGORIES;
-    // Build unique category set from user interests
-    const cats = new Set<string>();
-    for (const interest of interests) {
-      const mapped = INTEREST_TO_CATEGORIES[interest];
-      if (mapped) mapped.forEach(c => cats.add(c));
-    }
-    return cats.size > 0 ? Array.from(cats).join(',') : TOURISM_CATEGORIES;
-  } catch {
-    return TOURISM_CATEGORIES;
-  }
+/*
+ * TEXEL — Exact subcategory whitelist per dagdeel
+ * DB subcategories: Actief(Excursies,Golfbaan,Paarden,Rondvaarten,Wandelroutes,Watersporten,Zwemmen),
+ * Natuur(Landmarks,Natuurboerderij,Natuurgebieden,Stranden,Uitkijkpunten),
+ * Winkelen(Doe-het-zelf,Huisdieren,Huishoudelijk,Mode & Lifestyle,Speciaalzaken,Supermarkten),
+ * Cultuur & Historie(Landmarks,Monuments,Musea,Religieuze gebouwen,Sociaal-culturele centra,Texels Schaap,Uitkijkpunten),
+ * Eten & Drinken(Cafe,Cocktail Bar,Eetcafe,Foodtrucks,Ijs & Desserts,Ontbijt & Lunch,Restaurants,Speciaalzaken,Specialties,Strandkiosk,Strandpaviljoens,Wijndomein),
+ * Recreatief(Indoor)
+ */
+const TEXEL_CONFIG: DestinationConfig = {
+  highlights: [
+    'Vuurtoren Texel', 'Lighthouse Texel', 'Vuurtoren',
+    'Ecomare', 'De Slufter', 'Kaap Skil',
+    'Strandpaviljoen Paal 17', 'Paal 9',
+    'De Cocksdorp', 'Oudeschild',
+  ],
+  rules: {
+    morning: {
+      categories: 'Actief,Natuur,Winkelen,Cultuur & Historie,Recreatief,Eten & Drinken',
+      allowedSubcats: [
+        // Actief (NOT Fitness)
+        'excursies', 'golfbaan', 'paarden', 'rondvaarten', 'wandelroutes', 'watersporten', 'zwemmen',
+        // Natuur (all)
+        'landmarks', 'natuurboerderij', 'natuurgebieden', 'stranden', 'uitkijkpunten',
+        // Winkelen (Mode & Lifestyle ONLY — NOT Doe-het-zelf, Huisdieren, Supermarkten, Speciaalzaken)
+        'mode & lifestyle',
+        // Cultuur & Historie (all)
+        'monuments', 'musea', 'religieuze gebouwen', 'sociaal-culturele centra', 'texels schaap',
+        // Recreatief
+        'indoor',
+        // Eten & Drinken (Strandpaviljoens, Ontbijt & Lunch ONLY)
+        'strandpaviljoens', 'ontbijt & lunch',
+      ],
+      excludeSubcats: [],
+      excludeNames: [],
+      maxFood: 1,
+    },
+    afternoon: {
+      categories: 'Actief,Natuur,Winkelen,Cultuur & Historie,Recreatief,Eten & Drinken',
+      allowedSubcats: [
+        // Actief (NOT Fitness)
+        'excursies', 'golfbaan', 'paarden', 'rondvaarten', 'wandelroutes', 'watersporten', 'zwemmen',
+        // Natuur (all)
+        'landmarks', 'natuurboerderij', 'natuurgebieden', 'stranden', 'uitkijkpunten',
+        // Winkelen (Mode & Lifestyle)
+        'mode & lifestyle',
+        // Cultuur & Historie (all)
+        'monuments', 'musea', 'religieuze gebouwen', 'sociaal-culturele centra', 'texels schaap',
+        // Recreatief
+        'indoor',
+        // Eten & Drinken (Strandpaviljoens, Specialties, Ijs & Desserts, Wijndomein)
+        'strandpaviljoens', 'specialties', 'ijs & desserts', 'wijndomein',
+      ],
+      excludeSubcats: [],
+      excludeNames: [],
+      maxFood: 1,
+    },
+    evening: {
+      categories: 'Eten & Drinken',
+      allowedSubcats: [
+        // ONLY these Eten & Drinken subcats
+        'strandpaviljoens', 'restaurants', 'cafe', 'eetcafe', 'cocktail bar',
+      ],
+      excludeSubcats: ['fastfood', 'cafetaria', 'foodtrucks', 'ontbijt', 'ijs', 'speciaalzaken', 'strandkiosk'],
+      excludeNames: [],
+      maxFood: 3,
+    },
+  },
+};
+
+function getDestinationConfig(): DestinationConfig {
+  if (typeof window === 'undefined') return CALPE_CONFIG;
+  const host = window.location.hostname;
+  if (host.includes('texelmaps') || host.includes('dev.texelmaps')) return TEXEL_CONFIG;
+  return CALPE_CONFIG;
 }
+
+/* ─────────────────────────────────────────────
+ * FILTERING & SELECTION LOGIC
+ * ───────────────────────────────────────────── */
+
+const CLOSED_KEYWORDS = [
+  'permanently closed', 'permanent gesloten', 'dauerhaft geschlossen',
+  'temporarily closed', 'tijdelijk gesloten', 'vorübergehend geschlossen',
+  'gesloten', 'geschlossen', 'cerrado',
+];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isPOISuitable(poi: any, rule: DayPartRule): boolean {
+  // Closed check
+  if (poi.is_active === false) return false;
+  if (poi.status === 'closed' || poi.status === 'inactive') return false;
+  const fullText = `${poi.name || ''} ${poi.description || ''}`.toLowerCase();
+  if (CLOSED_KEYWORDS.some(kw => fullText.includes(kw))) return false;
+
+  const subText = `${poi.subcategory || ''}`.toLowerCase();
+  const nameText = `${poi.name || ''}`;
+
+  // Excluded names
+  if (rule.excludeNames?.some(n => nameText.includes(n))) return false;
+
+  // Excluded subcategories
+  if (rule.excludeSubcats?.some(kw => subText.includes(kw) || nameText.toLowerCase().includes(kw))) return false;
+
+  // If allowedSubcats is set, ONLY those pass
+  if (rule.allowedSubcats && rule.allowedSubcats.length > 0) {
+    const match = rule.allowedSubcats.some(kw => subText.includes(kw) || nameText.toLowerCase().includes(kw));
+    if (!match) return false;
+  }
+
+  return true;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isHighlight(poi: any, highlights: string[]): boolean {
+  const name = (poi.name || '').toLowerCase();
+  return highlights.some(h => name.includes(h.toLowerCase()));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isFood(p: any): boolean {
+  const cat = (p.category || '').toLowerCase();
+  return cat.includes('food') || cat.includes('eten') || cat.includes('drinken') || cat.includes('drinks');
+}
+
+/**
+ * Select diverse POIs:
+ * - Max 1 per subcategory
+ * - Max N food POIs (configurable per daypart)
+ * - Max 1 per main category for variety
+ * - For morning/afternoon: 1 highlight POI guaranteed
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function selectDiversePOIs(pois: any[], count: number, dayPart: DayPart, config: DestinationConfig): any[] {
+  const rule = config.rules[dayPart];
+  const selected: any[] = [];
+  const usedSubcategories = new Set<string>();
+  const usedCategories = new Set<string>();
+  let foodCount = 0;
+
+  // For morning/afternoon: find and insert 1 highlight first
+  if (dayPart !== 'evening') {
+    const highlight = pois.find(p => isHighlight(p, config.highlights));
+    if (highlight) {
+      selected.push(highlight);
+      usedSubcategories.add((highlight.subcategory || '').toLowerCase());
+      usedCategories.add((highlight.category || '').toLowerCase());
+      if (isFood(highlight)) foodCount++;
+    }
+  }
+
+  // Fill remaining slots with diverse selection
+  for (const poi of pois) {
+    if (selected.length >= count) break;
+    if (selected.some(s => s.id === poi.id)) continue; // skip if already selected (highlight)
+
+    const subcat = (poi.subcategory || poi.category || 'other').toLowerCase();
+    const mainCat = (poi.category || 'other').toLowerCase();
+
+    // Max 1 per subcategory
+    if (usedSubcategories.has(subcat)) continue;
+
+    // Enforce category diversity (max 1 per main category) — except evening food
+    if (dayPart !== 'evening' && usedCategories.has(mainCat)) continue;
+
+    // Max food POIs per rule
+    if (isFood(poi) && foodCount >= rule.maxFood) continue;
+
+    selected.push(poi);
+    usedSubcategories.add(subcat);
+    usedCategories.add(mainCat);
+    if (isFood(poi)) foodCount++;
+  }
+
+  // If we still need more (relaxed rules), fill without category uniqueness
+  if (selected.length < count) {
+    for (const poi of pois) {
+      if (selected.length >= count) break;
+      if (selected.some(s => s.id === poi.id)) continue;
+      const subcat = (poi.subcategory || '').toLowerCase();
+      if (usedSubcategories.has(subcat)) continue;
+      if (isFood(poi) && foodCount >= rule.maxFood) continue;
+      selected.push(poi);
+      usedSubcategories.add(subcat);
+      if (isFood(poi)) foodCount++;
+    }
+  }
+
+  return selected;
+}
+
+/* ─────────────────────────────────────────────
+ * TIME SLOTS & SHUFFLE
+ * ───────────────────────────────────────────── */
 
 const DAY_PART_CONFIG: Record<DayPart, { startHour: number }> = {
   morning:   { startHour: 9 },
@@ -74,21 +339,19 @@ const DAY_PART_CONFIG: Record<DayPart, { startHour: number }> = {
 const DAY_PART_LABELS: Record<DayPart, Record<string, string>> = {
   morning:   { nl: 'OCHTENDPROGRAMMA', en: 'MORNING PROGRAM', de: 'MORGENPROGRAMM', es: 'PROGRAMA DE MAÑANA' },
   afternoon: { nl: 'MIDDAGPROGRAMMA', en: 'AFTERNOON PROGRAM', de: 'NACHMITTAGSPROGRAMM', es: 'PROGRAMA DE TARDE' },
-  evening:   { nl: 'AVONDPROGRAMMA', en: 'EVENING PROGRAM', de: 'ABENDPROGRAMM', es: 'PROGRAMA DE ABEND' },
+  evening:   { nl: 'AVONDPROGRAMMA', en: 'EVENING PROGRAM', de: 'ABENDPROGRAMM', es: 'PROGRAMA DE NOCHE' },
 };
 
 function generateTimeSlots(count: number, dayPart: DayPart): { start: string; end: string }[] {
   const slots = [];
   const startHour = DAY_PART_CONFIG[dayPart].startHour;
-  // Calculate slot duration to fit within the day part window
-  // Morning: 09-13 (4h), Afternoon: 13-18 (5h), Evening: 18-23 (5h)
   const maxHour = dayPart === 'morning' ? 13 : dayPart === 'afternoon' ? 18 : 23;
   const totalHours = maxHour - startHour;
   const slotDuration = Math.max(1, totalHours / count);
 
   let hour = startHour;
   for (let i = 0; i < count; i++) {
-    const endHour = Math.min(hour + slotDuration, 23.5); // Never exceed 23:30
+    const endHour = Math.min(hour + slotDuration, 23.5);
     const fmt = (h: number) => {
       const hh = Math.floor(h);
       const mm = Math.round((h % 1) * 60);
@@ -100,18 +363,12 @@ function generateTimeSlots(count: number, dayPart: DayPart): { start: string; en
   return slots;
 }
 
-/**
- * Seeded pseudo-random shuffle so that the program stays stable per dayPart + date.
- * Uses a simple hash → LCG to produce deterministic order.
- */
 function seededShuffle<T>(arr: T[], seed: string): T[] {
   const copy = [...arr];
-  // Simple hash from string
   let h = 0;
   for (let i = 0; i < seed.length; i++) {
     h = ((h << 5) - h + seed.charCodeAt(i)) | 0;
   }
-  // LCG pseudo-random
   let s = Math.abs(h) || 1;
   const next = () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff; };
   for (let i = copy.length - 1; i > 0; i--) {
@@ -130,6 +387,10 @@ function getLocalizedString(val: unknown, locale: string): string {
   return '';
 }
 
+/* ─────────────────────────────────────────────
+ * COMPONENT
+ * ───────────────────────────────────────────── */
+
 export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProps) {
   const [items, setItems] = useState<ProgramItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,23 +401,29 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
   useEffect(() => {
     async function load() {
       try {
-        // Fetch POIs using personalized categories from onboarding + 1 event
+        const config = getDestinationConfig();
+        const rule = config.rules[dayPart];
         const poiLimit = Math.max(1, programSize - 1);
-        const categories = getPersonalizedCategories();
+
+        // Fetch more than needed to have room after filtering
         const [poisRes, eventsRes] = await Promise.all([
-          fetch(`/api/pois?limit=${poiLimit * 2}&sort=rating:desc&min_rating=4&min_reviews=3&categories=${encodeURIComponent(categories)}`),
+          fetch(`/api/pois?limit=${poiLimit * 6}&sort=rating:desc&min_rating=4.2&min_reviews=3&categories=${encodeURIComponent(rule.categories)}`),
           fetch('/api/events?limit=3'),
         ]);
 
         const poisData = await poisRes.json();
         const eventsData = await eventsRes.json();
 
-        // Deterministic shuffle: same result within a dayPart on a given date
-        const allPois = poisData?.data || [];
-        const today = new Date().toISOString().split('T')[0]; // e.g. "2026-03-23"
-        const shuffled = seededShuffle(allPois, `${today}-${dayPart}`);
-        const pois = shuffled.slice(0, poiLimit);
-        // Pick first upcoming event (or random from available)
+        // Filter: closed + daypart suitability
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const suitable = (poisData?.data || []).filter((p: any) => isPOISuitable(p, rule));
+
+        // Deterministic shuffle per date+daypart, then diverse selection
+        const today = new Date().toISOString().split('T')[0];
+        const shuffled = seededShuffle(suitable, `${today}-${dayPart}`);
+        const pois = selectDiversePOIs(shuffled, poiLimit, dayPart, config);
+
+        // Pick 1 event
         const events = (eventsData?.data || []).slice(0, 1);
 
         const combined: ProgramItem[] = [];
@@ -164,14 +431,11 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pois.forEach((p: any, i: number) => {
-          const img = Array.isArray(p.images) && p.images.length > 0
-            ? `/api/pois/${p.id}`.replace(/\/api\/pois\/\d+/, '') || p.images[0]
-            : undefined;
           combined.push({
             id: p.id,
             type: 'poi',
             name: typeof p.name === 'string' ? p.name : getLocalizedString(p.name, locale),
-            image: Array.isArray(p.images) ? p.images[0] : img,
+            image: Array.isArray(p.images) ? p.images[0] : undefined,
             timeStart: slots[i]?.start || '09:00',
             timeEnd: slots[i]?.end || '11:00',
           });
@@ -200,19 +464,17 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
     load();
   }, [locale]);
 
-  const langParam = locale !== 'en' ? `?lang=${locale}` : '';
-
-  // POI block click → generic production POIs page
-  const openPoisPage = () => {
-    window.location.href = `${getPortalUrl()}/pois${langParam}`;
+  // POI block click → open itinerary wizard
+  const openItinerary = () => {
+    window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { action: 'itinerary' } }));
   };
 
-  // CTA "Programma samenstellen" → open chatbot as popup
+  // CTA button
   const openChatbot = () => {
     window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { action: 'itinerary' } }));
   };
 
-  // Details button → open specific POI drawer or Event drawer
+  // Details button → POI/Event drawer
   const openDetail = (e: React.MouseEvent, item: ProgramItem) => {
     e.stopPropagation();
     if (item.type === 'poi') {
@@ -243,9 +505,7 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
 
   return (
     <div className="md:hidden">
-      <div
-        className="bg-white rounded-2xl p-5 mx-4 shadow-sm w-[calc(100%-2rem)] text-left"
-      >
+      <div className="bg-white rounded-2xl p-5 mx-4 shadow-sm w-[calc(100%-2rem)] text-left">
         <h3
           className="text-sm font-bold tracking-wider mb-4"
           style={{ fontFamily: "var(--hb-font-body), sans-serif", color: '#5E8B7E', fontStyle: 'normal', textTransform: 'uppercase' }}
@@ -256,22 +516,15 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
         <div className="relative flex flex-col items-stretch">
           {items.map((item, idx) => (
             <div key={`${item.type}-${item.id}`}>
-              {/* Card sub-block — bordered, conform template */}
               <div
                 className="flex items-center gap-3 rounded-xl p-3 cursor-pointer transition-colors active:bg-gray-50"
                 style={{ border: '1px solid #E5E7EB', backgroundColor: '#fff' }}
-                onClick={openPoisPage}
+                onClick={openItinerary}
               >
-                {/* Thumbnail */}
                 <div className="flex-shrink-0 w-12 h-12 rounded-xl overflow-hidden bg-gray-100">
                   {item.image ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xl">
                       {item.type === 'event' ? '📅' : '📍'}
@@ -279,27 +532,19 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
                   )}
                 </div>
 
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-bold text-gray-900 truncate">{item.name}</p>
                   <p className="text-[12px] font-semibold mt-0.5" style={{ color: '#5E8B7E' }}>🕓 {item.timeStart} – {item.timeEnd}</p>
                 </div>
 
-                {/* Details button */}
                 <button
                   onClick={(e) => openDetail(e, item)}
                   className="flex-shrink-0 text-[13px] font-semibold rounded-lg whitespace-nowrap transition-colors active:bg-[#d5e8df]"
-                  style={{
-                    color: '#5E8B7E',
-                    backgroundColor: '#f0f7f4',
-                    border: '1px solid #d5e8df',
-                    padding: '6px 14px',
-                  }}
+                  style={{ color: '#5E8B7E', backgroundColor: '#f0f7f4', border: '1px solid #d5e8df', padding: '6px 14px' }}
                 >
                   {t('details')}
                 </button>
               </div>
-              {/* Connector line between cards */}
               {idx < items.length - 1 && (
                 <div className="flex justify-start" style={{ paddingLeft: 28 }}>
                   <div style={{ width: 2, height: 20, backgroundColor: '#d5e8df' }} />
@@ -310,7 +555,6 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
         </div>
       </div>
 
-      {/* CTA */}
       <button
         onClick={openChatbot}
         className="mx-4 mt-3 w-[calc(100%-2rem)] py-3 rounded-xl text-sm font-semibold text-white text-center transition-transform active:scale-[0.98]"
