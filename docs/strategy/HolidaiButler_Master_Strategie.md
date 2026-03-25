@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 25 maart 2026
-**Versie**: 7.84
+**Versie**: 7.85
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **CalpeTrip.com LIVE + Texel Mobiel + B2B Corporate**. CalpeTrip.com live (DNS, SSL, Apache, CORS). Mobiele detectie geïntegreerd (homepage→Next.js, rest→Vite SPA). Texelmaps.nl zelfde patroon. Destination-aware links (portal-url.ts). HolidaiButler.com→B2B/Corporate homepage. Google Sign-In + Facebook Login live. 241 endpoints. CLAUDE.md v4.22.0. MS v7.82.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Chatbot Feature Parity Blok A+B+C**. CategoryBrowser geport (3-level hiërarchie). Routebeschrijving + Tip van de Dag fix. ChatbotWidget modulair refactored (3 componenten geëxtraheerd). ProgramCard destination-specifieke dagdeel-configuratie (Calpe+Texel whitelists). 241 endpoints. CLAUDE.md v4.25.0. MS v7.85.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1724,4 +1724,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 25 maart 2026 — SimpleAnalytics full event tracking (28+ events, desktop/mobile split, 11 componenten). UTM tracking fix. Agenda i18n NL+DE. Admin Portal: 241 endpoints, adminPortal.js v3.38.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.24.0. MS v7.84.*
+*Laatst bijgewerkt: 25 maart 2026 — Chatbot Feature Parity (CategoryBrowser, Routebeschrijving, Tip fix, ChatHeader+WelcomeScreen extractie). ProgramCard destination-specifieke dagdeel-configuratie. Admin Portal: 241 endpoints, adminPortal.js v3.38.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.25.0. MS v7.85.*

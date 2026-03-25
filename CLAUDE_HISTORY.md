@@ -5773,4 +5773,73 @@ CLAUDE.md v4.23.0 → v4.24.0. MS v7.83 → v7.84.
 
 ---
 
+## v4.25.0 — Chatbot Feature Parity Blok A+B+C1+C2 (25-03-2026)
+
+### Blok A: CategoryBrowser Port
+- Nieuw component: `src/components/chatbot/CategoryBrowser.tsx` (180 LOC)
+- 3-level categorie hiërarchie (Category → Subcategory → Type)
+- Destination-aware: ALLOWED_CALPE (6 cats EN) + ALLOWED_TEXEL (6 cats NL)
+- Emoji icons i.p.v. image dependencies
+- API proxy: `src/app/api/holibot/categories/route.ts` → backend `/api/v1/holibot/categories/hierarchy`
+- `__CATEGORY__` sentinel in alle 4 talen — vervangt tekst-naar-AI
+- Bij selectie: stuurt "Toon mij [type] in [categorie]" als chatbericht naar AI
+
+### Blok B: Tip van de Dag + Routebeschrijving
+- Tip van de Dag: null-safe check (`if (!tipData) throw new Error`)
+- `__DIRECTIONS__` sentinel: toont lokaal bericht "Naar welke bestemming wil je navigeren?" (4 talen NL/EN/DE/ES)
+- Identiek aan customer-portal gedrag (geen AI call, direct antwoord)
+- `DIRECTIONS_HELP` constante per taal
+
+### Blok C1: ChatHeader Extractie
+- Nieuw component: `src/components/chatbot/ChatHeader.tsx` (64 LOC)
+- Props: name, locale, accentColor, onReset, onClose
+- Mobile bottom-sheet handle bar + avatar + title + reset + close
+- Vervangt ~35 regels inline code in ChatbotWidget
+
+### Blok C2: WelcomeScreen Extractie
+- Nieuw component: `src/components/chatbot/WelcomeScreen.tsx` (88 LOC)
+- Props: messages, quickActions, onQuickAction
+- Eigen useState voor welcomeStep + quickRepliesVisible (verplaatst uit ChatbotWidget)
+- Animated sequential greeting + staggered quick action buttons
+- Vervangt ~50 regels inline code + 2 useState + 1 useEffect uit ChatbotWidget
+
+### ProgramCard Destination-Specifieke Dagdeel Configuratie
+- CALPE_CONFIG + TEXEL_CONFIG met stricte subcategorie whitelists per dagdeel
+- Ochtend: Active (NOT Sports & Fitness), Beaches, Shopping (NOT Specialty Stores), Culture, Recreation, Food (Breakfast only Calpe / Strandpaviljoens+Ontbijt Texel)
+- Middag: Zelfde + Food light only (Bars Calpe / Specialties+Ijs Texel)
+- Avond: Culture (Squares only Calpe) + Recreation (Theaters) + Food (Restaurant/Bar/Cocktail)
+- Highlight POIs: Calpe (Penyal d'Ifac, Old Town, Mirador, Serra Gelada, etc.), Texel (Vuurtoren, Ecomare, De Slufter, Kaap Skil, etc.)
+- 1 highlight altijd in ochtend/middag (niet avond)
+- Diversiteitsregel: max 1 per subcategorie, max 1 food per ochtend/middag
+- Min rating 4.2 (was 4.0)
+- `isPOISuitable()`: gesloten-check + excludeSubcats + allowedSubcats whitelist
+- `selectDiversePOIs()`: category diversity + subcategory uniqueness + food limiet
+- Excluded: Zeeman Calpe, Sports & Fitness, Fastfood, Cafetaria, Brouwerij (avond)
+
+### Overige Fixes
+- PoiDetailDrawer: "Volledig profiel" link → `${getPortalUrl()}/pois/${poi.id}` (was `/poi/${id}` → 404)
+- OnboardingSheet: body scroll freeze (position:fixed + scrollY restore)
+- Tessa greeting: "Hoi!" i.p.v. "Hola!" (destination-aware GREETINGS mapping)
+- Reset button altijd zichtbaar (customer-portal + hb-websites)
+
+### Architectuur Verbetering
+- ChatbotWidget: 1050 → 961 regels (-89 LOC)
+- 3 nieuwe componenten in `src/components/chatbot/`: ChatHeader, WelcomeScreen, CategoryBrowser
+- 1 nieuwe API route: `src/app/api/holibot/categories/route.ts`
+- analytics.ts: snake_case methoden (chatbot_quick_action_directions toegevoegd)
+
+### Gewijzigde Bestanden
+- hb-websites/src/components/modules/ChatbotWidget.tsx (refactored)
+- hb-websites/src/components/chatbot/ChatHeader.tsx (NIEUW)
+- hb-websites/src/components/chatbot/WelcomeScreen.tsx (NIEUW)
+- hb-websites/src/components/chatbot/CategoryBrowser.tsx (NIEUW)
+- hb-websites/src/app/api/holibot/categories/route.ts (NIEUW)
+- hb-websites/src/components/mobile/ProgramCard.tsx (destination configs)
+- hb-websites/src/components/modules/PoiDetailDrawer.tsx (portal-url link)
+- hb-websites/src/components/OnboardingSheet.tsx (scroll freeze)
+
+CLAUDE.md v4.24.0 → v4.25.0. MS v7.84 → v7.85.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

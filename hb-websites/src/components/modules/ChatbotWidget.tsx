@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { analytics } from '../../lib/analytics';
+import ChatHeader from '../chatbot/ChatHeader';
+import WelcomeScreen from '../chatbot/WelcomeScreen';
 import './ChatbotWidget.css';
 
 const CategoryBrowser = dynamic(() => import('../chatbot/CategoryBrowser'), { ssr: false });
@@ -55,29 +57,36 @@ interface ChatbotWidgetProps {
 
 /* ─── Constants ─── */
 
+const DIRECTIONS_HELP: Record<string, string> = {
+  nl: 'Naar welke bestemming wil je navigeren? Typ de naam van een plek, strand of restaurant.',
+  en: 'Which destination would you like directions to? Type the name of a place, beach or restaurant.',
+  de: 'Zu welchem Ziel möchtest du navigieren? Gib den Namen eines Ortes, Strandes oder Restaurants ein.',
+  es: '¿A qué destino te gustaría ir? Escribe el nombre de un lugar, playa o restaurante.',
+};
+
 const QUICK_ACTIONS: Record<string, Array<{ id: string; label: string; message: string }>> = {
   nl: [
     { id: 'program', label: 'Programma samenstellen', message: '__ITINERARY__' },
     { id: 'category', label: 'Zoeken op Rubriek', message: '__CATEGORY__' },
-    { id: 'directions', label: 'Routebeschrijving', message: 'Ik wil een routebeschrijving. Welke bezienswaardigheden kan ik combineren in een route?' },
+    { id: 'directions', label: 'Routebeschrijving', message: '__DIRECTIONS__' },
     { id: 'tip', label: 'Tip van de Dag', message: '__TIP_VAN_DE_DAG__' },
   ],
   en: [
     { id: 'program', label: 'Plan my day', message: '__ITINERARY__' },
     { id: 'category', label: 'Browse categories', message: '__CATEGORY__' },
-    { id: 'directions', label: 'Route planner', message: 'I want a route description. Which attractions can I combine in a route?' },
+    { id: 'directions', label: 'Route planner', message: '__DIRECTIONS__' },
     { id: 'tip', label: 'Tip of the Day', message: '__TIP_VAN_DE_DAG__' },
   ],
   de: [
     { id: 'program', label: 'Tagesprogramm', message: '__ITINERARY__' },
     { id: 'category', label: 'Nach Kategorie', message: '__CATEGORY__' },
-    { id: 'directions', label: 'Routenplaner', message: 'Ich möchte eine Routenbeschreibung. Welche Sehenswürdigkeiten kann ich in einer Route kombinieren?' },
+    { id: 'directions', label: 'Routenplaner', message: '__DIRECTIONS__' },
     { id: 'tip', label: 'Tipp des Tages', message: '__TIP_VAN_DE_DAG__' },
   ],
   es: [
     { id: 'program', label: 'Planificar el día', message: '__ITINERARY__' },
     { id: 'category', label: 'Buscar por categoría', message: '__CATEGORY__' },
-    { id: 'directions', label: 'Planificador de rutas', message: 'Quiero una descripción de ruta. ¿Qué atracciones puedo combinar en una ruta?' },
+    { id: 'directions', label: 'Planificador de rutas', message: '__DIRECTIONS__' },
     { id: 'tip', label: 'Consejo del día', message: '__TIP_VAN_DE_DAG__' },
   ],
 };
@@ -433,8 +442,6 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
   const [isListening, setIsListening] = useState(false);
   const [showItineraryWizard, setShowItineraryWizard] = useState(false);
   const [showCategoryBrowser, setShowCategoryBrowser] = useState(false);
-  const [welcomeStep, setWelcomeStep] = useState(0);
-  const [quickRepliesVisible, setQuickRepliesVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -465,23 +472,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
     ? allActions.filter(qa => quickActionFilter.includes(qa.id))
     : allActions;
 
-  // Welcome message sequential animation
-  useEffect(() => {
-    if (!isOpen || messages.length > 0) return;
-
-    setWelcomeStep(1);
-    setQuickRepliesVisible(false);
-
-    const t2 = setTimeout(() => setWelcomeStep(2), 1500);
-    const t3 = setTimeout(() => setWelcomeStep(3), 3000);
-    const t4 = setTimeout(() => setQuickRepliesVisible(true), 3500);
-
-    return () => {
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-    };
-  }, [isOpen, messages.length]);
+  // WelcomeScreen handles its own animation (extracted to component)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -580,11 +571,19 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
 
-    analytics.chatbotMessageSent(locale);
+    analytics.chatbot_message_sent(locale);
 
-    if (text === '__TIP_VAN_DE_DAG__') { analytics.quickAction("tip_van_de_dag"); fetchDailyTip(); return; }
-    if (text === '__ITINERARY__') { analytics.quickAction("itinerary"); setShowItineraryWizard(true); return; }
-    if (text === '__CATEGORY__') { setShowCategoryBrowser(true); return; }
+    if (text === '__TIP_VAN_DE_DAG__') { analytics.chatbot_quick_action_tip(); fetchDailyTip(); return; }
+    if (text === '__ITINERARY__') { analytics.chatbot_quick_action_itinerary(); setShowItineraryWizard(true); return; }
+    if (text === '__CATEGORY__') { analytics.chatbot_quick_action_category(); setShowCategoryBrowser(true); return; }
+    if (text === '__DIRECTIONS__') {
+      analytics.chatbot_quick_action_directions();
+      const helpText = DIRECTIONS_HELP[locale] || DIRECTIONS_HELP.en;
+      const now = new Date();
+      const msg: ChatMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: helpText, timestamp: now, isStreaming: false };
+      setMessages(prev => [...prev, msg]);
+      return;
+    }
 
     const now = new Date();
     const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: text.trim(), timestamp: now };
@@ -755,8 +754,6 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       setIsStreaming(false);
       setShowItineraryWizard(false);
       setShowCategoryBrowser(false);
-      setWelcomeStep(0);
-      setQuickRepliesVisible(false);
       if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
     }
   };
@@ -771,7 +768,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       {!isOpen && (
         <button
           className="holibot-fab"
-          onClick={() => { setIsOpen(true); analytics.chatbotOpened(); }}
+          onClick={() => { setIsOpen(true); analytics.chatbot_opened(); }}
           aria-label={`Open ${name}`}
           aria-expanded={false}
           aria-haspopup="dialog"
@@ -795,95 +792,29 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
 
           <div className="holibot-window" role="dialog" aria-modal="true" aria-labelledby="holibot-title">
             {/* Header */}
-            <div
-              className="holibot-chat-header relative"
-              style={{
-                background: `linear-gradient(135deg, ${accentColor} 0%, color-mix(in srgb, ${accentColor} 85%, black) 100%)`,
-                borderBottom: `2px solid ${accentColor}`,
-              }}
-            >
-              {/* Handle bar — mobile only (bottom-sheet affordance) */}
-              <div className="md:hidden absolute top-2 left-1/2 -translate-x-1/2">
-                <div className="w-10 h-1 rounded-full bg-white/40" />
-              </div>
-
-              {/* Avatar */}
-              <div className="holibot-header-logo">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              </div>
-
-              <h2 id="holibot-title" className="holibot-header-title">{name}</h2>
-              <div className="holibot-header-spacer" />
-
-              {/* Reset button — always visible for return to start */}
-              <button className="holibot-header-btn" onClick={handleReset} aria-label="Nieuwe chat" type="button" title={locale === 'nl' ? 'Opnieuw starten' : 'Start over'}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M4 12a8 8 0 018-8V0l4 4-4 4V4a6 6 0 100 12 6 6 0 006-6h2a8 8 0 01-16 0z" fill="white" />
-                  </svg>
-                </button>
-
-              {/* Close button */}
-              <button className="holibot-header-btn holibot-close-btn" onClick={() => setIsOpen(false)} aria-label="Sluit chat" type="button">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </button>
-            </div>
+            <ChatHeader
+              name={name}
+              locale={locale}
+              accentColor={accentColor}
+              onReset={handleReset}
+              onClose={() => setIsOpen(false)}
+            />
 
             {/* Message list */}
             <div className="holibot-message-list">
-              {/* Welcome message (sequential animation) — hide when wizard/browser active */}
+              {/* Welcome screen — hide when wizard/browser active */}
               {messages.length === 0 && !showItineraryWizard && !showCategoryBrowser && (
-                <div className="holibot-welcome-container" role="article">
-                  {welcomeStep >= 1 && (
-                    <div className="holibot-welcome-message holibot-welcome-animate">
-                      <div className="holibot-message-avatar">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                          <circle cx="12" cy="7" r="4" />
-                        </svg>
-                      </div>
-                      <p className="holibot-welcome-text">{welcomeMessages[0]}</p>
-                    </div>
-                  )}
-
-                  {welcomeStep >= 2 && (
-                    <div className="holibot-welcome-message holibot-welcome-animate holibot-welcome-secondary">
-                      <p className="holibot-welcome-text-secondary">{welcomeMessages[1]}</p>
-                    </div>
-                  )}
-
-                  {welcomeStep >= 3 && (
-                    <div className="holibot-welcome-message holibot-welcome-animate holibot-welcome-secondary">
-                      <p className="holibot-welcome-text-secondary">{welcomeMessages[2]}</p>
-                    </div>
-                  )}
-
-                  {/* Quick reply buttons with staggered animation */}
-                  <div className="holibot-quick-replies" role="group" aria-label="Snelle antwoorden">
-                    {quickActions.map((qa, index) => (
-                      <button
-                        key={qa.id}
-                        type="button"
-                        className={`holibot-quick-reply-button${quickRepliesVisible ? ' visible' : ''}`}
-                        onClick={() => {
-                          if (qa.id === 'category') analytics.quickAction("category");
-                          else if (qa.id === 'directions') analytics.quickAction("directions");
-                          else if (qa.id === 'program') analytics.quickAction("itinerary");
-                          else if (qa.id === 'tip') analytics.quickAction("tip_van_de_dag");
-                          sendMessage(qa.message);
-                        }}
-                        aria-label={qa.label}
-                        style={{ animationDelay: quickRepliesVisible ? `${index * 150}ms` : undefined }}
-                      >
-                        {qa.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <WelcomeScreen
+                  messages={welcomeMessages}
+                  quickActions={quickActions}
+                  onQuickAction={(message, actionId) => {
+                    if (actionId === 'category') analytics.chatbot_quick_action_category();
+                    else if (actionId === 'directions') analytics.chatbot_quick_action_directions();
+                    else if (actionId === 'program') analytics.chatbot_quick_action_itinerary();
+                    else if (actionId === 'tip') analytics.chatbot_quick_action_tip();
+                    sendMessage(message);
+                  }}
+                />
               )}
 
               {/* Chat messages */}
