@@ -195,6 +195,19 @@ export default async function RootLayout({
           src="https://scripts.simpleanalyticscdn.com/latest.js"
           strategy="afterInteractive"
         />
+        {/* Automated events: outbound links, emails, downloads */}
+        <Script
+          src="https://scripts.simpleanalyticscdn.com/auto-events.js"
+          data-collect="outbound,emails,downloads"
+          data-extensions="pdf,csv,docx,xlsx,zip"
+          data-use-title="true"
+          strategy="afterInteractive"
+        />
+        {/* Inline events: tracks data-sa-event attributes */}
+        <Script
+          src="https://scripts.simpleanalyticscdn.com/inline.js"
+          strategy="afterInteractive"
+        />
         <noscript>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="https://queue.simpleanalyticscdn.com/noscript.gif" alt="" referrerPolicy="no-referrer-when-downgrade" />

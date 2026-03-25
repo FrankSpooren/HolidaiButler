@@ -104,14 +104,21 @@ function mapEventToResponse(event, language = 'nl') {
 
   if (language === 'en' && event.title_en) {
     title = event.title_en;
-    description = event.short_description_en;
-    longDesc = event.long_description_en;
+    description = event.short_description_en || description;
+    longDesc = event.long_description_en || longDesc;
+  } else if (language === 'nl' && event.title_nl) {
+    title = event.title_nl;
+    description = event.short_description_nl || description;
+    longDesc = event.long_description_nl || longDesc;
+  } else if (language === 'de' && event.title_de) {
+    title = event.title_de;
+    description = event.short_description_de || description;
+    longDesc = event.long_description_de || longDesc;
   } else if (language === 'es' && event.title_es) {
     title = event.title_es;
-    description = event.short_description_es;
-    longDesc = event.long_description_es;
+    description = event.short_description_es || description;
+    longDesc = event.long_description_es || longDesc;
   }
-  // DE falls back to EN → NL (no separate de columns yet)
 
   const category = detectCategory(event.title, event.short_description);
 
@@ -119,18 +126,21 @@ function mapEventToResponse(event, language = 'nl') {
     _id: String(event.id),
     id: event.id,
     title: {
-      nl: event.title || title,
+      nl: event.title_nl || event.title || title,
       en: event.title_en || title,
+      de: event.title_de || event.title_en || title,
       es: event.title_es || title
     },
     description: {
-      nl: event.short_description || description,
+      nl: event.short_description_nl || event.short_description || description,
       en: event.short_description_en || description,
+      de: event.short_description_de || event.short_description_en || description,
       es: event.short_description_es || description
     },
     longDescription: {
-      nl: event.long_description || longDesc,
+      nl: event.long_description_nl || event.long_description || longDesc,
       en: event.long_description_en || longDesc,
+      de: event.long_description_de || event.long_description_en || longDesc,
       es: event.long_description_es || longDesc
     },
     startDate: event.event_date ? `${event.event_date}T${event.event_time || '00:00:00'}` : event.date,
@@ -262,10 +272,13 @@ router.get('/events', async (req, res) => {
       endDate,
       dateRange,
       category,
-      lang = 'nl',
+      lang,
       sort = 'date',
       sortOrder = 'asc'
     } = req.query;
+
+    // Language: query param → Accept-Language header → default 'en'
+    const language = lang || (req.headers['accept-language'] || '').substring(0, 2) || 'en';
 
     const destinationId = getDestinationId(req);
     const pageNum = parseInt(page);
@@ -335,7 +348,7 @@ router.get('/events', async (req, res) => {
 
     const events = await query(eventsQuery, [...params, limitNum, offset]);
 
-    let mappedEvents = events.map(e => mapEventToResponse(e, lang));
+    let mappedEvents = events.map(e => mapEventToResponse(e, language));
 
     // Client-side category filter (based on auto-detected category)
     if (category) {
@@ -377,7 +390,8 @@ router.get('/events', async (req, res) => {
  */
 router.get('/events/featured', async (req, res) => {
   try {
-    const { limit = 6, lang = 'nl' } = req.query;
+    const { limit = 6, lang } = req.query;
+    const language = lang || (req.headers['accept-language'] || '').substring(0, 2) || 'en';
     const destinationId = getDestinationId(req);
     const limitNum = Math.min(parseInt(limit), 20);
 
@@ -400,7 +414,7 @@ router.get('/events/featured', async (req, res) => {
 
     const events = await query(eventsQuery, [destinationId, limitNum]);
     const mappedEvents = events.map(e => ({
-      ...mapEventToResponse(e, lang),
+      ...mapEventToResponse(e, language),
       featured: true
     }));
 
@@ -433,7 +447,8 @@ router.get('/events/featured', async (req, res) => {
 router.get('/events/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { lang = 'nl' } = req.query;
+    const { lang } = req.query;
+    const language = lang || (req.headers['accept-language'] || '').substring(0, 2) || 'en';
 
     const eventQuery = `SELECT a.* FROM agenda a WHERE a.id = ?`;
     const events = await query(eventQuery, [id]);
@@ -452,7 +467,7 @@ router.get('/events/:id', async (req, res) => {
     `;
 
     const dates = await query(datesQuery, [events[0].provider_event_hash]);
-    const mappedEvent = mapEventToResponse(events[0], lang);
+    const mappedEvent = mapEventToResponse(events[0], language);
 
     mappedEvent.allDates = dates.map(d => ({
       date: d.event_date,

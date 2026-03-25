@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 24 maart 2026
-**Versie**: 7.82
+**Datum**: 25 maart 2026
+**Versie**: 7.83
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1724,4 +1724,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 24 maart 2026 — CalpeTrip.com LIVE (DNS+SSL+Apache+CORS). Mobiele detectie: homepage→Next.js, rest→Vite SPA. Texelmaps.nl zelfde patroon. HolidaiButler.com→B2B/Corporate. Google+Facebook Login. Destination-aware links. Admin Portal: 241 endpoints, adminPortal.js v3.38.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.22.0. MS v7.82.*
+*Laatst bijgewerkt: 25 maart 2026 — SimpleAnalytics event tracking (15 events: chatbot, POI, navigation). UTM tracking fix (publisher domain kolom, calpetrip.com). Agenda i18n (NL+DE kolommen live). Admin Portal: 241 endpoints, adminPortal.js v3.38.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.23.0. MS v7.83.*

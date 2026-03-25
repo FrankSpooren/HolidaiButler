@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { analytics } from '../../lib/analytics';
 import './ChatbotWidget.css';
 
 /* ─── Types ─── */
@@ -85,24 +86,30 @@ const TIP_LABELS: Record<string, string> = {
   es: 'Consejo del día',
 };
 
+// Greeting per destination: Calpe=Hola (Spanish), Texel=Hoi (Dutch), default=Hi
+const GREETINGS: Record<string, string> = {
+  calpe: 'Hola',
+  texel: 'Hoi',
+};
+
 const WELCOME_MESSAGES: Record<string, string[]> = {
   nl: [
-    'Hola! Ik ben {name}, je persoonlijke reisassistent.',
+    '{greeting}! Ik ben {name}, je persoonlijke reisassistent.',
     'Waar kan ik je bij helpen?',
     'Laat me enkele suggesties voor je doen, typ of spreek je vraag hieronder in:',
   ],
   en: [
-    'Hola! I\'m {name}, your personal travel assistant.',
+    '{greeting}! I\'m {name}, your personal travel assistant.',
     'How can I help you?',
     'Let me give you some suggestions, or type or speak your question below:',
   ],
   de: [
-    'Hola! Ich bin {name}, Ihr persönlicher Reiseassistent.',
+    '{greeting}! Ich bin {name}, Ihr persönlicher Reiseassistent.',
     'Wie kann ich Ihnen helfen?',
     'Hier sind einige Vorschläge, oder geben Sie Ihre Frage unten ein:',
   ],
   es: [
-    'Hola! Soy {name}, tu asistente personal de viaje.',
+    '¡{greeting}! Soy {name}, tu asistente personal de viaje.',
     '¿En qué puedo ayudarte?',
     'Aquí tienes algunas sugerencias, o escribe tu pregunta abajo:',
   ],
@@ -434,18 +441,18 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
   const accentColor = chatbotColor || '#D4AF37';
   const accentDark = '#C49B2A';
 
-  // Welcome messages: use branding config or default, with {name} substitution
+  // Welcome messages: use branding config or default, with {name} + {greeting} substitution
+  const greeting = GREETINGS[tenantSlug] || 'Hi';
   const getWelcomeMessages = (): string[] => {
     if (welcomeMessage && welcomeMessage[locale]) {
-      // If branding has a single welcome message, wrap it
       return [
-        `Hola! ${locale === 'nl' ? 'Ik ben' : locale === 'de' ? 'Ich bin' : locale === 'es' ? 'Soy' : "I'm"} ${name}.`,
+        `${greeting}! ${locale === 'nl' ? 'Ik ben' : locale === 'de' ? 'Ich bin' : locale === 'es' ? 'Soy' : "I'm"} ${name}.`,
         welcomeMessage[locale],
         WELCOME_MESSAGES[locale]?.[2] || WELCOME_MESSAGES.en[2],
       ];
     }
     const msgs = WELCOME_MESSAGES[locale] || WELCOME_MESSAGES.en;
-    return msgs.map(m => m.replace('{name}', name));
+    return msgs.map(m => m.replace('{name}', name).replace('{greeting}', greeting));
   };
 
   // Filter quick actions based on admin config
@@ -568,8 +575,10 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
 
-    if (text === '__TIP_VAN_DE_DAG__') { fetchDailyTip(); return; }
-    if (text === '__ITINERARY__') { setShowItineraryWizard(true); return; }
+    analytics.chatbotMessageSent(locale);
+
+    if (text === '__TIP_VAN_DE_DAG__') { analytics.quickAction('tip_van_de_dag'); fetchDailyTip(); return; }
+    if (text === '__ITINERARY__') { analytics.quickAction('itinerary'); setShowItineraryWizard(true); return; }
 
     const now = new Date();
     const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: text.trim(), timestamp: now };
@@ -755,7 +764,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       {!isOpen && (
         <button
           className="holibot-fab"
-          onClick={() => setIsOpen(true)}
+          onClick={() => { setIsOpen(true); analytics.chatbotOpened(); }}
           aria-label={`Open ${name}`}
           aria-expanded={false}
           aria-haspopup="dialog"
@@ -802,14 +811,12 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
               <h2 id="holibot-title" className="holibot-header-title">{name}</h2>
               <div className="holibot-header-spacer" />
 
-              {/* Reset button */}
-              {messages.length > 0 && (
-                <button className="holibot-header-btn" onClick={handleReset} aria-label="Nieuwe chat" type="button" title={locale === 'nl' ? 'Nieuwe chat' : 'New chat'}>
+              {/* Reset button — always visible for return to start */}
+              <button className="holibot-header-btn" onClick={handleReset} aria-label="Nieuwe chat" type="button" title={locale === 'nl' ? 'Opnieuw starten' : 'Start over'}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                     <path d="M4 12a8 8 0 018-8V0l4 4-4 4V4a6 6 0 100 12 6 6 0 006-6h2a8 8 0 01-16 0z" fill="white" />
                   </svg>
                 </button>
-              )}
 
               {/* Close button */}
               <button className="holibot-header-btn holibot-close-btn" onClick={() => setIsOpen(false)} aria-label="Sluit chat" type="button">

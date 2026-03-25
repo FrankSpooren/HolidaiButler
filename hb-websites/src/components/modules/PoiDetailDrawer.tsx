@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { POI, Review } from '@/types/poi';
 import OpeningHours from '@/components/poi/OpeningHours';
+import { getPortalUrl } from '@/lib/portal-url';
 import FeatureList from '@/components/poi/FeatureList';
 import { SkeletonDrawer } from '@/components/ui/Skeleton';
+import { analytics } from '@/lib/analytics';
 
 interface PoiDetailDrawerProps {
   locale: string;
@@ -54,6 +56,7 @@ export default function PoiDetailDrawer({ locale }: PoiDetailDrawerProps) {
         .then(data => {
           setPoi(data.poi ?? null);
           setReviews(data.reviews ?? []);
+          if (data.poi?.name) analytics.poiDetailOpened(data.poi.name);
         })
         .catch(() => setPoi(null))
         .finally(() => setLoading(false));
@@ -265,7 +268,7 @@ export default function PoiDetailDrawer({ locale }: PoiDetailDrawerProps) {
                   </div>
                   {reviews.length > 3 && (
                     <a
-                      href={`/poi/${poi.id}`}
+                      href={`${getPortalUrl()}/pois/${poi.id}`}
                       className="block mt-2 text-sm text-primary hover:underline text-center"
                     >
                       {locale === 'nl' ? `Alle ${reviews.length} reviews bekijken` : `View all ${reviews.length} reviews`}
@@ -276,7 +279,7 @@ export default function PoiDetailDrawer({ locale }: PoiDetailDrawerProps) {
 
               {/* Full page link */}
               <a
-                href={`/poi/${poi.id}`}
+                href={`${getPortalUrl()}/pois/${poi.id}`}
                 className="block w-full text-center py-3 rounded-lg bg-primary text-on-primary font-medium hover:bg-primary/90 transition-colors"
               >
                 {locale === 'nl' ? 'Volledig profiel bekijken' : locale === 'de' ? 'Vollst\u00e4ndiges Profil ansehen' : locale === 'es' ? 'Ver perfil completo' : 'View full profile'}
