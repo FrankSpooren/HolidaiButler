@@ -5750,4 +5750,27 @@ CLAUDE.md v4.22.0 → v4.23.0. MS v7.82 → v7.83.
 
 ---
 
+---
+
+## v4.24.0 — SimpleAnalytics Full Event Tracking (25-03-2026)
+
+### 28+ Custom Events met desktop/mobile onderscheid
+- **analytics.ts v2.0**: `getDevice()` helper (viewport <768px = mobile), alle events krijgen `_{device}` suffix
+- **Chatbot**: chatbot_opened, chatbot_message (met language metadata), 4 quick actions apart (tip_van_de_dag, programma_samenstellen, zoeken_op_rubriek, routebeschrijving)
+- **POI & Events**: poi_detail_opened (met poi naam), event_detail_opened (met event titel)
+- **Navigatie**: logo_calpetrip_clicked (desktop header via data-sa-event + mobile header via analytics.ts), hamburger_menu (met item metadata), mobile_bottom_nav per tab (home/agenda/chatbot/pois/profile), scroll_to_top
+- **Accessibility & Taal**: wcag_modal_opened, language_changed (met from/to metadata)
+- **Zoeken & Onboarding**: search_used (met query metadata), onboarding_step_1/2/3, onboarding_completed, tip_of_day_viewed
+- **Automated (zero-config)**: outbound, email, download
+
+### 11 componenten gewijzigd
+ChatbotWidget.tsx, PoiDetailDrawer.tsx, EventDetailDrawer.tsx, ScrollToTop.tsx, WcagButton.tsx, MobileBottomNav.tsx, MobileHeader.tsx (logo span→klikbare anchor), OnboardingSheet.tsx, LanguageSwitcher.tsx, SearchBar.tsx, TipOfTheDay.tsx
+
+### Deploy
+- hb-websites deploy via tar (SCP faalde op `[[...slug]]` directory — bracket characters)
+
+CLAUDE.md v4.23.0 → v4.24.0. MS v7.83 → v7.84.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

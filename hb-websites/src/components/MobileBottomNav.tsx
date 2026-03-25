@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { getPortalUrl } from '@/lib/portal-url';
+import { analytics } from '@/lib/analytics';
 
 interface MobileBottomNavProps {
   locale: string;
@@ -164,6 +165,7 @@ export default function MobileBottomNav({ locale, primaryColor, chatbotColor }: 
                 className="flex flex-col items-center justify-center transition-opacity duration-150"
                 style={{ minHeight: 44, minWidth: 44 }}
                 aria-label={l(tab.key)}
+                onClick={() => analytics.mobile_bottom_nav(tab.key)}
               >
                 {content}
               </a>
@@ -179,6 +181,7 @@ export default function MobileBottomNav({ locale, primaryColor, chatbotColor }: 
                 style={{ minHeight: 44, minWidth: 44 }}
                 aria-label={l(tab.key)}
                 aria-current={active ? 'page' : undefined}
+                onClick={() => analytics.mobile_bottom_nav(tab.key)}
               >
                 {content}
               </Link>

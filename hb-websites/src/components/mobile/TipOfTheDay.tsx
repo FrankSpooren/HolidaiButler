@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { analytics } from '@/lib/analytics';
 
 interface TipData {
   name: string;
@@ -120,6 +121,7 @@ export default function TipOfTheDay({ locale }: TipOfTheDayProps) {
           const localizedDesc = item[`description_${locale}`];
           const description = localizedDesc || getLocalizedString(item.description, locale) || item.description || '';
           if (name) {
+            analytics.tip_of_day_viewed();
             const newTip: TipData = { name, description, id: item.id, itemType };
             setTip(newTip);
             cacheTip(newTip, locale);

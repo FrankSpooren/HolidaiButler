@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { analytics } from '../../lib/analytics';
 import './ChatbotWidget.css';
+
+const CategoryBrowser = dynamic(() => import('../chatbot/CategoryBrowser'), { ssr: false });
 
 /* ─── Types ─── */
 
@@ -55,25 +58,25 @@ interface ChatbotWidgetProps {
 const QUICK_ACTIONS: Record<string, Array<{ id: string; label: string; message: string }>> = {
   nl: [
     { id: 'program', label: 'Programma samenstellen', message: '__ITINERARY__' },
-    { id: 'category', label: 'Zoeken op Rubriek', message: 'Welke categorieën zijn er? Laat me zoeken op rubriek.' },
+    { id: 'category', label: 'Zoeken op Rubriek', message: '__CATEGORY__' },
     { id: 'directions', label: 'Routebeschrijving', message: 'Ik wil een routebeschrijving. Welke bezienswaardigheden kan ik combineren in een route?' },
     { id: 'tip', label: 'Tip van de Dag', message: '__TIP_VAN_DE_DAG__' },
   ],
   en: [
     { id: 'program', label: 'Plan my day', message: '__ITINERARY__' },
-    { id: 'category', label: 'Browse categories', message: 'What categories are available? Let me browse by category.' },
+    { id: 'category', label: 'Browse categories', message: '__CATEGORY__' },
     { id: 'directions', label: 'Route planner', message: 'I want a route description. Which attractions can I combine in a route?' },
     { id: 'tip', label: 'Tip of the Day', message: '__TIP_VAN_DE_DAG__' },
   ],
   de: [
     { id: 'program', label: 'Tagesprogramm', message: '__ITINERARY__' },
-    { id: 'category', label: 'Nach Kategorie', message: 'Welche Kategorien gibt es? Lass mich nach Kategorie suchen.' },
+    { id: 'category', label: 'Nach Kategorie', message: '__CATEGORY__' },
     { id: 'directions', label: 'Routenplaner', message: 'Ich möchte eine Routenbeschreibung. Welche Sehenswürdigkeiten kann ich in einer Route kombinieren?' },
     { id: 'tip', label: 'Tipp des Tages', message: '__TIP_VAN_DE_DAG__' },
   ],
   es: [
     { id: 'program', label: 'Planificar el día', message: '__ITINERARY__' },
-    { id: 'category', label: 'Buscar por categoría', message: '¿Qué categorías hay disponibles? Déjame buscar por categoría.' },
+    { id: 'category', label: 'Buscar por categoría', message: '__CATEGORY__' },
     { id: 'directions', label: 'Planificador de rutas', message: 'Quiero una descripción de ruta. ¿Qué atracciones puedo combinar en una ruta?' },
     { id: 'tip', label: 'Consejo del día', message: '__TIP_VAN_DE_DAG__' },
   ],
@@ -429,6 +432,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
   const [isStreaming, setIsStreaming] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [showItineraryWizard, setShowItineraryWizard] = useState(false);
+  const [showCategoryBrowser, setShowCategoryBrowser] = useState(false);
   const [welcomeStep, setWelcomeStep] = useState(0);
   const [quickRepliesVisible, setQuickRepliesVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -510,8 +514,9 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       if (!res.ok) throw new Error(`API error: ${res.status}`);
 
       const json = await res.json();
-      const tipData: DailyTipData = json.data;
+      const tipData: DailyTipData | null = json.data;
 
+      if (!tipData) throw new Error('No tip data');
       if (tipData.tipId) recordTip(tipData.tipId, tipData.itemType);
 
       const itemName = tipData.poi?.name || tipData.event?.name || '';
@@ -577,8 +582,9 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
 
     analytics.chatbotMessageSent(locale);
 
-    if (text === '__TIP_VAN_DE_DAG__') { analytics.quickAction('tip_van_de_dag'); fetchDailyTip(); return; }
-    if (text === '__ITINERARY__') { analytics.quickAction('itinerary'); setShowItineraryWizard(true); return; }
+    if (text === '__TIP_VAN_DE_DAG__') { analytics.quickAction("tip_van_de_dag"); fetchDailyTip(); return; }
+    if (text === '__ITINERARY__') { analytics.quickAction("itinerary"); setShowItineraryWizard(true); return; }
+    if (text === '__CATEGORY__') { setShowCategoryBrowser(true); return; }
 
     const now = new Date();
     const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: text.trim(), timestamp: now };
@@ -748,6 +754,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       setInput('');
       setIsStreaming(false);
       setShowItineraryWizard(false);
+      setShowCategoryBrowser(false);
       setWelcomeStep(0);
       setQuickRepliesVisible(false);
       if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
@@ -828,8 +835,8 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
 
             {/* Message list */}
             <div className="holibot-message-list">
-              {/* Welcome message (sequential animation) — hide when itinerary wizard is active */}
-              {messages.length === 0 && !showItineraryWizard && (
+              {/* Welcome message (sequential animation) — hide when wizard/browser active */}
+              {messages.length === 0 && !showItineraryWizard && !showCategoryBrowser && (
                 <div className="holibot-welcome-container" role="article">
                   {welcomeStep >= 1 && (
                     <div className="holibot-welcome-message holibot-welcome-animate">
@@ -862,7 +869,13 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
                         key={qa.id}
                         type="button"
                         className={`holibot-quick-reply-button${quickRepliesVisible ? ' visible' : ''}`}
-                        onClick={() => sendMessage(qa.message)}
+                        onClick={() => {
+                          if (qa.id === 'category') analytics.quickAction("category");
+                          else if (qa.id === 'directions') analytics.quickAction("directions");
+                          else if (qa.id === 'program') analytics.quickAction("itinerary");
+                          else if (qa.id === 'tip') analytics.quickAction("tip_van_de_dag");
+                          sendMessage(qa.message);
+                        }}
                         aria-label={qa.label}
                         style={{ animationDelay: quickRepliesVisible ? `${index * 150}ms` : undefined }}
                       >
@@ -926,6 +939,30 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
                   </div>
                   <div className="holibot-message-content" style={{ maxWidth: '90%' }}>
                     <ItineraryWizard locale={locale} onSubmit={fetchItinerary} onCancel={() => setShowItineraryWizard(false)} />
+                  </div>
+                </div>
+              )}
+
+              {/* Category Browser */}
+              {showCategoryBrowser && (
+                <div className="holibot-message holibot-message--assistant">
+                  <div className="holibot-message-avatar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                  <div className="holibot-message-content" style={{ maxWidth: '90%' }}>
+                    <CategoryBrowser
+                      locale={locale}
+                      onSelect={(cat, sub, type) => {
+                        setShowCategoryBrowser(false);
+                        // Send the selected category as a chat message for POI recommendations
+                        const query = type ? `Toon mij ${type} in ${cat}` : sub ? `Toon mij ${sub} in ${cat}` : `Toon mij POIs in categorie ${cat}`;
+                        sendMessage(query);
+                      }}
+                      onCancel={() => setShowCategoryBrowser(false)}
+                    />
                   </div>
                 </div>
               )}

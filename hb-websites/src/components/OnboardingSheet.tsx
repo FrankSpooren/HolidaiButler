@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { analytics } from '@/lib/analytics';
 
 interface OnboardingSheetProps {
   locale: string;
@@ -120,14 +121,28 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
     return () => window.removeEventListener('hb:onboarding-open', onOpen);
   }, []);
 
-  // Apply blur to page content when onboarding is visible
+  // Apply blur + freeze scroll when onboarding is visible
   useEffect(() => {
     const main = document.querySelector('main');
     const header = document.querySelector('.md\\:hidden[style*="linear-gradient"]');
     if (isVisible && !isMinimizing) {
+      // Save scroll position and freeze body
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${window.scrollY}px`;
+      document.body.style.width = '100%';
+      // Apply blur
       main?.setAttribute('style', `${main.getAttribute('style') || ''};filter:blur(3px) brightness(0.85)`);
       if (header) (header as HTMLElement).style.filter = 'blur(3px) brightness(0.85)';
     } else {
+      // Restore scroll position
+      const scrollY = Math.abs(parseInt(document.body.style.top || '0', 10));
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, scrollY);
+      // Remove blur
       main?.setAttribute('style', (main.getAttribute('style') || '').replace(/;?filter:blur\(3px\) brightness\(0\.85\)/g, ''));
       if (header) (header as HTMLElement).style.filter = '';
     }
@@ -156,8 +171,11 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
 
   const goNext = useCallback(() => {
     if (step < 3) {
-      setStep(s => s + 1);
+      const next = step + 1;
+      setStep(next);
+      analytics.onboarding_step(next);
     } else {
+      analytics.onboarding_completed();
       complete();
     }
   }, [step, complete]);

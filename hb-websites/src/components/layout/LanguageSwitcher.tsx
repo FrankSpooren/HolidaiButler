@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { analytics } from '@/lib/analytics';
 
 const LANGUAGES = [
   { code: 'nl', label: 'Nederlands', flag: '\u{1F1F3}\u{1F1F1}' },
@@ -30,6 +31,8 @@ export default function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   }, [open]);
 
   const handleSelect = (code: string) => {
+    const currentLang = document.cookie.match(/hb_locale=(\w+)/)?.[1] || 'en';
+    analytics.language_changed(currentLang, code);
     document.cookie = `hb_locale=${code};path=/;max-age=${365 * 24 * 60 * 60};SameSite=Lax`;
     setOpen(false);
     window.location.reload();
