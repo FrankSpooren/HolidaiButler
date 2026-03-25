@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { getPortalUrl } from '@/lib/portal-url';
+import { analytics } from '@/lib/analytics';
 
 const AccessibilityModal = dynamic(
   () => import('./layout/AccessibilityModal'),
@@ -126,7 +127,8 @@ export default function MobileHeader({
         {/* Top bar */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           {/* Brand — pill badge matching customer-portal header */}
-          <span
+          <a
+            href="/"
             className="font-bold text-lg"
             style={{
               letterSpacing: '2px',
@@ -136,10 +138,12 @@ export default function MobileHeader({
               padding: '6px 16px',
               borderRadius: '8px',
               display: 'inline-block',
+              textDecoration: 'none',
             }}
+            onClick={() => analytics.calpetrip_logo_clicked()}
           >
             {brandName}
-          </span>
+          </a>
 
           {/* Controls */}
           <div className="flex items-center gap-1">
@@ -286,6 +290,7 @@ export default function MobileHeader({
                         className="flex items-center gap-3 py-3 text-white text-base font-medium transition-opacity active:opacity-70 text-left"
                         onClick={() => {
                           setMenuOpen(false);
+                          analytics.hamburger_menu_item(item.label);
                           window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { message: 'general' } }));
                         }}
                       >
@@ -297,7 +302,7 @@ export default function MobileHeader({
                         key={item.label}
                         href={item.href!}
                         className="flex items-center gap-3 py-3 text-white text-base font-medium transition-opacity active:opacity-70"
-                        onClick={() => setMenuOpen(false)}
+                        onClick={() => { setMenuOpen(false); analytics.hamburger_menu_item(item.label); }}
                       >
                         <span className="text-lg w-7 text-center">{item.icon}</span>
                         {item.label}
@@ -316,7 +321,7 @@ export default function MobileHeader({
                       key={item.label}
                       href={item.href}
                       className="flex items-center gap-3 py-3 text-white/90 text-base transition-opacity active:opacity-70"
-                      onClick={() => setMenuOpen(false)}
+                      onClick={() => { setMenuOpen(false); analytics.hamburger_menu_item(item.label); }}
                     >
                       <span className="text-lg w-7 text-center">{item.icon}</span>
                       {item.label}

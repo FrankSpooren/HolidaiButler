@@ -1,9 +1,12 @@
 /**
- * SimpleAnalytics Event Tracking Helper
+ * SimpleAnalytics Event Tracking — CalpeTrip.com
  * Sends custom events to SimpleAnalytics dashboard.
  * Events appear in: simpleanalytics.com/calpetrip.com/events
  *
- * @version 1.0.0
+ * Naming convention: {component}_{action}_{device}
+ * Device: desktop or mobile (auto-detected)
+ *
+ * @version 2.0.0
  */
 
 declare global {
@@ -12,42 +15,125 @@ declare global {
   }
 }
 
+/** Detect mobile vs desktop based on viewport width */
+function getDevice(): 'mobile' | 'desktop' {
+  if (typeof window === 'undefined') return 'desktop';
+  return window.innerWidth < 768 ? 'mobile' : 'desktop';
+}
+
 /**
  * Track a custom event in SimpleAnalytics
- * @param eventName - Event name (alphanumeric + underscores, auto-lowercased)
+ * @param eventName - Event name (alphanumeric + underscores, auto-lowercased by SA)
  * @param metadata - Optional metadata key-value pairs
  */
-export function trackEvent(eventName: string, metadata?: Record<string, string | number>): void {
+function trackEvent(eventName: string, metadata?: Record<string, string | number>): void {
   try {
     if (typeof window !== 'undefined' && window.sa_event) {
-      if (metadata && Object.keys(metadata).length > 0) {
-        window.sa_event(eventName, metadata);
-      } else {
-        window.sa_event(eventName);
-      }
+      const enriched = { ...metadata, device: getDevice() };
+      window.sa_event(eventName, enriched);
     }
   } catch {
     // Silent fail — analytics should never break the app
   }
 }
 
-// Pre-defined event trackers for common interactions
+// ============================================================
+// CHATBOT EVENTS
+// ============================================================
+
 export const analytics = {
-  chatbotOpened: () => trackEvent('chatbot_opened'),
-  chatbotMessageSent: (lang?: string) => trackEvent('chatbot_message_sent', lang ? { language: lang } : undefined),
-  quickAction: (action: string) => trackEvent('quick_action', { action }),
-  poiDetailOpened: (poiName: string) => trackEvent('poi_detail_opened', { poi: poiName.substring(0, 50) }),
-  eventDetailOpened: (eventTitle: string) => trackEvent('event_detail_opened', { event: eventTitle.substring(0, 50) }),
-  filterApplied: (filterType: string, value: string) => trackEvent('filter_applied', { type: filterType, value }),
-  languageChanged: (from: string, to: string) => trackEvent('language_changed', { from, to }),
-  scrollToTop: () => trackEvent('scroll_to_top'),
-  socialLogin: (provider: string) => trackEvent('social_login', { provider }),
-  onboardingStep: (step: number) => trackEvent('onboarding_step', { step }),
-  onboardingCompleted: () => trackEvent('onboarding_completed'),
-  ctaClicked: (label: string) => trackEvent('cta_clicked', { label: label.substring(0, 50) }),
-  searchUsed: (query: string) => trackEvent('search_used', { query: query.substring(0, 30) }),
-  mapInteraction: () => trackEvent('map_interaction'),
-  tipOfDayViewed: () => trackEvent('tip_of_day_viewed'),
+  // --- Chatbot ---
+  chatbot_opened: () =>
+    trackEvent(`chatbot_opened_${getDevice()}`),
+
+  chatbot_message_sent: (lang?: string) =>
+    trackEvent(`chatbot_message_${getDevice()}`, lang ? { language: lang } : undefined),
+
+  chatbot_quick_action_tip: () =>
+    trackEvent(`chatbot_quick_tip_van_de_dag_${getDevice()}`),
+
+  chatbot_quick_action_itinerary: () =>
+    trackEvent(`chatbot_quick_programma_samenstellen_${getDevice()}`),
+
+  chatbot_quick_action_category: () =>
+    trackEvent(`chatbot_quick_zoeken_op_rubriek_${getDevice()}`),
+
+  chatbot_quick_action_directions: () =>
+    trackEvent(`chatbot_quick_routebeschrijving_${getDevice()}`),
+
+  // --- POI ---
+  poi_card_clicked: (poiName: string) =>
+    trackEvent(`poi_card_clicked_${getDevice()}`, { poi: poiName.substring(0, 50) }),
+
+  poi_detail_opened: (poiName: string) =>
+    trackEvent(`poi_detail_opened_${getDevice()}`, { poi: poiName.substring(0, 50) }),
+
+  // --- Events / Agenda ---
+  event_card_clicked: (eventTitle: string) =>
+    trackEvent(`event_card_clicked_${getDevice()}`, { event: eventTitle.substring(0, 50) }),
+
+  event_detail_opened: (eventTitle: string) =>
+    trackEvent(`event_detail_opened_${getDevice()}`, { event: eventTitle.substring(0, 50) }),
+
+  // --- Filters & Categories ---
+  category_button_clicked: (category: string) =>
+    trackEvent(`category_button_${getDevice()}`, { category }),
+
+  filter_applied: (filterType: string, value: string) =>
+    trackEvent(`filter_applied_${getDevice()}`, { type: filterType, value }),
+
+  // --- Navigation ---
+  calpetrip_logo_clicked: () =>
+    trackEvent(`logo_calpetrip_clicked_${getDevice()}`),
+
+  hamburger_menu_item: (item: string) =>
+    trackEvent(`hamburger_menu_${getDevice()}`, { item }),
+
+  mobile_bottom_nav: (tab: string) =>
+    trackEvent(`mobile_bottom_nav_${tab}`),
+
+  scroll_to_top: () =>
+    trackEvent(`scroll_to_top_${getDevice()}`),
+
+  // --- Language ---
+  language_changed: (from: string, to: string) =>
+    trackEvent(`language_changed_${getDevice()}`, { from, to }),
+
+  // --- Auth / Account ---
+  login_clicked: () =>
+    trackEvent(`login_clicked_${getDevice()}`),
+
+  signup_clicked: () =>
+    trackEvent(`signup_clicked_${getDevice()}`),
+
+  social_login: (provider: string) =>
+    trackEvent(`social_login_${provider}_${getDevice()}`),
+
+  // --- Onboarding ---
+  onboarding_step: (step: number) =>
+    trackEvent(`onboarding_step_${step}_${getDevice()}`),
+
+  onboarding_completed: () =>
+    trackEvent(`onboarding_completed_${getDevice()}`),
+
+  // --- Accessibility ---
+  wcag_modal_opened: () =>
+    trackEvent(`wcag_modal_opened_${getDevice()}`),
+
+  // --- Search ---
+  search_used: (query: string) =>
+    trackEvent(`search_used_${getDevice()}`, { query: query.substring(0, 30) }),
+
+  // --- Map ---
+  map_interaction: () =>
+    trackEvent(`map_interaction_${getDevice()}`),
+
+  // --- Content ---
+  tip_of_day_viewed: () =>
+    trackEvent(`tip_of_day_viewed_${getDevice()}`),
+
+  cta_clicked: (label: string) =>
+    trackEvent(`cta_clicked_${getDevice()}`, { label: label.substring(0, 50) }),
 };
 
 export default analytics;

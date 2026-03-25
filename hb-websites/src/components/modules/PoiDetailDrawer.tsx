@@ -56,7 +56,7 @@ export default function PoiDetailDrawer({ locale }: PoiDetailDrawerProps) {
         .then(data => {
           setPoi(data.poi ?? null);
           setReviews(data.reviews ?? []);
-          if (data.poi?.name) analytics.poiDetailOpened(data.poi.name);
+          if (data.poi?.name) analytics.poi_detail_opened(data.poi.name);
         })
         .catch(() => setPoi(null))
         .finally(() => setLoading(false));

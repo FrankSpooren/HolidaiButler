@@ -94,7 +94,7 @@ export default function Header({ tenant, locale }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 relative">
           {/* Brand name + payoff */}
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3" data-sa-event="logo_calpetrip_clicked">
             <span
               className="text-lg sm:text-xl font-bold tracking-widest uppercase"
               style={{ color: tenant.branding.colors?.primary || 'var(--hb-primary)', fontFamily: 'var(--hb-font-heading), sans-serif' }}

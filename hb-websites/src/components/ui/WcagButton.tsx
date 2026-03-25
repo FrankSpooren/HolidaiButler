@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import { analytics } from '@/lib/analytics';
 
 const AccessibilityModal = dynamic(
   () => import('@/components/layout/AccessibilityModal'),
@@ -18,7 +19,7 @@ export default function WcagButton({ locale }: WcagButtonProps) {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { setOpen(true); analytics.wcag_modal_opened(); }}
         className="rounded transition-colors"
         aria-label="Accessibility settings"
         style={{

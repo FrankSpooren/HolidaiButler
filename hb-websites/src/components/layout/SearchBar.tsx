@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { analytics } from '@/lib/analytics';
 
 interface SearchResult {
   id: number;
@@ -66,6 +67,7 @@ export default function SearchBar() {
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
+        analytics.search_used(value.trim());
         const res = await fetch(`/api/pois?search=${encodeURIComponent(value.trim())}&limit=5`);
         if (res.ok) {
           const data = await res.json();

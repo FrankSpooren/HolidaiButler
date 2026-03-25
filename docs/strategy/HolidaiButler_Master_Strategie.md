@@ -2,7 +2,7 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 25 maart 2026
-**Versie**: 7.83
+**Versie**: 7.84
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1724,4 +1724,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 25 maart 2026 — SimpleAnalytics event tracking (15 events: chatbot, POI, navigation). UTM tracking fix (publisher domain kolom, calpetrip.com). Agenda i18n (NL+DE kolommen live). Admin Portal: 241 endpoints, adminPortal.js v3.38.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.23.0. MS v7.83.*
+*Laatst bijgewerkt: 25 maart 2026 — SimpleAnalytics full event tracking (28+ events, desktop/mobile split, 11 componenten). UTM tracking fix. Agenda i18n NL+DE. Admin Portal: 241 endpoints, adminPortal.js v3.38.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.24.0. MS v7.84.*

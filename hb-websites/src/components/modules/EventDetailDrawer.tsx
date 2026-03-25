@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AgendaEvent, I18nString } from '@/types/poi';
 import { SkeletonDrawer } from '@/components/ui/Skeleton';
+import { analytics } from '@/lib/analytics';
 
 interface EventDetailDrawerProps {
   locale: string;
@@ -77,6 +78,11 @@ export default function EventDetailDrawer({ locale }: EventDetailDrawerProps) {
         .then(r => r.json())
         .then(data => {
           setEvent(data.event ?? null);
+          if (data.event?.title) {
+            const t = data.event.title;
+            const title = typeof t === 'string' ? t : (t[locale] || t.en || Object.values(t)[0] || '');
+            analytics.event_detail_opened(title);
+          }
         })
         .catch(() => setEvent(null))
         .finally(() => setLoading(false));

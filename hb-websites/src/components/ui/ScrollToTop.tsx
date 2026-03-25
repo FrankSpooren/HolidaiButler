@@ -20,7 +20,7 @@ export default function ScrollToTop() {
 
   return (
     <button
-      onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); analytics.scrollToTop(); }}
+      onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); analytics.scroll_to_top(); }}
       className="fixed bottom-24 md:bottom-6 right-6 md:right-20 z-40 w-10 h-10 rounded-full bg-primary/80 text-on-primary shadow-lg hover:bg-primary transition-all duration-200 flex items-center justify-center animate-fade-in-up"
       aria-label="Scroll to top"
     >
