@@ -73,11 +73,11 @@ class PublisherAgent extends BaseAgent {
       if (contentItem.target_platform !== 'website') {
         try {
           const [[dest]] = await mysqlSequelize.query(
-            'SELECT custom_domain FROM destinations WHERE id = :id',
+            'SELECT domain FROM destinations WHERE id = :id',
             { replacements: { id: contentItem.destination_id } }
           );
-          if (dest?.custom_domain) {
-            const baseUrl = `https://${dest.custom_domain}`;
+          if (dest?.domain) {
+            const baseUrl = `https://${dest.domain}`;
             const trackedUrl = applyUtmToContent(baseUrl, contentItem, contentItem.target_platform);
             // Ensure social_metadata has the tracked link
             let meta = {};

@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.22.0
-> **Laatst bijgewerkt**: 24 maart 2026
+> **Versie**: 4.23.0
+> **Laatst bijgewerkt**: 25 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -671,6 +671,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.23.0** | **2026-03-25** | **SimpleAnalytics Event Tracking + UTM Fix + Agenda i18n**. SimpleAnalytics: automated events script (outbound/downloads/emails), inline events helper, analytics.ts utility met 15 tracked events (chatbot_opened, chatbot_message_sent, quick_action, poi_detail_opened, scroll_to_top, etc.). UTM tracking fix: publisher `custom_domain`→`domain` kolom, Calpe domain→calpetrip.com. Agenda i18n: title_nl/de, short_description_nl/de, long_description_nl/de kolommen gekoppeld in mapEventToResponse(), Accept-Language header support, NL/DE/ES/EN events op correcte taalversie pagina's. 241 endpoints. adminPortal.js v3.38.0. MS v7.83. |
 | **4.22.0** | **2026-03-24** | **CalpeTrip.com Launch + Texel Mobiel + B2B Corporate**. CalpeTrip.com live: DNS A-records, SSL certificaten (3 domeinen), Apache vhosts (prod/dev/test), CORS uitbreiding. Mobiele detectie via Apache User-Agent: homepage→Next.js (port 3002), alle andere routes→Vite SPA. Texelmaps.nl zelfde integratie. Destination-aware links: `portal-url.ts` helper (getPortalUrl() op basis van window.hostname), alle hardcoded holidaibutler.com→dynamisch per tenant. Desktop CALPETRIP: pill-badge linksboven (Header.tsx), Official Partner blok verwijderd, Footer butler-logo→CALPETRIP badge, OG preview "CalpeTrip - Costa Blanca Experiences". HolidaiButler.com→B2B/Corporate homepage (statisch HTML: platform, 9 modules, 8 USPs, footer met live producten). API routing fix: alle `/api/*` altijd→backend port 3001 (was split mobiel/desktop die 404 veroorzaakte). Next.js middleware: calpetrip.com + www.calpetrip.com tenant mapping. CLAUDE.md v4.22.0. MS v7.82. |
 | **4.21.0** | **2026-03-24** | **Content Studio UX Kwaliteitsronde**. 6 fixes: (1) Trending Monitor sorteerbare kolommen (Keyword/Score/Volume/Week klik-sort + Bron dropdown filter in kolomkop + delete knop per keyword). (2) Suggesties tab: sorteerbare Titel/Score + Type dropdown filter + Status dropdown filter. (3) Content Items tab: sorteerbare Titel/Score/Datum + Type/Platform/Status dropdown filters. (4) Publish knop voor draft/pending_review/scheduled items (was alleen approved). (5) Trending Monitor Gem. Score nu werkelijk gemiddelde (was top keyword). (6) DELETE /content/trending/:id endpoint. Campagne pipeline: alleen actieve kanalen+talen, volledige generateContentItem pipeline. Kalender auto-fill: komende 4 weken, per-platform optimale tijden, actieve kanalen. Image pipeline: media library absolute URLs (API_BASE_URL fix), Calpe backfill 30 items. SEO scoring: +16 NL +11 DE +11 ES CTA/hook patronen (75→97). Frontend: defaultLanguage popup, viewedItems markering, isContentOnlyDest prop. 241 endpoints. adminPortal.js v3.38.0. MS v7.81. |
 | **4.20.0** | **2026-03-24** | **CalpeTrip Rebranding Compleet + Taalparameter Fix**. Alle HolidaiButler→CalpeTrip in customer-portal (translations.ts 6 talen, vite.config destinationName, 7 static pages, Homepage, AgendaPage, auth pages, destinationText.ts). Language init script in index.html (zet `?lang=` in localStorage vóór React laadt — fix voor NL-taal op DE/EN/ES pagina's vanuit mobiele homepage). Copyright 2025→2026. CLAUDE.md v4.20.0. MS v7.80. |
@@ -689,7 +690,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.82 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.83 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

@@ -5721,4 +5721,33 @@ CLAUDE.md v4.21.0 → v4.22.0. MS v7.81 → v7.82.
 
 ---
 
+---
+
+## v4.23.0 — SimpleAnalytics Event Tracking + UTM Fix + Agenda i18n (25-03-2026)
+
+### SimpleAnalytics Event Tracking
+- **Automated events script**: outbound links, email clicks, downloads (PDF/CSV/DOCX/XLSX/ZIP) — zero-config tracking
+- **Inline events helper**: `data-sa-event` attribute support voor HTML-level tracking
+- **analytics.ts utility**: 15 pre-defined event trackers (chatbot_opened, chatbot_message_sent, quick_action, poi_detail_opened, event_detail_opened, filter_applied, language_changed, scroll_to_top, social_login, onboarding_step, onboarding_completed, cta_clicked, search_used, map_interaction, tip_of_day_viewed)
+- Tracking geïmplementeerd in: ChatbotWidget (open + message + quick actions), PoiDetailDrawer (poi detail opened), ScrollToTop
+
+### UTM Tracking Fix
+- Publisher `custom_domain` → `domain` kolom fix (query verwees naar niet-bestaande kolom)
+- Calpe destination domain: `holidaibutler.com` → `calpetrip.com`
+- UTM params bij publicatie: utm_source (platform), utm_medium (social), utm_campaign (campaign_tag of content_id), utm_content (type), utm_term (title)
+- Automatische URL-tagging in body + destination link als geen URL aanwezig
+
+### Agenda i18n (DE + NL kolommen)
+- `mapEventToResponse()` uitgebreid: `title_nl`, `title_de`, `short_description_nl`, `short_description_de`, `long_description_nl`, `long_description_de`
+- Accept-Language header support (naast query param `lang`)
+- i18n response object uitgebreid met `de` key (was alleen nl/en/es)
+- Alle 3 event endpoints (list, featured, detail) bijgewerkt
+- Bewezen: NL="QA Ontbijt Valencia", EN="QA Breakfast Valencia", DE="Softwareentwicklung rund um"
+
+**Bestanden**: hb-websites/src/app/layout.tsx, hb-websites/src/lib/analytics.ts (NIEUW), hb-websites/src/components/modules/ChatbotWidget.tsx, hb-websites/src/components/modules/PoiDetailDrawer.tsx, hb-websites/src/components/ui/ScrollToTop.tsx, platform-core/src/routes/agenda.js, platform-core/src/services/agents/publisher/index.js, customer-portal/frontend/index.html
+
+CLAUDE.md v4.22.0 → v4.23.0. MS v7.82 → v7.83.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
