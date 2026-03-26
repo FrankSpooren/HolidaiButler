@@ -12,6 +12,7 @@ import MobileBottomNav from '@/components/MobileBottomNav';
 import MobileHeader from '@/components/MobileHeader';
 import OnboardingSheet from '@/components/OnboardingSheet';
 import MobileHomepage from '@/components/mobile/MobileHomepage';
+import HoliBotProviderWrapper from '@/components/chatbot/HoliBotProviderWrapper';
 import { resolveAssetUrl } from '@/lib/assets';
 import Script from 'next/script';
 import './globals.css';
@@ -110,6 +111,7 @@ export default async function RootLayout({
         )}
       </head>
       <body className="min-h-screen flex flex-col bg-background text-foreground font-body antialiased">
+        <HoliBotProviderWrapper>
         {/* Desktop header */}
         {tenant && (
           <div className="hidden md:block">
@@ -212,6 +214,7 @@ export default async function RootLayout({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="https://queue.simpleanalyticscdn.com/noscript.gif" alt="" referrerPolicy="no-referrer-when-downgrade" />
         </noscript>
+        </HoliBotProviderWrapper>
       </body>
     </html>
   );

@@ -20,8 +20,8 @@ export function ChatHeader() {
     await clearMessages();
   };
 
-  // Only show reset button if there are messages
-  const showResetButton = messages.length > 0;
+  // Always show reset button (return to start screen)
+  const showResetButton = true;
 
   return (
     <div className="holibot-chat-header">

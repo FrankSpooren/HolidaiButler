@@ -359,33 +359,33 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
         <AccordionDetails>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <TextField fullWidth size="small" label="Persoonlijkheid" value={tone.personality || ''} onChange={e => setTone(t => ({ ...t, personality: e.target.value }))} placeholder="Warm, professioneel, betrouwbaar" helperText="Hoe klinkt uw merk? Beschrijf de persoonlijkheid in 3-5 woorden." />
+              <TextField fullWidth size="small" label={t('brandProfile.tone.personality', 'Persoonlijkheid')} value={tone.personality || ''} onChange={e => setTone(t => ({ ...t, personality: e.target.value }))} placeholder="Warm, professioneel, betrouwbaar" />
             </Grid>
             <Grid item xs={12}>
-              <TextField fullWidth size="small" label="Doelgroep" value={tone.audience || ''} onChange={e => setTone(t => ({ ...t, audience: e.target.value }))} placeholder="Professionals 30-55, ondernemers" />
+              <TextField fullWidth size="small" label={t('brandProfile.tone.audience', 'Doelgroep')} value={tone.audience || ''} onChange={e => setTone(t => ({ ...t, audience: e.target.value }))} placeholder="Professionals 30-55, ondernemers" />
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField fullWidth size="small" label="Merkwaarden" value={tone.brandValues || ''} onChange={e => setTone(t => ({ ...t, brandValues: e.target.value }))} placeholder="Kwaliteit, innovatie, duurzaamheid" />
+              <TextField fullWidth size="small" label={t('brandProfile.tone.brandValues', 'Merkwaarden')} value={tone.brandValues || ''} onChange={e => setTone(t => ({ ...t, brandValues: e.target.value }))} placeholder="Kwaliteit, innovatie, duurzaamheid" />
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField fullWidth size="small" label="Kernwoorden" value={tone.coreKeywords || ''} onChange={e => setTone(t => ({ ...t, coreKeywords: e.target.value }))} placeholder="Woorden die uw merk typeren" />
+              <TextField fullWidth size="small" label={t('brandProfile.tone.coreKeywords', 'Kernwoorden')} value={tone.coreKeywords || ''} onChange={e => setTone(t => ({ ...t, coreKeywords: e.target.value }))} placeholder="Woorden die uw merk typeren" />
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField fullWidth size="small" label="Gewenste bijvoeglijke naamwoorden" value={tone.adjectives || ''} onChange={e => setTone(t => ({ ...t, adjectives: e.target.value }))} placeholder="Betrouwbaar, innovatief, persoonlijk" />
+              <TextField fullWidth size="small" label={t('brandProfile.tone.adjectives', 'Gewenste bijvoeglijke naamwoorden')} value={tone.adjectives || ''} onChange={e => setTone(t => ({ ...t, adjectives: e.target.value }))} placeholder="Betrouwbaar, innovatief, persoonlijk" />
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField fullWidth size="small" label="Vermijd deze woorden" value={tone.avoidWords || ''} onChange={e => setTone(t => ({ ...t, avoidWords: e.target.value }))} placeholder="Goedkoop, basic, saai" />
+              <TextField fullWidth size="small" label={t('brandProfile.tone.avoidWords', 'Vermijd deze woorden')} value={tone.avoidWords || ''} onChange={e => setTone(t => ({ ...t, avoidWords: e.target.value }))} placeholder="Goedkoop, basic, saai" />
             </Grid>
             <Grid item xs={12}>
-              <TextField fullWidth size="small" label="Voorbeeldzinnen" value={tone.samplePhrases || ''} onChange={e => setTone(t => ({ ...t, samplePhrases: e.target.value }))} placeholder="Typische zinnen die uw merk zou gebruiken" />
+              <TextField fullWidth size="small" label={t('brandProfile.tone.samplePhrases', 'Voorbeeldzinnen')} value={tone.samplePhrases || ''} onChange={e => setTone(t => ({ ...t, samplePhrases: e.target.value }))} placeholder="Typische zinnen die uw merk zou gebruiken" />
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth size="small">
-                <InputLabel>Aanspreekstijl</InputLabel>
-                <Select value={tone.formalAddress || 'je'} label="Aanspreekstijl" onChange={e => setTone(t => ({ ...t, formalAddress: e.target.value }))}>
-                  <MenuItem value="je">Informeel (je/jij)</MenuItem>
-                  <MenuItem value="u">Formeel (u)</MenuItem>
-                  <MenuItem value="mixed">Gemengd (formeel voor info, informeel voor social)</MenuItem>
+                <InputLabel>{t('brandProfile.tone.formalAddress', 'Aanspreekstijl')}</InputLabel>
+                <Select value={tone.formalAddress || 'je'} label={t('brandProfile.tone.formalAddress', 'Aanspreekstijl')} onChange={e => setTone(t => ({ ...t, formalAddress: e.target.value }))}>
+                  <MenuItem value="je">{t('brandProfile.tone.informal', 'Informeel (je/jij)')}</MenuItem>
+                  <MenuItem value="u">{t('brandProfile.tone.formal', 'Formeel (u)')}</MenuItem>
+                  <MenuItem value="mixed">{t('brandProfile.tone.mixed', 'Gemengd')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

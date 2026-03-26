@@ -17,6 +17,10 @@ const contentService = {
     return client.get('/content/trending/summary', { params: { destination_id: destinationId, period } }).then(r => r.data);
   },
 
+  deleteTrending(id) {
+    return client.delete(`/content/trending/${id}`).then(r => r.data);
+  },
+
   addManualTrend(data) {
     return client.post('/content/trending/manual', data).then(r => r.data);
   },
@@ -51,6 +55,10 @@ const contentService = {
 
   generateItem(data) {
     return client.post('/content/items/generate', data, { timeout: 120000 }).then(r => r.data);
+  },
+
+  generateCampaign(data) {
+    return client.post('/content/campaigns/generate', data, { timeout: 300000 }).then(r => r.data);
   },
 
   updateItem(id, data) {
@@ -114,6 +122,10 @@ const contentService = {
 
   getSocialAccounts(destinationId) {
     return client.get('/content/social-accounts', { params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  connectMeta(data) {
+    return client.post('/content/social-accounts/connect/meta', data).then(r => r.data);
   },
 
   connectLinkedIn(data) {

@@ -177,7 +177,8 @@ export async function generateContent(suggestion, options = {}) {
     }
 
     // Translate to requested languages
-    const targetLangs = (languages.length > 0 ? languages : getLanguages(destinationId))
+    const destLangs = await getLanguages(destinationId);
+    const targetLangs = (languages.length > 0 ? languages : destLangs)
       .filter(l => l !== 'en');
 
     if (targetLangs.length > 0) {

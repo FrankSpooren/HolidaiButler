@@ -4,7 +4,7 @@ import {
   TableHead, TableRow, Chip, TextField, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, MenuItem, Select, FormControl, InputLabel, IconButton, Tooltip,
   Card, CardContent, Grid, CircularProgress, Alert, TablePagination, LinearProgress,
-  ToggleButton, ToggleButtonGroup, Checkbox, Accordion, AccordionSummary, AccordionDetails, Divider,
+  ToggleButton, ToggleButtonGroup, Checkbox, Accordion, AccordionSummary, AccordionDetails, Divider, Snackbar,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -144,7 +144,7 @@ function SummaryCards({ summary, loading }) {
   const cards = [
     { label: t('contentStudio.cards.uniqueKeywords', 'Unieke Keywords'), value: summary.totalKeywords || 0 },
     { label: t('contentStudio.cards.topKeyword', 'Top Keyword'), value: summary.topKeywords?.[0]?.keyword || '—' },
-    { label: t('contentStudio.cards.avgScore', 'Gem. Score'), value: summary.topKeywords?.[0]?.avg_score ? Number(summary.topKeywords[0].avg_score).toFixed(1) : '—' },
+    { label: t('contentStudio.cards.avgScore', 'Gem. Score'), value: summary.topKeywords?.length > 0 ? (summary.topKeywords.reduce((s, k) => s + Number(k.avg_score || 0), 0) / summary.topKeywords.length).toFixed(1) : '—' },
   ];
 
   const dirDist = summary.directionDistribution || [];
@@ -411,9 +411,9 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
     }
   };
 
-  if (!suggestion) return null;
-
   const { t } = useTranslation();
+
+  if (!suggestion) return null;
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{t('contentStudio.dialogs.generateContent', 'Content Genereren')}</DialogTitle>
@@ -820,7 +820,7 @@ function ApprovalTimeline({ itemId, currentStatus }) {
 // ============================================================
 // CONTENT IMAGE SECTION (BLOK 2)
 // ============================================================
-function ContentImageSection({ itemId, item, onUpdate }) {
+function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false }) {
   const { t } = useTranslation();
   const [images, setImages] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -1066,7 +1066,7 @@ function ContentImageSection({ itemId, item, onUpdate }) {
   );
 }
 
-function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
+function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isContentOnlyDest = false, defaultLanguage = 'en' }) {
   const { t } = useTranslation();
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -1075,7 +1075,7 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
   const [previewPlatform, setPreviewPlatform] = useState(null);
   const [improving, setImproving] = useState(false);
   const [improveResult, setImproveResult] = useState(null);
-  const [langTab, setLangTab] = useState('en');
+  const [langTab, setLangTab] = useState(defaultLanguage);
   const [editBody, setEditBody] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [saving, setSaving] = useState(false);
@@ -1116,9 +1116,9 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
     contentService.getItem(itemId).then(r => {
       const data = r.data;
       setItem(data);
-      setEditBody(data.body_en || '');
+      setEditBody(data[`body_${defaultLanguage}`] || data.body_en || data.body_nl || '');
       setEditTitle(data.title || '');
-      setLangTab('en');
+      setLangTab(defaultLanguage);
     }).finally(() => setLoading(false));
   }, [itemId, open]);
 
@@ -1389,7 +1389,7 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
             {/* Left: Editor */}
             <Grid item xs={12} md={8}>
               {/* Image Section (BLOK 2) */}
-              <ContentImageSection itemId={itemId} item={item} onUpdate={onUpdate} />
+              <ContentImageSection itemId={itemId} item={item} onUpdate={onUpdate} isContentOnlyDest={isContentOnlyDest} />
 
               <Tabs value={langTab} onChange={(_, v) => handleLangChange(v)} sx={{ mb: 1 }}>
                 {LANGS.map(lang => (
@@ -1775,7 +1775,7 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate }) {
                 <Button size="small" variant="outlined" color="primary" onClick={() => setRepurposeOpen(true)} startIcon={<ContentCopyIcon />} disabled={repurposing}>
                   {repurposing ? t('contentStudio.actions.repurposing', 'Bezig...') : 'Repurpose'}
                 </Button>
-                {item.approval_status === 'approved' && (
+                {['approved', 'draft', 'pending_review', 'scheduled'].includes(item.approval_status) && (
                   <Button size="small" variant="contained" color="primary" onClick={() => setPublishDialogOpen(true)} startIcon={<PublishIcon />}>
                     {t('contentStudio.actions.publishNow', 'Publiceren')}
                   </Button>
@@ -1932,6 +1932,9 @@ export default function ContentStudioPage() {
   const { t } = useTranslation();
   const user = useAuthStore(s => s.user);
   const [tab, setTab] = useState(0);
+  const [campaignGenerating, setCampaignGenerating] = useState(false);
+  const [snackMsg, setSnackMsg] = useState(null);
+  const [viewedItems, setViewedItems] = useState(new Set());
   const storeDestinations = useDestinationStore(s => s.destinations);
   const userDestId = (() => {
     if (user?.destination_id) return user.destination_id;
@@ -1966,6 +1969,17 @@ export default function ContentStudioPage() {
   const [trendRowsPerPage, setTrendRowsPerPage] = useState(25);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [trendView, setTrendView] = useState('table');
+  const [trendSort, setTrendSort] = useState('score_desc');
+  const [sourceFilter, setSourceFilter] = useState('');
+  // Suggestions sort/filter
+  const [sugSort, setSugSort] = useState('score_desc');
+  const [sugTypeFilter, setSugTypeFilter] = useState('');
+  const [sugStatusFilter, setSugStatusFilter] = useState('');
+  // Content Items sort/filter
+  const [itemSort, setItemSort] = useState('date_desc');
+  const [itemTypeFilter, setItemTypeFilter] = useState('');
+  const [itemPlatformFilter, setItemPlatformFilter] = useState('');
+  const [itemStatusFilter, setItemStatusFilter] = useState('');
   const [marketFilter, setMarketFilter] = useState('ALL');
   const [langFilter, setLangFilter] = useState('ALL');
 
@@ -2221,14 +2235,20 @@ export default function ContentStudioPage() {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>{t('contentStudio.table.keyword', 'Keyword')}</TableCell>
-                    <TableCell>{t('contentStudio.table.score', 'Score')}</TableCell>
+                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'keyword_asc' ? 'keyword_desc' : 'keyword_asc')}>{t('contentStudio.table.keyword', 'Keyword')} {trendSort.startsWith('keyword') ? (trendSort === 'keyword_asc' ? '↑' : '↓') : ''}</TableCell>
+                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'score_desc' ? 'score_asc' : 'score_desc')}>{t('contentStudio.table.score', 'Score')} {trendSort.startsWith('score') ? (trendSort === 'score_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell>{t('contentStudio.table.direction', 'Richting')}</TableCell>
-                    <TableCell>{t('contentStudio.table.volume', 'Volume')}</TableCell>
+                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'volume_desc' ? 'volume_asc' : 'volume_desc')}>{t('contentStudio.table.volume', 'Volume')} {trendSort.startsWith('volume') ? (trendSort === 'volume_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell>{t('contentStudio.table.language', 'Taal')}</TableCell>
                     <TableCell>{t('contentStudio.table.market', 'Markt')}</TableCell>
-                    <TableCell>{t('contentStudio.table.source', 'Bron')}</TableCell>
-                    <TableCell>{t('contentStudio.table.week', 'Week')}</TableCell>
+                    <TableCell>
+                      <Select size="small" value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 60 }}>
+                        <MenuItem value="">{t('contentStudio.table.source', 'Bron')}</MenuItem>
+                        {[...new Set(trends.map(t => t.source).filter(Boolean))].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                      </Select>
+                    </TableCell>
+                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'week_desc' ? 'week_asc' : 'week_desc')}>{t('contentStudio.table.week', 'Week')} {trendSort.startsWith('week') ? (trendSort === 'week_asc' ? '↑' : '↓') : ''}</TableCell>
+                    <TableCell width={40}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -2242,7 +2262,20 @@ export default function ContentStudioPage() {
                         <Typography color="text.secondary">{t('contentStudio.noTrending', 'Geen trending keywords gevonden voor deze periode.')}</Typography>
                       </TableCell>
                     </TableRow>
-                  ) : trends.map((trend, idx) => (
+                  ) : [...trends]
+                    .filter(t => !sourceFilter || t.source === sourceFilter)
+                    .sort((a, b) => {
+                      if (trendSort === 'keyword_asc') return (a.keyword || '').localeCompare(b.keyword || '');
+                      if (trendSort === 'keyword_desc') return (b.keyword || '').localeCompare(a.keyword || '');
+                      if (trendSort === 'score_asc') return (Number(a.relevance_score) || 0) - (Number(b.relevance_score) || 0);
+                      if (trendSort === 'score_desc') return (Number(b.relevance_score) || 0) - (Number(a.relevance_score) || 0);
+                      if (trendSort === 'volume_asc') return (Number(a.search_volume) || 0) - (Number(b.search_volume) || 0);
+                      if (trendSort === 'volume_desc') return (Number(b.search_volume) || 0) - (Number(a.search_volume) || 0);
+                      if (trendSort === 'week_asc') return (Number(a.week_number) || 0) - (Number(b.week_number) || 0);
+                      if (trendSort === 'week_desc') return (Number(b.week_number) || 0) - (Number(a.week_number) || 0);
+                      return 0;
+                    })
+                    .map((trend, idx) => (
                     <TableRow key={trend.id || idx} hover>
                       <TableCell sx={{ fontWeight: 500 }}>{trend.keyword}</TableCell>
                       <TableCell>
@@ -2265,6 +2298,11 @@ export default function ContentStudioPage() {
                         </Box>
                       </TableCell>
                       <TableCell>{trend.week_number ? `W${trend.week_number}` : '—'}</TableCell>
+                      <TableCell>
+                        <IconButton size="small" color="error" onClick={async (e) => { e.stopPropagation(); try { await contentService.deleteTrending(trend.id); loadTrends(); } catch {} }}>
+                          <DeleteIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -2312,12 +2350,27 @@ export default function ContentStudioPage() {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>{t('contentStudio.table.title', 'Titel')}</TableCell>
-                    <TableCell>{t('contentStudio.table.type', 'Type')}</TableCell>
-                    <TableCell>{t('contentStudio.table.score', 'Score')}</TableCell>
+                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setSugSort(s => s === 'title_asc' ? 'title_desc' : 'title_asc')}>{t('contentStudio.table.title', 'Titel')} {sugSort.startsWith('title') ? (sugSort === 'title_asc' ? '↑' : '↓') : ''}</TableCell>
+                    <TableCell>
+                      <Select size="small" value={sugTypeFilter} onChange={e => setSugTypeFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 60 }}>
+                        <MenuItem value="">{t('contentStudio.table.type', 'Type')}</MenuItem>
+                        <MenuItem value="blog">Blog</MenuItem>
+                        <MenuItem value="social_post">Social</MenuItem>
+                        <MenuItem value="video_script">Video</MenuItem>
+                      </Select>
+                    </TableCell>
+                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setSugSort(s => s === 'score_desc' ? 'score_asc' : 'score_desc')}>{t('contentStudio.table.score', 'Score')} {sugSort.startsWith('score') ? (sugSort === 'score_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell>{t('contentStudio.table.keywords', 'Keywords')}</TableCell>
                     <TableCell>{t('contentStudio.table.channels', 'Kanalen')}</TableCell>
-                    <TableCell>{t('contentStudio.table.status', 'Status')}</TableCell>
+                    <TableCell>
+                      <Select size="small" value={sugStatusFilter} onChange={e => setSugStatusFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 70 }}>
+                        <MenuItem value="">{t('contentStudio.table.status', 'Status')}</MenuItem>
+                        <MenuItem value="pending">In afwachting</MenuItem>
+                        <MenuItem value="approved">Goedgekeurd</MenuItem>
+                        <MenuItem value="rejected">Afgewezen</MenuItem>
+                        <MenuItem value="generated">Gegenereerd</MenuItem>
+                      </Select>
+                    </TableCell>
                     <TableCell align="right">{t('contentStudio.table.actions', 'Acties')}</TableCell>
                   </TableRow>
                 </TableHead>
@@ -2332,7 +2385,17 @@ export default function ContentStudioPage() {
                         <Typography color="text.secondary">{t('contentStudio.noSuggestions', 'Geen suggesties. Klik op "Genereer Suggesties" om AI suggesties te maken.')}</Typography>
                       </TableCell>
                     </TableRow>
-                  ) : suggestions.map((sug) => (
+                  ) : [...suggestions]
+                    .filter(s => !sugTypeFilter || s.content_type === sugTypeFilter)
+                    .filter(s => !sugStatusFilter || s.status === sugStatusFilter)
+                    .sort((a, b) => {
+                      if (sugSort === 'title_asc') return (a.title || '').localeCompare(b.title || '');
+                      if (sugSort === 'title_desc') return (b.title || '').localeCompare(a.title || '');
+                      if (sugSort === 'score_asc') return (Number(a.engagement_score) || 0) - (Number(b.engagement_score) || 0);
+                      if (sugSort === 'score_desc') return (Number(b.engagement_score) || 0) - (Number(a.engagement_score) || 0);
+                      return 0;
+                    })
+                    .map((sug) => (
                     <TableRow key={sug.id} hover sx={{ cursor: 'pointer' }} onClick={() => setSelectedSuggestion(sug)}>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 500, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -2451,6 +2514,22 @@ export default function ContentStudioPage() {
                 <Button size="small" variant="contained" startIcon={<NoteAddIcon />} onClick={() => setManualDialogOpen(true)}>
                   {t('contentStudio.actions.newItem', 'Nieuw Item')}
                 </Button>
+                <Button size="small" variant="outlined" color="secondary" startIcon={campaignGenerating ? <CircularProgress size={14} /> : <AutoAwesomeIcon />}
+                  disabled={campaignGenerating}
+                  onClick={async () => {
+                    const topic = prompt(t('contentStudio.campaign.topicPrompt', 'Voer het campagne-onderwerp in:'));
+                    if (!topic) return;
+                    setCampaignGenerating(true);
+                    try {
+                      const result = await contentService.generateCampaign({ destination_id: destinationId, topic, language: currentDest?.defaultLanguage || 'nl' });
+                      loadItems();
+                      const count = result?.data?.total || result?.total || result?.data?.items?.length || 0;
+                      setSnackMsg(`${count} items gegenereerd voor campagne "${topic}"`);
+                    } catch (err) { setSnackMsg(err.response?.data?.error?.message || err.message || 'Campagne generatie mislukt'); }
+                    finally { setCampaignGenerating(false); }
+                  }}>
+                  {t('contentStudio.actions.campaign', 'Campagne')}
+                </Button>
               </Box>
             </Box>
             <TableContainer>
@@ -2460,13 +2539,34 @@ export default function ContentStudioPage() {
                     <TableCell padding="checkbox">
                       <Checkbox size="small" checked={items.length > 0 && selectedIds.length === items.length} indeterminate={selectedIds.length > 0 && selectedIds.length < items.length} onChange={toggleSelectAll} />
                     </TableCell>
-                    <TableCell>{t('contentStudio.table.title', 'Titel')}</TableCell>
-                    <TableCell>{t('contentStudio.table.type', 'Type')}</TableCell>
-                    <TableCell>{t('contentStudio.table.platform', 'Platform')}</TableCell>
+                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setItemSort(s => s === 'title_asc' ? 'title_desc' : 'title_asc')}>{t('contentStudio.table.title', 'Titel')} {itemSort.startsWith('title') ? (itemSort === 'title_asc' ? '↑' : '↓') : ''}</TableCell>
+                    <TableCell>
+                      <Select size="small" value={itemTypeFilter} onChange={e => setItemTypeFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 55 }}>
+                        <MenuItem value="">{t('contentStudio.table.type', 'Type')}</MenuItem>
+                        <MenuItem value="blog">Blog</MenuItem>
+                        <MenuItem value="social_post">Social</MenuItem>
+                        <MenuItem value="video_script">Video</MenuItem>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select size="small" value={itemPlatformFilter} onChange={e => setItemPlatformFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 70 }}>
+                        <MenuItem value="">{t('contentStudio.table.platform', 'Platform')}</MenuItem>
+                        {Object.entries(PLATFORM_LABELS).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
+                      </Select>
+                    </TableCell>
                     <TableCell>{t('contentStudio.table.languages', 'Talen')}</TableCell>
-                    <TableCell>{t('contentStudio.table.score', 'Score')}</TableCell>
-                    <TableCell>{t('contentStudio.table.status', 'Status')}</TableCell>
-                    <TableCell>{t('contentStudio.table.date', 'Datum')}</TableCell>
+                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setItemSort(s => s === 'score_desc' ? 'score_asc' : 'score_desc')}>{t('contentStudio.table.score', 'Score')} {itemSort.startsWith('score') ? (itemSort === 'score_asc' ? '↑' : '↓') : ''}</TableCell>
+                    <TableCell>
+                      <Select size="small" value={itemStatusFilter} onChange={e => setItemStatusFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 70 }}>
+                        <MenuItem value="">{t('contentStudio.table.status', 'Status')}</MenuItem>
+                        <MenuItem value="draft">{t('contentStudio.status.draft', 'Concept')}</MenuItem>
+                        <MenuItem value="approved">{t('contentStudio.status.approved', 'Goedgekeurd')}</MenuItem>
+                        <MenuItem value="scheduled">{t('contentStudio.status.scheduled', 'Ingepland')}</MenuItem>
+                        <MenuItem value="published">{t('contentStudio.status.published', 'Gepubliceerd')}</MenuItem>
+                        <MenuItem value="failed">{t('contentStudio.status.failed', 'Mislukt')}</MenuItem>
+                      </Select>
+                    </TableCell>
+                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setItemSort(s => s === 'date_desc' ? 'date_asc' : 'date_desc')}>{t('contentStudio.table.date', 'Datum')} {itemSort.startsWith('date') ? (itemSort === 'date_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell align="right">{t('contentStudio.table.actions', 'Acties')}</TableCell>
                   </TableRow>
                 </TableHead>
@@ -2481,11 +2581,28 @@ export default function ContentStudioPage() {
                         <Typography color="text.secondary">{t('contentStudio.noItems', 'Geen content items. Genereer content vanuit goedgekeurde suggesties.')}</Typography>
                       </TableCell>
                     </TableRow>
-                  ) : items.map((item) => {
+                  ) : [...items]
+                    .filter(i => !itemTypeFilter || i.content_type === itemTypeFilter)
+                    .filter(i => !itemPlatformFilter || i.target_platform === itemPlatformFilter)
+                    .filter(i => !itemStatusFilter || i.approval_status === itemStatusFilter)
+                    .sort((a, b) => {
+                      if (itemSort === 'title_asc') return (a.title || '').localeCompare(b.title || '');
+                      if (itemSort === 'title_desc') return (b.title || '').localeCompare(a.title || '');
+                      if (itemSort === 'score_asc') return (Number(a.seo_data?.overallScore) || 0) - (Number(b.seo_data?.overallScore) || 0);
+                      if (itemSort === 'score_desc') return (Number(b.seo_data?.overallScore) || 0) - (Number(a.seo_data?.overallScore) || 0);
+                      if (itemSort === 'date_asc') return new Date(a.created_at) - new Date(b.created_at);
+                      if (itemSort === 'date_desc') return new Date(b.created_at) - new Date(a.created_at);
+                      return 0;
+                    })
+                    .map((item) => {
                     const langs = ['en', 'nl', 'de', 'es', 'fr'].filter(l => item[`body_${l}`]);
                     const seoScore = item.seo_data?.overallScore;
                     return (
-                      <TableRow key={item.id} hover sx={{ cursor: 'pointer' }} onClick={() => setSelectedItemId(item.id)}>
+                      <TableRow key={item.id} hover sx={{
+                        cursor: 'pointer',
+                        bgcolor: (item.approval_status === 'draft' && !viewedItems.has(item.id)) ? 'rgba(76, 175, 80, 0.08)' : 'inherit',
+                        borderLeft: (item.approval_status === 'draft' && !viewedItems.has(item.id)) ? '3px solid #4caf50' : 'none',
+                      }} onClick={() => { setSelectedItemId(item.id); setViewedItems(prev => new Set([...prev, item.id])); }}>
                         <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
                           <Checkbox size="small" checked={selectedIds.includes(item.id)} onChange={() => toggleSelectItem(item.id)} />
                         </TableCell>
@@ -2577,6 +2694,8 @@ export default function ContentStudioPage() {
         itemId={selectedItemId}
         onUpdate={loadItems}
         onTranslate={loadItems}
+        isContentOnlyDest={isContentOnlyDest}
+        defaultLanguage={currentDest?.defaultLanguage || 'en'}
       />
 
       <SuggestionDetailDialog
@@ -2593,6 +2712,8 @@ export default function ContentStudioPage() {
         destinationId={destinationId}
         onCreated={loadItems}
       />
+
+      <Snackbar open={!!snackMsg} autoHideDuration={5000} onClose={() => setSnackMsg(null)} message={snackMsg} />
     </Box>
   );
 }

@@ -5,7 +5,7 @@ import {
   TablePagination, Dialog, DialogTitle, DialogContent, DialogActions,
   Alert, Select, MenuItem, FormControl, InputLabel, Snackbar,
   IconButton, Tooltip, TextField, Menu, ListItemIcon, ListItemText,
-  CircularProgress
+  CircularProgress, FormControlLabel, Checkbox
 } from '@mui/material';
 import StorageIcon from '@mui/icons-material/Storage';
 import MemoryIcon from '@mui/icons-material/Memory';
@@ -475,6 +475,32 @@ function BrandingSection() {
 }
 
 /* ===== Destination Management ===== */
+const MODULE_OPTIONS = [
+  { key: 'hasContentStudio', label: 'Content Studio' },
+  { key: 'hasMediaLibrary', label: 'Media Library' },
+  { key: 'hasBranding', label: 'Branding / Merk Profiel' },
+  { key: 'hasPOI', label: 'POI Database' },
+  { key: 'hasEvents', label: 'Evenementen' },
+  { key: 'hasChatbot', label: 'AI Chatbot' },
+  { key: 'hasTicketing', label: 'Ticketing' },
+  { key: 'hasReservations', label: 'Reserveringen' },
+  { key: 'hasCommerce', label: 'Commerce Dashboard' },
+  { key: 'hasPartners', label: 'Partners' },
+  { key: 'hasIntermediary', label: 'Intermediair' },
+  { key: 'hasFinancial', label: 'Financieel' },
+  { key: 'hasPages', label: 'Pagina\'s / Website' },
+];
+
+const SOCIAL_OPTIONS = [
+  { key: 'facebook', label: 'Facebook' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'linkedin', label: 'LinkedIn' },
+  { key: 'x', label: 'X (Twitter)' },
+  { key: 'tiktok', label: 'TikTok' },
+  { key: 'pinterest', label: 'Pinterest' },
+  { key: 'youtube', label: 'YouTube' },
+];
+
 function DestinationManagement() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -484,6 +510,10 @@ function DestinationManagement() {
   const [deleteDialog, setDeleteDialog] = useState(null);
   const [deletePreview, setDeletePreview] = useState(null);
   const [confirmName, setConfirmName] = useState('');
+  const [editDialog, setEditDialog] = useState(null);
+  const [editFlags, setEditFlags] = useState({});
+  const [editSocial, setEditSocial] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
   const [snack, setSnack] = useState(null);
 
   const { data, isLoading } = useQuery({
@@ -607,6 +637,16 @@ function DestinationManagement() {
 
       {/* Action Menu */}
       <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={handleCloseMenu}>
+        <MenuItem onClick={() => {
+          const ff = menuDest?.featureFlags || {};
+          setEditFlags({ ...ff });
+          setEditSocial(ff.social_platforms || {});
+          setEditDialog(menuDest);
+          handleCloseMenu();
+        }}>
+          <ListItemIcon><PaletteIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Modules & kanalen bewerken</ListItemText>
+        </MenuItem>
         {menuDest?.status === 'active' && (
           <MenuItem onClick={() => { setArchiveDialog(menuDest); handleCloseMenu(); }}>
             <ListItemIcon><ArchiveIcon fontSize="small" /></ListItemIcon>
@@ -691,6 +731,49 @@ function DestinationManagement() {
             disabled={confirmName !== deleteDialog?.name || deleteMut.isPending}
             startIcon={deleteMut.isPending ? <CircularProgress size={16} /> : <DeleteForeverIcon />}>
             Permanent Verwijderen
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Modules & Social Channels Dialog */}
+      <Dialog open={!!editDialog} onClose={() => setEditDialog(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Modules & kanalen — {editDialog?.name}</DialogTitle>
+        <DialogContent>
+          <Typography variant="subtitle2" sx={{ mt: 1, mb: 1, fontWeight: 700 }}>Actieve modules</Typography>
+          {MODULE_OPTIONS.map(mod => (
+            <FormControlLabel key={mod.key} sx={{ display: 'block' }}
+              control={<Checkbox size="small" checked={editFlags[mod.key] !== false} onChange={e => setEditFlags(f => ({ ...f, [mod.key]: e.target.checked }))} />}
+              label={mod.label}
+            />
+          ))}
+          <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 700 }}>Social media kanalen</Typography>
+          {SOCIAL_OPTIONS.map(s => (
+            <FormControlLabel key={s.key} sx={{ display: 'block' }}
+              control={<Checkbox size="small" checked={editSocial[s.key] === true} onChange={e => setEditSocial(f => ({ ...f, [s.key]: e.target.checked }))} />}
+              label={s.label}
+            />
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialog(null)}>Annuleren</Button>
+          <Button variant="contained" disabled={editSaving} onClick={async () => {
+            setEditSaving(true);
+            try {
+              const updatedFlags = { ...editFlags, social_platforms: editSocial };
+              await client.put(`/destinations/${editDialog.id}/branding`, {
+                feature_flags_override: updatedFlags,
+              });
+              // Also update feature_flags directly in DB
+              await client.put(`/destinations/${editDialog.id}/feature-flags`, { featureFlags: updatedFlags });
+              queryClient.invalidateQueries({ queryKey: ['destinations-manage'] });
+              queryClient.invalidateQueries({ queryKey: ['destinations-list'] });
+              setSnack(`Modules bijgewerkt voor ${editDialog.name}`);
+              setEditDialog(null);
+            } catch (err) {
+              setSnack(err.response?.data?.error?.message || 'Fout bij opslaan');
+            } finally { setEditSaving(false); }
+          }}>
+            {editSaving ? 'Opslaan...' : 'Opslaan'}
           </Button>
         </DialogActions>
       </Dialog>
