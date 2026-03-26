@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.25.0
-> **Laatst bijgewerkt**: 25 maart 2026
+> **Versie**: 4.26.0
+> **Laatst bijgewerkt**: 26 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -671,6 +671,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.26.0** | **2026-03-26** | **Blok E Toekomstbestendig + SpeakerButton + A11y + Analytics Fix**. E1: Destination-aware verificatie — alle hardcoded hostname checks vervangen door centraal `getDestinationSlug()` in portal-url.ts. ProgramCard + CategoryBrowser gebruiken nu slug-based config lookup. Nieuwe bestemming = 1 mapping toevoegen. E2: SpeakerButton component (95 LOC) — Web Speech API TTS, 6 talen, 🔊 icoon bij elk assistant bericht. E3: Accessibility — Escape key sluit chatbot, `aria-live="polite"` op message list, 13 a11y attributen totaal. Blok D Personality modes teruggedraaid (wacht op gebruikersaccount + POI data-classificatie). Customer-portal SimpleAnalytics fix: `inline.js` + `auto-events.js` ontbraken op desktop calpetrip.com → heringezet. Customer-portal chatbot analytics: `sa_event` calls toegevoegd aan HoliBotContext (open, message) + MessageList (4 quick actions). HolidaiButler.com B2B corporate page hersteld (was overschreven door customer-portal deploy). CLAUDE.md v4.26.0. MS v7.86. |
 | **4.25.0** | **2026-03-25** | **Chatbot Feature Parity Blok A+B+C1+C2**. Blok A: CategoryBrowser component geport van customer-portal (3-level categorie hiërarchie, destination-aware Calpe/Texel whitelist, `/api/holibot/categories` proxy route). `__CATEGORY__` sentinel vervangt tekst-naar-AI. Blok B: Tip van de Dag null-safe fix + `__DIRECTIONS__` sentinel met lokaal "Naar welke bestemming?" antwoord (4 talen) i.p.v. AI call. Blok C1: ChatHeader geëxtraheerd als apart component (64 LOC). Blok C2: WelcomeScreen geëxtraheerd (88 LOC) — welcome animatie + quick action buttons. ProgramCard destination-specifieke dagdeel-configuratie (Calpe + Texel): stricte subcategorie whitelists per dagdeel, highlight POIs (Penyal d'Ifac, Vuurtoren etc.), max 1 food per ochtend/middag, diversiteitsregel max 1 per subcategorie, min rating 4.2, gesloten-POI filtering. PoiDetailDrawer "Volledig profiel" link → destination-aware `/pois/:id`. Onboarding scroll freeze (body position:fixed). Tessa "Hoi!" i.p.v. "Hola!". Reset button altijd zichtbaar. ChatbotWidget 1050→961 regels, 3 componenten geëxtraheerd. CLAUDE.md v4.25.0. MS v7.85. |
 | **4.24.0** | **2026-03-25** | **SimpleAnalytics Full Event Tracking (28+ events)**. Alle custom events geïmplementeerd met desktop/mobile onderscheid: chatbot (open, message, 4 quick actions), POI detail, event detail, navigatie (logo, hamburger menu items, mobile bottom nav 5 tabs), WCAG modal, taalwisseling, zoekbalk, onboarding (4 stappen), tip van de dag. analytics.ts v2.0 met getDevice() helper. Tracking in 11 componenten: ChatbotWidget, PoiDetailDrawer, EventDetailDrawer, ScrollToTop, WcagButton, MobileBottomNav, MobileHeader, OnboardingSheet, LanguageSwitcher, SearchBar, TipOfTheDay. Header logo via data-sa-event. Deploy via tar (SCP bracket-char fix). MS v7.84. |
 | **4.23.0** | **2026-03-25** | **SimpleAnalytics Event Tracking + UTM Fix + Agenda i18n**. SimpleAnalytics: automated events script (outbound/downloads/emails), inline events helper, analytics.ts utility met 15 tracked events (chatbot_opened, chatbot_message_sent, quick_action, poi_detail_opened, scroll_to_top, etc.). UTM tracking fix: publisher `custom_domain`→`domain` kolom, Calpe domain→calpetrip.com. Agenda i18n: title_nl/de, short_description_nl/de, long_description_nl/de kolommen gekoppeld in mapEventToResponse(), Accept-Language header support, NL/DE/ES/EN events op correcte taalversie pagina's. 241 endpoints. adminPortal.js v3.38.0. MS v7.83. |
@@ -692,7 +693,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.85 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.86 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

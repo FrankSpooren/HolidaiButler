@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 25 maart 2026
-**Versie**: 7.85
+**Datum**: 26 maart 2026
+**Versie**: 7.86
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Chatbot Feature Parity Blok A+B+C**. CategoryBrowser geport (3-level hiërarchie). Routebeschrijving + Tip van de Dag fix. ChatbotWidget modulair refactored (3 componenten geëxtraheerd). ProgramCard destination-specifieke dagdeel-configuratie (Calpe+Texel whitelists). 241 endpoints. CLAUDE.md v4.25.0. MS v7.85.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Chatbot Feature Parity COMPLEET (Blok A-E)**. Toekomstbestendig: centraal getDestinationSlug(), SpeakerButton TTS, a11y (Escape, aria-live). Customer-portal SA analytics fix. 241 endpoints. CLAUDE.md v4.26.0. MS v7.86.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1724,4 +1724,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 25 maart 2026 — Chatbot Feature Parity (CategoryBrowser, Routebeschrijving, Tip fix, ChatHeader+WelcomeScreen extractie). ProgramCard destination-specifieke dagdeel-configuratie. Admin Portal: 241 endpoints, adminPortal.js v3.38.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.25.0. MS v7.85.*
+*Laatst bijgewerkt: 26 maart 2026 — Chatbot Feature Parity COMPLEET (Blok A-E). Toekomstbestendig: getDestinationSlug(), SpeakerButton TTS, a11y. Customer-portal SA analytics fix. Admin Portal: 241 endpoints, adminPortal.js v3.38.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.26.0. MS v7.86.*
