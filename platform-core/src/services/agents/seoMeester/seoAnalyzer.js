@@ -491,8 +491,10 @@ function analyzeOpeningHook(body, weight) {
   const textOnly = firstLine.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}]+/gu, '').trim();
   const hasEmoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(firstLine);
   const hookPatterns = [
-    /^(did you know|have you|imagine|picture this|what if|here's|discover|ever wonder|ready to|looking for|tired of|want to|the secret|top \d|best \d|\d+ |dive into)/i,
-    /^(wist je|stel je voor|ontdek|ken je|klaar voor|op zoek naar|de beste|top \d|\d+ )/i,
+    /^(did you know|have you|imagine|picture this|what if|here's|discover|ever wonder|ready to|looking for|tired of|want to|the secret|top \d|best \d|\d+ |dive into|don't miss|breaking|attention)/i,
+    /^(wist je|stel je voor|ontdek|ken je|klaar voor|op zoek naar|de beste|top \d|\d+ |zin in|mis het niet|wat als|heb je|kom|geniet van|dit is|hier is|wil je|droom je)/i,
+    /^(wusstest du|stell dir vor|entdecke|bereit für|auf der suche|die besten|top \d|\d+ )/i,
+    /^(sabías que|imagina|descubre|listo para|buscas|los mejores|top \d|\d+ )/i,
   ];
   const hasHookWords = hookPatterns.some(p => p.test(textOnly));
   const endsQ = /[?!]$/.test(firstLine.trim());
@@ -510,9 +512,11 @@ function analyzeOpeningHook(body, weight) {
 
 function analyzeCallToAction(body, weight) {
   const ctaPatterns = [
-    /\b(click|tap|swipe|visit|book|check out|discover|explore|learn more|sign up|subscribe|follow|share|comment|tag|save|try|get|grab|join|register|download|read more|contact|dm|message)\b/gi,
-    /\b(klik|bezoek|ontdek|bekijk|boek|reserveer|lees meer|volg|deel|reageer|tag|bewaar|probeer|meld je aan)\b/gi,
-    /👉|⬇️|🔗|📩|📞|💬|➡️/g,
+    /\b(click|tap|swipe|visit|book|check out|discover|explore|learn more|sign up|subscribe|follow|share|comment|tag|save|try|get|grab|join|register|download|read more|contact|dm|message|come|go to|find out|don't miss|see you|watch|listen)\b/gi,
+    /\b(klik|bezoek|ontdek|bekijk|boek|reserveer|lees meer|volg|deel|reageer|tag|bewaar|probeer|meld je aan|kom|ga naar|schrijf je in|mis het niet|tot ziens|plan|geniet|ervaar|neem contact|stuur|bel|check|doe mee)\b/gi,
+    /\b(besuchen|entdecken|buchen|folgen|teilen|kommentieren|speichern|klicken|mehr erfahren|jetzt|mitmachen)\b/gi,
+    /\b(descubre|visita|reserva|comparte|sigue|comenta|guarda|haz clic|únete|no te pierdas|ven)\b/gi,
+    /👉|⬇️|🔗|📩|📞|💬|➡️|🎫|🔥|✨/g,
     /\b(link in bio|link in beschrijving|swipe up)\b/gi,
   ];
   let ctaCount = 0;

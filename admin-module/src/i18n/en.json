@@ -1468,5 +1468,50 @@
       "deleteTitle": "Delete season",
       "deleteConfirm": "Are you sure you want to delete this season?"
     }
+  },
+  "brandProfile": {
+    "page_title": "Brand Profile",
+    "sections": {
+      "company": "Company Profile",
+      "mission": "Mission, Vision & Values",
+      "audiences": "Target Audiences",
+      "tone": "Tone of Voice",
+      "knowledge": "Knowledge Base",
+      "competitors": "Competitors",
+      "strategy": "Content Strategy"
+    },
+    "fields": {
+      "company_name": "Company name",
+      "industry": "Industry",
+      "website": "Website",
+      "analyze_website": "Analyze website",
+      "description": "Short description",
+      "usps": "USPs (unique selling points)",
+      "add_usp": "Add USP",
+      "mission": "Mission",
+      "vision": "Vision",
+      "core_values": "Core values",
+      "add_persona": "New audience",
+      "upload_document": "Upload document",
+      "add_url": "Add URL as source",
+      "add_competitor": "Add competitor",
+      "analyze": "Analyze",
+      "seo_keywords": "SEO focus keywords",
+      "blogs_per_month": "Blogs per month",
+      "posts_per_week": "Social posts per week"
+    },
+    "tone": {
+      "personality": "Personality",
+      "audience": "Audience",
+      "brandValues": "Brand values",
+      "coreKeywords": "Core keywords",
+      "adjectives": "Preferred adjectives",
+      "avoidWords": "Words to avoid",
+      "samplePhrases": "Sample phrases",
+      "formalAddress": "Address style",
+      "informal": "Informal",
+      "formal": "Formal",
+      "mixed": "Mixed"
+    }
   }
 }

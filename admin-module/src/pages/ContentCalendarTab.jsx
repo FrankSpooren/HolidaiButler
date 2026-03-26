@@ -2,8 +2,9 @@ import { useState, useMemo, useCallback } from 'react';
 import {
   Box, Typography, Paper, Grid, Chip, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, MenuItem, Select, FormControl, InputLabel, IconButton,
-  Tooltip, Card, CardContent, CircularProgress, Alert, Badge,
+  Tooltip, Card, CardContent, CircularProgress, Alert, Badge, Snackbar,
 } from '@mui/material';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ScheduleIcon from '@mui/icons-material/Schedule';
@@ -57,12 +58,42 @@ export default function ContentCalendarTab({ destinationId }) {
   const [scheduleDialog, setScheduleDialog] = useState(null);
   const [selectedDay, setSelectedDay] = useState(null);
 
-  const { data: calendarData, isLoading } = useContentCalendar(destinationId, { month: month + 1, year });
+  const [autoFilling, setAutoFilling] = useState(false);
+  const [autoScheduling, setAutoScheduling] = useState(false);
+  const [autoFillSnack, setAutoFillSnack] = useState(null);
+
+  const { data: calendarData, isLoading, refetch } = useContentCalendar(destinationId, { month: month + 1, year });
   const { data: accountsData } = useSocialAccounts(destinationId);
   const scheduleMut = useScheduleItem();
   const publishMut = usePublishNow();
   const cancelMut = useCancelSchedule();
   const rescheduleMut = useRescheduleItem();
+
+  const handleAutoSchedule = async () => {
+    setAutoScheduling(true);
+    try {
+      const client = (await import('../api/client.js')).default;
+      const { data } = await client.post('/content/auto-schedule', { destination_id: destinationId });
+      setAutoFillSnack(`${data.data?.scheduled || 0} items automatisch ingepland`);
+      refetch();
+    } catch (err) {
+      setAutoFillSnack(err.response?.data?.error?.message || 'Auto-schedule mislukt');
+    } finally { setAutoScheduling(false); }
+  };
+
+  const handleAutoFill = async () => {
+    setAutoFilling(true);
+    try {
+      const client = (await import('../api/client.js')).default;
+      const { data } = await client.post('/content/calendar/auto-fill', {
+        destination_id: destinationId, month: month + 1, year
+      }, { timeout: 120000 });
+      setAutoFillSnack(`${data.data?.generated || 0} suggesties gegenereerd voor ${monthName}`);
+      refetch();
+    } catch (err) {
+      setAutoFillSnack(err.response?.data?.error?.message || 'Auto-fill mislukt');
+    } finally { setAutoFilling(false); }
+  };
 
   const items = calendarData?.data?.items || [];
   const seasons = calendarData?.data?.seasons || [];
@@ -150,15 +181,33 @@ export default function ContentCalendarTab({ destinationId }) {
           </Typography>
           <IconButton onClick={() => navigateMonth(1)} size="small"><ChevronRightIcon /></IconButton>
         </Box>
-        {activeSeason && (
-          <Chip
-            label={`${t('contentStudio.calendar.season', 'Seizoen')}: ${activeSeason.season_name}`}
-            color="primary"
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {activeSeason && (
+            <Chip label={`${t('contentStudio.calendar.season', 'Seizoen')}: ${activeSeason.season_name}`} color="primary" variant="outlined" size="small" />
+          )}
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={autoFilling ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}
+            onClick={handleAutoFill}
+            disabled={autoFilling}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            {autoFilling ? t('contentStudio.calendar.filling', 'Genereren...') : t('contentStudio.calendar.autoFill', 'Vul kalender')}
+          </Button>
+          <Button
             variant="outlined"
             size="small"
-          />
-        )}
+            startIcon={autoScheduling ? <CircularProgress size={16} /> : <ScheduleIcon />}
+            onClick={handleAutoSchedule}
+            disabled={autoScheduling}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            {autoScheduling ? 'Plannen...' : t('contentStudio.calendar.autoSchedule', 'Auto-inplannen')}
+          </Button>
+        </Box>
       </Box>
+      <Snackbar open={!!autoFillSnack} autoHideDuration={5000} onClose={() => setAutoFillSnack(null)} message={autoFillSnack} />
 
       {isLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>

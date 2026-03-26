@@ -1468,5 +1468,50 @@
       "deleteTitle": "Seizoen verwijderen",
       "deleteConfirm": "Weet je zeker dat je dit seizoen wilt verwijderen?"
     }
+  },
+  "brandProfile": {
+    "page_title": "Merk Profiel",
+    "sections": {
+      "company": "Bedrijfsprofiel",
+      "mission": "Missie, Visie & Waarden",
+      "audiences": "Doelgroepen",
+      "tone": "Tone of Voice",
+      "knowledge": "Knowledge Base",
+      "competitors": "Concurrenten",
+      "strategy": "Content Strategie"
+    },
+    "fields": {
+      "company_name": "Bedrijfsnaam",
+      "industry": "Branche",
+      "website": "Website",
+      "analyze_website": "Analyseer website",
+      "description": "Korte omschrijving",
+      "usps": "USPs (unieke verkoopargumenten)",
+      "add_usp": "Voeg USP toe",
+      "mission": "Missie",
+      "vision": "Visie",
+      "core_values": "Kernwaarden",
+      "add_persona": "Nieuwe doelgroep",
+      "upload_document": "Upload document",
+      "add_url": "URL toevoegen als bron",
+      "add_competitor": "Concurrent toevoegen",
+      "analyze": "Analyseer",
+      "seo_keywords": "SEO-focus keywords",
+      "blogs_per_month": "Blogs per maand",
+      "posts_per_week": "Social posts per week"
+    },
+    "tone": {
+      "personality": "Persoonlijkheid",
+      "audience": "Doelgroep",
+      "brandValues": "Merkwaarden",
+      "coreKeywords": "Kernwoorden",
+      "adjectives": "Gewenste bijvoeglijke naamwoorden",
+      "avoidWords": "Vermijd deze woorden",
+      "samplePhrases": "Voorbeeldzinnen",
+      "formalAddress": "Aanspreekstijl",
+      "informal": "Informeel (je/jij)",
+      "formal": "Formeel (u)",
+      "mixed": "Gemengd"
+    }
   }
 }

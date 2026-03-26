@@ -131,10 +131,11 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
          ${mediaOrder}`,
         { replacements: { destId: destinationId } }
       );
+      const apiBase = process.env.API_BASE_URL || 'https://api.holidaibutler.com';
       candidates.push(...mediaMatches.map(m => ({
         source: 'media_library',
         id: m.id,
-        url: `/storage/media/${m.filename}`,
+        url: `${apiBase}/media-files/${destinationId}/${m.filename}`,
         alt_text: m.alt_text,
         relevance: 0.5,
       })));

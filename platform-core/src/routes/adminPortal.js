@@ -9336,6 +9336,28 @@ router.put('/destinations/:id/social-links', adminAuth(), writeAccess(['platform
   }
 });
 
+/**
+ * PUT /destinations/:id/feature-flags — Update feature_flags JSON for a destination
+ */
+router.put('/destinations/:id/feature-flags', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    const destId = parseInt(req.params.id);
+    const { featureFlags } = req.body;
+    if (!featureFlags || typeof featureFlags !== 'object') {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_FLAGS', message: 'featureFlags object is required' } });
+    }
+    await mysqlSequelize.query(
+      'UPDATE destinations SET feature_flags = :ff, updated_at = NOW() WHERE id = :id',
+      { replacements: { ff: JSON.stringify(featureFlags), id: destId } }
+    );
+    logger.info(`[AdminPortal] Feature flags updated for destination ${destId}: ${Object.entries(featureFlags).filter(([,v]) => v === true).map(([k]) => k).join(', ')}`);
+    res.json({ success: true, data: { id: destId, featureFlags } });
+  } catch (error) {
+    logger.error('[AdminPortal] Feature flags update error:', error);
+    res.status(500).json({ success: false, error: { code: 'FEATURE_FLAGS_ERROR', message: error.message } });
+  }
+});
+
 // ============================================================
 // DESTINATION LIFECYCLE: Archive / Restore / Hard-Delete (Opdracht 9)
 // ============================================================
@@ -11035,6 +11057,19 @@ router.post('/content/trending/manual', adminAuth('editor'), writeAccess(['platf
 // ============================================================
 
 /**
+ * DELETE /content/trending/:id — Delete a trending keyword
+ */
+router.delete('/content/trending/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'editor']), async (req, res) => {
+  try {
+    await mysqlSequelize.query('DELETE FROM trending_data WHERE id = :id', { replacements: { id: Number(req.params.id) } });
+    res.json({ success: true, data: { deleted: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Delete trending error:', error);
+    res.status(500).json({ success: false, error: { code: 'DELETE_TRENDING_ERROR', message: error.message } });
+  }
+});
+
+/**
  * GET /content/suggestions — List content suggestions
  * Query: destination_id (required), status, limit, offset
  */
@@ -11405,25 +11440,58 @@ router.get('/content/items', adminAuth('editor'), async (req, res) => {
       // Resolve media_ids to image URLs — strip "poi:" prefix for numeric lookup
       item.resolved_images = [];
       const rawIds = Array.isArray(item.media_ids) ? item.media_ids : [];
-      const ids = rawIds.map(id => typeof id === 'string' && id.startsWith('poi:') ? Number(id.replace('poi:', '')) : Number(id)).filter(id => !isNaN(id) && id > 0);
-      if (ids.length > 0) {
-        const [images] = await mysqlSequelize.query(
+      const poiIds = rawIds.filter(id => typeof id === 'string' && id.startsWith('poi:')).map(id => Number(id.replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
+      const mediaIds = rawIds.filter(id => !(typeof id === 'string' && id.startsWith('poi:'))).map(id => Number(id)).filter(id => !isNaN(id) && id > 0);
+
+      // Resolve POI images (from imageurls table)
+      if (poiIds.length > 0) {
+        const [poiImages] = await mysqlSequelize.query(
           `SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)`,
-          { replacements: { ids } }
+          { replacements: { ids: poiIds } }
         );
-        item.resolved_images = images.map(img => {
+        item.resolved_images.push(...poiImages.map(img => {
           const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
           return {
-            id: img.id,
-            url: imgPath
-              ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp`
-              : img.image_url,
-            thumbnail: imgPath
-              ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp`
-              : img.image_url,
-            alt: img.local_path ? img.local_path.split('/').pop().replace(/\.\w+$/, '') : 'Content image',
+            id: `poi:${img.id}`,
+            url: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : img.image_url,
+            thumbnail: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp` : img.image_url,
+            alt: img.local_path ? img.local_path.split('/').pop().replace(/\.\w+$/, '') : 'POI image',
           };
-        });
+        }));
+      }
+
+      // Resolve Media Library images (from media table)
+      if (mediaIds.length > 0) {
+        const [mediaImages] = await mysqlSequelize.query(
+          `SELECT id, filename, alt_text, destination_id FROM media WHERE id IN (:ids)`,
+          { replacements: { ids: mediaIds } }
+        );
+        item.resolved_images.push(...mediaImages.map(img => ({
+          id: img.id,
+          url: `${process.env.API_BASE_URL || 'https://api.holidaibutler.com'}/media-files/${img.destination_id}/${img.filename}`,
+          thumbnail: `${process.env.API_BASE_URL || 'https://api.holidaibutler.com'}/media-files/${img.destination_id}/${img.filename}`,
+          alt: img.alt_text || img.filename.replace(/\.\w+$/, ''),
+        })));
+      }
+
+      // Backward compat: if resolved is still empty but has numeric ids, try imageurls as fallback
+      if (item.resolved_images.length === 0 && rawIds.length > 0) {
+        const allIds = rawIds.map(id => Number(String(id).replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
+        if (allIds.length > 0) {
+          const [fallbackImages] = await mysqlSequelize.query(
+            `SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)`,
+            { replacements: { ids: allIds } }
+          );
+          item.resolved_images = fallbackImages.map(img => {
+            const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
+            return {
+              id: img.id,
+              url: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : img.image_url,
+              thumbnail: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp` : img.image_url,
+              alt: 'Content image',
+            };
+          });
+        }
       }
     }
 
@@ -11457,30 +11525,33 @@ router.get('/content/items/:id', adminAuth('editor'), async (req, res) => {
     if (typeof item.media_ids === 'string') item.media_ids = JSON.parse(item.media_ids);
     if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
 
-    // Resolve media_ids to image URLs — strip "poi:" prefix for numeric lookup
+    // Resolve media_ids to image URLs — support both POI (imageurls) and Media Library (media) tables
     const imageBase = process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com';
     item.resolved_images = [];
     const rawIds = Array.isArray(item.media_ids) ? item.media_ids : [];
-    const ids = rawIds.map(id => typeof id === 'string' && id.startsWith('poi:') ? Number(id.replace('poi:', '')) : Number(id)).filter(id => !isNaN(id) && id > 0);
-    if (ids.length > 0) {
-      const [images] = await mysqlSequelize.query(
-        `SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)`,
-        { replacements: { ids } }
-      );
-      item.resolved_images = images.map(img => {
+    const poiIds = rawIds.filter(id => typeof id === 'string' && id.startsWith('poi:')).map(id => Number(id.replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
+    const mediaIds = rawIds.filter(id => !(typeof id === 'string' && id.startsWith('poi:'))).map(id => Number(id)).filter(id => !isNaN(id) && id > 0);
+
+    if (poiIds.length > 0) {
+      const [poiImages] = await mysqlSequelize.query('SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)', { replacements: { ids: poiIds } });
+      item.resolved_images.push(...poiImages.map(img => {
         const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
-        return {
-          id: img.id,
-          url: imgPath
-            ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp`
-            : img.image_url,
-          thumbnail: imgPath
-            ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp`
-            : img.image_url,
-          alt: img.local_path ? img.local_path.split('/').pop().replace(/\.\w+$/, '') : 'Content image',
-        };
-      });
+        return { id: `poi:${img.id}`, url: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : img.image_url, thumbnail: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp` : img.image_url, alt: 'POI image' };
+      }));
     }
+    if (mediaIds.length > 0) {
+      try {
+        const mediaBase = process.env.API_BASE_URL || 'https://api.holidaibutler.com';
+        const [mediaImages] = await mysqlSequelize.query('SELECT id, filename, alt_text, destination_id FROM media WHERE id IN (:ids)', { replacements: { ids: mediaIds } });
+        logger.info(`[ContentItem] Media resolve: mediaIds=${JSON.stringify(mediaIds)}, found=${mediaImages.length}`);
+        for (const img of mediaImages) {
+          item.resolved_images.push({ id: img.id, url: `${mediaBase}/media-files/${img.destination_id}/${img.filename}`, thumbnail: `${mediaBase}/media-files/${img.destination_id}/${img.filename}`, alt: img.alt_text || img.filename });
+        }
+      } catch (mediaErr) {
+        logger.warn('[ContentItem] Media resolve failed:', mediaErr.message);
+      }
+    }
+    logger.info(`[ContentItem] Resolved ${item.resolved_images.length} images for item ${item.id} (poi:${poiIds.length} media:${mediaIds.length})`);
 
     // Compile language versions
     item.languages = {};
@@ -12247,6 +12318,313 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
 });
 
 /**
+ * POST /content/auto-schedule — Auto-schedule approved items across optimal times
+ * Distributes approved (unscheduled) items across the coming week at best times per platform.
+ */
+router.post('/content/auto-schedule', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    const destId = Number(req.body.destination_id) || Number(req.query.destination_id) || 1;
+
+    // Get approved, unscheduled items
+    const [approved] = await mysqlSequelize.query(
+      `SELECT id, target_platform, content_type FROM content_items
+       WHERE destination_id = :destId AND approval_status = 'approved' AND scheduled_at IS NULL
+       ORDER BY created_at ASC`,
+      { replacements: { destId } }
+    );
+
+    if (approved.length === 0) {
+      return res.json({ success: true, data: { scheduled: 0, message: 'Geen goedgekeurde items om in te plannen' } });
+    }
+
+    // Best times per platform (based on general social media research)
+    const BEST_TIMES = {
+      instagram: ['10:00', '13:00', '17:00'],
+      facebook: ['09:00', '12:00', '15:00'],
+      linkedin: ['08:00', '10:00', '12:00'],
+      x: ['08:00', '12:00', '17:00'],
+      pinterest: ['14:00', '20:00'],
+      youtube: ['15:00', '18:00'],
+      website: ['09:00'],
+    };
+
+    // Distribute across coming 7 days
+    const now = new Date();
+    const scheduled = [];
+    let dayOffset = 1; // Start tomorrow
+    let timeIndex = 0;
+
+    for (const item of approved) {
+      const times = BEST_TIMES[item.target_platform] || BEST_TIMES.instagram;
+      const time = times[timeIndex % times.length];
+      const [hours, minutes] = time.split(':');
+
+      const scheduleDate = new Date(now);
+      scheduleDate.setDate(scheduleDate.getDate() + dayOffset);
+      scheduleDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+      await mysqlSequelize.query(
+        `UPDATE content_items SET scheduled_at = :scheduledAt, approval_status = 'scheduled', updated_at = NOW() WHERE id = :id`,
+        { replacements: { scheduledAt: scheduleDate.toISOString().slice(0, 19).replace('T', ' '), id: item.id } }
+      );
+
+      // Log approval
+      await mysqlSequelize.query(
+        `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
+         VALUES (:itemId, 'approved', 'scheduled', :userId, :comment)`,
+        { replacements: { itemId: item.id, userId: req.adminUser?.id || 'system', comment: `Auto-scheduled for ${scheduleDate.toISOString().split('T')[0]} ${time}` } }
+      );
+
+      scheduled.push({ id: item.id, platform: item.target_platform, scheduled_at: scheduleDate.toISOString() });
+
+      timeIndex++;
+      if (timeIndex >= times.length) { timeIndex = 0; dayOffset++; }
+      if (dayOffset > 7) dayOffset = 1; // Wrap around
+    }
+
+    logger.info(`[AdminPortal] Auto-scheduled ${scheduled.length} items for destination ${destId}`);
+    res.json({ success: true, data: { scheduled: scheduled.length, items: scheduled } });
+  } catch (error) {
+    logger.error('[AdminPortal] Auto-schedule error:', error);
+    res.status(500).json({ success: false, error: { code: 'AUTO_SCHEDULE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/campaigns/generate — One-Click Campaign: generate blog + 5 social posts + video script
+ * Body: { topic, persona_id, language, destination_id }
+ */
+router.post('/content/campaigns/generate', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    const { topic, persona_id } = req.body;
+    const destId = Number(req.body.destination_id) || Number(req.query.destination_id) || 1;
+    if (!topic) return res.status(400).json({ success: false, error: { code: 'MISSING_TOPIC', message: 'topic is required' } });
+
+    // Use the SAME pipeline as individual content generation: sanitize, format, translate, images, SEO
+    const redacteur = (await import('../services/agents/contentRedacteur/index.js')).default;
+    const { sanitizeContent } = await import('../services/agents/contentRedacteur/contentSanitizer.js');
+    const { formatForPlatform } = await import('../services/agents/contentRedacteur/contentFormatter.js');
+    const { selectImages } = await import('../services/agents/contentRedacteur/imageSelector.js');
+    const { analyzeContent } = await import('../services/agents/seoMeester/seoAnalyzer.js');
+
+    // Campaign = 1 item per ACTIVE platform only (from feature_flags.social_platforms)
+    const [[destRow]] = await mysqlSequelize.query('SELECT feature_flags, brand_profile FROM destinations WHERE id = :destId', { replacements: { destId } });
+    let ff = {};
+    try { ff = typeof destRow?.feature_flags === 'string' ? JSON.parse(destRow.feature_flags) : (destRow?.feature_flags || {}); } catch { /* empty */ }
+    const sp = ff.social_platforms || {};
+    const activeChannels = Object.entries(sp).filter(([, v]) => v === true).map(([k]) => k);
+
+    let bp = {};
+    try { bp = typeof destRow?.brand_profile === 'string' ? JSON.parse(destRow.brand_profile) : (destRow?.brand_profile || {}); } catch { /* empty */ }
+    const goals = bp.content_goals || {};
+
+    const CAMPAIGN_PLATFORMS = [];
+    // Blog only if blogs_per_month > 0
+    if (goals.blogs_per_month > 0) CAMPAIGN_PLATFORMS.push({ content_type: 'blog', platform: 'website' });
+    // Social posts only for active channels
+    for (const ch of activeChannels) {
+      if (ch === 'youtube') CAMPAIGN_PLATFORMS.push({ content_type: 'video_script', platform: 'youtube' });
+      else CAMPAIGN_PLATFORMS.push({ content_type: 'social_post', platform: ch });
+    }
+    // Fallback if nothing active
+    if (CAMPAIGN_PLATFORMS.length === 0) CAMPAIGN_PLATFORMS.push({ content_type: 'social_post', platform: 'instagram' }, { content_type: 'social_post', platform: 'facebook' });
+
+    // Create a pseudo-suggestion for each platform
+    const saved = [];
+    for (const camp of CAMPAIGN_PLATFORMS) {
+      try {
+        const suggestion = {
+          id: null,
+          destination_id: destId,
+          title: topic,
+          summary: `Campaign item for ${camp.platform}: ${topic}`,
+          content_type: camp.content_type,
+          keyword_cluster: topic.split(/\s+/).filter(w => w.length > 2),
+        };
+
+        // Generate via De Redacteur (full pipeline: brand context, tone, sanitize, format, translate, SEO)
+        const generated = await redacteur.generateContentItem(suggestion, {
+          destinationId: destId,
+          contentType: camp.content_type,
+          platform: camp.platform,
+          languages: [],
+          personaId: persona_id ? Number(persona_id) : null,
+        });
+
+        // Save to content_items
+        const [insertResult] = await mysqlSequelize.query(
+          `INSERT INTO content_items
+           (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+            seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+           VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
+            :seoData, :seoScore, :platform, 'draft', :aiModel, true, NOW(), NOW())`,
+          { replacements: {
+            destId,
+            contentType: generated.content_type,
+            title: generated.title,
+            bodyEn: generated.body_en || null,
+            bodyNl: generated.body_nl || null,
+            bodyDe: generated.body_de || null,
+            bodyEs: generated.body_es || null,
+            bodyFr: generated.body_fr || null,
+            seoData: JSON.stringify({ meta_description: generated.meta_description, hashtags: generated.hashtags, campaign: topic }),
+            seoScore: generated.seo_score || null,
+            platform: generated.target_platform,
+            aiModel: generated.ai_model,
+          } }
+        );
+
+        const contentItemId = insertResult;
+
+        // Auto-attach images (same as regular generate)
+        try {
+          const contentObj = { title: generated.title, body_en: generated.body_en, destination_id: destId, content_type: camp.content_type, target_platform: camp.platform };
+          const images = await selectImages(contentObj, destId);
+          if (images.length > 0) {
+            const maxImgs = camp.content_type === 'social_post' ? 1 : camp.content_type === 'video_script' ? 1 : 3;
+            const mediaIds = images.slice(0, maxImgs).map(img => img.source === 'poi' ? `poi:${img.id}` : img.id);
+            await mysqlSequelize.query(
+              'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
+              { replacements: { mediaIds: JSON.stringify(mediaIds), id: contentItemId } }
+            );
+          }
+        } catch { /* non-blocking */ }
+
+        saved.push({ id: contentItemId, content_type: camp.content_type, target_platform: camp.platform, title: generated.title, seo_score: generated.seo_score });
+      } catch (itemErr) {
+        logger.warn(`[Campaign] Item ${camp.platform} failed:`, itemErr.message);
+      }
+    }
+
+    logger.info(`[AdminPortal] Campaign generated: "${topic}" → ${saved.length} items for destination ${destId}`);
+    res.json({ success: true, data: { topic, items: saved, total: saved.length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Campaign generate error:', error);
+    res.status(500).json({ success: false, error: { code: 'CAMPAIGN_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/calendar/auto-fill — AI generates content plan for a month
+ * Body: { month, year, destination_id }
+ */
+router.post('/content/calendar/auto-fill', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    const { month, year } = req.body;
+    const destId = Number(req.body.destination_id) || Number(req.query.destination_id) || 1;
+    if (!month || !year) return res.status(400).json({ success: false, error: { code: 'MISSING_PARAMS', message: 'month and year are required' } });
+
+    // Gather context
+    const [pillars] = await mysqlSequelize.query(
+      'SELECT name, target_percentage FROM content_pillars WHERE destination_id = :destId AND is_active = 1', { replacements: { destId } }
+    );
+    const [personas] = await mysqlSequelize.query(
+      'SELECT name, interests, language FROM audience_personas WHERE destination_id = :destId ORDER BY is_primary DESC', { replacements: { destId } }
+    );
+    const [trending] = await mysqlSequelize.query(
+      'SELECT keyword, relevance_score FROM trending_data WHERE destination_id = :destId ORDER BY relevance_score DESC LIMIT 15', { replacements: { destId } }
+    );
+    const [[dest]] = await mysqlSequelize.query(
+      'SELECT name, brand_profile, default_language FROM destinations WHERE id = :destId', { replacements: { destId } }
+    );
+    let profile = {};
+    try { profile = typeof dest?.brand_profile === 'string' ? JSON.parse(dest.brand_profile) : (dest?.brand_profile || {}); } catch { /* empty */ }
+    const goals = profile.content_goals || { posts_per_week: 3, blogs_per_month: 0 };
+    const totalPosts = (goals.posts_per_week || 3) * 4 + (goals.blogs_per_month || 0);
+    const destLang = dest?.default_language || 'nl';
+    const LANG_NAMES = { nl: 'Dutch', en: 'English', de: 'German', es: 'Spanish', fr: 'French' };
+
+    // Get active social platforms from feature_flags
+    let activeChannels = ['instagram', 'facebook'];
+    try {
+      const [[ffRow]] = await mysqlSequelize.query('SELECT feature_flags FROM destinations WHERE id = :destId', { replacements: { destId } });
+      const ff = typeof ffRow?.feature_flags === 'string' ? JSON.parse(ffRow.feature_flags) : (ffRow?.feature_flags || {});
+      const sp = ff.social_platforms || {};
+      activeChannels = Object.entries(sp).filter(([, v]) => v === true).map(([k]) => k);
+      if (activeChannels.length === 0) activeChannels = ['instagram', 'facebook'];
+    } catch { /* fallback */ }
+
+    const prompt = `You are a content strategist. Create a content calendar.
+
+BRAND: ${profile.company_name || dest?.name || 'Unknown'}
+DESCRIPTION: ${profile.company_description || ''}
+USPs: ${(profile.usps || []).join(', ')}
+PILLARS: ${pillars.length > 0 ? pillars.map(p => `${p.name} (${p.target_percentage}%)`).join(', ') : 'No pillars defined — distribute evenly across topics'}
+AUDIENCES: ${personas.length > 0 ? personas.map(p => p.name).join(', ') : 'General audience'}
+TRENDING: ${trending.length > 0 ? trending.map(t => t.keyword).join(', ') : 'No specific trends'}
+GOAL: ${goals.posts_per_week || 3} social posts/week + ${goals.blogs_per_month || 0} blogs/month = ~${totalPosts} items total
+
+Today is ${new Date().toISOString().split('T')[0]}. Generate exactly ${totalPosts} content items for the NEXT 4 WEEKS starting from today.
+IMPORTANT: All dates MUST be today or in the future. Never use past dates.
+ACTIVE CHANNELS: ${activeChannels.join(', ')} — ONLY use these platforms as target_platform.
+${goals.blogs_per_month === 0 ? 'NO blogs — only social_post items.' : `${goals.blogs_per_month} blog(s) for website, rest as social_post.`}
+Write ALL titles and descriptions in ${LANG_NAMES[destLang] || 'Dutch'}.
+Per item: date (YYYY-MM-DD), title, content_type (blog or social_post), target_platform (one of: ${activeChannels.join(', ')}${goals.blogs_per_month > 0 ? ', website' : ''}), pillar, target_persona, brief (1-2 sentences).
+Distribute posts evenly across ${activeChannels.length} active channels.
+
+Return as JSON array only.`;
+
+    const embeddingService = (await import('../services/holibot/embeddingService.js')).default;
+    if (!embeddingService.isConfigured) embeddingService.initialize();
+
+    const aiResponse = await embeddingService.generateChatCompletion([
+      { role: 'user', content: prompt }
+    ], { temperature: 0.8, maxTokens: 4000 });
+
+    let suggestions = [];
+    try {
+      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+      if (jsonMatch) suggestions = JSON.parse(jsonMatch[0]);
+    } catch { suggestions = []; }
+
+    // Save as content_items with scheduled_at date, status 'draft' — directly visible in calendar
+    const bodyField = `body_${destLang}`;
+    const saved = [];
+    for (const s of suggestions) {
+      try {
+        // Parse date or default to spread across upcoming days
+        let schedDate = s.date || `${year}-${String(month).padStart(2, '0')}-${String(Math.min(28, saved.length + 1)).padStart(2, '0')}`;
+        // Best time per platform (research-based optimal posting times)
+        const BEST_TIMES = {
+          instagram: ['10:00', '13:00', '17:00'],
+          facebook: ['09:00', '12:00', '15:00'],
+          linkedin: ['08:00', '10:00', '12:00'],
+          x: ['08:00', '12:00', '17:00'],
+          pinterest: ['14:00', '20:00'],
+          youtube: ['15:00', '18:00'],
+          website: ['09:00'],
+        };
+        const platformTimes = BEST_TIMES[s.target_platform] || BEST_TIMES.instagram;
+        const bestTime = platformTimes[saved.length % platformTimes.length];
+        const scheduledAt = `${schedDate} ${bestTime}:00`;
+
+        const [result] = await mysqlSequelize.query(
+          `INSERT INTO content_items (destination_id, content_type, title, ${bodyField}, target_platform, approval_status, scheduled_at, ai_generated, ai_model, seo_data, created_at, updated_at)
+           VALUES (:destId, :contentType, :title, :body, :platform, 'draft', :scheduledAt, true, 'calendar-autofill', :seoData, NOW(), NOW())`,
+          { replacements: {
+            destId, contentType: s.content_type === 'blog' ? 'blog' : 'social_post',
+            title: s.title || 'Untitled',
+            body: s.brief || s.description || s.summary || '',
+            platform: s.target_platform || 'instagram',
+            scheduledAt,
+            seoData: JSON.stringify({ pillar: s.pillar || '', persona: s.target_persona || '', source: 'calendar-autofill' }),
+          }, type: QueryTypes.INSERT }
+        );
+        saved.push({ id: result, date: schedDate, title: s.title, content_type: s.content_type, target_platform: s.target_platform, pillar: s.pillar, persona: s.target_persona });
+      } catch (saveErr) {
+        logger.warn('[AutoFill] Save item failed:', saveErr.message);
+      }
+    }
+
+    logger.info(`[AdminPortal] Calendar auto-fill: ${saved.length} items for ${month}/${year}, destination ${destId}`);
+    res.json({ success: true, data: { generated: saved.length, month, year, suggestions: saved } });
+  } catch (error) {
+    logger.error('[AdminPortal] Calendar auto-fill error:', error);
+    res.status(500).json({ success: false, error: { code: 'AUTO_FILL_ERROR', message: error.message } });
+  }
+});
+
+/**
  * POST /content/items/:id/schedule — Schedule content for publishing
  */
 router.post('/content/items/:id/schedule', adminAuth('editor'), async (req, res) => {
@@ -12501,7 +12879,7 @@ router.get('/content/analytics/items', adminAuth('editor'), async (req, res) => 
        FROM content_items ci
        LEFT JOIN content_performance cp ON cp.content_item_id = ci.id
          AND cp.measured_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
-       WHERE ci.destination_id = :destId ${typeFilter}
+       WHERE ci.destination_id = :destId AND ci.approval_status != 'deleted' ${typeFilter}
        GROUP BY ci.id, ci.title, ci.content_type, ci.approval_status, ci.created_at
        ORDER BY ${sortBy} DESC
        LIMIT :limit OFFSET :offset`,
@@ -12614,6 +12992,124 @@ router.get('/content/social-accounts', adminAuth('editor'), async (req, res) => 
 /**
  * POST /content/social-accounts/connect/linkedin — Start LinkedIn OAuth flow
  */
+/**
+ * POST /content/social-accounts/connect/meta — Connect Facebook/Instagram via Page Access Token
+ * Body: { destination_id, platform ('facebook'|'instagram'), access_token, page_id? }
+ * Validates token via Graph API, stores encrypted in social_accounts.
+ */
+router.post('/content/social-accounts/connect/meta', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const { destination_id, platform, access_token, page_id } = req.body;
+    const destId = Number(destination_id);
+    if (!destId || destId <= 0) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destination_id is required' } });
+    }
+
+    if (!access_token) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_TOKEN', message: 'access_token is required' } });
+    }
+    if (!['facebook', 'instagram'].includes(platform)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_PLATFORM', message: 'platform must be facebook or instagram' } });
+    }
+
+    // Validate token via Meta Graph API + get actual Page info
+    let accountName = '';
+    let accountId = page_id || '';
+    let pageUrl = '';
+    let igAccountId = '';
+    try {
+      // First: get pages managed by this token
+      const pagesUrl = `https://graph.facebook.com/v25.0/me/accounts?access_token=${encodeURIComponent(access_token)}&fields=id,name,link,instagram_business_account`;
+      const pagesRes = await fetch(pagesUrl, { signal: AbortSignal.timeout(10000) });
+      const pagesData = await pagesRes.json();
+
+      if (pagesData.error) {
+        // Fallback: try /me endpoint (System User without page permissions)
+        const meUrl = `https://graph.facebook.com/v25.0/me?access_token=${encodeURIComponent(access_token)}&fields=id,name`;
+        const meRes = await fetch(meUrl, { signal: AbortSignal.timeout(10000) });
+        const meData = await meRes.json();
+        if (meData.error) {
+          return res.status(400).json({ success: false, error: { code: 'INVALID_TOKEN', message: `Meta API: ${meData.error.message}` } });
+        }
+        accountName = meData.name || '';
+        accountId = accountId || meData.id || '';
+      } else if (pagesData.data && pagesData.data.length > 0) {
+        // Use the first page (or match page_id if provided)
+        const page = page_id
+          ? pagesData.data.find(p => p.id === page_id) || pagesData.data[0]
+          : pagesData.data[0];
+        accountName = page.name || '';
+        accountId = page.id || '';
+        pageUrl = page.link || `https://www.facebook.com/${page.id}`;
+        if (page.instagram_business_account?.id) {
+          igAccountId = page.instagram_business_account.id;
+        }
+      } else {
+        // No pages found, use /me
+        const meUrl = `https://graph.facebook.com/v25.0/me?access_token=${encodeURIComponent(access_token)}&fields=id,name`;
+        const meRes = await fetch(meUrl, { signal: AbortSignal.timeout(10000) });
+        const meData = await meRes.json();
+        accountName = meData.name || '';
+        accountId = accountId || meData.id || '';
+      }
+
+      // For Instagram: get the IG username
+      if (platform === 'instagram' && igAccountId) {
+        try {
+          const igUrl = `https://graph.facebook.com/v25.0/${igAccountId}?access_token=${encodeURIComponent(access_token)}&fields=username,name`;
+          const igRes = await fetch(igUrl, { signal: AbortSignal.timeout(10000) });
+          const igData = await igRes.json();
+          if (igData.username) {
+            accountName = igData.name || igData.username;
+            accountId = igData.username;
+            pageUrl = `https://www.instagram.com/${igData.username}`;
+          }
+        } catch { /* use page info as fallback */ }
+      } else if (platform === 'facebook' && pageUrl) {
+        // pageUrl already set from /me/accounts
+      }
+    } catch (fetchErr) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_FAILED', message: `Could not validate token: ${fetchErr.message}` } });
+    }
+
+    // Encrypt token
+    const encryptionKey = process.env.SOCIAL_TOKEN_ENCRYPTION_KEY || process.env.JWT_SECRET || 'default-key';
+    const encCrypto = await import('crypto');
+    const cipher = encCrypto.createCipheriv('aes-256-cbc',
+      encCrypto.createHash('sha256').update(encryptionKey).digest(),
+      Buffer.alloc(16, 0)
+    );
+    const encryptedToken = cipher.update(access_token, 'utf8', 'hex') + cipher.final('hex');
+
+    // Upsert: update existing or insert new
+    const [[existing]] = await mysqlSequelize.query(
+      'SELECT id FROM social_accounts WHERE destination_id = :destId AND platform = :platform',
+      { replacements: { destId, platform } }
+    );
+
+    const metadataJson = JSON.stringify({ pageUrl, igAccountId: igAccountId || null });
+
+    if (existing) {
+      await mysqlSequelize.query(
+        `UPDATE social_accounts SET access_token_encrypted = :token, account_id = :accountId, account_name = :accountName, metadata = :metadata, status = 'active', updated_at = NOW() WHERE id = :id`,
+        { replacements: { token: encryptedToken, accountId, accountName, metadata: metadataJson, id: existing.id } }
+      );
+    } else {
+      await mysqlSequelize.query(
+        `INSERT INTO social_accounts (destination_id, platform, account_id, account_name, access_token_encrypted, metadata, status, created_at, updated_at)
+         VALUES (:destId, :platform, :accountId, :accountName, :token, :metadata, 'active', NOW(), NOW())`,
+        { replacements: { destId, platform, accountId, accountName, token: encryptedToken, metadata: metadataJson }, type: QueryTypes.INSERT }
+      );
+    }
+
+    logger.info(`[AdminPortal] Meta ${platform} account connected for destination ${destId}: ${accountName} (${accountId}) url=${pageUrl}`);
+    res.json({ success: true, data: { platform, accountName, accountId, pageUrl, status: 'active' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Meta connect error:', error);
+    res.status(500).json({ success: false, error: { code: 'META_CONNECT_ERROR', message: error.message } });
+  }
+});
+
 router.post('/content/social-accounts/connect/linkedin', adminAuth('destination_admin'), async (req, res) => {
   try {
     const LinkedInClient = (await import('../services/agents/publisher/clients/linkedinClient.js')).default;

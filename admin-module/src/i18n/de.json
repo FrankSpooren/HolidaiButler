@@ -1437,5 +1437,11 @@
       "deleteTitle": "Saison löschen",
       "deleteConfirm": "Möchten Sie diese Saison wirklich löschen?"
     }
+  },
+  "brandProfile": {
+    "page_title": "Markenprofil",
+    "sections": { "company": "Unternehmensprofil", "mission": "Mission, Vision & Werte", "audiences": "Zielgruppen", "tone": "Tonalität", "knowledge": "Wissensdatenbank", "competitors": "Wettbewerber", "strategy": "Content-Strategie" },
+    "fields": { "company_name": "Unternehmensname", "industry": "Branche", "website": "Webseite", "analyze_website": "Webseite analysieren", "description": "Kurzbeschreibung", "usps": "USPs (Alleinstellungsmerkmale)", "add_usp": "USP hinzufügen", "mission": "Mission", "vision": "Vision", "core_values": "Kernwerte", "add_persona": "Neue Zielgruppe", "upload_document": "Dokument hochladen", "add_url": "URL als Quelle hinzufügen", "add_competitor": "Wettbewerber hinzufügen", "analyze": "Analysieren", "seo_keywords": "SEO-Fokus-Keywords", "blogs_per_month": "Blogs pro Monat", "posts_per_week": "Social Posts pro Woche" },
+    "tone": { "personality": "Persönlichkeit", "audience": "Zielgruppe", "brandValues": "Markenwerte", "coreKeywords": "Kernbegriffe", "adjectives": "Gewünschte Adjektive", "avoidWords": "Wörter vermeiden", "samplePhrases": "Beispielsätze", "formalAddress": "Anredeform", "informal": "Informell (du)", "formal": "Formell (Sie)", "mixed": "Gemischt" }
   }
 }

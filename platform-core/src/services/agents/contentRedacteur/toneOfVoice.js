@@ -279,7 +279,22 @@ export async function buildToneInstruction(destinationId) {
 /**
  * Get supported languages for a destination (ordered by priority)
  */
-export function getLanguages(destinationId) {
+export async function getLanguages(destinationId) {
+  // DB-first: use supported_languages from destinations table
+  try {
+    const { mysqlSequelize } = await import('../../../config/database.js');
+    const [[dest]] = await mysqlSequelize.query(
+      'SELECT supported_languages, default_language FROM destinations WHERE id = :id',
+      { replacements: { id: Number(destinationId) } }
+    );
+    if (dest) {
+      let supported = [];
+      try { supported = typeof dest.supported_languages === 'string' ? JSON.parse(dest.supported_languages) : (dest.supported_languages || []); } catch { /* empty */ }
+      if (supported.length > 0) return supported;
+      if (dest.default_language) return [dest.default_language];
+    }
+  } catch { /* fallback to tone config */ }
+  // Fallback to tone config
   const tone = toneCache[destinationId] || FALLBACK_TONES[destinationId] || DEFAULT_TONE;
   return [tone.languages.primary, ...tone.languages.secondary];
 }
