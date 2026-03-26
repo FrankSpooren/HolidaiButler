@@ -213,6 +213,58 @@ function getDestinationConfig(): DestinationConfig {
 }
 
 /* ─────────────────────────────────────────────
+ * EVENT FILTERING — Time-of-day & Tourist relevance
+ * ───────────────────────────────────────────── */
+
+/** Keywords in event titles that indicate non-tourist / local-only events */
+const NON_TOURIST_EVENT_KEYWORDS = [
+  // NL
+  'forum', 'vergadering', 'ledenvergadering', 'gemeenteraad', 'bestuursvergadering',
+  'raadszitting', 'bijeenkomst', 'overleg', 'commissie', 'werkgroep', 'jaarvergadering',
+  'informatiebijeenkomst', 'spreekuur', 'inspraak',
+  // ES
+  'junta', 'asamblea', 'reunión', 'congreso', 'pleno', 'sesión plenaria',
+  'comisión', 'ayuntamiento',
+  // EN
+  'meeting', 'council', 'assembly', 'committee', 'board meeting', 'town hall',
+  // DE
+  'sitzung', 'versammlung', 'gemeinderatssitzung', 'besprechung', 'ausschuss',
+];
+
+const DAY_PART_HOUR_RANGES: Record<DayPart, { min: number; max: number }> = {
+  morning:   { min: 6, max: 12 },
+  afternoon: { min: 12, max: 17 },
+  evening:   { min: 17, max: 24 },
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isEventSuitableForDayPart(event: any, dayPart: DayPart): boolean {
+  const title = getLocalizedString(event.title, 'en').toLowerCase()
+    + ' ' + getLocalizedString(event.title, 'nl').toLowerCase()
+    + ' ' + getLocalizedString(event.title, 'es').toLowerCase();
+
+  // 1. Exclude non-tourist events
+  if (NON_TOURIST_EVENT_KEYWORDS.some(kw => title.includes(kw))) return false;
+
+  // 2. All-day events → OK for morning/afternoon, NOT for evening
+  if (event.allDay) return dayPart !== 'evening';
+
+  // 3. Filter by start hour
+  const startDate = event.startDate;
+  if (!startDate) return dayPart !== 'evening'; // no time info = treat as all-day
+
+  const hour = new Date(startDate).getHours();
+
+  // Hour 0 without explicit allDay flag = likely all-day event
+  if (hour === 0) return dayPart !== 'evening';
+
+  const range = DAY_PART_HOUR_RANGES[dayPart];
+  return hour >= range.min && hour < range.max;
+}
+
+const MIN_PROGRAM_ITEMS = 3;
+
+/* ─────────────────────────────────────────────
  * FILTERING & SELECTION LOGIC
  * ───────────────────────────────────────────── */
 
@@ -407,27 +459,33 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
 
         // Fetch more than needed to have room after filtering
         const [poisRes, eventsRes] = await Promise.all([
-          fetch(`/api/pois?limit=${poiLimit * 6}&sort=rating:desc&min_rating=4.2&min_reviews=3&categories=${encodeURIComponent(rule.categories)}`),
-          fetch('/api/events?limit=3'),
+          fetch(`/api/pois?limit=${poiLimit * 8}&sort=rating:desc&min_rating=4.2&min_reviews=3&categories=${encodeURIComponent(rule.categories)}`),
+          fetch('/api/events?limit=10'),
         ]);
 
         const poisData = await poisRes.json();
         const eventsData = await eventsRes.json();
 
-        // Filter: closed + daypart suitability
+        // Filter events: time-of-day + tourist relevance
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const suitableEvents = (eventsData?.data || []).filter((e: any) => isEventSuitableForDayPart(e, dayPart));
+        const events = suitableEvents.slice(0, 1); // max 1 event
+
+        // Filter POIs: closed + daypart suitability
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const suitable = (poisData?.data || []).filter((p: any) => isPOISuitable(p, rule));
 
         // Deterministic shuffle per date+daypart, then diverse selection
         const today = new Date().toISOString().split('T')[0];
         const shuffled = seededShuffle(suitable, `${today}-${dayPart}`);
-        const pois = selectDiversePOIs(shuffled, poiLimit, dayPart, config);
 
-        // Pick 1 event
-        const events = (eventsData?.data || []).slice(0, 1);
+        // Calculate how many POIs we need: fill remaining slots, ensure minimum total
+        const neededPois = Math.max(poiLimit, MIN_PROGRAM_ITEMS - events.length);
+        const pois = selectDiversePOIs(shuffled, neededPois, dayPart, config);
 
         const combined: ProgramItem[] = [];
-        const slots = generateTimeSlots(pois.length + events.length, dayPart);
+        const totalItems = pois.length + events.length;
+        const slots = generateTimeSlots(totalItems, dayPart);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pois.forEach((p: any, i: number) => {
