@@ -11,7 +11,7 @@ concurrency:
 
 on:
   push:
-    branches: [dev, test, main]
+    branches: [main]
     paths:
       - 'platform-core/**'
       - '!platform-core/README.md'
