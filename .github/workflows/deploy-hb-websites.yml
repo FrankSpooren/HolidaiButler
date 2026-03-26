@@ -13,7 +13,7 @@ concurrency:
 
 on:
   push:
-    branches: [dev, test, main]
+    branches: [main]
     paths:
       - 'hb-websites/**'
       - '.github/workflows/deploy-hb-websites.yml'

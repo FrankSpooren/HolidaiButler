@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 26 maart 2026
-**Versie**: 7.86
+**Versie**: 7.87
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Chatbot Feature Parity COMPLEET (Blok A-E)**. Toekomstbestendig: centraal getDestinationSlug(), SpeakerButton TTS, a11y (Escape, aria-live). Customer-portal SA analytics fix. 241 endpoints. CLAUDE.md v4.26.0. MS v7.86.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **CI/CD geoptimaliseerd**: deploy-hb-websites + deploy-platform-core nu main-only (was 3x redundant). ProgramCard avond maxFood fix + event dagdeel-filtering. 241 endpoints. CLAUDE.md v4.27.0. MS v7.87.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1473,10 +1473,12 @@ Met het enterprise-fundament op orde zijn deze vervolgstappen nodig voor state-o
 - Jaarlijkse penetration test + vulnerability disclosure policy
 
 **F. Developer Experience & CI/CD Excellence**
+- ✅ CI/CD trigger optimalisatie (26-03-2026): hb-websites + platform-core main-only triggers (waren 3x redundant)
 - Feature flags per destination
 - E2E test suite (Playwright/Cypress) alle kritieke user flows
 - Staging smoke tests per PR
 - API versioning (v1/v2) backward compatibility
+- OPEN: Aparte deploy-paden per omgeving voor hb-websites + platform-core (zodat dev/test/main triggers weer zinvol worden)
 
 ### 9.6 Tijdlijn & Budgetindicatie
 
@@ -1627,6 +1629,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.87** | **26-03-2026** | **CI/CD Optimalisatie + ProgramCard Fixes**. deploy-hb-websites.yml + deploy-platform-core.yml triggers gewijzigd: `branches: [dev, test, main]` → `branches: [main]`. Root cause: beide workflows deployen naar 1 server-pad (geen aparte dev/test/prod directories zoals admin-module/customer-portal wél hebben). Gevolg: elke commit triggerde 3 redundante deploys die in de concurrency queue stonden, cascading failures veroorzaakten, en ~66% onnodige GH Actions runs. admin-module + customer-portal behouden 3-branch triggers (hebben aparte deploy-paden). ProgramCard: event dagdeel-filtering + toerisme-relevantie (NON_TOURIST_EVENT_KEYWORDS, DAY_PART_HOUR_RANGES) + minimum 3 items. Calpe avond maxFood 1→3 (root cause: avondprogramma Food & Drinks dominant, maar maxFood=1 blokkeerde alles behalve 1 restaurant + schaarse non-food avond-POIs). CLAUDE.md v4.27.0. |
 | **7.75** | **21-03-2026** | **Command v16.0: Mobiele Homepage Quality — 14 Punten + Extra's COMPLEET. 503 API fix (adminPortal.js syntax error). Onboarding buttons conform template (rounded-xl, Inter font). Map category IDs fix (Beach,Nature→beaches). Profiel→login na onboarding. Leaflet z-index isolation (map overlap fix). ProgramCard time-of-day dynamisch (ochtend/middag/avond). 24h klok fix (nooit boven 23:30). Onboarding dismissed→sessionStorage. CTA→itinerary wizard direct. 1 platform-core + 6 hb-websites bestanden. 8/8 verificatie PASS. CLAUDE.md v4.15.0.** |
 | **7.74** | **20-03-2026** | **Fase VI-B Feedback: 7 Fixes COMPLEET. Inter font, Tip deep links, language params, WCAG, hamburger menu, CALPETRIP font, bottom nav SVGs. 6 bestanden. Commit 5d3bb00. CLAUDE.md v4.14.0.** |
 | **7.73** | **18-03-2026** | **Fase VI-B Mobile Homepage & Onboarding — 7 Blokken COMPLEET. BLOK A: MobileBottomNav (5 tabs). BLOK B: OnboardingSheet (4-stappen bottom-sheet, i18n). BLOK C: MobileHeader (gradient, SVG flags, WCAG). BLOK D: ProgramCard + TipOfTheDay + TodayEvents + MapPreview. BLOK E: Admin BrandingPage "Mobiele Homepage" accordion + 2 API endpoints + config doorvoering. BLOK F: 9/9 verificatie PASS. 9 nieuwe + 4 gewijzigde bestanden (1.712 LOC). Commit be8cc00. CLAUDE.md v4.13.0.** |
