@@ -130,7 +130,7 @@ const CALPE_CONFIG: DestinationConfig = {
       ],
       excludeSubcats: ['fastfood', 'breakfast'],
       excludeNames: [],
-      maxFood: 1,
+      maxFood: 3,
     },
   },
 };
