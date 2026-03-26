@@ -5842,4 +5842,59 @@ CLAUDE.md v4.24.0 → v4.25.0. MS v7.84 → v7.85.
 
 ---
 
+## v4.26.0 — Blok E Toekomstbestendig + SpeakerButton + A11y + Analytics Fix (26-03-2026)
+
+### E1: Destination-Aware Verificatie
+- `getDestinationSlug()` helper toegevoegd aan portal-url.ts (HOST_TO_SLUG mapping)
+- ProgramCard: `host.includes('texelmaps')` → `getDestinationSlug() === 'texel'`
+- CategoryBrowser: `host.includes('texelmaps')` → `getDestinationSlug() === 'texel'`
+- 0 hardcoded hostname checks in componenten (was 5)
+- Nieuwe bestemming toevoegen = 1 regel in HOST_TO_SLUG + 1 regel in HOST_TO_PORTAL
+
+### E2: SpeakerButton (Text-to-Speech)
+- Nieuw component: `src/components/chatbot/SpeakerButton.tsx` (95 LOC)
+- Web Speech API: `SpeechSynthesisUtterance` met taal-aware voice selectie
+- 6 talen: nl-NL, en-US, de-DE, es-ES, sv-SE, fr-FR
+- 🔊 icoon bij elk assistant bericht (niet bij streaming, niet bij user berichten)
+- Toggle: klik om voor te lezen, klik opnieuw om te stoppen
+- Text cleaning: strips markdown, URLs, emoji's
+
+### E3: Accessibility (a11y)
+- Escape key handler: sluit chatbot venster
+- `aria-live="polite" aria-relevant="additions"` op message list (screen readers)
+- Bestaande a11y: role="dialog", aria-modal, aria-labelledby, aria-label op buttons
+- 13 a11y attributen totaal over 4 chatbot componenten
+
+### Blok D Teruggedraaid
+- PersonalitySelector verwijderd uit chatbot UI
+- Backend personality instructies in embeddingService.js blijven (inactief zonder trigger)
+- Reden: moet in gebruikersaccount, niet in chatbot + POI data-classificatie nodig
+
+### Customer-Portal SimpleAnalytics Fix
+- Root cause: desktop calpetrip.com miste `inline.js` + `auto-events.js` → `window.sa_event` onbeschikbaar
+- Fix: customer-portal opnieuw gebuild en gedeployd met correcte index.html
+- Customer-portal chatbot analytics: `sa_event` calls toegevoegd aan HoliBotContext + MessageList
+- Nieuw bestand: `customer-portal/frontend/src/shared/utils/analytics.ts`
+
+### HolidaiButler.com B2B Herstel
+- B2B corporate page was overschreven door customer-portal deploy
+- Hersteld vanuit backup `/root/backups/pre-calpetrip-20260324/b2b-corporate-live.html`
+
+### Gewijzigde Bestanden
+- hb-websites/src/lib/portal-url.ts (getDestinationSlug helper)
+- hb-websites/src/components/chatbot/SpeakerButton.tsx (NIEUW)
+- hb-websites/src/components/chatbot/PersonalitySelector.tsx (AANGEMAAKT + TERUGGEDRAAID)
+- hb-websites/src/components/chatbot/HoliBotContext.tsx (personality state toegevoegd + verwijderd)
+- hb-websites/src/components/chatbot/CategoryBrowser.tsx (getDestinationSlug)
+- hb-websites/src/components/mobile/ProgramCard.tsx (getDestinationSlug)
+- hb-websites/src/components/modules/ChatbotWidget.tsx (SpeakerButton + a11y + Escape key)
+- customer-portal/frontend/src/shared/utils/analytics.ts (NIEUW)
+- customer-portal/frontend/src/shared/contexts/HoliBotContext.tsx (sa_event calls)
+- customer-portal/frontend/src/shared/components/HoliBot/MessageList.tsx (quick action analytics)
+- platform-core/src/services/holibot/embeddingService.js (personality instructions — inactief)
+
+CLAUDE.md v4.25.0 → v4.26.0. MS v7.85 → v7.86.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

@@ -18,3 +18,18 @@ export function getPortalUrl(): string {
   const host = window.location.hostname;
   return HOST_TO_PORTAL[host] || `https://${host}`;
 }
+
+/**
+ * Determine destination slug from current hostname.
+ * Used by components that need destination-specific config (ProgramCard, CategoryBrowser).
+ */
+const HOST_TO_SLUG: Record<string, string> = {
+  'calpetrip.com': 'calpe', 'www.calpetrip.com': 'calpe', 'dev.holidaibutler.com': 'calpe',
+  'texelmaps.nl': 'texel', 'www.texelmaps.nl': 'texel', 'dev.texelmaps.nl': 'texel',
+  'warrewijzer.be': 'warrewijzer', 'www.warrewijzer.be': 'warrewijzer', 'dev.warrewijzer.be': 'warrewijzer',
+};
+
+export function getDestinationSlug(): string {
+  if (typeof window === 'undefined') return 'calpe';
+  return HOST_TO_SLUG[window.location.hostname] || 'calpe';
+}

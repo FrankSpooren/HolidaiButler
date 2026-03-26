@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getPortalUrl } from '@/lib/portal-url';
+import { getPortalUrl, getDestinationSlug } from '@/lib/portal-url';
 
 interface ProgramItem {
   id: number;
@@ -206,9 +206,9 @@ const TEXEL_CONFIG: DestinationConfig = {
 };
 
 function getDestinationConfig(): DestinationConfig {
-  if (typeof window === 'undefined') return CALPE_CONFIG;
-  const host = window.location.hostname;
-  if (host.includes('texelmaps') || host.includes('dev.texelmaps')) return TEXEL_CONFIG;
+  const slug = getDestinationSlug();
+  if (slug === 'texel') return TEXEL_CONFIG;
+  // Future destinations: add config here
   return CALPE_CONFIG;
 }
 

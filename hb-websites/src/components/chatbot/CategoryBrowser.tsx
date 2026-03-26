@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getDestinationSlug } from '@/lib/portal-url';
 
 interface Category {
   name: string;
@@ -48,18 +49,11 @@ const CAT_TRANS: Record<string, Record<string, string>> = {
   es: { 'Beaches & Nature': 'Playas & Naturaleza', 'Food & Drinks': 'Comida & Bebidas', 'Culture & History': 'Cultura & Historia', 'Active': 'Activo', 'Shopping': 'Compras', 'Recreation': 'Ocio', 'Restaurants': 'Restaurantes', 'Bars': 'Bares', 'Beaches': 'Playas', 'Arts & Museums': 'Arte & Museos', 'Cycling': 'Ciclismo', 'Hiking': 'Senderismo' },
 };
 
-function getDestination(): 'calpe' | 'texel' {
-  if (typeof window === 'undefined') return 'calpe';
-  const host = window.location.hostname;
-  if (host.includes('texelmaps')) return 'texel';
-  return 'calpe';
-}
-
 export default function CategoryBrowser({ locale, onSelect, onCancel }: CategoryBrowserProps) {
   const t = LABELS[locale] || LABELS.en;
   const trans = CAT_TRANS[locale] || {};
-  const dest = getDestination();
-  const allowed = dest === 'texel' ? ALLOWED_TEXEL : ALLOWED_CALPE;
+  const slug = getDestinationSlug();
+  const allowed = slug === 'texel' ? ALLOWED_TEXEL : ALLOWED_CALPE;
   const translate = (name: string) => trans[name] || name;
 
   const [categories, setCategories] = useState<Category[]>([]);

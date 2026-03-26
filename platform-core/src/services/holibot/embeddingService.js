@@ -383,6 +383,41 @@ Richtlinien:
       prompt += `\n- De gebruiker reist met: ${userPreferences.travelCompanion}`;
     }
 
+    // Personality mode — adjusts tone and recommendation style
+    const personalityInstructions = {
+      adventurous: {
+        nl: '\n\nPERSOONLIJKHEID: De gebruiker houdt van avontuur. Beveel minder bekende, verrassende plekken aan. Focus op unieke ervaringen, off-the-beaten-path locaties en spannende activiteiten. Wees enthousiast en inspirerend.',
+        en: '\n\nPERSONALITY: The user loves adventure. Recommend lesser-known, surprising places. Focus on unique experiences, off-the-beaten-path locations and exciting activities. Be enthusiastic and inspiring.',
+        de: '\n\nPERSÖNLICHKEIT: Der Nutzer liebt Abenteuer. Empfehle weniger bekannte, überraschende Orte. Fokussiere auf einzigartige Erlebnisse und aufregende Aktivitäten.',
+        es: '\n\nPERSONALIDAD: Al usuario le encanta la aventura. Recomienda lugares sorprendentes y poco conocidos. Enfócate en experiencias únicas.',
+      },
+      relaxed: {
+        nl: '\n\nPERSOONLIJKHEID: De gebruiker zoekt rust en ontspanning. Beveel rustige restaurants, vredige stranden en ontspannen activiteiten aan. Vermijd drukte en hectiek. Wees kalm en geruststellend in je toon.',
+        en: '\n\nPERSONALITY: The user seeks calm and relaxation. Recommend quiet restaurants, peaceful beaches and relaxed activities. Avoid crowds and hectic places. Be calm and reassuring.',
+        de: '\n\nPERSÖNLICHKEIT: Der Nutzer sucht Ruhe und Entspannung. Empfehle ruhige Restaurants, friedliche Strände und entspannte Aktivitäten.',
+        es: '\n\nPERSONALIDAD: El usuario busca calma y relajación. Recomienda restaurantes tranquilos, playas pacíficas y actividades relajadas.',
+      },
+      cultural: {
+        nl: '\n\nPERSOONLIJKHEID: De gebruiker is cultuurliefhebber. Beveel musea, historische locaties, galeries, lokale tradities en culturele evenementen aan. Deel interessante achtergrondverhalen en historische context.',
+        en: '\n\nPERSONALITY: The user loves culture. Recommend museums, historical sites, galleries, local traditions and cultural events. Share interesting background stories and historical context.',
+        de: '\n\nPERSÖNLICHKEIT: Der Nutzer liebt Kultur. Empfehle Museen, historische Stätten, Galerien und kulturelle Veranstaltungen.',
+        es: '\n\nPERSONALIDAD: Al usuario le encanta la cultura. Recomienda museos, sitios históricos, galerías y eventos culturales.',
+      },
+      social: {
+        nl: '\n\nPERSOONLIJKHEID: De gebruiker is sociaal en houdt van gezelligheid. Beveel levendige restaurants, populaire terrassen, groepsactiviteiten en gezellige barretjes aan. Focus op plekken met sfeer en sociale interactie.',
+        en: '\n\nPERSONALITY: The user is social and loves lively places. Recommend vibrant restaurants, popular terraces, group activities and cozy bars. Focus on atmosphere and social interaction.',
+        de: '\n\nPERSÖNLICHKEIT: Der Nutzer ist gesellig. Empfehle lebhafte Restaurants, beliebte Terrassen und Gruppenaktivitäten.',
+        es: '\n\nPERSONALIDAD: Al usuario le gusta socializar. Recomienda restaurantes animados, terrazas populares y actividades grupales.',
+      },
+    };
+
+    if (userPreferences.personality && userPreferences.personality !== 'auto') {
+      const pInstr = personalityInstructions[userPreferences.personality];
+      if (pInstr) {
+        prompt += pInstr[language] || pInstr.nl;
+      }
+    }
+
     return prompt;
   }
 

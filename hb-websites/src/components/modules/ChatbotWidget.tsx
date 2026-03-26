@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import { analytics } from '../../lib/analytics';
 import ChatHeader from '../chatbot/ChatHeader';
 import WelcomeScreen from '../chatbot/WelcomeScreen';
+import SpeakerButton from '../chatbot/SpeakerButton';
+import { useHoliBot, type ChatMessage } from '../chatbot/HoliBotContext';
 import './ChatbotWidget.css';
 
 const CategoryBrowser = dynamic(() => import('../chatbot/CategoryBrowser'), { ssr: false });
@@ -27,15 +29,7 @@ interface ItineraryData {
   totalStops: number;
 }
 
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  isStreaming?: boolean;
-  tipData?: DailyTipData | null;
-  itineraryData?: ItineraryData | null;
-}
+// ChatMessage imported from HoliBotContext
 
 interface DailyTipData {
   itemType: 'poi' | 'event' | 'message';
@@ -435,10 +429,11 @@ function ItineraryCard({ data, locale }: { data: ItineraryData; locale: string }
 /* ─── Main Component ─── */
 
 export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickActionFilter, chatbotColor, welcomeMessage }: ChatbotWidgetProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Shared state via HoliBotContext (accessible by MobileBottomNav, layout, etc.)
+  const { isOpen, setIsOpen, messages, setMessages, isStreaming, setIsStreaming, sessionId, resetSession } = useHoliBot();
+
+  // Local UI state (component-specific, not shared)
   const [input, setInput] = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [showItineraryWizard, setShowItineraryWizard] = useState(false);
   const [showCategoryBrowser, setShowCategoryBrowser] = useState(false);
@@ -446,7 +441,6 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<any>(null);
-  const sessionIdRef = useRef<string>(crypto.randomUUID());
 
   const name = chatbotName ?? (tenantSlug === 'texel' ? 'Tessa' : tenantSlug === 'warrewijzer' ? 'Wijze Warre' : 'CalpeChat');
   const accentColor = chatbotColor || '#D4AF37';
@@ -483,6 +477,14 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       inputRef.current.focus();
     }
   }, [isOpen]);
+
+  // Keyboard: Escape closes chatbot
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, setIsOpen]);
 
   /** Fetch daily tip */
   const fetchDailyTip = useCallback(async () => {
@@ -546,7 +548,7 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
           interests: opts.interests,
           includeMeals: opts.includeMeals,
           language: locale,
-          sessionId: sessionIdRef.current,
+          sessionId: sessionId,
         }),
       });
 
@@ -613,7 +615,8 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
           message: text.trim(),
           conversationHistory,
           language: locale,
-          sessionId: sessionIdRef.current,
+          sessionId: sessionId,
+          userPreferences: undefined,
         }),
         signal: abortRef.current.signal,
       });
@@ -748,10 +751,8 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
   const handleReset = () => {
     const msg = locale === 'nl' ? 'Gesprek opnieuw starten?' : 'Restart conversation?';
     if (window.confirm(msg)) {
-      setMessages([]);
-      sessionIdRef.current = crypto.randomUUID();
+      resetSession(); // Clears messages, resets sessionId via Context
       setInput('');
-      setIsStreaming(false);
       setShowItineraryWizard(false);
       setShowCategoryBrowser(false);
       if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
@@ -800,8 +801,8 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
               onClose={() => setIsOpen(false)}
             />
 
-            {/* Message list */}
-            <div className="holibot-message-list">
+            {/* Message list — aria-live for screen readers */}
+            <div className="holibot-message-list" aria-live="polite" aria-relevant="additions">
               {/* Welcome screen — hide when wizard/browser active */}
               {messages.length === 0 && !showItineraryWizard && !showCategoryBrowser && (
                 <WelcomeScreen
@@ -854,7 +855,12 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
                         ) : null}
                       </div>
                     )}
-                    <div className="holibot-message-time">{formatTime(msg.timestamp)}</div>
+                    <div className="holibot-message-time" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {formatTime(msg.timestamp)}
+                      {msg.role === 'assistant' && msg.content && !msg.isStreaming && (
+                        <SpeakerButton text={msg.content} locale={locale} />
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
