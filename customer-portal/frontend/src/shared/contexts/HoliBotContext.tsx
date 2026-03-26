@@ -106,6 +106,8 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
     console.log('[HoliBot] Opening widget...');
     if (!isReady) initializeAPI();
     setIsOpen(true);
+    // SimpleAnalytics tracking
+    try { window.sa_event?.(`chatbot_opened_${window.innerWidth < 768 ? 'mobile' : 'desktop'}`); } catch {}
   }, [isReady, initializeAPI]);
 
   const close = useCallback(() => {
@@ -155,6 +157,11 @@ export function HoliBotProvider({ children }: HoliBotProviderProps) {
     currentMessages: ChatMessage[] = []
   ): Promise<boolean> => {
     if (!text.trim()) return true;
+
+    // SimpleAnalytics: track chatbot message
+    if (!isRetry) {
+      try { window.sa_event?.(`chatbot_message_${window.innerWidth < 768 ? 'mobile' : 'desktop'}`); } catch {}
+    }
 
     console.log('[HoliBot] Sending message:', text, 'Streaming:', useStreaming, 'Retry:', isRetry);
     setError(null);

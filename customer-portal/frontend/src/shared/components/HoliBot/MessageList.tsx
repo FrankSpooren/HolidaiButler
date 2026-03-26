@@ -431,23 +431,29 @@ export function MessageList() {
 
   const handleQuickReply = async (reply: string) => {
     const { quickActions, responses } = t.holibotChat;
+    const device = typeof window !== 'undefined' && window.innerWidth < 768 ? 'mobile' : 'desktop';
+    const saEvent = (name: string) => { try { (window as any).sa_event?.(name); } catch {} };
 
     if (reply === quickActions.itinerary) {
+      saEvent(`chatbot_quick_programma_samenstellen_${device}`);
       setShowItineraryBuilder(true);
       return;
     }
 
     if (reply === quickActions.locationInfo) {
+      saEvent(`chatbot_quick_zoeken_op_rubriek_${device}`);
       setShowCategoryBrowser(true);
       return;
     }
 
     if (reply === quickActions.directions) {
+      saEvent(`chatbot_quick_routebeschrijving_${device}`);
       addAssistantMessage(responses.directionsHelp);
       return;
     }
 
     if (reply === quickActions.dailyTip) {
+      saEvent(`chatbot_quick_tip_van_de_dag_${device}`);
       setLoadingPOIs(true);
       try {
         const response = await chatApi.getDailyTip();
