@@ -1051,8 +1051,21 @@
       "weather_widget": "Wetter-Widget",
       "banner": "Banner",
       "partners": "Partner",
-      "downloads": "Downloads"
+      "downloads": "Downloads",
+      "mobile_program": "Tagesprogramm",
+      "mobile_tip": "Tipp des Tages",
+      "mobile_events": "Heutige Events",
+      "mobile_map": "Kartenvorschau"
+    },
+    "categories": {
+      "Mobiel": "Mobil"
     }
+  },
+  "visibility": {
+    "label": "Sichtbarkeit",
+    "all": "Alle Geräte",
+    "mobile": "Nur Mobil",
+    "desktop": "Nur Desktop"
   },
   "navigation": {
     "title": "Navigation",

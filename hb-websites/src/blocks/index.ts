@@ -22,6 +22,10 @@ import Partners from './Partners';
 import Downloads from './Downloads';
 import PoiGridFiltered from './PoiGridFiltered';
 import EventCalendarFiltered from './EventCalendarFiltered';
+import MobileProgram from './MobileProgram';
+import MobileTip from './MobileTip';
+import MobileEvents from './MobileEvents';
+import MobileMap from './MobileMap';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = ComponentType<any>;
@@ -49,6 +53,10 @@ export const blockRegistry: Record<string, AnyComponent> = {
   banner: Banner,
   partners: Partners,
   downloads: Downloads,
+  mobile_program: MobileProgram,
+  mobile_tip: MobileTip,
+  mobile_events: MobileEvents,
+  mobile_map: MobileMap,
 };
 
 export function getBlock(type: BlockType): AnyComponent | null {

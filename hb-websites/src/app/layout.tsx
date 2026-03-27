@@ -11,7 +11,7 @@ import ScrollToTop from '@/components/ui/ScrollToTop';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import MobileHeader from '@/components/MobileHeader';
 import OnboardingSheet from '@/components/OnboardingSheet';
-import MobileHomepage from '@/components/mobile/MobileHomepage';
+// MobileHomepage removed — mobile blocks now rendered via page builder (visibility: 'mobile')
 import HoliBotProviderWrapper from '@/components/chatbot/HoliBotProviderWrapper';
 import { resolveAssetUrl } from '@/lib/assets';
 import Script from 'next/script';
@@ -140,14 +140,6 @@ export default async function RootLayout({
         })()}
         <main className="flex-1 pb-[78px] md:pb-0">
           {children}
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <MobileHomepage
-            locale={locale}
-            destinationName={tenant?.displayName || 'Calpe'}
-            destinationSlug={tenantSlug}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            mobileConfig={(tenant?.branding as any)?.mobileHomepage}
-          />
         </main>
         {tenant && (
           <div className="hidden md:block">
