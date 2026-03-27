@@ -1051,8 +1051,28 @@
       "weather_widget": "Weer Widget",
       "banner": "Banner",
       "partners": "Partners",
-      "downloads": "Downloads"
+      "downloads": "Downloads",
+      "mobile_program": "Dagprogramma",
+      "mobile_tip": "Tip van de Dag",
+      "mobile_events": "Vandaag Events",
+      "mobile_map": "Kaart Preview",
+      "mobile_program_info": "Toont een dagprogramma (ochtend/middag/avond) met POIs en events op basis van het tijdstip. Automatische selectie op rating, categorie en diversiteit.",
+      "mobile_program_size": "Aantal items per dagdeel",
+      "mobile_tip_info": "Toont een dagelijkse tip (POI of event) op basis van de onboarding-interesses van de bezoeker. Wordt automatisch ververst elke 24 uur.",
+      "mobile_events_info": "Horizontaal scrollbare lijst van vandaag's evenementen. Toont automatisch categorie-emoji's en tijdstippen.",
+      "mobile_map_info": "Interactieve kaart met top POIs per categorie. Toont gekleurde markers en categorie-filters.",
+      "mobile_map_poi_limit": "Max aantal POI markers",
+      "mobile_map_label": "Kaart label"
+    },
+    "categories": {
+      "Mobiel": "Mobiel"
     }
+  },
+  "visibility": {
+    "label": "Zichtbaarheid",
+    "all": "Alle apparaten",
+    "mobile": "Alleen mobiel",
+    "desktop": "Alleen desktop"
   },
   "navigation": {
     "title": "Navigatie",

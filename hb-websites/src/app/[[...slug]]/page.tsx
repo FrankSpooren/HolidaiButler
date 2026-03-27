@@ -8,12 +8,17 @@ import { resolveLocalizedProps } from '@/lib/i18n';
 import { getBlock } from '@/blocks/index';
 import BlockRenderer from '@/components/ui/BlockRenderer';
 import { SkeletonGrid } from '@/components/ui/Skeleton';
-import type { BlockConfig, BlockStyle } from '@/types/blocks';
+import type { BlockConfig, BlockStyle, BlockVisibility } from '@/types/blocks';
 import type { FeatureFlags } from '@/types/tenant';
 
 /** Block types that fetch data server-side and benefit from streaming SSR Suspense */
 const ASYNC_BLOCK_TYPES = new Set([
   'poi_grid', 'poi_grid_filtered', 'event_calendar', 'event_calendar_filtered',
+]);
+
+/** Mobile block types that need tenant context injected as props */
+const MOBILE_BLOCK_TYPES = new Set([
+  'mobile_program', 'mobile_tip', 'mobile_events', 'mobile_map',
 ]);
 
 interface PageProps {
@@ -28,20 +33,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const pageSlug = slug?.join('/') || 'home';
 
   try {
-    // Homepage: return basic metadata without fetching page (page may not exist in DB)
-    if (pageSlug === 'home') {
-      const tenant = await fetchTenantConfig(tenantSlug);
-      if (!tenant) return { title: 'HolidaiButler' };
+    const [tenant, page] = await Promise.all([
+      fetchTenantConfig(tenantSlug),
+      pageSlug === 'home' ? Promise.resolve(null) : fetchPage(tenantSlug, pageSlug, locale),
+    ]);
+    if (!tenant) return { title: 'HolidaiButler' };
+
+    // Homepage: basic metadata from tenant config
+    if (pageSlug === 'home' || !page) {
       return {
         title: tenant.displayName,
         description: tenant.branding?.payoff?.[locale] ?? tenant.branding?.payoff?.en ?? '',
       };
     }
-    const [tenant, page] = await Promise.all([
-      fetchTenantConfig(tenantSlug),
-      fetchPage(tenantSlug, pageSlug, locale),
-    ]);
-    if (!tenant || !page) return { title: 'HolidaiButler' };
     return generatePageMetadata(page, tenant, { locale });
   } catch {
     return { title: 'HolidaiButler' };
@@ -51,6 +55,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 function shouldRenderBlock(block: BlockConfig, featureFlags: FeatureFlags): boolean {
   if (!block.featureFlag) return true;
   return featureFlags[block.featureFlag] === true;
+}
+
+/** CSS class for block visibility (mobile/desktop/all) */
+function getVisibilityClass(visibility?: BlockVisibility): string {
+  switch (visibility) {
+    case 'mobile': return 'md:hidden';
+    case 'desktop': return 'hidden md:block';
+    default: return '';
+  }
 }
 
 const paddingMap: Record<string, string> = {
@@ -90,9 +103,13 @@ export default async function Page({ params }: PageProps) {
   const locale = headersList.get('x-tenant-locale') ?? 'en';
   const pageSlug = slug?.join('/') || 'home';
 
-  // Homepage: skip page-builder blocks — content handled by MobileHomepage in layout.tsx
-  if (pageSlug === 'home') {
-    const tenant = await fetchTenantConfig(tenantSlug);
+  const [tenant, page] = await Promise.all([
+    fetchTenantConfig(tenantSlug),
+    fetchPage(tenantSlug, pageSlug, locale),
+  ]);
+
+  // Homepage without page data in DB: render JSON-LD only (mobile handled by layout blocks)
+  if (pageSlug === 'home' && !page) {
     if (!tenant) notFound();
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://holidaibutler.com';
     const jsonLd = generateWebSiteJsonLd(tenant, baseUrl);
@@ -105,26 +122,24 @@ export default async function Page({ params }: PageProps) {
     );
   }
 
-  const [tenant, page] = await Promise.all([
-    fetchTenantConfig(tenantSlug),
-    fetchPage(tenantSlug, pageSlug, locale),
-  ]);
-
   if (!tenant || !page) {
     notFound();
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://holidaibutler.com';
-
   const blocks = page.layout?.blocks ?? [];
 
   // JSON-LD structured data
   const jsonLdItems: object[] = [];
 
-  // Breadcrumb
-  const breadcrumbs = [{ name: tenant.displayName, url: baseUrl }];
-  breadcrumbs.push({ name: page.title ?? pageSlug, url: `${baseUrl}/${pageSlug}` });
-  jsonLdItems.push(generateBreadcrumbJsonLd(breadcrumbs));
+  if (pageSlug === 'home') {
+    jsonLdItems.push(generateWebSiteJsonLd(tenant, baseUrl));
+    jsonLdItems.push(generateBreadcrumbJsonLd([{ name: tenant.displayName, url: baseUrl }]));
+  } else {
+    const breadcrumbs = [{ name: tenant.displayName, url: baseUrl }];
+    breadcrumbs.push({ name: page.title ?? pageSlug, url: `${baseUrl}/${pageSlug}` });
+    jsonLdItems.push(generateBreadcrumbJsonLd(breadcrumbs));
+  }
 
   return (
     <>
@@ -145,15 +160,23 @@ export default async function Page({ params }: PageProps) {
         }
 
         const resolvedProps = resolveLocalizedProps(block.props, locale);
-        const wrapperStyle = getBlockWrapperStyle(block.style);
-        const wrapperClass = block.style?.fullWidth ? 'w-full' : '';
 
-        const blockContent = (wrapperStyle || wrapperClass) ? (
-          <div className={wrapperClass || undefined} style={wrapperStyle}>
-            <BlockComponent {...resolvedProps} />
+        // Inject locale and tenant context into mobile blocks
+        const blockProps = MOBILE_BLOCK_TYPES.has(block.type)
+          ? { ...resolvedProps, locale, destinationName: tenant.displayName, destinationSlug: tenantSlug }
+          : resolvedProps;
+
+        const wrapperStyle = getBlockWrapperStyle(block.style);
+        const visibilityClass = getVisibilityClass(block.visibility);
+        const styleClass = block.style?.fullWidth ? 'w-full' : '';
+        const combinedClass = [visibilityClass, styleClass].filter(Boolean).join(' ') || undefined;
+
+        const blockContent = (wrapperStyle || combinedClass) ? (
+          <div className={combinedClass} style={wrapperStyle}>
+            <BlockComponent {...blockProps} />
           </div>
         ) : (
-          <BlockComponent {...resolvedProps} />
+          <BlockComponent {...blockProps} />
         );
 
         return (

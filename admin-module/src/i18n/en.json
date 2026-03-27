@@ -1051,8 +1051,28 @@
       "weather_widget": "Weather Widget",
       "banner": "Banner",
       "partners": "Partners",
-      "downloads": "Downloads"
+      "downloads": "Downloads",
+      "mobile_program": "Day Program",
+      "mobile_tip": "Tip of the Day",
+      "mobile_events": "Today's Events",
+      "mobile_map": "Map Preview",
+      "mobile_program_info": "Displays a day program (morning/afternoon/evening) with POIs and events based on time of day. Automatic selection by rating, category, and diversity.",
+      "mobile_program_size": "Items per day part",
+      "mobile_tip_info": "Shows a daily tip (POI or event) based on the visitor's onboarding interests. Automatically refreshes every 24 hours.",
+      "mobile_events_info": "Horizontally scrollable list of today's events. Automatically shows category emojis and times.",
+      "mobile_map_info": "Interactive map with top POIs per category. Shows colored markers and category filters.",
+      "mobile_map_poi_limit": "Max POI markers",
+      "mobile_map_label": "Map label"
+    },
+    "categories": {
+      "Mobiel": "Mobile"
     }
+  },
+  "visibility": {
+    "label": "Visibility",
+    "all": "All devices",
+    "mobile": "Mobile only",
+    "desktop": "Desktop only"
   },
   "navigation": {
     "title": "Navigation",

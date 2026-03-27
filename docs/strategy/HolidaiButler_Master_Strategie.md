@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 26 maart 2026
-**Versie**: 7.87
+**Datum**: 27 maart 2026
+**Versie**: 7.88
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **CI/CD geoptimaliseerd**: deploy-hb-websites + deploy-platform-core nu main-only (was 3x redundant). ProgramCard avond maxFood fix + event dagdeel-filtering. 241 endpoints. CLAUDE.md v4.27.0. MS v7.87.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Mobiele Page Builder Integratie COMPLEET**: 4 mobile block types (program/tip/events/map), visibility systeem (all/mobile/desktop), hardcoded MobileHomepage→page builder. Block registry 22→26. 241 endpoints. CLAUDE.md v4.28.0. MS v7.88.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1629,6 +1629,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.88** | **27-03-2026** | **Mobiele Page Builder Integratie — Architectuurproject COMPLEET**. Block Visibility Systeem: `visibility` property op BlockConfig (all/mobile/desktop) — CSS classes `md:hidden` / `hidden md:block`. 4 nieuwe mobile block types: `mobile_program` (ProgramCard wrapper, programSize prop), `mobile_tip` (TipOfTheDay wrapper), `mobile_events` (TodayEvents wrapper), `mobile_map` (MapPreview wrapper, poiLimit + mapLabel props). Hardcoded `MobileHomepage` component verwijderd uit layout.tsx — homepage rendert nu blocks uit pages DB via page builder, net als alle andere pagina's. page.tsx homepage special case verwijderd. Admin Portal: 4 block editors (MobileProgramEditor, MobileTipEditor, MobileEventsEditor, MobileMapEditor), categorie 'Mobiel' als 6e categorie in BlockSelectorDialog, visibility SelectField in BlockEditorCard met visuele badges (📱 mobiel, 🖥️ desktop). SVG wireframe thumbnails voor alle 4 mobile blocks. i18n 4 talen (~20 nieuwe keys per taal). Data migratie: Calpe home 7→11 blocks (7 desktop + 4 mobile), Texel home 5→9 blocks (5 desktop + 4 mobile). Home pages status draft→published. Block registry 22→26 types. Toekomstbestendig: nieuwe bestemmingen (WarreWijzer, Alicante) configureerbaar via Admin Portal zonder codewijzigingen — voeg mobile blocks toe via PagesPage block editor. CLAUDE.md v4.28.0. |
 | **7.87** | **26-03-2026** | **CI/CD Optimalisatie + ProgramCard Fixes**. deploy-hb-websites.yml + deploy-platform-core.yml triggers gewijzigd: `branches: [dev, test, main]` → `branches: [main]`. Root cause: beide workflows deployen naar 1 server-pad (geen aparte dev/test/prod directories zoals admin-module/customer-portal wél hebben). Gevolg: elke commit triggerde 3 redundante deploys die in de concurrency queue stonden, cascading failures veroorzaakten, en ~66% onnodige GH Actions runs. admin-module + customer-portal behouden 3-branch triggers (hebben aparte deploy-paden). ProgramCard: event dagdeel-filtering + toerisme-relevantie (NON_TOURIST_EVENT_KEYWORDS, DAY_PART_HOUR_RANGES) + minimum 3 items. Calpe avond maxFood 1→3 (root cause: avondprogramma Food & Drinks dominant, maar maxFood=1 blokkeerde alles behalve 1 restaurant + schaarse non-food avond-POIs). CLAUDE.md v4.27.0. |
 | **7.75** | **21-03-2026** | **Command v16.0: Mobiele Homepage Quality — 14 Punten + Extra's COMPLEET. 503 API fix (adminPortal.js syntax error). Onboarding buttons conform template (rounded-xl, Inter font). Map category IDs fix (Beach,Nature→beaches). Profiel→login na onboarding. Leaflet z-index isolation (map overlap fix). ProgramCard time-of-day dynamisch (ochtend/middag/avond). 24h klok fix (nooit boven 23:30). Onboarding dismissed→sessionStorage. CTA→itinerary wizard direct. 1 platform-core + 6 hb-websites bestanden. 8/8 verificatie PASS. CLAUDE.md v4.15.0.** |
 | **7.74** | **20-03-2026** | **Fase VI-B Feedback: 7 Fixes COMPLEET. Inter font, Tip deep links, language params, WCAG, hamburger menu, CALPETRIP font, bottom nav SVGs. 6 bestanden. Commit 5d3bb00. CLAUDE.md v4.14.0.** |

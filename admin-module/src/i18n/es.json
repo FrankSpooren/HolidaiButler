@@ -1051,8 +1051,21 @@
       "weather_widget": "Widget de Clima",
       "banner": "Banner",
       "partners": "Socios",
-      "downloads": "Descargas"
+      "downloads": "Descargas",
+      "mobile_program": "Programa del día",
+      "mobile_tip": "Consejo del día",
+      "mobile_events": "Eventos de hoy",
+      "mobile_map": "Vista previa del mapa"
+    },
+    "categories": {
+      "Mobiel": "Móvil"
     }
+  },
+  "visibility": {
+    "label": "Visibilidad",
+    "all": "Todos los dispositivos",
+    "mobile": "Solo móvil",
+    "desktop": "Solo escritorio"
   },
   "navigation": {
     "title": "Navegación",

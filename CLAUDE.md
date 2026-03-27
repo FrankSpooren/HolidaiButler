@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.27.0
-> **Laatst bijgewerkt**: 26 maart 2026
+> **Versie**: 4.28.0
+> **Laatst bijgewerkt**: 27 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -172,7 +172,7 @@ Na evaluatie van Directus (database-first CMS), Payload CMS 3.0 (Next.js-native 
 - **Next.js 15**: SSR voor SEO + tenant-theming via CSS Custom Properties + aansluiting op bestaande React codebase
 - **Bestaande HB API**: dezelfde /api/v1/* endpoints, X-Destination-ID header scoping
 - **Admin Portal uitbreiden**: Branding Editor, Page Layout Editor, Navigation Editor
-- **Block-based page builder**: 20 blocks live, configureerbare layouts per pagina per tenant
+- **Block-based page builder**: 24 blocks live (incl. 4 mobile), configureerbare layouts per pagina per tenant
 - **Geautomatiseerde tenant onboarding**: nieuwe bestemming = configuratie in Admin Portal, geen development
 - **Wildcard DNS**: `*.holidaibutler.com` → automatische subdomain-based tenant detectie via middleware
 
@@ -671,6 +671,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.28.0** | **2026-03-27** | **Mobiele Page Builder Integratie — Architectuurproject**. Block Visibility Systeem: `visibility` property op BlockConfig (all/mobile/desktop). 4 nieuwe mobile block types: `mobile_program`, `mobile_tip`, `mobile_events`, `mobile_map` — thin wrappers rond bestaande ProgramCard/TipOfTheDay/TodayEvents/MapPreview. Hardcoded MobileHomepage verwijderd uit layout.tsx — homepage rendert nu blocks uit pages DB net als alle andere pagina's. page.tsx homepage special case verwijderd, visibility CSS classes (md:hidden / hidden md:block). Admin Portal: 4 block editors, categorie 'Mobiel' in BlockSelectorDialog (6 categorieën totaal), visibility SelectField in BlockEditorCard met visuele badges (📱/🖥️). SVG thumbnails voor alle 4 mobile blocks. i18n 4 talen (~20 nieuwe keys). Data migratie: Calpe home 7→11 blocks, Texel home 5→9 blocks, bestaande desktop blocks visibility='desktop', 4 nieuwe mobile blocks visibility='mobile'. Home pages status draft→published. 4 nieuwe + 8 gewijzigde bestanden hb-websites, 6 nieuwe + 5 gewijzigde bestanden admin-module. Block registry 22→26 types. CLAUDE.md v4.28.0. MS v7.88. |
 | **4.27.0** | **2026-03-26** | **CI/CD Optimalisatie + ProgramCard Fixes**. CI/CD: deploy-hb-websites.yml + deploy-platform-core.yml triggers gewijzigd van `branches: [dev, test, main]` naar `branches: [main]` — root cause voor 3x redundante deployments per commit (alle branches deployen naar zelfde server-pad). Scheelt ~66% GH Actions runs en voorkomt queue-backlog + cascading failures. Admin-module + customer-portal behouden dev/test/main triggers (hebben wél aparte deploy-paden per omgeving). ProgramCard fixes: (1) event dagdeel-filtering + toerisme-relevantie + minimum 3 items (commit 2cd6838), (2) Calpe avond maxFood 1→3 — root cause voor slechts 2 avondprogramma items (commit ee3cb74). CLAUDE.md v4.27.0. MS v7.87. |
 | **4.26.0** | **2026-03-26** | **Blok E Toekomstbestendig + SpeakerButton + A11y + Analytics Fix**. E1: Destination-aware verificatie — alle hardcoded hostname checks vervangen door centraal `getDestinationSlug()` in portal-url.ts. ProgramCard + CategoryBrowser gebruiken nu slug-based config lookup. Nieuwe bestemming = 1 mapping toevoegen. E2: SpeakerButton component (95 LOC) — Web Speech API TTS, 6 talen, 🔊 icoon bij elk assistant bericht. E3: Accessibility — Escape key sluit chatbot, `aria-live="polite"` op message list, 13 a11y attributen totaal. Blok D Personality modes teruggedraaid (wacht op gebruikersaccount + POI data-classificatie). Customer-portal SimpleAnalytics fix: `inline.js` + `auto-events.js` ontbraken op desktop calpetrip.com → heringezet. Customer-portal chatbot analytics: `sa_event` calls toegevoegd aan HoliBotContext (open, message) + MessageList (4 quick actions). HolidaiButler.com B2B corporate page hersteld (was overschreven door customer-portal deploy). CLAUDE.md v4.26.0. MS v7.86. |
 | **4.25.0** | **2026-03-25** | **Chatbot Feature Parity Blok A+B+C1+C2**. Blok A: CategoryBrowser component geport van customer-portal (3-level categorie hiërarchie, destination-aware Calpe/Texel whitelist, `/api/holibot/categories` proxy route). `__CATEGORY__` sentinel vervangt tekst-naar-AI. Blok B: Tip van de Dag null-safe fix + `__DIRECTIONS__` sentinel met lokaal "Naar welke bestemming?" antwoord (4 talen) i.p.v. AI call. Blok C1: ChatHeader geëxtraheerd als apart component (64 LOC). Blok C2: WelcomeScreen geëxtraheerd (88 LOC) — welcome animatie + quick action buttons. ProgramCard destination-specifieke dagdeel-configuratie (Calpe + Texel): stricte subcategorie whitelists per dagdeel, highlight POIs (Penyal d'Ifac, Vuurtoren etc.), max 1 food per ochtend/middag, diversiteitsregel max 1 per subcategorie, min rating 4.2, gesloten-POI filtering. PoiDetailDrawer "Volledig profiel" link → destination-aware `/pois/:id`. Onboarding scroll freeze (body position:fixed). Tessa "Hoi!" i.p.v. "Hola!". Reset button altijd zichtbaar. ChatbotWidget 1050→961 regels, 3 componenten geëxtraheerd. CLAUDE.md v4.25.0. MS v7.85. |
@@ -694,7 +695,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.87 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.88 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

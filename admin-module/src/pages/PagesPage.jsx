@@ -240,6 +240,13 @@ export default function PagesPage() {
     setEditPage({ ...editPage, layout: { ...editPage.layout, blocks } });
   };
 
+  const updateBlockVisibility = (idx, visibility) => {
+    if (!editPage) return;
+    const blocks = [...editPage.layout.blocks];
+    blocks[idx] = { ...blocks[idx], visibility };
+    setEditPage({ ...editPage, layout: { ...editPage.layout, blocks } });
+  };
+
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (!over || active.id === over.id || !editPage) return;
@@ -552,6 +559,7 @@ export default function PagesPage() {
                       index={idx}
                       onUpdate={newProps => updateBlockProps(idx, newProps)}
                       onStyleChange={newStyle => updateBlockStyle(idx, newStyle)}
+                      onVisibilityChange={vis => updateBlockVisibility(idx, vis)}
                       onRemove={() => removeBlock(idx)}
                       onDuplicate={() => duplicateBlock(idx)}
                     />

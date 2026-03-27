@@ -21,7 +21,11 @@ export type BlockType =
   | 'weather_widget'
   | 'banner'
   | 'partners'
-  | 'downloads';
+  | 'downloads'
+  | 'mobile_program'
+  | 'mobile_tip'
+  | 'mobile_events'
+  | 'mobile_map';
 
 export interface BlockStyle {
   backgroundColor?: string;
@@ -31,12 +35,15 @@ export interface BlockStyle {
   fullWidth?: boolean;
 }
 
+export type BlockVisibility = 'all' | 'mobile' | 'desktop';
+
 export interface BlockConfig {
   id: string;
   type: BlockType;
   props: Record<string, unknown>;
   style?: BlockStyle;
   featureFlag?: string;
+  visibility?: BlockVisibility;
 }
 
 export interface ButtonStyle {
@@ -231,6 +238,24 @@ export interface GalleryItem {
   thumbnailUrl?: string;
   alt?: string;
   caption?: string;
+}
+
+export interface MobileProgramProps {
+  programSize?: number;
+}
+
+export interface MobileTipProps {
+  // Self-contained — reads onboarding interests from localStorage
+}
+
+export interface MobileEventsProps {
+  destinationName?: string;
+  destinationSlug?: string;
+}
+
+export interface MobileMapProps {
+  poiLimit?: number;
+  mapLabel?: Record<string, string>;
 }
 
 export interface PageLayout {
