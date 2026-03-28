@@ -1,148 +1,180 @@
 /**
- * Website Traffic Collector
- * Parses Apache access logs to find top-visited pages per destination.
- * Converts popular page paths into trending keywords (source = 'website_analytics').
+ * Website Traffic Collector — SimpleAnalytics Integration
+ * Wekelijks (zondag 03:45): haalt top pagina's + events op via SimpleAnalytics API
+ * en slaat ze op als trending_data met source='website_traffic' of source='user_event'.
+ *
+ * @version 2.0.0 — Rewrite: Apache logs → SimpleAnalytics API
  */
 
-import { readFile } from 'fs/promises';
-import { existsSync } from 'fs';
+import { mysqlSequelize } from '../../../config/database.js';
+import logger from '../../../utils/logger.js';
 
-// Per-destination log files (Apache vhost logs on Hetzner)
-const DESTINATION_LOGS = {
-  1: [ // Calpe — holidaibutler.com
-    '/var/log/apache2/dev_nextjs_access.log',
-    '/var/log/apache2/dev_nextjs_access.log.1',
-    '/var/log/apache2/holidaibutler_access.log',
-    '/var/log/apache2/holidaibutler_access.log.1',
-  ],
-  2: [ // Texel — texelmaps.nl
-    '/var/log/apache2/dev.texelmaps.nl-access.log',
-    '/var/log/apache2/dev.texelmaps.nl-access.log.1',
-    '/var/log/apache2/texelmaps_access.log',
-    '/var/log/apache2/texelmaps_access.log.1',
-  ],
+const SA_API_KEY = process.env.SA_API_KEY || 'sa_api_key_tdOPtEz1nQqzPJIXbmS9PYB12KwcwGi4KQI2';
+const SA_USER_ID = process.env.SA_USER_ID || 'sa_user_id_45cbd1c2-58bb-44e3-ac9c-94797095b640';
+
+const DEST_DOMAINS = {
+  1: 'calpetrip.com',
+  2: 'texelmaps.nl',
 };
 
-// Apache combined log format regex
-const LOG_LINE_REGEX = /^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) (\S+) \S+" (\d+) \S+ "[^"]*" "([^"]*)"/;
+/**
+ * Collect website traffic + event data from SimpleAnalytics for a destination
+ */
+async function collect(destinationId) {
+  const domain = DEST_DOMAINS[destinationId];
+  if (!domain) {
+    logger.info(`[WebsiteTraffic] No domain mapped for destination ${destinationId}, skipping`);
+    return [];
+  }
 
-// Paths to exclude (assets, API calls, health checks, scanners)
-const EXCLUDED_PATTERNS = [
-  /^\/(api|_next|static|assets|favicon|robots|sitemap|sw\.js)/,
-  /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|map|webp|avif|php|xml|txt|json)$/i,
-  /^\/$/,  // Root (too generic)
-  /wp-|\.git|\.env|\.well-known|cgi-bin|phpmyadmin|xmlrpc/i,  // Scanner/attack paths
-  /\?.*rsc=/,  // Next.js RSC prefetch params
-  /manifest\.json/,
-];
+  const now = new Date();
+  const weekAgo = new Date(now - 7 * 86400000);
+  const startDate = weekAgo.toISOString().split('T')[0];
+  const endDate = now.toISOString().split('T')[0];
+  const weekNumber = getWeekNumber(now);
+  const year = now.getFullYear();
+  const trends = [];
 
-// User-agents to exclude (bots, health checks, crawlers)
-const BOT_PATTERNS = [
-  /axios/i, /curl/i, /python/i, /bot/i, /spider/i, /crawl/i,
-  /Googlebot/i, /bingbot/i, /Slurp/i, /DuckDuckBot/i, /Baiduspider/i,
-  /uptimerobot/i, /monitoring/i, /^-$/,
-];
+  try {
+    // 1. Fetch top pages
+    const pagesUrl = `https://simpleanalytics.com/${domain}.json?version=6&fields=pages&start=${startDate}&end=${endDate}`;
+    const pagesRes = await fetch(pagesUrl, {
+      headers: { 'Api-Key': SA_API_KEY, 'User-Id': SA_USER_ID },
+      signal: AbortSignal.timeout(15000),
+    });
+    const pagesData = await pagesRes.json();
+    const pages = (pagesData.pages || []).slice(0, 15);
 
-// Extract meaningful keyword from a URL path
-function pathToKeyword(path) {
-  if (/^\/poi\/\d+/.test(path)) return 'poi detail';
-  if (/^\/event\//.test(path)) return 'event detail';
+    if (pages.length > 0) {
+      const maxVisits = pages[0]?.pageviews || pages[0]?.visitors || 1;
+      for (const page of pages) {
+        const path = page.value || '/';
+        const visits = page.pageviews || page.visitors || 0;
+        if (visits < 2) continue;
 
-  const clean = path
-    .replace(/^\//, '')
-    .replace(/\/$/, '')
-    .replace(/[_-]/g, ' ')
-    .replace(/\d+/g, '')
-    .trim();
+        const keyword = pathToKeyword(path);
+        if (!keyword) continue;
 
-  if (!clean || clean.length < 3) return null;
-  return clean.substring(0, 100);
-}
-
-class WebsiteTrafficCollector {
-  /**
-   * Collect top pages from Apache access logs for a destination.
-   * @param {number} destinationId
-   * @returns {Array} Trend items
-   */
-  async collect(destinationId) {
-    const logPaths = DESTINATION_LOGS[destinationId];
-    if (!logPaths) {
-      console.log(`[WebsiteTraffic] No log paths configured for destination ${destinationId}`);
-      return [];
-    }
-
-    const pageCounts = {};
-    let totalLines = 0;
-    let validLines = 0;
-
-    for (const logPath of logPaths) {
-      if (!existsSync(logPath)) continue;
-
-      try {
-        const content = await readFile(logPath, 'utf8');
-        const lines = content.split('\n');
-
-        for (const line of lines) {
-          if (!line) continue;
-          totalLines++;
-
-          const match = line.match(LOG_LINE_REGEX);
-          if (!match) continue;
-
-          const [, , , method, reqPath, statusCode, userAgent] = match;
-
-          // Only successful GET requests
-          if (method !== 'GET' || Number(statusCode) >= 400) continue;
-
-          // Skip bots and health checks
-          if (BOT_PATTERNS.some(p => p.test(userAgent || ''))) continue;
-
-          // Strip query params for path matching
-          const cleanPath = reqPath.split('?')[0];
-
-          // Skip excluded paths
-          if (EXCLUDED_PATTERNS.some(p => p.test(reqPath))) continue;
-
-          const keyword = pathToKeyword(cleanPath);
-          if (!keyword) continue;
-
-          validLines++;
-          pageCounts[keyword] = (pageCounts[keyword] || 0) + 1;
-        }
-      } catch (err) {
-        console.warn(`[WebsiteTraffic] Failed to read ${logPath}:`, err.message);
+        const relevance = Math.max(3, Math.round((visits / maxVisits) * 10 * 10) / 10);
+        trends.push({
+          keyword: `website: ${keyword}`,
+          language: 'en',
+          source: 'website_analytics',
+          source_url: `https://${domain}${path}`,
+          search_volume: visits,
+          trend_direction: visits > maxVisits * 0.7 ? 'rising' : visits > maxVisits * 0.3 ? 'stable' : 'declining',
+          relevance_score: relevance,
+        });
       }
     }
 
-    if (totalLines === 0) {
-      console.log(`[WebsiteTraffic] No access log data found for destination ${destinationId}`);
-      return [];
+    // 2. Fetch events
+    const eventsUrl = `https://simpleanalytics.com/${domain}.json?version=6&fields=events&start=${startDate}&end=${endDate}`;
+    const eventsRes = await fetch(eventsUrl, {
+      headers: { 'Api-Key': SA_API_KEY, 'User-Id': SA_USER_ID },
+      signal: AbortSignal.timeout(15000),
+    });
+    const eventsData = await eventsRes.json();
+    const events = (eventsData.events || []).slice(0, 20);
+
+    if (events.length > 0) {
+      const maxCount = events[0]?.total || events[0]?.visitors || 1;
+      for (const event of events) {
+        const eventName = event.value || '';
+        const count = event.total || event.visitors || 0;
+        if (count < 2 || !eventName) continue;
+        if (['scroll_to_top_mobile', 'scroll_to_top_desktop'].includes(eventName)) continue;
+
+        const keyword = eventToKeyword(eventName);
+        if (!keyword) continue;
+
+        const relevance = Math.max(2, Math.round((count / maxCount) * 10 * 10) / 10);
+        trends.push({
+          keyword: `event: ${keyword}`,
+          language: 'en',
+          source: 'user_event',
+          search_volume: count,
+          trend_direction: 'stable',
+          relevance_score: relevance,
+        });
+      }
     }
 
-    // Sort by count, take top 15
-    const sorted = Object.entries(pageCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 15);
-
-    if (sorted.length === 0) {
-      console.log(`[WebsiteTraffic] ${totalLines} lines parsed, ${validLines} valid, but no page keywords extracted for destination ${destinationId}`);
-      return [];
+    // 3. Save to trending_data
+    for (const t of trends) {
+      try {
+        const [[existing]] = await mysqlSequelize.query(
+          'SELECT id FROM trending_data WHERE destination_id = :destId AND keyword = :kw AND week_number = :week AND year = :year AND source = :source',
+          { replacements: { destId: destinationId, kw: t.keyword, week: weekNumber, year, source: t.source } }
+        );
+        if (existing) {
+          await mysqlSequelize.query(
+            'UPDATE trending_data SET relevance_score = :rel, search_volume = :vol, updated_at = NOW() WHERE id = :id',
+            { replacements: { rel: t.relevance_score, vol: t.search_volume, id: existing.id } }
+          );
+        } else {
+          await mysqlSequelize.query(
+            `INSERT INTO trending_data (destination_id, keyword, relevance_score, search_volume, trend_direction, source, source_url, week_number, year, language, created_at)
+             VALUES (:destId, :kw, :rel, :vol, :dir, :source, :url, :week, :year, :lang, NOW())`,
+            { replacements: { destId: destinationId, kw: t.keyword, rel: t.relevance_score, vol: t.search_volume, dir: t.trend_direction, source: t.source, url: t.source_url || null, week: weekNumber, year, lang: t.language } }
+          );
+        }
+      } catch (saveErr) {
+        logger.warn(`[WebsiteTraffic] Save failed for "${t.keyword}":`, saveErr.message);
+      }
     }
 
-    const maxCount = sorted[0][1];
-    const trends = sorted.map(([keyword, count]) => ({
-      keyword: `website: ${keyword}`,
-      language: 'en',
-      source: 'website_analytics',
-      search_volume: count,
-      trend_direction: count > maxCount * 0.7 ? 'rising' : count > maxCount * 0.3 ? 'stable' : 'declining',
-    }));
-
-    console.log(`[WebsiteTraffic] Parsed ${totalLines} lines (${validLines} valid), ${trends.length} top pages for destination ${destinationId}`);
-    return trends;
+    logger.info(`[WebsiteTraffic] ${domain}: ${trends.length} trends saved (${pages.length} pages, ${events.length} events)`);
+  } catch (error) {
+    logger.error(`[WebsiteTraffic] Error for destination ${destinationId} (${domain}):`, error.message);
   }
+
+  return trends;
 }
 
-const websiteTrafficCollector = new WebsiteTrafficCollector();
+function pathToKeyword(path) {
+  if (path === '/') return 'Homepage';
+  if (path === '/pois') return 'POI Overzicht';
+  if (path === '/agenda') return 'Evenementen';
+  if (path === '/login') return 'Login';
+  if (path === '/about') return 'Over ons';
+  if (path === '/contact') return 'Contact';
+  if (path === '/explore') return 'Ontdekken';
+  if (path === '/restaurants') return 'Restaurants';
+  if (path.startsWith('/poi/')) return `POI Detail (${path.replace('/poi/', '')})`;
+  if (path.startsWith('/event/')) return `Event Detail (${path.replace('/event/', '')})`;
+  const clean = path.replace(/^\//, '').replace(/\//g, ' > ').replace(/-/g, ' ');
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
+function eventToKeyword(name) {
+  const map = {
+    'chatbot_opened_mobile': 'Chatbot geopend (mobiel)',
+    'chatbot_opened_desktop': 'Chatbot geopend (desktop)',
+    'chatbot_message_mobile': 'Chatbot bericht (mobiel)',
+    'chatbot_message_desktop': 'Chatbot bericht (desktop)',
+    'poi_detail_opened_mobile': 'POI detail bekeken (mobiel)',
+    'poi_detail_opened_desktop': 'POI detail bekeken (desktop)',
+    'event_detail_opened_mobile': 'Event detail bekeken (mobiel)',
+    'event_detail_opened_desktop': 'Event detail bekeken (desktop)',
+    'search_used_mobile': 'Zoekfunctie (mobiel)',
+    'search_used_desktop': 'Zoekfunctie (desktop)',
+    'language_changed_mobile': 'Taal gewisseld (mobiel)',
+    'language_changed_desktop': 'Taal gewisseld (desktop)',
+    'wcag_modal_opened_mobile': 'Toegankelijkheid (mobiel)',
+    'wcag_modal_opened_desktop': 'Toegankelijkheid (desktop)',
+  };
+  if (name in map) return map[name];
+  return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+const websiteTrafficCollector = { collect };
 export default websiteTrafficCollector;

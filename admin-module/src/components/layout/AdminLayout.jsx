@@ -1,14 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Box, Drawer, useMediaQuery, useTheme } from '@mui/material';
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import { SIDEBAR_STYLES } from '../../theme.js';
+import useAuthStore from '../../stores/authStore.js';
+import AdminOnboardingGuide from '../onboarding/AdminOnboardingGuide.jsx';
 
 export default function AdminLayout() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const user = useAuthStore(s => s.user);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Show onboarding guide for users who haven't completed it
+  useEffect(() => {
+    if (user && user.onboardingCompleted === false && user.role !== 'platform_admin') {
+      setShowOnboarding(true);
+    }
+  }, [user]);
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -37,6 +48,12 @@ export default function AdminLayout() {
           <Outlet />
         </Box>
       </Box>
+
+      {/* Onboarding guide for new users */}
+      <AdminOnboardingGuide
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+      />
     </Box>
   );
 }

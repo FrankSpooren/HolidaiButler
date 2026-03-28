@@ -726,7 +726,16 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
       { replacements: [user.id, refreshToken] }
     ).catch(err => logger.warn('[AdminPortal] Session store skipped (non-critical):', err.message));
 
-    logger.info(`[AdminPortal] Admin login: ${email} (source: ${userSource})`);
+    // Check onboarding status
+    let onboardingCompleted = true;
+    if (userSource === 'admin_users') {
+      try {
+        const [[ob]] = await mysqlSequelize.query('SELECT onboarding_completed FROM admin_users WHERE id = :id', { replacements: { id: user.id } });
+        onboardingCompleted = !!ob?.onboarding_completed;
+      } catch { /* default true */ }
+    }
+
+    logger.info(`[AdminPortal] Admin login: ${email} (source: ${userSource}, onboarding: ${onboardingCompleted})`);
 
     res.json({
       success: true,
@@ -737,7 +746,8 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
           name: user.name,
           role: user.role,
           allowed_destinations: user.allowed_destinations,
-          permissions: ROLE_PERMISSIONS[user.role] || ROLE_PERMISSIONS.reviewer
+          permissions: ROLE_PERMISSIONS[user.role] || ROLE_PERMISSIONS.reviewer,
+          onboardingCompleted
         },
         accessToken,
         refreshToken
@@ -890,6 +900,13 @@ router.post('/auth/logout', adminAuth('reviewer'), async (req, res) => {
 router.get('/auth/me', adminAuth('reviewer'), async (req, res) => {
   try {
     // adminAuth already verified and populated req.adminUser
+    // Fetch onboarding status from DB
+    let onboardingCompleted = true;
+    try {
+      const [[ob]] = await mysqlSequelize.query('SELECT onboarding_completed FROM admin_users WHERE id = :id', { replacements: { id: req.adminUser.id } });
+      if (ob) onboardingCompleted = !!ob.onboarding_completed;
+    } catch { /* default true */ }
+
     res.json({
       success: true,
       data: {
@@ -901,7 +918,8 @@ router.get('/auth/me', adminAuth('reviewer'), async (req, res) => {
         role: req.adminUser.role,
         allowed_destinations: req.adminUser.allowed_destinations,
         owned_pois: req.adminUser.owned_pois,
-        permissions: req.adminUser.permissions
+        permissions: req.adminUser.permissions,
+        onboardingCompleted
       }
     });
   } catch (error) {
@@ -12073,6 +12091,7 @@ router.post('/content/items/:id/share-to-destination', adminAuth('editor'), writ
       destinationId: Number(destination_id),
       contentType: sourceItem.content_type,
       platform: sourceItem.target_platform,
+      personaId: null, // Uses target destination's brand context + tone automatically
     });
 
     // Save as new item in target destination
@@ -12099,7 +12118,21 @@ router.post('/content/items/:id/share-to-destination', adminAuth('editor'), writ
       }
     );
 
-    res.json({ success: true, data: { id: insertResult, source_id: Number(id), destination_id: Number(destination_id), ...result } });
+    // Copy images if source has them — try target destination's images first, fallback to source
+    const newItemId = insertResult;
+    try {
+      const { selectImages } = await import('../services/agents/contentRedacteur/imageSelector.js');
+      const contentObj = { title: result.title, body_en: result.body_en, destination_id: Number(destination_id), content_type: sourceItem.content_type, target_platform: sourceItem.target_platform };
+      const images = await selectImages(contentObj, Number(destination_id));
+      if (images.length > 0) {
+        const maxImgs = sourceItem.content_type === 'social_post' ? 1 : 3;
+        const mediaIds = images.slice(0, maxImgs).map(img => img.source === 'poi' ? `poi:${img.id}` : img.id);
+        await mysqlSequelize.query('UPDATE content_items SET media_ids = :m WHERE id = :id', { replacements: { m: JSON.stringify(mediaIds), id: newItemId } });
+      }
+    } catch { /* non-blocking */ }
+
+    logger.info(`[AdminPortal] Content shared: item ${id} → destination ${destination_id}, new item ${newItemId}`);
+    res.json({ success: true, data: { id: newItemId, source_id: Number(id), destination_id: Number(destination_id), title: result.title } });
   } catch (error) {
     logger.error('[AdminPortal] Content share error:', error);
     res.status(500).json({ success: false, error: { code: 'SHARE_ERROR', message: error.message } });
@@ -13946,6 +13979,100 @@ router.get('/content/items/:id/brand-score', adminAuth('editor'), async (req, re
   } catch (error) {
     logger.error('[AdminPortal] Brand score error:', error);
     res.status(500).json({ success: false, error: { code: 'BRAND_SCORE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /auth/onboarding-complete — Mark admin user's onboarding as completed
+ */
+router.post('/auth/onboarding-complete', adminAuth('reviewer'), async (req, res) => {
+  try {
+    await mysqlSequelize.query(
+      'UPDATE admin_users SET onboarding_completed = TRUE WHERE id = :id',
+      { replacements: { id: req.adminUser.id } }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Onboarding complete error:', error);
+    res.status(500).json({ success: false, error: { code: 'ONBOARDING_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/brand-check — Real-time brand voice consistency check
+ * Body: { text, destination_id }
+ * Returns score 0-100 + feedback without needing a saved content item
+ */
+router.post('/content/brand-check', adminAuth('editor'), async (req, res) => {
+  try {
+    const { text, destination_id } = req.body;
+    if (!text || !destination_id) return res.status(400).json({ success: false, error: { code: 'MISSING_PARAMS', message: 'text and destination_id required' } });
+
+    const { getTone } = await import('../services/agents/contentRedacteur/toneOfVoice.js');
+    const tone = await getTone(Number(destination_id));
+    const bodyLower = text.toLowerCase();
+
+    let score = 70;
+    const feedback = [];
+
+    // Personality match
+    if (tone.personality) {
+      const words = tone.personality.toLowerCase().split(/[,;\s]+/).filter(w => w.length > 3);
+      const matched = words.filter(w => bodyLower.includes(w)).length;
+      const pct = words.length > 0 ? matched / words.length : 0;
+      score += Math.round(pct * 10);
+      if (pct < 0.3 && words.length > 0) feedback.push('Voeg meer woorden toe die passen bij de merkpersoonlijkheid');
+    }
+
+    // Core keywords
+    if (tone.coreKeywords) {
+      const kws = (Array.isArray(tone.coreKeywords) ? tone.coreKeywords : tone.coreKeywords.split(/[,;]+/)).map(k => k.trim().toLowerCase()).filter(Boolean);
+      const found = kws.filter(k => bodyLower.includes(k));
+      score += Math.min(10, found.length * 3);
+      if (found.length === 0 && kws.length > 0) feedback.push('Geen kernwoorden van het merk gevonden');
+    }
+
+    // Brand values
+    if (tone.brandValues) {
+      const vals = (Array.isArray(tone.brandValues) ? tone.brandValues : tone.brandValues.split(/[,;]+/)).map(v => v.trim().toLowerCase()).filter(Boolean);
+      const found = vals.filter(v => bodyLower.includes(v));
+      score += Math.min(5, found.length * 2);
+    }
+
+    // Adjectives
+    if (tone.adjectives) {
+      const adjs = (Array.isArray(tone.adjectives) ? tone.adjectives : tone.adjectives.split(/[,;]+/)).map(a => a.trim().toLowerCase()).filter(Boolean);
+      const found = adjs.filter(a => bodyLower.includes(a));
+      score += Math.min(5, found.length * 2);
+      if (found.length > 0) feedback.push(`Merkadjectieven gevonden: ${found.join(', ')}`);
+    }
+
+    // Avoid words (penalty)
+    if (tone.avoidWords) {
+      const avoids = (Array.isArray(tone.avoidWords) ? tone.avoidWords : tone.avoidWords.split(/[,;]+/)).map(w => w.trim().toLowerCase()).filter(Boolean);
+      const violations = avoids.filter(w => bodyLower.includes(w));
+      score -= violations.length * 5;
+      if (violations.length > 0) feedback.push(`Vermijd: ${violations.join(', ')}`);
+    }
+
+    // Formal address check
+    if (tone.formalAddress === 'u' && bodyLower.match(/\bje\b|\bjij\b|\bjouw\b/)) {
+      score -= 5;
+      feedback.push('Formele aanspreekstijl (u) ingesteld, maar informele vormen (je/jij) gevonden');
+    } else if (tone.formalAddress === 'je' && bodyLower.match(/\bu\b|\buw\b/) && !bodyLower.match(/\buw\s/)) {
+      score -= 3;
+      feedback.push('Informele aanspreekstijl (je) ingesteld, maar formele vormen (u) gevonden');
+    }
+
+    score = Math.max(0, Math.min(100, score));
+    const grade = score >= 80 ? 'Excellent' : score >= 60 ? 'Goed' : score >= 40 ? 'Matig' : 'Zwak';
+
+    if (score >= 80 && feedback.length === 0) feedback.push('Content is consistent met de merkstem');
+
+    res.json({ success: true, data: { brand_score: score, grade, feedback } });
+  } catch (error) {
+    logger.error('[AdminPortal] Brand check error:', error);
+    res.status(500).json({ success: false, error: { code: 'BRAND_CHECK_ERROR', message: error.message } });
   }
 });
 

@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.28.0
+> **Versie**: 4.29.0
 > **Laatst bijgewerkt**: 27 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -482,10 +482,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.38.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.39.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (6 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 241 admin endpoints (+1: DELETE trending keyword)
+- **Endpoints**: 244 admin endpoints (+3: brand-check, onboarding-complete, feature-flags)
 
 ### RBAC Rollen (6 rollen, hiërarchie 100→30)
 | Rol | Level | Scope | Rechten |
@@ -671,6 +671,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.29.0** | **2026-03-27** | **Finale Kwaliteitsbeoordeling — 8 opdrachten COMPLEET**. Verificaties: (1) End-to-end publish flow PASS (generate→schedule→kalender→publisher jobs), (2) Differentiators PASS (campagne 4 items, auto-schedule, auto-fill), (3) Per-platform Social Score PASS (7 scores: IG:72/FB:42/LI:66/X:35/TikTok:46/Pinterest:63/YT:35). Implementaties: (4) SimpleAnalytics als trending bron (website_analytics + user_event, vervangt lege Apache logs), (5) Multi-destination content delen (share→tone aanpassing→Texel "duinen"/"Waddenzee" bewezen), (6) Brand Voice real-time check (POST /brand-check, debounced 1.5s, groen/geel/rood badge, on-brand:81 vs off-brand:50), (7) Onboarding UX gids (4-stappen Stepper dialog, onboarding_completed DB kolom, /auth/onboarding-complete endpoint, AdminOnboardingGuide component). 244 endpoints. adminPortal.js v3.39.0. MS v7.89. |
 | **4.28.0** | **2026-03-27** | **Mobiele Page Builder Integratie + Desktop Redesign + Routing**. (A) Block Visibility Systeem: `visibility` property op BlockConfig (all/mobile/desktop), CSS classes md:hidden / hidden md:block. 4 nieuwe mobile block types: `mobile_program`, `mobile_tip`, `mobile_events`, `mobile_map`. Hardcoded MobileHomepage verwijderd uit layout.tsx. page.tsx homepage special case verwijderd. (B) Desktop homepage redesign: hero compact + poi_grid + event_calendar grid + map + cta (actiegericht, chatbot CTA's). Oude static content blocks (rich_text, chatbot_widget, weather_widget, social_feed) verwijderd. (C) Apache routing: calpetrip.com vhost herschreven — ALLE traffic (desktop + mobiel) naar Next.js port 3002. Geen Vite SPA meer voor calpetrip.com homepage. holidaibutler.com B2B corporate page hersteld. (D) Admin Portal: 4 block editors, categorie 'Mobiel' in BlockSelectorDialog, visibility SelectField in BlockEditorCard met badges. i18n 4 talen. (E) Alle Calpe + Texel pages status draft→published. Calpe home 9 blocks (5 desktop + 4 mobile), Texel home 9 blocks. Block registry 22→26. CLAUDE.md v4.28.0. MS v7.88. |
 | **4.27.0** | **2026-03-26** | **CI/CD Optimalisatie + ProgramCard Fixes**. CI/CD: deploy-hb-websites.yml + deploy-platform-core.yml triggers gewijzigd van `branches: [dev, test, main]` naar `branches: [main]` — root cause voor 3x redundante deployments per commit (alle branches deployen naar zelfde server-pad). Scheelt ~66% GH Actions runs en voorkomt queue-backlog + cascading failures. Admin-module + customer-portal behouden dev/test/main triggers (hebben wél aparte deploy-paden per omgeving). ProgramCard fixes: (1) event dagdeel-filtering + toerisme-relevantie + minimum 3 items (commit 2cd6838), (2) Calpe avond maxFood 1→3 — root cause voor slechts 2 avondprogramma items (commit ee3cb74). CLAUDE.md v4.27.0. MS v7.87. |
 | **4.26.0** | **2026-03-26** | **Blok E Toekomstbestendig + SpeakerButton + A11y + Analytics Fix**. E1: Destination-aware verificatie — alle hardcoded hostname checks vervangen door centraal `getDestinationSlug()` in portal-url.ts. ProgramCard + CategoryBrowser gebruiken nu slug-based config lookup. Nieuwe bestemming = 1 mapping toevoegen. E2: SpeakerButton component (95 LOC) — Web Speech API TTS, 6 talen, 🔊 icoon bij elk assistant bericht. E3: Accessibility — Escape key sluit chatbot, `aria-live="polite"` op message list, 13 a11y attributen totaal. Blok D Personality modes teruggedraaid (wacht op gebruikersaccount + POI data-classificatie). Customer-portal SimpleAnalytics fix: `inline.js` + `auto-events.js` ontbraken op desktop calpetrip.com → heringezet. Customer-portal chatbot analytics: `sa_event` calls toegevoegd aan HoliBotContext (open, message) + MessageList (4 quick actions). HolidaiButler.com B2B corporate page hersteld (was overschreven door customer-portal deploy). CLAUDE.md v4.26.0. MS v7.86. |
@@ -695,7 +696,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.88 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.89 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
