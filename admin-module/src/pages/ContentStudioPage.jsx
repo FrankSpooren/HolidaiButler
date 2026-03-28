@@ -1095,9 +1095,10 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [scheduleDatetime, setScheduleDatetime] = useState('');
-  // Brand score state (9.10)
+  // Brand score state (9.10) — live real-time check
   const [brandScore, setBrandScore] = useState(null);
   const [brandScoreLoading, setBrandScoreLoading] = useState(false);
+  const brandCheckTimer = useRef(null);
   // Share to destination state (9.12)
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareDestId, setShareDestId] = useState('');
@@ -1121,6 +1122,21 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
       setLangTab(defaultLanguage);
     }).finally(() => setLoading(false));
   }, [itemId, open]);
+
+  // Live brand voice check — debounced 1500ms after body edit
+  useEffect(() => {
+    if (!editBody || editBody.length < 20 || !item?.destination_id) return;
+    if (brandCheckTimer.current) clearTimeout(brandCheckTimer.current);
+    brandCheckTimer.current = setTimeout(async () => {
+      setBrandScoreLoading(true);
+      try {
+        const r = await contentService.brandCheck({ text: editBody, destination_id: item.destination_id });
+        setBrandScore(r.data || null);
+      } catch { /* silent */ }
+      finally { setBrandScoreLoading(false); }
+    }, 1500);
+    return () => { if (brandCheckTimer.current) clearTimeout(brandCheckTimer.current); };
+  }, [editBody, item?.destination_id]);
 
   const loadSeo = async (platformOverride) => {
     if (!itemId) return;
@@ -1414,6 +1430,21 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
                 variant="outlined"
                 sx={{ fontFamily: 'monospace', mb: 0.5 }}
               />
+              {/* Brand Voice Score — live indicator */}
+              {brandScore && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                  <Tooltip title={brandScore.feedback?.join(' | ') || brandScore.grade}>
+                    <Chip
+                      label={`Brand ${brandScore.brand_score}`}
+                      size="small"
+                      color={brandScore.brand_score >= 80 ? 'success' : brandScore.brand_score >= 60 ? 'warning' : 'error'}
+                      sx={{ fontWeight: 600, fontSize: 11 }}
+                    />
+                  </Tooltip>
+                  {brandScoreLoading && <CircularProgress size={14} />}
+                  <Typography variant="caption" color="text.secondary">{brandScore.grade}</Typography>
+                </Box>
+              )}
               {/* Character counter with platform limit */}
               {(() => {
                 const platformLimits = { facebook: 500, instagram: 2200, linkedin: 3000, x: 280, tiktok: 150, youtube: 5000, pinterest: 500, website: 50000 };

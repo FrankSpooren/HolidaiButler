@@ -254,6 +254,10 @@ const contentService = {
     return client.get(`/content/items/${itemId}/brand-score`).then(r => r.data);
   },
 
+  brandCheck(data) {
+    return client.post('/content/brand-check', data).then(r => r.data);
+  },
+
   repurposeItem(id, targetPlatforms) {
     return client.post(`/content/items/${id}/repurpose`, { target_platforms: targetPlatforms }, { timeout: 120000 }).then(r => r.data);
   },

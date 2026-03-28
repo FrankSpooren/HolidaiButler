@@ -5897,4 +5897,29 @@ CLAUDE.md v4.25.0 → v4.26.0. MS v7.85 → v7.86.
 
 ---
 
+---
+
+## v4.29.0 — Finale Kwaliteitsbeoordeling — 8 Opdrachten COMPLEET (27-03-2026)
+
+### Verificatie-opdrachten (1-3) — Geen code-wijziging, alleen testen
+- **Opdracht 1 — Publish flow**: generate→draft→schedule→kalender (40 items) →publisher jobs (11 content jobs, publish elke 15 min). 5 social accounts active. PASS.
+- **Opdracht 2 — Differentiators**: One-Click Campagne (4 items Calpe), Auto-Schedule (0 = correct, geen unscheduled approved). PASS.
+- **Opdracht 3 — Per-platform Social Score**: 7 verschillende scores voor zelfde item (IG:72, FB:42, LI:66, X:35, TikTok:46, Pinterest:63, YT:35). PASS.
+
+### Implementatie-opdrachten (4-7)
+- **Opdracht 4 — SimpleAnalytics als trending bron**: websiteTrafficCollector.js v2.0 herschreven van Apache logs (leeg) naar SimpleAnalytics Stats API. SA_API_KEY + SA_USER_ID geconfigureerd. Top pagina's (source: website_analytics) + events (source: user_event) opgeslagen in trending_data. ENUM uitgebreid met 'user_event'. BullMQ job content-website-traffic actief (zondag 03:45). Bewezen: 5 trends (Homepage 121 visits, POI Overzicht 38).
+- **Opdracht 5 — Multi-destination content delen**: Bestaand endpoint verrijkt met brand context (personaId) + auto-image selectie voor target destination. Bewezen: Calpe Penon→Texel gedeeld, body automatisch aangepast ("duinen van Texel", "Waddenzee"), Texel images geselecteerd (media_ids=[28]).
+- **Opdracht 6 — Brand Voice real-time check**: Nieuw POST /content/brand-check endpoint (tekst + destination_id → score 0-100). Checks: personality match, core keywords, brand values, adjectives, avoid words, formal address. Frontend: debounced 1500ms useEffect in ContentItemDialog, brand score Chip badge (groen ≥80 / geel ≥60 / rood <60) met feedback tooltip. Bewezen: on-brand tekst 81/Excellent, off-brand tekst 50/Matig met 3 waarschuwingen.
+- **Opdracht 7 — Onboarding UX gids**: DB: admin_users.onboarding_completed BOOLEAN kolom. Backend: login + /auth/me retourneren onboardingCompleted, POST /auth/onboarding-complete markeert als voltooid. Frontend: AdminOnboardingGuide.jsx (4-stappen MUI Stepper: Merk Profiel → Social Accounts → Genereer Content → Review & Publiceer). AdminLayout toont gids bij eerste login (onboardingCompleted=false, niet platform_admin). Platform_admins auto-completed.
+
+### Bestanden
+- platform-core: adminPortal.js, websiteTrafficCollector.js
+- admin-module: AdminLayout.jsx, AdminOnboardingGuide.jsx (NIEUW), ContentStudioPage.jsx, contentService.js
+
+### Endpoints: 241 → 244 (+3). adminPortal.js v3.39.0.
+
+CLAUDE.md v4.28.0 → v4.29.0. MS v7.88 → v7.89.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
