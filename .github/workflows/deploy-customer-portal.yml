@@ -58,13 +58,13 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.destination }}" != "all" ]; then
             DEST="${{ github.event.inputs.destination }}"
             if [ "$DEST" = "calpe" ]; then
-              MATRIX='{"include":[{"destination":"calpe","domain_prod":"holidaibutler.com","domain_test":"test.holidaibutler.com","domain_dev":"dev.holidaibutler.com","deploy_path_prod":"/var/www/holidaibutler.com","deploy_path_test":"/var/www/test.holidaibutler.com","deploy_path_dev":"/var/www/dev.holidaibutler.com","map_lat":"38.6447","map_lng":"0.0410","default_lang":"nl"}]}'
+              MATRIX='{"include":[{"destination":"calpe","domain_prod":"calpetrip.com","domain_test":"test.calpetrip.com","domain_dev":"dev.holidaibutler.com","deploy_path_prod":"/var/www/calpetrip.com","deploy_path_test":"/var/www/test.calpetrip.com","deploy_path_dev":"/var/www/dev.holidaibutler.com","map_lat":"38.6447","map_lng":"0.0410","default_lang":"nl"}]}'
             else
               MATRIX='{"include":[{"destination":"texel","domain_prod":"texelmaps.nl","domain_test":"test.texelmaps.nl","domain_dev":"dev.texelmaps.nl","deploy_path_prod":"/var/www/destinations/texel/customer-portal","deploy_path_test":"/var/www/destinations/texel/test","deploy_path_dev":"/var/www/destinations/texel/dev","map_lat":"53.0548","map_lng":"4.7975","default_lang":"nl"}]}'
             fi
           else
             # Deploy all active destinations
-            MATRIX='{"include":[{"destination":"calpe","domain_prod":"holidaibutler.com","domain_test":"test.holidaibutler.com","domain_dev":"dev.holidaibutler.com","deploy_path_prod":"/var/www/holidaibutler.com","deploy_path_test":"/var/www/test.holidaibutler.com","deploy_path_dev":"/var/www/dev.holidaibutler.com","map_lat":"38.6447","map_lng":"0.0410","default_lang":"nl"},{"destination":"texel","domain_prod":"texelmaps.nl","domain_test":"test.texelmaps.nl","domain_dev":"dev.texelmaps.nl","deploy_path_prod":"/var/www/destinations/texel/customer-portal","deploy_path_test":"/var/www/destinations/texel/test","deploy_path_dev":"/var/www/destinations/texel/dev","map_lat":"53.0548","map_lng":"4.7975","default_lang":"nl"}]}'
+            MATRIX='{"include":[{"destination":"calpe","domain_prod":"calpetrip.com","domain_test":"test.calpetrip.com","domain_dev":"dev.holidaibutler.com","deploy_path_prod":"/var/www/calpetrip.com","deploy_path_test":"/var/www/test.calpetrip.com","deploy_path_dev":"/var/www/dev.holidaibutler.com","map_lat":"38.6447","map_lng":"0.0410","default_lang":"nl"},{"destination":"texel","domain_prod":"texelmaps.nl","domain_test":"test.texelmaps.nl","domain_dev":"dev.texelmaps.nl","deploy_path_prod":"/var/www/destinations/texel/customer-portal","deploy_path_test":"/var/www/destinations/texel/test","deploy_path_dev":"/var/www/destinations/texel/dev","map_lat":"53.0548","map_lng":"4.7975","default_lang":"nl"}]}'
           fi
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
