@@ -13,8 +13,8 @@ const BRAND_NAMES: Record<string, string> = {
 
 /* ── Mobile homepage URL per destination ── */
 const MOBILE_HOME: Record<string, string> = {
-  calpe: 'https://dev.holidaibutler.com',
-  texel: 'https://dev.texelmaps.nl',
+  calpe: 'https://calpetrip.com',
+  texel: 'https://texelmaps.nl',
 };
 
 export function Header() {
