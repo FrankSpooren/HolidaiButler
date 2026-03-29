@@ -13,15 +13,22 @@ const pageTemplates = [
   },
   {
     id: 'homepage',
-    label: 'Homepage',
-    description: 'Hero, POI grid, events, and newsletter signup',
+    label: 'Homepage (desktop + mobile)',
+    description: 'Volledige homepage: hero met chatbot, programma+tip, events, categorieën, kaart, POIs, CTA + 4 mobiele blokken',
     icon: 'Home',
     layout: {
       blocks: [
-        { id: 'hero-1', type: 'hero', props: { headline: { en: 'Welcome to [Destination]', nl: 'Welkom bij [Bestemming]' }, description: { en: 'Discover the best local experiences', nl: 'Ontdek de beste lokale ervaringen' }, buttons: [{ label: { en: 'Explore', nl: 'Ontdek' }, url: '/explore', variant: 'primary' }] } },
-        { id: 'poi-grid-1', type: 'poi_grid', props: { limit: 6, columns: 3, showRating: true, showCategory: true } },
-        { id: 'event-cal-1', type: 'event_calendar', props: { limit: 4, layout: 'grid' } },
-        { id: 'newsletter-1', type: 'newsletter', props: { headline: { en: 'Stay updated', nl: 'Blijf op de hoogte' }, description: { en: 'Subscribe to our newsletter', nl: 'Schrijf je in voor onze nieuwsbrief' } } }
+        { id: 'desktop-hero-1', type: 'desktop_hero', visibility: 'desktop', props: { greeting: { en: 'Welcome!', nl: 'Welkom!' }, subtitle: { en: 'Discover everything with your personal AI travel assistant', nl: 'Ontdek alles met je persoonlijke AI-reisassistent' } } },
+        { id: 'desktop-program-1', type: 'desktop_program_tip', visibility: 'desktop', props: { programSize: 4 } },
+        { id: 'desktop-events-1', type: 'desktop_events', visibility: 'desktop', props: { limit: 6 }, style: { backgroundColor: '#f8f9fa', paddingY: 'small' } },
+        { id: 'desktop-cats-1', type: 'category_grid', visibility: 'desktop', props: {} },
+        { id: 'desktop-map-1', type: 'map', visibility: 'desktop', props: { overlayLabel: 'Ontdek alle locaties' }, style: { paddingY: 'medium' } },
+        { id: 'desktop-pois-1', type: 'poi_grid', visibility: 'desktop', props: { limit: 6, columns: 3, title: 'Populair' }, style: { paddingY: 'medium' } },
+        { id: 'desktop-cta-1', type: 'cta', visibility: 'desktop', props: { headline: { en: 'Ready to explore?', nl: 'Klaar om te ontdekken?' }, description: { en: 'Let our AI assistant plan your perfect day', nl: 'Laat onze AI-assistent je perfecte dag plannen' }, backgroundStyle: 'primary', buttons: [{ label: 'Start Planning', variant: 'chatbot', chatbotAction: 'itinerary' }] } },
+        { id: 'mobile-program-1', type: 'mobile_program', visibility: 'mobile', props: { programSize: 4 } },
+        { id: 'mobile-tip-1', type: 'mobile_tip', visibility: 'mobile', props: {} },
+        { id: 'mobile-events-1', type: 'mobile_events', visibility: 'mobile', props: {} },
+        { id: 'mobile-map-1', type: 'mobile_map', visibility: 'mobile', props: { poiLimit: 8 } }
       ]
     }
   },

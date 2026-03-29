@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 27 maart 2026
-**Versie**: 7.89
+**Datum**: 29 maart 2026
+**Versie**: 7.90
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Content Studio Finale Kwaliteitsbeoordeling COMPLEET** (8 opdrachten: 3 verificaties PASS, 4 implementaties, 1 doc-sync). SimpleAnalytics trending bron live. Multi-destination content delen bewezen (Calpe→Texel auto-tone). Brand Voice real-time check (debounced badge). Onboarding UX gids (4-stappen). 244 endpoints. CLAUDE.md v4.29.0. MS v7.89.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Fase VI-C Desktop Homepage Redesign (Texel)**: DesktopHero chatbot-input, 2-kolom Programma+Tip, 3-kolom events, categorie grid, kaart 20 POIs round-robin, "Populair op Texel" POI grid. Block registry 26→35. Page Builder Homepage template (11 blocks). Calpe ongewijzigd (afspraak). 244 endpoints. CLAUDE.md v4.30.0. MS v7.90.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1629,6 +1629,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **7.90** | **29-03-2026** | **Fase VI-C: Desktop Homepage Redesign (Texel testomgeving) — BLOK A-E+F+G COMPLEET**. BLOK A: Calpetrip referenties gefixed (getPortalUrl→relatief, MapPreview generiek, analytics logo_clicked). DesktopHero met chatbot-input + quick actions + achtergrondafbeelding. BLOK B: DesktopProgramTip 2-kolom (60/40, forceShow prop). DesktopEvents 3-kolom grid. CategoryGrid 4-kolom (gradient, POI counts meta.total). BLOK C: Map overlay (bottom-4, "Ontdek ruim 1.600 locaties"). Map 20 POIs round-robin toeristische categorieën (was 500+). Legenda NL i18n (Eten & Drinken/Stranden & Natuur/Cultuur & Historie/Actief & Sport/Recreatief). PoiGrid title prop. BLOK D: Footer info@texelmaps.nl, MobileBottomNav md:hidden, responsive 9/10 PASS. BLOK E: 7 command block-type aliassen, Homepage template 11 blocks, admin 3x deployed. BLOK F: Calpe ongewijzigd (afspraak — pas na Texel goedkeuring). E2E: Texel 6/6, Calpe 4/4, 0 cross-dest leaks. Block registry 26→35. CLAUDE.md v4.30.0. |
 | **7.88** | **27-03-2026** | **Mobiele Page Builder Integratie + Desktop Redesign + Routing COMPLEET**. (A) Block Visibility Systeem: `visibility` property op BlockConfig (all/mobile/desktop). 4 mobile block types. Hardcoded MobileHomepage verwijderd. (B) Desktop homepage redesign: compact hero + poi_grid + event_calendar grid + map + chatbot CTA. Oude static blocks verwijderd. (C) Apache: calpetrip.com ALL traffic → Next.js port 3002 (was: alleen mobiel). Oude Vite SPA niet meer gebruikt. holidaibutler.com B2B corporate page hersteld. (D) Admin Portal: 4 editors, 'Mobiel' categorie, visibility selector. (E) Alle Calpe+Texel pages published. Block registry 22→26. Toekomstbestendig: nieuwe bestemmingen via Admin Portal page builder. CLAUDE.md v4.28.0. |
 | **7.87** | **26-03-2026** | **CI/CD Optimalisatie + ProgramCard Fixes**. deploy-hb-websites.yml + deploy-platform-core.yml triggers gewijzigd: `branches: [dev, test, main]` → `branches: [main]`. Root cause: beide workflows deployen naar 1 server-pad (geen aparte dev/test/prod directories zoals admin-module/customer-portal wél hebben). Gevolg: elke commit triggerde 3 redundante deploys die in de concurrency queue stonden, cascading failures veroorzaakten, en ~66% onnodige GH Actions runs. admin-module + customer-portal behouden 3-branch triggers (hebben aparte deploy-paden). ProgramCard: event dagdeel-filtering + toerisme-relevantie (NON_TOURIST_EVENT_KEYWORDS, DAY_PART_HOUR_RANGES) + minimum 3 items. Calpe avond maxFood 1→3 (root cause: avondprogramma Food & Drinks dominant, maar maxFood=1 blokkeerde alles behalve 1 restaurant + schaarse non-food avond-POIs). CLAUDE.md v4.27.0. |
 | **7.75** | **21-03-2026** | **Command v16.0: Mobiele Homepage Quality — 14 Punten + Extra's COMPLEET. 503 API fix (adminPortal.js syntax error). Onboarding buttons conform template (rounded-xl, Inter font). Map category IDs fix (Beach,Nature→beaches). Profiel→login na onboarding. Leaflet z-index isolation (map overlap fix). ProgramCard time-of-day dynamisch (ochtend/middag/avond). 24h klok fix (nooit boven 23:30). Onboarding dismissed→sessionStorage. CTA→itinerary wizard direct. 1 platform-core + 6 hb-websites bestanden. 8/8 verificatie PASS. CLAUDE.md v4.15.0.** |

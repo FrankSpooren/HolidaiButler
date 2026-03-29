@@ -16,9 +16,11 @@ const ASYNC_BLOCK_TYPES = new Set([
   'poi_grid', 'poi_grid_filtered', 'event_calendar', 'event_calendar_filtered',
 ]);
 
-/** Mobile block types that need tenant context injected as props */
-const MOBILE_BLOCK_TYPES = new Set([
+/** Block types that need tenant context (locale, destinationName, chatbotName) injected as props */
+const TENANT_CONTEXT_BLOCKS = new Set([
   'mobile_program', 'mobile_tip', 'mobile_events', 'mobile_map',
+  'desktop_hero', 'hero_chatbot', 'desktop_program_tip', 'program_card',
+  'desktop_events', 'today_events', 'category_grid',
 ]);
 
 interface PageProps {
@@ -161,9 +163,11 @@ export default async function Page({ params }: PageProps) {
 
         const resolvedProps = resolveLocalizedProps(block.props, locale);
 
-        // Inject locale and tenant context into mobile blocks
-        const blockProps = MOBILE_BLOCK_TYPES.has(block.type)
-          ? { ...resolvedProps, locale, destinationName: tenant.displayName, destinationSlug: tenantSlug }
+        // Inject locale and tenant context into blocks that need it
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const chatbotName = (tenant.branding as any)?.chatbotConfig?.name;
+        const blockProps = TENANT_CONTEXT_BLOCKS.has(block.type)
+          ? { ...resolvedProps, locale, destinationName: tenant.displayName, destinationSlug: tenantSlug, chatbotName }
           : resolvedProps;
 
         const wrapperStyle = getBlockWrapperStyle(block.style);

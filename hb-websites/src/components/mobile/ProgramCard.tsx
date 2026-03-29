@@ -15,6 +15,8 @@ interface ProgramItem {
 interface ProgramCardProps {
   locale: string;
   programSize?: number;
+  /** When true, skip the md:hidden wrapper (used by desktop_program_tip block) */
+  forceShow?: boolean;
 }
 
 const LABELS: Record<string, Record<string, string>> = {
@@ -443,7 +445,7 @@ function getLocalizedString(val: unknown, locale: string): string {
  * COMPONENT
  * ───────────────────────────────────────────── */
 
-export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProps) {
+export default function ProgramCard({ locale, programSize = 4, forceShow }: ProgramCardProps) {
   const [items, setItems] = useState<ProgramItem[]>([]);
   const [loading, setLoading] = useState(true);
   const t = (key: string) => LABELS[key]?.[locale] || LABELS[key]?.en || key;
@@ -562,7 +564,7 @@ export default function ProgramCard({ locale, programSize = 4 }: ProgramCardProp
   if (items.length === 0) return null;
 
   return (
-    <div className="md:hidden">
+    <div className={forceShow ? '' : 'md:hidden'}>
       <div className="bg-white rounded-2xl p-5 mx-4 shadow-sm w-[calc(100%-2rem)] text-left">
         <h3
           className="text-sm font-bold tracking-wider mb-4"

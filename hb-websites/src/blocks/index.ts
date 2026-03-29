@@ -22,6 +22,10 @@ import Partners from './Partners';
 import Downloads from './Downloads';
 import PoiGridFiltered from './PoiGridFiltered';
 import EventCalendarFiltered from './EventCalendarFiltered';
+import DesktopHero from './DesktopHero';
+import DesktopProgramTip from './DesktopProgramTip';
+import DesktopEvents from './DesktopEvents';
+import CategoryGrid from './CategoryGrid';
 import MobileProgram from './MobileProgram';
 import MobileTip from './MobileTip';
 import MobileEvents from './MobileEvents';
@@ -53,6 +57,15 @@ export const blockRegistry: Record<string, AnyComponent> = {
   banner: Banner,
   partners: Partners,
   downloads: Downloads,
+  desktop_hero: DesktopHero,
+  hero_chatbot: DesktopHero,
+  desktop_program_tip: DesktopProgramTip,
+  program_card: DesktopProgramTip,
+  desktop_events: DesktopEvents,
+  today_events: DesktopEvents,
+  category_grid: CategoryGrid,
+  popular_pois: PoiGrid,
+  map_preview: MapWrapper,
   mobile_program: MobileProgram,
   mobile_tip: MobileTip,
   mobile_events: MobileEvents,

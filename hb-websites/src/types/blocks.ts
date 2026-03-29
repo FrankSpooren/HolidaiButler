@@ -22,6 +22,15 @@ export type BlockType =
   | 'banner'
   | 'partners'
   | 'downloads'
+  | 'desktop_hero'
+  | 'hero_chatbot'
+  | 'desktop_program_tip'
+  | 'program_card'
+  | 'desktop_events'
+  | 'today_events'
+  | 'category_grid'
+  | 'popular_pois'
+  | 'map_preview'
   | 'mobile_program'
   | 'mobile_tip'
   | 'mobile_events'
@@ -89,6 +98,7 @@ export interface PoiGridProps {
   limit?: number;
   columns?: 2 | 3 | 4;
   layout?: 'grid' | 'list' | 'compact';
+  title?: string;
 }
 
 export interface EventCalendarProps {
@@ -125,6 +135,7 @@ export interface MapProps {
   zoom?: number;
   categoryFilter?: string[];
   markers?: MapMarker[];
+  overlayLabel?: string;
 }
 
 export interface TestimonialsProps {

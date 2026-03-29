@@ -12,6 +12,7 @@ interface TipData {
 
 interface TipOfTheDayProps {
   locale: string;
+  forceShow?: boolean;
 }
 
 const LABELS: Record<string, Record<string, string>> = {
@@ -90,7 +91,7 @@ function getLocalizedString(val: unknown, locale: string): string {
   return '';
 }
 
-export default function TipOfTheDay({ locale }: TipOfTheDayProps) {
+export default function TipOfTheDay({ locale, forceShow }: TipOfTheDayProps) {
   const [tip, setTip] = useState<TipData | null>(null);
   const [loading, setLoading] = useState(true);
   const t = (key: string) => LABELS[key]?.[locale] || LABELS[key]?.en || key;
@@ -142,7 +143,7 @@ export default function TipOfTheDay({ locale }: TipOfTheDayProps) {
 
   if (loading) {
     return (
-      <div className="mx-4 rounded-2xl p-4 md:hidden animate-pulse" style={{ backgroundColor: 'rgba(232,197,71,0.12)' }}>
+      <div className={`mx-4 rounded-2xl p-4 ${forceShow ? '' : 'md:hidden'} animate-pulse`} style={{ backgroundColor: 'rgba(232,197,71,0.12)' }}>
         <div className="h-4 w-32 bg-yellow-200/50 rounded mb-2" />
         <div className="h-3 w-full bg-yellow-200/50 rounded mb-1" />
         <div className="h-3 w-3/4 bg-yellow-200/50 rounded" />
@@ -163,7 +164,7 @@ export default function TipOfTheDay({ locale }: TipOfTheDayProps) {
   return (
     <button
       onClick={handleClick}
-      className="mx-4 rounded-2xl p-4 md:hidden text-left w-[calc(100%-2rem)] transition-transform active:scale-[0.98]"
+      className={`mx-4 rounded-2xl p-4 ${forceShow ? '' : 'md:hidden'} text-left w-[calc(100%-2rem)] transition-transform active:scale-[0.98]`}
       style={{
         background: 'linear-gradient(135deg, rgba(232,197,71,0.18), rgba(232,197,71,0.06))',
         border: '1px solid rgba(232,197,71,0.28)',
