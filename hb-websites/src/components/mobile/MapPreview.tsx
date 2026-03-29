@@ -14,7 +14,7 @@ const LABELS: Record<string, Record<string, string>> = {
   discover: { nl: 'Ontdek ruim', en: 'Discover over', de: 'Entdecke über', es: 'Descubre más de' },
   locations:{ nl: 'locaties', en: 'locations', de: 'Standorte', es: 'ubicaciones' },
   sub:      { nl: 'Restaurants · Stranden · Bezienswaardigheden · Winkels', en: 'Restaurants · Beaches · Attractions · Shops', de: 'Restaurants · Strände · Sehenswürdigkeiten · Geschäfte', es: 'Restaurantes · Playas · Atracciones · Tiendas' },
-  mapTitle: { nl: 'Ontdek jouw mooiste Calpe-plekjes', en: 'Discover your favorite Calpe spots', de: 'Entdecke deine schönsten Calpe-Orte', es: 'Descubre tus mejores lugares de Calpe' },
+  mapTitle: { nl: 'Ontdek jouw mooiste plekjes', en: 'Discover your favorite spots', de: 'Entdecke deine schönsten Orte', es: 'Descubre tus mejores lugares' },
 };
 
 const MAP_CATEGORIES = [

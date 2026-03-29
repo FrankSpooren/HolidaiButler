@@ -81,7 +81,7 @@ function roundRobinMix(pois: POI[]): POI[] {
   return result;
 }
 
-export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3, layout = 'grid' }: PoiGridProps) {
+export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3, layout = 'grid', title }: PoiGridProps) {
   const headersList = await headers();
   const tenantSlug = headersList.get('x-tenant-slug') ?? 'calpe';
   const locale = headersList.get('x-tenant-locale') ?? 'en';
@@ -155,6 +155,7 @@ export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3, 
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {title && <h2 className="text-2xl font-heading font-bold text-gray-900 mb-6">{title}</h2>}
       <div className={`grid grid-cols-1 ${gridCols} gap-6 animate-stagger`}>
         {displayPois.map((poi) => {
           const imageUrl = poi.images?.[0] ?? poi.thumbnail_url ?? '';

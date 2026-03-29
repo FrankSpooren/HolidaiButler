@@ -83,8 +83,8 @@ export const analytics = {
     trackEvent(`filter_applied_${getDevice()}`, { type: filterType, value }),
 
   // --- Navigation ---
-  calpetrip_logo_clicked: () =>
-    trackEvent(`logo_calpetrip_clicked_${getDevice()}`),
+  logo_clicked: () =>
+    trackEvent(`logo_clicked_${getDevice()}`),
 
   hamburger_menu_item: (item: string) =>
     trackEvent(`hamburger_menu_${getDevice()}`, { item }),

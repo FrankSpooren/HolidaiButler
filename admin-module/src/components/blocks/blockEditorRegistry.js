@@ -239,6 +239,47 @@ const blockEditorRegistry = {
     category: 'Commerce',
     thumbnail: THUMBNAILS.card_group
   },
+  // Desktop homepage block aliases (Fase VI-C command names)
+  hero_chatbot: {
+    editor: HeroEditor,
+    icon: 'Chat',
+    label: 'Hero + Chatbot',
+    description: 'Hero met chatbot-input en quick actions',
+    category: 'Content',
+    thumbnail: THUMBNAILS.hero
+  },
+  program_card: {
+    editor: MobileProgramEditor,
+    icon: 'ViewTimeline',
+    label: 'Programma + Tip (2-kolom)',
+    description: 'Dagprogramma links + Tip van de Dag rechts',
+    category: 'Content',
+    thumbnail: THUMBNAILS.mobile_program
+  },
+  today_events: {
+    editor: MobileEventsEditor,
+    icon: 'EventNote',
+    label: 'Vandaag Events (grid)',
+    description: 'Responsive events grid (3-kolom desktop)',
+    category: 'Data',
+    thumbnail: THUMBNAILS.mobile_events
+  },
+  popular_pois: {
+    editor: PoiGridEditor,
+    icon: 'Stars',
+    label: 'Populaire POIs',
+    description: 'Top POIs grid met titel',
+    category: 'Data',
+    thumbnail: THUMBNAILS.poi_grid
+  },
+  map_preview: {
+    editor: MapEditor,
+    icon: 'PinDrop',
+    label: 'Kaart met overlay',
+    description: 'Interactieve kaart met overlay label',
+    category: 'Data',
+    thumbnail: THUMBNAILS.map
+  },
   mobile_program: {
     editor: MobileProgramEditor,
     icon: 'ViewTimeline',

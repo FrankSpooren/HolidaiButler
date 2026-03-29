@@ -14,9 +14,12 @@ const HOST_TO_PORTAL: Record<string, string> = {
 };
 
 export function getPortalUrl(): string {
-  if (typeof window === 'undefined') return 'https://calpetrip.com';
+  if (typeof window === 'undefined') return '';
   const host = window.location.hostname;
-  return HOST_TO_PORTAL[host] || `https://${host}`;
+  // Return empty string for relative URLs when running on Next.js (same origin)
+  // Only return full URL for external customer-portal links
+  if (HOST_TO_PORTAL[host]) return '';
+  return `https://${host}`;
 }
 
 /**

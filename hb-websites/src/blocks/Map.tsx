@@ -44,20 +44,18 @@ function getCategoryColor(category?: string): string {
   return CATEGORY_COLORS[category.toLowerCase()] ?? DEFAULT_COLOR;
 }
 
-// Legend: deduplicate to show one entry per color
-const LEGEND_ITEMS = [
-  { label: 'Food & Drinks', color: '#4f766b' },
-  { label: 'Nature', color: '#7CB342' },
-  { label: 'Culture', color: '#253444' },
-  { label: 'Active', color: '#016193' },
-  { label: 'Shopping', color: '#b4892e' },
-  { label: 'Recreation', color: '#354f48' },
-  { label: 'Health', color: '#004568' },
-  { label: 'Practical', color: '#607D8B' },
-  { label: 'Other', color: DEFAULT_COLOR },
-];
+// Legend: i18n labels per color — must match CATEGORY_COLORS values exactly
+const LEGEND_ITEMS_I18N: Record<string, { nl: string; en: string; de: string; es: string; color: string }[]> = {
+  default: [
+    { nl: 'Eten & Drinken', en: 'Food & Drinks', de: 'Essen & Trinken', es: 'Comida & Bebidas', color: '#E53935' },
+    { nl: 'Stranden & Natuur', en: 'Beaches & Nature', de: 'Strände & Natur', es: 'Playas & Naturaleza', color: '#7CB342' },
+    { nl: 'Cultuur & Historie', en: 'Culture & History', de: 'Kultur & Geschichte', es: 'Cultura e Historia', color: '#004B87' },
+    { nl: 'Actief & Sport', en: 'Active & Sport', de: 'Aktiv & Sport', es: 'Activo & Deporte', color: '#FF6B00' },
+    { nl: 'Recreatief', en: 'Recreation', de: 'Freizeit', es: 'Recreación', color: '#354f48' },
+  ],
+};
 
-export default function Map({ center, zoom = 14, categoryFilter, markers: staticMarkers }: MapProps) {
+export default function Map({ center, zoom = 14, categoryFilter, markers: staticMarkers, overlayLabel }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
@@ -125,19 +123,40 @@ export default function Map({ center, zoom = 14, categoryFilter, markers: static
         return; // Done — no fetch needed
       }
 
-      // Fetch ALL POIs (for standalone Map block on explore/overview pages)
+      // Fetch tourist POIs for map display (max 20, diverse categories)
       try {
+        const TOURIST_CATS = 'Natuur,Eten & Drinken,Cultuur & Historie,Actief,Recreatief,Beaches & Nature,Food & Drinks,Culture & History,Active';
         const params = new URLSearchParams();
-        if (categoryFilter?.length) {
-          params.set('categories', categoryFilter.join(','));
-        }
-        params.set('limit', '500');
+        params.set('categories', categoryFilter?.length ? categoryFilter.join(',') : TOURIST_CATS);
+        params.set('limit', '80');
+        params.set('sort', 'rating:desc');
+        params.set('min_rating', '3.5');
 
         const res = await fetch(`/api/pois?${params.toString()}`);
         if (!res.ok) throw new Error(`API ${res.status}`);
 
         const json = await res.json();
-        const pois: MapPOI[] = json.data ?? json ?? [];
+        let allPois: MapPOI[] = json.data ?? json ?? [];
+
+        // Round-robin by category to ensure diversity, then limit to 20
+        const byCat: Record<string, MapPOI[]> = {};
+        for (const p of allPois) {
+          const cat = p.category || 'Other';
+          if (!byCat[cat]) byCat[cat] = [];
+          byCat[cat].push(p);
+        }
+        const cats = Object.keys(byCat);
+        const selected: MapPOI[] = [];
+        let idx = 0;
+        while (selected.length < 20 && idx < 80) {
+          const cat = cats[idx % cats.length];
+          const arr = byCat[cat];
+          const pick = arr?.shift();
+          if (pick) selected.push(pick);
+          idx++;
+          if (cats.every(c => (byCat[c]?.length ?? 0) === 0)) break;
+        }
+        const pois = selected;
 
         if (cancelled) return;
 
@@ -195,29 +214,42 @@ export default function Map({ center, zoom = 14, categoryFilter, markers: static
     };
   }, [center, zoom, categoryFilter]);
 
-  const visibleLegend = LEGEND_ITEMS.filter(item => usedColors.has(item.color));
+  // Resolve locale from document lang attribute (set by layout.tsx)
+  const locale = (typeof document !== 'undefined' ? document.documentElement.lang : 'nl') || 'nl';
+  const legendItems = LEGEND_ITEMS_I18N.default;
+  const visibleLegend = legendItems.filter(item => usedColors.has(item.color));
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div
-        ref={mapRef}
-        className="w-full h-[300px] sm:h-[400px] lg:h-[500px] rounded-tenant overflow-hidden shadow-sm"
-        aria-label="Interactive map"
-      />
+      <div className="relative">
+        <div
+          ref={mapRef}
+          className="w-full h-[300px] sm:h-[400px] lg:h-[500px] rounded-tenant overflow-hidden shadow-sm"
+          aria-label="Interactive map"
+        />
+        {overlayLabel && (
+          <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-lg border border-gray-100">
+            <span className="text-sm sm:text-base font-semibold text-gray-800">🗺️ {overlayLabel}</span>
+          </div>
+        )}
+      </div>
       {error && (
         <p className="text-sm text-red-500 mt-2 text-center">{error}</p>
       )}
       {visibleLegend.length > 0 && (
         <div className="flex flex-wrap gap-3 mt-3 justify-center overflow-x-auto">
-          {visibleLegend.map(item => (
-            <div key={item.color} className="flex items-center gap-1.5 text-xs text-muted">
-              <span
-                className="w-3 h-3 rounded-full inline-block flex-shrink-0"
-                style={{ backgroundColor: item.color, border: '1.5px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
-              />
-              {item.label}
-            </div>
-          ))}
+          {visibleLegend.map(item => {
+            const label = (item as Record<string, string>)[locale] || item.en || item.nl;
+            return (
+              <div key={item.color} className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                <span
+                  className="w-3 h-3 rounded-full inline-block flex-shrink-0"
+                  style={{ backgroundColor: item.color, border: '1.5px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+                />
+                {label}
+              </div>
+            );
+          })}
         </div>
       )}
     </section>

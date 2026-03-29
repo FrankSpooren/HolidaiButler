@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.29.0
-> **Laatst bijgewerkt**: 27 maart 2026
+> **Versie**: 4.30.0
+> **Laatst bijgewerkt**: 29 maart 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -172,7 +172,7 @@ Na evaluatie van Directus (database-first CMS), Payload CMS 3.0 (Next.js-native 
 - **Next.js 15**: SSR voor SEO + tenant-theming via CSS Custom Properties + aansluiting op bestaande React codebase
 - **Bestaande HB API**: dezelfde /api/v1/* endpoints, X-Destination-ID header scoping
 - **Admin Portal uitbreiden**: Branding Editor, Page Layout Editor, Navigation Editor
-- **Block-based page builder**: 24 blocks live (incl. 4 mobile), configureerbare layouts per pagina per tenant
+- **Block-based page builder**: 35 blocks live (incl. 4 mobile + 7 desktop homepage + aliassen), configureerbare layouts per pagina per tenant
 - **Geautomatiseerde tenant onboarding**: nieuwe bestemming = configuratie in Admin Portal, geen development
 - **Wildcard DNS**: `*.holidaibutler.com` → automatische subdomain-based tenant detectie via middleware
 
@@ -671,6 +671,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.30.0** | **2026-03-29** | **Fase VI-C: Desktop Homepage Redesign (Texel testomgeving)**. BLOK A: Alle calpetrip.com referenties op Texel gefixed (getPortalUrl→relatieve URLs, MapPreview "Calpe-plekjes"→generiek, Header/analytics logo_clicked). Desktop header al compleet (horizontale navigatie, SearchBar, WCAG, LanguageSwitcher). DesktopHero nieuw component (chatbot-input balk, quick action chips, achtergrondafbeelding uit brand visuals). BLOK B: DesktopProgramTip 2-kolom layout (60% ProgramCard + 40% TipOfTheDay, forceShow prop voor md:hidden override). DesktopEvents 3-kolom grid (responsive, categorie emoji, "Meer →" link). CategoryGrid 4-kolom (gradient kleuren, POI counts via meta.total). BLOK C: Map block overlay label (bottom-4, z-1000), 20 toeristische POIs round-robin (was 500+), legenda NL i18n + correcte kleuren (Eten & Drinken rood, Natuur groen, Cultuur blauw, Actief oranje, Recreatief donkergroen). PoiGrid title prop ("Populair op Texel"). BLOK D: Footer contactEmail destination-aware (info@texelmaps.nl), MobileBottomNav md:hidden bevestigd, responsive verificatie 9/10 PASS. BLOK E: 7 command block-type aliassen (hero_chatbot, program_card, today_events, category_grid, popular_pois, map_preview), Homepage template 11 blocks in PageTemplateDialog, admin 3x deployed. BLOK F: Calpe ongewijzigd (afspraak), E2E verificatie PASS (Texel 6/6, Calpe 4/4, 0 cross-dest leaks). 5 nieuwe + 12 gewijzigde bestanden hb-websites, 2 gewijzigde admin-module. Block registry 26→35. CLAUDE.md v4.30.0. MS v7.90. |
 | **4.29.0** | **2026-03-27** | **Finale Kwaliteitsbeoordeling — 8 opdrachten COMPLEET**. Verificaties: (1) End-to-end publish flow PASS (generate→schedule→kalender→publisher jobs), (2) Differentiators PASS (campagne 4 items, auto-schedule, auto-fill), (3) Per-platform Social Score PASS (7 scores: IG:72/FB:42/LI:66/X:35/TikTok:46/Pinterest:63/YT:35). Implementaties: (4) SimpleAnalytics als trending bron (website_analytics + user_event, vervangt lege Apache logs), (5) Multi-destination content delen (share→tone aanpassing→Texel "duinen"/"Waddenzee" bewezen), (6) Brand Voice real-time check (POST /brand-check, debounced 1.5s, groen/geel/rood badge, on-brand:81 vs off-brand:50), (7) Onboarding UX gids (4-stappen Stepper dialog, onboarding_completed DB kolom, /auth/onboarding-complete endpoint, AdminOnboardingGuide component). 244 endpoints. adminPortal.js v3.39.0. MS v7.89. |
 | **4.28.0** | **2026-03-27** | **Mobiele Page Builder Integratie + Desktop Redesign + Routing**. (A) Block Visibility Systeem: `visibility` property op BlockConfig (all/mobile/desktop), CSS classes md:hidden / hidden md:block. 4 nieuwe mobile block types: `mobile_program`, `mobile_tip`, `mobile_events`, `mobile_map`. Hardcoded MobileHomepage verwijderd uit layout.tsx. page.tsx homepage special case verwijderd. (B) Desktop homepage redesign: hero compact + poi_grid + event_calendar grid + map + cta (actiegericht, chatbot CTA's). Oude static content blocks (rich_text, chatbot_widget, weather_widget, social_feed) verwijderd. (C) Apache routing: calpetrip.com vhost herschreven — ALLE traffic (desktop + mobiel) naar Next.js port 3002. Geen Vite SPA meer voor calpetrip.com homepage. holidaibutler.com B2B corporate page hersteld. (D) Admin Portal: 4 block editors, categorie 'Mobiel' in BlockSelectorDialog, visibility SelectField in BlockEditorCard met badges. i18n 4 talen. (E) Alle Calpe + Texel pages status draft→published. Calpe home 9 blocks (5 desktop + 4 mobile), Texel home 9 blocks. Block registry 22→26. CLAUDE.md v4.28.0. MS v7.88. |
 | **4.27.0** | **2026-03-26** | **CI/CD Optimalisatie + ProgramCard Fixes**. CI/CD: deploy-hb-websites.yml + deploy-platform-core.yml triggers gewijzigd van `branches: [dev, test, main]` naar `branches: [main]` — root cause voor 3x redundante deployments per commit (alle branches deployen naar zelfde server-pad). Scheelt ~66% GH Actions runs en voorkomt queue-backlog + cascading failures. Admin-module + customer-portal behouden dev/test/main triggers (hebben wél aparte deploy-paden per omgeving). ProgramCard fixes: (1) event dagdeel-filtering + toerisme-relevantie + minimum 3 items (commit 2cd6838), (2) Calpe avond maxFood 1→3 — root cause voor slechts 2 avondprogramma items (commit ee3cb74). CLAUDE.md v4.27.0. MS v7.87. |
@@ -696,7 +697,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.89 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.90 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

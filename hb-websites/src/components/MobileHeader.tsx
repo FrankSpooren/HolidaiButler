@@ -140,7 +140,7 @@ export default function MobileHeader({
               display: 'inline-block',
               textDecoration: 'none',
             }}
-            onClick={() => analytics.calpetrip_logo_clicked()}
+            onClick={() => analytics.logo_clicked()}
           >
             {brandName}
           </a>
