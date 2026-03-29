@@ -396,7 +396,7 @@ export function LoginPage() {
 
             {/* Back to Home Link */}
             <div className="auth-link" style={{ marginTop: '16px' }}>
-              <a href="https://dev.holidaibutler.com" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none', color: 'inherit' }}>
+              <a href="/" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none', color: 'inherit' }}>
                 <span>🏠</span>
                 <span>{t.auth.login.backToHome}</span>
               </a>
