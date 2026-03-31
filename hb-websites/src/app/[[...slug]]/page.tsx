@@ -110,7 +110,22 @@ export default async function Page({ params }: PageProps) {
     fetchPage(tenantSlug, pageSlug, locale),
   ]);
 
-  // Homepage without page data in DB: render JSON-LD only (mobile handled by layout blocks)
+  // Homepage: destinations using standalone MobileHomepage (not page builder) skip blocks
+  // Texel uses page builder blocks for homepage. Other destinations use MobileHomepage in layout.tsx.
+  if (pageSlug === 'home' && tenantSlug !== 'texel') {
+    if (!tenant) notFound();
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://holidaibutler.com';
+    const jsonLd = generateWebSiteJsonLd(tenant, baseUrl);
+    const breadcrumbLd = generateBreadcrumbJsonLd([{ name: tenant.displayName, url: baseUrl }]);
+    return (
+      <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      </>
+    );
+  }
+
+  // Homepage without page data in DB: render JSON-LD only
   if (pageSlug === 'home' && !page) {
     if (!tenant) notFound();
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://holidaibutler.com';
