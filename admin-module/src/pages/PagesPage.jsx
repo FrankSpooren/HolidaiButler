@@ -32,7 +32,7 @@ import PageTemplateDialog from '../components/PageTemplateDialog.jsx';
 import PageRevisionsDialog from '../components/PageRevisionsDialog.jsx';
 import debounce from 'lodash.debounce';
 
-export default function PagesPage() {
+export default function PagesPage({ embedded = false }) {
   const { t } = useTranslation();
   const { data: destData } = useBrandingDestinations();
   const destinations = destData?.data?.destinations?.filter(d => d.isActive) || [];
@@ -286,7 +286,7 @@ export default function PagesPage() {
 
   if (isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: embedded ? 0 : 3 }}>
         <Skeleton variant="text" width={200} height={40} />
         <Skeleton variant="rounded" height={400} sx={{ mt: 2 }} />
       </Box>
@@ -294,12 +294,14 @@ export default function PagesPage() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: embedded ? 0 : 3, pt: embedded ? 2 : 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('pages.title')}</Typography>
-          <Typography variant="body2" color="text.secondary">{t('pages.subtitle')}</Typography>
-        </Box>
+        {!embedded ? (
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('pages.title')}</Typography>
+            <Typography variant="body2" color="text.secondary">{t('pages.subtitle')}</Typography>
+          </Box>
+        ) : <Box />}
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>{t('pages.destination')}</InputLabel>

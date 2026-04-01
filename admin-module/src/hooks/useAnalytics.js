@@ -41,3 +41,11 @@ export function usePageviewAnalytics(destination, period = 'month') {
     staleTime: 5 * 60 * 1000
   });
 }
+
+export function useWebsiteAnalytics(destination, period = 30) {
+  return useQuery({
+    queryKey: ['analytics-website', destination, period],
+    queryFn: () => analyticsService.getWebsite(destination, period),
+    staleTime: 10 * 60 * 1000
+  });
+}

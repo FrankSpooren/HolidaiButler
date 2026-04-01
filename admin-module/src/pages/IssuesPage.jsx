@@ -29,7 +29,7 @@ const STATUS_COLORS = {
   wont_fix: 'default'
 };
 
-export default function IssuesPage() {
+export default function IssuesPage({ embedded = false }) {
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
@@ -86,13 +86,13 @@ export default function IssuesPage() {
     ['open', 'acknowledged', 'in_progress'].includes(issue.status);
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+    <Box sx={{ p: embedded ? 0 : 3 }}>
+      {!embedded && <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h5">{t('issues.title')}</Typography>
         <Tooltip title={t('common.refresh')}>
           <IconButton onClick={() => refetch()}><RefreshIcon /></IconButton>
         </Tooltip>
-      </Box>
+      </Box>}
 
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>

@@ -212,7 +212,7 @@ function SettlementsTab({ destinationId, t, showSnackbar }) {
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
               <TableCell>{t('financial.batch_number')}</TableCell>
               <TableCell>{t('financial.period')}</TableCell>
               <TableCell>{t('financial.partners')}</TableCell>
@@ -227,7 +227,12 @@ function SettlementsTab({ destinationId, t, showSnackbar }) {
             {isLoading ? (
               <TableRow><TableCell colSpan={8}><Skeleton /></TableCell></TableRow>
             ) : items.length === 0 ? (
-              <TableRow><TableCell colSpan={8} align="center">{t('financial.no_settlements')}</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={8} sx={{ py: 4, textAlign: 'center' }}>
+                  <Typography color="text.secondary">{t('financial.no_settlements', 'Nog geen settlements')}</Typography>
+                  <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5 }}>{t('financial.settlements_hint', 'Settlements worden automatisch aangemaakt op de 1e van elke maand')}</Typography>
+                </TableCell>
+              </TableRow>
             ) : items.map(s => (
               <TableRow key={s.id}>
                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{s.batch_number}</TableCell>
@@ -338,7 +343,7 @@ function PayoutsTab({ destinationId, t, showSnackbar }) {
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
               <TableCell>{t('financial.payout_number')}</TableCell>
               <TableCell>{t('financial.partner')}</TableCell>
               <TableCell>{t('financial.batch')}</TableCell>
@@ -434,7 +439,7 @@ function CreditNotesTab({ destinationId, t, showSnackbar }) {
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
               <TableCell>{t('financial.credit_note_number')}</TableCell>
               <TableCell>{t('financial.partner')}</TableCell>
               <TableCell>{t('financial.period')}</TableCell>
@@ -579,7 +584,8 @@ export default function FinancialPage() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>{t('financial.title')}</Typography>
+      <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('financial.title')}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('financial.subtitle', "Overzicht van settlements, uitbetalingen en creditnota's")}</Typography>
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
         <Tab label={t('financial.tab_dashboard')} />

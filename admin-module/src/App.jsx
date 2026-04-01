@@ -3,7 +3,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 import AdminLayout from './components/layout/AdminLayout.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
-import AgentsPage from './pages/AgentsPage.jsx';
+import AgentsSystemPage from './pages/AgentsSystemPage.jsx';
 import POIsPage from './pages/POIsPage.jsx';
 import ReviewsPage from './pages/ReviewsPage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
@@ -15,13 +15,20 @@ import PartnersPage from './pages/PartnersPage.jsx';
 import FinancialPage from './pages/FinancialPage.jsx';
 import IntermediaryPage from './pages/IntermediaryPage.jsx';
 import BrandingPage from './pages/BrandingPage.jsx';
-import PagesPage from './pages/PagesPage.jsx';
-import NavigationPage from './pages/NavigationPage.jsx';
+import PagesNavigationPage from './pages/PagesNavigationPage.jsx';
 import MediaPage from './pages/MediaPage.jsx';
 import OnboardingPage from './pages/OnboardingPage.jsx';
 import ContentStudioPage from './pages/ContentStudioPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import useAuthStore from './stores/authStore.js';
+import { isStudioMode } from './utils/studioMode.js';
+
+function DefaultRedirect() {
+  const user = useAuthStore(s => s.user);
+  const studio = isStudioMode();
+  const target = (studio || user?.destinationType === 'content_only') ? '/content-studio' : '/dashboard';
+  return <Navigate to={target} replace />;
+}
 
 export default function App() {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
@@ -30,26 +37,26 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Public */}
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+        <Route path="/login" element={isAuthenticated ? <DefaultRedirect /> : <LoginPage />} />
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/agents" element={<AgentsPage />} />
+            <Route path="/agents" element={<AgentsSystemPage />} />
             <Route path="/pois" element={<POIsPage />} />
             <Route path="/reviews" element={<ReviewsPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/users" element={<UsersPage />} />
-            <Route path="/issues" element={<IssuesPage />} />
+            <Route path="/issues" element={<Navigate to="/agents" replace />} />
             <Route path="/commerce" element={<CommercePage />} />
             <Route path="/partners" element={<PartnersPage />} />
             <Route path="/financial" element={<FinancialPage />} />
             <Route path="/intermediary" element={<IntermediaryPage />} />
             <Route path="/branding" element={<BrandingPage />} />
-            <Route path="/pages" element={<PagesPage />} />
-            <Route path="/navigation" element={<NavigationPage />} />
+            <Route path="/pages" element={<PagesNavigationPage />} />
+            <Route path="/navigation" element={<Navigate to="/pages" replace />} />
             <Route path="/media" element={<MediaPage />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/content-studio" element={<ContentStudioPage />} />
@@ -57,7 +64,7 @@ export default function App() {
         </Route>
 
         {/* Redirects & 404 */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<DefaultRedirect />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>

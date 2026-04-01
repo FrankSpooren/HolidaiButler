@@ -42,7 +42,7 @@ export default function PageRevisionsDialog({ open, onClose, pageId, pageSlug, o
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        Revision History — /{pageSlug}
+        {t('pages.revisions.title', 'Revisie Geschiedenis')} — /{pageSlug}
       </DialogTitle>
       <DialogContent>
         {isLoading && (
@@ -55,7 +55,7 @@ export default function PageRevisionsDialog({ open, onClose, pageId, pageSlug, o
 
         {!isLoading && revisions.length === 0 && (
           <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
-            No revisions yet. Revisions are created automatically when you save a page.
+            {t('pages.revisions.empty', 'Nog geen revisies. Revisies worden automatisch aangemaakt bij het opslaan.')}
           </Typography>
         )}
 
@@ -75,7 +75,7 @@ export default function PageRevisionsDialog({ open, onClose, pageId, pageSlug, o
                       <Typography variant="body2" fontWeight={600}>
                         {formatDate(rev.created_at)}
                       </Typography>
-                      {i === 0 && <Chip label="Latest" size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />}
+                      {i === 0 && <Chip label={t('pages.revisions.latest', 'Laatst')} size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />}
                     </Box>
                   }
                   secondary={
@@ -84,10 +84,10 @@ export default function PageRevisionsDialog({ open, onClose, pageId, pageSlug, o
                         <Typography variant="caption" color="text.secondary">{rev.change_summary}</Typography>
                       )}
                       {rev.title_nl && (
-                        <Typography variant="caption" color="text.secondary" display="block">Title: {rev.title_nl}</Typography>
+                        <Typography variant="caption" color="text.secondary" display="block">{t('pages.revisions.titlePrefix', 'Titel')}: {rev.title_nl}</Typography>
                       )}
                       {rev.block_count !== undefined && (
-                        <Typography variant="caption" color="text.secondary"> · {rev.block_count} blocks</Typography>
+                        <Typography variant="caption" color="text.secondary"> · {rev.block_count} {t('pages.revisions.blocks', 'blocks')}</Typography>
                       )}
                     </Box>
                   }
@@ -100,7 +100,7 @@ export default function PageRevisionsDialog({ open, onClose, pageId, pageSlug, o
                     disabled={restoring || i === 0}
                     variant={i === 0 ? 'text' : 'outlined'}
                   >
-                    Restore
+                    {t('pages.revisions.restore', 'Herstellen')}
                   </Button>
                 </ListItemSecondaryAction>
               </ListItem>
@@ -109,7 +109,7 @@ export default function PageRevisionsDialog({ open, onClose, pageId, pageSlug, o
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+        <Button onClick={onClose}>{t('common.close', 'Sluiten')}</Button>
       </DialogActions>
     </Dialog>
   );

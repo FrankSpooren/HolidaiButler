@@ -24,10 +24,16 @@
     "onboarding": "New Destination",
     "contentStudio": "Content Studio",
     "section_overview": "Overview",
-    "section_content": "Content & Data",
+    "section_home": "Home",
+    "section_content": "Content",
+    "section_data": "Data & POI",
     "section_commerce": "Commerce",
+    "section_website": "Website",
+    "section_config": "Configuration",
     "section_platform": "Platform",
-    "section_system": "System"
+    "section_system": "System",
+    "pagesNav": "Pages & Navigation",
+    "agentsSystem": "Agents & System"
   },
   "auth": {
     "login": "Log in",
@@ -36,6 +42,28 @@
     "password": "Password",
     "loginTitle": "Admin Portal",
     "loginSubtitle": "Manage your HolidaiButler platform",
+    "studioWelcome": "Welcome to your Content Studio",
+    "studioLoginSubtitle": "Log in with your account to get started",
+    "studioHeroText": "Your AI-powered content engine. Generate, optimize and publish professional content in your own brand voice \u2014 across all platforms at once.",
+    "studioFeaturesLabel": "What makes the Content Studio unique?",
+    "studioSecurityNote": "100% European infrastructure. Your data stays in the EU (Hetzner DE, Mistral FR, DeepL DE).",
+    "usp": {
+      "aiTitle": "Relevant Content Generation",
+      "aiDesc": "Generate blogs, social posts and video scripts based on real-time online behavior via our multi-source strategy.",
+      "seoTitle": "SEO Optimization",
+      "seoDesc": "Built-in SEO scoring and automatic improvement for maximum discoverability (self-learning system).",
+      "calendarTitle": "Optimal Content Flow",
+      "calendarDesc": "Plan and publish content across all channels from a single overview, including batch function and campaign tool.",
+      "translateTitle": "Multilingual",
+      "translateDesc": "Translate with unmatched accuracy to 100+ languages with one click.",
+      "brandTitle": "Brand Profile & Tone of Voice",
+      "brandDesc": "Your brand identity, audiences and knowledge base as the foundation for every AI generation.",
+      "analyticsTitle": "Analytics",
+      "analyticsDesc": "Statistics per content item and channel for automatic content improvement."
+    },
+    "compareLabel": "Compare with the competition",
+    "compareTitle": "AI Content Studio vs. Hootsuite vs. Jasper AI",
+    "compareSubtitle": "One platform combining content generation, SEO, multilingual publishing and distribution. No more separate tools.",
     "invalidCredentials": "Invalid credentials",
     "serverError": "An error occurred. Please try again.",
     "sessionExpired": "Your session has expired. Please log in again."
@@ -969,7 +997,8 @@
     },
     "brandVisuals": {
       "addVisual": "Add Visual",
-      "uploaded": "Visual uploaded"
+      "uploaded": "Visual uploaded",
+      "openMediaLibrary": "Open Media Library"
     }
   },
   "pages": {
@@ -1073,6 +1102,13 @@
     "all": "All devices",
     "mobile": "Mobile only",
     "desktop": "Desktop only"
+  },
+  "pagesNav": {
+    "subtitle": "Manage page layouts, blocks and navigation items",
+    "tab": {
+      "pages": "Pages",
+      "navigation": "Navigation"
+    }
   },
   "navigation": {
     "title": "Navigation",
@@ -1283,7 +1319,8 @@
       "suggestions": "Suggestions",
       "unsplash": "Unsplash",
       "noSuggestions": "No suggestions found",
-      "searchPlaceholder": "Search stock photos..."
+      "searchPlaceholder": "Search stock photos...",
+      "openMediaLibrary": "Media Library"
     },
     "editor": {
       "contentItem": "Content Item",

@@ -11,6 +11,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
@@ -110,9 +111,10 @@ function DashboardTab({ destinationId, t, lang }) {
       <Box>
         <PeriodSelector from={from} to={to} onFromChange={setFrom} onToChange={setTo} onRefresh={fetchData} t={t} />
         <Card sx={{ p: 4, textAlign: 'center' }}>
-          <CheckCircleOutlineIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+          <ShoppingCartIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
           <Typography variant="h6">{t('commerce.no_data')}</Typography>
-          <Typography variant="body2" color="text.secondary">{t('commerce.no_data_description')}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('commerce.no_data_description')}</Typography>
+          <Button variant="outlined" size="small" href="/settings">{t('commerce.goToSettings', 'Commerce activeren in Instellingen')}</Button>
         </Card>
       </Box>
     );
@@ -485,7 +487,8 @@ export default function CommercePage() {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ mb: 2 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>{t('commerce.title')}</Typography>
+        <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('commerce.title')}</Typography>
+        <Typography variant="body2" color="text.secondary">{t('commerce.subtitle', 'Beheer bestellingen, tickets en reserveringen')}</Typography>
       </Box>
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>

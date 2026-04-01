@@ -3,7 +3,7 @@ import {
   Box, Typography, Paper, Tabs, Tab, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Chip, TextField, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, MenuItem, Select, FormControl, InputLabel, IconButton, Tooltip,
-  Card, CardContent, Grid, CircularProgress, Alert, TablePagination, LinearProgress,
+  Card, CardContent, Grid, CircularProgress, Skeleton, Alert, TablePagination, LinearProgress,
   ToggleButton, ToggleButtonGroup, Checkbox, Accordion, AccordionSummary, AccordionDetails, Divider, Snackbar,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -34,6 +34,7 @@ import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import LinkIcon from '@mui/icons-material/Link';
+import PermMediaIcon from '@mui/icons-material/PermMedia';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTranslation } from 'react-i18next';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -74,16 +75,16 @@ const STATUS_COLORS = {
 
 // Custom status styling with distinct colors for each status
 const STATUS_SX = {
-  draft: { bgcolor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D' },
-  pending: { bgcolor: '#FFF8E1', color: '#F57F17', border: '1px solid #FFD54F' },
-  pending_review: { bgcolor: '#F3E5F5', color: '#7B1FA2', border: '1px solid #CE93D8' },
-  approved: { bgcolor: '#E8F5E9', color: '#2E7D32', border: '1px solid #81C784' },
-  scheduled: { bgcolor: '#E3F2FD', color: '#1565C0', border: '1px solid #64B5F6' },
-  publishing: { bgcolor: '#E8EAF6', color: '#283593', border: '1px solid #7986CB' },
-  published: { bgcolor: '#C8E6C9', color: '#1B5E20', border: '1px solid #4CAF50' },
-  rejected: { bgcolor: '#FFEBEE', color: '#C62828', border: '1px solid #EF9A9A' },
-  failed: { bgcolor: '#FFCDD2', color: '#B71C1C', border: '1px solid #E57373' },
-  generated: { bgcolor: '#E0F7FA', color: '#00838F', border: '1px solid #4DD0E1' },
+  draft: { bgcolor: 'rgba(237,108,2,0.08)', color: 'warning.dark', border: '1px solid', borderColor: 'warning.light' },
+  pending: { bgcolor: 'rgba(255,152,0,0.08)', color: 'warning.dark', border: '1px solid', borderColor: 'warning.light' },
+  pending_review: { bgcolor: 'rgba(156,39,176,0.08)', color: '#7b1fa2', border: '1px solid', borderColor: 'rgba(156,39,176,0.3)' },
+  approved: { bgcolor: 'rgba(76,175,80,0.08)', color: 'success.dark', border: '1px solid', borderColor: 'success.light' },
+  scheduled: { bgcolor: 'rgba(33,150,243,0.08)', color: 'info.dark', border: '1px solid', borderColor: 'info.light' },
+  publishing: { bgcolor: 'rgba(63,81,181,0.08)', color: 'primary.dark', border: '1px solid', borderColor: 'primary.light' },
+  published: { bgcolor: 'rgba(76,175,80,0.08)', color: 'success.dark', border: '1px solid', borderColor: 'success.light' },
+  rejected: { bgcolor: 'rgba(244,67,54,0.08)', color: 'error.dark', border: '1px solid', borderColor: 'error.light' },
+  failed: { bgcolor: 'rgba(244,67,54,0.08)', color: 'error.dark', border: '1px solid', borderColor: 'error.light' },
+  generated: { bgcolor: 'action.selected', color: 'text.secondary', border: '1px solid', borderColor: 'divider' },
 };
 
 const CONTENT_TYPE_LABELS = {
@@ -138,7 +139,15 @@ function DirectionChip({ direction }) {
 
 function SummaryCards({ summary, loading }) {
   const { t } = useTranslation();
-  if (loading) return <CircularProgress size={24} />;
+  if (loading) return (
+    <Grid container spacing={2} sx={{ mb: 3 }}>
+      {[1, 2, 3, 4].map(i => (
+        <Grid item xs={6} md={3} key={i}>
+          <Skeleton variant="rounded" height={80} />
+        </Grid>
+      ))}
+    </Grid>
+  );
   if (!summary) return null;
 
   const cards = [
@@ -931,9 +940,14 @@ function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false
           {t('contentStudio.images.selected', 'Geselecteerde afbeelding')}
           {images.length > 0 && <Chip label={images.length} size="small" sx={{ ml: 1, height: 18, fontSize: 11 }} />}
         </Typography>
-        <Button size="small" variant="outlined" onClick={() => setSuggestOpen(true)} startIcon={<AddIcon />}>
-          {t('contentStudio.images.addImage', 'Meer opties')}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button size="small" variant="outlined" onClick={() => setSuggestOpen(true)} startIcon={<AddIcon />}>
+            {t('contentStudio.images.addImage', 'Meer opties')}
+          </Button>
+          <Button size="small" variant="text" href="/media" target="_blank" startIcon={<PermMediaIcon sx={{ fontSize: 16 }} />}>
+            {t('contentStudio.images.openMediaLibrary', 'Mediabibliotheek')}
+          </Button>
+        </Box>
       </Box>
 
       {images.length > 0 ? (
@@ -2284,13 +2298,16 @@ export default function ContentStudioPage() {
                 </TableHead>
                 <TableBody>
                   {trendLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}><CircularProgress size={28} /></TableCell>
-                    </TableRow>
+                    [1, 2, 3].map(i => (
+                      <TableRow key={i}>
+                        <TableCell colSpan={9}><Skeleton variant="text" /></TableCell>
+                      </TableRow>
+                    ))
                   ) : trends.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                        <Typography color="text.secondary">{t('contentStudio.noTrending', 'Geen trending keywords gevonden voor deze periode.')}</Typography>
+                        <Typography color="text.secondary" sx={{ mb: 0.5 }}>{t('contentStudio.noTrending', 'Geen trending keywords gevonden voor deze periode.')}</Typography>
+                        <Typography variant="caption" color="text.disabled">{t('contentStudio.noTrendingHint', 'Voeg trending keywords toe of wacht op de wekelijkse automatische scan')}</Typography>
                       </TableCell>
                     </TableRow>
                   ) : [...trends]
@@ -2407,13 +2424,16 @@ export default function ContentStudioPage() {
                 </TableHead>
                 <TableBody>
                   {sugLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}><CircularProgress size={28} /></TableCell>
-                    </TableRow>
+                    [1, 2, 3].map(i => (
+                      <TableRow key={i}>
+                        <TableCell colSpan={7}><Skeleton variant="text" /></TableCell>
+                      </TableRow>
+                    ))
                   ) : suggestions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                        <Typography color="text.secondary">{t('contentStudio.noSuggestions', 'Geen suggesties. Klik op "Genereer Suggesties" om AI suggesties te maken.')}</Typography>
+                        <Typography color="text.secondary" sx={{ mb: 1 }}>{t('contentStudio.noSuggestions', 'Geen suggesties. Klik op "Genereer Suggesties" om AI suggesties te maken.')}</Typography>
+                        <Button variant="outlined" size="small" startIcon={<AutoAwesomeIcon />} onClick={handleGenerateSuggestions}>{t('contentStudio.generateSuggestions', 'Genereer Suggesties')}</Button>
                       </TableCell>
                     </TableRow>
                   ) : [...suggestions]
@@ -2603,13 +2623,16 @@ export default function ContentStudioPage() {
                 </TableHead>
                 <TableBody>
                   {itemLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}><CircularProgress size={28} /></TableCell>
-                    </TableRow>
+                    [1, 2, 3].map(i => (
+                      <TableRow key={i}>
+                        <TableCell colSpan={9}><Skeleton variant="text" /></TableCell>
+                      </TableRow>
+                    ))
                   ) : items.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                        <Typography color="text.secondary">{t('contentStudio.noItems', 'Geen content items. Genereer content vanuit goedgekeurde suggesties.')}</Typography>
+                        <Typography color="text.secondary" sx={{ mb: 1 }}>{t('contentStudio.noItems', 'Geen content items. Genereer content vanuit goedgekeurde suggesties.')}</Typography>
+                        <Button variant="outlined" size="small" onClick={() => setTab(1)}>{t('contentStudio.goToSuggestions', 'Bekijk Suggesties')}</Button>
                       </TableCell>
                     </TableRow>
                   ) : [...items]

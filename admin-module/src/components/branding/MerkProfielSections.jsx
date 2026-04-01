@@ -101,8 +101,10 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
   const saveToneMut = useMutation({
     mutationFn: async (toneData) => {
       const c = (await import('../../api/client.js')).default;
-      const { data: brandingRes } = await c.get(`/destinations/${destinationId}/branding`);
-      const currentBranding = brandingRes?.data?.branding || {};
+      // Fetch current branding via destinations list (no dedicated GET /:id/branding endpoint)
+      const { data: destsRes } = await c.get('/destinations');
+      const dest = destsRes?.data?.destinations?.find(d => d.id === destinationId);
+      const currentBranding = dest?.branding || {};
       return c.put(`/destinations/${destinationId}/branding`, { ...currentBranding, toneOfVoice: toneData }).then(r => r.data);
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['brand-profile', destinationId] }); setSnack({ open: true, message: t('common.saved', 'Opgeslagen'), severity: 'success' }); },
@@ -280,12 +282,12 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
               </Box>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <TextField size="small" placeholder={t('brandProfile.fields.add_usp', 'Voeg USP toe')} value={chipInputs.usps || ''} onChange={e => setChipInputs(p => ({ ...p, usps: e.target.value }))} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addChip('usps'))} sx={{ flex: 1 }} />
-                <Button size="small" onClick={() => addChip('usps')} startIcon={<AddIcon />}>Toevoegen</Button>
+                <Button size="small" onClick={() => addChip('usps')} startIcon={<AddIcon />}>{t('common.add', 'Toevoegen')}</Button>
               </Box>
             </Grid>
             <Grid item xs={12}>
               <Button variant="contained" startIcon={<SaveIcon />} onClick={() => saveMut.mutate(bp)} disabled={saveMut.isPending} size="small">
-                {saveMut.isPending ? 'Opslaan...' : t('common.save', 'Opslaan')}
+                {saveMut.isPending ? t('common.saving', 'Opslaan...') : t('common.save', 'Opslaan')}
               </Button>
             </Grid>
           </Grid>
@@ -312,7 +314,7 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
               </Box>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <TextField size="small" placeholder="Voeg kernwaarde toe" value={chipInputs.core_values || ''} onChange={e => setChipInputs(p => ({ ...p, core_values: e.target.value }))} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addChip('core_values'))} sx={{ flex: 1 }} />
-                <Button size="small" onClick={() => addChip('core_values')} startIcon={<AddIcon />}>Toevoegen</Button>
+                <Button size="small" onClick={() => addChip('core_values')} startIcon={<AddIcon />}>{t('common.add', 'Toevoegen')}</Button>
               </Box>
             </Grid>
             <Grid item xs={12}>
@@ -347,7 +349,12 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
               </Box>
             </Paper>
           ))}
-          {personas.length === 0 && <Typography color="text.secondary" variant="body2">Nog geen doelgroepen gedefinieerd.</Typography>}
+          {personas.length === 0 && (
+            <Box sx={{ py: 2, textAlign: 'center' }}>
+              <Typography color="text.secondary" variant="body2" sx={{ mb: 1 }}>{t('brandProfile.personas.empty', 'Nog geen doelgroepen gedefinieerd.')}</Typography>
+              <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => setPersonaDialog({})}>{t('brandProfile.personas.addFirst', 'Eerste doelgroep toevoegen')}</Button>
+            </Box>
+          )}
         </AccordionDetails>
       </Accordion>
 
@@ -391,7 +398,7 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
             </Grid>
             <Grid item xs={12}>
               <Button variant="contained" startIcon={<SaveIcon />} onClick={() => saveToneMut.mutate(tone)} disabled={saveToneMut.isPending} size="small">
-                {saveToneMut.isPending ? 'Opslaan...' : t('common.save', 'Opslaan')}
+                {saveToneMut.isPending ? t('common.saving', 'Opslaan...') : t('common.save', 'Opslaan')}
               </Button>
             </Grid>
           </Grid>
@@ -500,7 +507,7 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
               </Box>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <TextField size="small" placeholder="Voeg keyword toe" value={chipInputs.seo_keywords || ''} onChange={e => setChipInputs(p => ({ ...p, seo_keywords: e.target.value }))} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addChip('seo_keywords'))} sx={{ flex: 1 }} />
-                <Button size="small" onClick={() => addChip('seo_keywords')} startIcon={<AddIcon />}>Toevoegen</Button>
+                <Button size="small" onClick={() => addChip('seo_keywords')} startIcon={<AddIcon />}>{t('common.add', 'Toevoegen')}</Button>
               </Box>
             </Grid>
             <Grid item xs={6}>
@@ -540,7 +547,7 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPersonaDialog(null)}>Annuleren</Button>
+          <Button onClick={() => setPersonaDialog(null)}>{t('common.cancel', 'Annuleren')}</Button>
           <Button variant="contained" onClick={() => {
             if (personaDialog?.id) personaUpdateMut.mutate({ id: personaDialog.id, ...personaForm });
             else personaCreateMut.mutate(personaForm);

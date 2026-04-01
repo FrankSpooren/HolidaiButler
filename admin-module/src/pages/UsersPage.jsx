@@ -273,7 +273,7 @@ export default function UsersPage() {
         <TableContainer>
           <Table size="small">
             <TableHead>
-              <TableRow>
+              <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
                 <TableCell>{t('users.table.name')}</TableCell>
                 <TableCell>{t('users.table.email')}</TableCell>
                 <TableCell>{t('users.table.role')}</TableCell>

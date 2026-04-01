@@ -24,7 +24,7 @@ import { getAgentIcon, getAgentDescription, getAgentTasks, formatTimestamp, CATE
 
 const CATEGORIES = ['all', 'core', 'operations', 'development', 'strategy', 'monitoring'];
 
-export default function AgentsPage() {
+export default function AgentsPage({ embedded = false }) {
   const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -113,8 +113,8 @@ export default function AgentsPage() {
 
   return (
     <Box>
-      {/* ROW 1: Page Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 1 }}>
+      {/* ROW 1: Page Header (hidden when embedded in Agents & System tab) */}
+      {!embedded && <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 1 }}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
             {t('agents.title')}
@@ -146,7 +146,7 @@ export default function AgentsPage() {
             {t('agents.refresh')}
           </Button>
         </Box>
-      </Box>
+      </Box>}
 
       {/* Error / Partial warning */}
       {error && (

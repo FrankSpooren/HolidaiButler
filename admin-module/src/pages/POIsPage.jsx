@@ -265,8 +265,9 @@ export default function POIsPage() {
               ))
             ) : pois.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                  <Typography color="text.secondary">{t('pois.noResults')}</Typography>
+                <TableCell colSpan={9} sx={{ py: 4, textAlign: 'center' }}>
+                  <Typography color="text.secondary" sx={{ mb: 0.5 }}>{t('pois.noResults')}</Typography>
+                  <Typography variant="caption" color="text.disabled">{t('pois.noResultsHint', 'POIs worden automatisch gesynchroniseerd via Apify. Controleer de destination configuratie.')}</Typography>
                 </TableCell>
               </TableRow>
             ) : (

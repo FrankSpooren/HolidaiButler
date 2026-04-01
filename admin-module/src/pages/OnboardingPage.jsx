@@ -682,7 +682,7 @@ export default function OnboardingPage() {
 
   return (
     <Box sx={{ p: 3, maxWidth: 900, mx: 'auto' }}>
-      <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>
+      <Typography variant="h5" sx={{ mb: 1, fontWeight: 700 }}>
         {t('onboarding.title')}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>

@@ -184,7 +184,7 @@ function TransactionsTab({ destinationId, t, showSnackbar }) {
       <TableContainer component={Paper} variant="outlined">
         <Table size="small">
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
               <TableCell>{t('intermediary.fields.transaction_number')}</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>{t('intermediary.fields.partner')}</TableCell>
@@ -206,7 +206,9 @@ function TransactionsTab({ destinationId, t, showSnackbar }) {
             ) : items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                  <Typography color="text.secondary">{t('intermediary.no_data')}</Typography>
+                  <Typography color="text.secondary" sx={{ mb: 1 }}>{t('intermediary.no_data', 'Nog geen transacties')}</Typography>
+                  <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mb: 2 }}>{t('intermediary.no_data_hint', 'Transacties worden aangemaakt zodra een partner een boeking bevestigt')}</Typography>
+                  <Button variant="outlined" size="small" href="/partners">{t('intermediary.goToPartners', 'Ga naar Partners')}</Button>
                 </TableCell>
               </TableRow>
             ) : items.map(tx => (
@@ -358,7 +360,7 @@ function TransactionDetailDialog({ id, destinationId, t, showSnackbar, onClose }
               {tx.qr_code_image && (
                 <Grid item xs={12} md={4} sx={{ textAlign: 'center' }}>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('intermediary.fields.qr_code')}</Typography>
-                  <img src={tx.qr_code_image} alt="QR Code" style={{ maxWidth: 200, border: '1px solid #ddd', borderRadius: 8 }} />
+                  <Box component="img" src={tx.qr_code_image} alt="QR Code" sx={{ maxWidth: 200, border: '1px solid', borderColor: 'divider', borderRadius: 1 }} />
                 </Grid>
               )}
             </Grid>
@@ -511,7 +513,8 @@ export default function IntermediaryPage() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>{t('intermediary.title')}</Typography>
+      <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('intermediary.title')}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('intermediary.subtitle', 'Beheer intermediaire transacties en afrekeningen')}</Typography>
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
         <Tab label={t('intermediary.tab_dashboard')} />

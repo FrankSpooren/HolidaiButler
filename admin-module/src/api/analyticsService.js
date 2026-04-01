@@ -16,6 +16,9 @@ export const analyticsService = {
   getPageviews: (destination, period = 'month') =>
     client.get('/analytics/pageviews', { params: { ...(destination && { destination }), period } }).then(r => r.data),
 
+  getWebsite: (destination, period = 30) =>
+    client.get('/analytics/website', { params: { ...(destination && { destination }), period } }).then(r => r.data),
+
   exportCsv: (type = 'summary', destination) =>
     client.get('/analytics/export', {
       params: { type, ...(destination && { destination }) },

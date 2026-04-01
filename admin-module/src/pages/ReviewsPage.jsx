@@ -23,9 +23,9 @@ import { formatDate, formatNumber } from '../utils/formatters.js';
 import { DESTINATIONS, getDestinationColor } from '../utils/destinations.js';
 
 const SENTIMENT_CONFIG = {
-  positive: { icon: SentimentSatisfiedIcon, color: '#22c55e', label: 'Positief' },
-  neutral: { icon: SentimentNeutralIcon, color: '#f59e0b', label: 'Neutraal' },
-  negative: { icon: SentimentDissatisfiedIcon, color: '#ef4444', label: 'Negatief' }
+  positive: { icon: SentimentSatisfiedIcon, color: 'success.main', label: 'Positief' },
+  neutral: { icon: SentimentNeutralIcon, color: 'warning.main', label: 'Neutraal' },
+  negative: { icon: SentimentDissatisfiedIcon, color: 'error.main', label: 'Negatief' }
 };
 
 export default function ReviewsPage() {
@@ -140,7 +140,7 @@ export default function ReviewsPage() {
         <Grid item xs={6} md={3}>
           <Card sx={{ p: 2, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary">{t('reviews.summary.positive')}</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#22c55e' }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: 'success.main' }}>
               {formatNumber(summary.positive)}
             </Typography>
           </Card>
@@ -148,7 +148,7 @@ export default function ReviewsPage() {
         <Grid item xs={6} md={3}>
           <Card sx={{ p: 2, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary">{t('reviews.summary.negative')}</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#ef4444' }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: 'error.main' }}>
               {formatNumber(summary.negative)}
             </Typography>
           </Card>
@@ -292,7 +292,7 @@ export default function ReviewsPage() {
                     </TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.3 }}>
-                        <StarIcon sx={{ fontSize: 14, color: '#f59e0b' }} />
+                        <StarIcon sx={{ fontSize: 14, color: 'warning.main' }} />
                         <Typography variant="body2">{review.rating}</Typography>
                       </Box>
                     </TableCell>

@@ -24,10 +24,16 @@
     "onboarding": "Neues Reiseziel",
     "contentStudio": "Content Studio",
     "section_overview": "Übersicht",
-    "section_content": "Inhalt & Daten",
+    "section_home": "Home",
+    "section_content": "Inhalt",
+    "section_data": "Daten & POI",
     "section_commerce": "Commerce",
+    "section_website": "Website",
+    "section_config": "Konfiguration",
     "section_platform": "Plattform",
-    "section_system": "System"
+    "section_system": "System",
+    "pagesNav": "Seiten & Navigation",
+    "agentsSystem": "Agents & System"
   },
   "auth": {
     "login": "Anmelden",
@@ -36,6 +42,11 @@
     "password": "Passwort",
     "loginTitle": "Admin Portal",
     "loginSubtitle": "Verwalten Sie Ihre HolidaiButler Plattform",
+    "studioWelcome": "Willkommen in Ihrem Content Studio",
+    "studioLoginSubtitle": "Melden Sie sich mit Ihrem Konto an",
+    "studioHeroText": "Ihre KI-gest\u00fctzte Content-Engine. Generieren, optimieren und ver\u00f6ffentlichen Sie professionelle Inhalte in Ihrer eigenen Markenstimme \u2014 auf allen Plattformen gleichzeitig.",
+    "studioFeaturesLabel": "Was macht das Content Studio einzigartig?",
+    "studioSecurityNote": "100% europ\u00e4ische Infrastruktur. Ihre Daten bleiben in der EU (Hetzner DE, Mistral FR, DeepL DE).",
     "invalidCredentials": "Ung\u00fcltige Anmeldedaten",
     "serverError": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
     "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
@@ -969,7 +980,8 @@
     },
     "brandVisuals": {
       "addVisual": "Visual hinzufügen",
-      "uploaded": "Visual hochgeladen"
+      "uploaded": "Visual hochgeladen",
+      "openMediaLibrary": "Medienbibliothek öffnen"
     }
   },
   "pages": {
@@ -1066,6 +1078,13 @@
     "all": "Alle Geräte",
     "mobile": "Nur Mobil",
     "desktop": "Nur Desktop"
+  },
+  "pagesNav": {
+    "subtitle": "Seitenlayouts, Blöcke und Navigationselemente verwalten",
+    "tab": {
+      "pages": "Seiten",
+      "navigation": "Navigation"
+    }
   },
   "navigation": {
     "title": "Navigation",
@@ -1263,7 +1282,8 @@
       "suggestions": "Vorschläge",
       "unsplash": "Unsplash",
       "noSuggestions": "Keine Vorschläge gefunden",
-      "searchPlaceholder": "Stockfotos suchen..."
+      "searchPlaceholder": "Stockfotos suchen...",
+      "openMediaLibrary": "Medienbibliothek"
     },
     "editor": {
       "contentItem": "Content Item",
