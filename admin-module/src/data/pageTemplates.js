@@ -34,28 +34,26 @@ const pageTemplates = [
   },
   {
     id: 'explore',
-    label: 'Explore / Discover',
-    description: 'Full POI grid with map and weather widget',
+    label: 'Explore / Ontdekken',
+    description: 'POI grid met filters, paginering ("Meer laden"), kaart en weer',
     icon: 'Explore',
     layout: {
       blocks: [
-        { id: 'hero-1', type: 'hero', props: { headline: { en: 'Explore', nl: 'Ontdek' }, description: { en: 'Find the best places and activities', nl: 'Vind de beste plekken en activiteiten' } } },
-        { id: 'poi-grid-1', type: 'poi_grid', props: { limit: 12, columns: 3, showRating: true, showCategory: true, showFilter: true } },
-        { id: 'map-1', type: 'map', props: { height: 500, showCategories: true } },
-        { id: 'weather-1', type: 'weather_widget', props: { layout: 'detailed' } }
+        { id: 'hero-1', type: 'hero', props: { headline: { en: 'Explore', nl: 'Ontdek' }, description: { en: 'Find the best places and activities', nl: 'Vind de beste plekken en activiteiten' }, height: 'compact' } },
+        { id: 'poi-grid-1', type: 'poi_grid_filtered', props: { limit: 24, columns: 3 } },
+        { id: 'map-1', type: 'map', props: {} }
       ]
     }
   },
   {
     id: 'events',
-    label: 'Events',
-    description: 'Events calendar with social feed',
+    label: 'Events / Evenementen',
+    description: 'Evenementenkalender met filters',
     icon: 'Event',
     layout: {
       blocks: [
-        { id: 'hero-1', type: 'hero', props: { headline: { en: 'Events & Activities', nl: 'Evenementen & Activiteiten' } } },
-        { id: 'event-cal-1', type: 'event_calendar', props: { limit: 12, layout: 'list', showPastEvents: false } },
-        { id: 'social-1', type: 'social_feed', props: { platforms: ['instagram'] } }
+        { id: 'hero-1', type: 'hero', props: { headline: { en: 'Events & Activities', nl: 'Evenementen & Activiteiten' }, height: 'compact' } },
+        { id: 'event-cal-1', type: 'event_calendar_filtered', props: { limit: 12, layout: 'list' } }
       ]
     }
   },

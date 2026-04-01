@@ -5922,4 +5922,19 @@ CLAUDE.md v4.28.0 → v4.29.0. MS v7.88 → v7.89.
 
 ---
 
+## Fase VI-C: Desktop Template Polish + Encoding Fix + Page Builder Completie (01-04-2026)
+
+Uitgebreide kwaliteitsronde Texel desktop template (15+ feedbackpunten). CalpeTrip mobiel BESCHERMD (PROTECTED_FILES.md).
+
+**BLOK H**: Inter font, Restaurants uit nav, WCAG dubbel icoon fix.
+**BLOK I**: Quick actions (Routebeschrijving/Zoeken op Rubriek), Je/U audit (payoff+DE teksten).
+**Encoding fix**: 176 DB records double-encoded UTF-8 (tile_nl 50, tile_en 29, highlights 92, namen 3, destinations config/branding). Calpe 100% clean.
+**BLOK J**: Footer 4-kolom (Brand+Social/PLATFORM/SUPPORT/JURIDISCH). ProgramCard categorie-tijdsloten (Winkelen 0.5u+2POIs, Activiteit 1.5u, Ontbijt 1u). USP's in footer.
+**BLOK K**: Chatbot CalpeTrip CSS (CategoryBrowser+ItineraryWizard gold styling). Quick action routing fix. WCAG modal viewport. POI paginering "Meer laden" (1.159 POIs, offset-based).
+**Page Builder 100%**: 35 blocks, 36 editors (0 gaps), 8 templates updated. TestimonialsEditor nieuw.
+
+CLAUDE.md v4.31.0 → v4.32.0. MS v7.91 → v7.92.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

@@ -112,11 +112,11 @@ export default function AccessibilityModal({ isOpen, onClose, locale }: Accessib
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-[999999] flex items-center justify-center animate-fade-in-up"
+      className="fixed inset-0 bg-black/50 z-[999999] flex items-start sm:items-center justify-center overflow-y-auto p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white w-[min(480px,calc(100vw-32px))] max-h-[calc(100vh-64px)] rounded-2xl shadow-2xl flex flex-col"
+        className="bg-white w-[min(480px,calc(100vw-32px))] max-h-[calc(100vh-32px)] rounded-2xl shadow-2xl flex flex-col my-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}

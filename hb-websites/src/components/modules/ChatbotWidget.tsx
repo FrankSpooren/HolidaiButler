@@ -8,6 +8,7 @@ import WelcomeScreen from '../chatbot/WelcomeScreen';
 import SpeakerButton from '../chatbot/SpeakerButton';
 import { useHoliBot, type ChatMessage } from '../chatbot/HoliBotContext';
 import './ChatbotWidget.css';
+import '../chatbot/ItineraryWizard.css';
 
 const CategoryBrowser = dynamic(() => import('../chatbot/CategoryBrowser'), { ssr: false });
 
@@ -294,7 +295,6 @@ function ItineraryWizard({ locale, onSubmit, onCancel }: {
   const t = ITINERARY_LABELS[locale] || ITINERARY_LABELS.en;
   const [step, setStep] = useState(1);
   const [duration, setDuration] = useState<Duration>('full-day');
-  // Pre-fill interests from onboarding data if available
   const [interests, setInterests] = useState<string[]>(() => getOnboardingInterests());
   const [includeMeals, setIncludeMeals] = useState(true);
 
@@ -303,26 +303,26 @@ function ItineraryWizard({ locale, onSubmit, onCancel }: {
   };
 
   return (
-    <div style={{ border: '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden', background: 'white' }}>
-      <div style={{ background: 'rgba(0,0,0,0.04)', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontWeight: 600, fontSize: 14, color: '#2C3E50' }}>{t.title}</span>
-        <div style={{ display: 'flex', gap: 4 }}>
+    <div className="iw-container">
+      <div className="iw-header">
+        <span className="iw-header-title">{t.title}</span>
+        <div className="iw-steps">
           {[1, 2, 3].map(s => (
-            <span key={s} style={{ width: 20, height: 20, borderRadius: '50%', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, background: step >= s ? 'var(--hb-primary, #30c59b)' : '#E5E7EB', color: step >= s ? 'white' : '#9CA3AF' }}>{s}</span>
+            <span key={s} className={`iw-step ${step >= s ? 'iw-step-active' : 'iw-step-inactive'}`}>{s}</span>
           ))}
         </div>
       </div>
-      <div style={{ padding: 12 }}>
+      <div className="iw-body">
         {step === 1 && (
           <div>
-            <p style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>{t.step1}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <p className="iw-label">{t.step1}</p>
+            <div className="iw-grid">
               {DURATION_OPTIONS.map(opt => (
                 <button key={opt.id} onClick={() => setDuration(opt.id)}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 8, borderRadius: 8, border: duration === opt.id ? '2px solid var(--hb-primary, #30c59b)' : '1px solid #E5E7EB', background: duration === opt.id ? 'rgba(0,0,0,0.04)' : 'white', cursor: 'pointer', fontSize: 12, fontWeight: duration === opt.id ? 600 : 400 }}>
-                  <span style={{ fontSize: 18 }}>{opt.icon}</span>
-                  <span style={{ color: '#2C3E50' }}>{t[opt.id]}</span>
-                  <span style={{ color: '#9CA3AF', fontSize: 10 }}>{opt.hours}</span>
+                  className={`iw-option ${duration === opt.id ? 'iw-option-selected' : ''}`}>
+                  <span className="iw-option-icon">{opt.icon}</span>
+                  <span>{t[opt.id]}</span>
+                  <span className="iw-option-sub">{opt.hours}</span>
                 </button>
               ))}
             </div>
@@ -330,11 +330,11 @@ function ItineraryWizard({ locale, onSubmit, onCancel }: {
         )}
         {step === 2 && (
           <div>
-            <p style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>{t.step2}</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <p className="iw-label">{t.step2}</p>
+            <div className="iw-chips">
               {INTEREST_OPTIONS.map(id => (
                 <button key={id} onClick={() => toggleInterest(id)}
-                  style={{ padding: '6px 10px', borderRadius: 20, fontSize: 12, border: '1px solid', borderColor: interests.includes(id) ? 'var(--hb-primary, #30c59b)' : '#E5E7EB', background: interests.includes(id) ? 'var(--hb-primary, #30c59b)' : 'white', color: interests.includes(id) ? 'white' : '#2C3E50', cursor: 'pointer' }}>
+                  className={`iw-chip ${interests.includes(id) ? 'iw-chip-selected' : ''}`}>
                   {t[id]}
                 </button>
               ))}
@@ -343,28 +343,28 @@ function ItineraryWizard({ locale, onSubmit, onCancel }: {
         )}
         {step === 3 && (
           <div>
-            <p style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>{t.step3}</p>
+            <p className="iw-label">{t.step3}</p>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input type="checkbox" checked={includeMeals} onChange={e => setIncludeMeals(e.target.checked)} style={{ width: 16, height: 16 }} />
+              <input type="checkbox" checked={includeMeals} onChange={e => setIncludeMeals(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#D4AF37' }} />
               <span style={{ fontSize: 12, color: '#2C3E50' }}>{t.includeMeals}</span>
             </label>
-            <div style={{ marginTop: 12, padding: 8, background: '#F8F9FA', borderRadius: 8, fontSize: 12, color: '#9CA3AF' }}>
-              <p style={{ fontWeight: 500, color: '#2C3E50', margin: 0 }}>{t[duration]}</p>
+            <div className="iw-summary">
+              <p className="iw-summary-title">{t[duration]}</p>
               {interests.length > 0 && <p style={{ margin: '4px 0 0' }}>{interests.map(i => t[i]).join(', ')}</p>}
             </div>
           </div>
         )}
       </div>
-      <div style={{ padding: '0 12px 12px', display: 'flex', justifyContent: 'space-between' }}>
+      <div className="iw-footer">
         {step > 1 ? (
-          <button onClick={() => setStep(step - 1)} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 20, border: '1px solid #E5E7EB', background: 'white', color: '#9CA3AF', cursor: 'pointer' }}>{t.back}</button>
+          <button className="iw-btn iw-btn-secondary" onClick={() => setStep(step - 1)}>{t.back}</button>
         ) : (
-          <button onClick={onCancel} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 20, border: '1px solid #E5E7EB', background: 'white', color: '#9CA3AF', cursor: 'pointer' }}>{t.cancel}</button>
+          <button className="iw-btn iw-btn-secondary" onClick={onCancel}>{t.cancel}</button>
         )}
         {step < 3 ? (
-          <button onClick={() => setStep(step + 1)} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 20, border: 'none', background: 'var(--hb-primary, #30c59b)', color: 'white', cursor: 'pointer' }}>{t.next}</button>
+          <button className="iw-btn iw-btn-primary" onClick={() => setStep(step + 1)}>{t.next}</button>
         ) : (
-          <button onClick={() => onSubmit({ duration, interests, includeMeals })} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 20, border: 'none', background: 'var(--hb-primary, #30c59b)', color: 'white', cursor: 'pointer' }}>{t.generate}</button>
+          <button className="iw-btn iw-btn-primary" onClick={() => onSubmit({ duration, interests, includeMeals })}>{t.generate}</button>
         )}
       </div>
     </div>
@@ -726,8 +726,13 @@ export default function ChatbotWidget({ tenantSlug, locale, chatbotName, quickAc
       const detail = (e as CustomEvent).detail;
       setIsOpen(true);
       if (detail?.action === 'itinerary') {
-        // Directly open the itinerary wizard (e.g. from "Zelf programma samenstellen")
         setTimeout(() => setShowItineraryWizard(true), 150);
+      } else if (detail?.action === '__TIP_VAN_DE_DAG__') {
+        setTimeout(() => sendMessage('__TIP_VAN_DE_DAG__'), 100);
+      } else if (detail?.action === '__DIRECTIONS__') {
+        setTimeout(() => sendMessage('__DIRECTIONS__'), 100);
+      } else if (detail?.action === '__CATEGORY__') {
+        setTimeout(() => setShowCategoryBrowser(true), 150);
       } else if (detail?.message && detail.message !== 'general') {
         setTimeout(() => sendMessage(detail.message), 100);
       }

@@ -88,9 +88,28 @@ export default function Footer({ tenant, locale }: FooterProps) {
             <h3 className="text-lg font-heading font-bold mb-2">
               {tenant.displayName}
             </h3>
-            <p className="text-sm opacity-70">
+            <p className="text-sm opacity-70 mb-4">
               {tenant.branding.payoff?.[locale] ?? tenant.branding.payoff?.en ?? ''}
             </p>
+            {activeSocials.length > 0 && (
+              <div className="flex gap-3 mt-2">
+                {activeSocials.map(([platform, url]) => {
+                  const icon = socialIcons[platform];
+                  return (
+                    <a
+                      key={platform}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={icon.label}
+                      className="w-9 h-9 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" dangerouslySetInnerHTML={{ __html: icon.svg }} />
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </>
         );
       }
@@ -206,7 +225,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
             )}
             {resolvedCustomContent && (
               isHtml
-                ? <div className="text-sm opacity-80" dangerouslySetInnerHTML={{ __html: resolvedCustomContent }} />
+                ? <div className="text-sm opacity-80 [&_a]:block [&_a]:py-1 [&_a]:opacity-80 [&_a]:hover:opacity-100 [&_a]:transition-opacity" dangerouslySetInnerHTML={{ __html: resolvedCustomContent }} />
                 : <p className="text-sm opacity-80">{resolvedCustomContent}</p>
             )}
           </>
@@ -226,8 +245,9 @@ export default function Footer({ tenant, locale }: FooterProps) {
           ))}
         </div>
 
-        <div className="border-t border-white/10 mt-8 pt-6 text-center text-sm opacity-60">
-          {copyright}
+        <div className="border-t border-white/10 mt-8 pt-6 flex flex-col sm:flex-row justify-between items-center gap-2 text-sm opacity-60">
+          <span>{copyright}</span>
+          <span>Gemaakt met ❤️ op {tenant.displayName || 'Texel'}</span>
         </div>
       </div>
     </footer>

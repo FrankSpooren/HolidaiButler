@@ -1,0 +1,193 @@
+/**
+ * ItineraryWizard — Matches CalpeTrip.com chatbot styling
+ * Gold accents, step indicators, Inter font
+ */
+
+.iw-container {
+  border: 1.5px solid #D4AF37;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  font-family: 'Inter', sans-serif;
+}
+
+.iw-header {
+  background: #FFF8E7;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #F0E6C4;
+}
+
+.iw-header-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #2C3E50;
+}
+
+.iw-steps {
+  display: flex;
+  gap: 4px;
+}
+
+.iw-step {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  transition: background 200ms, color 200ms;
+}
+
+.iw-step-active {
+  background: #D4AF37;
+  color: white;
+}
+
+.iw-step-inactive {
+  background: #E5E7EB;
+  color: #9CA3AF;
+}
+
+.iw-body {
+  padding: 14px;
+}
+
+.iw-label {
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-bottom: 10px;
+}
+
+.iw-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.iw-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1.5px solid #E5E7EB;
+  background: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 400;
+  color: #2C3E50;
+  transition: border-color 200ms, background 200ms, box-shadow 200ms;
+}
+
+.iw-option:hover {
+  border-color: #D4AF37;
+  background: #FFFDF5;
+}
+
+.iw-option-selected {
+  border-color: #D4AF37;
+  background: #FFF8E7;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(212,175,55,0.2);
+}
+
+.iw-option-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.iw-option-sub {
+  font-size: 10px;
+  color: #9CA3AF;
+}
+
+.iw-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.iw-chip {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  border: 1.5px solid #E5E7EB;
+  background: white;
+  color: #2C3E50;
+  cursor: pointer;
+  transition: border-color 200ms, background 200ms, color 200ms;
+}
+
+.iw-chip:hover {
+  border-color: #D4AF37;
+  background: #FFFDF5;
+}
+
+.iw-chip-selected {
+  border-color: #D4AF37;
+  background: #D4AF37;
+  color: white;
+}
+
+.iw-summary {
+  margin-top: 12px;
+  padding: 10px;
+  background: #FFFDF5;
+  border: 1px solid #F0E6C4;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.iw-summary-title {
+  font-weight: 500;
+  color: #2C3E50;
+  margin: 0;
+}
+
+.iw-footer {
+  padding: 0 14px 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.iw-btn {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: background 200ms, box-shadow 200ms;
+}
+
+.iw-btn-secondary {
+  border: 1.5px solid #D4AF37;
+  background: white;
+  color: #2C3E50;
+}
+
+.iw-btn-secondary:hover {
+  background: #FFF8E7;
+}
+
+.iw-btn-primary {
+  border: none;
+  background: #D4AF37;
+  color: white;
+}
+
+.iw-btn-primary:hover {
+  background: #C49B2A;
+  box-shadow: 0 2px 8px rgba(212,175,55,0.3);
+}
+
+.iw-btn:focus-visible {
+  outline: 3px solid #D4AF37;
+  outline-offset: 2px;
+}

@@ -15,9 +15,9 @@ interface DesktopHeroProps {
 
 const DEFAULT_QUICK_ACTIONS = [
   { emoji: '🗓️', label: { nl: 'Programma', en: 'Program', de: 'Programm', es: 'Programa' }, action: 'itinerary' },
-  { emoji: '💡', label: { nl: 'Tip van de Dag', en: 'Tip of the Day', de: 'Tipp des Tages', es: 'Consejo del Día' }, action: 'tip' },
-  { emoji: '🍽️', label: { nl: 'Restaurants', en: 'Restaurants', de: 'Restaurants', es: 'Restaurantes' }, action: '__CATEGORY__restaurants' },
-  { emoji: '🚴', label: { nl: 'Actief', en: 'Active', de: 'Aktiv', es: 'Activo' }, action: '__CATEGORY__active' },
+  { emoji: '💡', label: { nl: 'Tip van de Dag', en: 'Tip of the Day', de: 'Tipp des Tages', es: 'Consejo del Día' }, action: '__TIP_VAN_DE_DAG__' },
+  { emoji: '🧭', label: { nl: 'Routebeschrijving', en: 'Directions', de: 'Wegbeschreibung', es: 'Direcciones' }, action: '__DIRECTIONS__' },
+  { emoji: '🔍', label: { nl: 'Zoeken op Rubriek', en: 'Browse Categories', de: 'Nach Kategorie suchen', es: 'Buscar por Categoría' }, action: '__CATEGORY__' },
 ];
 
 function t(obj: Record<string, string> | string | undefined, locale: string): string {
@@ -64,8 +64,13 @@ export default function DesktopHero({
   };
 
   const handleQuickAction = (action: string) => {
-    if (action === 'tip') {
-      window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { action: 'tip' } }));
+    // Sentinels match ChatbotWidget quick action handling
+    if (action === '__TIP_VAN_DE_DAG__') {
+      window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { action: '__TIP_VAN_DE_DAG__' } }));
+    } else if (action === '__DIRECTIONS__') {
+      window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { action: '__DIRECTIONS__' } }));
+    } else if (action === '__CATEGORY__') {
+      window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { action: '__CATEGORY__' } }));
     } else if (action === 'itinerary') {
       window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { action: 'itinerary' } }));
     } else if (action.startsWith('__CATEGORY__')) {

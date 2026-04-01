@@ -322,11 +322,17 @@ function isFood(p: any): boolean {
  * - For morning/afternoon: 1 highlight POI guaranteed
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isShopping(p: { category?: string }): boolean {
+  const cat = (p.category || '').toLowerCase();
+  return cat.includes('winkelen') || cat.includes('shopping');
+}
+
 function selectDiversePOIs(pois: any[], count: number, dayPart: DayPart, config: DestinationConfig): any[] {
   const rule = config.rules[dayPart];
   const selected: any[] = [];
   const usedSubcategories = new Set<string>();
   const usedCategories = new Set<string>();
+  const categoryCount: Record<string, number> = {};
   let foodCount = 0;
 
   // For morning/afternoon: find and insert 1 highlight first
@@ -334,8 +340,10 @@ function selectDiversePOIs(pois: any[], count: number, dayPart: DayPart, config:
     const highlight = pois.find(p => isHighlight(p, config.highlights));
     if (highlight) {
       selected.push(highlight);
+      const hCat = (highlight.category || '').toLowerCase();
       usedSubcategories.add((highlight.subcategory || '').toLowerCase());
-      usedCategories.add((highlight.category || '').toLowerCase());
+      usedCategories.add(hCat);
+      categoryCount[hCat] = (categoryCount[hCat] || 0) + 1;
       if (isFood(highlight)) foodCount++;
     }
   }
@@ -343,7 +351,7 @@ function selectDiversePOIs(pois: any[], count: number, dayPart: DayPart, config:
   // Fill remaining slots with diverse selection
   for (const poi of pois) {
     if (selected.length >= count) break;
-    if (selected.some(s => s.id === poi.id)) continue; // skip if already selected (highlight)
+    if (selected.some(s => s.id === poi.id)) continue;
 
     const subcat = (poi.subcategory || poi.category || 'other').toLowerCase();
     const mainCat = (poi.category || 'other').toLowerCase();
@@ -351,8 +359,9 @@ function selectDiversePOIs(pois: any[], count: number, dayPart: DayPart, config:
     // Max 1 per subcategory
     if (usedSubcategories.has(subcat)) continue;
 
-    // Enforce category diversity (max 1 per main category) — except evening food
-    if (dayPart !== 'evening' && usedCategories.has(mainCat)) continue;
+    // Enforce category diversity — Shopping/Winkelen: max 2, others: max 1
+    const maxPerCat = isShopping(poi) ? 2 : 1;
+    if (dayPart !== 'evening' && (categoryCount[mainCat] || 0) >= maxPerCat) continue;
 
     // Max food POIs per rule
     if (isFood(poi) && foodCount >= rule.maxFood) continue;
@@ -360,6 +369,7 @@ function selectDiversePOIs(pois: any[], count: number, dayPart: DayPart, config:
     selected.push(poi);
     usedSubcategories.add(subcat);
     usedCategories.add(mainCat);
+    categoryCount[mainCat] = (categoryCount[mainCat] || 0) + 1;
     if (isFood(poi)) foodCount++;
   }
 
@@ -396,23 +406,71 @@ const DAY_PART_LABELS: Record<DayPart, Record<string, string>> = {
   evening:   { nl: 'AVONDPROGRAMMA', en: 'EVENING PROGRAM', de: 'ABENDPROGRAMM', es: 'PROGRAMA DE NOCHE' },
 };
 
-function generateTimeSlots(count: number, dayPart: DayPart): { start: string; end: string }[] {
-  const slots = [];
+/** Duration per category (hours) */
+const CATEGORY_DURATION: Record<string, number> = {
+  // Eten & Drinken subcategories
+  'breakfast & coffee': 1, 'ontbijt & lunch': 1, 'ontbijt': 1, 'breakfast': 1,
+  'restaurants': 1.5, 'bar restaurants': 1.5, 'eetcafe': 1.5, 'strandpaviljoens': 1.5,
+  'lunch': 1.5, 'diner': 1.5, 'dinner': 1.5,
+  'bars': 1, 'cafe': 1, 'cocktail bar': 1, 'ijs & desserts': 0.5,
+  // Winkelen
+  'winkelen': 0.5, 'shopping': 0.5, 'mode & lifestyle': 0.5, 'markets': 0.5,
+  'speciaalzaken': 0.5, 'supermarkten': 0.5,
+  // Actief / Sport
+  'cycling': 1.5, 'fietsen': 1.5, 'hiking': 1.5, 'wandelroutes': 1.5,
+  'water sports': 1.5, 'watersporten': 1.5, 'golf': 1.5, 'golfbaan': 1.5,
+  'excursies': 1.5, 'rondvaarten': 1.5, 'zwemmen': 1.5, 'paarden': 1.5,
+  // Cultuur
+  'arts & museums': 1.5, 'musea': 1.5, 'historical sites': 1.5, 'monuments': 1.5,
+  // Natuur
+  'beaches': 1.5, 'stranden': 1.5, 'parks & gardens': 1.5, 'natuurgebieden': 1.5,
+  'viewpoints & nature': 1, 'uitkijkpunten': 1,
+};
+
+/** Main category fallback durations */
+const MAIN_CATEGORY_DURATION: Record<string, number> = {
+  'food & drinks': 1.5, 'eten & drinken': 1.5,
+  'shopping': 0.5, 'winkelen': 0.5,
+  'active': 1.5, 'actief': 1.5,
+  'culture & history': 1.5, 'cultuur & historie': 1.5, 'cultuur': 1.5,
+  'beaches & nature': 1.5, 'natuur': 1.5,
+  'recreation': 1.5, 'recreatief': 1.5,
+};
+
+function getCategoryDuration(category?: string, subcategory?: string): number {
+  if (subcategory) {
+    const subLower = subcategory.toLowerCase();
+    if (CATEGORY_DURATION[subLower]) return CATEGORY_DURATION[subLower];
+  }
+  if (category) {
+    const catLower = category.toLowerCase();
+    if (MAIN_CATEGORY_DURATION[catLower]) return MAIN_CATEGORY_DURATION[catLower];
+  }
+  return 1.5; // default
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function generateTimeSlots(items: any[], dayPart: DayPart): { start: string; end: string }[] {
+  const slots: { start: string; end: string }[] = [];
   const startHour = DAY_PART_CONFIG[dayPart].startHour;
   const maxHour = dayPart === 'morning' ? 13 : dayPart === 'afternoon' ? 18 : 23;
-  const totalHours = maxHour - startHour;
-  const slotDuration = Math.max(1, totalHours / count);
+
+  const fmt = (h: number) => {
+    const hh = Math.floor(h);
+    const mm = Math.round((h % 1) * 60);
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  };
 
   let hour = startHour;
-  for (let i = 0; i < count; i++) {
-    const endHour = Math.min(hour + slotDuration, 23.5);
-    const fmt = (h: number) => {
-      const hh = Math.floor(h);
-      const mm = Math.round((h % 1) * 60);
-      return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-    };
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const duration = item?.type === 'event'
+      ? 1.5
+      : getCategoryDuration(item?.category, item?.subcategory);
+    const endHour = Math.min(hour + duration, maxHour, 23.5);
     slots.push({ start: fmt(hour), end: fmt(endHour) });
     hour = endHour;
+    if (hour >= maxHour) break;
   }
   return slots;
 }
@@ -462,7 +520,7 @@ export default function ProgramCard({ locale, programSize = 4, forceShow }: Prog
         // Fetch more than needed to have room after filtering
         const [poisRes, eventsRes] = await Promise.all([
           fetch(`/api/pois?limit=${poiLimit * 8}&sort=rating:desc&min_rating=4.2&min_reviews=3&categories=${encodeURIComponent(rule.categories)}`),
-          fetch('/api/events?limit=10'),
+          fetch('/api/events?limit=10&distance=5'),
         ]);
 
         const poisData = await poisRes.json();
@@ -486,8 +544,10 @@ export default function ProgramCard({ locale, programSize = 4, forceShow }: Prog
         const pois = selectDiversePOIs(shuffled, neededPois, dayPart, config);
 
         const combined: ProgramItem[] = [];
-        const totalItems = pois.length + events.length;
-        const slots = generateTimeSlots(totalItems, dayPart);
+        // Build items array with category info for duration-aware time slots
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const allItems: any[] = [...pois.map((p: any) => ({ ...p, type: 'poi' })), ...events.map((e: any) => ({ ...e, type: 'event' }))];
+        const slots = generateTimeSlots(allItems, dayPart);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pois.forEach((p: any, i: number) => {
