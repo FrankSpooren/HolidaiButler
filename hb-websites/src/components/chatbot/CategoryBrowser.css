@@ -1,0 +1,105 @@
+/**
+ * CategoryBrowser — Matches CalpeTrip.com chatbot styling
+ * Gold borders, hover effects, Inter font, pill-shaped items
+ */
+
+.cb-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.cb-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 8px;
+  font-family: 'Inter', sans-serif;
+  background: white;
+  border: 1.5px solid #D4AF37;
+  border-radius: 12px;
+  cursor: pointer;
+  outline: none;
+  text-align: center;
+  min-height: 70px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2C3E50;
+  transition: background-color 200ms, border-color 200ms, box-shadow 200ms, transform 200ms;
+}
+.cb-tile:hover {
+  background: #FFF8E7;
+  border-color: #C49B2A;
+  box-shadow: 0 2px 8px rgba(212,175,55,0.25);
+  transform: translateY(-2px);
+}
+.cb-tile:active {
+  transform: scale(0.98);
+  background: #D4AF37;
+  color: white;
+}
+.cb-tile-icon { font-size: 28px; }
+
+.cb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cb-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  font-family: 'Inter', sans-serif;
+  background: white;
+  border: 1.5px solid #D4AF37;
+  border-radius: 20px;
+  cursor: pointer;
+  outline: none;
+  text-align: left;
+  width: 100%;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2C3E50;
+  transition: background-color 200ms, border-color 200ms, box-shadow 200ms;
+}
+.cb-item:hover {
+  background: #FFF8E7;
+  border-color: #C49B2A;
+  box-shadow: 0 2px 8px rgba(212,175,55,0.25);
+}
+.cb-item:active { transform: scale(0.98); background: #D4AF37; color: white; }
+.cb-item-all { background: #FFF8E7; }
+.cb-item-icon { font-size: 20px; flex-shrink: 0; width: 28px; text-align: center; }
+.cb-item-name { flex: 1; }
+.cb-item-count { font-size: 12px; color: #9CA3AF; flex-shrink: 0; }
+.cb-item-arrow { font-size: 18px; color: #D4AF37; font-weight: bold; flex-shrink: 0; }
+
+.cb-back {
+  margin-top: 12px;
+  padding: 8px 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2C3E50;
+  background: white;
+  border: 1.5px solid #D4AF37;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 200ms;
+}
+.cb-back:hover { background: #FFF8E7; }
+
+.cb-title { font-size: 16px; font-weight: 600; color: #2C3E50; margin-bottom: 4px; }
+.cb-breadcrumb { font-size: 12px; color: #D4AF37; font-weight: 500; margin-bottom: 8px; }
+
+.cb-tile:focus-visible, .cb-item:focus-visible, .cb-back:focus-visible {
+  outline: 3px solid #D4AF37;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cb-tile, .cb-item, .cb-back { transition: none; }
+}

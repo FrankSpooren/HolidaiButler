@@ -51,6 +51,10 @@ const FILTER_LABELS: Record<string, string> = {
   nl: 'Filters', en: 'Filters', de: 'Filter', es: 'Filtros',
 };
 
+const LOAD_MORE_LABELS: Record<string, string> = {
+  nl: "Meer POI's laden", en: 'Load More POIs', de: 'Mehr POIs laden', es: 'Cargar más POIs',
+};
+
 interface PoiFilterBarProps {
   pois: POI[];
   columns?: number;
@@ -71,6 +75,10 @@ export default function PoiFilterBar({ pois: initialPois, columns = 3, locale, l
   const [filters, setFilters] = useState<PoiFilters>(DEFAULT_FILTERS);
   const [filteredPois, setFilteredPois] = useState<POI[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const PAGE_SIZE = 24;
 
   const pois = filteredPois ?? initialPois;
 
@@ -103,36 +111,65 @@ export default function PoiFilterBar({ pois: initialPois, columns = 3, locale, l
     (filters.sort !== 'rating:desc' ? 1 : 0)
   );
 
+  const buildParams = useCallback((f: PoiFilters, off: number) => {
+    const params = new URLSearchParams();
+    if (f.categories.length > 0) params.set('categories', f.categories.join(','));
+    if (f.min_rating) params.set('min_rating', String(f.min_rating));
+    if (f.min_reviews) params.set('min_reviews', String(f.min_reviews));
+    if (f.sort) params.set('sort', f.sort);
+    params.set('limit', String(PAGE_SIZE));
+    if (off > 0) params.set('offset', String(off));
+    return params;
+  }, []);
+
   const handleApplyFilters = useCallback(async (newFilters: PoiFilters) => {
     setFilters(newFilters);
+    setOffset(0);
 
     const hasFilters = newFilters.categories.length > 0 || newFilters.min_rating || newFilters.min_reviews || newFilters.sort !== 'rating:desc';
 
     if (!hasFilters) {
       setFilteredPois(null);
+      setHasMore(true);
       return;
     }
 
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (newFilters.categories.length > 0) params.set('categories', newFilters.categories.join(','));
-      if (newFilters.min_rating) params.set('min_rating', String(newFilters.min_rating));
-      if (newFilters.min_reviews) params.set('min_reviews', String(newFilters.min_reviews));
-      if (newFilters.sort) params.set('sort', newFilters.sort);
-      params.set('limit', '50');
-
+      const params = buildParams(newFilters, 0);
       const res = await fetch(`/api/pois?${params.toString()}`, {
         headers: { 'Accept-Language': locale },
       });
       const data = await res.json();
-      setFilteredPois(data?.data ?? []);
+      const newPois = data?.data ?? [];
+      setFilteredPois(newPois);
+      setHasMore(data?.meta?.has_more ?? newPois.length >= PAGE_SIZE);
+      setOffset(newPois.length);
     } catch {
       setFilteredPois(null);
     } finally {
       setLoading(false);
     }
-  }, [locale]);
+  }, [locale, buildParams]);
+
+  const handleLoadMore = useCallback(async () => {
+    setLoadingMore(true);
+    try {
+      const params = buildParams(filters, offset);
+      const res = await fetch(`/api/pois?${params.toString()}`, {
+        headers: { 'Accept-Language': locale },
+      });
+      const data = await res.json();
+      const newPois: POI[] = data?.data ?? [];
+      setFilteredPois(prev => [...(prev ?? initialPois), ...newPois]);
+      setHasMore(data?.meta?.has_more ?? newPois.length >= PAGE_SIZE);
+      setOffset(prev => prev + newPois.length);
+    } catch {
+      // silent
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [filters, offset, locale, initialPois, buildParams]);
 
   return (
     <>
@@ -254,6 +291,31 @@ export default function PoiFilterBar({ pois: initialPois, columns = 3, locale, l
               </PoiCard>
             );
           })}
+        </div>
+      )}
+
+      {/* Load More button */}
+      {hasMore && displayed.length > 0 && !loading && (
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="px-8 py-3 rounded-full text-sm font-semibold transition-all border-2"
+            style={{
+              borderColor: 'var(--hb-primary, #30c59b)',
+              color: loadingMore ? '#9CA3AF' : 'var(--hb-primary, #30c59b)',
+              background: loadingMore ? '#F3F4F6' : 'white',
+            }}
+          >
+            {loadingMore ? (
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                {locale === 'nl' ? 'Laden...' : 'Loading...'}
+              </span>
+            ) : (
+              LOAD_MORE_LABELS[locale] || LOAD_MORE_LABELS.en
+            )}
+          </button>
         </div>
       )}
 

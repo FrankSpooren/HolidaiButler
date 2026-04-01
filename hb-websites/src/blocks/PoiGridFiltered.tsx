@@ -56,17 +56,16 @@ export default async function PoiGridFiltered({ categoryFilter, limit = 24, colu
   const hasCategoryFilter = categoryFilter && categoryFilter.length > 0;
 
   const pois = await fetchPois(tenantSlug, {
-    categories: hasCategoryFilter ? categoryFilter.join(',') : TOURIST_CATEGORIES.join(','),
-    limit: hasCategoryFilter ? limit : limit * 3,
+    ...(hasCategoryFilter ? { categories: categoryFilter.join(','), min_rating: 3.5, min_reviews: 1 } : {}),
+    limit,
     locale,
-    ...(hasCategoryFilter ? { min_rating: 3.5, min_reviews: 1 } : {}),
     sort: 'rating:desc',
   });
 
   if (!pois || pois.length === 0) return null;
 
   // Round-robin mix for category variety when no explicit filter
-  const displayPois = hasCategoryFilter ? pois : roundRobinMix(pois).slice(0, limit);
+  const displayPois = hasCategoryFilter ? pois : roundRobinMix(pois);
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

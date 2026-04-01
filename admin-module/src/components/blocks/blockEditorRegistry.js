@@ -21,6 +21,7 @@ const SocialFeedEditor = lazy(() => import('./editors/SocialFeedEditor.jsx'));
 const TicketShopEditor = lazy(() => import('./editors/TicketShopEditor.jsx'));
 const ReservationWidgetEditor = lazy(() => import('./editors/ReservationWidgetEditor.jsx'));
 const ChatbotWidgetEditor = lazy(() => import('./editors/ChatbotWidgetEditor.jsx'));
+const TestimonialsEditor = lazy(() => import('./editors/TestimonialsEditor.jsx'));
 const MobileProgramEditor = lazy(() => import('./editors/MobileProgramEditor.jsx'));
 const MobileTipEditor = lazy(() => import('./editors/MobileTipEditor.jsx'));
 const MobileEventsEditor = lazy(() => import('./editors/MobileEventsEditor.jsx'));
@@ -239,7 +240,48 @@ const blockEditorRegistry = {
     category: 'Commerce',
     thumbnail: THUMBNAILS.card_group
   },
-  // Desktop homepage block aliases (Fase VI-C command names)
+  testimonials: {
+    editor: TestimonialsEditor,
+    icon: 'FormatQuote',
+    label: 'Recensies / Testimonials',
+    description: 'Reviews van bezoekers',
+    category: 'Data',
+    thumbnail: THUMBNAILS.poi_grid
+  },
+  // Desktop homepage blocks (primary names used in templates + DB)
+  desktop_hero: {
+    editor: HeroEditor,
+    icon: 'Chat',
+    label: 'Hero + Chatbot',
+    description: 'Hero met chatbot-input en quick actions',
+    category: 'Content',
+    thumbnail: THUMBNAILS.hero
+  },
+  desktop_program_tip: {
+    editor: MobileProgramEditor,
+    icon: 'ViewTimeline',
+    label: 'Programma + Tip (2-kolom)',
+    description: 'Dagprogramma links + Tip van de Dag rechts',
+    category: 'Content',
+    thumbnail: THUMBNAILS.mobile_program
+  },
+  desktop_events: {
+    editor: MobileEventsEditor,
+    icon: 'EventNote',
+    label: 'Vandaag Events (grid)',
+    description: 'Responsive events grid (3-kolom desktop)',
+    category: 'Data',
+    thumbnail: THUMBNAILS.mobile_events
+  },
+  category_grid: {
+    editor: MobileMapEditor,
+    icon: 'Category',
+    label: 'Categorie Grid',
+    description: 'Ontdek op categorie (4-kolom grid)',
+    category: 'Data',
+    thumbnail: THUMBNAILS.mobile_events
+  },
+  // Desktop homepage block aliases (backward compat)
   hero_chatbot: {
     editor: HeroEditor,
     icon: 'Chat',
