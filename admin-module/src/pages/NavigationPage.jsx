@@ -41,7 +41,7 @@ const BORDER_RADIUS_OPTIONS = [
   { value: 'full', label: 'Pill' }
 ];
 
-export default function NavigationPage() {
+export default function NavigationPage({ embedded = false }) {
   const { t } = useTranslation();
   const { data, isLoading, error, refetch } = useNavigationDestinations();
   const updateMut = useNavigationUpdate();
@@ -150,7 +150,7 @@ export default function NavigationPage() {
 
   if (isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: embedded ? 0 : 3 }}>
         <Skeleton variant="text" width={200} height={40} />
         <Skeleton variant="rounded" height={300} sx={{ mt: 2 }} />
       </Box>
@@ -159,7 +159,7 @@ export default function NavigationPage() {
 
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: embedded ? 0 : 3 }}>
         <Alert severity="error" action={<Button onClick={refetch}>{t('common.retry')}</Button>}>
           {t('common.error')}
         </Alert>
@@ -168,12 +168,14 @@ export default function NavigationPage() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: embedded ? 0 : 3, pt: embedded ? 2 : 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('navigation.title')}</Typography>
-          <Typography variant="body2" color="text.secondary">{t('navigation.subtitle')}</Typography>
-        </Box>
+        {!embedded ? (
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('navigation.title')}</Typography>
+            <Typography variant="body2" color="text.secondary">{t('navigation.subtitle')}</Typography>
+          </Box>
+        ) : <Box />}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button variant="outlined" startIcon={<AddIcon />} onClick={openCreateDialog}>
             {t('navigation.addItem')}

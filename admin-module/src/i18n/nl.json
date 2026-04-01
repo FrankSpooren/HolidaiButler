@@ -24,10 +24,16 @@
     "onboarding": "Nieuwe Bestemming",
     "contentStudio": "Content Studio",
     "section_overview": "Overzicht",
-    "section_content": "Content & Data",
+    "section_home": "Home",
+    "section_content": "Content",
+    "section_data": "Data & POI",
     "section_commerce": "Commerce",
+    "section_website": "Website",
+    "section_config": "Configuratie",
     "section_platform": "Platform",
-    "section_system": "Systeem"
+    "section_system": "Systeem",
+    "pagesNav": "Pagina's & Navigatie",
+    "agentsSystem": "Agents & Systeem"
   },
   "auth": {
     "login": "Inloggen",
@@ -36,6 +42,28 @@
     "password": "Wachtwoord",
     "loginTitle": "Admin Portal",
     "loginSubtitle": "Beheer je HolidaiButler platform",
+    "studioWelcome": "Welkom bij uw Content Studio",
+    "studioLoginSubtitle": "Log in met uw account om te starten",
+    "studioHeroText": "Uw AI-aangedreven content engine. Genereer, optimaliseer en publiceer professionele content in uw eigen merkstem \u2014 op alle platforms tegelijk.",
+    "studioFeaturesLabel": "Wat maakt de Content Studio uniek?",
+    "studioSecurityNote": "100% Europese infrastructuur. Uw data blijft in de EU (Hetzner DE, Mistral FR, DeepL DE).",
+    "usp": {
+      "aiTitle": "Relevante Content Generatie",
+      "aiDesc": "Genereer blogs, social posts en video scripts, gebaseerd op actueel online vertoond gedrag via onze multi-source strategie.",
+      "seoTitle": "SEO Optimalisatie",
+      "seoDesc": "Ingebouwde SEO-scoring en automatische verbetering voor maximale vindbaarheid (zelflerende systematiek).",
+      "calendarTitle": "Optimale Content Flow",
+      "calendarDesc": "Plan en publiceer content over alle kanalen vanuit \u00e9\u00e9n overzicht, inclusief batch-functie en speciale campagne-tool.",
+      "translateTitle": "Meertaligheid",
+      "translateDesc": "Vertaal in onge\u00ebvenaarde nauwkeurigheid naar 100+ talen met \u00e9\u00e9n klik.",
+      "brandTitle": "Merk Profiel & Tone of Voice",
+      "brandDesc": "Uw merkidentiteit, doelgroepen en knowledge base als fundament voor elke AI-generatie.",
+      "analyticsTitle": "Analytics",
+      "analyticsDesc": "Statistieken per content item en kanaal t.b.v. automatisch verbeteren van content."
+    },
+    "compareLabel": "Vergelijk met de concurrentie",
+    "compareTitle": "AI Content Studio vs. Hootsuite vs. Jasper AI",
+    "compareSubtitle": "E\u00e9n platform dat content generatie, SEO, meertaligheid \u00e9n publishing combineert. Geen losse tools meer nodig.",
     "invalidCredentials": "Ongeldige inloggegevens",
     "serverError": "Er is een fout opgetreden. Probeer het opnieuw.",
     "sessionExpired": "Je sessie is verlopen. Log opnieuw in."
@@ -313,8 +341,25 @@
   "analytics": {
     "title": "Analytics",
     "subtitle": "Platform statistieken en inzichten",
-    "contentCoverage": "Content dekking",
     "topPois": "Top 10 POIs (meeste reviews)",
+    "tab": {
+      "website": "Website",
+      "poiReviews": "POI & Reviews",
+      "chatbot": "Chatbot"
+    },
+    "website": {
+      "visitors": "Bezoekers",
+      "pageviews": "Paginaweergaven",
+      "avgPerDay": "Gem. per dag",
+      "devices": "Apparaten",
+      "visitorsChart": "Bezoekers & Paginaweergaven",
+      "topPages": "Top Pagina's",
+      "page": "Pagina",
+      "views": "Views",
+      "referrers": "Verkeersbronnen",
+      "events": "Gebruikersinteracties",
+      "noData": "Geen data beschikbaar voor deze periode"
+    },
     "kpi": {
       "totalPois": "Totaal POIs",
       "totalReviews": "Totaal Reviews",
@@ -969,7 +1014,8 @@
     },
     "brandVisuals": {
       "addVisual": "Visual toevoegen",
-      "uploaded": "Visual geüpload"
+      "uploaded": "Visual geüpload",
+      "openMediaLibrary": "Open Mediabibliotheek"
     }
   },
   "pages": {
@@ -1073,6 +1119,13 @@
     "all": "Alle apparaten",
     "mobile": "Alleen mobiel",
     "desktop": "Alleen desktop"
+  },
+  "pagesNav": {
+    "subtitle": "Beheer pagina-layouts, blokken en navigatie-items",
+    "tab": {
+      "pages": "Pagina's",
+      "navigation": "Navigatie"
+    }
   },
   "navigation": {
     "title": "Navigatie",
@@ -1283,7 +1336,8 @@
       "suggestions": "Suggesties",
       "unsplash": "Unsplash",
       "noSuggestions": "Geen suggesties gevonden",
-      "searchPlaceholder": "Zoek stock foto's..."
+      "searchPlaceholder": "Zoek stock foto's...",
+      "openMediaLibrary": "Mediabibliotheek"
     },
     "editor": {
       "contentItem": "Content Item",

@@ -24,10 +24,16 @@
     "onboarding": "Nuevo Destino",
     "contentStudio": "Estudio de Contenido",
     "section_overview": "Resumen",
-    "section_content": "Contenido y Datos",
+    "section_home": "Inicio",
+    "section_content": "Contenido",
+    "section_data": "Datos y POI",
     "section_commerce": "Comercio",
+    "section_website": "Sitio Web",
+    "section_config": "Configuración",
     "section_platform": "Plataforma",
-    "section_system": "Sistema"
+    "section_system": "Sistema",
+    "pagesNav": "Páginas y Navegación",
+    "agentsSystem": "Agentes y Sistema"
   },
   "auth": {
     "login": "Iniciar sesi\u00f3n",
@@ -36,6 +42,11 @@
     "password": "Contrase\u00f1a",
     "loginTitle": "Admin Portal",
     "loginSubtitle": "Gestiona tu plataforma HolidaiButler",
+    "studioWelcome": "Bienvenido a su Content Studio",
+    "studioLoginSubtitle": "Inicie sesi\u00f3n con su cuenta para comenzar",
+    "studioHeroText": "Su motor de contenido impulsado por IA. Genere, optimice y publique contenido profesional con su propia voz de marca \u2014 en todas las plataformas a la vez.",
+    "studioFeaturesLabel": "\u00bfQu\u00e9 hace \u00fanico al Content Studio?",
+    "studioSecurityNote": "Infraestructura 100% europea. Sus datos permanecen en la UE (Hetzner DE, Mistral FR, DeepL DE).",
     "invalidCredentials": "Credenciales inv\u00e1lidas",
     "serverError": "Ha ocurrido un error. Por favor, int\u00e9ntalo de nuevo.",
     "sessionExpired": "Tu sesi\u00f3n ha expirado. Por favor, inicia sesi\u00f3n de nuevo."
@@ -969,7 +980,8 @@
     },
     "brandVisuals": {
       "addVisual": "Añadir visual",
-      "uploaded": "Visual subido"
+      "uploaded": "Visual subido",
+      "openMediaLibrary": "Abrir mediateca"
     }
   },
   "pages": {
@@ -1066,6 +1078,13 @@
     "all": "Todos los dispositivos",
     "mobile": "Solo móvil",
     "desktop": "Solo escritorio"
+  },
+  "pagesNav": {
+    "subtitle": "Gestiona diseños de página, bloques y elementos de navegación",
+    "tab": {
+      "pages": "Páginas",
+      "navigation": "Navegación"
+    }
   },
   "navigation": {
     "title": "Navegación",
@@ -1263,7 +1282,8 @@
       "suggestions": "Sugerencias",
       "unsplash": "Unsplash",
       "noSuggestions": "No se encontraron sugerencias",
-      "searchPlaceholder": "Buscar fotos de stock..."
+      "searchPlaceholder": "Buscar fotos de stock...",
+      "openMediaLibrary": "Mediateca"
     },
     "editor": {
       "contentItem": "Contenido",

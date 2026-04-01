@@ -84,9 +84,11 @@ function TransactionsTab({ partnerId, destinationId, t }) {
 
   if (transactions.length === 0) {
     return (
-      <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
-        {t('intermediary.no_data')}
-      </Typography>
+      <Box sx={{ py: 4, textAlign: 'center' }}>
+        <Typography color="text.secondary" sx={{ mb: 1 }}>{t('partners.no_transactions', 'Nog geen transacties voor deze partner')}</Typography>
+        <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mb: 2 }}>{t('partners.no_transactions_hint', 'Transacties verschijnen hier zodra de partner een boeking bevestigt')}</Typography>
+        <Button variant="outlined" size="small" href="/intermediary">{t('partners.goToIntermediary', 'Bekijk alle transacties')}</Button>
+      </Box>
     );
   }
 
@@ -95,7 +97,7 @@ function TransactionsTab({ partnerId, destinationId, t }) {
       <TableContainer component={Paper} variant="outlined">
         <Table size="small">
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
               <TableCell>{t('intermediary.fields.transaction_number')}</TableCell>
               <TableCell>{t('common.status')}</TableCell>
               <TableCell>{t('intermediary.fields.service_type')}</TableCell>
@@ -433,7 +435,7 @@ export default function PartnersPage() {
                   {partner.pois?.length > 0 ? (
                     <Table size="small">
                       <TableHead>
-                        <TableRow>
+                        <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
                           <TableCell>{t('partners.poi_table.name')}</TableCell>
                           <TableCell>{t('partners.poi_table.category')}</TableCell>
                           <TableCell>{t('partners.poi_table.rating')}</TableCell>
@@ -500,10 +502,13 @@ export default function PartnersPage() {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5">
-          <HandshakeIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
-          {t('partners.title')}
-        </Typography>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            <HandshakeIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+            {t('partners.title')}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">{t('partners.subtitle', 'Beheer partners en samenwerkingen')}</Typography>
+        </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title={t('common.refresh')}>
             <IconButton onClick={() => refetch()}><RefreshIcon /></IconButton>
@@ -549,7 +554,7 @@ export default function PartnersPage() {
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
               <TableCell>{t('partners.table.company')}</TableCell>
               <TableCell>{t('partners.table.destination')}</TableCell>
               <TableCell>{t('partners.table.status')}</TableCell>
@@ -610,24 +615,24 @@ export default function PartnersPage() {
         </MenuItem>
         <MenuItem onClick={() => { setArchivePartnerDialog(partnerMenuTarget); setPartnerMenuAnchor(null); }}>
           <ListItemIcon><ArchiveIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Archiveren</ListItemText>
+          <ListItemText>{t('partners.archive', 'Archiveren')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => { setDeletePartnerDialog(partnerMenuTarget); setPartnerMenuAnchor(null); }} sx={{ color: 'error.main' }}>
           <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
-          <ListItemText>Verwijderen</ListItemText>
+          <ListItemText>{t('partners.delete', 'Verwijderen')}</ListItemText>
         </MenuItem>
       </Menu>
 
       {/* Archive Partner Dialog */}
       <Dialog open={!!archivePartnerDialog} onClose={() => setArchivePartnerDialog(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>Partner archiveren?</DialogTitle>
+        <DialogTitle>{t('partners.archiveTitle', 'Partner archiveren?')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2">
-            <strong>{archivePartnerDialog?.company_name}</strong> wordt gearchiveerd. Data blijft behouden.
+            {t('partners.archiveBody', '{{name}} wordt gearchiveerd. Data blijft behouden.', { name: archivePartnerDialog?.company_name })}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setArchivePartnerDialog(null)}>Annuleren</Button>
+          <Button onClick={() => setArchivePartnerDialog(null)}>{t('common.cancel', 'Annuleren')}</Button>
           <Button variant="contained" color="warning" onClick={async () => {
             try {
               await archivePartnerMut.mutateAsync(archivePartnerDialog.id);
@@ -638,22 +643,22 @@ export default function PartnersPage() {
             }
           }} disabled={archivePartnerMut.isPending}
             startIcon={archivePartnerMut.isPending ? <CircularProgress size={16} /> : <ArchiveIcon />}>
-            Archiveren
+            {t('partners.archive', 'Archiveren')}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Partner Dialog */}
       <Dialog open={!!deletePartnerDialog} onClose={() => setDeletePartnerDialog(null)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ color: 'error.main' }}>Partner permanent verwijderen?</DialogTitle>
+        <DialogTitle sx={{ color: 'error.main' }}>{t('partners.deleteTitle', 'Partner permanent verwijderen?')}</DialogTitle>
         <DialogContent>
           <Alert severity="error" sx={{ mb: 2 }}>
             <strong>{deletePartnerDialog?.company_name}</strong> en alle gerelateerde data (POI-koppelingen, onboarding, payouts) worden permanent verwijderd.
           </Alert>
-          <Typography variant="body2">Dit is onomkeerbaar.</Typography>
+          <Typography variant="body2">{t('partners.deleteWarning', 'Dit is onomkeerbaar.')}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeletePartnerDialog(null)}>Annuleren</Button>
+          <Button onClick={() => setDeletePartnerDialog(null)}>{t('common.cancel', 'Annuleren')}</Button>
           <Button variant="contained" color="error" onClick={async () => {
             try {
               await deletePartnerMut.mutateAsync(deletePartnerDialog.id);
@@ -664,7 +669,7 @@ export default function PartnersPage() {
             }
           }} disabled={deletePartnerMut.isPending}
             startIcon={deletePartnerMut.isPending ? <CircularProgress size={16} /> : <DeleteForeverIcon />}>
-            Permanent Verwijderen
+            {t('partners.deletePermanent', 'Permanent Verwijderen')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -18,7 +18,6 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import PaletteIcon from '@mui/icons-material/Palette';
 import UndoIcon from '@mui/icons-material/Undo';
 import SaveIcon from '@mui/icons-material/Save';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import UnarchiveIcon from '@mui/icons-material/Unarchive';
@@ -27,7 +26,7 @@ import PublicIcon from '@mui/icons-material/Public';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSettings, useAuditLog, useClearCache, useUndoAction, useBranding, useUpdateBranding, useUploadLogo } from '../hooks/useSettings.js';
+import { useSettings, useAuditLog, useClearCache, useUndoAction } from '../hooks/useSettings.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatDate } from '../utils/formatters.js';
 import client from '../api/client.js';
@@ -65,56 +64,10 @@ export default function SettingsPage() {
       {/* Language Selector */}
       <LanguageSelector />
 
-      {/* System Info */}
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
-        {t('settings.system.title')}
-      </Typography>
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
-          {isLoading ? <Skeleton variant="rounded" height={120} /> : (
-            <Card sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <MemoryIcon color="primary" />
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{t('settings.system.runtime')}</Typography>
-              </Box>
-              <Typography variant="body2">Node.js: {system.nodeVersion}</Typography>
-              <Typography variant="body2">{t('settings.system.uptime')}: {system.uptime}</Typography>
-              <Typography variant="body2">{t('settings.system.environment')}: {system.environment}</Typography>
-            </Card>
-          )}
-        </Grid>
-        <Grid item xs={12} md={4}>
-          {isLoading ? <Skeleton variant="rounded" height={120} /> : (
-            <Card sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <StorageIcon color="primary" />
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{t('settings.system.services')}</Typography>
-              </Box>
-              <ServiceStatus label="MySQL" status={system.mysql} />
-              <ServiceStatus label="MongoDB" status={system.mongodb} />
-              <ServiceStatus label="Redis" status={system.redis} />
-            </Card>
-          )}
-        </Grid>
-        <Grid item xs={12} md={4}>
-          {isLoading ? <Skeleton variant="rounded" height={120} /> : (
-            <Card sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <TimerIcon color="primary" />
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{t('settings.system.admin')}</Typography>
-              </Box>
-              <Typography variant="body2">{t('settings.system.adminUser')}: {admin.email}</Typography>
-              <Typography variant="body2">{t('settings.system.role')}: {admin.role}</Typography>
-            </Card>
-          )}
-        </Grid>
-      </Grid>
+      {/* System Info verplaatst naar Agents & Systeem (Opdracht 3) */}
 
       {/* Destination Management */}
       <DestinationManagement />
-
-      {/* Branding */}
-      <BrandingSection />
 
       {/* Cache Management */}
       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
@@ -236,245 +189,8 @@ function LanguageSelector() {
   );
 }
 
-/* ===== Branding Section ===== */
-function BrandingSection() {
-  const { t, i18n } = useTranslation();
-  const { data, isLoading } = useBranding();
-  const updateMut = useUpdateBranding();
-  const uploadMut = useUploadLogo();
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({});
-  const [snack, setSnack] = useState(null);
-  const API_BASE = import.meta.env.VITE_API_URL || '';
-
-  const branding = data?.data?.branding || {};
-  const DEST_FLAGS = { calpe: '🇪🇸', texel: '🇳🇱' };
-
-  const startEdit = (dest) => {
-    setForm({ ...branding[dest] });
-    setEditing(dest);
-  };
-
-  const handleSave = async () => {
-    try {
-      await updateMut.mutateAsync({ destination: editing, data: form });
-      setSnack(t('settings.branding.saved'));
-      setEditing(null);
-    } catch {
-      setSnack(t('common.error'));
-    }
-  };
-
-  return (
-    <>
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
-        <PaletteIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'text-bottom' }} />
-        {t('settings.branding.title')}
-      </Typography>
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        {isLoading ? (
-          [0, 1].map(i => (
-            <Grid item xs={12} md={6} key={i}>
-              <Skeleton variant="rounded" height={140} />
-            </Grid>
-          ))
-        ) : Object.entries(branding).map(([dest, brand]) => (
-          <Grid item xs={12} md={6} key={dest}>
-            <Card sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                  {DEST_FLAGS[dest]} {dest.charAt(0).toUpperCase() + dest.slice(1)}
-                </Typography>
-                <Button size="small" variant="outlined" onClick={() => startEdit(dest)}>
-                  {t('pois.edit')}
-                </Button>
-              </Box>
-              <Grid container spacing={1}>
-                <Grid item xs={4}>
-                  <Typography variant="caption" color="text.secondary">{t('settings.branding.primary')}</Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: brand.primary, border: '1px solid #ccc' }} />
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{brand.primary}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={4}>
-                  <Typography variant="caption" color="text.secondary">{t('settings.branding.secondary')}</Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: brand.secondary, border: '1px solid #ccc' }} />
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{brand.secondary}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={4}>
-                  <Typography variant="caption" color="text.secondary">{t('settings.branding.accent')}</Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: brand.accent, border: '1px solid #ccc' }} />
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{brand.accent}</Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-              {(brand.brand_name || brand.payoff) && (
-                <Grid container spacing={1} sx={{ mt: 0.5 }}>
-                  {brand.brand_name && (
-                    <Grid item xs={6}>
-                      <Typography variant="caption" color="text.secondary">{t('settings.branding.brandName')}</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{brand.brand_name}</Typography>
-                    </Grid>
-                  )}
-                  {brand.payoff && (
-                    <Grid item xs={6}>
-                      <Typography variant="caption" color="text.secondary">{t('settings.branding.payoff')}</Typography>
-                      <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                        {typeof brand.payoff === 'object' ? (brand.payoff[i18n.language] || brand.payoff.en || Object.values(brand.payoff)[0] || '') : brand.payoff}
-                      </Typography>
-                    </Grid>
-                  )}
-                </Grid>
-              )}
-              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                {brand.logo_url && (
-                  <Box
-                    component="img"
-                    src={`${API_BASE}${brand.logo_url}`}
-                    alt={`${dest} logo`}
-                    sx={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 0.5, border: '1px solid #eee' }}
-                  />
-                )}
-                <Typography variant="body2" color="text.secondary">
-                  {t('settings.branding.chatbot')}: <b>{brand.chatbotName}</b> | {brand.domain}
-                  {brand.customized && <Chip size="small" label={t('settings.branding.customized')} sx={{ ml: 1, fontSize: '0.65rem', height: 18 }} color="info" />}
-                </Typography>
-              </Box>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Edit Branding Dialog */}
-      {editing && (
-        <Dialog open maxWidth="xs" fullWidth onClose={() => setEditing(null)}>
-          <DialogTitle>
-            {t('settings.branding.editTitle')} — {DEST_FLAGS[editing]} {editing.charAt(0).toUpperCase() + editing.slice(1)}
-          </DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 0.5 }}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth size="small" label={t('settings.branding.primary')}
-                  value={form.primary || ''} onChange={(e) => setForm(f => ({ ...f, primary: e.target.value }))}
-                  InputProps={{ startAdornment: <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: form.primary, border: '1px solid #ccc', mr: 1, flexShrink: 0 }} /> }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth size="small" label={t('settings.branding.secondary')}
-                  value={form.secondary || ''} onChange={(e) => setForm(f => ({ ...f, secondary: e.target.value }))}
-                  InputProps={{ startAdornment: <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: form.secondary, border: '1px solid #ccc', mr: 1, flexShrink: 0 }} /> }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth size="small" label={t('settings.branding.accent')}
-                  value={form.accent || ''} onChange={(e) => setForm(f => ({ ...f, accent: e.target.value }))}
-                  InputProps={{ startAdornment: <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: form.accent, border: '1px solid #ccc', mr: 1, flexShrink: 0 }} /> }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth size="small" label={t('settings.branding.chatbot')}
-                  value={form.chatbotName || ''} onChange={(e) => setForm(f => ({ ...f, chatbotName: e.target.value }))}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth size="small" label={t('settings.branding.brandName')}
-                  value={form.brand_name || ''} onChange={(e) => setForm(f => ({ ...f, brand_name: e.target.value }))}
-                  placeholder="TexelMaps"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                  {t('settings.branding.logo')}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  {form.logo_url && (
-                    <Box
-                      component="img"
-                      src={`${API_BASE}${form.logo_url}`}
-                      alt="logo"
-                      sx={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 1, border: '1px solid #ddd', p: 0.5 }}
-                    />
-                  )}
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    component="label"
-                    startIcon={<CloudUploadIcon />}
-                    disabled={uploadMut.isPending}
-                  >
-                    {uploadMut.isPending ? t('settings.branding.uploading') : t('settings.branding.uploadLogo')}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/png,image/jpeg,image/svg+xml"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        if (file.size > 2 * 1024 * 1024) {
-                          setSnack(t('settings.branding.logoTooLarge'));
-                          return;
-                        }
-                        try {
-                          const result = await uploadMut.mutateAsync({ destination: editing, file });
-                          setForm(f => ({ ...f, logo_url: result.data.logo_url }));
-                          setSnack(t('settings.branding.logoUploaded'));
-                        } catch {
-                          setSnack(t('common.error'));
-                        }
-                        e.target.value = '';
-                      }}
-                    />
-                  </Button>
-                  <Typography variant="caption" color="text.secondary">
-                    PNG, JPG, SVG (max 2MB)
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth size="small" label={t('settings.branding.payoff')}
-                  value={typeof form.payoff === 'object' ? (form.payoff[i18n.language] || form.payoff.en || '') : (form.payoff || '')}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setForm(f => ({
-                      ...f,
-                      payoff: typeof f.payoff === 'object' ? { ...f.payoff, [i18n.language]: val } : val
-                    }));
-                  }}
-                  placeholder="Ontdek Texel"
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setEditing(null)}>{t('settings.cancel')}</Button>
-            <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave} disabled={updateMut.isPending}>
-              {updateMut.isPending ? t('pois.saving') : t('pois.save')}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      )}
-
-      <Snackbar
-        open={!!snack}
-        autoHideDuration={3000}
-        onClose={() => setSnack(null)}
-        message={snack}
-      />
-    </>
-  );
-}
-
 /* ===== Destination Management ===== */
+// MODULE_OPTIONS labels are configuration labels (not user-facing UI text); i18n can be added later if needed
 const MODULE_OPTIONS = [
   { key: 'hasContentStudio', label: 'Content Studio' },
   { key: 'hasMediaLibrary', label: 'Media Library' },
@@ -578,19 +294,19 @@ function DestinationManagement() {
     <>
       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
         <PublicIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'text-bottom' }} />
-        Destinations Beheer
+        {t('settings.destinations.title', 'Destinations Beheer')}
       </Typography>
 
       <TableContainer component={Paper} sx={{ mb: 3 }}>
         <Table size="small">
           <TableHead>
             <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
-              <TableCell>ID</TableCell>
-              <TableCell>Naam</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Code</TableCell>
-              <TableCell>Domein</TableCell>
+              <TableCell>{t('settings.destinations.id', 'ID')}</TableCell>
+              <TableCell>{t('settings.destinations.name', 'Naam')}</TableCell>
+              <TableCell>{t('settings.destinations.type', 'Type')}</TableCell>
+              <TableCell>{t('settings.destinations.status', 'Status')}</TableCell>
+              <TableCell>{t('settings.destinations.code', 'Code')}</TableCell>
+              <TableCell>{t('settings.destinations.domain', 'Domein')}</TableCell>
               <TableCell width={50}></TableCell>
             </TableRow>
           </TableHead>
@@ -609,7 +325,7 @@ function DestinationManagement() {
                 <TableCell>
                   <Chip
                     size="small"
-                    label={d.destinationType === 'content_only' ? 'Content Studio' : 'Tourism'}
+                    label={d.destinationType === 'content_only' ? t('settings.destinations.contentOnly', 'Content Studio') : t('settings.destinations.tourism', 'Tourism')}
                     color={d.destinationType === 'content_only' ? 'info' : 'default'}
                     icon={d.destinationType === 'content_only' ? <AutoAwesomeIcon /> : <PublicIcon />}
                     variant="outlined"
@@ -618,7 +334,7 @@ function DestinationManagement() {
                 </TableCell>
                 <TableCell>
                   <Chip size="small"
-                    label={d.status === 'archived' ? 'Gearchiveerd' : 'Actief'}
+                    label={d.status === 'archived' ? t('settings.destinations.archived', 'Gearchiveerd') : t('settings.destinations.active', 'Actief')}
                     color={d.status === 'archived' ? 'warning' : 'success'}
                   />
                 </TableCell>
@@ -645,24 +361,24 @@ function DestinationManagement() {
           handleCloseMenu();
         }}>
           <ListItemIcon><PaletteIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Modules & kanalen bewerken</ListItemText>
+          <ListItemText>{t('settings.destinations.editModules', 'Modules & kanalen bewerken')}</ListItemText>
         </MenuItem>
         {menuDest?.status === 'active' && (
           <MenuItem onClick={() => { setArchiveDialog(menuDest); handleCloseMenu(); }}>
             <ListItemIcon><ArchiveIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Archiveren</ListItemText>
+            <ListItemText>{t('settings.destinations.archive', 'Archiveren')}</ListItemText>
           </MenuItem>
         )}
         {menuDest?.status === 'archived' && (
           <MenuItem onClick={() => { handleRestore(menuDest); handleCloseMenu(); }}>
             <ListItemIcon><UnarchiveIcon fontSize="small" color="success" /></ListItemIcon>
-            <ListItemText>Herstellen</ListItemText>
+            <ListItemText>{t('settings.destinations.restore', 'Herstellen')}</ListItemText>
           </MenuItem>
         )}
         {menuDest && ![1, 2].includes(menuDest.id) && (
           <MenuItem onClick={() => { openDeleteDialog(menuDest); handleCloseMenu(); }} sx={{ color: 'error.main' }}>
             <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
-            <ListItemText>Permanent verwijderen</ListItemText>
+            <ListItemText>{t('settings.destinations.deletePermanent', 'Permanent verwijderen')}</ListItemText>
           </MenuItem>
         )}
         {menuDest && [1, 2].includes(menuDest.id) && (
@@ -674,24 +390,24 @@ function DestinationManagement() {
 
       {/* Archive Confirmation */}
       <Dialog open={!!archiveDialog} onClose={() => setArchiveDialog(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>Destination archiveren?</DialogTitle>
+        <DialogTitle>{t('settings.destinations.archiveTitle', 'Destination archiveren?')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2">
-            <strong>{archiveDialog?.name}</strong> wordt gearchiveerd. De destination verdwijnt uit de dropdown voor alle gebruikers (behalve platform admins). Alle data blijft behouden en kan later hersteld worden.
+            {t('settings.destinations.archiveBody', '{{name}} wordt gearchiveerd. De destination verdwijnt uit de dropdown voor alle gebruikers (behalve platform admins). Alle data blijft behouden en kan later hersteld worden.', { name: archiveDialog?.name })}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setArchiveDialog(null)}>Annuleren</Button>
+          <Button onClick={() => setArchiveDialog(null)}>{t('common.cancel', 'Annuleren')}</Button>
           <Button variant="contained" color="warning" onClick={handleArchive} disabled={archiveMut.isPending}
             startIcon={archiveMut.isPending ? <CircularProgress size={16} /> : <ArchiveIcon />}>
-            Archiveren
+            {t('settings.destinations.archive', 'Archiveren')}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Hard Delete — Two-step confirmation */}
       <Dialog open={!!deleteDialog} onClose={() => { setDeleteDialog(null); setDeletePreview(null); }} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ color: 'error.main' }}>Permanent verwijderen</DialogTitle>
+        <DialogTitle sx={{ color: 'error.main' }}>{t('settings.destinations.deleteTitle', 'Permanent verwijderen')}</DialogTitle>
         <DialogContent>
           <Alert severity="error" sx={{ mb: 2 }}>
             Dit is <strong>ONOMKEERBAAR</strong>. Alle data van <strong>{deleteDialog?.name}</strong> wordt permanent verwijderd.
@@ -699,7 +415,7 @@ function DestinationManagement() {
 
           {deletePreview && (
             <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>Wat wordt verwijderd:</Typography>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('settings.destinations.deleteWhat', 'Wat wordt verwijderd:')}</Typography>
               <Grid container spacing={1}>
                 {Object.entries(deletePreview.willDelete || {}).filter(([, v]) => v > 0).map(([table, count]) => (
                   <Grid item xs={6} key={table}>
@@ -711,13 +427,13 @@ function DestinationManagement() {
                 ))}
               </Grid>
               {Object.values(deletePreview.willDelete || {}).every(v => v === 0) && (
-                <Typography variant="body2" color="text.secondary">Geen gerelateerde data gevonden.</Typography>
+                <Typography variant="body2" color="text.secondary">{t('settings.destinations.noRelatedData', 'Geen gerelateerde data gevonden.')}</Typography>
               )}
             </Box>
           )}
 
           <Typography variant="body2" sx={{ mb: 1 }}>
-            Typ <strong>{deleteDialog?.name}</strong> om te bevestigen:
+            {t('settings.destinations.deleteConfirm', 'Typ {{name}} om te bevestigen:', { name: deleteDialog?.name })}
           </Typography>
           <TextField
             fullWidth size="small" value={confirmName} onChange={e => setConfirmName(e.target.value)}
@@ -726,27 +442,27 @@ function DestinationManagement() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setDeleteDialog(null); setDeletePreview(null); }}>Annuleren</Button>
+          <Button onClick={() => { setDeleteDialog(null); setDeletePreview(null); }}>{t('common.cancel', 'Annuleren')}</Button>
           <Button variant="contained" color="error" onClick={handleHardDelete}
             disabled={confirmName !== deleteDialog?.name || deleteMut.isPending}
             startIcon={deleteMut.isPending ? <CircularProgress size={16} /> : <DeleteForeverIcon />}>
-            Permanent Verwijderen
+            {t('settings.destinations.deletePermanent', 'Permanent Verwijderen')}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Edit Modules & Social Channels Dialog */}
       <Dialog open={!!editDialog} onClose={() => setEditDialog(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>Modules & kanalen — {editDialog?.name}</DialogTitle>
+        <DialogTitle>{t('settings.destinations.editModulesTitle', 'Modules & kanalen')} — {editDialog?.name}</DialogTitle>
         <DialogContent>
-          <Typography variant="subtitle2" sx={{ mt: 1, mb: 1, fontWeight: 700 }}>Actieve modules</Typography>
+          <Typography variant="subtitle2" sx={{ mt: 1, mb: 1, fontWeight: 700 }}>{t('settings.destinations.activeModules', 'Actieve modules')}</Typography>
           {MODULE_OPTIONS.map(mod => (
             <FormControlLabel key={mod.key} sx={{ display: 'block' }}
               control={<Checkbox size="small" checked={editFlags[mod.key] !== false} onChange={e => setEditFlags(f => ({ ...f, [mod.key]: e.target.checked }))} />}
               label={mod.label}
             />
           ))}
-          <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 700 }}>Social media kanalen</Typography>
+          <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 700 }}>{t('settings.destinations.socialChannels', 'Social media kanalen')}</Typography>
           {SOCIAL_OPTIONS.map(s => (
             <FormControlLabel key={s.key} sx={{ display: 'block' }}
               control={<Checkbox size="small" checked={editSocial[s.key] === true} onChange={e => setEditSocial(f => ({ ...f, [s.key]: e.target.checked }))} />}
@@ -755,7 +471,7 @@ function DestinationManagement() {
           ))}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditDialog(null)}>Annuleren</Button>
+          <Button onClick={() => setEditDialog(null)}>{t('common.cancel', 'Annuleren')}</Button>
           <Button variant="contained" disabled={editSaving} onClick={async () => {
             setEditSaving(true);
             try {
@@ -773,7 +489,7 @@ function DestinationManagement() {
               setSnack(err.response?.data?.error?.message || 'Fout bij opslaan');
             } finally { setEditSaving(false); }
           }}>
-            {editSaving ? 'Opslaan...' : 'Opslaan'}
+            {editSaving ? t('common.saving', 'Opslaan...') : t('common.save', 'Opslaan')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1071,6 +1071,137 @@ router.get('/dashboard', adminAuth('reviewer'), async (req, res) => {
   }
 });
 
+/**
+ * GET /dashboard/actions — Action-oriented dashboard data
+ * Returns: pending reviews, expiring tokens, top performer, trending topics, recent content
+ */
+router.get('/dashboard/actions', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const user = req.adminUser;
+    const isPlatformAdmin = user.role === 'platform_admin';
+    // Determine destination scope
+    let destFilter = '';
+    let destIds = [];
+    if (!isPlatformAdmin && user.allowed_destination_ids?.length > 0) {
+      destIds = user.allowed_destination_ids;
+      destFilter = `AND destination_id IN (${destIds.map(() => '?').join(',')})`;
+    }
+    const destParams = destIds.length > 0 ? destIds : [];
+
+    // 1. Pending reviews
+    let pendingReviews = 0;
+    try {
+      const [[pr]] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM content_items WHERE approval_status = 'pending_review' ${destFilter}`,
+        { replacements: destParams }
+      );
+      pendingReviews = pr?.cnt || 0;
+    } catch { /* */ }
+
+    // 2. Draft items
+    let draftItems = 0;
+    try {
+      const [[dr]] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM content_items WHERE approval_status = 'draft' ${destFilter}`,
+        { replacements: destParams }
+      );
+      draftItems = dr?.cnt || 0;
+    } catch { /* */ }
+
+    // 3. Expiring social tokens (within 7 days)
+    let expiringTokens = [];
+    try {
+      const [tokens] = await mysqlSequelize.query(
+        `SELECT platform, account_name, token_expires_at, DATEDIFF(token_expires_at, NOW()) as days_left
+         FROM social_accounts WHERE token_expires_at IS NOT NULL AND token_expires_at < DATE_ADD(NOW(), INTERVAL 7 DAY) AND status = 'active' ${destFilter}`,
+        { replacements: destParams }
+      );
+      expiringTokens = tokens;
+    } catch { /* */ }
+
+    // 4. Top performer (last 7 days)
+    let topPerformer = null;
+    try {
+      const [[top]] = await mysqlSequelize.query(
+        `SELECT ci.title, ci.target_platform, SUM(cp.engagement) as total_engagement, SUM(cp.reach) as total_reach
+         FROM content_items ci JOIN content_performance cp ON cp.content_item_id = ci.id
+         WHERE cp.measured_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) ${destFilter ? destFilter.replace('destination_id', 'ci.destination_id') : ''}
+         GROUP BY ci.id ORDER BY total_reach DESC LIMIT 1`,
+        { replacements: destParams }
+      );
+      if (top?.title) topPerformer = top;
+    } catch { /* */ }
+
+    // 5. Top trending topic
+    let trendingTopic = null;
+    try {
+      const [[trend]] = await mysqlSequelize.query(
+        `SELECT keyword, relevance_score, trend_direction FROM trending_data
+         WHERE trend_direction IN ('rising','breakout') ${destFilter}
+         ORDER BY relevance_score DESC LIMIT 1`,
+        { replacements: destParams }
+      );
+      if (trend?.keyword) trendingTopic = trend;
+    } catch { /* */ }
+
+    // 6. Recent content (last 5 items)
+    let recentContent = [];
+    try {
+      const [items] = await mysqlSequelize.query(
+        `SELECT id, title, target_platform, approval_status, seo_score, created_at
+         FROM content_items WHERE approval_status != 'deleted' ${destFilter}
+         ORDER BY updated_at DESC LIMIT 5`,
+        { replacements: destParams }
+      );
+      recentContent = items;
+    } catch { /* */ }
+
+    // 7. Content performance summary (7d)
+    let performance = { reach: 0, engagement: 0, clicks: 0, growth_reach: 0, growth_engagement: 0 };
+    try {
+      const [[perf]] = await mysqlSequelize.query(
+        `SELECT SUM(reach) as reach, SUM(engagement) as engagement, SUM(clicks) as clicks
+         FROM content_performance WHERE measured_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) ${destFilter ? destFilter.replace('destination_id', 'destination_id') : ''}`,
+        { replacements: destParams }
+      );
+      if (perf) {
+        performance.reach = perf.reach || 0;
+        performance.engagement = perf.engagement || 0;
+        performance.clicks = perf.clicks || 0;
+      }
+    } catch { /* */ }
+
+    // 8. Failed publishes
+    let failedPublishes = 0;
+    try {
+      const [[fp]] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM content_items WHERE approval_status = 'failed' ${destFilter}`,
+        { replacements: destParams }
+      );
+      failedPublishes = fp?.cnt || 0;
+    } catch { /* */ }
+
+    res.json({
+      success: true,
+      data: {
+        actions: {
+          pendingReviews,
+          draftItems,
+          expiringTokens,
+          failedPublishes,
+          topPerformer,
+          trendingTopic,
+        },
+        performance,
+        recentContent,
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Dashboard actions error:', error);
+    res.status(500).json({ success: false, error: { code: 'DASHBOARD_ACTIONS_ERROR', message: error.message } });
+  }
+});
+
 // ============================================================
 // HEALTH ENDPOINT
 // ============================================================
@@ -4698,6 +4829,145 @@ router.get('/analytics/snapshot', adminAuth('reviewer'), destinationScope, async
       success: false,
       error: { code: 'SERVER_ERROR', message: 'An error occurred fetching snapshot data' }
     });
+  }
+});
+
+/**
+ * GET /analytics/website — SimpleAnalytics live data (visitors, top pages, referrers, events, devices)
+ * Query: destination (code), period (7|30|90, default 30)
+ * Cached in Redis for 15 minutes.
+ */
+router.get('/analytics/website', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    if (req.destScope) {
+      const reqDestCode = req.query.destination;
+      if (reqDestCode) {
+        const reqDestId = resolveDestinationId(reqDestCode);
+        if (reqDestId && !req.destScope.includes(reqDestId)) {
+          return res.status(403).json({ success: false, error: { code: 'DESTINATION_FORBIDDEN', message: 'Access denied' } });
+        }
+      } else if (req.destScope.length === 1) {
+        const idToCode = { 1: 'calpe', 2: 'texel', 3: 'alicante', 4: 'warrewijzer' };
+        req.query.destination = idToCode[req.destScope[0]];
+      }
+    }
+
+    const { destination, period = '30' } = req.query;
+    const days = Math.min(parseInt(period) || 30, 365);
+    const destId = destination ? resolveDestinationId(destination) : 1;
+    const domainMap = { 1: 'calpetrip.com', 2: 'texelmaps.nl' };
+    const domain = domainMap[destId];
+    if (!domain) {
+      return res.json({ success: true, data: { visitors: 0, pageviews: 0, pages: [], referrers: [], events: [], chart: [], devices: {} } });
+    }
+
+    const cacheKey = `admin:analytics:website:${destId}:${days}`;
+    const redis = getRedis();
+    if (redis) {
+      try { const c = await redis.get(cacheKey); if (c) return res.json(JSON.parse(c)); } catch { /* miss */ }
+    }
+
+    const SA_API_KEY = process.env.SA_API_KEY || 'sa_api_key_tdOPtEz1nQqzPJIXbmS9PYB12KwcwGi4KQI2';
+    const SA_USER_ID = process.env.SA_USER_ID || 'sa_user_id_45cbd1c2-58bb-44e3-ac9c-94797095b640';
+    const saHeaders = { 'Api-Key': SA_API_KEY, 'User-Id': SA_USER_ID };
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+    const baseUrl = `https://simpleanalytics.com/${domain}.json?version=6&start=${startDate}&end=${endDate}`;
+
+    // Parallel SA API calls (stats + events are separate endpoints)
+    const [statsRes, pagesRes, referrersRes, deviceRes, eventsRes] = await Promise.all([
+      fetch(`${baseUrl}&fields=histogram`, { headers: saHeaders, signal: AbortSignal.timeout(12000) }).then(r => r.json()).catch(() => ({})),
+      fetch(`${baseUrl}&fields=pages`, { headers: saHeaders, signal: AbortSignal.timeout(12000) }).then(r => r.json()).catch(() => ({})),
+      fetch(`${baseUrl}&fields=referrers`, { headers: saHeaders, signal: AbortSignal.timeout(12000) }).then(r => r.json()).catch(() => ({})),
+      fetch(`${baseUrl}&fields=device_types`, { headers: saHeaders, signal: AbortSignal.timeout(12000) }).then(r => r.json()).catch(() => ({})),
+      // Events use a separate SA endpoint
+      fetch(`https://simpleanalytics.com/${domain}/events.json?version=1&start=${startDate}&end=${endDate}`, { headers: saHeaders, signal: AbortSignal.timeout(12000) }).then(r => r.json()).catch(() => ({})),
+    ]);
+
+    // Build daily chart from histogram
+    const histogram = statsRes.histogram || [];
+    const chart = histogram.map(h => ({
+      date: h.date,
+      pageviews: h.pageviews || 0,
+      visitors: h.visitors || 0,
+    }));
+
+    const totalPageviews = chart.reduce((s, d) => s + d.pageviews, 0);
+    const totalVisitors = chart.reduce((s, d) => s + d.visitors, 0);
+
+    // Period comparison (current half vs previous half)
+    const halfIdx = Math.floor(chart.length / 2);
+    const recentViews = chart.slice(halfIdx).reduce((s, d) => s + d.pageviews, 0);
+    const prevViews = chart.slice(0, halfIdx).reduce((s, d) => s + d.pageviews, 0);
+    const recentVisitors = chart.slice(halfIdx).reduce((s, d) => s + d.visitors, 0);
+    const prevVisitors = chart.slice(0, halfIdx).reduce((s, d) => s + d.visitors, 0);
+    const viewsGrowth = prevViews > 0 ? Math.round(((recentViews - prevViews) / prevViews) * 100) : 0;
+    const visitorsGrowth = prevVisitors > 0 ? Math.round(((recentVisitors - prevVisitors) / prevVisitors) * 100) : 0;
+
+    // Top pages
+    const pages = (pagesRes.pages || []).slice(0, 20).map(p => ({
+      path: p.value,
+      pageviews: p.pageviews || p.visitors || 0,
+      visitors: p.visitors || 0,
+    }));
+
+    // Referrers
+    const referrers = (referrersRes.referrers || []).slice(0, 15).map(r => ({
+      source: r.value || 'Direct',
+      pageviews: r.pageviews || r.visitors || 0,
+      visitors: r.visitors || 0,
+    }));
+
+    // Device types (from SA device_types field)
+    const deviceTypes = deviceRes.device_types || [];
+    let mobileCount = 0, desktopCount = 0, tabletCount = 0;
+    for (const dt of deviceTypes) {
+      const name = (dt.value || '').toLowerCase();
+      const count = dt.visitors || dt.pageviews || 0;
+      if (name.includes('mobile') || name.includes('phone')) mobileCount += count;
+      else if (name.includes('tablet')) tabletCount += count;
+      else desktopCount += count;
+    }
+    const deviceTotal = mobileCount + desktopCount + tabletCount || 1;
+
+    // Events (SA events endpoint returns different format)
+    const rawEvents = Array.isArray(eventsRes) ? eventsRes : (eventsRes.events || eventsRes.data || []);
+    const events = rawEvents.slice(0, 25).map(e => ({
+      name: e.name || e.value || e.event || '',
+      total: e.total || e.count || e.visitors || 0,
+      visitors: e.visitors || e.unique || 0,
+    })).filter(e => e.name);
+
+    const result = {
+      success: true,
+      data: {
+        domain,
+        period: days,
+        visitors: totalVisitors,
+        pageviews: totalPageviews,
+        visitorsGrowth,
+        viewsGrowth,
+        avgPerDay: chart.length > 0 ? Math.round(totalVisitors / chart.length) : 0,
+        chart,
+        pages,
+        referrers,
+        events,
+        devices: {
+          mobile: Math.round((mobileCount / deviceTotal) * 100),
+          desktop: Math.round((desktopCount / deviceTotal) * 100),
+          tablet: Math.round((tabletCount / deviceTotal) * 100),
+        },
+      }
+    };
+
+    if (redis) {
+      try { await redis.set(cacheKey, JSON.stringify(result), 'EX', 900); } catch { /* non-critical */ }
+    }
+
+    res.json(result);
+  } catch (error) {
+    logger.error('[AdminPortal] Website analytics error:', error);
+    res.status(500).json({ success: false, error: { code: 'SA_ERROR', message: error.message } });
   }
 });
 
@@ -9852,6 +10122,22 @@ router.put('/brand-profile', adminAuth('destination_admin'), writeAccess(['platf
       { replacements: { bp: JSON.stringify(updated), id: destId } }
     );
 
+    // Cross-section feed: seed SEO keywords into trending_data for Content Studio
+    if (updated.seo_keywords?.length) {
+      const now = new Date();
+      const week = Math.ceil((Math.floor((now - new Date(now.getFullYear(), 0, 1)) / 86400000) + 1) / 7);
+      const year = now.getFullYear();
+      for (const kw of updated.seo_keywords.slice(0, 20)) {
+        if (!kw || typeof kw !== 'string' || kw.trim().length < 2) continue;
+        await mysqlSequelize.query(
+          `INSERT INTO trending_data (destination_id, keyword, language, source, search_volume, trend_direction, relevance_score, week_number, year, created_at, updated_at)
+           VALUES (:destId, :kw, 'en', 'manual', 0, 'stable', 7.0, :week, :year, NOW(), NOW())
+           ON DUPLICATE KEY UPDATE relevance_score = GREATEST(relevance_score, 7.0), updated_at = NOW()`,
+          { replacements: { destId, kw: kw.trim().toLowerCase(), week, year } }
+        );
+      }
+    }
+
     res.json({ success: true, data: updated });
   } catch (error) {
     logger.error('[AdminPortal] Update brand profile error:', error);
@@ -10073,7 +10359,7 @@ const knowledgeUpload = multer({
 router.post('/brand-profile/knowledge/upload', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), (req, res) => {
   knowledgeUpload.single('file')(req, res, async (err) => {
     if (err) {
-      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 10MB)' : err.message;
+      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 40MB)' : err.message;
       return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
     }
     if (!req.file) {
@@ -10339,7 +10625,7 @@ const mediaStorage = multer.diskStorage({
 
 const mediaUpload = multer({
   storage: mediaStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 40 * 1024 * 1024 }, // 40 MB (video support)
   fileFilter: (_req, file, cb) => {
     const allowed = [
       'image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif',
@@ -10360,7 +10646,7 @@ const mediaUpload = multer({
 router.post('/media/upload', adminAuth('editor'), (req, res) => {
   mediaUpload.array('files', 50)(req, res, async (err) => {
     if (err) {
-      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 10MB)' : err.message;
+      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 40MB)' : err.message;
       return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
     }
     if (!req.files || req.files.length === 0) {
@@ -11149,13 +11435,35 @@ router.post('/content/suggestions/generate', adminAuth('editor'), writeAccess(['
       { replacements: { destId: Number(destination_id) } }
     );
 
-    if (trendingKeywords.length === 0) {
-      return res.status(400).json({ success: false, error: { code: 'NO_TRENDS', message: 'No trending keywords found for this destination in the last 30 days' } });
+    // Cross-section feed: fetch 5★ reviews as content inspiration
+    const [topReviews] = await mysqlSequelize.query(
+      `SELECT r.review_text, r.rating, r.user_name, p.name AS poi_name
+       FROM reviews r JOIN POI p ON r.poi_id = p.id
+       WHERE r.destination_id = :destId AND r.rating >= 5 AND r.review_text IS NOT NULL AND LENGTH(r.review_text) > 30
+       ORDER BY r.created_at DESC LIMIT 5`,
+      { replacements: { destId: Number(destination_id) } }
+    );
+
+    if (trendingKeywords.length === 0 && topReviews.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_TRENDS', message: 'No trending keywords or highlight reviews found for this destination' } });
     }
 
     // Generate suggestions via De Redacteur
     const redacteur = (await import('../services/agents/contentRedacteur/index.js')).default;
     const suggestions = await redacteur.generateSuggestionsForDestination(Number(destination_id), trendingKeywords);
+
+    // Add review-based suggestions
+    for (const rev of topReviews) {
+      const quote = rev.review_text.length > 120 ? rev.review_text.substring(0, 120) + '...' : rev.review_text;
+      suggestions.push({
+        title: `Highlight review: ${rev.poi_name}`,
+        summary: `"${quote}" — ${rev.user_name || 'Gast'} (${rev.rating}★). Gebruik deze authentieke ervaring als basis voor social content.`,
+        content_type: 'social_post',
+        suggested_channels: ['facebook', 'instagram'],
+        keyword_cluster: [rev.poi_name?.toLowerCase()].filter(Boolean),
+        engagement_score: 7.5,
+      });
+    }
 
     // Save to database
     const saved = [];

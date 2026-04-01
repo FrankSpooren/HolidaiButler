@@ -11,6 +11,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SelectAllIcon from '@mui/icons-material/SelectAll';
 import DeselectIcon from '@mui/icons-material/Deselect';
+import PermMediaIcon from '@mui/icons-material/PermMedia';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../api/client.js';
@@ -137,27 +139,28 @@ export default function MediaPage() {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>Media Library</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('media.title', 'Mediabibliotheek')}</Typography>
           <Typography variant="body2" color="text.secondary">{files.length} files</Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Destination</InputLabel>
-            <Select value={destFilter} label="Destination" onChange={e => setDestFilter(e.target.value)}>
+            <InputLabel>{t('media.destination', 'Bestemming')}</InputLabel>
+            <Select value={destFilter} label={t('media.destination', 'Bestemming')} onChange={e => setDestFilter(e.target.value)}>
               {destinations.map(d => <MenuItem key={d.id} value={d.id}>{d.displayName}</MenuItem>)}
             </Select>
           </FormControl>
           <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Category</InputLabel>
-            <Select value={category} label="Category" onChange={e => setCategory(e.target.value)}>
+            <InputLabel>{t('media.category', 'Categorie')}</InputLabel>
+            <Select value={category} label={t('media.category', 'Categorie')} onChange={e => setCategory(e.target.value)}>
               {CATEGORIES.map(c => <MenuItem key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</MenuItem>)}
             </Select>
           </FormControl>
-          <TextField size="small" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} sx={{ width: 160 }} />
+          <TextField size="small" placeholder={t('media.search', 'Zoeken...')} value={search} onChange={e => setSearch(e.target.value)} sx={{ width: 160 }} />
           <Button variant="contained" startIcon={<UploadIcon />} component="label" disabled={uploadMut.isPending}>
-            {uploadMut.isPending ? 'Uploading...' : 'Upload'}
+            {uploadMut.isPending ? t('media.uploading', 'Uploaden...') : t('media.upload', 'Upload')}
             <input type="file" hidden multiple accept="image/*,video/*,.pdf,.gpx" onChange={handleUpload} />
           </Button>
+          <Typography variant="caption" color="text.disabled" sx={{ ml: 0.5 }}>max 40MB</Typography>
         </Box>
       </Box>
 
@@ -193,7 +196,13 @@ export default function MediaPage() {
 
       {files.length === 0 ? (
         <Card sx={{ p: 4, textAlign: 'center' }}>
-          <Typography color="text.secondary">No media files yet. Upload your first file.</Typography>
+          <PermMediaIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+          <Typography variant="h6" sx={{ mb: 0.5 }}>{t('media.empty.title', 'Nog geen media bestanden')}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('media.empty.description', 'Upload afbeeldingen en video\'s om te gebruiken in content, pagina\'s en social media posts (max 40MB).')}</Typography>
+          <Button variant="contained" component="label" startIcon={<CloudUploadIcon />}>
+            {t('media.upload', 'Upload')}
+            <input type="file" hidden multiple accept="image/*,video/*,.pdf,.gpx" onChange={handleUpload} />
+          </Button>
         </Card>
       ) : (
         <ImageList cols={6} gap={8} sx={{ m: 0 }}>
@@ -237,22 +246,22 @@ export default function MediaPage() {
 
       {/* Detail dialog */}
       <Dialog open={!!detailOpen} onClose={() => setDetailOpen(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>Media Detail</DialogTitle>
+        <DialogTitle>{t('media.detail.title', 'Media Detail')}</DialogTitle>
         {detailOpen && (
           <DialogContent>
             {isImage(detailOpen) && (
               <Box component="img" src={getUrl(detailOpen)} alt={detailOpen.alt_text} sx={{ width: '100%', maxHeight: 300, objectFit: 'contain', mb: 2, borderRadius: 1, bgcolor: 'action.hover' }} />
             )}
-            <Typography variant="body2"><strong>Filename:</strong> {detailOpen.original_name}</Typography>
-            <Typography variant="body2"><strong>Type:</strong> {detailOpen.mime_type}</Typography>
-            <Typography variant="body2"><strong>Size:</strong> {Math.round(detailOpen.size_bytes / 1024)} KB</Typography>
-            {detailOpen.width && <Typography variant="body2"><strong>Dimensions:</strong> {detailOpen.width}x{detailOpen.height}</Typography>}
-            <Typography variant="body2" sx={{ mt: 1 }}><strong>URL:</strong></Typography>
+            <Typography variant="body2"><strong>{t('media.detail.filename', 'Bestandsnaam')}:</strong> {detailOpen.original_name}</Typography>
+            <Typography variant="body2"><strong>{t('media.detail.type', 'Type')}:</strong> {detailOpen.mime_type}</Typography>
+            <Typography variant="body2"><strong>{t('media.detail.size', 'Grootte')}:</strong> {Math.round(detailOpen.size_bytes / 1024)} KB</Typography>
+            {detailOpen.width && <Typography variant="body2"><strong>{t('media.detail.dimensions', 'Afmetingen')}:</strong> {detailOpen.width}x{detailOpen.height}</Typography>}
+            <Typography variant="body2" sx={{ mt: 1 }}><strong>{t('media.detail.url', 'URL')}:</strong></Typography>
             <TextField size="small" fullWidth value={detailOpen.url} sx={{ mt: 0.5, mb: 2 }} InputProps={{ readOnly: true }}
               onClick={e => { e.target.select(); navigator.clipboard?.writeText(detailOpen.url); setSnack({ open: true, message: 'URL copied', severity: 'info' }); }}
             />
             <TextField
-              size="small" fullWidth label="Alt Text" sx={{ mb: 1 }}
+              size="small" fullWidth label={t('media.detail.altText', 'Alt Tekst')} sx={{ mb: 1 }}
               value={detailOpen.alt_text || ''}
               onChange={e => setDetailOpen(prev => ({ ...prev, alt_text: e.target.value }))}
               onBlur={() => updateMut.mutate({ id: detailOpen.id, data: { alt_text: detailOpen.alt_text } })}

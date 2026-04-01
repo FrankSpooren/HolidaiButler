@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.30.0
-> **Laatst bijgewerkt**: 29 maart 2026
+> **Versie**: 4.31.0
+> **Laatst bijgewerkt**: 1 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -482,10 +482,11 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.39.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.40.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (6 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 244 admin endpoints (+3: brand-check, onboarding-complete, feature-flags)
+- **Endpoints**: 245 admin endpoints (+1: analytics/website SimpleAnalytics)
+- **Standalone Login**: studio.holidaibutler.com (Content Studio branded login, USP's, vergelijkingstabel)
 
 ### RBAC Rollen (6 rollen, hiërarchie 100→30)
 | Rol | Level | Scope | Rechten |
@@ -671,6 +672,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.31.0** | **2026-04-01** | **Admin Portal UX/UI Overhaul — 14 opdrachten**. Opdracht 1: Dashboard redesign (action-oriented, GET /dashboard/actions endpoint). Opdracht 2-3: Sidebar herstructurering (6 workflow-secties: Home/Content/Data&POI/Commerce/Website/Configuratie), Agents+Issues merged (AgentsSystemPage 3-tab wrapper). Opdracht 4: SettingsPage opgeschoond (BrandingSection verwijderd→Merk Profiel). Opdracht 5: BrandingPage 4 clickable kaarten (2x2 grid) met dialogs per groep. Opdracht 6: Pagina's+Navigatie samengevoegd (PagesNavigationPage tabbed wrapper). Opdracht 7: Mediabibliotheek Optie B (apart sidebar-item + directe links vanuit Content Studio en BrandingPage). Opdracht 8: Content Studio Standalone Login (studio.holidaibutler.com: branded landing page, USP's, vergelijkingstabel ACS vs Hootsuite vs Jasper AI 16/16, mobiele swipe carrousel, responsive tabel, DNS+SSL+Apache+CORS). Opdracht 9: Cross-sectie data integratie (SEO keywords→trending_data auto-seed, 5★ reviews→content suggesties). Opdracht 10: Overbodige secties verwijderd (BrandingSection dead code). Opdracht 10B: SimpleAnalytics live data op Analytics-pagina (3-tab: Website/POI&Reviews/Chatbot, GET /analytics/website endpoint met 5 parallelle SA API calls). Opdracht 11: Visuele consistentie audit (41 fixes: dark mode theme tokens, Skeleton i.p.v. CircularProgress, table headers, page headers, typography). Opdracht 12: Empty states & onboarding hints (7 pagina's: MediaPage, CommercePage, POIsPage, ContentStudio items+suggesties, MerkProfiel personas). Opdracht 13: i18n verificatie (~60 hardcoded strings→t() calls over 7 bestanden). Opdracht 14: Documentatie + commit. Social accounts: CalpeTrip Facebook+Instagram gekoppeld. Video upload 40MB. CORS fix: dubbele header (Apache+Express)→alleen Express. 245 endpoints. adminPortal.js v3.40.0. 38 bestanden gewijzigd (+4 nieuw). CLAUDE.md v4.31.0. MS v7.91. |
 | **4.30.0** | **2026-03-29** | **Fase VI-C: Desktop Homepage Redesign (Texel testomgeving)**. BLOK A: Alle calpetrip.com referenties op Texel gefixed (getPortalUrl→relatieve URLs, MapPreview "Calpe-plekjes"→generiek, Header/analytics logo_clicked). Desktop header al compleet (horizontale navigatie, SearchBar, WCAG, LanguageSwitcher). DesktopHero nieuw component (chatbot-input balk, quick action chips, achtergrondafbeelding uit brand visuals). BLOK B: DesktopProgramTip 2-kolom layout (60% ProgramCard + 40% TipOfTheDay, forceShow prop voor md:hidden override). DesktopEvents 3-kolom grid (responsive, categorie emoji, "Meer →" link). CategoryGrid 4-kolom (gradient kleuren, POI counts via meta.total). BLOK C: Map block overlay label (bottom-4, z-1000), 20 toeristische POIs round-robin (was 500+), legenda NL i18n + correcte kleuren (Eten & Drinken rood, Natuur groen, Cultuur blauw, Actief oranje, Recreatief donkergroen). PoiGrid title prop ("Populair op Texel"). BLOK D: Footer contactEmail destination-aware (info@texelmaps.nl), MobileBottomNav md:hidden bevestigd, responsive verificatie 9/10 PASS. BLOK E: 7 command block-type aliassen (hero_chatbot, program_card, today_events, category_grid, popular_pois, map_preview), Homepage template 11 blocks in PageTemplateDialog, admin 3x deployed. BLOK F: Calpe ongewijzigd (afspraak), E2E verificatie PASS (Texel 6/6, Calpe 4/4, 0 cross-dest leaks). 5 nieuwe + 12 gewijzigde bestanden hb-websites, 2 gewijzigde admin-module. Block registry 26→35. CLAUDE.md v4.30.0. MS v7.90. |
 | **4.29.0** | **2026-03-27** | **Finale Kwaliteitsbeoordeling — 8 opdrachten COMPLEET**. Verificaties: (1) End-to-end publish flow PASS (generate→schedule→kalender→publisher jobs), (2) Differentiators PASS (campagne 4 items, auto-schedule, auto-fill), (3) Per-platform Social Score PASS (7 scores: IG:72/FB:42/LI:66/X:35/TikTok:46/Pinterest:63/YT:35). Implementaties: (4) SimpleAnalytics als trending bron (website_analytics + user_event, vervangt lege Apache logs), (5) Multi-destination content delen (share→tone aanpassing→Texel "duinen"/"Waddenzee" bewezen), (6) Brand Voice real-time check (POST /brand-check, debounced 1.5s, groen/geel/rood badge, on-brand:81 vs off-brand:50), (7) Onboarding UX gids (4-stappen Stepper dialog, onboarding_completed DB kolom, /auth/onboarding-complete endpoint, AdminOnboardingGuide component). 244 endpoints. adminPortal.js v3.39.0. MS v7.89. |
 | **4.28.0** | **2026-03-27** | **Mobiele Page Builder Integratie + Desktop Redesign + Routing**. (A) Block Visibility Systeem: `visibility` property op BlockConfig (all/mobile/desktop), CSS classes md:hidden / hidden md:block. 4 nieuwe mobile block types: `mobile_program`, `mobile_tip`, `mobile_events`, `mobile_map`. Hardcoded MobileHomepage verwijderd uit layout.tsx. page.tsx homepage special case verwijderd. (B) Desktop homepage redesign: hero compact + poi_grid + event_calendar grid + map + cta (actiegericht, chatbot CTA's). Oude static content blocks (rich_text, chatbot_widget, weather_widget, social_feed) verwijderd. (C) Apache routing: calpetrip.com vhost herschreven — ALLE traffic (desktop + mobiel) naar Next.js port 3002. Geen Vite SPA meer voor calpetrip.com homepage. holidaibutler.com B2B corporate page hersteld. (D) Admin Portal: 4 block editors, categorie 'Mobiel' in BlockSelectorDialog, visibility SelectField in BlockEditorCard met badges. i18n 4 talen. (E) Alle Calpe + Texel pages status draft→published. Calpe home 9 blocks (5 desktop + 4 mobile), Texel home 9 blocks. Block registry 22→26. CLAUDE.md v4.28.0. MS v7.88. |
@@ -697,7 +699,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.90 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.91 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { SIDEBAR_STYLES } from '../../theme.js';
 import useAuthStore from '../../stores/authStore.js';
 import useDestinationStore from '../../stores/destinationStore.js';
+import { isStudioMode } from '../../utils/studioMode.js';
 
 /**
  * Menu sections with feature flag visibility checks.
@@ -29,23 +30,31 @@ import useDestinationStore from '../../stores/destinationStore.js';
  *   When no specific destination is selected ('all'), all items show (ff is empty → defaults to true).
  */
 const MENU_SECTIONS = [
+  // HOME
   {
-    label: 'nav.section_overview',
+    label: 'nav.section_home',
     items: [
       { key: 'dashboard', path: '/dashboard', icon: DashboardIcon },
-      { key: 'agents', path: '/agents', icon: SmartToyIcon, requiredRole: 'platform_admin' },
-      { key: 'issues', path: '/issues', icon: BugReportIcon, requiredRole: 'platform_admin' },
     ]
   },
+  // CONTENT
   {
     label: 'nav.section_content',
     items: [
-      { key: 'pois', path: '/pois', icon: PlaceIcon, visible: (ff) => ff.hasPOI !== false },
-      { key: 'reviews', path: '/reviews', icon: StarIcon, visible: (ff) => ff.hasPOI !== false },
-      { key: 'media', path: '/media', icon: PermMediaIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
       { key: 'contentStudio', path: '/content-studio', icon: AutoAwesomeIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
+      { key: 'media', path: '/media', icon: PermMediaIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
     ]
   },
+  // DATA & POI
+  {
+    label: 'nav.section_data',
+    items: [
+      { key: 'pois', path: '/pois', icon: PlaceIcon, visible: (ff) => ff.hasPOI !== false },
+      { key: 'reviews', path: '/reviews', icon: StarIcon, visible: (ff) => ff.hasPOI !== false },
+      { key: 'analytics', path: '/analytics', icon: BarChartIcon, visible: (ff) => ff.hasPOI !== false },
+    ]
+  },
+  // COMMERCE
   {
     label: 'nav.section_commerce',
     items: [
@@ -55,21 +64,22 @@ const MENU_SECTIONS = [
       { key: 'intermediary', path: '/intermediary', icon: SwapHorizIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'], visible: (ff) => ff.hasIntermediary === true },
     ]
   },
+  // WEBSITE
   {
-    label: 'nav.section_platform',
+    label: 'nav.section_website',
     items: [
-      { key: 'merkProfiel', path: '/branding', icon: PaletteIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
-      { key: 'pages', path: '/pages', icon: ArticleIcon, allowedRoles: ['platform_admin', 'destination_admin'], visible: (ff) => ff.hasPages !== false },
-      { key: 'navigation', path: '/navigation', icon: MenuOpenIcon, allowedRoles: ['platform_admin', 'destination_admin'], visible: (ff) => ff.hasPages !== false },
-      { key: 'onboarding', path: '/onboarding', icon: AddCircleOutlineIcon, allowedRoles: ['platform_admin'] },
+      { key: 'pagesNav', path: '/pages', icon: ArticleIcon, allowedRoles: ['platform_admin', 'destination_admin'], visible: (ff) => ff.hasPages !== false },
     ]
   },
+  // CONFIGURATIE
   {
-    label: 'nav.section_system',
+    label: 'nav.section_config',
     items: [
-      { key: 'analytics', path: '/analytics', icon: BarChartIcon, visible: (ff) => ff.hasPOI !== false },
+      { key: 'merkProfiel', path: '/branding', icon: PaletteIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
       { key: 'settings', path: '/settings', icon: SettingsIcon, requiredRole: 'platform_admin' },
       { key: 'users', path: '/users', icon: PeopleIcon, requiredRole: 'platform_admin' },
+      { key: 'agentsSystem', path: '/agents', icon: SmartToyIcon, requiredRole: 'platform_admin' },
+      { key: 'onboarding', path: '/onboarding', icon: AddCircleOutlineIcon, allowedRoles: ['platform_admin'] },
     ]
   },
 ];
@@ -81,6 +91,7 @@ export default function Sidebar() {
   const user = useAuthStore(s => s.user);
   const selectedFF = useDestinationStore(s => s.getSelectedFeatureFlags());
   const allDestinations = useDestinationStore(s => s.destinations);
+  const studioMode = isStudioMode();
 
   // Determine effective feature flags:
   // 1. If a specific destination is selected in dropdown → use those flags
@@ -118,10 +129,10 @@ export default function Sidebar() {
     }}>
       <Box sx={{ p: 2.5, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>
-          HolidaiButler
+          {studioMode ? 'Content Studio' : 'HolidaiButler'}
         </Typography>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-          Admin Portal
+          {studioMode ? 'Powered by HolidaiButler' : 'Admin Portal'}
         </Typography>
       </Box>
 

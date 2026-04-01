@@ -34,8 +34,8 @@ const LANGUAGES = [
   { code: 'fr', label: 'Français' },
 ];
 
-function getStatus(account) {
-  if (!account) return { status: 'disconnected', label: 'Niet gekoppeld', color: 'default', icon: CancelIcon };
+function getStatus(account, t) {
+  if (!account) return { status: 'disconnected', label: t('contentStudio.social.notConnected', 'Niet gekoppeld'), color: 'default', icon: CancelIcon };
   if (account.status === 'pending') return { status: 'pending', label: 'In afwachting', color: 'info', icon: WarningIcon };
   if (account.status !== 'active') return { status: 'fix', label: 'Fix nodig', color: 'warning', icon: WarningIcon };
   if (account.token_expires_at) {
@@ -189,7 +189,7 @@ export default function SocialAccountsCards({ destinationId }) {
       <Grid container spacing={2}>
         {visiblePlatforms.map(platform => {
           const account = accounts.find(a => a.platform === platform.key);
-          const statusInfo = getStatus(account);
+          const statusInfo = getStatus(account, t);
           const StatusIcon = statusInfo.icon;
           const isConnecting = connecting === platform.key;
           const canConnect = !!platform.connectMethod;
@@ -358,7 +358,7 @@ export default function SocialAccountsCards({ destinationId }) {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setMetaDialog(null)}>Annuleren</Button>
+          <Button onClick={() => setMetaDialog(null)}>{t('common.cancel', 'Annuleren')}</Button>
           <Button variant="contained" onClick={handleMetaConnect}
             disabled={!metaToken.trim() || connecting === metaDialog?.platform}
             startIcon={connecting === metaDialog?.platform ? <CircularProgress size={16} /> : <LinkIcon />}

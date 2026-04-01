@@ -4,8 +4,9 @@ import {
   Tabs, Tab, Skeleton, MenuItem, Select, FormControl, InputLabel,
   IconButton, Chip, Accordion, AccordionSummary, AccordionDetails,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Checkbox, FormControlLabel, Switch
+  Checkbox, FormControlLabel, Switch, Card, CardContent
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import TranslateIcon from '@mui/icons-material/Translate';
@@ -150,6 +151,7 @@ export default function BrandingPage() {
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
   const [translating, setTranslating] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [activeGroup, setActiveGroup] = useState(null); // 'merkProfiel' | 'brandingBasis' | 'websiteConfig' | 'components'
   const [pendingTemplate, setPendingTemplate] = useState(null);
 
   const apiUrl = import.meta.env.VITE_API_URL || '';
@@ -423,22 +425,78 @@ export default function BrandingPage() {
         ))}
       </Tabs>
 
-      {/* === MERK PROFIEL SECTIES (altijd zichtbaar) === */}
+      {/* === 4 GROEP KAARTEN (2x2 grid, boven de vouw) === */}
       {activeDest && (
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
-            {t('brandProfile.page_title', 'Merk Profiel')}
-          </Typography>
-          <MerkProfielSections destinationId={activeDest.id} destinationName={activeDest.displayName} />
-        </Box>
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          {/* Kaart 1: Merk Profiel */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ cursor: 'pointer', border: '2px solid transparent', '&:hover': { borderColor: '#7FA594' }, transition: 'border-color 0.2s', bgcolor: 'rgba(127, 165, 148, 0.06)' }} onClick={() => setActiveGroup('merkProfiel')}>
+              <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: '#7FA594', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5, fontSize: 24 }}>📋</Box>
+                <Typography variant="h6" fontWeight={700}>{t('brandProfile.page_title', 'Merk Profiel')}</Typography>
+                <Typography variant="body2" color="text.secondary">{t('branding.group.merkProfielDesc', 'Bedrijfsprofiel, missie, doelgroepen, tone of voice, knowledge base')}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          {/* Kaart 2: Branding Basis (alleen tourism) */}
+          {activeDest.destinationType !== 'content_only' && form.colors && (
+            <Grid item xs={12} md={6}>
+              <Card sx={{ cursor: 'pointer', border: '2px solid transparent', '&:hover': { borderColor: '#5B8DEF' }, transition: 'border-color 0.2s', bgcolor: 'rgba(91, 141, 239, 0.06)' }} onClick={() => setActiveGroup('brandingBasis')}>
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: '#5B8DEF', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5, fontSize: 24 }}>🎨</Box>
+                  <Typography variant="h6" fontWeight={700}>{t('branding.group.brandingBasis', 'Branding Basis')}</Typography>
+                  <Typography variant="body2" color="text.secondary">{t('branding.group.brandingBasisDesc', 'Kleuren, logo, typografie')}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+          {/* Kaart 3: Website Configuratie (alleen tourism) */}
+          {activeDest.destinationType !== 'content_only' && form.colors && (
+            <Grid item xs={12} md={6}>
+              <Card sx={{ cursor: 'pointer', border: '2px solid transparent', '&:hover': { borderColor: '#E5883E' }, transition: 'border-color 0.2s', bgcolor: 'rgba(229, 136, 62, 0.06)' }} onClick={() => setActiveGroup('websiteConfig')}>
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: '#E5883E', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5, fontSize: 24 }}>🌐</Box>
+                  <Typography variant="h6" fontWeight={700}>{t('branding.group.websiteConfig', 'Website Configuratie')}</Typography>
+                  <Typography variant="body2" color="text.secondary">{t('branding.group.websiteConfigDesc', 'Buttons, social links, footer, header, chatbot, favicon')}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+          {/* Kaart 4: Componenten & Overig (alleen tourism) */}
+          {activeDest.destinationType !== 'content_only' && form.colors && (
+            <Grid item xs={12} md={6}>
+              <Card sx={{ cursor: 'pointer', border: '2px solid transparent', '&:hover': { borderColor: '#9B59B6' }, transition: 'border-color 0.2s', bgcolor: 'rgba(155, 89, 182, 0.06)' }} onClick={() => setActiveGroup('components')}>
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: '#9B59B6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5, fontSize: 24 }}>⚙️</Box>
+                  <Typography variant="h6" fontWeight={700}>{t('branding.group.components', 'Componenten & Overig')}</Typography>
+                  <Typography variant="body2" color="text.secondary">{t('branding.group.componentsDesc', 'Brand visuals, mobiele homepage, privacy')}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+        </Grid>
       )}
 
-      {/* === VISUELE IDENTITEIT (verborgen voor content_only) === */}
-      {activeDest && form.colors && activeDest.destinationType !== 'content_only' && (
-        <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
-            {t('branding.visualIdentity', 'Visuele Identiteit')}
-          </Typography>
+      {/* === MERK PROFIEL DIALOG === */}
+      <Dialog open={activeGroup === 'merkProfiel'} onClose={() => setActiveGroup(null)} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'rgba(127, 165, 148, 0.08)' }}>
+          <Typography variant="h6" fontWeight={700}>📋 {t('brandProfile.page_title', 'Merk Profiel')}</Typography>
+          <IconButton onClick={() => setActiveGroup(null)}><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          {activeDest && <MerkProfielSections destinationId={activeDest.id} destinationName={activeDest.displayName} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* === BRANDING BASIS DIALOG === */}
+      <Dialog open={activeGroup === 'brandingBasis'} onClose={() => setActiveGroup(null)} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'rgba(91, 141, 239, 0.08)' }}>
+          <Typography variant="h6" fontWeight={700}>🎨 {t('branding.group.brandingBasis', 'Branding Basis')}</Typography>
+          <IconButton onClick={() => setActiveGroup(null)}><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          {activeDest && form.colors && (
+            <Box>
           {/* === COLORS + LIVE PREVIEW (side by side, default expanded) === */}
           <BrandingAccordion
             id="colors"
@@ -580,8 +638,8 @@ export default function BrandingPage() {
             </Grid>
           </BrandingAccordion>
 
-          {/* === TONE OF VOICE === */}
-          <BrandingAccordion
+          {/* TONE OF VOICE verplaatst naar Merk Profiel secties hierboven */}
+          {false && <BrandingAccordion
             id="toneOfVoice"
             title={t('branding.toneOfVoice.title', 'Tone of Voice')}
             subtitle={t('branding.toneOfVoice.subtitle', 'AI content style: personality, target audience, brand values')}
@@ -676,7 +734,7 @@ export default function BrandingPage() {
                 />
               </Grid>
             </Grid>
-          </BrandingAccordion>
+          </BrandingAccordion>}
 
           {/* === TYPOGRAPHY === */}
           <BrandingAccordion
@@ -763,6 +821,20 @@ export default function BrandingPage() {
             </Box>
           </BrandingAccordion>
 
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* === WEBSITE CONFIG DIALOG === */}
+      <Dialog open={activeGroup === 'websiteConfig'} onClose={() => setActiveGroup(null)} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'rgba(229, 136, 62, 0.08)' }}>
+          <Typography variant="h6" fontWeight={700}>🌐 {t('branding.group.websiteConfig', 'Website Configuratie')}</Typography>
+          <IconButton onClick={() => setActiveGroup(null)}><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          {activeDest && form.colors && (
+            <Box>
           {/* === BUTTON STYLES + ADVANCED STYLE === */}
           <BrandingAccordion
             id="buttons"
@@ -1194,6 +1266,21 @@ export default function BrandingPage() {
             </Box>
           </BrandingAccordion>
 
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* === COMPONENTEN DIALOG === */}
+      <Dialog open={activeGroup === 'components'} onClose={() => setActiveGroup(null)} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'rgba(155, 89, 182, 0.08)' }}>
+          <Typography variant="h6" fontWeight={700}>⚙️ {t('branding.group.components', 'Componenten & Overig')}</Typography>
+          <IconButton onClick={() => setActiveGroup(null)}><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          {activeDest && form.colors && (
+            <Box>
+
           {/* === BRAND VISUALS === */}
           <BrandingAccordion
             id="brandVisuals"
@@ -1243,6 +1330,9 @@ export default function BrandingPage() {
                 </Button>
               )}
             </Box>
+            <Button size="small" variant="text" href="/media" target="_blank" startIcon={<UploadIcon sx={{ fontSize: 16 }} />} sx={{ mt: 1 }}>
+              {t('branding.brandVisuals.openMediaLibrary', 'Open Mediabibliotheek')}
+            </Button>
           </BrandingAccordion>
 
           {/* === PRIVACY === */}
@@ -1364,9 +1454,10 @@ export default function BrandingPage() {
             />
           </BrandingAccordion>
 
-          {/* Preview panel moved to Colors section (side-by-side) */}
-        </Box>
-      )}
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Template Selector Dialog */}
       <Dialog open={templateDialogOpen} onClose={() => setTemplateDialogOpen(false)} maxWidth="md" fullWidth>

@@ -236,8 +236,8 @@ export default function ContentCalendarTab({ destinationId }) {
                     bgcolor: day === null ? 'action.disabledBackground' :
                       isToday(day) ? '#E3F2FD' :
                       isInSeason(day) ? '#F1F8E9' : 'background.paper',
-                    border: isToday(day) ? '2px solid #1976d2' : '1px solid',
-                    borderColor: isToday(day) ? '#1976d2' : 'divider',
+                    border: isToday(day) ? '2px solid' : '1px solid',
+                    borderColor: isToday(day) ? 'primary.main' : 'divider',
                     cursor: day ? 'pointer' : 'default',
                     position: 'relative',
                     '&:hover': day ? { bgcolor: 'action.hover' } : {},
@@ -372,7 +372,7 @@ export default function ContentCalendarTab({ destinationId }) {
                       <Chip
                         label={item.approval_status}
                         size="small"
-                        sx={{ bgcolor: STATUS_COLORS[item.approval_status], color: '#fff', fontSize: 11 }}
+                        sx={{ bgcolor: STATUS_COLORS[item.approval_status], color: 'common.white', fontSize: 11 }}
                       />
                     </Box>
                     <Typography variant="caption" color="text.secondary">

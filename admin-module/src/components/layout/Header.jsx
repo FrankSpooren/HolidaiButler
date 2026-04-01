@@ -9,12 +9,14 @@ import useDestinationStore from '../../stores/destinationStore.js';
 import useThemeStore from '../../stores/themeStore.js';
 import DestinationSelector from './DestinationSelector.jsx';
 import { SIDEBAR_STYLES } from '../../theme.js';
+import { isStudioMode } from '../../utils/studioMode.js';
 
 export default function Header({ onMenuToggle }) {
   const { t } = useTranslation();
   const { user, logout } = useAuthStore();
   const { selectedDestination, setDestination } = useDestinationStore();
   const { mode, toggleMode } = useThemeStore();
+  const studioMode = isStudioMode();
 
   return (
     <AppBar
@@ -35,7 +37,7 @@ export default function Header({ onMenuToggle }) {
         </IconButton>
 
         <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
-          {t('app.brand')} <Typography component="span" sx={{ color: 'text.secondary', fontWeight: 400 }}>{t('app.title')}</Typography>
+          {studioMode ? 'Content Studio' : t('app.brand')} <Typography component="span" sx={{ color: 'text.secondary', fontWeight: 400 }}>{studioMode ? '' : t('app.title')}</Typography>
         </Typography>
 
         <Box sx={{ flex: 1 }} />
