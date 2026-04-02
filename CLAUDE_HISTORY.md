@@ -5937,4 +5937,71 @@ CLAUDE.md v4.31.0 → v4.32.0. MS v7.91 → v7.92.
 
 ---
 
+## Admin Portal UX/UI Overhaul + POI Data Pipeline + Events + i18n (01-02-04-2026)
+
+### Admin Portal UX/UI Overhaul (14 opdrachten)
+- **Opdracht 1**: Dashboard redesign (action-oriented, GET /dashboard/actions)
+- **Opdracht 2-3**: Sidebar 6 workflow-secties, Agents+Issues→AgentsSystemPage 3-tab wrapper
+- **Opdracht 4**: SettingsPage BrandingSection dead code verwijderd
+- **Opdracht 5**: BrandingPage 4 clickable kaarten (2x2 grid) met dialog popups per groep
+- **Opdracht 6**: PagesNavigationPage tabbed wrapper (Pages + Navigatie samengevoegd)
+- **Opdracht 7**: Mediabibliotheek Optie B — directe links vanuit Content Studio + BrandingPage
+- **Opdracht 8**: Content Studio Standalone Login (studio.holidaibutler.com) — branded landing, USP's, vergelijkingstabel ACS vs Hootsuite vs Jasper 16/16, mobiele swipe carrousel, DNS+SSL+Apache+CORS
+- **Opdracht 9**: Cross-sectie data (SEO keywords→trending, 5★ reviews→suggesties)
+- **Opdracht 10**: Overbodige secties + SimpleAnalytics Analytics tab (3-tab: Website/POI&Reviews/Chatbot, GET /analytics/website)
+- **Opdracht 11**: Visuele consistentie audit — 41 fixes (dark mode theme tokens, Skeleton, table headers, page headers)
+- **Opdracht 12**: Empty states & onboarding hints (7 pagina's)
+- **Opdracht 13**: i18n verificatie ~60 hardcoded strings→t() calls
+- **Opdracht 14**: Documentatie + commit
+
+### Events Distance Filter
+- Backend: `calpe_distance` WHERE clause in agenda.js (default 15km, was ongelimiteerd → 500+ events)
+- hb-websites: 6 componenten met `distance=5` (EventCalendar, DesktopEvents, TodayEvents, ProgramCard)
+- Customer-portal: filter modal distance param + debounced live event count (300ms API call)
+
+### POI Filter Live Count
+- PoiFilterModal: real-time result count bij categorie/rating/reviews/sort/price wijziging
+- Prijsfilter geactiveerd (was "Coming soon") — €/€€/€€€/€€€€ knoppen
+
+### Statische Pagina's i18n (CalpeTrip)
+- 8 pagina's meertalig NL/EN/DE/ES: About, FAQ, HowItWorks, Help, Contact, Privacy, Terms, Cookies
+- Footer tagline + "Gemaakt met" meertalig
+- "HoliBot" → "CalpeChat" in alle Calpe content
+
+### POI Data Pipeline Optimalisatie (12 punten)
+- **Apify maxImages: 10** (was 0) — toekomstige runs leveren 10 image URLs per POI
+- **downloadNewImages()** geïntegreerd in sync pipeline (poiSyncService.js) — automatisch downloaden na updatePOI()
+- **6 nieuwe DB kolommen**: menu_url, booking_url, reservation_url, google_category, live_busyness_text, live_busyness_percent
+- **price_level parsing**: Apify `price` ("€10-20") → price_level 1-4
+- **POI model**: 14 kolommen toegevoegd aan Sequelize model
+- **Public API**: +8 velden in response (review_tags, people_also_search, menu_url, booking_url, reservation_url, google_category, live_busyness_text/percent)
+- **Backfill**: 2.259 POIs price_level + google_category gevuld uit raw_json
+- **Customer-portal POI detail**: action buttons (menu/reserve/book), review tags (8 chips), vergelijkbare plekken (klikbaar, DB-matched, CustomEvent doorsturen), google category badge, live drukte indicator
+- **Reviews**: 10→5 default + "Meer laden" knop
+- **Image download bewezen**: handmatige test 374KB image succesvol opgeslagen
+
+### Tier Sync Pauzering
+- Texel T2/T3/T4 GEPAUZEERD via `PAUSED_DESTINATIONS` in poiTierManager.js
+- T1 actief (18 POIs dagelijks)
+- Besparing: 1.315 POIs per sync-cyclus
+
+### SimpleAnalytics Events (5 nieuw)
+- `poi_website_clicked_{device}` — klik op website link
+- `poi_menu_clicked_{device}` — klik op "Bekijk menu"
+- `poi_reservation_clicked_{device}` — klik op "Reserveren"
+- `poi_booking_clicked_{device}` — klik op "Boeken"
+- `poi_similar_clicked_{device}` — klik op vergelijkbare plek
+
+### Overig
+- CalpeTrip Facebook + Instagram social accounts gekoppeld (System User token)
+- CORS fix: dubbele Access-Control-Allow-Origin header (Apache+Express→alleen Express)
+- Video upload limiet 10MB→40MB
+- MerkProfiel 404 fix (saveToneMut endpoint)
+
+**Bestanden**: 35 gewijzigd (+4 nieuw), +1668/-157 regels
+**Commits**: a201c4e (UX Overhaul) + b369521 (POI Pipeline + Events + i18n)
+CLAUDE.md v4.32.0 → v4.33.0. MS v7.92 → v7.93.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
