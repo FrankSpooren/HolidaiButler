@@ -57,7 +57,7 @@ export function POIReviewSection({
     travel_party: initialTravelParty,
     sentiment: 'all',
     sort: 'helpful',
-    limit: 10,
+    limit: 5,
     offset: 0
   });
 

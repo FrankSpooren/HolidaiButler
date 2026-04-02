@@ -8,6 +8,7 @@
 
 import apifyIntegration from "./apifyIntegration.js";
 import poiTierManager from "./poiTierManager.js";
+import imageDownloaderService from "../../imageDownloader.js";
 import { logAgent, logError } from "../../orchestrator/auditTrail/index.js";
 
 class POISyncService {
@@ -159,6 +160,74 @@ class POISyncService {
   }
 
   // ═══════════════════════════════════════════════════════
+  // IMAGE DOWNLOAD: Download Apify images to local storage
+  // ═══════════════════════════════════════════════════════
+
+  async downloadNewImages(poiId, destinationId, googlePlaceid, apifyData) {
+    try {
+      // Collect all image URLs from Apify output
+      const imageUrls = [];
+
+      // 1. imageUrls array (primary — when maxImages > 0)
+      if (Array.isArray(apifyData.imageUrls)) {
+        for (const url of apifyData.imageUrls) {
+          if (typeof url === 'string' && url.startsWith('http')) imageUrls.push(url);
+        }
+      }
+
+      // 2. imageUrl (single main image — always present)
+      if (apifyData.imageUrl && typeof apifyData.imageUrl === 'string' && !imageUrls.includes(apifyData.imageUrl)) {
+        imageUrls.push(apifyData.imageUrl);
+      }
+
+      if (imageUrls.length === 0) return 0;
+
+      // Check which URLs are already downloaded
+      const [existing] = await this.sequelize.query(
+        'SELECT image_url FROM imageurls WHERE poi_id = ?',
+        { replacements: [poiId] }
+      );
+      const existingUrls = new Set(existing.map(r => r.image_url));
+
+      let downloaded = 0;
+      const maxDisplay = Math.min(imageUrls.length, 10); // Max 10 per POI
+
+      for (let i = 0; i < maxDisplay; i++) {
+        const url = imageUrls[i];
+        if (existingUrls.has(url)) continue;
+
+        try {
+          const result = await imageDownloaderService.downloadImage(url, poiId);
+          if (result && result.local_path) {
+            const displayOrder = existing.length + downloaded + 1;
+            await this.sequelize.query(`
+              INSERT INTO imageurls (poi_id, image_url, local_path, source, google_place_id, file_size, file_hash, display_order, downloaded_at)
+              VALUES (?, ?, ?, 'apify_refresh', ?, ?, ?, ?, NOW())
+            `, {
+              replacements: [
+                poiId, url, result.local_path, googlePlaceid || null,
+                result.file_size || null, result.file_hash || null, displayOrder
+              ]
+            });
+            downloaded++;
+          }
+        } catch (imgErr) {
+          // Skip broken images silently — don't fail the whole sync
+          console.log(`[POISyncService] Image download failed for POI ${poiId}: ${imgErr.message}`);
+        }
+      }
+
+      if (downloaded > 0) {
+        console.log(`[POISyncService] Downloaded ${downloaded} new images for POI ${poiId}`);
+      }
+      return downloaded;
+    } catch (error) {
+      console.error(`[POISyncService] Image download error for POI ${poiId}:`, error.message);
+      return 0;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
   // SILVER LAYER: Full POI Update (Bronze + Silver)
   // ═══════════════════════════════════════════════════════
 
@@ -201,6 +270,33 @@ class POISyncService {
     const facebook = (apifyData.facebooks || [])[0] || null;
     const email = (apifyData.emails || [])[0] || null;
 
+    // Price level: parse "€10–20" format → 1-4 scale
+    let priceLevel = null;
+    if (apifyData.price) {
+      const priceStr = String(apifyData.price);
+      const dollarSigns = (priceStr.match(/[€$£]/g) || []).length;
+      if (dollarSigns >= 1) {
+        priceLevel = Math.min(dollarSigns, 4);
+      } else {
+        // Parse numeric: <10=1, 10-25=2, 25-50=3, >50=4
+        const nums = priceStr.match(/\d+/g);
+        if (nums) {
+          const avg = nums.reduce((s, n) => s + parseInt(n), 0) / nums.length;
+          priceLevel = avg < 10 ? 1 : avg < 25 ? 2 : avg < 50 ? 3 : 4;
+        }
+      }
+    }
+
+    // Booking & reservation URLs
+    const reservationUrl = apifyData.reserveTableUrl || null;
+    const bookingUrl = (apifyData.bookingLinks || []).find(l => l?.url)?.url || null;
+    const menuUrl = apifyData.menu || null;
+    const googleCategory = apifyData.categoryName || (apifyData.categories || [])[0] || null;
+
+    // Live busyness
+    const liveBusynessText = apifyData.popularTimesLiveText || null;
+    const liveBusynessPercent = apifyData.popularTimesLivePercent || null;
+
     // is_active: deactivate if permanently closed
     const isActive = apifyData.permanentlyClosed ? 0 : (transformed.is_active ? 1 : 0);
 
@@ -226,6 +322,13 @@ class POISyncService {
         people_also_search = ?,
         instagram_url = COALESCE(?, instagram_url),
         facebook_url = COALESCE(?, facebook_url),
+        price_level = COALESCE(?, price_level),
+        menu_url = COALESCE(?, menu_url),
+        booking_url = COALESCE(?, booking_url),
+        reservation_url = COALESCE(?, reservation_url),
+        google_category = COALESCE(?, google_category),
+        live_busyness_text = ?,
+        live_busyness_percent = ?,
         is_active = ?,
         last_updated = NOW(),
         content_updated_at = NOW(),
@@ -244,6 +347,8 @@ class POISyncService {
         serviceOptionsJson !== '[]' ? serviceOptionsJson : null,
         reviewsDistJson, reviewTagsJson, popularTimesJson, peopleAlsoJson,
         instagram, facebook,
+        priceLevel, menuUrl, bookingUrl, reservationUrl, googleCategory,
+        liveBusynessText, liveBusynessPercent,
         isActive,
         poiId
       ]
@@ -297,6 +402,8 @@ class POISyncService {
               const details = await apifyIntegration.getPlaceDetails(poi.google_placeid);
               if (details) {
                 await this.updatePOI(poi.id, details, poi.destination_id);
+                // Download new images from Apify output
+                await this.downloadNewImages(poi.id, poi.destination_id, poi.google_placeid, details);
                 totalUpdated++;
               }
             }

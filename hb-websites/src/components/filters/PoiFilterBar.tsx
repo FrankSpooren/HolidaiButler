@@ -67,6 +67,7 @@ const DEFAULT_FILTERS: PoiFilters = {
   min_rating: null,
   min_reviews: null,
   sort: 'rating:desc',
+  price_level: null,
 };
 
 export default function PoiFilterBar({ pois: initialPois, columns = 3, locale, layout = 'grid' }: PoiFilterBarProps) {
@@ -108,7 +109,8 @@ export default function PoiFilterBar({ pois: initialPois, columns = 3, locale, l
     filters.categories.length +
     (filters.min_rating ? 1 : 0) +
     (filters.min_reviews ? 1 : 0) +
-    (filters.sort !== 'rating:desc' ? 1 : 0)
+    (filters.sort !== 'rating:desc' ? 1 : 0) +
+    (filters.price_level ? 1 : 0)
   );
 
   const buildParams = useCallback((f: PoiFilters, off: number) => {
@@ -117,6 +119,7 @@ export default function PoiFilterBar({ pois: initialPois, columns = 3, locale, l
     if (f.min_rating) params.set('min_rating', String(f.min_rating));
     if (f.min_reviews) params.set('min_reviews', String(f.min_reviews));
     if (f.sort) params.set('sort', f.sort);
+    if (f.price_level) params.set('price_level', String(f.price_level));
     params.set('limit', String(PAGE_SIZE));
     if (off > 0) params.set('offset', String(off));
     return params;
@@ -126,7 +129,7 @@ export default function PoiFilterBar({ pois: initialPois, columns = 3, locale, l
     setFilters(newFilters);
     setOffset(0);
 
-    const hasFilters = newFilters.categories.length > 0 || newFilters.min_rating || newFilters.min_reviews || newFilters.sort !== 'rating:desc';
+    const hasFilters = newFilters.categories.length > 0 || newFilters.min_rating || newFilters.min_reviews || newFilters.sort !== 'rating:desc' || newFilters.price_level;
 
     if (!hasFilters) {
       setFilteredPois(null);

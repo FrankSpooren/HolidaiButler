@@ -104,6 +104,17 @@ export function POILandingPage() {
   const [comparisonModalOpen, setComparisonModalOpen] = useState<boolean>(false);
   const [showHeader, setShowHeader] = useState<boolean>(true);
 
+  // Listen for "open similar POI" events from POIDetailModal
+  useEffect(() => {
+    const handler = (e: CustomEvent<{ poiId: number }>) => {
+      if (e.detail?.poiId) {
+        setSelectedPOIId(e.detail.poiId);
+      }
+    };
+    window.addEventListener('openPoiDetail', handler as EventListener);
+    return () => window.removeEventListener('openPoiDetail', handler as EventListener);
+  }, []);
+
   // Grid virtualization
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const columnCount = useColumnCount();

@@ -59,7 +59,7 @@ export default async function EventCalendar({ limit = 6, layout = 'grid' }: Even
   const tenantSlug = headersList.get('x-tenant-slug') ?? 'calpe';
   const locale = headersList.get('x-tenant-locale') ?? 'en';
 
-  const events = await fetchEvents(tenantSlug, locale, limit);
+  const events = await fetchEvents(tenantSlug, locale, limit, 5);
 
   if (!events || events.length === 0) return null;
 

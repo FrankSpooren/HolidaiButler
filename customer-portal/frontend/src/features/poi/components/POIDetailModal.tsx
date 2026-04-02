@@ -27,6 +27,60 @@ import { POIBadge } from './POIBadge';
 import { POIReviewSection } from './POIReviewSection';
 import './POIDetailModal.css';
 
+// SimilarPlaces: fetches matching POIs from our DB by name, only shows clickable ones
+function SimilarPlaces({ places, currentPoiName, language, onOpenPoi }: {
+  places: Array<{ title: string; score: number; reviews: number }>;
+  currentPoiName: string;
+  language: string;
+  onOpenPoi: (poiId: number, name: string) => void;
+}) {
+  const [matchedPois, setMatchedPois] = useState<Array<{ id: number; name: string; rating: number; reviewCount: number }>>([]);
+
+  useEffect(() => {
+    // Search our DB for each "people also search" name
+    const fetchMatches = async () => {
+      const matches: typeof matchedPois = [];
+      for (const place of places.slice(0, 8)) {
+        try {
+          const res = await fetch(`/api/v1/pois?search=${encodeURIComponent(place.title)}&limit=1`);
+          const data = await res.json();
+          const match = data?.data?.[0];
+          if (match && match.name) {
+            matches.push({ id: match.id, name: match.name, rating: match.rating || place.score, reviewCount: match.review_count || match.reviewCount || place.reviews });
+          }
+        } catch { /* skip */ }
+      }
+      setMatchedPois(matches);
+    };
+    if (places.length > 0) fetchMatches();
+  }, [places]);
+
+  if (matchedPois.length === 0) return null;
+
+  return (
+    <div className="poi-similar-places-wrap">
+      <h2 className="poi-section-title">
+        {language === 'nl' ? 'Vergelijkbare plekken' : language === 'de' ? 'Ähnliche Orte' : language === 'es' ? 'Lugares similares' : 'Similar places'}
+      </h2>
+      <div className="poi-similar-grid">
+        {matchedPois.map((p) => (
+          <button
+            key={p.id}
+            className="poi-similar-card poi-similar-card--clickable"
+            onClick={() => onOpenPoi(p.id, p.name)}
+          >
+            <span className="poi-similar-title">{p.name}</span>
+            <span className="poi-similar-meta">
+              {p.rating > 0 && <span>⭐ {Number(p.rating).toFixed(1)}</span>}
+              {p.reviewCount > 0 && <span className="poi-similar-reviews">({p.reviewCount})</span>}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 interface POIDetailModalProps {
   poiId: number | string;
   isOpen: boolean;
@@ -368,6 +422,9 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                   {/* Badges */}
                   <div className="poi-badges-container">
                     <POIBadge type="category" category={poi.category} />
+                    {poi.google_category && poi.google_category !== poi.category && (
+                      <span className="poi-google-category-badge">{poi.google_category}</span>
+                    )}
                     {Boolean(poi.verified) && <POIBadge type="verified" />}
                     {poi.rating && poi.rating > 4.5 && poi.review_count && poi.review_count > 50 && <POIBadge type="popular" />}
                   </div>
@@ -510,6 +567,45 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                       </div>
                     )}
 
+                    {/* Action Buttons: Menu / Reserve / Book */}
+                    {(poi.menu_url || poi.reservation_url || poi.booking_url) && (
+                      <div className="poi-cta-actions">
+                        {poi.menu_url && (
+                          <a
+                            href={poi.menu_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="poi-cta-action-btn poi-cta-action-btn--menu"
+                            onClick={() => (window as any).sa_event?.('poi_menu_clicked', { poi: poi.name })}
+                          >
+                            🍽️ {language === 'nl' ? 'Bekijk menu' : language === 'de' ? 'Speisekarte' : language === 'es' ? 'Ver menú' : 'View menu'}
+                          </a>
+                        )}
+                        {poi.reservation_url && (
+                          <a
+                            href={poi.reservation_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="poi-cta-action-btn poi-cta-action-btn--reserve"
+                            onClick={() => (window as any).sa_event?.('poi_reservation_clicked', { poi: poi.name })}
+                          >
+                            📅 {language === 'nl' ? 'Reserveer' : language === 'de' ? 'Reservieren' : language === 'es' ? 'Reservar' : 'Reserve'}
+                          </a>
+                        )}
+                        {poi.booking_url && (
+                          <a
+                            href={poi.booking_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="poi-cta-action-btn poi-cta-action-btn--book"
+                            onClick={() => (window as any).sa_event?.('poi_booking_clicked', { poi: poi.name })}
+                          >
+                            🎫 {language === 'nl' ? 'Boeken' : language === 'de' ? 'Buchen' : language === 'es' ? 'Reservar entrada' : 'Book now'}
+                          </a>
+                        )}
+                      </div>
+                    )}
+
                     {/* Opening Hours */}
                     {(() => {
                       const parsedHours = parseOpeningHours(poi.opening_hours);
@@ -529,11 +625,61 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                       ) : null;
                     })()}
 
+                    {/* Live Busyness Indicator */}
+                    {(poi.live_busyness_text || poi.live_busyness_percent != null) && (
+                      <div className="poi-section poi-busyness-section">
+                        <h2 className="poi-section-title">
+                          {language === 'nl' ? 'Live drukte' : language === 'de' ? 'Aktuelle Auslastung' : language === 'es' ? 'Afluencia actual' : 'Live busyness'}
+                        </h2>
+                        <div className="poi-busyness-content">
+                          {(() => {
+                            const pct = poi.live_busyness_percent ?? 0;
+                            const dotColor = pct >= 70 ? '#EF4444' : pct >= 40 ? '#F59E0B' : '#10B981';
+                            return (
+                              <>
+                                <div className="poi-busyness-indicator">
+                                  <span className="poi-busyness-dot" style={{ background: dotColor }} />
+                                  <span className="poi-busyness-text">{poi.live_busyness_text}</span>
+                                </div>
+                                {poi.live_busyness_percent != null && (
+                                  <div className="poi-busyness-bar-wrap">
+                                    <div className="poi-busyness-bar-track">
+                                      <div
+                                        className="poi-busyness-bar-fill"
+                                        style={{ width: `${poi.live_busyness_percent}%`, background: dotColor }}
+                                      />
+                                    </div>
+                                    <span className="poi-busyness-pct">{poi.live_busyness_percent}%</span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Reviews Section - Full width on mobile, part of left column on desktop */}
                     <div className="poi-section poi-reviews-desktop">
                       <h2 className="poi-section-title">{t.reviews.title || 'Reviews'}</h2>
                       <POIReviewSection poiId={poi.id} poiName={poi.name} />
                     </div>
+
+                    {/* Review Tags */}
+                    {poi.review_tags && poi.review_tags.length > 0 && (
+                      <div className="poi-section">
+                        <h2 className="poi-section-title">
+                          {language === 'nl' ? 'Veelgenoemd in reviews' : language === 'de' ? 'Häufig erwähnt' : language === 'es' ? 'Mencionado frecuentemente' : 'Frequently mentioned'}
+                        </h2>
+                        <div className="poi-review-tags">
+                          {poi.review_tags.slice(0, 8).map((tag, idx) => (
+                            <span key={idx} className="poi-review-tag">
+                              {tag.title} <span className="poi-review-tag-count">({tag.count})</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Column - Sidebar */}
@@ -645,7 +791,10 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                     {poi.website && (
                       <button
                         className="poi-external-btn"
-                        onClick={() => window.open(poi.website, '_blank')}
+                        onClick={() => {
+                          (window as any).sa_event?.('poi_website_clicked', { poi: poi.name, url: poi.website });
+                          window.open(poi.website!, '_blank');
+                        }}
                       >
                         <ExternalLink size={18} />
                         <span>{t.poi.visitWebsite || 'Visit Website'}</span>
@@ -653,6 +802,22 @@ export function POIDetailModal({ poiId, isOpen, onClose }: POIDetailModalProps) 
                     )}
                   </div>
                 </div>
+
+                {/* Similar Places — only POIs that exist in our DB */}
+                {poi.people_also_search && poi.people_also_search.length > 0 && (
+                  <SimilarPlaces
+                    places={poi.people_also_search}
+                    currentPoiName={poi.name}
+                    language={language}
+                    onOpenPoi={(poiId: number, poiName: string) => {
+                      (window as any).sa_event?.('poi_similar_clicked', { from: poi.name, to: poiName });
+                      onClose();
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('openPoiDetail', { detail: { poiId } }));
+                      }, 300);
+                    }}
+                  />
+                )}
               </div>
 
               {/* Lightbox for full-screen image viewing */}

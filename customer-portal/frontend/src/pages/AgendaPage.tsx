@@ -168,7 +168,7 @@ const categoryMapping: Record<string, string> = {
   beach: 'nature', creative: 'creative',
 };
 
-const defaultFilters: AgendaFilters = { interests: [], distance: 50, company: [], dateType: 'all' };
+const defaultFilters: AgendaFilters = { interests: [], distance: 15, company: [], dateType: 'all' };
 
 export function AgendaPage() {
   const { t, language } = useLanguage();
@@ -199,12 +199,14 @@ export function AgendaPage() {
   const [loadedCount, setLoadedCount] = useState<number>(24);
 
   // Fetch ALL events - virtualization handles display efficiently
+  const activeDistance = filters?.distance || 15;
   const { data: eventsData, isLoading, error } = useQuery({
-    queryKey: ['agenda-events', searchQuery, selectedCategory],
+    queryKey: ['agenda-events', searchQuery, selectedCategory, activeDistance],
     queryFn: () => agendaService.getEvents({
       search: searchQuery || undefined,
       categories: selectedCategory || undefined,
-      limit: 500, // Fetch more - virtualization renders only visible
+      distance: activeDistance < 50 ? activeDistance : undefined,
+      limit: 500,
       page: 1,
     }),
     staleTime: 60000,

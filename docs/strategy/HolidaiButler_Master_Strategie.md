@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 1 april 2026
-**Versie**: 7.92
+**Datum**: 2 april 2026
+**Versie**: 7.93
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk

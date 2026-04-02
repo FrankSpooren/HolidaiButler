@@ -27,6 +27,15 @@ const TIER_CONFIG = {
   4: { updateFrequency: "quarterly", maxPOIs: null, cronExpr: "0 6 1 1,4,7,10 *" }
 };
 
+// Destinations paused per tier (to save Apify costs while site is in development)
+// Format: { tier: [destination_id, ...] }
+// Texel (id=2): T2/T3/T4 paused — site not live yet. T1 still active (18 POIs, minimal cost).
+const PAUSED_DESTINATIONS = {
+  2: [2], // Texel paused for T2
+  3: [2], // Texel paused for T3
+  4: [2], // Texel paused for T4
+};
+
 // Score calculation weights (informational only — does not affect tier assignment)
 const SCORE_WEIGHTS = {
   reviewCount: 0.30,
@@ -133,7 +142,16 @@ class POITierManager {
    * Get POIs for a specific tier sync
    * Queries the stored tier column directly (owner's manual assignments)
    */
+  getPausedDestinations(tier) {
+    return PAUSED_DESTINATIONS[tier] || [];
+  }
+
   async getPOIsForUpdate(sequelize, tier) {
+    const paused = PAUSED_DESTINATIONS[tier] || [];
+    const excludeClause = paused.length > 0
+      ? `AND destination_id NOT IN (${paused.join(',')})`
+      : '';
+
     const [pois] = await sequelize.query(`
       SELECT id, name, google_placeid, category, rating, review_count,
              destination_id, tier_score
@@ -142,10 +160,15 @@ class POITierManager {
         AND (is_active = 1 OR is_active IS NULL)
         AND google_placeid IS NOT NULL
         AND google_placeid != ''
+        ${excludeClause}
       ORDER BY tier_score DESC, last_updated ASC
     `, { replacements: [tier] });
 
-    console.log(`[POITierManager] Tier ${tier}: found ${pois.length} POIs for sync`);
+    if (paused.length > 0) {
+      console.log(`[POITierManager] Tier ${tier}: found ${pois.length} POIs for sync (destinations ${paused.join(',')} paused)`);
+    } else {
+      console.log(`[POITierManager] Tier ${tier}: found ${pois.length} POIs for sync`);
+    }
     return pois;
   }
 

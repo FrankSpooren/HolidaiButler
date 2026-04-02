@@ -14,7 +14,15 @@ export interface POI {
   rating?: number;
   reviewCount?: number;
   review_count?: number;
-  price_level?: string;
+  price_level?: number | string;
+  menu_url?: string | null;
+  booking_url?: string | null;
+  reservation_url?: string | null;
+  live_busyness_text?: string | null;
+  live_busyness_percent?: number | null;
+  google_category?: string | null;
+  review_tags?: Array<{ title: string; count: number }>;
+  people_also_search?: Array<{ title: string; score: number; reviews: number }>;
   latitude?: number;
   longitude?: number;
   phone?: string;

@@ -77,13 +77,98 @@ export function HowItWorksPage() {
     },
   };
 
+  // Calpe-specific content translations
+  const calpeContent = {
+    nl: {
+      title: 'Hoe Het Werkt',
+      subtitle: 'In 4 eenvoudige stappen naar de perfecte Calpe-ervaring',
+      step1Title: 'Bezoek CalpeTrip',
+      step1Text: 'Open calpetrip.com op je telefoon of computer. Bekijk de complete agenda, ontdek restaurants en activiteiten, en maak kennis met CalpeChat, onze persoonlijke AI-reisassistent voor Calpe en de Costa Blanca.',
+      step2Title: 'Stel CalpeChat Jouw Vraag',
+      step2AccountLink: 'Maak je een account aan',
+      step2Text: 'en stel CalpeChat al je vragen over Calpe - in je eigen taal. "Waar eet ik het beste?" of "Wat is er te doen met kinderen?" CalpeChat denkt mee en geeft direct persoonlijk advies op maat.',
+      step3Title: 'Ontvang Aanbevelingen op Maat',
+      step3Text: 'Ontvang gepersonaliseerde suggesties voor restaurants, stranden, activiteiten en evenementen in Calpe. Lees reviews van andere bezoekers, bekijk foto\'s en openingstijden, en sla je favorieten op.',
+      step4Title: 'Boek & Geniet',
+      step4Text: 'Reserveer direct via de app - of het nu gaat om een tafel bij een restaurant, tickets voor een evenement, of een activiteit. Alles geregeld, zodat jij zorgeloos kunt genieten van Calpe.',
+      featuresTitle: 'Waarom CalpeTrip?',
+      benefit1Title: '24/7 Beschikbaar',
+      benefit1Text: 'CalpeChat staat altijd voor je klaar, dag en nacht',
+      benefit2Title: 'GDPR-Compliant & Veilig',
+      benefit2Text: 'EU-servers, GDPR-compliant, alleen geverifieerde locaties',
+      benefit3Title: 'Meertalig',
+      benefit3Text: 'Beschikbaar in Nederlands, Engels, Duits en Spaans',
+    },
+    en: {
+      title: 'How It Works',
+      subtitle: 'In 4 simple steps to the perfect Calpe experience',
+      step1Title: 'Visit CalpeTrip',
+      step1Text: 'Open calpetrip.com on your phone or computer. Browse the complete calendar, discover restaurants and activities, and meet CalpeChat, our personal AI travel assistant for Calpe and the Costa Blanca.',
+      step2Title: 'Ask CalpeChat',
+      step2AccountLink: 'Create an account',
+      step2Text: 'and ask CalpeChat anything about Calpe - in your own language. "Where can I eat the best food?" or "What is there to do with children?" CalpeChat thinks along and gives instant personalized advice.',
+      step3Title: 'Get Personalized Recommendations',
+      step3Text: 'Receive personalized suggestions for restaurants, beaches, activities and events in Calpe. Read reviews from other visitors, view photos and opening hours, and save your favorites.',
+      step4Title: 'Book & Enjoy',
+      step4Text: 'Book directly through the app - whether it\'s a table at a restaurant, tickets for an event, or an activity. Everything arranged so you can enjoy Calpe without a worry.',
+      featuresTitle: 'Why CalpeTrip?',
+      benefit1Title: '24/7 Available',
+      benefit1Text: 'CalpeChat is always ready for you, day and night',
+      benefit2Title: 'GDPR-Compliant & Secure',
+      benefit2Text: 'EU servers, GDPR-compliant, only verified locations',
+      benefit3Title: 'Multilingual',
+      benefit3Text: 'Available in Dutch, English, German and Spanish',
+    },
+    de: {
+      title: 'So Funktioniert Es',
+      subtitle: 'In 4 einfachen Schritten zum perfekten Calpe-Erlebnis',
+      step1Title: 'CalpeTrip Besuchen',
+      step1Text: 'Öffnen Sie calpetrip.com auf Ihrem Handy oder Computer. Stöbern Sie im vollständigen Kalender, entdecken Sie Restaurants und Aktivitäten, und lernen Sie CalpeChat kennen, unseren persönlichen KI-Reiseassistenten für Calpe und die Costa Blanca.',
+      step2Title: 'CalpeChat Fragen',
+      step2AccountLink: 'Erstellen Sie ein Konto',
+      step2Text: 'und stellen Sie CalpeChat alle Ihre Fragen zu Calpe - in Ihrer eigenen Sprache. "Wo kann ich am besten essen?" oder "Was gibt es mit Kindern zu unternehmen?" CalpeChat denkt mit und gibt sofort personalisierte Empfehlungen.',
+      step3Title: 'Personalisierte Empfehlungen Erhalten',
+      step3Text: 'Erhalten Sie personalisierte Vorschläge für Restaurants, Strände, Aktivitäten und Veranstaltungen in Calpe. Lesen Sie Bewertungen anderer Besucher, sehen Sie Fotos und Öffnungszeiten, und speichern Sie Ihre Favoriten.',
+      step4Title: 'Buchen & Genießen',
+      step4Text: 'Buchen Sie direkt über die App - ob ein Tisch im Restaurant, Tickets für eine Veranstaltung oder eine Aktivität. Alles arrangiert, damit Sie Calpe sorglos genießen können.',
+      featuresTitle: 'Warum CalpeTrip?',
+      benefit1Title: '24/7 Verfügbar',
+      benefit1Text: 'CalpeChat ist immer für Sie da, Tag und Nacht',
+      benefit2Title: 'DSGVO-Konform & Sicher',
+      benefit2Text: 'EU-Server, DSGVO-konform, nur verifizierte Standorte',
+      benefit3Title: 'Mehrsprachig',
+      benefit3Text: 'Verfügbar in Niederländisch, Englisch, Deutsch und Spanisch',
+    },
+    es: {
+      title: 'Cómo Funciona',
+      subtitle: 'En 4 sencillos pasos hacia la experiencia perfecta en Calpe',
+      step1Title: 'Visita CalpeTrip',
+      step1Text: 'Abre calpetrip.com en tu teléfono o computadora. Consulta el calendario completo, descubre restaurantes y actividades, y conoce CalpeChat, nuestro asistente de viaje personal con IA para Calpe y la Costa Blanca.',
+      step2Title: 'Pregunta a CalpeChat',
+      step2AccountLink: 'Crea una cuenta',
+      step2Text: 'y hazle a CalpeChat todas tus preguntas sobre Calpe, en tu propio idioma. "¿Dónde se come mejor?" o "¿Qué hay para hacer con niños?" CalpeChat piensa contigo y te da consejos personalizados al instante.',
+      step3Title: 'Recibe Recomendaciones Personalizadas',
+      step3Text: 'Recibe sugerencias personalizadas de restaurantes, playas, actividades y eventos en Calpe. Lee reseñas de otros visitantes, consulta fotos y horarios, y guarda tus favoritos.',
+      step4Title: 'Reserva y Disfruta',
+      step4Text: 'Reserva directamente desde la app - ya sea una mesa en un restaurante, entradas para un evento o una actividad. Todo organizado para que puedas disfrutar de Calpe sin preocupaciones.',
+      featuresTitle: '¿Por Qué CalpeTrip?',
+      benefit1Title: 'Disponible 24/7',
+      benefit1Text: 'CalpeChat siempre está disponible para ti, de día y de noche',
+      benefit2Title: 'Cumple RGPD & Seguro',
+      benefit2Text: 'Servidores en la UE, cumple RGPD, solo ubicaciones verificadas',
+      benefit3Title: 'Multilingüe',
+      benefit3Text: 'Disponible en neerlandés, inglés, alemán y español',
+    },
+  };
+
   // Get content based on destination
   const getContent = (key: string, fallback: string) => {
     if (destination.id === 'texel') {
       const texel = texelContent[language as keyof typeof texelContent] || texelContent.nl;
       return texel[key as keyof typeof texel] || fallback;
     }
-    return sp?.[key] || fallback;
+    const calpe = calpeContent[language as keyof typeof calpeContent] || calpeContent.nl;
+    return (calpe[key as keyof typeof calpe] as string) || sp?.[key] || fallback;
   };
 
   return (

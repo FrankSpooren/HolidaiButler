@@ -70,7 +70,7 @@ class ApifyIntegration {
       throw new Error(`Apify budget exceeded: ${budgetCheck.reason}`);
     }
 
-    const { maxResults = 50, language = "en", skipClosed = true } = options;
+    const { maxResults = 50, language = "en", skipClosed = true, maxImages = 10 } = options;
 
     console.log(`[Apify] Searching "${searchTerms.join(", ")}" in ${location}`);
 
@@ -82,6 +82,7 @@ class ApifyIntegration {
         language,
         skipClosedPlaces: skipClosed,
         scrapePlaceDetailPage: true,
+        maxImages,
         maxReviews: 5,
         reviewsSort: "newest"
       };
@@ -123,6 +124,7 @@ class ApifyIntegration {
       const input = {
         startUrls: [{ url: `https://www.google.com/maps/place/?q=place_id:${placeId}` }],
         scrapePlaceDetailPage: true,
+        maxImages: 10,
         maxReviews: 10,
         reviewsSort: "newest",
         scrapeContacts: true

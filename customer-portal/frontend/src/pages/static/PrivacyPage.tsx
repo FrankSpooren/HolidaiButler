@@ -48,10 +48,59 @@ export function PrivacyPage() {
 
   const texel = texelContent[language as keyof typeof texelContent] || texelContent.nl;
 
-  // Get content with Texel overrides
+  // CalpeTrip-specific privacy content
+  const calpeContent = {
+    nl: {
+      title: 'Privacybeleid',
+      subtitle: 'Hoe wij omgaan met je persoonlijke gegevens',
+      lastUpdated: 'Laatst bijgewerkt: december 2025',
+      section1Title: '1. Inleiding',
+      section1Text: 'CalpeTrip ("wij", "ons", "onze") respecteert je privacy en zet zich in voor de bescherming van je persoonlijke gegevens. Dit privacybeleid informeert je over hoe wij omgaan met je persoonlijke gegevens wanneer je onze website of app gebruikt.',
+      section2Title: '2. Welke Gegevens Verzamelen Wij',
+      use2: 'Het personaliseren van aanbevelingen via CalpeChat',
+      section8Text: 'Voor vragen over dit privacybeleid of om je rechten uit te oefenen, neem contact met ons op via info@calpetrip.com.',
+    },
+    en: {
+      title: 'Privacy Policy',
+      subtitle: 'How we handle your personal data',
+      lastUpdated: 'Last updated: December 2025',
+      section1Title: '1. Introduction',
+      section1Text: 'CalpeTrip ("we", "us", "our") respects your privacy and is committed to protecting your personal data. This privacy policy informs you about how we handle your personal data when you use our website or app.',
+      section2Title: '2. What Data We Collect',
+      use2: 'Personalizing recommendations via CalpeChat',
+      section8Text: 'For questions about this privacy policy or to exercise your rights, contact us at info@calpetrip.com.',
+    },
+    de: {
+      title: 'Datenschutzrichtlinie',
+      subtitle: 'Wie wir mit Ihren persönlichen Daten umgehen',
+      lastUpdated: 'Zuletzt aktualisiert: Dezember 2025',
+      section1Title: '1. Einleitung',
+      section1Text: 'CalpeTrip ("wir", "uns", "unser") respektiert Ihre Privatsphäre und verpflichtet sich zum Schutz Ihrer persönlichen Daten. Diese Datenschutzrichtlinie informiert Sie darüber, wie wir mit Ihren persönlichen Daten umgehen, wenn Sie unsere Website oder App nutzen.',
+      section2Title: '2. Welche Daten Wir Sammeln',
+      use2: 'Personalisierung von Empfehlungen über CalpeChat',
+      section8Text: 'Bei Fragen zu dieser Datenschutzrichtlinie oder zur Ausübung Ihrer Rechte kontaktieren Sie uns unter info@calpetrip.com.',
+    },
+    es: {
+      title: 'Política de Privacidad',
+      subtitle: 'Cómo gestionamos tus datos personales',
+      lastUpdated: 'Última actualización: diciembre de 2025',
+      section1Title: '1. Introducción',
+      section1Text: 'CalpeTrip ("nosotros", "nos", "nuestro") respeta tu privacidad y se compromete a proteger tus datos personales. Esta política de privacidad te informa sobre cómo gestionamos tus datos personales cuando utilizas nuestro sitio web o aplicación.',
+      section2Title: '2. Qué Datos Recopilamos',
+      use2: 'Personalizar recomendaciones a través de CalpeChat',
+      section8Text: 'Para preguntas sobre esta política de privacidad o para ejercer tus derechos, contáctanos en info@calpetrip.com.',
+    },
+  };
+
+  const calpe = calpeContent[language as keyof typeof calpeContent] || calpeContent.nl;
+
+  // Get content with destination overrides
   const getContent = (key: string, fallback: string) => {
     if (destination.id === 'texel' && texel[key as keyof typeof texel]) {
       return texel[key as keyof typeof texel];
+    }
+    if (destination.id !== 'texel' && calpe[key as keyof typeof calpe]) {
+      return calpe[key as keyof typeof calpe];
     }
     return sp?.[key] || fallback;
   };
@@ -61,8 +110,7 @@ export function PrivacyPage() {
     if (destination.id === 'texel') {
       return texel.lastUpdated;
     }
-    // Update default date to December 2025
-    return sp?.lastUpdated || 'Laatst bijgewerkt: December 2025';
+    return calpe.lastUpdated;
   };
 
   return (
@@ -145,9 +193,7 @@ export function PrivacyPage() {
 
             <h2>{sp?.section8Title || '8. Contact'}</h2>
             <p>
-              {getContent('section8Text', destination.id === 'texel'
-                ? 'Voor vragen over dit privacybeleid of om je rechten uit te oefenen, neem contact met ons op via privacy@texelmaps.nl.'
-                : 'Voor vragen over dit privacybeleid of om je rechten uit te oefenen, neem contact met ons op via privacy@holidaibutler.com.')}
+              {getContent('section8Text', 'Voor vragen over dit privacybeleid of om je rechten uit te oefenen, neem contact met ons op via info@calpetrip.com.')}
             </p>
           </div>
         </div>

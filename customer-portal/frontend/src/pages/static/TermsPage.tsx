@@ -45,10 +45,55 @@ export function TermsPage() {
 
   const texel = texelContent[language as keyof typeof texelContent] || texelContent.nl;
 
+  // CalpeTrip-specific terms content
+  const calpeContent = {
+    nl: {
+      title: 'Algemene Voorwaarden',
+      subtitle: 'De voorwaarden voor het gebruik van CalpeTrip',
+      lastUpdated: 'Laatst bijgewerkt: december 2025',
+      section2Text: 'CalpeTrip is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten aan de Costa Blanca. Onze AI-assistent CalpeChat biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.',
+      section6Text: "Alle content op CalpeTrip, inclusief teksten, afbeeldingen, logo's en software, is eigendom van CalpeTrip of onze licentiegevers en wordt beschermd door auteursrecht en andere intellectuele eigendomsrechten.",
+      section7Text: 'CalpeTrip fungeert als tussenpersoon tussen gebruikers en lokale partners. Wij zijn niet aansprakelijk voor de kwaliteit van diensten geleverd door partners. Onze aansprakelijkheid is beperkt tot het maximaal door jou betaalde bedrag voor de betreffende dienst.',
+      section10Text: 'Voor vragen over deze voorwaarden kun je contact met ons opnemen via info@calpetrip.com.',
+    },
+    en: {
+      title: 'Terms and Conditions',
+      subtitle: 'The terms of use for CalpeTrip',
+      lastUpdated: 'Last updated: December 2025',
+      section2Text: 'CalpeTrip is a platform that helps users discover local attractions, restaurants and activities on the Costa Blanca. Our AI assistant CalpeChat provides personalized recommendations and you can make reservations and buy tickets through our platform.',
+      section6Text: 'All content on CalpeTrip, including texts, images, logos and software, is owned by CalpeTrip or our licensors and is protected by copyright and other intellectual property rights.',
+      section7Text: 'CalpeTrip acts as an intermediary between users and local partners. We are not liable for the quality of services provided by partners. Our liability is limited to the maximum amount paid by you for the relevant service.',
+      section10Text: 'For questions about these terms, you can contact us at info@calpetrip.com.',
+    },
+    de: {
+      title: 'Allgemeine Geschäftsbedingungen',
+      subtitle: 'Die Nutzungsbedingungen für CalpeTrip',
+      lastUpdated: 'Zuletzt aktualisiert: Dezember 2025',
+      section2Text: 'CalpeTrip ist eine Plattform, die Benutzern hilft, lokale Attraktionen, Restaurants und Aktivitäten an der Costa Blanca zu entdecken. Unser KI-Assistent CalpeChat bietet personalisierte Empfehlungen und Sie können über unsere Plattform Reservierungen vornehmen und Tickets kaufen.',
+      section6Text: 'Alle Inhalte auf CalpeTrip, einschließlich Texte, Bilder, Logos und Software, sind Eigentum von CalpeTrip oder unseren Lizenzgebern und werden durch Urheberrecht und andere geistige Eigentumsrechte geschützt.',
+      section7Text: 'CalpeTrip fungiert als Vermittler zwischen Benutzern und lokalen Partnern. Wir haften nicht für die Qualität der von Partnern erbrachten Dienstleistungen. Unsere Haftung ist auf den von Ihnen gezahlten Höchstbetrag für die betreffende Dienstleistung begrenzt.',
+      section10Text: 'Bei Fragen zu diesen Bedingungen können Sie uns unter info@calpetrip.com kontaktieren.',
+    },
+    es: {
+      title: 'Términos y Condiciones',
+      subtitle: 'Los términos de uso de CalpeTrip',
+      lastUpdated: 'Última actualización: diciembre de 2025',
+      section2Text: 'CalpeTrip es una plataforma que ayuda a los usuarios a descubrir atracciones locales, restaurantes y actividades en la Costa Blanca. Nuestro asistente de IA CalpeChat ofrece recomendaciones personalizadas y puedes hacer reservas y comprar entradas a través de nuestra plataforma.',
+      section6Text: "Todo el contenido de CalpeTrip, incluidos textos, imágenes, logotipos y software, es propiedad de CalpeTrip o de nuestros licenciantes y está protegido por derechos de autor y otros derechos de propiedad intelectual.",
+      section7Text: 'CalpeTrip actúa como intermediario entre los usuarios y los socios locales. No somos responsables de la calidad de los servicios prestados por los socios. Nuestra responsabilidad se limita al importe máximo pagado por ti por el servicio en cuestión.',
+      section10Text: 'Para preguntas sobre estos términos, puedes contactarnos en info@calpetrip.com.',
+    },
+  };
+
+  const calpe = calpeContent[language as keyof typeof calpeContent] || calpeContent.nl;
+
   // Get content based on destination
   const getContent = (key: string, fallback: string) => {
     if (destination.id === 'texel' && texel[key as keyof typeof texel]) {
       return texel[key as keyof typeof texel];
+    }
+    if (destination.id !== 'texel' && calpe[key as keyof typeof calpe]) {
+      return calpe[key as keyof typeof calpe];
     }
     return sp?.[key] || fallback;
   };
@@ -58,7 +103,7 @@ export function TermsPage() {
     if (destination.id === 'texel') {
       return texel.lastUpdated;
     }
-    return sp?.lastUpdated || 'Laatst bijgewerkt: December 2025';
+    return calpe.lastUpdated;
   };
 
   return (
@@ -66,7 +111,7 @@ export function TermsPage() {
       <div className="static-page-hero">
         <div className="static-page-hero-content">
           <h1>{getContent('title', 'Algemene Voorwaarden')}</h1>
-          <p>{getContent('subtitle', destination.id === 'texel' ? 'De voorwaarden voor het gebruik van TexelMaps' : 'De voorwaarden voor het gebruik van CalpeTrip')}</p>
+          <p>{getContent('subtitle', 'De voorwaarden voor het gebruik van CalpeTrip')}</p>
         </div>
       </div>
 
@@ -85,16 +130,14 @@ export function TermsPage() {
           <div className="legal-content">
             <h2>{sp?.section1Title || '1. Acceptatie van Voorwaarden'}</h2>
             <p>
-              {sp?.section1Text || (destination.id === 'texel'
+              {getContent('section1Text', destination.id === 'texel'
                 ? 'Door gebruik te maken van TexelMaps ga je akkoord met deze Algemene Voorwaarden. Als je niet akkoord gaat met deze voorwaarden, gebruik dan onze diensten niet.'
                 : 'Door gebruik te maken van CalpeTrip ga je akkoord met deze Algemene Voorwaarden. Als je niet akkoord gaat met deze voorwaarden, gebruik dan onze diensten niet.')}
             </p>
 
             <h2>{sp?.section2Title || '2. Beschrijving van de Dienst'}</h2>
             <p>
-              {getContent('section2Text', destination.id === 'texel'
-                ? 'TexelMaps is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten op Texel. Onze AI-assistent Tessa biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.'
-                : 'CalpeTrip is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten aan de Costa Blanca. Onze AI-assistent HoliBot biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.')}
+              {getContent('section2Text', 'CalpeTrip is een platform dat gebruikers helpt bij het ontdekken van lokale attracties, restaurants en activiteiten aan de Costa Blanca. Onze AI-assistent CalpeChat biedt gepersonaliseerde aanbevelingen en je kunt via ons platform reserveringen maken en tickets kopen.')}
             </p>
 
             <h2>{sp?.section3Title || '3. Gebruikersaccount'}</h2>
@@ -126,16 +169,12 @@ export function TermsPage() {
 
             <h2>{sp?.section6Title || '6. Intellectueel Eigendom'}</h2>
             <p>
-              {getContent('section6Text', destination.id === 'texel'
-                ? 'Alle content op TexelMaps, inclusief teksten, afbeeldingen, logo\'s en software, is eigendom van TexelMaps of onze licentiegevers en wordt beschermd door auteursrecht en andere intellectuele eigendomsrechten.'
-                : 'Alle content op CalpeTrip, inclusief teksten, afbeeldingen, logo\'s en software, is eigendom van CalpeTrip of onze licentiegevers en wordt beschermd door auteursrecht en andere intellectuele eigendomsrechten.')}
+              {getContent('section6Text', "Alle content op CalpeTrip, inclusief teksten, afbeeldingen, logo's en software, is eigendom van CalpeTrip of onze licentiegevers en wordt beschermd door auteursrecht en andere intellectuele eigendomsrechten.")}
             </p>
 
             <h2>{sp?.section7Title || '7. Aansprakelijkheid'}</h2>
             <p>
-              {getContent('section7Text', destination.id === 'texel'
-                ? 'TexelMaps fungeert als tussenpersoon tussen gebruikers en lokale partners. Wij zijn niet aansprakelijk voor de kwaliteit van diensten geleverd door partners. Onze aansprakelijkheid is beperkt tot het maximaal door jou betaalde bedrag voor de betreffende dienst.'
-                : 'CalpeTrip fungeert als tussenpersoon tussen gebruikers en lokale partners. Wij zijn niet aansprakelijk voor de kwaliteit van diensten geleverd door partners. Onze aansprakelijkheid is beperkt tot het maximaal door jou betaalde bedrag voor de betreffende dienst.')}
+              {getContent('section7Text', 'CalpeTrip fungeert als tussenpersoon tussen gebruikers en lokale partners. Wij zijn niet aansprakelijk voor de kwaliteit van diensten geleverd door partners. Onze aansprakelijkheid is beperkt tot het maximaal door jou betaalde bedrag voor de betreffende dienst.')}
             </p>
 
             <h2>{sp?.section8Title || '8. Wijzigingen'}</h2>
@@ -150,9 +189,7 @@ export function TermsPage() {
 
             <h2>{sp?.section10Title || '10. Contact'}</h2>
             <p>
-              {getContent('section10Text', destination.id === 'texel'
-                ? 'Voor vragen over deze voorwaarden kun je contact met ons opnemen via legal@texelmaps.nl.'
-                : 'Voor vragen over deze voorwaarden kun je contact met ons opnemen via legal@holidaibutler.com.')}
+              {getContent('section10Text', 'Voor vragen over deze voorwaarden kun je contact met ons opnemen via info@calpetrip.com.')}
             </p>
           </div>
         </div>

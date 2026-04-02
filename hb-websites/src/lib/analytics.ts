@@ -134,6 +134,21 @@ export const analytics = {
 
   cta_clicked: (label: string) =>
     trackEvent(`cta_clicked_${getDevice()}`, { label: label.substring(0, 50) }),
+
+  // --- POI Detail Actions ---
+  poi_menu_clicked: (poiName: string) =>
+    trackEvent(`poi_menu_clicked_${getDevice()}`, { poi: poiName.substring(0, 50) }),
+
+  poi_reservation_clicked: (poiName: string) =>
+    trackEvent(`poi_reservation_clicked_${getDevice()}`, { poi: poiName.substring(0, 50) }),
+
+  poi_booking_clicked: (poiName: string) =>
+    trackEvent(`poi_booking_clicked_${getDevice()}`, { poi: poiName.substring(0, 50) }),
+
+  poi_similar_clicked: (fromPoi: string, toPoi: string) =>
+    trackEvent(`poi_similar_clicked_${getDevice()}`, { from: fromPoi.substring(0, 50), to: toPoi.substring(0, 50) }),
+  poi_website_clicked: (poiName: string, url: string) =>
+    trackEvent(`poi_website_clicked_${getDevice()}`, { poi: poiName.substring(0, 50), url: url.substring(0, 80) }),
 };
 
 export default analytics;
