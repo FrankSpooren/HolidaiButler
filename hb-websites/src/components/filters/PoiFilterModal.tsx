@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export interface PoiFilters {
   categories: string[];
   min_rating: number | null;
   min_reviews: number | null;
   sort: string;
+  price_level: number | null;
 }
 
 interface PoiFilterModalProps {
@@ -138,6 +139,35 @@ export default function PoiFilterModal({
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
+  // Live result count preview
+  const [liveCount, setLiveCount] = useState<number | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchPreviewCount = useCallback(async (f: PoiFilters) => {
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', '1');
+      if (f.categories.length > 0) params.set('categories', f.categories.join(','));
+      if (f.min_rating) params.set('min_rating', String(f.min_rating));
+      if (f.min_reviews) params.set('min_reviews', String(f.min_reviews));
+      if (f.sort) params.set('sort', f.sort);
+      if (f.price_level) params.set('price_level', String(f.price_level));
+      const res = await fetch(`/api/pois?${params.toString()}`);
+      const data = await res.json();
+      setLiveCount(data.meta?.total ?? data.data?.length ?? 0);
+    } catch {
+      setLiveCount(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setLiveCount(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchPreviewCount(filters), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [open, filters, fetchPreviewCount]);
+
   const toggleCategory = useCallback((cat: string) => {
     setFilters(prev => ({
       ...prev,
@@ -148,7 +178,7 @@ export default function PoiFilterModal({
   }, []);
 
   const handleClear = () => {
-    setFilters({ categories: [], min_rating: null, min_reviews: null, sort: 'rating:desc' });
+    setFilters({ categories: [], min_rating: null, min_reviews: null, sort: 'rating:desc', price_level: null });
   };
 
   const handleApply = () => {
@@ -160,7 +190,8 @@ export default function PoiFilterModal({
     filters.categories.length +
     (filters.min_rating ? 1 : 0) +
     (filters.min_reviews ? 1 : 0) +
-    (filters.sort !== 'rating:desc' ? 1 : 0)
+    (filters.sort !== 'rating:desc' ? 1 : 0) +
+    (filters.price_level ? 1 : 0)
   );
 
   if (!open) return null;
@@ -269,9 +300,29 @@ export default function PoiFilterModal({
             </div>
           </div>
 
+          {/* Price Level */}
+          <div>
+            <h3 className="text-sm font-semibold mb-3">{t.priceLevel}</h3>
+            <div className="flex flex-wrap gap-2">
+              {[null, 1, 2, 3, 4].map(opt => (
+                <button
+                  key={String(opt)}
+                  onClick={() => setFilters(prev => ({ ...prev, price_level: opt }))}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    filters.price_level === opt
+                      ? 'bg-primary text-on-primary'
+                      : 'bg-gray-100 text-foreground hover:bg-gray-200'
+                  }`}
+                >
+                  {opt === null ? t.all : '€'.repeat(opt)}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Disabled future filters */}
           <div className="border-t pt-4 space-y-3 opacity-50">
-            {[t.priceLevel, t.openNow, t.accessibility, t.distance].map(label => (
+            {[t.openNow, t.accessibility, t.distance].map(label => (
               <div key={label} className="flex items-center justify-between">
                 <span className="text-sm">{label}</span>
                 <span className="text-xs bg-gray-100 text-muted px-2 py-0.5 rounded">{t.comingSoon}</span>
@@ -292,7 +343,7 @@ export default function PoiFilterModal({
             onClick={handleApply}
             className="flex-1 py-2.5 rounded-lg bg-primary text-on-primary font-medium hover:bg-primary/90 transition-colors"
           >
-            {t.apply} {activeCount > 0 && `(${activeCount})`}
+            {liveCount !== null ? `${t.apply} (${liveCount})` : t.apply}
           </button>
         </div>
 

@@ -239,6 +239,22 @@ const POI = mysqlSequelize.define('POI', {
     allowNull: true,
   },
 
+  // Apify-enriched data
+  popular_times_json: { type: DataTypes.TEXT('long'), allowNull: true },
+  live_busyness_text: { type: DataTypes.STRING(100), allowNull: true },
+  live_busyness_percent: { type: DataTypes.INTEGER, allowNull: true },
+  parking_info: { type: DataTypes.TEXT('long'), allowNull: true },
+  service_options: { type: DataTypes.TEXT('long'), allowNull: true },
+  reviews_distribution: { type: DataTypes.TEXT('long'), allowNull: true },
+  review_tags: { type: DataTypes.TEXT('long'), allowNull: true },
+  people_also_search: { type: DataTypes.TEXT('long'), allowNull: true },
+  last_apify_sync: { type: DataTypes.DATE, allowNull: true },
+  menu_url: { type: DataTypes.STRING(500), allowNull: true },
+  booking_url: { type: DataTypes.STRING(500), allowNull: true },
+  reservation_url: { type: DataTypes.STRING(500), allowNull: true },
+  google_category: { type: DataTypes.STRING(200), allowNull: true },
+  tier: { type: DataTypes.TINYINT, allowNull: true, defaultValue: 4 },
+
   // Timestamps
   last_updated: {
     type: DataTypes.DATE,

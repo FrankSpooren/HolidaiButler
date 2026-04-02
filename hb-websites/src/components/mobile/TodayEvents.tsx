@@ -113,7 +113,7 @@ export default function TodayEvents({ locale, destinationName = 'Calpe', destina
     async function load() {
       try {
         const today = new Date().toISOString().split('T')[0];
-        const res = await fetch(`/api/events?limit=8&date=${today}`);
+        const res = await fetch(`/api/events?limit=8&date=${today}&distance=5`);
         const data = await res.json();
         setEvents(data?.data || []);
       } catch (err) {

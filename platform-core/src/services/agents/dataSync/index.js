@@ -388,6 +388,16 @@ class DataSyncAgent {
 
     const placeholders = tiers.map(() => "?").join(", ");
 
+    // Collect paused destinations across all requested tiers
+    const pausedDestIds = new Set();
+    for (const t of tiers) {
+      const paused = poiTierManager.getPausedDestinations(t);
+      paused.forEach(id => pausedDestIds.add(id));
+    }
+    const excludeClause = pausedDestIds.size > 0
+      ? `AND destination_id NOT IN (${[...pausedDestIds].join(',')})`
+      : '';
+
     const [pois] = await poiSyncService.sequelize.query(`
       SELECT id, google_placeid, destination_id
       FROM POI
@@ -395,6 +405,7 @@ class DataSyncAgent {
         AND google_placeid IS NOT NULL
         AND google_placeid != ''
         AND tier IN (${placeholders})
+        ${excludeClause}
       LIMIT 500
     `, { replacements: tiers });
 

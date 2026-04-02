@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.32.0
-> **Laatst bijgewerkt**: 1 april 2026
+> **Versie**: 4.33.0
+> **Laatst bijgewerkt**: 2 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -232,6 +232,7 @@ Gold:   Customer Portal + Admin Portal (dynamic rendering)
 - Texel: 11.506 imageurls, 4.1 GB, pad: `/poi-images/texel/{google_placeid}/image_N.jpg`
 - `IMAGE_BASE_URL` in `.env`: `https://test.holidaibutler.com`
 - `getBestUrl()` in `ImageUrl.js`: prefereert `local_path`, fallback `image_url`
+- **Image bronnen**: `google_places` (22.596), `apify_refresh` (2.611+)
 - **Image Resize Proxy** (Fase II-B.4): `/api/v1/img/<path>?w=<width>&q=<quality>&f=<format>`
   - Sharp processing, mozjpeg, disk cache in `/storage/poi-images-cache/`
   - Widths: [200, 400, 600, 800, 1200], formats: jpg/webp/avif
@@ -485,7 +486,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.40.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (6 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 245 admin endpoints (+1: analytics/website SimpleAnalytics)
+- **Endpoints**: 246 admin endpoints (+1: analytics/website SimpleAnalytics, +1: price_level filter)
 - **Standalone Login**: studio.holidaibutler.com (Content Studio branded login, USP's, vergelijkingstabel)
 
 ### RBAC Rollen (6 rollen, hiërarchie 100→30)
@@ -526,6 +527,19 @@ Tier-indeling wordt **manueel bepaald door de eigenaar** (opgeslagen in `POI.tie
 | 4 | Kwartaal 06:00 | 784 | 1.427 | 2.211 |
 
 ### tier_score (informatief): `(review_count × 0.30) + (avg_rating × 0.20) + (tourist_relevance × 0.30) + (booking_frequency × 0.20)`
+
+### Texel Sync Pauzering (per 1 april 2026)
+- **T2/T3/T4 GEPAUZEERD** voor Texel (destination_id=2) — site niet live, kostenbesparing
+- **T1 actief** (18 POIs dagelijks, minimale kosten)
+- Config: `PAUSED_DESTINATIONS` in `poiTierManager.js` — verwijder `[2]` om te heractiveren
+- Bespaart 1.315 POIs per sync-cyclus
+
+### Image Download Pipeline (per 2 april 2026)
+- **Apify `maxImages: 10`** — elke run levert nu tot 10 image URLs per POI
+- **Automatische download** in `poiSyncService.downloadNewImages()` — na elke `updatePOI()` worden nieuwe images lokaal opgeslagen
+- **Dedup**: checkt `imageurls` tabel op bestaande URLs, downloadt alleen nieuwe
+- **Opslag**: `/var/www/api.holidaibutler.com/storage/poi-images/{poi_id}/{hash}.jpg`
+- **Source**: `apify_refresh` in imageurls tabel
 
 ### Browse View Filters
 Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusies: laadpunten/begraafplaatsen/accommodatie.
@@ -672,6 +686,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.33.0** | **2026-04-02** | **POI Data Pipeline Optimalisatie + Events Distance + i18n Static Pages**. (A) Events distance filter end-to-end: backend `calpe_distance` WHERE clause (default 15km), hb-websites 6 componenten `distance=5`, customer-portal filter modal `distance` param + live event count (debounced 300ms API call bij elke filterwijziging). (B) POI filter live count: PoiFilterModal real-time result count bij categorie/rating/reviews/sort/price wijziging. (C) Statische pagina's i18n: 8 pagina's (About/FAQ/HowItWorks/Help/Contact/Privacy/Terms/Cookies) + Footer meertalig NL/EN/DE/ES voor CalpeTrip. "HoliBot"→"CalpeChat" in Help. (D) POI Data Pipeline Optimalisatie — 12 punten: Apify `maxImages:10` (was 0), `downloadNewImages()` in sync pipeline, 6 nieuwe DB kolommen (menu_url, booking_url, reservation_url, google_category, live_busyness_text/percent), `price_level` parsing uit Apify `price` veld, backfill 2.259 POIs. Public API +8 velden. POI model 14 kolommen toegevoegd. Prijsfilter geactiveerd (was "Coming soon"). Customer-portal POI detail: action buttons (menu/reserve/book), review tags (8 chips), vergelijkbare plekken (klikbaar, DB-matched), google category badge, live drukte indicator, reviews 10→5 default. 5 nieuwe SA events (poi_website/menu/reservation/booking_clicked, poi_similar_clicked). (E) Texel T2/T3/T4 sync gepauzeerd (1.315 POIs/cyclus bespaard). CalpeTrip social accounts: Facebook+Instagram gekoppeld. 33 bestanden. CLAUDE.md v4.33.0. MS v7.93. |
 | **4.32.0** | **2026-04-01** | **Fase VI-C Desktop Template Polish + Encoding Fix + Page Builder Completie**. BLOK H: Inter font platform-breed (branding body+heading→Inter), Restaurants uit nav (config nav_items), WCAG dubbel icoon (Nav.tsx WCAG verwijderd, alleen Header.tsx WcagButton). BLOK I: Quick actions hero (Routebeschrijving+Zoeken op Rubriek i.p.v. Restaurants+Actief), Je/U audit (payoff "Uw"→"Je", DE "Sie"→"du" in mobileHomepage subtitle+mapLabel). **Encoding fix**: 176 DB records double-encoded UTF-8 hersteld (50 tile_nl + 29 tile_en + 92 highlights + 3 namen + destinations branding+config). Python fix_encoding.py script. Calpe 100% clean bevestigd. BLOK J: Footer conform Calpe (4 kolommen Brand+Social/PLATFORM/SUPPORT/JURIDISCH, "Gemaakt met ❤️ op Texel", i18n html links). USP "Waarom TexelMaps?" in footer. ProgramCard tijdsloten per categorie (Winkelen 0.5u, Activiteit 1.5u, Ontbijt 1u, Lunch/diner 1.5u) + Winkelen altijd 2 POIs (selectDiversePOIs maxPerCat). BLOK K: Chatbot CategoryBrowser CalpeTrip CSS (gold borders, hover effects, pill-shaped items). ItineraryWizard CalpeTrip CSS (gold header, step indicators). Quick action routing fix (ChatbotWidget event handler: __TIP_VAN_DE_DAG__→fetchDailyTip, __CATEGORY__→CategoryBrowser). WCAG modal viewport fix (items-start sm:items-center, overflow-y-auto). Footer "North Holland"→"Texel" (displayName). POI paginering: "Meer POI's laden" button op /explore (24 per batch, offset-based API, 1.159 POIs bereikbaar). PoiGridFiltered zonder default categorie-filter (was 449→1.159). CalpeTrip mobiel BESCHERMD (PROTECTED_FILES.md, layout.tsx tenantSlug conditie, page.tsx homepage skip, memory-entry). **Page Builder 100% compleet**: 35 hb-websites blocks, 36 admin editors (0 gaps), Homepage template 11 blocks, Explore template poi_grid_filtered+paginering, Events template event_calendar_filtered, TestimonialsEditor nieuw. CLAUDE.md v4.32.0. MS v7.92. |
 | **4.31.0** | **2026-04-01** | **Admin Portal UX/UI Overhaul — 14 opdrachten**. Opdracht 1: Dashboard redesign (action-oriented, GET /dashboard/actions endpoint). Opdracht 2-3: Sidebar herstructurering (6 workflow-secties: Home/Content/Data&POI/Commerce/Website/Configuratie), Agents+Issues merged (AgentsSystemPage 3-tab wrapper). Opdracht 4: SettingsPage opgeschoond (BrandingSection verwijderd→Merk Profiel). Opdracht 5: BrandingPage 4 clickable kaarten (2x2 grid) met dialogs per groep. Opdracht 6: Pagina's+Navigatie samengevoegd (PagesNavigationPage tabbed wrapper). Opdracht 7: Mediabibliotheek Optie B (apart sidebar-item + directe links vanuit Content Studio en BrandingPage). Opdracht 8: Content Studio Standalone Login (studio.holidaibutler.com: branded landing page, USP's, vergelijkingstabel ACS vs Hootsuite vs Jasper AI 16/16, mobiele swipe carrousel, responsive tabel, DNS+SSL+Apache+CORS). Opdracht 9: Cross-sectie data integratie (SEO keywords→trending_data auto-seed, 5★ reviews→content suggesties). Opdracht 10: Overbodige secties verwijderd (BrandingSection dead code). Opdracht 10B: SimpleAnalytics live data op Analytics-pagina (3-tab: Website/POI&Reviews/Chatbot, GET /analytics/website endpoint met 5 parallelle SA API calls). Opdracht 11: Visuele consistentie audit (41 fixes: dark mode theme tokens, Skeleton i.p.v. CircularProgress, table headers, page headers, typography). Opdracht 12: Empty states & onboarding hints (7 pagina's: MediaPage, CommercePage, POIsPage, ContentStudio items+suggesties, MerkProfiel personas). Opdracht 13: i18n verificatie (~60 hardcoded strings→t() calls over 7 bestanden). Opdracht 14: Documentatie + commit. Social accounts: CalpeTrip Facebook+Instagram gekoppeld. Video upload 40MB. CORS fix: dubbele header (Apache+Express)→alleen Express. 245 endpoints. adminPortal.js v3.40.0. 38 bestanden gewijzigd (+4 nieuw). CLAUDE.md v4.31.0. MS v7.91. |
 | **4.30.0** | **2026-03-29** | **Fase VI-C: Desktop Homepage Redesign (Texel testomgeving)**. BLOK A: Alle calpetrip.com referenties op Texel gefixed (getPortalUrl→relatieve URLs, MapPreview "Calpe-plekjes"→generiek, Header/analytics logo_clicked). Desktop header al compleet (horizontale navigatie, SearchBar, WCAG, LanguageSwitcher). DesktopHero nieuw component (chatbot-input balk, quick action chips, achtergrondafbeelding uit brand visuals). BLOK B: DesktopProgramTip 2-kolom layout (60% ProgramCard + 40% TipOfTheDay, forceShow prop voor md:hidden override). DesktopEvents 3-kolom grid (responsive, categorie emoji, "Meer →" link). CategoryGrid 4-kolom (gradient kleuren, POI counts via meta.total). BLOK C: Map block overlay label (bottom-4, z-1000), 20 toeristische POIs round-robin (was 500+), legenda NL i18n + correcte kleuren (Eten & Drinken rood, Natuur groen, Cultuur blauw, Actief oranje, Recreatief donkergroen). PoiGrid title prop ("Populair op Texel"). BLOK D: Footer contactEmail destination-aware (info@texelmaps.nl), MobileBottomNav md:hidden bevestigd, responsive verificatie 9/10 PASS. BLOK E: 7 command block-type aliassen (hero_chatbot, program_card, today_events, category_grid, popular_pois, map_preview), Homepage template 11 blocks in PageTemplateDialog, admin 3x deployed. BLOK F: Calpe ongewijzigd (afspraak), E2E verificatie PASS (Texel 6/6, Calpe 4/4, 0 cross-dest leaks). 5 nieuwe + 12 gewijzigde bestanden hb-websites, 2 gewijzigde admin-module. Block registry 26→35. CLAUDE.md v4.30.0. MS v7.90. |
@@ -700,7 +715,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.92 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.93 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

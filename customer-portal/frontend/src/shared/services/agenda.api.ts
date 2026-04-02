@@ -53,6 +53,7 @@ export interface EventFilters {
   isFree?: boolean;
   isFeatured?: boolean;
   search?: string;
+  distance?: number;
   limit?: number;
   offset?: number;
   lang?: string;
@@ -79,6 +80,7 @@ class AgendaAPI {
         if (filters.isFree !== undefined) queryParams.append('isFree', filters.isFree.toString());
         if (filters.isFeatured !== undefined) queryParams.append('isFeatured', filters.isFeatured.toString());
         if (filters.search) queryParams.append('search', filters.search);
+        if (filters.distance) queryParams.append('distance', filters.distance.toString());
         if (filters.limit) queryParams.append('limit', filters.limit.toString());
         if (filters.offset) queryParams.append('offset', filters.offset.toString());
         if (filters.lang) queryParams.append('lang', filters.lang);

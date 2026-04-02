@@ -32,6 +32,15 @@ export interface POI {
   parking: any[] | null;
   service_options: any[] | null;
   reviews_distribution: any | null;
+  // New Apify fields (Sprint 7.7)
+  review_tags: { title: string; count: number }[] | null;
+  people_also_search: { title: string; score: number; reviews: number }[] | null;
+  menu_url: string | null;
+  booking_url: string | null;
+  reservation_url: string | null;
+  live_busyness_text: string | null;
+  live_busyness_percent: number | null;
+  google_category: string | null;
   created_at: string;
   updated_at: string;
   // Language info from API

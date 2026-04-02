@@ -4,10 +4,12 @@
  * Supports all 6 languages: NL, DE, EN, ES, SV, PL
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ChevronDown, Calendar } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import './AgendaFilterModal.css';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 interface AgendaFilterModalProps {
   isOpen: boolean;
@@ -322,7 +324,7 @@ const filterTranslations: Record<string, {
 
 const defaultFilters: AgendaFilters = {
   interests: [],
-  distance: 50, // 50 = no limit
+  distance: 15, // 15 km default (Calpe + directe omgeving)
   company: [],
   dateType: 'all',
 };
@@ -339,10 +341,45 @@ export function AgendaFilterModal({
 
   const [filters, setFilters] = useState<AgendaFilters>(initialFilters);
   const [expandedSections, setExpandedSections] = useState<string[]>(['interests', 'distance', 'company', 'date']);
+  const [liveCount, setLiveCount] = useState<number | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetch live event count when filters change
+  // Category filter is applied server-side after SQL, so we need data.length (not pagination.total)
+  const fetchPreviewCount = useCallback(async (f: AgendaFilters) => {
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', '500');
+      if (f.distance < 50) params.set('distance', String(f.distance));
+      if (f.interests.length > 0) params.set('category', f.interests.join(','));
+      if (f.dateType === 'today') params.set('dateRange', 'today');
+      else if (f.dateType === 'tomorrow') {
+        const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+        params.set('startDate', tmr.toISOString().split('T')[0]);
+        params.set('endDate', tmr.toISOString().split('T')[0]);
+      } else if (f.dateType === 'weekend') params.set('dateRange', 'thisWeek');
+      const res = await fetch(`${API_BASE}/api/v1/agenda/events?${params}`, {
+        headers: { 'X-Destination-ID': '1' },
+      });
+      const data = await res.json();
+      // Use data.length because category filter is applied post-query
+      setLiveCount(data.data?.length ?? 0);
+    } catch {
+      setLiveCount(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchPreviewCount(filters), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [isOpen, filters, fetchPreviewCount]);
 
   useEffect(() => {
     if (isOpen) {
       setFilters(initialFilters);
+      setLiveCount(null);
       document.body.style.overflow = 'hidden';
     }
     return () => {
@@ -390,7 +427,7 @@ export function AgendaFilterModal({
   const getActiveFilterCount = (): number => {
     let count = 0;
     if (filters.interests.length > 0) count += filters.interests.length;
-    if (filters.distance < 50) count++;
+    if (filters.distance !== 15) count++;
     if (filters.company.length > 0) count += filters.company.length;
     if (filters.dateType !== 'all') count++;
     return count;
@@ -558,7 +595,7 @@ export function AgendaFilterModal({
             {t.actions.clear}
           </button>
           <button className="agenda-filter-apply" onClick={handleApply}>
-            {t.actions.show} {resultCount} {t.actions.events}
+            {t.actions.show} {liveCount !== null ? liveCount : resultCount} {t.actions.events}
           </button>
         </div>
       </div>

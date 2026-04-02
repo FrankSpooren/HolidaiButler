@@ -272,6 +272,7 @@ router.get('/events', async (req, res) => {
       endDate,
       dateRange,
       category,
+      distance,
       lang,
       sort = 'date',
       sortOrder = 'asc'
@@ -289,10 +290,17 @@ router.get('/events', async (req, res) => {
     const conditions = ['1=1'];
     const params = [];
 
-    // Destination filter (replaces hardcoded calpe_distance)
+    // Destination filter
     const destFilter = buildDestinationFilter(destinationId);
     conditions.push(destFilter.condition);
     params.push(destFilter.param);
+
+    // Distance filter (km from destination center, default 15km for Calpe)
+    const maxDistance = distance ? parseInt(distance) : 15;
+    if (maxDistance > 0 && maxDistance < 999) {
+      conditions.push('(a.calpe_distance IS NULL OR a.calpe_distance <= ?)');
+      params.push(maxDistance);
+    }
 
     // Date filtering
     let dateCondition = 'd.event_date >= CURDATE()'; // Default: upcoming

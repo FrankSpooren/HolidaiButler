@@ -30,6 +30,21 @@ export function Footer() {
   // Cast footer to any to handle optional properties
   const footer = t.footer as Record<string, string>;
 
+  // CalpeTrip language-aware tagline and footer text
+  const calpeTagline: Record<string, string> = {
+    nl: 'Jouw persoonlijke reisassistent voor Calpe en de Costa Blanca.',
+    en: 'Your personal travel assistant for Calpe and the Costa Blanca.',
+    de: 'Ihr persönlicher Reiseassistent für Calpe und die Costa Blanca.',
+    es: 'Tu asistente personal de viaje para Calpe y la Costa Blanca.',
+  };
+
+  const calpeMadeWith: Record<string, string> = {
+    nl: 'Gemaakt met \u2764\uFE0F voor de Costa Blanca',
+    en: 'Made with \u2764\uFE0F for the Costa Blanca',
+    de: 'Gemacht mit \u2764\uFE0F für die Costa Blanca',
+    es: 'Hecho con \u2764\uFE0F para la Costa Blanca',
+  };
+
   const footerLinks = {
     platform: [
       { label: footer.about || 'About', path: '/about' },
@@ -81,7 +96,7 @@ export function Footer() {
                 ? (language === 'en' ? 'Your personal island guide for Texel'
                   : language === 'de' ? 'Ihr persönlicher Inselführer für Texel'
                   : 'Jouw persoonlijke eilandgids voor Texel')
-                : destination.description}
+                : (calpeTagline[language] || calpeTagline.nl)}
             </p>
 
             {/* Social Links - destination-aware */}
@@ -288,8 +303,8 @@ export function Footer() {
           </p>
           <p className="footer-made-with">
             {destination.id === 'texel'
-              ? 'Gemaakt met ❤️ voor Texel'
-              : (footer.madeWith || 'Gemaakt met ❤️ in Costa Blanca')}
+              ? 'Gemaakt met \u2764\uFE0F voor Texel'
+              : (calpeMadeWith[language] || calpeMadeWith.nl)}
           </p>
         </div>
       </div>

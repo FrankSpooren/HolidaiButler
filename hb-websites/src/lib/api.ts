@@ -88,10 +88,12 @@ export async function fetchPois(
 export async function fetchEvents(
   tenantSlug: string,
   locale?: string,
-  limit?: number
+  limit?: number,
+  distance?: number
 ): Promise<AgendaEvent[]> {
   const params: Record<string, string> = {};
   if (limit) params.limit = String(limit);
+  if (distance) params.distance = String(distance);
 
   const res = await hbFetch<ApiResponse<AgendaEvent[]>>(
     '/api/v1/agenda/events',

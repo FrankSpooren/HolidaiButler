@@ -36,10 +36,51 @@ export function CookiesPage() {
 
   const texel = texelContent[language as keyof typeof texelContent] || texelContent.nl;
 
+  // CalpeTrip-specific cookies content
+  const calpeContent = {
+    nl: {
+      title: 'Cookiebeleid',
+      subtitle: 'Hoe wij cookies gebruiken op onze website',
+      lastUpdated: 'Laatst bijgewerkt: december 2025',
+      section1Title: '1. Wat zijn Cookies?',
+      section1Text: 'Cookies zijn kleine tekstbestanden die op je apparaat worden geplaatst wanneer je onze website bezoekt. Ze helpen ons om de website goed te laten functioneren, je ervaring te verbeteren en te begrijpen hoe bezoekers onze site gebruiken.',
+      section7Text: 'Voor vragen over ons cookiebeleid kun je contact met ons opnemen via info@calpetrip.com.',
+    },
+    en: {
+      title: 'Cookie Policy',
+      subtitle: 'How we use cookies on our website',
+      lastUpdated: 'Last updated: December 2025',
+      section1Title: '1. What are Cookies?',
+      section1Text: 'Cookies are small text files that are placed on your device when you visit our website. They help us to keep the website functioning properly, improve your experience and understand how visitors use our site.',
+      section7Text: 'For questions about our cookie policy, you can contact us at info@calpetrip.com.',
+    },
+    de: {
+      title: 'Cookie-Richtlinie',
+      subtitle: 'Wie wir Cookies auf unserer Website verwenden',
+      lastUpdated: 'Zuletzt aktualisiert: Dezember 2025',
+      section1Title: '1. Was sind Cookies?',
+      section1Text: 'Cookies sind kleine Textdateien, die auf Ihrem Gerät gespeichert werden, wenn Sie unsere Website besuchen. Sie helfen uns, die Website ordnungsgemäß zu betreiben, Ihre Erfahrung zu verbessern und zu verstehen, wie Besucher unsere Website nutzen.',
+      section7Text: 'Bei Fragen zu unserer Cookie-Richtlinie können Sie uns unter info@calpetrip.com kontaktieren.',
+    },
+    es: {
+      title: 'Política de Cookies',
+      subtitle: 'Cómo utilizamos las cookies en nuestro sitio web',
+      lastUpdated: 'Última actualización: diciembre de 2025',
+      section1Title: '1. ¿Qué son las Cookies?',
+      section1Text: 'Las cookies son pequeños archivos de texto que se colocan en tu dispositivo cuando visitas nuestro sitio web. Nos ayudan a mantener el sitio web en correcto funcionamiento, mejorar tu experiencia y comprender cómo los visitantes utilizan nuestro sitio.',
+      section7Text: 'Para preguntas sobre nuestra política de cookies, puedes contactarnos en info@calpetrip.com.',
+    },
+  };
+
+  const calpe = calpeContent[language as keyof typeof calpeContent] || calpeContent.nl;
+
   // Get content based on destination
   const getContent = (key: string, fallback: string) => {
     if (destination.id === 'texel' && texel[key as keyof typeof texel]) {
       return texel[key as keyof typeof texel];
+    }
+    if (destination.id !== 'texel' && calpe[key as keyof typeof calpe]) {
+      return calpe[key as keyof typeof calpe];
     }
     return sp?.[key] || fallback;
   };
@@ -49,7 +90,7 @@ export function CookiesPage() {
     if (destination.id === 'texel') {
       return texel.lastUpdated;
     }
-    return sp?.lastUpdated || 'Laatst bijgewerkt: December 2025';
+    return calpe.lastUpdated;
   };
 
   return (
@@ -146,9 +187,7 @@ export function CookiesPage() {
 
             <h2>{sp?.section7Title || '7. Contact'}</h2>
             <p>
-              {getContent('section7Text', destination.id === 'texel'
-                ? 'Voor vragen over ons cookiebeleid kun je contact met ons opnemen via privacy@texelmaps.nl.'
-                : 'Voor vragen over ons cookiebeleid kun je contact met ons opnemen via privacy@holidaibutler.com.')}
+              {getContent('section7Text', 'Voor vragen over ons cookiebeleid kun je contact met ons opnemen via info@calpetrip.com.')}
             </p>
           </div>
         </div>

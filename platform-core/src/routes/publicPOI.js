@@ -240,6 +240,14 @@ const formatPOIForPublic = (poi, lang = "en", images = null) => {
     parking: safeJSONParse(data.parking_info, null),
     service_options: safeJSONParse(data.service_options, null),
     reviews_distribution: safeJSONParse(data.reviews_distribution, null),
+    review_tags: safeJSONParse(data.review_tags, null),
+    people_also_search: safeJSONParse(data.people_also_search, null),
+    menu_url: data.menu_url || null,
+    booking_url: data.booking_url || null,
+    reservation_url: data.reservation_url || null,
+    google_category: data.google_category || null,
+    live_busyness_text: data.live_busyness_text || null,
+    live_busyness_percent: data.live_busyness_percent || null,
     // Include language info in response
     _language: lang,
     created_at: data.created_at || data.last_updated || new Date().toISOString(),
@@ -280,6 +288,7 @@ router.get('/', async (req, res) => {
       offset,
       min_rating,
       min_reviews,
+      price_level,
       require_images
     } = req.query;
 
@@ -317,6 +326,10 @@ router.get('/', async (req, res) => {
 
     if (min_reviews) {
       where.review_count = { [Op.gte]: parseInt(min_reviews) };
+    }
+
+    if (price_level) {
+      where.price_level = { [Op.eq]: parseInt(price_level) };
     }
 
     // Parse sort parameter

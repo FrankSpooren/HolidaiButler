@@ -160,6 +160,17 @@ export default function PoiDetailDrawer({ locale }: PoiDetailDrawerProps) {
                       {poi.subcategory}
                     </span>
                   )}
+                  {poi.google_category && poi.google_category !== poi.category && (
+                    <span className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
+                      {poi.google_category}
+                    </span>
+                  )}
+                  {/* Price Level Badge */}
+                  {poi.price_level && (
+                    <span className="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                      {'€'.repeat(Math.min(4, Math.max(1, Number(poi.price_level))))}
+                    </span>
+                  )}
                 </div>
                 <h2 className="text-2xl font-heading font-bold text-foreground">{poi.name}</h2>
                 {poi.address && (
@@ -187,6 +198,48 @@ export default function PoiDetailDrawer({ locale }: PoiDetailDrawerProps) {
                 </div>
               )}
 
+              {/* Action Buttons: Menu / Reserve / Book */}
+              {(poi.menu_url || poi.reservation_url || poi.booking_url) && (
+                <div className="flex flex-wrap gap-2">
+                  {poi.menu_url && (
+                    <a
+                      href={poi.menu_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => analytics.poi_menu_clicked(poi.name)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors shadow-sm"
+                    >
+                      <span>&#128203;</span>
+                      {locale === 'nl' ? 'Bekijk menu' : locale === 'de' ? 'Speisekarte' : locale === 'es' ? 'Ver menú' : 'View menu'}
+                    </a>
+                  )}
+                  {poi.reservation_url && (
+                    <a
+                      href={poi.reservation_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => analytics.poi_reservation_clicked(poi.name)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors shadow-sm"
+                    >
+                      <span>&#128197;</span>
+                      {locale === 'nl' ? 'Reserveren' : locale === 'de' ? 'Reservieren' : locale === 'es' ? 'Reservar' : 'Reserve'}
+                    </a>
+                  )}
+                  {poi.booking_url && (
+                    <a
+                      href={poi.booking_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => analytics.poi_booking_clicked(poi.name)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent hover:bg-accent/90 text-white text-sm font-medium transition-colors shadow-sm"
+                    >
+                      <span>&#10003;</span>
+                      {locale === 'nl' ? 'Boeken' : locale === 'de' ? 'Buchen' : locale === 'es' ? 'Reservar ahora' : 'Book now'}
+                    </a>
+                  )}
+                </div>
+              )}
+
               {/* Highlights */}
               {poi.enriched_highlights && poi.enriched_highlights.length > 0 && (
                 <div className="bg-primary/5 rounded-lg p-4">
@@ -209,7 +262,8 @@ export default function PoiDetailDrawer({ locale }: PoiDetailDrawerProps) {
                   </a>
                 )}
                 {poi.website && (
-                  <a href={poi.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                  <a href={poi.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline"
+                    onClick={() => analytics.poi_website_clicked(poi.name, poi.website || '')}>
                     <span>&#127760;</span> Website
                   </a>
                 )}
@@ -229,6 +283,35 @@ export default function PoiDetailDrawer({ locale }: PoiDetailDrawerProps) {
                   </a>
                 )}
               </div>
+
+              {/* Live Busyness Indicator */}
+              {poi.live_busyness_text && (
+                <div className="flex items-center gap-2 text-sm bg-gray-50 rounded-lg px-3 py-2">
+                  <span
+                    className="text-base leading-none"
+                    style={{
+                      color: poi.live_busyness_percent == null
+                        ? '#6b7280'
+                        : poi.live_busyness_percent < 30
+                        ? '#16a34a'
+                        : poi.live_busyness_percent <= 70
+                        ? '#d97706'
+                        : '#dc2626',
+                    }}
+                  >
+                    &#9679;
+                  </span>
+                  <span className="text-foreground/80">
+                    <span className="font-medium">
+                      {locale === 'nl' ? 'Nu: ' : locale === 'de' ? 'Jetzt: ' : locale === 'es' ? 'Ahora: ' : 'Now: '}
+                    </span>
+                    {poi.live_busyness_text}
+                    {poi.live_busyness_percent != null && (
+                      <span className="text-muted ml-1">({poi.live_busyness_percent}%)</span>
+                    )}
+                  </span>
+                </div>
+              )}
 
               {/* Opening Hours */}
               {poi.opening_hours && (
@@ -274,6 +357,49 @@ export default function PoiDetailDrawer({ locale }: PoiDetailDrawerProps) {
                       {locale === 'nl' ? `Alle ${reviews.length} reviews bekijken` : `View all ${reviews.length} reviews`}
                     </a>
                   )}
+                </div>
+              )}
+
+              {/* Review Tags */}
+              {poi.review_tags && poi.review_tags.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">
+                    {locale === 'nl' ? 'Vaak genoemd' : locale === 'de' ? 'Oft erwähnt' : locale === 'es' ? 'Más mencionado' : 'Frequently mentioned'}
+                  </h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {poi.review_tags.slice(0, 8).map((tag) => (
+                      <span
+                        key={tag.title}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                      >
+                        {tag.title}
+                        <span className="text-primary/60 font-normal">({tag.count})</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Similar Places / People Also Search */}
+              {poi.people_also_search && poi.people_also_search.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">
+                    {locale === 'nl' ? 'Vergelijkbare plekken' : locale === 'de' ? 'Ähnliche Orte' : locale === 'es' ? 'Lugares similares' : 'Similar places'}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {poi.people_also_search.slice(0, 6).map((place) => (
+                      <button
+                        key={place.title}
+                        onClick={() => analytics.poi_similar_clicked(poi.name, place.title)}
+                        className="flex flex-col items-start gap-0.5 px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-left transition-colors"
+                      >
+                        <span className="text-sm font-medium text-foreground line-clamp-1">{place.title}</span>
+                        <span className="text-xs text-muted">
+                          {place.score.toFixed(1)}&#9733; ({place.reviews})
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
