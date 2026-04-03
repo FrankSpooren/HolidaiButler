@@ -7,6 +7,8 @@
 
 import { mysqlSequelize } from '../../../config/database.js';
 import { searchUnsplash } from './unsplashClient.js';
+import { searchPexels } from './pexelsClient.js';
+import { searchFlickr } from './flickrClient.js';
 import logger from '../../../utils/logger.js';
 
 /**
@@ -16,10 +18,43 @@ import logger from '../../../utils/logger.js';
  * @returns {Array} Ranked image candidates with source labels
  */
 export async function selectImages(contentItem, destinationId, { forSuggestion = false, excludeIds = [] } = {}) {
-  const keywords = extractKeywords(
-    (contentItem.title || '') + ' ' + (contentItem.body_en || '')
-  );
+  const fullText = (contentItem.title || '') + ' ' + (contentItem.body_en || '');
+  const keywords = extractKeywords(fullText);
   const candidates = [];
+
+  // Priority: find POIs whose names appear in the generated content body
+  // (grounded content has real POI names with links like calpetrip.com/pois?poi=123)
+  try {
+    const bodyLower = fullText.toLowerCase();
+    const [namedPois] = await mysqlSequelize.query(
+      `SELECT id, name FROM POI WHERE destination_id = :destId AND is_active = 1 AND CHAR_LENGTH(name) > 4
+       ORDER BY review_count DESC LIMIT 50`,
+      { replacements: { destId: destinationId } }
+    );
+    const bodyMatchedPoiIds = namedPois
+      .filter(p => bodyLower.includes(p.name.toLowerCase().replace(/\.$/, '')))
+      .map(p => p.id);
+
+    if (bodyMatchedPoiIds.length > 0) {
+      const [matchedImages] = await mysqlSequelize.query(
+        `SELECT i.id, i.poi_id, i.image_url, i.local_path, i.display_order, p.name as poi_name
+         FROM imageurls i JOIN POI p ON i.poi_id = p.id
+         WHERE i.poi_id IN (${bodyMatchedPoiIds.join(',')})
+         AND i.local_path IS NOT NULL
+         ORDER BY i.display_order ASC LIMIT 10`
+      );
+      candidates.push(...matchedImages.map(img => ({
+        source: 'body_poi_match',
+        id: img.id,
+        poi_id: img.poi_id,
+        poi_name: img.poi_name,
+        url: buildImageUrl(img),
+        relevance: 1.0,
+      })));
+    }
+  } catch (err) {
+    logger.warn('[ImageSelector] Body POI match failed:', err.message);
+  }
 
   // For auto-attach: content-type limieten. For suggestion UI: always show 5+ options.
   const maxImages = forSuggestion ? 6
@@ -141,11 +176,14 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
       })));
     }
 
-    // 4. Unsplash fallback (if <3 candidates)
+    // 4. External stock photo fallback (if <3 candidates): Unsplash → Pexels → Flickr
     if (candidates.length < 3) {
+      const query = keywords.slice(0, 3).join(' ') + (isContentOnlyDest ? '' : ' tourism');
+      const needed = Math.max(1, 3 - candidates.length);
+
+      // 4a. Unsplash
       try {
-        const query = keywords.slice(0, 3).join(' ') + (isContentOnlyDest ? '' : ' tourism');
-        const unsplashResults = await searchUnsplash(query, 3);
+        const unsplashResults = await searchUnsplash(query, needed);
         candidates.push(...unsplashResults.map(u => ({
           source: 'unsplash',
           id: u.id,
@@ -157,6 +195,42 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
         })));
       } catch (e) {
         logger.warn('[ImageSelector] Unsplash fallback failed:', e.message);
+      }
+
+      // 4b. Pexels (if still need more)
+      if (candidates.length < 3) {
+        try {
+          const pexelsResults = await searchPexels(query, needed);
+          candidates.push(...pexelsResults.map(p => ({
+            source: 'pexels',
+            id: p.id,
+            url: p.urls?.regular || p.urls?.small,
+            thumbnail: p.urls?.thumb,
+            photographer: p.user?.name,
+            pexels_link: p.links?.html,
+            relevance: 0.25,
+          })));
+        } catch (e) {
+          logger.warn('[ImageSelector] Pexels fallback failed:', e.message);
+        }
+      }
+
+      // 4c. Flickr (if still need more)
+      if (candidates.length < 3) {
+        try {
+          const flickrResults = await searchFlickr(query, needed);
+          candidates.push(...flickrResults.map(f => ({
+            source: 'flickr',
+            id: f.id,
+            url: f.urls?.regular || f.urls?.small,
+            thumbnail: f.urls?.thumb,
+            photographer: f.user?.name,
+            flickr_link: f.links?.html,
+            relevance: 0.2,
+          })));
+        } catch (e) {
+          logger.warn('[ImageSelector] Flickr fallback failed:', e.message);
+        }
       }
     }
   } catch (error) {

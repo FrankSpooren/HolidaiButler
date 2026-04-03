@@ -6004,4 +6004,19 @@ CLAUDE.md v4.32.0 → v4.33.0. MS v7.92 → v7.93.
 
 ---
 
+## Content Studio Multi-Source Image Integratie (03-04-2026)
+
+Pexels en Flickr toegevoegd als externe image bronnen naast Unsplash in de AI Content Studio.
+
+**Backend**: pexelsClient.js (searchPexels, landscape, normalized objects), flickrClient.js (searchFlickr, CC BY/CC BY-SA/CC0/PDM license filter). imageSelector.js cascading fallback: tier 4a Unsplash → 4b Pexels → 4c Flickr. 2 admin endpoints (POST /content/images/pexels + /content/images/flickr).
+**Frontend**: contentService.js searchPexels() + searchFlickr().
+**Env**: PEXELS_API_KEY + FLICKR_API_KEY + FLICKR_API_SECRET op Hetzner.
+**Verified**: Pexels 200 OK (2 results), Flickr 200 OK (2 results CC-licensed).
+
+Bestanden: pexelsClient.js (nieuw), flickrClient.js (nieuw), imageSelector.js (gewijzigd), adminPortal.js (+2 endpoints), contentService.js (gewijzigd).
+
+CLAUDE.md v4.33.0 → v4.34.0. MS v7.93 → v7.94.
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

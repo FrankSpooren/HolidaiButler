@@ -11415,6 +11415,39 @@ router.get('/content/suggestions', adminAuth('editor'), async (req, res) => {
 });
 
 /**
+ * POST /content/suggestions — Create a manual suggestion (e.g. from trending keyword)
+ */
+router.post('/content/suggestions', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const { destination_id, title, summary, content_type = 'social_post', keyword_cluster = [], engagement_score = 5 } = req.body;
+    if (!destination_id || !title) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destination_id and title are required' } });
+    }
+
+    const [result] = await mysqlSequelize.query(
+      `INSERT INTO content_suggestions (destination_id, title, summary, content_type, suggested_channels, keyword_cluster, engagement_score, status, created_at, updated_at)
+       VALUES (:destId, :title, :summary, :contentType, :channels, :keywords, :score, 'pending', NOW(), NOW())`,
+      {
+        replacements: {
+          destId: Number(destination_id),
+          title,
+          summary: summary || `Content voor "${title}"`,
+          contentType: content_type,
+          channels: JSON.stringify(['facebook', 'instagram']),
+          keywords: JSON.stringify(keyword_cluster),
+          score: engagement_score,
+        },
+      }
+    );
+
+    res.json({ success: true, data: { id: result, title, content_type } });
+  } catch (error) {
+    logger.error('[AdminPortal] Create suggestion error:', error);
+    res.status(500).json({ success: false, error: { code: 'CREATE_SUGGESTION_ERROR', message: error.message } });
+  }
+});
+
+/**
  * POST /content/suggestions/generate — AI suggestie-generatie vanuit trending data
  * Body: destination_id (required)
  */
@@ -11666,15 +11699,26 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
           logger.info(`[ContentGenerate] Content-only: attached ${mediaIds.length} media library images to item ${contentItemId}`);
         }
       } else {
-        // Tourism: full POI image search + keyword matching
+        // Tourism: full POI image search — extract POI names from generated content + keywords
         const kws = generated.keyword_cluster || suggestion.keyword_cluster || [];
-        if (kws.length > 0) {
-          const keywordPattern = kws
-            .map(k => k.replace(/[.*+?^${}()|[\]\\%_]/g, ''))
-            .filter(k => k.length > 2)
-            .join('|');
+        // Split compound keywords into individual words for better matching
+        const allWords = kws.flatMap(k => k.split(/\s+/)).filter(w => w.length > 3);
+        // Also extract POI names from the generated body (grounded content has real POI names)
+        const bodyText = (generated.body_en || generated.title || '').substring(0, 2000);
+        // Find POI names that appear in the generated text
+        const [poiNameMatches] = await mysqlSequelize.query(
+          `SELECT DISTINCT id, name FROM POI WHERE destination_id = :destId AND is_active = 1 AND CHAR_LENGTH(name) > 4
+           ORDER BY review_count DESC LIMIT 50`,
+          { replacements: { destId: suggestion.destination_id } }
+        );
+        const matchedPoiIds = poiNameMatches.filter(p => bodyText.toLowerCase().includes(p.name.toLowerCase().replace(/\.$/, ''))).map(p => p.id);
 
-          if (keywordPattern) {
+        // Build REGEXP from keywords + category-relevant terms
+        const keywordPattern = [...new Set([...allWords, ...kws.map(k => k.replace(/[.*+?^${}()|[\]\\%_]/g, ''))])]
+          .filter(k => k.length > 2)
+          .join('|');
+
+        if (keywordPattern || matchedPoiIds.length > 0) {
             // Collect already-used image IDs to avoid duplicates across content items
             const [usedRows] = await mysqlSequelize.query(
               `SELECT media_ids FROM content_items WHERE destination_id = :destId AND media_ids IS NOT NULL AND media_ids != '[]' AND media_ids != 'null' AND id != :selfId`,
@@ -11686,17 +11730,32 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
               if (Array.isArray(ids)) ids.forEach(id => usedIds.add(Number(String(id).replace('poi:', ''))));
             }
 
-            // Search POI images (primary source — more relevant than media library)
-            const [poiImages] = await mysqlSequelize.query(
-              `SELECT DISTINCT iu.id FROM imageurls iu
-               INNER JOIN POI p ON iu.poi_id = p.id
-               WHERE p.destination_id = :destId
-               AND iu.local_path IS NOT NULL
-               AND (p.name REGEXP :pattern OR p.category REGEXP :pattern)
-               ORDER BY p.google_rating DESC, iu.display_order ASC
-               LIMIT 15`,
-              { replacements: { destId: suggestion.destination_id, pattern: keywordPattern } }
-            );
+            // Search POI images — first by direct POI name match in body, then by keyword REGEXP
+            let poiImages = [];
+            if (matchedPoiIds.length > 0) {
+              const [directMatches] = await mysqlSequelize.query(
+                `SELECT DISTINCT iu.id FROM imageurls iu
+                 WHERE iu.poi_id IN (${matchedPoiIds.join(',')})
+                 AND iu.local_path IS NOT NULL
+                 ORDER BY iu.display_order ASC
+                 LIMIT 10`
+              );
+              poiImages.push(...directMatches);
+            }
+            if (poiImages.length < maxImgs && keywordPattern) {
+              const [kwMatches] = await mysqlSequelize.query(
+                `SELECT DISTINCT iu.id FROM imageurls iu
+                 INNER JOIN POI p ON iu.poi_id = p.id
+                 WHERE p.destination_id = :destId
+                 AND iu.local_path IS NOT NULL
+                 AND (p.name REGEXP :pattern OR p.category REGEXP :pattern)
+                 ORDER BY p.google_rating DESC, iu.display_order ASC
+                 LIMIT 10`,
+                { replacements: { destId: suggestion.destination_id, pattern: keywordPattern } }
+              );
+              const existingIds = new Set(poiImages.map(p => p.id));
+              poiImages.push(...kwMatches.filter(m => !existingIds.has(m.id)));
+            }
 
             // Prefer unused images, fall back to used ones if needed
             const unusedPoiIds = poiImages.map(p => p.id).filter(id => !usedIds.has(id));
@@ -11713,7 +11772,6 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
             }
           }
         }
-      }
     } catch (imgErr) {
       logger.warn('[ContentGenerate] Auto-attach images failed (non-blocking):', imgErr.message);
     }
@@ -11901,7 +11959,7 @@ router.get('/content/items/:id', adminAuth('editor'), async (req, res) => {
 router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
-    const allowedFields = ['title', 'body_en', 'body_nl', 'body_de', 'body_es', 'body_fr', 'approval_status', 'seo_data', 'social_metadata', 'target_platform', 'pillar_id'];
+    const allowedFields = ['title', 'body_en', 'body_nl', 'body_de', 'body_es', 'body_fr', 'approval_status', 'seo_data', 'social_metadata', 'target_platform', 'pillar_id', 'media_ids'];
 
     // Sanitize body fields before saving (safety net — strips markdown artifacts)
     const bodyFields = ['body_en', 'body_nl', 'body_de', 'body_es', 'body_fr'];
@@ -12452,6 +12510,86 @@ router.post('/content/items/:id/share-to-destination', adminAuth('editor'), writ
 // ============================================================================
 
 /**
+ * GET /content/images/resolve/:id — Resolve a single imageurls ID to its URL
+ */
+router.get('/content/images/resolve/:id', adminAuth('editor'), async (req, res) => {
+  try {
+    const imgId = parseInt(req.params.id);
+    const imageBaseUrl = process.env.IMAGE_BASE_URL || 'https://api.holidaibutler.com';
+
+    const [[img]] = await mysqlSequelize.query(
+      `SELECT i.id, i.poi_id, i.local_path, i.image_url, p.name as poi_name
+       FROM imageurls i LEFT JOIN POI p ON i.poi_id = p.id
+       WHERE i.id = :id`,
+      { replacements: { id: imgId } }
+    );
+
+    if (!img) {
+      // Try media table
+      const [[media]] = await mysqlSequelize.query(
+        `SELECT id, filename, destination_id, alt_text FROM media WHERE id = :id`,
+        { replacements: { id: imgId } }
+      );
+      if (media) {
+        const apiBase = process.env.API_BASE_URL || 'https://api.holidaibutler.com';
+        return res.json({ success: true, data: { id: media.id, url: `${apiBase}/media-files/${media.destination_id}/${media.filename}`, poi_name: media.alt_text } });
+      }
+      return res.json({ success: true, data: { id: imgId, url: null } });
+    }
+
+    const url = img.local_path ? `${imageBaseUrl}${img.local_path}` : img.image_url;
+    res.json({ success: true, data: { id: img.id, url, poi_name: img.poi_name, poi_id: img.poi_id } });
+  } catch (error) {
+    res.json({ success: true, data: { id: parseInt(req.params.id), url: null } });
+  }
+});
+
+/**
+ * GET /content/images/browse — Browse POI images for content image picker
+ * Query: destination_id, search (optional POI name search), limit
+ */
+router.get('/content/images/browse', adminAuth('editor'), async (req, res) => {
+  try {
+    const { destination_id = 1, search, limit = 30 } = req.query;
+    const destId = Number(destination_id);
+    const imageBaseUrl = process.env.IMAGE_BASE_URL || 'https://api.holidaibutler.com';
+
+    let whereClause = 'p.destination_id = ? AND p.is_active = 1';
+    const params = [destId];
+
+    if (search && search.trim().length > 1) {
+      whereClause += ' AND (p.name LIKE ? OR p.category LIKE ?)';
+      params.push(`%${search.trim()}%`, `%${search.trim()}%`);
+    }
+
+    const [images] = await mysqlSequelize.query(`
+      SELECT i.id, i.poi_id, i.local_path, i.image_url, p.name as poi_name, p.category as poi_category
+      FROM imageurls i
+      JOIN POI p ON i.poi_id = p.id
+      WHERE ${whereClause}
+      AND i.local_path IS NOT NULL AND i.local_path != ''
+      GROUP BY i.poi_id
+      ORDER BY p.rating DESC, p.review_count DESC
+      LIMIT ?
+    `, { replacements: [...params, Number(limit)] });
+
+    const data = images.map(img => ({
+      id: img.id,
+      poi_id: img.poi_id,
+      poi_name: img.poi_name,
+      poi_category: img.poi_category,
+      url: `${imageBaseUrl}${img.local_path}`,
+      thumbnail: `${imageBaseUrl}${img.local_path}`,
+    }));
+
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Image browse error:', error);
+    res.status(500).json({ success: false, error: { code: 'BROWSE_ERROR', message: error.message } });
+  }
+});
+
+/**
  * POST /content/images/suggest — AI image suggestions for content item
  * Body: content_item_id OR { title, body_en, poi_id, destination_id }
  */
@@ -12498,6 +12636,44 @@ router.post('/content/images/unsplash', adminAuth('editor'), async (req, res) =>
   } catch (error) {
     logger.error('[AdminPortal] Unsplash search error:', error);
     res.status(500).json({ success: false, error: { code: 'UNSPLASH_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/images/pexels — Search Pexels for stock images
+ * Body: { query, per_page }
+ */
+router.post('/content/images/pexels', adminAuth('editor'), async (req, res) => {
+  try {
+    const { query, per_page = 6 } = req.body;
+    if (!query) return res.status(400).json({ success: false, error: { code: 'MISSING_QUERY', message: 'query is required' } });
+
+    const { searchPexels } = await import('../services/agents/contentRedacteur/pexelsClient.js');
+    const results = await searchPexels(query, Math.min(per_page, 12));
+
+    res.json({ success: true, data: results });
+  } catch (error) {
+    logger.error('[AdminPortal] Pexels search error:', error);
+    res.status(500).json({ success: false, error: { code: 'PEXELS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/images/flickr — Search Flickr for stock images (commercial-use only)
+ * Body: { query, per_page }
+ */
+router.post('/content/images/flickr', adminAuth('editor'), async (req, res) => {
+  try {
+    const { query, per_page = 6 } = req.body;
+    if (!query) return res.status(400).json({ success: false, error: { code: 'MISSING_QUERY', message: 'query is required' } });
+
+    const { searchFlickr } = await import('../services/agents/contentRedacteur/flickrClient.js');
+    const results = await searchFlickr(query, Math.min(per_page, 12));
+
+    res.json({ success: true, data: results });
+  } catch (error) {
+    logger.error('[AdminPortal] Flickr search error:', error);
+    res.status(500).json({ success: false, error: { code: 'FLICKR_ERROR', message: error.message } });
   }
 });
 

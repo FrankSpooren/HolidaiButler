@@ -41,6 +41,10 @@ const contentService = {
     return client.patch(`/content/suggestions/${id}`, data).then(r => r.data);
   },
 
+  createSuggestion(data) {
+    return client.post('/content/suggestions', data).then(r => r.data);
+  },
+
   // === Content Items ===
 
   getItems(destinationId, { status, limit = 50, offset = 0 } = {}) {
@@ -286,6 +290,14 @@ const contentService = {
 
   searchUnsplash(query, perPage = 6) {
     return client.post('/content/images/unsplash', { query, per_page: perPage }).then(r => r.data);
+  },
+
+  searchPexels(query, perPage = 6) {
+    return client.post('/content/images/pexels', { query, per_page: perPage }).then(r => r.data);
+  },
+
+  searchFlickr(query, perPage = 6) {
+    return client.post('/content/images/flickr', { query, per_page: perPage }).then(r => r.data);
   },
 
   formatImage(imagePath, platform, format = 'post') {
