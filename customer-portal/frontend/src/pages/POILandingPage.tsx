@@ -104,6 +104,18 @@ export function POILandingPage() {
   const [comparisonModalOpen, setComparisonModalOpen] = useState<boolean>(false);
   const [showHeader, setShowHeader] = useState<boolean>(true);
 
+  // Open POI from URL parameter (?poi=123) — for deep links from social posts
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const poiParam = params.get('poi');
+    if (poiParam) {
+      const poiId = parseInt(poiParam, 10);
+      if (!isNaN(poiId) && poiId > 0) {
+        setSelectedPOIId(poiId);
+      }
+    }
+  }, []);
+
   // Listen for "open similar POI" events from POIDetailModal
   useEffect(() => {
     const handler = (e: CustomEvent<{ poiId: number }>) => {

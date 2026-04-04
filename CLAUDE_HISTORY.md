@@ -6019,4 +6019,69 @@ CLAUDE.md v4.33.0 → v4.34.0. MS v7.93 → v7.94.
 
 ---
 
+## Implementatie Status — Volledige Fase Details (gearchiveerd 03-04-2026)
+
+> Verplaatst vanuit CLAUDE.md om bestandsgrootte te reduceren (98k→37k chars). Alleen de compacte fasering tabel blijft in CLAUDE.md.
+
+### Fase Overzicht (alle COMPLEET)
+| Fase | Beschrijving | Datum | Key Output |
+|------|--------------|-------|------------|
+| 1 | Foundation (DB schema, config) | 28-01 | Multi-tenant DB |
+| 2 | Texel Deployment (DNS, SSL, data) | 29-01 | texelmaps.nl live |
+| 3-5c | Content Pipeline (LLM, vergelijking, vertaling, frontend) | 02-08-02 | 2.515 POIs, 4-talen |
+| 6-6e | AI Chatbot Texel "Tessa" + fixes | 08-11-02 | 94.980 vectoren |
+| R1-R6d | Content Repair Pipeline | 12-19-02 | 61%→19.5% hallucinatie |
+| 7 | Reviews Integratie | 19-02 | 8.964 reviews live |
+| 8A-8B | Agent Reparatie + Multi-Destination | 20-02 | 18 agents dest-aware |
+| 8C-9I | Admin Portal Foundation→UX Polish | 20-25-02 | 41 endpoints, v3.9.0 |
+| 10A-10C | Agent Optimalisatie + Security + Apache | 26-02 | 0 vulnerabilities |
+| 11A-11B | Agent Enterprise Complete (Niveau 7) | 27-02 | logging, trending, issues, anomaliedetectie |
+| 12 | Verificatie, Consolidatie & Hardening | 27-02 | 34 tests, MS v7.13 |
+| II-A→II-D | Active Module Upgrade (Chatbot, POI, Agenda, Portal) | 28-02→01-03 | contextService, ragService v2.5, 12 intents |
+| III-G→III-F | Commerce Foundation (Payment, Ticketing, Reservation) | 01-02-03 | Adyen, Redis locking, 99 endpoints, FASE III COMPLEET |
+| IV-A→IV-F | Intermediair & Revenue (Pipeline, State Machine, Financial) | 03-04-03 | Medallion arch, 3 commerce agents, 137 endpoints, FASE IV COMPLEET |
+| V.0→V.6 | Multi-Tenant Next.js Foundation + Blocks | 05-06-03 | Next.js 15 live, 20 blocks, wildcard DNS |
+| Wave 1-3 | Visuele Block Editor + Pro Features + Excellence | 07-03 | @dnd-kit, TipTap, Media Library, revisies, Cookie Consent |
+| Cmd v5.0 | Bugfix + Stabilisatie + Hardening (8 stappen) | 07-03 | BlockErrorBoundary, XSS preventie, sidebar |
+| Repair v6.0 | Browser-Verified Fixes (3 rondes) | 07-08-03 | STORAGE_ROOT patroon |
+| Cmd v7.0-v8.0 | Fase V Voltooiing + Customer Portal Kwaliteit | 08-03 | Dark mode, templates, SEO, SSE proxy, POI detail |
+| Repair v9.0-v11.0 | Chirurgische Repairs (27 fixes) | 09-03 | chatbot, homepage, footer, events, filters |
+| Command v12.0-v14.0 | Onboarding + Kwaliteit + CI/CD | 09-10-03 | 158 endpoints, CI/CD workflow |
+| Command v15.0-v15.1 | UX Polish (VI-A) + Features (VI-B) | 10-11-03 | skeletons, animaties, SearchBar, LanguageSwitcher |
+| Fase B-D | Content Studio (Engine, Publishing, Intelligence) | 14-16-03 | 3 content agents (#23-25), 210 endpoints |
+| Wave 5+6 | Enterprise Workflow + Platform Completion | 15-03 | approval, pillars, X/Pinterest API, 14 templates |
+| Enterprise SEO + CS v5-v6 | SEO v2.0 + Content Studio Remediatie | 15-16-03 | seoAnalyzer v2.0, toneOfVoice v2.0, DeepL Pro |
+| OPDRACHT 7/7B + Completie | Content Studio Image Quality + 12 opdrachten 100% | 18-03 | POI auto-detectie, diversity filter |
+| Fase VI-B Mobile | Mobiele Homepage & Onboarding | 18-21-03 | MobileBottomNav, OnboardingSheet, ProgramCard |
+| v4.22-v4.24 | CalpeTrip Launch + SimpleAnalytics | 24-25-03 | CalpeTrip.com live, 28+ events |
+| v4.25-v4.27 | Chatbot Feature Parity + CI/CD Optimalisatie | 25-26-03 | CategoryBrowser, destination-specifiek |
+| v4.28-v4.30 | Page Builder + Desktop Homepage Redesign | 27-29-03 | Block visibility, DesktopHero, 35 blocks |
+| v4.31 | Admin Portal UX/UI Overhaul | 01-04 | 14 opdrachten, 245 endpoints, studio.holidaibutler.com |
+| v4.32-v4.34 | Desktop Polish + POI Pipeline + Multi-Source Images | 01-03-04 | encoding fix, Pexels+Flickr, 248 endpoints |
+
+### Changelog v4.14.0 — v4.31.0 (gearchiveerd 03-04-2026)
+
+| Versie | Datum | Samenvatting |
+|--------|-------|-------------|
+| 4.31.0 | 01-04 | Admin Portal UX/UI Overhaul — 14 opdrachten, studio.holidaibutler.com, 245 endpoints |
+| 4.30.0 | 29-03 | Desktop Homepage Redesign (Texel), block aliassen, block registry 26→35 |
+| 4.29.0 | 27-03 | Finale Kwaliteitsbeoordeling, SimpleAnalytics trending, Brand Voice check, 244 endpoints |
+| 4.28.0 | 27-03 | Block Visibility, Desktop redesign, Apache calpetrip.com→Next.js, block registry 22→26 |
+| 4.27.0 | 26-03 | CI/CD main-only triggers, ProgramCard dagdeel fixes |
+| 4.26.0 | 26-03 | getDestinationSlug(), SpeakerButton TTS, a11y, SimpleAnalytics desktop fix |
+| 4.25.0 | 25-03 | CategoryBrowser, ChatHeader/WelcomeScreen extracted, ProgramCard destination-specifiek |
+| 4.24.0 | 25-03 | SimpleAnalytics 28+ events, analytics.ts v2.0, 11 componenten |
+| 4.23.0 | 25-03 | SimpleAnalytics + UTM fix + Agenda i18n meertalig, 241 endpoints |
+| 4.22.0 | 24-03 | CalpeTrip.com Launch, DNS/SSL/Apache, B2B Corporate homepage |
+| 4.21.0 | 24-03 | Content Studio UX (sorteerbaar, filters, campagne pipeline), 241 endpoints |
+| 4.20.0 | 24-03 | CalpeTrip Rebranding, taalparameter fix |
+| 4.19.0 | 23-03 | Google Sign-In + Facebook Login, CalpeTrip branding, ForgotPassword, 240 endpoints |
+| 4.18.0 | 23-03 | Kwaliteitsaudit, AI Kalender Auto-Fill, One-Click Campagne, SEO scoring 97, 240 endpoints |
+| 4.17.0 | 23-03 | Merk Profiel, Meta connect, social filtering, 237 endpoints |
+| 4.16.0 | 21-03 | Standalone Content Studio, Merk Profiel & Knowledge Base, 234 endpoints |
+| 4.15.0 | 21-03 | Mobiele Homepage Quality 14 punten |
+| 4.14.0 | 20-03 | Fase VI-B Feedback 7 fixes |
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
