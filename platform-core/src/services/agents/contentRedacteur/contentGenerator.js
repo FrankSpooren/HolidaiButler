@@ -18,6 +18,114 @@ import logger from '../../../utils/logger.js';
 
 const SEO_MINIMUM_SCORE = 80;
 
+// Domain mapping for deep links per destination
+const DESTINATION_DOMAINS = {
+  1: 'calpetrip.com',
+  2: 'texelmaps.nl',
+};
+
+/**
+ * Find relevant POIs/Events from our database matching the content topic.
+ * Returns grounding data to constrain AI to only mention real, verified places.
+ */
+async function findRelevantPOIs(destinationId, keywords = [], limit = 5) {
+  try {
+    const searchTerms = keywords.filter(k => k && k.length > 2).slice(0, 3);
+    if (searchTerms.length === 0) {
+      // Fallback: get top-rated POIs for this destination
+      const [pois] = await mysqlSequelize.query(
+        `SELECT id, name, category, google_category, rating, review_count, city
+         FROM POI WHERE destination_id = ? AND is_active = 1 AND rating >= 4.0 AND review_count >= 5
+         ORDER BY review_count DESC LIMIT ?`,
+        { replacements: [destinationId, limit] }
+      );
+      return pois;
+    }
+
+    const likeConditions = searchTerms.map(() => '(name LIKE ? OR category LIKE ? OR google_category LIKE ?)').join(' OR ');
+    const likeParams = searchTerms.flatMap(t => [`%${t}%`, `%${t}%`, `%${t}%`]);
+
+    const [pois] = await mysqlSequelize.query(
+      `SELECT id, name, category, google_category, rating, review_count, city
+       FROM POI WHERE destination_id = ? AND is_active = 1 AND (${likeConditions})
+       ORDER BY rating DESC, review_count DESC LIMIT ?`,
+      { replacements: [destinationId, ...likeParams, limit] }
+    );
+
+    // If keyword search returns nothing, fallback to top POIs
+    if (pois.length === 0) {
+      const [fallback] = await mysqlSequelize.query(
+        `SELECT id, name, category, google_category, rating, review_count, city
+         FROM POI WHERE destination_id = ? AND is_active = 1 AND rating >= 4.0 AND review_count >= 5
+         ORDER BY RAND() LIMIT ?`,
+        { replacements: [destinationId, limit] }
+      );
+      return fallback;
+    }
+    return pois;
+  } catch (err) {
+    logger.error('[ContentGenerator] findRelevantPOIs error:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Find upcoming events from our database for content grounding.
+ */
+async function findRelevantEvents(destinationId, keywords = [], limit = 3) {
+  try {
+    const [events] = await mysqlSequelize.query(
+      `SELECT a.id, a.title, a.location_name, a.calpe_distance, d.event_date
+       FROM agenda a
+       INNER JOIN agenda_dates d ON a.provider_event_hash = d.provider_event_hash
+       WHERE a.destination_id = ? AND d.event_date >= CURDATE()
+       AND (a.calpe_distance IS NULL OR a.calpe_distance <= 15)
+       ORDER BY d.event_date ASC LIMIT ?`,
+      { replacements: [destinationId, limit] }
+    );
+    return events;
+  } catch (err) {
+    logger.error('[ContentGenerator] findRelevantEvents error:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Build grounding context with real POIs/Events and their deep links.
+ */
+function buildGroundingContext(pois, events, destinationId) {
+  const domain = DESTINATION_DOMAINS[destinationId] || 'calpetrip.com';
+  const lines = [];
+
+  if (pois.length > 0) {
+    lines.push('VERIFIED PLACES FROM OUR DATABASE (you MUST reference at least one of these):');
+    pois.forEach(p => {
+      const link = `https://${domain}/pois?poi=${p.id}`;
+      lines.push(`- ${p.name} (${p.google_category || p.category}, ${p.rating}★, ${p.review_count} reviews) — Link: ${link}`);
+    });
+  }
+
+  if (events.length > 0) {
+    lines.push('\nUPCOMING EVENTS (mention if relevant):');
+    events.forEach(e => {
+      const date = e.event_date ? new Date(e.event_date).toLocaleDateString('en-GB') : '';
+      const link = `https://${domain}/agenda`;
+      lines.push(`- ${e.title} at ${e.location_name || 'Calpe'} (${date}) — Link: ${link}`);
+    });
+  }
+
+  if (lines.length > 0) {
+    lines.push('\nCRITICAL RULES:');
+    lines.push('- ONLY mention places/events from the lists above — do NOT invent locations');
+    lines.push('- Include the link URL for at least 1 mentioned place in your post');
+    lines.push('- For Facebook/LinkedIn: include the link directly in the text');
+    lines.push('- For Instagram: mention "Link in bio" and reference the place by name');
+    lines.push('- For X: include shortened link if character count allows');
+  }
+
+  return lines.join('\n');
+}
+
 /**
  * Platform-specific prompt rules for social content generation
  */
@@ -112,8 +220,15 @@ export async function generateContent(suggestion, options = {}) {
   // Build brand context (includes profile, persona, knowledge base)
   const brandContext = await buildBrandContext(destinationId, personaId, keywords);
 
+  // POI/Event grounding: find real places from our DB to constrain AI output
+  const [relevantPOIs, relevantEvents] = await Promise.all([
+    findRelevantPOIs(destinationId, keywords),
+    findRelevantEvents(destinationId, keywords),
+  ]);
+  const groundingContext = buildGroundingContext(relevantPOIs, relevantEvents, destinationId);
+
   // Build the generation prompt — clean output, no markdown
-  const systemPrompt = buildSystemPrompt(contentType, platform, toneInstruction, keywords, brandContext);
+  const systemPrompt = buildSystemPrompt(contentType, platform, toneInstruction, keywords, brandContext, groundingContext);
   const userPrompt = buildUserPrompt(suggestion, contentType, platform, keywords);
 
   try {
@@ -291,23 +406,25 @@ CRITICAL: Respect the CONTENT GOALS from the brand profile above.
 /**
  * Build system prompt — clean output, platform-aware, no markdown
  */
-function buildSystemPrompt(contentType, platform, toneInstruction, keywords, brandContext = '') {
+function buildSystemPrompt(contentType, platform, toneInstruction, keywords, brandContext = '', groundingContext = '') {
   const keywordsStr = keywords.length > 0
     ? `Target keywords (MUST appear in text): ${keywords.map(k => `"${k}"`).join(', ')}`
     : '';
 
   const brandBlock = brandContext ? `\n${brandContext}\n` : '';
+  const groundingBlock = groundingContext ? `\n${groundingContext}\n` : '';
 
   const base = `You are an enterprise-grade content writer for a premium content platform.
 ${brandBlock}
 ${toneInstruction}
-
+${groundingBlock}
 ABSOLUTE RULES:
 - Write original, high-quality content — NO plagiarism
 - Facts must be accurate — do NOT hallucinate. If reference material is provided, use those facts.
 - Preserve proper nouns (names, street names, local terms)
 - EU AI Act compliance: this is AI-generated content
-- If a target audience is specified, tailor language, tone, and content to their interests and pain points`;
+- If a target audience is specified, tailor language, tone, and content to their interests and pain points
+- ONLY mention real places, restaurants, or businesses that are listed in the VERIFIED PLACES section above`;
 
   if (contentType === 'social_post') {
     const platformRules = PROMPT_PLATFORM_RULES[platform] || PROMPT_PLATFORM_RULES.facebook;
@@ -801,6 +918,13 @@ export async function repurposeContent(sourceItem, targetPlatforms, destinationI
     } catch { return []; }
   })();
 
+  // POI/Event grounding for repurposed content
+  const [relevantPOIs, relevantEvents] = await Promise.all([
+    findRelevantPOIs(destId, keywords),
+    findRelevantEvents(destId, keywords),
+  ]);
+  const groundingContext = buildGroundingContext(relevantPOIs, relevantEvents, destId);
+
   // Get the full original content text
   const originalBody = sourceItem.body_en || sourceItem.body_nl || sourceItem.body_de || sourceItem.body_es || '';
   if (!originalBody) {
@@ -821,8 +945,11 @@ You REWRITE content from scratch for ${platform} — you do NOT summarize, trunc
 
 ${toneInstruction}
 
+${groundingContext}
+
 YOUR MISSION: Create a COMPLETELY NEW ${platform} post inspired by the source content.
 The output must feel native to ${platform} — as if a ${platform} specialist wrote it from scratch.
+ONLY mention real places, restaurants, or businesses from the VERIFIED PLACES section above.
 
 WHAT MAKES ${platform} CONTENT UNIQUE:
 ${platform === 'instagram' ? `- Opens with a powerful HOOK line (visible before "more" button) — emotional, evocative, or surprising

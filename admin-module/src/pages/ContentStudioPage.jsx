@@ -41,6 +41,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, Resp
 import useAuthStore from '../stores/authStore.js';
 import useDestinationStore from '../stores/destinationStore.js';
 import contentService from '../api/contentService.js';
+import client from '../api/client.js';
+import ConceptDialog from '../components/content/ConceptDialog.jsx';
 import ContentCalendarTab from './ContentCalendarTab.jsx';
 import SeasonalConfigTab from './SeasonalConfigTab.jsx';
 import SocialAccountsCards from '../components/content/SocialAccountsCards.jsx';
@@ -363,7 +365,7 @@ function AddKeywordDialog({ open, onClose, onSubmit, destinationId }) {
 
 function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinationId }) {
   const [contentType, setContentType] = useState(suggestion?.content_type || 'blog');
-  const [platform, setPlatform] = useState('website');
+  const [platforms, setPlatforms] = useState(['facebook']);
   const [pillarId, setPillarId] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [personaId, setPersonaId] = useState('');
@@ -392,6 +394,7 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
   useEffect(() => {
     if (suggestion) {
       setContentType(suggestion.content_type || 'blog');
+      setPlatforms(['facebook']);
       setPillarId('');
       setTemplateId('');
     }
@@ -405,15 +408,17 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      const data = {
+      // Atomic multi-platform concept generation
+      await contentService.generateConcept({
         suggestion_id: suggestion.id,
+        destination_id: destinationId,
         content_type: contentType,
-        platform,
-      };
-      if (pillarId) data.pillar_id = pillarId;
-      if (templateId) data.template_id = templateId;
-      if (personaId) data.persona_id = personaId;
-      await onGenerate(data);
+        platforms,
+        pillar_id: pillarId || undefined,
+        template_id: templateId || undefined,
+        persona_id: personaId || undefined,
+      });
+      if (onGenerate) await onGenerate({});
       onClose();
     } finally {
       setGenerating(false);
@@ -439,72 +444,77 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
             <MenuItem value="video_script">Video Script</MenuItem>
           </Select>
         </FormControl>
-        <FormControl fullWidth>
-          <InputLabel>{t('contentStudio.form.platform', 'Platform')}</InputLabel>
-          <Select value={platform} onChange={e => setPlatform(e.target.value)} label={t('contentStudio.form.platform', 'Platform')}>
-            {Object.entries(PLATFORM_LABELS).map(([val, lbl]) => (
-              <MenuItem key={val} value={val}>{lbl}</MenuItem>
+        {/* Platform multi-select */}
+        <Box>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('contentStudio.form.platforms', 'Platformen')}</Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {Object.entries(PLATFORM_LABELS).filter(([k]) => k !== 'website').map(([val, lbl]) => (
+              <Chip
+                key={val}
+                label={lbl}
+                onClick={() => setPlatforms(prev => prev.includes(val) ? prev.filter(p => p !== val) : [...prev, val])}
+                color={platforms.includes(val) ? 'primary' : 'default'}
+                variant={platforms.includes(val) ? 'filled' : 'outlined'}
+                sx={{ cursor: 'pointer' }}
+              />
             ))}
-          </Select>
-        </FormControl>
+          </Box>
+        </Box>
 
-        {/* 9.3: Content Pillar selector */}
-        <FormControl fullWidth>
-          <InputLabel>{t('contentStudio.form.contentPillar', 'Content Pillar')}</InputLabel>
-          <Select value={pillarId} onChange={e => setPillarId(e.target.value)} label={t('contentStudio.form.contentPillar', 'Content Pillar')} displayEmpty>
-            <MenuItem value="">{t('contentStudio.form.noPillar', '— Geen pillar —')}</MenuItem>
-            {loadingMeta ? <MenuItem disabled>{t('contentStudio.form.loading', 'Laden...')}</MenuItem> : pillars.map(p => (
-              <MenuItem key={p.id} value={p.id}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {p.color && <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: p.color, flexShrink: 0 }} />}
-                  {p.name}
-                  {p.target_percentage && <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>({p.target_percentage}%)</Typography>}
-                </Box>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        {/* Content Pillar selector */}
+        <TextField
+          select fullWidth size="small"
+          label={t('contentStudio.form.contentPillar', 'Content Pillar')}
+          value={pillarId}
+          onChange={e => setPillarId(e.target.value)}
+        >
+          <MenuItem value="">{t('contentStudio.form.noPillar', '— Geen pillar —')}</MenuItem>
+          {loadingMeta ? <MenuItem disabled>{t('contentStudio.form.loading', 'Laden...')}</MenuItem> : pillars.map(p => (
+            <MenuItem key={p.id} value={p.id}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {p.color && <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: p.color, flexShrink: 0 }} />}
+                {p.name}
+              </Box>
+            </MenuItem>
+          ))}
+        </TextField>
 
-        {/* 9.9: Template selector */}
-        <FormControl fullWidth>
-          <InputLabel>{t('contentStudio.form.template', 'Template')}</InputLabel>
-          <Select value={templateId} onChange={e => setTemplateId(e.target.value)} label={t('contentStudio.form.template', 'Template')} displayEmpty>
-            <MenuItem value="">{t('contentStudio.form.noTemplate', '— Geen template —')}</MenuItem>
-            {loadingMeta ? <MenuItem disabled>{t('contentStudio.form.loading', 'Laden...')}</MenuItem> : filteredTemplates.map(t => (
-              <MenuItem key={t.id} value={t.id}>
-                <Box>
-                  <Typography variant="body2">{t.name}</Typography>
-                  {t.description && <Typography variant="caption" color="text.secondary">{t.description}</Typography>}
-                </Box>
-              </MenuItem>
-            ))}
-          </Select>
-          {filteredTemplates.length === 0 && templates.length > 0 && !loadingMeta && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-              {t('contentStudio.form.noTemplatesFor', 'Geen templates beschikbaar voor')} {CONTENT_TYPE_LABELS[contentType] || contentType}
-            </Typography>
-          )}
-        </FormControl>
+        {/* Template selector — deduped by name */}
+        <TextField
+          select fullWidth size="small"
+          label={t('contentStudio.form.template', 'Template')}
+          value={templateId}
+          onChange={e => setTemplateId(e.target.value)}
+        >
+          <MenuItem value="">{t('contentStudio.form.noTemplate', '— Geen template —')}</MenuItem>
+          {loadingMeta ? <MenuItem disabled>{t('contentStudio.form.loading', 'Laden...')}</MenuItem> :
+            // Dedup templates by name to prevent duplicates
+            filteredTemplates.filter((tpl, idx, arr) => arr.findIndex(t2 => t2.name === tpl.name) === idx).map(tpl => (
+              <MenuItem key={tpl.id} value={tpl.id}>{tpl.name}</MenuItem>
+            ))
+          }
+        </TextField>
 
         {/* Doelgroep / Audience Persona selector */}
         {personas.length > 0 && (
-          <FormControl fullWidth>
-            <InputLabel>{t('contentStudio.form.persona', 'Doelgroep')}</InputLabel>
-            <Select value={personaId} onChange={e => setPersonaId(e.target.value)} label={t('contentStudio.form.persona', 'Doelgroep')} displayEmpty>
-              <MenuItem value="">{t('contentStudio.form.noPersona', '— Geen specifieke doelgroep —')}</MenuItem>
-              {personas.map(p => (
-                <MenuItem key={p.id} value={p.id}>
-                  <Box>
-                    <Typography variant="body2">{p.is_primary ? '★ ' : ''}{p.name}</Typography>
-                    {p.age_range && <Typography variant="caption" color="text.secondary"> ({p.age_range}{p.location ? `, ${p.location}` : ''})</Typography>}
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+          <TextField
+            select fullWidth size="small"
+            label={t('contentStudio.form.persona', 'Specifieke doelgroep')}
+            value={personaId}
+            onChange={e => setPersonaId(e.target.value)}
+          >
+            <MenuItem value="">{t('contentStudio.form.noPersona', '— Geen specifieke doelgroep —')}</MenuItem>
+            {personas.map(p => (
+              <MenuItem key={p.id} value={p.id}>
+                {p.is_primary ? '★ ' : ''}{p.name}{p.age_range ? ` (${p.age_range})` : ''}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
+        {personas.length > 0 && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: -1 }}>
               {t('contentStudio.form.personaHelper', 'Optioneel — beïnvloedt toon en inhoud van de gegenereerde content')}
             </Typography>
-          </FormControl>
         )}
       </DialogContent>
       <DialogActions>
@@ -839,8 +849,51 @@ function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false
   const [unsplashResults, setUnsplashResults] = useState([]);
   const [unsplashLoading, setUnsplashLoading] = useState(false);
   const [suggestTab, setSuggestTab] = useState(0);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [mediaItems, setMediaItems] = useState([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaTab, setMediaTab] = useState(0);
+  const [mediaSearch, setMediaSearch] = useState('');
 
-  // Load current images
+  // Load images from all sources based on active tab + search
+  useEffect(() => {
+    if (!mediaPickerOpen) return;
+    const apiBase = import.meta.env.VITE_API_URL || '';
+    const destCode = item?.destination_id === 2 ? 'texel' : item?.destination_id === 4 ? 'warrewijzer' : 'calpe';
+    const destId = item?.destination_id || 1;
+
+    if (mediaTab === 0) {
+      // Media library
+      setMediaLoading(true);
+      client.get('/media', { params: { limit: 50 }, headers: { 'X-Destination-ID': destCode } })
+        .then(res => {
+          const files = res.data?.data?.files || res.data?.data || [];
+          setMediaItems(files.map(f => ({ ...f, source: 'media', url: `${apiBase}/media-files/${f.destination_id || destId}/${f.filename}`, thumbnail: `${apiBase}/media-files/${f.destination_id || destId}/${f.filename}` })));
+        })
+        .catch(() => setMediaItems([]))
+        .finally(() => setMediaLoading(false));
+    } else if (mediaTab === 1) {
+      // POI images
+      setMediaLoading(true);
+      const searchParam = mediaSearch ? `&search=${encodeURIComponent(mediaSearch)}` : '';
+      client.get(`/content/images/browse?destination_id=${destId}&limit=30${searchParam}`)
+        .then(res => setMediaItems((res.data?.data || []).map(img => ({ id: img.id, source: 'poi', url: img.url, thumbnail: img.url, poi_name: img.poi_name }))))
+        .catch(() => setMediaItems([]))
+        .finally(() => setMediaLoading(false));
+    } else if (mediaTab === 2 && mediaSearch.trim().length > 1) {
+      // Pexels stock photos
+      setMediaLoading(true);
+      contentService.searchPexels(mediaSearch.trim())
+        .then(res => {
+          const photos = res.data || [];
+          setMediaItems(photos.map(p => ({ id: p.id, source: 'pexels', url: p.urls?.regular || p.urls?.small, thumbnail: p.urls?.thumb || p.urls?.small, photographer: p.photographer || p.user?.name, source_link: p.url || p.links?.html })));
+        })
+        .catch(() => setMediaItems([]))
+        .finally(() => setMediaLoading(false));
+    }
+  }, [mediaPickerOpen, mediaTab, mediaSearch, itemId, item?.destination_id]);
+
+  // Load current images — resolve raw IDs to URLs
   useEffect(() => {
     if (!item) return;
     try {
@@ -850,7 +903,26 @@ function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false
         const mediaIds = item.media_ids
           ? (typeof item.media_ids === 'string' ? JSON.parse(item.media_ids) : item.media_ids)
           : [];
-        setImages(mediaIds);
+        // Resolve IDs to image objects with URLs
+        if (mediaIds.length > 0 && typeof mediaIds[0] !== 'object') {
+          Promise.all(mediaIds.map(async (rawId) => {
+            // Already a full URL (Pexels, Unsplash, etc.)
+            if (typeof rawId === 'string' && rawId.startsWith('http')) {
+              return { id: rawId, url: rawId, thumbnail: rawId };
+            }
+            // Numeric ID or poi:ID — resolve via backend
+            const numId = typeof rawId === 'string' && rawId.startsWith('poi:') ? Number(rawId.replace('poi:', '')) : Number(rawId);
+            if (isNaN(numId)) return { id: rawId, url: rawId, thumbnail: rawId };
+            try {
+              const res = await client.get(`/content/images/resolve/${numId}`);
+              return res.data?.data || { id: numId, url: null };
+            } catch {
+              return { id: numId, url: null };
+            }
+          })).then(resolved => setImages(resolved)).catch(() => setImages(mediaIds));
+        } else {
+          setImages(mediaIds);
+        }
       }
     } catch { setImages([]); }
   }, [item?.media_ids, item?.resolved_images]);
@@ -865,11 +937,20 @@ function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false
 
   const handleRemoveImage = async (mediaId) => {
     try {
-      await contentService.detachImage(itemId, mediaId);
-      setImages(prev => prev.filter(m => (typeof m === 'object' ? m.id : m) !== mediaId));
+      // For URL-based images (Pexels, etc.) or numeric IDs: update media_ids directly
+      const updatedImages = images.filter(m => {
+        const mId = typeof m === 'object' ? m.id : m;
+        return mId !== mediaId;
+      });
+      const updatedIds = updatedImages.map(m => {
+        if (typeof m === 'object' && typeof m.id === 'string' && m.id.startsWith('http')) return m.id;
+        return typeof m === 'object' ? m.id : m;
+      });
+      await client.patch(`/content/items/${itemId}`, { media_ids: updatedIds });
+      setImages(updatedImages);
       if (onUpdate) onUpdate();
     } catch (err) {
-      console.error('Image detach failed:', err);
+      console.error('Image remove failed:', err);
     }
   };
 
@@ -940,14 +1021,9 @@ function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false
           {t('contentStudio.images.selected', 'Geselecteerde afbeelding')}
           {images.length > 0 && <Chip label={images.length} size="small" sx={{ ml: 1, height: 18, fontSize: 11 }} />}
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button size="small" variant="outlined" onClick={() => setSuggestOpen(true)} startIcon={<AddIcon />}>
-            {t('contentStudio.images.addImage', 'Meer opties')}
-          </Button>
-          <Button size="small" variant="text" href="/media" target="_blank" startIcon={<PermMediaIcon sx={{ fontSize: 16 }} />}>
-            {t('contentStudio.images.openMediaLibrary', 'Mediabibliotheek')}
-          </Button>
-        </Box>
+        <Button size="small" variant="outlined" onClick={() => setMediaPickerOpen(true)} startIcon={<AddIcon />}>
+          {t('contentStudio.images.addImage', 'Afbeelding zoeken')}
+        </Button>
       </Box>
 
       {images.length > 0 ? (
@@ -1074,6 +1150,71 @@ function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSuggestOpen(false)}>{t('contentStudio.actions.close', 'Sluiten')}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Unified Image Picker Dialog — All Sources */}
+      <Dialog open={mediaPickerOpen} onClose={() => setMediaPickerOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>{t('contentStudio.images.selectFromLibrary', 'Selecteer afbeelding')}</DialogTitle>
+        <DialogContent>
+          <Tabs value={mediaTab} onChange={(_, v) => { setMediaTab(v); setMediaSearch(''); setMediaItems([]); }} sx={{ mb: 2 }}>
+            <Tab label="Media" />
+            <Tab label="POI" />
+            <Tab label="Pexels" />
+          </Tabs>
+
+          <TextField size="small" fullWidth
+            placeholder={mediaTab === 1 ? 'Zoek POI naam...' : mediaTab === 2 ? 'Zoek stock foto\'s (Engels)...' : 'Zoek...'}
+            value={mediaSearch}
+            onChange={e => setMediaSearch(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && (mediaTab === 2 || mediaTab === 3)) { /* trigger external search */ setMediaItems([]); }}}
+            sx={{ mb: 2 }} />
+
+          {mediaLoading ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress /></Box>
+          ) : mediaItems.length > 0 ? (
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', maxHeight: 400, overflowY: 'auto' }}>
+              {mediaItems.map((m, idx) => (
+                <Box key={m.id || idx} sx={{ cursor: 'pointer', width: 150, textAlign: 'center' }}
+                  onClick={async () => {
+                    if (m.source === 'unsplash' || m.source === 'pexels') {
+                      // External: download to media library first, then attach
+                      try {
+                        const res = await client.post('/content/images/download-external', {
+                          url: m.url, source: m.source, destination_id: item?.destination_id || 1,
+                          photographer: m.photographer || '', source_link: m.source_link || '',
+                        });
+                        const savedId = res.data?.data?.id;
+                        if (savedId) await handleAttachImage(savedId);
+                      } catch { await handleAttachImage(m.url); }
+                    } else {
+                      const attachId = m.source === 'poi' ? `poi:${m.id}` : m.id;
+                      await handleAttachImage(attachId);
+                    }
+                    setMediaPickerOpen(false);
+                  }}>
+                  <Box component="img" src={m.thumbnail || m.url} alt={m.alt_text || m.poi_name || ''}
+                    sx={{ width: 150, height: 112, objectFit: 'cover', borderRadius: 1,
+                      border: '2px solid transparent', '&:hover': { borderColor: 'primary.main', transform: 'scale(1.03)' },
+                      transition: 'all 0.2s' }}
+                    onError={e => { e.target.style.display = 'none'; }} />
+                  <Typography variant="caption" noWrap sx={{ display: 'block', mt: 0.3 }}>
+                    {m.poi_name || m.original_name || m.photographer || m.filename || '—'}
+                  </Typography>
+                  {(m.source === 'unsplash' || m.source === 'pexels') && (
+                    <Typography variant="caption" sx={{ fontSize: 9, color: 'text.disabled' }}>{m.source}</Typography>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+              {mediaTab === 2 && !mediaSearch ? 'Typ een zoekterm en druk Enter voor Pexels stock foto\'s.' : 'Geen resultaten gevonden.'}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMediaPickerOpen(false)}>{t('common.close', 'Sluiten')}</Button>
         </DialogActions>
       </Dialog>
     </Paper>
@@ -2042,6 +2183,9 @@ export default function ContentStudioPage() {
   const [items, setItems] = useState([]);
   const [itemTotal, setItemTotal] = useState(0);
   const [itemLoading, setItemLoading] = useState(false);
+  const [concepts, setConcepts] = useState([]);
+  const [conceptTotal, setConceptTotal] = useState(0);
+  const [conceptDialogId, setConceptDialogId] = useState(null);
   const [itemError, setItemError] = useState(null);
   const [itemPage, setItemPage] = useState(0);
   const [selectedItemId, setSelectedItemId] = useState(null);
@@ -2099,9 +2243,14 @@ export default function ContentStudioPage() {
     setItemLoading(true);
     setItemError(null);
     try {
-      const result = await contentService.getItems(destinationId, { limit: 25, offset: itemPage * 25 });
-      setItems(result.data?.items || []);
-      setItemTotal(result.data?.total || 0);
+      // Load concepts (grouped view) instead of flat items
+      const result = await contentService.getConcepts(destinationId, { limit: 25, offset: itemPage * 25 });
+      setConcepts(result.data || []);
+      setConceptTotal(result.meta?.total || 0);
+      // Also load flat items for backward compat (filters, etc.)
+      const itemResult = await contentService.getItems(destinationId, { limit: 100, offset: 0 });
+      setItems(itemResult.data?.items || []);
+      setItemTotal(itemResult.data?.total || 0);
     } catch (err) {
       setItemError(err.message || t('contentStudio.errorLoadingItems', 'Fout bij laden content items'));
     } finally {
@@ -2347,9 +2496,33 @@ export default function ContentStudioPage() {
                       </TableCell>
                       <TableCell>{trend.week_number ? `W${trend.week_number}` : '—'}</TableCell>
                       <TableCell>
-                        <IconButton size="small" color="error" onClick={async (e) => { e.stopPropagation(); try { await contentService.deleteTrending(trend.id); loadTrends(); } catch {} }}>
-                          <DeleteIcon sx={{ fontSize: 16 }} />
-                        </IconButton>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <Tooltip title={t('contentStudio.actions.generateFromTrend', 'Genereer content')}>
+                            <IconButton size="small" color="primary" onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                // Create a suggestion from this trend, then open generate dialog
+                                const sugRes = await contentService.createSuggestion({
+                                  destination_id: destinationId,
+                                  title: trend.keyword,
+                                  summary: `Content gebaseerd op trending keyword "${trend.keyword}" (score: ${trend.relevance_score}, bron: ${trend.source})`,
+                                  content_type: 'social_post',
+                                  keyword_cluster: [trend.keyword],
+                                  engagement_score: trend.relevance_score || 5,
+                                });
+                                const newSugId = sugRes?.data?.id;
+                                if (newSugId) {
+                                  setGenerateDialogSuggestion({ id: newSugId, title: trend.keyword, keyword_cluster: [trend.keyword], content_type: 'social_post' });
+                                }
+                              } catch (err) { console.error('Generate from trend failed:', err); }
+                            }}>
+                              <AutoAwesomeIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <IconButton size="small" color="error" onClick={async (e) => { e.stopPropagation(); try { await contentService.deleteTrending(trend.id); loadTrends(); } catch {} }}>
+                            <DeleteIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -2548,7 +2721,7 @@ export default function ContentStudioPage() {
           <Paper variant="outlined">
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                {itemTotal} {t('contentStudio.itemsFound', 'content items')}
+                {conceptTotal} {t('contentStudio.conceptsFound', 'content concepten')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 {selectedIds.length > 0 && (
@@ -2605,8 +2778,7 @@ export default function ContentStudioPage() {
                         {Object.entries(PLATFORM_LABELS).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
                       </Select>
                     </TableCell>
-                    <TableCell>{t('contentStudio.table.languages', 'Talen')}</TableCell>
-                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setItemSort(s => s === 'score_desc' ? 'score_asc' : 'score_desc')}>{t('contentStudio.table.score', 'Score')} {itemSort.startsWith('score') ? (itemSort === 'score_asc' ? '↑' : '↓') : ''}</TableCell>
+                    <TableCell>{t('contentStudio.table.versions', 'Versies')}</TableCell>
                     <TableCell>
                       <Select size="small" value={itemStatusFilter} onChange={e => setItemStatusFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 70 }}>
                         <MenuItem value="">{t('contentStudio.table.status', 'Status')}</MenuItem>
@@ -2628,76 +2800,86 @@ export default function ContentStudioPage() {
                         <TableCell colSpan={9}><Skeleton variant="text" /></TableCell>
                       </TableRow>
                     ))
-                  ) : items.length === 0 ? (
+                  ) : concepts.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary" sx={{ mb: 1 }}>{t('contentStudio.noItems', 'Geen content items. Genereer content vanuit goedgekeurde suggesties.')}</Typography>
                         <Button variant="outlined" size="small" onClick={() => setTab(1)}>{t('contentStudio.goToSuggestions', 'Bekijk Suggesties')}</Button>
                       </TableCell>
                     </TableRow>
-                  ) : [...items]
-                    .filter(i => !itemTypeFilter || i.content_type === itemTypeFilter)
-                    .filter(i => !itemPlatformFilter || i.target_platform === itemPlatformFilter)
-                    .filter(i => !itemStatusFilter || i.approval_status === itemStatusFilter)
+                  ) : concepts
+                    .filter(c => c.approval_status !== 'deleted')
+                    .filter(c => !itemTypeFilter || c.content_type === itemTypeFilter)
+                    .filter(c => !itemPlatformFilter || c.platforms?.includes(itemPlatformFilter))
+                    .filter(c => !itemStatusFilter || c.approval_status === itemStatusFilter)
                     .sort((a, b) => {
                       if (itemSort === 'title_asc') return (a.title || '').localeCompare(b.title || '');
                       if (itemSort === 'title_desc') return (b.title || '').localeCompare(a.title || '');
-                      if (itemSort === 'score_asc') return (Number(a.seo_data?.overallScore) || 0) - (Number(b.seo_data?.overallScore) || 0);
-                      if (itemSort === 'score_desc') return (Number(b.seo_data?.overallScore) || 0) - (Number(a.seo_data?.overallScore) || 0);
                       if (itemSort === 'date_asc') return new Date(a.created_at) - new Date(b.created_at);
                       if (itemSort === 'date_desc') return new Date(b.created_at) - new Date(a.created_at);
                       return 0;
                     })
-                    .map((item) => {
-                    const langs = ['en', 'nl', 'de', 'es', 'fr'].filter(l => item[`body_${l}`]);
-                    const seoScore = item.seo_data?.overallScore;
-                    return (
-                      <TableRow key={item.id} hover sx={{
-                        cursor: 'pointer',
-                        bgcolor: (item.approval_status === 'draft' && !viewedItems.has(item.id)) ? 'rgba(76, 175, 80, 0.08)' : 'inherit',
-                        borderLeft: (item.approval_status === 'draft' && !viewedItems.has(item.id)) ? '3px solid #4caf50' : 'none',
-                      }} onClick={() => { setSelectedItemId(item.id); setViewedItems(prev => new Set([...prev, item.id])); }}>
+                    .map((concept) => {
+                      // Open the first active platform item in the existing ContentItemDialog
+                      const activeVersions = (concept.platform_versions || []).filter(v => v.status !== 'deleted');
+                      const firstItemId = activeVersions[0]?.id;
+                      return (
+                      <TableRow key={concept.id} hover sx={{ cursor: firstItemId ? 'pointer' : 'default', opacity: firstItemId ? 1 : 0.6 }}
+                        onClick={() => { if (firstItemId) { setSelectedItemId(firstItemId); setViewedItems(prev => new Set([...prev, firstItemId])); } }}>
                         <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
-                          <Checkbox size="small" checked={selectedIds.includes(item.id)} onChange={() => toggleSelectItem(item.id)} />
+                          <Checkbox size="small" checked={selectedIds.includes(firstItemId)} onChange={() => firstItemId && toggleSelectItem(firstItemId)} />
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 500, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {item.title}
+                          <Typography variant="body2" sx={{ fontWeight: 500, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {concept.title}
                           </Typography>
                         </TableCell>
-                        <TableCell><Chip label={CONTENT_TYPE_LABELS[item.content_type] || item.content_type} size="small" /></TableCell>
-                        <TableCell><Chip label={PLATFORM_LABELS[item.target_platform] || item.target_platform} size="small" variant="outlined" /></TableCell>
+                        <TableCell><Chip label={CONTENT_TYPE_LABELS[concept.content_type] || concept.content_type} size="small" /></TableCell>
                         <TableCell>
-                          <Box sx={{ display: 'flex', gap: 0.3 }}>
-                            {langs.map(l => <Chip key={l} label={l.toUpperCase()} size="small" sx={{ height: 18, fontSize: 10 }} />)}
+                          <Box sx={{ display: 'flex', gap: 0.3, flexWrap: 'wrap' }}>
+                            {(concept.platform_versions || []).filter(v => v.status !== 'deleted').map(v => (
+                              <Chip key={v.id} label={PLATFORM_LABELS[v.platform] || v.platform} size="small" variant="outlined"
+                                onClick={(e) => { e.stopPropagation(); setSelectedItemId(v.id); setViewedItems(prev => new Set([...prev, v.id])); }}
+                                sx={{ cursor: 'pointer', height: 22, fontSize: 11,
+                                  borderColor: v.platform === 'facebook' ? '#1877F2' : v.platform === 'instagram' ? '#E4405F' : v.platform === 'linkedin' ? '#0A66C2' : 'divider',
+                                  bgcolor: v.status === 'published' ? 'success.50' : v.status === 'scheduled' ? 'warning.50' : 'transparent',
+                                }} />
+                            ))}
+                            {(concept.platform_versions || []).filter(v => v.status !== 'deleted').length === 0 && <Typography variant="caption" color="text.disabled">—</Typography>}
                           </Box>
                         </TableCell>
                         <TableCell>
-                          {seoScore !== undefined ? (
-                            <Tooltip title={item.content_type === 'social_post' ? 'Social Score' : item.content_type === 'video_script' ? 'Script Score' : 'SEO Score'}>
-                              <Chip label={seoScore} size="small" color={seoScore >= 80 ? 'success' : seoScore >= 60 ? 'warning' : 'error'} />
-                            </Tooltip>
-                          ) : '—'}
+                          {(() => {
+                            const versions = concept.platform_versions?.filter(v => v.status !== 'deleted') || [];
+                            const published = versions.filter(v => v.status === 'published').length;
+                            return <Typography variant="caption">{versions.length} {published > 0 ? `(${published} live)` : ''}</Typography>;
+                          })()}
                         </TableCell>
                         <TableCell>
-                          <StatusChip status={item.approval_status} />
+                          {concept.platform_versions?.some(v => v.status === 'published') ? (
+                            <Chip label="Live" size="small" color="success" sx={{ height: 20, fontSize: 10 }} />
+                          ) : concept.platform_versions?.some(v => v.status === 'scheduled') ? (
+                            <Chip label="Ingepland" size="small" color="warning" sx={{ height: 20, fontSize: 10 }} />
+                          ) : (
+                            <StatusChip status={concept.approval_status} />
+                          )}
                         </TableCell>
                         <TableCell>
-                          <Typography variant="caption">{new Date(item.created_at).toLocaleDateString('nl-NL')}</Typography>
+                          <Typography variant="caption">{new Date(concept.updated_at || concept.created_at).toLocaleDateString('nl-NL')}</Typography>
                         </TableCell>
                         <TableCell align="right" onClick={e => e.stopPropagation()}>
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
                             <Tooltip title={t('common.edit', 'Bewerken')}>
-                              <IconButton size="small" onClick={() => setSelectedItemId(item.id)}><EditIcon fontSize="small" /></IconButton>
+                              <IconButton size="small" onClick={() => { if (firstItemId) setSelectedItemId(firstItemId); }}><EditIcon fontSize="small" /></IconButton>
                             </Tooltip>
                             <Tooltip title={t('common.delete', 'Verwijderen')}>
-                              <IconButton size="small" color="error" onClick={() => handleDeleteItem(item.id)}><DeleteIcon fontSize="small" /></IconButton>
+                              <IconButton size="small" color="error" onClick={async () => { await contentService.deleteConcept(concept.id); loadItems(); }}><DeleteIcon fontSize="small" /></IconButton>
                             </Tooltip>
                           </Box>
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
+                      );
+                    })}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -2751,6 +2933,8 @@ export default function ContentStudioPage() {
         isContentOnlyDest={isContentOnlyDest}
         defaultLanguage={currentDest?.defaultLanguage || 'en'}
       />
+
+      {/* ConceptDialog verwijderd — ContentItemDialog bevat alle features */}
 
       <SuggestionDetailDialog
         open={!!selectedSuggestion}

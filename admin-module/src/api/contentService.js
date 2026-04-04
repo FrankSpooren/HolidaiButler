@@ -45,6 +45,26 @@ const contentService = {
     return client.post('/content/suggestions', data).then(r => r.data);
   },
 
+  // === Content Concepts ===
+
+  getConcepts(destinationId, { status, limit = 50, offset = 0 } = {}) {
+    const params = { destination_id: destinationId, limit, offset };
+    if (status) params.status = status;
+    return client.get('/content/concepts', { params }).then(r => r.data);
+  },
+
+  getConcept(conceptId) {
+    return client.get(`/content/concepts/${conceptId}`).then(r => r.data);
+  },
+
+  generateConcept(data) {
+    return client.post('/content/concepts/generate', data, { timeout: 300000 }).then(r => r.data);
+  },
+
+  deleteConcept(conceptId) {
+    return client.delete(`/content/concepts/${conceptId}`).then(r => r.data);
+  },
+
   // === Content Items ===
 
   getItems(destinationId, { status, limit = 50, offset = 0 } = {}) {

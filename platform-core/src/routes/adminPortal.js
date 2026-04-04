@@ -12105,6 +12105,211 @@ router.delete('/content/items/:id', adminAuth('editor'), writeAccess(['platform_
   }
 });
 
+// ============================================================
+// CONTENT CONCEPTS — Grouped content management
+// ============================================================
+
+/**
+ * GET /content/concepts — List concepts with platform versions
+ */
+router.get('/content/concepts', adminAuth('editor'), async (req, res) => {
+  try {
+    const { destination_id, status, limit = 50, offset = 0 } = req.query;
+    const conditions = ["c.approval_status != 'deleted'"];
+    const params = [];
+
+    if (destination_id) { conditions.push('c.destination_id = ?'); params.push(Number(destination_id)); }
+    if (status && status !== 'all' && status !== 'deleted') { conditions.push('c.approval_status = ?'); params.push(status); }
+
+    const whereClause = conditions.join(' AND ');
+
+    const [[{ total }]] = await mysqlSequelize.query(
+      `SELECT COUNT(DISTINCT c.id) as total FROM content_concepts c WHERE ${whereClause}`,
+      { replacements: params }
+    );
+
+    const [concepts] = await mysqlSequelize.query(
+      `SELECT c.*,
+        (SELECT GROUP_CONCAT(DISTINCT ci.target_platform) FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted') as platforms,
+        (SELECT GROUP_CONCAT(CONCAT(ci.id, ':', ci.target_platform, ':', ci.approval_status) SEPARATOR '|') FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted') as items_summary
+       FROM content_concepts c
+       WHERE ${whereClause}
+       ORDER BY c.updated_at DESC
+       LIMIT ? OFFSET ?`,
+      { replacements: [...params, Number(limit), Number(offset)] }
+    );
+
+    // Parse items_summary into structured platform versions
+    const data = concepts.map(c => {
+      const platformVersions = (c.items_summary || '').split('|').filter(Boolean).map(s => {
+        const [id, platform, status] = s.split(':');
+        return { id: Number(id), platform, status };
+      });
+      return {
+        ...c,
+        items_summary: undefined,
+        platform_versions: platformVersions,
+        platforms: (c.platforms || '').split(',').filter(Boolean),
+      };
+    });
+
+    res.json({ success: true, data, meta: { total, limit: Number(limit), offset: Number(offset) } });
+  } catch (error) {
+    logger.error('[AdminPortal] Content concepts list error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONCEPTS_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/concepts/:id — Single concept with all platform items
+ */
+router.get('/content/concepts/:id', adminAuth('editor'), async (req, res) => {
+  try {
+    const [[concept]] = await mysqlSequelize.query(
+      'SELECT * FROM content_concepts WHERE id = ?',
+      { replacements: [Number(req.params.id)] }
+    );
+    if (!concept) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Concept not found' } });
+
+    const [items] = await mysqlSequelize.query(
+      `SELECT * FROM content_items WHERE concept_id = ? AND approval_status != 'deleted' ORDER BY target_platform`,
+      { replacements: [concept.id] }
+    );
+
+    res.json({ success: true, data: { ...concept, items } });
+  } catch (error) {
+    logger.error('[AdminPortal] Concept detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONCEPT_DETAIL_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/concepts/generate — Atomic multi-platform content generation
+ * Creates 1 concept + N platform items in one call
+ * Body: { suggestion_id, destination_id, content_type, platforms[], pillar_id?, persona_id?, template_id? }
+ */
+router.post('/content/concepts/generate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const { suggestion_id, destination_id, content_type = 'social_post', platforms = ['facebook'], pillar_id, persona_id, template_id } = req.body;
+    if (!destination_id || !suggestion_id) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destination_id and suggestion_id required' } });
+    }
+
+    // Get suggestion
+    const [[suggestion]] = await mysqlSequelize.query(
+      'SELECT * FROM content_suggestions WHERE id = ?', { replacements: [Number(suggestion_id)] }
+    );
+    if (!suggestion) return res.status(404).json({ success: false, error: { code: 'SUGGESTION_NOT_FOUND' } });
+
+    // Create concept
+    const [conceptResult] = await mysqlSequelize.query(
+      `INSERT INTO content_concepts (destination_id, suggestion_id, title, content_type, pillar_id, poi_id, approval_status, ai_generated, keyword_cluster)
+       VALUES (?, ?, ?, ?, ?, ?, 'draft', 1, ?)`,
+      { replacements: [
+        Number(destination_id), suggestion.id, suggestion.title, content_type,
+        pillar_id || null, suggestion.poi_id || null,
+        typeof suggestion.keyword_cluster === 'string' ? suggestion.keyword_cluster : JSON.stringify(suggestion.keyword_cluster || [])
+      ]}
+    );
+    const conceptId = conceptResult;
+
+    // Import generator
+    const { generateContent } = await import('../services/agents/contentRedacteur/contentGenerator.js');
+
+    // Generate for each platform
+    const generatedItems = [];
+    for (const platform of platforms) {
+      try {
+        const generated = await generateContent(suggestion, {
+          destinationId: Number(destination_id),
+          contentType: content_type,
+          platform,
+          personaId: persona_id || null,
+        });
+
+        // Insert content item linked to concept
+        const [itemResult] = await mysqlSequelize.query(
+          `INSERT INTO content_items (concept_id, destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+           seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, pillar_id, keyword_cluster, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?, ?, NOW(), NOW())`,
+          { replacements: [
+            conceptId, Number(destination_id), suggestion.id, content_type,
+            generated.title || suggestion.title,
+            generated.body_en || '', generated.title_nl ? (generated.body_nl || '') : null,
+            generated.title_de ? (generated.body_de || '') : null, generated.title_es ? (generated.body_es || '') : null,
+            generated.title_fr ? (generated.body_fr || '') : null,
+            generated.seo_data ? JSON.stringify(generated.seo_data) : null, generated.seo_score || null,
+            platform, generated.ai_model || 'mistral-medium-latest',
+            suggestion.poi_id || null, pillar_id || null,
+            JSON.stringify(generated.keyword_cluster || suggestion.keyword_cluster || []),
+          ]}
+        );
+
+        generatedItems.push({ id: itemResult, platform, title: generated.title, seo_score: generated.seo_score });
+
+        // Auto-attach images to concept (first platform only)
+        if (generatedItems.length === 1 && generated.attached_images?.length > 0) {
+          await mysqlSequelize.query(
+            'UPDATE content_concepts SET media_ids = ? WHERE id = ?',
+            { replacements: [JSON.stringify(generated.attached_images), conceptId] }
+          );
+        }
+      } catch (platErr) {
+        logger.warn(`[ConceptGenerate] Platform ${platform} failed: ${platErr.message}`);
+        generatedItems.push({ platform, error: platErr.message });
+      }
+    }
+
+    // Update suggestion status
+    await mysqlSequelize.query(
+      `UPDATE content_suggestions SET status = 'generated', updated_at = NOW() WHERE id = ?`,
+      { replacements: [suggestion.id] }
+    );
+
+    // Update concept title from generated content
+    if (generatedItems[0]?.title) {
+      await mysqlSequelize.query(
+        'UPDATE content_concepts SET title = ? WHERE id = ?',
+        { replacements: [generatedItems[0].title, conceptId] }
+      );
+    }
+
+    res.json({
+      success: true,
+      data: {
+        concept_id: conceptId,
+        items: generatedItems,
+        platforms_generated: generatedItems.filter(i => !i.error).length,
+        platforms_failed: generatedItems.filter(i => i.error).length,
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Concept generate error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONCEPT_GENERATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /content/concepts/:id — Soft delete concept + all items
+ */
+router.delete('/content/concepts/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const conceptId = Number(req.params.id);
+    await mysqlSequelize.query(
+      `UPDATE content_items SET approval_status = 'deleted', updated_at = NOW() WHERE concept_id = ?`,
+      { replacements: [conceptId] }
+    );
+    await mysqlSequelize.query(
+      `UPDATE content_concepts SET approval_status = 'deleted', updated_at = NOW() WHERE id = ?`,
+      { replacements: [conceptId] }
+    );
+    res.json({ success: true, data: { concept_id: conceptId, deleted: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Concept delete error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONCEPT_DELETE_ERROR', message: error.message } });
+  }
+});
+
 /**
  * POST /content/items/:id/translate — Translate to additional language
  * Body: target_lang (e.g., 'de', 'es', 'fr')
@@ -12372,7 +12577,8 @@ router.post('/content/items/:id/repurpose', adminAuth('editor'), writeAccess(['p
     const { repurposeContent } = await import('../services/agents/contentRedacteur/contentGenerator.js');
     const results = await repurposeContent(sourceItem, target_platforms, sourceItem.destination_id);
 
-    // Save each repurposed item with SEO score and char count metadata
+    // Save each repurposed item with SEO score — linked to same concept as source
+    const conceptId = sourceItem.concept_id || null;
     const savedIds = [];
     for (const item of results) {
       const seoData = {
@@ -12385,12 +12591,13 @@ router.post('/content/items/:id/repurpose', adminAuth('editor'), writeAccess(['p
       };
       const [insertResult] = await mysqlSequelize.query(
         `INSERT INTO content_items
-         (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+         (concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
           seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
-         VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
+         VALUES (:conceptId, :destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
           :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
         {
           replacements: {
+            conceptId,
             destId: sourceItem.destination_id,
             contentType: item.content_type,
             title: item.title,
