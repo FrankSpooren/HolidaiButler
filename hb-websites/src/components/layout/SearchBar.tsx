@@ -82,6 +82,7 @@ export default function SearchBar() {
   };
 
   const handleResultClick = (poiId: number) => {
+    analytics.search_result_clicked(poiId);
     window.dispatchEvent(
       new CustomEvent('hb:poi:open', { detail: { poiId } })
     );

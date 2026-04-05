@@ -149,6 +149,75 @@ export const analytics = {
     trackEvent(`poi_similar_clicked_${getDevice()}`, { from: fromPoi.substring(0, 50), to: toPoi.substring(0, 50) }),
   poi_website_clicked: (poiName: string, url: string) =>
     trackEvent(`poi_website_clicked_${getDevice()}`, { poi: poiName.substring(0, 50), url: url.substring(0, 80) }),
+
+  // --- Program Card (Mobile Homepage) ---
+  program_item_clicked: (itemName: string, itemType: 'poi' | 'event') =>
+    trackEvent(`program_item_clicked_${getDevice()}`, { name: itemName.substring(0, 50), type: itemType }),
+
+  program_details_clicked: (itemName: string, itemType: 'poi' | 'event') =>
+    trackEvent(`program_details_clicked_${getDevice()}`, { name: itemName.substring(0, 50), type: itemType }),
+
+  program_cta_clicked: () =>
+    trackEvent(`program_cta_clicked_${getDevice()}`),
+
+  // --- Today Events (Mobile Homepage) ---
+  today_events_more_clicked: () =>
+    trackEvent(`today_events_more_clicked_${getDevice()}`),
+
+  // --- Map Preview (Mobile Homepage) ---
+  map_preview_clicked: () =>
+    trackEvent(`map_preview_clicked_${getDevice()}`),
+
+  // --- Onboarding ---
+  onboarding_dismissed: (step: number) =>
+    trackEvent(`onboarding_dismissed_${getDevice()}`, { step: step }),
+
+  onboarding_choice: (step: string, value: string) =>
+    trackEvent(`onboarding_choice_${getDevice()}`, { step, value }),
+
+  // --- Desktop Navigation ---
+  nav_link_clicked: (label: string) =>
+    trackEvent(`nav_link_clicked_${getDevice()}`, { label: label.substring(0, 50) }),
+
+  footer_link_clicked: (label: string) =>
+    trackEvent(`footer_link_clicked_${getDevice()}`, { label: label.substring(0, 50) }),
+
+  social_link_clicked: (platform: string) =>
+    trackEvent(`social_link_clicked_${getDevice()}`, { platform }),
+
+  // --- Search Result ---
+  search_result_clicked: (poiId: number) =>
+    trackEvent(`search_result_clicked_${getDevice()}`, { poi_id: poiId }),
+
+  // --- Forms ---
+  contact_form_submitted: () =>
+    trackEvent(`contact_form_submitted_${getDevice()}`),
+
+  newsletter_subscribed: () =>
+    trackEvent(`newsletter_subscribed_${getDevice()}`),
+
+  // --- Commerce ---
+  ticket_buy_clicked: (ticketName: string) =>
+    trackEvent(`ticket_buy_clicked_${getDevice()}`, { ticket: ticketName.substring(0, 50) }),
+
+  reservation_search_clicked: () =>
+    trackEvent(`reservation_search_clicked_${getDevice()}`),
+
+  reservation_slot_clicked: (time: string) =>
+    trackEvent(`reservation_slot_clicked_${getDevice()}`, { time }),
+
+  // --- Blocks ---
+  faq_toggled: (question: string) =>
+    trackEvent(`faq_toggled_${getDevice()}`, { question: question.substring(0, 50) }),
+
+  gallery_opened: (index: number) =>
+    trackEvent(`gallery_opened_${getDevice()}`, { index }),
+
+  banner_link_clicked: (label: string) =>
+    trackEvent(`banner_link_clicked_${getDevice()}`, { label: label.substring(0, 50) }),
+
+  banner_dismissed: () =>
+    trackEvent(`banner_dismissed_${getDevice()}`),
 };
 
 export default analytics;

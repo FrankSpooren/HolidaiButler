@@ -109,7 +109,7 @@ export default function MobileBottomNav({ locale, primaryColor, chatbotColor }: 
             return (
               <button
                 key={tab.key}
-                onClick={openChatbot}
+                onClick={() => { analytics.mobile_bottom_nav('chat'); openChatbot(); }}
                 className="flex flex-col items-center justify-center -mt-5 min-w-[56px]"
                 aria-label={l(tab.key)}
                 style={{ minHeight: 44, minWidth: 44 }}
@@ -191,7 +191,7 @@ export default function MobileBottomNav({ locale, primaryColor, chatbotColor }: 
           return (
             <button
               key={tab.key}
-              onClick={(tab as any).profileTrigger ? handleProfile : openChatbot}
+              onClick={() => { analytics.mobile_bottom_nav(tab.key); ((tab as any).profileTrigger ? handleProfile : openChatbot)(); }}
               className="flex flex-col items-center justify-center transition-opacity duration-150"
               style={{ minHeight: 44, minWidth: 44 }}
               aria-label={l(tab.key)}

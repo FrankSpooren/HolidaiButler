@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getPortalUrl } from '@/lib/portal-url';
+import { analytics } from '@/lib/analytics';
 
 interface TodayEventsProps {
   locale: string;
@@ -149,6 +150,7 @@ export default function TodayEvents({ locale, destinationName = 'Calpe', destina
           href={`${getPortalUrl()}/agenda${locale !== 'en' ? `?lang=${locale}` : ''}`}
           className="text-sm font-medium transition-colors"
           style={{ color: 'var(--hb-primary)' }}
+          onClick={() => analytics.today_events_more_clicked()}
         >
           {t('more')} →
         </a>
@@ -167,7 +169,7 @@ export default function TodayEvents({ locale, destinationName = 'Calpe', destina
             return (
               <button
                 key={event.id}
-                onClick={() => window.dispatchEvent(new CustomEvent('hb:event:open', { detail: { eventId: event.id } }))}
+                onClick={() => { analytics.event_card_clicked(name); window.dispatchEvent(new CustomEvent('hb:event:open', { detail: { eventId: event.id } })); }}
                 className="flex-shrink-0 w-40 bg-white rounded-xl p-3 shadow-sm text-left transition-transform active:scale-[0.97]"
                 style={{ scrollSnapAlign: 'start' }}
               >

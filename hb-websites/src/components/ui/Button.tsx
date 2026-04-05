@@ -33,7 +33,7 @@ export default function Button({
 
   if (href) {
     return (
-      <a href={href} className={classes} style={style}>
+      <a href={href} className={classes} style={style} onClick={props.onClick as unknown as React.MouseEventHandler<HTMLAnchorElement>}>
         {children}
       </a>
     );

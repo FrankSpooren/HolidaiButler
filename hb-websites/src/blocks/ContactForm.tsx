@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { ContactFormProps } from '@/types/blocks';
+import { analytics } from '@/lib/analytics';
 
 export default function ContactForm({
   headline,
@@ -37,6 +38,7 @@ export default function ContactForm({
       });
       const data = await res.json();
       if (data.success) {
+        analytics.contact_form_submitted();
         setStatus('success');
         setFormData({});
         setConsent(false);

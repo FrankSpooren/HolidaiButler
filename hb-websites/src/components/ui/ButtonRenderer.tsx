@@ -3,6 +3,7 @@
 import type { HeroButton, ButtonStyle } from '@/types/blocks';
 import Button from './Button';
 import ChatbotButton from './ChatbotButton';
+import { analytics } from '@/lib/analytics';
 
 interface ButtonRendererProps {
   buttons: HeroButton[];
@@ -77,6 +78,7 @@ export default function ButtonRenderer({
                 : undefined
             }
             style={customCSS}
+            onClick={() => analytics.cta_clicked(btn.label)}
           >
             {btn.label}
           </Button>

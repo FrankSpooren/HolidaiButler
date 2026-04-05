@@ -117,7 +117,7 @@ export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3, 
             const imageUrl = poi.images?.[0] ?? poi.thumbnail_url ?? '';
             const catStyle = getCategoryStyle(poi.category ?? '');
             return (
-              <PoiCard key={poi.id} poiId={poi.id} href={`/poi/${poi.id}`}>
+              <PoiCard key={poi.id} poiId={poi.id} href={`/poi/${poi.id}`} poiName={poi.name}>
                 <div className="flex gap-4 items-center p-3">
                   {imageUrl && (
                     <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden">
@@ -161,7 +161,7 @@ export default async function PoiGrid({ categoryFilter, limit = 6, columns = 3, 
           const imageUrl = poi.images?.[0] ?? poi.thumbnail_url ?? '';
           const catStyle = getCategoryStyle(poi.category ?? '');
           return (
-            <PoiCard key={poi.id} poiId={poi.id} href={`/poi/${poi.id}`}>
+            <PoiCard key={poi.id} poiId={poi.id} href={`/poi/${poi.id}`} poiName={poi.name}>
               {imageUrl && (
                 <CardImage src={imageUrl} alt={poi.name} />
               )}

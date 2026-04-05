@@ -149,6 +149,7 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
   }, [isVisible, isMinimizing]);
 
   const dismiss = useCallback(() => {
+    analytics.onboarding_dismissed(step);
     setIsMinimizing(true);
     setTimeout(() => {
       setIsVisible(false);
@@ -156,7 +157,7 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
       sessionStorage.setItem('hb_onboarding_dismissed', 'true');
       window.dispatchEvent(new Event('hb:onboarding-update'));
     }, 500);
-  }, []);
+  }, [step]);
 
   const complete = useCallback(() => {
     localStorage.setItem('hb_onboarding_complete', 'true');
@@ -186,11 +187,13 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
 
   // Step 1 auto-advance
   const selectCompanion = (key: string) => {
+    analytics.onboarding_choice('companion', key);
     setData(d => ({ ...d, travel_companion: key }));
     setTimeout(() => setStep(1), 400);
   };
 
   const toggleInterest = (key: string) => {
+    analytics.onboarding_choice('interest', key);
     setData(d => {
       const current = d.interests || [];
       const next = current.includes(key) ? current.filter(k => k !== key) : [...current, key];
@@ -199,6 +202,7 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
   };
 
   const toggleSpecial = (key: string) => {
+    analytics.onboarding_choice('special_need', key);
     setData(d => {
       const current = d.special_needs || [];
       const next = current.includes(key) ? current.filter(k => k !== key) : [...current, key];
@@ -344,7 +348,7 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
                     return (
                       <button
                         key={item.key}
-                        onClick={() => setData(d => ({ ...d, visit_purpose: item.key }))}
+                        onClick={() => { analytics.onboarding_choice('purpose', item.key); setData(d => ({ ...d, visit_purpose: item.key })); }}
                         className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl border-2 transition-all duration-200"
                         style={{
                           borderColor: selected ? accent : '#E5E7EB',
@@ -368,7 +372,7 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
                     return (
                       <button
                         key={item.key}
-                        onClick={() => setData(d => ({ ...d, visit_frequency: item.key }))}
+                        onClick={() => { analytics.onboarding_choice('frequency', item.key); setData(d => ({ ...d, visit_frequency: item.key })); }}
                         className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl border-2 transition-all duration-200"
                         style={{
                           borderColor: selected ? accent : '#E5E7EB',
