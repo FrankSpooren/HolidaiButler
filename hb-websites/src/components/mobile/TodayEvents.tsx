@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getPortalUrl } from '@/lib/portal-url';
-import { analytics } from '@/lib/analytics';
+import { analytics, trackSectionViewed } from '@/lib/analytics';
 
 interface TodayEventsProps {
   locale: string;
@@ -107,8 +107,14 @@ export default function TodayEvents({ locale, destinationName = 'Calpe', destina
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const sectionRef = useRef<HTMLDivElement>(null);
   const t = (key: string) => LABELS[key]?.[locale] || LABELS[key]?.en || key;
   const prep = (DESTINATION_PREP[destinationSlug || ''] || DEFAULT_PREP)[locale] || DEFAULT_PREP.en;
+
+  // Track section visibility
+  useEffect(() => {
+    if (!loading && events.length > 0) return trackSectionViewed(sectionRef.current, 'today_events');
+  }, [loading, events.length]);
 
   useEffect(() => {
     async function load() {
@@ -140,7 +146,7 @@ export default function TodayEvents({ locale, destinationName = 'Calpe', destina
   }
 
   return (
-    <div className="md:hidden">
+    <div ref={sectionRef} className="md:hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 mb-3">
         <h3 className="text-base font-bold text-gray-800">
