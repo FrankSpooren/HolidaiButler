@@ -3,6 +3,7 @@ import type { POI } from '../types/poi.types';
 import { MapPin, Star, Phone, Globe } from 'lucide-react';
 import { getCategoryByName } from '../../../shared/config/categoryConfig';
 import { useLanguage } from '../../../i18n/LanguageContext';
+import { analytics } from '../../../shared/utils/analytics';
 
 interface POICardProps {
   poi: POI;
@@ -41,7 +42,7 @@ export const POICard: React.FC<POICardProps> = ({ poi, onClick }) => {
 
   return (
     <div
-      onClick={onClick}
+      onClick={() => { analytics.poi_card_clicked(poi.name); onClick?.(); }}
       className="bg-white rounded-card border border-border-light p-4 shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer active:scale-98 md:hover:translate-y-[-2px]"
     >
       {/* POI Image Placeholder */}
@@ -128,6 +129,7 @@ export const POICard: React.FC<POICardProps> = ({ poi, onClick }) => {
               className="flex-1 min-h-touch py-2 px-3 bg-bg-hover text-text-primary rounded-button text-sm font-medium hover:bg-border-light transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
+                analytics.poi_website_clicked(poi.name, poi.website!);
                 window.open(poi.website!, '_blank');
               }}
             >

@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router';
 import { WCAGModal } from './WCAGModal';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useDestination } from '../contexts/DestinationContext';
+import { analytics } from '../utils/analytics';
 import './Header.css';
 
 /* ── Brand name mapping (destination-specific) ── */
@@ -43,6 +44,7 @@ export function Header() {
   };
 
   const selectLang = (lang: string) => {
+    analytics.language_changed(language, lang);
     setLanguage(lang as 'nl' | 'en' | 'de' | 'es' | 'sv' | 'pl');
     setLangMenuOpen(false);
   };
@@ -87,7 +89,7 @@ export function Header() {
   return (
     <header className="header">
       <div className={`header-content ${isHomePage ? 'homepage-header' : ''}`}>
-        <a href="/" className="logo-container" style={{ textDecoration: 'none' }}>
+        <a href="/" className="logo-container" style={{ textDecoration: 'none' }} onClick={() => analytics.logo_clicked()}>
           <span
             className="header-brand-name"
             style={{
@@ -133,7 +135,7 @@ export function Header() {
 
           <button
             className="wcag-icon"
-            onClick={() => setWcagModalOpen(true)}
+            onClick={() => { analytics.wcag_modal_opened(); setWcagModalOpen(true); }}
             title="Accessibility Options"
             aria-label="Open accessibility settings"
           >
@@ -162,8 +164,8 @@ export function Header() {
       </div>
 
       <nav ref={menuRef} className={`nav-menu ${menuOpen ? 'active' : ''}`}>
-        <a href={mobileHomeUrl} className="nav-link" onClick={() => setMenuOpen(false)}>🏠 {t.nav.home}</a>
-        <Link to="/pois" className="nav-link" onClick={() => setMenuOpen(false)}>🗺️ {t.nav.explore}</Link>
+        <a href={mobileHomeUrl} className="nav-link" onClick={() => { analytics.nav_link_clicked('Home'); setMenuOpen(false); }}>🏠 {t.nav.home}</a>
+        <Link to="/pois" className="nav-link" onClick={() => { analytics.nav_link_clicked('Explore'); setMenuOpen(false); }}>🗺️ {t.nav.explore}</Link>
         <a
           href="#"
           className="nav-link"
@@ -177,16 +179,16 @@ export function Header() {
         >
           💬 {t.nav.holibot}
         </a>
-        <Link to="/agenda" className="nav-link" onClick={() => setMenuOpen(false)}>📅 {t.nav.agenda}</Link>
+        <Link to="/agenda" className="nav-link" onClick={() => { analytics.nav_link_clicked('Agenda'); setMenuOpen(false); }}>📅 {t.nav.agenda}</Link>
         {/* TEMPORARILY DISABLED - modules not ready for production
         <Link to="/reservations" className="nav-link" onClick={() => setMenuOpen(false)}>🍽️ {t.nav.reservations || 'Reserveren'}</Link>
         <Link to="/tickets" className="nav-link" onClick={() => setMenuOpen(false)}>🎫 {t.nav.tickets || 'Tickets'}</Link>
         */}
-        <Link to="/favorites" className="nav-link" onClick={() => setMenuOpen(false)}>❤️ {t.nav.favorites}</Link>
+        <Link to="/favorites" className="nav-link" onClick={() => { analytics.nav_link_clicked('Favorites'); setMenuOpen(false); }}>❤️ {t.nav.favorites}</Link>
         <div className="nav-separator"></div>
-        <Link to="/account" className="nav-link" onClick={() => setMenuOpen(false)}>👤 {t.nav.account}</Link>
-        <Link to="/about" className="nav-link" onClick={() => setMenuOpen(false)}>ℹ️ {t.nav.about}</Link>
-        <Link to="/faq" className="nav-link" onClick={() => setMenuOpen(false)}>❓ {t.nav.faq}</Link>
+        <Link to="/account" className="nav-link" onClick={() => { analytics.nav_link_clicked('Account'); setMenuOpen(false); }}>👤 {t.nav.account}</Link>
+        <Link to="/about" className="nav-link" onClick={() => { analytics.nav_link_clicked('About'); setMenuOpen(false); }}>ℹ️ {t.nav.about}</Link>
+        <Link to="/faq" className="nav-link" onClick={() => { analytics.nav_link_clicked('FAQ'); setMenuOpen(false); }}>❓ {t.nav.faq}</Link>
       </nav>
 
       <WCAGModal isOpen={wcagModalOpen} onClose={() => setWcagModalOpen(false)} />
