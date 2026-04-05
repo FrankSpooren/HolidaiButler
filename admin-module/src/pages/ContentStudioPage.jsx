@@ -43,6 +43,7 @@ import useDestinationStore from '../stores/destinationStore.js';
 import contentService from '../api/contentService.js';
 import client from '../api/client.js';
 import ConceptDialog from '../components/content/ConceptDialog.jsx';
+import ContentImageSection from '../components/content/ContentImageSection.jsx';
 import ContentCalendarTab from './ContentCalendarTab.jsx';
 import SeasonalConfigTab from './SeasonalConfigTab.jsx';
 import SocialAccountsCards from '../components/content/SocialAccountsCards.jsx';
@@ -405,10 +406,15 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
     return templates.filter(t => !t.content_type || t.content_type === contentType);
   }, [templates, contentType]);
 
+  const [genProgress, setGenProgress] = useState('');
+  const [genElapsed, setGenElapsed] = useState(0);
+
   const handleGenerate = async () => {
     setGenerating(true);
+    setGenProgress('AI schrijft content...');
+    setGenElapsed(0);
+    const timer = setInterval(() => setGenElapsed(prev => prev + 1), 1000);
     try {
-      // Atomic multi-platform concept generation
       await contentService.generateConcept({
         suggestion_id: suggestion.id,
         destination_id: destinationId,
@@ -421,7 +427,10 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
       if (onGenerate) await onGenerate({});
       onClose();
     } finally {
+      clearInterval(timer);
       setGenerating(false);
+      setGenProgress('');
+      setGenElapsed(0);
     }
   };
 
@@ -517,9 +526,32 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
             </Typography>
         )}
       </DialogContent>
+      {/* Progress indicator during generation */}
+      {generating && (
+        <Box sx={{ px: 3, pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+            <CircularProgress size={18} />
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {genElapsed < 10 ? 'AI schrijft content...' :
+                 genElapsed < 25 ? 'SEO-analyse en optimalisatie...' :
+                 genElapsed < 50 ? 'Kwaliteitscontrole en verbetering...' :
+                 'Bijna klaar, nog even geduld...'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {platforms.length} {platforms.length === 1 ? 'platform' : 'platformen'} — circa {platforms.length * 30} sec
+                {genElapsed > 0 ? ` (${genElapsed}s)` : ''}
+              </Typography>
+            </Box>
+          </Box>
+          <LinearProgress variant="determinate"
+            value={Math.min(95, (genElapsed / (platforms.length * 35)) * 100)}
+            sx={{ height: 4, borderRadius: 2 }} />
+        </Box>
+      )}
       <DialogActions>
-        <Button onClick={onClose}>{t('contentStudio.actions.cancel', 'Annuleren')}</Button>
-        <Button onClick={handleGenerate} variant="contained" disabled={generating} startIcon={generating ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}>
+        <Button onClick={onClose} disabled={generating}>{t('contentStudio.actions.cancel', 'Annuleren')}</Button>
+        <Button onClick={handleGenerate} variant="contained" disabled={generating || platforms.length === 0} startIcon={generating ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}>
           {generating ? t('contentStudio.actions.generating', 'Genereren...') : t('contentStudio.generateContent', 'Genereer Content')}
         </Button>
       </DialogActions>
@@ -839,7 +871,12 @@ function ApprovalTimeline({ itemId, currentStatus }) {
 // ============================================================
 // CONTENT IMAGE SECTION (BLOK 2)
 // ============================================================
-function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false }) {
+// ContentImageSection is now imported from ../components/content/ContentImageSection.jsx
+// Legacy embedded version removed — see import at top of file
+
+function ContentImageSection_REMOVED({ itemId, item, onUpdate, isContentOnlyDest = false }) {
+  // This function is no longer used — kept as dead code marker
+  // The actual ContentImageSection is imported from components/content/ContentImageSection.jsx
   const { t } = useTranslation();
   const [images, setImages] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -2824,8 +2861,8 @@ export default function ContentStudioPage() {
                       const activeVersions = (concept.platform_versions || []).filter(v => v.status !== 'deleted');
                       const firstItemId = activeVersions[0]?.id;
                       return (
-                      <TableRow key={concept.id} hover sx={{ cursor: firstItemId ? 'pointer' : 'default', opacity: firstItemId ? 1 : 0.6 }}
-                        onClick={() => { if (firstItemId) { setSelectedItemId(firstItemId); setViewedItems(prev => new Set([...prev, firstItemId])); } }}>
+                      <TableRow key={concept.id} hover sx={{ cursor: 'pointer' }}
+                        onClick={() => { setConceptDialogId(concept.id); }}>
                         <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
                           <Checkbox size="small" checked={selectedIds.includes(firstItemId)} onChange={() => firstItemId && toggleSelectItem(firstItemId)} />
                         </TableCell>
@@ -2839,7 +2876,7 @@ export default function ContentStudioPage() {
                           <Box sx={{ display: 'flex', gap: 0.3, flexWrap: 'wrap' }}>
                             {(concept.platform_versions || []).filter(v => v.status !== 'deleted').map(v => (
                               <Chip key={v.id} label={PLATFORM_LABELS[v.platform] || v.platform} size="small" variant="outlined"
-                                onClick={(e) => { e.stopPropagation(); setSelectedItemId(v.id); setViewedItems(prev => new Set([...prev, v.id])); }}
+                                onClick={(e) => { e.stopPropagation(); setConceptDialogId(concept.id); }}
                                 sx={{ cursor: 'pointer', height: 22, fontSize: 11,
                                   borderColor: v.platform === 'facebook' ? '#1877F2' : v.platform === 'instagram' ? '#E4405F' : v.platform === 'linkedin' ? '#0A66C2' : 'divider',
                                   bgcolor: v.status === 'published' ? 'success.50' : v.status === 'scheduled' ? 'warning.50' : 'transparent',
@@ -2934,7 +2971,13 @@ export default function ContentStudioPage() {
         defaultLanguage={currentDest?.defaultLanguage || 'en'}
       />
 
-      {/* ConceptDialog verwijderd — ContentItemDialog bevat alle features */}
+      <ConceptDialog
+        open={!!conceptDialogId}
+        onClose={() => setConceptDialogId(null)}
+        conceptId={conceptDialogId}
+        onUpdate={loadItems}
+        destinationId={destinationId}
+      />
 
       <SuggestionDetailDialog
         open={!!selectedSuggestion}

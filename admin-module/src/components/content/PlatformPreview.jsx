@@ -24,7 +24,7 @@ const PLATFORM_RULES = {
   website:   { maxChars: 50000, optimalRange: null, emojiRange: [0, 0], hashtagMax: 0, hashtagPos: 'none', imageSpec: '1200x630', aspectRatio: '1.91:1', icon: null, color: '#7FA594' },
 };
 
-const PLATFORMS = ['instagram', 'facebook', 'linkedin', 'x', 'tiktok', 'youtube', 'pinterest'];
+const ALL_PLATFORMS = ['instagram', 'facebook', 'linkedin', 'x', 'tiktok', 'youtube', 'pinterest'];
 
 /** Platform-specific content style tips */
 const PLATFORM_TIPS = {
@@ -374,7 +374,8 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
   );
 }
 
-export default function PlatformPreview({ content, targetPlatform, selectedLanguage = 'en', onPlatformChange }) {
+export default function PlatformPreview({ content, targetPlatform, selectedLanguage = 'en', onPlatformChange, availablePlatforms }) {
+  const PLATFORMS = availablePlatforms && availablePlatforms.length > 0 ? availablePlatforms : ALL_PLATFORMS;
   const { t } = useTranslation();
   const [activePlatform, setActivePlatform] = useState(targetPlatform || 'instagram');
 

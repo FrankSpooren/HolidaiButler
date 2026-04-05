@@ -101,7 +101,8 @@ function buildGroundingContext(pois, events, destinationId) {
     lines.push('VERIFIED PLACES FROM OUR DATABASE (you MUST reference at least one of these):');
     pois.forEach(p => {
       const link = `https://${domain}/pois?poi=${p.id}`;
-      lines.push(`- ${p.name} (${p.google_category || p.category}, ${p.rating}★, ${p.review_count} reviews) — Link: ${link}`);
+      const ratingLabel = p.rating >= 4.7 ? 'exceptional' : p.rating >= 4.4 ? 'highly rated' : p.rating >= 4.0 ? 'well-reviewed' : 'popular';
+      lines.push(`- ${p.name} (${p.google_category || p.category}, ${p.rating}/5, ${ratingLabel}) — Link: ${link}`);
     });
   }
 
@@ -121,6 +122,9 @@ function buildGroundingContext(pois, events, destinationId) {
     lines.push('- For Facebook/LinkedIn: include the link directly in the text');
     lines.push('- For Instagram: mention "Link in bio" and reference the place by name');
     lines.push('- For X: include shortened link if character count allows');
+    lines.push('- NEVER exaggerate ratings or review counts — use the exact rating provided (e.g. "rated 4.2/5"), do NOT say "rave reviews" or "hundreds of glowing reviews" unless rating is ≥4.7');
+    lines.push('- NEVER use bullet characters (•), smart quotes (""), or other special Unicode in the output');
+    lines.push('- Rating context: 4.0-4.3 = "well-reviewed", 4.4-4.6 = "highly rated", 4.7+ = "exceptional"');
   }
 
   return lines.join('\n');
@@ -128,60 +132,113 @@ function buildGroundingContext(pois, events, destinationId) {
 
 /**
  * Platform-specific prompt rules for social content generation
+ * Updated April 2026 — based on Meta/LinkedIn/X best practices 2025-2026
+ * Sources: Meta Business Suite, Hootsuite Benchmarks 2026, Buffer State of Social 2025
  */
 const PROMPT_PLATFORM_RULES = {
   facebook: {
     maxChars: 500,
-    rules: 'Optimal length 100-250 characters. Can be longer. Conversational, engaging.',
-    emojiCount: '2-4',
+    optimalChars: '100-250',
+    rules: `FACEBOOK POST RULES (MANDATORY — every rule must be followed):
+1. HOOK: Start with an attention-grabbing first sentence (question, bold statement, or sensory detail)
+2. TONE: Conversational, warm, ask a question to invite engagement ("Have you tried...?", "What's your favorite...?")
+3. LENGTH: AIM for 100-250 characters. Maximum 500. Shorter posts get 2x more engagement
+4. EMOJI: Use exactly 2-3 emoji, placed naturally within the text (not clustered)
+5. CTA: End with a clear call-to-action ("Discover more", "Tag someone who needs this", "Share your experience")
+6. HASHTAGS: Add 3-5 relevant hashtags at the very end, on a new line
+7. NO markdown, NO bullet points, NO numbered lists — flowing conversational text only`,
+    emojiCount: '2-3',
     hashtagPosition: 'end',
     maxHashtags: 5,
   },
   instagram: {
     maxChars: 2200,
-    rules: 'First sentence is the hook (visible before "more"). Storytelling style. Separate hashtags with blank line at end.',
-    emojiCount: '3-6',
+    optimalChars: '500-1200',
+    rules: `INSTAGRAM POST RULES (MANDATORY — every rule must be followed):
+1. HOOK: First sentence is THE hook — this is what shows before "...meer". Make it irresistible
+2. TONE: Storytelling, immersive, sensory-rich. Paint a picture with words
+3. LENGTH: 500-1200 characters optimal. Use the space for a mini-story
+4. EMOJI: Use 3-5 emoji naturally woven into the narrative
+5. CTA: Include a call-to-action ("Save this for your trip", "Double tap if you agree", "Link in bio")
+6. HASHTAGS: 10-15 relevant hashtags on a SEPARATE line at the end (blank line before hashtags)
+7. Line breaks between paragraphs for readability`,
+    emojiCount: '3-5',
     hashtagPosition: 'end_separated',
     maxHashtags: 15,
   },
   linkedin: {
     maxChars: 3000,
-    rules: 'Professional tone. Insightful, value-driven. No emoji overload. Hashtags at end, max 5.',
-    emojiCount: '0-2',
+    optimalChars: '800-1300',
+    rules: `LINKEDIN POST RULES (MANDATORY — every rule must be followed):
+1. HOOK: First 2 lines are visible before "see more" — make them count with an insight or provocative question
+2. TONE: Professional, thought leadership, data-driven. Share insights, not just promotion
+3. LENGTH: 800-1300 characters optimal for engagement
+4. EMOJI: Use 0-1 emoji maximum. Professional context
+5. CTA: End with a discussion question ("What's been your experience?", "Do you agree?")
+6. HASHTAGS: 3-5 relevant hashtags at the end
+7. Use short paragraphs (2-3 lines) with line breaks for scannability`,
+    emojiCount: '0-1',
     hashtagPosition: 'end',
     maxHashtags: 5,
   },
   x: {
     maxChars: 280,
-    rules: 'Ultra-concise. Punchy. Weave 1-2 hashtags into text, not at end.',
+    optimalChars: '200-270',
+    rules: `X (TWITTER) POST RULES (MANDATORY):
+1. HOOK: Ultra-concise, punchy opening
+2. TONE: Provocative, witty, or surprising
+3. LENGTH: 200-270 characters (leave room for engagement)
+4. EMOJI: 0-1 emoji maximum
+5. HASHTAGS: Weave 1-2 hashtags INTO the text naturally, not at end
+6. NO line breaks — single flowing statement`,
     emojiCount: '0-1',
     hashtagPosition: 'inline',
     maxHashtags: 2,
   },
   tiktok: {
     maxChars: 150,
-    rules: 'Youth-oriented, trendy. Super short caption. Hashtags at end.',
-    emojiCount: '1-3',
+    optimalChars: '80-140',
+    rules: `TIKTOK CAPTION RULES (MANDATORY):
+1. HOOK: POV or "Wait for it" style opening
+2. TONE: Gen-Z friendly, trendy, casual
+3. LENGTH: 80-140 characters. Super short
+4. EMOJI: 2-4 emoji, expressive
+5. HASHTAGS: 3-5 trending hashtags at end`,
+    emojiCount: '2-4',
     hashtagPosition: 'end',
     maxHashtags: 5,
   },
   youtube: {
     maxChars: 5000,
-    rules: 'Description with timestamps if relevant. Include links. SEO-rich.',
-    emojiCount: '1-3',
+    optimalChars: '1000-3000',
+    rules: `YOUTUBE DESCRIPTION RULES (MANDATORY):
+1. HOOK: First 2 lines appear in search — include keywords
+2. TONE: SEO-rich, informative, timestamps if relevant
+3. LENGTH: 1000-3000 characters
+4. EMOJI: 1-2 emoji for visual breaks
+5. Include links and relevant resources
+6. HASHTAGS: 10-15 at end`,
+    emojiCount: '1-2',
     hashtagPosition: 'end',
     maxHashtags: 15,
   },
   pinterest: {
     maxChars: 500,
-    rules: 'Descriptive, aspirational. Include relevant keywords naturally for Pinterest search.',
-    emojiCount: '0-2',
+    optimalChars: '200-400',
+    rules: `PINTEREST PIN RULES (MANDATORY):
+1. TONE: Aspirational, dreamy, keyword-rich for Pinterest search
+2. LENGTH: 200-400 characters
+3. EMOJI: 0-1 emoji maximum
+4. Include searchable keywords naturally
+5. HASHTAGS: 3-5 at end`,
+    emojiCount: '0-1',
     hashtagPosition: 'end',
     maxHashtags: 5,
   },
   snapchat: {
     maxChars: 80,
-    rules: 'Ultra-short. No hashtags. Casual.',
+    optimalChars: '30-70',
+    rules: 'Ultra-short. No hashtags. Casual and fun.',
     emojiCount: '1-2',
     hashtagPosition: 'none',
     maxHashtags: 0,
@@ -214,7 +271,8 @@ export async function generateContent(suggestion, options = {}) {
   const toneInstruction = await buildToneInstruction(destinationId);
   const formatInstruction = buildFormatInstruction(contentType, platform);
   const spec = getContentSpec(contentType);
-  const keywords = suggestion.keyword_cluster || [];
+  const rawKeywords = suggestion.keyword_cluster || [];
+  const keywords = typeof rawKeywords === 'string' ? JSON.parse(rawKeywords) : (Array.isArray(rawKeywords) ? rawKeywords : []);
   const modelName = embeddingService.chatModel || 'mistral-small-latest';
 
   // Build brand context (includes profile, persona, knowledge base)
@@ -253,15 +311,38 @@ export async function generateContent(suggestion, options = {}) {
     // Format for target platform
     const formattedBody = formatForPlatform(sanitizedBody, platform);
 
+    // Apply UTM tracking to all URLs in the content (so preview validates correctly)
+    let trackedBody = formattedBody;
+    if (platform !== 'website') {
+      try {
+        const { applyUtmToContent } = await import('../publisher/utmBuilder.js');
+        trackedBody = applyUtmToContent(formattedBody, { id: 0, content_type: contentType, title: suggestion.title }, platform);
+      } catch { /* UTM builder not available, continue without */ }
+    }
+
     // Generate hashtags for social platforms
     const hashtags = platform !== 'website' ? generateHashtags(keywords, platform) : [];
+
+    // Build social_metadata with UTM-tracked link for the first mentioned POI
+    let socialMetadata = {};
+    if (platform !== 'website' && relevantPOIs.length > 0) {
+      const domain = DESTINATION_DOMAINS[destinationId] || 'calpetrip.com';
+      const poiLink = `https://${domain}/pois?poi=${relevantPOIs[0].id}`;
+      try {
+        const { buildUtmUrl } = await import('../publisher/utmBuilder.js');
+        socialMetadata.link = buildUtmUrl(poiLink, { id: 0, content_type: contentType, title: suggestion.title }, platform);
+      } catch {
+        socialMetadata.link = poiLink;
+      }
+    }
 
     // Build result object
     let result = {
       title,
-      body_en: formattedBody,
+      body_en: trackedBody,
       meta_description: metaDescription,
       hashtags,
+      social_metadata: socialMetadata,
       ai_model: modelName,
       ai_generated: true,
       content_type: contentType,
@@ -279,7 +360,7 @@ export async function generateContent(suggestion, options = {}) {
 
     if (seoResult.overallScore < SEO_MINIMUM_SCORE) {
       logger.info(`[ContentGenerator] SEO score ${seoResult.overallScore}/100 < ${SEO_MINIMUM_SCORE} — auto-improving...`);
-      const improved = await improveContent(result, seoResult, { destinationId, contentType, keywords });
+      const improved = await improveContent(result, seoResult, { destinationId, contentType, keywords, targetPlatform: platform });
       if (improved) {
         result.title = improved.title || result.title;
         result.body_en = improved.body_en || result.body_en;
@@ -430,14 +511,28 @@ ABSOLUTE RULES:
     const platformRules = PROMPT_PLATFORM_RULES[platform] || PROMPT_PLATFORM_RULES.facebook;
     return `${base}
 
+${platformRules.rules}
+
 CRITICAL FORMATTING RULES:
 - Write as PLAIN TEXT ready to paste directly into ${platform}
 - NEVER use markdown: no **, no ##, no ---, no \`, no []()
-- NEVER include labels like CAPTION:, POST:, HOOK:, CTA:, TITLE:
-- ${platformRules.rules}
-- Include ${platformRules.emojiCount} relevant emoji naturally in the text
-- End with a call-to-action
+- NEVER include labels like CAPTION:, POST:, HOOK:, CTA:, TITLE:, BODY:
+- NEVER use em-dashes (—), en-dashes (–), bullet characters (•), or smart quotes ("")
+- NEVER leave sentences incomplete or truncated
+- Maximum ${platformRules.maxChars} characters (ABSOLUTE LIMIT — count carefully)
+- Optimal length: ${platformRules.optimalChars || platformRules.maxChars} characters
+- Include exactly ${platformRules.emojiCount} relevant emoji naturally in the text
+- Include ${platformRules.maxHashtags} relevant hashtags (${platformRules.hashtagPosition === 'end_separated' ? 'on a separate line at the end' : platformRules.hashtagPosition === 'inline' ? 'woven into the text' : 'at the end'})
 ${keywordsStr}
+
+QUALITY CHECKLIST (your output MUST satisfy ALL):
+✓ Hook: compelling first sentence that stops scrolling
+✓ CTA: clear call-to-action at the end
+✓ Emoji: exactly ${platformRules.emojiCount} emoji in the text
+✓ Hashtags: ${platformRules.maxHashtags} hashtags included
+✓ Length: within ${platformRules.optimalChars || platformRules.maxChars} characters
+✓ Tone: matches platform style (${platform})
+✓ Grounding: references real verified places from the database
 
 Return ONLY the post text. Nothing else. No quotes around it.`;
   }
@@ -489,11 +584,21 @@ Start directly with the first paragraph. Write 800-1500 words of flowing prose.
 End with a natural call-to-action paragraph.
 Do NOT include a title, meta description, or any labels. Just the article body.`;
 
-    case 'social_post':
+    case 'social_post': {
+      const pr = PROMPT_PLATFORM_RULES[platform] || PROMPT_PLATFORM_RULES.facebook;
       return `Write a ${platform} post about "${suggestion.title}".${context}${keywordsStr}
 
-Start with a scroll-stopping opening line. Keep it conversational.
-Do NOT prefix with any label. Just the post text, ready to copy-paste.`;
+REQUIREMENTS (all mandatory):
+1. Start with a scroll-stopping hook (first sentence)
+2. ${pr.optimalChars || pr.maxChars} characters optimal, maximum ${pr.maxChars} characters
+3. Include exactly ${pr.emojiCount} emoji naturally placed
+4. End with a clear call-to-action
+5. Add ${pr.maxHashtags} relevant hashtags (${pr.hashtagPosition === 'end_separated' ? 'blank line then hashtags' : pr.hashtagPosition === 'inline' ? 'woven into text' : 'at the end'})
+6. Plain text only — no labels, no markdown, no quotes around it
+7. Ready to copy-paste directly into ${platform}
+
+Write the post now.`;
+    }
 
     case 'video_script':
       return `Write a 60-90 second video script about "${suggestion.title}".${context}${keywordsStr}
@@ -562,9 +667,16 @@ async function translateContent(title, body, targetLangs) {
  * @returns {Object|null} Improved content or null if no improvement possible
  */
 async function improveContent(content, seoResult, options = {}) {
-  const { destinationId, contentType, keywords = [] } = options;
+  const { destinationId, contentType, keywords = [], targetPlatform } = options;
   const MAX_ROUNDS = 3; // Up to 3 rounds to reach SEO ≥ 80
   const modelName = embeddingService.chatModel || 'mistral-small-latest';
+
+  // Platform character limits — enforce during improvement
+  const PLATFORM_CHAR_LIMITS = {
+    facebook: 500, instagram: 2200, linkedin: 3000, x: 280,
+    tiktok: 150, youtube: 5000, pinterest: 500,
+  };
+  const platformMaxChars = targetPlatform ? PLATFORM_CHAR_LIMITS[targetPlatform] : null;
 
   if (!embeddingService.isConfigured) {
     embeddingService.initialize();
@@ -594,6 +706,10 @@ async function improveContent(content, seoResult, options = {}) {
 
     const toneInstruction = await buildToneInstruction(destinationId);
 
+    const platformLimitRule = platformMaxChars
+      ? `\n- ABSOLUTE CHARACTER LIMIT: ${platformMaxChars} characters maximum. The improved content MUST be shorter than ${platformMaxChars} characters. Count carefully. If the current content exceeds this limit, SHORTEN it while fixing quality.`
+      : '';
+
     const systemPrompt = `You are a surgical content optimizer. You fix ONLY what's broken — preserve everything that scores 10/10.
 
 ${toneInstruction}
@@ -601,10 +717,13 @@ ${toneInstruction}
 CRITICAL FORMATTING RULES:
 - NEVER use markdown: no **, no ##, no ---, no \`, no []()
 - NEVER include labels like TITLE:, META:, INTRODUCTION: — just the clean text
+- NEVER use em-dashes (—) or en-dashes (–) — use commas or regular hyphens instead
+- NEVER leave incomplete sentences or truncated words (no trailing "...")
+- NEVER include AI instruction brackets like [Link in Bio] or [Image: ...]
 - Write clean, flowing prose only
 - Return the COMPLETE improved content (not just the changes)
 - DO NOT change aspects that already score 10/10 — only fix failing metrics
-- Do NOT add disclaimers or explanations — return ONLY the improved content`;
+- Do NOT add disclaimers or explanations — return ONLY the improved content${platformLimitRule}`;
 
     const userPrompt = `Content scored ${currentSeo.overallScore}/100 (need ≥${SEO_MINIMUM_SCORE}/100). Fix the failing metrics.
 
@@ -634,7 +753,7 @@ Rewrite to fix ALL failing metrics while keeping perfect scores intact.`;
 
       const parsed = parseGeneratedContent(improved, currentTitle);
       currentTitle = parsed.title;
-      currentBody = sanitizeContent(parsed.body, contentType, 'website');
+      currentBody = sanitizeContent(parsed.body, contentType, targetPlatform || 'website');
       if (parsed.metaDescription) currentMeta = parsed.metaDescription;
 
       // Re-score
@@ -719,7 +838,7 @@ export async function improveExistingContent(contentItem) {
     keyword_cluster: keywords,
   };
 
-  const improved = await improveContent(content, currentSeo, { destinationId, contentType, keywords });
+  const improved = await improveContent(content, currentSeo, { destinationId, contentType, keywords, targetPlatform: contentItem.target_platform });
 
   if (improved) {
     return {
