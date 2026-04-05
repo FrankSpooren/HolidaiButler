@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { analytics } from '@/lib/analytics';
+import { useState, useEffect, useRef } from 'react';
+import { analytics, trackSectionViewed } from '@/lib/analytics';
 
 interface TipData {
   name: string;
@@ -94,6 +94,7 @@ function getLocalizedString(val: unknown, locale: string): string {
 export default function TipOfTheDay({ locale, forceShow }: TipOfTheDayProps) {
   const [tip, setTip] = useState<TipData | null>(null);
   const [loading, setLoading] = useState(true);
+  const sectionRef = useRef<HTMLButtonElement>(null);
   const t = (key: string) => LABELS[key]?.[locale] || LABELS[key]?.en || key;
 
   useEffect(() => {

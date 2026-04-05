@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { getPortalUrl } from '@/lib/portal-url';
-import { analytics } from '@/lib/analytics';
+import { analytics, trackSectionViewed } from '@/lib/analytics';
 
 interface MapPreviewProps {
   locale: string;
@@ -57,7 +57,13 @@ export default function MapPreview({ locale, poiCount = 1500, poiLimit = 8, mapL
   const [markers, setMarkers] = useState<any[]>([]);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<unknown>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
   const t = (key: string) => LABELS[key]?.[locale] || LABELS[key]?.en || key;
+
+  // Track section visibility
+  useEffect(() => {
+    if (markers.length > 0) return trackSectionViewed(sectionRef.current, 'map_preview');
+  }, [markers.length]);
 
   useEffect(() => {
     async function load() {
@@ -135,7 +141,7 @@ export default function MapPreview({ locale, poiCount = 1500, poiLimit = 8, mapL
   }, [markers]);
 
   return (
-    <div className="md:hidden mx-4">
+    <div ref={sectionRef} className="md:hidden mx-4">
       <button
         onClick={() => { analytics.map_preview_clicked(); window.location.href = `${getPortalUrl()}/pois?view=map${locale !== 'en' ? `&lang=${locale}` : ''}`; }}
         className="relative w-full rounded-2xl overflow-hidden shadow-sm"

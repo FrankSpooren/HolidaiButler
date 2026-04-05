@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getPortalUrl, getDestinationSlug } from '@/lib/portal-url';
-import { analytics } from '@/lib/analytics';
+import { analytics, trackSectionViewed } from '@/lib/analytics';
 
 interface ProgramItem {
   id: number;
@@ -507,7 +507,13 @@ function getLocalizedString(val: unknown, locale: string): string {
 export default function ProgramCard({ locale, programSize = 4, forceShow }: ProgramCardProps) {
   const [items, setItems] = useState<ProgramItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const sectionRef = useRef<HTMLDivElement>(null);
   const t = (key: string) => LABELS[key]?.[locale] || LABELS[key]?.en || key;
+
+  // Track section visibility
+  useEffect(() => {
+    if (!loading && items.length > 0) return trackSectionViewed(sectionRef.current, 'program_card');
+  }, [loading, items.length]);
 
   const dayPart = getDayPart();
 
@@ -628,7 +634,7 @@ export default function ProgramCard({ locale, programSize = 4, forceShow }: Prog
   if (items.length === 0) return null;
 
   return (
-    <div className={forceShow ? '' : 'md:hidden'}>
+    <div ref={sectionRef} className={forceShow ? '' : 'md:hidden'}>
       <div className="bg-white rounded-2xl p-5 mx-4 shadow-sm w-[calc(100%-2rem)] text-left">
         <h3
           className="text-sm font-bold tracking-wider mb-4"
