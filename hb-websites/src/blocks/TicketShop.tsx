@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { TicketShopProps } from '@/types/blocks';
 import type { Ticket } from '@/types/poi';
+import { analytics } from '@/lib/analytics';
 
 export default function TicketShop({ limit, layout = 'grid', showPrices = true }: TicketShopProps) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -83,6 +84,7 @@ export default function TicketShop({ limit, layout = 'grid', showPrices = true }
                 <a
                   href={`/tickets/${ticket.id}`}
                   className="inline-block mt-2 px-4 py-2 text-sm bg-primary text-on-primary rounded-tenant hover:bg-primary-dark transition-colors"
+                  onClick={() => analytics.ticket_buy_clicked(ticket.name)}
                 >
                   Koop
                 </a>
@@ -129,6 +131,7 @@ export default function TicketShop({ limit, layout = 'grid', showPrices = true }
               <a
                 href={`/tickets/${ticket.id}`}
                 className="block mt-4 text-center px-4 py-2.5 bg-primary text-on-primary rounded-tenant font-medium hover:bg-primary-dark transition-colors"
+                onClick={() => analytics.ticket_buy_clicked(ticket.name)}
               >
                 Koop ticket
               </a>

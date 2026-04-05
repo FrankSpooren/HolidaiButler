@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { TenantConfig } from '@/types/tenant';
 import { resolveAssetUrl } from '@/lib/assets';
+import { analytics } from '@/lib/analytics';
 
 interface FooterProps {
   tenant: TenantConfig;
@@ -103,6 +104,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
                       rel="noopener noreferrer"
                       aria-label={icon.label}
                       className="w-9 h-9 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+                      onClick={() => analytics.social_link_clicked(platform)}
                     >
                       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" dangerouslySetInnerHTML={{ __html: icon.svg }} />
                     </a>
@@ -151,7 +153,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
             <ul className="space-y-2 text-sm opacity-80">
               {navLinks.map((link, idx) => (
                 <li key={idx}>
-                  <Link href={link.href} className="hover:opacity-100 transition-opacity">
+                  <Link href={link.href} className="hover:opacity-100 transition-opacity" onClick={() => analytics.footer_link_clicked(link.label)}>
                     {link.label}
                   </Link>
                 </li>
@@ -189,6 +191,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
                       rel="noopener noreferrer"
                       aria-label={icon.label}
                       className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                      onClick={() => analytics.social_link_clicked(platform)}
                     >
                       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" dangerouslySetInnerHTML={{ __html: icon.svg }} />
                     </a>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import type { ReservationWidgetProps } from '@/types/blocks';
 import type { ReservationSlot } from '@/types/poi';
 import type { POI } from '@/types/poi';
+import { analytics } from '@/lib/analytics';
 
 export default function ReservationWidget({ defaultPoiId, showSearch = true }: ReservationWidgetProps) {
   const [pois, setPois] = useState<POI[]>([]);
@@ -122,7 +123,7 @@ export default function ReservationWidget({ defaultPoiId, showSearch = true }: R
           <div className="sm:col-span-2">
             <button
               className="w-full px-4 py-2.5 bg-primary text-on-primary rounded-tenant font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={searchSlots}
+              onClick={() => { analytics.reservation_search_clicked(); searchSlots(); }}
               disabled={!selectedPoiId || !date || loading}
             >
               {loading ? 'Zoeken...' : 'Zoek beschikbaarheid'}
@@ -142,6 +143,7 @@ export default function ReservationWidget({ defaultPoiId, showSearch = true }: R
                   key={slot.id}
                   href={`/reservations/book?poiId=${selectedPoiId}&slotId=${slot.id}&date=${date}&partySize=${partySize}`}
                   className="border border-border rounded-tenant p-3 text-center hover:border-primary hover:bg-primary/5 transition-colors group"
+                  onClick={() => analytics.reservation_slot_clicked(slot.time.slice(0, 5))}
                 >
                   <p className="text-lg font-bold text-foreground group-hover:text-primary">
                     {formatTime(slot.time)}

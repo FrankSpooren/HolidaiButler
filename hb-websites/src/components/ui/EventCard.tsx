@@ -1,16 +1,19 @@
 'use client';
 
 import type { ReactNode, MouseEvent } from 'react';
+import { analytics } from '@/lib/analytics';
 
 interface EventCardProps {
   eventId: number;
   children: ReactNode;
   className?: string;
+  eventTitle?: string;
 }
 
-export default function EventCard({ eventId, children, className = '' }: EventCardProps) {
+export default function EventCard({ eventId, children, className = '', eventTitle }: EventCardProps) {
   const handleClick = (e: MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (eventTitle) analytics.event_card_clicked(eventTitle);
     window.dispatchEvent(
       new CustomEvent('hb:event:open', { detail: { eventId } })
     );

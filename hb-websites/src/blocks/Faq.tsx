@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { FaqProps } from '@/types/blocks';
 import { sanitizeHtml } from '@/lib/sanitize';
+import { analytics } from '@/lib/analytics';
 
 export default function Faq({ items, title }: FaqProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -10,6 +11,7 @@ export default function Faq({ items, title }: FaqProps) {
   if (!items || items.length === 0) return null;
 
   const toggle = (idx: number) => {
+    if (openIndex !== idx) analytics.faq_toggled(items[idx].question);
     setOpenIndex(prev => (prev === idx ? null : idx));
   };
 

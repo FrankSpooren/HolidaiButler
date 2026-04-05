@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { getPortalUrl } from '@/lib/portal-url';
+import { analytics } from '@/lib/analytics';
 
 interface MapPreviewProps {
   locale: string;
@@ -136,7 +137,7 @@ export default function MapPreview({ locale, poiCount = 1500, poiLimit = 8, mapL
   return (
     <div className="md:hidden mx-4">
       <button
-        onClick={() => { window.location.href = `${getPortalUrl()}/pois?view=map${locale !== 'en' ? `&lang=${locale}` : ''}`; }}
+        onClick={() => { analytics.map_preview_clicked(); window.location.href = `${getPortalUrl()}/pois?view=map${locale !== 'en' ? `&lang=${locale}` : ''}`; }}
         className="relative w-full rounded-2xl overflow-hidden shadow-sm"
         style={{ height: 200, isolation: 'isolate', zIndex: 0 }}
       >
@@ -167,7 +168,7 @@ export default function MapPreview({ locale, poiCount = 1500, poiLimit = 8, mapL
               <a
                 key={cat.key}
                 href={`${getPortalUrl()}/pois?categories=${encodeURIComponent(cat.filter)}${locale !== 'en' ? `&lang=${locale}` : ''}`}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); analytics.category_button_clicked(cat.en); }}
                 className="text-[11px] font-semibold rounded-md px-2.5 py-1 text-white transition-opacity active:opacity-80"
                 style={{ backgroundColor: cat.color }}
               >

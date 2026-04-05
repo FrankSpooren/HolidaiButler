@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { BannerProps } from '@/types/blocks';
 import ChatbotButton from '@/components/ui/ChatbotButton';
+import { analytics } from '@/lib/analytics';
 
 const typeStyles = {
   info: 'bg-blue-50 text-blue-800 border-blue-200',
@@ -23,6 +24,7 @@ export default function Banner({ message, type = 'info', dismissible = false, li
   if (dismissed) return null;
 
   const handleDismiss = () => {
+    analytics.banner_dismissed();
     const key = `hb-banner-${message.substring(0, 20)}`;
     localStorage.setItem(key, 'dismissed');
     setDismissed(true);
@@ -42,7 +44,7 @@ export default function Banner({ message, type = 'info', dismissible = false, li
                 size="sm"
               />
             ) : (
-              <a href={link.href} className="ml-2 underline hover:no-underline font-semibold">
+              <a href={link.href} className="ml-2 underline hover:no-underline font-semibold" onClick={() => analytics.banner_link_clicked(link.label)}>
                 {link.label}
               </a>
             )

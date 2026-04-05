@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { GalleryProps, GalleryItem } from '@/types/blocks';
+import { analytics } from '@/lib/analytics';
 
 export default function Gallery({ images, items, columns = 3, layout = 'grid' }: GalleryProps) {
   // Backward compatible: convert images to items format
@@ -14,7 +15,7 @@ export default function Gallery({ images, items, columns = 3, layout = 'grid' }:
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  const openLightbox = (idx: number) => setLightboxIndex(idx);
+  const openLightbox = (idx: number) => { analytics.gallery_opened(idx); setLightboxIndex(idx); };
   const closeLightbox = () => setLightboxIndex(null);
 
   const goPrev = useCallback(() => {

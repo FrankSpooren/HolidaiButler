@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getPortalUrl, getDestinationSlug } from '@/lib/portal-url';
+import { analytics } from '@/lib/analytics';
 
 interface ProgramItem {
   id: number;
@@ -585,18 +586,21 @@ export default function ProgramCard({ locale, programSize = 4, forceShow }: Prog
   }, [locale]);
 
   // POI block click → open itinerary wizard
-  const openItinerary = () => {
+  const openItinerary = (item: ProgramItem) => {
+    analytics.program_item_clicked(item.name, item.type);
     window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { action: 'itinerary' } }));
   };
 
   // CTA button
   const openChatbot = () => {
+    analytics.program_cta_clicked();
     window.dispatchEvent(new CustomEvent('hb:chatbot:open', { detail: { action: 'itinerary' } }));
   };
 
   // Details button → POI/Event drawer
   const openDetail = (e: React.MouseEvent, item: ProgramItem) => {
     e.stopPropagation();
+    analytics.program_details_clicked(item.name, item.type);
     if (item.type === 'poi') {
       window.dispatchEvent(new CustomEvent('hb:poi:open', { detail: { poiId: item.id } }));
     } else {
@@ -639,7 +643,7 @@ export default function ProgramCard({ locale, programSize = 4, forceShow }: Prog
               <div
                 className="flex items-center gap-3 rounded-xl p-3 cursor-pointer transition-colors active:bg-gray-50"
                 style={{ border: '1px solid #E5E7EB', backgroundColor: '#fff' }}
-                onClick={openItinerary}
+                onClick={() => openItinerary(item)}
               >
                 <div className="flex-shrink-0 w-12 h-12 rounded-xl overflow-hidden bg-gray-100">
                   {item.image ? (

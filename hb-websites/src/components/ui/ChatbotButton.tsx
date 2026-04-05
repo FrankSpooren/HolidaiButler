@@ -1,6 +1,7 @@
 'use client';
 
 import { openChatbotWithMessage } from '@/lib/chatbot-actions';
+import { analytics } from '@/lib/analytics';
 
 interface ChatbotButtonProps {
   label: string;
@@ -20,7 +21,7 @@ export default function ChatbotButton({ label, message, className = '', size = '
   return (
     <button
       type="button"
-      onClick={() => openChatbotWithMessage(message)}
+      onClick={() => { analytics.cta_clicked(label); openChatbotWithMessage(message); }}
       className={`inline-flex items-center justify-center font-medium transition-colors duration-200 rounded-tenant ${sizes[size]} ${className}`}
       style={style}
     >

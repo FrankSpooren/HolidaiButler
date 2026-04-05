@@ -155,8 +155,10 @@ export default function TipOfTheDay({ locale, forceShow }: TipOfTheDayProps) {
 
   const handleClick = () => {
     if (tip.id && tip.itemType === 'poi') {
+      analytics.poi_card_clicked(tip.name);
       window.dispatchEvent(new CustomEvent('hb:poi:open', { detail: { poiId: tip.id } }));
     } else if (tip.id && tip.itemType === 'event') {
+      analytics.event_card_clicked(tip.name);
       window.dispatchEvent(new CustomEvent('hb:event:open', { detail: { eventId: tip.id } }));
     }
   };

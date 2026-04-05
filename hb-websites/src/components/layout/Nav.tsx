@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { FeatureFlags } from '@/types/tenant';
 import SearchBar from './SearchBar';
 import LanguageSwitcher from './LanguageSwitcher';
+import { analytics } from '@/lib/analytics';
 
 interface NavItemStyle {
   color?: string;
@@ -82,6 +83,7 @@ export default function Nav({ items, featureFlags, locale }: NavProps) {
                 href={item.href}
                 className="text-foreground/80 hover:text-primary transition-colors font-medium"
                 style={navItemStyle(item.style)}
+                onClick={() => analytics.nav_link_clicked(item.label)}
               >
                 {item.label}
               </Link>
@@ -124,7 +126,7 @@ export default function Nav({ items, featureFlags, locale }: NavProps) {
                   href={item.href}
                   className="block px-6 py-3 text-foreground hover:bg-primary-light transition-colors"
                   style={navItemStyle(item.style)}
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => { analytics.nav_link_clicked(item.label); setIsOpen(false); }}
                 >
                   {item.label}
                 </Link>

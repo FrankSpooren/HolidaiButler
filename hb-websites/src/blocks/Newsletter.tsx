@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { NewsletterProps } from '@/types/blocks';
+import { analytics } from '@/lib/analytics';
 
 const bgStyles: Record<string, string> = {
   primary: 'bg-primary text-on-primary',
@@ -41,6 +42,7 @@ export default function Newsletter({
       });
       const data = await res.json();
       if (data.success) {
+        analytics.newsletter_subscribed();
         setStatus('success');
         setEmail('');
         setName('');
