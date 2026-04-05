@@ -35,8 +35,13 @@ class MetaClient {
    * Publish to Facebook Page
    */
   async _publishToFacebook(contentItem, systemToken) {
-    const pageId = process.env.META_PAGE_ID;
-    const accessToken = await this._getPageAccessToken(systemToken, pageId);
+    // Use page ID from social_accounts (per-destination), fallback to env
+    const pageId = contentItem.platform_account_id || process.env.META_PAGE_ID;
+    logger.info(`[MetaClient] Publishing to Facebook page ${pageId} (from ${contentItem.platform_account_id ? 'social_accounts' : 'env'})`);
+
+    // Always use the System User token from env for page token exchange (social_accounts token decryption may fail)
+    const exchangeToken = process.env.META_PAGE_ACCESS_TOKEN || systemToken;
+    const accessToken = await this._getPageAccessToken(exchangeToken, pageId);
     const message = this._getPostBody(contentItem);
     const metadata = contentItem.social_metadata ? JSON.parse(contentItem.social_metadata) : {};
 

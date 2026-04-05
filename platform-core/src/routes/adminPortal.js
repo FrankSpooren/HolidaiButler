@@ -11935,6 +11935,25 @@ router.get('/content/items/:id', adminAuth('editor'), async (req, res) => {
         logger.warn('[ContentItem] Media resolve failed:', mediaErr.message);
       }
     }
+    // Fallback: if resolved is still empty but has numeric ids, try imageurls (POI images stored without poi: prefix)
+    if (item.resolved_images.length === 0 && rawIds.length > 0) {
+      const allIds = rawIds.map(id => Number(String(id).replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
+      if (allIds.length > 0) {
+        const [fallbackImages] = await mysqlSequelize.query(
+          'SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)',
+          { replacements: { ids: allIds } }
+        );
+        item.resolved_images = fallbackImages.map(img => {
+          const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
+          return {
+            id: img.id,
+            url: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : img.image_url,
+            thumbnail: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp` : img.image_url,
+            alt: 'Content image',
+          };
+        });
+      }
+    }
     logger.info(`[ContentItem] Resolved ${item.resolved_images.length} images for item ${item.id} (poi:${poiIds.length} media:${mediaIds.length})`);
 
     // Compile language versions
@@ -12230,8 +12249,8 @@ router.post('/content/concepts/generate', adminAuth('editor'), writeAccess(['pla
         // Insert content item linked to concept
         const [itemResult] = await mysqlSequelize.query(
           `INSERT INTO content_items (concept_id, destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-           seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, pillar_id, keyword_cluster, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?, ?, NOW(), NOW())`,
+           seo_data, seo_score, social_metadata, target_platform, approval_status, ai_model, ai_generated, poi_id, pillar_id, keyword_cluster, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?, ?, NOW(), NOW())`,
           { replacements: [
             conceptId, Number(destination_id), suggestion.id, content_type,
             generated.title || suggestion.title,
@@ -12239,6 +12258,7 @@ router.post('/content/concepts/generate', adminAuth('editor'), writeAccess(['pla
             generated.title_de ? (generated.body_de || '') : null, generated.title_es ? (generated.body_es || '') : null,
             generated.title_fr ? (generated.body_fr || '') : null,
             generated.seo_data ? JSON.stringify(generated.seo_data) : null, generated.seo_score || null,
+            generated.social_metadata ? JSON.stringify(generated.social_metadata) : null,
             platform, generated.ai_model || 'mistral-medium-latest',
             suggestion.poi_id || null, pillar_id || null,
             JSON.stringify(generated.keyword_cluster || suggestion.keyword_cluster || []),

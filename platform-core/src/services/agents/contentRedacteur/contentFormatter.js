@@ -7,12 +7,13 @@
 
 const PLATFORM_LIMITS = {
   website: { maxChars: null, supportsMarkdown: true, supportsHashtags: false },
-  facebook: { maxChars: 63206, supportsMarkdown: false, supportsHashtags: true },
-  instagram: { maxChars: 2200, supportsMarkdown: false, supportsHashtags: true, maxHashtags: 30 },
+  facebook: { maxChars: 500, supportsMarkdown: false, supportsHashtags: true, maxHashtags: 5 },
+  instagram: { maxChars: 2200, supportsMarkdown: false, supportsHashtags: true, maxHashtags: 15 },
   linkedin: { maxChars: 3000, supportsMarkdown: false, supportsHashtags: true, maxHashtags: 5 },
-  x: { maxChars: 280, supportsMarkdown: false, supportsHashtags: true, maxHashtags: 3 },
-  tiktok: { maxChars: 2200, supportsMarkdown: false, supportsHashtags: true, maxHashtags: 10 },
+  x: { maxChars: 280, supportsMarkdown: false, supportsHashtags: true, maxHashtags: 2 },
+  tiktok: { maxChars: 150, supportsMarkdown: false, supportsHashtags: true, maxHashtags: 5 },
   youtube: { maxChars: 5000, supportsMarkdown: false, supportsHashtags: true, maxHashtags: 15 },
+  pinterest: { maxChars: 500, supportsMarkdown: false, supportsHashtags: true, maxHashtags: 5 },
 };
 
 const CONTENT_TYPE_SPECS = {

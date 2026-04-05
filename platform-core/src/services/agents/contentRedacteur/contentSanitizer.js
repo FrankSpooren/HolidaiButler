@@ -87,12 +87,31 @@ export function sanitizeContent(rawContent, contentType, targetPlatform) {
   // Inline code (`text`)
   clean = clean.replace(/`([^`]+)`/g, '$1');
 
-  // === PHASE 2: Strip inline formatting ===
+  // === PHASE 2: Strip inline formatting + AI artifacts ===
   // Bold (**text** or __text__)
   clean = clean.replace(/\*\*(.+?)\*\*/g, '$1');
   clean = clean.replace(/__(.+?)__/g, '$1');
   // Italic (*text* or _text_) — careful with legitimate underscores/asterisks
   clean = clean.replace(/(?<!\w)\*(?!\s)(.+?)(?<!\s)\*(?!\w)/g, '$1');
+
+  // Em-dashes and en-dashes → comma or regular dash (AI artifact)
+  clean = clean.replace(/\s*—\s*/g, ', ');   // em-dash → comma
+  clean = clean.replace(/\s*–\s*/g, ' - ');  // en-dash → hyphen
+
+  // Strip AI artifacts: bullet dots, smart quotes, special Unicode
+  clean = clean.replace(/•/g, '');            // bullet character
+  clean = clean.replace(/[""]/g, '"');         // smart double quotes → regular
+  clean = clean.replace(/['']/g, "'");         // smart apostrophes → regular
+
+  // Strip AI instruction brackets: [Link in Bio], [Image: ...], [Image recommendation: ...]
+  clean = clean.replace(/\[(?:Link in Bio|Image(?:\s+recommendation)?:\s*[^\]]*)\]/gi, '');
+  // Strip AI image suggestion paragraphs in parentheses at end of content
+  clean = clean.replace(/\n*\((?:Picture this|Image suggestion|Visual|Photo)[^)]{20,}\)\s*$/gi, '');
+
+  // Fix trailing ellipsis from truncation (incomplete sentences)
+  clean = clean.replace(/,?\s*and\s+\w*\.{3}\s*$/, '.');    // "and eveni..." → "."
+  clean = clean.replace(/[,\s]+\.{3}\s*$/, '.');              // trailing "..." → "."
+  clean = clean.replace(/\s+\w{1,4}\.{3}\s*$/, '.');          // single truncated word → "."
 
   // === PHASE 3: Strip metadata labels ===
   const LABELS = [
