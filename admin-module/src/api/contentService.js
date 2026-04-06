@@ -291,7 +291,7 @@ const contentService = {
   },
 
   generateFromPOI(poiId, data) {
-    return client.post('/content/generate-from-poi', { poi_id: poiId, ...data }, { timeout: 120000 }).then(r => r.data);
+    return client.post('/content/generate-from-poi', { poi_id: poiId, ...data }, { timeout: 600000 }).then(r => r.data);
   },
 
   // === Image Management (Blok 2) ===

@@ -6180,4 +6180,32 @@ CLAUDE.md v4.33.0 → v4.34.0. MS v7.93 → v7.94.
 
 ---
 
+## v4.38.0 — CalpeTrip Blog Live + POI Frontend Fix + Blog Analytics (6 april 2026)
+
+### Fixes
+- **POIsPage "Bekijk op frontend"**: URL gewijzigd van `holidaibutler.com` naar `calpetrip.com` (404 fix)
+- **generateFromPOI timeout**: 120s→600s (blog generatie duurt 5+ min door auto-improve)
+- **blogs.js image resolver**: URL strings (http://, /path) nu direct doorgestuurd i.p.v. alleen numeric IDs
+
+### CalpeTrip Blog
+- 2e blog "Plan Your Calpe Trip in Minutes | AI-Powered Itineraries" gepubliceerd (item 144)
+- CalpeTrip mobiele homepage screenshot als blog image
+- Beide blogs live op https://calpetrip.com/blog met images
+
+### Simple Analytics Blog Events (4 nieuwe)
+- `blog_list_viewed_{device}` — blog overzichtspagina geladen
+- `blog_card_clicked_{device}` — klik op blog card (slug + title)
+- `blog_article_viewed_{device}` — blog artikel geladen (slug + title)
+- `blog_back_clicked_{device}` — klik op "← Blog" terug link
+
+### Bestanden
+- `admin-module/src/pages/POIsPage.jsx` (frontendUrl fix)
+- `admin-module/src/api/contentService.js` (timeout 600s)
+- `customer-portal/frontend/src/pages/static/BlogListPage.tsx` (analytics)
+- `customer-portal/frontend/src/pages/static/BlogDetailPage.tsx` (analytics)
+- `customer-portal/frontend/src/shared/utils/analytics.ts` (4 blog events)
+- `platform-core/src/routes/blogs.js` (URL image resolver)
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

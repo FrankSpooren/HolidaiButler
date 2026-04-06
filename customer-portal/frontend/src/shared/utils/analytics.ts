@@ -127,6 +127,12 @@ export const analytics = {
   // --- Content ---
   tip_of_day_viewed: () => trackEvent(`tip_of_day_viewed_${getDevice()}`),
 
+  // --- Blog ---
+  blog_list_viewed: () => trackEvent(`blog_list_viewed_${getDevice()}`),
+  blog_card_clicked: (slug: string, title: string) => trackBeforeNav(`blog_card_clicked_${getDevice()}`, { slug, title: title.substring(0, 50) }),
+  blog_article_viewed: (slug: string, title: string) => trackEvent(`blog_article_viewed_${getDevice()}`, { slug, title: title.substring(0, 50) }),
+  blog_back_clicked: () => trackBeforeNav(`blog_back_clicked_${getDevice()}`),
+
   // --- Page views (SPA navigation) ---
   page_viewed: (page: string) => trackEvent(`page_viewed_${getDevice()}`, { page: page.substring(0, 50) }),
 };

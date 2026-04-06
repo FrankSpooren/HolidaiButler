@@ -410,7 +410,7 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
   const envPrefix = getEnvPrefix();
   const frontendUrl = poi.destination_id === 2
     ? `https://${envPrefix}texelmaps.nl/pois/${poi.id}`
-    : `https://${envPrefix}holidaibutler.com/pois/${poi.id}`;
+    : `https://${envPrefix}calpetrip.com/pois/${poi.id}`;
 
   const handleMoveImage = async (images, fromIdx, direction) => {
     const toIdx = fromIdx + direction;

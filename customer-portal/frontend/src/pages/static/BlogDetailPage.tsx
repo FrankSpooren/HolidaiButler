@@ -4,6 +4,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useDestination } from '../../shared/contexts/DestinationContext';
 import { usePageMeta } from '../../shared/hooks/usePageMeta';
 import { blogApi, type BlogDetail } from '../../shared/services/blog.api';
+import analytics from '../../shared/utils/analytics';
 
 export function BlogDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -24,7 +25,7 @@ export function BlogDetailPage() {
     setLoading(true);
     setError(null);
     blogApi.getBlog(slug, language)
-      .then(data => setBlog(data))
+      .then(data => { setBlog(data); if (data) analytics.blog_article_viewed(slug, data.title); })
       .catch(err => setError(err.message || 'Blog not found'))
       .finally(() => setLoading(false));
   }, [slug, language]);
@@ -64,7 +65,7 @@ export function BlogDetailPage() {
 
       <article style={{ maxWidth: 760, margin: '0 auto', padding: '24px 24px 64px' }}>
         {/* Breadcrumb */}
-        <Link to="/blog" style={{ fontSize: 14, color: '#5E8B7E', textDecoration: 'none', fontWeight: 500 }}>
+        <Link to="/blog" onClick={() => analytics.blog_back_clicked()} style={{ fontSize: 14, color: '#5E8B7E', textDecoration: 'none', fontWeight: 500 }}>
           ← Blog
         </Link>
 

@@ -4,6 +4,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useDestination } from '../../shared/contexts/DestinationContext';
 import { usePageMeta } from '../../shared/hooks/usePageMeta';
 import { blogApi, type BlogSummary } from '../../shared/services/blog.api';
+import analytics from '../../shared/utils/analytics';
 
 export function BlogListPage() {
   const { language } = useLanguage();
@@ -20,7 +21,7 @@ export function BlogListPage() {
   useEffect(() => {
     setLoading(true);
     blogApi.getBlogs({ limit: 12, lang: language })
-      .then(data => setBlogs(data.blogs))
+      .then(data => { setBlogs(data.blogs); analytics.blog_list_viewed(); })
       .catch(() => setBlogs([]))
       .finally(() => setLoading(false));
   }, [language]);
@@ -59,6 +60,7 @@ export function BlogListPage() {
               <Link
                 to={`/blog/${blog.slug}`}
                 key={blog.id}
+                onClick={() => analytics.blog_card_clicked(blog.slug, blog.title)}
                 style={{
                   background: '#fff',
                   borderRadius: 12,
