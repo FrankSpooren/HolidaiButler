@@ -302,8 +302,8 @@ export async function generateContent(suggestion, options = {}) {
       }
     );
 
-    // Extract title and body from generated content
-    const { title, body, metaDescription } = parseGeneratedContent(content, suggestion.title);
+    // Extract title and body from generated content (+ blog SEO metadata)
+    const { title, body, metaDescription, metaTitle, slug } = parseGeneratedContent(content, suggestion.title);
 
     // Sanitize — safety net strips any remaining markdown artifacts
     const sanitizedBody = sanitizeContent(body, contentType, platform);
@@ -323,24 +323,64 @@ export async function generateContent(suggestion, options = {}) {
     // Generate hashtags for social platforms
     const hashtags = platform !== 'website' ? generateHashtags(keywords, platform) : [];
 
-    // Build social_metadata with UTM-tracked link for the first mentioned POI
-    let socialMetadata = {};
-    if (platform !== 'website' && relevantPOIs.length > 0) {
-      const domain = DESTINATION_DOMAINS[destinationId] || 'calpetrip.com';
-      const poiLink = `https://${domain}/pois?poi=${relevantPOIs[0].id}`;
-      try {
-        const { buildUtmUrl } = await import('../publisher/utmBuilder.js');
-        socialMetadata.link = buildUtmUrl(poiLink, { id: 0, content_type: contentType, title: suggestion.title }, platform);
-      } catch {
-        socialMetadata.link = poiLink;
+    // Ensure hashtags are present in the body (AI sometimes forgets for Facebook)
+    if (hashtags.length > 0 && platform !== 'website') {
+      const existingHashtags = (trackedBody.match(/#[a-zA-Z0-9\u00C0-\u024F]+/g) || []);
+      if (existingHashtags.length === 0) {
+        const hashtagLine = hashtags.join(' ');
+        const separator = (platform === 'instagram') ? '\n\n' : '\n';
+        trackedBody = trackedBody.trimEnd() + separator + hashtagLine;
       }
     }
 
-    // Build result object
+    // Build social_metadata with UTM-tracked link
+    let socialMetadata = {};
+    if (platform !== 'website') {
+      const domain = DESTINATION_DOMAINS[destinationId] || 'calpetrip.com';
+      // Use POI link if available, otherwise homepage (ensures UTM tracking always exists)
+      const baseLink = relevantPOIs.length > 0
+        ? `https://${domain}/pois?poi=${relevantPOIs[0].id}`
+        : `https://${domain}/`;
+      try {
+        const { buildUtmUrl } = await import('../publisher/utmBuilder.js');
+        socialMetadata.link = buildUtmUrl(baseLink, { id: 0, content_type: contentType, title: suggestion.title }, platform);
+      } catch {
+        socialMetadata.link = baseLink;
+      }
+    }
+
+    // Build result object — auto-generate SEO metadata if AI didn't provide them
+    const autoMetaTitle = metaTitle || title.substring(0, 60);
+    const autoSlug = slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 80);
+    const autoMetaDesc = metaDescription || (() => {
+      const plainBody = (trackedBody || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      return plainBody.substring(0, 155);
+    })();
+
+    const seoData = { meta_description: autoMetaDesc, meta_title: autoMetaTitle, slug: autoSlug };
+
+    // Auto-select best matching image(s) for this content
+    let mediaIds = null;
+    try {
+      const { selectImages } = await import('./imageSelector.js');
+      const imageCandidates = await selectImages(
+        { title: metaTitle || title, body_en: trackedBody, poi_id: relevantPOIs[0]?.id || null, content_type: contentType },
+        destinationId
+      );
+      if (imageCandidates.length > 0) {
+        mediaIds = imageCandidates.map(img =>
+          img.source === 'media_library' ? String(img.id) : `poi:${img.id}`
+        );
+      }
+    } catch (imgErr) {
+      logger.warn('[ContentGenerator] Auto-image selection failed:', imgErr.message);
+    }
+
     let result = {
-      title,
+      title: metaTitle || title, // prefer SEO-optimized title for blogs
       body_en: trackedBody,
       meta_description: metaDescription,
+      seo_data: seoData,
       hashtags,
       social_metadata: socialMetadata,
       ai_model: modelName,
@@ -348,6 +388,7 @@ export async function generateContent(suggestion, options = {}) {
       content_type: contentType,
       target_platform: platform,
       keyword_cluster: keywords,
+      media_ids: mediaIds,
     };
 
     // === AUTO-IMPROVE LOOP: SEO check → AI rewrite until ≥65/100 ===
@@ -551,22 +592,30 @@ ${keywordsStr}
 Return ONLY the script. Scene markers and narration text. Nothing else.`;
   }
 
-  // Blog
+  // Blog — output as structured HTML for TipTap WYSIWYG editor
   return `${base}
 
-CRITICAL FORMATTING RULES:
-- Write in clean, flowing prose paragraphs ONLY
-- NEVER use markdown: no **, no ##, no ---, no \`, no [](), no >
-- NEVER include labels like TITLE:, META:, INTRODUCTION:, CONCLUSION:, HOOK:
-- Start directly with the first paragraph. No headers.
-- Use natural paragraph breaks (blank line) between sections
-- Do NOT use bullet points or numbered lists with special characters
+CRITICAL FORMATTING RULES — BLOG (HTML output):
+- Output as CLEAN HTML: use <h2>, <h3>, <p>, <a href="...">, <strong>, <em> tags
+- Structure: 4-6 sections, each with an <h2> heading + 2-3 paragraphs
+- Use <h3> for subsections where appropriate
+- Wrap every paragraph in <p>...</p> tags
+- Link mentioned places to their detail page: <a href="https://{domain}/pois?poi={id}">{POI name}</a>
+- For events, link to: <a href="https://{domain}/agenda">{event name}</a>
+- NEVER use markdown syntax (no **, ##, ---, \`, []())
+- NEVER include labels like TITLE:, META:, INTRODUCTION:
 - Target: 800-1500 words
-- Include factual details: opening hours, prices, locations where relevant
-- End with a natural call-to-action paragraph
+- Include factual details: opening hours, ratings, locations where relevant
+- End with a call-to-action section
+- NEVER use em-dashes (—) or bullet characters (•)
 ${keywordsStr}
 
-Return ONLY the article text. Nothing before it. Nothing after it.`;
+ALSO GENERATE SEO METADATA — add these 3 lines at the VERY END of your output, after the article:
+META_TITLE: [60-char max SEO title for this blog]
+META_DESCRIPTION: [155-char max meta description]
+SLUG: [url-friendly-slug-for-this-blog]
+
+Return the HTML article first, then the 3 META lines.`;
 }
 
 /**
@@ -576,24 +625,54 @@ function buildUserPrompt(suggestion, contentType, platform, keywords) {
   const keywordsStr = keywords.length > 0 ? `\nKeywords to incorporate naturally: ${keywords.join(', ')}` : '';
   const context = suggestion.summary ? `\nContext: ${suggestion.summary}` : '';
 
+  // Detect website_analytics trending keywords (e.g., "website: Homepage", "website: Restaurants")
+  const isWebsiteAnalytics = (suggestion.title || '').toLowerCase().startsWith('website:');
+  const websitePageName = isWebsiteAnalytics ? suggestion.title.replace(/^website:\s*/i, '').trim() : '';
+
+  // Build website-analytics specific instruction
+  const websiteInstruction = isWebsiteAnalytics ? `
+
+CRITICAL CONTEXT — This content promotes a SPECIFIC PAGE on the CalpeTrip.com platform.
+The page is: "${websitePageName}"
+Your post MUST:
+- Explain what visitors can FIND and DO on this specific page of CalpeTrip.com
+- Mention concrete features: interactive CalpeChat AI assistant, personalized day programs, real-time event calendar, 1500+ verified local places with reviews, restaurant reservations, etc.
+- Frame it as: "Visit calpetrip.com to discover [what this page offers]"
+- Do NOT write generic tourism prose about Calpe — write about the PLATFORM FEATURES
+- The goal is to drive traffic TO this specific page by showing its unique value
+Example features per page:
+  Homepage: AI-powered day program, Tip of the Day, local event calendar, interactive chatbot
+  Restaurants: 200+ verified restaurants with ratings, menus, reservation links
+  Events/Agenda: Complete Calpe event calendar, filters by category
+  Explore/POIs: 1500+ points of interest, interactive map, category filters
+  About: The story behind CalpeTrip, mission, team` : '';
+
   switch (contentType) {
     case 'blog':
-      return `Write a tourism blog article about "${suggestion.title}".${context}${keywordsStr}
+      return `Write a tourism blog article about "${suggestion.title}".${context}${keywordsStr}${websiteInstruction}
 
-Start directly with the first paragraph. Write 800-1500 words of flowing prose.
-End with a natural call-to-action paragraph.
-Do NOT include a title, meta description, or any labels. Just the article body.`;
+Write 800-1500 words as structured HTML:
+1. Start with an engaging <h2> section heading, then <p> paragraphs
+2. Use 4-6 <h2> sections with descriptive headings
+3. Link real places/restaurants mentioned to their detail pages using <a href> tags
+4. Include ratings (e.g. "rated 4.8/5") where available
+5. End with a call-to-action section
+
+After the HTML article, add exactly 3 metadata lines:
+META_TITLE: [SEO title, max 60 chars]
+META_DESCRIPTION: [meta description, max 155 chars]
+SLUG: [url-slug]`;
 
     case 'social_post': {
       const pr = PROMPT_PLATFORM_RULES[platform] || PROMPT_PLATFORM_RULES.facebook;
-      return `Write a ${platform} post about "${suggestion.title}".${context}${keywordsStr}
+      return `Write a ${platform} post about "${suggestion.title}".${context}${keywordsStr}${websiteInstruction}
 
 REQUIREMENTS (all mandatory):
 1. Start with a scroll-stopping hook (first sentence)
 2. ${pr.optimalChars || pr.maxChars} characters optimal, maximum ${pr.maxChars} characters
 3. Include exactly ${pr.emojiCount} emoji naturally placed
 4. End with a clear call-to-action
-5. Add ${pr.maxHashtags} relevant hashtags (${pr.hashtagPosition === 'end_separated' ? 'blank line then hashtags' : pr.hashtagPosition === 'inline' ? 'woven into text' : 'at the end'})
+5. MUST include ${pr.maxHashtags} relevant hashtags (${pr.hashtagPosition === 'end_separated' ? 'blank line then hashtags' : pr.hashtagPosition === 'inline' ? 'woven into text' : 'at the end'}) — this is REQUIRED, do NOT omit hashtags
 6. Plain text only — no labels, no markdown, no quotes around it
 7. Ready to copy-paste directly into ${platform}
 
@@ -619,6 +698,8 @@ function parseGeneratedContent(content, fallbackTitle) {
   let title = fallbackTitle;
   let body = content;
   let metaDescription = '';
+  let metaTitle = '';
+  let slug = '';
 
   // Extract TITLE: if Mistral still includes it (backward compat)
   const titleMatch = content.match(/^TITLE:\s*(.+)$/m);
@@ -627,17 +708,34 @@ function parseGeneratedContent(content, fallbackTitle) {
     body = content.replace(titleMatch[0], '').trim();
   }
 
-  // Extract META: if present
+  // Extract META: if present (legacy format)
   const metaMatch = body.match(/^META:\s*(.+)$/m);
   if (metaMatch) {
     metaDescription = metaMatch[1].trim();
     body = body.replace(metaMatch[0], '').trim();
   }
 
+  // Extract blog SEO metadata (new format: META_TITLE, META_DESCRIPTION, SLUG)
+  const metaTitleMatch = body.match(/^META_TITLE:\s*(.+)$/m);
+  if (metaTitleMatch) {
+    metaTitle = metaTitleMatch[1].trim().replace(/^["'\[\]]+|["'\[\]]+$/g, '');
+    body = body.replace(metaTitleMatch[0], '').trim();
+  }
+  const metaDescMatch = body.match(/^META_DESCRIPTION:\s*(.+)$/m);
+  if (metaDescMatch) {
+    metaDescription = metaDescMatch[1].trim().replace(/^["'\[\]]+|["'\[\]]+$/g, '');
+    body = body.replace(metaDescMatch[0], '').trim();
+  }
+  const slugMatch = body.match(/^SLUG:\s*(.+)$/m);
+  if (slugMatch) {
+    slug = slugMatch[1].trim().replace(/^["'\[\]]+|["'\[\]]+$/g, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    body = body.replace(slugMatch[0], '').trim();
+  }
+
   // Strip any remaining label prefixes the sanitizer will also catch
   body = body.replace(/^(INTRODUCTION|CONCLUSION|BODY|OPENING|CLOSING|SUMMARY)\s*[:：]\s*/gim, '');
 
-  return { title, body, metaDescription };
+  return { title, body, metaDescription, metaTitle, slug };
 }
 
 /**
@@ -710,6 +808,10 @@ async function improveContent(content, seoResult, options = {}) {
       ? `\n- ABSOLUTE CHARACTER LIMIT: ${platformMaxChars} characters maximum. The improved content MUST be shorter than ${platformMaxChars} characters. Count carefully. If the current content exceeds this limit, SHORTEN it while fixing quality.`
       : '';
 
+    const blogHtmlRule = contentType === 'blog'
+      ? `\n- BLOG OUTPUT FORMAT: Return as HTML using <h2>, <h3>, <p>, <a href>, <strong>, <em> tags. Preserve existing HTML structure. Do NOT strip HTML tags.`
+      : '';
+
     const systemPrompt = `You are a surgical content optimizer. You fix ONLY what's broken — preserve everything that scores 10/10.
 
 ${toneInstruction}
@@ -723,7 +825,7 @@ CRITICAL FORMATTING RULES:
 - Write clean, flowing prose only
 - Return the COMPLETE improved content (not just the changes)
 - DO NOT change aspects that already score 10/10 — only fix failing metrics
-- Do NOT add disclaimers or explanations — return ONLY the improved content${platformLimitRule}`;
+- Do NOT add disclaimers or explanations — return ONLY the improved content${platformLimitRule}${blogHtmlRule}`;
 
     const userPrompt = `Content scored ${currentSeo.overallScore}/100 (need ≥${SEO_MINIMUM_SCORE}/100). Fix the failing metrics.
 
