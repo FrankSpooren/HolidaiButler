@@ -184,10 +184,11 @@ class POISyncService {
 
       // Check which URLs are already downloaded
       const [existing] = await this.sequelize.query(
-        'SELECT image_url FROM imageurls WHERE poi_id = ?',
+        'SELECT image_url, image_id FROM imageurls WHERE poi_id = ?',
         { replacements: [poiId] }
       );
       const existingUrls = new Set(existing.map(r => r.image_url));
+      const maxImageId = existing.reduce((max, r) => Math.max(max, r.image_id || 0), 0);
 
       let downloaded = 0;
       const maxDisplay = Math.min(imageUrls.length, 10); // Max 10 per POI
@@ -200,12 +201,13 @@ class POISyncService {
           const result = await imageDownloaderService.downloadImage(url, poiId);
           if (result && result.local_path) {
             const displayOrder = existing.length + downloaded + 1;
+            const imageId = maxImageId + downloaded + 1;
             await this.sequelize.query(`
-              INSERT INTO imageurls (poi_id, image_url, local_path, source, google_place_id, file_size, file_hash, display_order, downloaded_at)
-              VALUES (?, ?, ?, 'apify_refresh', ?, ?, ?, ?, NOW())
+              INSERT INTO imageurls (poi_id, image_id, image_url, local_path, source, google_place_id, file_size, file_hash, display_order, downloaded_at)
+              VALUES (?, ?, ?, ?, 'apify_refresh', ?, ?, ?, ?, NOW())
             `, {
               replacements: [
-                poiId, url, result.local_path, googlePlaceid || null,
+                poiId, imageId, url, result.local_path, googlePlaceid || null,
                 result.file_size || null, result.file_hash || null, displayOrder
               ]
             });
