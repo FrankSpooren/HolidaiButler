@@ -12224,10 +12224,10 @@ router.post('/content/concepts/generate', adminAuth('editor'), writeAccess(['pla
     );
     if (!suggestion) return res.status(404).json({ success: false, error: { code: 'SUGGESTION_NOT_FOUND' } });
 
-    // Create concept
+    // Create concept immediately (so frontend can open it)
     const [conceptResult] = await mysqlSequelize.query(
       `INSERT INTO content_concepts (destination_id, suggestion_id, title, content_type, pillar_id, poi_id, approval_status, ai_generated, keyword_cluster)
-       VALUES (?, ?, ?, ?, ?, ?, 'draft', 1, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, 'generating', 1, ?)`,
       { replacements: [
         Number(destination_id), suggestion.id, suggestion.title, content_type,
         pillar_id || null, suggestion.poi_id || null,
@@ -12236,75 +12236,77 @@ router.post('/content/concepts/generate', adminAuth('editor'), writeAccess(['pla
     );
     const conceptId = conceptResult;
 
-    // Import generator
-    const { generateContent } = await import('../services/agents/contentRedacteur/contentGenerator.js');
-
-    // Generate for each platform
-    const generatedItems = [];
-    for (const platform of platforms) {
-      try {
-        const generated = await generateContent(suggestion, {
-          destinationId: Number(destination_id),
-          contentType: content_type,
-          platform,
-          personaId: persona_id || null,
-        });
-
-        // Insert content item linked to concept
-        const [itemResult] = await mysqlSequelize.query(
-          `INSERT INTO content_items (concept_id, destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-           seo_data, seo_score, social_metadata, target_platform, approval_status, ai_model, ai_generated, poi_id, pillar_id, keyword_cluster, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?, ?, NOW(), NOW())`,
-          { replacements: [
-            conceptId, Number(destination_id), suggestion.id, content_type,
-            generated.title || suggestion.title,
-            generated.body_en || '', generated.title_nl ? (generated.body_nl || '') : null,
-            generated.title_de ? (generated.body_de || '') : null, generated.title_es ? (generated.body_es || '') : null,
-            generated.title_fr ? (generated.body_fr || '') : null,
-            generated.seo_data ? JSON.stringify(generated.seo_data) : null, generated.seo_score || null,
-            generated.social_metadata ? JSON.stringify(generated.social_metadata) : null,
-            platform, generated.ai_model || 'mistral-medium-latest',
-            suggestion.poi_id || null, pillar_id || null,
-            JSON.stringify(generated.keyword_cluster || suggestion.keyword_cluster || []),
-          ]}
-        );
-
-        generatedItems.push({ id: itemResult, platform, title: generated.title, seo_score: generated.seo_score });
-
-        // Auto-attach images to concept (first platform only)
-        if (generatedItems.length === 1 && generated.attached_images?.length > 0) {
-          await mysqlSequelize.query(
-            'UPDATE content_concepts SET media_ids = ? WHERE id = ?',
-            { replacements: [JSON.stringify(generated.attached_images), conceptId] }
-          );
-        }
-      } catch (platErr) {
-        logger.warn(`[ConceptGenerate] Platform ${platform} failed: ${platErr.message}`);
-        generatedItems.push({ platform, error: platErr.message });
-      }
-    }
-
-    // Update suggestion status
-    await mysqlSequelize.query(
-      `UPDATE content_suggestions SET status = 'generated', updated_at = NOW() WHERE id = ?`,
-      { replacements: [suggestion.id] }
-    );
-
-    // Update concept title from generated content
-    if (generatedItems[0]?.title) {
-      await mysqlSequelize.query(
-        'UPDATE content_concepts SET title = ? WHERE id = ?',
-        { replacements: [generatedItems[0].title, conceptId] }
-      );
-    }
-
+    // Return immediately — generation happens in background
     res.json({
       success: true,
       data: {
         concept_id: conceptId,
-        items: generatedItems,
-        platforms_generated: generatedItems.filter(i => !i.error).length,
-        platforms_failed: generatedItems.filter(i => i.error).length,
+        status: 'generating',
+        message: `Content generation started for ${platforms.length} platform(s). Poll GET /content/concepts/${conceptId} for status.`,
+      }
+    });
+
+    // === ASYNC BACKGROUND GENERATION ===
+    setImmediate(async () => {
+      try {
+        const { generateContent } = await import('../services/agents/contentRedacteur/contentGenerator.js');
+
+        const generatedItems = [];
+        for (const platform of platforms) {
+          try {
+            const generated = await generateContent(suggestion, {
+              destinationId: Number(destination_id),
+              contentType: content_type,
+              platform,
+              personaId: persona_id || null,
+            });
+
+            const [itemResult] = await mysqlSequelize.query(
+              `INSERT INTO content_items (concept_id, destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+               seo_data, seo_score, social_metadata, media_ids, target_platform, approval_status, ai_model, ai_generated, poi_id, pillar_id, keyword_cluster, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?, ?, NOW(), NOW())`,
+              { replacements: [
+                conceptId, Number(destination_id), suggestion.id, content_type,
+                generated.title || suggestion.title,
+                generated.body_en || '', generated.body_nl || null,
+                generated.body_de || null, generated.body_es || null,
+                generated.body_fr || null,
+                generated.seo_data ? JSON.stringify(generated.seo_data) : null, generated.seo_score || null,
+                generated.social_metadata ? JSON.stringify(generated.social_metadata) : null,
+                generated.media_ids ? JSON.stringify(generated.media_ids) : null,
+                platform, generated.ai_model || 'mistral-medium-latest',
+                suggestion.poi_id || null, pillar_id || null,
+                JSON.stringify(generated.keyword_cluster || suggestion.keyword_cluster || []),
+              ]}
+            );
+
+            generatedItems.push({ id: itemResult, platform, title: generated.title });
+          } catch (platErr) {
+            logger.warn(`[ConceptGenerate] Platform ${platform} failed: ${platErr.message}`);
+          }
+        }
+
+        // Update suggestion status
+        await mysqlSequelize.query(
+          `UPDATE content_suggestions SET status = 'generated', updated_at = NOW() WHERE id = ?`,
+          { replacements: [suggestion.id] }
+        );
+
+        // Update concept: title + status → draft (done generating)
+        const finalTitle = generatedItems[0]?.title || suggestion.title;
+        await mysqlSequelize.query(
+          `UPDATE content_concepts SET title = ?, approval_status = 'draft' WHERE id = ?`,
+          { replacements: [finalTitle, conceptId] }
+        );
+
+        logger.info(`[ConceptGenerate] Async generation complete: concept ${conceptId}, ${generatedItems.length} items`);
+      } catch (bgErr) {
+        logger.error(`[ConceptGenerate] Async generation failed for concept ${conceptId}: ${bgErr.message}`);
+        // Mark concept as failed so frontend knows
+        await mysqlSequelize.query(
+          `UPDATE content_concepts SET approval_status = 'draft' WHERE id = ? AND approval_status = 'generating'`,
+          { replacements: [conceptId] }
+        ).catch(() => {});
       }
     });
   } catch (error) {
