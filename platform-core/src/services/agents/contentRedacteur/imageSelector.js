@@ -2,7 +2,7 @@
  * Image Selection Engine — Smart image matching for content items
  * Matches content keywords to POI images, media library, and Unsplash fallback.
  *
- * @version 1.0.0
+ * @version 2.0.0 — Hybrid B/C keyword search (keywords_verified + keywords_visual FULLTEXT)
  */
 
 import { mysqlSequelize } from '../../../config/database.js';
@@ -109,49 +109,79 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
       })));
     }
 
-    // 2. Keyword match: find POIs matching content keywords (SKIP for content_only)
+    // 2. FULLTEXT keyword match on image keywords (verified + visual) — SKIP for content_only
     if (candidates.length < maxImages && keywords.length > 0 && !isContentOnlyDest) {
-      const keywordConditions = keywords.slice(0, 5).map(kw =>
-        `(p.name LIKE :kw_${kw.replace(/[^a-z]/gi, '')} OR p.category LIKE :kw_${kw.replace(/[^a-z]/gi, '')})`
-      ).join(' OR ');
+      const searchTerms = keywords.slice(0, 8).join(' ');
+      const imgExcludeClause = excludeSet.size > 0 ? `AND i.id NOT IN (${[...excludeSet].join(',')})` : '';
+      const orderClause = excludeSet.size > 0 ? 'ORDER BY relevance_score DESC, RAND()' : 'ORDER BY relevance_score DESC, i.display_order ASC';
 
-      const replacements = { destId: destinationId };
-      keywords.slice(0, 5).forEach(kw => {
-        replacements[`kw_${kw.replace(/[^a-z]/gi, '')}`] = `%${kw}%`;
-      });
-
-      if (keywordConditions) {
-        // Use RAND() offset for refresh variety when excludeIds present
-        const orderClause = excludeSet.size > 0 ? 'ORDER BY RAND()' : 'ORDER BY p.id';
-        const [matchingPois] = await mysqlSequelize.query(
-          `SELECT DISTINCT p.id, p.name FROM POI p
-           WHERE p.destination_id = :destId AND p.is_active = 1 AND (${keywordConditions})
-           ${orderClause} LIMIT 10`,
-          { replacements }
+      try {
+        // FULLTEXT search across both verified (Google) and visual (Pixtral) keywords
+        // Verified keywords get 2x weight via scoring
+        const [keywordImages] = await mysqlSequelize.query(
+          `SELECT i.id, i.poi_id, i.image_url, i.local_path, i.display_order,
+                  p.name as poi_name,
+                  (IFNULL(MATCH(i.keywords_verified) AGAINST(:terms IN BOOLEAN MODE), 0) * 2 +
+                   IFNULL(MATCH(i.keywords_visual) AGAINST(:terms IN BOOLEAN MODE), 0)) as relevance_score
+           FROM imageurls i
+           JOIN POI p ON i.poi_id = p.id
+           WHERE p.destination_id = :destId AND p.is_active = 1
+             AND (MATCH(i.keywords_verified) AGAINST(:terms IN BOOLEAN MODE)
+                  OR MATCH(i.keywords_visual) AGAINST(:terms IN BOOLEAN MODE))
+             ${imgExcludeClause}
+           ${orderClause}
+           LIMIT 20`,
+          { replacements: { destId: destinationId, terms: searchTerms } }
         );
 
-        for (const poi of matchingPois) {
-          if (candidates.some(c => c.poi_id === poi.id)) continue;
-          const imgExcludeClause = excludeSet.size > 0 ? `AND id NOT IN (${[...excludeSet].join(',')})` : '';
-          const imgOrder = excludeSet.size > 0 ? 'ORDER BY RAND() LIMIT 4' : 'ORDER BY display_order ASC LIMIT 4';
-          const [imgs] = await mysqlSequelize.query(
-            `SELECT id, poi_id, image_url, local_path, display_order FROM imageurls WHERE poi_id = :poiId ${imgExcludeClause} ${imgOrder}`,
-            { replacements: { poiId: poi.id } }
-          );
-          // Prefer unused images, deprioritize already-used ones
-          const sorted = imgs.sort((a, b) => {
-            const aUsed = usedImageIds.has(a.id) ? 1 : 0;
-            const bUsed = usedImageIds.has(b.id) ? 1 : 0;
-            return aUsed - bUsed || a.display_order - b.display_order;
-          });
-          candidates.push(...sorted.slice(0, 2).map(img => ({
+        // Deduplicate by POI (max 2 per POI) and prefer unused images
+        const poiCount = {};
+        for (const img of keywordImages) {
+          if (candidates.some(c => c.id === img.id)) continue;
+          poiCount[img.poi_id] = (poiCount[img.poi_id] || 0) + 1;
+          if (poiCount[img.poi_id] > 2) continue;
+
+          candidates.push({
             source: 'keyword_match',
             id: img.id,
             poi_id: img.poi_id,
-            poi_name: poi.name,
+            poi_name: img.poi_name,
             url: buildImageUrl(img),
-            relevance: usedImageIds.has(img.id) ? 0.3 : 0.7, // penalize reused images
-          })));
+            relevance: usedImageIds.has(img.id) ? 0.3 : 0.7,
+          });
+        }
+      } catch (ftErr) {
+        // Fallback to LIKE search if FULLTEXT not available
+        logger.warn('[ImageSelector] FULLTEXT search failed, falling back to LIKE:', ftErr.message);
+        const keywordConditions = keywords.slice(0, 5).map(kw =>
+          `(p.name LIKE :kw_${kw.replace(/[^a-z]/gi, '')} OR p.category LIKE :kw_${kw.replace(/[^a-z]/gi, '')})`
+        ).join(' OR ');
+        const replacements = { destId: destinationId };
+        keywords.slice(0, 5).forEach(kw => {
+          replacements[`kw_${kw.replace(/[^a-z]/gi, '')}`] = `%${kw}%`;
+        });
+        if (keywordConditions) {
+          const [matchingPois] = await mysqlSequelize.query(
+            `SELECT DISTINCT p.id, p.name FROM POI p
+             WHERE p.destination_id = :destId AND p.is_active = 1 AND (${keywordConditions})
+             LIMIT 10`,
+            { replacements }
+          );
+          for (const poi of matchingPois) {
+            if (candidates.some(c => c.poi_id === poi.id)) continue;
+            const [imgs] = await mysqlSequelize.query(
+              `SELECT id, poi_id, image_url, local_path, display_order FROM imageurls WHERE poi_id = :poiId ORDER BY display_order ASC LIMIT 2`,
+              { replacements: { poiId: poi.id } }
+            );
+            candidates.push(...imgs.map(img => ({
+              source: 'keyword_match',
+              id: img.id,
+              poi_id: img.poi_id,
+              poi_name: poi.name,
+              url: buildImageUrl(img),
+              relevance: usedImageIds.has(img.id) ? 0.3 : 0.7,
+            })));
+          }
         }
       }
     }
