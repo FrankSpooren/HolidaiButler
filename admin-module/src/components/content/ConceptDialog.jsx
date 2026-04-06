@@ -106,20 +106,45 @@ function cleanBodyForDisplay(text) {
   return clean.trim();
 }
 
-// Helper: render body with highlighted AI suggestions
+// AI editorial patterns that should NOT be published — must be highlighted for user review
+const EDITORIAL_PATTERNS = [
+  // Bracketed instructions
+  /\[[^\]]*(?:Link in Bio|Image|Visual|Photo|Suggested|CTA|Insert|Add)[^\]]*\]/gi,
+  // Unbracketed common AI instructions
+  /Link in bio[^.!?\n]*/gi,
+  /(?:^|\n)\s*(?:Image suggestion|Suggested image|Visual suggestion|Photo recommendation|Image recommendation)[:\s][^\n]*/gi,
+  /(?:^|\n)\s*\((?:Image|Photo|Visual|Picture)[^)]*\)\s*$/gim,
+  // Scene markers from video scripts
+  /\[SCENE:[^\]]*\]/gi,
+];
+
+// Helper: render body with highlighted AI editorial instructions
 function renderBodyWithHighlights(text) {
   if (!text) return null;
   const cleaned = cleanBodyForDisplay(text);
-  // Highlight remaining bracketed instructions (yellow bg)
-  const parts = cleaned.split(/(\[[^\]]+\])/g);
+
+  // Build a combined pattern that matches ALL editorial fragments
+  const combined = new RegExp(
+    '(' + EDITORIAL_PATTERNS.map(p => p.source).join('|') + '|\\[[^\\]]+\\])',
+    'gi'
+  );
+
+  const parts = cleaned.split(combined).filter(Boolean);
   return parts.map((part, i) => {
-    if (/^\[.+\]$/.test(part)) {
+    // Check if this part matches any editorial pattern
+    const isEditorial = EDITORIAL_PATTERNS.some(p => {
+      p.lastIndex = 0; // reset regex state
+      return p.test(part);
+    }) || /^\[.+\]$/.test(part);
+
+    if (isEditorial) {
       return (
         <span key={i} style={{
-          backgroundColor: '#FFF3CD', color: '#856404', padding: '1px 4px',
-          borderRadius: 3, fontSize: '0.85em', fontWeight: 500,
-        }}>
-          {part}
+          backgroundColor: '#FFF3CD', color: '#856404', padding: '2px 6px',
+          borderRadius: 4, fontSize: '0.85em', fontWeight: 500,
+          border: '1px solid #FFEEBA',
+        }} title="Redactionele opmerking — verwijderen vóór publicatie">
+          ⚠️ {part.trim()}
         </span>
       );
     }
