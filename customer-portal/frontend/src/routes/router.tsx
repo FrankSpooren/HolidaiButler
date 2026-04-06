@@ -37,6 +37,8 @@ const HelpCenterPage = lazy(() => import('../pages/static/HelpCenterPage').then(
 const PrivacyPage = lazy(() => import('../pages/static/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
 const TermsPage = lazy(() => import('../pages/static/TermsPage').then(m => ({ default: m.TermsPage })));
 const CookiesPage = lazy(() => import('../pages/static/CookiesPage').then(m => ({ default: m.CookiesPage })));
+const BlogListPage = lazy(() => import('../pages/static/BlogListPage').then(m => ({ default: m.BlogListPage })));
+const BlogDetailPage = lazy(() => import('../pages/static/BlogDetailPage').then(m => ({ default: m.BlogDetailPage })));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -172,6 +174,14 @@ export const router = createBrowserRouter([
       {
         path: '/cookies',
         element: <LazyWrapper><CookiesPage /></LazyWrapper>,
+      },
+      {
+        path: '/blog',
+        element: <LazyWrapper><BlogListPage /></LazyWrapper>,
+      },
+      {
+        path: '/blog/:slug',
+        element: <LazyWrapper><BlogDetailPage /></LazyWrapper>,
       },
       {
         // Onboarding Flow (now with Header/Footer)

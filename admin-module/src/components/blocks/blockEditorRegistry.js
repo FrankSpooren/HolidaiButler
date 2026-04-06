@@ -26,6 +26,7 @@ const MobileProgramEditor = lazy(() => import('./editors/MobileProgramEditor.jsx
 const MobileTipEditor = lazy(() => import('./editors/MobileTipEditor.jsx'));
 const MobileEventsEditor = lazy(() => import('./editors/MobileEventsEditor.jsx'));
 const MobileMapEditor = lazy(() => import('./editors/MobileMapEditor.jsx'));
+const BlogGridEditor = lazy(() => import('./editors/BlogGridEditor.jsx'));
 
 /**
  * Inline SVG wireframe thumbnails (300×200) per block type.
@@ -353,6 +354,14 @@ const blockEditorRegistry = {
     description: 'Interactieve kaart met top POIs',
     category: 'Mobiel',
     thumbnail: THUMBNAILS.mobile_map
+  },
+  blog_grid: {
+    editor: BlogGridEditor,
+    icon: 'Article',
+    label: 'Blog Grid',
+    description: 'Overzicht van gepubliceerde blog artikelen uit Content Studio',
+    category: 'Content',
+    thumbnail: THUMBNAILS.rich_text
   }
 };
 
