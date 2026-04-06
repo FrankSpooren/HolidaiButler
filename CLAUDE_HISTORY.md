@@ -6112,4 +6112,71 @@ CLAUDE.md v4.33.0 → v4.34.0. MS v7.93 → v7.94.
 
 ---
 
+## v4.37.0 — Simple Analytics + Image Keywords + Content Studio Fixes + Async Generation (6 april 2026)
+
+### Simple Analytics Event Tracking v3.0
+- **Root cause**: SA gebruikt `new Image()` pixel — events gaan verloren bij page navigatie
+- **Fix**: `sendBeacon()` fallback in `trackBeforeNav()` + event buffer voor pre-SA-load
+- **analytics.ts v3.0**: 50 events, 27 getrackte bestanden (hb-websites) + 6 (customer-portal)
+- **IntersectionObserver**: section-viewed impressies (ProgramCard, TodayEvents, MapPreview)
+- **Desktop**: Header, Footer, POICard, Nav tracking in customer-portal SPA
+- **Footer 'use client'**: SSR Server Component fix (onClick handlers)
+
+### Apify Image Pipeline Fixes
+- **image_id bug**: `imageurls.image_id` NOT NULL maar ontbrak in INSERT → images op disk maar niet in DB
+- **1.208 wees-images**: geregistreerd via Python script
+- **26.415 images**: `keywords_verified` kolom gevuld (Apify categoryName + reviewsTags + atmosphere)
+- **Pixtral 12B batch**: 25.632 images AI-vision tags (keywords_visual, visual_description, visual_mood, visual_setting)
+- **Benchmark**: 100 POIs stratified sample, 95% betrouwbaarheid — hybride B+C aanbeveling
+- **imageSelector.js v2.0**: FULLTEXT search op keywords_verified (2x gewicht) + keywords_visual
+- **adminPortal.js**: /content/images/browse met FULLTEXT keyword search
+
+### Content Studio Bug Fixes (8 bugs)
+1. **Website platform ontbrak** in generatie-dialog: `.filter(k !== 'website')` verwijderd
+2. **Hashtags afgebroken** bij FB 500 char-limiet: sanitizer scheidt hashtags vóór truncatie
+3. **media_ids niet opgeslagen**: toegevoegd aan INSERT in /content/items/generate
+4. **social_metadata niet opgeslagen**: idem (UTM link bewaard)
+5. **UTM "Ontbreekt"**: PlatformPreview checkt nu ook `social_metadata.link`
+6. **Redactionele tekst niet gearceerd**: EDITORIAL_PATTERNS regex (Link in bio, Image suggestion, etc.)
+7. **Blog body raw HTML**: dangerouslySetInnerHTML voor blog content_type
+8. **Meta description afbreking**: woordgrens/zinsgrens i.p.v. harde substring(0,155)
+
+### Content Generator Verbeteringen
+- **website_analytics prompt**: CalpeTrip standalone pagina's (Home, Explore, CalpeChat, Agenda, Favorites, Account, About, FAQ)
+- **Hashtag injectie**: post-processing als AI hashtags vergeet
+- **UTM altijd**: homepage fallback als geen POI-link beschikbaar
+- **Auto-image selectie**: media_ids automatisch bij generatie via imageSelector.js
+- **SEO_MINIMUM_SCORE**: 80 → 50 (auto-improve zelden effectief)
+- **MAX_ROUNDS**: 3 → 1 (voorkomt 90s+ nutteloze herschrijf-rondes)
+
+### Async Content Generation
+- **POST /content/concepts/generate**: retourneert instant met concept_id + status "generating"
+- **Achtergrond**: setImmediate() voert generatie + vertalingen uit na HTTP response
+- **Frontend polling**: ContentStudioPage pollt elke 5s op GET /concepts/:id
+- **ConceptDialog**: toont spinner + "Content wordt gegenereerd..." bij status=generating
+- **DB**: approval_status ENUM uitgebreid met 'generating'
+- **Bewijs**: concept 105 — blog 10.262 chars + 3 images, geen HTTP timeout
+
+### Bestanden gewijzigd (deze sessie)
+- `hb-websites/src/lib/analytics.ts` (v3.0)
+- `hb-websites/src/components/mobile/` (4 bestanden: section-viewed)
+- `hb-websites/src/components/` (MobileBottomNav, OnboardingSheet, layout/Footer, layout/Nav)
+- `hb-websites/src/blocks/` (9 bestanden: tracking toegevoegd)
+- `hb-websites/src/components/ui/` (6 bestanden: tracking)
+- `customer-portal/frontend/src/shared/utils/analytics.ts` (v3.0)
+- `customer-portal/frontend/src/shared/components/Header.tsx`
+- `customer-portal/frontend/src/shared/components/Footer/Footer.tsx`
+- `customer-portal/frontend/src/features/poi/components/POICard.tsx`
+- `platform-core/src/services/agents/dataSync/poiSyncService.js` (image_id fix + keywords)
+- `platform-core/src/services/agents/contentRedacteur/imageSelector.js` (v2.0 FULLTEXT)
+- `platform-core/src/services/agents/contentRedacteur/contentGenerator.js` (website_analytics, async, SEO threshold)
+- `platform-core/src/services/agents/contentRedacteur/contentSanitizer.js` (hashtag truncation)
+- `platform-core/src/routes/adminPortal.js` (async generate, media_ids, social_metadata, image browse)
+- `admin-module/src/pages/ContentStudioPage.jsx` (Website platform, async polling)
+- `admin-module/src/components/content/ConceptDialog.jsx` (blog HTML, editorial arcering, generating status)
+- `admin-module/src/components/content/PlatformPreview.jsx` (UTM check social_metadata.link)
+- `scripts/populate_keywords_verified.py` + `populate_keywords_visual.py` + `pixtral_benchmark.py`
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

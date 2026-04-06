@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.36.0
+> **Versie**: 4.37.0
 > **Laatst bijgewerkt**: 6 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -702,7 +702,8 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **4.36.0** | **2026-04-06** | **Content Studio Enterprise Redesign + CalpeTrip Blog**. ConceptDialog 2-panel (Opdracht 1-4): platform tabs, body editor, vertaal-tabs, SEO/Brand Score, PlatformPreview, publish/schedule acties, blog-modus (TipTap WYSIWYG). Backend: Facebook publish fix (page ID), content generatie prompt engineering per kanaaltype (Quality Checklist), UTM tracking, em-dash/bullet sanitizer, PLATFORM_LIMITS correctie (FB 500). Blog: public API `/api/v1/blogs`, CalpeTrip.com blog route (customer-portal SPA), BlogGrid block + editor. CalpeTrip hybride architectuur gedocumenteerd. Taaldetectie via Accept-Language header (fallback EN). inline.js 404 fix. |
+| **4.37.0** | **2026-04-06** | **Async Content Generation + Content Studio Bug Fixes + Image Keywords + SA v3.0**. Async generatie: /concepts/generate retourneert instant, generatie op achtergrond (setImmediate), frontend pollt status. DB: approval_status ENUM + 'generating'. 8 Content Studio bugs gefixt: Website platform-optie, hashtag afbreking, media_ids/social_metadata opslaan, UTM check, editorial arcering (EDITORIAL_PATTERNS), blog HTML rendering, meta description woordgrens, website_analytics prompt. Image keywords hybride B/C: FULLTEXT search op keywords_verified (26.415 Apify) + keywords_visual (Pixtral 12B, 25.632 images). Apify image_id bug fix + 1.208 wees-images geregistreerd. SA analytics v3.0: sendBeacon, IntersectionObserver, 50 events, desktop customer-portal tracking. SEO_MINIMUM_SCORE 50, MAX_ROUNDS 1. |
+| 4.36.0 | 2026-04-06 | Content Studio Enterprise Redesign + CalpeTrip Blog. ConceptDialog 2-panel (Opdracht 1-4): platform tabs, body editor, vertaal-tabs, SEO/Brand Score, PlatformPreview, publish/schedule acties, blog-modus (TipTap WYSIWYG). Backend: Facebook publish fix (page ID), content generatie prompt engineering per kanaaltype (Quality Checklist), UTM tracking, em-dash/bullet sanitizer, PLATFORM_LIMITS correctie (FB 500). Blog: public API `/api/v1/blogs`, CalpeTrip.com blog route (customer-portal SPA), BlogGrid block + editor. CalpeTrip hybride architectuur gedocumenteerd. Taaldetectie via Accept-Language header (fallback EN). inline.js 404 fix. |
 | 4.35.0 | 2026-04-06 | Simple Analytics Event Tracking v3.0 — Complete Coverage. sendBeacon fallback, 50 events, 27 getrackte bestanden. |
 | 4.34.0 | 2026-04-03 | Content Studio Multi-Source Image Integratie. Pexels + Flickr als image bronnen naast Unsplash. imageSelector.js cascading fallback. 2 nieuwe admin endpoints (248 totaal). |
 | 4.33.0 | 2026-04-02 | POI Data Pipeline Optimalisatie + Events Distance + i18n Static Pages. Apify maxImages:10, downloadNewImages(), 6 nieuwe DB kolommen, prijsfilter, POI detail action buttons, Texel sync gepauzeerd. 33 bestanden. |
@@ -715,7 +716,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.96 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.97 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
