@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 3 april 2026
-**Versie**: 7.94
+**Datum**: 6 april 2026
+**Versie**: 7.95
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Content Studio Multi-Source Images**: Pexels + Flickr API integratie naast Unsplash. 3 externe image bronnen in cascading fallback (imageSelector tier 4a/4b/4c). 248 endpoints. CLAUDE.md v4.34.0. MS v7.94.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Simple Analytics Event Tracking v3.0**: sendBeacon + IntersectionObserver. 50 events, 27 bestanden, 100% coverage mobiel + desktop. 248 endpoints. CLAUDE.md v4.35.0. MS v7.95.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1712,6 +1712,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 | **7.63** | **15-03-2026** | **Fase C: Content Publishing — De Uitgever Agent + Social Media + Calendar. Publisher Agent (#25 De Uitgever): Meta Graph API v25.0 (Facebook + Instagram two-step container), LinkedIn Marketing API, platform client factory. Content Calendar tab (maandweergave, seizoensoverlay, inplannen/publiceren). Performance tab (KPI cards, Recharts BarChart+PieChart, top content). Seasonal Config tab (CRUD, activeren, thema's, hero image override). Social Accounts (connect/disconnect, AES-256-CBC). LinkedIn OAuth callback. DB migration content_items +3 kolommen + ENUM uitgebreid. 2 social_accounts geseeded. 17 nieuwe API endpoints (185 totaal). 3 BullMQ jobs (59 totaal). 25 agents (+1). 3 frontend tabs, 17 API methods, 16 hooks. i18n 4 talen. adminPortal.js v3.27.0. CLAUDE.md v4.1.0.** |
 | **7.62** | **14-03-2026** | **Fase B: Content Engine — AI Content Generatie Motor. De Redacteur Agent (#23, Mistral AI content generatie, tone-of-voice, vertaling, formatting). De SEO Meester Agent (#24, SEO analyse, Flesch-Kincaid per taal, SISTRIX integratie). Content Suggestie Engine (3 endpoints). Content Generator UI (7 endpoints, ContentStudioPage 3 tabs). 10 nieuwe + 7 gewijzigde bestanden. 24 agents, 56 jobs, 168 endpoints. adminPortal.js v3.26.0. CLAUDE.md v4.0.0.** |
 | **7.61** | **11-03-2026** | **Command v15.1 — Fase VI-B Features + Admin Fixes. DEEL A: Hero chatbot "general" filter, events slide-in drawer (EventDetailDrawer + EventCard + API proxy), block selector dark mode. DEEL B: SearchBar (debounced autocomplete), LanguageSwitcher (cookie locale override), chatbot speech-to-text (Web Speech API), chatbot refresh button. Admin: OnboardingPage React Error #31 fix, design templates → Onboarding, POI module + AI Content. 5 nieuwe + 8 gewijzigde bestanden (724 LOC). CLAUDE.md v3.99.0.** |
+| **7.95** | **06-04-2026** | **Simple Analytics Event Tracking v3.0 — Complete Coverage mobiel + desktop. Root cause: SA Image pixel verliest events bij page-navigatie → sendBeacon fallback. analytics.ts v3.0 in hb-websites + customer-portal. 50 events, 27 getrackte bestanden (mobiel) + 6 bestanden (desktop SPA). IntersectionObserver section-viewed impressies. trackBeforeNav() voor navigatie-kliks. Event buffer. Footer 'use client' SSR fix. Desktop: Header, Footer, POICard tracking. CLAUDE.md v4.35.0.** |
 | **7.60** | **10-03-2026** | **Command v15.0 — UX Polish (Fase VI-A). 7 fixes: ChatbotWidget mobile responsive (calc(100vw-1.5rem)), loading skeletons (Skeleton.tsx + Suspense SSR streaming), animaties (fadeInUp, stagger, hover lift, image fade-in, prefers-reduced-motion), Hero/DateBlock responsive tekst, Map responsive hoogte (300/400/500px), ScrollToTop button, font preloading. 2 nieuwe + 10 gewijzigde bestanden. CLAUDE.md v3.98.0.** |
 | **7.59** | **10-03-2026** | **Command v14.0 DEEL B: Browser-Verificatie + CI/CD Workflow. POI detail HTTP 500 fix (PoiImageGallery.tsx 'use client' — React 19 Server Component event handler beperking). deploy-hb-websites.yml CI/CD workflow aangemaakt + fixed (rsync --delete wiped server-only files → verwijderd, config files aan Git). tsconfig.json exclude playwright/tests. Server hersteld (214 PM2 restarts). Workflow dev+main SUCCESS. CLAUDE.md v3.97.0.** |
 | **7.58** | **10-03-2026** | **Command v14.0 DEEL A: 5 Resterende Fixes — Customer Portal Kwaliteit. FIX 1: Footer navigation data-driven (tenant.config.nav_items) + custom HTML. FIX 2: ButtonRenderer generiek component (Hero/Cta refactored, CardGroup+Banner chatbot variant). FIX 3: POI detail image layout (4 varianten, vaste verhoudingen). FIX 4: POI detail slide-in drawer (PoiDetailDrawer+PoiCard CustomEvent, API proxy). FIX 5: Filter modals POI+Event (categorie/rating/reviews/sort/datum, slide-in, i18n). 7 nieuwe + 11 gewijzigde bestanden. 10/10 Hetzner PASS. CLAUDE.md v3.96.0.** |
@@ -1731,4 +1732,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 27 maart 2026 — Content Studio Finale Kwaliteitsbeoordeling COMPLEET (8 opdrachten). SimpleAnalytics trending bron. Multi-destination content delen. Brand Voice real-time check. Onboarding UX gids. Admin Portal: 244 endpoints, adminPortal.js v3.39.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.29.0. MS v7.89.*
+*Laatst bijgewerkt: 6 april 2026 — Simple Analytics Event Tracking v3.0: sendBeacon + IntersectionObserver, 50 events, 100% coverage mobiel + desktop. Admin Portal: 248 endpoints, adminPortal.js v3.40.0. 62 scheduled jobs. 25 agents. CLAUDE.md v4.35.0. MS v7.95.*

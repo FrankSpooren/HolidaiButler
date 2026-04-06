@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.34.0
-> **Laatst bijgewerkt**: 3 april 2026
+> **Versie**: 4.35.0
+> **Laatst bijgewerkt**: 6 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -476,6 +476,80 @@ Rating ≥ 4.0, reviews ≥ 3, tile description required, ≥ 3 images, exclusie
 | LLM | 🇫🇷 | Mistral AI |
 | Vector DB | — | ChromaDB Cloud |
 | SEO Intelligence | 🇩🇪 | SISTRIX (Bonn) |
+| Analytics | 🇳🇱 | Simple Analytics (Amsterdam) |
+
+---
+
+## 📊 Simple Analytics — Event Tracking (v3.0)
+
+### Dashboard
+`https://dashboard.simpleanalyticscdn.com/calpetrip.com/events`
+
+### Architectuur
+CalpeTrip.com heeft **twee aparte codebases** die beide naar hetzelfde SA-dashboard rapporteren:
+
+| Visitor | Codebase | Analytics bestand | Versie |
+|---------|----------|-------------------|--------|
+| **Mobiel** (homepage) | `hb-websites/src/lib/analytics.ts` | Next.js 15 (port 3002) | v3.0.0 |
+| **Desktop** (SPA) | `customer-portal/frontend/src/shared/utils/analytics.ts` | React 19 + Vite (SPA) | v3.0.0 |
+
+### Tracking Mechanisme (v3.0)
+```
+onClick → trackEvent() / trackBeforeNav()
+           ├─ window.sa_event() (SA native, als geladen)
+           └─ navigator.sendBeacon() (fallback, overleeft page-navigatie)
+```
+
+**Drie verzendmethoden** (in volgorde van prioriteit):
+1. `window.sa_event()` — SA's eigen functie (Image pixel), als SA-script geladen is
+2. `navigator.sendBeacon()` — overleeft page unloads, gebruikt voor navigatie-events
+3. Event buffer — events die vuren voordat SA geladen is worden gequeued en geflusht
+
+**Twee typen tracking functies:**
+- `trackEvent()` — voor kliks die op de pagina blijven (drawer openen, chatbot, etc.)
+- `trackBeforeNav()` — voor kliks die wegnavigeren (bottom nav Agenda/POIs, externe links). Gebruikt sa_event + sendBeacon dubbel om verlies te voorkomen
+
+### Impressie-tracking (IntersectionObserver)
+Automatische `*_viewed_mobile` events wanneer een sectie 30% zichtbaar wordt in de viewport (1x per sessie):
+- `program_card_viewed_mobile` — ProgramCard blok zichtbaar
+- `today_events_viewed_mobile` — TodayEvents blok zichtbaar
+- `map_preview_viewed_mobile` — MapPreview blok zichtbaar
+
+### Event Inventaris (50 events)
+
+**Chatbot** (6): `chatbot_opened`, `chatbot_message`, `chatbot_quick_tip_van_de_dag`, `chatbot_quick_programma_samenstellen`, `chatbot_quick_zoeken_op_rubriek`, `chatbot_quick_routebeschrijving`
+
+**POI** (7): `poi_card_clicked`, `poi_detail_opened`, `poi_menu_clicked`, `poi_reservation_clicked`, `poi_booking_clicked`, `poi_similar_clicked`, `poi_website_clicked`
+
+**Events/Agenda** (2): `event_card_clicked`, `event_detail_opened`
+
+**Navigatie** (7): `logo_clicked`, `nav_link_clicked`, `footer_link_clicked`, `social_link_clicked`, `hamburger_menu`, `mobile_bottom_nav_*`, `scroll_to_top`
+
+**Onboarding** (4): `onboarding_step_N`, `onboarding_completed`, `onboarding_dismissed`, `onboarding_choice`
+
+**Homepage impressies** (3): `program_card_viewed`, `today_events_viewed`, `map_preview_viewed`
+
+**Content** (4): `tip_of_day_viewed`, `program_item_clicked`, `program_details_clicked`, `program_cta_clicked`
+
+**Overig** (17): `language_changed`, `wcag_modal_opened`, `search_used`, `search_result_clicked`, `category_button`, `filter_applied`, `cta_clicked`, `contact_form_submitted`, `newsletter_subscribed`, `ticket_buy_clicked`, `reservation_search_clicked`, `reservation_slot_clicked`, `faq_toggled`, `gallery_opened`, `banner_link_clicked`, `banner_dismissed`, `today_events_more_clicked`, `map_preview_clicked`
+
+### Naamconventie
+`{component}_{actie}_{device}` — device wordt automatisch gedetecteerd (`mobile` < 768px, anders `desktop`)
+
+### Scripts (geladen in layout)
+```html
+<script src="https://scripts.simpleanalyticscdn.com/latest.js" />     <!-- pageviews + sa_event() -->
+<script src="https://scripts.simpleanalyticscdn.com/auto-events.js" /> <!-- outbound, emails, downloads -->
+<script src="https://scripts.simpleanalyticscdn.com/inline.js" />      <!-- data-sa-event HTML attributen -->
+```
+
+### Getrackte Componenten (27 bestanden)
+
+**hb-websites (mobiel + Next.js desktop):**
+analytics.ts, MobileBottomNav, MobileHeader, OnboardingSheet, ProgramCard, TipOfTheDay, TodayEvents, MapPreview, ChatbotWidget, PoiDetailDrawer, EventDetailDrawer, Nav, Footer, SearchBar, ButtonRenderer, ChatbotButton, Button, PoiCard, EventCard, PoiGrid, EventCalendar, ContactForm, Newsletter, TicketShop, ReservationWidget, Faq, Gallery, Banner
+
+**customer-portal (desktop SPA):**
+analytics.ts, Header, Footer, POICard, POIDetailModal, HoliBotContext
 
 ---
 
@@ -601,9 +675,9 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **4.34.0** | **2026-04-03** | **Content Studio Multi-Source Image Integratie**. Pexels + Flickr als image bronnen naast Unsplash. imageSelector.js cascading fallback. 2 nieuwe admin endpoints (248 totaal). |
-| **4.33.0** | **2026-04-02** | **POI Data Pipeline Optimalisatie + Events Distance + i18n Static Pages**. Apify maxImages:10, downloadNewImages(), 6 nieuwe DB kolommen, prijsfilter, POI detail action buttons, Texel sync gepauzeerd. 33 bestanden. |
-| **4.32.0** | **2026-04-01** | **Desktop Template Polish + Encoding Fix + Page Builder Completie**. Inter font, encoding fix 176 records, Footer conform Calpe, POI paginering, Page Builder 100% (35 blocks, 36 editors). |
+| **4.35.0** | **2026-04-06** | **Simple Analytics Event Tracking v3.0 — Complete Coverage**. Root cause fix: SA gebruikt Image pixel (verliest events bij navigatie) → sendBeacon fallback. analytics.ts v3.0 in hb-websites + customer-portal. 50 events, 27 getrackte bestanden. IntersectionObserver section-viewed impressies (ProgramCard, TodayEvents, MapPreview). trackBeforeNav() voor navigatie-kliks. Event buffer voor pre-SA-load kliks. Desktop: Header, Footer, POICard tracking. |
+| 4.34.0 | 2026-04-03 | Content Studio Multi-Source Image Integratie. Pexels + Flickr als image bronnen naast Unsplash. imageSelector.js cascading fallback. 2 nieuwe admin endpoints (248 totaal). |
+| 4.33.0 | 2026-04-02 | POI Data Pipeline Optimalisatie + Events Distance + i18n Static Pages. Apify maxImages:10, downloadNewImages(), 6 nieuwe DB kolommen, prijsfilter, POI detail action buttons, Texel sync gepauzeerd. 33 bestanden. |
 
 > **Volledige changelog (v3.0.0 - v4.31.0)**: zie CLAUDE_HISTORY.md
 
@@ -613,7 +687,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.94 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.95 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
