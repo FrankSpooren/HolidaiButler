@@ -625,27 +625,40 @@ function buildUserPrompt(suggestion, contentType, platform, keywords) {
   const keywordsStr = keywords.length > 0 ? `\nKeywords to incorporate naturally: ${keywords.join(', ')}` : '';
   const context = suggestion.summary ? `\nContext: ${suggestion.summary}` : '';
 
-  // Detect website_analytics trending keywords (e.g., "website: Homepage", "website: Restaurants")
+  // Detect website_analytics trending keywords (e.g., "website: Homepage")
   const isWebsiteAnalytics = (suggestion.title || '').toLowerCase().startsWith('website:');
   const websitePageName = isWebsiteAnalytics ? suggestion.title.replace(/^website:\s*/i, '').trim() : '';
 
-  // Build website-analytics specific instruction
+  // CalpeTrip.com is a STANDALONE platform (not connected to Page Builder).
+  // Pages: Home, Explore (POIs), CalpeChat, Agenda, Favorites, Account, About, FAQ.
+  const CALPETRIP_PAGES = {
+    'homepage': 'CalpeTrip.com homepage: AI-powered personal day program (morning/afternoon/evening), daily Tip of the Day, real-time "Vandaag in Calpe" event carousel, interactive map with 1500+ POIs, and CalpeChat AI travel assistant',
+    'home': 'CalpeTrip.com homepage: AI-powered personal day program, daily Tip of the Day, live event carousel, interactive map, CalpeChat AI assistant',
+    'explore': 'Explore page: 1500+ verified points of interest with ratings, reviews, photos, interactive map with category filters (beaches, restaurants, culture, active, shopping)',
+    'calpechat': 'CalpeChat: AI travel assistant that speaks 4 languages, gives personalized recommendations, plans your day, and knows every hidden gem in Calpe',
+    'agenda': 'Agenda: complete real-time Calpe event calendar with category filters, all local festivals, markets, concerts and activities',
+    'favorites': 'Favorites: save your favorite places and build your personal Calpe collection',
+    'about': 'About: the story behind CalpeTrip, AI-powered tourism platform for the Costa Blanca',
+    'faq': 'FAQ: answers about using CalpeTrip, planning your visit, and local tips',
+  };
+
+  const pageKey = websitePageName.toLowerCase().replace(/[^a-z]/g, '');
+  const pageFeatures = CALPETRIP_PAGES[pageKey] || CALPETRIP_PAGES['homepage'];
+
   const websiteInstruction = isWebsiteAnalytics ? `
 
-CRITICAL CONTEXT — This content promotes a SPECIFIC PAGE on the CalpeTrip.com platform.
-The page is: "${websitePageName}"
-Your post MUST:
-- Explain what visitors can FIND and DO on this specific page of CalpeTrip.com
-- Mention concrete features: interactive CalpeChat AI assistant, personalized day programs, real-time event calendar, 1500+ verified local places with reviews, restaurant reservations, etc.
-- Frame it as: "Visit calpetrip.com to discover [what this page offers]"
-- Do NOT write generic tourism prose about Calpe — write about the PLATFORM FEATURES
-- The goal is to drive traffic TO this specific page by showing its unique value
-Example features per page:
-  Homepage: AI-powered day program, Tip of the Day, local event calendar, interactive chatbot
-  Restaurants: 200+ verified restaurants with ratings, menus, reservation links
-  Events/Agenda: Complete Calpe event calendar, filters by category
-  Explore/POIs: 1500+ points of interest, interactive map, category filters
-  About: The story behind CalpeTrip, mission, team` : '';
+MANDATORY — THIS POST IS ABOUT A PLATFORM, NOT ABOUT TOURISM.
+You are writing about CalpeTrip.com — a digital travel platform.
+Specific page: "${websitePageName}"
+Page features: ${pageFeatures}
+
+RULES (OVERRIDE ALL OTHER INSTRUCTIONS):
+1. Write about WHAT THE PLATFORM DOES — its features, tools, and benefits
+2. Do NOT write generic tourism prose about beaches, sunsets, or paella
+3. Mention specific platform features: CalpeChat AI, day program, event calendar, 1500+ POIs, ratings
+4. CTA must drive to calpetrip.com
+5. Tone: "Your holiday planning made effortless with smart technology"
+6. NEVER include the raw title "website: Homepage" or "website: ..." literally in the post text — use "CalpeTrip.com" instead` : '';
 
   switch (contentType) {
     case 'blog':
