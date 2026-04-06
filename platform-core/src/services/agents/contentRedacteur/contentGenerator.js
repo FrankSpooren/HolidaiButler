@@ -354,7 +354,14 @@ export async function generateContent(suggestion, options = {}) {
     const autoSlug = slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 80);
     const autoMetaDesc = metaDescription || (() => {
       const plainBody = (trackedBody || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-      return plainBody.substring(0, 155);
+      if (plainBody.length <= 160) return plainBody;
+      // Truncate at sentence boundary (. ! ?) within 155 chars, or at last word boundary
+      const maxLen = 155;
+      const truncated = plainBody.substring(0, maxLen);
+      const lastSentence = Math.max(truncated.lastIndexOf('. '), truncated.lastIndexOf('! '), truncated.lastIndexOf('? '));
+      if (lastSentence > maxLen * 0.5) return truncated.substring(0, lastSentence + 1).trim();
+      const lastSpace = truncated.lastIndexOf(' ');
+      return (lastSpace > maxLen * 0.6 ? truncated.substring(0, lastSpace) : truncated).trim() + '...';
     })();
 
     const seoData = { meta_description: autoMetaDesc, meta_title: autoMetaTitle, slug: autoSlug };
