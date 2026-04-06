@@ -331,10 +331,11 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
           </Tabs>
 
           <TextField size="small" fullWidth
-            placeholder={mediaTab === 1 ? 'Zoek POI naam...' : mediaTab === 2 ? 'Zoek stock foto\'s (Engels)...' : 'Zoek...'}
+            placeholder={mediaTab === 1 ? 'Zoek op naam, categorie, sfeer (bijv. "terrace", "romantic", "beach")...' : mediaTab === 2 ? 'Zoek stock foto\'s (Engels)...' : 'Zoek...'}
             value={mediaSearch}
             onChange={e => setMediaSearch(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && (mediaTab === 2 || mediaTab === 3)) { setMediaItems([]); }}}
+            helperText={mediaTab === 1 ? 'Zoekt op POI-naam, Google categorie, review tags, sfeer en visuele AI-tags' : undefined}
             sx={{ mb: 2 }} />
 
           {mediaLoading ? (
@@ -364,9 +365,15 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
                       border: '2px solid transparent', '&:hover': { borderColor: 'primary.main', transform: 'scale(1.03)' },
                       transition: 'all 0.2s' }}
                     onError={e => { e.target.style.display = 'none'; }} />
-                  <Typography variant="caption" noWrap sx={{ display: 'block', mt: 0.3 }}>
+                  <Typography variant="caption" noWrap sx={{ display: 'block', mt: 0.3, fontWeight: 500 }}>
                     {m.poi_name || m.original_name || m.photographer || m.filename || '—'}
                   </Typography>
+                  {m.poi_category && (
+                    <Typography variant="caption" noWrap sx={{ display: 'block', fontSize: 10, color: 'text.secondary' }}>{m.poi_category}</Typography>
+                  )}
+                  {m.visual_description && (
+                    <Typography variant="caption" noWrap sx={{ display: 'block', fontSize: 9, color: 'text.disabled', fontStyle: 'italic' }}>{m.visual_description}</Typography>
+                  )}
                   {(m.source === 'unsplash' || m.source === 'pexels') && (
                     <Typography variant="caption" sx={{ fontSize: 9, color: 'text.disabled' }}>{m.source}</Typography>
                   )}
