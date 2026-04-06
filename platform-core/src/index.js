@@ -57,6 +57,7 @@ import reservationRoutes from './routes/reservations.js';
 import pagesRoutes from './routes/pages.js';
 import contactRoutes from './routes/contact.js';
 import newsletterRoutes from './routes/newsletter.js';
+import blogRoutes from './routes/blogs.js';
 import User from './models/User.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -186,6 +187,7 @@ app.use('/api/v1/reservations', reservationRoutes); // Reservation Module (Fase 
 app.use('/api/v1/pages', pagesRoutes); // Pages & Destinations (Fase V)
 app.use('/api/v1/contact', contactRoutes); // Contact Form (Fase V.6)
 app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V.6)
+app.use('/api/v1/blogs', blogRoutes); // Public Blog API (Content Studio blogs)
 
 // OAuth helper — public base URL for callbacks (behind Apache reverse proxy req.get('host') returns localhost)
 function getOAuthBaseUrl() {
