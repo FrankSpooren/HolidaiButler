@@ -12784,13 +12784,21 @@ router.get('/content/images/browse', adminAuth('editor'), async (req, res) => {
     let whereClause = 'p.destination_id = ? AND p.is_active = 1';
     const params = [destId];
 
+    // Search across POI name/category AND image keywords (verified + visual)
+    let fulltextSearch = false;
     if (search && search.trim().length > 1) {
-      whereClause += ' AND (p.name LIKE ? OR p.category LIKE ?)';
-      params.push(`%${search.trim()}%`, `%${search.trim()}%`);
+      const term = search.trim();
+      // Try FULLTEXT on image keywords first, fallback to LIKE on POI fields
+      whereClause += ` AND (p.name LIKE ? OR p.category LIKE ?
+        OR MATCH(i.keywords_verified) AGAINST(? IN BOOLEAN MODE)
+        OR MATCH(i.keywords_visual) AGAINST(? IN BOOLEAN MODE))`;
+      params.push(`%${term}%`, `%${term}%`, term, term);
+      fulltextSearch = true;
     }
 
     const [images] = await mysqlSequelize.query(`
-      SELECT i.id, i.poi_id, i.local_path, i.image_url, p.name as poi_name, p.category as poi_category
+      SELECT i.id, i.poi_id, i.local_path, i.image_url, i.keywords_verified, i.visual_description,
+             p.name as poi_name, p.category as poi_category
       FROM imageurls i
       JOIN POI p ON i.poi_id = p.id
       WHERE ${whereClause}

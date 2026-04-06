@@ -182,6 +182,23 @@ class POISyncService {
 
       if (imageUrls.length === 0) return 0;
 
+      // Build keywords_verified from Apify data for new images
+      const verifiedKeywords = [];
+      if (apifyData.categoryName) verifiedKeywords.push(apifyData.categoryName);
+      if (Array.isArray(apifyData.reviewsTags)) {
+        for (const tag of apifyData.reviewsTags.slice(0, 5)) {
+          if (tag?.title) verifiedKeywords.push(tag.title);
+        }
+      }
+      if (apifyData.additionalInfo?.Atmosphere) {
+        const atm = apifyData.additionalInfo.Atmosphere;
+        const labels = Array.isArray(atm)
+          ? atm.flatMap(a => typeof a === 'object' ? Object.keys(a).filter(k => a[k]) : [])
+          : typeof atm === 'object' ? Object.keys(atm).filter(k => atm[k]) : [];
+        verifiedKeywords.push(...labels);
+      }
+      const keywordsStr = [...new Set(verifiedKeywords)].slice(0, 10).join(', ');
+
       // Check which URLs are already downloaded
       const [existing] = await this.sequelize.query(
         'SELECT image_url, image_id FROM imageurls WHERE poi_id = ?',
@@ -203,12 +220,13 @@ class POISyncService {
             const displayOrder = existing.length + downloaded + 1;
             const imageId = maxImageId + downloaded + 1;
             await this.sequelize.query(`
-              INSERT INTO imageurls (poi_id, image_id, image_url, local_path, source, google_place_id, file_size, file_hash, display_order, downloaded_at)
-              VALUES (?, ?, ?, ?, 'apify_refresh', ?, ?, ?, ?, NOW())
+              INSERT INTO imageurls (poi_id, image_id, image_url, local_path, source, google_place_id, file_size, file_hash, display_order, downloaded_at, keywords_verified)
+              VALUES (?, ?, ?, ?, 'apify_refresh', ?, ?, ?, ?, NOW(), ?)
             `, {
               replacements: [
                 poiId, imageId, url, result.local_path, googlePlaceid || null,
-                result.file_size || null, result.file_hash || null, displayOrder
+                result.file_size || null, result.file_hash || null, displayOrder,
+                keywordsStr || null
               ]
             });
             downloaded++;
