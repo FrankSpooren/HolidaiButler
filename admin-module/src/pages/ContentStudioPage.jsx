@@ -415,7 +415,7 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
     setGenElapsed(0);
     const timer = setInterval(() => setGenElapsed(prev => prev + 1), 1000);
     try {
-      await contentService.generateConcept({
+      const result = await contentService.generateConcept({
         suggestion_id: suggestion.id,
         destination_id: destinationId,
         content_type: contentType,
@@ -424,13 +424,52 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
         template_id: templateId || undefined,
         persona_id: personaId || undefined,
       });
-      if (onGenerate) await onGenerate({});
-      onClose();
-    } finally {
+
+      const conceptId = result?.data?.concept_id;
+
+      if (conceptId) {
+        // Async generation started — poll until concept has items
+        setGenProgress('Content wordt gegenereerd op de achtergrond...');
+        let attempts = 0;
+        const maxAttempts = 60; // 60 × 5s = 5 minutes max
+        const pollInterval = setInterval(async () => {
+          attempts++;
+          try {
+            const concept = await contentService.getConcept(conceptId);
+            const cData = concept?.data || concept;
+            const items = (cData?.items || []).filter(i => i.approval_status !== 'deleted');
+            const status = cData?.approval_status;
+
+            if (items.length > 0 || (status && status !== 'generating') || attempts >= maxAttempts) {
+              clearInterval(pollInterval);
+              clearInterval(timer);
+              setGenerating(false);
+              setGenProgress('');
+              setGenElapsed(0);
+              if (onGenerate) await onGenerate({});
+              onClose();
+            } else {
+              const phase = attempts < 6 ? 'AI schrijft content...'
+                : attempts < 12 ? 'SEO-analyse en optimalisatie...'
+                : attempts < 20 ? 'Vertalingen genereren...'
+                : 'Bijna klaar, nog even geduld...';
+              setGenProgress(phase);
+            }
+          } catch {
+            // Poll error — keep trying
+          }
+        }, 5000);
+      } else {
+        // Fallback: old sync behavior (shouldn't happen)
+        if (onGenerate) await onGenerate({});
+        onClose();
+      }
+    } catch (err) {
       clearInterval(timer);
       setGenerating(false);
       setGenProgress('');
       setGenElapsed(0);
+      throw err;
     }
   };
 

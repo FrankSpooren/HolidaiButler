@@ -738,7 +738,14 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
 
             {/* ─── LEFT PANEL (60%) ─── */}
             <Box sx={{ width: '60%', borderRight: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-              {items.length === 0 ? (
+              {items.length === 0 && concept?.approval_status === 'generating' ? (
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <CircularProgress size={32} sx={{ mb: 2 }} />
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>Content wordt gegenereerd...</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Dit kan 1-3 minuten duren voor een blog post met vertalingen.</Typography>
+                  <Button size="small" sx={{ mt: 2 }} onClick={loadConcept}>Ververs status</Button>
+                </Box>
+              ) : items.length === 0 ? (
                 <Box sx={{ p: 4, textAlign: 'center' }}><Alert severity="info">Dit concept heeft nog geen platform versies.</Alert></Box>
               ) : activeItem && isBlog ? (
                 /* ═══ BLOG MODUS — TipTap WYSIWYG + SEO Metadata ═══ */
