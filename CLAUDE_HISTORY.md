@@ -6129,7 +6129,8 @@ CLAUDE.md v4.33.0 → v4.34.0. MS v7.93 → v7.94.
 - **Pixtral 12B batch**: 25.632 images AI-vision tags (keywords_visual, visual_description, visual_mood, visual_setting)
 - **Benchmark**: 100 POIs stratified sample, 95% betrouwbaarheid — hybride B+C aanbeveling
 - **imageSelector.js v2.0**: FULLTEXT search op keywords_verified (2x gewicht) + keywords_visual
-- **adminPortal.js**: /content/images/browse met FULLTEXT keyword search
+- **adminPortal.js**: /content/images/browse met FULLTEXT keyword search + retourneert poi_category + visual_description
+- **Image picker POI-tab** (ContentImageSection.jsx): placeholder "Zoek op naam, categorie, sfeer...", helperText uitlegt zoekbereik, toont poi_category + AI-beschrijving per resultaat
 
 ### Content Studio Bug Fixes (8 bugs)
 1. **Website platform ontbrak** in generatie-dialog: `.filter(k !== 'website')` verwijderd
