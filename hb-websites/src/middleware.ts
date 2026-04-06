@@ -4,8 +4,8 @@ import type { TenantMapping } from '@/types/tenant';
 const DOMAIN_MAP: Record<string, TenantMapping> = {
   'holidaibutler.com': { slug: 'calpe', defaultLocale: 'nl' },
   'www.holidaibutler.com': { slug: 'calpe', defaultLocale: 'nl' },
-  'calpetrip.com': { slug: 'calpe', defaultLocale: 'nl' },
-  'www.calpetrip.com': { slug: 'calpe', defaultLocale: 'nl' },
+  'calpetrip.com': { slug: 'calpe', defaultLocale: 'en' },
+  'www.calpetrip.com': { slug: 'calpe', defaultLocale: 'en' },
   'calpe.holidaibutler.com': { slug: 'calpe', defaultLocale: 'nl' },
   'dev.holidaibutler.com': { slug: 'calpe', defaultLocale: 'nl' },
   'texelmaps.nl': { slug: 'texel', defaultLocale: 'nl' },
@@ -45,12 +45,18 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host')?.replace(/:\d+$/, '') ?? '';
   const tenant = resolveTenant(hostname);
 
-  // Check for locale override cookie
+  // Locale resolution: cookie > browser Accept-Language > default (EN)
   const localeCookie = request.cookies.get('hb_locale')?.value;
   const validLocales = ['nl', 'en', 'de', 'es', 'fr'];
-  const locale = localeCookie && validLocales.includes(localeCookie)
-    ? localeCookie
-    : tenant.defaultLocale;
+  let locale: string;
+  if (localeCookie && validLocales.includes(localeCookie)) {
+    locale = localeCookie;
+  } else {
+    // Detect browser language from Accept-Language header
+    const acceptLang = request.headers.get('accept-language') || '';
+    const browserLang = acceptLang.split(',').map(l => l.split(';')[0].trim().substring(0, 2).toLowerCase()).find(l => validLocales.includes(l));
+    locale = browserLang || 'en'; // fallback to EN when no match
+  }
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-tenant-slug', tenant.slug);

@@ -88,12 +88,22 @@ router.get('/', async (req, res) => {
       try {
         const mediaIds = blog.media_ids ? (typeof blog.media_ids === 'string' ? JSON.parse(blog.media_ids) : blog.media_ids) : [];
         if (mediaIds.length > 0) {
-          const numId = Number(String(mediaIds[0]).replace('poi:', ''));
-          if (!isNaN(numId) && numId > 0) {
-            const [imgs] = await mysqlSequelize.query('SELECT local_path, image_url FROM imageurls WHERE id = :id', { replacements: { id: numId } });
-            if (imgs[0]) {
-              const imgPath = imgs[0].local_path ? imgs[0].local_path.replace(/^\/poi-images\//, '/') : null;
-              image = imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : imgs[0].image_url;
+          // Check if first entry is a URL string
+          const firstId = mediaIds[0];
+          if (typeof firstId === 'string' && firstId.startsWith('http')) {
+            image = firstId;
+          } else if (typeof firstId === 'string' && firstId.startsWith('/')) {
+            image = `${imageBase}${firstId}`;
+          }
+          // Otherwise try numeric ID in imageurls
+          if (!image) {
+            const numId = Number(String(firstId).replace('poi:', ''));
+            if (!isNaN(numId) && numId > 0) {
+              const [imgs] = await mysqlSequelize.query('SELECT local_path, image_url FROM imageurls WHERE id = :id', { replacements: { id: numId } });
+              if (imgs[0]) {
+                const imgPath = imgs[0].local_path ? imgs[0].local_path.replace(/^\/poi-images\//, '/') : null;
+                image = imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : imgs[0].image_url;
+              }
             }
           }
         }
@@ -164,12 +174,20 @@ router.get('/:slug', async (req, res) => {
     try {
       const mediaIds = blog.media_ids ? (typeof blog.media_ids === 'string' ? JSON.parse(blog.media_ids) : blog.media_ids) : [];
       if (mediaIds.length > 0) {
-        const numId = Number(String(mediaIds[0]).replace('poi:', ''));
-        if (!isNaN(numId) && numId > 0) {
-          const [imgs] = await mysqlSequelize.query('SELECT local_path, image_url FROM imageurls WHERE id = :id', { replacements: { id: numId } });
-          if (imgs[0]) {
-            const imgPath = imgs[0].local_path ? imgs[0].local_path.replace(/^\/poi-images\//, '/') : null;
-            image = imgPath ? `${imageBase}/api/v1/img${imgPath}?w=1200&f=webp` : imgs[0].image_url;
+        const firstId = mediaIds[0];
+        if (typeof firstId === 'string' && firstId.startsWith('http')) {
+          image = firstId;
+        } else if (typeof firstId === 'string' && firstId.startsWith('/')) {
+          image = `${imageBase}${firstId}`;
+        }
+        if (!image) {
+          const numId = Number(String(firstId).replace('poi:', ''));
+          if (!isNaN(numId) && numId > 0) {
+            const [imgs] = await mysqlSequelize.query('SELECT local_path, image_url FROM imageurls WHERE id = :id', { replacements: { id: numId } });
+            if (imgs[0]) {
+              const imgPath = imgs[0].local_path ? imgs[0].local_path.replace(/^\/poi-images\//, '/') : null;
+              image = imgPath ? `${imageBase}/api/v1/img${imgPath}?w=1200&f=webp` : imgs[0].image_url;
+            }
           }
         }
       }

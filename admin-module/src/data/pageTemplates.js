@@ -100,6 +100,19 @@ const pageTemplates = [
     }
   },
   {
+    id: 'blog',
+    label: 'Blog',
+    description: 'Blog overzichtspagina met laatste artikelen uit Content Studio',
+    icon: 'Article',
+    layout: {
+      blocks: [
+        { id: 'hero-1', type: 'hero', props: { headline: 'Blog', description: 'Stories, tips and local insights', height: 'compact' } },
+        { id: 'blog-grid-1', type: 'blog_grid', props: { limit: 9, columns: 3 } },
+        { id: 'cta-1', type: 'cta', props: { headline: 'Want more inspiration?', buttons: [{ label: 'Start chatting', variant: 'chatbot' }] } }
+      ]
+    }
+  },
+  {
     id: 'partners',
     label: 'Partners & Sponsors',
     description: 'Partner showcase with downloads',

@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.35.0
+> **Versie**: 4.36.0
 > **Laatst bijgewerkt**: 6 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -188,6 +188,31 @@ Na evaluatie van Directus (database-first CMS), Payload CMS 3.0 (Next.js-native 
 
 **Technische blauwdruk**: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
 
+### 🚨 CalpeTrip.com — Hybride Architectuur (KRITIEK)
+
+> **CalpeTrip.com is GEEN Page Builder site. CalpeTrip.com is GEEN customer-portal.**
+> **CalpeTrip.com draait op hb-websites (Next.js) met een STANDALONE mobiele + desktop template.**
+
+| Aspect | CalpeTrip.com (LIVE) | Toekomstige destinations (Texel, WarreWijzer, etc.) |
+|--------|---------------------|-----------------------------------------------------|
+| **Codebase** | `hb-websites/` (Next.js, port 3002) | `hb-websites/` (zelfde codebase, page builder modus) |
+| **Homepage** | Standalone templates (`mobile/*`, `layout.tsx`) | Page Builder blocks (`pages` tabel + `blocks/`) |
+| **Configuratie** | Hardcoded + `destinations.branding` DB | Admin Portal → Pagina's & Navigatie |
+| **Apache vhost** | `calpetrip.com` → proxy naar port 3002 | `texelmaps.nl` / `warrewijzer.be` → proxy naar port 3002 |
+| **Routing** | `layout.tsx`: `tenantSlug !== 'texel'` → standalone MobileHomepage | Page builder rendering via `[[...slug]]/page.tsx` |
+
+**Beschermde bestanden** (live campagne sinds 1 april 2026):
+- `hb-websites/src/components/mobile/*` — NOOIT wijzigen zonder Frank's akkoord
+- `hb-websites/src/components/MobileHeader.tsx` — idem
+- `hb-websites/src/components/MobileBottomNav.tsx` — idem
+- `hb-websites/src/components/modules/ChatbotWidget.tsx` — idem
+- `hb-websites/src/app/layout.tsx` — idem
+
+**Verplichte checks bij ELKE hb-websites wijziging:**
+1. Beïnvloedt deze wijziging calpetrip.com mobiel? → STOP, vraag Frank
+2. Beïnvloedt deze wijziging `destinations.branding` DB? → STOP, vraag Frank
+3. Raakt dit beschermde bestanden? → STOP, vraag Frank
+
 ---
 
 ## 🗃️ Database Schema
@@ -328,18 +353,20 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Admin UX Overhaul | v4.31.0 (14 opdrachten) | ✅ COMPLEET | apr 2026 |
 | POI Pipeline Optimalisatie | v4.33.0 (12 punten) | ✅ COMPLEET | apr 2026 |
 | Content Studio Images | v4.34.0 (Pexels + Flickr) | ✅ COMPLEET | apr 2026 |
+| Content Studio Redesign | v4.36.0 (Opdracht 1-4 + Blog + Kwaliteit) | ✅ COMPLEET | apr 2026 |
 
 ### Huidige Tellingen
 | Metric | Waarde |
 |--------|--------|
-| Admin endpoints | 248 |
-| adminPortal.js | v3.40.0 |
+| Admin endpoints | 249 |
+| adminPortal.js | v3.41.0 |
 | Agents | 25 |
 | BullMQ jobs | 62 |
-| Block types | 35 (+ aliassen) |
-| Block editors | 36 |
-| CLAUDE.md | v4.34.0 |
-| Master Strategie | v7.94 |
+| Block types | 36 (+ aliassen, +blog_grid) |
+| Block editors | 37 (+BlogGridEditor) |
+| Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
+| CLAUDE.md | v4.36.0 |
+| Master Strategie | v7.96 |
 
 ---
 
@@ -675,7 +702,8 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **4.35.0** | **2026-04-06** | **Simple Analytics Event Tracking v3.0 — Complete Coverage**. Root cause fix: SA gebruikt Image pixel (verliest events bij navigatie) → sendBeacon fallback. analytics.ts v3.0 in hb-websites + customer-portal. 50 events, 27 getrackte bestanden. IntersectionObserver section-viewed impressies (ProgramCard, TodayEvents, MapPreview). trackBeforeNav() voor navigatie-kliks. Event buffer voor pre-SA-load kliks. Desktop: Header, Footer, POICard tracking. |
+| **4.36.0** | **2026-04-06** | **Content Studio Enterprise Redesign + CalpeTrip Blog**. ConceptDialog 2-panel (Opdracht 1-4): platform tabs, body editor, vertaal-tabs, SEO/Brand Score, PlatformPreview, publish/schedule acties, blog-modus (TipTap WYSIWYG). Backend: Facebook publish fix (page ID), content generatie prompt engineering per kanaaltype (Quality Checklist), UTM tracking, em-dash/bullet sanitizer, PLATFORM_LIMITS correctie (FB 500). Blog: public API `/api/v1/blogs`, CalpeTrip.com blog route (customer-portal SPA), BlogGrid block + editor. CalpeTrip hybride architectuur gedocumenteerd. Taaldetectie via Accept-Language header (fallback EN). inline.js 404 fix. |
+| 4.35.0 | 2026-04-06 | Simple Analytics Event Tracking v3.0 — Complete Coverage. sendBeacon fallback, 50 events, 27 getrackte bestanden. |
 | 4.34.0 | 2026-04-03 | Content Studio Multi-Source Image Integratie. Pexels + Flickr als image bronnen naast Unsplash. imageSelector.js cascading fallback. 2 nieuwe admin endpoints (248 totaal). |
 | 4.33.0 | 2026-04-02 | POI Data Pipeline Optimalisatie + Events Distance + i18n Static Pages. Apify maxImages:10, downloadNewImages(), 6 nieuwe DB kolommen, prijsfilter, POI detail action buttons, Texel sync gepauzeerd. 33 bestanden. |
 
@@ -687,7 +715,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.95 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.96 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

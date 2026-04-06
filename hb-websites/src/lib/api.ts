@@ -208,3 +208,46 @@ export async function fetchAvailableSlots(
   );
   return res?.data ?? [];
 }
+
+// ─── Blog API ───────────────────────────────────────────────
+
+export interface BlogSummary {
+  id: number;
+  title: string;
+  slug: string;
+  metaTitle: string;
+  metaDescription: string;
+  excerpt: string;
+  body?: string;
+  image: string | null;
+  seoScore: number;
+  publishedAt: string;
+  createdAt: string;
+  bodyTranslations?: Record<string, string>;
+}
+
+export async function fetchBlogs(
+  tenantSlug: string,
+  locale?: string,
+  limit = 12
+): Promise<BlogSummary[]> {
+  const res = await hbFetch<ApiResponse<{ blogs: BlogSummary[] }>>(
+    '/api/v1/blogs',
+    tenantSlug,
+    { revalidate: 300, locale, params: { limit: String(limit) } }
+  );
+  return res?.data?.blogs ?? [];
+}
+
+export async function fetchBlog(
+  tenantSlug: string,
+  slug: string,
+  locale?: string
+): Promise<BlogSummary | null> {
+  const res = await hbFetch<ApiResponse<BlogSummary>>(
+    `/api/v1/blogs/${slug}`,
+    tenantSlug,
+    { revalidate: 300, locale }
+  );
+  return res?.data ?? null;
+}

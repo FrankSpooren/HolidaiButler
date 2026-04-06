@@ -6081,6 +6081,34 @@ CLAUDE.md v4.33.0 → v4.34.0. MS v7.93 → v7.94.
 | 4.16.0 | 21-03 | Standalone Content Studio, Merk Profiel & Knowledge Base, 234 endpoints |
 | 4.15.0 | 21-03 | Mobiele Homepage Quality 14 punten |
 | 4.14.0 | 20-03 | Fase VI-B Feedback 7 fixes |
+| 4.35.0 | 06-04 | Simple Analytics v3.0 — 50 events, sendBeacon, 27 bestanden |
+| 4.36.0 | 06-04 | Content Studio Enterprise Redesign Opdracht 1-4 + CalpeTrip Blog |
+
+---
+
+## v4.36.0 — Content Studio Enterprise Redesign + CalpeTrip Blog (6 april 2026)
+
+### ConceptDialog (Opdracht 1-4)
+- 2-panel layout (1326 LOC), MUI platform icons, doelgroep selector
+- ContentImageSection geëxtraheerd (388 LOC), body editor, karakter teller, vertaal-tabs
+- Emoji picker (90 emoji, 9 categorieën), publish/schedule acties, SEO/Brand Score
+- Blog-modus: TipTap WYSIWYG, woordteller, heading outline, SEO Metadata panel
+
+### Backend
+- Facebook publish: page ID uit social_accounts (metaClient.js)
+- Prompt engineering: Quality Checklist per kanaaltype (hook, CTA, emoji, hashtags)
+- PLATFORM_LIMITS: FB 500, TikTok 150, Pinterest 500
+- UTM tracking bij generatie, sanitizer (em-dash, bullet, markdown→HTML)
+- Blog API: `GET /api/v1/blogs` + `GET /api/v1/blogs/:slug` (public, no auth)
+
+### CalpeTrip Blog
+- customer-portal: BlogListPage + BlogDetailPage (clean wit design)
+- Apache SPA fallback voor /blog (NIET Next.js proxy)
+- BlogGridEditor: Automatisch/Handmatig modus met blog selector
+
+### CalpeTrip Fixes
+- CALPETRIP brandName, taaldetectie Accept-Language, inline.js 404
+- Hybride architectuur gedocumenteerd in CLAUDE.md
 
 ---
 

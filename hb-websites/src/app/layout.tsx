@@ -76,7 +76,7 @@ export default async function RootLayout({
 }) {
   const headersList = await headers();
   const tenantSlug = headersList.get('x-tenant-slug') ?? 'calpe';
-  const locale = headersList.get('x-tenant-locale') ?? 'nl';
+  const locale = headersList.get('x-tenant-locale') ?? 'en';
 
   let tenant;
   try {
@@ -207,11 +207,7 @@ export default async function RootLayout({
           data-use-title="true"
           strategy="afterInteractive"
         />
-        {/* Inline events: tracks data-sa-event attributes */}
-        <Script
-          src="https://scripts.simpleanalyticscdn.com/inline.js"
-          strategy="afterInteractive"
-        />
+        {/* inline.js removed — script no longer exists on SA CDN, tracking handled by analytics.ts sendBeacon */}
         <noscript>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="https://queue.simpleanalyticscdn.com/noscript.gif" alt="" referrerPolicy="no-referrer-when-downgrade" />
