@@ -457,7 +457,7 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
         <Box>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('contentStudio.form.platforms', 'Platformen')}</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {Object.entries(PLATFORM_LABELS).filter(([k]) => k !== 'website').map(([val, lbl]) => (
+            {Object.entries(PLATFORM_LABELS).map(([val, lbl]) => (
               <Chip
                 key={val}
                 label={lbl}
