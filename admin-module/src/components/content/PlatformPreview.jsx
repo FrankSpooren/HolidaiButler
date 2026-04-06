@@ -149,7 +149,7 @@ function ValidationItem({ label, value, status, detail }) {
   );
 }
 
-function PlatformMockup({ platform, content, rules, isTargetPlatform, contentType, images }) {
+function PlatformMockup({ platform, content, rules, isTargetPlatform, contentType, images, socialMetadata }) {
   // For blogs on social platforms: show "use Repurpose" message instead of truncated preview
   const isBlogOnSocial = contentType === 'blog' && platform !== 'website' && rules.maxChars < 50000;
   const isOverLimit = rules.maxChars && content.length > rules.maxChars;
@@ -187,7 +187,7 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
   const charCount = adapted.length;
   const emojiCount = countEmoji(adapted);
   const hashtagCount = countHashtags(adapted);
-  const hasUtm = hasUtmParams(adapted);
+  const hasUtm = hasUtmParams(adapted) || hasUtmParams(socialMetadata?.link || '');
   const isInOptimalRange = rules.optimalRange
     ? charCount >= rules.optimalRange[0] && charCount <= rules.optimalRange[1]
     : null;
@@ -355,10 +355,10 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
           detail={rules.emojiRange[0] === rules.emojiRange[1] && rules.emojiRange[0] === 0 ? 'n.v.t.' : `${rules.emojiRange[0]}-${rules.emojiRange[1]} optimaal`}
         />
         {hasUtm && (
-          <ValidationItem label="UTM tracking" value="Actief" status="success" />
+          <ValidationItem label="UTM tracking" value="Actief" status="success" detail="link wordt automatisch voorzien van tracking" />
         )}
         {!hasUtm && platform !== 'website' && (
-          <ValidationItem label="UTM tracking" value="Ontbreekt" status="warning" detail="aanbevolen" />
+          <ValidationItem label="UTM tracking" value="Ontbreekt" status="warning" detail="genereer opnieuw om toe te voegen" />
         )}
       </Paper>
 
@@ -446,6 +446,7 @@ export default function PlatformPreview({ content, targetPlatform, selectedLangu
         isTargetPlatform={activePlatform === targetPlatform}
         contentType={content?.content_type}
         images={content?.resolved_images}
+        socialMetadata={content?.social_metadata}
       />
     </Box>
   );
