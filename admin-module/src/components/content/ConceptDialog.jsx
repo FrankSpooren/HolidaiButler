@@ -39,6 +39,7 @@ import contentService from '../../api/contentService.js';
 import brandProfileService from '../../api/brandProfileService.js';
 import ContentImageSection from './ContentImageSection.jsx';
 import PlatformPreview from './PlatformPreview.jsx';
+import RichTextField from '../blocks/fields/RichTextField.jsx';
 
 // ─── Platform Config (official MUI icons) ───────────────────
 const PLATFORM_CONFIG = {
@@ -210,6 +211,11 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   const [snackMsg, setSnackMsg] = useState(null); // feedback messages
   const [resolvedImages, setResolvedImages] = useState([]); // for PlatformPreview
 
+  // Blog-modus state (Opdracht 4)
+  const [blogMetaTitle, setBlogMetaTitle] = useState('');
+  const [blogMetaDesc, setBlogMetaDesc] = useState('');
+  const [blogSlug, setBlogSlug] = useState('');
+
   // ─── Load Concept ───────────────────────────────────────
   const loadConcept = useCallback(async () => {
     if (!conceptId) return;
@@ -268,19 +274,38 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   const activePlatform = activeItem?.target_platform || 'website';
   const platformConfig = PLATFORM_CONFIG[activePlatform] || PLATFORM_CONFIG.website;
   const selectedPersonaObj = personas.find(p => p.id === selectedPersona) || null;
+  const isBlog = concept?.content_type === 'blog';
 
   // Sync body editor when switching tabs or languages
   useEffect(() => {
     if (!activeItem) return;
     const rawBody = activeItem[`body_${langTab}`] || '';
-    const cleaned = cleanBodyForDisplay(rawBody);
+    const cleaned = isBlog ? rawBody : cleanBodyForDisplay(rawBody);
     setEditBody(cleaned);
     setOriginalBody(cleaned);
     setDirty(false);
     setWasEdited(false);
-    setIsEditing(false);
+    setIsEditing(isBlog); // blogs always in edit mode
     setImproveResult(null);
-  }, [activeTab, langTab]);
+    // Blog SEO metadata — extract from seo_data with robust fallbacks
+    if (isBlog) {
+      let seoData = {};
+      try { seoData = activeItem.seo_data ? (typeof activeItem.seo_data === 'string' ? JSON.parse(activeItem.seo_data) : activeItem.seo_data) : {}; } catch { seoData = {}; }
+      const suggestions = seoData.seoSuggestions || {};
+      // Meta title: seo_data.meta_title > seoSuggestions.meta_title > item title
+      const mt = seoData.meta_title || suggestions.meta_title || activeItem.title || '';
+      setBlogMetaTitle(mt.substring(0, 60));
+      // Meta description: seo_data.meta_description (skip if starts with <) > seoSuggestions (skip if HTML) > auto from body
+      const rawDesc = seoData.meta_description || '';
+      const sugDesc = suggestions.meta_description || '';
+      const bodyPlain = (activeItem.body_en || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const md = (rawDesc && !rawDesc.startsWith('<')) ? rawDesc : (sugDesc && !sugDesc.startsWith('<')) ? sugDesc : bodyPlain.substring(0, 155);
+      setBlogMetaDesc(md.substring(0, 160));
+      // Slug: seo_data.slug > seoSuggestions.slug > auto from title
+      const rawSlug = seoData.slug || (suggestions.slug || '').replace(/^blog\//, '');
+      setBlogSlug(rawSlug || (activeItem.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 80));
+    }
+  }, [activeTab, langTab, activeItem?.id]);
 
   // ─── Handlers ───────────────────────────────────────────
   const handleSaveTitle = async () => {
@@ -299,15 +324,26 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     if (!activeItem) return;
     setSaving(true);
     try {
-      await contentService.updateItem(activeItem.id, { [`body_${langTab}`]: editBody });
-      // Update local state
-      setItems(prev => prev.map(i => i.id === activeItem.id ? { ...i, [`body_${langTab}`]: editBody } : i));
+      const updates = { [`body_${langTab}`]: editBody };
+      // Blog: also save SEO metadata
+      if (isBlog) {
+        updates.seo_data = JSON.stringify({
+          ...(activeItem.seo_data ? (typeof activeItem.seo_data === 'string' ? JSON.parse(activeItem.seo_data) : activeItem.seo_data) : {}),
+          meta_title: blogMetaTitle,
+          meta_description: blogMetaDesc,
+          slug: blogSlug,
+        });
+      }
+      await contentService.updateItem(activeItem.id, updates);
+      setItems(prev => prev.map(i => i.id === activeItem.id ? { ...i, [`body_${langTab}`]: editBody, ...(isBlog ? { seo_data: updates.seo_data } : {}) } : i));
       setDirty(false);
-      setWasEdited(editBody !== originalBody); // persist "Aangepast" if content changed vs original
-      setIsEditing(false);
+      setWasEdited(editBody !== originalBody);
+      if (!isBlog) setIsEditing(false);
       if (onUpdate) onUpdate();
+      setSnackMsg('Opgeslagen');
     } catch (err) {
       console.error('Save failed:', err);
+      setSnackMsg('Opslaan mislukt');
     } finally {
       setSaving(false);
     }
@@ -649,8 +685,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
 
           <Divider sx={{ mt: 1 }} />
 
-          {/* ═══ PLATFORM TABS ═══ */}
-          {items.length > 0 && (
+          {/* ═══ PLATFORM TABS (hidden for blogs) ═══ */}
+          {items.length > 0 && !isBlog && (
             <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} variant="scrollable" scrollButtons="auto"
               sx={{ px: 3, minHeight: 44, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minHeight: 44, textTransform: 'none' } }}>
               {items.map((item, idx) => {
@@ -679,6 +715,135 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
             <Box sx={{ width: '60%', borderRight: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
               {items.length === 0 ? (
                 <Box sx={{ p: 4, textAlign: 'center' }}><Alert severity="info">Dit concept heeft nog geen platform versies.</Alert></Box>
+              ) : activeItem && isBlog ? (
+                /* ═══ BLOG MODUS — TipTap WYSIWYG + SEO Metadata ═══ */
+                <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {/* Image Section */}
+                  <ContentImageSection itemId={activeItem.id} item={activeItem} onUpdate={handleImageUpdate} />
+
+                  {/* Blog Header */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LanguageIcon sx={{ fontSize: 20, color: '#5E8B7E' }} />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Blog Editor</Typography>
+                    {(() => {
+                      const score = seoData?.overallScore ?? activeItem.seo_score;
+                      return score != null ? (
+                        <Chip label={`SEO ${score}/100`} size="small"
+                          color={score >= 80 ? 'success' : score >= 60 ? 'warning' : 'error'} />
+                      ) : null;
+                    })()}
+                    {dirty && <Chip label="Niet opgeslagen" size="small" sx={{ height: 20, fontSize: 10, bgcolor: '#FFB74D', color: '#5D4037' }} />}
+                    <Box sx={{ flex: 1 }} />
+                    <Button variant="contained" size="small" startIcon={saving ? <CircularProgress size={14} /> : <SaveIcon />}
+                      onClick={handleSaveBody} disabled={saving || !dirty}>Opslaan</Button>
+                    <Tooltip title="AI Herschrijven">
+                      <IconButton size="small" onClick={handleImprove} disabled={improving}>
+                        {improving ? <CircularProgress size={16} /> : <AutoAwesomeIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+
+                  {improveResult && (
+                    <Alert severity={improveResult.improved ? 'success' : 'info'} onClose={() => setImproveResult(null)} sx={{ py: 0.5 }}>
+                      {improveResult.improved
+                        ? `Content verbeterd! Score: ${improveResult.original_score || '?'} → ${seoData?.overallScore || improveResult.final_score || '?'}/100`
+                        : `Niet verbeterd: ${improveResult.reason || 'Score was al hoog genoeg'}`}
+                    </Alert>
+                  )}
+
+                  {/* TipTap Rich Text Editor */}
+                  <RichTextField
+                    value={editBody}
+                    onChange={val => { setEditBody(val); setDirty(true); }}
+                    placeholder="Begin met schrijven..."
+                    sx={{ '& .ProseMirror': { minHeight: 300 } }}
+                  />
+
+                  {/* Word counter */}
+                  {(() => {
+                    const text = editBody.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                    const wordCount = text ? text.split(/\s+/).length : 0;
+                    const pct = Math.min(100, (wordCount / 1500) * 100);
+                    const color = wordCount >= 800 && wordCount <= 1500 ? 'success' : wordCount >= 500 ? 'warning' : 'error';
+                    return (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LinearProgress variant="determinate" value={pct} color={color} sx={{ flex: 1, height: 4, borderRadius: 2 }} />
+                        <Typography variant="caption" color={`${color}.main`} sx={{ fontWeight: 600, minWidth: 90, textAlign: 'right' }}>
+                          {wordCount} woorden {wordCount >= 800 && wordCount <= 1500 ? '✓' : `(${wordCount < 800 ? 'min 800' : 'max 1500'})`}
+                        </Typography>
+                      </Box>
+                    );
+                  })()}
+
+                  {/* Heading Outline */}
+                  {(() => {
+                    const headingRegex = /<h([23])[^>]*>(.*?)<\/h[23]>/gi;
+                    const headings = [];
+                    let match;
+                    while ((match = headingRegex.exec(editBody)) !== null) {
+                      headings.push({ level: Number(match[1]), text: match[2].replace(/<[^>]+>/g, '') });
+                    }
+                    return headings.length > 0 ? (
+                      <Paper variant="outlined" sx={{ p: 1.5 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Heading Structuur</Typography>
+                        {headings.map((h, i) => (
+                          <Typography key={i} variant="caption" sx={{ display: 'block', pl: h.level === 3 ? 2 : 0, color: 'text.secondary' }}>
+                            {h.level === 2 ? 'H2' : '  H3'} — {h.text}
+                          </Typography>
+                        ))}
+                      </Paper>
+                    ) : null;
+                  })()}
+
+                  <Divider />
+
+                  {/* SEO Metadata Panel */}
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>SEO Metadata</Typography>
+                    <TextField label="Meta Title" value={blogMetaTitle} onChange={e => { setBlogMetaTitle(e.target.value); setDirty(true); }}
+                      fullWidth size="small" sx={{ mb: 1.5 }}
+                      helperText={`${blogMetaTitle.length}/60 tekens ${blogMetaTitle.length > 60 ? '(te lang)' : ''}`}
+                      error={blogMetaTitle.length > 60} />
+                    <TextField label="Meta Description" value={blogMetaDesc} onChange={e => { setBlogMetaDesc(e.target.value); setDirty(true); }}
+                      fullWidth size="small" multiline rows={2} sx={{ mb: 1.5 }}
+                      helperText={`${blogMetaDesc.length}/160 tekens ${blogMetaDesc.length > 160 ? '(te lang)' : ''}`}
+                      error={blogMetaDesc.length > 160} />
+                    <TextField label="URL Slug" value={blogSlug} onChange={e => { setBlogSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')); setDirty(true); }}
+                      fullWidth size="small"
+                      helperText={`calpetrip.com/blog/${blogSlug}`} />
+                  </Paper>
+
+                  {/* Language tabs for blog */}
+                  <Paper variant="outlined" sx={{ p: 1.5 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, mb: 1, display: 'block' }}>Vertalingen</Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {LANGS.map(lang => {
+                        const hasBody = !!activeItem[`body_${lang}`];
+                        const isActive = langTab === lang;
+                        return (
+                          <Chip key={lang} label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                            {lang.toUpperCase()} {hasBody ? <CheckIcon sx={{ fontSize: 12 }} /> : null}
+                          </Box>} size="small" variant={isActive ? 'filled' : hasBody ? 'filled' : 'outlined'}
+                            color={isActive ? 'primary' : hasBody ? 'success' : 'default'}
+                            onClick={() => hasBody && setLangTab(lang)}
+                            sx={{ height: 26, fontSize: 11, cursor: hasBody ? 'pointer' : 'default', fontWeight: isActive ? 700 : 400 }} />
+                        );
+                      })}
+                    </Box>
+                    {LANGS.filter(l => !activeItem[`body_${l}`]).length > 0 && (
+                      <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <TranslateIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>Vertaal naar:</Typography>
+                        {LANGS.filter(l => !activeItem[`body_${l}`]).map(l => (
+                          <Chip key={l} label={l.toUpperCase()} size="small" variant="outlined"
+                            icon={<TranslateIcon sx={{ fontSize: 12 }} />} onClick={() => handleTranslate(l)}
+                            disabled={translating} sx={{ height: 22, fontSize: 10, cursor: 'pointer' }} />
+                        ))}
+                      </Box>
+                    )}
+                  </Paper>
+                </Box>
+
               ) : activeItem ? (
                 <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
 
@@ -770,10 +935,20 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     </Box>
                   ) : (
                     <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2, borderLeft: `4px solid ${platformConfig.color}`,
-                      minHeight: 120, whiteSpace: 'pre-wrap', fontSize: '0.9rem', lineHeight: 1.6,
-                      maxHeight: 350, overflowY: 'auto', cursor: 'pointer' }}
+                      minHeight: 120, whiteSpace: isBlog ? 'normal' : 'pre-wrap', fontSize: '0.9rem', lineHeight: 1.6,
+                      maxHeight: 350, overflowY: 'auto', cursor: 'pointer',
+                      '& h2': { fontSize: '1.25rem', fontWeight: 700, mt: 2, mb: 1 },
+                      '& h3': { fontSize: '1.1rem', fontWeight: 600, mt: 1.5, mb: 0.5 },
+                      '& p': { mb: 1 },
+                      '& a': { color: 'primary.main', textDecoration: 'underline' },
+                      '& strong': { fontWeight: 600 },
+                    }}
                       onClick={() => setIsEditing(true)} title="Klik om te bewerken">
-                      {editBody ? renderBodyWithHighlights(editBody) : (
+                      {editBody ? (
+                        isBlog && editBody.includes('<')
+                          ? <div dangerouslySetInnerHTML={{ __html: editBody }} />
+                          : renderBodyWithHighlights(editBody)
+                      ) : (
                         <Typography color="text.secondary" sx={{ fontStyle: 'italic' }}>
                           Geen content beschikbaar, klik om te bewerken
                         </Typography>
@@ -1032,7 +1207,26 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                 </Paper>
 
                 {/* ══ PREVIEW SECTIE ══ */}
-                {activeItem && activeItem.target_platform !== 'website' && (
+                {activeItem && isBlog ? (
+                  /* Blog: website preview */
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <VisibilityIcon sx={{ fontSize: 18 }} /> Website Preview
+                    </Typography>
+                    <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2, bgcolor: '#fff' }}>
+                      <Typography variant="caption" color="primary.main" sx={{ display: 'block', mb: 0.5 }}>
+                        calpetrip.com/blog/{blogSlug || 'slug'}
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 16, mb: 0.5, color: '#1a0dab' }}>
+                        {blogMetaTitle || concept?.title || 'Blog titel'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>
+                        {blogMetaDesc || 'Meta description verschijnt hier in zoekresultaten...'}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                ) : activeItem && activeItem.target_platform !== 'website' ? (
+                  /* Social: platform preview */
                   <Paper variant="outlined" sx={{ p: 2 }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <VisibilityIcon sx={{ fontSize: 18 }} /> Preview
@@ -1044,7 +1238,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       availablePlatforms={items.map(i => i.target_platform).filter((v, i, a) => a.indexOf(v) === i)}
                     />
                   </Paper>
-                )}
+                ) : null}
 
                 {/* ══ PERFORMANCE DATA (na publicatie) ══ */}
                 {activeItem?.approval_status === 'published' && (
