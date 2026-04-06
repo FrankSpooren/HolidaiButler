@@ -11643,13 +11643,15 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
       }
     }
 
-    // Save to content_items (with seo_score + poi_id)
+    // Save to content_items (with seo_score + poi_id + media_ids + social_metadata)
     const [insertResult] = await mysqlSequelize.query(
       `INSERT INTO content_items
        (destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-        seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
+        seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id,
+        media_ids, social_metadata, created_at, updated_at)
        VALUES (:destId, :sugId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-        :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
+        :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId,
+        :mediaIds, :socialMeta, NOW(), NOW())`,
       {
         replacements: {
           destId: suggestion.destination_id,
@@ -11666,6 +11668,8 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
           platform: generated.target_platform,
           aiModel: generated.ai_model,
           poiId: detectedPoiId,
+          mediaIds: generated.media_ids ? JSON.stringify(generated.media_ids) : null,
+          socialMeta: generated.social_metadata ? JSON.stringify(generated.social_metadata) : null,
         },
       }
     );
