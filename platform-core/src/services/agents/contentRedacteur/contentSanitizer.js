@@ -73,6 +73,41 @@ const PLATFORM_RULES = {
 export function sanitizeContent(rawContent, contentType, targetPlatform) {
   if (!rawContent || typeof rawContent !== 'string') return '';
 
+  // Blog content — should be HTML. If AI returned markdown instead, convert to HTML.
+  if (contentType === 'blog') {
+    let clean = rawContent;
+    // Strip AI artifacts
+    clean = clean.replace(/^```html\s*\n?/i, '');  // strip opening ```html
+    clean = clean.replace(/\n?```\s*$/g, '');       // strip closing ```
+    clean = clean.replace(/•/g, '');
+    clean = clean.replace(/\s*—\s*/g, ', ');
+    clean = clean.replace(/\s*–\s*/g, ' - ');
+    clean = clean.replace(/\n*\((?:Picture this|Image suggestion|Visual|Photo)[^)]{20,}\)\s*$/gi, '');
+    clean = clean.replace(/^(META_TITLE|META_DESCRIPTION|SLUG)\s*:.+$/gm, '');
+
+    // If content has NO HTML tags, convert markdown to HTML
+    if (!/<h[23456]|<p>|<\/p>/.test(clean)) {
+      // Convert markdown headers to HTML
+      clean = clean.replace(/^#{3}\s+(.+)$/gm, '<h3>$1</h3>');
+      clean = clean.replace(/^#{2}\s+(.+)$/gm, '<h2>$1</h2>');
+      clean = clean.replace(/^#\s+(.+)$/gm, '<h2>$1</h2>');
+      // Convert bold/italic
+      clean = clean.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      clean = clean.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      // Convert markdown links [text](url) to <a href>
+      clean = clean.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+      // Wrap paragraphs: split on double newline, wrap each in <p>
+      const parts = clean.split(/\n{2,}/);
+      clean = parts.map(p => {
+        p = p.trim();
+        if (!p) return '';
+        if (/^<h[23456]>/.test(p)) return p; // already a heading
+        return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+      }).filter(Boolean).join('\n\n');
+    }
+    return clean.trim();
+  }
+
   let clean = rawContent;
 
   // === PHASE 1: Strip structural markdown ===
@@ -147,13 +182,40 @@ export function sanitizeContent(rawContent, contentType, targetPlatform) {
   const limits = PLATFORM_RULES[targetPlatform];
   if (limits && limits.maxChars) {
     if (clean.length > limits.maxChars) {
-      // Find last sentence boundary before limit
-      const truncated = clean.substring(0, limits.maxChars - 3);
-      const lastSentence = truncated.lastIndexOf('. ');
-      if (lastSentence > limits.maxChars * 0.5) {
-        clean = truncated.substring(0, lastSentence + 1);
+      // Separate hashtags from body before truncating
+      const hashtagMatch = clean.match(/(\n\n?)(#[a-zA-Z0-9\u00C0-\u024F][\s#a-zA-Z0-9\u00C0-\u024F]*)\s*$/);
+      let bodyPart = clean;
+      let hashtagPart = '';
+      if (hashtagMatch) {
+        bodyPart = clean.substring(0, hashtagMatch.index).trim();
+        hashtagPart = hashtagMatch[2].trim();
+      }
+
+      // Clean incomplete hashtags (e.g., "#...", "#Mediter...", "#Medit...")
+      // Remove any hashtag followed by dots, or any hashtag that's clearly truncated (no matching full word)
+      hashtagPart = hashtagPart
+        .replace(/#[a-zA-Z0-9]*\.{2,}\s*/g, '')   // #anything... → remove
+        .replace(/#[a-zA-Z]{1,6}\s*$/g, '')         // trailing short fragment like "#Medit" at end → remove
+        .trim();
+
+      // Truncate body at sentence boundary if needed
+      const maxBody = limits.maxChars - (hashtagPart ? hashtagPart.length + 2 : 0); // 2 for \n\n
+      if (bodyPart.length > maxBody) {
+        const truncated = bodyPart.substring(0, maxBody - 3);
+        const lastSentence = Math.max(truncated.lastIndexOf('. '), truncated.lastIndexOf('! '), truncated.lastIndexOf('? '));
+        if (lastSentence > maxBody * 0.5) {
+          bodyPart = truncated.substring(0, lastSentence + 1);
+        } else {
+          const lastSpace = truncated.lastIndexOf(' ');
+          bodyPart = (lastSpace > maxBody * 0.6 ? truncated.substring(0, lastSpace) : truncated).trim();
+        }
+      }
+
+      // Reassemble: body + hashtags (drop hashtags if still too long)
+      if (hashtagPart && (bodyPart.length + hashtagPart.length + 2) <= limits.maxChars) {
+        clean = bodyPart + '\n\n' + hashtagPart;
       } else {
-        clean = truncated + '...';
+        clean = bodyPart;
       }
     }
   }
