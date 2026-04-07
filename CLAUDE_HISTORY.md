@@ -7,6 +7,94 @@
 
 ---
 
+## v4.39.0 — Content Studio Image Pipeline Hardening + i18n Blog Titles + BullMQ Generation Queue (07-04-2026)
+
+### Aanleiding
+Frank rapporteerde 4 verbonden bugs in de Content Studio image pipeline na publicatie van een test-blog (concept 108):
+1. Image selector koos POIs van verkeerde categorie (food/sport in plaats van culture voor "calpe old town")
+2. Preview toonde andere image dan geselecteerd ("Geselecteerde afbeelding" ≠ wat in PlatformPreview verscheen)
+3. Facebook-publicatie gebruikte HolidaiButler corporate logo i.p.v. de geselecteerde POI image
+4. Media library-selectie ging verloren bij re-render
+
+Daarnaast: 2 live blogs hadden alleen Engelse titels, en content generation was kwetsbaar voor PM2 restarts (concepts bleven hangen op `generating`).
+
+### Strict Diagnostic Workflow
+Op verzoek van Frank: per fix eerst PRE-FLIGHT diagnose met harde data (SQL/curl/functietest) → bewijs rapporteren → fix implementeren → POST-FLIGHT verificatie. Geen aannames, geen mega-changes.
+
+### Onderdelen
+
+**1. DeepL Blog Translations + Localized Titles**
+- Nieuwe DB kolommen: `title_en/nl/de/es/fr` op `content_items`
+- DeepL vertalingen: blog 128 (Best Tapas Bars) NL/DE/ES/FR + blog 144 (Plan Your Calpe Trip) FR
+- `blogs.js` API list + detail: `COALESCE(title_${lang}, title_en, title) as title_localized`
+- Live op https://calpetrip.com/blog in alle 5 talen
+
+**2. BullMQ Content Generation Queue (vervangt setImmediate)**
+- `setImmediate` background-generatie werd gekild bij PM2 restart → concept hing op `generating`
+- Nieuwe queue `content-generation`: persisted in Redis, 2 attempts exponential backoff 30s, removeOnComplete 1d, removeOnFail 7d
+- Worker: concurrency 2, lockDuration 600.000ms, dead-letter recovery → concept naar `draft`
+- Route refactor `/content/concepts/generate`: enqueue met `jobId: concept-${id}` (idempotency)
+- Startup recovery hook: reset orphaned `generating` concepts >15 min oud
+- POST-FLIGHT: concept 108 succesvol gegenereerd in 317s via BullMQ
+
+**3. Realistic ETA UI**
+- `ContentStudioPage.jsx`: per content_type ETA (blog 4-6 min, social 35-53 sec, video 90s)
+- 5-fase progress (blog): schrijven → SEO → vertalen NL/DE/ES/FR → kwaliteitscontrole → afronden
+- Bij overschrijding ETA: melding "loopt door op achtergrond"
+
+**4. FIX 1 — POI Grounding (`contentGenerator.js`)**
+- Bug: `findRelevantPOIs(["calpe old town"])` matchte 0 POIs via substring → fallback `RAND()` → 5 willekeurige POIs (3× food)
+- Nieuw: `THEME_MAP` (7 thema's) + multi-strategie query (name match + category + google_category) + limit 5→15 voor blogs
+- Prompt versterking: "MUST link AT LEAST 5 verified places"
+- POST-FLIGHT: 0 → 15 culture POIs (Església antiga de Calp, Far de l'Albir, Casa Nova, Torre Bombarda, Antiga mina d'ocre, etc.)
+
+**5. FIX 2 — Image Selector (`imageSelector.js`)**
+- Bug: FULLTEXT keyword search zonder thema-awareness → 4/6 off-thema (sportscholen, bike rentals)
+- Nieuw: `IMAGE_THEME_MAP` met **title-priority** detection (body als fallback), theme-first SQL pass
+- POST-FLIGHT: title="calpe old town" → enkel `[Culture & History]` → 6/6 culture images
+
+**6. FIX 3 — Centrale Media Resolver (`adminPortal.js` + `ConceptDialog.jsx`)**
+- Bug: Frontend resolver filterde alleen `id.startsWith('http')` → bare numbers en `poi:N` weggegooid → fallback random `suggestImages()` → preview ≠ selectie
+- Nieuw endpoint `POST /content/media/resolve-batch`: 5 ID-formaten in 1 batch call (URL/path/`poi:N`/`media:N`/bare → dual-lookup)
+- `ConceptDialog.resolveItemImages` herschreven: gebruikt resolver, fallback alleen bij echt lege media_ids
+- POST-FLIGHT curl: 5 mixed IDs → 4 correcte URLs + 1 graceful `not_found`
+
+**7. FIX 4 — Publisher (`publisher/index.js`)**
+- Bug: Skipte `poi:` prefix → `meta.image_url` leeg → metaClient `/feed` (text-only) → FB OG fallback naar corporate logo
+- Nieuw: 5-branch resolution (URL/path/`poi:`/`media:`/bare) + dual-lookup helpers `resolvePoiImage()` en `resolveMediaLibrary()`
+- POST-FLIGHT: item 164 met `media_ids=[13695]` → resolved naar `https://test.holidaibutler.com/poi-images/418/...` (HEAD 200 OK)
+
+**8. ID Prefix Conventie (BUG Z fundamenteel)**
+- Ontdekt na initial fix: `selectImages` returnde bare `id: 13695` → frontend stored ambiguous bare nummers → resolver kon niet onderscheiden imageurls vs media library
+- Fix: alle returned ids prefixed (`poi:N`, `media:N`, of HTTP URL)
+- `contentGenerator.js` line 456: double-prefix bug verwijderd
+- Resolver + publisher behouden dual-lookup voor legacy bare numbers in DB
+
+### Deployment Issue Discovered
+Eerste test toonde 0% verbetering. PRE-FLIGHT data revealed: server bundle `index-caebbb6f.js` bevatte GEEN `resolveMediaBatch` ondanks vermeende deploy. Local rebuild produceerde nieuwe `index-49a3cfa6.js`. Oude bundle handmatig verwijderd, nieuwe gedeployed. POST-FLIGHT: `grep -c resolve-batch` → 2.
+
+### Bestanden (10)
+**Backend (8):** queues.js, workers.js, orchestrator/index.js, contentGenerator.js, imageSelector.js, publisher/index.js, blogs.js, adminPortal.js
+**Frontend (3):** contentService.js, ConceptDialog.jsx, ContentStudioPage.jsx
+**DB Schema:** content_items.title_en/nl/de/es/fr (5 nieuwe kolommen)
+
+### Tellingen Bijgewerkt
+- Admin endpoints: 249 → 250
+- adminPortal.js: v3.41.0 → v3.42.0
+- BullMQ queues: 3 → 4 (+content-generation)
+- BullMQ workers: 3 → 4 (+contentGenerationWorker)
+- CLAUDE.md: v4.38.1 → v4.39.0
+- Master Strategie: v7.98 → v7.99
+
+### Lessons Learned
+1. **PRE-FLIGHT diagnose**: Frank's strict workflow onthulde dat mijn initial fix een fundamenteel probleem miste (bare-number ambiguïteit). Alleen door echte data te inspecteren kwam dit boven
+2. **Build/deploy verificatie**: na elke admin deploy `grep -c <new_function> assets/index-*.js` om te bewijzen dat bundle daadwerkelijk vernieuwd is
+3. **ID-conventies centraliseren**: 3 codepaden hadden elk eigen aannames over media_id format → één canonical (`type:id`) + dual-lookup voor legacy
+4. **Title-priority theme detection**: body-text matching vangt false positives (prose mentioning food/beach/family). Title alleen is scherper
+5. **BullMQ > setImmediate** voor long-running async werk dat PM2 restart moet overleven
+
+---
+
 ## Inhoudsopgave
 
 1. [Content Pipeline Fasen (4, 4b, 6, 6b-6e)](#content-pipeline-fasen)

@@ -52,7 +52,8 @@ router.get('/', async (req, res) => {
     const orderBy = sortBy === 'score' ? 'ci.seo_score DESC' : sortBy === 'popular' ? 'ci.seo_score DESC' : 'ci.published_at DESC';
 
     const [blogs] = await mysqlSequelize.query(
-      `SELECT ci.id, ci.title, ci.body_${lang} as body, ci.body_en,
+      `SELECT ci.id, ci.title, COALESCE(ci.title_${lang}, ci.title_en, ci.title) as title_localized,
+              ci.body_${lang} as body, ci.body_en,
               ci.seo_data, ci.seo_score, ci.published_at, ci.created_at,
               ci.media_ids, ci.target_platform
        FROM content_items ci
@@ -74,9 +75,10 @@ router.get('/', async (req, res) => {
       try { seoData = typeof blog.seo_data === 'string' ? JSON.parse(blog.seo_data) : (blog.seo_data || {}); } catch { /* */ }
       const suggestions = seoData.seoSuggestions || {};
 
+      const localizedTitle = blog.title_localized || blog.title;
       const slug = seoData.slug || (suggestions.slug || '').replace(/^blog\//, '') ||
         (blog.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      const metaTitle = seoData.meta_title || suggestions.meta_title || blog.title;
+      const metaTitle = seoData.meta_title || suggestions.meta_title || localizedTitle;
       const metaDesc = seoData.meta_description && !seoData.meta_description.startsWith('<')
         ? seoData.meta_description
         : (suggestions.meta_description && !suggestions.meta_description.startsWith('<'))
@@ -111,7 +113,7 @@ router.get('/', async (req, res) => {
 
       return {
         id: blog.id,
-        title: blog.title,
+        title: localizedTitle,
         slug,
         metaTitle,
         metaDescription: metaDesc,
@@ -142,7 +144,8 @@ router.get('/:slug', async (req, res) => {
 
     // Find blog by slug in seo_data JSON, or by title-derived slug
     const [blogs] = await mysqlSequelize.query(
-      `SELECT ci.id, ci.title, ci.body_${lang} as body, ci.body_en, ci.body_nl, ci.body_de, ci.body_es, ci.body_fr,
+      `SELECT ci.id, ci.title, COALESCE(ci.title_${lang}, ci.title_en, ci.title) as title_localized,
+              ci.body_${lang} as body, ci.body_en, ci.body_nl, ci.body_de, ci.body_es, ci.body_fr,
               ci.seo_data, ci.seo_score, ci.published_at, ci.created_at, ci.media_ids
        FROM content_items ci
        WHERE ci.destination_id = :destId AND ci.content_type = 'blog' AND ci.approval_status = 'published'
@@ -197,9 +200,9 @@ router.get('/:slug', async (req, res) => {
       success: true,
       data: {
         id: blog.id,
-        title: blog.title,
+        title: blog.title_localized || blog.title,
         slug: req.params.slug,
-        metaTitle: seoData.meta_title || suggestions.meta_title || blog.title,
+        metaTitle: seoData.meta_title || suggestions.meta_title || blog.title_localized || blog.title,
         metaDescription: seoData.meta_description && !seoData.meta_description.startsWith('<')
           ? seoData.meta_description : (blog.body_en || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 155),
         body: blog.body || blog.body_en,

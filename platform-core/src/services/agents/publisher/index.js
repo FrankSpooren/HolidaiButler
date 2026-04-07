@@ -91,33 +91,89 @@ class PublisherAgent extends BaseAgent {
       }
 
       // Auto-crop attached images to platform-conformant dimensions (TO DO 4b+4d)
+      // === RESOLVE FIRST media_id TO PUBLIC URL FOR PLATFORM EMBED ===
+      // Supports all media_id formats: "poi:N", numeric (media library), HTTP URL, "/path".
+      // Without this, FB/Insta posts go out without an image and Facebook falls back
+      // to the link's og:image (which is the corporate logo on calpetrip.com).
       if (contentItem.media_ids && contentItem.target_platform !== 'website') {
         try {
-          const { formatImage } = await import('../contentRedacteur/imageFormatter.js');
           let mediaIds = typeof contentItem.media_ids === 'string' ? JSON.parse(contentItem.media_ids) : (contentItem.media_ids || []);
           if (mediaIds.length > 0) {
             const firstMediaId = mediaIds[0];
-            // Only process numeric media IDs (from media table)
-            if (typeof firstMediaId === 'number' || (typeof firstMediaId === 'string' && !firstMediaId.startsWith('poi:'))) {
-              const [[media]] = await mysqlSequelize.query(
-                'SELECT id, filename, filepath FROM media WHERE id = :id',
-                { replacements: { id: Number(firstMediaId) } }
+            const imageBase = process.env.IMAGE_BASE_URL || 'https://api.holidaibutler.com';
+            const apiBase = process.env.API_BASE_URL || 'https://api.holidaibutler.com';
+            let resolvedUrl = null;
+
+            // Branch 1: HTTP URL → use as-is
+            if (typeof firstMediaId === 'string' && (firstMediaId.startsWith('http://') || firstMediaId.startsWith('https://'))) {
+              resolvedUrl = firstMediaId;
+            }
+            // Branch 2: "/path" → prefix with API base
+            else if (typeof firstMediaId === 'string' && firstMediaId.startsWith('/')) {
+              resolvedUrl = `${apiBase}${firstMediaId}`;
+            }
+            // Helper: resolve a POI imageurls.id → URL (prefer local_path)
+            const resolvePoiImage = async (imgId) => {
+              if (isNaN(imgId) || imgId <= 0) return null;
+              const [[img]] = await mysqlSequelize.query(
+                'SELECT id, local_path, image_url FROM imageurls WHERE id = :id',
+                { replacements: { id: imgId } }
               );
-              if (media?.filepath) {
-                const storageRoot = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
-                const fullPath = media.filepath.startsWith('/') ? media.filepath : `${storageRoot}/${media.filepath}`;
-                const formatted = await formatImage(fullPath, contentItem.target_platform, 'post');
-                // Update social_metadata with the formatted image URL
-                let meta = {};
-                try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch { /* */ }
-                meta.image_url = `${process.env.HB_ASSET_URL || 'https://api.holidaibutler.com'}/api/v1/img/${formatted.relativePath}`;
-                contentItem.social_metadata = JSON.stringify(meta);
-                logger.info(`[Publisher] Auto-cropped image to ${formatted.width}x${formatted.height} for ${contentItem.target_platform}`);
+              if (!img) return null;
+              return img.local_path ? `${imageBase}${img.local_path}` : img.image_url;
+            };
+            // Helper: resolve a media library id → URL (with auto-crop)
+            const resolveMediaLibrary = async (mediaIdNum) => {
+              if (isNaN(mediaIdNum) || mediaIdNum <= 0) return null;
+              const [[media]] = await mysqlSequelize.query(
+                'SELECT id, filename, filepath, destination_id FROM media WHERE id = :id',
+                { replacements: { id: mediaIdNum } }
+              );
+              if (!media) return null;
+              if (media.filepath) {
+                try {
+                  const { formatImage } = await import('../contentRedacteur/imageFormatter.js');
+                  const storageRoot = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
+                  const fullPath = media.filepath.startsWith('/') ? media.filepath : `${storageRoot}/${media.filepath}`;
+                  const formatted = await formatImage(fullPath, contentItem.target_platform, 'post');
+                  logger.info(`[Publisher] Auto-cropped media library image to ${formatted.width}x${formatted.height} for ${contentItem.target_platform}`);
+                  return `${process.env.HB_ASSET_URL || apiBase}/api/v1/img/${formatted.relativePath}`;
+                } catch (cropErr) {
+                  logger.warn(`[Publisher] Auto-crop failed, using raw media URL: ${cropErr.message}`);
+                }
+              }
+              return `${apiBase}/media-files/${media.destination_id}/${media.filename}`;
+            };
+
+            // Branch 3: "poi:N" → imageurls
+            if (typeof firstMediaId === 'string' && firstMediaId.startsWith('poi:')) {
+              resolvedUrl = await resolvePoiImage(Number(firstMediaId.slice(4)));
+            }
+            // Branch 4: "media:N" → media library
+            else if (typeof firstMediaId === 'string' && firstMediaId.startsWith('media:')) {
+              resolvedUrl = await resolveMediaLibrary(Number(firstMediaId.slice(6)));
+            }
+            // Branch 5: bare number (legacy ambiguous) → try imageurls FIRST, then media library
+            else if (typeof firstMediaId === 'number' || (typeof firstMediaId === 'string' && /^\d+$/.test(firstMediaId))) {
+              const num = Number(firstMediaId);
+              resolvedUrl = await resolvePoiImage(num);
+              if (!resolvedUrl) {
+                resolvedUrl = await resolveMediaLibrary(num);
               }
             }
+
+            if (resolvedUrl) {
+              let meta = {};
+              try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch { /* */ }
+              meta.image_url = resolvedUrl;
+              contentItem.social_metadata = JSON.stringify(meta);
+              logger.info(`[Publisher] Resolved media_id ${JSON.stringify(firstMediaId)} → ${resolvedUrl} for ${contentItem.target_platform}`);
+            } else {
+              logger.warn(`[Publisher] Could not resolve media_id ${JSON.stringify(firstMediaId)} for item ${contentItemId} — post will be text-only`);
+            }
           }
-        } catch (cropErr) {
-          logger.warn(`[Publisher] Auto-crop failed (non-blocking):`, cropErr.message);
+        } catch (resolveErr) {
+          logger.warn(`[Publisher] Media resolution failed (non-blocking):`, resolveErr.message);
         }
       }
 

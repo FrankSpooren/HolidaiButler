@@ -313,6 +313,14 @@ const contentService = {
     return client.post('/content/images/suggest', data).then(r => r.data);
   },
 
+  /**
+   * Resolve mixed media_ids (URLs, /paths, "poi:N", numeric media library) to absolute URLs.
+   * Single source of truth — preview MUST use this so it shows what's actually selected.
+   */
+  resolveMediaBatch(ids) {
+    return client.post('/content/media/resolve-batch', { ids }).then(r => r.data);
+  },
+
   searchUnsplash(query, perPage = 6) {
     return client.post('/content/images/unsplash', { query, per_page: perPage }).then(r => r.data);
   },

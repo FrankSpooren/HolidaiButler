@@ -28,41 +28,116 @@ const DESTINATION_DOMAINS = {
  * Find relevant POIs/Events from our database matching the content topic.
  * Returns grounding data to constrain AI to only mention real, verified places.
  */
-async function findRelevantPOIs(destinationId, keywords = [], limit = 5) {
+/**
+ * Theme detection — maps blog/topic keywords to POI categories so we can ground
+ * the AI in semantically relevant POIs instead of random fallbacks.
+ */
+const THEME_MAP = [
+  { match: /\b(old town|historic|history|culture|heritage|landmark|church|monument|plaza|museum|architectur)/i,
+    categories: ['Culture & History'],
+    googleLikes: ['landmark', 'church', 'museum', 'historical', 'tourist attraction', 'plaza', 'monument', 'art gallery', 'sculpture'] },
+  { match: /\b(food|restaurant|tapas|paella|dining|cuisine|gastronom|cafe|bar|wine|drink)/i,
+    categories: ['Food & Drinks'],
+    googleLikes: ['restaurant', 'cafe', 'bar', 'tapas', 'food'] },
+  { match: /\b(beach|sea|swim|snorkel|dive|water|coast|cala|playa)/i,
+    categories: ['Beaches & Nature'],
+    googleLikes: ['beach', 'cove', 'natural feature'] },
+  { match: /\b(hike|hiking|trail|mountain|nature|outdoor|walk|peñón|penon|ifach)/i,
+    categories: ['Beaches & Nature', 'Activities & Sports'],
+    googleLikes: ['hiking', 'park', 'natural feature', 'mountain'] },
+  { match: /\b(family|kids|children|playground|fun|activit)/i,
+    categories: ['Activities & Sports', 'Family & Kids'],
+    googleLikes: ['amusement', 'park', 'playground'] },
+  { match: /\b(shop|shopping|market|boutique|souvenir)/i,
+    categories: ['Shopping'],
+    googleLikes: ['shop', 'market', 'boutique', 'store'] },
+  { match: /\b(spa|wellness|relax|massage|yoga)/i,
+    categories: ['Wellness'],
+    googleLikes: ['spa', 'wellness'] },
+];
+
+function detectThemes(text) {
+  const themes = THEME_MAP.filter(t => t.match.test(text));
+  // Always include culture as a soft default if nothing matches (better than random)
+  if (themes.length === 0) themes.push(THEME_MAP[0]);
+  return themes;
+}
+
+/**
+ * Multi-strategy POI grounding:
+ *  (a) name substring match on keywords
+ *  (b) theme-driven category + google_category match
+ *  (c) top-rated fallback within those themes
+ * Deduped, ranked by rating × review_count, capped at `limit`.
+ */
+async function findRelevantPOIs(destinationId, keywords = [], limit = 15, contextText = '') {
   try {
-    const searchTerms = keywords.filter(k => k && k.length > 2).slice(0, 3);
-    if (searchTerms.length === 0) {
-      // Fallback: get top-rated POIs for this destination
-      const [pois] = await mysqlSequelize.query(
+    const searchTerms = (keywords || []).filter(k => k && k.length > 2);
+    const haystack = (contextText + ' ' + searchTerms.join(' ')).toLowerCase();
+    const themes = detectThemes(haystack);
+    const themeCategories = [...new Set(themes.flatMap(t => t.categories))];
+    const themeGoogleLikes = [...new Set(themes.flatMap(t => t.googleLikes))];
+
+    const results = new Map(); // id → row (dedup)
+
+    // (a) Name substring match — high priority for explicit place names in keywords
+    if (searchTerms.length > 0) {
+      const nameLikes = searchTerms.map(() => 'name LIKE ?').join(' OR ');
+      const nameParams = searchTerms.map(t => `%${t}%`);
+      const [byName] = await mysqlSequelize.query(
         `SELECT id, name, category, google_category, rating, review_count, city
-         FROM POI WHERE destination_id = ? AND is_active = 1 AND rating >= 4.0 AND review_count >= 5
+         FROM POI WHERE destination_id = ? AND is_active = 1 AND rating >= 4.0
+         AND (${nameLikes})
+         ORDER BY rating DESC, review_count DESC LIMIT 10`,
+        { replacements: [destinationId, ...nameParams] }
+      );
+      byName.forEach(p => results.set(p.id, p));
+    }
+
+    // (b) Theme-driven category match — strong semantic relevance
+    if (themeCategories.length > 0 || themeGoogleLikes.length > 0) {
+      const catPlaceholders = themeCategories.map(() => '?').join(',');
+      const googleLikeClauses = themeGoogleLikes.map(() => 'google_category LIKE ?').join(' OR ');
+      const conditions = [];
+      const params = [destinationId];
+      if (themeCategories.length > 0) {
+        conditions.push(`category IN (${catPlaceholders})`);
+        params.push(...themeCategories);
+      }
+      if (themeGoogleLikes.length > 0) {
+        conditions.push(`(${googleLikeClauses})`);
+        params.push(...themeGoogleLikes.map(t => `%${t}%`));
+      }
+      const [byTheme] = await mysqlSequelize.query(
+        `SELECT id, name, category, google_category, rating, review_count, city
+         FROM POI WHERE destination_id = ? AND is_active = 1 AND rating >= 4.0 AND review_count >= 3
+         AND (${conditions.join(' OR ')})
+         ORDER BY rating DESC, review_count DESC LIMIT 25`,
+        { replacements: params }
+      );
+      byTheme.forEach(p => { if (!results.has(p.id)) results.set(p.id, p); });
+    }
+
+    // (c) Last-resort fallback: top-rated overall (only if we still have nothing)
+    if (results.size === 0) {
+      const [fallback] = await mysqlSequelize.query(
+        `SELECT id, name, category, google_category, rating, review_count, city
+         FROM POI WHERE destination_id = ? AND is_active = 1 AND rating >= 4.3 AND review_count >= 10
          ORDER BY review_count DESC LIMIT ?`,
         { replacements: [destinationId, limit] }
       );
-      return pois;
+      fallback.forEach(p => results.set(p.id, p));
     }
 
-    const likeConditions = searchTerms.map(() => '(name LIKE ? OR category LIKE ? OR google_category LIKE ?)').join(' OR ');
-    const likeParams = searchTerms.flatMap(t => [`%${t}%`, `%${t}%`, `%${t}%`]);
+    // Rank: rating × log(review_count+1), then take top `limit`
+    const ranked = [...results.values()].sort((a, b) => {
+      const sa = (a.rating || 0) * Math.log((a.review_count || 0) + 2);
+      const sb = (b.rating || 0) * Math.log((b.review_count || 0) + 2);
+      return sb - sa;
+    }).slice(0, limit);
 
-    const [pois] = await mysqlSequelize.query(
-      `SELECT id, name, category, google_category, rating, review_count, city
-       FROM POI WHERE destination_id = ? AND is_active = 1 AND (${likeConditions})
-       ORDER BY rating DESC, review_count DESC LIMIT ?`,
-      { replacements: [destinationId, ...likeParams, limit] }
-    );
-
-    // If keyword search returns nothing, fallback to top POIs
-    if (pois.length === 0) {
-      const [fallback] = await mysqlSequelize.query(
-        `SELECT id, name, category, google_category, rating, review_count, city
-         FROM POI WHERE destination_id = ? AND is_active = 1 AND rating >= 4.0 AND review_count >= 5
-         ORDER BY RAND() LIMIT ?`,
-        { replacements: [destinationId, limit] }
-      );
-      return fallback;
-    }
-    return pois;
+    logger.info(`[ContentGenerator] findRelevantPOIs: themes=[${themeCategories.join(',')}] returned ${ranked.length}/${results.size} POIs for keywords=[${searchTerms.join(', ')}]`);
+    return ranked;
   } catch (err) {
     logger.error('[ContentGenerator] findRelevantPOIs error:', err.message);
     return [];
@@ -116,8 +191,11 @@ function buildGroundingContext(pois, events, destinationId) {
   }
 
   if (lines.length > 0) {
-    lines.push('\nCRITICAL RULES:');
-    lines.push('- ONLY mention places/events from the lists above — do NOT invent locations');
+    lines.push('\nCRITICAL RULES (strict — content will be rejected if violated):');
+    lines.push('- ONLY mention named places that appear in the VERIFIED PLACES list above. Do NOT invent locations, do NOT use places you "know about" from training data, do NOT make up street names, churches, plazas, monuments, restaurants, beaches, or shops.');
+    lines.push('- For BLOG content: you MUST link AT LEAST 5 of the verified places using exact <a href="..."> markup as listed. Spread links naturally throughout the body — do not cluster them.');
+    lines.push('- Use the EXACT name from the list (case-sensitive) when linking. Example: <a href="https://calpetrip.com/pois?poi=569">Bar Casa de Cultura</a>');
+    lines.push('- If you need a generic reference (e.g. "the old quarter", "a hidden street", "a local cafe"), use generic descriptive language WITHOUT a specific name. Never invent a name.');
     lines.push('- Include the link URL for at least 1 mentioned place in your post');
     lines.push('- For Facebook/LinkedIn: include the link directly in the text');
     lines.push('- For Instagram: mention "Link in bio" and reference the place by name');
@@ -280,7 +358,7 @@ export async function generateContent(suggestion, options = {}) {
 
   // POI/Event grounding: find real places from our DB to constrain AI output
   const [relevantPOIs, relevantEvents] = await Promise.all([
-    findRelevantPOIs(destinationId, keywords),
+    findRelevantPOIs(destinationId, keywords, contentType === 'blog' ? 15 : 5, suggestion.title || ''),
     findRelevantEvents(destinationId, keywords),
   ]);
   const groundingContext = buildGroundingContext(relevantPOIs, relevantEvents, destinationId);
@@ -375,9 +453,9 @@ export async function generateContent(suggestion, options = {}) {
         destinationId
       );
       if (imageCandidates.length > 0) {
-        mediaIds = imageCandidates.map(img =>
-          img.source === 'media_library' ? String(img.id) : `poi:${img.id}`
-        );
+        // selectImages now returns canonical, prefixed ids ("poi:N", "media:N", or http URL).
+        // Just pass through — no double-prefixing.
+        mediaIds = imageCandidates.map(img => img.id);
       }
     } catch (imgErr) {
       logger.warn('[ContentGenerator] Auto-image selection failed:', imgErr.message);
@@ -1161,7 +1239,7 @@ export async function repurposeContent(sourceItem, targetPlatforms, destinationI
 
   // POI/Event grounding for repurposed content
   const [relevantPOIs, relevantEvents] = await Promise.all([
-    findRelevantPOIs(destId, keywords),
+    findRelevantPOIs(destId, keywords, contentType === 'blog' ? 15 : 5, sourceItem.title || ''),
     findRelevantEvents(destId, keywords),
   ]);
   const groundingContext = buildGroundingContext(relevantPOIs, relevantEvents, destId);

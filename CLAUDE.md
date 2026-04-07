@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.38.1
+> **Versie**: 4.39.0
 > **Laatst bijgewerkt**: 7 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -358,15 +358,15 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 ### Huidige Tellingen
 | Metric | Waarde |
 |--------|--------|
-| Admin endpoints | 249 |
-| adminPortal.js | v3.41.0 |
+| Admin endpoints | 250 |
+| adminPortal.js | v3.42.0 |
 | Agents | 25 |
 | BullMQ jobs | 62 |
 | Block types | 36 (+ aliassen, +blog_grid) |
 | Block editors | 37 (+BlogGridEditor) |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.38.0 |
-| Master Strategie | v7.98 |
+| CLAUDE.md | v4.39.0 |
+| Master Strategie | v8.00 |
 
 ---
 
@@ -702,7 +702,8 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
-| **4.38.1** | **2026-04-07** | **Pixtral 12B batch COMPLEET + Image picker UX**. Hybride B/C image keywords project 100% afgerond: 25.426/25.632 images verwerkt (99,2%), 12 errors (0,05%), 206 skipped, **€2,67 totale kosten** (was geschat €6-7), looptijd ~6u met 1x checkpoint resume. Image picker POI-tab UX upgrade: placeholder "Zoek op naam, categorie, sfeer (terrace, romantic, beach)...", helperText uitlegt FULLTEXT zoekbereik, toont poi_category + AI visual_description per resultaat. Backend /content/images/browse retourneert deze velden al. |
+| **4.39.0** | **2026-04-07** | **Content Studio Image Pipeline Hardening + i18n Blog Titles + BullMQ Generation Queue**. (1) Blog title schema: `title_en/nl/de/es/fr` kolommen op `content_items`, blogs.js serveert localized title via `COALESCE(title_${lang})`, DeepL vertalingen voor 2 live blogs (10 talen totaal). (2) Content generation: BullMQ `content-generation` queue vervangt `setImmediate` (persisted in Redis, 2 retries exponential backoff, dead-letter recovery → concept naar `draft`). Worker concurrency 2, lockDuration 10 min. Startup recovery hook reset orphaned `generating` concepts >15 min oud. (3) Realistic ETA UI: `ContentStudioPage.jsx` toont per content_type (blog 4-6 min, social 35-53 sec) + 5-fase voortgang + "loopt door op achtergrond" melding bij overschrijding. (4) **POI grounding (FIX 1)**: `findRelevantPOIs` herschreven met THEME_MAP (7 thema's) + multi-strategie query (name match + category + google_category) + limit 5→15 voor blogs, prompt versterkt "MUST link AT LEAST 5 verified places". 0 → 15 culture POIs voor "calpe old town". (5) **Image selector (FIX 2)**: title-priority theme detection (alleen Culture & History bij "calpe old town"), theme-first SQL pass (rating ≥4.0, ORDER BY rating × log(reviews)), keyword fallback met theme JOIN. 0/6 → 6/6 culture images. (6) **Centrale media resolver (FIX 3)**: nieuw endpoint `POST /content/media/resolve-batch` (250 endpoints), batch resolutie van mixed ID-formaten (URL/path/`poi:N`/`media:N`/bare numeric), dual-lookup voor legacy bare numbers (imageurls eerst, media library tweede). `ConceptDialog.resolveItemImages` refactored: gebruikt resolver i.p.v. random suggestImages fallback. (7) **Publisher (FIX 4)**: `publisher/index.js` 5-branch resolution (URL/path/`poi:`/`media:`/legacy bare number) met dual-lookup. Lost FB image-loos publish op (was `og:image` fallback naar corporate logo). (8) **ID prefix conventie**: `selectImages` returnt nu canonical prefixed ids (`poi:N`, `media:N`, of HTTP URL), generator passthrough (geen double-prefix meer). 5 backend bestanden + 2 admin bestanden + DB schema. adminPortal.js v3.42.0. |
+| 4.38.1 | 2026-04-07 | **Pixtral 12B batch COMPLEET + Image picker UX**. Hybride B/C image keywords project 100% afgerond: 25.426/25.632 images verwerkt (99,2%), 12 errors (0,05%), 206 skipped, **€2,67 totale kosten** (was geschat €6-7), looptijd ~6u met 1x checkpoint resume. Image picker POI-tab UX upgrade: placeholder "Zoek op naam, categorie, sfeer (terrace, romantic, beach)...", helperText uitlegt FULLTEXT zoekbereik, toont poi_category + AI visual_description per resultaat. Backend /content/images/browse retourneert deze velden al. |
 | 4.38.0 | 2026-04-06 | **CalpeTrip Blog Live + POI Frontend Fix + Blog Analytics**. POIsPage "Bekijk op frontend" URL fix: holidaibutler.com→calpetrip.com. generateFromPOI timeout 120s→600s. Blog: 2e blog "Plan Your Calpe Trip" gepubliceerd met CalpeTrip mobile screenshot. Blog analytics: 4 SA events (blog_list_viewed, blog_card_clicked, blog_article_viewed, blog_back_clicked). blogs.js URL image resolver (http:// + /path support). |
 | 4.37.0 | 2026-04-06 | **Async Content Generation + Content Studio Bug Fixes + Image Keywords + SA v3.0**. Async generatie: /concepts/generate retourneert instant, generatie op achtergrond (setImmediate), frontend pollt status. DB: approval_status ENUM + 'generating'. 8 Content Studio bugs gefixt: Website platform-optie, hashtag afbreking, media_ids/social_metadata opslaan, UTM check, editorial arcering (EDITORIAL_PATTERNS), blog HTML rendering, meta description woordgrens, website_analytics prompt. Image keywords hybride B/C: FULLTEXT search op keywords_verified (26.415 Apify) + keywords_visual (Pixtral 12B, 25.632 images). Image picker POI-tab: zoek op naam, categorie, sfeer, AI-tags (placeholder + helperText + poi_category/visual_description per resultaat). Apify image_id bug fix + 1.208 wees-images geregistreerd. SA analytics v3.0: sendBeacon, IntersectionObserver, 50 events, desktop customer-portal tracking. SEO_MINIMUM_SCORE 50, MAX_ROUNDS 1. |
 | 4.36.0 | 2026-04-06 | Content Studio Enterprise Redesign + CalpeTrip Blog. ConceptDialog 2-panel (Opdracht 1-4): platform tabs, body editor, vertaal-tabs, SEO/Brand Score, PlatformPreview, publish/schedule acties, blog-modus (TipTap WYSIWYG). Backend: Facebook publish fix (page ID), content generatie prompt engineering per kanaaltype (Quality Checklist), UTM tracking, em-dash/bullet sanitizer, PLATFORM_LIMITS correctie (FB 500). Blog: public API `/api/v1/blogs`, CalpeTrip.com blog route (customer-portal SPA), BlogGrid block + editor. CalpeTrip hybride architectuur gedocumenteerd. Taaldetectie via Accept-Language header (fallback EN). inline.js 404 fix. |
@@ -718,7 +719,7 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 7.99 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.00 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

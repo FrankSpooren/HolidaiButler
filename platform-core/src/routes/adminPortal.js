@@ -12886,9 +12886,12 @@ router.post('/content/media/resolve-batch', adminAuth('editor'), async (req, res
     const imageBase = process.env.IMAGE_BASE_URL || 'https://api.holidaibutler.com';
     const apiBase = process.env.API_BASE_URL || 'https://api.holidaibutler.com';
 
-    // Bucket the IDs by type so we can do at most 2 batched DB queries.
-    const poiImageIds = []; // numeric ids from "poi:N"
-    const mediaIds = [];    // numeric ids (media library)
+    // Bucket the IDs by type. Bare numbers are LEGACY ambiguous — they could be
+    // either imageurls.id (POI image, the historical case) OR media.id (library).
+    // We dual-lookup: try imageurls FIRST (more common), fall back to media.
+    const poiImageIds = []; // entries from "poi:N"
+    const mediaIds = [];    // entries from "media:N"
+    const ambiguousIds = []; // bare numbers — try poi first, then media
     const passthrough = new Map(); // index → resolved object (for URLs/paths)
 
     ids.forEach((raw, idx) => {
@@ -12907,39 +12910,59 @@ router.post('/content/media/resolve-batch', adminAuth('editor'), async (req, res
           if (!isNaN(n) && n > 0) poiImageIds.push({ idx, id: n, raw });
           return;
         }
-        // Numeric string → treat as media library id
+        if (raw.startsWith('media:')) {
+          const n = Number(raw.slice(6));
+          if (!isNaN(n) && n > 0) mediaIds.push({ idx, id: n, raw });
+          return;
+        }
+        // Bare numeric string → ambiguous legacy
         const n = Number(raw);
-        if (!isNaN(n) && n > 0) mediaIds.push({ idx, id: n, raw });
+        if (!isNaN(n) && n > 0) ambiguousIds.push({ idx, id: n, raw });
         return;
       }
       if (typeof raw === 'number' && raw > 0) {
-        mediaIds.push({ idx, id: raw, raw });
+        ambiguousIds.push({ idx, id: raw, raw });
       }
     });
 
-    // Batch lookup POI images
+    // Combined POI imageurls lookup (explicit "poi:N" + ambiguous bare numbers)
     const poiResults = new Map();
-    if (poiImageIds.length > 0) {
-      const idList = poiImageIds.map(p => p.id);
+    const allPoiLookup = [...poiImageIds.map(p => p.id), ...ambiguousIds.map(a => a.id)];
+    if (allPoiLookup.length > 0) {
       const [rows] = await mysqlSequelize.query(
         `SELECT i.id, i.local_path, i.image_url, p.name AS poi_name, p.id AS poi_id
          FROM imageurls i LEFT JOIN POI p ON i.poi_id = p.id
          WHERE i.id IN (:ids)`,
-        { replacements: { ids: idList } }
+        { replacements: { ids: allPoiLookup } }
       );
       rows.forEach(r => poiResults.set(r.id, r));
     }
 
-    // Batch lookup media library
+    // Combined media library lookup (explicit "media:N" + bare numbers that missed imageurls)
     const mediaResults = new Map();
-    if (mediaIds.length > 0) {
-      const idList = mediaIds.map(m => m.id);
+    const ambiguousNotInPoi = ambiguousIds.filter(a => !poiResults.has(a.id));
+    const allMediaLookup = [...mediaIds.map(m => m.id), ...ambiguousNotInPoi.map(a => a.id)];
+    if (allMediaLookup.length > 0) {
       const [rows] = await mysqlSequelize.query(
         `SELECT id, filename, destination_id, alt_text FROM media WHERE id IN (:ids)`,
-        { replacements: { ids: idList } }
+        { replacements: { ids: allMediaLookup } }
       );
       rows.forEach(r => mediaResults.set(r.id, r));
     }
+
+    const buildPoiResult = (raw, r) => ({
+      id: raw,
+      url: r.local_path ? `${imageBase}${r.local_path}` : r.image_url,
+      alt: r.poi_name || '',
+      poi_id: r.poi_id,
+      source: 'poi',
+    });
+    const buildMediaResult = (raw, r) => ({
+      id: raw,
+      url: `${apiBase}/media-files/${r.destination_id}/${r.filename}`,
+      alt: r.alt_text || '',
+      source: 'media',
+    });
 
     // Assemble in original order
     const result = ids.map((raw, idx) => {
@@ -12948,20 +12971,23 @@ router.post('/content/media/resolve-batch', adminAuth('editor'), async (req, res
       const poi = poiImageIds.find(p => p.idx === idx);
       if (poi) {
         const r = poiResults.get(poi.id);
-        if (r) {
-          const url = r.local_path ? `${imageBase}${r.local_path}` : r.image_url;
-          return { id: raw, url, alt: r.poi_name || '', poi_id: r.poi_id, source: 'poi' };
-        }
-        return { id: raw, url: null, source: 'poi', error: 'not_found' };
+        return r ? buildPoiResult(raw, r) : { id: raw, url: null, source: 'poi', error: 'not_found' };
       }
 
       const med = mediaIds.find(m => m.idx === idx);
       if (med) {
         const r = mediaResults.get(med.id);
-        if (r) {
-          return { id: raw, url: `${apiBase}/media-files/${r.destination_id}/${r.filename}`, alt: r.alt_text || '', source: 'media' };
-        }
-        return { id: raw, url: null, source: 'media', error: 'not_found' };
+        return r ? buildMediaResult(raw, r) : { id: raw, url: null, source: 'media', error: 'not_found' };
+      }
+
+      const amb = ambiguousIds.find(a => a.idx === idx);
+      if (amb) {
+        // Try POI first (more common case), then media library
+        const poiRow = poiResults.get(amb.id);
+        if (poiRow) return buildPoiResult(raw, poiRow);
+        const medRow = mediaResults.get(amb.id);
+        if (medRow) return buildMediaResult(raw, medRow);
+        return { id: raw, url: null, source: 'ambiguous', error: 'not_found_in_poi_or_media' };
       }
 
       return { id: raw, url: null, source: 'unknown' };

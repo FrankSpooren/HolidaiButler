@@ -5,6 +5,7 @@ import { logAgent, logError, logSystem, logAlert } from "./auditTrail/index.js";
 let scheduledWorker = null;
 let alertWorker = null;
 let orchestratorWorker = null;
+let contentGenerationWorker = null;
 
 export function startWorkers() {
   console.log("[Orchestrator] Starting workers...");
@@ -1241,6 +1242,93 @@ export function startWorkers() {
     }
   }, { connection });
 
+  // Content Generation Worker — long-running Mistral AI generation jobs.
+  // Survives PM2 restarts (jobs persisted in Redis), retries on failure,
+  // and on final failure marks the concept as 'draft' so the frontend recovers.
+  contentGenerationWorker = new Worker("content-generation", async (job) => {
+    if (job.name !== "generate-concept") {
+      throw new Error("Unknown content-generation job: " + job.name);
+    }
+
+    const { conceptId, suggestionId, destinationId, contentType, platforms, pillarId, personaId } = job.data;
+    console.log(`[ContentGen] Processing concept ${conceptId} (${platforms.length} platforms)`);
+
+    const { mysqlSequelize } = await import("../../config/database.js");
+    const { generateContent } = await import("../agents/contentRedacteur/contentGenerator.js");
+
+    // Load suggestion fresh (in case it was updated)
+    const [[suggestion]] = await mysqlSequelize.query(
+      "SELECT * FROM content_suggestions WHERE id = ?",
+      { replacements: [Number(suggestionId)] }
+    );
+    if (!suggestion) throw new Error(`Suggestion ${suggestionId} not found`);
+    if (typeof suggestion.keyword_cluster === "string") {
+      try { suggestion.keyword_cluster = JSON.parse(suggestion.keyword_cluster); } catch { /* */ }
+    }
+
+    const generatedItems = [];
+    for (const platform of platforms) {
+      try {
+        const generated = await generateContent(suggestion, {
+          destinationId: Number(destinationId),
+          contentType,
+          platform,
+          personaId: personaId || null,
+        });
+
+        const [itemResult] = await mysqlSequelize.query(
+          `INSERT INTO content_items (concept_id, destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+           seo_data, seo_score, social_metadata, media_ids, target_platform, approval_status, ai_model, ai_generated, poi_id, pillar_id, keyword_cluster, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?, ?, NOW(), NOW())`,
+          { replacements: [
+            conceptId, Number(destinationId), suggestion.id, contentType,
+            generated.title || suggestion.title,
+            generated.body_en || "", generated.body_nl || null,
+            generated.body_de || null, generated.body_es || null, generated.body_fr || null,
+            generated.seo_data ? JSON.stringify(generated.seo_data) : null,
+            generated.seo_score || null,
+            generated.social_metadata ? JSON.stringify(generated.social_metadata) : null,
+            generated.media_ids ? JSON.stringify(generated.media_ids) : null,
+            platform, generated.ai_model || "mistral-medium-latest",
+            suggestion.poi_id || null, pillarId || null,
+            JSON.stringify(generated.keyword_cluster || suggestion.keyword_cluster || []),
+          ]}
+        );
+        generatedItems.push({ id: itemResult, platform, title: generated.title });
+      } catch (platErr) {
+        console.warn(`[ContentGen] Platform ${platform} failed: ${platErr.message}`);
+      }
+    }
+
+    // Update suggestion + concept
+    await mysqlSequelize.query(
+      "UPDATE content_suggestions SET status = 'generated', updated_at = NOW() WHERE id = ?",
+      { replacements: [suggestion.id] }
+    );
+    const finalTitle = generatedItems[0]?.title || suggestion.title;
+    await mysqlSequelize.query(
+      "UPDATE content_concepts SET title = ?, approval_status = 'draft', updated_at = NOW() WHERE id = ?",
+      { replacements: [finalTitle, conceptId] }
+    );
+
+    console.log(`[ContentGen] Concept ${conceptId} done: ${generatedItems.length}/${platforms.length} items`);
+    return { conceptId, itemCount: generatedItems.length };
+  }, { connection, concurrency: 2, lockDuration: 600000 }); // 10 min lock for long Mistral calls
+
+  // On final failure (after retries) — recover the concept so frontend stops polling
+  contentGenerationWorker.on("failed", async (job, err) => {
+    console.error(`[ContentGen] Job failed: concept=${job?.data?.conceptId} attempt=${job?.attemptsMade}/${job?.opts?.attempts} err=${err.message}`);
+    if (job && job.attemptsMade >= (job.opts.attempts || 1)) {
+      try {
+        const { mysqlSequelize } = await import("../../config/database.js");
+        await mysqlSequelize.query(
+          "UPDATE content_concepts SET approval_status = 'draft', updated_at = NOW() WHERE id = ? AND approval_status = 'generating'",
+          { replacements: [job.data.conceptId] }
+        );
+      } catch (e) { console.error("[ContentGen] Recovery update failed:", e.message); }
+    }
+  });
+
   // Error handlers
   scheduledWorker.on("failed", (job, err) => {
     console.error("[Orchestrator] Scheduled job failed: " + (job?.name || "unknown"), err.message);
@@ -1269,6 +1357,7 @@ export function startWorkers() {
   console.log("[Orchestrator] - Intermediary Monitor Agent (De Makelaar): active");
   console.log("[Orchestrator] - Financial Monitor Agent (De Kassier): active");
   console.log("[Orchestrator] - Inventory Sync Agent (De Magazijnier): active");
+  console.log("[Orchestrator] - Content Generation Worker: active");
 }
 
 export async function stopWorkers() {
@@ -1281,7 +1370,8 @@ export async function stopWorkers() {
   if (scheduledWorker) await scheduledWorker.close();
   if (alertWorker) await alertWorker.close();
   if (orchestratorWorker) await orchestratorWorker.close();
+  if (contentGenerationWorker) await contentGenerationWorker.close();
   console.log("[Orchestrator] Workers stopped");
 }
 
-export { scheduledWorker, alertWorker, orchestratorWorker };
+export { scheduledWorker, alertWorker, orchestratorWorker, contentGenerationWorker };

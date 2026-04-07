@@ -1,6 +1,6 @@
 import { initializeScheduler } from './scheduler.js';
 import { startWorkers, stopWorkers } from './workers.js';
-import { orchestratorQueue, alertQueue, scheduledQueue, connection } from './queues.js';
+import { orchestratorQueue, alertQueue, scheduledQueue, contentGenerationQueue, connection } from './queues.js';
 import { mysqlSequelize } from '../../config/database.js';
 import mongoose from 'mongoose';
 import dataSyncAgent from '../agents/dataSync/index.js';
@@ -96,6 +96,23 @@ export async function initializeOrchestrator() {
       // Jobs will be skipped if agent is not initialized
     }
 
+    // Recovery: reset orphaned 'generating' concepts left behind by a previous
+    // crash/restart where the BullMQ job was lost or pre-dates this fix.
+    // Any concept stuck in 'generating' for >15 min has no realistic chance of
+    // completing — mark it 'draft' so the frontend stops polling.
+    try {
+      const [result] = await mysqlSequelize.query(
+        `UPDATE content_concepts
+         SET approval_status = 'draft', updated_at = NOW()
+         WHERE approval_status = 'generating'
+           AND updated_at < (NOW() - INTERVAL 15 MINUTE)`
+      );
+      const affected = result?.affectedRows ?? 0;
+      if (affected > 0) console.log(`[Orchestrator] Recovered ${affected} orphaned 'generating' concepts`);
+    } catch (error) {
+      console.error('[Orchestrator] Concept recovery failed:', error.message);
+    }
+
     isInitialized = true;
     console.log('[Orchestrator] Orchestrator Agent ready');
   } catch (error) {
@@ -110,8 +127,9 @@ export async function shutdownOrchestrator() {
   await orchestratorQueue.close();
   await alertQueue.close();
   await scheduledQueue.close();
+  await contentGenerationQueue.close();
   isInitialized = false;
   console.log('[Orchestrator] Shutdown complete');
 }
 
-export { orchestratorQueue, alertQueue, scheduledQueue, connection };
+export { orchestratorQueue, alertQueue, scheduledQueue, contentGenerationQueue, connection };

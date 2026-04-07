@@ -528,26 +528,46 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     finally { setPerfLoading(false); }
   }, []);
 
-  // Resolve images for PlatformPreview
+  // Resolve images for PlatformPreview.
+  // Hard rule: the preview MUST show the actually-stored selection, never random
+  // suggestions. We resolve every media_id format (URL, /path, "poi:N", numeric)
+  // via the centralised /content/media/resolve-batch endpoint. Only if media_ids
+  // is genuinely empty do we surface ONE AI suggestion as a placeholder.
   const resolveItemImages = useCallback(async (item) => {
     if (!item) { setResolvedImages([]); return; }
-    // 1. Check resolved_images on item
+    // 1. Pre-resolved images on item (server-side hydrated) — trust them
     if (item.resolved_images?.length > 0) {
       setResolvedImages(item.resolved_images);
       return;
     }
-    // 2. Check media_ids
+    // 2. Resolve raw media_ids via backend batch resolver
     const mediaIds = item.media_ids
       ? (typeof item.media_ids === 'string' ? JSON.parse(item.media_ids) : item.media_ids)
       : [];
-    if (mediaIds.length > 0) {
-      const resolved = mediaIds.filter(id => typeof id === 'string' && id.startsWith('http')).map(url => ({ url, thumbnail: url }));
-      if (resolved.length > 0) { setResolvedImages(resolved); return; }
+    if (Array.isArray(mediaIds) && mediaIds.length > 0) {
+      try {
+        const r = await contentService.resolveMediaBatch(mediaIds);
+        const resolved = (r.data || [])
+          .filter(x => x && x.url)
+          .map(x => ({ url: x.url, thumbnail: x.url, alt: x.alt || '', source: x.source }));
+        if (resolved.length > 0) {
+          setResolvedImages(resolved);
+          return;
+        }
+        // All ids failed to resolve — fall through to placeholder suggestion
+      } catch (err) {
+        console.warn('[resolveItemImages] resolve-batch failed:', err.message);
+      }
     }
-    // 3. Fallback: load image suggestions for preview
+    // 3. Empty media_ids → surface one AI suggestion as placeholder (clearly marked)
     try {
       const r = await contentService.suggestImages({ content_item_id: item.id });
-      const imgs = (r.data || []).slice(0, 1).map(img => ({ url: img.url || img.thumbnail, thumbnail: img.thumbnail || img.url, alt: img.poi_name || '' }));
+      const imgs = (r.data || []).slice(0, 1).map(img => ({
+        url: img.url || img.thumbnail,
+        thumbnail: img.thumbnail || img.url,
+        alt: img.poi_name || '',
+        placeholder: true,
+      }));
       setResolvedImages(imgs);
     } catch { setResolvedImages([]); }
   }, []);
