@@ -21,6 +21,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CheckIcon from '@mui/icons-material/Check';
 import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
@@ -317,12 +318,30 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       setSnackMsg({ severity: 'success', text: `${PLATFORM_CONFIG[platformKey]?.label || platformKey} versie gegenereerd` });
       setAddPlatformOpen(false);
       await loadConcept();
-      // Switch to newly added tab (last one)
-      setTimeout(() => setActiveTab(prev => prev), 50);
+      if (onUpdate) onUpdate();
     } catch (e) {
       setSnackMsg({ severity: 'error', text: `Repurpose mislukt: ${e?.response?.data?.error?.message || e.message}` });
     } finally {
       setRepurposing(null);
+    }
+  };
+
+  // Opdracht 5b: Delete platform handler
+  const [deletingItemId, setDeletingItemId] = useState(null);
+  const handleDeletePlatform = async (itemId) => {
+    if (!itemId) return;
+    if (!window.confirm('Weet je zeker dat je deze platform versie wilt verwijderen?')) return;
+    setDeletingItemId(itemId);
+    try {
+      await contentService.deleteItem(itemId);
+      setSnackMsg({ severity: 'success', text: 'Platform versie verwijderd' });
+      setActiveTab(0);
+      await loadConcept();
+      if (onUpdate) onUpdate();
+    } catch (e) {
+      setSnackMsg({ severity: 'error', text: `Verwijderen mislukt: ${e?.response?.data?.error?.message || e.message}` });
+    } finally {
+      setDeletingItemId(null);
     }
   };
 
@@ -1147,6 +1166,13 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                         )}
                         <Chip label={isPublished ? 'Live' : isScheduled ? 'Gepland' : it.approval_status}
                           size="small" color={STATUS_COLORS[it.approval_status] || 'default'} sx={{ height: 18, fontSize: 10 }} />
+                        {items.length > 1 && (
+                          <Tooltip title="Platform versie verwijderen">
+                            <IconButton size="small" color="error" onClick={() => handleDeletePlatform(it.id)} disabled={deletingItemId === it.id || isPublished}>
+                              {deletingItemId === it.id ? <CircularProgress size={12} /> : <DeleteIcon sx={{ fontSize: 14 }} />}
+                            </IconButton>
+                          </Tooltip>
+                        )}
                       </Box>
                     );
                   })}
