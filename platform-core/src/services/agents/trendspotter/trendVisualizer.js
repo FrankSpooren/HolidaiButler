@@ -34,7 +34,40 @@ class TrendVisualizer {
       offset,
     });
 
-    return { trends: rows, total: count };
+    // Opdracht 7-C: attach 4-week sparkline history per keyword (single bulk query)
+    const trendsWithHistory = rows.map(r => r.toJSON ? r.toJSON() : { ...r });
+    if (trendsWithHistory.length > 0) {
+      const keywords = [...new Set(trendsWithHistory.map(t => t.keyword).filter(Boolean))];
+      if (keywords.length > 0) {
+        try {
+          const [historyRows] = await mysqlSequelize.query(
+            `SELECT keyword, year, week_number, AVG(relevance_score) as score
+             FROM trending_data
+             WHERE destination_id = :destId
+               AND keyword IN (:keywords)
+             GROUP BY keyword, year, week_number
+             ORDER BY year DESC, week_number DESC`,
+            { replacements: { destId: destinationId, keywords } }
+          );
+          // Group by keyword, keep last 4 weeks (most recent first), then reverse to chronological
+          const byKeyword = {};
+          for (const h of historyRows) {
+            if (!byKeyword[h.keyword]) byKeyword[h.keyword] = [];
+            if (byKeyword[h.keyword].length < 4) {
+              byKeyword[h.keyword].push(Number(h.score) || 0);
+            }
+          }
+          for (const t of trendsWithHistory) {
+            t.history = (byKeyword[t.keyword] || []).slice().reverse();
+          }
+        } catch (e) {
+          // Non-fatal: trends still returnable without history
+          for (const t of trendsWithHistory) t.history = [];
+        }
+      }
+    }
+
+    return { trends: trendsWithHistory, total: count };
   }
 
   /**
