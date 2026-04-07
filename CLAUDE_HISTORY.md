@@ -6126,7 +6126,7 @@ CLAUDE.md v4.33.0 → v4.34.0. MS v7.93 → v7.94.
 - **image_id bug**: `imageurls.image_id` NOT NULL maar ontbrak in INSERT → images op disk maar niet in DB
 - **1.208 wees-images**: geregistreerd via Python script
 - **26.415 images**: `keywords_verified` kolom gevuld (Apify categoryName + reviewsTags + atmosphere)
-- **Pixtral 12B batch**: 25.632 images AI-vision tags (keywords_visual, visual_description, visual_mood, visual_setting)
+- **Pixtral 12B batch COMPLEET (07-04-2026)**: 25.426/25.632 images verwerkt (99,2%), 12 errors (0,05%), 206 skipped (te groot/missing), totale kosten **€2,67** (was geschat €6-7), looptijd ~6u met 1x checkpoint resume. Velden: keywords_visual, visual_description, visual_mood, visual_setting. Hybride B/C image keywords project 100% COMPLEET.
 - **Benchmark**: 100 POIs stratified sample, 95% betrouwbaarheid — hybride B+C aanbeveling
 - **imageSelector.js v2.0**: FULLTEXT search op keywords_verified (2x gewicht) + keywords_visual
 - **adminPortal.js**: /content/images/browse met FULLTEXT keyword search + retourneert poi_category + visual_description
