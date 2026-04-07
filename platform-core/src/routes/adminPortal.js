@@ -13681,10 +13681,17 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
     if (!scheduled_at) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
+    // MySQL DATETIME accepteert geen ISO 8601 met 'Z' suffix in strict mode —
+    // converteer naar 'YYYY-MM-DD HH:MM:SS' (UTC).
+    const parsed = new Date(scheduled_at);
+    if (isNaN(parsed.getTime())) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_DATE', message: 'scheduled_at is geen geldige datum' } });
+    }
+    const mysqlDatetime = parsed.toISOString().slice(0, 19).replace('T', ' ');
     const [, meta] = await mysqlSequelize.query(
       `UPDATE content_items SET scheduled_at = :scheduledAt, updated_at = NOW()
        WHERE id = :id AND approval_status NOT IN ('published','rejected','failed')`,
-      { replacements: { scheduledAt: scheduled_at, id: Number(id) } }
+      { replacements: { scheduledAt: mysqlDatetime, id: Number(id) } }
     );
     const affected = meta?.affectedRows ?? 0;
     if (affected === 0) {

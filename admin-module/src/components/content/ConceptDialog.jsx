@@ -1479,11 +1479,18 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                     {(() => {
                       const defaults = BEST_TIME_DEFAULTS[activeItem.target_platform] || BEST_TIME_DEFAULTS.instagram;
-                      return [defaults.best, ...defaults.alt].map((t, i) => (
-                        <Chip key={i} label={t} color={i === 0 ? 'success' : 'default'} size="small"
-                          variant={i === 0 ? 'filled' : 'outlined'}
-                          onClick={() => selectBestTime(t)} sx={{ cursor: 'pointer' }} />
-                      ));
+                      // HH:MM uit huidige scheduleDatetime extract (datetime-local format: YYYY-MM-DDTHH:MM)
+                      const selectedHm = scheduleDatetime ? scheduleDatetime.slice(11, 16) : null;
+                      const times = [defaults.best, ...defaults.alt];
+                      const hasMatch = selectedHm && times.includes(selectedHm);
+                      return times.map((t, i) => {
+                        const isSelected = hasMatch ? (t === selectedHm) : (i === 0 && !selectedHm);
+                        return (
+                          <Chip key={i} label={t} color={isSelected ? 'success' : 'default'} size="small"
+                            variant={isSelected ? 'filled' : 'outlined'}
+                            onClick={() => selectBestTime(t)} sx={{ cursor: 'pointer' }} />
+                        );
+                      });
                     })()}
                   </Box>
                 </Box>
