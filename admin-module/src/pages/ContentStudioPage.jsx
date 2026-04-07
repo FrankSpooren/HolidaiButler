@@ -147,34 +147,195 @@ function getSourceMeta(source) {
   return { label: source, Icon: LanguageIcon, color: '#607D8B' };
 }
 
-// Sparkline mini-chart component (Opdracht 7-C)
-// Renders a small bar chart from a numeric history array (max 4 values).
-function Sparkline({ data, width = 56, height = 18, color = '#5E8B7E' }) {
+// Score color helper (Opdracht 7-3): 4-staps schaal
+// 8.5-10 → groen, 6-8.5 → blauw, 3.5-6 → oranje, 0-3.5 → rood
+function getScoreColor(score) {
+  const s = Number(score) || 0;
+  if (s >= 8.5) return { mui: 'success', hex: '#2e7d32' };
+  if (s >= 6) return { mui: 'info', hex: '#0288d1' };
+  if (s >= 3.5) return { mui: 'warning', hex: '#ed6c02' };
+  return { mui: 'error', hex: '#d32f2f' };
+}
+
+// Sparkline mini-chart component (Opdracht 7-C, herontwerp v2)
+// Toont weeknummers onder de bars + score-label boven, zodat de viz
+// betekenisvol is. Bij 1 datapunt: single bar met label. Bij 0: tekst.
+// Bars zijn gekleurd op basis van hun eigen score (4-staps schaal) en
+// gebruiken vaste 0-10 schaal voor visuele consistentie tussen rijen.
+function Sparkline({ data, weeks, width = 100, height = 38 }) {
   if (!Array.isArray(data) || data.length === 0) {
-    return <Box component="span" sx={{ display: 'inline-block', width, height, color: 'text.disabled', fontSize: 10, lineHeight: `${height}px`, textAlign: 'center' }}>—</Box>;
+    return (
+      <Box component="span" sx={{ display: 'inline-block', color: 'text.disabled', fontSize: 10, fontStyle: 'italic' }}>
+        Geen historie
+      </Box>
+    );
   }
   const values = data.map(v => Number(v) || 0);
-  const max = Math.max(...values, 1);
+  const labels = Array.isArray(weeks) && weeks.length === values.length
+    ? weeks.map(w => `W${w}`)
+    : values.map((_, i) => `t${i + 1}`);
+  const max = 10;
   const barCount = values.length;
-  const gap = 2;
-  const barWidth = Math.max(2, (width - gap * (barCount - 1)) / barCount);
+  const gap = 4;
+  const labelHeight = 10;
+  const valueHeight = 10;
+  const barAreaH = height - labelHeight - valueHeight - 2;
+  const barWidth = Math.max(8, (width - gap * (barCount - 1)) / barCount);
   return (
-    <svg width={width} height={height} role="img" aria-label="Trend history">
+    <svg width={width} height={height} role="img" aria-label="Sparkline 4-week trend">
       {values.map((v, i) => {
-        const h = Math.max(1, (v / max) * (height - 2));
+        const h = Math.max(2, (v / max) * barAreaH);
+        const x = i * (barWidth + gap);
+        const y = valueHeight + (barAreaH - h);
+        const c = getScoreColor(v).hex;
         return (
-          <rect
-            key={i}
-            x={i * (barWidth + gap)}
-            y={height - h - 1}
-            width={barWidth}
-            height={h}
-            fill={color}
-            rx={1}
-          />
+          <g key={i}>
+            <text x={x + barWidth / 2} y={valueHeight - 2} textAnchor="middle" fontSize="9" fontWeight="600" fill={c}>
+              {v.toFixed(1)}
+            </text>
+            <rect x={x} y={y} width={barWidth} height={h} fill={c} rx={1} />
+            <text x={x + barWidth / 2} y={height - 1} textAnchor="middle" fontSize="8" fill="#666">
+              {labels[i]}
+            </text>
+          </g>
         );
       })}
     </svg>
+  );
+}
+
+// Helper: laatste geschiedenis-waarde voor sortering op Trend kolom
+function latestHistoryValue(historyArr) {
+  if (!Array.isArray(historyArr) || historyArr.length === 0) return -1;
+  return Number(historyArr[historyArr.length - 1]) || 0;
+}
+
+// Opdracht 7-F (v2): Platform-aware suggestion preview
+// Toont een passende mini-preview op basis van content_type + primair kanaal
+function SuggestionPreview({ suggestion: sug }) {
+  if (!sug) return null;
+  const ct = sug.content_type;
+  const channels = Array.isArray(sug.suggested_channels) ? sug.suggested_channels : [];
+  const primary = channels[0] || (ct === 'blog' ? 'website' : 'instagram');
+  const keywords = Array.isArray(sug.keyword_cluster) ? sug.keyword_cluster : [];
+  const hashtags = keywords.slice(0, 3).map(k => `#${String(k).replace(/[^a-zA-Z0-9]/g, '')}`).filter(h => h.length > 1).join(' ');
+  const summary = sug.summary || '';
+
+  // BLOG: hero met titel + lead
+  if (ct === 'blog') {
+    return (
+      <Box sx={{ width: 280, color: 'common.white' }}>
+        <Box sx={{ fontSize: 10, opacity: 0.7, mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Preview · Blog artikel</Box>
+        <Box sx={{ borderRadius: 1, overflow: 'hidden', bgcolor: '#fff', color: '#222' }}>
+          <Box sx={{ height: 90, background: 'linear-gradient(135deg, #5E8B7E 0%, #2C3E50 100%)', display: 'flex', alignItems: 'flex-end', p: 1.2 }}>
+            <Box sx={{ fontSize: 9, color: '#fff', bgcolor: 'rgba(0,0,0,0.4)', px: 0.6, borderRadius: 0.4 }}>BLOG</Box>
+          </Box>
+          <Box sx={{ p: 1.2 }}>
+            <Box sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1.25, mb: 0.5 }}>{sug.title}</Box>
+            {summary && <Box sx={{ fontSize: 10, color: '#555', lineHeight: 1.35 }}>{summary.length > 140 ? summary.slice(0, 140) + '…' : summary}</Box>}
+            <Box sx={{ fontSize: 9, color: '#888', mt: 0.8 }}>calpetrip.com/blog</Box>
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
+  // VIDEO SCRIPT: video frame mock
+  if (ct === 'video_script') {
+    return (
+      <Box sx={{ width: 240, color: 'common.white' }}>
+        <Box sx={{ fontSize: 10, opacity: 0.7, mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Preview · Video</Box>
+        <Box sx={{ aspectRatio: '16/9', bgcolor: '#000', borderRadius: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Box sx={{ width: 0, height: 0, borderTop: '14px solid transparent', borderBottom: '14px solid transparent', borderLeft: '20px solid rgba(255,255,255,0.85)', ml: 0.5 }} />
+          <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1, bgcolor: 'rgba(0,0,0,0.6)' }}>
+            <Box sx={{ fontSize: 11, fontWeight: 600, color: '#fff' }}>{sug.title}</Box>
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
+  // SOCIAL POST: kies layout op basis van primair kanaal
+  const platformLabel = (PLATFORM_LABELS[primary] || primary || 'social').toString();
+
+  if (primary === 'instagram') {
+    return (
+      <Box sx={{ width: 220, color: 'common.white' }}>
+        <Box sx={{ fontSize: 10, opacity: 0.7, mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Preview · Instagram</Box>
+        <Box sx={{ bgcolor: '#fff', color: '#222', borderRadius: 1, overflow: 'hidden' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, px: 1, py: 0.6, borderBottom: '1px solid #eee' }}>
+            <Box sx={{ width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg, #833AB4 0%, #FD1D1D 50%, #FCB045 100%)' }} />
+            <Box sx={{ fontSize: 10, fontWeight: 600 }}>calpetrip</Box>
+          </Box>
+          <Box sx={{ width: '100%', aspectRatio: '1 / 1', background: 'linear-gradient(135deg, #833AB4 0%, #FD1D1D 50%, #FCB045 100%)', display: 'flex', alignItems: 'flex-end', p: 1 }}>
+            <Box sx={{ fontSize: 11, color: '#fff', fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>{sug.title}</Box>
+          </Box>
+          <Box sx={{ p: 0.8 }}>
+            {summary && <Box sx={{ fontSize: 9.5, color: '#222', lineHeight: 1.3 }}>{summary.length > 110 ? summary.slice(0, 110) + '…' : summary}</Box>}
+            {hashtags && <Box sx={{ fontSize: 9, color: '#00376b', mt: 0.4 }}>{hashtags}</Box>}
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (primary === 'facebook') {
+    return (
+      <Box sx={{ width: 240, color: 'common.white' }}>
+        <Box sx={{ fontSize: 10, opacity: 0.7, mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Preview · Facebook</Box>
+        <Box sx={{ bgcolor: '#fff', color: '#222', borderRadius: 1, overflow: 'hidden', border: '1px solid #ddd' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, p: 1, borderBottom: '1px solid #eee' }}>
+            <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: '#1877F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700 }}>C</Box>
+            <Box>
+              <Box sx={{ fontSize: 10, fontWeight: 700 }}>CalpeTrip</Box>
+              <Box sx={{ fontSize: 8, color: '#666' }}>Sponsored · 🌐</Box>
+            </Box>
+          </Box>
+          <Box sx={{ p: 1 }}>
+            <Box sx={{ fontSize: 11, fontWeight: 600, mb: 0.5 }}>{sug.title}</Box>
+            {summary && <Box sx={{ fontSize: 9.5, color: '#444', lineHeight: 1.35 }}>{summary.length > 130 ? summary.slice(0, 130) + '…' : summary}</Box>}
+          </Box>
+          <Box sx={{ height: 80, background: 'linear-gradient(135deg, #1877F2 0%, #42A5F5 100%)' }} />
+          <Box sx={{ display: 'flex', gap: 1, p: 0.6, borderTop: '1px solid #eee', fontSize: 9, color: '#666' }}>
+            <span>👍 Vind ik leuk</span><span>💬 Reageer</span><span>↗ Deel</span>
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (primary === 'linkedin') {
+    return (
+      <Box sx={{ width: 240, color: 'common.white' }}>
+        <Box sx={{ fontSize: 10, opacity: 0.7, mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Preview · LinkedIn</Box>
+        <Box sx={{ bgcolor: '#fff', color: '#222', borderRadius: 1, overflow: 'hidden', border: '1px solid #ddd' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, p: 1 }}>
+            <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: '#0A66C2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700 }}>C</Box>
+            <Box>
+              <Box sx={{ fontSize: 10, fontWeight: 700 }}>CalpeTrip</Box>
+              <Box sx={{ fontSize: 8, color: '#666' }}>Travel · 1.2k volgers</Box>
+            </Box>
+          </Box>
+          <Box sx={{ px: 1, pb: 1 }}>
+            <Box sx={{ fontSize: 11, fontWeight: 600, mb: 0.5 }}>{sug.title}</Box>
+            {summary && <Box sx={{ fontSize: 9.5, color: '#444', lineHeight: 1.35 }}>{summary.length > 130 ? summary.slice(0, 130) + '…' : summary}</Box>}
+            {hashtags && <Box sx={{ fontSize: 9, color: '#0A66C2', mt: 0.4 }}>{hashtags}</Box>}
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Generieke fallback (X, TikTok, etc.)
+  return (
+    <Box sx={{ width: 220, color: 'common.white' }}>
+      <Box sx={{ fontSize: 10, opacity: 0.7, mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Preview · {platformLabel}</Box>
+      <Box sx={{ bgcolor: '#fff', color: '#222', borderRadius: 1, p: 1, border: '1px solid #ddd' }}>
+        <Box sx={{ fontSize: 11, fontWeight: 700, mb: 0.5 }}>{sug.title}</Box>
+        {summary && <Box sx={{ fontSize: 10, color: '#444' }}>{summary.length > 140 ? summary.slice(0, 140) + '…' : summary}</Box>}
+        {hashtags && <Box sx={{ fontSize: 9, color: '#0288d1', mt: 0.4 }}>{hashtags}</Box>}
+      </Box>
+    </Box>
   );
 }
 
@@ -650,28 +811,53 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
         )}
       </DialogContent>
       {/* Progress indicator during generation */}
-      {generating && (
-        <Box sx={{ px: 3, pb: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-            <CircularProgress size={18} />
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {genElapsed < 10 ? 'AI schrijft content...' :
-                 genElapsed < 25 ? 'SEO-analyse en optimalisatie...' :
-                 genElapsed < 50 ? 'Kwaliteitscontrole en verbetering...' :
-                 'Bijna klaar, nog even geduld...'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {platforms.length} {platforms.length === 1 ? 'platform' : 'platformen'} — circa {platforms.length * 30} sec
-                {genElapsed > 0 ? ` (${genElapsed}s)` : ''}
-              </Typography>
+      {generating && (() => {
+        // Realistic ETA per content type. Blogs: multilingual (5x) + SEO scoring + improve loops + image picker.
+        // Social posts: single language, short, no improve loop.
+        const secPerPlatform = contentType === 'blog' ? 240 : contentType === 'video_script' ? 90 : 35;
+        const etaTotal = platforms.length * secPerPlatform;
+        const etaMin = Math.ceil(etaTotal / 60);
+        const etaMax = Math.ceil((etaTotal * 1.5) / 60);
+        const etaLabel = contentType === 'blog'
+          ? `${etaMin}-${etaMax} min`
+          : `${etaTotal}-${Math.round(etaTotal * 1.5)} sec`;
+        const blogPhase =
+          genElapsed < 30 ? 'AI schrijft de hoofdtekst...' :
+          genElapsed < 90 ? 'SEO-analyse en optimalisatie...' :
+          genElapsed < 180 ? 'Vertalen naar NL/DE/ES/FR...' :
+          genElapsed < 270 ? 'Kwaliteitscontrole en verbetering...' :
+          'Afronden — duurt wat langer dan verwacht...';
+        const shortPhase =
+          genElapsed < 10 ? 'AI schrijft content...' :
+          genElapsed < 25 ? 'SEO-analyse en optimalisatie...' :
+          genElapsed < 50 ? 'Kwaliteitscontrole en verbetering...' :
+          'Afronden — duurt wat langer dan verwacht...';
+        const fmt = s => s >= 60 ? `${Math.floor(s/60)}m ${s%60}s` : `${s}s`;
+        return (
+          <Box sx={{ px: 3, pb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+              <CircularProgress size={18} />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {contentType === 'blog' ? blogPhase : shortPhase}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {platforms.length} {platforms.length === 1 ? 'platform' : 'platformen'} — verwacht {etaLabel}
+                  {genElapsed > 0 ? ` (verstreken: ${fmt(genElapsed)})` : ''}
+                </Typography>
+              </Box>
             </Box>
+            <LinearProgress variant="determinate"
+              value={Math.min(95, (genElapsed / etaTotal) * 100)}
+              sx={{ height: 4, borderRadius: 2 }} />
+            {contentType === 'blog' && genElapsed > etaTotal && (
+              <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
+                Generatie loopt door op de achtergrond — je kunt dit dialoog sluiten en later het concept openen.
+              </Typography>
+            )}
           </Box>
-          <LinearProgress variant="determinate"
-            value={Math.min(95, (genElapsed / (platforms.length * 35)) * 100)}
-            sx={{ height: 4, borderRadius: 2 }} />
-        </Box>
-      )}
+        );
+      })()}
       <DialogActions>
         <Button onClick={onClose} disabled={generating}>{t('contentStudio.actions.cancel', 'Annuleren')}</Button>
         <Button onClick={handleGenerate} variant="contained" disabled={generating || platforms.length === 0} startIcon={generating ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}>
@@ -2727,9 +2913,9 @@ export default function ContentStudioPage() {
                   <TableRow>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'keyword_asc' ? 'keyword_desc' : 'keyword_asc')}>{t('contentStudio.table.keyword', 'Keyword')} {trendSort.startsWith('keyword') ? (trendSort === 'keyword_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'score_desc' ? 'score_asc' : 'score_desc')}>{t('contentStudio.table.score', 'Score')} {trendSort.startsWith('score') ? (trendSort === 'score_asc' ? '↑' : '↓') : ''}</TableCell>
-                    <TableCell>
-                      <Tooltip title={t('contentStudio.table.trendTooltip', 'Mini sparkline van de laatste 4 weken (relevance score per week)')}>
-                        <span>{t('contentStudio.table.trend', 'Trend')}</span>
+                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'trend_desc' ? 'trend_asc' : 'trend_desc')}>
+                      <Tooltip title={t('contentStudio.table.trendTooltip', 'Sparkline met de relevance score per week (laatste 4 weken). Klik om te sorteren op de meest recente week.')}>
+                        <span>{t('contentStudio.table.trend', 'Trend')} {trendSort.startsWith('trend') ? (trendSort === 'trend_asc' ? '↑' : '↓') : ''}</span>
                       </Tooltip>
                     </TableCell>
                     <TableCell>{t('contentStudio.table.direction', 'Richting')}</TableCell>
@@ -2771,6 +2957,8 @@ export default function ContentStudioPage() {
                       if (trendSort === 'volume_desc') return (Number(b.search_volume) || 0) - (Number(a.search_volume) || 0);
                       if (trendSort === 'week_asc') return (Number(a.week_number) || 0) - (Number(b.week_number) || 0);
                       if (trendSort === 'week_desc') return (Number(b.week_number) || 0) - (Number(a.week_number) || 0);
+                      if (trendSort === 'trend_asc') return latestHistoryValue(a.history) - latestHistoryValue(b.history);
+                      if (trendSort === 'trend_desc') return latestHistoryValue(b.history) - latestHistoryValue(a.history);
                       return 0;
                     })
                     .map((trend, idx) => (
@@ -2792,14 +2980,19 @@ export default function ContentStudioPage() {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Chip label={trend.relevance_score != null ? Number(trend.relevance_score).toFixed(1) : '—'} size="small" color={Number(trend.relevance_score) >= 7 ? 'success' : Number(trend.relevance_score) >= 4 ? 'info' : 'default'} />
+                        <Chip
+                          label={trend.relevance_score != null ? Number(trend.relevance_score).toFixed(1) : '—'}
+                          size="small"
+                          color={getScoreColor(trend.relevance_score).mui}
+                          sx={{ fontWeight: 600, minWidth: 38 }}
+                        />
                       </TableCell>
                       <TableCell>
                         <Tooltip title={Array.isArray(trend.history) && trend.history.length > 0
-                          ? `4-weken: ${trend.history.map(v => Number(v).toFixed(1)).join(' → ')}`
-                          : t('contentStudio.noHistory', 'Geen historische data')}>
+                          ? `Laatste ${trend.history.length} ${trend.history.length === 1 ? 'week' : 'weken'}: ${trend.history.map((v, i) => `${(trend.history_weeks?.[i] != null ? 'W' + trend.history_weeks[i] + ' ' : '')}${Number(v).toFixed(1)}`).join(' → ')}`
+                          : t('contentStudio.noHistory', 'Geen historische data — er is maar 1 datapunt of nog geen wekelijkse scan uitgevoerd')}>
                           <Box sx={{ display: 'inline-flex' }}>
-                            <Sparkline data={trend.history} color={Number(trend.relevance_score) >= 7 ? '#2e7d32' : Number(trend.relevance_score) >= 4 ? '#0288d1' : '#9e9e9e'} />
+                            <Sparkline data={trend.history} weeks={trend.history_weeks} />
                           </Box>
                         </Tooltip>
                       </TableCell>
@@ -2989,31 +3182,16 @@ export default function ContentStudioPage() {
                         <Checkbox size="small" checked={selectedSugIds.includes(sug.id)} onChange={() => toggleSugSelect(sug.id)} />
                       </TableCell>
                       <TableCell>
-                        {/* Opdracht 7-F: IG-preview tooltip on hover */}
+                        {/* Opdracht 7-F (v2): platform-aware preview tooltip
+                            - blog → blog article hero mock
+                            - social_post → preview van het primaire kanaal (eerste suggested_channel)
+                            - video_script → video frame mock
+                        */}
                         <Tooltip
                           placement="right"
                           arrow
-                          title={
-                            <Box sx={{ p: 0, width: 220 }}>
-                              <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, mb: 0.5, color: 'common.white' }}>
-                                {t('contentStudio.igPreviewLabel', 'Preview als Instagram post')}
-                              </Typography>
-                              <Box sx={{
-                                width: '100%', aspectRatio: '1 / 1',
-                                borderRadius: 1,
-                                background: 'linear-gradient(135deg, #833AB4 0%, #FD1D1D 50%, #FCB045 100%)',
-                                display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-                                p: 1.5,
-                              }}>
-                                <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 13, lineHeight: 1.2, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                                  {sug.title}
-                                </Typography>
-                                <Typography sx={{ color: '#fff', fontSize: 10, mt: 0.5, opacity: 0.9, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                                  {(Array.isArray(sug.keyword_cluster) ? sug.keyword_cluster : []).slice(0, 3).map(k => `#${String(k).replace(/\s+/g, '')}`).join(' ')}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          }
+                          componentsProps={{ tooltip: { sx: { bgcolor: 'rgba(33,33,33,0.97)', maxWidth: 'none', p: 1.5 } } }}
+                          title={<SuggestionPreview suggestion={sug} />}
                         >
                           <Typography variant="body2" sx={{ fontWeight: 500, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {sug.title}
@@ -3027,7 +3205,12 @@ export default function ContentStudioPage() {
                       </TableCell>
                       <TableCell><Chip label={CONTENT_TYPE_LABELS[sug.content_type] || sug.content_type} size="small" /></TableCell>
                       <TableCell>
-                        <Chip label={Number(sug.engagement_score || 0).toFixed(1)} size="small" color={sug.engagement_score >= 7 ? 'success' : sug.engagement_score >= 4 ? 'info' : 'default'} />
+                        <Chip
+                          label={Number(sug.engagement_score || 0).toFixed(1)}
+                          size="small"
+                          color={getScoreColor(sug.engagement_score).mui}
+                          sx={{ fontWeight: 600, minWidth: 38 }}
+                        />
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 180 }}>
@@ -3070,18 +3253,11 @@ export default function ContentStudioPage() {
                             </Tooltip>
                           )}
                           {sug.status === 'rejected' && (
-                            <>
-                              <Tooltip title={t('contentStudio.tooltips.restorePending', 'Herstel naar pending')}>
-                                <IconButton size="small" color="info" onClick={() => handleSuggestionAction(sug.id, 'pending')}>
-                                  <RestoreIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title={t('contentStudio.tooltips.deleteForever', 'Definitief verwijderen')}>
-                                <IconButton size="small" color="error" onClick={() => handleSuggestionAction(sug.id, 'deleted')}>
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </>
+                            <Tooltip title={t('contentStudio.tooltips.restorePending', 'Herstel naar pending')}>
+                              <IconButton size="small" color="info" onClick={() => handleSuggestionAction(sug.id, 'pending')}>
+                                <RestoreIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
                           )}
                           {/* Opdracht 7-E: Verrijk-knop (alleen voor pending of approved suggesties) */}
                           {(sug.status === 'pending' || sug.status === 'approved') && (
@@ -3100,6 +3276,19 @@ export default function ContentStudioPage() {
                               <VisibilityIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
+                          {/* Opdracht 7-fix-5: prullenbak voor ALLE statussen (sluit niet meer alleen rejected in) */}
+                          {sug.status !== 'deleted' && (
+                            <Tooltip title={t('contentStudio.tooltips.deleteSuggestion', 'Verwijderen (naar prullenbak)')}>
+                              <IconButton size="small" color="error"
+                                onClick={() => {
+                                  if (window.confirm(t('contentStudio.confirmDeleteSuggestion', 'Deze suggestie verwijderen?'))) {
+                                    handleSuggestionAction(sug.id, 'deleted');
+                                  }
+                                }}>
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                         </Box>
                       </TableCell>
                     </TableRow>

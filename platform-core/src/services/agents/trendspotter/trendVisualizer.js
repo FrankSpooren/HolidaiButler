@@ -49,20 +49,22 @@ class TrendVisualizer {
              ORDER BY year DESC, week_number DESC`,
             { replacements: { destId: destinationId, keywords } }
           );
-          // Group by keyword, keep last 4 weeks (most recent first), then reverse to chronological
+          // Group by keyword, keep last 4 weeks (most recent first), reverse → chronological
           const byKeyword = {};
           for (const h of historyRows) {
             if (!byKeyword[h.keyword]) byKeyword[h.keyword] = [];
             if (byKeyword[h.keyword].length < 4) {
-              byKeyword[h.keyword].push(Number(h.score) || 0);
+              byKeyword[h.keyword].push({ score: Number(h.score) || 0, week: Number(h.week_number) || 0 });
             }
           }
           for (const t of trendsWithHistory) {
-            t.history = (byKeyword[t.keyword] || []).slice().reverse();
+            const arr = (byKeyword[t.keyword] || []).slice().reverse();
+            t.history = arr.map(x => x.score);
+            t.history_weeks = arr.map(x => x.week);
           }
         } catch (e) {
           // Non-fatal: trends still returnable without history
-          for (const t of trendsWithHistory) t.history = [];
+          for (const t of trendsWithHistory) { t.history = []; t.history_weeks = []; }
         }
       }
     }
