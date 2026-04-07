@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 7 april 2026
-**Versie**: 7.99
+**Versie**: 8.00
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Hybride B/C Image Keywords 100% COMPLEET (Pixtral batch €2,67 finale)** + Image Picker UX + Async Content Gen + 8 CS Bug Fixes + SA v3.0. CLAUDE.md v4.38.1. MS v7.99.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Content Studio Image Pipeline Hardening + i18n Blog Titles + BullMQ Generation Queue (v4.39.0)**: 4 verbonden image-pipeline bugs gefixt via strict PRE-FLIGHT diagnostic workflow (theme-aware POI/image selection, centrale media resolver, publisher dual-lookup, ID prefix conventie). DeepL blog title vertalingen 5 talen. BullMQ vervangt setImmediate voor robuuste content generation. 250 admin endpoints, adminPortal.js v3.42.0. CLAUDE.md v4.39.0. MS v8.00.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
