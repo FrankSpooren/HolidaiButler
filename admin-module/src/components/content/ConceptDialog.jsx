@@ -1479,12 +1479,18 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                     {(() => {
                       const defaults = BEST_TIME_DEFAULTS[activeItem.target_platform] || BEST_TIME_DEFAULTS.instagram;
-                      // HH:MM uit huidige scheduleDatetime extract (datetime-local format: YYYY-MM-DDTHH:MM)
+                      // HH:MM uit scheduleDatetime (datetime-local format: YYYY-MM-DDTHH:MM)
                       const selectedHm = scheduleDatetime ? scheduleDatetime.slice(11, 16) : null;
+                      // Extract HH:MM uit chip label "Dinsdag 11:00" → "11:00"
+                      const extractHm = (label) => {
+                        const m = label.match(/(\d{1,2}):(\d{2})/);
+                        return m ? `${m[1].padStart(2, '0')}:${m[2]}` : null;
+                      };
                       const times = [defaults.best, ...defaults.alt];
-                      const hasMatch = selectedHm && times.includes(selectedHm);
+                      const timesHm = times.map(extractHm);
+                      const hasMatch = selectedHm && timesHm.includes(selectedHm);
                       return times.map((t, i) => {
-                        const isSelected = hasMatch ? (t === selectedHm) : (i === 0 && !selectedHm);
+                        const isSelected = hasMatch ? (timesHm[i] === selectedHm) : (i === 0 && !selectedHm);
                         return (
                           <Chip key={i} label={t} color={isSelected ? 'success' : 'default'} size="small"
                             variant={isSelected ? 'filled' : 'outlined'}
