@@ -6555,4 +6555,74 @@ CLAUDE.md v4.33.0 → v4.34.0. MS v7.93 → v7.94.
 
 ---
 
+## v4.41.0 — Content Studio State-of-the-Art Polish (De Laatste 5%) — 7 april 2026
+
+6 opdrachten geleverd in één sessie. Doel: micro-interacties + power-user features die het verschil maken tussen "zeer goed" en "voelt premium". Geen architectuurwijzigingen, geen nieuwe tabellen of agents (1 BullMQ job, 1 nieuw service file, 2 nieuwe DB-kolommen).
+
+**Opdracht 1 — Command Palette (Cmd+K)**
+- `admin-module/src/components/common/CommandPalette.jsx` NIEUW (~210 LOC)
+- MUI Dialog + TextField + List + fuzzy match (token-based, alle woorden moeten substring zijn)
+- 3 secties: Navigatie (15 routes, role-aware admin-only items), Acties (Nieuw item / Nieuwe campagne / Kalender auto-fill / AI herschrijven), Recent (laatste 5 content items via `contentService.getItems(destId, {limit:5})`)
+- Arrow ↑↓ navigatie, Enter execute, Escape close
+- Globale `Cmd+K`/`Ctrl+K` hotkey gemount in `AdminLayout.jsx` via `window.addEventListener('keydown')`
+
+**Opdracht 2 — Kalender Drag & Drop**
+- `@dnd-kit/core` (al geïnstalleerd voor block editor) hergebruikt
+- `ContentCalendarTab.jsx`: `DndContext` wrap, `DroppableDayCell` + `DraggableCalendarItem` helper componenten
+- Backend `PATCH /content/items/:id/reschedule`: SQL filter `approval_status = 'scheduled'` → `IN ('draft','scheduled')`. Cancel-schedule endpoint **niet** gewijzigd
+- Behoud uur/min van bestaande planning (default 09:00 voor draft), `DragOverlay` met item-titel, droptarget highlight (#FFF3E0 + oranje 2px border), snackbar feedback "Verplaatst naar dd-mm-yyyy"
+- PointerSensor met `activationConstraint: { distance: 5 }` voorkomt accidental drag bij click
+- Alleen draggable wanneer `approval_status ∈ {draft, scheduled}` — anders cursor default
+
+**Opdracht 3 — A/B Variant Generatie ("Alternatief")**
+- Backend `contentGenerator.js`: nieuwe `generateAlternative(contentItem)` functie (~100 LOC)
+  - Temperature 0.9 voor creatieve divergentie
+  - Prompt: "Pick a new angle: contrarian, story-led, list-format, problem/solution, sensory-immersive, behind-the-scenes — anything but the original structure"
+  - Geen DB-write, retourneert `{original, alternative, ai_model}`
+  - Zelfde sanitizers (em-dash, markdown-strip) en platform char limits
+- `POST /content/items/:id/improve` accepteert nu `{mode:'alternative'}` → branche naar `generateAlternative` — geen extra endpoint, count blijft 251
+- Frontend `contentService.generateAlternative(id)` helper
+- `ConceptDialog`: `ShuffleIcon` knop naast "AI Herschrijven" in beide headers (blog editor + social editor)
+- Split-view Dialog (`maxWidth=lg`): origineel links, alternatief rechts (geaccentueerd met `bgcolor: rgba(94,139,126,0.06)` + `borderColor: primary.main`), 3 acties: `Annuleren` / `Gebruik origineel` / `Gebruik alternatief`
+- "Gebruik alternatief" → `setEditBody(alternative.body_en)` + `setDirty(true)` + `setIsEditing(true)`
+
+**Opdracht 4 — Content Recycling Suggesties**
+- ALTER TABLE `content_suggestions` ADD COLUMN `source VARCHAR(50) DEFAULT NULL`, ADD COLUMN `original_item_id INT NULL`
+- `platform-core/src/services/agents/dataSync/contentRecycleService.js` NIEUW (~100 LOC)
+  - `generateRecycleSuggestions(destinationId)`: top-5 published items >30 dagen oud via JOIN content_performance, GROUP BY id ORDER BY total_engagement DESC
+  - Dedup-check: skipt bestaande pending/approved recycle-suggestions voor zelfde `original_item_id`
+  - INSERT met `source='recycle'`, `original_item_id=item.id`, titel `♻️ Hergebruik: {originele titel}` (max 500 chars), summary met engagement stats
+  - `runRecycleSuggestionsAllDestinations()`: itereert over `destinations WHERE status='active'`
+- Scheduler entry: `content-recycle-suggestions` cron `0 7 * * 2` (Europe/Amsterdam — dinsdag 07:00)
+- Worker case + `JOB_ACTOR_MAP['content-recycle-suggestions'] = 'data-sync'`
+- **Smoke test op live DB destination 1**: 0 candidates (alle published items zijn van 06-07 april, binnen 30 dagen) — service draait zonder errors, query + INSERT logica correct
+- **63 BullMQ jobs totaal** (was 62)
+- Frontend rendering: bestaande Suggesties-tab toont titel met `♻️` prefix en bestaande SuggestionPreview/Verrijk/Genereer flow werkt out-of-the-box
+
+**Opdracht 5 — Micro-Interacties & Transitions (5/5)**
+Alle 5 met `@media (prefers-reduced-motion: reduce)` fallback:
+1. **ConceptDialog Tabs**: `transition: color 200ms / background 200ms / border-bottom 200ms ease`, indicator transition 250ms cubic-bezier
+2. **Concept-tabel rij hover-lift**: `transform: translateY(-1px)` + `boxShadow: 1`, transition 150ms ease
+3. **AnimatedScoreChip** nieuw component (`admin-module/src/components/common/AnimatedScoreChip.jsx`, ~35 LOC): `requestAnimationFrame` + easeOutCubic, count-up 0→score over 400ms. Gebruikt in beide SEO chips ConceptDialog (blog header + social header)
+4. **Kalender "⚠ Gat" pulse**: `@keyframes hbGapPulse { 0%,100%: opacity 1; 50%: opacity 0.5 }`, 2s ease-in-out infinite
+5. **Bulk toolbar slide-in**: `@keyframes hbSlideDown { from: translateY(-100%) opacity 0; to: translateY(0) opacity 1 }`, 250ms cubic-bezier, op beide bulk toolbars (items + suggesties)
+
+**Opdracht 6 — Documentatie + QA**
+- CLAUDE.md → v4.41.0 (header + Huidige Tellingen + Quick Health Check 62→63 + changelog entry)
+- Master Strategie footer → v8.02
+- CLAUDE_HISTORY.md → deze entry
+- Build: `admin-module && npm run build` succesvol (52s, 0 errors). Bundel 6.39 MB / 1.40 MB gzipped (chunk warning bestaat al, geen blocker)
+
+**Bestanden gewijzigd/nieuw**
+- Backend (5): `platform-core/src/routes/adminPortal.js` (v3.43.0→v3.43.1, reschedule SQL + alternative mode branche), `platform-core/src/services/agents/contentRedacteur/contentGenerator.js` (+generateAlternative + default export), `platform-core/src/services/agents/dataSync/contentRecycleService.js` **NIEUW**, `platform-core/src/services/orchestrator/scheduler.js` (+content-recycle cron), `platform-core/src/services/orchestrator/workers.js` (+case + JOB_ACTOR_MAP)
+- Frontend (8): `admin-module/src/components/common/CommandPalette.jsx` **NIEUW**, `admin-module/src/components/common/AnimatedScoreChip.jsx` **NIEUW**, `admin-module/src/components/layout/AdminLayout.jsx`, `admin-module/src/pages/ContentCalendarTab.jsx`, `admin-module/src/components/content/ConceptDialog.jsx`, `admin-module/src/api/contentService.js`, `admin-module/src/pages/ContentStudioPage.jsx`
+- Database: `content_suggestions` ALTER TABLE (live op Hetzner)
+- Documentatie (3): CLAUDE.md, Master Strategie, CLAUDE_HISTORY.md
+
+**Endpoint count**: 251 (ongewijzigd — alternative mode hergebruikt bestaande improve endpoint).
+**BullMQ jobs**: 62 → 63.
+**Agents**: 25 (ongewijzigd).
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

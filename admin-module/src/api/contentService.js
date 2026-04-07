@@ -107,8 +107,12 @@ const contentService = {
     return client.get(`/content/items/${id}/seo`, { params }).then(r => r.data);
   },
 
-  improveItem(id) {
-    return client.post(`/content/items/${id}/improve`, {}, { timeout: 120000 }).then(r => r.data);
+  improveItem(id, opts = {}) {
+    return client.post(`/content/items/${id}/improve`, opts, { timeout: 120000 }).then(r => r.data);
+  },
+
+  generateAlternative(id) {
+    return client.post(`/content/items/${id}/improve`, { mode: 'alternative' }, { timeout: 120000 }).then(r => r.data);
   },
 
   // === Calendar & Scheduling (Fase C) ===

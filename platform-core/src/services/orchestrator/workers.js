@@ -518,6 +518,18 @@ export function startWorkers() {
           }
           break;
 
+        case "content-recycle-suggestions":
+          try {
+            const recycleService = await import("../agents/dataSync/contentRecycleService.js");
+            const recycleResult = await recycleService.runRecycleSuggestionsAllDestinations();
+            console.log("[Orchestrator] Content recycle suggestions:", JSON.stringify(recycleResult));
+            result = recycleResult;
+          } catch (error) {
+            console.error("[Orchestrator] Content recycle suggestions failed:", error.message);
+            throw error;
+          }
+          break;
+
         case "content-freshness-check":
           try {
             const freshnessService = await import("../agents/dataSync/freshnessService.js");
@@ -1120,6 +1132,7 @@ export function startWorkers() {
         'backup-recency-check': 'health-monitor',
         'content-quality-audit': 'data-sync',
         'content-freshness-check': 'data-sync',
+        'content-recycle-suggestions': 'data-sync',
         'chromadb-state-snapshot': 'holibot-sync',
         'agent-success-rate': 'strategy-layer',
         'gdpr-consent-audit': 'gdpr',

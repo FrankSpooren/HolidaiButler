@@ -3103,6 +3103,13 @@ export default function ContentStudioPage() {
                 display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center',
                 px: 2, py: 1.5, mb: 1,
                 bgcolor: 'primary.50', borderTop: 2, borderBottom: 2, borderColor: 'primary.main',
+                // Opdracht 5 micro-interactie #5: slide-in van boven
+                animation: 'hbSlideDown 250ms cubic-bezier(0.16, 1, 0.3, 1)',
+                '@keyframes hbSlideDown': {
+                  from: { transform: 'translateY(-100%)', opacity: 0 },
+                  to: { transform: 'translateY(0)', opacity: 1 },
+                },
+                '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
               }}>
                 <Chip label={`${selectedSugIds.length} ${t('contentStudio.selected', 'geselecteerd')}`} color="primary" sx={{ fontWeight: 600 }} />
                 <Box sx={{ flex: 1 }} />
@@ -3350,6 +3357,13 @@ export default function ContentStudioPage() {
                 display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center',
                 px: 2, py: 1.5, mb: 1,
                 bgcolor: 'primary.50', borderTop: 2, borderBottom: 2, borderColor: 'primary.main',
+                // Opdracht 5 micro-interactie #5: slide-in van boven
+                animation: 'hbSlideDown 250ms cubic-bezier(0.16, 1, 0.3, 1)',
+                '@keyframes hbSlideDown': {
+                  from: { transform: 'translateY(-100%)', opacity: 0 },
+                  to: { transform: 'translateY(0)', opacity: 1 },
+                },
+                '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
               }}>
                 <Chip label={`${selectedIds.length} ${t('contentStudio.selected', 'geselecteerd')}`} color="primary" sx={{ fontWeight: 600 }} />
                 <Box sx={{ flex: 1 }} />
@@ -3466,7 +3480,13 @@ export default function ContentStudioPage() {
                       const activeVersions = (concept.platform_versions || []).filter(v => v.status !== 'deleted');
                       const firstItemId = activeVersions[0]?.id;
                       return (
-                      <TableRow key={concept.id} hover sx={{ cursor: 'pointer' }}
+                      <TableRow key={concept.id} hover sx={{
+                        cursor: 'pointer',
+                        // Opdracht 5 micro-interactie #2: hover-lift
+                        transition: 'transform 150ms ease, box-shadow 150ms ease',
+                        '&:hover': { transform: 'translateY(-1px)', boxShadow: 1 },
+                        '@media (prefers-reduced-motion: reduce)': { transition: 'none', '&:hover': { transform: 'none', boxShadow: 'none' } },
+                      }}
                         onClick={() => { setConceptDialogId(concept.id); }}>
                         <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
                           <Checkbox size="small" checked={selectedIds.includes(firstItemId)} onChange={() => firstItemId && toggleSelectItem(firstItemId)} />

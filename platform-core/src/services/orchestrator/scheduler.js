@@ -100,6 +100,13 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: content-quality-audit (Monday 05:00)');
 
+  // Content Recycle Suggestions - weekly Tuesday 07:00 (Opdracht 4 — HB Polish)
+  await scheduledQueue.add('content-recycle-suggestions', { type: 'content-recycle' }, {
+    repeat: { cron: '0 7 * * 2', tz: 'Europe/Amsterdam' },
+    jobId: 'content-recycle-suggestions-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-recycle-suggestions (Tuesday 07:00)');
+
   // Content Freshness Check - weekly Wednesday at 05:30 (Fase II Blok B)
   await scheduledQueue.add('content-freshness-check', { type: 'content-freshness' }, {
     repeat: { cron: '30 5 * * 3', tz: 'Europe/Amsterdam' },

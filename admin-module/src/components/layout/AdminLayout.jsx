@@ -6,6 +6,7 @@ import Header from './Header.jsx';
 import { SIDEBAR_STYLES } from '../../theme.js';
 import useAuthStore from '../../stores/authStore.js';
 import AdminOnboardingGuide from '../onboarding/AdminOnboardingGuide.jsx';
+import CommandPalette from '../common/CommandPalette.jsx';
 
 export default function AdminLayout() {
   const theme = useTheme();
@@ -13,6 +14,7 @@ export default function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const user = useAuthStore(s => s.user);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Show onboarding guide for users who haven't completed it
   useEffect(() => {
@@ -20,6 +22,20 @@ export default function AdminLayout() {
       setShowOnboarding(true);
     }
   }, [user]);
+
+  // Global Cmd+K / Ctrl+K hotkey for command palette
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setPaletteOpen(p => !p);
+      } else if (e.key === 'Escape' && paletteOpen) {
+        setPaletteOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [paletteOpen]);
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -54,6 +70,9 @@ export default function AdminLayout() {
         open={showOnboarding}
         onClose={() => setShowOnboarding(false)}
       />
+
+      {/* Command Palette (Cmd+K / Ctrl+K) */}
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </Box>
   );
 }
