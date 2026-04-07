@@ -74,8 +74,10 @@ export default function CommandPalette({ open, onClose }) {
     if (!destId) destId = user?.allowed_destinations?.[0];
     if (!destId) return;
     contentService.getItems(destId, { limit: 5 })
-      .then(data => {
-        const items = (data?.items || data || []).slice(0, 5).map(item => ({
+      .then(resp => {
+        // Response shape: { success, data: { items: [...] } } — getItems doet .then(r => r.data) (= body)
+        const list = resp?.data?.items || resp?.items || (Array.isArray(resp) ? resp : []) || [];
+        const items = list.slice(0, 5).map(item => ({
           id: `recent-${item.id}`,
           label: item.title || 'Untitled',
           icon: Article,

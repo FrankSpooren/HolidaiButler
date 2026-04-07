@@ -14,7 +14,8 @@ export default function AnimatedScoreChip({ score, label, color, size = 'small',
 
   useEffect(() => {
     if (target === 0) { setDisplay(0); return; }
-    const duration = 400;
+    setDisplay(0); // visuele reset zodat de count-up altijd vanaf 0 zichtbaar start
+    const duration = 700;
     const from = 0;
     startRef.current = null;
     const tick = (ts) => {
