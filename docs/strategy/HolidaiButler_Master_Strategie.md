@@ -2,11 +2,11 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 7 april 2026
-**Versie**: 8.00
+**Versie**: 8.01
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Content Studio Image Pipeline Hardening + i18n Blog Titles + BullMQ Generation Queue (v4.39.0)**: 4 verbonden image-pipeline bugs gefixt via strict PRE-FLIGHT diagnostic workflow (theme-aware POI/image selection, centrale media resolver, publisher dual-lookup, ID prefix conventie). DeepL blog title vertalingen 5 talen. BullMQ vervangt setImmediate voor robuuste content generation. 250 admin endpoints, adminPortal.js v3.42.0. CLAUDE.md v4.39.0. MS v8.00.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Content Studio Enterprise Redesign — Command v1.0 100% COMPLEET (v4.40.0)**: alle 8 opdrachten geleverd. Opdracht 5 Platform Toevoegen (Repurpose als Tab) + delete platform-versie + onUpdate refresh. Opdracht 6 Concept-Gebaseerde tabel met Pillar+Score≥ filters, branded platform chips met status-iconen, 4-staps SEO score kleurschaal, sticky bulk toolbar (Approve/Publiceer/Plan in/Exporteer/Delete) + SEO consistentie root-cause fix (seo_score kolom werd niet gepersisteerd door /seo endpoint). Opdracht 7 Trending Monitor (sparkline 4-weken met week-labels, sorteerbaar, source-iconen, pillar-match dot) + Suggesties (batch approve, Verrijk via brandContext+trending Mistral, platform-aware preview tooltip blog/video/FB/IG/LinkedIn, generieke prullenbak). Opdracht 8 Kalender (pillar kleurcodering, gat-detectie oranje dashed, hero auto-fill balk) + Analyse (KPIs Bereik/Engagement/CTR/Groei, top performer hero, pillar donut chart, SEO score correlation box). 251 admin endpoints (+1 enrich), adminPortal.js v3.43.0. CLAUDE.md v4.40.0. MS v8.01.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)

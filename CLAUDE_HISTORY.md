@@ -7,6 +7,265 @@
 
 ---
 
+## v4.40.0 — Content Studio Enterprise Redesign — Command v1.0 100% COMPLEET (Opdracht 5-8) (07-04-2026)
+
+### Aanleiding
+Het commandfile `HB_Content_Studio_Enterprise_Redesign_Command.md` definieert 8 sequentiële opdrachten voor een enterprise herontwerp van Content Studio. Opdrachten 1-4 (ConceptDialog 2-panel layout, blog modus, content editor, context paneel) waren reeds afgerond in v4.36.0. Deze release voltooit de resterende vier opdrachten (5-8) plus alle Frank-feedback fixes die tijdens iteratie naar voren kwamen.
+
+### Werkprotocol
+Strikt volgens command spec: per opdracht **PRE-FLIGHT** (codebase verificatie + scope vaststelling) → presenteer plan → **wacht op Frank's akkoord** → **IMPLEMENTATIE** → **POST-FLIGHT BEWIJS** → STOP. Geen implementatie zonder expliciete toestemming. Alle wijzigingen via dev → test → main sequential push, deploy via CI/CD `deploy-admin-module.yml` (frontend) en directe scp + pm2 restart (backend hotfixes).
+
+---
+
+### Opdracht 5: Platform Toevoegen (Repurpose als Tab)
+
+**PRE-FLIGHT bevindingen**: Backend `POST /content/items/:id/repurpose` (adminPortal.js:12592) bestond reeds, accepteerde `target_platforms[]`, koppelde nieuwe items via `concept_id`. Frontend ConceptDialog had al een `+ Platform` Tab maar stond op `disabled` (placeholder zonder onClick). Geen dialog, geen state.
+
+**Implementatie**:
+- `+ Platform` Tab actief gemaakt (`disabled` weg, groene styling #5E8B7E)
+- Tabs `onChange` intercepteert klik op laatste (ghost) index → opent `addPlatformOpen` dialog i.p.v. `setActiveTab` (anders out-of-bounds)
+- AddPlatformDialog: 2-koloms grid van alle 8 platforms uit `PLATFORM_CONFIG`, bestaande gedimd met ✓, loading spinner per knop, disabled tijdens repurpose
+- `handleAddPlatform(platformKey)` → `contentService.repurposeItem(activeItem.id, [platformKey])` → `loadConcept()` → snackbar → `onUpdate()` voor parent refresh
+- `useEffect` op `items.length` → auto-switch naar nieuwe (laatste) tab na succes
+
+**Frank feedback fix**: Tabs-rij was verborgen voor blogs (`!isBlog` filter op regel 748). Bij blog-concepten zag Frank dus geen `+ Platform` knop. Filter weggehaald → tabs zichtbaar voor alle content types.
+
+**Opdracht 5b — Delete platform-versie + parent refresh** (Frank feedback):
+- Platform chips in ContentStudioPage tabel werden niet realtime ververst na add/delete → `handleAddPlatform` + `handleDeletePlatform` roepen nu beide `onUpdate()` aan (= `loadItems` van parent)
+- Delete IconButton (rode `DeleteIcon`) per platform-rij in rechter paneel "Per-platform actions" sectie
+  - Alleen zichtbaar wanneer `items.length > 1` (laatste platform niet verwijderbaar)
+  - Disabled voor `isPublished` items (live content niet per ongeluk verwijderen)
+  - `window.confirm()` bevestiging
+  - Backend: bestaande `DELETE /content/items/:id` (adminPortal.js:12118)
+
+**Bestanden**: `admin-module/src/components/content/ConceptDialog.jsx`
+
+---
+
+### Opdracht 6: Content Items Tabel — Concept-Gebaseerd
+
+**PRE-FLIGHT bevindingen**: De tabel was al concept-gebaseerd (1 rij = 1 concept via `concepts.map`). Reeds aanwezig: ☐ checkbox, Titel, Type, Platforms (chips), Versies, Status, Datum, Acties + bulk Approve/Reject/Delete. Filters: Type, Platform, Status. Aggregate status Live/Ingepland in StatusChip.
+
+**Ontbrekend t.o.v. spec**: Score-kolom, status-iconen in chips, Pillar-filter, Score≥-filter, Bulk Publiceer/Plan in/Exporteer.
+
+**Backend wijzigingen** (`adminPortal.js GET /content/concepts`):
+```sql
+LEFT JOIN content_pillars cp ON cp.id = c.pillar_id
+-- Returns: pillar_name, pillar_color
+(SELECT MAX(ci.seo_score) FROM content_items ci
+ WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted'
+ AND ci.seo_score IS NOT NULL) as avg_seo_score
+```
+MAX i.p.v. AVG zodat de score "best score per concept" toont — intuïtiever en nooit lager dan wat user in popup ziet.
+
+**Frontend wijzigingen** (`ContentStudioPage.jsx`):
+- `PLATFORM_COLORS` map (Facebook #1877F2, Instagram #E4405F, LinkedIn #0A66C2, X/TikTok #000000, YouTube #FF0000, Pinterest #BD081C, Website #5E8B7E)
+- `PLATFORM_STATUS_ICON` map (✓ published, ⏱ scheduled, ✎ draft/pending_review/approved, ! failed, ✕ rejected)
+- Branded platform chips: solid background brand-color, status-icoon achter platform-naam, opacity per status
+- Score-kolom (vervangt "Versies"): `Chip` met 4-staps kleurschaal + pillar-dot+naam onder de score
+- Filterbalk boven tabel: Pillar Select (gekleurde dots, alle destination-pillars via `contentService.getPillars`) + Score≥ Select (drempels 50/60/70/80/90) + "Wissen" knop
+- Bulk handlers:
+  - `handleBulkPublish()` itereert `publishNow` over alle non-published platform-versies van geselecteerde concepten (met confirm)
+  - `handleBulkScheduleOpen/Confirm()` opent datetime dialog → verzamelt alle item IDs → `bulkSchedule(itemIds, scheduled_at)`
+  - `handleBulkExport()` CSV download met header `ID,Titel,Type,Platforms,Score,Pillar,Status,Created`
+
+**Frank feedback fixes** (na eerste live test):
+1. **SEO score discrepantie tabel ↔ popup** (root cause): `GET /content/items/:id/seo` updateedde wel `seo_data` JSON maar **niet de `seo_score` kolom** → tabel toonde stale 65 terwijl popup live 75 herberekende. Fix: ook `seo_score = analysis.overallScore` mee persisteren in UPDATE statement. Vanaf eerste popup-opening zijn tabel en popup consistent.
+2. **Naamgeving "Score" → "SEO"**: kolomheader hernoemd met tooltip die expliciet uitlegt dat dit de SEO-score is en dat Brand Score een aparte metric is.
+3. **Bulk toolbar onvindbaar**: stond in overvolle header-rij naast "Nieuw Item"/"Campagne" → afgekapt. Verplaatst naar dedicated **sticky balk boven filter-rij** met `bgcolor: 'primary.50'`, borderTop+borderBottom 2px primary.main, flex layout met gap, `Wis selectie` knop.
+4. **TablePagination teller "1-21 of 21" bij 4 concepten**: count was `itemTotal` (flat content_items count = 21 individuele platform-items), moet `conceptTotal` zijn (4 concepten). Update ook na elke add/delete via `loadItems()`.
+
+**Bestanden**: `admin-module/src/pages/ContentStudioPage.jsx`, `platform-core/src/routes/adminPortal.js`
+
+---
+
+### Opdracht 7: Trending Monitor + Suggesties Upgrade
+
+**PRE-FLIGHT bevindingen**: Trending Monitor had reeds Genereer-knop per trend, source filter, markt/taal filters. Suggesties had geen checkbox/batch approve, geen Verrijk-functie, geen preview tooltip.
+
+**Backend wijzigingen**:
+
+1. `trendVisualizer.getTrends()` — sparkline history attachment:
+```js
+// Bulk SQL voor laatste 4 weken per zichtbaar keyword
+SELECT keyword, year, week_number, AVG(relevance_score) as score
+FROM trending_data
+WHERE destination_id = :destId AND keyword IN (:keywords)
+GROUP BY keyword, year, week_number
+ORDER BY year DESC, week_number DESC
+```
+Group by keyword in JS, keep first 4 (most recent), reverse → chronological. Attach `t.history[]` + `t.history_weeks[]` per row.
+
+2. `POST /content/suggestions/:id/enrich` — nieuwe endpoint (totaal 251 admin endpoints, adminPortal.js v3.43.0):
+   - Loads suggestion + bouwt `brandContext` via `buildBrandContext(destinationId, null, existingKeywords)` (profiel + persona + knowledge base)
+   - Query top-5 trending keywords laatste 30 dagen
+   - Mistral prompt: "Verrijk content suggestie met merk + trending context", verplicht JSON output `{title, summary, keyword_cluster}`
+   - Robust JSON parse (strip code fences), update `content_suggestions.title/summary/keyword_cluster`
+   - 60s timeout in client
+
+**Frontend wijzigingen** (`ContentStudioPage.jsx`):
+
+A. **Source-iconen** via `getSourceMeta(source)` helper: Google Trends → 🔍 SearchIcon #4285F4, Website Traffic/Analytics → 📊 AnalyticsIcon #00BFA5, Manual/Handmatig → 👤 PersonIcon #9C27B0, SISTRIX → AnalyticsIcon #FF6F00, fallback → LanguageIcon #607D8B. Vervangt generieke outlined chip met `Box` met border + bgcolor + Icon + label.
+
+B. **Pillar-match per keyword** via `findMatchingPillar(keyword, pillars)`: token-based fuzzy match (split pillar name op `[\s&/,]+`, tokens ≥3 chars, includes check tegen lowercase keyword). Toont kleine `Box` met pillar-dot + naam met `bgcolor: pillarColor + '1A'` achter het keyword.
+
+C. **Inline SVG Sparkline** component:
+   - Vaste 0-10 schaal (visuele consistentie tussen rijen, niet relatieve max die kleine waarden vertekent)
+   - Score-label (`v.toFixed(1)`) boven elke bar
+   - Week-label (`W11`..`W14`) onder elke bar
+   - Bars per eigen score 4-staps gekleurd via `getScoreColor`
+   - Width 100, height 38, gap 4
+   - Bij 0 datapunten: "Geen historie" tekst i.p.v. lege bar
+   - Backend levert nu echte weeknummers via `history_weeks[]`
+
+D. **Score 4-staps kleurschaal** (`getScoreColor` helper) — vervangt 3-staps:
+   - 8.5-10 → groen (success #2e7d32)
+   - 6-8.5  → blauw (info #0288d1)
+   - 3.5-6  → oranje (warning #ed6c02)
+   - 0-3.5  → rood (error #d32f2f)
+   Toegepast op trending Score chip + suggesties Score chip + sparkline bars.
+
+E. **Trend-kolom sorteerbaar**: `trendSort` toegevoegd `trend_desc/trend_asc`, sorteert op `latestHistoryValue(trend.history)` (meest recente weekwaarde).
+
+F. **Suggesties checkbox + sticky bulk toolbar**: nieuwe `selectedSugIds` state, `toggleSugSelect`, `toggleSugSelectAll(filteredIds)`, `handleSugBulkStatus(newStatus)` itereert `updateSuggestion` per id. Sticky bar verschijnt zodra `selectedSugIds.length > 0` met "Goedkeuren"/"Afwijzen"/"Wis selectie".
+
+G. **Verrijk-knop** (paars `AutoFixHighIcon` #9C27B0) per pending/approved suggestie → `contentService.enrichSuggestion(id)` → loading spinner → reload + snackbar.
+
+H. **`SuggestionPreview` platform-aware tooltip** (vervangt eerdere statische IG-only mock die alleen lege gradient toonde):
+   - **Blog** → witte kaart met groen/donkerblauwe gradient header + BLOG badge + titel + lead summary + `calpetrip.com/blog` URL
+   - **Video script** → 16:9 zwart frame met play-knop driehoek + onderaan title bar
+   - **Social post + Facebook** → timeline card met avatar (CalpeTrip C op #1877F2) + Sponsored label + body + blauw image-blok + 👍💬↗ footer
+   - **+ Instagram** → IG post met header (gradient avatar + calpetrip handle) + vierkante gradient image (#833AB4→#FD1D1D→#FCB045) met titel overlay + summary + hashtags
+   - **+ LinkedIn** → zakelijke kaart met avatar (C op #0A66C2) + "1.2k volgers" + body + blauwe hashtags
+   - **Generieke fallback** voor X/TikTok/Pinterest
+   - Alle previews tonen echte content (titel + summary + hashtags uit `keyword_cluster`)
+
+I. **Generieke prullenbak voor ALLE statussen** (Frank feedback): oude rejected-only delete verwijderd om dubbele knop te voorkomen, generieke trash IconButton in elke rij behalve `deleted` met confirm-dialog.
+
+**Frank feedback fixes** (na eerste live test van Opdracht 7):
+1. Sparkline herontwerp (zie C hierboven — tweede iteratie met week-labels en vaste schaal)
+2. Trend-kolom sorteerbaar (zie E)
+3. Score 4-staps i.p.v. 3-staps (zie D)
+4. Preview platform-aware met echte content i.p.v. lege gradient (zie H)
+5. Prullenbak voor alle statussen (zie I)
+
+**Bestanden**: `admin-module/src/pages/ContentStudioPage.jsx`, `admin-module/src/api/contentService.js`, `platform-core/src/routes/adminPortal.js`, `platform-core/src/services/agents/trendspotter/trendVisualizer.js`
+
+---
+
+### Opdracht 8: Kalender + Analyse Upgrade
+
+**PRE-FLIGHT bevindingen**:
+- ContentCalendarTab had reeds maandgrid + navigatie, vandaag-badge, platform-iconen, status-kleur, "Vul kalender" + "Auto-inplannen" knoppen (klein, rechts bovenaan). Ontbrekend: pillar kleurcodering, gat-detectie, prominente Auto-Fill positie.
+- ContentAnalyseTab had reeds 4 KPI cards (Views/Clicks/Engagement/Reach met growth%), tijdsreeks, per-platform bar, per-type pie, top content tabel. Ontbrekend per spec: KPI set herwerkt naar Bereik/Engagement/CTR/Groei%, top performer hero, pillar donut, score correlation.
+
+**Backend wijzigingen**:
+
+`GET /content/calendar` SQL uitgebreid:
+```sql
+SELECT ci.*, cc.pillar_id, cp.name AS pillar_name, cp.color AS pillar_color
+FROM content_items ci
+LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
+LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
+WHERE ci.destination_id = :destId AND ci.approval_status NOT IN ('deleted')
+  AND (...)
+```
+Plus `seo_score` voor toekomstige uitbreidingen.
+
+`GET /content/analytics/overview` uitgebreid met:
+1. **CTR + growth_ctr**: `summary.ctr = (clicks/views) × 100`, `growth_ctr` op basis van vorige periode CTR
+2. **top_this_week**: top engagement query laatste 7 dagen (LIMIT 1)
+3. **by_pillar[]**: engagement/views/reach per pillar via `JOIN content_items → content_concepts → content_pillars`
+4. **score_correlation**: avg engagement voor SEO ≥70 vs <70 bucket
+   ```sql
+   SELECT CASE WHEN ci.seo_score >= 70 THEN 'high' ELSE 'low' END as bucket,
+          AVG(cperf.engagement) as avg_engagement,
+          COUNT(DISTINCT cperf.content_item_id) as items_count
+   FROM content_performance cperf JOIN content_items ci ON ...
+   WHERE ci.seo_score IS NOT NULL
+   GROUP BY bucket
+   ```
+   `lift_pct = (high_avg - low_avg) / low_avg × 100`
+
+**Frontend wijzigingen ContentCalendarTab**:
+
+K1 **Pillar kleurcodering**: item-rendering gebruikt `item.pillar_color` als primaire kleur:
+- 4px solid linkerrand = pillar_color
+- 3px solid rechterrand = status_color
+- `bgcolor: pillarColor + '15'`
+- Border 1px `pillarColor + '40'`
+- Tooltip: `${title} · ${pillar_name} · ${approval_status}`
+- Pillar Icon kleur ook = pillar_color
+
+K2 **Gat-detectie**: `gapCount` useMemo loopt door `daysInMonth`, telt toekomstige werkdagen (ma-vr) zonder content. Per-cel `isGap` check → `border: '2px dashed #FF9800'`, `borderColor: '#FF9800'`, label "⚠ Gat" in oranje italic in de cel. Hero subtitle wisselt dynamisch tussen "{count} werkdagen zonder geplande content" en algemene melding.
+
+K3 **Auto-Fill hero balk** bovenaan: vervangt kleine knop in navigatierij door prominente `Paper` met:
+- `background: 'linear-gradient(135deg, #5E8B7E 0%, #2C3E50 100%)'`
+- Witte tekst, h6 titel "Vul je contentkalender met AI"
+- Dynamische subtitle gebaseerd op `gapCount`
+- Grote witte "Vul kalender met AI" knop (size large) + "Auto-inplannen" outlined knop
+- Oude knoppen uit navigatierij verwijderd
+
+Legenda uitgebreid met 3 nieuwe entries: Gat (oranje dashed), Pillar (linkerrand), Status (rechterrand).
+
+**Frontend wijzigingen ContentAnalyseTab**:
+
+A1 **KPI set per spec**: `kpis` array herwerkt:
+- Bereik (`total_reach`, `growth_reach`)
+- Engagement (`total_engagement`, `growth_engagement`)
+- CTR (`summary.ctr`, `growth_ctr`, suffix `%`)
+- Groei % (`avgGrowth` = gemiddelde van engagement/reach/views growth, suffix `%`, `hideGrowth: true` zodat geen dubbele growth chip)
+
+KpiCard render aangepast om `suffix` en `hideGrowth` te respecteren.
+
+A2 **Top performer deze week** (onder KPI's): `Paper` met `background: 'linear-gradient(135deg, #FFD700 0%, #FF8C00 100%)'`, 🏆 emoji, caption "UW TOP POST DEZE WEEK", h6 titel uit `topThisWeek.title`, body row met platform/engagement/views/clicks. Conditioneel gerenderd alleen als `topThisWeek` niet null.
+
+A3 **Pillar donut chart**: nieuwe `Paper` sectie onder by-platform/by-type Grid:
+- Recharts `PieChart` met `Pie data={pillarPieData} innerRadius=55 outerRadius=95 label`
+- Cells gekleurd op `pillar_color`
+- Tooltip formatter `[Number(v).toLocaleString('nl-NL'), 'Engagement']`
+- Naast chart: tekstlijst met pillar-dots + namen + absolute engagement + percentage chips
+- Fallback-melding als geen pillar data
+
+A4 **Score correlatie box** (paarse accent-kaart):
+- `borderLeft: '4px solid #9c27b0'`, 💡 emoji
+- Titel: "Correlatie: hoge SEO-score → hogere engagement?"
+- Body: "JA — items met SEO ≥70 halen gemiddeld {lift}% meer engagement dan items met SEO <70 ({high} items ≥70, {low} items <70)" (of "NEE" als lift_pct ≤ 0)
+- Caption met high/low bucket gemiddelden
+- Lift% Chip rechts (success ≥20%, info > 0, default ≤ 0)
+
+**Bestanden**: `admin-module/src/pages/ContentCalendarTab.jsx`, `admin-module/src/pages/ContentAnalyseTab.jsx`, `platform-core/src/routes/adminPortal.js`
+
+---
+
+### Documentatie-sync
+
+- `CLAUDE.md` v4.39.0 → v4.40.0
+- `CLAUDE_HISTORY.md` v4.40.0 sectie toegevoegd (dit blok)
+- `HolidaiButler_Master_Strategie.md` v8.00 → v8.01
+
+### Tellingen na v4.40.0
+- Admin endpoints: 250 → **251** (+1 enrich)
+- adminPortal.js: v3.42.0 → **v3.43.0**
+- Agents: 25 (ongewijzigd)
+- BullMQ jobs: 62 (ongewijzigd)
+- Block types: 36 (ongewijzigd)
+- Block editors: 37 (ongewijzigd)
+
+### Commits
+- `ec8e6c5` Opdracht 5: Platform Toevoegen (Repurpose als Tab)
+- `e943b67` Opdracht 5 fix: '+ Platform' tab ook tonen bij blog/website concepten
+- `f2414fe` Opdracht 5b: platform versie verwijderen + parent list refresh
+- `030dd1b` Opdracht 6: Content Items tabel — Score/Pillar/branded chips/bulk acties
+- `2bf58dd` Opdracht 6 fixes: SEO consistentie + sticky bulk toolbar + correcte teller
+- `219284a` Opdracht 7: Trending Monitor + Suggesties Upgrade
+- `db035ed` Opdracht 7 fixes 1-5: Sparkline herontwerp, Score kleurschaal, preview platform-aware, prullenbak
+- `eb2de42` Opdracht 8: Kalender + Analyse Upgrade
+
+Alle commits dev → test → main (sequential ff-only merges).
+
+---
+
 ## v4.39.0 — Content Studio Image Pipeline Hardening + i18n Blog Titles + BullMQ Generation Queue (07-04-2026)
 
 ### Aanleiding
