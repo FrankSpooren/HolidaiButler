@@ -170,8 +170,69 @@ export default function ContentCalendarTab({ destinationId }) {
     return date >= new Date(activeSeason.start_date) && date <= new Date(activeSeason.end_date);
   };
 
+  // Opdracht 8-K2: gap-detection — werkdagen (ma-vr) zonder content worden als gap gemarkeerd
+  const gapCount = useMemo(() => {
+    let count = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      const weekday = date.getDay(); // 0=zo, 6=za
+      const isWeekday = weekday !== 0 && weekday !== 6;
+      const isPast = date < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      // Alleen toekomstige werkdagen in dezelfde maand tellen als gap
+      if (isWeekday && !isPast && (!itemsByDay[d] || itemsByDay[d].length === 0)) count++;
+    }
+    return count;
+  }, [daysInMonth, year, month, itemsByDay, now]);
+
   return (
     <Box>
+      {/* Opdracht 8-K3: Hero Auto-Fill balk bovenaan */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2, mb: 2,
+          background: 'linear-gradient(135deg, #5E8B7E 0%, #2C3E50 100%)',
+          color: '#fff',
+          borderRadius: 2,
+          display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap',
+        }}
+      >
+        <Box sx={{ flex: 1, minWidth: 200 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.25, color: '#fff' }}>
+            {t('contentStudio.calendar.heroTitle', 'Vul je contentkalender met AI')}
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.9, color: '#fff' }}>
+            {gapCount > 0
+              ? t('contentStudio.calendar.heroSubtitleGaps', '{{count}} werkdagen zonder geplande content in {{month}}. Laat AI dit automatisch aanvullen.', { count: gapCount, month: monthName })
+              : t('contentStudio.calendar.heroSubtitle', 'Laat AI content-suggesties genereren voor elke werkdag in {{month}}.', { month: monthName })}
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={autoFilling ? <CircularProgress size={18} sx={{ color: '#5E8B7E' }} /> : <AutoAwesomeIcon />}
+          onClick={handleAutoFill}
+          disabled={autoFilling}
+          sx={{
+            bgcolor: '#fff', color: '#2C3E50', fontWeight: 700, px: 3,
+            '&:hover': { bgcolor: '#f0f0f0' },
+            '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.5)' },
+          }}
+        >
+          {autoFilling ? t('contentStudio.calendar.filling', 'Genereren...') : t('contentStudio.calendar.autoFill', 'Vul kalender met AI')}
+        </Button>
+        <Button
+          variant="outlined"
+          size="large"
+          startIcon={autoScheduling ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : <ScheduleIcon />}
+          onClick={handleAutoSchedule}
+          disabled={autoScheduling}
+          sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: '#fff' } }}
+        >
+          {autoScheduling ? 'Plannen...' : t('contentStudio.calendar.autoSchedule', 'Auto-inplannen')}
+        </Button>
+      </Paper>
+
       {/* Month navigation */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -185,26 +246,6 @@ export default function ContentCalendarTab({ destinationId }) {
           {activeSeason && (
             <Chip label={`${t('contentStudio.calendar.season', 'Seizoen')}: ${activeSeason.season_name}`} color="primary" variant="outlined" size="small" />
           )}
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={autoFilling ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}
-            onClick={handleAutoFill}
-            disabled={autoFilling}
-            sx={{ whiteSpace: 'nowrap' }}
-          >
-            {autoFilling ? t('contentStudio.calendar.filling', 'Genereren...') : t('contentStudio.calendar.autoFill', 'Vul kalender')}
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={autoScheduling ? <CircularProgress size={16} /> : <ScheduleIcon />}
-            onClick={handleAutoSchedule}
-            disabled={autoScheduling}
-            sx={{ whiteSpace: 'nowrap' }}
-          >
-            {autoScheduling ? 'Plannen...' : t('contentStudio.calendar.autoSchedule', 'Auto-inplannen')}
-          </Button>
         </Box>
       </Box>
       <Snackbar open={!!autoFillSnack} autoHideDuration={5000} onClose={() => setAutoFillSnack(null)} message={autoFillSnack} />
@@ -226,7 +267,17 @@ export default function ContentCalendarTab({ destinationId }) {
 
           {/* Calendar grid */}
           <Grid container spacing={0.5}>
-            {cells.map((day, idx) => (
+            {cells.map((day, idx) => {
+              // Opdracht 8-K2: gap-detection
+              const isGap = (() => {
+                if (day === null) return false;
+                const date = new Date(year, month, day);
+                const weekday = date.getDay();
+                const isWeekday = weekday !== 0 && weekday !== 6;
+                const isPast = date < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                return isWeekday && !isPast && (!itemsByDay[day] || itemsByDay[day].length === 0);
+              })();
+              return (
               <Grid item xs={12 / 7} key={idx}>
                 <Paper
                   variant="outlined"
@@ -236,8 +287,8 @@ export default function ContentCalendarTab({ destinationId }) {
                     bgcolor: day === null ? 'action.disabledBackground' :
                       isToday(day) ? '#E3F2FD' :
                       isInSeason(day) ? '#F1F8E9' : 'background.paper',
-                    border: isToday(day) ? '2px solid' : '1px solid',
-                    borderColor: isToday(day) ? 'primary.main' : 'divider',
+                    border: isToday(day) ? '2px solid' : isGap ? '2px dashed' : '1px solid',
+                    borderColor: isToday(day) ? 'primary.main' : isGap ? '#FF9800' : 'divider',
                     cursor: day ? 'pointer' : 'default',
                     position: 'relative',
                     '&:hover': day ? { bgcolor: 'action.hover' } : {},
@@ -274,23 +325,27 @@ export default function ContentCalendarTab({ destinationId }) {
                         {(itemsByDay[day] || []).slice(0, 3).map(item => {
                           const PlatformIcon = PLATFORM_ICONS[item.target_platform] || LanguageIcon;
                           const statusColor = STATUS_COLORS[item.approval_status] || '#ccc';
+                          // Opdracht 8-K1: pillar kleur als primaire (borderLeft), status als borderRight
+                          const pillarColor = item.pillar_color || statusColor;
                           return (
-                            <Box
-                              key={item.id}
-                              sx={{
-                                display: 'flex', alignItems: 'center', gap: 0.3, mb: 0.3,
-                                border: `1.5px solid ${statusColor}`,
-                                borderLeft: `4px solid ${statusColor}`,
-                                bgcolor: `${statusColor}15`,
-                                pl: 0.5, borderRadius: 0.5,
-                                fontSize: 10, lineHeight: 1.2, py: 0.2,
-                              }}
-                            >
-                              <PlatformIcon sx={{ fontSize: 12, color: statusColor }} />
-                              <Typography variant="caption" noWrap sx={{ fontSize: 10, flex: 1, fontWeight: 500 }}>
-                                {item.title || item.content_type}
-                              </Typography>
-                            </Box>
+                            <Tooltip key={item.id} title={`${item.title || item.content_type}${item.pillar_name ? ' · ' + item.pillar_name : ''} · ${item.approval_status}`}>
+                              <Box
+                                sx={{
+                                  display: 'flex', alignItems: 'center', gap: 0.3, mb: 0.3,
+                                  border: `1px solid ${pillarColor}40`,
+                                  borderLeft: `4px solid ${pillarColor}`,
+                                  borderRight: `3px solid ${statusColor}`,
+                                  bgcolor: `${pillarColor}15`,
+                                  pl: 0.5, borderRadius: 0.5,
+                                  fontSize: 10, lineHeight: 1.2, py: 0.2,
+                                }}
+                              >
+                                <PlatformIcon sx={{ fontSize: 12, color: pillarColor }} />
+                                <Typography variant="caption" noWrap sx={{ fontSize: 10, flex: 1, fontWeight: 500 }}>
+                                  {item.title || item.content_type}
+                                </Typography>
+                              </Box>
+                            </Tooltip>
                           );
                         })}
                         {(itemsByDay[day] || []).length > 3 && (
@@ -298,22 +353,41 @@ export default function ContentCalendarTab({ destinationId }) {
                             +{(itemsByDay[day] || []).length - 3} {t('contentStudio.calendar.more', 'meer')}
                           </Typography>
                         )}
+                        {isGap && (
+                          <Typography variant="caption" sx={{ fontSize: 9, color: '#FF9800', fontStyle: 'italic', fontWeight: 600 }}>
+                            ⚠ {t('contentStudio.calendar.gap', 'Gat')}
+                          </Typography>
+                        )}
                       </Box>
                     </>
                   )}
                 </Paper>
               </Grid>
-            ))}
+              );
+            })}
           </Grid>
 
-          {/* Status legend */}
-          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 1.5, mb: 1 }}>
+          {/* Legend */}
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1.5, mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ width: 14, height: 14, borderRadius: 0.5, border: '2px dashed #FF9800', bgcolor: 'transparent' }} />
+              <Typography variant="caption" sx={{ fontSize: 10, fontWeight: 600 }}>{t('contentStudio.calendar.gapLegend', 'Gat (werkdag zonder content)')}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ width: 14, height: 14, borderLeft: '4px solid #5E8B7E', bgcolor: '#5E8B7E15', borderRadius: 0.3 }} />
+              <Typography variant="caption" sx={{ fontSize: 10 }}>{t('contentStudio.calendar.pillarLegend', 'Linkerrand = pillar-kleur')}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ width: 14, height: 14, borderRight: '3px solid #2196f3', bgcolor: '#2196f315', borderRadius: 0.3 }} />
+              <Typography variant="caption" sx={{ fontSize: 10 }}>{t('contentStudio.calendar.statusLegend', 'Rechterrand = status-kleur')}</Typography>
+            </Box>
+            <Box sx={{ flex: 1 }} />
             {Object.entries(STATUS_COLORS).map(([status, color]) => {
               const labels = { draft: 'Concept', pending_review: 'Ter Review', approved: 'Goedgekeurd', scheduled: 'Ingepland', publishing: 'Publiceren', published: 'Gepubliceerd', failed: 'Mislukt', rejected: 'Afgekeurd' };
               return (
                 <Box key={status} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: color, border: `1px solid ${color}` }} />
-                  <Typography variant="caption" sx={{ fontSize: 10 }}>{labels[status] || status}</Typography>
+                  <Box sx={{ width: 10, height: 10, borderRadius: 0.5, bgcolor: color }} />
+                  <Typography variant="caption" sx={{ fontSize: 9 }}>{labels[status] || status}</Typography>
                 </Box>
               );
             })}

@@ -62,18 +62,31 @@ export default function ContentAnalyseTab({ destinationId }) {
   const timeSeries = overviewData?.data?.time_series || [];
   const byPlatform = overviewData?.data?.by_platform || [];
   const byType = overviewData?.data?.by_type || [];
+  const byPillar = overviewData?.data?.by_pillar || [];
   const topContent = overviewData?.data?.top_content || [];
+  const topThisWeek = overviewData?.data?.top_this_week;
+  const scoreCorrelation = overviewData?.data?.score_correlation || {};
   const analyticsItems = itemsData?.data?.items || [];
   const itemsTotal = itemsData?.data?.total || 0;
   const platforms = platformsData?.data?.platforms || [];
 
   const isLoading = loadingOverview || loadingItems || loadingPlatforms;
 
+  // Opdracht 8-A1: KPI set per spec = Bereik, Engagement, CTR, Groei%
+  // Groei% = gemiddelde growth over core metrics (engagement als primair)
+  const avgGrowth = (() => {
+    const parts = [summary.growth_engagement, summary.growth_reach, summary.growth_views]
+      .map(v => Number(v))
+      .filter(v => !isNaN(v));
+    if (parts.length === 0) return 0;
+    return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
+  })();
+
   const kpis = [
-    { key: 'views', label: t('contentStudio.analyse.views', 'Weergaven'), value: summary.total_views || 0, growth: summary.growth_views, icon: VisibilityIcon, color: '#2196f3' },
-    { key: 'clicks', label: t('contentStudio.analyse.clicks', 'Klikken'), value: summary.total_clicks || 0, growth: summary.growth_clicks, icon: TouchAppIcon, color: '#ff9800' },
-    { key: 'engagement', label: t('contentStudio.analyse.engagement', 'Engagement'), value: summary.total_engagement || 0, growth: summary.growth_engagement, icon: PeopleIcon, color: '#4caf50' },
     { key: 'reach', label: t('contentStudio.analyse.reach', 'Bereik'), value: summary.total_reach || 0, growth: summary.growth_reach, icon: TrendingUpIcon, color: '#9c27b0' },
+    { key: 'engagement', label: t('contentStudio.analyse.engagement', 'Engagement'), value: summary.total_engagement || 0, growth: summary.growth_engagement, icon: PeopleIcon, color: '#4caf50' },
+    { key: 'ctr', label: t('contentStudio.analyse.ctr', 'CTR'), value: summary.ctr || 0, growth: summary.growth_ctr, icon: TouchAppIcon, color: '#ff9800', suffix: '%' },
+    { key: 'growth', label: t('contentStudio.analyse.growth', 'Groei %'), value: avgGrowth, icon: VisibilityIcon, color: '#2196f3', suffix: '%', hideGrowth: true },
   ];
 
   const typePieData = byType.map(t => ({
@@ -86,6 +99,13 @@ export default function ContentAnalyseTab({ destinationId }) {
     name: p.platform,
     value: Number(p.total_views) || 0,
     color: PLATFORM_COLORS[p.platform] || '#999',
+  }));
+
+  // Opdracht 8-A3: pillar donut data
+  const pillarPieData = byPillar.map(p => ({
+    name: p.pillar_name || 'Onbekend',
+    value: Number(p.total_engagement) || 0,
+    color: p.pillar_color || '#999',
   }));
 
   return (
@@ -110,7 +130,7 @@ export default function ContentAnalyseTab({ destinationId }) {
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>
       ) : (
         <>
-          {/* KPI Cards (always visible) */}
+          {/* Opdracht 8-A1: KPI Cards (Bereik, Engagement, CTR, Groei%) */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
             {kpis.map(kpi => (
               <Grid item xs={6} md={3} key={kpi.key}>
@@ -121,8 +141,10 @@ export default function ContentAnalyseTab({ destinationId }) {
                     </Box>
                     <Box sx={{ flex: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="h5" fontWeight={600}>{kpi.value.toLocaleString('nl-NL')}</Typography>
-                        <GrowthChip value={kpi.growth} />
+                        <Typography variant="h5" fontWeight={600}>
+                          {kpi.value.toLocaleString('nl-NL')}{kpi.suffix || ''}
+                        </Typography>
+                        {!kpi.hideGrowth && <GrowthChip value={kpi.growth} />}
                       </Box>
                       <Typography variant="caption" color="text.secondary">{kpi.label}</Typography>
                     </Box>
@@ -131,6 +153,56 @@ export default function ContentAnalyseTab({ destinationId }) {
               </Grid>
             ))}
           </Grid>
+
+          {/* Opdracht 8-A2: Top performer deze week */}
+          {topThisWeek && (
+            <Paper sx={{ p: 2, mb: 3, background: 'linear-gradient(135deg, #FFD700 0%, #FF8C00 100%)', color: '#fff' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ fontSize: 32 }}>🏆</Box>
+                <Box sx={{ flex: 1, minWidth: 200 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', opacity: 0.9 }}>
+                    {t('contentStudio.analyse.topThisWeek', 'Uw top post deze week')}
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#fff', mb: 0.5 }}>
+                    {topThisWeek.title || topThisWeek.content_type}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Typography variant="body2"><strong>Platform:</strong> {topThisWeek.platform || '—'}</Typography>
+                    <Typography variant="body2"><strong>Engagement:</strong> {Number(topThisWeek.engagement || 0).toLocaleString('nl-NL')}</Typography>
+                    <Typography variant="body2"><strong>Weergaven:</strong> {Number(topThisWeek.views || 0).toLocaleString('nl-NL')}</Typography>
+                    <Typography variant="body2"><strong>Klikken:</strong> {Number(topThisWeek.clicks || 0).toLocaleString('nl-NL')}</Typography>
+                  </Box>
+                </Box>
+              </Box>
+            </Paper>
+          )}
+
+          {/* Opdracht 8-A4: SEO score ↔ engagement correlatie */}
+          {(scoreCorrelation.high_items > 0 || scoreCorrelation.low_items > 0) && (
+            <Paper variant="outlined" sx={{ p: 2, mb: 3, borderLeft: '4px solid #9c27b0' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ fontSize: 24 }}>💡</Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.25 }}>
+                    {t('contentStudio.analyse.correlationTitle', 'Correlatie: hoge SEO-score → hogere engagement?')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {scoreCorrelation.lift_pct > 0
+                      ? t('contentStudio.analyse.correlationPositive', 'JA — items met SEO ≥70 halen gemiddeld {{lift}}% meer engagement dan items met SEO <70. ({{high}} items ≥70, {{low}} items <70)', { lift: scoreCorrelation.lift_pct, high: scoreCorrelation.high_items, low: scoreCorrelation.low_items })
+                      : t('contentStudio.analyse.correlationNegative', 'NEE — hoge SEO-score correleert niet met hogere engagement in deze periode. ({{high}} items ≥70, {{low}} items <70)', { high: scoreCorrelation.high_items, low: scoreCorrelation.low_items })}
+                  </Typography>
+                  <Typography variant="caption" color="text.disabled">
+                    High-bucket gemiddelde: {Math.round(scoreCorrelation.high_avg_engagement)} · Low-bucket gemiddelde: {Math.round(scoreCorrelation.low_avg_engagement)}
+                  </Typography>
+                </Box>
+                <Chip
+                  label={`${scoreCorrelation.lift_pct > 0 ? '+' : ''}${scoreCorrelation.lift_pct}%`}
+                  color={scoreCorrelation.lift_pct >= 20 ? 'success' : scoreCorrelation.lift_pct > 0 ? 'info' : 'default'}
+                  sx={{ fontWeight: 700, fontSize: 13 }}
+                />
+              </Box>
+            </Paper>
+          )}
 
           {/* === Sub-tab: Overview === */}
           {subTab === 0 && (
@@ -220,6 +292,50 @@ export default function ContentAnalyseTab({ destinationId }) {
                   </Paper>
                 </Grid>
               </Grid>
+
+              {/* Opdracht 8-A3: Content Pillar verdeling donut chart */}
+              <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
+                <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                  {t('contentStudio.analyse.byPillar', 'Engagement per content pillar')}
+                </Typography>
+                {pillarPieData.length > 0 && pillarPieData.some(d => d.value > 0) ? (
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} md={6}>
+                      <ResponsiveContainer width="100%" height={260}>
+                        <PieChart>
+                          <Pie data={pillarPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={95} label>
+                            {pillarPieData.map((entry, i) => (
+                              <Cell key={i} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <RTooltip formatter={(v) => [Number(v).toLocaleString('nl-NL'), 'Engagement']} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {byPillar.map((p) => {
+                          const total = byPillar.reduce((sum, x) => sum + (Number(x.total_engagement) || 0), 0);
+                          const pct = total > 0 ? Math.round((Number(p.total_engagement) / total) * 100) : 0;
+                          return (
+                            <Box key={p.pillar_id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: p.pillar_color || '#999' }} />
+                              <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>{p.pillar_name}</Typography>
+                              <Typography variant="body2" color="text.secondary">{Number(p.total_engagement).toLocaleString('nl-NL')}</Typography>
+                              <Chip label={`${pct}%`} size="small" sx={{ bgcolor: `${p.pillar_color}20`, color: p.pillar_color, fontWeight: 600, minWidth: 48 }} />
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    </Grid>
+                  </Grid>
+                ) : (
+                  <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+                    {t('contentStudio.analyse.noPillarData', 'Geen pillar-data: zorg dat content_concepts een pillar_id hebben.')}
+                  </Typography>
+                )}
+              </Paper>
 
               {/* Top performing content */}
               <Paper variant="outlined">
