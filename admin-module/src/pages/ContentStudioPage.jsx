@@ -26,6 +26,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PublishIcon from '@mui/icons-material/Publish';
 import ScheduleIcon from '@mui/icons-material/Schedule';
+import DownloadIcon from '@mui/icons-material/Download';
 import ShareIcon from '@mui/icons-material/Share';
 import ReplayIcon from '@mui/icons-material/Replay';
 import RestoreIcon from '@mui/icons-material/Restore';
@@ -104,6 +105,30 @@ const PLATFORM_LABELS = {
   x: 'X',
   tiktok: 'TikTok',
   youtube: 'YouTube',
+  pinterest: 'Pinterest',
+};
+
+// Brand colors per platform (Opdracht 6)
+const PLATFORM_COLORS = {
+  website: '#5E8B7E',
+  facebook: '#1877F2',
+  instagram: '#E4405F',
+  linkedin: '#0A66C2',
+  x: '#000000',
+  tiktok: '#000000',
+  youtube: '#FF0000',
+  pinterest: '#BD081C',
+};
+
+// Status icon per platform-version status (Opdracht 6)
+const PLATFORM_STATUS_ICON = {
+  published: '✓',
+  scheduled: '⏱',
+  draft: '✎',
+  pending_review: '✎',
+  approved: '✎',
+  failed: '!',
+  rejected: '✕',
 };
 
 // STATUS_LABELS: dynamically resolved via t() in StatusChip
@@ -2242,6 +2267,9 @@ export default function ContentStudioPage() {
   const [itemTypeFilter, setItemTypeFilter] = useState('');
   const [itemPlatformFilter, setItemPlatformFilter] = useState('');
   const [itemStatusFilter, setItemStatusFilter] = useState('');
+  const [itemPillarFilter, setItemPillarFilter] = useState('');
+  const [itemMinScore, setItemMinScore] = useState('');
+  const [pagePillars, setPagePillars] = useState([]);
   const [marketFilter, setMarketFilter] = useState('ALL');
   const [langFilter, setLangFilter] = useState('ALL');
 
@@ -2341,6 +2369,14 @@ export default function ContentStudioPage() {
     else if (tab === 2) { loadItems(); }
   }, [tab, loadTrends, loadSummary, loadSuggestions, loadItems]);
 
+  // Load pillars for filter (Opdracht 6)
+  useEffect(() => {
+    if (!destinationId) return;
+    contentService.getPillars(destinationId)
+      .then(r => setPagePillars(r.data || []))
+      .catch(() => setPagePillars([]));
+  }, [destinationId]);
+
   // === Handlers ===
   const handleAddKeyword = async (data) => {
     await contentService.addManualTrend(data);
@@ -2415,6 +2451,89 @@ export default function ContentStudioPage() {
     } finally {
       setBulkLoading(false);
     }
+  };
+
+  // Opdracht 6: Bulk publish — publishes all platform versions for selected concepts
+  const handleBulkPublish = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(t('contentStudio.confirmBulkPublish', '{{count}} concepten direct publiceren?', { count: selectedIds.length }))) return;
+    setBulkLoading(true);
+    let success = 0, failed = 0;
+    try {
+      // selectedIds bevat firstItemId per concept; haal het concept op om alle platform versies te publiceren
+      const conceptIds = concepts.filter(c => c.platform_versions?.some(v => selectedIds.includes(v.id))).map(c => c.id);
+      for (const cid of conceptIds) {
+        const concept = concepts.find(c => c.id === cid);
+        const versions = (concept?.platform_versions || []).filter(v => v.status !== 'published' && v.status !== 'deleted');
+        for (const v of versions) {
+          try { await contentService.publishNow(v.id, { platform: v.platform }); success++; }
+          catch { failed++; }
+        }
+      }
+      setSnackMsg(t('contentStudio.bulkPublishResult', '{{ok}} gepubliceerd, {{fail}} mislukt', { ok: success, fail: failed }));
+      setSelectedIds([]);
+      loadItems();
+    } catch (err) {
+      setItemError(err.message);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  // Opdracht 6: Bulk schedule
+  const [bulkScheduleOpen, setBulkScheduleOpen] = useState(false);
+  const [bulkScheduleAt, setBulkScheduleAt] = useState('');
+  const handleBulkScheduleOpen = () => { setBulkScheduleAt(''); setBulkScheduleOpen(true); };
+  const handleBulkScheduleConfirm = async () => {
+    if (!bulkScheduleAt || selectedIds.length === 0) return;
+    setBulkLoading(true);
+    try {
+      // Verzamel alle item IDs van geselecteerde concepten (niet gepubliceerd)
+      const itemIds = [];
+      const conceptIds = concepts.filter(c => c.platform_versions?.some(v => selectedIds.includes(v.id))).map(c => c.id);
+      for (const cid of conceptIds) {
+        const concept = concepts.find(c => c.id === cid);
+        (concept?.platform_versions || [])
+          .filter(v => v.status !== 'published' && v.status !== 'deleted')
+          .forEach(v => itemIds.push(v.id));
+      }
+      await contentService.bulkSchedule(itemIds, bulkScheduleAt);
+      setSnackMsg(t('contentStudio.bulkScheduleDone', '{{count}} items ingepland', { count: itemIds.length }));
+      setBulkScheduleOpen(false);
+      setSelectedIds([]);
+      loadItems();
+    } catch (err) {
+      setItemError(err.message);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  // Opdracht 6: Bulk export naar CSV
+  const handleBulkExport = () => {
+    const conceptIds = concepts.filter(c => c.platform_versions?.some(v => selectedIds.includes(v.id))).map(c => c.id);
+    const rows = concepts.filter(c => conceptIds.includes(c.id));
+    const header = ['ID', 'Titel', 'Type', 'Platforms', 'Score', 'Pillar', 'Status', 'Created'];
+    const csv = [
+      header.join(','),
+      ...rows.map(c => [
+        c.id,
+        `"${(c.title || '').replace(/"/g, '""')}"`,
+        c.content_type || '',
+        (c.platforms || []).join(';'),
+        c.avg_seo_score != null ? Math.round(Number(c.avg_seo_score)) : '',
+        c.pillar_name || '',
+        c.approval_status || '',
+        c.created_at || '',
+      ].join(','))
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `content-concepts-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -2804,6 +2923,9 @@ export default function ContentStudioPage() {
                   <>
                     <Chip label={`${selectedIds.length} ${t('contentStudio.selected', 'geselecteerd')}`} size="small" color="primary" />
                     <Button size="small" variant="contained" color="success" onClick={() => handleBulkAction('approve')} disabled={bulkLoading}>{t('contentStudio.approve', 'Approve')}</Button>
+                    <Button size="small" variant="contained" color="primary" startIcon={<PublishIcon />} onClick={() => handleBulkPublish()} disabled={bulkLoading}>{t('contentStudio.bulkPublish', 'Publiceer')}</Button>
+                    <Button size="small" variant="outlined" startIcon={<ScheduleIcon />} onClick={() => handleBulkScheduleOpen()} disabled={bulkLoading}>{t('contentStudio.bulkSchedule', 'Plan in')}</Button>
+                    <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleBulkExport()} disabled={bulkLoading}>{t('contentStudio.bulkExport', 'Exporteer')}</Button>
                     <Button size="small" variant="outlined" color="error" onClick={() => handleBulkAction('reject')} disabled={bulkLoading}>{t('contentStudio.reject', 'Reject')}</Button>
                     <Button size="small" variant="outlined" color="error" onClick={() => handleBulkAction('delete')} disabled={bulkLoading}>{t('contentStudio.actions.delete', 'Delete')}</Button>
                   </>
@@ -2832,6 +2954,35 @@ export default function ContentStudioPage() {
                 </Button>
               </Box>
             </Box>
+            {/* Opdracht 6: Extra filterbalk (Pillar + Score≥) */}
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 1, px: 1 }}>
+              <Select size="small" value={itemPillarFilter} onChange={e => setItemPillarFilter(e.target.value)} displayEmpty
+                sx={{ fontSize: 12, minWidth: 140 }}>
+                <MenuItem value="">{t('contentStudio.filter.allPillars', 'Alle pillars')}</MenuItem>
+                {pagePillars.map(p => (
+                  <MenuItem key={p.id} value={p.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: p.color || '#999' }} />
+                      {p.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+              <Select size="small" value={itemMinScore} onChange={e => setItemMinScore(e.target.value)} displayEmpty
+                sx={{ fontSize: 12, minWidth: 120 }}>
+                <MenuItem value="">{t('contentStudio.filter.allScores', 'Alle scores')}</MenuItem>
+                <MenuItem value="50">SEO ≥ 50</MenuItem>
+                <MenuItem value="60">SEO ≥ 60</MenuItem>
+                <MenuItem value="70">SEO ≥ 70</MenuItem>
+                <MenuItem value="80">SEO ≥ 80</MenuItem>
+                <MenuItem value="90">SEO ≥ 90</MenuItem>
+              </Select>
+              {(itemPillarFilter || itemMinScore) && (
+                <Button size="small" onClick={() => { setItemPillarFilter(''); setItemMinScore(''); }}>
+                  {t('contentStudio.filter.clear', 'Wissen')}
+                </Button>
+              )}
+            </Box>
             <TableContainer>
               <Table size="small">
                 <TableHead>
@@ -2854,7 +3005,7 @@ export default function ContentStudioPage() {
                         {Object.entries(PLATFORM_LABELS).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
                       </Select>
                     </TableCell>
-                    <TableCell>{t('contentStudio.table.versions', 'Versies')}</TableCell>
+                    <TableCell>{t('contentStudio.table.score', 'Score')}</TableCell>
                     <TableCell>
                       <Select size="small" value={itemStatusFilter} onChange={e => setItemStatusFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 70 }}>
                         <MenuItem value="">{t('contentStudio.table.status', 'Status')}</MenuItem>
@@ -2888,6 +3039,8 @@ export default function ContentStudioPage() {
                     .filter(c => !itemTypeFilter || c.content_type === itemTypeFilter)
                     .filter(c => !itemPlatformFilter || c.platforms?.includes(itemPlatformFilter))
                     .filter(c => !itemStatusFilter || c.approval_status === itemStatusFilter)
+                    .filter(c => !itemPillarFilter || c.pillar_id === itemPillarFilter)
+                    .filter(c => !itemMinScore || (c.avg_seo_score != null && Number(c.avg_seo_score) >= Number(itemMinScore)))
                     .sort((a, b) => {
                       if (itemSort === 'title_asc') return (a.title || '').localeCompare(b.title || '');
                       if (itemSort === 'title_desc') return (b.title || '').localeCompare(a.title || '');
@@ -2913,23 +3066,38 @@ export default function ContentStudioPage() {
                         <TableCell><Chip label={CONTENT_TYPE_LABELS[concept.content_type] || concept.content_type} size="small" /></TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 0.3, flexWrap: 'wrap' }}>
-                            {(concept.platform_versions || []).filter(v => v.status !== 'deleted').map(v => (
-                              <Chip key={v.id} label={PLATFORM_LABELS[v.platform] || v.platform} size="small" variant="outlined"
-                                onClick={(e) => { e.stopPropagation(); setConceptDialogId(concept.id); }}
-                                sx={{ cursor: 'pointer', height: 22, fontSize: 11,
-                                  borderColor: v.platform === 'facebook' ? '#1877F2' : v.platform === 'instagram' ? '#E4405F' : v.platform === 'linkedin' ? '#0A66C2' : 'divider',
-                                  bgcolor: v.status === 'published' ? 'success.50' : v.status === 'scheduled' ? 'warning.50' : 'transparent',
-                                }} />
-                            ))}
+                            {(concept.platform_versions || []).filter(v => v.status !== 'deleted').map(v => {
+                              const brand = PLATFORM_COLORS[v.platform] || '#666';
+                              const icon = PLATFORM_STATUS_ICON[v.status] || '—';
+                              return (
+                                <Chip key={v.id}
+                                  label={`${PLATFORM_LABELS[v.platform] || v.platform} ${icon}`}
+                                  size="small"
+                                  onClick={(e) => { e.stopPropagation(); setConceptDialogId(concept.id); }}
+                                  sx={{
+                                    cursor: 'pointer', height: 22, fontSize: 11, fontWeight: 500,
+                                    color: '#fff', bgcolor: brand,
+                                    border: `1px solid ${brand}`,
+                                    opacity: v.status === 'published' ? 1 : v.status === 'scheduled' ? 0.85 : 0.7,
+                                    '&:hover': { bgcolor: brand, filter: 'brightness(1.1)' },
+                                  }} />
+                              );
+                            })}
                             {(concept.platform_versions || []).filter(v => v.status !== 'deleted').length === 0 && <Typography variant="caption" color="text.disabled">—</Typography>}
                           </Box>
                         </TableCell>
                         <TableCell>
-                          {(() => {
-                            const versions = concept.platform_versions?.filter(v => v.status !== 'deleted') || [];
-                            const published = versions.filter(v => v.status === 'published').length;
-                            return <Typography variant="caption">{versions.length} {published > 0 ? `(${published} live)` : ''}</Typography>;
-                          })()}
+                          {concept.avg_seo_score != null ? (() => {
+                            const s = Math.round(Number(concept.avg_seo_score));
+                            const color = s >= 80 ? 'success' : s >= 60 ? 'warning' : 'error';
+                            return <Chip label={`${s}`} size="small" color={color} sx={{ height: 20, fontSize: 11, fontWeight: 600, minWidth: 36 }} />;
+                          })() : <Typography variant="caption" color="text.disabled">—</Typography>}
+                          {concept.pillar_name && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: concept.pillar_color || '#999' }} />
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{concept.pillar_name}</Typography>
+                            </Box>
+                          )}
                         </TableCell>
                         <TableCell>
                           {concept.platform_versions?.some(v => v.status === 'published') ? (
@@ -3032,6 +3200,24 @@ export default function ContentStudioPage() {
         destinationId={destinationId}
         onCreated={loadItems}
       />
+
+      {/* Opdracht 6: Bulk schedule dialog */}
+      <Dialog open={bulkScheduleOpen} onClose={() => !bulkLoading && setBulkScheduleOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{t('contentStudio.bulkScheduleTitle', 'Geselecteerde concepten inplannen')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {t('contentStudio.bulkScheduleHelp', 'Alle niet-gepubliceerde platform versies van {{count}} geselecteerde concepten worden ingepland.', { count: selectedIds.length })}
+          </Typography>
+          <TextField type="datetime-local" label={t('contentStudio.scheduleAt', 'Datum & tijd')} value={bulkScheduleAt}
+            onChange={e => setBulkScheduleAt(e.target.value)} InputLabelProps={{ shrink: true }} fullWidth size="small" />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkScheduleOpen(false)} disabled={bulkLoading}>{t('common.cancel', 'Annuleren')}</Button>
+          <Button variant="contained" onClick={handleBulkScheduleConfirm} disabled={bulkLoading || !bulkScheduleAt}>
+            {bulkLoading ? <CircularProgress size={16} /> : t('contentStudio.schedule', 'Inplannen')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar open={!!snackMsg} autoHideDuration={5000} onClose={() => setSnackMsg(null)} message={snackMsg} />
     </Box>
