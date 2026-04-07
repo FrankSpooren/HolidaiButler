@@ -12153,9 +12153,13 @@ router.get('/content/concepts', adminAuth('editor'), async (req, res) => {
 
     const [concepts] = await mysqlSequelize.query(
       `SELECT c.*,
+        cp.name as pillar_name,
+        cp.color as pillar_color,
+        (SELECT AVG(ci.seo_score) FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted' AND ci.seo_score IS NOT NULL) as avg_seo_score,
         (SELECT GROUP_CONCAT(DISTINCT ci.target_platform) FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted') as platforms,
         (SELECT GROUP_CONCAT(CONCAT(ci.id, ':', ci.target_platform, ':', ci.approval_status) SEPARATOR '|') FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted') as items_summary
        FROM content_concepts c
+       LEFT JOIN content_pillars cp ON cp.id = c.pillar_id
        WHERE ${whereClause}
        ORDER BY c.updated_at DESC
        LIMIT ? OFFSET ?`,
