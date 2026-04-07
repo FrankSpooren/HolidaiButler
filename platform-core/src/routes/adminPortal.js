@@ -13681,11 +13681,16 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
     if (!scheduled_at) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
-    await mysqlSequelize.query(
-      `UPDATE content_items SET scheduled_at = :scheduledAt, updated_at = NOW() WHERE id = :id AND approval_status IN ('draft','scheduled')`,
+    const [, meta] = await mysqlSequelize.query(
+      `UPDATE content_items SET scheduled_at = :scheduledAt, updated_at = NOW()
+       WHERE id = :id AND approval_status NOT IN ('published','rejected','failed')`,
       { replacements: { scheduledAt: scheduled_at, id: Number(id) } }
     );
-    res.json({ success: true, data: { id: Number(id), scheduled_at } });
+    const affected = meta?.affectedRows ?? 0;
+    if (affected === 0) {
+      return res.status(409).json({ success: false, error: { code: 'NOT_RESCHEDULABLE', message: 'Item kan niet verplaatst worden (gepubliceerd, afgewezen of niet gevonden)' } });
+    }
+    res.json({ success: true, data: { id: Number(id), scheduled_at, affected } });
   } catch (error) {
     logger.error('[AdminPortal] Reschedule error:', error);
     res.status(500).json({ success: false, error: { code: 'RESCHEDULE_ERROR', message: error.message } });
