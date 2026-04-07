@@ -12373,69 +12373,29 @@ router.post('/content/concepts/generate', adminAuth('editor'), writeAccess(['pla
       }
     });
 
-    // === ASYNC BACKGROUND GENERATION ===
-    setImmediate(async () => {
-      try {
-        const { generateContent } = await import('../services/agents/contentRedacteur/contentGenerator.js');
-
-        const generatedItems = [];
-        for (const platform of platforms) {
-          try {
-            const generated = await generateContent(suggestion, {
-              destinationId: Number(destination_id),
-              contentType: content_type,
-              platform,
-              personaId: persona_id || null,
-            });
-
-            const [itemResult] = await mysqlSequelize.query(
-              `INSERT INTO content_items (concept_id, destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-               seo_data, seo_score, social_metadata, media_ids, target_platform, approval_status, ai_model, ai_generated, poi_id, pillar_id, keyword_cluster, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?, ?, NOW(), NOW())`,
-              { replacements: [
-                conceptId, Number(destination_id), suggestion.id, content_type,
-                generated.title || suggestion.title,
-                generated.body_en || '', generated.body_nl || null,
-                generated.body_de || null, generated.body_es || null,
-                generated.body_fr || null,
-                generated.seo_data ? JSON.stringify(generated.seo_data) : null, generated.seo_score || null,
-                generated.social_metadata ? JSON.stringify(generated.social_metadata) : null,
-                generated.media_ids ? JSON.stringify(generated.media_ids) : null,
-                platform, generated.ai_model || 'mistral-medium-latest',
-                suggestion.poi_id || null, pillar_id || null,
-                JSON.stringify(generated.keyword_cluster || suggestion.keyword_cluster || []),
-              ]}
-            );
-
-            generatedItems.push({ id: itemResult, platform, title: generated.title });
-          } catch (platErr) {
-            logger.warn(`[ConceptGenerate] Platform ${platform} failed: ${platErr.message}`);
-          }
-        }
-
-        // Update suggestion status
-        await mysqlSequelize.query(
-          `UPDATE content_suggestions SET status = 'generated', updated_at = NOW() WHERE id = ?`,
-          { replacements: [suggestion.id] }
-        );
-
-        // Update concept: title + status → draft (done generating)
-        const finalTitle = generatedItems[0]?.title || suggestion.title;
-        await mysqlSequelize.query(
-          `UPDATE content_concepts SET title = ?, approval_status = 'draft' WHERE id = ?`,
-          { replacements: [finalTitle, conceptId] }
-        );
-
-        logger.info(`[ConceptGenerate] Async generation complete: concept ${conceptId}, ${generatedItems.length} items`);
-      } catch (bgErr) {
-        logger.error(`[ConceptGenerate] Async generation failed for concept ${conceptId}: ${bgErr.message}`);
-        // Mark concept as failed so frontend knows
-        await mysqlSequelize.query(
-          `UPDATE content_concepts SET approval_status = 'draft' WHERE id = ? AND approval_status = 'generating'`,
-          { replacements: [conceptId] }
-        ).catch(() => {});
-      }
-    });
+    // === ENQUEUE BACKGROUND GENERATION (BullMQ) ===
+    // Persisted in Redis, survives PM2 restarts, automatic retries (2 attempts
+    // with exponential backoff), dead-letter recovery on final failure.
+    try {
+      const { contentGenerationQueue } = await import('../services/orchestrator/queues.js');
+      await contentGenerationQueue.add('generate-concept', {
+        conceptId,
+        suggestionId: suggestion.id,
+        destinationId: Number(destination_id),
+        contentType: content_type,
+        platforms,
+        pillarId: pillar_id || null,
+        personaId: persona_id || null,
+      }, { jobId: `concept-${conceptId}` });
+      logger.info(`[ConceptGenerate] Enqueued generation job for concept ${conceptId}`);
+    } catch (enqErr) {
+      logger.error(`[ConceptGenerate] Enqueue failed for concept ${conceptId}: ${enqErr.message}`);
+      // Recover concept so frontend stops polling
+      await mysqlSequelize.query(
+        `UPDATE content_concepts SET approval_status = 'draft' WHERE id = ? AND approval_status = 'generating'`,
+        { replacements: [conceptId] }
+      ).catch(() => {});
+    }
   } catch (error) {
     logger.error('[AdminPortal] Concept generate error:', error);
     res.status(500).json({ success: false, error: { code: 'CONCEPT_GENERATE_ERROR', message: error.message } });
@@ -12906,6 +12866,115 @@ router.get('/content/images/resolve/:id', adminAuth('editor'), async (req, res) 
 });
 
 /**
+ * POST /content/media/resolve-batch — Resolve mixed media_ids array to absolute URLs.
+ * Accepts:
+ *   - HTTP URLs (string starting with "http")  → returned as-is
+ *   - "/path"  (string starting with "/")      → prefixed with API base
+ *   - "poi:N"  (POI image reference)           → looked up in imageurls table
+ *   - N (numeric, media library ID)            → looked up in media table
+ *
+ * Body: { ids: Array<string|number> }
+ * Returns: { success: true, data: [{ id, url, alt, source }, ...] } in same order as input.
+ *
+ * Single source of truth for media resolution — both preview AND publisher MUST use this.
+ */
+router.post('/content/media/resolve-batch', adminAuth('editor'), async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+    if (ids.length === 0) return res.json({ success: true, data: [] });
+
+    const imageBase = process.env.IMAGE_BASE_URL || 'https://api.holidaibutler.com';
+    const apiBase = process.env.API_BASE_URL || 'https://api.holidaibutler.com';
+
+    // Bucket the IDs by type so we can do at most 2 batched DB queries.
+    const poiImageIds = []; // numeric ids from "poi:N"
+    const mediaIds = [];    // numeric ids (media library)
+    const passthrough = new Map(); // index → resolved object (for URLs/paths)
+
+    ids.forEach((raw, idx) => {
+      if (raw == null) return;
+      if (typeof raw === 'string') {
+        if (raw.startsWith('http://') || raw.startsWith('https://')) {
+          passthrough.set(idx, { id: raw, url: raw, source: 'url' });
+          return;
+        }
+        if (raw.startsWith('/')) {
+          passthrough.set(idx, { id: raw, url: `${apiBase}${raw}`, source: 'path' });
+          return;
+        }
+        if (raw.startsWith('poi:')) {
+          const n = Number(raw.slice(4));
+          if (!isNaN(n) && n > 0) poiImageIds.push({ idx, id: n, raw });
+          return;
+        }
+        // Numeric string → treat as media library id
+        const n = Number(raw);
+        if (!isNaN(n) && n > 0) mediaIds.push({ idx, id: n, raw });
+        return;
+      }
+      if (typeof raw === 'number' && raw > 0) {
+        mediaIds.push({ idx, id: raw, raw });
+      }
+    });
+
+    // Batch lookup POI images
+    const poiResults = new Map();
+    if (poiImageIds.length > 0) {
+      const idList = poiImageIds.map(p => p.id);
+      const [rows] = await mysqlSequelize.query(
+        `SELECT i.id, i.local_path, i.image_url, p.name AS poi_name, p.id AS poi_id
+         FROM imageurls i LEFT JOIN POI p ON i.poi_id = p.id
+         WHERE i.id IN (:ids)`,
+        { replacements: { ids: idList } }
+      );
+      rows.forEach(r => poiResults.set(r.id, r));
+    }
+
+    // Batch lookup media library
+    const mediaResults = new Map();
+    if (mediaIds.length > 0) {
+      const idList = mediaIds.map(m => m.id);
+      const [rows] = await mysqlSequelize.query(
+        `SELECT id, filename, destination_id, alt_text FROM media WHERE id IN (:ids)`,
+        { replacements: { ids: idList } }
+      );
+      rows.forEach(r => mediaResults.set(r.id, r));
+    }
+
+    // Assemble in original order
+    const result = ids.map((raw, idx) => {
+      if (passthrough.has(idx)) return passthrough.get(idx);
+
+      const poi = poiImageIds.find(p => p.idx === idx);
+      if (poi) {
+        const r = poiResults.get(poi.id);
+        if (r) {
+          const url = r.local_path ? `${imageBase}${r.local_path}` : r.image_url;
+          return { id: raw, url, alt: r.poi_name || '', poi_id: r.poi_id, source: 'poi' };
+        }
+        return { id: raw, url: null, source: 'poi', error: 'not_found' };
+      }
+
+      const med = mediaIds.find(m => m.idx === idx);
+      if (med) {
+        const r = mediaResults.get(med.id);
+        if (r) {
+          return { id: raw, url: `${apiBase}/media-files/${r.destination_id}/${r.filename}`, alt: r.alt_text || '', source: 'media' };
+        }
+        return { id: raw, url: null, source: 'media', error: 'not_found' };
+      }
+
+      return { id: raw, url: null, source: 'unknown' };
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Media resolve-batch error:', error);
+    res.status(500).json({ success: false, error: { code: 'MEDIA_RESOLVE_ERROR', message: error.message } });
+  }
+});
+
+/**
  * GET /content/images/browse — Browse POI images for content image picker
  * Query: destination_id, search (optional POI name search), limit
  */
@@ -13166,15 +13235,18 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
     }
 
     const [items] = await mysqlSequelize.query(
-      `SELECT id, title, content_type, target_platform, approval_status, scheduled_at, published_at, publish_url, created_at
-       FROM content_items
-       WHERE destination_id = :destId AND approval_status NOT IN ('deleted')
+      `SELECT ci.id, ci.title, ci.content_type, ci.target_platform, ci.approval_status, ci.scheduled_at, ci.published_at, ci.publish_url, ci.created_at,
+              ci.seo_score, cc.pillar_id, cp.name AS pillar_name, cp.color AS pillar_color
+       FROM content_items ci
+       LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
+       LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
+       WHERE ci.destination_id = :destId AND ci.approval_status NOT IN ('deleted')
          AND (
-           (scheduled_at BETWEEN :start AND :end)
-           OR (published_at BETWEEN :start AND :end)
-           OR (approval_status IN ('approved', 'draft', 'scheduled', 'publishing') AND created_at BETWEEN :start AND :end)
+           (ci.scheduled_at BETWEEN :start AND :end)
+           OR (ci.published_at BETWEEN :start AND :end)
+           OR (ci.approval_status IN ('approved', 'draft', 'scheduled', 'publishing') AND ci.created_at BETWEEN :start AND :end)
          )
-       ORDER BY COALESCE(scheduled_at, published_at, created_at) ASC`,
+       ORDER BY COALESCE(ci.scheduled_at, ci.published_at, ci.created_at) ASC`,
       { replacements: { destId: Number(destId), start: startDate, end: endDate + ' 23:59:59' } }
     );
 
@@ -13709,6 +13781,77 @@ router.get('/content/analytics/overview', adminAuth('editor'), async (req, res) 
       { replacements: { destId: dId, days } }
     );
 
+    // Opdracht 8-A2: Top performer van deze week (laatste 7 dagen)
+    const [topThisWeekRows] = await mysqlSequelize.query(
+      `SELECT ci.id, ci.title, ci.content_type, cp.platform,
+              SUM(cp.views) as views, SUM(cp.clicks) as clicks,
+              SUM(cp.engagement) as engagement, SUM(cp.reach) as reach
+       FROM content_performance cp
+       JOIN content_items ci ON ci.id = cp.content_item_id
+       WHERE cp.destination_id = :destId AND cp.measured_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+       GROUP BY ci.id, ci.title, ci.content_type, cp.platform
+       ORDER BY engagement DESC LIMIT 1`,
+      { replacements: { destId: dId } }
+    );
+    const topThisWeek = topThisWeekRows[0] || null;
+
+    // Opdracht 8-A3: Engagement verdeling per content pillar
+    const [byPillar] = await mysqlSequelize.query(
+      `SELECT cp2.id as pillar_id, cp2.name as pillar_name, cp2.color as pillar_color,
+              SUM(cperf.views) as total_views,
+              SUM(cperf.engagement) as total_engagement,
+              SUM(cperf.reach) as total_reach,
+              COUNT(DISTINCT cperf.content_item_id) as items_count
+       FROM content_performance cperf
+       JOIN content_items ci ON ci.id = cperf.content_item_id
+       JOIN content_concepts cc ON cc.id = ci.concept_id
+       JOIN content_pillars cp2 ON cp2.id = cc.pillar_id
+       WHERE cperf.destination_id = :destId AND cperf.measured_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+       GROUP BY cp2.id, cp2.name, cp2.color
+       ORDER BY total_engagement DESC`,
+      { replacements: { destId: dId, days } }
+    );
+
+    // Opdracht 8-A4: SEO score ↔ engagement correlatie (high vs low bucket)
+    const [scoreBuckets] = await mysqlSequelize.query(
+      `SELECT
+         CASE WHEN ci.seo_score >= 70 THEN 'high' ELSE 'low' END as bucket,
+         AVG(cperf.engagement) as avg_engagement,
+         AVG(cperf.views) as avg_views,
+         COUNT(DISTINCT cperf.content_item_id) as items_count
+       FROM content_performance cperf
+       JOIN content_items ci ON ci.id = cperf.content_item_id
+       WHERE cperf.destination_id = :destId
+         AND cperf.measured_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+         AND ci.seo_score IS NOT NULL
+       GROUP BY bucket`,
+      { replacements: { destId: dId, days } }
+    );
+    const highBucket = scoreBuckets.find(b => b.bucket === 'high') || {};
+    const lowBucket = scoreBuckets.find(b => b.bucket === 'low') || {};
+    const scoreCorrelation = {
+      high_avg_engagement: Number(highBucket.avg_engagement) || 0,
+      low_avg_engagement: Number(lowBucket.avg_engagement) || 0,
+      high_items: Number(highBucket.items_count) || 0,
+      low_items: Number(lowBucket.items_count) || 0,
+      // Positieve lift = high-bucket doet het beter dan low-bucket
+      lift_pct: (() => {
+        const h = Number(highBucket.avg_engagement) || 0;
+        const l = Number(lowBucket.avg_engagement) || 0;
+        if (l === 0) return h > 0 ? 100 : 0;
+        return Math.round(((h - l) / l) * 100);
+      })(),
+    };
+
+    // Opdracht 8-A1: CTR + growth
+    const curViews = Number(cur.total_views) || 0;
+    const curClicks = Number(cur.total_clicks) || 0;
+    const prevViews = Number(prev.total_views) || 0;
+    const prevClicks = Number(prev.total_clicks) || 0;
+    const ctrCur = curViews > 0 ? Math.round((curClicks / curViews) * 10000) / 100 : 0; // %, 2 decimalen
+    const ctrPrev = prevViews > 0 ? Math.round((prevClicks / prevViews) * 10000) / 100 : 0;
+    const ctrGrowth = ctrPrev === 0 ? (ctrCur > 0 ? 100 : 0) : Math.round(((ctrCur - ctrPrev) / ctrPrev) * 100);
+
     res.json({
       success: true,
       data: {
@@ -13718,15 +13861,20 @@ router.get('/content/analytics/overview', adminAuth('editor'), async (req, res) 
           total_engagement: Number(cur.total_engagement) || 0,
           total_reach: Number(cur.total_reach) || 0,
           items_tracked: Number(cur.items_tracked) || 0,
+          ctr: ctrCur,
           growth_views: growth(cur.total_views, prev.total_views),
           growth_clicks: growth(cur.total_clicks, prev.total_clicks),
           growth_engagement: growth(cur.total_engagement, prev.total_engagement),
           growth_reach: growth(cur.total_reach, prev.total_reach),
+          growth_ctr: ctrGrowth,
         },
         time_series: timeSeries || [],
         by_platform: byPlatform || [],
         by_type: byType || [],
+        by_pillar: byPillar || [],
         top_content: topContent || [],
+        top_this_week: topThisWeek,
+        score_correlation: scoreCorrelation,
       },
     });
   } catch (error) {
