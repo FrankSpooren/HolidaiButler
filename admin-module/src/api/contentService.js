@@ -93,6 +93,11 @@ const contentService = {
     return client.delete(`/content/items/${id}`).then(r => r.data);
   },
 
+  // Opdracht 7-E: enrich a suggestion with brand context + trending keywords
+  enrichSuggestion(id) {
+    return client.post(`/content/suggestions/${id}/enrich`, {}, { timeout: 60000 }).then(r => r.data);
+  },
+
   translateItem(id, targetLang) {
     return client.post(`/content/items/${id}/translate`, { target_lang: targetLang }).then(r => r.data);
   },

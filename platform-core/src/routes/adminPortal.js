@@ -11558,6 +11558,129 @@ router.patch('/content/suggestions/:id', adminAuth('editor'), writeAccess(['plat
   }
 });
 
+/**
+ * POST /content/suggestions/:id/enrich — Verrijk een suggestie met brand context + trending keywords (Opdracht 7-E)
+ * Body: (geen)
+ * Output: bijgewerkte suggestion (summary, keyword_cluster verrijkt)
+ */
+router.post('/content/suggestions/:id/enrich', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [[suggestion]] = await mysqlSequelize.query(
+      'SELECT * FROM content_suggestions WHERE id = :id',
+      { replacements: { id: Number(id) } }
+    );
+    if (!suggestion) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Suggestion not found' } });
+    }
+
+    const destinationId = suggestion.destination_id;
+    const existingKeywords = (() => {
+      try {
+        return Array.isArray(suggestion.keyword_cluster) ? suggestion.keyword_cluster :
+               typeof suggestion.keyword_cluster === 'string' ? JSON.parse(suggestion.keyword_cluster) : [];
+      } catch { return []; }
+    })();
+
+    // Brand context (profile, persona, knowledge base)
+    const { buildBrandContext } = await import('../services/agents/contentRedacteur/brandContext.js');
+    const brandContext = await buildBrandContext(destinationId, null, existingKeywords);
+
+    // Top 5 trending keywords (recent 30d)
+    const [trendingRows] = await mysqlSequelize.query(
+      `SELECT keyword, relevance_score FROM trending_data
+       WHERE destination_id = :destId AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+       ORDER BY relevance_score DESC LIMIT 5`,
+      { replacements: { destId: destinationId } }
+    );
+    const trendingList = trendingRows.map(t => `- ${t.keyword} (score ${Number(t.relevance_score).toFixed(1)})`).join('\n');
+
+    const embeddingService = (await import('../services/holibot/embeddingService.js')).default;
+
+    const systemPrompt = `Je bent een ervaren content strateeg voor een toeristische bestemming.
+Je verrijkt een bestaande content suggestie zodat deze beter aansluit bij het merk en actuele trends.
+
+Geef je antwoord ALTIJD als JSON met deze structuur (geen markdown, geen extra tekst):
+{
+  "title": "verbeterde titel (max 80 tekens, prikkelend)",
+  "summary": "verbeterde samenvatting van 2-3 zinnen die de hook en het waarom uitlegt",
+  "keyword_cluster": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
+}
+
+Eisen:
+- Behoud de originele intentie van de suggestie
+- Verwerk merkstem en doelgroep uit de brand context
+- Voeg 1-2 relevante trending keywords toe als ze passen bij het onderwerp
+- keyword_cluster: 4-6 keywords, een mix van origineel + brand + trending`;
+
+    const userPrompt = `${brandContext ? `BRAND CONTEXT:\n${brandContext}\n\n` : ''}TRENDING KEYWORDS (laatste 30 dagen):
+${trendingList || '(geen trending data beschikbaar)'}
+
+ORIGINELE SUGGESTIE:
+Titel: ${suggestion.title}
+Samenvatting: ${suggestion.summary || '(geen)'}
+Huidige keywords: ${existingKeywords.join(', ') || '(geen)'}
+Content type: ${suggestion.content_type || 'social_post'}
+
+Verrijk deze suggestie. Geef alleen de JSON terug.`;
+
+    const aiResponse = await embeddingService.generateChatCompletion(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      { temperature: 0.6, maxTokens: 600 }
+    );
+
+    // Parse JSON robustly (strip code fences if present)
+    let parsed = null;
+    try {
+      const cleaned = String(aiResponse).replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch (parseErr) {
+      logger.warn('[AdminPortal] Enrich JSON parse failed, using fallback:', parseErr.message);
+    }
+
+    if (!parsed || !parsed.summary) {
+      return res.status(502).json({ success: false, error: { code: 'AI_PARSE_ERROR', message: 'AI response could not be parsed' } });
+    }
+
+    const newTitle = (parsed.title || suggestion.title || '').slice(0, 200);
+    const newSummary = parsed.summary || suggestion.summary;
+    const newKeywords = Array.isArray(parsed.keyword_cluster) && parsed.keyword_cluster.length > 0
+      ? parsed.keyword_cluster.slice(0, 6)
+      : existingKeywords;
+
+    await mysqlSequelize.query(
+      `UPDATE content_suggestions
+       SET title = :title, summary = :summary, keyword_cluster = :kw, updated_at = NOW()
+       WHERE id = :id`,
+      {
+        replacements: {
+          title: newTitle,
+          summary: newSummary,
+          kw: JSON.stringify(newKeywords),
+          id: Number(id),
+        },
+      }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        id: Number(id),
+        title: newTitle,
+        summary: newSummary,
+        keyword_cluster: newKeywords,
+        enriched: true,
+      },
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Suggestion enrich error:', error);
+    res.status(500).json({ success: false, error: { code: 'ENRICH_ERROR', message: error.message } });
+  }
+});
+
 // ============================================================
 // CONTENT MODULE: CONTENT ITEMS (Fase B — Blok B.3)
 // ============================================================

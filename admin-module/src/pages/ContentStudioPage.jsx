@@ -27,6 +27,10 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PublishIcon from '@mui/icons-material/Publish';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import DownloadIcon from '@mui/icons-material/Download';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import PersonIcon from '@mui/icons-material/Person';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import LanguageIcon from '@mui/icons-material/Language';
 import ShareIcon from '@mui/icons-material/Share';
 import ReplayIcon from '@mui/icons-material/Replay';
 import RestoreIcon from '@mui/icons-material/Restore';
@@ -130,6 +134,61 @@ const PLATFORM_STATUS_ICON = {
   failed: '!',
   rejected: '✕',
 };
+
+// Trending source metadata (Opdracht 7-A)
+// Maps known source values to a friendly label + Material icon
+function getSourceMeta(source) {
+  if (!source) return { label: 'Onbekend', Icon: LanguageIcon, color: '#9E9E9E' };
+  const s = String(source).toLowerCase();
+  if (s.includes('google') || s.includes('trends')) return { label: 'Google Trends', Icon: SearchIcon, color: '#4285F4' };
+  if (s.includes('manual') || s.includes('handmatig')) return { label: 'Handmatig', Icon: PersonIcon, color: '#9C27B0' };
+  if (s.includes('traffic') || s.includes('analytics') || s.includes('website')) return { label: 'Website Traffic', Icon: AnalyticsIcon, color: '#00BFA5' };
+  if (s.includes('sistrix')) return { label: 'SISTRIX', Icon: AnalyticsIcon, color: '#FF6F00' };
+  return { label: source, Icon: LanguageIcon, color: '#607D8B' };
+}
+
+// Sparkline mini-chart component (Opdracht 7-C)
+// Renders a small bar chart from a numeric history array (max 4 values).
+function Sparkline({ data, width = 56, height = 18, color = '#5E8B7E' }) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return <Box component="span" sx={{ display: 'inline-block', width, height, color: 'text.disabled', fontSize: 10, lineHeight: `${height}px`, textAlign: 'center' }}>—</Box>;
+  }
+  const values = data.map(v => Number(v) || 0);
+  const max = Math.max(...values, 1);
+  const barCount = values.length;
+  const gap = 2;
+  const barWidth = Math.max(2, (width - gap * (barCount - 1)) / barCount);
+  return (
+    <svg width={width} height={height} role="img" aria-label="Trend history">
+      {values.map((v, i) => {
+        const h = Math.max(1, (v / max) * (height - 2));
+        return (
+          <rect
+            key={i}
+            x={i * (barWidth + gap)}
+            y={height - h - 1}
+            width={barWidth}
+            height={h}
+            fill={color}
+            rx={1}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+// Pillar matching helper (Opdracht 7-B)
+// Returns the matching pillar object if any pillar name appears in the keyword
+function findMatchingPillar(keyword, pillars) {
+  if (!keyword || !Array.isArray(pillars) || pillars.length === 0) return null;
+  const kw = keyword.toLowerCase();
+  return pillars.find(p => {
+    if (!p?.name) return false;
+    const tokens = String(p.name).toLowerCase().split(/[\s&/,]+/).filter(Boolean);
+    return tokens.some(tok => tok.length >= 3 && kw.includes(tok));
+  }) || null;
+}
 
 // STATUS_LABELS: dynamically resolved via t() in StatusChip
 const STATUS_KEYS = ['draft', 'pending', 'pending_review', 'approved', 'scheduled', 'publishing', 'published', 'rejected', 'failed', 'generated', 'deleted'];
@@ -2406,6 +2465,48 @@ export default function ContentStudioPage() {
     }
   };
 
+  // Opdracht 7-D: batch approve voor suggesties
+  const [selectedSugIds, setSelectedSugIds] = useState([]);
+  const [sugBulkLoading, setSugBulkLoading] = useState(false);
+  const toggleSugSelect = (id) => {
+    setSelectedSugIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleSugSelectAll = (filteredIds) => {
+    if (selectedSugIds.length === filteredIds.length && filteredIds.every(id => selectedSugIds.includes(id))) {
+      setSelectedSugIds([]);
+    } else {
+      setSelectedSugIds(filteredIds);
+    }
+  };
+  const handleSugBulkStatus = async (newStatus) => {
+    if (selectedSugIds.length === 0) return;
+    if (newStatus === 'rejected' && !window.confirm(t('contentStudio.confirmBulkReject', '{{count}} suggesties afwijzen?', { count: selectedSugIds.length }))) return;
+    setSugBulkLoading(true);
+    let ok = 0, fail = 0;
+    for (const id of selectedSugIds) {
+      try { await contentService.updateSuggestion(id, { status: newStatus }); ok++; } catch { fail++; }
+    }
+    setSnackMsg(t('contentStudio.bulkResultGeneric', '{{ok}} verwerkt, {{fail}} mislukt', { ok, fail }));
+    setSelectedSugIds([]);
+    setSugBulkLoading(false);
+    loadSuggestions();
+  };
+
+  // Opdracht 7-E: enrich a single suggestion
+  const [enrichingSugId, setEnrichingSugId] = useState(null);
+  const handleEnrichSuggestion = async (id) => {
+    setEnrichingSugId(id);
+    try {
+      await contentService.enrichSuggestion(id);
+      setSnackMsg(t('contentStudio.enriched', 'Suggestie verrijkt met merk- en trending context'));
+      loadSuggestions();
+    } catch (err) {
+      setSnackMsg(t('contentStudio.enrichFailed', 'Verrijken mislukt: {{msg}}', { msg: err?.response?.data?.error?.message || err.message }));
+    } finally {
+      setEnrichingSugId(null);
+    }
+  };
+
   const handleGenerateContent = async (data) => {
     try {
       await contentService.generateItem(data);
@@ -2626,6 +2727,11 @@ export default function ContentStudioPage() {
                   <TableRow>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'keyword_asc' ? 'keyword_desc' : 'keyword_asc')}>{t('contentStudio.table.keyword', 'Keyword')} {trendSort.startsWith('keyword') ? (trendSort === 'keyword_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'score_desc' ? 'score_asc' : 'score_desc')}>{t('contentStudio.table.score', 'Score')} {trendSort.startsWith('score') ? (trendSort === 'score_asc' ? '↑' : '↓') : ''}</TableCell>
+                    <TableCell>
+                      <Tooltip title={t('contentStudio.table.trendTooltip', 'Mini sparkline van de laatste 4 weken (relevance score per week)')}>
+                        <span>{t('contentStudio.table.trend', 'Trend')}</span>
+                      </Tooltip>
+                    </TableCell>
                     <TableCell>{t('contentStudio.table.direction', 'Richting')}</TableCell>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'volume_desc' ? 'volume_asc' : 'volume_desc')}>{t('contentStudio.table.volume', 'Volume')} {trendSort.startsWith('volume') ? (trendSort === 'volume_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell>{t('contentStudio.table.language', 'Taal')}</TableCell>
@@ -2644,12 +2750,12 @@ export default function ContentStudioPage() {
                   {trendLoading ? (
                     [1, 2, 3].map(i => (
                       <TableRow key={i}>
-                        <TableCell colSpan={9}><Skeleton variant="text" /></TableCell>
+                        <TableCell colSpan={10}><Skeleton variant="text" /></TableCell>
                       </TableRow>
                     ))
                   ) : trends.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                      <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary" sx={{ mb: 0.5 }}>{t('contentStudio.noTrending', 'Geen trending keywords gevonden voor deze periode.')}</Typography>
                         <Typography variant="caption" color="text.disabled">{t('contentStudio.noTrendingHint', 'Voeg trending keywords toe of wacht op de wekelijkse automatische scan')}</Typography>
                       </TableCell>
@@ -2669,25 +2775,60 @@ export default function ContentStudioPage() {
                     })
                     .map((trend, idx) => (
                     <TableRow key={trend.id || idx} hover>
-                      <TableCell sx={{ fontWeight: 500 }}>{trend.keyword}</TableCell>
+                      <TableCell sx={{ fontWeight: 500 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                          <span>{trend.keyword}</span>
+                          {(() => {
+                            const matched = findMatchingPillar(trend.keyword, pagePillars);
+                            return matched ? (
+                              <Tooltip title={t('contentStudio.matchesPillar', 'Past bij pillar: {{name}}', { name: matched.name })}>
+                                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, px: 0.6, py: 0.1, borderRadius: 1, bgcolor: `${matched.color || '#999'}1A`, border: `1px solid ${matched.color || '#999'}` }}>
+                                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: matched.color || '#999' }} />
+                                  <Typography variant="caption" sx={{ fontSize: 9, fontWeight: 600, color: matched.color || '#666' }}>{matched.name}</Typography>
+                                </Box>
+                              </Tooltip>
+                            ) : null;
+                          })()}
+                        </Box>
+                      </TableCell>
                       <TableCell>
                         <Chip label={trend.relevance_score != null ? Number(trend.relevance_score).toFixed(1) : '—'} size="small" color={Number(trend.relevance_score) >= 7 ? 'success' : Number(trend.relevance_score) >= 4 ? 'info' : 'default'} />
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={Array.isArray(trend.history) && trend.history.length > 0
+                          ? `4-weken: ${trend.history.map(v => Number(v).toFixed(1)).join(' → ')}`
+                          : t('contentStudio.noHistory', 'Geen historische data')}>
+                          <Box sx={{ display: 'inline-flex' }}>
+                            <Sparkline data={trend.history} color={Number(trend.relevance_score) >= 7 ? '#2e7d32' : Number(trend.relevance_score) >= 4 ? '#0288d1' : '#9e9e9e'} />
+                          </Box>
+                        </Tooltip>
                       </TableCell>
                       <TableCell><DirectionChip direction={trend.trend_direction} /></TableCell>
                       <TableCell>{trend.search_volume?.toLocaleString() || '—'}</TableCell>
                       <TableCell>{trend.language?.toUpperCase() || '—'}</TableCell>
                       <TableCell>{trend.market || '—'}</TableCell>
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Chip label={trend.source || '—'} size="small" variant="outlined" />
-                          {trend.source_url && (
-                            <Tooltip title={trend.source_url}>
-                              <IconButton size="small" component="a" href={trend.source_url} target="_blank" rel="noopener noreferrer" sx={{ p: 0.3 }}>
-                                <LinkIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </Box>
+                        {(() => {
+                          const meta = getSourceMeta(trend.source);
+                          const Icon = meta.Icon;
+                          return (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Tooltip title={meta.label}>
+                                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, px: 0.6, py: 0.2, borderRadius: 1, border: `1px solid ${meta.color}`, bgcolor: `${meta.color}14` }}>
+                                  <Icon sx={{ fontSize: 13, color: meta.color }} />
+                                  <Typography variant="caption" sx={{ fontSize: 10, fontWeight: 600, color: meta.color }}>{meta.label}</Typography>
+                                </Box>
+                              </Tooltip>
+                              {trend.source_url && (
+                                <Tooltip title={trend.source_url}>
+                                  <IconButton size="small" component="a" href={trend.source_url} target="_blank" rel="noopener noreferrer" sx={{ p: 0.3 }}>
+                                    <LinkIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </Box>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>{trend.week_number ? `W${trend.week_number}` : '—'}</TableCell>
                       <TableCell>
@@ -2762,10 +2903,38 @@ export default function ContentStudioPage() {
                 </Button>
               </Box>
             </Box>
+            {/* Opdracht 7-D: Bulk toolbar voor suggesties */}
+            {selectedSugIds.length > 0 && (
+              <Box sx={{
+                position: 'sticky', top: 0, zIndex: 5,
+                display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center',
+                px: 2, py: 1.5, mb: 1,
+                bgcolor: 'primary.50', borderTop: 2, borderBottom: 2, borderColor: 'primary.main',
+              }}>
+                <Chip label={`${selectedSugIds.length} ${t('contentStudio.selected', 'geselecteerd')}`} color="primary" sx={{ fontWeight: 600 }} />
+                <Box sx={{ flex: 1 }} />
+                <Button size="small" variant="contained" color="success" startIcon={<CheckIcon />} onClick={() => handleSugBulkStatus('approved')} disabled={sugBulkLoading}>{t('contentStudio.bulkApprove', 'Goedkeuren')}</Button>
+                <Button size="small" variant="outlined" color="error" startIcon={<CloseIcon />} onClick={() => handleSugBulkStatus('rejected')} disabled={sugBulkLoading}>{t('contentStudio.reject', 'Afwijzen')}</Button>
+                <Button size="small" onClick={() => setSelectedSugIds([])}>{t('contentStudio.clearSelection', 'Wis selectie')}</Button>
+              </Box>
+            )}
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
+                    <TableCell padding="checkbox">
+                      {(() => {
+                        const filtered = suggestions
+                          .filter(s => !sugTypeFilter || s.content_type === sugTypeFilter)
+                          .filter(s => !sugStatusFilter || s.status === sugStatusFilter)
+                          .map(s => s.id);
+                        const allChecked = filtered.length > 0 && filtered.every(id => selectedSugIds.includes(id));
+                        const someChecked = filtered.some(id => selectedSugIds.includes(id));
+                        return (
+                          <Checkbox size="small" checked={allChecked} indeterminate={!allChecked && someChecked} onChange={() => toggleSugSelectAll(filtered)} />
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setSugSort(s => s === 'title_asc' ? 'title_desc' : 'title_asc')}>{t('contentStudio.table.title', 'Titel')} {sugSort.startsWith('title') ? (sugSort === 'title_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell>
                       <Select size="small" value={sugTypeFilter} onChange={e => setSugTypeFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 60 }}>
@@ -2794,12 +2963,12 @@ export default function ContentStudioPage() {
                   {sugLoading ? (
                     [1, 2, 3].map(i => (
                       <TableRow key={i}>
-                        <TableCell colSpan={7}><Skeleton variant="text" /></TableCell>
+                        <TableCell colSpan={8}><Skeleton variant="text" /></TableCell>
                       </TableRow>
                     ))
                   ) : suggestions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                      <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary" sx={{ mb: 1 }}>{t('contentStudio.noSuggestions', 'Geen suggesties. Klik op "Genereer Suggesties" om AI suggesties te maken.')}</Typography>
                         <Button variant="outlined" size="small" startIcon={<AutoAwesomeIcon />} onClick={handleGenerateSuggestions}>{t('contentStudio.generateSuggestions', 'Genereer Suggesties')}</Button>
                       </TableCell>
@@ -2816,10 +2985,40 @@ export default function ContentStudioPage() {
                     })
                     .map((sug) => (
                     <TableRow key={sug.id} hover sx={{ cursor: 'pointer' }} onClick={() => setSelectedSuggestion(sug)}>
+                      <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
+                        <Checkbox size="small" checked={selectedSugIds.includes(sug.id)} onChange={() => toggleSugSelect(sug.id)} />
+                      </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {sug.title}
-                        </Typography>
+                        {/* Opdracht 7-F: IG-preview tooltip on hover */}
+                        <Tooltip
+                          placement="right"
+                          arrow
+                          title={
+                            <Box sx={{ p: 0, width: 220 }}>
+                              <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, mb: 0.5, color: 'common.white' }}>
+                                {t('contentStudio.igPreviewLabel', 'Preview als Instagram post')}
+                              </Typography>
+                              <Box sx={{
+                                width: '100%', aspectRatio: '1 / 1',
+                                borderRadius: 1,
+                                background: 'linear-gradient(135deg, #833AB4 0%, #FD1D1D 50%, #FCB045 100%)',
+                                display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+                                p: 1.5,
+                              }}>
+                                <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 13, lineHeight: 1.2, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                                  {sug.title}
+                                </Typography>
+                                <Typography sx={{ color: '#fff', fontSize: 10, mt: 0.5, opacity: 0.9, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                                  {(Array.isArray(sug.keyword_cluster) ? sug.keyword_cluster : []).slice(0, 3).map(k => `#${String(k).replace(/\s+/g, '')}`).join(' ')}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          }
+                        >
+                          <Typography variant="body2" sx={{ fontWeight: 500, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {sug.title}
+                          </Typography>
+                        </Tooltip>
                         {sug.summary && (
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {sug.summary}
@@ -2883,6 +3082,18 @@ export default function ContentStudioPage() {
                                 </IconButton>
                               </Tooltip>
                             </>
+                          )}
+                          {/* Opdracht 7-E: Verrijk-knop (alleen voor pending of approved suggesties) */}
+                          {(sug.status === 'pending' || sug.status === 'approved') && (
+                            <Tooltip title={t('contentStudio.tooltips.enrich', 'Verrijk met merk- en trending context (AI)')}>
+                              <span>
+                                <IconButton size="small" sx={{ color: '#9C27B0' }}
+                                  onClick={() => handleEnrichSuggestion(sug.id)}
+                                  disabled={enrichingSugId === sug.id}>
+                                  {enrichingSugId === sug.id ? <CircularProgress size={14} /> : <AutoFixHighIcon fontSize="small" />}
+                                </IconButton>
+                              </span>
+                            </Tooltip>
                           )}
                           <Tooltip title={t('contentStudio.tooltips.viewDetails', 'Details bekijken')}>
                             <IconButton size="small" onClick={() => setSelectedSuggestion(sug)}>
@@ -3037,7 +3248,7 @@ export default function ContentStudioPage() {
                   {itemLoading ? (
                     [1, 2, 3].map(i => (
                       <TableRow key={i}>
-                        <TableCell colSpan={9}><Skeleton variant="text" /></TableCell>
+                        <TableCell colSpan={10}><Skeleton variant="text" /></TableCell>
                       </TableRow>
                     ))
                   ) : concepts.length === 0 ? (
