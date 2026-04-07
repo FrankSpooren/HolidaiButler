@@ -9,6 +9,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import mailerLiteService from '../services/mailerlite.js';
 import logger from '../utils/logger.js';
+import { mysqlSequelize } from '../config/database.js';
 
 const router = express.Router();
 
@@ -27,7 +28,7 @@ const contactRateLimit = rateLimit({
  */
 router.post('/', contactRateLimit, async (req, res) => {
   try {
-    const { name, email, phone, subject, message, consent, _hp } = req.body;
+    const { name, email, phone, company, subject, message, consent, _hp, source } = req.body;
 
     // Honeypot check — if filled, it's a bot
     if (_hp) {
@@ -52,6 +53,35 @@ router.post('/', contactRateLimit, async (req, res) => {
     const destId = req.headers['x-destination-id'] || 'unknown';
     const destinationName = typeof destId === 'string' ? destId.charAt(0).toUpperCase() + destId.slice(1) : 'HolidaiButler';
 
+    // Persist demo requests (Content Studio landing page leads)
+    const isDemoRequest = source === 'studio_landing' || (subject && subject.toLowerCase().includes('demo'));
+    if (isDemoRequest) {
+      try {
+        await mysqlSequelize.query(
+          `INSERT INTO demo_requests
+           (name, email, phone, company, message, source, destination_context, ip, user_agent, consent_given)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          {
+            replacements: [
+              name || null,
+              email,
+              phone || null,
+              company || null,
+              message || null,
+              source || 'studio_landing',
+              String(destId),
+              (req.headers['x-forwarded-for'] || req.ip || '').toString().slice(0, 45),
+              (req.headers['user-agent'] || '').toString().slice(0, 500),
+              consent ? 1 : 0,
+            ],
+          }
+        );
+        logger.info(`[Contact] Demo request persisted from ${email} (${company || 'no company'})`);
+      } catch (dbErr) {
+        logger.error('[Contact] Failed to persist demo_request:', dbErr.message);
+      }
+    }
+
     // Send notification email via MailerLite
     if (mailerLiteService.isEnabled()) {
       try {
@@ -62,7 +92,7 @@ router.post('/', contactRateLimit, async (req, res) => {
             subject: `[${destinationName}] Contact: ${subject || 'No subject'}`,
             from_name: name || 'Website Visitor',
             from_email: email,
-            message: `Name: ${name || 'N/A'}\nEmail: ${email}\nPhone: ${phone || 'N/A'}\nSubject: ${subject || 'N/A'}\n\nMessage:\n${message}`,
+            message: `Name: ${name || 'N/A'}\nEmail: ${email}\nPhone: ${phone || 'N/A'}\nCompany: ${company || 'N/A'}\nSubject: ${subject || 'N/A'}\n\nMessage:\n${message}`,
           }
         );
       } catch (emailErr) {

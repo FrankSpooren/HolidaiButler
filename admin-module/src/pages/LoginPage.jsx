@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, TextField, Button,
   Alert, InputAdornment, IconButton, CircularProgress, Link,
-  Table, TableHead, TableBody, TableRow, TableCell, TableContainer
+  Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
+  Menu, MenuItem
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -17,9 +18,22 @@ import SecurityIcon from '@mui/icons-material/Security';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import LoginIcon from '@mui/icons-material/Login';
+import LanguageIcon from '@mui/icons-material/Language';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../stores/authStore.js';
 import { isStudioMode } from '../utils/studioMode.js';
+import LoginDialog from '../components/studio/LoginDialog.jsx';
+import DemoRequestDialog from '../components/studio/DemoRequestDialog.jsx';
+import ConceptMockup from '../components/studio/ConceptMockup.jsx';
+
+const STUDIO_LANGUAGES = [
+  { code: 'nl', label: 'Nederlands', short: 'NL' },
+  { code: 'en', label: 'English', short: 'EN' },
+  { code: 'de', label: 'Deutsch', short: 'DE' },
+  { code: 'es', label: 'Español', short: 'ES' },
+];
 
 const USP_ITEMS = [
   { icon: AutoAwesomeIcon, titleKey: 'auth.usp.aiTitle', descKey: 'auth.usp.aiDesc', titleFallback: 'Relevante Content Generatie', descFallback: 'Genereer blogs, social posts en video scripts, gebaseerd op actueel online vertoond gedrag via onze multi-source strategie.' },
@@ -59,10 +73,20 @@ function FeatureIcon({ value, small }) {
 }
 
 export default function LoginPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const login = useAuthStore(s => s.login);
   const studioMode = isStudioMode();
+
+  // Studio-mode: login + demo dialog state
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [demoDialogOpen, setDemoDialogOpen] = useState(false);
+  const [langMenuAnchor, setLangMenuAnchor] = useState(null);
+  const currentLang = STUDIO_LANGUAGES.find(l => l.code === i18n.language) || STUDIO_LANGUAGES[0];
+  const handleLangChange = (code) => {
+    i18n.changeLanguage(code);
+    setLangMenuAnchor(null);
+  };
 
   const [uspIndex, setUspIndex] = useState(0);
   const touchStartX = useRef(0);
@@ -166,14 +190,96 @@ export default function LoginPage() {
       bgcolor: '#FAFAF8',
       color: '#1C1917',
     }}>
-      {/* ── HERO SECTION ── */}
+      {/* ── STUDIO HEADER (sticky) ── */}
+      <Box sx={{
+        position: 'sticky', top: 0, zIndex: 20,
+        bgcolor: 'rgba(250, 250, 248, 0.92)',
+        backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
+      }}>
+        <Box sx={{
+          maxWidth: 1200, mx: 'auto',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 2,
+          px: { xs: 2, md: 3 }, py: 1.25,
+        }}>
+          {/* Logo + product name */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+            <Box component="img" src="/hb-logo.png" alt="HolidaiButler"
+              sx={{ width: 32, height: 32, borderRadius: 1 }} />
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontSize: { xs: '0.85rem', md: '0.95rem' }, fontWeight: 800, color: '#1C1917', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+                AI Content Studio
+              </Typography>
+              <Typography sx={{ fontSize: '0.65rem', color: '#6B7280', lineHeight: 1, display: { xs: 'none', sm: 'block' } }}>
+                by HolidaiButler
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Right: language + login */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
+            <Button
+              size="small"
+              onClick={(e) => setLangMenuAnchor(e.currentTarget)}
+              startIcon={<LanguageIcon sx={{ fontSize: 18 }} />}
+              endIcon={<ExpandMoreIcon sx={{ fontSize: 16 }} />}
+              sx={{
+                color: '#374151', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem',
+                minWidth: 0, px: { xs: 0.75, sm: 1.25 },
+                '& .MuiButton-startIcon': { mr: { xs: 0, sm: 0.5 } },
+                '& .MuiButton-endIcon': { ml: { xs: 0, sm: 0.25 } },
+              }}
+            >
+              <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>{currentLang.short}</Box>
+            </Button>
+            <Menu
+              anchorEl={langMenuAnchor}
+              open={Boolean(langMenuAnchor)}
+              onClose={() => setLangMenuAnchor(null)}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+              {STUDIO_LANGUAGES.map(lang => (
+                <MenuItem
+                  key={lang.code}
+                  selected={lang.code === currentLang.code}
+                  onClick={() => handleLangChange(lang.code)}
+                  sx={{ fontSize: '0.85rem', minWidth: 140 }}
+                >
+                  <Box component="span" sx={{ fontWeight: 700, width: 26, color: '#5E8B7E' }}>{lang.short}</Box>
+                  {lang.label}
+                </MenuItem>
+              ))}
+            </Menu>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<LoginIcon sx={{ fontSize: 16 }} />}
+              onClick={() => setLoginDialogOpen(true)}
+              sx={{
+                bgcolor: '#5E8B7E',
+                '&:hover': { bgcolor: '#4A7066' },
+                textTransform: 'none', fontWeight: 600,
+                px: { xs: 1.5, sm: 2 }, py: 0.6,
+                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                boxShadow: 'none',
+                '& .MuiButton-startIcon': { mr: { xs: 0.5, sm: 0.75 } },
+              }}
+            >
+              {t('auth.login', 'Inloggen')}
+            </Button>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* ── HERO SECTION (2-col) ── */}
       <Box sx={{
         background: 'linear-gradient(160deg, #7FA594, #5E8B7E)',
         color: '#fff',
-        pt: { xs: 6, md: 10 },
-        pb: { xs: 8, md: 12 },
+        pt: { xs: 5, md: 8 },
+        pb: { xs: 8, md: 14 },
         px: 3,
-        textAlign: 'center',
         position: 'relative',
         overflow: 'hidden',
       }}>
@@ -183,62 +289,118 @@ export default function LoginPage() {
           backgroundSize: '40px 40px',
         }} />
 
-        <Box sx={{ position: 'relative', maxWidth: 800, mx: 'auto' }}>
-          <Box
-            component="img"
-            src="/hb-logo.png"
-            alt="HolidaiButler"
-            sx={{
-              width: { xs: 80, md: 100 },
-              height: 'auto',
-              mb: 2,
-              mx: 'auto',
-              display: 'block',
-              mixBlendMode: 'multiply',
-              borderRadius: '16px',
-            }}
-          />
+        <Box sx={{
+          position: 'relative', maxWidth: 1200, mx: 'auto',
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '1.1fr 1fr' },
+          gap: { xs: 5, md: 6 },
+          alignItems: 'center',
+        }}>
+          {/* Left: copy + CTA */}
+          <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+            <Box sx={{
+              display: 'inline-block',
+              bgcolor: 'rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(8px)',
+              px: 1.5, py: 0.5,
+              borderRadius: '24px',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase',
+              mb: 2.5,
+            }}>
+              {t('auth.studioTagline', 'Europees AI Content Platform')}
+            </Box>
 
-          <Typography sx={{
-            fontSize: { xs: '2rem', md: '2.75rem' },
-            fontWeight: 800,
-            lineHeight: 1.15,
-            mb: 2,
-            letterSpacing: '-0.02em',
-          }}>
-            AI{' '}
-            <Box component="span" sx={{ color: '#D4AF37' }}>Content Studio</Box>
-          </Typography>
-
-          <Typography sx={{
-            fontSize: { xs: '1rem', md: '1.2rem' },
-            maxWidth: 620,
-            mx: 'auto',
-            opacity: 0.9,
-            lineHeight: 1.7,
-            mb: 4,
-          }}>
-            {t('auth.studioHeroText', 'Uw AI-aangedreven content engine. Genereer, optimaliseer en publiceer professionele content in uw eigen merkstem \u2014 op alle platforms tegelijk.')}
-          </Typography>
-
-          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {['EU AI Act Compliant', 'GDPR-proof', 'Mistral AI', 'DeepL Pro', '100% EU Data'].map(badge => (
-              <Box key={badge} sx={{
-                bgcolor: 'rgba(255,255,255,0.15)',
-                px: 2, py: 0.75,
-                borderRadius: '24px',
-                fontSize: '0.8rem',
-                fontWeight: 500,
-                backdropFilter: 'blur(8px)',
-              }}>
-                {badge}
+            <Typography sx={{
+              fontSize: { xs: '2rem', sm: '2.5rem', md: '3.1rem' },
+              fontWeight: 800,
+              lineHeight: 1.1,
+              mb: 2.5,
+              letterSpacing: '-0.025em',
+            }}>
+              {t('auth.studioHeroTitle', 'De slimste AI Content Studio')}{' '}
+              <Box component="span" sx={{ color: '#D4AF37' }}>
+                {t('auth.studioHeroTitleAccent', 'van Europa')}
               </Box>
-            ))}
+            </Typography>
+
+            <Typography sx={{
+              fontSize: { xs: '1rem', md: '1.15rem' },
+              maxWidth: 560,
+              mx: { xs: 'auto', md: 0 },
+              opacity: 0.92,
+              lineHeight: 1.65,
+              mb: 3.5,
+            }}>
+              {t('auth.studioHeroSubtitle', 'Genereer, plan en publiceer content op 7 platformen vanuit één intelligent werkstation. Zelflerend, meertalig en 100% EU-compliant.')}
+            </Typography>
+
+            <Box sx={{
+              display: 'flex',
+              gap: 1.5,
+              justifyContent: { xs: 'center', md: 'flex-start' },
+              flexWrap: 'wrap',
+              mb: 3.5,
+            }}>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={() => setDemoDialogOpen(true)}
+                sx={{
+                  bgcolor: '#D4AF37', color: '#1C1917',
+                  '&:hover': { bgcolor: '#C19B2E' },
+                  fontWeight: 700, fontSize: '0.95rem',
+                  px: 3, py: 1.25, borderRadius: '10px',
+                  textTransform: 'none', boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
+                }}
+              >
+                {t('auth.studioCtaDemo', 'Gratis Demo Aanvragen')}
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={() => setLoginDialogOpen(true)}
+                sx={{
+                  color: '#fff', borderColor: 'rgba(255,255,255,0.5)',
+                  '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.08)' },
+                  fontWeight: 600, fontSize: '0.95rem',
+                  px: 3, py: 1.25, borderRadius: '10px',
+                  textTransform: 'none',
+                }}
+              >
+                {t('auth.login', 'Inloggen')}
+              </Button>
+            </Box>
+
+            <Box sx={{
+              display: 'flex', gap: 1, justifyContent: { xs: 'center', md: 'flex-start' },
+              flexWrap: 'wrap',
+            }}>
+              {['EU AI Act', 'GDPR-proof', 'Mistral AI', 'DeepL Pro'].map(badge => (
+                <Box key={badge} sx={{
+                  bgcolor: 'rgba(255,255,255,0.15)',
+                  px: 1.5, py: 0.5,
+                  borderRadius: '20px',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  backdropFilter: 'blur(8px)',
+                }}>
+                  {badge}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Right: CSS mockup */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <ConceptMockup />
           </Box>
         </Box>
       </Box>
 
-      {/* ── MAIN: LOGIN + USPs ── */}
+      {/* ── MAIN: USPs ── */}
       <Box sx={{
         maxWidth: 1100,
         mx: 'auto',
@@ -247,56 +409,7 @@ export default function LoginPage() {
         position: 'relative',
         zIndex: 1,
       }}>
-        <Box sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
-          gap: 4,
-          alignItems: 'flex-start',
-        }}>
-          {/* Login Card */}
-          <Paper elevation={12} sx={{
-            p: 4,
-            borderRadius: 3,
-            width: { xs: '100%', md: 380 },
-            flexShrink: 0,
-          }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: '#1C1917' }}>
-              {t('auth.studioWelcome', 'Welkom bij uw Content Studio')}
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#6B7280', mb: 3 }}>
-              {t('auth.studioLoginSubtitle', 'Log in met uw account om te starten')}
-            </Typography>
-
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-            <form onSubmit={handleSubmit}>
-              <TextField fullWidth label={t('auth.email')} type="email" autoComplete="email"
-                value={email} onChange={(e) => setEmail(e.target.value)} sx={{ mb: 2 }} required size="small" />
-              <TextField fullWidth label={t('auth.password')}
-                type={showPassword ? 'text' : 'password'} autoComplete="current-password"
-                value={password} onChange={(e) => setPassword(e.target.value)} sx={{ mb: 3 }} required size="small"
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
-                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-              />
-              <Button type="submit" fullWidth variant="contained" size="large"
-                disabled={loading || !email || !password}
-                sx={{
-                  py: 1.25, fontSize: '0.95rem', fontWeight: 600,
-                  bgcolor: '#5E8B7E', borderRadius: '8px',
-                  '&:hover': { bgcolor: '#4A7066' },
-                }}>
-                {loading ? <CircularProgress size={22} color="inherit" /> : t('auth.login')}
-              </Button>
-            </form>
-          </Paper>
-
+        <Box>
           {/* USP Section */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{
@@ -540,6 +653,10 @@ export default function LoginPage() {
           AI-Powered Tourism & Content Platform
         </Typography>
       </Box>
+
+      {/* ── Dialogs ── */}
+      <LoginDialog open={loginDialogOpen} onClose={() => setLoginDialogOpen(false)} />
+      <DemoRequestDialog open={demoDialogOpen} onClose={() => setDemoDialogOpen(false)} />
     </Box>
   );
 }
