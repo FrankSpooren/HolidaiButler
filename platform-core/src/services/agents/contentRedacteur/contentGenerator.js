@@ -1065,6 +1065,105 @@ export async function improveExistingContent(contentItem) {
 }
 
 /**
+ * Generate an ALTERNATIVE version of an existing content item ("A/B variant" / Jasper Remix style).
+ * Reuses the same topic/keywords but instructs the LLM to write from a completely different angle,
+ * with a higher temperature for more creative divergence.
+ *
+ * Does NOT write to the DB — returns both original and alternative for split-view UI.
+ *
+ * @param {Object} contentItem - DB content item row
+ * @returns {Object} { original: { title, body_en }, alternative: { title, body_en, meta_description }, ai_model }
+ */
+export async function generateAlternative(contentItem) {
+  if (!embeddingService.isConfigured) {
+    embeddingService.initialize();
+  }
+
+  const keywords = typeof contentItem.keyword_cluster === 'string'
+    ? JSON.parse(contentItem.keyword_cluster)
+    : (contentItem.keyword_cluster || []);
+  const seoData = typeof contentItem.seo_data === 'string'
+    ? JSON.parse(contentItem.seo_data)
+    : (contentItem.seo_data || {});
+  const contentType = contentItem.content_type || 'blog';
+  const destinationId = contentItem.destination_id;
+  const targetPlatform = contentItem.target_platform || 'website';
+
+  const PLATFORM_CHAR_LIMITS = {
+    facebook: 500, instagram: 2200, linkedin: 3000, x: 280,
+    tiktok: 150, youtube: 5000, pinterest: 500,
+  };
+  const platformMaxChars = PLATFORM_CHAR_LIMITS[targetPlatform] || null;
+
+  const toneInstruction = await buildToneInstruction(destinationId);
+
+  const platformLimitRule = platformMaxChars
+    ? `\n- ABSOLUTE CHARACTER LIMIT: ${platformMaxChars} characters maximum.`
+    : '';
+
+  const blogHtmlRule = contentType === 'blog'
+    ? `\n- BLOG OUTPUT FORMAT: Return as HTML using <h2>, <h3>, <p>, <a href>, <strong>, <em> tags.`
+    : '';
+
+  const systemPrompt = `You are a creative content remixer. Your job is to write a COMPLETELY DIFFERENT version of an existing piece of content — same topic, same target keywords, but a fundamentally different angle, narrative structure, opening hook and tone within the brand voice.
+
+${toneInstruction}
+
+CRITICAL RULES:
+- The result must NOT paraphrase the original. Pick a new angle: contrarian, story-led, list-format, problem/solution, sensory-immersive, behind-the-scenes — anything but the original structure.
+- Stay on the same topic and use the same target keywords naturally.
+- NEVER use markdown: no **, no ##, no ---, no \`, no []()
+- NEVER use em-dashes (—) or en-dashes (–) — use commas or regular hyphens
+- NEVER include labels like TITLE:, META:, INTRODUCTION:
+- Write a NEW title that is distinct from the original.
+- Return clean, flowing prose (or HTML for blogs) only — no disclaimers.${platformLimitRule}${blogHtmlRule}`;
+
+  const userPrompt = `ORIGINAL TITLE: ${contentItem.title}
+
+ORIGINAL CONTENT:
+${contentItem.body_en}
+
+TARGET KEYWORDS: ${keywords.map(k => `"${k}"`).join(', ') || '(none specified)'}
+
+CONTENT TYPE: ${contentType}
+PLATFORM: ${targetPlatform}
+
+Write a complete alternative version with a fundamentally different angle. Same topic, same keywords, new narrative.`;
+
+  const modelName = embeddingService.chatModel || 'mistral-small-latest';
+
+  try {
+    const generated = await embeddingService.generateChatCompletion(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      { temperature: 0.9, maxTokens: contentType === 'blog' ? 3000 : 1500 }
+    );
+
+    const parsed = parseGeneratedContent(generated, contentItem.title);
+    const altBody = sanitizeContent(parsed.body, contentType, targetPlatform);
+
+    return {
+      original: {
+        title: contentItem.title,
+        body_en: contentItem.body_en,
+        meta_description: seoData.meta_description || '',
+      },
+      alternative: {
+        title: parsed.title,
+        body_en: altBody,
+        meta_description: parsed.metaDescription || seoData.meta_description || '',
+      },
+      ai_model: modelName,
+    };
+  } catch (err) {
+    logger.error('[ContentGenerator] generateAlternative failed:', err.message);
+    throw err;
+  }
+}
+
+/**
  * Generate content directly from a POI — KILLER FEATURE
  * Uses actual POI data (name, rating, category, opening hours, highlights) as context.
  *
@@ -1433,4 +1532,4 @@ Write a SHORTER, punchier ${platform} post. ${platformRules.maxChars} chars MAX.
   return results;
 }
 
-export default { generateContent, generateSuggestions, improveExistingContent, generateFromPOI, repurposeContent };
+export default { generateContent, generateSuggestions, improveExistingContent, generateAlternative, generateFromPOI, repurposeContent };

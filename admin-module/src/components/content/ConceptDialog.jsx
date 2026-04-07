@@ -16,6 +16,8 @@ import PublishIcon from '@mui/icons-material/Publish';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import EditIcon from '@mui/icons-material/Edit';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import ShuffleIcon from '@mui/icons-material/Shuffle';
+import AnimatedScoreChip from '../common/AnimatedScoreChip.jsx';
 import TranslateIcon from '@mui/icons-material/Translate';
 import PeopleIcon from '@mui/icons-material/People';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -216,6 +218,11 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   // AI improve state
   const [improving, setImproving] = useState(false);
   const [improveResult, setImproveResult] = useState(null);
+
+  // A/B Variant ("Alternatief") state — Opdracht 3
+  const [generatingAlt, setGeneratingAlt] = useState(false);
+  const [altResult, setAltResult] = useState(null); // { original, alternative, ai_model }
+  const [altError, setAltError] = useState(null);
 
   // Emoji picker
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -470,6 +477,30 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     } finally {
       setImproving(false);
     }
+  };
+
+  const handleGenerateAlternative = async () => {
+    if (!activeItem) return;
+    setGeneratingAlt(true);
+    setAltError(null);
+    setAltResult(null);
+    try {
+      const r = await contentService.generateAlternative(activeItem.id);
+      const data = r.data || r;
+      setAltResult(data);
+    } catch (err) {
+      setAltError(err.response?.data?.error?.message || err.message || 'Alternatief genereren mislukt');
+    } finally {
+      setGeneratingAlt(false);
+    }
+  };
+
+  const handleUseAlternative = () => {
+    if (!altResult?.alternative) return;
+    setEditBody(altResult.alternative.body_en || '');
+    setDirty(true);
+    setIsEditing(true);
+    setAltResult(null);
   };
 
   const handleImageUpdate = async () => {
@@ -786,7 +817,18 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
           {/* ═══ PLATFORM TABS ═══ */}
           {items.length > 0 && (
             <Tabs value={activeTab} onChange={(_, v) => { if (v < items.length) setActiveTab(v); else setAddPlatformOpen(true); }} variant="scrollable" scrollButtons="auto"
-              sx={{ px: 3, minHeight: 44, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minHeight: 44, textTransform: 'none' } }}>
+              sx={{
+                px: 3, minHeight: 44, borderBottom: 1, borderColor: 'divider',
+                // Opdracht 5 micro-interactie #1: smooth color transition bij tab-wissel
+                '& .MuiTab-root': {
+                  minHeight: 44, textTransform: 'none',
+                  transition: 'color 200ms ease, background-color 200ms ease, border-bottom-color 200ms ease',
+                },
+                '& .MuiTabs-indicator': { transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' },
+                '@media (prefers-reduced-motion: reduce)': {
+                  '& .MuiTab-root, & .MuiTabs-indicator': { transition: 'none' },
+                },
+              }}>
               {items.map((item, idx) => {
                 const cfg = PLATFORM_CONFIG[item.target_platform] || PLATFORM_CONFIG.website;
                 return (
@@ -835,7 +877,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     {(() => {
                       const score = seoData?.overallScore ?? activeItem.seo_score;
                       return score != null ? (
-                        <Chip label={`SEO ${score}/100`} size="small"
+                        <AnimatedScoreChip score={score} label={`SEO ${score}/100`} size="small"
                           color={score >= 80 ? 'success' : score >= 60 ? 'warning' : 'error'} />
                       ) : null;
                     })()}
@@ -844,8 +886,13 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     <Button variant="contained" size="small" startIcon={saving ? <CircularProgress size={14} /> : <SaveIcon />}
                       onClick={handleSaveBody} disabled={saving || !dirty}>Opslaan</Button>
                     <Tooltip title="AI Herschrijven">
-                      <IconButton size="small" onClick={handleImprove} disabled={improving}>
+                      <IconButton size="small" onClick={handleImprove} disabled={improving || generatingAlt}>
                         {improving ? <CircularProgress size={16} /> : <AutoAwesomeIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Alternatief genereren (andere invalshoek)">
+                      <IconButton size="small" onClick={handleGenerateAlternative} disabled={improving || generatingAlt}>
+                        {generatingAlt ? <CircularProgress size={16} /> : <ShuffleIcon fontSize="small" />}
                       </IconButton>
                     </Tooltip>
                   </Box>
@@ -972,7 +1019,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       // Single source of truth: live seoData > stored seo_score
                       const score = seoData?.overallScore ?? activeItem.seo_score;
                       return score != null ? (
-                        <Chip label={`SEO ${score}/100`} size="small"
+                        <AnimatedScoreChip score={score} label={`SEO ${score}/100`} size="small"
                           color={score >= 80 ? 'success' : score >= 60 ? 'warning' : 'error'} />
                       ) : null;
                     })()}
@@ -989,8 +1036,13 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="AI Herschrijven">
-                      <IconButton size="small" onClick={handleImprove} disabled={improving}>
+                      <IconButton size="small" onClick={handleImprove} disabled={improving || generatingAlt}>
                         {improving ? <CircularProgress size={16} /> : <AutoAwesomeIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Alternatief genereren (andere invalshoek)">
+                      <IconButton size="small" onClick={handleGenerateAlternative} disabled={improving || generatingAlt}>
+                        {generatingAlt ? <CircularProgress size={16} /> : <ShuffleIcon fontSize="small" />}
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Emoji">
@@ -1488,6 +1540,63 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
 
       {/* Feedback Snackbar */}
       <Snackbar open={!!snackMsg} autoHideDuration={6000} onClose={() => setSnackMsg(null)} message={typeof snackMsg === 'string' ? snackMsg : snackMsg?.text} />
+
+      {/* A/B Variant Split-View Dialog — Opdracht 3 */}
+      <Dialog open={!!altResult || !!altError} onClose={() => { setAltResult(null); setAltError(null); }} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ShuffleIcon color="primary" />
+          Alternatief vergelijken
+          {altResult?.ai_model && (
+            <Chip label={altResult.ai_model} size="small" sx={{ ml: 1, fontSize: 10 }} />
+          )}
+        </DialogTitle>
+        <DialogContent dividers>
+          {altError && <Alert severity="error" sx={{ mb: 2 }}>{altError}</Alert>}
+          {altResult && (
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                  Origineel
+                </Typography>
+                <Typography variant="h6" sx={{ mt: 0.5, mb: 1, fontSize: '1rem', fontWeight: 600 }}>
+                  {altResult.original?.title}
+                </Typography>
+                <Box
+                  sx={{
+                    fontSize: '0.85rem', lineHeight: 1.6, color: 'text.primary',
+                    maxHeight: 480, overflow: 'auto',
+                    '& p': { mb: 1 },
+                  }}
+                  dangerouslySetInnerHTML={{ __html: altResult.original?.body_en || '' }}
+                />
+              </Paper>
+              <Paper variant="outlined" sx={{ p: 2, bgcolor: 'rgba(94,139,126,0.06)', borderColor: 'primary.main' }}>
+                <Typography variant="overline" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                  Alternatief (andere invalshoek)
+                </Typography>
+                <Typography variant="h6" sx={{ mt: 0.5, mb: 1, fontSize: '1rem', fontWeight: 600 }}>
+                  {altResult.alternative?.title}
+                </Typography>
+                <Box
+                  sx={{
+                    fontSize: '0.85rem', lineHeight: 1.6, color: 'text.primary',
+                    maxHeight: 480, overflow: 'auto',
+                    '& p': { mb: 1 },
+                  }}
+                  dangerouslySetInnerHTML={{ __html: altResult.alternative?.body_en || '' }}
+                />
+              </Paper>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setAltResult(null); setAltError(null); }}>Annuleren</Button>
+          <Button onClick={() => { setAltResult(null); }} disabled={!altResult}>Gebruik origineel</Button>
+          <Button onClick={handleUseAlternative} variant="contained" disabled={!altResult?.alternative}>
+            Gebruik alternatief
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }

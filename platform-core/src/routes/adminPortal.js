@@ -12532,6 +12532,13 @@ router.post('/content/items/:id/improve', adminAuth('editor'), writeAccess(['pla
     if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
     if (typeof item.seo_data === 'string') item.seo_data = JSON.parse(item.seo_data);
 
+    // A/B variant mode: generate an alternative version (different angle, no DB write)
+    if (req.body?.mode === 'alternative') {
+      const { generateAlternative } = await import('../services/agents/contentRedacteur/contentGenerator.js');
+      const altResult = await generateAlternative(item);
+      return res.json({ success: true, data: { mode: 'alternative', ...altResult } });
+    }
+
     const redacteur = (await import('../services/agents/contentRedacteur/index.js')).default;
     const result = await redacteur.improveContentItem(item);
 
@@ -13675,7 +13682,7 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
     await mysqlSequelize.query(
-      `UPDATE content_items SET scheduled_at = :scheduledAt, updated_at = NOW() WHERE id = :id AND approval_status = 'scheduled'`,
+      `UPDATE content_items SET scheduled_at = :scheduledAt, updated_at = NOW() WHERE id = :id AND approval_status IN ('draft','scheduled')`,
       { replacements: { scheduledAt: scheduled_at, id: Number(id) } }
     );
     res.json({ success: true, data: { id: Number(id), scheduled_at } });

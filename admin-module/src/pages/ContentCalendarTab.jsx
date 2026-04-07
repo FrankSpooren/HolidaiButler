@@ -1,5 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import {
+  DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, DragOverlay,
+} from '@dnd-kit/core';
+import {
   Box, Typography, Paper, Grid, Chip, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, MenuItem, Select, FormControl, InputLabel, IconButton,
   Tooltip, Card, CardContent, CircularProgress, Alert, Badge, Snackbar,
@@ -61,6 +64,8 @@ export default function ContentCalendarTab({ destinationId }) {
   const [autoFilling, setAutoFilling] = useState(false);
   const [autoScheduling, setAutoScheduling] = useState(false);
   const [autoFillSnack, setAutoFillSnack] = useState(null);
+  const [draggingItem, setDraggingItem] = useState(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const { data: calendarData, isLoading, refetch } = useContentCalendar(destinationId, { month: month + 1, year });
   const { data: accountsData } = useSocialAccounts(destinationId);
@@ -140,6 +145,42 @@ export default function ContentCalendarTab({ destinationId }) {
   }, [month, year]);
 
   const monthName = new Date(year, month).toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
+
+  const handleDragStart = (event) => {
+    const id = Number(event.active.id);
+    const it = items.find(i => i.id === id);
+    setDraggingItem(it || null);
+  };
+
+  const handleDragEnd = async (event) => {
+    setDraggingItem(null);
+    const { active, over } = event;
+    if (!over) return;
+    const itemId = Number(active.id);
+    const targetDay = Number(String(over.id).replace('day-', ''));
+    if (!targetDay) return;
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+    if (!['draft', 'scheduled'].includes(item.approval_status)) {
+      setAutoFillSnack('Alleen draft en geplande items kunnen versleept worden');
+      return;
+    }
+    // Behoud uur/min van bestaande planning of default 09:00
+    const oldDate = item.scheduled_at ? new Date(item.scheduled_at) : new Date(year, month, targetDay, 9, 0, 0);
+    const newDate = new Date(year, month, targetDay, oldDate.getHours(), oldDate.getMinutes(), 0);
+    if (oldDate.getFullYear() === newDate.getFullYear() &&
+        oldDate.getMonth() === newDate.getMonth() &&
+        oldDate.getDate() === newDate.getDate()) {
+      return; // zelfde dag, geen wijziging
+    }
+    try {
+      await rescheduleMut.mutateAsync({ id: itemId, data: { scheduled_at: newDate.toISOString() } });
+      setAutoFillSnack(`Verplaatst naar ${newDate.toLocaleDateString('nl-NL')}`);
+      refetch();
+    } catch (err) {
+      setAutoFillSnack(err.response?.data?.error?.message || 'Verplaatsen mislukt');
+    }
+  };
 
   const handleSchedule = async (itemId, scheduledAt, socialAccountId) => {
     await scheduleMut.mutateAsync({ id: itemId, data: { scheduled_at: scheduledAt, social_account_id: socialAccountId } });
@@ -266,6 +307,7 @@ export default function ContentCalendarTab({ destinationId }) {
           </Grid>
 
           {/* Calendar grid */}
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <Grid container spacing={0.5}>
             {cells.map((day, idx) => {
               // Opdracht 8-K2: gap-detection
@@ -279,25 +321,15 @@ export default function ContentCalendarTab({ destinationId }) {
               })();
               return (
               <Grid item xs={12 / 7} key={idx}>
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    minHeight: 90,
-                    p: 0.5,
-                    bgcolor: day === null ? 'action.disabledBackground' :
-                      isToday(day) ? '#E3F2FD' :
-                      isInSeason(day) ? '#F1F8E9' : 'background.paper',
-                    border: isToday(day) ? '2px solid' : isGap ? '2px dashed' : '1px solid',
-                    borderColor: isToday(day) ? 'primary.main' : isGap ? '#FF9800' : 'divider',
-                    cursor: day ? 'pointer' : 'default',
-                    position: 'relative',
-                    '&:hover': day ? { bgcolor: 'action.hover' } : {},
-                  }}
+                <DroppableDayCell
+                  day={day}
+                  isToday={day && isToday(day)}
+                  isInSeason={day && isInSeason(day)}
+                  isGap={isGap}
                   onClick={() => day && setSelectedDay(day)}
                 >
                   {day && (
                     <>
-                      {/* Today badge */}
                       {isToday(day) && (
                         <Box sx={{ position: 'absolute', top: 2, right: 4 }}>
                           <Chip label="Vandaag" size="small" color="primary" sx={{ height: 16, fontSize: 9, fontWeight: 700 }} />
@@ -307,7 +339,6 @@ export default function ContentCalendarTab({ destinationId }) {
                         variant="caption"
                         sx={{
                           fontWeight: isToday(day) ? 700 : 400,
-                          color: isToday(day) ? '#1976d2' : 'text.secondary',
                           bgcolor: isToday(day) ? '#1976d2' : 'transparent',
                           color: isToday(day) ? '#fff' : 'text.secondary',
                           borderRadius: isToday(day) ? '50%' : 0,
@@ -322,50 +353,48 @@ export default function ContentCalendarTab({ destinationId }) {
                         {day}
                       </Typography>
                       <Box sx={{ mt: 0.3 }}>
-                        {(itemsByDay[day] || []).slice(0, 3).map(item => {
-                          const PlatformIcon = PLATFORM_ICONS[item.target_platform] || LanguageIcon;
-                          const statusColor = STATUS_COLORS[item.approval_status] || '#ccc';
-                          // Opdracht 8-K1: pillar kleur als primaire (borderLeft), status als borderRight
-                          const pillarColor = item.pillar_color || statusColor;
-                          return (
-                            <Tooltip key={item.id} title={`${item.title || item.content_type}${item.pillar_name ? ' · ' + item.pillar_name : ''} · ${item.approval_status}`}>
-                              <Box
-                                sx={{
-                                  display: 'flex', alignItems: 'center', gap: 0.3, mb: 0.3,
-                                  border: `1px solid ${pillarColor}40`,
-                                  borderLeft: `4px solid ${pillarColor}`,
-                                  borderRight: `3px solid ${statusColor}`,
-                                  bgcolor: `${pillarColor}15`,
-                                  pl: 0.5, borderRadius: 0.5,
-                                  fontSize: 10, lineHeight: 1.2, py: 0.2,
-                                }}
-                              >
-                                <PlatformIcon sx={{ fontSize: 12, color: pillarColor }} />
-                                <Typography variant="caption" noWrap sx={{ fontSize: 10, flex: 1, fontWeight: 500 }}>
-                                  {item.title || item.content_type}
-                                </Typography>
-                              </Box>
-                            </Tooltip>
-                          );
-                        })}
+                        {(itemsByDay[day] || []).slice(0, 3).map(item => (
+                          <DraggableCalendarItem key={item.id} item={item} />
+                        ))}
                         {(itemsByDay[day] || []).length > 3 && (
                           <Typography variant="caption" color="text.secondary" sx={{ fontSize: 9 }}>
                             +{(itemsByDay[day] || []).length - 3} {t('contentStudio.calendar.more', 'meer')}
                           </Typography>
                         )}
                         {isGap && (
-                          <Typography variant="caption" sx={{ fontSize: 9, color: '#FF9800', fontStyle: 'italic', fontWeight: 600 }}>
+                          <Typography variant="caption" sx={{
+                            fontSize: 9, color: '#FF9800', fontStyle: 'italic', fontWeight: 600, display: 'block',
+                            // Opdracht 5 micro-interactie #4: pulse animatie op gat-label
+                            animation: 'hbGapPulse 2s ease-in-out infinite',
+                            '@keyframes hbGapPulse': {
+                              '0%, 100%': { opacity: 1 },
+                              '50%': { opacity: 0.5 },
+                            },
+                            '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+                          }}>
                             ⚠ {t('contentStudio.calendar.gap', 'Gat')}
                           </Typography>
                         )}
                       </Box>
                     </>
                   )}
-                </Paper>
+                </DroppableDayCell>
               </Grid>
               );
             })}
           </Grid>
+          <DragOverlay>
+            {draggingItem ? (
+              <Box sx={{
+                px: 1, py: 0.5, bgcolor: 'background.paper', borderRadius: 1,
+                boxShadow: 4, border: '2px solid', borderColor: 'primary.main',
+                fontSize: 11, fontWeight: 600, maxWidth: 200,
+              }}>
+                {draggingItem.title || draggingItem.content_type}
+              </Box>
+            ) : null}
+          </DragOverlay>
+          </DndContext>
 
           {/* Legend */}
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1.5, mb: 1 }}>
@@ -502,6 +531,71 @@ export default function ContentCalendarTab({ destinationId }) {
         isPending={scheduleMut.isPending}
       />
     </Box>
+  );
+}
+
+function DroppableDayCell({ day, isToday, isInSeason, isGap, onClick, children }) {
+  const { setNodeRef, isOver } = useDroppable({ id: day ? `day-${day}` : `empty-${Math.random()}`, disabled: !day });
+  return (
+    <Paper
+      ref={setNodeRef}
+      variant="outlined"
+      onClick={onClick}
+      sx={{
+        minHeight: 90, p: 0.5,
+        bgcolor: day === null ? 'action.disabledBackground' :
+          isOver ? '#FFF3E0' :
+          isToday ? '#E3F2FD' :
+          isInSeason ? '#F1F8E9' : 'background.paper',
+        border: isOver ? '2px solid' : isToday ? '2px solid' : isGap ? '2px dashed' : '1px solid',
+        borderColor: isOver ? '#FF9800' : isToday ? 'primary.main' : isGap ? '#FF9800' : 'divider',
+        cursor: day ? 'pointer' : 'default',
+        position: 'relative',
+        transition: 'background-color 150ms, border-color 150ms',
+        '&:hover': day ? { bgcolor: isOver ? '#FFF3E0' : 'action.hover' } : {},
+      }}
+    >
+      {children}
+    </Paper>
+  );
+}
+
+function DraggableCalendarItem({ item }) {
+  const isDraggable = ['draft', 'scheduled'].includes(item.approval_status);
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: String(item.id),
+    disabled: !isDraggable,
+  });
+  const PlatformIcon = PLATFORM_ICONS[item.target_platform] || LanguageIcon;
+  const statusColor = STATUS_COLORS[item.approval_status] || '#ccc';
+  const pillarColor = item.pillar_color || statusColor;
+  return (
+    <Tooltip title={`${item.title || item.content_type}${item.pillar_name ? ' · ' + item.pillar_name : ''} · ${item.approval_status}${isDraggable ? ' · sleep om te verplaatsen' : ''}`}>
+      <Box
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        onClick={(e) => e.stopPropagation()}
+        sx={{
+          display: 'flex', alignItems: 'center', gap: 0.3, mb: 0.3,
+          border: `1px solid ${pillarColor}40`,
+          borderLeft: `4px solid ${pillarColor}`,
+          borderRight: `3px solid ${statusColor}`,
+          bgcolor: `${pillarColor}15`,
+          pl: 0.5, borderRadius: 0.5,
+          fontSize: 10, lineHeight: 1.2, py: 0.2,
+          cursor: isDraggable ? 'grab' : 'default',
+          opacity: isDragging ? 0.4 : 1,
+          touchAction: isDraggable ? 'none' : undefined,
+          '&:active': isDraggable ? { cursor: 'grabbing' } : {},
+        }}
+      >
+        <PlatformIcon sx={{ fontSize: 12, color: pillarColor }} />
+        <Typography variant="caption" noWrap sx={{ fontSize: 10, flex: 1, fontWeight: 500 }}>
+          {item.title || item.content_type}
+        </Typography>
+      </Box>
+    </Tooltip>
   );
 }
 
