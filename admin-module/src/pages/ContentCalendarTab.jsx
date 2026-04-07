@@ -161,8 +161,8 @@ export default function ContentCalendarTab({ destinationId }) {
     if (!targetDay) return;
     const item = items.find(i => i.id === itemId);
     if (!item) return;
-    if (!['draft', 'scheduled'].includes(item.approval_status)) {
-      setAutoFillSnack('Alleen draft en geplande items kunnen versleept worden');
+    if (['published', 'rejected', 'failed'].includes(item.approval_status)) {
+      setAutoFillSnack(`Items met status "${item.approval_status}" kunnen niet verplaatst worden`);
       return;
     }
     // Behoud uur/min van bestaande planning of default 09:00
@@ -561,7 +561,7 @@ function DroppableDayCell({ day, isToday, isInSeason, isGap, onClick, children }
 }
 
 function DraggableCalendarItem({ item }) {
-  const isDraggable = ['draft', 'scheduled'].includes(item.approval_status);
+  const isDraggable = !['published', 'rejected', 'failed'].includes(item.approval_status);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: String(item.id),
     disabled: !isDraggable,
