@@ -241,6 +241,10 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   const [blogMetaDesc, setBlogMetaDesc] = useState('');
   const [blogSlug, setBlogSlug] = useState('');
 
+  // Add Platform dialog (Opdracht 5)
+  const [addPlatformOpen, setAddPlatformOpen] = useState(false);
+  const [repurposing, setRepurposing] = useState(null); // platform key currently being generated
+
   // ─── Load Concept ───────────────────────────────────────
   const loadConcept = useCallback(async () => {
     if (!conceptId) return;
@@ -300,6 +304,36 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   const platformConfig = PLATFORM_CONFIG[activePlatform] || PLATFORM_CONFIG.website;
   const selectedPersonaObj = personas.find(p => p.id === selectedPersona) || null;
   const isBlog = concept?.content_type === 'blog';
+
+  // Opdracht 5: Add Platform handler — repurposes activeItem into another platform
+  const handleAddPlatform = async (platformKey) => {
+    if (!activeItem) {
+      setSnackMsg({ severity: 'warning', text: 'Geen bron-item geselecteerd' });
+      return;
+    }
+    setRepurposing(platformKey);
+    try {
+      await contentService.repurposeItem(activeItem.id, [platformKey]);
+      setSnackMsg({ severity: 'success', text: `${PLATFORM_CONFIG[platformKey]?.label || platformKey} versie gegenereerd` });
+      setAddPlatformOpen(false);
+      await loadConcept();
+      // Switch to newly added tab (last one)
+      setTimeout(() => setActiveTab(prev => prev), 50);
+    } catch (e) {
+      setSnackMsg({ severity: 'error', text: `Repurpose mislukt: ${e?.response?.data?.error?.message || e.message}` });
+    } finally {
+      setRepurposing(null);
+    }
+  };
+
+  // Auto-switch to last tab after items array grows from repurpose
+  const prevItemsLengthRef = useRef(0);
+  useEffect(() => {
+    if (items.length > prevItemsLengthRef.current && prevItemsLengthRef.current > 0) {
+      setActiveTab(items.length - 1);
+    }
+    prevItemsLengthRef.current = items.length;
+  }, [items.length]);
 
   // Sync body editor when switching tabs or languages
   useEffect(() => {
@@ -712,7 +746,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
 
           {/* ═══ PLATFORM TABS (hidden for blogs) ═══ */}
           {items.length > 0 && !isBlog && (
-            <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} variant="scrollable" scrollButtons="auto"
+            <Tabs value={activeTab} onChange={(_, v) => { if (v < items.length) setActiveTab(v); else setAddPlatformOpen(true); }} variant="scrollable" scrollButtons="auto"
               sx={{ px: 3, minHeight: 44, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minHeight: 44, textTransform: 'none' } }}>
               {items.map((item, idx) => {
                 const cfg = PLATFORM_CONFIG[item.target_platform] || PLATFORM_CONFIG.website;
@@ -728,8 +762,10 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   } sx={{ borderBottom: activeTab === idx ? `3px solid ${cfg.color}` : 'none' }} />
                 );
               })}
-              <Tab label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}><AddIcon sx={{ fontSize: 16 }} /><span>Platform</span></Box>}
-                disabled sx={{ opacity: 0.5, minWidth: 'auto' }} />
+              <Tab
+                label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#5E8B7E' }}><AddIcon sx={{ fontSize: 16 }} /><span>Platform</span></Box>}
+                sx={{ minWidth: 'auto', color: '#5E8B7E' }}
+              />
             </Tabs>
           )}
 
@@ -1372,8 +1408,40 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
         </>
       ) : null}
 
+      {/* Opdracht 5: Add Platform Dialog */}
+      <Dialog open={addPlatformOpen} onClose={() => !repurposing && setAddPlatformOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Platform toevoegen</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Kies een platform. AI genereert een nieuwe versie op basis van het huidige actieve item
+            ({activeItem ? (PLATFORM_CONFIG[activeItem.target_platform]?.label || activeItem.target_platform) : '—'}).
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
+            {Object.entries(PLATFORM_CONFIG).map(([key, cfg]) => {
+              const exists = items.some(it => it.target_platform === key);
+              const isLoading = repurposing === key;
+              return (
+                <Button
+                  key={key}
+                  variant="outlined"
+                  disabled={exists || !!repurposing || !activeItem}
+                  onClick={() => handleAddPlatform(key)}
+                  startIcon={isLoading ? <CircularProgress size={16} /> : <cfg.Icon sx={{ color: cfg.color }} />}
+                  sx={{ justifyContent: 'flex-start', textTransform: 'none', borderColor: exists ? 'divider' : cfg.color, color: exists ? 'text.disabled' : 'text.primary' }}
+                >
+                  {cfg.label}{exists ? ' ✓' : ''}
+                </Button>
+              );
+            })}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddPlatformOpen(false)} disabled={!!repurposing}>Sluiten</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Feedback Snackbar */}
-      <Snackbar open={!!snackMsg} autoHideDuration={6000} onClose={() => setSnackMsg(null)} message={snackMsg} />
+      <Snackbar open={!!snackMsg} autoHideDuration={6000} onClose={() => setSnackMsg(null)} message={typeof snackMsg === 'string' ? snackMsg : snackMsg?.text} />
     </Dialog>
   );
 }
