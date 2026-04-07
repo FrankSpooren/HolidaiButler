@@ -1542,7 +1542,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       <Snackbar open={!!snackMsg} autoHideDuration={6000} onClose={() => setSnackMsg(null)} message={typeof snackMsg === 'string' ? snackMsg : snackMsg?.text} />
 
       {/* A/B Variant Split-View Dialog — Opdracht 3 */}
-      <Dialog open={!!altResult || !!altError} onClose={() => { setAltResult(null); setAltError(null); }} maxWidth="lg" fullWidth>
+      <Dialog open={!!altResult || !!altError} onClose={() => { setAltResult(null); setAltError(null); }} maxWidth={false} fullWidth PaperProps={{ sx: { width: '95vw', maxWidth: 1400, height: '90vh' } }}>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <ShuffleIcon color="primary" />
           Alternatief vergelijken
@@ -1564,7 +1564,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                 <Box
                   sx={{
                     fontSize: '0.85rem', lineHeight: 1.6, color: 'text.primary',
-                    maxHeight: 480, overflow: 'auto',
+                    maxHeight: '65vh', overflow: 'auto',
                     '& p': { mb: 1 },
                   }}
                   dangerouslySetInnerHTML={{ __html: altResult.original?.body_en || '' }}
@@ -1580,7 +1580,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                 <Box
                   sx={{
                     fontSize: '0.85rem', lineHeight: 1.6, color: 'text.primary',
-                    maxHeight: 480, overflow: 'auto',
+                    maxHeight: '65vh', overflow: 'auto',
                     '& p': { mb: 1 },
                   }}
                   dangerouslySetInnerHTML={{ __html: altResult.alternative?.body_en || '' }}
