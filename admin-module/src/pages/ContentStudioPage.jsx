@@ -2919,17 +2919,6 @@ export default function ContentStudioPage() {
                 {conceptTotal} {t('contentStudio.conceptsFound', 'content concepten')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                {selectedIds.length > 0 && (
-                  <>
-                    <Chip label={`${selectedIds.length} ${t('contentStudio.selected', 'geselecteerd')}`} size="small" color="primary" />
-                    <Button size="small" variant="contained" color="success" onClick={() => handleBulkAction('approve')} disabled={bulkLoading}>{t('contentStudio.approve', 'Approve')}</Button>
-                    <Button size="small" variant="contained" color="primary" startIcon={<PublishIcon />} onClick={() => handleBulkPublish()} disabled={bulkLoading}>{t('contentStudio.bulkPublish', 'Publiceer')}</Button>
-                    <Button size="small" variant="outlined" startIcon={<ScheduleIcon />} onClick={() => handleBulkScheduleOpen()} disabled={bulkLoading}>{t('contentStudio.bulkSchedule', 'Plan in')}</Button>
-                    <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleBulkExport()} disabled={bulkLoading}>{t('contentStudio.bulkExport', 'Exporteer')}</Button>
-                    <Button size="small" variant="outlined" color="error" onClick={() => handleBulkAction('reject')} disabled={bulkLoading}>{t('contentStudio.reject', 'Reject')}</Button>
-                    <Button size="small" variant="outlined" color="error" onClick={() => handleBulkAction('delete')} disabled={bulkLoading}>{t('contentStudio.actions.delete', 'Delete')}</Button>
-                  </>
-                )}
                 <Tooltip title={t('contentStudio.tooltips.refresh', 'Vernieuwen')}>
                   <IconButton size="small" onClick={loadItems}><RefreshIcon fontSize="small" /></IconButton>
                 </Tooltip>
@@ -2954,6 +2943,26 @@ export default function ContentStudioPage() {
                 </Button>
               </Box>
             </Box>
+            {/* Opdracht 6: Bulk toolbar — verschijnt prominent zodra rijen geselecteerd zijn */}
+            {selectedIds.length > 0 && (
+              <Box sx={{
+                position: 'sticky', top: 0, zIndex: 5,
+                display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center',
+                px: 2, py: 1.5, mb: 1,
+                bgcolor: 'primary.50', borderTop: 2, borderBottom: 2, borderColor: 'primary.main',
+              }}>
+                <Chip label={`${selectedIds.length} ${t('contentStudio.selected', 'geselecteerd')}`} color="primary" sx={{ fontWeight: 600 }} />
+                <Box sx={{ flex: 1 }} />
+                <Button size="small" variant="contained" color="success" onClick={() => handleBulkAction('approve')} disabled={bulkLoading}>{t('contentStudio.approve', 'Approve')}</Button>
+                <Button size="small" variant="contained" color="primary" startIcon={<PublishIcon />} onClick={() => handleBulkPublish()} disabled={bulkLoading}>{t('contentStudio.bulkPublish', 'Publiceer')}</Button>
+                <Button size="small" variant="outlined" startIcon={<ScheduleIcon />} onClick={() => handleBulkScheduleOpen()} disabled={bulkLoading}>{t('contentStudio.bulkSchedule', 'Plan in')}</Button>
+                <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleBulkExport()} disabled={bulkLoading}>{t('contentStudio.bulkExport', 'Exporteer')}</Button>
+                <Button size="small" variant="outlined" color="error" onClick={() => handleBulkAction('reject')} disabled={bulkLoading}>{t('contentStudio.reject', 'Reject')}</Button>
+                <Button size="small" variant="outlined" color="error" onClick={() => handleBulkAction('delete')} disabled={bulkLoading}>{t('contentStudio.actions.delete', 'Delete')}</Button>
+                <Button size="small" onClick={() => setSelectedIds([])}>{t('contentStudio.clearSelection', 'Wis selectie')}</Button>
+              </Box>
+            )}
+
             {/* Opdracht 6: Extra filterbalk (Pillar + Score≥) */}
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 1, px: 1 }}>
               <Select size="small" value={itemPillarFilter} onChange={e => setItemPillarFilter(e.target.value)} displayEmpty
@@ -3005,7 +3014,11 @@ export default function ContentStudioPage() {
                         {Object.entries(PLATFORM_LABELS).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
                       </Select>
                     </TableCell>
-                    <TableCell>{t('contentStudio.table.score', 'Score')}</TableCell>
+                    <TableCell>
+                      <Tooltip title={t('contentStudio.table.seoScoreTooltip', 'Hoogste SEO-score over alle platform-versies van dit concept. Wordt bijgewerkt zodra de popup wordt geopend en de score live wordt herberekend. Brand-score is een aparte metric en hier niet getoond.')}>
+                        <span>{t('contentStudio.table.seoScore', 'SEO')}</span>
+                      </Tooltip>
+                    </TableCell>
                     <TableCell>
                       <Select size="small" value={itemStatusFilter} onChange={e => setItemStatusFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 70 }}>
                         <MenuItem value="">{t('contentStudio.table.status', 'Status')}</MenuItem>
@@ -3129,7 +3142,7 @@ export default function ContentStudioPage() {
             </TableContainer>
             <TablePagination
               component="div"
-              count={itemTotal}
+              count={conceptTotal}
               page={itemPage}
               onPageChange={(_, p) => setItemPage(p)}
               rowsPerPage={25}

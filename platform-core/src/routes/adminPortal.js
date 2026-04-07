@@ -12155,7 +12155,7 @@ router.get('/content/concepts', adminAuth('editor'), async (req, res) => {
       `SELECT c.*,
         cp.name as pillar_name,
         cp.color as pillar_color,
-        (SELECT AVG(ci.seo_score) FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted' AND ci.seo_score IS NOT NULL) as avg_seo_score,
+        (SELECT MAX(ci.seo_score) FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted' AND ci.seo_score IS NOT NULL) as avg_seo_score,
         (SELECT GROUP_CONCAT(DISTINCT ci.target_platform) FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted') as platforms,
         (SELECT GROUP_CONCAT(CONCAT(ci.id, ':', ci.target_platform, ':', ci.approval_status) SEPARATOR '|') FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted') as items_summary
        FROM content_concepts c
@@ -12409,12 +12409,13 @@ router.get('/content/items/:id/seo', adminAuth('editor'), async (req, res) => {
     const seoMeester = (await import('../services/agents/seoMeester/index.js')).default;
     const analysis = await seoMeester.analyzeItem(item, item.destination_id, platform);
 
-    // Save updated SEO data
+    // Save updated SEO data + score (consistency met tabel)
     await mysqlSequelize.query(
-      `UPDATE content_items SET seo_data = :seoData, updated_at = NOW() WHERE id = :id`,
+      `UPDATE content_items SET seo_data = :seoData, seo_score = :seoScore, updated_at = NOW() WHERE id = :id`,
       {
         replacements: {
           seoData: JSON.stringify({ ...analysis, lastAudit: new Date().toISOString() }),
+          seoScore: analysis?.overallScore != null ? Math.round(Number(analysis.overallScore)) : null,
           id: item.id,
         },
       }
