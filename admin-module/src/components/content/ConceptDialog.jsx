@@ -744,8 +744,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
 
           <Divider sx={{ mt: 1 }} />
 
-          {/* ═══ PLATFORM TABS (hidden for blogs) ═══ */}
-          {items.length > 0 && !isBlog && (
+          {/* ═══ PLATFORM TABS ═══ */}
+          {items.length > 0 && (
             <Tabs value={activeTab} onChange={(_, v) => { if (v < items.length) setActiveTab(v); else setAddPlatformOpen(true); }} variant="scrollable" scrollButtons="auto"
               sx={{ px: 3, minHeight: 44, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minHeight: 44, textTransform: 'none' } }}>
               {items.map((item, idx) => {
