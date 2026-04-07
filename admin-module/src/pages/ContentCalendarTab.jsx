@@ -155,30 +155,47 @@ export default function ContentCalendarTab({ destinationId }) {
   const handleDragEnd = async (event) => {
     setDraggingItem(null);
     const { active, over } = event;
-    if (!over) return;
+    console.debug('[Calendar DnD]', { activeId: active?.id, overId: over?.id });
+    if (!over) {
+      setAutoFillSnack('Sleep het item op een dag-vakje (geen drop-target gedetecteerd)');
+      return;
+    }
     const itemId = Number(active.id);
     const targetDay = Number(String(over.id).replace('day-', ''));
-    if (!targetDay) return;
+    if (!targetDay) {
+      setAutoFillSnack(`Onbekend drop-target: ${over.id}`);
+      return;
+    }
     const item = items.find(i => i.id === itemId);
-    if (!item) return;
+    if (!item) {
+      setAutoFillSnack(`Item ${itemId} niet gevonden in cache`);
+      return;
+    }
+    console.debug('[Calendar DnD] item status:', item.approval_status, 'targetDay:', targetDay);
     if (['published', 'rejected', 'failed'].includes(item.approval_status)) {
-      setAutoFillSnack(`Items met status "${item.approval_status}" kunnen niet verplaatst worden`);
+      setAutoFillSnack(`Item "${item.title || item.content_type}" heeft status "${item.approval_status}" en kan niet verplaatst worden`);
       return;
     }
     // Behoud uur/min van bestaande planning of default 09:00
     const oldDate = item.scheduled_at ? new Date(item.scheduled_at) : new Date(year, month, targetDay, 9, 0, 0);
-    const newDate = new Date(year, month, targetDay, oldDate.getHours(), oldDate.getMinutes(), 0);
-    if (oldDate.getFullYear() === newDate.getFullYear() &&
-        oldDate.getMonth() === newDate.getMonth() &&
-        oldDate.getDate() === newDate.getDate()) {
-      return; // zelfde dag, geen wijziging
+    const newDate = new Date(year, month, targetDay, oldDate.getHours() || 9, oldDate.getMinutes() || 0, 0);
+    // Voor draft items zonder scheduled_at: oude dag is created_at-dag, nieuwe dag is targetDay → altijd doorgaan
+    const oldDayKey = item.scheduled_at
+      ? `${oldDate.getFullYear()}-${oldDate.getMonth()}-${oldDate.getDate()}`
+      : null;
+    const newDayKey = `${newDate.getFullYear()}-${newDate.getMonth()}-${newDate.getDate()}`;
+    if (oldDayKey === newDayKey) {
+      setAutoFillSnack('Item staat al op deze dag');
+      return;
     }
     try {
-      await rescheduleMut.mutateAsync({ id: itemId, data: { scheduled_at: newDate.toISOString() } });
+      const result = await rescheduleMut.mutateAsync({ id: itemId, data: { scheduled_at: newDate.toISOString() } });
+      console.debug('[Calendar DnD] reschedule OK:', result);
       setAutoFillSnack(`Verplaatst naar ${newDate.toLocaleDateString('nl-NL')}`);
-      refetch();
+      await refetch();
     } catch (err) {
-      setAutoFillSnack(err.response?.data?.error?.message || 'Verplaatsen mislukt');
+      console.error('[Calendar DnD] reschedule FAIL:', err);
+      setAutoFillSnack(`Verplaatsen mislukt: ${err.response?.data?.error?.message || err.message || 'onbekende fout'}`);
     }
   };
 
