@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, TextField, Button,
@@ -8,18 +8,10 @@ import {
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TranslateIcon from '@mui/icons-material/Translate';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import BrushIcon from '@mui/icons-material/Brush';
-import BarChartIcon from '@mui/icons-material/BarChart';
 import SecurityIcon from '@mui/icons-material/Security';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
-import LoginIcon from '@mui/icons-material/Login';
-import LanguageIcon from '@mui/icons-material/Language';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../stores/authStore.js';
@@ -36,12 +28,48 @@ const STUDIO_LANGUAGES = [
 ];
 
 const USP_ITEMS = [
-  { icon: AutoAwesomeIcon, titleKey: 'auth.usp.aiTitle', descKey: 'auth.usp.aiDesc', titleFallback: 'Relevante Content Generatie', descFallback: 'Genereer blogs, social posts en video scripts, gebaseerd op actueel online vertoond gedrag via onze multi-source strategie.' },
-  { icon: TrendingUpIcon, titleKey: 'auth.usp.seoTitle', descKey: 'auth.usp.seoDesc', titleFallback: 'SEO Optimalisatie', descFallback: 'Ingebouwde SEO-scoring en automatische verbetering voor maximale vindbaarheid (zelflerende systematiek).' },
-  { icon: TranslateIcon, titleKey: 'auth.usp.translateTitle', descKey: 'auth.usp.translateDesc', titleFallback: 'Meertaligheid', descFallback: 'Vertaal in onge\u00ebvenaarde nauwkeurigheid naar 100+ talen met \u00e9\u00e9n klik.' },
-  { icon: CalendarMonthIcon, titleKey: 'auth.usp.calendarTitle', descKey: 'auth.usp.calendarDesc', titleFallback: 'Optimale Content Flow', descFallback: 'Plan en publiceer content over alle kanalen vanuit \u00e9\u00e9n overzicht, inclusief batch-functie en speciale campagne-tool.' },
-  { icon: BrushIcon, titleKey: 'auth.usp.brandTitle', descKey: 'auth.usp.brandDesc', titleFallback: 'Merk Profiel & Tone of Voice', descFallback: 'Uw merkidentiteit, doelgroepen en knowledge base als fundament voor elke AI-generatie.' },
-  { icon: BarChartIcon, titleKey: 'auth.usp.analyticsTitle', descKey: 'auth.usp.analyticsDesc', titleFallback: 'Analytics', descFallback: 'Statistieken per content item en kanaal t.b.v. automatisch verbeteren van content.' },
+  {
+    emoji: '🎯',
+    titleKey: 'auth.usp.conceptTitle',
+    titleFallback: 'ConceptDialog',
+    descKey: 'auth.usp.conceptDesc',
+    descFallback: 'Eén concept, meerdere platformen. Platform tabs met live preview, score en karakterteller.',
+  },
+  {
+    emoji: '🚀',
+    titleKey: 'auth.usp.campaignTitle',
+    titleFallback: '1-Click Campagne',
+    descKey: 'auth.usp.campaignDesc',
+    descFallback: 'Blog + 5 social posts in één keer. AI genereert, jij reviewt. Van idee naar publicatie in minuten.',
+  },
+  {
+    emoji: '🧠',
+    titleKey: 'auth.usp.learningTitle',
+    titleFallback: 'Zelflerende AI',
+    descKey: 'auth.usp.learningDesc',
+    descFallback: 'Leert van jouw resultaten. Score-calibratie op basis van werkelijke engagement. Wordt elke week slimmer.',
+  },
+  {
+    emoji: '📊',
+    titleKey: 'auth.usp.analyticsTitle',
+    titleFallback: 'Smart Analytics',
+    descKey: 'auth.usp.analyticsDesc',
+    descFallback: 'Sparklines, pillar-verdeling, gat-detectie, score-correlatie en top-performer tracking. Weet wat werkt.',
+  },
+  {
+    emoji: '🎨',
+    titleKey: 'auth.usp.personalTitle',
+    titleFallback: 'Hyper-Gepersonaliseerd',
+    descKey: 'auth.usp.personalDesc',
+    descFallback: 'Merk Profiel, Knowledge Base, Audience Personas, Tone of Voice. Content die klinkt als jouw merk.',
+  },
+  {
+    emoji: '📅',
+    titleKey: 'auth.usp.calendarTitle',
+    titleFallback: 'Slimme Kalender',
+    descKey: 'auth.usp.calendarDesc',
+    descFallback: 'AI vult je kalender. Trending topics, seizoenen, content pillars — automatisch verdeeld en ingepland.',
+  },
 ];
 
 // yes = full support, partial = limited, no = not available
@@ -86,16 +114,6 @@ export default function LoginPage() {
   const handleLangChange = (code) => {
     i18n.changeLanguage(code);
     setLangMenuAnchor(null);
-  };
-
-  const [uspIndex, setUspIndex] = useState(0);
-  const touchStartX = useRef(0);
-
-  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
-  const handleTouchEnd = (e) => {
-    const delta = touchStartX.current - e.changedTouches[0].clientX;
-    if (delta > 50) setUspIndex(i => Math.min(i + 1, USP_ITEMS.length - 1));
-    else if (delta < -50) setUspIndex(i => Math.max(i - 1, 0));
   };
 
   const [email, setEmail] = useState('');
@@ -431,114 +449,91 @@ export default function LoginPage() {
         </Box>
       </Box>
 
-      {/* ── MAIN: USPs ── */}
+      {/* ── USP CARDS SECTION ── */}
       <Box sx={{
-        maxWidth: 1100,
+        maxWidth: 1200,
         mx: 'auto',
-        px: 3,
-        mt: { xs: 2, md: 4 },
+        px: { xs: 0, md: 3 },
+        pt: { xs: 6, md: 8 },
+        pb: { xs: 4, md: 6 },
         position: 'relative',
         zIndex: 1,
       }}>
-        <Box>
-          {/* USP Section */}
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{
-              fontSize: '0.75rem', fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '2px',
-              color: '#D4AF37', mb: 1.5,
+        <Typography sx={{
+          fontSize: { xs: '1.6rem', md: '1.9rem' },
+          fontWeight: 800,
+          color: '#fff',
+          textAlign: 'center',
+          mb: 1,
+          letterSpacing: '-0.01em',
+          px: 3,
+        }}>
+          {t('auth.uspSectionTitle', 'Waarom AI Content Studio?')}
+        </Typography>
+        <Typography sx={{
+          fontSize: '0.95rem',
+          color: '#8B9DAF',
+          textAlign: 'center',
+          mb: { xs: 3, md: 5 },
+          px: 3,
+        }}>
+          {t('auth.uspSectionSubtitle', '6 redenen waarom marketeers overstappen')}
+        </Typography>
+
+        {/* Desktop: 3×2 grid · Mobile: horizontal scroll-snap */}
+        <Box sx={{
+          display: { xs: 'flex', md: 'grid' },
+          gridTemplateColumns: { md: 'repeat(3, 1fr)' },
+          gap: { xs: 1.75, md: 2.5 },
+          // Mobile scroll-snap
+          overflowX: { xs: 'auto', md: 'visible' },
+          scrollSnapType: { xs: 'x mandatory', md: 'none' },
+          scrollPaddingLeft: { xs: 24, md: 0 },
+          px: { xs: 3, md: 0 },
+          pb: { xs: 2, md: 0 },
+          WebkitOverflowScrolling: 'touch',
+          '&::-webkit-scrollbar': { display: 'none' },
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}>
+          {USP_ITEMS.map(({ emoji, titleKey, titleFallback, descKey, descFallback }) => (
+            <Box key={titleKey} sx={{
+              bgcolor: '#1A2332',
+              border: '1px solid #2A3A4A',
+              borderRadius: '12px',
+              p: { xs: 3, md: 3.5 },
+              transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                borderColor: '#028090',
+                boxShadow: '0 12px 32px rgba(2,128,144,0.15)',
+              },
+              // Mobile: each card takes 85% of viewport, peek of next card visible
+              flex: { xs: '0 0 85%', md: '1 1 auto' },
+              scrollSnapAlign: { xs: 'start', md: 'none' },
+              minWidth: 0,
             }}>
-              {t('auth.studioFeaturesLabel', 'Wat maakt de Content Studio uniek?')}
-            </Typography>
-
-            {/* Desktop: 2x3 grid */}
-            <Box sx={{
-              display: { xs: 'none', md: 'grid' },
-              gridTemplateColumns: '1fr 1fr',
-              gap: 2,
-            }}>
-              {USP_ITEMS.map(({ icon: Icon, titleKey, descKey, titleFallback, descFallback }) => (
-                <Box key={titleKey} sx={{
-                  bgcolor: '#fff',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                  borderRadius: '12px',
-                  p: 2.5,
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
-                  },
-                }}>
-                  <Box sx={{
-                    width: 36, height: 36, borderRadius: '8px',
-                    bgcolor: 'rgba(127, 165, 148, 0.12)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    mb: 1.5,
-                  }}>
-                    <Icon sx={{ fontSize: 20, color: '#5E8B7E' }} />
-                  </Box>
-                  <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 0.5, color: '#1C1917' }}>
-                    {t(titleKey, titleFallback)}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.8rem', color: '#6B7280', lineHeight: 1.5 }}>
-                    {t(descKey, descFallback)}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-
-            {/* Mobile: state-based carousel (1 card at a time, swipeable) */}
-            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-              {(() => {
-                const { icon: Icon, titleKey, descKey, titleFallback, descFallback } = USP_ITEMS[uspIndex];
-                return (
-                  <Box
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                    sx={{
-                    bgcolor: '#fff',
-                    border: '1px solid rgba(0,0,0,0.06)',
-                    borderRadius: '12px',
-                    p: 2.5,
-                    minHeight: 160,
-                  }}>
-                    <Box sx={{
-                      width: 36, height: 36, borderRadius: '8px',
-                      bgcolor: 'rgba(127, 165, 148, 0.12)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      mb: 1.5,
-                    }}>
-                      <Icon sx={{ fontSize: 20, color: '#5E8B7E' }} />
-                    </Box>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 0.5, color: '#1C1917' }}>
-                      {t(titleKey, titleFallback)}
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.8rem', color: '#6B7280', lineHeight: 1.5 }}>
-                      {t(descKey, descFallback)}
-                    </Typography>
-                  </Box>
-                );
-              })()}
-
-              {/* Carousel dots */}
-              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.75, mt: 2 }}>
-                {USP_ITEMS.map((_, i) => (
-                  <Box
-                    key={i}
-                    onClick={() => setUspIndex(i)}
-                    sx={{
-                      width: uspIndex === i ? 20 : 8,
-                      height: 8,
-                      borderRadius: 4,
-                      bgcolor: uspIndex === i ? '#5E8B7E' : '#d1d5db',
-                      transition: 'all 0.3s',
-                      cursor: 'pointer',
-                    }}
-                  />
-                ))}
+              <Box sx={{ fontSize: '1.8rem', mb: 1.5, lineHeight: 1 }}>
+                {emoji}
               </Box>
+              <Typography sx={{
+                fontWeight: 700,
+                fontSize: '1rem',
+                color: '#fff',
+                mb: 1,
+                letterSpacing: '-0.01em',
+              }}>
+                {t(titleKey, titleFallback)}
+              </Typography>
+              <Typography sx={{
+                fontSize: '0.82rem',
+                color: '#8B9DAF',
+                lineHeight: 1.6,
+              }}>
+                {t(descKey, descFallback)}
+              </Typography>
             </Box>
-          </Box>
+          ))}
         </Box>
       </Box>
 
