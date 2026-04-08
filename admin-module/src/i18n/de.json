@@ -44,15 +44,185 @@
     "loginSubtitle": "Verwalten Sie Ihre HolidaiButler Plattform",
     "studioWelcome": "Willkommen in Ihrem Content Studio",
     "studioLoginSubtitle": "Melden Sie sich mit Ihrem Konto an",
-    "studioHeroText": "Ihre KI-gest\u00fctzte Content-Engine. Generieren, optimieren und ver\u00f6ffentlichen Sie professionelle Inhalte in Ihrer eigenen Markenstimme \u2014 auf allen Plattformen gleichzeitig.",
+    "studioHeroText": "Ihre KI-gestützte Content-Engine. Generieren, optimieren und veröffentlichen Sie professionelle Inhalte in Ihrer eigenen Markenstimme — auf allen Plattformen gleichzeitig.",
     "studioFeaturesLabel": "Was macht das Content Studio einzigartig?",
-    "studioSecurityNote": "100% europ\u00e4ische Infrastruktur. Ihre Daten bleiben in der EU (Hetzner DE, Mistral FR, DeepL DE).",
-    "invalidCredentials": "Ung\u00fcltige Anmeldedaten",
+    "studioSecurityNote": "100% europäische Infrastruktur. Ihre Daten bleiben in der EU (Hetzner DE, Mistral FR, DeepL DE).",
+    "invalidCredentials": "Ungültige Anmeldedaten",
     "serverError": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
-    "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
+    "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+    "studio": {
+      "productTagline": "by HolidaiButler",
+      "tagline": "Europäische AI Content-Plattform",
+      "heroTitle": "Das smarteste",
+      "heroTitleAccent": "AI Content Studio",
+      "heroTitleSuffix": "Europas",
+      "heroSubtitle": "Generieren, planen und veröffentlichen Sie Content auf 7 Plattformen aus einem intelligenten Arbeitsplatz. Ein Konzept, mehrere Plattformen — die KI erledigt die Arbeit, Sie prüfen und geben frei.",
+      "ctaDemo": "Kostenlose Demo anfordern",
+      "ctaLogin": "Anmelden",
+      "badges": {
+        "aiActSuffix": "Konform",
+        "gdprSuffix": "100% EU-Daten",
+        "mistralSuffix": "Paris",
+        "deeplSuffix": "Köln",
+        "hetznerSuffix": "Deutschland"
+      },
+      "uspSectionTitle": "Warum AI Content Studio?",
+      "uspSectionSubtitle": "6 Gründe, warum Marketer wechseln",
+      "usps": {
+        "concept": {
+          "title": "ConceptDialog",
+          "desc": "Ein Konzept, mehrere Plattformen. Platform-Tabs mit Live-Vorschau, Score und Zeichenzähler."
+        },
+        "campaign": {
+          "title": "1-Click-Kampagne",
+          "desc": "Blog + 5 Social Posts auf einmal. KI generiert, Sie prüfen. Von der Idee zur Veröffentlichung in Minuten."
+        },
+        "learning": {
+          "title": "Selbstlernende KI",
+          "desc": "Lernt aus Ihren Ergebnissen. Score-Kalibrierung basierend auf tatsächlichem Engagement. Wird jede Woche smarter."
+        },
+        "analytics": {
+          "title": "Smart Analytics",
+          "desc": "Sparklines, Pillar-Verteilung, Lücken-Erkennung, Score-Korrelation und Top-Performer-Tracking. Wissen, was funktioniert."
+        },
+        "personal": {
+          "title": "Hyper-personalisiert",
+          "desc": "Markenprofil, Knowledge Base, Audience Personas, Tone of Voice. Content, der wie Ihre Marke klingt."
+        },
+        "calendar": {
+          "title": "Smarter Kalender",
+          "desc": "KI füllt Ihren Kalender. Trending Topics, Saisonen, Content Pillars — automatisch verteilt und geplant."
+        }
+      },
+      "compare": {
+        "title": "AI Content Studio vs. Die Konkurrenz",
+        "subtitle": "Vergleichen Sie auf das, was wirklich zählt",
+        "headerFeature": "Funktion",
+        "headerStudio": "AI Content Studio",
+        "total": "Keine andere Plattform bietet diese Kombination",
+        "legendFull": "Vollständig verfügbar",
+        "legendPartial": "Eingeschränkt / teilweise",
+        "legendNone": "Nicht verfügbar",
+        "features": {
+          "aiContent": "KI Content-Generierung",
+          "conceptDialog": "ConceptDialog (1 Konzept → N Plattformen)",
+          "socialScore": "Platform-spezifischer Social Score (7 Modelle)",
+          "selfLearning": "Selbstlernende Score-Kalibrierung",
+          "oneClickCampaign": "1-Click-Kampagne (6 Assets)",
+          "calendarAutoFill": "KI Kalender Auto-Fill",
+          "brandKb": "Markenprofil + Knowledge Base",
+          "personas": "Audience Personas + Zielgruppen-Auswahl",
+          "trending": "Multi-Source Trending-Analyse",
+          "blogSeo": "Blog + SEO (TipTap WYSIWYG)",
+          "deepl": "DeepL Pro Übersetzungen (5+ Sprachen)",
+          "compliance": "EU AI Act + DSGVO konform",
+          "poiSource": "POI-Datenbank als Content-Quelle",
+          "imageKeywords": "Pixtral AI Bild-Keywords (25K+)",
+          "multiTenant": "Multi-Tenant (mehrere Marken)",
+          "approval": "Approval-Workflow + Team-Kommentare"
+        }
+      },
+      "alternatives": {
+        "title": "AI Content Studio vs. Agentur vs. Intern",
+        "subtitle": "Warum KI die smarteste Investition ist",
+        "headerCriterion": "Kriterium",
+        "headerStudio": "AI Content Studio",
+        "headerInternal": "Intern (eigener Mitarbeiter)",
+        "headerAgency": "Agentur",
+        "criteria": {
+          "availability": {
+            "label": "24/7 Verfügbarkeit",
+            "studio": "Immer verfügbar",
+            "internal": "Bürozeiten",
+            "agency": "Bürozeiten + SLA"
+          },
+          "vacation": {
+            "label": "Urlaub und Krankheit",
+            "studio": "0 Ausfalltage",
+            "internal": "~35 Tage/Jahr",
+            "agency": "Wechselndes Team"
+          },
+          "training": {
+            "label": "Training & Onboarding",
+            "studio": "Sofort produktiv",
+            "internal": "3-6 Monate",
+            "agency": "Briefing-Zyklus"
+          },
+          "turnover": {
+            "label": "Fluktuation & Ersatz",
+            "studio": "Kein Risiko",
+            "internal": "Recruiting-Kosten €5-15K",
+            "agency": "Account Manager-Wechsel"
+          },
+          "expertise": {
+            "label": "Expertise 7 Plattformen",
+            "studio": "Alle Plattformen",
+            "internal": "1-3 Spezialisierungen",
+            "agency": "Pro Spezialist"
+          },
+          "response": {
+            "label": "Reaktionszeit",
+            "studio": "Sekunden",
+            "internal": "Stunden — Tage",
+            "agency": "Stunden — Wochen"
+          },
+          "scalability": {
+            "label": "Skalierbarkeit",
+            "studio": "Unbegrenzt",
+            "internal": "Linear mit FTE",
+            "agency": "Gegen Aufpreis"
+          },
+          "approach": {
+            "label": "Arbeitsweise",
+            "studio": "Datengetriebene KI",
+            "internal": "Erfahrungsbasiert",
+            "agency": "Best Practices"
+          },
+          "multilingual": {
+            "label": "Mehrsprachig (5+ Sprachen)",
+            "studio": "DeepL Pro sofort",
+            "internal": "Übersetzungsbüro nötig",
+            "agency": "Gegen Aufpreis"
+          },
+          "cost": {
+            "label": "Kosten / Monat",
+            "studio": "Bruchteil eines FTE",
+            "internal": "€3.500 — 5.500 brutto",
+            "agency": "€2.000 — 8.000 Retainer"
+          },
+          "brand": {
+            "label": "Markenkonsistenz",
+            "studio": "Knowledge Base + Tone",
+            "internal": "Personenabhängig",
+            "agency": "Briefing-abhängig"
+          }
+        }
+      },
+      "securityNote": "100% europäische Infrastruktur. Ihre Daten bleiben in der EU (Hetzner DE, Mistral FR, DeepL DE).",
+      "footerTagline": "AI-Powered Tourism & Content Platform",
+      "demo": {
+        "title": "Kostenlose Demo anfordern",
+        "subtitle": "Hinterlassen Sie Ihre Daten — wir melden uns innerhalb von 1 Werktag.",
+        "name": "Name",
+        "company": "Unternehmen / Organisation",
+        "email": "E-Mail",
+        "phone": "Telefon",
+        "message": "Nachricht (optional)",
+        "defaultMessage": "Ich möchte gerne eine Demo des AI Content Studio.",
+        "consent": "Ich stimme der Verarbeitung meiner Daten zur Kontaktaufnahme zu.",
+        "privacy": "Datenschutzerklärung",
+        "submit": "Demo anfordern",
+        "successTitle": "Vielen Dank!",
+        "successBody": "Wir haben Ihre Anfrage erhalten und melden uns innerhalb von 1 Werktag.",
+        "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+        "close": "Schließen"
+      },
+      "welcome": "Willkommen in Ihrem Content Studio",
+      "welcomeSubtitle": "Melden Sie sich mit Ihrem Konto an"
+    }
   },
   "dashboard": {
-    "welcome": "Willkommen zur\u00fcck",
+    "welcome": "Willkommen zurück",
     "destinations": "Reiseziele",
     "totalUsers": "Benutzer gesamt",
     "chatSessions": "Chatbot-Sitzungen (7T)",
@@ -62,9 +232,9 @@
       "title": "Geplante Aufgaben",
       "category": "Kategorie",
       "job": "Agent",
-      "schedule": "H\u00e4ufigkeit",
+      "schedule": "Häufigkeit",
       "description": "Beschreibung",
-      "close": "Schlie\u00dfen"
+      "close": "Schließen"
     },
     "systemHealth": "Systemstatus",
     "quickLinks": "Schnellzugriff",
@@ -72,13 +242,13 @@
     "activePois": "aktiv",
     "reviews": "Bewertungen",
     "healthy": "Gesund",
-    "degraded": "Beeintr\u00e4chtigt",
-    "unhealthy": "Nicht verf\u00fcgbar",
+    "degraded": "Beeinträchtigt",
+    "unhealthy": "Nicht verfügbar",
     "uptime": "API-Betriebszeit",
-    "agentHealth": "Agent-Aktivit\u00e4t (24h)",
+    "agentHealth": "Agent-Aktivität (24h)",
     "errors24h": "Fehler",
     "alerts24h": "Warnungen",
-    "jobs24h": "Ausgef\u00fchrte Jobs",
+    "jobs24h": "Ausgeführte Jobs",
     "links": {
       "agents": "Agents Dashboard",
       "pois": "POI-Verwaltung",
@@ -92,7 +262,7 @@
   },
   "agents": {
     "title": "Agent Dashboard",
-    "subtitle": "{{count}} Agents \u00fcberwacht",
+    "subtitle": "{{count}} Agents überwacht",
     "refresh": "Aktualisieren",
     "autoRefresh": "Auto-Aktualisierung: 5 Min",
     "lastUpdated": "Zuletzt aktualisiert",
@@ -118,10 +288,10 @@
       "calpe": "Calpe",
       "texel": "Texel",
       "status": "Status",
-      "shared": "\u2014 (geteilt)"
+      "shared": "— (geteilt)"
     },
     "activity": {
-      "title": "Letzte Aktivit\u00e4t",
+      "title": "Letzte Aktivität",
       "showMore": "Mehr anzeigen",
       "showLess": "Weniger anzeigen"
     },
@@ -188,17 +358,17 @@
       "saved": "Agent-Konfiguration gespeichert",
       "addTask": "Neue Aufgabe hinzufügen..."
     },
-    "partial": "Einige Datenquellen sind nicht erreichbar. Angezeigte Daten k\u00f6nnen unvollst\u00e4ndig sein.",
-    "noResults": "Keine Agents f\u00fcr die ausgew\u00e4hlten Filter gefunden.",
+    "partial": "Einige Datenquellen sind nicht erreichbar. Angezeigte Daten können unvollständig sein.",
+    "noResults": "Keine Agents für die ausgewählten Filter gefunden.",
     "scheduledJobs": "Geplante Aufgaben",
-    "noActivity": "Keine aktuelle Aktivit\u00e4t",
-    "close": "Schlie\u00dfen"
+    "noActivity": "Keine aktuelle Aktivität",
+    "close": "Schließen"
   },
   "pois": {
     "title": "POI-Verwaltung",
-    "subtitle": "Verwalten Sie Points of Interest f\u00fcr alle Reiseziele",
+    "subtitle": "Verwalten Sie Points of Interest für alle Reiseziele",
     "searchPlaceholder": "Nach Name suchen...",
-    "noResults": "Keine POIs f\u00fcr die ausgew\u00e4hlten Filter gefunden.",
+    "noResults": "Keine POIs für die ausgewählten Filter gefunden.",
     "rowsPerPage": "Zeilen pro Seite",
     "active": "Aktiv",
     "inactive": "Inaktiv",
@@ -206,7 +376,7 @@
     "inactiveOnFrontend": "POI nicht aktiv im Frontend",
     "view": "Ansehen",
     "edit": "Bearbeiten",
-    "close": "Schlie\u00dfen",
+    "close": "Schließen",
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Speichern...",
@@ -245,7 +415,7 @@
     "detail": {
       "description": "Beschreibung",
       "tileDescription": "Kurzbeschreibung (Kachel)",
-      "noContent": "Kein Inhalt verf\u00fcgbar",
+      "noContent": "Kein Inhalt verfügbar",
       "reviews": "Bewertungen",
       "totalReviews": "Bewertungen gesamt",
       "avgRating": "Durchschn. Bewertung",
@@ -257,19 +427,19 @@
       "freshness": "Aktualität"
     },
     "images": "Bilder",
-    "primary": "Prim\u00e4r",
+    "primary": "Primär",
     "imageReordered": "Bildreihenfolge aktualisiert",
-    "imageDeleted": "Bild dauerhaft gel\u00f6scht",
-    "deleteImageTitle": "Bild l\u00f6schen?",
-    "deleteImageConfirm": "Sind Sie sicher, dass Sie dieses Bild dauerhaft l\u00f6schen m\u00f6chten? Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.",
-    "deleteImage": "L\u00f6schen",
-    "deleting": "L\u00f6schen..."
+    "imageDeleted": "Bild dauerhaft gelöscht",
+    "deleteImageTitle": "Bild löschen?",
+    "deleteImageConfirm": "Sind Sie sicher, dass Sie dieses Bild dauerhaft löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteImage": "Löschen",
+    "deleting": "Löschen..."
   },
   "reviews": {
     "title": "Bewertungen Moderation",
     "subtitle": "Benutzerbewertungen verwalten und moderieren",
     "searchPlaceholder": "Nach POI-Name oder Bewertungstext suchen...",
-    "noResults": "Keine Bewertungen f\u00fcr die ausgew\u00e4hlten Filter gefunden.",
+    "noResults": "Keine Bewertungen für die ausgewählten Filter gefunden.",
     "noText": "Kein Bewertungstext",
     "rowsPerPage": "Zeilen pro Seite",
     "view": "Ansehen",
@@ -277,8 +447,8 @@
     "unarchive": "Dearchivieren",
     "archived": "Bewertung archiviert",
     "unarchived": "Bewertung dearchiviert",
-    "undo": "R\u00fcckg\u00e4ngig",
-    "close": "Schlie\u00dfen",
+    "undo": "Rückgängig",
+    "close": "Schließen",
     "summary": {
       "total": "Bewertungen gesamt",
       "avgRating": "Durchschn. Bewertung",
@@ -401,16 +571,16 @@
     },
     "language": {
       "title": "Sprache",
-      "description": "Sprache f\u00fcr das Admin Portal ausw\u00e4hlen",
+      "description": "Sprache für das Admin Portal auswählen",
       "nl": "Nederlands",
       "en": "English",
       "de": "Deutsch",
-      "es": "Espa\u00f1ol"
+      "es": "Español"
     },
     "branding": {
-      "title": "Markenidentit\u00e4t",
-      "primary": "Prim\u00e4r",
-      "secondary": "Sekund\u00e4r",
+      "title": "Markenidentität",
+      "primary": "Primär",
+      "secondary": "Sekundär",
       "accent": "Akzent",
       "chatbot": "Chatbot",
       "customized": "Angepasst",
@@ -450,11 +620,11 @@
     },
     "cache": {
       "title": "Cache-Verwaltung",
-      "description": "Redis-Cache leeren, um veraltete Daten zu entfernen. Dies kann kurze Verz\u00f6gerungen verursachen.",
+      "description": "Redis-Cache leeren, um veraltete Daten zu entfernen. Dies kann kurze Verzögerungen verursachen.",
       "clear": "Cache leeren",
       "clearTitle": "Cache leeren?",
-      "clearWarning": "Alle Admin-Cache-Schl\u00fcssel werden entfernt. Daten werden erneut aus der Datenbank geladen.",
-      "confirmClear": "L\u00f6schen best\u00e4tigen",
+      "clearWarning": "Alle Admin-Cache-Schlüssel werden entfernt. Daten werden erneut aus der Datenbank geladen.",
+      "confirmClear": "Löschen bestätigen",
       "clearing": "Wird geleert...",
       "cleared": "Cache erfolgreich geleert!"
     },
@@ -466,67 +636,67 @@
       "action": "Aktion",
       "user": "Benutzer",
       "details": "Details",
-      "noEntries": "Keine Audit-Log-Eintr\u00e4ge gefunden.",
-      "undo": "R\u00fcckg\u00e4ngig",
-      "undoAction": "Aktion r\u00fcckg\u00e4ngig machen",
-      "undone": "Aktion erfolgreich r\u00fcckg\u00e4ngig gemacht"
+      "noEntries": "Keine Audit-Log-Einträge gefunden.",
+      "undo": "Rückgängig",
+      "undoAction": "Aktion rückgängig machen",
+      "undone": "Aktion erfolgreich rückgängig gemacht"
     }
   },
   "users": {
     "title": "Benutzerverwaltung",
     "subtitle": "Admin-Benutzer und Zugriffsrechte verwalten",
-    "add": "Benutzer hinzuf\u00fcgen",
+    "add": "Benutzer hinzufügen",
     "addTitle": "Neuer Benutzer",
     "editTitle": "Benutzer bearbeiten",
     "deactivate": "Deaktivieren",
     "reactivate": "Reaktivieren",
     "deactivateTitle": "Benutzer deaktivieren?",
     "reactivateTitle": "Benutzer reaktivieren?",
-    "deactivateConfirm": "Sind Sie sicher, dass Sie {{name}} ({{email}}) deaktivieren m\u00f6chten?",
-    "reactivateConfirm": "Sind Sie sicher, dass Sie {{name}} ({{email}}) reaktivieren m\u00f6chten?",
+    "deactivateConfirm": "Sind Sie sicher, dass Sie {{name}} ({{email}}) deaktivieren möchten?",
+    "reactivateConfirm": "Sind Sie sicher, dass Sie {{name}} ({{email}}) reaktivieren möchten?",
     "deactivateNote": "Der Benutzer kann sich nicht mehr anmelden, aber das Konto bleibt erhalten.",
     "reactivateNote": "Der Benutzer kann sich wieder anmelden.",
     "confirmDeactivate": "Deaktivieren",
     "confirmReactivate": "Reaktivieren",
     "deactivated": "Benutzer deaktiviert",
     "reactivated": "Benutzer reaktiviert",
-    "permanentDelete": "Dauerhaft l\u00f6schen",
-    "permanentDeleteTitle": "Benutzer dauerhaft l\u00f6schen?",
-    "permanentDeleteConfirm": "Sind Sie sicher, dass Sie {{name}} ({{email}}) DAUERHAFT l\u00f6schen m\u00f6chten? Dies kann nicht r\u00fcckg\u00e4ngig gemacht werden.",
-    "permanentDeleteWarning": "Achtung: Das Konto wird endg\u00fcltig gel\u00f6scht. Alle Daten werden entfernt.",
-    "confirmPermanentDelete": "Endg\u00fcltig l\u00f6schen",
-    "permanentlyDeleted": "Benutzer dauerhaft gel\u00f6scht",
+    "permanentDelete": "Dauerhaft löschen",
+    "permanentDeleteTitle": "Benutzer dauerhaft löschen?",
+    "permanentDeleteConfirm": "Sind Sie sicher, dass Sie {{name}} ({{email}}) DAUERHAFT löschen möchten? Dies kann nicht rückgängig gemacht werden.",
+    "permanentDeleteWarning": "Achtung: Das Konto wird endgültig gelöscht. Alle Daten werden entfernt.",
+    "confirmPermanentDelete": "Endgültig löschen",
+    "permanentlyDeleted": "Benutzer dauerhaft gelöscht",
     "processing": "Verarbeitung...",
-    "deleteTitle": "Benutzer l\u00f6schen?",
-    "resetPasswordTitle": "Passwort zur\u00fccksetzen",
+    "deleteTitle": "Benutzer löschen?",
+    "resetPasswordTitle": "Passwort zurücksetzen",
     "searchPlaceholder": "Nach Name oder E-Mail suchen...",
-    "noResults": "Keine Benutzer f\u00fcr die ausgew\u00e4hlten Filter gefunden.",
+    "noResults": "Keine Benutzer für die ausgewählten Filter gefunden.",
     "rowsPerPage": "Zeilen pro Seite",
     "refresh": "Aktualisieren",
     "edit": "Bearbeiten",
-    "delete": "L\u00f6schen",
-    "resetPassword": "Passwort zur\u00fccksetzen",
+    "delete": "Löschen",
+    "resetPassword": "Passwort zurücksetzen",
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Speichern...",
     "create": "Erstellen",
     "creating": "Erstellen...",
-    "close": "Schlie\u00dfen",
-    "confirmDelete": "L\u00f6schung best\u00e4tigen",
-    "deleting": "L\u00f6schen...",
-    "resetting": "Zur\u00fccksetzen...",
+    "close": "Schließen",
+    "confirmDelete": "Löschung bestätigen",
+    "deleting": "Löschen...",
+    "resetting": "Zurücksetzen...",
     "created": "Benutzer erstellt",
     "updated": "Benutzer aktualisiert",
-    "deleted": "Benutzer gel\u00f6scht",
+    "deleted": "Benutzer gelöscht",
     "passwordCopied": "Passwort kopiert",
-    "passwordHint": "Mind. 12 Zeichen, 1 Gro\u00dfbuchstabe, 1 Ziffer",
-    "passwordGenerated": "Tempor\u00e4res Passwort erstellt",
+    "passwordHint": "Mind. 12 Zeichen, 1 Großbuchstabe, 1 Ziffer",
+    "passwordGenerated": "Temporäres Passwort erstellt",
     "copyPassword": "Passwort kopieren",
     "shareSecurely": "Teilen Sie dieses Passwort sicher mit dem Benutzer",
-    "deleteConfirm": "Sind Sie sicher, dass Sie {{name}} ({{email}}) l\u00f6schen m\u00f6chten?",
-    "deleteSoftNote": "Der Benutzer wird deaktiviert (nicht dauerhaft gel\u00f6scht)",
-    "resetPasswordConfirm": "Neues tempor\u00e4res Passwort f\u00fcr {{name}} erstellen?",
-    "resetPasswordNote": "Das aktuelle Passwort wird ung\u00fcltig",
+    "deleteConfirm": "Sind Sie sicher, dass Sie {{name}} ({{email}}) löschen möchten?",
+    "deleteSoftNote": "Der Benutzer wird deaktiviert (nicht dauerhaft gelöscht)",
+    "resetPasswordConfirm": "Neues temporäres Passwort für {{name}} erstellen?",
+    "resetPasswordNote": "Das aktuelle Passwort wird ungültig",
     "roles": {
       "platform_admin": "Plattform-Admin",
       "destination_admin": "Destination-Admin",
@@ -933,9 +1103,18 @@
     "download_csv": "CSV herunterladen",
     "year": "Jahr",
     "export_success": "CSV Export heruntergeladen",
-    "jan": "Jan", "feb": "Feb", "mar": "Mär", "apr": "Apr",
-    "may": "Mai", "jun": "Jun", "jul": "Jul", "aug": "Aug",
-    "sep": "Sep", "oct": "Okt", "nov": "Nov", "dec": "Dez"
+    "jan": "Jan",
+    "feb": "Feb",
+    "mar": "Mär",
+    "apr": "Apr",
+    "may": "Mai",
+    "jun": "Jun",
+    "jul": "Jul",
+    "aug": "Aug",
+    "sep": "Sep",
+    "oct": "Okt",
+    "nov": "Nov",
+    "dec": "Dez"
   },
   "branding": {
     "title": "Branding",
@@ -1113,33 +1292,33 @@
     }
   },
   "translate": {
-    "autoTranslate": "Auto-\u00fcbersetzen",
-    "translating": "\u00dcbersetzen...",
-    "success": "\u00dcbersetzungen automatisch ausgef\u00fcllt",
-    "error": "\u00dcbersetzung fehlgeschlagen. Bitte erneut versuchen."
+    "autoTranslate": "Auto-übersetzen",
+    "translating": "Übersetzen...",
+    "success": "Übersetzungen automatisch ausgefüllt",
+    "error": "Übersetzung fehlgeschlagen. Bitte erneut versuchen."
   },
   "onboarding": {
-    "title": "Neues Reiseziel hinzuf\u00fcgen",
+    "title": "Neues Reiseziel hinzufügen",
     "subtitle": "Folgen Sie den Schritten, um ein neues Reiseziel zu konfigurieren und zu aktivieren.",
     "name": "Name",
     "nameHelper": "Anzeigename des Reiseziels (z.B. Calpe, Texel)",
     "slug": "Slug",
-    "slugHelper": "Eindeutige Kennung (z.B. calpe, texel) \u2014 wird automatisch generiert",
+    "slugHelper": "Eindeutige Kennung (z.B. calpe, texel) — wird automatisch generiert",
     "domains": "Domains",
-    "addDomain": "Domain hinzuf\u00fcgen",
-    "language": "Prim\u00e4re Sprache",
+    "addDomain": "Domain hinzufügen",
+    "language": "Primäre Sprache",
     "timezone": "Zeitzone",
-    "primaryColor": "Prim\u00e4rfarbe",
-    "secondaryColor": "Sekund\u00e4rfarbe",
+    "primaryColor": "Primärfarbe",
+    "secondaryColor": "Sekundärfarbe",
     "payoff": "Payoff / Tagline",
-    "payoffHelper": "Kurzer Slogan f\u00fcr das Reiseziel",
+    "payoffHelper": "Kurzer Slogan für das Reiseziel",
     "navHelper": "Passen Sie die Standard-Navigationselemente an. Reihenfolge und Labels sind editierbar.",
-    "addNavItem": "Navigationspunkt hinzuf\u00fcgen",
-    "pagesHelper": "W\u00e4hlen Sie aus, welche Template-Seiten automatisch erstellt werden sollen.",
+    "addNavItem": "Navigationspunkt hinzufügen",
+    "pagesHelper": "Wählen Sie aus, welche Template-Seiten automatisch erstellt werden sollen.",
     "activate": "Reiseziel aktivieren",
     "success": "Reiseziel erfolgreich erstellt!",
     "created": "wurde erstellt und konfiguriert.",
-    "createAnother": "Weiteres Reiseziel hinzuf\u00fcgen",
+    "createAnother": "Weiteres Reiseziel hinzufügen",
     "dnsTitle": "DNS- & Server-Konfiguration",
     "dnsStep1": "Schritt 1: DNS A-Records erstellen",
     "dnsStep2": "Schritt 2: SSL-Zertifikat anfordern",
@@ -1274,7 +1453,9 @@
       "title": "Beste Zeit zum Posten",
       "noData": "Basierend auf allgemeinen Empfehlungen (noch keine eigenen Daten)"
     },
-    "workflow": { "title": "Workflow Status" },
+    "workflow": {
+      "title": "Workflow Status"
+    },
     "images": {
       "title": "Bilder",
       "addImage": "Bild hinzufügen",
@@ -1338,7 +1519,12 @@
       "warning": "Warnung",
       "fail": "Ungenügend"
     },
-    "info": { "type": "Typ", "platform": "Plattform", "aiModel": "AI Modell", "created": "Erstellt" },
+    "info": {
+      "type": "Typ",
+      "platform": "Plattform",
+      "aiModel": "AI Modell",
+      "created": "Erstellt"
+    },
     "brand": {
       "title": "Brand Voice Score",
       "description": "Misst, wie gut dein Content zur eingestellten Markenidentität dieses Reiseziels passt.",
@@ -1352,8 +1538,15 @@
       "vocabularyInfo": "Werden Kernbegriffe und gewünschte Adjektive verwendet?",
       "improvements": "Verbesserungspunkte:"
     },
-    "comments": { "title": "Team Kommentare", "noComments": "Keine Kommentare.", "placeholder": "Schreibe einen Kommentar..." },
-    "history": { "title": "Versionsgeschichte", "noVersions": "Keine früheren Versionen." },
+    "comments": {
+      "title": "Team Kommentare",
+      "noComments": "Keine Kommentare.",
+      "placeholder": "Schreibe einen Kommentar..."
+    },
+    "history": {
+      "title": "Versionsgeschichte",
+      "noVersions": "Keine früheren Versionen."
+    },
     "manualInfo": "Erstelle manuell ein Content Item ohne AI-Generierung. Du kannst es später bearbeiten, mit AI verbessern und veröffentlichen.",
     "repurposeInfo": "Wähle Plattformen, für die eine angepasste Version generiert wird. Die AI schreibt eine NEUE Version pro Plattform.",
     "repurposeSource": "(Quelle)",
@@ -1367,13 +1560,29 @@
     "publishFailed": "Veröffentlichung fehlgeschlagen:",
     "translateButton": "Übersetzen nach {{lang}}",
     "table": {
-      "keyword": "Keyword", "score": "Score", "direction": "Richtung", "volume": "Volumen",
-      "language": "Sprache", "market": "Markt", "source": "Quelle", "week": "Woche",
-      "title": "Titel", "type": "Typ", "keywords": "Keywords", "channels": "Kanäle",
-      "status": "Status", "actions": "Aktionen", "platform": "Plattform",
-      "languages": "Sprachen", "seo": "SEO", "score": "Score", "date": "Datum"
+      "keyword": "Keyword",
+      "score": "Score",
+      "direction": "Richtung",
+      "volume": "Volumen",
+      "language": "Sprache",
+      "market": "Markt",
+      "source": "Quelle",
+      "week": "Woche",
+      "title": "Titel",
+      "type": "Typ",
+      "keywords": "Keywords",
+      "channels": "Kanäle",
+      "status": "Status",
+      "actions": "Aktionen",
+      "platform": "Plattform",
+      "languages": "Sprachen",
+      "seo": "SEO",
+      "date": "Datum"
     },
-    "filter": { "market": "Markt:", "language": "Sprache:" },
+    "filter": {
+      "market": "Markt:",
+      "language": "Sprache:"
+    },
     "keywordsFound": "Keywords gefunden",
     "selected": "ausgewählt",
     "noTrending": "Keine Trending-Keywords für diesen Zeitraum gefunden.",
@@ -1399,7 +1608,6 @@
     "errorGeneratingContent": "Fehler beim Generieren des Contents",
     "confirmDelete": "Sind Sie sicher, dass Sie dieses Element löschen möchten?",
     "confirmBulkDelete": "{{count}} Elemente löschen?",
-    "or": "ODER",
     "calendar": {
       "season": "Saison",
       "more": "mehr",
@@ -1473,8 +1681,47 @@
   },
   "brandProfile": {
     "page_title": "Markenprofil",
-    "sections": { "company": "Unternehmensprofil", "mission": "Mission, Vision & Werte", "audiences": "Zielgruppen", "tone": "Tonalität", "knowledge": "Wissensdatenbank", "competitors": "Wettbewerber", "strategy": "Content-Strategie" },
-    "fields": { "company_name": "Unternehmensname", "industry": "Branche", "website": "Webseite", "analyze_website": "Webseite analysieren", "description": "Kurzbeschreibung", "usps": "USPs (Alleinstellungsmerkmale)", "add_usp": "USP hinzufügen", "mission": "Mission", "vision": "Vision", "core_values": "Kernwerte", "add_persona": "Neue Zielgruppe", "upload_document": "Dokument hochladen", "add_url": "URL als Quelle hinzufügen", "add_competitor": "Wettbewerber hinzufügen", "analyze": "Analysieren", "seo_keywords": "SEO-Fokus-Keywords", "blogs_per_month": "Blogs pro Monat", "posts_per_week": "Social Posts pro Woche" },
-    "tone": { "personality": "Persönlichkeit", "audience": "Zielgruppe", "brandValues": "Markenwerte", "coreKeywords": "Kernbegriffe", "adjectives": "Gewünschte Adjektive", "avoidWords": "Wörter vermeiden", "samplePhrases": "Beispielsätze", "formalAddress": "Anredeform", "informal": "Informell (du)", "formal": "Formell (Sie)", "mixed": "Gemischt" }
+    "sections": {
+      "company": "Unternehmensprofil",
+      "mission": "Mission, Vision & Werte",
+      "audiences": "Zielgruppen",
+      "tone": "Tonalität",
+      "knowledge": "Wissensdatenbank",
+      "competitors": "Wettbewerber",
+      "strategy": "Content-Strategie"
+    },
+    "fields": {
+      "company_name": "Unternehmensname",
+      "industry": "Branche",
+      "website": "Webseite",
+      "analyze_website": "Webseite analysieren",
+      "description": "Kurzbeschreibung",
+      "usps": "USPs (Alleinstellungsmerkmale)",
+      "add_usp": "USP hinzufügen",
+      "mission": "Mission",
+      "vision": "Vision",
+      "core_values": "Kernwerte",
+      "add_persona": "Neue Zielgruppe",
+      "upload_document": "Dokument hochladen",
+      "add_url": "URL als Quelle hinzufügen",
+      "add_competitor": "Wettbewerber hinzufügen",
+      "analyze": "Analysieren",
+      "seo_keywords": "SEO-Fokus-Keywords",
+      "blogs_per_month": "Blogs pro Monat",
+      "posts_per_week": "Social Posts pro Woche"
+    },
+    "tone": {
+      "personality": "Persönlichkeit",
+      "audience": "Zielgruppe",
+      "brandValues": "Markenwerte",
+      "coreKeywords": "Kernbegriffe",
+      "adjectives": "Gewünschte Adjektive",
+      "avoidWords": "Wörter vermeiden",
+      "samplePhrases": "Beispielsätze",
+      "formalAddress": "Anredeform",
+      "informal": "Informell (du)",
+      "formal": "Formell (Sie)",
+      "mixed": "Gemischt"
+    }
   }
 }

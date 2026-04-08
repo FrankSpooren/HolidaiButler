@@ -52,7 +52,7 @@ export default function DemoRequestDialog({ open, onClose }) {
           email,
           phone,
           company,
-          message: message || t('studio.demo.defaultMessage', 'Ik wil graag een demo van de AI Content Studio.'),
+          message: message || t('auth.studio.demo.defaultMessage', 'Ik wil graag een demo van de AI Content Studio.'),
           subject: 'Demo Request — Content Studio',
           source: 'studio_landing',
           consent,
@@ -65,7 +65,7 @@ export default function DemoRequestDialog({ open, onClose }) {
       }
       setSuccess(true);
     } catch (err) {
-      setError(err.message || t('studio.demo.error', 'Er ging iets mis. Probeer het opnieuw.'));
+      setError(err.message || t('auth.studio.demo.error', 'Er ging iets mis. Probeer het opnieuw.'));
     } finally {
       setLoading(false);
     }
@@ -83,10 +83,10 @@ export default function DemoRequestDialog({ open, onClose }) {
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700, color: '#1C1917' }}>
-              {t('studio.demo.title', 'Gratis Demo Aanvragen')}
+              {t('auth.studio.demo.title', 'Gratis Demo Aanvragen')}
             </Typography>
             <Typography variant="body2" sx={{ color: '#6B7280', mt: 0.5 }}>
-              {t('studio.demo.subtitle', 'Laat uw gegevens achter — we nemen binnen 1 werkdag contact op.')}
+              {t('auth.studio.demo.subtitle', 'Laat uw gegevens achter — we nemen binnen 1 werkdag contact op.')}
             </Typography>
           </Box>
           <IconButton onClick={handleClose} size="small" disabled={loading} sx={{ mt: -0.5, mr: -0.5 }}>
@@ -100,14 +100,14 @@ export default function DemoRequestDialog({ open, onClose }) {
           <Box sx={{ textAlign: 'center', py: 3 }}>
             <CheckCircleOutlineIcon sx={{ fontSize: 56, color: '#10B981', mb: 1 }} />
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-              {t('studio.demo.successTitle', 'Dank u wel!')}
+              {t('auth.studio.demo.successTitle', 'Dank u wel!')}
             </Typography>
             <Typography variant="body2" sx={{ color: '#6B7280', mb: 3 }}>
-              {t('studio.demo.successBody', 'We hebben uw aanvraag ontvangen en nemen binnen 1 werkdag contact op.')}
+              {t('auth.studio.demo.successBody', 'We hebben uw aanvraag ontvangen en nemen binnen 1 werkdag contact op.')}
             </Typography>
             <Button variant="contained" onClick={handleClose}
               sx={{ bgcolor: '#5E8B7E', '&:hover': { bgcolor: '#4A7066' } }}>
-              {t('common.close', 'Sluiten')}
+              {t('auth.studio.demo.close', 'Sluiten')}
             </Button>
           </Box>
         ) : (
@@ -118,27 +118,27 @@ export default function DemoRequestDialog({ open, onClose }) {
               style={{ position: 'absolute', left: '-9999px' }} tabIndex={-1} autoComplete="off" />
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1.5, mb: 2 }}>
-              <TextField size="small" label={t('studio.demo.name', 'Naam')}
+              <TextField size="small" label={t('auth.studio.demo.name', 'Naam')}
                 value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-              <TextField size="small" label={t('studio.demo.company', 'Bedrijf / organisatie')}
+              <TextField size="small" label={t('auth.studio.demo.company', 'Bedrijf / organisatie')}
                 value={company} onChange={(e) => setCompany(e.target.value)} />
-              <TextField size="small" label={t('studio.demo.email', 'E-mail')} type="email" required
+              <TextField size="small" label={t('auth.studio.demo.email', 'E-mail')} type="email" required
                 value={email} onChange={(e) => setEmail(e.target.value)} />
-              <TextField size="small" label={t('studio.demo.phone', 'Telefoon')}
+              <TextField size="small" label={t('auth.studio.demo.phone', 'Telefoon')}
                 value={phone} onChange={(e) => setPhone(e.target.value)} />
             </Box>
             <TextField fullWidth multiline rows={3} size="small"
-              label={t('studio.demo.message', 'Bericht (optioneel)')}
+              label={t('auth.studio.demo.message', 'Bericht (optioneel)')}
               value={message} onChange={(e) => setMessage(e.target.value)} sx={{ mb: 2 }} />
 
             <FormControlLabel
               control={<Checkbox checked={consent} onChange={(e) => setConsent(e.target.checked)} size="small" />}
               label={
                 <Typography variant="caption" sx={{ color: '#6B7280' }}>
-                  {t('studio.demo.consent', 'Ik ga akkoord met het verwerken van mijn gegevens om contact met mij op te nemen.')}{' '}
+                  {t('auth.studio.demo.consent', 'Ik ga akkoord met het verwerken van mijn gegevens om contact met mij op te nemen.')}{' '}
                   <Link href="https://holidaibutler.com/privacy" target="_blank" rel="noopener noreferrer"
                     sx={{ color: '#5E8B7E' }}>
-                    {t('studio.demo.privacy', 'Privacyverklaring')}
+                    {t('auth.studio.demo.privacy', 'Privacyverklaring')}
                   </Link>
                 </Typography>
               }
@@ -152,7 +152,7 @@ export default function DemoRequestDialog({ open, onClose }) {
                 bgcolor: '#D4AF37', borderRadius: '8px',
                 '&:hover': { bgcolor: '#B8941F' },
               }}>
-              {loading ? <CircularProgress size={22} color="inherit" /> : t('studio.demo.submit', 'Demo Aanvragen')}
+              {loading ? <CircularProgress size={22} color="inherit" /> : t('auth.studio.demo.submit', 'Demo Aanvragen')}
             </Button>
           </form>
         )}

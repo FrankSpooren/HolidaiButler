@@ -44,7 +44,7 @@
     "loginSubtitle": "Beheer je HolidaiButler platform",
     "studioWelcome": "Welkom bij uw Content Studio",
     "studioLoginSubtitle": "Log in met uw account om te starten",
-    "studioHeroText": "Uw AI-aangedreven content engine. Genereer, optimaliseer en publiceer professionele content in uw eigen merkstem \u2014 op alle platforms tegelijk.",
+    "studioHeroText": "Uw AI-aangedreven content engine. Genereer, optimaliseer en publiceer professionele content in uw eigen merkstem — op alle platforms tegelijk.",
     "studioFeaturesLabel": "Wat maakt de Content Studio uniek?",
     "studioSecurityNote": "100% Europese infrastructuur. Uw data blijft in de EU (Hetzner DE, Mistral FR, DeepL DE).",
     "usp": {
@@ -53,9 +53,9 @@
       "seoTitle": "SEO Optimalisatie",
       "seoDesc": "Ingebouwde SEO-scoring en automatische verbetering voor maximale vindbaarheid (zelflerende systematiek).",
       "calendarTitle": "Optimale Content Flow",
-      "calendarDesc": "Plan en publiceer content over alle kanalen vanuit \u00e9\u00e9n overzicht, inclusief batch-functie en speciale campagne-tool.",
+      "calendarDesc": "Plan en publiceer content over alle kanalen vanuit één overzicht, inclusief batch-functie en speciale campagne-tool.",
       "translateTitle": "Meertaligheid",
-      "translateDesc": "Vertaal in onge\u00ebvenaarde nauwkeurigheid naar 100+ talen met \u00e9\u00e9n klik.",
+      "translateDesc": "Vertaal in ongeëvenaarde nauwkeurigheid naar 100+ talen met één klik.",
       "brandTitle": "Merk Profiel & Tone of Voice",
       "brandDesc": "Uw merkidentiteit, doelgroepen en knowledge base als fundament voor elke AI-generatie.",
       "analyticsTitle": "Analytics",
@@ -63,10 +63,180 @@
     },
     "compareLabel": "Vergelijk met de concurrentie",
     "compareTitle": "AI Content Studio vs. Hootsuite vs. Jasper AI",
-    "compareSubtitle": "E\u00e9n platform dat content generatie, SEO, meertaligheid \u00e9n publishing combineert. Geen losse tools meer nodig.",
+    "compareSubtitle": "Eén platform dat content generatie, SEO, meertaligheid én publishing combineert. Geen losse tools meer nodig.",
     "invalidCredentials": "Ongeldige inloggegevens",
     "serverError": "Er is een fout opgetreden. Probeer het opnieuw.",
-    "sessionExpired": "Je sessie is verlopen. Log opnieuw in."
+    "sessionExpired": "Je sessie is verlopen. Log opnieuw in.",
+    "studio": {
+      "productTagline": "by HolidaiButler",
+      "tagline": "Europees AI Content Platform",
+      "heroTitle": "De slimste",
+      "heroTitleAccent": "AI Content Studio",
+      "heroTitleSuffix": "van Europa",
+      "heroSubtitle": "Genereer, plan en publiceer content op 7 platformen vanuit één intelligent werkstation. Eén concept, meerdere platformen — de AI doet het werk, jij reviewt en keurt goed.",
+      "ctaDemo": "Gratis Demo Aanvragen",
+      "ctaLogin": "Inloggen",
+      "badges": {
+        "aiActSuffix": "Compliant",
+        "gdprSuffix": "100% EU Data",
+        "mistralSuffix": "Parijs",
+        "deeplSuffix": "Keulen",
+        "hetznerSuffix": "Duitsland"
+      },
+      "uspSectionTitle": "Waarom AI Content Studio?",
+      "uspSectionSubtitle": "6 redenen waarom marketeers overstappen",
+      "usps": {
+        "concept": {
+          "title": "ConceptDialog",
+          "desc": "Eén concept, meerdere platformen. Platform tabs met live preview, score en karakterteller."
+        },
+        "campaign": {
+          "title": "1-Click Campagne",
+          "desc": "Blog + 5 social posts in één keer. AI genereert, jij reviewt. Van idee naar publicatie in minuten."
+        },
+        "learning": {
+          "title": "Zelflerende AI",
+          "desc": "Leert van jouw resultaten. Score-calibratie op basis van werkelijke engagement. Wordt elke week slimmer."
+        },
+        "analytics": {
+          "title": "Smart Analytics",
+          "desc": "Sparklines, pillar-verdeling, gat-detectie, score-correlatie en top-performer tracking. Weet wat werkt."
+        },
+        "personal": {
+          "title": "Hyper-Gepersonaliseerd",
+          "desc": "Merk Profiel, Knowledge Base, Audience Personas, Tone of Voice. Content die klinkt als jouw merk."
+        },
+        "calendar": {
+          "title": "Slimme Kalender",
+          "desc": "AI vult je kalender. Trending topics, seizoenen, content pillars — automatisch verdeeld en ingepland."
+        }
+      },
+      "compare": {
+        "title": "AI Content Studio vs. De Concurrentie",
+        "subtitle": "Vergelijk op wat er werkelijk toe doet",
+        "headerFeature": "Feature",
+        "headerStudio": "AI Content Studio",
+        "total": "Geen enkel platform biedt deze combinatie",
+        "legendFull": "Volledig aanwezig",
+        "legendPartial": "Beperkt / deels",
+        "legendNone": "Niet aanwezig",
+        "features": {
+          "aiContent": "AI content generatie",
+          "conceptDialog": "ConceptDialog (1 concept → N platformen)",
+          "socialScore": "Per-platform Social Score (7 modellen)",
+          "selfLearning": "Zelflerende score calibratie",
+          "oneClickCampaign": "1-Click Campagne (6 assets)",
+          "calendarAutoFill": "AI Kalender Auto-Fill",
+          "brandKb": "Merk Profiel + Knowledge Base",
+          "personas": "Audience Personas + doelgroep-selectie",
+          "trending": "Multi-source trending analyse",
+          "blogSeo": "Blog + SEO (TipTap WYSIWYG)",
+          "deepl": "DeepL Pro vertalingen (5+ talen)",
+          "compliance": "EU AI Act + GDPR compliant",
+          "poiSource": "POI-database als contentbron",
+          "imageKeywords": "Pixtral AI image keywords (25K+)",
+          "multiTenant": "Multi-tenant (meerdere merken)",
+          "approval": "Approval workflow + team comments"
+        }
+      },
+      "alternatives": {
+        "title": "AI Content Studio vs. Bureau vs. Intern",
+        "subtitle": "Waarom AI de slimste investering is",
+        "headerCriterion": "Criterium",
+        "headerStudio": "AI Content Studio",
+        "headerInternal": "Intern (eigen medewerker)",
+        "headerAgency": "Bureau / Agency",
+        "criteria": {
+          "availability": {
+            "label": "24/7 beschikbaarheid",
+            "studio": "Altijd beschikbaar",
+            "internal": "Kantooruren",
+            "agency": "Kantooruren + SLA"
+          },
+          "vacation": {
+            "label": "Vakantie- en ziektedagen",
+            "studio": "0 dagen uitval",
+            "internal": "~35 dagen/jaar",
+            "agency": "Wisselend team"
+          },
+          "training": {
+            "label": "Training & onboarding",
+            "studio": "Onmiddellijk productief",
+            "internal": "3-6 maanden",
+            "agency": "Briefingcyclus"
+          },
+          "turnover": {
+            "label": "Omzet & vervanging",
+            "studio": "Geen risico",
+            "internal": "Wervingskosten €5-15K",
+            "agency": "Account manager wissel"
+          },
+          "expertise": {
+            "label": "Expertise 7 platformen",
+            "studio": "Alle platformen",
+            "internal": "1-3 specialisaties",
+            "agency": "Per specialist"
+          },
+          "response": {
+            "label": "Responstijd",
+            "studio": "Seconden",
+            "internal": "Uren — dagen",
+            "agency": "Uren — weken"
+          },
+          "scalability": {
+            "label": "Schaalbaarheid",
+            "studio": "Onbeperkt",
+            "internal": "Linear met FTE",
+            "agency": "Tegen meerkosten"
+          },
+          "approach": {
+            "label": "Werkwijze",
+            "studio": "Data-driven AI",
+            "internal": "Ervaring-gebaseerd",
+            "agency": "Best practices"
+          },
+          "multilingual": {
+            "label": "Meertalig (5+ talen)",
+            "studio": "DeepL Pro instant",
+            "internal": "Vertaalbureau nodig",
+            "agency": "Tegen meerkosten"
+          },
+          "cost": {
+            "label": "Kosten / maand",
+            "studio": "Fractie van FTE",
+            "internal": "€3.500 — 5.500 bruto",
+            "agency": "€2.000 — 8.000 retainer"
+          },
+          "brand": {
+            "label": "Brand consistency",
+            "studio": "Knowledge Base + Tone",
+            "internal": "Persoons-afhankelijk",
+            "agency": "Briefing-afhankelijk"
+          }
+        }
+      },
+      "securityNote": "100% Europese infrastructuur. Uw data blijft in de EU (Hetzner DE, Mistral FR, DeepL DE).",
+      "footerTagline": "AI-Powered Tourism & Content Platform",
+      "demo": {
+        "title": "Gratis Demo Aanvragen",
+        "subtitle": "Laat uw gegevens achter — we nemen binnen 1 werkdag contact op.",
+        "name": "Naam",
+        "company": "Bedrijf / organisatie",
+        "email": "E-mail",
+        "phone": "Telefoon",
+        "message": "Bericht (optioneel)",
+        "defaultMessage": "Ik wil graag een demo van de AI Content Studio.",
+        "consent": "Ik ga akkoord met het verwerken van mijn gegevens om contact met mij op te nemen.",
+        "privacy": "Privacyverklaring",
+        "submit": "Demo Aanvragen",
+        "successTitle": "Dank u wel!",
+        "successBody": "We hebben uw aanvraag ontvangen en nemen binnen 1 werkdag contact op.",
+        "error": "Er ging iets mis. Probeer het opnieuw.",
+        "close": "Sluiten"
+      },
+      "welcome": "Welkom bij uw Content Studio",
+      "welcomeSubtitle": "Log in met uw account om te starten"
+    }
   },
   "dashboard": {
     "welcome": "Welkom terug",
@@ -135,7 +305,7 @@
       "calpe": "Calpe",
       "texel": "Texel",
       "status": "Status",
-      "shared": "\u2014 (gedeeld)"
+      "shared": "— (gedeeld)"
     },
     "activity": {
       "title": "Recente Activiteit",
@@ -967,9 +1137,18 @@
     "download_csv": "Download CSV",
     "year": "Jaar",
     "export_success": "CSV export gedownload",
-    "jan": "Jan", "feb": "Feb", "mar": "Mrt", "apr": "Apr",
-    "may": "Mei", "jun": "Jun", "jul": "Jul", "aug": "Aug",
-    "sep": "Sep", "oct": "Okt", "nov": "Nov", "dec": "Dec"
+    "jan": "Jan",
+    "feb": "Feb",
+    "mar": "Mrt",
+    "apr": "Apr",
+    "may": "Mei",
+    "jun": "Jun",
+    "jul": "Jul",
+    "aug": "Aug",
+    "sep": "Sep",
+    "oct": "Okt",
+    "nov": "Nov",
+    "dec": "Dec"
   },
   "branding": {
     "title": "Branding",
@@ -1450,7 +1629,6 @@
       "platform": "Platform",
       "languages": "Talen",
       "seo": "SEO",
-      "score": "Score",
       "date": "Datum"
     },
     "filter": {
@@ -1471,7 +1649,6 @@
     "errorGeneratingContent": "Fout bij genereren content",
     "confirmDelete": "Weet je zeker dat je dit item wilt verwijderen?",
     "confirmBulkDelete": "{{count}} items verwijderen?",
-    "or": "OF",
     "calendar": {
       "season": "Seizoen",
       "more": "meer",
