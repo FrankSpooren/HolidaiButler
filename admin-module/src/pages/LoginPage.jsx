@@ -71,22 +71,22 @@ const USP_ITEMS = [
 // yes = full support, partial = limited, no = not available
 // short = compact label for mobile (max ~25 chars)
 const COMPARE_FEATURES = [
-  { feature: 'AI content generatie',                        studio: 'yes', hootsuite: 'no',      jasper: 'yes',     buffer: 'partial' },
-  { feature: 'ConceptDialog (1 concept → N platformen)',    studio: 'yes', hootsuite: 'no',      jasper: 'no',      buffer: 'partial' },
-  { feature: 'Per-platform Social Score (7 modellen)',      studio: 'yes', hootsuite: 'no',      jasper: 'no',      buffer: 'no' },
-  { feature: 'Zelflerende score calibratie',                studio: 'yes', hootsuite: 'no',      jasper: 'no',      buffer: 'no' },
-  { feature: '1-Click Campagne (6 assets)',                 studio: 'yes', hootsuite: 'no',      jasper: 'partial', buffer: 'no' },
-  { feature: 'AI Kalender Auto-Fill',                       studio: 'yes', hootsuite: 'no',      jasper: 'no',      buffer: 'no' },
-  { feature: 'Merk Profiel + Knowledge Base',               studio: 'yes', hootsuite: 'no',      jasper: 'yes',     buffer: 'no' },
-  { feature: 'Audience Personas + doelgroep-selectie',      studio: 'yes', hootsuite: 'no',      jasper: 'yes',     buffer: 'no' },
-  { feature: 'Multi-source trending analyse',               studio: 'yes', hootsuite: 'partial', jasper: 'no',      buffer: 'no' },
-  { feature: 'Blog + SEO (TipTap WYSIWYG)',                 studio: 'yes', hootsuite: 'no',      jasper: 'yes',     buffer: 'no' },
-  { feature: 'DeepL Pro vertalingen (5+ talen)',            studio: 'yes', hootsuite: 'no',      jasper: 'partial', buffer: 'no' },
-  { feature: 'EU AI Act + GDPR compliant',                  studio: 'yes', hootsuite: 'no',      jasper: 'no',      buffer: 'no' },
-  { feature: 'POI-database als contentbron',                studio: 'yes', hootsuite: 'no',      jasper: 'no',      buffer: 'no' },
-  { feature: 'Pixtral AI image keywords (25K+)',            studio: 'yes', hootsuite: 'no',      jasper: 'no',      buffer: 'no' },
-  { feature: 'Multi-tenant (meerdere merken)',              studio: 'yes', hootsuite: 'no',      jasper: 'partial', buffer: 'no' },
-  { feature: 'Approval workflow + team comments',           studio: 'yes', hootsuite: 'yes',     jasper: 'partial', buffer: 'partial' },
+  { feature: 'AI content generatie',                        studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
+  { feature: 'ConceptDialog (1 concept → N platformen)',    studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { feature: 'Per-platform Social Score (7 modellen)',      studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { feature: 'Zelflerende score calibratie',                studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { feature: '1-Click Campagne (6 assets)',                 studio: 'yes', hootsuite: 'no',      jasper: 'partial' },
+  { feature: 'AI Kalender Auto-Fill',                       studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { feature: 'Merk Profiel + Knowledge Base',               studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
+  { feature: 'Audience Personas + doelgroep-selectie',      studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
+  { feature: 'Multi-source trending analyse',               studio: 'yes', hootsuite: 'partial', jasper: 'no'      },
+  { feature: 'Blog + SEO (TipTap WYSIWYG)',                 studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
+  { feature: 'DeepL Pro vertalingen (5+ talen)',            studio: 'yes', hootsuite: 'no',      jasper: 'partial' },
+  { feature: 'EU AI Act + GDPR compliant',                  studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { feature: 'POI-database als contentbron',                studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { feature: 'Pixtral AI image keywords (25K+)',            studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { feature: 'Multi-tenant (meerdere merken)',              studio: 'yes', hootsuite: 'no',      jasper: 'partial' },
+  { feature: 'Approval workflow + team comments',           studio: 'yes', hootsuite: 'yes',     jasper: 'partial' },
 ];
 
 function FeatureIcon({ value }) {
@@ -610,7 +610,7 @@ export default function LoginPage() {
         }}>
           <Box component="table" sx={{
             width: '100%',
-            minWidth: 680,
+            minWidth: 560,
             borderCollapse: 'collapse',
             fontSize: { xs: '0.78rem', md: '0.85rem' },
           }}>
@@ -652,15 +652,6 @@ export default function LoginPage() {
                 }}>
                   Jasper AI
                 </Box>
-                <Box component="th" sx={{
-                  bgcolor: '#0D1B2A', color: '#8B9DAF',
-                  fontWeight: 600, textAlign: 'center',
-                  p: { xs: '12px 8px', md: '14px 16px' },
-                  borderBottom: '2px solid #2A3A4A',
-                  whiteSpace: 'nowrap',
-                }}>
-                  Buffer
-                </Box>
               </Box>
             </Box>
             <Box component="tbody">
@@ -700,13 +691,6 @@ export default function LoginPage() {
                   }}>
                     <FeatureIcon value={row.jasper} />
                   </Box>
-                  <Box component="td" sx={{
-                    p: { xs: '10px 8px', md: '12px 16px' },
-                    borderBottom: '1px solid #1A2332',
-                    textAlign: 'center',
-                  }}>
-                    <FeatureIcon value={row.buffer} />
-                  </Box>
                 </Box>
               ))}
             </Box>
@@ -722,6 +706,28 @@ export default function LoginPage() {
         }}>
           16/16 ✓ — {t('auth.compareTotal', 'Geen enkel platform biedt deze combinatie')}
         </Typography>
+
+        {/* Legenda */}
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: { xs: 2, md: 3 },
+          mt: 1.5,
+          flexWrap: 'wrap',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+            <Box component="span" sx={{ color: '#27AE60', fontWeight: 800, fontSize: '0.9rem' }}>✓</Box>
+            <Typography sx={{ fontSize: '0.72rem', color: '#8B9DAF' }}>Volledig aanwezig</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+            <Box component="span" sx={{ color: '#F39C12', fontWeight: 800, fontSize: '0.9rem' }}>⚠</Box>
+            <Typography sx={{ fontSize: '0.72rem', color: '#8B9DAF' }}>Beperkt / deels</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+            <Box component="span" sx={{ color: '#E74C3C', fontWeight: 800, fontSize: '0.9rem' }}>✗</Box>
+            <Typography sx={{ fontSize: '0.72rem', color: '#8B9DAF' }}>Niet aanwezig</Typography>
+          </Box>
+        </Box>
       </Box>
 
       {/* Security note */}
