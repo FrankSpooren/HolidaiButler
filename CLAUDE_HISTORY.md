@@ -7,6 +7,300 @@
 
 ---
 
+## v4.42.0 — Studio Landing Page Upgrade — studio.holidaibutler.com (7 opdrachten) (08-04-2026)
+
+### Aanleiding
+Het commandfile `HB_Studio_Landing_Page_Upgrade_Command (1).md` (Downloads-folder) definieert 7 sequentiële opdrachten voor een volledige redesign van `studio.holidaibutler.com/login`. Uitgangspunt: de pagina was gebouwd in v4.31.0 (1 april 2026) maar reflecteerde niet de Enterprise Redesign features (v4.36-4.40). Visueel target: `studio_landing_page_design.html` (Frank's design spec in Downloads) — dark theme navy + teal accent, geen goud/cream.
+
+### Werkprotocol
+Strikt volgens Frank's eis voor **scope-beperking + bewijs-vereiste per opdracht**:
+1. **PRE-FLIGHT DIAGNOSE**: root cause bewezen met data (ls/grep/curl/SQL), concrete opdrachten, bestandslijst, STOP
+2. **Wacht op akkoord** van Frank op scope + aanpak
+3. **IMPLEMENTATIE**: exact de gediagnosticeerde wijziging, geen scope-creep
+4. **POST-FLIGHT BEWIJS**: build output + live verificatie + DB check waar relevant, STOP
+5. **Wacht op Frank's "OK"** per opdracht, pas dan door naar volgende
+
+Geen stapelen van feedback, geen parallelle opdrachten. Deploy via CI/CD `deploy-admin-module.yml` + `deploy-platform-core.yml`, sequentieel dev → test → main push.
+
+---
+
+### Opdracht 1: Layout Herstructurering + Login Rechtsboven + Demo Lead Capture
+
+**PRE-FLIGHT**: `admin-module/src/pages/LoginPage.jsx` studio-tak (regels 161-544) had gecentreerde hero, login-card als grote `<Paper>` in body, USP 2×3 grid + mobile carousel met dots. Studio-mode detectie via `utils/studioMode.js` (`hostname.startsWith('studio.')`). Publiek contact endpoint `/api/v1/contact` bestond al (Fase V.6) maar persist niet in DB — logging-only. Geen demo_requests tabel.
+
+**Implementatie** (grote commit — 5 bestanden, +660/-107 LOC):
+- **DB migratie**: nieuwe tabel `demo_requests` op productie (11 kolommen: id, name, email, phone, company, message, source, destination_context, ip, user_agent, consent_given, created_at — 2 indexes op email en created_at)
+- **Backend** `platform-core/src/routes/contact.js`: `+company` + `+source` velden in destructure, INSERT-blok achter `if (isDemoRequest = source === 'studio_landing' || subject.includes('demo'))` via `mysqlSequelize.query` met parameterized values, mail-body uitgebreid met Company regel
+- **Nieuwe components** in `admin-module/src/components/studio/`:
+  - `ConceptMockup.jsx` (~170 LOC) — pure MUI mockup van ConceptDialog (window chrome, 3 platform tabs + `+Platform`, Tapas Trails tekst met emoji hashtags, Social Score 81/100 + checklist met warning op Openingshook, Facebook Preview card). Initieel light card, later iteratie 2× aangepast (eerst dark, toen weer light voor contrast op dark page)
+  - `LoginDialog.jsx` (~110 LOC) — MUI Dialog die bestaande `handleSubmit`/auth logica hergebruikt, redirect naar `/content-studio` na login
+  - `DemoRequestDialog.jsx` (~165 LOC) — 5 velden (naam/bedrijf/email/telefoon/bericht) + consent checkbox + Privacyverklaring link, honeypot `_hp` veld, POST naar `/api/v1/contact` via raw fetch (publiek endpoint, geen JWT), success screen
+- **`LoginPage.jsx` studio-tak herbouwd** (~550 LOC):
+  - Sticky header: logo tekst (groot "AI Content Studio" + klein "by HolidaiButler"), taalswitch `Menu` NL/EN/DE/ES (FR komt in Opdracht 6), login-knop rechtsboven → `setLoginDialogOpen(true)`
+  - Hero 2-koloms grid (`md: '1.1fr 1fr'`): tagline pill + H1 (3 delen: "De slimste"+accent+"van Europa") + subtitle + primary CTA (Gratis Demo Aanvragen) + secondary CTA (Inloggen) + 4 EU-pill badges
+  - Rechts: `<ConceptMockup />` component
+  - `LoginDialog` + `DemoRequestDialog` gemount onder de root `<Box>`
+- **State toegevoegd**: `loginDialogOpen`, `demoDialogOpen`, `langMenuAnchor`, `STUDIO_LANGUAGES` array, `currentLang`, `handleLangChange`
+
+**Iteratieve redesign pass** (commit 80ea3e2, Frank's eerste verificatie bleek design target verkeerd geïnterpreteerd):
+- Page bg `#FAFAF8` cream → `#0D1B2A` dark navy
+- Hero gradient groen → flat dark met radial pattern
+- H1 accent goud `#D4AF37` → teal `#02C39A` op "AI Content Studio"
+- CTA primary bgcolor goud → teal + lift hover met teal glow
+- CTA secondary witte outline → dark bordered `#2A3A4A`
+- Header: backdrop dark rgba, logo text in teal, login knop outlined teal
+- Menu popover dark bgcolor + teal hover
+- Footer border dark
+
+**ConceptMockup light-card correctie** (commit 74b18a8): Frank's feedback dat dark mockup niet zichtbaar was op dark pagina → volledig herbouwd met witte card (`#FFFFFF`), `#E5E7EB` borders, teal outer glow `boxShadow: 0 0 0 1px rgba(2,195,154,0.15)`, zware schaduw `0 25px 70px rgba(0,0,0,0.45)` voor lift. Brand-gekleurde platform tabs (Facebook `#1877F2`, Instagram `#E4405F`, LinkedIn licht), hashtags in `#1877F2` blauw.
+
+**Demo dialog label-bug fix** (commit 1044ab9): bij focus op "Naam" en "Bedrijf" velden viel label tekst weg achter dialog subtitle door MUI float-label animatie + border-notch overlap. Eerste poging `InputLabelProps={{ shrink: true }}` geforceerd → Frank niet mooi. Oplossing: revert shrink + `DialogTitle` `pb: 1 → pb: 2` + fields-Box `mt: 1.5` → extra ~12-16px witruimte.
+
+**POST-FLIGHT BEWIJS**:
+- Build: `✓ built in 1m 1s`, 0 errors
+- DB verificatie: `SELECT * FROM demo_requests ORDER BY id DESC LIMIT 5` → row id=1: Frank Spooren, frankspooren@hotmail.com, HolidaiButler, 0652488618, source=studio_landing, consent_given=1, 2026-04-08 11:50:35 — end-to-end lead capture bewezen
+- Frank verificatie: stappen 1-8 PASS, Opdracht 1 compleet
+
+**Commits**: `4f36539`, `80ea3e2`, `74b18a8`, `14e64cb`, `1044ab9`
+
+---
+
+### Opdracht 2: USP Cards — 6 Enterprise Redesign Features
+
+**PRE-FLIGHT**: `USP_ITEMS` array had 6 oude entries (Relevante Content Generatie, SEO Optimalisatie, Meertaligheid, Optimale Content Flow, Merk Profiel, Analytics) met MUI icons (`AutoAwesomeIcon`, etc.). Render gebruikte lichte kaarten `bgcolor: '#fff'`, 2×3 grid + mobile swipe carousel met `uspIndex` state + touch handlers.
+
+**Implementatie**:
+- `USP_ITEMS` vervangen: `[{ emoji, titleKey, titleFallback, descKey, descFallback }]` met 6 command-spec items: 🎯 ConceptDialog, 🚀 1-Click Campagne, 🧠 Zelflerende AI, 📊 Smart Analytics, 🎨 Hyper-Gepersonaliseerd, 📅 Slimme Kalender
+- State cleanup: `uspIndex`, `setUspIndex`, `touchStartX`, `handleTouchStart`, `handleTouchEnd` verwijderd
+- Ongebruikte MUI icons imports weg: `AutoAwesomeIcon`, `TrendingUpIcon`, `TranslateIcon`, `CalendarMonthIcon`, `BrushIcon`, `BarChartIcon`, `LoginIcon`, `LanguageIcon`, `useRef`
+- Render-blok herbouwd:
+  - Section title "Waarom AI Content Studio?" (wit 1.9rem bold centered) + subtitle "6 redenen waarom marketeers overstappen" (#8B9DAF)
+  - Desktop: `grid-template-columns: repeat(3, 1fr)`, gap 2.5
+  - Mobile: `display: flex`, `overflow-x: auto`, **`scroll-snap-type: x mandatory`**, `scroll-padding-left: 24px`, scrollbar verborgen (`::-webkit-scrollbar display: none` + `scrollbar-width: none`)
+  - Cards: `flex: 0 0 85%` mobiel (peek van volgende card), `flex: 1 1 auto` desktop, `bgcolor: '#1A2332'` (later `#15293F`), border `#2A3A4A`, radius 12px, padding 3.5, hover `translateY(-4px)` + teal border + teal glow shadow
+  - Emoji 1.8rem, title 1rem wit bold, desc 0.82rem `#8B9DAF` line-height 1.6
+
+**Frank decision log**: eerst stelde ik vanilla 1-col stack voor mobiel (matcht HTML spec), Frank keurde af vanwege UX (onnodig lange pagina). Opties aangeboden: A) bestaande swipe-carousel, B) horizontal scroll-snap, C) 2×3 grid klein. Frank koos **B** (scroll-snap) — modern, native touch, peek-hint van volgende card, geen React state.
+
+**Commits**: `fa8a23a` (+119/-124 LOC)
+
+---
+
+### Opdracht 3: EU-First Badges Balk
+
+**PRE-FLIGHT**: Hero had al 4 kleine pill-badges onder CTAs (EU AI Act, GDPR-proof, Mistral AI, DeepL Pro). HTML design spec heeft een dedicated horizontale balk tussen hero en USP sectie met 5 badges incl. Hetzner. Dubbelop.
+
+**Implementatie**:
+- 4 pill-badges verwijderd uit hero
+- Nieuwe horizontale balk tussen hero en USP sectie:
+  - Initieel `background: linear-gradient(180deg, rgba(2,128,144,0.08) 0%, transparent 100%)` — Frank's feedback: niet zichtbaar, gefixed naar solid `bgcolor: '#15293F'` (canoniek panel token)
+  - Borders top+bottom `1px solid rgba(2,192,154,0.18)`
+  - Flex centered, wrap, gap 2.5-4, py 3-4
+- 5 badges uniform formaat (`32×32` circular container, wit bg, teal border-ring `rgba(2,192,154,0.25)`):
+  1. `/studio/eu-ai-act.png` custom logo (uit Frank's `ai-act-logo.png`, gekopieerd naar `public/studio/`)
+  2. `/studio/gdpr.jpg` custom logo (uit Frank's GDPR padlock image), `transform: scale(1.35)` om interne witte padding weg te croppen → visueel gelijk ring-gewicht als EU AI Act
+  3. 🇫🇷 Mistral AI — Parijs
+  4. 🇩🇪 DeepL Pro — Keulen
+  5. 🇩🇪 Hetzner Cloud — Duitsland
+- Labels: strong wit 700, suffix dim grijs, twee regels naast icon
+
+**Flag emoji Windows bug** (commit 65b5728): Frank rapporteerde dat op desktop (Windows Chrome/Edge) de vlag-emojis als letter-pairs `FR`/`DE`/`DE` gerenderd werden. Windows heeft geen flag-emoji in systeem-font. Fix: vervang unicode flag emojis door `flagcdn.com/w80/fr.png` + `de.png` PNGs — cross-platform betrouwbaar. Alle 5 badges gebruiken nu dezelfde `<img>` rendering (unified branch), geen flag-emoji type-check meer.
+
+**Memory**: `project_studio_landing_tokens.md` aangemaakt met canonieke design tokens (page `#0D1B2A`, panel `#15293F`, border `#2A3A4A`, accent `#02C39A`), reden: Frank eiste consistentie voor alle nieuwe elementen van Opdracht 3 onwaarts. MEMORY.md index bijgewerkt.
+
+**Commits**: `e1a6302`, `65b5728`, `11c9e20`, `590513c`
+
+---
+
+### Opdracht 4: Vergelijkingstabel 1 — vs Concurrentie (16 features)
+
+**PRE-FLIGHT**: Oude `COMPARE_FEATURES` had 16 rijen × 3 kolommen (studio/hootsuite/jasper) met oude SEO/Content Flow features. Render via MUI `Table` + `TableContainer` lichte styling met gouden label "Vergelijk met de concurrentie", mobile abbreviations (ACS/HT/JA).
+
+**Implementatie**:
+- `COMPARE_FEATURES` vervangen: 16 nieuwe Enterprise Redesign features uit command-spec (AI content generatie, ConceptDialog, Per-platform Social Score, Zelflerende score calibratie, 1-Click Campagne, AI Kalender Auto-Fill, Merk Profiel+KB, Audience Personas, Multi-source trending, Blog+SEO, DeepL Pro, EU AI Act+GDPR, POI-database, Pixtral AI image keywords, Multi-tenant, Approval workflow)
+- Initieel 4 kolommen (+ Buffer), later verwijderd na Frank's feedback (3 driehoekjes, geen meerwaarde)
+- `FeatureIcon` helper: MUI icons → text glyphs (`✓` groen `#27AE60` / `⚠` oranje `#F39C12` / `✗` rood `#E74C3C`), fontWeight 800
+- Tabel volledig herbouwd met **`Box component="table"`** native HTML (niet MUI Table) voor volledige `sx` controle:
+  - Wrapper `#15293F` + border `#2A3A4A`, rounded, overflow-x auto met custom thin scrollbar (`::-webkit-scrollbar height 8`, track `#0D1B2A`, thumb `#2A3A4A` radius 4)
+  - Header row: bg `#0D1B2A`, ACS kolom met teal `#02C39A` text + `rgba(2,195,154,0.08)` bg + teal border-bottom 2px, concurrenten dim grijs met `#2A3A4A` border
+  - Body rows: zebra `rgba(13,27,42,0.4)` op oneven, hover `rgba(2,128,144,0.1)` teal wash over hele rij + ACS kolom intensifies naar `rgba(2,195,154,0.12)` via `&:hover td.highlight`
+  - ACS kolom cells: permanent `rgba(2,195,154,0.06)` tint via `className="highlight"`
+  - Min-width initieel 680px (5 cols), later 560px (4 cols na Buffer verwijderen)
+- Footer tagline: "16/16 ✓ — Geen enkel platform biedt deze combinatie" in teal fontWeight 700 centered
+- Legenda onder tabel (na Frank's vraag over de `⚠` betekenis): 3 inline items ✓ Volledig / ⚠ Beperkt / ✗ Niet aanwezig
+- Cleanup imports: `Table`, `TableHead`, `TableBody`, `TableRow`, `TableCell`, `TableContainer`, `CheckCircleIcon`, `CancelIcon`, `RemoveCircleOutlineIcon` weg
+
+**Commits**: `8663841` (+157/-117), `af953a1` (Buffer verwijderen + legenda +39/-33)
+
+---
+
+### Opdracht 5: Vergelijkingstabel 2 — vs Bureau/Intern (11 criteria)
+
+**PRE-FLIGHT**: Deze tabel bestond nog niet in `LoginPage.jsx`. Nieuw te bouwen naar HTML spec.
+
+**Implementatie** (+146 LOC):
+- Nieuwe `COMPARE_ALTERNATIVES` constante: 11 rows met structuur `{ criterion, studio: {icon, text}, intern: {icon, text}, agency: {icon, text} }` (later geherstructureerd naar key-based in Opdracht 6)
+- 11 criteria: 24/7 beschikbaarheid, Vakantie-/ziektedagen, Training & onboarding, Omzet & vervanging, Expertise 7 platformen, Responstijd, Schaalbaarheid, Werkwijze, Meertalig, Kosten/maand, Brand consistency
+- Render-sectie tussen tabel 1 en security note:
+  - Zelfde dark styling als tabel 1 (`#15293F` wrapper, teal highlight col, zebra, hover teal wash)
+  - Kolommen: Criterium / AI Content Studio / Intern (eigen medewerker) / Bureau / Agency
+  - **Cells met inline icon + tekst** (niet alleen glyph zoals tabel 1): `<Box flex><FeatureIcon /><span>{text}</span></Box>`, links uitgelijnd
+  - Criterium-kolom `fontWeight: 700`, wit `#E8ECF1`, 26-28% breedte
+  - Body tekst `#C8D4E0`
+  - Min-width 760px, horizontal scroll mobiel
+- `FeatureIcon` helper hergebruikt uit Opdracht 4
+
+**Commits**: `9f7c6fa`
+
+---
+
+### Opdracht 6: Volledige i18n NL/EN/DE/ES/FR (~150 keys × 5 talen)
+
+**PRE-FLIGHT**: `admin-module/src/i18n/` had 4 JSON bundels (`nl.json` 1591 regels, `en.json` 1574, `de.json` 1480, `es.json` 1480). Geen `fr.json`. `index.js` registreerde alleen 4 talen. `STUDIO_LANGUAGES` array in LoginPage had 4 entries. Alle nieuwe studio-keys in LoginPage gebruikten fallback-strings (`t('auth.studioHeroTitle', 'De slimste')`) — geen echte translations.
+
+**Implementatie** (grootste commit — 9 bestanden, +2967/-400 LOC):
+- **Node patch script** `scripts/patch-studio-i18n.mjs` (one-off, verwijderd na uitvoering) — injecteert nieuwe `auth.studio.*` namespace in alle 5 JSON bestanden, `fr.json` bootstrapped uit `en.json` (admin-chrome valt terug op Engels, alleen studio sectie in vol Frans)
+- **Namespace structuur** (`auth.studio.*`):
+  - `productTagline`, `tagline`, `heroTitle`, `heroTitleAccent`, `heroTitleSuffix`, `heroSubtitle`, `ctaDemo`, `ctaLogin`
+  - `badges.{aiActSuffix, gdprSuffix, mistralSuffix, deeplSuffix, hetznerSuffix}`
+  - `uspSectionTitle`, `uspSectionSubtitle`, `usps.{concept,campaign,learning,analytics,personal,calendar}.{title,desc}`
+  - `compare.{title,subtitle,headerFeature,headerStudio,total,legendFull,legendPartial,legendNone}`
+  - `compare.features.{aiContent,conceptDialog,socialScore,selfLearning,oneClickCampaign,calendarAutoFill,brandKb,personas,trending,blogSeo,deepl,compliance,poiSource,imageKeywords,multiTenant,approval}` (16)
+  - `alternatives.{title,subtitle,headerCriterion,headerStudio,headerInternal,headerAgency}`
+  - `alternatives.criteria.{availability,vacation,training,turnover,expertise,response,scalability,approach,multilingual,cost,brand}.{label,studio,internal,agency}` (11 × 4 = 44)
+  - `demo.{title,subtitle,name,company,email,phone,message,defaultMessage,consent,privacy,submit,successTitle,successBody,error,close}` (15)
+  - `welcome`, `welcomeSubtitle`, `securityNote`, `footerTagline`
+- **5 volledige vertalingen** voor NL/EN/DE/ES/FR:
+  - NL brontaal (bestaande fallbacks overgenomen)
+  - EN: "Europe's smartest AI Content Studio" + volledige Engelse vertaling
+  - DE: "Das smarteste AI Content Studio Europas" + volledige Duitse vertaling
+  - ES: "El Content Studio con IA más inteligente de Europa" + volledige Spaanse vertaling
+  - FR: "Le Content Studio IA le plus intelligent d'Europe" + volledige Franse vertaling
+- **Code wijzigingen**:
+  - `i18n/index.js`: `fr` geregistreerd
+  - `STUDIO_LANGUAGES` + `{ code: 'fr', label: 'Français', short: 'FR' }`
+  - `USP_ITEMS` geherstructureerd naar `[{ emoji, key }]` (lookup via `auth.studio.usps.${key}.title/desc`)
+  - `COMPARE_FEATURES` geherstructureerd naar `[{ key, studio, hootsuite, jasper }]` (feature names via `auth.studio.compare.features.${key}`)
+  - `COMPARE_ALTERNATIVES` geherstructureerd naar `[{ key, studioIcon, internIcon, agencyIcon }]` (labels + 3 cell-teksten via `auth.studio.alternatives.criteria.${key}.{label,studio,internal,agency}`)
+  - Alle `t()` calls op LoginPage naar nieuwe `auth.studio.*` paden
+  - `LoginDialog.jsx`: 2 keys (`welcome`, `welcomeSubtitle`)
+  - `DemoRequestDialog.jsx`: 15 keys (via `sed` bulk replace)
+
+**Login dialog label-bug fix** (commit b9e86c9): zelfde witruimte-probleem als demo dialog. `DialogTitle` `pb: 1 → pb: 2` + email TextField `mt: 1.5` toegevoegd voor extra lucht onder subtitle.
+
+**Commits**: `1227a69` (+2967/-400), `b9e86c9` (login dialog fix)
+
+---
+
+### Opdracht 7: Social Proof + Footer Polish
+
+**PRE-FLIGHT**: Onder tabel 2 stond een kleine losse security note met `SecurityIcon` + tekst "100% Europese infrastructuur...". Footer had `hb-logo.png` image + "Powered by HolidaiButler" + tagline — geen copyright regel, geen EU data disclaimer.
+
+**Implementatie** (+92/-37 LOC, 6 bestanden):
+- **Node patch script 2** `scripts/patch-opdracht7.mjs` (one-off, verwijderd) — injecteert 5 nieuwe keys per taal × 5 talen:
+  - `socialProofQuote` — "De AI Content Studio heeft onze content-productie met 80% versneld..." (NL) + 4 vertalingen
+  - `socialProofCite` — "Early Access Partner, maart 2026" (veilige optie B — geen klantnaam, Frank's decision ipv letterlijk "BUTE" uit command)
+  - `footerPoweredBy` — "Powered by" in alle 5 talen
+  - `footerCopyright` — "EU-First AI Platform · © 2026" (constant in alle talen)
+  - `footerEuData` — "🇪🇺 Alle data wordt verwerkt binnen de Europese Unie" + 4 vertalingen met EU vlag emoji
+- **Social proof sectie** nieuw (tussen tabel 2 en footer):
+  - Dark card `#15293F` + border `#2A3A4A`, radius 16px, max-width 720px, centered, padding 4-5
+  - `boxShadow: 0 12px 40px rgba(0,0,0,0.25)` voor lift
+  - Decoratieve `"` quotation mark: `position: absolute` linksboven, Georgia serif, 3-4rem, teal `#02C39A` op 25% opacity, `pointerEvents: none`
+  - Blockquote italic `#E8ECF1`, 1.15rem, line-height 1.65
+  - Cite teal `#02C39A` fontWeight 600, letter-spacing 0.02em, prefixed met em-dash
+- **Security note sectie volledig verwijderd** (Frank's beslissing — EU data regel in footer dekt deze boodschap)
+- **Footer herwerkt** per Frank's instructies:
+  - ❌ `hb-logo.png` image verwijderd (alleen tekst)
+  - Regel 1 (primair): "Powered by **HolidaiButler** · EU-First AI Platform · © 2026" — HolidaiButler link in teal `#02C39A` fontWeight 700, hover underline
+  - Regel 2 (secundair): "🇪🇺 Alle data wordt verwerkt binnen de Europese Unie" — 0.72rem dim `#6B7280`
+  - Border-top `#1A2332`, bgcolor `#0D1B2A`
+- `SecurityIcon` import opgeschoond
+
+**Commits**: `f6788bc`
+
+---
+
+### Canonieke Design Tokens (vastgelegd in memory)
+
+| Token | Hex | Gebruik |
+|-------|-----|---------|
+| `page-bg` | `#0D1B2A` | Body background |
+| `panel-bg` | `#15293F` | Cards, bars, tables, panels (**canoniek**) |
+| `border` | `#2A3A4A` | Alle borders op dark panels |
+| `accent` | `#02C39A` | Teal — logo, CTA primary, H1 accent, hover glow |
+| `accent-2` | `#028090` | Secundaire teal (table highlight col, concept badge) |
+| `text` | `#E8ECF1` | Headings en body wit |
+| `text-dim` | `#8B9DAF` | Subtitles, secondary |
+| `text-body` | `#C8D4E0` | Paragraphs |
+| `ok` | `#27AE60` | Check marks, success |
+| `warn` | `#F39C12` | Warnings |
+| `err` | `#E74C3C` | Crosses, errors |
+
+Bron van waarheid: `LoginPage.jsx` studio-tak + `Downloads/studio_landing_page_design.html`. Memory bestand: `~/.claude/projects/C--Users-frank/memory/project_studio_landing_tokens.md`.
+
+---
+
+### Bestandsoverzicht (totaal Opdracht 1-7)
+
+**Nieuwe bestanden** (4):
+- `admin-module/src/components/studio/ConceptMockup.jsx` (~170 LOC)
+- `admin-module/src/components/studio/LoginDialog.jsx` (~110 LOC)
+- `admin-module/src/components/studio/DemoRequestDialog.jsx` (~165 LOC)
+- `admin-module/src/i18n/fr.json` (1751 regels, bootstrapped uit en.json)
+
+**Gewijzigde bestanden**:
+- `admin-module/src/pages/LoginPage.jsx` — studio-tak volledig herbouwd (~900 LOC), alle 7 opdrachten gecumuleerd
+- `admin-module/src/i18n/nl.json` — `auth.studio.*` namespace toegevoegd
+- `admin-module/src/i18n/en.json` — idem
+- `admin-module/src/i18n/de.json` — idem
+- `admin-module/src/i18n/es.json` — idem
+- `admin-module/src/i18n/index.js` — fr import + resources registratie
+- `platform-core/src/routes/contact.js` — `+company`, `+source` velden, `demo_requests` INSERT-blok
+- `admin-module/public/studio/eu-ai-act.png` (NIEUW asset)
+- `admin-module/public/studio/gdpr.jpg` (NIEUW asset)
+
+**Database**:
+- Nieuwe tabel `demo_requests` op `pxoziy_db1` (11 kolommen, 2 indexes)
+
+**Commits** (chronologisch, 12 in totaal):
+1. `4f36539` — Opdracht 1 initiële layout + DB tabel + 3 nieuwe components
+2. `80ea3e2` — Opdracht 1 redesign dark theme + teal accent (correctie na Frank's eerste pass)
+3. `74b18a8` — ConceptMockup light card voor contrast
+4. `14e64cb` — Demo dialog shrink labels (later teruggedraaid)
+5. `1044ab9` — Demo dialog revert shrink, vergroot spacing header → fields
+6. `fa8a23a` — Opdracht 2 USP cards 6× dark + scroll-snap mobiel
+7. `e1a6302` — Opdracht 3 EU-First badges balk
+8. `65b5728` — Flag icons via flagcdn (Windows fix) + GDPR scale crop
+9. `11c9e20` — EU badges balk lichter (#15293F)
+10. `590513c` — USP cards bgcolor #15293F (consistency)
+11. `8663841` — Opdracht 4 vergelijkingstabel 1 (16 features, 4 kolommen)
+12. `af953a1` — Buffer kolom verwijderen + legenda toevoegen
+13. `9f7c6fa` — Opdracht 5 vergelijkingstabel 2 (11 criteria vs Bureau/Intern)
+14. `1227a69` — Opdracht 6 volledige i18n NL/EN/DE/ES/FR
+15. `b9e86c9` — LoginDialog witruimte fix
+16. `f6788bc` — Opdracht 7 social proof + footer polish
+
+Elk commit via `dev → test → main` sequential fast-forward push, CI/CD deploy via GitHub Actions.
+
+---
+
+### Eindverificatie (alle opdrachten Frank OK)
+
+| # | Opdracht | Status |
+|---|----------|--------|
+| 1 | Layout + login popover + demo lead capture + DB | ✅ OK |
+| 2 | 6 USP cards dark + scroll-snap mobiel | ✅ OK |
+| 3 | EU-First badges balk (5 badges, flagcdn fix) | ✅ OK |
+| 4 | Tabel 1 — 16 features (Buffer verwijderd na feedback) | ✅ OK |
+| 5 | Tabel 2 — 11 criteria vs Bureau/Intern | ✅ OK |
+| 6 | i18n NL/EN/DE/ES/FR (~150 keys × 5 talen) | ✅ OK |
+| 7 | Social proof + footer polish | ✅ OK |
+
+**Lead capture bewezen functioneel**: row id=1 in `demo_requests` tabel met Frank's test-submissie (alle 5 velden + consent + timestamp).
+
+---
+
 ## v4.40.0 — Content Studio Enterprise Redesign — Command v1.0 100% COMPLEET (Opdracht 5-8) (07-04-2026)
 
 ### Aanleiding

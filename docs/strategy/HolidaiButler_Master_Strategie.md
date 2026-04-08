@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 7 april 2026
-**Versie**: 8.01
+**Datum**: 8 april 2026
+**Versie**: 8.03
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Content Studio Enterprise Redesign — Command v1.0 100% COMPLEET (v4.40.0)**: alle 8 opdrachten geleverd. Opdracht 5 Platform Toevoegen (Repurpose als Tab) + delete platform-versie + onUpdate refresh. Opdracht 6 Concept-Gebaseerde tabel met Pillar+Score≥ filters, branded platform chips met status-iconen, 4-staps SEO score kleurschaal, sticky bulk toolbar (Approve/Publiceer/Plan in/Exporteer/Delete) + SEO consistentie root-cause fix (seo_score kolom werd niet gepersisteerd door /seo endpoint). Opdracht 7 Trending Monitor (sparkline 4-weken met week-labels, sorteerbaar, source-iconen, pillar-match dot) + Suggesties (batch approve, Verrijk via brandContext+trending Mistral, platform-aware preview tooltip blog/video/FB/IG/LinkedIn, generieke prullenbak). Opdracht 8 Kalender (pillar kleurcodering, gat-detectie oranje dashed, hero auto-fill balk) + Analyse (KPIs Bereik/Engagement/CTR/Groei, top performer hero, pillar donut chart, SEO score correlation box). 251 admin endpoints (+1 enrich), adminPortal.js v3.43.0. CLAUDE.md v4.40.0. MS v8.01.
+**Status**: FASE IV COMPLEET ✅. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Studio Landing Page Upgrade — 7 opdrachten 100% COMPLEET (v4.42.0)**: volledige dark-theme redesign van `studio.holidaibutler.com/login` conform design spec (`#0D1B2A` page, `#15293F` panel, `#02C39A` teal accent). Opdracht 1 sticky header + hero 2-col + CSS ConceptMockup + LoginDialog popover + DemoRequestDialog 5 velden + nieuwe `demo_requests` tabel (lead capture bewezen id=1). Opdracht 2 USP cards 6× Enterprise Redesign features + scroll-snap mobiel. Opdracht 3 EU-First badges balk (EU AI Act + GDPR custom logos + 3 vlaggen via flagcdn voor Windows compat). Opdracht 4 Vergelijkingstabel 1 (16 features × 3 kolommen met teal highlight col + inline legenda). Opdracht 5 Vergelijkingstabel 2 (11 criteria × Studio/Intern/Bureau met inline icon+tekst cells). Opdracht 6 volledige i18n NL/EN/DE/ES/FR (~150 keys per taal, nieuwe `auth.studio.*` namespace, `fr.json` 5e taal toegevoegd). Opdracht 7 social proof blockquote sectie + footer polish (tekst-only, teal HB link, EU data regel). Werkprotocol strikt sequentieel: PRE-FLIGHT → akkoord → implementatie → POST-FLIGHT → Frank OK → volgende. 16 commits, ~900 LOC herbouwde LoginPage studio-tak, 3 nieuwe studio components, 5 i18n JSON bundels, 1 DB tabel, 1 backend route update. 251 admin endpoints (ongewijzigd). CLAUDE.md v4.42.0. MS v8.03.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
@@ -1736,4 +1736,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 7 april 2026 — Content Studio State-of-the-Art Polish (De Laatste 5%, 6 opdrachten) COMPLEET: Cmd+K Command Palette, Kalender Drag & Drop, A/B Variant ("Alternatief"), Content Recycling Suggesties (cron dinsdag 07:00, +1 BullMQ job), 5 Micro-Interacties (tab transitions, row hover-lift, AnimatedScoreChip count-up, Gat-pulse, bulk toolbar slide-in). Admin Portal: 251 endpoints, adminPortal.js v3.43.1. 63 scheduled jobs. 25 agents. CLAUDE.md v4.41.0. MS v8.02.*
+*Laatst bijgewerkt: 8 april 2026 — Studio Landing Page Upgrade (7 opdrachten) COMPLEET: dark theme redesign studio.holidaibutler.com (#0D1B2A/#15293F/#02C39A tokens), sticky header + login popover + DemoRequestDialog met nieuwe `demo_requests` tabel voor lead capture, 6 USP cards met scroll-snap mobiel, EU-First badges balk (custom logos + flagcdn voor Windows), 2 vergelijkingstabellen (16 features + 11 criteria), volledige i18n NL/EN/DE/ES/FR (~150 keys per taal, fr.json 5e taal), social proof + footer polish. 16 commits. Admin Portal: 251 endpoints, adminPortal.js v3.43.1 (ongewijzigd). 63 scheduled jobs. 25 agents. CLAUDE.md v4.42.0. MS v8.03.*
