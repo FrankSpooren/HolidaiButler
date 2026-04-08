@@ -433,9 +433,9 @@ export default function LoginPage() {
 
       {/* ── EU-FIRST BADGES BAR ── */}
       <Box sx={{
-        background: 'linear-gradient(180deg, rgba(2,128,144,0.08) 0%, transparent 100%)',
-        borderTop: '1px solid rgba(2,192,154,0.1)',
-        borderBottom: '1px solid rgba(2,192,154,0.1)',
+        bgcolor: '#15293F',
+        borderTop: '1px solid rgba(2,192,154,0.18)',
+        borderBottom: '1px solid rgba(2,192,154,0.18)',
         py: { xs: 3, md: 4 },
         px: { xs: 2, md: 6 },
       }}>
