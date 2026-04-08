@@ -95,6 +95,20 @@ function FeatureIcon({ value }) {
   return <Box component="span" sx={{ color: '#E74C3C', fontWeight: 800, fontSize: '1rem' }}>✗</Box>;
 }
 
+const COMPARE_ALTERNATIVES = [
+  { criterion: '24/7 beschikbaarheid',       studio: { icon: 'yes', text: 'Altijd beschikbaar' },       intern: { icon: 'no',      text: 'Kantooruren' },          agency: { icon: 'no',      text: 'Kantooruren + SLA' } },
+  { criterion: 'Vakantie- en ziektedagen',   studio: { icon: 'yes', text: '0 dagen uitval' },           intern: { icon: 'no',      text: '~35 dagen/jaar' },       agency: { icon: 'no',      text: 'Wisselend team' } },
+  { criterion: 'Training & onboarding',      studio: { icon: 'yes', text: 'Onmiddellijk productief' },  intern: { icon: 'no',      text: '3-6 maanden' },          agency: { icon: 'partial', text: 'Briefingcyclus' } },
+  { criterion: 'Omzet & vervanging',         studio: { icon: 'yes', text: 'Geen risico' },              intern: { icon: 'no',      text: 'Wervingskosten €5-15K' },agency: { icon: 'no',      text: 'Account manager wissel' } },
+  { criterion: 'Expertise 7 platformen',     studio: { icon: 'yes', text: 'Alle platformen' },          intern: { icon: 'partial', text: '1-3 specialisaties' },   agency: { icon: 'partial', text: 'Per specialist' } },
+  { criterion: 'Responstijd',                studio: { icon: 'yes', text: 'Seconden' },                 intern: { icon: 'no',      text: 'Uren — dagen' },         agency: { icon: 'no',      text: 'Uren — weken' } },
+  { criterion: 'Schaalbaarheid',             studio: { icon: 'yes', text: 'Onbeperkt' },                intern: { icon: 'no',      text: 'Linear met FTE' },       agency: { icon: 'partial', text: 'Tegen meerkosten' } },
+  { criterion: 'Werkwijze',                  studio: { icon: 'yes', text: 'Data-driven AI' },           intern: { icon: 'partial', text: 'Ervaring-gebaseerd' },   agency: { icon: 'partial', text: 'Best practices' } },
+  { criterion: 'Meertalig (5+ talen)',       studio: { icon: 'yes', text: 'DeepL Pro instant' },        intern: { icon: 'no',      text: 'Vertaalbureau nodig' },  agency: { icon: 'partial', text: 'Tegen meerkosten' } },
+  { criterion: 'Kosten / maand',             studio: { icon: 'yes', text: 'Fractie van FTE' },          intern: { icon: 'no',      text: '€3.500 — 5.500 bruto' },agency: { icon: 'no',       text: '€2.000 — 8.000 retainer' } },
+  { criterion: 'Brand consistency',          studio: { icon: 'yes', text: 'Knowledge Base + Tone' },    intern: { icon: 'partial', text: 'Persoons-afhankelijk' }, agency: { icon: 'partial', text: 'Briefing-afhankelijk' } },
+];
+
 export default function LoginPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -726,6 +740,138 @@ export default function LoginPage() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
             <Box component="span" sx={{ color: '#E74C3C', fontWeight: 800, fontSize: '0.9rem' }}>✗</Box>
             <Typography sx={{ fontSize: '0.72rem', color: '#8B9DAF' }}>Niet aanwezig</Typography>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* ── COMPARISON TABLE 2 — vs BUREAU/INTERN ── */}
+      <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, md: 3 }, pt: { xs: 4, md: 6 }, pb: { xs: 3, md: 5 } }}>
+        <Typography sx={{
+          fontSize: { xs: '1.6rem', md: '1.9rem' },
+          fontWeight: 800,
+          color: '#fff',
+          textAlign: 'center',
+          mb: 1,
+          letterSpacing: '-0.01em',
+        }}>
+          {t('auth.alternativesTitle', 'AI Content Studio vs. Bureau vs. Intern')}
+        </Typography>
+        <Typography sx={{
+          fontSize: '0.95rem',
+          color: '#8B9DAF',
+          textAlign: 'center',
+          mb: { xs: 3, md: 4 },
+        }}>
+          {t('auth.alternativesSubtitle', 'Waarom AI de slimste investering is')}
+        </Typography>
+
+        <Box sx={{
+          overflowX: 'auto',
+          borderRadius: 2,
+          border: '1px solid #2A3A4A',
+          bgcolor: '#15293F',
+          WebkitOverflowScrolling: 'touch',
+          '&::-webkit-scrollbar': { height: 8 },
+          '&::-webkit-scrollbar-track': { bgcolor: '#0D1B2A' },
+          '&::-webkit-scrollbar-thumb': { bgcolor: '#2A3A4A', borderRadius: 4 },
+        }}>
+          <Box component="table" sx={{
+            width: '100%',
+            minWidth: 760,
+            borderCollapse: 'collapse',
+            fontSize: { xs: '0.78rem', md: '0.85rem' },
+          }}>
+            <Box component="thead">
+              <Box component="tr">
+                <Box component="th" sx={{
+                  bgcolor: '#0D1B2A', color: '#02C39A',
+                  fontWeight: 700, textAlign: 'left',
+                  p: { xs: '12px 12px', md: '14px 20px' },
+                  borderBottom: '2px solid #028090',
+                  whiteSpace: 'nowrap',
+                  width: { xs: '28%', md: '26%' },
+                }}>
+                  Criterium
+                </Box>
+                <Box component="th" sx={{
+                  bgcolor: 'rgba(2,195,154,0.08)', color: '#02C39A',
+                  fontWeight: 700, textAlign: 'left',
+                  p: { xs: '12px 12px', md: '14px 20px' },
+                  borderBottom: '2px solid #02C39A',
+                  whiteSpace: 'nowrap',
+                }}>
+                  AI Content Studio
+                </Box>
+                <Box component="th" sx={{
+                  bgcolor: '#0D1B2A', color: '#8B9DAF',
+                  fontWeight: 600, textAlign: 'left',
+                  p: { xs: '12px 12px', md: '14px 20px' },
+                  borderBottom: '2px solid #2A3A4A',
+                  whiteSpace: 'nowrap',
+                }}>
+                  Intern (eigen medewerker)
+                </Box>
+                <Box component="th" sx={{
+                  bgcolor: '#0D1B2A', color: '#8B9DAF',
+                  fontWeight: 600, textAlign: 'left',
+                  p: { xs: '12px 12px', md: '14px 20px' },
+                  borderBottom: '2px solid #2A3A4A',
+                  whiteSpace: 'nowrap',
+                }}>
+                  Bureau / Agency
+                </Box>
+              </Box>
+            </Box>
+            <Box component="tbody">
+              {COMPARE_ALTERNATIVES.map((row, idx) => (
+                <Box component="tr" key={row.criterion} sx={{
+                  bgcolor: idx % 2 === 0 ? 'transparent' : 'rgba(13,27,42,0.4)',
+                  transition: 'background-color 0.15s',
+                  '&:hover': { bgcolor: 'rgba(2,128,144,0.1)' },
+                  '&:hover td.highlight': { bgcolor: 'rgba(2,195,154,0.12)' },
+                }}>
+                  <Box component="td" sx={{
+                    p: { xs: '12px', md: '14px 20px' },
+                    borderBottom: '1px solid #1A2332',
+                    color: '#E8ECF1',
+                    fontWeight: 700,
+                  }}>
+                    {row.criterion}
+                  </Box>
+                  <Box component="td" className="highlight" sx={{
+                    bgcolor: 'rgba(2,195,154,0.06)',
+                    p: { xs: '12px', md: '14px 20px' },
+                    borderBottom: '1px solid #1A2332',
+                    color: '#C8D4E0',
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <FeatureIcon value={row.studio.icon} />
+                      <Box component="span">{row.studio.text}</Box>
+                    </Box>
+                  </Box>
+                  <Box component="td" sx={{
+                    p: { xs: '12px', md: '14px 20px' },
+                    borderBottom: '1px solid #1A2332',
+                    color: '#C8D4E0',
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <FeatureIcon value={row.intern.icon} />
+                      <Box component="span">{row.intern.text}</Box>
+                    </Box>
+                  </Box>
+                  <Box component="td" sx={{
+                    p: { xs: '12px', md: '14px 20px' },
+                    borderBottom: '1px solid #1A2332',
+                    color: '#C8D4E0',
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <FeatureIcon value={row.agency.icon} />
+                      <Box component="span">{row.agency.text}</Box>
+                    </Box>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
           </Box>
         </Box>
       </Box>
