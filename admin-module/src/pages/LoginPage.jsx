@@ -449,11 +449,11 @@ export default function LoginPage() {
           flexWrap: 'wrap',
         }}>
           {[
-            { type: 'img', src: '/studio/eu-ai-act.png', strong: 'EU AI Act', suffix: 'Compliant', alt: 'EU AI Act' },
-            { type: 'img', src: '/studio/gdpr.jpg', strong: 'GDPR-proof', suffix: '100% EU Data', alt: 'GDPR' },
-            { type: 'flag', flag: '🇫🇷', strong: 'Mistral AI', suffix: 'Parijs' },
-            { type: 'flag', flag: '🇩🇪', strong: 'DeepL Pro', suffix: 'Keulen' },
-            { type: 'flag', flag: '🇩🇪', strong: 'Hetzner Cloud', suffix: 'Duitsland' },
+            { src: '/studio/eu-ai-act.png', strong: 'EU AI Act', suffix: 'Compliant', alt: 'EU AI Act', scale: 1 },
+            { src: '/studio/gdpr.jpg', strong: 'GDPR-proof', suffix: '100% EU Data', alt: 'GDPR', scale: 1.35 },
+            { src: 'https://flagcdn.com/w80/fr.png', strong: 'Mistral AI', suffix: 'Parijs', alt: 'France', scale: 1 },
+            { src: 'https://flagcdn.com/w80/de.png', strong: 'DeepL Pro', suffix: 'Keulen', alt: 'Germany', scale: 1 },
+            { src: 'https://flagcdn.com/w80/de.png', strong: 'Hetzner Cloud', suffix: 'Duitsland', alt: 'Germany', scale: 1 },
           ].map((b, i) => (
             <Box key={i} sx={{
               display: 'flex',
@@ -462,35 +462,25 @@ export default function LoginPage() {
               fontSize: { xs: '0.78rem', md: '0.82rem' },
               color: '#8B9DAF',
             }}>
-              {b.type === 'img' ? (
-                <Box sx={{
-                  width: 32, height: 32,
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                  bgcolor: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px solid rgba(2,192,154,0.25)',
-                }}>
-                  <Box component="img" src={b.src} alt={b.alt} sx={{
-                    width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-                  }} />
-                </Box>
-              ) : (
-                <Box sx={{
-                  width: 32, height: 32,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.6rem',
-                  lineHeight: 1,
-                  flexShrink: 0,
-                }}>
-                  {b.flag}
-                </Box>
-              )}
+              <Box sx={{
+                width: 32, height: 32,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                flexShrink: 0,
+                bgcolor: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid rgba(2,192,154,0.25)',
+              }}>
+                <Box component="img" src={b.src} alt={b.alt} sx={{
+                  width: '100%', height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                  transform: `scale(${b.scale})`,
+                  transformOrigin: 'center',
+                }} />
+              </Box>
               <Box>
                 <Box component="strong" sx={{ color: '#E8ECF1', fontWeight: 700, display: 'block', lineHeight: 1.2 }}>
                   {b.strong}
