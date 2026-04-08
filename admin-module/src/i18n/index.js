@@ -4,6 +4,7 @@ import nl from './nl.json';
 import en from './en.json';
 import de from './de.json';
 import es from './es.json';
+import fr from './fr.json';
 
 const savedLang = localStorage.getItem('hb-admin-lang') || 'nl';
 
@@ -12,7 +13,8 @@ i18n.use(initReactI18next).init({
     nl: { translation: nl },
     en: { translation: en },
     de: { translation: de },
-    es: { translation: es }
+    es: { translation: es },
+    fr: { translation: fr }
   },
   lng: savedLang,
   fallbackLng: 'en',

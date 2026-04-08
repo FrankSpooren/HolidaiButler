@@ -69,173 +69,173 @@
     "sessionExpired": "Your session has expired. Please log in again.",
     "studio": {
       "productTagline": "by HolidaiButler",
-      "tagline": "European AI Content Platform",
-      "heroTitle": "Europe's smartest",
-      "heroTitleAccent": "AI Content Studio",
-      "heroTitleSuffix": "",
-      "heroSubtitle": "Generate, plan and publish content across 7 platforms from one intelligent workspace. One concept, multiple platforms — the AI does the work, you review and approve.",
-      "ctaDemo": "Request Free Demo",
-      "ctaLogin": "Log In",
+      "tagline": "Plateforme Européenne de Contenu IA",
+      "heroTitle": "Le Content Studio IA",
+      "heroTitleAccent": "le plus intelligent",
+      "heroTitleSuffix": "d'Europe",
+      "heroSubtitle": "Générez, planifiez et publiez du contenu sur 7 plateformes depuis un seul espace de travail intelligent. Un concept, plusieurs plateformes — l'IA fait le travail, vous révisez et approuvez.",
+      "ctaDemo": "Demander une Démo Gratuite",
+      "ctaLogin": "Connexion",
       "badges": {
-        "aiActSuffix": "Compliant",
-        "gdprSuffix": "100% EU Data",
+        "aiActSuffix": "Conforme",
+        "gdprSuffix": "100% données UE",
         "mistralSuffix": "Paris",
         "deeplSuffix": "Cologne",
-        "hetznerSuffix": "Germany"
+        "hetznerSuffix": "Allemagne"
       },
-      "uspSectionTitle": "Why AI Content Studio?",
-      "uspSectionSubtitle": "6 reasons marketers are switching",
+      "uspSectionTitle": "Pourquoi AI Content Studio ?",
+      "uspSectionSubtitle": "6 raisons pour lesquelles les marketeurs changent",
       "usps": {
         "concept": {
           "title": "ConceptDialog",
-          "desc": "One concept, multiple platforms. Platform tabs with live preview, score and character counter."
+          "desc": "Un concept, plusieurs plateformes. Onglets plateformes avec aperçu en direct, score et compteur de caractères."
         },
         "campaign": {
-          "title": "1-Click Campaign",
-          "desc": "Blog + 5 social posts in one go. AI generates, you review. From idea to publish in minutes."
+          "title": "Campagne 1-Click",
+          "desc": "Blog + 5 posts sociaux en une fois. L'IA génère, vous révisez. De l'idée à la publication en minutes."
         },
         "learning": {
-          "title": "Self-learning AI",
-          "desc": "Learns from your results. Score calibration based on actual engagement. Gets smarter every week."
+          "title": "IA auto-apprenante",
+          "desc": "Apprend de vos résultats. Calibration du score basée sur l'engagement réel. Plus intelligente chaque semaine."
         },
         "analytics": {
           "title": "Smart Analytics",
-          "desc": "Sparklines, pillar distribution, gap detection, score correlation and top-performer tracking. Know what works."
+          "desc": "Sparklines, répartition par pilier, détection de lacunes, corrélation des scores et suivi top-performers. Sachez ce qui fonctionne."
         },
         "personal": {
-          "title": "Hyper-personalized",
-          "desc": "Brand Profile, Knowledge Base, Audience Personas, Tone of Voice. Content that sounds like your brand."
+          "title": "Hyper-personnalisé",
+          "desc": "Profil de Marque, Knowledge Base, Audience Personas, Tone of Voice. Du contenu qui sonne comme votre marque."
         },
         "calendar": {
-          "title": "Smart Calendar",
-          "desc": "AI fills your calendar. Trending topics, seasons, content pillars — automatically distributed and scheduled."
+          "title": "Calendrier Intelligent",
+          "desc": "L'IA remplit votre calendrier. Sujets tendances, saisons, piliers de contenu — automatiquement répartis et planifiés."
         }
       },
       "compare": {
-        "title": "AI Content Studio vs. The Competition",
-        "subtitle": "Compare on what truly matters",
-        "headerFeature": "Feature",
+        "title": "AI Content Studio vs. La Concurrence",
+        "subtitle": "Comparez sur ce qui compte vraiment",
+        "headerFeature": "Fonctionnalité",
         "headerStudio": "AI Content Studio",
-        "total": "No other platform offers this combination",
-        "legendFull": "Fully available",
-        "legendPartial": "Limited / partial",
-        "legendNone": "Not available",
+        "total": "Aucune autre plateforme n'offre cette combinaison",
+        "legendFull": "Entièrement disponible",
+        "legendPartial": "Limité / partiel",
+        "legendNone": "Non disponible",
         "features": {
-          "aiContent": "AI content generation",
-          "conceptDialog": "ConceptDialog (1 concept → N platforms)",
-          "socialScore": "Per-platform Social Score (7 models)",
-          "selfLearning": "Self-learning score calibration",
-          "oneClickCampaign": "1-Click Campaign (6 assets)",
-          "calendarAutoFill": "AI Calendar Auto-Fill",
-          "brandKb": "Brand Profile + Knowledge Base",
-          "personas": "Audience Personas + targeting",
-          "trending": "Multi-source trending analysis",
+          "aiContent": "Génération de contenu IA",
+          "conceptDialog": "ConceptDialog (1 concept → N plateformes)",
+          "socialScore": "Social Score par plateforme (7 modèles)",
+          "selfLearning": "Calibration de score auto-apprenante",
+          "oneClickCampaign": "Campagne 1-Click (6 assets)",
+          "calendarAutoFill": "Auto-Fill calendrier IA",
+          "brandKb": "Profil de Marque + Knowledge Base",
+          "personas": "Audience Personas + sélection de cible",
+          "trending": "Analyse tendances multi-sources",
           "blogSeo": "Blog + SEO (TipTap WYSIWYG)",
-          "deepl": "DeepL Pro translations (5+ languages)",
-          "compliance": "EU AI Act + GDPR compliant",
-          "poiSource": "POI database as content source",
-          "imageKeywords": "Pixtral AI image keywords (25K+)",
-          "multiTenant": "Multi-tenant (multiple brands)",
-          "approval": "Approval workflow + team comments"
+          "deepl": "Traductions DeepL Pro (5+ langues)",
+          "compliance": "Conforme EU AI Act + RGPD",
+          "poiSource": "Base de données POI comme source de contenu",
+          "imageKeywords": "Mots-clés d'image Pixtral AI (25K+)",
+          "multiTenant": "Multi-tenant (plusieurs marques)",
+          "approval": "Workflow d'approbation + commentaires d'équipe"
         }
       },
       "alternatives": {
-        "title": "AI Content Studio vs. Agency vs. In-house",
-        "subtitle": "Why AI is the smartest investment",
-        "headerCriterion": "Criterion",
+        "title": "AI Content Studio vs. Agence vs. Interne",
+        "subtitle": "Pourquoi l'IA est l'investissement le plus intelligent",
+        "headerCriterion": "Critère",
         "headerStudio": "AI Content Studio",
-        "headerInternal": "In-house (own employee)",
-        "headerAgency": "Agency",
+        "headerInternal": "Interne (salarié propre)",
+        "headerAgency": "Agence",
         "criteria": {
           "availability": {
-            "label": "24/7 availability",
-            "studio": "Always available",
-            "internal": "Office hours",
-            "agency": "Office hours + SLA"
+            "label": "Disponibilité 24/7",
+            "studio": "Toujours disponible",
+            "internal": "Heures de bureau",
+            "agency": "Heures de bureau + SLA"
           },
           "vacation": {
-            "label": "Holidays and sick days",
-            "studio": "0 days downtime",
-            "internal": "~35 days/year",
-            "agency": "Rotating team"
+            "label": "Congés et arrêts maladie",
+            "studio": "0 jour d'indisponibilité",
+            "internal": "~35 jours/an",
+            "agency": "Équipe tournante"
           },
           "training": {
-            "label": "Training & onboarding",
-            "studio": "Immediately productive",
-            "internal": "3-6 months",
-            "agency": "Briefing cycle"
+            "label": "Formation & onboarding",
+            "studio": "Productif immédiatement",
+            "internal": "3-6 mois",
+            "agency": "Cycle de briefing"
           },
           "turnover": {
-            "label": "Turnover & replacement",
-            "studio": "No risk",
-            "internal": "Hiring cost €5-15K",
-            "agency": "Account manager switch"
+            "label": "Rotation & remplacement",
+            "studio": "Aucun risque",
+            "internal": "Coût recrutement €5-15K",
+            "agency": "Changement d'account manager"
           },
           "expertise": {
-            "label": "7-platform expertise",
-            "studio": "All platforms",
-            "internal": "1-3 specializations",
-            "agency": "Per specialist"
+            "label": "Expertise 7 plateformes",
+            "studio": "Toutes les plateformes",
+            "internal": "1-3 spécialisations",
+            "agency": "Par spécialiste"
           },
           "response": {
-            "label": "Response time",
-            "studio": "Seconds",
-            "internal": "Hours — days",
-            "agency": "Hours — weeks"
+            "label": "Temps de réponse",
+            "studio": "Secondes",
+            "internal": "Heures — jours",
+            "agency": "Heures — semaines"
           },
           "scalability": {
-            "label": "Scalability",
-            "studio": "Unlimited",
-            "internal": "Linear with FTE",
-            "agency": "At extra cost"
+            "label": "Scalabilité",
+            "studio": "Illimitée",
+            "internal": "Linéaire avec ETP",
+            "agency": "Coût supplémentaire"
           },
           "approach": {
-            "label": "Approach",
-            "studio": "Data-driven AI",
-            "internal": "Experience-based",
+            "label": "Méthodologie",
+            "studio": "IA data-driven",
+            "internal": "Basé sur l'expérience",
             "agency": "Best practices"
           },
           "multilingual": {
-            "label": "Multilingual (5+ languages)",
-            "studio": "DeepL Pro instant",
-            "internal": "Translation agency",
-            "agency": "At extra cost"
+            "label": "Multilingue (5+ langues)",
+            "studio": "DeepL Pro instantané",
+            "internal": "Agence de traduction",
+            "agency": "Coût supplémentaire"
           },
           "cost": {
-            "label": "Cost / month",
-            "studio": "Fraction of an FTE",
-            "internal": "€3,500 — 5,500 gross",
-            "agency": "€2,000 — 8,000 retainer"
+            "label": "Coût / mois",
+            "studio": "Fraction d'un ETP",
+            "internal": "€3 500 — 5 500 brut",
+            "agency": "€2 000 — 8 000 retainer"
           },
           "brand": {
-            "label": "Brand consistency",
-            "studio": "Knowledge Base + Tone",
-            "internal": "Person-dependent",
-            "agency": "Briefing-dependent"
+            "label": "Cohérence de marque",
+            "studio": "Knowledge Base + Ton",
+            "internal": "Dépend de la personne",
+            "agency": "Dépend du briefing"
           }
         }
       },
-      "securityNote": "100% European infrastructure. Your data stays in the EU (Hetzner DE, Mistral FR, DeepL DE).",
+      "securityNote": "100% infrastructure européenne. Vos données restent dans l'UE (Hetzner DE, Mistral FR, DeepL DE).",
       "footerTagline": "AI-Powered Tourism & Content Platform",
       "demo": {
-        "title": "Request Free Demo",
-        "subtitle": "Leave your details — we'll contact you within 1 business day.",
-        "name": "Name",
-        "company": "Company / organization",
+        "title": "Demander une Démo Gratuite",
+        "subtitle": "Laissez-nous vos coordonnées — nous vous contactons sous 1 jour ouvré.",
+        "name": "Nom",
+        "company": "Entreprise / organisation",
         "email": "Email",
-        "phone": "Phone",
-        "message": "Message (optional)",
-        "defaultMessage": "I'd like a demo of the AI Content Studio.",
-        "consent": "I agree to the processing of my data to be contacted.",
-        "privacy": "Privacy Policy",
-        "submit": "Request Demo",
-        "successTitle": "Thank you!",
-        "successBody": "We've received your request and will contact you within 1 business day.",
-        "error": "Something went wrong. Please try again.",
-        "close": "Close"
+        "phone": "Téléphone",
+        "message": "Message (optionnel)",
+        "defaultMessage": "J'aimerais une démo du AI Content Studio.",
+        "consent": "J'accepte le traitement de mes données pour être contacté.",
+        "privacy": "Politique de Confidentialité",
+        "submit": "Demander la Démo",
+        "successTitle": "Merci !",
+        "successBody": "Nous avons reçu votre demande et vous contactons sous 1 jour ouvré.",
+        "error": "Une erreur s'est produite. Veuillez réessayer.",
+        "close": "Fermer"
       },
-      "welcome": "Welcome to your Content Studio",
-      "welcomeSubtitle": "Log in with your account to get started"
+      "welcome": "Bienvenue dans votre Content Studio",
+      "welcomeSubtitle": "Connectez-vous avec votre compte pour commencer"
     }
   },
   "dashboard": {

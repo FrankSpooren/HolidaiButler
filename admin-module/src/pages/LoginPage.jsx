@@ -21,72 +21,37 @@ const STUDIO_LANGUAGES = [
   { code: 'en', label: 'English', short: 'EN' },
   { code: 'de', label: 'Deutsch', short: 'DE' },
   { code: 'es', label: 'Español', short: 'ES' },
+  { code: 'fr', label: 'Français', short: 'FR' },
 ];
 
+// USP cards — keys resolve to auth.studio.usps.{key}.{title,desc}
 const USP_ITEMS = [
-  {
-    emoji: '🎯',
-    titleKey: 'auth.usp.conceptTitle',
-    titleFallback: 'ConceptDialog',
-    descKey: 'auth.usp.conceptDesc',
-    descFallback: 'Eén concept, meerdere platformen. Platform tabs met live preview, score en karakterteller.',
-  },
-  {
-    emoji: '🚀',
-    titleKey: 'auth.usp.campaignTitle',
-    titleFallback: '1-Click Campagne',
-    descKey: 'auth.usp.campaignDesc',
-    descFallback: 'Blog + 5 social posts in één keer. AI genereert, jij reviewt. Van idee naar publicatie in minuten.',
-  },
-  {
-    emoji: '🧠',
-    titleKey: 'auth.usp.learningTitle',
-    titleFallback: 'Zelflerende AI',
-    descKey: 'auth.usp.learningDesc',
-    descFallback: 'Leert van jouw resultaten. Score-calibratie op basis van werkelijke engagement. Wordt elke week slimmer.',
-  },
-  {
-    emoji: '📊',
-    titleKey: 'auth.usp.analyticsTitle',
-    titleFallback: 'Smart Analytics',
-    descKey: 'auth.usp.analyticsDesc',
-    descFallback: 'Sparklines, pillar-verdeling, gat-detectie, score-correlatie en top-performer tracking. Weet wat werkt.',
-  },
-  {
-    emoji: '🎨',
-    titleKey: 'auth.usp.personalTitle',
-    titleFallback: 'Hyper-Gepersonaliseerd',
-    descKey: 'auth.usp.personalDesc',
-    descFallback: 'Merk Profiel, Knowledge Base, Audience Personas, Tone of Voice. Content die klinkt als jouw merk.',
-  },
-  {
-    emoji: '📅',
-    titleKey: 'auth.usp.calendarTitle',
-    titleFallback: 'Slimme Kalender',
-    descKey: 'auth.usp.calendarDesc',
-    descFallback: 'AI vult je kalender. Trending topics, seizoenen, content pillars — automatisch verdeeld en ingepland.',
-  },
+  { emoji: '🎯', key: 'concept'   },
+  { emoji: '🚀', key: 'campaign'  },
+  { emoji: '🧠', key: 'learning'  },
+  { emoji: '📊', key: 'analytics' },
+  { emoji: '🎨', key: 'personal'  },
+  { emoji: '📅', key: 'calendar'  },
 ];
 
-// yes = full support, partial = limited, no = not available
-// short = compact label for mobile (max ~25 chars)
+// Comparison table 1 — keys resolve to auth.studio.compare.features.{key}
 const COMPARE_FEATURES = [
-  { feature: 'AI content generatie',                        studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
-  { feature: 'ConceptDialog (1 concept → N platformen)',    studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
-  { feature: 'Per-platform Social Score (7 modellen)',      studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
-  { feature: 'Zelflerende score calibratie',                studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
-  { feature: '1-Click Campagne (6 assets)',                 studio: 'yes', hootsuite: 'no',      jasper: 'partial' },
-  { feature: 'AI Kalender Auto-Fill',                       studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
-  { feature: 'Merk Profiel + Knowledge Base',               studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
-  { feature: 'Audience Personas + doelgroep-selectie',      studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
-  { feature: 'Multi-source trending analyse',               studio: 'yes', hootsuite: 'partial', jasper: 'no'      },
-  { feature: 'Blog + SEO (TipTap WYSIWYG)',                 studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
-  { feature: 'DeepL Pro vertalingen (5+ talen)',            studio: 'yes', hootsuite: 'no',      jasper: 'partial' },
-  { feature: 'EU AI Act + GDPR compliant',                  studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
-  { feature: 'POI-database als contentbron',                studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
-  { feature: 'Pixtral AI image keywords (25K+)',            studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
-  { feature: 'Multi-tenant (meerdere merken)',              studio: 'yes', hootsuite: 'no',      jasper: 'partial' },
-  { feature: 'Approval workflow + team comments',           studio: 'yes', hootsuite: 'yes',     jasper: 'partial' },
+  { key: 'aiContent',        studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
+  { key: 'conceptDialog',    studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { key: 'socialScore',      studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { key: 'selfLearning',     studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { key: 'oneClickCampaign', studio: 'yes', hootsuite: 'no',      jasper: 'partial' },
+  { key: 'calendarAutoFill', studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { key: 'brandKb',          studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
+  { key: 'personas',         studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
+  { key: 'trending',         studio: 'yes', hootsuite: 'partial', jasper: 'no'      },
+  { key: 'blogSeo',          studio: 'yes', hootsuite: 'no',      jasper: 'yes'     },
+  { key: 'deepl',            studio: 'yes', hootsuite: 'no',      jasper: 'partial' },
+  { key: 'compliance',       studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { key: 'poiSource',        studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { key: 'imageKeywords',    studio: 'yes', hootsuite: 'no',      jasper: 'no'      },
+  { key: 'multiTenant',      studio: 'yes', hootsuite: 'no',      jasper: 'partial' },
+  { key: 'approval',         studio: 'yes', hootsuite: 'yes',     jasper: 'partial' },
 ];
 
 function FeatureIcon({ value }) {
@@ -95,18 +60,19 @@ function FeatureIcon({ value }) {
   return <Box component="span" sx={{ color: '#E74C3C', fontWeight: 800, fontSize: '1rem' }}>✗</Box>;
 }
 
+// Comparison table 2 — keys resolve to auth.studio.alternatives.criteria.{key}.{label,studio,internal,agency}
 const COMPARE_ALTERNATIVES = [
-  { criterion: '24/7 beschikbaarheid',       studio: { icon: 'yes', text: 'Altijd beschikbaar' },       intern: { icon: 'no',      text: 'Kantooruren' },          agency: { icon: 'no',      text: 'Kantooruren + SLA' } },
-  { criterion: 'Vakantie- en ziektedagen',   studio: { icon: 'yes', text: '0 dagen uitval' },           intern: { icon: 'no',      text: '~35 dagen/jaar' },       agency: { icon: 'no',      text: 'Wisselend team' } },
-  { criterion: 'Training & onboarding',      studio: { icon: 'yes', text: 'Onmiddellijk productief' },  intern: { icon: 'no',      text: '3-6 maanden' },          agency: { icon: 'partial', text: 'Briefingcyclus' } },
-  { criterion: 'Omzet & vervanging',         studio: { icon: 'yes', text: 'Geen risico' },              intern: { icon: 'no',      text: 'Wervingskosten €5-15K' },agency: { icon: 'no',      text: 'Account manager wissel' } },
-  { criterion: 'Expertise 7 platformen',     studio: { icon: 'yes', text: 'Alle platformen' },          intern: { icon: 'partial', text: '1-3 specialisaties' },   agency: { icon: 'partial', text: 'Per specialist' } },
-  { criterion: 'Responstijd',                studio: { icon: 'yes', text: 'Seconden' },                 intern: { icon: 'no',      text: 'Uren — dagen' },         agency: { icon: 'no',      text: 'Uren — weken' } },
-  { criterion: 'Schaalbaarheid',             studio: { icon: 'yes', text: 'Onbeperkt' },                intern: { icon: 'no',      text: 'Linear met FTE' },       agency: { icon: 'partial', text: 'Tegen meerkosten' } },
-  { criterion: 'Werkwijze',                  studio: { icon: 'yes', text: 'Data-driven AI' },           intern: { icon: 'partial', text: 'Ervaring-gebaseerd' },   agency: { icon: 'partial', text: 'Best practices' } },
-  { criterion: 'Meertalig (5+ talen)',       studio: { icon: 'yes', text: 'DeepL Pro instant' },        intern: { icon: 'no',      text: 'Vertaalbureau nodig' },  agency: { icon: 'partial', text: 'Tegen meerkosten' } },
-  { criterion: 'Kosten / maand',             studio: { icon: 'yes', text: 'Fractie van FTE' },          intern: { icon: 'no',      text: '€3.500 — 5.500 bruto' },agency: { icon: 'no',       text: '€2.000 — 8.000 retainer' } },
-  { criterion: 'Brand consistency',          studio: { icon: 'yes', text: 'Knowledge Base + Tone' },    intern: { icon: 'partial', text: 'Persoons-afhankelijk' }, agency: { icon: 'partial', text: 'Briefing-afhankelijk' } },
+  { key: 'availability',  studioIcon: 'yes', internIcon: 'no',      agencyIcon: 'no' },
+  { key: 'vacation',      studioIcon: 'yes', internIcon: 'no',      agencyIcon: 'no' },
+  { key: 'training',      studioIcon: 'yes', internIcon: 'no',      agencyIcon: 'partial' },
+  { key: 'turnover',      studioIcon: 'yes', internIcon: 'no',      agencyIcon: 'no' },
+  { key: 'expertise',     studioIcon: 'yes', internIcon: 'partial', agencyIcon: 'partial' },
+  { key: 'response',      studioIcon: 'yes', internIcon: 'no',      agencyIcon: 'no' },
+  { key: 'scalability',   studioIcon: 'yes', internIcon: 'no',      agencyIcon: 'partial' },
+  { key: 'approach',      studioIcon: 'yes', internIcon: 'partial', agencyIcon: 'partial' },
+  { key: 'multilingual',  studioIcon: 'yes', internIcon: 'no',      agencyIcon: 'partial' },
+  { key: 'cost',          studioIcon: 'yes', internIcon: 'no',      agencyIcon: 'no' },
+  { key: 'brand',         studioIcon: 'yes', internIcon: 'partial', agencyIcon: 'partial' },
 ];
 
 export default function LoginPage() {
@@ -248,7 +214,7 @@ export default function LoginPage() {
               fontWeight: 400,
               display: { xs: 'none', sm: 'inline' },
             }}>
-              by HolidaiButler
+              {t('auth.studio.productTagline', 'by HolidaiButler')}
             </Typography>
           </Box>
 
@@ -358,7 +324,7 @@ export default function LoginPage() {
               textTransform: 'uppercase',
               mb: 2.5,
             }}>
-              {t('auth.studioTagline', 'Europees AI Content Platform')}
+              {t('auth.studio.tagline', 'Europees AI Content Platform')}
             </Box>
 
             <Typography sx={{
@@ -369,11 +335,11 @@ export default function LoginPage() {
               color: '#fff',
               letterSpacing: '-0.025em',
             }}>
-              {t('auth.studioHeroTitle', 'De slimste')}{' '}
+              {t('auth.studio.heroTitle', 'De slimste')}{' '}
               <Box component="span" sx={{ color: '#02C39A' }}>
-                {t('auth.studioHeroTitleAccent', 'AI Content Studio')}
+                {t('auth.studio.heroTitleAccent', 'AI Content Studio')}
               </Box>{' '}
-              {t('auth.studioHeroTitleSuffix', 'van Europa')}
+              {t('auth.studio.heroTitleSuffix', 'van Europa')}
             </Typography>
 
             <Typography sx={{
@@ -384,7 +350,7 @@ export default function LoginPage() {
               lineHeight: 1.65,
               mb: 3.5,
             }}>
-              {t('auth.studioHeroSubtitle', 'Genereer, plan en publiceer content op 7 platformen vanuit één intelligent werkstation. Eén concept, meerdere platformen — de AI doet het werk, jij reviewt en keurt goed.')}
+              {t('auth.studio.heroSubtitle', 'Genereer, plan en publiceer content op 7 platformen vanuit één intelligent werkstation. Eén concept, meerdere platformen — de AI doet het werk, jij reviewt en keurt goed.')}
             </Typography>
 
             <Box sx={{
@@ -411,7 +377,7 @@ export default function LoginPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                 }}
               >
-                {t('auth.studioCtaDemo', 'Gratis Demo Aanvragen')}
+                {t('auth.studio.ctaDemo', 'Gratis Demo Aanvragen')}
               </Button>
               <Button
                 variant="outlined"
@@ -458,11 +424,11 @@ export default function LoginPage() {
           flexWrap: 'wrap',
         }}>
           {[
-            { src: '/studio/eu-ai-act.png', strong: 'EU AI Act', suffix: 'Compliant', alt: 'EU AI Act', scale: 1 },
-            { src: '/studio/gdpr.jpg', strong: 'GDPR-proof', suffix: '100% EU Data', alt: 'GDPR', scale: 1.35 },
-            { src: 'https://flagcdn.com/w80/fr.png', strong: 'Mistral AI', suffix: 'Parijs', alt: 'France', scale: 1 },
-            { src: 'https://flagcdn.com/w80/de.png', strong: 'DeepL Pro', suffix: 'Keulen', alt: 'Germany', scale: 1 },
-            { src: 'https://flagcdn.com/w80/de.png', strong: 'Hetzner Cloud', suffix: 'Duitsland', alt: 'Germany', scale: 1 },
+            { src: '/studio/eu-ai-act.png', strong: 'EU AI Act',     suffix: t('auth.studio.badges.aiActSuffix', 'Compliant'),   alt: 'EU AI Act', scale: 1 },
+            { src: '/studio/gdpr.jpg',      strong: 'GDPR-proof',    suffix: t('auth.studio.badges.gdprSuffix', '100% EU Data'), alt: 'GDPR',      scale: 1.35 },
+            { src: 'https://flagcdn.com/w80/fr.png', strong: 'Mistral AI',    suffix: t('auth.studio.badges.mistralSuffix', 'Parijs'),    alt: 'France',  scale: 1 },
+            { src: 'https://flagcdn.com/w80/de.png', strong: 'DeepL Pro',     suffix: t('auth.studio.badges.deeplSuffix', 'Keulen'),      alt: 'Germany', scale: 1 },
+            { src: 'https://flagcdn.com/w80/de.png', strong: 'Hetzner Cloud', suffix: t('auth.studio.badges.hetznerSuffix', 'Duitsland'), alt: 'Germany', scale: 1 },
           ].map((b, i) => (
             <Box key={i} sx={{
               display: 'flex',
@@ -522,7 +488,7 @@ export default function LoginPage() {
           letterSpacing: '-0.01em',
           px: 3,
         }}>
-          {t('auth.uspSectionTitle', 'Waarom AI Content Studio?')}
+          {t('auth.studio.uspSectionTitle', 'Waarom AI Content Studio?')}
         </Typography>
         <Typography sx={{
           fontSize: '0.95rem',
@@ -531,7 +497,7 @@ export default function LoginPage() {
           mb: { xs: 3, md: 5 },
           px: 3,
         }}>
-          {t('auth.uspSectionSubtitle', '6 redenen waarom marketeers overstappen')}
+          {t('auth.studio.uspSectionSubtitle', '6 redenen waarom marketeers overstappen')}
         </Typography>
 
         {/* Desktop: 3×2 grid · Mobile: horizontal scroll-snap */}
@@ -550,8 +516,8 @@ export default function LoginPage() {
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
         }}>
-          {USP_ITEMS.map(({ emoji, titleKey, titleFallback, descKey, descFallback }) => (
-            <Box key={titleKey} sx={{
+          {USP_ITEMS.map(({ emoji, key }) => (
+            <Box key={key} sx={{
               bgcolor: '#15293F',
               border: '1px solid #2A3A4A',
               borderRadius: '12px',
@@ -577,14 +543,14 @@ export default function LoginPage() {
                 mb: 1,
                 letterSpacing: '-0.01em',
               }}>
-                {t(titleKey, titleFallback)}
+                {t(`auth.studio.usps.${key}.title`)}
               </Typography>
               <Typography sx={{
                 fontSize: '0.82rem',
                 color: '#8B9DAF',
                 lineHeight: 1.6,
               }}>
-                {t(descKey, descFallback)}
+                {t(`auth.studio.usps.${key}.desc`)}
               </Typography>
             </Box>
           ))}
@@ -601,7 +567,7 @@ export default function LoginPage() {
           mb: 1,
           letterSpacing: '-0.01em',
         }}>
-          {t('auth.compareTitle', 'AI Content Studio vs. De Concurrentie')}
+          {t('auth.studio.compare.title', 'AI Content Studio vs. De Concurrentie')}
         </Typography>
         <Typography sx={{
           fontSize: '0.95rem',
@@ -609,7 +575,7 @@ export default function LoginPage() {
           textAlign: 'center',
           mb: { xs: 3, md: 4 },
         }}>
-          {t('auth.compareSubtitle', 'Vergelijk op wat er werkelijk toe doet')}
+          {t('auth.studio.compare.subtitle', 'Vergelijk op wat er werkelijk toe doet')}
         </Typography>
 
         <Box sx={{
@@ -637,7 +603,7 @@ export default function LoginPage() {
                   borderBottom: '2px solid #028090',
                   whiteSpace: 'nowrap',
                 }}>
-                  Feature
+                  {t('auth.studio.compare.headerFeature', 'Feature')}
                 </Box>
                 <Box component="th" sx={{
                   bgcolor: 'rgba(2,195,154,0.08)', color: '#02C39A',
@@ -646,7 +612,7 @@ export default function LoginPage() {
                   borderBottom: '2px solid #02C39A',
                   whiteSpace: 'nowrap',
                 }}>
-                  AI Content Studio
+                  {t('auth.studio.compare.headerStudio', 'AI Content Studio')}
                 </Box>
                 <Box component="th" sx={{
                   bgcolor: '#0D1B2A', color: '#8B9DAF',
@@ -670,7 +636,7 @@ export default function LoginPage() {
             </Box>
             <Box component="tbody">
               {COMPARE_FEATURES.map((row, idx) => (
-                <Box component="tr" key={row.feature} sx={{
+                <Box component="tr" key={row.key} sx={{
                   bgcolor: idx % 2 === 0 ? 'transparent' : 'rgba(13,27,42,0.4)',
                   transition: 'background-color 0.15s',
                   '&:hover': { bgcolor: 'rgba(2,128,144,0.1)' },
@@ -681,7 +647,7 @@ export default function LoginPage() {
                     borderBottom: '1px solid #1A2332',
                     color: '#C8D4E0',
                   }}>
-                    {row.feature}
+                    {t(`auth.studio.compare.features.${row.key}`)}
                   </Box>
                   <Box component="td" className="highlight" sx={{
                     bgcolor: 'rgba(2,195,154,0.06)',
@@ -718,7 +684,7 @@ export default function LoginPage() {
           fontWeight: 700,
           fontSize: { xs: '0.9rem', md: '1rem' },
         }}>
-          16/16 ✓ — {t('auth.compareTotal', 'Geen enkel platform biedt deze combinatie')}
+          16/16 ✓ — {t('auth.studio.compare.total', 'Geen enkel platform biedt deze combinatie')}
         </Typography>
 
         {/* Legenda */}
@@ -731,15 +697,15 @@ export default function LoginPage() {
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
             <Box component="span" sx={{ color: '#27AE60', fontWeight: 800, fontSize: '0.9rem' }}>✓</Box>
-            <Typography sx={{ fontSize: '0.72rem', color: '#8B9DAF' }}>Volledig aanwezig</Typography>
+            <Typography sx={{ fontSize: '0.72rem', color: '#8B9DAF' }}>{t('auth.studio.compare.legendFull', 'Volledig aanwezig')}</Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
             <Box component="span" sx={{ color: '#F39C12', fontWeight: 800, fontSize: '0.9rem' }}>⚠</Box>
-            <Typography sx={{ fontSize: '0.72rem', color: '#8B9DAF' }}>Beperkt / deels</Typography>
+            <Typography sx={{ fontSize: '0.72rem', color: '#8B9DAF' }}>{t('auth.studio.compare.legendPartial', 'Beperkt / deels')}</Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
             <Box component="span" sx={{ color: '#E74C3C', fontWeight: 800, fontSize: '0.9rem' }}>✗</Box>
-            <Typography sx={{ fontSize: '0.72rem', color: '#8B9DAF' }}>Niet aanwezig</Typography>
+            <Typography sx={{ fontSize: '0.72rem', color: '#8B9DAF' }}>{t('auth.studio.compare.legendNone', 'Niet aanwezig')}</Typography>
           </Box>
         </Box>
       </Box>
@@ -754,7 +720,7 @@ export default function LoginPage() {
           mb: 1,
           letterSpacing: '-0.01em',
         }}>
-          {t('auth.alternativesTitle', 'AI Content Studio vs. Bureau vs. Intern')}
+          {t('auth.studio.alternatives.title', 'AI Content Studio vs. Bureau vs. Intern')}
         </Typography>
         <Typography sx={{
           fontSize: '0.95rem',
@@ -762,7 +728,7 @@ export default function LoginPage() {
           textAlign: 'center',
           mb: { xs: 3, md: 4 },
         }}>
-          {t('auth.alternativesSubtitle', 'Waarom AI de slimste investering is')}
+          {t('auth.studio.alternatives.subtitle', 'Waarom AI de slimste investering is')}
         </Typography>
 
         <Box sx={{
@@ -791,7 +757,7 @@ export default function LoginPage() {
                   whiteSpace: 'nowrap',
                   width: { xs: '28%', md: '26%' },
                 }}>
-                  Criterium
+                  {t('auth.studio.alternatives.headerCriterion', 'Criterium')}
                 </Box>
                 <Box component="th" sx={{
                   bgcolor: 'rgba(2,195,154,0.08)', color: '#02C39A',
@@ -800,7 +766,7 @@ export default function LoginPage() {
                   borderBottom: '2px solid #02C39A',
                   whiteSpace: 'nowrap',
                 }}>
-                  AI Content Studio
+                  {t('auth.studio.alternatives.headerStudio', 'AI Content Studio')}
                 </Box>
                 <Box component="th" sx={{
                   bgcolor: '#0D1B2A', color: '#8B9DAF',
@@ -809,7 +775,7 @@ export default function LoginPage() {
                   borderBottom: '2px solid #2A3A4A',
                   whiteSpace: 'nowrap',
                 }}>
-                  Intern (eigen medewerker)
+                  {t('auth.studio.alternatives.headerInternal', 'Intern (eigen medewerker)')}
                 </Box>
                 <Box component="th" sx={{
                   bgcolor: '#0D1B2A', color: '#8B9DAF',
@@ -818,13 +784,13 @@ export default function LoginPage() {
                   borderBottom: '2px solid #2A3A4A',
                   whiteSpace: 'nowrap',
                 }}>
-                  Bureau / Agency
+                  {t('auth.studio.alternatives.headerAgency', 'Bureau / Agency')}
                 </Box>
               </Box>
             </Box>
             <Box component="tbody">
               {COMPARE_ALTERNATIVES.map((row, idx) => (
-                <Box component="tr" key={row.criterion} sx={{
+                <Box component="tr" key={row.key} sx={{
                   bgcolor: idx % 2 === 0 ? 'transparent' : 'rgba(13,27,42,0.4)',
                   transition: 'background-color 0.15s',
                   '&:hover': { bgcolor: 'rgba(2,128,144,0.1)' },
@@ -836,7 +802,7 @@ export default function LoginPage() {
                     color: '#E8ECF1',
                     fontWeight: 700,
                   }}>
-                    {row.criterion}
+                    {t(`auth.studio.alternatives.criteria.${row.key}.label`)}
                   </Box>
                   <Box component="td" className="highlight" sx={{
                     bgcolor: 'rgba(2,195,154,0.06)',
@@ -845,8 +811,8 @@ export default function LoginPage() {
                     color: '#C8D4E0',
                   }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <FeatureIcon value={row.studio.icon} />
-                      <Box component="span">{row.studio.text}</Box>
+                      <FeatureIcon value={row.studioIcon} />
+                      <Box component="span">{t(`auth.studio.alternatives.criteria.${row.key}.studio`)}</Box>
                     </Box>
                   </Box>
                   <Box component="td" sx={{
@@ -855,8 +821,8 @@ export default function LoginPage() {
                     color: '#C8D4E0',
                   }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <FeatureIcon value={row.intern.icon} />
-                      <Box component="span">{row.intern.text}</Box>
+                      <FeatureIcon value={row.internIcon} />
+                      <Box component="span">{t(`auth.studio.alternatives.criteria.${row.key}.internal`)}</Box>
                     </Box>
                   </Box>
                   <Box component="td" sx={{
@@ -865,8 +831,8 @@ export default function LoginPage() {
                     color: '#C8D4E0',
                   }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <FeatureIcon value={row.agency.icon} />
-                      <Box component="span">{row.agency.text}</Box>
+                      <FeatureIcon value={row.agencyIcon} />
+                      <Box component="span">{t(`auth.studio.alternatives.criteria.${row.key}.agency`)}</Box>
                     </Box>
                   </Box>
                 </Box>
@@ -883,7 +849,7 @@ export default function LoginPage() {
       }}>
         <SecurityIcon sx={{ fontSize: 16, color: '#6B7280' }} />
         <Typography sx={{ fontSize: '0.75rem', color: '#6B7280' }}>
-          {t('auth.studioSecurityNote', '100% Europese infrastructuur. Uw data blijft in de EU (Hetzner DE, Mistral FR, DeepL DE).')}
+          {t('auth.studio.securityNote', '100% Europese infrastructuur. Uw data blijft in de EU (Hetzner DE, Mistral FR, DeepL DE).')}
         </Typography>
       </Box>
 
@@ -914,7 +880,7 @@ export default function LoginPage() {
           </Typography>
         </Box>
         <Typography sx={{ fontSize: '0.7rem', color: '#D1D5DB' }}>
-          AI-Powered Tourism & Content Platform
+          {t('auth.studio.footerTagline', 'AI-Powered Tourism & Content Platform')}
         </Typography>
       </Box>
 

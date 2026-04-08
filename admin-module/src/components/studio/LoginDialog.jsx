@@ -63,10 +63,10 @@ export default function LoginDialog({ open, onClose }) {
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700, color: '#1C1917' }}>
-              {t('auth.studioWelcome', 'Welkom bij uw Content Studio')}
+              {t('auth.studio.welcome', 'Welkom bij uw Content Studio')}
             </Typography>
             <Typography variant="body2" sx={{ color: '#6B7280', mt: 0.5 }}>
-              {t('auth.studioLoginSubtitle', 'Log in met uw account om te starten')}
+              {t('auth.studio.welcomeSubtitle', 'Log in met uw account om te starten')}
             </Typography>
           </Box>
           <IconButton onClick={onClose} size="small" sx={{ mt: -0.5, mr: -0.5 }}>
