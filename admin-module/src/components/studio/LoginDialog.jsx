@@ -59,7 +59,7 @@ export default function LoginDialog({ open, onClose }) {
       fullWidth
       PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}
     >
-      <DialogTitle sx={{ m: 0, p: 3, pb: 1 }}>
+      <DialogTitle sx={{ m: 0, p: 3, pb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700, color: '#1C1917' }}>
@@ -78,7 +78,7 @@ export default function LoginDialog({ open, onClose }) {
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <form onSubmit={handleSubmit}>
           <TextField fullWidth label={t('auth.email')} type="email" autoComplete="email"
-            value={email} onChange={(e) => setEmail(e.target.value)} sx={{ mb: 2 }} required size="small" autoFocus />
+            value={email} onChange={(e) => setEmail(e.target.value)} sx={{ mt: 1.5, mb: 2 }} required size="small" autoFocus />
           <TextField fullWidth label={t('auth.password')}
             type={showPassword ? 'text' : 'password'} autoComplete="current-password"
             value={password} onChange={(e) => setPassword(e.target.value)} sx={{ mb: 3 }} required size="small"
