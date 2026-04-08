@@ -119,17 +119,23 @@ export default function DemoRequestDialog({ open, onClose }) {
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 2 }}>
               <TextField size="small" label={t('studio.demo.name', 'Naam')}
-                value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+                value={name} onChange={(e) => setName(e.target.value)} autoFocus
+                InputLabelProps={{ shrink: true }} placeholder="Jan Jansen" />
               <TextField size="small" label={t('studio.demo.company', 'Bedrijf / organisatie')}
-                value={company} onChange={(e) => setCompany(e.target.value)} />
+                value={company} onChange={(e) => setCompany(e.target.value)}
+                InputLabelProps={{ shrink: true }} placeholder="Jouw bedrijf" />
               <TextField size="small" label={t('studio.demo.email', 'E-mail')} type="email" required
-                value={email} onChange={(e) => setEmail(e.target.value)} />
+                value={email} onChange={(e) => setEmail(e.target.value)}
+                InputLabelProps={{ shrink: true }} placeholder="jan@bedrijf.nl" />
               <TextField size="small" label={t('studio.demo.phone', 'Telefoon')}
-                value={phone} onChange={(e) => setPhone(e.target.value)} />
+                value={phone} onChange={(e) => setPhone(e.target.value)}
+                InputLabelProps={{ shrink: true }} placeholder="+31 6 12345678" />
             </Box>
             <TextField fullWidth multiline rows={3} size="small"
               label={t('studio.demo.message', 'Bericht (optioneel)')}
-              value={message} onChange={(e) => setMessage(e.target.value)} sx={{ mb: 2 }} />
+              value={message} onChange={(e) => setMessage(e.target.value)} sx={{ mb: 2 }}
+              InputLabelProps={{ shrink: true }}
+              placeholder={t('studio.demo.messagePlaceholder', 'Vertel kort wat je wilt bereiken...')} />
 
             <FormControlLabel
               control={<Checkbox checked={consent} onChange={(e) => setConsent(e.target.checked)} size="small" />}
