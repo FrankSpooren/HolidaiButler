@@ -422,30 +422,85 @@ export default function LoginPage() {
               </Button>
             </Box>
 
-            <Box sx={{
-              display: 'flex', gap: 1, justifyContent: { xs: 'center', md: 'flex-start' },
-              flexWrap: 'wrap',
-            }}>
-              {['EU AI Act', 'GDPR-proof', 'Mistral AI', 'DeepL Pro'].map(badge => (
-                <Box key={badge} sx={{
-                  bgcolor: 'rgba(2,195,154,0.06)',
-                  border: '1px solid rgba(2,195,154,0.2)',
-                  color: '#8B9DAF',
-                  px: 1.5, py: 0.5,
-                  borderRadius: '20px',
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                }}>
-                  {badge}
-                </Box>
-              ))}
-            </Box>
           </Box>
 
           {/* Right: CSS mockup */}
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             <ConceptMockup />
           </Box>
+        </Box>
+      </Box>
+
+      {/* ── EU-FIRST BADGES BAR ── */}
+      <Box sx={{
+        background: 'linear-gradient(180deg, rgba(2,128,144,0.08) 0%, transparent 100%)',
+        borderTop: '1px solid rgba(2,192,154,0.1)',
+        borderBottom: '1px solid rgba(2,192,154,0.1)',
+        py: { xs: 3, md: 4 },
+        px: { xs: 2, md: 6 },
+      }}>
+        <Box sx={{
+          maxWidth: 1200,
+          mx: 'auto',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: { xs: 2.5, md: 4 },
+          flexWrap: 'wrap',
+        }}>
+          {[
+            { type: 'img', src: '/studio/eu-ai-act.png', strong: 'EU AI Act', suffix: 'Compliant', alt: 'EU AI Act' },
+            { type: 'img', src: '/studio/gdpr.jpg', strong: 'GDPR-proof', suffix: '100% EU Data', alt: 'GDPR' },
+            { type: 'flag', flag: '🇫🇷', strong: 'Mistral AI', suffix: 'Parijs' },
+            { type: 'flag', flag: '🇩🇪', strong: 'DeepL Pro', suffix: 'Keulen' },
+            { type: 'flag', flag: '🇩🇪', strong: 'Hetzner Cloud', suffix: 'Duitsland' },
+          ].map((b, i) => (
+            <Box key={i} sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.25,
+              fontSize: { xs: '0.78rem', md: '0.82rem' },
+              color: '#8B9DAF',
+            }}>
+              {b.type === 'img' ? (
+                <Box sx={{
+                  width: 32, height: 32,
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                  bgcolor: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid rgba(2,192,154,0.25)',
+                }}>
+                  <Box component="img" src={b.src} alt={b.alt} sx={{
+                    width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+                  }} />
+                </Box>
+              ) : (
+                <Box sx={{
+                  width: 32, height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.6rem',
+                  lineHeight: 1,
+                  flexShrink: 0,
+                }}>
+                  {b.flag}
+                </Box>
+              )}
+              <Box>
+                <Box component="strong" sx={{ color: '#E8ECF1', fontWeight: 700, display: 'block', lineHeight: 1.2 }}>
+                  {b.strong}
+                </Box>
+                <Box component="span" sx={{ color: '#8B9DAF', fontSize: '0.72rem', lineHeight: 1.2 }}>
+                  {b.suffix}
+                </Box>
+              </Box>
+            </Box>
+          ))}
         </Box>
       </Box>
 
