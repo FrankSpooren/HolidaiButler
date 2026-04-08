@@ -79,7 +79,7 @@ export default function DemoRequestDialog({ open, onClose }) {
       fullWidth
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
-      <DialogTitle sx={{ m: 0, p: 3, pb: 1 }}>
+      <DialogTitle sx={{ m: 0, p: 3, pb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700, color: '#1C1917' }}>
@@ -117,25 +117,19 @@ export default function DemoRequestDialog({ open, onClose }) {
             <input type="text" value={hp} onChange={(e) => setHp(e.target.value)}
               style={{ position: 'absolute', left: '-9999px' }} tabIndex={-1} autoComplete="off" />
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1.5, mb: 2 }}>
               <TextField size="small" label={t('studio.demo.name', 'Naam')}
-                value={name} onChange={(e) => setName(e.target.value)} autoFocus
-                InputLabelProps={{ shrink: true }} placeholder="Jan Jansen" />
+                value={name} onChange={(e) => setName(e.target.value)} autoFocus />
               <TextField size="small" label={t('studio.demo.company', 'Bedrijf / organisatie')}
-                value={company} onChange={(e) => setCompany(e.target.value)}
-                InputLabelProps={{ shrink: true }} placeholder="Jouw bedrijf" />
+                value={company} onChange={(e) => setCompany(e.target.value)} />
               <TextField size="small" label={t('studio.demo.email', 'E-mail')} type="email" required
-                value={email} onChange={(e) => setEmail(e.target.value)}
-                InputLabelProps={{ shrink: true }} placeholder="jan@bedrijf.nl" />
+                value={email} onChange={(e) => setEmail(e.target.value)} />
               <TextField size="small" label={t('studio.demo.phone', 'Telefoon')}
-                value={phone} onChange={(e) => setPhone(e.target.value)}
-                InputLabelProps={{ shrink: true }} placeholder="+31 6 12345678" />
+                value={phone} onChange={(e) => setPhone(e.target.value)} />
             </Box>
             <TextField fullWidth multiline rows={3} size="small"
               label={t('studio.demo.message', 'Bericht (optioneel)')}
-              value={message} onChange={(e) => setMessage(e.target.value)} sx={{ mb: 2 }}
-              InputLabelProps={{ shrink: true }}
-              placeholder={t('studio.demo.messagePlaceholder', 'Vertel kort wat je wilt bereiken...')} />
+              value={message} onChange={(e) => setMessage(e.target.value)} sx={{ mb: 2 }} />
 
             <FormControlLabel
               control={<Checkbox checked={consent} onChange={(e) => setConsent(e.target.checked)} size="small" />}
