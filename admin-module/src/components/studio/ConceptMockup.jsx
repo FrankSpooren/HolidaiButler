@@ -1,14 +1,14 @@
 import { Box, Typography } from '@mui/material';
 
 /**
- * Dark-themed ConceptDialog mockup matching the studio landing design spec.
- * Pure CSS/MUI — no external assets. Shows an authentic concept with platform
- * tabs, content preview with emoji + hashtags, and score panel with checklist.
+ * Light-themed ConceptDialog mockup on the dark landing page.
+ * Light card for maximum contrast against the #0D1B2A background.
+ * Platform tabs keep brand colors (Facebook blue, Instagram pink, etc.).
  */
 const PLATFORMS = [
   { icon: '📘', label: 'Facebook', status: '✅', bg: '#1877F2', color: '#fff' },
   { icon: '📸', label: 'Instagram', status: '⏳', bg: '#E4405F', color: '#fff' },
-  { icon: '💼', label: 'LinkedIn', status: '', bg: '#1A2332', color: '#8B9DAF', border: '1px solid #2A3A4A' },
+  { icon: '💼', label: 'LinkedIn', status: '', bg: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' },
 ];
 
 const CHECKS = [
@@ -25,28 +25,28 @@ export default function ConceptMockup() {
     <Box sx={{
       width: '100%',
       maxWidth: 560,
-      bgcolor: '#1A2332',
-      border: '1px solid #2A3A4A',
-      borderRadius: '12px',
+      bgcolor: '#FFFFFF',
+      border: '1px solid #E5E7EB',
+      borderRadius: '14px',
       overflow: 'hidden',
-      boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+      boxShadow: '0 25px 70px rgba(0,0,0,0.45), 0 0 0 1px rgba(2,195,154,0.15)',
       fontFamily: "'Inter', sans-serif",
       transform: { xs: 'none', md: 'perspective(1600px) rotateY(-3deg) rotateX(1deg)' },
       transformOrigin: 'center',
     }}>
       {/* Mockup header */}
       <Box sx={{
-        bgcolor: '#15202B',
+        bgcolor: '#F9FAFB',
         px: 2, py: 1.25,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: '1px solid #2A3A4A',
+        borderBottom: '1px solid #E5E7EB',
         gap: 1,
       }}>
         <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
+          <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#111827', lineHeight: 1.2 }}>
             Tapas Trails in Calpe: A Culinary Adventure
           </Typography>
-          <Typography sx={{ fontSize: '0.65rem', color: '#8B9DAF', mt: 0.25 }}>
+          <Typography sx={{ fontSize: '0.65rem', color: '#6B7280', mt: 0.25 }}>
             Social Post · 3 platformen · 👥 Duitse gezinnen ▾
           </Typography>
         </Box>
@@ -69,8 +69,8 @@ export default function ConceptMockup() {
         {/* Left: editor */}
         <Box sx={{
           p: 2,
-          borderRight: { xs: 'none', sm: '1px solid #2A3A4A' },
-          borderBottom: { xs: '1px solid #2A3A4A', sm: 'none' },
+          borderRight: { xs: 'none', sm: '1px solid #E5E7EB' },
+          borderBottom: { xs: '1px solid #E5E7EB', sm: 'none' },
         }}>
           {/* Platform tabs */}
           <Box sx={{ display: 'flex', gap: 0.75, mb: 1.5, flexWrap: 'wrap' }}>
@@ -105,12 +105,12 @@ export default function ConceptMockup() {
 
           {/* Textarea */}
           <Box sx={{
-            bgcolor: '#0F1923',
-            border: '1px solid #2A3A4A',
+            bgcolor: '#F9FAFB',
+            border: '1px solid #E5E7EB',
             borderRadius: 1,
             p: 1.25,
             fontSize: '0.7rem',
-            color: '#C8D4E0',
+            color: '#374151',
             lineHeight: 1.55,
           }}>
             <Box sx={{ mb: 0.75 }}>Ever walked into a restaurant and instantly known you found THE spot?</Box>
@@ -118,28 +118,28 @@ export default function ConceptMockup() {
             <Box>🌊 El Puerto — freshest seafood tapas</Box>
             <Box>🏔️ La Taberna del Peñón — slow-cooked meats</Box>
             <Box sx={{ mt: 0.75 }}>Where's your favorite tapas spot?</Box>
-            <Box sx={{ mt: 0.75, color: '#8B9DAF' }}>#CalpeTapas #CostaBlancaFood #MediterraneanCuisine</Box>
+            <Box sx={{ mt: 0.75, color: '#1877F2', fontWeight: 500 }}>#CalpeTapas #CostaBlancaFood #MediterraneanCuisine</Box>
           </Box>
-          <Typography sx={{ textAlign: 'right', fontSize: '0.58rem', color: '#27AE60', mt: 0.5, fontWeight: 600 }}>
+          <Typography sx={{ textAlign: 'right', fontSize: '0.58rem', color: '#059669', mt: 0.5, fontWeight: 600 }}>
             487/500 ✅
           </Typography>
         </Box>
 
         {/* Right: score panel */}
-        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, bgcolor: '#FAFBFC' }}>
           <Box>
-            <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#27AE60', mb: 0.25 }}>
+            <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', mb: 0.25 }}>
               Social Score 81/100 (A)
             </Typography>
-            <Typography sx={{ fontSize: '0.7rem', color: '#C8D4E0', mb: 1 }}>
+            <Typography sx={{ fontSize: '0.7rem', color: '#374151', mb: 1 }}>
               Brand Score 88/100
             </Typography>
           </Box>
 
-          <Box sx={{ fontSize: '0.6rem', color: '#8B9DAF', fontFamily: 'Consolas, monospace', lineHeight: 1.9 }}>
+          <Box sx={{ fontSize: '0.6rem', color: '#6B7280', fontFamily: 'Consolas, monospace', lineHeight: 1.9 }}>
             {CHECKS.map((c, i) => (
               <Box key={c.label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Box component="span" sx={{ color: '#2A3A4A' }}>{i === CHECKS.length - 1 ? '└' : '├'}</Box>
+                <Box component="span" sx={{ color: '#D1D5DB' }}>{i === CHECKS.length - 1 ? '└' : '├'}</Box>
                 <Box component="span" sx={{ flex: 1 }}>{c.label}</Box>
                 <Box component="span">{c.icon}</Box>
               </Box>
@@ -148,14 +148,14 @@ export default function ConceptMockup() {
 
           <Box sx={{
             mt: 1,
-            bgcolor: '#1A2332',
+            bgcolor: '#fff',
             border: '1px solid #1877F2',
             borderRadius: 1,
             p: 1,
             fontSize: '0.58rem',
-            color: '#8B9DAF',
+            color: '#6B7280',
           }}>
-            <Box sx={{ color: '#E8ECF1', fontWeight: 700, mb: 0.25 }}>Facebook Preview</Box>
+            <Box sx={{ color: '#1877F2', fontWeight: 700, mb: 0.25 }}>Facebook Preview</Box>
             <Box>📷 Afbeelding</Box>
             <Box>Post tekst...</Box>
             <Box sx={{ mt: 0.25 }}>❤️ 💬 ↗️</Box>
