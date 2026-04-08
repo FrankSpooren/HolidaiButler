@@ -7,7 +7,6 @@ import {
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import SecurityIcon from '@mui/icons-material/Security';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../stores/authStore.js';
@@ -842,45 +841,76 @@ export default function LoginPage() {
         </Box>
       </Box>
 
-      {/* Security note */}
-      <Box sx={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: 1, mt: 5, mb: 2, px: 3,
-      }}>
-        <SecurityIcon sx={{ fontSize: 16, color: '#6B7280' }} />
-        <Typography sx={{ fontSize: '0.75rem', color: '#6B7280' }}>
-          {t('auth.studio.securityNote', '100% Europese infrastructuur. Uw data blijft in de EU (Hetzner DE, Mistral FR, DeepL DE).')}
-        </Typography>
+      {/* ── SOCIAL PROOF ── */}
+      <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, md: 3 }, pt: { xs: 4, md: 6 }, pb: { xs: 4, md: 6 } }}>
+        <Box sx={{
+          maxWidth: 720,
+          mx: 'auto',
+          bgcolor: '#15293F',
+          border: '1px solid #2A3A4A',
+          borderRadius: '16px',
+          p: { xs: 4, md: 5 },
+          textAlign: 'center',
+          position: 'relative',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.25)',
+        }}>
+          {/* Decorative quotation mark */}
+          <Box sx={{
+            position: 'absolute',
+            top: { xs: 12, md: 20 },
+            left: { xs: 20, md: 32 },
+            fontSize: { xs: '3rem', md: '4rem' },
+            lineHeight: 1,
+            color: '#02C39A',
+            opacity: 0.25,
+            fontFamily: 'Georgia, serif',
+            pointerEvents: 'none',
+          }}>
+            &ldquo;
+          </Box>
+          <Typography component="blockquote" sx={{
+            fontSize: { xs: '1rem', md: '1.15rem' },
+            fontStyle: 'italic',
+            color: '#E8ECF1',
+            lineHeight: 1.65,
+            mb: 2.5,
+            position: 'relative',
+          }}>
+            {t('auth.studio.socialProofQuote', 'De AI Content Studio heeft onze content-productie met 80% versneld. Wat voorheen een dag kostte, doen we nu in een uur.')}
+          </Typography>
+          <Typography component="cite" sx={{
+            fontSize: '0.85rem',
+            color: '#02C39A',
+            fontStyle: 'normal',
+            fontWeight: 600,
+            letterSpacing: '0.02em',
+          }}>
+            — {t('auth.studio.socialProofCite', 'Early Access Partner, maart 2026')}
+          </Typography>
+        </Box>
       </Box>
 
       {/* ── FOOTER ── */}
       <Box sx={{
         borderTop: '1px solid #1A2332',
-        mt: 4, py: 3, px: 3,
+        mt: 2, py: 3, px: 3,
         textAlign: 'center',
         bgcolor: '#0D1B2A',
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
-          <Box
-            component="img"
-            src="/hb-logo.png"
-            alt="HolidaiButler"
-            sx={{ width: 24, height: 'auto', opacity: 0.6 }}
-          />
-          <Typography sx={{ fontSize: '0.8rem', color: '#9CA3AF', fontWeight: 500 }}>
-            Powered by{' '}
-            <Link
-              href="https://holidaibutler.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{ color: '#5E8B7E', textDecoration: 'none', fontWeight: 600, '&:hover': { textDecoration: 'underline' } }}
-            >
-              HolidaiButler
-            </Link>
-          </Typography>
-        </Box>
-        <Typography sx={{ fontSize: '0.7rem', color: '#D1D5DB' }}>
-          {t('auth.studio.footerTagline', 'AI-Powered Tourism & Content Platform')}
+        <Typography sx={{ fontSize: '0.85rem', color: '#9CA3AF', fontWeight: 500, mb: 0.75 }}>
+          {t('auth.studio.footerPoweredBy', 'Powered by')}{' '}
+          <Link
+            href="https://holidaibutler.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ color: '#02C39A', textDecoration: 'none', fontWeight: 700, '&:hover': { textDecoration: 'underline' } }}
+          >
+            HolidaiButler
+          </Link>{' '}
+          · {t('auth.studio.footerCopyright', 'EU-First AI Platform · © 2026')}
+        </Typography>
+        <Typography sx={{ fontSize: '0.72rem', color: '#6B7280' }}>
+          {t('auth.studio.footerEuData', '🇪🇺 Alle data wordt verwerkt binnen de Europese Unie')}
         </Typography>
       </Box>
 

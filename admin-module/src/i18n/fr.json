@@ -235,7 +235,12 @@
         "close": "Fermer"
       },
       "welcome": "Bienvenue dans votre Content Studio",
-      "welcomeSubtitle": "Connectez-vous avec votre compte pour commencer"
+      "welcomeSubtitle": "Connectez-vous avec votre compte pour commencer",
+      "socialProofQuote": "L'AI Content Studio a accéléré notre production de contenu de 80%. Ce qui prenait une journée, nous le faisons maintenant en une heure.",
+      "socialProofCite": "Early Access Partner, mars 2026",
+      "footerPoweredBy": "Powered by",
+      "footerCopyright": "EU-First AI Platform · © 2026",
+      "footerEuData": "🇪🇺 Toutes les données sont traitées au sein de l'Union Européenne"
     }
   },
   "dashboard": {
