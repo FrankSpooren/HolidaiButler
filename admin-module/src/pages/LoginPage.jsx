@@ -543,7 +543,7 @@ export default function LoginPage() {
         }}>
           {USP_ITEMS.map(({ emoji, titleKey, titleFallback, descKey, descFallback }) => (
             <Box key={titleKey} sx={{
-              bgcolor: '#1A2332',
+              bgcolor: '#15293F',
               border: '1px solid #2A3A4A',
               borderRadius: '12px',
               p: { xs: 3, md: 3.5 },
