@@ -235,7 +235,12 @@
         "close": "Sluiten"
       },
       "welcome": "Welkom bij uw Content Studio",
-      "welcomeSubtitle": "Log in met uw account om te starten"
+      "welcomeSubtitle": "Log in met uw account om te starten",
+      "socialProofQuote": "De AI Content Studio heeft onze content-productie met 80% versneld. Wat voorheen een dag kostte, doen we nu in een uur.",
+      "socialProofCite": "Early Access Partner, maart 2026",
+      "footerPoweredBy": "Powered by",
+      "footerCopyright": "EU-First AI Platform · © 2026",
+      "footerEuData": "🇪🇺 Alle data wordt verwerkt binnen de Europese Unie"
     }
   },
   "dashboard": {
