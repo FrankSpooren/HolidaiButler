@@ -187,15 +187,15 @@ export default function LoginPage() {
     <Box sx={{
       minHeight: '100vh',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      bgcolor: '#FAFAF8',
-      color: '#1C1917',
+      bgcolor: '#0D1B2A',
+      color: '#E8ECF1',
     }}>
       {/* ── STUDIO HEADER (sticky) ── */}
       <Box sx={{
         position: 'sticky', top: 0, zIndex: 20,
-        bgcolor: 'rgba(250, 250, 248, 0.92)',
-        backdropFilter: 'blur(10px)',
-        borderBottom: '1px solid rgba(0,0,0,0.06)',
+        bgcolor: 'rgba(13, 27, 42, 0.92)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(2,192,154,0.15)',
       }}>
         <Box sx={{
           maxWidth: 1200, mx: 'auto',
@@ -204,34 +204,45 @@ export default function LoginPage() {
           px: { xs: 2, md: 3 }, py: 1.25,
         }}>
           {/* Logo + product name */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
-            <Box component="img" src="/hb-logo.png" alt="HolidaiButler"
-              sx={{ width: 32, height: 32, borderRadius: 1 }} />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontSize: { xs: '0.85rem', md: '0.95rem' }, fontWeight: 800, color: '#1C1917', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
-                AI Content Studio
-              </Typography>
-              <Typography sx={{ fontSize: '0.65rem', color: '#6B7280', lineHeight: 1, display: { xs: 'none', sm: 'block' } }}>
-                by HolidaiButler
-              </Typography>
-            </Box>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
+            <Typography sx={{
+              fontSize: { xs: '0.95rem', md: '1.1rem' },
+              fontWeight: 800,
+              color: '#02C39A',
+              lineHeight: 1.1,
+              whiteSpace: 'nowrap',
+              letterSpacing: '-0.01em',
+            }}>
+              AI Content Studio
+            </Typography>
+            <Typography sx={{
+              fontSize: '0.75rem',
+              color: '#8B9DAF',
+              fontWeight: 400,
+              display: { xs: 'none', sm: 'inline' },
+            }}>
+              by HolidaiButler
+            </Typography>
           </Box>
 
           {/* Right: language + login */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1.25 } }}>
             <Button
               size="small"
               onClick={(e) => setLangMenuAnchor(e.currentTarget)}
-              startIcon={<LanguageIcon sx={{ fontSize: 18 }} />}
-              endIcon={<ExpandMoreIcon sx={{ fontSize: 16 }} />}
+              endIcon={<ExpandMoreIcon sx={{ fontSize: 14 }} />}
               sx={{
-                color: '#374151', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem',
-                minWidth: 0, px: { xs: 0.75, sm: 1.25 },
-                '& .MuiButton-startIcon': { mr: { xs: 0, sm: 0.5 } },
-                '& .MuiButton-endIcon': { ml: { xs: 0, sm: 0.25 } },
+                color: '#8B9DAF',
+                bgcolor: 'transparent',
+                border: '1px solid #2A3A4A',
+                textTransform: 'none', fontWeight: 500, fontSize: '0.78rem',
+                minWidth: 0, px: { xs: 1, sm: 1.5 }, py: 0.5,
+                borderRadius: 0.75,
+                '&:hover': { borderColor: '#02C39A', bgcolor: 'rgba(2,195,154,0.06)' },
+                '& .MuiButton-endIcon': { ml: 0.25 },
               }}
             >
-              <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>{currentLang.short}</Box>
+              {currentLang.short}
             </Button>
             <Menu
               anchorEl={langMenuAnchor}
@@ -239,35 +250,44 @@ export default function LoginPage() {
               onClose={() => setLangMenuAnchor(null)}
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              PaperProps={{ sx: { bgcolor: '#15202B', border: '1px solid #2A3A4A', color: '#E8ECF1' } }}
             >
               {STUDIO_LANGUAGES.map(lang => (
                 <MenuItem
                   key={lang.code}
                   selected={lang.code === currentLang.code}
                   onClick={() => handleLangChange(lang.code)}
-                  sx={{ fontSize: '0.85rem', minWidth: 140 }}
+                  sx={{
+                    fontSize: '0.85rem', minWidth: 150,
+                    '&:hover': { bgcolor: 'rgba(2,195,154,0.08)' },
+                    '&.Mui-selected': { bgcolor: 'rgba(2,195,154,0.12)' },
+                    '&.Mui-selected:hover': { bgcolor: 'rgba(2,195,154,0.16)' },
+                  }}
                 >
-                  <Box component="span" sx={{ fontWeight: 700, width: 26, color: '#5E8B7E' }}>{lang.short}</Box>
+                  <Box component="span" sx={{ fontWeight: 700, width: 30, color: '#02C39A' }}>{lang.short}</Box>
                   {lang.label}
                 </MenuItem>
               ))}
             </Menu>
             <Button
-              variant="contained"
+              variant="outlined"
               size="small"
-              startIcon={<LoginIcon sx={{ fontSize: 16 }} />}
               onClick={() => setLoginDialogOpen(true)}
               sx={{
-                bgcolor: '#5E8B7E',
-                '&:hover': { bgcolor: '#4A7066' },
+                color: '#02C39A',
+                borderColor: '#02C39A',
+                bgcolor: 'transparent',
+                '&:hover': { bgcolor: '#02C39A', color: '#0D1B2A', borderColor: '#02C39A' },
                 textTransform: 'none', fontWeight: 600,
-                px: { xs: 1.5, sm: 2 }, py: 0.6,
-                fontSize: { xs: '0.75rem', sm: '0.8rem' },
-                boxShadow: 'none',
-                '& .MuiButton-startIcon': { mr: { xs: 0.5, sm: 0.75 } },
+                px: { xs: 1.75, sm: 2.25 }, py: 0.6,
+                fontSize: { xs: '0.78rem', sm: '0.82rem' },
+                borderRadius: 1,
+                borderWidth: '1px',
+                '&:hover .arrow': { transform: 'translateX(3px)' },
               }}
             >
               {t('auth.login', 'Inloggen')}
+              <Box component="span" className="arrow" sx={{ ml: 0.75, display: 'inline-block', transition: 'transform 0.2s' }}>→</Box>
             </Button>
           </Box>
         </Box>
@@ -275,10 +295,10 @@ export default function LoginPage() {
 
       {/* ── HERO SECTION (2-col) ── */}
       <Box sx={{
-        background: 'linear-gradient(160deg, #7FA594, #5E8B7E)',
-        color: '#fff',
-        pt: { xs: 5, md: 8 },
-        pb: { xs: 8, md: 14 },
+        bgcolor: '#0D1B2A',
+        color: '#E8ECF1',
+        pt: { xs: 5, md: 9 },
+        pb: { xs: 8, md: 10 },
         px: 3,
         position: 'relative',
         overflow: 'hidden',
@@ -300,12 +320,13 @@ export default function LoginPage() {
           <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
             <Box sx={{
               display: 'inline-block',
-              bgcolor: 'rgba(255,255,255,0.15)',
-              backdropFilter: 'blur(8px)',
+              bgcolor: 'rgba(2,195,154,0.08)',
+              border: '1px solid rgba(2,195,154,0.3)',
+              color: '#02C39A',
               px: 1.5, py: 0.5,
               borderRadius: '24px',
               fontSize: '0.72rem',
-              fontWeight: 600,
+              fontWeight: 700,
               letterSpacing: '0.5px',
               textTransform: 'uppercase',
               mb: 2.5,
@@ -316,25 +337,27 @@ export default function LoginPage() {
             <Typography sx={{
               fontSize: { xs: '2rem', sm: '2.5rem', md: '3.1rem' },
               fontWeight: 800,
-              lineHeight: 1.1,
+              lineHeight: 1.15,
               mb: 2.5,
+              color: '#fff',
               letterSpacing: '-0.025em',
             }}>
-              {t('auth.studioHeroTitle', 'De slimste AI Content Studio')}{' '}
-              <Box component="span" sx={{ color: '#D4AF37' }}>
-                {t('auth.studioHeroTitleAccent', 'van Europa')}
-              </Box>
+              {t('auth.studioHeroTitle', 'De slimste')}{' '}
+              <Box component="span" sx={{ color: '#02C39A' }}>
+                {t('auth.studioHeroTitleAccent', 'AI Content Studio')}
+              </Box>{' '}
+              {t('auth.studioHeroTitleSuffix', 'van Europa')}
             </Typography>
 
             <Typography sx={{
               fontSize: { xs: '1rem', md: '1.15rem' },
               maxWidth: 560,
               mx: { xs: 'auto', md: 0 },
-              opacity: 0.92,
+              color: '#8B9DAF',
               lineHeight: 1.65,
               mb: 3.5,
             }}>
-              {t('auth.studioHeroSubtitle', 'Genereer, plan en publiceer content op 7 platformen vanuit één intelligent werkstation. Zelflerend, meertalig en 100% EU-compliant.')}
+              {t('auth.studioHeroSubtitle', 'Genereer, plan en publiceer content op 7 platformen vanuit één intelligent werkstation. Eén concept, meerdere platformen — de AI doet het werk, jij reviewt en keurt goed.')}
             </Typography>
 
             <Box sx={{
@@ -349,11 +372,16 @@ export default function LoginPage() {
                 size="large"
                 onClick={() => setDemoDialogOpen(true)}
                 sx={{
-                  bgcolor: '#D4AF37', color: '#1C1917',
-                  '&:hover': { bgcolor: '#C19B2E' },
+                  bgcolor: '#02C39A', color: '#0D1B2A',
+                  '&:hover': {
+                    bgcolor: '#02C39A',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(2,195,154,0.35)',
+                  },
                   fontWeight: 700, fontSize: '0.95rem',
-                  px: 3, py: 1.25, borderRadius: '10px',
-                  textTransform: 'none', boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
+                  px: 3.5, py: 1.35, borderRadius: '10px',
+                  textTransform: 'none', boxShadow: '0 4px 14px rgba(2,195,154,0.25)',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
                 }}
               >
                 {t('auth.studioCtaDemo', 'Gratis Demo Aanvragen')}
@@ -363,14 +391,16 @@ export default function LoginPage() {
                 size="large"
                 onClick={() => setLoginDialogOpen(true)}
                 sx={{
-                  color: '#fff', borderColor: 'rgba(255,255,255,0.5)',
-                  '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.08)' },
-                  fontWeight: 600, fontSize: '0.95rem',
-                  px: 3, py: 1.25, borderRadius: '10px',
+                  color: '#E8ECF1',
+                  borderColor: '#2A3A4A',
+                  bgcolor: 'transparent',
+                  '&:hover': { borderColor: '#02C39A', bgcolor: 'rgba(2,195,154,0.06)' },
+                  fontWeight: 500, fontSize: '0.95rem',
+                  px: 3, py: 1.35, borderRadius: '10px',
                   textTransform: 'none',
                 }}
               >
-                {t('auth.login', 'Inloggen')}
+                {t('auth.login', 'Inloggen')} →
               </Button>
             </Box>
 
@@ -380,12 +410,13 @@ export default function LoginPage() {
             }}>
               {['EU AI Act', 'GDPR-proof', 'Mistral AI', 'DeepL Pro'].map(badge => (
                 <Box key={badge} sx={{
-                  bgcolor: 'rgba(255,255,255,0.15)',
+                  bgcolor: 'rgba(2,195,154,0.06)',
+                  border: '1px solid rgba(2,195,154,0.2)',
+                  color: '#8B9DAF',
                   px: 1.5, py: 0.5,
                   borderRadius: '20px',
                   fontSize: '0.72rem',
                   fontWeight: 600,
-                  backdropFilter: 'blur(8px)',
                 }}>
                   {badge}
                 </Box>
@@ -405,7 +436,7 @@ export default function LoginPage() {
         maxWidth: 1100,
         mx: 'auto',
         px: 3,
-        mt: { xs: -4, md: -6 },
+        mt: { xs: 2, md: 4 },
         position: 'relative',
         zIndex: 1,
       }}>
@@ -626,9 +657,10 @@ export default function LoginPage() {
 
       {/* ── FOOTER ── */}
       <Box sx={{
-        borderTop: '1px solid rgba(0,0,0,0.06)',
+        borderTop: '1px solid #1A2332',
         mt: 4, py: 3, px: 3,
         textAlign: 'center',
+        bgcolor: '#0D1B2A',
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
           <Box
