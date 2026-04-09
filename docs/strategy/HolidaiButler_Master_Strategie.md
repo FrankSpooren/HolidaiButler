@@ -1737,4 +1737,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 9 april 2026 — PubliQio Landing Page Polish & Branding COMPLEET (v4.43.0): PubliQioText component (9 locaties), 7e USP, ConceptMockup herbouwd, mobiele progressive disclosure, taalswitch vlaggen, login+demo dark theme, PrivacyPage GDPR, admin sidebar branding, per-user voorkeurstaal. 252 endpoints, adminPortal.js v3.44.0. 65 scheduled jobs. 25 agents. CLAUDE.md v4.43.0. MS v8.04.*
+*Laatst bijgewerkt: 9 april 2026 — PubliQio Post-Release Polish (v4.43.1): punt-uitlijning mobiel fix, EU badges responsive. 252 endpoints, adminPortal.js v3.44.0. 65 scheduled jobs. 25 agents. CLAUDE.md v4.43.1. MS v8.04.*

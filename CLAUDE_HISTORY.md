@@ -7,6 +7,18 @@
 
 ---
 
+## v4.43.1 — PubliQio Post-Release Polish (9 april 2026)
+
+### Fixes
+- **Hero punt-uitlijning**: Losse "." na PubliQio wrappte naar eigen regel op mobiel → nu als `suffix="."` in PubliQioText (geen line-break)
+- **EU badges balk mobiel**: Compactere layout — kleinere cirkels (28px), minder gap, op xs alleen icoon + korte naam, op sm+ volledige tekst + subtitle
+
+### Bestanden
+- **Gewijzigd**: LoginPage.jsx (16 insertions, 6 deletions)
+- CLAUDE.md v4.43.1
+
+---
+
 ## v4.43.0 — PubliQio Landing Page Polish & Branding (9 april 2026)
 
 ### Opdracht 1: PubliQio Merknaam
