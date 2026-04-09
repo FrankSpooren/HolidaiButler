@@ -51,11 +51,10 @@
     "serverError": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
     "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
     "studio": {
-      "productTagline": "by HolidaiButler",
+      "productTagline": "AI Content Studio",
       "tagline": "Europäische AI Content-Plattform",
-      "heroTitle": "Das smarteste",
-      "heroTitleAccent": "AI Content Studio",
-      "heroTitleSuffix": "Europas",
+      "heroTitle": "Veröffentliche smarter. Schneller. Besser.",
+      "heroTitleSuffix": ".",
       "heroSubtitle": "Generieren, planen und veröffentlichen Sie Content auf 7 Plattformen aus einem intelligenten Arbeitsplatz. Ein Konzept, mehrere Plattformen — die KI erledigt die Arbeit, Sie prüfen und geben frei.",
       "ctaDemo": "Kostenlose Demo anfordern",
       "ctaLogin": "Anmelden",
@@ -66,8 +65,9 @@
         "deeplSuffix": "Köln",
         "hetznerSuffix": "Deutschland"
       },
+      "uspSectionTitlePrefix": "Warum",
       "uspSectionTitle": "Warum AI Content Studio?",
-      "uspSectionSubtitle": "6 Gründe, warum Marketer wechseln",
+      "uspSectionSubtitle": "7 Gründe warum Marketer wechseln",
       "usps": {
         "concept": {
           "title": "ConceptDialog",
@@ -92,10 +92,15 @@
         "calendar": {
           "title": "Smarter Kalender",
           "desc": "KI füllt Ihren Kalender. Trending Topics, Saisonen, Content Pillars — automatisch verteilt und geplant."
+        },
+        "trending": {
+          "title": "Multi-Source Trending-Analyse",
+          "desc": "Google Trends, Website-Traffic, SISTRIX-SEO-Daten und manuelle Eingaben — kombiniert in einem Trending-Dashboard mit Sparklines und Pillar-Farbcodierung."
         }
       },
       "compare": {
         "title": "AI Content Studio vs. Die Konkurrenz",
+        "titleSuffix": "Wettbewerb",
         "subtitle": "Vergleichen Sie auf das, was wirklich zählt",
         "headerFeature": "Funktion",
         "headerStudio": "AI Content Studio",
@@ -124,6 +129,8 @@
       },
       "alternatives": {
         "title": "AI Content Studio vs. Agentur vs. Intern",
+        "titleBureau": "Agentur",
+        "titleIntern": "intern",
         "subtitle": "Warum KI die smarteste Investition ist",
         "headerCriterion": "Kriterium",
         "headerStudio": "AI Content Studio",
@@ -219,10 +226,10 @@
       },
       "welcome": "Willkommen in Ihrem Content Studio",
       "welcomeSubtitle": "Melden Sie sich mit Ihrem Konto an",
-      "socialProofQuote": "Das AI Content Studio hat unsere Content-Produktion um 80% beschleunigt. Was früher einen Tag dauerte, schaffen wir jetzt in einer Stunde.",
+      "socialProofQuote": "hat unsere Content-Produktion um 80% beschleunigt. Was früher einen Tag dauerte, schaffen wir jetzt in einer Stunde.",
       "socialProofCite": "Early Access Partner, März 2026",
       "footerPoweredBy": "Powered by",
-      "footerCopyright": "EU-First AI Platform · © 2026",
+      "footerSubline": "EU-First AI Content Studio",
       "footerEuData": "🇪🇺 Alle Daten werden innerhalb der Europäischen Union verarbeitet"
     }
   },

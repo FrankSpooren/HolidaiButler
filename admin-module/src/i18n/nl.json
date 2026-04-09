@@ -68,11 +68,10 @@
     "serverError": "Er is een fout opgetreden. Probeer het opnieuw.",
     "sessionExpired": "Je sessie is verlopen. Log opnieuw in.",
     "studio": {
-      "productTagline": "by HolidaiButler",
+      "productTagline": "AI Content Studio",
       "tagline": "Europees AI Content Platform",
-      "heroTitle": "De slimste",
-      "heroTitleAccent": "AI Content Studio",
-      "heroTitleSuffix": "van Europa",
+      "heroTitle": "Publiceer slimmer. Sneller. Beter.",
+      "heroTitleSuffix": ".",
       "heroSubtitle": "Genereer, plan en publiceer content op 7 platformen vanuit één intelligent werkstation. Eén concept, meerdere platformen — de AI doet het werk, jij reviewt en keurt goed.",
       "ctaDemo": "Gratis Demo Aanvragen",
       "ctaLogin": "Inloggen",
@@ -83,8 +82,9 @@
         "deeplSuffix": "Keulen",
         "hetznerSuffix": "Duitsland"
       },
+      "uspSectionTitlePrefix": "Waarom",
       "uspSectionTitle": "Waarom AI Content Studio?",
-      "uspSectionSubtitle": "6 redenen waarom marketeers overstappen",
+      "uspSectionSubtitle": "7 redenen waarom marketeers overstappen",
       "usps": {
         "concept": {
           "title": "ConceptDialog",
@@ -109,10 +109,15 @@
         "calendar": {
           "title": "Slimme Kalender",
           "desc": "AI vult je kalender. Trending topics, seizoenen, content pillars — automatisch verdeeld en ingepland."
+        },
+        "trending": {
+          "title": "Multi-Source Trending Analyse",
+          "desc": "Google Trends, website traffic, SISTRIX SEO-data en handmatige input — gecombineerd in één trending dashboard met sparklines en pillar-kleurcodering."
         }
       },
       "compare": {
         "title": "AI Content Studio vs. De Concurrentie",
+        "titleSuffix": "concurrentie",
         "subtitle": "Vergelijk op wat er werkelijk toe doet",
         "headerFeature": "Feature",
         "headerStudio": "AI Content Studio",
@@ -141,6 +146,8 @@
       },
       "alternatives": {
         "title": "AI Content Studio vs. Bureau vs. Intern",
+        "titleBureau": "bureau",
+        "titleIntern": "intern",
         "subtitle": "Waarom AI de slimste investering is",
         "headerCriterion": "Criterium",
         "headerStudio": "AI Content Studio",
@@ -236,10 +243,10 @@
       },
       "welcome": "Welkom bij uw Content Studio",
       "welcomeSubtitle": "Log in met uw account om te starten",
-      "socialProofQuote": "De AI Content Studio heeft onze content-productie met 80% versneld. Wat voorheen een dag kostte, doen we nu in een uur.",
+      "socialProofQuote": "heeft onze content-productie met 80% versneld. Wat voorheen een dag kostte, doen we nu in een uur.",
       "socialProofCite": "Early Access Partner, maart 2026",
       "footerPoweredBy": "Powered by",
-      "footerCopyright": "EU-First AI Platform · © 2026",
+      "footerSubline": "EU-First AI Content Studio",
       "footerEuData": "🇪🇺 Alle data wordt verwerkt binnen de Europese Unie"
     }
   },

@@ -7,6 +7,69 @@
 
 ---
 
+## v4.43.0 — PubliQio Landing Page Polish & Branding (9 april 2026)
+
+### Opdracht 1: PubliQio Merknaam
+- `PubliQioText` herbruikbaar component (witte tekst + groene Q #02C39A)
+- 9 locaties: header logo, hero headline, USP titel, 2 tabel-titels, 2 tabel headers, social proof, footer
+- "vs." styling: italic, wit, kleiner lettertype
+- Hero pay-off: "Publiceer slimmer. Sneller. Beter. PubliQio."
+- i18n: alle 5 talen (NL/EN/DE/ES/FR) bijgewerkt
+
+### Opdracht 2: 7e USP Card
+- "🔍 Multi-Source Trending Analyse" — brede card desktop, carousel-item mobiel
+- i18n 5 talen, subtitle 6→7 redenen
+
+### Opdracht 3: Realistische ConceptMockup
+- ConceptMockup.jsx volledig herbouwd naar werkelijke Content Studio popup
+- Calpe Playa Arenal beach foto uit POI-database (poi_id 15)
+- Header, platform tabs, image selector, content tekst, FB preview, Validatie panel, Tip-box
+
+### Opdracht 4: Mobiele Progressive Disclosure
+- Compact preview (max 200px) + gradient fade-out
+- "Bekijk volledig ▾" / "Inklappen ▴" toggle met smooth max-height transition
+- 7e USP in mobiele scroll-snap carousel
+
+### Opdracht 5: Taalswitch met Vlaggen
+- flagcdn.com vlag-iconen (20×15px) in header button + dropdown menu
+- NL/GB/DE/ES/FR
+
+### Opdracht 6+7: Login + Demo Popup Dark Theme
+- Beide: bgcolor #15293F, PubliQio logo, witte inputs, teal focus, gele knop (#F2C94C)
+- Floating label fix: shrink bgcolor #15293F voor leesbaarheid op donkere achtergrond
+- Demo popup: veld "Functie" toegevoegd, zakelijke e-mail validatie (35+ consumer-domeinen)
+- Consent tekst GDPR-aangepast
+
+### Opdracht 8: Footer Polish
+- EU vlag via flagcdn.com (emoji-fix desktop)
+- Kleur EU-regel → #8B9DAF
+
+### Privacybeleid
+- Nieuwe `/privacy` route + PrivacyPage.jsx
+- 11-secties GDPR-compliant privacybeleid in PubliQio dark theme
+- Verwerkingsverantwoordelijke, gegevenstypen, rechtsgrondslag, bewaartermijnen, 5 EU-verwerkers, 7 AVG-rechten, beveiliging, cookies, EU AI Act transparantie, klachten, wijzigingen
+
+### Opdracht 9: Admin Sidebar Branding
+- Sidebar.jsx domein-aware: studio.holidaibutler.com → "PubliQio" + "AI Content Studio"
+- admin.holidaibutler.com → "HolidaiButler Admin Portal" (ongewijzigd)
+
+### Per-user Voorkeurstaal
+- `preferred_language VARCHAR(5)` op admin_users + Users tabellen
+- Login response bevat preferred_language
+- PATCH /admin-portal/auth/language endpoint (252 totaal)
+- Landing page taalswitch → localStorage persist
+- Login → auto-apply preferred_language uit DB
+- SettingsPage → server sync (non-blocking)
+- Domain-default fallback: .com=EN, .es=ES, .nl=NL
+
+### Bestanden
+- **Nieuw**: PrivacyPage.jsx
+- **Gewijzigd**: LoginPage.jsx, ConceptMockup.jsx, LoginDialog.jsx, DemoRequestDialog.jsx, Sidebar.jsx, App.jsx, SettingsPage.jsx, adminPortal.js, auth.controller.js, 5× i18n JSON, i18n/index.js
+- **DB**: ALTER TABLE admin_users + Users ADD preferred_language VARCHAR(5)
+- adminPortal.js v3.44.0, 252 endpoints, CLAUDE.md v4.43.0
+
+---
+
 ## v4.42.0 — Studio Landing Page Upgrade — studio.holidaibutler.com (7 opdrachten) (08-04-2026)
 
 ### Aanleiding

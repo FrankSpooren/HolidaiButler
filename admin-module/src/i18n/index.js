@@ -6,7 +6,16 @@ import de from './de.json';
 import es from './es.json';
 import fr from './fr.json';
 
-const savedLang = localStorage.getItem('hb-admin-lang') || 'nl';
+// Domain-based language detection for Publiqio branded domains
+function getDefaultLang() {
+  const host = window.location.hostname;
+  if (host.endsWith('.es') || host === 'publiqio.es') return 'es';
+  if (host.endsWith('.com') || host === 'publiqio.com') return 'en';
+  if (host.endsWith('.nl') || host === 'publiqio.nl') return 'nl';
+  return 'nl';
+}
+
+const savedLang = localStorage.getItem('hb-admin-lang') || getDefaultLang();
 
 i18n.use(initReactI18next).init({
   resources: {

@@ -587,7 +587,7 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
     let userSource = null;
 
     const adminUsers = await mysqlSequelize.query(
-      `SELECT id, email, password, first_name, last_name, role, allowed_destinations, permissions, status, login_attempts, lock_until
+      `SELECT id, email, password, first_name, last_name, role, allowed_destinations, permissions, preferred_language, status, login_attempts, lock_until
        FROM admin_users WHERE email = ?`,
       { replacements: [email], type: QueryTypes.SELECT }
     );
@@ -648,13 +648,14 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
         email: au.email,
         name: `${au.first_name || ''} ${au.last_name || ''}`.trim() || au.email,
         role: au.role,
-        allowed_destinations: allowedDests
+        allowed_destinations: allowedDests,
+        preferred_language: au.preferred_language || null
       };
       userSource = 'admin_users';
     } else {
       // Fallback: try Users table for backward compatibility
       const legacyUsers = await mysqlSequelize.query(
-        `SELECT u.id, u.uuid, u.email, u.name, u.password_hash, r.name as role
+        `SELECT u.id, u.uuid, u.email, u.name, u.password_hash, u.preferred_language, r.name as role
          FROM Users u LEFT JOIN Roles r ON u.role_id = r.id
          WHERE u.email = ?`,
         { replacements: [email], type: QueryTypes.SELECT }
@@ -699,7 +700,8 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
         email: lu.email,
         name: lu.name || lu.email,
         role: roleMap[lu.role] || 'reviewer',
-        allowed_destinations: ['calpe', 'texel']
+        allowed_destinations: ['calpe', 'texel'],
+        preferred_language: lu.preferred_language || null
       };
       userSource = 'Users';
     }
@@ -747,7 +749,8 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
           role: user.role,
           allowed_destinations: user.allowed_destinations,
           permissions: ROLE_PERMISSIONS[user.role] || ROLE_PERMISSIONS.reviewer,
-          onboardingCompleted
+          onboardingCompleted,
+          preferred_language: user.preferred_language
         },
         accessToken,
         refreshToken
@@ -769,6 +772,37 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
 router.get('/auth/permissions', adminAuth('reviewer'), (req, res) => {
   const perms = ROLE_PERMISSIONS[req.adminUser.role] || ROLE_PERMISSIONS.reviewer;
   res.json({ success: true, data: { role: req.adminUser.role, permissions: perms } });
+});
+
+/**
+ * PATCH /auth/language
+ * Update preferred language for the current user.
+ */
+router.patch('/auth/language', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const { language } = req.body;
+    const validLangs = ['nl', 'en', 'de', 'es', 'fr'];
+    if (!language || !validLangs.includes(language)) {
+      return res.status(400).json({ success: false, error: { message: `Language must be one of: ${validLangs.join(', ')}` } });
+    }
+
+    // Try admin_users first, then Users
+    const [adminResult] = await mysqlSequelize.query(
+      'UPDATE admin_users SET preferred_language = ? WHERE id = ?',
+      { replacements: [language, req.adminUser.userId] }
+    );
+    if (!adminResult.affectedRows) {
+      await mysqlSequelize.query(
+        'UPDATE Users SET preferred_language = ? WHERE id = ? OR uuid = ?',
+        { replacements: [language, req.adminUser.userId, req.adminUser.userId] }
+      );
+    }
+
+    res.json({ success: true, data: { preferred_language: language } });
+  } catch (error) {
+    logger.error('[AdminPortal] Language update error:', error);
+    res.status(500).json({ success: false, error: { message: 'Failed to update language' } });
+  }
 });
 
 /**
