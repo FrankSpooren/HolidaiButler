@@ -344,8 +344,10 @@ export default function LoginPage() {
               {t('auth.studio.heroTitle', 'Publiceer slimmer. Sneller. Beter.')}{' '}
               <PubliQioText
                 fontSize="inherit"
+                suffix="."
+                suffixSx={{ ml: 0, fontWeight: 800, color: '#fff' }}
                 sx={{ display: 'inline-flex' }}
-              />.
+              />
             </Typography>
 
             <Typography sx={{
@@ -463,7 +465,7 @@ export default function LoginPage() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: { xs: 2.5, md: 4 },
+          gap: { xs: 1.5, md: 4 },
           flexWrap: 'wrap',
         }}>
           {[
@@ -476,12 +478,12 @@ export default function LoginPage() {
             <Box key={i} sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1.25,
-              fontSize: { xs: '0.78rem', md: '0.82rem' },
+              gap: { xs: 0.75, md: 1.25 },
+              fontSize: { xs: '0.72rem', md: '0.82rem' },
               color: '#8B9DAF',
             }}>
               <Box sx={{
-                width: 32, height: 32,
+                width: { xs: 28, md: 32 }, height: { xs: 28, md: 32 },
                 borderRadius: '50%',
                 overflow: 'hidden',
                 flexShrink: 0,
@@ -499,13 +501,21 @@ export default function LoginPage() {
                   transformOrigin: 'center',
                 }} />
               </Box>
-              <Box>
+              <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
                 <Box component="strong" sx={{ color: '#E8ECF1', fontWeight: 700, display: 'block', lineHeight: 1.2 }}>
                   {b.strong}
                 </Box>
                 <Box component="span" sx={{ color: '#8B9DAF', fontSize: '0.72rem', lineHeight: 1.2 }}>
                   {b.suffix}
                 </Box>
+              </Box>
+              {/* Mobile: show only strong name, no suffix */}
+              <Box component="strong" sx={{
+                display: { xs: 'block', sm: 'none' },
+                color: '#E8ECF1', fontWeight: 600, fontSize: '0.65rem', lineHeight: 1.2,
+                maxWidth: 50, textAlign: 'center',
+              }}>
+                {b.strong}
               </Box>
             </Box>
           ))}
