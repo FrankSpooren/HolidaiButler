@@ -15,12 +15,22 @@ import LoginDialog from '../components/studio/LoginDialog.jsx';
 import DemoRequestDialog from '../components/studio/DemoRequestDialog.jsx';
 import ConceptMockup from '../components/studio/ConceptMockup.jsx';
 
+/** Reusable PubliQio brand text — Q always in accent color */
+const PubliQioText = ({ fontSize = '1.1rem', color = '#FFFFFF', qColor = '#02C39A', sx = {}, suffix, suffixSx = {} }) => (
+  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'baseline', ...sx }}>
+    <Box component="span" sx={{ fontWeight: 800, fontSize, color, letterSpacing: '-0.01em' }}>Publi</Box>
+    <Box component="span" sx={{ fontWeight: 900, fontSize, color: qColor }}>Q</Box>
+    <Box component="span" sx={{ fontWeight: 800, fontSize, color, letterSpacing: '-0.01em' }}>io</Box>
+    {suffix && <Box component="span" sx={{ ml: 1.5, ...suffixSx }}>{suffix}</Box>}
+  </Box>
+);
+
 const STUDIO_LANGUAGES = [
-  { code: 'nl', label: 'Nederlands', short: 'NL' },
-  { code: 'en', label: 'English', short: 'EN' },
-  { code: 'de', label: 'Deutsch', short: 'DE' },
-  { code: 'es', label: 'Español', short: 'ES' },
-  { code: 'fr', label: 'Français', short: 'FR' },
+  { code: 'nl', label: 'Nederlands', short: 'NL', flag: 'https://flagcdn.com/w40/nl.png' },
+  { code: 'en', label: 'English', short: 'EN', flag: 'https://flagcdn.com/w40/gb.png' },
+  { code: 'de', label: 'Deutsch', short: 'DE', flag: 'https://flagcdn.com/w40/de.png' },
+  { code: 'es', label: 'Español', short: 'ES', flag: 'https://flagcdn.com/w40/es.png' },
+  { code: 'fr', label: 'Français', short: 'FR', flag: 'https://flagcdn.com/w40/fr.png' },
 ];
 
 // USP cards — keys resolve to auth.studio.usps.{key}.{title,desc}
@@ -32,6 +42,7 @@ const USP_ITEMS = [
   { emoji: '🎨', key: 'personal'  },
   { emoji: '📅', key: 'calendar'  },
 ];
+const USP_WIDE_ITEM = { emoji: '🔍', key: 'trending' };
 
 // Comparison table 1 — keys resolve to auth.studio.compare.features.{key}
 const COMPARE_FEATURES = [
@@ -84,9 +95,11 @@ export default function LoginPage() {
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [demoDialogOpen, setDemoDialogOpen] = useState(false);
   const [langMenuAnchor, setLangMenuAnchor] = useState(null);
+  const [mockupExpanded, setMockupExpanded] = useState(false);
   const currentLang = STUDIO_LANGUAGES.find(l => l.code === i18n.language) || STUDIO_LANGUAGES[0];
   const handleLangChange = (code) => {
     i18n.changeLanguage(code);
+    localStorage.setItem('hb-admin-lang', code);
     setLangMenuAnchor(null);
   };
 
@@ -106,6 +119,11 @@ export default function LoginPage() {
     try {
       const result = await login(email, password);
       const user = result.data?.user;
+      // Apply user's preferred language if set
+      if (user?.preferred_language) {
+        i18n.changeLanguage(user.preferred_language);
+        localStorage.setItem('hb-admin-lang', user.preferred_language);
+      }
       if (studioMode || user?.destinationType === 'content_only') {
         navigate('/content-studio', { replace: true });
       } else {
@@ -197,24 +215,11 @@ export default function LoginPage() {
         }}>
           {/* Logo + product name */}
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
-            <Typography sx={{
-              fontSize: { xs: '0.95rem', md: '1.1rem' },
-              fontWeight: 800,
-              color: '#02C39A',
-              lineHeight: 1.1,
-              whiteSpace: 'nowrap',
-              letterSpacing: '-0.01em',
-            }}>
-              AI Content Studio
-            </Typography>
-            <Typography sx={{
-              fontSize: '0.75rem',
-              color: '#8B9DAF',
-              fontWeight: 400,
-              display: { xs: 'none', sm: 'inline' },
-            }}>
-              {t('auth.studio.productTagline', 'by HolidaiButler')}
-            </Typography>
+            <PubliQioText
+              fontSize={{ xs: '1.15rem', md: '1.35rem' }}
+              suffix={t('auth.studio.productTagline', 'AI Content Studio')}
+              suffixSx={{ fontSize: '0.68rem', color: '#5A7A8A', fontWeight: 500, display: { xs: 'none', sm: 'inline' } }}
+            />
           </Box>
 
           {/* Right: language + login */}
@@ -234,6 +239,7 @@ export default function LoginPage() {
                 '& .MuiButton-endIcon': { ml: 0.25 },
               }}
             >
+              <Box component="img" src={currentLang.flag} alt="" sx={{ width: 20, height: 15, objectFit: 'cover', borderRadius: '2px', mr: 0.5 }} />
               {currentLang.short}
             </Button>
             <Menu
@@ -250,13 +256,14 @@ export default function LoginPage() {
                   selected={lang.code === currentLang.code}
                   onClick={() => handleLangChange(lang.code)}
                   sx={{
-                    fontSize: '0.85rem', minWidth: 150,
+                    fontSize: '0.85rem', minWidth: 170,
                     '&:hover': { bgcolor: 'rgba(2,195,154,0.08)' },
                     '&.Mui-selected': { bgcolor: 'rgba(2,195,154,0.12)' },
                     '&.Mui-selected:hover': { bgcolor: 'rgba(2,195,154,0.16)' },
                   }}
                 >
-                  <Box component="span" sx={{ fontWeight: 700, width: 30, color: '#02C39A' }}>{lang.short}</Box>
+                  <Box component="img" src={lang.flag} alt="" sx={{ width: 20, height: 15, objectFit: 'cover', borderRadius: '2px', mr: 1.25 }} />
+                  <Box component="span" sx={{ fontWeight: 700, width: 28, color: '#02C39A', fontSize: '0.8rem' }}>{lang.short}</Box>
                   {lang.label}
                 </MenuItem>
               ))}
@@ -290,7 +297,7 @@ export default function LoginPage() {
         bgcolor: '#0D1B2A',
         color: '#E8ECF1',
         pt: { xs: 5, md: 9 },
-        pb: { xs: 8, md: 10 },
+        pb: { xs: 8, md: 5 },
         px: 3,
         position: 'relative',
         overflow: 'hidden',
@@ -323,7 +330,7 @@ export default function LoginPage() {
               textTransform: 'uppercase',
               mb: 2.5,
             }}>
-              {t('auth.studio.tagline', 'Europees AI Content Platform')}
+              {t('auth.studio.footerSubline', 'EU-First AI Content Studio')}
             </Box>
 
             <Typography sx={{
@@ -334,11 +341,11 @@ export default function LoginPage() {
               color: '#fff',
               letterSpacing: '-0.025em',
             }}>
-              {t('auth.studio.heroTitle', 'De slimste')}{' '}
-              <Box component="span" sx={{ color: '#02C39A' }}>
-                {t('auth.studio.heroTitleAccent', 'AI Content Studio')}
-              </Box>{' '}
-              {t('auth.studio.heroTitleSuffix', 'van Europa')}
+              {t('auth.studio.heroTitle', 'Publiceer slimmer. Sneller. Beter.')}{' '}
+              <PubliQioText
+                fontSize="inherit"
+                sx={{ display: 'inline-flex' }}
+              />.
             </Typography>
 
             <Typography sx={{
@@ -398,9 +405,46 @@ export default function LoginPage() {
 
           </Box>
 
-          {/* Right: CSS mockup */}
+          {/* Right: CSS mockup — progressive disclosure on mobile */}
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <ConceptMockup />
+            {/* Desktop: full mockup — scaled down to align with left copy block */}
+            <Box sx={{ display: { xs: 'none', md: 'block' }, transform: 'scale(0.88)', transformOrigin: 'top center' }}>
+              <ConceptMockup />
+            </Box>
+            {/* Mobile: peek + expand */}
+            <Box sx={{ display: { xs: 'block', md: 'none' }, width: '100%' }}>
+              <Box sx={{
+                maxHeight: mockupExpanded ? 2000 : 200,
+                overflow: 'hidden',
+                transition: 'max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+              }}>
+                <ConceptMockup />
+                {!mockupExpanded && (
+                  <Box sx={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    height: 80,
+                    background: 'linear-gradient(to top, #0D1B2A 20%, transparent)',
+                    pointerEvents: 'none',
+                  }} />
+                )}
+              </Box>
+              <Button
+                size="small"
+                onClick={() => setMockupExpanded(v => !v)}
+                sx={{
+                  mt: 1, mx: 'auto', display: 'flex',
+                  color: '#02C39A',
+                  textTransform: 'none',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                }}
+              >
+                {mockupExpanded
+                  ? t('auth.studio.mockupCollapse', 'Inklappen ▴')
+                  : t('auth.studio.mockupExpand', 'Bekijk volledig ▾')}
+              </Button>
+            </Box>
           </Box>
         </Box>
       </Box>
@@ -410,7 +454,7 @@ export default function LoginPage() {
         bgcolor: '#15293F',
         borderTop: '1px solid rgba(2,192,154,0.18)',
         borderBottom: '1px solid rgba(2,192,154,0.18)',
-        py: { xs: 3, md: 4 },
+        py: { xs: 3, md: 2.5 },
         px: { xs: 2, md: 6 },
       }}>
         <Box sx={{
@@ -487,7 +531,7 @@ export default function LoginPage() {
           letterSpacing: '-0.01em',
           px: 3,
         }}>
-          {t('auth.studio.uspSectionTitle', 'Waarom AI Content Studio?')}
+          {t('auth.studio.uspSectionTitlePrefix', 'Waarom')}{' '}<PubliQioText fontSize="inherit" sx={{ display: 'inline-flex' }} />{'?'}
         </Typography>
         <Typography sx={{
           fontSize: '0.95rem',
@@ -496,7 +540,7 @@ export default function LoginPage() {
           mb: { xs: 3, md: 5 },
           px: 3,
         }}>
-          {t('auth.studio.uspSectionSubtitle', '6 redenen waarom marketeers overstappen')}
+          {t('auth.studio.uspSectionSubtitle', '7 redenen waarom marketeers overstappen')}
         </Typography>
 
         {/* Desktop: 3×2 grid · Mobile: horizontal scroll-snap */}
@@ -515,7 +559,8 @@ export default function LoginPage() {
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
         }}>
-          {USP_ITEMS.map(({ emoji, key }) => (
+          {/* Mobile: all 7 cards in carousel. Desktop: only first 6 */}
+          {[...USP_ITEMS, USP_WIDE_ITEM].map(({ emoji, key }, idx) => (
             <Box key={key} sx={{
               bgcolor: '#15293F',
               border: '1px solid #2A3A4A',
@@ -531,6 +576,8 @@ export default function LoginPage() {
               flex: { xs: '0 0 85%', md: '1 1 auto' },
               scrollSnapAlign: { xs: 'start', md: 'none' },
               minWidth: 0,
+              // 7th card: hide in desktop grid (shown as wide card below instead)
+              display: idx === 6 ? { xs: 'block', md: 'none' } : 'block',
             }}>
               <Box sx={{ fontSize: '1.8rem', mb: 1.5, lineHeight: 1 }}>
                 {emoji}
@@ -554,6 +601,46 @@ export default function LoginPage() {
             </Box>
           ))}
         </Box>
+
+        {/* 7th USP — wide card on desktop only */}
+        <Box sx={{
+          display: { xs: 'none', md: 'flex' },
+          bgcolor: '#15293F',
+          border: '1px solid #2A3A4A',
+          borderRadius: '12px',
+          p: 3.5,
+          mt: 2.5,
+          alignItems: 'flex-start',
+          gap: 2.5,
+          transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            borderColor: '#028090',
+            boxShadow: '0 12px 32px rgba(2,128,144,0.15)',
+          },
+        }}>
+          <Box sx={{ fontSize: '1.8rem', lineHeight: 1, flexShrink: 0 }}>
+            {USP_WIDE_ITEM.emoji}
+          </Box>
+          <Box>
+            <Typography sx={{
+              fontWeight: 700,
+              fontSize: '1rem',
+              color: '#fff',
+              mb: 1,
+              letterSpacing: '-0.01em',
+            }}>
+              {t(`auth.studio.usps.${USP_WIDE_ITEM.key}.title`)}
+            </Typography>
+            <Typography sx={{
+              fontSize: '0.82rem',
+              color: '#8B9DAF',
+              lineHeight: 1.6,
+            }}>
+              {t(`auth.studio.usps.${USP_WIDE_ITEM.key}.desc`)}
+            </Typography>
+          </Box>
+        </Box>
       </Box>
 
       {/* ── COMPARISON TABLE 1 — vs CONCURRENTIE ── */}
@@ -566,7 +653,9 @@ export default function LoginPage() {
           mb: 1,
           letterSpacing: '-0.01em',
         }}>
-          {t('auth.studio.compare.title', 'AI Content Studio vs. De Concurrentie')}
+          <PubliQioText fontSize="inherit" sx={{ display: 'inline-flex' }} />{' '}
+          <Box component="span" sx={{ color: '#FFFFFF', fontWeight: 300, fontStyle: 'italic', fontSize: '0.75em' }}>vs.</Box>{' '}
+          {t('auth.studio.compare.titleSuffix', 'concurrentie')}
         </Typography>
         <Typography sx={{
           fontSize: '0.95rem',
@@ -611,7 +700,7 @@ export default function LoginPage() {
                   borderBottom: '2px solid #02C39A',
                   whiteSpace: 'nowrap',
                 }}>
-                  {t('auth.studio.compare.headerStudio', 'AI Content Studio')}
+                  <PubliQioText fontSize="inherit" color="#FFFFFF" qColor="#02C39A" />
                 </Box>
                 <Box component="th" sx={{
                   bgcolor: '#0D1B2A', color: '#8B9DAF',
@@ -719,7 +808,11 @@ export default function LoginPage() {
           mb: 1,
           letterSpacing: '-0.01em',
         }}>
-          {t('auth.studio.alternatives.title', 'AI Content Studio vs. Bureau vs. Intern')}
+          <PubliQioText fontSize="inherit" sx={{ display: 'inline-flex' }} />{' '}
+          <Box component="span" sx={{ color: '#FFFFFF', fontWeight: 300, fontStyle: 'italic', fontSize: '0.75em' }}>vs.</Box>{' '}
+          {t('auth.studio.alternatives.titleBureau', 'bureau')}{' '}
+          <Box component="span" sx={{ color: '#FFFFFF', fontWeight: 300, fontStyle: 'italic', fontSize: '0.75em' }}>vs.</Box>{' '}
+          {t('auth.studio.alternatives.titleIntern', 'intern')}
         </Typography>
         <Typography sx={{
           fontSize: '0.95rem',
@@ -765,7 +858,7 @@ export default function LoginPage() {
                   borderBottom: '2px solid #02C39A',
                   whiteSpace: 'nowrap',
                 }}>
-                  {t('auth.studio.alternatives.headerStudio', 'AI Content Studio')}
+                  <PubliQioText fontSize="inherit" color="#FFFFFF" qColor="#02C39A" />
                 </Box>
                 <Box component="th" sx={{
                   bgcolor: '#0D1B2A', color: '#8B9DAF',
@@ -876,7 +969,8 @@ export default function LoginPage() {
             mb: 2.5,
             position: 'relative',
           }}>
-            {t('auth.studio.socialProofQuote', 'De AI Content Studio heeft onze content-productie met 80% versneld. Wat voorheen een dag kostte, doen we nu in een uur.')}
+            <PubliQioText fontSize="inherit" color="#E8ECF1" sx={{ display: 'inline-flex' }} />{' '}
+            {t('auth.studio.socialProofQuote', 'heeft onze content-productie met 80% versneld. Wat voorheen een dag kostte, doen we nu in een uur.')}
           </Typography>
           <Typography component="cite" sx={{
             fontSize: '0.85rem',
@@ -897,7 +991,13 @@ export default function LoginPage() {
         textAlign: 'center',
         bgcolor: '#0D1B2A',
       }}>
-        <Typography sx={{ fontSize: '0.85rem', color: '#9CA3AF', fontWeight: 500, mb: 0.75 }}>
+        <Box sx={{ mb: 1 }}>
+          <PubliQioText fontSize="1.1rem" />
+        </Box>
+        <Typography sx={{ fontSize: '0.82rem', color: '#9CA3AF', fontWeight: 500, mb: 0.5 }}>
+          {t('auth.studio.footerSubline', 'EU-First AI Content Studio')}
+        </Typography>
+        <Typography sx={{ fontSize: '0.82rem', color: '#9CA3AF', fontWeight: 500, mb: 0.75 }}>
           {t('auth.studio.footerPoweredBy', 'Powered by')}{' '}
           <Link
             href="https://holidaibutler.com"
@@ -907,11 +1007,17 @@ export default function LoginPage() {
           >
             HolidaiButler
           </Link>{' '}
-          · {t('auth.studio.footerCopyright', 'EU-First AI Platform · © 2026')}
+          · © 2026
         </Typography>
-        <Typography sx={{ fontSize: '0.72rem', color: '#6B7280' }}>
-          {t('auth.studio.footerEuData', '🇪🇺 Alle data wordt verwerkt binnen de Europese Unie')}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75, mb: 0.5 }}>
+          <Box component="img" src="https://flagcdn.com/w40/eu.png" alt="EU" sx={{ width: 18, height: 12, objectFit: 'cover', borderRadius: '2px' }} />
+          <Typography sx={{ fontSize: '0.69rem', color: '#8B9DAF' }}>
+            {t('auth.studio.footerEuData', 'Alle data wordt verwerkt binnen de Europese Unie')}
+          </Typography>
+        </Box>
+        <Link href="/privacy" sx={{ fontSize: '0.69rem', color: '#8B9DAF', textDecoration: 'none', '&:hover': { color: '#02C39A' } }}>
+          {t('auth.studio.demo.privacy', 'Privacybeleid')}
+        </Link>
       </Box>
 
       {/* ── Dialogs ── */}

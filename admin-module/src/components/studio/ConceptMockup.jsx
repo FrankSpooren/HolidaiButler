@@ -1,30 +1,19 @@
 import { Box, Typography } from '@mui/material';
 
 /**
- * Light-themed ConceptDialog mockup on the dark landing page.
- * Light card for maximum contrast against the #0D1B2A background.
- * Platform tabs keep brand colors (Facebook blue, Instagram pink, etc.).
+ * Realistic ConceptDialog mockup for the landing page hero.
+ * Static representation matching the actual Content Studio popup.
+ * Uses beach gradient as placeholder image.
  */
-const PLATFORMS = [
-  { icon: '📘', label: 'Facebook', status: '✅', bg: '#1877F2', color: '#fff' },
-  { icon: '📸', label: 'Instagram', status: '⏳', bg: '#E4405F', color: '#fff' },
-  { icon: '💼', label: 'LinkedIn', status: '', bg: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' },
-];
 
-const CHECKS = [
-  { label: 'Tekenlimiet', icon: '✅' },
-  { label: 'Hashtags', icon: '✅' },
-  { label: 'Emoji', icon: '✅' },
-  { label: 'Call-to-action', icon: '✅' },
-  { label: 'Openingshook', icon: '⚠️' },
-  { label: 'Leesbaarheid', icon: '✅' },
-];
+const BEACH_GRADIENT = 'linear-gradient(135deg, #43C6AC 0%, #4FACFE 40%, #F5AF19 80%, #F9D423 100%)';
+const BEACH_IMAGE = 'https://test.holidaibutler.com/poi-images/15/3f5dfc4e8ef02adf.jpg';
 
 export default function ConceptMockup() {
   return (
     <Box sx={{
       width: '100%',
-      maxWidth: 560,
+      maxWidth: 580,
       bgcolor: '#FFFFFF',
       border: '1px solid #E5E7EB',
       borderRadius: '14px',
@@ -34,132 +23,230 @@ export default function ConceptMockup() {
       transform: { xs: 'none', md: 'perspective(1600px) rotateY(-3deg) rotateX(1deg)' },
       transformOrigin: 'center',
     }}>
-      {/* Mockup header */}
+      {/* ── Header ── */}
       <Box sx={{
         bgcolor: '#F9FAFB',
         px: 2, py: 1.25,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         borderBottom: '1px solid #E5E7EB',
-        gap: 1,
       }}>
         <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#111827', lineHeight: 1.2 }}>
-            Tapas Trails in Calpe: A Culinary Adventure
-          </Typography>
-          <Typography sx={{ fontSize: '0.65rem', color: '#6B7280', mt: 0.25 }}>
-            Social Post · 3 platformen · 👥 Duitse gezinnen ▾
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#111827' }}>
+              calpe playas
+            </Typography>
+            <Box component="span" sx={{ fontSize: '0.65rem', color: '#6B7280' }}>✏️</Box>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25, flexWrap: 'wrap' }}>
+            <Typography sx={{ fontSize: '0.6rem', color: '#6B7280' }}>Social Post</Typography>
+            <Box sx={{
+              bgcolor: '#FEF3C7', color: '#92400E',
+              px: 0.75, py: 0.15, borderRadius: 0.5,
+              fontSize: '0.55rem', fontWeight: 700,
+            }}>
+              Deels live
+            </Box>
+            <Typography sx={{ fontSize: '0.6rem', color: '#6B7280' }}>2 platformen</Typography>
+            <Typography sx={{ fontSize: '0.6rem', color: '#6B7280' }}>👥 Doelgroep</Typography>
+          </Box>
+        </Box>
+        <Box sx={{ fontSize: '0.75rem', color: '#9CA3AF', cursor: 'default' }}>✕</Box>
+      </Box>
+
+      {/* ── Platform tabs ── */}
+      <Box sx={{
+        px: 2, py: 0.75,
+        display: 'flex', gap: 0.75, alignItems: 'center',
+        borderBottom: '1px solid #E5E7EB',
+        bgcolor: '#FAFBFC',
+      }}>
+        <Box sx={{
+          bgcolor: '#1877F2', color: '#fff',
+          px: 1.25, py: 0.4, borderRadius: 0.75,
+          fontSize: '0.6rem', fontWeight: 700,
+          display: 'flex', alignItems: 'center', gap: 0.4,
+        }}>
+          📘 Facebook <Box component="span" sx={{ color: '#86EFAC' }}>✓</Box>
         </Box>
         <Box sx={{
-          bgcolor: '#028090', color: '#fff',
-          px: 1.25, py: 0.4,
-          borderRadius: 0.75,
-          fontSize: '0.62rem', fontWeight: 700,
-          whiteSpace: 'nowrap',
+          bgcolor: '#FEE2E2', color: '#E4405F',
+          px: 1.25, py: 0.4, borderRadius: 0.75,
+          fontSize: '0.6rem', fontWeight: 700,
+          display: 'flex', alignItems: 'center', gap: 0.4,
         }}>
-          Concept
+          📸 Instagram <Box component="span">🔴</Box>
+        </Box>
+        <Box sx={{
+          px: 1, py: 0.4,
+          border: '1px dashed #02C39A',
+          borderRadius: 0.75,
+          fontSize: '0.55rem', fontWeight: 700,
+          color: '#02C39A',
+        }}>
+          + Platform
         </Box>
       </Box>
 
-      {/* Body */}
+      {/* ── Body 2-col ── */}
       <Box sx={{
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: '1.5fr 1fr' },
+        gridTemplateColumns: { xs: '1fr', sm: '1.4fr 1fr' },
       }}>
-        {/* Left: editor */}
+        {/* LEFT: image + editor */}
         <Box sx={{
           p: 2,
           borderRight: { xs: 'none', sm: '1px solid #E5E7EB' },
           borderBottom: { xs: '1px solid #E5E7EB', sm: 'none' },
         }}>
-          {/* Platform tabs */}
-          <Box sx={{ display: 'flex', gap: 0.75, mb: 1.5, flexWrap: 'wrap' }}>
-            {PLATFORMS.map(p => (
-              <Box key={p.label} sx={{
-                bgcolor: p.bg,
-                color: p.color,
-                border: p.border || 'none',
-                px: 1.25, py: 0.5,
-                borderRadius: 0.75,
-                fontSize: '0.62rem',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-              }}>
-                <span>{p.icon}</span>{p.label} {p.status}
-              </Box>
-            ))}
+          {/* Selected image + alternatives */}
+          <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
             <Box sx={{
-              px: 1.25, py: 0.5,
-              border: '1px dashed #02C39A',
-              borderRadius: 0.75,
-              fontSize: '0.58rem',
-              fontWeight: 700,
-              color: '#02C39A',
-              display: 'flex', alignItems: 'center',
+              width: 72, height: 52, borderRadius: 1,
+              background: BEACH_GRADIENT,
+              backgroundImage: `url(${BEACH_IMAGE})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              position: 'relative',
+              border: '2px solid #02C39A',
+              flexShrink: 0,
             }}>
-              + Platform
+              <Box sx={{
+                position: 'absolute', bottom: 2, left: 2,
+                bgcolor: '#02C39A', color: '#fff',
+                px: 0.5, py: 0.1, borderRadius: 0.4,
+                fontSize: '0.45rem', fontWeight: 700,
+              }}>
+                Actief
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography sx={{ fontSize: '0.55rem', color: '#6B7280', fontWeight: 600 }}>
+                Kies een alternatief
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                {[...Array(4)].map((_, i) => (
+                  <Box key={i} sx={{
+                    width: 32, height: 24, borderRadius: 0.5,
+                    background: `hsl(${190 + i * 25}, 55%, ${55 + i * 5}%)`,
+                    border: '1px solid #E5E7EB',
+                  }} />
+                ))}
+              </Box>
             </Box>
           </Box>
 
-          {/* Textarea */}
+          {/* Facebook label + SEO score */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ fontSize: '0.65rem' }}>📘</Box>
+              <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#111827' }}>Facebook</Typography>
+            </Box>
+            <Box sx={{
+              bgcolor: '#DCFCE7', color: '#166534',
+              px: 0.75, py: 0.15, borderRadius: 0.5,
+              fontSize: '0.55rem', fontWeight: 700,
+            }}>
+              SEO 83/100
+            </Box>
+          </Box>
+
+          {/* Content text */}
           <Box sx={{
             bgcolor: '#F9FAFB',
             border: '1px solid #E5E7EB',
             borderRadius: 1,
             p: 1.25,
-            fontSize: '0.7rem',
+            fontSize: '0.62rem',
             color: '#374151',
             lineHeight: 1.55,
           }}>
-            <Box sx={{ mb: 0.75 }}>Ever walked into a restaurant and instantly known you found THE spot?</Box>
-            <Box>🍷 Casa Pepa — legendary grilled sardines</Box>
-            <Box>🌊 El Puerto — freshest seafood tapas</Box>
-            <Box>🏔️ La Taberna del Peñón — slow-cooked meats</Box>
-            <Box sx={{ mt: 0.75 }}>Where's your favorite tapas spot?</Box>
-            <Box sx={{ mt: 0.75, color: '#1877F2', fontWeight: 500 }}>#CalpeTapas #CostaBlancaFood #MediterraneanCuisine</Box>
+            <Box>Imagine waking up to golden sands and turquoise waves, this is your morning in Calpe playas!</Box>
+            <Box sx={{ mt: 0.5 }}>Which beach steals your heart? Tag your travel buddy! 🌊 😊</Box>
+            <Box sx={{ mt: 0.5, color: '#1877F2', fontWeight: 500, fontSize: '0.58rem' }}>
+              #CalpePlayas #CostaBlancaMagic #BeachVibes #MediterraneanEscape
+            </Box>
           </Box>
-          <Typography sx={{ textAlign: 'right', fontSize: '0.58rem', color: '#059669', mt: 0.5, fontWeight: 600 }}>
-            487/500 ✅
-          </Typography>
         </Box>
 
-        {/* Right: score panel */}
-        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, bgcolor: '#FAFBFC' }}>
-          <Box>
-            <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', mb: 0.25 }}>
-              Social Score 81/100 (A)
-            </Typography>
-            <Typography sx={{ fontSize: '0.7rem', color: '#374151', mb: 1 }}>
-              Brand Score 88/100
-            </Typography>
-          </Box>
-
-          <Box sx={{ fontSize: '0.6rem', color: '#6B7280', fontFamily: 'Consolas, monospace', lineHeight: 1.9 }}>
-            {CHECKS.map((c, i) => (
-              <Box key={c.label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Box component="span" sx={{ color: '#D1D5DB' }}>{i === CHECKS.length - 1 ? '└' : '├'}</Box>
-                <Box component="span" sx={{ flex: 1 }}>{c.label}</Box>
-                <Box component="span">{c.icon}</Box>
-              </Box>
-            ))}
-          </Box>
-
+        {/* RIGHT: preview + validation */}
+        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.25, bgcolor: '#FAFBFC' }}>
+          {/* FB preview card */}
           <Box sx={{
-            mt: 1,
             bgcolor: '#fff',
-            border: '1px solid #1877F2',
+            border: '1px solid #E5E7EB',
             borderRadius: 1,
-            p: 1,
-            fontSize: '0.58rem',
-            color: '#6B7280',
+            overflow: 'hidden',
           }}>
-            <Box sx={{ color: '#1877F2', fontWeight: 700, mb: 0.25 }}>Facebook Preview</Box>
-            <Box>📷 Afbeelding</Box>
-            <Box>Post tekst...</Box>
-            <Box sx={{ mt: 0.25 }}>❤️ 💬 ↗️</Box>
+            <Box sx={{ px: 1, py: 0.5 }}>
+              <Typography sx={{ fontSize: '0.55rem', color: '#6B7280', fontWeight: 600 }}>destination_name</Typography>
+            </Box>
+            <Box sx={{
+              height: 56,
+              background: BEACH_GRADIENT,
+              backgroundImage: `url(${BEACH_IMAGE})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }} />
+            <Box sx={{ px: 1, py: 0.5 }}>
+              <Typography sx={{ fontSize: '0.5rem', color: '#374151', lineHeight: 1.4, maxHeight: 24, overflow: 'hidden' }}>
+                Imagine waking up to golden sands and turquoise waves...
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, mt: 0.25, fontSize: '0.5rem', color: '#9CA3AF' }}>
+                <span>❤️</span><span>💬</span><span>↗️</span>
+              </Box>
+            </Box>
           </Box>
+
+          {/* Validatie */}
+          <Box>
+            <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#374151', mb: 0.5 }}>
+              Validatie
+            </Typography>
+            <Box sx={{ fontSize: '0.55rem', color: '#6B7280', display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+              {[
+                { label: 'Tekens', value: '477/500', color: '#DC2626', dot: '#DC2626' },
+                { label: 'Afbeelding', value: '1200×630', color: '#059669', dot: '#059669' },
+                { label: 'Hashtags', value: '0/5', color: '#F59E0B', dot: '#F59E0B' },
+                { label: 'Emoji', value: '2', color: '#059669', dot: '#059669' },
+                { label: 'UTM tracking', value: 'Actief', color: '#059669', dot: '#059669' },
+              ].map(v => (
+                <Box key={v.label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: v.dot, flexShrink: 0 }} />
+                  <Box sx={{ flex: 1 }}>{v.label}</Box>
+                  <Box sx={{ color: v.color, fontWeight: 600 }}>{v.value}</Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Tip */}
+          <Box sx={{
+            bgcolor: '#F0FDF4',
+            border: '1px solid #BBF7D0',
+            borderRadius: 0.75,
+            p: 0.75,
+            fontSize: '0.5rem',
+            color: '#166534',
+            lineHeight: 1.45,
+          }}>
+            <Box sx={{ fontWeight: 700, mb: 0.15 }}>Tip:</Box>
+            Conversational, vraagstellend. Optimaal 100-250 tokens. Emoji versterkt engagement.
+          </Box>
+        </Box>
+      </Box>
+
+      {/* ── Footer ── */}
+      <Box sx={{
+        borderTop: '1px solid #E5E7EB',
+        px: 2, py: 0.75,
+        display: 'flex', justifyContent: 'flex-end',
+        bgcolor: '#F9FAFB',
+      }}>
+        <Box sx={{
+          fontSize: '0.6rem', fontWeight: 600, color: '#6B7280',
+          cursor: 'default',
+        }}>
+          Sluiten
         </Box>
       </Box>
     </Box>

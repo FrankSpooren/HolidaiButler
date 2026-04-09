@@ -163,6 +163,8 @@ function LanguageSelector() {
     const lang = e.target.value;
     i18n.changeLanguage(lang);
     localStorage.setItem('hb-admin-lang', lang);
+    // Persist to server (non-blocking)
+    client.patch('/admin-portal/auth/language', { language: lang }).catch(() => {});
   };
 
   return (

@@ -20,6 +20,7 @@ import MediaPage from './pages/MediaPage.jsx';
 import OnboardingPage from './pages/OnboardingPage.jsx';
 import ContentStudioPage from './pages/ContentStudioPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
+import PrivacyPage from './pages/PrivacyPage.jsx';
 import useAuthStore from './stores/authStore.js';
 import { isStudioMode } from './utils/studioMode.js';
 
@@ -38,6 +39,7 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/login" element={isAuthenticated ? <DefaultRedirect /> : <LoginPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>

@@ -179,7 +179,7 @@ export const login = async (req, res, next) => {
 
     // Find user
     const users = await query(
-      `SELECT id, uuid, email, name, password_hash, onboarding_completed, email_verified
+      `SELECT id, uuid, email, name, password_hash, onboarding_completed, email_verified, preferred_language
        FROM Users WHERE email = ?`,
       [email]
     );
@@ -235,7 +235,8 @@ export const login = async (req, res, next) => {
           uuid: user.uuid,
           email: user.email,
           name: user.name,
-          onboarding_completed: Boolean(user.onboarding_completed)
+          onboarding_completed: Boolean(user.onboarding_completed),
+          preferred_language: user.preferred_language || null
         },
         accessToken,
         refreshToken

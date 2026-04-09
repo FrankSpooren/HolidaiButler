@@ -128,12 +128,27 @@ export default function Sidebar() {
       flexDirection: 'column'
     }}>
       <Box sx={{ p: 2.5, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>
-          {studioMode ? 'Content Studio' : 'HolidaiButler'}
-        </Typography>
-        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-          {studioMode ? 'Powered by HolidaiButler' : 'Admin Portal'}
-        </Typography>
+        {studioMode ? (
+          <>
+            <Box sx={{ display: 'inline-flex', alignItems: 'baseline', mb: 0.25 }}>
+              <Box component="span" sx={{ fontWeight: 800, fontSize: '1.15rem', color: '#FFFFFF' }}>Publi</Box>
+              <Box component="span" sx={{ fontWeight: 900, fontSize: '1.15rem', color: '#02C39A' }}>Q</Box>
+              <Box component="span" sx={{ fontWeight: 800, fontSize: '1.15rem', color: '#FFFFFF' }}>io</Box>
+            </Box>
+            <Typography variant="caption" sx={{ display: 'block', color: 'rgba(255,255,255,0.5)' }}>
+              AI Content Studio
+            </Typography>
+          </>
+        ) : (
+          <>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>
+              HolidaiButler
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              Admin Portal
+            </Typography>
+          </>
+        )}
       </Box>
 
       <List sx={{ flex: 1, pt: 0.5, overflowY: 'auto' }}>
