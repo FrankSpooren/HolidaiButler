@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 9 april 2026
-**Versie**: 8.04
+**Datum**: 10 april 2026
+**Versie**: 8.05
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET. FASE V IN PROGRESS. FASE VI IN PROGRESS. **PubliQio Landing Page Polish & Branding COMPLEET (v4.43.0)**: PubliQioText herbruikbaar component (9 locaties), 7e USP card, ConceptMockup herbouwd naar werkelijke Content Studio popup, mobiele progressive disclosure, taalswitch met vlaggen (flagcdn.com), login + demo popup dark theme (#15293F) met zakelijke e-mail validatie, footer polish, PrivacyPage.jsx (11-secties GDPR), admin sidebar domein-aware branding, per-user voorkeurstaal (preferred_language DB kolom + PATCH endpoint + auto-apply). 252 admin endpoints. adminPortal.js v3.44.0. CLAUDE.md v4.43.0. MS v8.04.
+**Status**: FASE IV COMPLEET. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Corporate Landing Page Upgrade COMPLEET (v4.44.0)**: Volledige redesign holidaibutler.com B2B pagina — 9 opdrachten. Hero "25 AI Agents. Eén Platform. Nul concessies." + demo modal (zakelijke e-mail validatie). 9 module cards met gecorrigeerde USP-teksten. Count-up stats balk (251/100+/35+/25/1). "Van Data, via Beleving tot Resultaat" procesbeschrijving met 3 geverifieerde KPI proof points (HubSpot/Statista/ETC). Live projecten showcase (CalpeTrip/TexelMaps/PubliQio). EU-First Technology Stack (6 providers met vlaggen). i18n 5 talen (NL/EN/DE/ES/FR) via extern i18n.js (162 keys). Mobiele UX: scroll-snap carousels, floating CTA, taal-dropdown met vlaggen, hamburger menu. Privacy pagina (11 secties GDPR) + PubliQio privacy geharmoniseerd. 252 admin endpoints. adminPortal.js v3.44.0. CLAUDE.md v4.44.0. MS v8.05.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)
