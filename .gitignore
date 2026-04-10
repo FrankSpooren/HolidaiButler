@@ -95,3 +95,29 @@ exports/
 !admin-module/.env.development
 !admin-module/.env.test
 !admin-module/.env.production
+
+# ============================================================================
+# Server-specific (deployment runtime)
+# ============================================================================
+storage/
+exports/
+backups/
+*.sql.backup
+
+# Build outputs (Next.js, Vite)
+.next/
+tsconfig.tsbuildinfo
+next-env.d.ts
+
+# Credentials (NEVER commit)
+**/google-tts-credentials.json
+**/*.credentials.json
+
+# Legacy root src/ (old monorepo artifact)
+/src/
+
+# PM2
+ecosystem.config.js
+
+# Deploy triggers
+.deploy-trigger
