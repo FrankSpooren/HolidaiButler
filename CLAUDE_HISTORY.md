@@ -7,6 +7,43 @@
 
 ---
 
+## v4.44.0 — Corporate Landing Page Upgrade (10 april 2026)
+
+### Scope
+Volledige redesign van de B2B corporate pagina op holidaibutler.com — 9 opdrachten conform `HB_Corporate_Landing_Page_Command.md`.
+
+### Opdrachten
+| # | Opdracht | Resultaat |
+|---|---------|-----------|
+| 1 | Badges Balk | 4 badges (EU-First, White Label, Local2Local, Multi-Tenancy) in hero, EU-vlag via flagcdn.com |
+| 2 | Hero Sectie | "25 AI Agents. Eén Platform. Nul concessies." + Demo Aanvragen modal + zakelijke e-mail validatie |
+| 3 | Module Cards | 9 gecorrigeerde USP-teksten (Ongelimiteerd, 35+ blocks, 100+ talen, PubliQio standalone) |
+| 4 | Statistieken Balk | Count-up animatie: 251 → 100+ → 35+ → 25 → 1 (easeOutCubic, IntersectionObserver) |
+| 5 | Hoe Het Werkt | "Van Data, via Beleving tot Resultaat" — 3 fasen + 3 KPI proof points met bronvermelding |
+| 6 | Live Producten | CalpeTrip, TexelMaps, PubliQio showcase + WarreWijzer/Alicante pipeline |
+| 7 | EU-First Stack | 6 EU-providers met landenvlaggen in donkere sectie |
+| 8 | CTA & Contact | Dual-button CTA + contactinfo + productenbalk |
+| 9 | Responsive + i18n | Hamburger menu, taal-dropdown (5 talen), scroll-snap carousels, floating CTA |
+
+### Aanvullende wijzigingen
+- **Privacy pagina** (`privacy.html`): 11-secties GDPR-compliant pagina — verwerkingsverantwoordelijke, gegevenstypen, doeleinden+rechtsgrondslag tabel, bewaartermijnen, 6 EU-verwerkers, beveiliging (AES-256/TLS 1.3), cookies, 7 AVG-rechten (72h verwijdering/24h export), EU AI Act transparantie, klachten (AP contactgegevens), wijzigingen (30 dagen notice)
+- **PubliQio PrivacyPage.jsx** geharmoniseerd: privacy@→info@, Frank Spooren benoemd, AP contactgegevens, AVG artikelnummers, zelfde SLA's
+- **Demo modal**: `demo_requests` tabel hergebruikt (source: `corporate_landing`), veld Functie, zakelijke e-mail blocklist (40+ domeinen)
+- **i18n.js**: Extern vertaalbestand met 162 keys × 5 talen (NL/EN/DE/ES/FR)
+- **Mobiele UX**: Scroll-snap carousels (85% + peek), floating CTA, reduced padding, hamburger menu
+
+### KPI Proof Points (geverifieerd)
+- **Tijdwinst**: 10-14h/week bespaard (HubSpot 2026 State of Marketing, 1.500+ marketeers)
+- **Bereik**: 40% reizigers gebruikt gen AI (Statista/Kantar 2024, 10.012 respondenten, gecorrigeerd van 39%→40%)
+- **Impact**: 68% copywriting + 46% content creatie (European Travel Commission 2025)
+
+### Bestanden
+- **Nieuw**: `infrastructure/b2b-corporate/i18n.js`, `infrastructure/b2b-corporate/privacy.html`
+- **Gewijzigd**: `infrastructure/b2b-corporate/index.html` (volledig herbouwd ~850 LOC), `admin-module/src/pages/PrivacyPage.jsx`
+- CLAUDE.md v4.44.0, Master Strategie v8.05
+
+---
+
 ## v4.43.1 — PubliQio Post-Release Polish (9 april 2026)
 
 ### Fixes
