@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.44.0
+> **Versie**: 4.44.1
 > **Laatst bijgewerkt**: 10 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -27,7 +27,7 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 
 1. **Enterprise Level Kwaliteit**: Elke stap resulteert in een enterprise-level waardig, state-of-the-art product. Geen concessies.
 2. **Foutloze Deployments**: Alle errors opgelost VOORDAT een feature als afgerond beschouwd wordt, gepusht wordt naar server of GitHub.
-3. **CLAUDE.md Actualisatie**: Na elke aanpassing dit bestand bijwerken, opslaan op Hetzner + pushen naar GitHub.
+3. **CLAUDE.md Actualisatie**: Na elke aanpassing dit bestand bijwerken op de SERVER, committen en pushen naar GitHub.
 4. **Context Verificatie**: CLAUDE.md + Master Strategie lezen, actuele status verifiëren in codebase, geen aannames.
 5. **Geen Workarounds**: Problemen oplossen bij de root cause.
 6. **Staging-First Workflow**: Content wijzigingen eerst naar `poi_content_staging`, review door Frank, dan pas naar POI tabel.
@@ -689,6 +689,119 @@ node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); 
 
 ---
 
+---
+
+## 🔄 Git Workflow & Deployment (KRITIEK)
+
+> **Ingevoerd**: 10 april 2026 — Repo consolidatie. Server is LEADING, lokaal is secondary.
+
+### Principe: Server = Single Source of Truth
+
+```
+SERVER (Hetzner)                    GitHub                     LOKAAL (Windows)
+/var/www/api.holidaibutler.com/     FrankSpooren/HolidaiButler C:\Users\frank\HolidaiButler
+        |                                ^                           |
+   GIT ROOT ---- git push -------->  CENTRAL REMOTE  <-- git pull -- SECONDARY
+   (LEADING)                        (BACKUP+SYNC)               (ALLEEN LEZEN)
+```
+
+- **Alle code-wijzigingen** gebeuren op de SERVER via SSH (`ssh root@91.98.71.87`)
+- **GitHub** is de centrale remote voor backup en synchronisatie
+- **Lokaal (Windows)** is een clone voor inzage — NIET voor directe edits
+- Bij laptop-crash gaat NIETS verloren: alles staat op server + GitHub
+
+### Git Root & Repo Structuur
+
+| Pad (relatief aan git root) | Beschrijving |
+|-----------------------------|-------------|
+| `platform-core/` | Backend API (PM2 #9: src/index.js) |
+| `admin-module/` | React frontend (src/) + standalone backend (server.js, routes/) |
+| `customer-portal/` | React customer frontend (source) |
+| `hb-websites/` | Next.js publieke websites (PM2 #5) |
+| `ticketing-module/` | Standalone ticketing service (PM2 #1) |
+| `agenda-module/` | Standalone agenda service (PM2 #0) |
+| `reservations-module/` | Standalone reservations (toekomstige upgrade) |
+| `infrastructure/` | Apache vhost configs |
+| `docs/` | Strategie, compliance, API docs, archive/ |
+| `.github/workflows/` | CI/CD pipelines |
+
+### Branch Strategie: dev > test > main
+
+| Branch | Doel | Server omgeving | Wanneer deployen |
+|--------|------|-----------------|------------------|
+| `dev` | Actieve ontwikkeling | dev.* subdomeinen | Na elke fase/feature |
+| `test` | Klant-review en QA | test.* subdomeinen | Na Frank goedkeuring op dev |
+| `main` | Productie (LIVE) | Hoofddomeinen | Na Frank goedkeuring op test |
+
+### Standaard Werkflow (per opdracht/fase)
+
+```bash
+# 1. WERK op de server (altijd op feature branch of dev)
+ssh root@91.98.71.87
+cd /var/www/api.holidaibutler.com
+
+# 2. Feature branch (bij grotere wijzigingen)
+git checkout dev
+git pull origin dev
+git checkout -b feature/naam-van-feature
+
+# 3. Wijzigingen maken in code (edit, test, verifieer)
+
+# 4. Commit + push naar GitHub
+git add <specifieke bestanden>
+git commit -m "feat/fix/docs: beschrijving"
+git push origin feature/naam-van-feature
+
+# 5. Merge naar dev (na bewijs dat het werkt)
+git checkout dev
+git merge feature/naam-van-feature
+git push origin dev
+
+# 6. Deploy dev-omgeving
+#    Backend: pm2 restart holidaibutler-api
+#    Admin:   cd admin-module && npm run build, deploy naar admin.dev.*
+#    Websites: cd hb-websites && npm run build && pm2 restart hb-websites
+
+# 7. WACHT OP FRANK REVIEW
+
+# 8. Promotie naar test (na goedkeuring)
+git checkout test && git merge dev && git push origin test
+#    Deploy test-omgeving (zelfde stappen, test.* paden)
+
+# 9. Promotie naar main (na test-goedkeuring)
+git checkout main && git merge test && git push origin main
+#    Deploy productie (zelfde stappen, hoofddomeinen)
+#    ALTIJD: pm2 save na productie-deploy
+```
+
+### Deploy Paden per Component
+
+| Component | Build | Deploy locatie (prod) | PM2 |
+|-----------|-------|----------------------|-----|
+| platform-core | geen (Node.js direct) | in-place | `pm2 restart holidaibutler-api` |
+| admin-module frontend | `npm run build` | `/var/www/admin.holidaibutler.com/` | geen (static) |
+| hb-websites | `npm run build` | in-place (.next/) | `pm2 restart hb-websites` |
+| customer-portal | `npm run build` | `/var/www/holidaibutler.com/customer-portal/` | geen (static) |
+
+### Lokaal Synchroniseren
+
+```bash
+# Op Windows (alleen wanneer je lokaal wilt inzien)
+cd C:\Users\frank\HolidaiButler
+git pull origin dev
+```
+
+### Regels
+
+1. **NOOIT lokaal committen en pushen** — altijd via de server
+2. **NOOIT direct op main werken** — altijd dev, dan test, dan main
+3. **NOOIT git push --force** zonder expliciete toestemming van Frank
+4. **ALTIJD specifieke bestanden stagen** (`git add bestand.js`) — NIET `git add -A`
+5. **ALTIJD GitHub pushen** na elke commit — server + GitHub moeten in sync zijn
+6. **Feature branches** voor grotere wijzigingen (meer dan 5 bestanden), direct op dev voor kleine fixes
+7. **PM2 save** na elke productie-deploy: `pm2 save`
+
+
 ## 📞 Contact & Escalatie
 
 | Urgentie | Kanaal |
@@ -746,7 +859,7 @@ Bij elke nieuwe sessie:
 
 **Locaties**:
 - GitHub: `HolidaiButler/CLAUDE.md` (alle branches)
-- Hetzner: `/var/www/api.holidaibutler.com/platform-core/CLAUDE.md`
+- Hetzner: `/var/www/api.holidaibutler.com/CLAUDE.md` (git root)
 
 ---
 
