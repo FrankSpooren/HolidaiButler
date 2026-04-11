@@ -103,14 +103,6 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
       window.history.replaceState({}, '', window.location.pathname);
     }
 
-    const complete = localStorage.getItem('hb_onboarding_complete');
-    const dismissed = sessionStorage.getItem('hb_onboarding_dismissed');
-    if (complete !== 'true' && dismissed !== 'true') {
-      // Small delay so homepage renders first
-      const timer = setTimeout(() => setIsVisible(true), 600);
-      return () => clearTimeout(timer);
-    }
-
     // Listen for external open trigger (e.g. Profiel tab in MobileBottomNav)
     const onOpen = () => {
       setStep(0);
