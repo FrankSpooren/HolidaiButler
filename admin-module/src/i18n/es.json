@@ -55,7 +55,9 @@
       "tagline": "Plataforma Europea de Contenido con IA",
       "heroTitle": "Publica más inteligente. Más rápido. Mejor.",
       "heroTitleSuffix": ".",
-      "heroSubtitle": "Genera, planifica y publica contenido en 7 plataformas desde un único espacio de trabajo inteligente. Un concepto, múltiples plataformas — la IA hace el trabajo, tú revisas y apruebas.",
+      "heroSubtitle": "Genera, planifica y publica contenido en todas tus plataformas desde un \u00fanico espacio de trabajo inteligente. Un concepto, m\u00faltiples plataformas - la IA hace el trabajo. T\u00fa revisas, apruebas y ahorras {pct} de tu tiempo.{ast}",
+      "heroSourceNote": "* Fuente: estudio \u2018{link}\u2019 (1.500+ profesionales de marketing), HubSpot.",
+      "heroSourceLink": "2026 State of Marketing",
       "ctaDemo": "Solicitar Demo Gratuita",
       "ctaLogin": "Iniciar sesión",
       "badges": {
