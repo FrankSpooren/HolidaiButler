@@ -157,6 +157,15 @@ export function trackSectionViewed(element: HTMLElement | null, sectionName: str
 }
 
 // ============================================================
+// SESSION START — fires once per session
+// ============================================================
+if (typeof window !== 'undefined' && !sessionStorage.getItem('hb_session_started')) {
+  sessionStorage.setItem('hb_session_started', '1');
+  // Small delay to let SA script load
+  setTimeout(() => trackEvent('session_started'), 800);
+}
+
+// ============================================================
 // ANALYTICS API
 // ============================================================
 

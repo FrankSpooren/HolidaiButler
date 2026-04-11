@@ -263,7 +263,6 @@ export default function LoginPage() {
                   }}
                 >
                   <Box component="img" src={lang.flag} alt="" sx={{ width: 20, height: 15, objectFit: 'cover', borderRadius: '2px', mr: 1.25 }} />
-                  <Box component="span" sx={{ fontWeight: 700, width: 28, color: '#02C39A', fontSize: '0.8rem' }}>{lang.short}</Box>
                   {lang.label}
                 </MenuItem>
               ))}
@@ -358,7 +357,19 @@ export default function LoginPage() {
               lineHeight: 1.65,
               mb: 3.5,
             }}>
-              {t('auth.studio.heroSubtitle', 'Genereer, plan en publiceer content op 7 platformen vanuit één intelligent werkstation. Eén concept, meerdere platformen — de AI doet het werk, jij reviewt en keurt goed.')}
+              {(() => {
+                const raw = t('auth.studio.heroSubtitle', '');
+                const pctText = '30%+';
+                const parts = raw.split('{pct}');
+                const astParts = (parts.length > 1 ? parts[1] : parts[0]).split('{ast}');
+                return <>
+                  {parts[0]}
+                  <Box component="span" sx={{ color: '#02C39A', fontWeight: 700 }}>{pctText}</Box>
+                  {astParts[0]}
+                  <Box component="a" href="#source-note" sx={{ color: '#02C39A', textDecoration: 'none', fontWeight: 700 }}>*</Box>
+                  {astParts[1] || ''}
+                </>;
+              })()}
             </Typography>
 
             <Box sx={{
@@ -994,10 +1005,26 @@ export default function LoginPage() {
         </Box>
       </Box>
 
+      {/* ── SOURCE NOTE ── */}
+      <Box id="source-note" sx={{ px: 3, py: 2, textAlign: 'center', bgcolor: '#0D1B2A' }}>
+        <Typography sx={{ fontSize: '0.75rem', color: '#6B7280', lineHeight: 1.6 }}>
+          {(() => {
+            const note = t('auth.studio.heroSourceNote', "* Bron: '{link}'-onderzoek (1.500+ marketeers), HubSpot.");
+            const linkText = t('auth.studio.heroSourceLink', '2026 State of Marketing');
+            const parts = note.split('{link}');
+            return <>
+              {parts[0]}
+              <Link href="https://blog.hubspot.com/marketing/hubspot-blog-marketing-industry-trends-report" target="_blank" rel="noopener" sx={{ color: '#02C39A', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>{linkText}</Link>
+              {parts[1] || ''}
+            </>;
+          })()}
+        </Typography>
+      </Box>
+
       {/* ── FOOTER ── */}
       <Box sx={{
         borderTop: '1px solid #1A2332',
-        mt: 2, py: 3, px: 3,
+        mt: 0, py: 3, px: 3,
         textAlign: 'center',
         bgcolor: '#0D1B2A',
       }}>

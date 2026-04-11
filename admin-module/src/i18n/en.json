@@ -72,7 +72,9 @@
       "tagline": "European AI Content Platform",
       "heroTitle": "Publish smarter. Faster. Better.",
       "heroTitleSuffix": ".",
-      "heroSubtitle": "Generate, plan and publish content across 7 platforms from one intelligent workspace. One concept, multiple platforms — the AI does the work, you review and approve.",
+      "heroSubtitle": "Generate, plan and publish content across all your platforms from one intelligent workspace. One concept, multiple platforms - the AI does the work. You review, approve and save {pct} of your time.{ast}",
+      "heroSourceNote": "* Source: \u2018{link}\u2019 study (1,500+ marketers), HubSpot.",
+      "heroSourceLink": "2026 State of Marketing",
       "ctaDemo": "Request Free Demo",
       "ctaLogin": "Log In",
       "badges": {
