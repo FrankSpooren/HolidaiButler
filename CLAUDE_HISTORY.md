@@ -7049,6 +7049,8 @@ Alle 5 met `@media (prefers-reduced-motion: reduce)` fallback:
 | 8 | **Instagram Per-Destination Account** | `metaClient.js` hardcoded ENV `INSTAGRAM_BUSINESS_ACCOUNT_ID` voor alle destinations | Leest nu `igAccountId` uit `social_accounts.metadata` per destination |
 | 9 | **BUTE Social Account Config** | BUTE social accounts hadden geen geldig token | BUTECS System User token opgeslagen + igAccountId (17841452782960759) + Facebook page_id (102939469465160) |
 | 10 | **Media Picker Destination Filter** | `ContentImageSection.jsx` hardcoded destCode mapping (Texel/WarreWijzer/else=Calpe) | Vervangen door numeriek `String(destination_id)` |
+| 11 | **Facebook Per-Destination Token** | `metaClient.js` forceerde ENV token voor page token exchange → BUTE page onbereikbaar vanuit HB API portfolio | Volgorde omgedraaid: per-destination token eerst, ENV fallback |
+| 12 | **Instagram Page Token Exchange** | Instagram container API gebruikte system user token direct (geen page token exchange) | `_getPageAccessToken()` toegevoegd met `pageId` uit metadata. Beide BUTE publishes succesvol |
 
 ### Gewijzigde Bestanden (5)
 
