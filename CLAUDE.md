@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.48.0
+> **Versie**: 4.49.0
 > **Laatst bijgewerkt**: 12 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -365,6 +365,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Content Studio Analytics & Calendar | v4.46.0 (publish performance records, calendar edit+concept, auto-fill concept+images, orphan repair) | ✅ COMPLEET | apr 2026 |
 | Content Studio UX & Undo | v4.47.0 (sanitization, 7 tooltips, undo auto-fill/auto-schedule/campagne) | ✅ COMPLEET | apr 2026 |
 | Media Library v2.0 Enterprise | v4.48.0 (ML-1 t/m ML-4: 20 opdrachten, 33 endpoints, 15 componenten, DAM+GDPR+AI+editor) | ✅ COMPLEET | apr 2026 |
+| Media Library v2.1 Beyond Enterprise | v4.49.0 (V1-V4: verificatie, video/audio/GPX pipeline, preview upgrade) | ✅ COMPLEET | apr 2026 |
 
 ### Huidige Tellingen
 | Metric | Waarde |
@@ -376,7 +377,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Block types | 36 (+ aliassen, +blog_grid) |
 | Block editors | 37 (+BlogGridEditor) |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.48.0 |
+| CLAUDE.md | v4.49.0 |
 | Master Strategie | v8.09 |
 
 ---
@@ -853,7 +854,7 @@ git pull origin dev
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.09 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.10 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

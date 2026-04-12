@@ -100,10 +100,29 @@ function ThumbnailItem({ file, isSelected, onSelect, onClick, apiBase }) {
           loading="lazy"
           style={{ height: 150, objectFit: 'cover', width: '100%' }}
         />
+      ) : file.media_type === 'video' ? (
+        <Box sx={{ height: 150, position: 'relative', bgcolor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img
+            src={`${apiBase}/media-files/thumbnails/${file.id}_400.jpg`}
+            alt={file.original_name}
+            loading="lazy"
+            style={{ height: '100%', width: '100%', objectFit: 'cover', opacity: 0.7 }}
+            onError={e => { e.target.style.display = 'none'; }}
+          />
+          <Box sx={{ position: 'absolute', fontSize: 40, color: 'white', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>▶</Box>
+          {file.duration_seconds > 0 && (
+            <Box sx={{ position: 'absolute', bottom: 4, right: 4, bgcolor: 'rgba(0,0,0,0.7)', color: 'white', px: 0.5, borderRadius: 0.5, fontSize: '0.65rem', fontWeight: 700 }}>
+              {Math.floor(file.duration_seconds / 60)}:{String(Math.round(file.duration_seconds % 60)).padStart(2, '0')}
+            </Box>
+          )}
+        </Box>
       ) : (
-        <Box sx={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover' }}>
-          <Typography variant="h6" color="text.secondary">
-            {file.mime_type?.split('/')[1]?.toUpperCase() || 'FILE'}
+        <Box sx={{ height: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover' }}>
+          <Typography sx={{ fontSize: 32, mb: 0.5 }}>
+            {file.media_type === 'audio' ? '🎵' : file.media_type === 'pdf' ? '📄' : file.media_type === 'gpx' ? '🗺️' : '📎'}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {file.media_type?.toUpperCase() || file.mime_type?.split('/')[1]?.toUpperCase() || 'FILE'}
           </Typography>
         </Box>
       )}
