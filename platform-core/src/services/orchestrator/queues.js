@@ -25,3 +25,17 @@ export const contentGenerationQueue = new Queue('content-generation', {
 });
 
 export { connection };
+
+/**
+ * Media Processing Queue
+ * Handles: thumbnail generation, EXIF extraction, quality classification, pHash, AI tagging, video processing
+ */
+export const mediaProcessingQueue = new Queue('media-processing', {
+  connection,
+  defaultJobOptions: {
+    attempts: 2,
+    backoff: { type: 'exponential', delay: 60000 },
+    removeOnComplete: 100,
+    removeOnFail: 50,
+  }
+});

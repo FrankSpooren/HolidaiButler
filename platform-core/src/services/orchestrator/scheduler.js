@@ -107,6 +107,7 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: content-recycle-suggestions (Tuesday 07:00)');
 
+// Media Consent Expiry Check - daily at 07:00 (ML-4.1)  await scheduledQueue.add("media-consent-expiry-check", { type: "consent-expiry" }, {    repeat: { pattern: "0 7 * * *", tz: "Europe/Amsterdam" },    jobId: "media-consent-expiry-check-recurring"  });  console.log("[Orchestrator] Scheduled: media-consent-expiry-check (Daily 07:00)");
   // Content Freshness Check - weekly Wednesday at 05:30 (Fase II Blok B)
   await scheduledQueue.add('content-freshness-check', { type: 'content-freshness' }, {
     repeat: { cron: '30 5 * * 3', tz: 'Europe/Amsterdam' },

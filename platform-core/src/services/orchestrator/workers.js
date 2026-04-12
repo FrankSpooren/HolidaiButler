@@ -2,6 +2,7 @@ import { Worker } from "bullmq";
 import { connection } from "./queues.js";
 import { logAgent, logError, logSystem, logAlert } from "./auditTrail/index.js";
 
+import { startMediaWorker, stopMediaWorker, mediaWorker } from "../media/mediaProcessingWorker.js";
 let scheduledWorker = null;
 let alertWorker = null;
 let orchestratorWorker = null;
@@ -530,6 +531,7 @@ export function startWorkers() {
           }
           break;
 
+case "media-consent-expiry-check":          try {            const { mysqlSequelize: cdb } = await import("../../config/database.js");            const [expired] = await cdb.query(              "UPDATE media SET consent_status = 'expired' WHERE consent_status = 'approved' AND license_expiry IS NOT NULL AND license_expiry < CURDATE()"            );            console.log("[Orchestrator] Media consent expiry check: updated", expired?.affectedRows || 0, "expired items");            result = { expired: expired?.affectedRows || 0 };          } catch (error) {            console.error("[Orchestrator] Media consent expiry check failed:", error.message);            throw error;          }          break;
         case "content-freshness-check":
           try {
             const freshnessService = await import("../agents/dataSync/freshnessService.js");
@@ -1133,6 +1135,7 @@ export function startWorkers() {
         'content-quality-audit': 'data-sync',
         'content-freshness-check': 'data-sync',
         'content-recycle-suggestions': 'data-sync',
+'media-consent-expiry-check': 'gdpr',
         'chromadb-state-snapshot': 'holibot-sync',
         'agent-success-rate': 'strategy-layer',
         'gdpr-consent-audit': 'gdpr',
@@ -1371,6 +1374,8 @@ export function startWorkers() {
   console.log("[Orchestrator] - Financial Monitor Agent (De Kassier): active");
   console.log("[Orchestrator] - Inventory Sync Agent (De Magazijnier): active");
   console.log("[Orchestrator] - Content Generation Worker: active");
+  startMediaWorker();
+  console.log("[Orchestrator] - Media Processing Worker: active");
 }
 
 export async function stopWorkers() {
@@ -1384,7 +1389,8 @@ export async function stopWorkers() {
   if (alertWorker) await alertWorker.close();
   if (orchestratorWorker) await orchestratorWorker.close();
   if (contentGenerationWorker) await contentGenerationWorker.close();
+  await stopMediaWorker();
   console.log("[Orchestrator] Workers stopped");
 }
 
-export { scheduledWorker, alertWorker, orchestratorWorker, contentGenerationWorker };
+export { scheduledWorker, alertWorker, orchestratorWorker, contentGenerationWorker, mediaWorker };
