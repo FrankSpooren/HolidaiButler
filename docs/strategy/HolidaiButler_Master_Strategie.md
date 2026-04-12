@@ -1,12 +1,12 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 10 april 2026
-**Versie**: 8.05
+**Datum**: 12 april 2026
+**Versie**: 8.06
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
-**Status**: FASE IV COMPLEET. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Corporate Landing Page Upgrade COMPLEET (v4.44.0)**: Volledige redesign holidaibutler.com B2B pagina — 9 opdrachten. Hero "25 AI Agents. Eén Platform. Nul concessies." + demo modal (zakelijke e-mail validatie). 9 module cards met gecorrigeerde USP-teksten. Count-up stats balk (251/100+/35+/25/1). "Van Data, via Beleving tot Resultaat" procesbeschrijving met 3 geverifieerde KPI proof points (HubSpot/Statista/ETC). Live projecten showcase (CalpeTrip/TexelMaps/PubliQio). EU-First Technology Stack (6 providers met vlaggen). i18n 5 talen (NL/EN/DE/ES/FR) via extern i18n.js (162 keys). Mobiele UX: scroll-snap carousels, floating CTA, taal-dropdown met vlaggen, hamburger menu. Privacy pagina (11 secties GDPR) + PubliQio privacy geharmoniseerd. 252 admin endpoints. adminPortal.js v3.44.0. CLAUDE.md v4.44.0. MS v8.05.
+**Status**: FASE IV COMPLEET. FASE V IN PROGRESS. FASE VI IN PROGRESS. **Corporate Landing Page Upgrade COMPLEET (v4.44.0)**: Volledige redesign holidaibutler.com B2B pagina — 9 opdrachten. Hero "25 AI Agents. Eén Platform. Nul concessies." + demo modal (zakelijke e-mail validatie). 9 module cards met gecorrigeerde USP-teksten. Count-up stats balk (251/100+/35+/25/1). "Van Data, via Beleving tot Resultaat" procesbeschrijving met 3 geverifieerde KPI proof points (HubSpot/Statista/ETC). Live projecten showcase (CalpeTrip/TexelMaps/PubliQio). EU-First Technology Stack (6 providers met vlaggen). i18n 5 talen (NL/EN/DE/ES/FR) via extern i18n.js (162 keys). Mobiele UX: scroll-snap carousels, floating CTA, taal-dropdown met vlaggen, hamburger menu. Privacy pagina (11 secties GDPR) + PubliQio privacy geharmoniseerd. 285 admin endpoints. adminPortal.js v3.47.0. **Media Library v2.0 Enterprise COMPLEET (v4.47.0)**: 4 fasen (ML-1→ML-4), 33 nieuwe endpoints, 4 DB tabellen, 23 media kolommen, BullMQ processing pipeline (thumbnails+pHash+Pixtral AI tagging), 15 frontend componenten (~2.500 LOC), 12 Instagram-stijl filters, 3 AI endpoints (enhance/alt-text/retag), Content Studio media sidebar, smart image suggestions, Pexels import, collections+sharing, GDPR compliance, cleanup tools, i18n 5 talen. CLAUDE.md v4.47.0. MS v8.06.
 
 > **Dit document vervangt**:
 > - `HolidaiButler_Multi_Destination_Strategic_Advisory.md` (v3.1)

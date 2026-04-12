@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.44.1
-> **Laatst bijgewerkt**: 10 april 2026
+> **Versie**: 4.47.0
+> **Laatst bijgewerkt**: 12 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -357,18 +357,19 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Studio Landing Upgrade | v4.42.0 (7 opdrachten dark theme redesign + i18n 5 talen) | ✅ COMPLEET | apr 2026 |
 | PubliQio Branding & Polish | v4.43.0 (10 opdrachten branding + mockup + dark popups + privacy + per-user taal) | ✅ COMPLEET | apr 2026 |
 | Corporate Landing Page | v4.44.0 (9 opdrachten: hero, badges, modules, stats, proces, showcase, EU-stack, CTA, i18n 5 talen, mobiel UX) | ✅ COMPLEET | apr 2026 |
+| Media Library v2.0 Enterprise | v4.47.0 (4 fasen ML-1→ML-4: schema+backend, frontend rebuild, image editing+CS integratie, compliance+i18n) | ✅ COMPLEET | apr 2026 |
 
 ### Huidige Tellingen
 | Metric | Waarde |
 |--------|--------|
-| Admin endpoints | 252 |
-| adminPortal.js | v3.44.0 |
+| Admin endpoints | 285 |
+| adminPortal.js | v3.47.0 |
 | Agents | 25 |
-| BullMQ jobs | 65 |
+| BullMQ jobs | 66 |
 | Block types | 36 (+ aliassen, +blog_grid) |
 | Block editors | 37 (+BlogGridEditor) |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.44.0 |
+| CLAUDE.md | v4.47.0 |
 | Master Strategie | v8.03 |
 
 ---
@@ -818,6 +819,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.47.0** | **2026-04-12** | **Media Library v2.0 Enterprise Upgrade (4 fasen, 20 opdrachten)**. **ML-1 Database+Backend**: ALTER TABLE media (23 nieuwe kolommen: tags, rights, location, AI, versioning). 4 nieuwe tabellen (media_collections, media_collection_items, media_versions, media_audit_log). mediaService.js (11 methods). mediaRoutes.js (23 endpoints: list/filter/search/stats, CRUD, bulk tag/delete/download, pHash duplicate check, Pexels search+import). mediaCollectionRoutes.js (9 admin + 1 public share). mediaProcessingWorker.js BullMQ pipeline (thumbnails WebP 3 formaten, EXIF extract, quality classify, perceptual hash, Pixtral 12B AI tagging, FFmpeg video processing). **ML-2 Frontend Rebuild**: MediaPage herbouwd (10 componenten ~2.500 LOC). MediaHeader (zoek+view switch+sort), MediaSourceTabs (4 tabs), MediaGrid (grid/list/masonry+skeleton+infinite scroll), MediaFilterDrawer (10 filter dimensies), MediaSearchBar (debounced FULLTEXT), MediaDetailDialog (5 tabs: Info/Tags/Rechten/Versies/Gebruik met auto-save), MediaUploadDialog (drag&drop+progress+AI status polling+duplicaat detectie), MediaBulkActionsBar (download/tag/collection/delete), MediaCollectionsDrawer+Detail (share+QR+ZIP), PexelsSearchTab (zoek+import). **ML-3 Image Editing+CS**: MediaImageEditor (crop/resize/12 Instagram filters/adjust sliders/rotate/flip/sharpen+social media presets FB/IG/TikTok/Snap/Pinterest/LinkedIn/X). 3 AI endpoints (enhance/alt-text 5 talen/retag). Content Studio MediaSidebarPanel (persistent drawer, bibliotheek+Pexels browse). Smart image suggestions (media library als bron 0 in imageSelector.js). Media usage tracking in publisher (usage_count+last_used_at). MediaCleanupTab (duplicaat groepen+ongebruikt+bulk archiveer+archiveer alle duplicaten). **ML-4 Polish**: GDPR (consent request+GDPR export+consent expiry cron). Performance (Cache-Control 24h+ETag+staleTime 30/60s+server timeout 5min). i18n 5 talen (~140 keys). Accessibility (ARIA labels). PubliQio standalone verificatie (content_only destinations volledig ondersteund). **Kritieke bugfixes**: Upload destination (multer query param fix), media detail save (destinationId resolution), response data structure (files vs data array), image URL base (api.holidaibutler.com), edit endpoint (single-line comment fix → nieuw media record i.p.v. overschrijven origineel), media_type classificatie (video/audio/pdf), tags veldnaam (manual_tags→tags, ai_tags→tags_ai). **285 admin endpoints** (was 252), **66 BullMQ jobs** (was 65), adminPortal.js v3.47.0. |
 | **4.44.0** | **2026-04-10** | **Corporate Landing Page Upgrade — holidaibutler.com (9 opdrachten)**. Volledige redesign van de B2B corporate pagina. **Opdracht 1 (Badges)**: 4 badges (EU-First, White Label, Local2Local, Multi-Tenancy) in hero met flagcdn.com EU-vlag, witte icon-cirkels. **Opdracht 2 (Hero)**: "25 AI Agents. Eén Platform. Nul concessies." + 2 CTA buttons (Demo Aanvragen modal + Platform Ontdekken). **Opdracht 2+ (Demo Modal)**: Contactformulier naar `demo_requests` tabel (source: `corporate_landing`), veld Functie, zakelijke e-mail validatie (40+ consumer-domeinen geblokkeerd), GDPR consent + privacybeleid link. **Opdracht 3 (Module Cards)**: 9 gecorrigeerde USP-teksten (Ongelimiteerd POIs, 35+ blocks zonder code, 100+ talen, PubliQio standalone, etc.). **Opdracht 4 (Stats)**: Count-up animatie (easeOutCubic, IntersectionObserver): 251 API Endpoints → 100+ Talen → 35+ Blocks → 25 AI Agents → 1 Platform. **Opdracht 5 (Proces)**: "Van Data, via Beleving tot Resultaat" — 3 fasen (Data/Configuratie & Modules/Groei) met groene cards + pijlen + 3 KPI proof points (HubSpot 2026, Statista/Kantar 2024, ETC 2025) met bronlinks. **Opdracht 6 (Showcase)**: CalpeTrip, TexelMaps, PubliQio als live projecten + WarreWijzer/Alicante in voorbereiding. **Opdracht 7 (EU-Stack)**: 6 EU-providers met landenvlaggen (flagcdn) in donkere sectie. **Opdracht 8 (CTA)**: Dual-button CTA + contactinfo + productenbalk. **Opdracht 9 (Responsive + i18n)**: Hamburger menu mobiel, taal-dropdown met vlaggen (PubliQio patroon), i18n.js extern vertaalbestand (162 keys × 5 talen: NL/EN/DE/ES/FR), scroll-snap carousels op mobiel (85% viewport + peek), floating CTA, mobiele padding optimalisatie. **Privacy**: `privacy.html` — 11-secties GDPR-compliant pagina in HB design + PubliQio PrivacyPage.jsx geharmoniseerd (zelfde structuur, info@, Frank Spooren, AP contactgegevens, AVG artikelnummers, 72h/24h SLA's). **Bestanden**: 3 nieuwe (`i18n.js`, `privacy.html`, admin-module PrivacyPage.jsx update) + `index.html` volledig herbouwd (~850 LOC). |
 | **4.43.1** | **2026-04-09** | **PubliQio Post-Release Polish**. (1) Hero punt-uitlijning: losse "." na PubliQio wrappte naar eigen regel op mobiel → nu als `suffix="."` in PubliQioText component (geen line-break mogelijk). (2) EU badges balk mobiel responsiviteit: kleinere cirkels (28px xs), compactere gap, op xs alleen icoon + korte naam (geen subtitle), op sm+ volledige tekst. 1 bestand (LoginPage.jsx). |
 | **4.43.0** | **2026-04-09** | **PubliQio Landing Page Polish & Branding (10 opdrachten)**. **Opdracht 1 (PubliQio Merknaam)**: Herbruikbaar `PubliQioText` component (witte tekst + groene Q #02C39A), toegepast op 9 locaties: header logo (vergroot 1.35rem), hero headline ("Publiceer slimmer. Sneller. Beter. PubliQio."), USP sectie-titel ("Waarom PubliQio?"), 2 tabel-titels ("PubliQio vs. concurrentie/bureau/intern" met italic witte "vs."), 2 tabel kolomheaders (wit + groene Q), social proof quote, footer logo. Alle i18n keys bijgewerkt (5 talen). **Opdracht 2 (7e USP)**: "🔍 Multi-Source Trending Analyse" als brede card onder 3×2 grid (desktop) + 7e item in horizontale scroll-snap carousel (mobiel). i18n 5 talen. **Opdracht 3 (Realistische Mockup)**: ConceptMockup.jsx volledig herbouwd: header met "calpe playas" + "Deels live" badge, Facebook/Instagram platform tabs, beach foto uit Calpe POI-database (poi_id 15, Playa Arenal), content tekst + hashtags, FB preview card, Validatie panel (5 metrics), Tip-box, "Sluiten" footer. **Opdracht 4 (Mobiele Mockup)**: Progressive disclosure: compact preview (max 200px) + gradient fade + "Bekijk volledig ▾" expand/collapse knop. Desktop ongewijzigd. **Opdracht 5 (Taalswitch Vlaggen)**: flagcdn.com vlag-iconen (20×15px) in header button + dropdown (NL/GB/DE/ES/FR). **Opdracht 6+7 (Login + Demo Popup Dark Theme)**: Beide dialogen: bgcolor #15293F, PubliQio logo, witte inputs met teal focus, gele submit-knop (#F2C94C), floating label fix (shrink bgcolor #15293F). Demo popup: "Functie" veld toegevoegd, zakelijke e-mail validatie (35+ consumer-domeinen geblokkeerd), consent tekst GDPR-aangepast. **Opdracht 8 (Footer)**: PubliQio logo + "EU-First AI Content Studio" + "Powered by HolidaiButler" + EU vlag via flagcdn (emoji-fix desktop) + Privacybeleid link. **Privacybeleid**: Nieuwe `/privacy` route + `PrivacyPage.jsx` — 11-secties GDPR-compliant privacybeleid in PubliQio dark theme (verwerkingsverantwoordelijke, gegevenstypen, rechtsgrondslag, bewaartermijnen, 5 EU-verwerkers, 7 AVG-rechten, beveiliging, cookies, EU AI Act transparantie, klachten, wijzigingen). **Opdracht 9 (Admin Sidebar)**: `Sidebar.jsx` domein-aware: studio.holidaibutler.com → "PubliQio" logo + "AI Content Studio", admin.holidaibutler.com → "HolidaiButler Admin Portal" (ongewijzigd). **Per-user voorkeurstaal**: `preferred_language VARCHAR(5)` kolom op admin_users + Users tabellen. Login response bevat preferred_language. Nieuw endpoint PATCH /auth/language (252 totaal). Frontend: landing page taalswitch → localStorage persist, login → auto-apply preferred_language, SettingsPage → server sync. Domain-default: .com=EN, .es=ES, .nl=NL. **Bestanden**: 3 nieuwe (PrivacyPage.jsx, publiqio-favicon.svg) + 8 gewijzigd (LoginPage.jsx, ConceptMockup.jsx, LoginDialog.jsx, DemoRequestDialog.jsx, Sidebar.jsx, App.jsx, SettingsPage.jsx, adminPortal.js) + 5 i18n JSON + i18n/index.js. adminPortal.js v3.44.0. |
@@ -841,7 +843,7 @@ git pull origin dev
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.05 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.06 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

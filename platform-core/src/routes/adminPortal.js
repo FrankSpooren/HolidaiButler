@@ -176,6 +176,8 @@ import commerceService from '../services/commerce/commerceService.js';
 import partnerService from '../services/partner/partnerService.js';
 import intermediaryService from '../services/intermediary/intermediaryService.js';
 import financialService from '../services/financial/financialService.js';
+import createMediaRouter from "./mediaRoutes.js";
+import createCollectionRouter, { createPublicCollectionRouter } from "./mediaCollectionRoutes.js";
 
 const router = Router();
 
@@ -183,6 +185,9 @@ const router = Router();
 // 300 req/15min, platform_admin + trusted IPs exempt
 router.use(adminApiRateLimiter);
 
+// Media Library v2.0 routes (12 endpoints)
+router.use("/media", createMediaRouter(adminAuth, destinationScope, resolveDestinationId));
+router.use("/media-collections", createCollectionRouter(adminAuth, destinationScope, resolveDestinationId));
 // Redis client for dashboard caching
 let redisClient = null;
 function getRedis() {
@@ -10642,227 +10647,227 @@ Return as JSON with fields: tone (string in ${langName}), themes (string[] in ${
 // MEDIA LIBRARY (Wave 2 — W2.5) — 4 endpoints
 // ============================================================
 
-const MEDIA_DIR = path.join(STORAGE_ROOT, 'media');
-
-const mediaStorage = multer.diskStorage({
-  destination: (req, _file, cb) => {
-    const destId = req.body.destination_id || req.headers['x-destination-id'] || '0';
-    const dir = path.join(MEDIA_DIR, String(destId));
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-    cb(null, `${Date.now()}_${crypto.randomBytes(4).toString('hex')}${ext}`);
-  }
-});
-
-const mediaUpload = multer({
-  storage: mediaStorage,
-  limits: { fileSize: 40 * 1024 * 1024 }, // 40 MB (video support)
-  fileFilter: (_req, file, cb) => {
-    const allowed = [
-      'image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif',
-      'video/mp4', 'video/webm',
-      'application/pdf', 'application/gpx+xml', 'application/octet-stream'
-    ];
-    if (allowed.includes(file.mimetype) || file.originalname.endsWith('.gpx')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Unsupported file type'));
-    }
-  }
-});
-
-/**
- * POST /media/upload — Upload files to media library (multi-file, max 10)
- */
-router.post('/media/upload', adminAuth('editor'), (req, res) => {
-  mediaUpload.array('files', 50)(req, res, async (err) => {
-    if (err) {
-      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 40MB)' : err.message;
-      return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
-    }
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ success: false, error: { code: 'NO_FILES', message: 'No files uploaded' } });
-    }
-
-    try {
-      const destinationId = parseInt(req.body.destination_id || req.headers['x-destination-id']);
-      const category = req.body.category || 'other';
-      const results = [];
-
-      for (const file of req.files) {
-        const isImage = file.mimetype.startsWith('image/');
-        let width = null, height = null;
-
-        // Try to get image dimensions (basic, no sharp dependency)
-        if (isImage && file.mimetype === 'image/png') {
-          try {
-            const buf = fs.readFileSync(file.path);
-            width = buf.readUInt32BE(16);
-            height = buf.readUInt32BE(20);
-          } catch { /* ignore */ }
-        }
-
-        await mysqlSequelize.query(
-          `INSERT INTO media (destination_id, filename, original_name, mime_type, size_bytes, width, height, category, uploaded_by)
-           VALUES (:destId, :filename, :originalName, :mimeType, :sizeBytes, :width, :height, :category, :uploadedBy)`,
-          {
-            replacements: {
-              destId: destinationId,
-              filename: file.filename,
-              originalName: file.originalname,
-              mimeType: file.mimetype,
-              sizeBytes: file.size,
-              width,
-              height,
-              category,
-              uploadedBy: req.adminUser?.id || null
-            },
-            type: QueryTypes.INSERT
-          }
-        );
-
-        const [mediaItem] = await mysqlSequelize.query(
-          'SELECT * FROM media WHERE filename = :filename ORDER BY id DESC LIMIT 1',
-          { replacements: { filename: file.filename }, type: QueryTypes.SELECT }
-        );
-
-        results.push({
-          ...mediaItem,
-          url: `/media-files/${destinationId}/${file.filename}`
-        });
-      }
-
-      res.status(201).json({ success: true, data: { files: results } });
-    } catch (error) {
-      logger.error('[AdminPortal] Media upload error:', error);
-      res.status(500).json({ success: false, error: { code: 'MEDIA_UPLOAD_ERROR', message: error.message } });
-    }
-  });
-});
-
-/**
- * GET /media — List media files per destination (filterable by category)
- */
-router.get('/media', adminAuth('reviewer'), destinationScope, async (req, res) => {
-  try {
-    const destinationId = resolveDestinationId(req.query.destinationId || req.query.destination || req.headers['x-destination-id']);
-    const category = req.query.category;
-    const search = req.query.search;
-    const page = parseInt(req.query.page) || 1;
-    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
-    const offset = (page - 1) * limit;
-
-    let where = 'WHERE m.destination_id = :destId';
-    const replacements = { destId: destinationId, limit, offset };
-
-    if (category && category !== 'all') {
-      where += ' AND m.category = :category';
-      replacements.category = category;
-    }
-    if (search) {
-      where += ' AND (m.original_name LIKE :search OR m.alt_text LIKE :search)';
-      replacements.search = `%${search}%`;
-    }
-
-    const [countResult] = await mysqlSequelize.query(
-      `SELECT COUNT(*) AS total FROM media m ${where}`,
-      { replacements, type: QueryTypes.SELECT }
-    );
-
-    const items = await mysqlSequelize.query(
-      `SELECT m.* FROM media m ${where} ORDER BY m.created_at DESC LIMIT :limit OFFSET :offset`,
-      { replacements, type: QueryTypes.SELECT }
-    );
-
-    // Add URL to each item
-    const filesWithUrl = items.map(item => ({
-      ...item,
-      url: `/media-files/${item.destination_id}/${item.filename}`
-    }));
-
-    res.json({
-      success: true,
-      data: {
-        files: filesWithUrl,
-        pagination: { page, limit, total: countResult.total, totalPages: Math.ceil(countResult.total / limit) }
-      }
-    });
-  } catch (error) {
-    logger.error('[AdminPortal] Media list error:', error);
-    res.status(500).json({ success: false, error: { code: 'MEDIA_LIST_ERROR', message: error.message } });
-  }
-});
-
-/**
- * PUT /media/:id — Update media metadata (alt_text, category)
- */
-router.put('/media/:id', adminAuth('editor'), async (req, res) => {
-  try {
-    const mediaId = parseInt(req.params.id);
-    const [existing] = await mysqlSequelize.query('SELECT * FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.SELECT });
-    if (!existing) {
-      return res.status(404).json({ success: false, error: { code: 'MEDIA_NOT_FOUND', message: 'Media item not found' } });
-    }
-
-    const sets = [];
-    const replacements = { id: mediaId };
-    if (req.body.alt_text !== undefined) { sets.push('alt_text = :altText'); replacements.altText = req.body.alt_text; }
-    if (req.body.category !== undefined) { sets.push('category = :category'); replacements.category = req.body.category; }
-
-    if (sets.length === 0) {
-      return res.status(400).json({ success: false, error: { code: 'NO_CHANGES', message: 'No fields to update' } });
-    }
-
-    await mysqlSequelize.query(`UPDATE media SET ${sets.join(', ')} WHERE id = :id`, { replacements, type: QueryTypes.UPDATE });
-    const [updated] = await mysqlSequelize.query('SELECT * FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.SELECT });
-    updated.url = `/media-files/${updated.destination_id}/${updated.filename}`;
-
-    res.json({ success: true, data: updated });
-  } catch (error) {
-    logger.error('[AdminPortal] Media update error:', error);
-    res.status(500).json({ success: false, error: { code: 'MEDIA_UPDATE_ERROR', message: error.message } });
-  }
-});
-
-/**
- * DELETE /media/:id — Delete media file + DB record
- */
-router.delete('/media/:id', adminAuth('platform_admin'), async (req, res) => {
-  try {
-    const mediaId = parseInt(req.params.id);
-    const [existing] = await mysqlSequelize.query('SELECT * FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.SELECT });
-    if (!existing) {
-      return res.status(404).json({ success: false, error: { code: 'MEDIA_NOT_FOUND', message: 'Media item not found' } });
-    }
-
-    // Delete physical file
-    const filePath = path.join(MEDIA_DIR, String(existing.destination_id), existing.filename);
-    try { fs.unlinkSync(filePath); } catch { /* file may already be gone */ }
-
-    await mysqlSequelize.query('DELETE FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.DELETE });
-
-    // Audit log
-    try {
-      if (mongoose.connection.readyState === 1) {
-        await mongoose.connection.db.collection('audit_logs').insertOne({
-          action: 'media_deleted', entity_type: 'media', entity_id: mediaId,
-          admin_email: req.adminUser.email, changes: { filename: existing.original_name, category: existing.category },
-          timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
-        });
-      }
-    } catch { /* non-critical */ }
-
-    res.json({ success: true, data: { message: 'Media deleted', id: mediaId } });
-  } catch (error) {
-    logger.error('[AdminPortal] Media delete error:', error);
-    res.status(500).json({ success: false, error: { code: 'MEDIA_DELETE_ERROR', message: error.message } });
-  }
-});
-
-// ============================================================
+// [ML-v2 REPLACED] const MEDIA_DIR = path.join(STORAGE_ROOT, 'media');
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED] const mediaStorage = multer.diskStorage({
+// [ML-v2 REPLACED]   destination: (req, _file, cb) => {
+// [ML-v2 REPLACED]     const destId = req.body.destination_id || req.headers['x-destination-id'] || '0';
+// [ML-v2 REPLACED]     const dir = path.join(MEDIA_DIR, String(destId));
+// [ML-v2 REPLACED]     fs.mkdirSync(dir, { recursive: true });
+// [ML-v2 REPLACED]     cb(null, dir);
+// [ML-v2 REPLACED]   },
+// [ML-v2 REPLACED]   filename: (_req, file, cb) => {
+// [ML-v2 REPLACED]     const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+// [ML-v2 REPLACED]     cb(null, `${Date.now()}_${crypto.randomBytes(4).toString('hex')}${ext}`);
+// [ML-v2 REPLACED]   }
+// [ML-v2 REPLACED] });
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED] const mediaUpload = multer({
+// [ML-v2 REPLACED]   storage: mediaStorage,
+// [ML-v2 REPLACED]   limits: { fileSize: 40 * 1024 * 1024 }, // 40 MB (video support)
+// [ML-v2 REPLACED]   fileFilter: (_req, file, cb) => {
+// [ML-v2 REPLACED]     const allowed = [
+// [ML-v2 REPLACED]       'image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif',
+// [ML-v2 REPLACED]       'video/mp4', 'video/webm',
+// [ML-v2 REPLACED]       'application/pdf', 'application/gpx+xml', 'application/octet-stream'
+// [ML-v2 REPLACED]     ];
+// [ML-v2 REPLACED]     if (allowed.includes(file.mimetype) || file.originalname.endsWith('.gpx')) {
+// [ML-v2 REPLACED]       cb(null, true);
+// [ML-v2 REPLACED]     } else {
+// [ML-v2 REPLACED]       cb(new Error('Unsupported file type'));
+// [ML-v2 REPLACED]     }
+// [ML-v2 REPLACED]   }
+// [ML-v2 REPLACED] });
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED] /**
+// [ML-v2 REPLACED]  * POST /media/upload — Upload files to media library (multi-file, max 10)
+// [ML-v2 REPLACED]  */
+// [ML-v2 REPLACED] router.post('/media/upload', adminAuth('editor'), (req, res) => {
+// [ML-v2 REPLACED]   mediaUpload.array('files', 50)(req, res, async (err) => {
+// [ML-v2 REPLACED]     if (err) {
+// [ML-v2 REPLACED]       const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 40MB)' : err.message;
+// [ML-v2 REPLACED]       return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
+// [ML-v2 REPLACED]     }
+// [ML-v2 REPLACED]     if (!req.files || req.files.length === 0) {
+// [ML-v2 REPLACED]       return res.status(400).json({ success: false, error: { code: 'NO_FILES', message: 'No files uploaded' } });
+// [ML-v2 REPLACED]     }
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     try {
+// [ML-v2 REPLACED]       const destinationId = parseInt(req.body.destination_id || req.headers['x-destination-id']);
+// [ML-v2 REPLACED]       const category = req.body.category || 'other';
+// [ML-v2 REPLACED]       const results = [];
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]       for (const file of req.files) {
+// [ML-v2 REPLACED]         const isImage = file.mimetype.startsWith('image/');
+// [ML-v2 REPLACED]         let width = null, height = null;
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]         // Try to get image dimensions (basic, no sharp dependency)
+// [ML-v2 REPLACED]         if (isImage && file.mimetype === 'image/png') {
+// [ML-v2 REPLACED]           try {
+// [ML-v2 REPLACED]             const buf = fs.readFileSync(file.path);
+// [ML-v2 REPLACED]             width = buf.readUInt32BE(16);
+// [ML-v2 REPLACED]             height = buf.readUInt32BE(20);
+// [ML-v2 REPLACED]           } catch { /* ignore */ }
+// [ML-v2 REPLACED]         }
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]         await mysqlSequelize.query(
+// [ML-v2 REPLACED]           `INSERT INTO media (destination_id, filename, original_name, mime_type, size_bytes, width, height, category, uploaded_by)
+// [ML-v2 REPLACED]            VALUES (:destId, :filename, :originalName, :mimeType, :sizeBytes, :width, :height, :category, :uploadedBy)`,
+// [ML-v2 REPLACED]           {
+// [ML-v2 REPLACED]             replacements: {
+// [ML-v2 REPLACED]               destId: destinationId,
+// [ML-v2 REPLACED]               filename: file.filename,
+// [ML-v2 REPLACED]               originalName: file.originalname,
+// [ML-v2 REPLACED]               mimeType: file.mimetype,
+// [ML-v2 REPLACED]               sizeBytes: file.size,
+// [ML-v2 REPLACED]               width,
+// [ML-v2 REPLACED]               height,
+// [ML-v2 REPLACED]               category,
+// [ML-v2 REPLACED]               uploadedBy: req.adminUser?.id || null
+// [ML-v2 REPLACED]             },
+// [ML-v2 REPLACED]             type: QueryTypes.INSERT
+// [ML-v2 REPLACED]           }
+// [ML-v2 REPLACED]         );
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]         const [mediaItem] = await mysqlSequelize.query(
+// [ML-v2 REPLACED]           'SELECT * FROM media WHERE filename = :filename ORDER BY id DESC LIMIT 1',
+// [ML-v2 REPLACED]           { replacements: { filename: file.filename }, type: QueryTypes.SELECT }
+// [ML-v2 REPLACED]         );
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]         results.push({
+// [ML-v2 REPLACED]           ...mediaItem,
+// [ML-v2 REPLACED]           url: `/media-files/${destinationId}/${file.filename}`
+// [ML-v2 REPLACED]         });
+// [ML-v2 REPLACED]       }
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]       res.status(201).json({ success: true, data: { files: results } });
+// [ML-v2 REPLACED]     } catch (error) {
+// [ML-v2 REPLACED]       logger.error('[AdminPortal] Media upload error:', error);
+// [ML-v2 REPLACED]       res.status(500).json({ success: false, error: { code: 'MEDIA_UPLOAD_ERROR', message: error.message } });
+// [ML-v2 REPLACED]     }
+// [ML-v2 REPLACED]   });
+// [ML-v2 REPLACED] });
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED] /**
+// [ML-v2 REPLACED]  * GET /media — List media files per destination (filterable by category)
+// [ML-v2 REPLACED]  */
+// [ML-v2 REPLACED] router.get('/media', adminAuth('reviewer'), destinationScope, async (req, res) => {
+// [ML-v2 REPLACED]   try {
+// [ML-v2 REPLACED]     const destinationId = resolveDestinationId(req.query.destinationId || req.query.destination || req.headers['x-destination-id']);
+// [ML-v2 REPLACED]     const category = req.query.category;
+// [ML-v2 REPLACED]     const search = req.query.search;
+// [ML-v2 REPLACED]     const page = parseInt(req.query.page) || 1;
+// [ML-v2 REPLACED]     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+// [ML-v2 REPLACED]     const offset = (page - 1) * limit;
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     let where = 'WHERE m.destination_id = :destId';
+// [ML-v2 REPLACED]     const replacements = { destId: destinationId, limit, offset };
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     if (category && category !== 'all') {
+// [ML-v2 REPLACED]       where += ' AND m.category = :category';
+// [ML-v2 REPLACED]       replacements.category = category;
+// [ML-v2 REPLACED]     }
+// [ML-v2 REPLACED]     if (search) {
+// [ML-v2 REPLACED]       where += ' AND (m.original_name LIKE :search OR m.alt_text LIKE :search)';
+// [ML-v2 REPLACED]       replacements.search = `%${search}%`;
+// [ML-v2 REPLACED]     }
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     const [countResult] = await mysqlSequelize.query(
+// [ML-v2 REPLACED]       `SELECT COUNT(*) AS total FROM media m ${where}`,
+// [ML-v2 REPLACED]       { replacements, type: QueryTypes.SELECT }
+// [ML-v2 REPLACED]     );
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     const items = await mysqlSequelize.query(
+// [ML-v2 REPLACED]       `SELECT m.* FROM media m ${where} ORDER BY m.created_at DESC LIMIT :limit OFFSET :offset`,
+// [ML-v2 REPLACED]       { replacements, type: QueryTypes.SELECT }
+// [ML-v2 REPLACED]     );
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     // Add URL to each item
+// [ML-v2 REPLACED]     const filesWithUrl = items.map(item => ({
+// [ML-v2 REPLACED]       ...item,
+// [ML-v2 REPLACED]       url: `/media-files/${item.destination_id}/${item.filename}`
+// [ML-v2 REPLACED]     }));
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     res.json({
+// [ML-v2 REPLACED]       success: true,
+// [ML-v2 REPLACED]       data: {
+// [ML-v2 REPLACED]         files: filesWithUrl,
+// [ML-v2 REPLACED]         pagination: { page, limit, total: countResult.total, totalPages: Math.ceil(countResult.total / limit) }
+// [ML-v2 REPLACED]       }
+// [ML-v2 REPLACED]     });
+// [ML-v2 REPLACED]   } catch (error) {
+// [ML-v2 REPLACED]     logger.error('[AdminPortal] Media list error:', error);
+// [ML-v2 REPLACED]     res.status(500).json({ success: false, error: { code: 'MEDIA_LIST_ERROR', message: error.message } });
+// [ML-v2 REPLACED]   }
+// [ML-v2 REPLACED] });
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED] /**
+// [ML-v2 REPLACED]  * PUT /media/:id — Update media metadata (alt_text, category)
+// [ML-v2 REPLACED]  */
+// [ML-v2 REPLACED] router.put('/media/:id', adminAuth('editor'), async (req, res) => {
+// [ML-v2 REPLACED]   try {
+// [ML-v2 REPLACED]     const mediaId = parseInt(req.params.id);
+// [ML-v2 REPLACED]     const [existing] = await mysqlSequelize.query('SELECT * FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.SELECT });
+// [ML-v2 REPLACED]     if (!existing) {
+// [ML-v2 REPLACED]       return res.status(404).json({ success: false, error: { code: 'MEDIA_NOT_FOUND', message: 'Media item not found' } });
+// [ML-v2 REPLACED]     }
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     const sets = [];
+// [ML-v2 REPLACED]     const replacements = { id: mediaId };
+// [ML-v2 REPLACED]     if (req.body.alt_text !== undefined) { sets.push('alt_text = :altText'); replacements.altText = req.body.alt_text; }
+// [ML-v2 REPLACED]     if (req.body.category !== undefined) { sets.push('category = :category'); replacements.category = req.body.category; }
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     if (sets.length === 0) {
+// [ML-v2 REPLACED]       return res.status(400).json({ success: false, error: { code: 'NO_CHANGES', message: 'No fields to update' } });
+// [ML-v2 REPLACED]     }
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     await mysqlSequelize.query(`UPDATE media SET ${sets.join(', ')} WHERE id = :id`, { replacements, type: QueryTypes.UPDATE });
+// [ML-v2 REPLACED]     const [updated] = await mysqlSequelize.query('SELECT * FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.SELECT });
+// [ML-v2 REPLACED]     updated.url = `/media-files/${updated.destination_id}/${updated.filename}`;
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     res.json({ success: true, data: updated });
+// [ML-v2 REPLACED]   } catch (error) {
+// [ML-v2 REPLACED]     logger.error('[AdminPortal] Media update error:', error);
+// [ML-v2 REPLACED]     res.status(500).json({ success: false, error: { code: 'MEDIA_UPDATE_ERROR', message: error.message } });
+// [ML-v2 REPLACED]   }
+// [ML-v2 REPLACED] });
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED] /**
+// [ML-v2 REPLACED]  * DELETE /media/:id — Delete media file + DB record
+// [ML-v2 REPLACED]  */
+// [ML-v2 REPLACED] router.delete('/media/:id', adminAuth('platform_admin'), async (req, res) => {
+// [ML-v2 REPLACED]   try {
+// [ML-v2 REPLACED]     const mediaId = parseInt(req.params.id);
+// [ML-v2 REPLACED]     const [existing] = await mysqlSequelize.query('SELECT * FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.SELECT });
+// [ML-v2 REPLACED]     if (!existing) {
+// [ML-v2 REPLACED]       return res.status(404).json({ success: false, error: { code: 'MEDIA_NOT_FOUND', message: 'Media item not found' } });
+// [ML-v2 REPLACED]     }
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     // Delete physical file
+// [ML-v2 REPLACED]     const filePath = path.join(MEDIA_DIR, String(existing.destination_id), existing.filename);
+// [ML-v2 REPLACED]     try { fs.unlinkSync(filePath); } catch { /* file may already be gone */ }
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     await mysqlSequelize.query('DELETE FROM media WHERE id = :id', { replacements: { id: mediaId }, type: QueryTypes.DELETE });
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     // Audit log
+// [ML-v2 REPLACED]     try {
+// [ML-v2 REPLACED]       if (mongoose.connection.readyState === 1) {
+// [ML-v2 REPLACED]         await mongoose.connection.db.collection('audit_logs').insertOne({
+// [ML-v2 REPLACED]           action: 'media_deleted', entity_type: 'media', entity_id: mediaId,
+// [ML-v2 REPLACED]           admin_email: req.adminUser.email, changes: { filename: existing.original_name, category: existing.category },
+// [ML-v2 REPLACED]           timestamp: new Date(), actor: { type: 'admin', name: 'admin-portal' }
+// [ML-v2 REPLACED]         });
+// [ML-v2 REPLACED]       }
+// [ML-v2 REPLACED]     } catch { /* non-critical */ }
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED]     res.json({ success: true, data: { message: 'Media deleted', id: mediaId } });
+// [ML-v2 REPLACED]   } catch (error) {
+// [ML-v2 REPLACED]     logger.error('[AdminPortal] Media delete error:', error);
+// [ML-v2 REPLACED]     res.status(500).json({ success: false, error: { code: 'MEDIA_DELETE_ERROR', message: error.message } });
+// [ML-v2 REPLACED]   }
+// [ML-v2 REPLACED] });
+// [ML-v2 REPLACED] 
+// [ML-v2 REPLACED] // ============================================================
 // PAGE DUPLICATE (Wave 3 — W3.1) — 1 endpoint
 // ============================================================
 
@@ -11730,21 +11735,32 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
     // === Manual content creation (TO DO 4g) — no AI generation ===
     if (manual && title) {
       const destId = Number(destination_id) || Number(req.query.destination_id) || 1;
+      const cType = content_type || 'blog';
+      // Step 1: Create concept (parent row — required for listing)
+      const [conceptResult] = await mysqlSequelize.query(
+        `INSERT INTO content_concepts
+         (destination_id, title, content_type, approval_status, ai_generated, created_at, updated_at)
+         VALUES (:destId, :title, :cType, 'draft', false, NOW(), NOW())`,
+        { replacements: { destId, title: title.trim(), cType } }
+      );
+      const conceptId = conceptResult;
+      // Step 2: Create content item linked to concept
       const [insertResult] = await mysqlSequelize.query(
         `INSERT INTO content_items
-         (destination_id, content_type, title, body_en, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
-         VALUES (:destId, :contentType, :title, :bodyEn, :platform, 'draft', NULL, false, NOW(), NOW())`,
+         (destination_id, concept_id, content_type, title, body_en, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+         VALUES (:destId, :conceptId, :cType, :title, :bodyEn, :platform, 'draft', NULL, false, NOW(), NOW())`,
         {
           replacements: {
             destId,
-            contentType: content_type || 'blog',
+            conceptId,
+            cType,
             title: title.trim(),
             bodyEn: body_en || '',
             platform,
           },
         }
       );
-      return res.json({ success: true, data: { id: insertResult, title, manual: true } });
+      return res.json({ success: true, data: { id: insertResult, concept_id: conceptId, title, manual: true } });
     }
 
     // === AI-generated content from suggestion ===
@@ -12346,6 +12362,7 @@ router.get('/content/concepts', adminAuth('editor'), async (req, res) => {
 
 /**
  * GET /content/concepts/:id — Single concept with all platform items
+ * Includes server-side image resolution (same logic as GET /content/items)
  */
 router.get('/content/concepts/:id', adminAuth('editor'), async (req, res) => {
   try {
@@ -12359,6 +12376,70 @@ router.get('/content/concepts/:id', adminAuth('editor'), async (req, res) => {
       `SELECT * FROM content_items WHERE concept_id = ? AND approval_status != 'deleted' ORDER BY target_platform`,
       { replacements: [concept.id] }
     );
+
+    // Parse JSON fields + resolve images (same as GET /content/items)
+    const imageBase = process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com';
+    const mediaBase = process.env.API_BASE_URL || 'https://api.holidaibutler.com';
+    for (const item of items) {
+      if (typeof item.seo_data === 'string') try { item.seo_data = JSON.parse(item.seo_data); } catch { /* keep string */ }
+      if (typeof item.social_metadata === 'string') try { item.social_metadata = JSON.parse(item.social_metadata); } catch { /* keep string */ }
+      if (typeof item.media_ids === 'string') try { item.media_ids = JSON.parse(item.media_ids); } catch { /* keep string */ }
+
+      // Resolve media_ids to image URLs
+      item.resolved_images = [];
+      const rawIds = Array.isArray(item.media_ids) ? item.media_ids : [];
+      const poiIds = rawIds.filter(id => typeof id === 'string' && id.startsWith('poi:')).map(id => Number(id.replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
+      const mediaIds = rawIds.filter(id => !(typeof id === 'string' && id.startsWith('poi:'))).map(id => Number(String(id).replace('media:', ''))).filter(id => !isNaN(id) && id > 0);
+
+      if (poiIds.length > 0) {
+        const [poiImages] = await mysqlSequelize.query(
+          `SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)`,
+          { replacements: { ids: poiIds } }
+        );
+        item.resolved_images.push(...poiImages.map(img => {
+          const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
+          return {
+            id: `poi:${img.id}`,
+            url: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : img.image_url,
+            thumbnail: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp` : img.image_url,
+            alt: img.local_path ? img.local_path.split('/').pop().replace(/\.\w+$/, '') : 'POI image',
+          };
+        }));
+      }
+
+      if (mediaIds.length > 0) {
+        const [mediaImages] = await mysqlSequelize.query(
+          `SELECT id, filename, alt_text, destination_id FROM media WHERE id IN (:ids)`,
+          { replacements: { ids: mediaIds } }
+        );
+        item.resolved_images.push(...mediaImages.map(img => ({
+          id: img.id,
+          url: `${mediaBase}/media-files/${img.destination_id}/${img.filename}`,
+          thumbnail: `${mediaBase}/media-files/${img.destination_id}/${img.filename}`,
+          alt: img.alt_text || img.filename.replace(/\.\w+$/, ''),
+        })));
+      }
+
+      // Backward compat fallback
+      if (item.resolved_images.length === 0 && rawIds.length > 0) {
+        const allIds = rawIds.map(id => Number(String(id).replace(/^(poi|media):/, ''))).filter(id => !isNaN(id) && id > 0);
+        if (allIds.length > 0) {
+          const [fallbackImages] = await mysqlSequelize.query(
+            `SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)`,
+            { replacements: { ids: allIds } }
+          );
+          item.resolved_images = fallbackImages.map(img => {
+            const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
+            return {
+              id: img.id,
+              url: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : img.image_url,
+              thumbnail: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp` : img.image_url,
+              alt: 'Content image',
+            };
+          });
+        }
+      }
+    }
 
     res.json({ success: true, data: { ...concept, items } });
   } catch (error) {
@@ -12729,8 +12810,17 @@ router.post('/content/items/:id/repurpose', adminAuth('editor'), writeAccess(['p
     );
     if (!sourceItem) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
 
-    const { repurposeContent } = await import('../services/agents/contentRedacteur/contentGenerator.js');
-    const results = await repurposeContent(sourceItem, target_platforms, sourceItem.destination_id);
+    // Check if source has body text — if not, generate fresh content instead of repurposing
+    const sourceBody = sourceItem.body_en || sourceItem.body_nl || sourceItem.body_de || sourceItem.body_es || '';
+    let results;
+    if (sourceBody) {
+      const { repurposeContent } = await import('../services/agents/contentRedacteur/contentGenerator.js');
+      results = await repurposeContent(sourceItem, target_platforms, sourceItem.destination_id);
+    } else {
+      // No body text — generate fresh content from title for each target platform
+      const { generateFromTitle } = await import('../services/agents/contentRedacteur/contentGenerator.js');
+      results = await generateFromTitle(sourceItem, target_platforms, sourceItem.destination_id);
+    }
 
     // Save each repurposed item with SEO score — linked to same concept as source
     const conceptId = sourceItem.concept_id || null;
@@ -13302,7 +13392,7 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
     }
 
     const [items] = await mysqlSequelize.query(
-      `SELECT ci.id, ci.title, ci.content_type, ci.target_platform, ci.approval_status, ci.scheduled_at, ci.published_at, ci.publish_url, ci.created_at,
+      `SELECT ci.id, ci.concept_id, ci.title, ci.content_type, ci.target_platform, ci.approval_status, ci.scheduled_at, ci.published_at, ci.publish_url, ci.created_at,
               ci.seo_score, cc.pillar_id, cp.name AS pillar_name, cp.color AS pillar_color
        FROM content_items ci
        LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
@@ -13623,19 +13713,47 @@ Return as JSON array only.`;
         const bestTime = platformTimes[saved.length % platformTimes.length];
         const scheduledAt = `${schedDate} ${bestTime}:00`;
 
+        const cType = s.content_type === 'blog' ? 'blog' : 'social_post';
+        const itemTitle = s.title || 'Untitled';
+        // Step 1: Create concept (parent row — required for Content Items listing + ConceptDialog)
+        const [conceptResult] = await mysqlSequelize.query(
+          `INSERT INTO content_concepts (destination_id, title, content_type, approval_status, ai_generated, created_at, updated_at)
+           VALUES (:destId, :title, :cType, 'draft', true, NOW(), NOW())`,
+          { replacements: { destId, title: itemTitle, cType } }
+        );
+        const conceptId = conceptResult;
+        // Step 2: Create content item linked to concept
         const [result] = await mysqlSequelize.query(
-          `INSERT INTO content_items (destination_id, content_type, title, ${bodyField}, target_platform, approval_status, scheduled_at, ai_generated, ai_model, seo_data, created_at, updated_at)
-           VALUES (:destId, :contentType, :title, :body, :platform, 'draft', :scheduledAt, true, 'calendar-autofill', :seoData, NOW(), NOW())`,
+          `INSERT INTO content_items (destination_id, concept_id, content_type, title, ${bodyField}, target_platform, approval_status, scheduled_at, ai_generated, ai_model, seo_data, created_at, updated_at)
+           VALUES (:destId, :conceptId, :contentType, :title, :body, :platform, 'draft', :scheduledAt, true, 'calendar-autofill', :seoData, NOW(), NOW())`,
           { replacements: {
-            destId, contentType: s.content_type === 'blog' ? 'blog' : 'social_post',
-            title: s.title || 'Untitled',
+            destId, conceptId, contentType: cType,
+            title: itemTitle,
             body: s.brief || s.description || s.summary || '',
             platform: s.target_platform || 'instagram',
             scheduledAt,
             seoData: JSON.stringify({ pillar: s.pillar || '', persona: s.target_persona || '', source: 'calendar-autofill' }),
           }, type: QueryTypes.INSERT }
         );
-        saved.push({ id: result, date: schedDate, title: s.title, content_type: s.content_type, target_platform: s.target_platform, pillar: s.pillar, persona: s.target_persona });
+        // Step 3: Auto-attach best matching image
+        try {
+          const { selectImages } = await import('../services/agents/contentRedacteur/imageSelector.js');
+          const images = await selectImages(
+            { title: itemTitle, body_en: s.brief || '', content_type: cType, poi_id: null },
+            destId, { forSuggestion: false }
+          );
+          if (images.length > 0) {
+            const mediaId = images[0].id;
+            await mysqlSequelize.query(
+              'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
+              { replacements: { mediaIds: JSON.stringify([mediaId]), id: result } }
+            );
+          }
+        } catch (imgErr) {
+          logger.warn(`[AutoFill] Image auto-attach failed for "${itemTitle}": ${imgErr.message}`);
+        }
+
+        saved.push({ id: result, concept_id: conceptId, date: schedDate, title: s.title, content_type: s.content_type, target_platform: s.target_platform, pillar: s.pillar, persona: s.target_persona });
       } catch (saveErr) {
         logger.warn('[AutoFill] Save item failed:', saveErr.message);
       }

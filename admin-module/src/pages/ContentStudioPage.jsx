@@ -50,6 +50,8 @@ import client from '../api/client.js';
 import ConceptDialog from '../components/content/ConceptDialog.jsx';
 import ContentImageSection from '../components/content/ContentImageSection.jsx';
 import ContentCalendarTab from './ContentCalendarTab.jsx';
+import { lazy, Suspense } from 'react';
+const MediaSidebarPanel = lazy(() => import('../components/contentStudio/MediaSidebarPanel.jsx'));
 import SeasonalConfigTab from './SeasonalConfigTab.jsx';
 import SocialAccountsCards from '../components/content/SocialAccountsCards.jsx';
 import ContentAnalyseTab from './ContentAnalyseTab.jsx';
@@ -2489,6 +2491,7 @@ export default function ContentStudioPage() {
   const currentDest = allDestinations.find(d => d.id === destinationId);
   const isContentOnlyDest = currentDest?.destinationType === 'content_only';
   const [period, setPeriod] = useState('30d');
+  const [mediaSidebarOpen, setMediaSidebarOpen] = useState(false);
 
   // Trending state
   const [trends, setTrends] = useState([]);
@@ -2846,6 +2849,14 @@ export default function ContentStudioPage() {
               </Select>
             </FormControl>
           )}
+          <Button
+            size="small"
+            variant={mediaSidebarOpen ? 'contained' : 'outlined'}
+            startIcon={<PermMediaIcon />}
+            onClick={() => setMediaSidebarOpen(!mediaSidebarOpen)}
+          >
+            {t('contentStudio.mediaSidebar', 'Media')}
+          </Button>
         </Box>
       </Box>
 
@@ -3653,6 +3664,24 @@ export default function ContentStudioPage() {
       </Dialog>
 
       <Snackbar open={!!snackMsg} autoHideDuration={5000} onClose={() => setSnackMsg(null)} message={snackMsg} />
+
+      {/* Media Sidebar */}
+      {mediaSidebarOpen && (
+        <Suspense fallback={null}>
+          <MediaSidebarPanel
+            open={mediaSidebarOpen}
+            onClose={() => setMediaSidebarOpen(false)}
+            destId={destinationId}
+            onAddImage={(img) => {
+              // Copy URL to clipboard for easy paste into content
+              if (img.url) {
+                navigator.clipboard?.writeText(img.url);
+                setSnackMsg(t('media.sidebar.copied', 'Image URL gekopieerd — plak in je content'));
+              }
+            }}
+          />
+        </Suspense>
+      )}
     </Box>
   );
 }
