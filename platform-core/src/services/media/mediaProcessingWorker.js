@@ -45,6 +45,12 @@ async function processMediaJob(job) {
     case 'video_process':
       await processVideo(media, filePath);
       break;
+    case 'audio_process':
+      await processAudio(media, filePath);
+      break;
+    case 'gpx_process':
+      await processGpx(media, filePath);
+      break;
     case 'full_pipeline':
       await runFullPipeline(media, filePath);
       break;
@@ -246,8 +252,8 @@ async function processVideo(media, filePath) {
     );
 
     await mysqlSequelize.query(
-      'UPDATE media SET width = ?, height = ? WHERE id = ?',
-      { replacements: [width, height, media.id] }
+      'UPDATE media SET width = ?, height = ?, duration_seconds = ? WHERE id = ?',
+      { replacements: [width, height, duration, media.id] }
     );
 
     console.log(`[MediaProcessing] Video processed: ${width}x${height}, ${Math.round(duration)}s, media ${media.id}`);
@@ -256,9 +262,62 @@ async function processVideo(media, filePath) {
   }
 }
 
+async function processAudio(media, filePath) {
+  try {
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+
+    const { stdout } = await execAsync(
+      `ffprobe -v quiet -print_format json -show_format "${filePath}"`,
+      { timeout: 15000 }
+    );
+    const probe = JSON.parse(stdout);
+    const duration = parseFloat(probe.format?.duration || 0);
+
+    await mysqlSequelize.query(
+      'UPDATE media SET duration_seconds = ? WHERE id = ?',
+      { replacements: [duration, media.id] }
+    );
+
+    console.log(`[MediaProcessing] Audio processed: ${Math.round(duration)}s, media ${media.id}`);
+  } catch (err) {
+    console.warn(`[MediaProcessing] Audio processing failed for ${media.id}:`, err.message);
+  }
+}
+
+async function processGpx(media, filePath) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+
+    // Extract lat/lng coordinates from GPX XML
+    const latMatches = content.match(/lat="([^"]+)"/g) || [];
+    const lonMatches = content.match(/lon="([^"]+)"/g) || [];
+
+    if (latMatches.length > 0 && lonMatches.length > 0) {
+      const lats = latMatches.map(m => parseFloat(m.match(/lat="([^"]+)"/)[1]));
+      const lons = lonMatches.map(m => parseFloat(m.match(/lon="([^"]+)"/)[1]));
+
+      const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+      const centerLng = (Math.min(...lons) + Math.max(...lons)) / 2;
+
+      await mysqlSequelize.query(
+        'UPDATE media SET location_lat = ?, location_lng = ? WHERE id = ?',
+        { replacements: [centerLat, centerLng, media.id] }
+      );
+
+      console.log(`[MediaProcessing] GPX processed: center ${centerLat.toFixed(4)},${centerLng.toFixed(4)}, ${lats.length} waypoints, media ${media.id}`);
+    }
+  } catch (err) {
+    console.warn(`[MediaProcessing] GPX processing failed for ${media.id}:`, err.message);
+  }
+}
+
 async function runFullPipeline(media, filePath) {
   const isImage = (media.mime_type || '').startsWith('image/');
   const isVideo = (media.mime_type || '').startsWith('video/');
+  const isAudio = (media.mime_type || '').startsWith('audio/');
+  const isGpx = (media.original_name || media.filename || '').toLowerCase().endsWith('.gpx');
 
   if (isImage) {
     await generateThumbnails(media, filePath);
@@ -269,6 +328,10 @@ async function runFullPipeline(media, filePath) {
   } else if (isVideo) {
     await processVideo(media, filePath);
     await classifyQuality(media, filePath);
+  } else if (isAudio) {
+    await processAudio(media, filePath);
+  } else if (isGpx) {
+    await processGpx(media, filePath);
   }
 
   // Mark as fully processed

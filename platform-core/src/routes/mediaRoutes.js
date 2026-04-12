@@ -115,7 +115,9 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
       }
 
       try {
-        const destinationId = parseInt(req.body.destination_id || req.headers['x-destination-id']);
+        const codeMapU = { calpe: 1, texel: 2, alicante: 3, warrewijzer: 4, bute: 10 };
+        const rawDI = req.query.destinationId || req.body.destination_id || req.headers['x-destination-id'] || '1';
+        const destinationId = codeMapU[String(rawDI).toLowerCase()] || parseInt(rawDI) || 1;
         const category = req.body.category || 'other';
         const results = [];
 
