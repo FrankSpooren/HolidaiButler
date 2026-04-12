@@ -13392,7 +13392,7 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
     }
 
     const [items] = await mysqlSequelize.query(
-      `SELECT ci.id, ci.title, ci.content_type, ci.target_platform, ci.approval_status, ci.scheduled_at, ci.published_at, ci.publish_url, ci.created_at,
+      `SELECT ci.id, ci.concept_id, ci.title, ci.content_type, ci.target_platform, ci.approval_status, ci.scheduled_at, ci.published_at, ci.publish_url, ci.created_at,
               ci.seo_score, cc.pillar_id, cp.name AS pillar_name, cp.color AS pillar_color
        FROM content_items ci
        LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
@@ -13713,19 +13713,47 @@ Return as JSON array only.`;
         const bestTime = platformTimes[saved.length % platformTimes.length];
         const scheduledAt = `${schedDate} ${bestTime}:00`;
 
+        const cType = s.content_type === 'blog' ? 'blog' : 'social_post';
+        const itemTitle = s.title || 'Untitled';
+        // Step 1: Create concept (parent row — required for Content Items listing + ConceptDialog)
+        const [conceptResult] = await mysqlSequelize.query(
+          `INSERT INTO content_concepts (destination_id, title, content_type, approval_status, ai_generated, created_at, updated_at)
+           VALUES (:destId, :title, :cType, 'draft', true, NOW(), NOW())`,
+          { replacements: { destId, title: itemTitle, cType } }
+        );
+        const conceptId = conceptResult;
+        // Step 2: Create content item linked to concept
         const [result] = await mysqlSequelize.query(
-          `INSERT INTO content_items (destination_id, content_type, title, ${bodyField}, target_platform, approval_status, scheduled_at, ai_generated, ai_model, seo_data, created_at, updated_at)
-           VALUES (:destId, :contentType, :title, :body, :platform, 'draft', :scheduledAt, true, 'calendar-autofill', :seoData, NOW(), NOW())`,
+          `INSERT INTO content_items (destination_id, concept_id, content_type, title, ${bodyField}, target_platform, approval_status, scheduled_at, ai_generated, ai_model, seo_data, created_at, updated_at)
+           VALUES (:destId, :conceptId, :contentType, :title, :body, :platform, 'draft', :scheduledAt, true, 'calendar-autofill', :seoData, NOW(), NOW())`,
           { replacements: {
-            destId, contentType: s.content_type === 'blog' ? 'blog' : 'social_post',
-            title: s.title || 'Untitled',
+            destId, conceptId, contentType: cType,
+            title: itemTitle,
             body: s.brief || s.description || s.summary || '',
             platform: s.target_platform || 'instagram',
             scheduledAt,
             seoData: JSON.stringify({ pillar: s.pillar || '', persona: s.target_persona || '', source: 'calendar-autofill' }),
           }, type: QueryTypes.INSERT }
         );
-        saved.push({ id: result, date: schedDate, title: s.title, content_type: s.content_type, target_platform: s.target_platform, pillar: s.pillar, persona: s.target_persona });
+        // Step 3: Auto-attach best matching image
+        try {
+          const { selectImages } = await import('../services/agents/contentRedacteur/imageSelector.js');
+          const images = await selectImages(
+            { title: itemTitle, body_en: s.brief || '', content_type: cType, poi_id: null },
+            destId, { forSuggestion: false }
+          );
+          if (images.length > 0) {
+            const mediaId = images[0].id;
+            await mysqlSequelize.query(
+              'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
+              { replacements: { mediaIds: JSON.stringify([mediaId]), id: result } }
+            );
+          }
+        } catch (imgErr) {
+          logger.warn(`[AutoFill] Image auto-attach failed for "${itemTitle}": ${imgErr.message}`);
+        }
+
+        saved.push({ id: result, concept_id: conceptId, date: schedDate, title: s.title, content_type: s.content_type, target_platform: s.target_platform, pillar: s.pillar, persona: s.target_persona });
       } catch (saveErr) {
         logger.warn('[AutoFill] Save item failed:', saveErr.message);
       }

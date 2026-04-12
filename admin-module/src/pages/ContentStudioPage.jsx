@@ -2465,6 +2465,7 @@ export default function ContentStudioPage() {
   const user = useAuthStore(s => s.user);
   const [tab, setTab] = useState(0);
   const [campaignGenerating, setCampaignGenerating] = useState(false);
+  const [undoCampaignIds, setUndoCampaignIds] = useState(null);
   const [snackMsg, setSnackMsg] = useState(null);
   const [viewedItems, setViewedItems] = useState(new Set());
   const storeDestinations = useDestinationStore(s => s.destinations);
@@ -2902,9 +2903,11 @@ export default function ContentStudioPage() {
                     <RefreshIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => setAddDialogOpen(true)}>
-                  {t('contentStudio.actions.addKeyword', 'Keyword')}
-                </Button>
+                <Tooltip title={t('contentStudio.tooltips.addKeyword', 'Voeg handmatig een trending keyword toe aan de monitor. Gebruik dit voor branche-specifieke termen die niet automatisch worden opgepikt.')} arrow>
+                  <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => setAddDialogOpen(true)}>
+                    {t('contentStudio.actions.addKeyword', 'Keyword')}
+                  </Button>
+                </Tooltip>
               </Box>
             </Box>
             <TableContainer>
@@ -3085,15 +3088,19 @@ export default function ContentStudioPage() {
                 <Tooltip title={t('contentStudio.tooltips.refresh', 'Vernieuwen')}>
                   <IconButton size="small" onClick={loadSuggestions}><RefreshIcon fontSize="small" /></IconButton>
                 </Tooltip>
-                <Button
-                  size="small"
-                  variant="contained"
-                  startIcon={sugGenerating ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}
-                  onClick={handleGenerateSuggestions}
-                  disabled={sugGenerating}
-                >
-                  {sugGenerating ? t('contentStudio.actions.generating', 'Genereren...') : t('contentStudio.generateSuggestions', 'Genereer Suggesties')}
-                </Button>
+                <Tooltip title={t('contentStudio.tooltips.generateSuggestions', 'AI analyseert trending topics, merkprofiel en seizoensconfiguratie, en genereert content suggesties. Goedgekeurde suggesties kun je omzetten naar content items.')} arrow>
+                  <span>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={sugGenerating ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}
+                    onClick={handleGenerateSuggestions}
+                    disabled={sugGenerating}
+                  >
+                    {sugGenerating ? t('contentStudio.actions.generating', 'Genereren...') : t('contentStudio.generateSuggestions', 'Genereer Suggesties')}
+                  </Button>
+                  </span>
+                </Tooltip>
               </Box>
             </Box>
             {/* Opdracht 7-D: Bulk toolbar voor suggesties */}
@@ -3329,9 +3336,13 @@ export default function ContentStudioPage() {
                 <Tooltip title={t('contentStudio.tooltips.refresh', 'Vernieuwen')}>
                   <IconButton size="small" onClick={loadItems}><RefreshIcon fontSize="small" /></IconButton>
                 </Tooltip>
-                <Button size="small" variant="contained" startIcon={<NoteAddIcon />} onClick={() => setManualDialogOpen(true)}>
-                  {t('contentStudio.actions.newItem', 'Nieuw Item')}
-                </Button>
+                <Tooltip title={t('contentStudio.tooltips.newItem', 'Maak handmatig een nieuw content item aan (zonder AI). Je kunt het later bewerken, verbeteren met AI, en publiceren.')} arrow>
+                  <Button size="small" variant="contained" startIcon={<NoteAddIcon />} onClick={() => setManualDialogOpen(true)}>
+                    {t('contentStudio.actions.newItem', 'Nieuw Item')}
+                  </Button>
+                </Tooltip>
+                <Tooltip title={t('contentStudio.tooltips.campaign', 'Genereer een complete multi-platform campagne rond een onderwerp. AI maakt meerdere content items aan voor verschillende kanalen (Facebook, Instagram, etc.).')} arrow>
+                  <span>
                 <Button size="small" variant="outlined" color="secondary" startIcon={campaignGenerating ? <CircularProgress size={14} /> : <AutoAwesomeIcon />}
                   disabled={campaignGenerating}
                   onClick={async () => {
@@ -3342,12 +3353,16 @@ export default function ContentStudioPage() {
                       const result = await contentService.generateCampaign({ destination_id: destinationId, topic, language: currentDest?.defaultLanguage || 'nl' });
                       loadItems();
                       const count = result?.data?.total || result?.total || result?.data?.items?.length || 0;
+                      const campConceptIds = (result?.data?.items || result?.data?.concepts || []).map(i => i.concept_id).filter(Boolean);
                       setSnackMsg(`${count} items gegenereerd voor campagne "${topic}"`);
+                      if (campConceptIds.length > 0) setUndoCampaignIds(campConceptIds);
                     } catch (err) { setSnackMsg(err.response?.data?.error?.message || err.message || 'Campagne generatie mislukt'); }
                     finally { setCampaignGenerating(false); }
                   }}>
                   {t('contentStudio.actions.campaign', 'Campagne')}
                 </Button>
+                  </span>
+                </Tooltip>
               </Box>
             </Box>
             {/* Opdracht 6: Bulk toolbar — verschijnt prominent zodra rijen geselecteerd zijn */}
@@ -3574,7 +3589,7 @@ export default function ContentStudioPage() {
       )}
 
       {/* === TAB 3: Calendar === */}
-      {tab === 3 && <ContentCalendarTab destinationId={destinationId} />}
+      {tab === 3 && <ContentCalendarTab destinationId={destinationId} onEditConcept={(conceptId) => setConceptDialogId(conceptId)} />}
 
       {/* === TAB 4: Content Analyse === */}
       {tab === 4 && <ContentAnalyseTab destinationId={destinationId} />}
@@ -3652,7 +3667,33 @@ export default function ContentStudioPage() {
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={!!snackMsg} autoHideDuration={5000} onClose={() => setSnackMsg(null)} message={snackMsg} />
+      <Snackbar
+        open={!!snackMsg}
+        autoHideDuration={undoCampaignIds ? 15000 : 5000}
+        onClose={() => { setSnackMsg(null); setUndoCampaignIds(null); }}
+        message={snackMsg}
+        action={undoCampaignIds ? (
+          <Button
+            color="warning" size="small" variant="outlined"
+            sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.5)', fontWeight: 700 }}
+            onClick={async () => {
+              try {
+                for (const cid of undoCampaignIds) {
+                  await contentService.deleteConcept(cid);
+                }
+                setSnackMsg(`${undoCampaignIds.length} campagne-items ongedaan gemaakt`);
+                setUndoCampaignIds(null);
+                loadItems();
+              } catch (err) {
+                setSnackMsg(`Ongedaan maken mislukt: ${err.message}`);
+                setUndoCampaignIds(null);
+              }
+            }}
+          >
+            Ongedaan maken
+          </Button>
+        ) : null}
+      />
     </Box>
   );
 }

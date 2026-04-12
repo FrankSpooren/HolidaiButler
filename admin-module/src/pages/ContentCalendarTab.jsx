@@ -53,7 +53,7 @@ function getFirstDayOfWeek(year, month) {
   return day === 0 ? 6 : day - 1; // Monday = 0
 }
 
-export default function ContentCalendarTab({ destinationId }) {
+export default function ContentCalendarTab({ destinationId, onEditConcept }) {
   const { t } = useTranslation();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -64,6 +64,7 @@ export default function ContentCalendarTab({ destinationId }) {
   const [autoFilling, setAutoFilling] = useState(false);
   const [autoScheduling, setAutoScheduling] = useState(false);
   const [autoFillSnack, setAutoFillSnack] = useState(null);
+  const [undoData, setUndoData] = useState(null); // { type, ids } for undo
   const [draggingItem, setDraggingItem] = useState(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -79,7 +80,10 @@ export default function ContentCalendarTab({ destinationId }) {
     try {
       const client = (await import('../api/client.js')).default;
       const { data } = await client.post('/content/auto-schedule', { destination_id: destinationId });
-      setAutoFillSnack(`${data.data?.scheduled || 0} items automatisch ingepland`);
+      const scheduled = data.data?.scheduled || 0;
+      const ids = (data.data?.items || []).map(s => s.id).filter(Boolean);
+      setAutoFillSnack(`${scheduled} items automatisch ingepland`);
+      if (ids.length > 0) setUndoData({ type: 'autoschedule', ids });
       refetch();
     } catch (err) {
       setAutoFillSnack(err.response?.data?.error?.message || 'Auto-schedule mislukt');
@@ -93,7 +97,10 @@ export default function ContentCalendarTab({ destinationId }) {
       const { data } = await client.post('/content/calendar/auto-fill', {
         destination_id: destinationId, month: month + 1, year
       }, { timeout: 120000 });
-      setAutoFillSnack(`${data.data?.generated || 0} suggesties gegenereerd voor ${monthName}`);
+      const generated = data.data?.generated || 0;
+      const ids = (data.data?.suggestions || []).map(s => s.concept_id).filter(Boolean);
+      setAutoFillSnack(`${generated} items gegenereerd voor ${monthName}`);
+      if (ids.length > 0) setUndoData({ type: 'autofill', ids });
       refetch();
     } catch (err) {
       setAutoFillSnack(err.response?.data?.error?.message || 'Auto-fill mislukt');
@@ -265,30 +272,38 @@ export default function ContentCalendarTab({ destinationId }) {
               : t('contentStudio.calendar.heroSubtitle', 'Laat AI content-suggesties genereren voor elke werkdag in {{month}}.', { month: monthName })}
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={autoFilling ? <CircularProgress size={18} sx={{ color: '#5E8B7E' }} /> : <AutoAwesomeIcon />}
-          onClick={handleAutoFill}
-          disabled={autoFilling}
-          sx={{
-            bgcolor: '#fff', color: '#2C3E50', fontWeight: 700, px: 3,
-            '&:hover': { bgcolor: '#f0f0f0' },
-            '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.5)' },
-          }}
-        >
-          {autoFilling ? t('contentStudio.calendar.filling', 'Genereren...') : t('contentStudio.calendar.autoFill', 'Vul kalender met AI')}
-        </Button>
-        <Button
-          variant="outlined"
-          size="large"
-          startIcon={autoScheduling ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : <ScheduleIcon />}
-          onClick={handleAutoSchedule}
-          disabled={autoScheduling}
-          sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: '#fff' } }}
-        >
-          {autoScheduling ? 'Plannen...' : t('contentStudio.calendar.autoSchedule', 'Auto-inplannen')}
-        </Button>
+        <Tooltip title={t('contentStudio.calendar.autoFillTooltip', 'AI genereert nieuwe draft content items (titels + tekst + image) voor de komende 4 weken, op basis van je merkprofiel, pillars en trending topics. Items verschijnen als Draft in de kalender en Content Items.')} arrow>
+          <span>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={autoFilling ? <CircularProgress size={18} sx={{ color: '#5E8B7E' }} /> : <AutoAwesomeIcon />}
+            onClick={handleAutoFill}
+            disabled={autoFilling}
+            sx={{
+              bgcolor: '#fff', color: '#2C3E50', fontWeight: 700, px: 3,
+              '&:hover': { bgcolor: '#f0f0f0' },
+              '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.5)' },
+            }}
+          >
+            {autoFilling ? t('contentStudio.calendar.filling', 'Genereren...') : t('contentStudio.calendar.autoFill', 'Vul kalender met AI')}
+          </Button>
+          </span>
+        </Tooltip>
+        <Tooltip title={t('contentStudio.calendar.autoScheduleTooltip', 'Plant alle goedgekeurde (approved) items automatisch in op optimale tijdstippen per platform, verspreid over de komende 7 dagen. Alleen items met status Approved worden ingepland.')} arrow>
+          <span>
+          <Button
+            variant="outlined"
+            size="large"
+            startIcon={autoScheduling ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : <ScheduleIcon />}
+            onClick={handleAutoSchedule}
+            disabled={autoScheduling}
+            sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: '#fff' } }}
+          >
+            {autoScheduling ? 'Plannen...' : t('contentStudio.calendar.autoSchedule', 'Auto-inplannen')}
+          </Button>
+          </span>
+        </Tooltip>
       </Paper>
 
       {/* Month navigation */}
@@ -306,7 +321,43 @@ export default function ContentCalendarTab({ destinationId }) {
           )}
         </Box>
       </Box>
-      <Snackbar open={!!autoFillSnack} autoHideDuration={5000} onClose={() => setAutoFillSnack(null)} message={autoFillSnack} />
+      <Snackbar
+        open={!!autoFillSnack}
+        autoHideDuration={undoData ? 15000 : 5000}
+        onClose={() => { setAutoFillSnack(null); setUndoData(null); }}
+        message={autoFillSnack}
+        action={undoData ? (
+          <Button
+            color="warning" size="small" variant="outlined"
+            sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.5)', fontWeight: 700 }}
+            onClick={async () => {
+              try {
+                const client = (await import('../api/client.js')).default;
+                if (undoData.type === 'autofill') {
+                  // Delete generated concepts + items
+                  for (const cid of undoData.ids) {
+                    await client.delete(`/content/concepts/${cid}`);
+                  }
+                  setAutoFillSnack(`${undoData.ids.length} items ongedaan gemaakt`);
+                } else if (undoData.type === 'autoschedule') {
+                  // Revert scheduled → approved
+                  for (const id of undoData.ids) {
+                    await client.delete(`/content/items/${id}/schedule`);
+                  }
+                  setAutoFillSnack(`${undoData.ids.length} items teruggezet naar Approved`);
+                }
+                setUndoData(null);
+                refetch();
+              } catch (err) {
+                setAutoFillSnack(`Ongedaan maken mislukt: ${err.message}`);
+                setUndoData(null);
+              }
+            }}
+          >
+            {t('contentStudio.calendar.undo', 'Ongedaan maken')}
+          </Button>
+        ) : null}
+      />
 
       {isLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>
@@ -500,6 +551,14 @@ export default function ContentCalendarTab({ destinationId }) {
                        item.published_at ? `Gepubliceerd: ${new Date(item.published_at).toLocaleString('nl-NL')}` : ''}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
+                      {item.concept_id && onEditConcept && (
+                        <Button
+                          size="small" variant="outlined" startIcon={<EditIcon />}
+                          onClick={() => { setSelectedDay(null); onEditConcept(item.concept_id); }}
+                        >
+                          {t('contentStudio.calendar.edit', 'Bewerken')}
+                        </Button>
+                      )}
                       {item.approval_status === 'approved' && (
                         <>
                           <Button
