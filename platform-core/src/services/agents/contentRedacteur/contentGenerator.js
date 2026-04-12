@@ -1338,7 +1338,7 @@ export async function repurposeContent(sourceItem, targetPlatforms, destinationI
 
   // POI/Event grounding for repurposed content
   const [relevantPOIs, relevantEvents] = await Promise.all([
-    findRelevantPOIs(destId, keywords, contentType === 'blog' ? 15 : 5, sourceItem.title || ''),
+    findRelevantPOIs(destId, keywords, sourceItem.content_type === 'blog' ? 15 : 5, sourceItem.title || ''),
     findRelevantEvents(destId, keywords),
   ]);
   const groundingContext = buildGroundingContext(relevantPOIs, relevantEvents, destId);
@@ -1532,4 +1532,99 @@ Write a SHORTER, punchier ${platform} post. ${platformRules.maxChars} chars MAX.
   return results;
 }
 
-export default { generateContent, generateSuggestions, improveExistingContent, generateAlternative, generateFromPOI, repurposeContent };
+/**
+ * Generate fresh content from title only — used when repurposing an item that has no body text.
+ * Creates platform-optimized content based on title + brand context.
+ *
+ * @param {Object} sourceItem - Source content item (title required, body may be empty)
+ * @param {string[]} targetPlatforms - Target platforms
+ * @param {number} destinationId
+ * @returns {Array} Generated content items
+ */
+export async function generateFromTitle(sourceItem, targetPlatforms, destinationId) {
+  if (!embeddingService.isConfigured) {
+    embeddingService.initialize();
+  }
+  if (!embeddingService.isConfigured) {
+    throw new Error('Mistral AI client not configured — check MISTRAL_API_KEY');
+  }
+
+  const destId = destinationId || sourceItem.destination_id;
+  const toneInstruction = await buildToneInstruction(destId);
+  const modelName = embeddingService.chatModel || 'mistral-small-latest';
+  const title = sourceItem.title || 'Untitled';
+
+  const results = [];
+
+  for (const platform of targetPlatforms) {
+    const platformRules = PROMPT_PLATFORM_RULES[platform] || PROMPT_PLATFORM_RULES.facebook;
+    const example = PLATFORM_EXAMPLES[platform] || '';
+
+    try {
+      const prompt = `You are a professional social media content creator.
+
+TASK: Write a ${platform} post for the topic: "${title}"
+
+PLATFORM RULES:
+${platformRules.prompt || ''}
+Maximum characters: ${platformRules.maxChars || 2200}
+
+${example ? `EXAMPLE of good ${platform} content:
+${example}
+` : ''}
+
+${toneInstruction}
+
+STRICT FORMATTING RULES:
+- NEVER use markdown: no **, no ##, no ---, no \`, no []()
+- NEVER use bold markers (**text**) or italic markers (*text*)
+- NEVER use bullet points (- or *) or numbered lists (1. 2. 3.)
+- NEVER use em-dashes (—) or en-dashes (–)
+- Write in plain flowing text with natural paragraphs
+- Include relevant hashtags (3-8 depending on platform) at the end
+- Use appropriate emojis for the platform
+- Keep within character limits
+- Write in the same language as the title
+- Do NOT invent dates, locations, or details not in the title
+
+OUTPUT: Write ONLY the post content. No labels, no explanations, no metadata.`;
+
+      const response = await embeddingService.client.chat.complete({
+        model: modelName,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8,
+        maxTokens: platformRules.maxChars ? Math.min(platformRules.maxChars, 2000) : 1000,
+      });
+
+      let content = (response.choices?.[0]?.message?.content || '').trim();
+      if (!content) {
+        throw new Error('Empty response from AI');
+      }
+
+      // Sanitize + format — same pipeline as all other generation functions
+      content = sanitizeContent(content, 'social_post', platform);
+      content = formatForPlatform(content, platform);
+
+      results.push({
+        title,
+        body_en: content,
+        content_type: 'social_post',
+        target_platform: platform,
+        ai_model: modelName,
+        hashtags: [],
+        source_content_id: sourceItem.id,
+        seo_score: null,
+        char_count: content.length,
+        char_limit: platformRules.maxChars,
+      });
+      logger.info(`[GenerateFromTitle] ${platform}: ${content.length}/${platformRules.maxChars || '?'} chars for "${title}"`);
+    } catch (error) {
+      logger.error(`[GenerateFromTitle] Failed for ${platform}:`, error);
+      throw error;
+    }
+  }
+
+  return results;
+}
+
+export default { generateContent, generateSuggestions, improveExistingContent, generateAlternative, generateFromPOI, repurposeContent, generateFromTitle };

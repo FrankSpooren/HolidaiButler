@@ -82,9 +82,25 @@ class MetaClient {
 
   /**
    * Publish to Instagram (two-step container flow)
+   * Uses per-destination IG Business Account ID from social_accounts.metadata.igAccountId,
+   * falls back to env INSTAGRAM_BUSINESS_ACCOUNT_ID for backward compatibility.
    */
   async _publishToInstagram(contentItem, accessToken) {
-    const igAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+    // Per-destination IG account ID from social_accounts.metadata
+    let igAccountId = null;
+    try {
+      const accountMeta = contentItem.account_metadata
+        ? (typeof contentItem.account_metadata === 'string' ? JSON.parse(contentItem.account_metadata) : contentItem.account_metadata)
+        : {};
+      igAccountId = accountMeta.igAccountId || null;
+    } catch { /* parse error */ }
+    if (!igAccountId) {
+      igAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+    }
+    if (!igAccountId) {
+      throw new Error('Instagram Business Account ID not configured. Set igAccountId in social_accounts metadata or INSTAGRAM_BUSINESS_ACCOUNT_ID env var.');
+    }
+    logger.info(`[MetaClient] Publishing to Instagram account ${igAccountId} (from ${contentItem.account_metadata ? 'social_accounts' : 'env'})`);
     const caption = this._getPostBody(contentItem);
     const metadata = contentItem.social_metadata ? JSON.parse(contentItem.social_metadata) : {};
 

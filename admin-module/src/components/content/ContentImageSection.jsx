@@ -37,7 +37,7 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
   useEffect(() => {
     if (!mediaPickerOpen) return;
     const apiBase = import.meta.env.VITE_API_URL || '';
-    const destCode = item?.destination_id === 2 ? 'texel' : item?.destination_id === 4 ? 'warrewijzer' : 'calpe';
+    const destCode = String(item?.destination_id || 1);
     const destId = item?.destination_id || 1;
 
     if (mediaTab === 0) {
