@@ -169,6 +169,40 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
     // Build exclude set from passed IDs (for refresh functionality)
     const excludeSet = new Set(excludeIds.map(Number).filter(n => !isNaN(n)));
 
+
+    // 0. MEDIA LIBRARY match: search own media library by keywords + tags (HIGHEST PRIORITY)
+    try {
+      const searchTerms = keywords.slice(0, 5).join(' ');
+      if (searchTerms) {
+        const [mediaItems] = await mysqlSequelize.query(
+          `SELECT id, filename, destination_id, alt_text, tags, tags_ai
+           FROM media
+           WHERE destination_id = :destId AND (archived = 0 OR archived IS NULL) AND media_type = 'image'
+           AND (
+             MATCH(alt_text, description, owner_name, location_name) AGAINST(:search IN BOOLEAN MODE)
+             OR JSON_CONTAINS(tags_ai, :tag0) OR JSON_CONTAINS(tags_ai, :tag1)
+           )
+           ORDER BY usage_count ASC, created_at DESC LIMIT 6`,
+          { replacements: { destId: destinationId, search: searchTerms + '*', tag0: JSON.stringify(keywords[0] || ''), tag1: JSON.stringify(keywords[1] || '') } }
+        );
+        for (const img of mediaItems) {
+          candidates.push({
+            source: 'media_library',
+            id: `media:${img.id}`,
+            media_id: img.id,
+            url: `https://api.holidaibutler.com/media-files/${img.destination_id}/${img.filename}`,
+            relevance: 0.95,
+            alt_text: img.alt_text,
+          });
+        }
+        if (mediaItems.length > 0) {
+          logger.info(`[ImageSelector] Media library: found ${mediaItems.length} matches for "${searchTerms.substring(0, 40)}"`);
+        }
+      }
+    } catch (err) {
+      logger.warn('[ImageSelector] Media library search failed:', err.message);
+    }
+
     // 1. POI-based match: if content is about a specific POI (SKIP for content_only)
     if (contentItem.poi_id && !isContentOnlyDest) {
       const excludeClause = excludeSet.size > 0 ? `AND i.id NOT IN (${[...excludeSet].join(',')})` : '';
