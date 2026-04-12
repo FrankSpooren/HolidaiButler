@@ -182,6 +182,18 @@ class PublisherAgent extends BaseAgent {
         url: result.url,
       });
 
+      // Create initial performance record so item is immediately visible in Analytics
+      try {
+        await mysqlSequelize.query(
+          `INSERT INTO content_performance (content_item_id, destination_id, platform, measured_at, views, clicks, engagement, reach, conversions, raw_metrics, created_at)
+           VALUES (:itemId, :destId, :platform, CURDATE(), 0, 0, 0, 0, 0, '{}', NOW())
+           ON DUPLICATE KEY UPDATE created_at = created_at`,
+          { replacements: { itemId: contentItemId, destId: contentItem.destination_id, platform: contentItem.target_platform } }
+        );
+      } catch (perfErr) {
+        logger.warn(`[De Uitgever] Initial performance record failed (non-blocking): ${perfErr.message}`);
+      }
+
       return result;
     } catch (error) {
       // Update to failed
