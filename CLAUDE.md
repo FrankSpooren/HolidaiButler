@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.47.0
+> **Versie**: 4.48.0
 > **Laatst bijgewerkt**: 12 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -103,7 +103,7 @@ HolidaiButler/
 │   └── apify_backfill.py        # Apify historische data backfill (Bronze→Silver)
 ├── platform-core/               # Node.js/Express backend
 │   └── src/
-│       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.32.0)
+│       ├── routes/ (holibot.js, ticketing.js, reservations.js, adminPortal.js v3.47.0, mediaRoutes.js, mediaCollectionRoutes.js)
 │       ├── services/
 │       │   ├── holibot/         # HoliBot 2.0 (RAG Chatbot)
 │       │   ├── ticketing/       # Ticketing Module (inventoryService.js, ticketingService.js)
@@ -279,7 +279,11 @@ Gold:   Customer Portal + Admin Portal (dynamic rendering)
 | `pages` | Nieuwe tabel | Page layouts per destination: slug, title (meertalig), seo, layout JSON, status |
 | `pages.parent_id` | INT NULL | FK naar pages(id) ON DELETE SET NULL — pagina-hiërarchie |
 | `pages.og_image_path` | VARCHAR(500) | Open Graph afbeelding pad (upload) |
-| `media` | Nieuwe tabel | Media library: filename, mime_type, size, width/height, category ENUM, alt_text, uploaded_by VARCHAR(36) |
+| `media` | **Uitgebreid v2.0** | Media library: 40 kolommen incl. alt_text (5 talen), tags/tags_ai, owner/rights, GDPR consent, media_type, location, quality_tier, perceptual_hash, ai_processed, versioning, usage tracking |
+| `media_collections` | Nieuwe tabel (v2.0) | Collections/albums: name, description, destination_id, cover_media_id, shared_with JSON, is_smart |
+| `media_collection_items` | Nieuwe tabel (v2.0) | Collection membership: collection_id, media_id, display_order |
+| `media_versions` | Nieuwe tabel (v2.0) | Versie-historie: media_id, version_number, filename, changes JSON, created_by |
+| `media_audit_log` | Nieuwe tabel (v2.0) | Audit trail: media_id, action, details JSON, user_id, timestamp |
 | `page_revisions` | Nieuwe tabel | Revisie-geschiedenis: page_id, layout JSON, changed_by, change_summary |
 
 ### Content Module Database Uitbreidingen
@@ -360,19 +364,20 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Content Studio Multi-Tenant | v4.45.0 (12 fixes: manual items, repurpose, images, publisher, BUTE config, social publishing) | ✅ COMPLEET | apr 2026 |
 | Content Studio Analytics & Calendar | v4.46.0 (publish performance records, calendar edit+concept, auto-fill concept+images, orphan repair) | ✅ COMPLEET | apr 2026 |
 | Content Studio UX & Undo | v4.47.0 (sanitization, 7 tooltips, undo auto-fill/auto-schedule/campagne) | ✅ COMPLEET | apr 2026 |
+| Media Library v2.0 Enterprise | v4.48.0 (ML-1 t/m ML-4: 20 opdrachten, 33 endpoints, 15 componenten, DAM+GDPR+AI+editor) | ✅ COMPLEET | apr 2026 |
 
 ### Huidige Tellingen
 | Metric | Waarde |
 |--------|--------|
-| Admin endpoints | 252 |
-| adminPortal.js | v3.44.0 |
+| Admin endpoints | 285 |
+| adminPortal.js | v3.47.0 |
 | Agents | 25 |
-| BullMQ jobs | 65 |
+| BullMQ jobs | 66 |
 | Block types | 36 (+ aliassen, +blog_grid) |
 | Block editors | 37 (+BlogGridEditor) |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.47.0 |
-| Master Strategie | v8.08 |
+| CLAUDE.md | v4.48.0 |
+| Master Strategie | v8.09 |
 
 ---
 
@@ -431,7 +436,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 
 ### Architectuur
 - **Frontend**: React 18 + MUI 5 + Vite 4 + Zustand 4 + React Query
-- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.40.0)
+- **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.47.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (6 rollen)
 - **i18n**: NL (default), EN, DE, ES
 - **Endpoints**: 248 admin endpoints (+2: Pexels + Flickr image search)
@@ -822,6 +827,7 @@ git pull origin dev
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
 | **4.46.0** | **2026-04-12** | **Content Studio Analytics & Calendar Fixes**. **FIX 13 (Publish Performance Record)**: `publishItem()` maakt nu direct na succesvolle publish een initieel `content_performance` record aan (0-waarden), zodat gepubliceerde items onmiddellijk zichtbaar zijn in Analytics. BullMQ analytics collector vult later echte metrics aan. **FIX 14 (Calendar Edit Button)**: Kalender day-detail dialog had geen Bewerken knop. Edit-button toegevoegd die ConceptDialog opent via `onEditConcept(concept_id)` callback. `GET /content/calendar` retourneert nu `concept_id` per item. **FIX 15 (Auto-Fill Concept+Images)**: `POST /content/calendar/auto-fill` maakte items zonder `content_concepts` parent (onzichtbaar in Content Items) en zonder images. Nu maakt auto-fill concept+item+image per gegenereerd item via `selectImages()`. **FIX 16 (Orphan Repair)**: 30 orphan Calpe items retroactief aan concepts gekoppeld. 0 orphans remaining. **Bestanden**: 3 gewijzigd (`adminPortal.js`, `ContentCalendarTab.jsx`, `ContentStudioPage.jsx`) + `publisher/index.js`. |
+| **4.48.0** | **2026-04-12** | **Media Library v2.0 Enterprise Upgrade (ML-1 t/m ML-4, 20 opdrachten)**. **ML-1 Schema+Backend**: media tabel 12 naar 40 kolommen (+28: alt_text 5 talen, tags/tags_ai, owner/rights, GDPR consent/license, media_type, location, quality_tier, perceptual_hash, ai_processed, versioning, usage tracking). 4 nieuwe tabellen (media_collections, media_collection_items, media_versions, media_audit_log). mediaService.js + mediaRoutes.js (23 endpoints) + mediaCollectionRoutes.js (10 endpoints). BullMQ media-processing pipeline. Pexels import. **ML-2 Frontend Rebuild**: 15 componenten (~2.500 LOC): MediaGrid (grid/list/masonry), MediaFilterDrawer (10-dimensie), MediaDetailDialog (5 tabs), MediaUploadDialog (drag-drop+AI polling), MediaCollectionsDrawer, MediaBulkActionsBar, PexelsSearchTab, MediaCleanupTab. MediaPage.jsx herbouwd. **ML-3 Image Editor+AI**: MediaImageEditor (crop/resize/12 Instagram filters/adjust/social presets). 3 AI endpoints (enhance, alt-text 5 talen, retag). Content Studio MediaSidebarPanel. Smart image suggestions. Usage tracking + cleanup. **ML-4 GDPR+Performance**: Consent tracking, export, license expiry cron. Cache-Control 24h+ETag. i18n 5 talen (~140 keys). PubliQio standalone verified. **Bestanden**: 35 (5 nieuw backend, 14 nieuw frontend, 7 gewijzigd backend, 3 gewijzigd frontend, 5 i18n, 1 migration SQL, ~5.757 LOC). 285 admin endpoints (was 252). adminPortal.js v3.47.0. 66 BullMQ jobs. |
 | **4.47.0** | **2026-04-12** | **Content Studio UX: Sanitization, Tooltips & Undo**. **FIX 17 (Auto-Fill Sanitization)**: `POST /content/calendar/auto-fill` was de enige generatie-route zonder `sanitizeContent()`. Nu worden titel + body gesanitized voor opslag. AI prompt versterkt met strikte no-markdown regels. **FIX 18 (7 Action Button Tooltips)**: Enterprise UX tooltips op alle actiebuttons: Vul kalender met AI, Auto-inplannen, Nieuw Item, Campagne, Genereer Suggesties, Keyword. Elke tooltip legt de functie en verwachte output uit. **FIX 19 (Undo Functionaliteit)**: Na elke bulk AI-operatie verschijnt Snackbar met "Ongedaan maken" knop (15s zichtbaar). Auto-fill: soft-deletes concepts+items. Auto-inplannen: revert scheduled→approved. Campagne: soft-deletes concepts+items. **Bestanden**: 4 gewijzigd (`adminPortal.js`, `ContentCalendarTab.jsx`, `ContentStudioPage.jsx`, `publisher/index.js`). |
 | **4.45.0** | **2026-04-11** | **PubliQio Content Studio — Multi-Tenant Fixes & BUTE Publishing (10 fixes)**. **FIX 1 (Manual Item Invisible)**: `POST /content/items/generate` manual pad maakte alleen `content_items` rij aan zonder `content_concepts` parent → items onzichtbaar in concept-based listing. Nu maakt manual creation eerst concept aan, dan item met `concept_id`. 2 orphan BUTE items gerepareerd. **FIX 2 (Repurpose contentType crash)**: `contentGenerator.js` `repurposeContent()` gebruikte undefined `contentType` variabele → `sourceItem.content_type`. **FIX 3 (Concept Image Resolution)**: `GET /content/concepts/:id` retourneerde items zonder server-side image resolution (in tegenstelling tot `GET /content/items`). Volledige image resolution (poi: + media: + fallback) toegevoegd aan concept detail endpoint. **FIX 4 (Misplaced Media File)**: Media id=147 fysiek in `storage/media/1/` maar DB `destination_id=10` → 404. Bestand gekopieerd naar `storage/media/10/`. **FIX 5 (Empty Body Repurpose)**: Nieuw `generateFromTitle()` functie in contentGenerator.js — genereert verse platform-content op basis van titel + brand context wanneer bronitem geen body heeft (handmatig aangemaakt items). **FIX 6 (AI Markdown Artifacts)**: `generateFromTitle()` miste `sanitizeContent()` + `formatForPlatform()` pipeline. Toegevoegd + prompt versterkt met strikte no-markdown regels (conform bestaande generatiefuncties). **FIX 7 (Publisher filepath SQL Error)**: `publisher/index.js` `resolveMediaLibrary()` deed `SELECT filepath` op `media` tabel — kolom bestaat niet → silent SQL error → `social_metadata.image_url` nooit gezet → Instagram publish faalt. Query gecorrigeerd. **FIX 8 (Instagram Per-Destination Account)**: `metaClient.js` gebruikte hardcoded ENV `INSTAGRAM_BUSINESS_ACCOUNT_ID` voor alle destinations. Nu leest publisher `igAccountId` uit `social_accounts.metadata` per destination, met ENV fallback. **FIX 9 (BUTE Social Account Config)**: BUTECS System User token versleuteld opgeslagen voor BUTE Facebook (page_id=102939469465160) + Instagram (igAccountId=17841452782960759) social accounts. **FIX 10 (Media Picker Destination Filter)**: `ContentImageSection.jsx` had hardcoded `destCode` mapping (alleen Texel/WarreWijzer, rest=Calpe). Vervangen door numeriek `String(destination_id)` — werkt voor alle destinations. **FIX 11 (Facebook Per-Destination Token)**: `metaClient.js` `_publishToFacebook()` forceerde ENV token (`META_PAGE_ACCESS_TOKEN`) voor page token exchange → BUTE page onbereikbaar vanuit HB API portfolio. Volgorde omgedraaid: per-destination token eerst, ENV fallback. **FIX 12 (Instagram Page Token Exchange)**: Instagram container API had geen page token exchange (gebruikte system user token direct). Page token exchange toegevoegd via `_getPageAccessToken()` met `pageId` uit `social_accounts.metadata`. Beide BUTE publishes (Facebook + Instagram) succesvol geverifieerd. Admin-module rebuild + deploy. **Bestanden**: 5 gewijzigd (`adminPortal.js`, `contentGenerator.js`, `publisher/index.js`, `metaClient.js`, `ContentImageSection.jsx`). |
 | **4.44.0** | **2026-04-10** | **Corporate Landing Page Upgrade — holidaibutler.com (9 opdrachten)**. Volledige redesign van de B2B corporate pagina. **Opdracht 1 (Badges)**: 4 badges (EU-First, White Label, Local2Local, Multi-Tenancy) in hero met flagcdn.com EU-vlag, witte icon-cirkels. **Opdracht 2 (Hero)**: "25 AI Agents. Eén Platform. Nul concessies." + 2 CTA buttons (Demo Aanvragen modal + Platform Ontdekken). **Opdracht 2+ (Demo Modal)**: Contactformulier naar `demo_requests` tabel (source: `corporate_landing`), veld Functie, zakelijke e-mail validatie (40+ consumer-domeinen geblokkeerd), GDPR consent + privacybeleid link. **Opdracht 3 (Module Cards)**: 9 gecorrigeerde USP-teksten (Ongelimiteerd POIs, 35+ blocks zonder code, 100+ talen, PubliQio standalone, etc.). **Opdracht 4 (Stats)**: Count-up animatie (easeOutCubic, IntersectionObserver): 251 API Endpoints → 100+ Talen → 35+ Blocks → 25 AI Agents → 1 Platform. **Opdracht 5 (Proces)**: "Van Data, via Beleving tot Resultaat" — 3 fasen (Data/Configuratie & Modules/Groei) met groene cards + pijlen + 3 KPI proof points (HubSpot 2026, Statista/Kantar 2024, ETC 2025) met bronlinks. **Opdracht 6 (Showcase)**: CalpeTrip, TexelMaps, PubliQio als live projecten + WarreWijzer/Alicante in voorbereiding. **Opdracht 7 (EU-Stack)**: 6 EU-providers met landenvlaggen (flagcdn) in donkere sectie. **Opdracht 8 (CTA)**: Dual-button CTA + contactinfo + productenbalk. **Opdracht 9 (Responsive + i18n)**: Hamburger menu mobiel, taal-dropdown met vlaggen (PubliQio patroon), i18n.js extern vertaalbestand (162 keys × 5 talen: NL/EN/DE/ES/FR), scroll-snap carousels op mobiel (85% viewport + peek), floating CTA, mobiele padding optimalisatie. **Privacy**: `privacy.html` — 11-secties GDPR-compliant pagina in HB design + PubliQio PrivacyPage.jsx geharmoniseerd (zelfde structuur, info@, Frank Spooren, AP contactgegevens, AVG artikelnummers, 72h/24h SLA's). **Bestanden**: 3 nieuwe (`i18n.js`, `privacy.html`, admin-module PrivacyPage.jsx update) + `index.html` volledig herbouwd (~850 LOC). |
@@ -847,7 +853,7 @@ git pull origin dev
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.08 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.09 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

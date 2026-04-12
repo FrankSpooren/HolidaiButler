@@ -7,7 +7,7 @@
 
 ---
 
-## v4.47.0 — Media Library v2.0 Enterprise Upgrade (12 april 2026)
+## v4.48.0 — Media Library v2.0 Enterprise Upgrade (12 april 2026)
 
 ### Scope
 Enterprise DAM upgrade — 4 fasen (ML-1 t/m ML-4), 20 opdrachten, 33 nieuwe endpoints.
@@ -7091,7 +7091,7 @@ Alle 5 met `@media (prefers-reduced-motion: reduce)` fallback:
 ### Tellingen (ongewijzigd)
 
 **Endpoints**: 252. **adminPortal.js**: v3.44.0. **BullMQ jobs**: 65. **Agents**: 25.
-**CLAUDE.md**: v4.47.0. **Master Strategie**: v8.08.
+**CLAUDE.md**: v4.48.0. **Master Strategie**: v8.09.
 
 
 ---
