@@ -183,7 +183,7 @@ async function aiTag(media, filePath) {
         'Authorization': `Bearer ${MISTRAL_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'pixtral-12b-2409',
+        model: process.env.MISTRAL_VISION_MODEL || 'mistral-medium-latest',
         messages: [{
           role: 'user',
           content: [
