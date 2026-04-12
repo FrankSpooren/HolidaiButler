@@ -92,7 +92,7 @@ export default function MediaHeader({
       </Tooltip>
 
       <Button variant="contained" startIcon={<UploadIcon />} onClick={onUploadClick}>
-        {t('media.upload', 'Upload')}
+        Upload
       </Button>
     </Box>
   );

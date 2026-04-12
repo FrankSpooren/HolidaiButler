@@ -1,7 +1,7 @@
 /**
  * Media Library v2.0 — Express Router
  * 12 endpoints for media CRUD, bulk operations, stats, and duplicate detection.
-import { mediaProcessingQueue } from "../services/orchestrator/queues.js";
+ * Full media pipeline with AI tagging via BullMQ queue.
  * Mounted from adminPortal.js as: router.use('/media', mediaRouter)
  */
 import express from 'express';
@@ -115,7 +115,9 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
       }
 
       try {
-        const destinationId = parseInt(req.body.destination_id || req.headers['x-destination-id']);
+        const codeMap = { calpe: 1, texel: 2, alicante: 3, warrewijzer: 4, bute: 10 };
+        const rawDI = req.query.destinationId || req.body.destination_id || req.headers['x-destination-id'] || '1';
+        const destinationId = codeMap[String(rawDI).toLowerCase()] || parseInt(rawDI) || 1;
         const category = req.body.category || 'other';
         const results = [];
 
@@ -169,7 +171,7 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
           results.push({ ...mediaItem, url: `/media-files/${destinationId}/${file.filename}` });
           // Dispatch media processing pipeline
           try {
-            await mediaProcessingQueue.add("process-media", { mediaId: mediaItem.id, type: "full_pipeline" }, { priority: 2 });
+            const { mediaProcessingQueue } = await import("../services/orchestrator/queues.js"); await mediaProcessingQueue.add("process-media", { mediaId: mediaItem.id, type: "full_pipeline" }, { priority: 2 });
             console.log("[Media] Processing job dispatched for media " + mediaItem.id);
           } catch (qErr) { console.warn("[Media] Queue dispatch failed:", qErr.message); }
         }
@@ -581,7 +583,7 @@ router.post('/pexels/import/:pexels_id', adminAuth('editor'), async (req, res) =
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + MISTRAL_API_KEY },
         body: JSON.stringify({
-          model: "pixtral-12b-2409",
+          model: process.env.MISTRAL_VISION_MODEL || "mistral-medium-latest",
           messages: [{ role: "user", content: [
             { type: "image_url", image_url: { url: "data:" + mimeType + ";base64," + base64 } },
             { type: "text", text: "Describe this image for accessibility (alt-text). Return a JSON object with 5 keys: nl, en, de, es, fr. Each value should be 1-2 sentences in that language. Return ONLY valid JSON, no other text." }
