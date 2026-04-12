@@ -7056,6 +7056,46 @@ Alle 5 met `@media (prefers-reduced-motion: reduce)` fallback:
 
 ---
 
+## v4.46.0 — Content Studio Analytics & Calendar Fixes (12 april 2026)
+
+### Fixes
+
+| # | Fix | Oplossing |
+|---|-----|-----------|
+| 13 | **Publish Performance Record** | `publishItem()` maakt nu initieel `content_performance` record bij publish (0-waarden). Items direct zichtbaar in Analytics |
+| 14 | **Calendar Edit Button** | Edit-knop in kalender day-detail die ConceptDialog opent. `GET /content/calendar` retourneert nu `concept_id` |
+| 15 | **Auto-Fill Concept+Images** | Auto-fill maakt concept+item+image per item. `selectImages()` koppelt automatisch best-match image |
+| 16 | **Orphan Repair** | 30 orphan Calpe items retroactief aan concepts gekoppeld. 0 orphans remaining |
+
+---
+
+## v4.47.0 — Content Studio UX: Sanitization, Tooltips & Undo (12 april 2026)
+
+### Fixes
+
+| # | Fix | Oplossing |
+|---|-----|-----------|
+| 17 | **Auto-Fill Sanitization** | `sanitizeContent()` + strikte no-markdown prompt toegevoegd aan auto-fill. Enige generatieroute die sanitizer oversloeg |
+| 18 | **7 Action Button Tooltips** | Enterprise UX tooltips: Vul kalender met AI, Auto-inplannen, Nieuw Item, Campagne, Genereer Suggesties, Keyword |
+| 19 | **Undo Functionaliteit** | Snackbar "Ongedaan maken" (15s) na auto-fill (delete concepts), auto-schedule (revert→approved), campagne (delete concepts) |
+
+### Gewijzigde Bestanden (v4.46.0 + v4.47.0)
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/adminPortal.js` | Auto-fill: concept+image+sanitizer, calendar concept_id |
+| `platform-core/src/services/agents/publisher/index.js` | Initial performance record bij publish |
+| `admin-module/src/pages/ContentCalendarTab.jsx` | Edit button, tooltips, undo auto-fill/auto-schedule |
+| `admin-module/src/pages/ContentStudioPage.jsx` | Tooltips, undo campagne, onEditConcept callback |
+
+### Tellingen (ongewijzigd)
+
+**Endpoints**: 252. **adminPortal.js**: v3.44.0. **BullMQ jobs**: 65. **Agents**: 25.
+**CLAUDE.md**: v4.47.0. **Master Strategie**: v8.08.
+
+
+---
+
 ## v4.45.0 — PubliQio Content Studio Multi-Tenant Fixes & BUTE Publishing (11 april 2026)
 
 **Scope**: 10 chirurgische fixes voor Content Studio multi-tenant support, specifiek voor de BUTE content_only destination (destination_id=10).
