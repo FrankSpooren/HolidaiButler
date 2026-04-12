@@ -42,6 +42,7 @@ import workflowRoutes from './routes/workflows.js';
 import poiClassificationRoutes from './routes/poiClassification.js';
 import poiDiscoveryRoutes from './routes/poiDiscovery.js';
 import publicPOIRoutes from './routes/publicPOI.js';
+import { createPublicCollectionRouter } from "./routes/mediaCollectionRoutes.js";
 import authRoutes from './routes/auth.js';
 import chatRoutes from './routes/chat.js';
 import holibotRoutes from './routes/holibot.js';
@@ -188,6 +189,7 @@ app.use('/api/v1/pages', pagesRoutes); // Pages & Destinations (Fase V)
 app.use('/api/v1/contact', contactRoutes); // Contact Form (Fase V.6)
 app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V.6)
 app.use('/api/v1/blogs', blogRoutes); // Public Blog API (Content Studio blogs)
+app.use("/api/v1/public/media-collections", createPublicCollectionRouter()); // Public collection sharing (ML-1.4)
 
 // OAuth helper — public base URL for callbacks (behind Apache reverse proxy req.get('host') returns localhost)
 function getOAuthBaseUrl() {
@@ -302,7 +304,7 @@ app.get('/api/v1/oauth/youtube/callback', async (req, res) => {
 // Static file serving — OUTSIDE platform-core/ to survive CI/CD deployments
 const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
 app.use('/branding', express.static(path.join(STORAGE_ROOT, 'branding')));
-app.use('/media-files', express.static(path.join(STORAGE_ROOT, 'media')));
+app.use('/media-files', express.static(path.join(STORAGE_ROOT, 'media'), { maxAge: '24h', etag: true, lastModified: true }));
 app.use('/block-images', express.static(path.join(STORAGE_ROOT, 'block-images')));
 
 // Pageview tracking — public, fire-and-forget (Fase 9B)
@@ -345,7 +347,9 @@ process.on('SIGINT', async () => {
  * Start Server
  */
 initializePlatform().then(() => {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
+  server.timeout = 300000; // 5 min (video uploads)
+  server.keepAliveTimeout = 65000;
     const envDisplay = (process.env.NODE_ENV || 'development').toUpperCase().padEnd(42);
     const portDisplay = `http://localhost:${PORT}`.padEnd(28);
     logger.info(`
