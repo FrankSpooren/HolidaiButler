@@ -113,11 +113,54 @@ export default function MediaDetailDialog({ open, mediaId, destId, onClose, onUp
           ) : isImage ? (
             <Box component="img" src={fileUrl} alt={media?.alt_text || ''} sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
           ) : isVideo ? (
-            <Box component="video" src={fileUrl} controls sx={{ maxWidth: '100%', maxHeight: '100%' }} />
+            <Box sx={{ width: '100%', position: 'relative' }}>
+              <Box component="video" src={fileUrl} controls
+                poster={`${apiBase || ''}/media-files/thumbnails/${media?.id}_400.jpg`}
+                sx={{ maxWidth: '100%', maxHeight: '100%', bgcolor: '#000', borderRadius: 1 }}
+              />
+              {media?.duration_seconds && (
+                <Chip label={`${Math.floor(media.duration_seconds / 60)}:${String(Math.round(media.duration_seconds % 60)).padStart(2, '0')}`}
+                  size="small" sx={{ position: 'absolute', bottom: 48, right: 12, bgcolor: 'rgba(0,0,0,0.7)', color: 'white', fontWeight: 700 }} />
+              )}
+              {media?.width && media?.height && (
+                <Chip label={`${media.width}×${media.height}`} size="small" variant="outlined"
+                  sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'rgba(0,0,0,0.5)', color: 'white', borderColor: 'transparent', fontSize: '0.7rem' }} />
+              )}
+            </Box>
           ) : isAudio ? (
-            <Box sx={{ textAlign: 'center', p: 4 }}>
+            <Box sx={{ textAlign: 'center', p: 4, width: '100%' }}>
               <AudioFileIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Box component="audio" src={fileUrl} controls sx={{ width: '100%' }} />
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                {media?.original_name || media?.filename}
+              </Typography>
+              {media?.duration_seconds && (
+                <Typography variant="caption" color="text.disabled" sx={{ mb: 2, display: 'block' }}>
+                  {Math.floor(media.duration_seconds / 60)}:{String(Math.round(media.duration_seconds % 60)).padStart(2, '0')}
+                </Typography>
+              )}
+              <Box component="audio" src={fileUrl} controls sx={{ width: '100%', maxWidth: 400 }} />
+            </Box>
+          ) : (media?.media_type === 'gpx' || (media?.original_name || '').toLowerCase().endsWith('.gpx')) ? (
+            <Box sx={{ textAlign: 'center', p: 4 }}>
+              <Box sx={{ fontSize: 64, mb: 1 }}>🗺️</Box>
+              <Typography variant="h6" color="text.secondary">{media?.original_name || 'GPX Route'}</Typography>
+              {media?.location_lat && media?.location_lng && (
+                <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>
+                  📍 {Number(media.location_lat).toFixed(4)}, {Number(media.location_lng).toFixed(4)}
+                </Typography>
+              )}
+              <Chip label="GPX" size="small" color="info" sx={{ mt: 1 }} />
+            </Box>
+          ) : media?.media_type === 'pdf' ? (
+            <Box sx={{ textAlign: 'center', p: 4 }}>
+              <Box sx={{ fontSize: 64, mb: 1 }}>📄</Box>
+              <Typography variant="h6" color="text.secondary">{media?.original_name || 'PDF'}</Typography>
+              <Chip label="PDF" size="small" color="warning" sx={{ mt: 1 }} />
+              <Box sx={{ mt: 2 }}>
+                <a href={fileUrl} target="_blank" rel="noopener" style={{ color: 'inherit' }}>
+                  Openen in nieuw tabblad ↗
+                </a>
+              </Box>
             </Box>
           ) : (
             <Box sx={{ textAlign: 'center', p: 4 }}>
@@ -211,6 +254,9 @@ function InfoTab({ media, onSave, t }) {
         <ReadOnlyField label={t('media.dimensions', 'Afmetingen')} value={`${media.width} × ${media.height}`} />
       )}
       <ReadOnlyField label={t('media.fileSize', 'Bestandsgrootte')} value={formatFileSize(media?.size_bytes)} />
+      {media?.duration_seconds > 0 && (
+        <ReadOnlyField label={t('media.duration', 'Duur')} value={`${Math.floor(media.duration_seconds / 60)}:${String(Math.round(media.duration_seconds % 60)).padStart(2, '0')}`} />
+      )}
       <ReadOnlyField label={t('media.created', 'Aangemaakt')} value={formatDate(media?.created_at)} />
 
       <Divider />
