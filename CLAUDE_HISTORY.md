@@ -7,6 +7,32 @@
 
 ---
 
+## v4.49.0 — Media Library v2.1 Beyond Enterprise (12 april 2026)
+
+### Scope
+Browser-verificatie van v2.0 + video/audio/GPX processing pipeline + frontend preview upgrade.
+
+### Opdrachten
+| # | Opdracht | Resultaat |
+|---|---------|-----------|
+| V1 | Browser-verificatie 20 checks | 19/20 PASS, 1 fix (upload NaN destinationId) |
+| V2 | Fix gebroken features | Overgeslagen (0 blokkerende issues na V1) |
+| V3 | Video/Audio/GPX processing | duration_seconds kolom, processAudio(), processGpx(), video thumbnail+duration opslaan |
+| V4 | Frontend preview | Video poster+duration badge, audio player+duration, GPX coordinaten, PDF open link, grid video overlay |
+
+### Database
+- `ALTER TABLE media ADD COLUMN duration_seconds DECIMAL(10,2)` — video/audio duur in seconden
+
+### Backend
+- `mediaProcessingWorker.js`: processAudio (ffprobe duration), processGpx (XML lat/lng extractie), processVideo (nu met duration_seconds opslaan)
+- `mediaRoutes.js`: upload handler destinationId fix (codeMap in INSERT context)
+
+### Frontend
+- `MediaDetailDialog.jsx`: video poster thumbnail + duration/resolution badges, audio duration + player, GPX coordinaten, PDF open link, duration in Info tab
+- `MediaGrid.jsx`: video thumbnail + ▶ overlay + duration badge, type-specifieke emoji iconen
+
+---
+
 ## v4.48.0 — Media Library v2.0 Enterprise Upgrade (12 april 2026)
 
 ### Scope
