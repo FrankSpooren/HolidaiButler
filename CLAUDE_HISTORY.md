@@ -7031,4 +7031,48 @@ Alle 5 met `@media (prefers-reduced-motion: reduce)` fallback:
 
 ---
 
+## v4.45.0 — PubliQio Content Studio Multi-Tenant Fixes & BUTE Publishing (11 april 2026)
+
+**Scope**: 10 chirurgische fixes voor Content Studio multi-tenant support, specifiek voor de BUTE content_only destination (destination_id=10).
+
+### Fixes
+
+| # | Fix | Root Cause | Oplossing |
+|---|-----|-----------|-----------|
+| 1 | **Manual Item Invisible** | `POST /content/items/generate` (manual=true) maakte alleen `content_items` rij aan, geen `content_concepts` → items onzichtbaar in concept-based listing | Manual creation maakt nu eerst concept, dan item met `concept_id`. 2 orphan BUTE items gerepareerd |
+| 2 | **Repurpose contentType crash** | `contentGenerator.js` `repurposeContent()` refereerde undefined `contentType` variabele | Gecorrigeerd naar `sourceItem.content_type` |
+| 3 | **Concept Image Resolution** | `GET /content/concepts/:id` retourneerde items zonder server-side image resolution | Volledige image resolution (poi: + media: + backward compat fallback) toegevoegd |
+| 4 | **Misplaced Media File** | Media id=147 fysiek in `storage/media/1/` maar DB `destination_id=10` → 404 | Bestand gekopieerd naar `storage/media/10/` |
+| 5 | **Empty Body Repurpose** | `repurposeContent()` gooide error bij items zonder body text (handmatig aangemaakt) | Nieuw `generateFromTitle()` functie — genereert verse content op basis van titel + brand context |
+| 6 | **AI Markdown Artifacts** | `generateFromTitle()` miste sanitizer pipeline | `sanitizeContent()` + `formatForPlatform()` toegevoegd + strikte no-markdown prompt regels |
+| 7 | **Publisher filepath SQL Error** | `publisher/index.js` `resolveMediaLibrary()` SELECT op non-existent `filepath` kolom → silent SQL error → `image_url` nooit gezet | `filepath` verwijderd uit query |
+| 8 | **Instagram Per-Destination Account** | `metaClient.js` hardcoded ENV `INSTAGRAM_BUSINESS_ACCOUNT_ID` voor alle destinations | Leest nu `igAccountId` uit `social_accounts.metadata` per destination |
+| 9 | **BUTE Social Account Config** | BUTE social accounts hadden geen geldig token | BUTECS System User token opgeslagen + igAccountId (17841452782960759) + Facebook page_id (102939469465160) |
+| 10 | **Media Picker Destination Filter** | `ContentImageSection.jsx` hardcoded destCode mapping (Texel/WarreWijzer/else=Calpe) | Vervangen door numeriek `String(destination_id)` |
+
+### Gewijzigde Bestanden (5)
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/src/routes/adminPortal.js` | Manual item creation + concept detail image resolution |
+| `platform-core/src/services/agents/contentRedacteur/contentGenerator.js` | contentType fix + `generateFromTitle()` + sanitizer |
+| `platform-core/src/services/agents/publisher/index.js` | `resolveMediaLibrary` filepath fix |
+| `platform-core/src/services/agents/publisher/clients/metaClient.js` | Per-destination `igAccountId` uit metadata |
+| `admin-module/src/components/content/ContentImageSection.jsx` | Numeriek destination_id voor media picker |
+
+### Database Wijzigingen
+
+- `content_concepts`: 2 rijen aangemaakt voor orphan BUTE items (id 114, 115)
+- `social_accounts` id=6 (BUTE Facebook): `account_id` → `102939469465160`, encrypted token opgeslagen
+- `social_accounts` id=7 (BUTE Instagram): metadata `igAccountId` → `17841452782960759`, encrypted token opgeslagen
+- Media file `1775940315769-zhl8xe.avif` gekopieerd van `storage/media/1/` naar `storage/media/10/`
+
+### Tellingen (ongewijzigd)
+
+**Endpoints**: 252. **adminPortal.js**: v3.44.0. **BullMQ jobs**: 65. **Agents**: 25.
+**CLAUDE.md**: v4.45.0. **Master Strategie**: v8.06.
+
+
+---
+
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*

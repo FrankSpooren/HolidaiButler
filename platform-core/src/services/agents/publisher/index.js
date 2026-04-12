@@ -126,22 +126,10 @@ class PublisherAgent extends BaseAgent {
             const resolveMediaLibrary = async (mediaIdNum) => {
               if (isNaN(mediaIdNum) || mediaIdNum <= 0) return null;
               const [[media]] = await mysqlSequelize.query(
-                'SELECT id, filename, filepath, destination_id FROM media WHERE id = :id',
+                'SELECT id, filename, destination_id FROM media WHERE id = :id',
                 { replacements: { id: mediaIdNum } }
               );
               if (!media) return null;
-              if (media.filepath) {
-                try {
-                  const { formatImage } = await import('../contentRedacteur/imageFormatter.js');
-                  const storageRoot = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
-                  const fullPath = media.filepath.startsWith('/') ? media.filepath : `${storageRoot}/${media.filepath}`;
-                  const formatted = await formatImage(fullPath, contentItem.target_platform, 'post');
-                  logger.info(`[Publisher] Auto-cropped media library image to ${formatted.width}x${formatted.height} for ${contentItem.target_platform}`);
-                  return `${process.env.HB_ASSET_URL || apiBase}/api/v1/img/${formatted.relativePath}`;
-                } catch (cropErr) {
-                  logger.warn(`[Publisher] Auto-crop failed, using raw media URL: ${cropErr.message}`);
-                }
-              }
               return `${apiBase}/media-files/${media.destination_id}/${media.filename}`;
             };
 
@@ -186,6 +174,7 @@ class PublisherAgent extends BaseAgent {
         { replacements: { url: result.url || null, postId: result.postId || null, id: contentItemId } }
       );
 
+// Track media usage — increment usage_count for media items used in this content      try {        const mediaIds = typeof contentItem.media_ids === "string" ? JSON.parse(contentItem.media_ids) : contentItem.media_ids;        if (Array.isArray(mediaIds) && mediaIds.length > 0) {          for (const mid of mediaIds) {            const numId = typeof mid === "string" && mid.startsWith("media:") ? parseInt(mid.replace("media:", "")) : parseInt(mid);            if (!isNaN(numId) && numId > 0) {              await mysqlSequelize.query("UPDATE media SET usage_count = usage_count + 1, last_used_at = NOW() WHERE id = ?", { replacements: [numId] });            }          }        }      } catch (usageErr) { /* non-critical */ }
       await logAgent('publisher', contentItem.destination_id, 'content-published', {
         contentItemId,
         platform: contentItem.target_platform,
