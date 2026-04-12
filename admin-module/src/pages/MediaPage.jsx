@@ -1,69 +1,112 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
-  Box, Typography, Card, Grid, Button, TextField, Chip, Dialog, DialogTitle,
-  DialogContent, DialogActions, Alert, Snackbar, Skeleton, IconButton,
-  FormControl, InputLabel, Select, MenuItem, Tooltip, ImageList, ImageListItem,
-  ImageListItemBar, Checkbox
+  Box, Typography, Button, Chip, Dialog, DialogTitle, DialogContent,
+  DialogActions, Alert, Snackbar, TextField, FormControl, InputLabel,
+  Select, MenuItem, Tooltip, Checkbox, IconButton
 } from '@mui/material';
-import UploadIcon from '@mui/icons-material/Upload';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import FilterListIcon from '@mui/icons-material/FilterList';
 import SelectAllIcon from '@mui/icons-material/SelectAll';
 import DeselectIcon from '@mui/icons-material/Deselect';
-import PermMediaIcon from '@mui/icons-material/PermMedia';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../api/client.js';
 import { useBrandingDestinations } from '../hooks/useBrandingEditor.js';
 import useAuthStore from '../stores/authStore.js';
+import MediaHeader from '../components/media/MediaHeader.jsx';
+import MediaSourceTabs from '../components/media/MediaSourceTabs.jsx';
+import MediaGrid from '../components/media/MediaGrid.jsx';
+import MediaFilterDrawer from '../components/media/MediaFilterDrawer.jsx';
+import MediaDetailDialog from '../components/media/MediaDetailDialog.jsx';
+import MediaUploadDialog from '../components/media/MediaUploadDialog.jsx';
+import MediaBulkActionsBar from '../components/media/MediaBulkActionsBar.jsx';
+import MediaCollectionsDrawer from '../components/media/MediaCollectionsDrawer.jsx';
+import MediaCollectionDetailDialog from '../components/media/MediaCollectionDetailDialog.jsx';
+import MediaCleanupTab from '../components/media/MediaCleanupTab.jsx';
+import PexelsSearchTab from '../components/media/PexelsSearchTab.jsx';
+import useDestinationStore from '../stores/destinationStore.js';
 
 const CATEGORIES = ['all', 'branding', 'pages', 'pois', 'video', 'documents', 'other'];
+const apiUrl = import.meta.env.VITE_API_URL || 'https://api.holidaibutler.com';
 
 export default function MediaPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const user = useAuthStore(s => s.user);
   const isPlatformAdmin = user?.role === 'platform_admin';
-  const userAllowed = user?.allowed_destinations || [];
-  const { data: destData } = useBrandingDestinations();
-  const allDests = destData?.data?.destinations?.filter(d => d.isActive) || [];
-  const destinations = isPlatformAdmin
-    ? allDests
-    : allDests.filter(d => userAllowed.includes(d.code));
-  const [destFilter, setDestFilter] = useState('');
-  const destId = destFilter || (destinations[0]?.id) || '';
+  const selectedDest = useDestinationStore(s => s.selectedDestination);
+  const allStoreDests = useDestinationStore(s => s.destinations);
+  const destInfo = allStoreDests.find(d => d.code === selectedDest);
+  const destId = destInfo?.id || (allStoreDests[0]?.id) || '';
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
-  const [detailOpen, setDetailOpen] = useState(null);
-  const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
+  const [view, setView] = useState('grid');
+  const [sort, setSort] = useState('created_at');
+  const [order, setOrder] = useState('desc');
+  const [tab, setTab] = useState(0);
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(new Set());
+  const [detailOpen, setDetailOpen] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['media', destId, category, search],
-    queryFn: () => client.get('/media', { params: { destinationId: destId, category: category !== 'all' ? category : undefined, search: search || undefined, limit: 100 } }).then(r => r.data),
-    enabled: !!destId
+  const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    media_type: '', category: '', tags: [], quality_tier: '', owner_name: '',
+    usage_rights: '', license_type: '', consent_status: '', archived: false,
+    date_from: '', date_to: ''
   });
 
-  const files = data?.data?.files || [];
+  const filterCount = Object.entries(filters).filter(([k, v]) => {
+    if (k === 'archived') return v === true;
+    if (Array.isArray(v)) return v.length > 0;
+    return v !== '' && v !== undefined && v !== null;
+  }).length;
 
+  // Media query — library tab
+  const { data, isLoading } = useQuery({
+    queryKey: ['media', destId, search, sort, order, page, JSON.stringify(filters)],
+    queryFn: () => client.get('/media', {
+      params: {
+        destinationId: destId,
+        search: search || undefined,
+        sort,
+        ...( filters.media_type ? { media_type: filters.media_type } : {}),
+        ...( filters.category ? { category: filters.category } : {}),
+        ...( filters.quality_tier ? { quality_tier: filters.quality_tier } : {}),
+        ...( filters.owner_name ? { owner_name: filters.owner_name } : {}),
+        ...( filters.usage_rights ? { usage_rights: filters.usage_rights } : {}),
+        ...( filters.license_type ? { license_type: filters.license_type } : {}),
+        ...( filters.consent_status ? { consent_status: filters.consent_status } : {}),
+        ...( filters.archived ? { archived: true } : {}),
+        ...( filters.tags?.length ? { tags: filters.tags.join(',') } : {}),
+        order,
+        page,
+        limit: 200,
+      }
+    }).then(r => r.data),
+    enabled: !!destId && tab === 0,
+    staleTime: 30000, // 30s cache — media changes more often than POIs
+  });
+
+  const files = data?.data?.files || data?.data || [];
+  const totalItems = data?.meta?.total || 0;
+  const hasMore = files.length < totalItems;
+
+  // Mutations
   const uploadMut = useMutation({
     mutationFn: async (formData) => {
       const res = await client.post('/media/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 300000, // 5 min for large batch uploads (up to 50 files)
+        timeout: 300000,
       });
       return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media'] });
-      setSnack({ open: true, message: 'Files uploaded', severity: 'success' });
+      setSnack({ open: true, message: t('media.uploadSuccess', 'Files uploaded'), severity: 'success' });
     },
     onError: (err) => {
       setSnack({ open: true, message: err.response?.data?.error?.message || err.message, severity: 'error' });
-    }
+    },
   });
 
   const deleteMut = useMutation({
@@ -71,223 +114,203 @@ export default function MediaPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media'] });
       setDetailOpen(null);
-      setSnack({ open: true, message: 'File deleted', severity: 'success' });
-    }
+      setSnack({ open: true, message: t('media.deleted', 'File deleted'), severity: 'success' });
+    },
   });
 
   const bulkDeleteMut = useMutation({
     mutationFn: async (ids) => {
       const results = await Promise.allSettled(ids.map(id => client.delete(`/media/${id}`)));
-      const deleted = results.filter(r => r.status === 'fulfilled').length;
-      return deleted;
+      return results.filter(r => r.status === 'fulfilled').length;
     },
     onSuccess: (deleted) => {
       queryClient.invalidateQueries({ queryKey: ['media'] });
       setSelected(new Set());
       setBulkDeleteOpen(false);
-      setSnack({ open: true, message: `${deleted} file(s) deleted`, severity: 'success' });
-    }
+      setSnack({ open: true, message: `${deleted} ${t('media.filesDeleted', 'file(s) deleted')}`, severity: 'success' });
+    },
   });
-
-  const toggleSelect = (id, e) => {
-    e.stopPropagation();
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selected.size === files.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(files.map(f => f.id)));
-    }
-  };
 
   const updateMut = useMutation({
     mutationFn: ({ id, data: updateData }) => client.put(`/media/${id}`, updateData).then(r => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media'] });
-      setSnack({ open: true, message: 'Updated', severity: 'success' });
-    }
+      setSnack({ open: true, message: t('media.updated', 'Updated'), severity: 'success' });
+    },
   });
 
-  const handleUpload = (e) => {
-    const uploadFiles = e.target.files;
+  // Handlers
+  const handleUpload = useCallback((e) => {
+    const uploadFiles = e?.target?.files;
     if (!uploadFiles?.length) return;
     const formData = new FormData();
     formData.append('destination_id', destId);
     formData.append('category', category !== 'all' ? category : 'other');
-    for (const file of uploadFiles) {
-      formData.append('files', file);
-    }
+    for (const file of uploadFiles) formData.append('files', file);
     uploadMut.mutate(formData);
-    e.target.value = '';
-  };
+    if (e?.target) e.target.value = '';
+  }, [destId, category, uploadMut]);
 
-  const apiUrl = import.meta.env.VITE_API_URL || '';
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const [collectionDetailId, setCollectionDetailId] = useState(null);
+  const handleUploadClick = useCallback(() => {
+    setUploadDialogOpen(true);
+  }, []);
+
+  const toggleSelect = useCallback((id, e) => {
+    if (e) e.stopPropagation();
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    setSelected(prev => prev.size === files.length ? new Set() : new Set(files.map(f => f.id)));
+  }, [files]);
+
+  const handleSortChange = useCallback((newSort, newOrder) => {
+    setSort(newSort);
+    setOrder(newOrder);
+    setPage(1);
+  }, []);
+
+  const handleSearchChange = useCallback((val) => {
+    setSearch(val);
+    setPage(1);
+  }, []);
+
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && !isLoading) setPage(p => p + 1);
+  }, [hasMore, isLoading]);
+
   const getUrl = (file) => `${apiUrl}${file.url}`;
-  const isImage = (file) => file.mime_type?.startsWith('image/');
-
-  if (isLoading) {
-    return <Box sx={{ p: 3 }}><Skeleton variant="rounded" height={400} /></Box>;
-  }
+  const isImageFile = (file) => file.mime_type?.startsWith('image/');
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      {/* Page title + destination selector */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('media.title', 'Mediabibliotheek')}</Typography>
-          <Typography variant="body2" color="text.secondary">{files.length} files</Typography>
+          <Typography variant="body2" color="text.secondary">{data?.meta?.total || files.length} {t('media.files', 'bestanden')}</Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>{t('media.destination', 'Bestemming')}</InputLabel>
-            <Select value={destFilter} label={t('media.destination', 'Bestemming')} onChange={e => setDestFilter(e.target.value)}>
-              {destinations.map(d => <MenuItem key={d.id} value={d.id}>{d.displayName}</MenuItem>)}
-            </Select>
-          </FormControl>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>{t('media.category', 'Categorie')}</InputLabel>
-            <Select value={category} label={t('media.category', 'Categorie')} onChange={e => setCategory(e.target.value)}>
-              {CATEGORIES.map(c => <MenuItem key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</MenuItem>)}
-            </Select>
-          </FormControl>
-          <TextField size="small" placeholder={t('media.search', 'Zoeken...')} value={search} onChange={e => setSearch(e.target.value)} sx={{ width: 160 }} />
-          <Button variant="contained" startIcon={<UploadIcon />} component="label" disabled={uploadMut.isPending}>
-            {uploadMut.isPending ? t('media.uploading', 'Uploaden...') : t('media.upload', 'Upload')}
-            <input type="file" hidden multiple accept="image/*,video/*,.pdf,.gpx" onChange={handleUpload} />
-          </Button>
-          <Typography variant="caption" color="text.disabled" sx={{ ml: 0.5 }}>max 40MB</Typography>
-        </Box>
+        {destInfo && (
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, bgcolor: 'action.hover', px: 1.5, py: 0.5, borderRadius: 1 }}>
+            {destInfo.name || selectedDest}
+          </Typography>
+        )}
       </Box>
 
-      {/* Bulk actions bar */}
-      {files.length > 0 && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <Tooltip title={selected.size === files.length ? t('media.deselectAll', 'Deselect all') : t('media.selectAll', 'Select all')}>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={selected.size === files.length ? <DeselectIcon /> : <SelectAllIcon />}
-              onClick={toggleSelectAll}
-            >
-              {selected.size === files.length ? t('media.deselectAll', 'Deselect all') : t('media.selectAll', 'Select all')}
-            </Button>
-          </Tooltip>
-          {selected.size > 0 && (
-            <>
-              <Chip label={`${selected.size} ${t('media.selected', 'selected')}`} size="small" color="primary" />
-              <Button
-                size="small"
-                variant="contained"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={() => setBulkDeleteOpen(true)}
-              >
-                {t('media.deleteSelected', 'Delete selected')}
-              </Button>
-            </>
+      {/* Source tabs */}
+      <MediaSourceTabs activeTab={tab} onTabChange={setTab} />
+
+      {/* Tab content */}
+      {tab === 0 && (
+        <>
+          {/* Header bar with search, view, sort, filters, upload */}
+          <MediaHeader
+            search={search}
+            onSearchChange={handleSearchChange}
+            view={view}
+            onViewChange={setView}
+            sort={sort}
+            order={order}
+            onSortChange={handleSortChange}
+            filterCount={filterCount}
+            onFilterClick={() => setFilterOpen(true)}
+            onUploadClick={handleUploadClick}
+          />
+
+          {/* Bulk actions bar */}
+          {files.length > 0 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Tooltip title={selected.size === files.length ? t('media.deselectAll', 'Deselect all') : t('media.selectAll', 'Select all')}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={selected.size === files.length ? <DeselectIcon /> : <SelectAllIcon />}
+                  onClick={toggleSelectAll}
+                >
+                  {selected.size === files.length ? t('media.deselectAll', 'Deselect all') : t('media.selectAll', 'Select all')}
+                </Button>
+              </Tooltip>
+              {selected.size > 0 && (
+                <>
+                  <Chip label={`${selected.size} ${t('media.selected', 'selected')}`} size="small" color="primary" />
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => setBulkDeleteOpen(true)}
+                  >
+                    {t('media.deleteSelected', 'Delete selected')}
+                  </Button>
+                </>
+              )}
+            </Box>
           )}
+
+          {/* Bulk actions bar */}
+          <MediaBulkActionsBar
+            selectedIds={[...selected]}
+            destId={destId}
+            onClear={() => setSelected(new Set())}
+            onCollectionClick={() => setCollectionsOpen(true)}
+          />
+
+          {/* Media grid */}
+          <MediaGrid
+            items={files}
+            view={view}
+            selected={selected}
+            onSelect={toggleSelect}
+            onItemClick={setDetailOpen}
+            loading={isLoading}
+            apiBase={apiUrl}
+            onLoadMore={handleLoadMore}
+            onUploadClick={handleUploadClick}
+          />
+        </>
+      )}
+
+      {tab === 1 && (
+        <Box sx={{ textAlign: 'center', py: 6 }}>
+          <Typography variant="h6" color="text.secondary">
+            {t('media.poi.placeholder', 'Komt in volgende fase')}
+          </Typography>
         </Box>
       )}
 
-      {files.length === 0 ? (
-        <Card sx={{ p: 4, textAlign: 'center' }}>
-          <PermMediaIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-          <Typography variant="h6" sx={{ mb: 0.5 }}>{t('media.empty.title', 'Nog geen media bestanden')}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('media.empty.description', 'Upload afbeeldingen en video\'s om te gebruiken in content, pagina\'s en social media posts (max 40MB).')}</Typography>
-          <Button variant="contained" component="label" startIcon={<CloudUploadIcon />}>
-            {t('media.upload', 'Upload')}
-            <input type="file" hidden multiple accept="image/*,video/*,.pdf,.gpx" onChange={handleUpload} />
-          </Button>
-        </Card>
-      ) : (
-        <ImageList cols={6} gap={8} sx={{ m: 0 }}>
-          {files.map(file => (
-            <ImageListItem
-              key={file.id}
-              sx={{
-                cursor: 'pointer', borderRadius: 1, overflow: 'hidden',
-                border: selected.has(file.id) ? '2px solid' : '1px solid',
-                borderColor: selected.has(file.id) ? 'primary.main' : 'divider',
-                position: 'relative'
-              }}
-              onClick={() => setDetailOpen(file)}
-            >
-              <Checkbox
-                checked={selected.has(file.id)}
-                onClick={(e) => toggleSelect(file.id, e)}
-                size="small"
-                sx={{
-                  position: 'absolute', top: 2, left: 2, zIndex: 2,
-                  bgcolor: 'rgba(255,255,255,0.8)', borderRadius: 0.5,
-                  p: 0.25, '&:hover': { bgcolor: 'rgba(255,255,255,0.95)' }
-                }}
-              />
-              {isImage(file) ? (
-                <img src={getUrl(file)} alt={file.alt_text || file.original_name} loading="lazy" style={{ height: 150, objectFit: 'cover' }} />
-              ) : (
-                <Box sx={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover' }}>
-                  <Typography variant="h6" color="text.secondary">{file.mime_type?.split('/')[1]?.toUpperCase() || 'FILE'}</Typography>
-                </Box>
-              )}
-              <ImageListItemBar
-                title={file.original_name}
-                subtitle={<Chip size="small" label={file.category} sx={{ height: 18, fontSize: '0.65rem' }} />}
-                sx={{ '& .MuiImageListItemBar-title': { fontSize: '0.7rem' } }}
-              />
-            </ImageListItem>
-          ))}
-        </ImageList>
+      {tab === 2 && (
+        <PexelsSearchTab destId={destId} />
+      )}
+
+      {tab === 3 && (
+        <MediaCleanupTab destId={destId} />
       )}
 
       {/* Detail dialog */}
-      <Dialog open={!!detailOpen} onClose={() => setDetailOpen(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>{t('media.detail.title', 'Media Detail')}</DialogTitle>
-        {detailOpen && (
-          <DialogContent>
-            {isImage(detailOpen) && (
-              <Box component="img" src={getUrl(detailOpen)} alt={detailOpen.alt_text} sx={{ width: '100%', maxHeight: 300, objectFit: 'contain', mb: 2, borderRadius: 1, bgcolor: 'action.hover' }} />
-            )}
-            <Typography variant="body2"><strong>{t('media.detail.filename', 'Bestandsnaam')}:</strong> {detailOpen.original_name}</Typography>
-            <Typography variant="body2"><strong>{t('media.detail.type', 'Type')}:</strong> {detailOpen.mime_type}</Typography>
-            <Typography variant="body2"><strong>{t('media.detail.size', 'Grootte')}:</strong> {Math.round(detailOpen.size_bytes / 1024)} KB</Typography>
-            {detailOpen.width && <Typography variant="body2"><strong>{t('media.detail.dimensions', 'Afmetingen')}:</strong> {detailOpen.width}x{detailOpen.height}</Typography>}
-            <Typography variant="body2" sx={{ mt: 1 }}><strong>{t('media.detail.url', 'URL')}:</strong></Typography>
-            <TextField size="small" fullWidth value={detailOpen.url} sx={{ mt: 0.5, mb: 2 }} InputProps={{ readOnly: true }}
-              onClick={e => { e.target.select(); navigator.clipboard?.writeText(detailOpen.url); setSnack({ open: true, message: 'URL copied', severity: 'info' }); }}
-            />
-            <TextField
-              size="small" fullWidth label={t('media.detail.altText', 'Alt Tekst')} sx={{ mb: 1 }}
-              value={detailOpen.alt_text || ''}
-              onChange={e => setDetailOpen(prev => ({ ...prev, alt_text: e.target.value }))}
-              onBlur={() => updateMut.mutate({ id: detailOpen.id, data: { alt_text: detailOpen.alt_text } })}
-            />
-            <FormControl size="small" fullWidth>
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={detailOpen.category || 'other'}
-                label="Category"
-                onChange={e => {
-                  setDetailOpen(prev => ({ ...prev, category: e.target.value }));
-                  updateMut.mutate({ id: detailOpen.id, data: { category: e.target.value } });
-                }}
-              >
-                {CATEGORIES.filter(c => c !== 'all').map(c => <MenuItem key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</MenuItem>)}
-              </Select>
-            </FormControl>
-          </DialogContent>
-        )}
-        <DialogActions>
-          <Button color="error" startIcon={<DeleteIcon />} onClick={() => deleteMut.mutate(detailOpen?.id)} disabled={deleteMut.isPending}>
-            {t('common.delete', 'Delete')}
-          </Button>
-          <Button onClick={() => setDetailOpen(null)}>{t('common.close')}</Button>
-        </DialogActions>
-      </Dialog>
+      {/* Upload Dialog */}
+      <MediaUploadDialog
+        open={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        destId={destId}
+        onComplete={() => queryClient.invalidateQueries({ queryKey: ['media'] })}
+      />
+
+      {/* Media Detail Dialog */}
+      <MediaDetailDialog
+        open={!!detailOpen}
+        mediaId={detailOpen?.id}
+        destId={destId}
+        apiBase={apiUrl}
+        onClose={() => setDetailOpen(null)}
+        onUpdate={() => queryClient.invalidateQueries({ queryKey: ['media'] })}
+      />
 
       {/* Bulk delete confirmation */}
       <Dialog open={bulkDeleteOpen} onClose={() => setBulkDeleteOpen(false)}>
@@ -309,6 +332,33 @@ export default function MediaPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Collections Drawer */}
+      <MediaCollectionsDrawer
+        open={collectionsOpen}
+        onClose={() => setCollectionsOpen(false)}
+        selectedIds={[...selected]}
+        destId={destId}
+        onOpenDetail={(id) => { setCollectionsOpen(false); setCollectionDetailId(id); }}
+      />
+
+      {/* Collection Detail Dialog */}
+      <MediaCollectionDetailDialog
+        open={!!collectionDetailId}
+        collectionId={collectionDetailId}
+        destId={destId}
+        apiBase={apiUrl}
+        onClose={() => setCollectionDetailId(null)}
+      />
+
+      {/* Filter Drawer */}
+      <MediaFilterDrawer
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        filters={filters}
+        onFilterChange={(f) => { setFilters(f); setPage(1); }}
+        destId={destId}
+      />
 
       <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack(s => ({ ...s, open: false }))}>
         <Alert severity={snack.severity} onClose={() => setSnack(s => ({ ...s, open: false }))}>{snack.message}</Alert>
