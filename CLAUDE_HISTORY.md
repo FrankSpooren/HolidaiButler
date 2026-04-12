@@ -7,6 +7,31 @@
 
 ---
 
+## v4.47.0 — Media Library v2.0 Enterprise Upgrade (12 april 2026)
+
+### Scope
+Enterprise DAM upgrade — 4 fasen (ML-1 t/m ML-4), 20 opdrachten, 33 nieuwe endpoints.
+
+### Key Metrics
+| Metric | Voor | Na |
+|--------|------|-----|
+| Admin endpoints | 252 | 285 (+33) |
+| BullMQ jobs | 65 | 66 (+1) |
+| DB tabellen | media | +media_collections, media_collection_items, media_versions, media_audit_log |
+| Media kolommen | 12 | 35 (+23) |
+| Frontend componenten | 1 (MediaPage) | 15 media componenten (~2.500 LOC) |
+| Image filters | 0 | 12 Instagram-stijl |
+| AI endpoints | 0 | 3 (enhance, alt-text 5 talen, retag) |
+| i18n keys | 0 | ~140 (5 talen) |
+
+### Bestanden
+**Nieuw backend**: mediaRoutes.js, mediaCollectionRoutes.js, mediaService.js, mediaProcessingWorker.js, media-library-v2.sql
+**Gewijzigd backend**: adminPortal.js, index.js, workers.js, scheduler.js, queues.js, imageSelector.js, publisher/index.js
+**Nieuw frontend**: MediaHeader, MediaSourceTabs, MediaGrid, MediaFilterDrawer, MediaSearchBar, MediaDetailDialog, MediaUploadDialog, MediaBulkActionsBar, MediaCollectionsDrawer, MediaCollectionDetailDialog, MediaCleanupTab, PexelsSearchTab, MediaImageEditor, MediaSidebarPanel
+**Gewijzigd frontend**: MediaPage.jsx (herbouwd), ContentStudioPage.jsx, client.js, 5 i18n JSON bestanden
+
+---
+
 ## v4.44.0 — Corporate Landing Page Upgrade (10 april 2026)
 
 ### Scope
