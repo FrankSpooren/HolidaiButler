@@ -39,8 +39,8 @@ class MetaClient {
     const pageId = contentItem.platform_account_id || process.env.META_PAGE_ID;
     logger.info(`[MetaClient] Publishing to Facebook page ${pageId} (from ${contentItem.platform_account_id ? 'social_accounts' : 'env'})`);
 
-    // Always use the System User token from env for page token exchange (social_accounts token decryption may fail)
-    const exchangeToken = process.env.META_PAGE_ACCESS_TOKEN || systemToken;
+    // Use per-destination token for page exchange (multi-tenant), fallback to ENV
+    const exchangeToken = systemToken || process.env.META_PAGE_ACCESS_TOKEN;
     const accessToken = await this._getPageAccessToken(exchangeToken, pageId);
     const message = this._getPostBody(contentItem);
     const metadata = contentItem.social_metadata ? JSON.parse(contentItem.social_metadata) : {};
@@ -100,7 +100,22 @@ class MetaClient {
     if (!igAccountId) {
       throw new Error('Instagram Business Account ID not configured. Set igAccountId in social_accounts metadata or INSTAGRAM_BUSINESS_ACCOUNT_ID env var.');
     }
-    logger.info(`[MetaClient] Publishing to Instagram account ${igAccountId} (from ${contentItem.account_metadata ? 'social_accounts' : 'env'})`);
+    // Get the Facebook Page ID connected to this IG account (needed for page token exchange)
+    let fbPageId = null;
+    try {
+      const accountMeta2 = contentItem.account_metadata
+        ? (typeof contentItem.account_metadata === 'string' ? JSON.parse(contentItem.account_metadata) : contentItem.account_metadata)
+        : {};
+      fbPageId = accountMeta2.pageId || contentItem.platform_account_id || null;
+    } catch { /* */ }
+
+    // Exchange system user token for page token (same as Facebook flow)
+    let publishToken = accessToken;
+    if (fbPageId) {
+      publishToken = await this._getPageAccessToken(accessToken, fbPageId);
+    }
+
+    logger.info(`[MetaClient] Publishing to Instagram account ${igAccountId} (from ${contentItem.account_metadata ? 'social_accounts' : 'env'}, page token: ${fbPageId ? 'yes' : 'no'})`);
     const caption = this._getPostBody(contentItem);
     const metadata = contentItem.social_metadata ? JSON.parse(contentItem.social_metadata) : {};
 
@@ -115,7 +130,7 @@ class MetaClient {
       body: JSON.stringify({
         image_url: metadata.image_url,
         caption,
-        access_token: accessToken,
+        access_token: publishToken,
       }),
     });
 
@@ -130,7 +145,7 @@ class MetaClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         creation_id: containerData.id,
-        access_token: accessToken,
+        access_token: publishToken,
       }),
     });
 
