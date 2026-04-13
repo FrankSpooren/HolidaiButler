@@ -44,6 +44,7 @@ export default function MediaPage() {
   const [order, setOrder] = useState('desc');
   const [tab, setTab] = useState(0);
   const [page, setPage] = useState(1);
+  const [visualQuery, setVisualQuery] = useState('');
   const [selected, setSelected] = useState(new Set());
   const [detailOpen, setDetailOpen] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -87,9 +88,18 @@ export default function MediaPage() {
     staleTime: 30000, // 30s cache — media changes more often than POIs
   });
 
-  const files = data?.data?.files || data?.data || [];
-  const totalItems = data?.meta?.total || 0;
-  const hasMore = files.length < totalItems;
+  // Visual search query
+  const { data: vsData, isLoading: vsLoading } = useQuery({
+    queryKey: ['media-visual-search', destId, visualQuery],
+    queryFn: () => client.get('/media/visual-search', { params: { q: visualQuery, destinationId: destId, limit: 20 } }).then(r => r.data),
+    enabled: !!visualQuery && visualQuery.length >= 2 && !!destId && tab === 0,
+    staleTime: 60000,
+  });
+
+  const isVisualMode = !!visualQuery;
+  const files = isVisualMode ? (vsData?.data?.results || []) : (data?.data?.files || data?.data || []);
+  const totalItems = isVisualMode ? files.length : (data?.meta?.total || 0);
+  const hasMore = !isVisualMode && files.length < totalItems;
 
   // Mutations
   const uploadMut = useMutation({
@@ -213,7 +223,8 @@ export default function MediaPage() {
           {/* Header bar with search, view, sort, filters, upload */}
           <MediaHeader
             search={search}
-            onSearchChange={handleSearchChange}
+            onSearchChange={(v) => { handleSearchChange(v); setVisualQuery(''); }}
+            onVisualSearch={(v) => { setVisualQuery(v); setSearch(''); }}
             view={view}
             onViewChange={setView}
             sort={sort}
