@@ -90,6 +90,46 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
     }
   });
 
+  // 24. GET /media/visual-search — Semantic image search via ChromaDB embeddings
+  router.get('/visual-search', adminAuth('reviewer'), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.query.destination || req.headers['x-destination-id']);
+      const query = req.query.q || req.query.query;
+      const limit = parseInt(req.query.limit) || 10;
+      if (!query || query.length < 2) return res.status(400).json({ success: false, error: { code: 'QUERY_REQUIRED', message: 'Search query required (min 2 chars)' } });
+
+      const { default: imageEmbeddingService } = await import('../services/media/imageEmbeddingService.js');
+      const results = await imageEmbeddingService.searchByText(query, destId, limit);
+
+      if (results.length > 0) {
+        const ids = results.map(r => r.media_id);
+        const items = await mysqlSequelize.query(
+          `SELECT id, filename, original_name, destination_id, width, height, media_type, alt_text, quality_tier FROM media WHERE id IN (${ids.join(',')})`,
+          { type: QueryTypes.SELECT }
+        );
+        const map = {}; items.forEach(m => { map[m.id] = m; });
+        results.forEach(r => { const m = map[r.media_id]; if (m) { r.filename = m.filename; r.original_name = m.original_name; r.url = `/media-files/${m.destination_id}/${m.filename}`; r.width = m.width; r.height = m.height; r.quality_tier = m.quality_tier; } });
+      }
+      res.json({ success: true, data: { results, query, count: results.length } });
+    } catch (error) {
+      logger.error('[Media] Visual search error:', error);
+      res.status(500).json({ success: false, error: { code: 'VISUAL_SEARCH_ERROR', message: error.message } });
+    }
+  });
+
+  // 25. POST /media/visual-search/embed — Batch embed for destination
+  router.post('/visual-search/embed', adminAuth('platform_admin'), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.query.destination || req.headers['x-destination-id']);
+      const { default: imageEmbeddingService } = await import('../services/media/imageEmbeddingService.js');
+      const result = await imageEmbeddingService.embedDestination(destId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      logger.error('[Media] Batch embed error:', error);
+      res.status(500).json({ success: false, error: { code: 'EMBED_ERROR', message: error.message } });
+    }
+  });
+
   // 4. GET /media/:id — Detail + versions + audit log
   router.get('/:id', adminAuth('reviewer'), async (req, res) => {
     try {
