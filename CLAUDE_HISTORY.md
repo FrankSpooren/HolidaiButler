@@ -7,6 +7,33 @@
 
 ---
 
+## v4.50.0 — Media Library v2.1 Visual Search (13 april 2026)
+
+### Scope
+ChromaDB image embedding service + visual search API + frontend AI search toggle.
+
+### Opdrachten
+| # | Opdracht | Resultaat |
+|---|---------|-----------|
+| W1 | ChromaDB Image Embedding Service | imageEmbeddingService.js: embed/search/batch via mistral-embed 1024d vectors, ChromaDB Cloud collection `media_images` |
+| W2 | Visual Search API + Frontend | 2 endpoints (GET visual-search, POST visual-search/embed), AI toggle in MediaHeader, semantic results in grid |
+| W3+W4 | Documentatie + Deploy | CLAUDE.md v4.50.0, MS v8.11, commit + push dev→test→main |
+
+### Backend
+- `imageEmbeddingService.js` (160 LOC): buildSearchText (alt_text+description+tags_ai+tags+location), embedMedia, searchByText, embedDestination
+- `mediaRoutes.js`: +2 endpoints (287 totaal), visual-search VOOR /:id (route volgorde fix)
+
+### Frontend
+- `MediaHeader.jsx`: AI Visual Search toggle knop (ImageSearchIcon, teal highlight)
+- `MediaPage.jsx`: visual search query state + React Query voor `/visual-search` endpoint
+- `MediaSearchBar.jsx`: dual-mode (tekst/visual) met placeholder switch
+
+### Tellingen
+- **287 admin endpoints** (was 285, +2)
+- CLAUDE.md v4.50.0, MS v8.11
+
+---
+
 ## v4.49.0 — Media Library v2.1 Beyond Enterprise (12 april 2026)
 
 ### Scope

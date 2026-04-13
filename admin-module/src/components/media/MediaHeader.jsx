@@ -8,6 +8,7 @@ import ViewListIcon from '@mui/icons-material/ViewList';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import UploadIcon from '@mui/icons-material/Upload';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import ImageSearchIcon from '@mui/icons-material/ImageSearch';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { useTranslation } from 'react-i18next';
@@ -20,19 +21,21 @@ const SORT_OPTIONS = [
 ];
 
 export default function MediaHeader({
-  search, onSearchChange, view, onViewChange,
+  search, onSearchChange, onVisualSearch, view, onViewChange,
   sort, order, onSortChange, filterCount, onFilterClick, onUploadClick
 }) {
   const { t } = useTranslation();
   const [localSearch, setLocalSearch] = useState(search);
+  const [isVisual, setIsVisual] = useState(false);
 
   // Debounce search input 300ms
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (localSearch !== search) onSearchChange(localSearch);
-    }, 300);
+      if (isVisual && onVisualSearch) onVisualSearch(localSearch);
+      else if (localSearch !== search) onSearchChange(localSearch);
+    }, 400);
     return () => clearTimeout(timer);
-  }, [localSearch, search, onSearchChange]);
+  }, [localSearch, search, onSearchChange, onVisualSearch, isVisual]);
 
   // Sync external search changes
   useEffect(() => { setLocalSearch(search); }, [search]);
@@ -45,11 +48,17 @@ export default function MediaHeader({
     <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
       <TextField
         size="small"
-        placeholder={t('media.search', 'Zoeken...')}
+        placeholder={isVisual ? t('media.visualSearchHint', 'Beschrijf wat je zoekt...') : t('media.search', 'Zoeken...')}
         value={localSearch}
         onChange={e => setLocalSearch(e.target.value)}
-        sx={{ width: 200 }}
+        sx={{ width: isVisual ? 280 : 200 }}
       />
+      <Tooltip title={isVisual ? t('media.textSearch', 'Tekst zoeken') : t('media.aiSearch', 'AI Visual Search')} arrow>
+        <IconButton size="small" onClick={() => { setIsVisual(!isVisual); setLocalSearch(''); }}
+          sx={{ bgcolor: isVisual ? 'primary.main' : 'transparent', color: isVisual ? 'white' : 'text.secondary', '&:hover': { bgcolor: isVisual ? 'primary.dark' : 'action.hover' } }}>
+          <ImageSearchIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
 
       <ToggleButtonGroup
         value={view}
