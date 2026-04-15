@@ -17,8 +17,8 @@ import logger from '../../utils/logger.js';
 export async function getCurrentSeason(destinationId) {
   const [seasons] = await mysqlSequelize.query(
     `SELECT * FROM seasonal_config
-     WHERE destination_id = :destId AND is_active = 1 AND start_date <= CURDATE() AND end_date >= CURDATE()
-     ORDER BY start_date ASC LIMIT 1`,
+     WHERE destination_id = :destId AND is_active = 1 AND ((start_month < MONTH(CURDATE())) OR (start_month = MONTH(CURDATE()) AND start_day <= DAY(CURDATE()))) AND ((end_month > MONTH(CURDATE())) OR (end_month = MONTH(CURDATE()) AND end_day >= DAY(CURDATE())))
+     ORDER BY start_month ASC, start_day ASC LIMIT 1`,
     { replacements: { destId: destinationId } }
   );
   return seasons?.[0] || null;
@@ -43,8 +43,8 @@ export async function checkSeasonTransitions() {
     // Find season that should be active today
     const [activeSeasons] = await mysqlSequelize.query(
       `SELECT * FROM seasonal_config
-       WHERE destination_id = :destId AND start_date <= CURDATE() AND end_date >= CURDATE()
-       ORDER BY start_date ASC LIMIT 1`,
+       WHERE destination_id = :destId AND ((start_month < MONTH(CURDATE())) OR (start_month = MONTH(CURDATE()) AND start_day <= DAY(CURDATE()))) AND ((end_month > MONTH(CURDATE())) OR (end_month = MONTH(CURDATE()) AND end_day >= DAY(CURDATE())))
+       ORDER BY start_month ASC, start_day ASC LIMIT 1`,
       { replacements: { destId } }
     );
 
