@@ -45,6 +45,11 @@ import { useTranslation } from 'react-i18next';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, Legend } from 'recharts';
 import useAuthStore from '../stores/authStore.js';
 import useDestinationStore from '../stores/destinationStore.js';
+import VisualTrendsTab from "../components/content/VisualTrendsTab";
+import POIInspirationTab from "../components/content/POIInspirationTab";
+import AgendaInspirationTab from "../components/content/AgendaInspirationTab";
+import HolibotInsightsTab from "../components/content/HolibotInsightsTab";
+import SearchIntentTab from "../components/content/SearchIntentTab";
 import contentService from '../api/contentService.js';
 import client from '../api/client.js';
 import ConceptDialog from '../components/content/ConceptDialog.jsx';
@@ -101,6 +106,12 @@ const CONTENT_TYPE_LABELS = {
   blog: 'Blog',
   social_post: 'Social Post',
   video_script: 'Video Script',
+};
+
+const CONTENT_TYPE_COLORS = {
+  blog: { bg: '#1565c015', color: '#1565c0' },
+  social_post: { bg: '#2e7d3215', color: '#2e7d32' },
+  video_script: { bg: '#ed6c0215', color: '#ed6c02' },
 };
 
 const PLATFORM_LABELS = {
@@ -2466,6 +2477,7 @@ export default function ContentStudioPage() {
   const { t } = useTranslation();
   const user = useAuthStore(s => s.user);
   const [tab, setTab] = useState(0);
+  const [sourceTab, setSourceTab] = useState(0);
   const [campaignGenerating, setCampaignGenerating] = useState(false);
   const [undoCampaignIds, setUndoCampaignIds] = useState(null);
   const [snackMsg, setSnackMsg] = useState(null);
@@ -2518,6 +2530,7 @@ export default function ContentStudioPage() {
   const [itemStatusFilter, setItemStatusFilter] = useState('');
   const [itemPillarFilter, setItemPillarFilter] = useState('');
   const [itemMinScore, setItemMinScore] = useState('');
+  const [itemSourceFilter, setItemSourceFilter] = useState('');
   const [pagePillars, setPagePillars] = useState([]);
   const [marketFilter, setMarketFilter] = useState('ALL');
   const [langFilter, setLangFilter] = useState('ALL');
@@ -2850,19 +2863,12 @@ export default function ContentStudioPage() {
               </Select>
             </FormControl>
           )}
-          <Button
-            size="small"
-            variant={mediaSidebarOpen ? 'contained' : 'outlined'}
-            startIcon={<PermMediaIcon />}
-            onClick={() => setMediaSidebarOpen(!mediaSidebarOpen)}
-          >
-            {t('contentStudio.mediaSidebar', 'Media')}
-          </Button>
+
         </Box>
       </Box>
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }} variant="scrollable" scrollButtons="auto">
-        <Tab label={t('contentStudio.tabs.trending', 'Trending Monitor')} />
+        <Tab label={t('contentStudio.tabs.trending', 'Content Bronnen')} />
         <Tab label={t('contentStudio.tabs.suggestions', 'Suggesties')} />
         <Tab label={t('contentStudio.tabs.content', 'Content Items')} />
         <Tab label={t('contentStudio.tabs.calendar', 'Kalender')} icon={<CalendarMonthIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
@@ -2871,9 +2877,21 @@ export default function ContentStudioPage() {
         <Tab label={t('contentStudio.tabs.socialAccounts', 'Social Accounts')} />
       </Tabs>
 
-      {/* === TAB 0: Trending Monitor === */}
+      {/* === TAB 0: Content Bronnen (sub-tabs) === */}
       {tab === 0 && (
         <>
+          {/* Sub-tab navigation */}
+          <Tabs value={sourceTab} onChange={(_, v) => setSourceTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }} variant="scrollable" scrollButtons="auto">
+            <Tab label={t('contentStudio.sources.keywords', 'Zoektermen')} sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
+            <Tab label={t('contentStudio.sources.visuals', 'Visuele Trends')} sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
+            <Tab label={t('contentStudio.sources.pois', 'POI Inspiratie')} sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
+            <Tab label={t('contentStudio.sources.events', 'Agenda Inspiratie')} sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
+            <Tab label={t('contentStudio.sources.holibot', 'HoliBot Insights')} sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
+            <Tab label={t('contentStudio.sources.gsc', 'Zoekintentie')} sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
+          </Tabs>
+
+          {/* Sub-tab 0: Zoektermen (bestaande trending content) */}
+          {sourceTab === 0 && <>
           <SummaryCards summary={summary} loading={summaryLoading} />
 
           {/* Filters row */}
@@ -2950,7 +2968,7 @@ export default function ContentStudioPage() {
                   {trendLoading ? (
                     [1, 2, 3].map(i => (
                       <TableRow key={i}>
-                        <TableCell colSpan={10}><Skeleton variant="text" /></TableCell>
+                        <TableCell colSpan={11}><Skeleton variant="text" /></TableCell>
                       </TableRow>
                     ))
                   ) : trends.length === 0 ? (
@@ -3083,10 +3101,26 @@ export default function ContentStudioPage() {
               labelRowsPerPage={t('contentStudio.rowsPerPage', 'Rijen per pagina')}
             />
           </Paper>
+          </>}
+
+          {/* Sub-tab 1: Visuele Trends */}
+          {sourceTab === 1 && <VisualTrendsTab destinationId={destinationId} />}
+
+          {/* Sub-tab 2: POI Inspiratie */}
+          {sourceTab === 2 && <POIInspirationTab destinationId={destinationId} onNavigateToContent={(tabIdx) => { setSourceTab(0); setTab(tabIdx); }} />}
+
+          {/* Sub-tab 3: Agenda Inspiratie */}
+          {sourceTab === 3 && <AgendaInspirationTab destinationId={destinationId} onNavigateToContent={(tabIdx) => { setSourceTab(0); setTab(tabIdx); }} />}
+
+          {/* Sub-tab 4: HoliBot Insights */}
+          {sourceTab === 4 && <HolibotInsightsTab destinationId={destinationId} onNavigateToContent={(tabIdx) => { setSourceTab(0); setTab(tabIdx); }} />}
+
+          {/* Sub-tab 5: Zoekintentie (GSC) */}
+          {sourceTab === 5 && <SearchIntentTab destinationId={destinationId} />}
         </>
       )}
 
-      {/* === TAB 1: Suggesties === */}
+      {/* === TAB 1: Content Ideeën === */}
       {tab === 1 && (
         <>
           {sugError && <Alert severity="error" sx={{ mb: 2 }}>{sugError}</Alert>}
@@ -3154,6 +3188,18 @@ export default function ContentStudioPage() {
                       })()}
                     </TableCell>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setSugSort(s => s === 'title_asc' ? 'title_desc' : 'title_asc')}>{t('contentStudio.table.title', 'Titel')} {sugSort.startsWith('title') ? (sugSort === 'title_asc' ? '↑' : '↓') : ''}</TableCell>
+                    <TableCell>
+                      <Select size="small" value={itemSourceFilter} onChange={e => setItemSourceFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 60 }}>
+                        <MenuItem value="">Bron</MenuItem>
+                        <MenuItem value="poi">📍 POI</MenuItem>
+                        <MenuItem value="event">📅 Event</MenuItem>
+                        <MenuItem value="visual">📷 Visual</MenuItem>
+                        <MenuItem value="holibot">💬 HoliBot</MenuItem>
+                        <MenuItem value="keyword">🔍 Keyword</MenuItem>
+                        <MenuItem value="recycle">♻️ Recycle</MenuItem>
+                        <MenuItem value="manual">✏️ Handmatig</MenuItem>
+                      </Select>
+                    </TableCell>
                     <TableCell>
                       <Select size="small" value={sugTypeFilter} onChange={e => setSugTypeFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 60 }}>
                         <MenuItem value="">{t('contentStudio.table.type', 'Type')}</MenuItem>
@@ -3228,7 +3274,15 @@ export default function ContentStudioPage() {
                           </Typography>
                         )}
                       </TableCell>
-                      <TableCell><Chip label={CONTENT_TYPE_LABELS[sug.content_type] || sug.content_type} size="small" /></TableCell>
+                      <TableCell>
+                        {sug.event_source_id ? <Chip label="📅 Event" size="small" sx={{ fontSize: 10, bgcolor: '#ed6c0215', color: '#ed6c02' }} />
+                        : sug.visual_source_id ? <Chip label="📷 Visual" size="small" sx={{ fontSize: 10, bgcolor: '#1976d215', color: '#1976d2' }} />
+                        : sug.poi_source_id ? <Chip label="📍 POI" size="small" sx={{ fontSize: 10, bgcolor: '#2e7d3215', color: '#2e7d32' }} />
+                        : sug.source === 'recycle' ? <Chip label="♻️ Recycle" size="small" sx={{ fontSize: 10, bgcolor: '#7b1fa215', color: '#7b1fa2' }} />
+                        : (sug.summary || '').startsWith('Chatbot thema:') ? <Chip label="💬 HoliBot" size="small" sx={{ fontSize: 10, bgcolor: '#0288d115', color: '#0288d1' }} />
+                        : <Chip label="🔍 Trending" size="small" sx={{ fontSize: 10, bgcolor: '#66666615', color: '#666' }} />}
+                      </TableCell>
+                      <TableCell><Chip label={CONTENT_TYPE_LABELS[sug.content_type] || sug.content_type} size="small" sx={{ ...(CONTENT_TYPE_COLORS[sug.content_type] || {}), fontWeight: 500, fontSize: 11 }} /></TableCell>
                       <TableCell>
                         <Chip
                           label={Number(sug.engagement_score || 0).toFixed(1)}
@@ -3247,7 +3301,7 @@ export default function ContentStudioPage() {
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                           {(Array.isArray(sug.suggested_channels) ? sug.suggested_channels : []).map((ch, i) => (
-                            <Chip key={i} label={ch} size="small" variant="outlined" sx={{ fontSize: 10 }} />
+                            <Chip key={i} label={ch} size="small" sx={{ fontSize: 10, fontWeight: 500, color: '#fff', bgcolor: PLATFORM_COLORS[ch] || '#666' }} />
                           ))}
                         </Box>
                       </TableCell>
@@ -3477,12 +3531,12 @@ export default function ContentStudioPage() {
                   {itemLoading ? (
                     [1, 2, 3].map(i => (
                       <TableRow key={i}>
-                        <TableCell colSpan={10}><Skeleton variant="text" /></TableCell>
+                        <TableCell colSpan={11}><Skeleton variant="text" /></TableCell>
                       </TableRow>
                     ))
                   ) : concepts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                      <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary" sx={{ mb: 1 }}>{t('contentStudio.noItems', 'Geen content items. Genereer content vanuit goedgekeurde suggesties.')}</Typography>
                         <Button variant="outlined" size="small" onClick={() => setTab(1)}>{t('contentStudio.goToSuggestions', 'Bekijk Suggesties')}</Button>
                       </TableCell>
@@ -3494,6 +3548,7 @@ export default function ContentStudioPage() {
                     .filter(c => !itemStatusFilter || c.approval_status === itemStatusFilter)
                     .filter(c => !itemPillarFilter || c.pillar_id === itemPillarFilter)
                     .filter(c => !itemMinScore || (c.avg_seo_score != null && Number(c.avg_seo_score) >= Number(itemMinScore)))
+                    .filter(c => !itemSourceFilter || (c.content_source_type || 'manual') === itemSourceFilter)
                     .sort((a, b) => {
                       if (itemSort === 'title_asc') return (a.title || '').localeCompare(b.title || '');
                       if (itemSort === 'title_desc') return (b.title || '').localeCompare(a.title || '');
@@ -3521,6 +3576,16 @@ export default function ContentStudioPage() {
                           <Typography variant="body2" sx={{ fontWeight: 500, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {concept.title}
                           </Typography>
+                        </TableCell>
+                        <TableCell>
+                          {concept.content_source_type === 'poi' ? <Chip label="\U0001f4cd POI" size="small" sx={{ fontSize: 10, bgcolor: '#2e7d3215', color: '#2e7d32' }} />
+                          : concept.content_source_type === 'event' ? <Chip label="\U0001f4c5 Event" size="small" sx={{ fontSize: 10, bgcolor: '#ed6c0215', color: '#ed6c02' }} />
+                          : concept.content_source_type === 'visual' ? <Chip label="\U0001f4f7 Visual" size="small" sx={{ fontSize: 10, bgcolor: '#1976d215', color: '#1976d2' }} />
+                          : concept.content_source_type === 'holibot' ? <Chip label="\U0001f4ac HoliBot" size="small" sx={{ fontSize: 10, bgcolor: '#0288d115', color: '#0288d1' }} />
+                          : concept.content_source_type === 'gsc' ? <Chip label="\U0001f50d GSC" size="small" sx={{ fontSize: 10, bgcolor: '#42855415', color: '#428554' }} />
+                          : concept.content_source_type === 'recycle' ? <Chip label="\u267b\ufe0f Recycle" size="small" sx={{ fontSize: 10, bgcolor: '#7b1fa215', color: '#7b1fa2' }} />
+                          : concept.content_source_type === 'keyword' ? <Chip label="\U0001f50d Keyword" size="small" sx={{ fontSize: 10, bgcolor: '#66666615', color: '#666' }} />
+                          : <Chip label="\u270f\ufe0f Handmatig" size="small" sx={{ fontSize: 10, bgcolor: '#66666615', color: '#666' }} />}
                         </TableCell>
                         <TableCell><Chip label={CONTENT_TYPE_LABELS[concept.content_type] || concept.content_type} size="small" /></TableCell>
                         <TableCell>

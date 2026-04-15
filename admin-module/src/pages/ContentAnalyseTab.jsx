@@ -66,6 +66,7 @@ export default function ContentAnalyseTab({ destinationId }) {
   const topContent = overviewData?.data?.top_content || [];
   const topThisWeek = overviewData?.data?.top_this_week;
   const scoreCorrelation = overviewData?.data?.score_correlation || {};
+  const bySource = overviewData?.data?.by_source || [];
   const analyticsItems = itemsData?.data?.items || [];
   const itemsTotal = itemsData?.data?.total || 0;
   const platforms = platformsData?.data?.platforms || [];
@@ -537,10 +538,68 @@ export default function ContentAnalyseTab({ destinationId }) {
                   </ResponsiveContainer>
                 </Paper>
               )}
+
+          {/* Opdracht 17: Bron Performance Kaart */}
+          {true && (
+            <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
+                📊 Content per Bron
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {bySource.map(s => {
+                  const labels = { poi: '📍 POI', event: '📅 Event', visual: '📷 Visual', holibot: '💬 HoliBot', gsc: '🔍 GSC', keyword: '🔍 Keyword', recycle: '\u267b\ufe0f Recycle', manual: '\u270f\ufe0f Handmatig' };
+                  const colors = { poi: '#2e7d32', event: '#ed6c02', visual: '#1976d2', holibot: '#0288d1', gsc: '#428554', keyword: '#666', recycle: '#7b1fa2', manual: '#666' };
+                  const label = labels[s.source_type] || s.source_type;
+                  const color = colors[s.source_type] || '#666';
+                  const maxItems = Math.max(...bySource.map(x => x.item_count || 0), 1);
+                  const barPct = Math.round(((s.item_count || 0) / maxItems) * 100);
+                  return (
+                    <Box key={s.source_type} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Typography variant="body2" sx={{ minWidth: 120, fontWeight: 500 }}>{label}</Typography>
+                      <Box sx={{ flex: 1, bgcolor: 'action.hover', borderRadius: 1, height: 20, position: 'relative', overflow: 'hidden' }}>
+                        <Box sx={{ width: barPct + '%', height: '100%', bgcolor: color, borderRadius: 1, transition: 'width 0.3s ease' }} />
+                      </Box>
+                      <Typography variant="caption" sx={{ minWidth: 50, textAlign: 'right', fontWeight: 600 }}>{s.item_count} items</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ minWidth: 60, textAlign: 'right' }}>{Number(s.total_engagement || 0).toLocaleString('nl-NL')} eng.</Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Paper>
+          )}
             </>
           )}
         </>
       )}
+
+      {/* Opdracht 17: Bron Performance Kaart — altijd zichtbaar */}
+      <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>📊 Content per Bron</Typography>
+        {bySource.length > 0 ? (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            {bySource.map(s => {
+              const labels = { poi: "📍 POI", event: "📅 Event", visual: "📷 Visual", holibot: "💬 HoliBot", gsc: "🔍 GSC", keyword: "🔍 Keyword", recycle: "♻️ Recycle", manual: "✏️ Handmatig" };
+              const colors = { poi: "#2e7d32", event: "#ed6c02", visual: "#1976d2", holibot: "#0288d1", gsc: "#428554", keyword: "#666", recycle: "#7b1fa2", manual: "#666" };
+              const label = labels[s.source_type] || s.source_type;
+              const color = colors[s.source_type] || "#666";
+              const maxItems = Math.max(...bySource.map(x => x.item_count || 0), 1);
+              const barPct = Math.round(((s.item_count || 0) / maxItems) * 100);
+              return (
+                <Box key={s.source_type} sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                  <Typography variant="body2" sx={{ minWidth: 120, fontWeight: 500 }}>{label}</Typography>
+                  <Box sx={{ flex: 1, bgcolor: "action.hover", borderRadius: 1, height: 20, position: "relative", overflow: "hidden" }}>
+                    <Box sx={{ width: barPct + "%", height: "100%", bgcolor: color, borderRadius: 1 }} />
+                  </Box>
+                  <Typography variant="caption" sx={{ minWidth: 50, textAlign: "right", fontWeight: 600 }}>{s.item_count} items</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ minWidth: 60, textAlign: "right" }}>{Number(s.total_engagement || 0).toLocaleString("nl-NL")} eng.</Typography>
+                </Box>
+              );
+            })}
+          </Box>
+        ) : (
+          <Typography variant="body2" color="text.secondary">Nog geen bron-data beschikbaar.</Typography>
+        )}
+      </Paper>
     </Box>
   );
 }
