@@ -55,8 +55,8 @@
       "tagline": "Europäische AI Content-Plattform",
       "heroTitle": "Veröffentliche smarter. Schneller. Besser.",
       "heroTitleSuffix": ".",
-      "heroSubtitle": "Generieren, planen und ver\u00f6ffentlichen Sie Content auf all Ihren Plattformen aus einem intelligenten Arbeitsplatz. Ein Konzept, mehrere Plattformen - die KI erledigt die Arbeit. Sie pr\u00fcfen, geben frei und sparen {pct} Ihrer Zeit.{ast}",
-      "heroSourceNote": "* Quelle: \u2018{link}\u2019-Studie (1.500+ Marketer), HubSpot.",
+      "heroSubtitle": "Generieren, planen und veröffentlichen Sie Content auf all Ihren Plattformen aus einem intelligenten Arbeitsplatz. Ein Konzept, mehrere Plattformen - die KI erledigt die Arbeit. Sie prüfen, geben frei und sparen {pct} Ihrer Zeit.{ast}",
+      "heroSourceNote": "* Quelle: ‘{link}’-Studie (1.500+ Marketer), HubSpot.",
       "heroSourceLink": "2026 State of Marketing",
       "ctaDemo": "Kostenlose Demo anfordern",
       "ctaLogin": "Anmelden",
@@ -1341,8 +1341,8 @@
   "contentStudio": {
     "title": "Content Studio",
     "tabs": {
-      "trending": "Trending Monitor",
-      "suggestions": "Vorschläge",
+      "trending": "Content-Quellen",
+      "suggestions": "Content-Ideen",
       "content": "Content-Elemente",
       "calendar": "Kalender",
       "analyse": "Analyse",
@@ -1605,7 +1605,7 @@
     "channels": "Empfohlene Kanäle",
     "engagementScore": "Engagement Score",
     "generateSuggestions": "Vorschläge generieren",
-    "suggestionsFound": "Vorschläge",
+    "suggestionsFound": "Content-Ideen",
     "itemsFound": "Content-Elemente",
     "noSuggestions": "Keine Vorschläge. Klicken Sie auf \"Vorschläge generieren\" um KI-Vorschläge zu erstellen.",
     "noItems": "Keine Content-Elemente. Generieren Sie Content aus genehmigten Vorschlägen.",
@@ -1691,6 +1691,14 @@
       "featuredPois": "Featured POI IDs (JSON-Array)",
       "deleteTitle": "Saison löschen",
       "deleteConfirm": "Möchten Sie diese Saison wirklich löschen?"
+    },
+    "sources": {
+      "keywords": "Suchbegriffe",
+      "visuals": "Visuelle Trends",
+      "pois": "POI-Inspiration",
+      "events": "Veranstaltungs-Inspiration",
+      "holibot": "HoliBot Insights",
+      "gsc": "Suchintention"
     }
   },
   "brandProfile": {

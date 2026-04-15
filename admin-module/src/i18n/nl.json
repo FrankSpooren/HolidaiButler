@@ -72,8 +72,8 @@
       "tagline": "Europees AI Content Platform",
       "heroTitle": "Publiceer slimmer. Sneller. Beter.",
       "heroTitleSuffix": ".",
-      "heroSubtitle": "Genereer, plan en publiceer content op al jouw platformen vanuit \u00e9\u00e9n intelligent werkstation. E\u00e9n concept, meerdere platformen - de AI doet het werk. Jij reviewt, keurt goed en bespaart {pct} van je tijd.{ast}",
-      "heroSourceNote": "* Bron: \u2018{link}\u2019-onderzoek (1.500+ marketeers), HubSpot.",
+      "heroSubtitle": "Genereer, plan en publiceer content op al jouw platformen vanuit één intelligent werkstation. Eén concept, meerdere platformen - de AI doet het werk. Jij reviewt, keurt goed en bespaart {pct} van je tijd.{ast}",
+      "heroSourceNote": "* Bron: ‘{link}’-onderzoek (1.500+ marketeers), HubSpot.",
       "heroSourceLink": "2026 State of Marketing",
       "ctaDemo": "Gratis Demo Aanvragen",
       "ctaLogin": "Inloggen",
@@ -1382,8 +1382,8 @@
   "contentStudio": {
     "title": "Content Studio",
     "tabs": {
-      "trending": "Trending Monitor",
-      "suggestions": "Suggesties",
+      "trending": "Content Bronnen",
+      "suggestions": "Content Ideeën",
       "content": "Content Items",
       "calendar": "Kalender",
       "analyse": "Analyse",
@@ -1391,7 +1391,7 @@
       "socialAccounts": "Social Accounts"
     },
     "generateSuggestions": "Genereer Suggesties",
-    "suggestionsFound": "suggesties",
+    "suggestionsFound": "content ideeën",
     "itemsFound": "content items",
     "noSuggestions": "Geen suggesties. Klik op \"Genereer Suggesties\" om AI suggesties te maken.",
     "noItems": "Geen content items. Genereer content vanuit goedgekeurde suggesties.",
@@ -1732,6 +1732,14 @@
       "featuredPois": "Featured POI IDs (JSON array)",
       "deleteTitle": "Seizoen verwijderen",
       "deleteConfirm": "Weet je zeker dat je dit seizoen wilt verwijderen?"
+    },
+    "sources": {
+      "keywords": "Zoektermen",
+      "visuals": "Visuele Trends",
+      "pois": "POI Inspiratie",
+      "events": "Agenda Inspiratie",
+      "holibot": "HoliBot Insights",
+      "gsc": "Zoekintentie"
     }
   },
   "brandProfile": {

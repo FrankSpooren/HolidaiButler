@@ -318,6 +318,58 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: content-weekly-report (Monday 08:00)');
 
+
+  // HoliBot Insights Analysis - Sunday 06:00 (clusters chatbot questions per destination)
+  await scheduledQueue.add('content-holibot-insights', { type: 'content-holibot-insights' }, {
+    repeat: { cron: '0 6 * * 0', tz: 'Europe/Amsterdam' },
+    jobId: 'content-holibot-insights-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-holibot-insights (Sunday 06:00)');
+
+  // GSC Query Sync - Monday 05:00 (syncs Google Search Console top queries)
+  await scheduledQueue.add('gsc-query-sync', { type: 'gsc-query-sync' }, {
+    repeat: { cron: '0 5 * * 1', tz: 'Europe/Amsterdam' },
+    jobId: 'gsc-query-sync-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: gsc-query-sync (Monday 05:00)');
+
+  // === Visual Discovery & Analysis Pipeline (Opdracht 12) ===
+
+  // Visual Discovery - daily 05:00 (YouTube + Instagram + Facebook + Pexels)
+  await scheduledQueue.add('trending-visual-discovery', { type: 'trending-visual-discovery' }, {
+    repeat: { cron: '0 5 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'trending-visual-discovery-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: trending-visual-discovery (daily 05:00)');
+
+  // Visual Analysis - daily 06:00 (Mistral Vision AI on discovered visuals)
+  await scheduledQueue.add('trending-visual-analysis', { type: 'trending-visual-analysis' }, {
+    repeat: { cron: '0 6 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'trending-visual-analysis-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: trending-visual-analysis (daily 06:00)');
+
+  // Visual Cleanup - weekly Sunday 03:00 (remove dismissed/old visuals)
+  await scheduledQueue.add('trending-visual-cleanup', { type: 'trending-visual-cleanup' }, {
+    repeat: { cron: '0 3 * * 0', tz: 'Europe/Amsterdam' },
+    jobId: 'trending-visual-cleanup-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: trending-visual-cleanup (Sunday 03:00)');
+
+  // Reddit Discovery - Mon/Wed/Fri 05:00
+  await scheduledQueue.add('reddit-trend-discovery', { type: 'reddit-trend-discovery' }, {
+    repeat: { cron: '0 5 * * 1,3,5', tz: 'Europe/Amsterdam' },
+    jobId: 'reddit-trend-discovery-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: reddit-trend-discovery (Mon/Wed/Fri 05:00)');
+
+  // Google Images Discovery - weekly Tuesday 05:00
+  await scheduledQueue.add('google-images-discovery', { type: 'google-images-discovery' }, {
+    repeat: { cron: '0 5 * * 2', tz: 'Europe/Amsterdam' },
+    jobId: 'google-images-discovery-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: google-images-discovery (Tuesday 05:00)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);

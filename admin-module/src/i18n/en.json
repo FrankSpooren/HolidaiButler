@@ -73,7 +73,7 @@
       "heroTitle": "Publish smarter. Faster. Better.",
       "heroTitleSuffix": ".",
       "heroSubtitle": "Generate, plan and publish content across all your platforms from one intelligent workspace. One concept, multiple platforms - the AI does the work. You review, approve and save {pct} of your time.{ast}",
-      "heroSourceNote": "* Source: \u2018{link}\u2019 study (1,500+ marketers), HubSpot.",
+      "heroSourceNote": "* Source: ‘{link}’ study (1,500+ marketers), HubSpot.",
       "heroSourceLink": "2026 State of Marketing",
       "ctaDemo": "Request Free Demo",
       "ctaLogin": "Log In",
@@ -1365,8 +1365,8 @@
   "contentStudio": {
     "title": "Content Studio",
     "tabs": {
-      "trending": "Trending Monitor",
-      "suggestions": "Suggestions",
+      "trending": "Content Sources",
+      "suggestions": "Content Ideas",
       "content": "Content Items",
       "calendar": "Calendar",
       "analyse": "Analytics",
@@ -1374,7 +1374,7 @@
       "socialAccounts": "Social Accounts"
     },
     "generateSuggestions": "Generate Suggestions",
-    "suggestionsFound": "suggestions",
+    "suggestionsFound": "content ideas",
     "itemsFound": "content items",
     "noSuggestions": "No suggestions. Click \"Generate Suggestions\" to create AI suggestions.",
     "noItems": "No content items. Generate content from approved suggestions.",
@@ -1715,6 +1715,14 @@
       "featuredPois": "Featured POI IDs (JSON array)",
       "deleteTitle": "Delete season",
       "deleteConfirm": "Are you sure you want to delete this season?"
+    },
+    "sources": {
+      "keywords": "Keywords",
+      "visuals": "Visual Trends",
+      "pois": "POI Inspiration",
+      "events": "Event Inspiration",
+      "holibot": "HoliBot Insights",
+      "gsc": "Search Intent"
     }
   },
   "brandProfile": {

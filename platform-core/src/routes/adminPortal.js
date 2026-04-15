@@ -178,6 +178,9 @@ import intermediaryService from '../services/intermediary/intermediaryService.js
 import financialService from '../services/financial/financialService.js';
 import createMediaRouter from "./mediaRoutes.js";
 import createCollectionRouter, { createPublicCollectionRouter } from "./mediaCollectionRoutes.js";
+import visualTrendDiscovery from '../services/visual/visualTrendDiscovery.js';
+import visualAnalyzer from '../services/visual/visualAnalyzer.js';
+
 
 const router = Router();
 
@@ -11458,14 +11461,14 @@ router.get('/content/suggestions', adminAuth('editor'), async (req, res) => {
  */
 router.post('/content/suggestions', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
-    const { destination_id, title, summary, content_type = 'social_post', keyword_cluster = [], engagement_score = 5 } = req.body;
+    const { destination_id, title, summary, content_type = 'social_post', keyword_cluster = [], engagement_score = 5, event_source_id } = req.body;
     if (!destination_id || !title) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destination_id and title are required' } });
     }
 
     const [result] = await mysqlSequelize.query(
-      `INSERT INTO content_suggestions (destination_id, title, summary, content_type, suggested_channels, keyword_cluster, engagement_score, status, created_at, updated_at)
-       VALUES (:destId, :title, :summary, :contentType, :channels, :keywords, :score, 'pending', NOW(), NOW())`,
+      `INSERT INTO content_suggestions (destination_id, title, summary, content_type, suggested_channels, keyword_cluster, engagement_score, event_source_id, status, created_at, updated_at)
+       VALUES (:destId, :title, :summary, :contentType, :channels, :keywords, :score, :eventSourceId, 'pending', NOW(), NOW())`,
       {
         replacements: {
           destId: Number(destination_id),
@@ -11475,6 +11478,7 @@ router.post('/content/suggestions', adminAuth('editor'), writeAccess(['platform_
           channels: JSON.stringify(['facebook', 'instagram']),
           keywords: JSON.stringify(keyword_cluster),
           score: engagement_score,
+          eventSourceId: event_source_id ? Number(event_source_id) : null,
         },
       }
     );
@@ -12329,6 +12333,7 @@ router.get('/content/concepts', adminAuth('editor'), async (req, res) => {
         cp.name as pillar_name,
         cp.color as pillar_color,
         (SELECT MAX(ci.seo_score) FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted' AND ci.seo_score IS NOT NULL) as avg_seo_score,
+        (SELECT ci2.content_source_type FROM content_items ci2 WHERE ci2.concept_id = c.id AND ci2.approval_status != 'deleted' LIMIT 1) as content_source_type,
         (SELECT GROUP_CONCAT(DISTINCT ci.target_platform) FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted') as platforms,
         (SELECT GROUP_CONCAT(CONCAT(ci.id, ':', ci.target_platform, ':', ci.approval_status) SEPARATOR '|') FROM content_items ci WHERE ci.concept_id = c.id AND ci.approval_status != 'deleted') as items_summary
        FROM content_concepts c
@@ -12737,21 +12742,60 @@ router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['pla
     if (await isContentOnly(destId)) {
       return res.status(400).json({ success: false, error: { code: 'NOT_AVAILABLE', message: 'POI content generation is not available for Content Studio standalone destinations' } });
     }
+    // Fetch POI name for concept title
+    const [[poiRow]] = await mysqlSequelize.query('SELECT name FROM POI WHERE id = :poiId', { replacements: { poiId: poi_id } });
+    const poiName = poiRow ? poiRow.name : 'POI ' + poi_id;
+
+    // Create parent concept FIRST so items appear in Content Items tab immediately
+    const conceptType = platforms.includes('website') ? 'blog' : 'social_post';
+    const [conceptId] = await mysqlSequelize.query(
+      `INSERT INTO content_concepts (destination_id, title, content_type, poi_id, approval_status, ai_generated, created_at, updated_at)
+       VALUES (:destId, :title, :ctype, :poiId, 'generating', true, NOW(), NOW())`,
+      { replacements: { destId, title: poiName, ctype: conceptType, poiId: poi_id }, type: QueryTypes.INSERT }
+    );
+
+    // Return 202 immediately — generation happens in background
+    res.status(202).json({ success: true, data: { concept_id: conceptId, status: 'generating', message: 'Content generatie gestart voor ' + poiName + '. ' + platforms.length + ' platform(s).' } });
+
+    // Background generation (no await — runs after response is sent)
+    (async () => {
+    try {
     const { generateFromPOI } = await import('../services/agents/contentRedacteur/contentGenerator.js');
     const results = await generateFromPOI(Number(poi_id), destId, platforms);
 
-    // Save each result as a content_item (with seo_score + auto-attach images)
+    // Save each result as a content_item — use ALL fields from generateContent() result
+    // This ensures the same quality pipeline (sanitization, formatting, UTM, SEO, images)
+    // regardless of whether content is generated via Content Studio or POI Inspiration
     const savedIds = [];
     for (const item of results) {
+      // Use seo_data from generateContent (includes meta_title, meta_description, slug)
+      const seoData = item.seo_data || { meta_description: item.meta_description };
+      const seoMetaTitle = (seoData.meta_title || item.title || '').substring(0, 70);
+      const seoMetaDesc = (seoData.meta_description || item.meta_description || '').substring(0, 170);
+      const seoSlug = (seoData.slug || '').substring(0, 255);
+
+      // Use media_ids from generateContent (already selected by imageSelector with correct POI matching)
+      const mediaIds = item.media_ids ? JSON.stringify(item.media_ids) : null;
+
+      // Use social_metadata from generateContent (includes UTM-tracked links)
+      const socialMeta = item.social_metadata ? JSON.stringify(item.social_metadata) : null;
+
       const [insertResult] = await mysqlSequelize.query(
         `INSERT INTO content_items
-         (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-          seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
-         VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-          :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
+         (destination_id, concept_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+          seo_data, seo_score, seo_meta_title, seo_meta_description, seo_slug,
+          social_metadata, media_ids, keyword_cluster,
+          target_platform, approval_status, ai_model, ai_generated, poi_id,
+          content_source_type, content_source_id, created_at, updated_at)
+         VALUES (:destId, :conceptId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
+          :seoData, :seoScore, :seoMetaTitle, :seoMetaDesc, :seoSlug,
+          :socialMeta, :mediaIds, :keywords,
+          :platform, 'draft', :aiModel, true, :poiId,
+          'poi', :poiId, NOW(), NOW())`,
         {
           replacements: {
             destId,
+            conceptId: conceptId,
             contentType: item.content_type,
             title: item.title,
             bodyEn: item.body_en || null,
@@ -12759,8 +12803,14 @@ router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['pla
             bodyDe: item.body_de || null,
             bodyEs: item.body_es || null,
             bodyFr: item.body_fr || null,
-            seoData: JSON.stringify({ meta_description: item.meta_description, hashtags: item.hashtags }),
+            seoData: JSON.stringify(seoData),
             seoScore: item.seo_score || null,
+            seoMetaTitle: seoMetaTitle,
+            seoMetaDesc: seoMetaDesc,
+            seoSlug: seoSlug,
+            socialMeta: socialMeta,
+            mediaIds: mediaIds,
+            keywords: item.keyword_cluster ? JSON.stringify(item.keyword_cluster) : null,
             platform: item.target_platform,
             aiModel: item.ai_model,
             poiId: poi_id,
@@ -12769,26 +12819,17 @@ router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['pla
       );
       const contentItemId = insertResult;
       savedIds.push(contentItemId);
-
-      // AUTO-ATTACH IMAGES: POI images first, then keyword match
-      try {
-        const { selectImages } = await import('../services/agents/contentRedacteur/imageSelector.js');
-        const contentObj = { title: item.title, body_en: item.body_en, poi_id: Number(poi_id), destination_id: destId, content_type: item.content_type, target_platform: item.target_platform };
-        const images = await selectImages(contentObj, destId);
-        if (images.length > 0) {
-          const mediaIds = images.slice(0, 3).map(img => img.source === 'poi' ? `poi:${img.id}` : img.id);
-          await mysqlSequelize.query(
-            'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
-            { replacements: { mediaIds: JSON.stringify(mediaIds), id: contentItemId } }
-          );
-          logger.info(`[POIGenerate] Auto-attached ${mediaIds.length} images to item ${contentItemId}`);
-        }
-      } catch (imgErr) {
-        logger.warn('[POIGenerate] Auto-attach images failed (non-blocking):', imgErr.message);
-      }
+      logger.info('[POIGenerate] Saved item ' + contentItemId + ' (' + item.target_platform + ') with SEO ' + (item.seo_score || 'N/A') + '/100, ' + (item.media_ids ? item.media_ids.length : 0) + ' images');
     }
 
-    res.json({ success: true, data: { generated: results.length, ids: savedIds, items: results } });
+    // Update concept status to draft (generation complete)
+    await mysqlSequelize.query("UPDATE content_concepts SET approval_status = 'draft', updated_at = NOW() WHERE id = :cid", { replacements: { cid: conceptId } });
+    logger.info('[POIGenerate] Async generation complete: concept=' + conceptId + ', items=' + savedIds.length);
+    } catch (bgErr) {
+      logger.error('[POIGenerate] Background generation failed:', bgErr.message);
+      await mysqlSequelize.query("UPDATE content_concepts SET approval_status = 'draft', updated_at = NOW() WHERE id = :cid", { replacements: { cid: conceptId } }).catch(() => {});
+    }
+    })();
   } catch (error) {
     logger.error('[AdminPortal] POI content generation error:', error);
     res.status(500).json({ success: false, error: { code: 'POI_GENERATE_ERROR', message: error.message } });
@@ -13393,7 +13434,7 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
 
     const [items] = await mysqlSequelize.query(
       `SELECT ci.id, ci.concept_id, ci.title, ci.content_type, ci.target_platform, ci.approval_status, ci.scheduled_at, ci.published_at, ci.publish_url, ci.created_at,
-              ci.seo_score, cc.pillar_id, cp.name AS pillar_name, cp.color AS pillar_color
+              ci.seo_score, ci.content_source_type, cc.pillar_id, cp.name AS pillar_name, cp.color AS pillar_color
        FROM content_items ci
        LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
        LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
@@ -14048,6 +14089,8 @@ router.get('/content/analytics/overview', adminAuth('editor'), async (req, res) 
     const ctrCur = curViews > 0 ? Math.round((curClicks / curViews) * 10000) / 100 : 0; // %, 2 decimalen
     const ctrPrev = prevViews > 0 ? Math.round((prevClicks / prevViews) * 10000) / 100 : 0;
     const ctrGrowth = ctrPrev === 0 ? (ctrCur > 0 ? 100 : 0) : Math.round(((ctrCur - ctrPrev) / ctrPrev) * 100);
+// By source type (Opdracht 17)
+    const bySource = await mysqlSequelize.query("SELECT COALESCE(ci.content_source_type, 'manual') as source_type, COUNT(DISTINCT ci.id) as item_count, SUM(COALESCE(cp.engagement, 0)) as total_engagement, SUM(COALESCE(cp.reach, 0)) as total_reach FROM content_items ci LEFT JOIN content_performance cp ON cp.content_item_id = ci.id WHERE ci.destination_id = ? AND ci.approval_status NOT IN ('deleted','rejected') GROUP BY source_type ORDER BY total_engagement DESC", { replacements: [dId], type: QueryTypes.SELECT });
 
     res.json({
       success: true,
@@ -14072,6 +14115,7 @@ router.get('/content/analytics/overview', adminAuth('editor'), async (req, res) 
         top_content: topContent || [],
         top_this_week: topThisWeek,
         score_correlation: scoreCorrelation,
+        by_source: bySource || [],
       },
     });
   } catch (error) {
@@ -14496,7 +14540,7 @@ router.get('/content/seasons', adminAuth('editor'), async (req, res) => {
   try {
     const destId = req.adminUser?.destination_id || req.query.destination_id || 1;
     const [seasons] = await mysqlSequelize.query(
-      `SELECT * FROM seasonal_config WHERE destination_id = :destId ORDER BY start_date ASC`,
+      `SELECT * FROM seasonal_config WHERE destination_id = :destId ORDER BY start_month ASC, start_day ASC`,
       { replacements: { destId: Number(destId) } }
     );
     res.json({ success: true, data: seasons || [] });
@@ -14519,11 +14563,11 @@ router.post('/content/seasons', adminAuth('editor'), async (req, res) => {
     }
 
     const [result] = await mysqlSequelize.query(
-      `INSERT INTO seasonal_config (destination_id, season_name, start_date, end_date, hero_image_path, featured_poi_ids, strategic_themes, cta_config, homepage_blocks, is_active, created_at, updated_at)
-       VALUES (:destId, :name, :start, :end, :hero, :pois, :themes, :cta, :blocks, 0, NOW(), NOW())`,
+      `INSERT INTO seasonal_config (destination_id, season_name, start_month, start_day, end_month, end_day, hero_image_path, featured_poi_ids, strategic_themes, cta_config, homepage_blocks, is_active, created_at, updated_at)
+       VALUES (:destId, :name, :startMonth, :startDay, :endMonth, :endDay, :hero, :pois, :themes, :cta, :blocks, 0, NOW(), NOW())`,
       {
         replacements: {
-          destId: Number(destId), name: season_name, start: start_date, end: end_date,
+          destId: Number(destId), name: season_name, startMonth: start_date ? new Date(start_date).getMonth()+1 : 1, startDay: start_date ? new Date(start_date).getDate() : 1, endMonth: end_date ? new Date(end_date).getMonth()+1 : 12, endDay: end_date ? new Date(end_date).getDate() : 28,
           hero: hero_image_path || null, pois: JSON.stringify(featured_poi_ids || []),
           themes: JSON.stringify(strategic_themes || []), cta: JSON.stringify(cta_config || {}),
           blocks: JSON.stringify(homepage_blocks || null),
@@ -15272,6 +15316,525 @@ router.post('/content/brand-check', adminAuth('editor'), async (req, res) => {
     logger.error('[AdminPortal] Brand check error:', error);
     res.status(500).json({ success: false, error: { code: 'BRAND_CHECK_ERROR', message: error.message } });
   }
+});
+
+
+// ============================================================
+// CONTENT VISUALS — TRENDING (Opdracht 2: Visual Trend Discovery)
+// ============================================================
+
+router.get('/content/visuals/trending', adminAuth('editor'), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'X-Destination-ID header required' } });
+
+    const { page, limit, visual_type, source_platform, status, min_score, relevance, sort, order } = req.query;
+    const result = await visualTrendDiscovery.listTrending(destId, { page, limit, visual_type, source_platform, status, min_score, relevance, sort, order });
+
+    // Also fetch stats
+    const stats = await visualTrendDiscovery.getDiscoveryStats(destId);
+
+    res.json({ success: true, data: { ...result, stats } });
+  } catch (error) {
+    logger.error('[AdminPortal] Trending visuals list error:', error);
+    res.status(500).json({ success: false, error: { code: 'TRENDING_LIST_ERROR', message: error.message } });
+  }
+});
+
+router.get('/content/visuals/trending/:id', adminAuth('editor'), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'X-Destination-ID header required' } });
+
+    const item = await visualTrendDiscovery.getTrendingById(parseInt(req.params.id), destId);
+    if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Trending visual not found' } });
+
+    res.json({ success: true, data: item });
+  } catch (error) {
+    logger.error('[AdminPortal] Trending visual detail error:', error);
+    res.status(500).json({ success: false, error: { code: 'TRENDING_DETAIL_ERROR', message: error.message } });
+  }
+});
+
+router.post('/content/visuals/trending/:id/dismiss', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'X-Destination-ID header required' } });
+
+    const dismissed = await visualTrendDiscovery.dismissTrending(parseInt(req.params.id), destId);
+    if (!dismissed) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Trending visual not found or already dismissed' } });
+
+    res.json({ success: true, message: 'Visual dismissed' });
+  } catch (error) {
+    logger.error('[AdminPortal] Trending visual dismiss error:', error);
+    res.status(500).json({ success: false, error: { code: 'TRENDING_DISMISS_ERROR', message: error.message } });
+  }
+});
+
+
+// ============================================================
+// CONTENT VISUALS — ANALYZE (Opdracht 3: Visual Analyzer Service)
+// ============================================================
+
+router.post('/content/visuals/analyze', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'X-Destination-ID header required' } });
+
+    const { url, thumbnail_url, title, description, visual_type, trending_id } = req.body;
+
+    // If trending_id provided, analyze that record directly
+    if (trending_id) {
+      const result = await visualAnalyzer.analyzeTrendingVisual(parseInt(trending_id), destId);
+      if (!result) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Trending visual not found' } });
+      return res.json({ success: true, data: result });
+    }
+
+    // Otherwise analyze a URL on-demand
+    if (!url) return res.status(400).json({ success: false, error: { code: 'MISSING_URL', message: 'url or trending_id is required' } });
+
+    const result = await visualAnalyzer.analyzeUrl(url, {
+      thumbnailUrl: thumbnail_url,
+      title,
+      description,
+      visualType: visual_type || 'image'
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Visual analyze error:', error);
+    res.status(500).json({ success: false, error: { code: 'VISUAL_ANALYZE_ERROR', message: error.message } });
+  }
+});
+
+
+// ============================================================
+// CONTENT VISUALS — SAVE TO MEDIA LIBRARY (Opdracht 4: Media Library Integratie)
+// ============================================================
+
+router.post('/content/visuals/trending/:id/save', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'X-Destination-ID header required' } });
+
+    const trendingId = parseInt(req.params.id);
+
+    // 1. Get the trending visual
+    const [visual] = await mysqlSequelize.query(
+      'SELECT * FROM trending_visuals WHERE id = :id AND destination_id = :destId',
+      { replacements: { id: trendingId, destId }, type: QueryTypes.SELECT }
+    );
+    if (!visual) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Trending visual not found' } });
+
+    if (visual.media_id) {
+      return res.json({ success: true, data: { media_id: visual.media_id, message: 'Already saved to Media Library' } });
+    }
+
+    // 2. Download the image/thumbnail
+    const imageUrl = visual.thumbnail_url || visual.source_url;
+    if (!imageUrl) return res.status(400).json({ success: false, error: { code: 'NO_IMAGE', message: 'No image URL available' } });
+
+    const imageResp = await fetch(imageUrl, { signal: AbortSignal.timeout(15000) });
+    if (!imageResp.ok) return res.status(502).json({ success: false, error: { code: 'DOWNLOAD_FAILED', message: 'Failed to download image: ' + imageResp.status } });
+
+    const contentType = imageResp.headers.get('content-type') || 'image/jpeg';
+    const arrayBuffer = await imageResp.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // 3. Save to disk
+    const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
+    const ext = contentType.includes('png') ? '.png' : contentType.includes('webp') ? '.webp' : '.jpg';
+    const filename = 'trending-' + trendingId + '-' + Date.now() + ext;
+    const dir = path.join(STORAGE_ROOT, 'media', String(destId));
+    fs.mkdirSync(dir, { recursive: true });
+    const filePath = path.join(dir, filename);
+    fs.writeFileSync(filePath, buffer);
+
+    // 4. Get image dimensions
+    let width = null, height = null;
+    try {
+      const { default: sharp } = await import('sharp');
+      const meta = await sharp(buffer).metadata();
+      width = meta.width;
+      height = meta.height;
+    } catch (e) { /* sharp not critical */ }
+
+    // 5. Quality tier
+    let qualityTier = 'medium';
+    if (width) {
+      if (width < 800) qualityTier = 'low';
+      else if (width < 2000) qualityTier = 'medium';
+      else if (width < 4000) qualityTier = 'high';
+      else qualityTier = 'ultra';
+    }
+
+    // 6. INSERT into media table
+    const [insertId] = await mysqlSequelize.query(
+      "INSERT INTO media (destination_id, filename, original_name, mime_type, size_bytes, width, height, category, media_type, quality_tier, trending_source_platform, trending_source_url, trending_engagement_score, trending_discovered_at, description, uploaded_by) VALUES (:destId, :filename, :origName, :mimeType, :sizeBytes, :width, :height, 'other', 'image', :qualityTier, :platform, :sourceUrl, :engagement, :discoveredAt, :desc, :uploadedBy)",
+      {
+        replacements: {
+          destId, filename, origName: 'trending-' + visual.source_platform + '-' + trendingId + ext,
+          mimeType: contentType, sizeBytes: buffer.length, width, height, qualityTier,
+          platform: visual.source_platform, sourceUrl: visual.source_url,
+          engagement: visual.engagement_score, discoveredAt: visual.discovered_at,
+          desc: visual.ai_description || visual.title || null,
+          uploadedBy: req.adminUser?.id || null
+        },
+        type: QueryTypes.INSERT
+      }
+    );
+
+    // 7. Update trending_visuals with media_id
+    await mysqlSequelize.query(
+      "UPDATE trending_visuals SET media_id = :mediaId, status = 'saved' WHERE id = :id",
+      { replacements: { mediaId: insertId, id: trendingId }, type: QueryTypes.UPDATE }
+    );
+
+    // 8. Trigger processing pipeline (thumbnails, pHash, AI tags)
+    try {
+      const { Queue } = await import('bullmq');
+      const Redis = (await import('ioredis')).default;
+      const conn = new Redis();
+      const q = new Queue('media-processing', { connection: conn });
+      await q.add('process-media', { mediaId: insertId, type: 'full_pipeline' }, { priority: 2 });
+      await q.close();
+      await conn.quit();
+    } catch (e) {
+      logger.warn('[AdminPortal] Media processing queue trigger failed:', e.message);
+    }
+
+    logger.info('[AdminPortal] Trending visual ' + trendingId + ' saved to media ' + insertId + ' for dest ' + destId);
+
+    res.json({ success: true, data: { media_id: insertId, filename, quality_tier: qualityTier, size_bytes: buffer.length, width, height } });
+  } catch (error) {
+    logger.error('[AdminPortal] Visual save to media error:', error);
+    res.status(500).json({ success: false, error: { code: 'VISUAL_SAVE_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// CONTENT SOURCES — POI INSPIRATION (Opdracht 5)
+// ============================================================
+
+router.get('/content/sources/pois', adminAuth('editor'), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'X-Destination-ID header required' } });
+
+    const { limit = 20, page = 1, min_rating = 0, min_reviews = 0, category, sort = 'google_rating', order = 'DESC' } = req.query;
+
+    const lim = Math.min(parseInt(limit) || 20, 100);
+    const offset = (parseInt(page) - 1) * lim;
+    const replacements = { destId, minRating: parseFloat(min_rating) || 0, minReviews: parseInt(min_reviews) || 0 };
+
+    let where = 'WHERE p.destination_id = :destId AND p.status = "active" AND p.google_rating >= :minRating AND p.google_review_count >= :minReviews';
+    if (category) { where += ' AND p.category = :category'; replacements.category = category; }
+
+    const allowedSorts = ['google_rating', 'google_review_count', 'name', 'tier', 'content_count'];
+    const sortCol = allowedSorts.includes(sort) ? sort : 'google_rating';
+    const sortOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    replacements.limit = lim;
+    replacements.offset = offset;
+
+    const [countResult] = await mysqlSequelize.query(
+      'SELECT COUNT(*) AS total FROM POI p ' + where,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const items = await mysqlSequelize.query(
+      'SELECT p.id, p.name, p.category, p.google_rating, p.google_review_count, p.tier, ' +
+      'SUBSTRING(p.enriched_tile_description_en, 1, 200) AS tile_description, ' +
+      '(SELECT COUNT(*) FROM imageurls iu WHERE iu.poi_id = p.id) AS image_count, ' +
+      '(SELECT COUNT(*) FROM content_items ci WHERE ci.poi_id = p.id AND ci.destination_id = :destId AND ci.approval_status NOT IN ("deleted","rejected")) AS content_count ' +
+      'FROM POI p ' + where + ' ORDER BY ' + (sortCol === 'content_count' ? 'content_count' : 'p.' + sortCol) + ' ' + sortOrder + ' LIMIT :limit OFFSET :offset',
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const data = items.map(function(item) {
+      return Object.assign({}, item, { has_content: (item.content_count || 0) > 0 });
+    });
+
+    res.json({ success: true, data: { items: data, total: countResult.total || 0, page: parseInt(page), limit: lim, pages: Math.ceil((countResult.total || 0) / lim) } });
+  } catch (error) {
+    logger.error('[AdminPortal] Content sources POIs error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONTENT_SOURCES_POI_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// CONTENT SOURCES — AGENDA INSPIRATION (Opdracht 5)
+// ============================================================
+
+router.get('/content/sources/events', adminAuth('editor'), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'X-Destination-ID header required' } });
+
+    const { limit = 20, page = 1, days = 30, sort = 'date', order = 'ASC' } = req.query;
+
+    const lim = Math.min(parseInt(limit) || 20, 100);
+    const offset = (parseInt(page) - 1) * lim;
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + parseInt(days) || 30);
+
+    const replacements = { destId, maxDate: maxDate.toISOString().split('T')[0] };
+
+    const where = 'WHERE a.destination_id = :destId AND a.date >= CURDATE() AND a.date <= :maxDate';
+
+    const allowedSorts = ['date', 'title', 'created_at', 'content_count'];
+    const sortCol = allowedSorts.includes(sort) ? sort : 'date';
+    const sortOrder = order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+
+    replacements.limit = lim;
+    replacements.offset = offset;
+
+    const [countResult] = await mysqlSequelize.query(
+      'SELECT COUNT(*) AS total FROM agenda a ' + where,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const items = await mysqlSequelize.query(
+      'SELECT a.id, a.title, a.title_en, a.date, a.time, a.location_name, ' +
+      'SUBSTRING(a.short_description, 1, 300) AS short_description, ' +
+      'SUBSTRING(a.short_description_en, 1, 300) AS short_description_en, ' +
+      'a.image, a.url, ' +
+      '(SELECT COUNT(*) FROM content_items ci WHERE ci.destination_id = :destId AND ci.approval_status NOT IN ("deleted","rejected") AND ((ci.content_source_type = "event" AND ci.content_source_id = a.id) OR ci.concept_id IN (SELECT cc.id FROM content_concepts cc JOIN content_suggestions cs ON cc.suggestion_id = cs.id WHERE cs.event_source_id = a.id))) AS content_count ' +
+      'FROM agenda a ' + where + ' ORDER BY ' + (sortCol === 'content_count' ? 'content_count' : 'a.' + sortCol) + ' ' + sortOrder + ' LIMIT :limit OFFSET :offset',
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const data = items.map(function(item) {
+      return Object.assign({}, item, { has_content: (item.content_count || 0) > 0 });
+    });
+
+    res.json({ success: true, data: { items: data, total: countResult.total || 0, page: parseInt(page), limit: lim, pages: Math.ceil((countResult.total || 0) / lim) } });
+  } catch (error) {
+    logger.error('[AdminPortal] Content sources events error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONTENT_SOURCES_EVENT_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// CONTENT SOURCES — HOLIBOT INSIGHTS (Opdracht 6)
+// ============================================================
+
+router.get('/content/sources/holibot-insights', adminAuth('editor'), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'X-Destination-ID header required' } });
+
+    const { week, year, insight_type, limit, date_from, date_to } = req.query;
+    const holibotInsightsService = (await import('../services/visual/holibotInsightsService.js')).default;
+    const result = await holibotInsightsService.listInsights(destId, { week, year, insight_type, limit, date_from, date_to });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] HoliBot insights error:', error);
+    res.status(500).json({ success: false, error: { code: 'HOLIBOT_INSIGHTS_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// CONTENT SOURCES — SEARCH QUERIES / GSC (Opdracht 6)
+// ============================================================
+
+router.get('/content/sources/search-queries', adminAuth('editor'), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'X-Destination-ID header required' } });
+
+    const { limit, min_impressions, sort, order } = req.query;
+    const gscSyncService = (await import('../services/visual/gscSyncService.js')).default;
+    const result = await gscSyncService.listSearchQueries(destId, { limit, min_impressions, sort, order });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Search queries error:', error);
+    res.status(500).json({ success: false, error: { code: 'SEARCH_QUERIES_ERROR', message: error.message } });
+  }
+});
+// ============================================================
+// CONTENT VISUALS — GENERATE FROM TRENDING (Opdracht 13)
+// ============================================================
+
+router.post('/content/visuals/trending/:id/generate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'X-Destination-ID header required' } });
+
+    const trendingId = parseInt(req.params.id);
+    const { platforms = ['facebook', 'instagram'] } = req.body;
+
+    // Get the trending visual
+    const [visual] = await mysqlSequelize.query(
+      'SELECT * FROM trending_visuals WHERE id = :id AND destination_id = :destId',
+      { replacements: { id: trendingId, destId }, type: QueryTypes.SELECT }
+    );
+    if (!visual) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Trending visual not found' } });
+
+    // Build context from AI analysis
+    const context = [
+      visual.ai_description || visual.title || 'Visual content',
+      visual.ai_mood ? 'Mood: ' + visual.ai_mood : '',
+      visual.ai_themes ? 'Themes: ' + visual.ai_themes : '',
+      visual.ai_setting ? 'Setting: ' + visual.ai_setting : '',
+      'Source: ' + visual.source_platform
+    ].filter(Boolean).join('. ');
+
+    // Create suggestion with visual context
+    const [sugId] = await mysqlSequelize.query(
+      `INSERT INTO content_suggestions (destination_id, title, summary, content_type, keyword_cluster, engagement_score, visual_source_id, status, created_at, updated_at)
+       VALUES (:destId, :title, :summary, 'social_post', :keywords, :score, :visualId, 'pending', NOW(), NOW())`,
+      { replacements: {
+        destId, title: visual.title || 'Visual ' + trendingId,
+        summary: context,
+        keywords: JSON.stringify([visual.title, visual.ai_mood].filter(Boolean)),
+        score: visual.trend_score || 5,
+        visualId: trendingId
+      }, type: QueryTypes.INSERT }
+    );
+
+    // Create concept
+    const [conceptId] = await mysqlSequelize.query(
+      `INSERT INTO content_concepts (destination_id, suggestion_id, title, content_type, approval_status, ai_generated, created_at, updated_at)
+       VALUES (:destId, :sugId, :title, 'social_post', 'generating', true, NOW(), NOW())`,
+      { replacements: { destId, sugId, title: visual.title || 'Visual ' + trendingId }, type: QueryTypes.INSERT }
+    );
+
+    // Queue generation (async via BullMQ)
+    try {
+      const { Queue } = await import('bullmq');
+      const Redis = (await import('ioredis')).default;
+      const conn = new Redis();
+      const q = new Queue('content-generation', { connection: conn });
+      await q.add('generate-concept', {
+        conceptId, suggestionId: sugId, destinationId: destId,
+        contentType: 'social_post', platforms
+      }, { priority: 2, attempts: 2, backoff: { type: 'exponential', delay: 30000 } });
+      await q.close();
+      await conn.quit();
+    } catch (qErr) {
+      logger.warn('[AdminPortal] Content generation queue error:', qErr.message);
+    }
+
+    // Update trending visual status
+    await mysqlSequelize.query(
+      "UPDATE trending_visuals SET status = 'used' WHERE id = :id",
+      { replacements: { id: trendingId }, type: QueryTypes.UPDATE }
+    );
+
+    res.status(202).json({ success: true, data: { concept_id: conceptId, suggestion_id: sugId, status: 'generating' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Visual generate error:', error);
+    res.status(500).json({ success: false, error: { code: 'VISUAL_GENERATE_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// CONTENT VISUALS — MANUAL UPLOAD (Opdracht 16)
+// ============================================================
+
+const visualUploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const destId = req.query.destination_id || req.headers['x-destination-id'] || '1';
+    const dir = path.join(process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage', 'media', String(destId));
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, 'visual-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8) + ext);
+  }
+});
+const visualUpload = multer({ storage: visualUploadStorage, limits: { fileSize: 50 * 1024 * 1024 }, fileFilter: (req, file, cb) => {
+  const allowed = /^(image|video)\//;
+  cb(null, allowed.test(file.mimetype));
+}});
+
+router.post('/content/visuals/upload', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), (req, res) => {
+  visualUpload.single('file')(req, res, async (uploadErr) => {
+    if (uploadErr) return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message: uploadErr.message } });
+    if (!req.file) return res.status(400).json({ success: false, error: { code: 'NO_FILE', message: 'No file uploaded' } });
+
+    try {
+      const destination = req.query.destination_id || req.headers['x-destination-id'];
+      const destId = resolveDestinationId(destination);
+      if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destination_id required' } });
+
+      const file = req.file;
+      const isVideo = file.mimetype.startsWith('video/');
+      const title = req.body.title || file.originalname.replace(/\.[^.]+$/, '');
+
+      // Get dimensions for images
+      let width = null, height = null;
+      if (!isVideo) {
+        try {
+          const { default: sharp } = await import('sharp');
+          const meta = await sharp(file.path).metadata();
+          width = meta.width;
+          height = meta.height;
+        } catch (e) { /* non-critical */ }
+      }
+
+      // Quality tier
+      let qualityTier = 'medium';
+      if (width) {
+        if (width < 800) qualityTier = 'low';
+        else if (width < 2000) qualityTier = 'medium';
+        else if (width < 4000) qualityTier = 'high';
+        else qualityTier = 'ultra';
+      }
+
+      // 1. Save to media table
+      const [mediaId] = await mysqlSequelize.query(
+        `INSERT INTO media (destination_id, filename, original_name, mime_type, size_bytes, width, height, category, media_type, quality_tier, trending_source_platform, uploaded_by)
+         VALUES (:destId, :filename, :origName, :mimeType, :sizeBytes, :width, :height, 'other', :mediaType, :qualityTier, 'manual', :uploadedBy)`,
+        { replacements: {
+          destId, filename: file.filename, origName: file.originalname,
+          mimeType: file.mimetype, sizeBytes: file.size, width, height,
+          mediaType: isVideo ? 'video' : 'image', qualityTier,
+          uploadedBy: req.adminUser?.id || null
+        }, type: QueryTypes.INSERT }
+      );
+
+      // 2. Create trending_visual entry
+      const localUrl = 'https://api.holidaibutler.com/media-files/' + destId + '/' + file.filename;
+      const [trendingId] = await mysqlSequelize.query(
+        `INSERT INTO trending_visuals (destination_id, visual_type, source_platform, source_url, thumbnail_url, media_id, title, status, relevance_category)
+         VALUES (:destId, :type, 'manual', :url, :url, :mediaId, :title, 'discovered', 'medium')`,
+        { replacements: {
+          destId, type: isVideo ? 'video' : 'image', url: localUrl, mediaId, title
+        }, type: QueryTypes.INSERT }
+      );
+
+      // 3. Trigger AI analysis in background
+      (async () => {
+        try {
+          const visualAnalyzer = (await import('../services/visual/visualAnalyzer.js')).default;
+          await visualAnalyzer.analyzeTrendingVisual(trendingId, destId);
+          logger.info('[VisualUpload] AI analysis complete for visual ' + trendingId);
+        } catch (e) {
+          logger.warn('[VisualUpload] AI analysis failed (non-blocking):', e.message);
+        }
+      })();
+
+      res.json({ success: true, data: { trending_id: trendingId, media_id: mediaId, filename: file.filename, title } });
+    } catch (error) {
+      logger.error('[AdminPortal] Visual upload error:', error);
+      res.status(500).json({ success: false, error: { code: 'VISUAL_UPLOAD_ERROR', message: error.message } });
+    }
+  });
 });
 
 export default router;
