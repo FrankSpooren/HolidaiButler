@@ -1122,6 +1122,135 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
           }
           break;
 
+
+        case "content-holibot-insights":
+          try {
+            const holibotInsightsService = (await import("../services/visual/holibotInsightsService.js")).default;
+            const insightDestIds = [1, 2]; // calpe, texel (active destinations with chatbot)
+            const insightResults = {};
+            for (const dId of insightDestIds) {
+              try {
+                insightResults[dId] = await holibotInsightsService.analyzeWeek(dId);
+              } catch (e) {
+                insightResults[dId] = { error: e.message };
+              }
+            }
+            const totalInsights = Object.values(insightResults).reduce(function(s, r) { return s + (r.insights || 0); }, 0);
+            console.log("[Orchestrator] HoliBot insights analysis: " + totalInsights + " insights extracted");
+            result = { type: "content-holibot-insights", results: insightResults };
+          } catch (error) {
+            console.error("[Orchestrator] HoliBot insights analysis failed:", error.message);
+            result = { type: "content-holibot-insights", status: "error", error: error.message };
+          }
+          break;
+
+        case "gsc-query-sync":
+          try {
+            const gscSyncService = (await import("../services/visual/gscSyncService.js")).default;
+            const gscDestIds = [1, 2]; // calpe, texel
+            const gscResults = {};
+            for (const dId of gscDestIds) {
+              try {
+                gscResults[dId] = await gscSyncService.syncQueries(dId);
+              } catch (e) {
+                gscResults[dId] = { error: e.message };
+              }
+            }
+            const totalSynced = Object.values(gscResults).reduce(function(s, r) { return s + (r.synced || 0); }, 0);
+            console.log("[Orchestrator] GSC query sync: " + totalSynced + " queries synced");
+            result = { type: "gsc-query-sync", results: gscResults };
+          } catch (error) {
+            console.error("[Orchestrator] GSC query sync failed:", error.message);
+            result = { type: "gsc-query-sync", status: "error", error: error.message };
+          }
+          break;
+
+
+        case "trending-visual-discovery":
+          try {
+            const vtd = (await import("../services/visual/visualTrendDiscovery.js")).default;
+            const discResults = {};
+            for (const dId of [1, 2, 10]) {
+              try { discResults[dId] = await vtd.discoverForDestination(dId); }
+              catch (e) { discResults[dId] = { error: e.message }; }
+            }
+            const totalDisc = Object.values(discResults).reduce(function(s, r) { return s + (r.discovered || 0); }, 0);
+            console.log("[Orchestrator] Visual discovery: " + totalDisc + " new visuals");
+            result = { type: "trending-visual-discovery", results: discResults };
+          } catch (error) {
+            console.error("[Orchestrator] Visual discovery failed:", error.message);
+            result = { type: "trending-visual-discovery", status: "error", error: error.message };
+          }
+          break;
+
+        case "trending-visual-analysis":
+          try {
+            const vta = (await import("../services/visual/visualAnalyzer.js")).default;
+            const anaResults = {};
+            for (const dId of [1, 2, 10]) {
+              try { anaResults[dId] = await vta.batchAnalyze(dId); }
+              catch (e) { anaResults[dId] = { error: e.message }; }
+            }
+            const totalAna = Object.values(anaResults).reduce(function(s, r) { return s + (r.analyzed || 0); }, 0);
+            console.log("[Orchestrator] Visual analysis: " + totalAna + " visuals analyzed");
+            result = { type: "trending-visual-analysis", results: anaResults };
+          } catch (error) {
+            console.error("[Orchestrator] Visual analysis failed:", error.message);
+            result = { type: "trending-visual-analysis", status: "error", error: error.message };
+          }
+          break;
+
+        case "trending-visual-cleanup":
+          try {
+            const { mysqlSequelize: cleanDb } = await import("../../config/database.js");
+            const { QueryTypes: CleanQT } = await import("sequelize");
+            const cleanCfg = (await import("../../config/visualDiscoveryConfig.js")).default;
+            const dismissedDays = cleanCfg.cleanup.dismissedRetentionDays || 30;
+            const maxAgeDays = cleanCfg.cleanup.discoveredMaxAgeDays || 90;
+            const [r1] = await cleanDb.query("DELETE FROM trending_visuals WHERE status = 'dismissed' AND discovered_at < DATE_SUB(NOW(), INTERVAL " + dismissedDays + " DAY)", { type: CleanQT.DELETE });
+            const [r2] = await cleanDb.query("DELETE FROM trending_visuals WHERE status = 'discovered' AND discovered_at < DATE_SUB(NOW(), INTERVAL " + maxAgeDays + " DAY)", { type: CleanQT.DELETE });
+            console.log("[Orchestrator] Visual cleanup: dismissed=" + r1 + " old_discovered=" + r2);
+            result = { type: "trending-visual-cleanup", dismissed_removed: r1, old_removed: r2 };
+          } catch (error) {
+            console.error("[Orchestrator] Visual cleanup failed:", error.message);
+            result = { type: "trending-visual-cleanup", status: "error", error: error.message };
+          }
+          break;
+
+        case "reddit-trend-discovery":
+          try {
+            const vtdReddit = (await import("../services/visual/visualTrendDiscovery.js")).default;
+            const redditResults = {};
+            for (const dId of [1, 2, 10]) {
+              try { redditResults[dId] = await vtdReddit.discoverForDestination(dId, ["reddit"]); }
+              catch (e) { redditResults[dId] = { error: e.message }; }
+            }
+            const totalReddit = Object.values(redditResults).reduce(function(s, r) { return s + (r.discovered || 0); }, 0);
+            console.log("[Orchestrator] Reddit discovery: " + totalReddit + " new visuals");
+            result = { type: "reddit-trend-discovery", results: redditResults };
+          } catch (error) {
+            console.error("[Orchestrator] Reddit discovery failed:", error.message);
+            result = { type: "reddit-trend-discovery", status: "error", error: error.message };
+          }
+          break;
+
+        case "google-images-discovery":
+          try {
+            const vtdGoogle = (await import("../services/visual/visualTrendDiscovery.js")).default;
+            const googleResults = {};
+            for (const dId of [1, 2, 10]) {
+              try { googleResults[dId] = await vtdGoogle.discoverForDestination(dId, ["google_images"]); }
+              catch (e) { googleResults[dId] = { error: e.message }; }
+            }
+            const totalGoogle = Object.values(googleResults).reduce(function(s, r) { return s + (r.discovered || 0); }, 0);
+            console.log("[Orchestrator] Google Images discovery: " + totalGoogle + " new visuals");
+            result = { type: "google-images-discovery", results: googleResults };
+          } catch (error) {
+            console.error("[Orchestrator] Google Images discovery failed:", error.message);
+            result = { type: "google-images-discovery", status: "error", error: error.message };
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -1166,7 +1295,14 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
         'content-score-calibration': 'seo-meester',
         'seasonal-check': 'orchestrator',
         'content-weekly-report': 'owner-interface',
-        'content-publish-retry': 'publisher'
+        'content-publish-retry': 'publisher',
+        'content-holibot-insights': 'holibot-sync',
+        'gsc-query-sync': 'trendspotter',
+        'trending-visual-discovery': 'trendspotter',
+        'trending-visual-analysis': 'trendspotter',
+        'trending-visual-cleanup': 'trendspotter',
+        'reddit-trend-discovery': 'trendspotter',
+        'google-images-discovery': 'trendspotter'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {
@@ -1282,6 +1418,33 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
       try { suggestion.keyword_cluster = JSON.parse(suggestion.keyword_cluster); } catch { /* */ }
     }
 
+    // If this suggestion is from an agenda event, fetch the event image
+    let eventImageUrl = null;
+    if (suggestion.event_source_id) {
+      try {
+        const [[evtRow]] = await mysqlSequelize.query("SELECT image FROM agenda WHERE id = ?", { replacements: [suggestion.event_source_id] });
+        if (evtRow && evtRow.image) eventImageUrl = evtRow.image;
+      } catch (e) { /* non-blocking */ }
+    }
+
+    // Determine content_source_type from suggestion data
+    let itemSourceType = 'manual';
+    let itemSourceId = null;
+    if (suggestion.event_source_id) {
+      itemSourceType = 'event';
+      itemSourceId = suggestion.event_source_id;
+    } else if (suggestion.poi_source_id || suggestion.poi_id) {
+      itemSourceType = 'poi';
+      itemSourceId = suggestion.poi_source_id || suggestion.poi_id;
+    } else if (suggestion.visual_source_id) {
+      itemSourceType = 'visual';
+      itemSourceId = suggestion.visual_source_id;
+    } else if (suggestion.source === 'holibot' || (suggestion.title && suggestion.summary && suggestion.summary.startsWith('Chatbot thema:'))) {
+      itemSourceType = 'holibot';
+    } else if (suggestion.source === 'recycle') {
+      itemSourceType = 'recycle';
+    }
+
     const generatedItems = [];
     for (const platform of platforms) {
       try {
@@ -1294,8 +1457,9 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
 
         const [itemResult] = await mysqlSequelize.query(
           `INSERT INTO content_items (concept_id, destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-           seo_data, seo_score, social_metadata, media_ids, target_platform, approval_status, ai_model, ai_generated, poi_id, pillar_id, keyword_cluster, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?, ?, NOW(), NOW())`,
+           seo_data, seo_score, social_metadata, media_ids, target_platform, approval_status, ai_model, ai_generated, poi_id, pillar_id, keyword_cluster,
+           content_source_type, content_source_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?, ?, ?, ?, NOW(), NOW())`,
           { replacements: [
             conceptId, Number(destinationId), suggestion.id, contentType,
             generated.title || suggestion.title,
@@ -1304,10 +1468,12 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
             generated.seo_data ? JSON.stringify(generated.seo_data) : null,
             generated.seo_score || null,
             generated.social_metadata ? JSON.stringify(generated.social_metadata) : null,
-            generated.media_ids ? JSON.stringify(generated.media_ids) : null,
+            eventImageUrl ? JSON.stringify([eventImageUrl]) : (generated.media_ids ? JSON.stringify(generated.media_ids) : null),
             platform, generated.ai_model || "mistral-medium-latest",
             suggestion.poi_id || null, pillarId || null,
             JSON.stringify(generated.keyword_cluster || suggestion.keyword_cluster || []),
+            itemSourceType,
+            itemSourceId,
           ]}
         );
         generatedItems.push({ id: itemResult, platform, title: generated.title });

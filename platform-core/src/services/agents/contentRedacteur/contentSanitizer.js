@@ -79,7 +79,7 @@ export function sanitizeContent(rawContent, contentType, targetPlatform) {
     // Strip AI artifacts
     clean = clean.replace(/^```html\s*\n?/i, '');  // strip opening ```html
     clean = clean.replace(/\n?```\s*$/g, '');       // strip closing ```
-    clean = clean.replace(/•/g, '');
+    clean = clean.replace(/[•◦▪▫▸▹⦁⬤·∙⋅⁃]/g, '-');  // all bullet variants
     clean = clean.replace(/\s*—\s*/g, ', ');
     clean = clean.replace(/\s*–\s*/g, ' - ');
     clean = clean.replace(/\n*\((?:Picture this|Image suggestion|Visual|Photo)[^)]{20,}\)\s*$/gi, '');
@@ -134,7 +134,7 @@ export function sanitizeContent(rawContent, contentType, targetPlatform) {
   clean = clean.replace(/\s*–\s*/g, ' - ');  // en-dash → hyphen
 
   // Strip AI artifacts: bullet dots, smart quotes, special Unicode
-  clean = clean.replace(/•/g, '');            // bullet character
+  clean = clean.replace(/[•◦▪▫▸▹⦁⬤·∙⋅⁃]/g, '-');  // all bullet/dot variants
   clean = clean.replace(/[""]/g, '"');         // smart double quotes → regular
   clean = clean.replace(/['']/g, "'");         // smart apostrophes → regular
 

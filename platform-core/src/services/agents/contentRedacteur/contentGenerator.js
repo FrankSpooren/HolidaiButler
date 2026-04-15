@@ -449,7 +449,7 @@ export async function generateContent(suggestion, options = {}) {
     try {
       const { selectImages } = await import('./imageSelector.js');
       const imageCandidates = await selectImages(
-        { title: metaTitle || title, body_en: trackedBody, poi_id: relevantPOIs[0]?.id || null, content_type: contentType },
+        { title: metaTitle || title, body_en: trackedBody, poi_id: suggestion.poi_id || relevantPOIs[0]?.id || null, content_type: contentType },
         destinationId
       );
       if (imageCandidates.length > 0) {
@@ -1190,38 +1190,23 @@ export async function generateFromPOI(poiId, destinationId, platforms = ['instag
 
   const results = [];
 
-  // Blog
-  const blogSuggestion = {
-    title: `${poi.name} — ${poi.category || 'Local Gem'}`,
-    summary: poiContext,
-    keyword_cluster: [poi.name, poi.category, 'travel', 'tourism'].filter(Boolean),
-    content_type: 'blog',
-    poi_id: poiId,
-  };
-  const blog = await generateContent(blogSuggestion, {
-    destinationId: destinationId || poi.destination_id,
-    contentType: 'blog',
-    platform: 'website',
-  });
-  blog.poi_id = poiId;
-  results.push(blog);
-
-  // Social posts per platform
+  // Generate ONLY for user-selected platforms (website = blog, others = social_post)
   for (const platform of platforms) {
-    const socialSuggestion = {
-      title: poi.name,
+    const isBlog = platform === 'website';
+    const suggestion = {
+      title: isBlog ? `${poi.name} — ${poi.category || 'Local Gem'}` : poi.name,
       summary: poiContext,
-      keyword_cluster: [poi.name, poi.category].filter(Boolean),
-      content_type: 'social_post',
+      keyword_cluster: isBlog ? [poi.name, poi.category, 'travel', 'tourism'].filter(Boolean) : [poi.name, poi.category].filter(Boolean),
+      content_type: isBlog ? 'blog' : 'social_post',
       poi_id: poiId,
     };
-    const post = await generateContent(socialSuggestion, {
+    const item = await generateContent(suggestion, {
       destinationId: destinationId || poi.destination_id,
-      contentType: 'social_post',
+      contentType: isBlog ? 'blog' : 'social_post',
       platform,
     });
-    post.poi_id = poiId;
-    results.push(post);
+    item.poi_id = poiId;
+    results.push(item);
   }
 
   return results;

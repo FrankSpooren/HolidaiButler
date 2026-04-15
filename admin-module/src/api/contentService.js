@@ -366,6 +366,65 @@ const contentService = {
   activateSeason(id) {
     return client.post(`/content/seasons/${id}/activate`).then(r => r.data);
   },
+
+  // === Visual Trends (Content Bronnen) ===
+
+  getVisualTrending(destinationId, params = {}) {
+    params.destination_id = destinationId; return client.get("/content/visuals/trending", { params }).then(r => r.data);
+  },
+
+  getVisualTrendingDetail(id, destinationId) {
+    return client.get("/content/visuals/trending/" + id, { params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  dismissVisualTrending(id, destinationId) {
+    return client.post("/content/visuals/trending/" + id + "/dismiss", {}, { params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  saveVisualToMedia(id, destinationId) {
+    return client.post("/content/visuals/trending/" + id + "/save", {}, { params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  uploadVisual(file, destinationId, title) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (title) formData.append('title', title);
+    return client.post('/content/visuals/upload', formData, {
+      params: { destination_id: destinationId },
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000
+    }).then(r => r.data);
+  },
+
+  generateFromVisual(trendingId, destinationId, platforms) {
+    return client.post('/content/visuals/trending/' + trendingId + '/generate', { platforms }, { params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  analyzeVisual(data, destinationId) {
+    return client.post("/content/visuals/analyze", data, { timeout: 60000, params: { destination_id: destinationId } }).then(r => r.data);
+  },
+
+  // === Content Sources (POI + Events + HoliBot + GSC) ===
+
+  getContentSourcePois(destinationId, params = {}) {
+    params.destination_id = destinationId;
+    return client.get('/content/sources/pois', { params }).then(r => r.data);
+  },
+
+  getContentSourceEvents(destinationId, params = {}) {
+    params.destination_id = destinationId;
+    return client.get('/content/sources/events', { params }).then(r => r.data);
+  },
+
+  getHolibotInsights(destinationId, params = {}) {
+    params.destination_id = destinationId;
+    return client.get('/content/sources/holibot-insights', { params }).then(r => r.data);
+  },
+
+  getSearchQueries(destinationId, params = {}) {
+    params.destination_id = destinationId;
+    return client.get('/content/sources/search-queries', { params }).then(r => r.data);
+  },
 };
 
 export default contentService;

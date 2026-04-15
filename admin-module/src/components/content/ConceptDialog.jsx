@@ -311,7 +311,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   const activePlatform = activeItem?.target_platform || 'website';
   const platformConfig = PLATFORM_CONFIG[activePlatform] || PLATFORM_CONFIG.website;
   const selectedPersonaObj = personas.find(p => p.id === selectedPersona) || null;
-  const isBlog = concept?.content_type === 'blog';
+  const isBlog = concept?.content_type === 'blog' || activeItem?.content_type === 'blog' || activeItem?.target_platform === 'website';
 
   // Opdracht 5: Add Platform handler — repurposes activeItem into another platform
   const handleAddPlatform = async (platformKey) => {

@@ -668,7 +668,7 @@ function DraggableCalendarItem({ item }) {
       >
         <PlatformIcon sx={{ fontSize: 12, color: pillarColor }} />
         <Typography variant="caption" noWrap sx={{ fontSize: 10, flex: 1, fontWeight: 500 }}>
-          {item.title || item.content_type}
+          {item.content_source_type === "poi" ? "📍" : item.content_source_type === "event" ? "📅" : item.content_source_type === "visual" ? "📷" : item.content_source_type === "holibot" ? "💬" : ""}{" "}{item.title || item.content_type}
         </Typography>
       </Box>
     </Tooltip>
