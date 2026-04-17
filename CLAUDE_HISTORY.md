@@ -7196,3 +7196,50 @@ Alle 5 met `@media (prefers-reduced-motion: reduce)` fallback:
 ---
 
 *Dit archief bevat alle historische details. Voor actuele project context, zie CLAUDE.md.*
+
+---
+
+## PubliQio Content Bronnen — v4.51.0 (15 april 2026)
+
+**Command**: PubliQio_Content_Bronnen_Command_v1.md (19 opdrachten, 4 fasen)
+
+### Fase 1: Database & Backend Foundation (Opdracht 1-6)
+- **2 nieuwe tabellen**: `trending_visuals` (24 kolommen, 4 indexes, 2 FKs), `holibot_insights` (10 kolommen, UNIQUE KEY)
+- **ALTER TABLE**: `media` (+4 trending kolommen), `content_items` (+content_source_type/id), `content_suggestions` (+visual/poi/event_source_id), `trending_data` (+gsc source ENUM)
+- **5 backend services**: `visualTrendDiscovery.js` (7 platforms: YouTube, Instagram, Facebook, Pexels, Pinterest, Reddit, Google Images), `visualAnalyzer.js` (Mistral Medium Vision drielaags), `videoFrameExtractor.js` (ffmpeg), `holibotInsightsService.js` (AI clustering), `gscSyncService.js` (Google Search Console)
+- **Config**: `visualDiscoveryConfig.js` (per-destination: Calpe, Texel, BUTE)
+- **GSC integratie**: Service account `holidaibutler-gsc@holibot-review-intelligence.iam.gserviceaccount.com`, domain property `sc-domain:calpetrip.com`
+
+### Fase 2: Content Bronnen UI (Opdracht 7-12)
+- Tab "Trending Monitor" → **"Content Bronnen"** + 6 sub-tabs (i18n 5 talen)
+- **VisualTrendsTab**: Grid/list, 7 platform filters, bulk acties, AI analyse, detail dialog, upload, content generatie
+- **POIInspirationTab**: 1.593 POIs, sorteerbare headers, async generatie (202), content chips met polling, has_content filter
+- **AgendaInspirationTab**: 277+ events, horizon filter, event images, suggestion→concept flow
+- **HolibotInsightsTab**: AI-geclusterde thema's, type chips, datumfilter, vermeldingen balk
+- **SearchIntentTab**: GSC zoektermen, impressies, CTR
+- **5 BullMQ discovery jobs**: trending-visual-discovery (daily), trending-visual-analysis (daily), trending-visual-cleanup (weekly), reddit-trend-discovery (ma/wo/vr), google-images-discovery (weekly)
+
+### Fase 3: Content Generatie & Ideeën (Opdracht 13-16)
+- **Visual generate endpoint**: `POST /content/visuals/trending/:id/generate` (async 202 + BullMQ)
+- **`content_source_type` propagation**: BullMQ worker detecteert bron uit suggestion (event/poi/visual/holibot/recycle)
+- **"Suggesties" → "Content Ideeën"** (5 talen) + Bron kolom met source chips
+- **Content Items Bron kolom** + filter dropdown (7 brontypes)
+- **Manual upload**: `POST /content/visuals/upload` (multipart → media + trending_visual + AI analyse)
+- **generate-from-poi**: Async 202 + concept aanmaak + correcte POI images + SEO metadata + social_metadata + UTM
+
+### Fase 4: Analyse, Polish & Documentatie (Opdracht 17-19)
+- **"Content per Bron" analytics kaart**: Horizontale barren per brontype met item count + engagement
+- **Kalender bron-iconen**: 📍📅📷💬 emoji per content_source_type
+- **Type chips gekleurd**: Blog (blauw), Social Post (groen), Video Script (oranje)
+- **Kanalen chips**: Platform brand colors (FB blauw, IG roze, LinkedIn donkerblauw)
+- **Media button verwijderd** (rechtsboven Content Studio)
+
+### Extra fixes
+- **Chatbot Apache routing**: Mobiel `/api/v1/holibot/chat` ging naar Next.js (404) i.p.v. backend → extra `RewriteCond !^/api/v1/` toegevoegd
+- **Bullet-symbool sanitizer**: 12 Unicode varianten (•◦▪▫ etc.) → koppelteken
+- **Seasonal config schema fix**: `start_date`/`end_date` → `start_month`/`start_day`/`end_month`/`end_day`
+- **ConceptDialog isBlog**: Checkt nu ook `activeItem.content_type === 'blog'` (niet alleen concept type)
+- **selectImages POI fix**: `suggestion.poi_id` prioriteit boven keyword-matched POIs
+
+### Tellingen
+**Endpoints**: 279. **BullMQ jobs**: 72. **CLAUDE.md**: v4.51.0. **38 bestanden**, +4.816 regels.
