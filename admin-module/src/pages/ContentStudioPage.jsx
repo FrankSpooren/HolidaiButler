@@ -982,7 +982,8 @@ function ManualContentDialog({ open, onClose, destinationId, onCreated }) {
   const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [contentType, setContentType] = useState('blog');
-  const [platform, setPlatform] = useState('website');
+  const [platforms, setPlatforms] = useState(['facebook', 'instagram']);
+  const toggleManualPlatform = (p) => setPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -993,7 +994,7 @@ function ManualContentDialog({ open, onClose, destinationId, onCreated }) {
       await contentService.generateItem({
         destination_id: destinationId,
         content_type: contentType,
-        platform,
+        platforms,
         title: title.trim(),
         body_en: body,
         manual: true,
@@ -1025,14 +1026,18 @@ function ManualContentDialog({ open, onClose, destinationId, onCreated }) {
             <MenuItem value="video_script">Video Script</MenuItem>
           </Select>
         </FormControl>
-        <FormControl fullWidth>
-          <InputLabel>{t('contentStudio.form.platform', 'Platform')}</InputLabel>
-          <Select value={platform} onChange={e => setPlatform(e.target.value)} label={t('contentStudio.form.platform', 'Platform')}>
+        <Box>
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Platforms</Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
             {Object.entries(PLATFORM_LABELS).map(([val, lbl]) => (
-              <MenuItem key={val} value={val}>{lbl}</MenuItem>
+              <Chip key={val} label={lbl} clickable size="small"
+                color={platforms.includes(val) ? 'primary' : 'default'}
+                variant={platforms.includes(val) ? 'filled' : 'outlined'}
+                onClick={() => toggleManualPlatform(val)}
+                sx={{ fontWeight: platforms.includes(val) ? 600 : 400 }} />
             ))}
-          </Select>
-        </FormControl>
+          </Box>
+        </Box>
         <TextField
           label={t('contentStudio.form.bodyLabel', 'Inhoud (optioneel — kan later worden ingevuld)')}
           multiline
@@ -1045,7 +1050,7 @@ function ManualContentDialog({ open, onClose, destinationId, onCreated }) {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>{t('contentStudio.actions.cancel', 'Annuleren')}</Button>
-        <Button onClick={handleCreate} variant="contained" disabled={!title.trim() || saving} startIcon={saving ? <CircularProgress size={16} /> : <NoteAddIcon />}>
+        <Button onClick={handleCreate} variant="contained" disabled={!title.trim() || platforms.length === 0 || saving} startIcon={saving ? <CircularProgress size={16} /> : <NoteAddIcon />}>
           {saving ? t('contentStudio.actions.creating', 'Aanmaken...') : t('contentStudio.actions.create', 'Aanmaken')}
         </Button>
       </DialogActions>
