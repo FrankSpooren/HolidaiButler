@@ -3,6 +3,33 @@
 > **Versie**: 4.51.0
 > **Laatst bijgewerkt**: 15 april 2026
 > **Eigenaar**: Frank Spooren
+
+
+## GIT VEILIGHEIDSPROTOCOL (VERPLICHT)
+
+> **Incident 15 april 2026**: 22 bestanden (Media Library v2.0/v2.1) teruggedraaid door onzorgvuldige git rebase. Uren verloren aan debugging.
+
+### VÓÓR elke git operatie (stash, checkout, pull, rebase, merge, clean):
+1. On branch dev
+Your branch is up to date with 'origin/dev'.
+
+nothing to commit, working tree clean — check modified/untracked bestanden
+2.  — tel gewijzigde regels
+3. Als uncommitted changes: **EERST committen** als 
+4. **NOOIT** No local changes to save, ,  als shortcut
+
+### NA elke git operatie:
+1.  — verifieer dat ALLEEN verwachte bestanden zijn gewijzigd
+2. On branch dev
+Your branch is up to date with 'origin/dev'.
+
+nothing to commit, working tree clean — working tree moet clean zijn OF expliciet verklaarbaar
+
+### NOOIT:
+-  als globale vervanging (kan 30+ plekken raken) — gebruik Python met exacte string matching
+-  of  op hele directories
+- Dropped refs/stash@{0} (bf14e5a97757752061cc844f078d7ef08ad48f5d) zonder verificatie van inhoud
+
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
 ---
