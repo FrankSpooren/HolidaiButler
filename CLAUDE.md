@@ -5,34 +5,106 @@
 > **Eigenaar**: Frank Spooren
 
 
-## GIT VEILIGHEIDSPROTOCOL (VERPLICHT)
+## GIT VEILIGHEIDSPROTOCOL + SYNC PROCES (VERPLICHT)
 
-> **Incident 15 april 2026**: 22 bestanden (Media Library v2.0/v2.1) teruggedraaid door onzorgvuldige git rebase. Uren verloren aan debugging.
+> **Incident 15 april 2026**: 22 bestanden teruggedraaid door onzorgvuldige rebase. Protocol is BINDEND.
 
-### VÓÓR elke git operatie (stash, checkout, pull, rebase, merge, clean):
-1. On branch dev
-Your branch is up to date with 'origin/dev'.
+### Architectuur: Server-First met Bidirectionele Sync
 
-nothing to commit, working tree clean — check modified/untracked bestanden
-2.  — tel gewijzigde regels
-3. Als uncommitted changes: **EERST committen** als 
-4. **NOOIT** No local changes to save, ,  als shortcut
+```
+Server (Hetzner)  ──push──>  GitHub (dev/test/main)  <──pull──  Lokaal (Windows)
+      ^                                                              |
+      |                   (incidenteel)                              |
+      +─────────────────── pull <── push ────────────────────────────+
+```
 
-### NA elke git operatie:
-1.  — verifieer dat ALLEEN verwachte bestanden zijn gewijzigd
-2. On branch dev
-Your branch is up to date with 'origin/dev'.
+**Primaire flow** (95% van het werk):
+- Code wijzigen op SERVER → commit → push naar GitHub → lokaal pull
 
-nothing to commit, working tree clean — working tree moet clean zijn OF expliciet verklaarbaar
+**Incidentele flow** (lokale wijziging):
+- Wijzig lokaal → commit → push naar GitHub → server pull
 
-### NOOIT:
--  als globale vervanging (kan 30+ plekken raken) — gebruik Python met exacte string matching
--  of  op hele directories
-- Dropped refs/stash@{0} (bf14e5a97757752061cc844f078d7ef08ad48f5d) zonder verificatie van inhoud
+### A. Server-First Sync (standaard na elke fase/opdracht)
 
-> **Project**: HolidaiButler - AI-Powered Tourism Platform
+```bash
+# 1. Op SERVER: verifieer staat
+git status --short
+git diff HEAD --stat
 
----
+# 2. Stage + commit (NOOIT git add -A)
+git add [specifieke bestanden]
+git commit -m "beschrijving"
+
+# 3. Push naar alle branches
+git push origin dev
+git checkout test && git merge dev --no-edit && git push origin test
+git checkout main && git merge test --no-edit && git push origin main
+git checkout dev
+
+# 4. Post-push verificatie op server
+git status --short  # moet leeg zijn
+git diff HEAD --stat  # moet leeg zijn
+
+# 5. Op LOKAAL: sync
+git pull origin dev
+
+# 6. Post-pull verificatie lokaal
+git log --oneline -1  # moet zelfde commit als server tonen
+```
+
+### B. Lokale Wijziging Sync (incidenteel)
+
+```bash
+# 1. Op LOKAAL: verifieer staat
+git status --short
+git diff HEAD --stat
+
+# 2. Stage + commit
+git add [specifieke bestanden]
+git commit -m "beschrijving"
+
+# 3. Push naar GitHub
+git push origin dev
+
+# 4. Op SERVER: sync
+ssh root@91.98.71.87 "cd /var/www/api.holidaibutler.com && git pull origin dev"
+
+# 5. Verificatie: server en lokaal op zelfde commit
+ssh root@91.98.71.87 "cd /var/www/api.holidaibutler.com && git log --oneline -1"
+git log --oneline -1  # moet identiek zijn
+
+# 6. Server: PM2 restart als backend bestanden zijn gewijzigd
+ssh root@91.98.71.87 "pm2 restart holidaibutler-api --update-env"
+
+# 7. Server: admin rebuild als frontend bestanden zijn gewijzigd
+# (volg standaard build+deploy procedure)
+```
+
+### C. Conflict-preventie regels
+
+1. **NOOIT** gelijktijdig op server EN lokaal dezelfde bestanden wijzigen
+2. **ALTIJD** pull voordat je begint met wijzigen (zowel server als lokaal)
+3. **NOOIT** `git stash`, `git checkout -- .`, `git clean -fd` als shortcut
+4. **NOOIT** `sed -i 's/old/new/'` als globale vervanging — gebruik Python met exacte string matching
+5. Bij merge conflicten: **per bestand** oplossen, NOOIT `--theirs` of `--ours` op directories
+6. Na elke git operatie: `git diff [pre-commit] --name-only` verifiëren
+
+### D. Documentatie-sync checklist (na elke command/fase)
+
+Na afronding van een command of fase, ALTIJD deze 3 docs updaten:
+1. **CLAUDE.md**: versie ophogen, changelog entry, endpoint/job counts, roadmap entry
+2. **CLAUDE_HISTORY.md**: gedetailleerde fase-resultaten
+3. **Master Strategie**: versie + datum + changelog entry
+
+Verifieer na commit+push:
+```bash
+grep 'Versie.*[0-9]' CLAUDE.md | head -1
+grep 'Admin endpoints' CLAUDE.md
+grep 'BullMQ' CLAUDE.md
+grep '[COMMAND NAAM]' CLAUDE_HISTORY.md | head -1
+grep 'Versie.*[0-9]' docs/strategy/HolidaiButler_Master_Strategie.md | head -1
+```
+
 
 ## 🎯 Project Mission
 
