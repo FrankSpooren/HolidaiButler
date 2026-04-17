@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.44.2
-> **Laatst bijgewerkt**: 12 april 2026
+> **Versie**: 4.51.0
+> **Laatst bijgewerkt**: 15 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
