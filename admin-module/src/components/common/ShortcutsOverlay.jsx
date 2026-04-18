@@ -75,7 +75,6 @@ export default function ShortcutsOverlay() {
   useEffect(() => {
     const handleKey = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-      if (document.querySelector('.MuiDialog-root')) return;
       if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setOpen(true);
