@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 15 april 2026
-**Versie**: 8.12
+**Datum**: 18 april 2026
+**Versie**: 8.13
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1629,6 +1629,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| 8.13 | 2026-04-18 | PubliQio Content Studio Polish v4.52.0: 12 opdrachten, Content Top 25 overzicht, 5 UX bugfixes, kalender dag/week, i18n 5 talen, health-check job. 282 endpoints, 74 jobs. |
 | 8.12 | 2026-04-15 | PubliQio Content Bronnen v4.51.0: 19 opdrachten, 6 sub-tabs, 7 BullMQ jobs, visual discovery pipeline, GSC integratie. 279 endpoints, 72 jobs. |
 | **8.04** | **09-04-2026** | **PubliQio Landing Page Polish & Branding (v4.43.0)**. PubliQioText component (9 locaties), 7e USP, ConceptMockup herbouwd, mobiele progressive disclosure, taalswitch vlaggen, login+demo dark theme, PrivacyPage GDPR, admin sidebar branding, per-user voorkeurstaal (preferred_language + PATCH endpoint). 252 endpoints. adminPortal.js v3.44.0. CLAUDE.md v4.43.0. |
 | **7.94** | **03-04-2026** | **Content Studio Multi-Source Image Integratie**. Pexels API client (pexelsClient.js: searchPexels, landscape, genormaliseerde objects). Flickr API client (flickrClient.js: searchFlickr, commercial-use license filter CC BY/CC BY-SA/CC0/PDM). imageSelector.js cascading fallback: tier 4a Unsplash (0.3) → 4b Pexels (0.25) → 4c Flickr (0.2). 2 admin endpoints: POST /content/images/pexels + /content/images/flickr. contentService.js searchPexels() + searchFlickr(). Env vars PEXELS_API_KEY + FLICKR_API_KEY + FLICKR_API_SECRET. Verified: Pexels 200 OK, Flickr 200 OK (CC-licensed). 248 endpoints. CLAUDE.md v4.34.0. |

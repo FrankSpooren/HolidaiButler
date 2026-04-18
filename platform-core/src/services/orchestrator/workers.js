@@ -1251,6 +1251,46 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
           }
           break;
 
+
+        case "content-top25-refresh":
+          try {
+            const top25Svc = (await import("../services/visual/contentTop25Service.js")).default;
+            const refreshResults = {};
+            for (const dId of [1, 2, 10]) {
+              try {
+                top25Svc.clearCache(dId);
+                refreshResults[dId] = await top25Svc.getTop25(dId, { refresh: true });
+                console.log("[Orchestrator] Top 25 refreshed for dest " + dId + ": " + refreshResults[dId].total_count + " items");
+              } catch (e) { refreshResults[dId] = { error: e.message }; }
+            }
+            result = { type: "content-top25-refresh", results: refreshResults };
+          } catch (error) {
+            console.error("[Orchestrator] Top 25 refresh failed:", error.message);
+            result = { type: "content-top25-refresh", status: "error", error: error.message };
+          }
+          break;
+
+        case "content-sources-health-check":
+          try {
+            const { mysqlSequelize: hcDb } = await import("../../config/database.js");
+            const { QueryTypes: HcQT } = await import("sequelize");
+            const report = [];
+            for (const dId of [1, 2]) {
+              const [kwCount] = await hcDb.query("SELECT COUNT(*) as c FROM trending_data WHERE destination_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)", { replacements: [dId], type: HcQT.SELECT });
+              const [visCount] = await hcDb.query("SELECT COUNT(*) as c FROM trending_visuals WHERE destination_id = ? AND discovered_at > DATE_SUB(NOW(), INTERVAL 7 DAY)", { replacements: [dId], type: HcQT.SELECT });
+              const [insCount] = await hcDb.query("SELECT COUNT(*) as c FROM holibot_insights WHERE destination_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)", { replacements: [dId], type: HcQT.SELECT });
+              if ((kwCount.c || 0) < 5) report.push({ destination_id: dId, source: "keywords", status: "low", count: kwCount.c });
+              if ((visCount.c || 0) < 3) report.push({ destination_id: dId, source: "visuals", status: "low", count: visCount.c });
+              if ((insCount.c || 0) === 0) report.push({ destination_id: dId, source: "holibot", status: "empty", count: 0 });
+            }
+            console.log("[Orchestrator] Content sources health check: " + report.length + " issues");
+            result = { type: "content-sources-health-check", issues: report };
+          } catch (error) {
+            console.error("[Orchestrator] Health check failed:", error.message);
+            result = { type: "content-sources-health-check", status: "error", error: error.message };
+          }
+          break;
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
@@ -1302,7 +1342,9 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
         'trending-visual-analysis': 'trendspotter',
         'trending-visual-cleanup': 'trendspotter',
         'reddit-trend-discovery': 'trendspotter',
-        'google-images-discovery': 'trendspotter'
+        'google-images-discovery': 'trendspotter',
+        'content-top25-refresh': 'trendspotter',
+        'content-sources-health-check': 'trendspotter'
       };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
       await logAgent(actorName, "job_completed_" + job.name, {
@@ -1427,6 +1469,15 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
       } catch (e) { /* non-blocking */ }
     }
 
+    // If from a visual trend, use the visual's thumbnail as primary image
+    let visualImageUrl = null;
+    if (suggestion.visual_source_id) {
+      try {
+        const [[visRow]] = await mysqlSequelize.query("SELECT thumbnail_url FROM trending_visuals WHERE id = ?", { replacements: [suggestion.visual_source_id] });
+        if (visRow && visRow.thumbnail_url) visualImageUrl = visRow.thumbnail_url;
+      } catch (e) { /* non-blocking */ }
+    }
+
     // Determine content_source_type from suggestion data
     let itemSourceType = 'manual';
     let itemSourceId = null;
@@ -1468,7 +1519,7 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
             generated.seo_data ? JSON.stringify(generated.seo_data) : null,
             generated.seo_score || null,
             generated.social_metadata ? JSON.stringify(generated.social_metadata) : null,
-            eventImageUrl ? JSON.stringify([eventImageUrl]) : (generated.media_ids ? JSON.stringify(generated.media_ids) : null),
+            visualImageUrl ? JSON.stringify([visualImageUrl]) : (eventImageUrl ? JSON.stringify([eventImageUrl]) : (generated.media_ids ? JSON.stringify(generated.media_ids) : null)),
             platform, generated.ai_model || "mistral-medium-latest",
             suggestion.poi_id || null, pillarId || null,
             JSON.stringify(generated.keyword_cluster || suggestion.keyword_cluster || []),

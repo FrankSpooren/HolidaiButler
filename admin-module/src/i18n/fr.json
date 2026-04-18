@@ -1722,7 +1722,8 @@
       "pois": "Inspiration POI",
       "events": "Inspiration Evenements",
       "holibot": "HoliBot Insights",
-      "gsc": "Intention de recherche"
+      "gsc": "Intention de recherche",
+      "overview": "Aperçu"
     }
   },
   "brandProfile": {
@@ -1919,6 +1920,45 @@
       "removeFilter": "Supprimer le filtre",
       "versionDesc": "Description de la version",
       "save": "Enregistrer comme nouvelle version"
+    }
+  },
+  "contentSources": {
+    "overview": {
+      "title": "Content Top 25",
+      "subtitle": "{count} recommandations de {sources} sources",
+      "updatedAt": "Mis à jour {date}",
+      "refresh": "Actualiser (recalcule toutes les sources)",
+      "showAll": "Afficher tous ({count})",
+      "noItems": "Aucun élément",
+      "sourcesWarning": "{count} source(s) n'ont pas pu être chargées",
+      "addKeyword": "Ajouter un mot-clé",
+      "keywordPlaceholder": "ex. coucher de soleil calpe, meilleurs restaurants",
+      "keywordTarget": "Objectif",
+      "targetSeo": "SEO (contenu web)",
+      "targetSocial": "Réseaux sociaux",
+      "targetBoth": "Les deux",
+      "keywordAdded": "Mot-clé \"{keyword}\" ajouté",
+      "keywordExists": "Le mot-clé existe déjà"
+    },
+    "visualAnalysis": {
+      "title": "Analyse IA",
+      "startButton": "Démarrer l'analyse IA",
+      "analyzing": "Analyse en cours...",
+      "analyzingHint": "Mistral Vision analyse l'image (peut prendre 30-60s)",
+      "notAnalyzed": "Pas encore analysé. Lancez l'analyse IA pour détecter la description, l'ambiance, les thèmes et les objets.",
+      "failed": "Analyse échouée",
+      "retry": "Réessayer",
+      "createContent": "Créer du contenu à partir de ce visuel",
+      "generating": "Le contenu est en cours de génération...",
+      "generated": "Le contenu a été généré. Voir dans Content Items.",
+      "generationStarted": "Génération de contenu lancée. Les éléments apparaîtront dans 1-3 minutes."
+    },
+    "calendar": {
+      "day": "Jour",
+      "week": "Semaine",
+      "month": "Mois",
+      "noContentDay": "Aucun contenu prévu pour ce jour.",
+      "noContentWeek": "Aucun élément"
     }
   }
 }
