@@ -61,6 +61,7 @@ const MediaSidebarPanel = lazy(() => import('../components/contentStudio/MediaSi
 import SeasonalConfigTab from './SeasonalConfigTab.jsx';
 import SocialAccountsCards from '../components/content/SocialAccountsCards.jsx';
 import ContentAnalyseTab from './ContentAnalyseTab.jsx';
+import ContentStudioOverview from '../components/content/ContentStudioOverview.jsx';
 import PlatformPreview from '../components/content/PlatformPreview.jsx';
 
 const DIRECTION_CONFIG = {
@@ -2508,8 +2509,8 @@ export default function ContentStudioPage() {
   // Listen for keyboard shortcut tab navigation events
   useEffect(() => {
     const onTabNav = (e) => {
-      if (typeof e.detail === 'number' && e.detail >= 0 && e.detail <= 6) {
-        setTab(e.detail);
+      if (typeof e.detail === 'number' && e.detail >= 0 && e.detail <= 7) {
+        setTab(e.detail + 1);
       }
     };
     window.addEventListener('hb:content-studio-tab', onTabNav);
@@ -2663,9 +2664,9 @@ export default function ContentStudioPage() {
 
   // Load data based on active tab
   useEffect(() => {
-    if (tab === 0) { loadTrends(); loadSummary(); }
-    else if (tab === 1) { loadSuggestions(); }
-    else if (tab === 2) { loadItems(); }
+    if (tab === 1) { loadTrends(); loadSummary(); }
+    else if (tab === 2) { loadSuggestions(); }
+    else if (tab === 3) { loadItems(); }
   }, [tab, loadTrends, loadSummary, loadSuggestions, loadItems]);
 
   // Load pillars for filter (Opdracht 6)
@@ -2893,7 +2894,7 @@ export default function ContentStudioPage() {
               </Select>
             </FormControl>
           )}
-          {tab === 0 && (
+          {tab === 1 && (
             <FormControl size="small" sx={{ minWidth: 110 }}>
               <Select value={period} onChange={e => { setPeriod(e.target.value); setTrendPage(0); }}>
                 {PERIOD_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
@@ -2905,6 +2906,7 @@ export default function ContentStudioPage() {
       </Box>
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }} variant="scrollable" scrollButtons="auto">
+        <Tab label={t('contentStudio.tabs.overview', 'Overview')} icon={<DashboardIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
         <Tab label={t('contentStudio.tabs.trending', 'Content Bronnen')} />
         <Tab label={t('contentStudio.tabs.suggestions', 'Suggesties')} />
         <Tab label={t('contentStudio.tabs.content', 'Content Items')} />
@@ -2914,8 +2916,14 @@ export default function ContentStudioPage() {
         <Tab label={t('contentStudio.tabs.socialAccounts', 'Social Accounts')} />
       </Tabs>
 
-      {/* === TAB 0: Content Bronnen (sub-tabs) === */}
+
+      {/* === TAB 1: Overview === */}
       {tab === 0 && (
+        <ContentStudioOverview onNavigateTab={(t) => setTab(t + 1)} />
+      )}
+
+      {/* === TAB 2: Content Bronnen (sub-tabs) === */}
+      {tab === 1 && (
         <>
           {/* Sub-tab navigation */}
           <Tabs value={sourceTab} onChange={(_, v) => setSourceTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }} variant="scrollable" scrollButtons="auto">
@@ -3161,8 +3169,8 @@ export default function ContentStudioPage() {
         </>
       )}
 
-      {/* === TAB 1: Content Ideeën === */}
-      {tab === 1 && (
+      {/* === TAB 2: Content Ideeën === */}
+      {tab === 2 && (
         <>
           {sugError && <Alert severity="error" sx={{ mb: 2 }}>{sugError}</Alert>}
           <Paper variant="outlined">
@@ -3429,8 +3437,8 @@ export default function ContentStudioPage() {
         </>
       )}
 
-      {/* === TAB 2: Content Items === */}
-      {tab === 2 && (
+      {/* === TAB 3: Content Items === */}
+      {tab === 3 && (
         <>
           {itemError && <Alert severity="error" sx={{ mb: 2 }}>{itemError}</Alert>}
           <Paper variant="outlined">
@@ -3579,7 +3587,7 @@ export default function ContentStudioPage() {
                     <TableRow>
                       <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary" sx={{ mb: 1 }}>{t('contentStudio.noItems', 'Geen content items. Genereer content vanuit goedgekeurde suggesties.')}</Typography>
-                        <Button variant="outlined" size="small" onClick={() => setTab(1)}>{t('contentStudio.goToSuggestions', 'Bekijk Suggesties')}</Button>
+                        <Button variant="outlined" size="small" onClick={() => setTab(2)}>{t('contentStudio.goToSuggestions', 'Bekijk Suggesties')}</Button>
                       </TableCell>
                     </TableRow>
                   ) : concepts
@@ -3705,17 +3713,17 @@ export default function ContentStudioPage() {
         </>
       )}
 
-      {/* === TAB 3: Calendar === */}
-      {tab === 3 && <ContentCalendarTab destinationId={destinationId} onEditConcept={(conceptId) => setConceptDialogId(conceptId)} />}
+      {/* === TAB 4: Calendar === */}
+      {tab === 4 && <ContentCalendarTab destinationId={destinationId} onEditConcept={(conceptId) => setConceptDialogId(conceptId)} />}
 
-      {/* === TAB 4: Content Analyse === */}
-      {tab === 4 && <ContentAnalyseTab destinationId={destinationId} />}
+      {/* === TAB 5: Content Analyse === */}
+      {tab === 5 && <ContentAnalyseTab destinationId={destinationId} />}
 
-      {/* === TAB 5: Seasonal Config === */}
-      {tab === 5 && <SeasonalConfigTab destinationId={destinationId} />}
+      {/* === TAB 6: Seasonal Config === */}
+      {tab === 6 && <SeasonalConfigTab destinationId={destinationId} />}
 
-      {/* === TAB 6: Social Accounts (BLOK 5) === */}
-      {tab === 6 && <SocialAccountsTab destinationId={destinationId} />}
+      {/* === TAB 7: Social Accounts (BLOK 5) === */}
+      {tab === 7 && <SocialAccountsTab destinationId={destinationId} />}
 
       {/* === Dialogs === */}
       <AddKeywordDialog
