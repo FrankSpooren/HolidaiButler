@@ -207,7 +207,7 @@ export default function ContentStudioOverview({ onNavigateTab, destinationId }) 
           <CardContent sx={{ p: 2.5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <WhatshotIcon sx={{ fontSize: 18, color: tokens.brand.gold }} /> Content Top 25 — Snel starten
+                <WhatshotIcon sx={{ fontSize: 18, color: tokens.brand.gold }} /> Content Top 10 — Direct starten
               </Typography>
               <Button size="small" onClick={() => onNavigateTab && onNavigateTab(0, 0)} endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
                 sx={{ textTransform: 'none', fontSize: '0.7rem', color: tokens.brand.teal }}
