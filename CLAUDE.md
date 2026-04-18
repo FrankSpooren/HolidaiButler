@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.51.0
-> **Laatst bijgewerkt**: 15 april 2026
+> **Versie**: 4.52.0
+> **Laatst bijgewerkt**: 18 april 2026
 > **Eigenaar**: Frank Spooren
 
 
@@ -79,6 +79,13 @@ ssh root@91.98.71.87 "pm2 restart holidaibutler-api --update-env"
 # 7. Server: admin rebuild als frontend bestanden zijn gewijzigd
 # (volg standaard build+deploy procedure)
 ```
+
+
+### Build & Deploy Veiligheid
+- **NOOIT `pm2 stop` om geheugen vrij te maken voor builds** — gebruik swap (2GB) in plaats daarvan
+- Als SSH wegvalt na `pm2 stop` maar vóór `pm2 start`: sites onbereikbaar
+- **fail2ban**: Frank IP-range `31.4.236.0/24` ge-whitelisted
+- **SSH**: MaxStartups 50→100, MaxSessions 20→50
 
 ### C. Conflict-preventie regels
 
@@ -460,6 +467,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Studio Landing Upgrade | v4.42.0 (7 opdrachten dark theme redesign + i18n 5 talen) | ✅ COMPLEET | apr 2026 |
 | PubliQio Branding & Polish | v4.43.0 (10 opdrachten branding + mockup + dark popups + privacy + per-user taal) | ✅ COMPLEET | apr 2026 |
 | PubliQio Content Bronnen | v4.51.0 (19 opdrachten: visual discovery, POI/event/holibot content generatie, GSC, analytics) | ✅ COMPLEET | apr 2026 |
+| PubliQio Content Studio Polish | v4.52.0 (12 opdrachten: Content Top 25, 5 UX bugfixes, kalender dag/week, i18n 5 talen) | ✅ COMPLEET | apr 2026 |
 | Corporate Landing Page | v4.44.0 (9 opdrachten: hero, badges, modules, stats, proces, showcase, EU-stack, CTA, i18n 5 talen, mobiel UX) | ✅ COMPLEET | apr 2026 |
 | Content Studio Multi-Tenant | v4.45.0 (12 fixes: manual items, repurpose, images, publisher, BUTE config, social publishing) | ✅ COMPLEET | apr 2026 |
 | Content Studio Analytics & Calendar | v4.46.0 (publish performance records, calendar edit+concept, auto-fill concept+images, orphan repair) | ✅ COMPLEET | apr 2026 |
@@ -471,10 +479,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 ### Huidige Tellingen
 | Metric | Waarde |
 |--------|--------|
-| Admin endpoints | 279 |
+| Admin endpoints | 282 |
 | adminPortal.js | v3.47.0 |
 | Agents | 25 |
-| BullMQ jobs | 72 |
+| BullMQ jobs | 74 |
 | Block types | 36 (+ aliassen, +blog_grid) |
 | Block editors | 37 (+BlogGridEditor) |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
@@ -928,6 +936,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.52.0** | **2026-04-18** | **PubliQio Content Studio Polish & Content Top 25 (12 opdrachten, 3 fasen, Command v3.0)**. **Fase 1 (5 bugs)**: AI Analyse knop inline met retry+loading+resultaat in detail dialog, Visual→Content Items end-to-end (correct visual image via thumbnail_url), view persistentie (localStorage), sorteerbare list-view kolommen (5x TableSortLabel), ConceptDialog preview bidirectioneel sync (useEffect+onPlatformChange). **Fase 2 (Content Top 25)**: contentTop25Service.js (6-bron aggregatie, altijd exact 25 items, prioriteit Keywords>GSC>HoliBot>Visuals>POI>Events), GET /content/sources/top25 endpoint, ContentSourcesOverviewTab.jsx als eerste sub-tab, POST /content/keywords (handmatig keyword toevoegen), visuele trends platform-mix diversificatie (theme matching, max 2/platform). **Fase 3 (Polish)**: 155 i18n keys (31 per taal × 5: NL/EN/DE/ES/FR), monthly health-check BullMQ job, POST /agents/jobs/:name/trigger endpoint. **Kalender**: dag+week+maand toggle met localStorage persistentie, weekweergave met DnD, URL hash browser-back navigatie. **Infra**: fail2ban whitelist Frank IP, SSH MaxStartups 50→100, veilig build proces (geen pm2 stop). 282 endpoints. 74 BullMQ jobs. |
 | **4.51.0** | **2026-04-15** | **PubliQio Content Bronnen (19 opdrachten, 4 fasen)**. **Fase 1**: 2 tabellen (trending_visuals, holibot_insights), 5 backend services (visualTrendDiscovery 7 platforms, visualAnalyzer Mistral Vision, videoFrameExtractor, holibotInsights AI clustering, gscSync), 12 endpoints, GSC integratie. **Fase 2**: Tab "Content Bronnen" + 6 sub-tabs (Zoektermen, Visuele Trends, POI Inspiratie, Agenda Inspiratie, HoliBot Insights, Zoekintentie). 5 componenten. 7 BullMQ jobs. **Fase 3**: Content generatie vanuit alle bronnen (async 202), "Content Ideeën" + Bron kolom, Content Items bron-tracking + filter, handmatige upload. **Fase 4**: Bron Performance analytics kaart, kalender bron-iconen, Zoekintentie GSC tab. **Extra**: chatbot Apache routing fix (mobiel), bullet sanitizer (12 Unicode), seasonal schema fix, generate-from-poi async + correcte images + SEO. 279 endpoints. 72 BullMQ jobs. |
 | **4.46.0** | **2026-04-12** | **Content Studio Analytics & Calendar Fixes**. **FIX 13 (Publish Performance Record)**: `publishItem()` maakt nu direct na succesvolle publish een initieel `content_performance` record aan (0-waarden), zodat gepubliceerde items onmiddellijk zichtbaar zijn in Analytics. BullMQ analytics collector vult later echte metrics aan. **FIX 14 (Calendar Edit Button)**: Kalender day-detail dialog had geen Bewerken knop. Edit-button toegevoegd die ConceptDialog opent via `onEditConcept(concept_id)` callback. `GET /content/calendar` retourneert nu `concept_id` per item. **FIX 15 (Auto-Fill Concept+Images)**: `POST /content/calendar/auto-fill` maakte items zonder `content_concepts` parent (onzichtbaar in Content Items) en zonder images. Nu maakt auto-fill concept+item+image per gegenereerd item via `selectImages()`. **FIX 16 (Orphan Repair)**: 30 orphan Calpe items retroactief aan concepts gekoppeld. 0 orphans remaining. **Bestanden**: 3 gewijzigd (`adminPortal.js`, `ContentCalendarTab.jsx`, `ContentStudioPage.jsx`) + `publisher/index.js`. |
 | **4.48.0** | **2026-04-12** | **Media Library v2.0 Enterprise Upgrade (ML-1 t/m ML-4, 20 opdrachten)**. **ML-1 Schema+Backend**: media tabel 12 naar 40 kolommen (+28: alt_text 5 talen, tags/tags_ai, owner/rights, GDPR consent/license, media_type, location, quality_tier, perceptual_hash, ai_processed, versioning, usage tracking). 4 nieuwe tabellen (media_collections, media_collection_items, media_versions, media_audit_log). mediaService.js + mediaRoutes.js (23 endpoints) + mediaCollectionRoutes.js (10 endpoints). BullMQ media-processing pipeline. Pexels import. **ML-2 Frontend Rebuild**: 15 componenten (~2.500 LOC): MediaGrid (grid/list/masonry), MediaFilterDrawer (10-dimensie), MediaDetailDialog (5 tabs), MediaUploadDialog (drag-drop+AI polling), MediaCollectionsDrawer, MediaBulkActionsBar, PexelsSearchTab, MediaCleanupTab. MediaPage.jsx herbouwd. **ML-3 Image Editor+AI**: MediaImageEditor (crop/resize/12 Instagram filters/adjust/social presets). 3 AI endpoints (enhance, alt-text 5 talen, retag). Content Studio MediaSidebarPanel. Smart image suggestions. Usage tracking + cleanup. **ML-4 GDPR+Performance**: Consent tracking, export, license expiry cron. Cache-Control 24h+ETag. i18n 5 talen (~140 keys). PubliQio standalone verified. **Bestanden**: 35 (5 nieuw backend, 14 nieuw frontend, 7 gewijzigd backend, 3 gewijzigd frontend, 5 i18n, 1 migration SQL, ~5.757 LOC). 285 admin endpoints (was 252). adminPortal.js v3.47.0. 66 BullMQ jobs. |

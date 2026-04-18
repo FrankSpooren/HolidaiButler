@@ -1698,7 +1698,8 @@
       "pois": "Inspiracion POI",
       "events": "Inspiracion Eventos",
       "holibot": "HoliBot Insights",
-      "gsc": "Intencion de busqueda"
+      "gsc": "Intencion de busqueda",
+      "overview": "Resumen"
     }
   },
   "brandProfile": {
@@ -1895,6 +1896,45 @@
       "removeFilter": "Eliminar filtro",
       "versionDesc": "Descripción de versión",
       "save": "Guardar como nueva versión"
+    }
+  },
+  "contentSources": {
+    "overview": {
+      "title": "Content Top 25",
+      "subtitle": "{count} recomendaciones de {sources} fuentes",
+      "updatedAt": "Actualizado {date}",
+      "refresh": "Actualizar (recalcula todas las fuentes)",
+      "showAll": "Mostrar todos ({count})",
+      "noItems": "Sin elementos",
+      "sourcesWarning": "{count} fuente(s) no pudieron cargarse",
+      "addKeyword": "Añadir palabra clave",
+      "keywordPlaceholder": "ej. atardecer calpe, mejores restaurantes",
+      "keywordTarget": "Objetivo",
+      "targetSeo": "SEO (contenido web)",
+      "targetSocial": "Redes sociales",
+      "targetBoth": "Ambos",
+      "keywordAdded": "Palabra clave \"{keyword}\" añadida",
+      "keywordExists": "La palabra clave ya existe"
+    },
+    "visualAnalysis": {
+      "title": "Análisis IA",
+      "startButton": "Iniciar análisis IA",
+      "analyzing": "Analizando...",
+      "analyzingHint": "Mistral Vision analiza la imagen (puede tardar 30-60s)",
+      "notAnalyzed": "Aún no analizado. Inicie el análisis IA para detectar descripción, estado de ánimo, temas y objetos.",
+      "failed": "Análisis fallido",
+      "retry": "Reintentar",
+      "createContent": "Crear contenido a partir de este visual",
+      "generating": "Generando contenido...",
+      "generated": "Contenido generado. Ver en Content Items.",
+      "generationStarted": "Generación de contenido iniciada. Los elementos aparecerán en 1-3 minutos."
+    },
+    "calendar": {
+      "day": "Día",
+      "week": "Semana",
+      "month": "Mes",
+      "noContentDay": "Sin contenido programado para este día.",
+      "noContentWeek": "Sin elementos"
     }
   }
 }

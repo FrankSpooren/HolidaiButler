@@ -406,6 +406,16 @@ const contentService = {
 
   // === Content Sources (POI + Events + HoliBot + GSC) ===
 
+  addKeyword(destinationId, keyword, target = 'both') {
+    return client.post('/content/keywords', { destination_id: destinationId, keyword, target }).then(r => r.data);
+  },
+
+  getTop25(destinationId, { refresh = false } = {}) {
+    const params = { destination_id: destinationId };
+    if (refresh) params.refresh = 'true';
+    return client.get('/content/sources/top25', { params }).then(r => r.data);
+  },
+
   getContentSourcePois(destinationId, params = {}) {
     params.destination_id = destinationId;
     return client.get('/content/sources/pois', { params }).then(r => r.data);

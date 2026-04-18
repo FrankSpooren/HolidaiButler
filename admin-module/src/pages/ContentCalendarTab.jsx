@@ -10,6 +10,7 @@ import {
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { ToggleButtonGroup, ToggleButton } from '@mui/material';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import PublishIcon from '@mui/icons-material/Publish';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -60,6 +61,11 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
   const [month, setMonth] = useState(now.getMonth());
   const [scheduleDialog, setScheduleDialog] = useState(null);
   const [selectedDay, setSelectedDay] = useState(null);
+  const [calendarView, setCalendarView] = useState(() => {
+    const stored = localStorage.getItem('publiqio_calendar_view');
+    return stored === 'day' || stored === 'week' || stored === 'month' ? stored : 'month';
+  });
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [autoFilling, setAutoFilling] = useState(false);
   const [autoScheduling, setAutoScheduling] = useState(false);
@@ -306,19 +312,44 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
         </Tooltip>
       </Paper>
 
-      {/* Month navigation */}
+      {/* Navigation + view toggle */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton onClick={() => navigateMonth(-1)} size="small"><ChevronLeftIcon /></IconButton>
-          <Typography variant="h6" sx={{ textTransform: 'capitalize', minWidth: 180, textAlign: 'center' }}>
-            {monthName}
-          </Typography>
-          <IconButton onClick={() => navigateMonth(1)} size="small"><ChevronRightIcon /></IconButton>
+          {calendarView === 'month' ? (
+            <>
+              <IconButton onClick={() => navigateMonth(-1)} size="small"><ChevronLeftIcon /></IconButton>
+              <Typography variant="h6" sx={{ textTransform: 'capitalize', minWidth: 180, textAlign: 'center' }}>
+                {monthName}
+              </Typography>
+              <IconButton onClick={() => navigateMonth(1)} size="small"><ChevronRightIcon /></IconButton>
+            </>
+          ) : calendarView === 'week' ? (
+            <>
+              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })} size="small"><ChevronLeftIcon /></IconButton>
+              <Typography variant="h6" sx={{ minWidth: 240, textAlign: 'center' }}>
+                {(() => { const s = new Date(selectedDate); s.setDate(s.getDate() - s.getDay() + 1); const e = new Date(s); e.setDate(e.getDate() + 6); return s.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) + ' \u2013 ' + e.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }); })()}
+              </Typography>
+              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })} size="small"><ChevronRightIcon /></IconButton>
+            </>
+          ) : (
+            <>
+              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n; })} size="small"><ChevronLeftIcon /></IconButton>
+              <Typography variant="h6" sx={{ minWidth: 180, textAlign: 'center' }}>
+                {selectedDate.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </Typography>
+              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() + 1); return n; })} size="small"><ChevronRightIcon /></IconButton>
+            </>
+          )}
         </Box>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           {activeSeason && (
             <Chip label={`${t('contentStudio.calendar.season', 'Seizoen')}: ${activeSeason.season_name}`} color="primary" variant="outlined" size="small" />
           )}
+          <ToggleButtonGroup size="small" value={calendarView} exclusive onChange={(_, v) => { if (v) { setCalendarView(v); localStorage.setItem('publiqio_calendar_view', v); } }}>
+            <ToggleButton value="day" sx={{ textTransform: 'none', fontSize: 12 }}>Dag</ToggleButton>
+            <ToggleButton value="week" sx={{ textTransform: 'none', fontSize: 12 }}>Week</ToggleButton>
+            <ToggleButton value="month" sx={{ textTransform: 'none', fontSize: 12 }}>Maand</ToggleButton>
+          </ToggleButtonGroup>
         </Box>
       </Box>
       <Snackbar
@@ -363,8 +394,8 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>
       ) : (
         <>
-          {/* Weekday headers */}
-          <Grid container spacing={0.5} sx={{ mb: 0.5 }}>
+          {/* Weekday headers — month only */}
+          {calendarView === 'month' && <Grid container spacing={0.5} sx={{ mb: 0.5 }}>
             {WEEKDAYS.map(wd => (
               <Grid item xs={12 / 7} key={wd}>
                 <Typography variant="caption" fontWeight={600} textAlign="center" display="block" color="text.secondary">
@@ -372,10 +403,125 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
                 </Typography>
               </Grid>
             ))}
-          </Grid>
+          </Grid>}
 
           {/* Calendar grid */}
+    
+
+      {calendarView === 'day' && (() => {
+        const dayKey = selectedDate.getDate();
+        const dayMonth = selectedDate.getMonth();
+        const dayYear = selectedDate.getFullYear();
+        const dayItems = items.filter(i => {
+          const d = new Date(i.scheduled_at || i.published_at || i.created_at);
+          return d.getDate() === dayKey && d.getMonth() === dayMonth && d.getFullYear() === dayYear;
+        });
+        const platformGroups = {};
+        dayItems.forEach(i => {
+          const p = i.target_platform || 'other';
+          if (!platformGroups[p]) platformGroups[p] = [];
+          platformGroups[p].push(i);
+        });
+        return (
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+            {dayItems.length === 0 ? (
+              <Typography color="text.secondary" sx={{ py: 6, textAlign: 'center', fontStyle: 'italic' }}>
+                Geen content gepland voor deze dag.
+              </Typography>
+            ) : (
+              Object.entries(platformGroups).map(([platform, pItems]) => (
+                <Box key={platform} sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: platform === 'facebook' ? '#1877F2' : platform === 'instagram' ? '#E4405F' : platform === 'linkedin' ? '#0A66C2' : platform === 'website' ? '#5E8B7E' : '#666' }} />
+                    {platform} ({pItems.length})
+                  </Typography>
+                  {pItems.map(item => (
+                    <Box key={item.id} onClick={() => onEditConcept && onEditConcept(item.concept_id)}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, mb: 1, borderRadius: 1,
+                        borderLeft: '4px solid',
+                        borderLeftColor: item.pillar_color || (item.target_platform === 'facebook' ? '#1877F2' : item.target_platform === 'instagram' ? '#E4405F' : item.target_platform === 'linkedin' ? '#0A66C2' : '#5E8B7E'),
+                        border: '1px solid', borderColor: 'divider', cursor: 'pointer',
+                        transition: 'transform 150ms ease, box-shadow 150ms ease',
+                        '&:hover': { bgcolor: 'action.hover', transform: 'translateY(-1px)', boxShadow: 1 }, minHeight: 48 }}>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>{item.title || item.content_type}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {item.approval_status} {item.scheduled_at ? ' \u2022 ' + new Date(item.scheduled_at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </Typography>
+                      </Box>
+                      {item.seo_score && (
+                        <Chip label={item.seo_score} size="small" color={item.seo_score >= 70 ? 'success' : 'warning'} sx={{ fontSize: 11, height: 20 }} />
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              ))
+            )}
+          </Paper>
+        );
+      })()}
+
+      {calendarView === 'week' && (() => {
+        const weekStart = new Date(selectedDate);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+        const weekDays = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(weekStart);
+          d.setDate(d.getDate() + i);
+          return d;
+        });
+        const today = new Date();
+        const WEEKDAY_NAMES = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
+        return (
           <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(180px, 1fr))', gap: '1px', bgcolor: 'divider', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflowX: 'auto', overflowY: 'hidden' }}>
+              {weekDays.map((day, idx) => {
+                const dayNum = day.getDate();
+                const isToday = day.toDateString() === today.toDateString();
+                const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                const dayItems = items.filter(i => {
+                  const d = new Date(i.scheduled_at || i.published_at || i.created_at);
+                  return d.getDate() === dayNum && d.getMonth() === day.getMonth() && d.getFullYear() === day.getFullYear();
+                });
+                return (
+                  <DroppableDayCell key={day.toISOString()} day={dayNum} isToday={isToday} isInSeason={false} isGap={false}
+                    onClick={() => { setMonth(day.getMonth()); setYear(day.getFullYear()); setSelectedDay(dayNum); }}>
+                    <Box sx={{ p: 1.5, minHeight: 320, bgcolor: isToday ? 'primary.50' : isWeekend ? 'action.hover' : 'background.paper' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: isToday ? 700 : 500, color: isToday ? 'primary.main' : isWeekend ? 'text.secondary' : 'text.primary' }}>
+                          {WEEKDAY_NAMES[idx]}
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontWeight: isToday ? 700 : 400, color: isToday ? 'primary.main' : 'text.secondary', fontSize: 18 }}>
+                          {dayNum}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        {dayItems.length === 0 && (
+                          <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic', py: 2, textAlign: 'center' }}>
+                            Geen items
+                          </Typography>
+                        )}
+                        {dayItems.map(item => (
+                          <DraggableCalendarItem key={item.id} item={item} />
+                        ))}
+                      </Box>
+                    </Box>
+                  </DroppableDayCell>
+                );
+              })}
+            </Box>
+            <DragOverlay>
+              {draggingItem && (
+                <Paper elevation={4} sx={{ p: 1, maxWidth: 200, opacity: 0.9 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: 11 }}>{draggingItem.title || draggingItem.content_type}</Typography>
+                </Paper>
+              )}
+            </DragOverlay>
+          </DndContext>
+        );
+      })()}
+
+      {calendarView === 'month' && <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+
           <Grid container spacing={0.5}>
             {cells.map((day, idx) => {
               // Opdracht 8-K2: gap-detection
@@ -462,7 +608,7 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
               </Box>
             ) : null}
           </DragOverlay>
-          </DndContext>
+          </DndContext>}
 
           {/* Legend */}
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1.5, mb: 1 }}>
