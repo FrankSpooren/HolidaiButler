@@ -2920,7 +2920,7 @@ export default function ContentStudioPage() {
 
       {/* === TAB 1: Overview === */}
       {tab === 0 && (
-        <ContentStudioOverview onNavigateTab={(t) => setTab(t + 1)} />
+        <ContentStudioOverview destinationId={destinationId} onNavigateTab={(tabIdx, subTab) => { setTab(tabIdx + 1); if (subTab !== undefined) { setTimeout(() => setSourceTab(subTab), 100); } }} />
       )}
 
       {/* === TAB 2: Content Bronnen (sub-tabs) === */}
