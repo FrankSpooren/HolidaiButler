@@ -25,8 +25,6 @@ export default function useKeyboardShortcuts(shortcuts, options) {
       // Skip when user is typing in an input
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
-      // Skip when a dialog/modal is open (check for MUI dialog backdrop)
-      if (document.querySelector('.MuiDialog-root')) return;
 
       // Build the key representation
       const parts = [];
