@@ -1,4 +1,7 @@
 import { createTheme } from '@mui/material/styles';
+import { tokens } from './theme/tokens.js';
+
+export { tokens } from './theme/tokens.js';
 
 export function buildTheme(mode = 'light') {
   const isDark = mode === 'dark';
@@ -6,24 +9,63 @@ export function buildTheme(mode = 'light') {
   return createTheme({
     palette: {
       mode,
-      primary: { main: '#1976d2' },
+      primary: { main: tokens.brand.teal },
       secondary: { main: '#7FA594' },
       background: {
-        default: isDark ? '#0f172a' : '#f5f7fa',
-        paper: isDark ? '#1e293b' : '#ffffff'
+        default: isDark ? tokens.bg.page : '#f5f7fa',
+        paper: isDark ? tokens.bg.panel : '#ffffff'
       },
+      success: { main: tokens.semantic.success },
+      warning: { main: tokens.semantic.warning },
+      error: { main: tokens.semantic.error },
+      info: { main: tokens.semantic.info },
       ...(isDark && {
         text: {
-          primary: '#e2e8f0',
-          secondary: '#94a3b8'
+          primary: tokens.text.primary,
+          secondary: tokens.text.secondary
         }
       })
     },
     typography: {
-      fontFamily: "'Inter', 'Roboto', sans-serif"
+      fontFamily: "'Inter', 'Roboto', sans-serif",
+      h1: {
+        fontSize: tokens.type.h1.size,
+        fontWeight: tokens.type.h1.weight,
+        lineHeight: tokens.type.h1.lineHeight,
+      },
+      h2: {
+        fontSize: tokens.type.h2.size,
+        fontWeight: tokens.type.h2.weight,
+        lineHeight: tokens.type.h2.lineHeight,
+      },
+      h3: {
+        fontSize: tokens.type.h3.size,
+        fontWeight: tokens.type.h3.weight,
+        lineHeight: tokens.type.h3.lineHeight,
+      },
+      h4: {
+        fontSize: tokens.type.h4.size,
+        fontWeight: tokens.type.h4.weight,
+        lineHeight: tokens.type.h4.lineHeight,
+      },
+      body1: {
+        fontSize: tokens.type.body.size,
+        fontWeight: tokens.type.body.weight,
+        lineHeight: tokens.type.body.lineHeight,
+      },
+      body2: {
+        fontSize: tokens.type.small.size,
+        fontWeight: tokens.type.small.weight,
+        lineHeight: tokens.type.small.lineHeight,
+      },
+      caption: {
+        fontSize: tokens.type.micro.size,
+        fontWeight: tokens.type.micro.weight,
+        lineHeight: tokens.type.micro.lineHeight,
+      },
     },
     shape: {
-      borderRadius: 8
+      borderRadius: tokens.radius.md
     },
     components: {
       MuiButton: {
@@ -34,19 +76,19 @@ export function buildTheme(mode = 'light') {
       MuiCard: {
         styleOverrides: {
           root: {
-            boxShadow: isDark ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.08)',
+            boxShadow: isDark ? tokens.shadow.sm : '0 1px 3px rgba(0,0,0,0.08)',
             ...(isDark && { backgroundImage: 'none' })
           }
         }
       },
       MuiTableHead: {
         styleOverrides: {
-          root: isDark ? { '& th': { backgroundColor: '#1e293b !important' } } : {}
+          root: isDark ? { '& th': { backgroundColor: tokens.bg.panel + ' !important' } } : {}
         }
       },
       MuiAppBar: {
         styleOverrides: {
-          root: isDark ? { backgroundColor: '#1e293b', color: '#e2e8f0' } : {}
+          root: isDark ? { backgroundColor: tokens.bg.panel, color: tokens.text.primary } : {}
         }
       }
     }
@@ -63,8 +105,8 @@ export const DESTINATION_COLORS = {
 };
 
 export const SIDEBAR_STYLES = {
-  bg: '#1e293b',
-  text: '#e2e8f0',
+  bg: tokens.bg.panel,
+  text: tokens.text.primary,
   activeText: '#ffffff',
   activeBg: 'rgba(255,255,255,0.08)',
   hoverBg: 'rgba(255,255,255,0.04)',
