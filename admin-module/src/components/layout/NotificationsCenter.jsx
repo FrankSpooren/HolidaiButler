@@ -108,7 +108,7 @@ export default function NotificationsCenter() {
 
   const handleClickNotification = (n) => {
     if (!n.read_at) handleMarkRead(n.id);
-    if (n.action_url) { setAnchorEl(null); navigate(n.action_url); }
+    if (n.action_url) { setAnchorEl(null); const [path, query] = n.action_url.split("?"); navigate(path); if (query) { const params = new URLSearchParams(query); const tab = params.get("tab"); if (tab !== null) { setTimeout(() => window.dispatchEvent(new CustomEvent("hb:content-studio-tab", { detail: parseInt(tab) })), 100); } } }
   };
 
   const open = Boolean(anchorEl);
