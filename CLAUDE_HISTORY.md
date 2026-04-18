@@ -7243,3 +7243,48 @@ Alle 5 met `@media (prefers-reduced-motion: reduce)` fallback:
 
 ### Tellingen
 **Endpoints**: 279. **BullMQ jobs**: 72. **CLAUDE.md**: v4.51.0. **38 bestanden**, +4.816 regels.
+
+### Fase 1 Learnings (v3.0 Command — 17 april 2026)
+
+1. **Root cause hypotheses**: 4/5 correct. Opdracht 3 had value mismatch ("list" vs "table") niet in hypothese.
+2. **Snelste diagnostic**: `grep -c` kwantitatieve pre-flight (0 hits = feature ontbreekt).
+3. **Patroon**: Alle 5 bugs waren frontend-only. Backend endpoints werkten correct. Component state management (geen localStorage persist, geen prop sync, geen inline feedback) was de rode draad.
+4. **Lesson**: Bij conditional rendering (`{condition && <Component />}`) altijd checken: wordt state hersteld bij remount?
+
+---
+
+## PubliQio Content Studio Polish & Content Top 25 — v4.52.0 (18 april 2026)
+
+**Command**: PubliQio_Content_Studio_Command_v3.0_DEFINITIEF.md (12 opdrachten, 3 fasen)
+
+### Fase 1: Kritieke Bugs (Opdracht 1-5)
+- **Opdracht 1**: AI Analyse knop inline in detail dialog (retry 3x exponential backoff, loading state, inline resultaat)
+- **Opdracht 2**: Visual→Content Items end-to-end (visual thumbnail als primaire image, niet keyword-matched)
+- **Opdracht 3**: View persistentie (localStorage `publiqio_visual_trends_view`) + 5 sorteerbare list-view kolommen
+- **Opdracht 4**: ConceptDialog preview bidirectioneel sync (useEffect prop sync + onPlatformChange callback)
+- **Opdracht 5**: Kalender dag+week+maand toggle, weekweergave met DnD, localStorage view persistentie
+
+### Fase 2: Content Top 25 (Opdracht 6-9)
+- **Opdracht 6**: contentTop25Service.js + GET /content/sources/top25 + 2 BullMQ jobs (top25-refresh daily 07:00, sources-health-check monthly)
+- **Opdracht 7**: ContentSourcesOverviewTab.jsx als eerste sub-tab (6 sectie-cards, responsive grid, klikbare items)
+- **Opdracht 8**: POST /content/keywords (handmatig toevoegen) + bron-mix validatie warnings
+- **Opdracht 9**: Visuele trends platform-mix diversificatie (theme matching met destination brand keywords)
+
+### Fase 3: Polish + Documentatie (Opdracht 10-12)
+- **Opdracht 10**: 155 i18n keys (31 per taal × 5: NL/EN/DE/ES/FR)
+- **Opdracht 11**: Monthly health-check job + POST /agents/jobs/:name/trigger endpoint
+- **Opdracht 12**: Documentatie sync v4.52.0
+
+### Extra fixes
+- Chatbot Apache routing: browser-back navigatie via URL hash pushState
+- Bron-chips Unicode fix (escaped → werkelijke emoji's)
+- ManualContentDialog multi-platform chip selectie
+- fail2ban whitelist + SSH limits + veilig build proces (geen pm2 stop)
+
+### Learnings
+- Build success ≠ browser-verified functionaliteit
+- Component state management (localStorage, prop sync, inline feedback) was rode draad in alle bugs
+- `React.useEffect` → `useEffect` (automatische JSX transform)
+
+### Tellingen
+Endpoints: 282 (was 279). BullMQ jobs: 74 (was 72). i18n keys: +155. CLAUDE.md: v4.52.0. MS: v8.13.
