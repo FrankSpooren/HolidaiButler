@@ -23,6 +23,7 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import CloudIcon from '@mui/icons-material/Cloud';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PublishIcon from '@mui/icons-material/Publish';
 import ScheduleIcon from '@mui/icons-material/Schedule';
