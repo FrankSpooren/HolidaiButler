@@ -1739,7 +1739,8 @@
       "pois": "POI Inspiratie",
       "events": "Agenda Inspiratie",
       "holibot": "HoliBot Insights",
-      "gsc": "Zoekintentie"
+      "gsc": "Zoekintentie",
+      "overview": "Overzicht"
     }
   },
   "brandProfile": {
@@ -1936,6 +1937,45 @@
       "removeFilter": "Filter verwijderen",
       "versionDesc": "Versie beschrijving",
       "save": "Opslaan als nieuwe versie"
+    }
+  },
+  "contentSources": {
+    "overview": {
+      "title": "Content Top 25",
+      "subtitle": "{count} aanbevelingen uit {sources} bronnen",
+      "updatedAt": "Bijgewerkt {date}",
+      "refresh": "Vernieuwen (herberekent alle bronnen)",
+      "showAll": "Toon alle {count}",
+      "noItems": "Geen items",
+      "sourcesWarning": "{count} bron(nen) konden niet geladen worden",
+      "addKeyword": "Keyword toevoegen",
+      "keywordPlaceholder": "bijv. sunset calpe, beste restaurants",
+      "keywordTarget": "Doel",
+      "targetSeo": "SEO (website content)",
+      "targetSocial": "Social Media",
+      "targetBoth": "Beide",
+      "keywordAdded": "Keyword \"{keyword}\" toegevoegd",
+      "keywordExists": "Keyword bestaat al"
+    },
+    "visualAnalysis": {
+      "title": "AI Analyse",
+      "startButton": "AI Analyse Starten",
+      "analyzing": "Analyse bezig...",
+      "analyzingHint": "Mistral Vision analyseert de afbeelding (kan 30-60s duren)",
+      "notAnalyzed": "Nog niet geanalyseerd. Start de AI analyse om beschrijving, mood, thema's en objecten te detecteren.",
+      "failed": "Analyse mislukt",
+      "retry": "Opnieuw",
+      "createContent": "Content Maken vanuit deze Visual",
+      "generating": "Content wordt gegenereerd...",
+      "generated": "Content is gegenereerd. Bekijk in Content Items.",
+      "generationStarted": "Content generatie gestart. Items verschijnen binnen 1-3 minuten in Content Items."
+    },
+    "calendar": {
+      "day": "Dag",
+      "week": "Week",
+      "month": "Maand",
+      "noContentDay": "Geen content gepland voor deze dag.",
+      "noContentWeek": "Geen items"
     }
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, Tabs, Tab, Paper, Chip, LinearProgress, Tooltip, Divider, Alert,
 } from '@mui/material';
@@ -378,6 +378,7 @@ export default function PlatformPreview({ content, targetPlatform, selectedLangu
   const PLATFORMS = availablePlatforms && availablePlatforms.length > 0 ? availablePlatforms : ALL_PLATFORMS;
   const { t } = useTranslation();
   const [activePlatform, setActivePlatform] = useState(targetPlatform || 'instagram');
+  useEffect(() => { if (targetPlatform) setActivePlatform(targetPlatform); }, [targetPlatform]);
 
   // Get body text for selected language
   const bodyText = useMemo(() => {

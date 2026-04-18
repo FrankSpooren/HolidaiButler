@@ -1698,7 +1698,8 @@
       "pois": "POI-Inspiration",
       "events": "Veranstaltungs-Inspiration",
       "holibot": "HoliBot Insights",
-      "gsc": "Suchintention"
+      "gsc": "Suchintention",
+      "overview": "Übersicht"
     }
   },
   "brandProfile": {
@@ -1895,6 +1896,45 @@
       "removeFilter": "Filter entfernen",
       "versionDesc": "Versionsbeschreibung",
       "save": "Als neue Version speichern"
+    }
+  },
+  "contentSources": {
+    "overview": {
+      "title": "Content Top 25",
+      "subtitle": "{count} Empfehlungen aus {sources} Quellen",
+      "updatedAt": "Aktualisiert {date}",
+      "refresh": "Aktualisieren (berechnet alle Quellen neu)",
+      "showAll": "Alle {count} anzeigen",
+      "noItems": "Keine Einträge",
+      "sourcesWarning": "{count} Quelle(n) konnten nicht geladen werden",
+      "addKeyword": "Keyword hinzufügen",
+      "keywordPlaceholder": "z.B. Sonnenuntergang Calpe, beste Restaurants",
+      "keywordTarget": "Ziel",
+      "targetSeo": "SEO (Website-Inhalte)",
+      "targetSocial": "Social Media",
+      "targetBoth": "Beides",
+      "keywordAdded": "Keyword \"{keyword}\" hinzugefügt",
+      "keywordExists": "Keyword existiert bereits"
+    },
+    "visualAnalysis": {
+      "title": "KI-Analyse",
+      "startButton": "KI-Analyse starten",
+      "analyzing": "Analyse läuft...",
+      "analyzingHint": "Mistral Vision analysiert das Bild (kann 30-60s dauern)",
+      "notAnalyzed": "Noch nicht analysiert. Starten Sie die KI-Analyse um Beschreibung, Stimmung, Themen und Objekte zu erkennen.",
+      "failed": "Analyse fehlgeschlagen",
+      "retry": "Erneut versuchen",
+      "createContent": "Content aus diesem Visual erstellen",
+      "generating": "Content wird generiert...",
+      "generated": "Content wurde generiert. Ansehen in Content Items.",
+      "generationStarted": "Content-Generierung gestartet. Items erscheinen innerhalb von 1-3 Minuten."
+    },
+    "calendar": {
+      "day": "Tag",
+      "week": "Woche",
+      "month": "Monat",
+      "noContentDay": "Kein Content für diesen Tag geplant.",
+      "noContentWeek": "Keine Einträge"
     }
   }
 }

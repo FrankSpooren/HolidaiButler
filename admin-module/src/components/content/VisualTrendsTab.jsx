@@ -3,7 +3,8 @@ import {
   Box, Typography, Paper, Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
   Chip, IconButton, Tooltip, Button, ToggleButtonGroup, ToggleButton, Select, MenuItem,
   FormControl, InputLabel, Alert, Skeleton, Dialog, DialogTitle, DialogContent, DialogActions,
-  Grid, CardMedia, Card, CardContent, CardActions, TablePagination, Checkbox, Snackbar, CircularProgress
+  Grid, CardMedia, Card, CardContent, CardActions, TablePagination, Checkbox, Snackbar, CircularProgress,
+  TableSortLabel
 } from '@mui/material';
 import {
   Refresh as RefreshIcon, Visibility as ViewIcon, Delete as DismissIcon,
@@ -44,7 +45,12 @@ export default function VisualTrendsTab({ destinationId }) {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(20);
-  const [view, setView] = useState('grid');
+  const [view, setView] = useState(() => {
+    const stored = localStorage.getItem('publiqio_visual_trends_view');
+    return stored === 'table' || stored === 'grid' ? stored : 'grid';
+  });
+  const [sortField, setSortField] = useState('trend_score');
+  const [sortOrder, setSortOrder] = useState('DESC');
   const [platformFilter, setPlatformFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -53,6 +59,9 @@ export default function VisualTrendsTab({ destinationId }) {
   const [saving, setSaving] = useState(null);
   const [selected, setSelected] = useState([]);
   const [generatingContent, setGeneratingContent] = useState(null);
+  const [analyzingInDialog, setAnalyzingInDialog] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState(null);
+  const [generatingInDialog, setGeneratingInDialog] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [snackbar, setSnackbar] = useState(null);
 
@@ -88,6 +97,46 @@ export default function VisualTrendsTab({ destinationId }) {
       setError('Analyse mislukt: ' + err.message);
     } finally {
       setAnalyzing(null);
+    }
+  };
+
+  const handleAnalyzeInDialog = async () => {
+    if (!detailDialog) return;
+    setAnalyzingInDialog(true);
+    setAnalyzeError(null);
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      try {
+        await contentService.analyzeVisual({ trending_id: detailDialog.id }, destinationId);
+        const detail = await contentService.getVisualTrendingDetail(detailDialog.id, destinationId);
+        if (detail.success) setDetailDialog(detail.data);
+        loadData();
+        setAnalyzingInDialog(false);
+        return;
+      } catch (err) {
+        if (attempt === 2) {
+          setAnalyzeError(err.message);
+          setAnalyzingInDialog(false);
+        } else {
+          await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt)));
+        }
+      }
+    }
+  };
+
+  const handleGenerateInDialog = async () => {
+    if (!detailDialog) return;
+    setGeneratingInDialog(true);
+    try {
+      await contentService.generateFromVisual(detailDialog.id, destinationId, ['facebook', 'instagram']);
+      setSnackbar({ message: 'Content generatie gestart voor "' + (detailDialog.title || 'Visual') + '". Items verschijnen binnen 1-3 min in Content Items.', severity: 'success' });
+      loadData();
+      // Keep dialog open but update status
+      const detail = await contentService.getVisualTrendingDetail(detailDialog.id, destinationId);
+      if (detail.success) setDetailDialog(detail.data);
+    } catch (err) {
+      setSnackbar({ message: 'Content generatie mislukt: ' + err.message, severity: 'error' });
+    } finally {
+      setGeneratingInDialog(false);
     }
   };
 
@@ -151,6 +200,33 @@ export default function VisualTrendsTab({ destinationId }) {
       e.target.value = '';
     }
   };
+
+  const handleViewChange = (_, mode) => {
+    if (mode !== null) {
+      setView(mode);
+      localStorage.setItem('publiqio_visual_trends_view', mode);
+    }
+  };
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      setSortField(field);
+      setSortOrder(field === 'title' ? 'ASC' : 'DESC');
+    }
+  };
+
+  // Client-side sort for list view
+  const sortedItems = [...items].sort((a, b) => {
+    const dir = sortOrder === 'ASC' ? 1 : -1;
+    if (sortField === 'title') return dir * (a.title || '').localeCompare(b.title || '');
+    if (sortField === 'source_platform') return dir * (a.source_platform || '').localeCompare(b.source_platform || '');
+    if (sortField === 'visual_type') return dir * (a.visual_type || '').localeCompare(b.visual_type || '');
+    if (sortField === 'trend_score') return dir * ((Number(a.trend_score) || 0) - (Number(b.trend_score) || 0));
+    if (sortField === 'status') return dir * (a.status || '').localeCompare(b.status || '');
+    return 0;
+  });
 
   const toggleSelect = (id) => {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -295,7 +371,7 @@ export default function VisualTrendsTab({ destinationId }) {
           </Button>
         </Tooltip>
         <Tooltip title="Vernieuwen"><IconButton size="small" onClick={loadData}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
-        <ToggleButtonGroup size="small" value={view} exclusive onChange={(_, v) => { if (v) setView(v); }}>
+        <ToggleButtonGroup size="small" value={view} exclusive onChange={handleViewChange}>
           <ToggleButton value="grid"><GridIcon fontSize="small" /></ToggleButton>
           <ToggleButton value="table"><TableIcon fontSize="small" /></ToggleButton>
         </ToggleButtonGroup>
@@ -327,18 +403,38 @@ export default function VisualTrendsTab({ destinationId }) {
                 <TableCell padding="checkbox"><Checkbox size="small" checked={selected.length === items.length && items.length > 0}
                   onChange={() => setSelected(selected.length === items.length ? [] : items.map(i => i.id))} /></TableCell>
                 <TableCell>Thumbnail</TableCell>
-                <TableCell>Titel</TableCell>
-                <TableCell>Platform</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Score</TableCell>
-                <TableCell>Status</TableCell>
+                <TableCell sortDirection={sortField === 'title' ? sortOrder.toLowerCase() : false}>
+                  <TableSortLabel active={sortField === 'title'} direction={sortField === 'title' ? sortOrder.toLowerCase() : 'asc'} onClick={() => handleSort('title')}>
+                    Titel
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortField === 'source_platform' ? sortOrder.toLowerCase() : false}>
+                  <TableSortLabel active={sortField === 'source_platform'} direction={sortField === 'source_platform' ? sortOrder.toLowerCase() : 'asc'} onClick={() => handleSort('source_platform')}>
+                    Platform
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortField === 'visual_type' ? sortOrder.toLowerCase() : false}>
+                  <TableSortLabel active={sortField === 'visual_type'} direction={sortField === 'visual_type' ? sortOrder.toLowerCase() : 'asc'} onClick={() => handleSort('visual_type')}>
+                    Type
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortField === 'trend_score' ? sortOrder.toLowerCase() : false}>
+                  <TableSortLabel active={sortField === 'trend_score'} direction={sortField === 'trend_score' ? sortOrder.toLowerCase() : 'asc'} onClick={() => handleSort('trend_score')}>
+                    Score
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortField === 'status' ? sortOrder.toLowerCase() : false}>
+                  <TableSortLabel active={sortField === 'status'} direction={sortField === 'status' ? sortOrder.toLowerCase() : 'asc'} onClick={() => handleSort('status')}>
+                    Status
+                  </TableSortLabel>
+                </TableCell>
                 <TableCell align="right">Acties</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>{Array.from({ length: 8 }).map((_, j) => <TableCell key={j}><Skeleton /></TableCell>)}</TableRow>
-              )) : items.map(item => {
+              )) : sortedItems.map(item => {
                 const plat = getPlatform(item.source_platform);
                 return (
                   <TableRow key={item.id} hover sx={{ cursor: 'pointer' }} onClick={() => handleViewDetail(item.id)}>
@@ -409,9 +505,46 @@ export default function VisualTrendsTab({ destinationId }) {
                       catch { return null; }
                     })()}
                     {detailDialog.ai_setting && <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>Setting: {detailDialog.ai_setting}</Typography>}
+                    {detailDialog.ai_objects && (() => {
+                      try { const objs = JSON.parse(detailDialog.ai_objects); return <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>Objecten: {objs.join(', ')}</Typography>; }
+                      catch { return null; }
+                    })()}
+                    {detailDialog.status !== 'used' && (
+                      <Button variant="contained" color="secondary" startIcon={generatingInDialog ? <CircularProgress size={16} /> : <AnalyzeIcon />}
+                        onClick={handleGenerateInDialog} disabled={generatingInDialog}
+                        sx={{ mt: 2, minHeight: 44, textTransform: 'none', fontSize: 14 }}>
+                        {generatingInDialog ? 'Content wordt gegenereerd...' : 'Content Maken vanuit deze Visual'}
+                      </Button>
+                    )}
+                    {detailDialog.status === 'used' && (
+                      <Alert severity="success" sx={{ mt: 2, py: 0.5 }}>Content is gegenereerd. Bekijk in Content Items.</Alert>
+                    )}
                   </Box>
                 ) : (
-                  <Typography color="text.secondary" variant="body2">Nog niet geanalyseerd. Klik op "AI Analyse" om te starten.</Typography>
+                  <Box>
+                    {analyzingInDialog ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                        <CircularProgress size={24} />
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>Analyse bezig...</Typography>
+                          <Typography variant="caption" color="text.secondary">Mistral Vision analyseert de afbeelding (kan 30-60s duren)</Typography>
+                        </Box>
+                      </Box>
+                    ) : (
+                      <Box>
+                        <Typography color="text.secondary" variant="body2" sx={{ mb: 1.5 }}>Nog niet geanalyseerd. Start de AI analyse om beschrijving, mood, thema's en objecten te detecteren.</Typography>
+                        <Button variant="contained" color="primary" startIcon={<AnalyzeIcon />} onClick={handleAnalyzeInDialog}
+                          sx={{ minHeight: 44, minWidth: 44, textTransform: 'none', fontSize: 14 }}>
+                          AI Analyse Starten
+                        </Button>
+                      </Box>
+                    )}
+                    {analyzeError && (
+                      <Alert severity="error" sx={{ mt: 1.5 }} action={<Button size="small" color="inherit" onClick={handleAnalyzeInDialog}>Opnieuw</Button>}>
+                        Analyse mislukt: {analyzeError}
+                      </Alert>
+                    )}
+                  </Box>
                 )}
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="subtitle2" gutterBottom>Details</Typography>
@@ -425,14 +558,21 @@ export default function VisualTrendsTab({ destinationId }) {
             </Grid>
           </DialogContent>
           <DialogActions>
-            {detailDialog.status === 'discovered' && (
-              <Button startIcon={<AnalyzeIcon />} onClick={() => { handleAnalyze(detailDialog.id); setDetailDialog(null); }}>AI Analyse</Button>
-            )}
+
             {!detailDialog.media_id && detailDialog.status !== 'dismissed' && (
               <Button startIcon={<SaveIcon />} color="success" onClick={() => { handleSave(detailDialog.id); setDetailDialog(null); }}>Opslaan in Media</Button>
             )}
-            {detailDialog.status === 'analyzed' && (
-              <Button startIcon={<AnalyzeIcon />} color="secondary" onClick={() => { handleGenerateContent(detailDialog.id); setDetailDialog(null); }}>Content Maken</Button>
+            {(detailDialog.status === 'analyzed' || detailDialog.ai_description) && !generatingInDialog && detailDialog.status !== 'used' && (
+              <Button startIcon={<AnalyzeIcon />} color="secondary" variant="contained" onClick={handleGenerateInDialog}
+                sx={{ minHeight: 44, textTransform: 'none' }}>Content Maken</Button>
+            )}
+            {generatingInDialog && (
+              <Button disabled startIcon={<CircularProgress size={16} />} sx={{ textTransform: 'none' }}>
+                Content wordt gegenereerd...
+              </Button>
+            )}
+            {detailDialog.status === 'used' && (
+              <Chip label="Content gegenereerd" color="success" size="small" />
             )}
             <Button onClick={() => setDetailDialog(null)}>Sluiten</Button>
           </DialogActions>
