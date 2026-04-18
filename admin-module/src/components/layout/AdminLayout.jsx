@@ -45,11 +45,11 @@ export default function AdminLayout() {
     // Navigation sequences
     'g d': () => navigate('/dashboard'),
     'g c': () => navigate('/content-studio'),
-    'g b': () => navigate('/content-studio?tab=sources'),
-    'g i': () => navigate('/content-studio?tab=suggestions'),
-    'g t': () => navigate('/content-studio?tab=items'),
-    'g k': () => navigate('/content-studio?tab=calendar'),
-    'g a': () => navigate('/content-studio?tab=analytics'),
+    'g b': () => { navigate('/content-studio'); setTimeout(() => window.dispatchEvent(new CustomEvent('hb:content-studio-tab', { detail: 0 })), 100); },
+    'g i': () => { navigate('/content-studio'); setTimeout(() => window.dispatchEvent(new CustomEvent('hb:content-studio-tab', { detail: 1 })), 100); },
+    'g t': () => { navigate('/content-studio'); setTimeout(() => window.dispatchEvent(new CustomEvent('hb:content-studio-tab', { detail: 2 })), 100); },
+    'g k': () => { navigate('/content-studio'); setTimeout(() => window.dispatchEvent(new CustomEvent('hb:content-studio-tab', { detail: 3 })), 100); },
+    'g a': () => { navigate('/content-studio'); setTimeout(() => window.dispatchEvent(new CustomEvent('hb:content-studio-tab', { detail: 4 })), 100); },
     'g m': () => navigate('/media'),
     'g s': () => navigate('/branding'),
 
