@@ -15926,7 +15926,100 @@ router.post('/agents/jobs/:name/trigger', adminAuth('destination_admin'), writeA
 
 
 // ═══════════════════════════════════════════
-// NOTIFICATIONS CENTER (Opdracht 5 v4.0)
+// GET /content/studio/overview — Executive overview aggregation (Opdracht 6 v4.0)
+router.get('/content/studio/overview', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = req.destinationId || 1;
+
+    // Today's scheduled + published
+    const [todayScheduled] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND DATE(scheduled_at) = CURDATE() AND approval_status NOT IN ('deleted','archived')`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+    const [todayPublished] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND DATE(published_at) = CURDATE()`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // This week scheduled + published
+    const [weekScheduled] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND YEARWEEK(scheduled_at, 1) = YEARWEEK(CURDATE(), 1) AND approval_status NOT IN ('deleted','archived')`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+    const [weekPublished] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND YEARWEEK(published_at, 1) = YEARWEEK(CURDATE(), 1)`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // Calendar gaps (weekdays without scheduled content in next 14 days)
+    const gapDays = await mysqlSequelize.query(
+      `SELECT DATE(d.dt) as gap_date FROM (
+        SELECT CURDATE() + INTERVAL seq DAY as dt FROM (
+          SELECT 0 as seq UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6
+          UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12 UNION SELECT 13
+        ) nums
+      ) d
+      LEFT JOIN content_items ci ON DATE(ci.scheduled_at) = DATE(d.dt) AND ci.destination_id = ? AND ci.approval_status NOT IN ('deleted','archived')
+      WHERE DAYOFWEEK(d.dt) NOT IN (1, 7) AND ci.id IS NULL`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // AI suggestions pending
+    const [pendingSuggestions] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_suggestions WHERE destination_id = ? AND status = 'pending'`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // Drafts
+    const [drafts] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND approval_status = 'draft'`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // Pending review
+    const [pendingReview] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND approval_status = 'pending_review'`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // Failed publishes (last 7 days)
+    const [failedPublishes] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND approval_status = 'failed' AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // Top performing content (last 30 days)
+    const topContent = await mysqlSequelize.query(
+      `SELECT ci.id, ci.title, ci.content_type, ci.target_platform, COALESCE(SUM(cp.engagement), 0) as total_engagement, COALESCE(SUM(cp.reach), 0) as total_reach
+       FROM content_items ci
+       LEFT JOIN content_performance cp ON cp.content_item_id = ci.id
+       WHERE ci.destination_id = ? AND ci.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND ci.approval_status NOT IN ('deleted','archived')
+       GROUP BY ci.id ORDER BY total_engagement DESC LIMIT 3`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        today: { scheduled: todayScheduled?.count || 0, published: todayPublished?.count || 0 },
+        thisWeek: { scheduled: weekScheduled?.count || 0, published: weekPublished?.count || 0 },
+        gaps: { count: gapDays?.length || 0, dates: (gapDays || []).slice(0, 5).map(g => g.gap_date) },
+        suggestions: { pending: pendingSuggestions?.count || 0 },
+        attention: {
+          drafts: drafts?.count || 0,
+          pendingReview: pendingReview?.count || 0,
+          failedPublishes: failedPublishes?.count || 0,
+        },
+        topContent: topContent || [],
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Content overview error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'OVERVIEW_ERROR', message: error.message } });
+  }
+});
+
+
 // ═══════════════════════════════════════════
 
 // GET /notifications — list notifications for current user
