@@ -180,6 +180,7 @@ import createMediaRouter from "./mediaRoutes.js";
 import createCollectionRouter, { createPublicCollectionRouter } from "./mediaCollectionRoutes.js";
 import visualTrendDiscovery from '../services/visual/visualTrendDiscovery.js';
 import visualAnalyzer from '../services/visual/visualAnalyzer.js';
+import notificationService from '../services/notificationService.js';
 
 
 const router = Router();
@@ -15920,6 +15921,64 @@ router.post('/agents/jobs/:name/trigger', adminAuth('destination_admin'), writeA
   } catch (error) {
     logger.error('[AdminPortal] Job trigger error:', error);
     res.status(500).json({ success: false, error: { code: 'TRIGGER_ERROR', message: error.message } });
+  }
+});
+
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS CENTER (Opdracht 5 v4.0)
+// ═══════════════════════════════════════════
+
+// GET /notifications — list notifications for current user
+router.get('/notifications', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const offset = parseInt(req.query.offset) || 0;
+    const unreadOnly = req.query.unread_only === 'true';
+    const data = await notificationService.getForUser(userId, { limit, offset, unreadOnly });
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Get notifications error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'NOTIFICATIONS_ERROR', message: error.message } });
+  }
+});
+
+// PATCH /notifications/:id/read — mark single notification as read
+router.patch('/notifications/:id/read', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const ok = await notificationService.markRead(parseInt(req.params.id), userId);
+    if (!ok) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Notification not found or already read' } });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Mark read error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'MARK_READ_ERROR', message: error.message } });
+  }
+});
+
+// POST /notifications/read-all — mark all as read
+router.post('/notifications/read-all', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const count = await notificationService.markAllRead(userId);
+    res.json({ success: true, data: { marked: count } });
+  } catch (error) {
+    logger.error('[AdminPortal] Mark all read error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'MARK_ALL_READ_ERROR', message: error.message } });
+  }
+});
+
+// DELETE /notifications/:id — dismiss notification
+router.delete('/notifications/:id', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const ok = await notificationService.dismiss(parseInt(req.params.id), userId);
+    if (!ok) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Notification not found' } });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Dismiss notification error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'DISMISS_ERROR', message: error.message } });
   }
 });
 

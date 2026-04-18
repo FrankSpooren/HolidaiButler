@@ -8,6 +8,7 @@ import useAuthStore from '../../stores/authStore.js';
 import useDestinationStore from '../../stores/destinationStore.js';
 import useThemeStore from '../../stores/themeStore.js';
 import DestinationSelector from './DestinationSelector.jsx';
+import NotificationsCenter from './NotificationsCenter.jsx';
 import { SIDEBAR_STYLES } from '../../theme.js';
 import { isStudioMode } from '../../utils/studioMode.js';
 
@@ -43,6 +44,8 @@ export default function Header({ onMenuToggle }) {
         <Box sx={{ flex: 1 }} />
 
         <DestinationSelector value={selectedDestination} onChange={setDestination} />
+
+        <NotificationsCenter />
 
         <Tooltip title={mode === 'dark' ? 'Light mode' : 'Dark mode'}>
           <IconButton onClick={toggleMode} size="small" color="inherit">
