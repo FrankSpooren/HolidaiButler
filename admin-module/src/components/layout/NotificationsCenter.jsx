@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   IconButton, Badge, Popover, Box, Typography, Button,
@@ -57,6 +58,7 @@ function groupByDay(notifications) {
 }
 
 export default function NotificationsCenter() {
+  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -106,7 +108,7 @@ export default function NotificationsCenter() {
 
   const handleClickNotification = (n) => {
     if (!n.read_at) handleMarkRead(n.id);
-    if (n.action_url) { setAnchorEl(null); window.location.hash = n.action_url; }
+    if (n.action_url) { setAnchorEl(null); navigate(n.action_url); }
   };
 
   const open = Boolean(anchorEl);
