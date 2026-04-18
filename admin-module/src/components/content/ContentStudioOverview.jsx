@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Card, CardContent, Grid, Button, Chip, Skeleton, Alert, Divider } from '@mui/material';
+import { Box, Typography, Card, CardContent, Grid, Button, Chip, Skeleton, Alert } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
@@ -10,6 +10,10 @@ import EditNoteIcon from '@mui/icons-material/EditNote';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
+import SearchIcon from '@mui/icons-material/Search';
+import ImageIcon from '@mui/icons-material/Image';
+import PlaceIcon from '@mui/icons-material/Place';
+import EventIcon from '@mui/icons-material/Event';
 import client from '../../api/client.js';
 import { tokens } from '../../theme/tokens.js';
 
@@ -85,22 +89,83 @@ function TopContentItem({ item, rank }) {
   );
 }
 
-const DIRECTION_COLORS = { breakout: '#d32f2f', rising: '#2e7d32', stable: '#1565c0', declining: '#ef6c00' };
-const DIRECTION_LABELS = { breakout: 'Breakout', rising: 'Rising', stable: 'Stable', declining: 'Declining' };
+// Source type config for mixed Top 10
+const SOURCE_CONFIG = {
+  zoektermen:        { icon: SearchIcon, color: tokens.semantic.info,    label: 'Zoekterm' },
+  visuele_trends:    { icon: ImageIcon,  color: tokens.brand.teal,      label: 'Visual' },
+  poi_inspiratie:    { icon: PlaceIcon,  color: tokens.semantic.success, label: 'POI' },
+  agenda_inspiratie: { icon: EventIcon,  color: tokens.brand.gold,      label: 'Agenda' },
+  holibot_insights:  { icon: AutoAwesomeIcon, color: tokens.semantic.info, label: 'Chatbot' },
+};
 
-function Top25Item({ item, rank }) {
-  const dirColor = DIRECTION_COLORS[item.trend_direction] || DIRECTION_COLORS.stable;
+function buildMixedTop10(sections) {
+  if (!sections) return [];
+  // Normalize items from all sources into a unified format
+  const all = [];
+  const addItems = (key, items, getTitle, getScore) => {
+    (items || []).forEach(item => {
+      all.push({
+        source: key,
+        title: getTitle(item),
+        score: getScore(item),
+        raw: item,
+      });
+    });
+  };
+  addItems('zoektermen', sections.zoektermen?.items,
+    i => i.keyword, i => parseFloat(i.relevance_score || 0));
+  addItems('visuele_trends', sections.visuele_trends?.items,
+    i => i.title || i.ai_description || 'Visual trend', i => parseFloat(i.trend_score || 0));
+  addItems('poi_inspiratie', sections.poi_inspiratie?.items,
+    i => i.name || 'POI', i => parseFloat(i.google_rating || 0) * 2);
+  addItems('agenda_inspiratie', sections.agenda_inspiratie?.items,
+    i => i.title || i.title_en || 'Event', i => 5);
+  addItems('holibot_insights', sections.holibot_insights?.items,
+    i => i.query || i.topic || 'Chatbot vraag', i => parseFloat(i.frequency || i.count || 0));
+
+  // Sort by score descending, then round-robin from sources to ensure mix
+  const bySource = {};
+  for (const item of all) {
+    if (!bySource[item.source]) bySource[item.source] = [];
+    bySource[item.source].push(item);
+  }
+  // Sort each source by score
+  for (const key of Object.keys(bySource)) {
+    bySource[key].sort((a, b) => b.score - a.score);
+  }
+  // Round-robin pick: take top from each source in order
+  const result = [];
+  const sourceKeys = Object.keys(bySource).filter(k => bySource[k].length > 0);
+  let round = 0;
+  while (result.length < 10 && sourceKeys.length > 0) {
+    for (let i = sourceKeys.length - 1; i >= 0; i--) {
+      const key = sourceKeys[i];
+      if (round < bySource[key].length) {
+        result.push(bySource[key][round]);
+        if (result.length >= 10) break;
+      } else {
+        sourceKeys.splice(i, 1);
+      }
+    }
+    round++;
+  }
+  return result;
+}
+
+function Top10Item({ item, rank }) {
+  const cfg = SOURCE_CONFIG[item.source] || SOURCE_CONFIG.zoektermen;
+  const Icon = cfg.icon;
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { border: 'none' } }}>
       <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'text.disabled', width: 18, textAlign: 'center' }}>{rank}</Typography>
+      <Icon sx={{ fontSize: 16, color: cfg.color, flexShrink: 0 }} />
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2" sx={{ fontSize: '0.78rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.keyword}</Typography>
+        <Typography variant="body2" sx={{ fontSize: '0.78rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {item.title}
+        </Typography>
       </Box>
-      <Chip label={DIRECTION_LABELS[item.trend_direction] || item.trend_direction} size="small"
-        sx={{ height: 18, fontSize: '0.58rem', bgcolor: dirColor + '18', color: dirColor, fontWeight: 600 }} />
-      <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', minWidth: 40, textAlign: 'right' }}>
-        {parseInt(item.search_volume || 0).toLocaleString()}
-      </Typography>
+      <Chip label={cfg.label} size="small"
+        sx={{ height: 18, fontSize: '0.58rem', bgcolor: cfg.color + '18', color: cfg.color, fontWeight: 600, flexShrink: 0 }} />
     </Box>
   );
 }
@@ -118,7 +183,7 @@ export default function ContentStudioOverview({ onNavigateTab, destinationId }) 
         setError(null);
         const [overviewRes, top25Res] = await Promise.all([
           client.get('/content/studio/overview', { headers: { 'X-Destination-ID': destinationId } }),
-          client.get('/content/sources/top25?limit=10', { headers: { 'X-Destination-ID': destinationId } }).catch(() => null),
+          client.get('/content/sources/top25', { headers: { 'X-Destination-ID': destinationId } }).catch(() => null),
         ]);
         if (overviewRes.data.success) setData(overviewRes.data.data);
         else setError(overviewRes.data.error?.message);
@@ -134,7 +199,7 @@ export default function ContentStudioOverview({ onNavigateTab, destinationId }) 
 
   const hasAttention = data && (data.attention.drafts > 0 || data.attention.pendingReview > 0 || data.attention.failedPublishes > 0);
   const hasTopContent = data && data.topContent && data.topContent.length > 0;
-  const top25Items = top25?.sections?.zoektermen?.items?.slice(0, 10) || [];
+  const mixedTop10 = buildMixedTop10(top25?.sections);
 
   return (
     <Box>
@@ -201,8 +266,8 @@ export default function ContentStudioOverview({ onNavigateTab, destinationId }) 
         )}
       </Grid>
 
-      {/* Content Top 25 */}
-      {top25Items.length > 0 && (
+      {/* Content Top 10 — Mixed from all sources */}
+      {mixedTop10.length > 0 && (
         <Card>
           <CardContent sx={{ p: 2.5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
@@ -217,10 +282,10 @@ export default function ContentStudioOverview({ onNavigateTab, destinationId }) 
             </Box>
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
-                {top25Items.slice(0, 5).map((item, i) => <Top25Item key={i} item={item} rank={i + 1} />)}
+                {mixedTop10.slice(0, 5).map((item, i) => <Top10Item key={i} item={item} rank={i + 1} />)}
               </Grid>
               <Grid item xs={12} md={6}>
-                {top25Items.slice(5, 10).map((item, i) => <Top25Item key={i + 5} item={item} rank={i + 6} />)}
+                {mixedTop10.slice(5, 10).map((item, i) => <Top10Item key={i + 5} item={item} rank={i + 6} />)}
               </Grid>
             </Grid>
           </CardContent>
@@ -228,7 +293,7 @@ export default function ContentStudioOverview({ onNavigateTab, destinationId }) 
       )}
 
       {/* Empty state */}
-      {!loading && !data?.thisWeek?.scheduled && !data?.suggestions?.pending && !hasTopContent && top25Items.length === 0 && (
+      {!loading && !data?.thisWeek?.scheduled && !data?.suggestions?.pending && !hasTopContent && mixedTop10.length === 0 && (
         <Card sx={{ mt: 2, textAlign: 'center', py: 4 }}>
           <CardContent>
             <AutoAwesomeIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
