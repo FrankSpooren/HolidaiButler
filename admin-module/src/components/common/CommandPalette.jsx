@@ -46,11 +46,11 @@ const ALL_COMMANDS = [
   // NAVIGATIE (20)
   { id: 'nav-dashboard', label: 'Dashboard', icon: Dashboard, path: '/dashboard', section: 'Navigatie', shortcut: 'G D', keywords: 'home overzicht start' },
   { id: 'nav-content', label: 'Content Studio', icon: AutoAwesome, path: '/content-studio', section: 'Navigatie', shortcut: 'G C', keywords: 'studio items concepten' },
-  { id: 'nav-bronnen', label: 'Content Bronnen', icon: TrendingUp, path: '/content-studio?tab=sources', section: 'Navigatie', shortcut: 'G B', keywords: 'bronnen sources trending zoektermen' },
-  { id: 'nav-ideeen', label: 'Content Ideeen', icon: Lightbulb, path: '/content-studio?tab=suggestions', section: 'Navigatie', shortcut: 'G I', keywords: 'suggesties ideeen voorstellen' },
-  { id: 'nav-items', label: 'Content Items', icon: ViewList, path: '/content-studio?tab=items', section: 'Navigatie', shortcut: 'G T', keywords: 'items tabel lijst concepts' },
-  { id: 'nav-kalender', label: 'Kalender', icon: CalendarMonth, path: '/content-studio?tab=calendar', section: 'Navigatie', shortcut: 'G K', keywords: 'calendar planning schedule' },
-  { id: 'nav-analyse', label: 'Analyse', icon: BarChart, path: '/content-studio?tab=analytics', section: 'Navigatie', shortcut: 'G A', keywords: 'analytics prestaties performance' },
+  { id: 'nav-bronnen', label: 'Content Bronnen', icon: TrendingUp, path: '/content-studio', tabIndex: 0, section: 'Navigatie', shortcut: 'G B', keywords: 'bronnen sources trending zoektermen' },
+  { id: 'nav-ideeen', label: 'Content Ideeen', icon: Lightbulb, path: '/content-studio', tabIndex: 1, section: 'Navigatie', shortcut: 'G I', keywords: 'suggesties ideeen voorstellen' },
+  { id: 'nav-items', label: 'Content Items', icon: ViewList, path: '/content-studio', tabIndex: 2, section: 'Navigatie', shortcut: 'G T', keywords: 'items tabel lijst concepts' },
+  { id: 'nav-kalender', label: 'Kalender', icon: CalendarMonth, path: '/content-studio', tabIndex: 3, section: 'Navigatie', shortcut: 'G K', keywords: 'calendar planning schedule' },
+  { id: 'nav-analyse', label: 'Analyse', icon: BarChart, path: '/content-studio', tabIndex: 4, section: 'Navigatie', shortcut: 'G A', keywords: 'analytics prestaties performance' },
   { id: 'nav-media', label: 'Mediabibliotheek', icon: PhotoLibrary, path: '/media', section: 'Navigatie', shortcut: 'G M', keywords: 'media library afbeeldingen fotos videos' },
   { id: 'nav-branding', label: 'Merk Profiel', icon: Palette, path: '/branding', section: 'Navigatie', shortcut: 'G S', keywords: 'branding profiel tone of voice' },
   { id: 'nav-pois', label: "POI's", icon: Place, path: '/pois', section: 'Navigatie', keywords: 'points of interest locaties plekken' },
@@ -70,9 +70,9 @@ const ALL_COMMANDS = [
   { id: 'act-new-blog', label: 'Nieuw blog', icon: Article, path: '/content-studio?action=new&type=blog', section: 'Content Acties', shortcut: 'N B', keywords: 'nieuw blog artikel' },
   { id: 'act-new-social', label: 'Nieuwe social post', icon: Edit, path: '/content-studio?action=new&type=social', section: 'Content Acties', shortcut: 'N S', keywords: 'nieuw social post facebook instagram' },
   { id: 'act-new-campaign', label: 'Nieuwe campagne', icon: Campaign, path: '/content-studio?action=campaign', section: 'Content Acties', shortcut: 'N P', keywords: 'campagne campaign planning' },
-  { id: 'act-generate', label: 'Genereer suggesties', icon: AutoFixHigh, path: '/content-studio?tab=suggestions&action=generate', section: 'Content Acties', keywords: 'genereer ai suggesties ideeen' },
-  { id: 'act-autofill', label: 'Auto-fill kalender', icon: CalendarMonth, path: '/content-studio?tab=calendar&action=autofill', section: 'Content Acties', keywords: 'auto fill kalender planning automatisch' },
-  { id: 'act-bulk-publish', label: 'Bulk publiceren', icon: Publish, path: '/content-studio?tab=items&action=bulk-publish', section: 'Content Acties', keywords: 'bulk publish publiceren meerdere' },
+  { id: 'act-generate', label: 'Genereer suggesties', icon: AutoFixHigh, path: '/content-studio', tabIndex: 1, section: 'Content Acties', keywords: 'genereer ai suggesties ideeen' },
+  { id: 'act-autofill', label: 'Auto-fill kalender', icon: CalendarMonth, path: '/content-studio', tabIndex: 3, section: 'Content Acties', keywords: 'auto fill kalender planning automatisch' },
+  { id: 'act-bulk-publish', label: 'Bulk publiceren', icon: Publish, path: '/content-studio', tabIndex: 2, section: 'Content Acties', keywords: 'bulk publish publiceren meerdere' },
   { id: 'act-rewrite', label: 'AI herschrijven', icon: Refresh, path: '/content-studio?action=rewrite', section: 'Content Acties', keywords: 'herschrijven rewrite ai alternatief' },
 
   // MEDIA (2)
@@ -80,8 +80,8 @@ const ALL_COMMANDS = [
   { id: 'media-search', label: 'Zoek in media', icon: Search, path: '/media?focus=search', section: 'Media', keywords: 'zoek media afbeeldingen fotos' },
 
   // VISUEEL (2)
-  { id: 'vis-analyse', label: 'AI Analyse starten', icon: AutoFixHigh, path: '/content-studio?tab=sources&subtab=visuals&action=analyze', section: 'Visueel', keywords: 'visual trend analyse ai starten' },
-  { id: 'vis-refresh', label: 'Visuele Trends vernieuwen', icon: Refresh, path: '/content-studio?tab=sources&subtab=visuals&action=refresh', section: 'Visueel', keywords: 'visueel trends refresh vernieuwen' },
+  { id: 'vis-analyse', label: 'AI Analyse starten', icon: AutoFixHigh, path: '/content-studio', tabIndex: 0, section: 'Visueel', keywords: 'visual trend analyse ai starten' },
+  { id: 'vis-refresh', label: 'Visuele Trends vernieuwen', icon: Refresh, path: '/content-studio', tabIndex: 0, section: 'Visueel', keywords: 'visueel trends refresh vernieuwen' },
 
   // ZOEKEN (2)
   { id: 'search-content', label: 'Zoek in alle content', icon: Search, path: '/content-studio?focus=search', section: 'Zoeken', shortcut: '/', keywords: 'zoek search content items' },
@@ -192,7 +192,12 @@ export default function CommandPalette({ open, onClose }) {
       window.dispatchEvent(new CustomEvent('hb:show-shortcuts'));
       return;
     }
-    if (cmd.path) navigate(cmd.path);
+    if (cmd.path) {
+      navigate(cmd.path);
+      if (typeof cmd.tabIndex === 'number') {
+        setTimeout(() => window.dispatchEvent(new CustomEvent('hb:content-studio-tab', { detail: cmd.tabIndex })), 50);
+      }
+    }
   }, [navigate, onClose, logout, destinations, selectedDestination, setDestination, i18n]);
 
   const handleKeyDown = (e) => {

@@ -2504,6 +2504,17 @@ export default function ContentStudioPage() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  // Listen for keyboard shortcut tab navigation events
+  useEffect(() => {
+    const onTabNav = (e) => {
+      if (typeof e.detail === 'number' && e.detail >= 0 && e.detail <= 6) {
+        setTab(e.detail);
+      }
+    };
+    window.addEventListener('hb:content-studio-tab', onTabNav);
+    return () => window.removeEventListener('hb:content-studio-tab', onTabNav);
+  }, []);
   const [campaignGenerating, setCampaignGenerating] = useState(false);
   const [undoCampaignIds, setUndoCampaignIds] = useState(null);
   const [snackMsg, setSnackMsg] = useState(null);
