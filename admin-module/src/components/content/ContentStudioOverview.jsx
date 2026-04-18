@@ -70,25 +70,6 @@ function AttentionItem({ icon: Icon, color, text, count }) {
   );
 }
 
-function TopContentItem({ item, rank }) {
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { border: 'none' } }}>
-      <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: 'text.disabled', width: 20, textAlign: 'center' }}>{rank}</Typography>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</Typography>
-        <Box sx={{ display: 'flex', gap: 1, mt: 0.25 }}>
-          <Chip label={item.content_type === 'social_post' ? 'Social' : item.content_type === 'blog' ? 'Blog' : item.content_type} size="small" sx={{ height: 16, fontSize: '0.6rem' }} />
-          {item.target_platform && <Chip label={item.target_platform} size="small" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
-        </Box>
-      </Box>
-      <Box sx={{ textAlign: 'right' }}>
-        <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>{parseInt(item.total_reach || 0).toLocaleString()} bereik</Typography>
-        <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.disabled', display: 'block' }}>{parseInt(item.total_engagement || 0).toLocaleString()} engagement</Typography>
-      </Box>
-    </Box>
-  );
-}
-
 // Source type config for mixed Top 10
 const SOURCE_CONFIG = {
   zoektermen:        { icon: SearchIcon, color: tokens.semantic.info,    label: 'Zoekterm' },
@@ -198,7 +179,6 @@ export default function ContentStudioOverview({ onNavigateTab, destinationId }) 
   }, [destinationId]);
 
   const hasAttention = data && (data.attention.drafts > 0 || data.attention.pendingReview > 0 || data.attention.failedPublishes > 0);
-  const hasTopContent = data && data.topContent && data.topContent.length > 0;
   const mixedTop10 = buildMixedTop10(top25?.sections);
 
   return (
@@ -227,7 +207,7 @@ export default function ContentStudioOverview({ onNavigateTab, destinationId }) 
 
       {/* Middle row: Attention + Top Content */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={hasTopContent ? 5 : 12}>
+        <Grid item xs={12} md={12}>
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 2.5 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -249,21 +229,6 @@ export default function ContentStudioOverview({ onNavigateTab, destinationId }) 
             </CardContent>
           </Card>
         </Grid>
-        {hasTopContent && (
-          <Grid item xs={12} md={7}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent sx={{ p: 2.5 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TrendingUpIcon sx={{ fontSize: 18, color: tokens.brand.teal }} /> Top content (30 dagen)
-                  </Typography>
-                  <Button size="small" onClick={() => onNavigateTab && onNavigateTab(2)} sx={{ textTransform: 'none', fontSize: '0.7rem', color: tokens.brand.teal }}>Alle items</Button>
-                </Box>
-                {data.topContent.map((item, i) => <TopContentItem key={item.id} item={item} rank={i + 1} />)}
-              </CardContent>
-            </Card>
-          </Grid>
-        )}
       </Grid>
 
       {/* Content Top 10 — Mixed from all sources */}
@@ -293,7 +258,7 @@ export default function ContentStudioOverview({ onNavigateTab, destinationId }) 
       )}
 
       {/* Empty state */}
-      {!loading && !data?.thisWeek?.scheduled && !data?.suggestions?.pending && !hasTopContent && mixedTop10.length === 0 && (
+      {!loading && !data?.thisWeek?.scheduled && !data?.suggestions?.pending && mixedTop10.length === 0 && (
         <Card sx={{ mt: 2, textAlign: 'center', py: 4 }}>
           <CardContent>
             <AutoAwesomeIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
