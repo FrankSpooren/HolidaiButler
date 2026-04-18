@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Box, Typography, Paper, Tabs, Tab, Table, TableBody, TableCell, TableContainer,
@@ -2481,10 +2482,32 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
 // MAIN PAGE COMPONENT
 // ============================================================
 
+
+const TAB_NAMES = ['overview', 'bronnen', 'suggesties', 'items', 'kalender', 'analyse', 'seizoenen', 'social'];
+const TAB_INDEX = Object.fromEntries(TAB_NAMES.map((name, i) => [name, i]));
+
 export default function ContentStudioPage() {
   const { t } = useTranslation();
   const user = useAuthStore(s => s.user);
-  const [tab, setTab] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = TAB_INDEX[searchParams.get('tab')] ?? 0;
+  const [tab, setTabState] = useState(tabFromUrl);
+  const setTab = (newTab) => {
+    setTabState(newTab);
+    const name = TAB_NAMES[newTab] || 'overview';
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (name === 'overview') next.delete('tab');
+      else next.set('tab', name);
+      return next;
+    }, { replace: false });
+  };
+  // Sync tab state from URL on browser back/forward
+  useEffect(() => {
+    const urlTab = TAB_INDEX[searchParams.get('tab')] ?? 0;
+    if (urlTab !== tab) setTabState(urlTab);
+  }, [searchParams]);
+
   const [sourceTab, setSourceTabRaw] = useState(() => {
     const hash = window.location.hash.replace('#source-', '');
     const parsed = parseInt(hash);
