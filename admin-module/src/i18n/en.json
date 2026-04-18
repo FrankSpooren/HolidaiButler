@@ -1722,7 +1722,8 @@
       "pois": "POI Inspiration",
       "events": "Event Inspiration",
       "holibot": "HoliBot Insights",
-      "gsc": "Search Intent"
+      "gsc": "Search Intent",
+      "overview": "Overview"
     }
   },
   "brandProfile": {
@@ -1919,6 +1920,45 @@
       "removeFilter": "Remove filter",
       "versionDesc": "Version description",
       "save": "Save as new version"
+    }
+  },
+  "contentSources": {
+    "overview": {
+      "title": "Content Top 25",
+      "subtitle": "{count} recommendations from {sources} sources",
+      "updatedAt": "Updated {date}",
+      "refresh": "Refresh (recalculates all sources)",
+      "showAll": "Show all {count}",
+      "noItems": "No items",
+      "sourcesWarning": "{count} source(s) could not be loaded",
+      "addKeyword": "Add keyword",
+      "keywordPlaceholder": "e.g. sunset calpe, best restaurants",
+      "keywordTarget": "Goal",
+      "targetSeo": "SEO (website content)",
+      "targetSocial": "Social Media",
+      "targetBoth": "Both",
+      "keywordAdded": "Keyword \"{keyword}\" added",
+      "keywordExists": "Keyword already exists"
+    },
+    "visualAnalysis": {
+      "title": "AI Analysis",
+      "startButton": "Start AI Analysis",
+      "analyzing": "Analyzing...",
+      "analyzingHint": "Mistral Vision is analyzing the image (may take 30-60s)",
+      "notAnalyzed": "Not yet analyzed. Start AI analysis to detect description, mood, themes and objects.",
+      "failed": "Analysis failed",
+      "retry": "Retry",
+      "createContent": "Create Content from this Visual",
+      "generating": "Content is being generated...",
+      "generated": "Content has been generated. View in Content Items.",
+      "generationStarted": "Content generation started. Items will appear within 1-3 minutes in Content Items."
+    },
+    "calendar": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "noContentDay": "No content scheduled for this day.",
+      "noContentWeek": "No items"
     }
   }
 }

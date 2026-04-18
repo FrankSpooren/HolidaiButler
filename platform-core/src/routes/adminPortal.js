@@ -15837,4 +15837,90 @@ router.post('/content/visuals/upload', adminAuth('editor'), writeAccess(['platfo
   });
 });
 
+// ============================================================
+// CONTENT SOURCES — TOP 25 OVERVIEW (Opdracht 6, Command v3.0)
+// ============================================================
+
+router.get('/content/sources/top25', adminAuth('editor'), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'X-Destination-ID header required' } });
+
+    const refresh = req.query.refresh === 'true';
+    const contentTop25Service = (await import('../services/visual/contentTop25Service.js')).default;
+    const data = await contentTop25Service.getTop25(destId, { refresh });
+
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Top 25 error:', error);
+    res.status(500).json({ success: false, error: { code: 'TOP25_ERROR', message: error.message } });
+  }
+});
+
+// ============================================================
+// CONTENT KEYWORDS — MANUAL ADD (Opdracht 8, Command v3.0)
+// ============================================================
+
+router.post('/content/keywords', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const destination = req.headers['x-destination-id'] || req.query.destination_id || req.body.destination_id;
+    const destId = resolveDestinationId(destination);
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destination_id required' } });
+
+    const { keyword, target } = req.body;
+    if (!keyword || !keyword.trim()) return res.status(400).json({ success: false, error: { code: 'MISSING_KEYWORD', message: 'keyword is required' } });
+
+    // Check for duplicate
+    const [existing] = await mysqlSequelize.query(
+      "SELECT id FROM trending_data WHERE destination_id = :destId AND keyword = :kw AND source = 'manual'",
+      { replacements: { destId, kw: keyword.trim() }, type: QueryTypes.SELECT }
+    );
+    if (existing) return res.status(409).json({ success: false, error: { code: 'DUPLICATE', message: 'Keyword bestaat al' } });
+
+    const now = new Date();
+    const weekNumber = Math.ceil((((now - new Date(now.getFullYear(), 0, 1)) / 86400000) + 1) / 7);
+
+    const [id] = await mysqlSequelize.query(
+      "INSERT INTO trending_data (destination_id, keyword, source, language, search_volume, relevance_score, trend_direction, week_number, year, created_at, updated_at) VALUES (:destId, :kw, 'manual', 'en', 0, :score, 'stable', :week, :year, NOW(), NOW())",
+      { replacements: { destId, kw: keyword.trim(), score: target === 'seo' ? 7 : target === 'social' ? 6 : 5, week: weekNumber, year: now.getFullYear() }, type: QueryTypes.INSERT }
+    );
+
+    // Clear top25 cache
+    try {
+      const top25Svc = (await import('../services/visual/contentTop25Service.js')).default;
+      top25Svc.clearCache(destId);
+    } catch (e) { /* non-blocking */ }
+
+    res.json({ success: true, data: { id, keyword: keyword.trim(), source: 'manual' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Add keyword error:', error);
+    res.status(500).json({ success: false, error: { code: 'ADD_KEYWORD_ERROR', message: error.message } });
+  }
+});
+
+
+
+// Manual job trigger (Opdracht 11)
+router.post('/agents/jobs/:name/trigger', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), async (req, res) => {
+  try {
+    const jobName = req.params.name;
+    if (!jobName) return res.status(400).json({ success: false, error: { code: 'MISSING_NAME', message: 'Job name required' } });
+    const { Queue } = await import('bullmq');
+    const Redis = (await import('ioredis')).default;
+    const conn = new Redis();
+    const q = new Queue('scheduled-tasks', { connection: conn });
+    const jobs = await q.getRepeatableJobs();
+    const exists = jobs.find(j => j.name === jobName);
+    if (!exists) { await q.close(); await conn.quit(); return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Job not found' } }); }
+    await q.add(jobName, { type: jobName, manual: true, triggered_by: req.adminUser?.email || 'unknown' }, { priority: 1 });
+    await q.close(); await conn.quit();
+    logger.info('[AdminPortal] Manual trigger: ' + jobName);
+    res.json({ success: true, data: { job: jobName, status: 'triggered' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Job trigger error:', error);
+    res.status(500).json({ success: false, error: { code: 'TRIGGER_ERROR', message: error.message } });
+  }
+});
+
 export default router;

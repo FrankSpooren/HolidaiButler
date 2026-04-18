@@ -50,6 +50,7 @@ import POIInspirationTab from "../components/content/POIInspirationTab";
 import AgendaInspirationTab from "../components/content/AgendaInspirationTab";
 import HolibotInsightsTab from "../components/content/HolibotInsightsTab";
 import SearchIntentTab from "../components/content/SearchIntentTab";
+import ContentSourcesOverviewTab from "../components/content/ContentSourcesOverviewTab";
 import contentService from '../api/contentService.js';
 import client from '../api/client.js';
 import ConceptDialog from '../components/content/ConceptDialog.jsx';
@@ -2482,7 +2483,27 @@ export default function ContentStudioPage() {
   const { t } = useTranslation();
   const user = useAuthStore(s => s.user);
   const [tab, setTab] = useState(0);
-  const [sourceTab, setSourceTab] = useState(0);
+  const [sourceTab, setSourceTabRaw] = useState(() => {
+    const hash = window.location.hash.replace('#source-', '');
+    const parsed = parseInt(hash);
+    return !isNaN(parsed) && parsed >= 0 && parsed <= 6 ? parsed : 0;
+  });
+  const setSourceTab = (v) => {
+    setSourceTabRaw(v);
+    const newHash = v > 0 ? '#source-' + v : '';
+    if (window.location.hash !== newHash) {
+      window.history.pushState({ sourceTab: v }, '', window.location.pathname + newHash);
+    }
+  };
+  useEffect(() => {
+    const onPopState = () => {
+      const hash = window.location.hash.replace('#source-', '');
+      const parsed = parseInt(hash);
+      setSourceTabRaw(!isNaN(parsed) && parsed >= 0 && parsed <= 6 ? parsed : 0);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
   const [campaignGenerating, setCampaignGenerating] = useState(false);
   const [undoCampaignIds, setUndoCampaignIds] = useState(null);
   const [snackMsg, setSnackMsg] = useState(null);
@@ -2887,6 +2908,7 @@ export default function ContentStudioPage() {
         <>
           {/* Sub-tab navigation */}
           <Tabs value={sourceTab} onChange={(_, v) => setSourceTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }} variant="scrollable" scrollButtons="auto">
+            <Tab label={t('contentStudio.sources.overview', 'Overzicht')} sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
             <Tab label={t('contentStudio.sources.keywords', 'Zoektermen')} sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
             <Tab label={t('contentStudio.sources.visuals', 'Visuele Trends')} sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
             <Tab label={t('contentStudio.sources.pois', 'POI Inspiratie')} sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
@@ -2895,8 +2917,11 @@ export default function ContentStudioPage() {
             <Tab label={t('contentStudio.sources.gsc', 'Zoekintentie')} sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
           </Tabs>
 
-          {/* Sub-tab 0: Zoektermen (bestaande trending content) */}
-          {sourceTab === 0 && <>
+          {/* Sub-tab 0: Overzicht */}
+          {sourceTab === 0 && <ContentSourcesOverviewTab destinationId={destinationId} onNavigateToTab={(tabIdx) => setSourceTab(tabIdx)} onEditConcept={(conceptId) => setConceptDialogId(conceptId)} />}
+
+          {/* Sub-tab 1: Zoektermen (was 0) */}
+          {sourceTab === 1 && <>
           <SummaryCards summary={summary} loading={summaryLoading} />
 
           {/* Filters row */}
@@ -3108,20 +3133,20 @@ export default function ContentStudioPage() {
           </Paper>
           </>}
 
-          {/* Sub-tab 1: Visuele Trends */}
-          {sourceTab === 1 && <VisualTrendsTab destinationId={destinationId} />}
+          {/* Sub-tab 2: Visuele Trends */}
+          {sourceTab === 2 && <VisualTrendsTab destinationId={destinationId} />}
 
-          {/* Sub-tab 2: POI Inspiratie */}
-          {sourceTab === 2 && <POIInspirationTab destinationId={destinationId} onNavigateToContent={(tabIdx) => { setSourceTab(0); setTab(tabIdx); }} />}
+          {/* Sub-tab 3: POI Inspiratie */}
+          {sourceTab === 3 && <POIInspirationTab destinationId={destinationId} onNavigateToContent={(tabIdx) => { setSourceTab(0); setTab(tabIdx); }} />}
 
-          {/* Sub-tab 3: Agenda Inspiratie */}
-          {sourceTab === 3 && <AgendaInspirationTab destinationId={destinationId} onNavigateToContent={(tabIdx) => { setSourceTab(0); setTab(tabIdx); }} />}
+          {/* Sub-tab 4: Agenda Inspiratie */}
+          {sourceTab === 4 && <AgendaInspirationTab destinationId={destinationId} onNavigateToContent={(tabIdx) => { setSourceTab(0); setTab(tabIdx); }} />}
 
-          {/* Sub-tab 4: HoliBot Insights */}
-          {sourceTab === 4 && <HolibotInsightsTab destinationId={destinationId} onNavigateToContent={(tabIdx) => { setSourceTab(0); setTab(tabIdx); }} />}
+          {/* Sub-tab 5: HoliBot Insights */}
+          {sourceTab === 5 && <HolibotInsightsTab destinationId={destinationId} onNavigateToContent={(tabIdx) => { setSourceTab(0); setTab(tabIdx); }} />}
 
-          {/* Sub-tab 5: Zoekintentie (GSC) */}
-          {sourceTab === 5 && <SearchIntentTab destinationId={destinationId} />}
+          {/* Sub-tab 6: Zoekintentie (GSC) */}
+          {sourceTab === 6 && <SearchIntentTab destinationId={destinationId} />}
         </>
       )}
 
@@ -3583,14 +3608,14 @@ export default function ContentStudioPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          {concept.content_source_type === 'poi' ? <Chip label="\U0001f4cd POI" size="small" sx={{ fontSize: 10, bgcolor: '#2e7d3215', color: '#2e7d32' }} />
-                          : concept.content_source_type === 'event' ? <Chip label="\U0001f4c5 Event" size="small" sx={{ fontSize: 10, bgcolor: '#ed6c0215', color: '#ed6c02' }} />
-                          : concept.content_source_type === 'visual' ? <Chip label="\U0001f4f7 Visual" size="small" sx={{ fontSize: 10, bgcolor: '#1976d215', color: '#1976d2' }} />
-                          : concept.content_source_type === 'holibot' ? <Chip label="\U0001f4ac HoliBot" size="small" sx={{ fontSize: 10, bgcolor: '#0288d115', color: '#0288d1' }} />
-                          : concept.content_source_type === 'gsc' ? <Chip label="\U0001f50d GSC" size="small" sx={{ fontSize: 10, bgcolor: '#42855415', color: '#428554' }} />
-                          : concept.content_source_type === 'recycle' ? <Chip label="\u267b\ufe0f Recycle" size="small" sx={{ fontSize: 10, bgcolor: '#7b1fa215', color: '#7b1fa2' }} />
-                          : concept.content_source_type === 'keyword' ? <Chip label="\U0001f50d Keyword" size="small" sx={{ fontSize: 10, bgcolor: '#66666615', color: '#666' }} />
-                          : <Chip label="\u270f\ufe0f Handmatig" size="small" sx={{ fontSize: 10, bgcolor: '#66666615', color: '#666' }} />}
+                          {concept.content_source_type === 'poi' ? <Chip label="📍 POI" size="small" sx={{ fontSize: 10, bgcolor: '#2e7d3215', color: '#2e7d32' }} />
+                          : concept.content_source_type === 'event' ? <Chip label="📅 Event" size="small" sx={{ fontSize: 10, bgcolor: '#ed6c0215', color: '#ed6c02' }} />
+                          : concept.content_source_type === 'visual' ? <Chip label="📷 Visual" size="small" sx={{ fontSize: 10, bgcolor: '#1976d215', color: '#1976d2' }} />
+                          : concept.content_source_type === 'holibot' ? <Chip label="💬 HoliBot" size="small" sx={{ fontSize: 10, bgcolor: '#0288d115', color: '#0288d1' }} />
+                          : concept.content_source_type === 'gsc' ? <Chip label="🔍 GSC" size="small" sx={{ fontSize: 10, bgcolor: '#42855415', color: '#428554' }} />
+                          : concept.content_source_type === 'recycle' ? <Chip label="♻️ Recycle" size="small" sx={{ fontSize: 10, bgcolor: '#7b1fa215', color: '#7b1fa2' }} />
+                          : concept.content_source_type === 'keyword' ? <Chip label="🔍 Keyword" size="small" sx={{ fontSize: 10, bgcolor: '#66666615', color: '#666' }} />
+                          : <Chip label="✏️ Handmatig" size="small" sx={{ fontSize: 10, bgcolor: '#66666615', color: '#666' }} />}
                         </TableCell>
                         <TableCell><Chip label={CONTENT_TYPE_LABELS[concept.content_type] || concept.content_type} size="small" /></TableCell>
                         <TableCell>

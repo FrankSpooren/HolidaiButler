@@ -370,6 +370,21 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: google-images-discovery (Tuesday 05:00)');
 
+
+  // Content Top 25 Refresh — daily 07:00 (regenerates cached overview)
+  await scheduledQueue.add('content-top25-refresh', { type: 'content-top25-refresh' }, {
+    repeat: { cron: '0 7 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'content-top25-refresh-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-top25-refresh (daily 07:00)');
+
+  // Content Sources Health Check — monthly 1st 06:00
+  await scheduledQueue.add('content-sources-health-check', { type: 'content-sources-health-check' }, {
+    repeat: { cron: '0 6 1 * *', tz: 'Europe/Amsterdam' },
+    jobId: 'content-sources-health-check-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-sources-health-check (monthly 1st 06:00)');
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);
