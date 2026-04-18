@@ -1402,6 +1402,10 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       targetPlatform={activeItem.target_platform}
                       selectedLanguage={langTab}
                       availablePlatforms={items.map(i => i.target_platform).filter((v, i, a) => a.indexOf(v) === i)}
+                      onPlatformChange={(platform) => {
+                        const idx = items.findIndex(i => i.target_platform === platform);
+                        if (idx >= 0) setActiveTab(idx);
+                      }}
                     />
                   </Paper>
                 ) : null}
