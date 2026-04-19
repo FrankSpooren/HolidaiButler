@@ -39,6 +39,8 @@ import { analyticsService } from '../api/analyticsService.js';
 import useDestinationStore from '../stores/destinationStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatNumber } from '../utils/formatters.js';
+import ContentAnalyseTab from './ContentAnalyseTab.jsx';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 
 const PIE_COLORS = ['#5E8B7E', '#1976d2', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316'];
 const LANG_LABELS = { nl: 'Nederlands', en: 'English', de: 'Deutsch', es: 'Español', fr: 'Français' };
@@ -520,259 +522,6 @@ function ChatbotTab({ destination, t }) {
 
 
 // ════════════════════════════════════════════
-// TAB 4: Executive Report
-// ════════════════════════════════════════════
-function ReportTab({ destination, t }) {
-  const [period, setPeriod] = useState('last_month');
-  const [customStart, setCustomStart] = useState('');
-  const [customEnd, setCustomEnd] = useState('');
-  const [commentary, setCommentary] = useState('');
-
-  const startParam = period === 'custom' ? customStart : undefined;
-  const endParam = period === 'custom' ? customEnd : undefined;
-  const enabled = period !== 'custom' || (!!customStart && !!customEnd);
-
-  const { data, isLoading } = useAnalyticsReport(destination, period, startParam, endParam, enabled);
-  const report = data?.data || {};
-  const contentData = report.content || {};
-  const topContent = report.topContent || [];
-  const reviews = report.reviews || {};
-  const chatbot = report.chatbot || {};
-  const dest = report.destination || {};
-  const periodInfo = report.period || {};
-
-  const periodLabel = period === 'last_week' ? t('analytics.report.lastWeek', 'Vorige week')
-    : period === 'last_month' ? t('analytics.report.lastMonth', 'Vorige maand')
-    : `${periodInfo.start || customStart} — ${periodInfo.end || customEnd}`;
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  return (
-    <Box>
-      {/* Controls — hidden on print */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center', flexWrap: 'wrap', '@media print': { display: 'none' } }}>
-        <ToggleButtonGroup value={period} exclusive onChange={(_, v) => v && setPeriod(v)} size="small">
-          <ToggleButton value="last_week" sx={{ textTransform: 'none' }}>
-            {t('analytics.report.lastWeek', 'Vorige week')}
-          </ToggleButton>
-          <ToggleButton value="last_month" sx={{ textTransform: 'none' }}>
-            {t('analytics.report.lastMonth', 'Vorige maand')}
-          </ToggleButton>
-          <ToggleButton value="custom" sx={{ textTransform: 'none' }}>
-            {t('analytics.report.custom', 'Aangepast')}
-          </ToggleButton>
-        </ToggleButtonGroup>
-
-        {period === 'custom' && (
-          <>
-            <TextField type="date" size="small" label="Van" value={customStart}
-              onChange={e => setCustomStart(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: 160 }} />
-            <TextField type="date" size="small" label="Tot" value={customEnd}
-              onChange={e => setCustomEnd(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: 160 }} />
-          </>
-        )}
-
-        <Box sx={{ flex: 1 }} />
-
-        <Tooltip title={t('analytics.report.printPdf', 'Afdrukken als PDF (Ctrl+P)')}>
-          <Button variant="outlined" startIcon={<PrintIcon />} onClick={handlePrint} size="small"
-            sx={{ textTransform: 'none' }}>
-            {t('analytics.report.exportPdf', 'PDF / Afdrukken')}
-          </Button>
-        </Tooltip>
-      </Box>
-
-      {isLoading ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Skeleton variant="rounded" height={80} />
-          <Skeleton variant="rounded" height={120} />
-          <Skeleton variant="rounded" height={200} />
-        </Box>
-      ) : (
-        <Box data-print-report-area sx={{ '@media print': { '& *': { visibility: 'visible !important' }, position: 'absolute', left: 0, top: 0, width: '100%' } }}>
-          {/* ── Branded Header ── */}
-          <Paper sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #5E8B7E 0%, #2C3E50 100%)', color: '#fff', borderRadius: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  {t('analytics.report.title', 'Content Performance Rapport')}
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 400, opacity: 0.9 }}>
-                  {dest.name || 'HolidaiButler'}
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: 'right' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end', mb: 0.5 }}>
-                  <CalendarTodayIcon sx={{ fontSize: 16 }} />
-                  <Typography variant="body2">{periodLabel}</Typography>
-                </Box>
-                <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                  {t('analytics.report.generated', 'Gegenereerd')}: {new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-
-          {/* ── Executive Summary ── */}
-          <Card sx={{ p: 2.5, mb: 3 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, textTransform: 'uppercase', fontSize: 11, color: 'text.secondary', letterSpacing: 0.5 }}>
-              {t('analytics.report.executiveSummary', 'Executive Summary')}
-            </Typography>
-            <Typography variant="body1" sx={{ lineHeight: 1.8 }}>
-              {t('analytics.report.summaryText', 'In deze periode zijn {{total}} content items aangemaakt, waarvan {{published}} gepubliceerd en {{scheduled}} ingepland. {{reviewCount}} nieuwe reviews ontvangen met een gemiddelde rating van {{avgRating}}. De chatbot heeft {{sessions}} sessies afgehandeld met {{messages}} berichten.', {
-                total: contentData.total || 0,
-                published: contentData.published || 0,
-                scheduled: contentData.scheduled || 0,
-                reviewCount: reviews.count || 0,
-                avgRating: reviews.avgRating || '-',
-                sessions: chatbot.sessions || 0,
-                messages: chatbot.messages || 0,
-              })}
-            </Typography>
-          </Card>
-
-          {/* ── KPI Blocks (rapport-stijl) ── */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            {[
-              { label: t('analytics.report.kpi.totalContent', 'Totaal content'), value: contentData.total || 0, color: '#5E8B7E' },
-              { label: t('analytics.report.kpi.published', 'Gepubliceerd'), value: contentData.published || 0, color: '#27AE60' },
-              { label: t('analytics.report.kpi.scheduled', 'Ingepland'), value: contentData.scheduled || 0, color: '#2196f3' },
-              { label: t('analytics.report.kpi.drafts', 'Concepten'), value: contentData.drafts || 0, color: '#9e9e9e' },
-              { label: t('analytics.report.kpi.reviews', 'Nieuwe reviews'), value: reviews.count || 0, color: '#f59e0b' },
-              { label: t('analytics.report.kpi.chatSessions', 'Chatbot sessies'), value: chatbot.sessions || 0, color: '#8b5cf6' },
-            ].map((kpi, idx) => (
-              <Grid item xs={6} md={2} key={idx}>
-                <Card sx={{ p: 2, textAlign: 'center', borderTop: `3px solid ${kpi.color}` }}>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: kpi.color }}>{kpi.value}</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>{kpi.label}</Typography>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-
-          {/* ── Content by Platform ── */}
-          {(contentData.byPlatform || []).length > 0 && (
-            <Card sx={{ p: 2.5, mb: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, textTransform: 'uppercase', fontSize: 11, color: 'text.secondary', letterSpacing: 0.5 }}>
-                {t('analytics.report.byPlatform', 'Content per platform')}
-              </Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
-                      <TableCell>Platform</TableCell>
-                      <TableCell align="center">{t('analytics.report.total', 'Totaal')}</TableCell>
-                      <TableCell align="center">{t('analytics.report.kpi.published', 'Gepubliceerd')}</TableCell>
-                      <TableCell align="center">{t('analytics.report.publishRate', 'Publicatie %')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {(contentData.byPlatform || []).map((p, i) => (
-                      <TableRow key={i} hover>
-                        <TableCell sx={{ fontWeight: 600, textTransform: 'capitalize' }}>{p.target_platform}</TableCell>
-                        <TableCell align="center">{p.count}</TableCell>
-                        <TableCell align="center">{p.published}</TableCell>
-                        <TableCell align="center">
-                          <Chip label={`${p.count > 0 ? Math.round((p.published / p.count) * 100) : 0}%`}
-                            size="small" color={p.count > 0 && (p.published / p.count) >= 0.5 ? 'success' : 'default'}
-                            sx={{ fontSize: 11, height: 20 }} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Card>
-          )}
-
-          {/* ── Content by Pillar ── */}
-          {(contentData.byPillar || []).length > 0 && (
-            <Card sx={{ p: 2.5, mb: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, textTransform: 'uppercase', fontSize: 11, color: 'text.secondary', letterSpacing: 0.5 }}>
-                {t('analytics.report.byPillar', 'Content per pillar')}
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                {(contentData.byPillar || []).map((p, i) => (
-                  <Card key={i} variant="outlined" sx={{ p: 2, minWidth: 140, textAlign: 'center', borderTop: `3px solid ${p.pillar_color || '#5E8B7E'}` }}>
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>{p.count}</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>{p.pillar_name}</Typography>
-                    <Typography variant="caption" display="block" color="text.secondary">{p.published} gepubliceerd</Typography>
-                  </Card>
-                ))}
-              </Box>
-            </Card>
-          )}
-
-          {/* ── Top Performers ── */}
-          {topContent.length > 0 && (
-            <Card sx={{ p: 2.5, mb: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, textTransform: 'uppercase', fontSize: 11, color: 'text.secondary', letterSpacing: 0.5 }}>
-                {t('analytics.report.topPerformers', 'Top performers')}
-              </Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
-                      <TableCell>#</TableCell>
-                      <TableCell>{t('analytics.report.contentTitle', 'Titel')}</TableCell>
-                      <TableCell>Platform</TableCell>
-                      <TableCell>Pillar</TableCell>
-                      <TableCell align="center">SEO</TableCell>
-                      <TableCell>Status</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {topContent.map((item, i) => (
-                      <TableRow key={item.id} hover>
-                        <TableCell>{i + 1}</TableCell>
-                        <TableCell sx={{ fontWeight: 500, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</TableCell>
-                        <TableCell sx={{ textTransform: 'capitalize' }}>{item.target_platform}</TableCell>
-                        <TableCell>{item.pillar_name || '-'}</TableCell>
-                        <TableCell align="center">
-                          {item.seo_score ? (
-                            <Chip label={item.seo_score} size="small" color={item.seo_score >= 70 ? 'success' : item.seo_score >= 40 ? 'warning' : 'default'} sx={{ fontSize: 11, height: 20 }} />
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Chip label={item.approval_status} size="small" sx={{ fontSize: 10, height: 18 }} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Card>
-          )}
-
-          {/* ── Commentary Field ── */}
-          <Card sx={{ p: 2.5, mb: 3, '@media print': { minHeight: 100 } }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, textTransform: 'uppercase', fontSize: 11, color: 'text.secondary', letterSpacing: 0.5 }}>
-              {t('analytics.report.commentary', 'Opmerkingen')}
-            </Typography>
-            <TextField
-              multiline rows={3} fullWidth variant="outlined" size="small"
-              placeholder={t('analytics.report.commentaryPlaceholder', 'Voeg persoonlijke opmerkingen toe aan dit rapport...')}
-              value={commentary} onChange={e => setCommentary(e.target.value)}
-              sx={{ '@media print': { '& .MuiOutlinedInput-notchedOutline': { border: 'none' } } }}
-            />
-          </Card>
-
-          {/* ── Footer ── */}
-          <Box sx={{ textAlign: 'center', py: 2, borderTop: 1, borderColor: 'divider' }}>
-            <Typography variant="caption" color="text.secondary">
-              PubliQio Content Studio · {dest.name || 'HolidaiButler'} · {periodLabel}
-            </Typography>
-          </Box>
-        </Box>
-      )}
-    </Box>
-  );
-}
-
-
-// ════════════════════════════════════════════
 // MAIN PAGE
 // ════════════════════════════════════════════
 export default function AnalyticsPage() {
@@ -833,14 +582,14 @@ export default function AnalyticsPage() {
           label={t('analytics.tab.poiReviews', 'POI & Reviews')} sx={{ textTransform: 'none', minHeight: 48 }} />
         <Tab icon={<ChatIcon sx={{ fontSize: 18 }} />} iconPosition="start"
           label={t('analytics.tab.chatbot', 'Chatbot')} sx={{ textTransform: 'none', minHeight: 48 }} />
-        <Tab icon={<DescriptionIcon sx={{ fontSize: 18 }} />} iconPosition="start"
-          label={t('analytics.tab.report', 'Rapport')} sx={{ textTransform: 'none', minHeight: 48 }} />
+        <Tab icon={<EditNoteIcon sx={{ fontSize: 18 }} />} iconPosition="start"
+          label={t('analytics.tab.content', 'Content')} sx={{ textTransform: 'none', minHeight: 48 }} />
       </Tabs>
 
       {activeTab === 0 && <WebsiteTab destination={destParam} t={t} />}
       {activeTab === 1 && <PoiReviewsTab destination={destParam} t={t} isLoading={isLoading} analytics={analytics} snapshot={snapshot} />}
       {activeTab === 2 && <ChatbotTab destination={destParam} t={t} />}
-      {activeTab === 3 && <ReportTab destination={destParam} t={t} />}
+      {activeTab === 3 && <ContentAnalyseTab destinationId={destParam} />}
     </Box>
   );
 }

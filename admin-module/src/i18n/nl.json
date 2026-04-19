@@ -302,7 +302,19 @@
       "pages": "Pagina Beheer",
       "analytics": "Analytics",
       "settings": "Instellingen"
-    }
+    },
+    "platformDashboard": "Platform Dashboard",
+    "customize": "Dashboard aanpassen",
+    "customizeTitle": "Dashboard aanpassen",
+    "customizeDesc": "Selecteer welke KPIs zichtbaar zijn op je dashboard.",
+    "last7days": "Laatste 7 dagen",
+    "pendingReview": "in review",
+    "total": "totaal",
+    "processUptime": "Process uptime",
+    "newContent": "Nieuwe content",
+    "calendar": "Kalender",
+    "analytics": "Analytics",
+    "poiManagement": "POI beheer"
   },
   "agents": {
     "title": "Agent Dashboard",
@@ -543,7 +555,8 @@
       "website": "Website",
       "poiReviews": "POI & Reviews",
       "chatbot": "Chatbot",
-      "report": "Rapport"
+      "report": "Rapport",
+      "content": "Content"
     },
     "website": {
       "visitors": "Bezoekers",
