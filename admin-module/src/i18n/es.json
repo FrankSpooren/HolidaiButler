@@ -285,7 +285,19 @@
       "pages": "Gestión de Páginas",
       "analytics": "Analíticas",
       "settings": "Configuración"
-    }
+    },
+    "platformDashboard": "Panel de plataforma",
+    "customize": "Personalizar panel",
+    "customizeTitle": "Personalizar panel",
+    "customizeDesc": "Seleccione qué KPIs son visibles en su panel.",
+    "last7days": "Últimos 7 días",
+    "pendingReview": "en revisión",
+    "total": "total",
+    "processUptime": "Tiempo activo",
+    "newContent": "Nuevo contenido",
+    "calendar": "Calendario",
+    "analytics": "Analytics",
+    "poiManagement": "Gestión POI"
   },
   "agents": {
     "title": "Panel de Agentes",
@@ -579,7 +591,8 @@
       "month": "Mes"
     },
     "tab": {
-      "report": "Informe"
+      "report": "Informe",
+      "content": "Content"
     },
     "report": {
       "title": "Informe de rendimiento de contenido",

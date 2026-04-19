@@ -1,16 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box, Typography, Paper, Grid, Card, CardContent, CircularProgress, FormControl, Select, MenuItem,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Tabs, Tab, TablePagination,
-  TextField, Button, Tooltip, ToggleButton, ToggleButtonGroup, Skeleton,
+  Skeleton,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import PeopleIcon from '@mui/icons-material/People';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import DescriptionIcon from '@mui/icons-material/Description';
-import PrintIcon from '@mui/icons-material/Print';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import FacebookIcon from '@mui/icons-material/Facebook';
@@ -23,7 +20,6 @@ import {
   Tooltip as RTooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell,
 } from 'recharts';
 import { useAnalyticsOverview, useAnalyticsItems, useAnalyticsPlatforms } from '../hooks/useContent.js';
-import client from '../api/client.js';
 
 const PLATFORM_ICONS = { facebook: FacebookIcon, instagram: InstagramIcon, linkedin: LinkedInIcon, website: LanguageIcon };
 const PLATFORM_COLORS = { facebook: '#1877f2', instagram: '#e4405f', linkedin: '#0a66c2', website: '#4caf50' };
@@ -49,248 +45,6 @@ function GrowthChip({ value }) {
   );
 }
 
-
-// ════════════════════════════════════════════
-// SUB-TAB: Content Report (content metrics only)
-// ════════════════════════════════════════════
-function ReportSubTab({ destinationId, t }) {
-  const [period, setPeriod] = useState('last_month');
-  const [customStart, setCustomStart] = useState('');
-  const [customEnd, setCustomEnd] = useState('');
-  const [commentary, setCommentary] = useState('');
-  const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (period === 'custom' && (!customStart || !customEnd)) return;
-    setLoading(true);
-    const params = { destination_id: destinationId, period };
-    if (period === 'custom') { params.start = customStart; params.end = customEnd; }
-    client.get('/content/report', { params })
-      .then(res => setReport(res.data?.data || null))
-      .catch(() => setReport(null))
-      .finally(() => setLoading(false));
-  }, [destinationId, period, customStart, customEnd]);
-
-  const contentData = report?.content || {};
-  const topContent = report?.topContent || [];
-  const dest = report?.destination || {};
-  const periodInfo = report?.period || {};
-
-  const periodLabel = period === 'last_week' ? t('analytics.report.lastWeek', 'Vorige week')
-    : period === 'last_month' ? t('analytics.report.lastMonth', 'Vorige maand')
-    : `${periodInfo.start || customStart} — ${periodInfo.end || customEnd}`;
-
-  return (
-    <Box>
-      {/* Controls */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center', flexWrap: 'wrap', '@media print': { display: 'none' } }}>
-        <ToggleButtonGroup value={period} exclusive onChange={(_, v) => v && setPeriod(v)} size="small">
-          <ToggleButton value="last_week" sx={{ textTransform: 'none' }}>
-            {t('analytics.report.lastWeek', 'Vorige week')}
-          </ToggleButton>
-          <ToggleButton value="last_month" sx={{ textTransform: 'none' }}>
-            {t('analytics.report.lastMonth', 'Vorige maand')}
-          </ToggleButton>
-          <ToggleButton value="custom" sx={{ textTransform: 'none' }}>
-            {t('analytics.report.custom', 'Aangepast')}
-          </ToggleButton>
-        </ToggleButtonGroup>
-        {period === 'custom' && (
-          <>
-            <TextField type="date" size="small" label="Van" value={customStart}
-              onChange={e => setCustomStart(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: 160 }} />
-            <TextField type="date" size="small" label="Tot" value={customEnd}
-              onChange={e => setCustomEnd(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: 160 }} />
-          </>
-        )}
-        <Box sx={{ flex: 1 }} />
-        <Tooltip title={t('analytics.report.printPdf', 'Afdrukken als PDF (Ctrl+P)')}>
-          <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()} size="small"
-            sx={{ textTransform: 'none' }}>
-            {t('analytics.report.exportPdf', 'PDF / Afdrukken')}
-          </Button>
-        </Tooltip>
-      </Box>
-
-      {loading ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Skeleton variant="rounded" height={80} />
-          <Skeleton variant="rounded" height={120} />
-          <Skeleton variant="rounded" height={200} />
-        </Box>
-      ) : report ? (
-        <Box>
-          {/* Branded Header */}
-          <Paper sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #5E8B7E 0%, #2C3E50 100%)', color: '#fff', borderRadius: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  {t('analytics.report.title', 'Content Performance Rapport')}
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 400, opacity: 0.9 }}>
-                  {dest.name || 'PubliQio'}
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: 'right' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end', mb: 0.5 }}>
-                  <CalendarTodayIcon sx={{ fontSize: 16 }} />
-                  <Typography variant="body2">{periodLabel}</Typography>
-                </Box>
-                <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                  {t('analytics.report.generated', 'Gegenereerd')}: {new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-
-          {/* Executive Summary — content only */}
-          <Card sx={{ p: 2.5, mb: 3 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, textTransform: 'uppercase', fontSize: 11, color: 'text.secondary', letterSpacing: 0.5 }}>
-              {t('analytics.report.executiveSummary', 'Executive Summary')}
-            </Typography>
-            <Typography variant="body1" sx={{ lineHeight: 1.8 }}>
-              In deze periode zijn {contentData.total || 0} content items aangemaakt, waarvan {contentData.published || 0} gepubliceerd en {contentData.scheduled || 0} ingepland.
-              {contentData.drafts > 0 ? ` ${contentData.drafts} concepten staan klaar voor review.` : ''}
-              {(contentData.byPlatform || []).length > 0 ? ` De meest actieve platformen zijn ${(contentData.byPlatform || []).slice(0, 2).map(p => p.target_platform).join(' en ')}.` : ''}
-              {contentData.publishRate > 0 ? ` Het publicatiepercentage is ${contentData.publishRate}%.` : ''}
-            </Typography>
-          </Card>
-
-          {/* KPI Blocks — content only, no reviews/chatbot */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            {[
-              { label: t('analytics.report.kpi.totalContent', 'Totaal content'), value: contentData.total || 0, color: '#5E8B7E' },
-              { label: t('analytics.report.kpi.published', 'Gepubliceerd'), value: contentData.published || 0, color: '#27AE60' },
-              { label: t('analytics.report.kpi.scheduled', 'Ingepland'), value: contentData.scheduled || 0, color: '#2196f3' },
-              { label: t('analytics.report.kpi.drafts', 'Concepten'), value: contentData.drafts || 0, color: '#9e9e9e' },
-            ].map((kpi, idx) => (
-              <Grid item xs={6} md={3} key={idx}>
-                <Card sx={{ p: 2, textAlign: 'center', borderTop: '3px solid ' + kpi.color }}>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: kpi.color }}>{kpi.value}</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>{kpi.label}</Typography>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-
-          {/* Content by Platform */}
-          {(contentData.byPlatform || []).length > 0 && (
-            <Card sx={{ p: 2.5, mb: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, textTransform: 'uppercase', fontSize: 11, color: 'text.secondary', letterSpacing: 0.5 }}>
-                {t('analytics.report.byPlatform', 'Content per platform')}
-              </Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
-                      <TableCell>Platform</TableCell>
-                      <TableCell align="center">{t('analytics.report.total', 'Totaal')}</TableCell>
-                      <TableCell align="center">{t('analytics.report.kpi.published', 'Gepubliceerd')}</TableCell>
-                      <TableCell align="center">{t('analytics.report.publishRate', 'Publicatie %')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {(contentData.byPlatform || []).map((p, i) => (
-                      <TableRow key={i} hover>
-                        <TableCell sx={{ fontWeight: 600, textTransform: 'capitalize' }}>{p.target_platform}</TableCell>
-                        <TableCell align="center">{p.count}</TableCell>
-                        <TableCell align="center">{p.published}</TableCell>
-                        <TableCell align="center">
-                          <Chip label={(p.count > 0 ? Math.round((p.published / p.count) * 100) : 0) + '%'}
-                            size="small" color={p.count > 0 && (p.published / p.count) >= 0.5 ? 'success' : 'default'}
-                            sx={{ fontSize: 11, height: 20 }} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Card>
-          )}
-
-          {/* Content by Pillar */}
-          {(contentData.byPillar || []).length > 0 && (
-            <Card sx={{ p: 2.5, mb: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, textTransform: 'uppercase', fontSize: 11, color: 'text.secondary', letterSpacing: 0.5 }}>
-                {t('analytics.report.byPillar', 'Content per pillar')}
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                {(contentData.byPillar || []).map((p, i) => (
-                  <Card key={i} variant="outlined" sx={{ p: 2, minWidth: 140, textAlign: 'center', borderTop: '3px solid ' + (p.pillar_color || '#5E8B7E') }}>
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>{p.count}</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>{p.pillar_name}</Typography>
-                    <Typography variant="caption" display="block" color="text.secondary">{p.published} gepubliceerd</Typography>
-                  </Card>
-                ))}
-              </Box>
-            </Card>
-          )}
-
-          {/* Top Performers */}
-          {topContent.length > 0 && (
-            <Card sx={{ p: 2.5, mb: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, textTransform: 'uppercase', fontSize: 11, color: 'text.secondary', letterSpacing: 0.5 }}>
-                {t('analytics.report.topPerformers', 'Top performers')}
-              </Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'action.hover' } }}>
-                      <TableCell>#</TableCell>
-                      <TableCell>{t('analytics.report.contentTitle', 'Titel')}</TableCell>
-                      <TableCell>Platform</TableCell>
-                      <TableCell>Pillar</TableCell>
-                      <TableCell align="center">SEO</TableCell>
-                      <TableCell>Status</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {topContent.map((item, i) => (
-                      <TableRow key={item.id} hover>
-                        <TableCell>{i + 1}</TableCell>
-                        <TableCell sx={{ fontWeight: 500, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</TableCell>
-                        <TableCell sx={{ textTransform: 'capitalize' }}>{item.target_platform}</TableCell>
-                        <TableCell>{item.pillar_name || '-'}</TableCell>
-                        <TableCell align="center">
-                          {item.seo_score ? (
-                            <Chip label={item.seo_score} size="small" color={item.seo_score >= 70 ? 'success' : item.seo_score >= 40 ? 'warning' : 'default'} sx={{ fontSize: 11, height: 20 }} />
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell><Chip label={item.approval_status} size="small" sx={{ fontSize: 10, height: 18 }} /></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Card>
-          )}
-
-          {/* Commentary Field */}
-          <Card sx={{ p: 2.5, mb: 3 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, textTransform: 'uppercase', fontSize: 11, color: 'text.secondary', letterSpacing: 0.5 }}>
-              {t('analytics.report.commentary', 'Opmerkingen')}
-            </Typography>
-            <TextField multiline rows={3} fullWidth variant="outlined" size="small"
-              placeholder={t('analytics.report.commentaryPlaceholder', 'Voeg persoonlijke opmerkingen toe aan dit rapport...')}
-              value={commentary} onChange={e => setCommentary(e.target.value)} />
-          </Card>
-
-          {/* Footer */}
-          <Box sx={{ textAlign: 'center', py: 2, borderTop: 1, borderColor: 'divider' }}>
-            <Typography variant="caption" color="text.secondary">
-              PubliQio Content Studio \u00B7 {dest.name || 'HolidaiButler'} \u00B7 {periodLabel}
-            </Typography>
-          </Box>
-        </Box>
-      ) : (
-        <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-          {t('analytics.report.selectPeriod', 'Selecteer een periode om het rapport te genereren.')}
-        </Typography>
-      )}
-    </Box>
-  );
-}
 
 
 export default function ContentAnalyseTab({ destinationId }) {
@@ -366,7 +120,6 @@ export default function ContentAnalyseTab({ destinationId }) {
           <Tab label={t('contentStudio.analyse.overview', 'Overzicht')} sx={{ minHeight: 36, py: 0.5 }} />
           <Tab label={t('contentStudio.analyse.perItem', 'Per Item')} sx={{ minHeight: 36, py: 0.5 }} />
           <Tab label={t('contentStudio.analyse.platformCompare', 'Platformen')} sx={{ minHeight: 36, py: 0.5 }} />
-          <Tab label={t('contentStudio.analyse.report', 'Rapport')} icon={<DescriptionIcon sx={{ fontSize: 16 }} />} iconPosition="start" sx={{ minHeight: 36, py: 0.5 }} />
         </Tabs>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <Select value={days} onChange={e => setDays(e.target.value)}>
@@ -820,7 +573,6 @@ export default function ContentAnalyseTab({ destinationId }) {
             </>
           )}
 
-          {subTab === 3 && <ReportSubTab destinationId={destinationId} t={t} />}
         </>
       )}
 

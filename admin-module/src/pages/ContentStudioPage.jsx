@@ -3073,7 +3073,7 @@ export default function ContentStudioPage() {
         <Tab label={t('contentStudio.tabs.suggestions', 'Suggesties')} />
         <Tab label={t('contentStudio.tabs.content', 'Content Items')} />
         <Tab label={t('contentStudio.tabs.calendar', 'Kalender')} icon={<CalendarMonthIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-        <Tab label={t('contentStudio.tabs.analyse', 'Analyse')} />
+        <Tab label={t('contentStudio.tabs.analyse', 'Analyse')} sx={{ display: 'none' }} />
         <Tab label={t('contentStudio.tabs.seasons', 'Seizoenen')} />
         <Tab label={t('contentStudio.tabs.socialAccounts', 'Social Accounts')} />
       </Tabs>

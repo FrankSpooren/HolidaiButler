@@ -302,7 +302,19 @@
       "pages": "Page Management",
       "analytics": "Analytics",
       "settings": "Settings"
-    }
+    },
+    "platformDashboard": "Tableau de bord plateforme",
+    "customize": "Personnaliser le tableau",
+    "customizeTitle": "Personnaliser le tableau de bord",
+    "customizeDesc": "Sélectionnez les KPIs visibles sur votre tableau de bord.",
+    "last7days": "7 derniers jours",
+    "pendingReview": "en révision",
+    "total": "total",
+    "processUptime": "Temps de fonctionnement",
+    "newContent": "Nouveau contenu",
+    "calendar": "Calendrier",
+    "analytics": "Analytics",
+    "poiManagement": "Gestion POI"
   },
   "agents": {
     "title": "Agent Dashboard",
@@ -596,7 +608,8 @@
       "month": "Month"
     },
     "tab": {
-      "report": "Rapport"
+      "report": "Rapport",
+      "content": "Content"
     },
     "report": {
       "title": "Rapport de performance du contenu",

@@ -49,8 +49,8 @@ const MENU_SECTIONS = [
   {
     label: 'nav.section_workspace',
     items: [
-      { key: 'dashboard', path: '/dashboard', icon: DashboardIcon },
-      { key: 'overview', path: '/content-studio', tab: 'overview', icon: AutoAwesomeIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
+      { key: 'dashboard', path: '/dashboard', icon: DashboardIcon, adminOnly: true },
+      { key: 'overview', path: '/content-studio', tab: 'overview', icon: AutoAwesomeIcon, allowedRoles: ['platform_admin', 'destination_admin'], studioOnly: true },
     ]
   },
   // CONTENT
@@ -70,7 +70,6 @@ const MENU_SECTIONS = [
     items: [
       { key: 'pois', path: '/pois', icon: PlaceIcon, visible: (ff) => ff.hasPOI !== false },
       { key: 'reviews', path: '/reviews', icon: StarIcon, visible: (ff) => ff.hasPOI !== false },
-      { key: 'analytics', path: '/analytics', icon: InsightsIcon },
     ]
   },
   // COMMERCE
@@ -94,7 +93,7 @@ const MENU_SECTIONS = [
   {
     label: 'nav.section_intelligence',
     items: [
-      { key: 'analyse', path: '/content-studio', tab: 'analyse', tabIndex: 4, icon: BarChartIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
+      { key: 'analytics', path: '/analytics', icon: InsightsIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
       { key: 'merkProfiel', path: '/branding', icon: PaletteIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
       { key: 'seizoenen', path: '/content-studio', tab: 'seizoenen', tabIndex: 5, icon: WbSunnyIcon, allowedRoles: ['platform_admin', 'destination_admin'] },
     ]
@@ -182,6 +181,9 @@ export default function Sidebar() {
   }
 
   const isItemVisible = (item) => {
+    // Studio/Admin mode filtering
+    if (item.studioOnly && !studioMode) return false;
+    if (item.adminOnly && studioMode) return false;
     if (item.allowedRoles && !item.allowedRoles.includes(user?.role)) return false;
     if (item.requiredRole && user?.role !== item.requiredRole) return false;
     if (item.visible && Object.keys(featureFlags).length > 0) {

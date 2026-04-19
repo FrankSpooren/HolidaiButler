@@ -285,7 +285,19 @@
       "pages": "Seitenverwaltung",
       "analytics": "Analysen",
       "settings": "Einstellungen"
-    }
+    },
+    "platformDashboard": "Plattform Dashboard",
+    "customize": "Dashboard anpassen",
+    "customizeTitle": "Dashboard anpassen",
+    "customizeDesc": "Wählen Sie, welche KPIs auf Ihrem Dashboard sichtbar sind.",
+    "last7days": "Letzte 7 Tage",
+    "pendingReview": "in Prüfung",
+    "total": "gesamt",
+    "processUptime": "Prozess-Laufzeit",
+    "newContent": "Neuer Inhalt",
+    "calendar": "Kalender",
+    "analytics": "Analytics",
+    "poiManagement": "POI Verwaltung"
   },
   "agents": {
     "title": "Agent Dashboard",
@@ -579,7 +591,8 @@
       "month": "Monat"
     },
     "tab": {
-      "report": "Bericht"
+      "report": "Bericht",
+      "content": "Content"
     },
     "report": {
       "title": "Content Performance Bericht",
