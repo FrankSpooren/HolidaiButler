@@ -577,6 +577,36 @@
       "day": "Tag",
       "week": "Woche",
       "month": "Monat"
+    },
+    "tab": {
+      "report": "Bericht"
+    },
+    "report": {
+      "title": "Content Performance Bericht",
+      "lastWeek": "Letzte Woche",
+      "lastMonth": "Letzter Monat",
+      "custom": "Benutzerdefiniert",
+      "printPdf": "Als PDF drucken (Strg+P)",
+      "exportPdf": "PDF / Drucken",
+      "executiveSummary": "Zusammenfassung",
+      "summaryText": "In diesem Zeitraum wurden {{total}} Content-Items erstellt, davon {{published}} veröffentlicht und {{scheduled}} geplant. {{reviewCount}} neue Bewertungen mit einer Durchschnittsbewertung von {{avgRating}}. Der Chatbot hat {{sessions}} Sitzungen mit {{messages}} Nachrichten bearbeitet.",
+      "generated": "Erstellt",
+      "kpi": {
+        "totalContent": "Gesamt Content",
+        "published": "Veröffentlicht",
+        "scheduled": "Geplant",
+        "drafts": "Entwürfe",
+        "reviews": "Neue Bewertungen",
+        "chatSessions": "Chatbot Sitzungen"
+      },
+      "byPlatform": "Content pro Plattform",
+      "total": "Gesamt",
+      "publishRate": "Veröffentlichungsrate",
+      "byPillar": "Content pro Pillar",
+      "topPerformers": "Top Performer",
+      "contentTitle": "Titel",
+      "commentary": "Anmerkungen",
+      "commentaryPlaceholder": "Persönliche Anmerkungen zu diesem Bericht hinzufügen..."
     }
   },
   "settings": {
@@ -1645,7 +1675,11 @@
       "cancelSchedule": "Abbrechen",
       "scheduleTitle": "Inhalt planen",
       "dateTime": "Datum & Uhrzeit",
-      "account": "Konto"
+      "account": "Konto",
+      "filters": "Filter",
+      "toggleFilters": "Filter ein-/ausblenden",
+      "clearFilters": "Filter zurücksetzen",
+      "print": "Drucken"
     },
     "performance": {
       "days": "Tage",

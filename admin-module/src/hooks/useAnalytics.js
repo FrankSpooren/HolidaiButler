@@ -49,3 +49,13 @@ export function useWebsiteAnalytics(destination, period = 30) {
     staleTime: 10 * 60 * 1000
   });
 }
+
+
+export function useAnalyticsReport(destination, period, start, end, enabled = true) {
+  return useQuery({
+    queryKey: ['analytics-report', destination, period, start, end],
+    queryFn: () => analyticsService.getReport(destination, period, start, end),
+    staleTime: 5 * 60 * 1000,
+    enabled
+  });
+}

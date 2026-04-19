@@ -594,6 +594,36 @@
       "day": "Day",
       "week": "Week",
       "month": "Month"
+    },
+    "tab": {
+      "report": "Rapport"
+    },
+    "report": {
+      "title": "Rapport de performance du contenu",
+      "lastWeek": "Semaine dernière",
+      "lastMonth": "Mois dernier",
+      "custom": "Personnalisé",
+      "printPdf": "Imprimer en PDF (Ctrl+P)",
+      "exportPdf": "PDF / Imprimer",
+      "executiveSummary": "Résumé exécutif",
+      "summaryText": "Durant cette période, {{total}} éléments de contenu ont été créés, dont {{published}} publiés et {{scheduled}} planifiés. {{reviewCount}} nouveaux avis reçus avec une note moyenne de {{avgRating}}. Le chatbot a traité {{sessions}} sessions avec {{messages}} messages.",
+      "generated": "Généré",
+      "kpi": {
+        "totalContent": "Total contenu",
+        "published": "Publié",
+        "scheduled": "Planifié",
+        "drafts": "Brouillons",
+        "reviews": "Nouveaux avis",
+        "chatSessions": "Sessions chatbot"
+      },
+      "byPlatform": "Contenu par plateforme",
+      "total": "Total",
+      "publishRate": "Taux de publication",
+      "byPillar": "Contenu par pilier",
+      "topPerformers": "Meilleurs résultats",
+      "contentTitle": "Titre",
+      "commentary": "Commentaires",
+      "commentaryPlaceholder": "Ajouter des commentaires personnels à ce rapport..."
     }
   },
   "settings": {
@@ -1669,7 +1699,11 @@
       "cancelSchedule": "Cancel",
       "scheduleTitle": "Schedule content",
       "dateTime": "Date & time",
-      "account": "Account"
+      "account": "Account",
+      "filters": "Filtres",
+      "toggleFilters": "Afficher/masquer les filtres",
+      "clearFilters": "Effacer les filtres",
+      "print": "Imprimer"
     },
     "performance": {
       "days": "days",
