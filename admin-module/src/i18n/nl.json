@@ -33,7 +33,20 @@
     "section_platform": "Platform",
     "section_system": "Systeem",
     "pagesNav": "Pagina's & Navigatie",
-    "agentsSystem": "Agents & Systeem"
+    "agentsSystem": "Agents & Systeem",
+    "section_workspace": "Workspace",
+    "section_intelligence": "Intelligentie",
+    "section_management": "Beheer",
+    "overview": "Overzicht",
+    "bronnen": "Bronnen",
+    "ideeen": "Ideeën",
+    "contentItems": "Items",
+    "kalender": "Kalender",
+    "analyse": "Analyse",
+    "seizoenen": "Seizoenen",
+    "socialAccounts": "Social Accounts",
+    "collapse": "Inklappen",
+    "expand": "Uitklappen"
   },
   "auth": {
     "login": "Inloggen",
