@@ -5,7 +5,7 @@ import {
   TableHead, TableRow, Chip, TextField, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, MenuItem, Select, FormControl, InputLabel, IconButton, Tooltip,
   Card, CardContent, Grid, CircularProgress, Skeleton, Alert, TablePagination, LinearProgress,
-  ToggleButton, ToggleButtonGroup, Checkbox, Accordion, AccordionSummary, AccordionDetails, Divider, Snackbar,
+  ToggleButton, ToggleButtonGroup, Checkbox, Accordion, AccordionSummary, AccordionDetails, Divider, Snackbar, Popover, FormControlLabel, Switch,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -43,6 +43,13 @@ import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import LinkIcon from '@mui/icons-material/Link';
 import PermMediaIcon from '@mui/icons-material/PermMedia';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ViewColumnIcon from '@mui/icons-material/ViewColumn';
+import DensitySmallIcon from '@mui/icons-material/DensitySmall';
+import KeyboardIcon from '@mui/icons-material/Keyboard';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import DraftsIcon from '@mui/icons-material/Drafts';
 import { useTranslation } from 'react-i18next';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, Legend } from 'recharts';
 import useAuthStore from '../stores/authStore.js';
@@ -94,16 +101,16 @@ const STATUS_COLORS = {
 
 // Custom status styling with distinct colors for each status
 const STATUS_SX = {
-  draft: { bgcolor: 'rgba(237,108,2,0.08)', color: 'warning.dark', border: '1px solid', borderColor: 'warning.light' },
-  pending: { bgcolor: 'rgba(255,152,0,0.08)', color: 'warning.dark', border: '1px solid', borderColor: 'warning.light' },
-  pending_review: { bgcolor: 'rgba(156,39,176,0.08)', color: '#7b1fa2', border: '1px solid', borderColor: 'rgba(156,39,176,0.3)' },
-  approved: { bgcolor: 'rgba(76,175,80,0.08)', color: 'success.dark', border: '1px solid', borderColor: 'success.light' },
-  scheduled: { bgcolor: 'rgba(33,150,243,0.08)', color: 'info.dark', border: '1px solid', borderColor: 'info.light' },
-  publishing: { bgcolor: 'rgba(63,81,181,0.08)', color: 'primary.dark', border: '1px solid', borderColor: 'primary.light' },
-  published: { bgcolor: 'rgba(76,175,80,0.08)', color: 'success.dark', border: '1px solid', borderColor: 'success.light' },
-  rejected: { bgcolor: 'rgba(244,67,54,0.08)', color: 'error.dark', border: '1px solid', borderColor: 'error.light' },
-  failed: { bgcolor: 'rgba(244,67,54,0.08)', color: 'error.dark', border: '1px solid', borderColor: 'error.light' },
-  generated: { bgcolor: 'action.selected', color: 'text.secondary', border: '1px solid', borderColor: 'divider' },
+  draft: { bgcolor: 'rgba(255,183,77,0.12)', color: '#FFB74D', border: '1px solid', borderColor: 'rgba(255,183,77,0.3)' },
+  pending: { bgcolor: 'rgba(255,183,77,0.12)', color: '#FFB74D', border: '1px solid', borderColor: 'rgba(255,183,77,0.3)' },
+  pending_review: { bgcolor: 'rgba(206,147,216,0.12)', color: '#CE93D8', border: '1px solid', borderColor: 'rgba(206,147,216,0.3)' },
+  approved: { bgcolor: 'rgba(129,199,132,0.12)', color: '#81C784', border: '1px solid', borderColor: 'rgba(129,199,132,0.3)' },
+  scheduled: { bgcolor: 'rgba(100,181,246,0.12)', color: '#64B5F6', border: '1px solid', borderColor: 'rgba(100,181,246,0.3)' },
+  publishing: { bgcolor: 'rgba(121,134,203,0.12)', color: '#7986CB', border: '1px solid', borderColor: 'rgba(121,134,203,0.3)' },
+  published: { bgcolor: 'rgba(129,199,132,0.12)', color: '#81C784', border: '1px solid', borderColor: 'rgba(129,199,132,0.3)' },
+  rejected: { bgcolor: 'rgba(229,115,115,0.12)', color: '#E57373', border: '1px solid', borderColor: 'rgba(229,115,115,0.3)' },
+  failed: { bgcolor: 'rgba(229,115,115,0.12)', color: '#E57373', border: '1px solid', borderColor: 'rgba(229,115,115,0.3)' },
+  generated: { bgcolor: 'rgba(176,190,197,0.12)', color: '#B0BEC5', border: '1px solid', borderColor: 'rgba(176,190,197,0.3)' },
 };
 
 const CONTENT_TYPE_LABELS = {
@@ -2621,6 +2628,31 @@ export default function ContentStudioPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
 
+  // === Opdracht 9: Enterprise Density state ===
+  const [densityMode, setDensityMode] = useState(() => localStorage.getItem('hb-table-density') || 'comfortable');
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    try { const stored = localStorage.getItem('hb-table-columns'); return stored ? JSON.parse(stored) : null; } catch { return null; }
+  });
+  const [focusedRow, setFocusedRow] = useState(-1);
+  const [inlineEditId, setInlineEditId] = useState(null);
+  const [inlineEditValue, setInlineEditValue] = useState('');
+  const [columnMenuAnchor, setColumnMenuAnchor] = useState(null);
+  const [kbdAnchor, setKbdAnchor] = useState(null);
+  const tableRef = useRef(null);
+
+  // Density config
+  const DENSITY_HEIGHTS = { comfortable: 52, compact: 40, dense: 32 };
+  const rowHeight = DENSITY_HEIGHTS[densityMode] || 52;
+
+  // Column visibility
+  const ALL_COLUMNS = ['title', 'source', 'platforms', 'pillar', 'seo', 'status', 'updated', 'actions'];
+  const COLUMN_LABELS = { title: 'Titel', source: 'Bron', platforms: 'Platforms', pillar: 'Pillar', seo: 'SEO', status: 'Status', updated: 'Bijgewerkt', actions: 'Acties' };
+  const activeColumns = visibleColumns || ALL_COLUMNS;
+
+  // Persist density
+  useEffect(() => { localStorage.setItem('hb-table-density', densityMode); }, [densityMode]);
+  useEffect(() => { if (visibleColumns) localStorage.setItem('hb-table-columns', JSON.stringify(visibleColumns)); }, [visibleColumns]);
+
   // === Trending loaders ===
   const loadTrends = useCallback(async () => {
     setTrendLoading(true);
@@ -2692,6 +2724,112 @@ export default function ContentStudioPage() {
     else if (tab === 2) { loadSuggestions(); }
     else if (tab === 3) { loadItems(); }
   }, [tab, loadTrends, loadSummary, loadSuggestions, loadItems]);
+
+
+  // === Opdracht 9: Keyboard navigation for Content Items ===
+  useEffect(() => {
+    if (tab !== 3) return;
+    const filteredConcepts = concepts
+      .filter(c => c.approval_status !== 'deleted')
+      .filter(c => !itemTypeFilter || c.content_type === itemTypeFilter)
+      .filter(c => !itemPlatformFilter || c.platforms?.includes(itemPlatformFilter))
+      .filter(c => !itemStatusFilter || c.approval_status === itemStatusFilter)
+      .filter(c => !itemPillarFilter || c.pillar_id === itemPillarFilter)
+      .filter(c => !itemMinScore || (c.avg_seo_score != null && Number(c.avg_seo_score) >= Number(itemMinScore)))
+      .filter(c => !itemSourceFilter || (c.content_source_type || 'manual') === itemSourceFilter);
+
+    const handleKeyDown = (e) => {
+      // Skip if user is typing in an input/textarea or inline editing
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable || inlineEditId) return;
+
+      const maxIdx = filteredConcepts.length - 1;
+      switch (e.key) {
+        case 'j':
+        case 'ArrowDown':
+          e.preventDefault();
+          setFocusedRow(prev => prev < 0 ? 0 : Math.min(prev + 1, maxIdx));
+          break;
+        case 'k':
+        case 'ArrowUp':
+          e.preventDefault();
+          setFocusedRow(prev => Math.max(prev - 1, 0));
+          break;
+        case 'Enter':
+          if (focusedRow >= 0 && focusedRow <= maxIdx) {
+            setConceptDialogId(filteredConcepts[focusedRow].id);
+          }
+          break;
+        case 'x':
+          if (focusedRow >= 0 && focusedRow <= maxIdx) {
+            const c = filteredConcepts[focusedRow];
+            const firstItemId = (c.platform_versions || []).filter(v => v.status !== 'deleted')[0]?.id;
+            if (firstItemId) toggleSelectItem(firstItemId);
+          }
+          break;
+        case 'A':
+          if (e.shiftKey) {
+            e.preventDefault();
+            const allIds = filteredConcepts.map(c => (c.platform_versions || []).filter(v => v.status !== 'deleted')[0]?.id).filter(Boolean);
+            setSelectedIds(allIds);
+          }
+          break;
+        case 'X':
+          if (e.shiftKey) {
+            e.preventDefault();
+            setSelectedIds([]);
+          }
+          break;
+        case 'a':
+          if (!e.ctrlKey && !e.metaKey && selectedIds.length > 0) {
+            e.preventDefault();
+            handleBulkAction('approve');
+          }
+          break;
+        case 'p':
+          if (!e.ctrlKey && !e.metaKey && selectedIds.length > 0) {
+            e.preventDefault();
+            handleBulkPublish();
+          }
+          break;
+        case 'd':
+          if (!e.ctrlKey && !e.metaKey && selectedIds.length > 0) {
+            e.preventDefault();
+            handleBulkAction('draft');
+          }
+          break;
+        case 'Delete':
+          if (selectedIds.length > 0) {
+            e.preventDefault();
+            handleBulkAction('delete');
+          }
+          break;
+        case '/':
+          e.preventDefault();
+          // Focus search — future: focus the search field if one is added
+          break;
+        case 'f':
+          if (!e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            // Focus filter — future: focus the filter bar
+          }
+          break;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [tab, concepts, focusedRow, selectedIds, inlineEditId, itemTypeFilter, itemPlatformFilter, itemStatusFilter, itemPillarFilter, itemMinScore, itemSourceFilter]);
+
+  // Inline edit save handler
+  const handleInlineEditSave = useCallback(async (conceptId) => {
+    if (!inlineEditValue.trim()) { setInlineEditId(null); return; }
+    try {
+      await contentService.updateConcept(conceptId, { title: inlineEditValue.trim() });
+      loadItems();
+    } catch (err) {
+      console.error('Inline edit failed:', err);
+    }
+    setInlineEditId(null);
+  }, [inlineEditValue, loadItems]);
 
   // Load pillars for filter (Opdracht 6)
   useEffect(() => {
@@ -3465,12 +3603,118 @@ export default function ContentStudioPage() {
       {tab === 3 && (
         <>
           {itemError && <Alert severity="error" sx={{ mb: 2 }}>{itemError}</Alert>}
-          <Paper variant="outlined">
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
+          <Paper variant="outlined" ref={tableRef} tabIndex={0} onKeyDown={() => {}} sx={{ outline: "none", "&:focus-visible": { outline: "2px solid", outlineColor: "primary.main" } }}>
+            {/* Opdracht 9: Header bar met acties + density toggle + column visibility */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
               <Typography variant="subtitle2" color="text.secondary">
                 {conceptTotal} {t('contentStudio.conceptsFound', 'content concepten')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                {/* Density toggle */}
+                <ToggleButtonGroup
+                  value={densityMode}
+                  exclusive
+                  onChange={(_, v) => { if (v) setDensityMode(v); }}
+                  size="small"
+                  sx={{ '& .MuiToggleButton-root': { px: 1, py: 0.5, fontSize: 11 } }}
+                >
+                  <ToggleButton value="comfortable">
+                    <Tooltip title="Comfortable"><span style={{ fontSize: 11 }}>▤</span></Tooltip>
+                  </ToggleButton>
+                  <ToggleButton value="compact">
+                    <Tooltip title="Compact"><span style={{ fontSize: 11 }}>▥</span></Tooltip>
+                  </ToggleButton>
+                  <ToggleButton value="dense">
+                    <Tooltip title="Dense"><DensitySmallIcon sx={{ fontSize: 16 }} /></Tooltip>
+                  </ToggleButton>
+                </ToggleButtonGroup>
+                {/* Column visibility */}
+                <Tooltip title={t('contentStudio.columnVisibility', 'Kolommen')}>
+                  <IconButton size="small" onClick={(e) => setColumnMenuAnchor(e.currentTarget)}>
+                    <ViewColumnIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Popover
+                  open={Boolean(columnMenuAnchor)}
+                  anchorEl={columnMenuAnchor}
+                  onClose={() => setColumnMenuAnchor(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                >
+                  <Box sx={{ p: 2, minWidth: 180 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('contentStudio.visibleColumns', 'Zichtbare kolommen')}</Typography>
+                    {ALL_COLUMNS.map(col => (
+                      <FormControlLabel
+                        key={col}
+                        control={
+                          <Switch
+                            size="small"
+                            checked={activeColumns.includes(col)}
+                            onChange={() => {
+                              const newCols = activeColumns.includes(col)
+                                ? activeColumns.filter(c => c !== col)
+                                : [...activeColumns, col];
+                              setVisibleColumns(newCols.length === ALL_COLUMNS.length ? null : newCols);
+                            }}
+                            disabled={col === 'title'}
+                          />
+                        }
+                        label={<Typography variant="body2">{COLUMN_LABELS[col]}</Typography>}
+                        sx={{ display: 'block', mx: 0 }}
+                      />
+                    ))}
+                    <Button size="small" onClick={() => setVisibleColumns(null)} sx={{ mt: 1 }}>{t('contentStudio.resetColumns', 'Herstel')}</Button>
+                  </Box>
+                </Popover>
+                {/* Keyboard shortcuts */}
+                <Tooltip title="Sneltoetsen">
+                  <IconButton size="small" onClick={(e) => setKbdAnchor(e.currentTarget)} color={kbdAnchor ? 'primary' : 'default'}><KeyboardIcon fontSize="small" /></IconButton>
+                </Tooltip>
+                <Popover
+                  open={Boolean(kbdAnchor)}
+                  anchorEl={kbdAnchor}
+                  onClose={() => setKbdAnchor(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                >
+                  <Box sx={{ p: 2, minWidth: 240 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700 }}>Sneltoetsen</Typography>
+                    {[
+                      ['j / \u2193', 'Volgende rij'],
+                      ['k / \u2191', 'Vorige rij'],
+                      ['Enter', 'Open geselecteerd'],
+                      ['x', 'Selecteer/deselecteer'],
+                      ['Shift+A', 'Alles selecteren'],
+                      ['Shift+X', 'Selectie wissen'],
+                      ['a', 'Goedkeuren (bij selectie)'],
+                      ['p', 'Publiceren (bij selectie)'],
+                      ['Delete', 'Verwijderen (bij selectie)'],
+                    ].map(([key, desc]) => (
+                      <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12 }}>{desc}</Typography>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          {key.split(' / ').map(k => (
+                            <Box key={k} component="kbd" sx={{
+                              px: 0.75, py: 0.25, fontSize: 11, fontFamily: 'monospace', fontWeight: 600,
+                              bgcolor: 'action.hover', borderRadius: 0.5,
+                              border: '1px solid', borderColor: 'divider',
+                              lineHeight: 1.4,
+                            }}>{k}</Box>
+                          ))}
+                        </Box>
+                      </Box>
+                    ))}
+                    <Divider sx={{ my: 1 }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontSize: 12, fontWeight: 500, color: 'primary.main' }}>Command Palette</Typography>
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Box component="kbd" sx={{ px: 0.75, py: 0.25, fontSize: 11, fontFamily: 'monospace', fontWeight: 600, bgcolor: 'action.hover', borderRadius: 0.5, border: '1px solid', borderColor: 'divider', lineHeight: 1.4 }}>Ctrl</Box>
+                        <Box component="kbd" sx={{ px: 0.75, py: 0.25, fontSize: 11, fontFamily: 'monospace', fontWeight: 600, bgcolor: 'action.hover', borderRadius: 0.5, border: '1px solid', borderColor: 'divider', lineHeight: 1.4 }}>K</Box>
+                      </Box>
+                    </Box>
+                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10, mt: 0.5, display: 'block' }}>Alle sneltoetsen &amp; acties</Typography>
+                  </Box>
+                </Popover>
                 <Tooltip title={t('contentStudio.tooltips.refresh', 'Vernieuwen')}>
                   <IconButton size="small" onClick={loadItems}><RefreshIcon fontSize="small" /></IconButton>
                 </Tooltip>
@@ -3481,36 +3725,36 @@ export default function ContentStudioPage() {
                 </Tooltip>
                 <Tooltip title={t('contentStudio.tooltips.campaign', 'Genereer een complete multi-platform campagne rond een onderwerp. AI maakt meerdere content items aan voor verschillende kanalen (Facebook, Instagram, etc.).')} arrow>
                   <span>
-                <Button size="small" variant="outlined" color="secondary" startIcon={campaignGenerating ? <CircularProgress size={14} /> : <AutoAwesomeIcon />}
-                  disabled={campaignGenerating}
-                  onClick={async () => {
-                    const topic = prompt(t('contentStudio.campaign.topicPrompt', 'Voer het campagne-onderwerp in:'));
-                    if (!topic) return;
-                    setCampaignGenerating(true);
-                    try {
-                      const result = await contentService.generateCampaign({ destination_id: destinationId, topic, language: currentDest?.defaultLanguage || 'nl' });
-                      loadItems();
-                      const count = result?.data?.total || result?.total || result?.data?.items?.length || 0;
-                      const campConceptIds = (result?.data?.items || result?.data?.concepts || []).map(i => i.concept_id).filter(Boolean);
-                      setSnackMsg(`${count} items gegenereerd voor campagne "${topic}"`);
-                      if (campConceptIds.length > 0) setUndoCampaignIds(campConceptIds);
-                    } catch (err) { setSnackMsg(err.response?.data?.error?.message || err.message || 'Campagne generatie mislukt'); }
-                    finally { setCampaignGenerating(false); }
-                  }}>
-                  {t('contentStudio.actions.campaign', 'Campagne')}
-                </Button>
+                    <Button size="small" variant="outlined" color="secondary" startIcon={campaignGenerating ? <CircularProgress size={14} /> : <AutoAwesomeIcon />}
+                      disabled={campaignGenerating}
+                      onClick={async () => {
+                        const topic = prompt(t('contentStudio.campaign.topicPrompt', 'Voer het campagne-onderwerp in:'));
+                        if (!topic) return;
+                        setCampaignGenerating(true);
+                        try {
+                          const result = await contentService.generateCampaign({ destination_id: destinationId, topic, language: currentDest?.defaultLanguage || 'nl' });
+                          loadItems();
+                          const count = result?.data?.total || result?.total || result?.data?.items?.length || 0;
+                          const campConceptIds = (result?.data?.items || result?.data?.concepts || []).map(i => i.concept_id).filter(Boolean);
+                          setSnackMsg(`${count} items gegenereerd voor campagne "${topic}"`);
+                          if (campConceptIds.length > 0) setUndoCampaignIds(campConceptIds);
+                        } catch (err) { setSnackMsg(err.response?.data?.error?.message || err.message || 'Campagne generatie mislukt'); }
+                        finally { setCampaignGenerating(false); }
+                      }}>
+                      {t('contentStudio.actions.campaign', 'Campagne')}
+                    </Button>
                   </span>
                 </Tooltip>
               </Box>
             </Box>
+
             {/* Opdracht 6: Bulk toolbar — verschijnt prominent zodra rijen geselecteerd zijn */}
             {selectedIds.length > 0 && (
               <Box sx={{
                 position: 'sticky', top: 0, zIndex: 5,
                 display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center',
-                px: 2, py: 1.5, mb: 1,
+                px: 2, py: 1.5, mb: 0,
                 bgcolor: 'primary.50', borderTop: 2, borderBottom: 2, borderColor: 'primary.main',
-                // Opdracht 5 micro-interactie #5: slide-in van boven
                 animation: 'hbSlideDown 250ms cubic-bezier(0.16, 1, 0.3, 1)',
                 '@keyframes hbSlideDown': {
                   from: { transform: 'translateY(-100%)', opacity: 0 },
@@ -3531,7 +3775,7 @@ export default function ContentStudioPage() {
             )}
 
             {/* Opdracht 6: Extra filterbalk (Pillar + Score≥) */}
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 1, px: 1 }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 0, px: 1, py: 0.5 }}>
               <Select size="small" value={itemPillarFilter} onChange={e => setItemPillarFilter(e.target.value)} displayEmpty
                 sx={{ fontSize: 12, minWidth: 140 }}>
                 <MenuItem value="">{t('contentStudio.filter.allPillars', 'Alle pillars')}</MenuItem>
@@ -3559,59 +3803,103 @@ export default function ContentStudioPage() {
                 </Button>
               )}
             </Box>
-            <TableContainer>
-              <Table size="small">
+
+            {/* Opdracht 9: Enterprise density table */}
+            <TableContainer sx={{ maxHeight: 'calc(100vh - 320px)', overflow: 'auto' }}>
+              <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', '& .MuiTableCell-root': { py: densityMode === 'dense' ? 0.25 : densityMode === 'compact' ? 0.5 : 1 } }}>
                 <TableHead>
-                  <TableRow>
-                    <TableCell padding="checkbox">
+                  <TableRow sx={{ '& .MuiTableCell-head': { bgcolor: 'background.paper', fontWeight: 600, fontSize: 12, borderBottom: 2, borderColor: 'divider' } }}>
+                    <TableCell padding="checkbox" sx={{ width: 40 }}>
                       <Checkbox size="small" checked={items.length > 0 && selectedIds.length === items.length} indeterminate={selectedIds.length > 0 && selectedIds.length < items.length} onChange={toggleSelectAll} />
                     </TableCell>
-                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setItemSort(s => s === 'title_asc' ? 'title_desc' : 'title_asc')}>{t('contentStudio.table.title', 'Titel')} {itemSort.startsWith('title') ? (itemSort === 'title_asc' ? '↑' : '↓') : ''}</TableCell>
-                    <TableCell>
-                      <Select size="small" value={itemTypeFilter} onChange={e => setItemTypeFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 55 }}>
-                        <MenuItem value="">{t('contentStudio.table.type', 'Type')}</MenuItem>
-                        <MenuItem value="blog">Blog</MenuItem>
-                        <MenuItem value="social_post">Social</MenuItem>
-                        <MenuItem value="video_script">Video</MenuItem>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Select size="small" value={itemPlatformFilter} onChange={e => setItemPlatformFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 70 }}>
-                        <MenuItem value="">{t('contentStudio.table.platform', 'Platform')}</MenuItem>
-                        {Object.entries(PLATFORM_LABELS).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title={t('contentStudio.table.seoScoreTooltip', 'Hoogste SEO-score over alle platform-versies van dit concept. Wordt bijgewerkt zodra de popup wordt geopend en de score live wordt herberekend. Brand-score is een aparte metric en hier niet getoond.')}>
-                        <span>{t('contentStudio.table.seoScore', 'SEO')}</span>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      <Select size="small" value={itemStatusFilter} onChange={e => setItemStatusFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 70 }}>
-                        <MenuItem value="">{t('contentStudio.table.status', 'Status')}</MenuItem>
-                        <MenuItem value="draft">{t('contentStudio.status.draft', 'Concept')}</MenuItem>
-                        <MenuItem value="approved">{t('contentStudio.status.approved', 'Goedgekeurd')}</MenuItem>
-                        <MenuItem value="scheduled">{t('contentStudio.status.scheduled', 'Ingepland')}</MenuItem>
-                        <MenuItem value="published">{t('contentStudio.status.published', 'Gepubliceerd')}</MenuItem>
-                        <MenuItem value="failed">{t('contentStudio.status.failed', 'Mislukt')}</MenuItem>
-                      </Select>
-                    </TableCell>
-                    <TableCell sx={{ cursor: 'pointer' }} onClick={() => setItemSort(s => s === 'date_desc' ? 'date_asc' : 'date_desc')}>{t('contentStudio.table.date', 'Datum')} {itemSort.startsWith('date') ? (itemSort === 'date_asc' ? '↑' : '↓') : ''}</TableCell>
-                    <TableCell align="right">{t('contentStudio.table.actions', 'Acties')}</TableCell>
+                    {activeColumns.includes('title') && (
+                      <TableCell sx={{ cursor: 'pointer' }} onClick={() => setItemSort(s => s === 'title_asc' ? 'title_desc' : 'title_asc')}>
+                        {t('contentStudio.table.title', 'Titel')} {itemSort.startsWith('title') ? (itemSort === 'title_asc' ? '↑' : '↓') : ''}
+                      </TableCell>
+                    )}
+                    {activeColumns.includes('source') && (
+                      <TableCell sx={{ width: 110 }}>
+                        <Select size="small" value={itemTypeFilter} onChange={e => setItemTypeFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 55 }}>
+                          <MenuItem value="">{t('contentStudio.table.type', 'Type')}</MenuItem>
+                          <MenuItem value="blog">Blog</MenuItem>
+                          <MenuItem value="social_post">Social</MenuItem>
+                          <MenuItem value="video_script">Video</MenuItem>
+                        </Select>
+                      </TableCell>
+                    )}
+                    {activeColumns.includes('platforms') && (
+                      <TableCell sx={{ width: 180 }}>
+                        <Select size="small" value={itemPlatformFilter} onChange={e => setItemPlatformFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 70 }}>
+                          <MenuItem value="">{t('contentStudio.table.platform', 'Platforms')}</MenuItem>
+                          {Object.entries(PLATFORM_LABELS).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
+                        </Select>
+                      </TableCell>
+                    )}
+                    {activeColumns.includes('pillar') && (
+                      <TableCell sx={{ minWidth: 130 }}>Pillar</TableCell>
+                    )}
+                    {activeColumns.includes('seo') && (
+                      <TableCell sx={{ width: 55 }}>
+                        <Tooltip title={t('contentStudio.table.seoScoreTooltip', 'Hoogste SEO-score over alle platform-versies van dit concept.')}>
+                          <span>SEO</span>
+                        </Tooltip>
+                      </TableCell>
+                    )}
+                    {activeColumns.includes('status') && (
+                      <TableCell sx={{ width: 110 }}>
+                        <Select size="small" value={itemStatusFilter} onChange={e => setItemStatusFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 70 }}>
+                          <MenuItem value="">{t('contentStudio.table.status', 'Status')}</MenuItem>
+                          <MenuItem value="draft">{t('contentStudio.status.draft', 'Concept')}</MenuItem>
+                          <MenuItem value="approved">{t('contentStudio.status.approved', 'Goedgekeurd')}</MenuItem>
+                          <MenuItem value="scheduled">{t('contentStudio.status.scheduled', 'Ingepland')}</MenuItem>
+                          <MenuItem value="published">{t('contentStudio.status.published', 'Gepubliceerd')}</MenuItem>
+                          <MenuItem value="failed">{t('contentStudio.status.failed', 'Mislukt')}</MenuItem>
+                        </Select>
+                      </TableCell>
+                    )}
+                    {activeColumns.includes('updated') && (
+                      <TableCell sx={{ cursor: 'pointer', width: 110 }} onClick={() => setItemSort(s => s === 'date_desc' ? 'date_asc' : 'date_desc')}>
+                        {t('contentStudio.table.date', 'Bijgewerkt')} {itemSort.startsWith('date') ? (itemSort === 'date_asc' ? '↑' : '↓') : ''}
+                      </TableCell>
+                    )}
+                    {activeColumns.includes('actions') && (
+                      <TableCell align="right" sx={{ width: 70 }}>{t('contentStudio.table.actions', 'Acties')}</TableCell>
+                    )}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {itemLoading ? (
-                    [1, 2, 3].map(i => (
-                      <TableRow key={i}>
-                        <TableCell colSpan={11}><Skeleton variant="text" /></TableCell>
+                    Array.from({ length: 15 }).map((_, i) => (
+                      <TableRow key={`skel-${i}`} sx={{ height: rowHeight }}>
+                        <TableCell padding="checkbox"><Skeleton variant="rectangular" width={18} height={18} sx={{ borderRadius: 0.5 }} /></TableCell>
+                        {activeColumns.includes('title') && <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Skeleton variant="rectangular" width={28} height={28} sx={{ borderRadius: 1, flexShrink: 0 }} /><Skeleton variant="text" width={`${60 + Math.random() * 30}%`} /></Box></TableCell>}
+                        {activeColumns.includes('source') && <TableCell><Skeleton variant="rounded" width={60} height={20} /></TableCell>}
+                        {activeColumns.includes('platforms') && <TableCell><Box sx={{ display: 'flex', gap: 0.5 }}><Skeleton variant="rounded" width={55} height={20} /><Skeleton variant="rounded" width={55} height={20} /></Box></TableCell>}
+                        {activeColumns.includes('pillar') && <TableCell><Skeleton variant="text" width={70} /></TableCell>}
+                        {activeColumns.includes('seo') && <TableCell><Skeleton variant="rounded" width={36} height={20} /></TableCell>}
+                        {activeColumns.includes('status') && <TableCell><Skeleton variant="rounded" width={70} height={22} /></TableCell>}
+                        {activeColumns.includes('updated') && <TableCell><Skeleton variant="text" width={65} /></TableCell>}
+                        {activeColumns.includes('actions') && <TableCell><Skeleton variant="circular" width={24} height={24} /></TableCell>}
                       </TableRow>
                     ))
                   ) : concepts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
-                        <Typography color="text.secondary" sx={{ mb: 1 }}>{t('contentStudio.noItems', 'Geen content items. Genereer content vanuit goedgekeurde suggesties.')}</Typography>
-                        <Button variant="outlined" size="small" onClick={() => setTab(2)}>{t('contentStudio.goToSuggestions', 'Bekijk Suggesties')}</Button>
+                      <TableCell colSpan={activeColumns.length + 1} align="center" sx={{ py: 6 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                          <NoteAddIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
+                          <Typography variant="h6" color="text.secondary">{t('contentStudio.emptyState.title', 'Nog geen content')}</Typography>
+                          <Typography variant="body2" color="text.disabled" sx={{ maxWidth: 400 }}>
+                            {t('contentStudio.emptyState.description', 'Genereer content vanuit goedgekeurde suggesties of maak handmatig een nieuw item aan.')}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={() => setTab(2)}>
+                              {t('contentStudio.emptyState.goToSuggestions', 'Genereer suggesties')}
+                            </Button>
+                            <Button variant="outlined" startIcon={<NoteAddIcon />} onClick={() => setManualDialogOpen(true)}>
+                              {t('contentStudio.emptyState.newItem', 'Nieuw concept')}
+                            </Button>
+                          </Box>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ) : concepts
@@ -3629,95 +3917,156 @@ export default function ContentStudioPage() {
                       if (itemSort === 'date_desc') return new Date(b.created_at) - new Date(a.created_at);
                       return 0;
                     })
-                    .map((concept) => {
-                      // Open the first active platform item in the existing ContentItemDialog
+                    .map((concept, rowIdx) => {
                       const activeVersions = (concept.platform_versions || []).filter(v => v.status !== 'deleted');
                       const firstItemId = activeVersions[0]?.id;
+                      const isFocused = rowIdx === focusedRow;
                       return (
-                      <TableRow key={concept.id} hover sx={{
-                        cursor: 'pointer',
-                        // Opdracht 5 micro-interactie #2: hover-lift
-                        transition: 'transform 150ms ease, box-shadow 150ms ease',
-                        '&:hover': { transform: 'translateY(-1px)', boxShadow: 1 },
-                        '@media (prefers-reduced-motion: reduce)': { transition: 'none', '&:hover': { transform: 'none', boxShadow: 'none' } },
-                      }}
-                        onClick={() => { setConceptDialogId(concept.id); }}>
+                      <TableRow key={concept.id} hover
+                        selected={isFocused}
+                        sx={{
+                          height: rowHeight,
+                          cursor: 'pointer',
+                          transition: 'background-color 150ms ease',
+                          ...(isFocused ? { bgcolor: 'action.selected', outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 } : {}),
+                          '& .row-actions': { opacity: 0, transition: 'opacity 150ms ease' },
+                          '&:hover .row-actions': { opacity: 1 },
+                          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+                        }}
+                        onClick={() => { setFocusedRow(rowIdx); setConceptDialogId(concept.id); }}>
                         <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
                           <Checkbox size="small" checked={selectedIds.includes(firstItemId)} onChange={() => firstItemId && toggleSelectItem(firstItemId)} />
                         </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 500, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {concept.title}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {concept.content_source_type === 'poi' ? <Chip label="📍 POI" size="small" sx={{ fontSize: 10, bgcolor: '#2e7d3215', color: '#2e7d32' }} />
-                          : concept.content_source_type === 'event' ? <Chip label="📅 Event" size="small" sx={{ fontSize: 10, bgcolor: '#ed6c0215', color: '#ed6c02' }} />
-                          : concept.content_source_type === 'visual' ? <Chip label="📷 Visual" size="small" sx={{ fontSize: 10, bgcolor: '#1976d215', color: '#1976d2' }} />
-                          : concept.content_source_type === 'holibot' ? <Chip label="💬 HoliBot" size="small" sx={{ fontSize: 10, bgcolor: '#0288d115', color: '#0288d1' }} />
-                          : concept.content_source_type === 'gsc' ? <Chip label="🔍 GSC" size="small" sx={{ fontSize: 10, bgcolor: '#42855415', color: '#428554' }} />
-                          : concept.content_source_type === 'recycle' ? <Chip label="♻️ Recycle" size="small" sx={{ fontSize: 10, bgcolor: '#7b1fa215', color: '#7b1fa2' }} />
-                          : concept.content_source_type === 'keyword' ? <Chip label="🔍 Keyword" size="small" sx={{ fontSize: 10, bgcolor: '#66666615', color: '#666' }} />
-                          : <Chip label="✏️ Handmatig" size="small" sx={{ fontSize: 10, bgcolor: '#66666615', color: '#666' }} />}
-                        </TableCell>
-                        <TableCell><Chip label={CONTENT_TYPE_LABELS[concept.content_type] || concept.content_type} size="small" /></TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 0.3, flexWrap: 'wrap' }}>
-                            {(concept.platform_versions || []).filter(v => v.status !== 'deleted').map(v => {
-                              const brand = PLATFORM_COLORS[v.platform] || '#666';
-                              const icon = PLATFORM_STATUS_ICON[v.status] || '—';
-                              return (
-                                <Chip key={v.id}
-                                  label={`${PLATFORM_LABELS[v.platform] || v.platform} ${icon}`}
+                        {activeColumns.includes('title') && (
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {/* Thumbnail 28x28 */}
+                              <Box sx={{
+                                width: 28, height: 28, borderRadius: 1, flexShrink: 0,
+                                bgcolor: concept.content_source_type === 'poi' ? '#2e7d3220' : concept.content_source_type === 'visual' ? '#1976d220' : '#66666620',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 14,
+                              }}>
+                                {concept.content_source_type === 'poi' ? '📍' : concept.content_source_type === 'event' ? '📅' : concept.content_source_type === 'visual' ? '📷' : concept.content_source_type === 'holibot' ? '💬' : '✏️'}
+                              </Box>
+                              {inlineEditId === concept.id ? (
+                                <TextField
                                   size="small"
-                                  onClick={(e) => { e.stopPropagation(); setConceptDialogId(concept.id); }}
-                                  sx={{
-                                    cursor: 'pointer', height: 22, fontSize: 11, fontWeight: 500,
-                                    color: '#fff', bgcolor: brand,
-                                    border: `1px solid ${brand}`,
-                                    opacity: v.status === 'published' ? 1 : v.status === 'scheduled' ? 0.85 : 0.7,
-                                    '&:hover': { bgcolor: brand, filter: 'brightness(1.1)' },
-                                  }} />
-                              );
-                            })}
-                            {(concept.platform_versions || []).filter(v => v.status !== 'deleted').length === 0 && <Typography variant="caption" color="text.disabled">—</Typography>}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          {concept.avg_seo_score != null ? (() => {
-                            const s = Math.round(Number(concept.avg_seo_score));
-                            const color = s >= 80 ? 'success' : s >= 60 ? 'warning' : 'error';
-                            return <Chip label={`${s}`} size="small" color={color} sx={{ height: 20, fontSize: 11, fontWeight: 600, minWidth: 36 }} />;
-                          })() : <Typography variant="caption" color="text.disabled">—</Typography>}
-                          {concept.pillar_name && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: concept.pillar_color || '#999' }} />
-                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{concept.pillar_name}</Typography>
+                                  value={inlineEditValue}
+                                  onChange={e => setInlineEditValue(e.target.value)}
+                                  onBlur={() => handleInlineEditSave(concept.id)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') { e.preventDefault(); handleInlineEditSave(concept.id); }
+                                    if (e.key === 'Escape') { setInlineEditId(null); }
+                                    e.stopPropagation();
+                                  }}
+                                  onClick={e => e.stopPropagation()}
+                                  autoFocus
+                                  sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.5, fontSize: 13 } }}
+                                />
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    setInlineEditId(concept.id);
+                                    setInlineEditValue(concept.title || '');
+                                  }}
+                                  sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
+                                  title={concept.title}
+                                >
+                                  {concept.title}
+                                </Typography>
+                              )}
                             </Box>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {concept.platform_versions?.some(v => v.status === 'published') ? (
-                            <Chip label="Live" size="small" color="success" sx={{ height: 20, fontSize: 10 }} />
-                          ) : concept.platform_versions?.some(v => v.status === 'scheduled') ? (
-                            <Chip label="Ingepland" size="small" color="warning" sx={{ height: 20, fontSize: 10 }} />
-                          ) : (
-                            <StatusChip status={concept.approval_status} />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="caption">{new Date(concept.updated_at || concept.created_at).toLocaleDateString('nl-NL')}</Typography>
-                        </TableCell>
-                        <TableCell align="right" onClick={e => e.stopPropagation()}>
-                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                            <Tooltip title={t('common.edit', 'Bewerken')}>
-                              <IconButton size="small" onClick={() => { if (firstItemId) setSelectedItemId(firstItemId); }}><EditIcon fontSize="small" /></IconButton>
-                            </Tooltip>
-                            <Tooltip title={t('common.delete', 'Verwijderen')}>
-                              <IconButton size="small" color="error" onClick={async () => { await contentService.deleteConcept(concept.id); loadItems(); }}><DeleteIcon fontSize="small" /></IconButton>
-                            </Tooltip>
-                          </Box>
-                        </TableCell>
+                          </TableCell>
+                        )}
+                        {activeColumns.includes('source') && (
+                          <TableCell>
+                            <Chip
+                              label={CONTENT_TYPE_LABELS[concept.content_type] || concept.content_type || '—'}
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontSize: 10, height: 20, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'visible',
+                                borderColor: concept.content_type === 'blog' ? '#1565c0' : concept.content_type === 'social_post' ? '#2e7d32' : concept.content_type === 'video_script' ? '#ed6c02' : 'divider',
+                                color: concept.content_type === 'blog' ? '#64B5F6' : concept.content_type === 'social_post' ? '#81C784' : concept.content_type === 'video_script' ? '#FFB74D' : 'text.secondary',
+                              }}
+                            />
+                          </TableCell>
+                        )}
+                        {activeColumns.includes('platforms') && (
+                          <TableCell>
+                            <Box sx={{ display: 'flex', gap: 0.3, flexWrap: 'wrap' }}>
+                              {activeVersions.map(v => {
+                                const brand = PLATFORM_COLORS[v.platform] || '#666';
+                                const icon = PLATFORM_STATUS_ICON[v.status] || '—';
+                                return (
+                                  <Chip key={v.id}
+                                    label={`${PLATFORM_LABELS[v.platform] || v.platform} ${icon}`}
+                                    size="small"
+                                    onClick={(e) => { e.stopPropagation(); setConceptDialogId(concept.id); }}
+                                    sx={{
+                                      cursor: 'pointer', height: 20, fontSize: 10, fontWeight: 500,
+                                      color: '#fff', bgcolor: brand,
+                                      border: `1px solid ${brand}`,
+                                      opacity: v.status === 'published' ? 1 : v.status === 'scheduled' ? 0.85 : 0.7,
+                                      '&:hover': { bgcolor: brand, filter: 'brightness(1.1)' },
+                                    }} />
+                                );
+                              })}
+                              {activeVersions.length === 0 && <Typography variant="caption" color="text.disabled">—</Typography>}
+                            </Box>
+                          </TableCell>
+                        )}
+                        {activeColumns.includes('pillar') && (
+                          <TableCell>
+                            {concept.pillar_name ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: concept.pillar_color || '#999', flexShrink: 0 }} />
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>{concept.pillar_name}</Typography>
+                              </Box>
+                            ) : <Typography variant="caption" color="text.disabled">—</Typography>}
+                          </TableCell>
+                        )}
+                        {activeColumns.includes('seo') && (
+                          <TableCell>
+                            {concept.avg_seo_score != null ? (() => {
+                              const s = Math.round(Number(concept.avg_seo_score));
+                              const color = s >= 80 ? 'success' : s >= 60 ? 'warning' : 'error';
+                              return <Chip label={`${s}`} size="small" color={color} sx={{ height: 20, fontSize: 11, fontWeight: 600, minWidth: 36 }} />;
+                            })() : <Typography variant="caption" color="text.disabled">—</Typography>}
+                          </TableCell>
+                        )}
+                        {activeColumns.includes('status') && (
+                          <TableCell>
+                            {concept.platform_versions?.some(v => v.status === 'published') ? (
+                              <Chip icon={<CheckCircleOutlineIcon sx={{ fontSize: 14 }} />} label="Live" size="small" sx={{ height: 22, fontSize: 10, bgcolor: 'rgba(129,199,132,0.15)', color: '#81C784', border: '1px solid rgba(129,199,132,0.3)' }} />
+                            ) : concept.platform_versions?.some(v => v.status === 'scheduled') ? (
+                              <Chip icon={<AccessTimeIcon sx={{ fontSize: 14 }} />} label="Ingepland" size="small" sx={{ height: 22, fontSize: 10, bgcolor: 'rgba(100,181,246,0.15)', color: '#64B5F6', border: '1px solid rgba(100,181,246,0.3)' }} />
+                            ) : concept.platform_versions?.some(v => v.status === 'failed') ? (
+                              <Chip icon={<ErrorOutlineIcon sx={{ fontSize: 14 }} />} label="Mislukt" size="small" sx={{ height: 22, fontSize: 10, bgcolor: 'rgba(229,115,115,0.15)', color: '#E57373', border: '1px solid rgba(229,115,115,0.3)' }} />
+                            ) : (
+                              <StatusChip status={concept.approval_status} />
+                            )}
+                          </TableCell>
+                        )}
+                        {activeColumns.includes('updated') && (
+                          <TableCell>
+                            <Typography variant="caption" sx={{ fontSize: 11, whiteSpace: 'nowrap' }}>{new Date(concept.updated_at || concept.created_at).toLocaleDateString('nl-NL')}</Typography>
+                          </TableCell>
+                        )}
+                        {activeColumns.includes('actions') && (
+                          <TableCell align="right" onClick={e => e.stopPropagation()}>
+                            <Box className="row-actions" sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                              <Tooltip title={t('common.edit', 'Bewerken')}>
+                                <IconButton size="small" onClick={() => { if (firstItemId) setSelectedItemId(firstItemId); }}><EditIcon sx={{ fontSize: 16 }} /></IconButton>
+                              </Tooltip>
+                              <Tooltip title={t('common.delete', 'Verwijderen')}>
+                                <IconButton size="small" color="error" onClick={async () => { await contentService.deleteConcept(concept.id); loadItems(); }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
+                              </Tooltip>
+                            </Box>
+                          </TableCell>
+                        )}
                       </TableRow>
                       );
                     })}

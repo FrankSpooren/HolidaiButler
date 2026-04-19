@@ -12524,6 +12524,34 @@ router.post('/content/concepts/generate', adminAuth('editor'), writeAccess(['pla
 });
 
 /**
+ * PATCH /content/concepts/:id — Update concept (title, pillar, etc.)
+ * Opdracht 9: inline editing support
+ */
+router.patch('/content/concepts/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const conceptId = Number(req.params.id);
+    const { title, pillar_id, approval_status, content_type } = req.body;
+    const updates = [];
+    const replacements = [];
+    if (title !== undefined) { updates.push('title = ?'); replacements.push(String(title).substring(0, 500)); }
+    if (pillar_id !== undefined) { updates.push('pillar_id = ?'); replacements.push(pillar_id); }
+    if (approval_status !== undefined) { updates.push('approval_status = ?'); replacements.push(approval_status); }
+    if (content_type !== undefined) { updates.push('content_type = ?'); replacements.push(content_type); }
+    if (updates.length === 0) return res.status(400).json({ success: false, error: { code: 'NO_UPDATES', message: 'No fields to update' } });
+    updates.push('updated_at = NOW()');
+    replacements.push(conceptId);
+    await mysqlSequelize.query(
+      `UPDATE content_concepts SET ${updates.join(', ')} WHERE id = ?`,
+      { replacements }
+    );
+    res.json({ success: true, data: { concept_id: conceptId, updated: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Concept update error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONCEPT_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
  * DELETE /content/concepts/:id — Soft delete concept + all items
  */
 router.delete('/content/concepts/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
@@ -16023,6 +16051,70 @@ router.get('/content/studio/overview', adminAuth('editor'), async (req, res) => 
 // ═══════════════════════════════════════════
 
 // GET /notifications — list notifications for current user
+
+// ─── Sidebar Badge Counts (studio mode) ────────────────────────────
+router.get('/content/studio/sidebar-badges', adminAuth, async (req, res) => {
+  try {
+    const destId = req.destinationId;
+    if (!destId) return res.json({ success: true, data: {} });
+
+    const db = req.app.locals.db;
+
+    // Drafts count
+    const [[draftsRow]] = await db.query(
+      `SELECT COUNT(*) as c FROM content_items WHERE approval_status = 'draft' AND destination_id = ?`,
+      [destId]
+    );
+
+    // Pending ideas (suggestions)
+    const [[ideasRow]] = await db.query(
+      `SELECT COUNT(*) as c FROM content_suggestions WHERE status = 'pending' AND destination_id = ?`,
+      [destId]
+    );
+
+    // New sources (trending data last 7 days)
+    const [[sourcesRow]] = await db.query(
+      `SELECT COUNT(*) as c FROM trending_data WHERE destination_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`,
+      [destId]
+    );
+
+    // Calendar gaps (workdays without scheduled content in next 14 days)
+    let gaps = 0;
+    try {
+      const [scheduled] = await db.query(
+        `SELECT DATE(scheduled_at) as d FROM content_items
+         WHERE destination_id = ? AND scheduled_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 14 DAY)
+         AND approval_status IN ('scheduled', 'published')
+         GROUP BY DATE(scheduled_at)`,
+        [destId]
+      );
+      const scheduledDates = new Set(scheduled.map(r => r.d?.toISOString?.()?.slice(0,10) || ''));
+      const now = new Date();
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(now);
+        d.setDate(d.getDate() + i);
+        const day = d.getDay();
+        if (day === 0 || day === 6) continue; // skip weekends
+        const iso = d.toISOString().slice(0, 10);
+        if (!scheduledDates.has(iso)) gaps++;
+      }
+    } catch { /* gaps stays 0 */ }
+
+    res.json({
+      success: true,
+      data: {
+        drafts: draftsRow?.c || 0,
+        ideas: ideasRow?.c || 0,
+        sources: sourcesRow?.c || 0,
+        gaps,
+      }
+    });
+  } catch (err) {
+    console.error('[sidebar-badges]', err.message);
+    res.json({ success: true, data: {} });
+  }
+});
+
 router.get('/notifications', adminAuth('destination_admin'), async (req, res) => {
   try {
     const userId = req.adminUser.id;
