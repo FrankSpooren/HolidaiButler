@@ -51,7 +51,7 @@ function GrowthChip({ value }) {
 
 
 // ════════════════════════════════════════════
-// SUB-TAB: Executive Report
+// SUB-TAB: Content Report (content metrics only)
 // ════════════════════════════════════════════
 function ReportSubTab({ destinationId, t }) {
   const [period, setPeriod] = useState('last_month');
@@ -66,7 +66,7 @@ function ReportSubTab({ destinationId, t }) {
     setLoading(true);
     const params = { destination_id: destinationId, period };
     if (period === 'custom') { params.start = customStart; params.end = customEnd; }
-    client.get('/analytics/report', { params })
+    client.get('/content/report', { params })
       .then(res => setReport(res.data?.data || null))
       .catch(() => setReport(null))
       .finally(() => setLoading(false));
@@ -74,8 +74,6 @@ function ReportSubTab({ destinationId, t }) {
 
   const contentData = report?.content || {};
   const topContent = report?.topContent || [];
-  const reviews = report?.reviews || {};
-  const chatbot = report?.chatbot || {};
   const dest = report?.destination || {};
   const periodInfo = report?.period || {};
 
@@ -146,29 +144,28 @@ function ReportSubTab({ destinationId, t }) {
             </Box>
           </Paper>
 
-          {/* Executive Summary */}
+          {/* Executive Summary — content only */}
           <Card sx={{ p: 2.5, mb: 3 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, textTransform: 'uppercase', fontSize: 11, color: 'text.secondary', letterSpacing: 0.5 }}>
               {t('analytics.report.executiveSummary', 'Executive Summary')}
             </Typography>
             <Typography variant="body1" sx={{ lineHeight: 1.8 }}>
               In deze periode zijn {contentData.total || 0} content items aangemaakt, waarvan {contentData.published || 0} gepubliceerd en {contentData.scheduled || 0} ingepland.
-              {' '}{reviews.count || 0} nieuwe reviews ontvangen met een gemiddelde rating van {reviews.avgRating || '-'}.
-              {' '}De chatbot heeft {chatbot.sessions || 0} sessies afgehandeld met {chatbot.messages || 0} berichten.
+              {contentData.drafts > 0 ? ` ${contentData.drafts} concepten staan klaar voor review.` : ''}
+              {(contentData.byPlatform || []).length > 0 ? ` De meest actieve platformen zijn ${(contentData.byPlatform || []).slice(0, 2).map(p => p.target_platform).join(' en ')}.` : ''}
+              {contentData.publishRate > 0 ? ` Het publicatiepercentage is ${contentData.publishRate}%.` : ''}
             </Typography>
           </Card>
 
-          {/* KPI Blocks */}
+          {/* KPI Blocks — content only, no reviews/chatbot */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
             {[
               { label: t('analytics.report.kpi.totalContent', 'Totaal content'), value: contentData.total || 0, color: '#5E8B7E' },
               { label: t('analytics.report.kpi.published', 'Gepubliceerd'), value: contentData.published || 0, color: '#27AE60' },
               { label: t('analytics.report.kpi.scheduled', 'Ingepland'), value: contentData.scheduled || 0, color: '#2196f3' },
               { label: t('analytics.report.kpi.drafts', 'Concepten'), value: contentData.drafts || 0, color: '#9e9e9e' },
-              { label: t('analytics.report.kpi.reviews', 'Nieuwe reviews'), value: reviews.count || 0, color: '#f59e0b' },
-              { label: t('analytics.report.kpi.chatSessions', 'Chatbot sessies'), value: chatbot.sessions || 0, color: '#8b5cf6' },
             ].map((kpi, idx) => (
-              <Grid item xs={6} md={2} key={idx}>
+              <Grid item xs={6} md={3} key={idx}>
                 <Card sx={{ p: 2, textAlign: 'center', borderTop: '3px solid ' + kpi.color }}>
                   <Typography variant="h4" sx={{ fontWeight: 700, color: kpi.color }}>{kpi.value}</Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>{kpi.label}</Typography>
@@ -294,6 +291,7 @@ function ReportSubTab({ destinationId, t }) {
     </Box>
   );
 }
+
 
 export default function ContentAnalyseTab({ destinationId }) {
   const { t } = useTranslation();
