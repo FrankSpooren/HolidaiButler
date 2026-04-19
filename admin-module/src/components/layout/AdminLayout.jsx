@@ -10,6 +10,9 @@ import CommandPalette from '../common/CommandPalette.jsx';
 import ShortcutsOverlay from '../common/ShortcutsOverlay.jsx';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts.js';
 
+const COLLAPSED_WIDTH = 56;
+const EXPANDED_WIDTH = SIDEBAR_STYLES.width || 240;
+
 export default function AdminLayout() {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -18,6 +21,19 @@ export default function AdminLayout() {
   const user = useAuthStore(s => s.user);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Sidebar collapse state — syncs with Sidebar via CustomEvent
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('hb-sidebar-collapsed') === 'true'; } catch { return false; }
+  });
+
+  useEffect(() => {
+    const handler = (e) => setSidebarCollapsed(e.detail);
+    window.addEventListener('hb:sidebar-collapse', handler);
+    return () => window.removeEventListener('hb:sidebar-collapse', handler);
+  }, []);
+
+  const sidebarWidth = sidebarCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
 
   // Show onboarding guide for users who haven't completed it
   useEffect(() => {
@@ -61,7 +77,6 @@ export default function AdminLayout() {
 
     // Single keys
     '/': () => {
-      // Focus the search input on current page if available
       const searchInput = document.querySelector('[data-search-input]') || document.querySelector('input[placeholder*="Zoek"]');
       if (searchInput) { searchInput.focus(); searchInput.select(); }
     },
@@ -73,7 +88,14 @@ export default function AdminLayout() {
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Desktop sidebar */}
       {!isMobile && (
-        <Box component="nav" sx={{ width: SIDEBAR_STYLES.width, flexShrink: 0 }}>
+        <Box
+          component="nav"
+          sx={{
+            width: sidebarWidth,
+            flexShrink: 0,
+            transition: 'width 200ms ease',
+          }}
+        >
           <Sidebar />
         </Box>
       )}
@@ -84,13 +106,13 @@ export default function AdminLayout() {
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
         ModalProps={{ keepMounted: true }}
-        sx={{ display: { md: 'none' }, '& .MuiDrawer-paper': { width: SIDEBAR_STYLES.width } }}
+        sx={{ display: { md: 'none' }, '& .MuiDrawer-paper': { width: EXPANDED_WIDTH } }}
       >
         <Sidebar />
       </Drawer>
 
       {/* Main content */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <Header onMenuToggle={() => setMobileOpen(!mobileOpen)} />
         <Box component="main" sx={{ flex: 1, p: 3, mt: 8 }}>
           <Outlet />

@@ -170,7 +170,8 @@ export default function DashboardPage() {
         </Grid>
       </Grid>
 
-      {/* Recent Content */}
+      {/* Recent Content — div spacer to match gap above Snelkoppelingen */}
+      <div style={{ height: 24 }} />
       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
         {t('dashboard.recentContent', 'Recente content')}
       </Typography>
