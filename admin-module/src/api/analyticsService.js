@@ -23,5 +23,7 @@ export const analyticsService = {
     client.get('/analytics/export', {
       params: { type, ...(destination && { destination }) },
       responseType: 'blob'
-    }).then(r => r.data)
+    }).then(r => r.data),
+  getReport: (destination, period = 'last_month', start, end) =>
+    client.get('/analytics/report', { params: { ...(destination && { destination }), period, ...(start && { start }), ...(end && { end }) } }).then(r => r.data),
 };

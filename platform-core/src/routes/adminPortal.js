@@ -5018,6 +5018,131 @@ router.get('/analytics/website', adminAuth('reviewer'), destinationScope, async 
 // MODULE 8D-4: SETTINGS
 // ============================================================
 
+
+/**
+ * GET /analytics/report — Executive report data for PDF/print
+ * Query: destination (code/id), period (last_week|last_month|custom), start, end
+ * Returns aggregated KPIs, top performers, content stats for report rendering
+ */
+router.get('/analytics/report', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destId = req.query.destination ? resolveDestinationId(req.query.destination) : (req.destScope?.[0] || 1);
+    const { period = 'last_month', start, end } = req.query;
+
+    let startDate, endDate;
+    const now = new Date();
+    if (period === 'last_week') {
+      endDate = new Date(now); endDate.setDate(endDate.getDate() - 1);
+      startDate = new Date(endDate); startDate.setDate(startDate.getDate() - 6);
+    } else if (period === 'last_month') {
+      endDate = new Date(now.getFullYear(), now.getMonth(), 0); // last day prev month
+      startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+    } else if (start && end) {
+      startDate = new Date(start);
+      endDate = new Date(end);
+    } else {
+      endDate = new Date(now); endDate.setDate(endDate.getDate() - 1);
+      startDate = new Date(endDate); startDate.setDate(startDate.getDate() - 29);
+    }
+
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+
+    // Destination info
+    const destNames = { 1: 'Calpe', 2: 'Texel', 3: 'Alicante', 4: 'WarreWijzer' };
+    const destName = destNames[destId] || 'Unknown';
+
+    // Content stats
+    const [contentStats] = await mysqlSequelize.query(
+      `SELECT
+        COUNT(*) AS total_items,
+        SUM(CASE WHEN approval_status = 'published' THEN 1 ELSE 0 END) AS published,
+        SUM(CASE WHEN approval_status = 'scheduled' THEN 1 ELSE 0 END) AS scheduled,
+        SUM(CASE WHEN approval_status = 'draft' THEN 1 ELSE 0 END) AS drafts
+      FROM content_items
+      WHERE destination_id = :destId
+        AND created_at BETWEEN :start AND :end`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    // Content by platform
+    const [platformStats] = await mysqlSequelize.query(
+      `SELECT target_platform, COUNT(*) AS count,
+        SUM(CASE WHEN approval_status = 'published' THEN 1 ELSE 0 END) AS published
+      FROM content_items
+      WHERE destination_id = :destId AND created_at BETWEEN :start AND :end
+      GROUP BY target_platform ORDER BY count DESC`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    // Content by pillar
+    const [pillarStats] = await mysqlSequelize.query(
+      `SELECT cp.name AS pillar_name, cp.color AS pillar_color, COUNT(ci.id) AS count,
+        SUM(CASE WHEN ci.approval_status = 'published' THEN 1 ELSE 0 END) AS published
+      FROM content_items ci
+      JOIN content_concepts cc ON cc.id = ci.concept_id
+      JOIN content_pillars cp ON cp.id = cc.pillar_id
+      WHERE ci.destination_id = :destId AND ci.created_at BETWEEN :start AND :end
+      GROUP BY cp.id ORDER BY count DESC`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    // Top performing content (by SEO score if available)
+    const [topContent] = await mysqlSequelize.query(
+      `SELECT ci.id, ci.title, ci.target_platform, ci.approval_status, ci.seo_score,
+              ci.published_at, cp.name AS pillar_name
+      FROM content_items ci
+      LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
+      LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
+      WHERE ci.destination_id = :destId AND ci.created_at BETWEEN :start AND :end
+        AND ci.approval_status IN ('published', 'scheduled')
+      ORDER BY ci.seo_score DESC, ci.published_at DESC
+      LIMIT 10`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    // POI & review stats for the period
+    const [reviewStats] = await mysqlSequelize.query(
+      `SELECT COUNT(*) AS new_reviews, ROUND(AVG(rating), 1) AS avg_rating
+      FROM reviews WHERE destination_id = :destId AND created_at BETWEEN :start AND :end`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    // Chatbot stats
+    const [chatStats] = await mysqlSequelize.query(
+      `SELECT COUNT(*) AS sessions, SUM(message_count) AS messages
+      FROM holibot_sessions WHERE destination_id = :destId AND started_at BETWEEN :start AND :end`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    const cs = contentStats[0] || {};
+    const rs = reviewStats[0] || {};
+    const ch = chatStats[0] || {};
+
+    res.json({
+      success: true,
+      data: {
+        destination: { id: destId, name: destName },
+        period: { start: startStr, end: endStr, label: period },
+        content: {
+          total: cs.total_items || 0,
+          published: cs.published || 0,
+          scheduled: cs.scheduled || 0,
+          drafts: cs.drafts || 0,
+          byPlatform: platformStats || [],
+          byPillar: pillarStats || [],
+        },
+        topContent: topContent || [],
+        reviews: { count: rs.new_reviews || 0, avgRating: rs.avg_rating || 0 },
+        chatbot: { sessions: ch.sessions || 0, messages: ch.messages || 0 },
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Analytics report error:', error);
+    res.status(500).json({ success: false, error: { code: 'REPORT_ERROR', message: error.message } });
+  }
+});
+
 /**
  * GET /settings
  * System info, destinations, admin info, feature flags.

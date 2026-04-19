@@ -542,7 +542,8 @@
     "tab": {
       "website": "Website",
       "poiReviews": "POI & Reviews",
-      "chatbot": "Chatbot"
+      "chatbot": "Chatbot",
+      "report": "Rapport"
     },
     "website": {
       "visitors": "Bezoekers",
@@ -611,6 +612,33 @@
       "day": "Dag",
       "week": "Week",
       "month": "Maand"
+    },
+    "report": {
+      "title": "Content Performance Rapport",
+      "lastWeek": "Vorige week",
+      "lastMonth": "Vorige maand",
+      "custom": "Aangepast",
+      "printPdf": "Afdrukken als PDF (Ctrl+P)",
+      "exportPdf": "PDF / Afdrukken",
+      "executiveSummary": "Executive Summary",
+      "summaryText": "In deze periode zijn {{total}} content items aangemaakt, waarvan {{published}} gepubliceerd en {{scheduled}} ingepland. {{reviewCount}} nieuwe reviews ontvangen met een gemiddelde rating van {{avgRating}}. De chatbot heeft {{sessions}} sessies afgehandeld met {{messages}} berichten.",
+      "generated": "Gegenereerd",
+      "kpi": {
+        "totalContent": "Totaal content",
+        "published": "Gepubliceerd",
+        "scheduled": "Ingepland",
+        "drafts": "Concepten",
+        "reviews": "Nieuwe reviews",
+        "chatSessions": "Chatbot sessies"
+      },
+      "byPlatform": "Content per platform",
+      "total": "Totaal",
+      "publishRate": "Publicatie %",
+      "byPillar": "Content per pillar",
+      "topPerformers": "Top performers",
+      "contentTitle": "Titel",
+      "commentary": "Opmerkingen",
+      "commentaryPlaceholder": "Voeg persoonlijke opmerkingen toe aan dit rapport..."
     }
   },
   "settings": {
@@ -1686,7 +1714,11 @@
       "cancelSchedule": "Annuleren",
       "scheduleTitle": "Content inplannen",
       "dateTime": "Datum & tijd",
-      "account": "Account"
+      "account": "Account",
+      "filters": "Filters",
+      "toggleFilters": "Filters tonen/verbergen",
+      "clearFilters": "Filters wissen",
+      "print": "Afdrukken"
     },
     "performance": {
       "days": "dagen",
