@@ -31,6 +31,12 @@ import client from '../api/client.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { useNavigate } from 'react-router-dom';
 
+function fmtNum(n) {
+  if (n === null || n === undefined || n === '—') return '—';
+  if (typeof n === 'string' && n.endsWith('h')) return n; // uptime
+  return Number(n).toLocaleString('nl-NL');
+}
+
 const STORAGE_KEY = 'hb-dashboard-widgets';
 
 // All available widget definitions
@@ -79,7 +85,7 @@ function KpiWidget({ widget, value, subtext, loading }) {
           <Icon sx={{ color, fontSize: 28 }} />
         </Box>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{value ?? '—'}</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{fmtNum(value)}</Typography>
           <Typography variant="caption" color="text.secondary">{label}</Typography>
           {subtext && <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: 10 }}>{subtext}</Typography>}
         </Box>
@@ -123,7 +129,8 @@ export default function DashboardPage() {
   const kpis = kpiData?.data || {};
   const platform = kpis.platform || {};
   const destinations = kpis.destinations || {};
-  const actions = actionData?.data || {};
+  const actionsResponse = actionData?.data || {};
+  const actions = actionsResponse.actions || actionsResponse || {};
 
   const refetch = useCallback(() => { kpiRefetch(); actionRefetch(); }, [kpiRefetch, actionRefetch]);
 
