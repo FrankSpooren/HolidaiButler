@@ -13564,6 +13564,101 @@ router.delete('/content/items/:id/images/:mediaId', adminAuth('editor'), writeAc
 // ============================================================================
 
 /**
+ * GET /content/report — Content-only report data for Content Studio Rapport tab
+ * Query: destination_id, period (last_week|last_month|custom), start, end
+ * Returns content-specific KPIs only (no reviews, chatbot, website data)
+ */
+router.get('/content/report', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = Number(req.query.destination_id) || req.adminUser?.destination_id || 1;
+    const { period = 'last_month', start, end } = req.query;
+
+    let startDate, endDate;
+    const now = new Date();
+    if (period === 'last_week') {
+      endDate = new Date(now); endDate.setDate(endDate.getDate() - 1);
+      startDate = new Date(endDate); startDate.setDate(startDate.getDate() - 6);
+    } else if (period === 'last_month') {
+      endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+      startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+    } else if (start && end) {
+      startDate = new Date(start);
+      endDate = new Date(end);
+    } else {
+      endDate = new Date(now); endDate.setDate(endDate.getDate() - 1);
+      startDate = new Date(endDate); startDate.setDate(startDate.getDate() - 29);
+    }
+
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+    const destNames = { 1: 'Calpe', 2: 'Texel', 3: 'Alicante', 4: 'WarreWijzer' };
+
+    const [contentStats] = await mysqlSequelize.query(
+      `SELECT COUNT(*) AS total,
+        SUM(CASE WHEN approval_status = 'published' THEN 1 ELSE 0 END) AS published,
+        SUM(CASE WHEN approval_status = 'scheduled' THEN 1 ELSE 0 END) AS scheduled,
+        SUM(CASE WHEN approval_status = 'draft' THEN 1 ELSE 0 END) AS drafts
+      FROM content_items WHERE destination_id = :destId AND created_at BETWEEN :start AND :end`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    const [platformStats] = await mysqlSequelize.query(
+      `SELECT target_platform, COUNT(*) AS count,
+        SUM(CASE WHEN approval_status = 'published' THEN 1 ELSE 0 END) AS published
+      FROM content_items WHERE destination_id = :destId AND created_at BETWEEN :start AND :end
+      GROUP BY target_platform ORDER BY count DESC`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    const [pillarStats] = await mysqlSequelize.query(
+      `SELECT cp.name AS pillar_name, cp.color AS pillar_color, COUNT(ci.id) AS count,
+        SUM(CASE WHEN ci.approval_status = 'published' THEN 1 ELSE 0 END) AS published
+      FROM content_items ci
+      JOIN content_concepts cc ON cc.id = ci.concept_id
+      JOIN content_pillars cp ON cp.id = cc.pillar_id
+      WHERE ci.destination_id = :destId AND ci.created_at BETWEEN :start AND :end
+      GROUP BY cp.id ORDER BY count DESC`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    const [topContent] = await mysqlSequelize.query(
+      `SELECT ci.id, ci.title, ci.target_platform, ci.approval_status, ci.seo_score,
+              ci.published_at, cp.name AS pillar_name
+      FROM content_items ci
+      LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
+      LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
+      WHERE ci.destination_id = :destId AND ci.created_at BETWEEN :start AND :end
+        AND ci.approval_status IN ('published', 'scheduled')
+      ORDER BY ci.seo_score DESC, ci.published_at DESC LIMIT 10`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    const cs = contentStats[0] || {};
+    const total = Number(cs.total) || 0;
+    const published = Number(cs.published) || 0;
+
+    res.json({
+      success: true,
+      data: {
+        destination: { id: destId, name: destNames[destId] || 'Unknown' },
+        period: { start: startStr, end: endStr, label: period },
+        content: {
+          total, published, scheduled: Number(cs.scheduled) || 0, drafts: Number(cs.drafts) || 0,
+          publishRate: total > 0 ? Math.round((published / total) * 100) : 0,
+          byPlatform: platformStats || [],
+          byPillar: pillarStats || [],
+        },
+        topContent: topContent || [],
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Content report error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONTENT_REPORT_ERROR', message: error.message } });
+  }
+});
+
+
+/**
  * GET /content/calendar — Calendar data (month/week view)
  * Returns content items with scheduled_at or published_at for date range
  */

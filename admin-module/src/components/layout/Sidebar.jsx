@@ -6,6 +6,7 @@ import SmartToyIcon from '@mui/icons-material/SmartToy';
 import PlaceIcon from '@mui/icons-material/Place';
 import StarIcon from '@mui/icons-material/Star';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import InsightsIcon from '@mui/icons-material/Insights';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PeopleIcon from '@mui/icons-material/People';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -69,6 +70,7 @@ const MENU_SECTIONS = [
     items: [
       { key: 'pois', path: '/pois', icon: PlaceIcon, visible: (ff) => ff.hasPOI !== false },
       { key: 'reviews', path: '/reviews', icon: StarIcon, visible: (ff) => ff.hasPOI !== false },
+      { key: 'analytics', path: '/analytics', icon: InsightsIcon },
     ]
   },
   // COMMERCE
