@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Box, Typography, Paper, IconButton, Tooltip, Chip, Button,
   LinearProgress, Collapse, CircularProgress,
@@ -51,9 +52,7 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
   const [loaded, setLoaded] = useState(false);
 
   // Session-only hide: cleared on page refresh / new login
-  const [hiddenThisSession, setHiddenThisSession] = useState(() => {
-    try { return sessionStorage.getItem(SESSION_KEY) === '1'; } catch { return false; }
-  });
+  const [hiddenThisSession, setHiddenThisSession] = useState(false);
 
   // ── Applicable steps ──
   const applicableSteps = ALL_STEPS.filter(step => {
@@ -100,7 +99,7 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
       setHiddenThisSession(false);
       setBackendDismissed(false);
       setExpanded(true);
-      try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+      // In-memory only
       client.post('/onboarding/reopen').catch(() => {});
     };
     window.addEventListener('hb:onboarding-reopen', handler);
@@ -112,7 +111,7 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
     // Hide circle for this browser session only. Reappears on refresh/new login.
     setHiddenThisSession(true);
     setExpanded(false);
-    try { sessionStorage.setItem(SESSION_KEY, '1'); } catch {}
+    // In-memory only: resets on page refresh
   }, []);
 
   const handleFullDismiss = useCallback(async () => {
@@ -149,7 +148,7 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
   if (backendDismissed && allDone) return null;  // Permanently done
   if (hiddenThisSession) return null;             // Hidden for this session
 
-  return (
+  return createPortal(
     <Box sx={{
       position: 'fixed',
       bottom: 24,
@@ -250,6 +249,7 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
           </Paper>
         </Tooltip>
       )}
-    </Box>
+    </Box>,
+    document.body
   );
 }
