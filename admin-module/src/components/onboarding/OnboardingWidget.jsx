@@ -42,22 +42,11 @@ const ALL_STEPS = [
  * Native CSS style bypasses this entirely.
  */
 // Inject CSS rule once — bulletproof fixed positioning
-if (typeof document !== "undefined" && !document.getElementById('hb-onboarding-css')) {
-  const style = document.createElement('style');
-  style.id = 'hb-onboarding-css';
-  style.textContent = `
-    #hb-onboarding-widget {
-      position: fixed !important;
-      bottom: 24px !important;
-      right: 24px !important;
-      z-index: 1250 !important;
-      left: auto !important;
-      top: auto !important;
-      transform: none !important;
-    }
-    @media print { #hb-onboarding-widget { display: none !important; } }
-  `;
-  document.head.appendChild(style);
+if (typeof document !== "undefined" && !document.getElementById("hb-onboarding-css")) {
+  const s = document.createElement("style");
+  s.id = "hb-onboarding-css";
+  s.textContent = "#hb-onboarding-widget{position:fixed!important;bottom:24px!important;right:24px!important;z-index:1250!important;left:auto!important;top:auto!important;transform:none!important}@media print{#hb-onboarding-widget{display:none!important}}";
+  document.head.appendChild(s);
 }
 
 export default function OnboardingWidget({ user, featureFlags = {} }) {
