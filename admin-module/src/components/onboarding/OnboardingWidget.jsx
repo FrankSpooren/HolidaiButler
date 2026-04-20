@@ -151,8 +151,8 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
   return createPortal(
     <Box sx={{
       position: 'fixed',
-      bottom: 24,
-      right: 24,
+      bottom: '24px',
+      right: '24px',
       zIndex: 1250,
       maxWidth: expanded ? 360 : 'auto',
       '@media print': { display: 'none' },
