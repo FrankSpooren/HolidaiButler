@@ -137,7 +137,7 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
   if (hiddenThisSession) return null;
 
   return createPortal(
-    <div data-onboarding-widget="true" style={{position:"fixed",bottom:"24px",right:"24px",zIndex:1250,left:"auto",top:"auto",transform:"none"}}>
+    <div data-onboarding-widget="true" style={{position:"fixed",bottom:"24px",right:"24px",zIndex:1250,left:"auto",top:"auto",transform:"none",display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
       {/* ── Expanded panel ── */}
       <Collapse in={expanded}>
         <Paper elevation={8} sx={{ borderRadius: 3, overflow: 'hidden', mb: 1, border: '1px solid', borderColor: 'divider', maxWidth: 360 }}>
