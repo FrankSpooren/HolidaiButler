@@ -7321,3 +7321,48 @@ Endpoints: 282 (was 279). BullMQ jobs: 74 (was 72). i18n keys: +155. CLAUDE.md: 
 
 ### Tellingen
 Endpoints: 295 (+13). BullMQ jobs: 74 (ongewijzigd). CLAUDE.md: v4.54.0.
+
+---
+
+## Command v5.0: Polish & Sync (20 april 2026)
+
+### Opdracht 1 — Master Strategie Sync v8.14
+- Header: v8.13 → v8.14, datum → 20 april 2026
+- Changelog: nieuwe entry samenvat v4.52.0→v4.54.0 (Content Studio Polish + Enterprise Density + Corporate UX Upgrade)
+- Roadmap: CUX rij toegevoegd (Corporate UX Upgrade, COMPLEET apr 2026)
+- Footer consolidated line: 295 endpoints, adminPortal.js v3.47.0, 74 jobs, CLAUDE.md v4.54.0, MS v8.14
+
+### Opdracht 2 — Sidebar vs Tab Label Consistentie + PubliQio Dashboard Redirect
+- Tab labels: "Content Bronnen/Ideeën/Items" → "Bronnen/Ideeën/Items" in 5 talen (NL/EN/DE/ES/FR)
+- Fallback strings: ContentStudioPage.jsx, CommandPalette.jsx, ShortcutsOverlay.jsx
+- PubliQio dashboard redirect fix: LoginDialog.jsx gebruikte hostname.startsWith('studio.') i.p.v. isStudioMode() — publiqio.com werd niet herkend
+- DashboardPage.jsx: studio-mode redirect naar /content-studio (safety net)
+- 10 bestanden gewijzigd
+
+### Opdracht 3 — Onboarding Cirkel Verspringt
+- Root cause: MUI scroll-lock voegt padding-right toe aan body + verbergt scrollbar → viewport wordt breder → position:fixed right:24px verschuift mee
+- Fix: MutationObserver op body style, spiegelt padding-right in widget right offset
+- OnboardingWidget.jsx: useRef + MutationObserver, 0 flicker (direct DOM update)
+- 1 bestand gewijzigd
+
+### Opdracht 4 — Documentatie Slotcommit
+- CLAUDE.md Huidige Tellingen: 252→295 endpoints, v3.44.0→v3.47.0, v4.44.0→v4.54.0, v8.03→v8.14
+- Gerelateerde Documentatie: MS v8.05→v8.14
+- CLAUDE_HISTORY.md: deze entry
+
+### Learnings
+- Server-first: wijzigingen ALTIJD op server deployen, lokale edits alleen zijn onzichtbaar voor gebruiker
+- Merge conflicten: remote had Overview tab + Platform Dashboard rewrite — per bestand oplossen
+- Observation-first: DevTools snippet-metingen bevestigden H3 (scrollbar compensation) in 1 ronde
+
+### Bestanden (totaal deze sessie)
+- docs/strategy/HolidaiButler_Master_Strategie.md (4 wijzigingen)
+- admin-module/src/i18n/{nl,en,de,es,fr}.json (tab labels)
+- admin-module/src/pages/ContentStudioPage.jsx (tab fallbacks)
+- admin-module/src/pages/DashboardPage.jsx (studio redirect)
+- admin-module/src/components/common/CommandPalette.jsx (labels)
+- admin-module/src/components/common/ShortcutsOverlay.jsx (labels)
+- admin-module/src/components/studio/LoginDialog.jsx (isStudioMode)
+- admin-module/src/components/onboarding/OnboardingWidget.jsx (scroll-lock fix)
+- CLAUDE.md (tellingen sync)
+- CLAUDE_HISTORY.md (deze entry)

@@ -361,15 +361,15 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 ### Huidige Tellingen
 | Metric | Waarde |
 |--------|--------|
-| Admin endpoints | 252 |
-| adminPortal.js | v3.44.0 |
+| Admin endpoints | 295 |
+| adminPortal.js | v3.47.0 |
 | Agents | 25 |
 | BullMQ jobs | 74 |
 | Block types | 36 (+ aliassen, +blog_grid) |
 | Block editors | 37 (+BlogGridEditor) |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.44.0 |
-| Master Strategie | v8.03 |
+| CLAUDE.md | v4.54.0 |
+| Master Strategie | v8.14 |
 
 ---
 
@@ -844,7 +844,7 @@ git pull origin dev
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.05 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.14 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
