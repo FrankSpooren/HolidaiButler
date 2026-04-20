@@ -1431,7 +1431,39 @@
     "dnsTitle": "DNS & Server Configuratie",
     "dnsStep1": "Stap 1: DNS A-records aanmaken",
     "dnsStep2": "Stap 2: SSL certificaat aanvragen",
-    "dnsStep3": "Stap 3: Apache VHost configureren"
+    "dnsStep3": "Stap 3: Apache VHost configureren",
+    "widget": {
+      "titleStudio": "Content Studio Setup",
+      "titlePlatform": "Platform Setup",
+      "stepsComplete": "stappen voltooid",
+      "optional": "optioneel",
+      "allDone": "Setup voltooid!",
+      "dismiss": "Widget sluiten",
+      "next": "Volgende",
+      "openChecklist": "Setup checklist openen"
+    },
+    "steps": {
+      "welcome": "Welkom!",
+      "welcomeDesc": "Ontdek de mogelijkheden van uw werkruimte.",
+      "brandProfile": "Stel uw merkprofiel in",
+      "brandProfileDesc": "Voeg bedrijfsnaam, branche, USPs en tone of voice toe zodat AI on-brand content genereert.",
+      "connectSocial": "Koppel social media",
+      "connectSocialDesc": "Verbind Facebook, Instagram of LinkedIn zodat content direct gepubliceerd kan worden.",
+      "firstSuggestion": "Genereer AI content",
+      "firstSuggestionDesc": "Laat de AI uw eerste content suggesties genereren op basis van uw merkprofiel.",
+      "planItem": "Plan uw eerste item",
+      "planItemDesc": "Kies een content item en plan het in op de kalender.",
+      "viewCalendar": "Bekijk de kalender",
+      "viewCalendarDesc": "Overzicht van geplande en gepubliceerde content per dag, week of maand.",
+      "explorePois": "Verken uw POIs",
+      "explorePoisDesc": "Bekijk en beheer de Points of Interest in uw bestemming.",
+      "testChatbot": "Test de chatbot",
+      "testChatbotDesc": "Stel een vraag aan de AI-chatbot en ervaar hoe bezoekers uw bestemming ontdekken.",
+      "checkEvents": "Bekijk evenementen",
+      "checkEventsDesc": "Ontdek de agenda-module met lokale evenementen.",
+      "inviteTeam": "Nodig teamleden uit",
+      "inviteTeamDesc": "Voeg collega's toe zodat zij content kunnen bijdragen en reviewen."
+    }
   },
   "contentStudio": {
     "title": "Content Studio",

@@ -5,7 +5,7 @@ import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import { SIDEBAR_STYLES } from '../../theme.js';
 import useAuthStore from '../../stores/authStore.js';
-import AdminOnboardingGuide from '../onboarding/AdminOnboardingGuide.jsx';
+import OnboardingWidget from '../onboarding/OnboardingWidget.jsx';
 import CommandPalette from '../common/CommandPalette.jsx';
 import ShortcutsOverlay from '../common/ShortcutsOverlay.jsx';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts.js';
@@ -19,7 +19,6 @@ export default function AdminLayout() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const user = useAuthStore(s => s.user);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Sidebar collapse state — syncs with Sidebar via CustomEvent
@@ -35,12 +34,7 @@ export default function AdminLayout() {
 
   const sidebarWidth = sidebarCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
 
-  // Show onboarding guide for users who haven't completed it
-  useEffect(() => {
-    if (user && user.onboardingCompleted === false && user.role !== 'platform_admin') {
-      setShowOnboarding(true);
-    }
-  }, [user]);
+
 
   // Global Cmd+K / Ctrl+K hotkey for command palette
   useEffect(() => {
@@ -119,11 +113,8 @@ export default function AdminLayout() {
         </Box>
       </Box>
 
-      {/* Onboarding guide for new users */}
-      <AdminOnboardingGuide
-        open={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-      />
+      {/* Onboarding widget for new users */}
+      <OnboardingWidget user={user} />
 
       {/* Command Palette (Cmd+K / Ctrl+K) */}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
