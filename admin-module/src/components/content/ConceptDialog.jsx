@@ -28,6 +28,9 @@ import SaveIcon from '@mui/icons-material/Save';
 import CheckIcon from '@mui/icons-material/Check';
 import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
@@ -209,7 +212,10 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   const [langTab, setLangTab] = useState('en');
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false); // unsaved changes
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [wasEdited, setWasEdited] = useState(false); // content differs from original concept version
+
+
 
   // Translation state
   const [translating, setTranslating] = useState(false);
@@ -251,6 +257,10 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
 
   // Add Platform dialog (Opdracht 5)
   const [addPlatformOpen, setAddPlatformOpen] = useState(false);
+
+  // Opdracht 10: Focus Mode state
+  const [autoSaveStatus, setAutoSaveStatus] = useState(null); // null | 'saving' | 'saved'
+  const autoSaveTimerRef = useRef(null);
   const [repurposing, setRepurposing] = useState(null); // platform key currently being generated
 
   // ─── Load Concept ───────────────────────────────────────
@@ -735,19 +745,109 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     return { label: 'Concept', color: 'default' };
   };
 
-  if (!open) return null;
+  // === Opdracht 10: Auto-save draft every 10s ===
+  useEffect(() => {
+    if (!dirty || !activeItem || !open) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        setAutoSaveStatus('saving');
+        const updates = { [`body_${langTab}`]: editBody };
+        await contentService.updateItem(activeItem.id, updates);
+        setItems(prev => prev.map(i => i.id === activeItem.id ? { ...i, [`body_${langTab}`]: editBody } : i));
+        setDirty(false);
+        setWasEdited(editBody !== originalBody);
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus(null), 3000);
+      } catch (err) {
+        console.error('Auto-save failed:', err);
+        setAutoSaveStatus(null);
+      }
+    }, 10000);
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  }, [dirty, editBody, activeItem, langTab, open]);
+
+
+  // === Opdracht 10: Dialog keyboard shortcuts ===
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e) => {
+      // F key: toggle fullscreen (only when not in input)
+      if (e.key === 'f' && !e.ctrlKey && !e.metaKey && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !e.target.isContentEditable) {
+        e.preventDefault();
+        setIsFullscreen(prev => !prev);
+        return;
+      }
+      // Cmd/Ctrl+S: save
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (dirty && activeItem) handleSaveBody();
+        return;
+      }
+      // Cmd/Ctrl+Enter: save + close
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (dirty && activeItem) {
+          handleSaveBody().then(() => { onClose(); });
+        } else {
+          onClose();
+        }
+        return;
+      }
+      // Cmd/Ctrl+P: publish (with confirm)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
+        e.preventDefault();
+        if (window.confirm('Alle platformen publiceren?')) handlePublishAll();
+        return;
+      }
+      // Escape: close with unsaved changes warning
+      if (e.key === 'Escape') {
+        if (dirty) {
+          if (window.confirm('Je hebt niet-opgeslagen wijzigingen. Sluiten zonder opslaan?')) {
+            setDirty(false);
+            onClose();
+          }
+        }
+        // If not dirty, default Dialog Escape behavior handles close
+        return;
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [open, dirty, activeItem, handleSaveBody, onClose]);
+
+  // === Opdracht 10: beforeunload warning ===
+  useEffect(() => {
+    if (!dirty || !open) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty, open]);
+
+
+
+    if (!open) return null;
 
   const aggStatus = getAggregateStatus();
 
   // Character counter
   const charCount = editBody.length;
   const charLimit = platformConfig.maxChars || 50000;
+
+
+
+
+
+
   const charPct = (charCount / charLimit) * 100;
   const charColor = charPct > 95 ? 'error' : charPct > 80 ? 'warning' : 'success';
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth={false} fullWidth
-      PaperProps={{ sx: { width: '95vw', maxWidth: 1400, height: '90vh', maxHeight: '90vh', display: 'flex', flexDirection: 'column' } }}>
+    <Dialog open={open} onClose={() => { if (dirty) { if (window.confirm('Niet-opgeslagen wijzigingen. Sluiten?')) { setDirty(false); onClose(); } } else { onClose(); } }} maxWidth={false} fullWidth
+      PaperProps={{ sx: isFullscreen
+        ? { width: '100vw', maxWidth: '100vw', height: '100vh', maxHeight: '100vh', m: 0, borderRadius: 0, display: 'flex', flexDirection: 'column' }
+        : { width: '95vw', maxWidth: 1400, height: '90vh', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }
+      }}>
 
       {/* ═══ Loading / Error ═══ */}
       {loading ? (
@@ -808,7 +908,18 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   </Menu>
                 </Box>
               </Box>
-              <IconButton onClick={onClose} sx={{ mt: -0.5 }}><CloseIcon /></IconButton>
+              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                {/* Auto-save indicator */}
+                {autoSaveStatus === 'saving' && <Chip icon={<CircularProgress size={12} />} label="Opslaan..." size="small" sx={{ height: 20, fontSize: 10 }} />}
+                {autoSaveStatus === 'saved' && <Chip icon={<CloudDoneIcon sx={{ fontSize: 14 }} />} label="Opgeslagen" size="small" color="success" sx={{ height: 20, fontSize: 10 }} />}
+                {dirty && !autoSaveStatus && <Chip label="Niet opgeslagen" size="small" sx={{ height: 20, fontSize: 10, bgcolor: '#FFB74D', color: '#5D4037' }} />}
+                <Tooltip title={isFullscreen ? 'Verklein (F)' : 'Volledig scherm (F)'}>
+                  <IconButton onClick={() => setIsFullscreen(f => !f)} size="small">
+                    {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+                  </IconButton>
+                </Tooltip>
+                <IconButton onClick={() => { if (dirty) { if (window.confirm('Niet-opgeslagen wijzigingen. Sluiten?')) { setDirty(false); onClose(); } } else { onClose(); } }} sx={{ mt: -0.5 }}><CloseIcon /></IconButton>
+              </Box>
             </Box>
           </DialogTitle>
 

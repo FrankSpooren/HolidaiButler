@@ -21,6 +21,22 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // MUI core (largest dep)
+          'vendor-mui': ['@mui/material', '@mui/icons-material'],
+          // Charts
+          'vendor-charts': ['recharts'],
+          // Data management
+          'vendor-data': ['@tanstack/react-query', 'axios', 'zustand', 'i18next', 'react-i18next'],
+          // DnD + Rich text
+          'vendor-interactive': ['@dnd-kit/core'],
+        },
+      },
+    },
   }
 });

@@ -7288,3 +7288,36 @@ Alle 5 met `@media (prefers-reduced-motion: reduce)` fallback:
 
 ### Tellingen
 Endpoints: 282 (was 279). BullMQ jobs: 74 (was 72). i18n keys: +155. CLAUDE.md: v4.52.0. MS: v8.13.
+
+---
+
+## Command v4.0 — Opdracht 8+11-15 (20 april 2026)
+### CLAUDE.md v4.54.0 | Endpoints: 295 | BullMQ: 74
+
+### Fase 3: Content Studio Polish (Opdracht 8, 11-13)
+- **Opdracht 8**: Sidebar herstructurering (WORKSPACE/CONTENT/DATA&POI/COMMERCE/WEBSITE/INTELLIGENTIE/BEHEER), badges live counts, collapse icon-only mode (56px, localStorage), teal active state
+- **Opdracht 11**: Kalender Corporate Polish — mini-kalender sidebar, keyboard nav (t/arrows/1-2-3/?), workload indicator (groen/oranje/rood), platform+pillar+status filters, CSV/ICS export, print view
+- **Opdracht 12**: Analytics herstructurering — Content als 4e tab in AnalyticsPage (Website/POI&Reviews/Chatbot/Content), Analyse uit sidebar verwijderd, URL-based tab routing (?tab=chatbot)
+- **Opdracht 13**: Onboarding Widget (Intercom-stijl) — persistent cirkel rechtsonder (createPortal), 6 content + 3 platform stappen (feature flag gestuurd), NotificationsCenter integratie, toggle steps, session dismiss
+
+### Frank feedback iteraties
+- Platform Dashboard: personaliseerbare KPI widgets, 7d/30d/90d delta badges, destination-scoped data, klikbare blokken naar bijbehorende pagina
+- Conditional sidebar: adminOnly (Dashboard) / studioOnly (Overzicht)
+- Analytics/Analyse verwarring opgelost: een Analytics pagina met 4 tabs
+- Content Rapport gescheiden van platform analytics (GET /content/report)
+
+### Fase 4: Kwaliteit + Performance (Opdracht 14-15)
+- **Opdracht 14**: Vite code-splitting (6 chunks), asset cleanup 1.3GB naar 7.9MB, Cache-Control headers (assets 1yr immutable, HTML no-cache), sourcemaps disabled
+- **Opdracht 15**: WCAG 2.1 AA audit (27 violations gevonden, 21 gefixt: 16 aria-labels, 5 keyboard access)
+
+### Learnings
+- MUI sx numerieke waarden: right: 24 in sx = 24 x 8px = 192px (theme spacing), niet 24px. Altijd string '24px' gebruiken
+- Vite minifier stript CSS uit template literals: backtick strings met CSS selectors worden leeggestript
+- MUI Collapse neemt horizontale ruimte in zelfs bij in=false. Gebruik display:flex + alignItems:flex-end
+- createPortal naar document.body noodzakelijk voor fixed positioning binnen MUI flex layouts
+- sessionStorage overleeft F5: gebruik in-memory React state voor session-only dismiss
+- Deploy stap: build output moet gekopieerd worden naar Apache DocumentRoot
+- Diagnose eerst, code daarna: browser console diagnose (getBoundingClientRect) loste de onboarding positie in 1 stap op na 10+ blinde pogingen
+
+### Tellingen
+Endpoints: 295 (+13). BullMQ jobs: 74 (ongewijzigd). CLAUDE.md: v4.54.0.
