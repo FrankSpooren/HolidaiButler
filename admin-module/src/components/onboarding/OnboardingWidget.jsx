@@ -193,6 +193,17 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
       .catch(() => setLoaded(true));
   }, [user?.id]);
 
+  // Listen for reopen event (from Header help menu)
+  useEffect(() => {
+    const handler = async () => {
+      setDismissed(false);
+      setExpanded(true);
+      try { await client.post('/onboarding/reopen'); } catch { /* non-blocking */ }
+    };
+    window.addEventListener('hb:onboarding-reopen', handler);
+    return () => window.removeEventListener('hb:onboarding-reopen', handler);
+  }, []);
+
   const handleCompleteStep = useCallback(async (stepId, path) => {
     if (!completedSteps.includes(stepId)) {
       setCompletedSteps(prev => [...prev, stepId]);
@@ -219,7 +230,7 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
         position: 'fixed',
         bottom: 24,
         right: 24,
-        zIndex: 1200,
+        zIndex: 1250,
         maxWidth: expanded ? 360 : 'auto',
         '@media print': { display: 'none' },
       }}>
