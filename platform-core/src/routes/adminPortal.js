@@ -980,137 +980,164 @@ router.get('/auth/me', adminAuth('reviewer'), async (req, res) => {
 
 /**
  * GET /dashboard
- * Aggregated KPI data. Redis cached for 120 seconds.
+ * Aggregated KPI data with period deltas and destination filtering.
+ * Query: destination (1|2|all, default all), period (7|30|90, default 30)
+ * Redis cached per destination+period for 120 seconds.
  */
-router.get('/dashboard', adminAuth('reviewer'), async (req, res) => {
+router.get('/dashboard', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const cacheKey = 'admin:dashboard:kpis';
+    const { destination = 'all', period = '30' } = req.query;
+    const days = Math.min(parseInt(period) || 30, 365);
+    const destId = destination !== 'all' ? resolveDestinationId(destination) || parseInt(destination) : null;
+
+    // Respect RBAC destination scope
+    if (req.destScope && destId && !req.destScope.includes(destId)) {
+      return res.status(403).json({ success: false, error: { code: 'DESTINATION_FORBIDDEN', message: 'Access denied' } });
+    }
+
+    const cacheKey = `admin:dashboard:kpis:${destId || 'all'}:${days}`;
     const redis = getRedis();
-
-    // Try cache first
     if (redis) {
-      try {
-        const cached = await redis.get(cacheKey);
-        if (cached) {
-          return res.json(JSON.parse(cached));
-        }
-      } catch {
-        // Cache miss, continue
-      }
+      try { const c = await redis.get(cacheKey); if (c) return res.json(JSON.parse(c)); } catch { /* miss */ }
     }
 
-    // Collect KPI data with graceful degradation
-    const result = {
-      success: true,
-      data: {
-        timestamp: new Date().toISOString(),
-        destinations: { calpe: { id: 1 }, texel: { id: 2 } },
-        platform: {}
-      }
-    };
+    const destFilter = destId ? 'AND destination_id = :destId' : '';
+    const destRepl = destId ? { destId } : {};
 
-    // 1. POI counts per destination
+    const result = { success: true, data: { timestamp: new Date().toISOString(), period: days, destination: destId || 'all', kpis: {} } };
+
+    // ── POIs ──
     try {
-      const poiCounts = await mysqlSequelize.query(
-        `SELECT destination_id,
-                COUNT(*) as total,
-                SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active
-         FROM POI GROUP BY destination_id`,
-        { type: QueryTypes.SELECT }
+      const [current] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as total, SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active FROM POI WHERE 1=1 ${destFilter}`,
+        { replacements: destRepl }
       );
-      for (const row of poiCounts) {
-        const destKey = row.destination_id === 1 ? 'calpe' : row.destination_id === 2 ? 'texel' : null;
-        if (destKey) {
-          result.data.destinations[destKey].pois = {
-            total: parseInt(row.total),
-            active: parseInt(row.active)
-          };
-        }
-      }
-    } catch (err) {
-      logger.warn('[AdminPortal] POI count query failed:', err.message);
-      result.data.destinations.calpe.pois = { total: 0, active: 0, error: true };
-      result.data.destinations.texel.pois = { total: 0, active: 0, error: true };
-    }
-
-    // 2. Review counts per destination
-    try {
-      const reviewCounts = await mysqlSequelize.query(
-        `SELECT destination_id, COUNT(*) as total FROM reviews GROUP BY destination_id`,
-        { type: QueryTypes.SELECT }
+      // POIs added in period
+      const [added] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM POI WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, ...destRepl } }
       );
-      for (const row of reviewCounts) {
-        const destKey = row.destination_id === 1 ? 'calpe' : row.destination_id === 2 ? 'texel' : null;
-        if (destKey) {
-          result.data.destinations[destKey].reviews = parseInt(row.total);
-        }
-      }
+      // Previous period
+      const [prevAdded] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM POI WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days2 DAY) AND created_at < DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, days2: days * 2, ...destRepl } }
+      );
+      const cur = Number(added[0]?.cnt || 0);
+      const prev = Number(prevAdded[0]?.cnt || 0);
+      result.data.kpis.pois = {
+        total: Number(current[0]?.total || 0),
+        active: Number(current[0]?.active || 0),
+        added: cur,
+        delta: prev > 0 ? Math.round(((cur - prev) / prev) * 100) : (cur > 0 ? 100 : 0),
+      };
     } catch (err) {
-      logger.warn('[AdminPortal] Review count query failed:', err.message);
+      logger.warn('[AdminPortal] POI query failed:', err.message);
+      result.data.kpis.pois = { total: 0, active: 0, added: 0, delta: 0 };
     }
 
-    // Ensure defaults
-    if (!result.data.destinations.calpe.reviews) result.data.destinations.calpe.reviews = 0;
-    if (!result.data.destinations.texel.reviews) result.data.destinations.texel.reviews = 0;
-
-    // 3. Admin user count (from admin_users, not customer Users table)
+    // ── Reviews ──
     try {
-      const userCount = await mysqlSequelize.query(
+      const [total] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM reviews WHERE 1=1 ${destFilter}`, { replacements: destRepl }
+      );
+      const [cur] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM reviews WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, ...destRepl } }
+      );
+      const [prev] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM reviews WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days2 DAY) AND created_at < DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, days2: days * 2, ...destRepl } }
+      );
+      const c = Number(cur[0]?.cnt || 0);
+      const p = Number(prev[0]?.cnt || 0);
+      result.data.kpis.reviews = {
+        total: Number(total[0]?.cnt || 0),
+        new: c,
+        delta: p > 0 ? Math.round(((c - p) / p) * 100) : (c > 0 ? 100 : 0),
+      };
+    } catch (err) {
+      logger.warn('[AdminPortal] Review query failed:', err.message);
+      result.data.kpis.reviews = { total: 0, new: 0, delta: 0 };
+    }
+
+    // ── Chatbot ──
+    try {
+      const [cur] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt, SUM(message_count) as msgs FROM holibot_sessions WHERE started_at >= DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, ...destRepl } }
+      );
+      const [prev] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM holibot_sessions WHERE started_at >= DATE_SUB(NOW(), INTERVAL :days2 DAY) AND started_at < DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, days2: days * 2, ...destRepl } }
+      );
+      const c = Number(cur[0]?.cnt || 0);
+      const p = Number(prev[0]?.cnt || 0);
+      result.data.kpis.chatbot = {
+        sessions: c,
+        messages: Number(cur[0]?.msgs || 0),
+        delta: p > 0 ? Math.round(((c - p) / p) * 100) : (c > 0 ? 100 : 0),
+      };
+    } catch (err) {
+      logger.warn('[AdminPortal] Chatbot query failed:', err.message);
+      result.data.kpis.chatbot = { sessions: 0, messages: 0, delta: 0 };
+    }
+
+    // ── Content ──
+    try {
+      const [cur] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as total,
+          SUM(CASE WHEN approval_status = 'draft' THEN 1 ELSE 0 END) as drafts,
+          SUM(CASE WHEN approval_status = 'published' THEN 1 ELSE 0 END) as published,
+          SUM(CASE WHEN approval_status = 'scheduled' THEN 1 ELSE 0 END) as scheduled
+        FROM content_items WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, ...destRepl } }
+      );
+      const [prev] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as total FROM content_items WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days2 DAY) AND created_at < DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, days2: days * 2, ...destRepl } }
+      );
+      const c = Number(cur[0]?.total || 0);
+      const p = Number(prev[0]?.total || 0);
+      result.data.kpis.content = {
+        total: c,
+        drafts: Number(cur[0]?.drafts || 0),
+        published: Number(cur[0]?.published || 0),
+        scheduled: Number(cur[0]?.scheduled || 0),
+        delta: p > 0 ? Math.round(((c - p) / p) * 100) : (c > 0 ? 100 : 0),
+      };
+    } catch (err) {
+      logger.warn('[AdminPortal] Content query failed:', err.message);
+      result.data.kpis.content = { total: 0, drafts: 0, published: 0, scheduled: 0, delta: 0 };
+    }
+
+    // ── Users ──
+    try {
+      const [uc] = await mysqlSequelize.query(
         `SELECT COUNT(*) as total, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active FROM admin_users`,
         { type: QueryTypes.SELECT }
       );
-      result.data.platform.totalUsers = parseInt(userCount[0]?.total || 0);
-      result.data.platform.activeUsers = parseInt(userCount[0]?.active || 0);
+      result.data.kpis.users = { total: Number(uc?.total || 0), active: Number(uc?.active || 0) };
     } catch {
-      result.data.platform.totalUsers = 0;
-      result.data.platform.activeUsers = 0;
+      result.data.kpis.users = { total: 0, active: 0 };
     }
 
-    // 4. Chatbot sessions (last 7 days)
-    try {
-      const chatSessions = await mysqlSequelize.query(
-        `SELECT COUNT(*) as total FROM holibot_sessions
-         WHERE started_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`,
-        { type: QueryTypes.SELECT }
-      );
-      result.data.platform.chatbotSessions7d = parseInt(chatSessions[0]?.total || 0);
-    } catch {
-      result.data.platform.chatbotSessions7d = 0;
-    }
-
-    // 5. Agent count (from registry)
-    result.data.platform.totalAgents = 18;
-
-    // 6. Scheduled jobs
-    result.data.platform.scheduledJobs = 40;
-
-    // 7. System uptime
-    result.data.platform.uptimeHours = parseFloat((process.uptime() / 3600).toFixed(1));
-
-    // 8. Agent health summary (shared with daily briefing — B5 consistency fix)
+    // ── Agents ──
     try {
       const { getSystemHealthSummary } = await import('../services/orchestrator/auditTrail/index.js');
-      result.data.platform.healthSummary = await getSystemHealthSummary(24);
+      const health = await getSystemHealthSummary(24);
+      result.data.kpis.agents = { total: 18, alerts: health?.alerts || 0, errors: health?.errors || 0, jobs: health?.jobs || 0 };
     } catch {
-      result.data.platform.healthSummary = { jobs: 0, alerts: 0, errors: 0 };
+      result.data.kpis.agents = { total: 18, alerts: 0, errors: 0, jobs: 0 };
     }
 
-    // Cache result
-    if (redis) {
-      try {
-        await redis.set(cacheKey, JSON.stringify(result), 'EX', 120);
-      } catch {
-        // Cache write failure is non-critical
-      }
-    }
+    // ── Uptime ──
+    result.data.kpis.uptime = { hours: parseFloat((process.uptime() / 3600).toFixed(1)) };
 
+    if (redis) { try { await redis.set(cacheKey, JSON.stringify(result), 'EX', 120); } catch {} }
     res.json(result);
   } catch (error) {
     logger.error('[AdminPortal] Dashboard error:', error);
-    res.status(500).json({
-      success: false,
-      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching dashboard data' }
-    });
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
   }
 });
 
