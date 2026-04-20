@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Box, Typography, Paper, IconButton, Tooltip, Chip, Button,
@@ -132,12 +132,29 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
     }
   }, [completedSteps]);
 
+  // Compensate for MUI scroll-lock: when Popover/Modal opens, body gets
+  // padding-right to replace scrollbar width. position:fixed uses viewport
+  // edge, which shifts when scrollbar disappears. Mirror body padding-right
+  // into our right offset so the widget stays visually stable.
+  const containerRef = useRef(null);
+  useEffect(() => {
+    const sync = () => {
+      if (!containerRef.current) return;
+      const pr = parseInt(document.body.style.paddingRight) || 0;
+      containerRef.current.style.right = `${24 + pr}px`;
+    };
+    const observer = new MutationObserver(sync);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['style'] });
+    sync();
+    return () => observer.disconnect();
+  }, []);
+
   if (!loaded) return null;
   if (backendDismissed && allDone) return null;
   if (hiddenThisSession) return null;
 
   return createPortal(
-    <div data-onboarding-widget="true" style={{position:"fixed",bottom:"24px",right:"24px",zIndex:1250,left:"auto",top:"auto",transform:"none",display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
+    <div ref={containerRef} data-onboarding-widget="true" style={{position:"fixed",bottom:"24px",right:"24px",zIndex:1250,left:"auto",top:"auto",transform:"none",display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
       {/* ── Expanded panel ── */}
       <Collapse in={expanded}>
         <Paper elevation={8} sx={{ borderRadius: 3, overflow: 'hidden', mb: 1, border: '1px solid', borderColor: 'divider', maxWidth: 360 }}>
