@@ -33,7 +33,20 @@
     "section_platform": "Platform",
     "section_system": "System",
     "pagesNav": "Pages & Navigation",
-    "agentsSystem": "Agents & System"
+    "agentsSystem": "Agents & System",
+    "section_workspace": "Workspace",
+    "section_intelligence": "Intelligence",
+    "section_management": "Management",
+    "overview": "Overview",
+    "bronnen": "Sources",
+    "ideeen": "Ideas",
+    "contentItems": "Items",
+    "kalender": "Calendar",
+    "analyse": "Analysis",
+    "seizoenen": "Seasons",
+    "socialAccounts": "Social Accounts",
+    "collapse": "Collapse",
+    "expand": "Expand"
   },
   "auth": {
     "login": "Log in",
@@ -289,7 +302,19 @@
       "pages": "Page Management",
       "analytics": "Analytics",
       "settings": "Settings"
-    }
+    },
+    "platformDashboard": "Platform Dashboard",
+    "customize": "Customize dashboard",
+    "customizeTitle": "Customize dashboard",
+    "customizeDesc": "Select which KPIs are visible on your dashboard.",
+    "last7days": "Last 7 days",
+    "pendingReview": "in review",
+    "total": "total",
+    "processUptime": "Process uptime",
+    "newContent": "New content",
+    "calendar": "Calendar",
+    "analytics": "Analytics",
+    "poiManagement": "POI management"
   },
   "agents": {
     "title": "Agent Dashboard",
@@ -581,6 +606,37 @@
       "day": "Day",
       "week": "Week",
       "month": "Month"
+    },
+    "tab": {
+      "report": "Report",
+      "content": "Content"
+    },
+    "report": {
+      "title": "Content Performance Report",
+      "lastWeek": "Last week",
+      "lastMonth": "Last month",
+      "custom": "Custom",
+      "printPdf": "Print as PDF (Ctrl+P)",
+      "exportPdf": "PDF / Print",
+      "executiveSummary": "Executive Summary",
+      "summaryText": "During this period, {{total}} content items were created, of which {{published}} published and {{scheduled}} scheduled. {{reviewCount}} new reviews received with an average rating of {{avgRating}}. The chatbot handled {{sessions}} sessions with {{messages}} messages.",
+      "generated": "Generated",
+      "kpi": {
+        "totalContent": "Total content",
+        "published": "Published",
+        "scheduled": "Scheduled",
+        "drafts": "Drafts",
+        "reviews": "New reviews",
+        "chatSessions": "Chatbot sessions"
+      },
+      "byPlatform": "Content by platform",
+      "total": "Total",
+      "publishRate": "Publish rate",
+      "byPillar": "Content by pillar",
+      "topPerformers": "Top performers",
+      "contentTitle": "Title",
+      "commentary": "Comments",
+      "commentaryPlaceholder": "Add personal comments to this report..."
     }
   },
   "settings": {
@@ -1360,7 +1416,39 @@
     "dnsTitle": "DNS & Server Configuration",
     "dnsStep1": "Step 1: Create DNS A records",
     "dnsStep2": "Step 2: Request SSL certificate",
-    "dnsStep3": "Step 3: Configure Apache VHost"
+    "dnsStep3": "Step 3: Configure Apache VHost",
+    "widget": {
+      "titleStudio": "Content Studio Setup",
+      "titlePlatform": "Platform Setup",
+      "stepsComplete": "steps completed",
+      "optional": "optional",
+      "allDone": "Setup complete!",
+      "dismiss": "Close widget",
+      "next": "Next",
+      "openChecklist": "Open setup checklist"
+    },
+    "steps": {
+      "welcome": "Welcome!",
+      "welcomeDesc": "Discover the capabilities of your workspace.",
+      "brandProfile": "Set up your brand profile",
+      "brandProfileDesc": "Add company name, industry, USPs and tone of voice so AI generates on-brand content.",
+      "connectSocial": "Connect social media",
+      "connectSocialDesc": "Link Facebook, Instagram or LinkedIn so content can be published directly.",
+      "firstSuggestion": "Generate AI content",
+      "firstSuggestionDesc": "Let AI generate your first content suggestions based on your brand profile.",
+      "planItem": "Plan your first item",
+      "planItemDesc": "Choose a content item and schedule it on the calendar.",
+      "viewCalendar": "View the calendar",
+      "viewCalendarDesc": "Overview of planned and published content by day, week or month.",
+      "explorePois": "Explore your POIs",
+      "explorePoisDesc": "View and manage the Points of Interest in your destination.",
+      "testChatbot": "Test the chatbot",
+      "testChatbotDesc": "Ask the AI chatbot a question and experience how visitors discover your destination.",
+      "checkEvents": "Check events",
+      "checkEventsDesc": "Discover the events module with local happenings.",
+      "inviteTeam": "Invite team members",
+      "inviteTeamDesc": "Add colleagues so they can contribute and review content."
+    }
   },
   "contentStudio": {
     "title": "Content Studio",
@@ -1656,7 +1744,11 @@
       "cancelSchedule": "Cancel",
       "scheduleTitle": "Schedule content",
       "dateTime": "Date & time",
-      "account": "Account"
+      "account": "Account",
+      "filters": "Filters",
+      "toggleFilters": "Show/hide filters",
+      "clearFilters": "Clear filters",
+      "print": "Print"
     },
     "performance": {
       "days": "days",
