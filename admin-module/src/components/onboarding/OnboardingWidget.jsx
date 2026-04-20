@@ -189,6 +189,8 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
           }
         }
         setLoaded(true);
+        // Broadcast state for NotificationsCenter
+        window.dispatchEvent(new CustomEvent('hb:onboarding-state', { detail: { completedSteps: data?.completed_steps || [], dismissed: !!data?.dismissed } }));
       })
       .catch(() => setLoaded(true));
   }, [user?.id]);
@@ -215,14 +217,35 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
     }
   }, [completedSteps, navigate]);
 
-  const handleDismiss = useCallback(async () => {
+  const handleToggleStep = useCallback(async (stepId) => {
+    if (completedSteps.includes(stepId)) {
+      // Un-complete: remove from list
+      const updated = completedSteps.filter(s => s !== stepId);
+      setCompletedSteps(updated);
+      // Backend: overwrite completed_steps
+      try { await client.post(`/onboarding/step/${stepId}`, { toggle: true }); } catch {}
+    } else {
+      // Complete without navigating
+      setCompletedSteps(prev => [...prev, stepId]);
+      try { await client.post(`/onboarding/step/${stepId}`); } catch {}
+    }
+  }, [completedSteps]);
+
+  const handleDismiss = useCallback(() => {
+    // Only close the expanded panel, keep the progress circle visible
+    setExpanded(false);
+  }, []);
+
+  const handleFullDismiss = useCallback(async () => {
+    // Fully dismiss (only when all steps complete)
     setDismissed(true);
     setExpanded(false);
     try { await client.post('/onboarding/dismiss'); } catch { /* non-blocking */ }
   }, []);
 
   // Don't render if not loaded, dismissed, or platform_admin on first visit (they use OnboardingPage)
-  if (!loaded || dismissed) return null;
+  if (!loaded) return null;
+  if (dismissed && allDone) return null;
 
   return (
     <Fade in>
@@ -294,14 +317,14 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
                 return (
                   <Box
                     key={step.id}
-                    onClick={() => !isCompleted && handleCompleteStep(step.id, step.path)}
+                    onClick={() => isCompleted ? handleToggleStep(step.id) : handleCompleteStep(step.id, step.path)}
                     sx={{
                       display: 'flex',
                       alignItems: 'flex-start',
                       gap: 1.5,
                       p: 1.5,
                       borderRadius: 1.5,
-                      cursor: isCompleted ? 'default' : 'pointer',
+                      cursor: 'pointer',
                       opacity: isCompleted ? 0.6 : 1,
                       transition: 'background-color 150ms',
                       '&:hover': !isCompleted ? { bgcolor: 'action.hover' } : {},
@@ -346,7 +369,7 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                   {t('onboarding.widget.allDone', 'Setup voltooid!')}
                 </Typography>
-                <Button size="small" onClick={handleDismiss} sx={{ mt: 1, textTransform: 'none' }}>
+                <Button size="small" onClick={handleFullDismiss} sx={{ mt: 1, textTransform: 'none' }}>
                   {t('onboarding.widget.dismiss', 'Widget sluiten')}
                 </Button>
               </Box>
