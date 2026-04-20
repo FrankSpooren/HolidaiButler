@@ -88,9 +88,9 @@ function MiniCalendar({ year, month, selectedDate, onSelectDate, onNavigateMonth
       <Paper variant="outlined" sx={{ p: 1.5, position: 'sticky', top: 16 }}>
         {/* Nav header */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-          <IconButton size="small" onClick={() => onNavigateMonth(-1)}><ChevronLeftIcon sx={{ fontSize: 18 }} /></IconButton>
+          <IconButton size="small" onClick={() => onNavigateMonth(-1)} aria-label="Vorige maand"><ChevronLeftIcon sx={{ fontSize: 18 }} /></IconButton>
           <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 12, textTransform: 'capitalize' }}>{monthLabel}</Typography>
-          <IconButton size="small" onClick={() => onNavigateMonth(1)}><ChevronRightIcon sx={{ fontSize: 18 }} /></IconButton>
+          <IconButton size="small" onClick={() => onNavigateMonth(1)} aria-label="Volgende maand"><ChevronRightIcon sx={{ fontSize: 18 }} /></IconButton>
         </Box>
         {/* Weekday headers */}
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', mb: 0.5 }}>
@@ -768,25 +768,25 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
           {/* Navigation arrows */}
           {calendarView === 'month' ? (
             <>
-              <IconButton onClick={() => navigateMonth(-1)} size="small"><ChevronLeftIcon /></IconButton>
+              <IconButton onClick={() => navigateMonth(-1)} size="small" aria-label="Vorige maand"><ChevronLeftIcon /></IconButton>
               <Typography variant="h6" sx={{ textTransform: 'capitalize', minWidth: 180, textAlign: 'center' }}>{monthName}</Typography>
-              <IconButton onClick={() => navigateMonth(1)} size="small"><ChevronRightIcon /></IconButton>
+              <IconButton onClick={() => navigateMonth(1)} size="small" aria-label="Volgende maand"><ChevronRightIcon /></IconButton>
             </>
           ) : calendarView === 'week' ? (
             <>
-              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })} size="small"><ChevronLeftIcon /></IconButton>
+              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })} size="small" aria-label="Vorige week"><ChevronLeftIcon /></IconButton>
               <Typography variant="h6" sx={{ minWidth: 240, textAlign: 'center' }}>
                 {(() => { const s = new Date(selectedDate); s.setDate(s.getDate() - s.getDay() + 1); const e = new Date(s); e.setDate(e.getDate() + 6); return s.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) + ' \u2013 ' + e.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }); })()}
               </Typography>
-              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })} size="small"><ChevronRightIcon /></IconButton>
+              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })} size="small" aria-label="Volgende week"><ChevronRightIcon /></IconButton>
             </>
           ) : (
             <>
-              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n; })} size="small"><ChevronLeftIcon /></IconButton>
+              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n; })} size="small" aria-label="Vorige dag"><ChevronLeftIcon /></IconButton>
               <Typography variant="h6" sx={{ minWidth: 180, textAlign: 'center' }}>
                 {selectedDate.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </Typography>
-              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() + 1); return n; })} size="small"><ChevronRightIcon /></IconButton>
+              <IconButton onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() + 1); return n; })} size="small" aria-label="Volgende dag"><ChevronRightIcon /></IconButton>
             </>
           )}
           {/* Today button */}
@@ -1159,7 +1159,7 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
       <Dialog open={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Keyboard Shortcuts
-          <IconButton size="small" onClick={() => setShowShortcutsHelp(false)}><CloseIcon /></IconButton>
+          <IconButton size="small" onClick={() => setShowShortcutsHelp(false)} aria-label="Sluiten"><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent>
           {[

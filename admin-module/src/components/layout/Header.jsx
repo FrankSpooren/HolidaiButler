@@ -43,7 +43,7 @@ export default function Header({ onMenuToggle }) {
       }}
     >
       <Toolbar sx={{ gap: 2 }}>
-        <IconButton onClick={onMenuToggle} sx={{ display: { md: 'none' } }}>
+        <IconButton onClick={onMenuToggle} sx={{ display: { md: 'none' } }} aria-label="Menu openen">
           <MenuIcon />
         </IconButton>
 

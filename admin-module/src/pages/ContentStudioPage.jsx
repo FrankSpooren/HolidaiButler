@@ -909,7 +909,7 @@ function SuggestionDetailDialog({ open, onClose, suggestion, onAction, onGenerat
           <Typography variant="h6" sx={{ fontWeight: 600 }}>{suggestion.title}</Typography>
           <StatusChip status={suggestion.status} sx={{ mt: 0.5 }} />
         </Box>
-        <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+        <IconButton onClick={onClose} size="small" aria-label="Sluiten"><CloseIcon /></IconButton>
       </DialogTitle>
       <DialogContent>
         <Typography variant="body1" sx={{ mb: 2 }}>{suggestion.summary}</Typography>
@@ -1925,7 +1925,7 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
           />
           {item && <StatusChip status={item.approval_status} />}
         </Box>
-        <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+        <IconButton onClick={onClose} size="small" aria-label="Sluiten"><CloseIcon /></IconButton>
       </DialogTitle>
       <DialogContent>
         {loading ? (
@@ -3291,7 +3291,7 @@ export default function ContentStudioPage() {
                               <AutoAwesomeIcon sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Tooltip>
-                          <IconButton size="small" color="error" onClick={async (e) => { e.stopPropagation(); try { await contentService.deleteTrending(trend.id); loadTrends(); } catch {} }}>
+                          <IconButton size="small" color="error" aria-label="Verwijderen" onClick={async (e) => { e.stopPropagation(); try { await contentService.deleteTrending(trend.id); loadTrends(); } catch {} }}>
                             <DeleteIcon sx={{ fontSize: 16 }} />
                           </IconButton>
                         </Box>
@@ -3529,7 +3529,7 @@ export default function ContentStudioPage() {
                                 </IconButton>
                               </Tooltip>
                               <Tooltip title={t('contentStudio.reject', 'Afwijzen')}>
-                                <IconButton size="small" color="error" onClick={() => handleSuggestionAction(sug.id, 'rejected')}>
+                                <IconButton size="small" color="error" aria-label="Verwijderen" onClick={() => handleSuggestionAction(sug.id, 'rejected')}>
                                   <CloseIcon fontSize="small" />
                                 </IconButton>
                               </Tooltip>
@@ -4062,7 +4062,7 @@ export default function ContentStudioPage() {
                                 <IconButton size="small" onClick={() => { if (firstItemId) setSelectedItemId(firstItemId); }}><EditIcon sx={{ fontSize: 16 }} /></IconButton>
                               </Tooltip>
                               <Tooltip title={t('common.delete', 'Verwijderen')}>
-                                <IconButton size="small" color="error" onClick={async () => { await contentService.deleteConcept(concept.id); loadItems(); }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
+                                <IconButton size="small" color="error" aria-label="Verwijderen" onClick={async () => { await contentService.deleteConcept(concept.id); loadItems(); }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
                               </Tooltip>
                             </Box>
                           </TableCell>
