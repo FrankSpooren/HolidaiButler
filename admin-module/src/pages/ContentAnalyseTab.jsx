@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Box, Typography, Paper, Grid, Card, CardContent, CircularProgress, FormControl, Select, MenuItem,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Tabs, Tab, TablePagination,
+  Skeleton,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
@@ -43,6 +44,8 @@ function GrowthChip({ value }) {
     />
   );
 }
+
+
 
 export default function ContentAnalyseTab({ destinationId }) {
   const { t } = useTranslation();
@@ -569,6 +572,7 @@ export default function ContentAnalyseTab({ destinationId }) {
           )}
             </>
           )}
+
         </>
       )}
 

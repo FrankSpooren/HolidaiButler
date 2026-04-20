@@ -1,13 +1,17 @@
-import { AppBar, Toolbar, Typography, Button, Chip, Box, IconButton, Tooltip } from '@mui/material';
+import { useState } from 'react';
+import { AppBar, Toolbar, Typography, Button, Chip, Box, IconButton, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../../stores/authStore.js';
 import useDestinationStore from '../../stores/destinationStore.js';
 import useThemeStore from '../../stores/themeStore.js';
-import DestinationSelector from './DestinationSelector.jsx';
+import DestinationSwitcher from './DestinationSwitcher.jsx';
+import NotificationsCenter from './NotificationsCenter.jsx';
 import { SIDEBAR_STYLES } from '../../theme.js';
 import { isStudioMode } from '../../utils/studioMode.js';
 
@@ -17,6 +21,13 @@ export default function Header({ onMenuToggle }) {
   const { selectedDestination, setDestination } = useDestinationStore();
   const { mode, toggleMode } = useThemeStore();
   const studioMode = isStudioMode();
+
+  const [helpAnchor, setHelpAnchor] = useState(null);
+
+  const handleReopenOnboarding = () => {
+    setHelpAnchor(null);
+    window.dispatchEvent(new CustomEvent('hb:onboarding-reopen'));
+  };
 
   return (
     <AppBar
@@ -32,7 +43,7 @@ export default function Header({ onMenuToggle }) {
       }}
     >
       <Toolbar sx={{ gap: 2 }}>
-        <IconButton onClick={onMenuToggle} sx={{ display: { md: 'none' } }}>
+        <IconButton onClick={onMenuToggle} sx={{ display: { md: 'none' } }} aria-label="Menu openen">
           <MenuIcon />
         </IconButton>
 
@@ -42,7 +53,23 @@ export default function Header({ onMenuToggle }) {
 
         <Box sx={{ flex: 1 }} />
 
-        <DestinationSelector value={selectedDestination} onChange={setDestination} />
+        <DestinationSwitcher value={selectedDestination} onChange={setDestination} />
+
+        <NotificationsCenter />
+
+        <Tooltip title={t('header.help', 'Help')}>
+          <IconButton onClick={(e) => setHelpAnchor(e.currentTarget)} size="small" color="inherit">
+            <HelpOutlineIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Menu anchorEl={helpAnchor} open={!!helpAnchor} onClose={() => setHelpAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
+          <MenuItem onClick={handleReopenOnboarding}>
+            <ListItemIcon><RocketLaunchIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{t('header.reopenSetup', 'Setup checklist heropenen')}</ListItemText>
+          </MenuItem>
+        </Menu>
 
         <Tooltip title={mode === 'dark' ? 'Light mode' : 'Dark mode'}>
           <IconButton onClick={toggleMode} size="small" color="inherit">

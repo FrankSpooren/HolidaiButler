@@ -33,7 +33,20 @@
     "section_platform": "Platform",
     "section_system": "Systeem",
     "pagesNav": "Pagina's & Navigatie",
-    "agentsSystem": "Agents & Systeem"
+    "agentsSystem": "Agents & Systeem",
+    "section_workspace": "Workspace",
+    "section_intelligence": "Intelligentie",
+    "section_management": "Beheer",
+    "overview": "Overzicht",
+    "bronnen": "Bronnen",
+    "ideeen": "Ideeën",
+    "contentItems": "Items",
+    "kalender": "Kalender",
+    "analyse": "Analyse",
+    "seizoenen": "Seizoenen",
+    "socialAccounts": "Social Accounts",
+    "collapse": "Inklappen",
+    "expand": "Uitklappen"
   },
   "auth": {
     "login": "Inloggen",
@@ -289,7 +302,19 @@
       "pages": "Pagina Beheer",
       "analytics": "Analytics",
       "settings": "Instellingen"
-    }
+    },
+    "platformDashboard": "Platform Dashboard",
+    "customize": "Dashboard aanpassen",
+    "customizeTitle": "Dashboard aanpassen",
+    "customizeDesc": "Selecteer welke KPIs zichtbaar zijn op je dashboard.",
+    "last7days": "Laatste 7 dagen",
+    "pendingReview": "in review",
+    "total": "totaal",
+    "processUptime": "Process uptime",
+    "newContent": "Nieuwe content",
+    "calendar": "Kalender",
+    "analytics": "Analytics",
+    "poiManagement": "POI beheer"
   },
   "agents": {
     "title": "Agent Dashboard",
@@ -529,7 +554,9 @@
     "tab": {
       "website": "Website",
       "poiReviews": "POI & Reviews",
-      "chatbot": "Chatbot"
+      "chatbot": "Chatbot",
+      "report": "Rapport",
+      "content": "Content"
     },
     "website": {
       "visitors": "Bezoekers",
@@ -598,6 +625,33 @@
       "day": "Dag",
       "week": "Week",
       "month": "Maand"
+    },
+    "report": {
+      "title": "Content Performance Rapport",
+      "lastWeek": "Vorige week",
+      "lastMonth": "Vorige maand",
+      "custom": "Aangepast",
+      "printPdf": "Afdrukken als PDF (Ctrl+P)",
+      "exportPdf": "PDF / Afdrukken",
+      "executiveSummary": "Executive Summary",
+      "summaryText": "In deze periode zijn {{total}} content items aangemaakt, waarvan {{published}} gepubliceerd en {{scheduled}} ingepland. {{reviewCount}} nieuwe reviews ontvangen met een gemiddelde rating van {{avgRating}}. De chatbot heeft {{sessions}} sessies afgehandeld met {{messages}} berichten.",
+      "generated": "Gegenereerd",
+      "kpi": {
+        "totalContent": "Totaal content",
+        "published": "Gepubliceerd",
+        "scheduled": "Ingepland",
+        "drafts": "Concepten",
+        "reviews": "Nieuwe reviews",
+        "chatSessions": "Chatbot sessies"
+      },
+      "byPlatform": "Content per platform",
+      "total": "Totaal",
+      "publishRate": "Publicatie %",
+      "byPillar": "Content per pillar",
+      "topPerformers": "Top performers",
+      "contentTitle": "Titel",
+      "commentary": "Opmerkingen",
+      "commentaryPlaceholder": "Voeg persoonlijke opmerkingen toe aan dit rapport..."
     }
   },
   "settings": {
@@ -1377,7 +1431,39 @@
     "dnsTitle": "DNS & Server Configuratie",
     "dnsStep1": "Stap 1: DNS A-records aanmaken",
     "dnsStep2": "Stap 2: SSL certificaat aanvragen",
-    "dnsStep3": "Stap 3: Apache VHost configureren"
+    "dnsStep3": "Stap 3: Apache VHost configureren",
+    "widget": {
+      "titleStudio": "Content Studio Setup",
+      "titlePlatform": "Platform Setup",
+      "stepsComplete": "stappen voltooid",
+      "optional": "optioneel",
+      "allDone": "Setup voltooid!",
+      "dismiss": "Widget sluiten",
+      "next": "Volgende",
+      "openChecklist": "Setup checklist openen"
+    },
+    "steps": {
+      "welcome": "Welkom!",
+      "welcomeDesc": "Ontdek de mogelijkheden van uw werkruimte.",
+      "brandProfile": "Stel uw merkprofiel in",
+      "brandProfileDesc": "Voeg bedrijfsnaam, branche, USPs en tone of voice toe zodat AI on-brand content genereert.",
+      "connectSocial": "Koppel social media",
+      "connectSocialDesc": "Verbind Facebook, Instagram of LinkedIn zodat content direct gepubliceerd kan worden.",
+      "firstSuggestion": "Genereer AI content",
+      "firstSuggestionDesc": "Laat de AI uw eerste content suggesties genereren op basis van uw merkprofiel.",
+      "planItem": "Plan uw eerste item",
+      "planItemDesc": "Kies een content item en plan het in op de kalender.",
+      "viewCalendar": "Bekijk de kalender",
+      "viewCalendarDesc": "Overzicht van geplande en gepubliceerde content per dag, week of maand.",
+      "explorePois": "Verken uw POIs",
+      "explorePoisDesc": "Bekijk en beheer de Points of Interest in uw bestemming.",
+      "testChatbot": "Test de chatbot",
+      "testChatbotDesc": "Stel een vraag aan de AI-chatbot en ervaar hoe bezoekers uw bestemming ontdekken.",
+      "checkEvents": "Bekijk evenementen",
+      "checkEventsDesc": "Ontdek de agenda-module met lokale evenementen.",
+      "inviteTeam": "Nodig teamleden uit",
+      "inviteTeamDesc": "Voeg collega's toe zodat zij content kunnen bijdragen en reviewen."
+    }
   },
   "contentStudio": {
     "title": "Content Studio",
@@ -1673,7 +1759,11 @@
       "cancelSchedule": "Annuleren",
       "scheduleTitle": "Content inplannen",
       "dateTime": "Datum & tijd",
-      "account": "Account"
+      "account": "Account",
+      "filters": "Filters",
+      "toggleFilters": "Filters tonen/verbergen",
+      "clearFilters": "Filters wissen",
+      "print": "Afdrukken"
     },
     "performance": {
       "days": "dagen",
